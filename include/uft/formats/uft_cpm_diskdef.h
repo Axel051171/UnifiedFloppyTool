@@ -6,7 +6,7 @@
  * Support for CP/M disk definitions compatible with cpmtools.
  * Defines disk parameter blocks (DPB) for various CP/M systems.
  * 
- * Reference: libdsk diskdefs, cpmtools
+ * Reference: libdsk diskdefs, cpmtools (libdsk: LGPL-2.0-or-later, Fassung 1.5.12 geprueft; cpmtools NICHT gemessen -- Lizenz offen, LIZ-1)
  */
 
 #ifndef UFT_CPM_DISKDEF_H

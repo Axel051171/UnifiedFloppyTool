@@ -277,7 +277,7 @@ dreimal gesehen hat (MF-645):
 
 | Stufe | Zahl | Quelle | bedeutet |
 |---|---|---|---|
-| **Verdacht** | **48** | `scripts/audit_spdx_policy.py`, Attributionsstufe: Klasse A und B ohne genannte Lizenz | die Frage ist offen — es ist noch kein Befund |
+| **Verdacht** | **124** | `scripts/audit_attribution_licence.py` (abgeleitet, seit MF-651) | die Frage ist offen — es ist noch kein Befund |
 | **Befund** | **5** offene Zeilen | [`docs/QUARANTINE.md`](docs/QUARANTINE.md) | auditiert, Weg festgelegt oder ausstehend |
 
 **Gemeldet wird die Befund-Stufe**, weil sie ein Urteil trägt. Die

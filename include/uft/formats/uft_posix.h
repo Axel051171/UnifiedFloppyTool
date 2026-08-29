@@ -10,7 +10,7 @@
  * Format: imagename.dsk + imagename.dsk.geom
  * The .geom file contains: cylinders heads sectors secsize
  * 
- * Reference: libdsk drvposix.c
+ * Reference: libdsk drvposix.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_POSIX_H

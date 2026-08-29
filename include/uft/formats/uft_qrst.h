@@ -6,7 +6,7 @@
  * QRST format was used by Compaq for quick disk imaging.
  * Similar to CopyQM but with different compression scheme.
  * 
- * Reference: libdsk drvqrst.c
+ * Reference: libdsk drvqrst.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_QRST_H

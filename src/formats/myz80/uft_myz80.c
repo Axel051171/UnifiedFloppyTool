@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * MYZ80 CP/M emulator hard drive format with 256-byte header.
- * Reference: libdsk drvmyz80.c
+ * Reference: libdsk drvmyz80.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_myz80.h"

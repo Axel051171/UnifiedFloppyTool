@@ -10,7 +10,7 @@
  * - Amstrad CP/M formats
  * - Epson, Kaypro, Osborne, etc.
  * 
- * Reference: libdsk diskdefs file
+ * Reference: libdsk diskdefs file (LGPL-2.0-or-later, Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_CPM_DEFS_H

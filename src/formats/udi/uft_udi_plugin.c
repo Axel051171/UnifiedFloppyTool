@@ -21,7 +21,8 @@
  *
  * After all tracks: CRC32 of entire file (4 bytes LE)
  *
- * Reference: UDI specification by Simon Owen, libdsk
+ * Reference: UDI specification by Simon Owen; libdsk (LGPL-2.0-or-later,
+ *   Fassung 1.5.12 geprueft)
  */
 #include "uft/uft_format_common.h"
 #include "uft/uft_mfm_encoder.h"

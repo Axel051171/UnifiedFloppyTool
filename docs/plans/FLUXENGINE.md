@@ -54,7 +54,7 @@ Attribution nach samdisk-Muster (Quelle + Commit im Header).
 > Fremdcode ist `src/samdisk` (**MIT**, 147 Dateien) sowie
 > `src/a8rawconv` (**GPL-2.0-or-later**, 46 Dateien).
 >
-> **Vorbehalt, der die Reihenfolge bestimmt:** die 48 Attributionen ohne
+> **Vorbehalt, der die Reihenfolge bestimmt:** die 124 Attributionen (MF-651; früher mit 48 beziffert) ohne
 > genannte Lizenz aus `LIZ-1` sind ungeklärt, und HxCFloppyEmulator
 > taucht dreimal auf. Ist eine davon ein Port von GPL-2.0-only-Code, war
 > die Tür längst zu. **`LIZ-1` ist damit Vorbedingung jeder

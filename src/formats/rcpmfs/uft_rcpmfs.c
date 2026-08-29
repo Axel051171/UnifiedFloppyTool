@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * Multi-disk CP/M container format.
- * Reference: libdsk drvrcpm.c
+ * Reference: libdsk drvrcpm.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_rcpmfs.h"

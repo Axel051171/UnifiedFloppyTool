@@ -3,7 +3,14 @@
  * @file rawformatdialog.h
  * @brief RAW File Format Configuration Dialog
  * 
- * Based on HxCFloppyEmulator's RAW format configuration.
+ * Verhalten nach der Oberflaeche von HxCFloppyEmulator
+ * (jfdelnero, GPL-2.0-or-later) — EIGENSTAENDIGE
+ * Implementierung, kein Port. Geprueft MF-650: Idiom-Audit in
+ * beide Richtungen, je 0 Treffer. Deutlichster Beleg ist eine
+ * Bedeutungsdifferenz, die ein Port mitgeschleppt haette —
+ * unser calculateFormatValue() baut
+ * (tracks<<16)|(sides<<8)|sectors, waehrend HxCs formatvalue
+ * das Fuellbyte ist (cb_rawfile_loader_window.cxx:104).
  * Allows analysis and configuration of unknown disk formats.
  * 
  * Features:

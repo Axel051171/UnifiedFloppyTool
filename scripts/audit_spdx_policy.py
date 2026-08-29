@@ -97,8 +97,16 @@ def scan(repo: pathlib.Path) -> list[tuple[str, int, str]]:
 ATTRIBUTION = re.compile(
     r"(based\s+on|adapted\s+from|derived\s+from|port(?:ed)?\s+of|"
     r"portiert\s+aus|nach\s+dem\s+Vorbild|taken\s+from|"
-    r"originally\s+(?:by|from))\s+(.{0,60})",
+    r"originally\s+(?:by|from)|reference:|referenz:|"
+    r"verhalten\s+nach)\s+(.{0,60})",
     re.IGNORECASE)
+# MF-651: `reference:` fehlte hier — und das war die fuenfte Auflage
+# desselben Fehlers wie MF-567/578/598/633: eine Aufzaehlung bekannter
+# Faelle, die still veraltet. Gemessen: 32 Dateien tragen
+# "Reference: libdsk drv*.c", nennen also eine fremde Codebasis, und
+# KEINE davon war dem Zensus sichtbar — der Pruefer, der Attributionen
+# finden soll, konnte die groesste zusammenhaengende Gruppe im Baum
+# nicht sehen. Die Formulierung war neu, nicht der Sachverhalt.
 
 # Was KEINE Fremd-Attribution ist: Verweise auf den eigenen Baum und auf
 # Spezifikationen. "Based on the D88 spec" begruendet kein Urheberrecht.

@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * QRST format with RLE compression support.
- * Reference: libdsk drvqrst.c by John Elliott
+ * Reference: libdsk drvqrst.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_qrst.h"

@@ -6,7 +6,7 @@
  * NanoWasp format used by the NanoWasp Microbee emulator.
  * Simple format with 80-byte header followed by raw track data.
  * 
- * Reference: libdsk drvnwasp.c
+ * Reference: libdsk drvnwasp.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_NANOWASP_H

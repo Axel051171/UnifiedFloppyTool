@@ -9,7 +9,7 @@
  * Format: 80 tracks, double-sided, 10 sectors of 512 bytes.
  * Total capacity: 800KB formatted.
  * 
- * Reference: libdsk drvmgt.c, World of Spectrum
+ * Reference: libdsk drvmgt.c, World of Spectrum (libdsk ist LGPL-2.0-or-later; der genannte Treiber liegt NICHT in der geprueften Fassung 1.5.12 -- Datei unverifiziert, MF-651)
  */
 
 #ifndef UFT_MGT_H

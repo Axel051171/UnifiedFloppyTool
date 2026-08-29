@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * MGT +D/DISCiPLE format: 80 tracks, DS, 10 sectors, 512 bytes.
- * Reference: libdsk drvmgt.c
+ * Reference: libdsk drvmgt.c (libdsk ist LGPL-2.0-or-later; der genannte Treiber liegt NICHT in der geprueften Fassung 1.5.12 -- Datei unverifiziert, MF-651)
  */
 
 #include "uft/formats/uft_mgt.h"

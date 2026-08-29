@@ -4,7 +4,11 @@
  * @version 3.9.0
  * 
  * ApriDisk format support with RLE compression.
- * Reference: libdsk drvapdsk.c by John Elliott
+ * Reference: libdsk drvadisk.c by John Elliott (LGPL-2.0-or-later, Fassung 1.5.12
+ *   geprueft). Diese Zeile nannte bis MF-651 "drvapdsk.c" -- eine
+ *   Datei, die es unter dem Namen nicht gibt; der Apricot-Treiber
+ *   heisst drvadisk.c. Eine Attribution, deren Datei niemand findet,
+ *   ist nicht nachpruefbar und damit keine.
  */
 
 #include "uft/formats/uft_apridisk.h"

@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * Raw disk image with separate geometry file (.geom).
- * Reference: libdsk drvposix.c
+ * Reference: libdsk drvposix.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_posix.h"

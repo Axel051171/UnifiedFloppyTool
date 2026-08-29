@@ -7,7 +7,7 @@
  * Format: 40 tracks, single-sided, 18 sectors of 256 bytes.
  * Total capacity: 180KB formatted.
  * 
- * Reference: libdsk drvopus.c, World of Spectrum
+ * Reference: libdsk drvopus.c, World of Spectrum (libdsk ist LGPL-2.0-or-later; der genannte Treiber liegt NICHT in der geprueften Fassung 1.5.12 -- Datei unverifiziert, MF-651)
  */
 
 #ifndef UFT_OPUS_H

@@ -3,7 +3,12 @@
  * @brief Visual Floppy Disk Viewer Implementation
  * 
  * Polar disk visualization showing sectors as colored segments.
- * Based on HxCFloppyEmulator's Visual Floppy Disk view.
+ * Verhalten nach der Ansicht von HxCFloppyEmulator (jfdelnero,
+ * GPL-2.0-or-later) — EIGENSTAENDIGE Implementierung, kein
+ * Port. Geprueft MF-650: Idiom-Audit in beide Richtungen, je 0
+ * Treffer; anderes Datenmodell — HxC rendert bitzellengenau in
+ * einen eigenen Framebuffer (display_track.c), wir malen
+ * QPainterPath-Segmente je Sektorzustand.
  * 
  * @date 2026-01-12
  */

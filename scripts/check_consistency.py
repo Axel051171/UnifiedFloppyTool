@@ -796,6 +796,13 @@ def main() -> int:
         # Verfahren. Die Politik steht in CONTRIBUTING.md §Licensing.
         import audit_spdx_policy as _spdx
         all_errors.append(("SPDX ausserhalb der Politik", _spdx.check(repo)))
+        # .gitignore fuehrte `build_*/` mit Unterstrich, nicht `build-*/`
+        # mit Bindestrich — `build-shift/` hielt 30 971 ungetrackte, nicht
+        # ignorierte Dateien, ein `git add -A` von der Veroeffentlichung
+        # entfernt. Dieser Waechter zaehlt das ERGEBNIS statt Namensmuster,
+        # damit er die naechste Schreibweise nicht wieder verpasst (MF-652).
+        import untracked_flood_gate as _flood
+        all_errors.append(("ungetrackte Flut", _flood.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

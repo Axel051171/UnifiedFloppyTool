@@ -176,7 +176,7 @@ Unser einziges HFE-Abbild trägt `track_encoding = 0xFF` und
 
 | # | Sache | Wartet auf |
 |---|---|---|
-| C1 🟡 | `LIZ-1` — ~~48~~ **14** Attributionen ohne genannte Lizenz (MF-650: 31 × libdsk = **LGPL-2.0-or-later** bestimmt, 3 × HxC freigesprochen). Der Rest ist Fleißarbeit, keine Sprechstunde mehr | nur noch die letzten 14 bestimmen |
+| C1 🟡 | `LIZ-1` — **124** Attributionen ohne Lizenz daneben, gemessen mit `scripts/audit_attribution_licence.py`. **Die Zahl 14 aus MF-650 war falsch** (MF-651): sie rechnete auf einer Handklassifikation, deren Zensus `Reference:` gar nicht sah. Heute abgeleitet statt gepflegt; 32 sind bereits geheilt (156 → 124) | Fleißarbeit, keine Sprechstunde — aber mehr davon als gedacht |
 | C2 🔴 | `LIZ-2` — drei AIR-Dateien (GPL-3.0, eine erreichbar), XCopy-Port | Sprechstunde. `uft_ipf_air.c` kostet IPF-Lesen |
 | C3 🔴 | Klick-Session | MF-496, MF-501, Fluss-Widget, D64-Browser — eine Sitzung |
 | C4 🔴 | Acorn-Korpus | **selbst erzeugbar** mit DIMConsole (`new`+`add`+`savecsv`) — braucht Lazarus/FPC |
@@ -213,5 +213,5 @@ B1 hängt an einem `make`, B2 an einer Python-Umgebung, B3 an einem
 Upstream-Bau — alles Agentenarbeit.
 
 C ist die Sprechstunde. **Sechs Posten, ein Termin**, und `LIZ-1` geht
-allen anderen Lizenzfragen vor: solange 48 Attributionen ohne Lizenz
+allen anderen Lizenzfragen vor: solange 124 Attributionen ohne Lizenz
 dastehen, ist jede Aussage über die Gesamtlage vorläufig.

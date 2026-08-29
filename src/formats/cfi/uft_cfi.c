@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * CFI format from FDCOPY.COM, used for Amstrad PC distribution.
- * Reference: libdsk drvcfi.c by John Elliott
+ * Reference: libdsk drvcfi.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_cfi.h"

@@ -97,7 +97,7 @@ Angabe **stimmt**, GPL-Kopf wörtlich in `interleave.cpp:1-16` und
 
 ## Offene Vorbedingung
 
-`LIZ-1` — **48** Attributionen nennen eine fremde Codebasis ohne Lizenz
+`LIZ-1` — **124** Attributionen nennen eine fremde Codebasis ohne Lizenz daneben (MF-651; die frühere Zahl 48 stammte aus einem Zensus, der `Reference:` nicht kannte)
 (`scripts/audit_spdx_policy.py`, Attributionsstufe). Solange die nicht
 geklärt sind, ist jede Aussage über die Gesamtlage des Baums vorläufig,
 und die Lizenzentscheidung in `LIZ-2` steht auf unvollständigem Grund.

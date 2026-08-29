@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * NanoWasp format from the NanoWasp Microbee emulator.
- * Reference: libdsk drvnwasp.c by John Elliott
+ * Reference: libdsk drvnwasp.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_nanowasp.h"

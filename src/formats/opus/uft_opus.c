@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * OPUS Discovery for ZX Spectrum: 40 tracks, SS, 18 sectors, 256 bytes.
- * Reference: libdsk drvopus.c
+ * Reference: libdsk drvopus.c (libdsk ist LGPL-2.0-or-later; der genannte Treiber liegt NICHT in der geprueften Fassung 1.5.12 -- Datei unverifiziert, MF-651)
  */
 
 #include "uft/formats/uft_opus.h"

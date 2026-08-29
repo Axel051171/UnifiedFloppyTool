@@ -11,7 +11,7 @@
  * - Xerox 820 formats
  * - Various other CP/M machines
  * 
- * Reference: libdsk diskdefs, cpmtools diskdefs
+ * Reference: libdsk diskdefs, cpmtools diskdefs (libdsk: LGPL-2.0-or-later, Fassung 1.5.12 geprueft; cpmtools NICHT gemessen -- Lizenz offen, LIZ-1)
  */
 
 #ifndef UFT_CPM_DISKDEFS_H

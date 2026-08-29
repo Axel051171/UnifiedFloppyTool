@@ -103,3 +103,37 @@ __pycache__/
 # Real/cross-tool reference corpus: images stay local (copyright), only
 # tests/corpus_manifest/ (sha256 + provenance) is tracked (MF-364)
 /tests/corpus/
+
+# ── MF-652: Bindestrich statt Unterstrich ────────────────────────────
+# `build_*/` stand hier seit jeher, `build-*/` nicht. Gemessen:
+# `build-shift/` hielt 30 971 ungetrackte, NICHT ignorierte Dateien —
+# ein `git add -A` an der Wurzel haette sie veroeffentlicht.
+# Fuenfte Auflage des Aufzaehlungsfehlers (MF-567/578/598/633/651):
+# aufgezaehlt wurde EINE Schreibweise, durchgefallen ist die Nachbarin.
+build-*/
+
+# Fremde Skill-Sammlungen, von Werkzeugen installiert — in VIER Kopien
+# im Baum (.claude/skills, data/skills, .agents/skills, agent/skills),
+# je ~100 Verzeichnisse, keines UFT-spezifisch. Die UFT-eigenen Skills
+# (.claude/skills/uft-*) sind getrackt und bleiben es; gitignore
+# entfernt nichts, was bereits im Index steht.
+/data/skills/
+/.agents/
+/agent/
+/skills-lock.json
+
+# Dieselbe Fremd-Sammlung liegt auch unter .claude/skills/. Hier
+# wird sie ignoriert und die UFT-eigenen ausdruecklich wieder
+# aufgenommen, damit die 23 Agenten und die uft-*-Skills getrackt
+# bleiben. Reihenfolge zaehlt: das Negat muss NACH der Regel stehen.
+.claude/skills/*
+!.claude/skills/uft-*
+!.claude/skills/team-onboarding
+.claude/settings.json.graphify-bak
+
+# Lose Arbeitsreste an der Wurzel — Notizen und Zwischenergebnisse,
+# die nie in eine Veroeffentlichung gehoeren.
+/crc_stored
+/crc_computed
+/UnifiedFloppyTool-tod.txt
+/# GOAL Release *.txt

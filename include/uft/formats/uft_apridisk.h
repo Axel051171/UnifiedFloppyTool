@@ -11,7 +11,8 @@
  * - Series of track/sector records
  * - Each record has: 16-byte descriptor + compressed/raw data
  * 
- * Reference: libdsk drvapdsk.c
+ * Reference: libdsk drvadisk.c (LGPL-2.0-or-later, Fassung 1.5.12 geprueft;
+ *   hiess hier bis MF-651 faelschlich "drvapdsk.c")
  */
 
 #ifndef UFT_APRIDISK_H

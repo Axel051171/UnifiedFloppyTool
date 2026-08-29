@@ -6,7 +6,7 @@
  * YAZE ydsk format used by the YAZE CP/M emulator.
  * Simple format with 128-byte header followed by raw sector data.
  * 
- * Reference: libdsk drvydsk.c by John Elliott
+ * Reference: libdsk drvydsk.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_YDSK_H

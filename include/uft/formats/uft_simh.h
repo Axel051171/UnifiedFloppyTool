@@ -12,7 +12,7 @@
  * - VAX floppy
  * - Various CP/M formats
  * 
- * Reference: libdsk drvsimh.c
+ * Reference: libdsk drvsimh.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_SIMH_H

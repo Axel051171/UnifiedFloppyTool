@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * Comprehensive CP/M disk definition support compatible with cpmtools.
- * Reference: libdsk diskdefs, cpmtools by Michael Haardt
+ * Reference: libdsk diskdefs, cpmtools by Michael Haardt (libdsk: LGPL-2.0-or-later, Fassung 1.5.12 geprueft; cpmtools NICHT gemessen -- Lizenz offen, LIZ-1)
  */
 
 #include "uft/formats/uft_cpm_diskdef.h"

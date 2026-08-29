@@ -2742,3 +2742,82 @@ SpartaFS-Generator (erst nach B1).
 ungetracktes Verzeichnis und erzeugt trotzdem `vorhanden: true` —
 dieselbe Index-Falle wie seinerzeit die Fluss-Visualisierung (MF-630).
 Ein Verzeichnisname ist keine Fähigkeit.
+
+---
+
+## Berichtigung zu MF-650: die 14 waren falsch, und warum (MF-651, 2026-08-28)
+
+**Die Zahl „48 → 14" aus MF-650 ist zurückgenommen.** Sie war eine
+Rechnung auf einer Handklassifikation, die ich nicht nachgefahren habe —
+genau die Bauart, gegen die dieser Baum seine Kennzahlen abgeleitet
+statt gepflegt führt. Beim Nachmessen fiel sie auf beiden Beinen um.
+
+### Das erste Bein: das Maß konnte die Frage nicht stellen
+
+Mein erster Messversuch suchte einen Lizenzbezeichner **irgendwo** im
+60-Zeilen-Kopf. Damit zählte er unsere **eigene**
+`SPDX-License-Identifier: GPL-2.0-or-later` mit, die seit MF-621 in fast
+jeder Datei steht. Ergebnis: 29 frisch geheilte Attributionen bewegten
+die Zahl um **null**.
+
+Ein Maß, das sich durch die Sache nicht bewegen lässt, misst sie nicht.
+Das Kriterium heißt jetzt: die Lizenz muss **neben** der Attribution
+stehen (±6 Zeilen), und die eigene SPDX-Zeile zählt ausdrücklich nicht.
+
+### Das zweite Bein: der Zensus war blind für die größte Gruppe
+
+`scripts/audit_spdx_policy.py` erkannte „based on", „port of", „derived
+from", „taken from" — aber **nicht** `Reference:`. Und genau so sind die
+32 libdsk-Zuschreibungen formuliert.
+
+Die Folge, gemessen: der Prüfer, der Attributionen finden soll, sah die
+größte zusammenhängende Gruppe im Baum nicht. Die 48 waren nie die
+Gesamtlage, sondern das, was durch ein Muster passte.
+
+**Das ist die fünfte Auflage desselben Fehlers.** Die Tabelle in
+`CLAUDE.md` führt vier: MF-567 (Abbruch-Codes), MF-578 (Offscreen-Tests),
+MF-598 (`SKIP_RETURN_CODE`-Namen), MF-633 (`SKIP_DIRS`). Nun MF-651:
+aufgezählt wurden **Formulierungen**, durchgefallen ist eine neue.
+
+Der Unterschied zu den vier: dort ließ sich die Aufzählung durch eine
+Abfrage ersetzen (`git ls-files`). Hier geht das nicht — für „nennt
+dieser Satz eine fremde Codebasis?" gibt es keine autoritative Quelle.
+Was bleibt, ist die Regel, sie zu erweitern, **sobald** eine neue
+Formulierung auffällt, und den Fund als Fund zu notieren statt als
+Betriebsunfall.
+
+### Die Zahlen, jetzt abgeleitet statt gepflegt
+
+`scripts/audit_attribution_licence.py` (neu) beantwortet die Frage
+reproduzierbar:
+
+| | |
+|---|---|
+| Attributionen gesamt | **170** (mit `Reference:`; vorher sichtbar: 90) |
+| davon ohne Lizenz daneben, vor heute | **156** |
+| **heute** | **124** |
+
+Die 32 Heilungen dieses Commits sind damit **belegt sichtbar** —
+156 → 124, und die Differenz ist genau die Zahl der bearbeiteten Zeilen.
+
+Was inhaltlich richtig bleibt aus MF-650: die libdsk-Lizenz **ist**
+bestimmt (LGPL-2.0-or-later, 146 Dateien mit „any later version"), die
+HxC-Attributionen **sind** freigesprochen, und die GPLv3-Tür **ist**
+offen. Falsch war nur die Behauptung, wie viel davon `LIZ-1` schließt.
+
+### Was dabei sonst gefunden wurde
+
+**Ein Dateiname, den es nicht gibt.** Elf Attributionen nannten Treiber;
+drei davon liegen nicht in der geprüften Fassung 1.5.12. Bei einem ist
+der Grund ein Tippfehler mit Folgen: `drvapdsk.c` heißt in libdsk
+**`drvadisk.c`**. Eine Attribution, deren Datei niemand findet, ist
+nicht nachprüfbar und damit keine. Berichtigt; `drvmgt.c` und
+`drvopus.c` sind ausdrücklich als **unverifiziert** gekennzeichnet
+statt stillschweigend mit der Projektlizenz versehen.
+
+**Eine zweite Quelle, die niemand gemessen hat.** Sechs Zeilen nennen
+„libdsk diskdefs, **cpmtools**". cpmtools wurde in keinem Zyklus
+geklont; seine Lizenz steht in `ORACLES.md` als GPL-3.0 für `cpmls`,
+aber das ist ein anderes Artefakt. Die Zeilen tragen jetzt libdsks
+Lizenz **und** den ausdrücklichen Vermerk, dass cpmtools offen ist.
+Lieber eine halbe Antwort, die sagt, dass sie halb ist.

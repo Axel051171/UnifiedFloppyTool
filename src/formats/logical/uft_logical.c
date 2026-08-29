@@ -4,7 +4,7 @@
  * @version 3.9.0
  * 
  * Logical disk format with explicit geometry header.
- * Reference: libdsk drvlogi.c
+ * Reference: libdsk drvlogi.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_logical.h"

@@ -6,7 +6,7 @@
  * LDBS is a container format from libdsk that stores disk images
  * with metadata in a block-structured file.
  * 
- * Reference: libdsk drvldbs.c by John Elliott
+ * Reference: libdsk drvldbs.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #include "uft/formats/uft_ldbs.h"

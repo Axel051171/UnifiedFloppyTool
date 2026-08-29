@@ -12,7 +12,7 @@
  * - Raw sector data follows header
  * - Used for CP/M 2.2 and CP/M 3 emulation
  * 
- * Reference: libdsk drvmyz80.c
+ * Reference: libdsk drvmyz80.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_MYZ80_H

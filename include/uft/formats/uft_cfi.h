@@ -11,7 +11,7 @@
  * - Each block contains RLE-compressed data
  * - No file header - format is detected by validation
  * 
- * Reference: libdsk drvcfi.c by John Elliott
+ * Reference: libdsk drvcfi.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_CFI_H

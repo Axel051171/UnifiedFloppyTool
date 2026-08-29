@@ -13,7 +13,7 @@
  * - File attributes (R/O, SYS, ARC)
  * - Optional compression
  * 
- * Reference: libdsk drvrcpm.c
+ * Reference: libdsk drvrcpm.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
  */
 
 #ifndef UFT_RCPMFS_H
