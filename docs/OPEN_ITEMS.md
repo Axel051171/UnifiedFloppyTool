@@ -3421,9 +3421,44 @@ Die Datei hält je Auftrag auch die **Erwartung** fest, mit der er
 sich eine Vermutung bestätigt hat, statt das Ergebnis rückwirkend zur
 Absicht zu erklären.
 
-**Der Rückstand bleibt offen.** Die vor MF-675 übergebenen Listen stehen
-nicht darin und werden es nicht: der Gesprächsverlauf einer Sitzung ist
-keine Quelle, die eine spätere Sitzung befragen kann.
+### Geschlossen (MF-677): der Nenner steht
+
+Die ursprünglichen drei Blöcke sind **wörtlich nachgereicht** — aus den
+alten Nachrichten kopiert, nicht aus dem Gedächtnis rekonstruiert. Der
+Unterschied ist der ganze Punkt: nur eine Original-Liste belegt, dass
+nichts fehlt.
+
+**78 Aufträge. Und die Antwort auf die Ausgangsfrage lautet: nein.**
+
+| | |
+|---|---|
+| begutachtet | 22 |
+| früher bewertet (`known_negatives`) | 19 |
+| **noch nicht angefasst** | **37** |
+
+Vier Repos waren mehrfach genannt (`cpmtools`, `flux-analyze`,
+`superdiskindex`, `LinuxAtariFloppyFormatter`); die Dubletten sind
+zusammengefasst und vermerkt.
+
+### Drei Fehler in der eigenen Zuordnung, gefunden beim Nachprüfen
+
+Der erste Abgleich meldete **51** offen, der zweite **34** — beide
+falsch, und beide Male irrte das Werkzeug in die *gefährliche* Richtung
+oder verschleierte echte Arbeit:
+
+1. **Namensgleichheit.** `joncampbell123/floppytools` galt als geklont,
+   weil `Datamuseum-DK/FloppyTools` unter diesem Verzeichnisnamen liegt.
+   Zwei Projekte, ein Name. Behoben: die Klon-Zuordnung fragt jetzt
+   `git remote get-url origin`, nicht den Verzeichnisnamen — der
+   Rückfall auf Namen ist ersatzlos gestrichen, denn eine falsche
+   Entwarnung ist schlechter als eine fehlende Zuordnung.
+2. **Erwähnung ≠ Begutachtung.** Ein Treffer des bloßen Repo-Namens
+   zählte als erledigt. Jetzt trägt nur der volle `owner/repo`-Bezeichner
+   ein Urteil; ein Namenstreffer heißt „nur erwähnt" und ist eine Frage.
+3. **Der eigene erste Eintrag.** `gwnbd` wurde als OFFEN gemeldet,
+   obwohl sein Gutachten vorlag — er entstand vor der
+   Bezeichner-Konvention und hatte keinen `slug`. Die Liste, die den
+   Nenner liefern soll, hatte selbst eine Lücke im ersten Datensatz.
 
 Sie lässt sich nicht rückwirkend rekonstruieren, ohne zu raten: die
 eingereichten URLs stehen nirgends im Baum, und aus 31 Klonen auf die

@@ -8,14 +8,725 @@
     "auftraggeber": "wer es eingereicht hat",
     "notiz": "warum es interessant schien - die ERWARTUNG, damit spaeter sichtbar ist, ob sie sich bestaetigt hat"
   },
-  "_rueckstand": "Die vor MF-675 uebergebenen Listen (rund 32 URLs, plus eine zweite Runde) stehen NICHT hier. Sie sind nicht rekonstruierbar, ohne zu raten: die URLs standen nur im Gespraechsverlauf, und aus den 31 Klonen auf die Auftragsliste zu schliessen hiesse, die Antwort aus der Frage abzuleiten. Was zu jenen Listen messbar ist, sagt scripts/scout_stand.py; was daran offen bleibt, steht als SCOUT-25 in docs/OPEN_ITEMS.md.",
+  "_rueckstand": "Geschlossen mit MF-677: die urspruenglichen drei Bloecke sind woertlich nachgereicht und stehen unten. Sie sind die ORIGINAL-Liste (aus den alten Nachrichten kopiert, nicht aus dem Gedaechtnis rekonstruiert) - der Unterschied ist wichtig, weil nur eine Original-Liste ein Beleg dafuer ist, dass nichts fehlt.",
   "eintraege": [
     {
       "name": "gwnbd",
       "url": "https://github.com/N0t4R0b0t/gwnbd.git",
       "beauftragt": "2026-08-29",
       "auftraggeber": "Eigentuemer",
-      "notiz": "Vermutung bei der Uebergabe: Greaseweazle + NBD, also eine Diskette als Blockgeraet einhaengen statt sie erst in ein Abbild zu kopieren. Das waere eine Betriebsart, die UFT nicht hat. Besonders interessant ist die Fehlerfrage: ein Blockgeraet MUSS auf jeden Lesezugriff etwas zurueckgeben, waehrend 'Keine erfundenen Daten' uns die bequeme Antwort verbietet. Was dort bei einem unlesbaren Sektor passiert, ist entweder ein Fund oder ein lehrreiches Gegenbeispiel."
+      "notiz": "Vermutung bei der Uebergabe: Greaseweazle + NBD, also eine Diskette als Blockgeraet einhaengen statt sie erst in ein Abbild zu kopieren. Das waere eine Betriebsart, die UFT nicht hat. Besonders interessant ist die Fehlerfrage: ein Blockgeraet MUSS auf jeden Lesezugriff etwas zurueckgeben, waehrend 'Keine erfundenen Daten' uns die bequeme Antwort verbietet. Was dort bei einem unlesbaren Sektor passiert, ist entweder ein Fund oder ein lehrreiches Gegenbeispiel.",
+      "slug": "N0t4R0b0t/gwnbd",
+      "_hinweis": "Der erste Eintrag entstand vor der slug-Konvention und wurde darum als OFFEN gemeldet, obwohl sein Gutachten vorlag. Der Bezeichner ist das Zuordnungsmerkmal — ohne ihn traegt ein Eintrag kein Urteil."
+    },
+    {
+      "name": "HXCFE_file_selector",
+      "slug": "jfdelnero/HXCFE_file_selector",
+      "url": "https://github.com/jfdelnero/HXCFE_file_selector.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "HxCFloppyImageConverter",
+      "slug": "latchdevel/HxCFloppyImageConverter",
+      "url": "https://github.com/latchdevel/HxCFloppyImageConverter.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "cpmtools",
+      "slug": "lipro-cpm4l/cpmtools",
+      "url": "https://github.com/lipro-cpm4l/cpmtools.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "auch_in_block": [
+        2
+      ]
+    },
+    {
+      "name": "sector-cpc",
+      "slug": "neuro-sys/sector-cpc",
+      "url": "https://github.com/neuro-sys/sector-cpc.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "flux-analyze",
+      "slug": "kristomu/flux-analyze",
+      "url": "https://github.com/kristomu/flux-analyze.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "auch_in_block": [
+        2
+      ]
+    },
+    {
+      "name": "arcimage",
+      "slug": "picosonic/arcimage",
+      "url": "https://github.com/picosonic/arcimage.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "fdc_bitstream",
+      "slug": "yas-sim/fdc_bitstream",
+      "url": "https://github.com/yas-sim/fdc_bitstream.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "uMFMLib",
+      "slug": "Naguissa/uMFMLib",
+      "url": "https://github.com/Naguissa/uMFMLib.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "d71-81writer.c64",
+      "slug": "wiebow/d71-81writer.c64",
+      "url": "https://github.com/wiebow/d71-81writer.c64.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "wlite",
+      "slug": "havill/wlite",
+      "url": "https://github.com/havill/wlite.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "RetroDiskImages",
+      "slug": "Pontiac76/RetroDiskImages",
+      "url": "https://github.com/Pontiac76/RetroDiskImages.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "diskimgr",
+      "slug": "KBNLresearch/diskimgr",
+      "url": "https://github.com/KBNLresearch/diskimgr.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "superdiskindex",
+      "slug": "shamada-code/superdiskindex",
+      "url": "https://github.com/shamada-code/superdiskindex.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "auch_in_block": [
+        3
+      ]
+    },
+    {
+      "name": "misskey_mfm_parser",
+      "slug": "LibraryLibrarian/misskey_mfm_parser",
+      "url": "https://github.com/LibraryLibrarian/misskey_mfm_parser.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DiskImageTool",
+      "slug": "Digitoxin1/DiskImageTool",
+      "url": "https://github.com/Digitoxin1/DiskImageTool.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "RIDE",
+      "slug": "tomas-nestorovic/RIDE",
+      "url": "https://github.com/tomas-nestorovic/RIDE.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppyai",
+      "slug": "akspa0/floppyai",
+      "url": "https://github.com/akspa0/floppyai.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "volvex",
+      "slug": "Rob1c/volvex",
+      "url": "https://github.com/Rob1c/volvex.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "TRS80_HxC",
+      "slug": "GmEsoft/TRS80_HxC",
+      "url": "https://github.com/GmEsoft/TRS80_HxC.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "plus3",
+      "slug": "ha1tch/plus3",
+      "url": "https://github.com/ha1tch/plus3.git",
+      "block": 1,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "fathuman",
+      "slug": "vampirefrog/fathuman",
+      "url": "https://github.com/vampirefrog/fathuman.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DiskFlashback",
+      "slug": "RobSmithDev/DiskFlashback",
+      "url": "https://github.com/RobSmithDev/DiskFlashback.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "fdutils",
+      "slug": "lipro-cpm4l/fdutils",
+      "url": "https://github.com/lipro-cpm4l/fdutils.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "WinUAE",
+      "slug": "tonioni/WinUAE",
+      "url": "https://github.com/tonioni/WinUAE.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DiskFormatID",
+      "slug": "euanc/DiskFormatID",
+      "url": "https://github.com/euanc/DiskFormatID.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "trackloader",
+      "slug": "amigadev/trackloader",
+      "url": "https://github.com/amigadev/trackloader.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "HxCFloppyEmulatorManager_AmstradCPC",
+      "slug": "jfdelnero/HxCFloppyEmulatorManager_AmstradCPC",
+      "url": "https://github.com/jfdelnero/HxCFloppyEmulatorManager_AmstradCPC.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "dfsimage",
+      "slug": "monkeyman79/dfsimage",
+      "url": "https://github.com/monkeyman79/dfsimage.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppycapture",
+      "slug": "jesswhyte/floppycapture",
+      "url": "https://github.com/jesswhyte/floppycapture.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "Apple-II-Disk-Tools",
+      "slug": "cmosher01/Apple-II-Disk-Tools",
+      "url": "https://github.com/cmosher01/Apple-II-Disk-Tools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DskToWoz2",
+      "slug": "cmosher01/DskToWoz2",
+      "url": "https://github.com/cmosher01/DskToWoz2.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ddi2raw",
+      "slug": "SergiyKolesnikov/ddi2raw",
+      "url": "https://github.com/SergiyKolesnikov/ddi2raw.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "FloppyTools",
+      "slug": "Datamuseum-DK/FloppyTools",
+      "url": "https://github.com/Datamuseum-DK/FloppyTools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "trx2x",
+      "slug": "atsidaev/trx2x",
+      "url": "https://github.com/atsidaev/trx2x.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "hdcopy-tools",
+      "slug": "rgwan/hdcopy-tools",
+      "url": "https://github.com/rgwan/hdcopy-tools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ZX-Spectrum-FD-Images",
+      "slug": "konkotgit/ZX-Spectrum-FD-Images",
+      "url": "https://github.com/konkotgit/ZX-Spectrum-FD-Images.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "x68000-floppy-tools",
+      "slug": "leaded-solder/x68000-floppy-tools",
+      "url": "https://github.com/leaded-solder/x68000-floppy-tools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "flextools",
+      "slug": "laurent-fr/flextools",
+      "url": "https://github.com/laurent-fr/flextools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "mfmdisk",
+      "slug": "sergev/mfmdisk",
+      "url": "https://github.com/sergev/mfmdisk.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "lib1541img",
+      "slug": "excess-c64/lib1541img",
+      "url": "https://github.com/excess-c64/lib1541img.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "minnow-disk",
+      "slug": "schlae/minnow-disk",
+      "url": "https://github.com/schlae/minnow-disk.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppy-disk-ripper",
+      "slug": "psbhlw/floppy-disk-ripper",
+      "url": "https://github.com/psbhlw/floppy-disk-ripper.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "HXCFE_Amiga_copy_utility",
+      "slug": "gonk23/HXCFE_Amiga_copy_utility",
+      "url": "https://github.com/gonk23/HXCFE_Amiga_copy_utility.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "dumpfloppy",
+      "slug": "johnkw/dumpfloppy",
+      "url": "https://github.com/johnkw/dumpfloppy.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "wwarp",
+      "slug": "wepl/wwarp",
+      "url": "https://github.com/wepl/wwarp.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppy-decode",
+      "slug": "simon-frankau/floppy-decode",
+      "url": "https://github.com/simon-frankau/floppy-decode.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppytools",
+      "slug": "joncampbell123/floppytools",
+      "url": "https://github.com/joncampbell123/floppytools.git",
+      "block": 2,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DiskImageUtility",
+      "slug": "DarrellH89/DiskImageUtility",
+      "url": "https://github.com/DarrellH89/DiskImageUtility.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppydiskimagetool",
+      "slug": "markusC64/floppydiskimagetool",
+      "url": "https://github.com/markusC64/floppydiskimagetool.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "floppy-utils",
+      "slug": "jdurno/floppy-utils",
+      "url": "https://github.com/jdurno/floppy-utils.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "2eforthos",
+      "slug": "keithadler/2eforthos",
+      "url": "https://github.com/keithadler/2eforthos.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ddfloppy",
+      "slug": "mvirkkunen/ddfloppy",
+      "url": "https://github.com/mvirkkunen/ddfloppy.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "fuc",
+      "slug": "mrcbax/fuc",
+      "url": "https://github.com/mrcbax/fuc.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "sap2",
+      "slug": "nils-eilers/sap2",
+      "url": "https://github.com/nils-eilers/sap2.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "mfsreader",
+      "slug": "michaelengel/mfsreader",
+      "url": "https://github.com/michaelengel/mfsreader.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "LinuxAtariFloppyFormatter",
+      "slug": "shazzner/LinuxAtariFloppyFormatter",
+      "url": "https://github.com/shazzner/LinuxAtariFloppyFormatter.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "auch_in_block": [
+        3
+      ]
+    },
+    {
+      "name": "m20-floppy-tools",
+      "slug": "jandelgado/m20-floppy-tools",
+      "url": "https://github.com/jandelgado/m20-floppy-tools.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ADFCommander",
+      "slug": "wbommel/ADFCommander",
+      "url": "https://github.com/wbommel/ADFCommander.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "adf-tools",
+      "slug": "alpine9000/adf-tools",
+      "url": "https://github.com/alpine9000/adf-tools.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "disk-utilities",
+      "slug": "keirf/disk-utilities",
+      "url": "https://github.com/keirf/disk-utilities.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "adfrescue",
+      "slug": "dschwen/adfrescue",
+      "url": "https://github.com/dschwen/adfrescue.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "c64_tool_mkd64",
+      "slug": "Zirias/c64_tool_mkd64",
+      "url": "https://github.com/Zirias/c64_tool_mkd64.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "DiskToolC64",
+      "slug": "beddy70/DiskToolC64",
+      "url": "https://github.com/beddy70/DiskToolC64.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "disekt",
+      "slug": "Sam36502/disekt",
+      "url": "https://github.com/Sam36502/disekt.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "greaseweazle-utils",
+      "slug": "jpaulorio/greaseweazle-utils",
+      "url": "https://github.com/jpaulorio/greaseweazle-utils.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ST-Recover",
+      "slug": "ChrisBertrandDotNet/ST-Recover",
+      "url": "https://github.com/ChrisBertrandDotNet/ST-Recover.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "Jacknife",
+      "slug": "ggnkua/Jacknife",
+      "url": "https://github.com/ggnkua/Jacknife.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "dir2msa",
+      "slug": "arnaud-carre/dir2msa",
+      "url": "https://github.com/arnaud-carre/dir2msa.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "AtariDisk",
+      "slug": "laurent68k/AtariDisk",
+      "url": "https://github.com/laurent68k/AtariDisk.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "Atari-ST-Floppy-Image-Toolkit-GEM",
+      "slug": "flindholm-lab/Atari-ST-Floppy-Image-Toolkit-GEM",
+      "url": "https://github.com/flindholm-lab/Atari-ST-Floppy-Image-Toolkit-GEM.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "st2disk",
+      "slug": "vinz6751/st2disk",
+      "url": "https://github.com/vinz6751/st2disk.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "atari-st-tools",
+      "slug": "suiryc/atari-st-tools",
+      "url": "https://github.com/suiryc/atari-st-tools.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "disk-peek",
+      "slug": "andete/disk-peek",
+      "url": "https://github.com/andete/disk-peek.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "MaClone",
+      "slug": "ray77/MaClone",
+      "url": "https://github.com/ray77/MaClone.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "hfs2dfxml",
+      "slug": "cul-it/hfs2dfxml",
+      "url": "https://github.com/cul-it/hfs2dfxml.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "EncryptedDiskImageWrapper",
+      "slug": "prachigauriar/EncryptedDiskImageWrapper",
+      "url": "https://github.com/prachigauriar/EncryptedDiskImageWrapper.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "RDiskImager",
+      "slug": "andrewrowell/RDiskImager",
+      "url": "https://github.com/andrewrowell/RDiskImager.git",
+      "block": 3,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
     }
-  ]
+  ],
+  "_herkunft": {
+    "bloecke_1_bis_3": "Original-Uebergabe des Eigentuemers, woertlich nachgereicht am 2026-08-29 (MF-677). Dubletten innerhalb und zwischen den Bloecken sind zusammengefasst; 'auch_in_block' haelt fest, wo ein Repo mehrfach genannt war.",
+    "gwnbd": "Einzel-Uebergabe 2026-08-29, vor der Nachreichung"
+  }
 }
