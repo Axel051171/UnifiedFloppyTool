@@ -60,11 +60,35 @@ typedef enum {
     HFE_IF_AMIGA_HD         = 0x05,     // Amiga HD
     HFE_IF_CPC_DD           = 0x06,     // Amstrad CPC DD
     HFE_IF_GENERIC_8BIT     = 0x07,     // Generic Shugart
-    HFE_IF_MSX2_DD          = 0x08,     // MSX2 DD
-    HFE_IF_C64_DD           = 0x09,     // C64 DD
-    HFE_IF_EMU_SHUGART      = 0x0A,     // Emu Shugart
-    HFE_IF_S950_DD          = 0x0B,     // S950 DD
-    HFE_IF_S950_HD          = 0x0C,     // S950 HD
+    /* MF-659: hier fehlte 0x08 (IBMPC_ED), und dadurch war ALLES ab
+     * 0x08 um eins verschoben — MSX2 stand auf 0x08, C64 auf 0x09.
+     * Die Folge sass im Anzeigepfad: hfe_read_metadata(…,"interface",…)
+     * wies eine echte MSX2-Diskette als "C64" aus. Kein Datenverlust,
+     * aber eine stille Falschaussage ueber die Herkunft eines Mediums.
+     *
+     * Dreifach belegt und je selbst nachgelesen:
+     *   HxC (Urheber)  libhxcfe.h:414-416  IBMPC_ED 0x08, MSX2 0x09, C64 0x0A
+     *   SAMdisk        src/samdisk/hfe.cpp:35-53  dieselbe Reihenfolge
+     *   eigener Baum   include/uft/uft_hfe_format.h:53-68  war RICHTIG
+     *
+     * Der dritte Beleg ist der eigentliche Befund: der Baum fuehrte die
+     * Tabelle zweimal, und die registrierte Fassung war die falsche.
+     * Gefunden vom uft-variants-Agenten (Regel 2: widersprechen sich
+     * zwei Leser im eigenen Baum, ist das ein Befund ueber uns).
+     *
+     * WARUM DIE DUBLETTE BLEIBT: `include/uft/uft_hfe_format.h` waere
+     * die richtige Heimat, aber beide Dateien definieren auch
+     * `hfe_header_t` und `hfe_track_entry_t`. Die zusammenzulegen
+     * verlangt zuerst einen Beweis, dass die Layouts gleich sind — das
+     * ist eigene Arbeit mit eigenem Rotbeweis, nicht Beifang eines
+     * Bugfixes. Bis dahin haelt `tests/test_hfe_interface_modes.c` die
+     * beiden Fassungen ueber das VERHALTEN zusammen. */
+    HFE_IF_IBMPC_ED         = 0x08,     // IBM PC ED (fehlte bis MF-659)
+    HFE_IF_MSX2_DD          = 0x09,     // MSX2 DD
+    HFE_IF_C64_DD           = 0x0A,     // C64 DD
+    HFE_IF_EMU_SHUGART      = 0x0B,     // Emu Shugart
+    HFE_IF_S950_DD          = 0x0C,     // S950 DD
+    HFE_IF_S950_HD          = 0x0D,     // S950 HD
     HFE_IF_DISABLE          = 0xFE
 } hfe_interface_t;
 
@@ -944,8 +968,20 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
             case HFE_IF_AMIGA_DD:    if_name = "Amiga DD"; break;
             case HFE_IF_AMIGA_HD:    if_name = "Amiga HD"; break;
             case HFE_IF_CPC_DD:      if_name = "Amstrad CPC"; break;
-            case HFE_IF_C64_DD:      if_name = "C64"; break;
-            default:                  if_name = "Generic"; break;
+            /* MF-659: die Tabelle sprang von CPC direkt zu C64 — drei
+             * Modi hatten gar keinen Zweig und fielen auf "Generic".
+             * Jetzt vollstaendig bis HFE_IF_S950_HD. */
+            case HFE_IF_GENERIC_8BIT: if_name = "Generic Shugart"; break;
+            case HFE_IF_IBMPC_ED:    if_name = "IBM PC ED"; break;
+            case HFE_IF_MSX2_DD:     if_name = "MSX2 DD"; break;
+            case HFE_IF_C64_DD:      if_name = "C64 DD"; break;
+            case HFE_IF_EMU_SHUGART: if_name = "Emu Shugart"; break;
+            case HFE_IF_S950_DD:     if_name = "Akai S950 DD"; break;
+            case HFE_IF_S950_HD:     if_name = "Akai S950 HD"; break;
+            case HFE_IF_DISABLE:     if_name = "disabled"; break;
+            /* Unbekannt heisst unbekannt — nicht "Generic". Eine
+             * geratene Maschine ist schlimmer als ein Achselzucken. */
+            default:                 if_name = "unbekannt"; break;
         }
         snprintf(value, max_len, "%s", if_name);
         return UFT_OK;
@@ -967,9 +1003,27 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
 /* Prinzip 7 Feature-Matrix */
 static const uft_plugin_feature_t hfe_features[] = {
     { "HFE v1 (original)",         UFT_FEATURE_SUPPORTED,   NULL },
-    { "HFE v2 (HxC2001)",          UFT_FEATURE_SUPPORTED,   NULL },
+    /* MF-659: stand als "HFE v2 (HxC2001) = SUPPORTED" da. Es gibt kein
+     * v2. Die Generation haengt an der SIGNATUR (HXCPICFE vs HXCHFEV3),
+     * nicht am Revisionsbyte; der v3-Schreiber von HxC setzt selbst
+     * rev=0 (hfev3_writer.c:148), und rev=1 bedeutet ExtHFE, nicht v2.
+     * Das "v2" stammt allein aus HxCs Fehlermeldung, die
+     * `formatrevision+1` ausgibt (hfe_loader.c:154). Eine Zusage ueber
+     * etwas, das es nicht gibt, ist auch dann falsch, wenn niemand sie
+     * einloest. */
+    { "HFE v2",                    UFT_FEATURE_UNSUPPORTED,
+      "Es gibt keine HFE-Generation v2. Revision 1 ist ExtHFE, ein "
+      "eigenes Format, das selbst HxC nur schreibt und nicht liest." },
     { "HFE v3 (STM32 bootloader)", UFT_FEATURE_SUPPORTED,   NULL },
-    { "Per-track bitrate",         UFT_FEATURE_SUPPORTED,   NULL },
+    /* MF-659: stand als SUPPORTED da. Der v3-Dekoder LIEST den
+     * SETBITRATE-Opcode korrekt (er ueberspringt ihn samt Parameter,
+     * damit der Bitstrom nicht verrutscht — siehe hfe_v3_decode), aber
+     * er WENDET die Rate nicht an. Gelesen ist nicht beachtet. */
+    { "Per-track bitrate",         UFT_FEATURE_PARTIAL,
+      "SETBITRATE (0xF2) wird beim Dekodieren korrekt uebersprungen, "
+      "damit der Bitstrom stimmt — die Rate wird aber nicht angewandt. "
+      "Spuren mit abweichender Bitrate werden mit der Kopf-Bitrate "
+      "gelesen." },
     { "Write / encode",            UFT_FEATURE_SUPPORTED,   NULL },
     { "Weak-bit annotation",       UFT_FEATURE_PARTIAL,
       "HFE v1/v2 carry no weak-bit flags. HFE v3 encodes weak/fuzzy bits as "

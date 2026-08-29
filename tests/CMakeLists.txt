@@ -209,6 +209,15 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_geometry_zones")
         # Phase-0 geometry: D64 GCR zoned per-track sector counts (MF-337)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_hfe_interface_modes")
+        # MF-659: das registrierte Plugin meldete ab 0x08 die falsche
+        # Maschine. Der Test geht durch den ECHTEN Anzeigepfad
+        # (plugin.open + read_metadata), nicht ueber die Konstanten —
+        # ein Beweis, der die fragliche Stelle nicht durchlaeuft,
+        # beweist nichts.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_acorn_adfs_identity")
         # .adl ist ADFS L (655360, zweiseitig), nicht ADFS M (327680,
         # einseitig) — MF-654. Braucht BEIDE Leser, weil der Test genau

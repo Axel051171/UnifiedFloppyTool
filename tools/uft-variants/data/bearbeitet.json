@@ -2,9 +2,9 @@
   "_kommentar": "Zyklus-Gedaechtnis: welche Formate hat uft-variants bearbeitet? Verhindert, dass zwei Zyklen dasselbe Format anfassen. Eintrag erst, wenn die Uebergabe in out/ liegt.",
   "bearbeitet": {
     "hfe": {
-      "stand": "entwurf",
+      "stand": "tiefengeprueft",
       "uebergabe": "out/hfe.uebergabe.md",
-      "hinweis": "Erster Lauf des Eigentuemers; mechanischer Entwurf, Tiefenpruefung offen. Die Evidenz ist mit MF-656 neu erhoben — die alte enthielt einen Fehltreffer, der die Zwei-Quellen-Regel scheinbar erfuellte."
+      "hinweis": "Zweiter Lauf 2026-08-29: Variantentabelle 2x belegt (hxcfe + samdisk), Offset-8-Frage entschieden (Generation haengt an der Signatur; rev1 = ExtHFE, write-only), fuenf Fixtures aus hxcfe.exe erzeugt (work/fixtures/, gitignored, Uebernahme = menschliches Tor). Kernbefund F1: Interface-Mode-Tabelle im registrierten Plugin ab 0x08 um eins verschoben, korrekte Tabelle existiert doppelt im eigenen Baum."
     }
   }
 }
