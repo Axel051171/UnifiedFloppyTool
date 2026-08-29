@@ -140,9 +140,53 @@ angezeigt, nicht weggeräumt.
 `UNSUPPORTED` ist das auch das Richtige — ein dauerhaft graues Feld ist
 eine Frage, die nie beantwortet wird.
 
-**Aufwand:** M. **Abnahme:** ein Qt-Test, der für zwei Formate mit
-unterschiedlichem Manifest prüft, dass verschiedene Elemente sichtbar
-sind. Ohne diesen Test ist es eine Behauptung.
+### ✅ Gebaut (MF-660 C-Seite, MF-661 Qt-Seite)
+
+**Zuordnung Gruppe → Merkmal**, vom Eigentümer bestätigt und an EINER
+Stelle im Code (`kZuordnung` in `src/formattab.cpp`):
+
+| Gruppe | Merkmal | warum |
+|---|---|---|
+| `groupFlux` | `Flux` | arbeitet am Flussband |
+| `groupPLL` | `Flux` | PLL taktet den Flussstrom |
+| `groupWrite` | `Write` | direkt |
+| `groupProtection` | `Weak Bits` | Kopierschutz hängt daran |
+
+`groupNibble` fehlt **bewusst**: GCR hat kein Manifest-Merkmal, und
+eines zu erfinden hieße, 88 Manifeste um eine ungeprüfte Zeile zu
+erweitern. Die Gruppe bleibt sichtbar, bis es ein belegtes Merkmal gibt.
+
+**Mitgefunden und mitbehoben:** `updateFormatSpecificOptions()` kehrte
+für jedes Format ohne `m_formatInfo`-Eintrag **sofort zurück** — für 63
+der 88 Formate passierte gar nichts, und die Bedienelemente behielten
+den Zustand des *zuletzt* gewählten Formats. Der Manifest-Aufruf steht
+deshalb **vor** diesem `return`.
+
+**Abnahme:** `tests/test_format_tab_capability_gating.cpp` setzt das
+Format-Auswahlfeld — den Weg, den ein Benutzer nimmt — und liest danach
+die Sichtbarkeit der echten Widgets. D64 versteckt die Flussgruppe, SCP
+zeigt sie; ein unbekanntes Format versteckt **nichts**.
+
+**Rotbeweis:** MinGW-GUI-Programme geben unter QtTest keine Ausgabe aus,
+nur der Rückgabewert zählt (eigene Projektnotiz) — ein stiller Test, der
+nichts prüft, sähe genauso aus wie ein bestandener. Deshalb sabotiert:
+`applyPluginCapabilities()` auf `return;` gesetzt → Rückgabewert **2**,
+zurückgesetzt → **0**.
+
+**Nebenwirkung, die eine Regel des Baums einlöst:** die Liste der
+Format-Layer-Abhängigkeiten stand nur im C-Zweig der `CMakeLists.txt`.
+Der Qt-Test braucht dieselbe Menge. Sie ist als
+`UFT_FORMAT_LAYER_DEPS` / `UFT_FORMAT_LAYER_INCLUDES` **herausgezogen**,
+nicht kopiert — der Kommentar im C-Zweig nennt den Grund selbst: *„eine
+zweite, eigene Liste wäre eine zweite Wahrheit über dieselbe Sache; sie
+würde driften."*
+
+**Was noch offen ist:** `m_formatInfo` behält vorerst seine
+Fähigkeits-Felder. Sie steuern nichts mehr, was das Manifest steuert,
+aber `supportsGCR` und `supportsHalfTracks` haben noch eigene Aufrufer.
+Die gehören in Stufe 5 mit den Bedienelementen zusammen entschieden.
+
+**Aufwand war M.** 275/275 grün.
 
 ---
 
@@ -258,7 +302,7 @@ rechnen richtig" ein „der Pfad liest eine echte Datei richtig" — und
 ## Reihenfolge auf einen Blick
 
     1  Tor: Fähigkeit muss beweisbar sein      S   ERLEDIGT MF-658
-    2  Manifest -> Bedienelemente              M
+    2  Manifest -> Bedienelemente              M   ERLEDIGT MF-660/661
     3a Variante anzeigen (read_metadata)       S
     4  Variante beim Speichern + Standard      M
     5  Nibble -> Flux -> PLL verdrahten        3x M

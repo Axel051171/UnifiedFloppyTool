@@ -11,6 +11,7 @@
 #include "formattab.h"
 #include "ui_tab_format.h"
 #include "uft_gw2dmk_panel.h"
+#include <uft/uft_format_plugin.h>  /* MF-661: Faehigkeits-Manifest */
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -561,7 +562,104 @@ void FormatTab::populateVersionsForFormat(const QString& format) {
     ui->comboVersion->blockSignals(false);
 }
 
+// ============================================================================
+// Faehigkeits-Manifest -> Bedienelemente  (MF-661)
+// ============================================================================
+//
+// Stufe 2 aus docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md.
+//
+// Bis hierher entschied `m_formatInfo` — eine handgepflegte Tabelle mit 25
+// Eintraegen — was die Oberflaeche anbietet. Die 88 Plugins fuehren daneben
+// ihr eigenes Manifest, und die beiden widersprechen sich an fuenf Stellen
+// gemessen (MF-660): EDSK, G64, NIB, SCP und TD0 versprechen hier
+// Weak-Bit-Faehigkeit, die das Plugin als UNSUPPORTED fuehrt.
+//
+// Die beiden beantworten verschiedene Fragen — "kann das FORMAT das
+// tragen?" gegen "tut UNSER CODE das?". Fuer ein Bedienelement zaehlt die
+// zweite: ein Element, das ein format-theoretisches Koennen anbietet,
+// welches unser Leser nicht einloest, ist ein toter Knopf.
+//
+// Die Zuordnung Gruppe -> Merkmal ist eine FESTLEGUNG, keine Messung, und
+// steht deshalb hier an einer Stelle statt verstreut:
+
+namespace {
+
+struct GruppenMerkmal {
+    const char *gruppe;    // objectName des Widgets im .ui
+    const char *merkmal;   // Name im Faehigkeits-Manifest
+    const char *warum;
+};
+
+// groupNibble fehlt bewusst: GCR hat kein eigenes Manifest-Merkmal, und
+// eines zu erfinden hiesse, 88 Manifeste um eine ungepruefte Zeile zu
+// erweitern. Die Gruppe bleibt sichtbar, bis es ein belegtes Merkmal gibt.
+const GruppenMerkmal kZuordnung[] = {
+    { "groupFlux",       "Flux",      "arbeitet am Flussband" },
+    { "groupPLL",        "Flux",      "PLL taktet den Flussstrom" },
+    { "groupWrite",      "Write",     "direkt" },
+    { "groupProtection", "Weak Bits", "Kopierschutz haengt daran" },
+};
+
+} // namespace
+
+void FormatTab::applyPluginCapabilities(const QString& format)
+{
+    const uft_format_plugin_t *plugin =
+        uft_get_format_plugin_by_name(format.toUtf8().constData());
+
+    for (const GruppenMerkmal &z : kZuordnung) {
+        QWidget *w = findChild<QWidget *>(QString::fromLatin1(z.gruppe));
+        if (!w) continue;
+
+        // Kein Plugin gefunden: NICHTS ausblenden. Auf Unwissen zu
+        // verstecken naehme dem Benutzer Funktion wegen eines
+        // Nachschlagefehlers von uns — dieselbe Regel wie "nicht
+        // ermittelt" bei der Variantenanzeige.
+        if (!plugin) {
+            w->setVisible(true);
+            w->setEnabled(true);
+            w->setToolTip(QString());
+            continue;
+        }
+
+        switch (uft_plugin_control_visibility(plugin, z.merkmal)) {
+        case UFT_CONTROL_SHOW:
+            w->setVisible(true);
+            w->setEnabled(true);
+            w->setToolTip(QString());
+            break;
+
+        case UFT_CONTROL_SHOW_LIMITED: {
+            // PARTIAL wird gezeigt, nicht versteckt: eine eingeschraenkte
+            // Faehigkeit zu verbergen naehme dem Benutzer eine Information,
+            // die er hat. Der Header verlangt fuer PARTIAL eine
+            // Begruendung — die wird hier der Hinweistext.
+            w->setVisible(true);
+            w->setEnabled(true);
+            const char *note = uft_plugin_feature_note(plugin, z.merkmal);
+            w->setToolTip(note && *note
+                ? tr("Eingeschränkt: %1").arg(QString::fromUtf8(note))
+                : tr("Eingeschränkt unterstützt."));
+            break;
+        }
+
+        case UFT_CONTROL_HIDE:
+        default:
+            w->setVisible(false);
+            w->setEnabled(false);
+            w->setToolTip(QString());
+            break;
+        }
+    }
+}
+
 void FormatTab::updateFormatSpecificOptions(const QString& format) {
+    // MF-661: VOR dem fruehen return. `m_formatInfo` kennt 25 von 88
+    // Formaten; fuer die uebrigen 63 kehrte diese Funktion bisher sofort
+    // zurueck, und die Bedienelemente behielten den Zustand des ZULETZT
+    // gewaehlten Formats. Das Manifest gilt fuer alle.
+    applyPluginCapabilities(format);
+
     if (!m_formatInfo.contains(format)) {
         return;
     }

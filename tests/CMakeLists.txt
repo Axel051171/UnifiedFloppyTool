@@ -72,6 +72,58 @@ set(EXCLUDED_TESTS
 #       The twins are deleted, the includes point at the real headers.
 
 # Create test executables
+# ==========================================================================
+# Was der Format-Layer ausser sich selbst braucht  (MF-661)
+#
+# Diese Liste stand bis MF-661 nur im C-Zweig fuer test_disk_open_fuzz &
+# Co. Der Qt-Test test_format_tab_capability_gating braucht dieselbe
+# Menge, weil er den Format-Tab samt Registry antreibt.
+#
+# Sie ist herausgezogen und NICHT kopiert — der Kommentar im C-Zweig
+# sagt den Grund selbst: "eine zweite, eigene Liste waere eine zweite
+# Wahrheit ueber dieselbe Sache; sie wuerde driften."
+# ==========================================================================
+set(UFT_FORMAT_LAYER_DEPS
+            # what the format layer calls out to
+            # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
+            # gemeinsame Liste, nicht in einen Sonderzweig.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c
+    )
+
+# Die Plugins inkludieren ihre Header unqualifiziert ("uft_dms.h").
+set(UFT_FORMAT_LAYER_INCLUDES
+    ${CMAKE_SOURCE_DIR}/include/uft/detect
+    ${CMAKE_SOURCE_DIR}/include/uft/formats
+    ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+    ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+    ${CMAKE_SOURCE_DIR}/include/uft/flux
+    ${CMAKE_SOURCE_DIR}/include/uft/fs
+    )
+
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     
@@ -954,34 +1006,7 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE ALL_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
-            # what the format layer calls out to
-            # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
-            # gemeinsame Liste, nicht in einen Sonderzweig.
-            ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+            ${UFT_FORMAT_LAYER_DEPS})
         # the plugins include their headers unqualified ("uft_dms.h")
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -2473,11 +2498,6 @@ if(TARGET Qt6::Test)
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/forms
                 ${CMAKE_SOURCE_DIR}/src/gui
-                ${CMAKE_SOURCE_DIR}/include/uft/detect
-                ${CMAKE_SOURCE_DIR}/include/uft/formats
-                ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
-                ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
-                ${CMAKE_SOURCE_DIR}/include/uft/flux
                 ${CMAKE_SOURCE_DIR}/include/uft/fs)
             # Die Format-Quellen erwarten die Pfade, die uft_core PUBLIC
             # exportiert (include/uft, include/uft/core, .../compat).
@@ -2487,6 +2507,33 @@ if(TARGET Qt6::Test)
         # MF-631 (SCOUT-F2 Stufe 1): das Fluss-Visualisierungs-Widget wird
         # in keiner GUI instanziiert (MF-630) und war damit nie ausgefuehrt.
         # Der Test treibt es kopflos an, bevor es verdrahtet wird.
+        # MF-661 (Stufe 2): der Format-Tab blendet Bedienelemente nach dem
+        # Faehigkeits-Manifest des Plugins aus. Der Test setzt das
+        # Auswahlfeld — also den Weg, den ein Benutzer nimmt — und liest
+        # danach die Sichtbarkeit der echten Widgets. Braucht deshalb den
+        # ganzen Tab samt Format-Registry.
+        if(${qt_test_name} STREQUAL "test_format_tab_capability_gating")
+            file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/formattab.cpp
+                ${CMAKE_SOURCE_DIR}/src/advanceddialogs.cpp
+                ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
+                ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c
+                ${CAPGATE_FORMAT_SOURCES}
+                ${UFT_FORMAT_LAYER_DEPS})
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src
+                ${CMAKE_SOURCE_DIR}/include/uft/detect
+                ${CMAKE_SOURCE_DIR}/include/uft/formats
+                ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+                ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+                ${CMAKE_SOURCE_DIR}/include/uft/flux
+                ${UFT_FORMAT_LAYER_INCLUDES})
+            target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
+        endif()
+
         if(${qt_test_name} STREQUAL "test_flux_visualizer")
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/widgets/fluxvisualizerwidget.cpp)

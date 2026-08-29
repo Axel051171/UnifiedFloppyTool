@@ -221,6 +221,21 @@ private:
     void populateSystemCombo();
     void populateVersionsForFormat(const QString& format);
     void updateFormatSpecificOptions(const QString& format);
+
+    /**
+     * @brief Bedienelemente nach dem Faehigkeits-Manifest des Plugins zeigen
+     *        oder ausblenden (MF-661).
+     *
+     * Quelle ist `uft_plugin_control_visibility()` — also das, was das
+     * Plugin ueber SICH SELBST sagt, nicht die handgepflegte Tabelle
+     * `m_formatInfo`. Die beiden widersprechen sich an fuenf Stellen
+     * gemessen (MF-660); fuer ein Bedienelement gilt das Plugin.
+     *
+     * Findet sich kein Plugin zum Namen, wird NICHTS ausgeblendet.
+     * Auf Unwissen zu verstecken naehme dem Benutzer Funktion wegen
+     * eines Nachschlagefehlers von uns.
+     */
+    void applyPluginCapabilities(const QString& format);
     void syncProtectionWidgets(bool detectAll);
     void updatePLLOptions(bool enabled);
     void updateFluxOptions(bool isFluxFormat);
