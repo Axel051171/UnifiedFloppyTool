@@ -18,6 +18,15 @@ public:
     // Load image for analysis
     void loadImage(const QString &filename);
 
+    /**
+     * @brief Kodierung und Variante, wie das PLUGIN sie meldet (MF-662).
+     *
+     * Liefert "nicht ermittelt", wenn das Plugin schweigt — nie einen
+     * Rateschluss aus Dateigröße oder Endung. Bis MF-662 stand hier
+     * fest "ISO MFM", für jedes Format.
+     */
+    QString formatBeschreibung(const struct uft_disk *disk);
+
 private slots:
     void onTrackChanged(int track);
     void onSideChanged(int side);

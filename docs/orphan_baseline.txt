@@ -258,3 +258,20 @@ src/recovery/uft_forensic_track.c
 src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 
+
+# ANKER: docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md Stufe 3
+#   (die Fenster zeigt Kodierung und Variante an; ohne Tuer sieht sie
+#    niemand — die Verdrahtung gehoert zu dieser Stufe oder das Fenster
+#    faellt)
+#
+# Gefunden bei MF-662, und zwar unfreiwillig: ich habe die Anzeige
+# dieses Fensters repariert (das feste "ISO MFM" durch das ersetzt, was
+# das Plugin sagt) — und dabei gemeldet bekommen, dass es NIEMAND
+# oeffnet. Gemessen: die einzige Nennung von `DiskAnalyzerWindow`
+# ausserhalb seiner eigenen Dateien ist ein KOMMENTAR in
+# src/main.cpp:31. Gebaut wird es (UnifiedFloppyTool.pro:291/367),
+# erreichbar ist es nicht.
+#
+# Das ist ein "Koennen im Baum, Zugang fehlt"-Fall in seiner groessten
+# Form bisher: kein Modul, sondern ein ganzes Fenster.
+src/diskanalyzerwindow.cpp

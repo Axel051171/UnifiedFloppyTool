@@ -62,6 +62,57 @@ DiskAnalyzerWindow::~DiskAnalyzerWindow()
     delete ui;
 }
 
+// ============================================================================
+// Was das Abbild ueber sich sagt  (MF-662)
+// ============================================================================
+//
+// Bis hierher stand in beiden Zweigen dieser Datei
+//
+//     ui->labelSide0Format->setText("ISO MFM");
+//
+// fest verdrahtet — fuer JEDES Format. Ein D64 ist GCR, ein Amiga-ADF ist
+// Amiga MFM, ein SD-ATR ist FM. Die Oberflaeche behauptete fuer alle
+// dasselbe, und das Plugin wusste es oft besser: HFE, G64 und SCP
+// beantworten read_metadata("encoding"), HFE zusaetzlich "version" (die
+// Variante).
+//
+// Dieselbe Fehlerklasse wie die HFE-Interface-Tabelle (MF-659): eine
+// Aussage ueber das Medium, die niemand gemessen hat.
+//
+// Die Regel dahinter steht in docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md und
+// ist nicht verhandelbar: wer nichts weiss, schreibt "nicht ermittelt" —
+// nie etwas Geratenes. Aus Dateigroesse oder Endung eine Kodierung zu
+// erschliessen waere die Fabrikations-Klasse FMT-2/3/10/11/12 in der
+// Oberflaeche.
+
+namespace {
+
+/* Der Wert zu einem Schluessel, oder ein leerer QString wenn das Plugin
+ * schweigt. Die Unterscheidung "kein Plugin" / "kein read_metadata" /
+ * "kein Wert" faellt bewusst zusammen — sie hat dieselbe Folge. */
+QString metadatum(const uft_disk_t *disk, const char *key)
+{
+    char buf[128];
+    if (!uft_disk_metadata(disk, key, buf, sizeof(buf))) return QString();
+    return QString::fromUtf8(buf).trimmed();
+}
+
+} // namespace
+
+QString DiskAnalyzerWindow::formatBeschreibung(const uft_disk_t *disk)
+{
+    const QString kodierung = metadatum(disk, "encoding");
+    const QString variante   = metadatum(disk, "version");
+
+    if (kodierung.isEmpty() && variante.isEmpty()) {
+        // Kein Rateschluss. Das Plugin sagt nichts, also sagen wir das.
+        return tr("nicht ermittelt");
+    }
+    if (variante.isEmpty())  return kodierung;
+    if (kodierung.isEmpty()) return variante;
+    return QStringLiteral("%1 · %2").arg(kodierung, variante);
+}
+
 void DiskAnalyzerWindow::loadImage(const QString &filename)
 {
     m_currentFile = filename;
@@ -99,14 +150,22 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
         int side0Sectors = totalTracks * sectorsPerTrack;
         int side1Sectors = (sides > 1) ? totalTracks * sectorsPerTrack : 0;
 
-        ui->labelSide0Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
+        // MF-662: In diesem Zweig konnte KEIN Plugin die Datei oeffnen.
+        // Die Geometrie darueber ist aus der Dateigroesse GESCHAETZT
+        // (512 B/Sektor, 2 Seiten, 18 Sektoren — feste Annahmen), und ueber
+        // die Kodierung ist gar nichts bekannt. Frueher stand hier trotzdem
+        // "ISO MFM". Eine Schaetzung als Messung auszugeben ist genau die
+        // Fehlerklasse, gegen die dieses Werkzeug gebaut ist.
+        ui->labelSide0Info->setText(tr("%1 Tracks, %2 Sectors, %3 Bytes "
+                                       "(geschätzt aus der Dateigröße)")
             .arg(totalTracks).arg(side0Sectors).arg(side0Sectors * sectorSize));
-        ui->labelSide0Format->setText("ISO MFM");
+        ui->labelSide0Format->setText(tr("nicht ermittelt"));
 
         if (sides > 1) {
-            ui->labelSide1Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
+            ui->labelSide1Info->setText(tr("%1 Tracks, %2 Sectors, %3 Bytes "
+                                           "(geschätzt aus der Dateigröße)")
                 .arg(totalTracks).arg(side1Sectors).arg(side1Sectors * sectorSize));
-            ui->labelSide1Format->setText("ISO MFM");
+            ui->labelSide1Format->setText(tr("nicht ermittelt"));
         } else {
             ui->labelSide1Info->setText("N/A");
             ui->labelSide1Format->setText("-");
@@ -142,14 +201,17 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
     int side0Sectors = geom.cylinders * geom.sectors;
     int side1Sectors = (geom.heads > 1) ? geom.cylinders * geom.sectors : 0;
 
+    // MF-662: was das Plugin sagt, nicht was wir annehmen.
+    const QString beschreibung = formatBeschreibung(disk);
+
     ui->labelSide0Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
         .arg(geom.cylinders).arg(side0Sectors).arg(side0Sectors * geom.sector_size));
-    ui->labelSide0Format->setText("ISO MFM");
+    ui->labelSide0Format->setText(beschreibung);
 
     if (geom.heads > 1) {
         ui->labelSide1Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
             .arg(geom.cylinders).arg(side1Sectors).arg(side1Sectors * geom.sector_size));
-        ui->labelSide1Format->setText("ISO MFM");
+        ui->labelSide1Format->setText(beschreibung);
     } else {
         ui->labelSide1Info->setText("N/A");
         ui->labelSide1Format->setText("-");

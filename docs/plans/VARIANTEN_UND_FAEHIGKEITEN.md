@@ -213,7 +213,57 @@ Plugin, das keine Variante meldet, führt zu **„nicht ermittelt"** — nie
 zu einer geratenen. Ein erfundener Variantenname wäre exakt die
 Fabrikations-Klasse aus FMT-2/3/10/11/12, nur in der Oberfläche.
 
-**Aufwand:** S für (a), M für (b).
+### ✅ Gebaut (MF-662) — Weg (a), mit einem unfreiwilligen Fund
+
+`uft_disk_metadata()` in `src/core/uft_disk_metadata.c` fragt das Plugin
+und **fasst die drei Arten des Nichtwissens zusammen**: kein Plugin,
+kein `read_metadata`, kein Wert. Alle drei liefern `false` und einen
+LEEREN Puffer — wer den Rückgabewert übersieht, zeigt dann nichts statt
+Speichermüll.
+
+**Der Anlass war schlimmer als erwartet.** `diskanalyzerwindow.cpp`
+schrieb `labelSide0Format` **fest** auf `"ISO MFM"` — in **beiden**
+Zweigen, für **jedes** Format. Ein D64 ist GCR, ein Amiga-ADF ist Amiga
+MFM, ein SD-ATR ist FM. Dieselbe Fehlerklasse wie die
+HFE-Interface-Tabelle aus MF-659: eine Aussage über das Medium, die
+niemand gemessen hat.
+
+Der Rückfallzweig war noch eine Stufe schlimmer: dort ist die Geometrie
+aus der Dateigröße **geschätzt** (feste 512 B/Sektor, 2 Seiten, 18
+Sektoren) — und wurde ohne Kennzeichnung angezeigt. Jetzt steht
+„(geschätzt aus der Dateigröße)" daran und die Kodierung heißt
+„nicht ermittelt".
+
+Gemessen am echten Pfad (`tests/test_disk_metadata_variant.c`):
+
+    version   -> "HFEv1"
+    encoding  -> "Amiga MFM"      (nicht "ISO MFM")
+    interface -> "Amiga DD"
+    3 Plugins mit Metadaten, 134 ohne
+
+Die letzte Zahl ist der ehrliche Stand: **für die allermeisten Formate
+wird „nicht ermittelt" stehen.** Das ist der Punkt — es ist wahr, und
+das feste „ISO MFM" war es nicht.
+
+### ⚠ Der Fund, der beim Reparieren herausfiel
+
+Das Waisen-Tor meldete `src/diskanalyzerwindow.cpp` als neu verwaist.
+Nachgemessen: **niemand öffnet dieses Fenster.** Die einzige Nennung von
+`DiskAnalyzerWindow` außerhalb seiner eigenen Dateien ist ein
+**Kommentar** in `src/main.cpp:31`. Gebaut wird es
+(`UnifiedFloppyTool.pro:291/367`), erreichbar ist es nicht.
+
+Ich habe also die Anzeige eines Fensters repariert, das man nicht öffnen
+kann. Der Fix bleibt richtig — die Entscheidungslogik liegt in der
+geprüften C-Funktion, nicht im Fenster —, aber **Stufe 3 ist damit nicht
+fertig**: eine Variantenanzeige, die niemand sieht, erfüllt die Vorgabe
+nicht.
+
+Eintrag mit Anker in `docs/orphan_baseline.txt`. **Eigentümer-Entscheidung
+fällig:** verdrahten (Menüpunkt, der das Fenster öffnet) oder löschen.
+Die Verwaisten-Regel lässt kein Drittes zu.
+
+**Aufwand war S** für (a). Der Fund kostet extra.
 
 ---
 

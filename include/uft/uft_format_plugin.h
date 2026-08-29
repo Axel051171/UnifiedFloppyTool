@@ -819,6 +819,37 @@ bool uft_plugin_declares_feature(const uft_format_plugin_t* plugin,
 uft_control_visibility_t uft_plugin_control_visibility(
         const uft_format_plugin_t* plugin, const char* feature);
 
+/* ==========================================================================
+ * Metadaten eines GEOEFFNETEN Abbilds (MF-662)
+ *
+ * Stufe 3 aus docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md: beim Laden soll
+ * UFT erkennen, welche VARIANTE vorliegt, und sie anzeigen.
+ *
+ * Umsetzung: src/core/uft_disk_metadata.c
+ * ========================================================================== */
+
+/**
+ * @brief Fragt das Plugin nach einem Metadaten-Schluessel.
+ *
+ * Bekannte Schluessel (je nach Plugin): "version" (die VARIANTE),
+ * "encoding", "interface", "rpm", "bitrate", "tracks", "volume_name",
+ * "filesystem", "write_protected", "weak_regions".
+ *
+ * @param out      erhaelt den Wert; bei jedem Misserfolg der LEERE String,
+ *                 nie undefinierter Inhalt
+ * @return true nur, wenn das Plugin wirklich etwas geantwortet hat
+ *
+ * Ein `false` heisst "weiss ich nicht" — der Aufrufer schreibt dann
+ * "nicht ermittelt" und rät NICHT. Aus Dateigroesse oder Endung eine
+ * Variante zu erschliessen waere die Fabrikations-Klasse
+ * FMT-2/3/10/11/12 in der Oberflaeche.
+ */
+bool uft_disk_metadata(const uft_disk_t* disk, const char* key,
+                       char* out, size_t out_len);
+
+/** @brief Bietet das Plugin dieses Abbilds ueberhaupt Metadaten an? */
+bool uft_disk_has_metadata(const uft_disk_t* disk);
+
 
 /**
  * @brief Plugin über seinen eindeutigen Namen finden ("D64", "XFD", ...)
