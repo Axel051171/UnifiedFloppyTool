@@ -90,10 +90,8 @@ multiread_config_t multiread_config_default(void) {
         .min_passes = 3,
         .max_passes = MULTIREAD_DEFAULT_PASSES,
         .min_confidence = MULTIREAD_MIN_CONFIDENCE,
-        .majority_pct = MULTIREAD_MAJORITY_PCT,
         .adaptive_passes = true,
         .detect_weak_bits = true,
-        .generate_report = false,
         .user_data = NULL,
         .read_callback = NULL,
         .progress_callback = NULL
@@ -707,13 +705,11 @@ char *multiread_generate_report(const multiread_ctx_t *ctx,
         "  Min passes: %u\n"
         "  Max passes: %u\n"
         "  Min confidence: %u%%\n"
-        "  Majority threshold: %u%%\n"
         "  Adaptive passes: %s\n"
         "  Weak bit detection: %s\n\n",
         ctx->config.min_passes,
         ctx->config.max_passes,
         ctx->config.min_confidence,
-        ctx->config.majority_pct,
         ctx->config.adaptive_passes ? "yes" : "no",
         ctx->config.detect_weak_bits ? "yes" : "no");
     

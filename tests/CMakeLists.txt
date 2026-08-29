@@ -1203,6 +1203,12 @@ foreach(test_source ${TEST_SOURCES})
         # MF-399: real KryoFlux stream decoder instead of local constants
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+    elseif(${test_name} STREQUAL "test_vote_confidence")
+        # MF-673: prueft die Abstimm-Strenge direkt am Abstimmer — kein
+        # Korpus noetig, damit der Beweis auch in CI feuert statt sich zu
+        # ueberspringen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c)
     elseif(${test_name} STREQUAL "test_recovery")
         # MF-397: real CRC-16 + single-bit correction instead of local copies
         target_sources(${test_name} PRIVATE

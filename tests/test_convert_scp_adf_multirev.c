@@ -195,6 +195,24 @@ static uft_error_t convert(const char *scp, const char *adf_out,
     return rc;
 }
 
+/* Dieselbe Wandlung, aber mit waehlbarer Abstimm-Strenge (MF-673).
+ *
+ * Der Helfer daneben laesst `decode_vote_confidence_pct` bei 0 — also bei
+ * der Vorgabe des Abstimmers. Hier wird sie gesetzt, damit der Weg von
+ * der oeffentlichen Option bis in `multiread_config_t` belegt ist und
+ * nicht nur behauptet. */
+static uft_error_t convert_strict(const char *scp, const char *adf_out,
+                                  double strenge_pct,
+                                  uft_convert_result_t *res)
+{
+    uft_convert_options_t o = uft_convert_default_options();
+    o.use_multiple_revs = true;
+    o.accept_data_loss = true;
+    o.decode_vote_confidence_pct = strenge_pct;
+    memset(res, 0, sizeof(*res));
+    return uft_convert_file(scp, adf_out, UFT_FORMAT_ADF, &o, res);
+}
+
 static uint8_t *slurp(const char *path, size_t *len)
 {
     FILE *f = fopen(path, "rb");
@@ -483,6 +501,65 @@ TEST(a_sector_that_reads_differently_each_time_is_reported_as_weak) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Die Abstimm-Strenge kommt an (MF-673)                               */
+/* ------------------------------------------------------------------ */
+
+TEST(the_vote_strictness_reaches_the_voter) {
+    /* Derselbe Aufbau wie beim wackelnden Sektor: drei Umdrehungen, drei
+     * verschiedene Inhalte in Sektor 7. Genau dort entscheidet die
+     * Schwelle, ob der Sektor als wiederhergestellt GILT — die Daten
+     * selbst aendert sie nie.
+     *
+     * Warum dieser Test hier steht und nicht in test_vote_confidence.c:
+     * jener prueft den Abstimmer unmittelbar und beweist, dass der
+     * Mechanismus antwortet. Er sagt aber nichts darueber, ob der Wert
+     * aus `uft_convert_options_t` je dort ankommt. Diese Datei erzeugt
+     * ihre SCP-Abbilder selbst, braucht also kein Korpus — der Weg laesst
+     * sich vollstaendig und in CI belegen, statt sich zu ueberspringen. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    sector_defect_t d0 = { 7, true, 0x11 };
+    sector_defect_t d1 = { 7, true, 0x22 };
+    sector_defect_t d2 = { 7, true, 0x33 };
+    const sector_defect_t *per_rev[3] = { &d0, &d1, &d2 };
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "strict.scp");
+    get_temp_path(out, sizeof(out), "strict.adf");
+    ASSERT(write_scp(scp, adf, 3, per_rev) == 0);
+
+    /* Ausserhalb 50…100: NICHT angewandt, und gesagt. Still
+     * zurueckzufallen waere die schlimmere Haelfte — der Benutzer glaubt
+     * dann, seine Zahl habe gewirkt. */
+    uft_convert_result_t wild;
+    ASSERT(convert_strict(scp, out, 400.0, &wild) == UFT_OK);
+    if (!warned_about(&wild, "Abstimm-Strenge")) dump_warnings(&wild);
+    ASSERT(warned_about(&wild, "Abstimm-Strenge"));
+
+    /* Innerhalb: keine Warnung. Ein gueltiger Wert darf sich nicht
+     * beschweren. */
+    uft_convert_result_t ok;
+    ASSERT(convert_strict(scp, out, 90.0, &ok) == UFT_OK);
+    ASSERT(!warned_about(&ok, "Abstimm-Strenge"));
+
+    /* Und die Daten bleiben, was sie sind. Die Strenge aendert die
+     * Aussage ueber einen Sektor, nicht seinen Inhalt — sonst waere sie
+     * ein stiller Datenveraenderer, und das verbietet Prinzip 1. */
+    size_t len_streng = 0, len_locker = 0;
+    uint8_t *streng = slurp(out, &len_streng);
+    uft_convert_result_t weich;
+    ASSERT(convert_strict(scp, out, 50.0, &weich) == UFT_OK);
+    uint8_t *locker = slurp(out, &len_locker);
+    ASSERT(streng != NULL && locker != NULL);
+    ASSERT(len_streng == ADF_SIZE && len_locker == ADF_SIZE);
+    ASSERT(memcmp(streng, locker, ADF_SIZE) == 0);
+
+    free(streng); free(locker); free(adf);
+    remove(scp); remove(out);
+}
+
+/* ------------------------------------------------------------------ */
 /* Wo der Schaden auf der Umdrehung sitzt (MF-501)                     */
 /* ------------------------------------------------------------------ */
 
@@ -603,6 +680,7 @@ int main(void)
     RUN(a_sector_broken_in_revolution_zero_is_recovered_from_the_others);
     RUN(a_stable_crc_error_is_reported_as_copy_protection);
     RUN(a_sector_that_reads_differently_each_time_is_reported_as_weak);
+    RUN(the_vote_strictness_reaches_the_voter);
 
     /* MF-501: die Ortsangabe erreicht den Menschen */
     RUN(damage_is_reported_with_its_place_on_the_revolution);

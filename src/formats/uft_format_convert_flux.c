@@ -107,6 +107,53 @@ typedef struct {
     int     count;
 } uftc_d64_votes_t;
 
+/* Die Abstimm-Einstellungen fuer eine Spur mit mehreren Umdrehungen.
+ *
+ * ── Warum das eine Funktion ist (MF-673) ────────────────────────────────
+ *
+ * Zwei Stellen in dieser Datei stimmen ab — die D64-Seite und die
+ * ADF-Seite — und beide bauten ihre `multiread_config_t` selbst, mit
+ * denselben zwei Zeilen daneben. Das ist die Aufzaehlungs-Falle im
+ * Anfangsstadium: noch stimmen die Kopien ueberein, und genau so fing es
+ * bei `otdr_track_analyze()` an, wo am Ende eine von vier abwich
+ * (MF-671). Ein Anwender, zwei Aufrufer.
+ *
+ * ── Was eingestellt wird und was nicht ──────────────────────────────────
+ *
+ * `min_confidence` ist die einzige Groesse dieser Struktur, die das
+ * Ergebnis aendert (`uft_multiread_pipeline.c:520`). Gemessen: von den
+ * uebrigen entschied `majority_pct` trotz seines Namens nichts — es kam
+ * im ganzen Baum nur in einem BERICHTSTEXT vor, der es "Majority
+ * threshold" nannte. Es ist mit MF-673 entfernt, nicht verdrahtet; ein
+ * Regler darauf waere eine Zusage ohne Deckung gewesen.
+ *
+ * `min_passes = 1`, weil die Zahl der Umdrehungen aus der Datei kommt und
+ * nicht aus einer Wiederhol-Strategie: eine einzige Umdrehung heisst
+ * "keine Abstimmung moeglich", nicht "Fehler".
+ *
+ * Ausserhalb 50…100 wird der Wert NICHT angewandt, und das wird gesagt —
+ * dieselbe Drei-Zustands-Regel wie bei uftc_apply_decode_options(). */
+static multiread_config_t uftc_vote_config(
+    const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
+{
+    multiread_config_t cfg = multiread_config_default();
+    cfg.min_passes = 1;
+    cfg.detect_weak_bits = true;
+
+    if (opts && opts->decode_vote_confidence_pct > 0.0) {
+        if (opts->decode_vote_confidence_pct < 50.0 ||
+            opts->decode_vote_confidence_pct > 100.0) {
+            uftc_add_warning(result,
+                "Abstimm-Strenge %.0f%% liegt ausserhalb 50-100 und wurde "
+                "nicht angewandt", opts->decode_vote_confidence_pct);
+        } else {
+            cfg.min_confidence =
+                (uint8_t)(opts->decode_vote_confidence_pct + 0.5);
+        }
+    }
+    return cfg;
+}
+
 /**
  * Ein Sektor aus allen Umdrehungen, die ihn gelesen haben (MF-566).
  *
@@ -120,17 +167,13 @@ typedef struct {
  * @return true, wenn etwas Verwertbares herauskam
  */
 static bool uftc_d64_place_voted(const uftc_d64_votes_t* v, uint8_t* out,
-                                 multiread_class_t* cls_out)
+                                 multiread_class_t* cls_out,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result)
 {
     if (!v || v->count <= 0) return false;
 
-    multiread_config_t cfg = multiread_config_default();
-    /* Wie viele Umdrehungen es gibt, bestimmt die Datei, nicht eine
-     * Wiederhol-Strategie: min_passes = 1. Eine einzige Umdrehung heisst
-     * „keine Abstimmung moeglich", nicht „Fehler". */
-    cfg.min_passes = 1;
-    cfg.detect_weak_bits = true;
-
+    multiread_config_t cfg = uftc_vote_config(opts, result);
     multiread_ctx_t* mr = multiread_create(&cfg);
     if (!mr) return false;
 
@@ -334,7 +377,7 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
             multiread_class_t cls = MULTIREAD_CLASS_UNKNOWN;
 
             if (votes[s].count > 0 &&
-                uftc_d64_place_voted(&votes[s], voted, &cls)) {
+                uftc_d64_place_voted(&votes[s], voted, &cls, opts, result)) {
 
                 if (cls == MULTIREAD_CLASS_STABLE_GOOD) {
                     d64_set_sector(d64, track, s, voted, D64_ERR_OK);
@@ -473,16 +516,11 @@ static void uftc_adf_collect(const flux_decoded_track_t* dt,
  * @return true wenn der Sektor in @p output geschrieben wurde. */
 static bool uftc_adf_place_voted(const uftc_adf_votes_t* v,
                                  uint8_t* output, size_t off,
-                                 multiread_class_t* cls_out)
+                                 multiread_class_t* cls_out,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result)
 {
-    multiread_config_t cfg = multiread_config_default();
-    /* Wie viele Umdrehungen es gibt, bestimmt die Datei, nicht eine
-     * Wiederhol-Strategie: min_passes = 1. Eine einzige Umdrehung heisst
-     * "keine Abstimmung moeglich", nicht "Fehler" — und STABLE_GOOD bzw.
-     * STABLE_BAD_CRC sind auch ueber eine Lesung eine gueltige Aussage. */
-    cfg.min_passes = 1;
-    cfg.detect_weak_bits = true;
-
+    multiread_config_t cfg = uftc_vote_config(opts, result);
     multiread_ctx_t* mr = multiread_create(&cfg);
     if (!mr) return false;
 
@@ -1067,7 +1105,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                  * Lesung ohne gueltige Pruefsumme ueberschreibt nie gute
                  * Daten. Die Klasse sagt, warum. */
                 multiread_class_t cls = MULTIREAD_CLASS_UNKNOWN;
-                if (uftc_adf_place_voted(&votes[s], output, off, &cls)) placed++;
+                if (uftc_adf_place_voted(&votes[s], output, off, &cls, opts, result)) placed++;
                 else result->sectors_failed++;
                 if ((int)cls >= 0 && (int)cls < 5) class_counts[cls]++;
             }

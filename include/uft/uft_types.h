@@ -578,6 +578,31 @@ typedef struct uft_convert_options {
      * Wirkt nur auf Pfaden, die ein Medienprofil setzen. */
     double          decode_cell_adjust_pct;
 
+    /* Strenge der Umdrehungs-Abstimmung in Prozent, 50…100; 0 bedeutet
+     * unveraendert (der Abstimmer bleibt bei seinen 75).
+     *
+     * Was der Wert tut: liegen mehrere Umdrehungen einer Spur vor, stimmt
+     * `uft_multiread_pipeline.c` BYTEWEISE ab und rechnet je Sektor eine
+     * mittlere Konfidenz aus. Erst wenn sie diese Schwelle erreicht UND
+     * mindestens eine Lesung ihr Pruefbyte bestanden hat, gilt der Sektor
+     * als wiederhergestellt (`uft_multiread_pipeline.c:520`). Die Daten
+     * werden IMMER uebergeben — die Schwelle entscheidet nicht, was
+     * herauskommt, sondern welche Behauptung darueber aufgestellt wird.
+     *
+     * Hoeher heisst vorsichtiger: weniger Sektoren gelten als
+     * wiederhergestellt, dafuer traegt jede Zusage mehr. Niedriger heisst
+     * grosszuegiger. Fuer eine Archivierung ist hoch richtig, fuer eine
+     * Rettung von einer sterbenden Diskette eher niedrig.
+     *
+     * Wirkt nur, wo ueberhaupt abgestimmt wird — also auf Fluss-Quellen
+     * mit mehreren Umdrehungen. Eine einzelne Umdrehung oder ein
+     * Bitstrom-Abbild hat nichts abzustimmen; dann sagt der Wandler das,
+     * statt den Wert stillschweigend zu schlucken (MF-668).
+     *
+     * MF-673. Nicht zu verwechseln mit `majority_pct`, das genauso hiess
+     * und nie etwas entschied — siehe dort. */
+    double          decode_vote_confidence_pct;
+
     /* MF-484 (angehaengt, nicht eingefuegt — ABI).
      *
      * Rueckwaerts dekodieren: die Rueckseite einer Flippy-Diskette. Sie wurde

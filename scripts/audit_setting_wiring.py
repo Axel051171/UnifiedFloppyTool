@@ -77,7 +77,18 @@ GEPRUEFT = [
     ("include/uft/flux/uft_flux_decoder.h", "flux_decoder_options_t"),
     ("include/uft/uft_types.h",             "uft_convert_options_t"),
     ("include/uft/uft_format_convert.h",    "uft_convert_options_ext_t"),
+    # MF-673: der Abstimmer ist eine Einstellungs-Struktur wie die anderen.
+    # Beim Aufnehmen fand das Tor `generate_report` — einen Schalter ohne
+    # Schaltung — und bestaetigte, was von Hand schon gemessen war.
+    ("include/uft/recovery/uft_multiread_pipeline.h", "multiread_config_t"),
 ]
+
+# Was dieses Tor NICHT unterscheiden kann, und darum hier steht: ob ein
+# gelesener Wert etwas ENTSCHEIDET oder nur in einen Bericht gedruckt
+# wird. `majority_pct` hatte genau eine Lesestelle, und die war ein
+# printf, das den Wert "Majority threshold" nannte. Das Tor gab
+# Entwarnung; gefunden wurde es von Hand (MF-673). Wer hier eine Zahl
+# sieht, hat einen Hinweis, kein Urteil.
 
 # Feld -> Grund. Wer hier eintraegt, nennt auch das Ende.
 #

@@ -47,7 +47,6 @@ extern "C" {
 #define MULTIREAD_MIN_CONFIDENCE    75
 
 /** Majority threshold (percentage) */
-#define MULTIREAD_MAJORITY_PCT      66
 
 /** Maximum track size */
 #define MULTIREAD_MAX_TRACK_SIZE    32768
@@ -184,10 +183,24 @@ typedef struct {
     uint8_t     min_passes;         /**< Minimum read passes */
     uint8_t     max_passes;         /**< Maximum read passes */
     uint8_t     min_confidence;     /**< Minimum required confidence */
-    uint8_t     majority_pct;       /**< Majority vote percentage */
+
+    /* Hier standen bis MF-673 `majority_pct` und `generate_report`.
+     *
+     * `majority_pct` hiess "Majority vote percentage" und entschied
+     * nichts: im ganzen Baum kam es an genau zwei Stellen vor — der
+     * Vorbelegung und einem BERICHTSTEXT, der es "Majority threshold"
+     * nannte. `vote_byte()` nimmt die relative Mehrheit und fragt keine
+     * Schwelle. Wer eine echte Mehrheitsschwelle will, baut zuerst die
+     * Lesestelle gegen eine benannte Referenz, dann das Feld.
+     *
+     * `generate_report` war ein Schalter ohne Schaltung: der Bericht
+     * entsteht durch den ausdruecklichen Aufruf von
+     * multiread_generate_report(), nicht durch dieses Feld.
+     *
+     * Die wirksame Strenge ist @ref min_confidence — seit MF-673 von
+     * aussen einstellbar ueber uft_convert_options_t. */
     bool        adaptive_passes;    /**< Increase passes on failure */
     bool        detect_weak_bits;   /**< Enable weak bit detection */
-    bool        generate_report;    /**< Generate detailed report */
 
     /* Callbacks */
     void       *user_data;

@@ -122,6 +122,7 @@ uft_convert_options_t uft_convert_default_options(void) {
          * Rettungswerkzeug, kein Verbesserer — ein falscher Wert macht eine
          * gesunde Diskette unlesbar. Deshalb ist der Standard neutral. */
         .decode_cell_adjust_pct = 100.0,
+        .decode_vote_confidence_pct = 0.0,   /* MF-673: 0 = Abstimmer-Standard (75) */
         .interpolate_errors = true,
         /* UFT-A05: accept_data_loss intentionally LEFT UNSET (= false via
          * designated-init zero default). Forensic policy: a default-options
@@ -770,6 +771,8 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
             ext_opts.accept_data_loss = options->accept_data_loss;   /* UFT-A05 */
             ext_opts.decode_cell_adjust_pct =
                 options->decode_cell_adjust_pct;                     /* MF-480 */
+            ext_opts.decode_vote_confidence_pct =
+                options->decode_vote_confidence_pct;             /* MF-673 */
             ext_opts.target_geometry = options->target_geometry;      /* MF-482 */
             ext_opts.reverse_decode  = options->reverse_decode;       /* MF-484 */
         }

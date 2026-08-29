@@ -91,7 +91,7 @@ selbst nachgeprüft.
 | `trackStep` | `geometry.double_step` | `uft_kryoflux_dtc.c:540` | **Erfassung**, nicht Dekodierung |
 | `mergeRevs` | `use_multiple_revs` | `uft_format_convert_flux.c:964` | Fluss |
 | **neu gefunden:** Umdrehungen im ERZEUGTEN Abbild | `synthetic_revolutions` | `convert_bitstream.c:64/280`, `dispatch.c:349`, `convert_flux.c:2335` — alle vier in `scp_writer_create()` | **Ziel**, nicht Quelle |
-| **neu gefunden:** Strenge der Umdrehungs-Abstimmung | `multiread_config_t.{min_passes, majority_pct, min_confidence}` | `uft_multiread_pipeline.c` (10 Lesestellen) | Fluss |
+| ~~**neu gefunden:** Strenge der Umdrehungs-Abstimmung~~ **angeschlossen MF-673** | `multiread_config_t.min_confidence` — und nur dieses | `uft_multiread_pipeline.c:520` | Fluss |
 
 ### Die Einheiten-Falle
 
@@ -228,6 +228,42 @@ zwei Rückfallwerte — `convert_bitstream.c:65` nimmt 1 Umdrehung
 (HFE→SCP), `:281` nimmt 3 (G64→SCP). Ohne genannten Grund. Welcher der
 beiden richtig ist, sagt keine Referenz im Baum; darum benannt und
 stehen gelassen, statt eine Zahl zu raten.
+
+### MF-673 — die Abstimm-Strenge, und zwei Nachbarn die es nicht waren
+
+Wieder erst gemessen, und von sieben Feldern des Abstimmers blieb
+**eines** übrig.
+
+`min_confidence` entscheidet in `uft_multiread_pipeline.c:520`, ob ein
+Sektor als wiederhergestellt **gilt** — die Daten werden ohnehin immer
+übergeben. Genau das macht den Regler wertvoll und harmlos zugleich: er
+verstellt die Aussage, nicht den Inhalt. Für eine Archivierung ist streng
+richtig, für eine Rettung von einer sterbenden Diskette eher großzügig.
+Jetzt einstellbar als `decode_vote_confidence_pct` (50…100; 0 =
+unverändert).
+
+**Zwei Nachbarn sind gefallen, statt verdrahtet zu werden:**
+
+* `majority_pct` hieß „Majority vote percentage" und entschied nichts.
+  Zwei Vorkommen im ganzen Baum: die Vorbelegung und ein **Berichtstext**,
+  der den Wert „Majority threshold" nannte. `vote_byte()` nimmt die
+  relative Mehrheit und fragt keine Schwelle. Ein Regler darauf wäre die
+  perfekte Attrappe gewesen — ein plausibler Name über einer Zahl, die
+  in einen Bericht fließt.
+* `generate_report` war ein Schalter ohne Schaltung: der Bericht entsteht
+  durch den ausdrücklichen Aufruf von `multiread_generate_report()`.
+
+**Das Tor hat `majority_pct` nicht gefunden.** Es sah eine Lesestelle und
+gab Entwarnung — die Lesestelle war das `printf`. Ein Zähler kann nicht
+unterscheiden, ob ein Wert *entscheidet* oder nur *gedruckt* wird. Diese
+Grenze steht jetzt im Kopf des Skripts, damit die nächste Null dort nicht
+als Entwarnung gelesen wird.
+
+Nebenbei dieselbe Aufzählungs-Falle im Anfangsstadium entschärft: zwei
+Stellen in `uft_format_convert_flux.c` bauten ihre Abstimm-Konfiguration
+selbst, mit identischen Zeilen daneben. Noch stimmten die Kopien überein
+— genau so fing es bei `otdr_track_analyze()` an, wo am Ende eine von
+vier abwich. Jetzt ein Anwender, zwei Aufrufer.
 
 ## Noch ungeklärt
 

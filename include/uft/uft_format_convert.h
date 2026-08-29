@@ -142,6 +142,11 @@ typedef struct uft_convert_options_ext {
      * there. */
     double              decode_cell_adjust_pct;
 
+    /* MF-673: Strenge der Umdrehungs-Abstimmung in Prozent,
+     * 50…100; 0 = unveraendert. Derselbe Weg wie die Zeile
+     * darueber; die Begruendung steht in uft_types.h. */
+    double              decode_vote_confidence_pct;
+
     /* MF-482 (appended for ABI safety): explicit read range. 0 in a field
      * means "derive it from the source". Mirrors
      * uft_convert_options_t::target_geometry — see the rationale there. */
