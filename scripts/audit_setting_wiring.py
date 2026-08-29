@@ -208,13 +208,55 @@ def zaehle(typ: str, feld: str, dateien) -> tuple[int, int, list[str]]:
     return schreib, lies, orte
 
 
+# Trichter: Stellen, an denen eine Oberflaeche in eine Auswertung geht,
+# und die dabei eine Konfiguration mitgeben. Genau EINE Aufrufstelle je
+# Datei — sonst traegt jede eine eigene Kopie der Zuweisung, und eine
+# davon veraltet still.
+#
+# Belegt: bis MF-671 rief `uft_otdr_panel.cpp` viermal
+# `otdr_track_analyze()` auf, jedes Mal mit einer handkopierten
+# Konfigurations-Zuweisung davor. Eine der vier war bereits
+# unvollstaendig — sie setzte das Glaettungsfenster, aber nicht die
+# Kodierung. Wer eine Kodierung waehlte und DANN lud, bekam die erste
+# Spur mit "Auto" ausgewertet, waehrend der Kasten etwas anderes zeigte.
+#
+# Nachzaehlen, ob vor jeder Auswertung der Anwender steht, faellt erst
+# auf, NACHDEM jemand es vergessen hat. Ein einziger Weg kann nicht
+# vergessen werden; dieses Tor haelt fest, dass es einer bleibt.
+TRICHTER = [
+    ("src/gui/uft_otdr_panel.cpp", "otdr_track_analyze("),
+]
+
+
+def pruefe_trichter(repo: Path) -> list[str]:
+    befunde = []
+    for rel, ruf in TRICHTER:
+        p = repo / rel
+        if not p.is_file():
+            befunde.append(f"{rel}: Datei fehlt — Trichter-Regel kann nicht "
+                           f"geprueft werden (Eintrag veraltet?)")
+            continue
+        n = p.read_text(encoding="utf-8", errors="replace").count(ruf)
+        if n == 0:
+            befunde.append(f"{rel}: `{ruf}` kommt nicht mehr vor — der "
+                           f"Trichter-Eintrag ist veraltet und gehoert "
+                           f"entfernt oder korrigiert")
+        elif n > 1:
+            befunde.append(
+                f"{rel}: `{ruf}` {n}-mal aufgerufen, erlaubt ist 1. Jede "
+                f"weitere Stelle traegt ihre eigene Kopie der "
+                f"Konfigurations-Zuweisung; genau so veraltete eine von "
+                f"vieren still (MF-671).")
+    return befunde
+
+
 def check(repo: Path) -> list[str]:
     """Schnittstelle fuer `check_consistency.py`: eine Zeile je Befund."""
     dateien = quellen(repo)
     if not dateien:
         return ["audit_setting_wiring: keine Quelldateien im Blick — "
                 "das Tor kann nichts sagen"]
-    befunde = []
+    befunde = pruefe_trichter(repo)
     for hdr, typ in GEPRUEFT:
         namen = felder(repo / hdr, typ)
         if not namen:
@@ -240,6 +282,9 @@ def main() -> int:
     if not dateien:
         print("FEHLER: keine Quelldateien im Blick — Tor kann nichts sagen.")
         return 2
+
+    for z in pruefe_trichter(WURZEL):
+        print("!! Trichter: " + z)
 
     tot: list[tuple[str, str, int]] = []
     unbenutzt: list[tuple[str, str]] = []

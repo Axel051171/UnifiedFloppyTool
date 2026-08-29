@@ -52,6 +52,9 @@ UftOtdrPanel::UftOtdrPanel(QWidget *parent)
     , m_deepReadMode(nullptr)
     , m_confThreshold(nullptr)
     , m_pllTolerance(nullptr)
+    , m_pllLockThreshold(nullptr)
+    , m_weakBitCv(nullptr)
+    , m_noFluxThreshold(nullptr)
     , m_lblDeepReadStatus(nullptr)
     , m_lblDeepReadConf(nullptr)
     , m_eventTree(nullptr)
@@ -148,7 +151,57 @@ void UftOtdrPanel::setupControlPanel(QHBoxLayout *layout)
     m_smoothWindow = new QSpinBox();
     m_smoothWindow->setRange(1, 256);
     m_smoothWindow->setValue(16);
+
     layout->addWidget(m_smoothWindow);
+
+    /* ── Die drei Schwellen (MF-671) ─────────────────────────────────
+     *
+     * Alle drei haben im Kern eine Lesestelle und waren trotzdem nicht
+     * einstellbar — sie standen nur in otdr_config_defaults(). Die
+     * Grenzen unten sind die Vorgabe mal/geteilt durch etwa vier: weit
+     * genug zum Ausprobieren, eng genug, dass niemand versehentlich
+     * jede Spur als schwach markiert.
+     *
+     * Die Einheiten der Anzeige sind NICHT die des Traegers. Umgerechnet
+     * wird in applyConfigFromControls(). */
+    layout->addWidget(new QLabel("Lock:"));
+    m_pllLockThreshold = new QDoubleSpinBox();
+    m_pllLockThreshold->setRange(2.0, 40.0);
+    m_pllLockThreshold->setSingleStep(1.0);
+    m_pllLockThreshold->setDecimals(1);
+    m_pllLockThreshold->setSuffix("%");
+    m_pllLockThreshold->setValue(10.0);          /* = otdr_config_defaults */
+    m_pllLockThreshold->setToolTip(
+        "Bis zu welcher Abweichung vom Zellraster ein Abschnitt als "
+        "eingerastet gilt.\nGroesser = nachsichtiger. Wirkt auf die "
+        "Lock-Einstufung der Spuranalyse.");
+    layout->addWidget(m_pllLockThreshold);
+
+    layout->addWidget(new QLabel("Weak:"));
+    m_weakBitCv = new QDoubleSpinBox();
+    m_weakBitCv->setRange(0.02, 0.60);
+    m_weakBitCv->setSingleStep(0.01);
+    m_weakBitCv->setDecimals(2);
+    m_weakBitCv->setValue((double)OTDR_WEAK_BIT_CV);
+    m_weakBitCv->setToolTip(
+        "Streuung, ab der eine Bitzelle ueber mehrere Umdrehungen als "
+        "schwach gilt.\nAngabe als Variationskoeffizient (Streuung "
+        "geteilt durch Mittelwert), NICHT in Prozent.\nKleiner = "
+        "empfindlicher.");
+    layout->addWidget(m_weakBitCv);
+
+    layout->addWidget(new QLabel("No-Flux:"));
+    m_noFluxThreshold = new QDoubleSpinBox();
+    m_noFluxThreshold->setRange(1.5, 12.0);
+    m_noFluxThreshold->setSingleStep(0.5);
+    m_noFluxThreshold->setDecimals(1);
+    m_noFluxThreshold->setSuffix(" x");
+    m_noFluxThreshold->setValue((double)OTDR_NOFLUX_THRESHOLD);
+    m_noFluxThreshold->setToolTip(
+        "Ab welcher Luecke ein Bereich als flusslos gilt — als "
+        "VIELFACHES der Nennperiode,\nnicht in Mikrosekunden. Die "
+        "Nennperiode haengt an der Kodierung, darum ein Faktor.");
+    layout->addWidget(m_noFluxThreshold);
 
     layout->addStretch();
 
@@ -387,10 +440,8 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     }
 
     m_disk->rpm = 300;
-    m_config.smooth_window = (uint32_t)m_smoothWindow->value();
-
     if (m_disk->track_count > 0 && m_disk->tracks[0].flux_count > 0)
-        otdr_track_analyze(&m_disk->tracks[0], &m_config);
+        analyzeWithCurrentConfig(&m_disk->tracks[0]);
 
     m_otdrWidget->setDisk(m_disk);
     populateTrackCombo();
@@ -423,13 +474,10 @@ void UftOtdrPanel::analyzeTrack(int cylinder, int head)
 
     setCursor(Qt::WaitCursor);
 
-    m_config.encoding = (otdr_encoding_t)m_encodingCombo->currentData().toInt();
-    m_config.smooth_window = (uint32_t)m_smoothWindow->value();
-
     m_statusLabel->setText(QString("Analyzing C%1:H%2...").arg(cylinder).arg(head));
     QApplication::processEvents();
 
-    otdr_track_analyze(trk, &m_config);
+    analyzeWithCurrentConfig(trk);
     m_otdrWidget->selectTrack((uint16_t)idx);
     m_currentTrack = idx;
     updateEventTable();
@@ -499,14 +547,15 @@ void UftOtdrPanel::analyzeFullDisk()
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, (int)m_disk->track_count);
 
-    m_config.encoding = (otdr_encoding_t)m_encodingCombo->currentData().toInt();
-    m_config.smooth_window = (uint32_t)m_smoothWindow->value();
+    /* Die Waermekarte ist keine Oberflaechen-Einstellung, sondern eine
+     * Eigenschaft DIESES Laufs — sie steht darum hier und nicht im
+     * Anwender. Der Anwender laeuft gleich danach je Spur im Trichter. */
     m_config.generate_heatmap = true;
     m_config.heatmap_resolution = 1024;
 
     for (uint16_t t = 0; t < m_disk->track_count; t++) {
         if (m_disk->tracks[t].flux_count > 0)
-            otdr_track_analyze(&m_disk->tracks[t], &m_config);
+            analyzeWithCurrentConfig(&m_disk->tracks[t]);
         m_progressBar->setValue(t + 1);
         m_statusLabel->setText(QString("Analyzing track %1/%2...")
                                 .arg(t + 1).arg(m_disk->track_count));
@@ -565,9 +614,7 @@ void UftOtdrPanel::onTrackChanged(int index)
     m_currentTrack = trackNum;
 
     if (trk->sample_count == 0 && trk->flux_count > 0) {
-        m_config.encoding = (otdr_encoding_t)m_encodingCombo->currentData().toInt();
-        m_config.smooth_window = (uint32_t)m_smoothWindow->value();
-        otdr_track_analyze(trk, &m_config);
+        analyzeWithCurrentConfig(trk);
     }
 
     m_otdrWidget->selectTrack((uint16_t)trackNum);
@@ -701,6 +748,50 @@ void UftOtdrPanel::saveDeepReadSettings()
 /* ═══════════════════════════════════════════════════════════════════════
  * Display Updates
  * ═══════════════════════════════════════════════════════════════════════ */
+
+/* Alle von der Oberflaeche gesteuerten Werte in m_config — an EINER
+ * Stelle. Begruendung im Header. */
+void UftOtdrPanel::applyConfigFromControls()
+{
+    if (m_encodingCombo)
+        m_config.encoding =
+            (otdr_encoding_t)m_encodingCombo->currentData().toInt();
+    if (m_smoothWindow)
+        m_config.smooth_window = (uint32_t)m_smoothWindow->value();
+
+    /* Hier steht die Einheiten-Umrechnung, und nur hier.
+     *
+     * `pll_lock_threshold` rechnet selbst in Prozent (floppy_otdr.c:578
+     * vergleicht gegen `deviation_pct`) — der Regler zeigt Prozent, es
+     * gibt nichts umzurechnen.
+     *
+     * `weak_bit_cv` ist ein Variationskoeffizient, KEIN Prozentwert. Der
+     * Regler zeigt ihn darum auch als Koeffizient. Ein Prozent-Regler
+     * daneben waere die naechste stille Falschaussage gewesen: 15 % und
+     * 0.15 sehen im Dialog gleich plausibel aus und bedeuten dasselbe
+     * nur zufaellig.
+     *
+     * `noflux_threshold` ist ein VIELFACHES der Nennperiode
+     * (floppy_otdr.c:514: `t2 * cfg->noflux_threshold`), nicht eine
+     * Zeit. Die Nennperiode haengt an der Kodierung — ein µs-Regler
+     * waere bei jedem Kodierungswechsel falsch geworden.
+     *
+     * Siehe docs/SETTINGS_ROADMAP.md §Einheiten-Falle. */
+    if (m_pllLockThreshold)
+        m_config.pll_lock_threshold = m_pllLockThreshold->value();
+    if (m_weakBitCv)
+        m_config.weak_bit_cv = (float)m_weakBitCv->value();
+    if (m_noFluxThreshold)
+        m_config.noflux_threshold = (float)m_noFluxThreshold->value();
+}
+
+/* Der einzige Weg in die Spuranalyse. Begruendung im Header. */
+void UftOtdrPanel::analyzeWithCurrentConfig(otdr_track_t *track)
+{
+    if (!track) return;
+    applyConfigFromControls();
+    otdr_track_analyze(track, &m_config);
+}
 
 void UftOtdrPanel::populateTrackCombo()
 {

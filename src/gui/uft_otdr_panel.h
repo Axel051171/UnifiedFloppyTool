@@ -158,6 +158,33 @@ private:
     void updateProvenanceDisplay();
     void updateDeepReadStats(uint32_t sectors_improved, uint32_t sectors_attempted,
                              bool used_otdr, float avg_quality);
+    /* Traegt ALLE von der Oberflaeche gesteuerten Werte in m_config ein.
+     *
+     * Vor MF-671 stand diese Zuweisung viermal im Quelltext, je einmal vor
+     * einem otdr_track_analyze()-Aufruf — und eine der vier war bereits
+     * unvollstaendig: die erste Auswertung nach dem Laden setzte
+     * `smooth_window`, aber nicht `encoding`. Wer eine Kodierung waehlte
+     * und DANN lud, bekam die erste Spur mit "Auto" ausgewertet, waehrend
+     * der Kasten etwas anderes zeigte.
+     *
+     * Das ist dieselbe Aufzaehlungs-Falle, die in diesem Baum achtmal
+     * zugeschnappt ist (CLAUDE.md §Dateimengen; MF-668 zuletzt). Ein
+     * Anwender, vier Aufrufer: der fuenfte Auswertungsweg, den jemand
+     * anlegt, kann es nicht mehr vergessen, ohne dass es auffaellt —
+     * `scripts/audit_otdr_apply.py` zaehlt beide Seiten gegeneinander. */
+    void applyConfigFromControls();
+
+    /* Der EINZIGE Weg von diesem Panel in die Spuranalyse.
+     *
+     * Vor MF-671 riefen vier Stellen `otdr_track_analyze()` selbst auf und
+     * trugen je eine Kopie der Konfigurations-Zuweisung davor — eine der
+     * vier bereits unvollstaendig. Ein Trichter kann nicht vergessen
+     * werden; nachzuzaehlen, ob jemand ihn vergessen hat, faellt erst auf,
+     * NACHDEM es passiert ist.
+     *
+     * `scripts/audit_setting_wiring.py` haelt fest, dass es bei einem Weg
+     * bleibt. */
+    void analyzeWithCurrentConfig(otdr_track_t *track);
     void populateTrackCombo();
     void freeCurrentAnalysis();
     void loadDeepReadSettings();
@@ -179,6 +206,18 @@ private:
     QPushButton         *m_analyzeAllBtn;    /**< Analyze full disk */
     QPushButton         *m_exportBtn;        /**< Export report */
     QSpinBox            *m_smoothWindow;     /**< Smoothing window size */
+
+    /* Die drei Zahlen-Schwellen der OTDR-Auswertung (MF-671).
+     *
+     * Sie standen bis dahin nur in `otdr_config_defaults()` und waren von
+     * aussen nicht erreichbar, obwohl alle drei im Kern eine Lesestelle
+     * haben. Die Einheiten der Regler sind NICHT die des Traegers —
+     * umgerechnet wird in applyConfigFromControls(), an der einen Stelle,
+     * die den Traeger setzt. Siehe docs/SETTINGS_ROADMAP.md
+     * §Einheiten-Falle. */
+    QDoubleSpinBox      *m_pllLockThreshold; /**< Lock-Schwelle in %    */
+    QDoubleSpinBox      *m_weakBitCv;        /**< Weak-Bit-Streuung, CV */
+    QDoubleSpinBox      *m_noFluxThreshold;  /**< No-Flux, x Nennperiode */
 
     /* ── DeepRead Controls ── */
     QGroupBox           *m_deepReadGroup;    /**< DeepRead collapsible group */

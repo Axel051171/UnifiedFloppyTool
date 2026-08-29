@@ -74,10 +74,10 @@ selbst nachgeprüft.
 |---|---|---|---|
 | `bitcellPeriod`, `bitCell` | `flux_decoder_options_t.bitcell_ns` | `uft_flux_decoder.c` (2 Stellen) | Fluss |
 | `pllBandwidth` | `.pll_gain` | `uft_flux_decoder.c:376` u. a. (6) | Fluss |
-| `pllLockThreshold`, `lockThreshold` | `otdr_config.pll_lock_threshold` | `floppy_otdr.c:578` | Fluss |
-| `weakBitThreshold` | `otdr_config.weak_bit_cv` | `floppy_otdr.c:705` | Fluss |
-| `weakBitDetection` | `otdr_config.detect_weak_bits` | `floppy_otdr.c:867`; **schon in der GUI** `uft_otdr_panel.cpp:623/627` | Fluss |
-| `noFluxThreshold` | `otdr_config.noflux_threshold` | `floppy_otdr.c:514/533/594` | Fluss |
+| ~~`pllLockThreshold`, `lockThreshold`~~ **angeschlossen MF-671** | `otdr_config.pll_lock_threshold` | `floppy_otdr.c:578` | Fluss |
+| ~~`weakBitThreshold`~~ **angeschlossen MF-671** | `otdr_config.weak_bit_cv` | `floppy_otdr.c:705` | Fluss |
+| ~~`weakBitDetection`~~ **war schon angeschlossen** | `otdr_config.detect_weak_bits` | `floppy_otdr.c:867`; GUI `uft_otdr_panel.cpp` | Fluss |
+| ~~`noFluxThreshold`~~ **angeschlossen MF-671** | `otdr_config.noflux_threshold` | `floppy_otdr.c:514/533/594` | Fluss |
 | `useIndex` | `flux_raw_data_t.index_times` | `uft_flux_decoder.c:263-287` | Fluss |
 | `softIndex` | `synthetic_revolutions` + `revolution_ns` | `uft_flux_decoder.c:220-228/263ff` | Fluss |
 | `gcrVariant` | `.encoding` (`FLUX_ENC_GCR_C64` / `_APPLE`) | Dispatch `uft_flux_decoder.c:1766` | Fluss |
@@ -168,11 +168,36 @@ wiederentdeckt.
 
 ---
 
+## Erledigt
+
+### MF-671 — die vier OTDR-Schwellen, erster Stapel
+
+Drei neue Regler im OTDR-Panel (`Lock:` in %, `Weak:` als
+Variationskoeffizient, `No-Flux:` als Vielfaches), der vierte war
+bereits da. Alle vier gehen jetzt durch **einen** Weg in den Kern.
+
+Beim Anschließen fiel der **neunte** Fall der Aufzählungs-Falle auf:
+`otdr_track_analyze()` wurde an vier Stellen aufgerufen, jede mit einer
+handkopierten Konfigurations-Zuweisung davor — und **eine der vier war
+schon unvollständig.** Sie setzte das Glättungsfenster, aber nicht die
+Kodierung. Wer eine Kodierung wählte und *dann* eine Diskette lud, bekam
+die erste Spur mit „Auto" ausgewertet, während der Kasten etwas anderes
+zeigte.
+
+Behoben nicht durch Nachzählen, sondern durch einen **Trichter**:
+`analyzeWithCurrentConfig()` ist der einzige Weg von diesem Panel in die
+Analyse. Nachzuzählen, ob jemand den Anwender vergessen hat, fällt erst
+auf, *nachdem* es passiert ist; ein einziger Weg kann nicht vergessen
+werden. `scripts/audit_setting_wiring.py` hält fest, dass es einer
+bleibt (Rotbeweis geführt: zweiter Aufruf → rot).
+
+Die Einheiten-Falle ist dabei ernst genommen worden — die Regler zeigen
+die Einheit ihres **Trägers**, nicht die, die die alten Dialoge
+behaupteten. `Weak:` ist ausdrücklich kein Prozentregler: 15 % und 0.15
+sehen im Dialog gleich plausibel aus und bedeuten dasselbe nur zufällig.
+
 ## Noch ungeklärt
 
-* Ob das OTDR-Panel die drei numerischen Schwellen (`pll_lock_threshold`,
-  `weak_bit_cv`, `noflux_threshold`) heute schon setzbar macht. Belegt
-  ist nur der Weak-Bit-**Schalter** (`uft_otdr_panel.cpp:623/627`).
 * **GUI-7:** der PLL-Toleranz-Regler im OTDR-Panel ist der achte Fall
   derselben Klasse — Regler → `QSettings("pllTolerance")` → Regler,
   sonst kein Leser. Sein Zielfeld ist seit MF-669 gelöscht. Entscheidung
