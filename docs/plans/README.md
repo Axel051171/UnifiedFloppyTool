@@ -49,6 +49,7 @@ Dokument, auf das sich ein Baustein berufen kann?
 | FreeDOS-FORMAT | [`FDOS_FORMAT.md`](FDOS_FORMAT.md) | **ja** (seit MF-643) |
 | Tore-Bündel (Eigentümer-Entscheidungen) | [`TORE_BUENDEL.md`](TORE_BUENDEL.md) | — kein Anker, sondern eine Tagesordnung |
 | Umsetzungsliste (nach Reife geordnet) | [`UMSETZUNGSLISTE.md`](UMSETZUNGSLISTE.md) | — kein Anker, sondern eine Reihenfolge |
+| Varianten + Fähigkeits-Anzeige | [`VARIANTEN_UND_FAEHIGKEITEN.md`](VARIANTEN_UND_FAEHIGKEITEN.md) | **ja** (seit MF-657) |
 
 **Das Register ist damit vollständig.** Alle zuvor fehlenden Pläne
 liegen im Baum; jeder Baustein kann sich auf ein auffindbares Dokument
