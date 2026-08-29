@@ -1,0 +1,21 @@
+{
+  "_zweck": "Der NENNER fuer die Scout-Arbeit. Was hier steht, ist beauftragt; scripts/scout_stand.py vergleicht es gegen das, was in out/ angekommen ist. Ohne diese Datei laesst sich 'alles abgearbeitet?' nicht beantworten - man kann nur zaehlen, was da ist, und das klingt immer nach Vollstaendigkeit (SCOUT-25, MF-675).",
+  "_regel": "Wer eine Liste uebergibt, traegt sie hier ein, BEVOR der Scout laeuft. Ein Auftrag, der nur im Gespraech steht, ist fuer die naechste Sitzung nicht mehr befragbar.",
+  "_felder": {
+    "name": "muss dem Klon-Verzeichnis in work/ und dem Gutachten-Namen in out/ entsprechen, sonst findet scout_stand.py die Zuordnung nicht",
+    "url": "Quelle, wie uebergeben",
+    "beauftragt": "Datum der Uebergabe",
+    "auftraggeber": "wer es eingereicht hat",
+    "notiz": "warum es interessant schien - die ERWARTUNG, damit spaeter sichtbar ist, ob sie sich bestaetigt hat"
+  },
+  "_rueckstand": "Die vor MF-675 uebergebenen Listen (rund 32 URLs, plus eine zweite Runde) stehen NICHT hier. Sie sind nicht rekonstruierbar, ohne zu raten: die URLs standen nur im Gespraechsverlauf, und aus den 31 Klonen auf die Auftragsliste zu schliessen hiesse, die Antwort aus der Frage abzuleiten. Was zu jenen Listen messbar ist, sagt scripts/scout_stand.py; was daran offen bleibt, steht als SCOUT-25 in docs/OPEN_ITEMS.md.",
+  "eintraege": [
+    {
+      "name": "gwnbd",
+      "url": "https://github.com/N0t4R0b0t/gwnbd.git",
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Vermutung bei der Uebergabe: Greaseweazle + NBD, also eine Diskette als Blockgeraet einhaengen statt sie erst in ein Abbild zu kopieren. Das waere eine Betriebsart, die UFT nicht hat. Besonders interessant ist die Fehlerfrage: ein Blockgeraet MUSS auf jeden Lesezugriff etwas zurueckgeben, waehrend 'Keine erfundenen Daten' uns die bequeme Antwort verbietet. Was dort bei einem unlesbaren Sektor passiert, ist entweder ein Fund oder ein lehrreiches Gegenbeispiel."
+    }
+  ]
+}

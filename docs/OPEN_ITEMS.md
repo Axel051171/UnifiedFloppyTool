@@ -3409,12 +3409,21 @@ liegt — keine gepflegte Aufzählung, dieselbe Regel wie `repo_scope.py`.
 Es sagt **ausdrücklich**, dass der Nenner fehlt, statt eine
 Vollständigkeit zu suggerieren.
 
-### Offen: die Auftragsliste
+### Teilweise geschlossen (MF-676): die Auftragsliste existiert
 
-`tools/uft-scout/data/auftraege.json` existiert nicht. Solange sie
-fehlt, bleibt „alles abgearbeitet?" unbeantwortbar — und zwar
-**dauerhaft**, denn der Gesprächsverlauf einer Sitzung ist keine Quelle,
-die eine spätere Sitzung befragen kann.
+`tools/uft-scout/data/auftraege.json` ist angelegt und trägt ihren
+ersten Eintrag (`gwnbd`, übergeben 2026-08-29). `scout_stand.py` zeigt
+seither eine Zeile „beauftragt / davon noch offen" — **ab jetzt** ist
+die Frage also beantwortbar.
+
+Die Datei hält je Auftrag auch die **Erwartung** fest, mit der er
+übergeben wurde. Das ist Absicht: nur so lässt sich später sagen, ob
+sich eine Vermutung bestätigt hat, statt das Ergebnis rückwirkend zur
+Absicht zu erklären.
+
+**Der Rückstand bleibt offen.** Die vor MF-675 übergebenen Listen stehen
+nicht darin und werden es nicht: der Gesprächsverlauf einer Sitzung ist
+keine Quelle, die eine spätere Sitzung befragen kann.
 
 Sie lässt sich nicht rückwirkend rekonstruieren, ohne zu raten: die
 eingereichten URLs stehen nirgends im Baum, und aus 31 Klonen auf die
