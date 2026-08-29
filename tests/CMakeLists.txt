@@ -209,6 +209,15 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_geometry_zones")
         # Phase-0 geometry: D64 GCR zoned per-track sector counts (MF-337)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_acorn_adfs_identity")
+        # .adl ist ADFS L (655360, zweiseitig), nicht ADFS M (327680,
+        # einseitig) — MF-654. Braucht BEIDE Leser, weil der Test genau
+        # ihre Uebereinstimmung prueft: solange zwei Plugins dieselbe
+        # Endung beanspruchen, darf die Registrierungsreihenfolge das
+        # Ergebnis nicht entscheiden.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/adl/uft_adl.c
+            ${CMAKE_SOURCE_DIR}/src/formats/adf_arc/uft_adf_arc.c)
     elseif(${test_name} STREQUAL "test_d64_bam_40track")
         # 40-track BAM must not read the disk name as allocation data (MF-648).
         # The test includes the parser translation unit directly, because

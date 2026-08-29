@@ -3,9 +3,23 @@
  * @brief ADF_ARC (Acorn Archimedes) Plugin
  *
  * Acorn Archimedes .adf files: headerless raw sector dumps.
- * 800K: 80 cyl × 2 heads × 5 spt × 1024 = 819200
- * 1.6M: 80 cyl × 2 heads × 10 spt × 512 (some variants)
- * ADFS-D: 80 × 2 × 16 × 256 = 655360
+ * 800K: 80 cyl × 2 heads × 5 spt × 1024 = 819200  — ADFS D/E
+ * 1.6M: 80 cyl × 2 heads × 10 spt × 512 (some variants) — ADFS F
+ *
+ * MF-654: hier stand „ADFS-D: 80 × 2 × 16 × 256 = 655360". Falsch —
+ * 655 360 ist ADFS **L**, und ADFS D misst **819 200**. Beide Zahlen
+ * am Original nachgelesen: `DiscImage_ADFS.pas:73-75` führt
+ * 163840/327680/655360 als S/M/L, und das mitgelieferte
+ * `ADFS_D.adf` misst selbst gemessen 819 200 Byte — dieselbe Zahl,
+ * die zwei Zeilen höher schon richtig stand.
+ *
+ * 655 360 ist deshalb **entfernt**: es gehört `uft_adl.c` (Endung
+ * `.adl`), und dieses Plugin hätte es falsch gelesen. ADFS L ist als
+ * einziges ADFS-Format spurverschränkt abgelegt
+ * (`DiscImage_Private.pas:547-570`, `FInterleave = 2`); die lineare
+ * Rechnung unten trifft dafür die falschen Bytes. Es geht keine
+ * Fähigkeit verloren — `uft_adl.c` führt `adl;adf` als Endungen und
+ * fängt dieselben Dateien, jetzt mit der richtigen Ablage.
  */
 #include "uft/uft_format_common.h"
 
@@ -13,7 +27,7 @@ typedef struct { FILE* file; uint8_t cyl; uint8_t heads; uint8_t spt; uint16_t s
 
 bool adf_arc_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     (void)d; (void)s;
-    if (fs == 819200 || fs == 655360 || fs == 327680 || fs == 1638400) {
+    if (fs == 819200 || fs == 327680 || fs == 1638400) {
         *c = 35; return true;
     }
     return false;
@@ -31,7 +45,6 @@ static uft_error_t adf_arc_open(uft_disk_t *disk, const char *path, bool ro) {
     p->file = f;
     switch (fs) {
         case 819200:  p->cyl=80; p->heads=2; p->spt=5;  p->ss=1024; break;
-        case 655360:  p->cyl=80; p->heads=2; p->spt=16; p->ss=256;  break;
         case 327680:  p->cyl=80; p->heads=1; p->spt=16; p->ss=256;  break;
         case 1638400: p->cyl=80; p->heads=2; p->spt=10; p->ss=1024; break;
         default: free(p); fclose(f); return UFT_ERROR_FORMAT_INVALID;

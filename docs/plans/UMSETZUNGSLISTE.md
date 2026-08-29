@@ -97,7 +97,7 @@ fehle noch. Beide Formate stehen auf T1b, das byteverwandte Korpus-Paar
 * **Muster liegt vor:** Bit-Identitäts-Messung wie MF-532/533/539
 * **Gegenprobe:** a8rawconv, heute gebaut — `ATR→XFD` byteidentisch
 
-### A4 🟢 `uft_adl.c`-Identitätsfehler beheben
+### A4 ✅ `uft_adl.c`-Identitätsfehler beheben — **erledigt (MF-654)**
 **Kennzahl: ungeprüfte Formate runter** (`adl` T3 → T2)
 
 Der Kopf behauptet „Acorn **DFS** Large … 80 × 1 × 16 × 256 = 327 680"
@@ -109,6 +109,25 @@ Fabrikations-Klasse (FMT-2/3/10/11/12).
   führt die drei Größen; das beigelegte `ADFS_L.adl` misst 655 360 Byte
 * **Rotbeweis:** ein 655 360-Byte-Abbild gegen `uft_disk_open()` → heute
   NULL
+
+**Erledigt MF-654 — und der Fehler war größer als beschrieben.**
+`tests/test_acorn_adfs_identity.c` lief mit vier Fehlschlägen an. Der
+schwerste stand nicht in der Aufgabe: `adl_open()` **öffnete** eine
+655 360-Byte-Datei und beschrieb sie mit einer Geometrie über 327 680
+Byte — die halbe Diskette, still. Dazu wiesen `read_track` und
+`write_track` Seite 1 unbedingt ab.
+
+Zweiter Befund am selben Ort: `uft_adf_arc.c` beanspruchte 655 360
+ebenfalls, nannte es „ADFS-D“ (das misst 819 200) und hätte es
+**linear** gelesen. ADFS L ist als einziges ADFS-Format
+spurverschränkt — `DiscImage_Private.pas:547-570`, `FInterleave = 2`,
+also `offset = (cyl*2 + head) * 4096`. Die Größe ist dort entfernt;
+keine Fähigkeit geht verloren, weil `uft_adl.c` dieselben Endungen
+führt und sie jetzt richtig liest.
+
+Damit ist zugleich die SCOUT-41-Frage (lineare gegen verschränkte
+Ablage) für ADFS L beantwortet — ausdrücklich **nicht** für D/E/F.
+Kennzahl: **T3 55 → 53**, T2 19 → 21. 270/270 grün.
 
 ---
 
