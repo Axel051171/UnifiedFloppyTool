@@ -208,6 +208,53 @@ typedef struct uft_gw_flux_data {
 typedef struct uft_gw_device uft_gw_device_t;
 
 /**
+ * Byteebenen-Naht: die Leitung ersetzen, nicht das Geraet (MF-686).
+ *
+ * Ohne eingespeiste Ops laeuft alles ueber den Produktionsweg. Wer hier
+ * etwas setzt, bekommt jeden Byte, den der Treiber schreiben wuerde, und
+ * liefert jeden Byte, den er zu lesen glaubt.
+ *
+ * Wozu: der Emulator modelliert die Zustandsmaschine, nicht die Leitung
+ * (`tests/emulators/greaseweazle/DIVERGENCES.md` §D-2). Damit war jede
+ * Fehlerklasse zwischen Kopfbytes und Nutzlast unpruefbar — beim einzigen
+ * Controller mit Bench-Erfahrung. Diese Naht macht sie pruefbar, ohne die
+ * erprobte Logik anzufassen.
+ *
+ * Alle drei Zeiger duerfen NULL sein; dann greift fuer die betreffende
+ * Richtung wieder der Produktionsweg.
+ */
+typedef struct {
+    /** Schreibt @p len Bytes. Gibt UFT_GW_OK oder einen UFT_GW_ERR_* zurueck. */
+    int (*write)(void* user, const uint8_t* data, size_t len);
+    /** Liest GENAU @p len Bytes oder gibt UFT_GW_ERR_TIMEOUT zurueck. */
+    int (*read_exact)(void* user, uint8_t* data, size_t len, int timeout_ms);
+    /** Liest bis zu @p max_len Bytes; @p actual sagt wie viele. */
+    int (*read_available)(void* user, uint8_t* data, size_t max_len,
+                          size_t* actual, int timeout_ms);
+    /** Wird jedem Aufruf durchgereicht. */
+    void* user;
+} uft_gw_stream_ops_t;
+
+/**
+ * Setzt (oder entfernt) die Byteebenen-Naht.
+ *
+ * @param ops NULL stellt den Produktionsweg wieder her. Der Zeiger muss
+ *            das Geraet ueberleben; er wird nicht kopiert.
+ */
+int uft_gw_set_stream_ops(uft_gw_device_t* device,
+                          const uft_gw_stream_ops_t* ops);
+
+/**
+ * Oeffnet ein Geraet, dessen Leitung eingespeist ist — fuer den
+ * Pruefstand (MF-686).
+ *
+ * Kein Port, kein Handschlag: das Geraet gilt als verbunden, jeder Byte
+ * geht durch @p ops. Freigabe wie ueblich mit @ref uft_gw_close.
+ */
+int uft_gw_open_stream(const uft_gw_stream_ops_t* ops,
+                       uft_gw_device_t** device);
+
+/**
  * @brief Progress callback for long operations
  */
 typedef void (*uft_gw_progress_cb)(void* user_data, int percent, const char* message);
@@ -374,14 +421,10 @@ int uft_gw_get_head(uft_gw_device_t* device);
  */
 bool uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin);
 
-/**
- * @brief Set output pin state
- * @param device Device handle
- * @param pin Pin number
- * @param level Pin level (true=high)
- * @return 0 on success, error code on failure
- */
-int uft_gw_set_pin(uft_gw_device_t* device, uint8_t pin, bool level);
+/* `uft_gw_set_pin()` ist mit MF-686 entfernt: null Aufrufer im ganzen
+ * Baum. Die Begruendung samt gwnbds REDWC-Messung (Pin 2 ist auf 5,25"
+ * REDWC, nicht Density-Select — 28/30 gegen 1/23 Sektoren) steht an der
+ * Stelle der frueheren Definition in src/hal/uft_greaseweazle_full.c. */
 
 /**
  * @brief Check if disk is write protected

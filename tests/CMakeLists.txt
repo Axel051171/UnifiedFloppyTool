@@ -1203,6 +1203,12 @@ foreach(test_source ${TEST_SOURCES})
         # MF-399: real KryoFlux stream decoder instead of local constants
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+    elseif(${test_name} STREQUAL "test_gw_nak_resync")
+        # MF-686: speist ueber die Byteebenen-Naht ein. Der Emulator kann
+        # das nicht — er modelliert die Zustandsmaschine, nicht die
+        # Leitung (DIVERGENCES.md D-2).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
     elseif(${test_name} STREQUAL "test_adf_directory_crosstool")
         # MF-685: der ADF-Leser gegen ein FREMD erzeugtes Abbild. Die
         # bestehenden AmigaDOS-Tests bauen synthetisch — dieser hier ist

@@ -99,6 +99,14 @@ struct uft_gw_device {
     uft_gw_delays_t delays;
     uint8_t         cmd_buf[UFT_GW_MAX_CMD_SIZE];
     uint8_t         resp_buf[UFT_GW_MAX_CMD_SIZE];
+
+    /* Byteebenen-Naht (MF-686). NULL = Produktionsweg.
+     *
+     * Die Struktur ist opak (nur hier definiert, im Header steht bloss
+     * `typedef struct uft_gw_device uft_gw_device_t`), darum ist ein
+     * zusaetzliches Feld kein ABI-Bruch: niemand ausserhalb kennt das
+     * Layout. */
+    const uft_gw_stream_ops_t* stream_ops;
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -201,7 +209,7 @@ static void serial_close(uft_gw_device_t* dev) {
     }
 }
 
-static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
+static int serial_write_all_platform(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
     DWORD written = 0;
     if (!WriteFile(dev->handle, data, (DWORD)len, &written, NULL) || written != len)
         return UFT_GW_ERR_IO;
@@ -209,7 +217,7 @@ static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data, size_t le
     return UFT_GW_OK;
 }
 
-static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len, int timeout_ms) {
+static int serial_read_exact_platform(uft_gw_device_t* dev, uint8_t* data, size_t len, int timeout_ms) {
     size_t total = 0;
     DWORD start_tick = GetTickCount();
     while (total < len) {
@@ -231,7 +239,7 @@ static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len, in
     return UFT_GW_OK;
 }
 
-static int serial_read_available(uft_gw_device_t* dev, uint8_t* data, size_t max_len,
+static int serial_read_available_platform(uft_gw_device_t* dev, uint8_t* data, size_t max_len,
                                  size_t* actual, int timeout_ms) {
     DWORD start_tick = GetTickCount();
     COMMTIMEOUTS to;
@@ -310,7 +318,7 @@ static void serial_close(uft_gw_device_t* dev) {
     if (dev->fd >= 0) { close(dev->fd); dev->fd = -1; }
 }
 
-static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
+static int serial_write_all_platform(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
     size_t total = 0;
     while (total < len) {
         ssize_t n = write(dev->fd, data + total, len - total);
@@ -321,7 +329,7 @@ static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data, size_t le
     return UFT_GW_OK;
 }
 
-static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len, int timeout_ms) {
+static int serial_read_exact_platform(uft_gw_device_t* dev, uint8_t* data, size_t len, int timeout_ms) {
     struct timeval start, now;
     gettimeofday(&start, NULL);
     size_t total = 0;
@@ -345,7 +353,7 @@ static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len, in
     return UFT_GW_OK;
 }
 
-static int serial_read_available(uft_gw_device_t* dev, uint8_t* data, size_t max_len,
+static int serial_read_available_platform(uft_gw_device_t* dev, uint8_t* data, size_t max_len,
                                  size_t* actual, int timeout_ms) {
     struct timeval start, now;
     gettimeofday(&start, NULL);
@@ -393,6 +401,85 @@ static int serial_reset_comms(uft_gw_device_t* dev) {
  * PROTOCOL CORE
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * BYTEEBENEN-NAHT (MF-686)
+ *
+ * ── Warum es sie gibt ──────────────────────────────────────────────────
+ *
+ * Der Greaseweazle ist der einzige Controller mit echter Bench-Erfahrung
+ * — und ausgerechnet bei ihm war eine ganze Fehlerklasse strukturell
+ * unpruefbar. `tests/emulators/greaseweazle/DIVERGENCES.md` §D-2 sagt es
+ * selbst:
+ *
+ *     "Detection: none — this is an architectural split. The HAL's
+ *      serial_* helpers are the only place that touches the wire."
+ *
+ * Der Emulator modelliert die Zustandsmaschine als Funktionsaufrufe
+ * (`gw_fw_cmd_*`); einen Bytestrom gibt es dort nicht. Alles, was
+ * ZWISCHEN Kopfbytes und Nutzlast schiefgehen kann — Rahmenversatz,
+ * Reste nach einem NAK, halbe Antworten — konnte kein Test je sehen.
+ *
+ * Anlass war ein Fremdbefund (gwnbd, MF-680): dessen Autoren berichten,
+ * dass ihre Firmware nach einem NAK Bytes im Strom laesst, und haben
+ * dafuer ein `resync()`. Eine Quelle reicht fuer eine Behauptung nicht —
+ * aber sie reicht fuer ein EXPERIMENT. Was unser Pfad bei Muell nach NAK
+ * tut, ist messbar, sobald jemand Muell einspeisen kann. Das Ergebnis
+ * ist dann die fehlende zweite Quelle, in welche Richtung auch immer.
+ *
+ * ── Warum diese Bauform ────────────────────────────────────────────────
+ *
+ * Die Datei ist geschuetzt („production-tested C-API"). Der Schutzzweck
+ * ist, dass niemand die erprobte Logik anfasst — nicht, dass sie
+ * unpruefbar bleibt. Darum:
+ *
+ *   * Die plattformnahen Funktionen sind UNVERAENDERT; sie heissen jetzt
+ *     `*_platform` und haben Zeile fuer Zeile denselben Inhalt.
+ *   * Die Weiche darunter reicht ohne eingespeiste Ops exakt dorthin
+ *     durch. Ohne `uft_gw_set_stream_ops()` ist der Produktionsweg
+ *     identisch — kein Umweg, keine Kopie, kein zusaetzlicher Zustand.
+ *   * Die Kommando- und Dekodierlogik ist nicht beruehrt.
+ *
+ * Wer einspeist, ersetzt die Leitung, nicht das Geraet.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+int uft_gw_set_stream_ops(uft_gw_device_t* dev,
+                          const uft_gw_stream_ops_t* ops) {
+    if (!dev) return UFT_GW_ERR_INVALID;
+    dev->stream_ops = ops;      /* NULL stellt den Produktionsweg her */
+    return UFT_GW_OK;
+}
+
+static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data,
+                            size_t len) {
+    if (dev && dev->stream_ops && dev->stream_ops->write)
+        return dev->stream_ops->write(dev->stream_ops->user, data, len);
+    return serial_write_all_platform(dev, data, len);
+}
+
+static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len,
+                             int timeout_ms) {
+    if (dev && dev->stream_ops && dev->stream_ops->read_exact)
+        return dev->stream_ops->read_exact(dev->stream_ops->user, data, len,
+                                           timeout_ms);
+    return serial_read_exact_platform(dev, data, len, timeout_ms);
+}
+
+static int serial_read_available(uft_gw_device_t* dev, uint8_t* data,
+                                 size_t max_len, size_t* actual,
+                                 int timeout_ms) {
+    if (dev && dev->stream_ops && dev->stream_ops->read_available)
+        return dev->stream_ops->read_available(dev->stream_ops->user, data,
+                                               max_len, actual, timeout_ms);
+    return serial_read_available_platform(dev, data, max_len, actual,
+                                          timeout_ms);
+}
+
+/* Wie lange nach einem NAK auf Reste gewartet wird (MF-686). Kurz: es
+ * wird nichts erwartet, nur weggeraeumt. */
+#ifndef UFT_GW_NAK_DRAIN_MS
+#define UFT_GW_NAK_DRAIN_MS 50
+#endif
+
 static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* params,
                       size_t param_len, uint8_t* response, size_t* resp_len) {
     if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
@@ -420,6 +507,32 @@ static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* para
 
     if (hdr[1] != UFT_GW_ACK_OK) {
         fprintf(stderr, "[GW] NAK cmd=0x%02X ack=0x%02X\n", cmd, hdr[1]);
+
+        /* Den Strom abraeumen, bevor wir gehen (MF-686).
+         *
+         * GEMESSEN, nicht vermutet: ohne diese Zeilen liest der naechste
+         * Befehl die Reste als sein Echo. `tests/test_gw_nak_resync.c`
+         * hat es ueber die Byteebenen-Naht gezeigt — Befehl 1 wird
+         * abgelehnt und laesst drei Bytes liegen, Befehl 2 scheitert mit
+         * "Echo mismatch: expected 0x02 got 0xDE", obwohl das Geraet
+         * korrekt geantwortet hat. Danach ist die Sitzung verloren: jeder
+         * weitere Befehl liest um einen Rahmen versetzt.
+         *
+         * Der Anstoss kam von gwnbd (EUPL-1.2), das dafuer ein `resync()`
+         * hat. Deren Firmware-Beobachtung war EINE Quelle und haette
+         * allein nicht gereicht. Die zweite ist diese Messung am eigenen
+         * Code — und sie ist die staerkere, denn sie haengt nicht daran,
+         * WARUM Bytes im Strom liegen. Ein flackerndes Kabel genuegt.
+         *
+         * Kurze Frist: hier wird nichts erwartet, nur weggeraeumt. */
+        uint8_t muell[UFT_GW_MAX_CMD_SIZE];
+        size_t abgeraeumt = 0;
+        serial_read_available(dev, muell, sizeof(muell), &abgeraeumt,
+                              UFT_GW_NAK_DRAIN_MS);
+        if (abgeraeumt > 0)
+            fprintf(stderr, "[GW] %zu Byte nach NAK abgeraeumt\n",
+                    abgeraeumt);
+
         switch (hdr[1]) {
             case UFT_GW_ACK_NO_INDEX:       return UFT_GW_ERR_NO_INDEX;
             case UFT_GW_ACK_NO_TRK0:        return UFT_GW_ERR_NO_TRK0;
@@ -506,6 +619,39 @@ int uft_gw_list_ports(char** ports, int max_ports) {
     }
 #endif
     return count;
+}
+
+/* Ein Geraet, dessen Leitung eingespeist ist — fuer den Pruefstand
+ * (MF-686).
+ *
+ * Es wird KEIN Port geoeffnet und KEIN Handschlag gefahren: das Geraet
+ * gilt als verbunden, und jeder Byte geht durch die uebergebenen Ops.
+ * Damit sind Protokoll-Fehlerklassen pruefbar, die der Emulator
+ * bauartbedingt nicht sehen kann (DIVERGENCES.md §D-2).
+ *
+ * Bewusst NICHT: eine Attrappe des Handschlags. Wer `uft_gw_get_info()`
+ * pruefen will, speist die Antwort ein — dann prueft er den echten
+ * Pfad. Ein eingebauter Schein-Handschlag waere genau die Sorte
+ * Bequemlichkeit, die spaeter als "getestet" gelesen wird.
+ *
+ * `serial_close()` auf so einem Geraet ist wirkungslos, weil weder
+ * Deskriptor noch Handle gesetzt sind; `uft_gw_close()` gibt es normal
+ * frei. */
+int uft_gw_open_stream(const uft_gw_stream_ops_t* ops,
+                       uft_gw_device_t** device) {
+    if (!ops || !device) return UFT_GW_ERR_INVALID;
+    uft_gw_device_t* dev =
+        (uft_gw_device_t*)safe_calloc(1, sizeof(uft_gw_device_t));
+    if (!dev) return UFT_GW_ERR_NOMEM;
+#ifdef UFT_GW_PLATFORM_WINDOWS
+    dev->handle = INVALID_HANDLE_VALUE;
+#else
+    dev->fd = -1;
+#endif
+    dev->stream_ops = ops;
+    dev->current_cyl = -1;
+    *device = dev;
+    return UFT_GW_OK;
 }
 
 int uft_gw_open(const char* port, uft_gw_device_t** device) {
@@ -686,11 +832,29 @@ bool uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin) {
     return false;
 }
 
-int uft_gw_set_pin(uft_gw_device_t* device, uint8_t pin, bool level) {
-    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
-    uint8_t params[2] = { pin, level ? 1 : 0 };
-    return uft_gw_command(device, UFT_GW_CMD_SET_PIN, params, 2, NULL, NULL);
-}
+/* Hier stand bis MF-686 `uft_gw_set_pin()`.
+ *
+ * Entfernt nach der Verwaisten-Regel: **null Aufrufer** im ganzen Baum —
+ * Deklaration und Definition, sonst nichts. `HAL_CAP_DENSITY_CTRL` blieb
+ * unbedient. Wir haben nie einen Pin gefahren.
+ *
+ * ── Was dabei nicht verloren gehen darf ────────────────────────────────
+ *
+ * gwnbd (EUPL-1.2, siehe HAL-3 in docs/OPEN_ITEMS.md) hat gemessen, dass
+ * **Pin 2 auf 5,25"-Laufwerken REDWC ist und nicht Density-Select**:
+ * 28 von 30 gelesenen Sektoren mit korrekter Beschaltung gegen 1 von 23
+ * ohne. Zwei unabhaengige Pinout-Quellen stuetzen die Semantik.
+ *
+ * Das ist der Grund, warum diese Funktion NICHT einfach verdrahtet
+ * wurde, als sie auffiel: einen Pin zu setzen, den wir nirgends
+ * brauchen, haette einen Schalter ohne Wirkung ergeben — und wo wir ihn
+ * brauchen wuerden (5,25"-Dichte), ist die richtige Belegung eine
+ * Messung an fremder Hardware, die wir nicht haben (MF-310).
+ *
+ * Wer die Pin-Steuerung wieder einfuehrt, faengt bei der Faehigkeit an
+ * (was soll ein Benutzer damit tun koennen?), nicht bei der Funktion.
+ * Der Befehl `UFT_GW_CMD_SET_PIN` steht weiter im Protokoll-Enum; es
+ * fehlt nur die Huelle drumherum. */
 
 /* FIX BUG13/14: Signed seek + TRK0 verification */
 int uft_gw_seek(uft_gw_device_t* device, uint8_t cylinder) {

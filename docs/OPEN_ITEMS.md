@@ -3809,3 +3809,64 @@ Das steht hier als **benannte Grenze**, nicht als stille Lücke. Jeder
 dieser Fälle braucht ein fremd erzeugtes Abbild; `xdftool` kann sie
 erzeugen, und die Erzeugungsbefehle gehören dann ins Manifest — genau
 wie beim vorhandenen.
+
+---
+
+## HAL-3 geschlossen — und die Messung gab gwnbd recht (MF-686)
+
+Alle drei Teile des Pakets erledigt, nach ausdrücklicher Freigabe für die
+geschützte Datei.
+
+### (a) Die Byteebenen-Naht
+
+`uft_gw_stream_ops_t` + `uft_gw_set_stream_ops()` + `uft_gw_open_stream()`.
+Bauform bewusst konservativ: die plattformnahen Funktionen sind
+**unverändert** und heißen nur `*_platform`; die Weiche davor reicht ohne
+eingespeiste Ops exakt dorthin durch. **Ohne Einspeisung ist der
+Produktionsweg Zeile für Zeile derselbe.** Die Kommando- und
+Dekodierlogik ist nicht berührt.
+
+Das Feld in der Gerätestruktur ist kein ABI-Bruch: die Struktur ist opak,
+im Header steht nur `typedef struct uft_gw_device uft_gw_device_t`.
+
+### (b) Das Experiment — und sein Ergebnis
+
+`tests/test_gw_nak_resync.c`. **Gemessen, vor jedem Eingriff:**
+
+```
+Befehl 1 (NAK erwartet): rc=-7
+danach ungelesen im Puffer: 3 Byte
+Befehl 2 (sauber):       rc=-5
+[GW] Echo mismatch: expected 0x02 got 0xDE
+```
+
+Der Treiber räumte den Strom nicht ab und las die Reste als **Kopf des
+nächsten Befehls**. Danach ist die Sitzung verloren: jeder weitere Befehl
+liest um einen Rahmen versetzt.
+
+**Damit ist die Einquelligkeit aufgelöst, ohne die Regel zu verbiegen.**
+gwnbds Firmware-Beobachtung war eine Quelle und hätte allein nicht
+gereicht. Die zweite ist diese Messung am eigenen Code — und sie ist die
+stärkere, weil sie nicht davon abhängt, *warum* Bytes im Strom liegen.
+Ein flackerndes Kabel genügt.
+
+Behoben durch Abräumen nach NAK (50 ms, es wird nichts erwartet).
+Danach: 3 Byte abgeräumt, Folgebefehl grün.
+
+### (c) `uft_gw_set_pin` entfernt
+
+Null Aufrufer, Verwaisten-Regel. gwnbds REDWC-Messung (Pin 2 ist auf
+5,25″ REDWC statt Density-Select, 28/30 gegen 1/23 Sektoren) steht als
+Kommentar an der Stelle der früheren Definition — samt der Begründung,
+warum nicht verdrahtet wurde: einen Pin zu setzen, den niemand braucht,
+wäre ein Schalter ohne Wirkung, und wo wir ihn brauchen würden, ist die
+richtige Belegung eine Messung an Hardware, die wir nicht haben.
+
+### Was jetzt anders ist
+
+Die Fehlerklasse, die `DIVERGENCES.md` §D-2 als **„Detection: none"**
+führte, ist prüfbar. Nicht nur dieser eine Fall — jede Frage, die
+zwischen Kopfbytes und Nutzlast liegt, lässt sich jetzt am einzigen
+Controller mit Bench-Erfahrung stellen, ohne Gerät.
+
+Prüfstand: Bau grün, 283/283 mit benanntem Skip.
