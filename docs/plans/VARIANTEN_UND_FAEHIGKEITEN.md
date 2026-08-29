@@ -70,17 +70,49 @@ tatsächlich anbietet. Die Regeln sind mechanisch prüfbar:
 | `"Flux"/"Timing"/"Weak Bits"/"MultiRev" = SUPPORTED` | mindestens eine benannte Fundstelle im Plugin — sonst `PARTIAL` |
 | irgendetwas `= SUPPORTED` mit `NULL`-Zeiger | **rot** |
 
-**Rotbeweis zuerst:** der erste Lauf wird rot sein. Das ist der Zweck.
-Die Zahl der Widersprüche ist die Ausgangsmessung; sie gehört in den
-Commit, nicht geschätzt.
+### ✅ Gebaut und gemessen (MF-658) — die Vorhersage war falsch
 
-Zu erwarten sind zwei Sorten Fund: Plugins, die zu viel versprechen
-(`SUPPORTED` ohne Funktion), und Plugins, die zu wenig versprechen
-(Funktion da, `UNSUPPORTED` deklariert — HFE v3 könnte so einer sein,
-siehe unten).
+Hier stand: *„der erste Lauf wird rot sein. Das ist der Zweck."*
 
-**Aufwand:** S. **Erlaubt sich nichts:** die Einfrier-Regel ist nicht
-berührt, das ist Verifikationsarbeit.
+**Er war grün.** `tests/test_capability_manifest.c`, 137 Plugins in der
+Registry:
+
+| | |
+|---|---|
+| Aussagen mechanisch geprüft | **255** |
+| **Widersprüche** | **0** |
+| nicht beurteilbar (kein Funktionszeiger) | 325 |
+| Plugins ohne Manifest | 49 — sie sagen nichts und lügen damit auch nicht |
+
+Das ist ein echtes Ergebnis, kein Freispruch durch ein zahnloses Tor:
+der Rotbeweis ist gelaufen. `"Write"` in `uft_adf_ext.c` versuchsweise
+auf `SUPPORTED` gestellt, während `write_track = NULL` ist → das Tor
+meldet `ZU VIEL ExtADF "Write" = SUPPORTED, aber write_track ist NULL`
+und der Test fällt. Danach zurückgesetzt.
+
+**Was das grün bedeutet:** die 88 Manifeste sind für den prüfbaren Teil
+**sauber**. Wer `Read`/`Write`/`Create` deklariert, hat die Funktion
+auch. Damit trägt die Grundlage für Stufe 2 — und zwar genau für die
+drei Fähigkeiten, an denen die meiste Oberflächen-Steuerung hängt.
+
+**Was es NICHT bedeutet, und das ist der Vorbehalt:**
+
+* **325 von 580 Aussagen sind ungeprüft.** `Flux`, `Timing`,
+  `Weak Bits`, `MultiRev` haben keinen eigenen Funktionszeiger; sie zu
+  raten wäre schlimmer, als sie offen zu lassen. Der Test zählt sie und
+  sagt es.
+* Das Tor prüft, ob ein **Zeiger da ist** — nicht, ob die Funktion
+  taugt. Ein `write_track`, das `UFT_ERROR_NOT_SUPPORTED` zurückgibt,
+  besteht es. Die Grenze steht im Kopf der Testdatei, damit niemand mehr
+  in die Zahl hineinliest, als sie trägt.
+
+**Zusätzlich mitgeprüft:** `PARTIAL` ohne `note`. Der Header nennt die
+Begründung „Pflicht bei PARTIAL" (`uft_format_plugin.h:90`), und der
+Plan sieht genau diesen Text als Hinweis am Bedienelement vor — eine
+Einschränkung, die sich nicht erklärt, kann die Oberfläche nicht
+anzeigen. Auch hier: 0 Verstöße.
+
+**Aufwand war S.** Einfrier-Regel nicht berührt: Verifikationsarbeit.
 
 ---
 
@@ -225,7 +257,7 @@ rechnen richtig" ein „der Pfad liest eine echte Datei richtig" — und
 
 ## Reihenfolge auf einen Blick
 
-    1  Tor: Fähigkeit muss beweisbar sein      S   (rot zuerst)
+    1  Tor: Fähigkeit muss beweisbar sein      S   ERLEDIGT MF-658
     2  Manifest -> Bedienelemente              M
     3a Variante anzeigen (read_metadata)       S
     4  Variante beim Speichern + Standard      M
