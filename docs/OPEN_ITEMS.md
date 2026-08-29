@@ -2821,3 +2821,114 @@ geklont; seine Lizenz steht in `ORACLES.md` als GPL-3.0 für `cpmls`,
 aber das ist ein anderes Artefakt. Die Zeilen tragen jetzt libdsks
 Lizenz **und** den ausdrücklichen Vermerk, dass cpmtools offen ist.
 Lieber eine halbe Antwort, die sagt, dass sie halb ist.
+
+---
+
+## Die Oberfläche hat 27 Fenster ohne Tür und 21 tote Menüpunkte (MF-663, 2026-08-29)
+
+Der Eigentümer hat entschieden: das Analyse-Fenster **verdrahten**, und
+messen, ob mehr davon herumliegt. Beides erledigt — das Ergebnis der
+Messung ist erheblich größer als der Anlass.
+
+### Die Tür war halb schon da
+
+`actionAnalyze` steht seit jeher im Menü und war mit **nichts**
+verbunden. Gleichzeitig lag `DiskAnalyzerWindow` gebaut
+(`UnifiedFloppyTool.pro:291/367`), aber unerreichbar da.
+
+**Zwei Hälften derselben Lücke, die einander gesucht haben** — ein
+Menüpunkt ohne Ziel und ein Fenster ohne Aufrufer. Verbunden mit
+`MainWindow::onAnalyze()`; ohne geladenes Abbild sagt es das, statt ein
+leeres Fenster zu zeigen, das Geometrie aus dem Nichts schätzt.
+
+### Messung 1 — Fenster ohne Tür: **27 von 46**
+
+Methode: Erreichbarkeits-Wanderung ab `main.cpp` und `mainwindow.cpp`.
+Kante = „Klasse A erzeugt Klasse B"; Kommentare werden vorher entfernt.
+
+> **Die erste Fassung der Messung war falsch, und das gehört dazu.**
+> Sie fragte „konstruiert jemand die Klasse außerhalb ihrer eigenen
+> Datei?" — und zählte damit Unterfenster als türlos, die ihr Besitzer
+> in derselben Datei erzeugt (die fünf Assistentenseiten von
+> `UftRecoveryDialog`). Ein Unterfenster, das sein Besitzer erzeugt, ist
+> verdrahtet; unerreichbar ist es nur, wenn der **Besitzer**
+> unerreichbar ist. Die Erreichbarkeits-Wanderung kommt auf dieselben
+> 27 — aber jetzt mit einer Methode, die trägt.
+
+Darunter, nach Gewicht:
+
+| | |
+|---|---|
+| **vier ganze Einstellungs-Tabs** | `XCopyTab`, `NibbleTab`, `ForensicTab`, `ProtectionTab` |
+| ein Wiederherstellungs-Assistent | `UftRecoveryDialog` + 5 Seiten |
+| Sektor-Editor-Teile | `UftHexEdit`, `UftFindReplaceDialog` |
+| Dialoge | `UftCompareDialog`, `UftSmartExportDialog`, `PresetManagerDialog` |
+| Ansichten | `DiskVisualizationWindow`, `VisualDiskWindow`, `TrackGridWidget`, drei OTDR-Ansichten |
+
+**Der schärfste Einzelbefund:** `src/mainwindow.cpp:146` kommentiert
+
+> `// Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)`
+
+und erzeugt darunter **einen** davon (`FormatTab`). Fünf der sechs
+genannten Unter-Tabs existieren im laufenden Programm nicht. Der
+Kommentar beschreibt eine Absicht und liest sich wie ein Zustand.
+
+### Messung 2 — tote Menüpunkte: **21 von 30**
+
+`forms/mainwindow.ui` führt 30 `<action>`-Einträge; 21 werden in keinem
+`connect()` genannt. Darunter nicht Randsachen, sondern:
+
+    actionReadDisk · actionWriteDisk · actionVerifyDisk
+    actionConnect  · actionDisconnect · actionMotorOn/Off
+    actionConvert  · actionCompare    · actionRepair
+    actionBAMViewer · actionBootblockViewer · actionLabelEditor
+    actionProtectionAnalyzer · actionChecksumDatabase
+    drei Sprachumschaltungen + actionLoadLanguage
+
+Jeder davon ist anklickbar und tut nichts. Das ist dieselbe Klasse wie
+die 38 toten Bedienelemente aus Stufe 5 des Plans — nur eine Ebene
+höher, im Menü.
+
+### Und ein Tor, das falsch gezählt hat
+
+`scripts/audit_orphan_modules.py` ist für C geschrieben und kannte
+`namespace { … }` nicht. Es zählte jede Funktion in einem **anonymen
+Namensraum** als exportiert — obwohl die interne Bindung hat, genau wie
+`static`.
+
+Gemessen: **fünf von sechs** Dateien mit anonymem Namensraum standen
+als „ohne jeden Aufrufer" da, weil ihre einzigen „Exporte" dateilokale
+Helfer waren.
+
+**Das betrifft meine eigene Meldung von gestern.** In MF-662 habe ich
+geschrieben, das Waisen-Tor habe `diskanalyzerwindow.cpp` gemeldet und
+ich hätte daraufhin die fehlende Tür gefunden. Die fehlende Tür war
+echt und ist unabhängig per `grep` belegt — aber **das Tor meinte etwas
+anderes**: es sah `metadatum`, den Helfer, den ich im selben Commit in
+einen anonymen Namensraum gelegt hatte. Der Befund stimmt, die
+Begründung war ein Zufallstreffer.
+
+Das ist die Aufzählungsfalle in der Grammatik: der Prüfer kannte eine
+Schreibweise nicht und hat sie deshalb nicht übersehen, sondern
+**falsch gezählt** — was schlimmer ist. Behoben mit
+`strip_anon_namespace()`, Klammerzählung statt Regex, weil ein anonymer
+Namensraum verschachtelte Blöcke enthält.
+
+### Was daraus folgt
+
+Die drei Zahlen gehören zusammen und beschreiben **eine** Lage:
+
+    38 Bedienelemente ohne Wirkung   (MF-660, Stufe 5 offen)
+    27 Fenster ohne Tür              (hier)
+    21 Menüpunkte ohne Verbindung    (hier)
+
+Das ist kein Ausreißer, sondern der Regelfall in dieser Oberfläche: sie
+wurde gebaut, aber nicht verbunden. Der Plan
+`docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md` behandelt bisher nur die
+Bedienelemente; die anderen beiden brauchen dieselbe Behandlung —
+**verdrahten oder entfernen, kein Drittes.**
+
+**Nicht getan und bewusst nicht:** die übrigen 26 Fenster und 20
+Menüpunkte anzufassen. Das ist keine Nacharbeit, sondern eine
+Entscheidung je Fall — und 27 Fenster in einem Durchgang zu verdrahten
+wäre genau die Sorte Massenänderung, die dieser Baum nicht verträgt.

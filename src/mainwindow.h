@@ -55,6 +55,19 @@ private slots:
 
     // File menu
     void onOpen();
+
+    /**
+     * @brief Oeffnet das Analyse-Fenster fuer das geladene Abbild (MF-663).
+     *
+     * Bis MF-663 war `actionAnalyze` im Menue vorhanden und mit NICHTS
+     * verbunden — ein Menuepunkt, der nichts tut. Gleichzeitig war
+     * `DiskAnalyzerWindow` gebaut (UnifiedFloppyTool.pro:291), aber
+     * unerreichbar: seine einzige Nennung ausserhalb der eigenen Dateien
+     * war ein Kommentar in main.cpp:31.
+     *
+     * Zwei Haelften derselben fehlenden Tuer.
+     */
+    void onAnalyze();
     void onSave();
     void onSaveAs();
     

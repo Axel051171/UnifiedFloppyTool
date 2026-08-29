@@ -114,8 +114,59 @@ def built_sources() -> list[pathlib.Path]:
     return sorted(set(out))
 
 
+def strip_anon_namespace(body: str) -> str:
+    """Anonyme Namensraeume entfernen — ihr Inhalt ist NICHT exportiert.
+
+    MF-663: dieses Skript ist fuer C geschrieben und kannte
+    `namespace { ... }` nicht. Es zaehlte jede Funktion darin als
+    exportiert, obwohl sie interne Bindung hat — genau wie `static`.
+
+    Die Folge, gemessen: **fuenf von sechs** Dateien mit anonymem
+    Namensraum standen als "ohne jeden Aufrufer" da, weil ihre einzigen
+    "Exporte" dateilokale Helfer waren. Bei
+    `src/diskanalyzerwindow.cpp` war es eine einzige Funktion namens
+    `metadatum`, in MF-662 hinzugefuegt.
+
+    Das ist dieselbe Fehlerklasse wie die Aufzaehlungsfalle, nur in der
+    Grammatik: der Pruefer kannte eine Schreibweise nicht und hat sie
+    deshalb falsch bewertet — nicht uebersehen, sondern FALSCH GEZAEHLT,
+    was schlimmer ist.
+
+    Entfernt wird blockweise mit Klammerzaehlung, weil ein anonymer
+    Namensraum verschachtelte Bloecke enthaelt und ein Regex bis zur
+    ersten `}` zu frueh aufhoeren wuerde.
+    """
+    out = []
+    i = 0
+    n = len(body)
+    while i < n:
+        m = re.compile(r"\bnamespace\s*\{").search(body, i)
+        if not m:
+            out.append(body[i:])
+            break
+        out.append(body[i:m.start()])
+        # Klammern zaehlen ab der oeffnenden `{`
+        tiefe = 0
+        j = m.end() - 1
+        while j < n:
+            if body[j] == "{":
+                tiefe += 1
+            elif body[j] == "}":
+                tiefe -= 1
+                if tiefe == 0:
+                    break
+            j += 1
+        i = j + 1 if j < n else n
+    return "".join(out)
+
+
 def exported_names(body: str) -> set[str]:
-    """Nicht-statische Funktionen UND Objekte, die diese Datei definiert."""
+    """Nicht-statische Funktionen UND Objekte, die diese Datei definiert.
+
+    Ohne den Inhalt anonymer Namensraeume — der hat interne Bindung
+    (MF-663).
+    """
+    body = strip_anon_namespace(body)
     names = set(DEFINITION.findall(body)) - set(STATIC_DEF.findall(body))
     names |= set(OBJECT_DEF.findall(body))
     return {n for n in names if n not in C_KEYWORDS}

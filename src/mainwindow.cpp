@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "diskanalyzerwindow.h"  /* MF-663 */
 #include "uft_gui_write_gate.h"
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
@@ -233,6 +234,11 @@ void MainWindow::setupConnections()
 {
     // File menu
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::onOpen);
+    // MF-663: `actionAnalyze` stand seit jeher im Menue und war mit nichts
+    // verbunden. Gemessen sind 21 der 30 Menue-Aktionen so — dies ist die
+    // erste, die eine Tuer bekommt, weil hinter ihr ein fertiges Fenster
+    // wartete (DiskAnalyzerWindow, gebaut aber unerreichbar).
+    connect(ui->actionAnalyze, &QAction::triggered, this, &MainWindow::onAnalyze);
     connect(ui->actionSave, &QAction::triggered, this, &MainWindow::onSave);
     connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onSaveAs);
     connect(ui->actionExit, &QAction::triggered, this, &QMainWindow::close);
@@ -291,6 +297,29 @@ void MainWindow::onOpen()
     if (!filename.isEmpty()) {
         openFile(filename);
     }
+}
+
+void MainWindow::onAnalyze()
+{
+    // Ohne geladenes Abbild gibt es nichts zu analysieren. Das sagen wir,
+    // statt ein leeres Fenster zu zeigen, das Geometrie aus dem Nichts
+    // schaetzt — genau den Rueckfallzweig hat MF-662 als "geschaetzt aus
+    // der Dateigroesse" kenntlich gemacht.
+    if (m_currentFile.isEmpty()) {
+        QMessageBox::information(this, tr("Analyse"),
+            tr("Zuerst ein Abbild öffnen — es gibt sonst nichts zu "
+               "analysieren."));
+        return;
+    }
+
+    // Ein eigenes Fenster je Aufruf, das sich selbst aufraeumt. Kein
+    // Zwischenspeichern: das Abbild kann sich zwischen zwei Aufrufen
+    // geaendert haben, und ein Analysefenster, das einen alten Stand
+    // zeigt, waere schlimmer als keines.
+    DiskAnalyzerWindow *fenster = new DiskAnalyzerWindow(this);
+    fenster->setAttribute(Qt::WA_DeleteOnClose);
+    fenster->loadImage(m_currentFile);
+    fenster->show();
 }
 
 void MainWindow::onSave()

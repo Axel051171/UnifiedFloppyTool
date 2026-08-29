@@ -259,19 +259,18 @@ src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 
 
-# ANKER: docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md Stufe 3
-#   (die Fenster zeigt Kodierung und Variante an; ohne Tuer sieht sie
-#    niemand — die Verdrahtung gehoert zu dieser Stufe oder das Fenster
-#    faellt)
+# ── ERLEDIGT MF-663: src/diskanalyzerwindow.cpp hat eine Tuer ────────────
 #
-# Gefunden bei MF-662, und zwar unfreiwillig: ich habe die Anzeige
-# dieses Fensters repariert (das feste "ISO MFM" durch das ersetzt, was
-# das Plugin sagt) — und dabei gemeldet bekommen, dass es NIEMAND
-# oeffnet. Gemessen: die einzige Nennung von `DiskAnalyzerWindow`
-# ausserhalb seiner eigenen Dateien ist ein KOMMENTAR in
-# src/main.cpp:31. Gebaut wird es (UnifiedFloppyTool.pro:291/367),
-# erreichbar ist es nicht.
+# Der Eintrag stand hier genau einen Commit lang. Gefunden bei MF-662
+# (beim Reparieren der Anzeige), verdrahtet bei MF-663.
 #
-# Das ist ein "Koennen im Baum, Zugang fehlt"-Fall in seiner groessten
-# Form bisher: kein Modul, sondern ein ganzes Fenster.
-src/diskanalyzerwindow.cpp
+# Die Tuer war halb schon da und niemandem aufgefallen: `actionAnalyze`
+# stand seit jeher im Menue und war mit NICHTS verbunden. Zwei Haelften
+# derselben Luecke — ein Menuepunkt ohne Ziel und ein Fenster ohne
+# Aufrufer, die einander gesucht haben.
+#
+# Beim Nachmessen kam heraus, dass es kein Einzelfall ist:
+#   * 27 von 46 Fensterklassen sind vom laufenden Programm aus
+#     UNERREICHBAR (Erreichbarkeits-Wanderung ab main/mainwindow)
+#   * 21 von 30 Menue-Aktionen sind mit nichts verbunden
+# Beides steht in docs/OPEN_ITEMS.md unter MF-663.

@@ -259,9 +259,21 @@ geprüften C-Funktion, nicht im Fenster —, aber **Stufe 3 ist damit nicht
 fertig**: eine Variantenanzeige, die niemand sieht, erfüllt die Vorgabe
 nicht.
 
-Eintrag mit Anker in `docs/orphan_baseline.txt`. **Eigentümer-Entscheidung
-fällig:** verdrahten (Menüpunkt, der das Fenster öffnet) oder löschen.
-Die Verwaisten-Regel lässt kein Drittes zu.
+**Entschieden und erledigt (MF-663): verdrahtet.** Die Tür war halb
+schon da — `actionAnalyze` stand seit jeher im Menü und war mit nichts
+verbunden. Zwei Hälften derselben Lücke, die einander gesucht haben.
+
+**Und die Messung, die der Eigentümer dazu bestellt hat, fiel groß aus:**
+
+    27 von 46 Fensterklassen sind unerreichbar
+    21 von 30 Menue-Aktionen sind mit nichts verbunden
+
+Darunter vier ganze Einstellungs-Tabs (XCopy, Nibble, Forensic,
+Protection), die `mainwindow.cpp:146` im Kommentar als vorhanden
+beschreibt. Einzelheiten in `docs/OPEN_ITEMS.md` unter MF-663.
+
+Damit ist Stufe 3 **fertig**: die Variante wird beim Laden ermittelt,
+angezeigt, und das Fenster ist erreichbar.
 
 **Aufwand war S** für (a). Der Fund kostet extra.
 
@@ -353,7 +365,7 @@ rechnen richtig" ein „der Pfad liest eine echte Datei richtig" — und
 
     1  Tor: Fähigkeit muss beweisbar sein      S   ERLEDIGT MF-658
     2  Manifest -> Bedienelemente              M   ERLEDIGT MF-660/661
-    3a Variante anzeigen (read_metadata)       S
+    3a Variante anzeigen (read_metadata)       S   ERLEDIGT MF-662/663
     4  Variante beim Speichern + Standard      M
     5  Nibble -> Flux -> PLL verdrahten        3x M
     3b Varianten-Modell als Heimat             M   (wenn genug Formate)
