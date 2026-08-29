@@ -3569,3 +3569,81 @@ Steht in `playbook/lizenzmatrix.md` als eigene Zeile plus Fußnote (1)
 und (2), und als Verschärfung von Regel 3 in `AGENT.md`. Der Scout hat
 es im gwnbd-Zyklus von sich aus richtig gemacht; diese Einträge machen
 daraus eine Regel, damit es nicht Ermessen bleibt.
+
+---
+
+## HAL-3 — zwei gwnbd-Befunde am Greaseweazle-Pfad, beide gestoppt (MF-680)
+
+Schritt 3 des Plans wollte den NAK-Resync sofort bauen. **Beide Hälften
+sind blockiert**, und zwar aus zwei unabhängigen Gründen — keiner davon
+„es ist schwer".
+
+### Befund 1 — NAK ohne Wiederherstellung
+
+`uft_gw_command()` (`src/hal/uft_greaseweazle_full.c:396-448`) kehrt bei
+einem NAK sofort zurück, nachdem es zwei Kopfbytes gelesen hat. Es
+**leert den Strom nicht**. gwnbd hat dafür ein `resync()`.
+
+Das ist im Baum nachgemessen und unstrittig. Was daraus folgt, ist es
+nicht:
+
+**Grund A — die Behauptung ist einquellig.** Dass reale
+Greaseweazle-Firmware nach einem NAK noch Bytes im Strom lässt, stammt
+aus **einer** Quelle (Dritt-Firmware-Beobachtung in gwnbd). Nach der
+Zwei-Quellen-Regel ist das „unbelegt", nicht „baubar". Ohne Hardware
+(MF-310) können wir es nicht selbst messen.
+
+**Grund B — der Rotbeweis ist mit dem heutigen Emulator unmöglich.**
+Nicht schwierig — unmöglich. Der GW-Emulator modelliert die
+Zustandsmaschine als Funktionsaufrufe (`gw_fw_cmd_*`), es gibt keinen
+Bytestrom. `DIVERGENCES.md` §D-2 sagt das selbst, samt der Zeile, auf
+die es hier ankommt:
+
+> **Detection: none** — this is an architectural split. The HAL's
+> `serial_*` helpers are the only place that touches the wire.
+
+Und diese Helfer sind `static`, in zwei plattformbedingten Fassungen
+(POSIX `:204-234`, Windows `:313-348`). **Es gibt keinen
+Einspeisepunkt.** Ein Rotbeweis bräuchte also zuerst eine Änderung an
+genau der Datei, die er absichern soll — und das ist eine geschützte
+Datei.
+
+### Befund 2 — Pin 2 / REDWC
+
+gwnbd misst, dass Pin 2 auf 5,25″ REDWC ist und nicht Density-Select:
+28/30 gegen 1/23 gelesene Sektoren. Zwei unabhängige Pinout-Quellen
+stützen die Semantik.
+
+Bei uns: `uft_gw_set_pin` hat **null Aufrufer** — Deklaration
+(`uft_greaseweazle_full.h:384`) und Definition
+(`uft_greaseweazle_full.c:689`), sonst nichts. Von mir nachgemessen.
+`HAL_CAP_DENSITY_CTRL` bleibt unbedient. Wir fahren Pin 2 nie.
+
+Nach der Verwaisten-Regel wäre das ein Löschkandidat — aber die
+Löschung fasst dieselbe geschützte Datei an, und die Funktion ist ein
+plausibler künftiger Anker. **Kein Verdrahten auf Zuruf**: wir fahren
+Pin 2 nicht, also gäbe es nichts zu prüfen.
+
+### Was entschieden werden muss
+
+1. **Darf `uft_greaseweazle_full.c` angefasst werden**, um die
+   `serial_*`-Helfer einspeisbar zu machen? Das ist die Voraussetzung
+   für **jeden** künftigen Protokoll-Rotbeweis, nicht nur für diesen —
+   der Emulator kann diese ganze Fehlerklasse sonst nie sehen. Die Datei
+   ist als „production-tested C-API" geschützt; eine Ops-Indirektion
+   ändert kein Verhalten, aber sie ändert die Datei.
+2. **Reicht eine Quelle** für den NAK-Resync? Meine Empfehlung: nein.
+   Erst eine zweite unabhängige Bestätigung (Greaseweazle-Firmware-
+   Quelltext oder Protokoll-Doku), dann bauen.
+3. `uft_gw_set_pin`: löschen, oder mit Anker stehen lassen?
+
+Bis dahin bleibt der Befund dokumentiert und ungebaut. Das ist die
+richtige Reihenfolge, nicht die bequeme.
+
+### Der Emulator-Befund ist der eigentliche Ertrag
+
+Dass eine ganze Fehlerklasse — alles, was zwischen Kopfbytes und
+Nutzlast schiefgeht — bei unserem einzigen Tier-3-gebenchten Controller
+**strukturell unprüfbar** ist, wusste `DIVERGENCES.md` bereits und
+niemand hatte es als Auftrag gelesen. gwnbd hat es sichtbar gemacht,
+indem es einen konkreten Fall dieser Klasse mitbrachte.

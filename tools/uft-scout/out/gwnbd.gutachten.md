@@ -1,3 +1,9 @@
+<!-- uebernommen: MF-680 -->
+<!-- Befunde nach docs/OPEN_ITEMS.md, HAL-3: NAK-Resync und Pin-2/REDWC
+     sind beide dokumentiert und BEWUSST ungebaut — der Rotbeweis waere
+     mit dem heutigen Emulator unmoeglich (kein Bytestrom), und die
+     NAK-Behauptung ist einquellig. EUPL-1.2 ist als LIZ-3 in die
+     Matrix aufgenommen. -->
 # Gutachten: N0t4R0b0t/gwnbd
 
 > Gemessen 2026-08-29 gegen HEAD `6db8abe` (Release 1.0.1, 2026-08-02).
