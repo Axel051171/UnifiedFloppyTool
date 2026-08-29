@@ -43,12 +43,40 @@ Ein Oracle, das dasselbe Werkzeug ist wie der Korpus-Erzeuger, prüft
 seine eigene Selbstkonsistenz — nicht UFT. Der T1b-Eintrag wird damit
 **zirkulär**, und das fällt niemandem auf, weil alles grün ist.
 
-Der Fall ist zweimal gemessen worden:
+**Ein fremdes Projekt hat dieselbe Falle unabhängig gefunden (MF-682).**
+gwnbds `hardware-notes.md` dokumentiert selbstkritisch, dass frühe
+„validated"-Behauptungen in Wahrheit nur den eigenen Write-Back-Cache
+bestätigten: gelesen wurde, was kurz zuvor geschrieben worden war, und
+die Diskette kam nie vor. Ein anderes Team, ein anderes Land, eine
+andere Sprache, dieselbe Zirkularität.
 
-* **ADF:** `unadf` und AdfOpus teilen sich **ADFlib** — dieselbe
-  Bibliothek, die über `xdftool` auch unser Korpus-Abbild erzeugt hat.
-  AdfOpus schied deshalb aus, **nicht** weil es schlecht wäre
-  (`PLAN_v4.1.7.md:127-133`).
+Wenn zwei Gruppen unabhängig in dieselbe Grube fallen, ist es keine
+Marotte dieses Projekts, sondern eine Eigenschaft des Feldes. Eine Regel
+mit unabhängiger Bestätigung verteidigt man nicht noch einmal — man
+wendet sie an.
+
+Der Fall ist im eigenen Baum zweimal gemessen worden:
+
+* **ADF:** `unadf` und AdfOpus teilen sich **ADFlib**.
+
+  > **Berichtigt MF-682.** Hier stand, ADFlib sei „dieselbe Bibliothek,
+  > die über `xdftool` auch unser Korpus-Abbild erzeugt hat". Das ist
+  > **gemessen falsch**: die installierte `amitools` enthält **0**
+  > ADFlib — weder als Datei noch als Nennung in irgendeinem ihrer
+  > Python-Module. Zweimal unabhängig gemessen (Scout-Zyklus
+  > `adf_zweitmeinung`, danach von mir nachgeprüft).
+  >
+  > Der Ausschluss von AdfOpus bleibt trotzdem richtig, nur mit anderem
+  > Grund: `unadf` und AdfOpus teilen sich ADFlib **untereinander** —
+  > als Paar sind sie keine zwei Hände. Die Verbindung zum
+  > Korpus-Erzeuger gab es nie.
+  >
+  > Der Unterschied ist nicht akademisch. Nach der falschen Fassung war
+  > jedes ADFlib-Werkzeug als Oracle verbrannt; nach der gemessenen ist
+  > **eines** davon zulässig, solange das Korpus-Abbild nicht von ihm
+  > stammt. Eine Zirkularitäts-Regel, die zu viel ausschließt, kostet
+  > genauso viel wie eine, die zu wenig ausschließt — sie fällt nur
+  > niemandem auf.
 * **ATR:** `atrcopy 10.1` hat `atrcopy_dos2sd.atr` **erzeugt**
   (Manifest wörtlich). Als alleiniges Oracle wäre der Eintrag zirkulär.
 
@@ -153,7 +181,7 @@ urteilt.
 
 | Werkzeug | Grund |
 |---|---|
-| `unadf`, AdfOpus | teilen sich **ADFlib** — dieselbe Hand wie `xdftool`-erzeugte Korpus-Abbilder, also keine Zweitmeinung |
+| `unadf`, AdfOpus | teilen sich **ADFlib** — untereinander eine Hand, also als *Paar* keine Zweitmeinung. **Nicht** dieselbe Hand wie unser Korpus-Abbild; das stand hier bis MF-682 und war gemessen falsch |
 | `amigadx` | vendorte ADFlib 0.7.10 **und** Total-Commander-Plugin ohne Konsolen-Einstieg |
 | `ADFDiskBox` | ruft nur `cmd.exe /C gw …`; **keine** eigene ADF-Ebene (0 Treffer auf `ReadAllBytes\|FileStream\|adflib\|RootBlock`) |
 | `FloppyControl` selbst | WinForms-GUI, nicht skriptbar. Nur sein `dskx` ist ein Konsolenprogramm |
