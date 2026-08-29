@@ -3159,3 +3159,54 @@ Rotbeweis: `tests/test_decode_options_reach.c`, absichtlich über den
 HFE-Pfad (über SCP wäre er von Anfang an grün gewesen und hätte die
 Lücke zugedeckt). Gegenprobe durch Sabotage des HFE-Aufrufs: 2
 Abweichungen, danach wieder grün.
+
+---
+
+## GUI-7 — der achte Fall, in einem Teil der als funktionierend gilt (MF-669)
+
+**Kennzahl:** keine. Ehrlichkeits-Befund, Entscheidung beim Eigentuemer.
+
+Der PLL-Toleranz-Regler im OTDR-Panel (`m_pllTolerance`,
+`src/gui/uft_otdr_panel.cpp:210-219`) hat denselben geschlossenen Weg wie
+die 38 aus GUI-6, nur ueber einen Umweg:
+
+```
+Regler -> QSettings("pllTolerance") -> Regler
+```
+
+Gemessen: `m_pllTolerance->value()` wird an **einer** Stelle benutzt
+(`:697`, Speichern), und der Schluessel wird an **einer** Stelle gelesen
+(`:675`, Laden). Sonst nirgends.
+
+Das wiegt schwerer als GUI-6, weil das OTDR-Panel zu den *arbeitenden*
+Teilen gehoert — es ist der Aufrufer, der die drei DeepRead-Booster
+ueberhaupt erreichbar macht.
+
+### Was daran haengt: die beworbenen ±33 %
+
+`CLAUDE.md` beschreibt Adaptive Decode als „aggressiver PLL-Re-Decode
+(±33 %)". Gemessen in `uft_otdr_adaptive_decode.c`:
+
+```c
+agg_opts.tolerance = UFT_ADAPTIVE_PLL_TOLERANCE;  /* 0.33 — 0 Lesestellen */
+agg_opts.pll_gain  = UFT_ADAPTIVE_PLL_GAIN;       /* 6 Lesestellen */
+```
+
+Die Aggressivitaet kam **allein aus der Verstaerkung**. Die ±33 %
+Zeitgeber-Toleranz sind nie angewandt worden. Die wirkungslose Zuweisung
+ist mit MF-669 entfernt — eine wirkungslose Zuweisung neben einer
+wirksamen ist schwerer zu erkennen als gar keine.
+
+### Drei Wege
+
+1. **Regler entfernen.** Ehrlich; der Rest des Panels bleibt.
+2. **Mechanismus bauen**, Oracle-first: eine Lesestelle fuer eine
+   Zeitgeber-Toleranz im Dekoder, gegen eine benannte Referenz, mit
+   Rotbeweis vor dem Code. Erst danach das Feld, erst danach der Regler
+   (Regel aus `docs/SETTINGS_ROADMAP.md`).
+3. **Regler auf einen lebenden Traeger umhaengen** — `pll_gain` waere
+   der Kandidat, aber er bedeutet etwas anderes. Eine Umbenennung, die
+   die Bedeutung verschiebt, ist die naechste stille Falschaussage.
+
+Nicht entschieden. `CLAUDE.md` nennt die ±33 % bis dahin weiterhin
+falsch — das ist mit diesem Eintrag benannt, nicht behoben.

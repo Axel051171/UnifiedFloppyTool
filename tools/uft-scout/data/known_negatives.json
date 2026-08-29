@@ -180,6 +180,54 @@
     "OpenCBM/libcbmimage": {
       "status": "bewertet",
       "grund": "Gutachten Zyklus OpenCBM (2026-08-28): GPL-2.0 (GRUEN); cbmimage.exe mit CC=gcc gebaut+gelaufen (dir/bam auch auf UFT-Korpus-D64 und D1M); Oracle-Kandidat SCOUT-55/56 (40-Spur-BAM-Zweithand fuer A5, CMD-FD-Fixtures 829440/1658880/3317760)"
+    },
+    "alpine9000/adf-tools": {
+      "status": "bewertet",
+      "grund": "Gutachten adf_zweitmeinung: Amiga-natives trackdisk-Werkzeug (m68k-amigaos), kein Host-Oracle; ROT + Commodore-Ableitung"
+    },
+    "dschwen/adfrescue": {
+      "status": "bewertet",
+      "grund": "Gutachten adf_zweitmeinung: ADFlib-unabhaengiges, skriptbares OFS-Extraktions-Oracle, gebaut+byteidentisch zu xdftool gemessen; KEINE Lizenzdatei (ROT) -> Eigentuemer-Vorlage SCOUT-71"
+    },
+    "wbommel/ADFCommander": {
+      "status": "bewertet",
+      "grund": "Gutachten adf_zweitmeinung: MIT, aber AmigaDOS-Faehigkeit ~0 (Bootblock-Parse verworfen, RootBlock leer, Konsole hartkodiert+interaktiv)"
+    },
+    "michaelengel/mfsreader": {
+      "status": "bewertet",
+      "grund": "Gutachten mac_fs_dfxml: PD; MFS-Verzeichnis-Oracle (Extraktion wegen 12-Bit-Karten-Bug readmfs.c:207 ausgeschlossen); sample.img als dc42-Korpuskandidat (SCOUT-88/89)"
+    },
+    "cul-it/hfs2dfxml": {
+      "status": "bewertet",
+      "grund": "Gutachten mac_fs_dfxml: BSD-3; hfsutils-Subprocess-Wrapper, nichts portierbar; DFXML-1.1.1-Feldliste als Fundus (bewegt keine Kennzahl)"
+    },
+    "andete/disk-peek": {
+      "status": "bewertet",
+      "grund": "Gutachten mac_fs_dfxml: MIT; Browser-Viewer; FAT12-Cross-Link/Contiguous-Fallback als Schadensfall-Fundus nach VFS-P1, keine Kennzahl"
+    },
+    "ggnkua/Jacknife": {
+      "status": "bewertet",
+      "grund": "Gutachten atari_st_werkzeuge: SamariTan-Oracle gemessen (ST/MSA/DIM je-Datei), DIM-Magic-Rotbeweis fuer dim_atari; Zone ROT (keine Lizenzdatei), Eigentuemer-Vorlage U-1"
+    },
+    "suiryc/atari-st-tools": {
+      "status": "bewertet",
+      "grund": "Gutachten atari_st_werkzeuge: vierte unabhaengige MSA-Beschreibung; Oracle-Bau gescheitert (sbt fehlt, suiryc-scala-core 0.0.2-SNAPSHOT nur mavenLocal); GPL-3.0 GELB"
+    },
+    "vinz6751/st2disk": {
+      "status": "bewertet",
+      "grund": "Gutachten atari_st_werkzeuge: TOS-Programm fuer Atari-Hardware (XBIOS Flopwr), auf PC weder baubar noch nuetzlich, keine Lizenzdatei; irrelevant"
+    },
+    "Zirias/c64_tool_mkd64": {
+      "status": "bewertet",
+      "grund": "Gutachten cbm_erzeuger: 40-Spur-D64-Fixture-Erzeuger (Dolphin 0xAC/Speed 0xC0, gemessen); gleiche Hand wie lib1541img -> nie Oracle fuer A5; Eigenlizenz -> Zone PRUEFEN"
+    },
+    "beddy70/DiskToolC64": {
+      "status": "bewertet",
+      "grund": "Gutachten cbm_erzeuger: dritte Hand fuer 35-Spur-Dateiinhalte (127-B-Probe korrekt), aber keine Lizenzdatei (ROT) und keine Kennzahl bewegt -> Fundus"
+    },
+    "markusC64/floppydiskimagetool": {
+      "status": "bewertet",
+      "grund": "Gutachten cbm_erzeuger: D64->G64->D64 35trk byteidentisch gemessen, 40-Spur-Mastering still unvollstaendig; All rights reserved + geschlossene DLL (ROT); G64->D64 hat Matrix-Eintrag -> Fundus"
     }
   }
 }
