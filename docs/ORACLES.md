@@ -103,8 +103,27 @@ Verzeichnisdarstellung:
 | **stark** | **Hash je Datei** | `floptool flophashes d64 cbmdos <datei>` |
 | stärker | Bytes herausholen und selbst hashen | `floptool flopread … <pfad> <ziel>` |
 
-Gemessen am Korpus-D64: `UFT MARKER`, 254 Byte,
-sha1 `56fea729e9e37c473b12c3b76fc0d3e387b39b5a`.
+Gemessen am Korpus-D64: `UFT MARKER`.
+
+> **Berichtigt MF-684.** Hier stand „254 Byte, sha1 `56fea729…`" als
+> Messung. Das ist der Wert **nach floptool-Polsterung**: `flophashes`
+> füllt den Dateiinhalt auf die Sektorkapazität auf (254 B bei einem
+> Block). Der wahre Inhalt ist **127 Byte**, sha1 `a9fb8f28…` — zwei
+> unabhängige Hände einig, und seit MF-683 vom eigenen
+> Verzeichnisleser gestützt: `uft_cbmdos_read_directory` meldet für
+> diese Datei **1 Block**, und 127 Byte passen in einen.
+>
+> Der Unterschied ist nicht kosmetisch. Ein Differenzlauf gegen den
+> gepolsterten Wert misst **die Polsterung**, nicht das Format: er wird
+> grün, sobald unser Leser auf 254 auffüllt — also gerade dann, wenn er
+> etwas erfindet. Ein Oracle-Wert, der Erfindung belohnt, ist schlimmer
+> als keiner.
+>
+> **Toleranzregel:** `flophashes` taugt für Datei-**Namen**, -**Zahl**
+> und -**Reihenfolge**; für Inhalte nur mit ausdrücklicher
+> Padding-Toleranz. Wer Inhalte byteweise vergleichen will, nimmt
+> `flopread` und hasht selbst — die Zeile darüber nennt das ohnehin den
+> stärkeren Weg.
 
 Wo ein Werkzeug Spur- statt Dateiebene beurteilt (`nibscan`s BAM-/DIR-
 und Full-CRC), ergänzt das die Datei-Ebene, es ersetzt sie nicht.

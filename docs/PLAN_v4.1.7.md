@@ -114,8 +114,11 @@ was floptool kann. `flophashes <format> <fs> <datei>` gibt **CRC32 und
 SHA-1 je Datei** aus, `flopread` holt die Bytes heraus. Der
 Oracle-Differenzlaufsatz aus Phase 1 — „ein unabhängiges Werkzeug liest
 denselben Inhalt heraus" — ist damit wörtlich prüfbar statt nur
-strukturell. Gemessen am Korpus-D64: `UFT MARKER`, 254 Byte, sha1
-`56fea729e9e37c473b12c3b76fc0d3e387b39b5a`. Ebenfalls nachgemessen:
+strukturell. Gemessen am Korpus-D64: `UFT MARKER` — **127 Byte**,
+sha1 `a9fb8f28…`. Bis MF-684 stand hier „254 Byte, sha1
+`56fea729…`" — der Wert NACH floptool-Polsterung auf
+Sektorkapazität. Begründung und Toleranzregel stehen in
+`docs/ORACLES.md` §Differenzlauf-Standard. Ebenfalls nachgemessen:
 floptool liest `pc_fat` vollständig, ist also nicht auf CBM beschränkt.
 
 Der Betriebsfallstrick steht am Registry-Eintrag: floptool prüft den

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Das Zaehlwerk des Scout-Abgleichs, gegen seine eigenen Fehler (MF-681).
+"""Die Scout-Werkzeuge gegen ihre eigenen Fehler (MF-681, MF-684).
 
     python tests/test_scout_stand.py
 
@@ -133,6 +133,76 @@ def test_unbekanntes_ist_offen():
            "ohne jeden Beleg ist ein Auftrag offen")
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Die Ratenbremse und ihre Marken (MF-684)
+# ══════════════════════════════════════════════════════════════════════
+#
+# Zweiter Fall derselben Fehlerklasse: eine VEREINBARUNG OHNE LESER.
+#
+#   * MF-633: zwei Tore trugen eine hartkodierte Ausschlussliste, waehrend
+#     die Regel laengst "frag git" hiess. Die Liste veraltete still.
+#   * MF-678: die Marke `<!-- stufe: 2 -->` stand seit MF-646 in den
+#     Entwuerfen — und `gutachten.py` las sie nie. Die Bremse zaehlte
+#     Entwuerfe wie fertige Gutachten und verlangte vom Eigentuemer
+#     Entscheidungen, die es nicht zu treffen gab.
+#
+# Zweimal ist ein Muster. Beide Marken bekommen darum einen Test, der
+# rot wird, wenn der Leser wieder verschwindet.
+
+def _bremse_zaehlt(dateien: dict[str, str]) -> int:
+    """Legt ein out/-Verzeichnis an und fragt die Bremse."""
+    sys.path.insert(0, str(WURZEL / "tools" / "uft-scout" / "scripts"))
+    import gutachten as g
+    with tempfile.TemporaryDirectory() as t:
+        d = Path(t)
+        for name, inhalt in dateien.items():
+            (d / name).write_text(inhalt, encoding="utf-8")
+        return g.zaehle_offene(str(d))
+
+
+NL = chr(10)
+
+
+def test_bremse_sieht_die_uebernahme_marke():
+    """Ein uebernommenes Gutachten belegt keinen Platz mehr."""
+    n = _bremse_zaehlt({
+        "a.gutachten.md": "<!-- uebernommen: MF-123 -->" + NL + "# A" + NL,
+        "b.gutachten.md": "# B ohne Marke" + NL,
+    })
+    pruefe(n == 1,
+           "eine Uebernahme-Marke muss zaehlen: erwartet 1, war %d" % n)
+
+
+def test_bremse_sieht_die_entwurfs_marke():
+    """Ein Entwurf wartet auf Stufe 3, nicht auf einen Menschen.
+
+    Genau das las gutachten.py bis MF-678 nicht — die Marke stand seit
+    MF-646 in den Dateien und wurde ignoriert. Dieser Test wird rot,
+    wenn der Leser wieder verschwindet.
+    """
+    n = _bremse_zaehlt({
+        "entwurf.gutachten.md":
+            "<!-- stufe: 2 — mechanischer Entwurf -->" + NL + "# E" + NL,
+        "fertig.gutachten.md": "# F ohne Marke" + NL,
+    })
+    pruefe(n == 1,
+           "ein Entwurf darf die Bremse NICHT belasten: erwartet 1, war %d "
+           "— die Marke steht in der Datei und wird wieder nicht "
+           "gelesen" % n)
+
+
+def test_bremse_zaehlt_das_unmarkierte():
+    """Und was keine Marke traegt, zaehlt weiterhin. Eine Bremse, die
+    nichts mehr sieht, waere die dritte Fassung desselben Fehlers."""
+    n = _bremse_zaehlt({
+        "x.gutachten.md": "# X" + NL,
+        "y.gutachten.md": "# Y" + NL,
+        "z.txt": "kein Gutachten" + NL,
+    })
+    pruefe(n == 2, "zwei unmarkierte Gutachten muessen zaehlen, war %d" % n)
+
+
+
 def test_auftragsliste_ist_lesbar():
     """Die echte Datei muss gueltiges JSON sein und Bezeichner tragen.
 
@@ -153,7 +223,10 @@ def test_auftragsliste_ist_lesbar():
 
 def main() -> int:
     print("Scout-Zaehlwerk gegen seine eigenen drei Fehler (MF-681)\n")
-    for f in (test_namensgleichheit,
+    for f in (test_bremse_sieht_die_uebernahme_marke,
+              test_bremse_sieht_die_entwurfs_marke,
+              test_bremse_zaehlt_das_unmarkierte,
+              test_namensgleichheit,
               test_erwaehnung_ist_keine_begutachtung,
               test_alteintrag_ohne_bezeichner,
               test_negativliste_zaehlt,

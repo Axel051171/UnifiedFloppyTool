@@ -3682,3 +3682,66 @@ Sie sind eine Frage, kein Ergebnis: entweder mitbehandelt und nur nicht
 sauber benannt, oder übersehen.
 
 Ein Zählwerk ohne Test ist eine Zahl, der man glaubt.
+
+---
+
+## FMT-13 — `dim_atari`: ein Magic, das wir nicht prüfen (MF-684)
+
+**Kennzahl:** ungeprüfte Formate ↓ (`dim_atari` steht auf T3).
+**Stand: gemessen, NICHT geändert** — und der Grund ist der wichtigste
+Teil dieses Eintrags.
+
+### Was gemessen ist
+
+`dim_atari_probe()` prüft **kein** Magic. `grep -c "0x4242\|'B'"` in
+`src/formats/dim_atari/uft_dim_atari.c` = **0**. Die Probe prüft eine
+X68000-Abgrenzung und dann Geometrie-Plausibilität — mehr nicht.
+
+Jacknife prüft es: `dllmain.c:590`
+
+```c
+else if (*(unsigned short *)disk_image.buffer == 0x4242)  // "BB"
+{
+    // Fastcopy DIM image, unpack it to flat buffer if needed
+```
+
+Von mir im Klon gelesen, nicht übernommen. (Das Gutachten nannte
+Zeile 591; gemessen ist 590.)
+
+### Warum der Parser trotzdem unverändert bleibt
+
+**Unser eigener Header widerspricht dieser Quelle**, und zwar direkt:
+
+| Offset | unser Header sagt | Jacknife liest |
+|---|---|---|
+| 0x00 | „Flags (unused, often 0)" | `'B'` |
+| 0x01 | „Reserved" | `'B'` |
+
+Zwei Möglichkeiten, und sie führen zu entgegengesetzten Änderungen:
+Entweder unsere Spec ist falsch — dann gehört das Magic geprüft. Oder
+Jacknife behandelt eine **Fastcopy-Variante**, während wir das
+allgemeinere DIM meinen — dann würde eine Magic-Prüfung gültige Dateien
+abweisen. Der Kommentar in Jacknife sagt wörtlich „Fastcopy DIM image",
+was für die zweite Lesart spricht.
+
+Das Gutachten nennt Hatari als zweite Quelle. **Ich konnte sie nicht
+verifizieren**: Hatari ist nicht geklont, und `raw.githubusercontent.com`
+liefert für die genannten Pfade 404. Damit steht **eine** verifizierte
+Quelle gegen unsere eigene Dokumentation.
+
+Genau in dieser Lage sind hier fünf Parser gegen erfundene Specs gebaut
+worden (FMT-2/3/10/11/12). Eine Änderung am Format-Layer auf eine
+Quelle, die der eigenen Doku widerspricht, ist die Wiederholung dieses
+Fehlers — nur diesmal mit einer echten fremden Datei als Anlass statt
+mit einer erfundenen.
+
+### Was den Eintrag schließt
+
+Eine **zweite unabhängige Quelle**, die sagt, ob das Magic zum Format
+oder zur Fastcopy-Variante gehört. Kandidaten: Hatari `src/` (Klon
+nötig), die Fastcopy-Dokumentation, oder eine reale `.dim`-Datei aus
+zwei verschiedenen Erzeugern. Erst danach entscheidet sich, ob die
+Prüfung dazukommt oder unser Header korrigiert wird.
+
+**Bis dahin ist der Befund mehr wert als der Fix**, weil er die Frage
+festhält, die vorher niemand gestellt hatte.
