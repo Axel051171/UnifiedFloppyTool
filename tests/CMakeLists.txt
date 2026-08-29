@@ -995,6 +995,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_capability_manifest"
            OR ${test_name} STREQUAL "test_plugin_capability_api"
            OR ${test_name} STREQUAL "test_disk_metadata_variant"
+           OR ${test_name} STREQUAL "test_format_variants"
            OR ${test_name} STREQUAL "test_convert_roundtrip_measured")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()

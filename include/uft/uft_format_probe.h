@@ -63,24 +63,51 @@ typedef enum uft_format_class {
 // ============================================================================
 
 typedef struct uft_format_variant {
-    const char*     name;           // "D64-35", "D64-40", etc.
+    const char*     name;           // "D64-35", "D64-40", "HFEv3", …
     const char*     description;
     uft_format_t    base_format;
-    
+
     // Size constraints
     size_t          min_size;
     size_t          max_size;
     size_t          exact_sizes[8]; // Multiple valid sizes, 0-terminated
-    
+
     // Geometry
     int             cylinders;
     int             heads;
     int             sectors_min;
     int             sectors_max;
     int             sector_size;
-    
+
     // Detection
     int             (*validate)(const uint8_t* data, size_t size);
+
+    /* ── Richtung (MF-665) ────────────────────────────────────────────
+     *
+     * Dieser Typ hatte bis MF-665 **null Instanzen** und deshalb keine
+     * Richtung: er sagte, wie eine Variante AUSSIEHT, nicht ob wir sie
+     * lesen oder schreiben koennen. Fuer eine Auswahlliste beim
+     * Speichern ist genau das die Frage.
+     *
+     * HFE ist der Beleg, dass beides auseinanderfaellt: sein
+     * Faehigkeits-Manifest fuehrt "HFE v3 (STM32 bootloader)" als
+     * SUPPORTED — und `uft_hfe.c:797` lehnt das SCHREIBEN von v3
+     * ausdruecklich mit UFT_ERROR_NOT_SUPPORTED ab. Wer die Liste aus
+     * dem Manifest baute, boete "Speichern als HFEv3" an und liefe in
+     * eine Ablehnung.
+     *
+     * Deshalb hier zwei getrennte Angaben statt einer. */
+    bool            can_read;       /**< Der Leser beherrscht sie. */
+    bool            can_write;      /**< Der SCHREIBER beherrscht sie. */
+
+    /** Warum nicht schreibbar — Pflicht, wenn `can_write` false ist und
+     *  `can_read` true. Ein Format, das wir lesen aber nicht schreiben,
+     *  ist eine Einschraenkung, die der Benutzer erklaert bekommt. */
+    const char*     write_note;
+
+    /** Die Voreinstellung beim Speichern, wenn aus der geladenen Datei
+     *  keine Variante ermittelt wurde. Genau eine je Plugin. */
+    bool            is_write_default;
 } uft_format_variant_t;
 
 // ============================================================================

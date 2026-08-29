@@ -28,6 +28,7 @@
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_format_probe.h"   /* MF-665: Varianten */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1001,6 +1002,97 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
 // ============================================================================
 
 /* Prinzip 7 Feature-Matrix */
+/* ==========================================================================
+ * Varianten  (MF-665)
+ *
+ * Die ERSTE gefuellte `uft_format_variant_t`-Tabelle im Baum. Der Typ
+ * hatte bis MF-665 null Instanzen; er traegt seither eine RICHTUNG, weil
+ * das Faehigkeits-Manifest sie nicht kennt.
+ *
+ * HFE ist genau der Fall, der das erzwungen hat: die Feature-Matrix
+ * unten fuehrt "HFE v3 (STM32 bootloader)" als SUPPORTED — und
+ * `hfe_write_track()` lehnt v3 mit UFT_ERROR_NOT_SUPPORTED ab. Beides
+ * stimmt: wir LESEN v3, wir SCHREIBEN es nicht. Eine Auswahlliste aus
+ * dem Manifest boete "Speichern als HFEv3" an und liefe in die
+ * Ablehnung.
+ *
+ * ── Was NICHT in der Liste steht, und warum ──────────────────────────
+ *
+ * Der `uft-variants`-Zyklus (MF-664-Zuarbeit) hat fuenf Fassungen
+ * belegt. Drei fehlen hier mit Absicht:
+ *
+ *   ExtHFE (format_revision = 1)
+ *       Selbst HxC SCHREIBT sie nur und liest sie nicht zurueck; die
+ *       Loader-Slots sind 0 (`hfe_loader.c:395-397`). Beide
+ *       unabhaengigen Leser weisen revision != 0 laut ab
+ *       (`hfe_loader.c:161-163`, `samdisk/hfe.cpp:107-108`). Etwas
+ *       anzubieten, das der Urheber selbst nicht zurueckliest, waere
+ *       eine Sackgasse mit Ansage.
+ *
+ *   HDDD-A2
+ *       Ihr Kopf ist von v1 NICHT unterscheidbar. Eine Variante, die
+ *       man nicht erkennen kann, kann man auch nicht anbieten — die
+ *       Auswahl waere geraten, und genau das verbietet der Plan.
+ *
+ *   Stream-HFE ("HxC_Stream_Image")
+ *       Eigene 16-Byte-Signatur; ein anderes Format, das nur dieselbe
+ *       Endung traegt. Es hier zu fuehren hiesse, zwei Dinge unter
+ *       einem Namen zu vermischen.
+ *
+ * Die Generation haengt an der SIGNATUR, nicht am Revisionsbyte — auch
+ * das ist aus dem Zyklus: HxCs eigener v3-Schreiber setzt rev = 0
+ * (`hfev3_writer.c:148`), und das oft zitierte "v2" stammt allein aus
+ * einer Fehlermeldung, die `formatrevision + 1` ausgibt
+ * (`hfe_loader.c:154`).
+ * ========================================================================== */
+
+static int hfe_variant_is_v1(const uint8_t *data, size_t size)
+{
+    if (!data || size < 8) return 0;
+    return memcmp(data, HFE_SIGNATURE, 8) == 0 ? 1 : 0;
+}
+
+static int hfe_variant_is_v3(const uint8_t *data, size_t size)
+{
+    if (!data || size < 8) return 0;
+    return memcmp(data, HFE_SIGNATURE_V3, 8) == 0 ? 1 : 0;
+}
+
+static const uft_format_variant_t hfe_variants[] = {
+    {
+        .name             = "HFEv1",
+        .description      = "HxC HFE v1 — Signatur HXCPICFE, format_revision 0",
+        .base_format      = UFT_FORMAT_HFE,
+        .validate         = hfe_variant_is_v1,
+        .can_read         = true,
+        .can_write        = true,
+        .write_note       = NULL,
+        /* Voreinstellung, und der Grund steht dabei: JEDER bekannte
+         * Abnehmer liest v1 — HxC selbst, FlashFloppy, Greaseweazle,
+         * SAMdisk. v3 liest nur eine Teilmenge davon. Wer speichert,
+         * ohne nachzudenken, soll das Breiteste bekommen. */
+        .is_write_default = true,
+    },
+    {
+        .name        = "HFEv3",
+        .description = "HxC HFE v3 — Signatur HXCHFEV3, Opcode-Strom mit "
+                       "variabler Bitrate und RAND-Bereichen",
+        .base_format = UFT_FORMAT_HFE,
+        .validate    = hfe_variant_is_v3,
+        .can_read    = true,
+        /* hfe_write_track() gibt fuer v3 UFT_ERROR_NOT_SUPPORTED
+         * zurueck. Das ist ehrlich und bleibt so: einen Opcode-Strom zu
+         * schreiben, dessen RAND-Semantik wir nur LESEND nachgebaut
+         * haben, waere geraten. */
+        .can_write   = false,
+        .write_note  = "UFT liest HFEv3, schreibt es aber nicht. Der "
+                       "Opcode-Strom (SETBITRATE, SKIPBITS, RAND) ist "
+                       "lesend gegen HxC geprueft; ein Schreiber dafuer "
+                       "waere ungeprueft.",
+        .is_write_default = false,
+    },
+};
+
 static const uft_plugin_feature_t hfe_features[] = {
     { "HFE v1 (original)",         UFT_FEATURE_SUPPORTED,   NULL },
     /* MF-659: stand als "HFE v2 (HxC2001) = SUPPORTED" da. Es gibt kein
@@ -1051,6 +1143,8 @@ const uft_format_plugin_t uft_format_plugin_hfe = {
     .read_track = hfe_read_track,
     .write_track = hfe_write_track,
     .detect_geometry = NULL,
+    .variants = hfe_variants,
+    .variant_count = sizeof(hfe_variants) / sizeof(hfe_variants[0]),
     .read_metadata = hfe_read_metadata,
     .write_metadata = NULL,
     

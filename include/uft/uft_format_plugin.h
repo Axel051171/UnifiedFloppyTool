@@ -376,6 +376,8 @@ typedef struct uft_track uft_track_t;
  * 
  * Jedes Format-Plugin muss diese Struktur implementieren und registrieren.
  */
+struct uft_format_variant;   /* MF-665, def. in uft_format_probe.h */
+
 typedef struct uft_format_plugin {
     // === Identifikation ===
     const char*         name;          ///< Plugin-Name ("SCP", "ADF", etc.)
@@ -594,6 +596,24 @@ typedef struct uft_format_plugin {
      * Initialisierung (im Baum nirgends benutzt) und die ABI extern
      * vorkompilierter Plugins — dafür ist der Größen-Guard da.
      */
+    /* === MF-665: Varianten dieses Formats ==============================
+     *
+     * Optional. Ein Plugin, das hier nichts eintraegt, bietet keine
+     * Variantenauswahl an — und das ist die ehrliche Voreinstellung:
+     * lieber keine Liste als eine geratene.
+     *
+     * Der Typ steht in `uft_format_probe.h` und hatte bis MF-665 null
+     * Instanzen. Er traegt seit dann eine RICHTUNG (`can_read` /
+     * `can_write`), weil das Faehigkeits-Manifest sie nicht kennt: HFE
+     * fuehrt "HFE v3 SUPPORTED", und uft_hfe.c:797 lehnt das SCHREIBEN
+     * von v3 ab. Wer die Auswahlliste aus dem Manifest baute, boete
+     * etwas an, das die Maschine verweigert.
+     *
+     * Angehaengt nach dem Verfahren im Groessen-Waechter unten: ADD at
+     * end, neu bauen, gemeldete Groesse eintragen. */
+    const struct uft_format_variant* variants;
+    size_t                           variant_count;
+
     uint32_t            api_version;
 
 } uft_format_plugin_t;
@@ -645,13 +665,21 @@ typedef struct uft_format_plugin {
        /* Pinned 2026-05-25 against MinGW-w64 g++ 13.1.0 on Windows x86_64,
         * repinned 2026-08-18 (MF-404): 216 -> 224 after the optional
         * read_half_track pointer was added directly before api_version.
+        * Repinned 2026-08-29 (MF-665): 224 -> 240 nach `variants` +
+        * `variant_count` vor api_version. GEMESSEN mit gcc 13.1.0 auf
+        * MinGW-w64 x86_64 (`sizeof` ausgegeben, nicht gerechnet); +16 ist
+        * genau Zeiger plus size_t. Reine Anfuegung, keine Umsortierung —
+        * alle Plugins nutzen Designated Initializers, das Feld
+        * nullinitialisiert in den 136, die es nicht setzen. Kein
+        * API-Versionssprung: die Aenderung ist quelltextvertraeglich, und
+        * externe Plugins gibt es nicht (siehe UFT-004).
         * Measured, not estimated. Pure insertion of one pointer, no
         * reordering; all plugins use designated initializers, so the field
         * zero-initialises in the 87 plugins that do not set it. If this trips
         * on a new platform, run tests/test_plugin_abi.c, copy the reported
         * size here, and document the platform delta in MASTER_PLAN
         * v4.1.5-Backlog. */
-       _Static_assert(sizeof(uft_format_plugin_t) == 224,
+       _Static_assert(sizeof(uft_format_plugin_t) == 240,
                       "uft_format_plugin_t layout changed — update the pin "
                       "in this header AND tests/test_plugin_abi.c.");
 #    endif
@@ -849,6 +877,43 @@ bool uft_disk_metadata(const uft_disk_t* disk, const char* key,
 
 /** @brief Bietet das Plugin dieses Abbilds ueberhaupt Metadaten an? */
 bool uft_disk_has_metadata(const uft_disk_t* disk);
+
+/* ==========================================================================
+ * Varianten eines Formats (MF-665) — Umsetzung in uft_plugin_capability.c
+ *
+ * Getrennt vom Faehigkeits-Manifest, weil dieses die RICHTUNG nicht kennt:
+ * HFE fuehrt "HFE v3 SUPPORTED" und lehnt das SCHREIBEN von v3 ab.
+ * ========================================================================== */
+
+struct uft_format_variant;
+
+/**
+ * @brief Die Varianten, die das Plugin SCHREIBEN kann.
+ * @return Anzahl (auch wenn @p out zu klein ist — der Aufrufer sieht, dass
+ *         er zu wenig Platz hatte).
+ */
+size_t uft_plugin_write_variants(const uft_format_plugin_t* plugin,
+                                  const struct uft_format_variant** out,
+                                  size_t max);
+
+/**
+ * @brief Die Voreinstellung beim Speichern, oder NULL.
+ *
+ * NULL heisst: dieses Plugin schreibt keine Variante, die man waehlen
+ * koennte. Dann bietet die Oberflaeche keine Auswahl an — statt einer,
+ * die ins Leere zeigt.
+ */
+const struct uft_format_variant* uft_plugin_default_write_variant(
+        const uft_format_plugin_t* plugin);
+
+/**
+ * @brief Welche Variante die gegebenen Kopfbytes tragen, oder NULL.
+ *
+ * NULL heisst "nicht ermittelt" — nie "vermutlich die erste".
+ */
+const struct uft_format_variant* uft_plugin_variant_of(
+        const uft_format_plugin_t* plugin,
+        const uint8_t* head, size_t head_len);
 
 
 /**

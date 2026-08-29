@@ -40,6 +40,7 @@
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_format_probe.h"   /* MF-665 */
 
 #include <string.h>
 
@@ -108,4 +109,67 @@ uft_control_visibility_t uft_plugin_control_visibility(
     default:
         return UFT_CONTROL_HIDE;
     }
+}
+
+/* ==========================================================================
+ * Varianten  (MF-665)
+ *
+ * Der Unterschied zum Faehigkeits-Manifest daroeber ist die RICHTUNG.
+ * Das Manifest sagt, was ein Plugin kann; die Variantentabelle sagt, in
+ * welcher FASSUNG — und getrennt fuer Lesen und Schreiben.
+ *
+ * HFE ist der Fall, der das erzwungen hat: sein Manifest fuehrt
+ * "HFE v3 SUPPORTED", und `uft_hfe.c` lehnt das SCHREIBEN von v3 ab.
+ * Eine Auswahlliste aus dem Manifest boete etwas an, das die Maschine
+ * verweigert.
+ * ========================================================================== */
+
+size_t uft_plugin_write_variants(const uft_format_plugin_t *plugin,
+                                  const uft_format_variant_t **out,
+                                  size_t max)
+{
+    size_t n = 0;
+    if (!plugin || !plugin->variants) return 0;
+    for (size_t i = 0; i < plugin->variant_count; i++) {
+        if (!plugin->variants[i].can_write) continue;
+        if (out && n < max) out[n] = &plugin->variants[i];
+        n++;
+    }
+    return n;
+}
+
+const uft_format_variant_t *uft_plugin_default_write_variant(
+        const uft_format_plugin_t *plugin)
+{
+    if (!plugin || !plugin->variants) return NULL;
+
+    /* Die ausdrueckliche Voreinstellung — aber nur, wenn sie auch
+     * schreibbar ist. Eine Voreinstellung, die die Maschine ablehnt,
+     * waere schlimmer als keine. */
+    for (size_t i = 0; i < plugin->variant_count; i++) {
+        if (plugin->variants[i].is_write_default &&
+            plugin->variants[i].can_write)
+            return &plugin->variants[i];
+    }
+    /* Sonst die erste schreibbare. Kein Raten: wenn keine schreibbar
+     * ist, gibt es nichts anzubieten, und das sagen wir mit NULL. */
+    for (size_t i = 0; i < plugin->variant_count; i++) {
+        if (plugin->variants[i].can_write) return &plugin->variants[i];
+    }
+    return NULL;
+}
+
+const uft_format_variant_t *uft_plugin_variant_of(
+        const uft_format_plugin_t *plugin,
+        const uint8_t *head, size_t head_len)
+{
+    if (!plugin || !plugin->variants || !head || head_len == 0) return NULL;
+    for (size_t i = 0; i < plugin->variant_count; i++) {
+        const uft_format_variant_t *v = &plugin->variants[i];
+        if (v->validate && v->validate(head, head_len)) return v;
+    }
+    /* Keine passt: NULL. Die naechstbeste zu nehmen waere geraten —
+     * und ein geratener Variantenname ist die Fabrikations-Klasse
+     * FMT-2/3/10/11/12 in der Oberflaeche. */
+    return NULL;
 }
