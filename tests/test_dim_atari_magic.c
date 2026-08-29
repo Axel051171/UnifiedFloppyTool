@@ -59,6 +59,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 extern const uft_format_plugin_t uft_format_plugin_dim_atari;
 
@@ -109,10 +110,90 @@ static bool probe(const uint8_t *daten, int *konfidenz)
     return uft_format_plugin_dim_atari.probe(daten, GESAMT, GESAMT, konfidenz);
 }
 
+/* ── Der Schreibpfad (MF-688) ────────────────────────────────────────
+ *
+ * Die Probe zu haerten reicht nicht. `open()` prueft seinerseits kein
+ * Magic — es liest den Kopf, prueft Geometrie-Plausibilitaet und oeffnet
+ * die Datei bei Bedarf im SCHREIBMODUS ("r+b"). Wer das Plugin
+ * unmittelbar waehlt (Registry umgangen, ausdrueckliche Formatwahl, ein
+ * Fuzzer), bekommt fuer jede Fremddatei passender Laenge ein offenes
+ * Schreibziel — und `write_track()` schreibt dann Sektoren hinein.
+ *
+ * Das ist kein Variantenthema. Das laeuft gegen "Kein Bit verloren.
+ * Keine stille Veraenderung": ein Benutzer mit einer Nicht-DIM-Datei
+ * richtiger Laenge im falschen Dialog ueberschreibt sie kommentarlos.
+ *
+ * Der Test schreibt darum ABSICHTLICH echt: er legt eine Fremddatei mit
+ * erkennbarem Inhalt an, laesst den Schreibversuch laufen und sieht
+ * danach nach, ob auch nur ein Byte anders ist. Eine Ablehnung, die
+ * vorher schon geschrieben hat, ist keine Ablehnung. */
+static bool schreibversuch_veraendert_die_datei(const char *pfad)
+{
+    uint8_t *fremd = baue_dim(false);       /* passende Laenge, kein Magic */
+    if (!fremd) return false;
+
+    /* Wiedererkennbar machen — aber NUR in den Nutzdaten.
+     *
+     * Der erste Entwurf setzte die ersten 64 Byte auf 0x5A und bestand
+     * prompt: `open()` scheiterte dann an der zerstoerten GEOMETRIE, nicht
+     * am fehlenden Magic. Der Test war gruen und hat nichts gezeigt —
+     * dieselbe Falle, gegen die dieser Test antritt, eine Ebene hoeher.
+     *
+     * Jetzt bleibt der Kopf vollstaendig gueltig; einzig die zwei
+     * Magic-Bytes fehlen. Damit kann `open()` nur noch aus einem Grund
+     * ablehnen. */
+    memset(fremd + DIM_HDR, 0x5A, 512);
+
+    FILE *f = fopen(pfad, "wb");
+    if (!f) { free(fremd); return false; }
+    fwrite(fremd, 1, GESAMT, f);
+    fclose(f);
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = false;
+
+    uft_error_t rc = uft_format_plugin_dim_atari.open(&disk, pfad, false);
+    printf("  open(schreibend) auf Fremddatei: rc=%d%s\n", (int)rc,
+           rc == UFT_OK ? "  <- angenommen" : "  <- abgelehnt");
+
+    if (rc == UFT_OK) {
+        uint8_t inhalt[512];
+        memset(inhalt, 0xCC, sizeof(inhalt));
+        uft_sector_t sek;
+        memset(&sek, 0, sizeof(sek));
+        sek.data = inhalt;
+        sek.data_len = sizeof(inhalt);
+
+        uft_track_t trk;
+        memset(&trk, 0, sizeof(trk));
+        trk.sectors = &sek;
+        trk.sector_count = 1;
+
+        if (uft_format_plugin_dim_atari.write_track)
+            uft_format_plugin_dim_atari.write_track(&disk, 0, 0, &trk);
+        if (uft_format_plugin_dim_atari.close)
+            uft_format_plugin_dim_atari.close(&disk);
+    }
+
+    /* Nachsehen, nicht vermuten. */
+    bool veraendert = false;
+    f = fopen(pfad, "rb");
+    if (f) {
+        uint8_t *jetzt = (uint8_t *)malloc(GESAMT);
+        if (jetzt && fread(jetzt, 1, GESAMT, f) == GESAMT)
+            veraendert = (memcmp(jetzt, fremd, GESAMT) != 0);
+        free(jetzt);
+        fclose(f);
+    }
+    free(fremd);
+    return veraendert;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("DIM-Probe: ohne `BB` ist es kein DIM (MF-687)\n\n");
+    printf("DIM: ohne `BB` weder lesen noch schreiben (MF-687/688)\n\n");
 
     uint8_t *mit  = baue_dim(true);
     uint8_t *ohne = baue_dim(false);
@@ -154,6 +235,20 @@ int main(void)
         printf("  ok   das Magic entscheidet, nicht die Dateigroesse\n");
 
     free(mit); free(ohne);
+
+    /* ── Der Schreibpfad (MF-688) ─────────────────────────────────── */
+    printf("\n");
+    const char *tmp = "uft_dim_fremd.bin";
+    bool veraendert = schreibversuch_veraendert_die_datei(tmp);
+    remove(tmp);
+
+    PRUEFE(!veraendert,
+           "eine FREMDE Datei passender Laenge wurde beschrieben. `open()` "
+           "prueft kein Magic und liefert ein Schreibziel; `write_track()` "
+           "schreibt hinein. Das ist stille Veraenderung fremder Daten und "
+           "laeuft gegen Prinzip 1");
+    if (!veraendert)
+        printf("  ok   die Fremddatei ist unveraendert geblieben\n");
 
     printf("\n%s (%d Abweichungen)\n",
            fehler ? "FEHLGESCHLAGEN" : "OK", fehler);

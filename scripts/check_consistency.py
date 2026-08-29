@@ -817,6 +817,19 @@ def main() -> int:
         import audit_setting_wiring as _sw
         all_errors.append(("Einstellung ohne Wirkung", _sw.check(repo)))
 
+        # 42. Kategorie (MF-688): wer beim ERKENNEN ein Magic prueft, muss
+        # es beim OEFFNEN auch pruefen. `dim_atari` tat es nicht, und
+        # `open()` liefert bei Schreibwunsch ein "r+b"-Ziel — gemessen kam
+        # eine Fremddatei passender Laenge VERAENDERT zurueck.
+        #
+        # Die Messung fragt bewusst NICHT "hat dieses Plugin ein Magic":
+        # von 81 Plugins mit Schreibpfad sind die meisten kopflos (ADF,
+        # D64, IMG), die KOENNEN keines pruefen. Der erste Entwurf tat es
+        # doch und meldete zehn Befunde, davon mindestens drei falsch —
+        # von Hand nachgesehen, nicht dem Skript geglaubt.
+        import audit_open_vs_probe_magic as _ovp
+        all_errors.append(("Magic beim Oeffnen fehlt", _ovp.check(repo)))
+
         # 41. Kategorie (MF-681): das Zaehlwerk des Scout-Abgleichs gegen
         # seine eigenen drei Fehler. Der Nenner (beauftragt / begutachtet /
         # offen) steuert die gesamte Restarbeit am Scout-Rueckstand, und er

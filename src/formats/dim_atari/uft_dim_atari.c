@@ -194,6 +194,27 @@ static uft_error_t dim_atari_open(uft_disk_t *disk, const char *path, bool ro)
         return UFT_ERROR_IO;
     }
 
+    /* ID header 0x4242 — before anything else (MF-688).
+     *
+     * The probe checks this since MF-687, but `open()` did not, and that
+     * is the path that matters for damage: it opens "r+b" when the caller
+     * wants write access. Anyone selecting the plugin directly — explicit
+     * format choice, a fuzzer, a caller that bypasses the registry — got a
+     * writable handle on ANY file of a plausible length, and
+     * `write_track()` then wrote sectors into it.
+     *
+     * Measured before the fix (tests/test_dim_atari_magic.c): a foreign
+     * file with a valid-looking 32-byte header but no magic was opened
+     * with rc=0 and came back modified. That is silent alteration of
+     * someone else's data — Principle 1, not a matter of taste.
+     *
+     * Same three references as the probe: Hatari dim.c:75-76, HxC
+     * dim_loader.c:74/:110, Jacknife dllmain.c:590. */
+    if (hdr[0x00] != 0x42 || hdr[0x01] != 0x42) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     long fs = ftell(f);
     if (fs < 0) { fclose(f); return UFT_ERROR_IO; }

@@ -3932,3 +3932,82 @@ und sie abschreiben.
   Änderung mit eigenem Beleg. Als Fundus notiert, nicht gehandelt.
 * **Der Schreibpfad** prüft das Magic weiterhin nicht — `write_track`
   schreibt in fremde Dateien passender Größe. Eigener Prüfauftrag.
+
+---
+
+## FMT-14 — der Schreibpfad prüfte sein Ziel nicht (MF-688)
+
+**Kennzahl:** keine der vier direkt — aber der Befund läuft gegen
+Prinzip 1, und das steht über der Kennzahl-Regel.
+
+### Der Fehler
+
+`dim_atari_open()` prüfte kein Magic. Es liest den Kopf, prüft
+Geometrie-Plausibilität und öffnet **`"r+b"`**, wenn der Aufrufer
+schreiben will. Wer das Plugin unmittelbar wählt — ausdrückliche
+Formatwahl, ein Fuzzer, ein Aufrufer an der Registry vorbei — bekam für
+**jede Datei passender Länge** ein Schreibziel, und `write_track()`
+schrieb hinein.
+
+Gemessen, bevor etwas geändert wurde:
+
+```
+open(schreibend) auf Fremddatei: rc=0   <- angenommen
+→ die Datei kam VERÄNDERT zurück
+```
+
+Das ist stille Veränderung fremder Daten. Ein Benutzer mit einer
+Nicht-DIM-Datei richtiger Länge im falschen Dialog überschreibt sie
+kommentarlos.
+
+Behoben: `open()` prüft das Magic vor allem anderen, mit denselben drei
+Referenzen wie die Probe.
+
+### Der Rotbeweis hat sich selbst korrigiert
+
+Der erste Entwurf bestand — **aus dem falschen Grund**. Er setzte die
+ersten 64 Byte der Fremddatei auf `0x5A`, um sie wiedererkennbar zu
+machen, und zerstörte damit den Geometrie-Kopf. `open()` scheiterte an
+der Geometrie, nicht am fehlenden Magic. Grün, und nichts gezeigt.
+
+Jetzt bleibt der Kopf vollständig gültig; **einzig die zwei Magic-Bytes
+fehlen**. Damit kann `open()` nur noch aus einem Grund ablehnen. Und der
+Test schreibt absichtlich echt und sieht danach nach: eine Ablehnung,
+die vorher schon geschrieben hat, ist keine Ablehnung.
+
+### Der Zensus — und was er über Messungen lehrt
+
+`scripts/audit_open_vs_probe_magic.py`, registriert als 42. Kategorie.
+
+Die naheliegende Frage wäre „hat dieses Plugin ein Magic?" gewesen, und
+sie ist falsch: von 81 Plugins mit Schreibpfad sind die meisten
+**kopflos** — ADF, D64, IMG, XFD werden an der Dateigröße erkannt und
+*können* nichts prüfen. Ein Tor, das 70-mal falsch anschlägt, wird
+übergangen.
+
+Die richtige Frage ist enger: **prüft die Probe ein Magic, das `open()`
+nicht prüft?** Wer beim Erkennen auf feste Bytes besteht, hält sie für
+wesentlich; beim Öffnen darauf zu verzichten ist ein Widerspruch in sich.
+
+Der Weg dahin ging über zwei eigene Fehlmessungen, beide von Hand
+gefunden:
+
+| Lauf | Befunde | was falsch war |
+|---|---:|---|
+| 1 | 10 | zählte jeden Byte-Vergleich — auch Konfidenz-**Hinweise**. `img_probe` prüft `data[0] == 0xEB`, aber nur um die Zahl zu erhöhen; erkannt wird über die Größe. Dazu `scp` mit `write_track = NULL`. |
+| 2 | 1 | der Rückgabewert-Teil kannte nur `UFT_ERROR`, nicht `UFT_ERR_` — damit galt `cqm_open` als prüfungslos, obwohl es prüft. |
+| 3 | **0** | — |
+
+Ein Vergleich, der bei Nichtübereinstimmung **ablehnt**, ist ein Magic.
+Einer, der eine Zahl hochzählt, ist ein Hinweis — und ein Hinweis darf
+im `open()` fehlen.
+
+Rotbeweis: die Prüfung in `dim_atari_open` wieder entfernt → 1 Befund,
+zurückgesetzt → 0.
+
+### Was die Null NICHT heißt
+
+`dim_atari` war die einzige Instanz **dieses Musters**. Sie heißt nicht
+„alle Schreibpfade sind sicher": die kopflosen Formate erkennen allein
+an der Größe, und eine Größenprüfung ist dünn. Ob das ein eigener Befund
+ist, ist eine andere Messung — und eine andere Frage.
