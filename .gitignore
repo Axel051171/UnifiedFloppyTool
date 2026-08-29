@@ -137,3 +137,14 @@ build-*/
 /crc_computed
 /UnifiedFloppyTool-tod.txt
 /# GOAL Release *.txt
+
+# Zugangsdaten. Anlass MF-653, gemessen: proto/hermes-eval/.env
+# (drei API-Schluesselnamen) war NUR durch eine .gitignore INNERHALB
+# des geloeschten Verzeichnisses geschuetzt. Mit dem Verzeichnis fiel
+# der Schutz weg und die Datei lag ungetrackt und nicht ignoriert da.
+# Nie committet worden — geprueft mit `git log --all -- <pfad>`.
+# Ein Geheimnisschutz, der an einer Datei IM Verzeichnis haengt,
+# stirbt mit dem Verzeichnis. Deshalb steht die Regel jetzt oben.
+.env
+*.env
+!*.env.example
