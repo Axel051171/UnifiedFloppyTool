@@ -87,7 +87,13 @@ TEST(scp_hfe_is_lossy_documented_not_lossless) {
  * tests/test_convert_roundtrip_measured.c — der Rundlauf
  * D64->G64->D64 ist bitgleich.
  *
- * Der Test fuehrt sie jetzt namentlich. Wer einen dritten hinzufuegt,
+ * MF-655 zwei weitere: ATR->XFD und XFD->ATR, bewiesen von
+ * tests/test_convert_atr_xfd.c am Korpus-Paar atrcopy_dos2sd — beide
+ * Richtungen einzeln bitgleich, dazu der volle Rundlauf
+ * ATR->XFD->ATR, alles ohne accept_data_loss. Es sind die ersten
+ * Atari-Eintraege der Matrix ueberhaupt.
+ *
+ * Der Test fuehrt sie jetzt namentlich. Wer einen weiteren hinzufuegt,
  * ohne diese Liste anzufassen, wird rot — und muss dann sagen, welcher
  * Test seine Bit-Identitaet beweist. */
 TEST(every_lossless_pair_is_named_and_proven) {
@@ -109,11 +115,18 @@ TEST(every_lossless_pair_is_named_and_proven) {
             /* NUR die Hinrichtung. HFE -> IMG bleibt verlustbehaftet:
              * die Messquelle war ein IMG und hat keine schwachen Bits,
              * belegt ihren Verlust also nicht. */
-            (tbl[i].from == UFT_FORMAT_IMG && tbl[i].to == UFT_FORMAT_HFE))
+            (tbl[i].from == UFT_FORMAT_IMG && tbl[i].to == UFT_FORMAT_HFE) ||
+            /* MF-655: ATR <-> XFD, beide Richtungen bitgleich gemessen
+             * (tests/test_convert_atr_xfd.c, 92176 / 92160 B, Rundlauf
+             * eingeschlossen). Die Grenze steht im selben Test: ein ATR
+             * mit Sektorgroesse 256 wird ohne Zustimmung abgelehnt,
+             * weil XFD die Angabe nicht speichern kann. */
+            (tbl[i].from == UFT_FORMAT_ATR && tbl[i].to == UFT_FORMAT_XFD) ||
+            (tbl[i].from == UFT_FORMAT_XFD && tbl[i].to == UFT_FORMAT_ATR))
             n_known++;
     }
-    ASSERT(n_ll == 4);
-    ASSERT(n_known == 4);
+    ASSERT(n_ll == 6);
+    ASSERT(n_known == 6);
 }
 
 TEST(known_ld_scp_to_img) {

@@ -311,6 +311,39 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      * ihrer Messung zurueck.
      */
 
+    /* ATR <-> XFD (MF-655) — die ersten Atari-Eintraege dieser Matrix.
+     *
+     * Bis hierher fuehrte sie KEIN einziges Atari-Paar; der einzige
+     * ATR-Bezug in dieser Datei war die Notiz unten, dass ein Wandler
+     * fehle. Er fehlt nicht mehr.
+     *
+     * Gemessen, nicht zugesichert. `tests/test_convert_atr_xfd.c` prueft
+     * am Korpus-Paar atrcopy_dos2sd.atr (92 176 B) / .xfd (92 160 B):
+     *
+     *   - die Voraussetzung selbst:  atr[16:] == xfd, byteweise
+     *   - ATR -> XFD  bitgleich zum Korpus-XFD, OHNE accept_data_loss
+     *   - XFD -> ATR  bitgleich zum Korpus-ATR, OHNE accept_data_loss
+     *   - der volle Rundlauf ATR -> XFD -> ATR  bitgleich
+     *
+     * Die Grenze steht im selben Test und ist der Grund, warum diese
+     * Eintraege nicht blind LOSSLESS heissen duerfen: ein ATR mit
+     * Sektorgroesse 256 verliert diese Angabe unwiederbringlich, weil XFD
+     * sie nicht speichern kann und die Dateigroesse sie nicht verraet
+     * (184 320 Byte sind 1440x128 ODER 720x256). Der Wandler lehnt so
+     * einen Fall ohne Zustimmung ab, und der Test prueft genau das.
+     *
+     * LOSSLESS gilt also fuer den Weg, den der Wandler ohne Zustimmung
+     * ueberhaupt geht — und nur fuer den. Das ist keine Einschraenkung der
+     * Zusage, sondern ihre Bedingung. */
+    { UFT_FORMAT_ATR, UFT_FORMAT_XFD, UFT_RT_LOSSLESS,
+      "MF-655: Kopf entfernt; bitgleich zum Korpus-XFD gemessen "
+      "(atrcopy_dos2sd, 92160 B), ohne accept_data_loss. Sektorgroesse "
+      "!= 128 wird ohne Zustimmung abgelehnt." },
+    { UFT_FORMAT_XFD, UFT_FORMAT_ATR, UFT_RT_LOSSLESS,
+      "MF-655: Kopf erzeugt; bitgleich zum Korpus-ATR gemessen "
+      "(atrcopy_dos2sd, 92176 B), ohne accept_data_loss. Die erzeugte "
+      "Sektorgroesse 128 wird als Warnung ausgegeben, nicht verschwiegen." },
+
     /* Sector ↔ Sector note (UFT-A08):
      * No sector-sector pair is currently LOSSLESS in the public
      * conversion API. The public enum collapses IMG and IMA to a

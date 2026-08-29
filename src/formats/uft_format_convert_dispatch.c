@@ -169,6 +169,19 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
     }
 
     /* ===== Sector <-> Sector (format conversions) ===== */
+    /* MF-655: Atari 8-bit — der 16-Byte-Kopf ist der ganze Unterschied.
+     * ACHTUNG: diese Kette steht ZWEIMAL in dieser Datei, einmal in
+     * dispatch_conversion() und einmal in uft_convert_memory(). Wer
+     * einen Wandler nur an einer Stelle eintraegt, bekommt einen Pfad,
+     * der ueber die eine API geht und ueber die andere nicht — still.
+     * Dieselbe Doppelung war die Ursache von MF-567. */
+    if (src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) {
+        return uftc_convert_atr_to_xfd(src_data, src_size, dst_path, opts, result);
+    }
+    if (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR) {
+        return uftc_convert_xfd_to_atr(src_data, src_size, dst_path, opts, result);
+    }
+
     if (src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) {
         return uftc_convert_imd_to_img(src_data, src_size, dst_path, opts, result);
     }
@@ -706,7 +719,13 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
     } else if (src_class == UFT_FCLASS_SECTOR &&
                dst_class == UFT_FCLASS_SECTOR &&
                !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
-                 (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
+                 (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD) ||
+                 /* MF-655: ATR<->XFD hat seit diesem Commit einen echten
+                  * Wandler mit gemessener Bit-Identitaet und benannter
+                  * Verlustgrenze — genau die Bedingung, die der Kommentar
+                  * unten einfordert. */
+                 (src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) ||
+                 (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR))) {
         /* UFT-A08: prior code raw-copied EVERY sector→sector pair here
          * (D64→IMG, ATR→DSK, ...) with success=true and only a "format
          * headers may need adjustment" warning. That violated
@@ -912,7 +931,12 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
      * hit the same-format direct-copy path above, never this branch. */
     if (src_class == UFT_FCLASS_SECTOR && dst_class == UFT_FCLASS_SECTOR &&
         !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
-          (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
+          (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD) ||
+          /* MF-655: ATR<->XFD ist ein echter Sektor->Sektor-Wandler mit
+           * gemessener Bit-Identitaet und einer benannten Verlustgrenze —
+           * genau das, was diese Sperre einfordert. */
+          (src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) ||
+          (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR))) {
         result->error = UFT_ERR_NOT_IMPLEMENTED;
         if (result->warning_count + 3 <=
             sizeof(result->warnings) / sizeof(result->warnings[0])) {
@@ -941,6 +965,24 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     /* Handle conversions that have in-memory support via existing APIs */
 
     /* IMD -> IMG */
+    /* MF-655: Atari 8-bit — der 16-Byte-Kopf ist der ganze Unterschied.
+     * ACHTUNG: diese Kette steht ZWEIMAL in dieser Datei, einmal in
+     * dispatch_conversion() und einmal in uft_convert_memory(). Wer
+     * einen Wandler nur an einer Stelle eintraegt, bekommt einen Pfad,
+     * der ueber die eine API geht und ueber die andere nicht — still.
+     * Dieselbe Doppelung war die Ursache von MF-567. */
+    if ((src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) ||
+        (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR)) {
+        uft_error_t e = uftc_atr_xfd_memory(src_format, dst_format,
+                                            src_data, src_size, options,
+                                            result, dst_data, dst_size);
+        if (e != UFT_OK) return e;
+        result->success = true;
+        result->bytes_written = (int)*dst_size;
+        result->tracks_converted = 1;
+        return UFT_OK;
+    }
+
     if (src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) {
         uft_imd_image_t imd;
         uft_imd_init(&imd);

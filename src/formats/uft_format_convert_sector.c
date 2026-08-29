@@ -400,3 +400,232 @@ uft_error_t uftc_convert_img_to_imd(const uint8_t* src_data, size_t src_size,
     uftc_report_progress(opts, 100, "IMG->IMD complete");
     return err;
 }
+
+/* ==========================================================================
+ * ATR <-> XFD  (MF-655)
+ *
+ * XFD ist das ATR ohne seinen 16-Byte-Kopf. Selbst gemessen am Korpus-Paar
+ * `atrcopy_dos2sd.atr` (92 176 B) / `.xfd` (92 160 B):  atr[16:] == xfd,
+ * byteweise, ohne Ausnahme.
+ *
+ * Der Kopf traegt (Feldlage aus `src/formats/atr/uft_atr.c:53-56`, also aus
+ * dem eigenen Leser, nicht geraten):
+ *
+ *     0-1   Magic 0x0296
+ *     2-3   Paragraphen, niederwertig     -- aus der Dateigroesse ableitbar
+ *     4-5   SEKTORGROESSE                 -- NICHT ableitbar
+ *     6     Paragraphen, hoeherwertig     -- ableitbar
+ *     7-15  unbenutzt
+ *
+ * Daraus folgt die Grenze: die Sektorgroesse (128/256/512) kann XFD nicht
+ * speichern, und aus der Dateigroesse folgt sie nicht — 184 320 Byte sind
+ * 1440 Sektoren zu 128 ODER 720 zu 256. Verlustfrei ist der Weg genau dann,
+ * wenn der Kopf nichts traegt, was die Groesse nicht schon sagt.
+ *
+ * WARUM EIN GEMEINSAMER KERN: der Verteiler hat ZWEI Ketten — eine in
+ * dispatch_conversion() fuer den Dateiweg, eine in uft_convert_memory().
+ * Stuenden die Verlustregeln zweimal da, koennte eine Fassung nachziehen
+ * und die andere nicht. Genau diese Doppelung war die Ursache von MF-567,
+ * wo der Speicherweg am Preflight-Tor vorbeilief. Die Regeln stehen
+ * deshalb hier, einmal; die beiden Wandler unten sind nur noch Verpackung.
+ * ========================================================================== */
+
+#define UFTC_ATR_HEADER  16
+#define UFTC_ATR_MAGIC   0x0296
+
+/**
+ * @brief ATR -> XFD im Speicher: Kopf pruefen, Verlustregel anwenden, Rumpf
+ *        herausgeben.
+ *
+ * @param out      erhaelt einen mit malloc() geholten Puffer (Aufrufer gibt frei)
+ * @param out_size erhaelt dessen Groesse
+ * @return UFT_OK, oder UFT_ERR_NOT_SUPPORTED wenn Daten verloren gingen und
+ *         `accept_data_loss` fehlt.
+ */
+static uft_error_t uftc_atr_to_xfd_mem(const uint8_t* src_data, size_t src_size,
+                                        const uft_convert_options_ext_t* opts,
+                                        uft_convert_result_t* result,
+                                        uint8_t** out, size_t* out_size) {
+    *out = NULL; *out_size = 0;
+
+    if (src_size < UFTC_ATR_HEADER) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "ATR zu kurz: %zu Byte, Kopf braucht %d",
+                         src_size, UFTC_ATR_HEADER);
+        return UFT_ERR_FORMAT;
+    }
+
+    uint16_t magic = (uint16_t)(src_data[0] | (src_data[1] << 8));
+    if (magic != UFTC_ATR_MAGIC) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "kein ATR: Magic 0x%04X statt 0x%04X",
+                         magic, UFTC_ATR_MAGIC);
+        return UFT_ERR_FORMAT;
+    }
+
+    uint16_t sector_size = (uint16_t)(src_data[4] | (src_data[5] << 8));
+    uint32_t paragraphs  = (uint32_t)(src_data[2] | (src_data[3] << 8))
+                         | ((uint32_t)src_data[6] << 16);
+    const size_t payload = src_size - UFTC_ATR_HEADER;
+
+    bool reserved_used = false;
+    for (int i = 7; i < UFTC_ATR_HEADER; i++)
+        if (src_data[i] != 0) reserved_used = true;
+
+    bool size_field_matches = ((size_t)paragraphs * 16u == payload);
+    bool lossless = (sector_size == 128) && !reserved_used && size_field_matches;
+
+    if (!lossless && !(opts && opts->accept_data_loss)) {
+        result->error = UFT_ERR_NOT_SUPPORTED;
+        if (sector_size != 128)
+            uftc_add_warning(result,
+                "ATR->XFD verliert hier Daten: Sektorgroesse %u steht im Kopf, "
+                "XFD kann sie nicht speichern und aus der Dateigroesse folgt "
+                "sie nicht. Mit accept_data_loss moeglich.",
+                (unsigned)sector_size);
+        if (reserved_used)
+            uftc_add_warning(result,
+                "ATR->XFD verliert hier Daten: Bytes 7-15 des Kopfes sind "
+                "belegt. Mit accept_data_loss moeglich.");
+        if (!size_field_matches)
+            uftc_add_warning(result,
+                "ATR->XFD: Kopf nennt %u Paragraphen (%zu Byte), die Datei hat "
+                "%zu Byte Nutzdaten — der Widerspruch ginge verloren. Mit "
+                "accept_data_loss moeglich.",
+                (unsigned)paragraphs, (size_t)paragraphs * 16u, payload);
+        return UFT_ERR_NOT_SUPPORTED;
+    }
+    if (!lossless)
+        uftc_add_warning(result,
+            "mit Zustimmung gewandelt: Sektorgroesse %u und Kopf-Reserve gehen "
+            "verloren", (unsigned)sector_size);
+
+    uint8_t* buf = (uint8_t*)malloc(payload ? payload : 1u);
+    if (!buf) { result->error = UFT_ERR_MEMORY; return UFT_ERR_MEMORY; }
+    memcpy(buf, src_data + UFTC_ATR_HEADER, payload);
+    *out = buf; *out_size = payload;
+
+    uftc_add_warning(result,
+        "ATR->XFD: %zu Byte Nutzdaten unveraendert, 16 Byte Kopf entfernt "
+        "(Sektorgroesse %u)", payload, (unsigned)sector_size);
+    return UFT_OK;
+}
+
+/**
+ * @brief XFD -> ATR im Speicher: den 16-Byte-Kopf erzeugen.
+ *
+ * XFD traegt keine Sektorgroesse. Hier wird 128 gesetzt — der Atari-Standard
+ * fuer Single Density — und das AUSGESPROCHEN, statt es stillschweigend
+ * anzunehmen.
+ */
+static uft_error_t uftc_xfd_to_atr_mem(const uint8_t* src_data, size_t src_size,
+                                        const uft_convert_options_ext_t* opts,
+                                        uft_convert_result_t* result,
+                                        uint8_t** out, size_t* out_size) {
+    (void)opts;
+    *out = NULL; *out_size = 0;
+
+    if (src_size == 0) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "XFD ist leer");
+        return UFT_ERR_FORMAT;
+    }
+    if (src_size % 16u != 0u) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result,
+            "XFD-Groesse %zu ist kein Vielfaches von 16 — der ATR-Kopf zaehlt "
+            "in Paragraphen zu 16 Byte und koennte sie nicht darstellen",
+            src_size);
+        return UFT_ERR_FORMAT;
+    }
+
+    uint32_t paragraphs = (uint32_t)(src_size / 16u);
+    if (paragraphs > 0xFFFFFFu) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result,
+            "XFD zu gross: %u Paragraphen passen nicht in die 24 Bit des "
+            "ATR-Kopfes", (unsigned)paragraphs);
+        return UFT_ERR_FORMAT;
+    }
+
+    uint8_t* buf = (uint8_t*)malloc(UFTC_ATR_HEADER + src_size);
+    if (!buf) { result->error = UFT_ERR_MEMORY; return UFT_ERR_MEMORY; }
+    memset(buf, 0, UFTC_ATR_HEADER);
+    buf[0] = (uint8_t)(UFTC_ATR_MAGIC & 0xFF);
+    buf[1] = (uint8_t)(UFTC_ATR_MAGIC >> 8);
+    buf[2] = (uint8_t)(paragraphs & 0xFF);
+    buf[3] = (uint8_t)((paragraphs >> 8) & 0xFF);
+    buf[4] = 128; buf[5] = 0;                 /* Sektorgroesse 128, siehe oben */
+    buf[6] = (uint8_t)((paragraphs >> 16) & 0xFF);
+    memcpy(buf + UFTC_ATR_HEADER, src_data, src_size);
+    *out = buf; *out_size = UFTC_ATR_HEADER + src_size;
+
+    uftc_add_warning(result,
+        "XFD->ATR: %zu Byte unveraendert, 16-Byte-Kopf erzeugt. SEKTORGROESSE "
+        "AUF 128 GESETZT — XFD speichert sie nicht, und aus der Dateigroesse "
+        "folgt sie nicht. Bei einem Double-Density-Abbild ist diese Angabe "
+        "falsch und gehoert von Hand berichtigt.", src_size);
+    return UFT_OK;
+}
+
+/* --- Verpackung fuer den Dateiweg -------------------------------------- */
+
+uft_error_t uftc_convert_atr_to_xfd(const uint8_t* src_data, size_t src_size,
+                                     const char* dst_path,
+                                     const uft_convert_options_ext_t* opts,
+                                     uft_convert_result_t* result) {
+    uftc_report_progress(opts, 20, "ATR-Kopf lesen");
+    uint8_t* buf = NULL; size_t n = 0;
+    uft_error_t e = uftc_atr_to_xfd_mem(src_data, src_size, opts, result,
+                                        &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 70, "XFD schreiben");
+    /* VOR finish_or_refuse: die Funktion lehnt bei
+     * tracks_converted == 0 ab (MF-545) — sie soll ja gerade
+     * verhindern, dass eine leere Wandlung als Erfolg gilt.
+     * Ein Abbild ist hier genau eine Einheit. */
+    result->tracks_converted = 1;
+    e = uftc_finish_or_refuse(result, dst_path, buf, n, "XFD-Sektordaten");
+    free(buf);
+    if (e != UFT_OK) { result->tracks_converted = 0; return e; }
+    return UFT_OK;
+}
+
+uft_error_t uftc_convert_xfd_to_atr(const uint8_t* src_data, size_t src_size,
+                                     const char* dst_path,
+                                     const uft_convert_options_ext_t* opts,
+                                     uft_convert_result_t* result) {
+    uftc_report_progress(opts, 20, "ATR-Kopf erzeugen");
+    uint8_t* buf = NULL; size_t n = 0;
+    uft_error_t e = uftc_xfd_to_atr_mem(src_data, src_size, opts, result,
+                                        &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 70, "ATR schreiben");
+    /* VOR finish_or_refuse: die Funktion lehnt bei
+     * tracks_converted == 0 ab (MF-545) — sie soll ja gerade
+     * verhindern, dass eine leere Wandlung als Erfolg gilt.
+     * Ein Abbild ist hier genau eine Einheit. */
+    result->tracks_converted = 1;
+    e = uftc_finish_or_refuse(result, dst_path, buf, n,
+                              "ATR mit erzeugtem Kopf");
+    free(buf);
+    if (e != UFT_OK) { result->tracks_converted = 0; return e; }
+    return UFT_OK;
+}
+
+/* --- Verpackung fuer den Speicherweg ------------------------------------ */
+
+uft_error_t uftc_atr_xfd_memory(uft_format_t src_format,
+                                 uft_format_t dst_format,
+                                 const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out, size_t* out_size) {
+    if (src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD)
+        return uftc_atr_to_xfd_mem(src_data, src_size, opts, result,
+                                   out, out_size);
+    if (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR)
+        return uftc_xfd_to_atr_mem(src_data, src_size, opts, result,
+                                   out, out_size);
+    return UFT_ERR_NOT_SUPPORTED;
+}

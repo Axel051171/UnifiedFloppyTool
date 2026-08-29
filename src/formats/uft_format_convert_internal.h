@@ -216,6 +216,29 @@ uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
                                      const uft_convert_options_ext_t* opts,
                                      uft_convert_result_t* result);
 
+/* MF-655: ATR <-> XFD. XFD ist das ATR ohne seinen 16-Byte-Kopf
+ * (byteweise gemessen am Korpus-Paar). Verlustfrei nur bei Sektorgroesse
+ * 128 — die Angabe steht im Kopf und kann in XFD nicht abgelegt werden. */
+uft_error_t uftc_convert_atr_to_xfd(const uint8_t* src_data, size_t src_size,
+                                     const char* dst_path,
+                                     const uft_convert_options_ext_t* opts,
+                                     uft_convert_result_t* result);
+
+uft_error_t uftc_convert_xfd_to_atr(const uint8_t* src_data, size_t src_size,
+                                     const char* dst_path,
+                                     const uft_convert_options_ext_t* opts,
+                                     uft_convert_result_t* result);
+
+/* Speicherweg: dieselben Verlustregeln, derselbe Kern. Der Verteiler
+ * hat zwei Ketten (Datei und Speicher) — das hier ist der Eintritt fuer
+ * die zweite, damit die Regeln nicht zweimal geschrieben werden. */
+uft_error_t uftc_atr_xfd_memory(uft_format_t src_format,
+                                 uft_format_t dst_format,
+                                 const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out, size_t* out_size);
+
 uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,

@@ -929,6 +929,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_convert_fuzz"
            OR ${test_name} STREQUAL "test_convert_roundtrip_lossless"
            OR ${test_name} STREQUAL "test_convert_identity_lossless"
+           OR ${test_name} STREQUAL "test_convert_atr_xfd"
            OR ${test_name} STREQUAL "test_convert_roundtrip_measured")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()

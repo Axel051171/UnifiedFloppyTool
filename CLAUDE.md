@@ -70,15 +70,21 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
-### 3. Format-Konvertierung (44 Pfade registriert, **12 angeboten**)
+### 3. Format-Konvertierung (44 Pfade registriert, **14 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die
-> Wandlungstabelle fuehrt **44** Paare. Davon haben **15** einen Eintrag in
-> der Rundlauf-Matrix und werden angeboten:
+> Wandlungstabelle fuehrt **44** Paare. Die Rundlauf-Matrix hat **16**
+> Eintraege; **14** davon werden angeboten (zwei stehen als UNMOEGLICH):
 >
-> * **4 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
->   IMG→HFE. Jedes einzelne mit einer Bit-Identitaets-Messung im Baum
->   (MF-532/533/539), keines auf Zusicherung.
+> * **6 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
+>   IMG→HFE, **ATR→XFD**, **XFD→ATR**. Jedes einzelne mit einer
+>   Bit-Identitaets-Messung im Baum (MF-532/533/539/655), keines auf
+>   Zusicherung. Die beiden Atari-Paare sind seit MF-655 die ersten
+>   ihrer Familie in der Matrix: XFD ist das ATR ohne seinen
+>   16-Byte-Kopf (`atr[16:] == xfd`, byteweise am Korpus-Paar
+>   gemessen), und die Grenze steht dabei — ein ATR mit Sektorgroesse
+>   256 wird ohne `accept_data_loss` abgelehnt, weil XFD die Angabe
+>   nicht speichern kann und die Dateigroesse sie nicht verraet.
 > * **8 nur mit ausdruecklichem `accept_data_loss`.**
 >
 > **30 weist das Preflight-Tor als UNGEPRUEFT ab** („conversion pair is
@@ -372,8 +378,9 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
-  **12 angeboten**, davon **4 verlustfrei (je mit Messung)** (MF-541/567),
-  14 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`;
+  **14 angeboten**, davon **6 verlustfrei (je mit Messung)**
+  (MF-541/567/655), 16 Roundtrip-Matrix-Einträge (SSOT in
+  `src/core/uft_roundtrip.c`;
   die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt; MF-567 hat drei
   Urteile ohne Wandler entfernt)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,

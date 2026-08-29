@@ -35,6 +35,20 @@ const format_info_t g_format_info[] = {
     { UFT_FORMAT_DSK,       "DSK",      ".dsk",     UFT_FCLASS_SECTOR },
     { UFT_FORMAT_IMD,       "IMD",      ".imd",     UFT_FCLASS_SECTOR },
     { UFT_FORMAT_FDI,       "FDI",      ".fdi",     UFT_FCLASS_SECTOR },
+    /* MF-655: ATR und XFD fehlten hier. Der Verteiler loest den
+     * Formatnamen ueber diese Tabelle auf — ohne Eintrag meldete er
+     * "No conversion path from Unknown to Unknown", obwohl beide
+     * Formate seit jeher Plugins haben. Ein fehlender Tabelleneintrag
+     * sieht aus wie ein fehlender Wandler. */
+    { UFT_FORMAT_ATR,       "ATR",      ".atr",     UFT_FCLASS_SECTOR },
+    { UFT_FORMAT_XFD,       "XFD",      ".xfd",     UFT_FCLASS_SECTOR },
+    /* MF-655: ATR und XFD fehlten hier. Der Verteiler loest den
+     * Formatnamen ueber diese Tabelle auf — ohne Eintrag meldete er
+     * "No conversion path from Unknown to Unknown", obwohl beide
+     * Formate seit jeher Plugins haben. Ein fehlender Tabelleneintrag
+     * sieht aus wie ein fehlender Wandler. */
+    { UFT_FORMAT_ATR,       "ATR",      ".atr",     UFT_FCLASS_SECTOR },
+    { UFT_FORMAT_XFD,       "XFD",      ".xfd",     UFT_FCLASS_SECTOR },
 
     // ARCHIVE
     { UFT_FORMAT_TD0,       "TD0",      ".td0",     UFT_FCLASS_ARCHIVE },
@@ -49,6 +63,50 @@ const format_info_t g_format_info[] = {
 
 const uft_conversion_path_t g_conversion_paths[] = {
     // === FLUX -> BITSTREAM (Lossless) ===
+    /* === SEKTOR -> SEKTOR (Atari 8-bit), MF-655 ===
+     * XFD ist das ATR ohne seinen 16-Byte-Kopf — byteweise gemessen am
+     * Korpus-Paar atrcopy_dos2sd.atr/.xfd: atr[16:] == xfd.
+     * Verlustfrei ist das genau dann, wenn der Kopf nichts traegt, was
+     * die Dateigroesse nicht schon sagt: Sektorgroesse 128, Reserve
+     * leer, Paragraphenzahl stimmig. Sonst lehnt der Wandler ohne
+     * accept_data_loss ab — die Sektorgroesse ist in XFD nicht
+     * darstellbar und aus der Groesse nicht ableitbar (184 320 Byte
+     * sind 1440x128 ODER 720x256). */
+    {
+        .source = UFT_FORMAT_ATR, .target = UFT_FORMAT_XFD,
+        .quality = UFT_CONV_LOSSLESS,
+        .preserves_timing = false, .preserves_weak = false,
+        .description = "ATR to XFD (16-byte header removed)"
+    },
+    {
+        .source = UFT_FORMAT_XFD, .target = UFT_FORMAT_ATR,
+        .quality = UFT_CONV_LOSSLESS,
+        .preserves_timing = false, .preserves_weak = false,
+        .warning = "XFD carries no sector size; the generated ATR header declares 128 bytes per sector. Wrong for a double-density image.",
+        .description = "XFD to ATR (16-byte header generated)"
+    },
+    /* === SEKTOR -> SEKTOR (Atari 8-bit), MF-655 ===
+     * XFD ist das ATR ohne seinen 16-Byte-Kopf — byteweise gemessen am
+     * Korpus-Paar atrcopy_dos2sd.atr/.xfd: atr[16:] == xfd.
+     * Verlustfrei ist das genau dann, wenn der Kopf nichts traegt, was
+     * die Dateigroesse nicht schon sagt: Sektorgroesse 128, Reserve
+     * leer, Paragraphenzahl stimmig. Sonst lehnt der Wandler ohne
+     * accept_data_loss ab — die Sektorgroesse ist in XFD nicht
+     * darstellbar und aus der Groesse nicht ableitbar (184 320 Byte
+     * sind 1440x128 ODER 720x256). */
+    {
+        .source = UFT_FORMAT_ATR, .target = UFT_FORMAT_XFD,
+        .quality = UFT_CONV_LOSSLESS,
+        .preserves_timing = false, .preserves_weak = false,
+        .description = "ATR to XFD (16-byte header removed)"
+    },
+    {
+        .source = UFT_FORMAT_XFD, .target = UFT_FORMAT_ATR,
+        .quality = UFT_CONV_LOSSLESS,
+        .preserves_timing = false, .preserves_weak = false,
+        .warning = "XFD carries no sector size; the generated ATR header declares 128 bytes per sector. Wrong for a double-density image.",
+        .description = "XFD to ATR (16-byte header generated)"
+    },
     {
         .source = UFT_FORMAT_SCP, .target = UFT_FORMAT_HFE,
         .quality = UFT_CONV_LOSSY,

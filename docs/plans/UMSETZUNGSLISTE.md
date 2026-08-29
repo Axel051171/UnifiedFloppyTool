@@ -85,8 +85,8 @@ Spurzahl und Größe.
 * **Rotbeweis:** Test stellt UFT-Liste gegen `flophashes` → heute rot,
   weil UFT nichts liefert
 
-### A3 🟢 ATR↔XFD als Wandlungspfad
-**Kennzahl: Wandlungspfade rauf** (12 → 13)
+### A3 ✅ ATR↔XFD als Wandlungspfad — **erledigt (MF-655)**
+**Kennzahl: Wandlungspfade rauf** (12 → **14** — beide Richtungen zaehlen)
 
 Das Paar fehlt komplett — der einzige ATR-Bezug in
 `src/core/uft_roundtrip.c` ist ein Kommentar, der sagt, ein Wandler
@@ -96,6 +96,42 @@ fehle noch. Beide Formate stehen auf T1b, das byteverwandte Korpus-Paar
 * Der Unterschied ist ein 16-Byte-Kopf (MF-426)
 * **Muster liegt vor:** Bit-Identitäts-Messung wie MF-532/533/539
 * **Gegenprobe:** a8rawconv, heute gebaut — `ATR→XFD` byteidentisch
+
+**Erledigt MF-655 — und es wurden zwei Pfade, nicht einer.**
+Beide Richtungen zählen einzeln: **12 → 14 angebotene Paare**, davon
+**4 → 6 verlustfrei**. Alle Zahlen abgeleitet, nicht gepflegt
+(`DERIVED_CLAIMS`, MF-541) — der Prüfer hat die alten selbst gemeldet.
+
+Der Rotbeweis nannte **drei** Ursachen, von denen nur eine in der
+Aufgabe stand:
+
+1. `g_format_info` kannte **ATR und XFD gar nicht** — der Verteiler
+   meldete „No conversion path from **Unknown** to Unknown“, obwohl
+   beide seit jeher Plugins haben. Ein fehlender Tabelleneintrag sieht
+   aus wie ein fehlender Wandler.
+2. Die Sektor→Sektor-Sperre stand **zweimal** — einmal im Datei-, einmal im Speicherpfad. Wer nur eine bedient, bekommt einen Pfad, der
+   über die eine API geht und über die andere nicht, still. Genau das
+   war MF-567.
+3. `finish_or_refuse` lehnt bei `tracks_converted == 0` ab (MF-545) —
+   der Zähler muss **vor** dem Aufruf stehen.
+
+**Die Grenze ist gemessen, nicht behauptet:** der ATR-Kopf trägt die
+Sektorgröße, und XFD kann sie nicht speichern. Aus der Dateigröße
+folgt sie nicht — 184 320 Byte sind 1440×128 **oder** 720×256. Ein
+DD-ATR wird deshalb ohne `accept_data_loss` abgelehnt; der Test prüft
+genau diesen Fall. Ohne ihn wäre der Matrix-Eintrag eine Zusage, die
+für SD stimmt und für DD still falsch ist — die Bauart, die MF-527
+zurücknehmen musste.
+
+**XFD→ATR läuft über `uft_convert_memory()`**, weil XFD kopflos ist:
+gemessen beanspruchen **5 Plugins** das Korpus-XFD mit derselben
+Konfidenz 40, und der Verteiler weist das zu Recht ab. Sein eigener
+Kommentar nennt den Weg — „the caller can name the format explicitly“.
+Kein Umweg um das Tor, sondern der dafür vorgesehene Eingang.
+
+Die Verlustregeln stehen **einmal**, in einem gemeinsamen Kern, den
+beide Verteilerketten rufen. Zweimal geschrieben wären sie die nächste
+Drift. 271/271 grün.
 
 ### A4 ✅ `uft_adl.c`-Identitätsfehler beheben — **erledigt (MF-654)**
 **Kennzahl: ungeprüfte Formate runter** (`adl` T3 → T2)
