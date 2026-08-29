@@ -68,6 +68,9 @@
       "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
       "auch_in_block": [
         2
+      ],
+      "erneut_uebergeben": [
+        "2026-08-29 (Fluss-Buendel)"
       ]
     },
     {
@@ -161,7 +164,10 @@
       "block": 1,
       "beauftragt": "2026-08-29",
       "auftraggeber": "Eigentuemer",
-      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "erneut_uebergeben": [
+        "2026-08-29 (Fluss-Buendel)"
+      ]
     },
     {
       "name": "RIDE",
@@ -377,7 +383,10 @@
       "block": 2,
       "beauftragt": "2026-08-29",
       "auftraggeber": "Eigentuemer",
-      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+      "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677",
+      "erneut_uebergeben": [
+        "2026-08-29 (Fluss-Buendel)"
+      ]
     },
     {
       "name": "lib1541img",
@@ -723,6 +732,87 @@
       "beauftragt": "2026-08-29",
       "auftraggeber": "Eigentuemer",
       "notiz": "aus der urspruenglichen Sammel-Uebergabe (drei Bloecke), woertlich nachgereicht MF-677"
+    },
+    {
+      "name": "ipf-flux",
+      "slug": "mlund/ipf-flux",
+      "url": "https://github.com/mlund/ipf-flux.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "fluxfox",
+      "slug": "dbalsom/fluxfox",
+      "url": "https://github.com/dbalsom/fluxfox.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "fluxtoimd",
+      "slug": "brouhaha/fluxtoimd",
+      "url": "https://github.com/brouhaha/fluxtoimd.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "picturedsk",
+      "slug": "bzotto/picturedsk",
+      "url": "https://github.com/bzotto/picturedsk.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "apple-ii-fluxdoctor",
+      "slug": "fredsa/apple-ii-fluxdoctor",
+      "url": "https://github.com/fredsa/apple-ii-fluxdoctor.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "FluxBridge",
+      "slug": "CopperlineHQ/FluxBridge",
+      "url": "https://github.com/CopperlineHQ/FluxBridge.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "hardsector_tool",
+      "slug": "GeoKM/hardsector_tool",
+      "url": "https://github.com/GeoKM/hardsector_tool.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "fluxpy",
+      "slug": "bgottula/fluxpy",
+      "url": "https://github.com/bgottula/fluxpy.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "fuseadf",
+      "slug": "t-w/fuseadf",
+      "url": "https://github.com/t-w/fuseadf.git",
+      "block": 4,
+      "beauftragt": "2026-08-29",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
     }
   ],
   "_herkunft": {
