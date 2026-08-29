@@ -93,6 +93,32 @@ def zaehle_offene(outdir):
     uebernimmt — eine Zeile am Dateianfang:
 
         <!-- uebernommen: MF-NNN -->
+
+    ── Zweite Marke: Entwuerfe (MF-678) ──────────────────────────────────
+
+    Die Bremse zaehlte bis hierher jede Datei ohne Uebernahme-Marke, und
+    das warf zwei sehr verschiedene Dinge zusammen:
+
+      * ein fertiges Gutachten, das auf eine ENTSCHEIDUNG wartet
+      * die mechanische Ausgabe dieses Skripts — Messwerte, Lizenzzone,
+        Inventar-Abgleich, unausgefuellte UNGEKLAERT-Liste —, deren
+        Tiefenpruefung nie lief
+
+    Beim zweiten gibt es nichts zu uebernehmen. Er wartet nicht auf den
+    Eigentuemer, sondern auf seine eigene Stufe 3. Gezaehlt wurde er
+    trotzdem, und zwei solche Entwuerfe (`sector-cpc`, `superdiskindex`)
+    haben zusammen mit fuenf echten Gutachten die Bremse ausgeloest — der
+    Eigentuemer haette also Entscheidungen treffen sollen, die es gar
+    nicht zu treffen gab.
+
+    Ein Entwurf traegt darum:
+
+        <!-- stufe: 2 -->
+
+    Er belegt keinen Platz in der Bremse. Das ist keine Lockerung: die
+    Bremse begrenzt Vorschlaege an den Menschen, und ein Entwurf enthaelt
+    keine. Er bleibt offene Arbeit — nur eben Arbeit des Agenten, nicht
+    des Eigentuemers.
     """
     if not os.path.isdir(outdir):
         return 0
@@ -106,6 +132,8 @@ def zaehle_offene(outdir):
                 kopf = fh.read(400)
         except OSError:
             kopf = ""
+        if "stufe: 2" in kopf:
+            continue        # Entwurf: wartet auf Stufe 3, nicht auf einen Menschen
         if "uebernommen:" not in kopf and "übernommen:" not in kopf:
             offen += 1
     return offen

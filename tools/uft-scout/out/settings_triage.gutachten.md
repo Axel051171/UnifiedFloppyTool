@@ -1,3 +1,9 @@
+<!-- uebernommen: MF-670 -->
+<!-- Aufgenommen als erste Fassung von docs/SETTINGS_ROADMAP.md; die
+     offene Arbeit daraus steht als SET-1 in docs/OPEN_ITEMS.md. Vier
+     der Traeger-Behauptungen (pll_lock_threshold, weak_bit_cv,
+     noflux_threshold, detect_weak_bits) wurden vor der Uebernahme an
+     den genannten Zeilen nachgemessen, nicht uebernommen. -->
 # Gutachten: Triage der 34 Reglernamen aus `src/advanceddialogs.h`
 
 **Auftrag:** Vorarbeit für `docs/SETTINGS_ROADMAP.md` (Datei existiert noch

@@ -1,3 +1,7 @@
+<!-- uebernommen: MF-678 -->
+<!-- Befunde nach docs/OPEN_ITEMS.md, SCOUT-26 uebertragen: getrennt
+     nach Fehlern gegen benannte Referenzen (kein Vorlagenbedarf) und
+     echten Eigentuemer-Vorlagen (Lizenz/Verteilung betroffen). -->
 # Gutachten: CBM-Korpus-Erzeuger (Dreier-Zyklus)
 
 **Repos:** `Zirias/c64_tool_mkd64` (Klon `work/mkd64/`, HEAD `59009db7`,

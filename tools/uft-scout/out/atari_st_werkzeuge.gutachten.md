@@ -1,3 +1,7 @@
+<!-- uebernommen: MF-678 -->
+<!-- Befunde nach docs/OPEN_ITEMS.md, SCOUT-26 uebertragen: getrennt
+     nach Fehlern gegen benannte Referenzen (kein Vorlagenbedarf) und
+     echten Eigentuemer-Vorlagen (Lizenz/Verteilung betroffen). -->
 <!-- stufe: 3 — Tiefenprüfung abgeschlossen (Zyklus Atari-ST-Werkzeuge, 2026-08-29) -->
 # Gutachten: Atari-ST-Werkzeuge — Jacknife, atari-st-tools, st2disk
 

@@ -1,3 +1,7 @@
+<!-- uebernommen: MF-678 -->
+<!-- Befunde nach docs/OPEN_ITEMS.md, SCOUT-26 uebertragen: getrennt
+     nach Fehlern gegen benannte Referenzen (kein Vorlagenbedarf) und
+     echten Eigentuemer-Vorlagen (Lizenz/Verteilung betroffen). -->
 # Gutachten: die ADF-Zweitmeinung (drei Repos, ein Zyklus)
 
 * **Zyklus:** 9 (2026-08-29), Auftrag des Eigentümers — „die wichtigste

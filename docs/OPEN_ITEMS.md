@@ -3466,3 +3466,68 @@ ursprüngliche Liste zu schließen hieße, die Antwort aus der Frage
 abzuleiten. **Nächster Schritt gehört dem Eigentümer:** die Listen
 erneut übergeben, damit sie eingetragen werden können — dann sagt
 `scout_stand.py` beim nächsten Lauf, was fehlt.
+
+---
+
+## SCOUT-26 — die vier liegengebliebenen Gutachten, übernommen (MF-678)
+
+Erst der Ausfluss, dann der Zufluss: vier fertige Gutachten lagen ohne
+Übergabe in `out/` und haben zusammen mit zwei **Entwürfen** die
+Ratenbremse ausgelöst.
+
+### Zuerst ein Werkzeug-Fehler, der die Lage verzerrt hat
+
+Die Bremse zählte sieben. Zwei davon — `sector-cpc` und
+`superdiskindex` — sind gar keine Entscheidungen, sondern die
+mechanische Ausgabe von `gutachten.py`, deren Tiefenprüfung nie lief.
+Sie warten auf ihre eigene Stufe 3, nicht auf den Eigentümer.
+
+Beide trugen die Marke `<!-- stufe: 2 -->` **seit MF-646** — nur hat
+`gutachten.py` sie nie gelesen. Die Vereinbarung war da, der Leser
+fehlte. Seit MF-678 zählt die Bremse Entwürfe nicht mit: sie begrenzt
+Vorschläge an den Menschen, und ein Entwurf enthält keine.
+
+Ergebnis: fünf statt sieben — die vier unten plus `gwnbd`.
+
+### Die vier zerfallen in zwei Sorten
+
+**Sorte A — das sind keine Entscheidungen, das sind Fehler.** Drei
+Befunde stehen gegen benannte Referenzen und fallen damit unter die
+erlaubte Arbeit der EINFRIER-REGEL (Bugfix gegen benannte Quelle):
+
+| Befund | Beleg | Kennzahl |
+|---|---|---|
+| **`dim_atari` prüft das Magic nicht.** `grep -c "0x4242"` in `src/formats/dim_atari/uft_dim_atari.c` = **0** — von mir nachgemessen. Jacknife (`dllmain.c:591`) und Hatari (`src/floppies/dim.c`) prüfen es beide. Byte 3 (used-sectors) steht in unserem Kopfkommentar und wird nirgends gelesen. | zwei unabhängige Referenzen | ungeprüfte Formate ↓ |
+| **`docs/ORACLES.md:48-49,156` behauptet Falsches.** Die Prämisse, ADFlib sei „dieselbe Bibliothek, die über xdftool auch unser Korpus-Abbild erzeugt hat", ist gemessen falsch — amitools 0.8.1 enthält **0** ADFlib. Damit ist unser ADF-Oracle nicht das, was die Doku sagt. | Messung im Gutachten | Ehrlichkeit |
+| **floptool-Padding: `ORACLES.md`/`PLAN_v4.1.7` führen einen gepaddeten Wert als Messung.** Ein Differenzlauf dagegen misst das Padding, nicht das Format. | Messung im Gutachten | ungeprüfte Formate ↓ |
+
+**Empfehlung: alle drei beheben, keine Vorlage nötig.** Ein Tippfehler
+in einer Referenz ist keine Eigentümer-Frage.
+
+**Sorte B — echte Vorlagen, weil Lizenz und Verteilung betroffen sind:**
+
+| Vorlage | Worum es geht | Empfehlung |
+|---|---|---|
+| **adfrescue als ADF-Oracle** | Genau die gesuchte zweite Hand: ADFlib-**unabhängig**, skriptbar, extrahiert Inhalte. Gemessen gegen `tests/corpus_free/xdftool_dd_ofs.adf`: `marker.txt`, 127 Byte, **byteidentisch** zur xdftool-Extraktion. Blocker: **keine Lizenzdatei** → Zone ROT. | **Ja, aber nur als Oracle** — ein Werkzeug ausführen und seine Ausgabe vergleichen verteilt nichts. Kein Code-Port, kein Vendoring. |
+| **40-Spur-D64-Fixtures aus mkd64** (SCOUT-82) | Drei Abbilder liegen verifiziert bereit (35-Spur, 40-Spur Dolphin, 40-Spur Speed), Erzeuger mkd64 1.4b, deterministisch, durch libcbmimage gegengelesen. Sie würden die D64-Hebung erstmals gegen **fremd erzeugte** 40-Spur-Abbilder absichern — heute prüft `test_d64_bam_40track.c` nur selbstgebaute Bytes. | **Ja** — genau der Fixture-Typ, der MF-649 rückwirkend härtet. Aufnahme in den Baum heißt Verteilung, darum deine Entscheidung. |
+| **PD-lizenziertes MFS-Abbild** | Ein echtes Macintosh-MFS-Abbild in Public Domain; die MFS-Lücke im Baum ist gemessen real. | **Ja, wenn PD belegt ist** — Fixture-Lizenz ist Code-Lizenz (ROT-Zone für Daten). |
+| **EUPL-1.2 in die Lizenzmatrix** | Aus dem gwnbd-Zyklus; siehe eigener Eintrag. | siehe dort |
+
+### Was ausdrücklich Fundus bleibt
+
+* **DFXML** (`hfs2dfxml`): sauber recherchiert, bewegt keine Kennzahl.
+  UFT hat heute **0** DFXML-Erwähnungen; die Sechs-Formate-Liste in
+  `CLAUDE.md` §6 ist laut MF-366 ohnehin Zielbild, nicht Ist-Stand.
+* **disk-peek**, **DiskToolC64**, **floppydiskimagetool**: Oracle-Reserve,
+  alle Zone ROT, keine Kennzahl-Bewegung.
+* **Jacknife/st2disk/atari-st-tools**: kein Port möglich (ROT bzw. GELB,
+  ein Bau gescheitert). Der Wert des Zyklus war Befund J-1, nicht der
+  Code.
+
+### Ein Fund, der niemandem nützt und trotzdem hierher gehört
+
+`libcbmimage` liest die 40-Spur-BAM **aus dem Disknamen** — exakt der
+Fehler, den MF-649 in unserem eigenen D64-Parser behoben hat. Zwei
+Projekte, unabhängig, derselbe Off-by-one an derselben Stelle. Das ist
+kein Auftrag, aber es sagt etwas über die Fehlerklasse: die
+40-Spur-Erweiterung lädt zu genau dieser Verwechslung ein.
