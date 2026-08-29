@@ -2932,3 +2932,73 @@ Bedienelemente; die anderen beiden brauchen dieselbe Behandlung —
 Menüpunkte anzufassen. Das ist keine Nacharbeit, sondern eine
 Entscheidung je Fall — und 27 Fenster in einem Durchgang zu verdrahten
 wäre genau die Sorte Massenänderung, die dieser Baum nicht verträgt.
+
+---
+
+## Ein Header-Name, drei Dateien — und der Bau war rot, ohne dass es auffiel (MF-666)
+
+Beim Anschließen des Varianten-Wählers ist ein Bau fehlgeschlagen, der
+**vorher schon rot war** und den niemand bemerkt hatte.
+
+### Wie er sich versteckt hat
+
+Zwei Dinge zusammen:
+
+1. **Ich habe den Rückgabewert selbst verdeckt.** `cmake --build . | grep -c error` liefert die Trefferzahl von `grep`, nicht den Rückgabewert des Baus. Genau diese Falle steht in meinen eigenen Projektnotizen, und ich bin ein zweites Mal hineingelaufen. Erst `cmake --build . > log; echo $?` hat `rc=2` gezeigt.
+2. **`ctest` blieb grün.** Die betroffenen vier Ziele hatten ihre ausführbaren Dateien aus einem früheren Bau; der Prüfstand lief gegen veraltete Binärdateien und meldete 278/278. „Tests grün" und „Bau grün" sind zwei Aussagen.
+
+### Die Ursache
+
+`src/formats/bbc/uft_bbc_dfs.c` inkludiert **unqualifiziert**:
+
+```c
+#include "uft_bbc_dfs.h"
+```
+
+Diesen Namen gibt es **dreimal**:
+
+| Datei | `uft_dfs_file_entry_t` |
+|---|---|
+| `include/uft/uft_bbc_dfs.h` | 3× definiert |
+| `include/uft/formats/uft_bbc_dfs.h` | 3× definiert |
+| `include/uft/fs/uft_bbc_dfs.h` | **0×** |
+
+Welche Datei ein Ziel bekommt, entscheidet allein die **Reihenfolge der
+Suchpfade**. Vier Qt-Ziele hatten `include/uft/fs` auf dem Pfad und
+`include/uft/formats` nicht — sie griffen die Fassung ohne den Typ und
+bauten nicht.
+
+Der Beweis dafür steckt in der Behebung: mit `include/uft/fs` **zuerst**
+blieb der Bau rot; erst als der formats-Pfad davor stand, wurde er grün.
+Die Richtigkeit hing an einer Zeilenreihenfolge.
+
+### Was daran der eigentliche Befund ist
+
+Die Notabhilfe (Pfad ergänzt, Reihenfolge korrigiert) macht den Bau
+grün. Sie beseitigt die Falle nicht: **drei Dateien gleichen Namens,
+aufgelöst über Suchpfad-Reihenfolge**, bleiben ein Zufallsgenerator.
+Jedes neue Ziel kann wieder die falsche erwischen, und diesmal
+vielleicht ohne Übersetzungsfehler — mit einer Struktur, die nur *fast*
+passt.
+
+Das ist die SSOT-Verletzung in ihrer unangenehmsten Form: nicht zwei
+Wahrheiten in zwei Dateien, sondern zwei Wahrheiten unter **einem
+Namen**.
+
+Dieselbe Datei ist bereits als SCOUT-39 gemeldet — eines von drei
+türlosen Acorn-Modulen mit dreifacher Katalog-Implementierung. Jetzt
+kommt heraus: auch der Header liegt dreifach. Wer SCOUT-39 anfasst,
+entscheidet beides zusammen.
+
+**Offen:** welcher der drei Header ist der kanonische, und die anderen
+beiden weg — oder die Includes qualifizieren
+(`#include "uft/formats/uft_bbc_dfs.h"`). Beides ist eine
+SSOT-Entscheidung, kein Beifang eines Varianten-Wählers.
+
+### Und eine Lehre für die Tore
+
+`check_consistency.py` und `verify_build_sources.py` waren die ganze
+Zeit grün. Kein Tor prüft, **ob der Prüfstand überhaupt baut** — die
+Annahme war, dass `ctest` das mitbringt. Tut es nicht, wenn alte
+Binärdateien herumliegen. Ein Tor „`cmake --build` mit Rückgabewert 0"
+wäre billig und hätte das hier sofort gezeigt.

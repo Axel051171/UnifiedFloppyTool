@@ -15,6 +15,7 @@ extern "C" {
 #include "uft/uft_core.h"
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_format_convert.h"
+#include "uft/uft_format_probe.h"
 }
 
 namespace {
@@ -83,7 +84,8 @@ UftSaveOutcome kopiere(const QString &source, const QString &target)
 
 } // namespace
 
-UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target)
+UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
+                              const QString &variante)
 {
     UftSaveOutcome r;
 
@@ -130,6 +132,50 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target)
     }
     if (zielFmt == quellFmt) {
         return kopiere(source, target);
+    }
+
+    /* MF-666: die gewaehlte Variante gegen das pruefen, was der
+     * Schreiber wirklich kann.
+     *
+     * `uft_convert_file()` kennt keine Varianten — es nimmt ein Format.
+     * Solange je Format genau EINE schreibbar ist, ist die Wahl
+     * eindeutig. Eine andere anzunehmen und trotzdem die schreibbare zu
+     * erzeugen waere ein Bedienelement ohne Wirkung; deshalb wird hier
+     * abgelehnt statt ersetzt. */
+    if (!variante.isEmpty()) {
+        /* MF-666: NICHT uft_get_format_plugin() — das liefert das ERSTE
+         * Plugin mit dieser Container-Kennung, und 82 von 88 teilen sich
+         * UFT_FORMAT_DSK. Ein Tor im Baum weist genau darauf hin
+         * (MF-445). uft_resolve_format_plugin() geht die Leiter
+         * eindeutige Kennung -> Endung -> NULL und raet nie. */
+        size_t kandidaten = 0;
+        const uft_format_plugin_t *zielPlugin = uft_resolve_format_plugin(
+            zielFmt, target.toUtf8().constData(), &kandidaten);
+        const uft_format_variant_t *gewaehlt = nullptr;
+        if (zielPlugin && zielPlugin->variants) {
+            for (size_t i = 0; i < zielPlugin->variant_count; i++) {
+                const char *n = zielPlugin->variants[i].name;
+                if (n && variante == QString::fromUtf8(n)) {
+                    gewaehlt = &zielPlugin->variants[i];
+                    break;
+                }
+            }
+        }
+        if (!gewaehlt) {
+            r.message = QObject::tr("Die Variante „%1\" gehoert nicht zu %2. "
+                                    "Es wurde nichts geschrieben.")
+                            .arg(variante,
+                                 QString::fromUtf8(uft_format_get_name(zielFmt)));
+            return r;
+        }
+        if (!gewaehlt->can_write) {
+            QString m = QObject::tr("UFT schreibt „%1\" nicht.").arg(variante);
+            if (gewaehlt->write_note && gewaehlt->write_note[0])
+                m += "\n" + QString::fromUtf8(gewaehlt->write_note);
+            m += "\n\n" + QObject::tr("Es wurde nichts geschrieben.");
+            r.message = m;
+            return r;
+        }
     }
 
     /* Verschiedene Formate: durch den Wandler und sein Preflight-Tor.

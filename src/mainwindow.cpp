@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "diskanalyzerwindow.h"  /* MF-663 */
 #include "uft_save_image.h"        /* MF-664 */
+#include "uft_variant_chooser.h"    /* MF-666 */
 #include "uft_gui_write_gate.h"
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
@@ -357,12 +358,22 @@ void MainWindow::onSaveAs()
     // Der Zielpfad wird erst uebernommen, wenn das Schreiben GELUNGEN
     // ist. Ein fehlgeschlagenes "Speichern unter" darf nicht den
     // Merkzettel umbiegen.
-    speichereNach(filename);
+    // MF-666: fuehrt das Zielformat Varianten, wird gefragt — und die
+    // nicht schreibbaren stehen sichtbar, aber unanwaehlbar in der Liste
+    // (mit Begruendung). Fuehrt es keine, erscheint kein Dialog.
+    const QString zielFormat = QFileInfo(filename).suffix().toUpper();
+    bool abgebrochen = false;
+    const QString variante =
+        uftAskWriteVariant(this, zielFormat, &abgebrochen);
+    if (abgebrochen)
+        return;
+
+    speichereNach(filename, variante);
 }
 
-void MainWindow::speichereNach(const QString &ziel)
+void MainWindow::speichereNach(const QString &ziel, const QString &variante)
 {
-    const UftSaveOutcome r = uftSaveImageAs(m_currentFile, ziel);
+    const UftSaveOutcome r = uftSaveImageAs(m_currentFile, ziel, variante);
 
     if (!r.ok) {
         QMessageBox::warning(this, tr("Speichern"), r.message);

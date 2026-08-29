@@ -148,6 +148,37 @@ private slots:
                  "abgelehnt, aber es liegt eine Datei am Ziel");
     }
 
+    /* 6. MF-666: eine nicht schreibbare Variante wird ABGELEHNT, nicht
+     * stillschweigend durch die schreibbare ersetzt.
+     *
+     * Das ist der Rotbeweis fuer den Waehler: HFEv3 ist lesbar und NICHT
+     * schreibbar (uft_hfe.c:797). Wuerde uftSaveImageAs() die Wahl
+     * ignorieren und einfach v1 schreiben, waere der Waehler ein
+     * Bedienelement ohne Wirkung — genau das, was Stufe 5 beseitigt. */
+    void nicht_schreibbare_variante_wird_abgelehnt()
+    {
+        const QString src = korpus("vice_c1541_35trk.d64");
+        const QString dst = m_dir.filePath("v3_versuch.hfe");
+
+        const UftSaveOutcome r = uftSaveImageAs(src, dst, "HFEv3");
+        QVERIFY2(!r.ok, "HFEv3 ist nicht schreibbar und muss abgelehnt werden");
+        QVERIFY2(!QFileInfo::exists(dst),
+                 "abgelehnt, aber es liegt eine Datei am Ziel");
+        QVERIFY2(r.message.contains("HFEv3"),
+                 "die Ablehnung muss die Variante benennen");
+    }
+
+    /* 7. Ein Name, den es gar nicht gibt: ebenfalls Ablehnung. */
+    void unbekannte_variante_wird_abgelehnt()
+    {
+        const QString src = korpus("vice_c1541_35trk.d64");
+        const QString dst = m_dir.filePath("phantasie.hfe");
+
+        const UftSaveOutcome r = uftSaveImageAs(src, dst, "HFEv99");
+        QVERIFY2(!r.ok, "eine erfundene Variante darf nicht durchgehen");
+        QVERIFY2(!QFileInfo::exists(dst), "es darf nichts geschrieben werden");
+    }
+
     /* 5. Kein Abbild geladen: sagen, nicht schweigen. */
     void ohne_quelle_wird_nichts_geschrieben()
     {

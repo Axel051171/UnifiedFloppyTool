@@ -356,6 +356,41 @@ Tabellen, die `uft-variants` liefert (für HFE liegt sie bereits).
 
 **Ursprünglicher Aufwand M — der Boden hat ihn aufgebraucht.**
 
+### ✅ Der Wähler (MF-665/666)
+
+`uft_format_variant_t` trägt seit MF-665 eine **Richtung**, HFE hat die
+erste gefüllte Tabelle, und MF-666 hängt den Dialog daran.
+
+**Was du siehst:** beim Speichern unter einem Format mit Varianten
+erscheint eine Auswahl. Nicht schreibbare Fassungen stehen **sichtbar,
+aber unanwählbar** darin — mit ihrer Begründung als Hinweis. Bei HFE
+also `HFEv1` gewählt, `HFEv3` grau mit „UFT liest HFEv3, schreibt es
+aber nicht."
+
+Das ist deine Vorgabe wörtlich umgesetzt: was nicht nutzbar ist, ist
+nicht anwählbar — aber es verschwindet nicht, denn dass es die Fassung
+gibt, ist eine Information.
+
+**Die Grenze, ausgesprochen:** `uft_convert_file()` nimmt ein Format
+entgegen, **keine Variante**, und der HFE-Schreiber erzeugt immer v1
+(`uft_hfe.c:567-568`, gemessen). Solange je Format **genau eine**
+Variante schreibbar ist, ist die Wahl eindeutig und braucht keine
+Verkabelung nach unten. Bekommt ein Format eine **zweite**, braucht der
+Wandler einen Varianten-Parameter — sonst wäre die Auswahl ein
+Bedienelement ohne Wirkung, also genau das, was Stufe 5 beseitigt.
+
+Deshalb **lehnt** `uftSaveImageAs()` eine nicht schreibbare Wahl ab,
+statt stillschweigend etwas anderes zu schreiben. Rotbeweis: die Prüfung
+übersprungen → Rückgabewert 1; zurückgesetzt → 0.
+
+**Nebenbefund, der den Bau betraf:** beim vollständigen Neubau kam
+heraus, dass vier Qt-Ziele seit längerem **nicht bauen** — und dass
+weder `ctest` noch die Tore das zeigten (der Prüfstand lief gegen alte
+Binärdateien). Ursache: `uft_bbc_dfs.h` gibt es **dreimal**, die `.c`
+inkludiert unqualifiziert, und die Auflösung hängt an der Reihenfolge
+der Suchpfade. Behoben als Notabhilfe, der eigentliche Befund steht in
+`docs/OPEN_ITEMS.md` unter MF-666.
+
 ---
 
 ## Stufe 5 — Die 38 toten Bedienelemente
@@ -423,7 +458,7 @@ rechnen richtig" ein „der Pfad liest eine echte Datei richtig" — und
     1  Tor: Fähigkeit muss beweisbar sein      S   ERLEDIGT MF-658
     2  Manifest -> Bedienelemente              M   ERLEDIGT MF-660/661
     3a Variante anzeigen (read_metadata)       S   ERLEDIGT MF-662/663
-    4  Variante beim Speichern + Standard      M   BODEN GELEGT MF-664
+    4  Variante beim Speichern + Standard      M   ERLEDIGT MF-664/665/666
     5  Nibble -> Flux -> PLL verdrahten        3x M
     3b Varianten-Modell als Heimat             M   (wenn genug Formate)
 

@@ -2501,7 +2501,26 @@ if(TARGET Qt6::Test)
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/forms
                 ${CMAKE_SOURCE_DIR}/src/gui
-                ${CMAKE_SOURCE_DIR}/include/uft/fs)
+                # MF-666: der formats-Pfad muss VOR include/uft/fs stehen, und die
+                # Format-Quellen aus dem GLOB darueber brauchen ihn.
+                # `src/formats/bbc/uft_bbc_dfs.c` inkludiert
+                # "uft_bbc_dfs.h" UNQUALIFIZIERT — und den Namen gibt
+                # es DREIMAL: include/uft/, include/uft/formats/ und
+                # include/uft/fs/. Nur die ersten beiden definieren
+                # uft_dfs_file_entry_t; die fs-Fassung nicht. Ohne
+                # den formats-Pfad griff also die falsche Datei, und
+                # vier Qt-Ziele bauten nicht mehr.
+                #
+                # Das ist eine Notabhilfe, keine Loesung: drei Header
+                # gleichen Namens, aufgeloest ueber die Reihenfolge
+                # der Suchpfade, bleiben eine Falle. Der Befund steht
+                # in docs/OPEN_ITEMS.md unter MF-666.
+                #
+                # Die Reihenfolge ist der Beweis fuer den Befund: mit
+                # include/uft/fs ZUERST blieb der Bau rot, weil dann die
+                # fs-Fassung gewinnt. UFT_FORMAT_LAYER_INCLUDES enthaelt
+                # den fs-Pfad ohnehin, nur an der richtigen Stelle.
+                ${UFT_FORMAT_LAYER_INCLUDES})
             # Die Format-Quellen erwarten die Pfade, die uft_core PUBLIC
             # exportiert (include/uft, include/uft/core, .../compat).
             target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
@@ -2525,6 +2544,7 @@ if(TARGET Qt6::Test)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/uft_save_image.cpp
                 ${SAVEIMG_FORMAT_SOURCES}
+                ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
                 ${UFT_FORMAT_LAYER_DEPS})
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src

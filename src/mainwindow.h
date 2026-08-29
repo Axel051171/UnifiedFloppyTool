@@ -77,7 +77,8 @@ private:
      * das Paar nicht traegt. Uebernimmt @p ziel als neuen aktuellen Pfad
      * NUR bei Erfolg.
      */
-    void speichereNach(const QString &ziel);
+    void speichereNach(const QString &ziel,
+                       const QString &variante = QString());
 
 private slots:
     void onSave();

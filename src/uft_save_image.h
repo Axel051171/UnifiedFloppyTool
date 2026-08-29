@@ -66,7 +66,22 @@ struct UftSaveOutcome {
  *
  * Bei @p target == @p source ist das die Identität und damit eine
  * Byte-Kopie — die Matrix führt sie mit Messung als LOSSLESS (MF-532).
+ *
+ * @param variante  Name der Zielvariante („HFEv1"), oder leer.
+ *
+ * Leer heisst: das Zielformat fuehrt keine Varianten, oder der Aufrufer
+ * ueberlaesst die Wahl der Voreinstellung. Ein NICHT schreibbarer Name
+ * wird ABGELEHNT statt stillschweigend ersetzt — sonst waere die Wahl
+ * ein Bedienelement ohne Wirkung (MF-666).
+ *
+ * Grenze, ausgesprochen: `uft_convert_file()` nimmt ein Format entgegen,
+ * keine Variante. Solange je Format genau EINE Variante schreibbar ist,
+ * ist die Wahl eindeutig und braucht keine Verkabelung nach unten.
+ * Bekommt ein Format eine zweite, braucht der Wandler einen
+ * Varianten-Parameter — bis dahin lehnt diese Funktion jede Wahl ab, die
+ * nicht die schreibbare ist.
  */
-UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target);
+UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
+                              const QString &variante = QString());
 
 #endif /* UFT_SAVE_IMAGE_H */

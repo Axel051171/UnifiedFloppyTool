@@ -290,6 +290,7 @@ SOURCES += \
     src/uft_gui_write_gate.cpp \
     src/diskanalyzerwindow.cpp \
     src/uft_save_image.cpp \
+    src/uft_variant_chooser.cpp \
     src/visualdisk.cpp \
     src/explorertab.cpp \
     src/forensictab.cpp \
@@ -367,6 +368,7 @@ HEADERS += \
     src/uft_gui_write_gate.h \
     src/diskanalyzerwindow.h \
     src/uft_save_image.h \
+    src/uft_variant_chooser.h \
     src/visualdisk.h \
     src/explorertab.h \
     src/forensictab.h \
