@@ -4,7 +4,7 @@
  *
  * Erwaehnung ist kein Aufruf: uft_fix_kommentar() steht hier nur in
  * diesem Kommentar und gleich darunter in einem String-Literal. */
-extern int uft_fix_live(void);
+#include "uft/fix.h"   /* fremdes Teilsystem bindet ein */
 extern int uft_fix_b(void);
 
 int main(void)

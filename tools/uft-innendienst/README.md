@@ -12,9 +12,9 @@ nach innen.
 
 | Rolle | Werkzeug | Lauf |
 |---|---|---|
-| 1 Tür-Sucher | `scripts/tuersucher.py` | Selbsttest **9/9**. Baum: **4069** Exporte — OK 240 · WAISE 2661 · NUR_TESTS 898 · NUR_EIGENES_VERZEICHNIS 270 |
+| 1 Tür-Sucher | `scripts/tuersucher.py` | Selbsttest **13/13**. Baum: **4069** Exporte — OK 240 · WAISE 2661 · NUR_TESTS 898 · NUR_EIGENES_VERZEICHNIS 270 · **ANGEBOT_OHNE_ABNEHMER 289** |
 | 2 Zensus-Schmied | `playbook/zensus.md` | Ritual + Checkliste der 9 gemessenen Zensus-Fehler (kein Skript, siehe AGENT.md) |
-| 3 Oracle-Kalibrierer | `scripts/kalibrierer.py` | Register 7 · **4 Befunde** (`cpmls`, `hxcfe`, `samdisk`, `lsatr` ungemessen) · 2 Widersprüche (`gw`, `dtc`) · 3 kalibriert-aber-unregistriert |
+| 3 Oracle-Kalibrierer | `scripts/kalibrierer.py` | Register **8** (seit MF-693 mit `xdftool`) · **6 Befunde**: 4 ungeeicht (`cpmls`, `hxcfe`, `samdisk`, `lsatr`) + 2 unregistriert (`a8rawconv`, `adfrescue`, seit MF-693 gleichrangig) · 2 Widersprüche (`gw`, `dtc`) |
 | 4 Fixture-Beschaffer | `scripts/beschaffung.py` | **9 Posten** (1 Version, 8 Format), 0 ohne konkreten Weg |
 | 5 Widerspruchs-Finder | `scripts/widerspruch.py` | Selbsttest **3/3**. Baum: **0** — die drei bekannten Klassen sind geheilt |
 | 6 Tore-Sekretär | `scripts/sekretaer.py` | **21** wartende Entscheidungs-Posten |

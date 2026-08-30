@@ -4175,6 +4175,124 @@ nachgesehen; sie ist vollständig.
 
 ---
 
+### Was seither geschah, Teil 1: die Delegations-Messung (MF-693)
+
+**Die Frage war: sind `uft_convert_file()` und `uft_convert_memory()`
+zwei parallele Wandlungs-Implementierungen?** Gemessen — und die Antwort
+verschiebt den Befund, statt ihn zu bestätigen.
+
+**Nein, es gibt einen Kern.** Beide enden bei `dispatch_conversion()`
+(`src/formats/uft_format_convert_dispatch.c:150`), das **23**
+Format-Paare bedient. `uft_convert_file_inner()` ruft es an `:780`,
+`uft_convert_memory()` an `:1098`. `uft_convert_file()` delegiert
+**nicht** an `uft_convert_memory()` — das stimmt —, aber daraus folgt
+keine zweite Wandlungs-Implementierung.
+
+**Die Doppelung sitzt enger, und der Code sagt es selbst.**
+`uft_convert_memory()` trägt eine eigene **Abkürzungskette für 7 dieser
+23 Paare** — ATR↔XFD, IMD→IMG, IMG→IMD, TD0→IMG, D64→G64, G64→D64 —
+nach dem Preflight-Tor, vor dem Dispatch-Rückfall. Der Kommentar an
+`:973` steht seit MF-655 dort:
+
+> *„ACHTUNG: diese Kette steht ZWEIMAL in dieser Datei … Dieselbe
+> Doppelung war die Ursache von MF-567."*
+
+**Und die zwei Fassungen divergieren heute schon — ohne Bau messbar.**
+Am Paar D64→G64:
+
+| | `dispatch_conversion` | `uft_convert_memory` |
+|---|---|---|
+| Weg | `uftc_convert_d64_to_g64()` (`:225`) | von Hand, `:1030-1055` |
+| öffnet über | Format-Plugin (`uft_disk_open`) | `d64_load_buffer()` |
+| `opts` | benutzt (Fortschritt, `convert_options_t`) | **fasst `opts` nicht an** |
+| Warnungen | `uftc_add_warning` bei Fehlern | keine |
+
+Was `uftc_convert_d64_to_g64()` mit den Optionen tut, überspringt der
+Speicher-Weg still. Das ist die Divergenz — nicht als Risiko, sondern
+als Ist-Stand.
+
+### Der vorgeschlagene Weg wird von der Messung nicht getragen
+
+„`uft_convert_file()` auf `uft_convert_memory()` aufsetzen" scheitert an
+der Bedingung, die im Vorschlag selbst als Abbruchkriterium steht:
+`uft_convert_memory()` schreibt für die **16 Nicht-Abkürzungspaare** in
+eine **Temp-Datei** und liest sie zurück (`:1085-1110`). Heute schreibt
+`dispatch_conversion` im Dateiweg direkt nach `dst_path`. Die Vereinigung
+in dieser Richtung kaufte jedem Datei-Wandlungslauf eines dieser 16 Paare
+einen vollständigen Schreib-Lese-Umweg über die Ausgabedatei ein — bei
+SCP-Größen ist das genau der Streaming-Einwand.
+
+### Die Gegenrichtung, drei Fassungen (Eigentümer)
+
+1. **Kette einmal, zwei Enden** *(Empfehlung)* — die 7 Abkürzungen
+   wandern in **einen** Helfer mit zwei Abschlüssen (in einen Puffer /
+   in eine Datei), den beide Einstiege rufen. Eine Implementierung je
+   Paar, `opts` wirkt auf beiden APIs gleich, kein Temp-Datei-Preis.
+   Aufwand: mittel, rein mechanisch, keine Verhaltensänderung beabsichtigt.
+2. **Abkürzungen streichen** — `uft_convert_memory()` geht für alle 23
+   Paare durch `dispatch_conversion()`. Am einfachsten und am
+   ehrlichsten, kostet aber den 5 reinen In-Memory-Paaren einen
+   Temp-Datei-Umweg, den sie heute nicht haben. Leistungsfrage, keine
+   Korrektheitsfrage — und Forensik schlägt Performance.
+3. **Stehen lassen, Tor bauen** — ein Zensus, der anschlägt, sobald ein
+   Paar in nur einer der beiden Ketten steht. Behebt die Ursache nicht,
+   verhindert aber den nächsten MF-567.
+
+**Rotbeweis für 1 und 2 — vor der Änderung:** dieselbe D64 durch beide
+APIs schicken und die Ausgaben byteweise vergleichen, mit gesetztem
+`opts` (etwa `target_geometry`). Wenn sie heute schon abweichen, ist das
+der rote Test; wenn nicht, ist er nach der Änderung der grüne
+Regressionsschutz. Dazu der MF-567-Fall über die öffentliche API: das
+Preflight-Tor muss auf beiden Wegen greifen.
+
+### Was seither geschah, Teil 2: die Verallgemeinerung wurde geschärft
+
+Der Auftrag war, die Klasse als Marke `PUBLIC_PROMISE` in den Tür-Sucher
+zu heben: *in `include/uft/**` deklariert und ohne Produktionsaufrufer.*
+Die Messung hat die Marke widerlegt, bevor sie ausgeliefert war:
+
+| Fassung der Frage | Treffer |
+|---|---|
+| WAISE oder NUR_TESTS | 3559 |
+| davon in `include/uft/**` deklariert | **1777** |
+| davon: Header wird von einem **fremden** `src/`-Verzeichnis eingebunden | **289** |
+
+1777 von 3559 trennen nichts. Der Grund ist gemessen: **UFT ist
+`TEMPLATE = app`** (`UnifiedFloppyTool.pro:122`), keine Bibliothek. Es
+gibt keine Header-Installationsliste, keine API-Fassade, und das
+Export-Makro `UFT_API` — **zweimal** definiert, `uft_compiler.h:231` und
+`uft_platform.h:208` — steht an **null** Symbolen. `include/uft/` ist
+schlicht *das* Kopfverzeichnis einer Anwendung.
+
+**Dritte, denen man etwas versprechen könnte, gibt es nicht.** Die
+Klasse überlebt, ihr Adressat ändert sich: nicht „Zusage an Dritte",
+sondern **Angebot an den übrigen Baum**. Die Marke heißt deshalb
+`ANGEBOT_OHNE_ABNEHMER` und trifft **289**.
+
+Die Aufteilung zeigt sofort, dass sie diskriminiert — an der Spitze
+steht ein Befund, den `CLAUDE.md` bereits als P0-2 führt:
+
+| Anzahl | Ort |
+|---|---|
+| 46 | `src/fs/uft_fat12.c` |
+| 25 | `src/analysis/otdr` |
+| 19 | `src/hal/uft_kryoflux_dtc.c` |
+| 13 | `src/formats/uft_adf.c` |
+| 13 | `src/hal/uft_greaseweazle_full.c` |
+| 12 | `src/protection/c64` — der Kopierschutz-Katalog, „Bestand, nicht Fähigkeit" |
+
+Rotbeweise am gepflanzten Baum, alle drei gelaufen: Kommentar-Strip
+abgeschaltet ⇒ eine **erfundene** Zusage aus einer auskommentierten
+Deklaration; Verzeichnis-Prüfung abgeschaltet ⇒ das Hausmittel des
+eigenen Teilsystems erscheint fälschlich; unverändert ⇒ genau der eine
+richtige Fall. Selbsttest 13/13.
+
+**Nebenbefund, eigener Eintrag wert:** `UFT_API` ist an zwei Stellen
+definiert und wird nirgends verwendet — eine Vereinbarung ohne Leser in
+zwei Fassungen. Als Fundus notiert, nicht eingeplant: es bewegt keine
+der vier Kennzahlen.
+
+
 ## ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
 
 > **Teilerledigt am selben Tag.** `xdftool` ist seit MF-693 registriert

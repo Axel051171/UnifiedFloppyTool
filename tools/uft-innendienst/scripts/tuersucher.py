@@ -14,6 +14,51 @@ keine Tuer.
     NUR_TESTS                — Verwender nur unter tests/
     WAISE                    — kein Verwender
 
+Quer dazu liegt eine fuenfte, SCHAERFERE Marke:
+
+    ANGEBOT_OHNE_ABNEHMER    — der deklarierende Header wird von einem
+                               ANDEREN `src/`-Verzeichnis eingebunden,
+                               und trotzdem ruft niemand das Symbol
+
+── Wie die Frage geschaerft wurde, und warum (MF-693, ORPH-5) ───────────
+
+Der Auftrag lautete: "Symbol in `include/uft/**` deklariert und ohne
+Produktionsaufrufer" — die Klasse aus ORPH-5, dort **oeffentliche
+Zusage** genannt. Die Messung hat die Frage widerlegt, bevor die Marke
+ausgeliefert war:
+
+| Fassung der Frage | Treffer |
+|---|---|
+| WAISE oder NUR_TESTS | 3559 |
+| davon in `include/uft/**` deklariert | **1777** |
+| davon: Header wird von einem FREMDEN `src/`-Verzeichnis eingebunden | **289** |
+
+1777 von 3559 trennen nichts. Der Grund ist gemessen: UFT ist
+`TEMPLATE = app` (`UnifiedFloppyTool.pro:122`), keine Bibliothek. Es gibt
+keine Installationsliste fuer Header, keine API-Fassade, und das
+Export-Makro `UFT_API` — zweimal definiert, in `uft_compiler.h:231` und
+`uft_platform.h:208` — steht an **null** Symbolen. `include/uft/` ist
+schlicht *das* Kopfverzeichnis einer Anwendung, kein Versprechen an
+Dritte. **Dritte gibt es nicht.**
+
+Die Klasse ueberlebt, ihr Adressat aendert sich: nicht "Zusage an
+Dritte", sondern **Angebot an den uebrigen Baum**. Ein Symbol, dessen
+Header ein anderes Teilsystem bereits einbindet, liegt dort auf dem
+Tisch — und wird nicht genommen.
+
+Warum das die teure Klasse ist: `uft_convert_memory()` steht in
+`include/uft/uft_format_convert.h`, alle Aufrufer liegen unter `tests/`.
+Genau in dieser Lage entstand MF-567 — die Funktion ging vollstaendig am
+Preflight-Tor vorbei und lieferte aus 4096 Byte Zufall 3 712 758 Byte
+SCP, jahrelang unbemerkt, weil **kein Produktionspfad darueber lief**.
+Eine Regression auf einem Pfad ohne Tuer faellt niemandem auf.
+
+Was die Marke NICHT behauptet: dass das Symbol weg soll. Sie sagt: hier
+liegt etwas auf dem Tisch eines anderen Teilsystems, das niemand nimmt —
+und dafuer braucht es eine Entscheidung: **Anker** (gehoert dahin, Plan
+benennen) · **Tuer** (Abnehmer bauen) · **Rueckzug** (Header enger
+ziehen).
+
 ── Abgrenzung zu `scripts/audit_orphan_modules.py` (MF-693) ─────────────
 
 Der Baum hat seit MF-476 bereits einen Waisen-Zensus. Er misst etwas
@@ -84,8 +129,49 @@ def code_ohne_kommentare(text: str) -> str:
     return KOMMENTAR_RX.sub(" ", text)
 
 
-def klassifiziere(root: str) -> tuple[dict[str, str], dict[str, str]]:
-    """@return (klasse je Symbol, definierende Datei je Symbol)."""
+OEFFENTLICH = "include/uft/"
+
+# Eine Deklaration in einem oeffentlichen Header: Rueckgabetyp, Name,
+# offene Klammer — und irgendwo dahinter das Semikolon. Bewusst
+# grosszuegig: eine Zeile, die wie eine Deklaration aussieht, ist eine.
+DEKL_RX = re.compile(r"\b(uft_\w+|[a-z]\w{5,})\s*\(")
+
+
+INCLUDE_RX = re.compile(r"#\s*include\s+[<\"]([^\">]+)[\">]")
+
+
+def kopf_je_symbol(inhalt: dict[str, str]) -> dict[str, str]:
+    """Welcher Header unter `include/uft/**` deklariert welches Symbol?
+
+    Ohne Kommentare und String-Literale: eine Funktion, die im Header nur
+    im Fliesstext steht — etwa eine auskommentierte alte Deklaration —
+    ist nicht deklariert. Ohne diesen Strip erfindet die Marke Zusagen,
+    die es nie gab (MF-693, im Fixture als Rotbeweis hinterlegt).
+    """
+    aus: dict[str, str] = {}
+    for f, text in inhalt.items():
+        if not f.startswith(OEFFENTLICH) or not f.endswith((".h", ".hpp")):
+            continue
+        for zeile in code_ohne_kommentare(text).splitlines():
+            if ";" not in zeile:
+                continue
+            for m in DEKL_RX.finditer(zeile):
+                aus.setdefault(m.group(1), f)
+    return aus
+
+
+def einbinder_je_kopf(inhalt: dict[str, str]) -> dict[str, set[str]]:
+    """Welche Dateien binden welchen Header ein? (nach Basisnamen)"""
+    aus: dict[str, set[str]] = {}
+    for f, text in inhalt.items():
+        for m in INCLUDE_RX.finditer(text):
+            aus.setdefault(os.path.basename(m.group(1)), set()).add(f)
+    return aus
+
+
+def klassifiziere(root: str) -> tuple[dict[str, str], dict[str, str],
+                                      set[str]]:
+    """@return (klasse je Symbol, definierende Datei, ANGEBOT_OHNE_ABNEHMER-Menge)."""
     dateien = baum.dateien(root, baum.QUELLEN)
     inhalt = baum.inhalt(root, dateien)
 
@@ -150,7 +236,29 @@ def klassifiziere(root: str) -> tuple[dict[str, str], dict[str, str]]:
                 geaendert = True
         if not geaendert:
             break
-    return klasse, defs
+
+    # ANGEBOT_OHNE_ABNEHMER liegt QUER zu den vier Klassen, es ersetzt
+    # keine. Ein Symbol ist beides: WAISE *und* unangenommenes Angebot —
+    # und die zweite Eigenschaft ist die, die eine Entscheidung braucht.
+    #
+    # Die Bedingung ist nicht "steht in include/uft" (das trifft 1777 und
+    # trennt nichts, siehe Kopf), sondern: der deklarierende Header wird
+    # von einem ANDEREN `src/`-Verzeichnis eingebunden. Dann liegt das
+    # Symbol dort auf dem Tisch — und niemand nimmt es.
+    kopf = kopf_je_symbol(inhalt)
+    einb = einbinder_je_kopf(inhalt)
+    versprechen = set()
+    for sym, k in klasse.items():
+        if k not in ("WAISE", "NUR_TESTS"):
+            continue
+        h = kopf.get(sym)
+        if not h:
+            continue
+        eigenes = os.path.dirname(defs[sym])
+        if any(w.startswith("src/") and os.path.dirname(w) != eigenes
+               for w in einb.get(os.path.basename(h), ())):
+            versprechen.add(sym)
+    return klasse, defs, versprechen
 
 
 def selbsttest() -> int:
@@ -158,7 +266,7 @@ def selbsttest() -> int:
     ew = json.load(open(os.path.join(HIER, "..", "data",
                                      "tuer_erwartung.json"),
                         encoding="utf-8"))
-    klasse, defs = klassifiziere(fx)
+    klasse, defs, versprechen = klassifiziere(fx)
     fehler = 0
     for sym, soll in ew["erwartet"].items():
         ist = klasse.get(sym, "NICHT GEFUNDEN")
@@ -173,9 +281,22 @@ def selbsttest() -> int:
             fehler += 1
         else:
             print(f"  ok   {sym:24s} korrekt ausgenommen (vendorter Baum)")
-    print(f"\nSelbsttest: {fehler} Abweichung(en) bei "
-          f"{len(ew['erwartet']) + len(ew.get('darf_nicht_auftauchen', []))} "
-          f"Pruefungen")
+    soll_v = set(ew.get("angebot_ohne_abnehmer", []))
+    for sym in sorted(soll_v | versprechen):
+        if sym in soll_v and sym in versprechen:
+            print(f"  ok   {sym:24s} ANGEBOT_OHNE_ABNEHMER erkannt")
+        elif sym in soll_v:
+            print(f"  FAIL {sym:24s} sollte ANGEBOT_OHNE_ABNEHMER sein, ist es "
+                  f"nicht (Klasse {klasse.get(sym)})")
+            fehler += 1
+        else:
+            print(f"  FAIL {sym:24s} faelschlich ANGEBOT_OHNE_ABNEHMER "
+                  f"(Klasse {klasse.get(sym)})")
+            fehler += 1
+
+    gepr = (len(ew["erwartet"]) + len(ew.get("darf_nicht_auftauchen", []))
+            + len(soll_v | versprechen))
+    print(f"\nSelbsttest: {fehler} Abweichung(en) bei {gepr} Pruefungen")
     if fehler:
         print("Werkzeug nicht fertig — die Zahlen eines Laufs gelten "
               "erst, wenn dieser Test gruen ist (AGENT.md Regel 3).")
@@ -203,7 +324,7 @@ def main() -> int:
         return 3
     print()
 
-    klasse, defs = klassifiziere(root)
+    klasse, defs, versprechen = klassifiziere(root)
     warnungen = baum.warnungen()
 
     hist = []
@@ -230,7 +351,8 @@ def main() -> int:
         "# Tuer-Sucher-Bericht",
         f"Baum: `{root}` · Exporte: {len(defs)} · OK {zaehl['OK']} · "
         f"WAISE {zaehl['WAISE']} · NUR_TESTS {zaehl['NUR_TESTS']} · "
-        f"NUR_EIGENES_VERZEICHNIS {zaehl['NUR_EIGENES_VERZEICHNIS']}",
+        f"NUR_EIGENES_VERZEICHNIS {zaehl['NUR_EIGENES_VERZEICHNIS']} · "
+        f"**ANGEBOT_OHNE_ABNEHMER {len(versprechen)}**",
         "",
         "Abnahme am gepflanzten Baum: **gruen** (sonst laeuft dieser "
         "Bericht nicht).",
@@ -249,6 +371,39 @@ def main() -> int:
     ]
     for w in warnungen:
         zeilen += ["", f"> HINWEIS: {w}"]
+    zeilen += [
+        "",
+        f"## ANGEBOT_OHNE_ABNEHMER ({len(versprechen)})",
+        "",
+        "Der deklarierende Header wird von einem **anderen** "
+        "`src/`-Verzeichnis eingebunden — das Symbol liegt dort also auf "
+        "dem Tisch — und trotzdem ruft es niemand (ausser vielleicht ein "
+        "Test).",
+        "",
+        "**Nicht** einfach \"steht in `include/uft/`\": das trifft 1777 "
+        "von 3559 und trennt nichts, weil UFT `TEMPLATE = app` ist "
+        "(`UnifiedFloppyTool.pro:122`) — es gibt keine Bibliothek, keine "
+        "Header-Installationsliste, und `UFT_API` steht an null "
+        "Symbolen. Dritte, an die man etwas versprechen koennte, gibt es "
+        "nicht; der Adressat ist der **uebrige Baum**.",
+        "",
+        "Warum das die teure Klasse ist: MF-567. `uft_convert_memory()` "
+        "ging jahrelang am Preflight-Tor vorbei und lieferte aus 4096 "
+        "Byte Zufall 3 712 758 Byte SCP — unbemerkt, weil **kein "
+        "Produktionspfad darueber lief**. Eine Regression auf einem Pfad "
+        "ohne Tuer faellt niemandem auf.",
+        "",
+        "Je Zeile eine von drei Entscheidungen: **Anker** (gehoert dahin, "
+        "Plan benennen) · **Tuer** (Abnehmer bauen) · **Rueckzug** "
+        "(Header enger ziehen). Der Block gehoert in EINE Tore-Sitzung, "
+        "nicht in Einzelfunde ueber Wochen.",
+        ""]
+    for s in sorted(versprechen)[:limit]:
+        zeilen.append(f"- `{s}` — {klasse[s]}, definiert in `{defs[s]}`")
+    if len(versprechen) > limit:
+        zeilen.append(f"- … {len(versprechen) - limit} weitere in "
+                      f"`work/tueren_voll.json` (Feld `angebot_ohne_abnehmer`)")
+
     zeilen += ["", "## Historische Faelle (nachrichtlich, nicht blockierend)"]
     zeilen += hist or ["- keine hinterlegt"]
     for k in KLASSEN:
@@ -264,14 +419,16 @@ def main() -> int:
     open(out, "w", encoding="utf-8").write("\n".join(zeilen) + "\n")
     voll = os.path.join(HIER, "..", "work", "tueren_voll.json")
     os.makedirs(os.path.dirname(voll), exist_ok=True)
-    json.dump({s: {"klasse": k, "datei": defs[s]}
+    json.dump({s: {"klasse": k, "datei": defs[s],
+                   "angebot_ohne_abnehmer": s in versprechen}
                for s, k in klasse.items() if k != "OK"},
               open(voll, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for w in warnungen:
         print("HINWEIS: " + w)
     print(f"OK: {len(defs)} Exporte · OK {zaehl['OK']} · "
           f"WAISE {zaehl['WAISE']} · NUR_TESTS {zaehl['NUR_TESTS']} · "
-          f"NUR_DIR {zaehl['NUR_EIGENES_VERZEICHNIS']} -> {out}")
+          f"NUR_DIR {zaehl['NUR_EIGENES_VERZEICHNIS']} · "
+          f"ANGEBOT_OHNE_ABNEHMER {len(versprechen)} -> {out}")
     return 0
 
 
