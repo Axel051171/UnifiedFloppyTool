@@ -590,6 +590,24 @@ def check_tiers_fresh(repo: Path) -> list[str]:
     return []
 
 
+def check_stand_fresh(repo: Path) -> list[str]:
+    """Ist docs/STAND.md aktuell? (MF-704)
+
+    Eine Uebersichtsseite, die driftet, ist schlimmer als keine: sie
+    sieht nach Wahrheit aus. Darum dasselbe Frische-Tor wie bei den
+    beiden Tier-Tabellen.
+    """
+    try:
+        from gen_stand import bericht, ZIEL
+    except ImportError as e:                       # pragma: no cover
+        return [f"cannot import gen_stand: {e}"]
+    ist = ZIEL.read_text(encoding="utf-8") if ZIEL.exists() else ""
+    if ist.splitlines() != bericht().splitlines():
+        return ["docs/STAND.md ist veraltet — "
+                "run: python scripts/gen_stand.py"]
+    return []
+
+
 def check_fs_tiers_fresh(repo: Path) -> list[str]:
     """Ist docs/VERIFICATION_TIERS_FS.md aktuell? (MF-694)
 

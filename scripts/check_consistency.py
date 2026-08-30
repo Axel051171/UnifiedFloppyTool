@@ -588,6 +588,8 @@ def main() -> int:
                            _inv.check_tiers_fresh(repo)))
         all_errors.append(("FS tiers stale",
                            _inv.check_fs_tiers_fresh(repo)))
+        all_errors.append(("STAND.md stale",
+                           _inv.check_stand_fresh(repo)))
         all_errors.append(("include guard collisions",
                            _inv.check_include_guards(repo)))
         all_errors.append(("unbacked compat claims",

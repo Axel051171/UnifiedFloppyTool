@@ -1,5 +1,19 @@
 # Known Issues — Principle Compliance
 
+> **Rolle seit MF-704: GESCHICHTSBUCH, keine Arbeitsliste.**
+>
+> Dieses Dokument fuehrt 10 297 Zeilen und traegt 169 Stellen mit dem
+> Wort „offen" — die meisten davon historisch. Wer wissen will, was
+> HEUTE offen ist, liest **[`STAND.md`](STAND.md)** (abgeleitet) und
+> **[`OPEN_ITEMS.md`](OPEN_ITEMS.md)** (die EINE Liste mit
+> Begruendungen).
+>
+> Geloescht wird hier nichts. Eine geloeschte Liste nimmt ihre
+> Begruendungen mit, und die sind der Grund, warum dieser Baum
+> Entscheidungen nicht zweimal trifft. Was doppelt sein darf, sind
+> Verweise — nicht Zahlen.
+
+
 > **Für offene Arbeit ist [`docs/OPEN_ITEMS.md`](OPEN_ITEMS.md) die
 > einzige Liste** (MF-607). Die beiden Einträge, die hier noch auf
 > `OPEN` standen — 6.1 (Emulator-CI) und 7.4 (ADF-Schreibseite) — sind

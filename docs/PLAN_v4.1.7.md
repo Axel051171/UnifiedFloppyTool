@@ -1,5 +1,9 @@
 # Plan v4.1.7 — „Inhalt, nicht nur Struktur"
 
+> **Rolle seit MF-704: FASSUNGS-PLAN.** Was davon offen ist, steht
+> gesammelt in **[`STAND.md`](STAND.md)**.
+
+
 > **Verhältnis zu v4.1.6.** Die vorige Fassung hat bewiesen, dass jede
 > *Aussage* des Werkzeugs stimmt. Diese soll beweisen, dass die
 > *Interpretation* der wichtigsten Formate stimmt.

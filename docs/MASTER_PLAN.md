@@ -1,5 +1,12 @@
 # UFT Masterplan
 
+> **Rolle seit MF-704: BAU-MEILENSTEINE** (M3.x, HAL-Wiring,
+> Refactor-Phasen). Der Gesamtstand steht in
+> **[`STAND.md`](STAND.md)**, die offenen Punkte mit Begruendung in
+> **[`OPEN_ITEMS.md`](OPEN_ITEMS.md)**. Zahlen, die auch dort stehen,
+> sind hier Verweis und nicht Quelle.
+
+
 **Stand:** 2026-07-02 (Konsolidierungs-Pass MF-289; ursprünglich 2026-04-23)
 **Zweck:** Fahrplan und Status — **nicht** die Liste der offenen Punkte.
 
