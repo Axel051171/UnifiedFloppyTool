@@ -308,10 +308,26 @@ uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
  * Parses the IMD file, then uses uft_imd_to_raw() to extract sequential
  * sector data into a flat raw image suitable for use with standard tools.
  */
-uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
-                                      const char* dst_path,
-                                      const uft_convert_options_ext_t* opts,
-                                      uft_convert_result_t* result) {
+/* MF-701: Speicher-Kern, dritte Anwendung des Musters aus MF-655/695.
+ *
+ * Diese Doppelung war die teuerste der sechs: die Abkuerzung in
+ * `uft_convert_memory()` erzeugte zwar dieselben Bytes, verlor aber
+ * den BERICHT. Der Dateiweg meldet `tracks_converted` und warnt bei
+ * defekten oder nicht lesbaren Sektoren ("Warning: %u bad sectors,
+ * %u unavailable sectors"); der Speicherweg setzte nur `success` und
+ * `bytes_written`.
+ *
+ * Fuer ein Forensikwerkzeug ist das kein Schoenheitsfehler: dieselbe
+ * Wandlung meldete je nach Einstiegstuer defekte Sektoren oder
+ * schwieg darueber. "Keine stille Veraenderung" gilt auch fuer den
+ * Befund ueber die Daten, nicht nur fuer die Daten. */
+uft_error_t uftc_imd_to_img_mem(const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size) {
+    if (!out_data || !out_size) return UFT_ERR_NULL_POINTER;
+    *out_data = NULL;
+    *out_size = 0;
     uft_imd_image_t imd;
     uft_imd_init(&imd);
 
@@ -339,21 +355,10 @@ uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
         return UFT_ERR_FORMAT;
     }
 
-    uftc_report_progress(opts, 80, "Writing IMG output");
-
-    uft_error_t err = uftc_write_output_file(dst_path, raw_data, raw_size);
-    if (err != UFT_OK) {
-        free(raw_data);
-        uft_imd_free(&imd);
-        result->error = err;
-        return err;
-    }
-
-    result->success = true;
-    result->bytes_written = (int)raw_size;
     result->tracks_converted = imd.num_tracks;
 
-    /* Report statistics */
+    /* Der Bericht gehoert in den KERN, nicht in die Huelle — sonst
+     * bekommt ihn nur, wer ueber die Datei-API kommt (MF-701). */
     uftc_add_warning(result,
              "Extracted %d tracks (%d cyls x %d heads), %zu bytes output",
              imd.num_tracks, imd.num_cylinders, imd.num_heads, raw_size);
@@ -364,9 +369,32 @@ uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
                  imd.bad_sectors, imd.unavail_sectors);
     }
 
-    free(raw_data);
     uft_imd_free(&imd);
+    *out_data = raw_data;
+    *out_size = raw_size;
+    return UFT_OK;
+}
 
+/* Die Datei-Huelle: Kern + schreiben, keine Wandlungslogik. */
+uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
+                                      const char* dst_path,
+                                      const uft_convert_options_ext_t* opts,
+                                      uft_convert_result_t* result) {
+    uint8_t* buf = NULL;
+    size_t n = 0;
+    uft_error_t e = uftc_imd_to_img_mem(src_data, src_size, opts, result,
+                                         &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 80, "Writing IMG output");
+    e = uftc_write_output_file(dst_path, buf, n);
+    if (e != UFT_OK) {
+        free(buf);
+        result->error = e;
+        return e;
+    }
+    result->success = true;
+    result->bytes_written = (int)n;
+    free(buf);
     uftc_report_progress(opts, 100, "IMD->IMG complete");
     return UFT_OK;
 }

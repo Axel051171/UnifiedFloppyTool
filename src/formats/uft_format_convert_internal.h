@@ -90,6 +90,13 @@ void uftc_add_warning(uft_convert_result_t* result, const char* fmt, ...)
 /* Archive converters (defined in uft_format_convert_archive.c)               */
 /* ========================================================================== */
 
+/* MF-701: Speicher-Kern von TD0->IMG, mit dem Bericht (Spurzahl,
+ * LZSS ja/nein) — der lag bis MF-701 nur in der Datei-Huelle. */
+uft_error_t uftc_td0_to_img_mem(const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size);
+
 uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,
@@ -258,6 +265,14 @@ uft_error_t uftc_atr_xfd_memory(uft_format_t src_format,
                                  const uft_convert_options_ext_t* opts,
                                  uft_convert_result_t* result,
                                  uint8_t** out, size_t* out_size);
+
+/* MF-701: Speicher-Kern von IMD->IMG. Er traegt AUCH den Bericht
+ * (tracks_converted, Warnung bei defekten Sektoren) — der lag bis
+ * MF-701 nur in der Datei-Huelle, und der Speicherweg verlor ihn. */
+uft_error_t uftc_imd_to_img_mem(const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size);
 
 uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
                                       const char* dst_path,

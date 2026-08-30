@@ -21,10 +21,18 @@
  * Uses uft_td0_read_mem() to parse/decompress, then uft_td0_to_raw()
  * to extract the raw sector data.
  */
-uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
-                                      const char* dst_path,
-                                      const uft_convert_options_ext_t* opts,
-                                      uft_convert_result_t* result) {
+/* MF-701: Speicher-Kern, letzte der sechs Doppelungen aus MF-695.
+ *
+ * Wie bei IMD->IMG verlor die Abkuerzung in `uft_convert_memory()`
+ * nicht Bytes, sondern den BERICHT: Spurzahl und die Angabe, ob das
+ * Abbild LZSS-komprimiert war, standen nur in der Datei-Fassung. */
+uft_error_t uftc_td0_to_img_mem(const uint8_t* src_data, size_t src_size,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size) {
+    if (!out_data || !out_size) return UFT_ERR_NULL_POINTER;
+    *out_data = NULL;
+    *out_size = 0;
     uft_td0_image_t td0_img;
     uft_td0_init(&td0_img);
 
@@ -53,30 +61,42 @@ uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
         return UFT_ERR_FORMAT;
     }
 
-    uftc_report_progress(opts, 80, "Writing IMG output");
-
-    /* Write output file */
-    uft_error_t err = uftc_write_output_file(dst_path, raw_data, raw_size);
-    if (err != UFT_OK) {
-        free(raw_data);
-        uft_td0_free(&td0_img);
-        result->error = err;
-        return err;
-    }
-
-    result->success = true;
-    result->bytes_written = (int)raw_size;
     result->tracks_converted = td0_img.num_tracks;
 
+    /* Der Bericht gehoert in den KERN (MF-701) — sonst bekommt ihn
+     * nur, wer ueber die Datei-API kommt. */
     uftc_add_warning(result,
              "Decompressed %d tracks (%s compression), %zu bytes output",
              td0_img.num_tracks,
              td0_img.advanced_compression ? "LZSS" : "none",
              raw_size);
 
-    free(raw_data);
     uft_td0_free(&td0_img);
+    *out_data = raw_data;
+    *out_size = raw_size;
+    return UFT_OK;
+}
 
+/* Die Datei-Huelle: Kern + schreiben, keine Wandlungslogik. */
+uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
+                                      const char* dst_path,
+                                      const uft_convert_options_ext_t* opts,
+                                      uft_convert_result_t* result) {
+    uint8_t* buf = NULL;
+    size_t n = 0;
+    uft_error_t e = uftc_td0_to_img_mem(src_data, src_size, opts, result,
+                                         &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 80, "Writing IMG output");
+    e = uftc_write_output_file(dst_path, buf, n);
+    if (e != UFT_OK) {
+        free(buf);
+        result->error = e;
+        return e;
+    }
+    result->success = true;
+    result->bytes_written = (int)n;
+    free(buf);
     uftc_report_progress(opts, 100, "TD0->IMG complete");
     return UFT_OK;
 }

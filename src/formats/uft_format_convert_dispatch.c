@@ -171,11 +171,20 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
 
     /* ===== Sector <-> Sector (format conversions) ===== */
     /* MF-655: Atari 8-bit — der 16-Byte-Kopf ist der ganze Unterschied.
-     * ACHTUNG: diese Kette steht ZWEIMAL in dieser Datei, einmal in
-     * dispatch_conversion() und einmal in uft_convert_memory(). Wer
-     * einen Wandler nur an einer Stelle eintraegt, bekommt einen Pfad,
-     * der ueber die eine API geht und ueber die andere nicht — still.
-     * Dieselbe Doppelung war die Ursache von MF-567. */
+     *
+     * BERICHTIGT MF-701: hier stand seit MF-655 die Warnung, diese
+     * Kette stehe ZWEIMAL in dieser Datei. Das stimmte, und es war die
+     * Ursache von MF-567. Seit MF-695/700/701 stimmt es nicht mehr:
+     * alle Paare, die `uft_convert_memory()` behandelt, gehen durch
+     * einen GEMEINSAMEN Kern (`uftc_*_mem`), die Datei-Fassungen sind
+     * blosse Huellen darum. Gemessen: 4 Paare mit gemeinsamem Kern,
+     * **0 mit eigener Kette**.
+     *
+     * Die Warnung stehen zu lassen, waere schlimmer als sie zu
+     * loeschen: eine Warnung, die nicht mehr zutrifft, wird beim
+     * naechsten Lesen ueberblaettert — und mit ihr die naechste, die
+     * zutrifft. Wer einen neuen Wandler eintraegt, traegt ihn als Kern
+     * ein; die Huelle bekommt keine Logik. */
     if (src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) {
         return uftc_convert_atr_to_xfd(src_data, src_size, dst_path, opts, result);
     }
@@ -969,11 +978,20 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
 
     /* IMD -> IMG */
     /* MF-655: Atari 8-bit — der 16-Byte-Kopf ist der ganze Unterschied.
-     * ACHTUNG: diese Kette steht ZWEIMAL in dieser Datei, einmal in
-     * dispatch_conversion() und einmal in uft_convert_memory(). Wer
-     * einen Wandler nur an einer Stelle eintraegt, bekommt einen Pfad,
-     * der ueber die eine API geht und ueber die andere nicht — still.
-     * Dieselbe Doppelung war die Ursache von MF-567. */
+     *
+     * BERICHTIGT MF-701: hier stand seit MF-655 die Warnung, diese
+     * Kette stehe ZWEIMAL in dieser Datei. Das stimmte, und es war die
+     * Ursache von MF-567. Seit MF-695/700/701 stimmt es nicht mehr:
+     * alle Paare, die `uft_convert_memory()` behandelt, gehen durch
+     * einen GEMEINSAMEN Kern (`uftc_*_mem`), die Datei-Fassungen sind
+     * blosse Huellen darum. Gemessen: 4 Paare mit gemeinsamem Kern,
+     * **0 mit eigener Kette**.
+     *
+     * Die Warnung stehen zu lassen, waere schlimmer als sie zu
+     * loeschen: eine Warnung, die nicht mehr zutrifft, wird beim
+     * naechsten Lesen ueberblaettert — und mit ihr die naechste, die
+     * zutrifft. Wer einen neuen Wandler eintraegt, traegt ihn als Kern
+     * ein; die Huelle bekommt keine Logik. */
     if ((src_format == UFT_FORMAT_ATR && dst_format == UFT_FORMAT_XFD) ||
         (src_format == UFT_FORMAT_XFD && dst_format == UFT_FORMAT_ATR)) {
         uft_error_t e = uftc_atr_xfd_memory(src_format, dst_format,
@@ -986,42 +1004,30 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
         return UFT_OK;
     }
 
+    /* IMD -> IMG: EINE Kette, zwei Enden (MF-701).
+     *
+     * Der Nachbau hier erzeugte dieselben Bytes, verlor aber den
+     * BERICHT: `tracks_converted` und die Warnung ueber defekte oder
+     * nicht lesbare Sektoren standen nur in der Datei-Fassung.
+     * Dieselbe Wandlung meldete also je nach Einstiegstuer defekte
+     * Sektoren oder schwieg darueber. */
     if (src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) {
-        uft_imd_image_t imd;
-        uft_imd_init(&imd);
-        int rc = uft_imd_read_mem(src_data, src_size, &imd);
-        if (rc != 0) {
-            uft_imd_free(&imd);
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
-        rc = uft_imd_to_raw(&imd, dst_data, dst_size, 0xE5);
-        uft_imd_free(&imd);
-        if (rc != 0 || !*dst_data) {
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
+        uft_error_t e = uftc_imd_to_img_mem(src_data, src_size, options,
+                                             result, dst_data, dst_size);
+        if (e != UFT_OK) return e;
         result->success = true;
         result->bytes_written = (int)*dst_size;
         return UFT_OK;
     }
 
     /* TD0 -> IMG */
+    /* TD0 -> IMG: EINE Kette, zwei Enden (MF-701). Die letzte der
+     * sechs Doppelungen. Wie bei IMD->IMG verlor der Nachbau nicht
+     * Bytes, sondern den Bericht. */
     if (src_format == UFT_FORMAT_TD0 && dst_format == UFT_FORMAT_IMG) {
-        uft_td0_image_t td0;
-        uft_td0_init(&td0);
-        int rc = uft_td0_read_mem(src_data, src_size, &td0);
-        if (rc != 0) {
-            uft_td0_free(&td0);
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
-        rc = uft_td0_to_raw(&td0, dst_data, dst_size, 0xF6);
-        uft_td0_free(&td0);
-        if (rc != 0 || !*dst_data) {
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
+        uft_error_t e = uftc_td0_to_img_mem(src_data, src_size, options,
+                                             result, dst_data, dst_size);
+        if (e != UFT_OK) return e;
         result->success = true;
         result->bytes_written = (int)*dst_size;
         return UFT_OK;
