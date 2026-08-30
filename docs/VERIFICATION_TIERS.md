@@ -69,7 +69,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `edsk` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
-| `hardsector` | **T3** | — | — | — | — |
+| `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
 | `img` | **T3** | `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_plugin_probe_real` | — | — | — |
 | `jv1` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |

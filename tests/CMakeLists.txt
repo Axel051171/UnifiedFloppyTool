@@ -1388,6 +1388,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_atarist_copylock.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_hardsector_geometry")
+        # MF-706: Hartsektor-Geometrien gegen zwei externe Quellen.
+        # Der Leser hat KEINEN Aufrufer (10 Exporte, alle WAISE) — der
+        # Test misst die Tabelle, nicht den Betrieb.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hardsector/uft_hardsector.c)
     elseif(${test_name} STREQUAL "test_akai_s900_plugin")
         # Phase-3 new format: Akai S900/S950 sampler (DD 5x1024 / HD 10x1024) (MF-348)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/akai/uft_akai_s900.c)
