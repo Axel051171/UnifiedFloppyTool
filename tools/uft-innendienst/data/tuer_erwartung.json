@@ -1,0 +1,30 @@
+{
+  "_kommentar": "Abnahme des Tuer-Suchers an einem GEPFLANZTEN Baum (data/tuer_fixtures/), nicht an Symbolen des echten Baums. Grund (MF-693): die urspruengliche Abnahme nannte vier historische Symbole; drei davon waren beim ersten Lauf bereits geloescht und meldeten 'nicht mehr im Baum'. Eine Abnahme, die sich selbst loescht, sobald der Baum gesund wird, ist keine. Der gepflanzte Baum veraltet nie — jede Zeile hier ist eine Fehlklasse, die dieses Werkzeug beherrschen muss.",
+  "erwartet": {
+    "uft_fix_live": "OK",
+    "uft_fix_b": "OK",
+    "uft_fix_waise": "WAISE",
+    "uft_fix_scheinbar": "WAISE",
+    "uft_fix_totaufrufer": "WAISE",
+    "uft_fix_kommentar": "WAISE",
+    "uft_fix_nurtest": "NUR_TESTS",
+    "uft_fix_nurdir": "NUR_EIGENES_VERZEICHNIS"
+  },
+  "_was_jede_zeile_prueft": {
+    "uft_fix_live": "lebender Aufruf aus einer Datei ohne eigene Exporte (main) — darf nicht als Waise gelten",
+    "uft_fix_scheinbar": "TRANSITIV: einziger Aufrufer sitzt in src/tot2.c, deren saemtliche Exporte selbst Waisen sind. Ein Aufruf aus totem Code ist keine Tuer",
+    "uft_fix_kommentar": "ERWAEHNUNG != AUFRUF: der Name steht in src/anker.c in einem Kommentar UND in einem String-Literal. Beides darf nicht zaehlen",
+    "uft_fix_nurtest": "Faehigkeit mit Test, ohne Produktions-Tuer",
+    "uft_fix_nurdir": "Aufrufer nur im eigenen Verzeichnis — Modul ohne Anschluss nach aussen",
+    "uft_fix_fremd": "DARF NICHT AUFTAUCHEN: liegt unter src/samdisk/, einem vendorten Fremdbaum (scripts/audit_spdx_policy.py:AUSGENOMMEN)"
+  },
+  "darf_nicht_auftauchen": ["uft_fix_fremd"],
+  "historische_faelle": {
+    "_kommentar": "Nur nachrichtlich, NIE blockierend — genau weil diese Liste verfaellt. Sie belegt, dass das Werkzeug an echten Faellen einmal angeschlagen hat.",
+    "faelle": [
+      {"symbol": "uft_otdr_adaptive_decode", "erwartet": ["WAISE", "NUR_TESTS"], "historisch": "MF-501: einziger Leser von id_position/data_position, selbst ohne Aufrufer"},
+      {"symbol": "uft_gw_set_pin", "erwartet": ["WAISE"], "historisch": "gwnbd-Zyklus: Deklaration+Definition, null Aufrufer — seit MF-686 geloescht, meldet daher 'nicht mehr im Baum'"},
+      {"symbol": "uft_convert_memory", "erwartet": ["NUR_TESTS"], "historisch": "MF-693 gemessen: oeffentliche C-API des Speicher-Wandlungswegs, alle Aufrufer ausserhalb von Kommentaren liegen unter tests/"}
+    ]
+  }
+}

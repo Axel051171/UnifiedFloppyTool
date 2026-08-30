@@ -139,6 +139,25 @@ def status_von(e, texte, negativ, klone):
     return "OFFEN"
 
 
+def ohne_spur(gut: dict, liste: str) -> list[str]:
+    """Gutachten, die in `docs/OPEN_ITEMS.md` keine Spur hinterlassen.
+
+    Ausgelagert (MF-693), weil der Innendienst-Sekretaer dieselbe Frage
+    stellt. Er hatte dafuer zunaechst einen eigenen, schwaecheren Ersatz:
+    "Gutachten ohne `<!-- stufe: -->`-Marke". Gemessen tragen genau vier
+    der rund dreissig Gutachten diese Marke — der Ersatz haette also
+    fuenfundzwanzig Posten als offene Entscheidung gemeldet, von denen
+    die meisten laengst erledigt sind. Ein Tor, das so oft falsch
+    anschlaegt, wird uebergangen.
+
+    Der Vergleich ist bewusst grob (Name, nicht `owner/repo`): ein
+    Treffer ist eine FRAGE an den Menschen, kein Urteil.
+    """
+    return sorted(n for n in gut
+                  if n not in liste
+                  and not re.search(re.escape(n), liste, re.I))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--offen", action="store_true",
@@ -161,9 +180,7 @@ def main() -> int:
 
     liste = LISTE.read_text(encoding="utf-8", errors="replace") \
         if LISTE.is_file() else ""
-    ohne_entscheidung = sorted(
-        n for n in gut
-        if n not in liste and not re.search(re.escape(n), liste, re.I))
+    ohne_entscheidung = ohne_spur(gut, liste)
 
     neg = 0
     if NEGATIVE.is_file():

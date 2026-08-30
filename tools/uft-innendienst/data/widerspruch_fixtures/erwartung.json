@@ -1,0 +1,15 @@
+{
+  "_kommentar": "Die gepflanzten Faelle in docs/A.md und docs/B.md. Drei Befunde, einer je Pruefung — wenn dieser Baum weniger liefert, sucht das Werkzeug nicht, statt nichts zu finden (MF-693).",
+  "soll": 3,
+  "faelle": [
+    "A.md behauptet 'Generiert aus scripts/nichtda.py' — die Datei gibt es hier nicht (Pruefung 1)",
+    "A.md traegt die Marke '<!-- stufe:', unter tools/ liegt kein Leser (Pruefung 2, Klasse MF-678)",
+    "A.md und B.md belegen beide docs/specs/ (Pruefung 3, Klasse MF-689)"
+  ],
+  "config": {
+    "erzeuger_leser_pfade": ["scripts/", "tools/"],
+    "marken_mit_leser": [
+      {"marke": "<!-- stufe:", "leser_muster": "stufe", "leser_pfade": ["tools/", "scripts/"]}
+    ]
+  }
+}

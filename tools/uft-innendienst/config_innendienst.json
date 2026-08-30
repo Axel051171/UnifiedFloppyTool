@@ -1,0 +1,40 @@
+{
+  "_kommentar": "Gemeinsame Konfiguration der Innendienst-Rollen. Was hier NICHT mehr steht (MF-693): `soll_versionen`. Es war eine zweite gepflegte Liste neben dem Vokabular des Korpus-Zensus und hat prompt gedriftet — 'HFE v1' hier, 'rev0' dort, Ergebnis ein erfundener Fehlbestand. Das Soll kommt seither aus `tools/uft-variants/config.json` -> `erkennungen`.",
+
+  "erzeuger_leser_pfade": ["scripts/", "tools/", ".github/"],
+
+  "eich_ausnahmen": {
+    "_kommentar": "Werkzeuge, bei denen die Laengensemantik keinen Gegenstand hat. ACHTUNG: ORACLES.md fuehrt beide in der Sammelzeile 'ungemessen'. Der Kalibrierer meldet diesen Widerspruch seit MF-693 als Hinweis, statt die Ausnahme stillschweigend gewinnen zu lassen — wer die Ausnahme fuer richtig haelt, traegt sie in ORACLES.md nach.",
+    "gw": "Flux-Werkzeug — liest keine Dateiinhalte, Laengensemantik ohne Gegenstand",
+    "dtc": "Flux-Rohstrom — dito; Eichung erfolgt ueber Stream-Vergleich, nicht Dateilaengen"
+  },
+
+  "eichlaeufe": [
+    {"oracle": "lsatr", "kommando": ["lsatr", "{fixture_atr}"], "hinweis": "ATR mit 127-Byte-Datei erzeugen (mkatr), Laengenspalte ablesen — VOR dem ersten ATR-Differenzlauf"},
+    {"oracle": "cpmls", "kommando": ["cpmls", "-f", "{diskdef}", "{fixture}"], "hinweis": "CP/M-Abbild mit 127-Byte-Datei; cpmls zeigt Records — Umrechnung dokumentieren"},
+    {"oracle": "samdisk", "kommando": ["samdisk", "dir", "{fixture}"], "hinweis": "je Container einmal"},
+    {"oracle": "hxcfe", "kommando": ["hxcfe", "-infos", "-uselayout:{layout}", "{fixture}"], "hinweis": "Wandlungs-Oracle: Eichung ueber Roundtrip-Bytevergleich statt Laenge"}
+  ],
+
+  "marken_mit_leser": [
+    {"marke": "<!-- stufe:", "leser_muster": "stufe", "leser_pfade": ["tools/", "scripts/"]}
+  ],
+
+  "beschaffungswege": {
+    "_kommentar": "Schluessel sind '<Format> <Version>', '<Format> *' oder '<Format>'. Die Versionsnamen MUESSEN dem Vokabular aus tools/uft-variants/config.json entsprechen — sonst faellt der Posten auf 'sonst' zurueck und wird als unkonkret gemeldet.",
+    "HFE v3": "selbst erzeugen: eigener Dump -> hxcfe -conv:HXC_HFEV3 (Werkzeugkette ins README)",
+    "WOZ 1.x": "Applesauce-Beispielbilder (frei) oder wozardry-Erzeugung; Lizenz je Fundstueck",
+    "WOZ 2.x (2.1-Flux nur via INFO-Chunk!)": "dito; die 2.1-Flux-Fassung nur aus echter Applesauce-Aufnahme",
+    "A2R *": "Applesauce-Aufnahme; ohne Geraet nur aus freiem Archiv mit Lizenzzitat",
+    "CPC-DSK standard": "selbst erzeugen: eigener Dump -> hxcfe -conv:AMSTRADCPC_DSK",
+    "CPC-EDSK extended": "selbst erzeugen: hxcfe -conv:AMSTRADCPC_EDSK; die Kopfvariante im README festhalten",
+    "IMD ASCII-Header": "Originalwerkzeug im Emulator: ImageDisk in DOSBox auf eigenes Abbild (fremde Hand = das Werkzeug ist fremd, nicht der Bediener)",
+    "TD0-normal": "Originalwerkzeug im Emulator: Teledisk in DOSBox auf eigenes Abbild",
+    "TD0-advanced": "dito, mit /A-Schalter — beide Magics aus derselben Sitzung",
+    "IMD *": "Originalwerkzeug im Emulator: ImageDisk in DOSBox auf eigenes Abbild",
+    "TD0 *": "Originalwerkzeug im Emulator: Teledisk in DOSBox; normal UND /A in einer Sitzung, damit beide Magics aus derselben Hand kommen",
+    "SCP *": "eigener Greaseweazle-Dump -> gw convert; den C64-Fall mit 96-tpi-Verdopplung dokumentieren",
+    "ATX *": "a8rawconv aus eigenem SCP-Dump (a8rawconv liegt vendort im Baum)",
+    "sonst": "Archiv nur mit Lizenzzitat in der .readme — DMS-Regel; ungeklaerte Herkunft ist ROT"
+  }
+}
