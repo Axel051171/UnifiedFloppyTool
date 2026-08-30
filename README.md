@@ -14,8 +14,8 @@ honesty:** most parsers are currently validated only against synthetic
 round-trip tests and/or specs verified against authoritative reference
 implementations — **not yet against a real-disk reference corpus**. The
 per-format verification-tier table now exists and is kept current:
-[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **56 of 88
-formats are T3 (unverified)**; proven: T1=2, T1b=13, T2=21. 9 hardware controllers
+[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **51 of 88
+formats are T3 (unverified)**; proven: T1=2, T1b=13, T2=22. 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
 pending** — still open in 4.1.6, and it needs a machine we do not have
 (see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
@@ -121,10 +121,18 @@ not made green. The reference image is on the procurement list.
 **What this release still cannot do** — this list is part of the release,
 not a footnote:
 
-- **55 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
-  T1b=13, T2=21. (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
+- **51 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
+  T1b=13, T2=22. (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
   each after a real parser bug was fixed against a named reference:
-  MAME's `mfi_dsk.h`, and the pc98.org D88 spec plus MAME's `d88_dsk`.)
+  MAME's `mfi_dsk.h`, and the pc98.org D88 spec plus MAME's `d88_dsk`;
+  `dim_atari` in MF-690; `do` in MF-716 — the first Apple format
+  lifted, 560 of 560 sectors byte-identical against the `to_woz2`
+  oracle.)
+
+  Until MF-716 this file carried **three different** T3 counts in
+  three places (56, 55, 52). They are derived now, and
+  `scripts/check_consistency.py` fails the commit when they drift —
+  which is how the 56/55/52 was found.
 - **12 of 44 conversion paths are offered**, 4 of them lossless *with a
   measurement*. The rest the preflight gate refuses as UNTESTED — on
   purpose.
@@ -301,7 +309,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=13, T2=21, T3=52** of 88.
+for the tier definitions): **T1=2, T1b=13, T2=22, T3=51** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for

@@ -40,6 +40,10 @@
     "spec_source": "David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1",
     "evidence": "MF-353"
   },
+  "do": {
+    "spec_source": "Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md) plus die DOS-3.3-Interleave-Tabelle aus a8rawconv diska2.cpp:3-5 als unabhaengige zweite Quelle",
+    "evidence": "MF-716: linke Seite uft_format_plugin_do (Versatz (cyl*16+s)*256, Sektor-ID = logisch s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() in physische Sektoren, verbunden ueber die Interleave-Tabelle. Gemessen: 560 dekodiert, 560 verglichen, 560 BYTEIDENTISCH, 0 fehlend. Der Regressionsschutz steht in tests/test_do_layout_verified.c. Gilt NUR fuer die DOS-Ordnung — `po` war nicht beteiligt und bleibt T3."
+  },
   "dsk_cpc": {
     "spec_source": "EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested)",
     "evidence": "MF-332"

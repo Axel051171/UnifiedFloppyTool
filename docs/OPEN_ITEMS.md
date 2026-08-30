@@ -5536,4 +5536,55 @@ Eigenschaft der **Datei**, nicht der Spur (MF-463, MF-714).
 **Was NICHT belegt ist:** dass echte, historische Disketten gelesen
 werden. Gemessen ist eine von `to_woz2` erzeugte, fehlerfreie
 Aufzeichnung. Schwache Bits, Halbspuren, Kopierschutz und beschädigte
-Felder sind hier nicht vorgekommen.
+Felder sind hier nicht vorgekommen.
+
+### ORAK-2 Schritt 2 erledigt (MF-716) — `do` steht auf T2, T3 faellt 52 -> 51
+
+**Zum ersten Mal in dieser Kette bewegt sich eine Release-Kennzahl.**
+
+**Und der Weg war ein anderer als gedacht.** Ich hatte MF-711 dahin
+korrigiert, `to_woz2` liefere T1b. Das gilt fuer `woz` — nicht fuer
+`do`: der Generator ordnet Korpus-Eintraege je **Plugin-Symbol** zu, und
+`to_woz2` *erzeugt* WOZ, *verbraucht* DSK. Ein Fremdwerkzeug-Abbild fuer
+`do` gibt es also nicht. Der Weg ist `T2` ueber
+`docs/spec_verification.json` — genau, was der Scout urspruenglich sagte.
+Zweite Korrektur an mir selbst in dieser Sache; der Scout lag beide Male
+richtig.
+
+**Der Differenzlauf lief durch das Plugin, nicht nur durch einen Puffer.**
+Das war der Punkt, an dem ein blosser JSON-Eintrag zu wenig gewesen
+waere:
+
+```
+linke Seite : uft_format_plugin_do liest die DSK
+              (Versatz (cyl*16+s)*256, Sektor-ID = logisch s)
+rechte Seite: dieselbe Diskette, to_woz2 -> WOZ 2.0
+              -> uft_apple_gcr_scan_track() -> physische Sektoren
+Verbindung  : DOS-3.3-Interleave, a8rawconv diska2.cpp:3-5
+
+rechte Seite dekodiert : 560
+verglichen             : 560
+byteidentisch          : 560
+fehlend                :   0
+```
+
+Waere der Versatz falsch, die Nummerierung anders oder die Tabelle
+verkehrt herum, koennte das nicht aufgehen.
+
+**Regressionsschutz:** `tests/test_do_layout_verified.c` haelt die
+gepruefte Anordnung fest und braucht kein Fremdwerkzeug — faellt der
+Versatz um, ist der Differenzlauf hinfaellig, und das faellt auf.
+
+**Nebenbefund: die README trug drei verschiedene T3-Zahlen** (56, 55,
+52) an drei Stellen. Das Tor „inventory drift" hat beim Heben genau eine
+davon gefunden; die anderen zwei kamen beim Nachsehen. Alle drei stehen
+jetzt auf dem abgeleiteten Wert.
+
+**Was ausdruecklich NICHT gehoben ist:** `po` bleibt T3 — der
+Differenzlauf lief ueber die DOS-Ordnung, die ProDOS-Ordnung war nicht
+beteiligt. Und belegt ist eine fehlerfreie, maschinell erzeugte
+Aufzeichnung, keine historische Diskette.
+
+**Offen bleibt Schritt 3** (`d13`, heute ohne einen einzigen Test): er
+braucht die 5-and-3-Tabelle im Dekoder. `to_woz2` erzeugt sie bereits
+(`neu13.woz`, SHA `a5ff575f...`).

@@ -1397,6 +1397,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
+    elseif(${test_name} STREQUAL "test_do_layout_verified")
+        # MF-716: haelt die Anordnung fest, die der Differenzlauf
+        # gegen to_woz2 extern geprueft hat (560/560 byteidentisch).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c)
     elseif(${test_name} STREQUAL "test_apple_gcr_6and2")
         # MF-715: die neue Apple-GCR-Einheit. Reine Rechenwege, kein
         # WOZ-Leser noetig — die Spur baut der Test selbst.

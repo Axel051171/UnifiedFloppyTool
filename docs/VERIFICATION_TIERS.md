@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 13 |
-| T2 | 21 |
-| T3 | 52 |
+| T2 | 22 |
+| T3 | 51 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -43,6 +43,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d88` | **T2** | `test_d88_error_marks`, `test_d88_header_variants`, `test_format_probe_fuzz`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
+| `do` | **T2** | `test_apple_do_po_bounds`, `test_do_layout_verified`, `test_do_po_probe_ignores_content`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md) plus die DOS-3.3-Interleave-Tabelle aus a8rawconv diska2.cpp:3-5 als unabhaengige zweite Quelle | MF-716: linke Seite uft_format_plugin_do (Versatz (cyl*16+s)*256, Sektor-ID = logisch s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() in physische Sektoren, verbunden ueber die Interleave-Tabelle. Gemessen: 560 dekodiert, 560 verglichen, 560 BYTEIDENTISCH, 0 fehlend. Der Regressionsschutz steht in tests/test_do_layout_verified.c. Gilt NUR fuer die DOS-Ordnung — `po` war nicht beteiligt und bleibt T3. | — |
 | `dsk_cpc` | **T2** | `test_edsk_error_marks`, `test_format_probe_fuzz`, `test_plugin_probe_real` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
 | `imd` | **T2** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_track_record`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: "offs += 5 + sector_num"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256) | MF-430 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
@@ -64,7 +65,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
-| `do` | **T3** | `test_apple_do_po_bounds`, `test_do_po_probe_ignores_content`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
 | `edsk` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
