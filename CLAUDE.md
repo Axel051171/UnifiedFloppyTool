@@ -313,6 +313,43 @@ nächste Durchlauf ansetzt.
 3. **Ehrlichkeit vor Vollständigkeit.** Die Registry-Zeile „nicht lesbar"
    schlägt 1100 Zeilen Können ohne Tür (MF-635).
 
+### Der staerkste legale Kanal (MF-695)
+
+„Lizenz vor Fähigkeit" heißt **nicht** „Fund verwerfen". Es heißt: *auf
+welchem Weg*. Kein Fund verlässt die Pipeline ungenutzt — jeder bekommt
+den stärksten Kanal, der legal offensteht:
+
+| Kanal | wann | Beispiel im Baum |
+|---|---|---|
+| **Port** | Lizenz vereinbar, Attribution gesetzt | — |
+| **Nachbau** | Verhalten belegt, Code gesperrt | Ordinal/Dewarp aus flux-analyze (GPL-3) |
+| **Helfer-Prozess** | nicht einlinkbar, ausführbar | PFS3lib (BSD-4) |
+| **Oracle** | Ausführung frei, Weitergabe nicht | `dtc` (proprietär), SHA-gepinnt |
+| **Spec** | nur Doku lesbar | HxC-Formatbeschreibungen |
+| **Daten/Fixture** | Abbild frei, Code nicht | Korpus-Zulieferungen |
+| **Fundus** | heute kein Kanal | `ipf-flux`, bis die capsimg-Frage steht |
+
+**Fundus heißt benannt wartend, nicht verfallen.** Ein Fund ohne Kanal
+wird eingetragen — mit dem, was ihn öffnen würde. Sonst ist „später"
+dasselbe wie „nie".
+
+Der Preis der anderen Lesart ist dreimal bezahlt: P0-5 hat ein Release
+blockiert, die nibtools-Welle vier Dateien und Tage gekostet, die
+IPF-Quarantäne eine ganze Fähigkeit. Eine Lizenzverletzung verbessert
+das Werkzeug nicht — sie baut einen Defekt ein, den **kein Rotbeweis
+fangen kann**, und trifft am Ende genau das, was dieses Projekt
+herstellt: Vertrauenswürdigkeit.
+
+**Und die Bilanz will gemessen sein wie alles andere.** Beim
+Festschreiben dieser Regel wurde die Zeile „cpmtools: 131 diskdefs per
+Laufzeit-Parser, voller Nutzen, null Übernahme" nachgeprüft und trägt
+nicht: `src/formats/cpm/uft_cpm_diskdefs.c` führt **55** Definitionen
+**fest verdrahtet**, keinen Laufzeit-Parser, und die Kopfzeile nennt
+cpmtools als Referenz, deren Lizenz ausdrücklich **nicht gemessen** ist
+(`LIZ-1`, OPEN_ITEMS „Eine zweite Quelle, die niemand gemessen hat").
+Das ist kein Erfolgsfall der Regel, sondern ein offener Fall unter ihr.
+
+
 Diese drei Vorränge werden ohnehin praktiziert; ausgesprochen verhindern
 sie, dass je zwei davon gegeneinander optimieren.
 

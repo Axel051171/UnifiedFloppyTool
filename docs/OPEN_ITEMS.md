@@ -4632,3 +4632,69 @@ diesen Baum gegenstandslos).
    durch das neue Gutachten geheilt, das Zählverfahren bleibt anfällig —
    es ist dieselbe Namens-statt-Identitäts-Zuordnung, die MF-677 schon
    einmal gekostet hat.
+
+---
+
+## Drei Eigentümer-Handgriffe, die Fundus in Nutzung verwandeln (MF-695)
+<!-- status: wartet-eigentuemer(2026-08-30) -->
+
+**Kennzahl:** alle drei bewegen die fünfte (**Dateien mit ungeklärter
+Herkunft**, Befund-Stufe); (1) bewegt zusätzlich **T3 ↓**, sobald sie
+fällt.
+
+Drei Zeilen des Eigentümers stehen zwischen dem heutigen Fundus und
+seiner Nutzung. Sie stehen hier zusammen, weil sie **eine** Sitzung
+sind, nicht drei Nachrichten — und mit Datum, damit der Sekretär sie
+altersgestaffelt mahnen kann.
+
+### 1 · capsimg-Lizenzprüfung — die einzige, die eine Fähigkeit zurückbringt
+
+**Frage:** Ist `capsimg` so lizenziert, dass IPF-Lesen im Baum wieder
+zulässig ist?
+
+**Messung:** liegt vor. `LIZ-2` führt die Quarantäne; der
+Block-4-Zyklus hat zusätzlich `out/ipf-flux.gutachten.md` geliefert —
+BSD-3 durchgehend, aber die Dreiglied-Kette *ipf-flux ← MAME ←
+CAPS/SPS* ist **nicht messbar**, und „Clean room" ist eine
+Selbstauskunft. Zugleich belegt es, dass es inzwischen **zwei**
+blob-freie IPF-Implementierungen gibt (ipf-flux BSD-3, fluxfox MIT) —
+der Neubau-Preis in der `LIZ-2`-Vorlage ist damit neu zu schätzen.
+
+**Folge bei Ja:** `ipf-flux` wird **sofort** zweites Oracle
+(Ausführung ist frei, wie bei `dtc`), sein Varianten-Wissen wird
+geerntet, und die IPF-Fähigkeit kommt auf legalem Weg zurück.
+**Bei Nein:** die Quarantäne bleibt, das Gutachten bleibt als Anlage —
+nichts verfällt.
+
+### 2 · `adfrescue`: eine E-Mail
+
+**Frage:** Autor (dschwen) um eine Lizenzdatei bitten — ja oder nein?
+
+**Messung:** Repo seit 2015 unverändert, ein Autor, 225 Zeilen, **keine
+Lizenzdatei** (Zone ROT). Unabhängigkeit gegen `xdftool` ist gemessen
+(MF-693): eigenständiges C++, kein gemeinsamer Unterbau — die zweite
+Hand für ADF trägt.
+
+**Folge bei Ja:** wahrscheinlich Zone ROT → GRÜN, dann sogar vendorbar;
+`uft_amigados` bekäme seine zweite **registrierte** Hand.
+**Bei Nein:** Weg (2) aus `ORAK-1` bleibt — lokales, nicht
+weitergebbares Oracle nach `dtc`-Präzedenz. Beide Wege sind gangbar;
+(1) ist nur besser.
+
+### 3 · EUPL-1.2-Zeile bestätigen
+
+**Frage:** Steht EUPL-1.2 als Zeile in der Lizenz-Matrix?
+
+**Messung:** `LIZ-3` hat den Fall entschieden (MF-679); die
+gwnbd-Konzepte (NAK-Resync, REDWC-Messung) sind eingeplant und in
+MF-686 teils gelandet. Offen ist nur die **Verallgemeinerung**.
+
+**Folge bei Ja:** der nächste EUPL-Fund ist Routine statt Einzelfall.
+**Bei Nein:** jeder Fall wird wieder einzeln verhandelt.
+
+### Warum diese drei zusammen stehen
+
+Sie sind der Beleg für die Regel, die mit ihnen festgeschrieben wurde
+(`CLAUDE.md` §*Der stärkste legale Kanal*): **kein Fund verlässt die
+Pipeline ungenutzt.** Was heute keinen Kanal hat, wartet **benannt** —
+mit dem, was ihn öffnen würde. Alle drei sind genau solche Öffner.
