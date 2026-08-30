@@ -40,6 +40,20 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ERLAUBT = {
     "GPL-2.0-or-later",          # die Vorgabe fuer eigenen Code
     "GPL-2.0",                   # Altbestand, gleichbedeutend nur enger
+    # MF-698 — EIGENTUEMER-ENTSCHEIDUNG, kein stiller Zusatz.
+    #
+    # Drei erklaerte Ports aus dem AIR-Projekt (Jean Louis-Guerin) nennen
+    # GPL-3.0: `uft_ipf_air.c`, `uft_kfstream_air.c`, `uft_stx_air.c`.
+    # Sie zu behalten heisst, die GPL-3-Bindung anzunehmen — die
+    # verteilbare Fassung des GESAMTWERKS wird damit GPL-3. Zulaessig ist
+    # das, weil UFT selbst GPL-2.0-**or-later** ist; das "or later" ist
+    # genau die Tuer, die `CONTRIBUTING.md` dafuer offengehalten hat.
+    #
+    # Was dieser Eintrag NICHT bedeutet: dass neuer Code GPL-3 tragen
+    # darf. Die Vorgabe fuer eigenen Code bleibt GPL-2.0-or-later. Wer
+    # eine weitere GPL-3-Quelle aufnimmt, trifft dieselbe Entscheidung
+    # erneut — sie ist hier dokumentiert, nicht generalisiert.
+    "GPL-3.0-only",
     "LGPL-2.1-or-later",
     "MIT",
     "BSD-2-Clause",

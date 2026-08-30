@@ -574,4 +574,24 @@ UFT builds upon the work of these projects:
 
 ## License
 
-GPL-2.0 — see [LICENSE](LICENSE) for details.
+UFT's own code is **GPL-2.0-or-later** — see [LICENSE](LICENSE).
+
+**The distributable combination is GPL-3.0.** Three files are declared
+ports of the AIR project (Jean Louis-Guerin) and keep their origin's
+licence, `GPL-3.0-only`:
+
+- `src/formats/ipf/uft_ipf_air.c`
+- `src/formats/kfx/uft_kfstream_air.c`
+- `src/formats/stx/uft_stx_air.c`
+
+That is permitted precisely because UFT's own licence carries the
+`-or-later` clause; combining GPL-2-or-later with GPL-3 yields a work
+distributable under GPL-3. Anyone redistributing a build of this tree
+does so under **GPL-3.0**. The decision to accept that binding is
+recorded in `docs/OPEN_ITEMS.md` (LIZ-4, MF-698); the policy that
+enforces it is `scripts/audit_spdx_policy.py`.
+
+One file still carries **no measured licence** and is therefore not
+covered by the statement above: `src/formats/amiga/uft_amiga_protection.c`
+(declared a port of XCopy Pro, no licence found). It has no production
+caller; the open question is tracked as `LIZ-4 B`.

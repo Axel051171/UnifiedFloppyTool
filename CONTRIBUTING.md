@@ -91,8 +91,21 @@ cases in this tree show why: `SPDX: MIT` sat on a GPLv2+ port for months
 (P0-5, fixed in MF-580), and `uft_dms.c` claimed "Public Domain" with no
 source until MF-614 pinned it to Debian's `xdms` copyright file.
 
-**Not permitted without an owner decision:** GPL-3.0, AGPL, Apache-2.0
-and BSD-4-Clause in this tree — none of them combine with GPL-2.0.
+**Not permitted without an owner decision:** AGPL, Apache-2.0 and
+BSD-4-Clause. Each needs the owner, and the reason differs per licence —
+the blanket "none of them combine with GPL-2.0" that stood here until
+MF-698 was too coarse: GPL-3 *does* combine with GPL-2-**or-later**, and
+that door is exactly what the `-or-later` clause above is for.
+
+**GPL-3.0 has had that owner decision (MF-698)** and is in the policy as
+`GPL-3.0-only` — for the three declared AIR ports, not as a general
+permission. The default for code written for UFT stays
+`GPL-2.0-or-later`. Accepting it binds the **distributable combination**
+to GPL-3; that consequence is stated in `README.md` §License, because a
+binding nobody can read is not a binding.
+
+Taking in a further GPL-3 source is the same decision again, not a
+precedent already granted.
 `tools/uft-scout/playbook/lizenzmatrix.md` is the binding table.
 
 This is checked: `scripts/audit_spdx_policy.py` fails on any SPDX

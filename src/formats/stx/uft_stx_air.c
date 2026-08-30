@@ -6,6 +6,20 @@
  * Full port of AIR PastiRead.cs / PastiStruct.cs / PastiWrite.cs to C.
  * Original: Copyright (C) 2014 Jean Louis-Guerin (GPL-3.0)
  *
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * MF-698 — Eigentuemer-Entscheidung: die GPL-3-Bindung wird ANGENOMMEN.
+ * Diese Datei ist ein erklaerter Port und behaelt darum die Lizenz ihrer
+ * Quelle (CONTRIBUTING.md, "Ported or adapted code keeps its origin's
+ * licence and names it"). UFT selbst steht unter GPL-2.0-or-later; das
+ * "or later" macht die Kombination zulaessig und bindet die
+ * VERTEILBARE Fassung des Gesamtwerks an GPL-3.
+ *
+ * Warum `-only` und nicht `-or-later`: der Quellkopf nennt "GPL-3.0"
+ * ohne Zusatz. `-or-later` waere eine Behauptung ueber Rechte, die
+ * niemand gemessen hat; `-only` ist die konservative Lesart und irrt,
+ * wenn ueberhaupt, zu unseren Lasten.
+ *
  * Improvements over existing UFT STX parsers:
  * - Complete fuzzy byte mask extraction and per-sector transfer
  * - Timing record parsing for revision 2 files

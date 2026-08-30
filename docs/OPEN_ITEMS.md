@@ -4702,7 +4702,11 @@ mit dem, was ihn öffnen würde. Alle drei sind genau solche Öffner.
 ---
 
 ## LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
-<!-- status: wartet-eigentuemer(2026-08-30) -->
+<!-- status: offen -->
+
+> **Teil A entschieden und vollzogen (MF-698): die GPL-3-Bindung ist**
+> **angenommen, gelöscht wird nichts.** Was daraus folgte, steht am
+> Ende dieses Eintrags unter *Vollzug A*. Teil B bleibt offen.
 
 **Kennzahl:** fünfte (**Dateien mit ungeklärter Herkunft**, Befund-Stufe).
 Der Auftrag lautete, allen lizenzproblematischen Code sauber neu zu
@@ -4804,3 +4808,67 @@ Kein Fund verfällt dabei: die drei AIR-Dateien bleiben als **Spec-Quelle
 und Oracle-Kandidat** im Fundus, falls ein Baustein die Fähigkeit später
 verlangt — genau die Kanal-Regel aus `CLAUDE.md` §*Der stärkste legale
 Kanal*.
+
+### Vollzug A (MF-698): Bindung angenommen, nichts gelöscht
+
+Der Eigentümer hat **Weg 1** gewählt und ausdrücklich ergänzt: *nichts
+löschen*. Damit bleiben alle vier Dateien im Baum, und die Folgen sind
+zu **sagen**, nicht nur zu tragen.
+
+**1 · SPDX gesetzt, konservativ gelesen.** Die drei AIR-Ports tragen
+jetzt `SPDX-License-Identifier: GPL-3.0-only`. Warum `-only` und nicht
+`-or-later`: der Quellkopf nennt „GPL-3.0" ohne Zusatz. `-or-later`
+wäre eine Behauptung über Rechte, die niemand gemessen hat; `-only`
+irrt, wenn überhaupt, zu unseren Lasten. Der Grund steht in jedem der
+drei Köpfe, nicht nur hier.
+
+**2 · Politik erweitert — als Einzelfall, nicht als Freibrief.**
+`GPL-3.0-only` steht in `ERLAUBT` (`scripts/audit_spdx_policy.py`), mit
+dem ausdrücklichen Vermerk: die Vorgabe für **eigenen** Code bleibt
+`GPL-2.0-or-later`, und wer eine weitere GPL-3-Quelle aufnimmt, trifft
+dieselbe Entscheidung erneut.
+
+**3 · Die Bindung steht jetzt, wo ein Verteiler sie liest.** `README.md`
+§License sagte „GPL-2.0 — see LICENSE". Das war ab dem Moment der
+Annahme **unvollständig**: die verteilbare Kombination ist GPL-3.0. Eine
+Bindung, die niemand lesen kann, ist keine — das ist derselbe Fehler wie
+eine Lizenz, die nur als Kommentarsatz existiert (P0-5). README nennt
+jetzt die drei Dateien, die Folge für Weiterverteiler und den
+Entscheidungsanker.
+
+**4 · Eine Berichtigung an `CONTRIBUTING.md`.** Dort stand: *„Not
+permitted without an owner decision: GPL-3.0, AGPL, Apache-2.0 and
+BSD-4-Clause — none of them combine with GPL-2.0."* Der Nachsatz war
+**zu grob**: GPL-3 kombiniert sehr wohl mit GPL-2-**or-later**, und
+genau diese Tür hat der `-or-later`-Halbsatz zwei Absätze weiter oben
+offengehalten. Die Regel nennt jetzt den Unterschied.
+
+**Gemessen nach dem Vollzug:** `audit_spdx_policy.py` — 6
+Port-Erklärungen, **5 mit SPDX**, „SPDX außerhalb der Politik: 0".
+
+### Was offen bleibt: LIZ-4 B
+
+`src/formats/amiga/uft_amiga_protection.c` (766 Z., „C99 port of XCopy
+Pro (1989-2011) 68000 Assembly algorithms") ist die **einzige** Datei
+mit einer Port-Erklärung und **ohne jede Lizenzangabe** — weder im Kopf
+noch in einer messbaren Quelle. Sie ist damit von der README-Aussage
+oben ausdrücklich **nicht gedeckt**.
+
+Da nichts gelöscht wird, bleibt sie im Baum, und ihr SPDX-Kopf bleibt
+leer: einen zu setzen hieße, eine Lizenz zu erfinden. Das ist die
+Fehlerklasse, die dieser Baum als P0-5 bezahlt hat (`SPDX: MIT` auf
+einem GPLv2+-Port).
+
+Drei Wege, alle offen:
+
+1. **XCopy-Pro-Lizenz messen** — sie ist bisher nirgends belegt. Fällt
+   sie auf etwas Kombinierbares, ist die Sache mechanisch erledigt.
+2. **Als `LicenseRef-` führen** mit dem, was tatsächlich bekannt ist —
+   ehrlich, aber es bleibt eine Datei ungeklärter Herkunft im
+   Verteilpaket.
+3. **Vom Verteilpaket ausnehmen** (nicht löschen, nicht bauen) — die
+   Fähigkeit ist ohnehin keine: 16 von 17 Exporten ohne Tür, der
+   siebzehnte nur von einem Test gerufen.
+
+**Kennzahl:** fünfte, Befund-Stufe. Weg 3 bewegt sie ohne Verlust; Weg 1
+löst sie ganz.
