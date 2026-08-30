@@ -29,6 +29,26 @@ nach dem dritten falschen Posten weglegt.
 (Spur in OPEN_ITEMS.md, ueber den vollen Bezeichner). Zwei Fassungen
 einer Frage sind eine driftende Zahl; also gibt es hier nur eine.
 
+── Was der Zettel NICHT sieht (gemessen, MF-693) ────────────────────────
+
+Quelle (a) liest nur **Tabellenzeilen** aus `docs/OPEN_ITEMS.md`. Die
+Liste besteht inzwischen zum groessten Teil aus Prosa-Abschnitten, und
+ein Abschnitt wie `ORPH-5` mit der Ueberschrift „Entscheidung, die
+ansteht (Eigentuemer)" faellt darum durch.
+
+Der naheliegende Fix waere schlechter als die Luecke. Gemessen: von 65
+`##`-Abschnitten enthalten **36** ein Eigentuemer-Signal — die meisten
+davon in erledigten Vorgaengen („SCOUT-12 erledigt", „LIZ-3
+entschieden", „FMT-13 geschlossen"). Ein Prosa-Scan haette den Zettel
+von 21 auf ueber 50 Posten aufgeblaeht, groesstenteils mit
+abgeschlossener Arbeit — genau der Anschlag-ohne-Treffer, wegen dessen
+der `<!-- stufe: -->`-Ersatz schon verworfen wurde.
+
+Die Luecke bleibt darum **benannt statt zugekleistert**. Wer sie
+schliesst, braucht ein Erledigt-Signal je Abschnitt, das der Zensus
+lesen kann — das ist eine Aenderung an OPEN_ITEMS.md, nicht an diesem
+Skript, und eine Eigentuemer-Entscheidung.
+
 ── Was der Zettel nicht ist ─────────────────────────────────────────────
 
 Keine Rangfolge. Die Gewichtung ist ein Risiko-Urteil und bleibt beim
@@ -106,7 +126,14 @@ def main() -> int:
 
     z = [f"# Tore-Sitzung — Zettel vom {date.today().isoformat()}",
          f"{len(posten)} Posten aus zwei Quellen: `docs/OPEN_ITEMS.md` "
-         f"und `scripts/scout_stand.py:ohne_spur()`.",
+         f"(nur Tabellenzeilen) und `scripts/scout_stand.py:ohne_spur()`.",
+         "",
+         "**Was der Zettel nicht sieht:** Prosa-Abschnitte in "
+         "OPEN_ITEMS.md. Gemessen tragen 36 von 65 `##`-Abschnitten ein "
+         "Eigentümer-Signal, die meisten davon in **erledigten** "
+         "Vorgängen — sie mitzunehmen hätte den Zettel verdreifacht und "
+         "unbrauchbar gemacht. Die Lücke ist benannt, nicht "
+         "geschlossen (siehe Kopf von `sekretaer.py`).",
          "",
          "Format je Posten: **Frage · Messung · Empfehlung · Folge**. "
          "`AUSZUFUELLEN` heisst: steht in der verlinkten Quelle, ist "

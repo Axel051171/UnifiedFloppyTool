@@ -4109,3 +4109,131 @@ Zwei Wege, einer davon genügt je Format:
 
 Beides ist Arbeit mit Referenzbedarf, keine Aufräumaktion. Der Eintrag
 steht, damit die Frage nicht mit der beantworteten verwechselt wird.
+
+---
+
+## ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
+
+**Kennzahl:** keine unmittelbar. Der Punkt ist die **Anker-Regel**: eine
+öffentliche C-API ohne Produktions-Tür braucht einen benannten Plan-Anker
+oder sie geht. Bis das entschieden ist, ist er Fundus mit Verfallsdatum.
+
+Gemessen mit dem Tür-Sucher (`tools/uft-innendienst/scripts/tuersucher.py`,
+Kommentare und String-Literale gestrippt) und unabhängig mit `git grep`
+gegengeprüft. Alle Nennungen des Symbols im Baum:
+
+| Fundstelle | Art |
+|---|---|
+| `include/uft/uft_format_convert.h:147` | Deklaration |
+| `src/formats/uft_format_convert_dispatch.c:725` | Definition |
+| `tests/test_convert_atr_xfd.c:80` | Aufruf |
+| `tests/test_convert_table_has_dispatch.c:58` | Aufruf |
+| `tests/test_convert_table_has_dispatch.c:124` | Aufruf |
+
+**Kein einziger Aufruf außerhalb von `tests/`.** Die GUI wandelt über
+`uft_convert_file()`; der Speicher-Weg hat im Baum keinen Verbraucher.
+
+### Warum das trotzdem kein „dann weg damit" ist
+
+Die Funktion steht in einem **öffentlichen Header**. Wer die Bibliothek
+einbindet, kann sie aufrufen, ohne in diesem Baum vorzukommen — sie ist
+damit nicht dasselbe wie eine verwaiste `static`-Funktion. Genau deshalb
+war die Reparatur aus **MF-567** richtig und nicht überflüssig: bis dahin
+ging `uft_convert_memory()` vollständig am Preflight-Tor vorbei, weil es
+keine Dateipfade übergibt und die Prüfung ohne Pfade sofort mit
+`ABORT_INVALID_ARG` zurückkehrte. Gemessen kamen aus 4096 Byte Zufall
+3 712 758 Byte SCP heraus, bei einem Paar, das die Matrix wörtlich
+Fabrikation nennt.
+
+Der Befund ist also nicht „toter Code", sondern: **eine öffentliche
+Zusage, die im eigenen Baum niemand einlöst.** Das ist die Lage, in der
+eine Regression unbemerkt bleibt, weil kein Produktionspfad darüber
+läuft — dieselbe Lage wie bei MF-567, nur diesmal vorher benannt.
+
+### Entscheidung, die ansteht (Eigentümer)
+
+Genau eine von drei, keine vierte:
+
+1. **Anker setzen** — der Speicher-Weg gehört zur öffentlichen API und
+   bleibt; der Plan-Anker wird benannt (welcher Verbraucher, welche
+   Fassung). Dann gilt „nur Tests" als beabsichtigt und der Eintrag
+   schließt.
+2. **Tür bauen** — die GUI bekommt den Speicher-Weg dort, wo sie ihn
+   ohnehin bräuchte (Wandlung ohne Zwischendatei). Bewegt dann
+   **angebotene Wandlungspfade** nicht, aber macht die bestehende Zusage
+   erreichbar.
+3. **Zurückziehen** — aus dem öffentlichen Header nehmen, `static` im
+   Dispatch, Tests auf `uft_convert_file()` umstellen. Braucht die
+   sechsstufige Beweiskette aus MF-369 nicht (ein Symbol, kein Modul),
+   aber eine ABI-Prüfung: das Symbol ist exportiert.
+
+**Was diese Messung nicht sieht:** Aufrufe über Funktionszeiger, aus
+Makros und hinter `#if`. Der Fehler zeigt in die vorsichtige Richtung —
+eher wird etwas fälschlich als benutzt gemeldet als fälschlich als
+türlos. Für dieses Symbol wurde die Fundstellenliste von Hand
+nachgesehen; sie ist vollständig.
+
+---
+
+## ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
+
+**Kennzahl:** **ungeprüfte Formate (T3) ↓**, aufschiebend. Solange die
+beiden nicht im Register stehen, kann kein T1b-Manifest sie zitieren —
+und der nächste ADF-Schritt (**FS-2**: FFS, Unterverzeichnisse, Links)
+ist genau auf sie geplant.
+
+`docs/ORACLES.md` führt zwei Tabellen, und sie widersprechen sich:
+
+| Werkzeug | in „Stand der Kalibrierung" | in „Registrierte Oracles (7)" |
+|---|---|---|
+| `amitools xdftool` | **roh**, 2026-08-29, MF-685 | **nein** |
+| `adfrescue` | **roh**, Scout-Zyklus `adf_zweitmeinung` | **nein** |
+| `a8rawconv` | in der Sammelzeile **ungemessen** | **nein** |
+
+Gemessen: `tests/differential/oracles.py` registriert genau sieben Namen
+— `gw`, `cpmls`, `hxcfe`, `samdisk`, `dtc`, `floptool`, `lsatr`. Die
+drei oben sind nicht darunter. ORACLES.md sagt zu unregistrierten
+Werkzeugen selbst: *„Sie zählen deshalb für kein T1b-Manifest."*
+
+### Warum das mehr ist als ein fehlender Tabelleneintrag
+
+`tests/test_adf_directory_crosstool.c` läuft im Baum und stützt sich in
+seinem Kopfkommentar ausdrücklich auf beide:
+
+* Zeile 24–25: das Korpus-Abbild `xdftool_dd_ofs.adf` stammt aus
+  `amitools xdftool` — nachgewiesen in
+  `tests/corpus_manifest/manifest.json:27`.
+* Zeile 48–49: `adfrescue` als **zweite unabhängige Hand**, 127 Byte,
+  byteidentisch zur xdftool-Extraktion.
+
+Der Test trägt heute **kein** Tier-Urteil — die ADF-Zeile in
+`docs/VERIFICATION_TIERS.md` nennt ihn nicht. Das ist der einzige Grund,
+warum hier nichts Falsches behauptet wird. Ein Beleg, den man nicht
+zitieren darf, ist aber ein Beleg, der nicht zählt: der Test misst gegen
+zwei fremde Hände und darf es nirgends geltend machen.
+
+`a8rawconv` liegt anders und wird hier nur mitgeführt, damit die
+Sammelzeile nicht als „drei gleiche Fälle" gelesen wird: es ist weder
+gemessen noch registriert und steht in der Kalibriertabelle nur auf der
+Liste der offenen Eichläufe. Für ATX wäre es der naheliegende
+Beschaffungsweg (`tools/uft-innendienst/out/korb.md`, Posten 3), aber
+das ist eine andere Frage.
+
+### Schließbedingung
+
+Je Werkzeug ein Registry-Eintrag in `tests/differential/oracles.py` mit
+dem, was `ORACLES.md §Was ein Eintrag braucht` verlangt:
+Herkunfts-Anker (Version oder SHA-256, wenn `--version` nicht
+beantwortbar ist), Lizenz, Entscheidungsbereich, **und** die
+Längensemantik, die für beide bereits gemessen ist (roh, MF-685 bzw.
+Scout-Zyklus `adf_zweitmeinung`).
+
+Für `adfrescue` ist dabei die **fünfte Frage** (MF-644, „dieselbe
+Hand?") ausdrücklich zu beantworten: es soll die *unabhängige*
+Zweitmeinung gegen xdftool sein. Trüge es dieselbe Codebasis, wäre die
+Byte-Identität von 127 kein Beleg, sondern eine Tautologie — und die
+ADF-Kalibrierung stünde auf einer einzigen Hand.
+
+Gefunden vom `uft-innendienst`-Kalibrierer
+(`tools/uft-innendienst/scripts/kalibrierer.py pruefen .`), der die
+Kreuzung Register × Kalibriertabelle misst.
