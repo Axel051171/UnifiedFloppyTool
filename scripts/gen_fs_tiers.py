@@ -62,6 +62,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from repo_scope import repo_files
 
 WURZEL = Path(__file__).resolve().parent.parent
 ZIEL = WURZEL / "docs" / "VERIFICATION_TIERS_FS.md"
@@ -104,6 +105,57 @@ def leser() -> dict[str, set[str]]:
     for p in sorted(fs.glob("*.c")):
         text = ohne_kommentare(p.read_text(encoding="utf-8", errors="replace"))
         aus[p.stem] = set(EXPORT.findall(text))
+    return aus
+
+
+# Begriffe, an denen ein Dateisystem-Leser erkennbar ist: er bildet
+# Bytes auf BENANNTE Dateien ab, und dafuer liest er ein Verzeichnis.
+VERZEICHNIS = re.compile(
+    r"directory entry|dir_entry|dirent|catalog|volume_dir|read_dir|"
+    r"foreach_entry|file_entry", re.I)
+
+# Ab wie vielen Nennungen eine Datei als Kandidat gilt. Bewusst niedrig
+# und bewusst NICHT als Stufen-Vergabe verwendet: der Schwellwert
+# entscheidet, worueber geredet wird, nicht wie es eingestuft ist.
+KANDIDAT_AB = 5
+
+
+def kandidaten() -> list[tuple[str, int, int]]:
+    """Dateisystem-Leser AUSSERHALB von `src/fs/` (MF-710).
+
+    Die Dateimenge kommt aus `git ls-files` (CLAUDE.md §Grundsatz
+    Dateimengen), nicht aus einer Verzeichnisliste — genau das war der
+    Fehler, den diese Funktion behebt.
+    """
+    dateien = repo_files(WURZEL)
+    if dateien is None:
+        # repo_scope sagt es selbst, wenn git nicht befragbar ist. Hier
+        # gilt dieselbe Regel: lieber nichts behaupten als still luegen.
+        return []
+    aus: list[tuple[str, int, int]] = []
+    for pfad in sorted(dateien):
+        # `repo_files` liefert ABSOLUTE Pfade. Die erste Fassung dieser
+        # Funktion pruefte `startswith("src/")` darauf und meldete
+        # darum **0 Kandidaten** — eine Zahl, die genau so aussieht wie
+        # ein erledigtes Problem. Fuer den naechsten Leser: eine Null
+        # aus einem frisch gebauten Zaehler ist ein Befund, der
+        # nachzurechnen ist, kein Ergebnis (MF-710).
+        try:
+            r = pfad.resolve().relative_to(WURZEL).as_posix()
+        except ValueError:
+            continue
+        if not r.startswith("src/") or not r.endswith(".c"):
+            continue
+        if r.startswith("src/fs/"):
+            continue
+        try:
+            roh = pfad.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        treffer = len(VERZEICHNIS.findall(ohne_kommentare(roh)))
+        if treffer >= KANDIDAT_AB:
+            aus.append((r, treffer, roh.count("\n") + 1))
+    aus.sort(key=lambda t: -t[1])
     return aus
 
 
@@ -245,7 +297,12 @@ def bericht(zeilen) -> str:
          f"Hand nicht registriert |",
          f"| FS-T2 | {zaehl.get('FS-T2', 0)} | Korpus von **registrierter** "
          f"fremder Hand |",
-         f"| **gesamt** | **{len(zeilen)}** | |",
+         f"| **gesamt gefuehrt** | **{len(zeilen)}** | |",
+         "",
+         f"Dazu **{len(kandidaten())} ungefuehrte "
+         f"Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die "
+         f"Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, "
+         f"muss beide Zahlen sehen (MF-710).",
          "",
          "## Pro Leser",
          "",
@@ -254,6 +311,57 @@ def bericht(zeilen) -> str:
     for name, stufe, tests, grund, _w in zeilen:
         t = ", ".join(f"`{x[:-2]}`" for x in tests) or "—"
         z.append(f"| `{name}` | **{stufe}** | {t} | {grund} |")
+    kand = kandidaten()
+    z += ["",
+          "## Kandidaten ausserhalb von `src/fs/` — ungefuehrt (MF-710)",
+          "",
+          "Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser "
+          "Abschnitt nennt Dateien im uebrigen Baum, die ein "
+          "**Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne "
+          "eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier "
+          "steht, worueber zu entscheiden ist, nicht ein Urteil.",
+          "",
+          "Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` "
+          "seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine "
+          "hartkodierte Verzeichnisliste in genau jenem Werkzeug, das "
+          "eine der vier Release-Kennzahlen speist. Gemessen fuehrte "
+          f"die Tabelle **{len(zeilen)}** Leser, waehrend der Baum "
+          f"**{len(zeilen) + len(kand)}** Dateien hat, die ein "
+          "Verzeichnis lesen. Die Kennzahl unterberichtete damit still. "
+          "Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung "
+          "statt der Messung (MF-567/578/598/633/651/652/668/671/678/"
+          "703/708) — und das erste in einem Werkzeug, das ich selbst "
+          "dagegen gebaut habe.",
+          "",
+          "Die Dateimenge kommt jetzt aus `git ls-files` "
+          "(`scripts/repo_scope.py`). Das Merkmal ist gemessen, nicht "
+          f"geraten: mindestens {KANDIDAT_AB} Nennungen von "
+          "Verzeichnis-Begriffen ausserhalb von Kommentaren.",
+          ""]
+    if not kand:
+        z += ["Keine — oder `git` war nicht befragbar (dann sagt "
+              "`repo_scope` es beim Lauf).", ""]
+    else:
+        z += [f"**{len(kand)} Kandidaten**, nach Nennungen sortiert:",
+              "",
+              "| Datei | Verzeichnis-Nennungen | Zeilen |",
+              "|---|---|---|"]
+        for r, treffer, lines in kand:
+            z.append(f"| `{r}` | {treffer} | {lines} |")
+        z += ["",
+              "**Was ein Eintrag hier NICHT heisst:** dass die Datei "
+              "ungeprueft ist. Viele tragen einen Format-Test und "
+              "stehen in `docs/VERIFICATION_TIERS.md` — die "
+              "Plugin-Leiter misst sie, diese hier nicht. Der Befund "
+              "ist die **Luecke zwischen beiden Leitern**, nicht ein "
+              "Mangel je Datei.",
+              "",
+              "**Was zu entscheiden ist,** je Datei genau eines: nach "
+              "`src/fs/` verschieben (dann traegt sie eine FS-Stufe), "
+              "ausdruecklich als Format-Leser fuehren (dann genuegt die "
+              "Plugin-Leiter), oder als Doppelung zurueckziehen. Das "
+              "ist eine Eigentuemer-Entscheidung der ORPH-5-Klasse.",
+              ""]
     z += ["",
           "## Was eine Sprosse nicht sagt",
           "",

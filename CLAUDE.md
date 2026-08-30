@@ -210,10 +210,30 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 │  Forensic Flux Decoder │ CRC Correction                  │
 ├─────────────────────────────────────────────────────────┤
 │              Filesystem Layer (C)                        │
-│  AmigaDOS │ FAT12 │ CBM DOS │ Apple DOS/ProDOS │ CP/M   │
-│  TRSDOS │ TI-99 │ Atari DOS                             │
+│  in src/fs/ (mit FS-Stufe): AmigaDOS │ FAT12 │ CBM DOS  │
+│  anderswo, ohne FS-Stufe: CP/M │ Atari DOS │ BBC DFS │  │
+│  TR-DOS │ GEOS │ … (26 Kandidaten, MF-710)              │
 └─────────────────────────────────────────────────────────┘
 ```
+
+> **Ehrlichkeits-Hinweis (MF-710):** hier stand bis heute
+> „AmigaDOS │ FAT12 │ CBM DOS │ Apple DOS/ProDOS │ CP/M │ TRSDOS │
+> TI-99 │ Atari DOS". Zwei der acht tragen nicht: **Apple DOS/ProDOS**
+> hat im ganzen Baum eine einzige Datei (`src/formats/apple/
+> prodos_po_do.c`, 130 Zeilen) mit **null** Verzeichnis-Bezug — sie
+> ordnet Sektoren um, sie liest kein Dateisystem; **TRSDOS** hat
+> **null** Dateien (das TRS-80-Format `jv3` gibt es, das Dateisystem
+> nicht).
+>
+> Die anderen sechs gibt es — nur nicht dort, wo die Tafel sie
+> vermuten liess. `src/fs/` enthält **3** davon; CP/M (1425 Z.),
+> Atari DOS (1006 Z.) und weitere liegen unter `src/formats/` und
+> `src/detect/`. Das war keine Kleinigkeit: `scripts/gen_fs_tiers.py`
+> speist eine der **vier Release-Kennzahlen** und wählte seine Dateien
+> mit `(WURZEL/'src'/'fs').glob('*.c')` — die Kennzahl zählte 8, der
+> Baum hat 34. Seit MF-710 kommt die Dateimenge aus `git ls-files`,
+> und `docs/VERIFICATION_TIERS_FS.md` führt die 26 ungeführten
+> Kandidaten sichtbar auf.
 
 ## Build-System
 
