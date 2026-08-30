@@ -1,15 +1,26 @@
 {
   "_kommentar": "Die gepflanzten Faelle in docs/A.md und docs/B.md. Drei Befunde, einer je Pruefung — wenn dieser Baum weniger liefert, sucht das Werkzeug nicht, statt nichts zu finden (MF-693).",
-  "soll": 3,
+  "soll": 4,
   "faelle": [
     "A.md behauptet 'Generiert aus scripts/nichtda.py' — die Datei gibt es hier nicht (Pruefung 1)",
     "A.md traegt die Marke '<!-- stufe:', unter tools/ liegt kein Leser (Pruefung 2, Klasse MF-678)",
-    "A.md und B.md belegen beide docs/specs/ (Pruefung 3, Klasse MF-689)"
+    "A.md und B.md belegen beide docs/specs/ (Pruefung 3, Klasse MF-689)",
+    "Ein Agent nennt `scripts/generators/gibtsnicht.py` im Indikativ, die Datei fehlt (Pruefung 4, MF-702). Der zweite Pfad im selben Fixture ist als 'Optional' markiert und darf NICHT anschlagen — sonst meldet die Pruefung jeden Vorschlag als Befund."
   ],
   "config": {
-    "erzeuger_leser_pfade": ["scripts/", "tools/"],
+    "erzeuger_leser_pfade": [
+      "scripts/",
+      "tools/"
+    ],
     "marken_mit_leser": [
-      {"marke": "<!-- stufe:", "leser_muster": "stufe", "leser_pfade": ["tools/", "scripts/"]}
+      {
+        "marke": "<!-- stufe:",
+        "leser_muster": "stufe",
+        "leser_pfade": [
+          "tools/",
+          "scripts/"
+        ]
+      }
     ]
   }
 }

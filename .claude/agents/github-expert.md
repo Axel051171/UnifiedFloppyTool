@@ -57,7 +57,8 @@ Auf `main`: PR erforderlich, 1 Approval, alle CI-Checks (`CI`, `Sanitizer Checks
 
 ### 5. Community-Oberfläche
 
-- `.github/pull_request_template.md` mit UFT-spezifischen Feldern: Controller
+- **Geplant**, noch nicht angelegt: `.github/pull_request_template.md`
+  mit UFT-spezifischen Feldern: Controller
   betroffen? Format betroffen? DESIGN_PRINCIPLES-Check? Forensik-Integrity
   verifiziert? CI lokal grün?
 - `.github/ISSUE_TEMPLATE/*.yml` mit Kategorien: bug-format, bug-hardware,

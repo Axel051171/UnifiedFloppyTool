@@ -30,28 +30,43 @@ danach Widersprüche von selbst.
 
 Pro Fakt: **kanonische Datei** + **abgeleitete Stellen** + **Generator**.
 
+> **Stand, gemessen MF-702:** Das Schema unten ist **Zielbild**, nicht
+> Ist-Stand. Von den genannten Bausteinen existiert **keiner**:
+> `scripts/generators/gen_version_h.py`, `gen_format_registry.py`,
+> `uft_format_registry_gen.c`, `docs/FORMATS.md`, `docs/ERRORS.md`,
+> `include/uft/uft_features.h` — alle sechs geplant, keiner gebaut.
+>
+> Bis MF-702 stand das hier im Indikativ („liest VERSION, emittiert
+> die Header"), also als Beschreibung eines vorhandenen Werkzeugs. Das
+> ist dieselbe Klasse wie eine Marke ohne Leser: eine Zusage, die
+> niemand einlöst, und ein Agent, der sich darauf beruft, verweist ins
+> Leere. Was heute WIRKLICH gegen Versions-Drift arbeitet, ist
+> `scripts/check_consistency.py` (Kategorie „version SSOT drift") und
+> `scripts/update_inventory.py:DERIVED_CLAIMS`.
+
 ### 1. Projekt-Version
 
 - **Kanonisch:** `VERSION` oder `VERSION.txt` (einzeilig, `major.minor.patch[-pre]`)
 - **Abgeleitet:** `include/uft/uft_version.h`, `UnifiedFloppyTool.pro` VERSION-
   Variable, `CMakeLists.txt project(VERSION …)`, `debian/changelog`,
   `README.md` Badge, AppStream metainfo `<release version=>`, CHANGELOG-Header.
-- **Generator:** `scripts/generators/gen_version_h.py` liest VERSION, emittiert
-  die Header + patched die Build-Files.
+- **Generator (geplant):** `scripts/generators/gen_version_h.py` soll
+  VERSION lesen, die Header emittieren und die Build-Files patchen.
 
 ### 2. Format-Liste
 
 - **Kanonisch:** `data/formats.tsv` mit Spalten
   `id, name, extensions, category, encoding, platform, spec_status`.
-- **Abgeleitet:** `src/formats/format_registry/uft_format_registry_gen.c`,
-  `docs/FORMATS.md`, README-Formatliste, GUI-Combobox-Werte.
-- **Generator:** `scripts/generators/gen_format_registry.py` + `gen_formats_md.py`.
+- **Abgeleitet (geplant):** `src/formats/format_registry/uft_format_registry_gen.c`,
+  `docs/FORMATS.md`, README-Formatliste, GUI-Combobox-Werte. Heute
+  liefert `scripts/gen_format_list.py` die Plugin-Liste als SSOT.
+- **Generator (geplant):** `scripts/generators/gen_format_registry.py` + `gen_formats_md.py`.
 
 ### 3. Error-Codes
 
 - **Kanonisch:** `data/errors.tsv` mit `code, name, description, category`.
-- **Abgeleitet:** `include/uft/uft_error.h` (enum + `uft_strerror`),
-  `src/core/uft_error_strings.c`, `docs/ERRORS.md`.
+- **Abgeleitet (geplant):** `include/uft/uft_error.h` (enum +
+  `uft_strerror`), `src/core/uft_error_strings.c`, `docs/ERRORS.md`.
 - **Generator:** `gen_errors_h.py` + `gen_errors_strings.py` + `gen_errors_md.py`.
 
 ### 4. Hardware-Backends
@@ -65,8 +80,8 @@ Pro Fakt: **kanonische Datei** + **abgeleitete Stellen** + **Generator**.
 ### 5. Feature-Flags
 
 - **Kanonisch:** `data/features.tsv` mit `id, name, default, description`.
-- **Abgeleitet:** `include/uft/uft_features.h`, CMake `option(…)`-Zeilen,
-  README-Features-Liste.
+- **Abgeleitet (geplant):** `include/uft/uft_features.h`, CMake
+  `option(…)`-Zeilen, README-Features-Liste.
 - **Generator:** `gen_features.py`.
 
 ---

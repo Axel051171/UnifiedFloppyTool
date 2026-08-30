@@ -16,6 +16,30 @@ Quelle" — die im Baum viermal aufgetreten ist (MF-633/651/671/678):
   3. Ein Pfad, zwei Vereinbarungen: dieselbe `docs/`-Pfadangabe wird in
      mehr als einem Dokument mit "reserviert/gehoert/nur fuer" belegt
      (MF-689: der Namensraum-Konflikt um `docs/specs/`).
+  4. Eine Agenten-Datei nennt einen Pfad, den es nicht gibt, ohne ihn
+     als Vorschlag oder als Geschichte zu fuehren (MF-702).
+
+── Pruefung 4 brauchte fuenf Anlaeufe, und das ist die Lehre ────────────
+
+Der erste Lauf meldete **28** Befunde. Zehn davon waren echt. Die
+uebrigen achtzehn waren Fehler des PRUEFERS, jeder von einer eigenen
+Klasse:
+
+| Anlauf | Fehlalarm-Klasse | Zahl |
+|---|---|---|
+| 1 | Bauplaene ("Optional als Nightly-Workflow …") | 3 |
+| 2 | werkzeugkasten-relative Pfade (`playbook/…` unter `tools/uft-scout/`) | 4 |
+| 3 | gitignorierte, aber vorhandene Verzeichnisse (`out/`, `work/`) | 5 |
+| 4 | `tools/X/AGENT.md` — der Kasten IST das eigene Verzeichnis | 5 |
+| 5 | Qualifier eine Zeile ueber dem Pfad (umbrochener Fliesstext) | 8 |
+
+Danach kamen zwei NEUE Befunde dazu: die Berichtigungsnotizen, die den
+alten falschen Pfad zitieren. Ein Pruefer, der das Protokoll seiner
+eigenen Korrektur als Fehler meldet, zwingt dazu, die Korrektur
+unkenntlich zu machen — darum die Historien-Klasse.
+
+**28 → 10 echte.** Das Verhaeltnis ist die eigentliche Messung: wer
+einen Zensus beim ersten Lauf glaubt, baut auf 64 % Rauschen.
 
 ── Warum der Selbsttest hier vorn steht (MF-693) ────────────────────────
 
@@ -53,6 +77,45 @@ sys.path.insert(0, HIER)
 import baum  # noqa: E402
 
 GEN_RX = re.compile(r"[Gg]ener(?:iert aus|ated from)\s+`?([\w./-]+)`?")
+# Pruefung 4 (MF-702): eine Pfadangabe, die ins Leere zeigt.
+#
+# Gemessen an den 26 Agenten-Dateien: 109 Pfadangaben, **28** ohne
+# Ziel. Darunter `single-source-enforcer.md`, das im INDIKATIV sagt:
+# "Generator: `scripts/generators/gen_version_h.py` liest VERSION,
+# emittiert die Header" — die Datei gibt es nicht. Ein Agent, der
+# einen Generator beschreibt, den es nicht gibt, ist derselbe Fall
+# wie eine Marke ohne Leser, nur eine Ebene hoeher.
+#
+# UNTERSCHIEDEN wird dabei: eine Zeile, die den Pfad ausdruecklich
+# als Vorschlag fuehrt ("optional", "geplant", "koennte", "waere"),
+# ist KEIN Befund. Ohne diese Unterscheidung meldete die Pruefung
+# jeden Bauplan als Fehler — und `must-fix-hunter.md` schreibt
+# korrekt "Optional als Nightly-Workflow ...".
+# Zweite Ausnahme-Klasse: ein Pfad, der als GESCHICHTE genannt wird,
+# nicht als Zusage ("hier stand `x`", "bis MF-702 hiess es `y`").
+# Gemessen: nach dem Berichtigen der zehn Befunde meldete der Lauf
+# zwei neue — meine eigenen Berichtigungsnotizen, die den alten,
+# falschen Pfad zitieren. Ein Pruefer, der das Protokoll seiner
+# eigenen Korrektur als Fehler meldet, zwingt dazu, die Korrektur
+# unkenntlich zu machen. Das waere der schlechtere Baum.
+HISTORIE_RX = re.compile(
+    r"\b(hier stand|stand hier|bis MF-\d+|frueher|früher|entfernt|nie gab|hiess es|hieß es|Berichtigt)\b", re.I)
+
+VORSCHLAG_RX = re.compile(
+    r"\b(optional|geplant|vorgesehen|koennte|könnte|waere|wäre|kuenftig|künftig|spaeter|später|sobald|Zielbild|Vorschlag)\b", re.I)
+# Ein Agent nennt seinen Werkzeugkasten selbst. Das wird GELESEN,
+# nicht aus dem Namen geraten — und es war noetig: der erste Lauf
+# meldete `playbook/lizenzmatrix.md`, `data/known_negatives.json`,
+# `scripts/korpus_zensus.py` und `data/bearbeitet.json` als fehlend.
+# Alle vier existieren, nur relativ zu `tools/uft-scout/` bzw.
+# `tools/uft-variants/`. Vier Fehlalarme von 25 — und ein Pruefer,
+# der korrekte Verweise zu "Berichtigungen" macht, richtet mehr
+# Schaden an als die Drift, die er sucht.
+KASTEN_RX = re.compile(r"Werkzeugkasten:?\*{0,2}\s*`([^`]+)`")
+
+PFAD_RX = re.compile(
+    r"`([A-Za-z0-9_./-]+\.(?:py|c|h|cpp|hpp|md|json|ya?ml|txt|pro))`")
+
 RESV_RX = re.compile(r"(docs/[\w/]+/?)\S*.{0,60}?"
                      r"(reserviert|gehört|nur für|only for)", re.I)
 
@@ -101,6 +164,69 @@ def pruefe(root: str, cfg: dict) -> list[str]:
                            f"({', '.join(sorted(traeger)[:3])}), aber KEIN "
                            f"Leser unter {list(pfade)} — Vereinbarung ohne "
                            f"Leser")
+
+    # 4) Pfadangabe ohne Ziel (MF-702)
+    agenten = [f for f in alle
+               if f.endswith(".md")
+               and ("/agents/" in f or f.endswith("AGENT.md"))]
+    im_baum = set(alle)
+    verzeichnisse = {os.path.dirname(f) for f in alle}
+    # Oberste Ebene des Baums: woran sich entscheidet, ob ein Pfad von
+    # HIER aus ueberhaupt adressierbar ist.
+    oberste = {f.split("/", 1)[0] for f in alle if "/" in f}
+    for f, text in baum.inhalt(root, agenten).items():
+        # Werkzeugkasten-relative Angaben: die Agenten nennen ihren
+        # Kasten selbst ("**Werkzeugkasten:** `tools/uft-scout/`"), also
+        # wird er gelesen und nicht aus dem Namen geraten.
+        if f.endswith("AGENT.md") and "/" in f:
+            # Die Betriebsanweisung LIEGT im Werkzeugkasten — der ist ihr
+            # eigenes Verzeichnis, kein Textfund noetig. Ohne diese Zeile
+            # meldete der Lauf fuenf eigene Skripte als fehlend, die
+            # unmittelbar daneben liegen.
+            kasten = os.path.dirname(f) + "/"
+        else:
+            m = KASTEN_RX.search(text)
+            kasten = m.group(1).rstrip("/") + "/" if m else None
+        zeilen = text.splitlines()
+        for nr, zeile in enumerate(zeilen):
+            # Fenster statt Einzelzeile: bei umbrochenem Fliesstext steht
+            # der Qualifier oft eine Zeile vorher — "**Abgeleitet
+            # (geplant):**" und dann die Pfade in der naechsten Zeile.
+            # Gemessen: ohne Fenster meldete der Lauf acht Pfade, die
+            # zwei Zeilen ueber sich ausdruecklich als geplant gefuehrt
+            # sind.
+            fenster = " ".join(zeilen[max(0, nr - 2):nr + 2])
+            if VORSCHLAG_RX.search(fenster):
+                continue          # ausdruecklich ein Bauplan, kein Ist
+            if HISTORIE_RX.search(fenster):
+                continue          # als Geschichte zitiert, nicht zugesagt
+            for m2 in PFAD_RX.finditer(zeile):
+                pf = m2.group(1)
+                if "/" not in pf or "<" in pf or "*" in pf:
+                    continue      # blosser Dateiname oder Glob
+                if pf in im_baum or pf in verzeichnisse:
+                    continue
+                if kasten and (kasten + pf in im_baum
+                               or kasten + pf in verzeichnisse):
+                    continue      # relativ zum eigenen Werkzeugkasten
+                if os.path.exists(os.path.join(root, pf)):
+                    continue      # existiert auf der Platte, ist nur
+                                  # gitignored (z.B. `out/`, `work/`) —
+                                  # die Frage lautet "gibt es das", und
+                                  # git-Verfolgung ist dafuer nur ein
+                                  # Stellvertreter, der bei erzeugten
+                                  # Verzeichnissen versagt
+                if kasten and os.path.exists(
+                        os.path.join(root, kasten + pf)):
+                    continue
+                if pf.split("/", 1)[0] not in oberste:
+                    continue      # zeigt aus dem Baum hinaus (z.B.
+                                  # `memory/` = Claude-Gedaechtnis) —
+                                  # von hier aus nicht pruefbar, also
+                                  # kein Befund
+                befunde.append(f"- {f}: nennt `{pf}` — im Baum nicht "
+                               f"vorhanden, und die Zeile fuehrt es nicht "
+                               f"als Vorschlag")
 
     # 3) Ein Pfad, zwei Vereinbarungen
     resv: dict[str, set[str]] = {}

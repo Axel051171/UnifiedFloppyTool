@@ -17,7 +17,7 @@ Argument format: one or two V1 provider class names — e.g.
 `SCPHardwareProvider` or `SCPHardwareProvider KryoFluxProvider`.
 
 **Per-provider gate:** finish provider 1 completely — V2 file written,
-added to `tests/hal_conformance.cpp`, `ctest -R hal_conformance` GREEN,
+added to the `tests/conformance/` suite, its pytest run GREEN,
 commit made — before touching provider 2. On first conformance failure
 STOP; report 1-of-2 done. Never bundle two providers in one commit.
 
@@ -38,8 +38,11 @@ STOP; report 1-of-2 done. Never bundle two providers in one commit.
    - inherits one `*Vias<DerivedType>` per real capability ONLY
    - implements `do_*` methods that call the existing backend layer
      (do not rewrite backend logic — wrap it).
-6. Add the new V2 type to `tests/hal_conformance.cpp`'s typename list.
-7. Run `cmake --build` + `ctest -R hal_conformance` — must be green.
+6. Add the new V2 type to the `tests/conformance/` harness.
+   **Berichtigt MF-702:** hier stand `tests/hal_conformance.cpp`; die
+   Datei gibt es nicht, real ist ein pytest-Harness mit
+   `divergence_registry.yaml`.
+7. Run `cmake --build`, then the conformance suite — must be green.
 
 ## Hard rules
 
