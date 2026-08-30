@@ -75,11 +75,23 @@ static convert_options_t uftc_c64_encoder_options(
     return conv;
 }
 
-uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
-                                      const char* src_path,
-                                      const char* dst_path,
-                                      const uft_convert_options_ext_t* opts,
-                                      uft_convert_result_t* result) {
+/* MF-700: Speicher-Kern, nach dem Muster von `uftc_d64_to_g64_mem`
+ * (MF-695) und `uftc_atr_to_xfd_mem` (MF-655). Bis hierher stand die
+ * G64->D64-Kette zweimal im Baum — hier als Dateiwandler und ein
+ * zweites Mal von Hand nachgebaut in `uft_convert_memory()`.
+ *
+ * Gemessen erzeugten beide dieselben Bytes; die Doppelung war ein
+ * Risiko, keine Divergenz. Sie WIRD eine, sobald eine der beiden
+ * Stellen etwas bekommt, das die andere nicht hat — genau so entstand
+ * MF-567. */
+uft_error_t uftc_g64_to_d64_mem(const uint8_t* src_data, size_t src_size,
+                                 const char* src_path,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size) {
+    if (!out_data || !out_size) return UFT_ERR_NULL_POINTER;
+    *out_data = NULL;
+    *out_size = 0;
     convert_options_t conv_opts = uftc_c64_encoder_options(opts);
     convert_result_t conv_result;
     memset(&conv_result, 0, sizeof(conv_result));
@@ -131,20 +143,40 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
         return UFT_ERR_FORMAT;
     }
 
-    uftc_report_progress(opts, 80, "Writing D64 output");
+    uftc_report_progress(opts, 80, "D64-Sektordaten serialisieren");
 
-    rc = d64_save(dst_path, d64, false);
-    if (rc == 0) {
-        result->success = true;
-        result->tracks_converted = conv_result.tracks_converted;
-        result->sectors_converted = conv_result.sectors_converted;
-    } else {
-        result->error = UFT_ERR_IO;
-    }
-
+    /* `false` = ohne Fehlerkarte, wie bisher an beiden Stellen. Die
+     * Steuerung darueber laeuft ueber `conv_opts.generate_errors` im
+     * Dekoder (MF-695), nicht hier. */
+    rc = d64_save_buffer(d64, out_data, out_size, false);
     d64_free(d64);
+    if (rc != 0 || !*out_data) {
+        result->error = UFT_ERR_IO;
+        uftc_add_warning(result, "D64-Serialisierung fehlgeschlagen (%d)",
+                         rc);
+        return UFT_ERR_IO;
+    }
+    result->tracks_converted = conv_result.tracks_converted;
+    result->sectors_converted = conv_result.sectors_converted;
+    return UFT_OK;
+}
+
+/* Die Datei-Huelle: Kern + schreiben, keine Wandlungslogik. */
+uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
+                                      const char* src_path,
+                                      const char* dst_path,
+                                      const uft_convert_options_ext_t* opts,
+                                      uft_convert_result_t* result) {
+    uint8_t* buf = NULL;
+    size_t n = 0;
+    uft_error_t e = uftc_g64_to_d64_mem(src_data, src_size, src_path,
+                                         opts, result, &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 90, "D64 schreiben");
+    e = uftc_finish_or_refuse(result, dst_path, buf, n, "D64-Sektordaten");
+    free(buf);
     uftc_report_progress(opts, 100, "G64->D64 complete");
-    return result->success ? UFT_OK : result->error;
+    return e;
 }
 
 // ============================================================================

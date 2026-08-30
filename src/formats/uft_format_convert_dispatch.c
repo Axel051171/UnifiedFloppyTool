@@ -1045,27 +1045,18 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
         return UFT_OK;
     }
 
-    /* G64 -> D64 */
+    /* G64 -> D64: EINE Kette, zwei Enden (MF-700).
+     *
+     * Hier stand bis MF-700 ein Nachbau, der `g64_to_d64(g64, &d64,
+     * NULL, NULL)` rief und die Optionen des Aufrufers nicht anfasste.
+     * Gemessen erzeugte er dieselben Bytes wie der Dateiweg — bis die
+     * Optionen-Uebersetzung aus MF-695 dazukam, die NUR im gemeinsamen
+     * Kern sitzt. Der Nachbau haette sie nie bekommen. */
     if (src_format == UFT_FORMAT_G64 && dst_format == UFT_FORMAT_D64) {
-        g64_image_t* g64 = NULL;
-        int rc = g64_load_buffer(src_data, src_size, &g64);
-        if (rc != 0 || !g64) {
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
-        d64_image_t* d64 = NULL;
-        rc = g64_to_d64(g64, &d64, NULL, NULL);
-        g64_free(g64);
-        if (rc != 0 || !d64) {
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
-        rc = d64_save_buffer(d64, dst_data, dst_size, false);
-        d64_free(d64);
-        if (rc != 0 || !*dst_data) {
-            result->error = UFT_ERR_FORMAT;
-            return UFT_ERR_FORMAT;
-        }
+        uft_error_t e = uftc_g64_to_d64_mem(src_data, src_size, NULL,
+                                             options, result,
+                                             dst_data, dst_size);
+        if (e != UFT_OK) return e;
         result->success = true;
         result->bytes_written = (int)*dst_size;
         return UFT_OK;

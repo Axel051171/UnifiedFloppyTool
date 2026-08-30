@@ -204,6 +204,15 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 /* Sector converters (defined in uft_format_convert_sector.c)                 */
 /* ========================================================================== */
 
+/* MF-700: der Speicher-Kern von G64->D64 — dieselbe Form wie
+ * `uftc_d64_to_g64_mem` (MF-695). `uft_convert_memory()` ruft IHN
+ * statt einer eigenen Kette. */
+uft_error_t uftc_g64_to_d64_mem(const uint8_t* src_data, size_t src_size,
+                                 const char* src_path,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size);
+
 uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
                                      const char* src_path,
                                      const char* dst_path,
