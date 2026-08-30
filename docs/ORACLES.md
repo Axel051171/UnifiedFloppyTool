@@ -163,7 +163,7 @@ Schreck.
 | Werkzeug | Semantik | gemessen | womit |
 |---|---|---|---|
 | `floptool` (`flophashes`) | **gepolstert** (254 B bei einem CBM-Block) | 2026-08-29, MF-684 | Korpus-D64, `UFT MARKER` |
-| `amitools xdftool` | **roh** | 2026-08-29, MF-685 | Korpus-ADF, `marker.txt` — der eigene Leser meldet 127, nicht 488 |
+| `xdftool` (amitools, seit MF-693 registriert) | **roh** | 2026-08-29 MF-685, nachgemessen 2026-08-30 | Korpus-ADF, `marker.txt` — der eigene Leser meldet 127, nicht 488 |
 | `adfrescue` | **roh** | Scout-Zyklus `adf_zweitmeinung` | 127 B, byteidentisch zur xdftool-Extraktion |
 | `lsatr`, `a8rawconv`, `gw`, `cpmls`, `hxcfe`, `samdisk`, `dtc` | **ungemessen** | — | offen |
 
@@ -171,9 +171,9 @@ Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
 von ihnen war bisher an einem Inhalts-Differenzlauf beteiligt. Wer den
 ersten fährt, kalibriert vorher.
 
-## Registrierte Oracles (7)
+## Registrierte Oracles (8)
 
-Stand `tests/differential/oracles.py`, 2026-08-28.
+Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 
 | Kurzname | Variable | Lizenz | Herkunfts-Anker | entscheidet |
 |---|---|---|---|---|
@@ -184,6 +184,7 @@ Stand `tests/differential/oracles.py`, 2026-08-28.
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
 | `floptool` | `FLOPTOOL` | GPL-2.0-or-later (MAME) | **SHA-256** (keine Versionsabfrage) | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem |
 | `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
+| `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
 
 ### floptool — der einzige, der auf dieser Maschine liegt
 

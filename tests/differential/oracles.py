@@ -81,6 +81,33 @@ class Oracle:
     """Rueckgabewerte, die als Erfolg gelten. Manche Werkzeuge geben ihre
     Version mit einem Fehlercode aus (Aufruf ohne Argumente = Usage)."""
 
+    version_via: tuple[str, ...] = ()
+    """Vollstaendiges Kommando, das die Version liefert, wenn sie NICHT im
+    Startprogramm steckt (MF-693).
+
+    Der dritte Fall neben „das Programm sagt seine Version" und „es kann
+    sie ueberhaupt nicht sagen": ein Werkzeug, dessen Version an einer
+    anderen, ebenso pinbaren Stelle liegt.
+
+    Gemessen an `xdftool`: das ist ein Python-Einstiegspunkt aus dem Paket
+    `amitools`. Weder `--version` noch `-v` noch der argumentlose Aufruf
+    geben eine Versionszeile aus — die Version steht im **Paket**
+    (`importlib.metadata.version("amitools")` -> `0.8.1`).
+
+    Warum hier nicht `version_is_unaskable` mit SHA-256 gesetzt wird,
+    obwohl das der naheliegende Weg waere: die aufgeloeste Datei ist bei
+    einem Python-Einstiegspunkt ein **Startprogramm-Rumpf**. Sein Hash
+    pinnt den Rumpf, nicht `amitools`. Das waere der schwaechere Anker in
+    der Gestalt des staerkeren — genau der Fehler, vor dem die
+    Beschreibung von `version_is_unaskable` warnt.
+
+    Der Preis ist benannt: das Kommando fragt das PAKET, nicht die
+    aufgeloeste Datei. Laege ein fremdes `xdftool` im PATH, meldete es
+    trotzdem die Version des installierten `amitools`. Deshalb steht die
+    SHA-256 der aufgeloesten Datei weiterhin im Manifest daneben — sie
+    zeigt, WELCHES Programm gelaufen ist, waehrend `version_via` sagt,
+    WELCHES Paket dahinterliegt. Erst beide zusammen pinnen den Lauf."""
+
     version_is_unaskable: bool = False
     """Dieses Werkzeug kann seine Version NICHT nennen (MF-623).
 
@@ -237,6 +264,55 @@ REGISTRY: tuple[Oracle, ...] = (
                 "version\" im Kopf; nur die AUSGABE wird verglichen, es "
                 "wandert kein Code ein",
     ),
+    Oracle(
+        name="xdftool",
+        env="XDFTOOL",
+        exes=("xdftool", "xdftool.exe"),
+        version_args=(),
+        version_via=(sys.executable, "-c",
+                     "import importlib.metadata as m; "
+                     "print('amitools', m.version('amitools'))"),
+        version_re=r"amitools ([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+        reference_for=(
+            "AmigaDOS-Verzeichnis und Dateiinhalte in ADF (`xdftool <img> "
+            "list`, `... read <datei>`). Es ist zugleich der ERZEUGER des "
+            "Korpus-Abbilds `tests/corpus_free/xdftool_dd_ofs.adf` "
+            "(`tests/corpus_manifest/manifest.json:27`) — es beantwortet "
+            "damit die Provenienzfrage, NICHT die Richtigkeitsfrage: ein "
+            "Abbild mit seinem eigenen Erzeuger zu pruefen waere "
+            "zirkulaer. "
+            "LAENGENSEMANTIK: **roh**. Heute erneut gemessen an genau "
+            "diesem Abbild — `marker.txt` wird mit **127** gemeldet, "
+            "nicht mit 488 (der OFS-Blockkapazitaet). Das Hausmass ist "
+            "krumm, damit eine gepolsterte Antwort auffaellt (MF-684/685). "
+            "FUENFTE FRAGE (MF-644), gemessen statt vermutet: die zweite "
+            "Hand gegen dieses Abbild ist `adfrescue` (dschwen, Commit "
+            "`0cbc5ff`, 2015-12-21) — **225 Zeilen eigenstaendiges C++** "
+            "mit nur `stdio/stdlib/string.h`, kein ADFlib, kein amitools, "
+            "kein gemeinsamer Unterbau; `xdftool` ist Python. Geteilt ist "
+            "allein die **Doku** (ADF-FAQ, Laurent Clevy) — eine Spec, "
+            "kein Code. Die Byte-Identitaet der 127 Byte ist damit ein "
+            "Beleg und keine Tautologie. Was das NICHT ausschliesst: "
+            "einen Fehler, den beide aus derselben FAQ uebernommen "
+            "haetten."),
+        origin="https://github.com/cnvogelg/amitools — hier als "
+               "pip-Installation, Paketversion ueber "
+               "`importlib.metadata.version(\"amitools\")` abgefragt, weil "
+               "das Werkzeug selbst keine Versionszeile ausgibt (siehe "
+               "`version_via`). Die SHA-256 der aufgeloesten Datei steht "
+               "im Manifest daneben und sagt, welches Programm lief",
+        licence="GPL-2.0-or-later (Paket-Metadatum "
+                "`License-Expression`); nur die AUSGABE wird verglichen, "
+                "es wandert kein Code ein",
+    ),
+    # NICHT registriert: `adfrescue`. Die Unabhaengigkeits-Messung oben
+    # steht, aber der Eintrag haengt an einer Eigentuemer-Entscheidung —
+    # das Repo hat **keine** Lizenzdatei (Zone ROT: alle Rechte
+    # vorbehalten) und liefert kein Binaerprogramm; der Bau braucht
+    # `-include cstdint -Du_int32_t=uint32_t`, weil `u_int32_t` unter
+    # MinGW nicht existiert (heute nachgemessen: ohne die Zusaetze bricht
+    # g++ 13.1.0 in `checksum()` ab). Lizenz vor Faehigkeit — die drei
+    # Wege stehen in `docs/OPEN_ITEMS.md` unter ORAK-1.
 )
 
 
@@ -295,8 +371,14 @@ def version_of(o: Oracle, path: Path | None = None) -> str | None:
     exe = path or resolve_oracle(o)
     if exe is None:
         return None
+    # `version_via` fragt eine andere Stelle als das Startprogramm — aber
+    # erst, NACHDEM das Programm aufgeloest wurde. Ein Paket ohne sein
+    # Werkzeug darf keine Version melden, sonst stuende im Manifest eine
+    # Version fuer einen Lauf, den es nicht gab.
+    kommando = list(o.version_via) if o.version_via \
+        else [str(exe), *o.version_args]
     try:
-        r = subprocess.run([str(exe), *o.version_args], capture_output=True,
+        r = subprocess.run(kommando, capture_output=True,
                            text=True, timeout=20)
     except (OSError, subprocess.SubprocessError):
         return None
@@ -389,13 +471,20 @@ def _selfcheck() -> int:
         seen.add(o.name)
         if not o.exes:
             problems.append("%s: keine ausfuehrbaren Namen" % o.name)
-        if not o.version_args and not o.version_is_unaskable:
+        # Genau EINE der drei Antworten auf "wie wird die Version
+        # festgestellt?" darf gesetzt sein. Keine heisst: die Aussage ist
+        # nicht zitierfaehig. Zwei heissen: es gibt zwei Wahrheiten ueber
+        # denselben Anker, und die driften (MF-693).
+        wege = [bool(o.version_args), bool(o.version_via),
+                bool(o.version_is_unaskable)]
+        if not any(wege):
             problems.append("%s: keine Versionsabfrage - dann ist seine "
                             "Aussage nicht zitierfaehig" % o.name)
-        if o.version_args and o.version_is_unaskable:
-            problems.append("%s: hat eine Versionsabfrage UND erklaert sich "
-                            "fuer stumm - eines von beidem ist falsch"
-                            % o.name)
+        if sum(wege) > 1:
+            problems.append("%s: mehr als ein Weg zur Version gesetzt "
+                            "(version_args / version_via / "
+                            "version_is_unaskable) - hoechstens einer ist "
+                            "richtig" % o.name)
         try:
             re.compile(o.version_re)
         except re.error as exc:

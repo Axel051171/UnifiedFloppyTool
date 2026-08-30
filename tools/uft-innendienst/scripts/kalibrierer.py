@@ -4,6 +4,18 @@
     kalibrierer.py erzeugen            -> work/kalib_127.bin (Hausmass)
     kalibrierer.py pruefen <uft-pfad>  -> Register x Kalibrier-Stand
 
+Gemessen werden **beide Richtungen**, seit MF-693 gleichrangig:
+
+  * **registriert, aber ungeeicht** — die Laengensemantik fehlt.
+  * **geeicht, aber unregistriert** — der Wert steht da und darf nicht
+    zitiert werden.
+
+Die zweite Richtung stand bis MF-693 als Fussnote unter dem Bericht und
+blieb darum zwei Zyklen liegen. ORAK-1 ist der Beleg, dass sie genauso
+kostet: `amitools xdftool` war gemessen (roh, 127 statt 488) und nicht
+registriert — und `tests/test_adf_directory_crosstool.c` stuetzte sich
+trotzdem darauf.
+
 Ein Oracle-Wert, der Erfindung belohnt, ist schlimmer als keiner. Der
 Anlass steht in `docs/ORACLES.md`: floptool meldete **254 Byte** fuer
 eine 127-Byte-Datei, und dieser Wert stand dort als Messung. Seit MF-685
@@ -93,13 +105,19 @@ def namen_in(zelle: str) -> list[str]:
     Bericht meldete `flophashes` als "kalibriert, aber nicht im
     Register". Ein Klammerzusatz ist ein Aufrufname, kein Oracle.
     """
+    if "`" not in zelle:
+        # Zelle ganz ohne Backticks: dann ist das erste Wort der Name.
+        return [zelle.split()[0]] if zelle.split() else []
+    # Sonst zaehlt NUR, was in Backticks steht. Ein Komma-Teil ohne
+    # Backtick ist Prosa, kein Werkzeug — gemessen (MF-693): aus
+    # "`xdftool` (amitools, seit MF-693 registriert)" wurde sonst ein
+    # zweites Werkzeug namens `seit`, das prompt als Befund erschien.
+    # Dieselbe Klasse wie das erfundene `flophashes`.
     namen = []
     for teil in zelle.split(","):
         m = re.search(r"`([^`]+)`", teil)
         if m:
             namen.append(m.group(1).split()[0])
-        elif teil.split():
-            namen.append(teil.split()[0])
     return namen
 
 
@@ -166,7 +184,22 @@ def pruefen(root: str) -> int:
                            f"unbekannt. Vor jedem Differenzlauf eichen "
                            f"(Hausmass `work/kalib_127.bin`)")
 
+    # Gegenrichtung, seit MF-693 GLEICHRANGIG statt Fussnote.
+    #
+    # ORAK-1 ist der Beleg, dass beide Richtungen kosten: `amitools
+    # xdftool` war gemessen (roh, 127 statt 488) und stand NICHT im
+    # Register — und `tests/test_adf_directory_crosstool.c` stuetzte sich
+    # trotzdem darauf. Ein Beleg, den man nicht zitieren darf, zaehlt
+    # nicht; ORACLES.md sagt das selbst ("zaehlen fuer kein
+    # T1b-Manifest"). Als Hinweis am Fuss des Berichts stand das zwei
+    # Zyklen lang da, ohne dass es jemand aufnahm.
     unregistriert = [k for k in kal if k not in reg_namen]
+    for k in sorted(unregistriert):
+        gemessen = "ungemessen" not in kal[k]["semantik"].lower()
+        stand = "kalibriert" if gemessen else "in der Kalibriertabelle"
+        befunde.append(f"- `{k}`: {stand}, aber **nicht im Register** — "
+                       f"zaehlt fuer kein T1b-Manifest, auch wenn ein "
+                       f"Test sich darauf stuetzt")
 
     print(f"Register: {len(reg_namen)} · geeicht/ausgenommen: {len(ok)} · "
           f"Befunde: {len(befunde)}")
@@ -176,10 +209,6 @@ def pruefen(root: str) -> int:
         print("\ngeeicht/ausgenommen: " + ", ".join(ok))
     for h in hinweise:
         print("\nWIDERSPRUCH: " + h)
-    if unregistriert:
-        print("\nHinweis — kalibriert, aber NICHT im Register (zaehlt "
-              "fuer kein T1b-Manifest): " +
-              ", ".join(f"`{k}`" for k in sorted(unregistriert)))
     print("\nWas die Zahlen nicht heissen: gelesen wird, was dasteht — "
           "nicht, ob es stimmt. Der Eichlauf selbst bleibt eine "
           "Handbewegung.")

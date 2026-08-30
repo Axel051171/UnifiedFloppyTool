@@ -4177,6 +4177,12 @@ nachgesehen; sie ist vollständig.
 
 ## ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
 
+> **Teilerledigt am selben Tag.** `xdftool` ist seit MF-693 registriert
+> (`tests/differential/oracles.py`, Register jetzt **8**); die fünfte
+> Frage ist für `adfrescue` **gemessen** und fällt auf *verschiedene
+> Hände*. Offen bleibt allein die Lizenz-Entscheidung zu `adfrescue`
+> — siehe § *Was seither geschah* am Ende dieses Eintrags.
+
 **Kennzahl:** **ungeprüfte Formate (T3) ↓**, aufschiebend. Solange die
 beiden nicht im Register stehen, kann kein T1b-Manifest sie zitieren —
 und der nächste ADF-Schritt (**FS-2**: FFS, Unterverzeichnisse, Links)
@@ -4237,3 +4243,99 @@ ADF-Kalibrierung stünde auf einer einzigen Hand.
 Gefunden vom `uft-innendienst`-Kalibrierer
 (`tools/uft-innendienst/scripts/kalibrierer.py pruefen .`), der die
 Kreuzung Register × Kalibriertabelle misst.
+
+### Was seither geschah (MF-693, derselbe Tag)
+
+**Die fünfte Frage ist beantwortet — gemessen, nicht abgewogen.**
+`adfrescue` (dschwen, Commit `0cbc5ff`, 2015-12-21) sind **225 Zeilen
+eigenständiges C++** mit `stdio.h`, `stdlib.h`, `string.h` und sonst
+nichts: kein ADFlib, kein amitools, kein gemeinsamer Unterbau. `xdftool`
+ist Python aus `amitools`. Geteilt ist allein die **Dokumentation** —
+die ADF-FAQ von Laurent Clévy, die adfrescue als Kopie mitliefert. Eine
+Spec ist keine Hand.
+
+**Damit ist die 127-Byte-Identität ein Beleg und keine Tautologie.** Was
+sie *nicht* ausschließt, steht im Registry-Eintrag: einen Fehler, den
+beide aus derselben FAQ übernommen hätten.
+
+**`xdftool` ist registriert.** Der Eintrag brauchte eine kleine
+Erweiterung der Registry, weil das Werkzeug seine Version nicht nennt:
+
+* Neues Feld `version_via` — ein **vollständiges Kommando**, das die
+  Version liefert, wenn sie nicht im Startprogramm steckt. Für
+  `xdftool` ist das `importlib.metadata.version("amitools")` → `0.8.1`.
+* Warum nicht `version_is_unaskable` + SHA-256, der naheliegende Weg:
+  die aufgelöste Datei ist bei einem Python-Einstiegspunkt ein
+  **Startprogramm-Rumpf**. Sein Hash pinnt den Rumpf, nicht `amitools`
+  — der schwächere Anker in der Gestalt des stärkeren, also genau der
+  Fehler, vor dem die Beschreibung von `version_is_unaskable` warnt.
+  Die SHA-256 steht trotzdem im Manifest daneben: sie sagt, **welches
+  Programm lief**, während `version_via` sagt, **welches Paket
+  dahinterliegt**. Erst beide zusammen pinnen den Lauf.
+* Der Selbsttest lässt jetzt **genau einen** der drei Wege zu
+  (`version_args` / `version_via` / `version_is_unaskable`). Rotbeweis
+  gelaufen: zwei Wege gesetzt ⇒ rc=1 mit benanntem Grund, keiner
+  gesetzt ⇒ rc=1, unverändert ⇒ rc=0.
+* Live nachgemessen an `tests/corpus_free/xdftool_dd_ofs.adf`:
+  `marker.txt` wird mit **127** gemeldet, nicht mit 488. Semantik
+  **roh**, bestätigt.
+
+`manifest_entry("xdftool")` liefert damit `complete: true` mit Version
+`0.8.1` und SHA-256 — der erste Registry-Eintrag, der auf dieser
+Maschine tatsächlich auflösbar ist.
+
+**Was sich dadurch NICHT bewegt hat, und warum das richtig so ist.**
+`docs/VERIFICATION_TIERS.md` ist generiert; `gen_verification_tiers.py`
+ordnet Tests über ihre `uft_format_plugin_<sym>`-Verweise einem Format
+zu. `test_adf_directory_crosstool.c` nennt keinen — es prüft die
+**Dateisystem**-Schicht, nicht das Plugin. Nach der Registrierung neu
+erzeugt: **T1=2, T1b=13, T2=21, T3=52, unverändert.**
+
+Das ist kein Fehlschlag, sondern die genauere Fassung des Befunds: die
+Tier-Tabelle misst **Format-Plugins**. Für die **Dateisystem**-Schicht
+gibt es keine Stufe — und genau das ist, worum es bei `FS-2` geht. Die
+Registrierung war die *Vorbedingung* dafür, nicht die Bewegung selbst.
+
+### Offen: die `adfrescue`-Lizenzentscheidung (Eigentümer)
+
+Nicht registriert, und zwar bewusst: **Lizenz vor Fähigkeit.** Gemessen
+hat das Repo **keine** Lizenzdatei — Zone ROT, alle Rechte vorbehalten
+(`tools/uft-scout/work/adfrescue.messung.json`). Dazu liefert es kein
+Binärprogramm; der Bau braucht unter MinGW zwei Zusätze, heute
+nachgemessen:
+
+```
+g++ -include cstdint -Du_int32_t=uint32_t -o adfrescue.exe adfrescue.cc
+```
+
+Ohne sie bricht g++ 13.1.0 in `checksum()` ab (`'u_int32_t' was not
+declared`) — `u_int32_t` ist ein BSD-Typname.
+
+Die drei Wege stehen bereits im Scout-Gutachten
+`tools/uft-scout/out/adf_zweitmeinung.gutachten.md` als SCOUT-71 und
+werden hier auf die EINE Liste geholt, statt eine zweite ID zu eröffnen:
+
+1. **Upstream fragen** — dschwen um eine Lizenzdatei bitten. Das Repo
+   ist seit 2015 unverändert, der Autor auf GitHub aktiv. Bester
+   Ausgang, längste Laufzeit, Ergebnis nicht in unserer Hand.
+2. **Lokal als nicht-weitergebbares Zweit-Oracle** — Registry-Eintrag
+   mit `version_is_unaskable`, SHA-256 des Eigenbaus, Quell-Commit
+   `0cbc5ff` und dem Baurezept oben. Präzedenz: `dtc` steht mit
+   „proprietär, nur Ausführung" im Register. Verglichen wird ohnehin
+   nur die **Ausgabe**; es wandert kein Code ein.
+3. **Verwerfen** — nur als Verhaltens-Referenz im Testkommentar führen,
+   nie zitierfähig. Kostet die dritte Hand.
+
+**Empfehlung: (2), mit (1) parallel.** Die Präzedenz trägt, die Messung
+liegt vollständig vor, und (1) kann (2) später nur verbessern.
+
+### Offen: `a8rawconv`
+
+Steht in der Kalibriertabelle auf der Liste der **offenen Eichläufe**
+und nicht im Register — also weder gemessen noch zitierfähig. Für ATX
+wäre es der naheliegende Beschaffungsweg
+(`tools/uft-innendienst/out/korb.md`, Posten 3). Bis dahin ist es eine
+halbe Zusage und wird vom Kalibrierer seit MF-693 als **Befund**
+gemeldet, nicht mehr als Fußnote: kalibriert-aber-unregistriert ist ab
+jetzt gleichrangig mit registriert-aber-ungeeicht. ORAK-1 ist der
+Beleg, dass beide Richtungen kosten.
