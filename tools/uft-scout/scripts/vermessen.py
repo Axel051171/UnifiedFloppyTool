@@ -99,7 +99,19 @@ def messen(root):
     # MF-614 (W5): `COPYRIGHT` fehlte im Muster; MAMEs fat32-Verzeichnis
     # traegt seinen vollen GPL-2.0-Text in `COPYRIGHT.txt`.
     lz = []
-    LIZENZ_NAMEN = re.compile(r"(LICEN[SC]E|COPYING|COPYRIGHT|NOTICE)", re.I)
+    # MF-703: der Name einer Lizenzdatei ist keine Norm.
+    #
+    # Gemessen: `fluxtoimd` legt seine Lizenz als `gpl-3.0.txt` ab und
+    # wurde darum als ROT gefuehrt — "keine LICENSE/COPYING-Datei
+    # gefunden = alle Rechte vorbehalten". Das ist die gefaehrliche
+    # Richtung: ein falsches ROT streicht einen brauchbaren Fund still
+    # von der Liste, und niemand sieht nach, weil ROT wie "erledigt"
+    # aussieht. Dieselbe Klasse wie das falsche "vorhanden" aus
+    # MF-610, nur mit umgekehrtem Vorzeichen.
+    LIZENZ_NAMEN = re.compile(
+        r"(LICEN[SC]E|COPYING|COPYRIGHT|NOTICE"
+        r"|(?:A?GPL|LGPL|MIT|BSD|APACHE|MPL|ZLIB|UNLICENSE|CC0)"
+        r"[-_.]?[0-9.]*(?:\.txt|\.md)?$)", re.I)
     for dp, dn, fn in os.walk(root):
         dn[:] = [d for d in dn if d not in (".git", "node_modules")]
         for name in fn:
@@ -121,6 +133,24 @@ def messen(root):
     SPDX = re.compile(r"SPDX-License-Identifier:\s*([A-Za-z0-9.+\-]+)")
     LIZ  = re.compile(r"^\s*(?://|#|\*)\s*license:\s*([A-Za-z0-9.+\-]+)",
                       re.I | re.M)
+    # MF-703: Lizenzen stehen selten im Maschinenformat.
+    #
+    # Gemessen an `Jacknife`: "// Licensed under Apache License 2.0 (NO
+    # WARRANTY, etc. see website)" — kein SPDX, kein "license:" mit
+    # Doppelpunkt, also fuer die zwei Ausdruecke darueber unsichtbar. Das
+    # Repo galt als "alle Rechte vorbehalten", obwohl seine Lizenz im
+    # ersten Kommentar der Hauptdatei steht.
+    #
+    # Dieser dritte Ausdruck sucht die uebliche PROSA. Er ist bewusst
+    # grosszuegig: ein Treffer fuehrt nie zu GRUEN, sondern hoechstens zu
+    # PRUEFEN — also zu "sieh nach", nicht zu "nimm es". Ein Satz wie
+    # "this is NOT under the GPL" traefe ebenfalls zu, und genau darum
+    # ist die Folge eine Frage und kein Urteil.
+    LIZ_PROSA = re.compile(
+        r"(?:licen[sc]ed under|released under|under the terms of)\s+"
+        r"(?:the\s+)?(GNU (?:Lesser |Library )?General Public License"
+        r"|Apache License|MIT License|BSD|Mozilla Public License"
+        r"|zlib|Unlicense|Creative Commons)", re.I)
     je_datei = Counter()
     geprueft = 0
     GRENZE = 600
@@ -128,9 +158,16 @@ def messen(root):
     # Budget in Werkzeug- und Skriptordnern, die alphabetisch vorn
     # stehen — gemessen am eigenen Baum: 600 Dateien geprueft, NULL
     # Lizenzkopfzeilen gefunden, obwohl es sie gibt.
+    # MF-703: die WURZEL gehoert dazu.
+    #
+    # Gemessen an `Jacknife`: seine einzige Lizenzaussage steht in
+    # `dllmain.c` im Wurzelverzeichnis ("Licensed under Apache
+    # License 2.0"). Weil nur src/include/lib/source/core durchsucht
+    # wurden, sah der Vermesser sie nicht und meldete ROT — ein Repo
+    # mit benannter Lizenz als "alle Rechte vorbehalten".
     QUELLE = ("src", "include", "lib", "source", "core")
-    wurzeln = [os.path.join(root, d) for d in QUELLE
-               if os.path.isdir(os.path.join(root, d))] or [root]
+    wurzeln = [root] + [os.path.join(root, d) for d in QUELLE
+                        if os.path.isdir(os.path.join(root, d))]
     for wurzel in wurzeln:
       for dp, dn, fn in os.walk(wurzel):
         dn[:] = [d for d in dn if d not in (".git", "node_modules")]
@@ -150,6 +187,10 @@ def messen(root):
                   m1 = SPDX.search(kopf) or LIZ.search(kopf)
                   if m1:
                       je_datei[m1.group(1)] += 1
+                  else:
+                      m2 = LIZ_PROSA.search(kopf)
+                      if m2:
+                          je_datei[m2.group(1)] += 1
     m["lizenz_je_datei"] = je_datei.most_common(8)
     m["lizenz_je_datei_geprueft"] = geprueft
     m["lizenz_je_datei_vollstaendig"] = geprueft < GRENZE
@@ -159,13 +200,40 @@ def messen(root):
             "Verteilung ist ein Hinweis, keine Vollzaehlung." % GRENZE)
 
     m["lizenzen"] = lz
-    m["lizenz_zone"] = (sorted({l["zone"] for l in lz},
-                               key=["GRUEN", "GELB", "ORANGE",
-                                    "PRUEFEN", "ROT"].index)[-1]
-                        if lz else "ROT")
-    if not lz:
-        m["lizenz_hinweis"] = ("keine LICENSE/COPYING-Datei gefunden "
-                               "= alle Rechte vorbehalten (Zone ROT)")
+    # MF-703: `lizenz_je_datei` wurde gemessen und dann NICHT benutzt.
+    # Die Zone kam allein aus Lizenz-DATEIEN. Eine Messung ohne
+    # Verbraucher ist genau die Klasse, die dieser Baum als
+    # ANGEBOT_OHNE_ABNEHMER fuehrt — hier im Werkzeug des Scouts.
+    #
+    # Fehlt die Datei, nennen aber die Quellkoepfe eine Lizenz, ist
+    # das Repo NICHT "alle Rechte vorbehalten": die Aussage steht da,
+    # nur nicht an der ueblichen Stelle. Das ist PRUEFEN.
+    #
+    # Bewusst NICHT weiter automatisiert: eine Lizenz in einem
+    # VENDORTEN Unterverzeichnis ist nicht die Lizenz des Repos.
+    # Gemessen an `amigadx` — die GPL-2-Koepfe stehen in
+    # `lib/adflib/`, fremdem Code, den amigadx nur mitfuehrt. Der
+    # Hinweis nennt die Frage, damit ein Mensch sie entscheidet,
+    # statt dass das Werkzeug sie erraet.
+    if lz:
+        m["lizenz_zone"] = sorted({l["zone"] for l in lz},
+                                  key=ZONEN_ORDNUNG.index)[-1]
+    elif je_datei:
+        m["lizenz_zone"] = "PRUEFEN"
+        m["lizenz_hinweis"] = (
+            "keine Lizenzdatei, aber %d Quellkopf-Nennung(en): %s. "
+            "Das ist KEIN 'alle Rechte vorbehalten'. PRUEFEN: liegt "
+            "der Kopf im eigenen Code oder in einem vendorten "
+            "Unterverzeichnis? (Fall amigadx: lib/adflib gehoert "
+            "nicht dem Repo)" % (
+                sum(n for _, n in je_datei.most_common()),
+                ", ".join(k for k, _ in je_datei.most_common(3))))
+    else:
+        m["lizenz_zone"] = "ROT"
+        m["lizenz_hinweis"] = (
+            "weder Lizenzdatei noch Lizenz im Quellkopf gefunden "
+            "(Wurzel UND src/include/lib/source/core geprueft) "
+            "= alle Rechte vorbehalten (Zone ROT)")
 
     # Domänen-Treffer mit Fundstellen (max 3 je Begriff)
     treffer = {}
