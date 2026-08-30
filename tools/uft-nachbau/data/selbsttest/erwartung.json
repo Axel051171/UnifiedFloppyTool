@@ -1,0 +1,29 @@
+{
+  "_kommentar": "Abnahme der Brandmauer an gepflanzten Faellen (MF-696). Drei Faelle, weil zwei nicht reichen: die Erstfassung prueft nur 'Port erkannt' und 'Eigenbau frei' — und ihr Eigenbau war auf DEUTSCH geschrieben und teilte darum trivialerweise keinen Bezeichner. Das belegt, dass das Werkzeug identische Namen sieht, NICHT dass es einen Nachbau von einem Port unterscheidet. Der dritte Fall ist der schwere: eine unabhaengige Reimplementierung auf ENGLISCH, die das Fachvokabular des Formats absichtlich teilt (stride, offset, track, lut), aber keinen Ausdruck.",
+  "referenz": "referenz.c",
+  "weissliste": [
+    "hxcpicfe",
+    "formatrevision",
+    "track_list_offset",
+    "number_of_tracks",
+    "number_of_sides"
+  ],
+  "faelle": [
+    {
+      "datei": "port.c",
+      "mindestens": 3,
+      "warum": "PORT: umbenannte Funktion, aber erfundene Bezeichner (raw_stride, coerce_stride_result, MAX_WALK), woertliches Kommentar-Echo und identischer String. Genau die carryshift-Klasse aus MF-635"
+    },
+    {
+      "datei": "eigen.c",
+      "genau": 0,
+      "warum": "EIGENBAU auf Deutsch: teilt nichts. Der leichte Fall — er belegt nur, dass das Werkzeug nicht grundlos anschlaegt"
+    },
+    {
+      "datei": "unabhaengig_en.c",
+      "genau": 0,
+      "warum": "DER SCHWERE FALL: unabhaengige Reimplementierung auf Englisch. Teilt Fachvokabular (stride, offset, track), aber keinen erfundenen Namen, kein Kommentar-Echo, keinen String. Schlaegt das Werkzeug hier an, kann es Nachbau nicht von Port unterscheiden — und jeder kuenftige Clean-Room-Lauf ersaeuft in Fehlalarmen, bis ihn niemand mehr liest"
+    }
+  ],
+  "_was_der_selbsttest_nicht_prueft": "Die drei uebrigen beweiskraeftigen Klassen aus QUARANTINE_PROCESS.md §4 — Funktionszerlegung, Fehlerbehandlungs-Idiome, charakteristische Schwellwerte. Sie sind nicht mechanisch pruefbar und bleiben Handarbeit des Herkunftsaudits."
+}

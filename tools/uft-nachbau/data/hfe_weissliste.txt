@@ -1,0 +1,17 @@
+hxcpicfe
+hxchfev3
+formatrevision
+number_of_track
+number_of_side
+track_encoding
+bitrate
+floppyrpm
+floppyinterfacemode
+track_list_offset
+write_allowed
+single_step
+track0s0_altencoding
+track0s0_encoding
+track0s1_altencoding
+track0s1_encoding
+track_len

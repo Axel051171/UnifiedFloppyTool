@@ -439,12 +439,14 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex
 - Compiler-Hardening: stack-protector, FORTIFY_SOURCE, ASLR
-- 25 Agent-Definitionen (`.claude/agents/`, alle auf claude-fable-5);
+- 26 Agent-Definitionen (`.claude/agents/`, alle auf claude-fable-5);
   neu seit v4.1.6: `uft-scout` — sichtet fremden Code, liefert nur
   Dokumente (`tools/uft-scout/`); `uft-variants` — belegt die Dialekte
   EINES bekannten Formats (`tools/uft-variants/`); `uft-innendienst` —
   misst den eigenen Baum auf Türen ohne Leser, Oracles ohne Eichung,
-  Doku ohne Quelle (`tools/uft-innendienst/`, MF-693)
+  Doku ohne Quelle (`tools/uft-innendienst/`, MF-693); `uft-nachbau` —
+  bereitet den Clean-Room-Nachbau lizenzgesperrter Vorlagen vor
+  (`tools/uft-nachbau/`, MF-696)
 
 ## graphify
 
