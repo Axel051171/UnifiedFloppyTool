@@ -158,11 +158,75 @@ def check(repo) -> list:
             for f, ln, k in rows]
 
 
+# ── Die schaerfere Frage: PORT ohne SPDX-Kopf (MF-697) ──────────────────
+#
+# `scan_attributions` meldet jede Fremd-Attribution — 171 Stueck, und das
+# ist als Uebersicht richtig. Fuer eine Entscheidung ist es zu grob:
+# „Reference: libdsk drv*.c" begruendet keine Ableitung, „Full port of AIR
+# IPFReader.cs to C" schon.
+#
+# Diese Stufe fragt nur nach der ENGEREN Klasse: wer im Kopf eine
+# **Portierung oder Ableitung von fremdem CODE** erklaert, muss einen
+# SPDX-Kopf tragen. `CONTRIBUTING.md` §Licensing sagt das seit MF-580
+# („Ported or adapted code keeps its origin's licence and names it") — es
+# stand nur nirgends unter Beobachtung.
+#
+# Gemessen beim ersten Lauf: 5 solche Erklaerungen, **keine** mit
+# SPDX-Kopf. Zwei davon (a8rawconv-Ports) sind mit MF-697 gesetzt; die
+# drei AIR-Dateien nennen GPL-3.0, und GPL-3.0 steht NICHT in `ERLAUBT`.
+# Das ist eine Eigentuemer-Entscheidung (LIZ-2), kein Skriptfehler —
+# darum LISTE, nicht Tor.
+#
+# Der Detektor ist bewusst eng. Eine erste, weitere Fassung meldete 20
+# Dateien und war zu einem Viertel Artefakt: „a compact identifier
+# derived from timing histograms" (Prosa ueber einen Fingerabdruck),
+# „uint16_t expected_len; /* derived from N */" (ein Feldkommentar) und
+# ein deutsches „mit" als Lizenztreffer. Ein Detektor, der Prosa fuer
+# eine Rechtsaussage haelt, erzeugt eine Liste, die niemand liest.
+PORT_ERKLAERUNG = re.compile(
+    r"(full\s+port\s+of|C99\s+port\s+of|port\s+of\s+\w+[\w.]*['’]?s?\s|"
+    r"portiert\s+aus|adapted\s+from\s+the\s+source|"
+    r"uebernommen\s+aus)\s*(.{0,70})", re.IGNORECASE)
+
+
+def scan_ports_ohne_spdx(repo: pathlib.Path) -> list[tuple[str, str, bool]]:
+    """(Datei, Erklaerung, hat_SPDX) je Port-Erklaerung im Kopf."""
+    aus = []
+    for basis in ("src", "include"):
+        wurzel = repo / basis
+        if not wurzel.is_dir():
+            continue
+        for pfad in sorted(wurzel.rglob("*")):
+            if pfad.suffix not in (".c", ".h", ".cpp", ".hpp"):
+                continue
+            rel = pfad.relative_to(repo).as_posix()
+            if rel.startswith(AUSGENOMMEN):
+                continue
+            try:
+                kopf = pfad.read_text(encoding="utf-8", errors="replace")[:4000]
+            except OSError:
+                continue
+            m = PORT_ERKLAERUNG.search(kopf)
+            if not m:
+                continue
+            aus.append((rel, m.group(0).strip()[:75],
+                        bool(SPDX.search(kopf))))
+    return aus
+
+
 def main() -> int:
     attrib = scan_attributions(ROOT)
     print("Fliesstext-Attributionen (MF-636, Liste, kein Fehler): %d" % len(attrib))
     for f, ln, q in attrib:
         print("  %s:%d  %s" % (f, ln, q))
+    print()
+    ports = scan_ports_ohne_spdx(ROOT)
+    ohne = [p for p in ports if not p[2]]
+    print("Port-Erklaerungen im Kopf: %d, davon OHNE SPDX: %d "
+          "(MF-697, Liste — die Lizenzfrage ist Eigentuemer-Sache)"
+          % (len(ports), len(ohne)))
+    for f, erk, hat in ports:
+        print("  %s %-52s %s" % ("SPDX " if hat else "OHNE ", f, erk))
     print()
     rows = scan(ROOT)
     print("SPDX ausserhalb der Politik: %d" % len(rows))

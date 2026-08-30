@@ -5,6 +5,11 @@
  * Port of a8rawconv 0.95's postcomp_track_mac800k by Avery Lee
  * (GPL-2-or-later). See include/uft/core/uft_write_precomp.h for
  * full attribution.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ * Die Lizenz der Quelle ist am vendorten Baum gemessen
+ * (`src/a8rawconv/a8rawconv.cpp:5-7`), nicht dem
+ * Kopfkommentar entnommen (MF-697).
  */
 
 #include "uft/core/uft_write_precomp.h"

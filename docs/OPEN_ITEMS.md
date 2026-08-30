@@ -4698,3 +4698,109 @@ Sie sind der Beleg für die Regel, die mit ihnen festgeschrieben wurde
 (`CLAUDE.md` §*Der stärkste legale Kanal*): **kein Fund verlässt die
 Pipeline ungenutzt.** Was heute keinen Kanal hat, wartet **benannt** —
 mit dem, was ihn öffnen würde. Alle drei sind genau solche Öffner.
+
+---
+
+## LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
+<!-- status: wartet-eigentuemer(2026-08-30) -->
+
+**Kennzahl:** fünfte (**Dateien mit ungeklärter Herkunft**, Befund-Stufe).
+Der Auftrag lautete, allen lizenzproblematischen Code sauber neu zu
+implementieren. Die Messung trägt das in dieser Form **nicht** — sie
+trägt etwas Kleineres und etwas Größeres.
+
+### Was die Messung widerlegt
+
+**1 · UFT steht unter GPL-2.0-*or-later*** (`LICENSE`, `CONTRIBUTING.md`
+§Licensing). Die drei AIR-Ports nennen **GPL-3.0**. Unter „or later" ist
+das **kompatibel**: die verteilbare Kombination wird GPL-3. Das ist eine
+Bindung und eine Entscheidung — **keine Rechtsverletzung**. Ein Nachbau
+löst die Bindung, ist aber nicht nötig, um legal zu bleiben.
+
+**2 · Drei der vier tragen keine Fähigkeit.** Mit dem Tür-Sucher
+gemessen (`tools/uft-innendienst`):
+
+| Datei | Zeilen | Lizenz im Kopf | Exporte ohne Tür |
+|---|---|---|---|
+| `src/formats/stx/uft_stx_air.c` | 914 | GPL-3.0 | **4 von 4 WAISE** |
+| `src/formats/kfx/uft_kfstream_air.c` | 908 | GPL-3.0 | 2 WAISE + 2 nur eigenes Verzeichnis |
+| `src/formats/amiga/uft_amiga_protection.c` | 766 | **keine** | **16 WAISE + 1 nur Test** |
+| `src/formats/ipf/uft_ipf_air.c` | 975 | GPL-3.0 | 2 WAISE + 7 nur eigenes Verzeichnis — **aber das Plugin ruft vier Funktionen: IPF-Lesen hängt daran** |
+
+Diese drei nachzubauen hieße **2588 Zeilen** zu schreiben, die niemand
+ruft. Nach Regel 9 bewegt das keine Kennzahl; es wäre
+`ANGEBOT_OHNE_ABNEHMER` im Großformat. Der vorgesehene Weg steht schon
+in `QUARANTINE.md`: *Clean-Room-Neubau, **wenn ein Baustein ihn
+verlangt***.
+
+### Was die Messung stattdessen findet — und das ist der eigentliche Defekt
+
+**Keine der vier trägt einen SPDX-Kopf, und nichts hat das bemerkt.**
+`CONTRIBUTING.md` sagt seit MF-580: *„Ported or adapted code keeps its
+origin's licence and names it."* `audit_spdx_policy.py` prüfte bis
+MF-697 nur, ob **vorhandene** SPDX-Kennungen in der Politik stehen — es
+verlangte keine. Die Regel war unbewacht, und zwar genau bei den
+Dateien, die sie am nötigsten haben.
+
+Seit MF-697 listet das Tor die Klasse: **6 Port-Erklärungen im Kopf, 4
+ohne SPDX.** Bewusst als Liste, nicht als Tor — eine Attribution ist
+nichts Verbotenes, sondern etwas Entscheidungsbedürftiges (MF-636).
+
+**Zwei davon sind seither erledigt**, weil sie keine Entscheidung
+brauchten: `src/core/uft_interleave.c` und `src/core/uft_write_precomp.c`
+sind Ports aus **a8rawconv**, dessen Lizenz am vendorten Baum gemessen
+ist (`src/a8rawconv/a8rawconv.cpp:5-7` — *„version 2 … or (at your
+option) any later version"*), also **GPL-2.0-or-later** wie UFT selbst.
+SPDX gesetzt, Sache geschlossen. Die Lizenz stammt aus der **Quelle**,
+nicht aus dem Kopfkommentar — der behauptete sie nur.
+
+### Die zwei Entscheidungen, die bleiben
+
+**A · Die drei AIR-Dateien (GPL-3.0).** `GPL-3.0` steht **nicht** in
+`ERLAUBT` (`scripts/audit_spdx_policy.py:44-52`). Einen SPDX-Kopf zu
+setzen, ohne die Politik zu ändern, macht das Tor rot und blockiert
+jeden Commit; die Politik zu ändern, **ist** die Annahme der
+GPL-3-Bindung. Beides ist eine Lizenzentscheidung und darum nicht meine
+(MF-679). Drei Wege:
+
+1. **Bindung annehmen** — `GPL-3.0` in `ERLAUBT`, SPDX in die drei
+   Dateien, `LICENSE`-Frage für die Distribution klären. Kostet nichts
+   an Fähigkeit, bindet die Kombination an GPL-3.
+2. **Die zwei ohne Abnehmer löschen** (`stx_air`, `kfstream_air`, 1822
+   Zeilen) und nur für `ipf_air` Weg 1 gehen. Nach der sechsstufigen
+   Löschkette aus MF-369.
+3. **Nachbau** — nur für `ipf_air` sinnvoll, und der hängt ohnehin an
+   der capsimg-Entscheidung (siehe *Drei Eigentümer-Handgriffe*, Nr. 1).
+
+**Empfehlung: 2.** Sie entfernt 1822 Zeilen GPL-3-Bindung, die nichts
+tragen, und lässt die Entscheidung auf die eine Datei zusammenschmelzen,
+die eine Fähigkeit hat.
+
+**B · `uft_amiga_protection.c` — der einzige echte Lizenzmangel.**
+766 Zeilen, „C99 port of XCopy Pro (1989-2011) 68000 Assembly
+algorithms", **keine Lizenz genannt** — und XCopy Pro hat keine, die
+jemand gemessen hätte. Gemessen: 16 von 17 Exporten ohne Tür, der
+siebzehnte nur von einem Test gerufen. **Fähigkeit: keine.**
+
+Das ist der Fall, der weder Bindung noch Nachbau braucht, sondern
+**Löschung** — die Verwaisten-Regel und die Lizenzfrage zeigen zum
+selben Ergebnis, und der Nachbau hätte keinen Abnehmer. Auch hier gilt
+die sechsstufige Kette aus MF-369.
+
+### Was daraus für den Auftrag folgt
+
+„Allen Code mit Lizenzproblem sauber neu implementieren" wird nach
+dieser Messung zu:
+
+* **2 Dateien** — erledigt, SPDX gesetzt (a8rawconv, kompatibel).
+* **3 Dateien, 2588 Zeilen** — *nicht* nachbauen, sondern löschen oder
+  binden; sie tragen nichts. Eigentümer-Entscheidung A und B.
+* **1 Datei** — `ipf_air`, die einzige mit Fähigkeit. Ihr Weg hängt an
+  capsimg und steht bereits auf der Liste.
+* **1 Tor** — die Regel, die das alles hätte verhindern sollen, steht
+  seit MF-697 unter Beobachtung.
+
+Kein Fund verfällt dabei: die drei AIR-Dateien bleiben als **Spec-Quelle
+und Oracle-Kandidat** im Fundus, falls ein Baustein die Fähigkeit später
+verlangt — genau die Kanal-Regel aus `CLAUDE.md` §*Der stärkste legale
+Kanal*.

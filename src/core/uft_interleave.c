@@ -5,6 +5,12 @@
  * Port of a8rawconv 0.95's compute_interleave() by Avery Lee
  * (GPL-2-or-later), adapted to C and UFT error conventions.
  * See include/uft/core/uft_interleave.h for full attribution.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ * Die Lizenz der Quelle ist am vendorten Baum gemessen
+ * (`src/a8rawconv/a8rawconv.cpp:5-7`: "version 2 ... or (at your
+ * option) any later version"), nicht dem Kopfkommentar
+ * entnommen — der behauptete sie nur (MF-697).
  */
 
 #include "uft/core/uft_interleave.h"
