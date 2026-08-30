@@ -1,0 +1,53 @@
+{
+ "_kommentar": "Streif-Scout Zyklus 1 (2026-08-30). Auftrag: 'was brauchen wir alles von GitHub?'. Vier Funde, alle aus den vier benannten Beschaffungen des Auftrags; die Abdeckungskarte ist Messung, kein Fund, und steht im Zyklus-Bericht.",
+ "funde": [
+  {
+   "id": "Z1-ORAK-FLOPTOOL",
+   "repo": "mamedev/mame",
+   "titel": "floptool erneut beschaffen und an einen dauerhaften, gepinnten Ort legen",
+   "kennzahl": "T3 runter",
+   "kanal": "Oracle",
+   "zone": "GRUEN",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "Gemessen 2026-08-30: shutil.which('floptool'/'floptool.exe') leer, FLOPTOOL ungesetzt, Suche in Downloads/Temp/Repo leer — docs/ORACLES.md:191 behauptet 'der einzige, der auf dieser Maschine liegt' (Drift seit MF-623). Re-Bezug: mame0289b von mamedev.org gegen offizielle SHA256SUMS; Werkzeug-SHA zum Abgleich in ORACLES.md:194 (6973d1b5...20ac21); ohne das Binary ueberspringt sich die Eichung in tests/differential/test_oracles.py fuer alle floptool-Fragen"
+  },
+  {
+   "id": "Z1-FAT12-FREEDOS",
+   "repo": "—",
+   "titel": "FAT12-Abbild von fremder Hand: FreeDOS-Floppy-Edition x86BOOT.img als Korpus-Fixture",
+   "kennzahl": "T3 runter",
+   "kanal": "Daten",
+   "zone": "?",
+   "aufwand": "klein",
+   "abhaengig_von": ["EIGENTUEMER-FIXTURE-LIZENZ-FREEDOS"],
+   "neues_plugin": false,
+   "beleg": "FS-3/MF-709: 0 PC-Abbilder im Korpus (tests/corpus_manifest/manifest.json: kein img/ima-Eintrag, nachgezaehlt 2026-08-30); mtools/mkfs.fat auf dieser Maschine nicht vorhanden (gemessen). Quelle: FreeDOS Floppy-Only Edition (ibiblio.org distributions/1.3/official bzw. freedos.org/download), Boot-Disketten sind FAT12, 720k/1.2M/1.44M vorgefertigt. Fixture-Lizenz wird wie Code-Lizenz behandelt — Einstufung ist Eigentuemer-Vorlage, nicht Scout-Urteil"
+  },
+  {
+   "id": "Z1-PRODOS-ZWEITQUELLE",
+   "repo": "mamedev/mame",
+   "titel": "BESCH-PRODOS erfuellt: fs_prodos.cpp als zweite unabhaengige Quelle fuer den Verzeichnis-Aufbau",
+   "kennzahl": "T3 runter",
+   "kanal": "Spec",
+   "zone": "GRUEN",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "mamedev/mame@c0d3677674339a489efbad881047012ce8c2cc96 src/lib/formats/fs_prodos.cpp:269-271 (Datei-Header 'license:BSD-3-Clause', Zeile 1): Block 2 = kblk1, w16l(0x00,0x0000) Rueckzeiger, w16l(0x02,0x0003) Vorzeiger, w8(0x04,0xf0|namelen) Speichertyp 0xF — exakt die drei Werte aus FMT-17 (0x400/0x402/0x404). Datei 2026-08-30 gepinnt heruntergeladen und Zeilen lokal nachgemessen"
+  },
+  {
+   "id": "Z1-D13-BRUECKE",
+   "repo": "mamedev/mame",
+   "titel": "GCR-2-Beschaffung erfuellt: Zuordnung logisch<->physisch fuer 13 Sektoren ist die IDENTITAET, zweifach belegt",
+   "kennzahl": "T3 runter",
+   "kanal": "Spec",
+   "zone": "GRUEN",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "Quelle 1: mamedev/mame@c0d3677674 src/lib/formats/ap2_dsk.cpp:410 'a2_13sect_format::logical_sector_index(int physical) { return physical; }' (BSD-3, gepinnt geladen, lokal nachgemessen). Quelle 2: ciderpress2.com/formatdoc/Unadorned-notes.html: '13-sector floppies use physical sector order'. Konsistenzmessung am Oracle selbst: to_woz2.c:164-169 und :287-290 mappen Dateiversatz UND Adressfeld durch dieselbe mp_sector13 => Adressfeld s <-> Datei-Sektor s (Identitaet); der Skew 10 (to_woz2.c:145-151) ist nur Winkel-Platzierung auf der Spur, keine Datenzuordnung"
+  }
+ ]
+}

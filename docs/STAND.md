@@ -41,18 +41,20 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5648** Zeilen in **75** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5802** Zeilen in **77** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
 
-**offen** (6):
+**offen** (8):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
 - FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
 - ORAK-2 — `to_woz2`: das erste Oracle, das baut, läuft und dessen Ausgabe wir erkennen (MF-711)
 - GCR-2 — `d13`: 5-and-3, der Beweisweg steht bereits offen (MF-717)
+- FMT-17 — die zweite Quelle liegt vor (MF-720)
+- FMT-18 — sechs Formate ohne jedes fremde Gegenstück (MF-720)
 
 **wartet-eigentuemer** (5):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)

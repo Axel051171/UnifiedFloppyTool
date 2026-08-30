@@ -188,10 +188,23 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
 | `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |
 
-### floptool — der einzige, der auf dieser Maschine liegt
+### floptool — lag einmal auf dieser Maschine (MF-720: nicht mehr)
 
 Beschafft aus `mame0289b`; die SHA-256 der Distribution wurde gegen die
 offizielle `SHA256SUMS` geprüft. Werkzeug-Hash `6973d1b5…20ac21`.
+
+> **Berichtigung MF-720.** Die Überschrift sagte „der einzige, der auf
+> dieser Maschine liegt“. Gemessen (2026-08-30) stimmt das nicht mehr:
+> `shutil.which('floptool')` leer, `FLOPTOOL` ungesetzt, Downloads,
+> Temp und Repo durchsucht — das Binary ist fort. Damit sind **0 von 9**
+> registrierten Oracles verfügbar, und jede Eichung, die floptool
+> braucht, überspringt sich still.
+>
+> Das ist Doku-Drift derselben Art wie die drei T3-Zahlen in der README
+> (MF-716): eine Aussage über den **Maschinenzustand**, die in einer
+> Datei steht und dort nicht altern kann. Wer sie wieder beschafft,
+> pinnt sie über den bereits notierten Werkzeug-Hash und legt sie an
+> einen Ort, den `FLOPTOOL=` benennt.
 
 **Gemessen am freien Korpus (MF-623/629):**
 

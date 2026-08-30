@@ -5637,4 +5637,157 @@ dieselben vier Teile, ein Tabellenwechsel:
 
 **Was das NICHT wird:** ein Beleg, dass echte 13-Sektor-Disketten
 gelesen werden. Wie bei `do` ist die Vorlage maschinell erzeugt und
-fehlerfrei.
+fehlerfrei.
+
+### Vormessung erledigt (MF-719) — die 5-and-3-Tabelle ist vollstaendig gemessen
+
+Schritt 1 aus der Liste oben ist gefahren, blackbox gegen die **Ausgabe**
+von `to_woz2`, ohne eine Zeile fremden Quelltext. Vier Befunde, drei
+davon widerlegen eine Annahme dieses Eintrags:
+
+**1 · Der Adress-Vorspann ist ein anderer.** 13-Sektor benutzt
+**`D5 AA B5`**, nicht `D5 AA 96`. Gemessen an Spur 0 von `neu13.woz`:
+13 × `D5 AA B5`, 13 × `D5 AA AD`, **null** `D5 AA 96`. Der Abtaster aus
+MF-715 fände auf einer 13-Sektor-Spur also **keinen einzigen** Sektor —
+und würde dabei nicht scheitern, sondern schweigend 0 melden.
+
+**2 · Die Nutzlänge ist 411, nicht 410.** Der Eintrag oben schrieb
+„**410** statt 342" und mahnte, die Zahl sei zu messen. Sie ist es
+jetzt: vom Vorspann bis zum Epilog `DE AA` liegen **exakt 411** Nibbles,
+bei allen 13 Sektoren und bei beiden Prüfvorlagen. 410 Datenbytes plus
+**ein** Prüfbyte — dieselbe Bauform wie bei 6-and-2 (342 + 1 = 343).
+
+**3 · Die Tabelle hat 32 Einträge, und alle 32 sind belegt.** Der erste
+Lauf mit dem deterministischen Füllmuster löste nur **24** verschiedene
+Datenbytes aus — eine Teilmenge, die eine Tabelle bestätigen, aber nicht
+vervollständigen kann. Mit einer Vorlage, die alle 256 Bytewerte enthält
+(`voll13.d13`, 116 480 Byte, 256 verschiedene Werte), kamen **32 von 32**:
+
+```
+AB AD AE AF B5 B6 B7 BA BB BD BE BF D6 D7 DA DB
+DD DE DF EA EB ED EE EF F5 F6 F7 FA FB FD FE FF
+```
+
+Das ist dieselbe Methode wie bei 6-and-2 (MF-715) — nur dass sie hier
+nicht nur bestätigt, sondern die Tabelle **erzeugt**. Kein fremder Code
+gelesen, kein Gedächtnis bemüht.
+
+**4 · Der Abstand Adressfeld → Datenfeld ist 19 Nibbles**, bei allen 13
+Sektoren gleich.
+
+### Was davon in den Code muss
+
+| | Wert | Herkunft |
+|---|---|---|
+| Adress-Vorspann | `D5 AA B5` | gemessen |
+| Daten-Vorspann | `D5 AA AD` | gemessen, wie 16-Sektor |
+| Epilog | `DE AA` | gemessen |
+| Nutzlänge | **411** (410 + 1 Prüfbyte) | gemessen |
+| Alphabet | 32 Werte, s. o. | gemessen, vollständig |
+| Sektoren je Spur | 13 | gemessen |
+
+**Offen bleibt genau eines:** die Zuordnung logisch↔physisch für 13
+Sektoren. Sie fällt bei 6-and-2 aus dem Differenzlauf heraus (MF-715)
+und wird das hier genauso tun — aber sie braucht wie dort eine
+**zweite, unabhängige** Quelle, bevor sie als belegt gilt. Der
+Beschaffungsauftrag steht beim Streif-Scout.
+
+**Der Aufwand sinkt damit von „mittel" auf „klein":** die
+Verhaltens-Spec ist vollständig, es fehlt die Umsetzung plus der
+Differenzlauf (erwartet 35 × 13 = **455** Sektoren byteidentisch).
+
+### Beschaffung erfüllt (MF-720) — die 13-Sektor-Zuordnung ist die Identität
+
+Der Streif-Scout hat den Auftrag aus MF-719 erledigt. Damit ist die
+Verhaltens-Spec für `d13` **vollständig**; die Hebung kann beginnen.
+
+**Zwei unabhängige Quellen, plus eine Nachprüfung von mir:**
+
+| | Aussage | Fundstelle |
+|---|---|---|
+| Quelle 1 | `logical_sector_index(int physical) { return physical; }` | `mamedev/mame@c0d3677674` `src/lib/formats/ap2_dsk.cpp:410`, BSD-3 |
+| Quelle 2 | „13-sector floppies use physical sector order" | ciderpress2.com/formatdoc/Unadorned-notes.html |
+| Nachprüfung | dieselbe Datei, Zeile 410 gelesen; 16-Sektor steht bei `:666` und benutzt `dos_skewing[]`/`prodos_skewing[]` | lokal gemessen |
+
+Der Kontrast ist der eigentliche Beleg: **16-Sektor benutzt Tabellen,
+13-Sektor gibt `physical` unverändert zurück.** Die Identität ist
+Absicht, kein Versehen.
+
+**Der Scheinwiderspruch, den der Scout aufgelöst hat.** `to_woz2` führt
+eine Skew-10-Tabelle (`to_woz2.c:145-151`), MAME sagt Identität. Beides
+stimmt: der Skew bestimmt, *an welcher Winkelposition* ein Sektor auf
+der synthetisierten Spur landet — Adressfeld **und** Dateiversatz laufen
+durch **dieselbe** Tabelle (`to_woz2.c:164-169` und `:287-290`).
+Adressfeld-Sektor `s` trägt also die Daten von Datei-Sektor `s`. In
+MAMEs `load()` steht dasselbe Muster: `int sector = (i*10) % 13` für die
+Platzierung, und `sdata = sector_data + 256 * sector` für die Daten —
+derselbe `sector` auf beiden Seiten.
+
+**Und MAME bestätigt die Blackbox-Messung aus MF-719 Byte für Byte:**
+`raw_w(…, 0xd5aab5)` Adress-Vorspann, `0xd5aaad` Daten-Vorspann,
+`0xdeaaeb` Epilog, `translate5[nval ^ pval]` als laufende XOR über eine
+32-Werte-Tabelle. Dritte unabhängige Übereinstimmung, aus einer Quelle,
+die die Messung nicht kannte.
+
+**Damit steht in GCR-2 nichts mehr offen außer der Umsetzung.**
+
+## FMT-17 — die zweite Quelle liegt vor (MF-720)
+
+<!-- status: offen -->
+
+**Kennzahl:** **T3 runter** (`po`).
+
+Die Zwei-Quellen-Regel für das ProDOS-Datenträgerverzeichnis ist
+erfüllt. `mamedev/mame@c0d3677674` `src/lib/formats/fs_prodos.cpp:269-271`
+(Dateikopf `license:BSD-3-Clause`) schreibt in Block 2 genau die drei
+Werte, die MF-714 als unbelegt zurückgestellt hatte:
+
+```
+w16l(0x00, 0x0000)      Rückzeiger
+w16l(0x02, 0x0003)      Vorzeiger
+w8  (0x04, 0xf0 | len)  Speichertyp 0xF im oberen Nibble
+```
+
+Das ist eine **Referenz-Implementierung**, unabhängig von der ersten
+Quelle im Baum. Die Sperre aus MF-714 („ohne zweite Quelle wäre es genau
+die plausible Annahme, die FMT-2/3/10/11/12 erzeugt hat") ist damit
+aufgehoben.
+
+**Was jetzt zu tun ist:** `po_probe()` darf bei gefundenem Verzeichnis
+auf `0x400` einen positiven Beleg werten. **Es bleibt eine
+Verhaltensänderung an der Registry-Tür** — welches Plugin eine Datei
+beansprucht, ändert sich. Die Eigentümer-Entscheidung steht also weiter
+aus, jetzt aber mit vollständiger Begründung statt mit einer falschen
+(MF-713) oder einer halben (MF-714).
+
+## FMT-18 — sechs Formate ohne jedes fremde Gegenstück (MF-720)
+
+<!-- status: offen -->
+
+**Kennzahl:** **T3 runter** — aber die Frage geht tiefer.
+
+Die Abdeckungskarte des Streif-Scouts (51 T3-Formate gegen 45 gesichtete
+Repos **und** floptools 154 Formate) findet für sechs Formate **nirgends**
+ein Gegenstück:
+
+```
+edk · posix · syn · t1k · tan · xdm86
+```
+
+Kein Werkzeug, keine Spec, kein Abbild. Für die übrigen 45 gibt es
+mindestens einen Kandidaten.
+
+**Die Frage, die sich daraus stellt, ist nicht „wo finden wir eine
+Referenz", sondern:** *woher haben diese sechs Plugins ihre Layouts?*
+Das ist wörtlich die Frageform, die FMT-2/3/10/11/12 aufgedeckt hat —
+fünf Parser, gegen erfundene Spezifikationen gebaut und grün getestet.
+
+**Zu tun, bevor irgendetwas anderes an diesen sechs geschieht:** je
+Plugin den Header und die Commit-Geschichte lesen und feststellen, ob
+eine benannte Referenz existiert. Findet sich keine, gehören sie in
+dieselbe Behandlung wie `86f` (MF-707/708): messen, was sie
+tatsächlich tun, und die Ankündigung in `features` auf den belegten
+Stand bringen.
+
+`posix` ist dabei vermutlich harmlos (Sammelname, kein historisches
+Format) — das ist zu prüfen, nicht anzunehmen.
