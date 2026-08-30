@@ -1743,6 +1743,7 @@ SOURCES += \
     src/formats/apple/uft_2mg_parser.c \
     src/formats/apple/uft_diskcopy.c \
     src/formats/apple/uft_moof_parser.c \
+    src/formats/apple/uft_apple_gcr.c \
     src/formats/apple/uft_woz.c \
     src/formats/apple/woz.c \
     src/formats/apple/uft_ndif.c \

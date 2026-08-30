@@ -5432,4 +5432,108 @@ gefundenem Verzeichnis wäre eine Verhaltensänderung an der Registry-Tür
 Begründung statt mit falscher.
 
 **Kennzahl:** unverändert. Diese Runde hat nichts gehoben; sie hat eine
-falsche Aussage aus dem Baum genommen.
+falsche Aussage aus dem Baum genommen.
+
+## GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
+
+<!-- status: erledigt(MF-715) -->
+
+**Kennzahl:** Voraussetzung für **T3 ↓** bei `do`, `po`, `d13`, `nib`,
+`woz` — und für **Wandlungspfade ↑** (Apple hat bis heute **null**
+Einträge in der Rundlauf-Matrix). Die Hebung selbst steht noch aus;
+dieser Eintrag schafft ihre Grundlage.
+
+**Der Ausgangsbefund:** Der Baum konnte keinen einzigen Apple-Sektor aus
+einem Bitstrom zurückholen. `grep` über `src/` und `include/` fand
+Apple-GCR nur als CRC-Tabellen-Treffer. WOZ, NIB und A2R waren Container
+ohne Inhalt.
+
+### Die Messung stand vor dem Code
+
+Die EINFRIER-REGEL erlaubt neuen Decoder-Code nur mit benannter Referenz
+**und** Rotbeweis bzw. Messung **vor** dem Code. Beides ist erfüllt:
+
+**Zuerst die Tabelle geprüft, blackbox.** Die 64 Diskettenbytes der
+6-and-2-Kodierung wurden nicht aus dem Gedächtnis übernommen, sondern
+gegen die **Ausgabe** des registrierten Oracles `to_woz2` gehalten —
+ohne eine Zeile fremden Quelltext zu lesen:
+
+```
+Spur 0 eines to_woz2-WOZ : 50 624 Bits, 6224 Nibbles
+Adressfelder (D5 AA 96)  : 16
+Datenfelder  (D5 AA AD)  : 16
+Datenbytes geprüft       : 5488  (16 × 343)
+nicht in der Tabelle     : 0
+```
+
+Ein einziges fremdes Nibble hätte die Tabelle widerlegt, bevor sie Code
+wurde. Es gab keines.
+
+**Dann der Differenzlauf über die ganze Diskette:**
+
+```
+Eingabe  : 143 360-Byte-DSK, deterministisches Füllmuster
+Weg      : to_woz2 → WOZ 2.0 → woz_get_track_525()
+           → uft_apple_gcr_scan_track() → Vergleich gegen die DSK
+Ergebnis : 560 von 560 Sektoren gefunden
+           Adress-Prüfsumme  560/560
+           Datenfeld dekodiert und byteidentisch  560/560
+```
+
+**Und eine unabhängige Bestätigung, die niemand eingebaut hat.** Aus dem
+Vergleich fiel die Zuordnung physisch→logisch heraus:
+
+```
+0, 7, 14, 6, 13, 5, 12, 4, 11, 3, 10, 2, 9, 1, 8, 15
+```
+
+Das ist genau die Umkehrung der DOS-3.3-Interleave-Tabelle aus
+`a8rawconv` (`diska2.cpp:3-5`) — gemessen, nicht angenommen, und aus
+einer Quelle, die der Dekoder nicht kennt.
+
+### Was gebaut wurde
+
+`include/uft/formats/apple/uft_apple_gcr.h` + `src/formats/apple/uft_apple_gcr.c`:
+
+| Funktion | tut |
+|---|---|
+| `uft_apple_gcr_denibblize_6_2()` | 343 Diskettenbytes → 256 Nutzbytes, mit laufender XOR-Prüfsumme |
+| `uft_apple_gcr_decode_4_4()` | „odd-even" des Adressfelds |
+| `uft_apple_gcr_scan_track()` | Spur als **Ring** absuchen, Adress-/Datenfeld-Paare |
+
+Referenzen im Header: *Beneath Apple DOS* (Worth/Lechner) Kapitel 3 für
+das Verfahren, WOZ-2.0-Spezifikation für den Bitstrom, plus die
+Oracle-Messung oben.
+
+**Zwei Entscheidungen, die im Code begründet stehen:**
+
+1. **Bei abgewiesenem Feld bleibt das Ziel unberührt.** Ein halb
+   dekodierter Sektor wäre eine stille Veränderung
+   (`DESIGN_PRINCIPLES`). Der Test prüft das ausdrücklich.
+2. **Genau eine Umdrehung.** Die erste Fassung las
+   `bit_count + 8×400` und lieferte **595** statt 560 Sektoren — 17 je
+   Spur, weil der erste hinter der Naht ein zweites Mal kam. Alle 595
+   waren korrekt dekodiert; die Zahl war trotzdem falsch. Eine stille
+   Doppelung ist schlimmer als eine Lücke: sie sieht aus wie ein Fund.
+
+### Was der Dekoder ausdrücklich NICHT tut
+
+Er ordnet nichts um. `scan_track()` liefert die **physischen**
+Sektornummern aus dem Adressfeld. Ob daraus DOS- oder ProDOS-Reihenfolge
+wird, entscheidet der Aufrufer — die beiden Ordnungen sind eine
+Eigenschaft der **Datei**, nicht der Spur (MF-463, MF-714).
+
+### Was jetzt möglich wird
+
+* **ORAK-2 Schritt 2** (`do` → T1b): der Differenzlauf ist gefahren, es
+  fehlt die Verankerung als Korpus-Eintrag mit Manifest.
+* **ORAK-2 Schritt 3** (`d13`): der 13-Sektor-Weg braucht die
+  5-and-3-Tabelle — `to_woz2` erzeugt sie bereits (`probe13.d13` →
+  `neu13.woz`, SHA `a5ff575f…`), der Dekoder kennt sie noch nicht.
+* **Ein Apple-Wandlungspfad**: erst mit einem *Encoder*; der Dekoder ist
+  die eine Hälfte.
+
+**Was NICHT belegt ist:** dass echte, historische Disketten gelesen
+werden. Gemessen ist eine von `to_woz2` erzeugte, fehlerfreie
+Aufzeichnung. Schwache Bits, Halbspuren, Kopierschutz und beschädigte
+Felder sind hier nicht vorgekommen.

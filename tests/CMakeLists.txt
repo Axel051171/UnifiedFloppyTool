@@ -1397,6 +1397,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
+    elseif(${test_name} STREQUAL "test_apple_gcr_6and2")
+        # MF-715: die neue Apple-GCR-Einheit. Reine Rechenwege, kein
+        # WOZ-Leser noetig — die Spur baut der Test selbst.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c)
     elseif(${test_name} STREQUAL "test_do_po_probe_ignores_content")
         # MF-713: beide Sonden entscheiden allein an der Groesse, und die
         # ist bei do und po identisch (143360). Darum beide Quellen.
