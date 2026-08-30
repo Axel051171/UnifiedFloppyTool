@@ -1392,8 +1392,11 @@ foreach(test_source ${TEST_SOURCES})
         # MF-707: 86F gegen die Spezifikation von 86Box selbst.
         # Prueft das Plugin-Struct (Probe, Features, Schreibpfad),
         # darum die Plugin-Quelle statt eines Kern-Moduls.
+        # MF-708: dazu der ZWEITE 86F-Leser des Baums — gebaut, nicht
+        # registriert, ohne Aufrufer, aber mit dem richtigen Magic.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
     elseif(${test_name} STREQUAL "test_hardsector_geometry")
         # MF-706: Hartsektor-Geometrien gegen zwei externe Quellen.
         # Der Leser hat KEINEN Aufrufer (10 Exporte, alle WAISE) — der

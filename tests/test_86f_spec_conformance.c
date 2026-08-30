@@ -20,6 +20,32 @@
  * FM-/MFM-**Transitionen** — es ist ein Oberflaechenformat, kein
  * CHS-Sektorformat.
  *
+ * ── Die zweite, unabhaengige Quelle (MF-708) ────────────────────────────
+ *
+ * Die Zwei-Quellen-Regel verlangt eine zweite Quelle, die von der ersten
+ * nichts weiss. `Digitoxin1/DiskImageTool` (GPL-3.0, VB.NET, Windows)
+ * bringt einen **eigenstaendigen** 86F-Leser mit — 871 Zeilen unter
+ * `ImageFormats/86F/`, geschrieben ohne Kenntnis dieses Baums und ohne
+ * Bezug auf den Text oben. Gemessen im Klon:
+ *
+ *     86FImage.vb:8    Private Const FILE_SIGNATURE = "86BF"
+ *     86FImage.vb:348  _MinorVersion  = Buffer(4)
+ *     86FImage.vb:349  _MajorVersion  = Buffer(5)
+ *     86FImage.vb:350  _DiskFlags     = BitConverter.ToUInt16(Buffer, 6)
+ *     86FImage.vb:359  Dim Pos = 8            ' Beginn der Offset-Tabelle
+ *     86FImage.vb:363  Offset = BitConverter.ToUInt32(Buffer, Pos)
+ *
+ * Sie bestaetigt die Spezifikation Feld fuer Feld: Magic, beide
+ * Versionsbytes, die 16-Bit-Disk-Flags bei 6, den Tabellenbeginn bei 8
+ * und die 32-Bit-Offsets. Damit steht der Befund unten nicht mehr auf
+ * einer Quelle, sondern auf zweien, die einander nicht kennen.
+ *
+ * **Kanal:** GPL-3.0 heisst Zone GELB — lesen und beschreiben ja,
+ * portieren nein. Uebernommen wurde nichts; belegt wurden **Tatsachen**
+ * (welches Byte welche Bedeutung traegt), nicht Ausdruck. Eine
+ * Neufassung des Lesers folgt der 86Box-Spezifikation, nicht dieser
+ * Datei.
+ *
  * ── Was `uft_86f_plugin.c` stattdessen annimmt ──────────────────────────
  *
  * | Stelle | Baum | Spezifikation |
@@ -47,6 +73,36 @@
  * Das ist „Bestand, nicht Faehigkeit" (P0-2) in seiner unangenehmsten
  * Form: nicht bloss unerreichbar, sondern **angekuendigt**.
  *
+ * ── Und der zweite Leser, den MF-622 uebersehen hat (MF-708) ────────────
+ *
+ * Beim Nachpruefen des Tabellenbeginns fiel auf, dass dieser Baum **zwei**
+ * 86F-Leser baut:
+ *
+ * | | Spezifikation + DiskImageTool | `86box/uft_86f_plugin.c` | `pc/uft_86f.c` |
+ * |---|---|---|---|
+ * | im Build | — | ja (`.pro:906`) | ja (`.pro:3249`) |
+ * | **registriert** | — | **ja** (Registry) | **nein** |
+ * | Aufrufer | — | ueber Plugin-Zeiger | **keiner**, gemessen |
+ * | Magic | `86BF` | `86BX` ✗ | `86BF` ✓ |
+ * | Byte 4/5 | Minor / Major | — ✗ | Version LE16 ✓ |
+ * | Byte 6 | Disk flags LE16 | `disk_type` u8 ✗ | Flags LE16 ✓ |
+ * | Byte 8 | **Spur-Offset-Tabelle** | `tracks` u8 ✗ | `disk_type` u8 ✗ |
+ * | Byte 9-13 | (Tabelle) | — | encoding/rpm/tracks/sides/bitcell ✗ |
+ *
+ * Der Leser mit dem **richtigen** Erkennungsmerkmal ist der, der keine
+ * Tuer hat. Er kommt acht Byte weit korrekt und erfindet dann einen
+ * verlaengerten Kopf aus sechs Feldern, wo die Spezifikation die
+ * Offset-Tabelle beginnen laesst — dieselbe Fabrikationsklasse, nur
+ * einen Schritt spaeter.
+ *
+ * Der Kopf von `uft_86f_plugin.c` sagte bis MF-708, es trage die
+ * 86F-Unterstuetzung „allein". MF-622 hatte **einen** unerreichbaren
+ * 86F-Leser geloescht und daraus geschlossen, es sei der letzte
+ * gewesen; ein zweiter, 477 Zeilen, stand die ganze Zeit im Build.
+ * Das ist zum elften Mal in diesem Baum die **Aufzaehlung bekannter
+ * Faelle** statt einer Messung (MF-567/578/598/633/651/652/668/671/
+ * 678/703).
+ *
  * ── Warum hier KEIN Fix steht ───────────────────────────────────────────
  *
  * Das Magic zu berichtigen waere eine Zeile — und **schlimmer als der
@@ -64,6 +120,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
+#include "uft/formats/pc/uft_86f.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -138,6 +195,37 @@ int main(void)
         printf("\n  Genau umgekehrt zur Spezifikation: das erfundene "
                "Magic wird bejaht,\n"
                "  das echte abgewiesen.\n");
+
+    /* ── 3b · Der zweite Leser im selben Baum (MF-708) ──────────────────
+     *
+     * `src/formats/pc/uft_86f.c` wird gebaut (`.pro:3249`), ist NICHT
+     * registriert und hat keinen Aufrufer — aber sein Erkennungsmerkmal
+     * ist das richtige. Beide Leser bekommen hier denselben Kopf. */
+    int konf_pc_spec = -1, konf_pc_baum = -1;
+    kopf_nach_spec(buf, sizeof(buf), "86BF");
+    bool pc_spec = uft_pc86f_probe(buf, sizeof(buf), &konf_pc_spec);
+    kopf_nach_spec(buf, sizeof(buf), "86BX");
+    bool pc_baum = uft_pc86f_probe(buf, sizeof(buf), &konf_pc_baum);
+
+    printf("\n  Derselbe Kopf, der andere Leser (pc/uft_86f.c, "
+           "unregistriert):\n");
+    printf("     \"86BF\" -> %s (Konfidenz %d)   |  \"86BX\" -> %s\n",
+           pc_spec ? "JA" : "NEIN", konf_pc_spec,
+           pc_baum ? "JA" : "NEIN");
+
+    PRUEFE(pc_spec && !pc_baum,
+           "der zweite Leser verhaelt sich nicht mehr spec-konform "
+           "(erwartet: JA auf \"86BF\", NEIN auf \"86BX\") — dann ist "
+           "einer der beiden Leser angefasst worden und dieser Test "
+           "nachzuziehen");
+    PRUEFE(pc_spec != ja_spec,
+           "beide Leser antworten jetzt gleich — dann ist die Spaltung "
+           "aufgeloest (gut) und dieser Test hat seinen Gegenstand "
+           "verloren");
+    if (pc_spec && !ja_spec)
+        printf("       ^ genau umgekehrt zum registrierten Plugin: der "
+               "Leser MIT\n"
+               "         richtigem Magic ist der OHNE Tuer.\n");
 
     /* ── 4 · Was das Plugin dabei ANKUENDIGT ────────────────────────── */
     printf("\n  Angekuendigt in `uft_format_plugin_86f`:\n");

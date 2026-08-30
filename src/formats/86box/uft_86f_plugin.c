@@ -12,8 +12,25 @@
  * im ganzen Baum war dieser Kommentar selbst.
  *
  * Die Datei war unerreichbar (Verwaisten-Grundlinie) und ist mit
- * MF-622 geloescht. Dieses Plugin traegt die 86F-Unterstuetzung
- * allein.
+ * MF-622 geloescht.
+ *
+ * MF-708 berichtigt den Schlusssatz. Hier stand, dieses Plugin trage
+ * die 86F-Unterstuetzung „allein" — MF-622 hatte EINEN unerreichbaren
+ * 86F-Leser geloescht und daraus geschlossen, es sei der letzte
+ * gewesen. Gemessen gibt es einen zweiten: `src/formats/pc/uft_86f.c`,
+ * 477 Zeilen, im Build (`.pro:3249`), nicht in der Registry, ohne
+ * Aufrufer im ganzen Baum — und mit dem **richtigen** Magic `"86BF"`.
+ *
+ * Das oben angegebene `"86BX"` ist nicht das Erkennungsmerkmal von
+ * 86F. Die Spezifikation von 86Box (`docs/dev/formats/86f.rst`) und
+ * eine zweite, unabhaengige Implementierung (`Digitoxin1/DiskImageTool`,
+ * `ImageFormats/86F/86FImage.vb:8`) nennen beide `"86BF"`; der feste
+ * Kopf ist 8 Byte lang, nicht 32. Das Plugin weist damit jede echte
+ * 86F-Datei ab und meldet dabei Read/Write/Flux als SUPPORTED.
+ *
+ * Warum das hier NICHT einzeilig berichtigt wird, und was stattdessen
+ * zu tun ist: `tests/test_86f_spec_conformance.c` (der Rotbeweis) und
+ * `docs/OPEN_ITEMS.md` FMT-16.
  */
 #include "uft/uft_format_common.h"
 

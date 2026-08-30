@@ -132,3 +132,34 @@ liegt laut `inv["korpus"]` (24 Einträge) nicht.
 * Der Umfang der FloppyDB (`Modules/FloppyDB/`, 5 Dateien,
   `FloppyData.vb` 408 Zeilen) und ihre Datenherkunft — als Datenbank
   ohnehin PRÜFEN, nicht weiter verfolgt.
+
+---
+
+## Neubesuch 2026-08-30 (MF-708) — Fund B eingelöst
+
+Der Neubesuch-Anlass ist eingetreten: MF-707 hatte `86f` gegen die
+86Box-Spezifikation gemessen und vier Widersprüche gefunden — auf
+**einer** Quelle. Fund B dieses Gutachtens hat die zweite geliefert.
+
+**Was gemessen wurde** (`ImageFormats/86F/86FImage.vb`): Magic `"86BF"`
+(`:8`), Minor/Major bei 4/5 (`:348-349`), Disk-Flags als LE16 bei 6
+(`:350`), Beginn der Spur-Offset-Tabelle bei **8** (`:359`), Einträge
+als LE32 (`:363`). Feld für Feld deckungsgleich mit der Spezifikation,
+geschrieben ohne Kenntnis von ihr oder von diesem Baum.
+
+**Was der Quervergleich zusätzlich sichtbar machte:** Beim Nachprüfen
+des Tabellenbeginns fiel auf, dass UFT **zwei** 86F-Leser baut — und der
+mit dem richtigen Magic (`src/formats/pc/uft_86f.c`, 477 Zeilen) ist
+der ohne Registrierung und ohne Aufrufer. Das war ohne die zweite
+Referenz nicht sichtbar. Festgehalten in `docs/OPEN_ITEMS.md` FMT-16
+und im Rotbeweis `tests/test_86f_spec_conformance.c` (Abschnitt 3b).
+
+**Oracle-Eignung: nein, gemessen.** `DiskImageTool.vbproj` führt
+`OutputType=WinExe` auf .NET Framework 4.7.2; kein `Sub Main`, keine
+Kommandozeile, reine WinForms-Anwendung. Nicht automatisierbar, und
+`dotnet` allein baut kein Framework-4.7.2-Projekt. Der Kanal ist
+**Spec** (lesen und beschreiben), nicht Oracle und nicht Port —
+GPL-3.0, Zone GELB. Übernommen wurde nichts; belegt wurden Tatsachen
+über Byte-Bedeutungen, kein Ausdruck.
+
+**Fund A (FMT-15-Zweitreferenz) bleibt offen** und unverändert gültig.

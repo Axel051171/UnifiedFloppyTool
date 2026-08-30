@@ -4970,3 +4970,97 @@ dann das Erkennungsmerkmal.**
 **Empfehlung: 2 sofort, 1 als eigener Baustein.** Weg 2 ist eine
 Ehrlichkeitskorrektur und in Minuten gemacht; Weg 1 braucht Fixture und
 Oracle, also die Beschaffung, die dieser Posten ohnehin schon nennt.
+
+### Nachtrag MF-708 — die zweite Quelle, und ein zweiter Leser
+
+**Anlass:** der Eigentümer gab `Digitoxin1/DiskImageTool` zur Prüfung.
+Das Repo war aus Scout-Block 4 bereits begutachtet
+(`tools/uft-scout/out/DiskImageTool.gutachten.md`, Zone **GELB**,
+GPL-3.0) — mit einem dort vermerkten Neubesuch-Anlass. Der ist jetzt
+eingetreten.
+
+**1 · Die Zwei-Quellen-Regel ist erfüllt.** Bis MF-707 ruhten die vier
+Widersprüche auf **einer** Quelle (der 86Box-Spezifikation).
+DiskImageTool bringt einen eigenständigen 86F-Leser (871 Zeilen,
+VB.NET), der von diesem Baum und von jenem Spec-Text nichts weiß.
+Gemessen im Klon:
+
+```
+86FImage.vb:8    Private Const FILE_SIGNATURE = "86BF"
+86FImage.vb:348  _MinorVersion = Buffer(4)
+86FImage.vb:349  _MajorVersion = Buffer(5)
+86FImage.vb:350  _DiskFlags    = BitConverter.ToUInt16(Buffer, 6)
+86FImage.vb:359  Dim Pos = 8                    ' Beginn der Tabelle
+86FImage.vb:363  Offset = BitConverter.ToUInt32(Buffer, Pos)
+```
+
+Feld für Feld dieselbe Aussage wie die Spezifikation. Alle vier
+Widersprüche stehen damit auf zwei unabhängigen Quellen.
+
+**2 · Der Baum hat ZWEI 86F-Leser.** Beim Nachprüfen des
+Tabellenbeginns bei Byte 8 fiel auf:
+
+| | Spec + DiskImageTool | `86box/uft_86f_plugin.c` | `pc/uft_86f.c` |
+|---|---|---|---|
+| im Build | — | ja (`.pro:906`) | ja (`.pro:3249`) |
+| **registriert** | — | **ja** | **nein** |
+| Aufrufer | — | über Plugin-Zeiger | **keiner**, gemessen |
+| Magic | `86BF` | `86BX` ✗ | `86BF` ✓ |
+| Byte 4/5 | Minor / Major | — ✗ | Version LE16 ✓ |
+| Byte 6 | Disk flags LE16 | `disk_type` u8 ✗ | Flags LE16 ✓ |
+| Byte 8 | **Spur-Offset-Tabelle** | `tracks` u8 ✗ | `disk_type` u8 ✗ |
+| Byte 9-13 | (Tabelle) | — | encoding/rpm/tracks/sides/bitcell ✗ |
+
+Der Leser mit dem **richtigen** Erkennungsmerkmal ist der **ohne Tür**.
+Er kommt acht Byte weit korrekt und erfindet dann einen verlängerten
+Kopf aus sechs Feldern genau dort, wo die Offset-Tabelle beginnt —
+dieselbe Fabrikationsklasse, einen Schritt später.
+
+Gemessen im Rotbeweis (`tests/test_86f_spec_conformance.c`, Abschnitt
+3b), beide Leser mit demselben Kopf:
+
+```
+registriertes Plugin:  "86BF" -> NEIN          |  "86BX" -> JA (98)
+pc/uft_86f.c        :  "86BF" -> JA (97)       |  "86BX" -> NEIN
+```
+
+Eine vollständige Umkehrung. Die Registry hat den falschen gewählt.
+
+**3 · Und wieder die Aufzählung statt der Messung.** Der Kopf von
+`uft_86f_plugin.c` sagte bis MF-708, es trage die 86F-Unterstützung
+„allein". MF-622 hatte **einen** unerreichbaren 86F-Leser gelöscht und
+daraus geschlossen, es sei der letzte gewesen — statt zu messen, welche
+Dateien 86F lesen. Der zweite stand die ganze Zeit im Build. **Elfter
+belegter Fall** dieses Musters (MF-567/578/598/633/651/652/668/671/
+678/703). Die Kopfzeile ist mit MF-708 berichtigt.
+
+### Was das für die Entscheidung ändert
+
+**Der Weg zu T2 ist damit NICHT frei** — und das ist gemessen, nicht
+angenommen: DiskImageTool ist `OutputType=WinExe` auf .NET Framework
+4.7.2, eine reine WinForms-Anwendung ohne `Sub Main` und ohne
+Kommandozeile. Als **Oracle** taugt sie nicht (nicht automatisierbar,
+und `dotnet` allein baut kein Framework-4.7.2-Projekt); als
+**Verhaltens-Referenz zum Lesen** ist sie belegt und hat hier ihren
+Dienst getan. Kanal: **Spec**, nicht Port, nicht Oracle.
+
+**Die Empfehlung wird dadurch eindeutiger, nicht anders.** Weg 2
+(Merkmale auf UNSUPPORTED, bis eine Neufassung steht) war schon vorher
+die Empfehlung; jetzt steht sie auf zwei Quellen statt einer. Neu
+hinzu kommt eine **zweite Frage an den Eigentümer**:
+
+> `src/formats/pc/uft_86f.c` — 477 Zeilen, gebaut, unregistriert, ohne
+> Aufrufer, mit richtigem Magic und falschem Kopfaufbau ab Byte 8.
+> Anker setzen, Tür geben oder zurückziehen? (Klasse ORPH-5 /
+> Verwaisten-Regel.)
+
+Eine Tür zu geben wäre **falsch**, solange der Kopfaufbau ab Byte 8
+erfunden ist: aus „weist alles ab" würde „nimmt an und zerlegt falsch".
+Dieselbe Kopplung wie bei `hardsector` (MF-706) — erst die Struktur,
+dann das Erkennungsmerkmal.
+
+**Was die Neufassung braucht, wenn sie kommt:** sie folgt der
+86Box-Spezifikation. DiskImageTool ist GPL-3.0; gelesen wurden
+**Tatsachen** (welches Byte welche Bedeutung trägt), kein Ausdruck,
+und übernommen wurde nichts. Wer die Neufassung schreibt, arbeitet aus
+der Spezifikation — die dafür vollständig ist.
