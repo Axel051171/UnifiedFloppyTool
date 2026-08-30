@@ -813,6 +813,14 @@
       "beauftragt": "2026-08-29",
       "auftraggeber": "Eigentuemer",
       "notiz": "Fluss- und Dateisystem-Buendel. Uebergeben NACH dem Vorfilter-Beschluss (Erhebung nur noch ereignisgetrieben) — der Eigentuemer setzt den Rahmen. Mehrere haengen an offenen Punkten: fuseadf an FS-2 (Link-Abbilder), ipf-flux an LIZ/IPF, hardsector_tool an unserem hardsector-Plugin."
+    },
+    {
+      "name": "pyAccess1581",
+      "url": "https://github.com/hpingel/pyAccess1581.git",
+      "beauftragt": "2026-08-30",
+      "auftraggeber": "Eigentuemer",
+      "notiz": "Ausdrueckliche Frage: kann uns hier irgendetwas helfen, auch wenn es Python ist? Python oeffnet Oracle- und Helfer-Prozess-Kanal. Drei Prueffragen mitgegeben: (1) Faehigkeitsluecke - vermutet Arduino-Geraetezugriff, waere Fundus (MF-310); (2) Oracle-Tauglichkeit als zweite Hand neben c1541 fuer uft_cbmdos FS-T1b, inkl. fuenfter Frage (MF-644) und Laengensemantik; (3) Fixture-Erzeuger gegen den Beschaffungskorb. Anker im Baum: d81 steht auf T1b, ein reiner D81-Leser hilft nicht.",
+      "slug": "hpingel/pyAccess1581"
     }
   ],
   "_herkunft": {

@@ -31,7 +31,7 @@ Stand: 2026-08-30
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 
 - **GRUEN**: 12 — ADFCommander, ADFDiskBox, FloppyTools, atrcopy, disk-peek, fluxpy, hfs2dfxml, lib1541img, mame, mfmdisk, mfsreader, picturedsk
-- **GELB**: 8 — DiscImageManager, DiskImageTool, apple-ii-fluxdoctor, atari-st-tools, flux-analyze, fluxtoimd, hardsector_tool, nibtools
+- **GELB**: 9 — DiscImageManager, DiskImageTool, apple-ii-fluxdoctor, atari-st-tools, flux-analyze, fluxtoimd, hardsector_tool, nibtools, pyAccess1581
 - **PRUEFEN**: 16 — FloppyControl, FluxBridge, HxCFloppyEmulator, OpenCBM, a8rawconv, amigadx, atrip, dfsimage, fluxfox, fuseadf, gwnbd, ipf-flux, libcbmimage, libdsk, mkatr, mkd64
 - **ROT**: 7 — DiskToolC64, Jacknife, adf-tools, adfopus, adfrescue, floppydiskimagetool, st2disk
 - **?**: 1 — apple2-disk-tools

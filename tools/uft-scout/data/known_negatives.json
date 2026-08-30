@@ -1,233 +1,237 @@
 {
-  "_kommentar": "Bereits bewertete Repos (Mammut-Evaluierung 2026-08-23 + Einzelbewertungen). status: verworfen|bewertet|integriert. Neubewertung nur bei gemessener wesentlicher Änderung (AGENT.md Regel 6).",
-  "eintraege": {
-    "LibraryLibrarian/misskey_mfm_parser": {
-      "status": "verworfen",
-      "grund": "MFM = Markup for Misskey, Namenskollision"
-    },
-    "havill/wlite": {
-      "status": "verworfen",
-      "grund": "Unicode-wchar-Bibliothek, kein Floppy-Bezug"
-    },
-    "Naguissa/uMFMLib": {
-      "status": "verworfen",
-      "grund": "Arduino-Mini-MFM, trivial vs. UFT-Decoder"
-    },
-    "jfdelnero/HXCFE_file_selector": {
-      "status": "verworfen",
-      "grund": "Zielmaschinen-Firmware, keine übertragbaren Algorithmen"
-    },
-    "GmEsoft/TRS80_HxC": {
-      "status": "verworfen",
-      "grund": "dito, TRS-80-Selector"
-    },
-    "wiebow/d71-81writer.c64": {
-      "status": "verworfen",
-      "grund": "C64-seitiges Schreiben, Ökosystem-Trivia"
-    },
-    "Pontiac76/RetroDiskImages": {
-      "status": "verworfen",
-      "grund": "PowerShell-Wrapper; nur XUM1541-Workflow-Referenz"
-    },
-    "Rob1c/volvex": {
-      "status": "verworfen",
-      "grund": "DTC-GUI-Wrapper; einzig Auto-Init-UX-Idee"
-    },
-    "picosonic/arcimage": {
-      "status": "verworfen",
-      "grund": "ADFS-Fakten besser über FluxEngine-textpb; /format defekt"
-    },
-    "yas-sim/fdc_bitstream": {
-      "status": "integriert",
-      "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream)"
-    },
-    "kristomu/flux-analyze": {
-      "status": "bewertet",
-      "grund": "Gutachten liegt vor: Ordinal/Dewarp/Timeline, GPL-3.0 Konzept"
-    },
-    "tomas-nestorovic/RIDE": {
-      "status": "bewertet",
-      "grund": "Gutachten: Mining-Targets, fsck; keine Lizenzdatei"
-    },
-    "Digitoxin1/DiskImageTool": {
-      "status": "bewertet",
-      "grund": "Gutachten: HOST_OS_CONTAMINATION u.a., GPL-3.0 Konzept"
-    },
-    "shamada-code/superdiskindex": {
-      "status": "bewertet",
-      "grund": "Gutachten: Katalogmodus, MIT portierbar"
-    },
-    "akspa0/floppyai": {
-      "status": "bewertet",
-      "grund": "Gutachten: Thermik-Protokolle, Polar-Karten; keine Lizenzdatei"
-    },
-    "lipro-cpm4l/cpmtools": {
-      "status": "bewertet",
-      "grund": "Gutachten: 131 diskdefs via Laufzeit-Parser"
-    },
-    "ha1tch/plus3": {
-      "status": "bewertet",
-      "grund": "Gutachten: +3DOS Spec/Oracle, Apache-2.0"
-    },
-    "neuro-sys/sector-cpc": {
-      "status": "bewertet",
-      "grund": "Gutachten: AMSDOS-Spec; keine Lizenzdatei"
-    },
-    "KBNLresearch/diskimgr": {
-      "status": "bewertet",
-      "grund": "Gutachten: Archiv-Metadaten-Konzept, Apache-2.0"
-    },
-    "latchdevel/HxCFloppyImageConverter": {
-      "status": "bewertet",
-      "grund": "Gutachten: hxcfe-CLI als Oracle"
-    },
-    "davidgiven/fluxengine": {
-      "status": "bewertet",
-      "grund": "Umsetzungsplan liegt vor (VFS, textpb-Ernte, VCD)"
-    },
-    "keirf/disk-utilities": {
-      "status": "bewertet",
-      "grund": "Referenz-Oracle libdisk, Amiga-Decoder"
-    },
-    "keirf/greaseweazle": {
-      "status": "integriert",
-      "grund": "Provider vorhanden, Tier-3-Bench 2026-05-15"
-    },
-    "simonowen/samdisk": {
-      "status": "integriert",
-      "grund": "teil-vendored (src/samdisk), MIT"
-    },
-    "RobSmithDev/ArduinoFloppyDiskReader": {
-      "status": "bewertet",
-      "grund": "DrawBridge; Provider-Kandidat"
-    },
-    "RobSmithDev/DiskFlashback": {
-      "status": "bewertet",
-      "grund": "Umsetzungsplan liegt vor (Sektor-Cache, Mount, PFS3)"
-    },
-    "imqqmi/FloppyControl": {
-      "status": "bewertet",
-      "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0; Wiedervorlage Zyklus 6 (2026-08-28, Eigentuemer-Auftrag): 0 Commits seit Bewertung gemessen, Gutachten out/FloppyControl.gutachten.md — 3 Vorlagen (dskx-FAT12-Oracle, Flux-Scatterplot-Spec, Analog-Oszilloskop-Spec), Rest Fundus"
-    },
-    "FDOS/format": {
-      "status": "bewertet",
-      "grund": "Umsetzungsplan liegt vor (Verify-Kette, Interleave-Daten)"
-    },
-    "JYewman/Greaseweazle-Floppy-Disk-Restorer": {
-      "status": "verworfen",
-      "grund": "Gutachten 2026-08-26: Kern-Module Scheinmessungen (head_alignment liest bei jedem Offset dieselbe Spur, PLL-Sweep ohne CRC-Rechnung); Reales (RPM+Jitter, Bit-Slip, Multi-Rev-Voting, Erase) hat UFT bereits. MIT, aber substanzlos"
-    },
-    "mamedev/mame": {
-      "status": "bewertet",
-      "grund": "Gutachten 2026-08-27 (Zuschnitt src/lib/formats + src/tools): floptool-Oracle fuer 28/57 T3-Formate, MFI-Dreifach-Divergenz, ipf_dsk als BSD-3-Referenz; Zone je Datei (441x BSD-3, 6x GPL-2.0+, 6x LGPL-2.1+ in formats)"
-    },
-    "jfdelnero/AdfOpus_HxC": {
-      "status": "bewertet",
-      "grund": "Gutachten 2026-08-27 (adfopus_hxc): kein AmigaDOS-Encoder im Quelltext (MFM nur via libhxcfe.dll-Binaerdatei); als drittes ADF-Oracle untauglich (Win32-GUI ohne CLI, Engine = vendorte ADFlib 0.7.9d = dieselbe Hand wie unadf); abgeleitet: DMS-Hebung via xDMS-1.3-Oracle, Folgeziel HxCFloppyEmulator/libhxcfe-Quelle"
-    },
-    "rittwage/nibtools": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus 7 (2026-08-28): GPL-3.0 (GELB) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
-    },
-    "pbakota/amigadx": {
-      "status": "bewertet",
-      "grund": "Gutachten 2026-08-28: WCX-DLL auf vendorter ADFlib (gleiche Hand wie unadf/AdfOpus), Zone ROT; als ADF-Oracle untauglich. Ertrag: SCOUT-19 (81-83-Zyl.-ADF-Sonden) + SCOUT-20 (Zyklus-Schutz Basis-Walker)"
-    },
-    "hippy666/ADFDiskBox": {
-      "status": "verworfen",
-      "grund": "Gutachten Zyklus 8 (2026-08-28): reiner cmd.exe/gw-Wrapper (WinForms), 0 eigene ADF-/FS-/MFM-Zeilen (grep-Beleg im Gutachten); MIT sauber inkl. Attribution (GreaseweazleGUI .NET, MIT). Einziger Ertrag: 82-Zyl-Diskdef amiga.amigados.plus als Feld-Beleg fuer SCOUT-G1 (Plain-ADF 81-83 Zyl., Referenz WinUAE disk.cpp) — out/ADFDiskBox.gutachten.md"
-    },
-    "geraldholdsworth/DiscImageManager": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus 9 (2026-08-28, Eigentuemer-Auftrag Acorn): GPL-3.0 (GELB) — nur Spec+Oracle. Ertrag: DIMConsole als einziges bekanntes hardwarefreies Acorn-FS-Hash-Oracle (savecsv CRC32/MD5 je Datei, floptool-FS ohne Acorn); ADFS-Spec-Quellen (Old/New Map, Zone-Checks, 8 Broken-Codes, SEQ/INT/MUX-Interleave mit Auto-Erkennung); 2 Korrektheitsbefunde im eigenen Baum (uft_adl.c erfundenes 'DFS Large' 327680=ADFS M statt L 655360; groessenexakte Probes lehnen DIMs gekuerzte Referenz-Blanks ab). 5 Vorschlaege SCOUT-25..29 — out/DiscImageManager.gutachten.md"
-    },
-    "monkeyman79/dfsimage": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus (2026-08-28, Eigentuemer-Auftrag Acorn, zweite Hand neben DIM): MIT (GRUEN) + vendortes wildparse (PSF-2.0, Hand-Einstufung, Eigentuemer-Vorlage). Ertrag: zweites, DIM-unabhaengiges Acorn-DFS-Datei-Hash-Oracle (digest -m data -a sha256, list {sha1}, index -f json) + MIT-Korpus-Erzeugung (create/format/convert linear<->interleaved); Bereitschafts-Messung im Baum: drei tuerlose Acorn-Module (uft_bbc_dfs.c 5 Exporte/0 Aufrufer, ssd_dsd.c Header inkludiert niemand, uft_ssd_parser_v2.c eigenes main) und dreifache Katalog-Implementierung; Verhaltens-Deltas 18-Bit-Sign-Extension + lineare DSD-Ablage. Kein Watford, MMB=Fundus. 4 Vorschlaege (vorlaeufig SCOUT-38..41) - out/dfsimage.gutachten.md"
-    },
-    "cmosher01/Apple-II-Disk-Tools": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DEPRECATED, aber to_woz2 = einziger Konsolen-DSK->WOZ2-Oracle-Kandidat; GPL-3.0 Konzept/Oracle"
-    },
-    "cmosher01/DskToWoz2": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DSK->WOZ2-Verhaltens-Spec ausgeschrieben; GUI-only, GPL-3.0, kein Port; Nibblize stammt aus CiderPress (BSD-3)"
-    },
-    "Datamuseum-DK/FloppyTools": {
-      "status": "bewertet",
-      "grund": "Gutachten 2026-08-28 (out/FloppyTools.gutachten.md): BSD-2, Archiv-Werkzeug Datamuseum.dk; Upstream auf Codeberg (GitHub-Spiegel eingefroren 2026-03-25). 4 Vorschlaege: DG-Nova-Widerspruch, KryoFlux-Zweithand-Oracle, Q1-Multi-Lesungs-Korpus, Zilog-Referenz. M2FM-Decoder + 8 fehlende Formate im Fundus (Moratorium)."
-    },
-    "dmsc/mkatr": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): GPL-2.0-or-later (26/26 Datei-Koepfe), lsatr mit MinGW gebaut (sha256 dc7f9004..) und auf Korpus-Paar gelaufen (rc=0, DOS 2.0s 707/707 frei — Korpus-ATR ist LEER); alle drei Oracle-Fragen JA, unabhaengige Hand (0 atrcopy-Treffer). Vorschlaege SCOUT-64..66 (vorlaeufig): Registry-Eintrag lsatr (B2), DOS-2-Korpus-Trio, DD-Voll-Boot-Spec"
-    },
-    "robmcmullen/atrip": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): als ATR-Oracle AUSGESCHLOSSEN — zirkulaer (README.rst:6 'The successor to atrcopy', gleiche Hand wie Korpus-Erzeuger, fuenfte Registrierungsfrage MF-644) UND gemessen nicht lauffaehig (import scheitert an pkg_resources unter Python 3.13; np.fromstring 9x; Beta 0.5.0, letzter Commit 2019). Wert: samples/dos_{sd,ed,dd}_test1.atr als nicht-leere DOS-2-Fixtures (SCOUT-65), Hashes im Gutachten"
-    },
-    "lipro-cpm4l/libdsk": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus libdsk (2026-08-28, out/libdsk.gutachten.md): LGPL-2.0-or-later (GRUEN, 134/150 Dateien mit or-later-Kopf; ldbs.c MIT, blast.c zlib, crc16/crctable ohne Kopf). dskid/dsktrans/dskform mit MinGW hand-gebaut (Rezept im Gutachten), 13 Formate WRITE+ROUNDTRIP byteidentisch gemessen; deckt 7 der 12 libdsk-staemmigen T3-Formate (edsk/jv3/apridisk/myz80/nanowasp/logical/qrst) + seltene TD0/CQM-Schreiber. MF-648-Entlastungsbefund: kein 26x128-Eintrag, keine der 6 Systemzuschreibungen, dskid lehnt 256256-Zufall ab ('Bad format'). 31 UFT-Dateien mit libdsk-Attribution ohne Lizenzangabe -> SCOUT-62. Fork veraltet (1.5.12/2015; Upstream seasip 1.5.22, drvmgt/drvopus nur dort). 5 Vorschlaege (vorlaeufig SCOUT-59..63)."
-    },
-    "jfdelnero/HxCFloppyEmulator": {
-      "status": "bewertet",
-      "grund": "Gutachten 2026-08-28: LIZ-1-Kernfrage beantwortet (GPL-2.0-or-later, kein GPL-2.0-only; drei Baum-Attributionen eigenstaendig, Idiom-Audit 0 Treffer beidseitig); hxcfe v2.16.15.2 gebaut+gemessen als Oracle (ADF->HFE->ADF byte-identisch, kein G64/D64); AmigaDOS-MFM-Encoder amiga_mfm_track.c:356 GPLv2+ portierbar (MF-539); B4-Fixture-Rezept gemessen. SCOUT-49..52"
-    },
-    "OpenCBM/OpenCBM": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus OpenCBM (2026-08-28, out/OpenCBM.gutachten.md): GPL-2.0-or-later (GRUEN); M.4-Befunde am Original bestaetigt, MF-301-HAL deckungsgleich; Rest-M3.2 = DOS-Kommandoschicht (libd64copy/cbmctrl als Referenz, Fundus)"
-    },
-    "OpenCBM/libcbmimage": {
-      "status": "bewertet",
-      "grund": "Gutachten Zyklus OpenCBM (2026-08-28): GPL-2.0 (GRUEN); cbmimage.exe mit CC=gcc gebaut+gelaufen (dir/bam auch auf UFT-Korpus-D64 und D1M); Oracle-Kandidat SCOUT-55/56 (40-Spur-BAM-Zweithand fuer A5, CMD-FD-Fixtures 829440/1658880/3317760)"
-    },
-    "alpine9000/adf-tools": {
-      "status": "bewertet",
-      "grund": "Gutachten adf_zweitmeinung: Amiga-natives trackdisk-Werkzeug (m68k-amigaos), kein Host-Oracle; ROT + Commodore-Ableitung"
-    },
-    "dschwen/adfrescue": {
-      "status": "bewertet",
-      "grund": "Gutachten adf_zweitmeinung: ADFlib-unabhaengiges, skriptbares OFS-Extraktions-Oracle, gebaut+byteidentisch zu xdftool gemessen; KEINE Lizenzdatei (ROT) -> Eigentuemer-Vorlage SCOUT-71"
-    },
-    "wbommel/ADFCommander": {
-      "status": "bewertet",
-      "grund": "Gutachten adf_zweitmeinung: MIT, aber AmigaDOS-Faehigkeit ~0 (Bootblock-Parse verworfen, RootBlock leer, Konsole hartkodiert+interaktiv)"
-    },
-    "michaelengel/mfsreader": {
-      "status": "bewertet",
-      "grund": "Gutachten mac_fs_dfxml: PD; MFS-Verzeichnis-Oracle (Extraktion wegen 12-Bit-Karten-Bug readmfs.c:207 ausgeschlossen); sample.img als dc42-Korpuskandidat (SCOUT-88/89)"
-    },
-    "cul-it/hfs2dfxml": {
-      "status": "bewertet",
-      "grund": "Gutachten mac_fs_dfxml: BSD-3; hfsutils-Subprocess-Wrapper, nichts portierbar; DFXML-1.1.1-Feldliste als Fundus (bewegt keine Kennzahl)"
-    },
-    "andete/disk-peek": {
-      "status": "bewertet",
-      "grund": "Gutachten mac_fs_dfxml: MIT; Browser-Viewer; FAT12-Cross-Link/Contiguous-Fallback als Schadensfall-Fundus nach VFS-P1, keine Kennzahl"
-    },
-    "ggnkua/Jacknife": {
-      "status": "bewertet",
-      "grund": "Gutachten atari_st_werkzeuge: SamariTan-Oracle gemessen (ST/MSA/DIM je-Datei), DIM-Magic-Rotbeweis fuer dim_atari; Zone ROT (keine Lizenzdatei), Eigentuemer-Vorlage U-1"
-    },
-    "suiryc/atari-st-tools": {
-      "status": "bewertet",
-      "grund": "Gutachten atari_st_werkzeuge: vierte unabhaengige MSA-Beschreibung; Oracle-Bau gescheitert (sbt fehlt, suiryc-scala-core 0.0.2-SNAPSHOT nur mavenLocal); GPL-3.0 GELB"
-    },
-    "vinz6751/st2disk": {
-      "status": "bewertet",
-      "grund": "Gutachten atari_st_werkzeuge: TOS-Programm fuer Atari-Hardware (XBIOS Flopwr), auf PC weder baubar noch nuetzlich, keine Lizenzdatei; irrelevant"
-    },
-    "Zirias/c64_tool_mkd64": {
-      "status": "bewertet",
-      "grund": "Gutachten cbm_erzeuger: 40-Spur-D64-Fixture-Erzeuger (Dolphin 0xAC/Speed 0xC0, gemessen); gleiche Hand wie lib1541img -> nie Oracle fuer A5; Eigenlizenz -> Zone PRUEFEN"
-    },
-    "beddy70/DiskToolC64": {
-      "status": "bewertet",
-      "grund": "Gutachten cbm_erzeuger: dritte Hand fuer 35-Spur-Dateiinhalte (127-B-Probe korrekt), aber keine Lizenzdatei (ROT) und keine Kennzahl bewegt -> Fundus"
-    },
-    "markusC64/floppydiskimagetool": {
-      "status": "bewertet",
-      "grund": "Gutachten cbm_erzeuger: D64->G64->D64 35trk byteidentisch gemessen, 40-Spur-Mastering still unvollstaendig; All rights reserved + geschlossene DLL (ROT); G64->D64 hat Matrix-Eintrag -> Fundus"
-    }
+ "_kommentar": "Bereits bewertete Repos (Mammut-Evaluierung 2026-08-23 + Einzelbewertungen). status: verworfen|bewertet|integriert. Neubewertung nur bei gemessener wesentlicher Änderung (AGENT.md Regel 6).",
+ "eintraege": {
+  "LibraryLibrarian/misskey_mfm_parser": {
+   "status": "verworfen",
+   "grund": "MFM = Markup for Misskey, Namenskollision"
+  },
+  "havill/wlite": {
+   "status": "verworfen",
+   "grund": "Unicode-wchar-Bibliothek, kein Floppy-Bezug"
+  },
+  "Naguissa/uMFMLib": {
+   "status": "verworfen",
+   "grund": "Arduino-Mini-MFM, trivial vs. UFT-Decoder"
+  },
+  "jfdelnero/HXCFE_file_selector": {
+   "status": "verworfen",
+   "grund": "Zielmaschinen-Firmware, keine übertragbaren Algorithmen"
+  },
+  "GmEsoft/TRS80_HxC": {
+   "status": "verworfen",
+   "grund": "dito, TRS-80-Selector"
+  },
+  "wiebow/d71-81writer.c64": {
+   "status": "verworfen",
+   "grund": "C64-seitiges Schreiben, Ökosystem-Trivia"
+  },
+  "Pontiac76/RetroDiskImages": {
+   "status": "verworfen",
+   "grund": "PowerShell-Wrapper; nur XUM1541-Workflow-Referenz"
+  },
+  "Rob1c/volvex": {
+   "status": "verworfen",
+   "grund": "DTC-GUI-Wrapper; einzig Auto-Init-UX-Idee"
+  },
+  "picosonic/arcimage": {
+   "status": "verworfen",
+   "grund": "ADFS-Fakten besser über FluxEngine-textpb; /format defekt"
+  },
+  "yas-sim/fdc_bitstream": {
+   "status": "integriert",
+   "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream)"
+  },
+  "kristomu/flux-analyze": {
+   "status": "bewertet",
+   "grund": "Gutachten liegt vor: Ordinal/Dewarp/Timeline, GPL-3.0 Konzept"
+  },
+  "tomas-nestorovic/RIDE": {
+   "status": "bewertet",
+   "grund": "Gutachten: Mining-Targets, fsck; keine Lizenzdatei"
+  },
+  "Digitoxin1/DiskImageTool": {
+   "status": "bewertet",
+   "grund": "Gutachten: HOST_OS_CONTAMINATION u.a., GPL-3.0 Konzept"
+  },
+  "shamada-code/superdiskindex": {
+   "status": "bewertet",
+   "grund": "Gutachten: Katalogmodus, MIT portierbar"
+  },
+  "akspa0/floppyai": {
+   "status": "bewertet",
+   "grund": "Gutachten: Thermik-Protokolle, Polar-Karten; keine Lizenzdatei"
+  },
+  "lipro-cpm4l/cpmtools": {
+   "status": "bewertet",
+   "grund": "Gutachten: 131 diskdefs via Laufzeit-Parser"
+  },
+  "ha1tch/plus3": {
+   "status": "bewertet",
+   "grund": "Gutachten: +3DOS Spec/Oracle, Apache-2.0"
+  },
+  "neuro-sys/sector-cpc": {
+   "status": "bewertet",
+   "grund": "Gutachten: AMSDOS-Spec; keine Lizenzdatei"
+  },
+  "KBNLresearch/diskimgr": {
+   "status": "bewertet",
+   "grund": "Gutachten: Archiv-Metadaten-Konzept, Apache-2.0"
+  },
+  "latchdevel/HxCFloppyImageConverter": {
+   "status": "bewertet",
+   "grund": "Gutachten: hxcfe-CLI als Oracle"
+  },
+  "davidgiven/fluxengine": {
+   "status": "bewertet",
+   "grund": "Umsetzungsplan liegt vor (VFS, textpb-Ernte, VCD)"
+  },
+  "keirf/disk-utilities": {
+   "status": "bewertet",
+   "grund": "Referenz-Oracle libdisk, Amiga-Decoder"
+  },
+  "keirf/greaseweazle": {
+   "status": "integriert",
+   "grund": "Provider vorhanden, Tier-3-Bench 2026-05-15"
+  },
+  "simonowen/samdisk": {
+   "status": "integriert",
+   "grund": "teil-vendored (src/samdisk), MIT"
+  },
+  "RobSmithDev/ArduinoFloppyDiskReader": {
+   "status": "bewertet",
+   "grund": "DrawBridge; Provider-Kandidat"
+  },
+  "RobSmithDev/DiskFlashback": {
+   "status": "bewertet",
+   "grund": "Umsetzungsplan liegt vor (Sektor-Cache, Mount, PFS3)"
+  },
+  "imqqmi/FloppyControl": {
+   "status": "bewertet",
+   "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0; Wiedervorlage Zyklus 6 (2026-08-28, Eigentuemer-Auftrag): 0 Commits seit Bewertung gemessen, Gutachten out/FloppyControl.gutachten.md — 3 Vorlagen (dskx-FAT12-Oracle, Flux-Scatterplot-Spec, Analog-Oszilloskop-Spec), Rest Fundus"
+  },
+  "FDOS/format": {
+   "status": "bewertet",
+   "grund": "Umsetzungsplan liegt vor (Verify-Kette, Interleave-Daten)"
+  },
+  "JYewman/Greaseweazle-Floppy-Disk-Restorer": {
+   "status": "verworfen",
+   "grund": "Gutachten 2026-08-26: Kern-Module Scheinmessungen (head_alignment liest bei jedem Offset dieselbe Spur, PLL-Sweep ohne CRC-Rechnung); Reales (RPM+Jitter, Bit-Slip, Multi-Rev-Voting, Erase) hat UFT bereits. MIT, aber substanzlos"
+  },
+  "mamedev/mame": {
+   "status": "bewertet",
+   "grund": "Gutachten 2026-08-27 (Zuschnitt src/lib/formats + src/tools): floptool-Oracle fuer 28/57 T3-Formate, MFI-Dreifach-Divergenz, ipf_dsk als BSD-3-Referenz; Zone je Datei (441x BSD-3, 6x GPL-2.0+, 6x LGPL-2.1+ in formats)"
+  },
+  "jfdelnero/AdfOpus_HxC": {
+   "status": "bewertet",
+   "grund": "Gutachten 2026-08-27 (adfopus_hxc): kein AmigaDOS-Encoder im Quelltext (MFM nur via libhxcfe.dll-Binaerdatei); als drittes ADF-Oracle untauglich (Win32-GUI ohne CLI, Engine = vendorte ADFlib 0.7.9d = dieselbe Hand wie unadf); abgeleitet: DMS-Hebung via xDMS-1.3-Oracle, Folgeziel HxCFloppyEmulator/libhxcfe-Quelle"
+  },
+  "rittwage/nibtools": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus 7 (2026-08-28): GPL-3.0 (GELB) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
+  },
+  "pbakota/amigadx": {
+   "status": "bewertet",
+   "grund": "Gutachten 2026-08-28: WCX-DLL auf vendorter ADFlib (gleiche Hand wie unadf/AdfOpus), Zone ROT; als ADF-Oracle untauglich. Ertrag: SCOUT-19 (81-83-Zyl.-ADF-Sonden) + SCOUT-20 (Zyklus-Schutz Basis-Walker)"
+  },
+  "hippy666/ADFDiskBox": {
+   "status": "verworfen",
+   "grund": "Gutachten Zyklus 8 (2026-08-28): reiner cmd.exe/gw-Wrapper (WinForms), 0 eigene ADF-/FS-/MFM-Zeilen (grep-Beleg im Gutachten); MIT sauber inkl. Attribution (GreaseweazleGUI .NET, MIT). Einziger Ertrag: 82-Zyl-Diskdef amiga.amigados.plus als Feld-Beleg fuer SCOUT-G1 (Plain-ADF 81-83 Zyl., Referenz WinUAE disk.cpp) — out/ADFDiskBox.gutachten.md"
+  },
+  "geraldholdsworth/DiscImageManager": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus 9 (2026-08-28, Eigentuemer-Auftrag Acorn): GPL-3.0 (GELB) — nur Spec+Oracle. Ertrag: DIMConsole als einziges bekanntes hardwarefreies Acorn-FS-Hash-Oracle (savecsv CRC32/MD5 je Datei, floptool-FS ohne Acorn); ADFS-Spec-Quellen (Old/New Map, Zone-Checks, 8 Broken-Codes, SEQ/INT/MUX-Interleave mit Auto-Erkennung); 2 Korrektheitsbefunde im eigenen Baum (uft_adl.c erfundenes 'DFS Large' 327680=ADFS M statt L 655360; groessenexakte Probes lehnen DIMs gekuerzte Referenz-Blanks ab). 5 Vorschlaege SCOUT-25..29 — out/DiscImageManager.gutachten.md"
+  },
+  "monkeyman79/dfsimage": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus (2026-08-28, Eigentuemer-Auftrag Acorn, zweite Hand neben DIM): MIT (GRUEN) + vendortes wildparse (PSF-2.0, Hand-Einstufung, Eigentuemer-Vorlage). Ertrag: zweites, DIM-unabhaengiges Acorn-DFS-Datei-Hash-Oracle (digest -m data -a sha256, list {sha1}, index -f json) + MIT-Korpus-Erzeugung (create/format/convert linear<->interleaved); Bereitschafts-Messung im Baum: drei tuerlose Acorn-Module (uft_bbc_dfs.c 5 Exporte/0 Aufrufer, ssd_dsd.c Header inkludiert niemand, uft_ssd_parser_v2.c eigenes main) und dreifache Katalog-Implementierung; Verhaltens-Deltas 18-Bit-Sign-Extension + lineare DSD-Ablage. Kein Watford, MMB=Fundus. 4 Vorschlaege (vorlaeufig SCOUT-38..41) - out/dfsimage.gutachten.md"
+  },
+  "cmosher01/Apple-II-Disk-Tools": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DEPRECATED, aber to_woz2 = einziger Konsolen-DSK->WOZ2-Oracle-Kandidat; GPL-3.0 Konzept/Oracle"
+  },
+  "cmosher01/DskToWoz2": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DSK->WOZ2-Verhaltens-Spec ausgeschrieben; GUI-only, GPL-3.0, kein Port; Nibblize stammt aus CiderPress (BSD-3)"
+  },
+  "Datamuseum-DK/FloppyTools": {
+   "status": "bewertet",
+   "grund": "Gutachten 2026-08-28 (out/FloppyTools.gutachten.md): BSD-2, Archiv-Werkzeug Datamuseum.dk; Upstream auf Codeberg (GitHub-Spiegel eingefroren 2026-03-25). 4 Vorschlaege: DG-Nova-Widerspruch, KryoFlux-Zweithand-Oracle, Q1-Multi-Lesungs-Korpus, Zilog-Referenz. M2FM-Decoder + 8 fehlende Formate im Fundus (Moratorium)."
+  },
+  "dmsc/mkatr": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): GPL-2.0-or-later (26/26 Datei-Koepfe), lsatr mit MinGW gebaut (sha256 dc7f9004..) und auf Korpus-Paar gelaufen (rc=0, DOS 2.0s 707/707 frei — Korpus-ATR ist LEER); alle drei Oracle-Fragen JA, unabhaengige Hand (0 atrcopy-Treffer). Vorschlaege SCOUT-64..66 (vorlaeufig): Registry-Eintrag lsatr (B2), DOS-2-Korpus-Trio, DD-Voll-Boot-Spec"
+  },
+  "robmcmullen/atrip": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): als ATR-Oracle AUSGESCHLOSSEN — zirkulaer (README.rst:6 'The successor to atrcopy', gleiche Hand wie Korpus-Erzeuger, fuenfte Registrierungsfrage MF-644) UND gemessen nicht lauffaehig (import scheitert an pkg_resources unter Python 3.13; np.fromstring 9x; Beta 0.5.0, letzter Commit 2019). Wert: samples/dos_{sd,ed,dd}_test1.atr als nicht-leere DOS-2-Fixtures (SCOUT-65), Hashes im Gutachten"
+  },
+  "lipro-cpm4l/libdsk": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus libdsk (2026-08-28, out/libdsk.gutachten.md): LGPL-2.0-or-later (GRUEN, 134/150 Dateien mit or-later-Kopf; ldbs.c MIT, blast.c zlib, crc16/crctable ohne Kopf). dskid/dsktrans/dskform mit MinGW hand-gebaut (Rezept im Gutachten), 13 Formate WRITE+ROUNDTRIP byteidentisch gemessen; deckt 7 der 12 libdsk-staemmigen T3-Formate (edsk/jv3/apridisk/myz80/nanowasp/logical/qrst) + seltene TD0/CQM-Schreiber. MF-648-Entlastungsbefund: kein 26x128-Eintrag, keine der 6 Systemzuschreibungen, dskid lehnt 256256-Zufall ab ('Bad format'). 31 UFT-Dateien mit libdsk-Attribution ohne Lizenzangabe -> SCOUT-62. Fork veraltet (1.5.12/2015; Upstream seasip 1.5.22, drvmgt/drvopus nur dort). 5 Vorschlaege (vorlaeufig SCOUT-59..63)."
+  },
+  "jfdelnero/HxCFloppyEmulator": {
+   "status": "bewertet",
+   "grund": "Gutachten 2026-08-28: LIZ-1-Kernfrage beantwortet (GPL-2.0-or-later, kein GPL-2.0-only; drei Baum-Attributionen eigenstaendig, Idiom-Audit 0 Treffer beidseitig); hxcfe v2.16.15.2 gebaut+gemessen als Oracle (ADF->HFE->ADF byte-identisch, kein G64/D64); AmigaDOS-MFM-Encoder amiga_mfm_track.c:356 GPLv2+ portierbar (MF-539); B4-Fixture-Rezept gemessen. SCOUT-49..52"
+  },
+  "OpenCBM/OpenCBM": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus OpenCBM (2026-08-28, out/OpenCBM.gutachten.md): GPL-2.0-or-later (GRUEN); M.4-Befunde am Original bestaetigt, MF-301-HAL deckungsgleich; Rest-M3.2 = DOS-Kommandoschicht (libd64copy/cbmctrl als Referenz, Fundus)"
+  },
+  "OpenCBM/libcbmimage": {
+   "status": "bewertet",
+   "grund": "Gutachten Zyklus OpenCBM (2026-08-28): GPL-2.0 (GRUEN); cbmimage.exe mit CC=gcc gebaut+gelaufen (dir/bam auch auf UFT-Korpus-D64 und D1M); Oracle-Kandidat SCOUT-55/56 (40-Spur-BAM-Zweithand fuer A5, CMD-FD-Fixtures 829440/1658880/3317760)"
+  },
+  "alpine9000/adf-tools": {
+   "status": "bewertet",
+   "grund": "Gutachten adf_zweitmeinung: Amiga-natives trackdisk-Werkzeug (m68k-amigaos), kein Host-Oracle; ROT + Commodore-Ableitung"
+  },
+  "dschwen/adfrescue": {
+   "status": "bewertet",
+   "grund": "Gutachten adf_zweitmeinung: ADFlib-unabhaengiges, skriptbares OFS-Extraktions-Oracle, gebaut+byteidentisch zu xdftool gemessen; KEINE Lizenzdatei (ROT) -> Eigentuemer-Vorlage SCOUT-71"
+  },
+  "wbommel/ADFCommander": {
+   "status": "bewertet",
+   "grund": "Gutachten adf_zweitmeinung: MIT, aber AmigaDOS-Faehigkeit ~0 (Bootblock-Parse verworfen, RootBlock leer, Konsole hartkodiert+interaktiv)"
+  },
+  "michaelengel/mfsreader": {
+   "status": "bewertet",
+   "grund": "Gutachten mac_fs_dfxml: PD; MFS-Verzeichnis-Oracle (Extraktion wegen 12-Bit-Karten-Bug readmfs.c:207 ausgeschlossen); sample.img als dc42-Korpuskandidat (SCOUT-88/89)"
+  },
+  "cul-it/hfs2dfxml": {
+   "status": "bewertet",
+   "grund": "Gutachten mac_fs_dfxml: BSD-3; hfsutils-Subprocess-Wrapper, nichts portierbar; DFXML-1.1.1-Feldliste als Fundus (bewegt keine Kennzahl)"
+  },
+  "andete/disk-peek": {
+   "status": "bewertet",
+   "grund": "Gutachten mac_fs_dfxml: MIT; Browser-Viewer; FAT12-Cross-Link/Contiguous-Fallback als Schadensfall-Fundus nach VFS-P1, keine Kennzahl"
+  },
+  "ggnkua/Jacknife": {
+   "status": "bewertet",
+   "grund": "Gutachten atari_st_werkzeuge: SamariTan-Oracle gemessen (ST/MSA/DIM je-Datei), DIM-Magic-Rotbeweis fuer dim_atari; Zone ROT (keine Lizenzdatei), Eigentuemer-Vorlage U-1"
+  },
+  "suiryc/atari-st-tools": {
+   "status": "bewertet",
+   "grund": "Gutachten atari_st_werkzeuge: vierte unabhaengige MSA-Beschreibung; Oracle-Bau gescheitert (sbt fehlt, suiryc-scala-core 0.0.2-SNAPSHOT nur mavenLocal); GPL-3.0 GELB"
+  },
+  "vinz6751/st2disk": {
+   "status": "bewertet",
+   "grund": "Gutachten atari_st_werkzeuge: TOS-Programm fuer Atari-Hardware (XBIOS Flopwr), auf PC weder baubar noch nuetzlich, keine Lizenzdatei; irrelevant"
+  },
+  "Zirias/c64_tool_mkd64": {
+   "status": "bewertet",
+   "grund": "Gutachten cbm_erzeuger: 40-Spur-D64-Fixture-Erzeuger (Dolphin 0xAC/Speed 0xC0, gemessen); gleiche Hand wie lib1541img -> nie Oracle fuer A5; Eigenlizenz -> Zone PRUEFEN"
+  },
+  "beddy70/DiskToolC64": {
+   "status": "bewertet",
+   "grund": "Gutachten cbm_erzeuger: dritte Hand fuer 35-Spur-Dateiinhalte (127-B-Probe korrekt), aber keine Lizenzdatei (ROT) und keine Kennzahl bewegt -> Fundus"
+  },
+  "markusC64/floppydiskimagetool": {
+   "status": "bewertet",
+   "grund": "Gutachten cbm_erzeuger: D64->G64->D64 35trk byteidentisch gemessen, 40-Spur-Mastering still unvollstaendig; All rights reserved + geschlossene DLL (ROT); G64->D64 hat Matrix-Eintrag -> Fundus"
+  },
+  "hpingel/pyAccess1581": {
+   "status": "bewertet",
+   "grund": "GPL-3.0, 856 Zeilen Python, DrawBridge-Linie (Rob-Smith-Serienprotokoll). Drei Fundus-Posten, 0 Kennzahl-Bewegung: (1) DrawBridge-Protokoll-Zweitdoku (Verhaltens-Spec, haengt am bestehenden ArduinoFloppyDiskReader-Eintrag); (2) hardwarefreier Simulationsmodus als Decoder-Oracle, gemessen deterministisch, aber d81 schon T1b und kein Abbild-Leseweg -> keine zweite Hand fuer uft_cbmdos; (3) mitgelieferte Real-Aufnahme 160 Spuren, Nutzlast komplett 0xF6 (leer formatiert). Gutachten out/pyAccess1581.gutachten.md, 2026-08-30"
   }
+ }
 }

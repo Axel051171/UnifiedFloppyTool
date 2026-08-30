@@ -144,17 +144,20 @@ def lizenz() -> list[str]:
                  f"(`docs/QUARANTINE.md`)")
 
     z += ["", "### Gesichtete Fremd-Repos, nach Lizenzzone", ""]
-    w = WURZEL / "tools" / "uft-scout" / "work"
+    # MF-705: Quelle ist die VERFOLGTE `zonen.json`, nicht mehr die
+    # gitignorierten Messungen unter `tools/uft-scout/work/`. Die waren
+    # in CI nicht vorhanden — die Tabelle waere dort leer gewesen und
+    # das Frische-Tor 44 dauerhaft rot. Ein Tor, das immer rot ist, wird
+    # abgeschaltet, und dann faellt weg, wofuer es gebaut war.
     zonen: dict[str, list[str]] = {}
-    if w.is_dir():
-        for f in sorted(os.listdir(w)):
-            if not f.endswith(".messung.json"):
-                continue
-            try:
-                d = json.loads((w / f).read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            zonen.setdefault(d.get("lizenz_zone", "?"), []).append(f[:-13])
+    zp = WURZEL / "tools" / "uft-scout" / "data" / "zonen.json"
+    if zp.is_file():
+        try:
+            for name, zn in json.loads(
+                    zp.read_text(encoding="utf-8")).get("zonen", {}).items():
+                zonen.setdefault(zn, []).append(name)
+        except ValueError:
+            pass
     for zn in ("GRUEN", "GELB", "ORANGE", "PRUEFEN", "ROT", "?"):
         if zn not in zonen:
             continue
