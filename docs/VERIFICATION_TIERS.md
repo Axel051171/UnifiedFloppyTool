@@ -64,7 +64,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
-| `do` | **T3** | `test_apple_do_po_bounds`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
+| `do` | **T3** | `test_apple_do_po_bounds`, `test_do_po_probe_ignores_content`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
 | `edsk` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
@@ -86,7 +86,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `northstar` | **T3** | — | — | — | — |
 | `opus` | **T3** | — | — | — | — |
 | `pdp` | **T3** | — | — | — | — |
-| `po` | **T3** | `test_apple_do_po_bounds`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | — |
+| `po` | **T3** | `test_apple_do_po_bounds`, `test_do_po_probe_ignores_content`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_floppy_formats`, `test_st_plugin` | — | — | — |

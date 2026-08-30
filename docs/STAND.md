@@ -41,7 +41,7 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5269** Zeilen in **72** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5365** Zeilen in **73** Abschnitten.
 
 **offen** (5):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
@@ -50,11 +50,12 @@ Stand: 2026-08-30
 - FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
 - ORAK-2 — `to_woz2`: das erste Oracle, das baut, läuft und dessen Ausgabe wir erkennen (MF-711)
 
-**wartet-eigentuemer** (4):
+**wartet-eigentuemer** (5):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
 - ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
 - Drei Eigentümer-Handgriffe, die Fundus in Nutzung verwandeln (MF-695)
 - FMT-16 — `86f` verfehlt die Spezifikation an vier Stellen und kündigt es als „SUPPORTED" an (MF-707)
+- FMT-17 — `do` und `po` entscheiden ohne hinzusehen (MF-713)
 
 **ohne Status-Marke: 63** — noch nicht gesichtet, weder offen noch erledigt. Die Marke wird von Hand vergeben (`docs/OPEN_ITEMS.md`, Abschnitt Status-Marke); ein Prosa-Scan waere gemessen schlechter als die Luecke.
 

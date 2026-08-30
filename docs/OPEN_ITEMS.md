@@ -5263,4 +5263,99 @@ betreten. Dieselbe Klasse wie die 32 Testdateien aus MF-596. Berichtigt.
 **Offen bleiben** die Schritte 2–4 (Hebung `do`, `d13`, dann der
 Wandlungspfad). Und die fünfte Frage steht ehrlich im Eintrag: eine
 zweite unabhängige Hand für WOZ 2.0 gibt es hier nicht — der Abgleich
-stützt sich auf die Spezifikation, nicht auf ein zweites Werkzeug.
+stützt sich auf die Spezifikation, nicht auf ein zweites Werkzeug.
+
+## FMT-17 — `do` und `po` entscheiden ohne hinzusehen (MF-713)
+
+<!-- status: wartet-eigentuemer(2026-08-30) -->
+
+**Kennzahl:** **ungeprüfte Formate (T3) ↓** — `do` und `po` stehen beide
+auf T3. Der Rotbeweis hebt nichts; er macht aus einer stillen
+Falschaussage eine gemessene.
+
+**Anlass:** Schritt 2 aus ORAK-2 (`do` heben). Vor dem Differenzlauf
+stand die Messung — und die traf eine andere, größere Sache.
+
+### Der Befund
+
+Ein Apple-II-Abbild mit 35 × 16 × 256 ist **143 360 Byte** groß, ob die
+Sektoren in **DOS-** oder in **ProDOS-Reihenfolge** liegen. Die
+Reihenfolge entscheidet, wo jedes Byte landet; die Größe verrät sie
+nicht. Beide Sonden entscheiden trotzdem allein an ihr:
+
+```c
+src/formats/do/uft_do.c   do_probe(...) { (void)d; (void)s;
+                            if (fs == DO_SIZE) { *c = 60; return true; } }
+src/formats/po/uft_po.c   po_probe(...) { (void)d; (void)s;
+                            if (fs == PO_SIZE) { *c = 55; return true; } }
+```
+
+`DO_SIZE` und `PO_SIZE` sind **beide 143360**. Der Inhalt wird
+ausdrücklich weggeworfen. Gemessen
+(`tests/test_do_po_probe_ignores_content.c`):
+
+```
+Abbild A (DOS 3.3 im Inhalt)    do: JA (60)   po: JA (55)
+Abbild B (ProDOS im Inhalt)     do: JA (60)   po: JA (55)
+143360 Byte Nullen              do: JA (60)
+```
+
+Zwei Abbilder, die der Inhalt eindeutig trennt, bekommen **dasselbe**
+Urteil. Der Gleichstand wird an zwei fest verdrahteten Zahlen gebrochen:
+**60 > 55**. `do` gewinnt immer — ein ProDOS-geordnetes Abbild wird
+still in DOS-Reihenfolge gelesen, jeder Sektor am falschen Platz, ohne
+Warnung.
+
+Das ist die FMT-15-Klasse, hier verschärft: **zwei** Plugins auf
+**denselben** Bytes, entschieden von einer Konstanten.
+
+### Dass es auch anders geht, ist belegt
+
+In DOS-Reihenfolge liegt die VTOC auf Spur 17, Sektor 0 — Versatz
+`0x11000`. Zwei Bytes sind für DOS 3.3 festgelegt:
+
+| Versatz | Bedeutung | Wert |
+|---|---|---|
+| `0x11001` | Katalog-Spur | `0x11` (17) |
+| `0x11027` | max. Spur/Sektor-Paare | `0x7A` (122) |
+
+**Quelle 1:** *Beneath Apple DOS* (Worth/Lechner), VTOC-Aufbau.
+**Quelle 2, unabhängig:** `cmosher01/DskToWoz2`, `conversion.cpp:47-62`
+prüft **genau diese beiden Versätze auf genau diese beiden Werte** (und
+für 13 Sektoren `0x0DD01`/`0x0DD27` = 17 × 13 × 256). Übernommen wurden
+Tatsachen über ein Format, kein Ausdruck — GPL-3.0, Zone GELB, kein Port.
+
+**Zwei Bytes hätten gereicht.** Keines wird gelesen.
+
+### Die Eigentümer-Entscheidung
+
+Eine inhaltsbasierte Unterscheidung ändert, **welches Plugin eine Datei
+beansprucht** — Verhalten an der Registry-Tür, kein Tagesrand. Sie
+gehört in einen eigenen Schritt, mit diesem Rotbeweis als Grundlage;
+dieselbe Ordnung wie bei `hardsector` (MF-706) und `86f` (MF-707/708).
+
+Was dafür spricht, es zu tun: die Referenz ist benannt und
+zweitbestätigt, der Rotbeweis steht, und die Änderung ist klein.
+Was zu bedenken ist: eine Datei, die heute `do` beansprucht, könnte
+danach `po` beanspruchen — für Bestandsabbilder ohne VTOC an der
+DOS-Stelle ist das die *Korrektur*, aber es ist eine Verhaltensänderung.
+
+### Nicht Gegenstand dieses Eintrags
+
+`src/formats/apple/prodos_po_do.c:71` entscheidet die Reihenfolge am
+**ersten Buchstaben der Dateiendung** (`ext[1]=='d'`) — schlimmer als
+die Größe: ein `.dsk` wird immer DOS, ein `.img` immer ProDOS.
+Gemessen hat die Datei aber **0 Aufrufer**, **keine** Plugin-Struktur
+und **keinen** Registry-Eintrag; der Fehler ist dort **latent**. Beide
+Türen wurden geprüft — Symbol *und* Funktionszeiger, die Lehre aus
+MF-706. Sie gehört in die ORPH-5-Klasse (Anker / Tür / Rückzug).
+
+### Was das für ORAK-2 Schritt 2 heißt
+
+Der geplante Differenzlauf (WOZ → dekodieren → Sektoren vergleichen)
+ist **heute nicht fahrbar**: der Baum hat gemessen **keinen
+6-and-2-Dekoder** (`grep` über `src/` und `include/` findet Apple-GCR
+nur als CRC-Tabellen-Treffer). Das ist eigener Bau im Decoder-Layer und
+fällt unter die EINFRIER-REGEL — erlaubt nur mit benannter Referenz,
+Rotbeweis zuerst und Referenz im Header. Dieser Eintrag liefert das
+erste Drittel davon.

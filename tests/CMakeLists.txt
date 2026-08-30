@@ -1397,6 +1397,12 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
+    elseif(${test_name} STREQUAL "test_do_po_probe_ignores_content")
+        # MF-713: beide Sonden entscheiden allein an der Groesse, und die
+        # ist bei do und po identisch (143360). Darum beide Quellen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
+            ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c)
     elseif(${test_name} STREQUAL "test_hardsector_geometry")
         # MF-706: Hartsektor-Geometrien gegen zwei externe Quellen.
         # Der Leser hat KEINEN Aufrufer (10 Exporte, alle WAISE) — der
