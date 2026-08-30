@@ -24,13 +24,63 @@ extern const uft_format_plugin_t uft_format_plugin_g64;
  *
  * Uses the g64_to_d64() converter from uft_d64_g64.h.
  */
+/* ── Die Optionen des C64-Kodierers, EINMAL uebersetzt (MF-695) ───────
+ *
+ * `convert_options_t` (der GCR-Kodierer) und `uft_convert_options_ext_t`
+ * (die oeffentliche Wandlungs-API) waren bis MF-695 nicht verbunden: der
+ * Kodierer bekam immer `convert_get_defaults()`, und keine einzige
+ * Einstellung des Aufrufers erreichte ihn. Gemessen in
+ * `tests/test_convert_options_reach_encoder.c`: der Kodierer reagiert auf
+ * seine eigenen Parameter (gap_fill 0x55 vs 0xAA aendert die Bytes),
+ * aber **0 von 9** Feldern der oeffentlichen API taten es.
+ *
+ * Uebersetzt wird nur, was eine BELEGTE Bedeutung hat — gemessen an
+ * `src/formats/c64/uft_d64_g64.c`:
+ *
+ *   extended_tracks     `:975`/`:1093`  num_tracks = 42 statt num_tracks
+ *   include_halftracks  `:976`/`:1099`  g64_create(..., halftracks)
+ *   gap_fill            `:1006`/`:1135` Fuellbyte je Spur
+ *   generate_errors     `:1328`/`:1423` legt die D64-Fehlerkarte an
+ *   align_tracks        KEIN LESER
+ *   sync_length         KEIN LESER
+ *
+ * Die letzten beiden stehen in der Struktur und werden nirgends gelesen —
+ * dieselbe Klasse wie OPT-1, eine Schicht tiefer. Sie bekommen darum
+ * KEINE erfundene Zuordnung; das waere eine Einstellung, die anzukommen
+ * scheint und nichts tut.
+ *
+ * `generate_errors` kann hier nur STAERKER werden, nie schwaecher: die
+ * Vorgabe ist `true`, die Fehlerkarte wird heute also immer angelegt.
+ * `preserve_errors` aus der oeffentlichen API ist per Vorgabe `false` —
+ * eine 1:1-Zuweisung wuerde die Karte fuer jeden Aufrufer abschalten, der
+ * das Feld nicht setzt. Das waere stiller Datenverlust an einer Stelle,
+ * die vorher sicher war. Forensik schlaegt Symmetrie.
+ */
+static convert_options_t uftc_c64_encoder_options(
+        const uft_convert_options_ext_t* opts) {
+    convert_options_t conv;
+    convert_get_defaults(&conv);
+    if (!opts) return conv;
+
+    /* Mehr als 35 Spuren angefordert => die 40/42-Spur-Fassung. 35 ist
+     * die 1541-Norm; alles darueber ist genau das, was
+     * `extended_tracks` erzeugt. */
+    if (opts->target_geometry.cylinders > 35) {
+        conv.extended_tracks = true;
+    }
+    /* Nur verstaerken, nie abschalten — siehe Kopfkommentar. */
+    if (opts->preserve_errors) {
+        conv.generate_errors = true;
+    }
+    return conv;
+}
+
 uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
                                       const char* src_path,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,
                                       uft_convert_result_t* result) {
-    convert_options_t conv_opts;
-    convert_get_defaults(&conv_opts);
+    convert_options_t conv_opts = uftc_c64_encoder_options(opts);
     convert_result_t conv_result;
     memset(&conv_result, 0, sizeof(conv_result));
     d64_image_t* d64 = NULL;
@@ -116,13 +166,28 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
  * image now converts in full. No 41/42-track reference image exists in the
  * corpus, so that path is reasoned, not tested.
  */
-uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
-                                      const char* src_path,
-                                      const char* dst_path,
-                                      const uft_convert_options_ext_t* opts,
-                                      uft_convert_result_t* result) {
-    convert_options_t conv_opts;
-    convert_get_defaults(&conv_opts);
+/* MF-695: Speicher-Kern. Bis dahin stand die D64->G64-Kette ZWEIMAL im
+ * Baum — hier als Dateiwandler und ein zweites Mal, von Hand nachgebaut,
+ * in `uft_convert_memory()`. Der Kommentar an
+ * `uft_format_convert_dispatch.c:973` nannte die Doppelung seit MF-655
+ * und ihre Ursache: MF-567.
+ *
+ * Gemessen erzeugten beide Fassungen dieselben Bytes — die Doppelung war
+ * ein RISIKO, keine Divergenz. Sie wurde eine, sobald die
+ * Optionen-Uebersetzung dazukam: sie haette nur an einer der beiden
+ * Stellen gewirkt. Darum erst vereinigen, dann uebersetzen.
+ *
+ * Die Form ist die des Hauses (`uftc_atr_to_xfd_mem` seit MF-655): ein
+ * Kern, der einen Puffer liefert, und eine Huelle, die ihn schreibt. */
+uft_error_t uftc_d64_to_g64_mem(const uint8_t* src_data, size_t src_size,
+                                 const char* src_path,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size) {
+    if (!out_data || !out_size) return UFT_ERR_NULL_POINTER;
+    *out_data = NULL;
+    *out_size = 0;
+    convert_options_t conv_opts = uftc_c64_encoder_options(opts);
     convert_result_t conv_result;
     memset(&conv_result, 0, sizeof(conv_result));
     g64_image_t* g64 = NULL;
@@ -168,20 +233,37 @@ uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
         return UFT_ERR_FORMAT;
     }
 
-    uftc_report_progress(opts, 80, "Writing G64 output");
+    uftc_report_progress(opts, 80, "G64-Spurdaten serialisieren");
 
-    rc = g64_save(dst_path, g64);
-    if (rc == 0) {
-        result->success = true;
-        result->tracks_converted = conv_result.tracks_converted;
-        result->sectors_converted = conv_result.sectors_converted;
-    } else {
-        result->error = UFT_ERR_IO;
-    }
-
+    rc = g64_save_buffer(g64, out_data, out_size);
     g64_free(g64);
+    if (rc != 0 || !*out_data) {
+        result->error = UFT_ERR_IO;
+        uftc_add_warning(result, "G64-Serialisierung fehlgeschlagen (%d)", rc);
+        return UFT_ERR_IO;
+    }
+    result->tracks_converted = conv_result.tracks_converted;
+    result->sectors_converted = conv_result.sectors_converted;
+    return UFT_OK;
+}
+
+/* Die Datei-Huelle: Kern + schreiben. Sie enthaelt KEINE Wandlungslogik,
+ * damit es keine zweite geben kann (MF-695). */
+uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
+                                      const char* src_path,
+                                      const char* dst_path,
+                                      const uft_convert_options_ext_t* opts,
+                                      uft_convert_result_t* result) {
+    uint8_t* buf = NULL;
+    size_t n = 0;
+    uft_error_t e = uftc_d64_to_g64_mem(src_data, src_size, src_path,
+                                         opts, result, &buf, &n);
+    if (e != UFT_OK) return e;
+    uftc_report_progress(opts, 90, "G64 schreiben");
+    e = uftc_finish_or_refuse(result, dst_path, buf, n, "G64-Spurdaten");
+    free(buf);
     uftc_report_progress(opts, 100, "D64->G64 complete");
-    return result->success ? UFT_OK : result->error;
+    return e;
 }
 
 // ============================================================================

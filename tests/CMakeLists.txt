@@ -992,6 +992,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_convert_roundtrip_lossless"
            OR ${test_name} STREQUAL "test_convert_identity_lossless"
            OR ${test_name} STREQUAL "test_convert_atr_xfd"
+           OR ${test_name} STREQUAL "test_convert_options_reach_encoder"
            OR ${test_name} STREQUAL "test_capability_manifest"
            OR ${test_name} STREQUAL "test_plugin_capability_api"
            OR ${test_name} STREQUAL "test_disk_metadata_variant"

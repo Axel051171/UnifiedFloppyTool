@@ -210,6 +210,17 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
                                      const uft_convert_options_ext_t* opts,
                                      uft_convert_result_t* result);
 
+/* MF-695: der Speicher-Kern von D64->G64. `uft_convert_memory()` ruft
+ * IHN statt einer eigenen, von Hand nachgebauten Kette — die stand seit
+ * MF-655 als Doppelung im Baum, mit einem Kommentar, der ihre Ursache
+ * (MF-567) benannte. Wer einen neuen Wandler eintraegt, traegt ihn hier
+ * ein und nicht zweimal. */
+uft_error_t uftc_d64_to_g64_mem(const uint8_t* src_data, size_t src_size,
+                                 const char* src_path,
+                                 const uft_convert_options_ext_t* opts,
+                                 uft_convert_result_t* result,
+                                 uint8_t** out_data, size_t* out_size);
+
 uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
                                      const char* src_path,
                                      const char* dst_path,
