@@ -5222,4 +5222,45 @@ Sektorinhalte byteweise zurück — und der steht aus.
 
 **Fundus ohne Auftrag** (benannt, nicht verfallen): das
 META-Provenienz-Muster aus DskToWoz2 (Quell-CRC im Abbild) und
-`a2catalog` als DOS-3.3-Katalog-**Generator**.
+`a2catalog` als DOS-3.3-Katalog-**Generator**.
+
+### Nachtrag MF-712 — Schritt 1 erledigt, mit zwei Berichtigungen
+
+`to_woz2` ist registriert: `tests/differential/oracles.py` (9. Eintrag),
+`docs/ORACLES.md` mit eigenem Abschnitt, Eichung in
+`tests/differential/test_oracles.py`. Registry-Selbsttest grün,
+ctest 287/287.
+
+**Berichtigung 1 — die Stufe.** Oben stand „`do` T3 → **T2**". Die
+Leiter aus `scripts/gen_verification_tiers.py` sagt etwas anderes:
+T1b ist das *Fremdwerkzeug-Abbild*, T2 die *Spec-Verifikation des
+Byte-Layouts*. `to_woz2` liefert ein Fremdwerkzeug-Abbild, also
+**T1b** — und T1b steht auf dieser Leiter **über** T2
+(`order = {"T1": 0, "T1b": 1, "T2": 2, "T3": 3}`). Die Korrektur ist
+also eine Verbesserung, keine Rücknahme.
+
+**Berichtigung 2 — der Anker ist nicht der Binärhash.** Der Vorschlag
+oben nannte „Binary-SHA". Gemessen: zwei unabhängige Baue aus demselben
+Quellstand `639dc1c` ergaben **verschiedene** Binärhashes
+(`434cfbda…` / `4dbb8def…`) und **byteidentische** Ausgabe
+(`0015aa1e…` / `a5ff575f…`). Ein Binärhash hätte das Oracle nach jedem
+Neubau zu einem anderen gemacht. Zitierfähig ist **Quellstand +
+Baurezept + Ausgabe-SHA**; der Manifest-Hash bleibt eine *Bau*-Angabe.
+
+**Der Überlauf ist real und feuert.** Der Scout meldete ihn als
+Randnotiz. Gemessen: mit einem **absoluten** Pfad bricht `to_woz2` mit
+`0xC0000374` (STATUS_HEAP_CORRUPTION) ab — die erste Fassung des
+Eich-Tests hat ihn ausgelöst. Benutzungsregel jetzt am Eintrag: **immer
+aus dem Arbeitsverzeichnis mit relativen Namen rufen.**
+
+**Und ein Test, der nicht scheitern konnte.** `test_a_missing_tool_
+gives_an_incomplete_manifest_entry` kannte den Fall
+`version_is_unaskable` nicht und kippte, sobald zum ersten Mal
+überhaupt ein Oracle auflöste. Er war nie aufgefallen, weil auf dieser
+Maschine **keines** liegt — der Zweig `path is not None` wurde nie
+betreten. Dieselbe Klasse wie die 32 Testdateien aus MF-596. Berichtigt.
+
+**Offen bleiben** die Schritte 2–4 (Hebung `do`, `d13`, dann der
+Wandlungspfad). Und die fünfte Frage steht ehrlich im Eintrag: eine
+zweite unabhängige Hand für WOZ 2.0 gibt es hier nicht — der Abgleich
+stützt sich auf die Spezifikation, nicht auf ein zweites Werkzeug.

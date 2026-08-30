@@ -305,6 +305,75 @@ REGISTRY: tuple[Oracle, ...] = (
                 "`License-Expression`); nur die AUSGABE wird verglichen, "
                 "es wandert kein Code ein",
     ),
+    Oracle(
+        name="to_woz2",
+        env="TO_WOZ2",
+        exes=("to_woz2", "to_woz2.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Apple-II-Sektorabbild -> WOZ 2.0: `to_woz2 <ein.dsk|.d13> "
+            "<aus.woz>`. Es SYNTHETISIERT den GCR-Bitstrom (6-and-2 fuer "
+            "16 Sektoren, 5-and-3 fuer 13) und ist damit die fremde Hand "
+            "fuer genau das, was dieser Baum gemessen NICHT hat: einen "
+            "gebauten GCR-Encoder (`uft_nib_parser_v2.c:13` sagt selbst "
+            "\"decoding\"). Damit ist es der Erzeuger von "
+            "Fremdwerkzeug-Abbildern fuer `do`, `po` und `d13` — auf der "
+            "Leiter aus `scripts/gen_verification_tiers.py` ist das "
+            "**T1b** (cross-tool image, read back by UFT), NICHT T2. "
+            "T1b steht dort ueber T2. "
+            "GEMESSEN, und das ist der Grund fuer "
+            "`version_is_unaskable`: das Werkzeug hat weder `--version` "
+            "noch `-V`; der argumentlose Aufruf gibt seinen "
+            "Gebrauchstext und rc=0. "
+            "DER ANKER IST NICHT DER BINAERHASH. Zwei unabhaengige Baue "
+            "aus demselben Quellstand (Scout-Bau und Gegenbau) haben "
+            "VERSCHIEDENE Binaerhashes (`434cfbda...`, `4dbb8def...`) "
+            "und liefern BYTEIDENTISCHE Ausgabe (16-Sektor "
+            "`0015aa1e20247177f48a...`, 13-Sektor "
+            "`a5ff575f7f82592c80e6...`). Ein Binaerhash pinnt hier den "
+            "Uebersetzer, nicht das Werkzeug. Zitierfaehig ist der "
+            "QUELLSTAND (Commit `639dc1c`) plus das Baurezept aus "
+            "`origin` plus die AUSGABE-SHA fuer eine benannte Eingabe. "
+            "Der Hash im Manifest sagt weiterhin, WELCHER BAU lief — das "
+            "ist eine Bau-Angabe, keine Werkzeug-Identitaet. "
+            "FUENFTE FRAGE (MF-644), ehrlich beantwortet: eine zweite, "
+            "unabhaengige Hand fuer WOZ 2.0 gibt es hier NICHT. Der "
+            "Abgleich stuetzt sich auf die veroeffentlichte "
+            "WOZ-2.0-Spezifikation (applesaucefdc.com) — eine Spec, kein "
+            "zweites Werkzeug. Ein Fehler, den `to_woz2` aus der Spec "
+            "uebernommen haette, faellt damit NICHT auf. "
+            "FALLSTRICK, gemessen und nicht theoretisch (MF-712): mit "
+            "einem ABSOLUTEN Pfad bricht `to_woz2` mit "
+            "**0xC0000374 (STATUS_HEAP_CORRUPTION)** ab — das ist der "
+            "1-Byte-Ueberlauf in `parse_filename` "
+            "(`to_woz2.c:367-369`), und die erste Fassung des "
+            "Eich-Tests hat ihn ausgeloest. BENUTZUNGSREGEL: immer aus "
+            "dem Arbeitsverzeichnis mit RELATIVEN Namen rufen "
+            "(`cwd=<verzeichnis>`, Argumente `e.dsk e.woz`). So "
+            "gemessen: rc=0, 252416 Byte, Kopf `WOZ2 FF 0A 0D 0A`. "
+            "Wer das Werkzeug mit fremden Dateinamen fuettert, fuettert "
+            "einen Ueberlauf. "
+            "WEITERE GRENZEN, gemessen: kein `.po` (nur DSK/DO/D13); "
+            "der Kopf-CRC bleibt 0 (spec-legal)."),
+        origin="https://github.com/cmosher01/Apple-II-Disk-Tools "
+               "(Charles Mosher), Commit `639dc1c`, vom Upstream als "
+               "DEPRECATED gekennzeichnet. Autotools werden NICHT "
+               "gebraucht; hier direkt gebaut, gcc 13.1.0 (MinGW), rc=0, "
+               "0 Warnungen, aus `src/`: "
+               "`gcc -O2 -o to_woz2 to_woz2.c nibblize_4_4.c "
+               "nibblize_5_3.c nibblize_5_3_alt.c nibblize_5_3_common.c "
+               "nibblize_6_2.c ctest/ctest.c -I.` "
+               "(das ctest-Submodul haengt an einem toten `git://` und "
+               "wird so umgangen)",
+        licence="GPL-3.0 (`COPYING`, woertlicher Text; Zone GELB) — kein "
+                "Port zulaessig, verglichen wird ausschliesslich die "
+                "AUSGABE, es wandert kein Code ein. Nachgelagerte "
+                "Attribution im Quellkopf: `nibblize` \"Based on code by "
+                "Andy McFadden\" (CiderPress, BSD-3) — eine zweistufige "
+                "Kette, die nur bei einem Port zu klaeren waere",
+    ),
     # NICHT registriert: `adfrescue`. Die Unabhaengigkeits-Messung oben
     # steht, aber der Eintrag haengt an einer Eigentuemer-Entscheidung —
     # das Repo hat **keine** Lizenzdatei (Zone ROT: alle Rechte

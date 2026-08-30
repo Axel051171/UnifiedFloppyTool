@@ -165,13 +165,14 @@ Schreck.
 | `floptool` (`flophashes`) | **gepolstert** (254 B bei einem CBM-Block) | 2026-08-29, MF-684 | Korpus-D64, `UFT MARKER` |
 | `xdftool` (amitools, seit MF-693 registriert) | **roh** | 2026-08-29 MF-685, nachgemessen 2026-08-30 | Korpus-ADF, `marker.txt` — der eigene Leser meldet 127, nicht 488 |
 | `adfrescue` | **roh** | Scout-Zyklus `adf_zweitmeinung` | 127 B, byteidentisch zur xdftool-Extraktion |
+| `to_woz2` | **nicht anwendbar** (erzeugt Bitstrom, listet keine Dateien) | 2026-08-30, MF-712 | Ausgabe-SHA fuer eine benannte Eingabe, im Eich-Test gepinnt |
 | `lsatr`, `a8rawconv`, `gw`, `cpmls`, `hxcfe`, `samdisk`, `dtc` | **ungemessen** | — | offen |
 
 Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
 von ihnen war bisher an einem Inhalts-Differenzlauf beteiligt. Wer den
 ersten fährt, kalibriert vorher.
 
-## Registrierte Oracles (8)
+## Registrierte Oracles (9)
 
 Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 
@@ -185,6 +186,7 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `floptool` | `FLOPTOOL` | GPL-2.0-or-later (MAME) | **SHA-256** (keine Versionsabfrage) | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem |
 | `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
+| `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |
 
 ### floptool — der einzige, der auf dieser Maschine liegt
 
@@ -205,6 +207,69 @@ offizielle `SHA256SUMS` geprüft. Werkzeug-Hash `6973d1b5…20ac21`.
   braucht ein Zeitlimit.
 * Gegen die fünf Phase-1-Ziele: **1 von 5** (nur D64). Für ADF und ATR
   bringt floptool kein Dateisystem mit.
+
+### to_woz2 — warum der Binaerhash hier NICHT der Anker ist
+
+`floptool` kommt als **heruntergeladene Distribution**: sein Binaerhash
+ist stabil und pinnt das Werkzeug. `to_woz2` wird aus Quellen **gebaut**
+— und da gilt das nicht.
+
+**Gemessen (MF-711/712):** zwei unabhaengige Baue aus demselben
+Quellstand (`639dc1c`) ergaben
+
+| | Binaer-SHA-256 | Ausgabe 16-Sektor | Ausgabe 13-Sektor |
+|---|---|---|---|
+| Bau A (Scout) | `434cfbda…` | `0015aa1e2024…` | `a5ff575f7f82…` |
+| Bau B (Gegenbau) | `4dbb8def…` | `0015aa1e2024…` | `a5ff575f7f82…` |
+
+**Verschiedene Binaries, byteidentische Ausgabe.** Wer den Binaerhash
+als Identitaet liest, hat ein Oracle, das nach jedem Neubau ein anderes
+zu sein scheint — und ein T1b-Manifest, das ohne Not veraltet.
+
+Zitierfaehig ist deshalb: **Quellstand + Baurezept + Ausgabe-SHA fuer
+eine benannte Eingabe.** Der Hash im Manifest sagt weiterhin, WELCHER
+BAU lief; das ist eine Bau-Angabe, keine Werkzeug-Identitaet.
+
+**Baurezept** (Autotools werden nicht gebraucht; das `ctest`-Submodul
+haengt an einem toten `git://` und wird so umgangen), aus `src/`:
+
+```
+gcc -O2 -o to_woz2 to_woz2.c nibblize_4_4.c nibblize_5_3.c \
+    nibblize_5_3_alt.c nibblize_5_3_common.c nibblize_6_2.c \
+    ctest/ctest.c -I.
+```
+
+gcc 13.1.0 (MinGW), rc=0, 0 Warnungen.
+
+**Die Eichung** steht in `tests/differential/test_oracles.py`
+(`test_to_woz2_reproduces_its_pinned_output_when_present`): sie erzeugt
+eine deterministische 143 360-Byte-Eingabe, ruft das Werkzeug und
+vergleicht die SHA-256 der Ausgabe gegen
+`cb4269d51f73b070bcf086eb032846973a558253302d618adf942d0a50c86107`.
+Ohne Werkzeug ueberspringt sie sich und **behauptet nichts**. Der Anker
+ist rotbeweis-geprueft: mit verfaelschtem Pin wird die Pruefung rot.
+
+**FALLSTRICK — Benutzungsregel.** Mit einem **absoluten** Pfad bricht
+`to_woz2` mit `0xC0000374` (STATUS_HEAP_CORRUPTION) ab. Das ist der
+1-Byte-Ueberlauf in `parse_filename` (`to_woz2.c:367-369`), und er ist
+nicht theoretisch — die erste Fassung des Eich-Tests hat ihn
+ausgeloest. **Immer aus dem Arbeitsverzeichnis mit relativen Namen
+rufen.** Wer das Werkzeug mit fremden Dateinamen fuettert, fuettert
+einen Ueberlauf.
+
+**Fuenfte Frage (MF-644), ehrlich:** eine zweite, unabhaengige Hand fuer
+WOZ 2.0 gibt es hier **nicht**. Der Abgleich stuetzt sich auf die
+veroeffentlichte WOZ-2.0-Spezifikation (applesaucefdc.com) — eine Spec,
+kein zweites Werkzeug. Ein Fehler, den `to_woz2` aus der Spec
+uebernommen haette, faellt damit nicht auf.
+
+**Lizenz:** GPL-3.0 (`COPYING`, woertlicher Text), Zone **GELB** — kein
+Port. Verglichen wird ausschliesslich die Ausgabe. Nachgelagert traegt
+`nibblize` die Erklaerung „Based on code by Andy McFadden"
+(CiderPress, BSD-3): eine zweistufige Kette, die nur bei einem Port zu
+klaeren waere. Das Repo ist vom Urheber als **DEPRECATED**
+gekennzeichnet — fuer ein Oracle folgenlos, fuer eine Abhaengigkeit
+waere es eines.
 
 ## Vorgemerkt, noch nicht registriert
 

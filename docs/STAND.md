@@ -41,7 +41,7 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5227** Zeilen in **72** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5269** Zeilen in **72** Abschnitten.
 
 **offen** (5):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)

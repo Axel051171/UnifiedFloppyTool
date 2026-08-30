@@ -137,13 +137,41 @@ def test_a_missing_tool_gives_an_incomplete_manifest_entry():
     """`complete=False` ist die Aussage, die ein T1b-Manifest braucht:
     fehlt Werkzeug oder Version, zaehlt der Korpus-Eintrag nicht
     (VERIFICATION_PLAN, Provenienz-Regel). Auf dieser Maschine ist kein
-    Oracle installiert — der Eintrag muss das sagen und nicht verschweigen."""
+    Oracle installiert — der Eintrag muss das sagen und nicht verschweigen.
+
+    Berichtigt MF-712: diese Pruefung kannte den dritten Fall nicht —
+    ein Werkzeug, das seine Version NICHT sagen kann und darum per
+    SHA-256 verankert ist (`version_is_unaskable`). Fuer das gilt
+    `version=None` UND `complete=True`, sobald es aufloest.
+
+    Sie ist damit nie aufgefallen, weil auf dieser Maschine **kein**
+    registriertes Oracle liegt: der Zweig `path is not None` wurde nie
+    betreten. Erst `to_woz2` (MF-711/712, ueber `TO_WOZ2=` vorhanden)
+    hat ihn erreicht — und die Pruefung kippte sofort. Dieselbe Klasse
+    wie die 32 Testdateien aus MF-596, die ihren Erfolg bedingungslos
+    zaehlten: eine Zusicherung, die nicht scheitern KANN, sichert
+    nichts zu.
+    """
     for o in oracles.REGISTRY:
         e = oracles.manifest_entry(o.name)
         assert e["tool"] == o.name
         assert e["origin"] and e["licence"]
-        if e["path"] is None or e["version"] is None:
-            assert e["complete"] is False
+        if e["path"] is None:
+            assert e["complete"] is False, (
+                "%s: nicht aufgeloest, dann ist der Eintrag "
+                "unvollstaendig" % o.name)
+        elif o.version_is_unaskable:
+            assert e["version"] is None, (
+                "%s: erklaert sich als versions-stumm, gibt aber eine "
+                "Version an — dann stimmt eines von beiden nicht" % o.name)
+            assert e["complete"] is (e["sha256"] is not None), (
+                "%s: versions-stumm heisst per SHA-256 verankert; ohne "
+                "Hash gibt es keinen Anker und damit keine "
+                "Vollstaendigkeit" % o.name)
+        elif e["version"] is None:
+            assert e["complete"] is False, (
+                "%s: Version nicht lesbar und nicht als stumm erklaert "
+                "— unvollstaendig" % o.name)
         else:
             assert e["complete"] is True
 
@@ -274,6 +302,104 @@ def test_floptool_is_registered_and_declares_its_silent_failure():
     o = oracles.get("floptool")
     assert o.version_is_unaskable is True
     assert "cbmdos" in o.reference_for.lower()
+
+
+def test_to_woz2_is_pinned_by_its_OUTPUT_not_by_its_binary():
+    """Der Anker eines selbst gebauten Oracles (MF-712).
+
+    `floptool` kommt als **heruntergeladene Distribution** — sein
+    Binaerhash ist stabil und pinnt das Werkzeug. `to_woz2` wird aus
+    Quellen **gebaut**, und da gilt das nicht: zwei unabhaengige Baue
+    aus demselben Quellstand (`639dc1c`) ergaben zwei verschiedene
+    Binaerhashes (`434cfbda...` / `4dbb8def...`) und **byteidentische
+    Ausgabe**.
+
+    Wer hier den Binaerhash als Identitaet liest, hat ein Oracle, das
+    nach jedem Neubau ein anderes zu sein scheint. Zitierfaehig ist der
+    Quellstand + das Baurezept + die Ausgabe-SHA.
+
+    Dieser Test haelt genau das am Eintrag fest — er braucht das
+    Werkzeug NICHT.
+    """
+    o = oracles.get("to_woz2")
+    assert o.version_is_unaskable is True, (
+        "to_woz2 hat weder --version noch -V; der argumentlose Aufruf "
+        "gibt seinen Gebrauchstext")
+    assert o.code_import is False, "GPL-3.0, Zone GELB — kein Port"
+    assert "639dc1c" in o.origin, (
+        "der Quellstand IST der Anker — ohne Commit ist der Eintrag "
+        "nicht zitierfaehig")
+    assert "gcc -O2 -o to_woz2" in o.origin, (
+        "ohne Baurezept kann niemand denselben Stand herstellen")
+    for pflicht in ("BINAERHASH", "0015aa1e", "T1b"):
+        assert pflicht in o.reference_for, (
+            "%s fehlt am Eintrag — die Messung, die den Anker "
+            "begruendet, gehoert an den Eintrag, nicht in den "
+            "Commit-Text" % pflicht)
+
+
+def test_to_woz2_reproduces_its_pinned_output_when_present():
+    """Die Eichung — laeuft nur, wenn das Werkzeug da ist.
+
+    Auf dieser Maschine liegt es im Scratchpad, nicht im PATH; der Test
+    ueberspringt sich dann sauber und behauptet NICHTS. Ein Oracle, das
+    sich selbst nicht reproduziert, ist keins — darum steht hier die
+    Ausgabe-SHA einer benannten, im Test selbst erzeugten Eingabe.
+    """
+    pfad = oracles.resolve("to_woz2")
+    if pfad is None:
+        print("  [skip] to_woz2 nicht gefunden (TO_WOZ2= oder PATH) — "
+              "Eichung uebersprungen, nichts behauptet")
+        return
+
+    import hashlib
+    import tempfile
+    # Eingabe im Test erzeugt, damit die Eichung ohne Korpus laeuft:
+    # 35 Spuren x 16 Sektoren x 256 Byte, Fuellmuster aus dem
+    # Spur-/Sektor-Index — deterministisch und ohne Zufall.
+    roh = bytearray()
+    for spur in range(35):
+        for sekt in range(16):
+            roh += bytes(((spur * 16 + sekt + i) & 0xFF)
+                         for i in range(256))
+    assert len(roh) == 143360
+
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "e.dsk").write_bytes(bytes(roh))
+        # RELATIVE Namen aus dem Arbeitsverzeichnis — nicht Kosmetik.
+        # Gemessen (MF-712): mit einem ABSOLUTEN Pfad bricht to_woz2 mit
+        # 0xC0000374 (STATUS_HEAP_CORRUPTION) ab. Das ist der vom Scout
+        # gemeldete 1-Byte-Ueberlauf in `parse_filename`
+        # (to_woz2.c:367-369), und er ist nicht theoretisch: die erste
+        # Fassung dieses Tests hat ihn ausgeloest.
+        r = subprocess.run([str(pfad), "e.dsk", "e.woz"],
+                           capture_output=True, timeout=60, cwd=d)
+        assert r.returncode == 0, (
+            "to_woz2 endete mit rc=%d%s"
+            % (r.returncode,
+               " (0xC0000374 STATUS_HEAP_CORRUPTION — wurde das Werkzeug "
+               "mit einem absoluten Pfad gerufen?)"
+               if r.returncode == 3221226356 else ""))
+        daten = (Path(d) / "e.woz").read_bytes()
+
+    assert daten[:8] == b"WOZ2\xff\n\r\n", (
+        "Kopf ist nicht die WOZ-2.0-Signatur: %r" % daten[:8])
+    assert len(daten) == 252416, (
+        "unerwartete Groesse %d — die Eichung beschreibt einen anderen "
+        "Stand als den gepinnten" % len(daten))
+
+    # DER Anker. Nicht der Binaerhash (der wandert bei jedem Neubau),
+    # sondern was das Werkzeug fuer eine benannte Eingabe SAGT.
+    PIN = "cb4269d51f73b070bcf086eb032846973a558253302d618adf942d0a50c86107"
+    ist = hashlib.sha256(daten).hexdigest()
+    assert ist == PIN, (
+        "Die Ausgabe hat sich geaendert.\n"
+        "  erwartet %s\n  gemessen %s\n"
+        "Das ist KEIN Testfehler, den man wegdrueckt: entweder liegt ein "
+        "anderer Quellstand vor als der gepinnte (Commit 639dc1c), oder "
+        "das Werkzeug urteilt anders als bei der Eichung. Beides macht "
+        "jede damit erzeugte T1b-Vorlage fragwuerdig, bis es geklaert "
+        "ist." % (PIN, ist))
 
 
 if __name__ == "__main__":
