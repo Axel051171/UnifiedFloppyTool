@@ -5587,4 +5587,54 @@ Aufzeichnung, keine historische Diskette.
 
 **Offen bleibt Schritt 3** (`d13`, heute ohne einen einzigen Test): er
 braucht die 5-and-3-Tabelle im Dekoder. `to_woz2` erzeugt sie bereits
-(`neu13.woz`, SHA `a5ff575f...`).
+(`neu13.woz`, SHA `a5ff575f...`).
+
+## GCR-2 — `d13`: 5-and-3, der Beweisweg steht bereits offen (MF-717)
+
+<!-- status: offen -->
+
+**Kennzahl:** **ungeprüfte Formate (T3) ↓**. `d13` hat heute **keinen
+einzigen Test** (`docs/VERIFICATION_TIERS.md`) und ist damit der
+billigste noch offene Posten der Apple-Reihe.
+
+**Warum es jetzt dran ist:** ORAK-2 Schritt 2 (MF-716) hat den Weg
+vollständig ausgetreten. Für `d13` muss nichts Neues erfunden werden —
+dieselben vier Teile, ein Tabellenwechsel:
+
+| Teil | Stand für `do` (MF-716) | Stand für `d13` |
+|---|---|---|
+| Oracle | `to_woz2`, registriert | **dasselbe** — es liest `.d13` |
+| Fremd erzeugte Vorlage | `neu16.woz` | **`neu13.woz` liegt vor**, SHA `a5ff575f7f82592c80e6…` |
+| Dekoder | 6-and-2 ✓ | **5-and-3 fehlt** — das ist die ganze Arbeit |
+| Brücke logisch↔physisch | DOS-3.3-Interleave | 13-Sektor-Interleave, noch zu belegen |
+
+### Was zu tun ist, in dieser Reihenfolge
+
+1. **Die 5-and-3-Tabelle blackbox prüfen**, genau wie bei 6-and-2
+   (MF-715): Nibbles aus `neu13.woz` ziehen und gegen die
+   Kandidaten-Tabelle halten. Ein fremdes Nibble widerlegt sie, **bevor**
+   sie Code wird. Erwartet werden 13 Adress- und 13 Datenfelder je Spur.
+2. **`uft_apple_gcr_denibblize_5_3()`** dazu, nach demselben Muster:
+   bei abgewiesenem Feld bleibt das Ziel unberührt.
+3. **Differenzlauf durch das Plugin**, wie MF-716: linke Seite der
+   `d13`-Leser, rechte Seite `to_woz2` → WOZ → Dekoder. Erwartet:
+   35 × 13 = **455** Sektoren byteidentisch.
+4. **`spec_verification.json`-Eintrag** + Regressionstest, dann steigt
+   die Stufe.
+
+### Was dabei zu beachten ist
+
+* **13 Sektoren, nicht 16.** Die Dateigröße ist `116 480` (= 35 × 13 ×
+  256), und `DskToWoz2/conversion.cpp` prüft die VTOC entsprechend bei
+  `0x0DD00` (= 17 × 13 × 256) statt `0x11000`. Zwei unabhängige Quellen
+  für die Geometrie liegen damit vor.
+* **5-and-3 ist nicht 6-and-2 mit anderer Tabelle.** Es packt 5 Datenbits
+  je Diskettenbyte; ein Sektor braucht **410** statt 342 Nibbles. Die
+  Zahl ist zu **messen**, nicht anzunehmen — sie fällt bei Schritt 1 ab.
+* **Die EINFRIER-REGEL gilt.** Erlaubt ist das hier, weil es eine
+  **Hebung** ist und kein neues Plugin: benannte Referenz (*Beneath
+  Apple DOS*), Messung vor dem Code, Referenz im Header.
+
+**Was das NICHT wird:** ein Beleg, dass echte 13-Sektor-Disketten
+gelesen werden. Wie bei `do` ist die Vorlage maschinell erzeugt und
+fehlerfrei.

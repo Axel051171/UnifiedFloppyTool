@@ -1,0 +1,91 @@
+{
+ "_kommentar": "Beispiel-Eingabe fuer disposition.py (MF-718), aus den offenen Funden der Bloecke 4-5. NICHT gepflegt: wer sie als Arbeitsliste benutzt, erzeugt sie neu aus den aktuellen Gutachten. Erledigte Funde stehen hier bewusst NICHT drin — eine Liste, die Erledigtes mitschleppt, verliert ihre Aussage.",
+ "funde": [
+  {
+   "id": "GCR-2",
+   "repo": "cmosher01/Apple-II-Disk-Tools",
+   "titel": "d13 heben: 5-and-3 in den Dekoder",
+   "kennzahl": "T3 runter",
+   "kanal": "Oracle",
+   "zone": "GELB",
+   "aufwand": "mittel",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "MF-717: to_woz2 ist registriert (MF-712), neu13.woz liegt vor (SHA a5ff575f7f82592c80e6…), d13 hat 0 Tests"
+  },
+  {
+   "id": "FS-3",
+   "repo": "—",
+   "titel": "FAT12-Abbild von fremder Hand beschaffen",
+   "kennzahl": "T3 runter",
+   "kanal": "Daten",
+   "zone": "?",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "MF-709: 0 von 10 Korpusdateien sind PC-Abbilder; mtools/mkfs.fat auf dieser Maschine nicht vorhanden"
+  },
+  {
+   "id": "FMT-17",
+   "repo": "—",
+   "titel": "ProDOS-Verzeichnis als PO-Beleg (zweite Quelle fehlt)",
+   "kennzahl": "T3 runter",
+   "kanal": "Spec",
+   "zone": "?",
+   "aufwand": "klein",
+   "abhaengig_von": [
+    "BESCH-PRODOS"
+   ],
+   "neues_plugin": false,
+   "beleg": "MF-714: Block 2 auf Versatz 0x400 liegt im Sondenpuffer; eine Quelle im Baum, die Zwei-Quellen-Regel fordert zwei"
+  },
+  {
+   "id": "BESCH-PRODOS",
+   "repo": "—",
+   "titel": "ProDOS-8-Referenz beschaffen (Verzeichnis-Aufbau)",
+   "kennzahl": "T3 runter",
+   "kanal": "Spec",
+   "zone": "?",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "MF-714: Speichertyp 0xF bei 0x404 ist bislang unbelegt"
+  },
+  {
+   "id": "FMT-16",
+   "repo": "Digitoxin1/DiskImageTool",
+   "titel": "86f neu fassen — Magic, Kopfgroesse, Spurtabelle",
+   "kennzahl": "T3 runter",
+   "kanal": "Spec",
+   "zone": "GELB",
+   "aufwand": "gross",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "MF-707/708: vier Widersprueche, zwei unabhaengige Quellen (86Box-Spec + DiskImageTool ImageFormats/86F)"
+  },
+  {
+   "id": "SCOUT-P1",
+   "repo": "hpingel/pyAccess1581",
+   "titel": "Amiga-MFM-Encoder uebernehmen",
+   "kennzahl": "Pfade rauf",
+   "kanal": "Port",
+   "zone": "GELB",
+   "aufwand": "mittel",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "Scout-Block 4, Gutachten pyAccess1581"
+  },
+  {
+   "id": "SCOUT-P2",
+   "repo": "cmosher01/DskToWoz2",
+   "titel": "META-Provenienz-Muster (Quell-CRC im Abbild)",
+   "kennzahl": null,
+   "kanal": "Spec",
+   "zone": "GELB",
+   "aufwand": "klein",
+   "abhaengig_von": [],
+   "neues_plugin": false,
+   "beleg": "MF-711 Gutachten, Abschnitt Fundus"
+  }
+ ]
+}

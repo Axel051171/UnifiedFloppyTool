@@ -195,7 +195,7 @@ ehrliche TODOs auf der Issue-Liste.
 
 ---
 
-## Agenten-Übersicht (26 Agenten)
+## Agenten-Übersicht (27 Agenten)
 
 29 Agenten wurden auf eine schlanke Kern-Suite (13) reduziert; mit dem
 Type-Driven-HAL-Refactor sind 8 spezialisierte Refactor-Agenten dazu-
@@ -208,7 +208,7 @@ Insgesamt aktuell 26. Die früher entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-
 Prävention-Agenten abgedeckt — bei Bedarf aus git zurückholen.
 
-Stand der Modelle: alle 26 Agenten laufen auf `claude-fable-5`
+Stand der Modelle: alle 27 Agenten laufen auf `claude-fable-5`
 (einheitlicher Stack, ersetzt die frühere Opus 4.7 / Sonnet 4.6 / Haiku 4.5
 Tier-Verteilung).
 
@@ -249,7 +249,7 @@ Tier-Verteilung).
 |---|---|---|
 | `hardware-emulation-author` | Fable 5 | Firmware-realistische Emulatoren pro Controller (Wire + State-Machine + Flux-Generator + Edge-Cases) — reduziert Bench-Session-Bedarf, ersetzt sie NICHT. Output unter `tests/emulators/<controller>/` + `tests/flux_gen/<controller>/`. Forensisch ehrlich via `DIVERGENCES.md` + `coverage_matrix.md`. Ein Controller pro Invocation. |
 
-### Aufklärungs-Suite (4, post-v4.1.6)
+### Aufklärungs-Suite (5, post-v4.1.6)
 
 Alle vier liefern **nur Dokumente**, nie Code. Der Unterschied ist die
 Blickrichtung: der Scout geht nach draußen in die **Breite** („was fehlt
@@ -268,6 +268,7 @@ genau einer davon.
 | `uft-variants` | Fable 5 | Findet für ein Format, das UFT **schon** liest, die kursierenden **Versionen und Dialekte**, belegt jede mit zwei **unabhängigen** Quellen (der eigene Baum zählt nie mit), misst die Korpus-Abdeckung je Version und übergibt einen **Prüfauftrag** mit Rotbeweis-Skizze. Maßstab ist das Risiko der **stillen Falschaussage** — die Fehlerklasse aus FMT-2/3/10/11/12. Ein Format je Zyklus. Werkzeugkasten `tools/uft-variants/`. Die EINFRIER-REGEL verläuft mitten durch seinen Auftrag: Varianten eines vorhandenen Formats zu belegen ist **Verifikationsarbeit** und erlaubt; ein neues Plugin für einen Dialekt fällt unter das Moratorium — auch als Vorschlag. |
 | `uft-innendienst` | Fable 5 | Misst den **eigenen** Baum auf seine wiederkehrenden Muster und liefert nur Dokumente: Türen ohne Leser (Symbol-Ebene, abgegrenzt gegen `audit_orphan_modules.py` auf Modul-Ebene), Oracles ohne Eichung, Fixture-Lücken, Doku-Aussagen ohne Quelle, wartende Eigentümer-Entscheidungen — plus das Ritual, aus einem Einzelfund ein Tor zu schmieden. Sechs Rollen, jede mit **Selbsttest vor ihrem Nenner**: `tuersucher.py` und `widerspruch.py` brechen bei roter Abnahme ab, weil eine Erstfassung „Selbsttest 3/3" meldete und gemessen 0/3 lieferte. Werkzeugkasten `tools/uft-innendienst/`. Schreibt **nie** nach `src/`, `include/`, `tests/`; höchstens 5 Vorschläge je Zyklus, jeder mit Kennzahl-Bezug nach Regel 9. |
 | `uft-nachbau` | Fable 5 | Bereitet den **Clean-Room-Nachbau** einer fremden Vorlage vor, deren Lizenz einen Port verbietet — Lizenz-Route, Verhaltens-Spec aus Doku und Blackbox-Messung, Prüfvektoren, Oracle-Entwurf, Kontaminations-Grundlinie. Bedient **Weg 2** aus `docs/QUARANTINE_PROCESS.md` §5; sein Beweismaß ist §4 („beweiskräftig sind Idiome, nicht Fakten") — und zwar **abgeleitet statt gepflegt**: ein geteilter Bezeichner wiegt danach, wie selten er im übrigen Baum ist (0 andere Dateien = die `carryshift`-Klasse). Zwei-Hände-Brandmauer: Hand B (MF-Workflow) sieht **nur** die Spec, nie die Quelle. Werkzeugkasten `tools/uft-nachbau/`. Schreibt **nie** nach `src/`, `include/`, `tests/`; ein Paket je Zyklus, vollständig. |
+| `uft-github-scout` | Fable 5 | **Streift von sich aus über GitHub** und liefert nicht eine Sammlung, sondern eine **Arbeitsanweisung**: jeder Fund in SOFORT / LISTE / FUNDUS, mit Kennzahl, Kanal, Zone, Aufwand und topologischer Reihenfolge — inklusive „nächster Griff". Seine Suchfragen sind **abgeleitet** (`suchraster.py`: T3-Liste, vorgemerkte Oracles, Wandlungsmatrix, offene Punkte), nicht gepflegt; die frühere Handliste in `config.json` war der **dreizehnte** Fall der Aufzählung-statt-Messung und besonders teuer, weil sie bestimmt, wonach überhaupt gesucht wird. Die Einordnung fällt `disposition.py` nach den Regeln des Baums (Regel 9, MF-695, EINFRIER-REGEL), nicht der Agent. Höchstens 5 Funde je Zyklus; ein Fund ohne Beleg wird abgewiesen. Teilt sich `work/`+`out/` mit `uft-scout` und übergibt ihm, was eine tiefe Begutachtung verdient. |
 | `uft-scout` | Fable 5 | Sichtet **fremden** Quellcode auf das, was UFT fehlt oder besser könnte, und liefert **nur Dokumente** zurück — Gutachten mit Lizenzurteil, Inventar-Abfrage, Oracle-Kandidat und Differenzlauf-Plan. Werkzeugkasten `tools/uft-scout/`, Betriebsanweisung dort in `AGENT.md`. Schreibt **nie** nach `src/`, `include/` oder `tests/`; höchstens 5 OPEN_ITEMS-Vorschläge je Zyklus. Der einzige Agent, der fremde Repositorien klont. |
 
 ---
@@ -299,7 +300,7 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
    REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
    Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
 
-2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 26 Agenten haben
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 27 Agenten haben
    `Agent`-Tool in der Frontmatter:
    - `orchestrator` — Master-Router, darf beliebig spawnen
    - `deep-diagnostician` — gezielte Teilfragen
