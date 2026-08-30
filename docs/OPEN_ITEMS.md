@@ -5063,4 +5063,67 @@ dann das Erkennungsmerkmal.
 86Box-Spezifikation. DiskImageTool ist GPL-3.0; gelesen wurden
 **Tatsachen** (welches Byte welche Bedeutung trägt), kein Ausdruck,
 und übernommen wurde nichts. Wer die Neufassung schreibt, arbeitet aus
-der Spezifikation — die dafür vollständig ist.
+der Spezifikation — die dafür vollständig ist.
+
+## FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
+
+<!-- status: offen -->
+
+**Kennzahl:** **ungeprüfte Dateisystem-Leser ↓** (`uft_fat12` steht auf
+**FS-T1** — zirkulär) und mittelbar **T3 ↓** (`img` ist T3).
+
+**Anlass:** der Eigentümer legte die Fähigkeitsliste von
+`Digitoxin1/DiskImageTool` vor, mit der Frage „haben wir das auch, sind
+wir besser?". Die Antwort verlangte eine Messung der eigenen PC-Seite.
+Sie fiel anders aus, als die Export-Liste vermuten ließ — und die erste
+Fassung dieser Antwort saß darauf auf. Berichtigt nach Blick in die
+Rümpfe.
+
+### Was gemessen wurde
+
+| | Befund | Quelle |
+|---|---|---|
+| FAT-**Lese**pfade | echt — `uft_fat_open` 21 Z., `read_dir` 49, `extract` 43, `get_chain` 37 | `src/fs/uft_fat12.c` |
+| FAT-**Schreib**pfade | **11 von 12 sind ehrliche `UFT_FAT_ERR_READONLY`-Attrappen** (3-5 Zeilen): `inject`, `inject_from_file`, `inject_path`, `mkdir`, `rmdir`, `delete`, `rename`, `set_label`, `set_attr`, `save`, `write_cluster` | ebd. |
+| Erreichbarkeit | **57 von 59 Funktionen ohne Aufrufer** außerhalb der eigenen Datei | grep über `src/` + `tests/` |
+| Test-Tiefe | `test_fatfs` fasst **genau eine** Funktion an: `uft_fat12_detect()` | `tests/test_fatfs.c` |
+| Stufe | **FS-T1** — alle Eingaben selbst gebaut, gegen den eigenen Erzeuger geprüft | `docs/VERIFICATION_TIERS_FS.md` |
+| Korpus | **0 von 10** Dateien sind PC-/FAT-Abbilder | `tests/corpus/` |
+
+**Und die Tür führt aufs Nebengleis.** `src/explorertab.cpp` ruft nicht
+den 854-Zeilen-Leser, sondern `src/formats/uft_fat12_legacy.c` — **98
+Zeilen**, dessen Schreibpfade `-1` zurückgeben. Der Kopf jener Datei ist
+dabei vorbildlich ehrlich: er benennt sich als Übergang, nennt seinen
+einzigen Aufrufer und die Bedingung für die eigene Löschung. Kein
+Vorwurf an sie — der Befund ist, dass der Übergang seit Commit `db6897e`
+so steht.
+
+Das ist **dieselbe Form wie MF-708, einen Stock tiefer**: die fähigere
+Implementierung hat keine Tür, die Tür führt zur dünneren. Zweiter Fall
+an einem Tag.
+
+### Was daraus folgt
+
+**Nicht:** „FAT-Schreiben implementieren". Das wäre neuer Code im
+FS-Layer ohne benannte Referenz — die EINFRIER-REGEL trifft es, und zwar
+zu Recht: ein Schreiber lässt sich nicht rotbeweisen, solange kein fremd
+erzeugtes Abbild existiert, gegen das man liest.
+
+**Sondern, in dieser Reihenfolge:**
+
+1. **Beschaffung** — ein FAT12-Abbild von fremder Hand. Bewegt
+   `uft_fat12` FS-T1 → FS-T1b sofort, und mit Register-Eintrag der
+   erzeugenden Hand → FS-T2. Gemessen: `mtools` / `mkfs.fat` sind auf
+   dieser Maschine **nicht** vorhanden; der Kanal ist also
+   **Daten/Fixture** (frei verteilte DOS-Diskettenabbilder) oder eine
+   registrierbare Werkzeug-Hand. Dasselbe Abbild gibt `img` (T3) seine
+   erste echte Prüfvorlage.
+2. **Erst danach** ist über Schreibpfade zu reden — mit dem geprüften
+   Leser als Gegenprobe.
+
+### Was DiskImageTool dazu beiträgt
+
+Nichts Portierbares (GPL-3.0, Zone GELB), und als Oracle taugt es nicht
+(WinForms, keine Kommandozeile — gemessen, MF-708). Sein Beitrag ist
+**die Frage**: es belegt, dass genau diese Fähigkeit auf dieser
+Formatfamilie erwartet wird. Kanal: **Spec/Anregung**.

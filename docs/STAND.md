@@ -42,12 +42,13 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5066** Zeilen in **70** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5130** Zeilen in **71** Abschnitten.
 
-**offen** (3):
+**offen** (4):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
+- FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
 
 **wartet-eigentuemer** (4):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
