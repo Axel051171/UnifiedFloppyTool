@@ -42,17 +42,18 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **4888** Zeilen in **69** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **4972** Zeilen in **70** Abschnitten.
 
 **offen** (3):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
 
-**wartet-eigentuemer** (3):
+**wartet-eigentuemer** (4):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
 - ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
 - Drei Eigentümer-Handgriffe, die Fundus in Nutzung verwandeln (MF-695)
+- FMT-16 — `86f` verfehlt die Spezifikation an vier Stellen und kündigt es als „SUPPORTED" an (MF-707)
 
 **ohne Status-Marke: 63** — noch nicht gesichtet, weder offen noch erledigt. Die Marke wird von Hand vergeben (`docs/OPEN_ITEMS.md`, Abschnitt Status-Marke); ein Prosa-Scan waere gemessen schlechter als die Luecke.
 

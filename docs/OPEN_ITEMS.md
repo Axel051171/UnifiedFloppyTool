@@ -4886,3 +4886,87 @@ Die zwei Enden dieses Zwischenstands, eines muss eintreten:
 
 **Kennzahl:** fünfte, Befund-Stufe. Weg 3 bewegt sie ohne Verlust; Weg 1
 löst sie ganz.
+
+---
+
+## FMT-16 — `86f` verfehlt die Spezifikation an vier Stellen und kündigt es als „SUPPORTED" an (MF-707)
+<!-- status: wartet-eigentuemer(2026-08-30) -->
+
+**Kennzahl:** **ungeprüfte Formate (T3) ↓**, sobald die Neufassung
+steht. Der Rotbeweis allein hebt nichts — T2 verlangt eine autoritative
+Referenz-**Implementierung**, und `fftool` ist mangels `cargo` nicht
+baubar.
+
+Der zweite T3-Posten aus Scout-Block 4 war als **Differenzlauf** geplant.
+Der ist gesperrt, beide Blocker nachgemessen: `cargo` fehlt auf dieser
+Maschine (kein `fftool`), und der Korpus hat **0 von 24** 86F-Abbildern.
+Also der andere Weg — gegen die **veröffentlichte Spezifikation**.
+
+### Die Quelle
+
+`docs/dev/formats/86f.rst` aus dem **eigenen Dokumentations-Repositorium
+von 86Box** (github.com/86Box/docs, abgerufen 2026-08-30). Keine
+Sekundärquelle, keine Rückentwicklung: die Beschreibung durch den
+Urheber des Formats.
+
+```
+00000000: Magic 4 bytes ("86BF")
+00000004: Minor version (0C)
+00000005: Major version (02)
+00000006: Disk flags (16-bit)
+00000008: Offsets of tracks
+```
+
+### Vier Widersprüche, gemessen
+
+| Stelle | `uft_86f_plugin.c` | Spezifikation |
+|---|---|---|
+| Magic | `"86BX"` (`:20`) | **`"86BF"`** |
+| Kopfgröße | 32 (`:22`) | **8** |
+| Byte 6/7/8 | `disk_type` / `sides` / `tracks` (`:66-68`) | Disk flags (16 bit), dann **Beginn der Spur-Offset-Tabelle** |
+| Spurtabelle | ab 32, Einträge 12 Byte mit `offset(4)+length(4)+flags(1)+sectors(1)+rpm(2)` (`:105-107`) | ab 8, Einträge sind **32-Bit-Offsets** |
+| Geometrie | CHS aus einem „disk type byte" (`:32-43`) | 86F speichert FM-/MFM-**Transitionen**; einen solchen Typ gibt es nicht |
+
+Keine dieser Annahmen ist aus der Spezifikation herleitbar. Die
+12-Byte-Eintragsstruktur mit benannten Unterfeldern trägt die Signatur
+aus **FMT-2/3/10/11/12**: plausibel aussehend und erfunden.
+
+### Die praktische Folge
+
+Weil die Probe auf `"86BX"` besteht, **weist sie jede echte 86F-Datei
+ab** — gemessen in `tests/test_86f_spec_conformance.c`: Spec-Kopf →
+NEIN, erfundener Kopf → JA mit **Konfidenz 98**. Genau umgekehrt.
+
+Dabei kündigt `uft_format_plugin_86f` an: `Read SUPPORTED`, `Write
+SUPPORTED`, `Flux SUPPORTED`, dazu `CAP_READ | CAP_WRITE | CAP_FLUX |
+CAP_VERIFY`, und `.write_track` ist verdrahtet. Das ist „Bestand, nicht
+Fähigkeit" (P0-2) in der unangenehmsten Form: nicht bloß unerreichbar,
+sondern **angekündigt**.
+
+### Warum kein Ein-Zeilen-Fix
+
+Das Magic zu berichtigen wäre eine Zeile — und **schlimmer als der
+jetzige Zustand**. Heute lehnt das Plugin echte Dateien ab; mit richtigem
+Magic nähme es sie an und zerlegte sie mit Kopf-Offset 32 statt 8 und
+einer erfundenen Spurtabelle, bei verdrahtetem Schreibpfad. Aus
+„wirkungslos" würde „nimmt an und zerlegt falsch".
+
+Dieselbe Kopplung wie bei `hardsector` (MF-706): **erst die Struktur,
+dann das Erkennungsmerkmal.**
+
+### Drei Wege (Eigentümer)
+
+1. **Neufassung gegen die Spezifikation** — Magic, Kopf, Spurtabelle,
+   Transitionsmodell. Regelkonform unter der EINFRIER-REGEL: benannte
+   Referenz (86Box-Doku), Rotbeweis liegt, Referenz gehört in den
+   Header. Aufwand groß — 86F ist ein Oberflächenformat, kein
+   Sektorformat, und der jetzige Leser ist als Sektorleser gebaut.
+2. **Fähigkeit ehrlich zurücknehmen** — Features auf `UNSUPPORTED`,
+   Capabilities entsprechend, Plugin bleibt als Platzhalter. Kostet
+   nichts, macht die Registry wahr, und `docs/STAND.md` zeigt es sofort.
+3. **Aus dem Verteilpaket** wie `uft_amiga_protection.c` (MF-699) —
+   nicht löschen, nicht bauen, mit benanntem Ende.
+
+**Empfehlung: 2 sofort, 1 als eigener Baustein.** Weg 2 ist eine
+Ehrlichkeitskorrektur und in Minuten gemacht; Weg 1 braucht Fixture und
+Oracle, also die Beschaffung, die dieser Posten ohnehin schon nennt.

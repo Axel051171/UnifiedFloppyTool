@@ -55,7 +55,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `td0` | **T2** | `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_td0_error_marks` | SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag | MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als "Stepping type (0=SS, 1=DS, 2=EDS)" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. Falsch war die Beschreibung, nicht das Verhalten. | — |
 | `woz` | **T2** | `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
-| `86f` | **T3** | — | — | — | — |
+| `86f` | **T3** | `test_86f_spec_conformance` | — | — | — |
 | `apridisk` | **T3** | — | — | — | — |
 | `cas` | **T3** | — | — | — | — |
 | `cfi` | **T3** | — | — | — | — |

@@ -1388,6 +1388,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_atarist_copylock.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_86f_spec_conformance")
+        # MF-707: 86F gegen die Spezifikation von 86Box selbst.
+        # Prueft das Plugin-Struct (Probe, Features, Schreibpfad),
+        # darum die Plugin-Quelle statt eines Kern-Moduls.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c)
     elseif(${test_name} STREQUAL "test_hardsector_geometry")
         # MF-706: Hartsektor-Geometrien gegen zwei externe Quellen.
         # Der Leser hat KEINEN Aufrufer (10 Exporte, alle WAISE) — der
