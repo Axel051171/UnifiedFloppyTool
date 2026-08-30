@@ -13,6 +13,48 @@ stehen.
 
 ---
 
+## Status-Marke je Abschnitt (MF-694)
+
+Jeder `##`-Abschnitt darf **eine** maschinenlesbare Statuszeile tragen,
+unmittelbar unter der Ueberschrift:
+
+```
+<!-- status: offen -->
+<!-- status: wartet-eigentuemer(2026-08-30) -->
+<!-- status: erledigt(MF-693) -->
+```
+
+**Warum sie existiert.** Der Tore-Sekretaer
+(`tools/uft-innendienst/scripts/sekretaer.py`) las bis MF-693 nur
+Tabellenzeilen und sah Prosa-Abschnitte nicht — auch nicht solche, die
+ausdruecklich eine Eigentuemer-Entscheidung ueberschreiben. Der
+naheliegende Ausweg, ein Prosa-Scan nach Woertern wie „Eigentuemer",
+ist gemessen **schlechter als die Luecke**: von 65 Abschnitten tragen
+36 ein solches Signal, die meisten davon in **erledigten** Vorgaengen.
+Der Zettel waere von 21 auf ueber 50 Posten gewachsen.
+
+**Warum nicht automatisch vergeben.** Auch die Ueberschrift taeuscht:
+17 Koepfe enthalten ein Wort wie „erledigt" oder „geschlossen", aber
+„GUI-6 — 38 Bedienelemente in einer **geschlossenen** Schleife" ist
+kein abgeschlossener Vorgang, und „**Uebernommen** aus BACKLOG.md" sagt
+nichts ueber die uebernommenen Punkte. Eine Marke, die falsch gesetzt
+wird, ist schlimmer als keine — sie schliesst Vorgaenge still.
+Vergeben wird darum **von Hand, je Abschnitt, mit Begruendung im
+Commit**.
+
+**Das Datum bei `wartet-eigentuemer`** ist Pflicht: ohne es kann der
+Sekretaer Entscheidungsschulden nicht altersgestaffelt mahnen, und
+genau das ist seine Aufgabe.
+
+**Unmarkiert heisst „noch nicht gesichtet"**, nicht „offen" und nicht
+„erledigt". Der Sekretaer meldet die Zahl der unmarkierten Abschnitte
+als **eine** Zeile — sichtbar und zaehlbar, statt still.
+
+**Zwei Leser stehen ab Tag eins bereit**, damit dies nicht die fuenfte
+„Vereinbarung ohne Leser" wird: der Sekretaer wertet die Marke aus, und
+`tools/uft-innendienst/scripts/widerspruch.py` schlaegt an, sobald sie
+in einem Dokument steht und niemand sie liest.
+
 ## 0. Der gemessene Ist-Stand
 
 | | |
@@ -4079,6 +4121,7 @@ davon unberührt und brauchen stattdessen die Modus-Korrektur aus MF-688:
 ---
 
 ## FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
+<!-- status: offen -->
 
 **Kennzahl:** keine. Ehrlichkeits-Befund, kein Handlungsdruck.
 
@@ -4113,6 +4156,7 @@ steht, damit die Frage nicht mit der beantworteten verwechselt wird.
 ---
 
 ## ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
+<!-- status: wartet-eigentuemer(2026-08-30) -->
 
 **Kennzahl:** keine unmittelbar. Der Punkt ist die **Anker-Regel**: eine
 öffentliche C-API ohne Produktions-Tür braucht einen benannten Plan-Anker
@@ -4245,6 +4289,69 @@ der rote Test; wenn nicht, ist er nach der Änderung der grüne
 Regressionsschutz. Dazu der MF-567-Fall über die öffentliche API: das
 Preflight-Tor muss auf beiden Wegen greifen.
 
+### Berichtigung zur Divergenz-Behauptung (MF-694)
+
+Der Abschnitt oben sagt, die zwei Ketten „divergieren heute schon", und
+belegt das damit, dass die Speicher-Abkürzung `opts` nicht anfasst. Das
+erste stimmt so **nicht**, das zweite schon — und was darunter liegt,
+ist schlimmer.
+
+Nachgemessen an `uftc_convert_d64_to_g64()`
+(`src/formats/uft_format_convert_sector.c:119-175`):
+
+* Der Encoder bekommt seine Einstellungen aus
+  `convert_options_t conv_opts; convert_get_defaults(&conv_opts);` —
+  **nicht** aus `opts`.
+* `opts` wird dort ausschließlich für `uftc_report_progress()` benutzt.
+* Die Speicher-Abkürzung ruft `d64_to_g64(d64, &g64, NULL, NULL)`, und
+  `d64_to_g64` fällt bei `NULL` auf **genau dieselben**
+  `convert_get_defaults()` zurück (`src/formats/c64/uft_d64_g64.c:967-971`).
+
+**Folge: beide Ketten erzeugen für D64→G64 dieselben Bytes.** Was sie
+unterschiedlich machen, ist Buchhaltung — Fortschrittsmeldungen,
+Warntexte, `result`-Felder — nicht Nutzdaten. Meine Formulierung war zu
+stark; die Doppelung ist ein **Divergenz-Risiko**, keine gemessene
+Divergenz.
+
+**Der Rotbeweis aus dem Plan kann darum nicht feuern.** Er lautete:
+„D64→G64 über die Speicher-API mit gesetztem `opts`-Nudge muss sich vom
+Nudge-losen Lauf unterscheiden." Es gibt kein Feld in
+`uft_convert_options_ext_t`, das den Encoder erreicht — auf **keinem**
+der beiden Wege. Ein Beweis, der nicht feuern kann, hätte hier die
+Vereinigung als „belegt" ausgewiesen, obwohl er nichts gesehen hätte.
+
+### Der Befund, der stattdessen darunter liegt: OPT-2
+
+`convert_options_t` (der C64-Encoder: `extended_tracks`,
+`include_halftracks`, `gap_fill`, `sync_length`, `generate_errors`) wird
+**nirgends** aus `uft_convert_options_ext_t` befüllt — gemessen, kein
+einziger Treffer für eine Zuweisung an `conv_opts.*` außerhalb von
+`convert_get_defaults()`.
+
+Das heißt konkret: `preserve_errors` aus der Oberfläche erreicht die
+Fehlerkarten-Erzeugung nicht, und die 40/42-Spur-Wahl erreicht
+`extended_tracks` nicht. Das ist dieselbe Klasse wie `OPT-1` (sechs
+Wandlungsoptionen, die nirgends ankommen, MF-672) — nur eine Schicht
+tiefer und vom bestehenden Tor 40 nicht gesehen, weil dort geprüft wird,
+ob ein Feld **gelesen** wird, nicht ob der Wert **ankommt**.
+
+**Rotbeweis, der feuert:** `opts.preserve_errors = true` bei D64→G64
+setzen und die Ausgabe mit dem Lauf ohne vergleichen. Byteidentisch ⇒
+die Einstellung kommt nicht an. Das ist rot **vor** jeder Änderung und
+grün, sobald die Übersetzung gebaut ist.
+
+### Was das für die Vereinigung heißt
+
+Sie bleibt richtig, aber ihre **Begründung** ändert sich: nicht „die
+Ketten rechnen verschieden" (tun sie heute nicht), sondern „zwei Ketten
+für dieselben sieben Paare, von denen eine die Optionen-Übersetzung
+bekommen müsste, die andere aber nicht". Wer OPT-2 behebt, ohne vorher
+zu vereinigen, baut die Übersetzung an genau einer der beiden Stellen
+ein — und **dann** divergieren sie, gemessen und mit Datenfolge.
+
+**Reihenfolge daher:** OPT-2 rot machen ⇒ vereinigen ⇒ Übersetzung
+einmal einbauen ⇒ OPT-2 grün. Nicht umgekehrt.
+
 ### Was seither geschah, Teil 2: die Verallgemeinerung wurde geschärft
 
 Der Auftrag war, die Klasse als Marke `PUBLIC_PROMISE` in den Tür-Sucher
@@ -4294,6 +4401,7 @@ der vier Kennzahlen.
 
 
 ## ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
+<!-- status: wartet-eigentuemer(2026-08-30) -->
 
 > **Teilerledigt am selben Tag.** `xdftool` ist seit MF-693 registriert
 > (`tests/differential/oracles.py`, Register jetzt **8**); die fünfte
@@ -4457,3 +4565,70 @@ halbe Zusage und wird vom Kalibrierer seit MF-693 als **Befund**
 gemeldet, nicht mehr als Fußnote: kalibriert-aber-unregistriert ist ab
 jetzt gleichrangig mit registriert-aber-ungeeicht. ORAK-1 ist der
 Beleg, dass beide Richtungen kosten.
+
+---
+
+## Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
+<!-- status: offen -->
+
+**Kennzahl:** zwei Posten bewegen **ungeprüfte Formate (T3) ↓**, der
+Rest bewegt keine und steht darum als Fundus da — nicht als Auftrag.
+
+Der Zyklus zu Block 4 (zwölf Repos, MF-692) ist abgeschlossen: drei
+Gutachten lagen aus einem am Sitzungslimit abgebrochenen Lauf vor, neun
+sind nachgeliefert. Alle in `tools/uft-scout/out/`.
+
+### Die zwei Aufträge, nach Regel 9
+
+**1 · `hardsector`: Rotbeweis gegen die 3740-Falschzuschreibung, dann
+Tabellen-Korrektur.** Kennzahl **T3 ↓**. Quelle:
+`out/hardsector_tool.gutachten.md` §2-3. Aufwand klein — zwei
+synthetische Dateigrößen, **keine Beschaffung**. Regelkonform unter der
+EINFRIER-REGEL: Bugfix an Bestehendem plus Verifikation, die Referenzen
+stehen im Gutachten. Einhängepunkt `docs/VERIFICATION_PLAN.md`
+§Einfrier-Regel.
+
+**2 · `86f`: T3-Hebung per Differenzlauf.** Kennzahl **T3 ↓**. Aufwand
+mittel. Oracle-Kandidat `fftool` (aus fluxfox, MIT) — **Bau und
+Kalibrierung sind Bedingung**, nicht Zugabe: `cargo` liegt auf dieser
+Maschine nicht, und ein Oracle ohne Längensemantik ist eine Zusicherung
+(ORAK-1). Zweitreferenz DiskImageTool (GPL-3.0, nur Verhaltensabgleich,
+kein Code). Beschaffung: **ein 86Box-erzeugtes 86F-Abbild** — der
+Korpus hat 0 von 24. Quellen: `out/fluxfox.gutachten.md` §4,
+`out/DiskImageTool.gutachten.md` §3.
+
+### Was ausdrücklich Fundus bleibt
+
+`ipf-flux` kam **ohne Übernahmeweg** zurück — erwartet ROT, gemessen
+PRÜFEN mit derselben Folge: BSD-3 durchgehend, aber die Dreiglied-Kette
+ipf-flux ← MAME ← CAPS/SPS ist nicht messbar, und „Clean room" ist eine
+Selbstauskunft. Das ist der MF-638-Präzedenzfall, nicht seine Ausnahme.
+Wert hat das Gutachten als **Anlage zu LIZ-2, Entscheidung 2**: es
+belegt, dass es inzwischen **zwei** blob-freie IPF-Implementierungen
+gibt (ipf-flux BSD-3-Kette, fluxfox MIT) — der Neubau-Preis in der
+Vorlage ist damit neu zu schätzen. Die Lizenzfrage selbst bleibt beim
+Eigentümer.
+
+Ebenfalls Fundus, weil ohne Kennzahl-Bezug: FS-2-Fixture-Zulieferung
+(fuseadf — gehört an den bestehenden Punkt, dort schon beschrieben),
+FMT-15-Referenzpaar fluxfox+DiskImageTool (FMT-15 führt selbst
+„Kennzahl: keine"), M2FM-Decode aus fluxtoimd (Moratorium), WOZ2-Erzeuger
+picturedsk, BK-0010-Referenz mfmdisk, `FluxBridge`/DrawBridge-HAL (Hardware ohne
+Gerät, MF-310), `fluxpy` mit dem offenen Brother-WP-1-Verhältnis,
+flux-analyze-Schadensspuren und `apple-ii-fluxdoctor` als
+Community-Bench-Hinweis (6502-Assembler auf echter Hardware, für
+diesen Baum gegenstandslos).
+
+### Zwei Werkzeugkasten-Befunde des Scouts
+
+1. `tools/uft-scout/scripts/vermessen.py` erkennt nur `LICENSE` und
+   `COPYING` als Lizenzdateinamen und stellte `fluxtoimd` deshalb
+   **fälschlich ROT**, obwohl `gpl-3.0.txt` im Wurzelverzeichnis liegt.
+   Ein falsches ROT unterdrückt Funde still — dieselbe Fehlerklasse wie
+   das falsche „vorhanden" aus MF-610, nur in die andere Richtung.
+2. `scripts/scout_stand.py` zählt „Name kommt in einem Gutachten vor"
+   als begutachtet; bei `DiskImageTool` waren die Treffer teils ein
+   **anderes** Repo (`FloppyDiskImageTool`, markusC64). Für diesen Fall
+   durch das neue Gutachten geheilt, das Zählverfahren bleibt anfällig —
+   es ist dieselbe Namens-statt-Identitäts-Zuordnung, die MF-677 schon
+   einmal gekostet hat.

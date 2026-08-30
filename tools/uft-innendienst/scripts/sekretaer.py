@@ -9,12 +9,18 @@ Sammelt, was auf eine Entscheidung wartet, und formt jeden Posten auf
 kann, bleiben als `AUSZUFUELLEN` stehen — er erfindet keine Empfehlung.
 Ziel: vier Tore fallen in einer Sitzung statt in vierzehn Nachrichten.
 
-Zwei Quellen, beide bereits im Baum vorhanden:
+Drei Quellen, alle bereits im Baum vorhanden:
 
-  (a) `docs/OPEN_ITEMS.md` — Zeilen, deren Text auf den Eigentuemer
-      zeigt (Muster in `WARTE_RX`).
-  (b) Gutachten **ohne Spur in OPEN_ITEMS.md** — geliefert von
-      `scripts/scout_stand.py:ohne_spur()`, nicht selbst nachgebaut.
+  (a)  `docs/OPEN_ITEMS.md` — Tabellenzeilen, deren Text auf den
+       Eigentuemer zeigt (Muster in `WARTE_RX`).
+  (a2) die **Status-Marke** je Abschnitt (MF-694):
+       `<!-- status: wartet-eigentuemer(2026-08-30) -->`. Das Datum ist
+       Pflicht — daraus staffelt der Sekretaer nach Alter, und genau
+       das ist seine Aufgabe. Abschnitte ohne Marke gelten als **noch
+       nicht gesichtet** und erscheinen als EINE Rueckstands-Zeile,
+       nicht als Posten.
+  (b)  Gutachten **ohne Spur in OPEN_ITEMS.md** — geliefert von
+       `scripts/scout_stand.py:ohne_spur()`, nicht selbst nachgebaut.
 
 ── Warum (b) importiert und nicht nachgebaut wird (MF-693) ──────────────
 
@@ -44,10 +50,17 @@ von 21 auf ueber 50 Posten aufgeblaeht, groesstenteils mit
 abgeschlossener Arbeit — genau der Anschlag-ohne-Treffer, wegen dessen
 der `<!-- stufe: -->`-Ersatz schon verworfen wurde.
 
-Die Luecke bleibt darum **benannt statt zugekleistert**. Wer sie
-schliesst, braucht ein Erledigt-Signal je Abschnitt, das der Zensus
-lesen kann — das ist eine Aenderung an OPEN_ITEMS.md, nicht an diesem
-Skript, und eine Eigentuemer-Entscheidung.
+Geschlossen wurde die Luecke seit MF-694 nicht durch mehr Regex,
+sondern durch eine **Konvention**: die Status-Marke (a2). Sie wird von
+Hand vergeben, je Abschnitt, mit Begruendung im Commit — auch die
+Ueberschrift taeuscht naemlich: 17 Koepfe enthalten „erledigt" oder
+„geschlossen", aber „GUI-6 — 38 Bedienelemente in einer
+**geschlossenen** Schleife" ist kein abgeschlossener Vorgang. Eine
+falsch gesetzte Marke schliesst einen Vorgang still; das ist schlimmer
+als keine.
+
+Was der Zettel darum weiterhin nicht sieht: alles, was noch keine Marke
+hat. Er sagt aber, **wie viel** das ist.
 
 ── Was der Zettel nicht ist ─────────────────────────────────────────────
 
@@ -68,6 +81,47 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 WARTE_RX = re.compile(
     r"(Eigent|deine Entscheidung|wartet auf dein|Vorlage|Owner|"
     r"Klick-?Abnahme|Lizenzkl)", re.I)
+
+# Die Status-Marke aus `docs/OPEN_ITEMS.md` (MF-694). Sie steht
+# unmittelbar unter der Abschnitts-Ueberschrift und traegt bei
+# `wartet-eigentuemer` ein Pflicht-Datum — ohne das kann der Sekretaer
+# Entscheidungsschulden nicht altersgestaffelt mahnen, und genau das ist
+# seine Aufgabe.
+MARKE_RX = re.compile(r"<!--\s*status:\s*([^>]*?)\s*-->")
+WARTET_RX = re.compile(r"wartet-eigentuemer\s*\(\s*([^)]*?)\s*\)")
+
+
+def abschnitte(text: str):
+    """(Ueberschrift, Marke oder None) je `##`-Abschnitt.
+
+    Gesucht wird die Marke NUR in den Zeilen direkt unter der
+    Ueberschrift, bis zur ersten nicht-leeren Nicht-Marken-Zeile. Eine
+    Marke tiefer im Fliesstext gehoert nicht zum Abschnitt — sonst
+    faerbte ein zitiertes Beispiel den ganzen Vorgang um.
+    """
+    zeilen = text.splitlines()
+    aus = []
+    for i, z in enumerate(zeilen):
+        if not z.startswith("## "):
+            continue
+        marke = None
+        for w in zeilen[i + 1:i + 4]:
+            if not w.strip():
+                continue
+            m = MARKE_RX.search(w)
+            if m:
+                marke = m.group(1)
+            break
+        aus.append((z[3:].strip(), marke))
+    return aus
+
+
+def alter_in_tagen(datum: str, heute: date) -> int | None:
+    try:
+        j, mo, t = (int(x) for x in datum.split("-"))
+        return (heute - date(j, mo, t)).days
+    except (ValueError, TypeError):
+        return None
 
 
 def _scout_stand(root: str):
@@ -96,6 +150,7 @@ def main() -> int:
 
     posten: list[tuple[str, str, str]] = []
     hinweise: list[str] = []
+    unmarkiert = 0
 
     oi_pfad = os.path.join(root, "docs", "OPEN_ITEMS.md")
     liste = ""
@@ -106,6 +161,21 @@ def main() -> int:
                     and "✅" not in zeile):
                 kurz = " ".join(zeile.split("|")[1:3]).strip()
                 posten.append(("OPEN_ITEMS", f"Z.{nr}", kurz[:110]))
+
+        # Quelle (a2): die Status-Marke je Abschnitt (MF-694).
+        heute = date.today()
+        for kopf, marke in abschnitte(liste):
+            if marke is None:
+                unmarkiert += 1
+                continue
+            m = WARTET_RX.match(marke)
+            if not m:
+                continue                      # offen / erledigt: kein Posten
+            tage = alter_in_tagen(m.group(1), heute)
+            alt = f"{tage} Tage" if tage is not None else \
+                  f"Datum `{m.group(1)}` unlesbar"
+            posten.append((f"wartet auf Eigentuemer ({alt})", kopf[:70],
+                           "Entscheidung steht im Abschnitt"))
     else:
         hinweise.append("`docs/OPEN_ITEMS.md` fehlt — Quelle (a) leer.")
 
@@ -124,16 +194,24 @@ def main() -> int:
         except Exception as e:                      # noqa: BLE001
             hinweise.append(f"scout_stand.py lief nicht durch: {e}")
 
+    # Aelteste Entscheidungsschuld zuerst — das ist die Staffelung,
+    # fuer die das Pflicht-Datum in der Marke da ist.
+    def rang(p):
+        m = re.match(r"wartet auf Eigentuemer \((\d+) Tage\)", p[0])
+        return (0, -int(m.group(1))) if m else (1, 0)
+    posten.sort(key=rang)
+
     z = [f"# Tore-Sitzung — Zettel vom {date.today().isoformat()}",
          f"{len(posten)} Posten aus zwei Quellen: `docs/OPEN_ITEMS.md` "
          f"(nur Tabellenzeilen) und `scripts/scout_stand.py:ohne_spur()`.",
          "",
-         "**Was der Zettel nicht sieht:** Prosa-Abschnitte in "
-         "OPEN_ITEMS.md. Gemessen tragen 36 von 65 `##`-Abschnitten ein "
-         "Eigentümer-Signal, die meisten davon in **erledigten** "
-         "Vorgängen — sie mitzunehmen hätte den Zettel verdreifacht und "
-         "unbrauchbar gemacht. Die Lücke ist benannt, nicht "
-         "geschlossen (siehe Kopf von `sekretaer.py`).",
+         f"**Triage-Rückstand:** {unmarkiert} `##`-Abschnitte in "
+         f"OPEN_ITEMS.md tragen **keine** Status-Marke. Unmarkiert "
+         f"heisst „noch nicht gesichtet\" — weder offen noch erledigt. "
+         f"Sie stehen hier bewusst als EINE Zeile und nicht als "
+         f"{unmarkiert} Posten: ein Prosa-Scan nach „Eigentümer\" "
+         f"träfe 36 von 65 Abschnitten, die meisten davon erledigt, "
+         f"und machte den Zettel unbrauchbar (MF-693/694).",
          "",
          "Format je Posten: **Frage · Messung · Empfehlung · Folge**. "
          "`AUSZUFUELLEN` heisst: steht in der verlinkten Quelle, ist "

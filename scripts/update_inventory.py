@@ -590,6 +590,27 @@ def check_tiers_fresh(repo: Path) -> list[str]:
     return []
 
 
+def check_fs_tiers_fresh(repo: Path) -> list[str]:
+    """Ist docs/VERIFICATION_TIERS_FS.md aktuell? (MF-694)
+
+    Eigenes Tor neben `check_tiers_fresh`, weil es eine andere Frage
+    misst: dort Format-Plugins, hier Dateisystem-Leser. Ein erzeugtes
+    Dokument ohne Frische-Tor ist eine Zahl, die genau bis zur naechsten
+    Aenderung stimmt.
+    """
+    try:
+        from gen_fs_tiers import bericht, erhebe, ZIEL
+    except ImportError as e:                       # pragma: no cover
+        return [f"cannot import gen_fs_tiers: {e}"]
+    erwartet = bericht(erhebe())
+    ist = ZIEL.read_text(encoding="utf-8") if ZIEL.exists() else ""
+    if ist.splitlines() != erwartet.splitlines():
+        return ["docs/VERIFICATION_TIERS_FS.md ist veraltet gegenueber "
+                "src/fs/, tests/ und dem Oracle-Register — "
+                "run: python scripts/gen_fs_tiers.py"]
+    return []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path,

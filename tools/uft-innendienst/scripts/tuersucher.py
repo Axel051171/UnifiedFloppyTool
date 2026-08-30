@@ -393,16 +393,33 @@ def main() -> int:
         "Produktionspfad darueber lief**. Eine Regression auf einem Pfad "
         "ohne Tuer faellt niemandem auf.",
         "",
-        "Je Zeile eine von drei Entscheidungen: **Anker** (gehoert dahin, "
-        "Plan benennen) · **Tuer** (Abnehmer bauen) · **Rueckzug** "
-        "(Header enger ziehen). Der Block gehoert in EINE Tore-Sitzung, "
-        "nicht in Einzelfunde ueber Wochen.",
-        ""]
-    for s in sorted(versprechen)[:limit]:
-        zeilen.append(f"- `{s}` — {klasse[s]}, definiert in `{defs[s]}`")
-    if len(versprechen) > limit:
-        zeilen.append(f"- … {len(versprechen) - limit} weitere in "
-                      f"`work/tueren_voll.json` (Feld `angebot_ohne_abnehmer`)")
+        "**Gruppiert nach Modul, nicht als Einzelposten.** Die Marke "
+        "liefert leicht dreistellig viele Symbole — das sind aber nicht "
+        "ebenso viele Entscheidungen: 46 in `uft_fat12.c` haengen an "
+        "derselben Frage, 12 in `protection/c64` an der eingefrorenen "
+        "P0-2. Je Modul EINE Zeile: **Anker vorhanden** (wartet auf "
+        "einen benannten Baustein) oder **kein Anker** (Kandidat fuer "
+        "die Tore-Sitzung). Ein Block aus Hunderten Einzelposten wuerde "
+        "weggelegt — und daran waere die Marke selbst schuld.",
+        "",
+        "| Modul | Symbole | Klassen |",
+        "|---|---|---|"]
+    je_modul: dict[str, list[str]] = defaultdict(list)
+    for s in sorted(versprechen):
+        je_modul[defs[s]].append(s)
+    for modul, syms in sorted(je_modul.items(),
+                              key=lambda kv: (-len(kv[1]), kv[0]))[:limit]:
+        ks = sorted({klasse[s] for s in syms})
+        zeilen.append(f"| `{modul}` | {len(syms)} | {', '.join(ks)} |")
+    if len(je_modul) > limit:
+        zeilen.append(f"| … {len(je_modul) - limit} weitere Module | | "
+                      f"vollstaendig in `work/tueren_voll.json` |")
+    zeilen += ["",
+               f"{len(versprechen)} Symbole in **{len(je_modul)}** "
+               f"Modulen. Die Einzelnamen stehen in "
+               f"`work/tueren_voll.json` (Feld `angebot_ohne_abnehmer`) "
+               f"— sie gehoeren in den Pruefauftrag des jeweiligen "
+               f"Bausteins, nicht auf den Sitzungszettel."]
 
     zeilen += ["", "## Historische Faelle (nachrichtlich, nicht blockierend)"]
     zeilen += hist or ["- keine hinterlegt"]

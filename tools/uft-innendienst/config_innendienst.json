@@ -1,25 +1,73 @@
 {
   "_kommentar": "Gemeinsame Konfiguration der Innendienst-Rollen. Was hier NICHT mehr steht (MF-693): `soll_versionen`. Es war eine zweite gepflegte Liste neben dem Vokabular des Korpus-Zensus und hat prompt gedriftet — 'HFE v1' hier, 'rev0' dort, Ergebnis ein erfundener Fehlbestand. Das Soll kommt seither aus `tools/uft-variants/config.json` -> `erkennungen`.",
-
-  "erzeuger_leser_pfade": ["scripts/", "tools/", ".github/"],
-
+  "erzeuger_leser_pfade": [
+    "scripts/",
+    "tools/",
+    ".github/"
+  ],
   "eich_ausnahmen": {
     "_kommentar": "Werkzeuge, bei denen die Laengensemantik keinen Gegenstand hat. ACHTUNG: ORACLES.md fuehrt beide in der Sammelzeile 'ungemessen'. Der Kalibrierer meldet diesen Widerspruch seit MF-693 als Hinweis, statt die Ausnahme stillschweigend gewinnen zu lassen — wer die Ausnahme fuer richtig haelt, traegt sie in ORACLES.md nach.",
     "gw": "Flux-Werkzeug — liest keine Dateiinhalte, Laengensemantik ohne Gegenstand",
     "dtc": "Flux-Rohstrom — dito; Eichung erfolgt ueber Stream-Vergleich, nicht Dateilaengen"
   },
-
   "eichlaeufe": [
-    {"oracle": "lsatr", "kommando": ["lsatr", "{fixture_atr}"], "hinweis": "ATR mit 127-Byte-Datei erzeugen (mkatr), Laengenspalte ablesen — VOR dem ersten ATR-Differenzlauf"},
-    {"oracle": "cpmls", "kommando": ["cpmls", "-f", "{diskdef}", "{fixture}"], "hinweis": "CP/M-Abbild mit 127-Byte-Datei; cpmls zeigt Records — Umrechnung dokumentieren"},
-    {"oracle": "samdisk", "kommando": ["samdisk", "dir", "{fixture}"], "hinweis": "je Container einmal"},
-    {"oracle": "hxcfe", "kommando": ["hxcfe", "-infos", "-uselayout:{layout}", "{fixture}"], "hinweis": "Wandlungs-Oracle: Eichung ueber Roundtrip-Bytevergleich statt Laenge"}
+    {
+      "oracle": "lsatr",
+      "kommando": [
+        "lsatr",
+        "{fixture_atr}"
+      ],
+      "hinweis": "ATR mit 127-Byte-Datei erzeugen (mkatr), Laengenspalte ablesen — VOR dem ersten ATR-Differenzlauf"
+    },
+    {
+      "oracle": "cpmls",
+      "kommando": [
+        "cpmls",
+        "-f",
+        "{diskdef}",
+        "{fixture}"
+      ],
+      "hinweis": "CP/M-Abbild mit 127-Byte-Datei; cpmls zeigt Records — Umrechnung dokumentieren"
+    },
+    {
+      "oracle": "samdisk",
+      "kommando": [
+        "samdisk",
+        "dir",
+        "{fixture}"
+      ],
+      "hinweis": "je Container einmal"
+    },
+    {
+      "oracle": "hxcfe",
+      "kommando": [
+        "hxcfe",
+        "-infos",
+        "-uselayout:{layout}",
+        "{fixture}"
+      ],
+      "hinweis": "Wandlungs-Oracle: Eichung ueber Roundtrip-Bytevergleich statt Laenge"
+    }
   ],
-
   "marken_mit_leser": [
-    {"marke": "<!-- stufe:", "leser_muster": "stufe", "leser_pfade": ["tools/", "scripts/"]}
+    {
+      "marke": "<!-- stufe:",
+      "leser_muster": "stufe",
+      "leser_pfade": [
+        "tools/",
+        "scripts/"
+      ]
+    },
+    {
+      "marke": "<!-- status:",
+      "leser_muster": "MARKE_RX",
+      "leser_pfade": [
+        "tools/",
+        "scripts/"
+      ],
+      "_warum": "Die Status-Konvention aus MF-694. Sie wird ab Tag eins bewacht, damit sie nicht die fuenfte 'Vereinbarung ohne Leser' wird: sekretaer.py wertet sie aus, und dieser Eintrag schlaegt an, sobald der Leser verschwindet."
+    }
   ],
-
   "beschaffungswege": {
     "_kommentar": "Schluessel sind '<Format> <Version>', '<Format> *' oder '<Format>'. Die Versionsnamen MUESSEN dem Vokabular aus tools/uft-variants/config.json entsprechen — sonst faellt der Posten auf 'sonst' zurueck und wird als unkonkret gemeldet.",
     "HFE v3": "selbst erzeugen: eigener Dump -> hxcfe -conv:HXC_HFEV3 (Werkzeugkette ins README)",

@@ -586,6 +586,8 @@ def main() -> int:
                            _inv.check_corpus_manifest(repo)))
         all_errors.append(("verification tiers stale",
                            _inv.check_tiers_fresh(repo)))
+        all_errors.append(("FS tiers stale",
+                           _inv.check_fs_tiers_fresh(repo)))
         all_errors.append(("include guard collisions",
                            _inv.check_include_guards(repo)))
         all_errors.append(("unbacked compat claims",
