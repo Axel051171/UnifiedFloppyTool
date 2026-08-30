@@ -4859,14 +4859,28 @@ leer: einen zu setzen hieße, eine Lizenz zu erfinden. Das ist die
 Fehlerklasse, die dieser Baum als P0-5 bezahlt hat (`SPDX: MIT` auf
 einem GPLv2+-Port).
 
-Drei Wege, alle offen:
+**Weg 3 ist seit MF-699 vollzogen — als Zwischenstand, nicht als
+Ende.** Die Datei ist aus dem Verteilpaket (`UnifiedFloppyTool.pro`
+auskommentiert, Eintrag in `verify_build_sources.py:
+`NOT_BUILT_BY_DESIGN` mit benanntem Ende), bleibt aber im Baum und wird
+von ihrem Test weiter gebaut. Die ausgelieferte Fassung trägt damit
+keine ungeklärte Herkunft mehr; der Rückweg bleibt messbar.
+
+**Die Reihenfolge ist Eigentümer-Vorgabe (MF-699): erst der
+funktionierende Nachbau, dann die Löschung.** Sie steht jetzt als Regel
+in `docs/QUARANTINE_PROCESS.md` §5, zusammen mit der Registerpflicht.
+Der Grund ist messbar: eine gelöschte Vorlage ist als **Messpunkt** weg
+— der Nachbau braucht sie nicht als Quelltext (die Brandmauer verbietet
+das ohnehin), wohl aber als Verhaltensreferenz für Blackbox-Läufe.
+
+Die zwei Enden dieses Zwischenstands, eines muss eintreten:
 
 1. **XCopy-Pro-Lizenz messen** — sie ist bisher nirgends belegt. Fällt
    sie auf etwas Kombinierbares, ist die Sache mechanisch erledigt.
 2. **Als `LicenseRef-` führen** mit dem, was tatsächlich bekannt ist —
    ehrlich, aber es bleibt eine Datei ungeklärter Herkunft im
    Verteilpaket.
-3. **Vom Verteilpaket ausnehmen** (nicht löschen, nicht bauen) — die
+3. ~~**Vom Verteilpaket ausnehmen**~~ — **vollzogen MF-699.** Die
    Fähigkeit ist ohnehin keine: 16 von 17 Exporten ohne Tür, der
    siebzehnte nur von einem Test gerufen.
 

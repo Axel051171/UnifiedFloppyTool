@@ -1963,7 +1963,27 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/amiga/uft_amiga_protection.c \
+    # MF-699 — LIZ-4 B, Weg 3: aus dem VERTEILPAKET genommen, NICHT
+    # geloescht. Die Reihenfolge ist Eigentuemer-Vorgabe: erst der
+    # funktionierende Nachbau, dann die Loeschung. Bis dahin bleibt
+    # die Datei im Baum und messbar.
+    #
+    # Grund: "C99 port of XCopy Pro (1989-2011)" ohne jede gemessene
+    # Lizenz — die einzige Port-Erklaerung im Baum ohne SPDX-Kopf, und
+    # einen zu setzen hiesse, eine Lizenz zu ERFINDEN (die Klasse, die
+    # dieser Baum als P0-5 bezahlt hat).
+    #
+    # Gemessen (MF-699): 17 Exporte, KEIN Produktionsaufrufer. Die
+    # beiden Einbinder src/analysis/uft_track_analysis.c und
+    # include/uft/formats/uft_amiga_syncs.h rufen NICHTS — nur
+    # #include. Ein einziger Test ruft eine einzige Funktion
+    # (uft_amiga_identify_sync) und baut die Datei ueber
+    # tests/CMakeLists.txt weiterhin selbst; der Rueckweg bleibt also
+    # offen und pruefbar.
+    #
+    # Wiederaufnahme ODER Loeschung: siehe docs/QUARANTINE.md und
+    # docs/OPEN_ITEMS.md LIZ-4 B.
+    # src/formats/amiga/uft_amiga_protection.c \
     src/formats/amiga/uft_amiga_syncs.c \
     src/protection/ufm_c64_metrics.c \
     src/protection/ufm_c64_scheme_detect.c \

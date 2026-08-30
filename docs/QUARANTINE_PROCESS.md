@@ -184,10 +184,61 @@ IPF). Bedingungen:
   („erkannt, Inhalt nicht lesbar — Helper installieren"), nie still
 
 ### Weg X — bleibt draußen
-Zulässiger Ausgang. Verlangt einen Grund in der Liste (Spec nicht
-frei **und** keine Fremdkomponente; oder Fähigkeit nicht gewollt;
-oder Aufwand ohne Kennzahl-Bezug). Kein Eintrag verrottet ohne
-Entscheidung: was ein Jahr ohne Weg dasteht, wird Weg X.
+Zulässiger Ausgang, aber nur mit **ausdrücklichem Grund** in der Liste
+(Spec nicht frei **und** keine Fremdkomponente; oder Fähigkeit nicht
+gewollt; oder Aufwand ohne Kennzahl-Bezug). **Bloßes Liegenlassen ist
+kein Weg X** — der Satz „was ein Jahr ohne Weg dasteht, wird Weg X"
+stand hier bis MF-699 und war eine Verjährung durch Untätigkeit. Ein
+Eintrag ohne Entscheidung bleibt offen und wird älter, nicht
+stillschweigend erledigt.
+
+### Die Registerpflicht (MF-699)
+
+**Keine gelöschte oder quarantänisierte Fähigkeit verschwindet ohne
+Eintrag.** Jede bekommt eine Zeile mit vier Feldern:
+
+| Feld | heißt |
+|---|---|
+| **Nachbau-Route** | Weg 1/2/3/X — wie käme die Fähigkeit legal zurück? |
+| **Oracle-Kandidat** | woran der Nachbau gemessen würde (oder „offen") |
+| **Kennzahl-Bezug** | welche der vier Zahlen der Nachbau bewegt (Regel 9) |
+| **Aufwand** | grob, damit die Zeile planbar ist |
+
+**Nachbaupflicht heißt Bewertungspflicht, nicht Bauzwang.** Der
+Unterschied ist praktisch: löste jede lizenzlose Datei automatisch
+einen Nachbau-Auftrag aus, diktierte die Fundreihenfolge fremder
+Repositorien die eigene Arbeitsreihenfolge — der Amiga-Kopierschutz
+käme vor der ADF-Tür. Die Reihenfolge entscheidet **Regel 9** wie
+überall: bewegt der Nachbau eine Kennzahl, kommt er in die
+Warteschlange; bewegt er keine, wartet er im Register — sichtbar, mit
+Route, jederzeit abrufbar.
+
+Trägt der Eintrag **keine** Fähigkeit, steht das auch da: „keine
+Fähigkeit, kein Nachbau nötig". Eine Pflichtzeile für nichts ist
+Rauschen, und Rauschen macht das Register unlesbar.
+
+### Die Reihenfolge: erst der Ersatz, dann die Löschung (MF-699)
+
+**Eine Datei mit Lizenzmangel wird nicht gelöscht, bevor ein Nachbau
+gebaut ist und grün läuft.** Eigentümer-Vorgabe, und sie hat einen
+messbaren Grund: eine gelöschte Vorlage ist als **Messpunkt** weg. Der
+Nachbau braucht sie nicht als Quelltext — die Brandmauer verbietet das
+ohnehin —, wohl aber als Verhaltensreferenz für Blackbox-Läufe und als
+Beleg, dass die alte Fähigkeit überhaupt eine war.
+
+Der Zwischenzustand dafür ist **Weg 3 in seiner engen Fassung**: aus
+dem Verteilpaket nehmen, **nicht** aus dem Baum. Der Eintrag in
+`scripts/verify_build_sources.py:NOT_BUILT_BY_DESIGN` verlangt dann ein
+benanntes **Ende** — Lizenz gemessen und vereinbar, oder Nachbau grün.
+Ein Eintrag ohne Ende wäre Liegenlassen mit Kommentar.
+
+> **Vorgeführt (MF-699).** `src/formats/amiga/uft_amiga_protection.c`
+> („C99 port of XCopy Pro", keine gemessene Lizenz) ist seit MF-699 aus
+> dem Verteilpaket, aber im Baum. Gemessen: 17 Exporte, **kein**
+> Produktionsaufrufer; die zwei Einbinder rufen nichts, nur `#include`;
+> ein Test ruft eine Funktion und baut die Datei über die
+> Test-CMakeLists weiter. Die ausgelieferte Fassung trägt damit keine
+> ungeklärte Herkunft mehr, und der Rückweg bleibt messbar.
 
 ## 6. Was Quarantäne **nicht** rechtfertigt
 

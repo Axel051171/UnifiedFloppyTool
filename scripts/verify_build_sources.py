@@ -90,6 +90,36 @@ NOT_BUILT_BY_DESIGN: list[re.Pattern[str]] = [
     # das auf nichts mehr passt, ist eine stille Ausnahme fuer Code, den es
     # nicht gibt — genau die Sorte Eintrag, die spaeter versehentlich etwas
     # Neues durchlaesst.
+    #
+    # MF-699 — LIZ-4 B, Weg 3: aus dem VERTEILPAKET genommen, NICHT
+    # geloescht. Anders als die vier Eintraege darueber ist dieser
+    # ausdruecklich VORLAEUFIG, und die Bedingung steht dabei.
+    #
+    # Grund: "C99 port of XCopy Pro (1989-2011) 68000 Assembly
+    # algorithms" — die einzige Port-Erklaerung im Baum ohne SPDX-Kopf,
+    # weil ihre Quelle keine gemessene Lizenz hat. Einen Kopf zu setzen
+    # hiesse, eine Lizenz zu ERFINDEN; das ist die Klasse, die dieser
+    # Baum als P0-5 bezahlt hat (`SPDX: MIT` auf einem GPLv2+-Port).
+    # Sie mitzuverteilen hiesse, eine ungeklaerte Herkunft auszuliefern.
+    #
+    # Gemessen (MF-699): 17 Exporte, KEIN Produktionsaufrufer. Die
+    # beiden Einbinder `src/analysis/uft_track_analysis.c` und
+    # `include/uft/formats/uft_amiga_syncs.h` rufen NICHTS — nur
+    # `#include`. Genau ein Test ruft genau eine Funktion
+    # (`uft_amiga_identify_sync`) und baut die Datei ueber
+    # `tests/CMakeLists.txt` weiterhin selbst. Der Rueckweg bleibt damit
+    # messbar offen, statt hinter einer Loeschung zu verschwinden.
+    #
+    # ENDE DIESES EINTRAGS — eines von zweien, sonst nichts:
+    #   * die XCopy-Pro-Lizenz ist gemessen und vereinbar  -> Zeile in
+    #     der `.pro` wieder aktivieren, SPDX setzen, Eintrag hier weg;
+    #   * ein Nachbau ist gebaut UND laeuft gruen           -> dann erst
+    #     wird die alte Datei geloescht (Eigentuemer-Vorgabe: erst der
+    #     funktionierende Ersatz, dann die Loeschung).
+    # Ein Eintrag ohne eines der beiden Enden waere Liegenlassen mit
+    # Kommentar. Siehe `docs/QUARANTINE_PROCESS.md` §5 und
+    # `docs/OPEN_ITEMS.md` LIZ-4 B.
+    re.compile(r"^src/formats/amiga/uft_amiga_protection\.c$"),
 ]
 
 
