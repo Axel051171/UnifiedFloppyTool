@@ -5358,4 +5358,78 @@ ist **heute nicht fahrbar**: der Baum hat gemessen **keinen
 nur als CRC-Tabellen-Treffer). Das ist eigener Bau im Decoder-Layer und
 fällt unter die EINFRIER-REGEL — erlaubt nur mit benannter Referenz,
 Rotbeweis zuerst und Referenz im Header. Dieser Eintrag liefert das
-erste Drittel davon.
+erste Drittel davon.
+
+### Berichtigung MF-714 — die Prämisse von FMT-17 war falsch
+
+**Der Auftrag lautete „FMT-17 umsetzen". Beim Umsetzen hat sich die
+Begründung als falsch erwiesen — und der Baum hatte recht.**
+
+Der Eintrag oben behauptete, zwei Bytes hätten genügt: die VTOC auf
+Spur 17 Sektor 0 (`0x11001` = `0x11`, `0x11027` = `0x7A`). Beim Anfassen
+der Sonde kam heraus:
+
+**1 · Der Baum sagte es bereits.** `src/formats/do/uft_do.c` trägt seit
+**MF-463** die Analyse im Kopf, und sie ist richtig: DO und PO
+unterscheiden sich **nur in den Sektoren 1..14**; Sektor 0 und 15 liegen
+in beiden Ordnungen gleich. Die VTOC *ist* Sektor 0 — sie steht bei DO
+und bei PO auf demselben Versatz und sagt „DOS-3.3-Diskette", nicht
+„DOS-Reihenfolge". Unabhängig nachgemessen an `a8rawconv`,
+`diska2.cpp:3-9`:
+
+```
+DOS:    0, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 15
+ProDOS: 0,  2,  4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15
+         ^                                                  ^
+         beide stimmen genau an 0 und 15 überein
+```
+
+**2 · Und der angeführte Beleg belegte etwas anderes.**
+`DskToWoz2/conversion.cpp:47-62` heißt `readDos()` und liefert die
+Zeichenkette „DOS 3.x" — es prüft die **DOS-Ausgabe**, nicht die
+**Reihenfolge**. Zwei Tatsachen verwechselt.
+
+**3 · Die richtige Zweitreferenz stand schon im Kopf von `uft_do.c`:**
+SAMdisk löst es genauso und sagt es offen — `src/samdisk/do.cpp:5-13`,
+`ReadDO()` ist mit „not used" gekennzeichnet und fällt auf Größe **plus
+Dateiendung** zurück. Ich habe eine vorhandene, korrekte Analyse
+übergangen, statt sie zu lesen.
+
+### Was von FMT-17 bleibt — und es ist weniger
+
+Der Befund schrumpft, verschwindet aber nicht. Gemessen bleibt:
+
+* Beide Sonden nehmen **jede** 143 360-Byte-Datei an — auch 143 360
+  Nullbytes — mit voller Konfidenz.
+* Der Gleichstand fällt an zwei fest verdrahteten Zahlen (60 > 55).
+* `do` gewinnt damit **immer**, auch wenn im Puffer positive Belege für
+  die andere Ordnung lägen.
+
+Der letzte Punkt ist der einzige, den MF-463 **nicht** betrachtet hat,
+und er ist echt: das **ProDOS-Datenträgerverzeichnis** liegt in Block 2,
+also auf Versatz **`0x400`** — mitten im Sondenpuffer. In DOS-Reihenfolge
+steht dort etwas anderes (ProDOS-Block 2 landet über physischen Sektor
+8/10 in der DOS-Datei nicht auf `0x400`). Ein Fund dort wäre ein
+**positiver Beleg für PO** — die eine Richtung, die im Puffer erreichbar
+ist.
+
+### Warum es trotzdem noch kein Code ist
+
+**Die zweite unabhängige Quelle fehlt.** Für den Aufbau des
+Datenträgerverzeichnisses (Speichertyp `0xF` im oberen Nibble bei
+`0x404`, Vorgänger-Zeiger `0x0000`, Nachfolger `0x0003`) liegt in diesem
+Baum bislang **eine** Quelle vor. Die Zwei-Quellen-Regel ist nicht
+erfüllt, und ohne sie wäre es genau die plausibel aussehende Annahme,
+die FMT-2/3/10/11/12 erzeugt hat. Beschaffung: ProDOS-8-Referenz oder
+ein zweites Werkzeug, das Block 2 prüft — der Scout hat den Auftrag
+noch nicht.
+
+**Offen bleibt zusätzlich die Frage, ob es überhaupt gewollt ist.**
+MF-463 nennt „zwei Plugins mit fast gleicher Konfidenz auf denselben
+Bytes" ausdrücklich *die ehrliche Antwort*. Eine PO-Bevorzugung bei
+gefundenem Verzeichnis wäre eine Verhaltensänderung an der Registry-Tür
+— das bleibt eine Eigentümer-Entscheidung, jetzt nur mit richtiger
+Begründung statt mit falscher.
+
+**Kennzahl:** unverändert. Diese Runde hat nichts gehoben; sie hat eine
+falsche Aussage aus dem Baum genommen.

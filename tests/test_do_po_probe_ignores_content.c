@@ -31,29 +31,67 @@
  * Groesse"), hier verschaerft: es sind **zwei** Plugins auf **denselben**
  * Bytes, und die Entscheidung faellt an einer Konstanten.
  *
- * ── Dass es auch anders geht, ist belegt ────────────────────────────────
+ * ── Berichtigung MF-714: die VTOC trennt GAR NICHTS ─────────────────────
  *
- * Der Inhalt sagt es sehr wohl. In DOS-Reihenfolge liegt die VTOC auf
- * Spur 17, Sektor 0 — Dateiversatz 17 * 16 * 256 = **0x11000**. Zwei
- * Bytes darin sind fuer eine DOS-3.3-Diskette festgelegt:
+ * Die erste Fassung dieses Tests (MF-713) behauptete, zwei Bytes haetten
+ * genuegt: die VTOC auf Spur 17 Sektor 0 (`0x11001` = 0x11, `0x11027` =
+ * 0x7A). **Das war falsch, und der Baum sagte es bereits.**
  *
- *     0x11001   Katalog-Spur            = 0x11 (17)
- *     0x11027   max. Spur/Sektor-Paare  = 0x7A (122)
+ * `src/formats/do/uft_do.c` traegt seit **MF-463** die Analyse im Kopf,
+ * und sie ist richtig: DO und PO unterscheiden sich **nur in den
+ * Sektoren 1..14**; Sektor 0 und Sektor 15 liegen in beiden Ordnungen an
+ * derselben Stelle. Die VTOC ist Sektor 0 — sie steht also bei DO **und**
+ * bei PO auf demselben Dateiversatz. Sie sagt „das ist eine
+ * DOS-3.3-Diskette", nicht „das ist DOS-Reihenfolge".
  *
- * QUELLE 1: *Beneath Apple DOS* (Worth/Lechner), VTOC-Aufbau.
- * QUELLE 2, unabhaengig: `cmosher01/DskToWoz2`, `conversion.cpp:47-62`
- * prueft **genau diese beiden Versaetze auf genau diese beiden Werte**
- * (und fuer 13 Sektoren `0x0DD01`/`0x0DD27`, also 17 * 13 * 256).
- * Uebernommen wurden Tatsachen ueber ein Format, kein Ausdruck; das
- * Repo ist GPL-3.0, Zone GELB — kein Port.
+ * Unabhaengig nachgemessen an den Interleave-Tabellen von `a8rawconv`
+ * (`diska2.cpp:3-9`):
  *
- * Zwei Bytes haetten also gereicht. Dieser Test misst, dass keines
- * davon gelesen wird.
+ *     DOS:    0, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 15
+ *     ProDOS: 0,  2,  4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15
+ *              ^                                                  ^
+ *              beide Ordnungen stimmen genau an 0 und 15 ueberein
+ *
+ * Und `DskToWoz2/conversion.cpp:47-62`, das die erste Fassung als Beleg
+ * anfuehrte, prueft in Wahrheit, **welche DOS-Ausgabe** eine Diskette
+ * traegt — nicht, in welcher Reihenfolge sie gespeichert ist. Die
+ * Funktion heisst `readDos()` und liefert die Zeichenkette „DOS 3.x".
+ * Zwei Tatsachen wurden hier verwechselt.
+ *
+ * MF-463 nennt zudem die richtige Zweitreferenz: SAMdisk loest es
+ * genauso und sagt es offen — `src/samdisk/do.cpp:5-13`, `ReadDO()` ist
+ * mit „not used" gekennzeichnet und faellt auf Groesse **plus
+ * Dateiendung** zurueck.
+ *
+ * ── Was der Befund dann noch ist ────────────────────────────────────────
+ *
+ * Er schrumpft, aber er verschwindet nicht. Was bleibt, ist gemessen:
+ *
+ *   * Beide Sonden nehmen **jede** 143 360-Byte-Datei an, auch 143 360
+ *     Nullbytes, mit voller Konfidenz.
+ *   * Der Gleichstand faellt an zwei fest verdrahteten Zahlen (60 > 55).
+ *   * Damit gewinnt `do` **immer** — auch dann, wenn im Puffer positive
+ *     Belege fuer die andere Ordnung liegen.
+ *
+ * Der letzte Punkt ist der einzige, den MF-463 nicht betrachtet hat, und
+ * er ist offen: das **ProDOS-Datentraegerverzeichnis** liegt in Block 2,
+ * also auf Dateiversatz **0x400** — mitten im Sondenpuffer. In
+ * DOS-Reihenfolge steht dort etwas anderes (ProDOS-Block 2 landet dort
+ * bei physischem Sektor 8/10, in der DOS-Datei also nicht auf 0x400).
+ * Ein Fund an dieser Stelle waere ein positiver Beleg FUER PO — die
+ * Richtung, die es im Puffer tatsaechlich gibt.
+ *
+ * Das ist **noch nicht** umgesetzt: es braucht eine zweite, unabhaengige
+ * Quelle fuer den Aufbau des Datentraegerverzeichnisses (Speichertyp 0xF
+ * im oberen Nibble bei `0x404`), und die liegt in diesem Baum bislang
+ * nicht vor. Ohne sie waere es genau die Sorte plausibler Annahme, die
+ * FMT-2/3/10/11/12 erzeugt hat. Stand: `docs/OPEN_ITEMS.md` FMT-17.
  *
  * ── Warum hier KEIN Fix steht ───────────────────────────────────────────
  *
- * Eine inhaltsbasierte Unterscheidung aendert, **welches Plugin eine
- * Datei beansprucht** — das ist eine Verhaltensaenderung an der
+ * Weil die Grundlage dafuer noch fehlt (siehe Berichtigung oben) —
+ * und weil eine inhaltsbasierte Unterscheidung aendert, **welches
+ * Plugin eine Datei beansprucht**: eine Verhaltensaenderung an der
  * Registry-Tuer, kein Tagesrand. Sie gehoert in einen eigenen Schritt,
  * mit diesem Rotbeweis als Grundlage. Dieselbe Ordnung wie bei
  * `hardsector` (MF-706) und `86f` (MF-707/708): erst die Messung, dann
@@ -151,12 +189,14 @@ int main(void)
     ohne_vtoc(b);
 
     /* ── 1 · Zwei Abbilder, die der Inhalt klar trennt ───────────────── */
-    printf("  Der Inhalt trennt sie eindeutig:\n");
+    printf("  Was an der VTOC-Stelle steht (Spur 17, Sektor 0):\n");
     printf("     Abbild A  [0x11001]=0x%02X  [0x11027]=0x%02X"
-           "  -> DOS 3.3 (Beneath Apple DOS)\n",
+           "  -> DOS 3.3\n",
            a[VTOC_OFF + 0x01], a[VTOC_OFF + 0x27]);
     printf("     Abbild B  [0x11001]=0x%02X  [0x11027]=0x%02X"
-           "  -> keine VTOC an der DOS-Stelle\n\n",
+           "  -> keine VTOC\n"
+           "     ACHTUNG: diese Stelle ist in BEIDEN Ordnungen dieselbe "
+           "(MF-714) —\n     sie trennt do und po NICHT.\n\n",
            b[VTOC_OFF + 0x01], b[VTOC_OFF + 0x27]);
 
     PRUEFE(a[VTOC_OFF + 0x01] == 0x11 && a[VTOC_OFF + 0x27] == 0x7A,
@@ -192,11 +232,22 @@ int main(void)
 
     printf("\n  Was die gruene Ampel NICHT heisst: dass do/po richtig "
            "erkannt werden.\n"
-           "  Sie haelt fest, dass die Entscheidung an zwei Konstanten "
-           "haengt (60 > 55)\n"
-           "  und nicht am Inhalt — obwohl zwei Bytes genuegen wuerden "
-           "und zwei\n"
-           "  unabhaengige Quellen sagen, welche.\n");
+           "  Sie haelt fest, dass jede Datei dieser Groesse von BEIDEN "
+           "Sonden mit voller\n"
+           "  Konfidenz angenommen wird — auch 143360 Nullbytes — und "
+           "dass der\n"
+           "  Gleichstand an zwei fest verdrahteten Zahlen faellt "
+           "(60 > 55), nicht am Inhalt.\n"
+           "\n"
+           "  Was sie AUCH nicht heisst (MF-714): dass der Inhalt das "
+           "entscheiden koennte.\n"
+           "  Die VTOC kann es nicht — sie liegt in beiden Ordnungen "
+           "gleich (MF-463).\n"
+           "  Offen ist allein die PO-Richtung: das "
+           "ProDOS-Datentraegerverzeichnis auf\n"
+           "  Versatz 0x400 waere ein positiver Beleg, und der liegt im "
+           "Puffer. Er braucht\n"
+           "  eine zweite unabhaengige Quelle, bevor er Code wird.\n");
 
     free(a);
     free(b);
