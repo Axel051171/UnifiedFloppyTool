@@ -26,7 +26,7 @@
   "adfrescue": "ROT",
   "amigadx": "PRUEFEN",
   "apple-ii-fluxdoctor": "GELB",
-  "apple2-disk-tools": "?",
+  "apple2-disk-tools": "GELB",
   "atari-st-tools": "GELB",
   "atrcopy": "GRUEN",
   "atrip": "PRUEFEN",
@@ -62,6 +62,7 @@
   "adfopus": "keine LICENSE/COPYING-Datei gefunden = alle Rechte vorbehalten (Zone ROT)",
   "adfrescue": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
   "amigadx": "keine Lizenzdatei, aber 80 Quellkopf-Nennung(en): GNU General Public License, GNU. Das ist KEIN 'alle Rechte vorbehalten'. PRUEFEN: liegt der Kopf im eigenen Co",
+  "apple2-disk-tools": "beide Repos: woertlicher GPL-3.0-Text als Lizenzdatei (Apple-II-Disk-Tools/COPYING, DskToWoz2/LICENSE) -> Zone GELB je Einzelmessung; aufgeloest 2026-08-30 (vor",
   "floppydiskimagetool": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
   "fluxtoimd": "keine LICENSE/COPYING-Datei gefunden = alle Rechte vorbehalten (Zone ROT)",
   "st2disk": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)"

@@ -31,10 +31,9 @@ Stand: 2026-08-30
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 
 - **GRUEN**: 12 — ADFCommander, ADFDiskBox, FloppyTools, atrcopy, disk-peek, fluxpy, hfs2dfxml, lib1541img, mame, mfmdisk, mfsreader, picturedsk
-- **GELB**: 9 — DiscImageManager, DiskImageTool, apple-ii-fluxdoctor, atari-st-tools, flux-analyze, fluxtoimd, hardsector_tool, nibtools, pyAccess1581
+- **GELB**: 10 — DiscImageManager, DiskImageTool, apple-ii-fluxdoctor, apple2-disk-tools, atari-st-tools, flux-analyze, fluxtoimd, hardsector_tool, nibtools, pyAccess1581
 - **PRUEFEN**: 16 — FloppyControl, FluxBridge, HxCFloppyEmulator, OpenCBM, a8rawconv, amigadx, atrip, dfsimage, fluxfox, fuseadf, gwnbd, ipf-flux, libcbmimage, libdsk, mkatr, mkd64
 - **ROT**: 7 — DiskToolC64, Jacknife, adf-tools, adfopus, adfrescue, floppydiskimagetool, st2disk
-- **?**: 1 — apple2-disk-tools
 
 > ROT heisst **keine** gefundene Lizenz, nicht „schlecht“. MF-703 prüft der Vermesser auch Lizenzdateien unter anderem Namen (`gpl-3.0.txt`), das Wurzelverzeichnis und Lizenz-Prosa im Quellkopf — zwei von neun ROT-Repos kamen dadurch zurück. Ein Fund ohne Kanal verfällt nicht, er wartet benannt im Fundus (`CLAUDE.md` §Der stärkste legale Kanal).
 
@@ -42,13 +41,14 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5130** Zeilen in **71** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5227** Zeilen in **72** Abschnitten.
 
-**offen** (4):
+**offen** (5):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
 - FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
+- ORAK-2 — `to_woz2`: das erste Oracle, das baut, läuft und dessen Ausgabe wir erkennen (MF-711)
 
 **wartet-eigentuemer** (4):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)

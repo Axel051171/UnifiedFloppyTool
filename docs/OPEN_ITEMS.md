@@ -5126,4 +5126,100 @@ erzeugtes Abbild existiert, gegen das man liest.
 Nichts Portierbares (GPL-3.0, Zone GELB), und als Oracle taugt es nicht
 (WinForms, keine Kommandozeile — gemessen, MF-708). Sein Beitrag ist
 **die Frage**: es belegt, dass genau diese Fähigkeit auf dieser
-Formatfamilie erwartet wird. Kanal: **Spec/Anregung**.
+Formatfamilie erwartet wird. Kanal: **Spec/Anregung**.
+
+## ORAK-2 — `to_woz2`: das erste Oracle, das baut, läuft und dessen Ausgabe wir erkennen (MF-711)
+
+<!-- status: offen -->
+
+**Kennzahl:** **ungeprüfte Formate (T3) ↓** — Voraussetzung für die
+Hebungen von `do`, `po` und `d13`; mittelbar **Wandlungspfade ↑**
+(erster Apple-Eintrag der Rundlauf-Matrix).
+
+**Anlass:** der Eigentümer gab `cmosher01/DskToWoz2` und
+`cmosher01/Apple-II-Disk-Tools` zur Prüfung. Gutachten:
+`tools/uft-scout/out/{DskToWoz2,Apple-II-Disk-Tools}.gutachten.md`.
+Die Zone `?` von `apple2-disk-tools` ist dabei per Messung aufgelöst —
+beide Lizenzdateien sind wörtlicher GPL-3.0-Text → **GELB** (kein Port;
+Spec und Oracle zulässig).
+
+### Warum das mehr ist als ein weiteres Gutachten
+
+Diesem Baum fehlen Oracles chronisch, und die letzten drei Anläufe sind
+je an einer anderen Hürde gescheitert:
+
+| Kandidat | scheiterte an |
+|---|---|
+| `fftool` (fluxfox) | kein `cargo` auf dieser Maschine |
+| DiskImageTool | WinForms, keine Kommandozeile (MF-708) |
+| `cpmls`, `hxcfe`, `samdisk`, `lsatr` | nicht installiert |
+
+`to_woz2` scheitert an keiner. **Gemessen, in dieser Reihenfolge:**
+
+1. **Es baut.** MinGW gcc 13.1.0, eine Zeile, rc=0, 0 Warnungen
+   (Scout-Messung).
+2. **Es läuft.** `to_woz2.exe` ohne Argumente gibt seinen
+   Gebrauchstext; 16-Sektor, 13-Sektor und Blank erzeugen je ein
+   252 416-Byte-Abbild (eigene Gegenprüfung).
+3. **Es ist deterministisch.** Drei Läufe — zwei vom Scout, einer
+   unabhängig danach — liefern **byteidentische** SHA-256
+   (`0015aa1e2024717…`). Ein Oracle, das bei jedem Lauf etwas anderes
+   sagt, ist keins.
+4. **Sein Kopf stimmt.** `WOZ2 FF 0A 0D 0A` — die Signatur der
+   WOZ-2.0-Spezifikation (applesaucefdc.com), Byte für Byte.
+5. **Und wir erkennen seine Ausgabe.** Der Scout ließ das ausdrücklich
+   als UNGEKLÄRT stehen; die Wegwerf-Messung gegen
+   `uft_format_plugin_woz.probe()` beantwortet es:
+
+```
+out_a.woz  (16-Sektor)  Kopf WOZ2 FF 0A 0D 0A  ->  probe: JA (Konfidenz 98)
+out13.woz  (13-Sektor)  Kopf WOZ2 FF 0A 0D 0A  ->  probe: JA (Konfidenz 98)
+blank.woz  (35 leer)    Kopf WOZ2 FF 0A 0D 0A  ->  probe: JA (Konfidenz 98)
+```
+
+**Was dieses JA NICHT heißt:** dass wir richtig dekodieren. Es heißt,
+dass die Tür aufgeht. Der Beweis für T2 ist der Differenzlauf —
+Sektorinhalte byteweise zurück — und der steht aus.
+
+### Was zu tun ist, in dieser Reihenfolge
+
+1. **`to_woz2` in `docs/ORACLES.md` registrieren**, nach dem Muster von
+   `dtc`: nur Ausführung, kein Weitergeben; gepinnt über Quell-Commit
+   `639dc1c` + Bau-Rezept + Binary-SHA-256. Es hat **kein**
+   `--version` — die Pinnung muss das tragen. Rotbeweis: der
+   Fünf-Fragen-Prüfstand, mit benanntem Skip, wenn das Binary fehlt.
+2. **`do` T3 → T2** per Differenzlauf: Muster-DSK →(`to_woz2`)→ WOZ
+   →(UFT-Leser + 6-and-2-Decode)→ byteweiser Sektorvergleich.
+   Rotbeweis **zuerst**, und er muss den heute grün-falschen Fall
+   enthalten: `prodos_po_do.c:71` entscheidet DO gegen PO **an einem
+   Buchstaben der Dateiendung**. Ein PO-Inhalt mit `.dsk`-Endung wird
+   still falsch gelesen — dieselbe Klasse wie FMT-15.
+3. **`d13` T3 → ?** über den 13-Sektor-Pfad. `d13` hat heute
+   **keinen einzigen Test** (`VERIFICATION_TIERS.md:63`). Das erste
+   fremd erzeugte WOZ geht dabei in den Korpus — dieselbe Bewegung wie
+   `dim_atari` (MF-690).
+4. **Erst danach** `DO→WOZ` als erster Apple-Eintrag der
+   Rundlauf-Matrix. Braucht einen 6-and-2-**Encoder**, den der Baum
+   gemessen nicht hat (`uft_nib_parser_v2.c:13` sagt selbst
+   „decoding"). Der EINFRIER-konforme Weg ist benannt: Referenzen
+   (WOZ-2.0-Spec, *Beneath Apple DOS*) im Header, `to_woz2` als
+   Differenz-Oracle, Rotbeweis `DO→WOZ→DO` bitidentisch **vor** dem
+   Code.
+
+### Grenzen, gemessen statt angenommen
+
+* **Kein Port.** GPL-3.0, Zone GELB. Kanal ist **Oracle** (Ausführung
+  frei, Weitergabe nicht) und **Spec**.
+* `to_woz2` kann **kein `.po`**; der Kopf-CRC bleibt 0 (spec-legal).
+* Der Scout meldet einen **1-Byte-Heap-Überlauf** in `parse_filename`
+  (`to_woz2.c:367-369`). Für ein Oracle, das wir mit selbst gewählten
+  Dateinamen füttern, ist das tragbar — es gehört aber in den
+  Registry-Eintrag, nicht in eine Fußnote.
+* Die CiderPress-Kette (`nibblize`, „Based on code by Andy McFadden",
+  BSD-3) ist eine **zweistufige** Attribution und in beiden Gutachten
+  ausgewiesen. Sie betrifft uns nur, falls je portiert würde — was
+  Zone GELB ausschließt.
+
+**Fundus ohne Auftrag** (benannt, nicht verfallen): das
+META-Provenienz-Muster aus DskToWoz2 (Quell-CRC im Abbild) und
+`a2catalog` als DOS-3.3-Katalog-**Generator**.
