@@ -27,6 +27,23 @@ zuerst drankommt.
 Und sie ersetzt die anderen Dokumente nicht: `OPEN_ITEMS.md` bleibt die
 EINE Liste mit den Begruendungen, `KNOWN_ISSUES.md` bleibt das
 Geschichtsbuch. Diese Seite ist der Einstieg, nicht der Ersatz.
+
+── Rotbeweis fuer das Frische-Tor (Tor 44) ──────────────────────────────
+
+Zwei Laeufe, und nur der zweite zaehlt:
+
+1. **Trivial:** eine Zeile an `STAND.md` anhaengen ⇒ Tor meldet
+   „veraltet", zuruecknehmen ⇒ still. Das beweist nur, dass der
+   Textvergleich funktioniert.
+
+2. **Aussagekraeftig:** eine QUELLE aendern —
+   `tools/uft-scout/work/mfmdisk.messung.json` von `GRUEN` auf `ORANGE`
+   — ohne `STAND.md` anzufassen ⇒ Tor meldet „veraltet"; zuruecksetzen
+   ⇒ still. Damit ist belegt, dass das Tor die QUELLEN verfolgt und
+   nicht bloss sich selbst vergleicht.
+
+Der Unterschied ist der ganze Punkt: ein Frische-Tor, das nur die eigene
+Datei gegen die eigene Datei haelt, ist ein Beweis, der nicht feuert.
 """
 from __future__ import annotations
 
