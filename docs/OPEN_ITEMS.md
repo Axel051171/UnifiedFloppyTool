@@ -5913,4 +5913,73 @@ urteilen.** Sie sitzt offenbar noch nicht fest genug.
 * **Die ENC_53A-Variante** — eigene Aufgabe mit eigener Referenz.
 * **`nib`, `2img`, `moof`, `a2r`** — die uebrigen Apple-Formate auf T3.
   Der Dekoder steht jetzt fuer beide Kodierungen; was fehlt, ist je ein
-  Differenzlauf.
+  Differenzlauf.
+
+## GCR-3 — `nib` ist auf Unabhaengigkeit gesperrt, nicht auf Code (MF-723)
+
+<!-- status: wartet-eigentuemer(2026-08-31) -->
+
+**Kennzahl:** T3 runter — aber erst, wenn eine zweite Hand existiert.
+
+**Anlass:** `nib` war als naechster Posten vorgesehen, mit der
+Begruendung „kein neuer Code, nur ein Differenzlauf". Der Eigentuemer
+verlangte, **vorher die fuenfte Frage zu klaeren** (MF-644): bei rohen
+Nibbles ist die Gefahr besonders gross, dass Korpus-Erzeuger und Oracle
+dieselbe Hand sind — und ein Rundlauf wird dabei fast zwangslaeufig
+gruen, also unauffaellig falsch.
+
+**Die Messung faellt schaerfer aus als die Sorge.** Es geht nicht um
+dieselbe *Familie*, sondern um **dieselben Quelldateien**:
+
+| | |
+|---|---|
+| `.nib` im Korpus | **0** — es gibt nichts, dessen Herkunft messbar waere |
+| Erzeuger, verfuegbar | `a2nibblize` (Apple-II-Disk-Tools) |
+| dessen Kodierer | `nibblize_6_2.c`, `nibblize_5_3.c` |
+| unser Dekoder geeicht gegen | `to_woz2` — **dieselben** `nibblize_*.c` |
+| zweite Hand | MAMEs `a2_nib_format` hat `load`, aber **kein `save`** |
+
+Ein Differenzlauf `a2nibblize → unser Dekoder` pruefte damit **denselben
+Code gegen sich selbst durch zwei Huellen**. Gruen waere er mit
+Sicherheit; belegen wuerde er nichts.
+
+**Was ihn oeffnen wuerde**, in dieser Reihenfolge nach Aufwand:
+
+1. **MAMEs `a2_nib_format` als Leser bauen** (BSD-3, `ap2_dsk.cpp:821+`)
+   — echte zweite Hand, aber MAME ist gross; ob sich die Datei mit
+   vertretbarem Aufwand einzeln uebersetzen laesst, ist **nicht
+   gemessen**.
+2. **Ein `.nib` fremder Herkunft beschaffen** (Daten/Fixture-Kanal) —
+   dann ist der Erzeuger unbekannt und `a2nibblize` faellt als Vergleich
+   weg.
+3. **Ein dritter Erzeuger** (CiderPress, AppleCommander) — beide nicht
+   gemessen, beide nicht auf dieser Maschine.
+
+**Was NICHT hilft:** unser eigener Encoder. Er existiert nicht, und
+wenn er existierte, waere er die dritte Huelle um denselben Kern.
+
+### Was das fuer die Reihenfolge heisst
+
+Die geplante Folge war `nib → a2r → FMT-17 → 2img → moof`. `nib` faellt
+vorerst heraus, und `a2r` steht vor derselben Frage (Erzeuger ist
+Applesauce, hier nicht vorhanden). Was bleibt und **heute** geht:
+
+**FMT-17 zuerst** — es braucht keine neue Vorlage, nur eine Inhaltsprobe
+und eine ehrliche Kandidaten-Ausgabe.
+
+### Und ein Befund, der dabei abfiel: `2img` ist schon jetzt betroffen
+
+`src/formats/2img/uft_2img.c` liest das Sortierungs-Feld bei `0x0C` und
+kennt drei Werte:
+
+```c
+#define IMG2_FMT_DOS    0   /* definiert, NIRGENDS benutzt */
+#define IMG2_FMT_PRODOS 1   /* definiert, NIRGENDS benutzt */
+#define IMG2_FMT_NIB    2   /* einzige Verwendung, :72     */
+```
+
+Der Leser trennt NIB vom Sektor-Abbild und behandelt **DOS und ProDOS
+identisch**. Ein `.2mg`, das ProDOS-Sortierung deklariert, wird gelesen,
+als spielte die Sortierung keine Rolle — dieselbe stille Falschaussage
+wie FMT-17, eine Schicht hoeher, und sie laeuft bereits. `2img` gehoert
+darum hinter FMT-17, nicht daneben.
