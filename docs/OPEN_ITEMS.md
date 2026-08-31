@@ -6678,4 +6678,43 @@ Rumpfe, weil das Muster je Plugin-Struktur suchte — 39 Sonden stehen in
 **anderen** Dateien als ihre Struktur (`uft_adf.c` gegen
 `uft_adf_plugin.c`). Die Zahl haette 36 % statt 14 % gelautet und waere
 nicht gedeckt gewesen. Gesucht wird darum ueber den ganzen Baum, nicht
-je Struktur.
+je Struktur.
+
+### Nachtrag MF-733 — die CLI-Haelfte von FMT-21 gibt es nicht
+
+Der Plan zu FMT-21 sah zwei Anlaufstellen fuer die Kandidatenliste vor:
+die Oberflaeche soll sie zur Wahl anbieten, und **die Kommandozeile
+soll bei Mehrdeutigkeit `--format` verlangen** (das floptool-Muster).
+
+**Die zweite Haelfte ist gegenstandslos: UFT hat keine Kommandozeile.**
+Gemessen:
+
+```
+UnifiedFloppyTool.pro   TARGET = UnifiedFloppyTool
+                        TEMPLATE = app          (ein Ziel)
+ungeschuetztes main()   genau EINES: src/main.cpp
+```
+
+47 der 50 `main()` im Baum stehen in `#ifdef`-Bloecken
+(`IMD_PARSER_TEST`, `ADF_PARSER_TEST` …) — es sind Selbsttests der
+Parser, keine Programme. Das deckt sich mit der festen Projektregel
+„GUI-only, kein CLI-Modus".
+
+**Was daraus folgt, ist keine Luecke, sondern eine Vereinfachung:** der
+Baustein fuer die Klick-Sitzung hat **eine** Anlaufstelle statt zwei.
+Wo ein Skript stuende, steht hier der Rueckgabewert — `verdict` und
+`band_claimants` sind bereits Teil von `uft_probe_ranking`, und ein
+Aufrufer, der `UFT_PROBE_VERDICT_MEHRDEUTIG` ignoriert, trifft dieselbe
+falsche Annahme wie vorher. Das floptool-Muster bleibt also gueltig, es
+wirkt nur an der API-Grenze statt an einer Kommandozeile.
+
+**Berichtigung an mir selbst, weil die Methode wichtiger ist als die
+Zahl:** dieser Nachtrag entstand aus zwei nacheinander **falschen**
+Zaehlungen. Erst meldete ein Muster „24 ungeschuetzte main()", dann „21
+davon im Build" — beides waere ein Link-Fehler gewesen, den es nicht
+gibt. Der Grund: das Muster suchte die Wache in den 600 Zeichen vor dem
+`main()`, und in `uft_imd_parser_v2.c` steht sie **89 Zeilen** davor
+(`#ifdef IMD_PARSER_TEST`, Zeile 639, `main()` bei 728). Gefunden wurde
+der Fehler nur, weil ein einzelner Fall konkret nachgesehen wurde,
+statt der Zahl zu glauben. Die richtige Messung zaehlt die
+Praeprozessor-Verschachtelung mit.
