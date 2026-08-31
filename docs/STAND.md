@@ -2,7 +2,7 @@
 
 **NICHT von Hand editieren** — erzeugt von `scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im Baum und wird bei jedem Lauf neu gelesen.
 
-Stand: 2026-08-30
+Stand: 2026-08-31
 
 ---
 
@@ -41,7 +41,7 @@ Stand: 2026-08-30
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **5802** Zeilen in **77** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **5875** Zeilen in **77** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)

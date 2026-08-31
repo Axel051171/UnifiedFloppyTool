@@ -5790,4 +5790,76 @@ tatsächlich tun, und die Ankündigung in `features` auf den belegten
 Stand bringen.
 
 `posix` ist dabei vermutlich harmlos (Sammelname, kein historisches
-Format) — das ist zu prüfen, nicht anzunehmen.
+Format) — das ist zu prüfen, nicht anzunehmen.
+
+### Umsetzung erledigt (MF-721) — 454 von 455, und der eine ist benannt
+
+Der 5-and-3-Dekoder steht: `uft_apple_gcr_denibblize_5_3()`, und der
+Abtaster erkennt den 13-Sektor-Vorspann `D5 AA B5` selbst — der Aufrufer
+muss die Kodierung nicht mitgeben.
+
+**Der Differenzlauf gegen `to_woz2`:**
+
+```
+Eingabe : 116 480-Byte-D13 mit allen 256 Bytewerten
+gefunden           : 455 von 455
+Adress-Prüfsumme   : 455
+byteidentisch      : 454
+andere Kodierung   :   1  (benannt, siehe unten)
+```
+
+Die Zuordnung physisch↔logisch fiel wieder aus dem Lauf heraus und ist
+die **Identität** — dritte Bestätigung von MF-720 (MAME, CiderPress),
+diesmal aus dem eigenen Messaufbau. Die Abtast-Reihenfolge ist
+`0, 10, 7, 4, 1, 11, 8, 5, 2, 12, 9, 6, 3` = `(i·10) mod 13`, genau
+MAMEs Skew.
+
+### Der eine Sektor — und warum er der wichtigste ist
+
+**Spur 0, Sektor 0 trägt eine andere 5-and-3-Variante.** DOS 3.2
+schreibt den Bootsektor anders als die übrigen 454. Im Oracle steht das
+wörtlich:
+
+```c
+deduce_encoding(dos33, track, sector) {
+    if (dos33)            return ENC_62;
+    if (track || sector)  return ENC_53;
+    return ENC_53A;                 // genau T0S0
+}
+```
+
+Die beiden Kodierer sind verschiedene Dateien (`nibblize_5_3.c` 244
+Zeilen, `nibblize_5_3_alt.c` 271).
+
+**Und die Prüfsumme trennt sie nicht.** Beide benutzen dieselbe Tabelle
+und dieselbe laufende XOR. Der erste Entwurf hat den Bootsektor darum
+mit `data_checksum_ok = true` und **255 von 256 falschen Bytes**
+zurückgegeben — ein Inhalt, der nirgends auf der Diskette stand. Das ist
+wörtlich „stille Veränderung" und „erfundene Daten"
+(`DESIGN_PRINCIPLES`), und es wäre durchgegangen: der Sektor sah aus wie
+jeder andere gelesene.
+
+Seit MF-721 meldet die Einheit stattdessen `alt_encoding`, lässt `data`
+**unberührt** und setzt `data_checksum_ok = false`. Ein Feld wurde
+gefunden, es ist nur nicht lesbar — das ist etwas anderes als „defekt"
+und etwas anderes als „gelesen".
+
+**Wie der Fall gefunden wurde**, weil die Methode wiederverwendbar ist:
+455 gefunden, 454 identisch — die eine Abweichung ließ sich nicht mit
+„Rundungsfehler" abtun. Der Reihe nach ausgeschlossen: kein Nahtproblem
+(Drehen des Startpunkts ändert nichts), keine Verwechslung (der Inhalt
+steht **nirgends** in der Datei), keine falsche Zuordnung (die anderen
+zwölf stimmen). Erst danach der Blick in die Oracle-Quelle — und dort
+stand es in vier Zeilen.
+
+### Was jetzt noch fehlt, damit `d13` steigt
+
+Der Dekoder ist fertig und belegt. Die **Hebung** braucht denselben
+Schritt wie `do` (MF-716): einen `spec_verification.json`-Eintrag mit
+diesem Differenzlauf als Beleg, plus einen Regressionstest über den
+`d13`-Leser. Der Testkopf und `tests/test_apple_gcr_6and2.c`
+Abschnitt 4b tragen die Belege bereits.
+
+**Nicht belegt bleibt:** die ENC_53A-Variante selbst. Sie zu dekodieren
+wäre eine eigene Aufgabe mit eigener Referenz — heute wird sie
+**benannt**, nicht geraten.

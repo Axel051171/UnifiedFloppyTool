@@ -58,8 +58,18 @@ extern "C" {
 /** Diskettenbytes eines Datenfelds: 86 Hilfs- + 256 Haupt- + 1 Pruefbyte. */
 #define UFT_A2_DATA_NIBBLES     343u
 
+/** Diskettenbytes eines 5-and-3-Datenfelds: 410 Nutz- + 1 Pruefbyte.
+ *
+ * Gemessen (MF-719) an einer 13-Sektor-Spur aus `to_woz2`: vom Vorspann
+ * `D5 AA AD` bis zum Epilog `DE AA` liegen bei allen 13 Sektoren genau
+ * **411** Diskettenbytes. */
+#define UFT_A2_DATA_NIBBLES_13  411u
+
 /** Sektoren je Spur bei 16-Sektor-Formatierung. */
 #define UFT_A2_SECTORS_16       16u
+
+/** Sektoren je Spur bei 13-Sektor-Formatierung (DOS 3.2). */
+#define UFT_A2_SECTORS_13       13u
 
 /** Ein aus der Spur gelesener Sektor. */
 typedef struct {
@@ -69,6 +79,34 @@ typedef struct {
     bool    addr_checksum_ok;               /**< Adressfeld-Pruefsumme */
     bool    data_checksum_ok;               /**< Datenfeld-Pruefsumme  */
     bool    has_data;                       /**< Datenfeld gefunden    */
+    /** Datenfeld in einer Kodierung, die diese Einheit NICHT beherrscht.
+     *
+     * Gemessen (MF-721): bei einer 13-Sektor-Diskette schreibt DOS 3.2
+     * **Spur 0, Sektor 0** — den Bootsektor — mit einer ANDEREN
+     * 5-and-3-Variante als alle uebrigen 454 Sektoren. Im Oracle
+     * `to_woz2` steht das woertlich:
+     *
+     *     deduce_encoding(dos33, track, sector) {
+     *         if (dos33)           return ENC_62;
+     *         if (track || sector) return ENC_53;
+     *         return ENC_53A;                    // genau T0S0
+     *     }
+     *
+     * Die beiden Kodierer sind verschiedene Dateien (`nibblize_5_3.c`
+     * 244 Zeilen, `nibblize_5_3_alt.c` 271).
+     *
+     * **Die Pruefsumme trennt sie nicht** — beide benutzen dieselbe
+     * Tabelle und dieselbe laufende XOR. Der erste Entwurf dieser
+     * Einheit hat den Bootsektor darum mit `data_checksum_ok = true`
+     * und **falschen Bytes** zurueckgegeben: 255 von 256 abweichend,
+     * und der Inhalt stand nirgends auf der Diskette. Genau das ist
+     * „stille Veraenderung" (DESIGN_PRINCIPLES).
+     *
+     * Ist dieses Feld gesetzt, bleibt `data` **unberuehrt** und
+     * `data_checksum_ok` ist `false`. Ein Feld wurde gefunden, es ist
+     * nur nicht lesbar — das ist etwas anderes als „defekt" und etwas
+     * anderes als „gelesen". */
+    bool    alt_encoding;
     uint8_t data[UFT_A2_SECTOR_SIZE];       /**< Nutzbytes             */
 } uft_a2_sector_t;
 
@@ -84,6 +122,22 @@ typedef struct {
  *         Veraenderung (DESIGN_PRINCIPLES).
  */
 bool uft_apple_gcr_denibblize_6_2(const uint8_t nib[UFT_A2_DATA_NIBBLES],
+                                  uint8_t out[UFT_A2_SECTOR_SIZE]);
+
+/**
+ * @brief Ein 5-and-3-Datenfeld in 256 Nutzbytes zurueckwandeln (MF-719).
+ *
+ * Der Weg der 13-Sektor-Formatierung (DOS 3.2). Aufbau, Reihenfolge und
+ * die 32-Werte-Tabelle stehen im Kopf der Umsetzung; die Tabelle ist
+ * **gemessen**, nicht erinnert.
+ *
+ * @param nib   411 Diskettenbytes hinter dem Vorspann `D5 AA AD`.
+ * @param out   Ziel, 256 Byte.
+ * @return true, wenn alle 411 Bytes in der Tabelle stehen UND die
+ *         laufende XOR-Pruefsumme aufgeht. Bei false bleibt @p out
+ *         unveraendert — wie beim 6-and-2-Weg.
+ */
+bool uft_apple_gcr_denibblize_5_3(const uint8_t nib[UFT_A2_DATA_NIBBLES_13],
                                   uint8_t out[UFT_A2_SECTOR_SIZE]);
 
 /**

@@ -30,6 +30,25 @@
  * Das ist genau die Umkehrung der DOS-3.3-Tabelle aus `a8rawconv`
  * (`diska2.cpp:3-5`) — eine unabhaengige Bestaetigung, die niemand
  * eingebaut hat.
+ *
+ * ── Und derselbe Weg fuer 13 Sektoren (MF-721) ──────────────────────────
+ *
+ *     Eingabe : 116 480-Byte-D13 mit allen 256 Bytewerten
+ *     Ergebnis: 455 von 455 Sektoren gefunden, Adress-Pruefsumme 455/455,
+ *               **454 byteidentisch** — und einer benannt statt geraten
+ *
+ * Der eine ist **Spur 0, Sektor 0**: DOS 3.2 schreibt den Bootsektor mit
+ * einer ANDEREN 5-and-3-Variante. Im Oracle steht das woertlich
+ * (`to_woz2.c` `deduce_encoding()`: `if (track || sector) return ENC_53;
+ * return ENC_53A;`), und die beiden Kodierer sind verschiedene Dateien.
+ *
+ * **Die Pruefsumme trennt sie nicht.** Der erste Entwurf hat den
+ * Bootsektor darum mit `data_checksum_ok = true` und 255 von 256
+ * falschen Bytes zurueckgegeben — ein Inhalt, der nirgends auf der
+ * Diskette stand. Seit MF-721 meldet die Einheit stattdessen
+ * `alt_encoding` und liefert **keine** Bytes. Abschnitt 4b prueft
+ * beides: dass der Bootsektor abgewiesen wird UND dass Sektor 1
+ * weiterhin dekodiert (die Ausnahme darf nicht zu breit sein).
  */
 
 #include "uft/formats/apple/uft_apple_gcr.h"
@@ -97,6 +116,45 @@ static void schreib_nibble(schreiber_t *s, uint8_t v)
         if ((v >> k) & 1u) s->b[s->pos >> 3] |= (uint8_t)(0x80u >> (s->pos & 7u));
 }
 
+
+/* 5-and-3: die 32 Diskettenbytes, gemessen (MF-719). */
+static const uint8_t TAB5[32] = {
+    0xAB, 0xAD, 0xAE, 0xAF, 0xB5, 0xB6, 0xB7, 0xBA,
+    0xBB, 0xBD, 0xBE, 0xBF, 0xD6, 0xD7, 0xDA, 0xDB,
+    0xDD, 0xDE, 0xDF, 0xEA, 0xEB, 0xED, 0xEE, 0xEF,
+    0xF5, 0xF6, 0xF7, 0xFA, 0xFB, 0xFD, 0xFE, 0xFF
+};
+
+/* Zustand des 5-and-3-Kodierers: laufender XOR-Vorgaenger. */
+static uint8_t k53_pv;
+static size_t  k53_o;
+
+static void k53_w(uint8_t *nib, uint8_t nval)
+{
+    nib[k53_o++] = TAB5[(nval ^ k53_pv) & 31u];
+    k53_pv = nval;
+}
+
+/* 256 Nutzbytes -> 411 Diskettenbytes. Die Bit-Aufteilung steht im
+ * Kopf von src/formats/apple/uft_apple_gcr.c (Tatsache aus
+ * mamedev/mame ap2_dsk.cpp, BSD-3-Clause). */
+static void kodiere_5_3(const uint8_t in[256], uint8_t nib[411])
+{
+    k53_o = 0;
+    k53_pv = 0;
+    k53_w(nib, (uint8_t)(in[255] & 7u));
+    for (int k = 2; k >= 0; k--)
+        for (int j = 0; j < 51; j++)
+            k53_w(nib, (uint8_t)(((in[j*5+k] & 7u) << 2)
+                | (((in[j*5+3] >> (2-k)) & 1u) << 1)
+                | ((in[j*5+4] >> (2-k)) & 1u)));
+    for (int k = 0; k < 5; k++)
+        for (int j = 50; j >= 0; j--)
+            k53_w(nib, (uint8_t)(in[j*5+k] >> 3));
+    k53_w(nib, (uint8_t)(in[255] >> 3));
+    nib[k53_o] = TAB5[k53_pv & 31u];
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -155,6 +213,50 @@ int main(void)
     PRUEFE(vier_ok, "4-and-4 ueberlebt den Rundlauf nicht fuer alle 256 Werte");
     printf("  4-and-4, alle 256 Werte        : %s\n", vier_ok ? "ok" : "FEHLER");
 
+
+    /* ── 5 · 5-and-3 hin und zurueck (MF-721) ────────────────────────
+     *
+     * Der Weg der 13-Sektor-Formatierung. Der Beweis gegen die fremde
+     * Hand steht im Kopf dieser Datei: 454 von 455 Sektoren
+     * byteidentisch gegen to_woz2, plus ein benannter Sonderfall. */
+    uint8_t nib5[411], zur5[256];
+    kodiere_5_3(klar, nib5);
+    memset(zur5, 0xCC, sizeof(zur5));
+    ok = uft_apple_gcr_denibblize_5_3(nib5, zur5);
+    printf("\n  5-and-3 hin und zurueck        : %s\n",
+           ok ? "ok" : "FEHLER");
+    PRUEFE(ok, "das selbst kodierte 5-and-3-Feld wird nicht angenommen");
+    PRUEFE(memcmp(klar, zur5, 256) == 0,
+           "256 Nutzbytes kommen aus 5-and-3 nicht unveraendert zurueck");
+
+    for (int v = 0; v < 256; v++) {
+        uint8_t e[256], n5[411], d5[256];
+        memset(e, (uint8_t)v, sizeof(e));
+        kodiere_5_3(e, n5);
+        if (!uft_apple_gcr_denibblize_5_3(n5, d5)
+            || memcmp(e, d5, 256) != 0) {
+            PRUEFE(false, "5-and-3: Bytewert 0x%02X ueberlebt den "
+                   "Rundlauf nicht", v);
+            break;
+        }
+    }
+    printf("  5-and-3, alle 256 Bytewerte    : geprueft\n");
+
+    {
+        uint8_t kaputt5[411];
+        memcpy(kaputt5, nib5, sizeof(kaputt5));
+        kaputt5[200] = 0x96;   /* gueltig in 6-and-2, NICHT in 5-and-3 */
+        memset(zur5, 0xCC, sizeof(zur5));
+        PRUEFE(!uft_apple_gcr_denibblize_5_3(kaputt5, zur5),
+               "ein 6-and-2-Byte wird im 5-and-3-Feld angenommen");
+        bool rein = true;
+        for (size_t i = 0; i < 256; i++)
+            if (zur5[i] != 0xCC) rein = false;
+        PRUEFE(rein, "abgewiesenes 5-and-3-Feld hat das Ziel "
+               "beschrieben");
+    }
+    printf("  fremdes Nibble abgewiesen      : ok\n");
+
     /* ── 4 · Der Spur-Abtaster auf einer gebauten Spur ───────────────── */
     const uint32_t bits = 50624u;               /* wie eine echte Spur   */
     uint8_t *spur = calloc(1, bits / 8u + 8u);
@@ -195,6 +297,75 @@ int main(void)
                "Datenfeld nicht dekodiert");
         PRUEFE(memcmp(sek[0].data, klar, 256) == 0,
                "die Nutzbytes stimmen nicht mit dem Geschriebenen ueberein");
+    }
+
+    /* ── 4b · Der Bootsektor darf NICHT dekodiert werden (MF-721) ─────
+     *
+     * Bei 13 Sektoren traegt Spur 0 Sektor 0 eine ANDERE
+     * 5-and-3-Variante (Begruendung am Feld `alt_encoding`). Die
+     * Pruefsumme trennt die beiden nicht — ein Dekoder, der es
+     * trotzdem versucht, gibt plausible FALSCHE Bytes zurueck.
+     * Gemessen war genau das: 255 von 256 Bytes abweichend, und der
+     * Inhalt stand nirgends auf der Diskette. */
+    memset(spur, 0, bits / 8u + 8u);
+    s.pos = 0;
+    for (int i = 0; i < 40; i++) schreib_nibble(&s, 0xFF);
+    schreib_nibble(&s, 0xD5); schreib_nibble(&s, 0xAA);
+    schreib_nibble(&s, 0xB5);                  /* 13-Sektor-Vorspann */
+    kodiere_4_4(0xFE, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0x00, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0x00, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0xFE, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    schreib_nibble(&s, 0xDE); schreib_nibble(&s, 0xAA); schreib_nibble(&s, 0xEB);
+    for (int i = 0; i < 6; i++) schreib_nibble(&s, 0xFF);
+    schreib_nibble(&s, 0xD5); schreib_nibble(&s, 0xAA);
+    schreib_nibble(&s, 0xAD);
+    for (size_t i = 0; i < 411; i++) schreib_nibble(&s, nib5[i]);
+    schreib_nibble(&s, 0xDE); schreib_nibble(&s, 0xAA); schreib_nibble(&s, 0xEB);
+
+    int nb = uft_apple_gcr_scan_track(spur, bits, sek, 8);
+    printf("\n  13-Sektor, Spur 0 Sektor 0     : %d Sektor(en)\n", nb);
+    PRUEFE(nb == 1, "erwartet war ein Sektor, gefunden %d", nb);
+    if (nb == 1) {
+        printf("     alt_encoding %d  DatSumme %d\n",
+               sek[0].alt_encoding, sek[0].data_checksum_ok);
+        PRUEFE(sek[0].alt_encoding,
+               "der Bootsektor wird nicht als andere Kodierung gemeldet");
+        PRUEFE(!sek[0].data_checksum_ok,
+               "der Bootsektor wird als gelesen gemeldet — das waeren "
+               "erfundene Daten");
+        bool leer = true;
+        for (size_t i = 0; i < 256; i++) if (sek[0].data[i]) leer = false;
+        PRUEFE(leer, "der Bootsektor hat Bytes geliefert, obwohl seine "
+                     "Kodierung nicht beherrscht wird");
+    }
+
+    /* Und dieselbe Spur mit Sektor 1 statt 0 MUSS dekodieren — sonst
+     * waere die Ausnahme zu breit. */
+    memset(spur, 0, bits / 8u + 8u);
+    s.pos = 0;
+    for (int i = 0; i < 40; i++) schreib_nibble(&s, 0xFF);
+    schreib_nibble(&s, 0xD5); schreib_nibble(&s, 0xAA);
+    schreib_nibble(&s, 0xB5);
+    kodiere_4_4(0xFE, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0x00, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0x01, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    kodiere_4_4(0xFF, &h, &l); schreib_nibble(&s, h); schreib_nibble(&s, l);
+    schreib_nibble(&s, 0xDE); schreib_nibble(&s, 0xAA); schreib_nibble(&s, 0xEB);
+    for (int i = 0; i < 6; i++) schreib_nibble(&s, 0xFF);
+    schreib_nibble(&s, 0xD5); schreib_nibble(&s, 0xAA);
+    schreib_nibble(&s, 0xAD);
+    for (size_t i = 0; i < 411; i++) schreib_nibble(&s, nib5[i]);
+    schreib_nibble(&s, 0xDE); schreib_nibble(&s, 0xAA); schreib_nibble(&s, 0xEB);
+
+    nb = uft_apple_gcr_scan_track(spur, bits, sek, 8);
+    printf("  13-Sektor, Spur 0 Sektor 1     : %d Sektor(en)\n", nb);
+    if (nb == 1) {
+        PRUEFE(!sek[0].alt_encoding,
+               "die Bootsektor-Ausnahme greift zu breit — Sektor 1 ist "
+               "normal kodiert");
+        PRUEFE(sek[0].data_checksum_ok && memcmp(sek[0].data, klar, 256) == 0,
+               "Sektor 1 wird nicht korrekt dekodiert");
     }
 
     /* Eine Spur ohne jedes gesetzte Bit darf nicht haengen. */
