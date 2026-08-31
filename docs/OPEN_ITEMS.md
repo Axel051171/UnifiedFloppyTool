@@ -6218,4 +6218,67 @@ geraten — dieselbe Fehlerklasse, nur enger statt breiter.
 
 **Was zuerst zu messen waere:** wie viele der 137 Plugins eine Sonde
 haben, die unter 40 meldet. Jedes davon verliert heute an KFX, sobald
-irgendwo ein Wagenruecklauf steht.
+irgendwo ein Wagenruecklauf steht.
+
+### FMT-20 vermessen (MF-727) — und der Befund ist groesser als KFX
+
+Der Eigentuemer wollte die Zahl, die niemand kennt: wie viele Plugins
+verlieren an KFX? Sie ist da — und die Messung hat den Befund
+**erweitert**.
+
+**Statischer Zensus** ueber alle Plugin-Quellen aus `git ls-files`
+(nicht aus einer Liste, CLAUDE.md §Dateimengen): von **82** Quellen mit
+erkennbarer Konfidenz-Zuweisung melden **13** hoechstens 40 — sie
+koennen KFX nie ueberbieten:
+
+```
+25  t1k          35  jv1          40  dsk_generic
+30  edk          35  sam          40  jvc
+30  tan          35  syn          40  korg
+35  adf_arc      35  xdm86        40  pdp
+                                  40  v9t9
+```
+
+**Fuenf davon — `t1k`, `edk`, `tan`, `syn`, `xdm86` — sind genau die
+Formate, fuer die FMT-18 draussen kein Gegenstueck gefunden hat.** Die
+beiden Befunde treffen dieselben Plugins: kein fremdes Werkzeug, keine
+Spec, kein Abbild — und eine Sonde, die im Gedraenge untergeht.
+
+### Die dynamische Messung korrigiert meine Erwartung
+
+Ich hielt es fuer einen Zweikampf `v9t9` gegen KFX. Gemessen an einer
+92 160-Byte-Datei (eine der drei Groessen aus `v9t9_probe`):
+
+```
+ohne 0x0D :  7 Bewerber,  5 gleichauf bei 40,  Sieger XFD
+mit  0x0D :  8 Bewerber,  6 gleichauf bei 40,  Sieger XFD
+```
+
+**Der Sieger stand schon vorher durch die Registrierungsreihenfolge
+fest.** KFX ist nicht die Ursache, sondern der sechste im Gedraenge.
+
+Das 40er-Band ist ueberfuellt: mehrere kopflose Formate beanspruchen
+dieselbe Groesse mit identischer Konfidenz. Das ist die
+**FMT-15-Klasse**, und sie reicht weiter als FMT-20 — die
+Wagenruecklauf-Sonde macht ein bestehendes Problem sichtbar, sie
+verursacht es nicht.
+
+### Was daraus folgt
+
+**Nicht** „kfx_probe verengen und fertig". Zwei getrennte Aufgaben:
+
+1. **FMT-20 (KFX):** die Schaerfung braucht den OOB-Blockaufbau aus der
+   KryoFlux-Stream-Spezifikation als benannte Referenz. `dtc` ist
+   registriert, aber nicht installiert. Blind verengen waere derselbe
+   Fehler in der anderen Richtung — echte Stroeme fielen durch.
+2. **Neu, und das ist der groessere:** fuenf Plugins gleichauf bei 40 auf
+   derselben Groesse. Solange `uft_probe_ranking.tied` niemanden
+   erreicht, sieht das aus wie eine Entscheidung. FMT-17 (MF-724) hat
+   fuer `do`/`po` gezeigt, wie es geht — dieselbe Behandlung fuer das
+   40er-Band waere die Verallgemeinerung.
+
+**Was zuerst zu messen waere:** wie viele der 137 Plugins auf **jeder**
+gaengigen Diskettengroesse gleichauf liegen. Die 92 160-Byte-Messung ist
+ein Stichprobenwert; die Verteilung ueber alle Groessen kennt niemand.
+
+Regressionsschutz: `tests/test_kfx_probe_overclaims.c`.

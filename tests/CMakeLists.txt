@@ -985,6 +985,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_register_all_formats"
            OR ${test_name} STREQUAL "test_apple_moof_a2r_no_door"
+           OR ${test_name} STREQUAL "test_kfx_probe_overclaims"
            OR ${test_name} STREQUAL "test_disk_open_fuzz"
            OR ${test_name} STREQUAL "test_dsk_open_bounds"
            OR ${test_name} STREQUAL "test_disk_write_fuzz"
