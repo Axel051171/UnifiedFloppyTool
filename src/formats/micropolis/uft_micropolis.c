@@ -15,7 +15,10 @@
  * Used by: Vector Graphic, Exidy Sorcerer, Processor Technology,
  *          North Star (some), and various S-100 bus systems.
  *
- * Reference: FluxEngine, MAME Micropolis driver
+ * Reference: FluxEngine (davidgiven/fluxengine, GPL-2.0 laut
+ * COPYING.md), MAME Micropolis driver (mamedev/mame, GPL-2.0 laut
+ * COPYING). Beide vereinbar mit GPL-2.0-or-later; Lizenzen aus den
+ * Lizenzdateien gelesen, MF-739.
  */
 #include "uft/uft_format_common.h"
 

@@ -18,7 +18,10 @@
  * Sector size: 512 bytes.  Total per side: 1224 sectors = 626688 bytes.
  * Raw image: SS = 626688, DS = 1253376.
  *
- * Reference: FluxEngine, MAME Victor 9000 driver
+ * Reference: FluxEngine (davidgiven/fluxengine, GPL-2.0 laut
+ * COPYING.md), MAME Victor 9000 driver (mamedev/mame, GPL-2.0 laut
+ * COPYING). Beide vereinbar mit GPL-2.0-or-later; Lizenzen aus den
+ * Lizenzdateien gelesen, MF-739.
  */
 #include "uft/uft_format_common.h"
 

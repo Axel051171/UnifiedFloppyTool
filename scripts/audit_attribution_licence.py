@@ -189,7 +189,7 @@ def klassifiziere(text: str) -> tuple[str, str]:
 # Die Kennzahl: benannte fremde CODEBASIS ohne Lizenz daneben. Sie darf
 # sinken, nicht steigen — wie `audit_todo_without_plan`. Gemessen am
 # 2026-08-31 nach der Einordnung.
-CODE_OHNE_LIZENZ_MAX = 37
+CODE_OHNE_LIZENZ_MAX = 34
 
 
 def messe(repo: pathlib.Path):

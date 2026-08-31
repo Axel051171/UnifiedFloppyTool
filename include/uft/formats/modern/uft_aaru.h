@@ -6,7 +6,28 @@
  * It uses Protocol Buffers internally for metadata, but we parse the
  * fixed binary fields for basic floppy geometry and sector data.
  *
- * Reference: https://github.com/aaru-dps/Aaru
+ * Verhalten nach der Formatbeschreibung des Aaru-Projekts,
+ * eigenstaendige Implementierung. KEINE Ableitung von Aaru-Code.
+ *
+ * MF-739 — geprueft, weil die frueher hier stehende Zeile
+ * „Reference: https://github.com/aaru-dps/Aaru" auf eine Codebasis
+ * zeigte und Aaru **GPL-3.0** ist (`LICENSE` im Wortlaut gelesen). Eine
+ * Ableitung haette den ganzen Baum auf GPL-3.0 gehoben — eine
+ * Entscheidung ueber das gesamte Projekt fuer einen einzelnen Punkt.
+ *
+ * Gemessen, dass es keine ist: Aarus eigenes
+ * `Aaru.Images/AaruFormat/Structs.cs` nennt seine Felder `Version`
+ * (Byte-Array), `ApplicationVersion`, `ManufacturerLength`,
+ * `ModelLength` — und dokumentiert den Zeitstempel als **Windows
+ * FILETIME, 100 ns seit 1601-01-01 UTC**. Hier stehen andere Namen,
+ * andere Typen und eine andere Semantik. Eine Transkription haette die
+ * FILETIME-Bedeutung mitgenommen.
+ *
+ * ACHTUNG, offener Korrektheitspunkt aus derselben Messung: `creation_time`
+ * und `last_modified` sind unten als „Unix timestamp" beschrieben. Aarus
+ * Quelle sagt FILETIME. Entweder ist die Beschreibung falsch, oder die
+ * Felder liegen woanders — dieses Format steht auf **T3**, es gibt
+ * keinen Test, und geprueft hat es niemand.
  *
  * @version 1.0.0
  * @date 2026-04-10

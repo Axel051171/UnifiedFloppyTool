@@ -6865,4 +6865,183 @@ stehen als Liste bereit (`--unklar`), nicht als Zahl im Rückstand.
 
 **Kennzahl:** „Dateien mit ungeklärter Herkunft", Verdachts-Stufe:
 **125 → 37**, und zum ersten Mal mit einer Sperrklinke statt einer
-gepflegten Zahl.
+gepflegten Zahl.
+
+### Die vier Lizenzentscheidungen, einzeln beantwortet (MF-739)
+
+Der Eigentümer hat jede getrennt entschieden. Hier steht, was die
+Prüfung ergeben hat — inklusive der einen, bei der die Antwort das
+Gegenteil der Erwartung war.
+
+#### 2 · FluxEngine — erledigt
+
+Drei Kopfzeilen. GPL-2.0 laut `COPYING.md`, MAME GPL-2.0 laut
+`COPYING`, beide vereinbar mit `GPL-2.0-or-later`. Lizenzen aus den
+Lizenzdateien gelesen, nicht aus README-Prosa. Rückstand **37 → 35**.
+
+#### 3 · Aaru — keine Ableitung, und dabei ein Korrektheitsverdacht
+
+Die Frage war: enthält die Stelle Aaru-**Code**, oder bildet sie nur
+Aaru-**Verhalten** nach? Gemessen an Aarus eigenem
+`Aaru.Images/AaruFormat/Structs.cs`:
+
+| | Aaru | unser Header |
+|---|---|---|
+| Fassung | `Version` (Byte-Array), `ApplicationVersion` | `major_version`, `minor_version` (uint8) |
+| Zeitstempel | **Windows FILETIME**, 100 ns seit 1601-01-01 | „Unix timestamp" |
+| Längen | `ManufacturerLength`, `ModelLength`, … | kommen nicht vor |
+
+Andere Namen, andere Typen, **andere Semantik**. Eine Transkription
+hätte die FILETIME-Bedeutung mitgenommen. Die GPL-3.0-Frage löst sich
+damit auf; die Kopfzeile sagt jetzt „Verhalten nach der
+Formatbeschreibung, eigenständige Implementierung".
+
+**Nebenbefund, der bleibt:** wenn Aaru FILETIME schreibt und wir „Unix
+timestamp" dokumentieren, ist entweder die Beschreibung falsch oder die
+Felder liegen woanders. Das Format steht auf **T3** — kein Test, nie
+geprüft. Ein billiger, konkreter Prüfauftrag.
+
+#### 4 · nibtools — der Brief steht, und er ist nicht die Lösung
+
+`docs/LIZENZ_ANFRAGEN.md`. Fehlende Lizenz heißt **„alle Rechte
+vorbehalten"**, nicht „frei verwendbar"; bis eine Antwort kommt, bleibt
+die Stelle in Zone PRÜFEN. Die Tabelle dort führt jede Anfrage mit
+Datum und Stand, damit eine *gestellte* Frage nicht als erledigt
+durchgeht.
+
+Der Brief fragt nach **`gcr.c`**, nicht allgemein: eine allgemeine
+Frage verlangt vom Empfänger eine Entscheidung über sein ganzes
+Projekt, eine Frage nach einer benannten Datei mit fertigem Vorschlag
+ist in zwei Minuten beantwortet.
+
+### 1 · XCopy Pro — die Kopfzeile hat nicht übertrieben
+
+Die entscheidende Frage lautete: steht dort portierter Code, oder
+klingt die Zeile nur beeindruckend? **Es steht portierter Code, und der
+Beweis liegt in unserem eigenen Baum.**
+
+`src/formats/amiga/uft_amiga_protection.c` enthält den originalen
+68000-Quelltext in Kommentarblöcken, **mitsamt seinen deutschen
+Originalkommentaren**:
+
+```
+ *   move.w  #RLEN-2,D0      ; Read LEN in Bytes
+ *   lea     RLEN*2(A3),A1   ; Ende des Puffers
+ * 1$ tst.w   -(A1)          ; letztes Word im Puffer suchen
+ *   moveq   #0,D6           ; Bruchstellenzaehler
+ *   cmp.w   #5,D6           ; max 5 Bruchstellen
+```
+
+Und daneben die Transliteration, Befehl für Befehl:
+
+```c
+/* swap D0 / move.w (A2)+,D0 / swap D0 */
+d0 = (d0 >> 16) | ((uint32_t)read_be16(data + pos) << 16);
+```
+
+18 solcher Stellen. Der Kopf nennt sechs Routinen bei ihren
+Originalnamen — *Analyse, Search, gapsearch, Neuhaus, getracklen,
+dostest*. „Neuhaus" ist ein **Personenname als Routinenname**; so etwas
+errät man nicht.
+
+#### Die anderen zwei Dateien: die Textähnlichkeit täuscht
+
+`uft_track_analysis.c/.h` hat **kein** Assembly, keine Routinennamen,
+und die Textähnlichkeit zur Amiga-Datei beträgt **1,8 %**. Das sieht
+nach Unabhängigkeit aus — bis man das richtige Maß anlegt. Der Baum hat
+eines (MF-696: *beweiskräftig sind Idiome, nicht Fakten*):
+
+> **Zwölf Bezeichner kommen in diesen beiden Dateien vor und in keiner
+> einzigen der übrigen 715.**
+>
+> `detect_breakpoints` · `breakpoint_count` · `bp_count` ·
+> `has_breakpoints` · `gap_index` · `gap_sector_index` ·
+> `unique_lengths` · `unique_lens` · `unique_count` · `rol32` ·
+> `bytes_left` · `Breakpoint`
+
+„Breakpoint" ist die Übersetzung von „Bruchstelle" aus dem
+Original-Assembly-Kommentar, und der Kopf nennt die Routine ausdrücklich
+„Neuhaus (**breakpoint** detection)". Das ist dieselbe Ableitung, eine
+Stufe verallgemeinert — keine unabhängige Umsetzung.
+
+**Die Textähnlichkeit war das falsche Instrument.** 1,8 % hätte
+Entwarnung bedeutet; der Idiom-Test sagt das Gegenteil. Genau dafür
+steht die Regel im Baum.
+
+### Kann man das nachbauen — und würde es uns helfen?
+
+**Nachbauen: ja, die Konzepte sind nicht geschützt.** Multi-Sync-Suche
+mit Bitrotation, Spurlängenmessung, GAP-Erkennung über
+Häufigkeitsanalyse — das macht jeder Flux-Dekoder so. Ein Algorithmus
+ist nicht geschützt, eine konkrete Umsetzung schon, und wir haben die
+konkrete Umsetzung.
+
+Aber der Nachbau hätte eine Hürde, die hier besonders scharf ist: die
+Zwei-Hände-Brandmauer verlangt, dass die bauende Hand die Vorlage nie
+sieht — **und die Vorlage steht in unserem eigenen Baum**, in
+Kommentaren. Wer die Datei öffnet, ist kontaminiert. Ein Nachbau
+verlangt also, sie **zuerst zu entfernen**.
+
+**Helfen: nein, gemessen.**
+
+```
+37 exportierte Funktionen in den vier Stellen
+ 1 wird von ausserhalb gerufen — aus einem TEST
+ 0 Aufrufer in src/, keine GUI, keine Pipeline
+```
+
+Und die eine gerufene Funktion, `uft_amiga_identify_sync()`, ist ein
+**Vier-Fall-`switch`** von Sync-Wort auf Spielname (AmigaDOS, Arkanoid,
+Beyond the Ice Palace, Mercenary). Eine Tatsachentabelle. Tatsachen sind
+nicht geschützt, und sie ist in zehn Minuten unabhängig geschrieben.
+
+Im größeren Bild ist das nicht die Ausnahme:
+
+| | |
+|---|---|
+| CODE-Dateien mit exportierten Funktionen | **51** |
+| davon mit Aufrufer in `src/` | 45 |
+| davon **ohne jeden Aufrufer** | **6** |
+
+Die beiden XCopy-Dateien sind mit 20 und 17 Funktionen die **zwei
+größten toten Blöcke** unter allen Dateien, die eine Ableitung
+erklären.
+
+#### Empfehlung
+
+**Entfernen, nicht nachbauen.** Ein Clean-Room-Nachbau kostet das volle
+Zwei-Hände-Ritual und produziert am Ende Code, den weiterhin niemand
+ruft — das wäre die vierte Runde „Bestand statt Fähigkeit" nach dem
+Kopierschutz-Katalog (P0-2) und den DeepRead-Modulen (MF-627).
+
+Nach MF-695 ist der richtige Kanal damit **Fundus**: benannt wartend.
+Was ihn öffnen würde, ist kein Rechtsproblem, sondern ein Aufrufer —
+eine GUI oder Pipeline, die Amiga-Kopierschutzanalyse tatsächlich
+braucht. Kommt die, sind die Konzepte frei und direkt aus der
+Standardtechnik implementierbar; die Vorlage wird dafür nicht gebraucht.
+
+Zu erhalten wäre einzig die Sync-Tabelle (vier Konstanten plus Namen)
+und der Test, der sie benutzt.
+
+### Der Punkt, der über die vier hinausgeht
+
+**Eine Attributionszeile ist eine Tatsachenbehauptung.** Sie kann in
+beide Richtungen falsch sein, und heute waren beide Richtungen im Baum:
+
+* **Aaru** behauptete eine Ableitung, die es nicht gibt — und hätte
+  beinahe eine GPL-3.0-Entscheidung über das ganze Projekt ausgelöst.
+* **`uft_track_analysis.h`** sagte „derived from" und untertrieb dabei:
+  gemessen ist es dieselbe Ableitung wie die Assembly-Datei daneben.
+
+Das ist dieselbe Klasse wie die fabrizierten Parser und wie „Das
+Merkmal ist **gemessen, nicht geraten**" neben einem geratenen
+Schwellwert (MF-738, eine Stunde alt). Eine Zeile, die niemand prüft,
+sagt irgendwann etwas, das nicht stimmt — und hier erzeugt sie ein
+Rechtsproblem aus dem Nichts.
+
+**Offen bleibt die Frage in ihrer allgemeinen Form:** von den 75
+CODE-Fällen sind 45 lebendig, und wie viele davon eine *echte*
+Ableitung erklären, ist bei keinem einzigen geprüft. Der Idiom-Test hat
+heute in einer Viertelstunde eine Antwort geliefert, wo die
+Textähnlichkeit danebenlag — er ist das Werkzeug für diese Frage, und
+er ist billig.

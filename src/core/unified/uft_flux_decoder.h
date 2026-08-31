@@ -2,7 +2,10 @@
  * @file uft_flux_decoder.h
  * @brief Advanced Flux Decoder with FluxEngine-style PLL
  * 
- * Based on FluxEngine's proven flux decoding algorithms:
+ * Based on FluxEngine's proven flux decoding algorithms
+ * (davidgiven/fluxengine, GPL-2.0 laut COPYING.md; vereinbar mit
+ * unserem GPL-2.0-or-later. Lizenz gemessen MF-739, vorher stand
+ * hier keine):
  * - Adaptive PLL with configurable parameters
  * - Multi-format sync detection
  * - Bit error tolerance handling
