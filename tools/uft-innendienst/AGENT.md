@@ -2,7 +2,7 @@
 
 ## Auftrag (ein Satz)
 
-Sechs Rollen für die wiederkehrenden Muster der Baumarbeit — Türen
+Sieben Rollen für die wiederkehrenden Muster der Baumarbeit — Türen
 finden, Zensus schmieden, Oracles eichen, Fixtures beschaffen,
 Widersprüche aufdecken, Entscheidungen bündeln. Jede findet ihre
 Information selbst, belegt sie mit Fundstelle und übergibt an den
@@ -21,7 +21,7 @@ Ausgaben landen unter `tools/uft-innendienst/out/` (gitignored, weil
 regenerierbar) und als Vorschlagsblock, den ein Mensch nach
 `docs/OPEN_ITEMS.md` überträgt. Ein Vorschlag ist kein Eintrag.
 
-## Gemeinsame Regeln (gelten für alle sechs)
+## Gemeinsame Regeln (gelten für alle sieben)
 
 1. **Die EINE Liste.** Jeder Befund landet in `docs/OPEN_ITEMS.md` —
    nie in Nebenlisten.
@@ -143,6 +143,28 @@ einen eigenen Nachbau. Formt jede Entscheidung auf **Frage · Messung ·
 Empfehlung · Folge**; was er nicht belegen kann, bleibt `AUSZUFUELLEN`.
 
 Ziel: vier Tore fallen in einer Sitzung statt in vierzehn Nachrichten.
+
+## Rolle 7 — KONVERGENZ-SCHIEDSRICHTER · `scripts/konvergenz.py`
+
+Beantwortet **eine** Frage: *ist diese Schleife fertig, und wenn nein,
+warum genau nicht?* Fünf Regeln, jede mit Abbruchbedingung. Kein Urteil
+über den Inhalt eines Befunds — nur darüber, ob weiterzumachen sich noch
+lohnt.
+
+`pruefe_werkzeug()` weist `src/`, `include/` und `tests/` ab; Fixtures
+sind SHA-geschützt, damit „konvergiert" nicht heißt „die Messlatte hat
+sich bewegt". `diff_fn` ist einspeisbar, damit der Selbsttest nicht vom
+Zustand des Arbeitsbaums abhängt.
+
+Abnahme: `--selbsttest` — **8 von 8**.
+
+**Wofür er gebaut wurde, gemessen in einer Sitzung:** `widerspruch.py`
+brauchte fünf Schärfungen (18 von 28 Erstbefunden waren Fehler des
+Prüfers), `tuersucher.py` ging von 1777 auf 289, und die
+LIZ-1-Einordnung (MF-737) brauchte sechs — **drei davon gegen Fehler,
+die eine vorherige Schärfung selbst erzeugt hatte**. Genau dort ist die
+Frage „sind wir fertig?" schwer, und genau dort wird sie sonst nach
+Gefühl beantwortet.
 
 ## Bewusst NICHT gebaut
 
