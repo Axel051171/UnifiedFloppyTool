@@ -173,8 +173,26 @@ def struktur_koerper(text: str, typ: str) -> str | None:
 
 
 def felder(header: Path, typ: str) -> list[str]:
-    """Die Feldnamen der Struktur, in Reihenfolge."""
-    text = header.read_text(encoding="utf-8", errors="replace")
+    """Die Feldnamen der Struktur, in Reihenfolge.
+
+    MF-735: der Lesevorgang war ungeschuetzt. Fehlte eine Datei aus
+    `GEPRUEFT` — umbenannt, verschoben, oder das Tor gegen einen anderen
+    Baum gerichtet —, warf `check()` eine `FileNotFoundError` statt einen
+    Befund zu liefern. In `check_consistency.py` haette das **den ganzen
+    Lauf** mitgerissen: 44 Tore fallen aus, weil eines seine Vorlage
+    nicht findet.
+
+    Der Aufrufer kennt den Fall bereits und meldet ihn richtig („nicht
+    lesbar — Fehler im Tor, nicht leere Struktur"); er kam nur nie dort
+    an. Der Nachbar `pruefe_trichter` macht es seit jeher so.
+
+    Gefunden vom Pruefstand `scripts/audit_selbsttest.py`, an einem
+    gepflanzten Baum ohne `include/`.
+    """
+    try:
+        text = header.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
     koerper = struktur_koerper(text, typ)
     if koerper is None:
         return []

@@ -853,6 +853,28 @@ def main() -> int:
                            [l for l in _r.stdout.splitlines()
                             if "FAIL" in l] or ["test_scout_stand.py rot"]))
 
+        # 42. Kategorie (MF-735): DIE TORE SELBST.
+        #
+        # Bis heute hatte keines der 25 `scripts/audit_*.py` einen
+        # Selbsttest, 16 davon speisen ein Tor hier. Was das kostet, ist
+        # in derselben Sitzung dreimal gemessen worden: `widerspruch.py`
+        # brauchte fuenf Schaerfungen (18 von 28 Erstbefunden waren
+        # Fehler des PRUEFERS), `tuersucher.py` ging von 1777 auf 289,
+        # der `main()`-Zensus zaehlte zweimal falsch.
+        #
+        # Und der teuerste Fall war unsichtbar: Tor 34 war eine
+        # wortgleiche Kopie von Tor 33 und hat nie geprueft, was sein
+        # Name sagt. Ein Doppelgaenger ist immer gruen, wenn sein
+        # Vorbild gruen ist.
+        #
+        # `audit_selbsttest.py` pflanzt je Werkzeug einen Baum, dessen
+        # richtige Antwort feststeht — in BEIDE Richtungen: der
+        # gepflanzte Defekt MUSS gemeldet werden, die gepflanzte
+        # Unschuld darf es NICHT. Nur `treffer` zu pruefen laesst sich
+        # trivial erfuellen, indem ein Tor alles meldet.
+        import audit_selbsttest as _st
+        all_errors.append(("Tore ohne Selbsttest", _st.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

@@ -90,6 +90,22 @@ from pathlib import Path
 # found THAT CAN BE AUTOMATICALLY REPAIRED" — eine Aussage ueber die
 # Reparierbarkeit, nicht ueber die Diskette. Textuell nicht zu trennen,
 # also nicht im Wortschatz.
+# Ein Ternaer, dessen ZWEITER Zweig auch eine Zeichenkette ist — die
+# ehrliche Form: das Urteil kann anders lauten.
+#
+# MF-735: hier stand `if "?" in line and "—" in line`. Der Geviertstrich
+# war eine Eigenheit der drei Stellen im Baum, an denen die Ausnahme
+# gebraucht wurde, kein Merkmal der ehrlichen Form. Ein Ternaer ohne
+# Strich —
+#
+#     setText(ok ? tr("Valid") : tr("FAIL"))
+#
+# — wurde gemeldet, obwohl er genau das tut, was das Tor verlangt.
+# Gefunden vom gepflanzten `sauber`-Fall in `audit_selbsttest.py`; am
+# echten Baum unsichtbar, weil dort jede solche Stelle zufaellig einen
+# Strich trug. Die Zahl bleibt unveraendert: 0 vorher, 0 nachher.
+TERNAER_MIT_NEIN = re.compile(r'\?[^:]*:\s*(?:tr\s*\(\s*)?["✗]')
+
 VERDICTS = [
     r"\bValid\b",
     r"\bintact\b",
@@ -150,7 +166,7 @@ def check(repo: Path) -> list[str]:
                 if not re.search(word, line):
                     continue
                 # Ein Ternaer mit Gegenzweig ist die ehrliche Form.
-                if "?" in line and "—" in line:
+                if TERNAER_MIT_NEIN.search(line):
                     continue
                 key = f"{rel}:{word}"
                 seen.add(key)

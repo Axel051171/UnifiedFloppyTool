@@ -333,6 +333,235 @@ FAELLE: dict[str, list[Fall]] = {
                   "sichtbar wurden, als „for now“ aus den Ausloesern "
                   "flog."),
     ],
+
+    # ---------------------------------------------------------------
+    "audit_dead_probe": [
+        Fall(
+            name="Sonde kann nie zustimmen",
+            dateien={"src/formats/x.c":
+                     "bool x_probe_plugin(const uint8_t *d, size_t n)\n{\n"
+                     "    (void)d; (void)n;\n"
+                     "    return false;\n}\n"},
+            erwartet="treffer", muster="niemals true",
+            warum="jede Rueckgabe ist woertlich false — das Plugin ist "
+                  "unerreichbar und wird trotzdem in der Format-Liste "
+                  "gezaehlt (MF-444/449)."),
+        Fall(
+            name="Sonde kann zustimmen",
+            dateien={"src/formats/x.c":
+                     "bool x_probe_plugin(const uint8_t *d, size_t n)\n{\n"
+                     "    if (n < 4) return false;\n"
+                     "    return d[0] == 'X';\n}\n"},
+            erwartet="sauber",
+            warum="es gibt einen Weg zu true."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_verdict_cannot_fail": [
+        Fall(
+            name="Urteil ohne Gegenzweig",
+            dateien={"src/x.cpp":
+                     "void X::show()\n{\n"
+                     "    m_label->setText(tr(\"Valid\"));\n}\n"},
+            erwartet="treffer", muster="x.cpp",
+            warum="ein Unversehrtheits-Urteil, das nie anders lauten "
+                  "kann (MF-570)."),
+        Fall(
+            name="Urteil mit Gegenzweig",
+            dateien={"src/x.cpp":
+                     "void X::show()\n{\n"
+                     "    m_label->setText(ok ? tr(\"Valid\") "
+                     ": tr(\"FAIL\"));\n}\n"},
+            erwartet="sauber",
+            warum="der Ternaer traegt das Nein."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_read_track_contract": [
+        Fall(
+            name="schreibt direkt in track->sectors[]",
+            dateien={"src/x.c":
+                     "uft_error_t x_read_track(uft_disk_t *d, "
+                     "uft_track_t *t) {\n"
+                     "    t->sectors[0].data = buf;\n"
+                     "    return UFT_OK;\n}\n"},
+            erwartet="treffer", muster="sectors[]",
+            warum="der Zeiger ist NULL, bis uft_track_add_sector() ihn "
+                  "setzt."),
+        Fall(
+            name="benutzt die Zusatz-API",
+            dateien={"src/x.c":
+                     "uft_error_t x_read_track(uft_disk_t *d, "
+                     "uft_track_t *t) {\n"
+                     "    uft_track_add_sector(t, 0, buf, 256);\n"
+                     "    t->sectors[0].data = buf;\n"
+                     "    return UFT_OK;\n}\n"},
+            erwartet="sauber",
+            warum="add_sector legt den Zeiger vorher an."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_spdx_policy": [
+        Fall(
+            name="Bezeichner ausserhalb der Politik",
+            dateien={"src/x.c":
+                     "// SPDX-License-Identifier: AGPL-3.0-or-later\n"
+                     "int f(void) { return 0; }\n"},
+            erwartet="treffer", muster="ausserhalb der Politik",
+            warum="CONTRIBUTING.md §Licensing erlaubt GPL-2.0-or-later "
+                  "fuer eigenen Code; alles andere ist eine "
+                  "Eigentuemer-Entscheidung."),
+        Fall(
+            name="Bezeichner in der Politik",
+            dateien={"src/x.c":
+                     "// SPDX-License-Identifier: GPL-2.0-or-later\n"
+                     "int f(void) { return 0; }\n"},
+            erwartet="sauber",
+            warum="die Vorgabe."),
+        Fall(
+            name="ausgenommenes Verzeichnis",
+            dateien={"src/samdisk/x.c":
+                     "// SPDX-License-Identifier: AGPL-3.0-or-later\n"
+                     "int f(void) { return 0; }\n"},
+            erwartet="sauber",
+            warum="`src/samdisk` steht in AUSGENOMMEN — fremder Bestand "
+                  "mit eigener Lizenz."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_open_vs_probe_magic": [
+        Fall(
+            name="Sonde prueft Magic, Oeffner nicht",
+            dateien={"src/formats/x.c":
+                     "static bool x_probe(const uint8_t *d, size_t n) {\n"
+                     "    if (d[0] != 0x58) return false;\n"
+                     "    return true;\n}\n"
+                     "static uft_error_t x_open(uft_disk_t *dk) {\n"
+                     "    return UFT_OK;\n}\n"
+                     "static uft_error_t x_write_track(void) "
+                     "{ return UFT_OK; }\n"
+                     "static const uft_format_plugin_t P = {\n"
+                     "    .probe = x_probe,\n"
+                     "    .open = x_open,\n"
+                     "    .write_track = x_write_track,\n};\n"},
+            erwartet="treffer", muster="Schreibziel",
+            warum="MF-688: eine Fremddatei passender Laenge wird zum "
+                  "Schreibziel, weil nur die Sonde das Magic prueft."),
+        Fall(
+            name="beide pruefen",
+            dateien={"src/formats/x.c":
+                     "static bool x_probe(const uint8_t *d, size_t n) {\n"
+                     "    if (d[0] != 0x58) return false;\n"
+                     "    return true;\n}\n"
+                     "static uft_error_t x_open(uft_disk_t *dk) {\n"
+                     "    if (dk->buf[0] != 0x58) return UFT_ERR_FORMAT;\n"
+                     "    return UFT_OK;\n}\n"
+                     "static uft_error_t x_write_track(void) "
+                     "{ return UFT_OK; }\n"
+                     "static const uft_format_plugin_t P = {\n"
+                     "    .probe = x_probe,\n"
+                     "    .open = x_open,\n"
+                     "    .write_track = x_write_track,\n};\n"},
+            erwartet="sauber",
+            warum="der Oeffner prueft dasselbe Magic."),
+        Fall(
+            name="kein Schreibpfad",
+            dateien={"src/formats/x.c":
+                     "static bool x_probe(const uint8_t *d, size_t n) {\n"
+                     "    if (d[0] != 0x58) return false;\n"
+                     "    return true;\n}\n"
+                     "static uft_error_t x_open(uft_disk_t *dk) {\n"
+                     "    return UFT_OK;\n}\n"
+                     "static const uft_format_plugin_t P = {\n"
+                     "    .probe = x_probe,\n"
+                     "    .open = x_open,\n"
+                     "    .write_track = NULL,\n};\n"},
+            erwartet="sauber",
+            warum="ohne Schreibpfad ist die Frage gegenstandslos — es "
+                  "gibt nichts zu ueberschreiben."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_protection_claims": [
+        Fall(
+            name="Doku behauptet andere Zahlen",
+            dateien={"src/protection/p.c":
+                     "void uft_prot_alpha(void) { }\n",
+                     "docs/BACKLOG.md":
+                     "C1: 9 Dateien, 9 Funktionen, 9 von aussen gerufen, "
+                     "9 von einem Test beruehrt.\n"},
+            erwartet="treffer", muster="BACKLOG.md",
+            warum="gemessen ist (1, 1, 0, 0) — die Doku ist gedriftet."),
+        Fall(
+            name="Doku stimmt mit der Messung",
+            dateien={"src/protection/p.c":
+                     "void uft_prot_alpha(void) { }\n",
+                     "docs/BACKLOG.md":
+                     "C1: 1 Dateien, 1 Funktionen, 0 von aussen gerufen, "
+                     "0 von einem Test beruehrt.\n"},
+            erwartet="sauber",
+            warum="Behauptung und Messung decken sich."),
+    ],
+
+    # ---------------------------------------------------------------
+    "audit_setting_wiring": [
+        Fall(
+            name="Wandlungsoptionen genullt",
+            dateien={"src/x.c":
+                     "void f(void) {\n"
+                     "    uft_convert_options_t opts;\n"
+                     "    memset(&opts, 0, sizeof(opts));\n"
+                     "    opts.target = 1;\n}\n"},
+            erwartet="treffer", muster="x.c",
+            warum="MF-672: genullt ist SCHLECHTER als gar keine Angabe — "
+                  "`use_multiple_revs` steht in den Vorgaben auf TRUE, "
+                  "eine SCP mit fuenf Umdrehungen wurde still wie eine "
+                  "mit einer dekodiert."),
+        Fall(
+            name="Vorgaben geholt",
+            dateien={"src/x.c":
+                     "void f(void) {\n"
+                     "    uft_convert_options_t opts;\n"
+                     "    uft_convert_default_options(&opts);\n"
+                     "    opts.target = 1;\n}\n"},
+            erwartet="sauber",
+            warum="die Vorgabefunktion ist genannt."),
+    ],
+
+    # ---------------------------------------------------------------
+    # Gepflanzt wird auf `UFT_FMT_D64` — eine der zwei Sonden OHNE
+    # eingefrorene Grundlinie (die andere ist `UFT_SECTOR_DELETED`). Fuer
+    # die drei mit Grundlinie waere jeder gepflanzte Baum per Bauart eine
+    # Abweichung; deren Meldung steht in beiden Laeufen und faellt dem
+    # Grundrauschen-Abzug zu.
+    #
+    # Braucht einen Compiler. `_find_gcc()` kennt MinGW unter
+    # `C:\Qt\Tools\mingw1310_64` und `/usr/bin/gcc`; ohne einen liefert
+    # das Tor absichtlich `[]` („keine Messung -> kein Urteil"), und der
+    # `treffer`-Fall wuerde dann als blind gemeldet — zu Recht, denn dort
+    # bewacht es nichts.
+    "audit_format_id_drift": [
+        Fall(
+            name="zwei Werte fuer dieselbe Kennung",
+            dateien={"include/a.h": "enum { UFT_FMT_D64 = 5 };\n",
+                     "include/b.h": "enum { UFT_FMT_D64 = 9 };\n",
+                     "src/u1.c": "#include \"a.h\"\n"
+                                 "int f(void) { return UFT_FMT_D64; }\n",
+                     "src/u2.c": "#include \"b.h\"\n"
+                                 "int g(void) { return UFT_FMT_D64; }\n"},
+            erwartet="treffer", muster="verschiedene Zahlen",
+            warum="die Include-Reihenfolge entscheidet still, welche "
+                  "Zahl gilt (KNOWN_ISSUES ID-1/ID-2)."),
+        Fall(
+            name="eine Kennung, ein Wert",
+            dateien={"include/a.h": "enum { UFT_FMT_D64 = 5 };\n",
+                     "src/u1.c": "#include \"a.h\"\n"
+                                 "int f(void) { return UFT_FMT_D64; }\n",
+                     "src/u2.c": "#include \"a.h\"\n"
+                                 "int g(void) { return UFT_FMT_D64; }\n"},
+            erwartet="sauber",
+            warum="beide Uebersetzungseinheiten sehen denselben Wert."),
+    ],
 }
 
 
@@ -408,13 +637,23 @@ def fuehre_aus(name: str, fall: Fall) -> tuple[bool, str]:
         # Also: einmal gegen den leeren Baum messen und abziehen. Was
         # uebrig bleibt, hat die Pflanzung verursacht — und nur darueber
         # urteilt dieser Pruefstand.
-        # Der Nullbaum braucht dieselben VERZEICHNISSE wie die Pflanzung,
-        # nur ohne Inhalt: die meisten Werkzeuge kehren bei fehlendem
-        # `src/formats` sofort zurueck und wuerden gar kein Rauschen
-        # zeigen. Die erste Fassung tat genau das — und der Abzug wirkte
-        # nicht.
+        # Der Nullbaum traegt dieselben PFADE wie die Pflanzung, nur mit
+        # leerem Inhalt. Damit ist der INHALT der einzige Unterschied
+        # zwischen beiden Laeufen — und genau darueber urteilt der
+        # Pruefstand.
+        #
+        # Zwei Fassungen davor waren zu sparsam, beide gemessen:
+        #   * gar nichts anlegen — die meisten Werkzeuge kehren bei
+        #     fehlendem `src/formats` sofort zurueck und zeigen kein
+        #     Rauschen; der Abzug wirkte nicht
+        #   * nur die Verzeichnisse — `audit_setting_wiring` kehrt bei
+        #     LEERER Dateiliste zurueck („keine Quelldateien im Blick")
+        #     und erreicht seine Trichter-Regel nie; deren Meldung stand
+        #     dann nur im Pflanz-Lauf und galt als Fund
         for rel in list(fall.dateien) + list(fall.zusatz):
-            (leer / rel).parent.mkdir(parents=True, exist_ok=True)
+            q = leer / rel
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.write_text("", encoding="utf-8")
         try:
             rauschen = set(mod.check(leer))
         except Exception:                          # noqa: BLE001
