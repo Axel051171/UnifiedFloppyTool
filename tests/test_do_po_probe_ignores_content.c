@@ -87,15 +87,31 @@
  * nicht vor. Ohne sie waere es genau die Sorte plausibler Annahme, die
  * FMT-2/3/10/11/12 erzeugt hat. Stand: `docs/OPEN_ITEMS.md` FMT-17.
  *
- * ── Warum hier KEIN Fix steht ───────────────────────────────────────────
+ * ── Behoben in MF-724 — der Griff nach der Messung ──────────────────────
  *
- * Weil die Grundlage dafuer noch fehlt (siehe Berichtigung oben) —
- * und weil eine inhaltsbasierte Unterscheidung aendert, **welches
- * Plugin eine Datei beansprucht**: eine Verhaltensaenderung an der
- * Registry-Tuer, kein Tagesrand. Sie gehoert in einen eigenen Schritt,
- * mit diesem Rotbeweis als Grundlage. Dieselbe Ordnung wie bei
- * `hardsector` (MF-706) und `86f` (MF-707/708): erst die Messung, dann
- * der Griff.
+ * Die zweite Quelle kam mit MF-720 (`mamedev/mame` `fs_prodos.cpp:269-271`,
+ * BSD-3-Clause), damit war der Weg frei. Seither gilt:
+ *
+ *     Verzeichniskopf auf 0x400 gefunden -> po 90, do 20   (Evidenz)
+ *     nicht gefunden                     -> beide 55       (Gleichstand)
+ *
+ * Der **Gleichstand ist der eigentliche Gewinn**. Vorher standen dort 60
+ * gegen 55: `do` gewann immer, und `uft_probe_ranking.tied` blieb 1 —
+ * die Registry meldete Eindeutigkeit, wo keine war. Jetzt wird `tied`
+ * zwei, und `uft_smart_open()` reicht das als `equally_ranked` weiter
+ * (`uft_smart_open.c:422`, samt Warnung bei `:430`).
+ *
+ * Der Kopf von `uft_probe_ranking` sagt selbst, was das heisst: „der
+ * Gewinner steht durch Registrierungsreihenfolge fest, nicht durch
+ * Evidenz." Genau das war vorher der Fall — nur hat es niemand erfahren.
+ *
+ * **Ausdruecklich nicht gebaut:** ein Leser, der den Benutzer fragt. Ein
+ * Leser, der fragt, haengt in CI. Er reicht `tied` weiter; die
+ * Oberflaeche fragt, ein Skript bricht ab.
+ *
+ * Praktisch gewinnt bei Gleichstand weiterhin `do` — es steht in der
+ * Registry vorn. Das Verhalten ist also unveraendert; **die Aussage
+ * darueber** ist es nicht mehr.
  *
  * ── Was dieser Test NICHT behauptet ─────────────────────────────────────
  *
@@ -109,6 +125,7 @@
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/formats/apple/uft_apple_order.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -145,18 +162,21 @@ static void mit_vtoc(uint8_t *b)
 
 /* Dieselbe Groesse, aber an der DOS-Stelle steht nichts Passendes —
  * so sieht ein ProDOS-geordnetes Abbild von dort aus. */
-static void ohne_vtoc(uint8_t *b)
+/* Ein GUELTIGER ProDOS-Verzeichniskopf in Block 2 (Versatz 0x400).
+ * Die drei Felder sind zweifach belegt — siehe
+ * uft/formats/apple/uft_apple_order.h. */
+static void mit_prodos_voldir(uint8_t *b)
 {
     memset(b, 0, APPLE_16_SIZE);
-    /* ProDOS-Datentraegerverzeichnis liegt in Block 2 (Versatz 0x400);
-     * das Kopfbyte traegt Speichertyp 0xF im oberen Nibble. */
-    b[0x400 + 0x04] = 0xF4;
+    b[0x400 + 0x00] = 0x00; b[0x400 + 0x01] = 0x00;   /* Rueckzeiger  */
+    b[0x400 + 0x02] = 0x03; b[0x400 + 0x03] = 0x00;   /* Vorzeiger    */
+    b[0x400 + 0x04] = 0xF3;                            /* Typ 0xF      */
     b[0x400 + 0x05] = 'U';
     b[0x400 + 0x06] = 'F';
     b[0x400 + 0x07] = 'T';
 }
 
-static void zeige(const char *was, const uint8_t *b)
+static void zeige(const char *was, const uint8_t *b, bool soll_evidenz)
 {
     int kdo = -1, kpo = -1;
     bool jdo = uft_format_plugin_do.probe(b, APPLE_16_SIZE,
@@ -168,12 +188,21 @@ static void zeige(const char *was, const uint8_t *b)
            jdo ? "JA" : "NEIN", kdo, jpo ? "JA" : "NEIN", kpo);
 
     PRUEFE(jdo && jpo,
-           "%s: nicht mehr beide Sonden zustimmend — dann ist die "
-           "Unterscheidung gebaut worden und dieser Test nachzuziehen",
+           "%s: eine Sonde weist die Groesse jetzt ab — beide muessen "
+           "Kandidaten bleiben, damit die Mehrdeutigkeit sichtbar ist",
            was);
-    PRUEFE(kdo == 60 && kpo == 55,
-           "%s: Konfidenzen sind jetzt %d/%d statt 60/55 — der "
-           "Gleichstand wird anders gebrochen als gemessen", was, kdo, kpo);
+    if (soll_evidenz) {
+        PRUEFE(kpo == UFT_A2_CONF_EVIDENZ && kdo == UFT_A2_CONF_WIDERLEGT,
+               "%s: erwartet po=%d / do=%d (Verzeichniskopf gefunden), "
+               "gemessen %d/%d", was, UFT_A2_CONF_EVIDENZ,
+               UFT_A2_CONF_WIDERLEGT, kpo, kdo);
+        PRUEFE(kpo > kdo, "%s: der Beleg entscheidet nicht", was);
+    } else {
+        PRUEFE(kdo == kpo && kdo == UFT_A2_CONF_UNKLAR,
+               "%s: erwartet Gleichstand bei %d, gemessen %d/%d — ohne "
+               "Beleg DARF keine Lesart gewinnen, sonst entscheidet "
+               "wieder eine Konstante", was, UFT_A2_CONF_UNKLAR, kdo, kpo);
+    }
 }
 
 int main(void)
@@ -186,7 +215,7 @@ int main(void)
     if (!a || !b) { printf("kein Speicher\n"); return 2; }
 
     mit_vtoc(a);
-    ohne_vtoc(b);
+    mit_prodos_voldir(b);
 
     /* ── 1 · Zwei Abbilder, die der Inhalt klar trennt ───────────────── */
     printf("  Was an der VTOC-Stelle steht (Spur 17, Sektor 0):\n");
@@ -207,17 +236,16 @@ int main(void)
 
     /* ── 2 · Die Sonden sehen keinen Unterschied ─────────────────────── */
     printf("  Was die Sonden daraus machen:\n");
-    zeige("Abbild A (DOS 3.3 im Inhalt)", a);
-    zeige("Abbild B (ProDOS im Inhalt)", b);
+    zeige("Abbild A (DOS 3.3, kein Voldir)", a, false);
+    zeige("Abbild B (ProDOS-Verzeichniskopf)", b, true);
 
     /* ── 3 · Und der Beweis, dass es der Inhalt nicht ist ────────────── */
     int ka = -1, kb = -1;
     (void)uft_format_plugin_do.probe(a, APPLE_16_SIZE, APPLE_16_SIZE, &ka);
     (void)uft_format_plugin_do.probe(b, APPLE_16_SIZE, APPLE_16_SIZE, &kb);
-    PRUEFE(ka == kb,
-           "die do-Sonde antwortet auf verschiedenen Inhalt verschieden "
-           "(%d vs %d) — dann liest sie ihn, und der Befund ist "
-           "entschaerft", ka, kb);
+    PRUEFE(ka != kb,
+           "die do-Sonde antwortet auf beide Inhalte gleich (%d) — dann "
+           "liest sie ihn NICHT, und MF-724 ist zurueckgenommen", ka);
 
     /* Die Groesse allein — Nullbytes, kein Apple-Inhalt ueberhaupt. */
     memset(a, 0, APPLE_16_SIZE);
@@ -226,9 +254,10 @@ int main(void)
                                          APPLE_16_SIZE, &kn);
     printf("\n  143360 Byte Nullen                 do: %-4s (%d)\n",
            jn ? "JA" : "NEIN", kn);
-    PRUEFE(jn && kn == 60,
-           "Nullbytes werden nicht mehr mit voller Konfidenz "
-           "angenommen — dann wird der Inhalt geprueft");
+    PRUEFE(jn && kn == UFT_A2_CONF_UNKLAR,
+           "143360 Nullbytes: erwartet Gleichstand bei %d, gemessen %d — "
+           "Nullen tragen keinen Verzeichniskopf, also DARF keine Lesart "
+           "gewinnen", UFT_A2_CONF_UNKLAR, kn);
 
     printf("\n  Was die gruene Ampel NICHT heisst: dass do/po richtig "
            "erkannt werden.\n"

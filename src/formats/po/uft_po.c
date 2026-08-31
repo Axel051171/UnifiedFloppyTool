@@ -11,6 +11,7 @@
  * the structure that would decide it sits past the probe buffer.
  */
 #include "uft/uft_format_common.h"
+#include "uft/formats/apple/uft_apple_order.h"
 
 #define PO_SIZE   143360
 #define PO_TRACKS 35
@@ -19,10 +20,14 @@
 
 typedef struct { FILE *file; } po_pd_t;
 
+/* MF-724: Gegenstueck zu `do_probe()`. Der Verzeichniskopf auf 0x400 ist
+ * der einzige im Sondenpuffer erreichbare Beleg fuer die Anordnung —
+ * Begruendung und Quellen in `uft/formats/apple/uft_apple_order.h`. */
 static bool po_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
-    (void)d; (void)s;
-    if (fs == PO_SIZE) { *c = 55; return true; }
-    return false;
+    if (fs != PO_SIZE) return false;
+    *c = uft_a2_has_prodos_voldir(d, s) ? UFT_A2_CONF_EVIDENZ
+                                        : UFT_A2_CONF_UNKLAR;
+    return true;
 }
 
 static uft_error_t po_open(uft_disk_t *disk, const char *path, bool ro) {

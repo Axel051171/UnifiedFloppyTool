@@ -22,6 +22,7 @@
  * confidence for the same bytes is the honest answer, not a bug.
  */
 #include "uft/uft_format_common.h"
+#include "uft/formats/apple/uft_apple_order.h"
 
 #define DO_SIZE     143360
 #define DO_TRACKS   35
@@ -30,10 +31,17 @@
 
 typedef struct { FILE *file; } do_pd_t;
 
+/* MF-724: die Reihenfolge entscheidet der INHALT, soweit er es kann.
+ * Begruendung, Quellen und warum die VTOC es NICHT kann: siehe
+ * `uft/formats/apple/uft_apple_order.h`. */
 static bool do_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
-    (void)d; (void)s;
-    if (fs == DO_SIZE) { *c = 60; return true; }
-    return false;
+    if (fs != DO_SIZE) return false;
+    /* Ein ProDOS-Verzeichniskopf auf 0x400 belegt ProDOS-Anordnung —
+     * dann ist DO die schlechtere Erklaerung, aber nicht ausgeschlossen:
+     * eine ProDOS-geordnete Diskette KANN ein DOS-Dateisystem tragen. */
+    *c = uft_a2_has_prodos_voldir(d, s) ? UFT_A2_CONF_WIDERLEGT
+                                        : UFT_A2_CONF_UNKLAR;
+    return true;
 }
 
 static uft_error_t do_open(uft_disk_t *disk, const char *path, bool ro) {

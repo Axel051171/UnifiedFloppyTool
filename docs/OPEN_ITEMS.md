@@ -5982,4 +5982,71 @@ Der Leser trennt NIB vom Sektor-Abbild und behandelt **DOS und ProDOS
 identisch**. Ein `.2mg`, das ProDOS-Sortierung deklariert, wird gelesen,
 als spielte die Sortierung keine Rolle — dieselbe stille Falschaussage
 wie FMT-17, eine Schicht hoeher, und sie laeuft bereits. `2img` gehoert
-darum hinter FMT-17, nicht daneben.
+darum hinter FMT-17, nicht daneben.
+
+### FMT-17 erledigt (MF-724) — Kandidaten statt Konstante
+
+<!-- status: erledigt(MF-724) -->
+
+Der Eigentuemer hat den Ausgang vorgegeben und er trifft: `.do` gegen
+`.po` ist **kein Erkennungs-, sondern ein Mehrdeutigkeitsproblem**.
+Beide Deutungen bleiben Kandidaten; wo der Inhalt es hergibt,
+entscheidet er; wo nicht, wird der Gleichstand **gemeldet statt
+geraten**.
+
+**Gemessen, ueber die Registry:**
+
+```
+ohne Verzeichniskopf         Gewinner DO   Konf 55   tied 2   Bewerber 2
+mit ProDOS-Verzeichniskopf   Gewinner PO   Konf 90   tied 1   Bewerber 2
+```
+
+Die zweite Zeile war vorher **unmoeglich**: `do` gewann mit 60 gegen 55,
+immer, an einer Konstanten.
+
+**Der Gleichstand ist der eigentliche Gewinn.** Vorher blieb
+`uft_probe_ranking.tied` bei 1 — die Registry meldete Eindeutigkeit, wo
+keine war. Jetzt wird sie 2, und `uft_smart_open()` reicht das als
+`equally_ranked` weiter (`:422`) samt Warnung (`:430`). Der Kopf von
+`uft_probe_ranking` sagt selbst, was das heisst: „der Gewinner steht
+durch Registrierungsreihenfolge fest, nicht durch Evidenz." Genau das
+war vorher der Fall — nur hat es niemand erfahren.
+
+**Die Probe**, in `include/uft/formats/apple/uft_apple_order.h` mit
+Begruendung und beiden Quellen:
+
+```
+0x400  Rueckzeiger   == 0x0000
+0x402  Vorzeiger     == 0x0003
+0x404  Speichertyp   oberes Nibble == 0xF
+```
+
+ProDOS-Block 2 liegt in einer `.po` auf `N*512` = **0x400**, mitten im
+Sondenpuffer. In einer `.do` steht dort der DOS-logische Sektor 4;
+ProDOS-Block 2 landet ueber die physischen Sektoren 8/10 auf 0xB00 und
+0xA00. Ein gueltiger Verzeichniskopf auf 0x400 ist damit ein **positiver
+Beleg fuer ProDOS-Anordnung**.
+
+Quelle 1: ProDOS-8-Beschreibung. Quelle 2, unabhaengig:
+`mamedev/mame@c0d3677674` `fs_prodos.cpp:269-271` (BSD-3-Clause),
+beschafft in MF-720. Bis dahin war der Weg ausdruecklich gesperrt, weil
+**eine** Quelle nicht genuegt (MF-714) — die Sperre hat gehalten und ist
+regulaer gefallen.
+
+**Nicht gebaut, mit Absicht:** ein Leser, der den Benutzer fragt. Ein
+Leser, der fragt, haengt in CI. Er reicht `tied` weiter; die Oberflaeche
+fragt, ein Skript bricht ab.
+
+**Verhalten praktisch unveraendert:** bei Gleichstand gewinnt weiterhin
+`do`, es steht in der Registry vorn. Geaendert hat sich die **Aussage
+darueber**.
+
+**Kennzahl:** keine bewegt. `po` bleibt T3 — die Sonde ist ehrlich
+geworden, das Layout ist damit nicht geprueft. Dafuer braucht es einen
+Differenzlauf wie bei `do` (MF-716), und der braucht ein
+ProDOS-geordnetes Abbild fremder Hand.
+
+**Naechster Posten:** `2img`. Es liest das Sortierungs-Feld bei `0x0C`,
+benutzt aber nur `IMG2_FMT_NIB` — `DOS` und `PRODOS` sind definiert und
+werden **identisch** behandelt (MF-723). Dieselbe Frage, eine Schicht
+hoeher, und mit dieser Probe jetzt beantwortbar.
