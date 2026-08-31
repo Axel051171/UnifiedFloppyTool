@@ -70,14 +70,36 @@ bool kfx_probe(const uint8_t *data, size_t size, size_t file_size,
         if (data[i] == 0x0D) oob_count++;
     }
 
+    /* MF-729: hier standen 80 (>= 2 Vorkommen) und 40 (>= 1). Beides ist
+     * KEINE Strukturpruefung — es ist eine Byte-Zaehlung. Gemessen an
+     * Eichung 2 (`tests/test_probe_confidence_on_random.c`) stimmte diese
+     * Sonde bei **61,7 %** zufaelliger Puffer ins Band „Struktur
+     * gelesen": in 512 Zufallsbytes stehen erwartungsgemaess zwei 0x0D,
+     * und genau zwei genuegten fuer 80.
+     *
+     * Die Folge war messbar (MF-726): ein MOOF- und ein A2R-Kopf tragen
+     * `FF 0A 0D 0A`, und weil beide Formate kein eigenes Plugin haben,
+     * GEWANN KFX — `uft_disk_open()` uebergab eine MOOF-Datei dem
+     * KryoFlux-Strom-Leser.
+     *
+     * Beide Werte sinken darum ins Band „nur eine Vermutung" (30..49).
+     * Die relative Ordnung bleibt: mehr Marker ist ein staerkerer
+     * Hinweis als einer — aber keiner davon ist eine gelesene Struktur.
+     *
+     * Was es richtig machen wuerde, steht in `docs/OPEN_ITEMS.md`
+     * FMT-20: den OOB-Blockaufbau parsen (0x0D, Typbyte,
+     * 16-Bit-Groesse) statt Bytes zu zaehlen. Das braucht die
+     * KryoFlux-Stream-Spezifikation als benannte Referenz; `dtc` ist
+     * registriert, aber nicht vorhanden. Bis dahin ist eine ehrliche
+     * Vermutung besser als eine unehrliche Gewissheit. */
     if (oob_count >= 2) {
-        *confidence = 80;
+        *confidence = 45;
         return true;
     }
 
     /* Weaker: file extension would help, but probe only sees data */
     if (oob_count >= 1) {
-        *confidence = 40;
+        *confidence = 35;
         return true;
     }
 

@@ -21,7 +21,7 @@ typedef struct {
 bool d81_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size != D81_SIZE_STANDARD && file_size != D81_SIZE_WITH_ERRORS)
         return false;
-    *confidence = 80;
+    *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* D81 header at track 40 sector 0 (offset 0x61800):
      * Byte 0-1 = directory link (40/3 typical)

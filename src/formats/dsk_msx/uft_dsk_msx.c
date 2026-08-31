@@ -44,7 +44,7 @@ static bool msx_probe(const uint8_t *data, size_t size, size_t file_size,
     uint8_t cyl, heads, spt;
     if (!msx_detect(file_size, &cyl, &heads, &spt)) return false;
 
-    *confidence = 75;
+    *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* Check MSX boot sector */
     if (size >= 16) {

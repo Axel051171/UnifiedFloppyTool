@@ -1,100 +1,50 @@
 /**
  * @file test_probe_confidence_on_zeros.c
- * @brief Was Sonden auf einem Puffer aus lauter Nullen melden (MF-728)
+ * @brief Eichung 1 — was eine Sonde auf lauter Nullen melden darf (MF-729)
  *
- * ── Die Frage ───────────────────────────────────────────────────────────
+ * ── Die Regel ───────────────────────────────────────────────────────────
  *
  * Ein Puffer aus **lauter Nullen** traegt keine Signatur. Kein Magic,
  * kein Bootblock, kein Verzeichnis, keine Pruefsumme. Das Einzige, was
  * eine Sonde darin finden kann, ist die **Dateigroesse**, die ihr
  * getrennt mitgeteilt wird.
  *
- * Also: wie sicher darf sich eine Sonde auf Nullen sein?
+ * Also gilt: **wer den Inhalt nicht liest, bleibt unter 50.** Was auf
+ * einem Nullpuffer 50 oder mehr meldet, behauptet eine Erkenntnis, die
+ * es nicht haben kann.
  *
- * ── Die Messung ─────────────────────────────────────────────────────────
+ * Die Baender stehen im Kopf von `include/uft/uft_format_plugin.h`.
  *
- * Gemessen ueber 25 gaengige Diskettengroessen (MF-728): **4 von 25**
- * haben einen Gleichstand, der groesste mit **fuenf** Bewerbern. Das war
- * der Anlass. Der eigentliche Befund liegt daneben:
+ * ── Warum es diese Eichung gibt ─────────────────────────────────────────
  *
- *     Groesse    Sieger auf NULLEN   Konfidenz
- *     163840     TRD                 82
- *     819200     D81                 80
- *     1474560    DIM                 85
- *     184320     MSX                 75
+ * Gemessen (MF-728) meldeten die Sonden auf Nullen **35 bis 85** fuer
+ * exakt dieselbe Erkenntnis:
  *
- * Auf einem Puffer ohne jede Information melden Sonden bis **85**.
+ *     DIM 85 · TRD 82 · D81 80 · NIB 80 · MSX 75 · D64 75 · D13 75
+ *     D71 70 · ADF 70 · DO 55 · PO 55 · IMG 40 · V9T9 40 · JV1 35
  *
- * ── Warum das passiert, an zwei Beispielen ──────────────────────────────
+ * Da die Zahlen ohne gemeinsame Skala vergeben wurden, war der Vergleich
+ * zwischen zwei Plugins willkuerlich: ein PC-160K-Abbild verlor gegen
+ * `TRD` (82), ein Macintosh-800K gegen `D81` (80), ein PC-360K gegen
+ * `MSX` (75) — nicht weil die mehr erkannt haetten, sondern weil ihre
+ * Zahl groesser gewaehlt war.
  *
- * `trd_probe()` (`src/formats/trd/uft_trd.c`):
+ * ── Warum ueber ALLE Plugins, nicht ueber eine Liste ────────────────────
  *
- *     if (file_size != 655360 && ... != 163840) return false;
- *     *confidence = 70;
- *     if (data[0x227] == 0x10)          *confidence = 92;   // echte Signatur
- *     else if (data[0x8E4] <= 128)      *confidence = 82;   // <-- hier
+ * Die erste Fassung dieses Tests (MF-728) fuehrte 14 Plugins in einer
+ * Tabelle. Das war ein Protokoll, kein Tor: ein neues Plugin mit 85 auf
+ * Nullen waere nie aufgefallen. Seit MF-729 laeuft er ueber
+ * `uft_registered_format_plugin_at()` — die Menge kommt aus der Quelle,
+ * nicht aus einer gepflegten Liste (CLAUDE.md §Dateimengen; in diesem
+ * Baum dreizehnmal belegt, dass Aufzaehlungen still veralten).
  *
- * Die zweite Bedingung ist eine **Bereichspruefung**, die auf die
- * Haelfte aller Bytewerte zutrifft — auf Nullen immer. Sie hebt die
- * Konfidenz von 70 auf 82, ohne etwas erkannt zu haben.
+ * ── Was diese Eichung NICHT prueft ──────────────────────────────────────
  *
- * `d81_probe()` (`src/formats/d81/uft_d81.c`) hat nicht einmal das:
- *
- *     if (file_size != D81_SIZE_STANDARD && ...) return false;
- *     *confidence = 80;                                     // reine Groesse
- *     if (data[0x61800] == 40 && data[0x61801] == 3) *confidence = 92;
- *
- * **80 fuer die blosse Groesse**, 92 fuer die erkannte Signatur.
- *
- * ── Der eigentliche Mangel: es gibt keine gemeinsame Skala ──────────────
- *
- * Jede Sonde vergibt ihre Zahlen fuer sich. Nirgends steht, was 40, 55,
- * 75, 80 oder 92 **bedeuten**. Damit ist der Vergleich zwischen zwei
- * Plugins willkuerlich:
- *
- *   * `d81` meldet 80 fuer „Groesse passt"
- *   * `do`/`po` melden seit MF-724 **55** fuer genau dasselbe
- *   * `trd` meldet 82 fuer „Groesse passt und ein Byte ist <= 128"
- *
- * Ein 819 200-Byte-Macintosh-Abbild verliert damit gegen das
- * Commodore-D81-Plugin — nicht weil D81 mehr erkannt haette, sondern
- * weil seine Zahl groesser gewaehlt wurde.
- *
- * Und schlimmer als der Gleichstand ist die **falsche Eindeutigkeit**:
- * bei verschiedenen Zahlen meldet `uft_probe_ranking.tied` = 1. Der
- * Aufrufer erfaehrt „eindeutig", wo in Wahrheit mehrere Plugins dieselbe
- * groessenbasierte Vermutung anstellen.
- *
- * ── Wie andere Werkzeuge es halten (zwei belegte Quellen) ───────────────
- *
- * 1. **SAMdisk** (simonowen.com/samdisk/formats/, abgerufen 2026-08-31)
- *    fuehrt seine kopflosen Formate ausdruecklich als:
- *
- *        „RAW — raw sector dumps, identified by file size only."
- *
- *    Die Groessen-Erkennung wird also **als solche benannt**, nicht als
- *    Erkennung ausgegeben. (Der Baum kennt das schon: `uft_do.c` zitiert
- *    seit MF-463 SAMdisks `ReadDO()`, das mit „not used" markiert ist
- *    und auf Groesse plus Endung zurueckfaellt.)
- *
- * 2. **MAME floptool** (docs.mamedev.org/tools/floptool.html, abgerufen
- *    2026-08-31): das Eingabeformat darf `auto` sein, das **Ausgabe**-
- *    format muss immer genannt werden. Wo es darauf ankommt, wird nicht
- *    geraten, sondern gefragt.
- *
- * Beide loesen es also nicht durch bessere Zahlen, sondern indem sie die
- * Unsicherheit **sichtbar** machen. Das ist derselbe Weg, den FMT-17
- * (MF-724) fuer `do`/`po` gegangen ist.
- *
- * ── Was dieser Test tut, und was nicht ──────────────────────────────────
- *
- * Er **misst und haelt fest**. Er aendert keine Konfidenz: das waeren
- * ueber zwanzig Plugins auf einmal, ohne dass irgendwo geschrieben
- * steht, welcher Wert richtig waere. Der Vorschlag fuer eine Skala und
- * die Eigentuemer-Entscheidung stehen in `docs/OPEN_ITEMS.md` FMT-21.
- *
- * Faellt eine der Zahlen unten, ist das vermutlich eine Verbesserung —
- * der Test ist dann nachzuziehen, nicht wegzudruecken.
+ * Ob eine Sonde, die 50..79 beansprucht, den Inhalt **wirklich**
+ * geprueft hat. `trd_probe()` hob seine Konfidenz auf 82, wenn
+ * `data[0x8E4] <= 128` — wahr fuer die Haelfte aller Bytewerte, auf
+ * Nullen aber zufaellig falschbar. Dagegen steht Eichung 2:
+ * `tests/test_probe_confidence_on_random.c`.
  */
 
 #include "uft/uft_format_plugin.h"
@@ -114,91 +64,79 @@ static int fehler = 0;
                   printf("\n"); fehler++; }                              \
 } while (0)
 
-/* Gemessen am 2026-08-31 auf einem Puffer aus lauter Nullen. */
-static const struct {
-    const char *plugin;
-    size_t      groesse;
-    int         konf;
-    const char *woher;
-} ERWARTET[] = {
-    { "DIM", 1474560,  85, "reine Groesse" },
-    { "TRD",  163840,  82, "Groesse + data[0x8E4] <= 128" },
-    { "D81",  819200,  80, "reine Groesse" },
-    { "NIB",  232960,  80, "reine Groesse" },
-    { "MSX",  184320,  75, "reine Groesse" },
-    { "D64",  174848,  75, "reine Groesse" },
-    { "D13",  116480,  75, "reine Groesse" },
-    { "D71",  349696,  70, "reine Groesse" },
-    { "ADF",  901120,  70, "reine Groesse" },
-    { "DO",   143360,  55, "reine Groesse — seit MF-724 ehrlich" },
-    { "PO",   143360,  55, "reine Groesse — seit MF-724 ehrlich" },
-    { "IMG",  204800,  40, "reine Groesse" },
-    { "V9T9",  92160,  40, "reine Groesse" },
-    { "JV1",  102400,  35, "reine Groesse" },
+/* Gaengige Diskettengroessen. Eine Sonde beansprucht nur ihre eigenen;
+ * ueber diese Liste ist jede erreichbar, die ein reales Format bedient. */
+static const size_t GROESSEN[] = {
+     92160u,  102400u,  116480u,  143360u,  163840u,  174848u,  184320u,
+    204800u,  232960u,  250880u,  256256u,  327680u,  349696u,  368640u,
+    409600u,  655360u,  737280u,  802816u,  819200u,  901120u, 1146880u,
+   1228800u, 1474560u, 1720320u, 2949120u,
 };
 
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Was Sonden auf lauter Nullen melden (MF-728)\n\n");
+    printf("Eichung 1: was Sonden auf lauter Nullen melden (MF-729)\n\n");
 
     uft_error_t rc = uft_register_all_formats();
-    PRUEFE(rc == UFT_OK && uft_registered_format_plugin_count() > 100,
+    size_t anzahl = uft_registered_format_plugin_count();
+    printf("  Registry: rc=%d, %zu Plugins, %zu Groessen\n\n",
+           rc, anzahl, sizeof(GROESSEN) / sizeof(GROESSEN[0]));
+    PRUEFE(rc == UFT_OK && anzahl > 100,
            "die Registry ist nicht gefuellt (%zu) — dann misst dieser "
-           "Test nichts (MF-447)",
-           uft_registered_format_plugin_count());
+           "Test nichts (MF-447)", anzahl);
 
-    const size_t n = 4096;
+    const size_t n = 65536;              /* voller Sondenpuffer */
     uint8_t *nullen = calloc(1, n);
     if (!nullen) { printf("kein Speicher\n"); return 2; }
 
-    printf("  %-6s %9s  %5s  %s\n", "Plugin", "Groesse", "Konf", "woher");
-    int hoechste = 0;
+    int    hoechste = 0;
     const char *hoechster = "—";
+    size_t hoechste_gr = 0;
+    size_t verstoesse = 0, ansprueche = 0;
 
-    for (size_t i = 0; i < sizeof(ERWARTET) / sizeof(ERWARTET[0]); i++) {
-        const uft_format_plugin_t *p =
-            uft_get_format_plugin_by_name(ERWARTET[i].plugin);
-        if (!p || !p->probe) {
-            PRUEFE(false, "Plugin '%s' nicht gefunden — Registry oder "
-                   "Name geaendert", ERWARTET[i].plugin);
-            continue;
-        }
-        int k = -1;
-        bool ja = p->probe(nullen, n, ERWARTET[i].groesse, &k);
-        printf("  %-6s %9zu  %5d  %s\n", ERWARTET[i].plugin,
-               ERWARTET[i].groesse, ja ? k : -1, ERWARTET[i].woher);
-
-        PRUEFE(ja, "%s nimmt seine eigene Groesse %zu nicht mehr an",
-               ERWARTET[i].plugin, ERWARTET[i].groesse);
-        if (ja) {
-            PRUEFE(k == ERWARTET[i].konf,
-                   "%s meldet auf Nullen jetzt %d statt %d. Sinkt die "
-                   "Zahl, ist das vermutlich richtig (FMT-21) — dann ist "
-                   "dieser Test nachzuziehen, nicht wegzudruecken",
-                   ERWARTET[i].plugin, k, ERWARTET[i].konf);
-            if (k > hoechste) { hoechste = k; hoechster = ERWARTET[i].plugin; }
+    for (size_t g = 0; g < sizeof(GROESSEN) / sizeof(GROESSEN[0]); g++) {
+        for (size_t i = 0; i < anzahl; i++) {
+            const uft_format_plugin_t *p = uft_registered_format_plugin_at(i);
+            if (!p || !p->probe) continue;
+            int k = -1;
+            if (!p->probe(nullen, n, GROESSEN[g], &k)) continue;
+            ansprueche++;
+            if (k > hoechste) {
+                hoechste = k; hoechster = p->name ? p->name : "?";
+                hoechste_gr = GROESSEN[g];
+            }
+            if (k >= UFT_PROBE_CONF_STRUCT_MIN) {
+                if (verstoesse < 12)
+                    printf("  VERSTOSS  %-10s %9zu Byte  Konfidenz %3d\n",
+                           p->name ? p->name : "?", GROESSEN[g], k);
+                verstoesse++;
+            }
         }
     }
-
     free(nullen);
 
-    printf("\n  Hoechste Konfidenz auf einem Puffer ohne jede "
-           "Information: %d (%s)\n", hoechste, hoechster);
-    PRUEFE(hoechste == 85,
-           "die hoechste Konfidenz auf Nullen ist jetzt %d statt 85",
-           hoechste);
+    printf("\n  Ansprueche auf Nullpuffern : %zu\n", ansprueche);
+    printf("  hoechste Konfidenz         : %d  (%s, %zu Byte)\n",
+           hoechste, hoechster, hoechste_gr);
+    printf("  Verstoesse (>= %d)          : %zu\n",
+           UFT_PROBE_CONF_STRUCT_MIN, verstoesse);
 
-    printf("\n  Was die gruene Ampel heisst: der gemessene Stand gilt "
-           "unveraendert.\n"
-           "  Was sie NICHT heisst: dass diese Zahlen richtig sind. Auf "
-           "Nullen ist\n"
-           "  jede Aussage ueber das Format eine Vermutung aus der "
-           "Groesse — und die\n"
-           "  Spannweite 35..85 fuer genau dieselbe Erkenntnis zeigt, "
-           "dass es keine\n"
-           "  gemeinsame Skala gibt. Vorschlag und Entscheidung: "
-           "OPEN_ITEMS FMT-21.\n");
+    PRUEFE(verstoesse == 0,
+           "%zu Sonde(n) melden auf einem Puffer OHNE JEDE INFORMATION "
+           "eine Konfidenz von %d oder mehr. Das Band 50..79 heisst "
+           "'Struktur gelesen' — auf Nullen ist da keine. Der Wert "
+           "gehoert ins Band 30..49 (siehe Kopf von "
+           "uft/uft_format_plugin.h)", verstoesse,
+           UFT_PROBE_CONF_STRUCT_MIN);
+
+    printf("\n  Was die gruene Ampel heisst: keine Sonde behauptet auf "
+           "Nullen mehr,\n"
+           "  als die Groesse hergibt.\n"
+           "  Was sie NICHT heisst: dass die Sonden im Band 50..79 ihren "
+           "Inhalt\n"
+           "  wirklich pruefen — das misst Eichung 2 "
+           "(test_probe_confidence_on_random.c).\n");
 
     printf("\n%s (%d Abweichungen)\n", fehler ? "ROT" : "GRUEN", fehler);
     return fehler ? 1 : 0;

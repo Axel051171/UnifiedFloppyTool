@@ -109,7 +109,7 @@ bool dim_probe(const uint8_t *data, size_t size, size_t file_size,
     if (file_size < expected)
         return false;
 
-    *confidence = 85;
+    *confidence = 45;  /* MF-729: nur die Groesse */
     return true;
 }
 

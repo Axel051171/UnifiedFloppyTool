@@ -556,11 +556,25 @@ TEST(do_and_po_are_ambiguous_by_design) {
     ASSERT(probe_sized(&uft_format_plugin_do, hdr, sizeof(hdr), 143360, &do_conf));
     ASSERT(probe_sized(&uft_format_plugin_po, hdr, sizeof(hdr), 143360, &po_conf));
 
-    /* Both accept. Both report modest confidence, and DO ranks above PO —
-     * that ordering is the only thing distinguishing them today. */
+    /* Bis MF-724 stand hier `ASSERT(do_conf > po_conf)` — mit dem
+     * Kommentar, jene Ordnung sei „das Einzige, was sie heute
+     * unterscheidet". Der Test hiess dabei schon
+     * `do_and_po_are_ambiguous_by_design` und behauptete zugleich eine
+     * Rangfolge: genau die Verwechslung, die MF-724/729 behoben haben.
+     *
+     * Seither melden beide **denselben** Wert (`UFT_A2_CONF_UNKLAR`),
+     * damit `uft_probe_ranking.tied` anschlaegt statt einer Konstanten
+     * zu folgen — und seit MF-729 liegt der Wert im Band „nur die
+     * Groesse" (30..49), weil auf einem Nullpuffer nichts erkannt
+     * werden kann.
+     *
+     * Entscheidet der INHALT (ProDOS-Verzeichniskopf auf 0x400), trennen
+     * sie sich sehr wohl: po 90, do 20. Das prueft
+     * tests/test_do_po_probe_ignores_content.c. */
     ASSERT(do_conf > 0 && po_conf > 0);
-    ASSERT(do_conf > po_conf);
-    ASSERT(do_conf < 80 && po_conf < 80);
+    ASSERT(do_conf == po_conf);
+    ASSERT(do_conf < UFT_PROBE_CONF_STRUCT_MIN);
+    ASSERT(uft_probe_band(do_conf) == UFT_PROBE_BAND_SIZE);
 
     ASSERT(!probe_sized(&uft_format_plugin_do, hdr, sizeof(hdr), 143359, &do_conf));
     ASSERT(!probe_sized(&uft_format_plugin_po, hdr, sizeof(hdr), 143361, &po_conf));

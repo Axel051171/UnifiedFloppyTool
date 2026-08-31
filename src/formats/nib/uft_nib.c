@@ -24,7 +24,7 @@ typedef struct { uint8_t* data; } nib_data_t;
 
 bool nib_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size != NIB_FILE_SIZE) return false;
-    *confidence = 80;
+    *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* NIB: 35 tracks × 6656 bytes. Each track has Apple II GCR sync
      * bytes (0xFF runs) and address field markers (D5 AA 96). */

@@ -310,6 +310,43 @@ size_t uft_probe_buffer_ranked(const uint8_t *data, size_t size,
         }
     }
 
+    /* ── Das Urteil (MF-729) ──────────────────────────────────────────
+     *
+     * Bis hierher steht fest, WER die hoechste Zahl hat. Das ist noch
+     * kein Urteil: bis MF-728 meldete `tied` = 1, sobald die Zahlen
+     * verschieden waren — auch wenn mehrere Plugins dieselbe
+     * groessenbasierte Vermutung anstellten. Der Aufrufer erfuhr
+     * „eindeutig", wo niemand etwas erkannt hatte.
+     *
+     * Neu wird darum im **Band** gezaehlt, nicht in der Zahl:
+     *
+     *   eindeutig  <=>  genau EIN Bewerber im Band des Gewinners
+     *                   UND das Band ist mindestens „Struktur gelesen"
+     *
+     * Liegen alle im Groessen-Band, ist die Antwort **mehrdeutig** —
+     * unabhaengig davon, ob die Zahlen 45 und 40 oder beide 45 lauten.
+     * Ein Unterschied von fuenf Punkten zwischen zwei Vermutungen ist
+     * keine Evidenz. */
+    r.band = uft_probe_band(r.confidence);
+    r.band_claimants = 0;
+    if (r.winner && data && size > 0) {
+        for (size_t i = 0; i < g_format_plugin_count; i++) {
+            const uft_format_plugin_t *p = g_format_plugins[i];
+            if (!p || !p->probe) continue;
+            int conf = 0;
+            if (!p->probe(data, size, file_size, &conf)) continue;
+            if (uft_probe_band(conf) == r.band) r.band_claimants++;
+        }
+    }
+
+    if (!r.winner) {
+        r.verdict = UFT_PROBE_VERDICT_NONE;
+    } else if (r.band_claimants == 1 && r.band >= UFT_PROBE_BAND_STRUCT) {
+        r.verdict = UFT_PROBE_VERDICT_EINDEUTIG;
+    } else {
+        r.verdict = UFT_PROBE_VERDICT_MEHRDEUTIG;
+    }
+
     if (result) *result = r;
     return r.claimants;
 }
@@ -402,6 +439,11 @@ const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) 
  * It had no caller anywhere in the tree. Removed rather than kept in step with
  * uft_probe_file_ranked(), because three copies of one decision is how the
  * buffer sizes drifted apart in the first place (ARCH-15). */
+
+const uft_format_plugin_t* uft_registered_format_plugin_at(size_t index) {
+    if (index >= g_format_plugin_count) return NULL;
+    return g_format_plugins[index];
+}
 
 size_t uft_registered_format_plugin_count(void) {
     return g_format_plugin_count;

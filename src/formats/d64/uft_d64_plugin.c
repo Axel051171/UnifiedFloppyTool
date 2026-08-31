@@ -39,7 +39,7 @@ static bool d64_plugin_probe(const uint8_t *data, size_t size,
         file_size != 200960 && file_size != 201745 &&
         file_size != 205312 && file_size != 206114)
         return false;
-    *confidence = 75;
+    *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* BAM at track 18 sector 0 (offset 0x16500 for 35-track) */
     if (size >= 0x16600) {

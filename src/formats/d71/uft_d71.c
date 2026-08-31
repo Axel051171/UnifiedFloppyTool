@@ -61,7 +61,7 @@ bool d71_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
             if (bam[0] == 18 && bam[1] == 1) { *confidence = 90; return true; }
         }
     }
-    *confidence = 70;
+    *confidence = 45;  /* MF-729: nur die Groesse */
     return true;
 }
 

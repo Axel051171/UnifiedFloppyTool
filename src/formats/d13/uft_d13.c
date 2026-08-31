@@ -26,7 +26,7 @@ static bool d13_probe(const uint8_t *d, size_t s, size_t fs, int *c)
 {
     (void)d; (void)s;
     if (fs == D13_SIZE) {
-        *c = 75;
+        *c = 45;  /* MF-729: nur die Groesse */
         return true;
     }
     return false;

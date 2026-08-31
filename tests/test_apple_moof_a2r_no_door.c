@@ -142,9 +142,18 @@ int main(void)
                    "echtes %s-Plugin ist: wurde der Leser geprueft, bevor "
                    "er eine Tuer bekam? Sonst ist es die Lage von 86f "
                    "(MF-707)", fremd[i], r.winner->name, fremd[i]);
-            PRUEFE(r.confidence == 40,
-                   "%s: KFX gewinnt jetzt mit %d statt 40", fremd[i],
+            /* MF-729 hat KFX von 40 auf 35 gesenkt: Byte-Zaehlung ist
+             * keine Strukturpruefung (Eichung 2 mass 61,7 % Zustimmung
+             * auf Zufallspuffern). Der falsche Sieger bleibt, aber er
+             * behauptet nichts mehr — das Urteil lautet jetzt
+             * MEHRDEUTIG statt eindeutig. */
+            PRUEFE(r.confidence == 35,
+                   "%s: KFX gewinnt jetzt mit %d statt 35", fremd[i],
                    r.confidence);
+            PRUEFE(r.verdict == UFT_PROBE_VERDICT_MEHRDEUTIG,
+                   "%s: das Urteil ist nicht MEHRDEUTIG — ein Sieger im "
+                   "Vermutungsband darf nicht als erkannt gelten",
+                   fremd[i]);
         }
     }
 

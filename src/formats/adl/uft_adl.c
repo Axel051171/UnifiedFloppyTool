@@ -62,7 +62,9 @@ typedef struct { FILE *file; } adl_pd_t;
 
 static bool adl_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     (void)d; (void)s;
-    if (fs == ADL_SIZE) { *c = 50; return true; }
+    /* MF-729: war 50 — genau an der Bandgrenze, ohne den Inhalt
+     * anzusehen (`(void)d`). Nur die Groesse gehoert unter 50. */
+    if (fs == ADL_SIZE) { *c = 45; return true; }
     return false;
 }
 

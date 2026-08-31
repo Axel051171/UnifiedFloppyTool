@@ -807,6 +807,22 @@ size_t uft_list_format_plugins(const uft_format_plugin_t** plugins, size_t max);
  */
 size_t uft_registered_format_plugin_count(void);
 
+/**
+ * @brief Das i-te registrierte Plugin, oder NULL (MF-729).
+ *
+ * Ohne Enumeration laesst sich kein Tor bauen, das **jede** Sonde
+ * prueft — und genau das brauchen die zwei Eichungen aus dem Kopf von
+ * `uft_probe_ranking`: was meldet eine Sonde auf einem Nullpuffer, was
+ * auf Zufall? Beide Fragen gelten fuer alle Plugins, nicht fuer eine
+ * gepflegte Auswahl (CLAUDE.md §Dateimengen: die Menge kommt aus der
+ * Quelle, nicht aus einer Liste).
+ *
+ * Die Reihenfolge ist die Registrierungsreihenfolge; sie ist stabil,
+ * traegt aber **keine** Bedeutung — wer sie als Rangfolge liest, macht
+ * genau den Fehler, den MF-729 behebt.
+ */
+const uft_format_plugin_t* uft_registered_format_plugin_at(size_t index);
+
 /* ==========================================================================
  * Faehigkeits-Manifest abfragen (MF-660)
  *
@@ -985,6 +1001,82 @@ const uft_format_plugin_t* uft_disk_plugin(const uft_disk_t* disk);
  * `uft_format_t` statt über Plugins spricht. Für 131 Plugins auf
  * UFT_FORMAT_DSK kann deren `alternatives[4]` die Mehrdeutigkeit gar nicht
  * ausdrücken; siehe ARCH-14. */
+/** Konfidenz-Baender: was eine Zahl BEDEUTET (MF-729).
+ *
+ * Bis MF-728 vergab jede Sonde ihre Konfidenz fuer sich, und nirgends
+ * stand, was sie heisst. Gemessen an einem Puffer aus lauter Nullen —
+ * der keinerlei Signatur traegt — meldeten die Sonden **35 bis 85** fuer
+ * exakt dieselbe Erkenntnis („die Groesse passt"):
+ *
+ *     DIM 85 · TRD 82 · D81 80 · NIB 80 · MSX 75 · D64 75 · D13 75
+ *     D71 70 · ADF 70 · DO 55 · PO 55 · IMG 40 · V9T9 40 · JV1 35
+ *
+ * Damit war der Vergleich zwischen zwei Plugins willkuerlich: ein
+ * PC-160K-Abbild verlor gegen `TRD` (82), ein Macintosh-800K gegen
+ * `D81` (80) — nicht weil die mehr erkannt haetten, sondern weil ihre
+ * Zahl groesser gewaehlt war.
+ *
+ * Die Baender tragen **Bedeutung statt Rang**. Ihr Wert liegt nicht in
+ * den Grenzwerten, sondern in zwei Regeln, die mechanisch geprueft
+ * werden — der Nullpuffer und der Zufallspuffer sind die Eichgeraete:
+ *
+ *   1. **Wer den Inhalt nicht liest, bleibt unter 50.** Was auf einem
+ *      Nullpuffer >= 50 meldet, hat nichts erkannt.
+ *      Tor: `tests/test_probe_confidence_on_zeros.c`.
+ *   2. **Wer 50..79 beansprucht, muss Zufall abweisen.** Eine
+ *      Strukturpruefung, die zufaellige Puffer zur Haelfte durchlaesst,
+ *      ist keine — sie ist eine Bereichspruefung mit gutem Namen.
+ *      Tor: `tests/test_probe_confidence_on_random.c`.
+ *
+ * Die zweite Regel hat einen konkreten Anlass: `trd_probe()` hob seine
+ * Konfidenz von 70 auf 82, wenn `data[0x8E4] <= 128` — wahr fuer die
+ * **Haelfte aller Bytewerte**, auf Nullen immer.
+ *
+ * Externe Belege fuer das Verfahren (beide einzeln nachgelesen,
+ * 2026-08-31): **SAMdisk** fuehrt seine kopflosen Formate als „RAW —
+ * raw sector dumps, identified by file size only"; **MAME floptool**
+ * laesst `auto` fuer die Eingabe zu, verlangt das Ausgabeformat aber
+ * immer ausdruecklich. Beide loesen es nicht durch bessere Zahlen,
+ * sondern indem sie die Unsicherheit sichtbar machen.
+ */
+typedef enum {
+    UFT_PROBE_BAND_NONE   = 0,  /**< 0..29  — kein Anspruch            */
+    UFT_PROBE_BAND_SIZE   = 1,  /**< 30..49 — nur die Groesse passt    */
+    UFT_PROBE_BAND_STRUCT = 2,  /**< 50..79 — Struktur gelesen, plausibel */
+    UFT_PROBE_BAND_MAGIC  = 3   /**< 80..100 — Erkennungsmerkmal getroffen */
+} uft_probe_band_t;
+
+/** Untergrenze des Baendes „nur die Groesse". */
+#define UFT_PROBE_CONF_SIZE_MIN     30
+/** Untergrenze des Baendes „Struktur gelesen" — und damit die Schwelle,
+ *  ab der eine Sonde behauptet, den INHALT angesehen zu haben. */
+#define UFT_PROBE_CONF_STRUCT_MIN   50
+/** Untergrenze des Baendes „Erkennungsmerkmal getroffen". */
+#define UFT_PROBE_CONF_MAGIC_MIN    80
+
+/** In welchem Band liegt diese Konfidenz? */
+static inline uft_probe_band_t uft_probe_band(int confidence)
+{
+    if (confidence >= UFT_PROBE_CONF_MAGIC_MIN)  return UFT_PROBE_BAND_MAGIC;
+    if (confidence >= UFT_PROBE_CONF_STRUCT_MIN) return UFT_PROBE_BAND_STRUCT;
+    if (confidence >= UFT_PROBE_CONF_SIZE_MIN)   return UFT_PROBE_BAND_SIZE;
+    return UFT_PROBE_BAND_NONE;
+}
+
+/** Wie belastbar die Erkennung ist (MF-729). */
+typedef enum {
+    UFT_PROBE_VERDICT_NONE = 0,   /**< niemand beansprucht die Daten   */
+    /** Genau ein Bewerber im hoechsten belegten Band, und das Band ist
+     *  mindestens „Struktur gelesen". Nur hier darf ein Aufrufer den
+     *  Sieger als **erkannt** behandeln. */
+    UFT_PROBE_VERDICT_EINDEUTIG = 1,
+    /** Mehrere Bewerber im hoechsten Band ODER alle nur im
+     *  Groessen-Band. Der Sieger steht durch die
+     *  Registrierungsreihenfolge fest, nicht durch Evidenz — die
+     *  Kandidatenliste ist die Antwort, nicht der Sieger. */
+    UFT_PROBE_VERDICT_MEHRDEUTIG = 2
+} uft_probe_verdict_t;
+
 typedef struct uft_probe_ranking {
     const uft_format_plugin_t* winner;      /**< Höchste Konfidenz, oder NULL */
     int    confidence;                      /**< Konfidenz des Gewinners, 0 wenn keiner */
@@ -1003,6 +1095,30 @@ typedef struct uft_probe_ranking {
      * dieses Feld fasst. */
     const uft_format_plugin_t* tied_with[4];
     size_t tied_listed;                     /**< Belegte Einträge in tied_with[] */
+
+    /* ── Ab hier angehaengt (MF-729), ABI-sicher: keine Einfuegung ── */
+
+    /** Das Band des Gewinners. */
+    uft_probe_band_t band;
+
+    /** Wie belastbar die Erkennung ist.
+     *
+     * **Das ist das Feld, auf das ein Aufrufer schauen muss** — nicht
+     * `winner` allein. Bis MF-729 meldete `tied` = 1, sobald die Zahlen
+     * verschieden waren, auch wenn mehrere Plugins dieselbe
+     * groessenbasierte Vermutung anstellten. Der Aufrufer erfuhr
+     * „eindeutig", wo niemand etwas erkannt hatte.
+     *
+     * Gemessen waren das drei falsche Sieger auf gaengigen Groessen:
+     * PC-160K ging an `TRD`, Macintosh-800K an `D81`, PC-360K an `MSX`.
+     * Seit MF-729 sind es drei ehrliche Mehrdeutigkeiten. */
+    uft_probe_verdict_t verdict;
+
+    /** Bewerber im **Band** des Gewinners (nicht: mit derselben Zahl).
+     *
+     * `tied` zaehlt weiterhin die exakt Gleichauf-Liegenden; dieses Feld
+     * ist das, was fuer das Urteil zaehlt. */
+    size_t band_claimants;
 } uft_probe_ranking_t;
 
 /**

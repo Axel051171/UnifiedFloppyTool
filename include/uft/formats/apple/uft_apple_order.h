@@ -85,7 +85,7 @@
 /** Konfidenz, wenn die Ordnung NICHT entscheidbar ist. Beide Sonden
  *  melden denselben Wert, damit `tied` anschlaegt statt einer Konstanten
  *  zu folgen. */
-#define UFT_A2_CONF_UNKLAR      55
+#define UFT_A2_CONF_UNKLAR      45
 
 /** Konfidenz der jeweils widerlegten Lesart. Nicht 0: die Datei bleibt
  *  ein Kandidat (eine ProDOS-geordnete Diskette KANN ein DOS-Dateisystem

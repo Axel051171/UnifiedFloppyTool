@@ -11,7 +11,11 @@ typedef struct { FILE* file; bool header; } sad_data_t;
 
 bool sad_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 4 && memcmp(data, "SAD!", 4) == 0) { *confidence = 95; return true; }
-    if (file_size == SAD_SIZE) { *confidence = 70; return true; }
+    /* MF-729: war 70 — reine Groesse, ohne Merkmal. Der Magic-Zweig
+     * darueber bleibt bei 95; nur die Groessen-Vermutung sinkt ins
+     * Band 30..49. Gemessen war SAD damit der Sieger auf einem
+     * Macintosh-800K-Nullpuffer, sobald D81 gesenkt war. */
+    if (file_size == SAD_SIZE) { *confidence = 45; return true; }
     return false;
 }
 

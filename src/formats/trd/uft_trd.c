@@ -12,14 +12,21 @@ typedef struct { FILE* file; uint8_t tracks, sides; } trd_data_t;
 bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size != 655360 && file_size != 327680 && file_size != 163840)
         return false;
-    *confidence = 70;
+    *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* TR-DOS disk info at track 0, sector 9 (offset 0x800) */
     if (size >= 0x228) {
         /* Byte 0x227 = disk type: 0x10 = TR-DOS */
         if (data[0x227] == 0x10) *confidence = 92;
         /* File count (0x8E4 = track 0 sector 8 + 0xE4) should be 0-128 */
-        else if (size >= 0x8E5 && data[0x8E4] <= 128) *confidence = 82;
+        /* MF-729: hier stand `else if (data[0x8E4] <= 128) *confidence = 82;`
+         * — eine Bereichspruefung, die auf die HAELFTE aller Bytewerte
+         * zutrifft und auf Nullen immer. Sie hob 70 auf 82, ohne etwas
+         * erkannt zu haben, und liess ein PC-160K-Abbild gegen TRD
+         * verlieren. Eine Strukturpruefung, die Zufall zur Haelfte
+         * durchlaesst, ist keine (Eichung 2). Entfernt statt gesenkt:
+         * gesenkt waere sie von der reinen Groesse nicht mehr zu
+         * unterscheiden. */
     }
     return true;
 }

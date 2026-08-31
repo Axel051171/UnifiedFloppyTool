@@ -17,7 +17,7 @@ typedef struct { FILE *file; uint8_t spt; } adf_pd_t;
 static bool adf_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
     if (file_size != ADF_DD_SIZE && file_size != ADF_HD_SIZE) return false;
-    *confidence = 70;
+    *confidence = 45;  /* MF-729: nur die Groesse */
     /* Amiga bootblock: "DOS\0" at offset 0 */
     if (size >= 4 && data[0] == 'D' && data[1] == 'O' && data[2] == 'S')
         *confidence = 95;
