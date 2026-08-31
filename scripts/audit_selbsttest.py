@@ -562,6 +562,89 @@ FAELLE: dict[str, list[Fall]] = {
             erwartet="sauber",
             warum="beide Uebersetzungseinheiten sehen denselben Wert."),
     ],
+
+    # ---------------------------------------------------------------
+    # MF-737. Die Einordnung ist eine Regel ueber Fliesstext, und
+    # solche Regeln liegen zuerst daneben — sechs Schaerfungen waren
+    # noetig, drei davon behoben Fehler, die eine VORHERIGE Schaerfung
+    # erst erzeugt hatte. Die Faelle hier halten jede einzelne fest.
+    #
+    # Der Rueckstand selbst ist eine Sperrklinke gegen die Grundlinie;
+    # gepflanzt wird deshalb weit darueber (40) bzw. darunter.
+    "audit_attribution_licence": [
+        Fall(
+            name="Codebasis ohne Lizenz",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Based on hactool by SciresM */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="treffer", muster="ohne Lizenz daneben",
+            warum="Programm plus Autor, keine Lizenz — der Rueckstand."),
+        Fall(
+            name="Codebasis mit Lizenz daneben",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Based on hactool by SciresM (ISC) */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="die Lizenz steht daneben — genau die Regel aus "
+                  "MF-636."),
+        Fall(
+            name="GPLv2+ zaehlt als Lizenz",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Based on cbmconvert by M. Maekelae (GPLv2+) */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="`\\bGPL\\b` traf `GPLv2` NICHT — die haeufigste "
+                  "Schreibweise ueberhaupt. Eine korrekt lizenzierte "
+                  "Attribution stand deshalb im Rueckstand."),
+        Fall(
+            name="reiner Doku-Verweis",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Reference: Apple II 2IMG specification */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="eine Doku zu lesen begruendet keine Ableitung "
+                  "(MF-636) — das ist keine Lizenzfrage."),
+        Fall(
+            name="Prosa ist keine Attribution",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Threshold based on measured variance */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="ein zu Ende geschriebener Satz erklaert keine "
+                  "Herkunft."),
+        Fall(
+            name="Prosa hinter einem Code-Ausloeser",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Derived from timing histograms */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="„derived from" + "\" allein macht keine Ableitung. Diesen "
+                  "Fehler hat eine fruehere Schaerfung SELBST erzeugt — "
+                  "sieben Prosastellen landeten dadurch im Rueckstand."),
+        Fall(
+            name="Adresse auf eine Formatbeschreibung",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Reference: https://applesaucefdc.com/moof-ref */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="sauber",
+            warum="`REPO_PFAD` lief mit `re.I` und hielt den Pfadteil "
+                  "jeder Adresse fuer `nutzer/repo`."),
+        Fall(
+            name="Adresse auf eine Code-Ablage",
+            dateien={"src/x_%02d.c" % i:
+                     "/* Based on https://github.com/aaru-dps/Aaru */\n"
+                     "int f%d(void) { return 0; }\n" % i
+                     for i in range(40)},
+            erwartet="treffer", muster="ohne Lizenz daneben",
+            warum="dieselbe Form, anderer Wirt — und damit Code."),
+    ],
 }
 
 
@@ -592,7 +675,9 @@ def tor_skripte() -> set[str]:
         return set()
     text = p.read_text(encoding="utf-8", errors="replace")
     import re
-    return set(re.findall(r"\baudit_[a-z_]+", text))
+    # Sich selbst nicht mitzaehlen: ein Pruefstand, der seinen eigenen
+    # Pruefstand verlangt, ist ein Zirkel. Seine Faelle SIND sein Test.
+    return set(re.findall(r"\baudit_[a-z_]+", text)) - {"audit_selbsttest"}
 
 
 def lade(name: str):

@@ -6717,4 +6717,152 @@ gibt. Der Grund: das Muster suchte die Wache in den 600 Zeichen vor dem
 (`#ifdef IMD_PARSER_TEST`, Zeile 639, `main()` bei 728). Gefunden wurde
 der Fehler nur, weil ein einzelner Fall konkret nachgesehen wurde,
 statt der Zahl zu glauben. Die richtige Messung zaehlt die
-Praeprozessor-Verschachtelung mit.
+Praeprozessor-Verschachtelung mit.
+
+### LIZ-1 geordnet (MF-737) — der Rückstand war 125, die Entscheidung ist 37
+
+Die Zahl stand seit MF-651 als **„171 Attributionen, 125 ohne Lizenz"**
+da. Als Rückstand war sie unbrauchbar, weil sie drei völlig verschiedene
+Dinge in einen Topf warf. Gemessen, nachdem sie getrennt sind:
+
+| Klasse | gesamt | m. Lizenz | **o. Lizenz** | ist das eine Lizenzfrage? |
+|---|---|---|---|---|
+| **KEINE** — gar keine Attribution | 23 | 1 | 22 | nein, das ist Prosa |
+| **DOKU** — ein Dokument gelesen | 36 | 2 | 34 | **nein** (MF-636) |
+| **CODE** — fremde Codebasis benannt | 75 | 38 | **37** | **ja — das ist LIZ-1** |
+| **UNKLAR** — nennt beides | 37 | 6 | 31 | Mensch entscheidet |
+
+**87 der 125 waren nie eine Entscheidung.** `docs/CLAUDE.md` sagt es
+seit MF-636: *„wer eigenständig implementiert und nur fremde Doku gelesen
+hat, schreibt das auch so"* — eine Doku zu lesen begründet keine
+Ableitung. Und „based on measured variance" ist überhaupt keine
+Attribution, sondern ein zu Ende geschriebener Satz.
+
+#### Ein Prüfer-Fehler, der eine korrekte Attribution beschuldigt hat
+
+`\b(GPL|LGPL|...)\b` traf **`GPLv2` nicht** — das schließende `\b`
+verlangt ein Nicht-Wortzeichen, und `GPLv2` hat dort ein `v`. Gemessen:
+
+```
+GPLv2+  FEHLT      GPL-2.0   trifft
+GPLv2   FEHLT      LGPL-2.1  trifft
+GPLv3   FEHLT      GPL 2     trifft
+```
+
+Folge: `cbmconvert by Marko Mäkelä (GPLv2+)` stand auf der Liste „ohne
+Lizenz", obwohl die Lizenz danebensteht. Die häufigste Schreibweise
+überhaupt war die eine, die der Prüfer nicht kannte.
+
+#### Sechs Schärfungen — drei davon gegen selbst erzeugte Fehler
+
+Eine Regel über Fließtext liegt zuerst daneben. Festgehalten, weil das
+Muster wiederkehrt:
+
+| # | was | Wirkung |
+|---|---|---|
+| 1 | Marker vor Identifizierbarkeit | `libdsk` trägt keinen Großbuchstaben und ist trotzdem Code |
+| 2 | `derived from`/`taken from` sind Code-Auslöser | — |
+| 3 | Titel in Anführung = Dokument; `<Name> by <Person>` = Code | — |
+| 4 | starke vs. schwache Code-Marker | 6 Prosastellen raus („the track number") |
+| 5 | Adresse: Doku, außer bei einer Code-Ablage | `applesaucefdc.com/moof-reference` galt als `nutzer/repo` |
+| 6 | der Auslöser allein genügt nicht | **Schärfung 2 hatte 7 Prosastellen hereingezogen** |
+
+Schärfung 6 korrigiert Schärfung 2. `REPO_PFAD` lief mit `re.I` und hielt
+**`D77/D88`** für einen Repo-Pfad — eine reine Formatspezifikation in der
+Code-Klasse.
+
+**Grundsatz der Einordnung: im Zweifel die strenge Seite.** Was sich
+nicht entscheiden lässt, wird UNKLAR und geht an einen Menschen — nie
+stillschweigend in die harmlose Klasse. Ein Rückstand, der sich durch
+Wegsortieren verkleinern lässt, misst nichts.
+
+Alle acht Fälle stehen als Selbsttest in `scripts/audit_selbsttest.py`.
+
+#### Die Zahl hat jetzt eine Sperrklinke
+
+Tor 43 in `check_consistency.py`: **37 darf sinken, nicht steigen.** Es
+prüft nicht *ob* — eine Attribution ohne Lizenz ist nichts Verbotenes,
+sondern etwas Entscheidungsbedürftiges. Es prüft, dass niemand eine neue
+Ableitung erklärt, ohne ihre Lizenz zu nennen.
+
+### Die Belege — gemessen, nicht angenommen
+
+Über die GitHub-API abgefragt (`gh api repos/<r>/license`), Lizenzdateien
+im Wortlaut gelesen:
+
+| Quelle | Nennungen | Beleg | Lizenz |
+|---|---|---|---|
+| **XCopy Pro** | **4** | kein Repo; kommerzielles Amiga-Kopierprogramm | **keine** |
+| **nibtools** | **3** | `OpenCBM/nibtools`: keine `LICENSE`, kein Lizenzkopf in `gcr.c`, nichts im `readme.txt` | **nirgends genannt** |
+| **dec0de** | 3 | kein GitHub-Treffer | offen |
+| **bbctapedisc** | 3 | kein GitHub-Treffer | offen |
+| **msa-to-zip** | 2 | `obruchez/msa-to-zip`: keine `LICENSE` | **keine genannt** |
+| hactool | 3 | `SciresM/hactool` | ISC |
+| VICE | 3 | `VICE-Team/svn-mirror`, `vice/COPYING` | GPL-2.0 |
+| **FluxEngine** | 2 | `davidgiven/fluxengine`, `COPYING.md` | **GPL-2.0**, nicht MIT |
+| MAME | 2 | `mamedev/mame`, `COPYING` | GPL-2.0 |
+| **Aaru** | 1 | `aaru-dps/Aaru`, `LICENSE` | **GPL-3.0** |
+| 86Box | 1 | `86Box/86Box` | GPL-2.0 |
+| HxCFloppyEmulator | 1 | `jfdelnero/…`: keine `LICENSE` | offen |
+| cbmconvert | 1 | Kopf im eigenen Baum | GPLv2+ |
+
+Eingeordnet wird hier nichts — das ist Eigentümer-Sache (MF-679). Was
+sich geändert hat: die Frage steht nicht mehr als „laut README", sondern
+als Zitat aus der Lizenzdatei.
+
+### Vier Entscheidungen, nach Dringlichkeit
+
+**1 · XCopy Pro — vier Stellen, kommerzielle Vorlage, keine Lizenz.**
+
+```
+analysis/uft_track_analysis.c/.h      "derived from XCopy Pro (1989-2011)"
+formats/amiga/uft_amiga_protection.c  "port of XCopy Pro 68000 Assembly algorithms"
+formats/amiga/uft_amiga_protection.c  "Port of ROL.L #1,D0"
+```
+
+*„Port of … Assembly algorithms"* ist eine **ausdrückliche
+Ableitungserklärung** von einem kommerziellen Programm ohne jede
+Lizenz. Das ist die Lage, die bei IPF eine ganze Fähigkeit gekostet hat
+(P0-5, MF-638) — und dort war der Parser wenigstens erreichbar.
+
+Nach MF-695 sind die Kanäle: **Nachbau** (`uft-nachbau`, Weg 2 —
+Verhalten belegen, Code neu schreiben), **Zurücknehmen**, oder
+**Umformulieren**, falls die Erklärung zu weit greift und tatsächlich
+nur Verhalten nachgebaut wurde. Das lässt sich am Code prüfen, und es
+ist die erste Frage: *steht dort wirklich portierter Code, oder hat die
+Kopfzeile übertrieben?*
+
+**2 · FluxEngine ist GPL-2.0, nicht MIT.**
+
+`core/unified/uft_flux_decoder.h` („Based on FluxEngine's proven flux
+decoding algorithms"), `micropolis`, `victor9k`. GPL-2.0 ist mit unserem
+`GPL-2.0-or-later` **vereinbar** — die Erklärung muss die Lizenz nur
+nennen. Billigster Fall auf der Liste; drei Kopfzeilen.
+
+**3 · Aaru ist GPL-3.0.**
+
+`include/uft/formats/modern/uft_aaru.h`. GPL-3.0 lässt sich mit
+`GPL-2.0-or-later` verbinden, aber **das Ergebnis ist dann GPL-3.0**.
+Das ist eine Lizenzentscheidung über den Baum, keine Kopfzeile. Zu
+prüfen: ist es überhaupt eine Ableitung, oder nur ein Formatverweis?
+
+**4 · nibtools und msa-to-zip nennen nirgends eine Lizenz.**
+
+Damit gilt „unbekannte Lizenz = Zone PRÜFEN" (MF-679). Für nibtools ist
+das besonders scharf: `uft_gcr_ops.h` nennt **`nibtools gcr.c:`**
+namentlich, und diese Datei trägt nur einen Copyright-Vermerk. Der
+stärkste offene Kanal ist eine **Anfrage an die Autoren** — Pete
+Rittwage und Markus Brenner sind erreichbar, und eine schriftliche
+Freigabe kostet nichts als eine Mail.
+
+### Was bewusst offen bleibt
+
+Die **31 UNKLAR ohne Lizenz** nennen Doku *und* Code zugleich — „MSX
+Resource Center wiki, openMSX source", „VICE emulator, Commodore
+2040/4040 technical docs". Welche der beiden die Vorlage war, kann keine
+Regel entscheiden; das weiß nur, wer die Datei geschrieben hat. Sie
+stehen als Liste bereit (`--unklar`), nicht als Zahl im Rückstand.
+
+**Kennzahl:** „Dateien mit ungeklärter Herkunft", Verdachts-Stufe:
+**125 → 37**, und zum ersten Mal mit einer Sperrklinke statt einer
+gepflegten Zahl.

@@ -875,6 +875,22 @@ def main() -> int:
         import audit_selbsttest as _st
         all_errors.append(("Tore ohne Selbsttest", _st.check(repo)))
 
+        # 43. Kategorie (MF-737): Ableitungen ohne Lizenz — Sperrklinke.
+        #
+        # Die Zahl stand seit MF-651 als „125 von 171 ohne Lizenz" da und
+        # war als Rueckstand unbrauchbar: sie warf drei verschiedene
+        # Dinge zusammen — Prosa, die gar keine Attribution ist; Verweise
+        # auf DOKUMENTATION (die begruenden keine Ableitung, MF-636); und
+        # benannte fremde CODEBASEN. Nur die dritte Gruppe ist eine
+        # Entscheidung. Gemessen nach der Einordnung: **37**.
+        #
+        # Das Tor prueft nicht OB — eine Attribution ohne Lizenz ist
+        # nichts Verbotenes, sondern etwas Entscheidungsbeduerftiges. Es
+        # prueft, dass die Zahl **sinkt und nicht steigt**: wer eine neue
+        # Ableitung erklaert, nennt ihre Lizenz mit.
+        import audit_attribution_licence as _al
+        all_errors.append(("Ableitung ohne Lizenz", _al.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
