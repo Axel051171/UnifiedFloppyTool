@@ -7,7 +7,17 @@ Schema der Felder dort in §3.
 > ist die Datenquelle für „Dateien mit ungeklärter Herkunft" — die
 > begründete fünfte Release-Kennzahl (CLAUDE.md, MF-640).
 >
-> **Stand 2026-08-28: 1 vollzogen, 4 vorgemerkt, 0 aufgelöst.**
+> **Stand 2026-08-31: 1 vollzogen, 5 vorgemerkt, 0 aufgelöst.**
+>
+> MF-741: die fünfte vorgemerkte Zeile ist `uft_track_analysis.c`+`.h`.
+> Sie kam nicht über eine Selbsterklärung herein wie die vier davor,
+> sondern über den **Idiom-Test** — ihre Textähnlichkeit zur
+> XCopy-Nachbarzeile beträgt 1,8 % und hätte sie freigesprochen.
+>
+> **Diese Zahl ist von Hand gepflegt** und speist über
+> `scripts/gen_stand.py:139` eine der Release-Kennzahlen. Sie ist
+> damit ein Kandidat für dieselbe Behandlung wie die
+> Wandlungsmatrix (MF-541): ableiten statt zählen. Offen.
 
 ---
 
@@ -40,11 +50,24 @@ der Fälle eine Fähigkeit kostet.
 | `src/formats/kfx/uft_kfstream_air.c` | 908 | „Full port of AIR `KFReader.cs` to C. © 2013-2015 SPS & Jean Louis-Guerin (**GPL-3.0**)" | **keine** — 0 Aufrufer, steht in `orphan_baseline.txt` | 2 | KryoFlux DTC |
 | `src/formats/stx/uft_stx_air.c` | 914 | „Full port of AIR `PastiRead.cs`/`PastiStruct.cs`/`PastiWrite.cs` to C. © 2014 Jean Louis-Guerin (**GPL-3.0**)" | **keine** — 0 Aufrufer, steht in `orphan_baseline.txt` | 2 | Pasti-Spec liegt (T2-Quelle) |
 | `src/formats/amiga/uft_amiga_protection.c` | 766 | „C99 **port** of XCopy Pro (1989-2011) 68000 Assembly algorithms", `:47` „Port of `ROL.L #1,D0`" — **keine Lizenz genannt** | **keine** — 0 Produktions-Aufrufer, 1 Test | 2 (§4: unklar ⇒ wie portiert) | fehlt, Beschaffung: XCopy-Verhaltensdoku |
-
-**Audit-Stand aller vier: portiert** — bei den drei AIR-Dateien ohne
+| `src/analysis/uft_track_analysis.c` + `.h` | 1050 | „Universal track analysis algorithms **derived from** XCopy Pro (1989-2011)“ — **keine Lizenz genannt**. Nachgetragen MF-741: der Idiom-Test (MF-696) belegt **dieselbe** Ableitung wie die Zeile darueber — **zwoelf** Bezeichner kommen in genau diesen beiden Dateien vor und in **keiner** der uebrigen 715 (`detect_breakpoints`, `has_breakpoints`, `gap_sector_index`, `unique_lengths`, `rol32`, …). „Breakpoint“ ist die Uebersetzung von „Bruchstelle“ aus dem Original-Assembly-Kommentar. Die Textaehnlichkeit betraegt **1,8 %** und haette Entwarnung bedeutet. | **keine** — 20 Exporte, 0 Aufrufer ausserhalb; steht aber im Gegensatz zur Zeile darueber **noch im qmake-Bau** (`.pro:1219`) | 2 | fehlt — und die Fakten selbst sind unbelegt (MF-740) |
+**Audit-Stand aller fünf: portiert** — bei den drei AIR-Dateien ohne
 jedes Ähnlichkeitsaudit, weil sie sich **selbst** als „Full port"
 erklären und die Lizenz im eigenen Kopf nennen. Bei XCopy Pro nach §4
 „unklar ⇒ wie portiert".
+
+Die fünfte Zeile (`uft_track_analysis`) ist **anders zustande gekommen
+als die vier darüber** und deshalb der lehrreiche Fall: sie erklärt sich
+nicht selbst als Port, ihre Textähnlichkeit zur Nachbarzeile beträgt
+**1,8 %**, und ein Ähnlichkeitsvergleich hätte sie freigesprochen.
+Belegt hat sie erst der **Idiom-Test** aus §4 — zwölf Bezeichner, die
+nur diese beiden Dateien im ganzen Baum teilen. Das ist genau der Grund,
+warum dort „beweiskräftig sind Idiome, nicht Fakten" steht (MF-741).
+
+Und sie ist die einzige der fünf, die **noch im qmake-Bau steht**
+(`.pro:1219`). `uft_amiga_protection.c` ist seit MF-699 herauskommentiert;
+diese Datei ist es nie gewesen, weil bis MF-739 niemand wusste, dass sie
+dieselbe Ableitung ist.
 
 **MF:** Audit **MF-638**, Vollzug offen (`LIZ-2`).
 

@@ -26,7 +26,7 @@ Stand: 2026-08-31
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
 - Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **172**
-- Quarantäne: 1 vollzogen, 4 vorgemerkt, 0 aufgelöst (`docs/QUARANTINE.md`)
+- Quarantäne: 1 vollzogen, 5 vorgemerkt, 0 aufgelöst (`docs/QUARANTINE.md`)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 
