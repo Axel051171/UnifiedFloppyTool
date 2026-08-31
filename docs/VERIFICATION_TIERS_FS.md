@@ -14,7 +14,7 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 | FS-T2 | 1 | Korpus von **registrierter** fremder Hand |
 | **gesamt gefuehrt** | **8** | |
 
-Dazu **26 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
+Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
 
 ## Pro Leser
 
@@ -33,11 +33,23 @@ Dazu **26 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 
 Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser Abschnitt nennt Dateien im uebrigen Baum, die ein **Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier steht, worueber zu entscheiden ist, nicht ein Urteil.
 
-Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **8** Leser, waehrend der Baum **34** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
+Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **8** Leser, waehrend der Baum **40** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
 
-Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`). Das Merkmal ist gemessen, nicht geraten: mindestens 5 Nennungen von Verzeichnis-Begriffen ausserhalb von Kommentaren.
+Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`).
 
-**26 Kandidaten**, nach Nennungen sortiert:
+**MF-738 — an dieser Stelle stand bis heute der Satz „Das Merkmal ist gemessen, nicht geraten: mindestens 5 Nennungen von Verzeichnis-Begriffen“.** Die Zahl 5 war geraten, und der Satz behauptete das Gegenteil. Gemessen ist die Kurve glatt — sie hat keinen Bruch, an dem ein Schwellwert liegen koennte:
+
+```
+>=1  41    >=4  30    >=8  12    >=20  5
+>=2  35    >=5  26    >=10  7    >=30  2
+>=3  31    >=6  22    >=15  5
+```
+
+Ein Zaehler auf Begriffsnennungen misst ausserdem die falsche Sache. Ein Dateisystem-Leser ist nicht daran erkennbar, wie OFT er „directory“ sagt, sondern daran, dass er **benannte Dateien erzeugt**: er holt Bytes aus einem Sektor und fuellt damit ein Namensfeld. Das Merkmal ist jetzt: ein Verzeichnis-Begriff UND ein Namensfeld, beides ausserhalb von Kommentaren, und Verzeichnisse des WIRTSSYSTEMS (`<dirent.h>`, `opendir`) zaehlen nicht mit.
+
+Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDOS** (`uft_adf_parser_v3.c`), **BBC DFS**, **CBM DOS** (`uft_d64_parser_v3.c`) und **CP/M** (`uft_cpm_diskdef.c`) — und laesst zwei fallen, die keine Dateisysteme sind: `uft_jv3.c` ist ein Abbildformat, `mfm_detect.c` ein Erkenner.
+
+**32 Kandidaten**, nach Nennungen sortiert:
 
 | Datei | Verzeichnis-Nennungen | Zeilen |
 |---|---|---|
@@ -59,14 +71,20 @@ Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`). Das Mer
 | `src/formats/d81/uft_d81_parser_v2.c` | 7 | 440 |
 | `src/formats/msx/uft_msx.c` | 7 | 987 |
 | `src/formats/scl/uft_scl_parser_v2.c` | 7 | 504 |
-| `src/detect/mfm/mfm_detect.c` | 6 | 1794 |
 | `src/formats/c64/uft_geos.c` | 6 | 581 |
 | `src/formats/commodore/uft_m2i.c` | 6 | 433 |
 | `src/formats/flex/uft_flex.c` | 6 | 276 |
 | `src/fileops/uft_file_ops_extended.c` | 5 | 597 |
 | `src/formats/atari/atari_check.c` | 5 | 681 |
-| `src/formats/jv3/uft_jv3.c` | 5 | 293 |
 | `src/formats/legacy/uft_fdi.c` | 5 | 512 |
+| `src/formats/atari/atari_util.c` | 4 | 315 |
+| `src/formats/bbc/uft_bbc_dfs.c` | 4 | 359 |
+| `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1044 |
+| `src/formats/d64/uft_d64_parser_v3.c` | 4 | 1768 |
+| `src/formats/adf/uft_adf_parser_v3.c` | 3 | 545 |
+| `src/formats/cbm/uft_cbm_formats.c` | 2 | 960 |
+| `src/formats/fat32/uft_fat32_mbr.c` | 2 | 590 |
+| `src/formats/tap/uft_tap_parser_v2.c` | 1 | 296 |
 
 **Was ein Eintrag hier NICHT heisst:** dass die Datei ungeprueft ist. Viele tragen einen Format-Test und stehen in `docs/VERIFICATION_TIERS.md` — die Plugin-Leiter misst sie, diese hier nicht. Der Befund ist die **Luecke zwischen beiden Leitern**, nicht ein Mangel je Datei.
 

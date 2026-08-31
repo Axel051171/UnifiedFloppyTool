@@ -114,10 +114,122 @@ VERZEICHNIS = re.compile(
     r"directory entry|dir_entry|dirent|catalog|volume_dir|read_dir|"
     r"foreach_entry|file_entry", re.I)
 
-# Ab wie vielen Nennungen eine Datei als Kandidat gilt. Bewusst niedrig
-# und bewusst NICHT als Stufen-Vergabe verwendet: der Schwellwert
-# entscheidet, worueber geredet wird, nicht wie es eingestuft ist.
-KANDIDAT_AB = 5
+# ── Was einen Kandidaten ausmacht (MF-738) ───────────────────────────────
+#
+# Hier stand `KANDIDAT_AB = 5` — „ab fuenf Nennungen eines
+# Verzeichnis-Begriffs". Eine geratene Konstante, und die Messung zeigt,
+# dass sie nichts trennt: die Kurve ist glatt, es gibt keinen Bruch.
+#
+#     >=1  41    >=4  30    >=8  12    >=20  5
+#     >=2  35    >=5  26    >=10  7    >=30  2
+#     >=3  31    >=6  22    >=15  5
+#
+# Ein Zaehler auf Begriffsnennungen misst ausserdem die falsche Sache. Ein
+# Dateisystem-Leser ist nicht daran erkennbar, wie OFT er „directory"
+# sagt, sondern daran, dass er **benannte Dateien erzeugt**: er holt
+# Bytes aus einem Sektor und fuellt damit ein Namensfeld.
+#
+# Gemessen gegen den alten Schwellwert — die neue Regel findet ACHT, die
+# der Zaehler verlor, darunter vier der namentlich gefuehrten
+# Dateisysteme:
+#
+#     + adf/uft_adf_parser_v3.c      AmigaDOS
+#     + bbc/uft_bbc_dfs.c            BBC DFS
+#     + d64/uft_d64_parser_v3.c      CBM DOS
+#     + cpm/uft_cpm_diskdef.c        CP/M
+#     + cbm/uft_cbm_formats.c, atari/atari_util.c,
+#       fat32/uft_fat32_mbr.c, tap/uft_tap_parser_v2.c
+#
+# und laesst ZWEI fallen, die keine Dateisysteme sind:
+#
+#     - formats/jv3/uft_jv3.c        ein ABBILDFORMAT (TRS-80)
+#     - detect/mfm/mfm_detect.c      ein Erkenner, kein Leser
+#
+# `atari_sparta.c` haette eine erste Fassung dieser Regel verloren: sie
+# suchte `memcpy|strncpy` und uebersah, dass SpartaDOS ueber einen
+# eigenen Helfer kopiert (`trim_name(..., e->filename, ...)`). Die
+# Evidenz ist das NAMENSFELD, nicht die Kopierfunktion.
+
+# Ein Namensfeld, das aus dem Abbild gefuellt wird.
+NAMENSFELD = re.compile(
+    r"\b\w+(?:->|\.)(?:name|filename|fname)\b"
+    r"|char\s+\w*(?:name|fname|filename)\w*\s*\[", re.I)
+
+# Verzeichnisse des WIRTSSYSTEMS zaehlen nicht. `#include <dirent.h>` und
+# `struct dirent` brachten sonst zwei HAL-Dateien in die Liste
+# (`uft_hal_unified.c`, `uft_kryoflux_dtc.c`) — sie durchsuchen einen
+# Ordner auf der Platte, nicht ein Dateisystem im Abbild.
+WIRTSVERZEICHNIS = re.compile(
+    r"#\s*include\s*<dirent\.h>|struct\s+dirent|\bDIR\s*\*"
+    r"|\b(?:opendir|readdir|closedir|scandir)\s*\(")
+
+
+def ist_kandidat(text: str) -> tuple[bool, int]:
+    """(ja/nein, Verzeichnis-Nennungen) fuer EINEN Dateiinhalt.
+
+    Herausgezogen, damit die Regel pruefbar ist. `kandidaten()` selbst
+    laeuft ueber `git ls-files` und laesst sich nicht pflanzen — die
+    Regel darin schon.
+    """
+    t = WIRTSVERZEICHNIS.sub(" ", ohne_kommentare(text))
+    n = len(VERZEICHNIS.findall(t))
+    return (bool(n) and bool(NAMENSFELD.search(t))), n
+
+
+# Gepflanzte Faelle mit feststehender Antwort. Vier davon sind
+# GEMESSENE Stellen aus dem Baum, nicht erfunden — jede war beim
+# Entwurf dieser Regel ein roter Lauf.
+SELBSTTEST = [
+    # ACHTUNG, gemessene Falle: die Begriffe muessen im CODE stehen,
+    # nicht im Kommentar. Die erste Fassung dieser Faelle schrieb sie in
+    # `/* directory entry */` — Fall 1 wurde dadurch rot (die Regel war
+    # richtig, das Fixture falsch) und Fall 2 gruen AUS DEM FALSCHEN
+    # GRUND. Ein Fixture, das die Regel nicht erreicht, prueft nichts.
+    ("liest Verzeichnis, erzeugt Namen",
+     "static int sparta_read_directory(disk_t *d, entry_t *e,\n"
+     "                                 const uint8_t *raw) {\n"
+     "    trim_name((const char *)&raw[6], e->filename, 8);\n"
+     "    return 0;\n}\n", True,
+     "atari_sparta.c: kopiert ueber einen EIGENEN Helfer, nicht ueber "
+     "memcpy. Eine erste Fassung der Regel suchte `memcpy|strncpy` und "
+     "verlor SpartaDOS — ein echtes Dateisystem."),
+    ("Verzeichnis ohne Namenserzeugung",
+     "static int f(const uint8_t *catalog_buf) {\n"
+     "    return read_dir(catalog_buf) == 0x2A;\n"
+     "}\n", False,
+     "uft_jv3.c / mfm_detect.c: ein Abbildformat bzw. ein Erkenner. "
+     "Der alte Schwellwert nahm beide mit."),
+    ("Namensfeld ohne Verzeichnis",
+     "static void f(cfg_t *c) { c->name = \"gw\"; }\n", False,
+     "ein Name allein ist kein Dateisystem."),
+    ("Wirtsverzeichnis zaehlt nicht",
+     "#include <dirent.h>\n"
+     "static void f(void) {\n"
+     "    struct dirent *entry;\n"
+     "    cfg->filename = entry->d_name;\n"
+     "}\n", False,
+     "uft_hal_unified.c / uft_kryoflux_dtc.c durchsuchen einen ORDNER "
+     "auf der Platte, kein Dateisystem im Abbild."),
+    ("Begriff nur im Kommentar",
+     "/* Kein directory entry, kein file_entry — nur Prosa.\n"
+     "   Der Leser heisst hier x->filename. */\n"
+     "static int f(void) { return 0; }\n", False,
+     "Kommentare zaehlen nicht (die Falle aus MF-468)."),
+]
+
+
+def selbsttest() -> int:
+    gut = 0
+    for name, text, erwartet, warum in SELBSTTEST:
+        ja, n = ist_kandidat(text)
+        ok = (ja == erwartet)
+        gut += ok
+        print("  %s %-34s erwartet=%-5s gemessen=%-5s (%d Nennungen)"
+              % ("ok " if ok else "ROT", name, erwartet, ja, n))
+        if not ok:
+            print("      %s" % warum)
+    print("Selbsttest: %d/%d" % (gut, len(SELBSTTEST)))
+    return 0 if gut == len(SELBSTTEST) else 1
 
 
 def kandidaten() -> list[tuple[str, int, int]]:
@@ -152,8 +264,8 @@ def kandidaten() -> list[tuple[str, int, int]]:
             roh = pfad.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        treffer = len(VERZEICHNIS.findall(ohne_kommentare(roh)))
-        if treffer >= KANDIDAT_AB:
+        ja, treffer = ist_kandidat(roh)
+        if ja:
             aus.append((r, treffer, roh.count("\n") + 1))
     aus.sort(key=lambda t: -t[1])
     return aus
@@ -334,9 +446,36 @@ def bericht(zeilen) -> str:
           "dagegen gebaut habe.",
           "",
           "Die Dateimenge kommt jetzt aus `git ls-files` "
-          "(`scripts/repo_scope.py`). Das Merkmal ist gemessen, nicht "
-          f"geraten: mindestens {KANDIDAT_AB} Nennungen von "
-          "Verzeichnis-Begriffen ausserhalb von Kommentaren.",
+          "(`scripts/repo_scope.py`).",
+          "",
+          "**MF-738 — an dieser Stelle stand bis heute der Satz „Das "
+          "Merkmal ist gemessen, nicht geraten: mindestens 5 Nennungen "
+          "von Verzeichnis-Begriffen“.** Die Zahl 5 war geraten, und "
+          "der Satz behauptete das Gegenteil. Gemessen ist die Kurve "
+          "glatt — sie hat keinen Bruch, an dem ein Schwellwert liegen "
+          "koennte:",
+          "",
+          "```",
+          ">=1  41    >=4  30    >=8  12    >=20  5",
+          ">=2  35    >=5  26    >=10  7    >=30  2",
+          ">=3  31    >=6  22    >=15  5",
+          "```",
+          "",
+          "Ein Zaehler auf Begriffsnennungen misst ausserdem die falsche "
+          "Sache. Ein Dateisystem-Leser ist nicht daran erkennbar, wie "
+          "OFT er „directory“ sagt, sondern daran, dass er **benannte "
+          "Dateien erzeugt**: er holt Bytes aus einem Sektor und fuellt "
+          "damit ein Namensfeld. Das Merkmal ist jetzt: ein "
+          "Verzeichnis-Begriff UND ein Namensfeld, beides ausserhalb "
+          "von Kommentaren, und Verzeichnisse des WIRTSSYSTEMS "
+          "(`<dirent.h>`, `opendir`) zaehlen nicht mit.",
+          "",
+          "Die Regel findet acht Dateien, die der Schwellwert verlor — "
+          "darunter **AmigaDOS** (`uft_adf_parser_v3.c`), **BBC DFS**, "
+          "**CBM DOS** (`uft_d64_parser_v3.c`) und **CP/M** "
+          "(`uft_cpm_diskdef.c`) — und laesst zwei fallen, die keine "
+          "Dateisysteme sind: `uft_jv3.c` ist ein Abbildformat, "
+          "`mfm_detect.c` ein Erkenner.",
           ""]
     if not kand:
         z += ["Keine — oder `git` war nicht befragbar (dann sagt "
@@ -380,7 +519,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pruefen", action="store_true",
                     help="nur melden, ob die Datei aktuell ist")
+    ap.add_argument("--selbsttest", action="store_true",
+                    help="die Kandidaten-Regel gegen gepflanzte Faelle")
     a = ap.parse_args()
+    if a.selbsttest:
+        return selbsttest()
     neu = bericht(erhebe())
     if a.pruefen:
         alt = ZIEL.read_text(encoding="utf-8") if ZIEL.is_file() else ""
