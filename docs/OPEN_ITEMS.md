@@ -6526,4 +6526,103 @@ falsch.
 > sagt das jetzt, statt zu raten.** Wer bisher ein PC-Abbild geöffnet
 > hat, das (falsch, aber bequem) als TR-DOS aufging, bekommt künftig
 > eine Rückfrage. Die Erkennung ist nicht schlechter geworden; sie war
-> vorher nur zuversichtlicher, als sie durfte.
+> vorher nur zuversichtlicher, als sie durfte.
+
+### FMT-18 beantwortet (MF-730) — woher die sechs ihre Layouts haben
+
+Die Frage aus MF-720 lautete: für sechs Formate (`edk`, `posix`, `syn`,
+`t1k`, `tan`, `xdm86`) findet sich draußen **kein Gegenstück** — woher
+haben ihre Plugins dann ihr Wissen? Die Antwort braucht kein Werkzeug,
+nur Lesen.
+
+### Fünf haben keine benannte Referenz. Einer schon.
+
+**Entlastet:** `posix` trägt im Kopf *„Reference: libdsk drvposix.c
+(LGPL-2.0-or-later; Fassung 1.5.12 geprueft)"* — benannt, versioniert,
+geprüft. Es ist auch kein historisches Format, sondern libdsks Schema
+„Rohabbild plus `.geom`-Datei". Dass draußen kein Gegenstück gefunden
+wurde, war ein Suchartefakt: das Gegenstück heißt `libdsk` und steht
+schon im Baum.
+
+**Die anderen fünf** tragen nur eine Geometrie-Behauptung in Prosa:
+
+```
+edk    "80 × 2 × 10 × 512 = 819200 (DD) oder 80 × 2 × 20 × 512"
+syn    "77 cyl × 2 heads × 16 spt × 256 = 634880 bytes"
+xdm86  "40 cyl × 1-2 heads × 9 spt × 256"
+```
+
+Keine Quelle, keine Spec, kein Werkzeug. Genau die Lage der fünf
+fabrizierten Parser (FMT-2/3/10/11/12).
+
+### Zwei sagen selbst, dass sie nichts unterscheiden
+
+```
+t1k  "Tandy 1000 used standard IBM PC format ... Same geometry as IMG"
+tan  "Same as JV1 but from Tandy-era tools"
+```
+
+Ein Format, das mit einem anderen **byteidentisch** ist und sich nur
+durch *„welches Werkzeug es gemacht hat"* unterscheidet, ist aus der
+Datei **nicht erkennbar**. Das sind keine Formate, sondern
+Herkunftsetiketten — und als Plugins sind sie reine Bewerber im
+Größen-Band, die jeden Gleichstand vergrößern (`t1k` 25, `tan` 30, im
+FMT-21-Zensus). Sie können nie gewinnen und nie richtig liegen.
+
+### Und die Herkunft ist ein einziger Commit
+
+Alle fünf stammen aus **`4d8883cc`** (2026-04-14). Der Titel ist der
+Befund:
+
+> **feat: final 11 Plugin-B parsers — 0 active stubs remaining**
+> […] **Format count: 201 → 212. Zero active stubs in build.**
+
+Elf Plugins, 802 Zeilen, ein Commit — **um zwei Zahlen zu schließen**.
+Und derselbe Commit-Text kündigt an:
+
+> 25. DCM — header/metadata parsed, **decompression placeholder
+>     (returns E5-filled sectors)**
+
+Ein Plugin, das ausdrücklich erfundene Daten zurückgibt, ausgeliefert,
+damit „0 aktive Stubs" dasteht. *(Entlastet: `dcm` ist inzwischen
+repariert — der Kopf sagt „full decompression", und `dcm_decompress()`
+ist echt.)*
+
+**Von den elf stehen heute acht im Niedrig-Band** (`adf_arc` 35, `edk`
+30, `pdp` 40, `sam` 35, `syn` 35, `t1k` 25, `tan` 30, `xdm86` 35) —
+reine Größenvermutungen, die im FMT-21-Zensus die Gleichstände füllen.
+Drei sind belastbar geworden (`2img` 95, `dcm` 90, `xfd` 82).
+
+### Was das über den Baum sagt
+
+Dies ist die **Vorgeschichte** der Regeln, unter denen er heute
+arbeitet. Die EINFRIER-REGEL (MF-363/498) und Regel 9 („jeder Baustein
+nennt seine Kennzahl; was keine bewegt, ist Fundus, nicht Auftrag",
+MF-640) sind die Antwort auf genau diesen Commit: **eine Kennzahl trieb
+die Code-Produktion, und die Prüfung kam nicht mit.**
+
+Der Unterschied ist messbar. Damals: 11 Parser an einem Tag, um
+201→212 zu erreichen. Heute: zwei Formate in einer Woche gehoben
+(`do`, `d13`), jedes mit Differenzlauf gegen eine fremde Hand, und
+`nib` **nicht** gehoben, weil der einzige verfügbare Erzeuger dieselben
+Quelldateien benutzt wie das Oracle (GCR-3).
+
+### Die Eigentümer-Entscheidung
+
+Für die fünf ohne Referenz, je eines — **und `t1k`/`tan` sind der
+klarste Fall:**
+
+1. **Rückzug.** `t1k` ist IMG, `tan` ist JV1; ihre eigenen Köpfe sagen
+   es. Sie entfernen heißt: zwei Bewerber weniger in jedem Gleichstand,
+   und keine Fähigkeit verloren — die Dateien werden weiterhin gelesen,
+   nur unter dem Namen, der stimmt.
+2. **Belegen.** Für `edk`, `syn`, `xdm86` eine benannte Quelle
+   beschaffen (Ensoniq-, Synclavier-, TI-99-Doku) und die Geometrie
+   dagegen halten. Der Streif-Scout hat den Auftrag noch nicht.
+3. **Ankündigung senken.** Solange weder das eine noch das andere
+   geschehen ist, gehört in `features` und `spec_status`, was wirklich
+   belegt ist — die 86f-Behandlung (MF-707/708).
+
+**Kennzahl:** T3 runter für die drei belegbaren; für `t1k`/`tan` sinkt
+bei Rückzug die Zahl der Bewerber im Größen-Band, was FMT-21 direkt
+zuarbeitet.
