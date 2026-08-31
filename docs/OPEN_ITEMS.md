@@ -5862,4 +5862,55 @@ Abschnitt 4b tragen die Belege bereits.
 
 **Nicht belegt bleibt:** die ENC_53A-Variante selbst. Sie zu dekodieren
 wäre eine eigene Aufgabe mit eigener Referenz — heute wird sie
-**benannt**, nicht geraten.
+**benannt**, nicht geraten.
+
+### GCR-2 erledigt (MF-722) — `d13` steht auf T2, T3 faellt 51 auf 50
+
+<!-- status: erledigt(MF-722) -->
+
+**Zweite Hebung der Kette.** `d13` hatte vorher **keinen einzigen Test**
+und ist damit der billigste Posten gewesen, der noch offen war.
+
+**Differenzlauf durch das Plugin:**
+
+```
+links : uft_format_plugin_d13 liest die .d13
+        (Versatz (cyl*13+s)*256, Sektor-ID = s)
+rechts: dieselbe Diskette, to_woz2 -> WOZ 2.0
+        -> uft_apple_gcr_scan_track() auf dem 5-and-3-Weg (MF-721)
+Bruecke: Identitaet, zweifach belegt (MF-720)
+
+rechte Seite dekodiert : 454  (+1 andere Kodierung)
+verglichen             : 454
+byteidentisch          : 454
+```
+
+Der 455. ist der Bootsektor — **benannt, nicht geraten** (MF-721).
+
+### Eine Berichtigung an mir selbst
+
+Beim Lesen von `d13_read_track()` fiel auf, dass es einen
+unvollstaendigen Sektor mit `0xE5` fuellt und **ausgibt** — genau das,
+was `uft_do.c` seit MF-463 mit Begruendung im Quelltext verbietet
+(„invented data as if it had been read"). Derselbe Layer,
+entgegengesetztes Verhalten: ich hielt das fuer einen scharfen Fehler
+und wollte ihn beheben.
+
+**Gemessen ist er es nicht.** `d13_open()` lehnt jede Datei ab, deren
+Groesse nicht **genau** `D13_SIZE` ist — der Zweig ist durch die
+Plugin-Tuer unerreichbar. Der Test haelt statt dessen die Pruefung fest,
+die wirklich schuetzt: abgeschnitten **und** ein Byte zu lang werden
+beide abgewiesen.
+
+Dritte Wiederholung derselben Lehre in dieser Kette (`hardsector`
+MF-706, `prodos_po_do` MF-713): **erst die Erreichbarkeit messen, dann
+urteilen.** Sie sitzt offenbar noch nicht fest genug.
+
+### Was offen bleibt
+
+* **`po`** — braucht die Eigentuemer-Entscheidung aus FMT-17 (zweite
+  Quelle liegt seit MF-720 vor).
+* **Die ENC_53A-Variante** — eigene Aufgabe mit eigener Referenz.
+* **`nib`, `2img`, `moof`, `a2r`** — die uebrigen Apple-Formate auf T3.
+  Der Dekoder steht jetzt fuer beide Kodierungen; was fehlt, ist je ein
+  Differenzlauf.
