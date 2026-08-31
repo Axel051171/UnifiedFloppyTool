@@ -6625,4 +6625,57 @@ klarste Fall:**
 
 **Kennzahl:** T3 runter für die drei belegbaren; für `t1k`/`tan` sinkt
 bei Rückzug die Zahl der Bewerber im Größen-Band, was FMT-21 direkt
-zuarbeitet.
+zuarbeitet.
+
+### Nachtrag MF-732 — wie viele Sonden den Inhalt gar nicht ansehen
+
+Eine Zahl, die zu FMT-21 gehoerte und niemand hatte. Zensus ueber
+**alle** `.c`-Dateien aus `git ls-files src` (nicht ueber eine Liste),
+gesucht wurde jeder Sondenrumpf und darin die ausdrueckliche
+Verwerfung des Datenzeigers (`(void)d;` / `(void)data;`):
+
+```
+Sondenrumpfe im Baum   : 171
+verwerfen den Inhalt   :  24   (14 %)
+sehen ihn an           : 147
+```
+
+**Die 24 blinden:**
+
+```
+adf_arc · adl · akai · d13 · d67 · dim · edk · hardsector · jv1
+jvc · korg · lisa · micropolis · northstar · pdp · posix · sam
+syn · t1k · tan · v9t9 · victor9k · xdf · xdm86
+```
+
+### Was die Liste zeigt
+
+**Sie ist fast deckungsgleich mit den drei vorherigen Befunden.** Neun
+der elf Plugins aus `4d8883cc` („0 active stubs remaining", MF-730)
+stehen darin; alle fuenf ohne benannte Referenz aus FMT-18; die
+Mehrheit der dreizehn aus dem FMT-20-Niedrigband.
+
+Der schaerfste Einzelfall ist `dim`: eine Sonde, die den Inhalt
+**ausdruecklich verwirft** — und die bis MF-729 mit **85** die
+**hoechste** Konfidenz auf einem Nullpuffer meldete. Blindheit und
+Selbstsicherheit fielen zusammen.
+
+### Was sie NICHT zeigt
+
+Dass 14 % ein Missstand waeren. Fuer ein **wirklich** kopfloses Format
+ist die Groessenpruefung die einzige ehrliche Antwort — `hardsector`,
+`v9t9` oder `jv1` haben nichts, was man lesen koennte. Die Frage ist
+nicht, ob eine Sonde blind ist, sondern **ob sie das zugibt**. Genau
+das erzwingt seit MF-729 Eichung 1: wer blind ist, bleibt unter 50.
+
+Der Zensus ist damit kein neuer Auftrag, sondern die **Bestaetigung,
+dass das Band die richtige Groesse hat**: 24 blinde Sonden gehoeren ins
+Groessen-Band, 147 sehende koennen es verlassen — wenn sie es
+verdienen (Eichung 2).
+
+**Und eine Einschraenkung der Methode:** ein erster Zensus fand nur 50
+Rumpfe, weil das Muster je Plugin-Struktur suchte — 39 Sonden stehen in
+**anderen** Dateien als ihre Struktur (`uft_adf.c` gegen
+`uft_adf_plugin.c`). Die Zahl haette 36 % statt 14 % gelautet und waere
+nicht gedeckt gewesen. Gesucht wird darum ueber den ganzen Baum, nicht
+je Struktur.
