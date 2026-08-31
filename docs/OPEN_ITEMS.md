@@ -6281,4 +6281,136 @@ verursacht es nicht.
 gaengigen Diskettengroesse gleichauf liegen. Die 92 160-Byte-Messung ist
 ein Stichprobenwert; die Verteilung ueber alle Groessen kennt niemand.
 
-Regressionsschutz: `tests/test_kfx_probe_overclaims.c`.
+Regressionsschutz: `tests/test_kfx_probe_overclaims.c`.
+
+## FMT-21 — Konfidenz ohne Skala: 35 bis 85 für dieselbe Erkenntnis (MF-728)
+
+<!-- status: wartet-eigentuemer(2026-08-31) -->
+
+**Kennzahl:** keine unmittelbar. Es verfälscht die Format-Zuordnung für
+eine unbekannte Zahl von Dateien — und das ist schlechter als eine Zahl,
+weil niemand weiß, wie oft es zuschlägt.
+
+**Anlass:** der Eigentümer bat, Ordnung in den Befund aus MF-727 zu
+bringen (fünf Plugins gleichauf bei 40). Die Messung hat ihn verschoben:
+der Gleichstand ist das kleinere Problem.
+
+### Die Verteilung, gemessen
+
+Über 25 gängige Diskettengrößen, jeweils mit einem Puffer aus lauter
+Nullen:
+
+* **4 von 25** Größen haben einen Gleichstand, der größte mit **fünf**
+  Bewerbern (92 160 Byte).
+* Bei den übrigen 21 gibt es einen eindeutigen Sieger — **aber die
+  Eindeutigkeit ist ein Artefakt.**
+
+### Der eigentliche Befund
+
+Ein Puffer aus lauter Nullen trägt **keine Signatur**. Das Einzige, was
+eine Sonde darin finden kann, ist die Dateigröße. Gemessen melden sie
+darauf:
+
+```
+DIM  1474560  85     D71   349696  70
+TRD   163840  82     ADF   901120  70
+D81   819200  80     DO    143360  55
+NIB   232960  80     PO    143360  55
+MSX   184320  75     IMG   204800  40
+D64   174848  75     V9T9   92160  40
+D13   116480  75     JV1   102400  35
+```
+
+**35 bis 85 für exakt dieselbe Erkenntnis.** Es gibt keine gemeinsame
+Skala; jede Sonde vergibt ihre Zahl für sich, und nirgends steht, was
+sie bedeutet.
+
+Zwei Beispiele, warum das kein Zufall ist:
+
+```c
+/* trd_probe: Größe passt -> 70 */
+if (data[0x227] == 0x10)      *confidence = 92;   /* echte Signatur */
+else if (data[0x8E4] <= 128)  *confidence = 82;   /* <-- Bereichsprüfung */
+```
+
+Die zweite Bedingung trifft auf **die Hälfte aller Bytewerte** zu, auf
+Nullen immer. Sie hebt 70 auf 82, ohne etwas erkannt zu haben.
+
+```c
+/* d81_probe: Größe passt -> 80, ohne jede Prüfung des Inhalts */
+```
+
+### Die Folgen, gemessen
+
+* Ein **PC-160K**-Abbild verliert gegen **TRD** (82).
+* Ein **Macintosh-800K**-Abbild verliert gegen **D81** (80).
+* Ein **PC-180K/360K/720K**-Abbild verliert gegen **MSX** (75).
+
+Keines dieser Plugins hat mehr erkannt als „die Größe passt". Sie haben
+nur größere Zahlen gewählt.
+
+**Und schlimmer als der Gleichstand ist die falsche Eindeutigkeit:** bei
+verschiedenen Zahlen meldet `uft_probe_ranking.tied` = **1**. Der
+Aufrufer erfährt „eindeutig", wo mehrere Plugins dieselbe
+größenbasierte Vermutung anstellen. Der Gleichstand ist wenigstens
+ehrlich; die falsche Eindeutigkeit ist es nicht.
+
+### Wie andere Werkzeuge es halten — zwei belegte Quellen
+
+1. **SAMdisk** (simonowen.com/samdisk/formats/, abgerufen 2026-08-31)
+   führt seine kopflosen Formate ausdrücklich als
+   „**RAW — raw sector dumps, identified by file size only.**" Die
+   Größen-Erkennung wird *benannt*, nicht als Erkennung ausgegeben. Der
+   Baum kennt das bereits: `uft_do.c` zitiert seit MF-463 SAMdisks
+   `ReadDO()`, das mit „not used" markiert ist.
+2. **MAME floptool** (docs.mamedev.org/tools/floptool.html, abgerufen
+   2026-08-31): das Eingabeformat darf `auto` sein, das
+   **Ausgabeformat muss immer genannt werden**. Wo es darauf ankommt,
+   wird nicht geraten.
+
+Beide lösen es **nicht durch bessere Zahlen**, sondern indem sie die
+Unsicherheit sichtbar machen — derselbe Weg wie FMT-17 (MF-724) für
+`do`/`po`.
+
+### Vorschlag: eine geschriebene Skala
+
+Heute fehlt die eine Stelle, an der steht, was eine Konfidenz bedeutet.
+Vorschlag:
+
+| Band | heißt | Beispiel |
+|---|---|---|
+| **0–29** | kein Anspruch | — |
+| **30–49** | **nur die Größe** passt, sonst nichts | `img`, `v9t9`, `do`/`po` |
+| **50–79** | eine Struktur wurde gelesen und ist plausibel | Verzeichnis-Kopf, BPB |
+| **80–100** | ein **Erkennungsmerkmal** wurde getroffen | Magic, Signatur |
+
+Zwei Regeln daraus, beide mechanisch prüfbar:
+
+1. **Wer den Inhalt nicht liest, bleibt unter 50.** Prüfbar am Quelltext
+   (`(void)d`) *und* an der Messung: was auf einem Nullpuffer über 49
+   meldet, hat nichts erkannt.
+2. **Sind alle Bewerber im 30–49-Band, ist die Antwort „mehrdeutig"** —
+   unabhängig von kleinen Zahlenunterschieden. Das verallgemeinert
+   FMT-17 vom Sonderfall `do`/`po` auf alle kopflosen Formate.
+
+### Warum hier nichts geändert wurde
+
+Die Umsetzung berührt **über zwanzig Plugins**. Solange nicht
+geschrieben steht, welcher Wert richtig ist, wäre jede Änderung geraten
+— und die EINFRIER-REGEL verlangt für Format-Layer-Code eine benannte
+Referenz. Die beiden Quellen oben tragen das **Verfahren**, nicht die
+einzelnen Zahlen.
+
+Der Regressionsschutz steht: `tests/test_probe_confidence_on_zeros.c`
+hält alle 14 gemessenen Werte fest. Sinkt einer, ist das vermutlich
+richtig — der Test ist dann nachzuziehen, nicht wegzudrücken.
+
+### Die Eigentümer-Entscheidung
+
+1. Wird die Skala oben übernommen (dann ist es ein Bauauftrag, keine
+   Entscheidung mehr)?
+2. Soll `tied` auf „alle im selben Band" erweitert werden, statt auf
+   „exakt dieselbe Zahl"?
+3. In welcher Reihenfolge werden die Plugins angepasst — und wird eine
+   Anpassung als Verhaltensänderung behandelt (wie FMT-17) oder als
+   Bugfix?

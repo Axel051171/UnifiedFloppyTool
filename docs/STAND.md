@@ -41,7 +41,7 @@ Stand: 2026-08-31
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **6300** Zeilen in **81** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **6433** Zeilen in **82** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
@@ -58,7 +58,7 @@ Stand: 2026-08-31
 - FMT-19 — `2img` verwirft, was sein Kopf sagt (MF-725)
 - FMT-20 — `kfx_probe()` beansprucht jede Datei mit einem `0x0D` (MF-726)
 
-**wartet-eigentuemer** (7):
+**wartet-eigentuemer** (8):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)
 - ORAK-1 — zwei Oracles tragen einen Test, ohne registriert zu sein (MF-693)
 - Drei Eigentümer-Handgriffe, die Fundus in Nutzung verwandeln (MF-695)
@@ -66,6 +66,7 @@ Stand: 2026-08-31
 - FMT-17 — `do` und `po` entscheiden ohne hinzusehen (MF-713)
 - GCR-3 — `nib` ist auf Unabhaengigkeit gesperrt, nicht auf Code (MF-723)
 - ORPH-6 — MOOF und A2R: kein Zugang, aber die falsche Tuer geht auf (MF-726)
+- FMT-21 — Konfidenz ohne Skala: 35 bis 85 für dieselbe Erkenntnis (MF-728)
 
 **ohne Status-Marke: 63** — noch nicht gesichtet, weder offen noch erledigt. Die Marke wird von Hand vergeben (`docs/OPEN_ITEMS.md`, Abschnitt Status-Marke); ein Prosa-Scan waere gemessen schlechter als die Luecke.
 
