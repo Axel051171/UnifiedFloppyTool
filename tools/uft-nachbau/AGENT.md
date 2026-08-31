@@ -47,6 +47,44 @@ Quelltextzeilen, Funktionszerlegung, Kommentarformulierungen,
 erfundene Namen der Vorlage sind Ausdruck (geschützt) — sie dürfen
 nicht in die Spec, auch nicht umformuliert-erkennbar.
 
+### Die Brandmauer als Vorrichtung, nicht als Zusage (MF-740)
+
+`kontamination.py` prüft **nach** dem Bau, ob Ausdrücke der Vorlage im
+Neubau stehen — ein Nachweis am Ergebnis. `sichtprotokoll.py` führt den
+Nachweis am **Vorgang**: welche Datei hat welche Hand geöffnet?
+
+Bisher war das eine Zusage. Zusagen ohne Beleg sind in diesem Baum die
+Ausgangslage jedes Befundes gewesen.
+
+    1. --einfrieren <datei>…     Vorlage nach Pfad UND SHA-256 festhalten
+    2. --protokoll A --dateien … Hand A meldet, was sie gelesen hat
+    3. --arbeitsbaum <pfad>      MECHANISCH: liegt die Vorlage dort?
+    4. --protokoll B --dateien … Hand B meldet
+    5. --pruefen                 B-Meldung gegen die Vorlagenmenge
+
+**Zwei Hälften, und nur eine ist mechanisch — das steht hier, damit
+das Werkzeug nicht mehr verspricht, als es hält:**
+
+* **Mechanisch: der Arbeitsbaum.** Hand B arbeitet in einem Baum, in
+  dem die Vorlage nicht liegt. Geprüft nach Pfad *und* nach SHA-256 —
+  eine Umbenennung rutscht sonst durch. Wer nicht lesen kann, was nicht
+  da ist, ist nicht kontaminiert. Diese Hälfte kommt ohne Ehrlichkeit
+  des Gemeldeten aus und ist die tragende.
+* **Deklarativ: das Protokoll.** Was eine Hand geöffnet hat, misst das
+  Werkzeug nicht — es sitzt nicht im Agenten. Ein Lauf B, der eine
+  Vorlagendatei meldet, ist rot; ein Lauf B, der **schweigt**, ist
+  *unbelegt*, nicht bestanden.
+
+Abnahme: `--selbsttest` — **9/9**, darunter der Fall „Vorlage
+umbenannt", den ein reiner Pfadvergleich durchlässt.
+
+**Und die Brandmauer gilt für den Agenten selbst.** Wer die Vorlage
+liest, um zu sehen, *was* nachzubauen wäre, ist Hand A — und damit als
+Hand B ausgeschlossen. Das ist keine Formalie: die naheliegendste
+Handlung am Ende eines Nachbaus ist, die Vorlage zu öffnen „um zu
+prüfen, ob es stimmt". Genau das hebt die Trennung auf. Geprüft wird
+gegen die Spec und gegen ein reales Abbild — nie gegen das Original.
+
 ## Lizenz-Routen (Triage VOR jeder Arbeit; Matrix des Scouts bindend)
 
 | Zone der Vorlage | Route | Werkstatt-Leistung |

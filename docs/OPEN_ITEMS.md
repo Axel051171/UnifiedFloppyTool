@@ -7044,4 +7044,102 @@ CODE-Fällen sind 45 lebendig, und wie viele davon eine *echte*
 Ableitung erklären, ist bei keinem einzigen geprüft. Der Idiom-Test hat
 heute in einer Viertelstunde eine Antwort geliefert, wo die
 Textähnlichkeit danebenlag — er ist das Werkzeug für diese Frage, und
-er ist billig.
+er ist billig.
+
+### Der Nachbau ist beantwortet, bevor er begonnen hat (MF-740)
+
+Der Eigentümer hat die Frage an der richtigen Stelle angegriffen:
+*„Nachbauen, damit es mit den anderen Komponenten harmoniert" setzt
+voraus, dass es eine Komponente gibt, mit der harmoniert werden soll.*
+Die gibt es nicht — 20 und 17 Funktionen, null Aufrufer, die zwei
+größten toten Blöcke unter allen Ableitungserklärungen im Baum.
+
+Der erste Schritt ist deshalb keine Bauplanung, sondern die Frage:
+**welcher Aufrufer soll das benutzen?** Sie ist offen, und ohne
+Antwort ist jede Integration Vermutung.
+
+#### Aber die Belegfrage steht vor der Codefrage — und die ist beantwortet
+
+Der Eigentümer hat den Weg selbst benannt: Sync-Wörter sind auf dem
+Medium beobachtbar, also in einer unabhängigen Quelle zu belegen. Damit
+würde aus „nachgebaut" ein „unabhängig belegt". Diese Prüfung braucht
+keinen Aufrufer, und sie ist billig. Gemessen:
+
+| Wert | Anspruch im Baum | unabhängig belegt? |
+|---|---|---|
+| `0x4489` | AmigaDOS-Standard | **ja** — Amiga Hardware Reference Manual |
+| `0x9521` | Arkanoid | **nein** |
+| `0xA245` | Beyond the Ice Palace | **nein** |
+| `0xA89A` | Mercenary, Backlash | **nein** |
+| `0x448A` | „ohne belegten Namen" | — |
+
+Die drei spielspezifischen Werte kommen **auf GitHub nirgends** vor.
+Und der stärkste Gegenprobe-Fall: [`keirf/Disk-Utilities`
+(libdisk)](https://github.com/keirf/Disk-Utilities) führt rund 200
+einzeln gepflegte Amiga-Schutzhandler — und hat für **keines** der vier
+Spiele einen.
+
+#### Zwei der drei Zuordnungen werden ausdrücklich widersprochen
+
+* **Arkanoid – Revenge of Doh** benutzte laut Cracking-Dokumentation
+  *Single Track Protection – Copylock* — ein benanntes Schema, kein
+  nacktes Sync-Wort.
+* **Beyond the Ice Palace**: die
+  [SPS-WIP-Notiz](http://www.softpres.org/wip:2004-02-20) nennt
+  *Cyberblast-Schutzspuren*, dieselben wie bei den Garrison-Titeln, vom
+  selben Autor geschrieben.
+
+Damit ist die Tabelle nicht nur von ungeklärter Herkunft — **ihre
+Fakten sind unbelegt und teils widerlegt.** Sie hat genau eine Quelle,
+und das ist XCopy Pro.
+
+**Das erledigt die Nachbau-Frage endgültig.** Man kann nichts sauber
+nachbauen, dessen Fakten falsch sind; man würde eine ungeprüfte
+Behauptung durch eine unabhängig gebaute ungeprüfte Behauptung
+ersetzen. Genau der Mechanismus, der die 88 Plugins ohne Ground Truth
+erzeugt hat.
+
+#### Was stattdessen gebaut wurde: die Brandmauer als Vorrichtung
+
+Der Eigentümer verlangt, dass der Agent protokolliert, welche Dateien
+er in welchem Lauf geöffnet hat — *„ohne das ist die Trennung eine
+Behauptung"*. Diese Vorrichtung gab es nicht.
+`tools/uft-nachbau/scripts/sichtprotokoll.py`, Selbsttest **9/9**.
+
+`kontamination.py` prüft am **Ergebnis** (stehen Ausdrücke der Vorlage
+im Neubau?). Das Sichtprotokoll prüft am **Vorgang**, und es sagt
+ausdrücklich, welche seiner zwei Hälften trägt:
+
+* **Mechanisch — der Arbeitsbaum.** Hand B arbeitet in einem Baum ohne
+  die Vorlage. Geprüft nach Pfad **und** SHA-256; ein Selbsttestfall
+  ist genau die umbenannte Vorlage, die ein Pfadvergleich durchlässt.
+  Wer nicht lesen kann, was nicht da ist, ist nicht kontaminiert.
+* **Deklarativ — das Protokoll.** Was eine Hand geöffnet hat, kann das
+  Werkzeug nicht messen; es sitzt nicht im Agenten. Ein Lauf B, der
+  eine Vorlagendatei meldet, ist rot. Ein Lauf B, der **schweigt**, ist
+  *unbelegt* — nicht bestanden.
+
+Die Unterscheidung steht im Kopf des Werkzeugs, weil es sonst mehr
+verspräche, als es hält.
+
+#### Und sie gilt für mich
+
+Ich habe `uft_amiga_protection.c` gelesen, um festzustellen, *was*
+dort steht. Damit bin ich **Hand A** und als Hand B ausgeschlossen.
+Das ist keine Formalie: die naheliegendste Handlung am Ende eines
+Nachbaus ist, die Vorlage zu öffnen „um zu prüfen, ob es stimmt" — und
+genau die hebt die Trennung auf.
+
+Die Verhaltensbeschreibung, die Hand A liefern dürfte, ist damit auch
+schon geschrieben und besteht aus fünf Zeilen: vier Sync-Wörter, ein
+Name je Wort. **Drei davon sind unbelegt, zwei widerlegt.** Es gibt
+nichts zu übergeben.
+
+#### Stand
+
+| | |
+|---|---|
+| Aufrufer benannt? | **nein** — offen beim Eigentümer |
+| Fakten belegt? | **1 von 4** |
+| Empfehlung | entfernen, nicht nachbauen (MF-739) |
+| Kanal | **Fundus** — was ihn öffnet, ist ein Aufrufer |
