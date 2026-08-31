@@ -90,6 +90,27 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: coverage.info
+          # MF-731: wir uebergeben oben einen fertigen lcov-Bericht.
+          # Ohne diese Zeile durchsucht der Uploader trotzdem den ganzen
+          # Bauverzeichnisbaum und ruft gcov ueber JEDE gefundene .gcno —
+          # gemessen im Lauf 33415744177: **16 311** Zeilen der Form
+          #
+          #     warning - <Zeit> -- .../uft_imd_parser_v2.c.gcno
+          #
+          # Die sind keine Warnungen ueber die Dateien. Die Kopfzeile
+          # lautet „Running gcov on the following list of files:" — der
+          # Uploader gibt seine Arbeitsliste auf Log-Stufe `warning`
+          # aus. Es ist doppelte Arbeit (lcov hat den Bericht schon) und
+          # es macht das Log unlesbar: ein echter Coverage-Fehler geht
+          # zwischen 16 000 Zeilen Rauschen unter.
+          #
+          # Belegt: codecov/codecov-action README —
+          # „disable_search: Disable search for coverage files. This is
+          # helpful when specifying what files you want to upload with
+          # the files option." Einen An/Aus-Schalter fuer gcov gibt es
+          # dort nicht; ob das Rauschen damit ganz verschwindet, ist
+          # beim naechsten Lauf zu MESSEN, nicht anzunehmen.
+          disable_search: true
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
