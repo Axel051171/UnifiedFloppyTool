@@ -6110,4 +6110,112 @@ Mehrdeutigkeit meldet statt sie zu raten (`tied`). Hier liegt der Fall
 umgekehrt — die Datei **sagt** es, und niemand hoert zu. Der naechste
 Schritt waere, die Aussage des Kopfes gegen die Inhaltsprobe aus
 `uft_apple_order.h` zu halten: stimmen sie ueberein, ist die Sache klar;
-widersprechen sie sich, ist **das** der Befund.
+widersprechen sie sich, ist **das** der Befund.
+
+## ORPH-6 — MOOF und A2R: kein Zugang, aber die falsche Tuer geht auf (MF-726)
+
+<!-- status: wartet-eigentuemer(2026-08-31) -->
+
+**Kennzahl:** T3 runter, mittelbar — beide sind heute nicht einmal in
+der Tier-Tabelle, weil `gen_verification_tiers.py` ueber
+`uft_format_plugin_<sym>` zuordnet und es keines gibt.
+
+**Anlass:** `moof` war der naechste Posten der Apple-Reihe. Vor dem
+Differenzlauf stand die Erreichbarkeitsmessung — die Lehre aus
+`hardsector` (MF-706), `prodos_po_do` (MF-713) und `d13` (MF-722).
+
+### Was gemessen wurde
+
+`CLAUDE.md` fuehrt acht Apple-Formate. **Sechs** tragen ein Plugin und
+stehen in der Registry. **Zwei nicht:**
+
+| Format | Zeilen | Plugin | Registry | Aufrufer |
+|---|---|---|---|---|
+| `moof` | 597 | keins | 0 | **1** — und das ist ein Test |
+| `a2r` | 1111 | keins | 0 | **0** |
+
+Beide werden gebaut. Der einzige `moof`-Aufrufer,
+`tests/test_moof_roundtrip.c`, baut seine Struktur im Speicher und liest
+sie zurueck: **unser Schreiber gegen unseren Leser**, ohne jede fremde
+Referenz.
+
+`a2r` hat zusaetzlich eine Besonderheit: der Baum baut **zwei**
+Registries. In der aelteren (`src/formats/uft_format_registry.c`,
+Format-ID-basiert) steht `a2r` mit Magic, Endung und `uft_a2r_probe()`.
+Gemessen ruft diese Probe **niemand** ausserhalb ihrer eigenen Datei.
+Ein Eintrag in einer Tabelle, die keiner liest, ist keine Tuer.
+
+### Und dann kam es schlimmer als erwartet
+
+Die Erwartung war „niemand beansprucht sie". Mit allen 137 registrierten
+Plugins gemessen:
+
+```
+WOZ2 (Gegenprobe)   Bewerber 3   Gewinner WOZ (98)   Zweiter KFX (40)
+MOOF                Bewerber 2   Gewinner KFX (40)   Zweiter XFD (25)
+A2R2                Bewerber 2   Gewinner KFX (40)   Zweiter XFD (25)
+A2R3                Bewerber 2   Gewinner KFX (40)   Zweiter XFD (25)
+```
+
+**`uft_disk_open()` uebergibt eine MOOF-Datei dem KryoFlux-Strom-Leser.**
+Ein fehlender Zugang waere ehrlich; ein falscher ist es nicht.
+
+### Die Ursache liegt nicht bei Apple — FMT-20
+
+`kfx_probe()` (`src/formats/kfx/uft_kfx.c:57`) zaehlt Vorkommen des
+Bytes `0x0D` in den ersten 512 Byte:
+
+```c
+if (oob_count >= 2) { *confidence = 80; return true; }
+if (oob_count >= 1) { *confidence = 40; return true; }
+```
+
+**Ein einzelner Wagenruecklauf genuegt.** Gemessen: 512 Nullbytes mit
+einem einzigen `0x0D` an beliebiger Stelle werden von KFX mit 40
+beansprucht. Die Applesauce-Familie hat ihn im Kopf (`FF 0A 0D 0A`).
+
+Betroffen ist **jedes** Format, dessen eigene Sonde unter 40 meldet oder
+das gar kein Plugin hat. Das ist die FMT-15-Klasse in ihrer breitesten
+Form: nicht „erkennt an der Groesse", sondern „erkennt an einem Byte,
+das ueberall vorkommt".
+
+**Warum hier nicht geschaerft wird:** die richtige Bedingung ist die
+Struktur eines KryoFlux-OOB-Blocks (`0x0D`, Typbyte, 16-Bit-Groesse) —
+und dafuer braucht es die Stream-Spezifikation als benannte Referenz.
+`dtc` ist registriert, aber nicht installiert. Eine Sonde blind zu
+verengen, waere derselbe Fehler in der anderen Richtung.
+
+### Die Eigentuemer-Entscheidung
+
+Fuer `moof` und `a2r` je eines: **Anker** (Plan benennen), **Tuer**
+(registrieren) oder **Rueckzug**.
+
+„Tuer" ist **nicht** die naheliegende Wahl: ein unerreichbarer Leser,
+der erreichbar wird, ohne geprueft zu sein, ist genau die Lage von `86f`
+(MF-707/708) — angekuendigt und falsch. Und geprueft werden koennen
+beide heute nicht: MOOF-Vorlagen fehlen, A2R-Vorlagen erzeugt
+Applesauce, das hier nicht vorhanden ist. Damit stehen sie neben `nib`
+und `a2r` unter GCR-3.
+
+Regressionsschutz: `tests/test_apple_moof_a2r_no_door.c` haelt den
+gemessenen Stand fest — samt Gegenprobe, dass WOZ sehr wohl gewinnt
+(ohne sie waere der Test auch bei leerer Registry gruen, MF-447).
+
+## FMT-20 — `kfx_probe()` beansprucht jede Datei mit einem `0x0D` (MF-726)
+
+<!-- status: offen -->
+
+**Kennzahl:** keine unmittelbar — aber es verfaelscht die Zuordnung fuer
+eine unbekannte Zahl von Formaten, und das ist schlechter als eine Zahl.
+
+Siehe ORPH-6 fuer Messung und Begruendung. Kurz: `>= 1` Vorkommen von
+`0x0D` in 512 Byte gibt Konfidenz 40. Gemessen an 512 Nullen mit einem
+einzigen gesetzten Byte.
+
+**Was es braucht:** die KryoFlux-Stream-Spezifikation als benannte
+Referenz fuer den OOB-Blockaufbau. Ohne sie waere jede Verengung
+geraten — dieselbe Fehlerklasse, nur enger statt breiter.
+
+**Was zuerst zu messen waere:** wie viele der 137 Plugins eine Sonde
+haben, die unter 40 meldet. Jedes davon verliert heute an KFX, sobald
+irgendwo ein Wagenruecklauf steht.
