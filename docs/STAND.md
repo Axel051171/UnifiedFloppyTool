@@ -41,12 +41,12 @@ Stand: 2026-08-31
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **6065** Zeilen in **78** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **6127** Zeilen in **79** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
 
-**offen** (8):
+**offen** (9):
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)
@@ -55,6 +55,7 @@ Stand: 2026-08-31
 - GCR-2 — `d13`: 5-and-3, der Beweisweg steht bereits offen (MF-717)
 - FMT-17 — die zweite Quelle liegt vor (MF-720)
 - FMT-18 — sechs Formate ohne jedes fremde Gegenstück (MF-720)
+- FMT-19 — `2img` verwirft, was sein Kopf sagt (MF-725)
 
 **wartet-eigentuemer** (6):
 - ORPH-5 — `uft_convert_memory()` ist öffentlich und wird nur von Tests gerufen (MF-693)

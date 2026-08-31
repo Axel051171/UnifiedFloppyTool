@@ -68,10 +68,39 @@ static uft_error_t img2_open(uft_disk_t *disk, const char *path, bool ro) {
 
     if (p->data_offset < IMG2_HDR_SIZE) p->data_offset = IMG2_HDR_SIZE;
 
-    /* Geometry: Apple II = 35 tracks × 16 sectors × 256 bytes (DOS/ProDOS) */
+    /* MF-725: NIB-Inhalt wird ABGEWIESEN, nicht missdeutet.
+     *
+     * Der Kopf sagt bei `0x0C == 2`, dass innen der rohe Nibble-Strom
+     * liegt — kein Sektor-Abbild. Bis MF-725 setzte dieser Zweig
+     * trotzdem `spt = 16`, `sector_size = 256`, und `img2_read_track()`
+     * rechnete daraus die Schrittweite `cyl * 4096`. Eine NIB-Spur ist
+     * **6656 Byte** gross (`mamedev/mame` `ap2_dsk.h:150`
+     * `nibbles_per_track = 0x1a00`, und `src/formats/nib/uft_nib.c:9`).
+     *
+     * Gemessen am Rotbeweis (`tests/test_2img_nib_stride.c`): Spur 1
+     * wurde bei Versatz 4160 statt 6720 gelesen — mitten in Spur 0.
+     *
+     * Die zweite Folge wiegt schwerer als die erste: die gelesenen
+     * Bytes wurden als **Sektoren 0..15** ausgegeben. Rohe Nibbles sind
+     * keine Sektoren; sie sind GCR-kodiert und tragen ihre Nummern in
+     * Adressfeldern. Das ist erfundene Struktur, und sie waere auch bei
+     * richtiger Schrittweite falsch.
+     *
+     * Warum nicht dekodiert wird, obwohl der Baum seit MF-715/721 einen
+     * GCR-Dekoder hat: `nib` steht nach GCR-3 (MF-723) auf
+     * Unabhaengigkeit gesperrt — der einzige verfuegbare Erzeuger
+     * benutzt dieselben `nibblize_*.c` wie das Oracle, gegen das unser
+     * Dekoder geeicht ist. Ein Differenzlauf waere tautologisch. Bis das
+     * geoeffnet ist, ist „ich kann diesen Inhalt nicht" die ehrliche
+     * Antwort. */
     if (p->img_format == IMG2_FMT_NIB) {
-        p->sector_size = 256; p->cylinders = 35; p->spt = 16;
-    } else {
+        fclose(f);
+        free(p);
+        return UFT_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Geometry: Apple II = 35 tracks × 16 sectors × 256 bytes (DOS/ProDOS) */
+    {
         p->sector_size = 256; p->spt = 16;
         p->cylinders = (p->data_length > 0) ?
             (uint8_t)(p->data_length / (16 * 256)) : 35;

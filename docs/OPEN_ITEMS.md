@@ -6049,4 +6049,65 @@ ProDOS-geordnetes Abbild fremder Hand.
 **Naechster Posten:** `2img`. Es liest das Sortierungs-Feld bei `0x0C`,
 benutzt aber nur `IMG2_FMT_NIB` — `DOS` und `PRODOS` sind definiert und
 werden **identisch** behandelt (MF-723). Dieselbe Frage, eine Schicht
-hoeher, und mit dieser Probe jetzt beantwortbar.
+hoeher, und mit dieser Probe jetzt beantwortbar.
+
+## FMT-19 — `2img` verwirft, was sein Kopf sagt (MF-725)
+
+<!-- status: offen -->
+
+**Kennzahl:** T3 runter (`2img`) — aber die offene Haelfte braucht einen
+Kanal, den es noch nicht gibt.
+
+Der Eigentuemer hatte `2img` hinter FMT-17 eingeordnet, weil sein Kopf
+bei `0x0C` traegt, welche Sortierung innen liegt (0 = DOS, 1 = ProDOS,
+2 = NIB) — und weil ein Leser dem Feld entweder blind glauben oder
+dieselbe Mehrdeutigkeit aufloesen muss. Die Messung fiel schaerfer aus:
+**der Leser tut keines von beidem.** Er liest das Feld und verwirft es.
+
+### Erledigt in MF-725: der NIB-Fall
+
+`IMG2_FMT_NIB` war der **einzige** benutzte Wert — und er wurde falsch
+benutzt. `img2_open()` setzte auch dort `spt = 16`, `sector_size = 256`,
+und `img2_read_track()` rechnete `cyl * 4096`. Eine NIB-Spur ist
+**6656 Byte** gross (`mamedev/mame` `ap2_dsk.h:150`
+`nibbles_per_track = 0x1a00`; `src/formats/nib/uft_nib.c:9`).
+
+Gemessen im Rotbeweis: Spur 1 wurde bei Versatz **4160 statt 6720**
+gelesen — mitten in Spur 0, erstes Byte `0xFF` statt `0x01`.
+
+**Die zweite Folge wog schwerer:** die Bytes wurden als **Sektoren
+0..15** ausgegeben. Rohe Nibbles sind keine Sektoren; sie sind
+GCR-kodiert und tragen ihre Nummern in Adressfeldern. Das ist erfundene
+Struktur — und sie waere auch bei richtiger Schrittweite falsch. Kein
+Rechenfehler, sondern eine Bedeutungsverwechslung.
+
+Seit MF-725 wird NIB **abgewiesen** (`UFT_ERROR_NOT_SUPPORTED`), mit
+Begruendung im Quelltext. Nicht dekodiert, obwohl der Baum seit
+MF-715/721 einen GCR-Dekoder hat: `nib` steht nach GCR-3 auf
+Unabhaengigkeit gesperrt, ein Differenzlauf waere tautologisch.
+
+### Offen: die Sortierung wird gelesen und weggeworfen
+
+`IMG2_FMT_DOS` (0) und `IMG2_FMT_PRODOS` (1) sind definiert und
+**nirgends benutzt**. `img2_read_track()` liest sequenziell und vergibt
+`id.sector = s`.
+
+Das ist nicht schlicht falsch: in beiden Faellen **ist** `s` die
+logische Sektornummer — nur in verschiedenen Nummernkreisen. Falsch ist,
+dass der Aufrufer nicht erfaehrt, **welcher**. Fuer ein
+ProDOS-geordnetes Abbild sind alle Nummern ausser 0 und 15 anders
+gemeint, als ein DOS-Leser sie versteht.
+
+**Warum es hier nicht behoben wird:** dem Leser fehlt der Kanal.
+`uft_disk_t` traegt Geometrie, aber keine Angabe zur Sektor-Nummerierung,
+und `uft_track_t.sectors[].id` hat kein Feld dafuer. Das ist eine
+Architekturfrage (wo steht, in welchem Nummernkreis eine Sektor-ID
+gemeint ist?), kein Tagesrand — und sie betrifft nicht nur `2img`,
+sondern jedes Format, das beide Ordnungen kennt.
+
+**Was daran anschliesst:** FMT-17 hat fuer `do`/`po` gezeigt, wie man
+Mehrdeutigkeit meldet statt sie zu raten (`tied`). Hier liegt der Fall
+umgekehrt — die Datei **sagt** es, und niemand hoert zu. Der naechste
+Schritt waere, die Aussage des Kopfes gegen die Inhaltsprobe aus
+`uft_apple_order.h` zu halten: stimmen sie ueberein, ist die Sache klar;
+widersprechen sie sich, ist **das** der Befund.

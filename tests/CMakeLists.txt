@@ -1397,6 +1397,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
+    elseif(${test_name} STREQUAL "test_2img_nib_stride")
+        # MF-725: NIB-Inhalt in einem 2IMG — falsche Schrittweite und
+        # erfundene Sektorstruktur. Rotbeweis vor der Abweisung.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c)
     elseif(${test_name} STREQUAL "test_d13_layout_verified")
         # MF-722: haelt die Anordnung fest, die der Differenzlauf gegen
         # to_woz2 geprueft hat (454/454, 1 benannt) — und den Rotbeweis,
