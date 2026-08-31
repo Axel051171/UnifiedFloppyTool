@@ -104,13 +104,35 @@ jobs:
           # es macht das Log unlesbar: ein echter Coverage-Fehler geht
           # zwischen 16 000 Zeilen Rauschen unter.
           #
-          # Belegt: codecov/codecov-action README —
+          # Belegt: codecov/codecov-action `action.yml` —
           # „disable_search: Disable search for coverage files. This is
           # helpful when specifying what files you want to upload with
-          # the files option." Einen An/Aus-Schalter fuer gcov gibt es
-          # dort nicht; ob das Rauschen damit ganz verschwindet, ist
-          # beim naechsten Lauf zu MESSEN, nicht anzunehmen.
+          # the files option."
           disable_search: true
+          #
+          # MF-732, BERICHTIGUNG EINER MESSUNG: `disable_search` allein
+          # hat NICHTS bewirkt. Gemessen, Lauf 33415744177 gegen
+          # 33418494322: **16 311 Zeilen vorher, 16 311 nachher.** Die
+          # Option kam an (`./codecov ... --disable-search --file
+          # coverage.info --gcov-executable gcov`), sie schaltet aber
+          # nur die Suche nach BERICHTSDATEIEN ab — der gcov-Durchlauf
+          # ist ein eigener Schritt.
+          #
+          # Genau deshalb stand im vorigen Kommentar, das sei zu MESSEN
+          # und nicht anzunehmen. Die Annahme war falsch.
+          #
+          # Der richtige Schalter steht in `action.yml`, nicht im
+          # README (das ihn nicht nennt — die erste Recherche stuetzte
+          # sich darauf und kam zu „einen An/Aus-Schalter gibt es
+          # nicht"):
+          #
+          #   plugins: "Comma-separated list of plugins to run.
+          #             Specify `noop` to turn off all plugins"
+          #
+          # Der gcov-Durchlauf IST ein Plugin. `noop` ist zulaessig,
+          # weil wir oben einen fertigen lcov-Bericht uebergeben — es
+          # gibt nichts zu sammeln.
+          plugins: noop
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
