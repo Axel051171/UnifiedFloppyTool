@@ -73,6 +73,30 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
+> **Ehrlichkeits-Hinweis (MF-729) — kopflose Formate werden nur an der
+> Größe erkannt, und das Werkzeug sagt es jetzt.** Bis dahin vergab jede
+> Sonde ihre Konfidenz für sich, ohne gemeinsame Skala. Gemessen an
+> einem Puffer aus **lauter Nullen** — der keinerlei Signatur trägt —
+> meldeten sie **35 bis 85** für exakt dieselbe Erkenntnis. Der Vergleich
+> zwischen zwei Plugins war damit willkürlich, und es hatte Folgen: ein
+> **PC-160K**-Abbild verlor gegen `TRD` (82), ein **Macintosh-800K**
+> gegen `D81` (80), ein **PC-360K** gegen `MSX` (75) — nicht weil die
+> mehr erkannt hätten, sondern weil ihre Zahl größer gewählt war. Und
+> `uft_probe_ranking.tied` meldete dabei **1**: „eindeutig", wo niemand
+> etwas erkannt hatte.
+>
+> Seit MF-729 tragen die Konfidenzen **Bedeutung statt Rang** (0–29 kein
+> Anspruch · 30–49 nur die Größe · 50–79 Struktur gelesen · 80–100
+> Merkmal getroffen), und zwei Eichungen erzwingen sie mechanisch: auf
+> einem Nullpuffer darf nichts ≥ 50 melden, und wer 50–79 beansprucht,
+> muss ≥ 95 % zufälliger Puffer abweisen. Beide laufen über **alle**
+> Plugins, nicht über eine gepflegte Liste.
+>
+> Für Benutzer heißt das: wer bisher ein PC-Abbild geöffnet hat, das
+> (falsch, aber bequem) als TR-DOS aufging, bekommt künftig eine
+> Rückfrage. **Die Erkennung ist nicht schlechter geworden — sie war
+> vorher nur zuversichtlicher, als sie durfte.**
+
 ### 3. Format-Konvertierung (44 Pfade registriert, **14 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die

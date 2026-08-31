@@ -988,6 +988,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_kfx_probe_overclaims"
            OR ${test_name} STREQUAL "test_probe_confidence_on_zeros"
            OR ${test_name} STREQUAL "test_probe_verdict_bands"
+           OR ${test_name} STREQUAL "test_probe_confidence_on_random"
            OR ${test_name} STREQUAL "test_disk_open_fuzz"
            OR ${test_name} STREQUAL "test_dsk_open_bounds"
            OR ${test_name} STREQUAL "test_disk_write_fuzz"

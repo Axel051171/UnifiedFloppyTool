@@ -6413,4 +6413,117 @@ richtig — der Test ist dann nachzuziehen, nicht wegzudrücken.
    „exakt dieselbe Zahl"?
 3. In welcher Reihenfolge werden die Plugins angepasst — und wird eine
    Anpassung als Verhaltensänderung behandelt (wie FMT-17) oder als
-   Bugfix?
+   Bugfix?
+
+### FMT-21 umgesetzt (MF-729) — Vertrag mit Messinstrument statt zwanzig Zahlen
+
+Der Eigentümer hat alle drei Fragen entschieden, und die Antworten
+hängen zusammen: die Bänder tragen **Bedeutung statt Rang**, ihr Wert
+liegt in den **zwei mechanischen Regeln**, und der Nullpuffer ist das
+Eichgerät dafür.
+
+### Was gebaut wurde
+
+**1 · Die Bänder als Vertrag** (`include/uft/uft_format_plugin.h`):
+
+| Band | heißt |
+|---|---|
+| 0–29 | kein Anspruch |
+| **30–49** | nur die Größe passt |
+| 50–79 | Struktur gelesen, plausibel |
+| 80–100 | Erkennungsmerkmal getroffen |
+
+**2 · Das Urteil** — `uft_probe_ranking` trägt jetzt `band`, `verdict`
+und `band_claimants`:
+
+```
+eindeutig  <=>  genau EIN Bewerber im Band des Gewinners
+                UND das Band ist mindestens „Struktur gelesen"
+```
+
+Alles andere ist **mehrdeutig**, und dann ist die Kandidatenliste die
+Antwort. Das verallgemeinert FMT-17 (MF-724) vom Sonderfall `do`/`po`
+auf alle kopflosen Formate. Die Felder sind **angehängt**, nicht
+eingefügt — ABI-sicher.
+
+**3 · Eichung 1** (`tests/test_probe_confidence_on_zeros.c`): auf einem
+Nullpuffer darf **keine** Sonde 50 oder mehr melden. Läuft über
+**alle 137** Plugins × 25 Größen — die erste Fassung führte 14 in einer
+Tabelle und war damit ein Protokoll, kein Tor.
+
+**4 · Eichung 2** (`tests/test_probe_confidence_on_random.c`): wer
+50–79 beansprucht, darf bei höchstens **5 %** zufälliger Puffer
+zustimmen. Fester Generator, fester Startwert — ein Tor, das bei jedem
+Lauf etwas anderes misst, ist keins.
+
+**5 · Enumeration** — `uft_registered_format_plugin_at()`. Ohne sie
+lässt sich kein Tor bauen, das *jede* Sonde prüft.
+
+### Was gemessen wurde, vorher und nachher
+
+```
+                        vorher            nachher
+Nullpuffer, höchste     85 (DIM)          45 (D13)
+Verstöße Eichung 1      —                 0 von 137
+Verstöße Eichung 2      —                 0  (vorher: KFX bei 61,7 %)
+
+PC 160K   ->  TRD 82  eindeutig      ->  TRD 45  MEHRDEUTIG (9 von 10)
+Mac 800K  ->  D81 80  eindeutig      ->  D81 45  MEHRDEUTIG (12 von 12)
+PC 360K   ->  MSX 75  eindeutig      ->  MSX 45  MEHRDEUTIG (11 von 12)
+WOZ2-Kopf ->  WOZ 98  eindeutig      ->  WOZ 98  eindeutig   (1 von 3)
+```
+
+**Der Sieger ist derselbe wie vorher. Geändert hat sich, was über ihn
+behauptet wird.**
+
+### Die Plugins, die gesenkt wurden
+
+Mechanisch, kein Ermessen: geändert wurde ausschließlich der Zweig, der
+**nur die Größe** geprüft hatte. Signatur- und Strukturwerte blieben.
+
+`dim` 85→45 · `trd` 70→45 · `d81` 80→45 · `nib` 80→45 · `msx` 75→45 ·
+`d64` 75→45 · `d13` 75→45 · `d71` 70→45 · `adf` 70→45 · `sad` 70→45 ·
+`adl` 50→45 · `do`/`po` 55→45 (über `UFT_A2_CONF_UNKLAR`)
+
+**Zwei Bereichsprüfungen sind gestorben**, nicht gesunken:
+
+* `trd`: `data[0x8E4] <= 128` hob 70 auf 82 — wahr für die **Hälfte
+  aller Bytewerte**. Gesenkt wäre sie von der reinen Größe nicht mehr zu
+  unterscheiden gewesen; entfernt ist ehrlicher.
+* `kfx`: `oob_count >= 2` gab 80 für zwei `0x0D` in 512 Byte — in
+  Zufallsdaten der Erwartungswert. Eichung 2 mass **61,7 %** Zustimmung.
+  Beide Zweige jetzt 45/35, mit der relativen Ordnung erhalten.
+
+### Was das für die zwei Kennzahlen heißt
+
+Der Eigentümer hat die Verbindung benannt, und sie trägt: **was löst
+einen Gleichstand im 30–49-Band ehrlich auf? Ein Inhaltsleser.** Ein
+FAT12-Leser, der einen gültigen Bootsektor und ein plausibles
+Wurzelverzeichnis findet, hebt genau einen Kandidaten legitim ins
+50–79-Band. Die VFS-Leser sind die natürlichen Schiedsrichter der Probe
+— „Dateisystem wird nicht gelesen" und „Erkennung rät" sind dasselbe
+Problem von zwei Seiten und fallen mit derselben Arbeit.
+
+### Offen: die Kandidatenliste muss ankommen
+
+`verdict` und `band_claimants` stehen bereit, aber **niemand zeigt sie
+her**. Das ist der Baustein für die nächste Klick-Sitzung:
+
+* **GUI:** bei MEHRDEUTIG die Kandidatenliste zur Wahl anbieten — der
+  DiskFlashback-Befund („Erkenner liefert nie mehr als einen
+  Kandidaten") von der anderen Seite.
+* **CLI:** bei MEHRDEUTIG `--format` verlangen und die Kandidaten
+  auflisten — exakt das floptool-Muster (Eingabe darf `auto` sein, die
+  Entscheidung wird verlangt statt geraten).
+
+Bis dahin gewinnt bei Gleichstand weiterhin der zuerst registrierte —
+das Verhalten ist unverändert, nur die Aussage darüber nicht mehr
+falsch.
+
+### Ehrlichkeits-Eintrag (Release-Notes)
+
+> **Kopflose Formate werden nur an der Größe erkannt — das Werkzeug
+> sagt das jetzt, statt zu raten.** Wer bisher ein PC-Abbild geöffnet
+> hat, das (falsch, aber bequem) als TR-DOS aufging, bekommt künftig
+> eine Rückfrage. Die Erkennung ist nicht schlechter geworden; sie war
+> vorher nur zuversichtlicher, als sie durfte.
