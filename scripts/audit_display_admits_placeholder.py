@@ -1,46 +1,53 @@
 #!/usr/bin/env python3
-"""Eine Zahl aus der Datei, die ungeprueft eine Allokation bestimmt (MF-554)
+# SPDX-License-Identifier: MIT
+"""Eine Anzeige, die im Quelltext zugibt zu erfinden — und es dem
+Benutzer nicht sagt (MF-569, wiederhergestellt MF-735)
 
-── Warum es dieses Tor gibt ─────────────────────────────────────────────
+── Warum diese Datei zweimal geschrieben wurde ──────────────────────────
 
-MF-543 war der schwerste Speicherfehler der Pruef-Sitzung, und er hatte
-eine Form, die sich beschreiben laesst:
+Sie wurde in **MF-569** angelegt und in `check_consistency.py` als Tor 34
+(„Anzeige gibt Platzhalter zu") verdrahtet. Sie war eine **wortgleiche
+Kopie von `audit_unbounded_alloc.py`** — Vorlage kopiert, Rumpf nie
+ersetzt. Gemessen am 2026-08-31: beide Werkzeuge lieferten auf dem echten
+Baum dieselbe Liste, Element fuer Element.
 
-    uint16_t heads = read_le16(&header->heads);   // aus der DATEI
-    if (heads == 0) return UFT_ERR_FORMAT;        // die einzige Schranke
-    ...
-    uft_disk_alloc(cylinders, heads);             // uint8_t !
-    for (uint16_t h = 0; h < heads; h++)
-        disk->track_data[c * heads + h] = track;  // ungekuerzt
+Tor 34 hat also **nie geprueft, was sein Name sagt.** Es hat Tor 33 ein
+zweites Mal ausgefuehrt. Gefunden hat das der Pruefstand
+`scripts/audit_selbsttest.py` (MF-735) — beim Lesen der Erkennungsmuster
+fuer einen gepflanzten Fall, nicht durch einen roten Lauf: ein
+Doppelgaenger ist immer gruen, wenn sein Vorbild gruen ist.
 
-22 Byte Eingabe, ein Feld mit 88 Plaetzen, beschrieben bis Index 599.
-Daneben NanoWasp: `data_size` und `available` wurden beide ausgerechnet
-und nie verglichen — 1,1 TB Anspruch auf eine 80-Byte-Datei.
-
-Beide Male gilt dasselbe: **eine Zahl, die aus der Datei kommt, ist eine
-Behauptung.** Sie darf keine Schleifengrenze und keine Allokationsgroesse
-werden, bevor sie gegen etwas geprueft wurde, das nicht aus derselben
-Datei stammt — die tatsaechliche Dateilaenge, oder eine Konstante.
+Das ist die vierzehnte Auspraegung desselben Musters wie MF-567/578/598/
+633/651/652/668/671/678/703/708/710/718 — nur eine Ebene hoeher: nicht
+eine Aufzaehlung, die veraltet, sondern ein **Pruefer, der nicht prueft.**
+Ein Tor ohne Selbsttest kann seinen eigenen Ausfall nicht melden.
 
 ── Was gesucht wird ─────────────────────────────────────────────────────
 
-In `src/formats/**`: eine Variable, die aus einem `read_le16/32`,
-`read_be16/32` oder einem `header->`-Feld belegt wird und danach als
-Faktor in einer Allokation oder als Schleifengrenze auftaucht, OHNE dass
-zwischen beidem eine Schranke gegen `size`, `file_size` oder eine
-Zahlenkonstante steht.
+In `src/*.cpp` (der Oberflaeche): eine Funktion, deren **Quelltext
+zugibt**, dass die angezeigten Werte nicht aus dem Abbild stammen
+(„Placeholder", „for now", „in full implementation", „hardcoded"), in der
+aber **keine der angezeigten Zeichenketten** einen Vorbehalt traegt.
 
-── Warum das Tor MISST und die Grundlinie einfriert ─────────────────────
+Der Vorbehalt im Kommentar steht an der einen Stelle, wo ihn niemand
+liest, der das Werkzeug benutzt. Fuer einen Forensiker ist eine erfundene
+Verzeichnisliste von einer echten nicht zu unterscheiden.
 
-Rein textuell. Es kann nicht sehen, ob eine Schranke in einer gerufenen
-Funktion steckt (`uft_xxx_validate_header()`), ob eine Sonde vorher schon
-deckelt (so ist `Logical` gesichert), oder ob der Wert durch seinen Typ
-begrenzt ist.
+── Rotbeweis, aus dem Baum ──────────────────────────────────────────────
 
-Beim Anlegen wurde deshalb JEDER Treffer einzeln nachgelesen und mit
-seiner Begruendung in `BASELINE` eingetragen. Ein Eintrag dort heisst
-nicht "harmlos", sondern "geprueft, und hier steht das Ergebnis". Was das
-Tor verhindert, ist der naechste ungeprueste Fall.
+Die zwei von MF-569 reparierten Dateien sind die Eichung. Gemessen gegen
+`dcf800a5^` (vorher) und `dcf800a5` (nachher):
+
+    src/statustab.cpp     vorher: FEUERT      nachher: still
+    src/explorertab.cpp   vorher: FEUERT      nachher: still
+
+Vorher: `// Placeholder: mark all as allocated for now`, danach jeder
+Block gruen mit „F". Nachher: derselbe Kommentar steht noch da — jetzt
+aber zeigt die Tabelle „?" und ueber ihr steht ein Satz. **Der
+Unterschied liegt in der angezeigten Zeichenkette, nicht im Kommentar**,
+und genau daran misst dieses Werkzeug.
+
+Fest gehalten in `scripts/audit_selbsttest.py` unter diesem Namen.
 """
 
 from __future__ import annotations
@@ -49,271 +56,263 @@ import re
 import sys
 from pathlib import Path
 
-# Quellen, die aus der DATEI lesen.
-FROM_FILE = re.compile(
-    r"=\s*(?:read_(?:le|be)(?:16|32)\s*\(|"
-    r"[\w]*(?:hdr|header|h)\s*->\s*\w+|"
-    r"[\w]+\s*\[\s*\d+\s*\]\s*\|)")
+WURZEL = Path(__file__).resolve().parents[1]
 
-# Wo eine solche Zahl gefaehrlich wird.
-ALLOC = re.compile(r"\b(?:malloc|calloc|realloc)\s*\(")
-LOOPBOUND = re.compile(r"for\s*\([^;]*;\s*\w+\s*<\s*(\w+)")
+# Ein Eingestaendnis — nur im Kommentar, nicht im Code selbst.
+EINGESTAENDNIS = re.compile(
+    r"(?://|/\*|\*)[^\n]*\b("
+    r"placeholder"
+    # „for now" stand hier und ist RAUS. Gemessen am echten Baum: es
+    # trug **5 der 6** Fehlalarme, und keinen einzigen echten Fund.
+    #
+    #   samdisk/do.cpp:10        „For now, rely on the file size" —
+    #                            eine Erkennungs-Strategie, keine Anzeige
+    #   flux_histogram:436       „For now, assume first peak is base
+    #                            timing" — eine Algorithmus-Annahme
+    #   hardwaretab:1358         „For now we flag it loudly in the status
+    #                            bar" — beschreibt den EHRLICHEN Rueckfall
+    #   recovery_dialog:492      zitiert im Kommentar den ENTFERNTEN Code
+    #                            von MF-115
+    #
+    # Beide Rotbeweis-Faelle ueberleben ohne die Vokabel: statustab sagt
+    # „placeholder", explorertab „will be used when". Ein Wort, das jeden
+    # zweiten Kommentar im Baum trifft, ist kein Eingestaendnis.
+    r"|in full implementation"
+    r"|hardcoded|hard-coded"
+    r"|dummy data"
+    r"|fake data"
+    r"|simulated (?:data|values)"
+    r"|will be (?:used|implemented) when"
+    r"|when real \w+ (?:parsing |reading )?is implemented"
+    r"|not yet (?:implemented|wired|read)"
+    r")\b", re.I)
 
-# Was als Schranke zaehlt: ein Vergleich gegen die Dateigroesse oder gegen
-# eine Zahlenkonstante, die NICHT null ist.
+# Was der Benutzer zu sehen bekommt.
 #
-# MF-554: die erste Fassung liess `\d+` zu und zaehlte damit `cylinders == 0`
-# als Schranke. Der Rotbeweis fiel durch — die QRST-Schranke aus MF-543
-# entfernt, und das Tor meldete NICHTS.
+# JEDE Zeichenkette im Rumpf, nicht nur die an `setText`/`tr`. Die erste
+# Fassung sah nur die Aufrufe — und war damit blind fuer genau die
+# Haelfte des Vorbilds: `ExplorerTab::readDirectory()` baut seine
+# dreizehn erfundenen Eintraege in eine `QList<FileEntry>` und gibt sie
+# zurueck; angezeigt werden sie eine Funktion weiter. Gemessen an der
+# Vorher-Fassung von `dcf800a5`: das Werkzeug meldete `statustab.cpp`
+# und schwieg zu `explorertab.cpp` — der Haelfte, die MF-569 zuerst
+# nennt.
 #
-# Das ist die Pointe: ein Null-Test ist keine Obergrenze. Genau so stand es
-# in `uft_qrst.c`, und genau so ist der Fehler entstanden — der Kommentar in
-# MF-543 sagt es woertlich: "nur `!= 0`, keine Obergrenze, kein Abgleich
-# gegen die Dateigroesse".
+# Mindestens EIN Zeichen, nicht zwei. Der Vorbehalt, den MF-569 gesetzt
+# hat, ist woertlich `setText("?")` — eine Zeichenkette der Laenge 1. Mit
+# `{2,}` sah das Werkzeug sie nicht und meldete die reparierte Fassung
+# als Fund. Gefangen hat das der gepflanzte `sauber`-Fall, nicht der
+# echte Baum: dort trug ein langer Hinweissatz daneben das Fragezeichen
+# und deckte den Fehler zu.
+ANZEIGE = re.compile(r'"((?:[^"\\]|\\.)+)"')
+
+# Ein Vorbehalt IN der angezeigten Zeichenkette. Nur das entlastet.
+VORBEHALT = re.compile(
+    r"\?"
+    r"|\bunknown\b|\bunbekannt\b"
+    r"|not (?:read|available|parsed|implemented)"
+    r"|nicht (?:gelesen|verfuegbar|geprueft)"
+    r"|\bno data\b|\bkeine Daten\b"
+    r"|\bplaceholder\b"
+    r"|\bnot supported\b"
+    # Der Bootsektor-Hexdump in `statustab.cpp` ist der Gegenbeweis, den
+    # MF-569 selbst nennt („macht es richtig und beweist, dass es
+    # geht"): er zeigt `..` statt Bytes und schreibt darueber
+    # „(Boot sector data would be displayed here when loaded from disk
+    # image)". Ohne diese zwei Wendungen meldet das Werkzeug die eine
+    # Stelle im Baum, die es vorbildlich macht.
+    r"|would be (?:displayed|shown|read)"
+    r"|when loaded from", re.I)
+
+# `setPlaceholderText` ist Qt-Vokabular fuer den Hinweis in einem leeren
+# Eingabefeld — kein Eingestaendnis, sondern das Gegenteil: dort steht
+# nichts, und das Feld sagt es. Ohne diese Ausnahme meldet das Werkzeug
+# jedes Suchfeld im Baum.
+UNSCHULDIG = re.compile(r"setPlaceholderText|placeholderText\s*[:=]", re.I)
+
+# Ein Kommentar, der eine ENTFERNTE Erfindung zitiert, ist die Doku eines
+# Fixes — nicht der Fix, der fehlt. Zwei im Baum, beide echt entlastet:
 #
-# Ein Tor, das denselben Denkfehler macht wie der Code, den es pruefen soll,
-# ist kein Tor. `[1-9]\d*` statt `\d+`.
+#   uft_recovery_dialog.cpp:492  „MF-115: This page used to display
+#                                 int recovered = badBefore / 2;
+#                                 // placeholder estimate"
+#   hardwaretab.cpp:426          „MF-170: ... removed from the controller
+#                                 combo ... surfaced a 'Backend not yet
+#                                 wired' messagebox"
 #
-# Zweite Korrektur, MF-554: die rechte Seite darf ALLES sein ausser der
-# Null. Vorher standen dort nur Literale, `size`-artige Namen und
-# Grossbuchstaben-Konstanten — damit galten diese beiden echten Schranken
-# als nicht vorhanden:
-#
-#     if (track_size > pdata->max_track_size)      g64:512
-#     if (data_size > available)                   nanowasp (MF-543)
-#
-# Beide vergleichen gegen ein Strukturfeld beziehungsweise eine lokale
-# Variable. Das Tor meldete sie als ungedeckelt, und beide waren
-# Fehlalarme.
-#
-# Entscheidend bleibt die RICHTUNG: nur `>`, `>=`, `<`, `<=` zaehlen. Ein
-# `== 0` ist keine Obergrenze — genau daran ist MF-543 entstanden.
-GUARD = re.compile(
-    r"\b(\w+)\s*(?:>|>=|<|<=)\s*"
-    r"(?!0\s*[;)\]])"
-    r"[A-Za-z_0-9][\w.\->\[\]]*")
+# Beide sind vorbildlich: sie halten fest, was da war und warum es weg
+# ist. Ein Tor, das die Dokumentation eines Fixes als Fund meldet,
+# bestraft genau das Verhalten, das es herbeifuehren will.
+HISTORIE = re.compile(
+    r"\bused to\b|\bno longer\b|\bwas removed\b|\bremoved from\b"
+    r"|\bstand (?:hier|frueher)\b|\bentfernt\b|\bwar (?:hier|frueher)\b"
+    r"|\bbis (?:MF-)?\d+\b"
+    # Fuenfte Schaerfung. Drei weitere Stellen derselben Klasse, die
+    # erst sichtbar wurden, als „for now" das Rauschen nicht mehr
+    # verdeckte:
+    #   ProtectionAnalysisWidget:292  „der frueher an dieser Stelle
+    #                                  stehende Kommentar (…)"
+    #   fluxengine_provider_v2:192    „(was hard-coded \"ibm\")"
+    # Zum Vergleich: `widerspruch.py` brauchte in derselben Sitzung
+    # ebenfalls fuenf Durchgaenge, 18 von 28 Erstbefunden waren Fehler
+    # des Pruefers. Das ist die Regel, nicht die Ausnahme — und der
+    # Grund, warum ein Tor ohne Selbsttest nichts wert ist.
+    r"|\bfrueher\b|\bpreviously\b|\bwas hard-?coded\b|\bformerly\b", re.I)
 
-BASELINE: dict[str, str] = {
-    # Jeder Eintrag hier ist NACHGELESEN. "Begruendet" heisst: es steht
-    # dabei, WARUM die Zahl nicht entgleisen kann — nicht, dass jemand sie
-    # fuer harmlos hielt.
+FUNC_START = re.compile(r"^[A-Za-z_][\w \t*:&<>,]*\**\s*\w+\s*\([^;]*$")
 
-    "src/formats/rcpmfs/uft_rcpmfs.c:143:num_disks":
-        "Die Schleife lautet `for (i = 0; i < num_disks && i < "
-        "RCPMFS_MAX_DISKS; i++)` und bricht zusaetzlich ab, sobald "
-        "`entry_offset + sizeof(entry) > size`. Zwei Schranken, eine davon "
-        "gegen die Dateigroesse. Das Tor sieht sie nicht, weil die "
-        "gedeckelte Groesse `i` heisst und nicht `num_disks`.",
-
-    "src/formats/uft_format_convert_bitstream.c:97:cylinders":
-        "Aus `hdr->n_cylinders`, und das Feld ist ein **uint8_t** "
-        "(include/uft/uft_hfe_format.h:91). Der Wert kann 255 nicht "
-        "ueberschreiten; `hfe_is_valid_header()` weist zusaetzlich 0 ab. "
-        "Die LUT wird seit MF-526 gegen die Dateigroesse geprueft. Das Tor "
-        "kennt den Feldtyp nicht.",
-
-    "src/formats/uft_format_convert_bitstream.c:116:heads":
-        "Aus `hdr->n_heads`, ebenfalls **uint8_t** "
-        "(uft_hfe_format.h:92). Siehe den Eintrag darueber.",
-
-    "src/formats/uft_format_convert_flux.c:1620:heads":
-        "Aus `hdr->n_heads`, **uint8_t** (Deklaration Zeile 1539). Siehe "
-        "oben. Zusaetzlich haelt "
-        "die LUT-Schranke aus MF-526 den Zugriff in der Datei.",
-
-    "src/formats/nanowasp/uft_nanowasp.c:157:cylinders":
-        "uint8_t aus `header->cylinders`, also hoechstens 255. Das PRODUKT "
-        "der vier Groessen wird seit MF-543 gegen die Dateigroesse geprueft "
-        "(`data_size > available` -> UFT_ERR_FORMAT). Das Tor sieht die "
-        "Schranke nicht, weil sie auf `data_size` steht und nicht auf den "
-        "vier Einzelwerten.",
-
-    "src/formats/nanowasp/uft_nanowasp.c:158:heads":
-        "uint8_t aus `header->heads`. Siehe den Eintrag darueber.",
-
-    "src/formats/nanowasp/uft_nanowasp.c:171:sectors":
-        "uint8_t aus `header->sectors`. Siehe oben.",
-
-    "src/formats/scp/uft_scp_parser_v3.c:1262:flux_count":
-        "Seit MF-554 in 64 Bit geprueft: `flux_offset64 + flux_need > "
-        "size`, mit `flux_need = (uint64_t)flux_count * 2`. Vorher lief "
-        "genau diese Rechnung in uint32 ueber — bei flux_count = "
-        "0x80000000 ergab `flux_count * 2` null, die Schranke ging auf, "
-        "und das malloc daneben forderte trotzdem 4 GB. Das Tor liest die "
-        "neue Schranke nicht, weil links davon `flux_need` steht und "
-        "nicht `flux_count`.",
-
-    "src/formats/scp/uft_scp_parser_v3.c:1270:flux_count":
-        "Dieselbe Stelle, die Allokation dahinter. Siehe den Eintrag "
-        "darueber.",
-}
+_KOMMENTAR = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 
 
-def _strip_comments(text: str) -> str:
-    def keep(m):
-        return "\n" * m.group(0).count("\n")
-    text = re.sub(r"/\*.*?\*/", keep, text, flags=re.S)
-    return re.sub(r"//[^\n]*", "", text)
+def _ohne_kommentare(text: str) -> str:
+    """Kommentare durch Leerraum ersetzen, Zeilenzahl erhalten.
+
+    Fuer den ANZEIGE-Scan zwingend. `ANZEIGE` paart Anfuehrungszeichen
+    paarweise ab; ein einzelnes `"` oder ein Apostroph IN einem Kommentar
+    verschiebt jede Paarung danach um eins. Gemessen an der
+    Vorher-Fassung von `explorertab.cpp`: eine der falsch gepaarten
+    „Zeichenketten" lautete
+
+        });\\n    } else {\\n        // Generic - show placeholder\\n
+
+    — sie enthielt das Wort „placeholder", der Vorbehalts-Test griff, und
+    die Funktion entlastete sich mit ihrem eigenen Kommentar. Das Tor
+    schwieg zu genau der Haelfte des Vorbilds, die MF-569 zuerst nennt.
+    """
+    return _KOMMENTAR.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+
+# Begruendete Ausnahmen: Datei -> Warum. Abgeglichen wird nach ANZAHL je
+# Datei, nicht nach Zeile (die Lehre aus MF-566: eine Zeilennummer als
+# Schluessel laesst jede Verschiebung oberhalb rot werden, und die
+# billigste Antwort darauf ist Hochzaehlen ohne Nachlesen).
+GRUNDLINIE: dict[str, int] = {}
 
 
-FUNC_START = re.compile(r"^[A-Za-z_][\w 	*]*\**\s*\w+\s*\([^;]*$")
-
-
-def _functions(text: str):
-    """(startzeile, zeilenliste) je Funktion — grob, aber klammerbalanciert."""
-    lines = text.splitlines()
+def _funktionen(text: str):
+    """(Startzeile, Zeilen) je Funktionsrumpf — Klammern zaehlen."""
+    zeilen = text.split("\n")
     i = 0
-    while i < len(lines):
-        if FUNC_START.match(lines[i]) and not lines[i].lstrip().startswith(
-                ("if", "for", "while", "switch", "return", "else")):
-            # oeffnende Klammer suchen
+    while i < len(zeilen):
+        if FUNC_START.match(zeilen[i]) and "{" not in zeilen[i]:
             j = i
-            while j < len(lines) and "{" not in lines[j]:
-                if ";" in lines[j]:
-                    j = -1
-                    break
+            while j < len(zeilen) and "{" not in zeilen[j]:
                 j += 1
-            if j < 0 or j >= len(lines):
-                i += 1
-                continue
-            depth = 0
-            k = j
-            while k < len(lines):
-                depth += lines[k].count("{") - lines[k].count("}")
-                if depth == 0 and k > j:
+                if j - i > 6:
                     break
-                k += 1
-            yield i, lines[i:k + 1]
-            i = k + 1
+        elif FUNC_START.match(zeilen[i]) or (
+                "{" in zeilen[i] and re.match(r"^\w[\w \t*:&<>,]*\w\s*\(",
+                                              zeilen[i])):
+            j = i
+        else:
+            i += 1
             continue
-        i += 1
+        if j >= len(zeilen) or "{" not in zeilen[j]:
+            i += 1
+            continue
+        tiefe = 0
+        k = j
+        while k < len(zeilen):
+            tiefe += zeilen[k].count("{") - zeilen[k].count("}")
+            if tiefe <= 0 and k > j:
+                break
+            k += 1
+        if k - i > 1:
+            yield i + 1, zeilen[i:k + 1]
+        i = k + 1
 
 
 def check(repo: Path) -> list[str]:
     errors: list[str] = []
-    # Alle Fundstellen erst sammeln; der Abgleich gegen die Grundlinie
-    # laeuft danach ueber die ANZAHL je (Datei, Variable) — siehe unten.
-    hits: list[tuple[str, str, int, int]] = []
-    d = repo / "src" / "formats"
+    gesehen: dict[str, int] = {}
+    treffer: list[tuple[str, int, str]] = []
+
+    d = Path(repo) / "src"
     if not d.exists():
         return errors
 
-    for p in sorted(d.rglob("*.c")):
+    # NUR die Oberflaeche. Das Tor fragt, was der BENUTZER zu sehen
+    # bekommt — ein `.c` in `src/formats/` zeigt nichts an, es liefert
+    # Daten. Die erste Fassung nahm beides und meldete 35 Stellen, 29
+    # davon in Parsern. Dieselbe Lage wie beim `widerspruch.py`
+    # (18 von 28 Erstbefunden waren Fehler des Pruefers): ein Tor, das
+    # ueberwiegend danebenliegt, wird beim naechsten Mal nicht gelesen.
+    for p in sorted(d.rglob("*.cpp")):
         try:
-            raw = p.read_text(encoding="utf-8", errors="replace")
+            text = p.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        text = _strip_comments(raw)
         rel = p.relative_to(repo).as_posix()
 
-        # FUNKTIONSWEISE, nicht dateiweise.
-        #
-        # Der erste Lauf suchte ueber die ganze Datei und meldete 16
-        # Treffer. Zwoelf davon waren Fehlalarme aus EINEM Grund: derselbe
-        # Variablenname kommt in mehreren Funktionen vor. In
-        # uft_format_extensions.c meldete das Tor `tracks` in Zeile 45 als
-        # ungedeckelt und verwies auf die Herkunft in Zeile 154 — eine
-        # ANDERE Funktion, hundert Zeilen weiter unten.
-        #
-        # Zwei der vier uebrigen waren echt (myz80, rcpmfs, behoben in
-        # MF-554). Ein Tor, das zwoelf von sechzehn danebenliegt, wird beim
-        # naechsten Mal nicht gelesen — und dann faengt es auch die zwei
-        # echten nicht mehr.
-        for start, body in _functions(text):
+        for start, zeilen in _funktionen(text):
+            rumpf = "\n".join(zeilen)
 
-            # Schritt 1: Variablen, die aus der Datei kommen.
-            from_file: dict[str, int] = {}
-            for off, ln in enumerate(body):
-                if not FROM_FILE.search(ln):
-                    continue
-                m = re.match(r"\s*(?:[\w\s*]+?\s+)?([A-Za-z_]\w*)\s*=", ln)
-                if m:
-                    from_file.setdefault(m.group(1), start + off + 1)
-
-            if not from_file:
+            m = None
+            for kandidat in EINGESTAENDNIS.finditer(rumpf):
+                # Der Kommentarblock, in dem das Eingestaendnis steht.
+                block = ""
+                for k in _KOMMENTAR.finditer(rumpf):
+                    if k.start() <= kandidat.start() < k.end():
+                        block = k.group(0)
+                        break
+                if block and HISTORIE.search(block):
+                    continue            # zitiert Entferntes, kein Fund
+                m = kandidat
+                break
+            if m is None:
                 continue
-
-            # Schritt 2: welche davon werden in DIESER Funktion gedeckelt?
-            guarded: set[str] = set()
-            for ln in body:
-                for name in GUARD.findall(ln):
-                    if name in from_file:
-                        guarded.add(name)
-
-            # Schritt 3: ungedeckelte, die in eine Allokation oder eine
-            # Schleifengrenze gehen.
-            for off, ln in enumerate(body):
-                if not (ALLOC.search(ln) or LOOPBOUND.search(ln)):
+            # Die Qt-Vokabel `setPlaceholderText` in derselben Zeile ist
+            # kein Eingestaendnis.
+            zeile_des_funds = rumpf[:m.start()].count("\n")
+            if UNSCHULDIG.search(zeilen[zeile_des_funds]):
+                # weitersuchen: vielleicht gibt es ein echtes daneben
+                rest = rumpf[m.end():]
+                m2 = EINGESTAENDNIS.search(rest)
+                if not m2:
                     continue
-                lineno = start + off + 1
-                for name, decl in from_file.items():
-                    if name in guarded:
-                        continue
-                    if not re.search(r"\b" + re.escape(name) + r"\b", ln):
-                        continue
-                    hits.append((rel, name, lineno, decl))
 
-    # ── Abgleich gegen die Grundlinie, nach ANZAHL je (Datei, Variable) ──
-    #
-    # MF-566: der Abgleich lief frueher ueber `Datei:Zeile:Name`. Jede
-    # Aenderung OBERHALB einer der begruendeten Stellen liess das Tor rot
-    # werden, ohne dass sich inhaltlich etwas geaendert hatte — gemessen
-    # zweimal in zwei aufeinanderfolgenden Commits (MF-565, MF-566).
-    #
-    # Und die billigste Antwort darauf war jedes Mal, die Zahl
-    # hochzuzaehlen, ohne die Begruendung noch einmal zu lesen. Genau die
-    # stille Drift, gegen die dieses Tor gebaut wurde.
-    #
-    # Gezaehlt wird deshalb je `(Datei, Variable)`: so viele Fundstellen,
-    # wie die Grundlinie begruendete Ausnahmen dafuer fuehrt, sind gedeckt.
-    # Eine mehr ist ein Befund. Das haelt eine Verschiebung aus und faengt
-    # eine NEUE Stelle trotzdem — auch eine mit demselben Namen in
-    # derselben Datei.
-    allowed: dict[tuple[str, str], int] = {}
-    for key in BASELINE:
-        f, _line, n = key.rsplit(":", 2)
-        allowed[(f, n)] = allowed.get((f, n), 0) + 1
+            angezeigt = ANZEIGE.findall(_ohne_kommentare(rumpf))
+            if not angezeigt:
+                continue                   # zeigt gar nichts an
+            if any(VORBEHALT.search(s) for s in angezeigt):
+                continue                   # der Benutzer erfaehrt es
 
-    seen: dict[tuple[str, str], int] = {}
-    for rel, name, lineno, decl in hits:
-        pair = (rel, name)
-        seen[pair] = seen.get(pair, 0) + 1
-        if seen[pair] <= allowed.get(pair, 0):
+            gesehen[rel] = gesehen.get(rel, 0) + 1
+            treffer.append((rel, start + zeile_des_funds,
+                            m.group(1).strip()))
+
+    for rel, lineno, wort in treffer:
+        if gesehen[rel] <= GRUNDLINIE.get(rel, 0):
             continue
         errors.append(
-            f"{rel}:{lineno}: `{name}` kommt aus der Datei "
-            f"(Zeile {decl}) und bestimmt hier eine Allokation "
-            f"oder Schleifengrenze, ohne dass dazwischen eine "
-            f"Schranke gegen die Dateigroesse oder eine "
-            f"Konstante steht. Vorbild MF-543: 22 Byte Eingabe, "
-            f"Feld mit 88 Plaetzen, beschrieben bis Index 599.")
+            f"{rel}:{lineno}: der Quelltext gibt zu, dass die Werte "
+            f"erfunden sind („{wort}“) — aber keine der "
+            f"angezeigten Zeichenketten sagt es dem Benutzer. Vorbild "
+            f"MF-569: die Belegungskarte zeigte jede Diskette als leer, "
+            f"jeder Block gruen mit „F“, der Vorbehalt stand "
+            f"nur im Quelltext. Fuer einen Forensiker ist so eine Anzeige "
+            f"von einer echten nicht zu unterscheiden. Fix: ein „?“ "
+            f"statt des erfundenen Werts UND ein Satz in der Anzeige, "
+            f"nicht im Kommentar.")
 
-    # Eine Ausnahme, die keine Fundstelle mehr hat, ist erledigt. Sie
-    # stehen zu lassen hiesse, eine Deckung fuer eine Stelle zu fuehren,
-    # die es nicht mehr gibt — und die naechste Stelle desselben Namens
-    # waere damit stillschweigend gedeckt.
-    for pair, n in allowed.items():
-        extra = n - seen.get(pair, 0)
+    for rel, n in GRUNDLINIE.items():
+        extra = n - gesehen.get(rel, 0)
         if extra > 0:
             errors.append(
-                f"{pair[0]}: {extra} begruendete Ausnahme(n) fuer `{pair[1]}` "
-                f"ohne Fundstelle — erledigt, bitte aus BASELINE entfernen.")
+                f"{rel}: {extra} begruendete Ausnahme(n) ohne Fundstelle "
+                f"— erledigt, bitte aus GRUNDLINIE entfernen.")
 
     return errors
 
 
 def main() -> int:
-    repo = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    errs = check(repo)
-    print(f"Ungedeckelte Groessen aus der Datei (root={repo}):")
-    print(f"  begruendete Ausnahmen : {len(BASELINE)}")
-    print(f"  Befunde               : {len(errs)}")
-    for e in errs[:40]:
-        print(f"    {e}")
-    if len(errs) > 40:
-        print(f"    ... und {len(errs) - 40} weitere")
-    return 1 if errs else 0
+    ziel = Path(sys.argv[1]) if len(sys.argv) > 1 else WURZEL
+    fehler = check(ziel)
+    print("Anzeigen, die Erfindung nur im Quelltext zugeben: %d"
+          % len(fehler))
+    for f in fehler:
+        print("  " + f)
+    return 1 if fehler else 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

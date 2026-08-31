@@ -81,9 +81,14 @@ def macro_body(lines: list[str], i: int) -> str:
     return "\n".join(out)
 
 
-def scan() -> list[tuple[str, int, str]]:
+def scan(root: pathlib.Path = ROOT) -> list[tuple[str, int, str]]:
+    # MF-735: `root` war vorher fest ROOT, obwohl `check(repo)` einen
+    # Baum uebergeben bekommt. Das Tor las damit IMMER den echten
+    # Baum — und der Selbsttest bekam ein falsches Gruen: der
+    # `sauber`-Fall bestand, weil im echten Baum nichts stand, nicht
+    # weil die gepflanzte Unschuld durchging.
     findings = []
-    tdir = ROOT / "tests"
+    tdir = root / "tests"
     files = sorted(list(tdir.rglob("*.c")) + list(tdir.rglob("*.cpp")))
     for p in files:
         text = p.read_text(encoding="utf-8", errors="replace")
@@ -125,14 +130,14 @@ def scan() -> list[tuple[str, int, str]]:
             if re.search(r"\b\w*fail\w*\b", body):
                 continue
 
-        findings.append((p.relative_to(ROOT).as_posix(), ln, inc.group(1)))
+        findings.append((p.relative_to(root).as_posix(), ln, inc.group(1)))
     return findings
 
 
 def check(repo) -> list:
     """Schnittstelle fuer check_consistency.py."""
     try:
-        rows = scan()
+        rows = scan(pathlib.Path(repo))
     except Exception as exc:               # noqa: BLE001
         return ["Test-Scheiterbarkeit nicht pruefbar: %s" % exc]
     return ["Test kann nicht scheitern: %s:%d — `%s++` steht bedingungslos "
