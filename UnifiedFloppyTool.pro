@@ -323,6 +323,7 @@ SOURCES += \
     src/flux/uft_flux_sync_search.c \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
+    src/flux/uft_track_verdikt.c \
     src/flux/uft_media_profile.c \
     src/fileops/uft_file_ops_extended.c \
     src/analysis/uft_sector_compare.c

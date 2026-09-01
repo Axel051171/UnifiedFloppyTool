@@ -659,80 +659,82 @@ static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
     return fallback_ns;
 }
 
-/* „Kein Sync" verfeinern (MF-764).
+/* Das Spurverdikt bilden — die EINE Stelle (MF-765).
  *
- * Ohne diese Stelle meldet der Dekoder VIER verschiedene Medienzustaende
- * als denselben Fehler. Gemessen an drei synthetischen Spuren durch genau
- * diesen Pfad: eine geloeschte, eine gleichfoermig beschriebene mit drei
- * Bruchstellen und eine verrauschte lieferten alle FLUX_ERR_NO_SYNC mit
- * 0 Sektoren und lauter Nullen in den Zaehlern.
+ * Vorher stand an fuenf Rueckgabestellen `return (sector_count > 0) ?
+ * FLUX_OK : FLUX_ERR_NO_SYNC`. Jede Verfeinerung musste damit fuenfmal
+ * gebaut werden, und MF-764 hat genau eine davon verfeinert, weil die
+ * anderen vier ein anderes Bandmodell brauchen.
  *
- * Fuer ein Preservation-Werkzeug ist das die falsche Auskunft: X-Copys
- * Handbuch (3.4, 7.2) liest „keine Lesemarkierungen" ausdruecklich als
- * „wahrscheinlich ein Kopierschutz oder Fremdformat" — also gerade NICHT
- * als leer und nicht als defekt.
+ * Jetzt fuellt diese Funktion das Verdikt aus drei Feldern (Diagnose,
+ * Folge, Reparierbarkeit) und leitet den Status daraus ab. Die fuenf
+ * Stellen rufen sie; jede weitere Verfeinerung beruehrt eine Zeile.
  *
- * Unterschieden wird am Intervall-Histogramm (MF-488), dessen Aussage
- * bisher niemand las. Gemessen:
+ * `bandmodell_passt` entscheidet der AUFRUFER. Das Histogrammodul ist
+ * auf MFM gebaut (Abstaende 2T/3T/4T, drei Berge); ein FM-Strom traegt
+ * zwei und kaeme mit `sicher == false` heraus — er wuerde als UNLESBAR
+ * eingestuft, also eine gueltige Spur als defekt gemeldet. Falsch grob
+ * ist besser als praezise falsch.
  *
- *     leer           0 Berge
- *     gleichfoermig  1 Berg     <- ein Takt, aber keine Sync-Marke:
- *                                  genau das Nahtstellen-Muster
- *     verrauscht    >1 Berg, nicht `confident`
- *
- * Bleibt es bei FLUX_ERR_NO_SYNC, heisst das jetzt das Engere: es gibt
- * eine Struktur, sie traegt nur keine bekannte Marke.
- *
- * ── NUR DER MFM-PFAD, und warum ─────────────────────────────────────────
- *
- * `return (sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC` steht an FUENF
- * Stellen: MFM (:739), FM (:862), GCR-C64 (:1055), GCR-Apple (:1248) und
- * `flux_decode_amiga_bits` (:1524).
- *
- * Verfeinert wird nur die erste. Die Gruende sind verschieden und beide
- * gemessen:
- *
- *   * `flux_decode_amiga_bits` bekommt einen BITSTROM, keine Flusswechsel
- *     — es gibt dort keine Intervalle, ueber die sich ein Histogramm
- *     bilden liesse.
- *
- *   * FM und GCR haben eine ANDERE Bandstruktur. Das Histogrammodul ist
- *     ausdruecklich auf MFM gebaut (`uft_flux_histogram.h`: „Ein
- *     MFM-Datenstrom mit Zellendauer T traegt Abstaende von 2T, 3T und
- *     4T"). Ein FM-Strom traegt ZWEI Baender; er kaeme mit
- *     `confident == false` heraus und wuerde damit als NOISE eingestuft
- *     — eine gueltige Spur als unlesbar gemeldet. Das waere schlimmer
- *     als die Zusammenfassung, die hier behoben wird.
- *
- * Fuer FM und GCR braucht die Unterscheidung ein eigenes Bandmodell. Bis
- * es gemessen ist, bleibt dort die grobe Auskunft — falsch grob ist
- * besser als praezise falsch. */
-static flux_status_t no_sync_verfeinern(const flux_raw_data_t *flux)
+ * `expected_sectors` bleibt 0 = UNBEKANNT: der Flussdekoder kennt die
+ * Sollzahl nicht, sie steht in der OTDR-Konfiguration
+ * (`floppy_otdr.c:113-140`, nach Plattformnamen). Sobald ein Aufrufer
+ * sie mitgibt, greift X-Copys Klasse 1 — und zwar in BEIDE Richtungen,
+ * wie das Handbuch sagt: „less or MORE than 11 sectors". */
+static flux_status_t verdikt_bilden(flux_decoded_track_t *track,
+                                    const flux_raw_data_t *flux,
+                                    bool bandmodell_passt)
 {
-    if (!flux || !flux->transitions || flux->transition_count < 8)
-        return FLUX_ERR_UNFORMATTED;
+    uft_track_befunde_t b;
+    memset(&b, 0, sizeof(b));
 
-    double ns_per_tick = (flux->sample_rate > 0)
-                       ? (1e9 / (double)flux->sample_rate) : 1.0;
+    if (track) {
+        b.sector_count      = track->sector_count;
+        b.bad_id_crc        = track->bad_id_crc;
+        b.bad_header_format = track->bad_header_format;
+        b.bad_data_crc      = track->bad_data_crc;
+        b.missing_data      = track->missing_data;
+    }
+    b.expected_sectors = 0;      /* siehe oben: unbekannt, nicht null */
 
-    size_t n = flux->transition_count - 1;
-    uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
-    if (!iv) return FLUX_ERR_NO_SYNC;    /* kein Urteil ohne Messung */
+    /* Histogramm nur, wenn es hier ueberhaupt etwas aussagen kann. */
+    if (bandmodell_passt && flux && flux->transitions &&
+        flux->transition_count >= 8) {
+        double ns_per_tick = (flux->sample_rate > 0)
+                           ? (1e9 / (double)flux->sample_rate) : 1.0;
+        size_t n = flux->transition_count - 1;
+        uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
+        if (iv) {
+            for (size_t i = 0; i < n; i++) {
+                uint32_t d = flux->transitions[i + 1] - flux->transitions[i];
+                iv[i] = (uint32_t)((double)d * ns_per_tick);
+            }
+            uft_flux_hist_result_t h;
+            memset(&h, 0, sizeof(h));
+            uft_flux_histogram_analyze(iv, n, 100, &h);
+            free(iv);
 
-    for (size_t i = 0; i < n; i++) {
-        uint32_t d = flux->transitions[i + 1] - flux->transitions[i];
-        iv[i] = (uint32_t)((double)d * ns_per_tick);
+            b.histogramm_gueltig = true;
+            b.histogramm_berge   = h.peak_count;
+            b.histogramm_sicher  = h.confident;
+        }
+    } else if (bandmodell_passt) {
+        /* Zu wenige Wechsel, um ein Histogramm zu bilden — das IST die
+         * Aussage „keine Struktur", nicht ein fehlendes Ergebnis. */
+        b.histogramm_gueltig = true;
+        b.histogramm_berge   = 0;
     }
 
-    uft_flux_hist_result_t h;
-    memset(&h, 0, sizeof(h));
-    uft_flux_histogram_analyze(iv, n, 100, &h);
-    free(iv);
+    uft_track_verdikt_t v;
+    uft_track_verdikt_bilden(&b, &v);
+    if (track) track->verdikt = v;
 
-    if (h.peak_count == 0) return FLUX_ERR_UNFORMATTED;
-    if (h.peak_count == 1) return FLUX_ERR_NO_SYNC;   /* Takt da, Marke nicht */
-    if (!h.confident)      return FLUX_ERR_NOISE;
-    return FLUX_ERR_NO_SYNC;
+    if (b.sector_count > 0) return FLUX_OK;
+    switch (v.diagnose) {
+    case UFT_DIAG_LEER:     return FLUX_ERR_UNFORMATTED;
+    case UFT_DIAG_UNLESBAR: return FLUX_ERR_NOISE;
+    default:                return FLUX_ERR_NO_SYNC;
+    }
 }
 
 flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
@@ -812,7 +814,7 @@ flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
     }
     
     /* MF-764: nur hier verfeinert — siehe `no_sync_verfeinern`. */
-    return (track->sector_count > 0) ? FLUX_OK : no_sync_verfeinern(flux);
+    return verdikt_bilden(track, flux, /*bandmodell_passt=*/true);
 }
 
 
@@ -885,7 +887,9 @@ flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
     }
     
     free(bits);
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    /* MF-765: bandmodell_passt=false — das Histogrammodul rechnet mit
+     * MFM-Baendern; FM/GCR wuerden faelschlich als unlesbar gelten. */
+    return verdikt_bilden(track, flux, /*bandmodell_passt=*/false);
 }
 
 /* ============================================================================
@@ -1078,7 +1082,9 @@ flux_status_t flux_decode_gcr_c64(const flux_raw_data_t *flux,
         free(bits);
     }
     
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    /* MF-765: bandmodell_passt=false — das Histogrammodul rechnet mit
+     * MFM-Baendern; FM/GCR wuerden faelschlich als unlesbar gelten. */
+    return verdikt_bilden(track, flux, /*bandmodell_passt=*/false);
 }
 
 /* Apple II 6-and-2 GCR decode table (disk byte → 6-bit value) */
@@ -1271,7 +1277,9 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
         free(bits);
     }
     
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    /* MF-765: bandmodell_passt=false — das Histogrammodul rechnet mit
+     * MFM-Baendern; FM/GCR wuerden faelschlich als unlesbar gelten. */
+    return verdikt_bilden(track, flux, /*bandmodell_passt=*/false);
 }
 
 /* ============================================================================
@@ -1547,7 +1555,12 @@ flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
      * frees it and never stores it in track->raw_bits — flux_decode_amiga()
      * owns the buffer it allocated and decides that, and a caller passing a
      * plugin's raw_data must not have it freed under them. */
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    /* MF-765: hier gibt es GAR KEINE Flussdaten — diese Funktion bekommt
+     * einen fertigen Bitstrom. Ohne Wechsel-Abstaende laesst sich kein
+     * Histogramm bilden; das Verdikt kann hier nur aus den Zaehlern
+     * kommen. Das ist keine Nachlaessigkeit, sondern die Ebene: wer Bits
+     * hereinreicht, hat die Zeitinformation schon weggeworfen. */
+    return verdikt_bilden(track, NULL, /*bandmodell_passt=*/false);
 }
 
 /**

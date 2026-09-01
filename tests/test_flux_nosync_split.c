@@ -66,7 +66,7 @@ static uint32_t rnd(void) {
 }
 
 static void pruefe(const char *titel, const uint32_t *iv, size_t n,
-                   flux_status_t erwartet)
+                   flux_status_t erwartet, uft_track_diagnose_t d_soll)
 {
     flux_raw_data_t raw;
     memset(&raw, 0, sizeof(raw));
@@ -87,6 +87,19 @@ static void pruefe(const char *titel, const uint32_t *iv, size_t n,
            ok ? "ok  " : "FAIL", titel, name_of(s), name_of(erwartet));
     if (!ok) fehler++;
 
+    /* MF-765: und liest das Verdikt auch jemand?
+     *
+     * Fuenf Stellen, die einen Bauer rufen, dessen Ergebnis nirgends
+     * ankommt, waeren genau das Muster, das dieser Baum staendig
+     * findet: Bestand, nicht Faehigkeit. Deshalb prueft dieser Test
+     * das FELD auf der Spur, nicht nur den Rueckgabewert. */
+    int dok = (trk.verdikt.diagnose == d_soll);
+    printf("       %s Verdikt: %-12s (erwartet %s)\n",
+           dok ? "ok  " : "FAIL",
+           uft_track_diagnose_name(trk.verdikt.diagnose),
+           uft_track_diagnose_name(d_soll));
+    if (!dok) fehler++;
+
     free(raw.transitions);
     free(raw.index_times);
 }
@@ -102,7 +115,8 @@ int main(void)
 
     /* 1 — LEER: eine geloeschte Spur traegt praktisch keine Wechsel. */
     for (size_t i = 0; i < 40; i++) iv[i] = 40000 + (rnd() % 20000);
-    pruefe("leer (geloescht)", iv, 40, FLUX_ERR_UNFORMATTED);
+    pruefe("leer (geloescht)", iv, 40, FLUX_ERR_UNFORMATTED,
+           UFT_DIAG_LEER);
 
     /* 2 — GLEICHFOERMIG mit wenigen Bruchstellen: das Nahtstellen-Muster.
      *     Ein Takt ist da, eine bekannte Marke nicht. */
@@ -110,15 +124,18 @@ int main(void)
     iv[4000]  = 3 * ZELLE_NS;
     iv[9000]  = 3 * ZELLE_NS;
     iv[15000] = 4 * ZELLE_NS;
-    pruefe("gleichfoermig + 3 Bruchstellen", iv, N, FLUX_ERR_NO_SYNC);
+    pruefe("gleichfoermig + 3 Bruchstellen", iv, N, FLUX_ERR_NO_SYNC,
+           UFT_DIAG_SCHUTZ);
 
     /* 3 — VERRAUSCHT: Abstaende ohne gemeinsamen Takt. */
     for (size_t i = 0; i < N; i++) iv[i] = 1500 + (rnd() % 7000);
-    pruefe("verrauscht", iv, N, FLUX_ERR_NOISE);
+    pruefe("verrauscht", iv, N, FLUX_ERR_NOISE,
+           UFT_DIAG_UNLESBAR);
 
     /* 4 — GEGENPROBE: echter MFM-Strom ohne Sync-Marke. Bleibt NO_SYNC. */
     for (size_t i = 0; i < N; i++) iv[i] = (2 + (rnd() % 3)) * ZELLE_NS;
-    pruefe("echtes MFM ohne Sync-Marke", iv, N, FLUX_ERR_NO_SYNC);
+    pruefe("echtes MFM ohne Sync-Marke", iv, N, FLUX_ERR_NO_SYNC,
+           UFT_DIAG_SCHUTZ);
 
     free(iv);
 

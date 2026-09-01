@@ -19,6 +19,7 @@
 #ifndef UFT_FLUX_DECODER_H
 #define UFT_FLUX_DECODER_H
 
+#include "uft/flux/uft_track_verdikt.h"
 #include "uft/core/uft_unified_types.h"
 #include "uft/flux/uft_media_profile.h"  /* uft_media_kind_t (MF-471) */
 
@@ -274,6 +275,13 @@ typedef struct {
 
     /** Welcher Kandidat das Ergebnis geliefert hat. */
     flux_timing_source_t timing_source;
+
+    /* MF-765: das Spurverdikt als DREI Felder statt einer Ziffer.
+     * ANGEHAENGT, nicht eingefuegt — die Felder davor behalten ihre
+     * Lage. Gefuellt vom einen Bauer in `uft_track_verdikt.c`; die
+     * fuenf Rueckgabestellen des Dekoders rufen ihn, damit jede
+     * weitere Verfeinerung EINE Zeile beruehrt statt fuenf. */
+    uft_track_verdikt_t verdikt;
 
 } flux_decoded_track_t;
 

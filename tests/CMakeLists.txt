@@ -817,10 +817,17 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_track_verdikt")
+        # MF-765: der EINE Verdikt-Bauer, gegen die Handbuch-Tabelle.
+        # Braucht nichts ausser sich selbst — genau das ist der Punkt: das
+        # Urteil haengt nicht mehr am Dekoder-Pfad.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c)
     elseif(${test_name} STREQUAL "test_flux_nosync_split")
         # MF-764: „kein Sync" war vier Medienzustaende in einem Wort
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
