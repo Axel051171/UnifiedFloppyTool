@@ -148,3 +148,9 @@ build-*/
 .env
 *.env
 !*.env.example
+
+# MF-755: playwright-mcp legt Seiten-Schnappschuesse im Arbeitsverzeichnis ab.
+# Gemessen bei der Faehigkeitspruefung: ein einziger `browser_navigate` erzeugte
+# `.playwright-mcp/page-<zeit>.yml` MITTEN IM REPO. Werkzeug-Nebenprodukte
+# gehoeren nicht in den Baum.
+.playwright-mcp/
