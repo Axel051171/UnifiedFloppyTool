@@ -281,3 +281,61 @@ Zensus von innen.
 
 Offen bleiben **P1** (braucht Hardware, MF-310), **P6**
 (Schreibstartpunkt), **P8** (Korpus) und **P9** (Oracle).
+
+
+---
+
+## Nachtrag: die Fehlercodes von X-Copy 2.x (MF-751)
+
+X-Copy schrieb je Spur eine **grüne Null** bei Erfolg und eine **rote
+Ziffer** bei einem Fehler. Der Eigentümer hat die Bedeutung der Ziffern
+beigebracht (Fassung **2.x**, öffentlich überliefert):
+
+| # | Bedeutung |
+|---|---|
+| 1 | Less or more than 11 sectors |
+| 2 | No sync found |
+| 3 | No sync after gap found |
+| 4 | Header checksum error |
+| 5 | Error in header / format long |
+| 6 | Data block checksum error |
+| 7 | **Long track** |
+| 8 | **Verify error** |
+
+**Das ist keine Ableitung aus dem Quelltext**, sondern überliefertes
+Wissen über das Verhalten des Werkzeugs — zitierfähig ohne
+Kontaminationsfrage, und aus einer **anderen Fassung** (2.x) als das
+Gutachten (5.3).
+
+### Zwei Abweichungen gegenüber B9, beide bedeutsam
+
+**1 · „Less or MORE than 11 sectors".** B9 nennt „zu wenige Sektoren".
+Die überlieferte Liste sagt: **zu viele ist ebenfalls ein Fehler.** Das
+ist kein Detail — eine Spur mit mehr als der Regelzahl ist ein
+klassisches Schutzmerkmal, und ein Werkzeug, das nur nach unten prüft,
+sieht es nicht. Für **P4** heißt das: die Sektorzahl ist eine
+zweiseitige Schranke, keine Mindestanforderung.
+
+**2 · „Long track" ist ein eigener nummerierter Code.** B7 führt die
+überlange Spur als *Sonderfall*, der die vier Verdikte überlagert. Die
+2.x-Liste zeigt sie als **gleichrangigen Fehlercode**. Das stützt
+**P5** von einer zweiten, unabhängigen Seite: die überlange Spur war
+schon 1989 ein benannter Zustand und keine Fehlmessung.
+
+> **P5 ist in UFT grün** (`OTDR_EVT_PROT_LONG_TRACK`, bis zur GUI). Die
+> überlieferte Liste bestätigt, dass die Anforderung nicht konstruiert
+> ist.
+
+### Was das für P9 bedeutet
+
+Die acht Codes sind ein **fertiger Vergleichsmaßstab** für die
+Emulations-Eichung: Vorlage und UFT laufen gegen dasselbe Fixture, und
+die Vorlage nennt ihr Urteil als Ziffer. Wo UFT keinen entsprechenden
+Zustand führt — nach heutigem Stand mindestens Code 1 (zu *viele*
+Sektoren), 3 („kein Sync nach Gap") und der ganze P4-Komplex —, ist die
+Differenz benannt statt vermutet.
+
+**Zu prüfen bleibt**, ob die Codes zwischen 2.x und 5.3 gleich
+nummeriert sind. Die Liste stammt aus 2.x, das Gutachten aus 5.3, und
+B9 zählt sechs plus eine getrennte Verify-Kennung — die 2.x-Liste zählt
+acht. Ob dazwischen umnummeriert wurde, sagt keine der beiden Quellen.
