@@ -1,6 +1,6 @@
 # X-Copy unter Emulation — Sitzungsprotokoll
 
-**Werkstatt-Dokument. Stand 2026-09-01 (MF-775).**
+**Werkstatt-Dokument. Stand 2026-09-01 (MF-776).**
 
 Dieses Blatt macht aus der Emulationssitzung **eine** Sitzung statt drei.
 Jede Frage steht mit ihrer Fixture, ihrem erwarteten Bild und der Stelle
@@ -153,6 +153,51 @@ Je Lauf ein **Bildschirmfoto**, Dateiname `Fixture_Binary_Betriebsart`
 * Datum des Laufs
 
 Eine Ziffer ohne Bild ist eine Erinnerung, keine Messung.
+
+---
+
+## Die Fixtures sind gegengeprüft — von einer zweiten Hand (MF-776)
+
+Bis hierher waren die Fixtures von **UFTs eigenem** Dekoder abgenommen:
+derselbe Baum, der sie erzeugt. Seit `gw` 1.23 installiert ist, gibt es
+eine unabhängige Hand, und sie läuft **ohne Hardware**.
+
+**Beide Richtungen, byteidentisch:**
+
+| Richtung | Ergebnis |
+|---|---|
+| `gw` kodiert ADF → SCP, **UFT** dekodiert | 160/160 Spuren, 1760/1760 Sektoren, **1760 byteidentisch** zum Quell-ADF |
+| **UFTs Erzeuger** schreibt E0, `gw` dekodiert → ADF | 901 120 Byte, **byteidentisch** zum Quell-ADF |
+
+Damit ist zweierlei belegt, was vorher nur behauptet war: `flux_decode_amiga()`
+liest korrektes AmigaDOS, und `tests/flux_gen/amigados/` **schreibt**
+korrektes AmigaDOS.
+
+### Was `gw` zu den defekten Fixtures sagt
+
+| Fixture | `gw`-Befund | erwartet |
+|---|---|---|
+| `E0` | 1760 / 1760 (100 %) | ✔ |
+| `E1` | 1749 / 1760 | ✔ — Spur 40 fehlt ganz (11 Sektoren) |
+| `E2` | 1759 / 1760 | 12 Sektoren passen nicht in `gw`s 11er-Modell |
+| **`E2b`** | **1760 / 1760** | ✔ — **die Datenrate allein ändert nichts** |
+| **`E3a`** | **1760 / 1760** | ✔ — Umdrehung 1 ist auch für `gw` unsichtbar |
+| `E4` | 1749 / 1760 | ✔ — `$448A` wird nicht gesynct |
+| `E5` | 1760 / 1760 | ✔ — Prüfsummenfehler ≠ Sektor nicht gefunden |
+| `E6` | 1759 / 1760 | ✔ — **kaputter Kopf = Sektor nicht identifizierbar** |
+
+Zwei Zeilen tragen dabei mehr, als sie aussehen:
+
+* **`E2b` bei 100 %** ist die Antwort der Kontrolle, schon **vor** der
+  Sitzung und von unabhängiger Seite: eine abweichende Zellendauer allein
+  erzeugt keinen Befund. Zeigt X-Copy bei `E2` eine Ziffer, kommt sie von
+  der Sektorzahl.
+* **`E3a` bei 100 %** stützt die Vorhersage der E3b-Regel: ein Leser, der
+  eine Umdrehung nimmt, sieht die präparierte zweite gar nicht. Die
+  Vorprüfung unten bleibt trotzdem stehen — `gw` ist nicht WinUAE.
+* **`E6` verliert einen Sektor, `E5` nicht.** Genau die Trennung, die das
+  Handbuch zwischen Code 4 (Kopf) und Code 6 (Daten) macht, in einem
+  unabhängigen Werkzeug sichtbar.
 
 ---
 

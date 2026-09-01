@@ -185,8 +185,17 @@ REGISTRY: tuple[Oracle, ...] = (
         name="gw",
         env="GW",
         exes=("gw", "gw.exe"),
-        version_args=("--version",),
-        version_re=r"([0-9]+\.[0-9]+)",
+        # MF-776: `--version` gibt es NICHT — die Option faellt auf den
+        # Usage-Text zurueck. Eine erste Fassung las die „1.23" daraus ab
+        # und hielt sie fuer eine Versionsmeldung; tatsaechlich stand sie
+        # im INSTALLATIONSPFAD (`greaseweazle-1.23\gw.exe`), der in der
+        # Usage-Zeile mitgedruckt wird. Woanders installiert haette das
+        # still eine falsche oder gar keine Zahl geliefert.
+        #
+        # `gw info` meldet „Host Tools: 1.23" und laeuft OHNE Geraet
+        # („Device: Not found"), ist also die richtige Quelle.
+        version_args=("info",),
+        version_re=r"Host Tools:\s*([0-9]+\.[0-9]+)",
         reference_for="Flux-Aufnahme und -Wandlung am Greaseweazle; "
                       "Bezug fuer die gw-vs-UFT-Differenztests (P3.2)",
         origin="https://github.com/keirf/greaseweazle",
