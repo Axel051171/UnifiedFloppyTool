@@ -480,3 +480,165 @@ Schutzparameter stehen, wäre es eine **zweite, unabhängige** Quelle
 neben XCopys Sync-Satz — genau das, was P8 verlangt. Die Rechtslage
 dieser Programme ist **ungeprüft**; sie sind nicht Teil der
 ASI-Freigabe.
+
+
+---
+
+## Die Fehlercodes, autoritativ belegt (MF-753)
+
+Der 3.4-Autoren-Master (`xcopy_v3.4_authorsmaster_en_1991-02-17`,
+17.02.1991) trägt eine **29 164 Byte lange deutsche Anleitung** —
+viermal so lang wie das 5.21-Handbuch. Ihr Abschnitt **7.2) ERRORS
+(FEHLER)** führt alle acht Codes mit ihrer **Bedeutung**.
+
+**Die Nummerierung ist identisch mit der überlieferten 2.x-Liste.** Die
+in MF-751 offen gelassene Frage ist für 3.4 beantwortet: das Schema ist
+von 2.x bis 3.4 stabil. Für 5.3 bleibt es unbelegt, aber die Kontinuität
+über zwei Fassungen ist ein starkes Indiz.
+
+### Was die Bedeutungen ergänzen — und es ist mehr als die Namen
+
+| # | Kurzform | was die Anleitung erklärt |
+|---|---|---|
+| 1 | Less or more than 11 sectors | Lesemarken gefunden, Anzahl stimmt nicht — *„könnte sich um ein **Fremdformat** handeln"* |
+| 2 | No sync found | gar keine Lesemarken — *„wahrscheinlich ein **Kopierschutz** oder Fremdformat"* |
+| 3 | No sync after gap found | AmigaDOS-Struktur vorhanden, aber **teilweise zerstört** |
+| 4 | Header checksum error | Prüfsumme falsch — `DOSCOPY+` **korrigiert** ihn |
+| 5 | Error in header / format long | Kopf-**Inhalt** zerstört, nicht nur die Prüfsumme — ebenfalls korrigierbar |
+| 6 | Data block checksum error | Datenteil-Prüfsumme — ebenfalls korrigierbar |
+| 7 | **Long track** | nur `NIBBLECOPY` erkennt ihn; Original mit **Spezialhardware** geschrieben und mit normalen Laufwerken **nicht kopierbar** |
+| 8 | Verify error | **physischer** Defekt des Zielmediums |
+
+### Drei Befunde, die UFT unmittelbar betreffen
+
+**1 · Die Codes 1 und 2 trennen „Fremdformat" von „Schaden".** Die
+Autoren lesen eine falsche Sektorzahl und fehlende Syncs ausdrücklich
+als *möglicherweise ein anderes Format oder ein Kopierschutz* — nicht
+als Lesefehler. Das ist **genau P4**, von den Autoren 1991
+ausgesprochen.
+
+> **Und es ist die Diagnose, die UFT nicht führt.** Gemessen in MF-748:
+> `UFT_TRACK_READ_ERROR` wird von niemandem gesetzt, und der
+> Flussdekoder gibt bei null Sektoren `FLUX_ERR_NO_SYNC` zurück, ob die
+> Spur leer, fremd oder verrauscht ist. Die Vorlage unterscheidet an
+> dieser Stelle vier Zustände, UFT einen.
+
+**2 · Code 3 ist die Teilzerstörung.** „AmigaDOS-Struktur vorhanden,
+aber teilweise zerstört" ist ein eigener Zustand zwischen *lesbar* und
+*kein Sync*. B9 nennt ihn „kein zweiter Sync"; die Anleitung sagt, was
+er dem Anwender bedeutet.
+
+**3 · Code 7 ist mehr als eine Längenmarke.** Die Anleitung sagt: eine
+überlange Spur ist mit normalen Laufwerken **nicht reproduzierbar** —
+sie ist kein Messfehler und auch kein bloßes Merkmal, sondern eine
+**Aussage über die Kopierbarkeit**. Das schärft **P5**: eine überlange
+Spur zu erkennen genügt nicht; der Bericht muss sagen, dass sie mit
+gewöhnlicher Hardware nicht schreibbar ist.
+
+> UFT führt `OTDR_EVT_PROT_LONG_TRACK` bis in die GUI (MF-748, grün).
+> **Offen ist, ob der Bericht auch die Folge nennt.**
+
+**4 · Die Codes 4, 5 und 6 sind ausdrücklich reparabel** — die
+Anleitung nennt je Code, dass `DOSCOPY+` ihn korrigiert, „so daß er auf
+der Kopie nicht mehr auftritt". Das ist die Gegenseite zu B11: die
+Vorlage sagt dem Anwender **vorher**, welche Fehlerklassen sie
+reparieren kann, und **hinterher**, dass eine Rettung eine Rettung war.
+
+### Rechtsvermerk
+
+Die Anleitung steht unter ASI-Copyright und ist **nicht Teil der
+Freigabe von 2011** (§5.4b). Oben stehen abgeleitete Befunde und
+Fundstellen sowie kurze Belegzitate — **keine Abschrift**. Der Wortlaut
+steht im eingefrorenen Archiv.
+
+### Bestand, vollständig eingefroren
+
+Elf Archive, darunter drei Datenträger mit je beiliegender
+`xcopy_license.txt` (3.4, 5.21, 01/95) und der 2011-Quellstand.
+**Ungeöffnet bleiben** sämtliche ADFs, `xcop.s` (102 861 Byte),
+`xio.s` (93 902 Byte), `config.asm`, `depack.s` sowie die entpackten
+Verzeichnisse `xcopy_src` und `xcopy_src(1)`.
+
+> **Namensvetter, endgültig ausgeschieden:** `xcopy-master.zip` enthält
+> `kitten.c`, `nls/xcopy.de` und `doc/copying.txt` — das ist der
+> **DOS-XCOPY-Klon** (FreeDOS-Umfeld), nicht der Amiga-Nibbler. Er hat
+> mit diesem Vorgang nichts zu tun.
+
+
+---
+
+## Nebenzweig: die Amiga-Quellenliste, gemessen (MF-754)
+
+Der Eigentümer hat
+[`grovdata/Amiga_Sources`](https://github.com/grovdata/Amiga_Sources)
+vorgelegt und selbst durchgesehen: für den Nibbler-Teil ein Totalausfall
+— kein Flusswerkzeug, kein Trackdisk-Ersatz, kein MFM-Dekoder. Die
+naheliegenden Verdächtigen (DiskPart, HDPart, Lide.device) sind
+Festplatten- und Treiberwerkzeuge.
+
+**Eine Ausnahme: LibXAD** (Dirk Stöcker), wegen seines Client-Satzes.
+Das ist gemessen, nicht behauptet — hier die Übersetzung in unsere
+Kennzahl:
+
+| libxad-Client | UFT-Plugin | Stufe |
+|---|---|---|
+| **DMS** | `dms` | **T3** |
+| **TR-DOS** | `trd` | **T3** |
+| SuperDuper3, CrunchDisk, PackDisk, PackDev, Zoom, xDisk, MDC, DCS | — | **kein Plugin** |
+
+**Zwei von zehn treffen, und beide sind ungeprüft.** Das ist der ganze
+Wert — und er ist echt: „ungeprüfte Formate runter" ist die erste der
+vier Release-Kennzahlen.
+
+### Warum das der richtige Kanal ist
+
+LibXAD steht unter **LGPL-2.1-or-later**. Als **Oracle** ist das
+gleichgültig: das Werkzeug läuft extern gegen dieselben Fixtures, und
+verglichen werden nur Ergebnisse. Es entsteht **kein abgeleitetes
+Werk** — nach MF-695 der Kanal *„Oracle: Ausführung frei, Weitergabe
+nicht"*, derselbe wie bei `dtc`.
+
+Das ist der scharfe Gegensatz zur XCopy-Lage: dort scheitert die
+Übernahme an der Lizenz, hier stellt sich die Frage gar nicht.
+
+**Und bei `dms` löst es zusätzlich etwas:** die Attribution dieser Datei
+lautet heute *„Based on xDMS source, dms2adf, AROS source"* — eine
+CODE-Erklärung **ohne genannte Lizenz**, einer der 30 offenen Fälle aus
+MF-743. Ein Oracle-Weg verifiziert das Format, ohne diese Frage
+anzufassen.
+
+### Die anderen acht sind Fundus, nicht Auftrag
+
+Für SuperDuper3, CrunchDisk, PackDisk, PackDev, Zoom, xDisk, MDC und
+DCS gibt es **kein Plugin**, und die EINFRIER-REGEL sperrt neue —
+ausdrücklich auch als Vorschlag. Sie werden benannt und warten; was sie
+öffnen würde, ist die Erfüllung des Moratoriums (Label-Skript läuft,
+ATR/D64/ADF/FDI/NFD-r0 auf T1/T1b), danach 1:2.
+
+### Vorschlag
+
+`libxad` als **zehntes Oracle** in `tests/differential/oracles.py`,
+`reference_for` = `dms`, `trd`. Registrierung ist nach `ORAK-1`
+Voraussetzung dafür, dass sein Urteil ein T1b-Manifest trägt.
+
+**Eigentümer-Entscheidung**, weil es eine neue externe Abhängigkeit für
+die Prüfumgebung bedeutet.
+
+### Die genannte Wunschrichtung ist überwiegend schon eingeschlagen
+
+Der Eigentümer nennt als das, was wirklich trüge: WinUAE-Floppy,
+Greaseweazle- und FluxEngine-Hostwerkzeuge, KryoFlux-/HxC-/SCP-Stream-
+beschreibungen, ADFlib, amitools. Gemessen am Oracle-Register:
+
+| genannt | Stand |
+|---|---|
+| Greaseweazle-Host | **`gw` registriert** |
+| HxC | **`hxcfe` registriert** |
+| KryoFlux-Stream | **`dtc` registriert** |
+| amitools | **`xdftool` registriert** |
+| WinUAE, FluxEngine, SCP-Spec, ADFlib | nicht registriert |
+
+**Vier von fünf Richtungen sind bereits belegt** (9 Oracles im
+Register). Offen bleiben WinUAE als Flussquelle, FluxEngine als
+Hostwerkzeug und ADFlib — und die gehören zum Streif-Scout, nicht in
+diesen Vorgang.
