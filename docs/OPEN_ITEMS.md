@@ -7233,4 +7233,107 @@ AmigaDOS-Fixture reizvoll gewesen; es ist nicht verfügbar.
 Entscheidung ändert, und würde die Kontamination nur vertiefen. Und es
 kann die Sync-Wörter auch nicht belegen: XCopys eigenen Quelltext zu
 lesen bestätigt, *was XCopy behauptet* — nicht, ob es stimmt. Genau
-darum ging es in MF-740.
+darum ging es in MF-740.
+
+### BERICHTIGUNG zu MF-744 (MF-746) — ein Bearbeitungsrecht gibt es, und es hilft trotzdem nicht
+
+Der Eigentümer hat ein drittes Archiv beigebracht: den **entpackten
+Inhalt** des Abbilds, mit `Source/xcopypro_src_original_1992.lha`,
+`Source/xcopypro_src_fixed_2011.lha` — und einer Datei, die ich in
+MF-744 nicht hatte: **`Readme 2011`**.
+
+Gelesen wurde ausschließlich diese Datei, weil sie lizenzrelevant ist.
+Die beiden `.lha`-Quellen sind **ungeöffnet**.
+
+#### Was darin steht
+
+> *„The intention of this release is document the development process of
+> the software. This software is released as is, without any guarantees
+> or warranties. **You are welcome to enhance it or develop further
+> versions, just keep it free (don't sell it) and release your source as
+> well.**"*
+>
+> *„Regarding all other matters please respect the licence that came
+> with this disk image."*
+>
+> — Christian Bartsch für Anguilla Software International, 26.12.2011
+
+#### Was ich in MF-744 falsch geschrieben habe
+
+Dort stand:
+
+> **„Kein Recht auf Bearbeitung.** Die Lizenz gewährt *Nutzung* und
+> *unveränderte Weitergabe*. Ein Bearbeitungsrecht wird nirgends
+> eingeräumt."
+
+**Das ist falsch.** Der Rechteinhaber räumt ausdrücklich ein, die
+Software zu erweitern und weiterzuentwickeln. Ich hatte nur
+`xcopy_licence.txt` und habe aus dessen Schweigen auf ein Verbot
+geschlossen — ein Schluss aus fehlender Erwähnung, und genau die Art
+Schluss, die dieser Baum sonst als unbelegt zurückweist.
+
+Die Datei, die es widerlegt, lag in einem Archiv, das ich zu dem
+Zeitpunkt nicht hatte. Das entschuldigt den Fehler nicht: die richtige
+Formulierung wäre „in den mir vorliegenden Unterlagen findet sich kein
+Bearbeitungsrecht" gewesen, nicht „es wird keines eingeräumt".
+
+#### Das Ergebnis bleibt — aus einem anderen, engeren Grund
+
+Die Freigabe ist an **Bedingungen** geknüpft, und zusammen mit der
+Lizenz, auf die sie ausdrücklich verweist, ergibt sich:
+
+| Bedingung | Quelle | Vereinbar mit GPL-2.0-or-later? |
+|---|---|---|
+| „keep it free (**don't sell it**)" | Readme 2011 | **nein** — GPL §6 verbietet zusätzliche Beschränkungen, und die GPL erlaubt ausdrücklich, für die Weitergabe Geld zu nehmen |
+| „release your source as well" | Readme 2011 | ja, das ist Copyleft-Geist |
+| „private, **non-commercial** use" | `xcopy_licence.txt` | **nein** — Nutzungszweck-Beschränkung |
+| „**governmental use is not permitted**" | `xcopy_licence.txt` | **nein** — schließt Staatsarchive und Landesmuseen aus, unsere Zielgruppe |
+| Weitergabe nur vollständig und kostenlos | `xcopy_licence.txt` | **nein** |
+
+**Der entscheidende Punkt ist der Verkaufsvorbehalt.** Man kann etwas
+nicht unter GPL stellen, wenn man die Erlaubnisse, die die GPL
+weitergeben muss, selbst nicht hat. Eine „don't sell it"-Auflage ist
+eine zusätzliche Beschränkung im Sinne von §6 — sie macht die Lizenz
+GPL-**inkompatibel**, unabhängig davon, wie wohlwollend sie gemeint ist.
+
+Damit gilt unverändert: `uft_amiga_protection.c` und
+`uft_track_analysis.c`+`.h` können **nicht** unter `GPL-2.0-or-later`
+stehen. Der Weg bleibt **entfernen**.
+
+Was sich ändert, ist der Ton der Begründung: es ist **keine
+Rechtsverletzung**, sondern eine **Lizenz-Unverträglichkeit**. Die
+Autoren haben die Weiterentwicklung ausdrücklich erlaubt — nur unter
+Bedingungen, die unsere eigene Lizenz nicht tragen kann. Das ist ein
+Unterschied, der in einem Projekt zählt, das Attributionen als
+Tatsachenbehauptungen führt.
+
+#### Ein Nebenbefund, der ein Rätsel schließt
+
+> *„X-Copy was originally developed by **Frank Neuhaus** and H.G. Berg,
+> and later maintained by Hans Kurent and Holger Vocke."*
+
+In MF-739 stand: *„«Neuhaus» ist ein **Personenname als
+Routinenname**; so etwas errät man nicht."* Jetzt ist belegt, wessen
+Name: der des ursprünglichen Entwicklers. Der Kopf unseres
+`uft_amiga_protection.c` führt die Routine als *„Neuhaus (breakpoint
+detection)"* — das ist der Name aus der Vorlage, übernommen.
+
+Der Idiom-Befund aus MF-739 ist damit unabhängig bestätigt.
+
+#### Was weiterhin nicht folgt
+
+**Kein Nachbau.** Unverändert: von vier Sync-Wörtern ist eines belegt,
+zwei werden widersprochen, die Dateien haben null Aufrufer (MF-740).
+Das Bearbeitungsrecht ändert nichts an fehlenden Fakten.
+
+**Die Quellen bleiben zu.** `xcopypro_src_original_1992.lha` und
+`…_fixed_2011.lha` sind ungeöffnet und stehen nicht im Sichtprotokoll.
+Sie zu öffnen brächte nichts, was die Entscheidung ändert.
+
+**Und die Verwahrung wird leichter.** Der Readme erlaubt Weitergabe
+ausdrücklich („just keep it free") — die Sorge aus MF-744, ein
+einzelnes ADF als Korpus-Fixture wäre unzulässige Teil-Weitergabe,
+trägt so nicht mehr. Ob wir ein Abbild unter diesen Bedingungen ins
+Korpus nehmen wollen, ist eine **Eigentümer-Entscheidung**; es wäre das
+erste Fixture mit einer nicht-freien Lizenz, und `LIZENZ_ANFRAGEN.md`
+wäre der Ort, das zu führen.
