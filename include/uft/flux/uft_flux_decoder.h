@@ -85,7 +85,33 @@ typedef enum {
     FLUX_ERR_WEAK_BITS,     /* Unreliable flux timing */
     FLUX_ERR_OVERFLOW,      /* Buffer overflow */
     FLUX_ERR_UNDERFLOW,     /* Not enough data */
-    FLUX_ERR_INVALID        /* Invalid parameters */
+    FLUX_ERR_INVALID,       /* Invalid parameters */
+
+    /* MF-764: „kein Sync" war VIER Zustaende in einem Wort.
+     *
+     * Gemessen mit drei synthetischen Spuren durch den echten Dekoder —
+     * eine geloeschte, eine gleichfoermig beschriebene mit drei
+     * Bruchstellen, eine verrauschte. Alle drei lieferten
+     * FLUX_ERR_NO_SYNC, 0 Sektoren, alle Zaehler 0. Physisch voellig
+     * verschiedene Medienzustaende, ein Verdikt.
+     *
+     * X-Copys Handbuch von 1991 (3.4, Abschnitt 7.2) trennt sie: „keine
+     * Lesemarkierungen gefunden" heisst dort ausdruecklich
+     * „wahrscheinlich ein Kopierschutz ODER FREMDFORMAT" — nicht „leer"
+     * und nicht „unlesbar".
+     *
+     * Unterschieden wird am INTERVALL-HISTOGRAMM, das dieser Baum seit
+     * MF-488 hat. Gemessen an denselben drei Spuren:
+     *
+     *     leer          0 Berge   coverage 0,000
+     *     gleichfoermig 1 Berg    coverage 0,000
+     *     verrauscht    8 Berge   coverage 0,187
+     *
+     * Kein neues Verfahren, keine Erfindung — ein vorhandenes Modul,
+     * dessen Aussage bisher niemand las. Angehaengt statt eingefuegt:
+     * die Werte davor behalten ihre Zahlen. */
+    FLUX_ERR_UNFORMATTED,   /**< keine Wechsel-Struktur: leere/geloeschte Spur */
+    FLUX_ERR_NOISE          /**< Wechsel ohne gemeinsamen Takt: unlesbar */
 } flux_status_t;
 
 /* ============================================================================

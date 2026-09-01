@@ -659,6 +659,82 @@ static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
     return fallback_ns;
 }
 
+/* „Kein Sync" verfeinern (MF-764).
+ *
+ * Ohne diese Stelle meldet der Dekoder VIER verschiedene Medienzustaende
+ * als denselben Fehler. Gemessen an drei synthetischen Spuren durch genau
+ * diesen Pfad: eine geloeschte, eine gleichfoermig beschriebene mit drei
+ * Bruchstellen und eine verrauschte lieferten alle FLUX_ERR_NO_SYNC mit
+ * 0 Sektoren und lauter Nullen in den Zaehlern.
+ *
+ * Fuer ein Preservation-Werkzeug ist das die falsche Auskunft: X-Copys
+ * Handbuch (3.4, 7.2) liest „keine Lesemarkierungen" ausdruecklich als
+ * „wahrscheinlich ein Kopierschutz oder Fremdformat" — also gerade NICHT
+ * als leer und nicht als defekt.
+ *
+ * Unterschieden wird am Intervall-Histogramm (MF-488), dessen Aussage
+ * bisher niemand las. Gemessen:
+ *
+ *     leer           0 Berge
+ *     gleichfoermig  1 Berg     <- ein Takt, aber keine Sync-Marke:
+ *                                  genau das Nahtstellen-Muster
+ *     verrauscht    >1 Berg, nicht `confident`
+ *
+ * Bleibt es bei FLUX_ERR_NO_SYNC, heisst das jetzt das Engere: es gibt
+ * eine Struktur, sie traegt nur keine bekannte Marke.
+ *
+ * ── NUR DER MFM-PFAD, und warum ─────────────────────────────────────────
+ *
+ * `return (sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC` steht an FUENF
+ * Stellen: MFM (:739), FM (:862), GCR-C64 (:1055), GCR-Apple (:1248) und
+ * `flux_decode_amiga_bits` (:1524).
+ *
+ * Verfeinert wird nur die erste. Die Gruende sind verschieden und beide
+ * gemessen:
+ *
+ *   * `flux_decode_amiga_bits` bekommt einen BITSTROM, keine Flusswechsel
+ *     — es gibt dort keine Intervalle, ueber die sich ein Histogramm
+ *     bilden liesse.
+ *
+ *   * FM und GCR haben eine ANDERE Bandstruktur. Das Histogrammodul ist
+ *     ausdruecklich auf MFM gebaut (`uft_flux_histogram.h`: „Ein
+ *     MFM-Datenstrom mit Zellendauer T traegt Abstaende von 2T, 3T und
+ *     4T"). Ein FM-Strom traegt ZWEI Baender; er kaeme mit
+ *     `confident == false` heraus und wuerde damit als NOISE eingestuft
+ *     — eine gueltige Spur als unlesbar gemeldet. Das waere schlimmer
+ *     als die Zusammenfassung, die hier behoben wird.
+ *
+ * Fuer FM und GCR braucht die Unterscheidung ein eigenes Bandmodell. Bis
+ * es gemessen ist, bleibt dort die grobe Auskunft — falsch grob ist
+ * besser als praezise falsch. */
+static flux_status_t no_sync_verfeinern(const flux_raw_data_t *flux)
+{
+    if (!flux || !flux->transitions || flux->transition_count < 8)
+        return FLUX_ERR_UNFORMATTED;
+
+    double ns_per_tick = (flux->sample_rate > 0)
+                       ? (1e9 / (double)flux->sample_rate) : 1.0;
+
+    size_t n = flux->transition_count - 1;
+    uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
+    if (!iv) return FLUX_ERR_NO_SYNC;    /* kein Urteil ohne Messung */
+
+    for (size_t i = 0; i < n; i++) {
+        uint32_t d = flux->transitions[i + 1] - flux->transitions[i];
+        iv[i] = (uint32_t)((double)d * ns_per_tick);
+    }
+
+    uft_flux_hist_result_t h;
+    memset(&h, 0, sizeof(h));
+    uft_flux_histogram_analyze(iv, n, 100, &h);
+    free(iv);
+
+    if (h.peak_count == 0) return FLUX_ERR_UNFORMATTED;
+    if (h.peak_count == 1) return FLUX_ERR_NO_SYNC;   /* Takt da, Marke nicht */
+    if (!h.confident)      return FLUX_ERR_NOISE;
+    return FLUX_ERR_NO_SYNC;
+}
+
 flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
                               flux_decoded_track_t *track,
                               const flux_decoder_options_t *opts) {
@@ -735,8 +811,10 @@ flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
         free(bits);
     }
     
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    /* MF-764: nur hier verfeinert — siehe `no_sync_verfeinern`. */
+    return (track->sector_count > 0) ? FLUX_OK : no_sync_verfeinern(flux);
 }
+
 
 /* ============================================================================
  * FM Track Decoder

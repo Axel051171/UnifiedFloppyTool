@@ -560,3 +560,93 @@ Der Umfang ist klein und der Zweck belegend, nicht übernehmend: keiner
 dieser Namen erscheint im UFT-Code, nur im Kommentar als Fundstelle.
 **Zur Kenntnis, nicht als Befund** — aber die Regel aus MF-746 gilt:
 eine Fundstelle nennt man, einen Namen übernimmt man nicht.
+
+
+---
+
+## P4 — vollzogen, und die Trennung war schon da (MF-764)
+
+### Der Rotbeweis zuerst, wie festgelegt
+
+Drei synthetische Spuren durch den **echten** Dekoder `flux_decode_mfm`:
+
+```
+1 leer (gelöscht)                FLUX_ERR_NO_SYNC   0 Sektoren, alle Zähler 0
+2 gleichförmig + 3 Bruchstellen  FLUX_ERR_NO_SYNC   0 Sektoren, alle Zähler 0
+3 verrauscht                     FLUX_ERR_NO_SYNC   0 Sektoren, alle Zähler 0
+```
+
+**Drei physisch völlig verschiedene Medienzustände, ein Verdikt.** P4s
+rote Bedingung war „fallen zwei davon auf dasselbe Verdikt" — es fielen
+alle drei.
+
+### Und das Unterscheidungsmerkmal existierte bereits
+
+Kein neues Verfahren nötig. Das Intervall-Histogramm (MF-488) trennt sie,
+und seine Aussage las bisher niemand:
+
+| | Berge | coverage |
+|---|---|---|
+| leer | **0** | 0,000 |
+| gleichförmig | **1** | 0,000 |
+| verrauscht | **8** | 0,187 |
+
+Der Kopf des Moduls hatte die Begründung sogar schon: *„Ein echter
+MFM-Strom hat fast seine ganze Masse in den drei Bändern; Rauschen
+verteilt sie über den ganzen Bereich."*
+
+### Umgesetzt
+
+`FLUX_ERR_UNFORMATTED` und `FLUX_ERR_NOISE`, **angehängt** an
+`flux_status_t` — die Werte davor behalten ihre Zahlen. Verfeinert wird
+in `no_sync_verfeinern()`, aufgerufen an genau einer Stelle.
+
+```
+1 leer                       → FLUX_ERR_UNFORMATTED
+2 gleichförmig               → FLUX_ERR_NO_SYNC   (Takt da, Marke nicht)
+3 verrauscht                 → FLUX_ERR_NOISE
+4 echtes MFM ohne Marke      → FLUX_ERR_NO_SYNC   ← Gegenprobe
+```
+
+**Die Gegenprobe ist der wichtigere Teil.** Fall 4 ist ein gültiger
+MFM-Strom (2T/3T/4T) ohne Sync-Marke: 3 Berge, `coverage 1,000`,
+`confident = ja`, Zellendauer **2000 ns exakt** getroffen. Er bleibt
+`NO_SYNC`. Wäre er zu `NOISE` geworden, hätte die Verfeinerung eine
+gültige Spur als unlesbar gemeldet — schlimmer als die Zusammenfassung,
+die sie behebt.
+
+Fest als `tests/test_flux_nosync_split.c`, in `CMakeLists.txt`
+verdrahtet.
+
+### Nur der MFM-Pfad — und das ist gemessen, nicht vorsichtig
+
+`return (sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC` steht an **fünf**
+Stellen, nicht an zweien, wie meine erste Messung sagte:
+
+| Zeile | Funktion | verfeinert? |
+|---|---|---|
+| 739 | `flux_decode_mfm` | **ja** |
+| 862 | `flux_decode_fm` | nein |
+| 1055 | `flux_decode_gcr_c64` | nein |
+| 1248 | `flux_decode_gcr_apple` | nein |
+| 1524 | `flux_decode_amiga_bits` | nein — **hat gar keine Flussdaten**, nur einen Bitstrom |
+
+Der Grund für FM und GCR ist inhaltlich: das Histogrammodul ist
+**ausdrücklich auf MFM gebaut** (2T/3T/4T). Ein FM-Strom trägt **zwei**
+Bänder, käme mit `confident == false` heraus und würde damit als
+**NOISE** eingestuft — eine gültige Spur als unlesbar gemeldet.
+
+**Falsch grob ist besser als präzise falsch.** Für FM und GCR braucht
+die Unterscheidung ein eigenes Bandmodell; bis das gemessen ist, bleibt
+dort die grobe Auskunft.
+
+### Was damit für Code 2 der Tabelle gilt
+
+Die Zeile sagte „vier Fälle fallen auf einen". Jetzt sind es **zwei** —
+und der verbleibende `NO_SYNC` bedeutet das Engere: *es gibt eine
+Struktur, sie trägt nur keine bekannte Marke.* Das ist genau die
+Diagnose, die das Handbuch von 1991 „wahrscheinlich ein Kopierschutz
+oder Fremdformat" nennt.
+
+Offen bleibt die Trennung *Schutz* gegen *Fremdformat* — dafür bräuchte
+es einen erweiterbaren Sync-Satz, also **P2**.
