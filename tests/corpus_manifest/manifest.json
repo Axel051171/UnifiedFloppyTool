@@ -24,7 +24,7 @@
       "sha256": "9af68fcc86bcb76bd32cecca2c8b53ccc60042cb9b82a796639b02512db875e0",
       "format": "adf",
       "origin": "cross-tool",
-      "tool": "amitools xdftool (pip amitools, 2026-08)",
+      "tool": "amitools xdftool 0.8.1 (pip amitools, installiert 2026-08; Version per importlib.metadata.version(\"amitools\") gemessen MF-778)",
       "source": "xdftool <img> create + format \"UFTCORPUS\" ofs + write marker.txt; marker.txt is original UFT text (rights-free)",
       "test": "test_corpus_adf"
     },

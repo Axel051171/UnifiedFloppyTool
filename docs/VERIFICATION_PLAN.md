@@ -48,6 +48,10 @@ Unentscheidbarkeit, die die Fabrikationen ermöglichte. Konkret:
 - **T1b (cross-tool)** verlangt im Manifest: Erzeuger-Tool **und** Version
   **und** reproduzierbaren Erzeugungsweg/Lizenz. Fehlt eines, zählt der
   Eintrag nicht (Gate erzwingt das).
+> **Offene Lesart (MF-778):** der Schrägstrich in „Erzeugungsweg/**Lizenz**" ist zweideutig — *Weg **oder** Lizenz* oder *Weg **und** Lizenz*? Gemessen an den 14 cross-tool-Einträgen des Manifests: **alle 14** nennen Werkzeug und Erzeugungsweg, **keiner** nennt eine Lizenz. Auf der strengen Lesart wäre also **kein einziges** T1b belegt; auf der milden sind es 13 von 14. Das ist kein Detail — es entscheidet über die Hälfte der Stufentabelle. **Eigentümer-Entscheidung.**
+>
+> Zwei Nebenbefunde derselben Messung: `adf` nannte statt einer Version nur ein Datum („pip amitools, 2026-08") — seit MF-778 steht dort **0.8.1**, per `importlib.metadata` gemessen. Und `dim_atari` trägt einen **Klon-Hash** (`05b53aa`) statt einer Versionsnummer; das ist für ein aus Quellen gebautes Werkzeug **stärker**, nicht schwächer — eine Prüfung, die nur nach `\d+\.\d+` sucht, meldet es fälschlich als Mangel. Wer hier ein Tor baut, muss beide Formen zulassen.
+
 - **T1 (real)** verlangt: dokumentierte archivalische Herkunft (Quelle/URL +
   SHA-256) **plus** unabhängigen Spec-Pin — die Assert-Bytes werden VOR dem
   UFT-Lauf per unabhängigem Parse (python, gegen die publizierte Spec)
