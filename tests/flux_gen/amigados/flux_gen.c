@@ -102,13 +102,16 @@ static void be32(uint8_t out[4], uint32_t v)
  */
 static void amiga_put_sector(uft_amigados_cells_t *c, uint8_t track,
                              uint8_t sec, const uint8_t *data,
-                             bool force_bad_dchk)
+                             int spt, bool force_bad_dchk,
+                             bool force_bad_hchk)
 {
     cell_put_gap(c, 32);                     /* Vorspann */
     cell_put_word(c, 0x4489);                /* Amiga schreibt zwei Marken */
     cell_put_word(c, 0x4489);
 
-    uint8_t info[4]  = { 0xFF, track, sec, (uint8_t)(UFT_AMIGADOS_SPT - sec) };
+    /* Das vierte Byte ist „Sektoren bis zum Gap" — es haengt an der
+     * Sektorzahl der Spur, nicht an der Konstanten 11 (MF-772). */
+    uint8_t info[4]  = { 0xFF, track, sec, (uint8_t)(spt - sec) };
     uint8_t label[16]; memset(label, 0, sizeof(label));
 
     /* Kopf- und Datenpruefsumme muessen VOR dem Schreiben feststehen, weil
@@ -120,8 +123,12 @@ static void amiga_put_sector(uft_amigados_cells_t *c, uint8_t track,
     amiga_put_field(&dry, label, 16, &hdr);
     amiga_put_field(&dry, data,  UFT_AMIGADOS_SECSZ, &dat);
 
+    /* Die Verfaelschung ist 0x00540000 — ein Wert, dessen gesetzte Bits
+     * innerhalb der Maske 0x55555555 liegen. Ein Bit ausserhalb der Maske
+     * wuerde beim Maskieren wieder verschwinden, und die Pruefsumme waere
+     * versehentlich richtig: eine Fixture, die keinen Fehler traegt. */
     uint8_t hchk[4], dchk[4];
-    be32(hchk, hdr & 0x55555555u);
+    be32(hchk, (hdr ^ (force_bad_hchk ? 0x00540000u : 0u)) & 0x55555555u);
     be32(dchk, (dat ^ (force_bad_dchk ? 0x00540000u : 0u)) & 0x55555555u);
 
     amiga_put_field(c, info,  4,  NULL);
@@ -137,27 +144,50 @@ void uft_amigados_build_track(uft_amigados_cells_t *c, const uint8_t *adf,
                               uint8_t track,
                               const uft_amigados_defect_t *defect)
 {
-    if (!c || !c->cells || !adf || c->cap == 0) return;
+    (void)uft_amigados_build_track_n(c, adf, track, UFT_AMIGADOS_SPT, defect);
+}
+
+bool uft_amigados_build_track_n(uft_amigados_cells_t *c, const uint8_t *adf,
+                                uint8_t track, int spt,
+                                const uft_amigados_defect_t *defect)
+{
+    if (!c || !c->cells || !adf || c->cap == 0 || spt <= 0) return false;
 
     memset(c->cells, 0, (c->cap + 7) / 8);
     c->n = 0; c->prev = 0;
 
-    for (int s = 0; s < UFT_AMIGADOS_SPT; s++) {
+    /* Ein Sektor belegt 8704 Zellen — siehe die Rechnung im Header. Wer
+     * anfaengt und nicht fertig wird, hinterlaesst einen halben Sektor,
+     * und die Spur beantwortet dann eine andere Frage als die gestellte:
+     * nicht mehr „zwoelf Sektoren", sondern „elf plus Bruchstueck". */
+    const size_t JE_SEKTOR = 32 + 32 + (4 + 16 + 4 + 4 + UFT_AMIGADOS_SECSZ) * 16;
+
+    for (int s = 0; s < spt; s++) {
+        if (c->n + JE_SEKTOR > c->cap) return false;
+
+        /* Die Quelldaten kommen weiterhin aus dem 11-Sektor-Raster des
+         * ADF — ein ADF KENNT keine zwoelfte Sektorspalte. Der zwoelfte
+         * Sektor bekommt deshalb die Daten des ersten. Das ist fuer die
+         * Frage („wie viele Sektoren zaehlt X-Copy") ohne Belang und
+         * steht hier, damit niemand es fuer einen Fehler haelt. */
         const uint8_t *src = adf + ((size_t)track * UFT_AMIGADOS_SPT
-                                    + (size_t)s) * UFT_AMIGADOS_SECSZ;
+                              + (size_t)(s % UFT_AMIGADOS_SPT))
+                             * UFT_AMIGADOS_SECSZ;
         uint8_t buf[UFT_AMIGADOS_SECSZ];
         memcpy(buf, src, UFT_AMIGADOS_SECSZ);
 
-        bool bad = false;
+        bool bad_d = false, bad_h = false;
         if (defect && defect->sector == s) {
-            bad = defect->bad_checksum;
+            bad_d = defect->bad_checksum;
+            bad_h = defect->bad_header;
             if (defect->overwrite) buf[0] = defect->overwrite;
         }
-        amiga_put_sector(c, track, (uint8_t)s, buf, bad);
+        amiga_put_sector(c, track, (uint8_t)s, buf, spt, bad_d, bad_h);
     }
 
     /* Auf die volle Umdrehung auffuellen. */
     while (c->n + 1 < c->cap) mfm_put_data_bit(c, 0);
+    return true;
 }
 
 size_t uft_amigados_cells_to_intervals(const uft_amigados_cells_t *c,

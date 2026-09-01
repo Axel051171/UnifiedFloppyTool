@@ -69,6 +69,17 @@ typedef struct {
     bool    bad_checksum;
     /** Wenn != 0: Datenbyte 0 dieses Sektors durch diesen Wert ersetzen. */
     uint8_t overwrite;
+    /** KOPFprüfsumme absichtlich falsch schreiben (MF-772).
+     *
+     * Angehängt, nicht eingefügt — die drei Felder davor behalten ihre
+     * Lage, damit die neun Tests, die diese Struktur positionsweise
+     * initialisieren, unberührt bleiben.
+     *
+     * Der Unterschied zu `bad_checksum` ist der, den X-Copys Handbuch
+     * zwischen Code 4 und Code 6 macht: die eine Prüfsumme deckt Info-Long
+     * und Label, die andere die 512 Datenbytes. Beide auf derselben Spur
+     * gesetzt ist die Fixture für E6 — welche Ziffer zeigt X-Copy dann? */
+    bool    bad_header;
 } uft_amigados_defect_t;
 
 /* ─── Zellenstrom ────────────────────────────────────────────────────── */
@@ -99,6 +110,37 @@ void uft_amigados_build_track(uft_amigados_cells_t *c,
                               const uint8_t *adf,
                               uint8_t track,
                               const uft_amigados_defect_t *defect);
+
+/**
+ * Wie @ref uft_amigados_build_track, aber mit wählbarer Sektorzahl (MF-772).
+ *
+ * ── Warum 12 Sektoren nicht einfach „mehr vom selben" sind ───────────────
+ *
+ * Ein AmigaDOS-Sektor belegt **8704 Zellen**: 32 Vorspann, zwei Marken zu
+ * je 16, und 8640 Nutzlast (Info-Long 4 + Label 16 + zwei Prüfsummen zu 4
+ * + 512 Daten, jedes Byte als Odd- und Even-Hälfte, jede Rohbyte-Hälfte 8
+ * Zellen). Elf davon sind 95 744 Zellen; eine Umdrehung bei 2000 ns je
+ * Zelle fasst 100 000. **Zwölf wären 104 448 — sie passen nicht.**
+ *
+ * Genau deshalb sind es elf. Wer zwölf unterbringen will, muss schneller
+ * schreiben, also die Zellendauer verkürzen — und das ist keine
+ * Künstlichkeit der Fixture, sondern das, was „lange Spur" als
+ * Kopierschutz seit jeher tut.
+ *
+ * Der Aufrufer muss also `cell_ns` entsprechend senken (rund 1900 ns für
+ * zwölf Sektoren). Diese Funktion füllt nur bis `c->cap`; passt die
+ * Sektorzahl nicht hinein, bricht sie ab und `c->n` bleibt kleiner —
+ * **stillschweigend abschneiden würde eine Spur bauen, deren letzter
+ * Sektor halb ist, und das wäre eine andere Frage als die gestellte.**
+ *
+ * @param spt  Sektoren je Spur; 11 ist der AmigaDOS-Normalfall
+ * @return true, wenn alle @p spt Sektoren vollständig hineinpassten
+ */
+bool uft_amigados_build_track_n(uft_amigados_cells_t *c,
+                                const uint8_t *adf,
+                                uint8_t track,
+                                int spt,
+                                const uft_amigados_defect_t *defect);
 
 /**
  * Zellenstrom -> ns-Intervalle zwischen den Flusswechseln.

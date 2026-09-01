@@ -57,6 +57,21 @@
 #define CELL_NS       UFT_AMIGADOS_CELL_NS
 #define ZELLEN        UFT_AMIGADOS_CELLS_PER_REV
 
+/* E2 — zwoelf Sektoren passen bei Nennwert NICHT.
+ *
+ * Gemessen: ein Sektor belegt 8704 Zellen; elf sind 95 744 und eine
+ * Umdrehung bei 2000 ns fasst 100 000. Zwoelf waeren 104 448 — der
+ * Erzeuger bricht dort mit `passt=0` bei 96 096 Zellen ab. Bei 1900 ns
+ * fasst dieselbe Umdrehung 105 263 Zellen, und der Dekoder liest 12.
+ *
+ * Das ist keine Kuenstlichkeit der Fixture: schneller schreiben, um mehr
+ * unterzubringen, ist genau das, was „lange Spur" als Kopierschutz tut.
+ * Nur die Fixture-Spur bekommt die kuerzere Zelle, die anderen 159
+ * bleiben beim Nennwert. */
+#define E2_CELL_NS    1900u
+#define E2_ZELLEN     (UFT_AMIGADOS_REV_NS / E2_CELL_NS)
+#define E2_SPT        12
+
 static int fehler = 0;
 
 /* ── Zellenströme für die Fixture-Spuren ─────────────────────────────── */
@@ -108,7 +123,8 @@ static size_t marken_spur(uint32_t *iv, size_t cap, uint16_t marke)
 
 /* ── Eine ganze Diskette schreiben ───────────────────────────────────── */
 
-typedef enum { SPUR_GUT, SPUR_LEER, SPUR_MARKE, SPUR_DEFEKT } spurart_t;
+typedef enum { SPUR_GUT, SPUR_LEER, SPUR_MARKE, SPUR_DEFEKT,
+               SPUR_ZWOELF, SPUR_BEIDE_CHK } spurart_t;
 
 /* @param umdr        Umdrehungen je Spur (1 oder 2)
  * @param art         was auf FIXTURE_TRK steht
@@ -117,8 +133,11 @@ typedef enum { SPUR_GUT, SPUR_LEER, SPUR_MARKE, SPUR_DEFEKT } spurart_t;
 static int diskette_schreiben(const char *pfad, const uint8_t *adf,
                               int umdr, spurart_t art, int sonder_in_umdr)
 {
-    uint8_t  *cells = (uint8_t *)calloc((ZELLEN + 7) / 8 + 1, 1);
-    uint32_t *iv    = (uint32_t *)malloc(ZELLEN * sizeof(uint32_t));
+    /* Der Puffer muss die LAENGSTE Spur fassen — die 12-Sektor-Spur
+     * bei 1900 ns traegt mehr Zellen als eine bei 2000 ns. */
+    size_t cap_max = (E2_ZELLEN > ZELLEN) ? E2_ZELLEN : ZELLEN;
+    uint8_t  *cells = (uint8_t *)calloc((cap_max + 7) / 8 + 1, 1);
+    uint32_t *iv    = (uint32_t *)malloc(cap_max * sizeof(uint32_t));
     if (!cells || !iv) { free(cells); free(iv); return -1; }
 
     scp_writer_t *w = scp_writer_create(SCP_TYPE_AMIGA, (uint8_t)umdr);
@@ -136,12 +155,32 @@ static int diskette_schreiben(const char *pfad, const uint8_t *adf,
             } else if (sonder && art == SPUR_MARKE) {
                 n = marken_spur(iv, ZELLEN, 0x448A);
             } else {
-                uft_amigados_defect_t d = { 5, true, 0 };
-                uft_amigados_cells_t c = { cells, ZELLEN, 0, 0 };
-                memset(cells, 0, (ZELLEN + 7) / 8 + 1);
-                uft_amigados_build_track(&c, adf, (uint8_t)trk,
-                    (sonder && art == SPUR_DEFEKT) ? &d : NULL);
-                n = uft_amigados_cells_to_intervals(&c, CELL_NS, iv, ZELLEN);
+                /* Sektor 5 ist das Ziel jedes Pruefsummen-Defekts:
+                 * weit genug von Sektor 0 (den X-Copy zuerst sieht) und
+                 * weit genug vom Spurende. */
+                uft_amigados_defect_t d_dat   = { 5, true,  0, false };
+                uft_amigados_defect_t d_beide = { 5, true,  0, true  };
+
+                int      spt  = (sonder && art == SPUR_ZWOELF) ? E2_SPT : UFT_AMIGADOS_SPT;
+                unsigned cell = (sonder && art == SPUR_ZWOELF) ? E2_CELL_NS : CELL_NS;
+                size_t   cap  = UFT_AMIGADOS_REV_NS / cell;
+
+                const uft_amigados_defect_t *def = NULL;
+                if (sonder && art == SPUR_DEFEKT)     def = &d_dat;
+                if (sonder && art == SPUR_BEIDE_CHK)  def = &d_beide;
+
+                uft_amigados_cells_t c = { cells, cap, 0, 0 };
+                memset(cells, 0, (cap_max + 7) / 8 + 1);
+                if (!uft_amigados_build_track_n(&c, adf, (uint8_t)trk,
+                                                spt, def)) {
+                    /* Passt die Sektorzahl nicht in die Umdrehung, bricht
+                     * der Erzeuger ab statt einen halben Sektor zu
+                     * hinterlassen — und dann ist die Fixture falsch,
+                     * nicht bloss knapp. */
+                    rc = -2;
+                    break;
+                }
+                n = uft_amigados_cells_to_intervals(&c, cell, iv, cap);
             }
             rc = scp_writer_add_track(w, trk / 2, trk % 2, iv, n,
                                       UFT_AMIGADOS_REV_NS, r);
@@ -157,7 +196,8 @@ static int diskette_schreiben(const char *pfad, const uint8_t *adf,
 
 /* ── Abnahme: zurücklesen und eine NACHBARSPUR dekodieren ────────────── */
 
-static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr)
+static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr,
+                         int *out_kopf_fehler)
 {
     uft_scp_track_data_t td;
     memset(&td, 0, sizeof(td));
@@ -170,7 +210,7 @@ static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr)
         ? flux_raw_from_ns_intervals(td.revolutions[umdr].flux_data,
                                      td.revolutions[umdr].flux_count, &raw)
         : FLUX_ERR_NO_DATA;
-    int sektoren = 0, gut = 0;
+    int sektoren = 0, gut = 0, kopf = 0;
     if (rs == FLUX_OK) {
         flux_decoded_track_t trk;
         flux_decoder_options_t o;
@@ -178,13 +218,20 @@ static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr)
         memset(&o, 0, sizeof(o));
         flux_decode_amiga(&raw, &trk, &o);
         sektoren = (int)trk.sector_count;
-        for (int i = 0; i < sektoren; i++)
+        for (int i = 0; i < sektoren; i++) {
             if (trk.sectors[i].data_crc_ok && trk.sectors[i].id_crc_ok) gut++;
+            /* Die KOPFfehler getrennt zaehlen — sonst faellt E6 (Kopf UND
+             * Daten falsch) mit E5 (nur Daten falsch) auf dieselbe Zahl
+             * guter Sektoren, und die Abnahme koennte die beiden Fixtures
+             * nicht auseinanderhalten. */
+            if (!trk.sectors[i].id_crc_ok) kopf++;
+        }
         free(raw.transitions);
         free(raw.index_times);
     }
 
     (void)sektoren;
+    if (out_kopf_fehler) *out_kopf_fehler = kopf;
     uft_scp_free_track(&td);
     return gut;
 }
@@ -207,7 +254,7 @@ static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr)
  * durchlassen, in der auch Umdrehung 1 defekt ist, und die Frage E5
  * wäre auf der Diskette gar nicht gestellt. */
 static void abnehmen(const char *pfad, const char *titel,
-                     int soll_u0, int soll_u1)
+                     int soll_u0, int soll_u1, int soll_kopf)
 {
     FILE *f = fopen(pfad, "rb");
     if (!f) { printf("  FAIL %-34s nicht lesbar\n", titel); fehler++; return; }
@@ -221,16 +268,20 @@ static void abnehmen(const char *pfad, const char *titel,
     }
     fclose(f);
 
-    int nachbar = gute_sektoren(buf, (size_t)sz, NACHBAR_TRK, 0);
-    int u0 = gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 0);
-    int u1 = (soll_u1 >= 0) ? gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 1) : -1;
+    int kopf = 0;
+    int nachbar = gute_sektoren(buf, (size_t)sz, NACHBAR_TRK, 0, NULL);
+    int u0 = gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 0, &kopf);
+    int u1 = (soll_u1 >= 0)
+           ? gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 1, NULL) : -1;
     free(buf);
 
-    int ok = (nachbar == 11) && (u0 == soll_u0) && (u1 == soll_u1);
+    int ok = (nachbar == 11) && (u0 == soll_u0) && (u1 == soll_u1)
+          && (kopf == soll_kopf);
     if (!ok) fehler++;
-    printf("  %s %-32s %8ld B  Nachbar %2d  Spur40 u0=%2d u1=%2d"
-           "  (soll %2d / %2d)\n",
-           ok ? "ok  " : "FAIL", titel, sz, nachbar, u0, u1, soll_u0, soll_u1);
+    printf("  %s %-32s %8ld B  Nachbar %2d  Spur40 u0=%2d u1=%2d kopf=%d"
+           "  (soll %2d/%2d/%d)\n",
+           ok ? "ok  " : "FAIL", titel, sz, nachbar, u0, u1, kopf,
+           soll_u0, soll_u1, soll_kopf);
 }
 
 /* ── main ────────────────────────────────────────────────────────────── */
@@ -248,12 +299,14 @@ int main(int argc, char **argv)
     uft_amigados_fill_pattern(adf, adf_bytes);
 
     struct { const char *datei; const char *titel;
-             int umdr; spurart_t art; int sonder_in; int soll_u0, soll_u1; } plan[] = {
-      { "E1_leere_spur.scp",     "E1  Spur 40 leer",              1, SPUR_LEER,   -1,  0, -1 },
-      { "E3a_kein_sync_u2.scp",  "E3a Sync fehlt in Umdrehung 2", 2, SPUR_LEER,    1, 11,  0 },
-      { "E3b_eine_umdrehung.scp","E3b nur eine Umdrehung",        1, SPUR_GUT,    -1, 11, -1 },
-      { "E4_marke_448A.scp",     "E4  Spur 40 traegt $448A",      1, SPUR_MARKE,  -1,  0, -1 },
-      { "E5_gerettet.scp",       "E5  Umdr. 1 defekt, 2 heil",    2, SPUR_DEFEKT,  0, 10, 11 },
+             int umdr; spurart_t art; int sonder_in; int soll_u0, soll_u1, soll_kopf; } plan[] = {
+      { "E1_leere_spur.scp",     "E1  Spur 40 leer",              1, SPUR_LEER,   -1,  0, -1, 0 },
+      { "E3a_kein_sync_u2.scp",  "E3a Sync fehlt in Umdrehung 2", 2, SPUR_LEER,    1, 11,  0, 0 },
+      { "E3b_eine_umdrehung.scp","E3b nur eine Umdrehung",        1, SPUR_GUT,    -1, 11, -1, 0 },
+      { "E4_marke_448A.scp",     "E4  Spur 40 traegt $448A",      1, SPUR_MARKE,  -1,  0, -1, 0 },
+      { "E5_gerettet.scp",       "E5  Umdr. 1 defekt, 2 heil",    2, SPUR_DEFEKT,  0, 10, 11, 0 },
+      { "E2_zwoelf_sektoren.scp", "E2  Spur 40 mit 12 Sektoren",   1, SPUR_ZWOELF, -1, 12, -1, 0 },
+      { "E6_kopf_und_daten.scp",  "E6  Kopf UND Daten falsch",     1, SPUR_BEIDE_CHK, -1, 10, -1, 1 },
     };
 
     for (size_t i = 0; i < sizeof(plan) / sizeof(plan[0]); i++) {
@@ -264,7 +317,8 @@ int main(int argc, char **argv)
             fehler++;
             continue;
         }
-        abnehmen(pfad, plan[i].titel, plan[i].soll_u0, plan[i].soll_u1);
+        abnehmen(pfad, plan[i].titel, plan[i].soll_u0, plan[i].soll_u1,
+                 plan[i].soll_kopf);
     }
 
     free(adf);
