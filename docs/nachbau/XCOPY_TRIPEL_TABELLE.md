@@ -1,6 +1,6 @@
 # Die Tripel-Tabelle — Spurverdikt als drei Felder statt einer Ziffer
 
-**Werkstatt-Dokument, Zug 2. Stand 2026-09-01 (MF-757).**
+**Werkstatt-Dokument, Zug 2. Stand 2026-09-01 (MF-768).**
 
 X-Copy presst drei Aussagen in eine rote Ziffer. Dieses Dokument
 zerlegt sie und stellt daneben, was UFT heute für denselben Fall setzt.
@@ -394,7 +394,10 @@ messen.
 | **Code 1** (Emit-Stelle) | offen, unverändert machbar |
 | **gerettet / P3 / B8** | **umgeleitet** — braucht einen Aufrufer, Eigentümer-Entscheidung |
 | **P2** | **Ziel korrigiert** — gegen `uft_flux_sync_search`, nicht `fuzzy_sync_v2`; Toleranzfrage vorher messen |
-| Code 5, P4, Code 3 | offen, unverändert |
+| **P2** | **beantwortet** — MF-766 (fremd) + MF-768 (Schutz, benannt) |
+| **Verdikt-Bauer** | **eine Stelle**, fünf Aufrufer (MF-765) |
+| Code 3 (splice_pos → P6) | offen — der letzte Zug vor der Sitzung |
+| Code 5, P4 | vollzogen |
 
 
 ---
@@ -527,6 +530,38 @@ sondern weil sie auf der falschen Ebene liegen: Spur, nicht Sektor.
 
 **Diagnose: 6 von 9 unterschieden, nicht 4.** Die Lücke ist kleiner, als
 meine Tabelle behauptet hat.
+
+### Fortschreibung MF-765 bis MF-768
+
+Vier Züge, alle mit Rotbeweis zuerst. Was sich am Stand oben ändert:
+
+| | vorher | jetzt |
+|---|---|---|
+| **Code 2** | kollabierte leer / fremd / verrauscht | **aufgeteilt** — `FLUX_ERR_UNFORMATTED` · `NO_SYNC` · `NOISE` (MF-764), und die Diagnose nennt jetzt die **Marke beim Namen** (MF-768) |
+| **Fremdformat** | Kodierung nach Mittelwert geraten, 3 von 5 falsch | am **Verhältnismuster** des vorhandenen Histogramms, 5 von 5 (MF-766) |
+| **Alle Codes** | fünf Rückgabestellen, jede eigen | **ein** Verdikt-Bauer, fünf Aufrufer (MF-765) |
+| **gerettet** | ohne Tür | im Verdikt, schlägt „korrigierbar" (MF-765) |
+
+Damit ist **P2 als Dreiwege-Frage beantwortet**: Fremdformat über die
+Kodierungserkennung, Schutz über den benannten Markensatz, und „keiner"
+bleibt die Zweideutigkeit, die das Handbuch von 1991 selbst so stehen
+lässt („wahrscheinlich ein Kopierschutz **oder Fremdformat**").
+
+**Was dabei UNBELEGT bleibt und benannt ist:**
+
+* der **Vorrang** — kein Handbuch sagt, welche Prüfung X-Copy zuerst
+  greifen lässt. Für die leere Spur treffen Code 1 und Code 2 beide zu.
+  Das ist die **erste Frage der Emulationssitzung (E1)**.
+* die **Toleranz** 12 % im Verhältnisvergleich und die **Mindestzahl** 2
+  bei der Markensuche — beides Setzungen, gegen synthetische Ströme
+  geprüft, nicht gegen einen Korpus.
+* die **Spanne bei `$A245`** ist dünn: 4 Treffer gegen 3 für `$448A`.
+
+**Und eine Falle, die der Plan selbst enthielt:** als Gegenprobe war
+`$4489` mit einem gekippten Bit vorgesehen, also `$448A`. Das steht als
+eigener Eintrag in `UFT_AMIGA_SYNCS`, weil die Vorlage es in ihrer
+Suchschleife führt — ein Test darauf hätte das Richtige bestraft. Das
+gekippte Bit ist `$4488`.
 
 ### Was wirklich fehlt, ist nicht die Unterscheidung, sondern der Abnehmer
 
