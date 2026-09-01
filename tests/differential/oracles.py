@@ -144,6 +144,44 @@ class Oracle:
 
 REGISTRY: tuple[Oracle, ...] = (
     Oracle(
+        name="xcopy",
+        env="XCOPY_ORACLE",
+        exes=("xcopy-oracle",),
+        version_args=("--fassung",),
+        version_re=r"([0-9]+\.[0-9]+)",
+        reference_for="Das Spurverdikt eines historischen Werkzeugs — "
+                      "welche Fehlerziffer X-Copy fuer welchen "
+                      "Medienzustand zeigt. Bezug fuer die Vorrangkette in "
+                      "`src/flux/uft_track_verdikt.c`, deren Reihenfolge "
+                      "dort ausdruecklich als SETZUNG gekennzeichnet ist "
+                      "(MF-765). Fixtures und Fragen: "
+                      "`docs/nachbau/XCOPY_EMULATIONSSITZUNG.md`.",
+        origin="X-Copy Professional (Cachet Software), Fassungen 3.4 "
+               "(1991-02-17), 5.21 und ein 01/95-Stand — unter WinUAE mit "
+               "Kickstart 1.3 ausgefuehrt, nicht weitergegeben",
+        licence="proprietaer; Kanal ist AUSFUEHRUNG, nicht Uebernahme "
+                "(MF-695). Weder Binary noch Text gehen ins Repo.",
+        abstammung=(
+            "UNABHAENGIG, und zwar auf die staerkste denkbare Weise: das "
+            "Werkzeug ist von 1991 und kennt UFT nicht. Es ist damit das "
+            "einzige Oracle im Register, bei dem die Frage „dieselbe "
+            "Hand?“ gar nicht erst entstehen kann. "
+            "Die Gegenrichtung ist die eigentliche Gefahr und wird von "
+            "der Zwei-Haende-Brandmauer getragen: UFT darf nicht aus "
+            "seiner QUELLE abgeleitet sein. Hand A hat sie gelesen und "
+            "eine Verhaltens-Spec geliefert "
+            "(`docs/nachbau/XCOPY_VERHALTEN_HAND-A2.md`); die "
+            "Implementierungsseite hat sie nie gesehen. "
+            "ACHTUNG BEIM UMFANG: das Oracle beobachtet nur, was auf dem "
+            "Schirm steht. Alles unterhalb der MFM-Wortebene — "
+            "Zellendauer, Intervall-Histogramm, Rauschen — sieht X-Copy "
+            "nie, weil der Emulator (wie Paula auf echter Hardware) den "
+            "Fluss vorher dekodiert. Eine Frage aus dieser Schicht ist "
+            "hier nicht stellbar, sondern nur ueber `gw` oder eine "
+            "echte Aufnahme. "
+        ),
+    ),
+    Oracle(
         name="gw",
         env="GW",
         exes=("gw", "gw.exe"),
@@ -154,7 +192,20 @@ REGISTRY: tuple[Oracle, ...] = (
         origin="https://github.com/keirf/greaseweazle",
         licence="Unlicense (public domain)",
         abstammung=(
-            "UNGEPRUEFT, aber der naheliegende Verdacht ist ausgeraeumt: "
+            "GEMESSEN (MF-774), und die Antwort ist ZWEIGETEILT. "
+            "Der Kopf von `src/hal/uft_greaseweazle_full.c` sagt woertlich "
+            "`Verified against keirf/greaseweazle v1.23 (usb.py, flux.py)` "
+            "und listet 13 Fehler, die beim Lesen dieser Dateien gefunden "
+            "wurden — Opcode-Deutung, Divisor 255, `cue_at_index`, "
+            "Endmarke, ClearComms. Das ist eine Ableitungs-Erklaerung nach "
+            "MF-636: fuer das WIRE-PROTOKOLL ist gw DIESELBE HAND, und ein "
+            "Differenzlauf UFT-HAL gegen gw faengt dort keine Fehler. "
+            "Fuer alles ANDERE ist gw unabhaengig — insbesondere fuer den "
+            "Amiga-MFM-Encoder (P3-9, MF-539), der mit dem HAL-Protokoll "
+            "nichts zu tun hat; in DIESEM Umfang ist gw ein taugliches "
+            "zweites Oracle. Die Lizenzfrage stellt sich nicht: Unlicense "
+            "ist Public Domain und stellt keine Bedingung. "
+            "Der frueher hier notierte Verdacht bleibt ausgeraeumt: "
             "der Treffer `uft_gw2dmk_panel.cpp` („qbarnes/gw2dmk concept“) "
             "meint gw2dmk von Quentin Barnes, NICHT die "
             "Greaseweazle-Hostwerkzeuge von Keir Fraser — zwei Projekte, "

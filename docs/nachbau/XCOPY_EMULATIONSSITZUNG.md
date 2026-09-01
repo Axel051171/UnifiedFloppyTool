@@ -1,6 +1,6 @@
 # X-Copy unter Emulation — Sitzungsprotokoll
 
-**Werkstatt-Dokument. Stand 2026-09-01 (MF-774).**
+**Werkstatt-Dokument. Stand 2026-09-01 (MF-775).**
 
 Dieses Blatt macht aus der Emulationssitzung **eine** Sitzung statt drei.
 Jede Frage steht mit ihrer Fixture, ihrem erwarteten Bild und der Stelle
@@ -19,12 +19,16 @@ Gemessen am 2026-09-01:
 | | Stand |
 |---|---|
 | **Oracle-Material** | **vorhanden** — drei Fassungen als entpackte AmigaDOS-Bäume: `xcopy_v3.4_authorsmaster_en_1991-02-17`, `xcopy_v5.21_en_c9.69`, `xcopy_01_95_master` |
-| **Emulator** | **fehlt** — weder WinUAE noch FS-UAE installiert |
-| **Kickstart-ROM** | **fehlt** — lizenziertes Eigentum (Cloanto), **Eigentümer-Beschaffung** |
+| **Emulator** | **WinUAE** — entschieden 2026-09-01. Nicht FS-UAE: SCP-Lesen ist bei WinUAE gesichert, bei FS-UAE ungeprüft, und seit dem Befund „Extended-ADF: not implemented" ist SCP alternativlos |
+| **Kickstart-ROM** | **Amiga Forever (Plus-Ausgabe mit ROM-Dateien)** — lizenziert, läuft in eigenständigem WinUAE. **Kickstart 1.3 fest** für 3.4 und 5.21. AROS-Ersatz-ROM **nein** (vierte Achse); eigener Dump **nein** (langsamer, und setzt einen Amiga voraus) |
 
-Beides kann nur der Eigentümer bereitstellen. Ohne ROM startet kein
-Amiga, und ein ROM aus unklarer Quelle wäre genau der Fehler, den dieses
-Projekt bei fremdem Code nicht macht.
+Die Beschaffung liegt beim Eigentümer; die **Wahl** ist getroffen und
+steht hier, damit sie bei einer Abweichung nicht neu verhandelt wird.
+
+**Der bekannte Preis dieses Wegs** steht ausdrücklich da, weil er die
+Fixture-Liste bestimmt: WinUAE dekodiert den Fluss selbst, bevor X-Copy
+ein Bit sieht — und Paula auf echter Hardware tut genau dasselbe. Daraus
+folgt die E3b-Regel unten.
 
 **Fixtures: gebaut und abgenommen (MF-771).**
 `tests/flux_gen/xcopy/gen_xcopy_fixtures.c` schreibt fünf SCP-Disketten,
@@ -149,6 +153,69 @@ Je Lauf ein **Bildschirmfoto**, Dateiname `Fixture_Binary_Betriebsart`
 * Datum des Laufs
 
 Eine Ziffer ohne Bild ist eine Erinnerung, keine Messung.
+
+---
+
+## Die E3b-Regel, einmal durch die ganze Liste
+
+> **WinUAE dekodiert den Fluss, bevor X-Copy ein Bit sieht** — und Paula
+> auf echter Hardware tut genau dasselbe. Liegt die Frage einer Fixture
+> **unterhalb der MFM-Wortebene** (Zellendauer, Intervall-Histogramm,
+> Rauschen), ist sie unter X-Copy nicht stellbar, weder emuliert noch
+> real. Sie kostet nur Läufe.
+
+Angewandt, vor der Sitzung:
+
+| Fixture | Variable | Ebene | Urteil |
+|---|---|---|---|
+| **E0** | nichts | — | **Kontrolle** |
+| **E1** | gar keine Wechsel | Paula findet kein Sync-Wort | **stellbar** |
+| **E2** | 12 Sektorköpfe | Wortebene | **stellbar** |
+| **E2b** | Zellendauer 1900 ns | **unterhalb** | **Kontrolle**, siehe unten |
+| **E3a** | Sync fehlt in Umdrehung 2 | **Umdrehungswahl** | **erst prüfen** |
+| **E4** | Sync-Wort `$448A` | Wortebene — es *ist* ein Wort | **stellbar** |
+| **E5** | Umdr. 0 defekt, Umdr. 1 heil | **Umdrehungswahl** | **erst prüfen** |
+| **E6** | zwei Prüfsummen falsch | Wortebene | **stellbar** |
+
+### E2b bleibt — als Kontrolle, nicht als Frage
+
+Seine *Variable* liegt unterhalb der Wortebene, sein *Beobachtbares*
+nicht: die Frage lautet „erscheint eine Ziffer?", und das ist eine
+Aussage auf Ziffernebene. Erwartet wird **keine** Ziffer — aber
+Vorhersagen ist nicht Messen. Damit steht E2b neben E0: eine Kontrolle,
+die man auch dann fährt, wenn man die Antwort kennt.
+
+### E3a und E5 hängen an derselben offenen Frage
+
+Beide variieren eine **einzelne Umdrehung**. Ob X-Copy das je zu sehen
+bekommt, entscheidet **WinUAE**, nicht die Fixture: der Emulator stellt
+ein rotierendes Laufwerk hin. Präsentiert er stets Umdrehung 0 im Kreis,
+sind beide Fixtures wirkungslos — genau die Lage, an der `E3b`
+gescheitert ist.
+
+**E5 hat ein zweites, schärferes Problem.** „Gerettet" heißt: ein
+Wiederholversuch *gelingt*. Bei einem deterministischen Abbild liest ein
+zweiter Versuch dieselben Bits — es gibt nichts zu retten. E5 kann einen
+Rettungsfall nur erzeugen, wenn WinUAE über Umdrehungen hinweg
+**unterschiedliche** Daten liefert.
+
+> **Vorprüfung, vor E1 und nach E0** — sie kostet zwei Minuten und
+> entscheidet über vier Läufe:
+>
+> 1. `E5_gerettet.scp` einlegen.
+> 2. Spur 40 zweimal hintereinander lesen (X-Copys eigener Lesevorgang
+>    genügt: zweimal dieselbe Diskette kopieren).
+> 3. **Zeigt Spur 40 beide Male dieselbe Ziffer**, präsentiert WinUAE
+>    eine feste Umdrehung → **E3a und E5 entfallen** wie E3b, und die
+>    Fragen wandern an die Hardware-Sitzung (P3-12), wo eine echte
+>    Diskette echte Streuung hat.
+> 4. **Zeigt sie verschiedene Ziffern**, wechselt WinUAE die Umdrehung →
+>    beide Fixtures tragen, und E5 ist zusätzlich der Nachweis, dass der
+>    Aufbau Rettungsfälle überhaupt erzeugen kann.
+
+Das ist keine Vorsicht, sondern Arithmetik: entfallen beide, sinkt die
+Sitzung von 24 auf **16 Läufe** — und vier davon hätten Zahlen geliefert,
+die nichts bedeuten.
 
 ---
 
