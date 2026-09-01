@@ -198,7 +198,7 @@ offen).
 | P3-6 | **ATR Enhanced Density:** beide ATR-Fassungen rechnen fest mit 18 Sektoren/Spur. Für ED (1040 Sektoren à 128 B) ergäbe das 58×18 statt 40×26. **Kein Datenverlust** — ATR ist ein lineares Sektorabbild, jeder Sektor bleibt erreichbar; falsch wäre nur die *gemeldete* Geometrie. Nicht geändert, weil keine **benannte Referenz** im Baum liegt (MF-498(a)) — gehört in die ATR-Hebung auf T1/T1b |
 | P3-7 | **Der Schreibstartpunkt hat keinen Verbraucher (P6, MF-769).** Der Produzent steht: `uft_track_verdikt_t` trägt seit MF-769 `splice_lage`, `splice_pos_ns`, `splice_abstand_ns` und `splice_alt_ns` — gemessen unterscheidet er „Sync nach dem Gap da" (Abstand 11 994 000 ns) von „Sync direkt hinter dem Index" (16 000 ns, Faktor 750) von „kein Sync = Code 3" von „nur eine Umdrehung aufgenommen". **Gelesen wird davon nichts.** Der Verbraucher wäre der Schreibpfad, und `src/hal/uft_greaseweazle_full.c` ist ein **geschützter Pfad** — Änderung nur nach Rückfrage. Die Entscheidung lautet: soll der Startpunkt über `uft_hal.h` in die HAL (so der Plan), oder bleibt es beim `index_sync` des Greaseweazle-Protokolls? Bis dahin ist auch dies **Bestand, nicht Fähigkeit** — dieselbe Lage wie bei „gerettet" (P3/B8). Die **Schwelle**, ab der ein Abstand zu klein ist, hängt am Laufwerk und bleibt ungemessen (MF-310); deshalb liefert der Produzent einen zweiten Kandidaten statt einer Zahl |
 | P3-8 | **Drei Aminet-Pakete gesichtet, Lizenzurteil offen (MF-773).** `SuperDuper 3.0/3.13` — Weitergabe nur „without additions, deletions, or modifications of any kind", also **kein Bearbeitungsrecht**, dieselbe Klasse wie LIZ-4 B (MF-744). `AllowBad 0.7` — Freeware mit ausdrücklichem Modifikations- **und Reverse-Engineering-Verbot**, kein Quellcode im Archiv. `badformat 0.2` — **keinerlei Lizenzaussage** → Zone ROT. Alle drei: Urteil ist Eigentümerentscheidung (MF-679). Gutachten: `docs/scout/GUTACHTEN_SUPERDUPER_ALLOWBAD_BADFORMAT.md` |
-| P3-9 | **SuperDuper als Oracle für den fehlenden AmigaDOS-MFM-Encoder.** Der einzige der vier Funde, der eine Kennzahl bewegt (**Wandlungspfade ↑**): `src/formats/uft_format_convert_bitstream.c` lehnt ADF→HFE ab, weil dem Baum ein AmigaDOS-Encoder in `src/` fehlt (MF-539; der in `tests/flux_gen/` ist testseitig). SuperDuper wäre die **zweite unabhängige Hand**, die MF-646 verlangt — unabhängig von ADFlib und libhxcfe. Kanal: **Oracle** (ausführen frei, weitergeben nicht), nicht Port. **NICHT MEHR BLOCKIEREND (MF-774):** MF-646s „dieselbe Hand" meint die *Abstammung des Codes*, nicht das Werkzeug — `gw` (Keir Fraser) und `hxcfe` (jfdelnero) sind zwei getrennte Linien und genügen einander. Offen bleibt nicht die Zahl der Hände, sondern deren Unabhängigkeit **von UFT**: beide tragen im Register `abstammung` = offen, und bei `hxcfe` nennt `uft_hxcstream.h` das HxC-Projekt als Code-Erklärung ohne Lizenz (MF-743). Gemessen sind zudem **0 von 10** Oracles installiert. Damit ist P3-9 eine Wahlmöglichkeit, kein Engpass |
+| P3-9 | **SuperDuper als Oracle für den fehlenden AmigaDOS-MFM-Encoder.** Der einzige der vier Funde, der eine Kennzahl bewegt (**Wandlungspfade ↑**): `src/formats/uft_format_convert_bitstream.c` lehnt ADF→HFE ab, weil dem Baum ein AmigaDOS-Encoder in `src/` fehlt (MF-539; der in `tests/flux_gen/` ist testseitig). SuperDuper wäre die **zweite unabhängige Hand**, die MF-646 verlangt — unabhängig von ADFlib und libhxcfe. Kanal: **Oracle** (ausführen frei, weitergeben nicht), nicht Port. **ERLEDIGT (MF-776):** `gw` 1.23 ist installiert (Archiv-SHA-256 `f409ae24…d146464`) und **kodiert AmigaDOS ohne Hardware** — `gw convert --format amiga.amigados x.adf x.scp`. Beide Richtungen gegen UFT gemessen: **1760/1760 Sektoren byteidentisch**. Die zweite Hand für MF-539 ist damit da; SuperDuper wird dafür nicht mehr gebraucht und bleibt **Fundus, nicht Auftrag**. — Der Weg dorthin, für den nächsten Leser: **NICHT MEHR BLOCKIEREND (MF-774):** MF-646s „dieselbe Hand" meint die *Abstammung des Codes*, nicht das Werkzeug — `gw` (Keir Fraser) und `hxcfe` (jfdelnero) sind zwei getrennte Linien und genügen einander. Offen bleibt nicht die Zahl der Hände, sondern deren Unabhängigkeit **von UFT**: beide tragen im Register `abstammung` = offen, und bei `hxcfe` nennt `uft_hxcstream.h` das HxC-Projekt als Code-Erklärung ohne Lizenz (MF-743). Gemessen sind zudem **0 von 10** Oracles installiert. Damit ist P3-9 eine Wahlmöglichkeit, kein Engpass |
 | P3-10 | **43 Testblöcke listen dieselben Quellen einzeln (MF-773).** Jede neue Abhängigkeit des Flussdekoders muss heute 43-mal eingetragen werden; MF-765/766/768 haben genau das verpasst und den Bau vier Commits lang gebrochen. Der Hook fängt es jetzt, aber er behandelt das Symptom. Die Ursache wäre eine **Objektbibliothek**, gegen die alle Testziele linken — aus 43 Stellen wird eine. **Prüfauftrag für den Innendienst**, kein Nebenfix: er muss erst messen, welche Ziele wirklich denselben Satz brauchen und welche bewusst schlank sind |
 | P3-11 | **Lizenz-Klasse statt Einzelurteil — Eigentümer-Vorlage (MF-774).** Vorschlag zur Entscheidung über P3-8: **nicht je Paket urteilen, sondern die Klasse festlegen.** „**Oracle-Kanal** = unverändert ausführen, Ergebnisse als Fakten festhalten, weder Binary noch Text ins Repo." Die X-Copy-Binaries laufen bereits über genau diese Klasse. SuperDupers Text verbietet die Veränderung der *Verteilung* und sagt nichts gegen Ausführung; `badformat` ohne Lizenz braucht dafür nur, was der Aminet-Upload ohnehin bezweckt. Der einzige harte Fall ist **AllowBads Reverse-Engineering-Verbot** — ob ein Black-Box-Differenztest darunter fällt, ist die eine Frage, die wirklich zu beantworten ist. **Und sie muss nicht beantwortet werden:** AllowBad bewegt keine Kennzahl und kann draußen bleiben. Urteil bleibt beim Eigentümer (MF-679) |
 | P3-12 | **Ein Hardwaretag erledigt drei wartende Punkte (MF-774).** `P6`/`P3-7` (Schreibstartpunkt am echten Laufwerk), `P1` (HIL) und `P7` (ob der Default-an-Zustand am echten Laufwerk trägt) warten alle auf **dasselbe Tor** — es hat im Mai v4.1.4 blockiert. Ein Tag mit Greaseweazle, Laufwerk und frischen Disketten deckt alle drei. **Danach öffnet sich ein zweiter Oracle-Pfad:** dieselben Fixtures per Greaseweazle auf echte Disketten, echtes X-Copy auf echtem Amiga — Emulator- und ROM-Achse fallen weg. Das geht erst **nach** P6, weil es den Schreibpfad braucht. **Reihenfolge: Emulator zuerst, Hardware zweitens.** Kein Gerät im Haus (MF-310) — an die Gemeinschaft delegierbar |
@@ -5069,7 +5069,7 @@ dann das Erkennungsmerkmal.
 86Box-Spezifikation. DiskImageTool ist GPL-3.0; gelesen wurden
 **Tatsachen** (welches Byte welche Bedeutung trägt), kein Ausdruck,
 und übernommen wurde nichts. Wer die Neufassung schreibt, arbeitet aus
-der Spezifikation — die dafür vollständig ist.
+der Spezifikation — die dafür vollständig ist.
 
 ## FS-3 — die PC-Seite: Leser echt, Schreiber elf Attrappen, Tür auf dem Nebengleis (MF-709)
 
@@ -5132,7 +5132,7 @@ erzeugtes Abbild existiert, gegen das man liest.
 Nichts Portierbares (GPL-3.0, Zone GELB), und als Oracle taugt es nicht
 (WinForms, keine Kommandozeile — gemessen, MF-708). Sein Beitrag ist
 **die Frage**: es belegt, dass genau diese Fähigkeit auf dieser
-Formatfamilie erwartet wird. Kanal: **Spec/Anregung**.
+Formatfamilie erwartet wird. Kanal: **Spec/Anregung**.
 
 ## ORAK-2 — `to_woz2`: das erste Oracle, das baut, läuft und dessen Ausgabe wir erkennen (MF-711)
 
@@ -5228,7 +5228,7 @@ Sektorinhalte byteweise zurück — und der steht aus.
 
 **Fundus ohne Auftrag** (benannt, nicht verfallen): das
 META-Provenienz-Muster aus DskToWoz2 (Quell-CRC im Abbild) und
-`a2catalog` als DOS-3.3-Katalog-**Generator**.
+`a2catalog` als DOS-3.3-Katalog-**Generator**.
 
 ### Nachtrag MF-712 — Schritt 1 erledigt, mit zwei Berichtigungen
 
@@ -5269,7 +5269,7 @@ betreten. Dieselbe Klasse wie die 32 Testdateien aus MF-596. Berichtigt.
 **Offen bleiben** die Schritte 2–4 (Hebung `do`, `d13`, dann der
 Wandlungspfad). Und die fünfte Frage steht ehrlich im Eintrag: eine
 zweite unabhängige Hand für WOZ 2.0 gibt es hier nicht — der Abgleich
-stützt sich auf die Spezifikation, nicht auf ein zweites Werkzeug.
+stützt sich auf die Spezifikation, nicht auf ein zweites Werkzeug.
 
 ## FMT-17 — `do` und `po` entscheiden ohne hinzusehen (MF-713)
 
@@ -5364,7 +5364,7 @@ ist **heute nicht fahrbar**: der Baum hat gemessen **keinen
 nur als CRC-Tabellen-Treffer). Das ist eigener Bau im Decoder-Layer und
 fällt unter die EINFRIER-REGEL — erlaubt nur mit benannter Referenz,
 Rotbeweis zuerst und Referenz im Header. Dieser Eintrag liefert das
-erste Drittel davon.
+erste Drittel davon.
 
 ### Berichtigung MF-714 — die Prämisse von FMT-17 war falsch
 
@@ -5438,7 +5438,7 @@ gefundenem Verzeichnis wäre eine Verhaltensänderung an der Registry-Tür
 Begründung statt mit falscher.
 
 **Kennzahl:** unverändert. Diese Runde hat nichts gehoben; sie hat eine
-falsche Aussage aus dem Baum genommen.
+falsche Aussage aus dem Baum genommen.
 
 ## GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
 
@@ -5542,7 +5542,7 @@ Eigenschaft der **Datei**, nicht der Spur (MF-463, MF-714).
 **Was NICHT belegt ist:** dass echte, historische Disketten gelesen
 werden. Gemessen ist eine von `to_woz2` erzeugte, fehlerfreie
 Aufzeichnung. Schwache Bits, Halbspuren, Kopierschutz und beschädigte
-Felder sind hier nicht vorgekommen.
+Felder sind hier nicht vorgekommen.
 
 ### ORAK-2 Schritt 2 erledigt (MF-716) — `do` steht auf T2, T3 faellt 52 -> 51
 
@@ -5593,7 +5593,7 @@ Aufzeichnung, keine historische Diskette.
 
 **Offen bleibt Schritt 3** (`d13`, heute ohne einen einzigen Test): er
 braucht die 5-and-3-Tabelle im Dekoder. `to_woz2` erzeugt sie bereits
-(`neu13.woz`, SHA `a5ff575f...`).
+(`neu13.woz`, SHA `a5ff575f...`).
 
 ## GCR-2 — `d13`: 5-and-3, der Beweisweg steht bereits offen (MF-717)
 
@@ -5643,7 +5643,7 @@ dieselben vier Teile, ein Tabellenwechsel:
 
 **Was das NICHT wird:** ein Beleg, dass echte 13-Sektor-Disketten
 gelesen werden. Wie bei `do` ist die Vorlage maschinell erzeugt und
-fehlerfrei.
+fehlerfrei.
 
 ### Vormessung erledigt (MF-719) — die 5-and-3-Tabelle ist vollstaendig gemessen
 
@@ -5796,7 +5796,7 @@ tatsächlich tun, und die Ankündigung in `features` auf den belegten
 Stand bringen.
 
 `posix` ist dabei vermutlich harmlos (Sammelname, kein historisches
-Format) — das ist zu prüfen, nicht anzunehmen.
+Format) — das ist zu prüfen, nicht anzunehmen.
 
 ### Umsetzung erledigt (MF-721) — 454 von 455, und der eine ist benannt
 
@@ -5868,7 +5868,7 @@ Abschnitt 4b tragen die Belege bereits.
 
 **Nicht belegt bleibt:** die ENC_53A-Variante selbst. Sie zu dekodieren
 wäre eine eigene Aufgabe mit eigener Referenz — heute wird sie
-**benannt**, nicht geraten.
+**benannt**, nicht geraten.
 
 ### GCR-2 erledigt (MF-722) — `d13` steht auf T2, T3 faellt 51 auf 50
 
@@ -5919,7 +5919,7 @@ urteilen.** Sie sitzt offenbar noch nicht fest genug.
 * **Die ENC_53A-Variante** — eigene Aufgabe mit eigener Referenz.
 * **`nib`, `2img`, `moof`, `a2r`** — die uebrigen Apple-Formate auf T3.
   Der Dekoder steht jetzt fuer beide Kodierungen; was fehlt, ist je ein
-  Differenzlauf.
+  Differenzlauf.
 
 ## GCR-3 — `nib` ist auf Unabhaengigkeit gesperrt, nicht auf Code (MF-723)
 
@@ -5988,7 +5988,7 @@ Der Leser trennt NIB vom Sektor-Abbild und behandelt **DOS und ProDOS
 identisch**. Ein `.2mg`, das ProDOS-Sortierung deklariert, wird gelesen,
 als spielte die Sortierung keine Rolle — dieselbe stille Falschaussage
 wie FMT-17, eine Schicht hoeher, und sie laeuft bereits. `2img` gehoert
-darum hinter FMT-17, nicht daneben.
+darum hinter FMT-17, nicht daneben.
 
 ### FMT-17 erledigt (MF-724) — Kandidaten statt Konstante
 
@@ -6055,7 +6055,7 @@ ProDOS-geordnetes Abbild fremder Hand.
 **Naechster Posten:** `2img`. Es liest das Sortierungs-Feld bei `0x0C`,
 benutzt aber nur `IMG2_FMT_NIB` — `DOS` und `PRODOS` sind definiert und
 werden **identisch** behandelt (MF-723). Dieselbe Frage, eine Schicht
-hoeher, und mit dieser Probe jetzt beantwortbar.
+hoeher, und mit dieser Probe jetzt beantwortbar.
 
 ## FMT-19 — `2img` verwirft, was sein Kopf sagt (MF-725)
 
@@ -6116,7 +6116,7 @@ Mehrdeutigkeit meldet statt sie zu raten (`tied`). Hier liegt der Fall
 umgekehrt — die Datei **sagt** es, und niemand hoert zu. Der naechste
 Schritt waere, die Aussage des Kopfes gegen die Inhaltsprobe aus
 `uft_apple_order.h` zu halten: stimmen sie ueberein, ist die Sache klar;
-widersprechen sie sich, ist **das** der Befund.
+widersprechen sie sich, ist **das** der Befund.
 
 ## ORPH-6 — MOOF und A2R: kein Zugang, aber die falsche Tuer geht auf (MF-726)
 
@@ -6224,7 +6224,7 @@ geraten — dieselbe Fehlerklasse, nur enger statt breiter.
 
 **Was zuerst zu messen waere:** wie viele der 137 Plugins eine Sonde
 haben, die unter 40 meldet. Jedes davon verliert heute an KFX, sobald
-irgendwo ein Wagenruecklauf steht.
+irgendwo ein Wagenruecklauf steht.
 
 ### FMT-20 vermessen (MF-727) — und der Befund ist groesser als KFX
 
@@ -6287,7 +6287,7 @@ verursacht es nicht.
 gaengigen Diskettengroesse gleichauf liegen. Die 92 160-Byte-Messung ist
 ein Stichprobenwert; die Verteilung ueber alle Groessen kennt niemand.
 
-Regressionsschutz: `tests/test_kfx_probe_overclaims.c`.
+Regressionsschutz: `tests/test_kfx_probe_overclaims.c`.
 
 ## FMT-21 — Konfidenz ohne Skala: 35 bis 85 für dieselbe Erkenntnis (MF-728)
 
@@ -6419,7 +6419,7 @@ richtig — der Test ist dann nachzuziehen, nicht wegzudrücken.
    „exakt dieselbe Zahl"?
 3. In welcher Reihenfolge werden die Plugins angepasst — und wird eine
    Anpassung als Verhaltensänderung behandelt (wie FMT-17) oder als
-   Bugfix?
+   Bugfix?
 
 ### FMT-21 umgesetzt (MF-729) — Vertrag mit Messinstrument statt zwanzig Zahlen
 
@@ -6532,7 +6532,7 @@ falsch.
 > sagt das jetzt, statt zu raten.** Wer bisher ein PC-Abbild geöffnet
 > hat, das (falsch, aber bequem) als TR-DOS aufging, bekommt künftig
 > eine Rückfrage. Die Erkennung ist nicht schlechter geworden; sie war
-> vorher nur zuversichtlicher, als sie durfte.
+> vorher nur zuversichtlicher, als sie durfte.
 
 ### FMT-18 beantwortet (MF-730) — woher die sechs ihre Layouts haben
 
@@ -6631,7 +6631,7 @@ klarste Fall:**
 
 **Kennzahl:** T3 runter für die drei belegbaren; für `t1k`/`tan` sinkt
 bei Rückzug die Zahl der Bewerber im Größen-Band, was FMT-21 direkt
-zuarbeitet.
+zuarbeitet.
 
 ### Nachtrag MF-732 — wie viele Sonden den Inhalt gar nicht ansehen
 
@@ -6684,7 +6684,7 @@ Rumpfe, weil das Muster je Plugin-Struktur suchte — 39 Sonden stehen in
 **anderen** Dateien als ihre Struktur (`uft_adf.c` gegen
 `uft_adf_plugin.c`). Die Zahl haette 36 % statt 14 % gelautet und waere
 nicht gedeckt gewesen. Gesucht wird darum ueber den ganzen Baum, nicht
-je Struktur.
+je Struktur.
 
 ### Nachtrag MF-733 — die CLI-Haelfte von FMT-21 gibt es nicht
 
@@ -6723,7 +6723,7 @@ gibt. Der Grund: das Muster suchte die Wache in den 600 Zeichen vor dem
 (`#ifdef IMD_PARSER_TEST`, Zeile 639, `main()` bei 728). Gefunden wurde
 der Fehler nur, weil ein einzelner Fall konkret nachgesehen wurde,
 statt der Zahl zu glauben. Die richtige Messung zaehlt die
-Praeprozessor-Verschachtelung mit.
+Praeprozessor-Verschachtelung mit.
 
 ### LIZ-1 geordnet (MF-737) — der Rückstand war 125, die Entscheidung ist 37
 
@@ -6871,7 +6871,7 @@ stehen als Liste bereit (`--unklar`), nicht als Zahl im Rückstand.
 
 **Kennzahl:** „Dateien mit ungeklärter Herkunft", Verdachts-Stufe:
 **125 → 37**, und zum ersten Mal mit einer Sperrklinke statt einer
-gepflegten Zahl.
+gepflegten Zahl.
 
 ### Die vier Lizenzentscheidungen, einzeln beantwortet (MF-739)
 
@@ -7050,7 +7050,7 @@ CODE-Fällen sind 45 lebendig, und wie viele davon eine *echte*
 Ableitung erklären, ist bei keinem einzigen geprüft. Der Idiom-Test hat
 heute in einer Viertelstunde eine Antwort geliefert, wo die
 Textähnlichkeit danebenlag — er ist das Werkzeug für diese Frage, und
-er ist billig.
+er ist billig.
 
 ### Der Nachbau ist beantwortet, bevor er begonnen hat (MF-740)
 
@@ -7148,7 +7148,7 @@ nichts zu übergeben.
 | Aufrufer benannt? | **nein** — offen beim Eigentümer |
 | Fakten belegt? | **1 von 4** |
 | Empfehlung | entfernen, nicht nachbauen (MF-739) |
-| Kanal | **Fundus** — was ihn öffnet, ist ein Aufrufer |
+| Kanal | **Fundus** — was ihn öffnet, ist ein Aufrufer |
 
 ### LIZ-4 B entschieden (MF-744) — die XCopy-Lizenz liegt vor, und sie verbietet es
 
@@ -7239,7 +7239,7 @@ AmigaDOS-Fixture reizvoll gewesen; es ist nicht verfügbar.
 Entscheidung ändert, und würde die Kontamination nur vertiefen. Und es
 kann die Sync-Wörter auch nicht belegen: XCopys eigenen Quelltext zu
 lesen bestätigt, *was XCopy behauptet* — nicht, ob es stimmt. Genau
-darum ging es in MF-740.
+darum ging es in MF-740.
 
 ### BERICHTIGUNG zu MF-744 (MF-746) — ein Bearbeitungsrecht gibt es, und es hilft trotzdem nicht
 
