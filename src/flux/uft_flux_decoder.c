@@ -737,9 +737,12 @@ static bool marke_suchen(const flux_raw_data_t *flux,
 /* Wo darf ein Rueckschreiben beginnen? (MF-769)
  *
  * Gesucht wird die Standardmarke NACH dem zweiten Indeximpuls — also der
- * erste Sync hinter dem Gap. Das ist X-Copys Code 3 von der anderen
- * Seite: was dort als Fehler gemeldet wird, ist hier die Quelle des
- * Schreibstartpunkts.
+ * erste Sync hinter dem Gap.
+ *
+ * BERICHTIGUNG (MF-773): hier stand „Das ist X-Copys Code 3 von der
+ * anderen Seite". Das war abgeleitet, nicht gemessen, und ist widerlegt —
+ * die Ziffer 3 der Vorlage hat mit einer zweiten Umdrehung nichts zu tun.
+ * Diese Suche steht fuer sich: sie bedient P6, nicht Code 3.
  *
  * Warum der ZWEITE Index und nicht der erste: der Anfang des Stroms ist
  * nicht der Anfang einer Umdrehung. Was vor dem ersten Indeximpuls
@@ -790,7 +793,7 @@ static void splice_suchen(const flux_raw_data_t *flux, uft_track_befunde_t *b)
     free(iv);
 
     /* Ab hier steht fest: es GIBT eine zweite Umdrehung. Findet sich in
-     * ihr kein Sync, ist das Code 3 und keine Wissensluecke. */
+     * ihr kein Sync, ist das ein BEFUND und keine Wissensluecke. */
     b->splice_lage = UFT_SPLICE_FEHLT;
 
     double idx2_ns = (double)flux->index_times[1] * ns_per_tick;

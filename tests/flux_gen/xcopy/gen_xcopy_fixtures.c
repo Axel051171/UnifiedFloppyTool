@@ -30,14 +30,20 @@
  * Sektoren mit gültigen Prüfsummen herauskommen, gilt die Diskette als
  * brauchbar.
  *
- * ── Was hier NICHT gebaut wird ───────────────────────────────────────────
+ * ── E2 braucht eine Gegenprobe, und sie heißt E2b ────────────────────────
  *
- * **E2** (Spur mit 12 statt 11 Sektoren) und **E6** (Kopf- UND
- * Datenprüfsummenfehler auf derselben Spur) brauchen eine Erweiterung von
- * `tests/flux_gen/amigados/` — eine wählbare Sektorzahl und ein Defekt am
- * Kopf statt an den Daten. Beides ist klein und additiv, aber es ist ein
- * eigener Schritt mit eigener Abnahme. Sie fehlen hier ausdrücklich statt
- * halb.
+ * Zwölf Sektoren passen bei 2000 ns **nicht** in eine Umdrehung (gemessen:
+ * 104 448 Zellen nötig, 100 000 vorhanden). E2 schreibt deshalb mit
+ * 1900 ns — schneller, wie es eine lange Spur als Kopierschutz tut.
+ *
+ * Damit ist jede Ziffer bei E2 doppeldeutig: **Sektorzahl oder Datenrate?**
+ * `E2b` beantwortet das — elf Sektoren bei 1900 ns. Zeigt X-Copy dort
+ * nichts und bei E2 etwas, liegt es an der Zahl; zeigt es bei beiden
+ * dasselbe, an der Rate. Ohne E2b müsste die Sitzung wiederholt werden.
+ *
+ * Die Abnahme misst deshalb auch die **Zellendauer** der Fixture-Spur.
+ * E2b trägt elf Sektoren wie jede normale Spur — ohne diese Messung wäre
+ * nicht belegt, dass es überhaupt eine Gegenprobe ist.
  *
  * **E7** (Schreibstartpunkt) ist unter Emulation gar nicht beobachtbar —
  * siehe das Sitzungsblatt und P3-7 in `OPEN_ITEMS.md`.
@@ -45,11 +51,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "flux_gen.h"
 #include "uft/formats/uft_scp_writer.h"
 #include "uft/flux/uft_scp_parser.h"
 #include "uft/flux/uft_flux_decoder.h"
+#include "uft/flux/uft_flux_histogram.h"
 
 #define NTRACKS      160
 #define FIXTURE_TRK   40
@@ -124,7 +132,11 @@ static size_t marken_spur(uint32_t *iv, size_t cap, uint16_t marke)
 /* ── Eine ganze Diskette schreiben ───────────────────────────────────── */
 
 typedef enum { SPUR_GUT, SPUR_LEER, SPUR_MARKE, SPUR_DEFEKT,
-               SPUR_ZWOELF, SPUR_BEIDE_CHK } spurart_t;
+               SPUR_ZWOELF, SPUR_BEIDE_CHK,
+               /* E2b: elf Sektoren, aber mit der SCHNELLEN Zelle.
+                * Die Gegenprobe zu E2 — ohne sie ist jede Ziffer
+                * dort doppeldeutig: Sektorzahl oder Datenrate? */
+               SPUR_ELF_SCHNELL } spurart_t;
 
 /* @param umdr        Umdrehungen je Spur (1 oder 2)
  * @param art         was auf FIXTURE_TRK steht
@@ -161,8 +173,11 @@ static int diskette_schreiben(const char *pfad, const uint8_t *adf,
                 uft_amigados_defect_t d_dat   = { 5, true,  0, false };
                 uft_amigados_defect_t d_beide = { 5, true,  0, true  };
 
-                int      spt  = (sonder && art == SPUR_ZWOELF) ? E2_SPT : UFT_AMIGADOS_SPT;
-                unsigned cell = (sonder && art == SPUR_ZWOELF) ? E2_CELL_NS : CELL_NS;
+                int  schnell = sonder && (art == SPUR_ZWOELF
+                                       || art == SPUR_ELF_SCHNELL);
+                int      spt  = (sonder && art == SPUR_ZWOELF)
+                              ? E2_SPT : UFT_AMIGADOS_SPT;
+                unsigned cell = schnell ? E2_CELL_NS : CELL_NS;
                 size_t   cap  = UFT_AMIGADOS_REV_NS / cell;
 
                 const uft_amigados_defect_t *def = NULL;
@@ -196,8 +211,15 @@ static int diskette_schreiben(const char *pfad, const uint8_t *adf,
 
 /* ── Abnahme: zurücklesen und eine NACHBARSPUR dekodieren ────────────── */
 
+/* Nebenbefund, den die Abnahme braucht: die ZELLENDAUER.
+ *
+ * E2b traegt elf Sektoren wie jede normale Spur — der Unterschied
+ * ist allein die Datenrate. Eine Abnahme, die nur Sektoren zaehlt,
+ * koennte E2b nicht von einer gewoehnlichen Spur unterscheiden, und
+ * die Gegenprobe waere wertlos: sie soll ja gerade zeigen, dass die
+ * abweichende Rate ALLEIN keine Ziffer ausloest. */
 static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr,
-                         int *out_kopf_fehler)
+                         int *out_kopf_fehler, double *out_cell_ns)
 {
     uft_scp_track_data_t td;
     memset(&td, 0, sizeof(td));
@@ -232,6 +254,24 @@ static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr,
 
     (void)sektoren;
     if (out_kopf_fehler) *out_kopf_fehler = kopf;
+    if (out_cell_ns) {
+        /* `flux_data` sind ABSTAENDE, keine kumulierten Uebergangszeiten —
+         * `uft_flux_histogram_cell_ns_from_transitions()` waere die falsche
+         * Funktion fuer diese Datenform und lieferte still 0. */
+        *out_cell_ns = 0.0;
+        if (td.revolution_count > umdr) {
+            uft_flux_hist_result_t h;
+            memset(&h, 0, sizeof(h));
+            uft_flux_histogram_analyze(td.revolutions[umdr].flux_data,
+                                       td.revolutions[umdr].flux_count,
+                                       100, &h);
+            if (h.confident && h.cell_ns > 0.0)
+                *out_cell_ns = h.cell_ns;
+            else if (h.peak_count > 0)
+                /* MFM: der erste Berg liegt bei 2 Zellen. */
+                *out_cell_ns = h.peaks[0].center_ns / 2.0;
+        }
+    }
     uft_scp_free_track(&td);
     return gut;
 }
@@ -254,7 +294,8 @@ static int gute_sektoren(const uint8_t *buf, size_t sz, int spur, int umdr,
  * durchlassen, in der auch Umdrehung 1 defekt ist, und die Frage E5
  * wäre auf der Diskette gar nicht gestellt. */
 static void abnehmen(const char *pfad, const char *titel,
-                     int soll_u0, int soll_u1, int soll_kopf)
+                     int soll_u0, int soll_u1, int soll_kopf,
+                     unsigned soll_cell_ns)
 {
     FILE *f = fopen(pfad, "rb");
     if (!f) { printf("  FAIL %-34s nicht lesbar\n", titel); fehler++; return; }
@@ -269,19 +310,35 @@ static void abnehmen(const char *pfad, const char *titel,
     fclose(f);
 
     int kopf = 0;
-    int nachbar = gute_sektoren(buf, (size_t)sz, NACHBAR_TRK, 0, NULL);
-    int u0 = gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 0, &kopf);
+    double cell = 0.0;
+    int nachbar = gute_sektoren(buf, (size_t)sz, NACHBAR_TRK, 0, NULL, NULL);
+    int u0 = gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 0, &kopf, &cell);
     int u1 = (soll_u1 >= 0)
-           ? gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 1, NULL) : -1;
+           ? gute_sektoren(buf, (size_t)sz, FIXTURE_TRK, 1, NULL, NULL) : -1;
     free(buf);
 
+    /* Die Zellendauer nur prüfen, wo sie die Frage trägt.
+     *
+     * E2b trägt elf Sektoren wie jede normale Spur — der Unterschied ist
+     * allein die Datenrate. Eine Abnahme, die nur Sektoren zählt, könnte
+     * E2b nicht von einer gewöhnlichen Spur unterscheiden, und die
+     * Gegenprobe wäre wertlos: sie soll ja gerade zeigen, dass die
+     * abweichende Rate **allein** keine Ziffer auslöst.
+     *
+     * Toleranz 3 %: das Histogramm bestimmt die Zelle aus
+     * Abstandsschwerpunkten, nicht aus dem Sollwert. */
+    int cell_ok = (soll_cell_ns == 0)
+               || (cell > 0.0
+                   && fabs(cell - soll_cell_ns) <= soll_cell_ns * 0.03);
+
     int ok = (nachbar == 11) && (u0 == soll_u0) && (u1 == soll_u1)
-          && (kopf == soll_kopf);
+          && (kopf == soll_kopf) && cell_ok;
     if (!ok) fehler++;
-    printf("  %s %-32s %8ld B  Nachbar %2d  Spur40 u0=%2d u1=%2d kopf=%d"
-           "  (soll %2d/%2d/%d)\n",
-           ok ? "ok  " : "FAIL", titel, sz, nachbar, u0, u1, kopf,
-           soll_u0, soll_u1, soll_kopf);
+    printf("  %s %-30s Nachbar %2d  Spur40 u0=%2d u1=%2d kopf=%d cell=%4.0f"
+           "  (soll %2d/%2d/%d/%u)\n",
+           ok ? "ok  " : "FAIL", titel, nachbar, u0, u1, kopf, cell,
+           soll_u0, soll_u1, soll_kopf, soll_cell_ns);
+    (void)sz;
 }
 
 /* ── main ────────────────────────────────────────────────────────────── */
@@ -299,14 +356,15 @@ int main(int argc, char **argv)
     uft_amigados_fill_pattern(adf, adf_bytes);
 
     struct { const char *datei; const char *titel;
-             int umdr; spurart_t art; int sonder_in; int soll_u0, soll_u1, soll_kopf; } plan[] = {
-      { "E1_leere_spur.scp",     "E1  Spur 40 leer",              1, SPUR_LEER,   -1,  0, -1, 0 },
-      { "E3a_kein_sync_u2.scp",  "E3a Sync fehlt in Umdrehung 2", 2, SPUR_LEER,    1, 11,  0, 0 },
-      { "E3b_eine_umdrehung.scp","E3b nur eine Umdrehung",        1, SPUR_GUT,    -1, 11, -1, 0 },
-      { "E4_marke_448A.scp",     "E4  Spur 40 traegt $448A",      1, SPUR_MARKE,  -1,  0, -1, 0 },
-      { "E5_gerettet.scp",       "E5  Umdr. 1 defekt, 2 heil",    2, SPUR_DEFEKT,  0, 10, 11, 0 },
-      { "E2_zwoelf_sektoren.scp", "E2  Spur 40 mit 12 Sektoren",   1, SPUR_ZWOELF, -1, 12, -1, 0 },
-      { "E6_kopf_und_daten.scp",  "E6  Kopf UND Daten falsch",     1, SPUR_BEIDE_CHK, -1, 10, -1, 1 },
+             int umdr; spurart_t art; int sonder_in; int soll_u0, soll_u1, soll_kopf; unsigned soll_cell; } plan[] = {
+      { "E1_leere_spur.scp",     "E1  Spur 40 leer",              1, SPUR_LEER,   -1,  0, -1, 0,    0 },
+      { "E3a_kein_sync_u2.scp",  "E3a Sync fehlt in Umdrehung 2", 2, SPUR_LEER,    1, 11,  0, 0,    0 },
+      { "E3b_eine_umdrehung.scp","E3b nur eine Umdrehung",        1, SPUR_GUT,    -1, 11, -1, 0,    0 },
+      { "E4_marke_448A.scp",     "E4  Spur 40 traegt $448A",      1, SPUR_MARKE,  -1,  0, -1, 0,    0 },
+      { "E5_gerettet.scp",       "E5  Umdr. 1 defekt, 2 heil",    2, SPUR_DEFEKT,  0, 10, 11, 0,    0 },
+      { "E2_zwoelf_sektoren.scp", "E2  Spur 40 mit 12 Sektoren",   1, SPUR_ZWOELF, -1, 12, -1, 0, 1900 },
+      { "E6_kopf_und_daten.scp",  "E6  Kopf UND Daten falsch",     1, SPUR_BEIDE_CHK, -1, 10, -1, 1,    0 },
+      { "E2b_elf_bei_1900ns.scp", "E2b elf Sektoren, 1900 ns",     1, SPUR_ELF_SCHNELL, -1, 11, -1, 0, 1900 },
     };
 
     for (size_t i = 0; i < sizeof(plan) / sizeof(plan[0]); i++) {
@@ -318,7 +376,7 @@ int main(int argc, char **argv)
             continue;
         }
         abnehmen(pfad, plan[i].titel, plan[i].soll_u0, plan[i].soll_u1,
-                 plan[i].soll_kopf);
+                 plan[i].soll_kopf, plan[i].soll_cell);
     }
 
     free(adf);

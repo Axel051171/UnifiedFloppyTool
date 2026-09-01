@@ -6,8 +6,8 @@
  *
  * ── Der Befund ───────────────────────────────────────────────────────────
  *
- * X-Copys Code 3 heißt „no sync after gap found". Gemessen durch den
- * echten Dekoder fielen **vier** Lagen auf dasselbe Verdikt:
+ * Gemessen durch den echten Dekoder fielen **vier** Lagen auf dasselbe
+ * Verdikt:
  *
  *     (a) 2 Umdrehungen, Sync in beiden        Schutz / $4489
  *     (b) 2 Umdrehungen, Sync nur in Umdr. 1   Schutz / $4489
@@ -32,9 +32,10 @@
  *
  * ── Die Folge-Aussage ────────────────────────────────────────────────────
  *
- * `UFT_SPLICE_FEHLT` setzt die Folge auf „nicht reproduzierbar". Das ist
- * **nicht** aus dem Handbuch abgeleitet — X-Copy führt Code 3 als
- * gewöhnlichen Lesefehler. Es folgt aus P6: ergibt die Analyse keinen
+ * `UFT_SPLICE_FEHLT` setzt die Folge auf „nicht reproduzierbar". Das
+ * beansprucht **keine** Herkunft aus der Vorlage — die frühere Fassung
+ * dieses Kopfes nannte es „X-Copys Code 3", und das war abgeleitet und
+ * ist widerlegt (MF-773). Es folgt aus P6: ergibt die Analyse keinen
  * Startpunkt, hat ein bitgenaues Rückschreiben keinen sicheren Anfang.
  *
  * `UNBEKANNT` bleibt bewusst folgenlos. Fall (c) friert das ein: eine zu
@@ -55,7 +56,7 @@ static const char *lage_name(uft_splice_lage_t l)
 {
     switch (l) {
     case UFT_SPLICE_GEFUNDEN:  return "GEFUNDEN";
-    case UFT_SPLICE_FEHLT:     return "FEHLT (Code 3)";
+    case UFT_SPLICE_FEHLT:     return "FEHLT";
     default:                   return "UNBEKANNT";
     }
 }
@@ -173,12 +174,12 @@ int main(void)
     pruefe("(a) Sync in beiden Umdrehungen", iv, k, grenze,
            UFT_SPLICE_GEFUNDEN, UFT_FOLGE_REPRODUZIERBAR, 1);
 
-    /* (b) Sync NUR in Umdrehung 1 — das ist Code 3. */
+    /* (b) Sync NUR in Umdrehung 1 — kein Startpunkt ableitbar. */
     bp = 0; last = -1; k = 0;
     k = umdrehung(iv, k, 1, 2000, 6000, &bp, &last);
     grenze = k;
     k = umdrehung(iv, k, 0, 2000, 6000, &bp, &last);
-    pruefe("(b) kein Sync nach dem Gap = Code 3", iv, k, grenze,
+    pruefe("(b) kein Sync nach dem Gap", iv, k, grenze,
            UFT_SPLICE_FEHLT, UFT_FOLGE_NICHT_REPRODUZIERBAR, 0);
 
     /* (c) Nur EINE Umdrehung — Aussage ueber die Aufnahme, nicht ueber

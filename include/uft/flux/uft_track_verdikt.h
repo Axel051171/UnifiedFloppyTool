@@ -78,19 +78,33 @@ typedef enum {
     UFT_REP_GERETTET            /**< behoben — und das MUSS sichtbar bleiben */
 } uft_track_reparierbarkeit_t;
 
-/** Wo darf ein Rueckschreiben beginnen? (MF-769)
- *
- * X-Copys Code 3 heisst „no sync after gap found". Dahinter stehen DREI
- * Lagen, und zwei davon sagen etwas voellig Verschiedenes:
+/** Wo darf ein Rueckschreiben beginnen? (MF-769, Herkunft berichtigt MF-773)
  *
  *   GEFUNDEN    zweite Umdrehung aufgenommen, Sync nach dem Gap da
- *   FEHLT       zweite Umdrehung aufgenommen, KEIN Sync — das ist Code 3
+ *   FEHLT       zweite Umdrehung aufgenommen, KEIN Sync
  *   UNBEKANNT   nur EINE Umdrehung aufgenommen
  *
  * UNBEKANNT ist keine Aussage ueber die Diskette, sondern ueber die
  * AUFNAHME. Wer es mit FEHLT zusammenwirft, meldet einen
  * Diskettenfehler fuer einen zu kurzen Mitschnitt — und ein Archivar,
  * der das liest, sucht den Fehler am falschen Ort.
+ *
+ * ── BERICHTIGUNG (MF-773): das ist NICHT X-Copys Code 3 ──────────────────
+ *
+ * Hier stand: „X-Copys Code 3 heisst ‚no sync after gap found'. Dahinter
+ * stehen DREI Lagen … FEHLT — das ist Code 3." Das war eine ABLEITUNG aus
+ * dem Handbuchwortlaut, keine Messung, und sie ist widerlegt: die Ziffer 3
+ * der Vorlage hat mit einer zweiten Umdrehung nichts zu tun.
+ *
+ * Diese Dreiteilung ist damit eine **UFT-eigene Verfeinerung** — sie
+ * beansprucht keine Herkunft aus der Vorlage. Ihr Grund steht fuer sich:
+ * P6 verlangt, dass der Schreibstartpunkt aus der ANALYSE der Spur
+ * stammt, und eine Analyse, die „kein Startpunkt" nicht von „danach nicht
+ * gesucht" unterscheidet, hat die Frage nicht beantwortet.
+ *
+ * Die Lehre ist allgemeiner als der Fall: eine Herkunftsangabe ist eine
+ * Behauptung wie jede Zahl. „Das ist Code 3" gehoert gemessen, nicht aus
+ * einer Bedeutungsaehnlichkeit geschlossen.
  */
 typedef enum {
     UFT_SPLICE_UNBEKANNT = 0,

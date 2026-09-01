@@ -49,8 +49,9 @@ void uft_track_verdikt_bilden(const uft_track_befunde_t *b,
 
     /* Und ein FEHLENDER Startpunkt ist eine Folge-Aussage.
      *
-     * Diese Zeile ist NICHT aus dem Handbuch abgeleitet — X-Copy fuehrt
-     * Code 3 als Lesefehler wie die anderen. Sie folgt aus UFTs eigener
+     * Diese Zeile beansprucht KEINE Herkunft aus der Vorlage (MF-773:
+     * die frueher hier behauptete Entsprechung zu deren Ziffer 3 war
+     * abgeleitet und ist widerlegt). Sie folgt aus UFTs eigener
      * Anforderung P6: der Startpunkt muss aus der ANALYSE der Spur
      * stammen. Ergibt die Analyse keinen, dann hat ein bitgenaues
      * Rueckschreiben keinen sicheren Anfang — und das ist genau das,
