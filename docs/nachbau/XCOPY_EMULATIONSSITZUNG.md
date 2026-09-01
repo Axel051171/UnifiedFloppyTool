@@ -1,6 +1,6 @@
 # X-Copy unter Emulation — Sitzungsprotokoll
 
-**Werkstatt-Dokument. Stand 2026-09-01 (MF-771).**
+**Werkstatt-Dokument. Stand 2026-09-01 (MF-772).**
 
 Dieses Blatt macht aus der Emulationssitzung **eine** Sitzung statt drei.
 Jede Frage steht mit ihrer Fixture, ihrem erwarteten Bild und der Stelle
@@ -55,6 +55,8 @@ sie werden bei Bedarf erzeugt. Gemessen am 2026-09-01:
 | `E3b_eine_umdrehung.scp` | E3 | 11/11 | 11/11 | — |
 | `E4_marke_448A.scp` | E4 | 11/11 | **0/11** | — |
 | `E5_gerettet.scp` | E5 | 11/11 | **10/11** | **11/11** |
+| `E2_zwoelf_sektoren.scp` | E2 | 11/11 | **12/11** | — |
+| `E6_kopf_und_daten.scp` | E6 | 11/11 | **10/11**, davon **1 Kopffehler** | — |
 
 **Warum gemischte Disketten:** 159 gute Spuren und **eine** Fixture-Spur
 (immer Spur 40). Eine Diskette aus lauter Fixture-Spuren zeigt 160 rote
@@ -69,10 +71,23 @@ Diskette ist gültig), und die Fixture-Spur muss **abweichen** (die Frage
 steht wirklich darauf). Die erste Fassung prüfte nur die erste Hälfte —
 eine still normal gebaute Fixture wäre durchgegangen.
 
-**E2 und E6 fehlen noch.** Sie brauchen eine additive Erweiterung von
-`tests/flux_gen/amigados/`: eine wählbare Sektorzahl (12 statt 11) und
-einen Defekt am **Kopf** statt an den Daten. Klein, aber ein eigener
-Schritt mit eigener Abnahme.
+**E2 hat eine physische Besonderheit, die keine Künstlichkeit ist.**
+Gemessen: ein Sektor belegt 8704 Zellen, elf sind 95 744, und eine
+Umdrehung bei 2000 ns fasst 100 000. **Zwölf wären 104 448 — sie passen
+nicht.** Genau deshalb sind es elf. Die Fixture schreibt die
+12-Sektor-Spur deshalb mit **1900 ns je Zelle** (105 263 Zellen je
+Umdrehung); die anderen 159 Spuren bleiben beim Nennwert.
+
+Das ist kein Kunstgriff, sondern das, was „lange Spur" als Kopierschutz
+seit jeher tut: schneller schreiben, um mehr unterzubringen. **Beim
+Deuten des Ergebnisses mitdenken:** wenn X-Copy hier eine Ziffer zeigt,
+ist die Ursache nicht zwingend die Sektorzahl — sie könnte auch die
+abweichende Datenrate sein. Wer das trennen will, braucht eine zweite
+Fixture mit 11 Sektoren bei 1900 ns als Gegenprobe.
+
+**E6 zählt Kopffehler getrennt.** Ohne das fällt E6 (Kopf **und** Daten
+falsch) mit E5 (nur Daten falsch) auf dieselbe Zahl guter Sektoren, und
+die Abnahme könnte die beiden Fixtures nicht auseinanderhalten.
 
 ---
 
