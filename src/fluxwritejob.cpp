@@ -21,7 +21,18 @@
 FluxWriteJob::FluxWriteJob(QObject *parent)
     : QObject(parent)
     , m_provider(nullptr)
-    , m_verify(false)
+    /* MF-759: Vorgabe von false auf TRUE gedreht — Eigentuemer-
+     * Entscheidung. Begruendung: bei „kein stiller Datenverlust"
+     * ist Verify-an die konsistente Wahl; der Preis ist Zeit je
+     * Spur, nicht Richtigkeit.
+     *
+     * Vorher spiegelte der Wert das V1-Verhalten (params.verify=
+     * false). Damit lief der Rueckvergleich nur, wenn ihn jemand
+     * einschaltete — und er ist die einzige Stelle, an der UFT die
+     * Vorlage UEBERTRIFFT: X-Copy ueberspringt rohkopierte Spuren
+     * beim Verify (B12), UFT prueft sie auf ROHFLUSS-Ebene.
+     * Eine Faehigkeit, die per Vorgabe aus ist, wirkt wie keine. */
+    , m_verify(true)
     , m_cancel(false)
 {
 }
@@ -209,9 +220,11 @@ void FluxWriteJob::run()
         }
 
         /* WriteFluxParams::verify defaults to true; honour the job's own
-         * m_verify (off by default, mirroring the V1 params.verify=false).
-         * When verify is on, do_write_raw_flux does a read-back pass and
-         * a mismatch surfaces here as WriteVerifyFailed. */
+         * m_verify — seit MF-759 ebenfalls TRUE per Vorgabe (vorher
+         * false, dem V1-Verhalten nachgebildet). Wenn Verify an ist,
+         * macht do_write_raw_flux einen Rueckvergleich auf Rohfluss-
+         * Ebene, und eine Abweichung erscheint hier als
+         * WriteVerifyFailed. */
         ::uft::hal::WriteFluxParams wp;
         wp.cylinder = cyl;
         wp.head     = side;

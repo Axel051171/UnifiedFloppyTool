@@ -277,3 +277,121 @@ ist der Lauf zirkulär.
 > **Die Vorhersage traf zu, und das Verfahren hat sie eingeholt.** Es
 > hätte eine Registrierung, einen Bau und einen Lauf gekostet,
 > herauszufinden, was in vierzig Zeilen Kopfkommentar stand.
+
+
+---
+
+## Zug 2b — erste Messungen, und der Plan ändert sich an zwei Stellen (MF-759)
+
+*Messung vor Plan.* Beim Angehen der freigegebenen Reihenfolge sind zwei
+Annahmen gefallen.
+
+### P7 — vollzogen
+
+`src/fluxwritejob.cpp:24`, `m_verify(false)` → **`m_verify(true)`**.
+Begründung im Quelltext: bei „kein stiller Datenverlust" ist Verify-an
+die konsistente Wahl; der Preis ist Zeit je Spur, nicht Richtigkeit. Es
+ist zugleich die **einzige Stelle, an der UFT die Vorlage übertrifft**
+(B12 überspringt rohkopierte Spuren, UFT prüft sie auf Rohfluss-Ebene)
+— und eine Fähigkeit, die per Vorgabe aus ist, wirkt wie keine.
+
+### Berichtigung 1: `uft_crc_correction_v2.c:333` ist die falsche Stelle
+
+Dort steht `correct_sector()`, und die Funktion hat **keinen Aufrufer**.
+Ein Bit dort wäre das vierte Stück Bestand ohne Tür.
+
+Die lebende Verwandte heißt **`uft_forensic_correct_sector()`**
+(`src/recovery/uft_forensic_recovery.c:654`, öffentlicher Header, mit
+`tests/test_forensic_crc_honesty.c`). Sie führt das Gewünschte sogar
+**schon mit**: `sector->quality.corrections_applied++` und einen
+Fehlersatz mit `recovery_attempted / recovery_successful`.
+
+**Aber auch sie hat keinen Produktionsaufrufer** — Zeile 921 ist ein
+Kommentar, der ausdrücklich sagt, dass sie dort *nicht* gerufen wird,
+und der Ehrlichkeitstest sagt dasselbe.
+
+> **Die „eine Zeile" ist also eine Zeile plus ein Aufrufer, den es nicht
+> gibt.** Einen Aufruf in den Forensik-Pfad zu setzen, ist eine
+> Verhaltensänderung an einer Wiederherstellungskette — kein Bit.
+> **Eigentümer-Entscheidung**, kein Agentenschritt.
+>
+> Was fehlt, ist außerdem kein „gerettet"-Bit, sondern ein
+> **„hergeleitet"-Merkmal**: gemessen gibt es im ganzen Baum **kein**
+> Feld, das sagt „diese Bytes wurden nicht gelesen, sondern erzeugt".
+> Das ist die B8-Auflage, und sie ist breiter als P3.
+
+### Berichtigung 2: es gibt eine **dritte** Sync-Suche, und sie ist die beste
+
+Meine P2-Antwort nannte zwei Fassungen. Es sind drei, und die dritte
+ist als einzige **erreichbar**:
+
+| | Ebene | erreichbar |
+|---|---|---|
+| `uft_fuzzy_sync_v2.c` | Bitstrom, Hamming-Toleranz | nein |
+| `uft_track_analysis.c` | Bitstrom, `rol32` | wird entfernt |
+| **`uft_flux_sync_search.c`** | **Flussstrom, VOR der PLL** | **ja** — `uft_flux_decoder.c:1507` |
+
+Die dritte ist nicht nur erreichbar, sondern der Sache nach überlegen:
+sie sucht **maßstabsunabhängig** nach Abstandsverhältnissen, findet
+Marken also auch dann, wenn die PLL den Takt verliert. Die Begründung
+im Kopf ist gemessen (FLUX-11, MF-487): bei 0,85 der wahren Zellendauer
+und 4 % Zittern kommen **0 von 11** Sektoren zurück, *obwohl alle elf
+Marken unverändert im Strom stehen*.
+
+**Und sie nimmt bereits einen konfigurierbaren Sync-Satz entgegen** —
+`opts->sync_patterns` / `opts->sync_count`, mit Rückfall auf `0x4489`
+allein (`uft_flux_decoder.c:1491-1494`). Das ist B5s Anforderung, schon
+gebaut.
+
+### Die Lücke ist damit eine Verbindung, kein Neubau
+
+Gemessen: die **Plattform-Profile führen bereits Sync-Sätze** —
+`PC98_SYNCS`, `X68000_SYNCS`, `ELECTRON_SYNCS`, `ENTERPRISE_SYNCS`,
+`EINSTEIN_SYNCS`, `MEMOTECH_SYNCS`, und für Amiga `{0x4489}`
+(`src/analysis/profiles/*.c`).
+
+```
+Profil trägt Sync-Satz          ✔  uft_platform_profile_t.sync_patterns
+Dekoder nimmt Sync-Satz         ✔  flux_decoder_options_t.sync_patterns
+etwas verbindet beide           ✘
+```
+
+**Das ist P2 in einem Satz.** Und es erklärt, warum Löschung und P2
+derselbe Commit sind: `uft_platform_profile_t` wird von der zu
+entfernenden Datei deklariert — die Profile hängen genau daran.
+
+> **Die Neuverbindung geht also nicht gegen `fuzzy_sync_v2`**, wie ich
+> zuvor geschrieben habe, sondern gegen `uft_flux_sync_search` — die
+> Fassung, die schon eine Tür hat. Der Typ `uft_platform_profile_t`
+> muss dabei aus der entfernten Datei in einen eigenen Kopf wandern;
+> gemessen brauchen die sieben Profil-Dateien daraus **nur zwei
+> Deklarationen** (MF-744).
+
+### Hamming-Toleranz: die Regel ist gemessen und bestätigt
+
+Nachgerechnet:
+
+```
+0x4489 ⊕ 0x448A = 0x0003   → Abstand 2
+0x448B ⊕ 0x4489 = 0x0002   → Abstand 1
+0x448B ⊕ 0x448A = 0x0001   → Abstand 1
+```
+
+Mit Toleranz 1 fände UFT `0x448B` als Treffer für **beide** Muster —
+einen Sync, den X-Copy nie findet. **Toleranz 0 für den Schutzsatz** ist
+damit keine Vorsichtsmaßnahme, sondern die Bedingung dafür, dass ein
+Oracle-Vergleich überhaupt aussagekräftig ist.
+
+`uft_flux_sync_search` benutzt `UFT_SYNC_DEFAULT_TOL` — was diese
+Toleranz für den Schutzsatz bedeutet, ist **vor** der Verdrahtung zu
+messen.
+
+### Stand der freigegebenen Reihenfolge
+
+| | Stand |
+|---|---|
+| **P7** | **vollzogen** |
+| **Code 1** (Emit-Stelle) | offen, unverändert machbar |
+| **gerettet / P3 / B8** | **umgeleitet** — braucht einen Aufrufer, Eigentümer-Entscheidung |
+| **P2** | **Ziel korrigiert** — gegen `uft_flux_sync_search`, nicht `fuzzy_sync_v2`; Toleranzfrage vorher messen |
+| Code 5, P4, Code 3 | offen, unverändert |
