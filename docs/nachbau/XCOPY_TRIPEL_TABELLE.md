@@ -395,3 +395,80 @@ messen.
 | **gerettet / P3 / B8** | **umgeleitet** — braucht einen Aufrufer, Eigentümer-Entscheidung |
 | **P2** | **Ziel korrigiert** — gegen `uft_flux_sync_search`, nicht `fuzzy_sync_v2`; Toleranzfrage vorher messen |
 | Code 5, P4, Code 3 | offen, unverändert |
+
+
+---
+
+## Code 1 — die drei Teile sind vier, und der vierte fehlt (MF-761)
+
+Der Auftrag lautete: `expected_sectors` dort lesen, wo es berechnet
+wird, und die zwei deklarierten Events erzeugen. **Eine Emit-Stelle.**
+
+Die Stelle stimmt. `otdr_track_detect_events(otdr_track_t *track, const
+otdr_config_t *cfg)` hat beides zur Hand, und der Abschnitt
+`/* --- Track-level events --- */` zeigt am LONG_TRACK-Fall genau das
+Muster. Es wäre wirklich ein Block gewesen.
+
+### Die Falle
+
+```
+otdr_track_t.sector_count   deklariert  floppy_otdr.h:258
+                            gelesen     floppy_otdr.c:999, 1000, 1338
+                            GESETZT     nirgends
+```
+
+Ein Vergleich `sector_count != expected_sectors` feuerte damit auf
+**jeder** Spur, weil der Wert immer 0 ist. Nicht Verdrahtung, sondern
+ein Ereignis, das nichts bedeutet.
+
+### Und der Fund dahinter ist größer als Code 1
+
+Die drei Lesestellen sind keine Nebensache:
+
+```c
+total_sectors += trk->sector_count;                    /* :999  immer 0 */
+for (uint8_t s = 0; s < trk->sector_count; s++) {      /* :1000 laeuft nie */
+    if (trk->sectors[s].data_ok) good_sectors++;
+    else                         bad_sectors++;        /* beide bleiben 0 */
+}
+...
+fprintf(f, "... %5u   %4u     %s
+", ..., trk->sector_count, notes);  /* :1338 */
+```
+
+**Der Bericht erreicht den Benutzer.** `otdr_disk_export_report()` wird
+aus `src/gui/uft_otdr_panel.cpp:651` gerufen — die Oberfläche
+exportiert ihn.
+
+Er druckt für **jede** Spur eine Sektorzahl, die strukturell null ist,
+und weist „gute" und „schlechte" Sektoren aus, die beide null bleiben,
+weil die Schleife nie läuft.
+
+> **Das ist die Klasse aus MF-569/735** — eine Anzeige, deren Werte
+> nicht aus dem Abbild stammen. Mit einem Unterschied: dort gab der
+> Quelltext es zu („Placeholder"), und deshalb konnte Tor 34 es fangen.
+> **Hier gesteht er nichts ein**, und das Tor ist blind dafür.
+>
+> Für einen Forensiker ist eine Spurtabelle mit lauter Nullen in der
+> Sektorspalte von einer echten nicht zu unterscheiden — sie sieht aus
+> wie eine leere Diskette.
+
+### Die Reihenfolge ist damit vier Schritte, nicht einer
+
+1. **`track->sector_count` füllen** — die Zahl kommt aus dem Dekoder,
+   nicht aus dem OTDR. Das ist ein Datenfluss zwischen zwei Schichten,
+   kein Emit.
+2. Erst dann die Ereignisse `OTDR_EVT_EXTRA_SECTOR` /
+   `OTDR_EVT_MISSING_SECTOR` erzeugen — beide Richtungen, wie die
+   2.x/3.4-Liste es verlangt („less or **more** than 11").
+3. Der Bericht wird dabei nebenbei ehrlich.
+4. Solange 1 nicht steht, gehört in den Bericht ein **Vorbehalt** statt
+   einer Null — dieselbe Behandlung, die MF-569 der Belegungskarte
+   gegeben hat („?" statt „F").
+
+**Schritt 4 ist sofort machbar und unabhängig vom Rest.** Er ist auch
+der einzige, der ohne Eigentümer-Entscheidung auskommt: eine Anzeige,
+die nichts weiß, soll das sagen.
+
+Ich habe **nichts verdrahtet** — ein Ereignis auf jeder Spur wäre
+schlimmer als keines.

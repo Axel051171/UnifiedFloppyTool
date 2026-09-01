@@ -69,6 +69,29 @@ def test_every_entry_says_what_it_is_a_reference_for():
         assert not o.code_import, o.name
 
 
+def test_every_entry_names_its_provenance():
+    """Die fuenfte Frage gehoert VOR den Eintrag (MF-760).
+
+    Ein Oracle, das von derselben Quelle abstammt wie unsere Umsetzung,
+    ist kein Zeuge: ein geerbter Fehler steckt dann in beiden, und der
+    Differenzlauf entscheidet nichts.
+
+    Vorgefuehrt an `xadundisk`: die Antwort stand in vierzig Zeilen
+    Kopfkommentar von `DMS.c` („lossely based ... on xDMS source“).
+    Ohne diese Regel haette es eine Registrierung, einen Bau und einen
+    Lauf gekostet, sie zu finden.
+
+    `UNGEPRUEFT` ist zulaessig — Schweigen nicht. Die offenen Faelle
+    zaehlt `oracles.py` beim Lauf mit und weist sie namentlich aus;
+    gemessen sind es sechs von zehn, fuenf davon mit einem VERDACHT aus
+    unseren eigenen Attributionen.
+    """
+    for o in oracles.REGISTRY:
+        assert o.abstammung.strip(), (
+            "%s: Abstammung unbenannt — die fuenfte Frage gehoert vor "
+            "den Eintrag, nicht nach dem ersten Lauf" % o.name)
+
+
 def test_an_unknown_name_is_an_error_not_a_none():
     """Ein Tippfehler im Oracle-Namen muss knallen. Ein stilles None waere
     ein uebersprungener Test, der wie ein bestandener aussieht."""

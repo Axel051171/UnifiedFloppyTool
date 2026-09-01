@@ -109,6 +109,23 @@ class Oracle:
     WELCHES Paket dahinterliegt. Erst beide zusammen pinnen den Lauf."""
 
     version_is_unaskable: bool = False
+    abstammung: str = ""
+    """PFLICHTFELD seit MF-760 — die fuenfte Frage, VOR dem Eintrag.
+
+    Steht dieses Werkzeug in derselben Linie wie das, was es pruefen
+    soll? Ein Oracle, das von derselben Quelle abstammt wie unsere
+    Umsetzung, ist kein Zeuge — ein geerbter Fehler steckt dann in
+    beiden, und der Differenzlauf entscheidet nichts.
+
+    DIE REGEL: der KOPFKOMMENTAR zuerst, nie der Lauf. Bei `xadundisk`
+    stand die Antwort in vierzig Zeilen Kopfkommentar von `DMS.c`
+    („lossely based ... on xDMS source“) — es haette sonst eine
+    Registrierung, einen Bau und einen Lauf gekostet, sie zu finden.
+
+    Wer die Frage nicht beantworten kann, schreibt `UNGEPRUEFT` und
+    sagt, was zu pruefen waere. Diese Eintraege werden gezaehlt und
+    beim Lauf ausgewiesen — ein Rueckstand, kein Freibrief.
+    """
     """Dieses Werkzeug kann seine Version NICHT nennen (MF-623).
 
     Gemessen an floptool aus mame0289b: weder `--version` noch `-version`
@@ -136,6 +153,15 @@ REGISTRY: tuple[Oracle, ...] = (
                       "Bezug fuer die gw-vs-UFT-Differenztests (P3.2)",
         origin="https://github.com/keirf/greaseweazle",
         licence="Unlicense (public domain)",
+        abstammung=(
+            "UNGEPRUEFT, aber der naheliegende Verdacht ist ausgeraeumt: "
+            "der Treffer `uft_gw2dmk_panel.cpp` („qbarnes/gw2dmk concept“) "
+            "meint gw2dmk von Quentin Barnes, NICHT die "
+            "Greaseweazle-Hostwerkzeuge von Keir Fraser — zwei Projekte, "
+            "gw2dmk BENUTZT Greaseweazle. Zu pruefen bleibt, ob unser "
+            "HAL-Protokollwissen aus der gw-Quelle oder aus deren "
+            "Protokolldoku stammt. "
+        ),
     ),
     Oracle(
         name="cpmls",
@@ -150,6 +176,16 @@ REGISTRY: tuple[Oracle, ...] = (
         origin="https://github.com/lipro-cpm4l/cpmtools",
         licence="GPL-3.0",
         version_exit_ok=(0, 1, 2),
+        abstammung=(
+            "VERDACHT, gemessen: `include/uft/formats/uft_cpm_defs.h` "
+            "nennt „libdsk diskdefs“, und "
+            "`src/formats/cpm/uft_cpm_diskdefs.c` fuehrt 55 fest "
+            "verdrahtete Definitionen mit cpmtools als Referenz im Kopf "
+            "(CLAUDE.md, LIZ-1). Fuer einen Vergleich der DISKDEFS ist "
+            "cpmls damit moeglicherweise dieselbe Hand; fuer das Lesen "
+            "eines konkreten Abbilds nicht zwingend. VOR dem ersten Lauf "
+            "trennen. "
+        ),
     ),
     Oracle(
         name="hxcfe",
@@ -164,6 +200,14 @@ REGISTRY: tuple[Oracle, ...] = (
                "(HxCFloppyEmulator, Quellen auf GitHub)",
         licence="GPL-2.0",
         version_exit_ok=(0, 1),
+        abstammung=(
+            "VERDACHT, gemessen: `include/uft/formats/flux/uft_hxcstream.h` "
+            "nennt „HxC Floppy Emulator project by Jean-Francois DEL "
+            "NERO“, `rawformatdialog.h` „der Oberflaeche von "
+            "HxCFloppyEmulator“. Ob die Attributionen Doku oder Code "
+            "meinen, ist ungeklaert — die erste ist eine CODE-Erklaerung "
+            "ohne Lizenz (MF-743). "
+        ),
     ),
     Oracle(
         name="samdisk",
@@ -176,6 +220,14 @@ REGISTRY: tuple[Oracle, ...] = (
                       "als Spec-Referenz, etwa fuer `.tc` (Mammut 1.4)",
         origin="https://github.com/simonowen/samdisk",
         licence="MIT",
+        abstammung=(
+            "VERDACHT, und der schaerfste im Register: dieser Baum FUEHRT "
+            "147 SamDisk-Quelldateien in `src/samdisk/` mit, im Bauplan, "
+            "von der SPDX-Politik ausgenommen (`audit_spdx_policy.py:68`). "
+            "Ein Differenzlauf verglichte UFT mit einem Werkzeug, dessen "
+            "Quelltext wir mitfuehren. Vor jedem Urteil ist zu klaeren, ob "
+            "der gepruefte Pfad durch vendorierten SamDisk-Code laeuft. "
+        ),
     ),
     Oracle(
         name="dtc",
@@ -188,6 +240,15 @@ REGISTRY: tuple[Oracle, ...] = (
         origin="https://kryoflux.com (DTC, Binaerdistribution)",
         licence="proprietaer, nur Ausfuehrung",
         version_exit_ok=(0, 1, 255),
+        abstammung=(
+            "UNGEPRUEFT, Lage schwaecher als bei den anderen: die Treffer "
+            "(`uft_kryoflux_stream.c` „Reference: KryoFlux Stream "
+            "Protocol, DTC documentation“, `uft_protection_extended.h` "
+            "„DTC learnings“) nennen DOKUMENTATION, nicht Code — und dtc "
+            "ist proprietaer, sein Quelltext war nie zugaenglich. Eine "
+            "Code-Abstammung ist damit unwahrscheinlich; belegt ist sie "
+            "nicht. "
+        ),
     ),
     Oracle(
         name="floptool",
@@ -229,6 +290,13 @@ REGISTRY: tuple[Oracle, ...] = (
                "wurde",
         licence="GPL-2.0-or-later (MAME); hier wird nur die AUSGABE "
                 "verglichen, es wandert kein Code ein",
+        abstammung=(
+            "VERDACHT, gemessen: floptool IST das MAME-Werkzeug, und "
+            "`include/uft/protection/uft_magnetic_state.h` traegt „Based "
+            "on MAME lib/formats/flopimg.h“ — eine CODE-Erklaerung. Fuer "
+            "alles, was ueber `uft_magnetic_state` laeuft, ist floptool "
+            "damit dieselbe Hand. Fuer Formate ohne diesen Bezug nicht. "
+        ),
     ),
     Oracle(
         name="lsatr",
@@ -263,6 +331,14 @@ REGISTRY: tuple[Oracle, ...] = (
                 "\"either version 2 ... or (at your option) any later "
                 "version\" im Kopf; nur die AUSGABE wird verglichen, es "
                 "wandert kein Code ein",
+        abstammung=(
+            "GEPRUEFT UND UNABHAENGIG: eigene C-Codebasis von Daniel "
+            "Serpell; der ATR-Korpus stammt von atrcopy (robmcmullen), und "
+            "im ganzen Quellbaum stehen 0 Treffer fuer "
+            "atrcopy/robmcmullen/omnivore. Der Nachfolger atrip ist "
+            "ausdruecklich KEIN Oracle — `README.rst:6` nennt ihn den "
+            "Nachfolger von atrcopy, also dieselbe Hand. "
+        ),
     ),
     Oracle(
         name="xdftool",
@@ -304,6 +380,12 @@ REGISTRY: tuple[Oracle, ...] = (
         licence="GPL-2.0-or-later (Paket-Metadatum "
                 "`License-Expression`); nur die AUSGABE wird verglichen, "
                 "es wandert kein Code ein",
+        abstammung=(
+            "GEPRUEFT: amitools (Christian Vogelgsang) ist gegenueber "
+            "unserem AmigaDOS-Leser eine eigene Codebasis; der Baum traegt "
+            "keine amitools-Attribution. Die Grenze steht im "
+            "`reference_for`. "
+        ),
     ),
     Oracle(
         name="to_woz2",
@@ -373,6 +455,14 @@ REGISTRY: tuple[Oracle, ...] = (
                 "Attribution im Quellkopf: `nibblize` \"Based on code by "
                 "Andy McFadden\" (CiderPress, BSD-3) — eine zweistufige "
                 "Kette, die nur bei einem Port zu klaeren waere",
+        abstammung=(
+            "GEPRUEFT, mit benannter Luecke: `to_woz2` (cmosher01) ist "
+            "gegenueber unserem Baum eine fremde Hand — der Baum hatte "
+            "gemessen KEINEN GCR-Encoder. Die fuenfte Frage bleibt dennoch "
+            "offen fuer die SPEZIFIKATION: beide stuetzen sich auf die "
+            "veroeffentlichte WOZ-2.0-Beschreibung, ein Fehler AUS DER "
+            "SPEC faellt nicht auf. "
+        ),
     ),
     # NICHT registriert: `adfrescue`. Die Unabhaengigkeits-Messung oben
     # steht, aber der Eintrag haengt an einer Eigentuemer-Entscheidung —
@@ -451,6 +541,16 @@ REGISTRY: tuple[Oracle, ...] = (
                 "extern laeuft und nur die AUSGABE verglichen wird; es "
                 "wandert kein Code ein. Die genaue Fassung "
                 "(2.1-or-later?) ist NICHT am Lizenztext gemessen.",
+        abstammung=(
+            "GEMESSEN, MF-758, und gespalten: fuer `dms` DIESELBE HAND — "
+            "der Kopf von `DMS.c` sagt „lossely based (mainly decrunch "
+            "stuff) on xDMS source“, unsere Attribution „Based on xDMS "
+            "source, dms2adf, AROS source“. Fuer `trd` besteht die Frage "
+            "nicht. Praezisierung aus demselben Kopf: geteilt ist nur die "
+            "ENTPACKUNG, der Client benutze „not DMS header information "
+            "... but always the track data“ — fuer die SPURDATEN kann er "
+            "unabhaengig sein. "
+        ),
     ),
 )
 
@@ -639,12 +739,20 @@ def _selfcheck() -> int:
             problems.append("%s: nicht beschaffbar (keine Herkunft)" % o.name)
         if not o.licence.strip():
             problems.append("%s: Lizenz unbenannt" % o.name)
+        if not o.abstammung.strip():
+            problems.append("%s: ABSTAMMUNG unbenannt — die fuenfte "
+                            "Frage gehoert VOR den Eintrag, nicht "
+                            "nach dem ersten Lauf (MF-760)" % o.name)
         if o.code_import:
             problems.append("%s: code_import=True - ein Oracle vergleicht "
                             "Ausgaben; Code-Import braucht eine eigene "
                             "Entscheidung, nicht diese Tabelle" % o.name)
 
-    print("Oracle-Registry: %d Eintraege" % len(REGISTRY))
+    offen = [o.name for o in REGISTRY
+             if "UNGEPRUEFT" in o.abstammung or "VERDACHT" in o.abstammung]
+    print("Oracle-Registry: %d Eintraege, %d mit offener Abstammung%s"
+          % (len(REGISTRY), len(offen),
+             (" (" + ", ".join(offen) + ")") if offen else ""))
     have = available()
     for o in REGISTRY:
         if have[o.name]:
