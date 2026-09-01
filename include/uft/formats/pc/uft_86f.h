@@ -10,7 +10,12 @@
  * which defines the full API, and src/formats/flux/f86.c which is the
  * FloppyDevice adapter). This parser handles direct file I/O with MFM decode.
  *
- * Reference: 86Box source code (src/floppy/fdd_86f.c)
+ * Reference: 86Box source code (src/floppy/fdd_86f.c) —
+ * 86Box/86Box, **GPL-2.0** (Lizenzfeld der Ablage, gemessen MF-739;
+ * hier nachgetragen MF-743). Vorher stand hier eine benannte fremde
+ * DATEI ohne jede Lizenzangabe — die schaerfste Form einer
+ * Ableitungserklaerung, weil sie belegt, dass jemand den Quelltext
+ * offen hatte.
  *
  * @version 1.0.0
  * @date 2026-04-10

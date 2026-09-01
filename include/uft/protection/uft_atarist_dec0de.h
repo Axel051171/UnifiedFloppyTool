@@ -4,6 +4,21 @@
  * 
  * Complete implementation of Atari ST copy protection decryption algorithms.
  * Based on dec0de by Orion ^ The Replicants.
+ * dec0de: orionfuzion/dec0de, **Apache-2.0** — aus der `LICENSE`-Datei
+ * im Wortlaut gelesen (MF-743), nicht aus dem Lizenzfeld der Ablage.
+ *
+ * OFFEN, EIGENTUEMER-ENTSCHEIDUNG: Apache-2.0 ist mit GPL-3.0
+ * vereinbar, mit **GPL-2.0 nicht**. Unser Baum ist GPL-2.0-or-later —
+ * eine echte Ableitung wuerde das Ergebnis auf GPL-3.0 festlegen. Die
+ * Frage ist dieselbe wie bei Aaru (MF-739): steckt hier dec0de-CODE,
+ * oder ist es eine eigenstaendige Umsetzung nach beobachtbaren Bytes?
+ *
+ * Vorlaeufige Lesart, NICHT abschliessend: die Bytefolgen in diesen
+ * Dateien sind die Bytes des KOPIERSCHUTZES selbst, mit Disassembly
+ * als erklaerendem Kommentar — Fakten ueber das Medium, die jede
+ * unabhaengige Umsetzung auch haette (QUARANTINE_PROCESS.md §4).
+ * Dagegen steht, dass `uft_atarist_dec0de.h` sich „complete
+ * implementation" nennt und genau dec0des Schutzumfang auffuehrt.
  * 
  * Supported protections:
  * - Rob Northen Copylock Series 1 (1988) - 5 variants

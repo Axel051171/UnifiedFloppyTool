@@ -2,7 +2,10 @@
  * @file uft_magnetic_state.h
  * @brief MAME-Compatible Magnetic State Representation
  * 
- * Based on MAME lib/formats/flopimg.h
+ * Based on MAME lib/formats/flopimg.h — mamedev/mame, **GPL-2.0**
+ * laut `COPYING` („MAME as a whole is made available under the terms
+ * of the GNU General Public License"), im Wortlaut gelesen MF-739,
+ * hier nachgetragen MF-743.
  * Provides magnetic state encoding for flux-level weak bit support.
  * 
  * The magnetic state system uses 4-bit nibbles to encode:
