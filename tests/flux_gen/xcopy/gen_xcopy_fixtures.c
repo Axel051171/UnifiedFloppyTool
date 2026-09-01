@@ -357,9 +357,25 @@ int main(int argc, char **argv)
 
     struct { const char *datei; const char *titel;
              int umdr; spurart_t art; int sonder_in; int soll_u0, soll_u1, soll_kopf; unsigned soll_cell; } plan[] = {
+      /* E0 — DIE POSITIVKONTROLLE, und sie laeuft zuerst.
+       *
+       * Eine vollstaendig normale Diskette, keine Fixture-Spur. Sie
+       * MUSS auf jedem Binary in jeder Betriebsart durchgehend gruen
+       * zeigen. Ohne sie ist jede rote Ziffer der Sitzung
+       * doppeldeutig: X-Copy — oder die Kette aus Export, Emulator
+       * und ROM? Sechs Laeufe mehr, und die billigsten von allen.
+       *
+       * Diese Diskette ERSETZT zugleich das frueher eigene `E3b`
+       * („nur eine Umdrehung"): sie war byteweise dasselbe Abbild.
+       * Und die Frage dahinter ist unter Emulation ohnehin nicht
+       * stellbar — die Umdrehungszahl ist eine Eigenschaft der
+       * AUFNAHME, und der Emulator stellt X-Copy ein rotierendes
+       * Laufwerk hin, keine Datei mit n Umdrehungen. Eine Fixture,
+       * deren Frage der Aufbau gar nicht durchlaesst, kostet einen
+       * Lauf und liefert eine Zahl, die nichts bedeutet. */
+      { "E0_kontrolle.scp",      "E0  Positivkontrolle (alles heil)", 1, SPUR_GUT,   -1, 11, -1, 0,    0 },
       { "E1_leere_spur.scp",     "E1  Spur 40 leer",              1, SPUR_LEER,   -1,  0, -1, 0,    0 },
       { "E3a_kein_sync_u2.scp",  "E3a Sync fehlt in Umdrehung 2", 2, SPUR_LEER,    1, 11,  0, 0,    0 },
-      { "E3b_eine_umdrehung.scp","E3b nur eine Umdrehung",        1, SPUR_GUT,    -1, 11, -1, 0,    0 },
       { "E4_marke_448A.scp",     "E4  Spur 40 traegt $448A",      1, SPUR_MARKE,  -1,  0, -1, 0,    0 },
       { "E5_gerettet.scp",       "E5  Umdr. 1 defekt, 2 heil",    2, SPUR_DEFEKT,  0, 10, 11, 0,    0 },
       { "E2_zwoelf_sektoren.scp", "E2  Spur 40 mit 12 Sektoren",   1, SPUR_ZWOELF, -1, 12, -1, 0, 1900 },

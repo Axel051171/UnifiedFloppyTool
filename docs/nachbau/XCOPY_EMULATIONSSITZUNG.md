@@ -1,6 +1,6 @@
 # X-Copy unter Emulation — Sitzungsprotokoll
 
-**Werkstatt-Dokument. Stand 2026-09-01 (MF-773).**
+**Werkstatt-Dokument. Stand 2026-09-01 (MF-774).**
 
 Dieses Blatt macht aus der Emulationssitzung **eine** Sitzung statt drei.
 Jede Frage steht mit ihrer Fixture, ihrem erwarteten Bild und der Stelle
@@ -48,15 +48,23 @@ gcc -std=c11 -Iinclude -Iinclude/uft -Isrc -I. -Itests/flux_gen/amigados \
 Die Dateien sind zusammen ~86 MB und gehören **nicht** ins Repository —
 sie werden bei Bedarf erzeugt. Gemessen am 2026-09-01:
 
-| Datei | Frage | Nachbarspur | Spur 40 Umdr. 0 | Umdr. 1 |
-|---|---|---|---|---|
-| `E1_leere_spur.scp` | E1 | 11/11 | **0/11** | — |
-| `E3a_kein_sync_u2.scp` | E3 | 11/11 | 11/11 | **0/11** |
-| `E3b_eine_umdrehung.scp` | E3 | 11/11 | 11/11 | — |
-| `E4_marke_448A.scp` | E4 | 11/11 | **0/11** | — |
-| `E5_gerettet.scp` | E5 | 11/11 | **10/11** | **11/11** |
-| `E2_zwoelf_sektoren.scp` | E2 | 11/11 | **12/11** | — |
-| `E6_kopf_und_daten.scp` | E6 | 11/11 | **10/11**, davon **1 Kopffehler** | — |
+| Datei | Frage | SHA-256 (16) | Nachbar | Spur 40 | Zelle |
+|---|---|---|---|---|---|
+| `E0_kontrolle.scp` | **E0** | `79c31b3f7af5a9ac` | 11/11 | 11/11 | 2000 |
+| `E1_leere_spur.scp` | E1 | `a2f6e4bcba9d2337` | 11/11 | **0/11** | — |
+| `E2_zwoelf_sektoren.scp` | E2 | `9944b11c50438abc` | 11/11 | **12** | **1900** |
+| `E2b_elf_bei_1900ns.scp` | **E2b** | `75b298414686d148` | 11/11 | 11/11 | **1900** |
+| `E3a_kein_sync_u2.scp` | E3 | `50bf4510db388bff` | 11/11 | 11 / **u1 = 0** | 2000 |
+| `E4_marke_448A.scp` | E4 | `0540114103fd6cba` | 11/11 | **0/11** | 2000 |
+| `E5_gerettet.scp` | E5 | `883a7ef8983fc1ae` | 11/11 | **10** / u1 = 11 | 2000 |
+| `E6_kopf_und_daten.scp` | E6 | `ec404ce56c533b91` | 11/11 | **10**, 1 Kopffehler | 2000 |
+
+**`E3b` gibt es nicht mehr.** Es war byteweise dasselbe Abbild wie `E0`,
+und seine Frage ist unter Emulation ohnehin nicht stellbar: die
+Umdrehungszahl ist eine Eigenschaft der **Aufnahme**, und der Emulator
+stellt X-Copy ein rotierendes Laufwerk hin, keine Datei mit *n*
+Umdrehungen. Eine Fixture, deren Frage der Aufbau nicht durchlässt,
+kostet einen Lauf und liefert eine Zahl ohne Bedeutung.
 
 **Warum gemischte Disketten:** 159 gute Spuren und **eine** Fixture-Spur
 (immer Spur 40). Eine Diskette aus lauter Fixture-Spuren zeigt 160 rote
@@ -88,6 +96,59 @@ Fixture mit 11 Sektoren bei 1900 ns als Gegenprobe.
 **E6 zählt Kopffehler getrennt.** Ohne das fällt E6 (Kopf **und** Daten
 falsch) mit E5 (nur Daten falsch) auf dieselbe Zahl guter Sektoren, und
 die Abnahme könnte die beiden Fixtures nicht auseinanderhalten.
+
+---
+
+## Aufbau: was festliegen muss, bevor der erste Lauf zählt
+
+### Das ROM ist eine Achse — halte sie fest
+
+Der kürzeste legale Weg zu einem Kickstart-ROM ist **Amiga Forever**. Die
+freie **AROS-Ersatz-ROM** würde vermutlich genügen, weil X-Copy direkt auf
+die Hardware greift — aber sie wäre eine **vierte Achse**, und die will
+niemand. Also: **eine ROM je Binary-Ära**, festgelegt und protokolliert.
+
+| Binary | ROM | Begründung |
+|---|---|---|
+| X-Copy 3.4 (1991) | Kickstart **1.3** | zeitgenössisch |
+| X-Copy 5.21 | Kickstart **1.3** | dieselbe Ära, hält die Achse fest |
+| 01/95-Stand | nach Bedarf | läuft ohnehin nur bei Abweichung |
+
+Weicht ein Lauf ab, ist die erste Rückfrage **nicht** „welche ROM?" —
+weil die Antwort im Blatt steht.
+
+### Der Datenweg ist SCP, nicht Extended-ADF
+
+**Gemessen:** UFT kann Extended-ADF **nicht schreiben** —
+`src/formats/adf_ext/uft_adf_ext.c` führt es ausdrücklich als
+*„extended-ADF write (re-MFM-encode protection) not implemented"*. Der
+Weg ist also **SCP**, und WinUAE liest das. Der Export ist zugleich der
+Rundlauf-Test: der Erzeuger liest jede Datei mit UFTs eigenem SCP-Leser
+zurück und dekodiert eine Nachbarspur.
+
+### E0 — die Positivkontrolle läuft **zuerst**
+
+> Eine vollständig normale Diskette muss auf **allen** Binaries in
+> **beiden** Betriebsarten durchgehend grün zeigen.
+
+Ohne sie ist jede rote Ziffer der Sitzung doppeldeutig: X-Copy — oder die
+Kette aus Export, Emulator und ROM? Das sind sechs Läufe mehr, und sie
+sind die billigsten von allen.
+
+**Zeigt E0 nicht grün, ist die Sitzung beendet, bevor sie beginnt.** Dann
+ist der Aufbau der Befund, nicht X-Copy.
+
+### Belegführung
+
+Je Lauf ein **Bildschirmfoto**, Dateiname `Fixture_Binary_Betriebsart`
+(z. B. `E1_3.4_direkt.png`). Das Blatt trägt dazu:
+
+* Emulator und Version
+* ROM-Datei mit SHA-256
+* Fixture-Hash (Tabelle oben)
+* Datum des Laufs
+
+Eine Ziffer ohne Bild ist eine Erinnerung, keine Messung.
 
 ---
 
@@ -123,13 +184,15 @@ verdoppelt die Läufe — deshalb **nur dort, wo es zählt**:
 |---|---|---|
 | E1 leer | einer | einmal je Fassung |
 | E2 / E2b | einer | einmal je Fassung |
-| E3a / E3b | einer | einmal je Fassung |
+| E3a | einer | einmal je Fassung |
 | E4 `$448A` | einer | einmal je Fassung |
 | E5 gerettet | einer, aber über zwei Umdrehungen | **beide Betriebsarten** |
 | **E6** Kopf + Daten | **zwei** | **beide Betriebsarten** |
 
-Damit: 8 Fixtures × 2 Fassungen = 16 Läufe, plus 2 × 2 für die
-Betriebsarten bei E5 und E6 = **20 Läufe**. Nicht 8 × 2 × 2 = 32.
+Damit: **7 Fixtures** (E1, E2, E2b, E3a, E4, E5, E6) × 2 Fassungen = 14,
+plus 2 × 2 für die Betriebsarten bei E5 und E6 = **18 Läufe** — statt
+7 × 2 × 2 = 28. Dazu die **6 Kontrollläufe** aus E0 (3 Binaries × 2
+Betriebsarten), die vorweg laufen: **24 zusammen**.
 
 ### Was zuerst
 
