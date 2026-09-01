@@ -37,9 +37,32 @@ GEN_CORPUS = HERE / "gen_corpus.py"
 
 # UFT engine sources the helper links (kept in sync with the helper's
 # #include list — both are self-contained C TUs).
+# Quellen des Helfers.
+#
+# MF-777: hier standen ZWEI Dateien, gebraucht werden NEUN. Der Bau war
+# damit kaputt — und niemand hat es gemerkt, weil die sechs Tests
+# davor am Skip „no C compiler" hängenblieben. Ein Skip, der einen
+# Bruch verdeckt, ist schlimmer als ein roter Test: er sieht aus wie
+# eine bewusste Auslassung.
+#
+# Das ist dasselbe Muster wie die 43 CMake-Blöcke aus MF-772/773 — eine
+# von Hand gepflegte Quellenliste, die bei jeder neuen Abhängigkeit des
+# Dekoders nachgezogen werden muss und es nicht wird. Die strukturelle
+# Antwort ist **P3-10** (eine Objektbibliothek, gegen die alles linkt);
+# bis dahin ist diese Liste die dritte Stelle, an der derselbe Satz
+# gepflegt wird.
 HELPER_DEPS = [
     REPO_ROOT / "src" / "flux" / "uft_scp_parser.c",
     REPO_ROOT / "src" / "flux" / "uft_flux_decoder.c",
+    REPO_ROOT / "src" / "flux" / "uft_track_verdikt.c",      # MF-765
+    REPO_ROOT / "src" / "flux" / "uft_flux_histogram.c",
+    REPO_ROOT / "src" / "flux" / "uft_flux_sync_search.c",
+    REPO_ROOT / "src" / "flux" / "uft_dewarp.c",
+    REPO_ROOT / "src" / "flux" / "uft_decode_timeline.c",
+    REPO_ROOT / "src" / "flux" / "uft_media_profile.c",
+    REPO_ROOT / "src" / "flux" / "uft_mfm_sector_parser.c",
+    REPO_ROOT / "src" / "formats" / "amiga" / "uft_amiga_syncs.c",  # MF-768
+    REPO_ROOT / "src" / "core" / "uft_log.c",                # MF-766
 ]
 
 
