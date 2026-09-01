@@ -1300,9 +1300,38 @@ int otdr_disk_export_report(const otdr_disk_t *disk, const char *filename) {
             otdr_quality_name(disk->stats.overall), disk->stats.quality_mean);
     fprintf(f, "  Worst Track:    %u (jitter %.1f%%)\n",
             disk->stats.worst_track_num, disk->stats.quality_worst_track);
-    fprintf(f, "  Sectors:        %u total, %u good, %u bad\n",
-            disk->stats.total_sectors, disk->stats.good_sectors,
-            disk->stats.bad_sectors);
+    /* MF-762: Ist die Sektor-Ebene ueberhaupt gemessen?
+     *
+     * `otdr_track_t.sector_count` wird im ganzen Baum von NIEMANDEM
+     * gesetzt — deklariert (floppy_otdr.h:258), an drei Stellen gelesen,
+     * nie zugewiesen. Damit war jede Sektorzahl in diesem Bericht
+     * strukturell null, und „gut"/„schlecht" blieben es auch, weil die
+     * zaehlende Schleife nie lief.
+     *
+     * Fuer einen Forensiker ist eine Spurtabelle mit lauter Nullen in
+     * der Sektorspalte von einer echten nicht zu unterscheiden — sie
+     * sieht aus wie eine leere Diskette. Das ist die Fehlerklasse aus
+     * MF-569, mit dem Unterschied, dass hier nicht einmal der Quelltext
+     * etwas zugab; Tor 34 konnte es deshalb nicht fangen.
+     *
+     * Der Vorbehalt ist SELBSTHEILEND: gefragt wird, ob IRGENDEINE Spur
+     * der Diskette eine Sektorzahl traegt. Sobald jemand sie fuellt,
+     * verschwindet er von allein — und eine einzelne wirklich leere Spur
+     * druckt dann korrekt ihre Null. */
+    bool sektoren_gemessen = false;
+    for (uint16_t st = 0; disk->tracks && st < disk->track_count; st++) {
+        if (disk->tracks[st].sector_count > 0) { sektoren_gemessen = true; break; }
+    }
+
+    if (sektoren_gemessen)
+        fprintf(f, "  Sectors:        %u total, %u good, %u bad\n",
+                disk->stats.total_sectors, disk->stats.good_sectors,
+                disk->stats.bad_sectors);
+    else
+        fprintf(f, "  Sectors:        ? — not read\n"
+                   "                  This report analyses the FLUX signal. No\n"
+                   "                  sector decode is attached to it, so sector\n"
+                   "                  counts are UNKNOWN, not zero.\n");
     fprintf(f, "  Events:         %u total, %u critical\n",
             disk->stats.total_events, disk->stats.critical_events);
 
@@ -1312,6 +1341,11 @@ int otdr_disk_export_report(const otdr_disk_t *disk, const char *filename) {
     }
 
     fprintf(f, "\n── Per-Track Summary ───────────────────────────────────────\n\n");
+    if (!sektoren_gemessen)
+        fprintf(f, "  Die Spalte „Sectors\" zeigt ? — die Sektor-Ebene ist in\n"
+                   "  diesem Lauf nicht gemessen (siehe oben). Eine Null stuende\n"
+                   "  hier fuer „gelesen und leer\", und das waere falsch.\n\n");
+
     fprintf(f, "  Track  Cyl:Hd  Jitter%%  Quality   Events  Sectors  Notes\n");
     fprintf(f, "  ─────  ──────  ───────  ────────  ──────  ───────  ─────\n");
 
@@ -1331,11 +1365,17 @@ int otdr_disk_export_report(const otdr_disk_t *disk, const char *filename) {
             snprintf(notes + strlen(notes), sizeof(notes) - strlen(notes),
                      "PLL×%u ", trk->stats.pll_relocks);
 
-        fprintf(f, "  %5u  %2u:%u    %5.1f    %-9s %5u   %4u     %s\n",
+        char sekt[8];
+        if (sektoren_gemessen)
+            snprintf(sekt, sizeof(sekt), "%4u", trk->sector_count);
+        else
+            snprintf(sekt, sizeof(sekt), "%4s", "?");
+
+        fprintf(f, "  %5u  %2u:%u    %5.1f    %-9s %5u   %s     %s\n",
                 t, trk->cylinder, trk->head,
                 trk->stats.jitter_rms,
                 otdr_quality_name(trk->stats.overall),
-                trk->event_count, trk->sector_count, notes);
+                trk->event_count, sekt, notes);
     }
 
     fprintf(f, "\n── Event Details ──────────────────────────────────────────\n\n");
