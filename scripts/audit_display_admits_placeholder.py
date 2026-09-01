@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Eine Anzeige, die im Quelltext zugibt zu erfinden — und es dem
 Benutzer nicht sagt (MF-569, wiederhergestellt MF-735)
 
