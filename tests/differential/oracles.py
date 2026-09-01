@@ -224,6 +224,57 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="bluemsx",
+        env="BLUEMSX",
+        exes=("bluemsx", "blueMSX", "bluemsx.exe", "blueMSX.exe"),
+        version_args=("/help",),
+        version_re=r"blueMSX\s+v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+        version_exit_ok=(0, 1),
+        reference_for=(
+            "ERZEUGT KORPUS fuer msx_disk (heute T3: null Tests, keine "
+            "Spec-Quelle). Unter dem Emulator laeuft Nextor bzw. MSX-DOS "
+            "und formatiert eine Diskette; Bootsektor, BPB, "
+            "Media-Descriptor und FAT stammen damit von der KANONISCHEN "
+            "Implementierung, nicht von UFTs Annahme. Fuer den "
+            "msx-LESER ist blueMSX danach kein Pruefer mehr — dieselbe "
+            "Trennung wie bei c1541 und atrcopy."
+        ),
+        origin="https://bluemsx.msxblue.com/ (Daniel Vik u. a.)",
+        licence="GPL-2.0",
+        abstammung=(
+            "UNABHAENGIG — und das ist hier keine Formalie, sondern der "
+            "GRUND fuer die Wahl. "
+            "GEMESSEN (MF-780): `openMSX` waere der bequemere Emulator "
+            "(Tcl-Konsole, skriptbar, damit eine reproduzierbare "
+            "Befehlszeile statt einer Klickfolge). Er faellt aber aus, "
+            "und zwar messbar: `src/formats/dsk_msx/uft_dsk_msx.c` "
+            "erklaert im Kopf `Reference: MSX-DOS specification, openMSX "
+            "source` — und GENAU diese Datei IST das Plugin `msx_disk`, "
+            "das gehoben werden soll. openMSX ist fuer dieses Format "
+            "DIESELBE HAND; ein Differenzlauf wuerde nur bestaetigen, "
+            "dass UFT reproduziert, wovon es abgeleitet ist. "
+            "(`src/formats/cas/uft_cas.c` traegt dieselbe Erklaerung — "
+            "fuer CAS gilt sie entsprechend.) "
+            "blueMSX wird im Baum an keiner Stelle genannt; gemessen mit "
+            "`git ls-files` ueber `src/` und `include/`, kein Treffer. "
+            "DER PREIS, benannt: blueMSX wird ueber eine Oberflaeche "
+            "bedient. T1b verlangt einen reproduzierbaren Erzeugungsweg — "
+            "hier ist das eine DOKUMENTIERTE KLICKFOLGE, nicht eine "
+            "Befehlszeile. Das ist schwaecher, und `KNOWN_ISSUES.md` "
+            "fuehrt Klick-Sitzungen als das, was am haeufigsten nicht "
+            "stattfindet. Unabhaengigkeit schlaegt hier Bequemlichkeit: "
+            "ein bequemes Oracle, das dieselbe Hand ist, misst nichts. "
+            "FREMDCODE, vorab und noch ungemessen: eine von "
+            "MSX-DOS/Nextor formatierte Diskette traegt einen BOOTSEKTOR "
+            "mit Startroutine — also `ja (was)`, nicht `nein`. Der "
+            "Media-Descriptor, an dem `uft_dsk_msx.c` erkennt, ist dabei "
+            "DATEN (eine Tatsache ueber die Geometrie); die Startroutine "
+            "daneben ist CODE. Ein solches Abbild gehoert deshalb nach "
+            "`tests/corpus/` (gitignored, nur SHA-256 im Manifest) und "
+            "NICHT nach `tests/corpus_free/`. "
+        ),
+    ),
+    Oracle(
         name="c1541",
         env="C1541",
         exes=("c1541", "c1541.exe"),
