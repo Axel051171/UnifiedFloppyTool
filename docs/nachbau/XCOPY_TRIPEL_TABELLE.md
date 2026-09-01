@@ -472,3 +472,91 @@ die nichts weiß, soll das sagen.
 
 Ich habe **nichts verdrahtet** — ein Ereignis auf jeder Spur wäre
 schlimmer als keines.
+
+
+---
+
+## Code 5 — BERICHTIGUNG: er ist seit MF-454 gebaut (MF-763)
+
+Meine Tabellenzeile sagte „**✘ = Code 4**, für „Inhalt zerstört" gibt es
+keinen eigenen Zustand". **Das ist falsch.**
+
+`src/flux/uft_flux_decoder.c:1354-1360` trennt beide Fälle, und der
+Kommentar sagt warum:
+
+> *„`FLUX_ERR_BAD_HEADER`, nicht `FLUX_ERR_NO_SYNC`. Der Sync war da —
+> was dahinter steht, passt nicht. X-Copy trennt diese beiden Fälle seit
+> 1992 (Code 2 gegen Code 5), UFT warf sie zusammen."*
+
+Das Verdikt wird gezählt: `track->bad_header_format++`
+(`:1453`), deklariert als **„X-Copy-Klasse 5"**
+(`uft_flux_decoder.h:208`).
+
+### Und MF-454 hat mehr gebaut als eine Fallunterscheidung
+
+Der Header führt **alle acht Codes** mit ihrer Bedeutung, aus **zwei**
+Quellen: den Quelltext-Labels und einem Handbuch von 1992 (Siren
+Software über archive.org) — eine dritte Dokumentationsquelle neben den
+ASI-Handbüchern von 3.4 und 5.21, unabhängig gefunden.
+
+Und er sagt ehrlich, was fehlt und warum:
+
+> *„1, 3, 7 und 8 sind hier nicht zählbar — sie sind Aussagen über die
+> ganze Spur bzw. über einen Schreibvorgang, nicht über einen Sektor.
+> Sie fehlen **absichtlich** statt mit einer Näherung gefüllt zu
+> werden."*
+
+**Das ist genau die Trennung, die die Tripel-Tabelle braucht** — und sie
+war vor ihr da. Die vier fehlenden Codes fehlen nicht aus Nachlässigkeit,
+sondern weil sie auf der falschen Ebene liegen: Spur, nicht Sektor.
+
+### Die berichtigte Zählung
+
+| Code | Ist in UFT | Ebene |
+|---|---|---|
+| 0 | `UFT_SECTOR_OK` / `UFT_TRACK_OK` | ✔ |
+| **1** | **fehlt — absichtlich auf Sektorebene, offen auf Spurebene** | Spur |
+| 2 | `FLUX_ERR_NO_SYNC` — **schärfer als gedacht**, seit MF-454 von Code 5 getrennt; kollabiert aber weiterhin leer/fremd/verrauscht | Spur |
+| 3 | `missing_data` — laut Header „teilweise" | Sektor |
+| 4 | `bad_id_crc` | ✔ Sektor |
+| **5** | **`bad_header_format`** ✔ | Sektor |
+| 6 | `bad_data_crc` | ✔ Sektor |
+| 7 | `OTDR_EVT_PROT_LONG_TRACK` ✔ **mit Tür** | Spur |
+| 8 | `WriteVerifyFailed` ✔ | Schreibvorgang |
+| gerettet | `UFT_SECTOR_RECOVERED` ✔ **ohne Tür** | Sektor |
+
+**Diagnose: 6 von 9 unterschieden, nicht 4.** Die Lücke ist kleiner, als
+meine Tabelle behauptet hat.
+
+### Was wirklich fehlt, ist nicht die Unterscheidung, sondern der Abnehmer
+
+Gemessen, wer die vier Sektor-Zähler außerhalb des Dekoders liest:
+
+| Zähler | Verbraucher |
+|---|---|
+| `bad_id_crc` | **keiner** |
+| `bad_header_format` | **keiner** |
+| `missing_data` | **keiner** |
+| `bad_data_crc` | einer — `uft_otdr_adaptive_decode.c:422` |
+
+**Drei von vier Fehlerklassen werden gezählt und von niemandem gelesen.**
+Das ist dasselbe Muster wie bei `sector_count` (MF-762) und bei
+`expected_sectors` — der Dekoder weiß es, und nichts trägt es nach oben.
+
+> **Für die Reihenfolge heißt das:** Code 5 ist erledigt. Was die
+> Tripel-Tabelle wirklich braucht, ist **eine Stelle, die die vier
+> Zähler in ein Spurverdikt überführt** — und genau dort setzt auch
+> Code 1 an, denn `sector_count` müsste aus derselben Quelle kommen.
+> Ein Schritt, nicht zwei.
+
+### Ein Kontaminationspunkt, benannt statt übergangen
+
+MF-454 zitiert `xcop.s:1163-1174` **mit Routinennamen** (`tofewsc`,
+`nosync`, `no2sync`, `hecksum`, `headerr`, `blcksum`). Routinennamen
+sind **Ausdruck**, nicht Tatsache — dieselbe Klasse wie „Neuhaus" in
+`uft_amiga_protection.c` (MF-739).
+
+Der Umfang ist klein und der Zweck belegend, nicht übernehmend: keiner
+dieser Namen erscheint im UFT-Code, nur im Kommentar als Fundstelle.
+**Zur Kenntnis, nicht als Befund** — aber die Regel aus MF-746 gilt:
+eine Fundstelle nennt man, einen Namen übernimmt man nicht.
