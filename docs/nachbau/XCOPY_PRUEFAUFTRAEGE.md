@@ -137,7 +137,7 @@ gelten**, sondern nur als Einstiegsliste für eigene Messung.
 
 
 
-## P9 — Eichung gegen das Originalprogramm unter Emulation
+## E1 — Eichung gegen das Originalprogramm unter Emulation
 
 **Anforderung.** Zum Quellmaterial gehören zeitgenössische lauffähige
 Binaries. Das Originalprogramm kann unter Emulation gegen **dieselben
@@ -147,6 +147,8 @@ erwarteten Verdikte dienen.
 Das ersetzt keine Messung an Hardware, aber es **verschiebt die
 Beweislast**: wo UFT und Vorlage zum selben Fixture verschiedene
 Verdikte liefern, ist mindestens eines von beiden erklärungsbedürftig.
+
+*(Bis zur dritten Gutachten-Fassung als „P9" geführt; dort ist P9 neu vergeben, siehe unten. Als **E1** weitergeführt.)*
 
 **Nicht anwendbar auf P1 (B3) und auf B13** — Kalibrierung und
 Beruhigungszeiten hängen an echter Laufwerksmechanik und lassen sich
@@ -339,3 +341,142 @@ Differenz benannt statt vermutet.
 nummeriert sind. Die Liste stammt aus 2.x, das Gutachten aus 5.3, und
 B9 zählt sechs plus eine getrennte Verify-Kennung — die 2.x-Liste zählt
 acht. Ob dazwischen umnummeriert wurde, sagt keine der beiden Quellen.
+
+
+---
+
+## P9 — Reichweite über Amiga-Formate hinaus (dritte Gutachten-Fassung)
+
+**Anforderung.** Das Handbuch zur Version 5.21 beansprucht für den
+Nibbler-Modus ausdrücklich, auch Disketten von IBM-PC, Atari ST und
+Acorn Archimedes sowie Keyboard-Disketten zu sichern. Ferner sind ein
+Spurbereich **0 bis 81** — über die üblichen 80 hinaus — und die
+Beschränkung auf **eine Diskettenseite** als Bedienoptionen
+dokumentiert.
+
+Der Anspruch ist plausibel, weil ein Verfahren, das den Spurinhalt
+nicht interpretiert, formatunabhängig ist. Zu klären: hat UFTs
+Rohspur-Pfad dieselbe Formatunabhängigkeit, oder steckt irgendwo doch
+eine Amiga-Annahme?
+
+**Rotbeweis.** Fixtures aus mindestens zwei fremden Formatfamilien
+durch den Rohspur-Pfad schicken. Bricht der Pfad ab, verwirft die Spur
+oder legt stillschweigend eine Amiga-Spurlänge zugrunde, ist der Befund
+rot. Ebenso: eine Diskette mit 82 Spuren und eine einseitig
+formatierte.
+
+**Nachrangig.** Der Anspruch ist eine Herstellerangabe von 1991 und
+selbst prüfbedürftig.
+
+> **MF-752 — am Handbuch selbst nachgelesen und bestätigt.** Alle drei
+> Punkte stehen im `MANUAL/MANUAL.XCOPY` des 5.21-Datenträgers: die
+> Fremdformat-Behauptung beim Nibblecopy-Eintrag, der Spurbereich
+> `00`–`81` und die Seitenwahl (dort mit einer einseitig formatierten
+> Atari-ST-Diskette als Beispiel).
+
+---
+
+## Nachtrag: der Bestand, und was das Handbuch belegt (MF-752)
+
+### Die Archive, eingefroren
+
+| Archiv | SHA-256 | Inhalt |
+|---|---|---|
+| `xcopypro_source_2011.zip` | `0047220e40ae…` | ADF + `xcopy_licence.txt` |
+| `xcopypro_source_2011_v2.zip` | `09d051e6eba9…` | nur ADF |
+| `xcopy_v5.21_en_c9.69.zip` | `b90554feb3dd…` | ADF + `xcopy_license.txt` |
+| `xcopy_v5.21_en_c9.69(1).zip` | `f42fb0be1641…` | entpackt, **mit Handbuch** |
+| `xcopy_01_95_master.zip` | `08990061f112…` | ADF + `xcopy_license.txt` |
+| `xcopy_01_95_master(1).zip` | `9aaa81b8ebc2…` | entpackt |
+
+**Gelesen wurden ausschließlich Lizenz- und Dokumentationsdateien.**
+Kein ADF, kein `.lha`, kein Programmkörper.
+
+### §0.2 ist geschlossen: die vermisste Lizenz liegt jedem Abbild bei
+
+Das Gutachten sagt, die in der Freigabeerklärung genannte Lizenz sei
+„im vorliegenden Material nicht auffindbar" und der Verweis laufe ins
+Leere. **Gemessen: sie liegt jedem Abbild-Archiv als eigene Datei bei**
+— und zwar dreimal über zwanzig Jahre:
+
+| Herkunft | SHA-256 (Anfang) | Länge |
+|---|---|---|
+| 5.21-Datenträger | `57970598d3e9dca5` | 1485 |
+| 01/95-Datenträger | `57970598d3e9dca5` | 1485 |
+| 2011-Quellarchiv | `f45f5ab6e64bfe6c` | 1485 |
+
+Die beiden Datenträger-Fassungen sind **byteidentisch**. Der Unterschied
+zum Quellarchiv ist **eine einzige Zeile** — die Jahreszahl,
+`1988-2010` gegen `1988-2011`. Sonst wortgleich.
+
+**Folge:** der Verweis der Freigabeerklärung läuft nicht ins Leere. Der
+Umfang der Erlaubnis ist bestimmt, und das Ergebnis aus MF-744/746
+bleibt: nicht verkaufen, nicht kommerziell, keine behördliche Nutzung,
+Weitergabe nur vollständig — **unvereinbar mit GPL-2.0-or-later**.
+
+### Das Handbuch bestätigt B3, B5, B9 — und trägt sein eigenes Verbot
+
+Alle drei DOKUMENTIERT-Befunde der dritten Gutachten-Fassung sind am
+`MANUAL/MANUAL.XCOPY` des 5.21-Datenträgers nachgelesen:
+
+| Befund | Handbuch-Eintrag |
+|---|---|
+| **B3** laufwerksweise Kalibrierung | *Speedcheck* — prüft die Geschwindigkeit der Laufwerke und gibt die Kapazität einer Spur aus |
+| **B5** Sync-Satz konfigurierbar | *Sync* — vom Anwender änderbar, erfahrenen Anwendern vorbehalten |
+| **B9** Verdiktschema | *Checkdisk* — eine rote Zahl statt der grünen Null, „the number fits to a given error" |
+
+**Und ein vierter, den das Gutachten nicht führt:** die Betriebsarten
+trennen ausdrücklich zwischen *kopieren wie vorgefunden* und
+*Fehler reparieren* — `Doscopy` korrigiert Lesefehler **nicht**,
+`Doscopy+` tut es. Diese Unterscheidung ist dem Anwender **vor** dem
+Kopiervorgang zugänglich, nicht erst im Bericht. Das ergänzt **P3** um
+eine Frage: bietet UFT die Wahl, oder entscheidet es selbst?
+
+> **Rechtsvermerk des Handbuchs — strenger als die Software-Lizenz.**
+> Es untersagt Vervielfältigung „in whole or in part", ausdrücklich auch
+> Übersetzung und Überführung in maschinenlesbare Form. §5.4b des
+> Gutachtens sagt es richtig: die Handbücher sind **nicht Teil der
+> Freigabe von 2011**. Sie dürfen ausgewertet, aber nicht wiedergegeben
+> werden.
+>
+> **Dieses Dokument hält sich daran:** oben stehen Befunde und
+> Fundstellen, keine Abschriften. Wer den Wortlaut braucht, liest das
+> eingefrorene Archiv.
+
+### §5.4a unabhängig bestätigt — die Nibbler-Linie endet bei 5.3
+
+`Guides/XCopy_TNG.GUIDE` auf dem 01/95-Datenträger führt einen
+Abschnitt *„Geplante Features in den nächsten Versionen"*, und
+**„Nibble-Modus" steht darin**. TNG 1.1 (1994, Holger Vocke) hat das
+Verfahren also nicht.
+
+**Das spart Suchaufwand:** ein späterer, besserer Nibbler desselben
+Hauses existiert nicht. TNG scheidet als Oracle für **P2 bis P7** aus,
+weil ihm die geprüfte Fähigkeit fehlt.
+
+### Drei Programmstände für E1
+
+| Datei | Größe | Rolle |
+|---|---|---|
+| `XCopyPro` (5.21-Datenträger) | 59 536 | älter als die Quelle; **B11 schreibt genau dieser Version die Verhaltensänderung zu** |
+| `XCopyPro` (2011-Neubau) | 63 296 | deckungsgleich mit der Analyse |
+| `XCopy_Alt/XCopyPro` (01/95) | **65 900** | **unbestimmt** — größer als beide, Versionsangabe nicht auslesbar |
+
+Der 5.21-Stand ist für E1 der wertvollste: B11 behauptet eine
+Verhaltensänderung *dieser* Version, und hier lässt sie sich prüfen.
+
+Der 01/95-Stand ist der offene Punkt — der Verdacht auf eine Fassung
+**nach 5.3**, aus dem Zeitraum, dessen Quellcode als verloren gilt, ist
+naheliegend und **nicht belegt**.
+
+### Was auf dem 01/95-Datenträger sonst noch liegt
+
+`CYCLONE` (41 076), `XLent` (28 264), `XLentPro` (45 432), `X-It`
+(37 060) — **fremde Kopierprogramme mit eigenen Handbüchern**, und
+`S/CYCLONE.PARA` (6 178 Byte) sieht nach einer Parameterdatei aus.
+
+Für **P8** ist das ein Hinweis, kein Auftrag: wenn dort
+Schutzparameter stehen, wäre es eine **zweite, unabhängige** Quelle
+neben XCopys Sync-Satz — genau das, was P8 verlangt. Die Rechtslage
+dieser Programme ist **ungeprüft**; sie sind nicht Teil der
+ASI-Freigabe.
