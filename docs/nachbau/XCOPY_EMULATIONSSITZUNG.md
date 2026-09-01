@@ -1,6 +1,6 @@
 # X-Copy unter Emulation — Sitzungsprotokoll
 
-**Werkstatt-Dokument. Stand 2026-09-01 (MF-772).**
+**Werkstatt-Dokument. Stand 2026-09-01 (MF-773).**
 
 Dieses Blatt macht aus der Emulationssitzung **eine** Sitzung statt drei.
 Jede Frage steht mit ihrer Fixture, ihrem erwarteten Bild und der Stelle
@@ -88,6 +88,56 @@ Fixture mit 11 Sektoren bei 1900 ns als Gegenprobe.
 **E6 zählt Kopffehler getrennt.** Ohne das fällt E6 (Kopf **und** Daten
 falsch) mit E5 (nur Daten falsch) auf dieselbe Zahl guter Sektoren, und
 die Abnahme könnte die beiden Fixtures nicht auseinanderhalten.
+
+---
+
+## Das Sitzungsdesign: zwei Achsen, nicht sieben Läufe
+
+Die Sichtung der Vorlage hat die meisten Fragen schon beantwortet — aber
+sie hat **eine Fassung** gesehen (5.3). Die Binaries sind **3.4**, **5.21**
+und der unbestimmte **01/95**-Stand. Die Sitzung liefert damit genau das,
+was die Quelle nicht kann.
+
+### Achse 1 — die Versionsachse
+
+Jede Fixture wird auf **3.4** und **5.21** gefahren. Weichen sie ab, ist
+das ein **Varianten-Fund** und keine Ungenauigkeit: zeigt 3.4 für die
+leere Spur `1` und 5.21 eine `2`, dann hat sich das Verhalten zwischen
+den Fassungen geändert, und jede Aussage „X-Copy tut Y" braucht künftig
+die Fassung dazu.
+
+`01/95` läuft als dritter Lauf nur dort, wo 3.4 und 5.21 sich
+unterscheiden — sonst kostet er Zeit ohne Aussage.
+
+### Achse 2 — die Betriebsartenachse
+
+Die Vorlage hat **zwei** Vorrangketten: Direktkopie „erster Fehler
+gewinnt", RAM-Kopie „letzter gewinnt". Beide Betriebsarten zu fahren
+verdoppelt die Läufe — deshalb **nur dort, wo es zählt**:
+
+> **Beide Betriebsarten nur für Fixtures mit mehr als einem Fehler.**
+> „Erster gewinnt" und „letzter gewinnt" können sich gar nicht
+> unterscheiden, wenn es nur einen Fehler gibt.
+
+| Fixture | Fehler | Läufe |
+|---|---|---|
+| E1 leer | einer | einmal je Fassung |
+| E2 / E2b | einer | einmal je Fassung |
+| E3a / E3b | einer | einmal je Fassung |
+| E4 `$448A` | einer | einmal je Fassung |
+| E5 gerettet | einer, aber über zwei Umdrehungen | **beide Betriebsarten** |
+| **E6** Kopf + Daten | **zwei** | **beide Betriebsarten** |
+
+Damit: 8 Fixtures × 2 Fassungen = 16 Läufe, plus 2 × 2 für die
+Betriebsarten bei E5 und E6 = **20 Läufe**. Nicht 8 × 2 × 2 = 32.
+
+### Was zuerst
+
+**E1 auf 3.4.** Nicht weil die Antwort unbekannt wäre — sie steht in der
+Spec —, sondern weil sie dort für **5.3** steht und 3.4 die älteste
+verfügbare Fassung ist. Stimmt sie überein, ist die Versionsachse für
+diese Frage geschlossen und man kann die übrigen zügig durchfahren.
+Weicht sie ab, ändert das die Reihenfolge aller weiteren Fragen.
 
 ---
 
