@@ -10,6 +10,7 @@
 #include "uft/flux/uft_flux_histogram.h"
 #include "uft/flux/uft_flux_sync_search.h"
 #include "uft/flux/uft_dewarp.h"
+#include "uft/uft_log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -1286,39 +1287,116 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
  * Encoding Detection
  * ============================================================================ */
 
+/* Kodierung erkennen — am VERHAELTNISMUSTER, nicht am Mittelwert (MF-766).
+ *
+ * Hier stand eine Einteilung nach dem MITTLEREN Wechselabstand, in vier
+ * handgewaehlten Schwellen. Gemessen an den Konstanten dieses Baums
+ * selbst (uft_flux_decoder.h:35-40), mit dem Wechselmuster JE Kodierung:
+ *
+ *     MFM HD  2T/3T/4T x1000ns    Mittel  2973 ns -> MFM       ok
+ *     MFM DD  2T/3T/4T x2000ns    Mittel  6022 ns -> GCR_C64   FALSCH
+ *     FM      1T/2T    x4000ns    Mittel  5993 ns -> GCR_C64   FALSCH
+ *     GCR C64 Sync + 1..3T        Mittel  5598 ns -> GCR_C64   ok
+ *     GCR Apple 1..3T  x4000ns    Mittel  7943 ns -> GCR_C64   FALSCH
+ *
+ * Drei von fuenf falsch, und die schwerste ist DD-MFM: die haeufigste
+ * Diskette ueberhaupt (PC 720K, Amiga 880K, Atari ST) ging an den
+ * Commodore-GCR-Dekoder. `GCR_C64` war der Auffangwert fuer alles ueber
+ * 5000 ns und hat deshalb nur zufaellig gestimmt.
+ *
+ * Der Grund ist nicht schlechte Einstellung, sondern das falsche Mass:
+ * MFM DD (6022), FM (5993) und GCR C64 (5598) liegen innerhalb von 8 %.
+ * KEINE Schwellenwahl trennt die.
+ *
+ * Das VERHANDENE Histogramm (MF-488) trennt sie. Gemessen, dieselben
+ * Stroeme:
+ *
+ *     MFM DD     3 Berge  4000 / 6000 / 8000    -> 2 : 3 : 4
+ *     MFM HD     3 Berge  2000 / 3000 / 4000    -> 2 : 3 : 4
+ *     FM         2 Berge  4000 / 8000           -> 1 : 2
+ *     GCR C64    3 Berge  3200 / 6400 / 9600    -> 1 : 2 : 3, Zelle 3200
+ *     GCR Apple  3 Berge  4000 / 8000 / 12000   -> 1 : 2 : 3, Zelle 4000
+ *
+ * Kein neues Verfahren und keine neue Zahl: das Muster kommt aus einem
+ * vorhandenen Modul, die Zellendauern aus den Konstanten dieses Baums.
+ *
+ * Und wo das Muster zu nichts passt, sagt die Funktion jetzt AUTO —
+ * „unentschieden" — statt zu raten. Fuer ein Werkzeug, das keine Daten
+ * erfinden darf, ist eine ehrliche Nichtauskunft besser als eine
+ * zuversichtliche falsche. */
 flux_encoding_t flux_detect_encoding(const flux_raw_data_t *flux) {
-    if (!flux || flux->transition_count < 100) {
+    if (!flux || !flux->transitions || flux->transition_count < 100) {
         return FLUX_ENC_AUTO;
     }
-    
-    /* Calculate average transition time */
-    double ns_per_tick = 1e9 / flux->sample_rate;
-    double total_time = 0;
-    uint32_t prev = 0;
-    size_t count = 0;
-    
-    for (size_t i = 0; i < flux->transition_count && i < 1000; i++) {
-        if (i > 0) {
-            total_time += (flux->transitions[i] - prev) * ns_per_tick;
-            count++;
-        }
-        prev = flux->transitions[i];
+
+    uft_flux_hist_result_t h;
+    memset(&h, 0, sizeof(h));
+    if (!uft_flux_histogram_analyze_transitions(flux->transitions,
+                                                flux->transition_count,
+                                                100, &h) ||
+        h.peak_count < 2) {
+        return FLUX_ENC_AUTO;
     }
-    
-    if (count == 0) return FLUX_ENC_AUTO;
-    
-    double avg_interval = total_time / count;
-    
-    /* Classify based on average interval */
-    if (avg_interval < 1500) {
-        return FLUX_ENC_MFM;  /* HD MFM (~1µs bit cell, ~1.5µs avg interval) */
-    } else if (avg_interval < 3000) {
-        return FLUX_ENC_MFM;  /* DD MFM (~2µs bit cell, ~3µs avg interval) */
-    } else if (avg_interval < 5000) {
-        return FLUX_ENC_FM;   /* FM (~4µs bit cell) */
-    } else {
-        return FLUX_ENC_GCR_C64;  /* Slower - probably GCR */
+
+    /* `h.confident` wird hier ABSICHTLICH nicht als Tor benutzt. Gemessen
+     * ist es nur fuer MFM wahr (siehe Tabelle oben) — es als Bedingung zu
+     * nehmen hiesse, FM und GCR gar nicht erst zuzulassen. Das ist
+     * dieselbe Bandmodell-Falle wie in MF-765. */
+
+    const double p0 = h.peaks[0].center_ns;
+    if (p0 <= 0.0) return FLUX_ENC_AUTO;
+
+    /* Die Toleranz ist eine SETZUNG, keine Messung. Die Zentren oben sind
+     * an synthetischen Stroemen exakt; echte Aufnahmen zittern. Welcher
+     * Wert reale Aufnahmen traegt, kann nur ein Korpus sagen — bis dahin
+     * ist 12 % gewaehlt, weil er die gemessenen Muster klar trennt
+     * (naechster Nachbar: 1,5 gegen 2,0, also 33 % Abstand). */
+    const double TOL = 0.12;
+    #define NAH(a,b) (fabs((a) - (b)) <= (b) * TOL)
+
+    const double r1 = h.peaks[1].center_ns / p0;
+
+    if (h.peak_count == 2) {
+        /* 1 : 2 -> FM. Die Zelle ist der erste Berg. */
+        if (NAH(r1, 2.0)) return FLUX_ENC_FM;
+        return FLUX_ENC_AUTO;
     }
+
+    /* Ab hier gilt: GENAU drei Berge. Das ist kein Feinschliff — die
+     * erste Fassung liess `>= 3` zu und nahm die ersten drei. Gemessen
+     * an einem gleichverteilten Rauschstrom (1500..8500 ns), der acht
+     * Berge traegt, sassen drei davon zufaellig bei 1 : 1,5 : 2 — und
+     * die Erkennung meldete MFM fuer reines Rauschen.
+     *
+     * Eine Spur mit acht Baendern hat keine Bandstruktur. Ob echte
+     * Aufnahmen mit ihrem Zittern hier zu streng behandelt werden,
+     * kann nur ein Korpus sagen; die Gegenrichtung ist gemessen und
+     * falsch. */
+    if (h.peak_count != 3) return FLUX_ENC_AUTO;
+
+    const double r2 = h.peaks[2].center_ns / p0;
+
+    /* 2 : 3 : 4 -> MFM. Vom ersten Berg aus: 1 : 1,5 : 2. */
+    if (NAH(r1, 1.5) && NAH(r2, 2.0)) {
+        return FLUX_ENC_MFM;
+    }
+
+    /* 1 : 2 : 3 -> GCR. Welches, entscheidet die Zellendauer gegen die
+     * Konstanten dieses Baums (FLUX_GCR_C64_BITCELL_NS 3200,
+     * FLUX_GCR_APPLE_BITCELL_NS 4000) — nicht gegen eine neue Zahl. */
+    if (NAH(r1, 2.0) && NAH(r2, 3.0)) {
+        double d_c64   = fabs(p0 - (double)FLUX_GCR_C64_BITCELL_NS);
+        double d_apple = fabs(p0 - (double)FLUX_GCR_APPLE_BITCELL_NS);
+        return (d_c64 <= d_apple) ? FLUX_ENC_GCR_C64 : FLUX_ENC_GCR_APPLE;
+    }
+
+    #undef NAH
+
+    /* Kein bekanntes Muster. Das ist eine AUSSAGE, keine Luecke: eine
+     * beschaedigte oder geschuetzte Spur traegt oft gar kein sauberes
+     * Verhaeltnis, und sie dann in den haeufigsten Zweig zu schieben war
+     * genau der Fehler, den diese Funktion vorher machte. */
+    return FLUX_ENC_AUTO;
 }
 
 /* ============================================================================
@@ -1872,6 +1950,13 @@ flux_status_t flux_decode_track(const flux_raw_data_t *flux,
         case FLUX_ENC_GCR_APPLE:
             return flux_decode_gcr_apple(flux, track, opts);
         
+        case FLUX_ENC_AUTO:
+            /* MF-766: die Erkennung hat sich NICHT entschieden. Frueher
+             * kam dieser Fall nie vor, weil sie immer riet — und in
+             * drei von fuenf Faellen falsch. */
+            UFT_WARN("Kodierung nicht bestimmbar — kein bekanntes Verhaeltnismuster im Wechsel-Histogramm");
+            return FLUX_ERR_ENCODING_UNKNOWN;
+
         default:
             return FLUX_ERR_INVALID;
     }

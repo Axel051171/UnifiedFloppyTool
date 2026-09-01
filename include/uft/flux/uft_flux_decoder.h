@@ -112,7 +112,14 @@ typedef enum {
      * dessen Aussage bisher niemand las. Angehaengt statt eingefuegt:
      * die Werte davor behalten ihre Zahlen. */
     FLUX_ERR_UNFORMATTED,   /**< keine Wechsel-Struktur: leere/geloeschte Spur */
-    FLUX_ERR_NOISE          /**< Wechsel ohne gemeinsamen Takt: unlesbar */
+    FLUX_ERR_NOISE          /**< Wechsel ohne gemeinsamen Takt: unlesbar */,
+
+    /* MF-766: „ich kann die Kodierung nicht bestimmen" ist eine Auskunft,
+     * kein ungueltiges Argument. Vorher lief dieser Fall in
+     * FLUX_ERR_INVALID („Invalid parameters") — eine Meldung, die den
+     * Benutzer an seinem Aufruf zweifeln laesst statt an der Spur.
+     * Angehaengt statt eingefuegt. */
+    FLUX_ERR_ENCODING_UNKNOWN
 } flux_status_t;
 
 /* ============================================================================
