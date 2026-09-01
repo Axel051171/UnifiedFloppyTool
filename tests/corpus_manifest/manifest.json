@@ -17,7 +17,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)",
       "source": "c1541 -format \"uftcorpus,42\" d64 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
-      "test": "test_corpus_d64"
+      "test": "test_corpus_d64",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/xdftool_dd_ofs.adf",
@@ -26,7 +28,9 @@
       "origin": "cross-tool",
       "tool": "amitools xdftool 0.8.1 (pip amitools, installiert 2026-08; Version per importlib.metadata.version(\"amitools\") gemessen MF-778)",
       "source": "xdftool <img> create + format \"UFTCORPUS\" ofs + write marker.txt; marker.txt is original UFT text (rights-free)",
-      "test": "test_corpus_adf"
+      "test": "test_corpus_adf",
+      "oracle": "xdftool",
+      "fremdcode": "nein - Block 0 gemessen: 5 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/atrcopy_dos2sd.atr",
@@ -35,7 +39,9 @@
       "origin": "cross-tool",
       "tool": "atrcopy 10.1 template dos2sd.atr (pristine, byte-identical to the pip package artifact)",
       "source": "atrcopy templates/dos2sd.atr: 'Atari 8-bit DOS 2 single density (90K), empty VTOC' — filesystem structure only, no copyrighted DOS files",
-      "test": "test_corpus_atr"
+      "test": "test_corpus_atr",
+      "oracle": "atrcopy",
+      "fremdcode": "nein - Block 0 gemessen: 5 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/atrcopy_dos2sd.xfd",
@@ -44,7 +50,9 @@
       "origin": "cross-tool",
       "tool": "atrcopy 10.1 template dos2sd.atr, header stripped (MF-426)",
       "source": "XFD is ATR without its 16-byte header (Atari 8-bit FAQ doc-27). Reproduce: tail -c +17 tests/corpus_free/atrcopy_dos2sd.atr > atrcopy_dos2sd.xfd. The stripped header is decoded and checked in the test, so the derivation is not taken on faith.",
-      "test": "test_corpus_xfd"
+      "test": "test_corpus_xfd",
+      "oracle": "atrcopy",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus/zxart_spectrofon01.fdi",
@@ -62,7 +70,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
       "source": "c1541 -format \"uftcorpus,42\" d71 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
-      "test": "test_corpus_d71"
+      "test": "test_corpus_d71",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/vice_c1541_80trk.d81",
@@ -71,7 +81,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
       "source": "c1541 -format \"uftcorpus,42\" d81 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
-      "test": "test_corpus_d81"
+      "test": "test_corpus_d81",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/gw_amigados.hfe",
@@ -80,7 +92,9 @@
       "origin": "cross-tool",
       "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
       "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.hfe — canonical MFM encoding of the rights-free xdftool ADF",
-      "test": "test_corpus_hfe"
+      "test": "test_corpus_hfe",
+      "oracle": "gw",
+      "fremdcode": "nein - Block 0 gemessen: 5 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus/gw_amigados.scp",
@@ -89,7 +103,9 @@
       "origin": "cross-tool",
       "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
       "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.scp — 32 MB flux, LOCAL-ONLY (tests/corpus/ gitignored) but fully reproducible from the tracked ADF with this exact command",
-      "test": "test_corpus_scp"
+      "test": "test_corpus_scp",
+      "oracle": "gw",
+      "fremdcode": "nein - per ABSTAMMUNG: erzeugt aus einem Abbild, dessen Block 0 gemessen sauber ist; der Containerkopf ist Werkzeug-Metadaten, nicht Diskettenblock 0 (MF-779)"
     },
     {
       "file": "tests/corpus_free/vice_c1541_35trk.g64",
@@ -98,7 +114,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
       "source": "c1541 -format \"uftg64,42\" g64 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Real 1541 GCR bitstreams: 35 tracks, speed zones 3/2/1/0, 21/19/18/17 sectors, no half-tracks",
-      "test": "test_c64_metrics_corpus"
+      "test": "test_c64_metrics_corpus",
+      "oracle": "c1541",
+      "fremdcode": "nein - per ABSTAMMUNG: erzeugt aus einem Abbild, dessen Block 0 gemessen sauber ist; der Containerkopf ist Werkzeug-Metadaten, nicht Diskettenblock 0 (MF-779)"
     },
     {
       "file": "tests/corpus/c64pp_bountybob.g64",
@@ -179,7 +197,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
       "source": "c1541 -format \"uftcorpus,42\" d67 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 2040/4040, 690 sectors, zone table 21/20/18/17.",
-      "test": "test_corpus_cbm_vice"
+      "test": "test_corpus_cbm_vice",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/vice_c1541_8050.d80",
@@ -188,7 +208,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
       "source": "c1541 -format \"uftcorpus,42\" d80 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 8050, 2083 sectors, zone table 29/27/25/23.",
-      "test": "test_corpus_cbm_vice"
+      "test": "test_corpus_cbm_vice",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/vice_c1541_8250.d82",
@@ -197,7 +219,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
       "source": "c1541 -format \"uftcorpus,42\" d82 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 8250, double-sided 8050, 4166 sectors.",
-      "test": "test_corpus_cbm_vice"
+      "test": "test_corpus_cbm_vice",
+      "oracle": "c1541",
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
     },
     {
       "file": "tests/corpus_free/vice_c1541_1571.g71",
@@ -206,7 +230,9 @@
       "origin": "cross-tool",
       "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
       "source": "c1541 -format \"uftcorpus,42\" g71 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). 1571 GCR, 168 half-track slots.",
-      "test": "test_corpus_cbm_vice"
+      "test": "test_corpus_cbm_vice",
+      "oracle": "c1541",
+      "fremdcode": "nein - per ABSTAMMUNG: erzeugt aus einem Abbild, dessen Block 0 gemessen sauber ist; der Containerkopf ist Werkzeug-Metadaten, nicht Diskettenblock 0 (MF-779)"
     },
     {
       "file": "tests/corpus_free/hxcfe_atarist_dd.dim",
@@ -215,7 +241,9 @@
       "origin": "cross-tool",
       "tool": "HxC libhxcfe hxcfe.exe (Klon 05b53aa)",
       "source": "hxcfe.exe -finput:tests/differential/corpus/sources/atarist_dd.st -conv:ATARIST_DIM; Quelle ist eigener Differential-Korpus (selbst gebaut), Zielformat von fremder Hand erzeugt. Traegt das ID-Magic 0x4242 an 0x00 (MF-687). BPB 0x0E-0x1F ist bei HxC-Erzeugnissen genullt — ein FastCopy-Pro-Erzeugnis mit gefuellter BPB fehlt noch (FMT-15).",
-      "test": "test_dim_atari_magic"
+      "test": "test_dim_atari_magic",
+      "oracle": "hxcfe",
+      "fremdcode": "UNGEMESSEN - Containerformat, das kein verfuegbares Werkzeug in Sektoren wandelt; die ersten 1024 Byte sind der Containerkopf, nicht Block 0 (MF-779)"
     },
     {
       "file": "tests/corpus_free/hxcfe_atarist_dd_nomagic.dim",

@@ -224,6 +224,67 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="c1541",
+        env="C1541",
+        exes=("c1541", "c1541.exe"),
+        version_args=("-?",),
+        version_re=r"[Vv]ersion\s+([0-9]+\.[0-9]+)",
+        version_exit_ok=(0, 1, 2),
+        reference_for=(
+            "ERZEUGT KORPUS fuer d64, d67, d71, d80, d81, d82, g64, g71 — "
+            "und ist damit fuer diese Formate KEIN PRUEFER. Ein Werkzeug, "
+            "das die Fixture geschrieben hat, kann nicht zugleich "
+            "bestaetigen, dass sie richtig gelesen wird; es wuerde nur "
+            "seine eigene Ausgabe wiedererkennen. Wer d64 gegen eine "
+            "zweite Hand messen will, braucht eine ANDERE."
+        ),
+        origin="https://sourceforge.net/projects/vice-emu/ (VICE-Team)",
+        licence="GPL-2.0-or-later",
+        abstammung=(
+            "FUENFTE FRAGE (MF-644), beantwortet: c1541 steht hier als "
+            "ERZEUGER, nicht als Pruefer — die Frage „dieselbe Hand?“ ist "
+            "fuer seine eigenen Fixtures mit JA zu beantworten, und genau "
+            "deshalb steht es im `reference_for` oben statt in einer "
+            "Fussnote. "
+            "ACHTUNG BEI DER VERSION: das Manifest nennt DREI verschiedene "
+            "Bauten derselben Fassung 3.10 — `GTK3VICE-3.10-win64`, "
+            "`SDLVICE-3.10-win64-r46215` und ein blosses "
+            "`VICE-Team/svn-mirror release 3.10.0`. Die Revision `r46215` "
+            "unterscheidet den SDL-Bau; `c1541 -?` meldet nur `3.10`. Der "
+            "Korpus-Eintrag muss den BAU nennen, das Register kann es "
+            "nicht. "
+        ),
+    ),
+    Oracle(
+        name="atrcopy",
+        env="ATRCOPY",
+        exes=("atrcopy", "atrcopy.exe"),
+        # Wie `xdftool`: die Version kommt aus den Paket-Metadaten, nicht
+        # aus dem Werkzeug. Gemessen: `atrcopy 10.1`.
+        version_args=(),
+        version_via=(sys.executable, "-c",
+                     "import importlib.metadata as m; "
+                     "print('atrcopy', m.version('atrcopy'))"),
+        version_re=r"atrcopy ([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+        reference_for=(
+            "ERZEUGT KORPUS fuer atr und xfd — und ist damit fuer diese "
+            "Formate KEIN PRUEFER, aus demselben Grund wie c1541. "
+            "Besonderheit: die beiden Fixtures stammen aus EINER Vorlage "
+            "(`dos2sd.atr` aus dem pip-Paket); das xfd ist dasselbe Abbild "
+            "ohne den 16-Byte-Kopf (MF-426). Zwei Eintraege, eine Quelle — "
+            "wer sie als zwei unabhaengige Belege zaehlt, zaehlt einen "
+            "doppelt."
+        ),
+        origin="https://github.com/robmcmullen/atrcopy",
+        licence="MPL-2.0",
+        abstammung=(
+            "FUENFTE FRAGE (MF-644), beantwortet: Erzeuger, nicht Pruefer "
+            "— siehe `reference_for`. Fuer den ATR-LESER des Baums ist "
+            "atrcopy damit dieselbe Hand; eine echte Hebung von `atr` "
+            "braucht eine zweite Quelle oder einen realen Dump. "
+        ),
+    ),
+    Oracle(
         name="cpmls",
         env="CPMLS",
         exes=("cpmls", "cpmls.exe"),

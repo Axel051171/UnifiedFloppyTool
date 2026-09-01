@@ -45,12 +45,51 @@ für T1/T1b, nicht dekorativ. Ohne sie ist „Parser falsch" von „Datei
 beschädigt / von exotischem Tool erzeugt" nicht unterscheidbar — exakt die
 Unentscheidbarkeit, die die Fabrikationen ermöglichte. Konkret:
 
-- **T1b (cross-tool)** verlangt im Manifest: Erzeuger-Tool **und** Version
-  **und** reproduzierbaren Erzeugungsweg/Lizenz. Fehlt eines, zählt der
-  Eintrag nicht (Gate erzwingt das).
-> **Offene Lesart (MF-778):** der Schrägstrich in „Erzeugungsweg/**Lizenz**" ist zweideutig — *Weg **oder** Lizenz* oder *Weg **und** Lizenz*? Gemessen an den 14 cross-tool-Einträgen des Manifests: **alle 14** nennen Werkzeug und Erzeugungsweg, **keiner** nennt eine Lizenz. Auf der strengen Lesart wäre also **kein einziges** T1b belegt; auf der milden sind es 13 von 14. Das ist kein Detail — es entscheidet über die Hälfte der Stufentabelle. **Eigentümer-Entscheidung.**
+- **T1b (cross-tool)** verlangt im Manifest **vier** Angaben:
+  1. **Erzeuger als Registername** — der Eintrag nennt `gw`, `xdftool`,
+     `c1541`, … und *nichts weiter*. Lizenz und Herkunft stehen **einmal**
+     in `tests/differential/oracles.py` und werden von dort **aufgelöst,
+     nicht kopiert**.
+  2. **Version oder Commit-Hash.** Beides zählt; für ein aus Quellen
+     gebautes Werkzeug ist der Hash **stärker**, weil er genau einen
+     Zustand bezeichnet. Das Register unterscheidet die Formen bereits
+     (MF-623).
+  3. **Reproduzierbare Befehlszeile.**
+  4. **Fremdcode-Befund** — `nein`, oder `ja (was)`.
+
+  Fehlt eines, zählt der Eintrag nicht (Tor erzwingt das).
+
+> **Warum die Lizenz NICHT im Korpus-Eintrag steht (MF-779).** Hier stand
+> „reproduzierbaren Erzeugungsweg/**Lizenz**", und der Schrägstrich war
+> eine **falsche Alternative**: die Lizenz ist eine Eigenschaft des
+> *Werkzeugs*, nicht des Korpus-Eintrags. Ein Werkzeug hat eine Lizenz,
+> egal wie viele Fixtures es erzeugt hat — und ein Feld, das dieselbe
+> Angabe **vierzehnmal** trägt, driftet vierzehnmal. Genau das Muster,
+> das dieser Baum als „Aufzählung statt Messung" führt.
 >
-> Zwei Nebenbefunde derselben Messung: `adf` nannte statt einer Version nur ein Datum („pip amitools, 2026-08") — seit MF-778 steht dort **0.8.1**, per `importlib.metadata` gemessen. Und `dim_atari` trägt einen **Klon-Hash** (`05b53aa`) statt einer Versionsnummer; das ist für ein aus Quellen gebautes Werkzeug **stärker**, nicht schwächer — eine Prüfung, die nur nach `\d+\.\d+` sucht, meldet es fälschlich als Mangel. Wer hier ein Tor baut, muss beide Formen zulassen.
+> Gemessen war die Lage: alle 14 cross-tool-Einträge nannten Werkzeug und
+> Weg, **keiner** eine Lizenz. Die naheliegende Antwort wäre gewesen, 14
+> Lizenzstrings nachzutragen. Die richtige ist ein **Verweis**.
+>
+> **Und der Verweis findet sofort, was das Abtippen verdeckt hätte:** das
+> Register kennt `gw`, `hxcfe` und `xdftool` — aber weder **VICE/c1541**
+> noch **atrcopy**. Zwei Korpus-Erzeuger ohne Registereintrag heißt: keine
+> gepinnte Version, keine Abstammungs-Notiz, keine SHA. Vierzehn
+> Lizenzstrings hätten wie Vollständigkeit ausgesehen und diese Lücke
+> zugedeckt.
+
+> **Wozu ein Fixture überhaupt eine Rechte-Angabe braucht (MF-779).**
+> Nicht wegen des Werkzeugs — dessen Lizenz erfasst seinen **Code**, nicht
+> seine **Ausgabe**. Sondern wegen dessen, was das Werkzeug in das Abbild
+> hineinschreibt: ein Bootblock, ein Bootsektor, ein Dateisystem-Stumpf.
+>
+> Ein unter Kickstart mit `install` erzeugtes ADF trüge **Commodore-Code**.
+> Ein mit `format` erzeugtes trägt nur DOS-Kennung, Prüfsumme und Nullen.
+> Das ist die Zeile, die bisher fehlte — und sie ist **messbar**, nicht
+> zu beurteilen: ein Blick auf Block 0 beantwortet sie. Für leere
+> formatierte Abbilder lautet die Antwort `nein`.
+>
+> Dieses Feld schützt das Repository. Die Werkzeuglizenz tat es nie.
 
 - **T1 (real)** verlangt: dokumentierte archivalische Herkunft (Quelle/URL +
   SHA-256) **plus** unabhängigen Spec-Pin — die Assert-Bytes werden VOR dem

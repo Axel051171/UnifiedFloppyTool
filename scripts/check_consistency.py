@@ -891,6 +891,20 @@ def main() -> int:
         import audit_attribution_licence as _al
         all_errors.append(("Ableitung ohne Lizenz", _al.check(repo)))
 
+        # 47. Kategorie (MF-779): Korpus-Herkunft, per VERWEIS statt Kopie.
+        #
+        # T1b verlangt Erzeuger, Version, Befehlszeile und
+        # Fremdcode-Befund. Der Erzeuger steht als REGISTERNAME da und
+        # loest auf `oracles.py` auf — die Lizenz wird damit aufgeloest,
+        # nicht vierzehnmal abgetippt. Ein Feld, das dieselbe Angabe
+        # vierzehnmal traegt, driftet vierzehnmal.
+        #
+        # Der Verweis fand sofort, was das Abtippen verdeckt haette:
+        # das Register kannte weder VICE/c1541 noch atrcopy — und die
+        # beiden erzeugen ZEHN der vierzehn Eintraege.
+        import audit_korpus_herkunft as _kh
+        all_errors.append(("Korpus-Herkunft", _kh.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"
