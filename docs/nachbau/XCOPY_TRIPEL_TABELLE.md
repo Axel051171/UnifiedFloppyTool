@@ -1,6 +1,6 @@
 # Die Tripel-Tabelle — Spurverdikt als drei Felder statt einer Ziffer
 
-**Werkstatt-Dokument, Zug 2. Stand 2026-09-01 (MF-768).**
+**Werkstatt-Dokument, Zug 2. Stand 2026-09-01 (MF-769).**
 
 X-Copy presst drei Aussagen in eine rote Ziffer. Dieses Dokument
 zerlegt sie und stellt daneben, was UFT heute für denselben Fall setzt.
@@ -396,7 +396,7 @@ messen.
 | **P2** | **Ziel korrigiert** — gegen `uft_flux_sync_search`, nicht `fuzzy_sync_v2`; Toleranzfrage vorher messen |
 | **P2** | **beantwortet** — MF-766 (fremd) + MF-768 (Schutz, benannt) |
 | **Verdikt-Bauer** | **eine Stelle**, fünf Aufrufer (MF-765) |
-| Code 3 (splice_pos → P6) | offen — der letzte Zug vor der Sitzung |
+| **Code 3 / P6 (Leseseite)** | **vollzogen** (MF-769) — Produzent steht, Verbraucher ist **P3-7**, Eigentümerentscheidung (geschützter Pfad) |
 | Code 5, P4 | vollzogen |
 
 
@@ -520,7 +520,7 @@ sondern weil sie auf der falschen Ebene liegen: Spur, nicht Sektor.
 | 0 | `UFT_SECTOR_OK` / `UFT_TRACK_OK` | ✔ |
 | **1** | **fehlt — absichtlich auf Sektorebene, offen auf Spurebene** | Spur |
 | 2 | `FLUX_ERR_NO_SYNC` — **schärfer als gedacht**, seit MF-454 von Code 5 getrennt; kollabiert aber weiterhin leer/fremd/verrauscht | Spur |
-| 3 | `missing_data` — laut Header „teilweise" | Sektor |
+| **3** | **`uft_splice_lage_t`** seit MF-769 — `FEHLT` ist Code 3, und es ist von `UNBEKANNT` (nur eine Umdrehung aufgenommen) getrennt. `missing_data` daneben bleibt die Sektor-Ebene | Spur + Sektor |
 | 4 | `bad_id_crc` | ✔ Sektor |
 | **5** | **`bad_header_format`** ✔ | Sektor |
 | 6 | `bad_data_crc` | ✔ Sektor |
@@ -528,7 +528,7 @@ sondern weil sie auf der falschen Ebene liegen: Spur, nicht Sektor.
 | 8 | `WriteVerifyFailed` ✔ | Schreibvorgang |
 | gerettet | `UFT_SECTOR_RECOVERED` ✔ **ohne Tür** | Sektor |
 
-**Diagnose: 6 von 9 unterschieden, nicht 4.** Die Lücke ist kleiner, als
+**Diagnose: 7 von 9 unterschieden** (Stand MF-769; 6 vor Code 3). Die Lücke ist kleiner, als
 meine Tabelle behauptet hat.
 
 ### Fortschreibung MF-765 bis MF-768
@@ -541,6 +541,7 @@ Vier Züge, alle mit Rotbeweis zuerst. Was sich am Stand oben ändert:
 | **Fremdformat** | Kodierung nach Mittelwert geraten, 3 von 5 falsch | am **Verhältnismuster** des vorhandenen Histogramms, 5 von 5 (MF-766) |
 | **Alle Codes** | fünf Rückgabestellen, jede eigen | **ein** Verdikt-Bauer, fünf Aufrufer (MF-765) |
 | **gerettet** | ohne Tür | im Verdikt, schlägt „korrigierbar" (MF-765) |
+| **Code 3** | fiel mit drei anderen Lagen zusammen | `GEFUNDEN` / `FEHLT` / `UNBEKANNT`, und der **Schreibstartpunkt** fällt als Nebenprodukt an — P6 (MF-769) |
 
 Damit ist **P2 als Dreiwege-Frage beantwortet**: Fremdformat über die
 Kodierungserkennung, Schutz über den benannten Markensatz, und „keiner"
