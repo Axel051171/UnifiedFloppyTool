@@ -891,6 +891,18 @@ def main() -> int:
         import audit_attribution_licence as _al
         all_errors.append(("Ableitung ohne Lizenz", _al.check(repo)))
 
+        # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
+        #
+        # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"
+        # war von Hand gepflegt und wurde von `gen_stand.py` per Regex
+        # in eine RELEASE-KENNZAHL uebersetzt. Bei ihrer ersten Messung
+        # war sie falsch: 0 aufgeloest behauptet, zwei gefuehrt.
+        #
+        # Die Prosazeile darf bleiben — sie ist fuer Menschen da. Sie
+        # darf nur nicht mehr von den Tabellen abweichen.
+        import quarantine_stand as _qsc
+        all_errors.append(("Quarantaene-Stand", _qsc.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

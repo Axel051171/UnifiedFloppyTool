@@ -2,7 +2,7 @@
 
 **NICHT von Hand editieren** — erzeugt von `scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im Baum und wird bei jedem Lauf neu gelesen.
 
-Stand: 2026-08-31
+Stand: 2026-09-01
 
 ---
 
@@ -26,7 +26,7 @@ Stand: 2026-08-31
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
 - Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **172**
-- Quarantäne: 1 vollzogen, 5 vorgemerkt, 0 aufgelöst (`docs/QUARANTINE.md`)
+- Quarantäne: 1 vollzogen, 5 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 

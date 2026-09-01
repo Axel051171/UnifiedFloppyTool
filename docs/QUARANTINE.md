@@ -7,7 +7,18 @@ Schema der Felder dort in §3.
 > ist die Datenquelle für „Dateien mit ungeklärter Herkunft" — die
 > begründete fünfte Release-Kennzahl (CLAUDE.md, MF-640).
 >
-> **Stand 2026-08-31: 1 vollzogen, 5 vorgemerkt, 0 aufgelöst.**
+> **Stand 2026-08-31: 1 vollzogen, 5 vorgemerkt, 2 aufgelöst.**
+>
+> MF-742: hier stand **0 aufgelöst**. Gemessen an den Tabellen sind
+> es **zwei** — `uft_gcr_ops.c` und `uft_d64_g64.c` unter
+> „Rehabilitiert (Weg 1)". Die Zahl unterberichtete **erledigte
+> Arbeit**; das ist die Richtung, in der ein Fehler am längsten
+> unbemerkt bleibt, weil niemand nachfragt, warum etwas noch offen
+> ist.
+>
+> Diese Zeile ist jetzt für Menschen da, nicht als Quelle: die
+> Zahlen leitet `scripts/quarantine_stand.py` aus den Tabellen ab,
+> und Tor 44 hält Prosa und Messung zusammen.
 >
 > MF-741: die fünfte vorgemerkte Zeile ist `uft_track_analysis.c`+`.h`.
 > Sie kam nicht über eine Selbsterklärung herein wie die vier davor,

@@ -135,13 +135,18 @@ def lizenz() -> list[str]:
     if m:
         z.append(f"- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): "
                  f"**{m.group(1)}**")
-    q = lies("docs/QUARANTINE.md")
-    mq = re.search(r"Stand [0-9-]+: (\d+) vollzogen, (\d+) vorgemerkt, "
-                   r"(\d+) aufgeloest", q.replace("ö", "oe"))
-    if mq:
-        z.append(f"- Quarantäne: {mq.group(1)} vollzogen, "
-                 f"{mq.group(2)} vorgemerkt, {mq.group(3)} aufgelöst "
-                 f"(`docs/QUARANTINE.md`)")
+    # MF-742: hier stand ein Regex auf die von Hand geschriebene
+    # Prosazeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest".
+    # Eine gepflegte Zahl, die eine RELEASE-KENNZAHL speist — und sie
+    # war bei ihrer ersten Messung falsch: sie sagte 0 aufgeloest, die
+    # Tabelle „Rehabilitiert (Weg 1)" fuehrt zwei. Jetzt abgeleitet.
+    import quarantine_stand as _qs
+    _st, _warn = _qs.zaehle(lies("docs/QUARANTINE.md"))
+    z.append(f"- Quarantäne: {_st['vollzogen']} vollzogen, "
+             f"{_st['vorgemerkt']} vorgemerkt, {_st['aufgeloest']} "
+             f"aufgelöst (`docs/QUARANTINE.md`, abgeleitet)")
+    for _w in _warn:
+        z.append(f"  - ! {_w}")
 
     z += ["", "### Gesichtete Fremd-Repos, nach Lizenzzone", ""]
     # MF-705: Quelle ist die VERFOLGTE `zonen.json`, nicht mehr die

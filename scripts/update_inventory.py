@@ -99,6 +99,32 @@ def _excluded_test_count(repo: Path):
     return count
 
 
+def _quarantine_open_count(repo: Path):
+    """Autoritativ: offene Zeilen in `docs/QUARANTINE.md`.
+
+    „Offen" heisst auditiert mit festgelegtem oder ausstehendem Weg —
+    also `vollzogen` + `vorgemerkt`. Rehabilitierte zaehlen nicht, sie
+    sind aufgeloest.
+
+    MF-742: diese Zahl stand in CLAUDE.md von Hand und war die
+    **fuenfte** Release-Kennzahl. Ihre Quelle war eine ebenfalls von
+    Hand geschriebene Prosazeile im Zieldokument, und die war falsch —
+    „0 aufgeloest", waehrend zwei gefuehrt waren. Zwei gepflegte Zahlen
+    hintereinander, keine gemessen.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import quarantine_stand as qs
+        f = repo / "docs/QUARANTINE.md"
+        if not f.exists():
+            return None
+        stand, _ = qs.zaehle(f.read_text(encoding="utf-8",
+                                         errors="replace"))
+        return stand["vollzogen"] + stand["vorgemerkt"]
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
 def _matrix_entry_count(repo: Path):
     """Autoritativ: Eintraege in g_matrix[] (src/core/uft_roundtrip.c).
 
@@ -188,6 +214,12 @@ DERIVED_CLAIMS = [
     # Sache, keine davon gemessen. Diese Klasse hat MF-526/527 schon
     # einmal getroffen; sie kommt wieder, solange die Zahl von Hand
     # gepflegt wird.
+    # MF-742: die fuenfte Kennzahl (Herkunft, Befund-Stufe). Sie stand
+    # von Hand in CLAUDE.md und ihre Quelle war eine ebenfalls von Hand
+    # geschriebene Prosazeile — die bei ihrer ersten Messung falsch war.
+    ("CLAUDE.md", r"\*\*(\d+)\*\* offene Zeilen", _quarantine_open_count,
+     "CLAUDE.md: offene Zeilen in QUARANTINE.md "
+     "(vollzogen + vorgemerkt)"),
     ("CLAUDE.md", r"(\d+) Roundtrip-Matrix-Eintr", _matrix_entry_count,
      "CLAUDE.md: Eintraege in g_matrix[]"),
     ("CLAUDE.md", r"(\d+) verlustfrei \(je mit Messung\)",
