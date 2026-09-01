@@ -7142,4 +7142,95 @@ nichts zu übergeben.
 | Aufrufer benannt? | **nein** — offen beim Eigentümer |
 | Fakten belegt? | **1 von 4** |
 | Empfehlung | entfernen, nicht nachbauen (MF-739) |
-| Kanal | **Fundus** — was ihn öffnet, ist ein Aufrufer |
+| Kanal | **Fundus** — was ihn öffnet, ist ein Aufrufer |
+
+### LIZ-4 B entschieden (MF-744) — die XCopy-Lizenz liegt vor, und sie verbietet es
+
+Der Eigentümer hat `xcopypro_source_2011.zip` beigebracht
+(SHA-256 `0047220e40ae5441…`, eingefroren über
+`tools/uft-nachbau/scripts/sichtprotokoll.py`). Das Archiv enthält zwei
+Dateien: `xcopy_licence.txt` und ein 880K-Amiga-Abbild mit dem
+Quelltext.
+
+**Gelesen wurde nur die Lizenzdatei.** Das Abbild ist bewusst
+ungeöffnet und steht nicht im Sichtprotokoll — die Lizenz entscheidet,
+ob es überhaupt geöffnet werden darf, und sie entscheidet es mit Nein.
+
+#### Der Wortlaut
+
+| Klausel | Text |
+|---|---|
+| **1. Usage** | *„You are entitled to use the enclosed software free for **private, non-commercial** use. Commercial or **governmental use is not permitted**."* |
+| **2. Distribution** | *„…only if you keep **all the files in it intact**, and provided you do it **free of any charge at all**."* |
+| **3. Copyrights** | *„© 1988-2011 Anguilla Software International Ltd., Bletchley Manor, Long Ground, Anguilla, BWI."* |
+| **Bearbeitung** | **kommt nicht vor** |
+
+#### Drei Folgen, alle zwingend
+
+**1 · Kein Recht auf Bearbeitung.** Die Lizenz gewährt *Nutzung* und
+*unveränderte Weitergabe*. Ein Bearbeitungsrecht wird nirgends
+eingeräumt. `uft_amiga_protection.c` erklärt sich im eigenen Kopf als
+*„C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms"* und
+trägt den Original-Assemblertext mitsamt seinen deutschen
+Originalkommentaren in den Kommentarblöcken. Das ist ein
+**Bearbeitungswerk ohne Erlaubnis**.
+
+**2 · Unvereinbar mit GPL-2.0-or-later.** Die GPL *verlangt*, dass
+kommerzielle Nutzung gestattet wird (§0, §6: keine weiteren
+Beschränkungen). Diese Lizenz *verbietet* sie. Die Dateien können unter
+unserer Lizenz nicht stehen — und einen SPDX-Kopf zu setzen hieße, eine
+Lizenz zu erfinden. Das ist die Fehlerklasse, die dieser Baum als P0-5
+bezahlt hat.
+
+**3 · Unsere Zielgruppe ist ausdrücklich ausgeschlossen.** `CLAUDE.md`
+nennt „Archive, Museen, digitale Forensiker". *„Governmental use is not
+permitted"* schließt einen erheblichen Teil davon aus — Staatsarchive,
+Landesmuseen, Behörden.
+
+#### Damit ist LIZ-4 B entschieden
+
+Nicht mehr „unklar ⇒ wie portiert" (§4), sondern **belegt portiert unter
+einer Lizenz, die Bearbeitung nicht gestattet**. Es ist keine
+Abwägungsfrage mehr.
+
+Betroffen sind vier Stellen in zwei Übersetzungseinheiten:
+
+```
+src/formats/amiga/uft_amiga_protection.c    seit MF-699 aus dem qmake-Bau
+src/analysis/uft_track_analysis.c + .h      steht NOCH im Bau (.pro:1219)
+```
+
+#### Die Entfernung ist kleiner als befürchtet — gemessen
+
+`uft_track_analysis.h` wird von sieben Dateien eingebunden, was nach
+viel aussieht. Gemessen, was sie daraus benutzen:
+
+| | |
+|---|---|
+| exportierte Funktionen in `.c` | **20** |
+| davon von den Einbindern gerufen | **0** |
+| gebrauchte Typen | **2** — `uft_platform_t`, `uft_platform_profile_t` |
+
+Die sieben Profil-Dateien brauchen **nur zwei Typdeklarationen**. Ein
+Plattform-Enum und eine Profilstruktur sind Fakten, keine
+Ausdrucksform — sie lassen sich behalten, ohne die Vorlage zu berühren.
+Die 20 abgeleiteten Funktionen haben null Abnehmer.
+
+#### Was ausdrücklich NICHT folgt
+
+**Kein Nachbau.** MF-740 hat das schon entschieden, und die Lizenz
+ändert daran nichts: von den vier Sync-Wörtern ist eines belegt, zwei
+werden von unabhängiger Preservation-Dokumentation widersprochen, und
+der Baum selbst führte `0xA245` unter zwei verschiedenen Namen. Man
+kann nichts sauber nachbauen, dessen Fakten falsch sind.
+
+**Das Archiv gehört nicht in den Baum** — auch nicht ins Korpus.
+Klausel 2 erlaubt Weitergabe nur **vollständig**; ein einzelnes ADF als
+Fixture wäre die Weitergabe eines Teils. Das 880K-Abbild wäre als
+AmigaDOS-Fixture reizvoll gewesen; es ist nicht verfügbar.
+
+**Das Abbild bleibt zu.** Es zu öffnen brächte nichts, was die
+Entscheidung ändert, und würde die Kontamination nur vertiefen. Und es
+kann die Sync-Wörter auch nicht belegen: XCopys eigenen Quelltext zu
+lesen bestätigt, *was XCopy behauptet* — nicht, ob es stimmt. Genau
+darum ging es in MF-740.
