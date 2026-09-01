@@ -171,9 +171,33 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 > `tests/`; die einzigen Treffer sind ihre eigenen Prototypen in
 > `include/uft/analysis/`. Unabhängig mit einfachem `grep` gegengeprüft.
 > Das ist dieselbe Lage wie beim Kopierschutz-Katalog (P0-2): **Bestand,
-> nicht Fähigkeit.** Die drei Decode-Booster darüber sind davon nicht
-> betroffen — sie haben mit `src/gui/uft_otdr_panel.cpp` einen echten
-> Aufrufer.
+> nicht Fähigkeit.**
+>
+> **BERICHTIGUNG (MF-767).** Hier stand: „Die drei Decode-Booster
+> darüber sind davon nicht betroffen — sie haben mit
+> `src/gui/uft_otdr_panel.cpp` einen echten Aufrufer." Das trifft auf
+> **einen** von dreien zu. Gemessen über den ganzen Baum mit
+> `git ls-files`, je Bezeichner:
+>
+> | Booster | Symbol | Aufrufer |
+> |---|---|---|
+> | Encoding Boost | `uft_otdr_detect_encoding` | **ja** — `uft_otdr_panel.cpp:888` |
+> | Adaptive Decode | `uft_otdr_adaptive_decode` | **nein** — alle vier Fundstellen außerhalb der eigenen Datei sind **Kommentare** |
+> | Weighted Voting | `uft_otdr_fuse_sector` | **nein** — nur eigener Prototyp |
+>
+> Einen Bezeichner `uft_otdr_weighted_vote` gibt es im Baum überhaupt
+> nicht; die float-gewichtete Fusion ist `uft_otdr_fuse_sector()` und
+> liegt **im Modul der Adaptive Decode** — beide fallen also zusammen.
+>
+> Das ist bemerkenswert, weil MF-627 selbst ein Ehrlichkeits-Hinweis
+> war: die Notiz, die eine Überzeichnung berichtigt hat, trug eine
+> zweite. Eine Erreichbarkeits-Zusage gehört gemessen wie jede Zahl —
+> `docs/orphan_baseline.txt` und `tools/uft-innendienst/` führen
+> `uft_otdr_adaptive_decode` bereits, die Tafel hier hat es nur nicht
+> nachgezogen.
+>
+> Damit steht es bei den 8 DeepRead-Modulen: **1 erreichbar, 7 ohne
+> Aufrufer** — nicht 3 zu 5.
 
 **5 Forensik-Module:**
 - **Write-Splice Detection:** Erkennt Schreibkopf-Ein/Aus-Übergänge
@@ -476,11 +500,15 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
   erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
-- 8 DeepRead-Module, davon **3 erreichbar** (die Decode-Booster, über
-  `src/gui/uft_otdr_panel.cpp`) und **5 ohne Aufrufer** (die
-  Forensik-Module in `src/analysis/deepread/`, 13 exportierte
-  Funktionen, 0 Nennungen außerhalb — MF-627) + 12
-  OTDR-Pipeline-Stufen
+- 8 DeepRead-Module, davon **1 erreichbar** und **7 ohne Aufrufer**
+  (MF-767, gemessen je Bezeichner über `git ls-files`). Erreichbar ist
+  allein der **Encoding Boost** (`uft_otdr_detect_encoding`, gerufen in
+  `src/gui/uft_otdr_panel.cpp:888`). Ohne Aufrufer: die fünf
+  Forensik-Module in `src/analysis/deepread/` (13 exportierte
+  Funktionen, 0 Nennungen außerhalb — MF-627) **plus Adaptive Decode
+  und die float-gewichtete Fusion** — hier stand bis MF-767 „3
+  erreichbar", was die frühere Berichtigung MF-627 mitgeschleppt hat.
+  Dazu 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex
