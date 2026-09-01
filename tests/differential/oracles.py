@@ -382,6 +382,60 @@ REGISTRY: tuple[Oracle, ...] = (
     # MinGW nicht existiert (heute nachgemessen: ohne die Zusaetze bricht
     # g++ 13.1.0 in `checksum()` ab). Lizenz vor Faehigkeit — die drei
     # Wege stehen in `docs/OPEN_ITEMS.md` unter ORAK-1.
+    Oracle(
+        name="xadundisk",
+        env="XADUNDISK",
+        exes=("xadUnDisk", "xadundisk", "xadUnDisk.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Amiga-Disketten-ARCHIVE: `xadUnDisk <archiv> <ziel.adf>`. "
+            "Deckt in diesem Baum genau ZWEI Plugins ab, und beide "
+            "stehen auf T3 — `dms` (Disk Masher System) und `trd` "
+            "(TR-DOS). Das ist der ganze Ertrag, und er ist echt: "
+            "„ungeprueft runter“ ist die erste der vier "
+            "Release-Kennzahlen. "
+            "WARUM GERADE HIER: `dms` traegt heute die Attribution "
+            "„Based on xDMS source, dms2adf, AROS source“ "
+            "OHNE genannte Lizenz — einer der offenen Faelle aus "
+            "MF-743. Ein Oracle-Weg verifiziert das Format, ohne diese "
+            "Frage anzufassen: das Werkzeug laeuft extern, verglichen "
+            "wird nur die Ausgabe, es entsteht kein abgeleitetes Werk "
+            "(MF-695, Kanal „Oracle: Ausfuehrung frei, Weitergabe "
+            "nicht“, derselbe wie bei `dtc`). "
+            "WAS HIER NICHT GEMESSEN IST, und das ist wichtig: dieses "
+            "Werkzeug wurde in diesem Baum **nie ausgefuehrt**. Der "
+            "Programmname stammt aus der Projektdokumentation (die "
+            "Shell-Werkzeuge liegen im `C`-Verzeichnis von xadmaster; "
+            "`xadUnDisk` fuer Disketten-, `xadUnFile` fuer "
+            "Datei-Archive), nicht aus einem Aufruf. Solange kein "
+            "Differenzlauf existiert, traegt dieser Eintrag KEIN "
+            "T1b-Manifest — er macht die Referenz nach ORAK-1 nur "
+            "zitierfaehig. Vor dem ersten Urteil zu messen: Bauweg, "
+            "Aufrufform, und ob die Ausgabe fuer `dms` und `trd` "
+            "ueberhaupt mit unserer vergleichbar ist. "
+            "FUENFTE FRAGE (MF-644): libxad ist gegenueber unseren "
+            "`dms`-Quellen (xDMS, dms2adf, AROS) eine EIGENE "
+            "Client-Implementierung von Dirk Stoecker — aber ob sie "
+            "ihrerseits von xDMS abstammt, ist UNGEPRUEFT. Wer den "
+            "Differenzlauf baut, klaert das zuerst; sonst ist es "
+            "dieselbe Hand. "
+            "DIE ANDEREN ACHT Clients (SuperDuper3, CrunchDisk, "
+            "PackDisk, PackDev, Zoom, xDisk, MDC, DCS) haben in diesem "
+            "Baum KEIN Plugin. Sie sind Fundus, nicht Auftrag — die "
+            "EINFRIER-REGEL sperrt neue Format-Plugins ausdruecklich "
+            "auch als Vorschlag."),
+        origin="XAD von Dirk Stoecker (1998); Architektur "
+               "`xadmaster.library` plus Clients, Kommandozeilen-"
+               "werkzeuge fuer Linux und Windows. NICHT hier gebaut, "
+               "NICHT hier gelaufen — Angaben aus der "
+               "Projektdokumentation.",
+        licence="LGPL — als Oracle unerheblich, weil das Werkzeug "
+                "extern laeuft und nur die AUSGABE verglichen wird; es "
+                "wandert kein Code ein. Die genaue Fassung "
+                "(2.1-or-later?) ist NICHT am Lizenztext gemessen.",
+    ),
 )
 
 

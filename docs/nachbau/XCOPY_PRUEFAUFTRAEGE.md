@@ -642,3 +642,84 @@ beschreibungen, ADFlib, amitools. Gemessen am Oracle-Register:
 Register). Offen bleiben WinUAE als Flussquelle, FluxEngine als
 Hostwerkzeug und ADFlib — und die gehören zum Streif-Scout, nicht in
 diesen Vorgang.
+
+
+---
+
+## P6 — beantwortet MF-756: **ROT, und das Konzept fehlt in der API**
+
+`uft_gw_write_params_t` (`include/uft/hal/uft_greaseweazle_full.h:184-190`)
+trägt fünf Felder:
+
+```
+index_sync   erase_empty   verify   pre_erase_ticks   terminate_at_index
+```
+
+**Kein Feld für einen Schreibversatz.** Und
+`uft_gw_write_flux_simple()` (`src/hal/uft_greaseweazle_full.c:1113`)
+verdrahtet fest:
+
+```c
+uft_gw_write_params_t p = { .index_sync=true, ..., .terminate_at_index=1 };
+```
+
+Gemessen: die einzigen `start_pos`-Fundstellen außerhalb der
+XCopy-abgeleiteten Dateien liegen im **Dekoder**
+(`src/flux/uft_flux_decoder.c`, Sync-Suche innerhalb eines Bitstroms) —
+das ist Lesen, nicht der Schreibstart. Kein `write_start`, kein
+`splice_pos`, kein `write_offset`.
+
+**Damit ist P6 in beiden Hälften rot:** der Startpunkt kommt aus einer
+festen Index-Annahme, nicht aus der Analyse der aufgenommenen Spur, und
+einen Ausweichfall für Startpunkte am Pufferrand gibt es nicht — das
+Konzept existiert in der API nicht.
+
+> `uft_greaseweazle_full.c` ist ein **geschützter Pfad**. Hier wurde
+> ausschließlich gelesen.
+
+### Damit ist der am Code messbare Satz vollständig
+
+| | | erreichbar | |
+|---|---|---|---|
+| **P2** bitweise Sync-Suche | ja, zweimal | **nein** | rot |
+| **P3** „gerettet" als Klasse | ja, mit Test | **nein** | rot |
+| **P4** syncfrei ≠ leer ≠ unlesbar | teilweise | — | rot |
+| **P5** überlange Spur | ja | ja, bis zur GUI | grün |
+| **P6** Schreibstartpunkt | **nein** | — | **rot** |
+| **P7** Verify auf Rohstromebene | ja | ja, aber aus | grün* |
+
+**Vier von sechs rot.** Drei davon sind „Bestand ohne Tür" (P2, P3, und
+P4 mangels Zuweisung); P6 ist die einzige echte Fähigkeitslücke — dort
+fehlt nicht die Tür, sondern das Zimmer.
+
+Offen bleiben **P1** (Hardware, MF-310), **P8** (Korpus), **P9**
+(Reichweite) und **E1** (Emulations-Oracle).
+
+---
+
+## Zug 1 vollzogen: `xadundisk` als zehntes Oracle (MF-756)
+
+`tests/differential/oracles.py`, `reference_for` = `dms` und `trd` —
+**beide auf T3**.
+
+Das Werkzeug heißt **`xadUnDisk`** (Disketten-Archive; `xadUnFile` ist
+das Gegenstück für Datei-Archive). XAD stammt von Dirk Stöcker, 1998,
+Architektur `xadmaster.library` plus Clients, mit
+Kommandozeilenwerkzeugen für Linux und Windows.
+
+**Was der Eintrag ausdrücklich NICHT behauptet:**
+
+* Das Werkzeug wurde in diesem Baum **nie ausgeführt.** Der
+  Programmname stammt aus der Projektdokumentation, nicht aus einem
+  Aufruf. Solange kein Differenzlauf existiert, trägt der Eintrag
+  **kein T1b-Manifest** — er macht die Referenz nach `ORAK-1` nur
+  zitierfähig.
+* Die genaue Lizenzfassung ist **nicht am Lizenztext gemessen**.
+* **Fünfte Frage (MF-644), ungeklärt:** ob libxads DMS-Client seinerseits
+  von xDMS abstammt. Ist er es, wäre es dieselbe Hand wie unsere Quelle,
+  und der Differenzlauf entschiede nichts. **Wer ihn baut, klärt das
+  zuerst.**
+
+> Dass keiner der zehn Oracles hier installiert ist, ist normal — das
+> Register ist eine benannte Referenz, kein Bestandsnachweis; die Tests
+> überspringen bei Abwesenheit.
