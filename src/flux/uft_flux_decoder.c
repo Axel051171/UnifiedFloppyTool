@@ -11,6 +11,7 @@
 #include "uft/flux/uft_flux_sync_search.h"
 #include "uft/flux/uft_dewarp.h"
 #include "uft/uft_log.h"
+#include "uft/formats/uft_amiga_syncs.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -660,6 +661,79 @@ static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
     return fallback_ns;
 }
 
+/* Welche Marke traegt die Spur? (MF-768)
+ *
+ * Der Satz kommt aus UFT_AMIGA_SYNCS — fuenf Muster, drei davon benannt,
+ * Herkunft im Kopf von include/uft/formats/uft_amiga_syncs.h. Kein neuer
+ * Katalog, keine neue Zahl.
+ *
+ * ── Warum nicht „der erste Treffer" ──────────────────────────────────────
+ *
+ * Gesucht wird im ABSTANDSSTROM, und verschiedene Bitmuster erzeugen an
+ * manchen Stellen dieselbe Abstandsfolge. Gemessen, je Strom mit acht
+ * Wiederholungen einer Marke, Toleranz 0:
+ *
+ *              gesucht:  $4489  $9521  $A245  $448A
+ *     Strom $9521           2      4      0      1
+ *     Strom $4489           4      0      0      0
+ *     Strom $4488           0      0      0      1     (kein Eintrag)
+ *     Strom $A245           2      0      4      3
+ *
+ * Wer den ersten Treffer nimmt, benennt bei $A245 unter Umstaenden
+ * $4489. Deshalb: der STAERKSTE Treffer gewinnt, und er braucht
+ * mindestens zwei. Mit dieser Regel stimmen alle vier Zeilen — der
+ * Strom $4488 (der in der Tabelle NICHT steht) faellt mit seinem einen
+ * Streutreffer korrekt heraus.
+ *
+ * UNBELEGT und hiermit benannt: die Spanne bei $A245 ist duenn — 4 gegen
+ * 3. Ob echte Aufnahmen sie halten, kann nur ein Korpus sagen. Die
+ * Alternative, gar nicht zu benennen, ist gemessen schlechter.
+ *
+ * $448A ist KEIN Tippfehler und keine Verwechslung mit einem gekippten
+ * Bit: die Vorlage fuehrt es als eigenen Eintrag in ihrer Suchschleife.
+ * Das gekippte Bit waere $4488, und das steht nirgends.
+ */
+static bool marke_suchen(const flux_raw_data_t *flux,
+                         uint16_t *out_marke, const char **out_name)
+{
+    *out_marke = 0;
+    *out_name  = NULL;
+    if (!flux || !flux->transitions || flux->transition_count < 64)
+        return false;
+
+    /* Abstaende in Nanosekunden bilden — die Suche rechnet in ns. */
+    double ns_per_tick = (flux->sample_rate > 0)
+                       ? (1e9 / (double)flux->sample_rate) : 1.0;
+    size_t n = flux->transition_count - 1;
+    uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
+    if (!iv) return false;
+    for (size_t i = 0; i < n; i++) {
+        uint32_t d = flux->transitions[i + 1] - flux->transitions[i];
+        iv[i] = (uint32_t)((double)d * ns_per_tick);
+    }
+
+    size_t bester = 0;
+    size_t best_i = 0;
+    for (size_t k = 0; k < UFT_AMIGA_SYNC_COUNT; k++) {
+        uint16_t w[2] = { UFT_AMIGA_SYNCS[k].pattern,
+                          UFT_AMIGA_SYNCS[k].pattern };
+        uft_sync_pattern_t pat;
+        if (!uft_sync_pattern_from_words(w, 2, &pat)) continue;
+
+        uft_sync_hit_t hits[32];
+        size_t t = uft_sync_search_intervals(iv, n, &pat, 0.0, hits, 32);
+        if (t > bester) { bester = t; best_i = k; }
+    }
+    free(iv);
+
+    /* Mindestens zwei Treffer — siehe die Zeile $4488 in der Tabelle oben. */
+    if (bester < 2) return false;
+
+    *out_marke = UFT_AMIGA_SYNCS[best_i].pattern;
+    *out_name  = UFT_AMIGA_SYNCS[best_i].name;   /* darf NULL sein */
+    return true;
+}
+
 /* Das Spurverdikt bilden — die EINE Stelle (MF-765).
  *
  * Vorher stand an fuenf Rueckgabestellen `return (sector_count > 0) ?
@@ -725,6 +799,11 @@ static flux_status_t verdikt_bilden(flux_decoded_track_t *track,
         b.histogramm_gueltig = true;
         b.histogramm_berge   = 0;
     }
+
+    /* MF-768: nur suchen, wenn nichts dekodiert wurde — bei erfolgreich
+     * gelesenen Sektoren ist die Frage „welche Marke" beantwortet. */
+    if (b.sector_count == 0)
+        b.marke_gefunden = marke_suchen(flux, &b.marke, &b.marke_name);
 
     uft_track_verdikt_t v;
     uft_track_verdikt_bilden(&b, &v);

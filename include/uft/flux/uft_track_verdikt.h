@@ -83,6 +83,18 @@ typedef struct {
     uft_track_diagnose_t        diagnose;
     uft_track_folge_t           folge;
     uft_track_reparierbarkeit_t reparierbarkeit;
+
+    /* MF-768: WELCHE Marke, nicht nur „eine". ANGEHAENGT.
+     *
+     * `schutz_name` ist NULL, wenn keine Marke erkannt wurde oder die
+     * erkannte unbenannt ist. `schutz_marke` traegt dann 0.
+     *
+     * Der Unterschied fuer den Archivar ist nicht klein: „Schutz" sagt
+     * ihm nichts, „Schutz (Arkanoid)" nennt das Verfahren — und
+     * „AmigaDOS" sagt ihm, dass die Standardmarke da ist und trotzdem
+     * nichts dekodiert, was eine voellig andere Lage ist. */
+    const char *schutz_name;
+    uint16_t    schutz_marke;
 } uft_track_verdikt_t;
 
 /** Eingaben des Bauers — alles, was der Dekoder ohnehin schon weiss. */
@@ -102,6 +114,18 @@ typedef struct {
     bool     histogramm_gueltig;
     size_t   histogramm_berge;
     bool     histogramm_sicher;
+
+    /* Ergebnis der Markensuche (MF-768). Der AUFRUFER sucht, der Bauer
+     * urteilt — dieselbe Trennung wie beim Bandmodell.
+     *
+     * Warum nicht „irgendein Treffer": gemessen erzeugen verschiedene
+     * Bitmuster an manchen Stellen dieselbe ABSTANDSFOLGE. Ein Strom
+     * mit lauter $A245 liefert 4 Treffer fuer $A245, aber auch 3 fuer
+     * $448A und 2 fuer $4489. Wer den ersten Treffer nimmt, benennt das
+     * falsche Verfahren. */
+    bool        marke_gefunden;
+    uint16_t    marke;
+    const char *marke_name;
 } uft_track_befunde_t;
 
 /**

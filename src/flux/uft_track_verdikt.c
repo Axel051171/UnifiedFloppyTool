@@ -88,6 +88,8 @@ void uft_track_verdikt_bilden(const uft_track_befunde_t *b,
          * vorsichtigere Auskunft: sie behauptet keine fremde Geometrie,
          * die niemand gemessen hat. */
         out->diagnose = UFT_DIAG_SCHUTZ;
+        out->schutz_name  = b->marke_gefunden ? b->marke_name : NULL;
+        out->schutz_marke = b->marke_gefunden ? b->marke : 0;
         return;
     }
 

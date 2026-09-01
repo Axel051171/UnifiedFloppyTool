@@ -94,6 +94,7 @@ set(UFT_FORMAT_LAYER_DEPS
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -520,6 +521,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -556,6 +558,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -583,6 +586,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_cbm_geometry")
@@ -606,6 +610,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -654,6 +659,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -823,6 +829,21 @@ foreach(test_source ${TEST_SOURCES})
         # Urteil haengt nicht mehr am Dekoder-Pfad.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c)
+    elseif(${test_name} STREQUAL "test_flux_schutzmarke")
+        # MF-768: welche Marke — staerkster Treffer, mindestens zwei
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_flux_encoding_detect")
         # MF-766: Kodierungserkennung am Verhaeltnismuster, nicht am Mittelwert
         target_sources(${test_name} PRIVATE
@@ -834,6 +855,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
@@ -848,6 +870,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
@@ -883,6 +906,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -920,6 +944,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -956,6 +981,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -994,6 +1020,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
@@ -1879,6 +1906,7 @@ foreach(test_source ${TEST_SOURCES})
         # parser TU is the only production source needed.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_provenance_chain")
         # MF-214 / P3.3 #110: forensic provenance chain-of-custody
@@ -2601,6 +2629,7 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
                 ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
                 ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
