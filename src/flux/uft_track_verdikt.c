@@ -40,6 +40,27 @@ void uft_track_verdikt_bilden(const uft_track_befunde_t *b,
     out->folge = b->ueberlange_spur ? UFT_FOLGE_NICHT_REPRODUZIERBAR
                                     : UFT_FOLGE_REPRODUZIERBAR;
 
+    /* Der Schreibstartpunkt wird durchgereicht — der Aufrufer sucht,
+     * hier wird nur geurteilt (MF-769). */
+    out->splice_lage       = b->splice_lage;
+    out->splice_pos_ns     = b->splice_pos_ns;
+    out->splice_abstand_ns = b->splice_abstand_ns;
+    out->splice_alt_ns     = b->splice_alt_ns;
+
+    /* Und ein FEHLENDER Startpunkt ist eine Folge-Aussage.
+     *
+     * Diese Zeile ist NICHT aus dem Handbuch abgeleitet — X-Copy fuehrt
+     * Code 3 als Lesefehler wie die anderen. Sie folgt aus UFTs eigener
+     * Anforderung P6: der Startpunkt muss aus der ANALYSE der Spur
+     * stammen. Ergibt die Analyse keinen, dann hat ein bitgenaues
+     * Rueckschreiben keinen sicheren Anfang — und das ist genau das,
+     * was „nicht reproduzierbar" heisst.
+     *
+     * UNBEKANNT bleibt bewusst folgenlos: eine zu kurze Aufnahme sagt
+     * nichts ueber die Reproduzierbarkeit der Diskette. */
+    if (b->splice_lage == UFT_SPLICE_FEHLT)
+        out->folge = UFT_FOLGE_NICHT_REPRODUZIERBAR;
+
     /* ── Reparierbarkeit ─────────────────────────────────────────────────
      *
      * „Gerettet" schlägt alles andere. Das Änderungsprotokoll zu X-Copy

@@ -734,6 +734,87 @@ static bool marke_suchen(const flux_raw_data_t *flux,
     return true;
 }
 
+/* Wo darf ein Rueckschreiben beginnen? (MF-769)
+ *
+ * Gesucht wird die Standardmarke NACH dem zweiten Indeximpuls — also der
+ * erste Sync hinter dem Gap. Das ist X-Copys Code 3 von der anderen
+ * Seite: was dort als Fehler gemeldet wird, ist hier die Quelle des
+ * Schreibstartpunkts.
+ *
+ * Warum der ZWEITE Index und nicht der erste: der Anfang des Stroms ist
+ * nicht der Anfang einer Umdrehung. Was vor dem ersten Indeximpuls
+ * liegt, ist der Rest der vorigen Umdrehung — ein Startpunkt dort waere
+ * auf nichts bezogen.
+ *
+ * Die drei Rueckgabelagen stehen im Kopf von uft_track_verdikt.h. Der
+ * wichtige Unterschied: `UNBEKANNT` (nur eine Umdrehung aufgenommen) ist
+ * eine Aussage ueber die AUFNAHME, `FEHLT` eine ueber die DISKETTE.
+ *
+ * P6 verlangt einen Ausweichfall fuer Startpunkte am Pufferrand. Statt
+ * einer Schwelle — die am Laufwerk haengt und die dieses Projekt mangels
+ * Hardware nicht messen kann (MF-310) — liefert die Funktion den
+ * ABSTAND zum Index und einen ZWEITEN Kandidaten. Der Verbraucher
+ * entscheidet, ohne dass hier eine ungemessene Zahl steht.
+ */
+static void splice_suchen(const flux_raw_data_t *flux, uft_track_befunde_t *b)
+{
+    b->splice_lage       = UFT_SPLICE_UNBEKANNT;
+    b->splice_pos_ns     = 0;
+    b->splice_abstand_ns = 0;
+    b->splice_alt_ns     = 0;
+
+    if (!flux || !flux->transitions || flux->transition_count < 64)
+        return;
+    /* Ohne zweiten Indeximpuls gibt es keine zweite Umdrehung — und
+     * damit keine Frage, die hier zu beantworten waere. */
+    if (flux->index_count < 2 || !flux->index_times)
+        return;
+
+    double ns_per_tick = (flux->sample_rate > 0)
+                       ? (1e9 / (double)flux->sample_rate) : 1.0;
+
+    size_t n = flux->transition_count - 1;
+    uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
+    if (!iv) return;
+    for (size_t i = 0; i < n; i++) {
+        uint32_t d = flux->transitions[i + 1] - flux->transitions[i];
+        iv[i] = (uint32_t)((double)d * ns_per_tick);
+    }
+
+    uint16_t w[2] = { MFM_SYNC_PATTERN, MFM_SYNC_PATTERN };
+    uft_sync_pattern_t pat;
+    if (!uft_sync_pattern_from_words(w, 2, &pat)) { free(iv); return; }
+
+    uft_sync_hit_t hits[64];
+    size_t treffer = uft_sync_search_intervals(iv, n, &pat, 0.0, hits, 64);
+    free(iv);
+
+    /* Ab hier steht fest: es GIBT eine zweite Umdrehung. Findet sich in
+     * ihr kein Sync, ist das Code 3 und keine Wissensluecke. */
+    b->splice_lage = UFT_SPLICE_FEHLT;
+
+    double idx2_ns = (double)flux->index_times[1] * ns_per_tick;
+    int gefunden = 0;
+
+    for (size_t k = 0; k < treffer; k++) {
+        if (hits[k].index >= flux->transition_count) continue;
+        double pos = (double)flux->transitions[hits[k].index] * ns_per_tick;
+        if (pos < idx2_ns) continue;          /* noch in Umdrehung 1 */
+
+        if (!gefunden) {
+            b->splice_lage       = UFT_SPLICE_GEFUNDEN;
+            b->splice_pos_ns     = (uint32_t)pos;
+            b->splice_abstand_ns = (uint32_t)(pos - idx2_ns);
+            gefunden = 1;
+        } else {
+            /* Der Ausweichkandidat. Der erste danach reicht — wer den
+             * ersten verwirft, will den naechsten, nicht den letzten. */
+            b->splice_alt_ns = (uint32_t)pos;
+            break;
+        }
+    }
+}
+
 /* Das Spurverdikt bilden — die EINE Stelle (MF-765).
  *
  * Vorher stand an fuenf Rueckgabestellen `return (sector_count > 0) ?
@@ -804,6 +885,11 @@ static flux_status_t verdikt_bilden(flux_decoded_track_t *track,
      * gelesenen Sektoren ist die Frage „welche Marke" beantwortet. */
     if (b.sector_count == 0)
         b.marke_gefunden = marke_suchen(flux, &b.marke, &b.marke_name);
+
+    /* Der Schreibstartpunkt (MF-769). Unabhaengig davon, ob Sektoren
+     * dekodiert wurden: gerade eine ERFOLGREICH gelesene Spur ist die,
+     * die man zurueckschreiben will. */
+    splice_suchen(flux, &b);
 
     uft_track_verdikt_t v;
     uft_track_verdikt_bilden(&b, &v);

@@ -78,6 +78,26 @@ typedef enum {
     UFT_REP_GERETTET            /**< behoben — und das MUSS sichtbar bleiben */
 } uft_track_reparierbarkeit_t;
 
+/** Wo darf ein Rueckschreiben beginnen? (MF-769)
+ *
+ * X-Copys Code 3 heisst „no sync after gap found". Dahinter stehen DREI
+ * Lagen, und zwei davon sagen etwas voellig Verschiedenes:
+ *
+ *   GEFUNDEN    zweite Umdrehung aufgenommen, Sync nach dem Gap da
+ *   FEHLT       zweite Umdrehung aufgenommen, KEIN Sync — das ist Code 3
+ *   UNBEKANNT   nur EINE Umdrehung aufgenommen
+ *
+ * UNBEKANNT ist keine Aussage ueber die Diskette, sondern ueber die
+ * AUFNAHME. Wer es mit FEHLT zusammenwirft, meldet einen
+ * Diskettenfehler fuer einen zu kurzen Mitschnitt — und ein Archivar,
+ * der das liest, sucht den Fehler am falschen Ort.
+ */
+typedef enum {
+    UFT_SPLICE_UNBEKANNT = 0,
+    UFT_SPLICE_GEFUNDEN,
+    UFT_SPLICE_FEHLT
+} uft_splice_lage_t;
+
 /** Das Spurverdikt. */
 typedef struct {
     uft_track_diagnose_t        diagnose;
@@ -95,6 +115,27 @@ typedef struct {
      * nichts dekodiert, was eine voellig andere Lage ist. */
     const char *schutz_name;
     uint16_t    schutz_marke;
+
+    /* MF-769: der Schreibstartpunkt, aus der ANALYSE (P6). ANGEHAENGT.
+     *
+     * P6 verlangt ausdruecklich, dass der Startpunkt aus der Analyse der
+     * aufgenommenen Spur stammt und nicht aus einer festen Annahme ueber
+     * den Indexbezug — und dass es einen Ausweichfall gibt, wenn der
+     * erste Sync unmittelbar hinter dem Index liegt. Dort faellt der
+     * Schreibstart sonst in den Aufsetzbereich des Kopfs.
+     *
+     * `splice_abstand_ns` traegt genau die Zahl, an der man das
+     * entscheidet — die SCHWELLE dafuer steht hier bewusst NICHT: sie
+     * haengt am Laufwerk, und dieses Projekt hat keine Hardware zum
+     * Messen (MF-310). Stattdessen liefert `splice_alt_ns` den NAECHSTEN
+     * Sync als Ausweichkandidaten, sodass der Verbraucher waehlen kann,
+     * ohne dass hier eine ungemessene Zahl steht.
+     *
+     * Alle Zeiten in Nanosekunden, bezogen auf den Anfang des Stroms. */
+    uft_splice_lage_t splice_lage;
+    uint32_t          splice_pos_ns;      /**< erster Sync nach dem Gap */
+    uint32_t          splice_abstand_ns;  /**< Abstand zum Index davor */
+    uint32_t          splice_alt_ns;      /**< naechster Sync, 0 = keiner */
 } uft_track_verdikt_t;
 
 /** Eingaben des Bauers — alles, was der Dekoder ohnehin schon weiss. */
@@ -126,6 +167,13 @@ typedef struct {
     bool        marke_gefunden;
     uint16_t    marke;
     const char *marke_name;
+
+    /* Ergebnis der Splice-Suche (MF-769). Wieder gilt: der AUFRUFER
+     * sucht, der Bauer urteilt. */
+    uft_splice_lage_t splice_lage;
+    uint32_t          splice_pos_ns;
+    uint32_t          splice_abstand_ns;
+    uint32_t          splice_alt_ns;
 } uft_track_befunde_t;
 
 /**
