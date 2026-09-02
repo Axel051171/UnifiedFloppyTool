@@ -824,12 +824,28 @@ int uft_gw_set_motor(uft_gw_device_t* device, bool on) {
 }
 
 /* Pin access */
-bool uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin) {
-    if (!device) return false;
+/* MF-799: der Fehlschlag hat jetzt einen eigenen Wert.
+ *
+ * Hier stand `return false` fuer jeden Fehlerfall — und uft_gw_seek()
+ * liest den Pin INVERTIERT, also wurde aus einem gescheiterten Befehl
+ * ein bestandener Spur-0-Test. Begruendung vollstaendig im Header. */
+int uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin, bool* out_high) {
+    if (!out_high) return UFT_GW_ERR_INVALID;
+    if (!device)   return UFT_GW_ERR_NOT_CONNECTED;
     uint8_t resp; size_t rlen = 1;
-    if (uft_gw_command(device, UFT_GW_CMD_GET_PIN, &pin, 1, &resp, &rlen) == UFT_GW_OK)
-        return (resp != 0);
-    return false;
+    int r = uft_gw_command(device, UFT_GW_CMD_GET_PIN, &pin, 1, &resp, &rlen);
+    if (r != UFT_GW_OK) return r;
+    /* Erst NACH dem Erfolg schreiben: ein Aufrufer, der den Rueckgabewert
+     * prueft, darf sich darauf verlassen, dass sein Wachposten steht. */
+    *out_high = (resp != 0);
+    return UFT_GW_OK;
+}
+
+/* Rein, damit die Entscheidung pruefbar ist statt in einem Geraetepfad
+ * zu verschwinden, den ohne Hardware niemand erreicht (MF-310). */
+bool uft_gw_trk0_stimmig(int cylinder, bool trk0) {
+    if (cylinder < 0) return true;          /* Flippy, wie in der Referenz */
+    return (cylinder == 0) == trk0;
 }
 
 /* Hier stand bis MF-686 `uft_gw_set_pin()`.
@@ -865,14 +881,43 @@ int uft_gw_seek(uft_gw_device_t* device, uint8_t cylinder) {
     int ret = uft_gw_command(device, UFT_GW_CMD_SEEK, (uint8_t*)&cyl8, 1, NULL, NULL);
     if (ret != UFT_GW_OK) return ret;
 
-    /* TRK0 verification (reference: usb.py seek()) */
-    if (cylinder == 0) {
-        bool trk0 = !uft_gw_get_pin(device, 26);
-        if (!trk0) {
+    /* TRK0-Pruefung, BEIDSEITIG (MF-799; Referenz: usb.py seek(),
+     * `error.check(cyl < 0 or (cyl == 0) == trk0, ...)`).
+     *
+     * Zwei Aenderungen gegenueber der Vorfassung:
+     *
+     *   (a) Der Fehlschlag von GET_PIN ist jetzt ein Fehler. Vorher gab
+     *       er `false`, die Invertierung machte `true` daraus, und der
+     *       Test galt als bestanden — die Pruefung konnte nur dann „in
+     *       Ordnung" sagen, wenn sie selbst kaputt war.
+     *   (b) Geprueft wird auf JEDEM Zylinder, nicht nur auf 0. Die
+     *       zweite Richtung faengt den dekalibrierten Kopf: das Laufwerk
+     *       glaubt, es steht auf Spur 40, steht aber auf 0. Vorher las
+     *       ein solches Laufwerk stillschweigend achtzigmal dieselbe
+     *       Spur. */
+    bool pegel;
+    int pr = uft_gw_get_pin(device, 26, &pegel);
+    if (pr != UFT_GW_OK) return pr;
+    bool trk0 = !pegel;                     /* /TRK0 ist aktiv low */
+
+    if (!uft_gw_trk0_stimmig((int)cylinder, trk0)) {
+        if (cylinder == 0) {
+            /* Der bekannte Fall: Kopf steht knapp daneben. Ein
+             * NO_CLICK_STEP und noch einmal messen. */
             fprintf(stderr, "[GW] WARN: TRK0 absent after seek to cyl 0\n");
             uft_gw_command(device, UFT_GW_CMD_NO_CLICK_STEP, NULL, 0, NULL, NULL);
-            trk0 = !uft_gw_get_pin(device, 26);
-            if (!trk0) return UFT_GW_ERR_NO_TRK0;
+            pr = uft_gw_get_pin(device, 26, &pegel);
+            if (pr != UFT_GW_OK) return pr;
+            if (!uft_gw_trk0_stimmig((int)cylinder, !pegel))
+                return UFT_GW_ERR_NO_TRK0;
+        } else {
+            /* /TRK0 liegt an, obwohl wir woanders stehen sollten. Das
+             * ist keine Warnung, sondern ein verlorener Kopf — und wer
+             * hier weiterliest, bekommt achtzigmal Spur 0 unter dem
+             * Namen von achtzig Spuren. */
+            fprintf(stderr, "[GW] ERROR: TRK0 asserted at cyl %u — "
+                            "drive lost its position\n", (unsigned)cylinder);
+            return UFT_GW_ERR_NO_TRK0;
         }
     }
 
@@ -899,7 +944,21 @@ int uft_gw_get_head(uft_gw_device_t* device) { return device ? device->current_h
 
 bool uft_gw_is_write_protected(uft_gw_device_t* device) {
     if (!device) return true;
-    return !uft_gw_get_pin(device, 28);
+    bool pegel;
+    /* MF-799: Die Richtung bleibt sicher — bei Zweifel NICHT schreiben.
+     * Falsch war die AUSSAGE: ein Kabelfehler kam beim Benutzer als
+     * „Diskette ist schreibgeschuetzt" an. Der Rueckgabetyp ist `bool`
+     * und bleibt es (die Oberflaeche haengt daran,
+     * greaseweazle_provider_v2.cpp:407); die Ursache steht jetzt
+     * wenigstens im Protokoll statt gar nirgends. */
+    int r = uft_gw_get_pin(device, 28, &pegel);
+    if (r != UFT_GW_OK) {
+        fprintf(stderr, "[GW] WARN: /WPT nicht lesbar (rc=%d) — es wird "
+                        "vorsichtshalber NICHT geschrieben. Das heisst "
+                        "NICHT, dass die Diskette schreibgeschuetzt ist.\n", r);
+        return true;
+    }
+    return !pegel;                          /* /WPT ist aktiv low */
 }
 
 /* FIX BUG12: Delays via SetParams/GetParams (not custom 0x30/0x31) */

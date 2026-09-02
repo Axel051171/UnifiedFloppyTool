@@ -536,6 +536,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gw_trk0")
+        # MF-799: die Spur-0-Entscheidung, aus dem Geraetepfad
+        # herausgezogen und damit ohne Hardware pruefbar (MF-310).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
     elseif(${test_name} STREQUAL "test_korpus_container")
         # MF-796: Formate MIT Container-Kopf. gw kann die nicht schreiben;
         # SAMdisk erzeugt, hxcfe liest zurueck — zwei unabhaengige Haende.

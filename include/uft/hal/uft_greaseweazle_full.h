@@ -415,11 +415,52 @@ int uft_gw_get_head(uft_gw_device_t* device);
 
 /**
  * @brief Get input pin state
+ * ── MF-799: der Fehlschlag hatte keinen eigenen Wert ────────────────────
+ *
+ * Hier stand `bool uft_gw_get_pin(device, pin)` mit `return false` fuer
+ * jeden Fehlerfall. Damit war ein gescheiterter Befehl von einem echten
+ * Low-Pegel nicht zu unterscheiden — und `uft_gw_seek()` liest den Pin
+ * INVERTIERT:
+ *
+ *     bool trk0 = !uft_gw_get_pin(device, 26);
+ *
+ * Scheiterte GET_PIN (alte Firmware, ein Byte Versatz im Strom, ein
+ * wackelndes Kabel), kam `false` zurueck, `!false` ist `true`, und die
+ * Spur-0-Pruefung galt als BESTANDEN. Die einzige Absicherung dagegen,
+ * dass ein dekalibriertes Laufwerk stillschweigend die falschen Spuren
+ * liest, konnte nur dann „in Ordnung" sagen, wenn sie selbst kaputt war.
+ *
+ * keirf loest das ueber eine Ausnahme: `_send_cmd` wirft bei jedem
+ * Nicht-Null-ACK, `get_pin` kommt gar nicht erst zum Rueckgabewert. In C
+ * braucht es dafuer den dritten Zustand.
+ *
  * @param device Device handle
  * @param pin Pin number (e.g., 26=/TRK0, 28=/WPT)
- * @return true if pin is high
+ * @param out_high Pegel, nur bei UFT_GW_OK beschrieben
+ * @return UFT_GW_OK oder ein UFT_GW_ERR_*
  */
-bool uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin);
+int uft_gw_get_pin(uft_gw_device_t* device, uint8_t pin, bool* out_high);
+
+/**
+ * Ist die /TRK0-Meldung mit dem angefahrenen Zylinder VEREINBAR?
+ *
+ * Rein, ohne Geraet — damit die Entscheidung pruefbar ist, statt in
+ * einem Geraetepfad zu verschwinden.
+ *
+ * keirf prueft in BEIDE Richtungen:
+ *
+ *     error.check(cyl < 0 or (cyl == 0) == trk0, ...)
+ *
+ * Also: /TRK0 muss bei Zylinder 0 anliegen UND bei jedem anderen
+ * Zylinder fehlen. Die zweite Haelfte faengt den dekalibrierten Kopf —
+ * das Laufwerk glaubt, es steht auf Spur 40, steht aber auf 0. UFT
+ * pruefte bis MF-799 nur den `cylinder == 0`-Zweig; ein Laufwerk, das
+ * seine Position verloren hatte, las stillschweigend achtzigmal
+ * dieselbe Spur.
+ *
+ * Negative Zylinder (Flippy) sind ausgenommen, wie in der Referenz.
+ */
+bool uft_gw_trk0_stimmig(int cylinder, bool trk0);
 
 /* `uft_gw_set_pin()` ist mit MF-686 entfernt: null Aufrufer im ganzen
  * Baum. Die Begruendung samt gwnbds REDWC-Messung (Pin 2 ist auf 5,25"
