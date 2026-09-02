@@ -3297,6 +3297,7 @@ SOURCES += \
 # Amiga Protection (3 files)
 SOURCES += \
     src/protection/uft_amiga_caps.c \
+    src/protection/uft_schutzbefund.c \
     src/protection/uft_amiga_protection.c \
     src/protection/uft_amiga_protection_full.c
 
