@@ -323,8 +323,33 @@ void gather_evidence(const uint8_t* data, size_t size, format_evidence_t* ev) {
             }
         }
         
-        // Check for Amiga bootblock
-        if (memcmp(data, "DOS", 3) == 0) {
+        /* Amiga-Bootblock — und das VIERTE Byte zaehlt mit (MF-790).
+         *
+         * Hier stand `memcmp(data, "DOS", 3)` allein. Die AmigaDOS-Kennung
+         * ist aber `DOS` PLUS ein Kennungsbyte; der Baum selbst fuehrt
+         * dafuer sechs Werte (`uft_adf_parser_v2.c`: ADF_DOS0..ADF_DOS5 =
+         * 0x444F5300..05), und `uft_triage.c:153-155` prueft es korrekt
+         * mit `data[3] > 5`.
+         *
+         * Ohne diese Pruefung setzt jeder Puffer, der mit dem ASCII-Text
+         * „DOS" beginnt, das Beweisstueck fuer Amiga — auch `DOS!` oder
+         * `DOSX`. In einem Bayes-Detektor ist das kein Schoenheitsfehler,
+         * sondern ein falsch gewichteter Hinweis.
+         *
+         * EHRLICH ZUR TRAGWEITE: `uft_bayesian_detect` hat heute KEINEN
+         * Aufrufer (gemessen mit `git ls-files`; der einzige Treffer
+         * ausserhalb ist ein Dateiname in einem Kommentar, und die
+         * Funktion steht in `docs/orphan_baseline.txt`). Das ist damit
+         * eine entschaerfte Mine, kein behobener Fehlbefund — wer den
+         * Pfad verdrahtet, haette ihn sonst mitgeerbt. Aus demselben
+         * Grund steht hier kein eigener Test: ein Rotbeweis auf Code
+         * ohne Leser belegt nichts ueber das Werkzeug.
+         *
+         * Hinweis von aussen (Eigentuemer, 2026-09-02): AllowBad 0.7 von
+         * 1996 prueft die Geraeteform an SIEBEN Merkmalen, bevor es
+         * etwas anfasst — an dieser Stelle war ein Werkzeug von 1996
+         * strenger als dieses hier. */
+        if (memcmp(data, "DOS", 3) == 0 && data[3] <= 5) {
             ev->has_amiga_bootblock = true;
         }
     }
