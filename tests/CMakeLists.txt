@@ -499,6 +499,16 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_gw_geometrie")
+        # MF-783: fuenf T3-Formate gegen gws eigenes Geometriemodell.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/micropolis/uft_micropolis.c
+            ${CMAKE_SOURCE_DIR}/src/formats/northstar/uft_northstar.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
+            ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_msx")
         # MF-782: erster Test, den msx_disk je hatte. Abbild von gw 1.23
         # (msx.2dd) — zwei unabhaengige Haende ueber dieselbe Geometrie.

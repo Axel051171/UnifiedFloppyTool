@@ -264,6 +264,61 @@
       "source": "Quellabbild eigen erzeugt (BPB nach FAT12-Beschreibung, OEM \"UFTMSX\", Media-Descriptor 0xF9, sonst Nullen); dann zweimal gw: `gw convert --format msx.2dd src.img mid.scp` und `gw convert --format msx.2dd mid.scp gw_msx_2dd.img`. Beide Laeufe melden \"Found 1440 sectors of 1440 (100%)\", der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem msx.2dd-Modell (80x2x9x512), nicht aus UFTs Annahme.",
       "fremdcode": "nein - Block 0 gemessen: 24 von 512 Bytes ungleich null (BPB, OEM-Kennung, 0x55AA). Die drei Bytes EB FE 90 sind `jmp $` + `nop`, der uebliche Nicht-startbar-Stumpf, selbst geschrieben (MF-782)",
       "test": "test_corpus_msx"
+    },
+    {
+      "file": "tests/corpus_free/gw_micropolis.img",
+      "sha256": "9d531b2332e3c91c0098e43e7267f1e72fdf6febdf4a9a3029113f38fa96ef8a",
+      "format": "micropolis",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format micropolis.100tpi.ss` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 1232 sectors of 1232 (100%)\" (77x16), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem micropolis.100tpi.ss-Modell, nicht aus UFTs Annahme.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_northstar.img",
+      "sha256": "1794caa0430d02681d0010ccb3d745ec0c9b3e96ea88e6fb70d25c5b997fdcd9",
+      "format": "northstar",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format northstar.fm.ss` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 350 sectors of 350 (100%)\" (35x10), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem northstar.fm.ss-Modell, nicht aus UFTs Annahme.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_ssd.img",
+      "sha256": "337508466e4de0d1506db971015b26c43666df551b4916f398e1326a56e23c8d",
+      "format": "ssd",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format acorn.dfs.ss` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 400 sectors of 400 (100%)\" (40x10), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem acorn.dfs.ss-Modell, nicht aus UFTs Annahme.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_po.img",
+      "sha256": "2358486a896f0442d8237698484ef92257dc18dbf7afc1fae637ca5f8a282381",
+      "format": "po",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format apple2.prodos.140` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 560 sectors of 560 (100%)\" (35x16), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem apple2.prodos.140-Modell, nicht aus UFTs Annahme.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_trd.img",
+      "sha256": "f9b72b04c4e1523d83b2ca8749c931017516b0400d8d1e5587c5c80744fc446e",
+      "format": "trd",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format zx.trdos.ds80` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 2560 sectors of 2560 (100%)\" (80x2x16), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem zx.trdos.ds80-Modell, nicht aus UFTs Annahme.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
+      "test": "test_corpus_gw_geometrie"
     }
   ]
 }

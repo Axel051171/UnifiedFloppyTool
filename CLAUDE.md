@@ -51,14 +51,14 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > neues Format = zwei Hebungen). Verbindliche Fassung:
 > [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
 > **Was „unterstützt" hier heißt (MF-509):** von den 88 tier-geführten
-> Plugins stehen **49 auf T3 — ungeprüft** (MF-654: `adl` und
+> Plugins stehen **44 auf T3 — ungeprüft** (MF-654: `adl` und
 > `adf_arc` auf T2; MF-690: `dim_atari` auf T1b, erstes fremd erzeugtes
 > DIM im Korpus; MF-716: `do` auf T2, das erste Apple-Format —
 > Differenzlauf gegen das Oracle `to_woz2`, 560 von 560 Sektoren
 > byteidentisch): kein Test, oder ein
 > synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau
 > in dieser Lage waren die fünf fabrizierten Parser grün
-> (FMT-2/3/10/11/12). Belegt sind T1=2, T1b=14, T2=23 (MF-782: `msx_disk`, das vorher **keinen einzigen Test** hatte — Abbild von `gw` 1.23 unter `msx.2dd`, zwei unabhängige Hände über dieselbe Geometrie; MF-690: `dim_atari`; MF-716: `do` — das erste Apple-Format, 560 von 560 Sektoren byteidentisch gegen das Oracle `to_woz2`; MF-722: `d13`, das vorher **keinen einzigen Test** hatte — 454 von 454 byteidentisch, der 455. benannt statt geraten). Die Liste unten
+> (FMT-2/3/10/11/12). Belegt sind T1=2, T1b=19, T2=23 (MF-783: `micropolis`, `northstar`, `ssd`, `po` und `trd` — fünf auf einen Streich, jedes gegen `gw`s eigenes Geometriemodell, alle fünf Rundläufe byteidentisch; MF-782: `msx_disk`, das vorher **keinen einzigen Test** hatte — Abbild von `gw` 1.23 unter `msx.2dd`, zwei unabhängige Hände über dieselbe Geometrie; MF-690: `dim_atari`; MF-716: `do` — das erste Apple-Format, 560 von 560 Sektoren byteidentisch gegen das Oracle `to_woz2`; MF-722: `d13`, das vorher **keinen einzigen Test** hatte — 454 von 454 byteidentisch, der 455. benannt statt geraten). Die Liste unten
 > nennt, was **gelesen werden soll**, nicht was **geprüft ist** — pro
 > Format: [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md).
 

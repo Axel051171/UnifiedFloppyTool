@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 14 |
+| T1b | 19 |
 | T2 | 23 |
-| T3 | 49 |
+| T3 | 44 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -31,8 +31,13 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dim_atari` | **T1b** | `test_dim_atari_magic` | — | — | 1 |
 | `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
 | `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_interface_modes`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
+| `micropolis` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `msx_disk` | **T1b** | `test_corpus_msx` | — | — | 1 |
+| `northstar` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
+| `po` | **T1b** | `test_apple_do_po_bounds`, `test_corpus_gw_geometrie`, `test_do_po_probe_ignores_content`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | 1 |
 | `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_flux_jitter_vectors`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_layout`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
+| `ssd` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
+| `trd` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `adf_arc` | **T2** | `test_acorn_adfs_identity` | DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur. | MF-654 | — |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
@@ -79,14 +84,11 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `kfx` | **T3** | — | — | — | — |
 | `logical` | **T3** | — | — | — | — |
 | `mgt` | **T3** | — | — | — | — |
-| `micropolis` | **T3** | — | — | — | — |
 | `myz80` | **T3** | — | — | — | — |
 | `nanowasp` | **T3** | — | — | — | — |
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
-| `northstar` | **T3** | — | — | — | — |
 | `opus` | **T3** | — | — | — | — |
 | `pdp` | **T3** | — | — | — | — |
-| `po` | **T3** | `test_apple_do_po_bounds`, `test_do_po_probe_ignores_content`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
@@ -96,11 +98,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `sam` | **T3** | — | — | — | — |
 | `sap_thomson` | **T3** | — | — | — | — |
 | `scl` | **T3** | — | — | — | — |
-| `ssd` | **T3** | — | — | — | — |
 | `syn` | **T3** | — | — | — | — |
 | `t1k` | **T3** | — | — | — | — |
 | `tan` | **T3** | — | — | — | — |
-| `trd` | **T3** | — | — | — | — |
 | `udi` | **T3** | — | — | — | — |
 | `v9t9` | **T3** | — | — | — | — |
 | `vdk` | **T3** | — | — | — | — |
