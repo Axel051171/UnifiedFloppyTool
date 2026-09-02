@@ -118,7 +118,14 @@ uft_as_config_t *uft_as_config_create(void) {
     cfg->track_start  = 0;
     cfg->track_end    = 34;     /* DOS 3.3 default: tracks 0..34 */
     cfg->side         = 0;
-    cfg->revolutions  = 1;
+    /* MF-819: 5, nicht 1. Eine Umdrehung ist DUPLIKATIONSNIVEAU —
+     * die Referenz (Louis-Guerin, Rev. 1.4, §3.2) trennt Duplikation
+     * und Preservation ausdruecklich, und fuer Preservation ist 3 das
+     * Minimum und 5 die Empfehlung. Herleitung vollstaendig in
+     * src/hal/uft_kryoflux_dtc.c. Eine Umdrehung bleibt EINSTELLBAR
+     * (uft_as_set_revolutions akzeptiert 1..5) — falsch war nur, sie
+     * zur Vorgabe zu machen. */
+    cfg->revolutions  = 5;
     cfg->is_open      = false;
     return cfg;
 }

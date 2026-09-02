@@ -51,21 +51,57 @@ void uft_atarist_prot_init(uft_atarist_prot_result_t *result) {
  */
 static bool detect_copylock(const uint8_t *data, size_t len, 
                             uft_copylock_st_t *info) {
-    if (!data || len < 512 || !info) return false;
-    
-    /* Copylock signatures: Look for LFSR patterns */
-    /* Rob Northen's Copylock uses specific sector layouts and timing */
-    
-    /* Simplified detection: Look for typical Copylock boot sector markers */
-    /* Real detection would analyze sector timing and fuzzy bits */
-    
-    /* Look for "RNC" or Copylock magic */
+    (void)data; (void)len;
+    if (!info) return false;
+
+    /* MF-820: DIESE ERKENNUNG IST ZURUECKGEZOGEN.
+     *
+     * Hier stand eine Suche nach der Zeichenfolge "RNC" in den
+     * Sektordaten, und bei einem Treffer wurden zwei Werte gesetzt, die
+     * der Code SELBST als Vermutung auswies:
+     *
+     *     info->track = 79;              // „Typically on last track"
+     *     info->lfsr_seed = 0x12345678;  // „Placeholder"
+     *
+     * Beide wurden von uft_atarist_prot_print() als Befund AUSGEGEBEN
+     * („Track/Side: 79/0", „LFSR Seed: 0x12345678"), und der Pfad endet
+     * ueber uft_protection_classify.c in ProtectionAnalysisWidget.cpp —
+     * also beim Benutzer. Eine erfundene Konstante, gerendert als
+     * Messwert. Fuer ein Werkzeug mit dem Grundsatz „Keine erfundenen
+     * Daten" ist das die schwerste Fehlerklasse, die es kennt.
+     *
+     * Und die Suche selbst traegt nicht: Copylock ist nach Louis-Guerin
+     * (Rev. 1.4, §2.2.1) ein ZEITSCHUTZ — ein kurzer Sektor mit rund
+     * 4,2 us Bitzellenbreite, dessen erste ~32 Byte auf Normalgeschwin-
+     * digkeit liegen. Aus SEKTORDATEN ist er grundsaetzlich nicht
+     * erkennbar, und der Loader ist stark verschluesselt. Drei
+     * ASCII-Zeichen treffen auf einer 720-KB-Diskette mit Zufallsdaten
+     * schon rein rechnerisch haeufig, auf einer Diskette mit Text erst
+     * recht.
+     *
+     * Der zweite Zweig darunter war noch schlechter: er suchte ein sich
+     * WIEDERHOLENDES 2-Byte-Muster INNERHALB EINER Lesung. „Fuzzy"
+     * heisst aber: aendert sich ZWISCHEN Lesungen — das ist die
+     * Umkehrung. Und ein sich wiederholendes 2-Byte-Muster ueber einen
+     * ganzen Sektor ist $6D $B6, die Formatfuellung eines frisch
+     * formatierten, nie beschriebenen Sektors (David Small, START Vol.1
+     * Nr.2, Herbst 1986). Der Detektor meldete also „Rob Northen
+     * Copylock" mit 0,60 auf LEEREN Disketten.
+     *
+     * Was hier stattdessen noetig waere, steht in P3-40: eine Messung
+     * der Bitzellenbreite auf Flussebene. Bis die da ist, wird nichts
+     * gemeldet — ein Fail-closed-Detektor behauptet nichts, wofuer er
+     * keinen Beleg hat. */
+    info->detected = false;
+    info->confidence = 0.0;
+    return false;
+#if 0   /* zurueckgezogen, MF-820 — Begruendung oben */
     for (size_t i = 0; i + 3 < len; i++) {
         if (data[i] == 'R' && data[i+1] == 'N' && data[i+2] == 'C') {
             info->detected = true;
-            info->track = 79;  /* Typically on last track */
+            info->track = 79;
             info->side = 0;
-            info->lfsr_seed = 0x12345678;  /* Placeholder */
+            info->lfsr_seed = 0x12345678;
             info->confidence = 0.75;
             return true;
         }
@@ -89,8 +125,9 @@ static bool detect_copylock(const uint8_t *data, size_t len,
         info->confidence = 0.6;
         return true;
     }
-    
+
     return false;
+#endif  /* MF-820 */
 }
 
 /**
@@ -98,18 +135,30 @@ static bool detect_copylock(const uint8_t *data, size_t len,
  */
 static bool detect_long_track(const uint8_t *data, size_t len,
                               uft_long_track_st_t *info) {
-    if (!data || !info) return false;
-    
-    /* Long tracks are > 6500 bytes for DD, > 13000 for HD */
-    if (len > UFT_ATARIST_LONG_TRACK_MIN) {
-        info->detected = true;
-        info->actual_length = (uint32_t)len;
-        info->standard_length = 6250;
-        info->extra_bytes = (uint32_t)(len - 6250);
-        info->confidence = 0.9;
-        return true;
-    }
-    
+    (void)data; (void)len;
+    if (!info) return false;
+
+    /* MF-820: ZURUECKGEZOGEN — hier wurde eine PUFFERGROESSE mit einer
+     * SPURLAENGE verglichen.
+     *
+     * `len` ist der `data_len`-Parameter von uft_atarist_prot_detect(),
+     * also das, was der Aufrufer uebergibt. Ein ganzes 720-KB-.ST-Abbild
+     * ergab damit:
+     *
+     *     „Long Track, 737280 Byte, +731030 extra, Konfidenz 0,9"
+     *
+     * Dazu war `standard_length` auf 6250 festgenagelt und die Schwelle
+     * 6500 nirgends hergeleitet. Die Quellen geben andere Zahlen:
+     * Louis-Guerin 6240 nominal mit >5 % als Kriterium (Arkanoid <6027),
+     * David Small ~6000, Rittwage ~7700 als physikalische Schreibgrenze
+     * beim 1541. Keine davon ist 6500 — aber das ist nebensaechlich,
+     * solange die VERGLICHENE GROESSE die falsche ist.
+     *
+     * Eine ehrliche Erkennung braucht die Laenge EINER SPUR, gemessen
+     * zwischen zwei Indexpulsen. Solange die Schnittstelle die nicht
+     * uebergibt, wird nichts gemeldet. */
+    info->detected = false;
+    info->confidence = 0.0;
     return false;
 }
 
@@ -118,28 +167,33 @@ static bool detect_long_track(const uint8_t *data, size_t len,
  */
 static bool detect_flaschel(const uint8_t *data, size_t len,
                             uft_flaschel_t *info) {
-    if (!data || len < 512 || !info) return false;
-    
-    /* Flaschel uses specific gap patterns that exploit WD1772 FDC bug */
-    /* Look for unusual gap bytes (not 0x4E) in specific positions */
-    
-    int gap_anomalies = 0;
-    for (size_t i = 0; i + 512 < len; i += 512) {
-        /* Check gap area after sector data */
-        for (size_t j = i + 512; j < i + 530 && j < len; j++) {
-            if (data[j] != 0x4E && data[j] != 0x00) {
-                gap_anomalies++;
-            }
-        }
-    }
-    
-    if (gap_anomalies > 5) {
-        info->detected = true;
-        info->track = 0;
-        info->confidence = 0.7;
-        return true;
-    }
-    
+    (void)data; (void)len;
+    if (!info) return false;
+
+    /* MF-820: ZURUECKGEZOGEN — zweifach.
+     *
+     * (1) Die Suche lief im 512-Byte-Raster und unterstellte, hinter
+     *     jedem Datenblock folge der Gap. In einer echten Spur betraegt
+     *     der Sektorabstand 614 Byte (Louis-Guerin) bzw. 626 (David
+     *     Small) — nie 512. Der untersuchte Bereich war also NUTZDATEN,
+     *     kein Gap. Und da echte Sektordaten selten nur aus 0x4E und
+     *     0x00 bestehen, war die Schwelle von fuenf „Anomalien" sofort
+     *     ueberschritten: der Detektor meldete auf so ziemlich jedem
+     *     Sektorabbild.
+     *
+     * (2) DER NAME IST IN KEINER QUELLE BELEGT. „Flaschel" steht weder
+     *     in Louis-Guerins rund 30 Klassen noch bei Small noch in
+     *     Rittwages C64-Liste. Der Kommentar sagt „FDC bug exploit" —
+     *     einen echten WD1772-Bug beschreiben beide Quellen (Syncmarke
+     *     ueber dem Index, der Indexpuls wird nicht erkannt, der FDC
+     *     schiebt nahezu unbegrenzt Bytes in die DMA; Panzer reservierte
+     *     dafuer 20 480 Byte). Wenn das gemeint war, hat eine Suche
+     *     ueber Gap-Bytes damit nichts zu tun.
+     *
+     * Ein Name, der plausibel klingt, ist kein Beleg. Zurueckverfolgen
+     * oder streichen — bis dahin wird nichts gemeldet (P3-40). */
+    info->detected = false;
+    info->confidence = 0.0;
     return false;
 }
 

@@ -29,7 +29,9 @@ ohne Fehler im UFT-Log.
 - Referenz-Tool: `gw read --format=<fmt> ref.scp` (offizielle gw-Tools)
 - UFT: gleiche Disk lesen → SCP speichern → `SCP → IMG/ADF/D64` konvertieren;
   gleiche Konvertierung mit dem gw-Ökosystem; Sektor-Hashes vergleichen.
-- Zusätzlich: 3+ Revolutionen einer kopiergeschützten Disk lesen — UFT darf
+- Zusätzlich: **5 Revolutionen** einer kopiergeschützten Disk lesen (3 ist das
+  Minimum, 1 nur für Duplikation — Herleitung in ,
+  Quelle Louis-Guérin Rev. 1.4 §3.2). UFT darf
   Multi-Rev/Weak-Fenster nicht kollabieren (Loss-Report prüfen).
 
 ### SuperCard Pro (SCP-Direct, M3.1 — UFT-008)

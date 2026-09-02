@@ -609,7 +609,36 @@ uft_kf_config_t* uft_kf_config_create(void) {
     cfg->start_track = 0;
     cfg->end_track = 83;
     cfg->side = -1;          /* Both sides */
-    cfg->revolutions = 2;
+    /* MF-819: 5, nicht 2 — hergeleitet, nicht gesetzt.
+     *
+     * Jean Louis-Guerin (DrCoolZic), „Atari Floppy Disk Copy
+     * Protection", Rev. 1.4 (2015-06-24), Abschnitt 3.2, Copyleft.
+     * Das Dokument LEITET die Zahl her:
+     *
+     *   1. Fuzzy Bits brauchen mindestens 2 Umdrehungen, besser 3 —
+     *      bei zwei Lesungen laesst sich ein Unterschied feststellen,
+     *      aber nicht entscheiden, welcher Wert der haeufigere ist.
+     *      Die Mehrheitsregel beginnt bei drei.
+     *   2. Verschobene Spuren brauchen mindestens 2, weil man am Index
+     *      weder zu lesen noch zu schreiben beginnen darf — der
+     *      Einstieg liegt am Write-Splice.
+     *   3. Beides zusammen => mindestens 3.
+     *   4. Wegen des Medienalters und der Moeglichkeit, einen Sektor
+     *      mit gueltiger Pruefsumme aus mehreren Durchgaengen zu
+     *      waehlen => 5 empfohlen.
+     *
+     * Und die Unterscheidung, die alles traegt: FUER DUPLIKATION
+     * REICHT EINE UMDREHUNG, FUER PRESERVATION NICHT.
+     *
+     * Hier stand 2 — UNTER dem Minimum. Damit fiel die Mehrheitsregel
+     * fuer Fuzzy Bits weg, und die Kombination Fuzzy + verschobene Spur
+     * war gar nicht mehr abgedeckt. Das Geraet selbst bewahrt ab Werk
+     * fuenf; UFTs Ansteuerung setzte es herunter.
+     *
+     * Der Preis ist ehrlich zu nennen: die Aufnahme dauert 2,5-mal so
+     * lange. Fuer ein Werkzeug mit dem Grundsatz „Kein Bit verloren"
+     * ist das die richtige Seite des Handels. */
+    cfg->revolutions = 5;
     cfg->output_format = KF_FMT_RAW;
     cfg->device_index = -1;  /* Auto */
     cfg->double_step = false;
