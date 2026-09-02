@@ -150,7 +150,28 @@ int main(void)
      * liegengelassen, liest er sie jetzt als Kopf des NEUEN Befehls —
      * 0xDE statt des Echos — und meldet einen Protokollfehler, obwohl
      * das Geraet korrekt geantwortet hat. */
-    const uint8_t gute_antwort[] = { UFT_GW_CMD_SEEK, UFT_GW_ACK_OK };
+    /* MF-816: Das Geraet muss auch die TRK0-Abfrage beantworten.
+     *
+     * `uft_gw_seek()` fragt seit MF-799 nach JEDEM Positionieren den
+     * Pin 26 ab und prueft beidseitig — `(cyl == 0) == trk0`, wie die
+     * Referenz (usb.py `seek()`). Ein echtes Geraet antwortet darauf;
+     * dieser Prueftisch tat es nicht.
+     *
+     * WARUM DAS VORHER NICHT AUFFIEL, und das ist der eigentliche
+     * Punkt: die alte `uft_gw_get_pin()` gab `bool` zurueck und
+     * verschluckte jeden Fehlschlag als `false`. Der Aufrufer las den
+     * Pin INVERTIERT, `!false` ergab „TRK0 liegt an", und `seek()`
+     * meldete Erfolg. Der Test war also gruen, WEIL der Fehler da war —
+     * seine Leitung hatte nie eine GET_PIN-Antwort, und niemand hat es
+     * bemerkt.
+     *
+     * Der Prueftisch wird deshalb vollstaendiger, nicht die Zusicherung
+     * schwaecher: TRK0 ist AKTIV LOW, fuer Zylinder 0 gehoert Pegel 0
+     * auf die Leitung. */
+    const uint8_t gute_antwort[] = {
+        UFT_GW_CMD_SEEK,    UFT_GW_ACK_OK,
+        UFT_GW_CMD_GET_PIN, UFT_GW_ACK_OK, 0x00,
+    };
     leitung_sendet(&l, gute_antwort, sizeof(gute_antwort));
 
     int rc2 = uft_gw_seek(dev, 0);
