@@ -3,4 +3,34 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "ci"
+    groups:
+      # Minor/Patch gesammelt in einem PR -- kleine Diffs, ein Review.
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      # upload-/download-artifact muessen paarweise springen: release.yml
+      # laedt in den Build-Jobs hoch und im create-release-Job wieder
+      # herunter. Ein einseitiger Major-Bump zerreisst den Release-Pfad.
+      #
+      # MF-801 hat genau diese Lage hergestellt und sie ist KEIN Fehler:
+      # hochgeladen wird mit upload@v7, heruntergeladen mit download@v8.
+      # Die beiden Majors sind nicht deckungsgleich, weil die Projekte
+      # verschieden schnell zaehlen. Die Gruppe sorgt dafuer, dass der
+      # naechste Sprung wieder GEMEINSAM zur Entscheidung kommt statt
+      # einzeln durchzurutschen.
+      artifact-actions:
+        patterns:
+          - "actions/upload-artifact"
+          - "actions/download-artifact"
