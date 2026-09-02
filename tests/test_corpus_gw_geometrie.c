@@ -146,41 +146,69 @@ static void pruefe(const fall_t *f)
         _fail++; f->plugin->close(&disk); return;
     }
 
-    /* Die REIHENFOLGE, nicht nur die Laenge: Spur 0 muss die Sektoren 0..n-1
-     * in genau dieser Folge tragen. Jeder Sektor nennt seine Nummer selbst. */
-    uft_track_t t;
-    memset(&t, 0, sizeof(t));
-    if (f->plugin->read_track(&disk, 0, 0, &t) != UFT_OK) {
-        printf("FAIL: read_track(0,0)\n"); _fail++; f->plugin->close(&disk);
-        return;
-    }
-    if (t.sector_count != f->spt) {
-        printf("FAIL: %zu Sektoren auf Spur 0, erwartet %u\n",
-               t.sector_count, f->spt);
-        _fail++; free_ts(&t); f->plugin->close(&disk); return;
-    }
-    for (size_t s = 0; s < t.sector_count; s++) {
-        const uint8_t *b = t.sectors[s].data;
-        if (!b || t.sectors[s].data_len != f->ss) {
-            printf("FAIL: Sektor %zu ohne Daten\n", s);
+    /* Die REIHENFOLGE, nicht nur die Laenge: jede gepruefte Spur muss ihre
+     * Sektoren in genau der Folge tragen, die das lineare Quellabbild
+     * vorgibt. Jeder Sektor nennt seine Nummer selbst.
+     *
+     * ── WARUM NICHT NUR SPUR (0,0) (MF-795) ─────────────────────────────
+     *
+     * Bis hierher prueft dieser Test genau eine Spur: (0,0). Das ist die
+     * EINZIGE Spur, bei der zylinder-dur und kopf-dur denselben Versatz
+     * ergeben — also genau die Stelle, an der eine vertauschte Anordnung
+     * UNSICHTBAR ist.
+     *
+     * Das ist keine Vermutung. Bei `sad` lag genau dieser Fehler, das
+     * Format stand auf T1b, sein Test las (0,0), und 158 von 160 Spuren
+     * kamen von der falschen Stelle (MF-794). Vier der Faelle hier sind
+     * ebenfalls zweiseitig — dieselbe Falle stand offen.
+     *
+     * Geprueft werden deshalb (0,0), (0,1), (1,0) und die letzte Spur:
+     * (0,1) und (1,0) trennen die beiden Anordnungen, die letzte Spur
+     * faengt einen Versatz am Ende. */
+    static const struct { int c, h; } SPUREN[] = { {0,0}, {0,1}, {1,0}, {-1,-1} };
+    for (size_t i = 0; i < sizeof(SPUREN) / sizeof(SPUREN[0]); i++) {
+        int c = SPUREN[i].c, h = SPUREN[i].h;
+        if (c < 0) { c = f->cyl - 1; h = f->heads - 1; }   /* letzte Spur */
+        if (c >= f->cyl || h >= f->heads) continue;        /* einseitig */
+
+        uft_track_t t;
+        memset(&t, 0, sizeof(t));
+        if (f->plugin->read_track(&disk, c, h, &t) != UFT_OK) {
+            printf("FAIL: read_track(%d,%d)\n", c, h);
+            _fail++; f->plugin->close(&disk); return;
+        }
+        if (t.sector_count != f->spt) {
+            printf("FAIL: Spur (%d,%d): %zu Sektoren, erwartet %u\n",
+                   c, h, t.sector_count, f->spt);
             _fail++; free_ts(&t); f->plugin->close(&disk); return;
         }
-        if (memcmp(b, "UFT\x00", 4) != 0) {
-            printf("FAIL: Sektor %zu ohne Kennung\n", s);
-            _fail++; free_ts(&t); f->plugin->close(&disk); return;
+        /* Das Quellabbild ist linear zylinder-dur durchnummeriert. */
+        unsigned basis = ((unsigned)c * f->heads + (unsigned)h) * f->spt;
+        for (size_t s = 0; s < t.sector_count; s++) {
+            const uint8_t *b = t.sectors[s].data;
+            if (!b || t.sectors[s].data_len != f->ss) {
+                printf("FAIL: Spur (%d,%d) Sektor %zu ohne Daten\n", c, h, s);
+                _fail++; free_ts(&t); f->plugin->close(&disk); return;
+            }
+            if (memcmp(b, "UFT\x00", 4) != 0) {
+                printf("FAIL: Spur (%d,%d) Sektor %zu ohne Kennung\n", c, h, s);
+                _fail++; free_ts(&t); f->plugin->close(&disk); return;
+            }
+            unsigned nr = (unsigned)b[4] | ((unsigned)b[5] << 8);
+            if (nr != basis + (unsigned)s) {
+                printf("FAIL: Spur (%d,%d) Lage %zu nennt sich %u, "
+                       "erwartet %u — umsortiert\n",
+                       c, h, s, nr, basis + (unsigned)s);
+                _fail++; free_ts(&t); f->plugin->close(&disk); return;
+            }
         }
-        unsigned nr = (unsigned)b[4] | ((unsigned)b[5] << 8);
-        if (nr != (unsigned)s) {
-            printf("FAIL: Sektor an Lage %zu nennt sich %u — umsortiert\n",
-                   s, nr);
-            _fail++; free_ts(&t); f->plugin->close(&disk); return;
-        }
+        free_ts(&t);
     }
 
-    free_ts(&t);
     f->plugin->close(&disk);
-    printf("OK  %u/%u/%u/%u, Spur 0 in Reihenfolge\n",
-           f->cyl, f->heads, f->spt, f->ss);
+    printf("OK  %u/%u/%u/%u, %s in Reihenfolge\n",
+           f->cyl, f->heads, f->spt, f->ss,
+           f->heads > 1 ? "4 Spuren" : "2 Spuren");
     _pass++;
 }
 
