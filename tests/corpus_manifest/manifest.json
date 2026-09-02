@@ -385,6 +385,17 @@
       "source": "Rohabbild eigen erzeugt (819 200 B, je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann `SAMdisk <roh>.raw <out>.sad`. Ergebnis 819 222 B = 22 Byte Kopf + 819 200 Nutzdaten. Der Kopf traegt \"Aley's disk backup\" (18 B) und die vier Geometriebytes 02/50/0a/08 = 2 Koepfe, 80 Zylinder, 10 Sektoren, Sektorgroesse 8*64=512 — er belegt sich selbst, denn 80*2*10*512 = 819 200.",
       "fremdcode": "nein - die Nutzdaten sind vollstaendig eigen erzeugt; der 22-Byte-Kopf ist Formatstruktur (Kennung + vier Zahlen), kein ausfuehrbarer Code (MF-787)",
       "test": "test_sad_magic"
+    },
+    {
+      "file": "tests/corpus_free/mtools_fat12_720k.img",
+      "sha256": "2bc693025c5997bcc0566f0877715a386e98fa812e13ee90fe3b2729e85f51b9",
+      "format": "fat12_fs",
+      "origin": "cross-tool",
+      "oracle": "mformat",
+      "tool": "mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2",
+      "source": "`mformat -i x.img -t 80 -h 2 -n 9 -N 12345678 -v UFTFAT12 -B tpl.bin ::` auf ein 737 280-Byte-Nullabbild. `tpl.bin` ist eine EIGENE Bootvorlage mit fuenf Bytes (EB FE 90 = jmp $ + nop, 55 AA) und der OEM-Kennung \"UFTCORP \"; der BPB dazwischen stammt von mtools. Gemessen: 512 B/Sektor, 2 Sekt/Cluster, 112 Wurzel-Eintraege, 1440 Sektoren, Media F9, 9 Sekt/Spur, 2 Koepfe, FAT[0]=F9.",
+      "fremdcode": "nein - gemessen 0 Bytes ungleich null im Bereich 0x3E..0x1FD. Ohne `-B` schreibt mformat dort 44 Byte eigenen Bootcode; die eigene Vorlage schaltet ihn ab (MF-789)",
+      "test": "test_fat12_fremd"
     }
   ]
 }

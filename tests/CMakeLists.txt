@@ -499,6 +499,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_fat12_fremd")
+        # MF-789: das erste FAT12, das UFT nicht selbst erzeugt hat.
+        # Abbild von mformat (mtools 4.0.49), bootcodefrei.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_fat12.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_sad_magic")
         # MF-787: SAD suchte nach "SAD!" — die Kennung lautet
         # "Aley's disk backup". Gefunden durch einen Differenzlauf

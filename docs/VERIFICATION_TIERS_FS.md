@@ -9,9 +9,9 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 | Stufe | Leser | heisst |
 |---|---|---|
 | FS-T0 | 1 | kein Test |
-| FS-T1 | 5 | nur selbst gebaute Eingaben — zirkulaer |
+| FS-T1 | 4 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
-| FS-T2 | 2 | Korpus von **registrierter** fremder Hand |
+| FS-T2 | 3 | Korpus von **registrierter** fremder Hand |
 | **gesamt gefuehrt** | **8** | |
 
 Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
@@ -26,7 +26,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_amigados_extended` | **FS-T1** | `test_amigados_validate` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_bootblock_scanner` | **FS-T1** | `test_amigados_validate`, `test_bootblock_scanner` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_cbmdos` | **FS-T2** | `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
-| `uft_fat12` | **FS-T1** | `test_fatfs` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
 | `uft_fs_amigados_driver` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 
 ## Kandidaten ausserhalb von `src/fs/` — ungefuehrt (MF-710)

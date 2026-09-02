@@ -360,9 +360,22 @@ def erhebe():
                 # zwei bzw. drei Zeichen lang und traefen sonst in jedem
                 # zweiten Werkzeugnamen zufaellig zu. Zuordnung ueber
                 # Identitaet, nicht ueber Aehnlichkeit.
-                kurz = next((o for o in sorted(orakel, key=len, reverse=True)
-                             if re.search(r"\b" + re.escape(o) + r"\b",
-                                          w, re.I)), None)
+                # MF-789: das AUSDRÜCKLICHE Feld schlägt die Suche.
+                #
+                # Seit MF-779 nennt jeder cross-tool-Eintrag seinen
+                # Erzeuger als REGISTERNAME im Feld `oracle`. Die Suche
+                # im `tool`-Text darunter bleibt als Rückfall für ältere
+                # Einträge — sie ist aber eine Heuristik, und sie hat
+                # sofort danebengegriffen: das mtools-Abbild nennt im
+                # `tool` „mtools 4.0.49", der Registereintrag heißt
+                # `mformat`. Ergebnis wäre FS-T1b statt FS-T2 gewesen —
+                # eine Stufe zu niedrig, weil zwei Namen dasselbe
+                # Werkzeug bezeichnen.
+                kurz = e.get("oracle") if e.get("oracle") in orakel else None
+                if not kurz:
+                    kurz = next((o for o in sorted(orakel, key=len, reverse=True)
+                                 if re.search(r"\b" + re.escape(o) + r"\b",
+                                              w, re.I)), None)
                 if kurz and stufe != "FS-T2":
                     stufe, werkzeug = "FS-T2", w
                     grund = (f"`{b}` stammt von `{w}` — im Oracle-Register "

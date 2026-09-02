@@ -275,6 +275,43 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="mformat",
+        env="MFORMAT",
+        exes=("mformat", "mformat.exe"),
+        version_args=("--version",),
+        version_re=r"mformat \(GNU mtools\) ([0-9]+\.[0-9]+\.[0-9]+)",
+        version_exit_ok=(0, 1),
+        reference_for=(
+            "ERZEUGT FAT12-Abbilder mit EXPLIZITER Geometrie und ist damit "
+            "der Bezug fuer `src/fs/uft_fat12.c` — das bis MF-789 auf "
+            "FS-T1 stand mit dem Vermerk „alle Tests bauen ihre Eingabe "
+            "selbst, geprueft gegen den eigenen Erzeuger\". Fuer den "
+            "FAT12-LESER ist mformat danach kein Pruefer mehr; wer eine "
+            "zweite Meinung will, braucht eine andere Hand (Flopgen, "
+            "P3-16)."
+        ),
+        origin="https://www.gnu.org/software/mtools/ (mtools 4.0.49)",
+        licence="GPL-3.0-or-later",
+        abstammung=(
+            "UNABHAENGIG, gemessen: `git ls-files` ueber `src/` und "
+            "`include/` nennt weder `mtools` noch `mformat` an einer "
+            "einzigen Stelle. "
+            "WICHTIG BEIM GEBRAUCH — der Bootcode: `mformat` schreibt "
+            "standardmaessig 44 Byte ausfuehrbaren Code hinter den BPB "
+            "(gemessen: Sprung eb3c90, OEM „MTOO4049\"). Fuer ein "
+            "Korpus-Abbild ist das ein Derivat in diesen Bytes. Mit "
+            "`-B <vorlage>` faellt er weg; die Vorlage muss dann Sprung "
+            "und 0xAA55 selbst tragen, sonst fehlen sie. UFT benutzt eine "
+            "EIGENE Vorlage mit fuenf Bytes (EB FE 90 / 55 AA) — gemessen "
+            "0 Byte Fremdcode im Bereich 0x3E..0x1FD. "
+            "Gebaut unter WSL Ubuntu mit gcc 15.2 ohne `make` (das dort "
+            "fehlt): die 68 Quellen ohne die eigenstaendigen Programme "
+            "`floppyd*`, `mkmanifest`, `privtest`, `file_read` in einem "
+            "Aufruf, mit -DSYSCONFDIR. Das Windows-Binaerprogramm loeste "
+            "eine Defender-Heuristik aus (P3-15) — der WSL-Weg umgeht das. "
+        ),
+    ),
+    Oracle(
         name="c1541",
         env="C1541",
         exes=("c1541", "c1541.exe"),
