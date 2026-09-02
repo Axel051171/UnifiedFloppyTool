@@ -130,4 +130,27 @@ int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
 }
 #endif
 
+
+/* ── Der Dichtename ist ein BEFUND (MF-823) ──────────────────────────────
+ *
+ * Das IPF-Dichtefeld BENENNT die Schutzart — nicht als Heuristik,
+ * sondern als Angabe des Encoders in der Datei: 3 = „Copylock Amiga",
+ * 4 = „Copylock Amiga New", 5 = „Copylock ST", 6 = „Speedlock Amiga",
+ * 7 = „Speedlock Amiga Old", 8/9 = Adam Brierley.
+ *
+ * Bis MF-823 wurde die Namenstabelle nur in einem Debug-printf benutzt,
+ * und das Plugin machte aus `density >= 3` ein `copy_protected = true`
+ * — neun benannte Schutzarten zu einem Boolean.
+ *
+ * WAS DAMIT NOCH NICHT GELOEST IST: `uft_track_t` hat kein Feld fuer
+ * einen Schutznamen. Eines anzulegen ist ein ABI-Eingriff am oeffentlichen
+ * Kopf und gehoert getrennt entschieden. Bis dahin wird der Name
+ * wenigstens GEMELDET statt verworfen — die Aussage geht nicht mehr
+ * verloren, sie ist nur noch nicht strukturiert abrufbar.
+ *
+ * Quelle: Jean Louis-Guerin, „IPF Documentation" V0.0 (Januar 2012),
+ * mit dem Vorbehalt des Autors, dass die Angaben nur an Atari-ST-IPFs
+ * geprueft sind. */
+const char* ipf_air_density_name(uint32_t d);
+
 #endif /* UFT_IPF_AIR_H */

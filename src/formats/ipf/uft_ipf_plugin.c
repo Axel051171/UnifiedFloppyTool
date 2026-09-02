@@ -154,10 +154,31 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                          (uint32_t)UFT_TRACK_PROTECTED;
         track->copy_protected = true;
     }
-    /* density >= 3 = Copylock/Speedlock variants per IPF spec */
+    /* MF-823: der Dichtewert BENENNT die Schutzart — er wird nicht mehr
+     * stillschweigend zu einem Boolean eingedampft.
+     *
+     * Hier stand nur `if (density >= 3) copy_protected = true`, und der
+     * Kommentar daneben („Copylock/Speedlock variants per IPF spec")
+     * wusste es besser, als der Code tat. Neun benannte Schutzarten —
+     * Copylock Amiga, Copylock Amiga New, Copylock ST, Speedlock Amiga,
+     * Speedlock Amiga Old, Adam Brierley, Adam Brierley Key — wurden zu
+     * einem Wahrheitswert.
+     *
+     * Und im selben Baum RIET `uft_atarist_protection.c` denselben Namen
+     * aus drei ASCII-Zeichen in Sektordaten, in denen er physikalisch
+     * nicht stehen kann (MF-820, zurueckgezogen). Das Werkzeug hatte die
+     * belegte Antwort in der Datei und warf sie weg, waehrend es nebenan
+     * riet.
+     *
+     * Der Name wird jetzt GEMELDET. Ihn strukturiert an den Aufrufer zu
+     * geben, braucht ein Feld in `uft_track_t` — ein ABI-Eingriff am
+     * oeffentlichen Kopf, getrennt zu entscheiden (P3-41). */
     if (density >= 3) {
         track->status |= (uint32_t)UFT_TRACK_PROTECTED;
         track->copy_protected = true;
+        fprintf(stderr, "[IPF] Spur %d/%d: Schutzart laut Datei: %s "
+                        "(Dichte %d)\n", cyl, head,
+                ipf_air_density_name(density), density);
     }
 
     /* Pull concatenated data-element payload bytes from the AIR parser.

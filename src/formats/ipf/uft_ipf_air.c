@@ -744,6 +744,31 @@ static const char* ipf_density_names[] = {
     "Adam Brierley", "Adam Brierley Key"
 };
 
+/* MF-823: Der Dichtename ist EIN BEFUND, kein Debug-Text.
+ *
+ * Das IPF-Dichtefeld BENENNT die Schutzart — nicht als Heuristik,
+ * sondern als Angabe des Encoders in der Datei selbst. Dichte 5 heisst
+ * „Copylock ST", 3 und 4 heissen „Copylock Amiga" und „Copylock Amiga
+ * New", 6 und 7 „Speedlock Amiga" und „Speedlock Amiga Old".
+ *
+ * Bis MF-823 wurde diese Tabelle an genau EINER Stelle benutzt: einem
+ * printf im Debug-Dump (`:787`). Das Plugin machte daraus
+ * `if (density >= 3) copy_protected = true` — NEUN BENANNTE
+ * SCHUTZARTEN ZU EINEM BOOLEAN.
+ *
+ * Und im selben Baum riet `src/protection/uft_atarist_protection.c`
+ * denselben Namen aus drei ASCII-Zeichen in Sektordaten, in denen er
+ * physikalisch nicht stehen kann (MF-820, zurueckgezogen). Das Werkzeug
+ * hatte die belegte Antwort und warf sie weg, waehrend es nebenan riet.
+ *
+ * Quelle: Jean Louis-Guerin, „Interchangeable Preservation Format (IPF)
+ * Documentation", V0.0, Januar 2012 — mit dem ausdruecklichen Vorbehalt
+ * des Autors, dass die Angaben nur an Atari-ST-IPFs geprueft sind. */
+const char* ipf_air_density_name(uint32_t d) {
+    const size_t n = sizeof(ipf_density_names) / sizeof(ipf_density_names[0]);
+    return ((size_t)d < n) ? ipf_density_names[d] : "Unknown";
+}
+
 const char* ipf_air_platform_name(ipf_platform_t p) {
     return (p <= IPF_PLAT_ATARI_8BIT) ? ipf_platform_names[p] : "Unknown";
 }
