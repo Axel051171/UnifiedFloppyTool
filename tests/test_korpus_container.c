@@ -90,6 +90,19 @@ static const fall_t FAELLE[] = {
      * schreibt sie auch, wenn das Layout 80 nennt. Gemessen. */
     { "msa",  &uft_format_plugin_msa,  "hxcfe_msa.msa",
       774490L, 84, 2, 9, 512, 1 },
+
+    /* MF-810: DERSELBE Aufbau, aber komprimierbarer Inhalt — 15 484 B
+     * statt 774 490. Die Zeile darueber laeuft NIE durch MSAs
+     * RLE-Kette: MSA legt eine Spur unkomprimiert ab, wenn Kompression
+     * sie groesser macht, und das Markenmuster komprimiert nicht.
+     *
+     * Ohne diesen Fall deckte das T1b von MF-806 die Geometrie und die
+     * Reihenfolge ab, aber nicht den Dekomprimierer — und genau dort
+     * liegt in `uft_msa_parser_v2.c:180` die vertauschte Operandenfolge
+     * (Zaehler und Datenbyte), die dieses Plugin NICHT hat. Gemessen,
+     * statt aus der Nichtbeobachtung geschlossen. */
+    { "msa_rle", &uft_format_plugin_msa, "hxcfe_msa_rle.msa",
+      15484L, 84, 2, 9, 512, 1 },
 };
 
 static void free_ts(uft_track_t *t)

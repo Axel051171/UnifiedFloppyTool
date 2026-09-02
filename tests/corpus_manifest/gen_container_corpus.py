@@ -89,23 +89,35 @@ ZIEL = WURZEL / "tests" / "corpus_free"
 FORMATE = [
     ("edsk", "dsk", "samdisk", 80, 2, 9, 512, 1, None),
     ("msa",  "msa", "hxcfe",   84, 2, 9, 512, 1, "ATARIST_DD_720KB"),
+    # MF-810: dieselbe Geometrie, aber KOMPRIMIERBARER Inhalt. Die
+    # Zeile darueber laeuft nie durch die RLE-Kette, weil das
+    # Markenmuster nicht komprimiert (774 490 B fuer 774 144 B
+    # Nutzdaten — MSA legt eine Spur unkomprimiert ab, wenn
+    # Kompression sie groesser macht). Gemessen wird die Kette erst
+    # hier: 15 484 B statt 774 490.
+    ("msa_rle", "msa", "hxcfe", 84, 2, 9, 512, 1, "ATARIST_DD_720KB"),
 ]
 
 
-HXC_KONV = {"msa": "ATARIST_MSA"}
+HXC_KONV = {"msa": "ATARIST_MSA", "msa_rle": "ATARIST_MSA"}
 
 
-def inhalt(n_bytes: int, sektorgroesse: int) -> bytes:
+def inhalt(n_bytes: int, sektorgroesse: int, komprimierbar: bool = False) -> bytes:
     """Jeder Sektor traegt seine laufende Nummer — eine Umsortierung wird
-    dadurch sichtbar. Gleiche Bauart wie gen_gw_geometry_corpus.py."""
-    d = bytearray(n_bytes)
+    dadurch sichtbar. Gleiche Bauart wie gen_gw_geometry_corpus.py.
+
+    `komprimierbar` fuellt den Rest mit konstantem 0xE5 statt mit einem
+    Muster. Nur so laeuft ein Container mit RLE (MSA) ueberhaupt durch
+    seine Kompressionskette — MF-810."""
+    d = bytearray([0xE5]) * n_bytes if komprimierbar else bytearray(n_bytes)
     for s in range(n_bytes // sektorgroesse):
         off = s * sektorgroesse
         d[off:off + 4] = b"UFT\x00"
         d[off + 4] = s & 0xFF
         d[off + 5] = (s >> 8) & 0xFF
-        for i in range(6, sektorgroesse):
-            d[off + i] = (s * 7 + i * 31) & 0xFF
+        if not komprimierbar:
+            for i in range(6, sektorgroesse):
+                d[off + i] = (s * 7 + i * 31) & 0xFF
     return bytes(d)
 
 
@@ -131,7 +143,7 @@ def main() -> int:
     for name, ext, erzeuger, z, k, spt, ss, basis, layout in FORMATE:
         n = z * k * spt * ss
         quelle = tmp / f"{name}_src.img"
-        quelle.write_bytes(inhalt(n, ss))
+        quelle.write_bytes(inhalt(n, ss, name.endswith("_rle")))
         behaelter = tmp / f"{name}.{ext}"
         zurueck = tmp / (f"{name}_zurueck.img" if erzeuger == "samdisk"
                          else f"{name}_zurueck.raw")

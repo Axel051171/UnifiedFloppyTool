@@ -421,6 +421,18 @@
       "source": "Rohabbild eigen erzeugt (774 144 B, 84/2/9/512, je Sektor Kennung UFT\u0000 + laufende Nummer), dann `hxcfe -finput:<roh>.img -uselayout:ATARIST_DD_720KB -conv:ATARIST_MSA -foutput:<out>.msa`. Ergebnis 774 490 B; der MSA-Kopf meldet magic 0x0E0F, 9 Sektoren/Spur, Seiten-1 = 1, Startspur 0, Endspur 83. WARUM hxcfe UND NICHT SAMDISK ERZEUGT: UFTs msa-Leser ist gegen src/samdisk/msa.cpp geschrieben (VERIFICATION_TIERS fuehrt genau das als Spec-Quelle), und MF-785 fuehrt `msa` ausdruecklich auf SAMdisks Sperrliste. Ein von SAMdisk erzeugtes MSA bestaetigte nur, wovon der Leser abgeleitet ist. ZWEITE HAND: SAMdisk 4.0 liest die Datei zurueck (`SAMdisk copy <out>.msa <zurueck>.raw -f`) und liefert das Rohabbild BYTEIDENTISCH. 84 Zylinder und nicht 80: hxcfes Plattenmodell hat 84 Spuren und schreibt sie auch, wenn das Layout 80 nennt — gemessen, eine 80-Zylinder-Quelle kann den Rundlauf deshalb gar nicht schliessen.",
       "fremdcode": "nein - MSA traegt einen 10-Byte-Kopf aus reiner Geometrie (magic, Sektoren/Spur, Seiten, Start-/Endspur) und danach je Spur ein Laengenwort. Keine Erzeugerkennung, kein Text, kein ausfuehrbarer Code. Die Nutzdaten sind vollstaendig eigen erzeugt; die RLE-Kompression je Spur ist Formatstruktur.",
       "test": "test_korpus_container"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_msa_rle.msa",
+      "sha256": "9ca3345e75d3f4e0bc3cf3ae0d42c35b02d96dd67653d49471d19297d4407660",
+      "format": "msa",
+      "origin": "cross-tool",
+      "oracle": "hxcfe",
+      "oracle_zweit": "samdisk",
+      "tool": "HxC Floppy Emulator hxcfe 2.16.13.1 (GPL-3.0; als Oracle unveraendert ausgefuehrt, nichts eingebunden)",
+      "source": "Wie hxcfe_msa.msa, aber mit KOMPRIMIERBAREM Inhalt: 774 144 B, je Sektor Kennung UFT\u0000 + laufende Nummer, Rest konstant 0xE5. Ergebnis 15 484 B statt 774 490 — die RLE-Kette laeuft also wirklich. Das ist der Zweck: MSA legt eine Spur UNKOMPRIMIERT ab, wenn Kompression sie groesser macht, und das Markenmuster der anderen Datei komprimiert nicht. Ohne diesen Eintrag deckte das T1b von MF-806 Geometrie und Reihenfolge ab, aber nicht den Dekomprimierer. ZWEITE HAND: SAMdisk 4.0 liest zurueck, byteidentisch.",
+      "fremdcode": "nein - reine Geometrie im 10-Byte-Kopf, je Spur ein Laengenwort, Nutzdaten eigen erzeugt",
+      "test": "test_korpus_container"
     }
   ]
 }
