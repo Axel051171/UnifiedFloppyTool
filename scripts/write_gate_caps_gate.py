@@ -63,15 +63,15 @@ _SIG_RE = re.compile(r'\{"([^"]+)"(.*?)\},', re.S)
 _PLUGIN_DEF_RE_TMPL = r"uft_format_plugin_t\s+{sym}\s*=\s*\{{(.*?)\n\}};"
 
 
-def _gate_write_caps(repo: Path) -> dict[str, bool]:
-    """Welche Gate-Eintraege tragen UFT_FMT_CAP_WRITE?"""
+def _gate_caps(repo: Path, bit: str) -> dict[str, bool]:
+    """Welche Gate-Eintraege tragen `bit`?"""
     text = (repo / GATE_SRC).read_text(encoding="utf-8", errors="replace")
     start = text.index("FORMAT_SIGS[] = {")
     block = text[start:]
     block = block[: block.index("\n};")]
     out: dict[str, bool] = {}
     for name, rest in _SIG_RE.findall(block):
-        out[name] = "UFT_FMT_CAP_WRITE" in rest
+        out[name] = bit in rest
     return out
 
 
@@ -108,11 +108,29 @@ def check(repo: Path) -> list[str]:
         return [f"{GATE_SRC} fehlt — der Waechter kann nichts vergleichen"]
 
     try:
-        gate = _gate_write_caps(repo)
+        gate = _gate_caps(repo, "UFT_FMT_CAP_WRITE")
+        gate_read = _gate_caps(repo, "UFT_FMT_CAP_READ")
     except ValueError:
         return [f"{GATE_SRC}: FORMAT_SIGS nicht gefunden oder Form geaendert"]
 
     plugins = _plugin_write_caps(repo)
+
+    # MF-814: dasselbe fuer LESEN. Der MF-491-Kommentar im Tor hat
+    # sorgfaeltig begruendet, warum XDF und DMF kein SCHREIBbit bekommen
+    # — „ein Fail-closed-Tor verspricht nichts, wofuer es keinen
+    # Ausfuehrenden gibt" —, und genau diese Pruefung fuer das LESEbit
+    # nie gemacht. `XDF (IBM)` trug `UFT_FMT_CAP_READ`, obwohl
+    # `src/formats/xdf/` UFTs EIGENER Forensik-Container ist und nicht
+    # das IBM-Format; die Registry kennt kein xdf-Plugin.
+    #
+    # Ein Versprechen ist ein Versprechen, egal in welche Richtung.
+    for name, plugin in sorted(GATE_TO_PLUGIN.items()):
+        if plugin is None and gate_read.get(name):
+            errors.append(
+                f"{GATE_SRC}: Eintrag \"{name}\" verspricht LESEN "
+                f"(UFT_FMT_CAP_READ), hat aber kein Plugin. Ein "
+                f"Fail-closed-Tor verspricht nichts, wofuer es keinen "
+                f"Ausfuehrenden gibt — das galt schon fuer das Schreibbit.")
 
     for name, gate_write in sorted(gate.items()):
         if name not in GATE_TO_PLUGIN:

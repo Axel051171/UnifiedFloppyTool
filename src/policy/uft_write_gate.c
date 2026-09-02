@@ -97,10 +97,39 @@ static const format_sig_t FORMAT_SIGS[] = {
      * Fail-closed-Tor verspricht nichts, wofuer es keinen Ausfuehrenden
      * gibt. Wer einen Schreiber baut, traegt ihn in
      * scripts/write_gate_caps_gate.py ein und setzt das Bit hier. */
-    {"XDF (IBM)", 1915904, 1915904, NULL, 0, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 850},
+    /* MF-814: hier stand fuer beide Eintraege UFT_FMT_CAP_READ.
+     *
+     * Der Kommentar darueber hat sorgfaeltig begruendet, warum XDF und
+     * DMF kein SCHREIBbit bekommen — „ein Fail-closed-Tor verspricht
+     * nichts, wofuer es keinen Ausfuehrenden gibt". Genau diese
+     * Pruefung wurde fuer das LESEbit nie gemacht.
+     *
+     * Es gibt keinen IBM-XDF-Leser im Baum. `src/formats/xdf/` ist
+     * UFTs EIGENER Forensik-Container („XDF Core - Universal Forensic
+     * Disk Container"), nicht das IBM-Format; die Registry kennt kein
+     * xdf-Plugin. `scripts/write_gate_caps_gate.py` prueft das seit
+     * MF-814 in beide Richtungen.
+     *
+     * UND DIE GROESSE WAR ERFUNDEN. Hier stand 1 915 904 (= 1871 KB),
+     * ohne Quelle. Das ist weder XDF noch 2M noch sonst eine
+     * dokumentierte Groesse. XDF legt je Spur einen Sektor zu 8 KB,
+     * 2 KB, 1 KB und 512 B an — 11,5 KB je Spur, bei 80 Spuren und
+     * zwei Seiten also 1840 KB = 1 884 160 B (Michal Necasek,
+     * OS/2 Museum).
+     *
+     * Die richtige Zahl steht jetzt da, ABER: eine einzelne Groesse ist
+     * fuer XDF auch dann die falsche Auskunft, wenn sie stimmt. Das
+     * definierende Merkmal sind VERSCHIEDENE SEKTORGROESSEN AUF
+     * DERSELBEN SPUR; ein Bytezaehler ist dafuer der falsche
+     * Schluesseltyp, und mit 82 statt 80 Spuren aendert sich die Zahl.
+     * Ein Rohabbild kann das Layout ohnehin nicht tragen. Wer einen
+     * Leser baut, erkennt XDF am Spurlayout, nicht an der Dateilaenge. */
+    {"XDF (IBM)", 1884160, 1884160, NULL, 0, 0,
+     UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 850},
+    /* DMF: 80 x 2 x 21 x 512 = 1 720 320 — die Groesse stimmt, nur das
+     * Leseversprechen nicht. */
     {"DMF (MS)", 1720320, 1720320, NULL, 0, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL, 850},
+     UFT_FMT_CAP_PHYSICAL, 850},
     
     {NULL, 0, 0, NULL, 0, 0, 0, 0}
 };
