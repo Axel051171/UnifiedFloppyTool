@@ -56,6 +56,7 @@
 #include <string.h>
 
 extern const uft_format_plugin_t uft_format_plugin_edsk;
+extern const uft_format_plugin_t uft_format_plugin_msa;
 
 #ifndef UFT_CORPUS_DIR
 #error "UFT_CORPUS_DIR must be defined by the build (tests/CMakeLists.txt)"
@@ -78,6 +79,17 @@ typedef struct {
 static const fall_t FAELLE[] = {
     { "edsk", &uft_format_plugin_edsk, "samdisk_edsk.dsk",
       778496L, 80, 2, 9, 512, 1 },
+
+    /* MF-806: `msa` stand auf T2, und seine einzige Spec-Quelle war
+     * SAMdisk (`src/samdisk/msa.cpp`) — dieselbe Hand. Deshalb ERZEUGT
+     * hier hxcfe und SAMdisk liest zurueck, nicht umgekehrt. Ein von
+     * SAMdisk erzeugtes MSA bestaetigte nur, wovon UFTs Leser
+     * abgeleitet ist.
+     *
+     * 84 Zylinder, nicht 80: hxcfes Plattenmodell hat 84 Spuren und
+     * schreibt sie auch, wenn das Layout 80 nennt. Gemessen. */
+    { "msa",  &uft_format_plugin_msa,  "hxcfe_msa.msa",
+      774490L, 84, 2, 9, 512, 1 },
 };
 
 static void free_ts(uft_track_t *t)

@@ -409,6 +409,18 @@
       "source": "Rohabbild eigen erzeugt (737 280 B, 80/2/9/512, je Sektor Kennung UFT\u0000 + laufende Nummer), dann mit EXPLIZITER Geometrie gewandelt: `SAMdisk copy <roh>.img <out>.dsk -c80 -s9 -z2 -b1 -f`. Ohne die Warnung \"input format guessed from file size\". Ergebnis 778 496 B = 256 Byte Disk-Info + 80*2 Spuren zu je 19*256 Byte (256 Spurkopf + 9*512 Daten). ZWEITE UNABHAENGIGE HAND: hxcfe 2.16.13 liest die Datei zurueck (`hxcfe -finput:<out>.dsk -conv:RAW_LOADER -foutput:<zurueck>.img`) und liefert das Rohabbild BYTEIDENTISCH. Der Generator tests/corpus_manifest/gen_container_corpus.py schreibt die Datei nur, wenn dieser Rundlauf sich schliesst — ein Container auf EINER Hand belegt nichts. SAMdisk wendet dabei seinen Spurversatz an (--skew, Vorgabe 1): Spur (1,0) liegt als 9 1 2 3 4 5 6 7 8 in der Datei. Das ist richtig und wird vom Test nach Sektor-ID geschluesselt geprueft, nicht nach Lage.",
       "fremdcode": "ja - die Erzeugerkennung \"SAMdisk220725\" steht ab Offset 0x22 im Disk-Info-Block. Das ist Formatstruktur (ein 14-Byte-Namensfeld, das die EDSK-Beschreibung vorsieht), kein ausfuehrbarer Code und kein Bootsektor. Gemessen: der Rest des Kopfes traegt Geometrie und Spurgroessentabelle, die Nutzdaten sind vollstaendig eigen erzeugt.",
       "test": "test_korpus_container"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_msa.msa",
+      "sha256": "56f071d41caa0ef1e775c711c0be50c4a098555bafd71130d38e1df07aa7eddd",
+      "format": "msa",
+      "origin": "cross-tool",
+      "oracle": "hxcfe",
+      "oracle_zweit": "samdisk",
+      "tool": "HxC Floppy Emulator hxcfe 2.16.13.1 (Jean-Francois DEL NERO, GPL-3.0; als Oracle unveraendert ausgefuehrt, nichts eingebunden)",
+      "source": "Rohabbild eigen erzeugt (774 144 B, 84/2/9/512, je Sektor Kennung UFT\u0000 + laufende Nummer), dann `hxcfe -finput:<roh>.img -uselayout:ATARIST_DD_720KB -conv:ATARIST_MSA -foutput:<out>.msa`. Ergebnis 774 490 B; der MSA-Kopf meldet magic 0x0E0F, 9 Sektoren/Spur, Seiten-1 = 1, Startspur 0, Endspur 83. WARUM hxcfe UND NICHT SAMDISK ERZEUGT: UFTs msa-Leser ist gegen src/samdisk/msa.cpp geschrieben (VERIFICATION_TIERS fuehrt genau das als Spec-Quelle), und MF-785 fuehrt `msa` ausdruecklich auf SAMdisks Sperrliste. Ein von SAMdisk erzeugtes MSA bestaetigte nur, wovon der Leser abgeleitet ist. ZWEITE HAND: SAMdisk 4.0 liest die Datei zurueck (`SAMdisk copy <out>.msa <zurueck>.raw -f`) und liefert das Rohabbild BYTEIDENTISCH. 84 Zylinder und nicht 80: hxcfes Plattenmodell hat 84 Spuren und schreibt sie auch, wenn das Layout 80 nennt — gemessen, eine 80-Zylinder-Quelle kann den Rundlauf deshalb gar nicht schliessen.",
+      "fremdcode": "nein - MSA traegt einen 10-Byte-Kopf aus reiner Geometrie (magic, Sektoren/Spur, Seiten, Start-/Endspur) und danach je Spur ein Laengenwort. Keine Erzeugerkennung, kein Text, kein ausfuehrbarer Code. Die Nutzdaten sind vollstaendig eigen erzeugt; die RLE-Kompression je Spur ist Formatstruktur.",
+      "test": "test_korpus_container"
     }
   ]
 }

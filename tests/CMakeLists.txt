@@ -561,6 +561,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")

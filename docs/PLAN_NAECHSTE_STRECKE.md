@@ -157,7 +157,7 @@ auf der Sperrliste (dort nur `dim_atari`, `hfe`, `hxcstream`). Damit ist
 der Weg derselbe wie bei `edsk`: hxcfe erzeugt, SAMdisk liest zurück,
 `gen_container_corpus.py` schreibt nur bei byteidentischem Rundlauf.
 
-**Kennzahl:** ungeprüfte Formate ↓. Siehe P3-27.
+**Kennzahl — BERICHTIGT (MF-806):** **keine der vier.** Hier stand „ungeprüfte Formate ↓", und das war falsch: `msa` stand auf **T2**, nicht T3. Gemessen bewegt die Hebung **T1b 26 → 27** und **T2 23 → 22**; T3 bleibt bei **37**. Der Wert ist trotzdem echt — ein Eintrag, der sich gegen seine eigene Quelle bestätigte, ist jetzt gegen eine fremde Hand belegt. Aber die Leitzahl bewegt er nicht, und das gehört gesagt. Siehe P3-27.
 
 ### Schritt 3 — PLL-Kaskade und Re-Read-Fusion *(die teuerste Lücke)*
 

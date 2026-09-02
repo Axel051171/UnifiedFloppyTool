@@ -26,15 +26,36 @@ EINE Hand. Dieses Skript schreibt eine Datei deshalb nur, wenn eine
 **zweite, unabhängige** Hand sie zurücklesen kann und dabei genau das
 Rohabbild wieder herausgibt, aus dem sie entstanden ist:
 
-    Rohabbild --SAMdisk--> Container --hxcfe--> Rohabbild
+    Rohabbild --Hand 1--> Container --Hand 2--> Rohabbild
 
 Ist der Rundlauf nicht byteidentisch, wird **nichts geschrieben**. Damit
 kann kein Eintrag entstehen, der nur auf einer Hand steht.
 
-MF-785 hat vorher geprüft, für welche Formate die beiden Werkzeuge
-DIESELBE Hand wie UFT sind (fünfte Frage): SAMdisk für `cqm`, `do`,
-`fdi`, `hfe`, `msa`, `st`, `td0`, `udi`; hxcfe für `dim_atari`, `hfe`,
-`hxcstream`. Keines der Formate unten steht auf einer der beiden Listen.
+── Welche Hand SCHREIBT, ist nicht beliebig (MF-806) ────────────────────
+
+MF-785 hat gemessen, für welche Formate die beiden Werkzeuge **dieselbe
+Hand wie UFT** sind (fünfte Frage): SAMdisk für `cqm`, `do`, `fdi`,
+`hfe`, `msa`, `st`, `td0`, `udi`; hxcfe für `dim_atari`, `hfe`,
+`hxcstream`.
+
+Für `msa` heißt das: UFTs Leser ist gegen `src/samdisk/msa.cpp`
+geschrieben. Ließe man SAMdisk die Datei **erzeugen**, bestätigte der
+Test nur, wovon er abgeleitet ist — dieselbe Lage, die MF-780 bei
+`openMSX`/`msx_disk` erkannt und verworfen hat. Also **muss hxcfe
+schreiben**, und SAMdisk liest zurück.
+
+Deshalb trägt jeder Eintrag seinen Erzeuger, und der Dateiname im Korpus
+nennt ihn: `hxcfe_msa.msa`, `samdisk_edsk.dsk`.
+
+── Zwei gemessene Eigenheiten der Werkzeuge ─────────────────────────────
+
+* **hxcfe schreibt 84 Zylinder**, auch wenn das Layout 80 nennt — sein
+  Plattenmodell hat 84 Spuren, die überzähligen bleiben leer. Eine
+  80-Zylinder-Quelle kann den Rundlauf deshalb gar nicht schließen; die
+  Quelle wird zu 84 erzeugt.
+* **SAMdisk 4.0 schreibt roh nur als `.raw`.** `.img` weist es mit
+  „unknown output file type" ab, `.st` mit „ST is not supported for
+  output". Gemessen, nicht vermutet.
 
 ── Was das NICHT belegt ─────────────────────────────────────────────────
 
@@ -54,11 +75,24 @@ from pathlib import Path
 WURZEL = Path(__file__).resolve().parent.parent.parent
 ZIEL = WURZEL / "tests" / "corpus_free"
 
-# (UFT-Plugin, Dateiendung, Zylinder, Koepfe, Sektoren, Sektorgroesse,
-#  erster Sektor)
+# (UFT-Plugin, Endung, Erzeuger, Zyl, Koepfe, Sektoren, Sektorgroesse,
+#  erster Sektor, hxcfe-Layout)
+#
+# ERZEUGER ist die Hand, die den Container SCHREIBT, und sie darf nicht
+# die sein, aus der UFTs Leser stammt (fuenfte Frage, MF-785). Die
+# jeweils andere liest zurueck.
+#
+#   edsk  UFTs Leser hat keine der beiden als Quelle -> SAMdisk schreibt
+#   msa   UFTs Leser stammt aus src/samdisk/msa.cpp  -> hxcfe MUSS
+#         schreiben, sonst bestaetigt der Test nur, wovon er abgeleitet
+#         ist
 FORMATE = [
-    ("edsk", "dsk", 80, 2, 9, 512, 1),
+    ("edsk", "dsk", "samdisk", 80, 2, 9, 512, 1, None),
+    ("msa",  "msa", "hxcfe",   84, 2, 9, 512, 1, "ATARIST_DD_720KB"),
 ]
+
+
+HXC_KONV = {"msa": "ATARIST_MSA"}
 
 
 def inhalt(n_bytes: int, sektorgroesse: int) -> bytes:
@@ -94,24 +128,41 @@ def main() -> int:
     tmp.mkdir(parents=True, exist_ok=True)
 
     fehler = 0
-    for name, ext, z, k, s, ss, basis in FORMATE:
-        n = z * k * s * ss
+    for name, ext, erzeuger, z, k, spt, ss, basis, layout in FORMATE:
+        n = z * k * spt * ss
         quelle = tmp / f"{name}_src.img"
         quelle.write_bytes(inhalt(n, ss))
         behaelter = tmp / f"{name}.{ext}"
-        zurueck = tmp / f"{name}_zurueck.img"
-        ziel = ZIEL / f"samdisk_{name}.{ext}"
+        zurueck = tmp / (f"{name}_zurueck.img" if erzeuger == "samdisk"
+                         else f"{name}_zurueck.raw")
+        ziel = ZIEL / f"{erzeuger}_{name}.{ext}"
+        geraten = False
 
-        # Hand 1: SAMdisk schreibt, mit EXPLIZITER Geometrie.
-        befehl = [samdisk, "copy", str(quelle), str(behaelter),
-                  f"-c{z}", f"-s{s}", f"-z{groessencode(ss)}", f"-b{basis}",
-                  "-f"]
-        r1 = subprocess.run(befehl, capture_output=True, text=True)
-        geraten = "guessed from file size" in (r1.stdout + r1.stderr)
-
-        # Hand 2: hxcfe liest zurueck.
-        subprocess.run([hxcfe, f"-finput:{behaelter}", "-conv:RAW_LOADER",
-                        f"-foutput:{zurueck}"], capture_output=True, text=True)
+        if erzeuger == "samdisk":
+            # Hand 1: SAMdisk schreibt, mit EXPLIZITER Geometrie.
+            r1 = subprocess.run(
+                [samdisk, "copy", str(quelle), str(behaelter),
+                 f"-c{z}", f"-s{spt}", f"-z{groessencode(ss)}", f"-b{basis}",
+                 "-f"],
+                capture_output=True, text=True)
+            geraten = "guessed from file size" in (r1.stdout + r1.stderr)
+            # Hand 2: hxcfe liest zurueck.
+            subprocess.run([hxcfe, f"-finput:{behaelter}",
+                            "-conv:RAW_LOADER", f"-foutput:{zurueck}"],
+                           capture_output=True, text=True)
+        else:
+            # Hand 1: hxcfe schreibt, mit benanntem Layout.
+            subprocess.run([hxcfe, f"-finput:{quelle}",
+                            f"-uselayout:{layout}",
+                            f"-conv:{HXC_KONV[name]}",
+                            f"-foutput:{behaelter}"],
+                           capture_output=True, text=True)
+            # Hand 2: SAMdisk liest zurueck. `.raw` ist die einzige rohe
+            # Ausgabeform, die SAMdisk 4.0 kennt — `.img` und `.st` weist
+            # es ab („unknown output file type" / „ST is not supported
+            # for output"), gemessen.
+            subprocess.run([samdisk, "copy", str(behaelter), str(zurueck),
+                            "-f"], capture_output=True, text=True)
 
         rund = zurueck.exists() and zurueck.read_bytes() == quelle.read_bytes()
         if rund and not geraten:
@@ -121,6 +172,7 @@ def main() -> int:
             ziel.unlink(missing_ok=True)
 
         print(f"  {'ok  ' if (rund and not geraten) else 'FAIL'} {name:6s} "
+              f"{erzeuger:8s} "
               f"{behaelter.stat().st_size if behaelter.exists() else 0:8d} B "
               f"Container, Rundlauf {'byteidentisch' if rund else 'NICHT gleich'}"
               f"{'' if not geraten else ', GERATENE Geometrie'}")

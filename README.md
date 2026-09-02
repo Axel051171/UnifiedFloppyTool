@@ -15,7 +15,7 @@ round-trip tests and/or specs verified against authoritative reference
 implementations — **not yet against a real-disk reference corpus**. The
 per-format verification-tier table now exists and is kept current:
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **37 of 88
-formats are T3 (unverified)**; proven: T1=2, T1b=26, T2=23. 9 hardware controllers
+formats are T3 (unverified)**; proven: T1=2, T1b=27, T2=22. 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
 pending** — still open in 4.1.6, and it needs a machine we do not have
 (see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
@@ -122,7 +122,7 @@ not made green. The reference image is on the procurement list.
 not a footnote:
 
 - **37 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
-  T1b=26, T2=23. (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
+  T1b=27, T2=22. (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
   each after a real parser bug was fixed against a named reference:
   MAME's `mfi_dsk.h`, and the pc98.org D88 spec plus MAME's `d88_dsk`;
   `dim_atari` in MF-690; `do` in MF-716 — the first Apple format
@@ -312,7 +312,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=26, T2=23, T3=37** of 88.
+for the tier definitions): **T1=2, T1b=27, T2=22, T3=37** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for
