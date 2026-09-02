@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 19 |
+| T1b | 24 |
 | T2 | 23 |
-| T3 | 44 |
+| T3 | 39 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -31,12 +31,17 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dim_atari` | **T1b** | `test_dim_atari_magic` | — | — | 1 |
 | `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
 | `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_interface_modes`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
+| `img` | **T1b** | `test_corpus_gw_geometrie`, `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | 1 |
+| `jvc` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `micropolis` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `msx_disk` | **T1b** | `test_corpus_msx` | — | — | 1 |
 | `northstar` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
+| `pdp` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `po` | **T1b** | `test_apple_do_po_bounds`, `test_corpus_gw_geometrie`, `test_do_po_probe_ignores_content`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | 1 |
+| `sam` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_flux_jitter_vectors`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_layout`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `ssd` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
+| `t1k` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `trd` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `adf_arc` | **T2** | `test_acorn_adfs_identity` | DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur. | MF-654 | — |
@@ -76,11 +81,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
-| `img` | **T3** | `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_plugin_probe_real` | — | — | — |
 | `jv1` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `jv3` | **T3** | — | — | — | — |
-| `jvc` | **T3** | — | — | — | — |
 | `kfx` | **T3** | — | — | — | — |
 | `logical` | **T3** | — | — | — | — |
 | `mgt` | **T3** | — | — | — | — |
@@ -88,18 +91,15 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `nanowasp` | **T3** | — | — | — | — |
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `opus` | **T3** | — | — | — | — |
-| `pdp` | **T3** | — | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
 | `qrst` | **T3** | — | — | — | — |
 | `rcpmfs` | **T3** | — | — | — | — |
 | `sad` | **T3** | — | — | — | — |
-| `sam` | **T3** | — | — | — | — |
 | `sap_thomson` | **T3** | — | — | — | — |
 | `scl` | **T3** | — | — | — | — |
 | `syn` | **T3** | — | — | — | — |
-| `t1k` | **T3** | — | — | — | — |
 | `tan` | **T3** | — | — | — | — |
 | `udi` | **T3** | — | — | — | — |
 | `v9t9` | **T3** | — | — | — | — |

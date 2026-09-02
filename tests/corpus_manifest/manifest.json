@@ -319,6 +319,61 @@
       "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster, damit eine Umsortierung sichtbar wird), dann zweimal `gw convert --format zx.trdos.ds80` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 2560 sectors of 2560 (100%)\" (80x2x16), der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem zx.trdos.ds80-Modell, nicht aus UFTs Annahme.",
       "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt (Kennung, Sektornummer, Muster); kein fremdes Werkzeug schreibt Nutzdaten hinein, gw setzt nur Sektoren um (MF-783)",
       "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_pdp.img",
+      "sha256": "e944d1341def58fbbe5e79be7462f07ec12e7d68879845cffa1130206f910d2e",
+      "format": "pdp",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format dec.rx01` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 2002 sectors of 2002 (100%)\" (77x26x128), der Rundlauf ist byteidentisch.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_img.img",
+      "sha256": "b905e4716982d7d4a08de63f1a70c09cb8c460bfb561ed2f836b03d4002cdc80",
+      "format": "img",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format ibm.720` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 1440 sectors of 1440 (100%)\" (80x2x9x512), der Rundlauf ist byteidentisch.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_t1k.img",
+      "sha256": "baabf7adb9f48bc6d501ae3fcbf804f9b9cd190f88934c0210922f9f5bac7ea5",
+      "format": "t1k",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format ibm.1440` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 2880 sectors of 2880 (100%)\" (80x2x18x512), der Rundlauf ist byteidentisch.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_sam.img",
+      "sha256": "7aad99696fc8ab2aa484f4176c5080ba805632795665060d25b0aafa150f8455",
+      "format": "sam",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format ibm.800` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 1600 sectors of 1600 (100%)\" (80x2x10x512), der Rundlauf ist byteidentisch.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
+      "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/gw_jvc.img",
+      "sha256": "36c9d52baa08fbcae82e69d7e02bb2c0153f8c609049e746ce96e0516495405a",
+      "format": "jvc",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format coco.decb` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 630 sectors of 630 (100%)\" (35x18x256), der Rundlauf ist byteidentisch.",
+      "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
+      "test": "test_corpus_gw_geometrie"
     }
   ]
 }

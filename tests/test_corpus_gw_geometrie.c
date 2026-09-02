@@ -55,6 +55,11 @@ extern const uft_format_plugin_t uft_format_plugin_northstar;
 extern const uft_format_plugin_t uft_format_plugin_ssd;
 extern const uft_format_plugin_t uft_format_plugin_po;
 extern const uft_format_plugin_t uft_format_plugin_trd;
+extern const uft_format_plugin_t uft_format_plugin_pdp;
+extern const uft_format_plugin_t uft_format_plugin_img;
+extern const uft_format_plugin_t uft_format_plugin_t1k;
+extern const uft_format_plugin_t uft_format_plugin_sam;
+extern const uft_format_plugin_t uft_format_plugin_jvc;
 
 #ifndef UFT_CORPUS_DIR
 #error "UFT_CORPUS_DIR must be defined by the build (tests/CMakeLists.txt)"
@@ -84,6 +89,20 @@ static const fall_t FAELLE[] = {
       143360L, 35, 1, 16, 256 },
     { "trd",        &uft_format_plugin_trd,        "gw_trd.img",
       655360L, 80, 2, 16, 256 },
+
+    /* Zweite Runde (MF-784). Alle fuenf sind KOPFLOSE Sektordumps —
+     * Formate mit Container-Kopf (sap, 2img, vdk, fdi_pc98) oder
+     * Archivstruktur (scl) kann gw grundsaetzlich nicht liefern. */
+    { "pdp",        &uft_format_plugin_pdp,        "gw_pdp.img",
+      256256L, 77, 1, 26, 128 },
+    { "img",        &uft_format_plugin_img,        "gw_img.img",
+      737280L, 80, 2,  9, 512 },
+    { "t1k",        &uft_format_plugin_t1k,        "gw_t1k.img",
+     1474560L, 80, 2, 18, 512 },
+    { "sam",        &uft_format_plugin_sam,        "gw_sam.img",
+      819200L, 80, 2, 10, 512 },
+    { "jvc",        &uft_format_plugin_jvc,        "gw_jvc.img",
+      161280L, 35, 1, 18, 256 },
 };
 
 static void free_ts(uft_track_t *t)

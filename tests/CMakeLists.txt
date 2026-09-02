@@ -506,7 +506,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/northstar/uft_northstar.c
             ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
-            ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/pdp/uft_pdp.c
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/formats/t1k/uft_t1k.c
+            ${CMAKE_SOURCE_DIR}/src/formats/sam/uft_sam.c
+            ${CMAKE_SOURCE_DIR}/src/formats/jvc/uft_jvc_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_msx")

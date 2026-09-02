@@ -51,6 +51,14 @@ FORMATE = [
     ("ssd",        "acorn.dfs.ss",         102400, 256,  400),
     ("po",         "apple2.prodos.140",    143360, 256,  560),
     ("trd",        "zx.trdos.ds80",        655360, 256, 2560),
+    # Zweite Runde (MF-784). Alle fuenf sind KOPFLOSE Sektordumps —
+    # Formate mit Container-Kopf (sap, 2img, vdk, fdi_pc98) oder
+    # Archivstruktur (scl) kann gw grundsaetzlich nicht liefern.
+    ("pdp",        "dec.rx01",             256256, 128, 2002),
+    ("img",        "ibm.720",              737280, 512, 1440),
+    ("t1k",        "ibm.1440",            1474560, 512, 2880),
+    ("sam",        "ibm.800",              819200, 512, 1600),
+    ("jvc",        "coco.decb",            161280, 256,  630),
 ]
 
 
