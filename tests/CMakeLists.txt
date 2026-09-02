@@ -536,6 +536,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_scp_status")
+        # MF-804: die Statuscode-Uebersetzung ist REIN und damit ohne
+        # Hardware pruefbar (MF-310). Sie liegt aber in derselben
+        # Uebersetzungseinheit wie der libusb-Pfad, also wird gegen
+        # libusb gelinkt wenn vorhanden — gleiche Behandlung wie
+        # test_scp_direct_hal und test_xum1541_hal.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        if(LIBUSB_FOUND)
+            target_link_libraries(${test_name} PRIVATE uft::libusb)
+        endif()
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_gw_trk0")
         # MF-799: die Spur-0-Entscheidung, aus dem Geraetepfad
         # herausgezogen und damit ohne Hardware pruefbar (MF-310).

@@ -82,8 +82,63 @@ extern "C" {
 #define UFT_SCP_FF_WIPE            0x04  /* wipe track before write */
 #define UFT_SCP_FF_RPM360          0x08  /* 360 RPM vs 300 RPM drive */
 
-/* Response status codes (pr_* in samdisk). */
-#define UFT_SCP_PR_OK              0x4F  /* successful packet completion */
+/* ── Antwort-Statuscodes ─────────────────────────────────────────────────
+ *
+ * MF-804: hier stand EIN Code — `UFT_SCP_PR_OK`. Alles andere wurde in
+ * `scp_send_cmd_ex()` auf `UFT_ERR_IO` abgebildet, mit dem Kommentar
+ * „caller can read the raw status via a future status-query API". Diese
+ * API gab es nicht, und das Byte war zu dem Zeitpunkt weg.
+ *
+ * Die Firmware unterscheidet **zwanzig** Zustände. Für den Benutzer ist
+ * der Unterschied zwischen „keine Diskette eingelegt" und „Spur 0 nicht
+ * gefunden" der ganze Unterschied zwischen einem Werkzeug und einem
+ * Rätsel — und für dieses Projekt ist es dieselbe Ehrlichkeitsfrage wie
+ * überall sonst: **die Information ist da und wurde weggeworfen.**
+ *
+ * QUELLE: `src/samdisk/SuperCardPro.h:9-28` (simonowen/samdisk, MIT, im
+ * Baum), das seinerseits die vom Hersteller veröffentlichte
+ * *SuperCard Pro SDK v1.7* (cbmstuff.com, Dezember 2015) umsetzt —
+ * dieselbe Quelle, die der Dateikopf von `uft_scp_direct.c` bereits als
+ * `SPEC_STATUS: VENDOR-DOCUMENTED` führt.
+ *
+ * NICHT aus `pySuperCardPro` übernommen: das steht unter GPL-3.0, und
+ * es war nicht nötig — die Werte liegen MIT-lizenziert im eigenen Baum.
+ */
+typedef enum {
+    UFT_SCP_PR_UNUSED        = 0x00, /**< nicht benutzt (verbietet NULL-Antworten) */
+    UFT_SCP_PR_BAD_COMMAND   = 0x01, /**< unbekannter Befehl */
+    UFT_SCP_PR_COMMAND_ERR   = 0x02, /**< Befehlsfehler (Aufbau falsch) */
+    UFT_SCP_PR_CHECKSUM      = 0x03, /**< Paketprüfsumme falsch */
+    UFT_SCP_PR_TIMEOUT       = 0x04, /**< USB-Zeitüberschreitung */
+    UFT_SCP_PR_NO_TRK0       = 0x05, /**< Spur 0 nie gefunden (evtl. kein Laufwerk) */
+    UFT_SCP_PR_NO_DRIVE_SEL  = 0x06, /**< kein Laufwerk gewählt */
+    UFT_SCP_PR_NO_MOTOR_SEL  = 0x07, /**< Motor nicht eingeschaltet */
+    UFT_SCP_PR_NOT_READY     = 0x08, /**< Laufwerk nicht bereit (Disk-Change hoch) */
+    UFT_SCP_PR_NO_INDEX      = 0x09, /**< kein Indexpuls erkannt */
+    UFT_SCP_PR_ZERO_REVS     = 0x0A, /**< null Umdrehungen angefordert */
+    UFT_SCP_PR_READ_TOO_LONG = 0x0B, /**< Lesedaten größer als der Gerätespeicher */
+    UFT_SCP_PR_BAD_LENGTH    = 0x0C, /**< Längenangabe ungültig */
+    UFT_SCP_PR_BAD_DATA      = 0x0D, /**< Bitzellenzeit ungültig (0) */
+    UFT_SCP_PR_BOUNDARY_ODD  = 0x0E, /**< Adressgrenze ungerade */
+    UFT_SCP_PR_WP_ENABLED    = 0x0F, /**< Diskette ist schreibgeschützt */
+    UFT_SCP_PR_BAD_RAM       = 0x10, /**< RAM-Test fehlgeschlagen */
+    UFT_SCP_PR_NO_DISK       = 0x11, /**< keine Diskette im Laufwerk */
+    UFT_SCP_PR_BAD_BAUD      = 0x12, /**< ungültige Baudrate gewählt */
+    UFT_SCP_PR_BAD_CMD_PORT  = 0x13, /**< Befehl für diesen Porttyp nicht verfügbar */
+    UFT_SCP_PR_OK            = 0x4F  /**< erfolgreicher Paketabschluss */
+} uft_scp_status_t;
+
+/**
+ * Klartext zu einem Statuscode — **rein**, ohne Gerät.
+ *
+ * Rein, damit die Übersetzung prüfbar ist, statt in einem Gerätepfad zu
+ * verschwinden, den ohne Hardware niemand erreicht (MF-310).
+ *
+ * Ein unbekannter Code liefert `"unbekannter SCP-Status"` und wird
+ * NICHT geraten. Der Zahlenwert gehört daneben ausgegeben.
+ */
+const char *uft_scp_status_name(uint8_t status);
+
 
 /* Checksum seed for the SendCmd packet framing
  *   packet = [CMD, LEN, params..., CHECKSUM]
@@ -124,6 +179,18 @@ extern "C" {
  * Internal layout is private to uft_scp_direct.c; callers treat as handle.
  */
 typedef struct uft_scp_direct_ctx uft_scp_direct_ctx_t;
+
+/**
+ * Das ROHE Statusbyte des zuletzt gescheiterten Befehls.
+ *
+ * Das ist die „status-query API", auf die der Kommentar in
+ * `scp_send_cmd_ex()` seit jeher verwies. Sie existiert jetzt, statt
+ * versprochen zu werden.
+ *
+ * Gibt `UFT_SCP_PR_OK` zurück, wenn seit dem Öffnen kein Befehl an
+ * einem Statuscode gescheitert ist — oder wenn @p ctx NULL ist.
+ */
+uint8_t uft_scp_last_status(const uft_scp_direct_ctx_t *ctx);
 
 /**
  * Open a USB connection to the first SCP device found.

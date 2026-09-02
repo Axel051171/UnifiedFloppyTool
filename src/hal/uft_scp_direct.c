@@ -37,6 +37,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -80,6 +81,10 @@ struct uft_scp_direct_ctx {
     bool      is_open;
     int       current_track;
     uint32_t  revolutions_setting;
+    /* MF-804: das rohe Statusbyte des zuletzt an einem Statuscode
+     * gescheiterten Befehls. Vorher ging es verloren, bevor es
+     * irgendjemand sehen konnte. */
+    uint8_t   last_status;
 };
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
@@ -155,8 +160,18 @@ scp_send_cmd_ex(uft_scp_direct_ctx_t *ctx,
         return UFT_ERR_IO;
     }
     if (response[1] != UFT_SCP_PR_OK) {
-        /* Device reported an error code. Map to generic I/O — caller
-         * can read the raw status via a future status-query API. */
+        /* MF-804: Das Geraet hat einen von zwanzig unterscheidbaren
+         * Zustaenden gemeldet. Vorher wurde das Byte hier verworfen und
+         * durch ein pauschales UFT_ERR_IO ersetzt — mit dem Verweis auf
+         * eine „future status-query API", die es nicht gab.
+         *
+         * Jetzt: behalten (uft_scp_last_status), benennen
+         * (uft_scp_status_name) und SOFORT melden. Der Rueckgabewert
+         * bleibt UFT_ERR_IO, weil uft_error_t keine geraetespezifische
+         * Variante hat; die Aussage geht dadurch nicht mehr verloren. */
+        ctx->last_status = response[1];
+        fprintf(stderr, "[SCP] Befehl 0x%02X abgewiesen: %s (0x%02X)\n",
+                cmd, uft_scp_status_name(response[1]), response[1]);
         return UFT_ERR_IO;
     }
 
@@ -257,6 +272,11 @@ uft_error_t uft_scp_direct_open(uft_scp_direct_ctx_t **out_ctx)
         return UFT_ERR_IO;
     }
     ctx->interface_claimed = true;
+    /* MF-804: calloc nullt, und 0 ist PR_UNUSED, nicht PR_OK. Der
+     * Header sagt zu, dass ohne gescheiterten Befehl PR_OK
+     * herauskommt — also ausdruecklich setzen statt sich auf die
+     * Nullung zu verlassen. */
+    ctx->last_status = UFT_SCP_PR_OK;
     ctx->is_open = true;
     ctx->current_track = -1;
     ctx->revolutions_setting = UFT_SCP_DEFAULT_REVOLUTIONS;
@@ -492,4 +512,57 @@ uft_error_t uft_scp_direct_get_capabilities(
     out->flux_ns_per_sample = UFT_SCP_FLUX_NS_PER_SAMPLE;
     out->max_track_index    = UFT_SCP_MAX_TRACK_INDEX;
     return UFT_OK;
+}
+
+/* ── Statuscodes: behalten statt wegwerfen (MF-804) ──────────────────────
+ *
+ * Beide Funktionen sind absichtlich am Dateiende und OHNE libusb-Bezug:
+ * `uft_scp_status_name()` ist rein und damit ohne Geraet pruefbar
+ * (MF-310), und `uft_scp_last_status()` braucht nur den Kontext.
+ *
+ * QUELLE der Werte und Texte: `src/samdisk/SuperCardPro.h:9-28`
+ * (simonowen/samdisk, MIT, im Baum), Umsetzung der vom Hersteller
+ * veroeffentlichten SuperCard Pro SDK v1.7 (cbmstuff.com, Dez. 2015).
+ * NICHT aus pySuperCardPro (GPL-3.0) — nicht noetig gewesen.
+ */
+const char *uft_scp_status_name(uint8_t status)
+{
+    switch (status) {
+        case UFT_SCP_PR_UNUSED:        return "unbenutzter Antwortwert";
+        case UFT_SCP_PR_BAD_COMMAND:   return "unbekannter Befehl";
+        case UFT_SCP_PR_COMMAND_ERR:   return "Befehlsfehler (Aufbau falsch)";
+        case UFT_SCP_PR_CHECKSUM:      return "Paketpruefsumme falsch";
+        case UFT_SCP_PR_TIMEOUT:       return "USB-Zeitueberschreitung";
+        case UFT_SCP_PR_NO_TRK0:       return "Spur 0 nie gefunden "
+                                              "(moeglicherweise kein Laufwerk)";
+        case UFT_SCP_PR_NO_DRIVE_SEL:  return "kein Laufwerk gewaehlt";
+        case UFT_SCP_PR_NO_MOTOR_SEL:  return "Motor nicht eingeschaltet";
+        case UFT_SCP_PR_NOT_READY:     return "Laufwerk nicht bereit "
+                                              "(Disk-Change liegt hoch)";
+        case UFT_SCP_PR_NO_INDEX:      return "kein Indexpuls erkannt";
+        case UFT_SCP_PR_ZERO_REVS:     return "null Umdrehungen angefordert";
+        case UFT_SCP_PR_READ_TOO_LONG: return "Lesedaten groesser als der "
+                                              "Geraetespeicher";
+        case UFT_SCP_PR_BAD_LENGTH:    return "Laengenangabe ungueltig";
+        case UFT_SCP_PR_BAD_DATA:      return "Bitzellenzeit ungueltig (0)";
+        case UFT_SCP_PR_BOUNDARY_ODD:  return "Adressgrenze ungerade";
+        case UFT_SCP_PR_WP_ENABLED:    return "Diskette ist schreibgeschuetzt";
+        case UFT_SCP_PR_BAD_RAM:       return "RAM-Test fehlgeschlagen";
+        case UFT_SCP_PR_NO_DISK:       return "keine Diskette im Laufwerk";
+        case UFT_SCP_PR_BAD_BAUD:      return "ungueltige Baudrate gewaehlt";
+        case UFT_SCP_PR_BAD_CMD_PORT:  return "Befehl fuer diesen Porttyp "
+                                              "nicht verfuegbar";
+        case UFT_SCP_PR_OK:            return "in Ordnung";
+        default:                       break;
+    }
+    /* NICHT raten. Wer diesen Text sieht, hat einen Wert vor sich, den
+     * die Spezifikation nicht kennt — und der Zahlenwert gehoert
+     * daneben, deshalb steht er nicht in diesem String. */
+    return "unbekannter SCP-Status";
+}
+
+uint8_t uft_scp_last_status(const uft_scp_direct_ctx_t *ctx)
+{
+    if (!ctx) return UFT_SCP_PR_OK;
+    return ctx->last_status;
 }
