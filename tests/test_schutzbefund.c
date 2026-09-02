@@ -348,6 +348,108 @@ TEST(zwei_lesungen_reichen_nicht_und_werden_protokolliert)
     uft_schutz_bericht_frei(&b);
 }
 
+/* ══ Der Sektorbestand gehoert zur UMDREHUNG, nicht zur Spur (MF-797) ══
+ *
+ * MF-793 baute die Arbeitsliste aus den Sektoren der ERSTEN Umdrehung,
+ * mit der Begruendung, ein spaeter auftauchender Sektor sei ein anderer
+ * Befund. Die Begruendung traegt nicht: er erzeugt dann WEDER Befund
+ * NOCH Skip — also Stille, in genau der Datei, die Stille verhindern
+ * soll.
+ *
+ * Gemessen an einer realen Aufnahme (Louis-Guerin, `After the War`,
+ * Spur 72.0): Sektor 8 erscheint in manchen Umdrehungen und in anderen
+ * nicht, weil seinem ID-Feld dort nur zwei statt drei Sync-Marken
+ * vorausgehen. Ein Sektorbestand je SPUR gibt es also nicht — es gibt
+ * einen je UMDREHUNG, und die Vereinigung ist die Arbeitsliste. */
+
+enum { FZS_MAXSEK = 2 };
+
+typedef struct {
+    uint8_t              daten[UMDR][FZS_MAXSEK][SEKTORGROESSE];
+    uft_schutz_sektor_t  sek[UMDR][FZS_MAXSEK];
+    const uft_schutz_sektor_t *zeiger[UMDR];
+    size_t               anzahl[UMDR];
+} fzs2_t;
+
+/* `praesenz[r]` ist eine Bitmaske: welche Sektoren traegt Umdrehung r?
+ * `wackelt` ist die Bitmaske der Sektoren, deren Byte 200 je Lesung
+ * abweicht. */
+static void fzs2_bauen(fzs2_t *f, const unsigned *praesenz, unsigned wackelt)
+{
+    memset(f, 0, sizeof(*f));
+    for (size_t r = 0; r < UMDR; r++) {
+        size_t n = 0;
+        for (unsigned s = 0; s < FZS_MAXSEK; s++) {
+            if (!(praesenz[r] & (1u << s))) continue;
+            uint8_t *d = f->daten[r][s];
+            for (int i = 0; i < SEKTORGROESSE; i++)
+                d[i] = (uint8_t)(i * 31 + 7 + s);
+            if (wackelt & (1u << s)) d[200] = (uint8_t)(0xA0 + r);
+            f->sek[r][n].nummer = (uint8_t)(s + 1);
+            f->sek[r][n].daten  = d;
+            f->sek[r][n].laenge = SEKTORGROESSE;
+            f->sek[r][n].crc_ok = true;
+            n++;
+        }
+        f->zeiger[r] = f->sek[r];
+        f->anzahl[r] = n;
+    }
+}
+
+/* DER ROTBEWEIS. Sektor 2 fehlt in Umdrehung 0 und liegt in 1 und 2 vor.
+ * Vor MF-797 kam dabei NICHTS heraus — kein Befund, kein Skip. */
+TEST(sektor_der_in_umdrehung_0_fehlt_verschwindet_nicht)
+{
+    const unsigned praesenz[UMDR] = { 0x1, 0x3, 0x3 };   /* S2 fehlt in Umdr. 0 */
+    fzs2_t f; fzs2_bauen(&f, praesenz, 0x2);             /* S2 wackelt */
+
+    uft_schutz_probe_t p;
+    memset(&p, 0, sizeof(p));
+    p.umdrehungen = UMDR;
+    p.sektoren = f.zeiger;
+    p.sektor_anzahl = f.anzahl;
+
+    uft_schutz_bericht_t b;
+    fzs_lauf(&p, &b);
+
+    /* Sektor 1 lag dreimal vor und ist stabil -> kein Befund.
+     * Sektor 2 lag ZWEIMAL vor -> zu wenige Lesungen, und DAS gehoert
+     * protokolliert. */
+    ASSERT(b.befund_anzahl == 0);
+    ASSERT(b.uebersprungen_anzahl == 1);
+    ASSERT(b.uebersprungen[0].code == UFT_SCHUTZ_FZS);
+    ASSERT(b.uebersprungen[0].grund == UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN);
+    ASSERT(b.uebersprungen[0].ort.sektor == 2);
+    uft_schutz_bericht_frei(&b);
+}
+
+/* Gegenstueck: derselbe Sektor, aber in allen drei Umdrehungen — nur in
+ * Umdrehung 0 an anderer Stelle der Liste. Er muss gefunden werden. */
+TEST(sektor_nur_in_spaeteren_umdrehungen_wird_trotzdem_geprueft)
+{
+    const unsigned praesenz[UMDR] = { 0x2, 0x3, 0x2 };   /* S1 fehlt zweimal */
+    fzs2_t f; fzs2_bauen(&f, praesenz, 0x2);             /* S2 wackelt */
+
+    uft_schutz_probe_t p;
+    memset(&p, 0, sizeof(p));
+    p.umdrehungen = UMDR;
+    p.sektoren = f.zeiger;
+    p.sektor_anzahl = f.anzahl;
+
+    uft_schutz_bericht_t b;
+    fzs_lauf(&p, &b);
+
+    /* S2 liegt dreimal vor und wackelt -> FZS. S1 liegt einmal vor ->
+     * Skip. Vor MF-797 waere S1 gar nicht betrachtet worden, weil es in
+     * Umdrehung 0 nicht als erstes stand. */
+    ASSERT(b.befund_anzahl == 1);
+    ASSERT(b.befunde[0].code == UFT_SCHUTZ_FZS);
+    ASSERT(b.befunde[0].ort.sektor == 2);
+    ASSERT(b.uebersprungen_anzahl == 1);
+    ASSERT(b.uebersprungen[0].ort.sektor == 1);
+    uft_schutz_bericht_frei(&b);
+}
+
 int main(void)
 {
     printf("test_schutzbefund (MF-792)\n");
@@ -360,6 +462,8 @@ int main(void)
     RUN(wackelnde_bytes_ergeben_FZS_mit_gemessener_spanne);
     RUN(randfuzzy_wird_nicht_beschnitten);
     RUN(zwei_lesungen_reichen_nicht_und_werden_protokolliert);
+    RUN(sektor_der_in_umdrehung_0_fehlt_verschwindet_nicht);
+    RUN(sektor_nur_in_spaeteren_umdrehungen_wird_trotzdem_geprueft);
     printf("%d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

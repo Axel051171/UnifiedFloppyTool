@@ -294,12 +294,37 @@ static void fuzzy_pruefe(const uft_schutz_detektor_t *selbst,
     (void)selbst;
     if (!p->sektoren || !p->sektor_anzahl || p->umdrehungen == 0) return;
 
-    /* Die Sektornummern der ERSTEN Umdrehung sind die Arbeitsliste.
-     * Ein Sektor, der dort fehlt und spaeter auftaucht, ist ein eigener
-     * Befund (SNI/DSN) und nicht Sache dieses Detektors. */
-    const uft_schutz_sektor_t *erste = p->sektoren[0];
-    for (size_t k = 0; k < p->sektor_anzahl[0]; k++) {
-        uint8_t nr = erste[k].nummer;
+    /* Die Arbeitsliste ist die VEREINIGUNG ueber alle Umdrehungen
+     * (MF-797).
+     *
+     * Hier stand die Liste der ersten Umdrehung, mit der Begruendung,
+     * ein spaeter auftauchender Sektor sei ein anderer Befund. Die
+     * Begruendung traegt nicht: er erzeugte dann WEDER Befund NOCH
+     * Skip — also Stille, in genau der Datei, die Stille verhindern
+     * soll. Ich hatte die Rechtfertigung selbst danebengeschrieben.
+     *
+     * Der Sektorbestand gehoert zur UMDREHUNG, nicht zur Spur. Gemessen
+     * an einer realen Aufnahme (Louis-Guerin, „After the War", Spur
+     * 72.0): Sektor 8 erscheint in manchen Umdrehungen und in anderen
+     * nicht, weil seinem ID-Feld dort nur zwei statt drei Sync-Marken
+     * vorausgehen. Eine spurweite Sektormenge gibt es nicht. */
+    bool bekannt[256];
+    memset(bekannt, 0, sizeof(bekannt));
+    uint8_t liste[256];
+    size_t  liste_n = 0;
+    for (size_t r = 0; r < p->umdrehungen; r++) {
+        const uft_schutz_sektor_t *feld = p->sektoren[r];
+        if (!feld) continue;
+        for (size_t i = 0; i < p->sektor_anzahl[r]; i++) {
+            uint8_t nr = feld[i].nummer;
+            if (bekannt[nr]) continue;
+            bekannt[nr] = true;
+            liste[liste_n++] = nr;
+        }
+    }
+
+    for (size_t k = 0; k < liste_n; k++) {
+        uint8_t nr = liste[k];
 
         const uint8_t *lesung[64];
         size_t         laenge[64];
