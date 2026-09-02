@@ -10,53 +10,13 @@
 
 #include "uft/uft_format_common.h"
 
-/* ============================================================================
- * Forward declarations from uft_edsk_parser.c (same translation unit)
- * ============================================================================ */
-
-/* Opaque parser context */
-typedef struct edsk_parser_ctx_s edsk_parser_ctx_t;
-
-/* Sector from parsed track */
-typedef struct {
-    uint8_t track;
-    uint8_t side;
-    uint8_t sector_id;
-    uint8_t size_code;
-    uint8_t  st1;
-    uint8_t  st2;
-    uint16_t data_size;
-    uint8_t* data;
-    uint8_t* weak_data;
-    int      weak_copies;
-} edsk_sector_info_t;
-
-/* Parsed track */
-typedef struct {
-    int track_number;
-    int side;
-    int sector_count;
-    uint8_t sector_size_code;
-    uint8_t gap3_length;
-    uint8_t filler_byte;
-    edsk_sector_info_t sectors[64];
-    int good_sectors;
-    int bad_sectors;
-    int weak_sectors;
-    int deleted_sectors;
-    float quality_percent;
-} edsk_track_info_t;
-
-extern edsk_parser_ctx_t* edsk_parser_open(const char* path);
-extern void edsk_parser_close(edsk_parser_ctx_t** ctx);
-extern int  edsk_parser_read_track(edsk_parser_ctx_t* ctx,
-                                    int track_num, int side,
-                                    edsk_track_info_t** track_out);
-extern void edsk_parser_free_track(edsk_track_info_t** track);
-extern void edsk_parser_get_info(edsk_parser_ctx_t* ctx,
-                                  int* num_tracks, int* num_sides,
-                                  bool* is_extended,
-                                  char* creator, size_t creator_size);
+/* MF-796: EINE Definition fuer beide Uebersetzungseinheiten. Hier
+ * standen die Parser-Typen VON HAND nachdeklariert, unter Namen, die
+ * im Parser etwas anderes bedeuten — gemessen 40 gegen 32 Byte je
+ * Sektor, Datenzeiger bei +16 gegen +8. Die Folge: jede Spur jeder
+ * EDSK-Datei kam mit null Sektoren zurueck, still, mit UFT_OK.
+ * Begruendung vollstaendig in uft_edsk_parser.h. */
+#include "uft_edsk_parser.h"
 
 /* ============================================================================
  * Plugin data
@@ -147,21 +107,26 @@ static uft_error_t edsk_read_track(uft_disk_t *disk, int cyl, int head,
 
     uft_track_init(track, cyl, head);
 
-    edsk_track_info_t *et = NULL;
-    if (edsk_parser_read_track(pd->ctx, cyl, head, &et) != 0 || !et) {
-        return UFT_OK;  /* empty track, not an error */
-    }
+    edsk_track_t *et = NULL;
+    int r = edsk_parser_read_track(pd->ctx, cyl, head, &et);
+    /* MF-796: „unformatiert" und „gescheitert" trennen. Vorher gab jeder
+     * der beiden Faelle UFT_OK mit leerer Spur zurueck — der Aufrufer
+     * konnte nicht sehen, ob die Spur wirklich leer ist oder ob das Lesen
+     * nicht gelungen ist. Fuer ein forensisches Werkzeug ist das die
+     * schwerere der beiden Aussagen, und sie war die stille. */
+    if (r == EDSK_TRACK_LEER) return UFT_OK;      /* wirklich leer */
+    if (r != EDSK_TRACK_OK || !et) return UFT_ERROR_IO;
 
     /* Convert EDSK sectors to UFT sectors */
     for (int s = 0; s < et->sector_count; s++) {
-        edsk_sector_info_t *es = &et->sectors[s];
-        if (!es->data || es->data_size == 0) continue;
+        edsk_sector_t *es = &et->sectors[s];
+        if (!es->data || es->actual_size == 0) continue;
 
-        uint16_t sz = es->data_size;
+        uint16_t sz = es->actual_size;
         if (sz > 8192) sz = 8192;
 
         uft_format_add_sector(track,
-                              es->sector_id > 0 ? es->sector_id - 1 : 0,
+                              es->id_sector > 0 ? es->id_sector - 1 : 0,
                               es->data, sz,
                               (uint8_t)cyl, (uint8_t)head);
     }

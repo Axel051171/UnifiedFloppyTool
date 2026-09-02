@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "uft/uft_compiler.h"
+#include "uft_edsk_parser.h"
 
 /*============================================================================
  * EDSK CONSTANTS
@@ -31,7 +32,7 @@
 #define DSK_HEADER_SIZE     256
 #define TRACK_INFO_SIZE     256
 #define MAX_TRACKS          204     /* 102 * 2 sides */
-#define MAX_SECTORS         29      /* Per track */
+#define MAX_SECTORS         UFT_EDSK_MAX_SECTORS  /* MF-796: aus dem Header */
 
 /* FDC status flags */
 #define FDC_ST1_DE          0x20    /* Data error (CRC) */
@@ -87,55 +88,11 @@ typedef struct {
 } edsk_sector_info_t;
 UFT_PACK_END
 
-/* Parsed sector */
-typedef struct {
-    /* ID field */
-    uint8_t  id_track;
-    uint8_t  id_side;
-    uint8_t  id_sector;
-    uint8_t  id_size;
-    uint16_t actual_size;
-    
-    /* FDC status */
-    uint8_t  fdc_st1;
-    uint8_t  fdc_st2;
-    
-    /* Flags */
-    bool     crc_error;
-    bool     deleted;
-    bool     no_data;
-    bool     weak;
-    
-    /* Data */
-    uint8_t* data;
-    uint8_t* weak_data;              /* Multiple copies for weak sectors */
-    int      weak_copies;
-} edsk_sector_t;
+/* edsk_sector_t / edsk_track_t stehen seit MF-796 in
+ * uft_edsk_parser.h — eine Definition, zwei Uebersetzungseinheiten. */
 
-/* Parsed track */
-typedef struct {
-    int track_number;
-    int side;
-    int sector_count;
-    
-    /* Track parameters */
-    uint8_t sector_size_code;
-    uint8_t gap3_length;
-    uint8_t filler_byte;
-    
-    /* Sectors */
-    edsk_sector_t sectors[MAX_SECTORS];
-    
-    /* Statistics */
-    int good_sectors;
-    int bad_sectors;
-    int weak_sectors;
-    int deleted_sectors;
-    float quality_percent;
-} edsk_track_t;
-
-/* Parser context */
-typedef struct {
+/* Parser context — Marke passend zur Vorwaertsdeklaration im Header. */
+struct edsk_parser_ctx_s {
     FILE* file;
     edsk_disk_info_t disk_info;
     bool is_extended;
@@ -150,7 +107,7 @@ typedef struct {
     uint32_t deleted_sectors;
     
     bool initialized;
-} edsk_parser_ctx_t;
+};
 
 /*============================================================================
  * INTERNAL HELPERS
@@ -317,9 +274,14 @@ int edsk_parser_read_track(
     int track_idx = (int)idx;
     uint32_t track_offset = ctx->track_offsets[track_idx];
     
-    /* Check for empty track (EDSK) */
+    /* Unformatierte Spur — das ist KEIN Fehler, und seit MF-796 sagt der
+     * Rueckgabewert das auch. Vorher lieferte dieser Fall dasselbe -1 wie
+     * ein gescheitertes Lesen, und der Aufrufer machte aus beidem ein
+     * UFT_OK mit leerer Spur: „unformatiert" war von „Lesen gescheitert"
+     * nicht zu unterscheiden. Dieselbe Verwechslung, gegen die
+     * uft_schutzbefund.h geschrieben ist. */
     if (ctx->is_extended && ctx->disk_info.track_sizes[track_idx] == 0) {
-        return -1;
+        return EDSK_TRACK_LEER;
     }
     
     /* Seek to track */

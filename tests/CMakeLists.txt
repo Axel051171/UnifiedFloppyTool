@@ -536,6 +536,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_korpus_container")
+        # MF-796: Formate MIT Container-Kopf. gw kann die nicht schreiben;
+        # SAMdisk erzeugt, hxcfe liest zurueck — zwei unabhaengige Haende.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_msx")
         # MF-782: erster Test, den msx_disk je hatte. Abbild von gw 1.23
         # (msx.2dd) — zwei unabhaengige Haende ueber dieselbe Geometrie.
@@ -1441,6 +1450,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
@@ -1479,6 +1489,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c

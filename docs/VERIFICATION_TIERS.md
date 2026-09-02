@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 25 |
+| T1b | 26 |
 | T2 | 23 |
-| T3 | 38 |
+| T3 | 37 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -29,6 +29,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `d82` | **T1b** | `test_corpus_cbm_vice`, `test_d82_write_roundtrip` | — | — | 1 |
 | `dim_atari` | **T1b** | `test_dim_atari_magic` | — | — | 1 |
+| `edsk` | **T1b** | `test_format_probe_fuzz`, `test_korpus_container`, `test_plugin_probe_real` | — | — | 1 |
 | `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
 | `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_interface_modes`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
 | `img` | **T1b** | `test_corpus_gw_geometrie`, `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | 1 |
@@ -78,7 +79,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dim` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
-| `edsk` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |

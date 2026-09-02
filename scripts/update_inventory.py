@@ -282,27 +282,110 @@ def check_inventory(repo: Path) -> list[str]:
                 errors.append(
                     f"{fname}: {desc} claims {claimed}, source says {truth}")
 
-    # README tier summary must match the computed tiers (drift gate).
-    readme = repo / "README.md"
-    if readme.exists():
-        m = re.search(r"T1=(\d+), T1b=(\d+), T2=(\d+), T3=(\d+)",
-                      readme.read_text(encoding="utf-8", errors="replace"))
-        if m:
-            try:
-                from gen_verification_tiers import compute_tiers
-                counts: dict[str, int] = {}
-                for r in compute_tiers(repo):
-                    counts[r["tier"]] = counts.get(r["tier"], 0) + 1
-                claimed = tuple(int(g) for g in m.groups())
-                actual = tuple(counts.get(t, 0) for t in ("T1", "T1b", "T2", "T3"))
-                if claimed != actual:
-                    errors.append(
-                        f"README.md: tier summary claims T1={claimed[0]}, "
-                        f"T1b={claimed[1]}, T2={claimed[2]}, T3={claimed[3]} "
-                        f"but computed tiers are T1={actual[0]}, "
-                        f"T1b={actual[1]}, T2={actual[2]}, T3={actual[3]}")
-            except ImportError:
-                pass
+    # ── Stufen-Zahlen in der Prosa gegen die Rechnung (Drift-Tor) ────────
+    #
+    # MF-796: hier stand EIN `re.search` auf die Schreibweise
+    # "T1=.., T1b=.., T2=.., T3=..". README.md trug daneben ZWEI weitere
+    # Aussagen in anderer Formulierung — "**50 of 88 formats are T3
+    # (unverified)**; proven: T1=2, T1b=25, T2=23" —, und die hat das Tor
+    # nie gesehen. Gemessen standen sie 13 Formate daneben.
+    #
+    # Das ist Aufzaehlung statt Messung, und diesmal war die Aufzaehlung
+    # ein regulaerer Ausdruck, der genau eine Schreibweise kennt. Der
+    # Baum hat diese Klasse jetzt sechzehnmal gefunden.
+    #
+    # Deshalb: JEDE Fundstelle jeder Schreibweise wird geprueft, in
+    # mehreren Dateien, und `re.finditer` statt `re.search`.
+    try:
+        from gen_verification_tiers import compute_tiers
+    except ImportError:
+        return errors
+    counts: dict[str, int] = {}
+    for r in compute_tiers(repo):
+        counts[r["tier"]] = counts.get(r["tier"], 0) + 1
+    gesamt = sum(counts.values())
+
+    # WO STRENG UND WO NICHT (MF-796, zweiter Anlauf):
+    #
+    # Der erste Entwurf prueft alle vier Dateien streng und meldete
+    # sofort zwoelf Befunde — von denen die meisten RICHTIG waren: in
+    # `OPEN_ITEMS.md` stehen historische Saetze wie „hier stand 57" und
+    # „Was 57/17 —". Die sollen genau so stehen bleiben.
+    #
+    # Ein Tor, das eine aktuelle Behauptung nicht von einem Zitat
+    # unterscheiden kann, erzeugt Rauschen; Rauschen wird abgeschaltet;
+    # abgeschaltet schuetzt es nichts. Eine Stichwortliste („hier stand",
+    # „vorher", „war") waere wieder eine Aufzaehlung und veraltet still —
+    # genau die Klasse, die dieses Tor beheben soll.
+    #
+    # Deshalb dieselbe Form wie bei den Attributionen (MF-636): STRENG
+    # dort, wo jede Zahl eine aktuelle Zusage ist — das ist README.md,
+    # die oeffentliche Seite —, und eine LISTE fuer den Rest. Eine Liste
+    # ist nichts Verbotenes, sondern etwas Nachsehbedurftiges.
+    # CLAUDE.md steht ebenfalls streng: seine Stufen-Zahlen sind
+    # durchweg aktuelle Zusagen, kein Verlauf. Gemessen beim Einbau —
+    # ein Befund, kein Fehlalarm.
+    STRENG = ("README.md", "CLAUDE.md")
+    LISTE = ("docs/OPEN_ITEMS.md", "docs/PLAN_NAECHSTE_STRECKE.md",
+             "CLAUDE.md", "docs/MASTER_PLAN.md")
+
+    for name in STRENG + LISTE:
+        datei = repo / name
+        if not datei.exists():
+            continue
+        streng = name in STRENG
+        text = datei.read_text(encoding="utf-8", errors="replace")
+        if not streng:
+            # Nur nachsehen, nicht blockieren: welche Stufen-Zahlen
+            # stehen hier, und stimmen sie mit der Rechnung ueberein?
+            for m in re.finditer(
+                    r"(?<!\d)(?<!of )(?<!von )(\d+)\s+(?:Formate?|formats?)"
+                    r"\s+(?:auf|are|on)\s+\*{0,2}T3",
+                    text):
+                if int(m.group(1)) != counts.get("T3", 0):
+                    print(f"[tier-liste] {name}: '{m.group(0)}' - gerechnet "
+                          f"{counts.get('T3', 0)}. Wenn das eine AKTUELLE "
+                          f"Aussage ist, ist sie veraltet; ist es ein Zitat, "
+                          f"bleibt sie stehen.")
+            continue
+
+        # Schreibweise A: "T1=2, T1b=26, T2=23, T3=37"
+        for m in re.finditer(r"T1=(\d+), T1b=(\d+), T2=(\d+), T3=(\d+)", text):
+            claimed = tuple(int(g) for g in m.groups())
+            actual = tuple(counts.get(t, 0) for t in ("T1", "T1b", "T2", "T3"))
+            if claimed != actual:
+                errors.append(
+                    f"{name}: tier summary claims T1={claimed[0]}, "
+                    f"T1b={claimed[1]}, T2={claimed[2]}, T3={claimed[3]} "
+                    f"but computed tiers are T1={actual[0]}, "
+                    f"T1b={actual[1]}, T2={actual[2]}, T3={actual[3]}")
+
+        # Schreibweise B: "T1b=26, T2=23" ohne T1/T3 daneben
+        for m in re.finditer(r"T1b=(\d+), T2=(\d+)(?!\d)(?!, T3)", text):
+            if (int(m.group(1)), int(m.group(2))) != (counts.get("T1b", 0),
+                                                      counts.get("T2", 0)):
+                errors.append(
+                    f"{name}: claims T1b={m.group(1)}, T2={m.group(2)} "
+                    f"but computed are T1b={counts.get('T1b', 0)}, "
+                    f"T2={counts.get('T2', 0)}")
+
+        # Schreibweise C: "37 of 88 ... T3" / "37 von 88 ... T3"
+        for m in re.finditer(
+                r"(\d+)\s+(?:of|von)\s+(\d+)[^.\n]{0,80}?"
+                r"(?:T3|unverified|ungepr)", text):
+            if (int(m.group(1)), int(m.group(2))) != (counts.get("T3", 0), gesamt):
+                errors.append(
+                    f"{name}: claims {m.group(1)} of {m.group(2)} on T3 "
+                    f"but computed are {counts.get('T3', 0)} of {gesamt}")
+
+        # Schreibweise D: "39 Formate auf T3" / "39 formats are T3"
+        for m in re.finditer(
+                r"(?<!\d)(?<!of )(?<!von )(\d+)\s+(?:Formate?|formats?)"
+                r"\s+(?:auf|are|on)\s+\*{0,2}T3", text):
+            if int(m.group(1)) != counts.get("T3", 0):
+                errors.append(
+                    f"{name}: claims {m.group(1)} formats on T3 "
+                    f"but computed are {counts.get('T3', 0)}")
     return errors
 
 

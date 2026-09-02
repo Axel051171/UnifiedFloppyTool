@@ -32,7 +32,7 @@ hängt an **einer** Datei.
 
 | Kennzahl | Stand | Bewegung diese Sitzung |
 |---|---|---|
-| **ungeprüfte Formate (T3)** | **39** von 88 | **50 → 39** (elf Hebungen) |
+| **ungeprüfte Formate (T3)** | **37** von 88 | **50 → 37** (dreizehn Hebungen; `edsk` in MF-796) |
 | angebotene Wandlungspfade | 16 Matrix-Einträge, 14 angeboten | unverändert |
 | leckende Tests | 0 | gehalten |
 | Bench-Alter je Controller | kein Gerät (MF-310) | unverändert |

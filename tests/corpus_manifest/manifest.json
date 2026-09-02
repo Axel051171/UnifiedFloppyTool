@@ -397,6 +397,18 @@
       "source": "`mformat -i x.img -t 80 -h 2 -n 9 -N 12345678 -v UFTFAT12 -B tpl.bin ::` auf ein 737 280-Byte-Nullabbild. `tpl.bin` ist eine EIGENE Bootvorlage mit fuenf Bytes (EB FE 90 = jmp $ + nop, 55 AA) und der OEM-Kennung \"UFTCORP \"; der BPB dazwischen stammt von mtools. Gemessen: 512 B/Sektor, 2 Sekt/Cluster, 112 Wurzel-Eintraege, 1440 Sektoren, Media F9, 9 Sekt/Spur, 2 Koepfe, FAT[0]=F9.",
       "fremdcode": "nein - gemessen 0 Bytes ungleich null im Bereich 0x3E..0x1FD. Ohne `-B` schreibt mformat dort 44 Byte eigenen Bootcode; die eigene Vorlage schaltet ihn ab (MF-789)",
       "test": "test_fat12_fremd"
+    },
+    {
+      "file": "tests/corpus_free/samdisk_edsk.dsk",
+      "sha256": "30258ff0345579af575adc8391b13795f4127efba5c1b412a38e8258381c7aca",
+      "format": "edsk",
+      "origin": "cross-tool",
+      "oracle": "samdisk",
+      "oracle_zweit": "hxcfe",
+      "tool": "SAMdisk 4.0 ALPHA (2022-07-25, simonowen/samdisk, Release SAMdisk4-20220725_x64.zip, Archiv-SHA-256 c95c8ce4f6180d007d044baa813aa1aafc1fb2b6b7086c5739ffea8a6b66d424)",
+      "source": "Rohabbild eigen erzeugt (737 280 B, 80/2/9/512, je Sektor Kennung UFT\u0000 + laufende Nummer), dann mit EXPLIZITER Geometrie gewandelt: `SAMdisk copy <roh>.img <out>.dsk -c80 -s9 -z2 -b1 -f`. Ohne die Warnung \"input format guessed from file size\". Ergebnis 778 496 B = 256 Byte Disk-Info + 80*2 Spuren zu je 19*256 Byte (256 Spurkopf + 9*512 Daten). ZWEITE UNABHAENGIGE HAND: hxcfe 2.16.13 liest die Datei zurueck (`hxcfe -finput:<out>.dsk -conv:RAW_LOADER -foutput:<zurueck>.img`) und liefert das Rohabbild BYTEIDENTISCH. Der Generator tests/corpus_manifest/gen_container_corpus.py schreibt die Datei nur, wenn dieser Rundlauf sich schliesst — ein Container auf EINER Hand belegt nichts. SAMdisk wendet dabei seinen Spurversatz an (--skew, Vorgabe 1): Spur (1,0) liegt als 9 1 2 3 4 5 6 7 8 in der Datei. Das ist richtig und wird vom Test nach Sektor-ID geschluesselt geprueft, nicht nach Lage.",
+      "fremdcode": "ja - die Erzeugerkennung \"SAMdisk220725\" steht ab Offset 0x22 im Disk-Info-Block. Das ist Formatstruktur (ein 14-Byte-Namensfeld, das die EDSK-Beschreibung vorsieht), kein ausfuehrbarer Code und kein Bootsektor. Gemessen: der Rest des Kopfes traegt Geometrie und Spurgroessentabelle, die Nutzdaten sind vollstaendig eigen erzeugt.",
+      "test": "test_korpus_container"
     }
   ]
 }
