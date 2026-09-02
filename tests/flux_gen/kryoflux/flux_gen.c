@@ -150,10 +150,35 @@ uft_kf_gen_err_t uft_kf_gen_stream(const uft_kf_gen_params_t *params,
         /* Index OOB at the START of each revolution: stream_pos = current
          * cell-stream byte position, sample_counter = running ticks. */
         if (want_index) {
+            /* MF-825: die beiden Zaehler standen VERTAUSCHT.
+             *
+             * Hier stand `sample_counter = sample_ctr` (ein laufender
+             * Tickzaehler) und `index_counter = rev` (die blosse
+             * Umdrehungsnummer). Die Spezifikation sagt das Gegenteil:
+             *
+             *   Sample Counter — „This counter is reset after each Flux
+             *     reversal recording."  Also ein Versatz INNERHALB einer
+             *     Zelle, klein (bei DD-MFM 96..192 Ticks).
+             *   Index Counter  — „a free running counter (not reset)",
+             *     getaktet mit ick = sck/8.
+             *
+             * Der Emulator bildete also einen freilaufenden Zaehler im
+             * falschen Feld ab — und der Parser rechnete die
+             * Umdrehungszeit aus genau diesem falschen Feld. Beide
+             * Fehler hoben sich auf, und `decoded_rpm_near_300` war
+             * gruen, WEIL beide da waren. Erst der berichtigte Parser
+             * (MF-825) hat den Prueftisch freigelegt.
+             *
+             * Ein Emulator, der die Hardware falsch nachbildet, kann die
+             * Fehlerklasse nicht fangen, fuer die er gebaut wurde. */
             uint8_t ix[12];
             put_u32(&ix[0], (uint32_t)pos);   /* NB: our stream_pos proxy */
-            put_u32(&ix[4], sample_ctr);
-            put_u32(&ix[8], (uint32_t)rev);
+            /* Versatz in der Zelle: eine plausible, feste Groesse. Der
+             * genaue Wert ist fuer die Umdrehungszeit ohne Belang — das
+             * ist ja der Punkt. */
+            put_u32(&ix[4], 144u);
+            /* Freilaufender Index Counter in ick-Ticks (ick = sck/8). */
+            put_u32(&ix[8], sample_ctr / 8u);
             if (emit_oob(buf, cap, &pos, OOB_INDEX, ix, sizeof(ix)))
                 idx_emitted++;
         }

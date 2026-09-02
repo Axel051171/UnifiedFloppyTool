@@ -185,9 +185,41 @@ static void kf_resolve_indexes(uft_kf_stream_t *s)
         if (n == 0) {
             s->indexes[n].rotation_time = 0;
         } else {
-            uint32_t prev = s->index_internal[n - 1].sample_counter;
-            uint32_t cur  = s->index_internal[n].sample_counter;
-            s->indexes[n].rotation_time = (cur >= prev) ? (cur - prev) : 0u;
+            /* MF-825: aus dem INDEX Counter, nicht aus dem Sample
+             * Counter — und die Einheit sind ick-Ticks, nicht sck.
+             *
+             * Hier stand die Differenz zweier SAMPLE COUNTER. Die
+             * Spezifikation ist dazu eindeutig: „This counter is reset
+             * after each Flux reversal recording." Sein Wert beim Index
+             * sagt, wie weit der Index vom vorhergehenden Flusswechsel
+             * entfernt liegt — ein Versatz INNERHALB einer Zelle, keine
+             * laufende Uhr. Die Differenz zweier solcher Versaetze ist
+             * keine Zeitspanne.
+             *
+             * Die Groessenordnung zeigte es: eine Umdrehung bei 300 U/min
+             * sind rund 4 805 486 sck-Ticks, ein Sample Counter beim Index
+             * liegt bei DD-MFM zwischen 96 und 192. Vier Groessenordnungen.
+             *
+             * Und die frueher hier stehende Absicherung
+             * `(cur >= prev) ? … : 0u` verriet, dass jemand bemerkt hatte,
+             * dass die Werte etwa in der Haelfte der Faelle rueckwaerts
+             * laufen — was bei zwei unabhaengigen Zellversaetzen zu
+             * erwarten ist. Statt das Modell zu pruefen, wurde geklemmt:
+             * rund jede zweite Umdrehung meldete exakt null.
+             *
+             * Der Index Counter ist laut Spezifikation ausdruecklich „a
+             * free running counter (not reset)". Er wurde seit jeher
+             * eingelesen (`:296`) und im GANZEN BAUM nirgends gelesen —
+             * das Feld mit der Antwort lag brach.
+             *
+             * Referenz: Jean Louis-Guerin, „KryoFlux Stream File
+             * Protocol" (info-coach.fr), Abschnitte Sample Counter und
+             * Index Counter. Die zweite dort genannte Methode („take the
+             * Index Clock value of the second index and subtract the
+             * Index Clock value of the first") ist genau diese Zeile. */
+            uint32_t prev = s->index_internal[n - 1].index_counter;
+            uint32_t cur  = s->index_internal[n].index_counter;
+            s->indexes[n].rotation_time = cur - prev;   /* ick-Ticks */
         }
 
         /* pre_index_time = ticks from the start of the containing flux
@@ -404,7 +436,12 @@ void uft_uft_kf_calc_stats(uft_kf_stream_t *stream)
     for (uint32_t n = 1; n < stream->index_count; ++n) {
         uint32_t rt = stream->indexes[n].rotation_time;
         if (rt == 0) continue;
-        double rpm = 60.0 * stream->sample_clock / (double)rt;
+        /* MF-825: `rotation_time` steht seit dem Wechsel auf den Index
+         * Counter in ick-Ticks (ick = sck/8). Diese Zeile teilte durch
+         * den ABTASTtakt und lieferte damit die achtfache Drehzahl —
+         * zweite Fundstelle desselben Fehlers, gefunden erst, als der
+         * Emulator-Test nach dem ersten Fix noch rot blieb. */
+        double rpm = 60.0 * stream->index_clock / (double)rt;
         if (rev_count == 0) {
             st->min_rpm = st->max_rpm = rpm;
         } else {

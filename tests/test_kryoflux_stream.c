@@ -168,6 +168,82 @@ static void test_oob_index(void)
     printf("  ok: oob_index\n");
 }
 
+/* ── Die Umdrehungszeit kommt aus dem INDEX Counter (MF-825) ────────
+ *
+ * `rotation_time` wurde aus der Differenz zweier SAMPLE COUNTER
+ * gerechnet. Die Spezifikation ist dazu eindeutig:
+ *
+ *   „The Sample Counter is used to measure the elapsed time between two
+ *    flux reversals, or between a Flux reversal and an Index Signal.
+ *    … This counter is reset after each Flux reversal recording."
+ *
+ * Er wird nach JEDEM Flusswechsel zurueckgesetzt. Sein Wert beim Index
+ * sagt, wie weit der Index vom vorhergehenden Flusswechsel entfernt
+ * liegt — ein Versatz INNERHALB einer Zelle, keine laufende Uhr. Die
+ * Differenz zweier solcher Versaetze ist keine Zeitspanne.
+ *
+ * Die Groessenordnung zeigt es: eine Umdrehung bei 300 U/min sind
+ * 200 ms x 24 027 428 Hz = rund 4 805 486 Ticks. Ein Sample Counter beim
+ * Index liegt bei DD-MFM zwischen einem 4- und 8-us-Intervall, also 96
+ * bis 192 Ticks. VIER GROESSENORDNUNGEN daneben.
+ *
+ * Und die Absicherung `(cur >= prev) ? … : 0u` verriet, dass jemand
+ * bemerkt hatte, dass die Werte etwa in der Haelfte der Faelle
+ * rueckwaerts laufen — was bei zwei unabhaengigen Zellversaetzen zu
+ * erwarten ist. Statt das Modell zu pruefen, wurde auf 0 geklemmt: rund
+ * jede zweite Umdrehung meldete exakt null.
+ *
+ * Richtig ist der INDEX Counter, laut Spezifikation ausdruecklich „a
+ * free running counter (not reset)", getaktet mit ick = sck/8. Das Feld
+ * wurde bereits eingelesen (`:296`) und im ganzen Baum NIRGENDS gelesen.
+ *
+ * Referenz: Jean Louis-Guerin, „KryoFlux Stream File Protocol"
+ * (info-coach.fr), Abschnitte zu Sample Counter und Index Counter.
+ */
+static void test_umdrehungszeit_kommt_aus_dem_index_counter(void)
+{
+    /* Zwei Indexe, eine echte Umdrehung auseinander. ick = sck/8, also
+     * 200 ms = 0,2 s x 3 003 428,57 Hz = 600 686 ick-Ticks. */
+    const uint32_t IDX0 = 1000u;
+    const uint32_t IDX1 = 1000u + 600686u;
+    /* Die Sample Counter sind ABSICHTLICH rueckwaerts (144 -> 96): so
+     * sieht ein echter Strom aus, und die alte Rechnung klemmte hier
+     * auf 0. */
+    const uint8_t data[] = {
+        0x40, 0x50, 0x60,
+        0x0D, 0x02, 0x0C, 0x00,
+            0x01, 0x00, 0x00, 0x00,             /* stream_pos = 1     */
+            0x90, 0x00, 0x00, 0x00,             /* sample_cnt = 144   */
+            0xE8, 0x03, 0x00, 0x00,             /* index_cnt  = 1000  */
+        0x70, 0x71,
+        0x0D, 0x02, 0x0C, 0x00,
+            0x04, 0x00, 0x00, 0x00,             /* stream_pos = 4     */
+            0x60, 0x00, 0x00, 0x00,             /* sample_cnt = 96    */
+            0xC6, 0x2B, 0x09, 0x00,             /* index_cnt  = 601686*/
+        0x72
+    };
+    (void)IDX0; (void)IDX1;
+
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
+    uft_kf_decode(&s, data, sizeof(data));
+
+    CHECK(s.index_count == 2, "zwei Indexe erwartet");
+    if (s.index_count < 2) { uft_kf_free(&s); return; }
+
+    double ms = uft_kf_revolution_time_ms(&s, 1);
+    printf("    Umdrehungszeit: %.3f ms (erwartet ~200)\n", ms);
+
+    /* Vor MF-825 kam hier 0.000 heraus: die Sample Counter laufen
+     * rueckwaerts (144 -> 96) und die Klemme machte daraus 0. */
+    CHECK(ms > 190.0 && ms < 210.0,
+          "Umdrehungszeit nicht ~200 ms — kommt sie noch aus dem "
+          "Sample Counter statt aus dem Index Counter?");
+
+    uft_kf_free(&s);
+    printf("  ok: umdrehungszeit_aus_index_counter\n");
+}
+
 /* ── OOB KFInfo: sck= overrides the default sample clock ──────────── */
 static void test_oob_kfinfo_sck(void)
 {
@@ -288,6 +364,7 @@ int main(void)
     test_nops();
     test_overflow();
     test_oob_index();
+    test_umdrehungszeit_kommt_aus_dem_index_counter();
     test_oob_kfinfo_sck();
     test_stream_end();
     test_truncated_stream();

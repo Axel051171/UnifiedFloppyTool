@@ -229,8 +229,12 @@ static inline double uft_kf_revolution_time_ms(const uft_kf_stream_t *stream,
     if (index_num == 0 || index_num >= stream->index_count) {
         return 0.0;
     }
-    return (double)stream->indexes[index_num].rotation_time * 1000.0 
-           / stream->sample_clock;
+    /* MF-825: durch den INDEX-Takt teilen, nicht durch den Abtasttakt.
+     * `rotation_time` steht seit MF-825 in ick-Ticks (ick = sck/8), weil
+     * es aus dem Index Counter kommt. Durch `sample_clock` zu teilen
+     * ergaebe den achtfach zu kleinen Wert. */
+    return (double)stream->indexes[index_num].rotation_time * 1000.0
+           / stream->index_clock;
 }
 
 /**
