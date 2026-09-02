@@ -49,7 +49,7 @@ Dokument anpassen, nicht die Behauptung wegerklären.
 | SCP-Direct    | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired, 22/22 opcodes byte-exact vs samdisk |
 | XUM1541       | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired; Drahtprotokoll gegen die **OpenCBM-Quelle** geprüft (MF-301) — die alte Opcode-Tabelle war erfunden |
 | Applesauce    | 🟡   | ⬜    | -         | byte-compile | USB-CDC serial  | `?vers` handshake wired; `?disk` read-state-machine **weiter offen** |
-| ADF-Copy      | 🟡   | ⬜    | -         | SIMULATED    | USB-CDC serial  | QSerialPort transport wired, Teensy-probe MF-213 |
+| ADF-Copy      | 🟡   | ⬜    | -         | SIMULATED    | USB-CDC serial  | QSerialPort verdrahtet, **Protokoll ungeprüft** (Opcodes aus eigenen Kommentaren, P3-31) |
 | USB-Floppy    | Linux| Linux | -         | -            | SG_IO ioctl     | Linux-only via SG_IO; Win/Mac (DeviceIoControl/IOKit) **weiter offen** |
 
 ### Bench-Alter je Controller (MF-589)

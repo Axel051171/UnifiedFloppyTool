@@ -365,7 +365,7 @@ Status legend:
 | SCP-Direct | 🟡 | Yes\* | (safety-blocked) | Yes\* | M3.1 full libusb impl, 22/22 opcodes byte-exact vs samdisk; write blocked until real-HW read-verify |
 | XUM1541 / ZoomFloppy | 🟡 | Yes\* | Yes\* | — | M3.2 libusb wired. Wire protocol **rewritten against the OpenCBM source** (MF-301) — see below. Emulator 56/56. Silicon-untested |
 | Applesauce | 🟡 | Yes\* | — | Yes\* | M3.3 `?vers` handshake wired; `?disk` state machine **still open** |
-| ADF-Copy | 🟠 | — | — | — | QSerialPort transport wired, Teensy-probe (MF-213) |
+| ADF-Copy | 🟠 | — | — | — | QSerialPort verdrahtet, **aber das Protokoll ist ungeprüft** — die Opcodes stammen aus UFTs eigenen Kommentaren, nicht aus der Firmware (P3-31) |
 | USB-Floppy | 🐧 | Linux | Linux | — | SG_IO ioctl; Win/Mac backends **still open** |
 
 `\*` = libusb-mock-validated, no Tier-3 hardware-bench yet. GUI shows
