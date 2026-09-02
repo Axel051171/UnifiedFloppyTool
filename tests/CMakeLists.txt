@@ -536,6 +536,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_flux_pll_profile")
+        # MF-808: die zwei PLL-Profile und der Beleg, dass sie sich
+        # unterschiedlich verhalten. Kein Geraet noetig (MF-310).
+        # KEINE zweite Liste daneben: `UFT_FORMAT_LAYER_DEPS` ist die
+        # eine Wahrheit ueber diesen Quellensatz. Beim Bauen dieses
+        # Tests wuchs die Handliste in drei Anlaeufen von 2 auf 8
+        # Dateien — genau der Rueckstand, den P3-10 benennt.
+        target_sources(${test_name} PRIVATE
+            ${UFT_FORMAT_LAYER_DEPS}
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # Der Satz bindet Header unqualifiziert ein — gleiche
+        # Behandlung wie beim anderen Nutzer (test_disk_open_fuzz).
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_scp_status")
         # MF-804: die Statuscode-Uebersetzung ist REIN und damit ohne
         # Hardware pruefbar (MF-310). Sie liegt aber in derselben

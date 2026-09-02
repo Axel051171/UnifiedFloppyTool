@@ -63,9 +63,49 @@ void flux_pll_init(flux_pll_t *pll, double initial_period) {
     memset(pll, 0, sizeof(*pll));
     pll->period = initial_period;
     pll->phase = 0;
+    /* MF-808: UNVERAENDERT. Diese Vorgabe zu verschieben waere eine
+     * Verhaltensaenderung an jedem bestehenden Dekodierlauf ohne
+     * Messung dahinter. Die Profile stehen daneben, nicht darueber. */
     pll->freq_gain = 0.02;
     pll->phase_gain = 0.5;
     pll->last_transition = 0;
+}
+
+/* ── Die zwei Profile (MF-808) ───────────────────────────────────────────
+ *
+ * Werte aus keirf/greaseweazle, Commit a0ae343d (v1.23, Unlicense),
+ * src/greaseweazle/track.py:10-40. Prozent des Phasenfehlers, also
+ * geteilt durch 100. Begruendung und Vorbehalt vollstaendig im Header —
+ * kurz: die PERIODE traegt die Uebertragung sauber, die PHASE hat bei
+ * UFT eine andere Form (leckender Integrator statt Direktkorrektur).
+ * Deshalb Ausgangspunkte, keine portierten Konstanten. */
+static const struct {
+    const char *name;
+    double      freq_gain;
+    double      phase_gain;
+} PROFILE[UFT_PLL_PROFIL_ANZAHL] = {
+    [UFT_PLL_PROFIL_AGGRESSIV]    = { "aggressiv",    0.05, 0.60 },
+    [UFT_PLL_PROFIL_KONSERVATIV]  = { "konservativ",  0.01, 0.10 },
+};
+
+const char *uft_pll_profil_name(uft_pll_profil_t profil) {
+    if ((unsigned)profil >= UFT_PLL_PROFIL_ANZAHL) return "unbekannt";
+    return PROFILE[profil].name;
+}
+
+void flux_pll_init_profil(flux_pll_t *pll, double initial_period,
+                          uft_pll_profil_t profil) {
+    if (!pll) return;
+    flux_pll_init(pll, initial_period);
+    if ((unsigned)profil >= UFT_PLL_PROFIL_ANZAHL) {
+        /* Nicht stillschweigend etwas anderes waehlen. */
+        fprintf(stderr, "[FLUX] unbekanntes PLL-Profil %d — es wird "
+                        "'%s' gesetzt\n", (int)profil,
+                PROFILE[UFT_PLL_PROFIL_AGGRESSIV].name);
+        profil = UFT_PLL_PROFIL_AGGRESSIV;
+    }
+    pll->freq_gain  = PROFILE[profil].freq_gain;
+    pll->phase_gain = PROFILE[profil].phase_gain;
 }
 
 void flux_decoded_track_init(flux_decoded_track_t *track) {

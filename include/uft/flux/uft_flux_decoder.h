@@ -112,8 +112,8 @@ typedef enum {
      * dessen Aussage bisher niemand las. Angehaengt statt eingefuegt:
      * die Werte davor behalten ihre Zahlen. */
     FLUX_ERR_UNFORMATTED,   /**< keine Wechsel-Struktur: leere/geloeschte Spur */
-    FLUX_ERR_NOISE          /**< Wechsel ohne gemeinsamen Takt: unlesbar */,
-
+    FLUX_ERR_NOISE          /**< Wechsel ohne gemeinsamen Takt: unlesbar */,
+
     /* MF-766: „ich kann die Kodierung nicht bestimmen" ist eine Auskunft,
      * kein ungueltiges Argument. Vorher lief dieser Fall in
      * FLUX_ERR_INVALID („Invalid parameters") — eine Meldung, die den
@@ -379,6 +379,73 @@ void flux_decoder_options_init(flux_decoder_options_t *opts);
  * @brief Initialize PLL state
  */
 void flux_pll_init(flux_pll_t *pll, double initial_period);
+
+/* ── Zwei PLL-Profile statt einer festen Einstellung (MF-808) ────────────
+ *
+ * `flux_pll_init()` setzt seit jeher EINE Einstellung: `freq_gain=0.02`,
+ * `phase_gain=0.5`. Es gibt keine zweite, und `read_flux` hat auch keinen
+ * Weg, dieselbe Aufnahme mit einer anderen noch einmal zu dekodieren.
+ *
+ * Die Referenz führt **zwei benannte Profile** und fährt sie kaskadiert:
+ * erst das eine, und solange Sektoren fehlen, dasselbe Flussbild noch
+ * einmal durch das andere. Beides gemessen an
+ * `keirf/greaseweazle`, Commit
+ * `a0ae343d7e2603b9f3fdc0149ef8e89de5399f58` (v1.23, **Unlicense**,
+ * Public Domain), `src/greaseweazle/track.py` Zeilen 10–40:
+ *
+ *     PLL('period=5:phase=60')   „An aggressive PLL which will quickly
+ *                                 sync to extreme bit timings."
+ *     PLL('period=1:phase=10')   „A conservative PLL which is good at
+ *                                 ignoring noise in otherwise fairly
+ *                                 well-behaved tracks."
+ *
+ * `gw read --help` beschreibt beide Werte als *„adjustment as percentage
+ * of phase error"* — nachgesehen, nicht angenommen.
+ *
+ * ── WAS HIER NICHT BEHAUPTET WIRD ───────────────────────────────────────
+ *
+ * Dass die Zahlen dasselbe BEDEUTEN. Gemessen an
+ * `src/flux/uft_flux_decoder.c`:
+ *
+ *   * Die Periodenanpassung hat dieselbe Form —
+ *     `period += error * freq_gain / num_cells`, also ein Bruchteil des
+ *     Fehlers. Hier ist `5 %` → `0.05` eine saubere Übertragung.
+ *   * Die Phase NICHT. UFT führt einen leckenden Integrator
+ *     (`phase = (1-α)·phase + α·error`); die Referenz beschreibt eine
+ *     unmittelbare Korrektur um einen Prozentsatz. Gleiche Rolle,
+ *     andere Form.
+ *
+ * Die Profile sind deshalb **übernommene Ausgangspunkte**, keine
+ * portierten Konstanten. Was sie taugen, entscheidet die Messung, nicht
+ * die Herkunft — `tests/test_flux_pll_profile.c` belegt, dass sie sich
+ * auf demselben Flussbild UNTERSCHIEDLICH verhalten. Ohne diesen Beleg
+ * wäre ein zweites Profil Zierat.
+ *
+ * `flux_pll_init()` bleibt UNVERÄNDERT bei 0.02/0.5. Eine geänderte
+ * Vorgabe wäre eine Verhaltensänderung an jedem bestehenden Dekodierlauf
+ * ohne Messung dahinter.
+ */
+typedef enum {
+    /** Folgt extremen Bitzeiten schnell — für lange und ratenvariable
+     *  Spuren. Referenz: `period=5:phase=60`. */
+    UFT_PLL_PROFIL_AGGRESSIV = 0,
+    /** Überhört Hochfrequenzrauschen — für sonst gutmütige Spuren mit
+     *  Schmutz oder Schimmel. Referenz: `period=1:phase=10`. */
+    UFT_PLL_PROFIL_KONSERVATIV,
+    UFT_PLL_PROFIL_ANZAHL
+} uft_pll_profil_t;
+
+/** Kurzname für Protokolle und Tests („aggressiv" / „konservativ"). */
+const char *uft_pll_profil_name(uft_pll_profil_t profil);
+
+/**
+ * PLL mit einem benannten Profil aufsetzen.
+ *
+ * Ein unbekanntes Profil setzt AGGRESSIV und meldet das — es wird nicht
+ * stillschweigend etwas anderes gewählt.
+ */
+void flux_pll_init_profil(flux_pll_t *pll, double initial_period,
+                          uft_pll_profil_t profil);
 
 /**
  * @brief Initialize decoded track structure
