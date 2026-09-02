@@ -108,9 +108,6 @@ src/formats/d81/uft_d81_parser_v2.c
 src/formats/dec/uft_rx50.c
 src/formats/dmk/uft_dmk_parser_v2.c
 src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c
-src/formats/eastblock/uft_meritum.c
-src/formats/eastblock/uft_pravetz.c
-src/formats/eastblock/uft_robotron.c
 src/formats/fdi/uft_fdi_parser_v2.c
 src/formats/flashfloppy/uft_ff_formats.c
 src/formats/flex/uft_flex.c

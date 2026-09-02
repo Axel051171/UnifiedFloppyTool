@@ -227,3 +227,51 @@ Diese Tabelle wird beim Tag-Day gegen drei Quellen abgeglichen:
 
 Wenn eine der drei Quellen mit dieser Matrix kollidiert: **CONSULT-Block
 in der nächsten Session, Matrix korrigieren, nicht die Quelle ignorieren.**
+
+## Nicht unterstützt: DDR- und Ostblock-Formate (MF-812)
+
+Robotron/KC (MicroDOS, SCP, CP/A), Meritum und Pravetz werden **nicht**
+unterstützt. Bis MF-812 lagen dafür drei Module im Baum — 114, 108 und
+112 Zeilen unter `src/formats/eastblock/` —, die gebaut wurden und
+**keinen einzigen Aufrufer** hatten: nicht in der Registry, nicht in
+einem Test, in keinem Dokument.
+
+Sie sind entfernt, und der Grund ist nicht die fehlende Verdrahtung,
+sondern **was sie getan hätten, wäre sie da gewesen**. Alle drei
+erkannten ausschließlich über die Dateigröße, und **5 ihrer 11 Größen
+gehören Formaten, die dieser Baum auf T1b belegt hat:**
+
+| Größe | behauptet | ist in Wahrheit |
+|---|---|---|
+| 737 280 | von **allen drei** (`KC MicroDOS 720KB`, `Meritum DS/DD 80T`, `Pravetz 8D DS/DD`) | `gw_img.img`, `gw_msx_2dd.img`, `mtools_fat12_720k.img` |
+| 819 200 | `KC 85/4 DS 800KB` | `gw_sam.img`, `vice_c1541_80trk.d81` |
+| 143 360 | `Pravetz 82 (Apple II)` | `gw_po.img` |
+| 102 400 | `Meritum SS/SD 100KB` | `gw_ssd.img` |
+| 89 600 | `TNS SS/SD 87KB` | `gw_northstar.img` |
+
+Das ist „Größengleichheit ist keine Geometriegleichheit" (MF-784) in
+Reinform, dreifach. Dazu waren die Angaben selbst erfunden: „KC 85/87"
+gibt es nicht als Familie — der KC 85/2-4 kam aus Mühlhausen, der
+KC 85/1 und KC 87 aus Dresden, zwei nicht kompatible Linien —, und
+MicroDOS kennt kein 9×512-Format; das ist die IBM-PC-Geometrie unter
+falscher Flagge.
+
+**Wenn diese Formate aufgenommen werden, dann als CP/M-Diskdefs.** Sie
+*sind* CP/M-Formate: `src/formats/cpm/uft_cpm_diskdefs.c` führt Spuren,
+Sektoren, Sektorgröße, Blockgröße, Verzeichniseinträge, Skew und
+**Bootspuren** bereits für 55 andere Systeme. Die Bootspur ist dabei der
+Punkt, an dem eine Größenprüfung prinzipiell scheitern muss: CP/K legt
+das Betriebssystem in die Systemspuren, MicroDOS ausdrücklich nicht
+(`MICRODOS.SYS`) — zwei Abbilder desselben physischen Formats haben
+damit verschiedene Länge.
+
+> **Namenskollision, vor dem ersten Korpus-Eintrag zu klären:** in der
+> DDR-Welt heißt **SCP** *Singlecomputer Control Program* und ist der
+> Oberbegriff für die CP/M-kompatiblen DDR-Betriebssysteme (SCP1526,
+> SCP1715, SCP/M). In diesem Baum ist SCP das SuperCard-Pro-Flussformat.
+> Auf Dateiebene kollidiert das nicht — die Erkennung geht über die
+> Kennung im Kopf —, auf Korpus- und Beschriftungsebene sehr wohl.
+
+> **Und eine stillschweigende Annahme, die dort nicht trägt:** das
+> Laufwerk K5601 formatiert bis 800 KB, zwei Seiten, 80 Spuren, **FM
+> oder MFM**. Eine DDR-Diskette kann FM-kodiert sein.
