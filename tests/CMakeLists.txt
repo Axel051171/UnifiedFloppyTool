@@ -1419,6 +1419,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
@@ -1457,6 +1458,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c

@@ -103,6 +103,7 @@ static const fall_t FAELLE[] = {
       819200L, 80, 2, 10, 512 },
     { "jvc",        &uft_format_plugin_jvc,        "gw_jvc.img",
       161280L, 35, 1, 18, 256 },
+
 };
 
 static void free_ts(uft_track_t *t)

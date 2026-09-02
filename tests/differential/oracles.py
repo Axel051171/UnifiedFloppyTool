@@ -386,7 +386,11 @@ REGISTRY: tuple[Oracle, ...] = (
         env="SAMDISK",
         exes=("samdisk", "samdisk.exe"),
         version_args=("--version",),
-        version_re=r"([0-9]+\.[0-9]+)",
+        version_re=r"SAMdisk\s+([0-9]+\.[0-9]+)",
+        # MF-785: `--version` meldet die Fassung auf stdout und kehrt
+        # mit RUECKGABEWERT 1 zurueck. Ohne diese Zeile blieb der
+        # Eintrag „Version unbekannt", obwohl die Zahl dastand.
+        version_exit_ok=(0, 1),
         reference_for="Container-Formate und ihre Randfaelle; die QUELLE "
                       "liegt zusaetzlich im Baum (src/samdisk/) und dient "
                       "als Spec-Referenz, etwa fuer `.tc` (Mammut 1.4)",
