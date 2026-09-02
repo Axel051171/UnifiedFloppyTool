@@ -48,6 +48,86 @@ jobs:
         run: python3 scripts/check_consistency.py
 
   # ══════════════════════════════════════════════════════════════════════════
+  # gw-Paritaet (MF-798)
+  #
+  # `tests/differential/test_gw_parity.py` dekodiert DENSELBEN von gw
+  # erzeugten Flussstrom zweimal — einmal mit `gw convert`, einmal mit UFTs
+  # Flussmaschine — und verlangt BYTEIDENTISCHE Sektorabbilder. Sechs
+  # Diskettenklassen: IBM MFM DD/HD, Atari ST MFM, Commodore 1541 GCR,
+  # Apple II GCR, AmigaDOS MFM.
+  #
+  # Das ist das staerkste Stueck Beweisfuehrung im Baum, und es lief bis
+  # MF-798 NIE: keiner der sechs Arbeitsablaeufe rief `pytest` auf oder
+  # installierte `gw`. Der Test uebersprang sich sauber — und war damit
+  # eine einmal behauptete Aussage statt einer bei jedem Push erneuerten.
+  #
+  # EIN SKIP MACHT DIESEN JOB ROT. Das ist die Lehre aus MF-598: ein
+  # Skip, der einen Bruch verdeckt, ist schlimmer als ein roter Test. Die
+  # gw-Paritaet meldete jahrelang „6 skipped", und dahinter lag ein Ziel,
+  # das sich nicht einmal uebersetzen liess.
+  # ══════════════════════════════════════════════════════════════════════════
+  gw-parity:
+    timeout-minutes: 20
+    needs: consistency
+    name: gw parity (differential)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Greaseweazle host tools
+        run: |
+          set -euo pipefail
+          # gw steht nicht auf PyPI. Unlicense (Public Domain) — die
+          # Installation ist unbedenklich, und wir binden NICHTS davon
+          # ein: gw laeuft als eigener Prozess, als Oracle.
+          #
+          # GEPINNT AUF DEN COMMIT, nicht auf den Tag `v1.23`. Ein Tag
+          # laesst sich verschieben; dann waere das Oracle still ein
+          # anderes als das, gegen das die Aussagen gemessen wurden.
+          # Der Hash ist der von `v1.23`, nachgesehen ueber die
+          # GitHub-API am 2026-09-02.
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "git+https://github.com/keirf/greaseweazle@a0ae343d7e2603b9f3fdc0149ef8e89de5399f58"
+          python3 -m pip install pytest
+          # `gw --version` gibt es NICHT (MF-776) — die Option faellt auf
+          # den Usage-Text zurueck, in dem die Zahl aus dem INSTALLATIONS-
+          # PFAD steht. `gw info` ist die richtige Quelle und laeuft ohne
+          # Geraet.
+          echo "gw-Fassung, wie das Oracle-Register sie fuehrt:"
+          gw info 2>&1 | grep -i "host tools"
+          gw info 2>&1 | grep -qE "Host Tools:\s*1\.23" || {
+            echo "::error::gw meldet nicht 1.23 — das Oracle ist ein anderes"
+            exit 1
+          }
+
+      - name: Parity suite (a skip fails this job)
+        run: |
+          set -euo pipefail
+          python3 -m pytest tests/differential/test_gw_parity.py \
+            -v -rs 2>&1 | tee parity.log
+          # `pytest` gibt bei durchweg uebersprungenen Tests 0 zurueck.
+          # Genau daran ist diese Aussage jahrelang vorbeigelaufen.
+          if grep -qiE '[0-9]+ skipped' parity.log; then
+            echo "::error::Die gw-Paritaet hat uebersprungen statt zu pruefen."
+            echo "Ein Skip ist hier KEIN Erfolg — siehe MF-598. Gruende:"
+            grep -iE 'SKIPPED' parity.log || true
+            exit 1
+          fi
+          if ! grep -qE '[0-9]+ passed' parity.log; then
+            echo "::error::Kein einziger Paritaetsfall ist gelaufen."
+            exit 1
+          fi
+          echo "gw-Paritaet: byteidentisch, nachgewiesen statt behauptet."
+
+      - name: Upload parity log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-parity-log-${{ github.sha }}
+          path: parity.log
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════════════════
   # Matrix: C++17 (Qt 6.7.3) UND C++20 (Qt 6.10.1) — beide müssen grün sein
   # ══════════════════════════════════════════════════════════════════════════
   build-linux:
