@@ -7,10 +7,49 @@
 
 #define SAD_SIZE 819200
 
+/* Die SAD-Kennung, gemessen — nicht geraten (MF-787).
+ *
+ * Hier stand `"SAD!"`. Die steht in KEINER SAD-Datei. Gemessen an einem
+ * von SAMdisk 4.0 erzeugten Abbild (Oracle-Register: `samdisk`) lautet
+ * der 22-Byte-Kopf:
+ *
+ *     41 6c 65 79 27 73 20 64 69 73 6b 20 62 61 63 6b 75 70
+ *         -> "Aley's disk backup", 18 Byte
+ *     02  -> Koepfe
+ *     50  -> Zylinder (80)
+ *     0a  -> Sektoren je Spur (10)
+ *     08  -> Sektorgroesse / 64  (8 * 64 = 512)
+ *
+ * Der Kopf BELEGT SICH SELBST: 80 * 2 * 10 * 512 = 819 200, und das ist
+ * genau die Nutzdatenmenge der Datei (819 222 - 22).
+ *
+ * Was die falsche Kennung kostete, war doppelt und still: `sad_probe()`
+ * fiel auf die Groessenpruefung `file_size == SAD_SIZE` zurueck, die eine
+ * echte SAD-Datei NIE erfuellt (ihr Kopf legt 22 Byte drauf) — eine echte
+ * SAD-Datei wurde also gar nicht als SAD erkannt. Und `sad_open()`
+ * schloss aus der fehlenden Kennung auf „kopflos" und las die 22
+ * Kopfbytes als NUTZDATEN.
+ *
+ * Die Offsets waren aus demselben Grund falsch: `hdr[4..6]` unterstellt
+ * eine 4-Byte-Kennung.
+ *
+ * Gefunden nicht durch Lesen, sondern durch einen Differenzlauf —
+ * `tests/test_sad_magic.c`. */
+#define SAD_MAGIC     "Aley's disk backup"
+#define SAD_MAGIC_LEN 18
+#define SAD_HDR_LEN   22
+#define SAD_OFF_HEADS 18
+#define SAD_OFF_CYLS  19
+#define SAD_OFF_SPT   20
+#define SAD_OFF_SSDIV 21    /* Sektorgroesse / 64 */
+
 typedef struct { FILE* file; bool header; } sad_data_t;
 
 bool sad_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    if (size >= 4 && memcmp(data, "SAD!", 4) == 0) { *confidence = 95; return true; }
+    if (size >= SAD_MAGIC_LEN &&
+        memcmp(data, SAD_MAGIC, SAD_MAGIC_LEN) == 0) {
+        *confidence = 95; return true;
+    }
     /* MF-729: war 70 — reine Groesse, ohne Merkmal. Der Magic-Zweig
      * darueber bleibt bei 95; nur die Groessen-Vermutung sinkt ins
      * Band 30..49. Gemessen war SAD damit der Sieger auf einem
@@ -23,9 +62,9 @@ static uft_error_t sad_open(uft_disk_t* disk, const char* path, bool read_only) 
     FILE* f = fopen(path, read_only ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
 
-    uint8_t hdr[22];
-    if (fread(hdr, 1, 22, f) != 22) { fclose(f); return UFT_ERROR_IO; }
-    bool has_hdr = (memcmp(hdr, "SAD!", 4) == 0);
+    uint8_t hdr[SAD_HDR_LEN];
+    if (fread(hdr, 1, SAD_HDR_LEN, f) != SAD_HDR_LEN) { fclose(f); return UFT_ERROR_IO; }
+    bool has_hdr = (memcmp(hdr, SAD_MAGIC, SAD_MAGIC_LEN) == 0);
     if (!has_hdr) {
         if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
     }
@@ -35,10 +74,13 @@ static uft_error_t sad_open(uft_disk_t* disk, const char* path, bool read_only) 
     p->file = f; p->header = has_hdr;
 
     disk->plugin_data = p;
-    disk->geometry.cylinders = has_hdr ? hdr[5] : 80;
-    disk->geometry.heads = has_hdr ? hdr[4] : 2;
-    disk->geometry.sectors = has_hdr ? hdr[6] : 10;
-    disk->geometry.sector_size = 512;
+    /* Mit Kopf: die vier Zahlen dahinter. Ohne Kopf: der Normalfall
+     * einer SAM-Coupe-Diskette, 80 x 2 x 10 x 512 = 819 200. */
+    disk->geometry.cylinders   = has_hdr ? hdr[SAD_OFF_CYLS]  : 80;
+    disk->geometry.heads       = has_hdr ? hdr[SAD_OFF_HEADS] : 2;
+    disk->geometry.sectors     = has_hdr ? hdr[SAD_OFF_SPT]   : 10;
+    disk->geometry.sector_size = has_hdr
+                               ? (uint16_t)(hdr[SAD_OFF_SSDIV] * 64) : 512;
     disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders *
                                    disk->geometry.heads * disk->geometry.sectors;
     return UFT_OK;
@@ -60,14 +102,21 @@ static uft_error_t sad_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     sad_data_t* p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
-    long off = (long)((p->header ? 22 : 0) +
+    /* MF-787: Kopflaenge und Sektorgroesse kommen aus dem KOPF, nicht aus
+     * einer Zahl im Code. Vorher stand hier zweimal `22` und viermal
+     * `512` — dieselbe Annahme wie bei der erfundenen Kennung, nur eine
+     * Ebene tiefer: ein SAD mit anderer Sektorgroesse waere still falsch
+     * gelesen worden. */
+    const uint16_t ss = disk->geometry.sector_size;
+    if (ss == 0 || ss > 1024) return UFT_ERROR_INVALID_STATE;
+    long off = (long)((p->header ? SAD_HDR_LEN : 0) +
                ((size_t)cyl * disk->geometry.heads + head) *
-               disk->geometry.sectors * 512);
-    uint8_t buf[512];
+               disk->geometry.sectors * ss);
+    uint8_t buf[1024];
     for (int s = 0; s < disk->geometry.sectors; s++) {
-        if (fseek(p->file, off + s * 512, SEEK_SET) != 0) return UFT_ERROR_IO;
-        if (fread(buf, 1, 512, p->file) != 512) { memset(buf, 0xE5, 512); }
-        uft_format_add_sector(track, (uint8_t)s, buf, 512, (uint8_t)cyl, (uint8_t)head);
+        if (fseek(p->file, off + (long)s * ss, SEEK_SET) != 0) return UFT_ERROR_IO;
+        if (fread(buf, 1, ss, p->file) != ss) { memset(buf, 0xE5, ss); }
+        uft_format_add_sector(track, (uint8_t)s, buf, ss, (uint8_t)cyl, (uint8_t)head);
     }
     return UFT_OK;
 }
@@ -89,17 +138,19 @@ static uft_error_t sad_write_track(uft_disk_t* disk, int cyl, int head,
     sad_data_t* p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
-    long off = (long)((p->header ? 22 : 0) +
+    const uint16_t ss = disk->geometry.sector_size;
+    if (ss == 0 || ss > 1024) return UFT_ERROR_INVALID_STATE;
+    long off = (long)((p->header ? SAD_HDR_LEN : 0) +
                ((size_t)cyl * disk->geometry.heads + head) *
-               disk->geometry.sectors * 512);
+               disk->geometry.sectors * ss);
     for (size_t s = 0; s < track->sector_count && (int)s < disk->geometry.sectors; s++) {
-        if (fseek(p->file, off + (long)s * 512, SEEK_SET) != 0) return UFT_ERROR_IO;
+        if (fseek(p->file, off + (long)s * ss, SEEK_SET) != 0) return UFT_ERROR_IO;
         const uint8_t *data = track->sectors[s].data;
-        uint8_t pad[512];
+        uint8_t pad[1024];
         if (!data || track->sectors[s].data_len == 0) {
-            memset(pad, 0xE5, 512); data = pad;
+            memset(pad, 0xE5, ss); data = pad;
         }
-        if (fwrite(data, 1, 512, p->file) != 512) return UFT_ERROR_IO;
+        if (fwrite(data, 1, ss, p->file) != ss) return UFT_ERROR_IO;
     }
     return UFT_OK;
 }

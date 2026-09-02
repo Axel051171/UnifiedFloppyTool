@@ -499,6 +499,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_sad_magic")
+        # MF-787: SAD suchte nach "SAD!" — die Kennung lautet
+        # "Aley's disk backup". Gefunden durch einen Differenzlauf
+        # gegen SAMdisk 4.0.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/sad/uft_sad.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_gw_geometrie")
         # MF-783: fuenf T3-Formate gegen gws eigenes Geometriemodell.
         target_sources(${test_name} PRIVATE

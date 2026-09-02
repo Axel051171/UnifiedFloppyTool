@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 24 |
+| T1b | 25 |
 | T2 | 23 |
-| T3 | 39 |
+| T3 | 38 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -38,6 +38,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `northstar` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `pdp` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `po` | **T1b** | `test_apple_do_po_bounds`, `test_corpus_gw_geometrie`, `test_do_po_probe_ignores_content`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | 1 |
+| `sad` | **T1b** | `test_sad_magic` | — | — | 1 |
 | `sam` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_flux_jitter_vectors`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_layout`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `ssd` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
@@ -96,7 +97,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `pro` | **T3** | `test_atari`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
 | `qrst` | **T3** | — | — | — | — |
 | `rcpmfs` | **T3** | — | — | — | — |
-| `sad` | **T3** | — | — | — | — |
 | `sap_thomson` | **T3** | — | — | — | — |
 | `scl` | **T3** | — | — | — | — |
 | `syn` | **T3** | — | — | — | — |

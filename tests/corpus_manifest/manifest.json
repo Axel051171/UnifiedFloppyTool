@@ -374,6 +374,17 @@
       "source": "`python tests/corpus_manifest/gen_gw_geometry_corpus.py <gw>`: Rohabbild eigen erzeugt (je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann zweimal `gw convert --format coco.decb` Rohabbild -> SCP -> Rohabbild. Beide Laeufe melden \"Found 630 sectors of 630 (100%)\" (35x18x256), der Rundlauf ist byteidentisch.",
       "fremdcode": "nein - der Inhalt ist vollstaendig eigen erzeugt; gw setzt nur Sektoren um und schreibt keine Nutzdaten hinein (MF-784)",
       "test": "test_corpus_gw_geometrie"
+    },
+    {
+      "file": "tests/corpus_free/samdisk_sad.sad",
+      "sha256": "4c959fd8ec0367d4fd86a7a570160c970e409fff64d9724163e17432abae4cc4",
+      "format": "sad",
+      "origin": "cross-tool",
+      "oracle": "samdisk",
+      "tool": "SAMdisk 4.0 ALPHA (2022-07-25, simonowen/samdisk, Release SAMdisk4-20220725_x64.zip, Archiv-SHA-256 c95c8ce4f6180d007d044baa813aa1aafc1fb2b6b7086c5739ffea8a6b66d424)",
+      "source": "Rohabbild eigen erzeugt (819 200 B, je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann `SAMdisk <roh>.raw <out>.sad`. Ergebnis 819 222 B = 22 Byte Kopf + 819 200 Nutzdaten. Der Kopf traegt \"Aley's disk backup\" (18 B) und die vier Geometriebytes 02/50/0a/08 = 2 Koepfe, 80 Zylinder, 10 Sektoren, Sektorgroesse 8*64=512 — er belegt sich selbst, denn 80*2*10*512 = 819 200.",
+      "fremdcode": "nein - die Nutzdaten sind vollstaendig eigen erzeugt; der 22-Byte-Kopf ist Formatstruktur (Kennung + vier Zahlen), kein ausfuehrbarer Code (MF-787)",
+      "test": "test_sad_magic"
     }
   ]
 }
