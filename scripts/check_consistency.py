@@ -914,6 +914,20 @@ def main() -> int:
         #
         # Die Prosazeile darf bleiben — sie ist fuer Menschen da. Sie
         # darf nur nicht mehr von den Tabellen abweichen.
+        # 45. Kategorie (MF-813): der CP/M-DPB gegen SICH SELBST.
+        #
+        # Der Dateikopf von `uft_cpm_diskdefs.c` sagt, dass libdsk
+        # geprueft ist und cpmtools NICHT — ehrlich notiert, ohne
+        # Folge. Die Pointe: fuer diese Pruefung braucht es keine
+        # Referenz. Der Disk Parameter Block haengt arithmetisch
+        # zusammen, und ein Viertel der Tabelle faellt bei reiner
+        # Rechnung durch — ohne ein einziges Referenzabbild.
+        #
+        # Bestand eingefroren wie beim Format-Freeze: 13 stehen drin,
+        # ein vierzehnter faellt sofort auf.
+        import audit_cpm_dpb as _dpb
+        all_errors.append(("CP/M-DPB", _dpb.check(repo)))
+
         import quarantine_stand as _qsc
         all_errors.append(("Quarantaene-Stand", _qsc.check(repo)))
 
