@@ -190,7 +190,7 @@ offen).
 
 | # | Punkt |
 |---|---|
-| P3-1 | **57 Formate auf T3.** Das Moratorium (MF-363/498) verlangt: erst ATR, D64, ADF, FDI, NFD-r0 auf T1/T1b, danach 1:2 |
+| P3-1 | **39 Formate auf T3** (gemessen 2026-09-02, MF-786; hier stand **57** — um 18 daneben, ausgerechnet in dem Punkt, der das Moratorium führt). **Und das Moratorium ist EIN FORMAT von seinem eigenen Ende entfernt:** MF-363/498 verlangt ATR, D64, ADF, FDI, NFD-r0 auf T1/T1b — `fdi` steht auf **T1**, `adf`/`atr`/`d64` auf **T1b**, allein **`nfd` ist noch T2**. Es hat bereits Test und benannte Spec-Quelle; was fehlt, ist ein **cross-tool-Abbild**, und NFD ist ein Container mit Kopf — also blockiert von **P3-14**. Danach gilt nicht „alles erlaubt", sondern **1:2** (ein neues Format = zwei Hebungen). Plan: `docs/PLAN_NAECHSTE_STRECKE.md` |
 | P3-2 | Korpus-Beschaffung — **blockiert beim Eigentümer**: `cpmtools`, SAMdisks `tc.cpp`, `sector-cpc` (siehe `MAMMUT_PLAN.md` §5) |
 | P3-3 | GUI-Rauchtest für MF-496/MF-501 — **blockiert beim Eigentümer** (kein Bediener in dieser Sitzung) |
 | P3-4 | Tier-3-Hardware-Bench — **kein Gerät vorhanden** (MF-310), an die Gemeinschaft delegiert |
