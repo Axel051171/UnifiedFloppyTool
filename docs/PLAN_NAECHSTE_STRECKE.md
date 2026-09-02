@@ -68,6 +68,31 @@ trägt seine Nummer" überlebt es nicht.
 **Das ist eine Verfahrensfrage, keine Werkzeugfrage.** Beide Werkzeuge
 nehmen Geometrieangaben entgegen — sie wurden nur nicht genutzt.
 
+> **BERICHTIGUNG (MF-794) — die Prämisse trägt nicht.** Der Satz oben
+> war plausibel und falsch. Gemessen: mit expliziter Geometrie
+> (`SAMdisk copy -c80 -s10 -z2 -b1`) kommt für `sad` eine Datei heraus,
+> die mit der geratenen **byteidentisch** ist. Das Raten war folgenlos.
+>
+> Die Ursache lag bei der **Erwartung**. Der Korpus-Test verglich gegen
+> eine *lineare* Anordnung; SAD legt aber **kopf-dur** ab — alle
+> Zylinder von Seite 0, dann alle von Seite 1. Zwei unabhängige Hände
+> sagen dasselbe: SAMdisk schreibt so, und hxcfe 2.16.13 liest dieselbe
+> Datei zu einem Rohabbild zurück, das mit der Quelle byteidentisch
+> ist. Für `mgt` und `edsk` schließt sich derselbe Rundlauf ebenfalls
+> byteidentisch.
+>
+> **Die Werkzeuge legen den Inhalt nach dem Zielformat ab. Sie
+> zerstören nichts.**
+>
+> Was der Differenzlauf stattdessen fand, ist ein echter Lesefehler in
+> UFT: `uft_sad.c` rechnete zylinder-dur und las **158 von 160 Spuren
+> an der falschen Stelle** — bei einem Format, das auf **T1b** stand.
+> Richtig lagen nur (0,0) und (79,1), wo beide Formeln denselben Index
+> ergeben, und genau (0,0) hatte der Test geprüft.
+>
+> Die Lehre ist nicht „Geometrie angeben". Sie ist: **ein Werkzeug, das
+> nicht das liefert, was man erwartet, ist erst der zweite Verdächtige.**
+
 ### B3 — FAT12 ist gegen sich selbst geprüft
 
 `src/fs/uft_fat12.c` steht auf **FS-T1** mit dem Vermerk *„alle Tests

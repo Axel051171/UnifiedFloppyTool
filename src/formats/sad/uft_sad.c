@@ -109,8 +109,17 @@ static uft_error_t sad_read_track(uft_disk_t* disk, int cyl, int head, uft_track
      * gelesen worden. */
     const uint16_t ss = disk->geometry.sector_size;
     if (ss == 0 || ss > 1024) return UFT_ERROR_INVALID_STATE;
+    /* MF-794: SAD ist KOPF-DUR — alle Zylinder von Seite 0, dann alle
+     * von Seite 1. Hier stand `cyl * heads + head`, also zylinder-dur.
+     * Von 160 Spuren lagen damit 158 an der falschen Stelle; richtig
+     * waren nur (0,0) und (79,1), wo beide Formeln denselben Index
+     * ergeben — und genau (0,0) hatte der Test von MF-787 geprueft.
+     * Belegt von zwei unabhaengigen Haenden: SAMdisk 4.0 schreibt so,
+     * hxcfe 2.16.13 liest es so zurueck (Rundlauf byteidentisch). */
+    if (cyl >= disk->geometry.cylinders || head >= disk->geometry.heads)
+        return UFT_ERROR_INVALID_PARAM;
     long off = (long)((p->header ? SAD_HDR_LEN : 0) +
-               ((size_t)cyl * disk->geometry.heads + head) *
+               ((size_t)head * disk->geometry.cylinders + cyl) *
                disk->geometry.sectors * ss);
     uint8_t buf[1024];
     for (int s = 0; s < disk->geometry.sectors; s++) {
@@ -140,8 +149,17 @@ static uft_error_t sad_write_track(uft_disk_t* disk, int cyl, int head,
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
     const uint16_t ss = disk->geometry.sector_size;
     if (ss == 0 || ss > 1024) return UFT_ERROR_INVALID_STATE;
+    /* MF-794: SAD ist KOPF-DUR — alle Zylinder von Seite 0, dann alle
+     * von Seite 1. Hier stand `cyl * heads + head`, also zylinder-dur.
+     * Von 160 Spuren lagen damit 158 an der falschen Stelle; richtig
+     * waren nur (0,0) und (79,1), wo beide Formeln denselben Index
+     * ergeben — und genau (0,0) hatte der Test von MF-787 geprueft.
+     * Belegt von zwei unabhaengigen Haenden: SAMdisk 4.0 schreibt so,
+     * hxcfe 2.16.13 liest es so zurueck (Rundlauf byteidentisch). */
+    if (cyl >= disk->geometry.cylinders || head >= disk->geometry.heads)
+        return UFT_ERROR_INVALID_PARAM;
     long off = (long)((p->header ? SAD_HDR_LEN : 0) +
-               ((size_t)cyl * disk->geometry.heads + head) *
+               ((size_t)head * disk->geometry.cylinders + cyl) *
                disk->geometry.sectors * ss);
     for (size_t s = 0; s < track->sector_count && (int)s < disk->geometry.sectors; s++) {
         if (fseek(p->file, off + (long)s * ss, SEEK_SET) != 0) return UFT_ERROR_IO;

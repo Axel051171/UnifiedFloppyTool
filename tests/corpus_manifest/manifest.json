@@ -382,9 +382,10 @@
       "origin": "cross-tool",
       "oracle": "samdisk",
       "tool": "SAMdisk 4.0 ALPHA (2022-07-25, simonowen/samdisk, Release SAMdisk4-20220725_x64.zip, Archiv-SHA-256 c95c8ce4f6180d007d044baa813aa1aafc1fb2b6b7086c5739ffea8a6b66d424)",
-      "source": "Rohabbild eigen erzeugt (819 200 B, je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann `SAMdisk <roh>.raw <out>.sad`. Ergebnis 819 222 B = 22 Byte Kopf + 819 200 Nutzdaten. Der Kopf traegt \"Aley's disk backup\" (18 B) und die vier Geometriebytes 02/50/0a/08 = 2 Koepfe, 80 Zylinder, 10 Sektoren, Sektorgroesse 8*64=512 — er belegt sich selbst, denn 80*2*10*512 = 819 200.",
+      "source": "Rohabbild eigen erzeugt (819 200 B, je Sektor Kennung UFT\u0000 + laufende Nummer + abgeleitetes Muster), dann `SAMdisk <roh>.raw <out>.sad`. Ergebnis 819 222 B = 22 Byte Kopf + 819 200 Nutzdaten. Der Kopf traegt \"Aley's disk backup\" (18 B) und die vier Geometriebytes 02/50/0a/08 = 2 Koepfe, 80 Zylinder, 10 Sektoren, Sektorgroesse 8*64=512 — er belegt sich selbst, denn 80*2*10*512 = 819 200. MF-794: der Lauf ist mit EXPLIZITER Geometrie wiederholt worden — `SAMdisk copy <roh>.img <out>.sad -c80 -s10 -z2 -b1 -f` — und liefert eine byteidentische Datei; das Raten war also folgenlos. Die Anordnung im Rumpf ist KOPF-DUR (alle Zylinder von Seite 0, dann alle von Seite 1), belegt von einer ZWEITEN unabhaengigen Hand: hxcfe 2.16.13 liest dieselbe Datei und gibt ein Rohabbild zurueck, das mit der Quelle byteidentisch ist (`hxcfe -finput:<out>.sad -conv:RAW_LOADER -foutput:<zurueck>.img`).",
       "fremdcode": "nein - die Nutzdaten sind vollstaendig eigen erzeugt; der 22-Byte-Kopf ist Formatstruktur (Kennung + vier Zahlen), kein ausfuehrbarer Code (MF-787)",
-      "test": "test_sad_magic"
+      "test": "test_sad_magic",
+      "oracle_zweit": "hxcfe"
     },
     {
       "file": "tests/corpus_free/mtools_fat12_720k.img",

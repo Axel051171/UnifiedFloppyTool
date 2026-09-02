@@ -171,6 +171,177 @@ TEST(kopfloses_abbild_bleibt_erkannt)
     ASSERT(conf >= 30 && conf < 50);
 }
 
+
+/* ── DER ZWEITE BEFUND: SAD ist KOPF-DUR (MF-794) ───────────────────────
+ *
+ * Der Test oben liest Spur (0,0) — und das ist die EINZIGE Spur, die
+ * unter beiden denkbaren Anordnungen an derselben Stelle liegt. Genau
+ * deshalb blieb der zweite Fehler eine Woche unbemerkt.
+ *
+ * SAD legt die Spuren KOPF-DUR ab: alle Zylinder von Seite 0, dann alle
+ * von Seite 1. Der Spurindex ist also `kopf * zylinder + zylinder_nr`,
+ * nicht `zylinder_nr * koepfe + kopf`.
+ *
+ * Gemessen, zwei unabhaengige Haende (MF-785 sperrt keine davon fuer SAD):
+ *
+ *   * **SAMdisk 4.0** schreibt aus einem zylinder-dur Rohabbild eine SAD,
+ *     in der Spurblock 1 den Sektor 20 traegt (= Zyl. 1 / Kopf 0) und
+ *     Spurblock 80 den Sektor 10 (= Zyl. 0 / Kopf 1).
+ *   * **hxcfe 2.16.13** liest dieselbe Datei und gibt ein Rohabbild
+ *     zurueck, das mit der urspruenglichen Quelle **byteidentisch** ist.
+ *     Der Rundlauf img -> sad -> img schliesst sich also, und zwar nur
+ *     unter kopf-dur.
+ *
+ * Die Korpus-Datei belegt es aus sich selbst — die Zusicherungen unten
+ * lesen sie roh, ohne UFTs Plugin zu befragen.
+ *
+ * WAS DER FEHLER KOSTETE: von 160 Spuren las UFT **158 an der falschen
+ * Stelle**. Richtig lagen nur (0,0) und (79,1) — Anfang und Ende, wo
+ * beide Formeln denselben Index ergeben. Ein Benutzer haette ein
+ * vollstaendig durchmischtes Abbild bekommen, ohne eine einzige
+ * Fehlermeldung.
+ */
+
+/* Erst die Datei selbst, ohne UFT: welche Anordnung liegt vor? */
+TEST(die_datei_selbst_ist_kopf_dur)
+{
+    FILE *f = fopen(pfad(), "rb");
+    ASSERT(f != NULL);
+    /* Spurblock 1 = zweiter 10-Sektor-Block. Unter kopf-dur ist das
+     * Zylinder 1 / Kopf 0, dessen Sektor 0 die Marke 20 traegt. */
+    uint8_t b[8];
+    ASSERT(fseek(f, 22 + 1 * 10 * 512, SEEK_SET) == 0);
+    ASSERT(fread(b, 1, 6, f) == 6);
+    ASSERT(memcmp(b, "UFT\x00", 4) == 0);
+    ASSERT((b[4] | (b[5] << 8)) == 20);
+
+    /* Spurblock 80 = Zylinder 0 / Kopf 1 -> Marke 10. */
+    ASSERT(fseek(f, 22 + 80 * 10 * 512, SEEK_SET) == 0);
+    ASSERT(fread(b, 1, 6, f) == 6);
+    ASSERT(memcmp(b, "UFT\x00", 4) == 0);
+    ASSERT((b[4] | (b[5] << 8)) == 10);
+    fclose(f);
+}
+
+/* DER ROTBEWEIS. Vor MF-794 lieferte read_track(0,1) den Sektor 20 —
+ * also Zylinder 1 / Kopf 0. */
+TEST(spur_0_1_liefert_kopf_1_nicht_zylinder_1)
+{
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    ASSERT(uft_format_plugin_sad.open(&disk, pfad(), true) == UFT_OK);
+
+    struct { int cyl, head, erwartet; } faelle[] = {
+        { 0,  0,   0 },   /* lag schon vorher richtig */
+        { 0,  1,  10 },   /* <- der Rotbeweis */
+        { 1,  0,  20 },
+        { 1,  1,  30 },
+        { 79, 1, 1590 },  /* lag schon vorher richtig */
+    };
+    for (size_t i = 0; i < sizeof(faelle) / sizeof(faelle[0]); i++) {
+        uft_track_t t;
+        memset(&t, 0, sizeof(t));
+        if (uft_format_plugin_sad.read_track(&disk, faelle[i].cyl,
+                                             faelle[i].head, &t) != UFT_OK) {
+            uft_format_plugin_sad.close(&disk);
+            ASSERT(0);
+        }
+        int nr = -1;
+        if (t.sector_count == 10 && t.sectors[0].data &&
+            memcmp(t.sectors[0].data, "UFT\x00", 4) == 0)
+            nr = t.sectors[0].data[4] | (t.sectors[0].data[5] << 8);
+        for (size_t k = 0; k < t.sector_count; k++) free(t.sectors[k].data);
+        free(t.sectors);
+        if (nr != faelle[i].erwartet) {
+            printf("FAIL: Spur (%d,%d) -> Sektor %d, erwartet %d\n",
+                   faelle[i].cyl, faelle[i].head, nr, faelle[i].erwartet);
+            _fail++;
+            uft_format_plugin_sad.close(&disk);
+            return;
+        }
+    }
+    uft_format_plugin_sad.close(&disk);
+}
+
+/* Die Formel steht an ZWEI Stellen — read_track und write_track. Der
+ * Rotbeweis oben belegt nur die erste.
+ *
+ * WAS DIESER FALL BELEGT UND WAS NICHT: er zeigt, dass beide Formeln
+ * DIESELBE sind. Waere nur eine geaendert worden, landete jede Spur an
+ * einer anderen Stelle, als sie herkam, und der Vergleich schluege fehl.
+ * Dass die Formel RICHTIG ist, belegt er nicht — das leistet der Fall
+ * darueber, der gegen die rohe Datei prueft. Erst beide zusammen
+ * tragen.
+ *
+ * Das Ziel wird mit 0xE5 vorbelegt und nicht etwa kopiert: eine Kopie
+ * waere schon vor dem ersten Schreibzugriff identisch und der Vergleich
+ * wertlos. */
+TEST(lese_und_schreibpfad_verwenden_dieselbe_anordnung)
+{
+    uft_disk_t q;
+    memset(&q, 0, sizeof(q));
+    ASSERT(uft_format_plugin_sad.open(&q, pfad(), true) == UFT_OK);
+
+    char ziel[512];
+    snprintf(ziel, sizeof(ziel), "%s/_sad_rundlauf.sad", UFT_CORPUS_DIR);
+    {   /* Kopf woertlich uebernehmen, Nutzdaten auf 0xE5 setzen. */
+        FILE *o = fopen(pfad(), "rb"), *n = fopen(ziel, "wb");
+        if (!o || !n) { if (o) fclose(o); if (n) fclose(n);
+                        uft_format_plugin_sad.close(&q); ASSERT(0); }
+        uint8_t k[22];
+        size_t g = fread(k, 1, 22, o);
+        fclose(o);
+        if (g != 22 || fwrite(k, 1, 22, n) != 22) {
+            fclose(n); uft_format_plugin_sad.close(&q); ASSERT(0);
+        }
+        uint8_t fuell[512];
+        memset(fuell, 0xE5, sizeof(fuell));
+        for (int i = 0; i < 1600; i++)
+            if (fwrite(fuell, 1, 512, n) != 512) {
+                fclose(n); uft_format_plugin_sad.close(&q); ASSERT(0);
+            }
+        fclose(n);
+    }
+
+    uft_disk_t z;
+    memset(&z, 0, sizeof(z));
+    if (uft_format_plugin_sad.open(&z, ziel, false) != UFT_OK) {
+        uft_format_plugin_sad.close(&q);
+        ASSERT(0);
+    }
+
+    int fehler = 0;
+    for (int c = 0; c < q.geometry.cylinders && !fehler; c++)
+        for (int h = 0; h < q.geometry.heads && !fehler; h++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_format_plugin_sad.read_track(&q, c, h, &t) != UFT_OK ||
+                uft_format_plugin_sad.write_track(&z, c, h, &t) != UFT_OK)
+                fehler = 1;
+            for (size_t k = 0; k < t.sector_count; k++) free(t.sectors[k].data);
+            free(t.sectors);
+        }
+    uft_format_plugin_sad.close(&z);
+    uft_format_plugin_sad.close(&q);
+    ASSERT(!fehler);
+
+    /* Byteweiser Vergleich gegen das Original. */
+    FILE *a = fopen(pfad(), "rb"), *b = fopen(ziel, "rb");
+    ASSERT(a && b);
+    long gleich = 1, n = 0;
+    for (;;) {
+        int x = fgetc(a), y = fgetc(b);
+        if (x == EOF && y == EOF) break;
+        if (x != y) { gleich = 0; break; }
+        n++;
+    }
+    fclose(a); fclose(b);
+    remove(ziel);
+    if (!gleich) printf("FAIL: erste Abweichung bei Offset %ld\n", n);
+    ASSERT(gleich);
+    ASSERT(n == 819222L);
+}
+
 int main(void)
 {
     printf("test_sad_magic (MF-787)\n");
@@ -178,6 +349,9 @@ int main(void)
     RUN(sonde_erkennt_eine_echte_sad_datei);
     RUN(oeffnen_ueberspringt_den_kopf);
     RUN(kopfloses_abbild_bleibt_erkannt);
+    RUN(die_datei_selbst_ist_kopf_dur);
+    RUN(spur_0_1_liefert_kopf_1_nicht_zylinder_1);
+    RUN(lese_und_schreibpfad_verwenden_dieselbe_anordnung);
     printf("%d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail ? 1 : 0;
 }
