@@ -176,11 +176,28 @@ size_t msa_decompress_track(const uint8_t* input, size_t input_size,
         uint8_t byte = input[in_pos++];
         
         if (byte == MSA_RLE_MARKER && in_pos + 2 < input_size) {
-            /* RLE sequence */
+            /* MF-822: Reihenfolge BERICHTIGT — Marker, DATENBYTE, dann
+             * das Laengenwort. Hier stand Zaehler zuerst.
+             *
+             * Drei unabhaengige Wiedergaben derselben Urquelle (Damien
+             * Burke, 1997) sagen dasselbe:
+             *
+             *   DrCoolZic, „Atari Image File Formats" V1.0 (09/2014):
+             *     Byte Marker – $E5 / Byte Data byte / Word Run length
+             *     „six $AA bytes in a row … encoded as $E5AA0006"
+             *   Simon Sunnyboy im atari-forum (Faden „MSA disk image
+             *     format"), dieselbe Reihenfolge
+             *   uft_msa_plugin.c:43 im EIGENEN Baum macht es richtig
+             *
+             * Der Fehler war still: `msa_compress_track()` unten schrieb
+             * in DERSELBEN falschen Reihenfolge, der Rundlauf war also in
+             * sich stimmig. Sichtbar wird er erst an einer FREMDEN
+             * MSA-Datei — genau der Fall, gegen den ein
+             * Selbstkonsistenz-Test nichts ausrichtet. */
+            uint8_t value = input[in_pos++];
             uint16_t count = msa_read_be16(input + in_pos);
             in_pos += 2;
-            uint8_t value = input[in_pos++];
-            
+
             while (count > 0 && out_pos < output_size) {
                 output[out_pos++] = value;
                 count--;
@@ -219,10 +236,13 @@ size_t msa_compress_track(const uint8_t* input, size_t input_size,
         if ((run_length >= 5) || (byte == MSA_RLE_MARKER && run_length >= 1)) {
             if (out_pos + 4 > output_size) break;
             
+            /* MF-822: Marker, DATENBYTE, Laengenwort — siehe die
+             * Begruendung im Dekomprimierer. Beide Seiten waren
+             * vertauscht und hoben sich gegenseitig auf. */
             output[out_pos++] = MSA_RLE_MARKER;
+            output[out_pos++] = byte;
             msa_write_be16(output + out_pos, (uint16_t)run_length);
             out_pos += 2;
-            output[out_pos++] = byte;
         } else {
             /* Literal */
             for (size_t i = 0; i < run_length && out_pos < output_size; i++) {

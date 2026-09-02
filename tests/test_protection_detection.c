@@ -269,6 +269,64 @@ static void test_dm_serial_crc_roundtrip(void)
           "DM serial: a blank sector must not parse as a serial block");
 }
 
+/* ── Ein VEROEFFENTLICHTES Paar, nicht das eigene Ergebnis (MF-821) ──────
+ *
+ * Der Test darueber heisst zu Recht `roundtrip`: er berechnet die CRC
+ * mit der zu pruefenden Funktion, schreibt sie hin und stellt fest, dass
+ * dieselbe Funktion sie wiedererkennt. Das gelingt mit JEDEM Polynom und
+ * JEDEM Initialwert — ein Tippfehler in `poly` oder `init` faellt nicht
+ * auf. Dieselbe Zirkularitaet wie bei ADF-Copy (Mock spiegelt Provider,
+ * Test prueft Provider gegen Mock, MF-807).
+ *
+ * Die Quelle veroeffentlicht **86** (Seriennummer, CRC)-Paare, gesammelt
+ * aus ST-, STX-, STT-, KryoFlux-, ADF/DMS- und SCP-Abzuegen. Hier steht
+ * eines davon — das einzige, das mir im Wortlaut vorliegt:
+ *
+ *     CA 08 00 00  ->  EF     „Dungeon Master version 1.2 English"
+ *
+ * Ein Vektor aus einer fremden Hand ist unendlich viel mehr wert als
+ * null. Wer die uebrigen 85 nachtraegt, macht daraus eine echte
+ * Eichreihe; die Stelle dafuer ist hier.
+ *
+ * Quelle: `atari.8bitchip.info` (Fassung 1.3, 2020-12-20), aufgebaut auf
+ * Jean Louis-Guerins Discovery-Cartridge-Analyse; dieselbe Seite nennt
+ * die CRC-8-Parameter (poly 0x01, init 0x2D, kein Reflect, kein XOR)
+ * samt der `reveng`-Befehlszeile, mit der sie hergeleitet wurden.
+ */
+static void test_dm_serial_crc_gegen_veroeffentlichtes_paar(void)
+{
+    /* Dungeon Master 1.2 English — Seriennummer und CRC aus der Quelle,
+     * NICHT aus unserer eigenen Rechnung. */
+    const uint8_t serial[4] = { 0xCA, 0x08, 0x00, 0x00 };
+    const uint8_t crc_veroeffentlicht = 0xEF;
+
+    uint8_t gerechnet = uft_calc_dm_serial_crc(serial);
+    if (gerechnet != crc_veroeffentlicht) {
+        printf("    gerechnet 0x%02X, veroeffentlicht 0x%02X\n",
+               gerechnet, crc_veroeffentlicht);
+    }
+    CHECK(gerechnet == crc_veroeffentlicht,
+          "DM-CRC: die Rechnung trifft das veroeffentlichte Paar nicht — "
+          "poly/init pruefen, nicht den Vektor");
+
+    /* Und der Vollstaendigkeitshalber ueber den Ausleseweg: ein Block mit
+     * der veroeffentlichten CRC muss als gueltig durchgehen. */
+    uint8_t sector[512];
+    memset(sector, 0, sizeof(sector));
+    const uint8_t pace_fb[] = { 0x07, 'P', 'A', 'C', 'E', '/', 'F', 'B' };
+    const uint8_t seri[]    = { 0x09, 'S', 'e', 'r', 'i' };
+    memcpy(sector + 0x00, pace_fb, sizeof(pace_fb));
+    memcpy(sector + 0x08, seri,    sizeof(seri));
+    memcpy(sector + 0x0D, serial,  4);
+    sector[0x11] = crc_veroeffentlicht;      /* die FREMDE Zahl */
+
+    uft_dm_serial_t out;
+    CHECK(uft_extract_dm_serial(sector, &out),
+          "DM-CRC: der veroeffentlichte Block muss sich auslesen lassen");
+    CHECK(out.crc_valid,
+          "DM-CRC: der veroeffentlichte Block muss als gueltig gelten");
+}
+
 int main(void)
 {
     test_longtrack_protec();
@@ -280,6 +338,7 @@ int main(void)
     test_dm_fuzzy_pattern_negative();
     test_fuzzy_timing_boundaries();
     test_dm_serial_crc_roundtrip();
+    test_dm_serial_crc_gegen_veroeffentlichtes_paar();
 
     if (g_errors) {
         fprintf(stderr, "[protection] %d check(s) failed\n", g_errors);
