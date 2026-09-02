@@ -2,7 +2,7 @@
 
 **NICHT von Hand editieren** — erzeugt von `scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im Baum und wird bei jedem Lauf neu gelesen.
 
-Stand: 2026-09-01
+Stand: 2026-09-02
 
 ---
 
@@ -10,7 +10,7 @@ Stand: 2026-09-01
 
 | Kennzahl | Stand | Richtung | Quelle |
 |---|---|---|---|
-| ungeprüfte **Format-Plugins** (T3) | **50** von 88 | runter | `docs/VERIFICATION_TIERS.md` |
+| ungeprüfte **Format-Plugins** (T3) | **49** von 88 | runter | `docs/VERIFICATION_TIERS.md` |
 | ungeprüfte **Dateisystem-Leser** | T0 1 · T1 5 · T1b 0 · T2 2 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
 | angebotene **Wandlungspfade** | **14**, davon 6 verlustfrei | rauf | `src/core/uft_roundtrip.c` |
 | leckende Tests | 0 zu halten | null halten | ASan/UBSan in CI |

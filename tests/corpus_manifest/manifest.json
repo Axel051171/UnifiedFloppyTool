@@ -253,6 +253,17 @@
       "tool": "Python, aus hxcfe_atarist_dd.dim",
       "source": "Byte 0x00 und 0x01 auf 0 gesetzt, sonst byteidentisch. GEGENSTUECK, kein gueltiges DIM: es belegt, dass Probe und open() das Magic pruefen und nicht die Dateigroesse (MF-687/688).",
       "test": "test_dim_atari_magic"
+    },
+    {
+      "file": "tests/corpus_free/gw_msx_2dd.img",
+      "sha256": "b812ae659d5ac3de2a8a9865e2af337cd73c1c3295e9af6ea5e0b35aa283e2d7",
+      "format": "msx_disk",
+      "origin": "cross-tool",
+      "oracle": "gw",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle, Release win64, Archiv-SHA-256 f409ae2411506eacecd60915c361c7bfa7293795e3e488fad4927ddd7d146464)",
+      "source": "Quellabbild eigen erzeugt (BPB nach FAT12-Beschreibung, OEM \"UFTMSX\", Media-Descriptor 0xF9, sonst Nullen); dann zweimal gw: `gw convert --format msx.2dd src.img mid.scp` und `gw convert --format msx.2dd mid.scp gw_msx_2dd.img`. Beide Laeufe melden \"Found 1440 sectors of 1440 (100%)\", der Rundlauf ist byteidentisch. Der AUFBAU stammt damit aus gws eigenem msx.2dd-Modell (80x2x9x512), nicht aus UFTs Annahme.",
+      "fremdcode": "nein - Block 0 gemessen: 24 von 512 Bytes ungleich null (BPB, OEM-Kennung, 0x55AA). Die drei Bytes EB FE 90 sind `jmp $` + `nop`, der uebliche Nicht-startbar-Stumpf, selbst geschrieben (MF-782)",
+      "test": "test_corpus_msx"
     }
   ]
 }
