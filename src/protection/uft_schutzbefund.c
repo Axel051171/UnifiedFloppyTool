@@ -144,7 +144,8 @@ static bool bedarf_gedeckt(const uft_schutz_bedarf_t *bd,
         *warum = UFT_UEBERSPRUNGEN_KEIN_INDEX;
         return false;
     }
-    if (bd->braucht_dekodiert && !p->dekodiert_vorhanden) {
+    /* Die DATEN, nicht eine Zusicherung ueber sie (MF-793). */
+    if (bd->braucht_dekodiert && (!p->sektoren || !p->sektor_anzahl)) {
         *warum = UFT_UEBERSPRUNGEN_NICHT_DEKODIERBAR;
         return false;
     }
@@ -243,8 +244,138 @@ const uft_schutz_detektor_t uft_schutz_detektor_spurlaenge = {
     .name = "Spurlaenge (LGT/SHT)"
 };
 
+
+/* ── Detektor: Fuzzy-Sektor (FZS) ─────────────────────────────────────────
+ *
+ * Die Erkennung selbst ist unspektakulaer: denselben Sektor mehrfach
+ * lesen und auf Unterschiede pruefen. Der interessante Teil ist, was
+ * hier NICHT geschieht.
+ *
+ * FALLE (Referenz, und sie ist der Grund fuer den Testfall
+ * `randfuzzy_wird_nicht_beschnitten`): das Dokument merkt an, dass die
+ * ersten und letzten rund 32 Byte eines Fuzzy-Sektors ueblicherweise
+ * NICHT fuzzy sind, und beschreibt beim RNC-Copylock, dass die ersten
+ * etwa 32 Byte mit normaler Taktrate geschrieben werden.
+ *
+ * Das sind BEOBACHTUNGEN AN EINEM KORPUS, keine Gesetze. Baut man sie
+ * als Filter ein, verwirft man genau die Faelle, die davon abweichen —
+ * und die abweichenden sind die interessanten. Aufzeichnen ja, filtern
+ * nein. Deshalb wird die volle Maske gemeldet, vom ersten bis zum
+ * letzten abweichenden Bit, ohne jede Randbehandlung.
+ *
+ * ZWEITE FALLE (Beleg-Klasse): dass Bytes abweichen, ist BEOBACHTET —
+ * `UFT_BELEG_GEMESSEN`. Ob sie aus einer flussmehrdeutigen Zone oder
+ * aus einer Taktratenverletzung stammen, waere eine SCHLUSSFOLGERUNG,
+ * und die trifft dieser Detektor nicht. Er sagt „hier weicht es ab",
+ * nicht „hier ist ein Copylock".
+ */
+
+/* Wie viele der Lesungen stimmen mit der haeufigsten ueberein?
+ * Gezaehlt, nicht geschaetzt. */
+static int mehrheit_zaehlen(const uint8_t *const *lesung,
+                            const size_t *laenge, size_t n)
+{
+    int beste = 0;
+    for (size_t i = 0; i < n; i++) {
+        int gleich = 0;
+        for (size_t j = 0; j < n; j++)
+            if (laenge[i] == laenge[j] &&
+                memcmp(lesung[i], lesung[j], laenge[i]) == 0)
+                gleich++;
+        if (gleich > beste) beste = gleich;
+    }
+    return beste;
+}
+
+static void fuzzy_pruefe(const uft_schutz_detektor_t *selbst,
+                         const uft_schutz_probe_t *p,
+                         uft_schutz_bericht_t *bericht)
+{
+    (void)selbst;
+    if (!p->sektoren || !p->sektor_anzahl || p->umdrehungen == 0) return;
+
+    /* Die Sektornummern der ERSTEN Umdrehung sind die Arbeitsliste.
+     * Ein Sektor, der dort fehlt und spaeter auftaucht, ist ein eigener
+     * Befund (SNI/DSN) und nicht Sache dieses Detektors. */
+    const uft_schutz_sektor_t *erste = p->sektoren[0];
+    for (size_t k = 0; k < p->sektor_anzahl[0]; k++) {
+        uint8_t nr = erste[k].nummer;
+
+        const uint8_t *lesung[64];
+        size_t         laenge[64];
+        size_t         n = 0;
+
+        for (size_t r = 0; r < p->umdrehungen && n < 64; r++) {
+            const uft_schutz_sektor_t *feld = p->sektoren[r];
+            if (!feld) continue;
+            for (size_t i = 0; i < p->sektor_anzahl[r]; i++) {
+                if (feld[i].nummer != nr || !feld[i].daten) continue;
+                lesung[n] = feld[i].daten;
+                laenge[n] = feld[i].laenge;
+                n++;
+                break;
+            }
+        }
+
+        uft_schutz_ort_t ort = { p->zylinder, p->kopf, (int)nr, 0, 0 };
+
+        /* Zu wenige Lesungen DIESES Sektors — die Aufnahme war lang
+         * genug, der Sektor aber nicht oft genug lesbar. Das ist eine
+         * Aussage ueber das MEDIUM und gehoert protokolliert, nicht
+         * verschwiegen: sonst laese sich „nicht oft genug gelesen" wie
+         * „geprueft und sauber". */
+        if (n < UFT_SCHUTZ_FZS_MIN_LESUNGEN) {
+            uft_schutz_bericht_uebersprungen(
+                bericht, UFT_SCHUTZ_FZS,
+                UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN, ort);
+            continue;
+        }
+
+        /* Volle Maske ueber die kuerzeste gemeinsame Laenge. */
+        size_t kurz = laenge[0];
+        for (size_t i = 1; i < n; i++) if (laenge[i] < kurz) kurz = laenge[i];
+
+        long von = -1, bis = -1;
+        size_t abweichend = 0;
+        for (size_t b = 0; b < kurz; b++) {
+            uint8_t v = lesung[0][b];
+            bool anders = false;
+            for (size_t i = 1; i < n; i++)
+                if (lesung[i][b] != v) { anders = true; break; }
+            if (!anders) continue;
+            abweichend++;
+            if (von < 0) von = (long)b;
+            bis = (long)b;
+        }
+        if (abweichend == 0) continue;      /* stabil — kein Befund */
+
+        uft_schutz_befund_t f;
+        memset(&f, 0, sizeof(f));
+        f.code  = UFT_SCHUTZ_FZS;
+        f.beleg = UFT_BELEG_GEMESSEN;       /* beobachtet, nicht gefolgert */
+        f.halt.umdrehungen_geprueft = (int)n;
+        f.halt.umdrehungen_einig    = mehrheit_zaehlen(lesung, laenge, n);
+        f.ort = ort;
+        f.ort.bit_von = (uint32_t)(von * 8);
+        f.ort.bit_bis = (uint32_t)(bis * 8 + 7);
+        f.messgroesse = "abweichende_bytes";
+        f.messwert    = (double)abweichend;
+        uft_schutz_bericht_add(bericht, &f);
+    }
+}
+
+const uft_schutz_detektor_t uft_schutz_detektor_fuzzy_sektor = {
+    .code = UFT_SCHUTZ_FZS,
+    .bedarf = { .min_umdrehungen = UFT_SCHUTZ_FZS_MIN_LESUNGEN,
+                .braucht_fluss = false, .braucht_index = false,
+                .braucht_dekodiert = true },
+    .pruefe = fuzzy_pruefe,
+    .name = "Fuzzy-Sektor (FZS)"
+};
+
 static const uft_schutz_detektor_t *const EINGEBAUT[] = {
     &uft_schutz_detektor_spurlaenge,
+    &uft_schutz_detektor_fuzzy_sektor,
 };
 
 const uft_schutz_detektor_t *const *uft_schutz_detektoren(size_t *anzahl)

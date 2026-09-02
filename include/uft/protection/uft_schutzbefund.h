@@ -183,7 +183,18 @@ typedef enum {
     UFT_UEBERSPRUNGEN_ZU_WENIG_UMDREHUNGEN,
     UFT_UEBERSPRUNGEN_KEIN_INDEX,
     UFT_UEBERSPRUNGEN_NICHT_DEKODIERBAR,
-    UFT_UEBERSPRUNGEN_ABGESCHALTET
+    UFT_UEBERSPRUNGEN_ABGESCHALTET,
+    /** Der Detektor lief, aber DIESER Sektor lag in zu wenigen
+     *  Umdrehungen vor (MF-793).
+     *
+     *  Der Unterschied zu @ref UFT_UEBERSPRUNGEN_ZU_WENIG_UMDREHUNGEN
+     *  ist nicht klein: dort war die AUFNAHME zu kurz, hier war sie
+     *  lang genug und der Sektor trotzdem nicht oft genug lesbar. Das
+     *  ist ein Befund ueber das MEDIUM. Wer beides zusammenwirft,
+     *  verwechselt eine zu kurze Aufnahme mit einer beschaedigten
+     *  Stelle — dieselbe Verwechslung wie bei
+     *  `uft_splice_lage_t` (MF-769). */
+    UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN
 } uft_uebersprungen_grund_t;
 
 const char *uft_uebersprungen_name(uft_uebersprungen_grund_t g);
@@ -254,8 +265,45 @@ typedef struct {
     /** Indexzeitpunkte je Umdrehung in Nanosekunden, oder NULL. */
     const uint32_t *index_ns;
 
-    bool        dekodiert_vorhanden;
+    /* HIER STAND `bool dekodiert_vorhanden;` (entfernt MF-793).
+     *
+     * Das Tor prueft beim Fluss die DATEN (`!p->fluss_ns`), pruefte beim
+     * Dekodierten aber eine BEHAUPTUNG. Die beiden Zweige standen
+     * nebeneinander in derselben Funktion, und der Unterschied fiel
+     * nicht auf, solange kein Detektor dekodierte Sektoren wirklich
+     * anfasste.
+     *
+     * Gemessen an einer Probe mit `dekodiert_vorhanden = true` und
+     * `sektoren = NULL`: das Tor liess FZS durch, FZS fand keine
+     * Sektoren, kehrte zurueck — und der Bericht meldete null Befunde
+     * UND null Uebersprungene. Also genau die Verwechslung, gegen die
+     * diese Datei geschrieben wurde, im Tor der Datei selbst.
+     *
+     * Seither entscheidet die Anwesenheit von `sektoren`. Eine
+     * Zusicherung, die keine Daten hinter sich hat, ist kein Tor. */
+
+    /** Dekodierte Sektoren JE UMDREHUNG (MF-793).
+     *
+     * `sektoren[r]` ist das Feld der in Umdrehung `r` gelesenen
+     * Sektoren, `sektor_anzahl[r]` seine Laenge. NULL, wenn die Quelle
+     * keine dekodierten Sektoren liefert.
+     *
+     * Warum je Umdrehung und nicht zusammengefasst: ein Fuzzy-Sektor
+     * ist PER DEFINITION nur durch Mehrfachlesung und Vergleich
+     * feststellbar. Eine Schnittstelle, die die Umdrehungen vorher
+     * verschmilzt — etwa durch Mehrheitsentscheid —, hat den Befund
+     * bereits weggerechnet, bevor ein Detektor ihn sehen kann. */
+    const struct uft_schutz_sektor *const *sektoren;
+    const size_t                          *sektor_anzahl;
 } uft_schutz_probe_t;
+
+/** Ein dekodierter Sektor einer einzelnen Umdrehung. */
+typedef struct uft_schutz_sektor {
+    uint8_t        nummer;
+    const uint8_t *daten;
+    size_t         laenge;
+    bool           crc_ok;
+} uft_schutz_sektor_t;
 
 /* ── Der Detektor ────────────────────────────────────────────────────── */
 
@@ -307,6 +355,20 @@ const uft_schutz_detektor_t *const *uft_schutz_detektoren(size_t *anzahl);
 #define UFT_SCHUTZ_SPURLAENGE_TOL    0.05
 
 extern const uft_schutz_detektor_t uft_schutz_detektor_spurlaenge;
+
+/* ── Der zweite Detektor: Fuzzy-Sektor (FZS) ─────────────────────────── */
+
+/**
+ * Mindestzahl Lesungen EINES Sektors, damit ein Unterschied etwas
+ * bedeutet.
+ *
+ * Drei, nicht zwei. Bei zwei Lesungen ist ein Unterschied nicht von
+ * einem einmaligen Lesefehler zu trennen; ab drei traegt eine
+ * Mehrheit, und genau das verlangt die Referenz.
+ */
+#define UFT_SCHUTZ_FZS_MIN_LESUNGEN  3
+
+extern const uft_schutz_detektor_t uft_schutz_detektor_fuzzy_sektor;
 
 #ifdef __cplusplus
 }

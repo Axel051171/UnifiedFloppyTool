@@ -83,8 +83,27 @@ static void probe_aus(uft_schutz_probe_t *p, fixture_t *f, size_t umdr)
     p->fluss_ns    = f->zeiger;
     p->fluss_anzahl = f->anzahl;
     p->index_ns    = f->index;
-    p->dekodiert_vorhanden = true;
 }
+
+/* Wie oft wurde AUSGERECHNET dieser Code uebersprungen?
+ *
+ * Eine rohe Gesamtzahl waere hier falsch: sie bricht, sobald ein
+ * weiterer Detektor dazukommt, und zwar ohne dass die geprüfte Aussage
+ * sich geaendert haette. Genau das ist beim Bau von FZS passiert. */
+static size_t skips(const uft_schutz_bericht_t *b, uft_schutz_code_t c)
+{
+    size_t n = 0;
+    for (size_t i = 0; i < b->uebersprungen_anzahl; i++)
+        if (b->uebersprungen[i].code == c) n++;
+    return n;
+}
+
+/* ANMERKUNG zur Registrierung: der Spurlaengen-Detektor ist unter
+ * UFT_SCHUTZ_LGT eingetragen und meldet LGT ODER SHT. Sein Skip laeuft
+ * deshalb unter LGT, obwohl auch SHT ungeprueft blieb — ein Detektor,
+ * zwei Codes, ein Eintrag. Das ist im Bericht sichtbar, aber nicht
+ * ausbuchstabiert; wer die Skips je Code auswertet, muss es wissen.
+ * Notiert statt stillschweigend hingenommen. */
 
 /* ── Fall 1: eine Quelle OHNE Fluss ──────────────────────────────────────
  *
@@ -96,7 +115,6 @@ TEST(ohne_fluss_wird_uebersprungen_nicht_freigesprochen)
     memset(&p, 0, sizeof(p));
     p.umdrehungen = 3;
     p.fluss_ns = NULL;          /* .ST traegt keine Zeitinformation */
-    p.dekodiert_vorhanden = true;
 
     uft_schutz_bericht_t b;
     uft_schutz_bericht_init(&b);
@@ -105,7 +123,7 @@ TEST(ohne_fluss_wird_uebersprungen_nicht_freigesprochen)
     uft_schutz_pruefe_alle(d, anz, &p, &b);
 
     ASSERT(b.befund_anzahl == 0);            /* nichts gefunden … */
-    ASSERT(b.uebersprungen_anzahl == 1);     /* … aber auch nichts geprueft */
+    ASSERT(skips(&b, UFT_SCHUTZ_LGT) == 1);  /* … aber auch nichts geprueft */
     ASSERT(b.uebersprungen[0].grund == UFT_UEBERSPRUNGEN_KEIN_FLUSS);
 
     uft_schutz_bericht_frei(&b);
@@ -130,7 +148,11 @@ TEST(mit_fluss_und_normaler_laenge_ist_wirklich_sauber)
     uft_schutz_pruefe_alle(d, anz, &p, &b);
 
     ASSERT(b.befund_anzahl == 0);
-    ASSERT(b.uebersprungen_anzahl == 0);     /* DAS ist der Unterschied */
+    ASSERT(skips(&b, UFT_SCHUTZ_LGT) == 0);  /* DAS ist der Unterschied */
+    /* FZS dagegen KONNTE hier nicht laufen — reine Flussprobe, keine
+     * dekodierten Sektoren. Und das steht im Bericht, statt als
+     * „sauber" durchzugehen. Vor MF-793 stand hier Stille. */
+    ASSERT(skips(&b, UFT_SCHUTZ_FZS) == 1);
 
     uft_schutz_bericht_frei(&b);
     fixture_frei(&f);
@@ -157,7 +179,7 @@ TEST(kurze_spur_wird_als_SHT_gemeldet)
      * tragen den Befund mit. */
     ASSERT(b.befunde[0].halt.umdrehungen_geprueft == 3);
     ASSERT(b.befunde[0].halt.umdrehungen_einig == 3);
-    ASSERT(b.uebersprungen_anzahl == 0);
+    ASSERT(skips(&b, UFT_SCHUTZ_LGT) == 0);
 
     uft_schutz_bericht_frei(&b);
     fixture_frei(&f);
@@ -186,7 +208,7 @@ TEST(eine_umdrehung_reicht_nicht_und_das_steht_im_bericht)
     /* KEIN Befund, obwohl die Spur auffaellig ist — und der Grund steht
      * da. Ein Werkzeug, das hier „SHT" meldete, raet. */
     ASSERT(b.befund_anzahl == 0);
-    ASSERT(b.uebersprungen_anzahl == 1);
+    ASSERT(skips(&b, UFT_SCHUTZ_LGT) == 1);
     ASSERT(b.uebersprungen[0].grund == UFT_UEBERSPRUNGEN_ZU_WENIG_UMDREHUNGEN);
 
     uft_schutz_bericht_frei(&b);
@@ -209,6 +231,123 @@ TEST(zeitbasierte_codes_sind_als_solche_gekennzeichnet)
     ASSERT(strcmp(uft_schutz_code_name(UFT_SCHUTZ_FZT), "FZT") == 0);
 }
 
+
+/* ══ FZS — Fuzzy-Sektor (MF-793) ═══════════════════════════════════════ */
+
+enum { SEKTORGROESSE = 512, UMDR = 3 };
+
+typedef struct {
+    uint8_t              daten[UMDR][SEKTORGROESSE];
+    uft_schutz_sektor_t  sek[UMDR][1];
+    const uft_schutz_sektor_t *zeiger[UMDR];
+    size_t               anzahl[UMDR];
+} fzs_fixture_t;
+
+/* Drei Lesungen desselben Sektors. `von`/`bis` (einschliesslich) sind
+ * die Bytes, die zwischen den Lesungen wackeln; von < 0 = stabil. */
+static void fzs_bauen(fzs_fixture_t *f, long von, long bis, size_t lesungen)
+{
+    memset(f, 0, sizeof(*f));
+    for (size_t r = 0; r < UMDR; r++) {
+        for (int i = 0; i < SEKTORGROESSE; i++)
+            f->daten[r][i] = (uint8_t)(i * 31 + 7);
+        if (von >= 0)
+            for (long b = von; b <= bis && b < SEKTORGROESSE; b++)
+                f->daten[r][b] = (uint8_t)(0xA0 + r);   /* je Lesung anders */
+        f->sek[r][0].nummer = 1;
+        f->sek[r][0].daten  = f->daten[r];
+        f->sek[r][0].laenge = SEKTORGROESSE;
+        f->sek[r][0].crc_ok = true;
+        f->zeiger[r] = f->sek[r];
+        f->anzahl[r] = (r < lesungen) ? 1 : 0;   /* Sektor fehlt in spaeteren */
+    }
+}
+
+static void fzs_probe(uft_schutz_probe_t *p, fzs_fixture_t *f)
+{
+    memset(p, 0, sizeof(*p));
+    p->umdrehungen = UMDR;
+    p->sektoren     = f->zeiger;
+    p->sektor_anzahl = f->anzahl;
+}
+
+static void fzs_lauf(uft_schutz_probe_t *p, uft_schutz_bericht_t *b)
+{
+    uft_schutz_bericht_init(b);
+    size_t n = 0;
+    const uft_schutz_detektor_t *const d[] = { &uft_schutz_detektor_fuzzy_sektor };
+    (void)n;
+    uft_schutz_pruefe_alle(d, 1, p, b);
+}
+
+TEST(stabiler_sektor_ergibt_keinen_befund)
+{
+    fzs_fixture_t f; fzs_bauen(&f, -1, -1, UMDR);
+    uft_schutz_probe_t p; fzs_probe(&p, &f);
+    uft_schutz_bericht_t b; fzs_lauf(&p, &b);
+    ASSERT(b.befund_anzahl == 0);
+    ASSERT(b.uebersprungen_anzahl == 0);   /* geprueft UND sauber */
+    uft_schutz_bericht_frei(&b);
+}
+
+TEST(wackelnde_bytes_ergeben_FZS_mit_gemessener_spanne)
+{
+    fzs_fixture_t f; fzs_bauen(&f, 200, 203, UMDR);
+    uft_schutz_probe_t p; fzs_probe(&p, &f);
+    uft_schutz_bericht_t b; fzs_lauf(&p, &b);
+
+    ASSERT(b.befund_anzahl == 1);
+    ASSERT(b.befunde[0].code == UFT_SCHUTZ_FZS);
+    ASSERT(b.befunde[0].beleg == UFT_BELEG_GEMESSEN);
+    ASSERT(b.befunde[0].ort.sektor == 1);
+    ASSERT(b.befunde[0].ort.bit_von == 200 * 8);
+    ASSERT(b.befunde[0].ort.bit_bis == 203 * 8 + 7);
+    ASSERT(b.befunde[0].messwert == 4.0);
+    /* Drei Lesungen, alle drei verschieden -> Mehrheit ist 1. Gezaehlt. */
+    ASSERT(b.befunde[0].halt.umdrehungen_geprueft == 3);
+    ASSERT(b.befunde[0].halt.umdrehungen_einig == 1);
+    uft_schutz_bericht_frei(&b);
+}
+
+/* ── DIE FALLE, um die es geht ───────────────────────────────────────────
+ *
+ * Die Referenz merkt an, dass die ersten und letzten rund 32 Byte eines
+ * Fuzzy-Sektors ueblicherweise NICHT fuzzy sind. Das ist eine
+ * Beobachtung an einem Korpus, kein Gesetz. Wer sie als Filter einbaut,
+ * verwirft genau die Faelle, die davon abweichen — und die abweichenden
+ * sind die interessanten.
+ *
+ * Dieser Fall wackelt in den ersten acht Byte. Er MUSS gemeldet werden.
+ * Wer je eine Randbeschneidung einbaut, bricht ihn. */
+TEST(randfuzzy_wird_nicht_beschnitten)
+{
+    fzs_fixture_t f; fzs_bauen(&f, 0, 7, UMDR);
+    uft_schutz_probe_t p; fzs_probe(&p, &f);
+    uft_schutz_bericht_t b; fzs_lauf(&p, &b);
+
+    ASSERT(b.befund_anzahl == 1);
+    ASSERT(b.befunde[0].ort.bit_von == 0);
+    ASSERT(b.befunde[0].ort.bit_bis == 7 * 8 + 7);
+    uft_schutz_bericht_frei(&b);
+}
+
+/* Zu wenige Lesungen DIESES Sektors: die Aufnahme war lang genug (drei
+ * Umdrehungen), der Sektor lag aber nur zweimal vor. Das ist eine
+ * Aussage ueber das MEDIUM — und sie darf nicht wie „sauber" aussehen. */
+TEST(zwei_lesungen_reichen_nicht_und_werden_protokolliert)
+{
+    fzs_fixture_t f; fzs_bauen(&f, 200, 203, 2);
+    uft_schutz_probe_t p; fzs_probe(&p, &f);
+    uft_schutz_bericht_t b; fzs_lauf(&p, &b);
+
+    ASSERT(b.befund_anzahl == 0);
+    ASSERT(b.uebersprungen_anzahl == 1);
+    ASSERT(b.uebersprungen[0].code == UFT_SCHUTZ_FZS);
+    ASSERT(b.uebersprungen[0].grund == UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN);
+    ASSERT(b.uebersprungen[0].ort.sektor == 1);
+    uft_schutz_bericht_frei(&b);
+}
+
 int main(void)
 {
     printf("test_schutzbefund (MF-792)\n");
@@ -217,6 +356,10 @@ int main(void)
     RUN(kurze_spur_wird_als_SHT_gemeldet);
     RUN(eine_umdrehung_reicht_nicht_und_das_steht_im_bericht);
     RUN(zeitbasierte_codes_sind_als_solche_gekennzeichnet);
+    RUN(stabiler_sektor_ergibt_keinen_befund);
+    RUN(wackelnde_bytes_ergeben_FZS_mit_gemessener_spanne);
+    RUN(randfuzzy_wird_nicht_beschnitten);
+    RUN(zwei_lesungen_reichen_nicht_und_werden_protokolliert);
     printf("%d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail ? 1 : 0;
 }
