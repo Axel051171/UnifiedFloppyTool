@@ -93,12 +93,31 @@ jobs:
           # den Usage-Text zurueck, in dem die Zahl aus dem INSTALLATIONS-
           # PFAD steht. `gw info` ist die richtige Quelle und laeuft ohne
           # Geraet.
+          #
+          # EINMAL AUSFUEHREN, IN EINE DATEI (MF-805). Hier stand
+          # `gw info 2>&1 | grep -qE ...` — und das ist mit
+          # `set -o pipefail` ein WETTLAUF: `grep -q` steigt beim ersten
+          # Treffer aus und schliesst die Pipe, der Erzeuger bekommt
+          # SIGPIPE und endet mit 141, und pipefail macht daraus einen
+          # Fehlschlag der ganzen Pipeline — obwohl der Treffer da war.
+          #
+          # Der erste CI-Lauf ist genau daran gescheitert: das Protokoll
+          # zeigt `Host Tools: 1.23` UND darunter „gw meldet nicht 1.23".
+          # Lokal lief dieselbe Zeile gruen, weil gws Ausgabe klein genug
+          # ist, um vor dem Schliessen durchzulaufen. Nachgestellt:
+          # `set -o pipefail; yes | grep -q y` gibt 141.
+          gw info > gwinfo.txt 2>&1 || true
           echo "gw-Fassung, wie das Oracle-Register sie fuehrt:"
-          gw info 2>&1 | grep -i "host tools"
-          gw info 2>&1 | grep -qE "Host Tools:\s*1\.23" || {
+          grep -i "host tools" gwinfo.txt || true
+          # Auf der DATEI greppen, nicht auf einer Pipe: kein SIGPIPE,
+          # kein zweiter Lauf, und die Ausgabe steht fuer die
+          # Fehlermeldung noch zur Verfuegung.
+          if ! grep -qiE "Host Tools:[[:space:]]*1\.23" gwinfo.txt; then
             echo "::error::gw meldet nicht 1.23 — das Oracle ist ein anderes"
+            echo "Was gw tatsaechlich ausgegeben hat:"
+            cat gwinfo.txt
             exit 1
-          }
+          fi
 
       - name: Parity suite (a skip fails this job)
         run: |
