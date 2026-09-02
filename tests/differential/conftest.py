@@ -94,7 +94,35 @@ def uft_decoder() -> Path:
         if cc is None:
             pytest.skip("no C compiler (gcc/cc/clang) — cannot build the "
                         "uft_flux_decode helper")
-        cmd = [cc, "-std=c11", "-O2", "-I", str(REPO_ROOT / "include"),
+        # MF-817: `-std=gnu11`, NICHT `-std=c11`.
+        #
+        # `-std=c11` setzt `__STRICT_ANSI__`, und glibc blendet damit
+        # `strdup()` aus — es ist POSIX, nicht ISO C11. GCC nahm die
+        # implizite Deklaration `int strdup()` an, stutzte den Zeiger auf
+        # 32 Bit, legte ihn in `ctx->creator_string`
+        # (`uft_scp_parser.c:156`) und reichte ihn in `uft_scp_close()`
+        # (`:325`) an `free()`. Ergebnis: SIGSEGV (-11) in ALLEN SECHS
+        # Paritaetsfaellen — und zwar NACH dem Dekodieren, die
+        # Sektorabbilder waren laengst richtig geschrieben. Nur der
+        # Rueckgabewert war ungleich 0.
+        #
+        # Der Produktivbau setzt nirgends einen C-Standard (weder .pro
+        # noch CMake), also gilt GCCs Vorgabe gnu11/gnu17 und `strdup`
+        # ist deklariert. Der EINZIGE Pfad mit striktem `-std=c11` war
+        # diese Zeile — und `uft_scp_parser.c` steht in HELPER_DEPS erst
+        # seit MF-777, das die Liste von zwei auf elf Dateien erweitert
+        # hat. Davor hing die Reihe an „no C compiler" bzw. „gw not
+        # found": genau das Skip-Muster aus MF-598.
+        #
+        # `-Werror=implicit-function-declaration` gehoert dazu, sonst
+        # rutscht derselbe Fehler beim naechsten POSIX-Aufruf wieder als
+        # still gestutzter Zeiger durch statt als Uebersetzungsfehler.
+        # Dasselbe Muster wartet bereits bei `localtime_r` in
+        # `src/core/uft_log.c:137` — ab GCC 14 ist die Option ohnehin
+        # Vorgabe, dann braeche dort schon der Bau.
+        cmd = [cc, "-std=gnu11", "-O2",
+               "-Werror=implicit-function-declaration",
+               "-I", str(REPO_ROOT / "include"),
                str(HELPER_SRC), *[str(p) for p in HELPER_DEPS],
                "-lm", "-o", str(HELPER_EXE)]
         r = subprocess.run(cmd, capture_output=True, text=True)

@@ -121,9 +121,22 @@ jobs:
 
       - name: Parity suite (a skip fails this job)
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # MF-817: `set -e` NICHT ueber dieser Pipe.
+          #
+          # Bei einem echten Testfehlschlag beendete `set -e` den Schritt
+          # sofort an der Pipe — und die Skip- und Pass-Diagnostik
+          # darunter lief nie. Man sah einen nackten roten Schritt,
+          # obwohl der Job Namen und Gruende haette ausgeben koennen.
+          # Derselbe Fallstrick wie `grep -q` in MF-805, nur andersherum.
+          #
+          # Deshalb: Rueckgabewert von pytest EXPLIZIT aufheben
+          # (`PIPESTATUS[0]`, nicht der von `tee`), erst alle Pruefungen
+          # laufen lassen, dann entscheiden.
           python3 -m pytest tests/differential/test_gw_parity.py \
             -v -rs 2>&1 | tee parity.log
+          rc=${PIPESTATUS[0]}
+          set -e
           # `pytest` gibt bei durchweg uebersprungenen Tests 0 zurueck.
           # Genau daran ist diese Aussage jahrelang vorbeigelaufen.
           if grep -qiE '[0-9]+ skipped' parity.log; then
@@ -134,6 +147,13 @@ jobs:
           fi
           if ! grep -qE '[0-9]+ passed' parity.log; then
             echo "::error::Kein einziger Paritaetsfall ist gelaufen."
+            exit 1
+          fi
+          # Erst JETZT ueber pytests eigenen Rueckgabewert entscheiden —
+          # nach den Pruefungen, damit ihre Meldungen im Protokoll stehen.
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::pytest endete mit $rc — Paritaet NICHT erreicht."
+            grep -E 'FAILED|assert' parity.log | head -20 || true
             exit 1
           fi
           echo "gw-Paritaet: byteidentisch, nachgewiesen statt behauptet."
