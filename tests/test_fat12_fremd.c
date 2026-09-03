@@ -246,6 +246,75 @@ TEST(zwei_verschiedene_fats_muessen_auffallen)
     free(d);
 }
 
+/* ── Der Pruefvektor aus SED 5.68 (MF-832) ───────────────────────────────
+ *
+ * Erste FREMDE Quelle fuer die FAT12-Nibbelentpackung. Alle bisherigen
+ * Tests dieser Datei pruefen ein mtools-Abbild — also die GEOMETRIE aus
+ * fremder Hand, aber die Entpackung weiter gegen die eigene Rechnung.
+ *
+ * Quelle: `SED_568.HLP`, Disk-Monitor SED 5.68 (Anton Stepper / Claus
+ * Brod, August 1996, von der „Kleisterscheibe"). Die Hilfedatei fuehrt
+ * acht Byte FAT und nennt fuenf Erwartungswerte:
+ *
+ *     F9 FF FF 03 40 00 FF 0F
+ *
+ *     Eintrag 0  = $FF9   (Medienbyte F9, in den ersten 12 Bit)
+ *     Eintrag 1  = $FFF
+ *     Eintrag 2  = $003   Byteversatz 3, GERADER Eintrag
+ *     Eintrag 3  = $004   Byteversatz 4, UNGERADER Eintrag
+ *     Eintrag 4  = $FFF   Dateiende
+ *
+ * Warum genau dieser Vektor etwas wert ist: er deckt BEIDE Nibbelfaelle
+ * ab, und zwar an einer Stelle, wo sie sich UEBERLAPPEN — Eintrag 2 und
+ * 3 teilen sich das Byte an Versatz 4 (`$40`). Der gerade Eintrag nimmt
+ * dessen untere vier Bit als seine oberen, der ungerade dessen obere
+ * vier als seine unteren. Eine vertauschte Schiebung liefert hier
+ * $403 und $000 statt $003 und $004 — sichtbar, nicht bloss falsch.
+ *
+ * Nachgerechnet vor dem Schreiben, Eintrag n liegt bei n + n/2:
+ *     n=0  Versatz 0  gerade   (F9 | FF<<8) & 0FFF = FF9   OK
+ *     n=1  Versatz 1  ungerade (FF | FF<<8) >> 4   = FFF   OK
+ *     n=2  Versatz 3  gerade   (03 | 40<<8) & 0FFF = 003   OK
+ *     n=3  Versatz 4  ungerade (40 | 00<<8) >> 4   = 004   OK
+ *     n=4  Versatz 6  gerade   (FF | 0F<<8) & 0FFF = FFF   OK
+ *
+ * Der Kontext wird von Hand gestellt statt ein Abbild zu bauen: geprueft
+ * werden soll die ENTPACKUNG, nicht der Weg dorthin. `uft_fat_ctx_t` ist
+ * eine oeffentliche Struktur, das ist also kein Griff hinter die Fassade.
+ */
+TEST(fat12_nibbel_gegen_sed_568)
+{
+    /* Genau die acht Byte der Quelle. */
+    uint8_t fat[8] = { 0xF9, 0xFF, 0xFF, 0x03, 0x40, 0x00, 0xFF, 0x0F };
+
+    uft_fat_ctx_t c;
+    memset(&c, 0, sizeof c);
+    c.fat_cache        = fat;
+    c.vol.fat_type     = UFT_FAT_TYPE_FAT12;
+    c.vol.last_cluster = 4;          /* Eintraege 0..4 sind abgedeckt */
+
+    ASSERT(uft_fat_get_entry(&c, 0) == 0xFF9);   /* Medienbyte */
+    ASSERT(uft_fat_get_entry(&c, 1) == 0xFFF);
+    ASSERT(uft_fat_get_entry(&c, 2) == 0x003);   /* gerade  */
+    ASSERT(uft_fat_get_entry(&c, 3) == 0x004);   /* ungerade */
+    ASSERT(uft_fat_get_entry(&c, 4) == 0xFFF);   /* Dateiende */
+
+    /* GEGENPROBE: mit vertauschter Schiebung waeren 2 und 3 gerade
+     * $403 und $000. Dass sie es NICHT sind, ist die Aussage des
+     * Vektors — ohne diese zwei Zeilen koennte man ihn fuer eine
+     * beliebige Zahlenreihe halten. */
+    ASSERT(uft_fat_get_entry(&c, 2) != 0x403);
+    ASSERT(uft_fat_get_entry(&c, 3) != 0x000);
+
+    /* Und die Regel, die dieselbe Quelle zweimal nennt — HLP
+     * („Eintraege 2 bis Clusterzahl + 1") und Rainer Seitels
+     * Aenderungsprotokoll 1994/95 („Groesster Clusterindex ist jetzt
+     * cpd%+1"): jenseits von `last_cluster` gibt es keine Antwort,
+     * keinen geratenen Wert. `uft_fat12.c:210` rechnet
+     * `data_clusters + 2 - 1`, also genau Clusterzahl + 1. */
+    ASSERT(uft_fat_get_entry(&c, 5) == -1);
+}
+
 int main(void)
 {
     printf("test_fat12_fremd (MF-789) — Abbild von mtools 4.0.49\n");
@@ -254,6 +323,7 @@ int main(void)
     RUN(uft_erkennt_das_fremde_abbild);
     RUN(fat_null_wiederholt_den_media_descriptor);
     RUN(zwei_verschiedene_fats_muessen_auffallen);
+    RUN(fat12_nibbel_gegen_sed_568);
     printf("%d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

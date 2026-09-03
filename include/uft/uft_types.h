@@ -357,7 +357,59 @@ typedef struct uft_sector {
     double*          timing_ns;       ///< Per-bit timing in nanoseconds
     size_t           timing_count;    ///< Number of timing entries
 
-    /* Position in track */
+    /* ── Position in track ────────────────────────────────────────────
+     *
+     * MF-832 (P3-59): KEINES dieser sechs Felder wird heute von
+     * irgendeinem Erzeuger gefuellt. Gemessen je Bezeichner ueber
+     * `git ls-files`, gegen die Schreibstellen im ganzen Baum:
+     *
+     *   id_offset     0 Schreibstellen — eine einzige Fundstelle im
+     *                 ganzen Baum, naemlich diese Zeile
+     *   data_offset   44 gleichnamige Treffer, alle auf ANDEREN
+     *                 Strukturen (2IMG-Kopf, IR-Format, ...); der
+     *                 naechstliegende, `uft_mfm_sector_t.data_offset`,
+     *                 ist laut eigenem Kommentar ein "byte offset into
+     *                 caller's data pool" — ein Pufferindex, keine
+     *                 Bitposition
+     *   bit_position  alle Treffer auf anderen Strukturen
+     *   bit_offset    dito
+     *   byte_offset   nur `uft_disk_compare.c` (eigene Struktur) und
+     *                 die Kopierfunktion in `uft_unified_types.c:180`
+     *   gap_before    ein Treffer, `uft_atarist_macrodos.c:116`, auf
+     *                 einer eigenen Struktur
+     *
+     * WARUM das so ist, und warum es kein Versehen war: die Erzeuger
+     * von `uft_sector_t` sind Format-Plugins fuer SEKTORABBILDER (ATX,
+     * CFI, APRIDISK, CMD-FD, ...). Ein Sektorabbild hat keine
+     * spurbezogenen Bitpositionen — es gibt schlicht nichts zu fuellen.
+     * Die einzige Stelle im Baum, die sie kennt, ist
+     * `src/flux/uft_mfm_sector_parser.c` (dort liegen `bp`,
+     * `data_start`, `data_after` waehrend des Laufs vor) — und die
+     * erzeugt `uft_mfm_sector_t`, nicht `uft_sector_t`. Ein Erzeuger
+     * dafuer waere die Bruecke zwischen beiden; die gibt es nicht.
+     *
+     * WARUM das gefaehrlich ist: 0 ist eine GUELTIGE Bitposition. Wer
+     * `sector.id_offset` liest, bekommt eine Zahl, die wie eine Messung
+     * aussieht. Dasselbe Muster hat in MF-829 einen gruenen Test
+     * getragen, dem die Pruefung fehlte.
+     *
+     * WAS DAGEGEN NICHT GETAN WURDE, und warum: ein Gueltigkeitsflag
+     * `has_bit_positions` nach dem Muster von `has_angular_position`
+     * (MF-474) und `fat_compared` (MF-829) war der erste Entwurf und
+     * ist ZURUECKGENOMMEN. Es haette niemand gesetzt — es waere also
+     * selbst ein totes Feld gewesen, und damit genau der Fall, den das
+     * Tor aus MF-831 fangen soll. Ein Flag, das immer false ist, sagt
+     * nichts, was dieser Kommentar nicht besser sagt.
+     *
+     * Ein Flag gehoert hierher, SOBALD ein Erzeuger die sechs Werte
+     * fuellt — zusammen mit ihm, nicht vorher. Bis dahin fuehrt
+     * `scripts/audit_dead_fields.py` `id_offset` in seinem Bestand;
+     * faengt jemand an, es zu schreiben, sinkt die Zahl und das ist der
+     * Anlass, das Flag nachzuziehen.
+     *
+     * Verbraucher: die sechs Werte heute NICHT benutzen. Sie sind 0,
+     * und 0 heisst hier "niemand hat nachgesehen".
+     */
     size_t           id_offset;       ///< Bit offset of ID field
     size_t           data_offset;     ///< Bit offset of data field
     uint32_t         bit_position;    ///< Position im Track (Bits, legacy)
@@ -413,6 +465,7 @@ typedef struct uft_sector {
 
     /** true, wenn @ref angular_position aus dem Medium stammt. Siehe dort. */
     bool             has_angular_position;
+
 } uft_sector_t;
 
 /**

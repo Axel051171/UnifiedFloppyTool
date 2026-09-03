@@ -525,6 +525,10 @@ foreach(test_source ${TEST_SOURCES})
         # MF-792: „nicht gefunden" darf nie wie „nicht geprueft" aussehen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/uft_schutzbefund.c)
+    elseif(${test_name} STREQUAL "test_sector_copy_vollstaendig")
+        # MF-832: uft_sector_copy() zaehlte neun Skalarfelder von Hand auf.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_fat12_fremd")
         # MF-789: das erste FAT12, das UFT nicht selbst erzeugt hat.
         # Abbild von mformat (mtools 4.0.49), bootcodefrei.

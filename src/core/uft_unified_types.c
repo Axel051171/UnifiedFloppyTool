@@ -169,16 +169,38 @@ void uft_sector_free(uft_sector_t *sector) {
 
 int uft_sector_copy(uft_sector_t *dest, const uft_sector_t *src) {
     if (!dest || !src) return -1;
-    
-    dest->id = src->id;
-    dest->crc_stored = src->crc_stored;
-    dest->crc_calculated = src->crc_calculated;
-    dest->crc_ok = src->crc_ok;
-    dest->error = src->error;
-    dest->retry_count = src->retry_count;
-    dest->bit_offset = src->bit_offset;
-    dest->byte_offset = src->byte_offset;
-    
+
+    /* MF-832: die GANZE Struktur uebernehmen, dann die vier eigenen
+     * Puffer neu anlegen.
+     *
+     * Hier standen NEUN von Hand aufgezaehlte Skalarfelder — id,
+     * crc_stored, crc_calculated, crc_ok, error, retry_count,
+     * bit_offset, byte_offset, confidence. Alles, was seither zu
+     * `uft_sector_t` hinzukam, fiel beim Kopieren still weg. Gemessen
+     * mit einem byteweisen Muster (`tests/test_sector_copy_vollstaendig.c`):
+     * **98 von 192 Byte verloren**, das erste bei Offset 12.
+     *
+     * Namentlich betroffen waren unter anderem `angular_position` samt
+     * `has_angular_position` (MF-474) — eine kopierte Spur verlor die
+     * Winkelposition eines ATX-Sektors und meldete danach „nicht
+     * gemessen", wo gemessen wurde —, dazu `id_crc_ok` (ID-CRC getrennt
+     * vom Daten-CRC), `gap_before`, `weak_mask`-Begleitfelder und die
+     * Kompatibilitaets-Aliasse. `uft_track_copy()` unten ruft diese
+     * Funktion fuer JEDEN Sektor auf, der Weg war also erreichbar.
+     *
+     * Eine Aufzaehlung bekannter Felder veraltet still — in diesem Baum
+     * ist das der siebzehnte belegte Fall. Die Strukturzuweisung kann
+     * kein Feld vergessen, auch kein kuenftiges; zu pflegen ist nur noch
+     * die kurze Liste der Zeiger, die NICHT geteilt werden duerfen, und
+     * die steht unmittelbar darunter. */
+    *dest = *src;
+    dest->data           = NULL;
+    dest->confidence_map = NULL;
+    dest->weak_mask      = NULL;
+    dest->timing_ns      = NULL;
+    dest->data_len       = 0;
+    dest->timing_count   = 0;
+
     /* Copy data */
     if (src->data && src->data_len > 0) {
         dest->data = malloc(src->data_len);
