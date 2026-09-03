@@ -1,0 +1,58 @@
+# Grundlinie fuer scripts/audit_decl_conflicts.py (MF-839)
+#
+# Die Zahl unten ist die Anzahl der Funktionsnamen, die in oeffentlichen
+# Headern unter `include/` mit MEHR ALS EINER Parameterliste deklariert
+# sind. Das Tor schlaegt an, wenn sie STEIGT.
+#
+# Stand 2026-09-03: 3306 Funktionsnamen, 35 widerspruechlich.
+#
+# ── Warum das gefaehrlich ist ─────────────────────────────────────────────
+#
+# C prueft Deklarationen nicht ueber Uebersetzungseinheiten hinweg. Zwei
+# Header duerfen dasselbe Symbol verschieden deklarieren, und es LINKT
+# trotzdem — der Aufrufer folgt dem Header, den er zufaellig eingebunden
+# hat. Ein ueberzaehliges Argument wird auf x86-64 stillschweigend
+# verworfen, ein fehlendes aus einem Register gelesen, das niemand gesetzt
+# hat. Kein Compilerfehler, kein Linkerfehler, kein Absturz — nur ein
+# falscher Wert.
+#
+# ── Die drei schwersten Faelle im heutigen Bestand ────────────────────────
+#
+#   uft_crc16_ccitt   4 Header, 2 Signaturen. Drei nennen
+#                     (const uint8_t*, size_t), einer
+#                     (const uint8_t*, size_t, uint16_t init).
+#                     Es gibt EINE Definition — `uft_protection_ext.c:171`,
+#                     mit ZWEI Parametern. Wer `uft_decoder_plugin.h`
+#                     einbindet und einen Startwert uebergibt, bekaeme eine
+#                     CRC, die ihn IGNORIERT. Heute ruft niemand die
+#                     Dreiparameter-Form; die Gefahr ist latent.
+#
+#   uft_disk_free     3 Header, 3 verschiedene Zeigertypen
+#                     (uft_disk_image_t*, uft_disk_t*, uft_disk_unified_t*).
+#                     Ein `free()` auf dem falschen Typ ist die teuerste
+#                     Variante dieser Klasse.
+#
+#   bam_*             15 Namen, durchgehend `bam_context_t*` gegen
+#                     `bam_editor_t*` als erster Parameter. Zwei Header
+#                     beschreiben dieselbe API mit verschiedenen
+#                     Handle-Typen — ein halb vollzogener Umbau.
+#
+# ── Warum die Zahl nicht 0 ist ────────────────────────────────────────────
+#
+# Jeder dieser 35 Faelle braucht eine ENTSCHEIDUNG, welche Signatur gilt,
+# und die betrifft Aufrufer. Das ist Eigentuemerarbeit, keine
+# Sammelkorrektur — und eine Sammelkorrektur waere hier besonders
+# gefaehrlich, weil sie stillschweigend Aufrufer umdeutet.
+#
+# Das Tor haelt die Zahl fest, damit keine 36. dazukommt.
+#
+# ── Grenze des Verfahrens ─────────────────────────────────────────────────
+#
+# Es liest keine Praeprozessor-Bedingungen (zwei Deklarationen in
+# getrennten `#if`-Zweigen waeren kein Fehler), kennt keine Typaliase, und
+# es prueft NICHT gegen die Definition — ein Name mit nur EINER
+# Deklaration faellt nicht auf, selbst wenn die Definition abweicht.
+#
+# Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+
+35

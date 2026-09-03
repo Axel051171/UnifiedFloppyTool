@@ -961,6 +961,20 @@ def main() -> int:
         import audit_fdc_gaps as _fg
         all_errors.append(("FDC-Gap-Tabelle", _fg.check(repo)))
 
+        # 48. Kategorie (MF-839): dasselbe Symbol, verschiedene Signaturen.
+        #
+        # C prueft Deklarationen nicht ueber Uebersetzungseinheiten hinweg.
+        # `uft_crc16_ccitt` steht in VIER oeffentlichen Headern, einer davon
+        # mit einem `init`-Parameter, den die einzige Definition nicht hat —
+        # wer diesen Header einbindet, bekaeme eine CRC, die seinen
+        # Startwert ignoriert. Kein Compiler-, kein Linkerfehler.
+        #
+        # Der Baum fuehrt fuer diese Klasse einen Agenten
+        # (`abi-bomb-detector`) und ein Prinzip (`single-source-enforcer`),
+        # aber bis MF-839 kein Tor. Gemessen wird der ANSTIEG.
+        import audit_decl_conflicts as _dc
+        all_errors.append(("Deklarations-Konflikte", _dc.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
