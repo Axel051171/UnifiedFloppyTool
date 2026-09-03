@@ -170,13 +170,31 @@ static bool detect_flaschel(const uint8_t *data, size_t len,
     (void)data; (void)len;
     if (!info) return false;
 
-    /* MF-820: ZURUECKGEZOGEN — zweifach.
+    /* MF-820: ZURUECKGEZOGEN — dreifach; Grund (0) nachgetragen MF-828.
+     *
+     * (0) DER STAERKSTE GRUND, und er stand bis MF-828 nicht hier:
+     *     die Fehlklasse gibt es beim SEKTORLESEN GAR NICHT. Claus
+     *     Brod, ST NEWS Vol. 2 Issue 7 (1987), "Copy me - I want to
+     *     travel" / "The Track 41 Protector": "This error only
+     *     occurs when reading a complete track with the read-track
+     *     command. When reading sectors, the controller switches
+     *     off the sync unit, so that it can read without the sync
+     *     bug confusing it." Ein Detektor, der auf SEKTORDATEN
+     *     arbeitet, kann diese Klasse also prinzipbedingt nie
+     *     sehen — unabhaengig davon, wie er adressiert. Erkennung
+     *     setzt ein echtes Trackabbild voraus.
      *
      * (1) Die Suche lief im 512-Byte-Raster und unterstellte, hinter
      *     jedem Datenblock folge der Gap. In einer echten Spur betraegt
      *     der Sektorabstand 614 Byte (Louis-Guerin) bzw. 626 (David
-     *     Small) — nie 512. Der untersuchte Bereich war also NUTZDATEN,
-     *     kein Gap. Und da echte Sektordaten selten nur aus 0x4E und
+     *     Small) — nie 512. Die 614 sind seit MF-828 nicht mehr
+     *     nur zitiert, sondern HERGELEITET: Brods Write-Track-
+     *     Tabelle (12x00, 3xF5, FE, 4 Byte ID, F7, 22x4E, 12x00,
+     *     3xF5, FB, 512 Daten, F7, 40x4E) summiert sich naiv auf
+     *     612 — und F7 schreibt eine Pruefsumme aus ZWEI Byte,
+     *     zweimal je Sektor: 612 + 2 = 614. Schreib- und Leseseite,
+     *     28 Jahre auseinander, treffen sich auf das Byte.
+     *     Der untersuchte Bereich war also NUTZDATEN, kein Gap. Und da echte Sektordaten selten nur aus 0x4E und
      *     0x00 bestehen, war die Schwelle von fuenf „Anomalien" sofort
      *     ueberschritten: der Detektor meldete auf so ziemlich jedem
      *     Sektorabbild.
@@ -191,7 +209,17 @@ static bool detect_flaschel(const uint8_t *data, size_t len,
      *     ueber Gap-Bytes damit nichts zu tun.
      *
      * Ein Name, der plausibel klingt, ist kein Beleg. Zurueckverfolgen
-     * oder streichen — bis dahin wird nichts gemeldet (P3-40). */
+     * oder streichen — bis dahin wird nichts gemeldet (P3-40).
+     *
+     * RICHTUNG (MF-828, P3-52): die IDEE ist richtig — Nicht-Gap-Bytes
+     * im Gap zu zaehlen ist die passende Erkennung fuer "Hidden Data
+     * into GAP", und Brod bestaetigt sie indirekt ("Most programmers
+     * therefore suppose that gaps consist of $4E-s and $00-s and
+     * nothing else, basta" — 1987 als Beschreibung genau der Annahme,
+     * die der Schutz ausnutzt). Also UMSETZEN statt loeschen, sobald
+     * ein Trackabbild vorliegt: Satzlaenge 614, Nutzlast ist DRUCKBARER
+     * ASCII-Text, und als zweites Kriterium die Sync-Signatur 14 0B
+     * (gerades Byte, 29, A1 — so gelesen). Der NAME bleibt gestrichen. */
     info->detected = false;
     info->confidence = 0.0;
     return false;
