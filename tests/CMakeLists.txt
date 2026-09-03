@@ -325,6 +325,11 @@ foreach(test_source ${TEST_SOURCES})
         # uft_dms.c hat ein unqualifiziertes #include "uft_dms.h"
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/formats)
+    elseif(${test_name} STREQUAL "test_multiread_kein_mischbyte")
+        # MF-845: byteweises Voting darf keinen Sektor erfinden, den
+        # keine der Lesungen enthielt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c)
     elseif(${test_name} STREQUAL "test_adf_teilabzug")
         # MF-840: spurgenaue ADF-Teilabzuege annehmen, fehlende Spuren
         # aber NICHT mit 0xE5 erfinden.

@@ -219,6 +219,42 @@ const char *multiread_class_name(multiread_class_t cls)
  *                    (disk.cpp:331-343), nicht der Abstand zweier davon.
  * @param out_distinct Anzahl unterschiedlicher Inhalte, mindestens 1.
  */
+/**
+ * @brief Hat irgendeine Lesung ihre CRC bestanden?
+ *
+ * MF-845: ausgeklammert, weil `multiread_execute()` dieselbe Frage
+ * stellen muss. Zwei Fassungen derselben Regel driften — dieser Baum
+ * hat dafuer genug Belege (P3-78: zwei gleichnamige `sap_crc16`;
+ * P3-83: ein toter Zwilling mit zwei Fehlern darin).
+ */
+static bool multiread_any_crc_ok(const multiread_pass_t *passes,
+                                 uint8_t pass_count)
+{
+    for (uint8_t p = 0; p < pass_count; p++) {
+        if (passes[p].crc_ok) return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Der erste ueberlebende Pass — die Bezugsgroesse.
+ *
+ * MF-845: ebenfalls ausgeklammert. `classify_passes()` waehlt damit den
+ * Vergleichsmassstab, und `multiread_execute()` uebernimmt im
+ * AMBIGUOUS_GOOD-Fall GENAU DIESEN Pass als Ausgabe. Beide muessen
+ * dieselbe Lesung meinen, sonst meldet die Einstufung etwas anderes,
+ * als der Puffer traegt.
+ */
+static const multiread_pass_t *multiread_reference_pass(
+        const multiread_pass_t *passes, uint8_t pass_count, bool any_crc_ok)
+{
+    for (uint8_t p = 0; p < pass_count; p++) {
+        if (pass_survives_crc_sift(&passes[p], any_crc_ok) && passes[p].data)
+            return &passes[p];
+    }
+    return NULL;
+}
+
 static multiread_class_t classify_passes(const multiread_pass_t *passes,
                                          uint8_t pass_count,
                                          size_t len,
@@ -231,19 +267,10 @@ static multiread_class_t classify_passes(const multiread_pass_t *passes,
     if (!passes || pass_count == 0 || len == 0)
         return MULTIREAD_CLASS_UNKNOWN;
 
-    bool any_crc_ok = false;
-    for (uint8_t p = 0; p < pass_count; p++) {
-        if (passes[p].crc_ok) { any_crc_ok = true; break; }
-    }
+    bool any_crc_ok = multiread_any_crc_ok(passes, pass_count);
 
-    /* Erster ueberlebender Pass ist die Bezugsgroesse. */
-    const multiread_pass_t *ref = NULL;
-    for (uint8_t p = 0; p < pass_count; p++) {
-        if (pass_survives_crc_sift(&passes[p], any_crc_ok) && passes[p].data) {
-            ref = &passes[p];
-            break;
-        }
-    }
+    const multiread_pass_t *ref = multiread_reference_pass(passes, pass_count,
+                                                           any_crc_ok);
     if (!ref)
         return MULTIREAD_CLASS_UNKNOWN;
 
@@ -473,10 +500,40 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
         weak_mask = calloc(output_len, 1);
     }
     
-    /* Vote on each byte */
+    /* MF-845: ERST einstufen, DANN entscheiden, wie `output` entsteht.
+     *
+     * Hier lief `vote_buffer()` zuerst und `classify_passes()` erst
+     * danach — die Einstufung konnte den bereits gebauten Puffer also
+     * nicht mehr beeinflussen. Bei zwei Lesungen, die BEIDE ihre CRC
+     * bestehen und sich trotzdem unterscheiden, ergibt die byteweise
+     * Mehrheit eine DRITTE Bytefolge:
+     *
+     *     Pass A   01 FF 02 FF 03 FF 04 FF
+     *     Pass B   FF 01 FF 02 FF 03 FF 04
+     *     Voting   01 01 02 02 03 03 04 04   <- war auf keiner Diskette
+     *
+     * Bei Gleichstand gewinnt in `vote_byte()` der kleinere Bytewert,
+     * stillschweigend. Fuer ein Werkzeug mit dem Grundsatz „Keine
+     * erfundenen Daten" ist das die schwerste Klasse: hier geht nichts
+     * verloren, hier ENTSTEHT etwas — und es landet ueber
+     * `uftc_adf_place_voted()` unveraendert im Zielabbild.
+     *
+     * Das Referenzverhalten stand im eigenen Kommentar bei
+     * `classify_passes()`: „a8rawconv behaelt einen und warnt". Auch
+     * FluxEngine (`readerwriter.cc::collectSectors()`) vergleicht GANZE
+     * Kandidaten und markiert zwei abweichende `Sector::OK` als
+     * `Sector::CONFLICT`. Beide mischen nie auf Byteebene. */
+    result->class_ = classify_passes(ctx->passes, ctx->pass_count, output_len,
+                                     &result->weak_offset,
+                                     &result->distinct_contents);
+
+    /* `vote_buffer()` liefert die KENNZAHLEN — Konfidenz und Weak-Maske.
+     * Die kommen aus den Lesungen, nicht aus der Ausgabe, und werden in
+     * jedem Zweig gebraucht. Nur seine BYTE-AUSGABE ist im
+     * AMBIGUOUS_GOOD-Fall die falsche Antwort. */
     uint8_t avg_conf;
     uint32_t weak_count;
-    
+
     multiread_error_t err = vote_buffer(ctx->passes, ctx->pass_count,
                                         output, output_len,
                                         NULL, weak_mask,
@@ -485,8 +542,25 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
         free(weak_mask);
         return err;
     }
-    
-    /* Fill result */
+
+    if (result->class_ == MULTIREAD_CLASS_AMBIGUOUS_GOOD) {
+        /* Eine GANZE beobachtete Lesung statt eines Mischbytes — und
+         * zwar genau die, die `classify_passes()` als Bezugsgroesse
+         * genommen hat (gemeinsame Auswahl ueber
+         * `multiread_reference_pass()`), damit Einstufung und Puffer
+         * dieselbe Lesung meinen.
+         *
+         * Traegt der Bezugspass weniger Bytes als der Ausgabepuffer,
+         * bleibt es beim Voting: eine halbe Lesung mit einem
+         * gevoteten Rest zu verkleben waere dieselbe Fabrikation in
+         * klein. Die Klasse meldet den Fall ohnehin. */
+        const multiread_pass_t *ref = multiread_reference_pass(
+            ctx->passes, ctx->pass_count,
+            multiread_any_crc_ok(ctx->passes, ctx->pass_count));
+        if (ref && ref->data && ref->data_len >= output_len)
+            memcpy(output, ref->data, output_len);
+    }
+        /* Fill result */
     result->data = output;
     result->data_len = output_len;
     result->confidence = avg_conf;
@@ -522,10 +596,10 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
     /* MF-473: was die Lesungen ZUEINANDER sagen. `has_weak_bits` oben
      * beantwortet nur "irgendein Byte wich ab" — das trifft auf einen
      * absichtlich falsch aufgezeichneten Kopierschutz-Sektor NICHT zu, und
-     * genau den muss man von einem gesunden unterscheiden koennen. */
-    result->class_ = classify_passes(ctx->passes, ctx->pass_count, output_len,
-                                     &result->weak_offset,
-                                     &result->distinct_contents);
+     * genau den muss man von einem gesunden unterscheiden koennen.
+     *
+     * MF-845: der Aufruf steht jetzt WEITER OBEN, vor dem Bau von
+     * `output` — sonst kann die Einstufung ihn nicht mehr beeinflussen. */
     result->weak_mask = weak_mask;
     
     /* Update stats */
