@@ -23,6 +23,7 @@
 #include "uft/uft_format_common.h"
 #include "uft/profiles/uft_ipf_format.h"
 #include "uft/formats/ipf/uft_ipf_air.h"
+#include "uft/uft_log.h"
 
 extern bool uft_caps_is_ipf(const uint8_t *data, size_t size);
 
@@ -176,9 +177,16 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     if (density >= 3) {
         track->status |= (uint32_t)UFT_TRACK_PROTECTED;
         track->copy_protected = true;
-        fprintf(stderr, "[IPF] Spur %d/%d: Schutzart laut Datei: %s "
-                        "(Dichte %d)\n", cyl, head,
-                ipf_air_density_name(density), density);
+        /* MF-844: war `fprintf(stderr, ...)`. Diese Stelle sitzt in
+         * `read_track()` und feuert damit EINMAL JE SPUR — bei einer
+         * Amiga-Diskette bis zu 160 Zeilen auf stderr, unabhaengig
+         * davon, ob der Aufrufer sie sehen will. Eingefuehrt mit
+         * MF-823, dort uebersehen.
+         *
+         * `UFT_INFO` ist zugleich die richtige Stufe: es ist eine
+         * Feststellung AUS DER DATEI, keine Warnung. */
+        UFT_INFO("IPF Spur %d/%d: Schutzart laut Datei: %s (Dichte %d)",
+                 cyl, head, ipf_air_density_name(density), density);
     }
 
     /* Pull concatenated data-element payload bytes from the AIR parser.
