@@ -1737,6 +1737,18 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_gw_wire_conformance")
+        # MF-848: zwei Haelften, die einander nie begegnet sind — der
+        # Firmware-Automat unter tests/emulators/greaseweazle/ und die
+        # Byteebenen-Naht des Treibers (uft_gw_open_stream, MF-686).
+        # gw_wire_bridge.c verbindet sie; damit ist die beidseitige
+        # TRK0-Pruefung aus MF-799 (dekalibrierter Kopf) erstmals OHNE
+        # Hardware pruefbar (MF-310).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/gw_wire_bridge.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+        target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests)
     elseif(${test_name} STREQUAL "test_stx_registrierter_leser")
         # MF-847: der EINZIGE STX-Leser, der an der Registry haengt.
         # Drei weitere liegen im Baum, darunter der vollstaendige

@@ -71,7 +71,31 @@ Für Hardware heißt das: **wann** wurde zuletzt an echtem Gerät geprüft?
 
 **Ein einziger Bench, und der ist aus v4.1.4-rc1.** Das ✅ bei
 Greaseweazle ruht darauf, dass sich der Code seither nicht geändert hat —
-nicht auf einer neuen Messung. Alles andere ist gegen **benannte
+nicht auf einer neuen Messung.
+
+> **Seit MF-848 ruht es nicht mehr allein darauf.** Der Bench sagt „am
+> 15.05.2026 lief es an echtem Gerät"; die Frage danach war immer „und
+> gilt das noch?". Beantwortet wurde sie durch *byte-identisch geblieben*
+> — eine Aussage über den Code, nicht über sein Verhalten.
+>
+> `tests/test_gw_wire_conformance.c` fährt jetzt den **Produktions**-
+> treiber (`src/hal/uft_greaseweazle_full.c`) gegen den
+> **Firmware-Automaten** (`tests/emulators/greaseweazle/`), verbunden über
+> die Byteebenen-Naht `uft_gw_open_stream()` (MF-686). Damit ist die
+> beidseitige TRK0-Prüfung aus MF-799 — die Erkennung des
+> **dekalibrierten Kopfes** — erstmals ohne Gerät prüfbar. Gemessen:
+> nimmt man die zweite Richtung heraus, wird der Prüfstand rot
+> (`seek(40) bei anliegendem /TRK0 gab 0, erwartet -7`).
+>
+> **Das ersetzt keinen Bench-Termin.** Der Prüfstand misst gegen ein
+> Modell; wo Modell und Firmware auseinandergehen, geht er mit fehl —
+> die bekannten Stellen stehen in
+> `tests/emulators/greaseweazle/DIVERGENCES.md`. Was sich ändert, ist
+> die **Reichweite einer Code-Änderung**: bisher entwertete jede
+> Änderung am GW-Treiber den einzigen Bench des Projekts, weil
+> „byte-identisch" die einzige Zusage war. Jetzt trägt eine Änderung
+> einen eigenen Beweis, und der Bench muss nur noch das prüfen, was
+> ein Modell nicht kann. Alles andere ist gegen **benannte
 Referenzen** geprüft (samdisk, OpenCBM, Emulatoren), und das ist etwas
 anderes als Silizium.
 
