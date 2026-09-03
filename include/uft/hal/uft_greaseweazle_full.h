@@ -328,6 +328,29 @@ int uft_gw_reset(uft_gw_device_t* device);
 int uft_gw_get_info(uft_gw_device_t* device, uft_gw_info_t* info);
 
 /**
+ * @brief Ist diese Firmware alt genug fuer diesen Treiber? (MF-849)
+ *
+ * EIGENE Zusage statt eines Zweigs in uft_gw_open() — und das ist der
+ * Punkt, an dem wir es anders machen als die Vorlage. `usb.py` faltet
+ * die Pruefung in `Unit.__init__`, also in den Verbindungsaufbau. Eine
+ * Regel, die nur im Transportpfad steht, ist ohne Transport nicht
+ * pruefbar: sie braucht ein Geraet, um befragt zu werden. Dieses
+ * Projekt hat keins (MF-310).
+ *
+ * Hier getrennt, kann sie mit einem `uft_gw_info_t` auf dem Stapel
+ * befragt werden — und ueber die Byteebenen-Naht (MF-686) auch mit
+ * einer Antwort, die der Firmware-Automat gegeben hat (MF-848).
+ *
+ * @param info Geraeteangaben aus @ref uft_gw_get_info. NULL ergibt
+ *             `false` — wer nichts weiss, weiss nicht, dass es reicht.
+ * @return true, wenn fw_major.fw_minor >= UFT_GW_MIN_FW_MAJOR.MINOR.
+ *
+ * Sagt NICHTS ueber den Bootloader: `is_main_fw` ist eine eigene Frage
+ * und wird in uft_gw_open() eigens beantwortet.
+ */
+bool uft_gw_firmware_supported(const uft_gw_info_t* info);
+
+/**
  * @brief Get firmware version string
  * @param device Device handle
  * @return Version string (e.g., "1.4") or NULL
@@ -711,6 +734,21 @@ size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
                                                  Disconnect, hold drive ID 0 button
                                                  down, then re-plug to enter main
                                                  firmware (see docs/HARDWARE.md). */
+#define UFT_GW_ERR_FW_TOO_OLD       -16     /**< Main firmware runs, but is older
+                                                 than UFT_GW_MIN_FW_MAJOR.MINOR —
+                                                 reflash with `gw update`. */
+
+/* Aelteste Firmware, mit der dieser Treiber arbeitet.
+ *
+ * Referenz: keirf/greaseweazle, `src/greaseweazle/usb.py`:
+ *     EARLIEST_SUPPORTED_FIRMWARE = (0, 31)
+ *
+ * Das Original bricht bei aelterer Firmware nicht ab, sondern setzt
+ * `update_needed` und beschraenkt das Geraet auf `GetInfo`. Wir weisen
+ * stattdessen ab — eine BEWUSSTE Abweichung, begruendet bei
+ * uft_gw_firmware_supported(). */
+#define UFT_GW_MIN_FW_MAJOR          0
+#define UFT_GW_MIN_FW_MINOR          31
 
 /**
  * @brief Get error message for error code

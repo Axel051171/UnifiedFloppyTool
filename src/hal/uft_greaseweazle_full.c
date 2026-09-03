@@ -451,6 +451,14 @@ int uft_gw_set_stream_ops(uft_gw_device_t* dev,
 
 static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data,
                             size_t len) {
+    /* MF-849: der Rueckfall bekam ein moegliches NULL weitergereicht.
+     * Der `dev &&`-Test unten schuetzte nur den Naht-Zweig; darunter
+     * dereferenziert serial_*_platform() `dev->handle` bzw. `dev->fd`
+     * ungeprueft. Heute nicht erreichbar — jeder Aufrufer prueft vorher,
+     * uft_gw_command() beginnt damit. Haertung, kein Bugfix mit
+     * Symptom, und deshalb ohne eigenen Test: ein Pruefstand, der die
+     * Stelle nicht erreichen kann, waere ein Schein-Test. */
+    if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
     if (dev && dev->stream_ops && dev->stream_ops->write)
         return dev->stream_ops->write(dev->stream_ops->user, data, len);
     return serial_write_all_platform(dev, data, len);
@@ -458,6 +466,14 @@ static int serial_write_all(uft_gw_device_t* dev, const uint8_t* data,
 
 static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len,
                              int timeout_ms) {
+    /* MF-849: der Rueckfall bekam ein moegliches NULL weitergereicht.
+     * Der `dev &&`-Test unten schuetzte nur den Naht-Zweig; darunter
+     * dereferenziert serial_*_platform() `dev->handle` bzw. `dev->fd`
+     * ungeprueft. Heute nicht erreichbar — jeder Aufrufer prueft vorher,
+     * uft_gw_command() beginnt damit. Haertung, kein Bugfix mit
+     * Symptom, und deshalb ohne eigenen Test: ein Pruefstand, der die
+     * Stelle nicht erreichen kann, waere ein Schein-Test. */
+    if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
     if (dev && dev->stream_ops && dev->stream_ops->read_exact)
         return dev->stream_ops->read_exact(dev->stream_ops->user, data, len,
                                            timeout_ms);
@@ -467,6 +483,14 @@ static int serial_read_exact(uft_gw_device_t* dev, uint8_t* data, size_t len,
 static int serial_read_available(uft_gw_device_t* dev, uint8_t* data,
                                  size_t max_len, size_t* actual,
                                  int timeout_ms) {
+    /* MF-849: der Rueckfall bekam ein moegliches NULL weitergereicht.
+     * Der `dev &&`-Test unten schuetzte nur den Naht-Zweig; darunter
+     * dereferenziert serial_*_platform() `dev->handle` bzw. `dev->fd`
+     * ungeprueft. Heute nicht erreichbar — jeder Aufrufer prueft vorher,
+     * uft_gw_command() beginnt damit. Haertung, kein Bugfix mit
+     * Symptom, und deshalb ohne eigenen Test: ein Pruefstand, der die
+     * Stelle nicht erreichen kann, waere ein Schein-Test. */
+    if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
     if (dev && dev->stream_ops && dev->stream_ops->read_available)
         return dev->stream_ops->read_available(dev->stream_ops->user, data,
                                                max_len, actual, timeout_ms);
@@ -654,6 +678,13 @@ int uft_gw_open_stream(const uft_gw_stream_ops_t* ops,
     return UFT_GW_OK;
 }
 
+bool uft_gw_firmware_supported(const uft_gw_info_t* info) {
+    if (!info) return false;
+    if (info->fw_major != UFT_GW_MIN_FW_MAJOR)
+        return info->fw_major > UFT_GW_MIN_FW_MAJOR;
+    return info->fw_minor >= UFT_GW_MIN_FW_MINOR;
+}
+
 int uft_gw_open(const char* port, uft_gw_device_t** device) {
     if (!port || !device) return UFT_GW_ERR_INVALID;
     uft_gw_device_t* dev = (uft_gw_device_t*)safe_calloc(1, sizeof(uft_gw_device_t));
@@ -684,6 +715,33 @@ int uft_gw_open(const char* port, uft_gw_device_t** device) {
         serial_close(dev);
         free(dev);
         return UFT_GW_ERR_BOOTLOADER;
+    }
+
+    /* Die Hauptfirmware laeuft — ist sie neu genug? (MF-849)
+     *
+     * Referenz: usb.py, EARLIEST_SUPPORTED_FIRMWARE = (0, 31). Bisher
+     * wurden fw_major/fw_minor gelesen, protokolliert und gegen NICHTS
+     * geprueft; eine zu alte Firmware fiel erst beim ersten nicht
+     * unterstuetzten Befehl auf — als UFT_GW_ERR_UNSUPPORTED ohne
+     * Hinweis auf die Ursache.
+     *
+     * BEWUSSTE ABWEICHUNG VON DER VORLAGE: `usb.py` weist nicht ab,
+     * sondern setzt `update_needed` und laesst das Geraet fuer `GetInfo`
+     * offen. Das setzt einen Begriff voraus, den UFT nicht hat — ein
+     * eingeschraenkt nutzbares Geraet. In einem forensischen Werkzeug
+     * ist ein halb brauchbares Geraet schlechter als eine benannte
+     * Absage: die Absage nennt Ist- und Sollversion und sagt, was zu tun
+     * ist. Wer die Version trotzdem sehen will, bekommt sie in der
+     * Meldung. */
+    if (!uft_gw_firmware_supported(&dev->info)) {
+        fprintf(stderr,
+                "[GW] ERROR: Firmware v%d.%d ist zu alt (noetig >= %d.%d) — "
+                "zuerst mit `gw update` neu einspielen\n",
+                dev->info.fw_major, dev->info.fw_minor,
+                UFT_GW_MIN_FW_MAJOR, UFT_GW_MIN_FW_MINOR);
+        serial_close(dev);
+        free(dev);
+        return UFT_GW_ERR_FW_TOO_OLD;
     }
 
     snprintf(dev->version_str, sizeof(dev->version_str), "%d.%d",
@@ -1409,6 +1467,9 @@ const char* uft_gw_strerror(int err) {
                                               "update mode — reflash firmware "
                                               "or power-cycle while holding the "
                                               "ID-0 button to enter main firmware";
+        case UFT_GW_ERR_FW_TOO_OLD:    return "Greaseweazle main firmware is "
+                                              "older than the earliest supported "
+                                              "version — reflash with `gw update`";
         default:                       return "Unknown error";
     }
 }

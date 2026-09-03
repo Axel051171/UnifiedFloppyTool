@@ -184,6 +184,90 @@ TEST(der_automat_sieht_was_der_treiber_tat)
     stand_ab(&s);
 }
 
+/**
+ * Fragt den Automaten nach seiner Version und legt die Antwort dem
+ * Treiber-Datensatz vor — GENAU der Weg, den `uft_gw_open()` geht.
+ */
+static bool firmware_akzeptiert(uint8_t major, uint8_t minor)
+{
+    stand_t s;
+    if (!stand_auf(&s, true, major, minor)) return false;
+
+    uft_gw_info_t info;
+    memset(&info, 0, sizeof info);
+    bool ok = (uft_gw_get_info(s.dev, &info) == UFT_GW_OK)
+           && info.fw_major == major && info.fw_minor == minor
+           && uft_gw_firmware_supported(&info);
+
+    stand_ab(&s);
+    return ok;
+}
+
+TEST(zu_alte_firmware_wird_abgewiesen)
+{
+    /* MF-849. Referenz: keirf/greaseweazle, `src/greaseweazle/usb.py`,
+     * EARLIEST_SUPPORTED_FIRMWARE = (0, 31).
+     *
+     * Vorher wurden `fw_major`/`fw_minor` gelesen, protokolliert und
+     * gegen NICHTS geprueft — gemessen: die Zeichenketten `MIN_FW` und
+     * `EARLIEST` kamen im Modul nullmal vor. Eine zu alte Firmware fiel
+     * erst beim ersten nicht unterstuetzten Befehl auf, als
+     * UFT_GW_ERR_UNSUPPORTED ohne Hinweis auf die Ursache. */
+    if (firmware_akzeptiert(0, 29)) {
+        printf("\n      v0.29 wurde angenommen (Mindestversion %d.%d)\n      ",
+               UFT_GW_MIN_FW_MAJOR, UFT_GW_MIN_FW_MINOR);
+        _fail++;
+    }
+}
+
+TEST(die_grenze_selbst_geht_durch)
+{
+    /* Gegenprobe 1 — der Ort, an dem `<` und `<=` auseinandergehen.
+     * 0.31 IST die aelteste unterstuetzte Fassung und muss durch; 0.30
+     * darf nicht. Ohne diesen Fall waere eine Fassung gruen, die um eins
+     * danebenliegt und jede 0.31er-Firmware ablehnt. */
+    ASSERT(firmware_akzeptiert(0, 31));
+    ASSERT(!firmware_akzeptiert(0, 30));
+}
+
+TEST(neuere_firmware_geht_durch)
+{
+    /* Gegenprobe 2: die Hauptzahl darf die Nebenzahl nicht ueberstimmen.
+     * 1.0 ist NEUER als 0.31, obwohl 0 < 31 — eine Pruefung, die beide
+     * Zahlen zusammenwirft, faellt hier auf. */
+    ASSERT(firmware_akzeptiert(1, 0));
+    ASSERT(firmware_akzeptiert(1, 23));
+}
+
+/*
+ * GRENZE DIESER VIER FAELLE, ausdruecklich (MF-849).
+ *
+ * Vier Mutationsproben an `uft_gw_firmware_supported()` wurden gemessen;
+ * DREI macht dieser Pruefstand rot (immer wahr · `>` statt `>=` · NULL
+ * gilt als in Ordnung). Die vierte nicht:
+ *
+ *     return info->fw_major * 256 + info->fw_minor >= UFT_GW_MIN_FW_MINOR;
+ *
+ * Sie besteht alle Faelle — und das ist richtig so, denn sie ist keine
+ * Mutation, sondern eine GLEICHWERTIGE Schreibweise, solange
+ * UFT_GW_MIN_FW_MAJOR == 0 ist. Nachgerechnet: der Schwellwert waere
+ * 0*256 + 31 = 31, also genau derselbe.
+ *
+ * Sie wird erst in dem Moment falsch, in dem jemand die Hauptzahl
+ * anhebt: bei einer Mindestversion 1.31 kaeme `0.200` durch (200 >= 31),
+ * obwohl 0.200 aelter ist. Kein Testfall kann das HEUTE zeigen, weil es
+ * unterhalb von Hauptzahl 0 keine Version gibt.
+ *
+ * Deshalb steht es hier statt in einem Testfall, der nichts beweisen
+ * kann: wer UFT_GW_MIN_FW_MAJOR anhebt, muss die Zusage mitlesen.
+ */
+TEST(ohne_angaben_keine_zusage)
+{
+    /* Gegenprobe 3: NULL heisst nicht "in Ordnung". Wer nichts weiss,
+     * weiss nicht, dass es reicht. */
+    ASSERT(!uft_gw_firmware_supported(NULL));
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -193,6 +277,10 @@ int main(void)
     RUN(gesunder_seek_bleibt_gruen);
     RUN(spur_null_mit_trk0_geht_durch);
     RUN(der_automat_sieht_was_der_treiber_tat);
+    RUN(zu_alte_firmware_wird_abgewiesen);
+    RUN(die_grenze_selbst_geht_durch);
+    RUN(neuere_firmware_geht_durch);
+    RUN(ohne_angaben_keine_zusage);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
