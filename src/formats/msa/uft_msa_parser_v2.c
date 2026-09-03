@@ -164,8 +164,16 @@ size_t msa_track_size(uint16_t sectors_per_track) {
  * @brief Decompress RLE track data
  * 
  * MSA RLE format:
- * - 0xE5 <count_hi> <count_lo> <byte> = repeat <byte> <count> times
+ * - 0xE5 <byte> <count_hi> <count_lo> = repeat <byte> <count> times
  * - Other bytes are literal
+ *
+ * MF-830: diese Zeile stand bis hierher in der ALTEN, FALSCHEN
+ * Reihenfolge (`<count_hi> <count_lo> <byte>`) — dieselbe, die MF-822
+ * im Code darunter berichtigt hat. Die Beschreibung hat den Fehler also
+ * ueberlebt und lehrte ihn weiter; wer ihr folgte, haette ihn wieder
+ * eingebaut. Belegt ist die Reihenfolge unten im Rumpf mit drei
+ * unabhaengigen Wiedergaben von Damien Burkes Urquelle
+ * ($E5AA0006 = sechs $AA).
  */
 size_t msa_decompress_track(const uint8_t* input, size_t input_size,
                             uint8_t* output, size_t output_size) {

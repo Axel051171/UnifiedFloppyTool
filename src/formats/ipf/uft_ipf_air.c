@@ -242,6 +242,15 @@ typedef struct {
     uint32_t actual_blocks;
 
     bool has_fuzzy;
+
+    /* MF-830: `block_count` traegt, was die DATEI angibt, `actual_blocks`,
+     * was dieser Leser wirklich haelt. Beide gab es; verglichen hat sie
+     * niemand — gemessen ueber `git ls-files`: keine einzige Stelle im
+     * Baum setzt die zwei zueinander in Bezug. Bei mehr als
+     * IPF_MAX_BLOCKS Bloecken fiel die Differenz STILL unter den Tisch.
+     * Und sie ist erreichbar: eine PC-HD-Spur mit 18 Sektoren hat mehr
+     * als 16 Bloecke. */
+    bool blocks_truncated;
 } ipf_track_t;
 
 /** CTEI/CTEX extension records */
@@ -569,6 +578,12 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
                 trk->track_bits  = img.track_bits;
                 trk->block_count = img.block_count;
                 trk->track_flags = img.track_flags;
+                /* MF-830: schon bei der ANKUENDIGUNG festhalten. Wenn die
+                 * Datei mehr Bloecke angibt, als dieser Leser fassen kann,
+                 * steht der Verlust fest — unabhaengig davon, ob spaeter
+                 * ueberhaupt ein DATA-Satz dazu kommt. Frueher und
+                 * genauer als am Klemmpunkt selbst. */
+                trk->blocks_truncated = (img.block_count > IPF_MAX_BLOCKS);
                 if (img.track_flags & IPF_TF_FUZZY)
                     trk->has_fuzzy = true;
                 disk->total_tracks++;
@@ -875,6 +890,19 @@ int ipf_air_get_track_meta(const ipf_air_disk_t *disk, int cyl, int head,
     if (out_density)     *out_density     = (uint32_t)trk->density;
     if (out_track_flags) *out_track_flags = trk->track_flags;
     if (out_has_fuzzy)   *out_has_fuzzy   = trk->has_fuzzy;
+    return 0;
+}
+
+int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
+                            uint32_t *out_declared,
+                            uint32_t *out_stored,
+                            bool     *out_truncated) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+
+    if (out_declared)  *out_declared  = trk->block_count;
+    if (out_stored)    *out_stored    = trk->actual_blocks;
+    if (out_truncated) *out_truncated = trk->blocks_truncated;
     return 0;
 }
 

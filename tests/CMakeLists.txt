@@ -138,7 +138,29 @@ foreach(test_source ${TEST_SOURCES})
     endif()
     
     add_executable(${test_name} ${test_source})
-    
+
+    # MF-830: `assert()` darf in einem TEST nie wegoptimiert werden.
+    #
+    # `CMAKE_C_FLAGS_RELEASE` ist "-O3 -DNDEBUG", und der gatende CI-Job
+    # (.github/workflows/ci.yml) baut Release. Damit war `assert()` in
+    # jedem Test ein LEERER AUSDRUCK — 21 Testdateien stuetzen sich
+    # allein darauf (kein eigenes ASSERT-Makro). Sie konnten in dem Job,
+    # der Merges blockiert, gar nicht rot werden.
+    #
+    # Gemessen, nicht vermutet: in `test_ipf_air_accessors` wurde die
+    # Zuweisung `blocks_truncated = (…)` durch `= false` ersetzt, neu
+    # gebaut und der Test meldete weiterhin "All accessor smoke-tests
+    # passed". Erst mit `-UNDEBUG` faellt er um.
+    #
+    # `-U` steht in der Kommandozeile hinter dem `-D` aus den
+    # CONFIG-Flags und gewinnt deshalb. Sanitizer- und Coverage-Lauf
+    # bauen Debug und waren nie betroffen — der gatende Lauf schon.
+    if(NOT MSVC)
+        target_compile_options(${test_name} PRIVATE -UNDEBUG)
+    else()
+        target_compile_options(${test_name} PRIVATE /U NDEBUG)
+    endif()
+
     target_include_directories(${test_name} PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/include/uft

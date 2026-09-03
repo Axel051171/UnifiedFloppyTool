@@ -108,6 +108,82 @@ int main(void) {
     free(disk);
     printf("OK\n");
 
+    /* === Test 7b: die Blockklemme muss sich melden (MF-830) ========
+     *
+     * Der Leser fasst hoechstens IPF_MAX_BLOCKS (16) Bloecke je Spur.
+     * `block_count` (aus IMGE) und `actual_blocks` (aus dem Lesevorgang)
+     * lagen beide vor — verglichen hat sie bis MF-830 niemand, gemessen
+     * ueber `git ls-files`: keine Stelle im Baum setzte die zwei
+     * zueinander in Bezug. Mehr als 16 angekuendigte Bloecke fielen also
+     * STILL unter den Tisch, und der Fall ist erreichbar: eine
+     * PC-HD-Spur mit 18 Sektoren hat mehr als 16 Bloecke.
+     *
+     * Zwei Spuren, damit die Zusicherung nicht leer ist: eine ueber der
+     * Grenze (20) und eine darunter (8). Ohne die zweite wuerde auch ein
+     * `*out_truncated = true` durchgehen. */
+    printf("Test 7b: Blockklemme meldet sich (MF-830)... ");
+    {
+        /* CAPS(12) + INFO(96) + 2x IMGE(80) */
+        uint8_t b2[12 + 96 + 80 + 80] = {0};
+        memcpy(b2, "CAPS", 4);
+        put_be32(b2 + 4, 12);
+        put_be32(b2 + 8, air_crc32_header(b2, 0, 12));
+
+        uint8_t *q = b2 + 12;
+        memcpy(q, "INFO", 4);
+        put_be32(q + 4, 96);
+        put_be32(q + 12 +  4, 2);   /* encoder_type = SPS */
+        put_be32(q + 12 + 28, 3);   /* max_track = 3 */
+        put_be32(q + 12 + 36, 1);   /* max_side  = 1 */
+        put_be32(q + 12 + 48, 2);   /* platforms[0] = Atari_ST */
+        put_be32(q + 8, air_crc32_header(q, 0, 96));
+
+        /* IMGE-Nutzlast (BE32 ab dem 12-Byte-Kopf):
+         *  0 track   4 side  8 density 12 signal 16 track_bytes
+         * 20 start_byte 24 start_bit 28 data_bits 32 gap_bits
+         * 36 track_bits 40 BLOCK_COUNT 44 encoder 48 flags 52 data_key
+         * 56..64 reserved[3]  = 68 Byte Nutzlast, 80 Byte Satz */
+        struct { uint32_t track, blocks; } tr[2] = { {1, 20}, {2, 8} };
+        for (int k = 0; k < 2; k++) {
+            uint8_t *m = b2 + 12 + 96 + (size_t)k * 80;
+            memcpy(m, "IMGE", 4);
+            put_be32(m + 4, 80);
+            put_be32(m + 12 +  0, tr[k].track);
+            put_be32(m + 12 +  4, 0);              /* side */
+            put_be32(m + 12 + 40, tr[k].blocks);   /* block_count */
+            put_be32(m + 8, air_crc32_header(m, 0, 80));
+        }
+
+        ipf_air_disk_t *d2 = ipf_air_alloc();
+        assert(d2 != NULL);
+        assert(ipf_air_parse(b2, sizeof(b2), d2) == IPF_AIR_OK);
+
+        uint32_t decl = 0, stored = 0xFFFFu;
+        bool cut = false;
+
+        /* Spur 1: 20 angekuendigt, 16 tragbar — der Verlust MUSS stehen. */
+        assert(ipf_air_track_present(d2, 1, 0));
+        assert(ipf_air_get_track_loss(d2, 1, 0, &decl, &stored, &cut) == 0);
+        assert(decl == 20);
+        assert(cut  == true);
+        assert(stored == 0);   /* kein DATA-Satz — nichts gelesen */
+
+        /* Spur 2: 8 angekuendigt — nichts geklemmt. Die Gegenprobe. */
+        decl = 0; cut = true;
+        assert(ipf_air_get_track_loss(d2, 2, 0, &decl, &stored, &cut) == 0);
+        assert(decl == 8);
+        assert(cut  == false);
+
+        /* Abwesende Spur und NULL-Griff. */
+        assert(ipf_air_get_track_loss(d2, 9, 0, &decl, &stored, &cut) == -1);
+        assert(ipf_air_get_track_loss(NULL, 1, 0, &decl, &stored, &cut) == -1);
+        assert(ipf_air_get_track_loss(d2, 1, 0, NULL, NULL, NULL) == 0);
+
+        ipf_air_free(d2);
+        free(d2);
+    }
+    printf("OK\n");
+
     /* === Test 8: NULL-disk handling ================================ */
     printf("Test 8: NULL disk handling... ");
     rc = ipf_air_get_geometry(NULL, &cyls, &sides, &platform);

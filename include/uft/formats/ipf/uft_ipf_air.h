@@ -104,6 +104,28 @@ int ipf_air_get_track_meta(const ipf_air_disk_t *disk, int cyl, int head,
                             bool     *out_has_fuzzy);
 
 /**
+ * @brief Was die Datei je Spur ANKUENDIGT gegen das, was dieser Leser HAELT.
+ *
+ * MF-830. Der Leser fasst hoechstens IPF_MAX_BLOCKS (16) Bloecke je Spur.
+ * Gibt eine Datei mehr an, wurde der Rest bis MF-830 STILL verworfen: die
+ * Zahlen dafuer lagen beide vor (`block_count` aus dem IMGE-Satz,
+ * `actual_blocks` aus dem Lesevorgang), nur verglichen hat sie niemand.
+ * Erreichbar ist der Fall — eine PC-HD-Spur mit 18 Sektoren hat mehr als
+ * 16 Bloecke.
+ *
+ * `*out_truncated` bezieht sich ausschliesslich auf diese Obergrenze.
+ * `*out_stored` kann auch ohne Kappung kleiner als `*out_declared` sein,
+ * etwa wenn der DATA-Satz fehlt oder abgeschnitten ist — die beiden
+ * Ursachen sind hier bewusst NICHT vermengt.
+ *
+ * @return 0 wenn die Spur existiert, -1 sonst. Out-Zeiger duerfen NULL sein.
+ */
+int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
+                            uint32_t *out_declared,
+                            uint32_t *out_stored,
+                            bool     *out_truncated);
+
+/**
  * @brief Concatenate decoded data-element payload bytes from every block of
  *        a track into a single contiguous buffer.
  *
