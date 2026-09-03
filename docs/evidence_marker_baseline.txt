@@ -1,0 +1,55 @@
+# Grundlinie fuer scripts/audit_evidence_marker.py (MF-843)
+#
+# Eintraege in docs/OPEN_ITEMS.md ohne BELEGTYP: ohne ein Wort, das sagt
+# WIE etwas festgestellt wurde (gemessen, Rotbeweis, gelesen,
+# disassembliert, abgeleitet, gemeldet von …) UND ohne die MF-Nummer,
+# unter der es entstanden ist.
+#
+# Stand nach MF-843: 86 Eintraege, 11 ohne Belegtyp.
+#
+# ── Warum es dieses Tor gibt ──────────────────────────────────────────────
+#
+# Der Eigentuemer hat in dieser Analysereihe zweimal eine eigene
+# Behauptung zuruecknehmen muessen, weil eine BESCHREIBUNG als MESSUNG
+# weitergegeben wurde: die Aussagekraft der FAT-Volumeseriennummer und
+# die 0x01-Ersetzung durch Burst Nibbler.
+#
+# Mir ist dieselbe Klasse unterlaufen: P3-65 (3) hielt fest,
+# `atari_check.c` pruefe Eintraege hinter der Verzeichnis-Endmarke nicht
+# — uebernommen ohne Messung, und falsch (MF-835: der Prueflauf gab es,
+# er konnte nur nicht feuern).
+#
+# ── Warum keine C-Struktur ────────────────────────────────────────────────
+#
+# Der Vorschlag sah `uft_rule_meta_t` mit `may_assert` im Code vor. Als
+# C-Struktur waere das ein Feld, das niemand liest — genau der Fall, den
+# `audit_dead_fields.py` seit MF-831 misst (1231 im Bestand). Die
+# tragfaehige Fassung ist die Belegspalte von OPEN_ITEMS, wo der Beleg
+# BEREITS steht; dieses Tor macht daraus eine Zahl.
+#
+# ── Die 11, und warum sie stehen bleiben ──────────────────────────────────
+#
+# Es sind AUSSCHLIESSLICH fruehe Eintraege — P3-2 bis P3-12 sowie
+# P3-17, P3-21 und P3-31 —, entstanden bevor die Belegspalte zur
+# Gewohnheit wurde. Kein einziger neuerer Eintrag ist darunter. Sie
+# nachtraeglich zu beschriften hiesse, ihren Beleg zu REKONSTRUIEREN —
+# und das ist genau die Bewegung, gegen die dieses Tor steht.
+#
+# Sie werden beschriftet, wenn jemand sie ohnehin anfasst und dabei
+# WEISS, woher sie stammen. Bis dahin haelt das Tor die Zahl.
+#
+# ── Grenze des Verfahrens ─────────────────────────────────────────────────
+#
+# Die Erkennung arbeitet mit einem WORTSCHATZ. Ein Eintrag mit einem
+# Beleg in anderen Worten faellt faelschlich auf; ein Eintrag, der
+# „gemessen" schreibt, ohne gemessen zu haben, faellt NICHT auf. Das Tor
+# prueft die FORM, nicht die Wahrheit — es ersetzt keine Sorgfalt,
+# sondern verhindert nur, dass die Zahl still waechst.
+#
+# Zwei Anlaeufe ueber Spaltenzerlegung sind gescheitert (Index 3 von
+# vorn, Index -2 von hinten): die Prosa enthaelt zu viele `|`. Geprueft
+# wird deshalb die ganze Zeile auf beide Merkmale.
+#
+# Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+
+11

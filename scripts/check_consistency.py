@@ -989,6 +989,19 @@ def main() -> int:
         import audit_enum_tables as _et
         all_errors.append(("Enum-Tabellen zu kurz", _et.check(repo)))
 
+        # 50. Kategorie (MF-843): Eintraege ohne Belegtyp.
+        #
+        # Vorschlag des Eigentuemers, nachdem er zweimal eine eigene
+        # Behauptung zuruecknehmen musste, weil eine Beschreibung als
+        # Messung weitergegeben wurde. Nicht als C-Struktur umgesetzt —
+        # das waere ein Feld, das niemand liest (MF-831) —, sondern auf
+        # der Belegspalte von OPEN_ITEMS, wo der Beleg ohnehin steht.
+        #
+        # Prueft die FORM, nicht die Wahrheit. Verhindert nur, dass die
+        # Zahl belegfreier Eintraege still waechst.
+        import audit_evidence_marker as _em
+        all_errors.append(("Eintraege ohne Belegtyp", _em.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
