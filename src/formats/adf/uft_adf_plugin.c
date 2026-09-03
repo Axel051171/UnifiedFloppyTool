@@ -7,20 +7,163 @@
  * HD: 80 cyl × 2 heads × 22 spt × 512 = 1,802,240 bytes
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_log.h"
 
 #define ADF_DD_SIZE     901120
 #define ADF_HD_SIZE     1802240
 #define ADF_SECTOR_SIZE 512
+#define ADF_SPT_DD      11
+#define ADF_SPT_HD      22
+#define ADF_TRACK_DD    (ADF_SPT_DD * ADF_SECTOR_SIZE)   /*  5632 */
+#define ADF_TRACK_HD    (ADF_SPT_HD * ADF_SECTOR_SIZE)   /* 11264 */
+#define ADF_TRACKS      160                              /* 80 Zyl. x 2 */
 
-typedef struct { FILE *file; uint8_t spt; } adf_pd_t;
+/**
+ * @brief Wie vollstaendig ist diese Datei (MF-840)?
+ *
+ * ADF ist kopflos — die Groesse ist das einzige Merkmal ausser dem
+ * Bootblock. Bis MF-840 verlangten Sonde und `open` **exakte**
+ * Gleichheit mit 901 120 oder 1 802 240 Byte.
+ *
+ * Das verwirft einen dokumentierten Normalfall: `TransDisk` (Amiga,
+ * ueber `trackdisk.device`) zieht mit `-s`/`-e` Spurbereiche ab, und
+ * das Beispiel seines Autors lautet
+ *
+ *     transdisk >RAM:df1.adf.1 -d trackdisk 1 -s 0 -e 39
+ *
+ * — 40 Zylinder = 80 Spuren = **225 280 Byte**, mit einer `.2` als
+ * Ergaenzung. Auf Amigas mit knapper RAM-Disk oder bei serieller
+ * Uebertragung war das ueblich.
+ *
+ * Eine solche Datei traegt 80 **vollstaendige, gueltige** Spuren. Sie
+ * zu verwerfen, weil 80 weitere fehlen, verliert alles statt nichts.
+ *
+ * Die drei Kurzfaelle sind an der Groesse unterscheidbar:
+ *   Vielfaches der Spurlaenge      spurgenauer Teilabzug
+ *   Vielfaches von 512, nicht das  an Blockgrenze abgebrochen
+ *   kein Vielfaches von 512        KEIN ADF — an der Groesse nicht mehr
+ *                                  erkennbar (siehe unten)
+ */
+typedef enum {
+    ADF_EXT_NICHT_ADF = 0,
+    ADF_EXT_VOLLSTAENDIG,
+    ADF_EXT_TEILABZUG,        /* spurgenau kurz                     */
+    ADF_EXT_BLOCKGENAU_KURZ   /* 512er-Vielfaches, nicht spurgenau  */
+    /* Ein vierter Zustand „mitten im Block abgebrochen" waere denkbar,
+     * ist hier aber ABSICHTLICH nicht aufgefuehrt: eine solche Datei
+     * traegt kein Groessenmerkmal mehr und faellt auf ADF_EXT_NICHT_ADF.
+     * Ein Aufzaehlungswert, den nie jemand erzeugt, ist dasselbe wie ein
+     * Feld, das nie jemand setzt (MF-831). */
+} adf_extent_t;
+
+typedef struct {
+    adf_extent_t extent;
+    uint8_t      spt;             /* 11 oder 22            */
+    unsigned     tracks_present;  /* vollstaendige Spuren  */
+    size_t       rest;            /* Byte hinter der letzten ganzen Spur */
+} adf_shape_t;
+
+static adf_extent_t adf_classify(size_t len, adf_shape_t *out)
+{
+    memset(out, 0, sizeof *out);
+    if (len == 0) return out->extent = ADF_EXT_NICHT_ADF;
+
+    /* Die VOLLSTAENDIGEN Groessen zuerst, und zwar beide, BEVOR
+     * ueberhaupt an Teilabzuege gedacht wird.
+     *
+     * Der Grund ist eine Falle, in die die erste Fassung dieses Codes
+     * gelaufen ist: 901 120 (volle DD-Diskette) ist zugleich ein
+     * Vielfaches der HD-Spurlaenge (901120 / 11264 = 80). Eine Regel
+     * „HD zuerst pruefen" stuft die vollstaendige DD-Diskette damit als
+     * HD-TEILABZUG ein — gefangen von
+     * `vollstaendiges_adf_bleibt_wie_bisher`. */
+    if (len == (size_t)ADF_DD_SIZE) {
+        out->spt = ADF_SPT_DD;
+        out->tracks_present = ADF_TRACKS;
+        return out->extent = ADF_EXT_VOLLSTAENDIG;
+    }
+    if (len == (size_t)ADF_HD_SIZE) {
+        out->spt = ADF_SPT_HD;
+        out->tracks_present = ADF_TRACKS;
+        return out->extent = ADF_EXT_VOLLSTAENDIG;
+    }
+
+    /* Teilabzuege. DD zuerst, weil es der weit haeufigere Fall und der
+     * von TransDisk dokumentierte ist. Eine Laenge, die durch BEIDE
+     * Spurlaengen teilbar ist (z.B. 225 280 = 40 DD-Spuren = 20
+     * HD-Spuren), ist echt mehrdeutig — die Groesse allein entscheidet
+     * das nicht, und deshalb bleibt die Konfidenz dafuer unter 50. */
+    if (len < (size_t)ADF_DD_SIZE && (len % ADF_TRACK_DD) == 0) {
+        out->spt = ADF_SPT_DD;
+        out->tracks_present = (unsigned)(len / ADF_TRACK_DD);
+        return out->extent = ADF_EXT_TEILABZUG;
+    }
+    if (len < (size_t)ADF_HD_SIZE && (len % ADF_TRACK_HD) == 0) {
+        out->spt = ADF_SPT_HD;
+        out->tracks_present = (unsigned)(len / ADF_TRACK_HD);
+        return out->extent = ADF_EXT_TEILABZUG;
+    }
+    if (len > (size_t)ADF_TRACK_HD * ADF_TRACKS)
+        return out->extent = ADF_EXT_NICHT_ADF;
+    if (len < (size_t)ADF_TRACK_DD)
+        return out->extent = ADF_EXT_NICHT_ADF;
+
+    /* Eine Datei, die nicht einmal ein Vielfaches der SEKTORgroesse ist,
+     * traegt kein Merkmal mehr, an dem sie als ADF erkennbar waere. Der
+     * Fall „mitten im Block abgebrochen" ist real, aber er ist an der
+     * GROESSE nicht identifizierbar — und ihn trotzdem anzunehmen hiesse,
+     * fast jede Datei dieser Groessenordnung zu beanspruchen.
+     * `test_plugin_probe_real` verlangt genau das (901 119 muss durchfallen),
+     * und die Forderung ist richtig. */
+    if ((len % ADF_SECTOR_SIZE) != 0)
+        return out->extent = ADF_EXT_NICHT_ADF;
+
+    out->spt = ADF_SPT_DD;
+    out->tracks_present = (unsigned)(len / ADF_TRACK_DD);
+    out->rest = len % ADF_TRACK_DD;
+    return out->extent = ADF_EXT_BLOCKGENAU_KURZ;
+}
+
+typedef struct {
+    FILE    *file;
+    uint8_t  spt;
+    /* MF-840: wie viele Spuren die DATEI traegt. Die Geometrie meldet
+     * weiter die ganze Diskette — die Datei ist ein Ausschnitt daraus,
+     * nicht eine kleinere Diskette. */
+    unsigned tracks_present;
+    adf_extent_t extent;
+} adf_pd_t;
 
 static bool adf_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
-    if (file_size != ADF_DD_SIZE && file_size != ADF_HD_SIZE) return false;
-    *confidence = 45;  /* MF-729: nur die Groesse */
-    /* Amiga bootblock: "DOS\0" at offset 0 */
+    adf_shape_t shape;
+    switch (adf_classify(file_size, &shape)) {
+    case ADF_EXT_NICHT_ADF:
+        return false;
+    case ADF_EXT_VOLLSTAENDIG:
+        *confidence = 45;             /* MF-729: nur die Groesse */
+        break;
+    case ADF_EXT_TEILABZUG:
+        /* Spurgenau kurz. Die Groesse allein sagt hier weniger als bei
+         * einer vollen Diskette — ein Vielfaches von 5632 ist auch
+         * anderes. Unterhalb von 50, also kein Merkmalsanspruch. */
+        *confidence = 35;
+        break;
+    case ADF_EXT_BLOCKGENAU_KURZ:
+        /* 512er-Vielfaches, aber nicht spurgenau — abgebrochene
+         * Uebertragung. Nur mitnehmen, damit die Datei ueberhaupt
+         * angeboten wird. Der Bootblock hebt das ABSICHTLICH nicht an:
+         * `DOS` sind drei Byte, und die Groesse traegt hier nichts. */
+        *confidence = 25;
+        return true;
+    default:
+        return false;
+    }
+    /* Amiga bootblock: "DOS\0" at offset 0. Ein Teilabzug ab Spur 0 hat
+     * ihn; einer ab `-s 40` nicht — das ist kein Mangel, sondern die
+     * zweite Haelfte eines Paares. */
     if (size >= 4 && data[0] == 'D' && data[1] == 'O' && data[2] == 'S')
-        *confidence = 95;
+        *confidence = (shape.extent == ADF_EXT_VOLLSTAENDIG) ? 95 : 70;
     return true;
 }
 
@@ -32,12 +175,36 @@ static uft_error_t adf_open(uft_disk_t *disk, const char *path, bool ro) {
     if (sz < 0) { fclose(f); return UFT_ERROR_IO; }
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
 
-    uint8_t spt = (sz == ADF_HD_SIZE) ? 22 : 11;
-    if (sz != ADF_DD_SIZE && sz != ADF_HD_SIZE) { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
+    adf_shape_t shape;
+    if (adf_classify((size_t)sz, &shape) == ADF_EXT_NICHT_ADF) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    uint8_t spt = shape.spt;
+
+    /* MF-840: den Zustand MELDEN, nicht verschweigen. */
+    switch (shape.extent) {
+    case ADF_EXT_TEILABZUG:
+        UFT_WARN("ADF-Teilabzug: %u von %u Spuren vorhanden (%u Sekt./Spur). "
+                 "Erzeugt von einem Werkzeug mit Spurbereichsangabe (z.B. "
+                 "TransDisk -s/-e); eine ergaenzende Datei mit den restlichen "
+                 "Spuren kann daneben liegen.",
+                 shape.tracks_present, (unsigned)ADF_TRACKS, spt);
+        break;
+    case ADF_EXT_BLOCKGENAU_KURZ:
+        UFT_WARN("ADF endet an einer Blockgrenze, aber nicht an einer "
+                 "Spurgrenze: %u vollstaendige Spuren plus %zu Byte — "
+                 "Uebertragung vermutlich abgebrochen",
+                 shape.tracks_present, shape.rest);
+        break;
+    default: break;
+    }
 
     adf_pd_t *p = calloc(1, sizeof(adf_pd_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f; p->spt = spt;
+    p->tracks_present = shape.tracks_present;
+    p->extent = shape.extent;
 
     disk->plugin_data = p;
     disk->geometry.cylinders = 80;
@@ -84,12 +251,39 @@ static uft_error_t adf_read_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
 
+    /* MF-840: eine Spur, die die DATEI nicht traegt, ist FEHLEND — nicht
+     * leer. Hier stand darunter
+     *
+     *     if (fread(...) != ADF_SECTOR_SIZE) memset(buf, 0xE5, ...);
+     *
+     * und damit kam eine Spur jenseits des Dateiendes als 0xE5-Fuellung
+     * mit UFT_OK zurueck. 0xE5 ist die AmigaDOS-Formatfuellung — ein
+     * Fehlschlag war von einer leeren, formatierten Spur nicht zu
+     * unterscheiden. Dieselbe Klasse, die MF-837 aus dem DMS-Plugin
+     * entfernt hat: der Verlust wird als Datum ausgegeben.
+     *
+     * Ohne diese Schranke waere das Annehmen von Teilabzuegen (oben) ein
+     * Rueckschritt gewesen — die 80 fehlenden Spuren waeren als leere
+     * Diskette erschienen. */
+    unsigned trk = (unsigned)(cyl * 2 + head);
+    if (trk >= p->tracks_present) {
+        UFT_WARN("ADF: Spur %u (Zyl. %d, Kopf %d) liegt jenseits des "
+                 "Dateiendes — die Datei traegt %u von %u Spuren",
+                 trk, cyl, head, p->tracks_present, (unsigned)ADF_TRACKS);
+        return UFT_ERROR_NOT_FOUND;
+    }
+
     long off = (long)((cyl * 2 + head) * p->spt * ADF_SECTOR_SIZE);
     uint8_t buf[ADF_SECTOR_SIZE];
     for (int s = 0; s < p->spt; s++) {
         if (fseek(p->file, off + s * ADF_SECTOR_SIZE, SEEK_SET) != 0) return UFT_ERROR_IO;
         if (fread(buf, 1, ADF_SECTOR_SIZE, p->file) != ADF_SECTOR_SIZE) {
-            memset(buf, 0xE5, ADF_SECTOR_SIZE);
+            /* Innerhalb der gezaehlten Spuren darf das nicht vorkommen —
+             * wenn doch, ist die Datei unter uns geschrumpft. Melden,
+             * nicht fuellen. */
+            UFT_WARN("ADF: Sektor %d der Spur %u nicht lesbar, obwohl die "
+                     "Datei ihn tragen sollte", s, trk);
+            return UFT_ERROR_IO;
         }
         /* AmigaDOS numbers its sectors 0..10 (ARCH-20) */
         uft_format_add_sector_with_id(track, (uint8_t)s, buf, ADF_SECTOR_SIZE,

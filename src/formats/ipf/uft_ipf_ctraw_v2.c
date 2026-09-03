@@ -396,11 +396,46 @@ static void analyze_image_protection(ipf_image_t* image) {
         }
     }
     
-    /* Copylock-Erkennung: spezifische Track-Muster */
-    /* Copylock verwendet typisch Track 79+ mit speziellen Patterns */
+    /* MF-841: DIE COPYLOCK-BENENNUNG IST ZURUECKGEZOGEN.
+     *
+     * Hier stand „Copylock verwendet typisch Track 79+ mit speziellen
+     * Patterns", und darunter wurde aus zwei gezaehlten Signalen — es
+     * gibt eine Spur >= 80 UND es gibt eine Spur mit mehr als 100 Weak
+     * Bits — der Name `IPF_PROT_COPYLOCK` abgeleitet.
+     *
+     * Die Spurangabe ist falsch. Rob Northen Copylock (Atari ST) liegt
+     * auf **Spur 0, Sektor 6**. Drei unabhaengige Quellen:
+     *
+     *   1. Rob Northen Computing selbst, `keydisk.s` (1990):
+     *      „DO NOT OVERWRITE SECTOR 6 ON TRACK 0"
+     *   2. Louis-Guerin, Atari Floppy Disk Copy Protection Rev. 1.4,
+     *      Klasse LGS/SHS: Populous T0-S6, Back to the Future T0-S6
+     *   3. Das entschluesselte Laufzeitdisassemblat der Pruefroutine:
+     *      sie liest Sektor 6 und misst ihn gegen Sektor 5 als
+     *      Bezugsgroesse (`move.w #6,d0` bzw. `#5`), verlangt mindestens
+     *      1 % mehr Lesezeit und misst am Original 0xC66 gegen 0xCEB,
+     *      also **4,19 %** — was Louis-Guerins „4-5 %" unabhaengig
+     *      bestaetigt.
+     *
+     * Der eigentliche Punkt daran: Copylock braucht ZWEI Sektoren. Der
+     * Schutz bildet ein VERHAELTNIS, weil die absolute Lesezeit mit der
+     * Laufwerksdrehzahl schwankt. Ein Erkenner ohne Bezugssektor hat
+     * keinen Nenner — und „Spur >= 80" hat mit alldem nichts zu tun.
+     *
+     * Zweiter Grund, unabhaengig vom ersten: fuer IPF-Dateien braucht es
+     * diese Heuristik ueberhaupt nicht. Das Dichtefeld im Track-Datensatz
+     * NENNT den Schutz (Wert 5 = Copylock ST, siehe
+     * `uft_ipf_air.c:89` und `ipf_air_density_name()` seit MF-823).
+     * Eine Mustererkennung neben einer Formatangabe zu stellen ist die
+     * schwaechere Hand.
+     *
+     * Die BEOBACHTUNG bleibt erhalten und wird weiter gezaehlt — sie ist
+     * fuer sich genommen richtig. Nur ihre BENENNUNG faellt weg. Das ist
+     * derselbe Rueckzug wie MF-820 fuer `uft_atarist_protection.c`, und
+     * damit die zweite von zwei Stellen, die „Spur 79" behaupteten. */
     bool has_extra_track = false;
     bool has_weak_track = false;
-    
+
     for (size_t t = 0; t < image->track_count; t++) {
         if (image->tracks[t].track >= 80) {
             has_extra_track = true;
@@ -410,9 +445,19 @@ static void analyze_image_protection(ipf_image_t* image) {
         }
     }
     
-    if (has_extra_track && has_weak_track && !seen[IPF_PROT_COPYLOCK]) {
-        image->detected_protections[image->protection_count++] = IPF_PROT_COPYLOCK;
-    }
+    /* MF-841: die Benennung faellt weg, die Beobachtung bleibt. Was hier
+     * gemessen wurde — eine Spur jenseits 79 UND irgendwo mehr als 100
+     * Weak Bits — ist beides fuer sich richtig und weiterhin in
+     * `image->tracks[]` nachlesbar. Nur der Schluss auf Copylock war
+     * unbelegt, siehe die Begruendung oben.
+     *
+     * Was stattdessen noetig waere: die Lesezeit von Spur 0 / Sektor 6
+     * gegen Spur 0 / Sektor 5, mit einer Schwelle von 1 % — und das
+     * setzt gefuellte Feldgrenzen voraus (P3-59), die heute kein
+     * Erzeuger liefert. Fuer IPF ist ohnehin das Dichtefeld die
+     * bessere Quelle. */
+    (void)has_extra_track;
+    (void)has_weak_track;
 }
 
 /*============================================================================

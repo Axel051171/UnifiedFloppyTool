@@ -325,6 +325,12 @@ foreach(test_source ${TEST_SOURCES})
         # uft_dms.c hat ein unqualifiziertes #include "uft_dms.h"
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/formats)
+    elseif(${test_name} STREQUAL "test_adf_teilabzug")
+        # MF-840: spurgenaue ADF-Teilabzuege annehmen, fehlende Spuren
+        # aber NICHT mit 0xE5 erfinden.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_ssd_hadfs_nicht_dfs")
         # MF-836: HADFS legt einen echten DFS-Katalog in Sektor 0/1 —
         # die SSD-Sonde darf darauf kein Merkmal beanspruchen.
@@ -366,7 +372,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_adf_write_roundtrip")
         # Phase-6 round-trip: ADF write_track -> read_track (MF-341)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            # MF-840: uft_adf_plugin.c meldet Teilabzuege ueber UFT_WARN
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atr_write_roundtrip")
         # Phase-6 round-trip: ATR write_track -> read_track (MF-341)
         # MF-833: das ATR-Plugin meldet die Boot-Layout-Erkennung ueber
@@ -658,7 +666,9 @@ foreach(test_source ${TEST_SOURCES})
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_adf")
         # T1b cross-tool corpus: ADF by amitools xdftool (MF-365)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            # MF-840: uft_adf_plugin.c meldet Teilabzuege ueber UFT_WARN
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_flux_truncation_is_reported"
