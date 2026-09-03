@@ -378,11 +378,31 @@ atari_error_t check_sector_chains(atari_disk_t *disk, check_result_t *result,
                 result->is_valid = false;
             }
 
-            /* Nicht-letzter Sektor sollte voll sein */
+            /* MF-833: die Begruendung hier war FALSCH. Sie lautete
+             * „Nicht-letzter Sektor sollte voll sein" — das steht so in
+             * keiner Quelle, und die einzige benannte sagt das Gegenteil:
+             *
+             *   Bill Wilkinson, „Inside Atari DOS" (1982) — „any sector
+             *   can be short, not just the last one", wiedergegeben in
+             *   Joe Allens `atari-tools` readme §Filesystem format.
+             *
+             * Ein kurzer Sektor mitten in der Kette ist also ZULAESSIG.
+             * Der Befund bleibt trotzdem drin: er ist ungewoehnlich (DOS 2
+             * schreibt im Normalfall voll) und damit fuer Herkunftsfragen
+             * interessant — aber er macht das Dateisystem nicht ungueltig.
+             *
+             * Deshalb CHECK_INFO statt CHECK_WARNING, und deshalb steht
+             * die Quelle im Text: ohne sie haette ein spaeterer Durchgang
+             * die Stufe „verschaerft", statt sie zu senken. Genau das ist
+             * die Gefahr einer Warnung mit erfundener Begruendung — sie
+             * wandert mit der Zeit nach oben, nicht nach unten.
+             *
+             * NICHT zu CHECK_ERROR heben. */
             if (link.next_sector != 0 && link.byte_count != max_data) {
-                add_issue(result, CHECK_WARNING, current, i,
-                          "Datei #%d (%s): Sektor %d nicht voll "
-                          "(%d/%d Bytes) aber nicht letzter",
+                add_issue(result, CHECK_INFO, current, i,
+                          "Datei #%d (%s): Sektor %d fuehrt %d/%d Bytes "
+                          "(kurzer Sektor mitten in der Kette — nach "
+                          "Inside Atari DOS zulaessig)",
                           i, entry->filename, current,
                           link.byte_count, max_data);
             }

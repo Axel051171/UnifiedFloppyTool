@@ -21,7 +21,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fdi` | **T1** | `test_corpus_fdi`, `test_fdi_spectrum`, `test_format_probe_fuzz`, `test_plugin_probe_real` | SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ | MF-359 | 1 |
 | `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus`, `test_convert_via_plugin`, `test_d64_writer`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | 3 |
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | 1 |
-| `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
+| `atr` | **T1b** | `test_atr_512`, `test_atr_boot_layout`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
 | `d64` | **T1b** | `test_convert_via_plugin`, `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_disk_open_fuzz`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_sector_id_on_disk`, `test_smart_open_quality` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
 | `d67` | **T1b** | `test_convert_via_plugin`, `test_corpus_cbm_vice`, `test_plugin_identity`, `test_smart_open_quality` | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | 1 |
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |

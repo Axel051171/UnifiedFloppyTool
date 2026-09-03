@@ -313,9 +313,20 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_atr_boot_layout")
+        # MF-833: ATR mit 256-B-Sektoren ist dreifach ambig
+        # (LOGICAL/PHYSICAL/WEIRD). Das Plugin meldet die Erkennung ueber
+        # UFT_WARN, daher uft_log.c.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atr_512")
         # ATR 512-byte-sector (SpartaDOS X) read, not clamped to 128 (MF-340)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+        # MF-833: das ATR-Plugin meldet die Boot-Layout-Erkennung ueber
+        # UFT_WARN, braucht also uft_log.c mit dazu.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_mfi_layout")
         # MFI signature width + entry offset vs. MAME mfi_dsk.h (MF-614)
         target_sources(${test_name} PRIVATE
@@ -332,7 +343,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
     elseif(${test_name} STREQUAL "test_atr_write_roundtrip")
         # Phase-6 round-trip: ATR write_track -> read_track (MF-341)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+        # MF-833: das ATR-Plugin meldet die Boot-Layout-Erkennung ueber
+        # UFT_WARN, braucht also uft_log.c mit dazu.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_apple_do_po_bounds")
         # DO/PO: kein Fuellbyte als Sektor, Zylinder begrenzt (MF-463)
         target_sources(${test_name} PRIVATE
@@ -1408,12 +1423,18 @@ foreach(test_source ${TEST_SOURCES})
         # Both readers are linked so the two containers can be compared.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
-            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            # MF-833: uft_atr.c meldet die Boot-Layout-Erkennung ueber UFT_WARN
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_atr")
         # T1b cross-tool corpus: ATR from the atrcopy project (MF-365)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+        # MF-833: das ATR-Plugin meldet die Boot-Layout-Erkennung ueber
+        # UFT_WARN, braucht also uft_log.c mit dazu.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_fdi")
