@@ -328,6 +328,15 @@ typedef struct {
     bool boot_sig_missing;          /**< 0xAA55 missing */
     bool bpb_inconsistent;          /**< BPB values inconsistent */
     bool fat_mismatch;              /**< FAT copies don't match */
+
+    /* MF-829: „nicht geprueft" darf nicht wie „geprueft und gleich"
+     * aussehen. `fat_mismatch` allein kann das nicht sagen — es ist
+     * `false`, wenn die Kopien gleich sind, UND wenn nur der
+     * Bootsektor uebergeben wurde, UND (bis MF-829) wenn gar nicht
+     * verglichen wurde. Die beiden Felder trennen das.
+     * Angehaengt, nicht eingefuegt — die ABI-vertraegliche Richtung. */
+    bool     fat_compared;          /**< the FAT copies were compared */
+    uint32_t fat_diff_bytes;        /**< differing bytes; 0 if equal or not compared */
 } uft_fat_detect_t;
 
 /*===========================================================================

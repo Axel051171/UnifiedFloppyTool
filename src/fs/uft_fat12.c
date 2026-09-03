@@ -134,6 +134,36 @@ int uft_fat12_detect(const uint8_t *data, size_t size, uft_fat_detect_t *result)
     else if (clusters < 65525) result->type = UFT_FAT_TYPE_FAT16;
     else                        result->type = UFT_FAT_TYPE_FAT32;
 
+    /* MF-829: die FAT-Kopien vergleichen, statt es nur zu behaupten.
+     *
+     * Das Warnfeld `fat_mismatch` gab es seit jeher; gesetzt wurde es im
+     * ganzen Baum nie. Ein Test sicherte zu, dass es `false` ist — und
+     * war gruen, WEIL die Pruefung fehlte (MF-829, Rotbeweis in
+     * `tests/test_fat12_fremd.c`).
+     *
+     * Gemeldet wird die BEOBACHTUNG, nicht ihre Deutung: „die Kopien
+     * unterscheiden sich in n Byte". WELCHE Kopie die massgebliche ist,
+     * haengt vom schreibenden System ab und ist im Baum nicht belegbar
+     * (eine Quelle, siehe P3-56) — diese Funktion entscheidet es nicht.
+     *
+     * Ein Unterschied macht das Dateisystem NICHT ungueltig: `valid`
+     * bleibt unberuehrt. Ein Befund darf den Zugriff nicht verstellen. */
+    if (num_fats >= 2 && fatsz16 > 0) {
+        size_t fat_bytes = (size_t)fatsz16 * bps;
+        size_t off1      = (size_t)reserved * bps;
+        size_t off2      = off1 + fat_bytes;
+        if (fat_bytes > 0 && off2 + fat_bytes <= size) {
+            const uint8_t *a = data + off1;
+            const uint8_t *b = data + off2;
+            uint32_t diff = 0;
+            for (size_t i = 0; i < fat_bytes; i++)
+                if (a[i] != b[i]) diff++;
+            result->fat_compared   = true;
+            result->fat_diff_bytes = diff;
+            result->fat_mismatch   = (diff != 0);
+        }
+    }
+
     result->geometry   = uft_fat_geometry_from_size(size);
     result->platform   = (data[0] == 0x60) ? UFT_FAT_PLATFORM_ATARI : UFT_FAT_PLATFORM_PC;
     result->valid      = !result->boot_sig_missing && !result->bpb_inconsistent;
