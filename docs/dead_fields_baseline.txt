@@ -1,0 +1,38 @@
+# Grundlinie fuer scripts/audit_dead_fields.py (MF-831)
+#
+# Die Zahl unten ist die Anzahl der Feldnamen, die in einem oeffentlichen
+# Header deklariert sind und im ganzen Baum an KEINER Stelle geschrieben
+# werden. Das Tor schlaegt an, wenn sie STEIGT.
+#
+# Warum eine Grundlinie und keine Null:
+#
+#   Gemessen am 2026-09-03: 3995 Felder in `include/`, davon 1231 nirgends
+#   geschrieben (9 davon `_`-praefigiert, also konventionell Fuellung oder
+#   reserviert; 1222 sind Zusagen ohne Einloesung). Ein Tor bei 0 waere
+#   heute unpassierbar und damit nutzlos.
+#
+#   Die 1231 sind kein Befundstapel. Ein grosser Teil gehoert zu
+#   Teilsystemen, die der Baum selbst als unfertig fuehrt — die
+#   Phantom-API in MF-366 war genau davon ein Ausschnitt und wurde
+#   entfernt. Was die Zahl leistet, ist eine OBERGRENZE fuer Vertrauen:
+#   solange sie so hoch steht, ist „das Feld existiert" kein Beleg
+#   dafuer, dass es gefuellt wird.
+#
+# Warum das Tor trotzdem traegt — die Rueckprobe:
+#
+#   Vor MF-829 hatte `uft_fat_detect_t.fat_mismatch` im ganzen Baum genau
+#   zwei Fundstellen: seine Deklaration (`uft_fat12.h:330`) und einen
+#   LESENDEN Zugriff (`ASSERT(!r.fat_mismatch)`). Keine Schreibstelle.
+#   Dieses Tor haette es gelistet. Gemessen an Commit 14da0842.
+#
+# Grenze des Verfahrens (steht auch im Skript):
+#
+#   Ein Feld, das auf einer ANDEREN Struktur mit gleichem Feldnamen
+#   geschrieben wird, faellt durch. `uft_sector_t.gap_before` ist genau
+#   dieser Fall — tot, aber unsichtbar fuer dieses Tor, weil
+#   `uft_atarist_macrodos.c` ein gleichnamiges Feld einer eigenen
+#   Struktur setzt. „0 gefunden" ist hier keine Entwarnung.
+#
+# Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+
+1231

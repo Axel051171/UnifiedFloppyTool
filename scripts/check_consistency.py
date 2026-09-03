@@ -931,6 +931,23 @@ def main() -> int:
         import quarantine_stand as _qsc
         all_errors.append(("Quarantaene-Stand", _qsc.check(repo)))
 
+        # 46. Kategorie (MF-831): Felder, die nirgends geschrieben werden.
+        #
+        # Dreimal in drei Tagen dieselbe Klasse: `fat_mismatch` (MF-829,
+        # Warnfeld nie gesetzt, Test gruen WEIL die Pruefung fehlte),
+        # `block_count` gegen `actual_blocks` (MF-830, beide Zahlen da,
+        # nie verglichen), `uft_sector_t.id_offset` (MF-831, eine
+        # einzige Fundstelle im ganzen Baum — die Deklaration).
+        #
+        # Ein nie geschriebenes Feld ist schlimmer als ein fehlendes: es
+        # sieht wie eine Zusage aus, und sein Nullwert ist oft gueltig.
+        #
+        # Gemessen wird der ANSTIEG, nicht der Bestand — 1231 von 3995
+        # stehen heute so da. Rueckprobe an Commit 14da0842: dieses Tor
+        # haette `fat_mismatch` gelistet.
+        import audit_dead_fields as _df
+        all_errors.append(("Tote Header-Felder", _df.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
