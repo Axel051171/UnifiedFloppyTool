@@ -313,6 +313,18 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_dms_plugin_gegen_bibliothek")
+        # MF-837: das Plugin las den Track-Kopf vollstaendig falsch; die
+        # verifizierte Bibliothek uft_dms.c war ohne Produktionsaufrufer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms_plugin.c
+            # MF-837: das Plugin ruft jetzt die verifizierte Bibliothek
+            ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # uft_dms.c hat ein unqualifiziertes #include "uft_dms.h"
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/formats)
     elseif(${test_name} STREQUAL "test_ssd_hadfs_nicht_dfs")
         # MF-836: HADFS legt einen echten DFS-Katalog in Sektor 0/1 —
         # die SSD-Sonde darf darauf kein Merkmal beanspruchen.
