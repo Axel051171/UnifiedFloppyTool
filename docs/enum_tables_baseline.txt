@@ -1,0 +1,32 @@
+# Grundlinie fuer scripts/audit_enum_tables.py (MF-842)
+#
+# Nachschlagetabellen mit designierten Initialisierern, die WENIGER
+# Eintraege haben als das Enum Werte, gegen dessen `..._COUNT` ihr
+# Aufrufer schrankt — und die keine ausdrueckliche Dimension tragen.
+#
+# Die Zahl ist NULL, und das ist hier keine Grundlinie, sondern ein
+# hartes Tor: die zwei bekannten Faelle sind behoben, und der Fix ist
+# strukturell (Dimension `[X_COUNT]` statt `[]`), also nicht wieder
+# aufweichbar, ohne dass es auffaellt.
+#
+# Was das Tor vor dem Fix gefunden hat — die Gegenprobe:
+#
+#   ufm_c64_scheme_detect.c   names[]        18 Eintraege, COUNT = 25
+#   uft_pc_protection.c       vendor_names[] 22 Eintraege, COUNT = 35
+#
+# In beiden Faellen wurde das Enum erweitert und EINE von mehreren
+# abgeleiteten Tabellen nicht mitgezogen. Bei `uft_pc_protection.c` ist
+# die Schwestertabelle `protection_names[]` korrekt gewachsen — nur die
+# Herstellertabelle blieb zurueck.
+#
+# Der empfohlene Fix ist die ausdrueckliche Dimension, nicht das
+# Nachtragen von Eintraegen: sie erzwingt die Laenge auch beim naechsten
+# Wachstum, fehlende Eintraege sind NULL, und die Zugriffsfunktionen
+# fangen das bereits ab.
+#
+# Grenze des Verfahrens (steht auch im Skript): eine kurze Tabelle mit
+# korrekter EIGENER Schranke wird gemeldet, obwohl sie sicher ist — ein
+# falscher Alarm in der sicheren Richtung. Tabellen ohne designierte
+# Initialisierer werden nicht gesehen.
+
+0

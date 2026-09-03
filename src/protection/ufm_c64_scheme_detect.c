@@ -14,7 +14,24 @@
 
 const char *ufm_c64_prot_type_name(ufm_c64_prot_type_t type)
 {
-    static const char *names[] = {
+    /* MF-842: Laenge AUSDRUECKLICH an UFM_PROT_COUNT gebunden.
+     *
+     * Hier stand `names[]` — die Laenge ergab sich aus dem letzten
+     * benannten Initialisierer, also 18 (bis UFM_PROT_UNKNOWN). Das
+     * Enum in `ufm_c64_protection_taxonomy.h` ist seither um sieben
+     * Werte gewachsen (UFM_C64_PROT_WEAK_BITS … LONG_TRACK, Index
+     * 18-24, COUNT = 25); die Schranke `type < UFM_PROT_COUNT` liess
+     * sie durch und las HINTER dem Feld.
+     *
+     * Erreichbar: `ufm_c64_prot_type_name()` wird aus
+     * `src/gui/ProtectionAnalysisWidget.cpp` gerufen, und die GUI hat
+     * fuer genau diese sieben Werte bereits ein Spalten-Mapping. Dass
+     * heute kein Detektor sie SETZT, ist der einzige Grund, warum der
+     * Pfad noch nicht zuendet.
+     *
+     * Behoben ueber die Dimension, nicht ueber nachgetragene Namen:
+     * fehlende Eintraege sind NULL, und die Rueckgabe faengt das ab. */
+    static const char *names[UFM_PROT_COUNT] = {
         [UFM_PROT_NONE]             = "None",
         [UFM_PROT_VMAX]             = "V-MAX!",
         [UFM_PROT_RAPIDLOK]        = "RapidLok",
@@ -34,7 +51,8 @@ const char *ufm_c64_prot_type_name(ufm_c64_prot_type_t type)
         [UFM_PROT_TIMING]          = "Timing-Based",
         [UFM_PROT_UNKNOWN]         = "Unknown",
     };
-    if (type >= 0 && type < UFM_PROT_COUNT) return names[type];
+    if (type >= 0 && type < UFM_PROT_COUNT)
+        return names[type] ? names[type] : "Unknown";
     return "Unknown";
 }
 

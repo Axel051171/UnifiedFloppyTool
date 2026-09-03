@@ -99,12 +99,26 @@ const char* uft_protection_preset_name(uft_protection_preset_id_t preset) {
     return g_preset_names[preset];
 }
 
-static const char* uft_protection_type_name_local(uft_protection_type_t type) {
-    int idx = 0;
-    uint32_t t = (uint32_t)type;
-    while (t > 1 && idx < 14) { t >>= 1; idx++; }
-    return g_type_names[idx];
-}
+/* MF-842: `uft_protection_type_name_local()` ENTFERNT.
+ *
+ * Sie war `static`, hatte im ganzen Baum KEINEN Aufrufer — auch nicht in
+ * dieser Datei — und trug zwei Fehler:
+ *
+ *   (1) Die Schleife `while (t > 1 && idx < 14) { t >>= 1; idx++; }`
+ *       zaehlt bis `t <= 1`, nicht bis `t == 0`. Fuer jedes Flag ergab
+ *       das einen um 1 zu niedrigen Index: `UFT_PROT_FUZZY_BITS`
+ *       (0x0001) lief null Mal durch -> idx 0 -> „None" statt
+ *       „Fuzzy Bits".
+ *   (2) Fuer `UFT_PROT_CUSTOM` (0x8000, Bit 15) reichte der Deckel
+ *       `idx < 14` nicht, um `t` zu reduzieren -> idx 14 ->
+ *       `g_type_names[14]` bei 14 Eintraegen, also ein Element HINTER
+ *       dem Feld.
+ *
+ * Eine gleichnamige, korrekte Fassung steht in
+ * `uft_protection_detect.c:701` und hat dort einen Aufrufer. Diese hier
+ * war ihr toter Zwilling — geloescht statt repariert, weil ein zweiter
+ * Namensvetter genau die Verwechslung ermoeglicht, die den Fehler
+ * ueberhaupt entstehen liess. */
 
 bool uft_protection_params_validate(uft_protection_params_t* params) {
     if (!params) return false;

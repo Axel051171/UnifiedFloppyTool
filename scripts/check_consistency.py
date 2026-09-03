@@ -975,6 +975,20 @@ def main() -> int:
         import audit_decl_conflicts as _dc
         all_errors.append(("Deklarations-Konflikte", _dc.check(repo)))
 
+        # 49. Kategorie (MF-842): Tabelle kuerzer als ihr Enum.
+        #
+        # Das Enum waechst, eine der abgeleiteten Nachschlagetabellen
+        # wird nicht mitgezogen, und die Schranke prueft weiter gegen
+        # `..._COUNT` — ein Lesezugriff hinter dem Feld, den der Compiler
+        # nicht sieht. Gefunden an `ufm_c64_scheme_detect.c` (18 gegen
+        # 25) und `uft_pc_protection.c` (22 gegen 35, waehrend die
+        # Schwestertabelle korrekt mitgewachsen war).
+        #
+        # HARTES Tor: die Grundlinie ist 0, weil der Fix strukturell ist
+        # (Dimension `[X_COUNT]`) und deshalb nicht still zurueckfaellt.
+        import audit_enum_tables as _et
+        all_errors.append(("Enum-Tabellen zu kurz", _et.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

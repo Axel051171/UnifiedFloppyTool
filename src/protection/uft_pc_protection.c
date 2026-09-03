@@ -192,7 +192,7 @@ static const uft_pcprot_sig_t builtin_signatures[] = {
  * String Tables
  *===========================================================================*/
 
-static const char *protection_names[] = {
+static const char *protection_names[UFT_PCPROT_COUNT] = {
     [UFT_PCPROT_UNKNOWN] = "Unknown",
     [UFT_PCPROT_SAFEDISC_1] = "SafeDisc 1.x",
     [UFT_PCPROT_SAFEDISC_2] = "SafeDisc 2.x",
@@ -230,7 +230,24 @@ static const char *protection_names[] = {
     [UFT_PCPROT_SUBCODE] = "Subcode Protection",
 };
 
-static const char *vendor_names[] = {
+/* MF-842: Laenge AUSDRUECKLICH an UFT_PCPROT_COUNT gebunden.
+ *
+ * Hier stand `vendor_names[]` — die Laenge ergab sich aus dem letzten
+ * benannten Initialisierer, also 22 (bis UFT_PCPROT_SOLIDSHIELD). Das
+ * Enum ist seither auf 35 Werte gewachsen; die dreizehn neueren
+ * (ARMADILLO … SUBCODE) fehlen hier. `uft_pcprot_vendor()` prueft
+ * `type >= UFT_PCPROT_COUNT` — also gegen 35 — und las damit fuer
+ * jeden dieser dreizehn Werte HINTER dem Feld.
+ *
+ * Die Schwestertabelle `protection_names[]` wurde beim Erweitern
+ * mitgezogen (35 Eintraege), diese nicht. Genau die Fehlerklasse, die
+ * `scripts/audit_enum_tables.py` seit MF-842 misst.
+ *
+ * Behoben NICHT durch Nachtragen erfundener Herstellernamen — die
+ * Dimension erzwingt jetzt die Laenge, fehlende Eintraege sind NULL,
+ * und die Zugriffsfunktion liefert dafuer bereits „Unknown". Waechst
+ * das Enum erneut, waechst die Tabelle mit. */
+static const char *vendor_names[UFT_PCPROT_COUNT] = {
     [UFT_PCPROT_UNKNOWN] = "Unknown",
     [UFT_PCPROT_SAFEDISC_1] = "Macrovision",
     [UFT_PCPROT_SAFEDISC_2] = "Macrovision",
