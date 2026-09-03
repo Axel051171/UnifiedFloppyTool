@@ -41,7 +41,7 @@ Stand: 2026-09-03
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **7405** Zeilen in **82** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **7407** Zeilen in **82** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)

@@ -313,6 +313,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_ssd_hadfs_nicht_dfs")
+        # MF-836: HADFS legt einen echten DFS-Katalog in Sektor 0/1 —
+        # die SSD-Sonde darf darauf kein Merkmal beanspruchen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atari_dir_past_end")
         # MF-835: Eintraege hinter der Verzeichnis-Endmarke. Der Pruefzweig
         # gab es, der Parser hat seinen Gegenstand vorher zerstoert.

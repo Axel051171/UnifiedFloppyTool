@@ -15,8 +15,63 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/uft_log.h"
 
 #define SSD_SECTOR_SIZE     256
+
+/* ── HADFS-Kennung (MF-836) ───────────────────────────────────────────────
+ *
+ * HADFS (J. G. Harston, BBC/Electron/Master) schreibt beim ANLEGEN einer
+ * Diskette einen ECHTEN DFS-Katalog in die Sektoren 0/1 — als
+ * Kompatibilitaetsmassnahme. Quelle: HADFS 6.10 Quelltext, `S.HADFS8`
+ * §InstDFS:
+ *
+ *     LDA FSM+31:AND #&41:BNE InstNoDFS   \ Don't overwrite sectors 0/1
+ *
+ * Nur bei Flag-Bit 0 (NoDFS) oder Bit 6 (Locked) bleiben 0/1 unberuehrt.
+ * Im Normalfall stehen dort Titel „HADFS" und die Eintraege `!Boot`, `$`,
+ * `HADFSROM` (`S.HADFS9` §BootCode).
+ *
+ * Die Sonde unten prueft genau diesen Katalog und meldete darauf **85**,
+ * also nach der Skala aus MF-729 „Merkmal getroffen". Getroffen wurde
+ * aber ein Merkmal, das HADFS ABSICHTLICH hinterlegt hat; das eigentliche
+ * Dateisystem beginnt bei Sektor 71 und blieb unsichtbar. Kein Absturz,
+ * keine Warnung — ein plausibles falsches Ergebnis.
+ *
+ * HADFS prueft sich selbst an acht Byte (`S.HADFS9` §ChkJGH gegen
+ * §JGHName; Puffer bei &F00, verglichen ab &F10 = Offset 16):
+ *
+ *     Sektor 70, Byte 16..23 = 00 28 43 29 4A 47 48 00   („\0(C)JGH\0")
+ *
+ * Dateioffset 70*256 + 16 = 0x4610, innerhalb von
+ * UFT_PROBE_BUFFER_SIZE (65536).
+ *
+ * WAS HIER NICHT PASSIERT: HADFS wird nicht GELESEN. Ein neuer
+ * Dateisystem-Leser fiele unter das Moratorium (EINFRIER-REGEL
+ * MF-363/498). Diese Aenderung nimmt nur einen falschen Anspruch
+ * zurueck — die Groesse stimmt weiter, das Merkmal wird nicht mehr
+ * behauptet. */
+#define SSD_HADFS_FSM_SECTOR  70u
+#define SSD_HADFS_SIG_OFFSET  16u
+#define SSD_HADFS_SIG_AT      (SSD_HADFS_FSM_SECTOR * SSD_SECTOR_SIZE \
+                               + SSD_HADFS_SIG_OFFSET)   /* 0x4610 */
+
+static const uint8_t SSD_HADFS_SIG[8] = {
+    0x00, '(', 'C', ')', 'J', 'G', 'H', 0x00
+};
+
+/** true, wenn der Puffer die HADFS-Kennung an ihrer Stelle traegt.
+ *
+ *  Reicht der Puffer nicht bis dorthin, ist die Frage unbeantwortbar —
+ *  und eine unbeantwortbare Frage darf keine Antwort erzwingen: dann
+ *  false, also keine Herabsetzung. */
+static bool ssd_traegt_hadfs_kennung(const uint8_t *data, size_t size)
+{
+    if (!data || size < SSD_HADFS_SIG_AT + sizeof(SSD_HADFS_SIG))
+        return false;
+    return memcmp(data + SSD_HADFS_SIG_AT, SSD_HADFS_SIG,
+                  sizeof(SSD_HADFS_SIG)) == 0;
+}
 #define SSD_SPT             10
 
 typedef struct {
@@ -56,6 +111,23 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
         /* Boot option (bits 4-5 of byte 0x106) should be 0-3 */
         if ((data[0x106] >> 4) <= 3 && sec_count_lo > 0)
             *confidence = 85;
+    }
+
+    /* MF-836: Der Katalog kann ECHT und die Diskette trotzdem kein
+     * DFS-Volume sein — HADFS legt ihn absichtlich dort ab. Traegt
+     * Sektor 70 die HADFS-Kennung, wird der Anspruch auf das gesenkt,
+     * was dann noch stimmt: die Groesse.
+     *
+     * 30 ist die Skalenstufe „nur die Groesse" (MF-729). Bewusst KEIN
+     * `return false` — die Datei IST ein Acorn-Abbild mit 10 Sektoren zu
+     * 256 Byte, und ihr den Zugriff zu verweigern waere schlechter als
+     * eine ehrliche niedrige Zahl. */
+    if (ssd_traegt_hadfs_kennung(data, size)) {
+        UFT_WARN("SSD: Sektor 70 traegt die HADFS-Kennung \"(C)JGH\" — "
+                 "der DFS-Katalog in Sektor 0/1 ist HADFS' "
+                 "Kompatibilitaetseintrag, kein eigenstaendiges "
+                 "DFS-Volume; das Dateisystem beginnt bei Sektor 71");
+        *confidence = 30;
     }
     return true;
 }
