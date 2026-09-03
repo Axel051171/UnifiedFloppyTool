@@ -14,14 +14,31 @@
 #define STX_MAGIC_2 'Y'
 #define STX_MAGIC_3 '\0'
 #define STX_HEADER_SIZE 16
-#define STX_MAX_TRACKS 200
+
+/* trackNumber (Spursatz-Byte 0x0E) traegt die Spur in Bit 0-6 und die
+ * SEITE in Bit 7 — also hoechstens 128 Spuren je Seite. */
+#define STX_MAX_TRACK   128
+#define STX_MAX_SIDES   2
+
+/* Spur-Flags, Pasti-Dokumentation (Jean Louis-Guerin). Bit 0 entscheidet,
+ * ob dem Spursatz Sektordeskriptoren folgen oder unmittelbar Nutzdaten. */
+#define STX_TF_SECT_DESC 0x01
+
+/* Standardspuren fuehren ausschliesslich 512-Byte-Sektoren.
+ * Vorlage: AIR pasti/PastiRead.cs:314-334 (GPL-3, J. Louis-Guerin),
+ * im Baum als uft_stx_air.c:506-538 portiert. */
+#define STX_SECTOR_STD  512
 
 typedef struct {
     uint8_t  *file_data;
     size_t    file_size;
     uint16_t  version;
-    uint16_t  track_count;
-    uint32_t  track_offsets[STX_MAX_TRACKS];
+    uint8_t   track_count;
+    uint8_t   revision;
+    /* MF-847: Spursaetze werden ueber IHRE EIGENE Koordinate abgelegt,
+     * nicht ueber ihre Reihenfolge in der Datei. 0 heisst "nicht
+     * vorhanden" — Offset 0 ist der Dateikopf und nie ein Spursatz. */
+    uint32_t  track_offsets[STX_MAX_TRACK][STX_MAX_SIDES];
 } stx_pd_t;
 
 static bool stx_plugin_probe(const uint8_t *data, size_t size,
@@ -51,20 +68,43 @@ static uft_error_t stx_open(uft_disk_t *disk, const char *path, bool ro) {
     p->file_data = raw;
     p->file_size = raw_size;
     p->version = uft_read_le16(raw + 4);
-    p->track_count = uft_read_le16(raw + 10);
-    if (p->track_count > STX_MAX_TRACKS) p->track_count = STX_MAX_TRACKS;
 
-    /* Parse track offset table starting after header */
+    /* MF-847: `trackCount` ist EIN Byte an 0x0A, `revision` ein eigenes
+     * an 0x0B (Pasti-Dokumentation; im Baum uft_stx_air.c:233-234, Port
+     * von AIR pasti/PastiRead.cs). Ein LE16 an 0x0A faltet die Revision
+     * in die Spurzahl: bei revision=2 wurde aus 1 Spur 0x0201 = 513, nach
+     * der alten Klemme 200 — und die gemeldete Geometrie hatte 100
+     * Zylinder statt 1. Gemessen in test_stx_registrierter_leser.c. */
+    p->track_count = raw[10];
+    p->revision    = raw[11];
+
+    /* Spursaetze ueber ihre EIGENE Koordinate ablegen.
+     *
+     * MF-847: bisher zaehlte die Reihenfolge in der Datei
+     * (`track_offsets[t] = pos`) und der Leser indizierte spaeter mit
+     * `cyl*2 + head`. STX-Dateien enthalten aber regelmaessig nur EINEN
+     * TEIL der Spuren — etwa nur die geschuetzten oder nur eine Seite.
+     * Dann wanderte jede folgende Spur unter fremde Koordinaten, still.
+     * Vorlage: AIR pasti/PastiRead.cs, im Baum uft_stx_air.c:265-266:
+     *     track = td.track_number & 0x7F;
+     *     side  = (td.track_number >> 7) & 1; */
     size_t pos = STX_HEADER_SIZE;
-    for (int t = 0; t < p->track_count && pos + 16 <= raw_size; t++) {
-        p->track_offsets[t] = (uint32_t)pos;
+    int max_cyl = 0;
+    for (int t = 0; t < (int)p->track_count && pos + 16 <= raw_size; t++) {
         uint32_t trk_size = uft_read_le32(raw + pos);
         if (trk_size < 16 || pos + trk_size > raw_size) break;
+
+        uint8_t tnum = raw[pos + 14];
+        int trk  = tnum & 0x7F;
+        int side = (tnum >> 7) & 1;
+        p->track_offsets[trk][side] = (uint32_t)pos;
+        if (trk + 1 > max_cyl) max_cyl = trk + 1;
+
         pos += trk_size;
     }
 
     disk->plugin_data = p;
-    disk->geometry.cylinders = (p->track_count + 1) / 2;
+    disk->geometry.cylinders = max_cyl;
     disk->geometry.heads = 2;
     disk->geometry.sectors = 9;
     disk->geometry.sector_size = 512;
@@ -94,23 +134,69 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->file_data) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
 
-    int trk_idx = cyl * 2 + head;
-    if (trk_idx >= p->track_count) return UFT_OK;
+    if (cyl >= STX_MAX_TRACK || head >= STX_MAX_SIDES) return UFT_OK;
 
-    uint32_t trk_off = p->track_offsets[trk_idx];
-    if (trk_off + 16 > p->file_size) return UFT_OK;
+    uint32_t trk_off = p->track_offsets[cyl][head];
+    if (trk_off == 0) return UFT_OK;               /* Spur nicht im Abzug */
+    if ((size_t)trk_off + 16 > p->file_size) return UFT_OK;
 
-    /* Track descriptor: size(4) + fuzzy_count(4) + sector_count(2) + flags(2) + ... */
-    uint16_t sec_count = uft_read_le16(p->file_data + trk_off + 8);
-    uint16_t trk_flags = uft_read_le16(p->file_data + trk_off + 10);
-    (void)trk_flags;
+    /* Spursatz, 16 Byte LE:
+     *   0x00 recordSize | 0x04 fuzzyCount | 0x08 sectorCount
+     *   0x0A flags      | 0x0C trackLength| 0x0E trackNumber | 0x0F type */
+    uint32_t fuzzy_count = uft_read_le32(p->file_data + trk_off + 4);
+    uint16_t sec_count   = uft_read_le16(p->file_data + trk_off + 8);
+    uint16_t trk_flags   = uft_read_le16(p->file_data + trk_off + 10);
 
-    /* Sector descriptors start at offset 16 within track, 16 bytes each */
-    size_t sec_desc_off = trk_off + 16;
-    /* Sector data follows after all descriptors */
-    size_t data_off = sec_desc_off + (size_t)sec_count * 16;
+    /* ---- Standardspur: keine Deskriptoren, nur 512-Byte-Sektoren ----
+     *
+     * MF-847: `trk_flags` wurde hier mit `(void)` kassiert und IMMER
+     * angenommen, es folgten Sektordeskriptoren. Bei einer Standardspur
+     * las der Leser damit Nutzdaten als Adressfelder und meldete
+     * Sektoren, deren Nummern und Groessen aus dem Inhalt stammten.
+     * Vorlage: AIR pasti/PastiRead.cs:314-334, im Baum
+     * uft_stx_air.c:506-538. */
+    if (!(trk_flags & STX_TF_SECT_DESC)) {
+        size_t off = (size_t)trk_off + 16;
+        for (int s = 0; s < (int)sec_count; s++) {
+            if (off + STX_SECTOR_STD > p->file_size) break;
+            uft_format_add_sector(track, (uint8_t)s, p->file_data + off,
+                                  STX_SECTOR_STD, (uint8_t)cyl, (uint8_t)head);
+            off += STX_SECTOR_STD;
+        }
+        return UFT_OK;
+    }
 
-    for (int s = 0; s < sec_count && s < 26; s++) {
+    /* ---- Spur mit Sektordeskriptoren ----
+     *
+     * Aufbau ab trk_off+16:
+     *     sectorCount * 16 Byte Deskriptoren
+     *     fuzzyCount   Byte Fuzzy-Maske        <- LIEGT DAZWISCHEN
+     *     Sektordaten; `dataOffset` zaehlt ab HIER
+     *
+     * MF-847: die Fuzzy-Maske wurde nicht uebersprungen. Jeder Sektor
+     * einer Spur mit Fuzzy-Daten kam damit `fuzzyCount` Byte zu frueh —
+     * der Leser lieferte die MASKE als Sektorinhalt, still, mit UFT_OK.
+     * Das trifft nicht den Randfall, sondern den Zweck des Formats:
+     * Spuren MIT Fuzzy-Maske sind die geschuetzten, und dafuer gibt es
+     * STX ueberhaupt.
+     *
+     * Vorlage: AIR pasti/PastiRead.cs:199-210 — die Maske wird gelesen,
+     * `bpos` wandert weiter, DANN erst `track_data_start = bpos`. Im
+     * Baum portiert als uft_stx_air.c:333-346. Gemessen in
+     * test_stx_registrierter_leser.c: erstes Sektorbyte 0x5C (Fuellbyte
+     * der Maske) statt 0xA7 (Nutzdaten), 8 Byte zu frueh. */
+    size_t sec_desc_off = (size_t)trk_off + 16;
+    size_t data_off = sec_desc_off + (size_t)sec_count * 16 + fuzzy_count;
+
+    /* MF-847: KEINE Klemme mehr. Hier stand `s < 26` — eine Zahl ohne
+     * jede Begruendung, die 26 Sektoren stillschweigend durchliess und
+     * alles darueber verwarf. Es gab auch keinen Kapazitaetsgrund:
+     * `uft_track_add_sector()` waechst per realloc (Verdopplung ab 32).
+     * Die Formatgrenze ist `sectorCount` als uint16; die Dateigrenze
+     * faengt die Schleife unten ab. Belegte Extremfaelle liegen weit
+     * ueber 26 — "Sherman M4" fuehrt 70 Sektoren je Spur (DrCoolZic,
+     * Atari Copy Protection Rev 1.4, Klasse NOS). */
+    for (int s = 0; s < (int)sec_count; s++) {
         size_t desc = sec_desc_off + (size_t)s * 16;
         if (desc + 16 > p->file_size) break;
 

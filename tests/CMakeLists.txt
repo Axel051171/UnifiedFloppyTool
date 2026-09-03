@@ -1737,6 +1737,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_stx_registrierter_leser")
+        # MF-847: der EINZIGE STX-Leser, der an der Registry haengt.
+        # Drei weitere liegen im Baum, darunter der vollstaendige
+        # AIR-Port — ohne Aufrufer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c)
     elseif(${test_name} STREQUAL "test_d88_header_variants")
         # 672-Byte-Kopf (160 Spureintraege) wurde vom Erkenner abgewiesen (MF-625);
         # beide Geschwister, weil die feste Schranke 0x2B0 in beiden stand

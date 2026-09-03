@@ -75,7 +75,17 @@ static int build_stx(const char *path) {
     put_le32(trk + 0, trk_size);          /* track record size */
     put_le32(trk + 4, 0);                 /* fuzzy count */
     put_le16(trk + 8, NSEC);              /* sector count */
-    put_le16(trk + 10, 0);                /* track flags */
+    /* MF-847: die Vorrichtung setzte hier 0 — also KEIN Bit 0 — und legte
+     * trotzdem drei Sektordeskriptoren an. Das beschreibt eine Datei, die
+     * es nicht geben kann: ohne die Deskriptor-Kennung folgen dem Spursatz
+     * unmittelbar Nutzdaten (AIR pasti/PastiRead.cs:314-334, im Baum
+     * uft_stx_air.c:506). Der Leser prueft das Flag jetzt und las die
+     * Vorrichtung folgerichtig als Standardspur — der Test wurde rot.
+     *
+     * Er war vorher gruen, WEIL der Fehler da war: solange das Flag
+     * kassiert wurde, konnte eine Vorrichtung ohne Flag nicht auffallen.
+     * Dieselbe Bauform wie MF-830 und MF-596. */
+    put_le16(trk + 10, 0x01);             /* track flags: SECT_DESC */
 
     uint8_t *descs = trk + 16;
     uint8_t *data  = descs + NSEC * 16;
