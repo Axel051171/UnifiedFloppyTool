@@ -188,7 +188,7 @@ int uft_udi_get_info(const char *path, uft_udi_info_t *info) {
     info->file_size = header.file_size;
     
     /* Read CRC at end of file */
-    if (fseek(f, file_size - 4, SEEK_SET) != 0) return -1;
+    if (fseek(f, file_size - 4, SEEK_SET) != 0) { fclose(f); return -1; }
     uint8_t crc_bytes[4];
     if (fread(crc_bytes, 1, 4, f) != 4) {
         fclose(f);

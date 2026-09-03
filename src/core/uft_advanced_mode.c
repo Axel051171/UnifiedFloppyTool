@@ -152,7 +152,7 @@ int uft_advanced_detect_format(const char* path, int* confidence) {
     
     fseek(f, 0, SEEK_END);
     size_t file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) return -1;
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return FMT_UNKNOWN; }
     
     /* Read header for detection */
     uint8_t header[8192];

@@ -82,7 +82,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1044 |
 | `src/formats/d64/uft_d64_parser_v3.c` | 4 | 1768 |
 | `src/formats/adf/uft_adf_parser_v3.c` | 3 | 545 |
-| `src/formats/cbm/uft_cbm_formats.c` | 2 | 960 |
+| `src/formats/cbm/uft_cbm_formats.c` | 2 | 969 |
 | `src/formats/fat32/uft_fat32_mbr.c` | 2 | 590 |
 | `src/formats/tap/uft_tap_parser_v2.c` | 1 | 296 |
 

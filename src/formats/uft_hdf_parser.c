@@ -294,7 +294,7 @@ int uft_hdf_parse(const char *path, uft_hdf_info_t *info) {
         info->has_rdb = false;
         
         /* Try to detect filesystem type from first blocks */
-        if (fseek(f, 0, SEEK_SET) != 0) return -1;
+        if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
         if (fread(block, 1, 512, f) == 512) {
             uint32_t dos_type = read_be32(block);
             if ((dos_type & 0xFFFFFF00) == 0x444F5300) {
@@ -319,7 +319,9 @@ int uft_hdf_read_block(const char *path, uint32_t block_num, uint8_t *buffer) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, block_num * 512, SEEK_SET) != 0) return 0;
+    /* MF-846: `return 0` hiess in dieser Funktion ERFOLG — der Aufrufer
+     * haette einen unberuehrten Puffer als gelesenen Block bekommen. */
+    if (fseek(f, block_num * 512, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buffer, 1, 512, f);
     fclose(f);
     

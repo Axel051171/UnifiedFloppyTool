@@ -94,7 +94,7 @@ int uft_abc800_read(const char *path, uft_abc800_image_t **image) {
     long sz = ftell(f);
     if (sz <= 0) { fclose(f); return UFT_ERR_IO; }
     size_t size = (size_t)sz;
-    if (fseek(f, 0, SEEK_SET) != 0) return UFT_ERR_IO;
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_IO; }
     
     uint8_t *data = malloc(size);
     if (!data) { fclose(f); return UFT_ERR_MEMORY; }

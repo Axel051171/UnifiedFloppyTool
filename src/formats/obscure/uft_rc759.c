@@ -62,7 +62,7 @@ int uft_rc759_read(const char *path, uft_rc759_image_t **image) {
     
     fseek(f, 0, SEEK_END);
     size_t size = (size_t)ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) return UFT_ERR_IO;
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_IO; }
     
     uint8_t *data = malloc(size);
     if (!data) { fclose(f); return UFT_ERR_MEMORY; }

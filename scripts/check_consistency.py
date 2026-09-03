@@ -1002,6 +1002,25 @@ def main() -> int:
         import audit_evidence_marker as _em
         all_errors.append(("Eintraege ohne Belegtyp", _em.check(repo)))
 
+        # 51. Kategorie (MF-846): Dateihandles, die an einer I/O-Schranke
+        # offen bleiben.
+        #
+        # 21 Stellen, alle nach demselben Muster: `fopen` gelingt, die
+        # `fseek`-Schranke bricht ab und kehrt zurueck — waehrend der
+        # NACHBARZWEIG in derselben Funktion sauber `fclose` ruft. Eine
+        # vergessene Klammer in einer kopierten Vorlage.
+        #
+        # Der Trennstrich ist die HERKUNFT des Handles, nicht die
+        # Schranke: ein grober Durchlauf lieferte 467 Kandidaten, die
+        # enge Form mit Schranke immer noch 347 — fast alle auf einem
+        # langlebigen `p->file`, wo `return` ohne `fclose` richtig ist.
+        # Nur ein `FILE*` aus einem `fopen` in DERSELBEN Funktion muss
+        # geschlossen werden; damit fielen 347 auf 21.
+        #
+        # HARTES Tor: Grundlinie 0, weil kein Rueckstand bleibt.
+        import audit_fd_leaks as _fd
+        all_errors.append(("offene Dateihandles", _fd.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

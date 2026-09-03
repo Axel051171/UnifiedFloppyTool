@@ -839,7 +839,16 @@ int uft_cbm_t64_read(const char *filename, uft_cbm_file_t **files)
         write16_le(file->data, start_addr);
         
         long current_pos = ftell(f);
-        if (fseek(f, offset, SEEK_SET) != 0) return -1;
+        if (fseek(f, offset, SEEK_SET) != 0) {
+            /* MF-846: wie der Zweig darunter — Eintrag ueberspringen,
+             * nicht abbrechen. `return -1` verlor hier das Handle, den
+             * gerade gebauten Eintrag samt `file->data` UND die ganze
+             * bereits aufgebaute `*files`-Liste, und meldete -1 in einer
+             * Funktion, die sonst UFT_CBM_* oder die Anzahl liefert. */
+            uft_cbm_file_free(file);
+            fseek(f, current_pos, SEEK_SET);
+            continue;
+        }
         if (fread(file->data + 2, 1, size, f) != size) {
             uft_cbm_file_free(file);
             fseek(f, current_pos, SEEK_SET);

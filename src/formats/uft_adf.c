@@ -764,11 +764,11 @@ int uft_adf_create(const char *path, uft_adf_density_t density,
     root[5] = cpu_to_be32(checksum);
     
     /* Write boot block */
-    if (fseek(fp, 0, SEEK_SET) != 0) return -1;
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     fwrite(bootblock, 1, UFT_ADF_BOOTBLOCK_SIZE, fp);
     
     /* Write root block */
-    if (fseek(fp, (long)root_block * UFT_ADF_SECTOR_SIZE, SEEK_SET) != 0) return -1;
+    if (fseek(fp, (long)root_block * UFT_ADF_SECTOR_SIZE, SEEK_SET) != 0) { fclose(fp); return -1; }
     fwrite(rootblock, 1, UFT_ADF_SECTOR_SIZE, fp);
     
     /* Create bitmap block (all blocks free except boot and root) */
@@ -799,7 +799,7 @@ int uft_adf_create(const char *path, uft_adf_density_t density,
     bm[0] = cpu_to_be32(checksum);
     
     /* Write bitmap */
-    if (fseek(fp, (long)(root_block + 1) * UFT_ADF_SECTOR_SIZE, SEEK_SET) != 0) return -1;
+    if (fseek(fp, (long)(root_block + 1) * UFT_ADF_SECTOR_SIZE, SEEK_SET) != 0) { fclose(fp); return -1; }
     fwrite(bitmap, 1, UFT_ADF_SECTOR_SIZE, fp);
     if (ferror(fp)) {
         fclose(fp);
