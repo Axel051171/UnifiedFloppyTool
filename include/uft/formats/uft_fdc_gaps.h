@@ -156,6 +156,48 @@ typedef struct {
 
 /*===========================================================================
  * Standard Format Definitions
+ *===========================================================================
+ *
+ * ── EHRLICHKEITS-HINWEIS (MF-838) ─────────────────────────────────────────
+ *
+ * Diese Tabelle ist **nicht durchgehend belegt**, und das Modul hat
+ * **keinen Aufrufer** — `src/formats/uft_fdc_gaps.c` steht als solches in
+ * `docs/orphan_baseline.txt:213`, und alle sechs oeffentlichen Funktionen
+ * werden ausserhalb ihrer eigenen Datei nirgends gerufen. `gap3_fmt` wird
+ * im ganzen Baum an **null** Stellen gelesen.
+ *
+ * Gemessen an zwei HARTEN Invarianten (`scripts/audit_fdc_gaps.py`):
+ *
+ *   PASSEN   gap4a + gap1 + Sektoren x (Satzlaenge + gap3_fmt) + gap4b
+ *            darf `track_bytes` nicht ueberschreiten
+ *   ORDNUNG  gap3_fmt >= gap3_rw — der Format-Gap ist nie kleiner als der
+ *            Lese/Schreib-Gap, weil beim Formatieren Drehzahlschwankung
+ *            aufgefangen werden muss
+ *
+ * Ergebnis beim ersten Lauf: **11 von 17 Eintraegen passen nicht auf ihre
+ * eigene Spur**, und `gap3_fmt = 84` steht in **vier** Eintraegen mit
+ * **drei verschiedenen Sektorzahlen** (15, 18, 18, 36) — das Muster eines
+ * kopierten Blocks, dieselbe Klasse wie FMT-1/2/3.
+ *
+ * WOHER DIE 664 KOMMT, und das ist der aufschlussreichste Teil: sie steht
+ * in den PC-, MSX- und Amstrad-Eintraegen als `gap4b`, ist dort aber der
+ * **Atari-ST-Wert**. Nachgerechnet (MF-828):
+ *
+ *   Satzlaenge ohne Gap3            574 Byte
+ *   ST:  574 + 40 (gap3)          = 614  <- Louis-Guerins Sektorabstand
+ *        60 + 9 x 614             = 5586 ; 6250 - 5586 = **664**
+ *   IBM: 574 + 80 (gap3)          = 654
+ *        80 + 50 + 9 x 654        = 6016 ; 6250 - 6016 = **234**
+ *
+ * Der ST-Eintrag ist also richtig (gap3 = 40 ergibt genau 614), die 664
+ * ist nur in die falschen Zeilen gewandert. Fuer IBM waeren es 234.
+ *
+ * BERICHTIGT wurde hier nur, was eine benannte Quelle traegt (PC 1.44M,
+ * siehe dort). Die uebrigen zehn Eintraege bleiben **sichtbar falsch**
+ * statt uebertuencht: sie mit abgeleiteten Werten stimmig zu machen
+ * wuerde sie konsistent machen, ohne sie richtig zu machen — und das
+ * waere schlechter, weil der Widerspruch dann nicht mehr auffaellt.
+ * `audit_fdc_gaps.py` haelt die Zahl bei 11 fest; sie darf nur sinken.
  *===========================================================================*/
 
 /* PC/DOS Formats */
@@ -187,7 +229,27 @@ static const uft_fdc_format_t UFT_FDC_PC_1440K = {
     .name = "PC 1.44M (3.5\" HD)",
     .tracks = 80, .sides = 2, .sectors = 18, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_500K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 108, .gap3_fmt = 84, .gap4b = 400 },
+    /* MF-838: die beiden Gap-3-Werte waren VERTAUSCHT, und der zweite
+     * war der Wert von 1.2M.
+     *
+     * Die DDPT des PC fuehrt zwei Gap-3-Werte getrennt — FreeDOS FORMAT
+     * 0.92, `floppy.c:402` (`ddptPrinter`) zeigt sie nebeneinander als
+     * `gap3_length_rw` und `gap3_length_xmat`. Werte nach Ch. Hochstaetter,
+     * FDFORMAT/88 1.8, zitiert in FreeDOS FORMAT `floppy.c:952`:
+     *
+     *    9 Sekt.: Format-Gap 0x50 = 80    (BIOS-R/W-Gap 0x2A = 42)
+     *   15 Sekt.: Format-Gap 0x54 = 84
+     *   18 Sekt.: Format-Gap 0x6C = 108   (BIOS-R/W-Gap 0x1B = 27)
+     *
+     * Hier stand `gap3_rw = 108` — das ist der FORMAT-Gap — und
+     * `gap3_fmt = 84`, der Wert von 1.2M (siehe UFT_FDC_PC_1200K, dort
+     * richtig). Derselbe 84er steht noch in drei weiteren Eintraegen.
+     *
+     * `gap4b` war 400 und ist ABGELEITET auf 78: mit dem belegten
+     * Format-Gap 108 belegt die Spur 80 + 50 + 18 x (574 + 108) = 12406
+     * von 12500 Byte; 400 haetten nicht gepasst. Die 78 sind Rechnung,
+     * keine Quelle — deshalb steht das hier. */
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 27, .gap3_fmt = 108, .gap4b = 78 },
     .track_bytes = 12500, .raw_bits = 200000
 };
 

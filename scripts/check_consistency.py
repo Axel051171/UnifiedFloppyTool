@@ -948,6 +948,19 @@ def main() -> int:
         import audit_dead_fields as _df
         all_errors.append(("Tote Header-Felder", _df.check(repo)))
 
+        # 47. Kategorie (MF-838): die FDC-Gap-Tabelle gegen sich selbst.
+        #
+        # Dieselbe Pointe wie beim CP/M-DPB (MF-813): fuer diese Pruefung
+        # braucht es keine Referenz. Ein Spurlayout haengt arithmetisch
+        # zusammen — 11 von 17 Eintraegen passten beim ersten Nachrechnen
+        # nicht auf ihre eigene Spur, und  stand in vier
+        # Eintraegen mit drei verschiedenen Sektorzahlen.
+        #
+        # Gemessen wird der ANSTIEG. „Passt" heisst nicht „stimmt" —
+        # geprueft wird Selbstkonsistenz, nicht Richtigkeit.
+        import audit_fdc_gaps as _fg
+        all_errors.append(("FDC-Gap-Tabelle", _fg.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

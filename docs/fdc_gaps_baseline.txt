@@ -1,0 +1,43 @@
+# Grundlinie fuer scripts/audit_fdc_gaps.py (MF-838)
+#
+# Die Zahl unten ist die Anzahl der Eintraege in
+# `include/uft/formats/uft_fdc_gaps.h`, die sich SELBST widersprechen —
+# entweder passt ihr Spurlayout nicht auf ihre eigene `track_bytes`
+# (Invariante PASSEN), oder ihr Format-Gap ist kleiner als ihr
+# Lese/Schreib-Gap (Invariante ORDNUNG). Das Tor schlaegt an, wenn sie
+# STEIGT.
+#
+# Stand 2026-09-03, nach MF-838: 17 Eintraege, 11 widerspruechlich.
+#
+# Warum 11 stehen bleiben und nicht behoben wurden:
+#
+#   Berichtigt wurde nur, was eine BENANNTE Quelle traegt — PC 1.44M
+#   (Ch. Hochstaetter, FDFORMAT/88 1.8, ueber FreeDOS FORMAT 0.92
+#   `floppy.c:952`). Fuer die uebrigen zehn Eintraege (BBC, PC-98,
+#   Amstrad, MSX, 8-Zoll-FM, Atari) liegt keine Quelle vor.
+#
+#   Sie mit ABGELEITETEN Werten stimmig zu machen waere moeglich — die
+#   Arithmetik gibt fuer jeden Eintrag ein passendes `gap4b` her — aber
+#   es waere schlechter: die Eintraege wuerden konsistent, ohne richtig
+#   zu werden, und der Widerspruch fiele nicht mehr auf. Sichtbar falsch
+#   ist besser als unsichtbar falsch.
+#
+# Was die Zahl bereits erklaert:
+#
+#   Die PC-, MSX- und Amstrad-Eintraege liegen um 430 bzw. 186 Byte
+#   darueber, die Atari-Eintraege um exakt **60**. Bei den ersten steht
+#   `gap4b = 664` — das ist der ATARI-ST-Wert (60 + 9 x 614 = 5586;
+#   6250 - 5586 = 664, siehe MF-828), fuer IBM waeren es 234. Bei den
+#   Atari-Eintraegen ist der 60-Byte-Vorspann DOPPELT gezaehlt
+#   (gap4a = 60 UND gap1 = 60), wo Brods Write-Track-Tabelle nur einen
+#   nennt: „Intro: 60 bytes of $4E".
+#
+#   Beides ist eine Herleitung, keine Quelle — deshalb steht es hier und
+#   nicht im Code.
+#
+# Grenze des Verfahrens: „passt" heisst nicht „stimmt". Das Tor prueft
+# Selbstkonsistenz, nicht Richtigkeit.
+#
+# Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+
+11
