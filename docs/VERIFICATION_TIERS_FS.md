@@ -55,7 +55,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 |---|---|---|
 | `src/formats/ssd/uft_ssd_parser_v2.c` | 48 | 556 |
 | `src/detect/mfm/cpm_fs.c` | 41 | 1426 |
-| `src/formats/atari/atari_dos2.c` | 23 | 1007 |
+| `src/formats/atari/atari_dos2.c` | 23 | 1038 |
 | `src/formats/trd/uft_trd_parser_v2.c` | 23 | 666 |
 | `src/formats/c64/uft_bam_editor.c` | 20 | 976 |
 | `src/formats/nintendo/uft_switch.c` | 13 | 411 |
@@ -75,7 +75,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/commodore/uft_m2i.c` | 6 | 433 |
 | `src/formats/flex/uft_flex.c` | 6 | 276 |
 | `src/fileops/uft_file_ops_extended.c` | 5 | 597 |
-| `src/formats/atari/atari_check.c` | 5 | 701 |
+| `src/formats/atari/atari_check.c` | 5 | 727 |
 | `src/formats/legacy/uft_fdi.c` | 5 | 512 |
 | `src/formats/atari/atari_util.c` | 4 | 315 |
 | `src/formats/bbc/uft_bbc_dfs.c` | 4 | 359 |

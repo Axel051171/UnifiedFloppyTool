@@ -35,7 +35,25 @@ typedef enum {
     ATR_BOOT_UNKNOWN  = 0,  /**< nicht entscheidbar                    */
     ATR_BOOT_LOGICAL  = 1,  /**< 3 x 128 B, danach Sektorgroesse       */
     ATR_BOOT_PHYSICAL = 2,  /**< 3 x Sektorgroesse, je 128 B genutzt   */
-    ATR_BOOT_WEIRD    = 3   /**< 3 x 128 B + 3 x 128 B Nullen          */
+    ATR_BOOT_WEIRD    = 3,  /**< 3 x 128 B + 3 x 128 B Nullen          */
+    /* MF-834: der Fall, den die Referenzimplementierung SELBST schreibt.
+     * Nick Kennedys SIO2PC adressiert Sektor n>3 bei `0x190 + (n-4)*256`
+     * (`8BUSCMND.S`: „Offset past 10h header & 180h 3 SD") — also
+     * LOGICAL —, deklariert die 180-K-Diskette aber mit `(256/16)*720
+     * = 11520` Absaetzen, also 184320 Byte. Adressiert werden davon nur
+     * 183936; die letzten 384 Byte sind SCHLACKE.
+     *
+     * Damit ist die Nutzlast durch 256 teilbar und das Layout trotzdem
+     * LOGICAL. Die Regel aus dem atari-tools-Readme („durch 256 teilbar
+     * -> PHYSICAL oder WEIRD") deckt diesen Fall NICHT ab, und MF-833
+     * hat ihn deshalb auf PHYSICAL abgebildet — 384 Byte verschoben,
+     * genau bei den Dateien, die das Originalprogramm erzeugt hat.
+     *
+     * DIE TRICHOTOMIE IST DAMIT ERKLAERT: nicht drei Deutungen einer
+     * klaren Spezifikation, sondern eine in sich WIDERSPRUECHLICHE
+     * Referenzimplementierung — wer ihrer Groessenangabe folgte, baute
+     * PHYSICAL, wer ihrer Adressrechnung folgte, LOGICAL. */
+    ATR_BOOT_LOGICAL_SLACK = 4  /**< LOGICAL, Datei 384 B laenger */
 } atr_boot_layout_t;
 
 typedef struct {
@@ -46,13 +64,36 @@ typedef struct {
     atr_boot_layout_t boot_layout;
     uint16_t    sector_size_raw;    /**< Kopfwert, auch wenn unbekannt  */
     bool        sector_size_assumed;/**< true: 128 B nur ANGENOMMEN     */
+    /* MF-834: zwei Kopffelder, die bisher niemand gelesen hat. */
+    uint8_t     flags_raw;          /**< H_FLAGS, unveraendert          */
+    bool        copy_prot;          /**< b4: kopiergeschuetzte Diskette */
+    bool        write_prot;         /**< b5: schreibgeschuetztes Abbild */
+    uint16_t    first_bad_sec;      /**< BAD_1ST, erster VOLLSTAENDIGER Satz */
 } atr_data_t;
+
+/* Flags-Bits nach `2SIOTEXT.S:619-620` (Nick Kennedy). */
+#define ATR_FLAG_COPY_PROTECTED  0x10u
+#define ATR_FLAG_WRITE_PROTECTED 0x20u
+
+/* Standardgroessen in 16-Byte-Absaetzen, `2SIOTEXT.S:1125`:
+ *   SIZES: DW 01000h,(128/16)*720,(128/16)*1040,(256/16)*720 */
+#define ATR_PARA_64K_RAMDISK  0x1000u  /*  4096 */
+#define ATR_PARA_90K_SD        5760u
+#define ATR_PARA_130K_ED       8320u
+#define ATR_PARA_180K_DD      11520u
+
+static bool atr_para_ist_standard(uint16_t lo) {
+    return lo == ATR_PARA_64K_RAMDISK || lo == ATR_PARA_90K_SD ||
+           lo == ATR_PARA_130K_ED     || lo == ATR_PARA_180K_DD;
+}
 
 /** Nutzlastlaenge (ohne Kopf), aus der die drei Bootsektoren bestehen. */
 static size_t atr_boot_span(atr_boot_layout_t layout, uint16_t sector_size) {
     switch (layout) {
     case ATR_BOOT_PHYSICAL: return (size_t)ATR_BOOT_SECTORS * sector_size;
     case ATR_BOOT_WEIRD:    return 2u * ATR_BOOT_SECTORS * ATR_BOOT_SECTOR_SIZE;
+    /* LOGICAL_SLACK liegt wie LOGICAL — der Unterschied steckt allein in
+     * der Dateilaenge, nicht in den Versaetzen. */
     default:                return (size_t)ATR_BOOT_SECTORS * ATR_BOOT_SECTOR_SIZE;
     }
 }
@@ -90,8 +131,56 @@ static size_t atr_sector_offset(int sector, uint16_t sector_size,
  * @param f          offene Datei, Position wird wiederhergestellt
  * @param payload    Dateilaenge ohne die 16 Kopfbytes
  */
+static bool alles_null(FILE *f, long off, size_t len)
+{
+    long merk = ftell(f);
+    if (merk < 0 || fseek(f, off, SEEK_SET) != 0) return false;
+    bool null = true;
+    uint8_t puf[256];
+    size_t rest = len;
+    while (rest) {
+        size_t n = rest > sizeof puf ? sizeof puf : rest;
+        if (fread(puf, 1, n, f) != n) { null = false; break; }
+        for (size_t i = 0; i < n; i++) if (puf[i]) { null = false; break; }
+        if (!null) break;
+        rest -= n;
+    }
+    (void)fseek(f, merk, SEEK_SET);
+    return null;
+}
+
+/**
+ * @brief Boot-Layout bestimmen (MF-833, Entscheidungstafel MF-834).
+ *
+ * Schritt 1 stammt aus dem atari-tools-Readme (Joe Allen): Nutzlast
+ * durch 128 teilbar, aber NICHT durch 256 -> LOGICAL. Das ist eindeutig.
+ *
+ * Schritt 2 stand dort als „Byte 384..767 pruefen: alles Null ->
+ * wahrscheinlich WEIRD, sonst PHYSICAL". Diese Regel ist UNVOLLSTAENDIG:
+ * sie kennt den vierten Fall nicht, den die Referenzimplementierung
+ * selbst erzeugt (LOGICAL_SLACK, siehe dort). MF-833 folgte ihr woertlich
+ * und las SIO2PC-Originaldateien 384 Byte verschoben.
+ *
+ * Deshalb ZWEI Zeugen statt einem — der Anfang UND das Ende:
+ *
+ *   A = Byte 384..767 sind Null      (der Bootbereich ist aufgefuellt)
+ *   B = die letzten 384 Byte sind Null (das Ende ist unadressiert)
+ *
+ *   A  B  Layout          Begruendung
+ *   -  -  ------------    ------------------------------------------
+ *   0  1  LOGICAL_SLACK   Sektor 4 steht bei 384, das Ende ist Schlacke
+ *   0  0  PHYSICAL        Bootbereich belegt, Daten laufen bis zum Ende
+ *   1  0  WEIRD           drei Nullsektoren, Daten laufen bis zum Ende
+ *   1  1  unentscheidbar  -> LOGICAL, weil die Referenz so ADRESSIERT
+ *
+ * Die letzte Zeile ist eine bewusste Wahl, nicht Verlegenheit: bei einer
+ * weitgehend leeren Diskette tragen beide Zeugen nichts, und dann ist
+ * die Adressrechnung der Referenzimplementierung die bessere Annahme als
+ * ihre Groessenangabe. Sie wird gemeldet.
+ */
 static atr_boot_layout_t atr_probe_boot_layout(FILE *f, size_t payload,
-                                               uint16_t sector_size) {
+                                               uint16_t sector_size)
+{
     /* Bei 128 B sind Boot- und Datensektoren gleich gross — es gibt
      * nichts zu unterscheiden. Bei 512 B ist keine Variante belegt;
      * das bisherige Verhalten (LOGICAL) bleibt, damit MF-340 haelt. */
@@ -109,27 +198,23 @@ static atr_boot_layout_t atr_probe_boot_layout(FILE *f, size_t payload,
 
     if (payload < 768u) return ATR_BOOT_UNKNOWN;
 
-    long merk = ftell(f);
-    if (merk < 0) return ATR_BOOT_UNKNOWN;
-    if (fseek(f, ATR_HEADER_SIZE + 384, SEEK_SET) != 0) return ATR_BOOT_UNKNOWN;
+    bool a = alles_null(f, ATR_HEADER_SIZE + 384, 384);
+    bool b = alles_null(f, (long)(ATR_HEADER_SIZE + payload - 384), 384);
 
-    uint8_t puf[384];
-    size_t n = fread(puf, 1, sizeof puf, f);
-    (void)fseek(f, merk, SEEK_SET);
-    if (n != sizeof puf) return ATR_BOOT_UNKNOWN;
+    if (!a && b) {
+        UFT_WARN("ATR: Nutzlast %zu ist 256-teilbar, aber die letzten 384 "
+                 "Byte sind leer — LOGICAL mit Schlacke (SIO2PC-Original)",
+                 payload);
+        return ATR_BOOT_LOGICAL_SLACK;
+    }
+    if (!a && !b) return ATR_BOOT_PHYSICAL;
+    if (a && !b)  return ATR_BOOT_WEIRD;
 
-    for (size_t i = 0; i < sizeof puf; i++)
-        if (puf[i] != 0) return ATR_BOOT_PHYSICAL;
-
-    /* Alles Null. WEIRD ist wahrscheinlich — sicher ist es nicht: ein
-     * PHYSICAL-Abbild, dessen Bootsektoren 4..6 leer sind, sieht genauso
-     * aus. Die Quelle sagt ausdruecklich „probably". Also melden, nicht
-     * behaupten. Die beiden Deutungen liegen hier ohnehin gleich (beide
-     * Bootbereiche 768 Byte), der Unterschied betrifft nur die
-     * BENENNUNG im Bericht. */
-    UFT_WARN("ATR: Byte 384-767 sind Null — WEIRD-Layout angenommen; "
-             "PHYSICAL mit leeren Bootsektoren 4-6 ist nicht auszuschliessen");
-    return ATR_BOOT_WEIRD;
+    /* a && b: beide Zeugen stumm. */
+    UFT_WARN("ATR: Boot-Layout nicht entscheidbar (Byte 384-767 UND die "
+             "letzten 384 Byte sind leer) — LOGICAL angenommen, weil die "
+             "Referenzimplementierung so adressiert");
+    return ATR_BOOT_LOGICAL;
 }
 
 bool atr_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
@@ -160,8 +245,53 @@ static uft_error_t atr_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (!pdata) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     
     pdata->file = f;
-    uint32_t paragraphs = uft_read_le16(&header[2]) | ((uint32_t)header[6] << 16);
+    /* MF-834: HI_XSIZE ist ein WORT bei Offset 6-7, nicht ein Byte.
+     * Layout nach Nick Kennedys `2SIOTEXT.S:1160-1167`:
+     *   0-1 HEADER (Magic)  2-3 XSIZE  4-5 SEC_XSIZE
+     *   6-7 HI_XSIZE        8 H_FLAGS  9-10 BAD_1ST  11-15 unbenutzt
+     *
+     * UND: SIO2PC VOR Revision 3.00 schrieb MUELL in HI_XSIZE. Der Autor
+     * hat dafuer eine versteckte Reparaturoption eingebaut, die das Wort
+     * schlicht nullt („This fixes it!!!", `A_DISKS.S:1256`), mit dem
+     * Bildschirmtext „PRESS Y TO FORCE FILE SIZE TO STANDARD (FIX BUG)".
+     * Er nennt es selbst einen Bug.
+     *
+     * Erkennung nach dem Verfahren des Autors (`A_DISKS.S:1265`): nur bei
+     * HI_XSIZE == 0 wird gegen die Standardgroessentabelle geprueft.
+     * Umgekehrt gilt: passt das Low-Wort EXAKT auf eine Standardgroesse
+     * und ist das High-Wort ungleich 0, dann ist das High-Wort mit hoher
+     * Wahrscheinlichkeit der bekannte Muell. Bedingungslos addiert ergaebe
+     * es eine bis zu 255-fach zu grosse Diskette. */
+    uint16_t para_lo = uft_read_le16(&header[2]);
+    uint16_t para_hi = uft_read_le16(&header[6]);
+    if (para_hi != 0 && atr_para_ist_standard(para_lo)) {
+        UFT_WARN("ATR-Kopf: HI_XSIZE ist 0x%04X, XSIZE 0x%04X entspricht "
+                 "aber genau einer Standardgroesse — bekannter Fehler in "
+                 "SIO2PC vor Rev. 3.00; HI_XSIZE ignoriert",
+                 (unsigned)para_hi, (unsigned)para_lo);
+        para_hi = 0;
+    }
+    uint32_t paragraphs = (uint32_t)para_lo | ((uint32_t)para_hi << 16);
     uint32_t disk_bytes = paragraphs * 16;
+
+    /* MF-834: zwei Kopffelder, die bisher niemand gelesen hat.
+     * Flags-Byte bei 8 (`2SIOTEXT.S:619-620`): b4 = kopiergeschuetzte
+     * Diskette, b5 = schreibgeschuetztes Abbild. Die uebrigen Bits
+     * betrachtet SIO2PC ausdruecklich nicht („at present just look at b4
+     * and b5") — also erhalten, nicht deuten.
+     * Wort bei 9-10 ist NICHT „irgendein defekter Sektor", sondern der
+     * erste Sektor, fuer den ein VOLLSTAENDIGER Satz aus Good- UND
+     * Bad-Status vorliegt (`B_1050.S:748-753`). */
+    pdata->flags_raw     = header[8];
+    pdata->copy_prot     = (header[8] & ATR_FLAG_COPY_PROTECTED)  != 0;
+    pdata->write_prot    = (header[8] & ATR_FLAG_WRITE_PROTECTED) != 0;
+    pdata->first_bad_sec = uft_read_le16(&header[9]);
+    if (header[8] & (uint8_t)~(ATR_FLAG_COPY_PROTECTED |
+                               ATR_FLAG_WRITE_PROTECTED)) {
+        UFT_WARN("ATR-Kopf: Flags 0x%02X traegt Bits ausserhalb b4/b5 — "
+                 "unbekannte Erweiterung, unveraendert erhalten",
+                 (unsigned)header[8]);
+    }
     pdata->sector_size     = uft_read_le16(&header[4]);
     pdata->sector_size_raw = pdata->sector_size;
     /* 128 (SD/ED), 256 (DD), and 512 (SpartaDOS X / Altirra/AspeQt large ATR).
@@ -195,17 +325,35 @@ static uft_error_t atr_open(uft_disk_t* disk, const char* path, bool read_only) 
 
     pdata->boot_layout = atr_probe_boot_layout(f, payload, pdata->sector_size);
 
-    /* Sektorzahl aus derselben Nutzlast und demselben Layout ableiten.
-     * Bis MF-833 rechnete diese Stelle mit `disk_bytes` aus dem Kopf UND
-     * dem LOGICAL-Bootbereich; bei PHYSICAL/WEIRD lag sie damit daneben. */
+    /* MF-834: Sektorzahl nach EINER Regel, die alle belegten Faelle
+     * trifft — und nicht mehr nach der LOGICAL-Formel allein.
+     *
+     * SIO2PC rechnet `Absaetze / (Sektorgroesse/16)` (`A_DISKS.S:174`),
+     * also OHNE Sonderbehandlung der drei 128-Byte-Bootsektoren. Das
+     * stimmt fuer jede Nutzlast, die ein Vielfaches der Sektorgroesse
+     * ist. Ein echtes LOGICAL-Abbild ist das NICHT (183936 % 256 = 128),
+     * dort gilt `3 + (Nutzlast - 384)/Sektorgroesse`.
+     *
+     * Nachgerechnet an allen fuenf belegten Faellen:
+     *   SD  90K   92160 % 128 = 0  ->   92160/128 =  720
+     *   ED 130K  133120 % 128 = 0  ->  133120/128 = 1040
+     *   LOGICAL  183936 % 256 = 128 -> 3 + 717    =  720
+     *   SIO2PC   184320 % 256 = 0  ->  184320/256 =  720
+     *   SDX 512    2944 % 512 = 384 -> 3 +   5    =    8   (MF-340)
+     *
+     * Die alte Rechnung ergab beim SIO2PC-Fall 721 — ein Sektor, der nie
+     * einer war, mit echtem Inhalt aus der Schlacke. */
     {
-        size_t bspan = atr_boot_span(pdata->boot_layout, pdata->sector_size);
         size_t nutz  = payload ? payload : (size_t)disk_bytes;
-        if (nutz <= bspan) {
-            pdata->total_sectors = (uint32_t)(nutz / ATR_BOOT_SECTOR_SIZE);
+        if (pdata->sector_size && (nutz % pdata->sector_size) == 0) {
+            pdata->total_sectors = (uint32_t)(nutz / pdata->sector_size);
         } else {
-            pdata->total_sectors = ATR_BOOT_SECTORS +
-                (uint32_t)((nutz - bspan) / pdata->sector_size);
+            size_t bspan = atr_boot_span(pdata->boot_layout,
+                                         pdata->sector_size);
+            pdata->total_sectors = (nutz > bspan)
+                ? ATR_BOOT_SECTORS +
+                  (uint32_t)((nutz - bspan) / pdata->sector_size)
+                : (uint32_t)(nutz / ATR_BOOT_SECTOR_SIZE);
         }
         if (payload && disk_bytes && payload != (size_t)disk_bytes) {
             UFT_WARN("ATR: Kopf nennt %u Byte Nutzlast, die Datei hat %zu — "
@@ -213,10 +361,26 @@ static uft_error_t atr_open(uft_disk_t* disk, const char* path, bool read_only) 
                      (unsigned)disk_bytes, payload);
         }
     }
+
     disk->plugin_data = pdata;
-    disk->geometry.cylinders = (pdata->total_sectors + 17) / 18;
+    /* MF-834: Sektoren je Spur aus der Standardgroesse, nicht fest 18.
+     * SIO2PCs Groessentabelle (`2SIOTEXT.S:1125`) nennt genau vier
+     * Formate: 4096 Absaetze (64-K-RAMdisk), 5760 (90 K SD, 18 Sektoren),
+     * 8320 (130 K ED, **26** Sektoren) und 11520 (180 K DD, 18).
+     * Mit fest 18 meldete Enhanced Density 58 Zylinder statt 40 — die
+     * Sektorzahl stimmte, die Spuraufteilung nicht. */
+    uint16_t spt;
+    if      (pdata->total_sectors == 1040u) spt = 26u;   /* DOS 2.5 ED */
+    else if (pdata->total_sectors ==  720u) spt = 18u;   /* SD und DD  */
+    else {
+        spt = 18u;
+        UFT_WARN("ATR: %u Sektoren entsprechen keinem der vier "
+                 "Standardformate — 18 Sektoren/Spur angenommen",
+                 (unsigned)pdata->total_sectors);
+    }
+    disk->geometry.cylinders = (pdata->total_sectors + spt - 1u) / spt;
     disk->geometry.heads = 1;
-    disk->geometry.sectors = 18;
+    disk->geometry.sectors = spt;
     disk->geometry.sector_size = pdata->sector_size;
     disk->geometry.total_sectors = pdata->total_sectors;
     

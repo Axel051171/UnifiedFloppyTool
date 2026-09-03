@@ -362,6 +362,9 @@ atari_error_t dos2_read_directory(atari_disk_t *disk)
         return ATARI_ERR_NULL_PTR;
 
     disk->dir_entry_count = 0;
+    /* MF-835: true ab der ersten Endmarke — danach wird weiter
+     * GELESEN, aber `dir_entry_count` nicht mehr erhoeht. */
+    bool ende_gesehen = false;
 
     for (int sec = 0; sec < DIR_SECTOR_COUNT; sec++) {
         uint8_t buf[SECTOR_SIZE_DD];
@@ -388,15 +391,43 @@ atari_error_t dos2_read_directory(atari_disk_t *disk)
             entry->is_dos2_compat = (entry->status & DIR_FLAG_DOS2_CREATED) != 0;
             entry->is_open       = (entry->status & DIR_FLAG_OPEN_OUTPUT) != 0;
 
-            if (entry->status == DIR_FLAG_NEVER_USED) {
-                /* Ende der Directory-Suche bei DOS 2.0 */
-                disk->dir_entry_count = idx;
-                /* Rest trotzdem füllen als "nicht benutzt" */
-                for (int rest = idx; rest < MAX_FILES; rest++) {
-                    disk->directory[rest].status = DIR_FLAG_NEVER_USED;
-                    disk->directory[rest].entry_index = rest;
+            /* MF-835: Die Endmarke beendet die SICHT von DOS, nicht das
+             * Lesen. Hier stand:
+             *
+             *     disk->dir_entry_count = idx;
+             *     for (int rest = idx; rest < MAX_FILES; rest++)
+             *         disk->directory[rest].status = DIR_FLAG_NEVER_USED;
+             *     return ATARI_OK;
+             *
+             * Der Parser hoerte also beim ersten Nullstatus auf zu LESEN
+             * und ueberschrieb alle restlichen Plaetze mit „nie benutzt".
+             * Damit waren zwei Dinge verloren:
+             *
+             * (1) FORENSISCH: Eintraege hinter der Marke tragen Namen,
+             *     Startsektor und Sektorzahl von Dateien, die DOS nicht
+             *     mehr findet — die Daten liegen aber noch auf der
+             *     Diskette. Dieselbe Klasse, die
+             *     `uft_amigados_extended.c` fuer AmigaDOS als
+             *     `orphan_count` fuehrt und dort begruendet („data still
+             *     on disk = forensically valuable").
+             *
+             * (2) DER PRUEFLAUF DAFUER WAR UNERREICHBAR:
+             *     `atari_check.c` meldet „Eintrag hinter Ende-Marke" —
+             *     eine Bedingung, die nach diesem Ueberschreiben auf
+             *     JEDER Diskette falsch ist. Fuenfter belegter Fall einer
+             *     Pruefung, die gruen ist WEIL sie unmoeglich ist, und
+             *     der erste, bei dem nicht die Pruefung fehlt, sondern
+             *     ihr Gegenstand zerstoert wird.
+             *
+             * Jetzt: `dir_entry_count` merkt die Sichtgrenze EINMAL,
+             * gelesen wird weiter bis zum Ende des Verzeichnisses. */
+            if (DIR_IST_ENDMARKE(entry->status)) {
+                if (!ende_gesehen) {
+                    disk->dir_entry_count = idx;
+                    ende_gesehen = true;
                 }
-                return ATARI_OK;
+                /* Auch eine Endmarke wird vollstaendig gelesen — ihre
+                 * unteren Bits und ihr Rest sind Befundmaterial. */
             }
 
             entry->sector_count = read_le16(&raw[1]);
@@ -406,7 +437,7 @@ atari_error_t dos2_read_directory(atari_disk_t *disk)
             trim_filename((const char *)&raw[5], entry->filename, FILENAME_LEN);
             trim_filename((const char *)&raw[13], entry->extension, EXTENSION_LEN);
 
-            disk->dir_entry_count = idx + 1;
+            if (!ende_gesehen) disk->dir_entry_count = idx + 1;
         }
     }
 

@@ -313,6 +313,14 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_atari_dir_past_end")
+        # MF-835: Eintraege hinter der Verzeichnis-Endmarke. Der Pruefzweig
+        # gab es, der Parser hat seinen Gegenstand vorher zerstoert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_dos2.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_atr.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_check.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_sparta.c)
     elseif(${test_name} STREQUAL "test_atr_boot_layout")
         # MF-833: ATR mit 256-B-Sektoren ist dreifach ambig
         # (LOGICAL/PHYSICAL/WEIRD). Das Plugin meldet die Erkennung ueber

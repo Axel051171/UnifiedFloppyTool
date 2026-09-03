@@ -132,6 +132,22 @@ extern "C" {
 #define DIR_FLAG_DELETED            0x80    /* Gelöscht (Eintrag wiederverwendbar) */
 #define DIR_FLAG_NEVER_USED         0x00    /* Noch nie benutzt (Ende der Suche) */
 
+/* MF-835: Die Endmarke ist NICHT `status == 0`, sondern „bits 6 and 7
+ * both 0" — DOS 2.0s bricht die Verzeichnissuche beim ersten Eintrag ab,
+ * bei dem WEDER das In-Use- NOCH das Deleted-Bit gesetzt ist. Ein
+ * Eintrag mit z. B. 0x02 (von DOS 2.x erstellt, b6/b7 frei) beendet die
+ * Suche also ebenfalls, obwohl er nicht 0x00 ist.
+ *
+ * Quelle: Joe Allen, `atari-tools` readme.md §Filesystem format
+ * (DOS 2.0s) — „it stops searching when it encounters the first
+ * directory entry which has never been used (flag byte bits 6 and 7
+ * both 0)".
+ *
+ * Der Unterschied ist nicht akademisch: mit der Gleichheitspruefung sah
+ * UFT Dateien, die DOS nicht sieht, und sagte es nicht. */
+#define DIR_FLAG_END_MASK           (DIR_FLAG_IN_USE | DIR_FLAG_DELETED)
+#define DIR_IST_ENDMARKE(st)        (((st) & DIR_FLAG_END_MASK) == 0)
+
 /* Normale Statuswerte */
 #define DIR_STATUS_NORMAL           0x42    /* IN_USE | DOS2_CREATED */
 #define DIR_STATUS_LOCKED           0x62    /* IN_USE | LOCKED | DOS2_CREATED */

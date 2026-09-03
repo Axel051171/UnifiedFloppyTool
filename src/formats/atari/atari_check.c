@@ -223,16 +223,42 @@ atari_error_t check_directory(atari_disk_t *disk, check_result_t *result,
     for (int i = 0; i < MAX_FILES; i++) {
         atari_dir_entry_t *entry = &disk->directory[i];
 
-        if (entry->status == DIR_FLAG_NEVER_USED) {
+        /* MF-835: Endmarke = b6 UND b7 frei, nicht `status == 0`.
+         * Siehe DIR_IST_ENDMARKE in atari_dos.h. */
+        if (DIR_IST_ENDMARKE(entry->status)) {
             if (!found_end) found_end = true;
+            /* Eine Endmarke mit gesetzten UNTEREN Bits ist selbst ein
+             * Fund: DOS bricht dort ab, aber irgendwer hat Bits
+             * hinterlassen. */
+            if (entry->status != DIR_FLAG_NEVER_USED) {
+                add_issue(result, CHECK_INFO,
+                          (uint16_t)(DIR_SECTOR_START + i / DIR_ENTRIES_PER_SECTOR),
+                          (uint8_t)i,
+                          "Eintrag #%d ist Ende-Marke (b6/b7 frei), traegt "
+                          "aber Status $%02X", i, entry->status);
+            }
             continue;
         }
 
-        /* Einträge nach dem "nie benutzt" Marker */
-        if (found_end && entry->status != DIR_FLAG_NEVER_USED) {
-            add_issue(result, CHECK_WARNING, 0, i,
-                      "Eintrag #%d nach Ende-Marker (Status=$%02X)",
-                      i, entry->status);
+        /* MF-835: Eintraege HINTER der Ende-Marke. Fuer DOS unsichtbar,
+         * die Daten liegen aber noch auf der Diskette — deshalb
+         * CHECK_INFO mit Sektor, Startsektor und Sektorzahl, damit die
+         * Datei wiederherstellbar ist, und ausdruecklich KEIN Mangel:
+         * `is_valid` bleibt unberuehrt.
+         *
+         * Bis MF-835 war dieser Zweig unerreichbar — der Parser hat alle
+         * Eintraege ab der Marke mit „nie benutzt" ueberschrieben, bevor
+         * der Pruefer sie sah. */
+        if (found_end) {
+            add_issue(result, CHECK_INFO,
+                      (uint16_t)(DIR_SECTOR_START + i / DIR_ENTRIES_PER_SECTOR),
+                      (uint8_t)i,
+                      "Eintrag #%d liegt hinter der Ende-Marke — fuer DOS "
+                      "unsichtbar (Status $%02X, %s.%s, %u Sektoren ab %u); "
+                      "Daten vermutlich noch vorhanden",
+                      i, entry->status,
+                      entry->filename, entry->extension,
+                      entry->sector_count, entry->first_sector);
         }
 
         if (entry->is_deleted) {

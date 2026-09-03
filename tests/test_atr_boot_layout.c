@@ -75,6 +75,19 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define LAY_LOGICAL   0
 #define LAY_PHYSICAL  1
 #define LAY_WEIRD     2
+/* MF-834: der Fall, den die Referenzimplementierung SELBST schreibt —
+ * LOGICAL-Ablage mit PHYSICAL-grosser Deklaration. Nick Kennedys SIO2PC
+ * adressiert Sektor n>3 bei `0x190 + (n-4)*256` (`8BUSCMND.S`, „Offset
+ * past 10h header & 180h 3 SD"), deklariert die Diskette aber mit
+ * `(256/16)*720 = 11520` Absaetzen = 184320 Byte Nutzlast. Adressiert
+ * werden davon nur 183936 — die letzten **384 Byte sind Schlacke**.
+ *
+ * Damit ist die Nutzlast durch 256 teilbar, das Layout aber LOGICAL.
+ * Die Regel aus dem atari-tools-Readme („durch 256 teilbar -> PHYSICAL
+ * oder WEIRD") trifft diesen Fall NICHT — und MF-833 hat ihn deshalb
+ * auf PHYSICAL abgebildet, also 384 Byte verschoben gelesen. Genau bei
+ * den Dateien, die das Originalprogramm erzeugt hat. */
+#define LAY_LOGICAL_SLACK 3
 
 static void temp_pfad(char *p, size_t n, const char *stamm) {
     const char *d = getenv("TMPDIR");
@@ -93,8 +106,12 @@ static void spuren_frei(uft_track_t *t) {
 /* Legt ein ATR in einer der drei Varianten ab. */
 static int baue_atr(const char *pfad, int layout)
 {
-    size_t vorlauf = (layout == LAY_LOGICAL) ? 3u * 128u : 768u;
+    size_t vorlauf = (layout == LAY_PHYSICAL || layout == LAY_WEIRD)
+                   ? 768u : 3u * 128u;
     size_t nutz    = vorlauf + (NSEC - 3u) * SS;
+    /* LOGICAL_SLACK: dieselbe Ablage wie LOGICAL, aber die Datei ist
+     * 384 Byte laenger — genau die Schlacke, die SIO2PC erzeugt. */
+    if (layout == LAY_LOGICAL_SLACK) nutz += 384u;
     uint8_t *img = (uint8_t *)calloc(1, 16u + nutz);
     if (!img) return 0;
 
@@ -237,6 +254,83 @@ TEST(bei_128_byte_sektoren_stellt_sich_die_frage_nicht)
     remove(p);
 }
 
+TEST(sio2pc_original_ist_logical_trotz_256_teilbarer_laenge)
+{
+    /* MF-834. Der Rotbeweis fuer meinen eigenen Fehler aus MF-833.
+     *
+     * Nutzlast 184320 (durch 256 teilbar), Ablage aber LOGICAL, weil
+     * die Referenzimplementierung so adressiert. MF-833 pruefte nur
+     * Byte 384..767 — die tragen hier Sektor 4 und die erste Haelfte
+     * von Sektor 5, sind also NICHT Null — und entschied PHYSICAL.
+     * Ergebnis: Sektor 4 wurde 384 Byte zu weit hinten gelesen.
+     *
+     * Der zweite Zeuge ist der SCHLUSS der Datei: bei LOGICAL mit
+     * Schlacke sind die letzten 384 Byte unadressiert und leer, bei
+     * PHYSICAL laufen die Daten bis zum Ende. */
+    char p[300]; temp_pfad(p, sizeof p, "sio");
+    ASSERT(baue_atr(p, LAY_LOGICAL_SLACK));
+    uint8_t b = 0; uint32_t tot = 0;
+    ASSERT(lies(p, 4, &b, &tot, NULL) == 0);
+    ASSERT(b == MARKE4);
+    /* Und die Sektorzahl: SIO2PC rechnet Absaetze/(Sektorgroesse/16)
+     * = 11520/16 = 720. Die Rechnung `3 + (Nutzlast-384)/256` ergibt
+     * hier 721 — ein Sektor, der nie einer war, mit echtem Inhalt aus
+     * der Schlacke. */
+    ASSERT(tot == NSEC);
+    remove(p);
+}
+
+TEST(schlacke_am_ende_wird_nicht_als_sektor_ausgegeben)
+{
+    char p[300]; temp_pfad(p, sizeof p, "slk");
+    ASSERT(baue_atr(p, LAY_LOGICAL_SLACK));
+    uint8_t b = 0;
+    /* Der letzte echte Sektor traegt die Marke. */
+    ASSERT(lies(p, NSEC, &b, NULL, NULL) == 0);
+    ASSERT(b == MARKE_END);
+    remove(p);
+}
+
+TEST(enhanced_density_hat_26_sektoren_je_spur)
+{
+    /* MF-834. SIO2PCs Groessentabelle (`2SIOTEXT.S:1125`) nennt vier
+     * Formate: 4096 Absaetze (64-K-RAMdisk), 5760 (90 K SD), 8320
+     * (130 K ED) und 11520 (180 K DD). Enhanced Density hat **26**
+     * Sektoren je Spur, nicht 18 — mit fest 18 meldete das Plugin
+     * 58 Zylinder statt 40. Die Sektorzahl stimmte dabei, die
+     * Spuraufteilung nicht. */
+    char p[300]; temp_pfad(p, sizeof p, "ed");
+    uint32_t nutz = 1040u * 128u;              /* 133120 */
+    uint32_t para = nutz / 16u;                /* 8320   */
+    uint8_t hdr[16]; memset(hdr, 0, sizeof hdr);
+    hdr[0] = 0x96; hdr[1] = 0x02;
+    hdr[2] = (uint8_t)(para & 0xFF); hdr[3] = (uint8_t)((para >> 8) & 0xFF);
+    hdr[4] = 128; hdr[5] = 0;
+    FILE *f = fopen(p, "wb");
+    ASSERT(f != NULL);
+    int ok = fwrite(hdr, 1, 16, f) == 16;
+    uint8_t *body = (uint8_t *)calloc(1, nutz);
+    ASSERT(body != NULL);
+    /* Marke im letzten Sektor (1040), Nutzlast-Offset 1039*128. */
+    body[1039u * 128u] = MARKE_END;
+    ok = ok && fwrite(body, 1, nutz, f) == nutz;
+    free(body); fclose(f);
+    ASSERT(ok);
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    disk.read_only = true;
+    ASSERT(uft_format_plugin_atr.open(&disk, p, true) == UFT_OK);
+    ASSERT(disk.geometry.total_sectors == 1040u);
+    ASSERT(disk.geometry.sectors       == 26u);   /* vorher 18 */
+    ASSERT(disk.geometry.cylinders     == 40u);   /* vorher 58 */
+    if (uft_format_plugin_atr.close) uft_format_plugin_atr.close(&disk);
+
+    /* Gegenprobe: 720 Sektoren muessen weiter 18/40 melden. */
+    ASSERT(1040u / 26u == 40u);
+    remove(p);
+}
+
 int main(void)
 {
     printf("=== ATR Boot-Layout: LOGICAL / PHYSICAL / WEIRD (MF-833) ===\n");
@@ -244,6 +338,9 @@ int main(void)
     RUN(physical_wird_nicht_um_384_byte_verschoben);
     RUN(weird_ueberspringt_die_drei_nullsektoren);
     RUN(der_letzte_sektor_liegt_in_allen_drei_varianten_richtig);
+    RUN(sio2pc_original_ist_logical_trotz_256_teilbarer_laenge);
+    RUN(schlacke_am_ende_wird_nicht_als_sektor_ausgegeben);
+    RUN(enhanced_density_hat_26_sektoren_je_spur);
     RUN(bei_128_byte_sektoren_stellt_sich_die_frage_nicht);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
