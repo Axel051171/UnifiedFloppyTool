@@ -9127,9 +9127,30 @@ liest es als Spurdichte, mit **Bit 7 als „Kommentarblock folgt"**
 (`td0.cpp:28` und `:208`, `th.bTrackDensity & 0x80`).
 
 Und unser eigener Code tut genau das schon: `uft_td0_lzss.c:469` prüft
-`header.stepping & 0x80`. **Falsch war die Beschreibung, nicht das Verhalten** —
-aber eine falsche Beschreibung ist die Vorlage für den nächsten, der danach
-implementiert.
+`header.stepping & 0x80`.
+
+> **BERICHTIGT MF-870.** Hier stand: *„Falsch war die Beschreibung, nicht
+> das Verhalten — aber eine falsche Beschreibung ist die Vorlage für den
+> nächsten, der danach implementiert."*
+>
+> Der zweite Halbsatz hat sich als richtiger erwiesen, als er gemeint war:
+> **falsch war beides.** `uft_td0_parser_v2.c:412` las das Kommentar-Flag
+> tatsächlich aus `drive_type` statt aus `stepping`. MF-460 hat den Vermerk
+> gesetzt und die Zeile darunter nie nachgezogen — und der Vermerk hat die
+> Lage dann sechs Sitzungen lang als geklärt erscheinen lassen.
+>
+> Dazu war in derselben Datei die Kompressionserkennung invertiert
+> (`"TD"` galt als komprimiert, obwohl es die unkomprimierte Fassung ist),
+> und **drei** Stellen — Dateikopf, beide Konstantenkommentare, Auswertung
+> — sagten einträchtig dasselbe Falsche. Wer nur diese Datei liest, findet
+> keinen Fehler.
+>
+> Behoben MF-870, Rotbeweis `tests/test_td0_signatur.c`: 4 von 6 rot gegen
+> den Vorzustand.
+>
+> **Die Lehre gehört hierher, nicht in den Commit:** ein Vermerk, der einen
+> Befund beschreibt, aber die Zeile darunter nicht anfasst, ist schlimmer
+> als kein Vermerk. Er sieht aus wie eine Erledigung.
 
 Dazu eine **dritte** Lesart desselben Bytes: `uft_td0_parser_v2.c:76` nannte es
 „Track stepping (1 or 2)" und druckte `"Stepping: %d:1"` — bei gesetztem Bit 7

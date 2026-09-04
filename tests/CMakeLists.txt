@@ -1425,6 +1425,12 @@ foreach(test_source ${TEST_SOURCES})
         # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c)
+    elseif(${test_name} STREQUAL "test_td0_signatur")
+        # MF-870: "TD" ist die UNKOMPRIMIERTE Fassung, "td" die
+        # komprimierte — uft_td0_parser_v2.c hatte es invertiert und las
+        # das Kommentarflag aus dem falschen Byte.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_parser_v2.c)
     elseif(${test_name} STREQUAL "test_fm_echte_aufnahme")
         # MF-869: der FM-Dekoder gegen eine echte Aufnahme von 1979,
         # byteweise gegen die IMD desselben Objekts (Applesauces eigener

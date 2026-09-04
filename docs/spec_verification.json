@@ -103,7 +103,7 @@
   },
   "td0": {
     "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag",
-    "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. Falsch war die Beschreibung, nicht das Verhalten."
+    "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. BERICHTIGT MF-870: falsch war BEIDES. Die Beschreibung stimmte nicht, und uft_td0_parser_v2.c:412 las das Kommentar-Flag tatsaechlich aus drive_type statt aus stepping - MF-460 hat den Vermerk gesetzt und die Zeile darunter nie nachgezogen. Dazu war die Kompressionserkennung invertiert: die Grossbuchstaben-Kennung galt als komprimiert, obwohl sie die unkomprimierte Fassung bezeichnet. Beides behoben, Rotbeweis tests/test_td0_signatur.c (4 von 6 rot gegen den Vorzustand)."
   },
   "woz": {
     "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",

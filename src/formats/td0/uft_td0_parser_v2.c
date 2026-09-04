@@ -12,7 +12,19 @@
  * - Sector interleave detection
  * 
  * Teledisk was created by Sydex in 1985 for disk-to-disk backup.
- * Two compression methods: "td" (none/RLE) and "TD" (advanced LZSS)
+ *
+ * MF-870: hier stand `"td" (none/RLE) and "TD" (advanced LZSS)` — die
+ * dritte Stelle in DIESER Datei, die es verkehrt herum sagte (neben den
+ * beiden Konstantenkommentaren und der Auswertung selbst). Richtig ist:
+ *
+ *     "TD" (0x4454)  normal, RLE
+ *     "td" (0x6474)  advanced, LZSS/Huffman
+ *
+ * Bemerkenswert daran: die Datei war in sich WIDERSPRUCHSFREI falsch.
+ * Kopfkommentar, Konstantenkommentare und Code sagten dasselbe — nur
+ * eben das Gegenteil dessen, was der kanonische Header des Baums und
+ * drei weitere Quellen sagen. Wer nur diese Datei liest, findet keinen
+ * Fehler.
  * 
  * @author GOD MODE v5.3.8
  * @date 2026-01-02
@@ -33,9 +45,39 @@
  * TD0 FORMAT STRUCTURES
  *============================================================================*/
 
-/* TD0 signatures */
-#define TD0_SIG_NORMAL    0x4454  /* "TD" - advanced compression */
-#define TD0_SIG_OLD       0x6474  /* "td" - no/RLE compression */
+/* TD0 signatures.
+ *
+ * MF-870: hier stand die Ursache, nicht nur ihre Folge.
+ *
+ *     #define TD0_SIG_NORMAL  0x4454  // "TD" - advanced compression
+ *     #define TD0_SIG_OLD     0x6474  // "td" - no/RLE compression
+ *
+ * Beide Kommentare sagten das GEGENTEIL, und der Name `TD0_SIG_OLD` fuer
+ * die Kleinbuchstaben-Kennung ist irrefuehrend: "td" ist nicht aelter,
+ * sondern die KOMPRIMIERTE Fassung (LZSS/Huffman).
+ *
+ * Richtig:
+ *     "TD" (0x4454)  normal, RLE
+ *     "td" (0x6474)  advanced, LZSS/Huffman
+ *
+ * Vier unabhaengige Gegenquellen, drei davon im eigenen Baum:
+ *     include/uft/formats/uft_td0.h:31,34   der kanonische Header
+ *     src/formats/td0/uft_td0_lzss.c:295    DIESELBE Formatfamilie
+ *     src/samdisk/td0.cpp:10-11             (MIT, im Baum)
+ *     uft_extract_v19                       fremdes Buendel, unabhaengig
+ *
+ * Warum kein Tor das gefangen hat: Tor 52 (`audit_macro_drift.py`)
+ * vergleicht gleiche NAMEN mit verschiedenen Werten. Hier waren es
+ * verschiedene Namen (`TD0_SIG_*` gegen `UFT_TD0_SIG_*`) mit gleichem
+ * Wert und gegensaetzlichem Kommentar — genau die Luecke, die im
+ * Dateikopf jenes Tores seit MF-853 ausdruecklich vermerkt ist.
+ *
+ * Die Namen folgen jetzt dem kanonischen Header. `TD0_SIG_OLD` bleibt
+ * als Alias stehen, damit keine Fundstelle stillschweigend ihre
+ * Bedeutung wechselt. */
+#define TD0_SIG_NORMAL    0x4454  /* "TD" — normal, RLE            */
+#define TD0_SIG_ADVANCED  0x6474  /* "td" — advanced, LZSS/Huffman */
+#define TD0_SIG_OLD       TD0_SIG_ADVANCED  /* alter, irrefuehrender Name */
 
 /* TD0 header flags */
 #define TD0_FLAG_COMMENT  0x80    /* Comment block present */
@@ -408,9 +450,22 @@ td0_context_t* td0_open(const char *filename) {
         return NULL;
     }
     
-    ctx->advanced_compression = (ctx->header.signature == TD0_SIG_NORMAL);
-    ctx->has_comment = (ctx->header.drive_type & TD0_FLAG_COMMENT) != 0;
-    ctx->header.drive_type &= ~TD0_FLAG_COMMENT;  /* Clear flag */
+    /* MF-870: beide Zeilen waren falsch.
+     *
+     * VORHER:
+     *     advanced_compression = (signature == TD0_SIG_NORMAL);
+     *     has_comment = (header.drive_type & TD0_FLAG_COMMENT) != 0;
+     *
+     * Die erste war invertiert: "TD" ist die UNKOMPRIMIERTE Fassung.
+     * Eine "TD"-Datei lief damit durch den LZSS-Dekoder, eine
+     * "td"-Datei wurde roh gelesen — beide liefern Unsinn.
+     *
+     * Die zweite las das falsche Byte. Der MF-460-Vermerk bei der
+     * Strukturdefinition oben beschreibt es seit jeher richtig
+     * (`stepping`, Bit 7) — die Zeile hier wurde nie nachgezogen. */
+    ctx->advanced_compression = (ctx->header.signature == TD0_SIG_ADVANCED);
+    ctx->has_comment = (ctx->header.stepping & TD0_FLAG_COMMENT) != 0;
+    ctx->header.stepping &= (uint8_t)~TD0_FLAG_COMMENT;  /* Flag loeschen */
     
     /* Validate CRC */
     uint16_t calc_crc = td0_calc_crc((uint8_t*)&ctx->header, 10, 0);
@@ -518,6 +573,21 @@ td0_context_t* td0_open(const char *filename) {
 /**
  * @brief Close TD0 file
  */
+/* MF-870: zwei Zugriffsfunktionen statt eines nachdeklarierten Aufbaus.
+ *
+ *  braucht genau diese beiden Wahrheitswerte.
+ * Die Struktur dafuer im Test nachzubauen waere der Fehler, den MF-796
+ * im EDSK-Plugin gefunden hat: dort standen 40 gegen 32 Byte je Sektor,
+ * von Hand nachdeklariert, und das Plugin lieferte fuer JEDE Spur JEDER
+ * EDSK-Datei keinen einzigen Sektor — still, mit UFT_OK. */
+bool td0_uses_advanced_compression(const td0_context_t *ctx) {
+    return ctx && ctx->advanced_compression;
+}
+
+bool td0_has_comment(const td0_context_t *ctx) {
+    return ctx && ctx->has_comment;
+}
+
 void td0_close(td0_context_t *ctx) {
     if (!ctx) return;
     
