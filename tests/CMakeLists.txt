@@ -1425,6 +1425,28 @@ foreach(test_source ${TEST_SOURCES})
         # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c)
+    elseif(${test_name} STREQUAL "test_fm_echte_aufnahme")
+        # MF-869: der FM-Dekoder gegen eine echte Aufnahme von 1979,
+        # byteweise gegen die IMD desselben Objekts (Applesauces eigener
+        # Dekoder). Ueberspringt sich benannt, wenn der Korpus fehlt —
+        # tests/corpus/ ist ungetrackt (Zone PRUEFEN).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # SKIP_RETURN_CODE 77 gilt seit MF-598 fuer ALLE Tests — eine
+        # eigene Zeile hier waere genau die Aufzaehlung, die dort
+        # abgeschafft wurde.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_a2r_layout")
         # MF-868: der A2R-Leser meldete A2R_OK und lieferte nichts.
         # Struktur aus der veroeffentlichten A2R-3.x-Referenz, byteweise

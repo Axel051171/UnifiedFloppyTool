@@ -291,9 +291,28 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 > X3.73**, und die Prüfsummen erzeugt die fremde Klasse, während **UFTs
 > eigene** `flux_crc16_ccitt()` sie nachrechnet.
 >
-> **Was das nicht belegt:** das Verhalten an einer echten Aufnahme. Im
-> Korpus liegt kein FM-Flussabzug (P3-123). Der Dekoder liest eine
-> normgerechte Spur — mehr sagt die Messung nicht.
+> **Nachtrag MF-869 — inzwischen an einer echten Aufnahme belegt.** Hier
+> stand: „das Verhalten an einer echten Aufnahme ist nicht belegt, im
+> Korpus liegt kein FM-Flussabzug". Beides hat sich geändert. Seit der
+> Korpus-Beschaffung liegt eine **Applesauce-Aufnahme einer 8-Zoll-
+> Diskette von 1979** darin, und seit MF-868 lässt sie sich öffnen —
+> der A2R-Leser war bis dahin eine WOZ-Kopie, die `OK` zu nichts
+> meldete.
+>
+> Gemessen an Zylinder 0 dieser Aufnahme:
+>
+> | | |
+> |---|---|
+> | Zellenzeit | aus dem **Intervall-Histogramm** (~2125 ns), nicht angenommen |
+> | dekodiert | **32 Sektoren**, ID-CRC falsch **0**, Daten-CRC falsch **0** |
+> | gegen die IMD | **26 von 26 byteidentisch** |
+>
+> Die CRCs stehen auf der Diskette selbst, 1979 geschrieben. Die IMD
+> stammt aus demselben Objekt und wurde von **Applesauces eigenem**
+> Dekoder erzeugt — zwei unabhängige Umsetzungen, dieselbe Diskette,
+> dieselben 3328 Bytes. Festgehalten als
+> `tests/test_fm_echte_aufnahme.c`; ohne Korpus überspringt er sich
+> benannt.
 
 > **Ehrlichkeits-Hinweis (MF-710):** hier stand bis heute
 > „AmigaDOS │ FAT12 │ CBM DOS │ Apple DOS/ProDOS │ CP/M │ TRSDOS │
