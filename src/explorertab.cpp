@@ -1169,14 +1169,33 @@ void ExplorerTab::onViewHex()
         if (imgFile.open(QIODevice::ReadOnly)) {
             QByteArray imgBytes = imgFile.readAll();
             imgFile.close();
-            if (fat12_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
-                                   static_cast<size_t>(imgBytes.size()),
-                                   fileName.toUtf8().constData(),
-                                   &outData, &outSize) == 0 && outData) {
+            /* MF-874: 1 heisst „gelesen, aber die beiden FAT-Kopien
+             * beschreiben fuer diese Datei verschiedene Clusterketten".
+             * Der Zugriff bleibt offen — gemeldet wird die Beobachtung,
+             * nicht ihre Deutung. WELCHE Kopie massgeblich ist, haengt
+             * vom schreibenden System ab (P3-56): MS-DOS/MSXDOS fuehren
+             * FAT 1, TOS liest FAT 2. Der gelieferte Inhalt folgt FAT 1. */
+            int fatRc = fat12_extract_file(
+                reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                static_cast<size_t>(imgBytes.size()),
+                fileName.toUtf8().constData(),
+                &outData, &outSize);
+            if (fatRc >= 0 && outData) {
                 fileData = QByteArray(reinterpret_cast<const char*>(outData),
                                       static_cast<int>(outSize));
                 free(outData);
                 extracted = true;
+                if (fatRc == 1) {
+                    QMessageBox::warning(
+                        this, tr("FAT copies disagree"),
+                        tr("The two FAT copies describe different cluster "
+                           "chains for \"%1\".\n\n"
+                           "The extracted content follows FAT 1. Which copy "
+                           "is authoritative depends on the writing system: "
+                           "MS-DOS and MSX-DOS maintain FAT 1, TOS reads "
+                           "FAT 2. This is reported, not resolved.")
+                            .arg(fileName));
+                }
             }
         }
     } else if (ext == "ssd" || ext == "dsd") {
@@ -1316,14 +1335,33 @@ void ExplorerTab::onViewText()
         if (imgFile.open(QIODevice::ReadOnly)) {
             QByteArray imgBytes = imgFile.readAll();
             imgFile.close();
-            if (fat12_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
-                                   static_cast<size_t>(imgBytes.size()),
-                                   fileName.toUtf8().constData(),
-                                   &outData, &outSize) == 0 && outData) {
+            /* MF-874: 1 heisst „gelesen, aber die beiden FAT-Kopien
+             * beschreiben fuer diese Datei verschiedene Clusterketten".
+             * Der Zugriff bleibt offen — gemeldet wird die Beobachtung,
+             * nicht ihre Deutung. WELCHE Kopie massgeblich ist, haengt
+             * vom schreibenden System ab (P3-56): MS-DOS/MSXDOS fuehren
+             * FAT 1, TOS liest FAT 2. Der gelieferte Inhalt folgt FAT 1. */
+            int fatRc = fat12_extract_file(
+                reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                static_cast<size_t>(imgBytes.size()),
+                fileName.toUtf8().constData(),
+                &outData, &outSize);
+            if (fatRc >= 0 && outData) {
                 fileData = QByteArray(reinterpret_cast<const char*>(outData),
                                       static_cast<int>(outSize));
                 free(outData);
                 extracted = true;
+                if (fatRc == 1) {
+                    QMessageBox::warning(
+                        this, tr("FAT copies disagree"),
+                        tr("The two FAT copies describe different cluster "
+                           "chains for \"%1\".\n\n"
+                           "The extracted content follows FAT 1. Which copy "
+                           "is authoritative depends on the writing system: "
+                           "MS-DOS and MSX-DOS maintain FAT 1, TOS reads "
+                           "FAT 2. This is reported, not resolved.")
+                            .arg(fileName));
+                }
             }
         }
     } else if (ext == "ssd" || ext == "dsd") {

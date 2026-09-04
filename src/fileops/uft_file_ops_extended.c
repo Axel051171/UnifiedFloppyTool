@@ -465,6 +465,41 @@ int fat12_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
 /**
  * @brief Extract file from FAT12 image
  */
+/**
+ * @brief Eine Datei aus einem FAT12-Abbild lesen.
+ *
+ * MF-874: die Clusterkette wird in BEIDEN FAT-Kopien verfolgt und
+ * verglichen.
+ *
+ * Der Baum hat drei FAT-Leser. Der einzige, der die Kopien vergleicht
+ * (`src/fs/uft_fat12.c`, MF-829), hat KEINEN Aufrufer ausserhalb der
+ * Tests. Die beiden, die die Oberflaeche erreicht — dieser hier ueber
+ * `src/explorertab.cpp:1172,1319` und `uft_fat12_init()` ueber
+ * `:677,772` — lasen beide unbedingt FAT 1 und verglichen nie.
+ *
+ * Das ist nicht gleichgueltig. `explorertab.cpp:1165` schickt auch
+ * `.st`-Abbilder hierher, und fuer die gilt laut Claus Brod, MSXPATCH
+ * (1994, ZOO-Archiv vom 23.11.1994): "MSXDOS disks have two FATs, but
+ * only the first of them contains valid data. ... TOS, however, always
+ * tries to look up its file allocation data in the SECOND FAT."
+ * Weichen die Kopien ab, lieferte diese Funktion also moeglicherweise
+ * den falschen Inhalt — still.
+ *
+ * Gemeldet wird die BEOBACHTUNG, nicht ihre Deutung. WELCHE Kopie
+ * massgeblich ist, haengt vom schreibenden System ab und ist im Baum
+ * nicht belegbar (eine Quelle, P3-56). Diese Funktion entscheidet es
+ * nicht: sie folgt weiterhin FAT 1 und sagt, dass es eine zweite
+ * Lesart gibt. Ein Befund darf den Zugriff nicht verstellen (MF-829).
+ *
+ * Verglichen wird PRO DATEI entlang der tatsaechlich verfolgten Kette,
+ * nicht die ganze FAT: zwei Kopien duerfen sich in Bereichen
+ * unterscheiden, die diese Datei nicht beruehren, ohne dass ihr Inhalt
+ * dadurch zweideutig waere.
+ *
+ * @return 0  gelesen, beide Kopien beschreiben dieselbe Kette
+ *         1  gelesen, die Ketten weichen ab — der Inhalt ist zweideutig
+ *        -1  Fehler
+ */
 int fat12_extract_file(const uint8_t *image, size_t img_size,
                        const char *filename, uint8_t **data, size_t *size)
 {
@@ -520,27 +555,42 @@ int fat12_extract_file(const uint8_t *image, size_t img_size,
     
     /* Follow cluster chain */
     const uint8_t *fat = image + fat_start;
+
+    /* MF-874: die zweite Kopie, wenn es sie gibt und sie im Puffer liegt.
+     * NULL heisst "kein Vergleich moeglich" — nicht "keine Abweichung". */
+    size_t         fat_bytes = (size_t)sects_per_fat * bytes_per_sect;
+    const uint8_t *fat2      = NULL;
+    if (fat_count >= 2 && fat_bytes > 0 &&
+        fat_start + 2u * fat_bytes <= img_size) {
+        fat2 = fat + fat_bytes;
+    }
+    int ketten_weichen_ab = 0;
+
     uint16_t cluster = f->start_sector;
     size_t pos = 0;
-    
+
     while (cluster >= 2 && cluster < 0xFF8 && pos < f->size) {
         size_t cluster_offset = data_start + (cluster - 2) * cluster_size;
-        
+
         size_t to_copy = f->size - pos;
         if (to_copy > cluster_size) to_copy = cluster_size;
-        
+
         if (cluster_offset + to_copy > img_size) break;
-        
+
         memcpy(buf + pos, image + cluster_offset, to_copy);
         pos += to_copy;
-        
-        cluster = fat12_get_cluster(fat, cluster);
+
+        uint16_t naechster = fat12_get_cluster(fat, cluster);
+        if (fat2 && fat12_get_cluster(fat2, cluster) != naechster)
+            ketten_weichen_ab = 1;      /* melden, nicht entscheiden */
+
+        cluster = naechster;
     }
-    
+
     *data = buf;
     *size = f->size;
-    
-    return 0;
+
+    return ketten_weichen_ab;
 }
 
 /* ============================================================================

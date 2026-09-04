@@ -425,6 +425,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_fat_kopien_kette")
+        # MF-874: der einzige FAT-Leser, der die Kopien vergleicht
+        # (src/fs/uft_fat12.c, MF-829), hat keinen Produktionsaufrufer.
+        # Der hier ist von explorertab.cpp:1172,1319 erreichbar und las
+        # unbedingt FAT 1.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fileops/uft_file_ops_extended.c)
     elseif(${test_name} STREQUAL "test_st_bootpruefsumme")
         # MF-873: die TOS-Bootpruefsumme ist BIG-endian. test_st_geometry
         # konnte das nicht zeigen, weil sein Erbauer dieselbe Formel

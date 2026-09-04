@@ -74,7 +74,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/c64/uft_geos.c` | 6 | 581 |
 | `src/formats/commodore/uft_m2i.c` | 6 | 433 |
 | `src/formats/flex/uft_flex.c` | 6 | 276 |
-| `src/fileops/uft_file_ops_extended.c` | 5 | 597 |
+| `src/fileops/uft_file_ops_extended.c` | 5 | 647 |
 | `src/formats/atari/atari_check.c` | 5 | 752 |
 | `src/formats/legacy/uft_fdi.c` | 5 | 512 |
 | `src/formats/atari/atari_util.c` | 4 | 315 |
