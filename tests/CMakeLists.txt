@@ -1419,6 +1419,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_encoding_caps")
+        # MF-865: die Faehigkeitstabelle. Was sie ueber `can_decode`
+        # sagt, misst zusaetzlich scripts/audit_encoding_caps.py gegen
+        # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c)
     elseif(${test_name} STREQUAL "test_flux_fm_sektoren")
         # MF-864: der FM-Weg legte keine Sektoren an ("FM sector decoding
         # would go here"). Die Pruefspur ist an vier Stellen von fluxtoimd
@@ -2912,6 +2918,9 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/fluxcapturejob.cpp
                     ${CMAKE_SOURCE_DIR}/src/fluxwritejob.cpp
                     ${CMAKE_SOURCE_DIR}/src/uft_flux_histogram_widget.cpp
+                    # MF-865: das Widget fragt seit der Faehigkeitstabelle,
+                    # ob eine Kodierung ueberhaupt dekodiert werden kann.
+                    ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c
                     # fluxcapturejob spricht den Greaseweazle-V2-Provider an
                     ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
                     ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)

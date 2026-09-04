@@ -105,6 +105,27 @@ def _selbsttest() -> bool:
     return ok == len(faelle)
 
 
+def _kandidaten(wurzel: Path, laut: bool) -> list[Path]:
+    """Die zu pruefenden Baudateien.
+
+    MF-636: die Dateimenge kommt aus git, nicht aus einer gepflegten
+    Liste. Ist git nicht befragbar, faellt die Funktion auf `glob`
+    zurueck — und sagt es, sofern @p laut. Eine stille Luecke waere
+    schlimmer als ein Hinweis.
+    """
+    try:
+        from repo_scope import repo_files                # type: ignore
+        alle = repo_files(wurzel)
+    except Exception:
+        alle = None
+    if alle is None:
+        if laut:
+            print('  HINWEIS: git nicht befragbar — Rueckfall auf glob. Eine')
+            print('           Null aus diesem Lauf deckt nur den Wurzelordner.')
+        return sorted(wurzel.glob('*.pro')) + sorted(wurzel.glob('*.pri'))
+    return sorted(p for p in alle if p.suffix in ('.pro', '.pri'))
+
+
 def main() -> int:
     print('Tor 53: Mehrfacheintraege in .pro-Dateien (MF-863)')
     print('=' * 68)
@@ -113,21 +134,7 @@ def main() -> int:
         print('         wertlos, ihre Null keine Entwarnung.')
         return 2
 
-    # MF-636: die Dateimenge kommt aus git, nicht aus einer gepflegten Liste.
-    kandidaten: list[Path] = []
-    try:
-        from repo_scope import repo_files                # type: ignore
-        alle = repo_files(WURZEL)
-    except Exception:
-        alle = None
-    if alle is None:
-        # Ist git nicht befragbar, lassen wir durch UND sagen es.
-        print('  HINWEIS: git nicht befragbar — Rueckfall auf glob. Eine')
-        print('           Null aus diesem Lauf deckt nur den Wurzelordner.')
-        kandidaten = sorted(WURZEL.glob('*.pro')) + sorted(WURZEL.glob('*.pri'))
-    else:
-        kandidaten = sorted(p for p in alle
-                            if p.suffix in ('.pro', '.pri'))
+    kandidaten = _kandidaten(WURZEL, laut=True)
 
     gesamt = 0
     for rel in kandidaten:
@@ -155,6 +162,40 @@ def main() -> int:
         print('Ansehen entscheiden, welcher Block sie absichtlich fuehrt.')
         return 1
     return 0
+
+
+def check(repo) -> list[str]:
+    """Fuer scripts/check_consistency.py. Liefert die Befundzeilen.
+
+    Benutzt DIESELBE Dateimenge wie `main()` — zwei Wege zu derselben
+    Frage waeren genau die Drift, gegen die dieses Tor gebaut ist.
+    """
+    from pathlib import Path as _P
+    wurzel = _P(repo)
+    if not _selbsttest_still():
+        return ['audit_pro_duplicates: Selbsttest ROT — Messung wertlos']
+
+    aus: list[str] = []
+    for rel in _kandidaten(wurzel, laut=False):
+        pfad = rel if rel.is_absolute() else wurzel / rel
+        if not pfad.is_file():
+            continue
+        for p, orte in messen(pfad.read_text(encoding='utf-8',
+                                             errors='replace')):
+            aus.append('%s: %s steht %dx unbedingt (Z%s)'
+                       % (pfad.name, p, len(orte),
+                          ','.join(str(o) for o in orte[:4])))
+    return aus
+
+
+def _selbsttest_still() -> bool:
+    import io as _io, sys as _sys
+    alt = _sys.stdout
+    _sys.stdout = _io.StringIO()
+    try:
+        return _selbsttest()
+    finally:
+        _sys.stdout = alt
 
 
 if __name__ == '__main__':

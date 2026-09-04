@@ -92,6 +92,16 @@ public:
      */
     EncodingType detectedEncoding() const { return m_detectedEncoding; }
 
+    /** MF-865: kam die Angabe aus der Erkennung oder aus der Auswahl des
+     *  Benutzers? Die Anzeige muss das unterscheiden — sonst gibt sie
+     *  eine Vorgabe als Befund zurueck. */
+    bool encodingIstVorgabe() const { return m_encodingIstVorgabe; }
+
+    /** MF-865: Beschriftung mit Herkunft und Grenze, z. B.
+     *  „M2FM (vorgegeben) — nicht dekodierbar". Quelle der Grenze ist
+     *  `uft_encoding_caps()`, das Tor 54 gegen den Verteiler misst. */
+    static QString encodingBeschriftung(EncodingType enc, bool istVorgabe);
+
     /**
      * @brief Get detected bit cell time in nanoseconds
      */
@@ -204,6 +214,7 @@ private:
 
     // Detection results
     EncodingType m_detectedEncoding;
+    bool         m_encodingIstVorgabe = false;   /* MF-865 */
     double m_cellTime;                   ///< Bit cell time in ns
 
     // Display settings

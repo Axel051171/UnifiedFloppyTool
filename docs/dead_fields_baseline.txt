@@ -34,5 +34,14 @@
 #   Struktur setzt. „0 gefunden" ist hier keine Entwarnung.
 #
 # Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+#
+# MF-865: 1231 -> 1229. Die Zahl stand zwei zu hoch — beim Einbau der
+# Faehigkeitstabelle gemessen. Dabei meldete das Tor zunaechst DREI
+# neue tote Felder (can_detect, can_decode, grenze), und es hatte in
+# seinen eigenen Begriffen recht: die Tabelle initialisierte
+# POSITIONELL, also wurde kein Feld je namentlich geschrieben. Behoben
+# durch benannte Initialisierer — was ohnehin der bessere Code ist,
+# weil ein spaeter eingeschobenes Feld sonst still alle Werte
+# verschoebe.
 
-1231
+1229

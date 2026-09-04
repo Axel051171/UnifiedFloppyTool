@@ -4,6 +4,7 @@
  */
 
 #include "uft_flux_histogram_widget.h"
+#include "uft/core/uft_encoding_caps.h"   /* MF-865 */
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -102,6 +103,7 @@ void UftFluxHistogramWidget::clear()
     m_maxCount = 0;
     m_totalSamples = 0;
     m_detectedEncoding = ENC_AUTO;
+    m_encodingIstVorgabe = false;
     m_cellTime = 0.0;
     update();
     emit histogramUpdated();
@@ -115,8 +117,43 @@ void UftFluxHistogramWidget::setDisplayMode(DisplayMode mode)
 
 void UftFluxHistogramWidget::setEncodingHint(EncodingType enc)
 {
-    m_detectedEncoding = enc;
+    /* MF-865: die Vorgabe wird als Vorgabe gemerkt.
+     *
+     * Hier stand nur `m_detectedEncoding = enc;`. Die Auswahl des
+     * Benutzers landete damit im Feld für das ERKANNTE Ergebnis, und die
+     * Anzeige gab sie ihm als „Encoding: M2FM" zurück — als hätte das
+     * Werkzeug etwas festgestellt. Festgestellt hatte es nichts: die
+     * Auto-Erkennung liefert ausschließlich MFM oder FM (siehe
+     * `analyzeEncoding()`), und M2FM setzt im ganzen Baum niemand als
+     * Ergebnis. */
+    m_detectedEncoding    = enc;
+    m_encodingIstVorgabe  = (enc != ENC_AUTO);
     update();
+}
+
+QString UftFluxHistogramWidget::encodingBeschriftung(EncodingType enc,
+                                                     bool istVorgabe)
+{
+    /* MF-865: ein Satz, der sagt, woher die Angabe kommt und was mit ihr
+     * geht. Die Fähigkeitstabelle ist die Quelle — sie wird von Tor 54
+     * gegen den Verteiler gemessen, ist also keine Zusicherung. */
+    QString name;
+    uft_track_encoding_t kanon = UFT_ENC_UNKNOWN;
+    switch (enc) {
+        case ENC_MFM:       name = "MFM";           kanon = UFT_ENC_MFM;       break;
+        case ENC_FM:        name = "FM";            kanon = UFT_ENC_FM;        break;
+        case ENC_GCR_C64:   name = "GCR (C64)";     kanon = UFT_ENC_GCR_C64;   break;
+        case ENC_GCR_APPLE: name = "GCR (Apple)";   kanon = UFT_ENC_GCR_APPLE; break;
+        case ENC_M2FM:      name = "M2FM";          kanon = UFT_ENC_M2FM;      break;
+        case ENC_AMIGA:     name = "Amiga MFM";     kanon = UFT_ENC_AMIGA_MFM; break;
+        default:            return tr("Auto");
+    }
+
+    QString s = istVorgabe ? tr("%1 (vorgegeben)").arg(name)
+                           : tr("%1 (erkannt)").arg(name);
+    if (!uft_encoding_can_decode(kanon))
+        s += tr(" — nicht dekodierbar");
+    return s;
 }
 
 void UftFluxHistogramWidget::setBinWidth(int nsPerBin)
@@ -377,6 +414,7 @@ void UftFluxHistogramWidget::detectEncoding()
 {
     if (m_peaks.size() < 2) {
         m_detectedEncoding = ENC_AUTO;
+    m_encodingIstVorgabe = false;
         m_cellTime = 0.0;
         return;
     }
@@ -401,6 +439,7 @@ void UftFluxHistogramWidget::detectEncoding()
             ratio2 > 1.8 && ratio2 < 2.2) {    // 2.0 ± 0.2
             
             m_detectedEncoding = ENC_MFM;
+        m_encodingIstVorgabe = false;   /* MF-865: wirklich erkannt */
             m_cellTime = p1;  // First peak is 1T
             
             // Label peaks
@@ -422,6 +461,7 @@ void UftFluxHistogramWidget::detectEncoding()
         
         if (ratio > 1.8 && ratio < 2.2) {  // 2.0 ± 0.2
             m_detectedEncoding = ENC_FM;
+            m_encodingIstVorgabe = false;   /* MF-865: wirklich erkannt */
             m_cellTime = p1;
             
             m_peaks[0].label = "1T";
@@ -435,6 +475,7 @@ void UftFluxHistogramWidget::detectEncoding()
     // GCR detection: typically has different pattern
     // For now, assume first peak is base timing
     m_detectedEncoding = ENC_AUTO;
+    m_encodingIstVorgabe = false;
     m_cellTime = peakNs.isEmpty() ? 0.0 : peakNs[0];
 }
 
@@ -546,16 +587,10 @@ void UftFluxHistogramWidget::drawStatistics(QPainter &painter, const QRect &rect
     font.setBold(true);
     painter.setFont(font);
     
-    QString encStr;
-    switch (m_detectedEncoding) {
-        case ENC_MFM:       encStr = "MFM"; break;
-        case ENC_FM:        encStr = "FM"; break;
-        case ENC_GCR_C64:   encStr = "GCR (C64)"; break;
-        case ENC_GCR_APPLE: encStr = "GCR (Apple)"; break;
-        case ENC_M2FM:      encStr = "M2FM"; break;
-        case ENC_AMIGA:     encStr = "Amiga MFM"; break;
-        default:            encStr = "Auto"; break;
-    }
+    /* MF-865: sagt jetzt, ob die Angabe erkannt oder vorgegeben ist, und
+     * ob mit ihr ueberhaupt dekodiert werden kann. */
+    QString encStr = encodingBeschriftung(m_detectedEncoding,
+                                          m_encodingIstVorgabe);
     
     QString info = QString("Encoding: %1").arg(encStr);
     if (m_cellTime > 0) {
@@ -794,16 +829,10 @@ void UftFluxHistogramPanel::setupUi()
 
 void UftFluxHistogramPanel::updateStatistics()
 {
-    QString encStr;
-    switch (m_histogram->detectedEncoding()) {
-        case UftFluxHistogramWidget::ENC_MFM:       encStr = "MFM"; break;
-        case UftFluxHistogramWidget::ENC_FM:        encStr = "FM"; break;
-        case UftFluxHistogramWidget::ENC_GCR_C64:   encStr = "GCR (C64)"; break;
-        case UftFluxHistogramWidget::ENC_GCR_APPLE: encStr = "GCR (Apple)"; break;
-        case UftFluxHistogramWidget::ENC_M2FM:      encStr = "M2FM"; break;
-        case UftFluxHistogramWidget::ENC_AMIGA:     encStr = "Amiga MFM"; break;
-        default:                                     encStr = "-"; break;
-    }
+    /* MF-865: dieselbe Beschriftung wie im Overlay — eine Quelle. */
+    QString encStr = UftFluxHistogramWidget::encodingBeschriftung(
+        m_histogram->detectedEncoding(),
+        m_histogram->encodingIstVorgabe());
     
     m_encodingLabel->setText(tr("Encoding: %1").arg(encStr));
     

@@ -1036,6 +1036,37 @@ def main() -> int:
         import audit_macro_drift as _md
         all_errors.append(("Makro-Drift", _md.check(repo)))
 
+        # 53. Kategorie (MF-863): dieselbe Quelldatei mehrfach unbedingt
+        # in einer .pro. Gemessen waren es 1499 ueberzaehlige Zeilen —
+        # 44 % der Datei —, weil ein 16-Zeilen-Block 94 SOURCES-Bloecken
+        # vorangestellt worden war. qmake baute vorher und nachher
+        # dieselben 624 Objekte; der Schaden war, dass niemand mehr durch
+        # Ansehen entscheiden konnte, welcher Block eine Datei fuehrt.
+        #
+        # Prueft NUR den unbedingten Geltungsbereich: eine Datei einmal in
+        # `win32 { }` und einmal in `unix { }` ist richtig.
+        #
+        # HARTES Tor: Grundlinie 0.
+        import audit_pro_duplicates as _pd
+        all_errors.append(("mehrfache .pro-Eintraege", _pd.check(repo)))
+
+        # 54. Kategorie (MF-865): weicht die Faehigkeitstabelle vom
+        # Verteiler ab?
+        #
+        # `src/core/uft_encoding_caps.c` sagt Benutzern, welche Kodierung
+        # dieses Werkzeug lesen kann. Eine von Hand gefuehrte Tabelle
+        # dieser Art ist genau das Muster, das hier siebzehnmal als
+        # Ursache gefunden wurde — deshalb wird `can_decode` gegen die
+        # switch-Zweige von `flux_decode_track()` gemessen.
+        #
+        # Zusaetzlich: jede geroutete Funktion muss wirklich Sektoren
+        # anlegen. Genau das fehlte bei `flux_decode_fm()` (MF-864) —
+        # ein Zweig, der auf zwei Kommentare zeigte.
+        #
+        # HARTES Tor: Grundlinie 0.
+        import audit_encoding_caps as _ec
+        all_errors.append(("Faehigkeitstabelle", _ec.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

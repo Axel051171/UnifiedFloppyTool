@@ -681,6 +681,7 @@ SOURCES += \
     src/formats/scl/uft_scl_plugin.c \
     src/formats/format_registry/uft_format_registry.c \
     src/core/uft_format_verify.c \
+    src/core/uft_encoding_caps.c \
     src/core/uft_disk_stream.c \
     src/core/uft_disk_verify.c \
     src/core/uft_disk_stats.c \
