@@ -425,6 +425,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_st_bootpruefsumme")
+        # MF-873: die TOS-Bootpruefsumme ist BIG-endian. test_st_geometry
+        # konnte das nicht zeigen, weil sein Erbauer dieselbe Formel
+        # rechnet wie der Pruefer (MF-644/760: das Orakel ist dieselbe
+        # Hand). Referenz fuer die Byte-Reihenfolge: disktype §3.3.1.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
     elseif(${test_name} STREQUAL "test_st_write_roundtrip")
         # Phase-6 round-trip: Atari ST write_track -> read_track (MF-341)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
