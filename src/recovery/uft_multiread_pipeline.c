@@ -255,6 +255,103 @@ static const multiread_pass_t *multiread_reference_pass(
     return NULL;
 }
 
+/**
+ * @brief Gruppiert die ueberlebenden Lesungen nach INHALT.
+ *
+ * ── Warum das die erste Lesung ersetzt (MF-860) ──────────────────────
+ *
+ * MF-845 hat das erfundene Mischbyte beseitigt und dafuer „die erste
+ * ueberlebende Lesung" uebernommen. Das war die richtige Richtung, aber
+ * zu grob: bei drei Lesungen, von denen ZWEI uebereinstimmen und eine
+ * abweicht, kann die erste die Einzelgaengerin sein.
+ *
+ * Der Referenzalgorithmus waehlt die HAEUFIGSTE unter inhaltsgleich
+ * gruppierten Kandidaten — `src/a8rawconv/disk.cpp:267-320`
+ * (`sift_sectors`, Avery Lee, GPL-2.0-or-later; im Baum vendoriert):
+ *
+ *     std::unordered_map<HashedSectorRef, uint32_t, ...> hashedSectors;
+ *     for (auto it = subgroup.begin(); ...) ++hashedSectors[hsref];
+ *     // find the most popular; count is small, so we'll just do this
+ *     // linearly
+ *     best_sector = best_ref->first.mpSector;
+ *
+ * `best_sector` zeigt dabei IMMER auf ein wirklich gelesenes Objekt —
+ * nie auf eine neu zusammengesetzte Bytefolge. Genau diese Zusage
+ * bewahrt MF-845, und MF-860 macht die Auswahl darunter richtig.
+ *
+ * Kein Hash noetig: a8rawconv sagt selbst „count is small", und UFTs
+ * `pass_count` ist ein `uint8_t`. Ein `memcmp` je Paar reicht.
+ *
+ * ── Und nebenbei ein Zaehlfehler ─────────────────────────────────────
+ *
+ * `classify_passes()` zaehlte `distinct` als „Anzahl der Lesungen, die
+ * vom BEZUG abweichen, plus eins". Das ist nicht die Zahl verschiedener
+ * Inhalte: bei A, B, B ergab es **3** statt 2, weil B zweimal gegen A
+ * verglichen wurde. Diese Funktion zaehlt Gruppen und liefert damit die
+ * Zahl, die der Name behauptet.
+ *
+ * @param len          Vergleichslaenge (die Ausgabelaenge).
+ * @param out_distinct Zahl verschiedener Inhalte unter den Ueberlebenden.
+ * @param out_tie      true, wenn KEINE Gruppe groesser als eins ist und
+ *                     es mehr als eine gibt — dann ist die Wahl
+ *                     willkuerlich, nicht mehrheitlich.
+ * @return die Lesung aus der groessten Gruppe, oder NULL.
+ */
+static const multiread_pass_t *multiread_popular_pass(
+        const multiread_pass_t *passes, uint8_t pass_count, bool any_crc_ok,
+        size_t len, uint8_t *out_distinct, bool *out_tie)
+{
+    if (out_distinct) *out_distinct = 0;
+    if (out_tie) *out_tie = false;
+    if (!passes || pass_count == 0 || len == 0) return NULL;
+
+    /* Je Gruppe: ein Vertreter und wie oft er vorkommt. */
+    const multiread_pass_t *vertreter[UINT8_MAX];
+    uint8_t haeufigkeit[UINT8_MAX];
+    uint8_t gruppen = 0;
+
+    for (uint8_t p = 0; p < pass_count; p++) {
+        const multiread_pass_t *q = &passes[p];
+        if (!q->data || !pass_survives_crc_sift(q, any_crc_ok)) continue;
+
+        /* Eine kuerzere Lesung ist ab ihrem Ende „anders" — sonst ginge
+         * ein abgeschnittener Pass als deckungsgleich durch. */
+        bool zugeordnet = false;
+        for (uint8_t g = 0; g < gruppen; g++) {
+            const multiread_pass_t *v = vertreter[g];
+            if (q->data_len != v->data_len) continue;
+            size_t n = (q->data_len < len) ? q->data_len : len;
+            if (memcmp(q->data, v->data, n) == 0) {
+                if (haeufigkeit[g] < 255) haeufigkeit[g]++;
+                zugeordnet = true;
+                break;
+            }
+        }
+        if (!zugeordnet && gruppen < UINT8_MAX) {
+            vertreter[gruppen]   = q;
+            haeufigkeit[gruppen] = 1;
+            gruppen++;
+        }
+    }
+
+    if (gruppen == 0) return NULL;
+
+    uint8_t beste = 0;
+    for (uint8_t g = 1; g < gruppen; g++)
+        if (haeufigkeit[g] > haeufigkeit[beste]) beste = g;
+
+    if (out_distinct) *out_distinct = gruppen;
+
+    /* Gleichstand heisst hier: KEINE Gruppe hat mehr als ein Mitglied.
+     * a8rawconv warnt dann „Keeping one of them" — und die Warnung
+     * verschwindet in der Ausgabe. Hier steht sie im Ergebnis, damit
+     * ein Verbraucher „mehrheitlich gewaehlt" von „willkuerlich
+     * gewaehlt" unterscheiden kann. */
+    if (out_tie) *out_tie = (gruppen > 1 && haeufigkeit[beste] == 1);
+
+    return vertreter[beste];
+}
+
 static multiread_class_t classify_passes(const multiread_pass_t *passes,
                                          uint8_t pass_count,
                                          size_t len,
@@ -275,7 +372,14 @@ static multiread_class_t classify_passes(const multiread_pass_t *passes,
         return MULTIREAD_CLASS_UNKNOWN;
 
     size_t common = len;      /* laengstes gemeinsames Praefix */
+
+    /* MF-860: die Zahl verschiedener Inhalte kommt aus der Gruppierung,
+     * nicht aus „wie viele weichen vom Bezug ab". Bei A, B, B ergab die
+     * alte Zaehlung 3 statt 2. */
     uint8_t distinct = 1;
+    (void)multiread_popular_pass(passes, pass_count, any_crc_ok, len,
+                                 &distinct, NULL);
+    if (distinct == 0) distinct = 1;
 
     for (uint8_t p = 0; p < pass_count; p++) {
         const multiread_pass_t *q = &passes[p];
@@ -294,7 +398,8 @@ static multiread_class_t classify_passes(const multiread_pass_t *passes,
         size_t first_diff = (i < n) ? i : ((n < len) ? n : len);
 
         if (first_diff < len) {
-            if (distinct < 255) distinct++;
+            /* Nur noch das gemeinsame Praefix — die Zahl der Inhalte
+             * kommt seit MF-860 aus der Gruppierung. */
             if (first_diff < common) common = first_diff;
         }
     }
@@ -554,9 +659,24 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
          * bleibt es beim Voting: eine halbe Lesung mit einem
          * gevoteten Rest zu verkleben waere dieselbe Fabrikation in
          * klein. Die Klasse meldet den Fall ohnehin. */
-        const multiread_pass_t *ref = multiread_reference_pass(
+        bool gleichstand = false;
+        const multiread_pass_t *ref = multiread_popular_pass(
             ctx->passes, ctx->pass_count,
-            multiread_any_crc_ok(ctx->passes, ctx->pass_count));
+            multiread_any_crc_ok(ctx->passes, ctx->pass_count),
+            output_len, NULL, &gleichstand);
+
+        /* MF-860: die HAEUFIGSTE unter inhaltsgleich gruppierten
+         * Lesungen, nicht die erste. Bei drei Lesungen, von denen zwei
+         * uebereinstimmen, kann die erste die Einzelgaengerin sein.
+         * Referenz: a8rawconv `disk.cpp:300-308`.
+         *
+         * `gleichstand` bleibt hier ohne Verbraucher — er ist aus dem
+         * Ergebnis ableitbar (`distinct_contents == good_reads` heisst:
+         * jede Lesung ist einzigartig, die Wahl war willkuerlich). Ein
+         * eigenes Feld waere ein totes Feld (MF-831), solange niemand
+         * es liest. */
+        (void)gleichstand;
+
         if (ref && ref->data && ref->data_len >= output_len)
             memcpy(output, ref->data, output_len);
     }

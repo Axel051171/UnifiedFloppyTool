@@ -205,6 +205,61 @@ TEST(die_kennzahlen_bleiben_gefuellt)
     multiread_destroy(ctx);
 }
 
+TEST(die_mehrheit_gewinnt_nicht_die_erste_lesung)
+{
+    /* MF-860, Verfeinerung von MF-845.
+     *
+     * MF-845 nahm „die erste ueberlebende Lesung". Bei DREI Lesungen,
+     * von denen ZWEI uebereinstimmen, kann die erste die
+     * Einzelgaengerin sein — dann setzt sich eine Minderheit durch.
+     *
+     * Referenz: a8rawconv `src/a8rawconv/disk.cpp:300-308` gruppiert
+     * nach Inhalt und nimmt die haeufigste Gruppe („find the most
+     * popular"). `best_sector` zeigt dabei immer auf ein wirklich
+     * gelesenes Objekt.
+     *
+     * Aufbau: Pass A steht ALLEIN, Pass B kommt ZWEIMAL. Alle drei
+     * bestehen ihre CRC. Erwartet wird B. */
+    multiread_config_t cfg = multiread_config_default();
+    cfg.min_passes = 2;
+    multiread_ctx_t *ctx = multiread_create(&cfg);
+    ASSERT(ctx != NULL);
+
+    ASSERT(multiread_add_pass(ctx, PASS_A, N, 100, true) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, PASS_B, N, 100, true) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, PASS_B, N, 100, true) == MULTIREAD_OK);
+
+    uint8_t out[N];
+    memset(out, 0, sizeof out);
+    multiread_sector_t res;
+    memset(&res, 0, sizeof res);
+    ASSERT(multiread_execute(ctx, out, N, &res) == MULTIREAD_OK);
+
+    ASSERT(res.class_ == MULTIREAD_CLASS_AMBIGUOUS_GOOD);
+
+    /* ZWEI verschiedene Inhalte, nicht drei. Die alte Zaehlung verglich
+     * jede Lesung gegen den Bezug und kam bei A, B, B auf 3. */
+    if (res.distinct_contents != 2) {
+        printf("\n      distinct_contents = %u, erwartet 2\n"
+               "      -> gezaehlt wird, wie viele vom Bezug abweichen,\n"
+               "         nicht wie viele Inhalte es gibt\n      ",
+               res.distinct_contents);
+        _fail++;
+    }
+
+    if (memcmp(out, PASS_B, N) != 0) {
+        zeige("Pass A", PASS_A);
+        zeige("Pass B", PASS_B);
+        zeige("Ausgabe", out);
+        printf("\n      -> B kam ZWEIMAL vor, A einmal — die Mehrheit "
+               "haette gewinnen muessen\n      ");
+        _fail++;
+    }
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
 int main(void)
 {
     printf("=== Multi-Read: kein erfundenes Mischbyte (MF-845) ===\n");
@@ -212,6 +267,7 @@ int main(void)
     RUN(einigkeit_bleibt_wie_bisher);
     RUN(ohne_gueltige_crc_bleibt_das_byte_voting);
     RUN(die_kennzahlen_bleiben_gefuellt);
+    RUN(die_mehrheit_gewinnt_nicht_die_erste_lesung);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
