@@ -59,6 +59,7 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/formats/mfi.h"
 
 /* ============================================================================
  * Constants
@@ -66,9 +67,11 @@
 
 /* MF-614: 16 Byte einschliesslich der abschliessenden Null, beide Varianten
  * (mfi_dsk.cpp:81-82). Der alte Wert 8 traf nur ein Praefix. */
-#define MFI_MAGIC           "MAMEFLOPPYIMAGE"
-#define MFI_MAGIC_OLD       "MESSFLOPPYIMAGE"
-#define MFI_MAGIC_LEN       16
+/* MF-863: die Kennung steht jetzt in include/uft/formats/mfi.h —
+ * eine Definition, zwei Leser. */
+#define MFI_MAGIC           UFT_MFI_MAGIC
+#define MFI_MAGIC_OLD       UFT_MFI_MAGIC_OLD
+#define MFI_MAGIC_LEN       UFT_MFI_MAGIC_LEN
 #define MFI_HEADER_SIZE     32
 #define MFI_RESOLUTION_SHIFT 30
 #define MFI_CYLINDER_MASK   0x3FFFFFFFu

@@ -392,6 +392,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/mfi/uft_mfi.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_mfi_kennung")
+        # MF-863: der ZWEITE MFI-Leser verglich drei Byte ("MFI") statt der
+        # 16 Byte langen Kennung — er wies jede echte Datei ab und nahm jede
+        # an, die zufaellig so beginnt. test_mfi_layout bewacht nur den
+        # ersten Leser.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/flux/mfi.c)
     elseif(${test_name} STREQUAL "test_cqm_layout")
         # CopyQM header offsets + RLE polarity vs. the published layout (MF-461)
         # The plugin reports integrity findings through UFT_WARN, hence uft_log.c

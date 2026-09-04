@@ -418,22 +418,6 @@ kalman_pll {
 
 # ALL Hardware Provider Sources
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/hardware_providers/greaseweazle_provider_v2.cpp \
     src/hardware_providers/scp_provider_v2.cpp \
     src/hardware_providers/kryoflux_provider_v2.cpp \
@@ -512,22 +496,6 @@ HEADERS += \
 
 # Widget Sources
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/widgets/diskvisualizationwindow.cpp \
     src/widgets/fluxvisualizerwidget.cpp \
     src/widgets/parameterpanelwidget.cpp \
@@ -615,80 +583,16 @@ INCLUDEPATH += \
 
 # D64 - Commodore 64 (most important for preservation)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
 
 # G64 - Commodore 64 with timing data
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
 
 # ADF - Amiga
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/adf/uft_adf_parser_v3.c
 
 # HDF - Amiga Hard Disk (P1 Feature)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/uft_hdf_parser.c
 
 HEADERS += \
@@ -735,63 +639,15 @@ HEADERS += \
 
 # SCP - SuperCard Pro raw flux
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/scp/uft_scp_parser_v3.c
 
 # IMD - ImageDisk
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/imd/uft_imd_plugin.c \
     src/formats/fdi/uft_fdi_plugin.c
 
 # DSK - Standard disk image
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/dsk_generic/uft_dsk_generic.c \
     src/formats/st/uft_st.c \
     src/formats/d77/uft_d77.c \
@@ -916,22 +772,6 @@ SOURCES += \
 
 # STX - Atari ST with protection
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/stx/uft_stx_air.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -941,22 +781,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/algorithms/advanced/uft_god_mode_api.c \
     # src/algorithms/advanced/uft_kalman_pll_v2.c \ # optional: CONFIG+=kalman_pll
     src/algorithms/advanced/uft_gcr_viterbi.c \
@@ -1018,22 +842,6 @@ HEADERS += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/core/uft_smart_open.c \
     src/core/uft_unified_types.c
 
@@ -1071,23 +879,7 @@ HEADERS += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/core/uft_advanced_mode.c \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+    src/core/uft_advanced_mode.c
 
 HEADERS += include/uft/uft_advanced_mode.h \
     include/uft/analysis/uft_export_bridge.h \
@@ -1139,22 +931,6 @@ HEADERS += include/uft/analysis/uft_disk_quickscan.h \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/d71/uft_d71.c \
     src/formats/d80/uft_d80.c \
     src/formats/d81/uft_d81.c \
@@ -1173,22 +949,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/uft_format_registry.c \
     src/formats/uft_v3_bridge.c \
     src/core/uft_format_plugin.c \
@@ -1201,22 +961,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/analysis/uft_track_analysis.c \
     src/analysis/uft_triage.c \
     src/analysis/otdr/floppy_otdr.c \
@@ -1229,22 +973,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/fs/uft_amigados_extended.c
 
 HEADERS += \
@@ -1274,22 +1002,6 @@ HEADERS += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/core/uft_core_stubs.c \
     src/core/uft_pll.c
 
@@ -1298,22 +1010,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/hfe/uft_hfe.c \
     src/formats/sad/uft_sad.c \
     src/formats/scl/uft_scl.c \
@@ -1338,40 +1034,13 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/core/uft_decode_pipeline.c \
-    src/parsers/a2r/uft_a2r_parser.c \
-    src/formats/cas/uft_cas.c \
-    src/formats/d77/uft_d77.c \
-    src/formats/dc42/uft_dc42.c \
     # src/formats/dim/uft_dim.c  # already in main SOURCES block \
     src/formats/dms/uft_dms.c \
     src/detect/mfm/mfm_detect.c \
     src/detect/mfm/cpm_fs.c \
     src/detect/mfm/uft_mfm_detect_bridge.c \
-    src/formats/amstrad/uft_edsk.c \
-    src/formats/fds/uft_fds_plugin.c \
-    src/formats/kfx/uft_kfx.c \
     src/formats/kfx/uft_kfstream_air.c \
     src/formats/kfx/uft_kf_histogram.c \
-    src/formats/mfi/uft_mfi.c \
-    src/formats/pri/uft_pri.c \
-    src/formats/st/uft_st.c \
     # WOZ: real impl in src/formats/apple/uft_woz.c (already in SOURCES below)
 
 
@@ -1380,22 +1049,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/d64/uft_d64_parser_v3.c \
     src/formats/d71/uft_d71_parser_v2.c \
     src/formats/d81/uft_d81_parser_v2.c \
@@ -1446,22 +1099,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/adf/uft_adf_parser_v2.c \
     src/formats/uft_adf.c \
     src/formats/uft_axdf.c \
@@ -1469,22 +1106,6 @@ SOURCES += \
     src/formats/uft_fdc_gaps.c \
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/2img/uft_2img_parser_v2.c \
     src/formats/g64/uft_g64_parser_v2.c \
     src/formats/hfe/uft_hfe_parser_v2.c \
@@ -1496,22 +1117,6 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/apridisk/uft_apridisk.c \
     src/formats/cfi/uft_cfi.c \
     src/formats/nanowasp/uft_nanowasp.c \
@@ -1528,22 +1133,6 @@ SOURCES += \
 # ===============================================================================
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/uft_gw2dmk_panel.cpp \
     src/uft_flux_histogram_widget.cpp
 
@@ -1572,22 +1161,6 @@ HEADERS += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/hal/uft_greaseweazle_full.c \
     src/hal/uft_fluxengine.c \
     src/formats/st/uft_st_order.c \
@@ -1662,22 +1235,6 @@ HEADERS += \
 
 # Commodore formats (21 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/commodore/crt.c \
     src/formats/commodore/d67.c \
     src/formats/commodore/d71.c \
@@ -1697,22 +1254,6 @@ SOURCES += \
 
 # Amstrad formats (6 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/amstrad/dsk.c \
     src/formats/amstrad/dsk_mfm.c \
     src/formats/amstrad/edsk_extdsk.c \
@@ -1722,22 +1263,6 @@ SOURCES += \
 
 # Apple formats (15 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/apple/2mg.c \
     src/formats/apple/mac_dsk.c \
     src/formats/apple/nib.c \
@@ -1755,22 +1280,6 @@ SOURCES += \
 
 # Atari formats (19 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/atari/atr.c \
     src/formats/atari/atx.c \
     src/formats/atari/st.c \
@@ -1791,22 +1300,6 @@ SOURCES += \
 
 # BBC formats (4 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/bbc/adf_adl.c \
     src/formats/bbc/ssd_dsd.c \
     src/formats/bbc/uft_bbc_dfs.c \
@@ -1814,22 +1307,6 @@ SOURCES += \
 
 # TRS80 formats (5 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/trs80/dmk.c \
     src/formats/trs80/jv3_jvc.c \
     src/formats/trs80/jvc.c \
@@ -1838,22 +1315,6 @@ SOURCES += \
 
 # PC98 formats (7 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/pc98/d88.c \
     src/formats/pc98/dim.c \
     src/formats/pc98/fdd.c \
@@ -1864,22 +1325,6 @@ SOURCES += \
 
 # Misc formats (23 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/misc/adf.c \
     src/formats/misc/adz.c \
     src/formats/misc/cqm.c \
@@ -1903,22 +1348,6 @@ SOURCES += \
 
 # Flux formats (12 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/flux/dfi.c \
     src/formats/flux/f86.c \
     src/formats/flux/gwraw.c \
@@ -1932,41 +1361,9 @@ SOURCES += \
 
 # 86Box (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
 
 # Amiga (2 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     # MF-699 — LIZ-4 B, Weg 3: aus dem VERTEILPAKET genommen, NICHT
     # geloescht. Die Reihenfolge ist Eigentuemer-Vorgabe: erst der
     # funktionierende Nachbau, dann die Loeschung. Bis dahin bleibt
@@ -1998,82 +1395,18 @@ SOURCES += \
 
 # Amiga Extended (9 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/amiga_ext/crc.c \
     src/formats/amiga_ext/snprintf.c
 
 # Apridisk (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Brother (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/brother/brother.c
 
 # C64 Extended (19 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/c64/uft_bam_editor.c \
     src/formats/c64/uft_c64rom.c \
     src/formats/c64/uft_cmd.c \
@@ -2094,81 +1427,17 @@ SOURCES += \
 
 # CBM (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/cbm/uft_cbm_geometry.c \
     src/formats/cbm/uft_cbm_formats.c
 
 # CFI (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # CMD FD (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # CPM (5 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/cpm/uft_supercopy_detect.c \
     src/formats/cpm/uft_cpm_diskdef.c \
     src/formats/cpm/uft_cpm_diskdefs.c \
@@ -2177,42 +1446,10 @@ SOURCES += \
 
 # Dec (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/dec/uft_rx50.c
 
 # Eastern Block (3 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/misc/polyglot_boot.c
 
 HEADERS += \
@@ -2240,22 +1477,6 @@ HEADERS += \
 
 # Atari DOS Filesystem Module
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/atari/atari_atr.c \
     src/formats/atari/atari_dos2.c \
     src/formats/atari/atari_sparta.c \
@@ -2283,283 +1504,59 @@ HEADERS += \
 
 # FAT (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/fat/uft_fat_bootsector.c
 
 # FAT32 (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/fat32/uft_fat32_mbr.c
 
 # FlashFloppy (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/flashfloppy/uft_ff_formats.c
 
 # Flex (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/flex/uft_flex.c
 
 # Format Core (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Geometry (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # HP (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/hp/lif.c
 
 # Hardsector (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Industrial (2 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/industrial/uft_cromemco.c \
     src/formats/industrial/uft_heathkit.c
 
 # Japanese Ext (3 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/japanese_ext/uft_hitachi_s1.c \
     src/formats/japanese_ext/uft_sanyo_mbc.c \
     src/formats/japanese_ext/uft_sharp_x1.c
 
 # KryoFlux (2 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/kryoflux/uft_kryoflux_checker.c
 
 # Legacy (4 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/legacy/uft_altair_hd.c \
     src/formats/legacy/uft_fdi.c \
     src/formats/legacy/uft_imd.c
 
 # Logical (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # MAME (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/mame/uft_chd.c
 
 HEADERS += \
@@ -2567,180 +1564,36 @@ HEADERS += \
 
 # MFM Native (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/mfm_native/uft_mfm_image.c
 
 # MSX (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/msx/uft_msx.c
 
 # Mega65 (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Micropolis (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/micropolis/micropolis.c
 
 # Minicomputer (2 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/minicomputer/uft_dg_nova.c \
     src/formats/minicomputer/uft_prime.c
 
 # MyZ80 (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # NEC (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/nec/uft_pce.c
 
 # Nanowasp (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Nintendo (7 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/nintendo/uft_3ds.c \
     src/formats/nintendo/uft_gameboy.c \
     src/formats/nintendo/uft_n64.c \
@@ -2755,62 +1608,14 @@ HEADERS += \
 
 # Nordic (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/nordic/uft_abc800.c
 
 # Northstar (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/northstar/northstar.c
 
 # Obscure (5 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/obscure/uft_applix.c \
     src/formats/obscure/uft_calcomp.c \
     src/formats/obscure/uft_pmc_micromate.c \
@@ -2818,377 +1623,73 @@ SOURCES += \
     src/formats/obscure/uft_rc759.c
 
 # Opus (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Posix (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # QL (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/ql/qdos.c
 
 # QRST (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # RCPMFS (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Roland (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Russian (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # SIMH (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # SNK (2 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/snk/uft_neogeo.c \
 
 # Sega (3 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/sega/uft_genesis.c \
     src/formats/sega/uft_sega_cd.c \
     src/formats/sega/uft_sms.c
 
 # Sinclair (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/sinclair/uft_spectrum.c
 
 # Sony (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/sony/uft_ps1.c
 
 # TC (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # TI99 (4 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/ti99/uft_fiad.c \
     src/formats/ti99/uft_tifiles.c \
     src/formats/ti99/v9t9_pc99.c
 
 # Thomson (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/thomson/sap.c
 
 # Victor (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/victor/victor9k.c
 
 # X68K (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # YDSK (1 files)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+SOURCES +=
 
 # Zilog (1 files)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/zilog/zilogmcz.c
 
 
