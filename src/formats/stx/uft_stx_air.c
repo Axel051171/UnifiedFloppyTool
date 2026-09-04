@@ -54,6 +54,30 @@
 #define STX_SECTOR_STD      512
 
 /* Track descriptor flags (from PastiStruct.cs) */
+/*
+ * MF-852: diese Tabelle hat jetzt eine ZWEITE Hand.
+ *
+ * Bis dahin ruhte sie allein auf Jean Louis-Guerin (AIR PastiRead.cs +
+ * Pasti-Dokumentation) — Referenzcode und Beschreibung vom selben
+ * Autor, also nach der Zwei-Quellen-Regel EINE Quelle. Im Baum stand
+ * daneben eine widersprechende Fassung (src/formats/atari/
+ * uft_stx_parser.c), und eine von beiden musste falsch sein (P3-92).
+ *
+ * Bestaetigt durch Hatari, `src/includes/floppies/stx.h:40-45,83-85`
+ * (GPL-2-or-later): alle FUENF Sektor-Flags identisch, drei von vier
+ * Spur-Flags identisch. `STX_TF_PROT` (0x20) modelliert Hatari nicht —
+ * kein Widerspruch, nur keine Aussage.
+ *
+ * Eingeschraenkt unabhaengig: Hataris Kopf nennt Louis-Guerin unter
+ * seinen vier Rueckentwicklern (daneben Markus Fritze, P. Putnik,
+ * Nicolas Pomarede). Was Hatari hinzufuegt, ist Verhaltensbeleg — der
+ * Emulator faehrt damit reale geschuetzte Spiele.
+ *
+ * Nebenbei bestaetigt Hatari `stx.c:1080-1083` den Kern von MF-847:
+ *     pFuzzyData = p + SectorsCount * STX_SECTOR_BLOCK_SIZE;
+ *     pTrackData = pFuzzyData + FuzzySize;
+ * also genau `sec_desc_off + sec_count*16 + fuzzy_count`.
+ */
 #define STX_TF_SECT_DESC    0x01    /* Track record has sector descriptors */
 #define STX_TF_PROT         0x20    /* Track contains protections (always set) */
 #define STX_TF_IMAGE        0x40    /* Track record contains track image */

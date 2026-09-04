@@ -36,7 +36,23 @@
  *============================================================================*/
 
 /* ATX Signature */
-#define ATX_SIGNATURE           0x41543858  /* "AT8X" little-endian */
+/* MF-852: der Wert war byte-verdreht und die Pruefung traf NIE.
+ *
+ * `fread(&reader->header, ...)` liest die Rohbytes 'A','T','8','X' in
+ * einen gepackten Struct; auf einer Little-Endian-Maschine steht in
+ * `signature` damit 0x58385441. Verglichen wurde gegen 0x41543858 —
+ * die Big-Endian-Lesung derselben vier Zeichen. Ergebnis: jede
+ * GUELTIGE ATX-Datei wurde abgewiesen, `atx_reader_open()` gab NULL.
+ *
+ * Gefunden von `scripts/audit_macro_drift.py`: derselbe Name traegt in
+ * `src/formats/atx/uft_atx.c:61` den anderen Wert, und dort ist die
+ * Lesung explizit (`uft_read_le32(data) != ATX_SIGNATURE`). Beide
+ * Kommentare behaupteten "AT8X"; nur einer rechnete richtig.
+ *
+ * Heute folgenlos: diese Datei hat im ganzen Baum keinen Aufrufer
+ * (gemessen). Sie waere es nicht geblieben, sobald jemand sie
+ * verdrahtet. */
+#define ATX_SIGNATURE           0x58385441u  /* "AT8X" als LE32 */
 #define ATX_VERSION_MIN         0x0100      /* Minimum supported version */
 #define ATX_VERSION_MAX         0x0102      /* Maximum supported version */
 

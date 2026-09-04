@@ -1021,6 +1021,21 @@ def main() -> int:
         import audit_fd_leaks as _fd
         all_errors.append(("offene Dateihandles", _fd.check(repo)))
 
+        # 52. Kategorie (MF-852): gleicher Makroname, verschiedener Wert.
+        #
+        # Aus P3-92 entstanden — zwei STX-Flagtabellen im selben Baum,
+        # die einander widersprachen. Das Tor faengt DIESEN Fall NICHT
+        # (die Tabellen nannten dasselbe Bit verschieden, Gegenbeweis
+        # gefahren), aber die Messung fand 32 andere: ATX_SIGNATURE
+        # byte-verdreht, CMD_BAM_TRACK/SECTOR zwischen Header und
+        # Umsetzung vertauscht, SCP_DISK_APPLE_400K 0x30 gegen 0x24.
+        #
+        # WEICHE Grundlinie: ein lokales MAX_SECTORS in zwei unverwandten
+        # Modulen ist kein Fehler. Jeder Abbau ist eine
+        # Einzelentscheidung wie bei P3-76.
+        import audit_macro_drift as _md
+        all_errors.append(("Makro-Drift", _md.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

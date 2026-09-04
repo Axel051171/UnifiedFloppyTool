@@ -35,18 +35,48 @@
 #define STX_REC_TRACK_TIMING  0x01
 #define STX_REC_SECTOR_DATA   0x02
 
-/* Track flags */
-#define STX_TF_TRACK_IMAGE     0x01  /* Contains raw track image */
-#define STX_TF_SECTOR_DATA     0x80  /* Contains sector data */
-#define STX_TF_FUZZY_BITS      0x40  /* Track has fuzzy bits */
-#define STX_TF_TIMING_DATA     0x20  /* Has timing information */
+/*
+ * MF-852: diese Tabelle war bei SIEBEN von neun Konstanten falsch.
+ *
+ * Sie widersprach der Fassung in `src/formats/stx/uft_stx_air.c` (Port
+ * von AIR `pasti/PastiRead.cs`, Jean Louis-Guerin) — als OPEN_ITEMS
+ * P3-92 gefuehrt, weil beide im selben Baum standen und eine von beiden
+ * falsch sein musste. Entschieden ueber eine ZWEITE Hand:
+ *
+ *   Hatari, `src/includes/floppies/stx.h:83-85` und `src/floppies/stx.c`
+ *   (GPL-2-or-later). Hataris Kopf nennt vier Rueckentwickler — Markus
+ *   Fritze (Sarnau), P. Putnik, Jean Louis Guerin, Nicolas Pomarede —
+ *   und der Emulator faehrt damit reale geschuetzte Spiele. Das ist
+ *   Verhaltensbeleg, den eine Beschreibung allein nicht liefert.
+ *
+ *   Eingeschraenkt unabhaengig: Louis-Guerin ist UNTER Hataris Quellen.
+ *   Drei weitere Namen und eine laufende Umsetzung stehen daneben; die
+ *   Atari-Fassung hier hatte gar keine genannte Quelle.
+ *
+ * Uebereinstimmung Hatari <-> AIR: alle fuenf Sektor-Flags und drei von
+ * vier Spur-Flags identisch. Hatari modelliert 0x20 (Schutz) nicht —
+ * kein Widerspruch, nur keine Aussage.
+ *
+ * Kein Port: die Werte sind gelesen und gegenuebergestellt, der Code
+ * hier ist eigenstaendig.
+ */
 
-/* Sector flags */
-#define STX_SF_FUZZY           0x80  /* Sector has fuzzy bits */
-#define STX_SF_CRC_ERROR       0x08  /* CRC error in sector */
-#define STX_SF_DELETED         0x04  /* Deleted data address mark */
-#define STX_SF_ID_CRC_ERROR    0x02  /* ID field CRC error */
-#define STX_SF_RECORD_TYPE     0x01  /* Record type mask */
+/* Track flags — Hatari stx.h:83-85, AIR uft_stx_air.c:57-60 */
+#define STX_TF_SECTOR_BLOCK    0x01  /* Spur traegt Sektordeskriptoren   */
+#define STX_TF_PROT            0x20  /* Schutz vorhanden (AIR; Hatari
+                                      * modelliert es nicht)             */
+#define STX_TF_TRACK_IMAGE     0x40  /* Spur traegt ein Spurbild         */
+#define STX_TF_TRACK_IMAGE_SYNC 0x80 /* Spurbild mit Sync-Position       */
+
+/* Sector flags — Hatari stx.h:40-45, AIR uft_stx_air.c:63-67.
+ * Alle fuenf in beiden Quellen identisch. */
+#define STX_SF_BIT_WIDTH       0x01  /* variable Bitbreite im Sektor     */
+#define STX_SF_CRC_ERROR       0x08  /* CRC-Fehler: Daten wenn RNF=0,
+                                      * ID wenn RNF=1                    */
+#define STX_SF_RNF             0x10  /* Record Not Found — nur Adresse,
+                                      * keine Daten                      */
+#define STX_SF_DELETED         0x20  /* geloeschte Datenadressmarke      */
+#define STX_SF_FUZZY           0x80  /* Sektor traegt Fuzzy-Bits         */
 
 /*============================================================================
  * STRUCTURES
@@ -215,9 +245,17 @@ static int parse_sector(
     
     /* Parse flags */
     sector->has_fuzzy = (desc->flags & STX_SF_FUZZY) != 0;
-    sector->crc_error = (desc->flags & STX_SF_CRC_ERROR) != 0;
-    sector->deleted = (desc->flags & STX_SF_DELETED) != 0;
-    sector->id_crc_error = (desc->flags & STX_SF_ID_CRC_ERROR) != 0;
+    sector->deleted   = (desc->flags & STX_SF_DELETED) != 0;
+
+    /* MF-852: EIN Bit trennt beide CRC-Aussagen nicht — 0x08 sagt „CRC
+     * fehlerhaft", und erst RNF (0x10) sagt WELCHE. Woertlich in beiden
+     * Quellen: AIR „CRC error (data if RNF=0, ID if RNF=1)", Hatari
+     * fuehrt beide Bits getrennt. Vorher las diese Datei den ID-Fehler
+     * aus 0x02 — ein Bit, das in keiner der beiden Quellen vorkommt. */
+    bool rnf = (desc->flags & STX_SF_RNF) != 0;
+    bool crc = (desc->flags & STX_SF_CRC_ERROR) != 0;
+    sector->crc_error    = crc && !rnf;
+    sector->id_crc_error = crc &&  rnf;
     sector->fdc_status = desc->fdcstat;
     
     /* Read sector data */
@@ -408,8 +446,19 @@ int stx_parser_read_track(
     
     /* Parse flags */
     track->has_track_image = (td.flags & STX_TF_TRACK_IMAGE) != 0;
-    track->has_fuzzy = (td.flags & STX_TF_FUZZY_BITS) != 0;
-    track->has_timing = (td.flags & STX_TF_TIMING_DATA) != 0;
+
+    /* MF-852: „Fuzzy vorhanden" steht NICHT in den Spur-Flags — weder
+     * Hatari noch AIR kennen dafuer ein Bit. Massgeblich ist
+     * `fuzzy_size` im Spursatz (Byte 0x04), und den liest diese Datei
+     * bereits. Ein Flag, das es nicht gibt, meldete hier bisher 0x40 —
+     * in Wahrheit das Spurbild-Bit. */
+    track->has_fuzzy = (td.fuzzy_size > 0);
+
+    /* MF-852: ein Timing-Bit gibt es in keiner der beiden Quellen. Die
+     * Timing-Saetze haengen an der Satzgroesse, nicht an einem Flag;
+     * AIR liest sie ueber `record_size` (uft_stx_air.c). Bis das hier
+     * ebenso geschieht, ist die ehrliche Aussage: unbekannt. */
+    track->has_timing = false;
     
     /* Read sector descriptors */
     if (td.sector_count > 0 && td.sector_count <= STX_MAX_SECTORS) {

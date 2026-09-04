@@ -1,0 +1,7 @@
+31
+# MF-852: gleicher Makroname, verschiedener Wert (siehe scripts/audit_macro_drift.py).
+# WEICHE Grundlinie: nicht jeder Treffer ist ein Fehler — zwei unverwandte
+# Module duerfen ein lokales MAX_SECTORS mit verschiedenen Werten fuehren.
+# Echte Faelle erkennt man am formatgebundenen Praefix (ATX_, SCP_, G64_,
+# CMD_, PRO_, GEOS_, ADF_): ein Format hat nur EINE solche Eigenschaft.
+# Jeder Abbau ist eine Einzelentscheidung wie bei P3-76. Darf nur fallen.
