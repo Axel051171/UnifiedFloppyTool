@@ -301,6 +301,114 @@ TEST(ohne_sect_desc_flag_keine_deskriptoren_annehmen)
     remove(TMP);
 }
 
+/*
+ * Baut eine Spur mit @p nsec Sektoren — fuer den Klemmfall.
+ * Immer mit Deskriptoren, ohne Fuzzy-Maske (die ist hier nicht die Frage).
+ */
+static uint8_t *baue_stx_viele(size_t *out_len, uint16_t nsec)
+{
+    const uint32_t track_rec = 16u + (uint32_t)nsec * 16u
+                             + (uint32_t)nsec * SEC_N;
+    const size_t   total     = 16u + track_rec;
+    uint8_t *b = calloc(1, total);
+    if (!b) return NULL;
+
+    memcpy(b, "RSY\0", 4);
+    w16(b + 4, 3);
+    b[10] = 1;
+
+    uint8_t *tr = b + 16;
+    w32(tr + 0, track_rec);
+    w32(tr + 4, 0);                 /* keine Fuzzy-Maske */
+    w16(tr + 8, nsec);
+    w16(tr + 10, 0x21);             /* SECT_DESC | PROT */
+    w16(tr + 12, 6250);
+    tr[14] = 0;
+    tr[15] = 0;
+
+    uint8_t *sd   = tr + 16;
+    uint8_t *daten = sd + (size_t)nsec * 16u;
+    for (uint16_t i = 0; i < nsec; i++) {
+        uint8_t *d = sd + (size_t)i * 16u;
+        w32(d + 0, (uint32_t)i * SEC_N);   /* dataOffset */
+        w16(d + 4, 0);
+        w16(d + 6, 100);
+        d[8]  = 0;
+        d[9]  = 0;
+        d[10] = (uint8_t)(i + 1);         /* R, 1-basiert */
+        d[11] = 2;                        /* N -> 512 */
+        w16(d + 12, 0x1234);
+        d[14] = 0;
+        d[15] = 0;
+        memset(daten + (size_t)i * SEC_N, (uint8_t)(0x40 + i), SEC_N);
+    }
+    *out_len = total;
+    return b;
+}
+
+TEST(zu_viele_sektoren_werden_gemeldet_nicht_verschwiegen)
+{
+    /* MF-854 / P3-58: mit der Verdrahtung des vollstaendigen Ports wurde
+     * dessen Klemme (32 Deskriptoren je Spur) SCHARF. Sie ist eine
+     * Grenze dieser Umsetzung, nicht des Formats — `sectorCount` ist ein
+     * uint16, und „Sherman M4" fuehrt 70 Sektoren je Spur (DrCoolZic,
+     * Atari Copy Protection Rev 1.4, Klasse NOS).
+     *
+     * „Kein Bit verloren" heisst nicht, dass nie etwas fehlt, sondern
+     * dass Fehlendes BENANNT wird. Genau das wird hier geprueft — und
+     * es war bis zu diesem Fall eine blosse Zusage: MF-854 hat die
+     * Meldung eingebaut und nie bewiesen, dass sie feuert. */
+    size_t n; uint8_t *b = baue_stx_viele(&n, 40);
+    ASSERT(b != NULL);
+    ASSERT(schreibe(b, n));
+    free(b);
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    ASSERT(uft_format_plugin_stx.open(&disk, TMP, true) == UFT_OK);
+
+    uft_track_t tr;
+    memset(&tr, 0, sizeof tr);
+    ASSERT(uft_format_plugin_stx.read_track(&disk, 0, 0, &tr) == UFT_OK);
+
+    /* Es kommen 32 an — die Grenze der Umsetzung. */
+    ASSERT(tr.sector_count == 32);
+
+    /* Und der Verlust ist VERMERKT, nicht still. */
+    if (tr.errors == 0) {
+        printf("\n      40 angekuendigt, 32 geliefert, errors == 0\n"
+               "      -> acht Sektoren sind still verschwunden\n      ");
+        _fail++;
+    }
+    uft_track_cleanup(&tr);
+    uft_format_plugin_stx.close(&disk);
+    remove(TMP);
+}
+
+TEST(passende_sektorzahl_meldet_keinen_verlust)
+{
+    /* Gegenprobe: genau an der Grenze darf NICHTS gemeldet werden.
+     * Ohne diesen Fall waere eine Fassung gruen, die immer warnt. */
+    size_t n; uint8_t *b = baue_stx_viele(&n, 32);
+    ASSERT(b != NULL);
+    ASSERT(schreibe(b, n));
+    free(b);
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    ASSERT(uft_format_plugin_stx.open(&disk, TMP, true) == UFT_OK);
+
+    uft_track_t tr;
+    memset(&tr, 0, sizeof tr);
+    ASSERT(uft_format_plugin_stx.read_track(&disk, 0, 0, &tr) == UFT_OK);
+    ASSERT(tr.sector_count == 32);
+    ASSERT(tr.errors == 0);
+
+    uft_track_cleanup(&tr);
+    uft_format_plugin_stx.close(&disk);
+    remove(TMP);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -309,6 +417,8 @@ int main(void)
     RUN(spurzahl_ist_ein_byte_nicht_zwei);
     RUN(die_seite_steckt_in_bit_7_von_byte_14);
     RUN(ohne_sect_desc_flag_keine_deskriptoren_annehmen);
+    RUN(zu_viele_sektoren_werden_gemeldet_nicht_verschwiegen);
+    RUN(passende_sektorzahl_meldet_keinen_verlust);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
