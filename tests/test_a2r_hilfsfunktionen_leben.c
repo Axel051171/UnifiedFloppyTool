@@ -47,8 +47,32 @@ TEST(fehlertexte)
 
 TEST(laufwerkstypen)
 {
+    /* MF-868: hier stand `"5.25\" Single-Sided (Disk II)"`.
+     *
+     * Dieser Fall wurde geschrieben, um die Hilfsfunktionen ueberhaupt
+     * einmal AUSZUFUEHREN (MF-851) — nicht, um sie gegen eine Referenz
+     * zu pruefen. Er hat damit festgeschrieben, was dastand, und was
+     * dastand war erfunden: die veroeffentlichte „A2R 3.x Disk Image
+     * Reference" (applesaucefdc.com/a2r/) fuehrt fuer den Drive Type
+     * andere Namen, und ab Index 2 benannte die Tabelle durchgehend
+     * etwas anderes als die Referenz.
+     *
+     * Ein Test ohne Referenz haelt eine Behauptung fest, keine Wahrheit.
+     * Jetzt steht die Aufzaehlung der Referenz hier — samt der Werte
+     * 6..8, die ganz fehlten. Typ 6 traegt die Aufnahme im Korpus. */
     ASSERT(strcmp(a2r_disk_type_string(1),
-                  "5.25\" Single-Sided (Disk II)") == 0);
+                  "5.25\" SS 40trk 0.25 step") == 0);
+    ASSERT(strcmp(a2r_disk_type_string(2),
+                  "3.5\" DS 80trk Apple CLV") == 0);
+    ASSERT(strcmp(a2r_disk_type_string(6), "8\" DS") == 0);
+    ASSERT(strcmp(a2r_disk_type_string(8), "3\" DS 40trk") == 0);
+
+    /* Gegenprobe: jenseits der Aufzaehlung wird nichts erfunden — und
+     * die Schranke kommt aus der Tabelle, nicht aus einer festen Zahl,
+     * die beim naechsten Zuwachs wieder falsch waere. */
+    ASSERT(strcmp(a2r_disk_type_string(0), "Unknown") == 0);
+    ASSERT(strcmp(a2r_disk_type_string(9), "Unknown") == 0);
+    ASSERT(strcmp(a2r_disk_type_string(255), "Unknown") == 0);
 }
 
 TEST(viertelspur_hin_und_zurueck)

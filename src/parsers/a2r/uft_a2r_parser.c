@@ -82,12 +82,30 @@ static const char *error_strings[A2R_ERR_COUNT] = {
     "Corrupt data"
 };
 
+/* MF-868: die Aufzaehlung stammt jetzt aus der veroeffentlichten
+ * Referenz („A2R 3.x Disk Image Reference", applesaucefdc.com/a2r/,
+ * Feld „Drive Type" im INFO-Chunk).
+ *
+ * Vorher standen hier fuenf Eintraege, die ab Index 2 durchgehend etwas
+ * anderes benannten als die Referenz — 2 hiess „5.25 Double-Sided"
+ * (richtig: 3.5 DS 80trk Apple CLV), 3 hiess „3.5 Single-Sided"
+ * (richtig: 5.25 DS 80trk), 4 hiess „3.5 Double-Sided" (richtig:
+ * 5.25 DS 40trk). Die Werte 6..8 fehlten ganz — und genau 6 traegt die
+ * Aufnahme im Korpus (`tests/corpus/kor_a`), die daraufhin als
+ * „Unknown" angezeigt wurde, obwohl die Referenz sie kennt.
+ *
+ * Ein falsches Etikett ist schlimmer als gar keines: es sieht aus wie
+ * eine Auskunft. */
 static const char *disk_type_strings[] = {
     "Unknown",
-    "5.25\" Single-Sided (Disk II)",
-    "5.25\" Double-Sided",
-    "3.5\" Single-Sided (400K)",
-    "3.5\" Double-Sided (800K)"
+    "5.25\" SS 40trk 0.25 step",
+    "3.5\" DS 80trk Apple CLV",
+    "5.25\" DS 80trk",
+    "5.25\" DS 40trk",
+    "3.5\" DS 80trk",
+    "8\" DS",
+    "3\" DS 80trk",
+    "3\" DS 40trk"
 };
 
 /*============================================================================
@@ -135,44 +153,68 @@ static void copy_fixed_string(char *dst, const uint8_t *src,
  * Chunk Parsing
  *============================================================================*/
 
-/** Parse INFO chunk (v2: 60 bytes, v3: 60 bytes with different layout) */
+/** Parse INFO chunk.
+ *
+ * MF-868: hier stand `if (size < 60) return A2R_ERR_BAD_CHUNK;` und ein
+ * Feldlayout, das den Erzeuger ab Byte 0 las.
+ *
+ * Beides ist falsch, und zwar gemessen an ZWEI unabhaengigen Haenden:
+ * der veroeffentlichten „A2R 3.x Disk Image Reference"
+ * (applesaucefdc.com/a2r/) und einer echten Aufnahme (Applesauce
+ * v1.88.4, `tests/corpus/kor_a/…a2r`). Beide sagen dasselbe:
+ *
+ *     +0   1   INFO Version (aktuell 1)
+ *     +1  32   Creator, mit 0x20 gefuellt
+ *     +33  1   Drive Type
+ *     +34  1   Write Protected
+ *     +35  1   Synchronized
+ *     +36  1   Hard Sector Count       -> 37 Byte gesamt
+ *
+ * Die echte Datei hat einen 37-Byte-INFO-Chunk. Der Leser wies ihn also
+ * ab — und gab trotzdem `A2R_OK` mit einem genullten Datensatz zurueck,
+ * weil der Aufrufer den Rueckgabewert nicht auswertete. Das ist der
+ * eigentliche Schaden: nicht dass etwas nicht ging, sondern dass „OK"
+ * daran stand.
+ *
+ * Fuer A2R 2.x fuehrt die Referenz denselben Aufbau ohne das fuehrende
+ * Versionsbyte (Creator ab +0, 36 Byte). Der 2.x-Zweig bleibt deshalb
+ * wie er war — er ist hier NICHT nachgemessen, weil im Korpus keine
+ * 2.x-Datei liegt, und steht ausdruecklich als ungeprueft. */
 static a2r_error_t parse_info_chunk(const uint8_t *data, size_t size,
                                     uint8_t version, a2r_info_t *info) {
     if (!data || !info) return A2R_ERR_NULL_PARAM;
-    if (size < 60) return A2R_ERR_BAD_CHUNK;
-    
+
     memset(info, 0, sizeof(*info));
     info->version = version;
-    
+
     if (version == 2) {
-        /* A2R v2 INFO layout */
+        /* NICHT nachgemessen: keine 2.x-Datei im Korpus (MF-868). */
+        if (size < 36) return A2R_ERR_BAD_CHUNK;
         copy_fixed_string(info->creator, data, 32, sizeof(info->creator));
         info->disk_type = data[32];
         info->write_protected = data[33] != 0;
         info->synchronized = data[34] != 0;
-        /* Bytes 35-59: reserved */
-    } else if (version == 3) {
-        /* A2R v3 INFO layout */
-        copy_fixed_string(info->creator, data, 32, sizeof(info->creator));
-        info->disk_type = data[32];
-        info->write_protected = data[33] != 0;
-        info->synchronized = data[34] != 0;
-        info->cleaned = data[35] != 0;
-        info->optimal_timing = data[36] != 0;
-        
-        /* v3 extended fields */
-        if (size >= 56) {
-            info->disk_sides = data[37];
-            info->boot_sector_format = data[38];
-            info->data_format = data[39];
-            info->optimal_bit_timing = read_le32(&data[40]);
-            info->compatible_hw = read_le16(&data[44]);
-            info->required_ram = read_le16(&data[46]);
-            info->largest_track = read_le16(&data[48]);
-        }
+        return A2R_OK;
     }
-    
-    return A2R_OK;
+
+    if (version == 3) {
+        if (size < 37) return A2R_ERR_BAD_CHUNK;
+        /* data[0] ist die INFO-Version, NICHT das erste Zeichen des
+         * Erzeugers. Genau dieser eine Byte-Versatz zog sich durch alle
+         * Felder. */
+        copy_fixed_string(info->creator, &data[1], 32,
+                          sizeof(info->creator));
+        info->disk_type       = data[33];
+        info->write_protected = data[34] != 0;
+        info->synchronized    = data[35] != 0;
+        /* data[36] ist die Zahl der Hartsektoren. Der Baum hat dafuer
+         * kein Feld; sie wird bewusst nicht in `cleaned` o. ae.
+         * einsortiert — ein falsch benanntes Feld ist schlimmer als ein
+         * fehlendes. */
+        return A2R_OK;
+    }
+
+    return A2R_ERR_BAD_CHUNK;
 }
 
 /** Parse STRM chunk (v2) */
@@ -299,135 +341,177 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
     return A2R_OK;
 }
 
-/** Parse RWCP chunk (v3) */
+/** Parse RWCP chunk (v3).
+ *
+ * MF-868: der bisherige Rumpf traf die Struktur an keiner Stelle.
+ *
+ * Er nahm an: `location` in Byte 0, `side` in Byte 2, `data_len` in
+ * Byte 6, feste Eintragsgroesse 10 + data_len — und uebersprang den
+ * RWCP-Kopf GAR NICHT.
+ *
+ * Was wirklich dasteht (veroeffentlichte „A2R 3.x Disk Image
+ * Reference", applesaucefdc.com/a2r/, byteweise an einer echten
+ * Applesauce-Aufnahme nachgemessen):
+ *
+ *   Kopf, 16 Byte:
+ *     +0   1   RWCP Version
+ *     +1   4   Resolution, Pikosekunden je Tick
+ *     +5  11   Reserve
+ *
+ *   danach Eintraege, Ende an Ende:
+ *     +0   1   Mark: 0x43 'C' = Aufnahme, 0x58 'X' = Ende
+ *     +1   1   Capture Type: 1 timing, 2 bits, 3 xtiming
+ *     +2   2   Location (uint16 — Byte 2 ist NICHT die Seite)
+ *     +4   1   Zahl der Index-Signale
+ *     +5   4*N Index-Signale
+ *     ..   4   Groesse der Aufnahmedaten
+ *     ..   N   Aufnahmedaten
+ *
+ * Die Eintragsgroesse haengt also von der Zahl der Index-Signale ab.
+ * Mit fester Groesse lief der alte Leser schon beim ersten Eintrag aus
+ * dem Tritt — deshalb fand er auf einer echten Datei null Aufnahmen.
+ *
+ * Zur SEITE: die Referenz kennt in der Location keine getrennte
+ * Seitenangabe; bei zweiseitigen Medien steckt sie in der Location
+ * selbst. Dieser Leser fuehrt `side` deshalb konstant als 0 und legt
+ * die volle Location in `track_number` ab, statt eine Aufteilung zu
+ * erfinden. Was der Baum nicht belegt, behauptet er hier auch nicht.
+ */
 static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
                                     const uint8_t *data, size_t size) {
     if (!ctx || !data) return A2R_ERR_NULL_PARAM;
-    
-    /* RWCP format: entries with track/side/indices/data */
-    const uint8_t *ptr = data;
-    const uint8_t *end = data + size;
-    
-    /* First pass: count tracks */
-    uint8_t track_map[A2R_MAX_TRACKS][2] = {{0}};  /* [track][side] */
-    const uint8_t *scan = data;
-    
-    while (scan + 10 <= end) {
-        uint8_t location = scan[0];
-        uint8_t capture_type = scan[1];
-        
-        if (location == 0xFF) break;
-        
-        uint8_t track = location;
-        uint8_t side = scan[2];
-        
-        /* Skip based on capture type */
-        if (capture_type == 1) {
-            /* Timing capture */
-            uint32_t data_len = read_le32(&scan[6]);
-            track_map[track][side & 1] = 1;
-            scan += 10 + data_len;
-        } else if (capture_type == 2) {
-            /* Bits capture */
-            uint32_t data_len = read_le32(&scan[6]);
-            track_map[track][side & 1] = 1;
-            scan += 10 + data_len;
-        } else {
-            break;  /* Unknown type */
-        }
+    if (size < 16) return A2R_ERR_BAD_CHUNK;
+
+    /* Kopf: Version, Aufloesung, Reserve. */
+    ctx->resolution_ps = read_le32(&data[1]);
+
+    const uint8_t *const anfang = data + 16;
+    const uint8_t *const end    = data + size;
+
+    /* Erster Durchlauf: welche Locations kommen vor?
+     *
+     * `A2R_MAX_TRACKS` ist 160 (Viertelspuren). Eine Location darueber
+     * wird UEBERSPRUNGEN und nicht auf den Bereich zurechtgebogen —
+     * eine zurechtgebogene Spurnummer waere eine erfundene Angabe. */
+    uint8_t gesehen[A2R_MAX_TRACKS];
+    memset(gesehen, 0, sizeof(gesehen));
+
+    const uint8_t *scan = anfang;
+    while (scan < end) {
+        uint8_t mark = scan[0];
+        if (mark == 0x58) break;                 /* 'X' — Ende */
+        if (mark != 0x43) break;                 /* nichts Bekanntes */
+        if (scan + 5 > end) break;
+
+        uint16_t location  = (uint16_t)(scan[2] | ((uint16_t)scan[3] << 8));
+        uint8_t  idx_count = scan[4];
+
+        const uint8_t *nach_idx = scan + 5 + (size_t)idx_count * 4u;
+        if (nach_idx + 4 > end) break;
+        uint32_t data_len = read_le32(nach_idx);
+
+        const uint8_t *naechster = nach_idx + 4 + data_len;
+        if (naechster > end) break;
+
+        if (location < A2R_MAX_TRACKS) gesehen[location] = 1;
+        scan = naechster;
     }
-    
-    /* Count unique track/side combinations */
+
     ctx->track_count = 0;
-    for (int t = 0; t < A2R_MAX_TRACKS; t++) {
-        for (int s = 0; s < 2; s++) {
-            if (track_map[t][s]) ctx->track_count++;
-        }
-    }
-    
+    for (int k = 0; k < A2R_MAX_TRACKS; k++)
+        if (gesehen[k]) ctx->track_count++;
+
     if (ctx->track_count == 0) return A2R_ERR_NO_FLUX;
 
-    /* Overflow check: track_count * sizeof(a2r_track_t) */
     if (ctx->track_count > SIZE_MAX / sizeof(a2r_track_t))
         return A2R_ERR_ALLOC;
 
-    /* Allocate tracks */
     ctx->tracks = calloc(ctx->track_count, sizeof(a2r_track_t));
     if (!ctx->tracks) return A2R_ERR_ALLOC;
 
-    /* Second pass: parse data */
-    ptr = data;
-    uint8_t track_idx = 0;
-    uint8_t current_track = 0xFF;
-    uint8_t current_side = 0xFF;
-    a2r_track_t *current = NULL;
-    
-    while (ptr + 10 <= end && track_idx < ctx->track_count) {
-        uint8_t location = ptr[0];
-        uint8_t capture_type = ptr[1];
-        
-        if (location == 0xFF) break;
-        
-        uint8_t track = location;
-        uint8_t side = ptr[2];
-        uint32_t data_len = read_le32(&ptr[6]);
-        
-        /* New track/side? */
-        if (track != current_track || side != current_side) {
-            current = &ctx->tracks[track_idx++];
-            current->track_number = track;
-            current->side = side;
-            current->capture_count = 0;
-            current_track = track;
-            current_side = side;
-        }
-        
-        /* Add capture */
-        if (current && current->capture_count < A2R_MAX_CAPTURES) {
-            a2r_capture_t *cap = &current->captures[current->capture_count];
-            cap->capture_type = capture_type;
-            cap->data_length = data_len;
-            cap->tick_count = 0;
-            
-            if (ptr + 10 + data_len <= end && data_len > 0) {
-                /* Sanity cap on capture data size */
-                if (data_len > A2R_MAX_FLUX_BYTES_PER_CAPTURE) {
-                    ptr += 10 + data_len;
-                    continue;
-                }
-                cap->data = malloc(data_len);
-                if (cap->data) {
-                    memcpy(cap->data, ptr + 10, data_len);
-
-                    /* Calculate duration from flux data */
-                    uint64_t total_ticks = 0;
-                    const uint8_t *flux = cap->data;
-                    for (uint32_t i = 0; i < data_len; i++) {
-                        if (flux[i] == 0xFF && i + 1 < data_len) {
-                            total_ticks += flux[++i];
-                        } else {
-                            total_ticks += flux[i];
-                        }
-                    }
-                    cap->duration_us = (total_ticks * A2R_TICK_NS) / 1000.0;
-                    cap->rpm = a2r_duration_to_rpm(cap->duration_us);
-                    
-                    ctx->total_flux_bytes += data_len;
-                    ctx->total_captures++;
-                    
-                    if (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm)
-                        ctx->min_rpm = cap->rpm;
-                    if (cap->rpm > ctx->max_rpm)
-                        ctx->max_rpm = cap->rpm;
-                }
-            }
-            
-            current->capture_count++;
-        }
-        
-        ptr += 10 + data_len;
+    /* Die Locations der Reihe nach den Plaetzen zuordnen, damit der
+     * zweite Durchlauf sie wiederfindet. */
+    for (int k = 0, n = 0; k < A2R_MAX_TRACKS; k++) {
+        if (!gesehen[k]) continue;
+        ctx->tracks[n].track_number = (uint8_t)k;
+        ctx->tracks[n].side = 0;
+        n++;
     }
-    
+
+    /* Aufloesung in Nanosekunden. 0 heisst „steht nicht in der Datei" —
+     * dann gilt weiterhin der Nennwert. */
+    double ns_je_tick = (ctx->resolution_ps > 0)
+                      ? (double)ctx->resolution_ps / 1000.0
+                      : (double)A2R_TICK_NS;
+
+    /* Zweiter Durchlauf: Aufnahmen einsortieren. */
+    const uint8_t *ptr = anfang;
+    while (ptr < end) {
+        uint8_t mark = ptr[0];
+        if (mark != 0x43) break;
+        if (ptr + 5 > end) break;
+
+        uint8_t  typ       = ptr[1];
+        uint16_t location  = (uint16_t)(ptr[2] | ((uint16_t)ptr[3] << 8));
+        uint8_t  idx_count = ptr[4];
+
+        const uint8_t *nach_idx = ptr + 5 + (size_t)idx_count * 4u;
+        if (nach_idx + 4 > end) break;
+        uint32_t data_len = read_le32(nach_idx);
+        const uint8_t *nutz = nach_idx + 4;
+        const uint8_t *naechster = nutz + data_len;
+        if (naechster > end) break;
+
+        a2r_track_t *ziel = NULL;
+        for (uint8_t n = 0; n < ctx->track_count; n++) {
+            if (ctx->tracks[n].track_number == location) {
+                ziel = &ctx->tracks[n];
+                break;
+            }
+        }
+
+        if (ziel && ziel->capture_count < A2R_MAX_CAPTURES &&
+            data_len > 0 && data_len <= A2R_MAX_FLUX_BYTES_PER_CAPTURE) {
+            a2r_capture_t *cap = &ziel->captures[ziel->capture_count];
+            cap->capture_type = typ;
+            cap->data_length  = data_len;
+            cap->tick_count   = 0;
+
+            cap->data = malloc(data_len);
+            if (cap->data) {
+                memcpy(cap->data, nutz, data_len);
+
+                /* Flusswerte: 0xFF ist ein Ueberlauf und wird zum
+                 * FOLGENDEN Wert addiert; der alte Rumpf zaehlte
+                 * stattdessen nur das Folgebyte. */
+                uint64_t ticks = 0;
+                uint32_t traeger = 0;
+                for (uint32_t k = 0; k < data_len; k++) {
+                    if (cap->data[k] == 0xFF) { traeger += 0xFF; continue; }
+                    ticks += traeger + cap->data[k];
+                    traeger = 0;
+                }
+                ticks += traeger;
+
+                cap->tick_count  = (uint32_t)((ticks > 0xFFFFFFFFu)
+                                              ? 0xFFFFFFFFu : ticks);
+                cap->duration_us = ((double)ticks * ns_je_tick) / 1000.0;
+                cap->rpm         = a2r_duration_to_rpm(cap->duration_us);
+
+                ctx->total_flux_bytes += data_len;
+                ctx->total_captures++;
+
+                if (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm)
+                    ctx->min_rpm = cap->rpm;
+                if (cap->rpm > ctx->max_rpm)
+                    ctx->max_rpm = cap->rpm;
+            }
+            ziel->capture_count++;
+        }
+
+        ptr = naechster;
+    }
+
     return A2R_OK;
 }
 
@@ -900,7 +984,11 @@ const char *a2r_error_string(a2r_error_t err) {
 }
 
 const char *a2r_disk_type_string(uint8_t disk_type) {
-    if (disk_type > 4) return "Unknown";
+    /* MF-868: die Schranke stand fest bei 4 und blieb es, als die
+     * Tabelle wuchs — dann waere Typ 6 wieder „Unknown" gewesen, mit
+     * dem Eintrag daneben. Sie kommt jetzt aus der Tabelle selbst. */
+    const size_t n = sizeof(disk_type_strings) / sizeof(disk_type_strings[0]);
+    if ((size_t)disk_type >= n) return "Unknown";
     return disk_type_strings[disk_type];
 }
 

@@ -92,23 +92,46 @@ typedef enum {
 /**
  * @brief INFO chunk data
  */
+/* MF-868: NEUN Felder sind hier ENTFALLEN, und der Grund ist der
+ * eigentliche Befund dieses Durchgangs.
+ *
+ * Entfallen sind: `cleaned`, `optimal_timing`, `disk_sides`,
+ * `boot_sector_format`, `data_format`, `optimal_bit_timing`,
+ * `compatible_hw`, `required_ram`, `largest_track`.
+ *
+ * Die A2R-Spezifikation kennt keines davon. Der INFO-Chunk von A2R 3
+ * hat SECHS Felder auf 37 Byte (veroeffentlichte „A2R 3.x Disk Image
+ * Reference", byteweise an einer echten Aufnahme nachgemessen).
+ *
+ * Woher kamen sie dann? Aus WOZ. Die Namen stehen eins zu eins in
+ * `include/uft/formats/apple/uft_woz.h:139-142`
+ * (`optimal_bit_timing`, `compatible_hw`, `required_ram`,
+ * `largest_track`), und dort steht ueber der Struktur woertlich:
+ * „WOZ INFO chunk (60 bytes)" — exakt die Groesse, die
+ * `parse_info_chunk()` verlangte.
+ *
+ * Der A2R-INFO-Leser WAR der WOZ-INFO-Leser, umbenannt. Das erklaert
+ * alles auf einmal: die 60-Byte-Schranke, den Byte-Versatz, und dass
+ * jedes dieser Felder auf einer echten A2R-Datei mit Werten aus dem
+ * Nichts gefuellt wurde.
+ *
+ * Das ist das Kopier-Muster, wegen dem es in diesem Baum die
+ * EINFRIER-REGEL gibt (FMT-1/2/3: fuenf Parser gegen erfundene Specs).
+ * Hier ist es kein erfundener Parser, sondern ein FREMDER — was in der
+ * Wirkung dasselbe ist und schwerer zu sehen, weil alles kompiliert und
+ * plausibel aussieht.
+ *
+ * Gemessen vor dem Entfernen: keines der neun Felder wird irgendwo
+ * gelesen (`grep` ueber `src/` und `tests/`, je Bezeichner). Die
+ * Hartsektor-Zahl (INFO +36) bekommt bewusst KEIN Feld — sie zu lesen
+ * und in eines der alten einzusortieren waere derselbe Fehler noch
+ * einmal. */
 typedef struct {
     uint8_t     version;            /**< Format version (2 or 3) */
     char        creator[33];        /**< Creator string (32 chars + null) */
-    uint8_t     disk_type;          /**< Disk type (A2R_DISK_*) */
+    uint8_t     disk_type;          /**< Drive Type, siehe die Referenz */
     bool        write_protected;    /**< Disk write protected */
-    bool        synchronized;       /**< Tracks are synchronized */
-    bool        cleaned;            /**< Flux cleaned (v3) */
-    bool        optimal_timing;     /**< Optimal bit timing (v3) */
-    
-    /* v3 extended fields */
-    uint8_t     disk_sides;         /**< Number of sides */
-    uint8_t     boot_sector_format; /**< Boot sector format */
-    uint8_t     data_format;        /**< Data format */
-    uint32_t    optimal_bit_timing; /**< Optimal bit timing in ns (v3) */
-    uint16_t    compatible_hw;      /**< Compatible hardware flags (v3) */
-    uint16_t    required_ram;       /**< Required RAM in KB (v3) */
-    uint16_t    largest_track;      /**< Largest track size (v3) */
+    bool        synchronized;       /**< Cross track sync/index used */
 } a2r_info_t;
 
 /**
@@ -176,6 +199,20 @@ typedef struct {
     /* Internal */
     void           *file_data;          /**< Mapped file data */
     size_t          file_size;
+
+    /* MF-868: die Aufloesung kommt aus der DATEI, nicht aus einer
+     * Konstante.
+     *
+     * `A2R_TICK_NS` (125) stand im Baum als feste Zahl. Die
+     * veroeffentlichte Referenz „A2R 3.x Disk Image Reference" fuehrt
+     * sie als Feld im RWCP-Kopf, in Pikosekunden je Tick. Eine feste
+     * Konstante rechnet jede Aufnahme mit anderer Abtastrate falsch um,
+     * und Dauer wie Drehzahl haengen daran.
+     *
+     * Angehaengt ans ENDE der Struktur — ein Einschub mittendrin waere
+     * eine binaere Aenderung ohne Compiler-Warnung. 0 heisst „nicht aus
+     * der Datei gelesen"; dann gilt weiterhin A2R_TICK_NS. */
+    uint32_t        resolution_ps;
 } a2r_context_t;
 
 /**

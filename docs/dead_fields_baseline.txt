@@ -54,4 +54,25 @@
 # fuer die haeufigste Art toter Kandidaten nicht kennt, meldet genau
 # dort Fehlalarm, wo man ihm glauben moechte.
 
-1163
+#
+# MF-868: 1163 -> 1168. Eine ERHOEHUNG, und sie ist begruendet: die
+# Messung ist ehrlicher geworden, nicht der Baum schlechter.
+#
+# Der A2R-INFO-Leser war eine Kopie des WOZ-INFO-Lesers — gleiche
+# Feldnamen, gleiche 60-Byte-Annahme (uft_woz.h:126 sagt woertlich
+# "WOZ INFO chunk (60 bytes)"). Er schrieb neun Felder, die die
+# A2R-Spezifikation gar nicht kennt, mit Werten, die er hinter dem
+# nur 37 Byte langen Chunk auflas.
+#
+# Dieses Tor vergleicht Feldnamen BAUMWEIT, nicht je Struktur. Die
+# Schreibzugriffe des A2R-Lesers hielten damit fuenf Felder in
+# uft_woz.h und uft_moof.h von der Liste fern, die dort NIE gefuellt
+# werden: cleaned, compatible_hw, disk_sides, required_ram,
+# largest_track. Nach dem Entfernen gemessen: null Schreibstellen im
+# ganzen Baum.
+#
+# Die fuenf waren also immer tot. Sichtbar sind sie erst, seit die
+# Kopie weg ist. Genau davor warnt der Hinweis weiter oben, dort in
+# der anderen Richtung: "0 gefunden" ist keine Entwarnung.
+
+1168

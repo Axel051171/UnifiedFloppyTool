@@ -1425,6 +1425,12 @@ foreach(test_source ${TEST_SOURCES})
         # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c)
+    elseif(${test_name} STREQUAL "test_a2r_layout")
+        # MF-868: der A2R-Leser meldete A2R_OK und lieferte nichts.
+        # Struktur aus der veroeffentlichten A2R-3.x-Referenz, byteweise
+        # an einer echten Applesauce-Aufnahme nachgemessen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
     elseif(${test_name} STREQUAL "test_pll_klemme")
         # MF-866: die Periodenklemme zaehlt ihre Treffer. Der Bericht
         # meldete "keine Klemme" — die gibt es seit jeher; gefehlt hat
