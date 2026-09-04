@@ -41,8 +41,41 @@ extern "C" {
 
 /* Sync patterns */
 #define MFM_SYNC_PATTERN            0x4489  /* MFM sync (A1 with missing clock) */
-#define FM_SYNC_PATTERN             0xF57E  /* FM sync (FE with clock) */
-#define FM_IAM_PATTERN              0xF77A  /* FM Index Address Mark */
+
+/* ── Die vier FM-Adressmarken (MF-864) ───────────────────────────────────
+ *
+ * Bei FM ist eine Adressmarke durch ihr CLOCKMUSTER definiert, nicht durch
+ * ihr Datenbyte. Diese Konstanten sind das fertige 16-Bit-Kanalwort: je
+ * Bit ein Paar (Clockbit, Datenbit), hoechstwertiges Bit zuerst.
+ *
+ *     Marke                Daten  Clock   Kanalwort
+ *     Index Address Mark    0xFC   0xD7    0xF77A
+ *     ID Address Mark       0xFE   0xC7    0xF57E
+ *     Data Address Mark     0xFB   0xC7    0xF56F
+ *     Deleted Data AM       0xF8   0xC7    0xF56A
+ *
+ * Referenz: **ECMA 54 / ISO 5654 / ANSI X3.73** (8 Zoll, einseitig,
+ * einfache Dichte — IBM 3740). Nachgemessen gegen `fluxtoimd` (Eric Smith
+ * 2016, GPL-3-only) als Oracle: seine vorberechneten Klassenwerte
+ * `FM.index_address_mark` … `FM.deleted_data_address_mark` stimmen mit
+ * allen vier ueberein (`scripts/gen_fm_fixture.py`, Abnahme 1).
+ *
+ * Drei davon standen bereits im Baum — hier und in
+ * `src/algorithms/advanced/uft_fuzzy_sync_v2.c:27-28`, von anderer Hand.
+ * Die Rechnung reproduziert sie; das ist die Gegenprobe zur Herleitung.
+ *
+ * WARUM DAS 16-BIT-WORT GENUEGT und keine Byte-Aufspaltung noetig ist:
+ * ein gewoehnliches Datenbyte traegt Clock 0xFF. Ein `0xFE` in den
+ * Nutzdaten wird damit zu 0xFFFE — verschieden von 0xF57E. Der Vergleich
+ * des vollen Kanalworts unterscheidet die Marke also bereits von jedem
+ * Nutzbyte. (Zur Einordnung: `fluxtoimd`s eigenes `Modulation.decode()`
+ * verwirft die Clockbits ebenfalls und traegt dazu einen ausdruecklichen
+ * Vorbehalt, dass es die Clockbits nicht gegen die Kodierregeln prueft.
+ * Es unterscheidet die Marken also genauso am Kanalwort.) */
+#define FM_SYNC_PATTERN             0xF57E  /* FM ID AM   (FE, Clock C7) */
+#define FM_IAM_PATTERN              0xF77A  /* FM Index AM(FC, Clock D7) */
+#define FM_DAM_PATTERN              0xF56F  /* FM Data AM (FB, Clock C7) */
+#define FM_DDAM_PATTERN             0xF56A  /* FM Deleted (F8, Clock C7) */
 
 /* Address marks */
 #define MFM_IDAM                    0xFE    /* ID Address Mark */

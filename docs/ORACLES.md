@@ -166,6 +166,7 @@ Schreck.
 | `xdftool` (amitools, seit MF-693 registriert) | **roh** | 2026-08-29 MF-685, nachgemessen 2026-08-30 | Korpus-ADF, `marker.txt` — der eigene Leser meldet 127, nicht 488 |
 | `adfrescue` | **roh** | Scout-Zyklus `adf_zweitmeinung` | 127 B, byteidentisch zur xdftool-Extraktion |
 | `to_woz2` | **nicht anwendbar** (erzeugt Bitstrom, listet keine Dateien) | 2026-08-30, MF-712 | Ausgabe-SHA fuer eine benannte Eingabe, im Eich-Test gepinnt |
+| `fluxtoimd` (FM) | **nicht anwendbar** (dekodiert Kanalbits, listet keine Dateien) | 2026-09-04, MF-864 | vier Abnahmen an der erzeugten FM-Spur, alle uebereinstimmend |
 | `lsatr`, `a8rawconv`, `gw`, `cpmls`, `hxcfe`, `samdisk`, `dtc` | **ungemessen** | — | offen |
 
 Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
@@ -184,6 +185,7 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `samdisk` | `SAMDISK` | MIT | `--version` | Container-Formate und ihre Randfälle. Die **Quelle** liegt zusätzlich im Baum (`src/samdisk/`) und dient als Spec-Referenz |
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
 | `floptool` | `FLOPTOOL` | GPL-2.0-or-later (MAME) | **SHA-256** (keine Versionsabfrage) | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem |
+| `fluxtoimd` | — (Python, im Baum geklont) | GPL-3.0-**only** | Pfad `tools/uft-scout/work/fluxtoimd` | FM- und M2FM-Modulation. Seit MF-864 die zweite Hand fuer die FM-Pruefspur: Adressmarken, `FM.decode()`, CRC-Parameter. **Wird ausgefuehrt, nicht portiert** — GPL-3-only vertraegt sich mit dem Baum, aber der Kanal ist ausdruecklich „Oracle" |
 | `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
 | `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |

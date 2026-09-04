@@ -1419,6 +1419,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_flux_fm_sektoren")
+        # MF-864: der FM-Weg legte keine Sektoren an ("FM sector decoding
+        # would go here"). Die Pruefspur ist an vier Stellen von fluxtoimd
+        # abgenommen — siehe scripts/gen_fm_fixture.py.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests)
     elseif(${test_name} STREQUAL "test_flux_index_wiring")
         # MF-475: die gemessene Umdrehung erreicht alle fuenf Decoder
         target_sources(${test_name} PRIVATE

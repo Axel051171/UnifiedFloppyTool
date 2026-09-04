@@ -1031,6 +1031,136 @@ flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
  * FM Track Decoder
  * ============================================================================ */
 
+/* MF-864: der FM-Sektordekoder. Hier stand bis dahin nichts.
+ *
+ * `flux_decode_fm()` war ueber den Verteiler `flux_decode_track()`
+ * erreichbar, suchte Syncs und legte KEINEN Sektor an — der Rumpf der
+ * Schleife bestand aus zwei Kommentaren („FM sector decoding would go
+ * here"). Jede FM-Diskette ueber den Flusspfad (Atari 810/1050, TRS-80
+ * SD, IBM 3740) lieferte damit null Sektoren.
+ *
+ * ── Wodurch sich FM von MFM unterscheidet ───────────────────────────────
+ *
+ * 1. KEIN Sync-Lauf. MFM stellt jeder Adressmarke drei 0xA1 mit fehlendem
+ *    Clock voran; `decode_mfm_sector()` muss die ueberspringen (MF-218).
+ *    FM hat das nicht — die Marke IST der Sync, erkennbar an ihrem
+ *    Clockmuster. `flux_find_sync()` landet direkt auf ihr.
+ *
+ * 2. ANDERE Pruefsumme. `flux_crc16_mfm()` stellt drei 0xA1 voran, weil
+ *    MFM sie mitrechnet. FM hat keine — hier gilt `flux_crc16_ccitt()`,
+ *    Init 0xFFFF, ueber die Adressmarke und die Felder. Die Vorlage
+ *    fuehrt dafuer `crc_init = 0xffff` und
+ *    `crc_includes_address_mark = True` (fluxtoimd `modulation.py`,
+ *    Klasse FM).
+ *
+ * 3. Nutzbytes brauchen die Clockbits nicht. Die Marken werden am vollen
+ *    16-Bit-Kanalwort unterschieden (siehe Herleitung im Header); fuer
+ *    den Inhalt genuegen die Datenbits, und die holt
+ *    `flux_fm_decode_byte()`. Die Funktion hatte bis MF-864 keinen
+ *    Aufrufer — jetzt hat sie einen.
+ *
+ * ── Referenz ────────────────────────────────────────────────────────────
+ *
+ * Spurlayout und Marken: **ECMA 54 / ISO 5654 / ANSI X3.73**.
+ * Rotbeweis vor dem Code: `tests/test_flux_fm_sektoren.c` (0 von 7 gruen
+ * gegen den Vorzustand). Die Pruefspur ist an vier Stellen von einer
+ * unabhaengigen Umsetzung abgenommen — `scripts/gen_fm_fixture.py`.
+ *
+ * NICHT belegt: das Verhalten an einer echten Aufnahme. Im Korpus liegt
+ * kein FM-Flussabzug; die Pruefspur ist erzeugt.
+ */
+static uint8_t fm_byte_lesen(const uint8_t *bits, size_t bit_count,
+                             size_t *pos)
+{
+    uint16_t wort = 0;
+    for (int b = 0; b < 16 && *pos < bit_count; b++, (*pos)++) {
+        wort = (uint16_t)((wort << 1) |
+                          ((bits[*pos / 8] >> (7 - (*pos % 8))) & 1));
+    }
+    return flux_fm_decode_byte(wort);
+}
+
+static flux_status_t decode_fm_sector(const uint8_t *bits, size_t bit_count,
+                                      size_t idam_pos,
+                                      flux_decoded_sector_t *sector,
+                                      size_t *end_pos)
+{
+    /* `idam_pos` zeigt AUF die ID-Adressmarke. Anders als bei MFM gibt es
+     * keinen Sync-Lauf davor, der uebersprungen werden muesste. */
+    size_t pos = idam_pos;
+
+    /* Marke + C + H + S + N + CRC(2) = 7 Byte */
+    if (pos + 7 * 16 > bit_count) return FLUX_ERR_UNDERFLOW;
+
+    uint8_t idf[7];
+    for (int i = 0; i < 7; i++) idf[i] = fm_byte_lesen(bits, bit_count, &pos);
+
+    if (idf[0] != MFM_IDAM) return FLUX_ERR_NO_SYNC;
+
+    sector->cylinder  = idf[1];
+    sector->head      = idf[2];
+    sector->sector    = idf[3];
+    sector->size_code = idf[4];
+    sector->id_crc    = (uint16_t)((idf[5] << 8) | idf[6]);
+
+    /* Ueber die Marke UND die vier Kopffelder — ohne A1-Vorspann. */
+    sector->id_crc_ok = (flux_crc16_ccitt(idf, 5) == sector->id_crc);
+    sector->id_position = (uint32_t)idam_pos;
+
+    /* Datenfeld suchen. GAP2 ist nach ECMA 54 elf Byte 0xFF plus sechs
+     * Byte 0x00 = 17 Byte; das Fenster von 43 Byte ist dasselbe wie im
+     * MFM-Pfad und damit reichlich. (Die Vorlage rechnet mit
+     * `id_to_data_half_bits = 400`, also rund 25 Byte.)
+     *
+     * Beide Marken in EINEM Durchlauf, damit der Treffer der fruehere von
+     * beiden ist — bei zwei Einzelaufrufen bekaeme man den fruehesten
+     * Treffer der ERSTEN Marke, was etwas anderes ist (MF-453). */
+    static const uint16_t DATENMARKEN[2] = { FM_DAM_PATTERN,
+                                             FM_DDAM_PATTERN };
+    size_t welche = 0;
+    int dam_pos = flux_find_sync_any(bits, bit_count, DATENMARKEN, 2,
+                                     pos, &welche);
+    if (dam_pos < 0 || (size_t)dam_pos > pos + 43 * 16)
+        return FLUX_ERR_NO_DATA;
+
+    sector->data_position = (uint32_t)dam_pos;
+    sector->deleted       = (welche == 1);
+
+    pos = (size_t)dam_pos;
+    uint8_t dam = fm_byte_lesen(bits, bit_count, &pos);
+    if (dam != MFM_DAM && dam != MFM_DDAM) return FLUX_ERR_NO_DATA;
+
+    size_t data_size = flux_sector_size(sector->size_code);
+    if (pos + (data_size + 2) * 16 > bit_count) return FLUX_ERR_UNDERFLOW;
+
+    sector->data = (uint8_t *)malloc(data_size);
+    if (!sector->data) return FLUX_ERR_OVERFLOW;
+    sector->data_size = data_size;
+
+    for (size_t i = 0; i < data_size; i++)
+        sector->data[i] = fm_byte_lesen(bits, bit_count, &pos);
+
+    uint8_t crc_hi = fm_byte_lesen(bits, bit_count, &pos);
+    uint8_t crc_lo = fm_byte_lesen(bits, bit_count, &pos);
+    sector->data_crc = (uint16_t)((crc_hi << 8) | crc_lo);
+
+    /* Auch hier: Marke mitrechnen, kein A1-Vorspann. */
+    uint8_t *puffer = (uint8_t *)malloc(1 + data_size);
+    if (puffer) {
+        puffer[0] = dam;
+        memcpy(puffer + 1, sector->data, data_size);
+        sector->data_crc_ok =
+            (flux_crc16_ccitt(puffer, 1 + data_size) == sector->data_crc);
+        free(puffer);
+    }
+
+    /* MF-218s Lehre, hier gleich mitgenommen: dem Aufrufer sagen, wo
+     * dieser Sektor endet. Setzt er die Suche vorher fort, findet er
+     * dieselbe Marke wieder und legt den Sektor doppelt an. */
+    if (end_pos) *end_pos = pos;
+    return FLUX_OK;
+}
+
 flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
                              flux_decoded_track_t *track,
                              const flux_decoder_options_t *opts) {
@@ -1084,15 +1214,35 @@ flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
     track->detected_encoding = FLUX_ENC_FM;
     track->avg_bitrate = 1e9 / pll.period;
     
-    /* FM decoding - similar to MFM but with FM sync pattern */
+    /* MF-864: hier stand „FM sector decoding would go here". Der Aufbau
+     * folgt jetzt dem MFM-Zweig darueber, Zeile fuer Zeile — inklusive
+     * seiner Lehren: Fortsetzen HINTER dem Sektor (MF-218) und Zaehlen
+     * der Fehlerarten statt stillem Ueberspringen. */
     size_t pos = 0;
     while (pos < bit_count && track->sector_count < FLUX_MAX_SECTORS) {
         int sync_pos = flux_find_sync(bits, bit_count, FM_SYNC_PATTERN, pos);
         if (sync_pos < 0) break;
-        
-        /* FM sector decoding would go here - similar to MFM */
-        /* For now, just note we found a sync */
-        pos = sync_pos + 16;
+
+        flux_decoded_sector_t *sector = &track->sectors[track->sector_count];
+        memset(sector, 0, sizeof(*sector));
+
+        size_t end_pos = (size_t)sync_pos + 16;
+        flux_status_t st = decode_fm_sector(bits, bit_count,
+                                            (size_t)sync_pos, sector,
+                                            &end_pos);
+        if (st == FLUX_OK) {
+            if (!sector->id_crc_ok)   track->bad_id_crc++;
+            if (!sector->data_crc_ok) track->bad_data_crc++;
+            track->sector_count++;
+            pos = end_pos;
+        } else {
+            /* Der Befund gehoert gezaehlt, nicht verschwiegen. */
+            if (st == FLUX_ERR_NO_DATA)  track->missing_data++;
+            if (st == FLUX_ERR_NO_SYNC)  track->bad_header_format++;
+            free(sector->data);
+            memset(sector, 0, sizeof(*sector));
+            pos = (size_t)sync_pos + 16;
+        }
     }
     
     free(bits);

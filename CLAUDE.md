@@ -266,6 +266,35 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 └─────────────────────────────────────────────────────────┘
 ```
 
+> **Ehrlichkeits-Hinweis (MF-864) — „MFM/FM/GCR Codec" stimmte beim FM
+> zur Hälfte.** Der Flusspfad hat fünf Dekoder. Vier legten Sektoren an;
+> `flux_decode_fm()` nicht. Er war über den Verteiler
+> `flux_decode_track()` **erreichbar**, suchte Syncs, zählte sie — und
+> sein Sektorteil bestand aus zwei Kommentaren:
+>
+> ```c
+> /* FM sector decoding would go here - similar to MFM */
+> /* For now, just note we found a sync */
+> ```
+>
+> Gemessen über den ganzen Rumpf: keine Zeile schrieb `track->sectors[…]`
+> oder erhöhte `sector_count`. Jede FM-Diskette über den Flusspfad —
+> **Atari 810/1050, TRS-80 SD, IBM 3740** — lieferte null Sektoren.
+>
+> Seit MF-864 liest er. Was dabei die halbe Arbeit war, gehört dazu
+> gesagt: der Baum hat **keinen FM- und keinen MFM-Encoder** (an vier
+> Stellen als Blocker vermerkt), also gibt es keine hauseigene Möglichkeit,
+> eine Prüfspur zu erzeugen. Ein Fixture aus derselben Hand wie der
+> Dekoder wäre wertlos gewesen. Die Spur ist deshalb an **vier** Stellen
+> von `fluxtoimd` (Eric Smith 2016, GPL-3-only) abgenommen — ausgeführt,
+> nicht übernommen —, das Layout stammt aus **ECMA 54 / ISO 5654 / ANSI
+> X3.73**, und die Prüfsummen erzeugt die fremde Klasse, während **UFTs
+> eigene** `flux_crc16_ccitt()` sie nachrechnet.
+>
+> **Was das nicht belegt:** das Verhalten an einer echten Aufnahme. Im
+> Korpus liegt kein FM-Flussabzug (P3-123). Der Dekoder liest eine
+> normgerechte Spur — mehr sagt die Messung nicht.
+
 > **Ehrlichkeits-Hinweis (MF-710):** hier stand bis heute
 > „AmigaDOS │ FAT12 │ CBM DOS │ Apple DOS/ProDOS │ CP/M │ TRSDOS │
 > TI-99 │ Atari DOS". Zwei der acht tragen nicht: **Apple DOS/ProDOS**
