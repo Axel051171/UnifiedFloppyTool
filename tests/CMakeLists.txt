@@ -203,6 +203,7 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_g64")
         # Include D64/G64 conversion source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
 
     elseif(${test_name} STREQUAL "test_c64_protection_ext")
@@ -1461,6 +1462,7 @@ foreach(test_source ${TEST_SOURCES})
         # MF-433: converter seam — blob loader vs plugin, byte-identical
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
@@ -1687,6 +1689,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             # MF-405: the GUI's own G64 reader, so its data path is testable
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus"
@@ -1763,6 +1766,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_d64_gcr_zwei_erzeuger")
+        # MF-862: der angeschlossene Erzeuger gegen den reicheren,
+        # unbenutzten. Messung VOR jeder Verdrahtung — der Pfad D64->G64
+        # ist gemessen verlustfrei (MF-532/533).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
     elseif(${test_name} STREQUAL "test_d64_writer_sektorfolge")
         # MF-859: die 21er-Tabelle erzeugte auf 18 von 35 Spuren doppelte
         # und fehlende Sektoren.

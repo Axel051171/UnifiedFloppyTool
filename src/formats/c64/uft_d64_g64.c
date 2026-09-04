@@ -20,6 +20,7 @@
  */
 
 #include "uft/formats/c64/uft_d64_g64.h"
+#include "uft/uft_d64_writer.h"
 #include "uft/uft_format_plugin.h"   /* MF-433: read sectors through a plugin */
 #include "uft/uft_track.h"
 #include "uft/formats/cbm/uft_cbm_geometry.h"  /* MF-434: one geometry */
@@ -916,15 +917,70 @@ size_t build_gcr_track(const uint8_t **sectors, int num_sectors,
     if (!sectors || !gcr_output || !disk_id || num_sectors <= 0) return 0;
     
     uint8_t *out = gcr_output;
-    
-    for (int s = 0; s < num_sectors; s++) {
-        if (sectors[s]) {
-            size_t sector_len = sector_to_gcr(sectors[s], out, track, s, disk_id, D64_ERR_OK);
-            out += sector_len;
+
+    /* MF-862: der vollstaendige Fall geht ueber `d64_write_track_gcr()`.
+     *
+     * Der Baum hatte ZWEI Erzeuger fuer GCR-Spuren, und der unbenutzte
+     * war der REICHERE: Gap- und Sync-Laengen je Spur einstellbar, eigene
+     * Sektorordnung moeglich, Ergebnisdatensatz je Spur. Genau das
+     * braucht Kopierschutz — lange Spuren, eigene Syncs —, und der
+     * angeschlossene konnte es nicht.
+     *
+     * Vor der Umstellung gemessen (`tests/test_d64_gcr_zwei_erzeuger.c`,
+     * MF-862): beide liefern ueber die volle Laenge des reicheren
+     * **byte-identische** Ausgabe. Der Pfad D64->G64 ist verlustfrei
+     * gemessen (MF-532/533); ohne diesen Beweis waere die Umstellung
+     * nicht zu rechtfertigen gewesen.
+     *
+     * Was HIER bleibt: die Auffuellung auf Zonenkapazitaet (der Erzeuger
+     * liefert nur die belegte Laenge) und der unvollstaendige Fall. */
+    bool vollstaendig = true;
+    for (int s = 0; s < num_sectors; s++)
+        if (!sectors[s]) { vollstaendig = false; break; }
+
+    if (vollstaendig) {
+        uint8_t *flach = (uint8_t *)malloc((size_t)num_sectors * 256u);
+        if (flach) {
+            for (int s = 0; s < num_sectors; s++)
+                memcpy(flach + (size_t)s * 256u, sectors[s], 256u);
+
+            d64_writer_config_t cfg = (d64_writer_config_t)D64_WRITER_CONFIG_DEFAULT;
+            cfg.disk_id[0] = disk_id[0];
+            cfg.disk_id[1] = disk_id[1];
+
+            d64_writer_t *w = d64_writer_create(&cfg);
+            if (w) {
+                size_t len = 0;
+                if (d64_write_track_gcr(w, track, flach, num_sectors,
+                                        out, &len, NULL) == 0)
+                    out += len;
+                else
+                    vollstaendig = false;   /* Rueckfall unten */
+                d64_writer_destroy(w);
+            } else {
+                vollstaendig = false;
+            }
+            free(flach);
+        } else {
+            vollstaendig = false;
         }
     }
-    
-    /* Fill remaining with gap */
+
+    if (!vollstaendig) {
+        /* Unvollstaendige Spur: einzelne Sektoren koennen fehlen. Der
+         * reichere Erzeuger verlangt einen zusammenhaengenden Puffer und
+         * die volle Sektorzahl — hier waere das Erfinden der fehlenden.
+         * Deshalb bleibt fuer diesen Fall die alte Schleife, die fehlende
+         * Sektoren UEBERSPRINGT statt sie zu ersetzen. */
+        out = gcr_output;
+        for (int s = 0; s < num_sectors; s++) {
+            if (sectors[s]) {
+                size_t sector_len = sector_to_gcr(sectors[s], out, track, s,
+                                                  disk_id, D64_ERR_OK);
+                out += sector_len;
+            }
+        }
+    }    /* Fill remaining with gap */
     size_t used = (size_t)(out - gcr_output);
     size_t capacity = capacity_map[speed_map[track]];
     
