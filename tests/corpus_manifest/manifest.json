@@ -433,6 +433,105 @@
       "source": "Wie hxcfe_msa.msa, aber mit KOMPRIMIERBAREM Inhalt: 774 144 B, je Sektor Kennung UFT\u0000 + laufende Nummer, Rest konstant 0xE5. Ergebnis 15 484 B statt 774 490 — die RLE-Kette laeuft also wirklich. Das ist der Zweck: MSA legt eine Spur UNKOMPRIMIERT ab, wenn Kompression sie groesser macht, und das Markenmuster der anderen Datei komprimiert nicht. Ohne diesen Eintrag deckte das T1b von MF-806 Geometrie und Reihenfolge ab, aber nicht den Dekomprimierer. ZWEITE HAND: SAMdisk 4.0 liest zurueck, byteidentisch.",
       "fremdcode": "nein - reine Geometrie im 10-Byte-Kopf, je Spur ein Laengenwort, Nutzdaten eigen erzeugt",
       "test": "test_korpus_container"
+    },
+    {
+      "file": "tests/corpus/kor_a/CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979) - Imaging Log.txt",
+      "sha256": "3f3f5862a7eb45c9971dfeeac35dd091ce253d7e074c2a651cfccffbc72c7399",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979) - Imaging Log.txt\", 2600 Byte, md5 laut Archiv 3bcd2869c518c1484c2f626fc560cd78, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_a/CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).a2r",
+      "sha256": "742d140c2a14c875b90516034baefc1951df3421f26f555d9a1bd96c9c65597e",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).a2r\", 27958725 Byte, md5 laut Archiv 3ec28534b16f32b51de8cf97c2b58bcb, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_a/CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).imd",
+      "sha256": "b1b04cd619027dcff414ef208b36f9144f1cbab2c1abfd6733a63e234aa0ea30",
+      "format": "imd",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).imd\", 404633 Byte, md5 laut Archiv cf27a911477bec22b90d1629da6fa43f, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_b/F-15 Strike Eagle - F-15 Strike Eagle.a2r",
+      "sha256": "c456978ca1f68fb9388616de5c7f719012ec69bb983735874c3ced367ccb4aae",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/f-15-strike-eagle-f-15-strike-eagle — Datei \"F-15 Strike Eagle - F-15 Strike Eagle.a2r\", 7810459 Byte, md5 laut Archiv 66062dde7544150d1c4bb6717aab08d3, abgerufen 2026-09-04. ZWECK: Erstes reales ATX und erstes reales MFI im Korpus — beide Tier-Vermerke \"kein reales Abbild\" (VERIFICATION_TIERS.md Z.54/66) faellig. Dazu Atari-FM-Fluss (P3-123c Vorrang 2, UFT_MEDIA_ATARI_FM). Herkunftsluecke benannt: kein Imaging-Log im Objekt.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_b/F-15 Strike Eagle - F-15 Strike Eagle.atx",
+      "sha256": "54438032c05c423faf7c7a8df8582d3e211a19eb50cd375f8283134a2292d2b0",
+      "format": "atx",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/f-15-strike-eagle-f-15-strike-eagle — Datei \"F-15 Strike Eagle - F-15 Strike Eagle.atx\", 100344 Byte, md5 laut Archiv 7cb0bee0a91e72675369c7e784365cb0, abgerufen 2026-09-04. ZWECK: Erstes reales ATX und erstes reales MFI im Korpus — beide Tier-Vermerke \"kein reales Abbild\" (VERIFICATION_TIERS.md Z.54/66) faellig. Dazu Atari-FM-Fluss (P3-123c Vorrang 2, UFT_MEDIA_ATARI_FM). Herkunftsluecke benannt: kein Imaging-Log im Objekt.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_b/F-15 Strike Eagle - F-15 Strike Eagle.mfi",
+      "sha256": "c3fcc171c3eb73bc0d746a5cb7a48a431bbb0c197304348562b77bed87f4c195",
+      "format": "mfi",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/f-15-strike-eagle-f-15-strike-eagle — Datei \"F-15 Strike Eagle - F-15 Strike Eagle.mfi\", 879834 Byte, md5 laut Archiv f94e84c57ce46d338bac0e079cedfabc, abgerufen 2026-09-04. ZWECK: Erstes reales ATX und erstes reales MFI im Korpus — beide Tier-Vermerke \"kein reales Abbild\" (VERIFICATION_TIERS.md Z.54/66) faellig. Dazu Atari-FM-Fluss (P3-123c Vorrang 2, UFT_MEDIA_ATARI_FM). Herkunftsluecke benannt: kein Imaging-Log im Objekt.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_c/OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.a2r",
+      "sha256": "a691a94002038f2aaa8f482563fbc9bca3b71f4a464f5e9f69b6174e44bb1115",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.a2r\", 17824640 Byte, md5 laut Archiv 8f5584352c1652834a3e8963a5e34fe9, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_c/OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe",
+      "sha256": "cbd8ad5c14a4974a4628a77bb6e5434ae74746068a69e646e0c6e3a559a65405",
+      "format": "hfe",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe\", 1004544 Byte, md5 laut Archiv 6dc7c8cbbaac4e468b73fdef3d6ae15c, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/kor_c/OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.imd",
+      "sha256": "bdd21b50545c89928e05dbf5c70c8c3cc727c91594648a782023f2b8981b6aa0",
+      "format": "imd",
+      "origin": "real",
+      "tool": "aus der Aufnahme abgeleitet (Uploader)",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.imd\", 127433 Byte, md5 laut Archiv 97cd9bafc90447689f9dcb196d3d9919, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
+      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "oracle": "offen",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
     }
   ]
 }

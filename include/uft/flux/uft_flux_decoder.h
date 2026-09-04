@@ -397,6 +397,28 @@ typedef struct {
     double   phase_gain;        /* Phase adjustment gain */
     uint32_t last_transition;   /* Last transition time */
     bool     use_pll;           /* Enable PLL tracking */
+
+    /* ── MF-866: die Klemme zaehlt mit ──────────────────────────────
+     *
+     * `flux_to_bitstream()` begrenzt die Oszillatorperiode auf ±20 % um
+     * den Sollwert (`uft_flux_decoder.c`, „Clamp period to reasonable
+     * range"). Die Grenze gab es seit jeher — gezaehlt wurde nie, wie
+     * oft sie greift.
+     *
+     * Das ist ein verschenkter Messwert. Eine Spur, deren Regelung
+     * wiederholt an die Grenze laeuft, hat eine BITRATENAENDERUNG, und
+     * das ist ein Befund, kein Fehler: Write Splice, No-Flux-Area, oder
+     * eine absichtliche Ratenaenderung als Kopierschutz.
+     *
+     * ABI: beide Felder stehen am ENDE der Struktur. Ein Einschub
+     * mittendrin waere eine binaere Aenderung ohne Compiler-Warnung.
+     *
+     * NICHT belegt: dass diese Zahl eine bestimmte Schutzklasse
+     * ausweist. Sie sagt „die Periode wollte weiter, als erlaubt ist" —
+     * die Deutung braucht eine Aufnahme, und im Korpus liegt keine mit
+     * bekannter Ratenaenderung. */
+    double   period_nominal;    /* Ausgangswert; Bezug fuer die Grenzen */
+    uint32_t clamp_hits;        /* wie oft die Klemme griff */
 } flux_pll_t;
 
 /* ============================================================================

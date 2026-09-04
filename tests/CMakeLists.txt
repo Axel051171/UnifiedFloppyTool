@@ -1425,6 +1425,21 @@ foreach(test_source ${TEST_SOURCES})
         # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c)
+    elseif(${test_name} STREQUAL "test_pll_klemme")
+        # MF-866: die Periodenklemme zaehlt ihre Treffer. Der Bericht
+        # meldete "keine Klemme" — die gibt es seit jeher; gefehlt hat
+        # das Mitzaehlen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_flux_fm_sektoren")
         # MF-864: der FM-Weg legte keine Sektoren an ("FM sector decoding
         # would go here"). Die Pruefspur ist an vier Stellen von fluxtoimd

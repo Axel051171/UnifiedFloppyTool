@@ -62,6 +62,9 @@ void flux_pll_init(flux_pll_t *pll, double initial_period) {
     if (!pll) return;
     memset(pll, 0, sizeof(*pll));
     pll->period = initial_period;
+    /* MF-866: der Bezugswert fuer die Klemme. `memset` hat clamp_hits
+     * bereits genullt. */
+    pll->period_nominal = initial_period;
     pll->phase = 0;
     /* MF-808: UNVERAENDERT. Diese Vorgabe zu verschieben waere eine
      * Verhaltensaenderung an jedem bestehenden Dekodierlauf ohne
@@ -414,16 +417,38 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
             /* Frequency adjustment */
             pll->period += error * pll->freq_gain / num_cells;
 
-            /* Clamp period to reasonable range */
+            /* Clamp period to reasonable range.
+             *
+             * MF-866: das Erreichen der Grenze wird GEZAEHLT. Bis dahin
+             * verschwand die Information stillschweigend — dabei ist sie
+             * die eigentliche Aussage: die Regelung wollte weiter, als
+             * erlaubt ist. */
             double min_period = bitcell_ns * 0.8;
             double max_period = bitcell_ns * 1.2;
-            if (pll->period < min_period) pll->period = min_period;
-            if (pll->period > max_period) pll->period = max_period;
+            if (pll->period < min_period) {
+                pll->period = min_period;
+                pll->clamp_hits++;
+            } else if (pll->period > max_period) {
+                pll->period = max_period;
+                pll->clamp_hits++;
+            }
         }
 
         prev_time = time;
     }
     
+    /* MF-866: der Befund gehoert ausgesprochen, sonst ist der Zaehler
+     * eine Tuer ohne Leser.
+     *
+     * Bewusst EINE Stelle: alle fuenf Dekoder laufen hierdurch. Fuenf
+     * Meldestellen waeren fuenf Gelegenheiten zum Auseinanderdriften. */
+    if (pll->use_pll && pll->clamp_hits > 0) {
+        UFT_WARN("PLL erreichte die Periodengrenze %umal (+-20 %% um "
+                 "%.0f ns) — Hinweis auf Bitratenaenderung, Write Splice "
+                 "oder eine No-Flux-Area, nicht zwingend ein Defekt",
+                 (unsigned)pll->clamp_hits, pll->period_nominal);
+    }
+
     *bit_count = out_bits;
     return FLUX_OK;
 }

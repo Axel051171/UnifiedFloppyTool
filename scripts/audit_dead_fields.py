@@ -106,9 +106,19 @@ def felder_aus_headern(hdr: list[Path]) -> dict[str, list[str]]:
 
 
 def geschriebene_namen(quellen: list[Path]) -> set[str]:
-    """Jeder Name, der irgendwo links von '=' hinter '.' oder '->' steht."""
+    """Jeder Name, der irgendwo links von '=' hinter '.' oder '->' steht.
+
+    MF-867: `++` und `--` gehoeren dazu. Sie fehlten, und der Fall ist
+    lehrreich — ein ZAEHLER wird typischerweise genau so geschrieben.
+    Aufgefallen an `pll->clamp_hits++` (MF-866): das Feld galt als tot,
+    obwohl es an der einzigen sinnvollen Stelle beschrieben wird.
+
+    Ein Tor, das die haeufigste Schreibweise fuer die haeufigste Art
+    toter Kandidaten nicht kennt, meldet genau dort Fehlalarm, wo man
+    ihm glauben moechte.
+    """
     zuw = re.compile(r"(?:\.|->)\s*([a-z_][a-z0-9_]*)\s*(?:\[[^\]]*\])?\s*"
-                     r"(?:=[^=]|\+=|-=|\|=|&=|\^=)")
+                     r"(?:=[^=]|\+=|-=|\|=|&=|\^=|\+\+|--)")
     # Auch designierte Initialisierer: { .feld = ... }
     des = re.compile(r"\.\s*([a-z_][a-z0-9_]*)\s*=")
     namen: set[str] = set()

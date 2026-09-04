@@ -44,4 +44,14 @@
 # weil ein spaeter eingeschobenes Feld sonst still alle Werte
 # verschoebe.
 
-1229
+#
+# MF-867: 1229 -> 1163. Das Tor kannte die Inkrement-Operatoren nicht
+# als Schreibweise — ausgerechnet die haeufigste fuer ZAEHLER.
+# Aufgefallen an `pll->clamp_hits` (MF-866, mit `++` hochgezaehlt): das
+# Feld galt als tot, obwohl es an der einzigen sinnvollen Stelle
+# beschrieben wird. Mit der Ergaenzung in `geschriebene_namen()`
+# fielen 66 Fehlalarme weg. Ein Tor, das die haeufigste Schreibweise
+# fuer die haeufigste Art toter Kandidaten nicht kennt, meldet genau
+# dort Fehlalarm, wo man ihm glauben moechte.
+
+1163
