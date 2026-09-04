@@ -1278,6 +1278,7 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_register_all_formats"
            OR ${test_name} STREQUAL "test_apple_moof_a2r_no_door"
            OR ${test_name} STREQUAL "test_kfx_probe_overclaims"
+           OR ${test_name} STREQUAL "test_img_ed_spezialformate"
            OR ${test_name} STREQUAL "test_probe_confidence_on_zeros"
            OR ${test_name} STREQUAL "test_probe_verdict_bands"
            OR ${test_name} STREQUAL "test_probe_confidence_on_random"

@@ -43,6 +43,34 @@ static const img_geometry_entry_t known_geometries[] = {
     { 1474560,  80, 2, 18, "1.44MB 3.5\" DS/HD" },
     { 1720320,  80, 2, 21, "1.68MB 3.5\" DMF" },
     { 2949120,  80, 2, 36, "2.88MB 3.5\" DS/ED" },
+    /* MF-872: die ED-Spezialformate mit 41-44 Sektoren je Spur.
+     *
+     * Referenz, zwei unabhaengige Quellen:
+     *   FLOPFIX `version.txt:40` — „Sind die Spezialformate aktiviert,
+     *     so sind nun auch die ED-Formate mit 41, 42, 43 und 44
+     *     Sektoren zugaenglich."
+     *   FreeDOS FORMAT 0.92 (GPL-2-only, nur Zahlen entnommen) fuehrt
+     *     mit FD3360/FD3486 bis 42 SpT — deckt die untere Haelfte
+     *     unabhaengig ab.
+     *
+     * Die Groessen sind gerechnet, nicht abgeschrieben:
+     *   SpT x 2 Seiten x 80 Spuren x 512 Byte.
+     * Die Rechnung reproduziert die bestehende Zeile darueber
+     * (36 SpT -> 2949120) exakt; das ist die Begruendung fuer die neuen.
+     *
+     * Gemessen, bevor sie eingetragen wurden (MF-784: Groessengleichheit
+     * ist keine Geometriegleichheit): keine der vier Zahlen kommt sonst
+     * irgendwo im Baum vor, und der generische Rueckfall unten faengt
+     * sie nicht — `sectors_options[]` kennt 41-44 nicht, und bei 8 oder
+     * 10 SpT lieferte er Zylinderzahlen weit ueber 84.
+     *
+     * Was sie VORHER beanspruchte: bei einem echten PC-Bootsektor
+     * meldete allein `DMK` diese vier Groessen, mit Konfidenz 55 — ein
+     * TRS-80-Format fuer ein PC-Abbild. Nachher meldet `IMG` 90. */
+    { 3358720,  80, 2, 41, "3.28MB 3.5\" ED (41 SpT)" },
+    { 3440640,  80, 2, 42, "3.36MB 3.5\" ED (42 SpT)" },
+    { 3522560,  80, 2, 43, "3.44MB 3.5\" ED (43 SpT)" },
+    { 3604480,  80, 2, 44, "3.52MB 3.5\" ED (44 SpT)" },
     { 0, 0, 0, 0, NULL }
 };
 
