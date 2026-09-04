@@ -1763,6 +1763,14 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_fluxengine_wire")
+        # MF-857: die Rahmenschicht des nativen FluxEngine-Treibers gegen
+        # den Firmware-Automaten auf DRAHTebene. Der vorhandene Emulator
+        # daneben modelliert die CLI, nicht die Leitung (DIVERGENCES FE-3).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_fluxengine.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/fluxengine/wire_state_machine.c)
+        target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests)
     elseif(${test_name} STREQUAL "test_gw_wire_conformance")
         # MF-848: zwei Haelften, die einander nie begegnet sind — der
         # Firmware-Automat unter tests/emulators/greaseweazle/ und die

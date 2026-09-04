@@ -1589,6 +1589,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/hal/uft_greaseweazle_full.c \
+    src/hal/uft_fluxengine.c \
     src/hal/uft_hal_unified.c \
     src/hal/uft_hal_profiles.c \
     src/hal/uft_kryoflux_dtc.c \
