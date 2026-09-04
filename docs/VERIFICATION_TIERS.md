@@ -94,7 +94,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `opus` | **T3** | — | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
-| `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
+| `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_atari_verlorene_sektoren`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
 | `qrst` | **T3** | — | — | — | — |
 | `rcpmfs` | **T3** | — | — | — | — |
 | `sap_thomson` | **T3** | — | — | — | — |

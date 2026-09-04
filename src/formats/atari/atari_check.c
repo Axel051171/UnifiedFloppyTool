@@ -335,7 +335,14 @@ atari_error_t check_sector_chains(atari_disk_t *disk, check_result_t *result,
     for (int i = 0; i < MAX_FILES; i++) {
         atari_dir_entry_t *entry = &disk->directory[i];
 
-        if (entry->status == DIR_FLAG_NEVER_USED) break;
+        /* MF-850: KEIN Abbruch an der Endmarke.
+         *
+         * MF-835 hat `check_directory()` beigebracht, Eintraege dahinter
+         * zu melden — fuer DOS unsichtbar, die Daten aber noch da. Diese
+         * drei Geschwister blieben beim alten `break` stehen, und damit
+         * blieb die Kette einer versteckten Datei ungeprueft. Die Zeile
+         * darunter filtert ohnehin ueber `is_valid` (b6), das bei einer
+         * Endmarke per Definition frei ist. */
         if (!entry->is_valid || entry->is_deleted) continue;
         if (entry->first_sector == 0) continue;
 
@@ -498,7 +505,11 @@ atari_error_t check_cross_links(atari_disk_t *disk, check_result_t *result)
     for (int i = 0; i < MAX_FILES; i++) {
         atari_dir_entry_t *entry = &disk->directory[i];
 
-        if (entry->status == DIR_FLAG_NEVER_USED) break;
+        /* MF-850: KEIN Abbruch an der Endmarke — sonst sieht dieser
+         * Durchgang bei einer Querverkettung nur EINEN der beiden
+         * Anspruchsteller und meldet nichts. Gemessen in
+         * tests/test_atari_verlorene_sektoren.c: zwei Dateien auf
+         * demselben Sektor, eine davon versteckt, null Befunde. */
         if (!entry->is_valid || entry->is_deleted) continue;
 
         uint16_t current = entry->first_sector;
@@ -573,7 +584,21 @@ atari_error_t check_lost_sectors(atari_disk_t *disk, check_result_t *result,
     /* Alle Datei-Sektoren markieren */
     for (int i = 0; i < MAX_FILES; i++) {
         atari_dir_entry_t *entry = &disk->directory[i];
-        if (entry->status == DIR_FLAG_NEVER_USED) break;
+        /* MF-850: KEIN Abbruch an der Endmarke — und hier wiegt es am
+         * schwersten, weil dieser Durchgang SCHREIBT.
+         *
+         * `used_by_files[]` entscheidet, welche Sektoren als „verloren"
+         * gelten, und mit `fix = true` folgt darauf `dos2_free_sector()`
+         * + `dos2_write_vtoc()`. Brach die Schleife an der Endmarke ab,
+         * fehlten die Sektoren jeder versteckten Datei in dieser Menge —
+         * der Reparaturlauf gab GENAU DIE Daten frei, die
+         * `check_directory()` im selben Lauf als „vermutlich noch
+         * vorhanden" meldet.
+         *
+         * Gemessen vor dem Fix (tests/test_atari_verlorene_sektoren.c):
+         * „Sektor 401 ist nach dem Reparaturlauf FREI". Das ist keine
+         * verpasste Meldung, sondern eine stille Veraenderung am
+         * Beweismittel. */
         if (!entry->is_valid || entry->is_deleted) continue;
 
         uint16_t current = entry->first_sector;

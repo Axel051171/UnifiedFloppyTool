@@ -342,6 +342,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_atari_verlorene_sektoren")
+        # MF-850: MF-835 hat check_directory() beigebracht, Eintraege
+        # hinter der Endmarke zu melden — drei Geschwister blieben beim
+        # alten Abbruch. Der schwerste davon GIBT deren Sektoren FREI.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_dos2.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_atr.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_check.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_sparta.c)
     elseif(${test_name} STREQUAL "test_atari_dir_past_end")
         # MF-835: Eintraege hinter der Verzeichnis-Endmarke. Der Pruefzweig
         # gab es, der Parser hat seinen Gegenstand vorher zerstoert.
