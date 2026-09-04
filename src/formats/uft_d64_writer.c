@@ -47,10 +47,57 @@ static const int track_gcr_length[4] = {
     6250    /* Zone 3: 17 sectors */
 };
 
-/* Standard interleave table */
-static const int standard_interleave[21] = {
-    0, 10, 20, 9, 19, 8, 18, 7, 17, 6, 16, 5, 15, 4, 14, 3, 13, 2, 12, 1, 11
-};
+/*
+ * MF-859: die Tabelle ist weg — sie war fuer 21 Sektoren gerechnet und
+ * wurde auf jede Spur angewandt.
+ *
+ * Hier stand:
+ *     static const int standard_interleave[21] = {
+ *         0,10,20,9,19,8,18,7,17,6,16,5,15,4,14,3,13,2,12,1,11 };
+ * und in der Schleife:
+ *     sector = standard_interleave[i % 21];
+ *     if (sector >= sector_count) sector = i;
+ *
+ * Der Rueckfall ersetzte einen zu grossen Wert durch den LAUFINDEX — der
+ * aber spaeter selbst noch in der Tabelle steht. Ergebnis auf 18 von 35
+ * Spuren: doppelte UND fehlende Sektoren, nicht bloss eine andere
+ * Reihenfolge. Nachgerechnet:
+ *
+ *     Spur 18-24 (19 Sekt): fehlend 1, 11      doppelt 2, 4
+ *     Spur 25-30 (18 Sekt): fehlend 1, 11, 12  doppelt 2, 4, 6
+ *     Spur 31-35 (17 Sekt): fehlend 1, 11, 12  doppelt 4, 6, 8
+ *
+ * Ein echter 1541 faende auf Spur 18-24 die Sektoren 1 und 11 nie.
+ *
+ * Die Regel steht jetzt in `uft_d64_sektor_an_position()` — fuer sich,
+ * mit Rotbeweis (tests/test_d64_writer_sektorfolge.c).
+ */
+
+int uft_d64_sektor_an_position(int track, int position)
+{
+    const int n = d64_sectors_per_track(track);
+    if (n <= 0 || position < 0 || position >= n) return -1;
+
+    const int versatz = (track == UFT_D64_DIRECTORY_TRACK)
+                            ? UFT_D64_INTERLEAVE_DIRECTORY
+                            : UFT_D64_INTERLEAVE_DATEN;
+
+    /* Vergabe nachbilden statt eine Folge zu tabellieren: weiterruecken,
+     * und wenn die Stelle belegt ist, um eins weiter. Der Aufwand ist
+     * O(n^2) im schlimmsten Fall bei hoechstens 21 Sektoren — das ist
+     * einmal je Spur und nicht messbar. */
+    unsigned char belegt[32] = { 0 };
+    int s = 0;
+    for (int i = 0; i <= position; i++) {
+        int schutz = 0;
+        while (belegt[s] && schutz++ <= n) s = (s + 1) % n;
+        if (belegt[s]) return -1;          /* kann nicht eintreten */
+        if (i == position) return s;
+        belegt[s] = 1;
+        s = (s + versatz) % n;
+    }
+    return -1;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Writer Context
@@ -290,8 +337,11 @@ int d64_write_track_gcr(
             writer->config.custom_interleave) {
             sector = writer->config.custom_interleave[i % writer->config.custom_interleave_len];
         } else {
-            sector = standard_interleave[i % 21];
-            if (sector >= sector_count) sector = i;
+            /* MF-859: eine Regel, die jeden Sektor genau einmal liefert —
+             * fuer jede der vier Zonen, und mit dem eigenen Versatz der
+             * Directory-Spur. */
+            sector = uft_d64_sektor_an_position(track, i);
+            if (sector < 0) return -1;
         }
         
         /* Sync before header */

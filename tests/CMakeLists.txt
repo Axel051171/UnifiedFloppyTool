@@ -1763,6 +1763,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_d64_writer_sektorfolge")
+        # MF-859: die 21er-Tabelle erzeugte auf 18 von 35 Spuren doppelte
+        # und fehlende Sektoren.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c)
     elseif(${test_name} STREQUAL "test_st_spiralfaktor")
         # MF-858: Stessuns Formel (ST-Computer 12/1989) gegen ihre eigene
         # Messreihe. Der ST-Pfad kannte Interleave und Spiralfaktor nicht.

@@ -255,6 +255,60 @@ int d64_write_track_gcr(
  */
 int d64_sectors_per_track(int track);
 
+/** Versatz fuer Datenspuren (1541-DOS: `secinc` = 10, `dskintsf.src`). */
+#define UFT_D64_INTERLEAVE_DATEN      10
+
+/** Versatz fuer die Directory-Spur (1541-DOS: `nxdrbk` setzt 3). */
+#define UFT_D64_INTERLEAVE_DIRECTORY   3
+
+/** Die Directory-Spur einer 1541-Diskette. */
+#define UFT_D64_DIRECTORY_TRACK       18
+
+/**
+ * @brief Welcher Sektor liegt an Position @p position der Spur @p track?
+ *
+ * ── Warum das eine eigene Funktion ist (MF-859) ──────────────────────
+ *
+ * Die Regel stand vorher als 21-Elemente-Tabelle mitten in der
+ * Schreibschleife, mit einem Rueckfall fuer den Fall, dass ein
+ * Tabellenwert nicht in die Spur passt. Auf 18 von 35 Spuren erzeugte
+ * dieser Rueckfall **doppelte und fehlende** Sektoren:
+ *
+ *     Zone       Sektoren   fehlend        doppelt
+ *     Spur 18-24    19      1, 11          2, 4
+ *     Spur 25-30    18      1, 11, 12      2, 4, 6
+ *     Spur 31-35    17      1, 11, 12      4, 6, 8
+ *
+ * Eine Regel, die nur in der Schleife steht, ist ohne die Schleife nicht
+ * pruefbar — dieselbe Lehre wie bei `uft_gw_firmware_supported()`
+ * (MF-849). Hier steht sie fuer sich und hat einen Rotbeweis.
+ *
+ * ── Die Regel ────────────────────────────────────────────────────────
+ *
+ * Fortlaufend um den Versatz weiterruecken, modulo Sektorzahl DIESER
+ * Spur; ist die Stelle schon vergeben, um eins weiter. Damit ist das
+ * Ergebnis immer eine vollstaendige Permutation — die Eigenschaft, die
+ * unter jeder Interleave-Regel gelten muss.
+ *
+ * Versatz 10 fuer Datenspuren, 3 fuer die Directory-Spur 18. Belegt aus
+ * zwei unabhaengigen Haenden: der 1541-DOS-ROM-Quelle 901229-05
+ * (`dskintsf.src` setzt `secinc` = 10; `tst4.src::nxdrbk` sichert den
+ * Wert, setzt 3, vergibt, setzt zurueck) und `lib1541img`
+ * (`src/lib/1541img/cbmdosfs.c:21-22`: `.dirInterleave = 3`,
+ * `.fileInterleave = 10`).
+ *
+ * ── Offen, und ausdruecklich nicht hier entschieden ──────────────────
+ *
+ * Ob ein 1541 die Sektoren PHYSISCH interleavt auf die Spur legt oder
+ * aufsteigend, und ob beim Umbruch zusaetzlich um eins verringert wird —
+ * die beiden Quellen widersprechen sich (P3-110). Diese Funktion
+ * behaelt fuer 21 Sektoren genau die Reihenfolge, die der Baum bisher
+ * hatte, und setzt sie fuer die anderen Zonen widerspruchsfrei fort.
+ *
+ * @return Sektornummer, oder -1 bei ungueltiger Spur/Position.
+ */
+int uft_d64_sektor_an_position(int track, int position);
+
 /**
  * @brief Get speed zone for track
  */
