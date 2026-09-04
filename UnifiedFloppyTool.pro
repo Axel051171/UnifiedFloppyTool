@@ -1387,6 +1387,7 @@ SOURCES += \
     # docs/OPEN_ITEMS.md LIZ-4 B.
     # src/formats/amiga/uft_amiga_protection.c \
     src/formats/amiga/uft_amiga_syncs.c \
+    src/protection/uft_d64_fehlerbytes.c \
     src/protection/ufm_c64_metrics.c \
     src/protection/ufm_c64_scheme_detect.c \
     src/protection/uft_protection_unified.c \

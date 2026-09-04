@@ -66,6 +66,14 @@ const char *uft_uebersprungen_name(uft_uebersprungen_grund_t g)
         return "Spur nicht dekodierbar";
     case UFT_UEBERSPRUNGEN_ABGESCHALTET:
         return "Detektor abgeschaltet";
+    /* MF-876: dieser Zweig fehlte seit MF-793 — der Grund war benannt
+     * und wurde als "unbekannt" angezeigt. Ein Bericht, dessen zweite
+     * Liste "unbekannt" sagt, ist genau so wertlos wie eine leere
+     * erste Liste; die Datei existiert, um das zu verhindern. */
+    case UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN:
+        return "dieser Sektor lag in zu wenigen Lesungen vor";
+    case UFT_UEBERSPRUNGEN_KEINE_FEHLERINFO:
+        return "Quelle traegt keine Fehlerinformation";
     default:
         return "unbekannt";
     }

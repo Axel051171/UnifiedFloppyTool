@@ -26,6 +26,7 @@
 #include "forensictab.h"
 #include "ui_tab_forensic.h"
 #include "disk_image_validator.h"
+#include <uft/protection/uft_d64_fehlerbytes.h>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -33,6 +34,7 @@
 #include <QFileInfo>
 #include <QCryptographicHash>
 #include <QDebug>
+#include <QStringList>
 #include <QDateTime>
 
 // ============================================================================
@@ -531,58 +533,105 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
 
 void ForensicTab::detectProtection(const QByteArray& data)
 {
+    /* MF-876: hier standen drei Heuristiken, und alle drei wurden
+     * gemessen, bevor sie ersetzt wurden.
+     *
+     *   data[0x1e0] == 0x36  ->  "RapidLok-style loader detected"
+     *       6 Treffer auf 2000 Zufallspuffern = 0,3 % = 1/256. Die
+     *       Pruefung traegt keine Information; keine Quelle im Baum
+     *       nennt diesen Offset. Ersatzlos entfernt.
+     *
+     *   contains("V-MAX!") -> "V-MAX! copy protection signatures found"
+     *       Gemessen an einer Sammlung von 146 C64-Kopierprogrammen:
+     *       traf `vmax 2 copy -dsd.prg` und `vmax 3.1 cpy-dsd.prg`,
+     *       also V-MAX-KOPIERER, keine geschuetzten Disketten. Die
+     *       Variante "\x52\x52\x52\x52" traf zusaetzlich
+     *       `rmr nibbler copy.prg`, einen Nibbler. Bleibt erhalten,
+     *       aber als INHALTSHINWEIS ausgewiesen, nicht als Schutzbefund.
+     *
+     * An ihre Stelle tritt `uft_schutz_aus_d64()` — jede Aussage aus
+     * `docs/format_specs/commodore/D64.TXT` (Schepers, Rev. 1.11,
+     * Abschnitt "*** Error codes"), und beide Listen des Berichts
+     * werden angezeigt: was gefunden wurde UND was nicht geprueft
+     * werden konnte. Das ist der Unterschied, den `uft_schutzbefund.h`
+     * traegt und den die alte Fassung nicht kannte. */
     ui->textDetails->appendPlainText(tr("▶ Analyzing copy protection..."));
-    
-    // Simple signature detection
-    bool foundProtection = false;
-    
-    // V-MAX! signature
-    if (data.contains("V-MAX!") || data.contains("\x52\x52\x52\x52")) {
-        addResultRow(tr("Protection: V-MAX!"), tr("⚠ Detected"),
-                     tr("V-MAX! copy protection signatures found"));
-        foundProtection = true;
+
+    const uint8_t *roh = reinterpret_cast<const uint8_t *>(data.constData());
+    const size_t   n   = static_cast<size_t>(data.size());
+
+    uft_schutz_bericht_t bericht;
+    uft_schutz_bericht_init(&bericht);
+
+    if (!uft_schutz_aus_d64(roh, n, &bericht)) {
+        /* Kein D64. Die alte Fassung lief auf ALLES, was der Benutzer
+         * geladen hatte — auch auf ein .prg, wo dann ein einzelnes Byte
+         * "RapidLok" meldete. */
+        addResultRow(tr("Copy Protection"), tr("— not applicable"),
+                     tr("This detector reads the D64 error map. The loaded "
+                        "file is not a D64 (%1 bytes), so nothing about "
+                        "copy protection can be said from it — this is not "
+                        "an all-clear.").arg(data.size()));
+        uft_schutz_bericht_frei(&bericht);
+        ui->textDetails->appendPlainText(tr("  Protection analysis complete."));
+        return;
     }
-    
-    // RapidLok signature check (simplified)
-    if (data.size() > 0x1e0 && static_cast<quint8>(data[0x1e0]) == 0x36) {
-        addResultRow(tr("Protection: RapidLok"), tr("⚠ Possible"),
-                     tr("RapidLok-style loader detected"));
-        foundProtection = true;
+
+    for (size_t i = 0; i < bericht.befund_anzahl; i++) {
+        const uft_schutz_befund_t *f = &bericht.befunde[i];
+        const QString wo = (f->ort.zylinder < 0)
+            ? tr("whole disk")
+            : tr("track %1 sector %2").arg(f->ort.zylinder).arg(f->ort.sektor);
+        /* GEMESSEN und GEFOLGERT werden unterschieden, weil sie es sind:
+         * ein Fehlerbyte ist die KATEGORIE einer GCR-Anomalie, nicht die
+         * Anomalie. Schepers selbst zu G64->D64: "all of the low level
+         * data that comprises the errors is lost." */
+        const QString art = (f->beleg == UFT_BELEG_GEMESSEN)
+            ? tr("measured") : tr("inferred");
+        addResultRow(tr("Protection: %1")
+                         .arg(QString::fromLatin1(
+                             uft_schutz_code_name(f->code))),
+                     tr("⚠ %1").arg(art),
+                     tr("%1, %2 = %3")
+                         .arg(wo)
+                         .arg(QString::fromLatin1(f->messgroesse))
+                         .arg(f->messwert, 0, 'f', 0));
     }
-    
-    // Check for non-standard sector counts (C64)
-    if (data.size() == 174848 || data.size() == 175531) {
-        // Standard D64 sizes
-    } else if (data.size() > 174848 && data.size() < 200000) {
-        addResultRow(tr("Protection: Extended Tracks"), tr("⚠ Possible"),
-                     tr("Non-standard file size may indicate extra tracks"));
-        foundProtection = true;
+
+    /* Die zweite Liste. Wer nur die erste zeigt, zeigt die Haelfte —
+     * und eine leere erste Liste liest sich dann als Unbedenklichkeits-
+     * bescheinigung. */
+    if (bericht.uebersprungen_anzahl > 0) {
+        QStringList gruende;
+        for (size_t i = 0; i < bericht.uebersprungen_anzahl; i++) {
+            const QString g = QString::fromLatin1(
+                uft_uebersprungen_name(bericht.uebersprungen[i].grund));
+            if (!gruende.contains(g))
+                gruende << g;
+        }
+        addResultRow(tr("Not checked"),
+                     tr("%1 scheme(s)")
+                         .arg(static_cast<int>(bericht.uebersprungen_anzahl)),
+                     gruende.join(QStringLiteral(" · ")));
     }
-    
-    if (!foundProtection) {
-        /* MF-570: stand als "✓ None detected — No known protection
-         * signatures found".
-         *
-         * Geprueft werden hier DREI Heuristiken (V-MAX!-Zeichenkette, ein
-         * Byte an 0x1e0, Dateigroesse). Der Baum kennt weit mehr, ruft es
-         * aber nicht: der Katalog der 55+ benannten Verfahren in
-         * `src/protection/` hat keinen Aufrufer (BACKLOG C1).
-         *
-         * Vor allem aber ist ein SEKTORABBILD der falsche Ort dafuer:
-         * schwache Bits, lange Spuren, Fuzzy Bits und Schreibnaehte stehen
-         * im Fluss, nicht in den Sektoren. Sie sind hier bauartbedingt
-         * unsichtbar.
-         *
-         * "Keine gefunden" mit gruenem Haekchen liest sich als "diese
-         * Diskette ist ungeschuetzt". Das ist Abwesenheit von Beweis,
-         * ausgegeben als Beweis von Abwesenheit. */
+
+    if (bericht.befund_anzahl == 0) {
         addResultRow(tr("Copy Protection"), tr("— nothing matched"),
-                     tr("3 signature heuristics ran and found nothing. "
-                        "Flux-level protection (weak bits, long tracks, "
-                        "fuzzy bits) cannot be seen in a sector image at "
+                     tr("The checks that could run found nothing. See "
+                        "\"Not checked\" above for what could not run at "
                         "all — this is not an all-clear"));
     }
-    
+
+    /* Der Inhaltshinweis, klar getrennt vom Schutzbefund. */
+    if (data.contains("V-MAX!") || data.contains("\x52\x52\x52\x52")) {
+        addResultRow(tr("Content hint: V-MAX! string"), tr("ℹ present"),
+                     tr("The text appears in the image. That is not a "
+                        "protection finding: measured against 146 C64 copy "
+                        "programs, it also matches V-MAX copiers and a "
+                        "nibbler."));
+    }
+
+    uft_schutz_bericht_frei(&bericht);
     ui->textDetails->appendPlainText(tr("  Protection analysis complete."));
 }
 

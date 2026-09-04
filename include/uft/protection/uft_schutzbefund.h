@@ -194,7 +194,21 @@ typedef enum {
      *  verwechselt eine zu kurze Aufnahme mit einer beschaedigten
      *  Stelle — dieselbe Verwechslung wie bei
      *  `uft_splice_lage_t` (MF-769). */
-    UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN
+    UFT_UEBERSPRUNGEN_ZU_WENIG_LESUNGEN,
+
+    /** Die Quelle traegt zwar Sektoren, aber keine Fehlerinformation —
+     *  ein D64 ohne Fehlerkarte, ein IMG, ein ADF (MF-876).
+     *
+     *  Abgegrenzt gegen @ref UFT_UEBERSPRUNGEN_NICHT_DEKODIERBAR, und
+     *  der Unterschied ist nicht kosmetisch: dort war eine Spur nicht
+     *  LESBAR, hier ist sie vollstaendig gelesen und die gesuchte
+     *  Angabe steht im Format ueberhaupt nicht. Ein Benutzer, dem
+     *  „nicht dekodierbar" gemeldet wird, sucht einen Defekt, den es
+     *  nicht gibt.
+     *
+     *  Dieselbe Verwechslung wie `UNBEKANNT` gegen `FEHLT` (MF-769) —
+     *  die Fehlerklasse, wegen der es diese Datei gibt. */
+    UFT_UEBERSPRUNGEN_KEINE_FEHLERINFO
 } uft_uebersprungen_grund_t;
 
 const char *uft_uebersprungen_name(uft_uebersprungen_grund_t g);
