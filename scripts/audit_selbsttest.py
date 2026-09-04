@@ -540,6 +540,45 @@ FAELLE: dict[str, list[Fall]] = {
     # das Tor absichtlich `[]` („keine Messung -> kein Urteil"), und der
     # `treffer`-Fall wuerde dann als blind gemeldet — zu Recht, denn dort
     # bewacht es nichts.
+    "audit_fat_boundary": [
+        Fall(
+            name="TOS-Grenze im Baum",
+            dateien={"src/x.c":
+                     "int t(unsigned clusters)\n"
+                     "{ return clusters <= 4078 ? 12 : 16; }\n"},
+            erwartet="treffer", muster="entscheidet FAT12/16",
+            warum="4078 ist die TOS-2.06-Grenze (FLOP_FIX.TXT 1992). "
+                  "Steht sie neben der MS-Grenze 4085 im selben Baum, "
+                  "bekommen dieselben Bytes je nach Codepfad "
+                  "verschiedene Antworten."),
+        Fall(
+            name="MS-Grenze",
+            dateien={"src/x.c":
+                     "int t(unsigned clusters)\n"
+                     "{ return clusters < 4085 ? 12 : 16; }\n"},
+            erwartet="sauber",
+            warum="4085 ist der Wert, auf den der Baum sich festgelegt "
+                  "hat."),
+        Fall(
+            name="dieselbe Zahl ohne FAT-Bezug",
+            dateien={"src/x.c":
+                     "static const unsigned short t[] = "
+                     "{ 0x4084, 0x50A5 };\n"},
+            erwartet="sauber",
+            warum="0x4084 steht so in zwei CRC-CCITT-Tabellen im Baum "
+                  "(uft_bbc_tape.c, uft_sap_parser_v2.c). Ohne "
+                  "Cluster-Bezug ist es keine Grenzentscheidung."),
+        Fall(
+            name="der andere Wert im Kommentar",
+            dateien={"src/x.c":
+                     "/* TOS schaltet bei 4078 Clustern auf FAT16. */\n"
+                     "int t(unsigned clusters)\n"
+                     "{ return clusters < 4085 ? 12 : 16; }\n"},
+            erwartet="sauber",
+            warum="ein Kommentar, der die andere Auslegung ERKLAERT, "
+                  "ist Dokumentation. Ein Tor, das die bestraft, "
+                  "verhindert genau das Verhalten, das es will."),
+    ],
     "audit_format_id_drift": [
         Fall(
             name="zwei Werte fuer dieselbe Kennung",
@@ -699,6 +738,38 @@ def pflanze(fall: Fall, ziel: Path) -> None:
         p.write_text(inhalt, encoding="utf-8")
 
 
+def _mach_repo(ziel: Path) -> None:
+    """Die Attrappe zu einem git-Repo machen (MF-875).
+
+    Werkzeuge, die ihre Dateimenge ueber `scripts/repo_scope.py` holen
+    (MF-636), fragen `git ls-files`. In einem Temp-Verzeichnis ohne
+    `.git` schlaegt das fehl, und `repo_scope` faellt — richtigerweise —
+    auf „alles durchlassen" zurueck und WARNT.
+
+    Zwei Folgen, beide unerwuenscht:
+
+    1. Jeder Konsistenzlauf begann mit zehn Zeilen „`git ls-files` nicht
+       verfuegbar — es wird der GANZE Verzeichnisbaum geprueft". Das
+       liest sich wie MF-633 und ist harmlos; genau dadurch erzieht es
+       dazu, die Meldung zu ueberlesen. `repo_scope.py` warnt im eigenen
+       Kopf vor dieser Wirkung.
+
+    2. Schwerer: der Pruefstand mass die Werkzeuge damit in einem
+       Betriebszustand, den sie in Wirklichkeit NIE haben. Der
+       git-gestuetzte Pfad — der einzige, den CI benutzt — war vom
+       Selbsttest nicht gedeckt. Ein Werkzeug, das nur dort bricht,
+       waere hier gruen geblieben.
+
+    `git init` genuegt: `--others --exclude-standard` sieht auch neue,
+    nicht hinzugefuegte Dateien, also braucht es kein `git add`.
+    """
+    try:
+        subprocess.run(["git", "init", "-q"], cwd=str(ziel),
+                       capture_output=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        pass    # ohne git bleibt es wie bisher — mit Warnung, nicht still
+
+
 def fuehre_aus(name: str, fall: Fall) -> tuple[bool, str]:
     """(bestanden, Begruendung)."""
     try:
@@ -710,6 +781,8 @@ def fuehre_aus(name: str, fall: Fall) -> tuple[bool, str]:
 
     tmp = Path(tempfile.mkdtemp(prefix="uft_selbsttest_"))
     leer = Path(tempfile.mkdtemp(prefix="uft_grundrauschen_"))
+    _mach_repo(tmp)
+    _mach_repo(leer)
     try:
         # GRUNDRAUSCHEN ZUERST.
         #

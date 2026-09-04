@@ -68,7 +68,41 @@ static const uint8_t uft_fat12_valid_media[] = {
 /** Directory entry sizes */
 #define UFT_FAT_DIR_ENTRY_SIZE      32
 
-/** Maximum values */
+/**
+ * Letzter Clusterzaehler, der noch als FAT12 gilt — MS-Auslegung.
+ *
+ * MF-875: Diese Grenze ist NICHT selbstverstaendlich. Es gibt zwei
+ * hergeleitete Werte aus zwei Systemen, und sie widersprechen sich:
+ *
+ *   MS-DOS / FAT-Spezifikation   FAT12 bis 4084 (also `< 4085`)
+ *       reserviert $FF7..$FFF (9) + $000,$001 (2) -> 4096-11 = 4085
+ *
+ *   TOS 2.06/3.06/4.0x           FAT12 bis 4078 (also `< 4079`)
+ *       reserviert $FF0..$FFF (16) + $000,$001 (2) -> 4096-18 = 4078
+ *       Quelle: Harun Scheutzow, FLOP_FIX.TXT (1992), Abschnitt
+ *       „ED-Disketten", mit ausgeschriebener Herleitung: „Bis
+ *       einschliesslich 4078 Datenclustern wird von einer 12Bit-FAT
+ *       ausgegangen. Ab 4079 Datenclustern wird eine 16Bit-FAT
+ *       verwendet."
+ *
+ * Ein Medium mit 4079 bis 4084 Datenclustern wird von TOS als FAT16
+ * und von MS-DOS als FAT12 gelesen. Dieselben Bytes, zwei Ergebnisse.
+ * Das ist keine akademische Luecke — eine 2,88-MB-ED-Diskette mit einem
+ * Sektor je Cluster landet je nach Geometrie genau in diesem Fenster,
+ * und FLOP_FIX ist deswegen geschrieben worden.
+ *
+ * UFT bleibt bei der MS-Auslegung. Fuer ein Werkzeug, das ueberwiegend
+ * PC-Medien liest, ist das richtig; die Wahl ist Eigentuemer-Sache und
+ * wird hier NICHT geaendert. Festgehalten wird, dass sie eine Wahl ist.
+ *
+ * `scripts/audit_fat_boundary.py` (Tor 55) haelt die sechs
+ * Entscheidungsstellen im Baum auf demselben Wert. Taucht 4078 oder
+ * 4086 auf, ist das ein Befund, kein Versehen.
+ *
+ * Offen (P3-142): das Fenster wird nirgends GEMELDET. Fuer ein
+ * forensisches Werkzeug ist „FAT12" darin unvollstaendig — die Aussage
+ * gilt nur fuer eine der beiden Plattformen.
+ */
 #define UFT_FAT12_MAX_CLUSTERS      4084  /* 0x0FF4 */
 
 /*============================================================================

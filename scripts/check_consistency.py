@@ -1067,6 +1067,23 @@ def main() -> int:
         import audit_encoding_caps as _ec
         all_errors.append(("Faehigkeitstabelle", _ec.check(repo)))
 
+        # Tor 55 (MF-875): die FAT12/16-Grenze steht an sechs Stellen im
+        # Baum, viermal fest verdrahtet als 4085, dazu eine benannte
+        # Konstante 4084, die niemand benutzt. Das ist die Form aus
+        # MF-870 — derselbe Wert unter verschiedenen Namen —, und Tor 52
+        # (audit_macro_drift) faengt sie nicht: es vergleicht gleiche
+        # NAMEN mit verschiedenen Werten.
+        #
+        # Besonders wichtig hier, weil die Grenze NICHT eindeutig ist:
+        # TOS 2.06+ schaltet bei 4078 um (FLOP_FIX.TXT 1992, mit
+        # Herleitung). Ein zweiter Wert im selben Baum hiesse, dieselben
+        # Bytes bekommen je nach Codepfad verschiedene Antworten.
+        #
+        # HARTES Tor: Grundlinie 6, darf fallen, steigt nur mit
+        # Begruendung im Commit.
+        import audit_fat_boundary as _fb
+        all_errors.append(("FAT12/16-Grenze", _fb.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
