@@ -313,7 +313,36 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
             switch (oob_type) {
             case UFT_UFT_KF_OOB_STREAM_INFO:
                 if (oob_size >= 8) {
-                    stream->data_count = uft_kf_read_u32(&payload[0]);
+                    /* MF-867: der Block traegt die Stream-Position, an der
+                     * er steht. Sie wurde gelesen und nie gegen die selbst
+                     * mitgezaehlte geprueft.
+                     *
+                     * Weicht beides ab, ist die Blockkette durcheinander —
+                     * haeufigste Ursache: OOB-Bytes wurden faelschlich in
+                     * die Position eingerechnet. (Dieser Leser zaehlt sie
+                     * richtig NICHT mit, siehe `stream_pos` oben.)
+                     *
+                     * HARTER Fehler, keine Korrektur. Eine stillschweigend
+                     * berichtigte Position verdeckt den eigentlichen
+                     * Fehler — fuer ein Preservationswerkzeug die falsche
+                     * Richtung.
+                     *
+                     * Das Verfahren ist nicht neu erfunden: der ZWEITE
+                     * KryoFlux-Leser dieses Baums macht es seit jeher
+                     * (`src/formats/kfx/uft_kfstream_air.c:294-296`), und
+                     * `UFT_UFT_KF_STATUS_WRONG_POS` stand hier bereits in
+                     * der Aufzaehlung — gesetzt hat es nie jemand. */
+                    uint32_t gemeldet = uft_kf_read_u32(&payload[0]);
+                    if (gemeldet != stream_pos) {
+                        status = UFT_UFT_KF_STATUS_WRONG_POS;
+                        i = len;              /* Abbruch, nicht korrigieren */
+                        break;
+                    }
+                    /* `data_count` heisst historisch so, ist aber die
+                     * Stream-Position; am Stromende entspricht sie der
+                     * uebertragenen Bytezahl, weshalb `avg_bps` damit
+                     * rechnet (Z459-461). */
+                    stream->data_count = gemeldet;
                     stream->data_time  = uft_kf_read_u32(&payload[4]);
                 }
                 break;
@@ -338,6 +367,19 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
                         status = UFT_UFT_KF_STATUS_DEV_BUFFER;
                     else if (result == UFT_UFT_KF_RESULT_NO_INDEX)
                         status = UFT_UFT_KF_STATUS_DEV_INDEX;
+                    else if (uft_kf_read_u32(&payload[0]) != stream_pos) {
+                        /* MF-867: auch der Endblock traegt die Position.
+                         *
+                         * Das `else` ist kein Schoenheitsfehler, sondern
+                         * uebernommen aus der zweiten Hand im Baum
+                         * (`uft_kfstream_air.c:331-334`, dort als
+                         * `if (hw_status == KF_HW_OK)`): hat die HARDWARE
+                         * bereits einen Fehler gemeldet, ist eine
+                         * abweichende Position dessen FOLGE und kein
+                         * eigener Befund. Sie zusaetzlich zu melden
+                         * ueberschriebe die eigentliche Ursache. */
+                        status = UFT_UFT_KF_STATUS_WRONG_POS;
+                    }
                 }
                 break;
 

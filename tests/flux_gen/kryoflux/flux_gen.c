@@ -131,6 +131,26 @@ uft_kf_gen_err_t uft_kf_gen_stream(const uft_kf_gen_params_t *params,
     if (!buf) return UFT_KF_GEN_ERR_NOMEM;
     size_t pos = 0;
 
+    /* MF-867: die STREAM-POSITION ist nicht die Pufferposition.
+     *
+     * Der KryoFlux-Strom zaehlt nur Zellenstrom-Bytes; OOB-Bloecke
+     * zaehlen NICHT mit (der Baum hat dafuer einen eigenen Testfall:
+     * "OOB bytes do NOT advance stream pos"). Dieser Erzeuger schrieb
+     * ueberall `pos` — die rohe Pufferposition, in der jeder Index- und
+     * StreamInfo-Block mitzaehlt. An einer Stelle stand sogar
+     * ausdruecklich "our stream_pos proxy".
+     *
+     * Aufgefallen ist es, als MF-867 den Positionsabgleich im Leser
+     * einbaute: der Emulator erzeugte prompt genau die Fehlerklasse, die
+     * der Abgleich fangen soll — "OOB-Bytes wurden faelschlich in die
+     * Position eingerechnet". Das ist der Fall, fuer den er gebaut ist,
+     * und der Prueftisch selbst hat ihn geliefert.
+     *
+     * Es ist derselbe Befund wie MF-825 ein paar Zeilen weiter unten:
+     * ein Emulator, der die Hardware falsch nachbildet, kann die
+     * Fehlerklasse nicht fangen, fuer die er gebaut wurde. */
+    size_t zell_pos = 0;
+
     uint64_t rng = params->seed ? params->seed : 0x1234567890ABCDEFULL;
 
     /* StreamInfo header (position 0, transfer time 0 — placeholder). */
@@ -172,7 +192,7 @@ uft_kf_gen_err_t uft_kf_gen_stream(const uft_kf_gen_params_t *params,
              * Ein Emulator, der die Hardware falsch nachbildet, kann die
              * Fehlerklasse nicht fangen, fuer die er gebaut wurde. */
             uint8_t ix[12];
-            put_u32(&ix[0], (uint32_t)pos);   /* NB: our stream_pos proxy */
+            put_u32(&ix[0], (uint32_t)zell_pos);   /* MF-867: echt, kein Proxy */
             /* Versatz in der Zelle: eine plausible, feste Groesse. Der
              * genaue Wert ist fuer die Umdrehungszeit ohne Belang — das
              * ist ja der Punkt. */
@@ -210,9 +230,12 @@ uft_kf_gen_err_t uft_kf_gen_stream(const uft_kf_gen_params_t *params,
             uint32_t ticks = ns_to_ticks(this_ns);
             if (ticks == 0) ticks = 1;
             if (pos + 6 > cap) { free(buf); return UFT_KF_GEN_ERR_NOMEM; }
-            if (uft_kf_gen_encode_flux(buf, cap, &pos, ticks) == 0) {
+            size_t geschrieben = uft_kf_gen_encode_flux(buf, cap, &pos,
+                                                        ticks);
+            if (geschrieben == 0) {
                 free(buf); return UFT_KF_GEN_ERR_NOMEM;
             }
+            zell_pos += geschrieben;      /* MF-867: nur Zellenstrom */
             flux_encoded++;
             sample_ctr += ticks;
             rev_accum  += ticks;
@@ -244,7 +267,7 @@ uft_kf_gen_err_t uft_kf_gen_stream(const uft_kf_gen_params_t *params,
         if (params->defects & UFT_KF_DEFECT_DEV_NO_INDEX) result = KF_RESULT_NO_INDEX;
         else if (params->defects & UFT_KF_DEFECT_DEV_BUFFER) result = KF_RESULT_BUFFERING;
         uint8_t se[8];
-        put_u32(&se[0], (uint32_t)pos);
+        put_u32(&se[0], (uint32_t)zell_pos);   /* MF-867 */
         put_u32(&se[4], result);
         emit_oob(buf, cap, &pos, OOB_STREAM_END, se, sizeof(se));
         /* EOF marker: type 0x0D, sentinel size 0x0D0D, no payload. */

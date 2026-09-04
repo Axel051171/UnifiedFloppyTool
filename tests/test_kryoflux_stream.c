@@ -270,7 +270,10 @@ static void test_stream_end(void)
     const uint8_t end_block[] = {
         0x40,
         0x0D, 0x03, 0x08, 0x00,                 /* OOB StreamEnd, size 8 */
-            0x00, 0x00, 0x00, 0x00,             /*   stream_pos          */
+            /* MF-867: war 0. Ein Flussbyte ist gelaufen, also steht der
+             * Leser bei 1 — die Spur behauptete 0 und war damit still
+             * ungueltig. Derselbe Fall wie in test_mixed_stream. */
+            0x01, 0x00, 0x00, 0x00,             /*   stream_pos = 1      */
             0x00, 0x00, 0x00, 0x00              /*   result = OK         */
     };
     uft_kf_stream_t s;
@@ -336,8 +339,18 @@ static void test_mixed_stream(void)
             0x01, 0x00, 0x00, 0x00,             /*   index_cnt  = 1    */
         0xC0,                                   /* Flux1 (pos 4)       */
         0x0D, 0x03, 0x08, 0x00,                 /* OOB StreamEnd       */
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00
+            /* MF-867: hier standen vier Nullbytes. Die Pruefspur war
+             * damit still UNGUELTIG — der Endblock behauptete Position 0,
+             * waehrend fuenf Flussbytes gelaufen waren. Aufgefallen ist
+             * das erst, als der Positionsabgleich eingebaut wurde: der
+             * vorher gruene Fall wurde rot, und die Ursache lag in der
+             * Spur, nicht im Leser.
+             *
+             * Fuer das, wofuer dieser Fall geschrieben wurde (Fluss,
+             * Index, Positionszaehlung), aendert die Berichtigung
+             * nichts. */
+            0x05, 0x00, 0x00, 0x00,             /*   Position = 5      */
+            0x00, 0x00, 0x00, 0x00              /*   Ergebnis = OK     */
     };
     uft_kf_stream_t s;
     if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
@@ -355,6 +368,89 @@ static void test_mixed_stream(void)
     printf("  ok: mixed_stream\n");
 }
 
+/* ── MF-867: der StreamInfo-Positionsabgleich ─────────────────────────
+ *
+ * Der StreamInfo-Block traegt die Stream-Position, an der er steht. Bis
+ * MF-867 wurde sie gelesen und nie gegen die selbst mitgezaehlte
+ * geprueft. Weicht beides ab, ist die Blockkette durcheinander — meist,
+ * weil OOB-Bytes faelschlich in die Position eingerechnet wurden.
+ *
+ * HARTER Fehler, keine Korrektur: eine stillschweigend berichtigte
+ * Position verdeckt den eigentlichen Fehler.
+ *
+ * Das Verfahren stand schon im Baum — die zweite Hand
+ * (`src/formats/kfx/uft_kfstream_air.c:294-296`) macht es seit jeher,
+ * und `UFT_UFT_KF_STATUS_WRONG_POS` war definiert, aber wurde nie
+ * gesetzt.
+ */
+static void test_streaminfo_position_stimmt(void)
+{
+    /* Gegenprobe ZUERST: die richtige Position darf nicht anschlagen.
+     * Ohne diesen Fall waere ein Abgleich, der IMMER meckert, ebenso
+     * "gruen" wie ein richtiger. */
+    const uint8_t data[] = {
+        0x40, 0x50, 0x60,                       /* flux an Pos 0,1,2  */
+        0x0D, 0x01, 0x08, 0x00,                 /* OOB StreamInfo, 8  */
+            0x03, 0x00, 0x00, 0x00,             /*   Position = 3     */
+            0x64, 0x00, 0x00, 0x00,             /*   Zeit     = 100   */
+        0x70                                    /* flux an Pos 3      */
+    };
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
+
+    uft_kf_status_t st = uft_kf_decode(&s, data, sizeof(data));
+    CHECK(st != UFT_UFT_KF_STATUS_WRONG_POS,
+          "richtige Position wurde als falsch gemeldet");
+    CHECK(s.flux_count == 4, "flux_count != 4");
+    CHECK(s.data_count == 3, "data_count != gemeldete Position");
+    printf("  ok: streaminfo_position_stimmt\n");
+}
+
+static void test_streaminfo_position_weicht_ab(void)
+{
+    /* DER ROTBEWEIS. Dieselbe Spur, aber der Block behauptet Position 7,
+     * waehrend der Leser bei 3 steht — genau das, was passiert, wenn
+     * jemand die vier OOB-Kopfbytes mitzaehlt. */
+    const uint8_t data[] = {
+        0x40, 0x50, 0x60,
+        0x0D, 0x01, 0x08, 0x00,
+            0x07, 0x00, 0x00, 0x00,             /*   Position = 7 (!)  */
+            0x64, 0x00, 0x00, 0x00,
+        0x70
+    };
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
+
+    uft_kf_status_t st = uft_kf_decode(&s, data, sizeof(data));
+    CHECK(st == UFT_UFT_KF_STATUS_WRONG_POS,
+          "abweichende Position blieb folgenlos");
+    /* NICHT korrigiert: der gemeldete Wert wird gar nicht erst
+     * uebernommen. */
+    CHECK(s.data_count != 7, "die falsche Position wurde uebernommen");
+    printf("  ok: streaminfo_position_weicht_ab\n");
+}
+
+static void test_hardwarefehler_schlaegt_positionsfehler(void)
+{
+    /* Uebernommen aus der zweiten Hand (`uft_kfstream_air.c:331-334`):
+     * hat die HARDWARE bereits einen Fehler gemeldet, ist eine
+     * abweichende Position dessen FOLGE und kein eigener Befund. Sie
+     * zusaetzlich zu melden ueberschriebe die Ursache. */
+    const uint8_t data[] = {
+        0x40, 0x50, 0x60,
+        0x0D, 0x03, 0x08, 0x00,                 /* OOB StreamEnd, 8   */
+            0x63, 0x00, 0x00, 0x00,             /*   Position = 99(!) */
+            0x01, 0x00, 0x00, 0x00              /*   Ergebnis = Puffer*/
+    };
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
+
+    uft_kf_status_t st = uft_kf_decode(&s, data, sizeof(data));
+    CHECK(st == UFT_UFT_KF_STATUS_DEV_BUFFER,
+          "der Hardwarebefund wurde von der Position ueberschrieben");
+    printf("  ok: hardwarefehler_schlaegt_positionsfehler\n");
+}
+
 int main(void)
 {
     printf("test_kryoflux_stream: KryoFlux stream decoder (P1.24 / MF-208)\n");
@@ -370,6 +466,9 @@ int main(void)
     test_truncated_stream();
     test_empty_stream();
     test_mixed_stream();
+    test_streaminfo_position_stimmt();
+    test_streaminfo_position_weicht_ab();
+    test_hardwarefehler_schlaegt_positionsfehler();
 
     if (g_failures != 0) {
         printf("test_kryoflux_stream: %d CHECK(s) FAILED\n", g_failures);

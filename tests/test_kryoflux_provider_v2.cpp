@@ -236,7 +236,12 @@ static void smoke_read_raw_flux_decodes_stream() {
             0x00, 0x00, 0x00, 0x00,                     /*  index_cnt   */
         0x70,                                           /* Flux1        */
         0x0D, 0x03, 0x08, 0x00,                         /* OOB End/8    */
-            0x00, 0x00, 0x00, 0x00,                     /*  stream_pos  */
+            /* MF-867: war 0. Vier Flussbytes sind gelaufen, also steht
+             * der Leser bei 4 — der Endblock behauptete 0 und machte den
+             * Strom still ungueltig. Aufgefallen, als der
+             * Positionsabgleich eingebaut wurde; dritter Pruefstrom mit
+             * demselben Fehler. */
+            0x04, 0x00, 0x00, 0x00,                     /*  stream_pos=4*/
             0x00, 0x00, 0x00, 0x00                      /*  result OK   */
     };
     const std::string raw_stream(
