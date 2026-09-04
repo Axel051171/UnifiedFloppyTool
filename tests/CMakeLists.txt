@@ -1431,6 +1431,18 @@ foreach(test_source ${TEST_SOURCES})
         # das Kommentarflag aus dem falschen Byte.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_parser_v2.c)
+    elseif(${test_name} STREQUAL "test_d64_42_spuren")
+        # MF-871: BEIDE D64-Tueren im selben Binaer, damit messbar ist,
+        # ob sie dieselben Groessen annehmen — das Plugin kannte acht,
+        # der v3-Leser vier. Dazu die Blockzahl als AEUSSERE Invariante
+        # ueber der Zonentabelle: scripts/cbm_zone_gate.py prueft nur,
+        # ob die 24 Kopien MITEINANDER uebereinstimmen, und 24 Kopien
+        # koennen eintraechtig alle falsch sein.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_fm_echte_aufnahme")
         # MF-869: der FM-Dekoder gegen eine echte Aufnahme von 1979,
         # byteweise gegen die IMD desselben Objekts (Applesauces eigener

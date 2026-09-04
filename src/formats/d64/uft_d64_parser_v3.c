@@ -40,13 +40,48 @@
 #define D64_SECTOR_SIZE         256
 #define D64_TRACKS_STANDARD     35
 #define D64_TRACKS_EXTENDED     40
+
+/* MF-871: 42 Spuren.
+ *
+ * `src/formats/cbm/uft_cbm_geometry.c` fuehrt die Spuren 36-42 seit
+ * jeher als "extended range", und nibtools setzt `MAX_TRACKS_1541 42`
+ * (`gcr.h:21`, Peter Rittwage). Hier endete die Groessenpruefung bei 40 —
+ * eine 42-Spur-Diskette wurde abgewiesen.
+ *
+ * Die Blockzahlen sind NICHT eingetippt, sondern aus der Zonentabelle
+ * gerechnet, und `tests/test_d64_42_spuren.c` weist das nach:
+ *
+ *     Spuren 1-17  je 21 Sektoren     357
+ *     Spuren 18-24 je 19              133
+ *     Spuren 25-30 je 18              108
+ *     Spuren 31-42 je 17              204
+ *
+ *      35 Spuren -> 683 Bloecke    40 -> 768    42 -> 802
+ *
+ * Dieselbe Rechnung liefert die bestehenden, funktionierenden Werte 683
+ * und 768. Dass sie auch 802 liefert, ist die Begruendung fuer die neue
+ * Zeile — eine eingetippte Zahl haette die nicht.
+ *
+ * Zur Obergrenze: Werkzeuge der Zeit erlaubten die EINGABE von mehr.
+ * "Copy+ 45 Tracks" prueft gegen 45 statt 40 und ist mit "Copy+ V1.1"
+ * byteidentisch bis auf den Titel und ZWEI ASCII-Ziffern. Das sagt etwas
+ * ueber das Werkzeug, nichts ueber das Medium — die Kopfbewegung der
+ * 1541 endet mechanisch frueher. 42 bleibt die belegte Grenze. */
+#define D64_TRACKS_EXTENDED_MAX 42
+
 #define D64_SECTORS_35          683
 #define D64_SECTORS_40          768
+#define D64_SECTORS_41          785
+#define D64_SECTORS_42          802
 
 #define D64_SIZE_35             (D64_SECTORS_35 * D64_SECTOR_SIZE)  /* 174848 */
 #define D64_SIZE_35_ERR         (D64_SIZE_35 + D64_SECTORS_35)      /* 175531 */
 #define D64_SIZE_40             (D64_SECTORS_40 * D64_SECTOR_SIZE)  /* 196608 */
 #define D64_SIZE_40_ERR         (D64_SIZE_40 + D64_SECTORS_40)      /* 197376 */
+#define D64_SIZE_41             (D64_SECTORS_41 * D64_SECTOR_SIZE)  /* 200960 */
+#define D64_SIZE_41_ERR         (D64_SIZE_41 + D64_SECTORS_41)      /* 201745 */
+#define D64_SIZE_42             (D64_SECTORS_42 * D64_SECTOR_SIZE)  /* 205312 */
+#define D64_SIZE_42_ERR         (D64_SIZE_42 + D64_SECTORS_42)      /* 206114 */
 
 #define D64_BAM_TRACK           18
 #define D64_BAM_SECTOR          0
@@ -523,6 +558,25 @@ static size_t d64_get_sector_offset(uint8_t track, uint8_t sector) {
 /**
  * @brief Check valid D64 size
  */
+static bool d64_is_valid_size(size_t size, uint8_t* tracks,
+                              bool* has_errors);
+
+/* MF-871: eine schmale Tuer fuer die Pruefung.
+ *
+ * `d64_disk_v3_t` ist dateilokal; ein Test, der ihn nachdeklariert,
+ * waere der Fehler aus MF-796 (EDSK: 40 gegen 32 Byte je Sektor von Hand
+ * nachgebaut, Plugin lieferte fuer jede Spur keinen Sektor — still, mit
+ * UFT_OK). Deshalb nur diese eine Funktion nach aussen, kein Aufbau.
+ *
+ * Sie ist bewusst eine reine Weiterleitung: die Entscheidung bleibt an
+ * genau einer Stelle. */
+bool d64_size_is_valid(size_t size, uint8_t *tracks, bool *has_errors) {
+    uint8_t t_dummy = 0;
+    bool    e_dummy = false;
+    return d64_is_valid_size(size, tracks ? tracks : &t_dummy,
+                             has_errors ? has_errors : &e_dummy);
+}
+
 static bool d64_is_valid_size(size_t size, uint8_t* tracks, bool* has_errors) {
     *has_errors = false;
     
@@ -541,6 +595,29 @@ static bool d64_is_valid_size(size_t size, uint8_t* tracks, bool* has_errors) {
     }
     if (size == D64_SIZE_40_ERR) {
         *tracks = 40;
+        *has_errors = true;
+        return true;
+    }
+
+    /* MF-871: 41 und 42 Spuren. Groessen aus der Zonentabelle gerechnet,
+     * siehe die Herleitung bei den Konstanten. Beide Paare stehen
+     * seit MF-350 in `uft_d64_plugin.c:36-41` — der zweiten D64-Tuer
+     * im selben Verzeichnis, die diese Datei nicht kannte. */
+    if (size == D64_SIZE_41) {
+        *tracks = 41;
+        return true;
+    }
+    if (size == D64_SIZE_41_ERR) {
+        *tracks = 41;
+        *has_errors = true;
+        return true;
+    }
+    if (size == D64_SIZE_42) {
+        *tracks = 42;
+        return true;
+    }
+    if (size == D64_SIZE_42_ERR) {
+        *tracks = 42;
         *has_errors = true;
         return true;
     }
