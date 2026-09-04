@@ -187,7 +187,8 @@ jeder Befund eine Registerzeile hat.
 | 1 | ◐ **Verträge vollständig, `src/core` teilweise** — zwei Artefakte liegen: `memory/arch_kernvertraege.md` (Header, ABI-Regeln) und `memory/arch_kern_src_core.md` (Registry, Öffnungspfad, Wandlungsmatrix, Preflight-Tor). Ungelesen bleiben 32 der 38 `.c`-Dateien, **namentlich in der Notiz aufgeführt** |
 | 2 | ◐ **Verträge vollständig gemessen, Umsetzungen teilweise** — Artefakt `memory/arch_flusspfad.md`. Zwei Phantome gefunden (P3-222, P3-223); was ungelesen blieb, steht namentlich in der Notiz |
 | 3 | ◐ **Verträge vollständig gemessen** — Artefakt `memory/arch_dateisysteme.md`. Vier Phantom-Header und 26 Header-Namenskollisionen gefunden (P3-228, P3-229) |
-| 4–10 | offen |
+| 4a | ◐ **CBM gemessen** (49 Dateien, 23 122 Z.) — Artefakt `memory/arch_formate_cbm.md`. Registry sauber: 88 Plugin-Tafeln, **kein `.name` doppelt**, also fällt keines still heraus. Zwei Befunde (P3-232 GCR-Tabelle sechsfach + getestete API ohne Produktionspfad, P3-233 zweite BAM-API ohne Umsetzung und ohne Einbinder). **Nicht** gemessen: ob die Leser richtig lesen — das hängt an `VERIFICATION_TIERS.md` |
+| 4b–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 
