@@ -1060,52 +1060,17 @@ a2r_error_t a2r_analyze_protection(const a2r_track_t *track,
  * Unit Tests
  *============================================================================*/
 
-#ifdef UFT_UNIT_TESTS
+/*
+ * MF-851: hier stand ein `#ifdef UFT_UNIT_TESTS`-Block mit 6
+ * Zusagen. `UFT_UNIT_TESTS` wird im ganzen Baum NIRGENDS definiert —
+ * weder im qmake-`.pro`, noch in einer `CMakeLists.txt`, noch als
+ * Compilerschalter. Er wurde nie uebersetzt und konnte nie rot
+ * werden; dieselbe Klasse wie MF-830 und MF-596 (P3-89).
+ *
+ * Die Faelle laufen jetzt unter
+ *     tests/test_a2r_hilfsfunktionen_leben.c
+ * und damit in CI. Alle waren inhaltlich richtig — was den Befund
+ * nicht kleiner macht: richtig und ungeprueft ist nicht dasselbe wie
+ * richtig und bewacht.
+ */
 
-#include <assert.h>
-
-static void test_a2r_basics(void) {
-    /* Test error strings */
-    assert(strcmp(a2r_error_string(A2R_OK), "OK") == 0);
-    assert(strcmp(a2r_error_string(A2R_ERR_BAD_MAGIC), 
-                  "Invalid A2R signature") == 0);
-    
-    /* Test disk type strings */
-    assert(strcmp(a2r_disk_type_string(1), 
-                  "5.25\" Single-Sided (Disk II)") == 0);
-    
-    /* Test quarter track conversion */
-    uint8_t track, quarter;
-    a2r_quarter_to_track(35, &track, &quarter);
-    assert(track == 8);
-    assert(quarter == 3);
-    assert(a2r_track_to_quarter(8, 3) == 35);
-    
-    /* Test RPM calculation */
-    double rpm = a2r_duration_to_rpm(200000.0);  /* 200ms = 300 RPM */
-    assert(fabs(rpm - 300.0) < 0.1);
-    
-    /* Test LE read */
-    uint8_t buf[] = {0x34, 0x12, 0x78, 0x56};
-    assert(read_le16(buf) == 0x1234);
-    assert(read_le32(buf) == 0x56781234);
-    
-    printf("  ✓ a2r_basics passed\n");
-}
-
-static void test_a2r_file_detection(void) {
-    /* Test with non-existent file */
-    assert(a2r_is_valid_file("/nonexistent.a2r") == false);
-    assert(a2r_get_file_version("/nonexistent.a2r") == 0);
-    
-    printf("  ✓ a2r_file_detection passed\n");
-}
-
-void uft_a2r_parser_tests(void) {
-    printf("Running A2R parser tests...\n");
-    test_a2r_basics();
-    test_a2r_file_detection();
-    printf("All A2R parser tests passed!\n");
-}
-
-#endif /* UFT_UNIT_TESTS */

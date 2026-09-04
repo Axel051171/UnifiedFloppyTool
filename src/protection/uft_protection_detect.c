@@ -800,101 +800,17 @@ int uft_protection_generate_report(const uft_protection_ctx_t *ctx,
  * Unit Tests
  *============================================================================*/
 
-#ifdef UFT_UNIT_TESTS
+/*
+ * MF-851: hier stand ein `#ifdef UFT_UNIT_TESTS`-Block mit 8
+ * Zusagen. `UFT_UNIT_TESTS` wird im ganzen Baum NIRGENDS definiert —
+ * weder im qmake-`.pro`, noch in einer `CMakeLists.txt`, noch als
+ * Compilerschalter. Er wurde nie uebersetzt und konnte nie rot
+ * werden; dieselbe Klasse wie MF-830 und MF-596 (P3-89).
+ *
+ * Die Faelle laufen jetzt unter
+ *     tests/test_schutz_erkennung_lebt.c
+ * und damit in CI. Alle waren inhaltlich richtig — was den Befund
+ * nicht kleiner macht: richtig und ungeprueft ist nicht dasselbe wie
+ * richtig und bewacht.
+ */
 
-#include <assert.h>
-
-static void test_vmax_detection(void) {
-    /* Create test data with V-MAX marker */
-    uint8_t track[100];
-    memset(track, 0x00, sizeof(track));
-    memcpy(track + 20, UFT_VMAX_MARKERS, sizeof(UFT_VMAX_MARKERS));
-    
-    uft_protection_result_t result;
-    const uint8_t *pos = uft_prot_detect_vmax(track, sizeof(track), &result);
-    
-    assert(pos != NULL);
-    assert(pos == track + 20);
-    assert(result.type == UFT_PROT_VMAX);
-    assert(result.confidence >= 90);
-    
-    printf("  ✓ vmax_detection passed\n");
-}
-
-static void test_rapidlok_detection(void) {
-    /* Create test data with RapidLok header */
-    uint8_t track[300];
-    memset(track, 0x00, sizeof(track));
-    
-    /* 25 sync bytes */
-    memset(track + 10, 0xFF, 25);
-    /* ID byte */
-    track[35] = 0x55;
-    /* 170 header bytes */
-    memset(track + 36, 0x7B, 170);
-    
-    uft_protection_result_t result;
-    const uint8_t *pos = uft_prot_detect_rapidlok(track, sizeof(track), &result);
-    
-    assert(pos != NULL);
-    assert(result.type == UFT_PROT_RAPIDLOK);
-    assert(result.confidence >= 90);
-    
-    printf("  ✓ rapidlok_detection passed\n");
-}
-
-static void test_weak_bits_detection(void) {
-    /* Create test data with inconsistent bytes */
-    uint8_t read1[] = {0x01, 0x02, 0x03, 0x04, 0x05};
-    uint8_t read2[] = {0x01, 0x02, 0xFF, 0x04, 0x05};  /* byte 2 differs */
-    uint8_t read3[] = {0x01, 0x02, 0xAA, 0x04, 0x05};  /* byte 2 differs */
-    
-    const uint8_t *reads[] = {read1, read2, read3};
-    uint8_t weak_map[5];
-    size_t weak_count;
-    
-    bool found = uft_prot_detect_weak_bits(reads, 3, 5, weak_map, &weak_count);
-    
-    assert(found);
-    assert(weak_count == 1);
-    assert(weak_map[2] == 1);
-    
-    printf("  ✓ weak_bits_detection passed\n");
-}
-
-static void test_context_management(void) {
-    uft_protection_ctx_t ctx;
-    assert(uft_protection_ctx_init(&ctx) == 0);
-    
-    uft_protection_result_t result = {
-        .type = UFT_PROT_VMAX,
-        .name = "Test",
-        .confidence = 90
-    };
-    
-    assert(uft_protection_ctx_add_result(&ctx, &result) == 0);
-    assert(ctx.result_count == 1);
-    
-    uft_protection_ctx_free(&ctx);
-    
-    printf("  ✓ context_management passed\n");
-}
-
-static void test_string_functions(void) {
-    assert(strcmp(uft_protection_type_name_local(UFT_PROT_VMAX), "V-MAX") == 0);
-    assert(strcmp(uft_protection_family_name(UFT_PROT_COPYLOCK), "Rob Northen") == 0);
-    
-    printf("  ✓ string_functions passed\n");
-}
-
-void uft_protection_detect_tests(void) {
-    printf("Running Protection Detection tests...\n");
-    test_vmax_detection();
-    test_rapidlok_detection();
-    test_weak_bits_detection();
-    test_context_management();
-    test_string_functions();
-    printf("All Protection Detection tests passed!\n");
-}
-
-#endif /* UFT_UNIT_TESTS */

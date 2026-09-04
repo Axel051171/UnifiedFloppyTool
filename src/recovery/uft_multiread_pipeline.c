@@ -821,111 +821,17 @@ char *multiread_generate_report(const multiread_ctx_t *ctx,
  * Unit Tests
  *============================================================================*/
 
-#ifdef UFT_UNIT_TESTS
+/*
+ * MF-851: hier stand ein `#ifdef UFT_UNIT_TESTS`-Block mit 5
+ * Zusagen. `UFT_UNIT_TESTS` wird im ganzen Baum NIRGENDS definiert —
+ * weder im qmake-`.pro`, noch in einer `CMakeLists.txt`, noch als
+ * Compilerschalter. Er wurde nie uebersetzt und konnte nie rot
+ * werden; dieselbe Klasse wie MF-830 und MF-596 (P3-89).
+ *
+ * Die Faelle laufen jetzt unter
+ *     tests/test_multiread_selbsttests_leben.c
+ * und damit in CI. Alle waren inhaltlich richtig — was den Befund
+ * nicht kleiner macht: richtig und ungeprueft ist nicht dasselbe wie
+ * richtig und bewacht.
+ */
 
-#include <assert.h>
-
-static void test_multiread_vote_majority(void) {
-    /* Test majority voting */
-    uint8_t buf1[] = {0x01, 0x02, 0x03, 0x04};
-    uint8_t buf2[] = {0x01, 0x02, 0x03, 0x04};
-    uint8_t buf3[] = {0x01, 0x02, 0xFF, 0x04};  /* One different byte */
-    
-    const uint8_t *buffers[] = {buf1, buf2, buf3};
-    size_t lengths[] = {4, 4, 4};
-    
-    uint8_t output[4];
-    uint8_t confidence;
-    
-    multiread_error_t err = multiread_vote_buffers(buffers, lengths, 3,
-                                                    output, 4, &confidence);
-    
-    assert(err == MULTIREAD_OK);
-    assert(output[0] == 0x01);
-    assert(output[1] == 0x02);
-    assert(output[2] == 0x03);  /* Majority wins */
-    assert(output[3] == 0x04);
-    assert(confidence >= 75);
-    
-    printf("  ✓ multiread_vote_majority passed\n");
-}
-
-static void test_multiread_context(void) {
-    multiread_config_t cfg = multiread_config_default();
-    multiread_ctx_t *ctx = multiread_create(&cfg);
-    
-    assert(ctx != NULL);
-    
-    /* Add passes */
-    uint8_t data1[] = {0xAA, 0xBB, 0xCC};
-    uint8_t data2[] = {0xAA, 0xBB, 0xCC};
-    uint8_t data3[] = {0xAA, 0xBB, 0xDD};
-    
-    assert(multiread_add_pass(ctx, data1, 3, 100, true) == MULTIREAD_OK);
-    assert(multiread_add_pass(ctx, data2, 3, 100, true) == MULTIREAD_OK);
-    assert(multiread_add_pass(ctx, data3, 3, 80, false) == MULTIREAD_OK);
-    
-    /* Execute voting */
-    uint8_t output[3];
-    multiread_sector_t result = {0};
-    
-    multiread_error_t err = multiread_execute(ctx, output, 3, &result);
-    assert(err == MULTIREAD_OK);
-    
-    assert(output[0] == 0xAA);
-    assert(output[1] == 0xBB);
-    assert(output[2] == 0xCC);  /* Majority */
-    assert(result.good_reads == 2);
-    assert(result.total_reads == 3);
-    
-    /* Cleanup */
-    free(result.weak_mask);
-    multiread_destroy(ctx);
-    
-    printf("  ✓ multiread_context passed\n");
-}
-
-static void test_multiread_error_handling(void) {
-    /* Test error cases */
-    assert(multiread_vote_buffers(NULL, NULL, 0, NULL, 0, NULL) 
-           == MULTIREAD_ERR_NULL_PARAM);
-    
-    multiread_ctx_t *ctx = multiread_create(NULL);
-    assert(ctx != NULL);
-    
-    uint8_t output[4];
-    multiread_sector_t result;
-    
-    /* Not enough passes */
-    assert(multiread_execute(ctx, output, 4, &result) 
-           == MULTIREAD_ERR_INSUFFICIENT_PASSES);
-    
-    multiread_destroy(ctx);
-    
-    printf("  ✓ multiread_error_handling passed\n");
-}
-
-static void test_multiread_report(void) {
-    multiread_config_t cfg = multiread_config_default();
-    multiread_ctx_t *ctx = multiread_create(&cfg);
-    
-    char *report = multiread_generate_report(ctx, NULL, 0);
-    assert(report != NULL);
-    assert(strstr(report, "Multi-Read Recovery Report") != NULL);
-    
-    free(report);
-    multiread_destroy(ctx);
-    
-    printf("  ✓ multiread_report passed\n");
-}
-
-void uft_multiread_pipeline_tests(void) {
-    printf("Running Multi-Read Pipeline tests...\n");
-    test_multiread_vote_majority();
-    test_multiread_context();
-    test_multiread_error_handling();
-    test_multiread_report();
-    printf("All Multi-Read Pipeline tests passed!\n");
-}
-
-#endif /* UFT_UNIT_TESTS */

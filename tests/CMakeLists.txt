@@ -342,6 +342,19 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_a2r_hilfsfunktionen_leben")
+        # MF-851 / P3-89
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_multiread_selbsttests_leben")
+        # MF-851 / P3-89
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c)
+    elseif(${test_name} STREQUAL "test_schutz_erkennung_lebt")
+        # MF-851 / P3-89: die Faelle standen in einem
+        # `#ifdef UFT_UNIT_TESTS`-Block, den keine Bauvorschrift definiert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_detect.c)
     elseif(${test_name} STREQUAL "test_atari_verlorene_sektoren")
         # MF-850: MF-835 hat check_directory() beigebracht, Eintraege
         # hinter der Endmarke zu melden — drei Geschwister blieben beim
