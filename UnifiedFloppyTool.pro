@@ -1590,6 +1590,7 @@ SOURCES += \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/hal/uft_greaseweazle_full.c \
     src/hal/uft_fluxengine.c \
+    src/formats/st/uft_st_order.c \
     src/hal/uft_hal_unified.c \
     src/hal/uft_hal_profiles.c \
     src/hal/uft_kryoflux_dtc.c \

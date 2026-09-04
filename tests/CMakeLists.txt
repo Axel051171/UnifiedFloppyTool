@@ -1763,6 +1763,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_st_spiralfaktor")
+        # MF-858: Stessuns Formel (ST-Computer 12/1989) gegen ihre eigene
+        # Messreihe. Der ST-Pfad kannte Interleave und Spiralfaktor nicht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st_order.c)
     elseif(${test_name} STREQUAL "test_fluxengine_wire")
         # MF-857: die Rahmenschicht des nativen FluxEngine-Treibers gegen
         # den Firmware-Automaten auf DRAHTebene. Der vorhandene Emulator
