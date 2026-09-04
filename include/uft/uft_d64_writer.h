@@ -255,59 +255,66 @@ int d64_write_track_gcr(
  */
 int d64_sectors_per_track(int track);
 
-/** Versatz fuer Datenspuren (1541-DOS: `secinc` = 10, `dskintsf.src`). */
+/**
+ * @brief Welcher Sektor liegt PHYSISCH an Position @p position?
+ *
+ * Aufsteigend: Position i traegt Sektor i. Ein 1541 formatiert seine
+ * Spuren sequenziell; der Interleave ist Sache der Vergabe
+ * (@ref uft_d64_vergabe_an_position), nicht des Spurbildes (MF-861).
+ *
+ * Die Funktion ist bewusst trivial und existiert trotzdem: sie ist die
+ * Stelle, an der die Aussage steht, und sie hat einen Rotbeweis.
+ *
+ * @return Sektornummer, oder -1 bei ungueltiger Spur/Position.
+ */
+int uft_d64_sektor_an_position(int track, int position);
+
+/** Versatz fuer Datenspuren (1541-DOS: `secinc` = 10, ROM $EBCD). */
 #define UFT_D64_INTERLEAVE_DATEN      10
 
-/** Versatz fuer die Directory-Spur (1541-DOS: `nxdrbk` setzt 3). */
+/** Versatz fuer die Directory-Spur (1541-DOS: NXDRBK $D497 setzt 3). */
 #define UFT_D64_INTERLEAVE_DIRECTORY   3
 
 /** Die Directory-Spur einer 1541-Diskette. */
 #define UFT_D64_DIRECTORY_TRACK       18
 
 /**
- * @brief Welcher Sektor liegt an Position @p position der Spur @p track?
+ * @brief Welchen Sektor VERGIBT das CBM-DOS als naechsten?
  *
- * ── Warum das eine eigene Funktion ist (MF-859) ──────────────────────
+ * ── BERICHTIGT MF-861: das ist Vergabe, nicht Spurbelegung ───────────
  *
- * Die Regel stand vorher als 21-Elemente-Tabelle mitten in der
- * Schreibschleife, mit einem Rueckfall fuer den Fall, dass ein
- * Tabellenwert nicht in die Spur passt. Auf 18 von 35 Spuren erzeugte
- * dieser Rueckfall **doppelte und fehlende** Sektoren:
+ * MF-859 hat diese Funktion gebaut und sie in `d64_write_track_gcr()`
+ * benutzt, um die PHYSISCHE Reihenfolge der Sektoren auf der Spur zu
+ * bestimmen. Das war die falsche Ebene, und MF-859 hat die Frage selbst
+ * als P3-111 offen gelassen, statt sie zu klaeren.
  *
- *     Zone       Sektoren   fehlend        doppelt
- *     Spur 18-24    19      1, 11          2, 4
- *     Spur 25-30    18      1, 11, 12      2, 4, 6
- *     Spur 31-35    17      1, 11, 12      4, 6, 8
+ * Geklaert ist sie jetzt: **ein 1541 legt die Sektoren aufsteigend auf
+ * die Spur** — 0, 1, 2, …, n-1. Fuenf unabhaengige Umsetzungen und eine
+ * Messung an einer realen G64 sagen dasselbe (ROM-Formatierroutine
+ * $FC36-$FD1C, OpenCBM `cbmformat.a65`, VICE `fsimage-dxx.c:262`,
+ * nibtools `fileio.c:760`, 1541ultimate `disk_image.cc:251`). Der
+ * Versatz 10 lebt ausschliesslich in der BLOCKVERGABE.
  *
- * Eine Regel, die nur in der Schleife steht, ist ohne die Schleife nicht
- * pruefbar — dieselbe Lehre wie bei `uft_gw_firmware_supported()`
- * (MF-849). Hier steht sie fuer sich und hat einen Rotbeweis.
+ * Die Funktion bleibt — die Vergabereihenfolge ist eine echte Groesse,
+ * nur nicht die, fuer die MF-859 sie eingesetzt hat. Sie heisst jetzt
+ * so, wie sie ist.
  *
- * ── Die Regel ────────────────────────────────────────────────────────
+ * ── Die Regel, und warum sie nicht modular ist ───────────────────────
  *
- * Fortlaufend um den Versatz weiterruecken, modulo Sektorzahl DIESER
- * Spur; ist die Stelle schon vergeben, um eins weiter. Damit ist das
- * Ergebnis immer eine vollstaendige Permutation — die Eigenschaft, die
- * unter jeder Interleave-Regel gelten muss.
+ * Beim Ueberlauf zieht das DOS die Sektorzahl ab und **danach noch
+ * eins**, sofern das Ergebnis nicht 0 ist (ROM FNDNXT $F189-$F193;
+ * byte-fuer-byte dieselbe Regel wie `lib1541img`
+ * `cbmdosfs.c:126-134`). Fuer 21 Sektoren ergibt das
+ * `0, 10, 20, 8, 18, 6, …` — NICHT `0, 10, 20, 9, 19, 8, …`.
  *
- * Versatz 10 fuer Datenspuren, 3 fuer die Directory-Spur 18. Belegt aus
- * zwei unabhaengigen Haenden: der 1541-DOS-ROM-Quelle 901229-05
- * (`dskintsf.src` setzt `secinc` = 10; `tst4.src::nxdrbk` sichert den
- * Wert, setzt 3, vergibt, setzt zurueck) und `lib1541img`
- * (`src/lib/1541img/cbmdosfs.c:21-22`: `.dirInterleave = 3`,
- * `.fileInterleave = 10`).
+ * Die modulare Fassung, die MF-859 gebaut hat, entspricht
+ * `lib1541img`s Schalter `CFF_SIMPLEINTERLEAVE` und nicht dem DOS.
  *
- * ── Offen, und ausdruecklich nicht hier entschieden ──────────────────
- *
- * Ob ein 1541 die Sektoren PHYSISCH interleavt auf die Spur legt oder
- * aufsteigend, und ob beim Umbruch zusaetzlich um eins verringert wird —
- * die beiden Quellen widersprechen sich (P3-110). Diese Funktion
- * behaelt fuer 21 Sektoren genau die Reihenfolge, die der Baum bisher
- * hatte, und setzt sie fuer die anderen Zonen widerspruchsfrei fort.
+ * Ist die Stelle schon vergeben, rueckt das DOS um eins weiter.
  *
  * @return Sektornummer, oder -1 bei ungueltiger Spur/Position.
  */
-int uft_d64_sektor_an_position(int track, int position);
+int uft_d64_vergabe_an_position(int track, int position);
 
 /**
  * @brief Get speed zone for track

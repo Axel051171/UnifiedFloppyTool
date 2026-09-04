@@ -75,6 +75,23 @@ static const int track_gcr_length[4] = {
 
 int uft_d64_sektor_an_position(int track, int position)
 {
+    /* MF-861: aufsteigend. Ein 1541 formatiert seine Spuren sequenziell;
+     * der Versatz 10 gehoert in die Vergabe, nicht auf die Spur.
+     *
+     * MF-859 hat hier interleavt und die Frage als P3-111 offen
+     * gelassen. Geklaert durch fuenf unabhaengige Umsetzungen und eine
+     * Messung an einer realen G64 — und durch den eigenen Baum: der
+     * ANGEBOTENE Wandlungspfad D64->G64 laeuft ueber
+     * `uft_d64_g64.c::build_gcr_track()` und schreibt dort seit jeher
+     * `for (int s = 0; s < num_sectors; s++)`. Diese Funktion hier war
+     * die einzige Stelle, die es anders machte. */
+    const int n = d64_sectors_per_track(track);
+    if (n <= 0 || position < 0 || position >= n) return -1;
+    return position;
+}
+
+int uft_d64_vergabe_an_position(int track, int position)
+{
     const int n = d64_sectors_per_track(track);
     if (n <= 0 || position < 0 || position >= n) return -1;
 
@@ -82,22 +99,31 @@ int uft_d64_sektor_an_position(int track, int position)
                             ? UFT_D64_INTERLEAVE_DIRECTORY
                             : UFT_D64_INTERLEAVE_DATEN;
 
-    /* Vergabe nachbilden statt eine Folge zu tabellieren: weiterruecken,
-     * und wenn die Stelle belegt ist, um eins weiter. Der Aufwand ist
-     * O(n^2) im schlimmsten Fall bei hoechstens 21 Sektoren — das ist
-     * einmal je Spur und nicht messbar. */
     unsigned char belegt[32] = { 0 };
     int s = 0;
     for (int i = 0; i <= position; i++) {
         int schutz = 0;
         while (belegt[s] && schutz++ <= n) s = (s + 1) % n;
-        if (belegt[s]) return -1;          /* kann nicht eintreten */
+        if (belegt[s]) return -1;
         if (i == position) return s;
         belegt[s] = 1;
-        s = (s + versatz) % n;
+
+        /* Die DOS-Regel, nicht die modulare: beim Ueberlauf die
+         * Sektorzahl abziehen und DANACH noch eins, sofern das Ergebnis
+         * nicht 0 ist (ROM FNDNXT $F189-$F193; gleichlautend in
+         * lib1541img `cbmdosfs.c:126-134`). Fuer 21 Sektoren ergibt das
+         * 0, 10, 20, 8, 18, 6, … — die modulare Fassung ergaebe
+         * 0, 10, 20, 9, 19, 8, … und entspricht dort dem Schalter
+         * CFF_SIMPLEINTERLEAVE, nicht dem DOS. */
+        s += versatz;
+        if (s >= n) {
+            s -= n;
+            if (s) s--;
+        }
     }
     return -1;
 }
+
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Writer Context
