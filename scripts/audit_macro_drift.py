@@ -36,12 +36,39 @@ Jedes `#define NAME <ganze Zahl>` in `src/` und `include/`. Gruppiert
 nach NAME; gemeldet wird jeder Name, dem mehr als ein Wert zugewiesen
 wird.
 
+── GESCHAERFT (MF-853): nur WIRKSAME Drift ─────────────────────────────────
+
+Die erste Fassung meldete jeden Namen mit mehr als einem Wert: **31**.
+Nachgemessen wurde dann, ob der Name in seiner Datei ueberhaupt BENUTZT
+wird — und das Bild kippte:
+
+    Drift gesamt        31
+    davon wirksam       11   (in >= 2 Dateien benutzt, verschiedene Werte)
+    davon toter #define 20   (in hoechstens einer benutzt)
+
+Zwanzig von einunddreissig waren Definitionen, die ihre eigene Datei nie
+liest. Sie koennen niemanden in die Irre fuehren, weil niemand sie
+befragt — das ist eine eigene, geringere Klasse (Bestand, nicht
+Wirkung).
+
+Das kostete eine eigene Ueberzeichnung: MF-852 meldete
+`CMD_BAM_TRACK`/`CMD_BAM_SECTOR` als „zwischen Header und Umsetzung
+vertauscht". Gemessen sind es **tote Definitionen in einem unabhaengigen
+Modul** (`uft_cmd_fd.c` definiert vier und benutzt keine; die Treffer
+kamen aus `uft_cmd.c`, das seinen eigenen Satz hat). Kein Fehler, nur
+Ballast — und ein Beleg dafuer, dass eine Zahl ohne Wirkungspruefung
+groesser aussieht, als sie ist.
+
+Gezaehlt wird seither nur die wirksame Menge. Die toten werden
+BERICHTET, nicht gezaehlt: sie gehoeren weg, aber nicht in dieselbe
+Zahl.
+
 ── Grenze des Verfahrens, ausdruecklich ────────────────────────────────────
 
-**Nicht jeder Treffer ist ein Fehler.** Zwei unverwandte Module duerfen
-ein lokales `MAX_SECTORS` mit verschiedenen Werten fuehren; der Name ist
-dann schlicht generisch. Die Grundlinie ist deshalb WEICH — sie haelt
-die Zahl fest, damit keine 33. dazukommt, und jeder Abbau ist eine
+**Auch ein wirksamer Treffer ist nicht automatisch ein Fehler.** Zwei
+unverwandte Module duerfen ein lokales `MAX_SECTORS` oder `INITIAL_CAP`
+mit verschiedenen Werten fuehren; der Name benennt dann eine Eigenschaft
+des MODULS. Die Grundlinie ist deshalb WEICH, und jeder Abbau ist eine
 Einzelentscheidung wie bei P3-76.
 
 Woran man die echten erkennt: ein **formatgebundener Praefix**
@@ -96,9 +123,26 @@ def dateien(wurzel: Path):
             and (z.startswith("src/") or z.startswith("include/"))]
 
 
-def pruefe_texte(paare):
-    """paare: [(pfad, text)] -> {name: {pfad: wert}} mit mehr als einem Wert."""
+def _benutzt(name: str, txt: str) -> bool:
+    """Kommt @p name im Text vor — ausserhalb seiner eigenen Definition?
+
+    MF-853: die entscheidende Frage. Ein `#define`, das seine eigene
+    Datei nie liest, kann keinen Leser in die Irre fuehren."""
+    for z in txt.split("\n"):
+        if name in z and not DEF.match(z):
+            return True
+    return False
+
+
+def pruefe_texte(paare, mit_toten=False):
+    """paare: [(pfad, text)] -> {name: {pfad: wert}}.
+
+    Gemeldet wird nur WIRKSAME Drift: der Name muss in mindestens zwei
+    Dateien benutzt werden UND dort verschiedene Werte tragen.
+    Mit @p mit_toten kommt zusaetzlich die Liste der toten Definitionen
+    zurueck (zweiter Rueckgabewert)."""
     werte = collections.defaultdict(dict)
+    texte = dict(paare)
     for pfad, txt in paare:
         for z in txt.split("\n"):
             m = DEF.match(z)
@@ -109,19 +153,31 @@ def pruefe_texte(paare):
             except ValueError:
                 continue
             werte[m.group(1)][pfad] = v
-    return {n: d for n, d in werte.items() if len(set(d.values())) > 1}
+
+    wirksam, tot = {}, {}
+    for n, d in werte.items():
+        if len(set(d.values())) <= 1:
+            continue
+        aktiv = {f: v for f, v in d.items() if _benutzt(n, texte[f])}
+        if len(set(aktiv.values())) > 1:
+            wirksam[n] = aktiv
+        else:
+            tot[n] = d
+    return (wirksam, tot) if mit_toten else wirksam
 
 
 def selbsttest() -> bool:
     """Vor dem Nenner, mit Gegenproben."""
     ok = 0
 
-    A = "#define FOO_BAR 0x01\n"
-    B = "#define FOO_BAR 0x40\n"
+    # MF-853: die Werte muessen BENUTZT werden, sonst ist es toter
+    # Ballast. Deshalb traegt jede Probe eine Verwendungszeile.
+    A = "#define FOO_BAR 0x01\nint f(void){return FOO_BAR;}\n"
+    B = "#define FOO_BAR 0x40\nint g(void){return FOO_BAR;}\n"
     if list(pruefe_texte([("a.c", A), ("b.c", B)])) == ["FOO_BAR"]:
         ok += 1
     else:
-        print("  SELBSTTEST 1 ROT: Drift nicht erkannt")
+        print("  SELBSTTEST 1 ROT: wirksame Drift nicht erkannt")
 
     # GEGENPROBE A: derselbe Wert in zwei Dateien ist KEIN Fund.
     if not pruefe_texte([("a.c", A), ("b.c", A)]):
@@ -132,11 +188,20 @@ def selbsttest() -> bool:
     # GEGENPROBE B: 0x40 und 64 sind DERSELBE Wert — verglichen wird die
     # Zahl, nicht ihre Schreibweise. Ohne das waere jede Hex/Dezimal-
     # Mischung ein Fehlalarm.
-    if not pruefe_texte([("a.c", "#define FOO_BAR 0x40\n"),
-                         ("b.c", "#define FOO_BAR 64\n")]):
+    if not pruefe_texte([("a.c", "#define FOO_BAR 0x40\nint f(void){return FOO_BAR;}\n"),
+                         ("b.c", "#define FOO_BAR 64\nint g(void){return FOO_BAR;}\n")]):
         ok += 1
     else:
         print("  SELBSTTEST 3 ROT: 0x40 != 64 gemeldet")
+
+    # GEGENPROBE D (MF-853): verschiedene Werte, aber EINE der beiden
+    # Dateien benutzt ihren Wert nicht — toter Ballast, kein Fund. Ohne
+    # diese Probe waere die Schaerfung selbst unbewacht.
+    if not pruefe_texte([("a.c", "#define FOO_BAR 0x01\nint f(void){return FOO_BAR;}\n"),
+                         ("b.c", "#define FOO_BAR 0x40\n")]):
+        ok += 1
+    else:
+        print("  SELBSTTEST 5 ROT: toter #define als Drift gemeldet")
 
     # GEGENPROBE C: ein Makro mit Ausdruck statt Zahl faellt nicht auf —
     # das ist die im Kopf genannte Grenze, und sie wird hier BELEGT,
@@ -147,8 +212,8 @@ def selbsttest() -> bool:
     else:
         print("  SELBSTTEST 4 ROT: Ausdruck wurde doch gelesen")
 
-    print("  Selbsttest %d/4" % ok)
-    return ok == 4
+    print("  Selbsttest %d/5" % ok)
+    return ok == 5
 
 
 def sammle(wurzel: Path):
@@ -162,7 +227,7 @@ def sammle(wurzel: Path):
             paare.append((z, p.read_text(encoding="utf-8", errors="replace")))
         except OSError:
             continue
-    return pruefe_texte(paare)
+    return pruefe_texte(paare, mit_toten=True)
 
 
 def grenze():
@@ -183,11 +248,14 @@ def check(repo=None):
     g = grenze()
     if g is None:
         return []
-    d = sammle(WURZEL)
-    if d is None or len(d) <= g:
+    r = sammle(WURZEL)
+    if r is None:
         return []
-    return ["%d Makros mit gleichem Namen und verschiedenem Wert > "
-            "Grundlinie %d: %s" % (len(d), g, ", ".join(sorted(d)[:5]))]
+    d, _tot = r
+    if len(d) <= g:
+        return []
+    return ["%d wirksame Makro-Drifts > Grundlinie %d: %s"
+            % (len(d), g, ", ".join(sorted(d)[:5]))]
 
 
 def main() -> int:
@@ -195,13 +263,16 @@ def main() -> int:
     if not selbsttest():
         print("  ABBRUCH: Selbsttest rot — kein Nenner ohne Abnahme")
         return 2
-    d = sammle(WURZEL)
-    if d is None:
+    r = sammle(WURZEL)
+    if r is None:
         return 0
-    print("  gleicher Name, verschiedener Wert : %d" % len(d))
+    d, tot = r
+    print("  WIRKSAME Drift (>=2 Nutzer)       : %d" % len(d))
     for n in sorted(d):
         print("    %-32s %s" % (n, " | ".join(
             "%s=%s" % (f.rsplit("/", 1)[-1], hex(v)) for f, v in d[n].items())))
+    print("  tote #defines (hoechstens 1 Nutzer): %d  — berichtet, nicht "
+          "gezaehlt" % len(tot))
     g = grenze()
     if g is None:
         print("  keine Grundlinie — nur Bericht")

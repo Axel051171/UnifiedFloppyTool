@@ -1,4 +1,4 @@
-31
+11
 # MF-852: gleicher Makroname, verschiedener Wert (siehe scripts/audit_macro_drift.py).
 # WEICHE Grundlinie: nicht jeder Treffer ist ein Fehler — zwei unverwandte
 # Module duerfen ein lokales MAX_SECTORS mit verschiedenen Werten fuehren.
