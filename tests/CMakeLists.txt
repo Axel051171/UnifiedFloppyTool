@@ -1613,6 +1613,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
@@ -1655,6 +1656,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
@@ -1750,7 +1752,9 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
     elseif(${test_name} STREQUAL "test_stx_error_marks")
         # STX (Pasti) FDC-status disk-error marking + descriptor offset fix (Phase-4 WP5, MF-335)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_amigados_cycle")
         # MF-639: Ringschluss in der AmigaDOS-Hashkette — beide Ketten
         # brachen nur bei einer Selbst-Schleife ab
@@ -1776,7 +1780,9 @@ foreach(test_source ${TEST_SOURCES})
         # Drei weitere liegen im Baum, darunter der vollstaendige
         # AIR-Port — ohne Aufrufer.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d88_header_variants")
         # 672-Byte-Kopf (160 Spureintraege) wurde vom Erkenner abgewiesen (MF-625);
         # beide Geschwister, weil die feste Schranke 0x2B0 in beiden stand

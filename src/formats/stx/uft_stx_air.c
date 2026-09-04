@@ -39,6 +39,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "uft/formats/stx/uft_stx_air.h"
+
 /*============================================================================
  * STX/PASTI CONSTANTS (from PastiStruct.cs)
  *============================================================================*/
@@ -48,7 +50,17 @@
 #define STX_FILE_HEADER_SZ  16
 #define STX_TRACK_DESC_SZ   16
 #define STX_SECTOR_DESC_SZ  16
-#define STX_MAX_TRACKS      85
+/* MF-854: 128, nicht 85.
+ *
+ * `trackNumber` (Spursatz-Byte 0x0E) traegt die Spur in Bit 0-6 — das
+ * Format erlaubt also 0..127. Die 85 war eine Zahl dieser Umsetzung,
+ * und sie wurde mit der Verdrahtung SCHARF: eine Spur darueber gab
+ * `STX_AIR_TRACK_ERROR` und damit die ganze Datei verloren.
+ *
+ * P3-105 hat die vier Spurdecken im Baum gegenuebergestellt (85 · 168 ·
+ * 168 · 128); 128 ist die einzige, die aus dem Format stammt. Kosten:
+ * das Feld waechst von ~350 KB auf ~530 KB je Diskette, auf dem Haufen. */
+#define STX_MAX_TRACKS      128
 #define STX_MAX_SIDES       2
 #define STX_MAX_SECTORS     32
 #define STX_SECTOR_STD      512
@@ -180,7 +192,7 @@ typedef struct {
 } stx_air_track_t;
 
 /** Complete parsed disk */
-typedef struct {
+typedef struct stx_air_disk {
     stx_air_file_hdr_t header;
 
     stx_air_track_t tracks[STX_MAX_TRACKS][STX_MAX_SIDES];
@@ -797,6 +809,91 @@ stx_air_status_t stx_air_write(const stx_air_disk_t* disk,
 /*============================================================================
  * DIAGNOSTICS / INFO
  *============================================================================*/
+
+/*============================================================================
+ * ZUGRIFFSSCHICHT (MF-854)
+ *
+ * Die schmale Tuer nach `include/uft/formats/stx/uft_stx_air.h`. Sie
+ * legt die Struktur NICHT offen: ein Aufrufer, der ihr Feldlayout von
+ * Hand nachdeklariert, ist der Fehler aus MF-796 (EDSK, 40 gegen 32
+ * Byte je Sektor — jede Spur jeder Datei still leer).
+ *==========================================================================*/
+
+stx_air_handle_t* uft_stx_air_open(const uint8_t* data, size_t size) {
+    if (!data || size < 16u) return NULL;   /* Dateikopf */
+    stx_air_disk_t* d = (stx_air_disk_t*)calloc(1, sizeof(stx_air_disk_t));
+    if (!d) return NULL;
+    if (stx_air_parse(data, size, d) != STX_AIR_OK) {
+        stx_air_free(d);
+        free(d);
+        return NULL;
+    }
+    return d;
+}
+
+void uft_stx_air_close(stx_air_handle_t* h) {
+    if (!h) return;
+    stx_air_free(h);
+    free(h);
+}
+
+int uft_stx_air_cylinders(const stx_air_handle_t* h) {
+    if (!h) return 0;
+    int hoechste = -1;
+    for (int c = 0; c < STX_MAX_TRACKS; c++)
+        for (int s = 0; s < STX_MAX_SIDES; s++)
+            if (h->track_present[c][s] && c > hoechste) hoechste = c;
+    return hoechste + 1;
+}
+
+static const stx_air_track_t* air_track(const stx_air_handle_t* h,
+                                        int cyl, int head) {
+    if (!h || cyl < 0 || head < 0) return NULL;
+    if (cyl >= STX_MAX_TRACKS || head >= STX_MAX_SIDES) return NULL;
+    if (!h->track_present[cyl][head]) return NULL;
+    return &h->tracks[cyl][head];
+}
+
+bool uft_stx_air_track_present(const stx_air_handle_t* h, int cyl, int head) {
+    return air_track(h, cyl, head) != NULL;
+}
+
+int uft_stx_air_track_stored(const stx_air_handle_t* h, int cyl, int head) {
+    const stx_air_track_t* tr = air_track(h, cyl, head);
+    if (!tr) return 0;
+    /* MF-854: gezaehlt wird, was WIRKLICH dasteht — nicht die
+     * angekuendigte Zahl und auch nicht die Klemme. Ein Sektor ohne
+     * Daten ist keiner; `stx_air_parse()` nullt die Struktur vorher. */
+    int n = 0;
+    for (int i = 0; i < STX_MAX_SECTORS; i++)
+        if (tr->sectors[i].sector_data) n++;
+    return n;
+}
+
+int uft_stx_air_track_announced(const stx_air_handle_t* h, int cyl, int head) {
+    const stx_air_track_t* tr = air_track(h, cyl, head);
+    return tr ? (int)tr->sector_count : 0;
+}
+
+bool uft_stx_air_sector(const stx_air_handle_t* h, int cyl, int head,
+                        int idx, uft_stx_sector_view_t* out) {
+    const stx_air_track_t* tr = air_track(h, cyl, head);
+    if (!tr || !out || idx < 0 || idx >= STX_MAX_SECTORS) return false;
+    const stx_air_sector_t* sc = &tr->sectors[idx];
+    if (!sc->sector_data) return false;
+
+    out->data      = sc->sector_data;
+    out->size      = sc->sector_size;
+    out->id_track  = sc->id.track;
+    out->id_side   = sc->id.side;
+    out->id_number = sc->id.number;
+    out->id_size   = sc->id.size;
+    out->deleted   = sc->is_deleted;
+    out->crc_error = sc->has_crc_error;
+    out->rnf       = sc->has_rnf;
+    out->fuzzy     = sc->has_fuzzy;
+    return true;
+}
 
 void stx_air_print_info(const stx_air_disk_t* disk) {
     if (!disk || !disk->valid) {
