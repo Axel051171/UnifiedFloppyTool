@@ -113,51 +113,63 @@ static uft_error_t pro_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/**
+ * MF-880: PRO wird NICHT geschrieben — und sagt das jetzt.
+ *
+ * Hier stand eine Schleife, die Sektoren nach `p->file_data` kopierte
+ * und `UFT_OK` meldete. `p->file_data` ist die SPEICHERKOPIE, die
+ * `pro_open()` mit `uft_read_file()` angelegt hat; ein Pfad oder ein
+ * `FILE*` wird nirgends aufbewahrt, `pro_close()` macht `free()`, und
+ * im ganzen File steht kein `fwrite`, kein `fopen`, kein `fseek`
+ * (gezaehlt: 0). Die Plugin-Struktur hat kein `.flush`.
+ *
+ * Jeder Schreibvorgang auf ein PRO-Abbild wurde also still verworfen,
+ * und der Aufrufer bekam Erfolg gemeldet. Das ist woertlich die Klasse,
+ * die MF-522 an D64/D81 behoben hat: „Eine Erfolgsmeldung ohne Tat ist
+ * in einem forensischen Werkzeug schlimmer als ein Fehler."
+ *
+ * WARUM HIER KEIN ECHTER SCHREIBER STEHT
+ *
+ * Die EINFRIER-REGEL (MF-363/498) verlangt eine benannte Referenz, jede
+ * Zahl gemessen, die Referenz im Header. Fuer PRO ist im Baum nichts
+ * davon vorhanden:
+ *
+ *   - diese Datei nennt keine Quelle
+ *   - im Korpus liegt kein PRO-Abbild
+ *   - `PRO_MAX_TRACKS` ist hier 77 und in `uft_pro_parser_v2.c` 80 —
+ *     ein unaufgeloester Widerspruch
+ *   - der Kopfkommentar sagt „Tracks and SPT from header bytes 4-5",
+ *     `pro_open()` liest `raw[7]` und `raw[6]`
+ *
+ * Einen Schreiber gegen diese Lage zu bauen waere die Wette der fuenf
+ * fabrizierten Parser (ARCH-25/MF-509). Die Zusage wahr zu machen ist
+ * der kleinere und richtige Schritt; die Merkmalstabelle unten sagt
+ * seither dasselbe wie dieser Rumpf.
+ *
+ * Die Koordinatenpruefung aus MF-529 bleibt vor der Ablehnung stehen:
+ * ein Aufrufer, der mit -1 kommt, hat einen anderen Fehler als einer,
+ * der ein nicht schreibbares Format beschreiben will, und die beiden
+ * duerfen nicht dieselbe Antwort bekommen.
+ */
 static uft_error_t pro_write_track(uft_disk_t *disk, int cyl, int head,
                                     const uft_track_t *track) {
-    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+    (void)track;
     if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
     pro_pd_t *p = disk->plugin_data;
     if (!p || !p->file_data || head != 0) return UFT_ERROR_INVALID_STATE;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    uint32_t total_secs = (uint32_t)p->tracks * p->spt;
-    size_t table_size = total_secs * 4;
-    size_t data_start = PRO_HEADER_SIZE + table_size;
-
-    for (int s = 0; s < p->spt; s++) {
-        uint32_t sec_idx = (uint32_t)cyl * p->spt + s;
-        if (sec_idx >= total_secs) break;
-
-        size_t sec_data = data_start + (size_t)sec_idx * PRO_SECTOR_SIZE;
-        if (sec_data + PRO_SECTOR_SIZE > p->file_size) break;
-
-        /* Find matching sector in input track */
-        for (size_t ts = 0; ts < track->sector_count; ts++) {
-            if (track->sectors[ts].id.sector == (uint8_t)s) {
-                const uint8_t *src = track->sectors[ts].data;
-                if (src && track->sectors[ts].data_len >= PRO_SECTOR_SIZE)
-                    memcpy(p->file_data + sec_data, src, PRO_SECTOR_SIZE);
-                break;
-            }
-        }
-    }
-    return UFT_OK;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_pro_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    /* MF-880: stand auf SUPPORTED, waehrend write_track in eine
+     * Speicherkopie schrieb, die close() verwirft. Siehe den Kommentar
+     * bei pro_write_track(). */
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "PRO wird nur gelesen. Fuer einen Schreiber fehlen im Baum die "
+      "benannte Referenz und ein Pruefabbild (EINFRIER-REGEL MF-498)." },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -168,7 +180,12 @@ static const uft_plugin_feature_t uft_format_plugin_pro_features[] = {
 const uft_format_plugin_t uft_format_plugin_pro = {
     .name = "PRO", .description = "Atari 8-bit Protected (APE Pro)",
     .extensions = "pro;atx", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_WEAK_BITS | UFT_FORMAT_CAP_VERIFY,
+    /* MF-880: UFT_FORMAT_CAP_WRITE entfernt. Es war die DRITTE Stelle,
+     * die Schreiben behauptete — neben der Merkmalstabelle und dem
+     * `UFT_OK` aus `pro_write_track()`. `write_track` bleibt gesetzt und
+     * antwortet UFT_ERROR_NOT_SUPPORTED: ein NULL-Zeiger gaebe dem
+     * Aufrufer keine Begruendung, diese Antwort schon. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WEAK_BITS | UFT_FORMAT_CAP_VERIFY,
     .probe = pro_plugin_probe, .open = pro_open,
     .close = pro_close, .read_track = pro_read_track,
     .write_track = pro_write_track,

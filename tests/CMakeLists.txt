@@ -425,6 +425,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_pro_schreibt_nicht")
+        # MF-880: pro_write_track meldete UFT_OK, ohne dass ein Byte die
+        # Platte erreichte — im ganzen File steht kein fwrite.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/uft_pro_plugin.c)
     elseif(${test_name} STREQUAL "test_d64_fehlerbytes")
         # MF-876: der EINZIGE erreichbare Schutzerkenner pruefte drei
         # Heuristiken, davon eine mit 1/256 Trefferquote auf Zufall.
