@@ -430,23 +430,136 @@ void DiskAnalyzerWindow::updateDiskView()
     renderDisk(ui->frameDisk1, 1);
 }
 
+/**
+ * Was WIRKLICH auf der Spur liegt — und was dieses Format nicht sagen kann.
+ *
+ * ── Was hier stand (MF-890) ──────────────────────────────────────────────
+ *
+ * Der ganze Bericht war eine feste Zeichenkette. Eingesetzt wurden GENAU
+ * drei Werte: Sektor, Spur, Seite. Alles andere stand fuer jede Spur jeder
+ * Diskette gleich da:
+ *
+ *     Data checksum: 0x5600 (OK)
+ *     Head CRC: 0x3FFF (BAD CRC!)
+ *     Data CRC: 0xFFFF (BAD CRC!)
+ *     Start sector cell: 95821   ... Number of cells: 4896
+ *
+ * Zwei erfundene CRC-FEHLER und vier erfundene Zellpositionen. Und der
+ * Text ging woertlich in den Bericht: `onExportClicked()` schreibt
+ * `ui->textSectorInfo->toPlainText()` unter „Current Sector" in die HTML-
+ * UND die Textfassung. Das war kein Anzeigefehler, sondern ein falscher
+ * Befund in einem ausgelieferten Dokument.
+ *
+ * ── Warum hier keine CRC-Zeile fuer jedes Format steht ───────────────────
+ *
+ * Gemessen am Korpus-Abbild ueber den echten Plugin-Pfad:
+ *
+ *     D64, Zylinder 0: 21 Sektoren, C=0 H=0 N=1, je 256 Byte
+ *     crc_ok = 1,  crc_stored = 0x0,  crc_calculated = 0x0
+ *
+ * Das Plugin setzt `crc_ok` auf wahr, OHNE dass eine Pruefsumme existiert
+ * — ein D64 ist ein Sektorabbild und traegt keine. „Data CRC: OK" waere
+ * dort dieselbe Erfindung wie „BAD CRC!", nur in die andere Richtung.
+ * Genannt werden CRC-Werte darum nur, wenn das Plugin welche geliefert
+ * hat; sonst steht da, dass dieses Format keine fuehrt.
+ *
+ * Die Zellpositionen (`Start sector cell`, `Number of cells`) sind
+ * Fluss-Groessen. Ein Sektorabbild kennt sie nicht, und der Weg hierher
+ * liefert sie nicht — sie sind ersatzlos weg statt gefuellt.
+ */
 void DiskAnalyzerWindow::updateSectorInfo(int track, int side, int sector)
 {
-    QString info = QString(
-        "MFM Sector\n"
-        "Sector ID: %1\n"
-        "Track ID: %2 - Side ID: %3\n"
-        "Size: 00256 (ID: 0x01)\n"
-        "Data checksum: 0x5600 (OK)\n"
-        "Head CRC: 0x3FFF (BAD CRC!)\n"
-        "Data CRC: 0xFFFF (BAD CRC!)\n"
-        "Start sector cell: 95821\n"
-        "Start sector Data cell: 96525\n"
-        "End sector cell: 200\n"
-        "Number of cells: 4896"
-    ).arg(sector).arg(track).arg(side);
-    
-    ui->textSectorInfo->setPlainText(info);
+    Q_UNUSED(sector);   /* der Bericht zeigt die ganze Spur, nicht einen Sektor */
+
+    if (m_currentFile.isEmpty()) {
+        ui->textSectorInfo->setPlainText(tr("Kein Abbild geladen."));
+        return;
+    }
+
+    uft_disk_t *disk = uft_disk_open(m_currentFile.toUtf8().constData(), true);
+    if (!disk) {
+        ui->textSectorInfo->setPlainText(
+            tr("Spur %1, Seite %2\n\n"
+               "Nicht lesbar: kein Plugin konnte dieses Abbild oeffnen.")
+                .arg(track).arg(side));
+        return;
+    }
+
+    const uft_format_plugin_t *pl = uft_disk_plugin(disk);
+    if (!pl || !pl->read_track) {
+        ui->textSectorInfo->setPlainText(
+            tr("Spur %1, Seite %2\n\n"
+               "Das Plugin \"%3\" liest keine ganzen Spuren; ueber die "
+               "Sektoren dieser Spur ist hier nichts bekannt.")
+                .arg(track).arg(side)
+                .arg(pl && pl->name ? QString::fromUtf8(pl->name)
+                                    : tr("(unbenannt)")));
+        uft_disk_close(disk);
+        return;
+    }
+
+    uft_track_t spur;
+    memset(&spur, 0, sizeof(spur));
+    const uft_error_t rc = pl->read_track(disk, track, side, &spur);
+
+    QStringList z;
+    z << tr("Spur %1, Seite %2   (Plugin: %3)")
+             .arg(track).arg(side)
+             .arg(pl->name ? QString::fromUtf8(pl->name) : tr("(unbenannt)"));
+    z << QString();
+
+    if (rc != UFT_OK) {
+        z << tr("Nicht lesbar (Fehler %1).").arg(static_cast<int>(rc));
+    } else if (spur.sector_count == 0) {
+        z << tr("Keine Sektoren gefunden.");
+        z << tr("Das ist eine Beobachtung, keine Diagnose: eine leere Spur "
+                "und eine nicht dekodierbare sehen hier gleich aus.");
+    } else {
+        z << tr("%1 Sektoren gefunden.").arg(spur.sector_count);
+        z << QString();
+
+        bool crc_gemeldet = false;
+        for (size_t i = 0; i < spur.sector_count; i++) {
+            const uft_sector_t *s = &spur.sectors[i];
+            if (s->crc_stored != 0 || s->crc_calculated != 0)
+                crc_gemeldet = true;
+
+            QStringList merkmale;
+            if (s->deleted) merkmale << tr("geloescht-Marke");
+            if (s->weak)    merkmale << tr("schwache Bits");
+
+            z << tr("  Sektor %1   C=%2 H=%3 N=%4   %5 Byte%6")
+                     .arg(s->id.sector, 3)
+                     .arg(s->id.cylinder).arg(s->id.head).arg(s->id.size_code)
+                     .arg(s->data_len, 5)
+                     .arg(merkmale.isEmpty() ? QString()
+                                             : "   " + merkmale.join(", "));
+        }
+
+        z << QString();
+        if (crc_gemeldet) {
+            z << tr("Pruefsummen:");
+            for (size_t i = 0; i < spur.sector_count; i++) {
+                const uft_sector_t *s = &spur.sectors[i];
+                if (s->crc_stored == 0 && s->crc_calculated == 0) continue;
+                z << tr("  Sektor %1   gespeichert 0x%2   gerechnet 0x%3   %4")
+                         .arg(s->id.sector, 3)
+                         .arg(s->crc_stored, 4, 16, QChar('0'))
+                         .arg(s->crc_calculated, 4, 16, QChar('0'))
+                         .arg(s->crc_ok ? tr("stimmt") : tr("weicht ab"));
+            }
+        } else {
+            z << tr("Keine Pruefsumme: dieses Format speichert keine, und "
+                    "das Plugin hat keine gemeldet. Ein Urteil \"gut\" oder "
+                    "\"fehlerhaft\" waere hier erfunden.");
+        }
+    }
+
+    for (size_t i = 0; i < spur.sector_count; i++) free(spur.sectors[i].data);
+    free(spur.sectors);
+    uft_disk_close(disk);
+
+    ui->textSectorInfo->setPlainText(z.join("\n"));
 }
 
 void DiskAnalyzerWindow::updateHexDump(const QByteArray &data)

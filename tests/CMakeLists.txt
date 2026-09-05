@@ -2996,6 +2996,7 @@ if(TARGET Qt6::Test)
         # Maschine dahinter.
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
            ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR
+           ${qt_test_name} STREQUAL "test_disk_analyzer_no_fiction" OR
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
@@ -3026,6 +3027,19 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
                 target_include_directories(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/hardware_providers)
+            elseif(${qt_test_name} STREQUAL "test_disk_analyzer_no_fiction")
+                # MF-890: der Sektorbericht baute seinen ganzen Inhalt aus
+                # einer festen Zeichenkette - inklusive zweier erfundener
+                # CRC-Fehler, die `onExportClicked()` woertlich in den
+                # HTML- und Textbericht schrieb.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/diskanalyzerwindow.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/diskanalyzer_window.ui
+                    ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp
+                    ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+                    ${CMAKE_SOURCE_DIR}/src/core/uft_disk_metadata.c)
+                target_compile_definitions(${qt_test_name} PRIVATE
+                    UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
                 # MF-576: der Status-Reiter mit der Belegungskarte. Er
                 # bettet ProtectionAnalysisWidget ein, und DecodeJob
