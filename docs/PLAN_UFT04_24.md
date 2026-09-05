@@ -53,6 +53,22 @@ Zulässig bleiben **Nachbau** (Hand B sieht die Quelle nie) und **Oracle**.
 
 ## Phase 1 — Die Signaturkonstanten haben keine Quelle, und ihr Test kann nicht scheitern
 
+> **✅ ERLEDIGT — MF-913.** Der Rotbeweis lief als **Mutation vor dem
+> Eingriff**, weil ein Test, der nicht scheitern kann, sich nicht
+> anders widerlegen lässt: die Konstante durch `{DE,AD,BE,EF,99}`
+> ersetzt — reinen Unsinn — und die Suite blieb **8 von 8 grün**.
+> Nach dem Eingriff fällt dieselbe Mutation **zwei** Prüfungen.
+>
+> Der Test nennt seine Bytes jetzt selbst, und eine eigene Prüfung
+> hält fest: die Konstante muss sein, was der Test erwartet — nicht
+> umgekehrt. Der widerlegte Vermerk „(bit-shifted)“ ist gestrichen.
+>
+> **Keine nibtools-Bytes übernommen** (GPL-3 gegen GPL-2). Was der
+> Kommentar jetzt sagt, ist eine **Beschreibung** des Unterschieds —
+> Folge gegen Menge —, keine Übernahme von Werten. Befund als
+> **P3-187**.
+
+
 **Der schwerste Fund der Runde**, erstgeprüft gegen nibtools im Baum:
 
 | | UFT (`uft_protection_detect.c`) | nibtools `prot.c` (erstgeprüft) |
@@ -172,6 +188,6 @@ dieselbe Überdehnung, die MF-910 an anderer Stelle behoben hat.
 
 | # | Phase | Nutzen | beweisbar heute? |
 |---|---|---|---|
-| 1 | Signaturkonstanten + Test | ein Test, der scheitern **kann** | **ja** |
+| 1 | Signaturkonstanten + Test | ein Test, der scheitern **kann** | **✅ erledigt, MF-913** |
 | 2 | Herkunft der 313 Formate + Torlücke | Lizenzklarheit, und ein Tor, das sieht | **ja** |
 | 3 | `zones_1541`-Vermerk | Ehrlichkeit gegen die eigene Überdehnung | **ja** |

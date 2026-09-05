@@ -25,9 +25,38 @@
  *============================================================================*/
 
 /* V-MAX duplicator markers */
+/* MF-913: DIESE KONSTANTEN HABEN KEINE BENANNTE QUELLE.
+ *
+ * Gemessen, weil ein Bericht sie gegen nibtools halten wollte:
+ *
+ *   - `nibtools/prot.c` prueft fuer V-MAX jedes einzelne Byte gegen eine
+ *     MENGE und verlangt eine Lauflaenge; UFT sucht hier eine exakte
+ *     FOLGE. Das sind zwei verschiedene Verfahren.
+ *   - Von den fuenf Bytes ueberschneidet sich genau EINES mit dem, was
+ *     nibtools prueft.
+ *   - Am Cinemaware-Marker stand "(bit-shifted)". Das ist NACHGERECHNET
+ *     FALSCH: keine der 16 Bitverschiebungen des nibtools-Wertes ergibt
+ *     den hier stehenden. Der Vermerk ist deshalb gestrichen — er
+ *     behauptete eine Herleitung, die es nicht gibt.
+ *
+ * Was daraus NICHT folgt: dass die Werte falsch sind. Sie koennen aus
+ * einer anderen, ungenannten Quelle stammen. Was folgt: **niemand kann
+ * das heute pruefen**, weil keine Quelle dasteht und im Korpus kein
+ * geschuetztes C64-Abbild liegt.
+ *
+ * Warum hier keine nibtools-Bytes stehen: `tools/uft-scout/work/nibtools/
+ * LICENSE` ist GPL-3.0, UFT ist GPL-2. Eine weitere GPL-3-Quelle
+ * aufzunehmen ist laut CONTRIBUTING.md eine eigene
+ * Eigentuemer-Entscheidung, kein erteiltes Praezedenz — MF-635 hat dafuer
+ * schon zwei Dateien entfernt. Zulaessig waeren Nachbau oder Oracle.
+ *
+ * Erreichbarkeit, damit die Schwere stimmt: die ganze
+ * `uft_prot_detect_*`-Familie hat ausser Tests KEINEN Aufrufer
+ * (gemessen ueber `git ls-files`). Kein Benutzer bekommt heute eine
+ * Schutzaussage aus diesen Bytes. */
 const uint8_t UFT_VMAX_MARKERS[5] = {0xA5, 0x1E, 0x78, 0xE1, 0x87};
 
-/* Cinemaware V-MAX marker (bit-shifted) */
+/* Cinemaware V-MAX marker. Herkunft unbekannt — siehe oben. */
 const uint8_t UFT_VMAX_CW_MARKER[4] = {0x4B, 0x3C, 0xF0, 0xC3};
 
 /* PirateSlayer signature v1 */

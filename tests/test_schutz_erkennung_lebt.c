@@ -49,11 +49,39 @@ static int _pass = 0, _fail = 0, _last = 0;
 #define ASSERT(c) do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                        _fail++; return; } } while (0)
 
+/*
+ * MF-913: hier stand
+ *
+ *     memcpy(track + 20, UFT_VMAX_MARKERS, sizeof(UFT_VMAX_MARKERS));
+ *
+ * Der Test baute sein Pruefstueck aus DERSELBEN Konstante, die er
+ * prueft. Er war damit gruen, egal welche Bytes dort stehen — gemessen:
+ * die Konstante durch {DE,AD,BE,EF,99} ersetzt, die Suite blieb 8/8.
+ *
+ * Eine Zusicherung, die dem folgt, was sie zusichern soll, sichert
+ * nichts zu. Der Test nennt seine Bytes jetzt SELBST; wer die Konstante
+ * aendert, faellt hier auf.
+ *
+ * Das macht die Bytes nicht richtig — ihre Herkunft ist unbekannt, siehe
+ * den Vermerk an `UFT_VMAX_MARKERS`. Es macht sie nur FESTGEHALTEN: eine
+ * Aenderung ist ab jetzt sichtbar statt still.
+ */
+static const uint8_t kVmaxErwartet[5] = {0xA5, 0x1E, 0x78, 0xE1, 0x87};
+
+TEST(konstanten_stehen_fest)
+{
+    /* Die Konstante muss sein, was dieser Test erwartet — nicht
+     * umgekehrt. */
+    ASSERT(sizeof(UFT_VMAX_MARKERS) == sizeof(kVmaxErwartet));
+    ASSERT(memcmp(UFT_VMAX_MARKERS, kVmaxErwartet,
+                  sizeof(kVmaxErwartet)) == 0);
+}
+
 TEST(vmax_erkennung)
 {
     uint8_t track[100];
     memset(track, 0x00, sizeof track);
-    memcpy(track + 20, UFT_VMAX_MARKERS, sizeof(UFT_VMAX_MARKERS));
+    memcpy(track + 20, kVmaxErwartet, sizeof(kVmaxErwartet));
 
     uft_protection_result_t result;
     memset(&result, 0, sizeof result);
@@ -196,6 +224,7 @@ int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("=== Schutz-Erkennung: Selbsttests erstmals ausgefuehrt (MF-851) ===\n");
+    RUN(konstanten_stehen_fest);
     RUN(vmax_erkennung);
     RUN(vmax_schweigt_ohne_marke);
     RUN(rapidlok_erkennung);
