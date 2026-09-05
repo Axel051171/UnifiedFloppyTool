@@ -30,9 +30,35 @@ static const uint32_t UFM_GCR_LEGAL =
     (1u << 0x09) | (1u << 0x19) | (1u << 0x1A) | (1u << 0x1B) |
     (1u << 0x0D) | (1u << 0x1D) | (1u << 0x1E) | (1u << 0x15);
 
-/* Standard 1541 zone capacities in bytes (zone 3 = innermost track group 1-17
- * ... zone 0 = 31-35). A VICE-written G64 stores exactly these lengths. */
-static const uint32_t UFM_ZONE_BYTES[4] = { 6250, 6667, 7143, 7692 };
+/* Standard-Spurlaengen der 1541 in Byte, nach Speed-Zone (Zone 3 = Spuren
+ * 1-17 ... Zone 0 = 31-42).
+ *
+ * MF-878: hier stand `{ 6250, 6667, 7143, 7692 }` mit der Zusage „A
+ * VICE-written G64 stores exactly these lengths." Die Zusage war an ihrer
+ * eigenen benannten Quelle falsch. Gemessen an
+ * `tests/corpus_free/vice_c1541_35trk.g64` — einer von VICEs c1541
+ * erzeugten Aufnahme —, Spurlaenge aus dem Kopf jeder Spur gelesen:
+ *
+ *     Spur  1 und 17 -> 7692   (Zone 3)
+ *     Spur 18 und 24 -> 7142   (Zone 2)   <- nicht 7143
+ *     Spur 25 und 30 -> 6666   (Zone 1)   <- nicht 6667
+ *     Spur 31 und 35 -> 6250   (Zone 0)
+ *
+ * 6667 und 7143 sind die aufgerundeten NOMINALWERTE (7142,85 -> 7143), also
+ * gerechnet statt gemessen. Die SSOT des Baums fuehrt seit MF-434 die
+ * gemessenen Werte: `src/formats/cbm/uft_cbm_geometry.c:64`
+ * `capacity_by_speed[4] = { 6250, 6666, 7142, 7692 }`.
+ *
+ * Folge des Fehlers, ehrlich beziffert: `track_length_ratio` wurde fuer
+ * echte Spuren der Zonen 1 und 2 um 1,4e-4 zu klein. Die Schwelle fuer
+ * „lange Spur" liegt bei 1,02 (`ufm_c64_scheme_detect.c:102`), die Anzeige
+ * rundet auf drei Nachkommastellen — es hat sich also NICHTS falsch
+ * verhalten. Falsch war die Aussage, nicht das Verhalten.
+ *
+ * Diese Tabelle bleibt eine Kopie der SSOT; sie zu einem Aufruf von
+ * `uft_cbm_track_capacity()` zusammenzufuehren braucht eine Bindung, die
+ * hier noch nicht liegt (P3-150). */
+static const uint32_t UFM_ZONE_BYTES[4] = { 6250, 6666, 7142, 7692 };
 
 #define UFM_SYNC_MIN_BITS   10   /* 1541 hardware sync: >= 10 one-bits */
 /* nibtools tolerates a 3-byte glitch when calling a track "all sync"

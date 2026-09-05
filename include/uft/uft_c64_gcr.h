@@ -144,7 +144,15 @@ static inline int uft_c64_track_bitrate(int track) {
 static inline int uft_c64_bytes_per_track(int track) {
     int zone = uft_c64_speed_zone(track);
     if (zone < 0) return 0;
-    static const int bytes[] = { 6250, 6667, 7143, 7692 };
+    /* MF-878: hier stand `{ 6250, 6667, 7143, 7692 }` — die aufgerundeten
+     * Nominalwerte. Gemessen an `tests/corpus_free/vice_c1541_35trk.g64`
+     * speichert eine echte, von VICEs c1541 erzeugte G64 6666 und 7142.
+     * Die SSOT des Baums fuehrt dieselben Werte
+     * (`src/formats/cbm/uft_cbm_geometry.c:64`). Diese Funktion hat
+     * ausserhalb ihrer eigenen Definition keinen Aufrufer — die falschen
+     * Zahlen hatten also keine Wirkung, standen aber in einem Header
+     * bereit, sie zu bekommen. */
+    static const int bytes[] = { 6250, 6666, 7142, 7692 };
     return bytes[zone];
 }
 

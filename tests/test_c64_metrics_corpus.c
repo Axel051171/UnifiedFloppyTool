@@ -64,6 +64,75 @@ static uint32_t expected_sectors(int track) {
     return 17;
 }
 
+/**
+ * Die Spurlaengen aus der echten Aufnahme lesen und gegen
+ * `ufm_c64_zone_nominal_bytes()` halten (MF-878).
+ *
+ * G64-Kopf: "GCR-1541" (8) + Version (1) + Eintragszahl (1) +
+ * max. Spurgroesse (2, LE) = 12 Byte. Danach `n` Spur-Offsets zu je
+ * 4 Byte LE; ein Offset 0 heisst „Halbspur nicht vorhanden". Am Offset
+ * steht die tatsaechliche Spurlaenge als 2 Byte LE, dann die GCR-Daten.
+ * Halbspur-Index i gehoert zu Spur (i/2)+1.
+ *
+ * Referenz: docs/format_specs/commodore/G64.TXT (Schepers, Rev. 1.9).
+ */
+static void pruefe_zonen_gegen_die_aufnahme(void) {
+    FILE *f = fopen(img_path(), "rb");
+    if (!f) {
+        printf("\n      uebersprungen: %s nicht lesbar\n      ", img_path());
+        return;
+    }
+    unsigned char kopf[12];
+    if (fread(kopf, 1, sizeof kopf, f) != sizeof kopf ||
+        memcmp(kopf, "GCR-1541", 8) != 0) {
+        printf("\n      uebersprungen: keine GCR-1541-Kennung\n      ");
+        fclose(f);
+        return;
+    }
+    const unsigned n = kopf[9];
+
+    /* Je Zone eine Spur, die sicher darin liegt. */
+    static const struct { int spur; int zone; } PROBE[] = {
+        {  1, 3 }, { 17, 3 }, { 18, 2 }, { 24, 2 },
+        { 25, 1 }, { 30, 1 }, { 31, 0 }, { 35, 0 },
+    };
+    int geprueft = 0;
+    for (size_t k = 0; k < sizeof PROBE / sizeof PROBE[0]; k++) {
+        const unsigned i = (unsigned)(PROBE[k].spur - 1) * 2u;   /* Halbspur */
+        if (i >= n) continue;
+
+        unsigned char b[4];
+        if (fseek(f, 12L + (long)i * 4L, SEEK_SET) != 0 ||
+            fread(b, 1, 4, f) != 4) continue;
+        const unsigned long off = (unsigned long)b[0] | ((unsigned long)b[1] << 8)
+                                | ((unsigned long)b[2] << 16)
+                                | ((unsigned long)b[3] << 24);
+        if (off == 0) continue;
+
+        unsigned char l[2];
+        if (fseek(f, (long)off, SEEK_SET) != 0 ||
+            fread(l, 1, 2, f) != 2) continue;
+        const uint32_t laenge = (uint32_t)l[0] | ((uint32_t)l[1] << 8);
+
+        const uint32_t soll = ufm_c64_zone_nominal_bytes(PROBE[k].zone);
+        if (soll != laenge) {
+            printf("\n      Spur %d (Zone %d): Aufnahme %u Byte, Tabelle %u\n"
+                   "      ", PROBE[k].spur, PROBE[k].zone,
+                   (unsigned)laenge, (unsigned)soll);
+            _fail++;
+            fclose(f);
+            return;
+        }
+        geprueft++;
+    }
+    fclose(f);
+    if (geprueft < 8) {
+        printf("\n      nur %d von 8 Spuren pruefbar — die Aufnahme traegt "
+               "die Messung nicht\n      ", geprueft);
+        _fail++;
+    }
+}
+
 TEST(zone_tables_match_1541_geometry) {
     ASSERT(ufm_c64_zone_for_track(1)  == 3);
     ASSERT(ufm_c64_zone_for_track(17) == 3);
@@ -75,12 +144,17 @@ TEST(zone_tables_match_1541_geometry) {
     ASSERT(ufm_c64_zone_for_track(35) == 0);
     ASSERT(ufm_c64_zone_for_track(0)  == -1);
 
-    /* Pinned against the lengths VICE actually wrote into the G64 */
-    ASSERT(ufm_c64_zone_nominal_bytes(3) == 7692);
-    ASSERT(ufm_c64_zone_nominal_bytes(2) == 7143);
-    ASSERT(ufm_c64_zone_nominal_bytes(1) == 6667);
-    ASSERT(ufm_c64_zone_nominal_bytes(0) == 6250);
+    /* MF-878: hier stand „Pinned against the lengths VICE actually wrote
+     * into the G64" — und darunter 7143 und 6667. VICE hat 7142 und 6666
+     * geschrieben. Der Test benannte die Quelle, der er widersprach, und
+     * hielt damit den Fehler fest, statt ihn zu fangen.
+     *
+     * Jetzt wird die Aufnahme WIRKLICH gelesen: die Sollwerte kommen aus
+     * der Datei, nicht aus dieser Zeile. Eine erneute Drift ist damit
+     * nicht mehr eintippbar. */
     ASSERT(ufm_c64_zone_nominal_bytes(4) == 0);
+    ASSERT(ufm_c64_zone_nominal_bytes(-1) == 0);
+    pruefe_zonen_gegen_die_aufnahme();
 }
 
 TEST(track1_metrics_match_pinned_values) {
