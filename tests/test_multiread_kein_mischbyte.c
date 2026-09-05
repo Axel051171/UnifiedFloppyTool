@@ -49,6 +49,40 @@
  *
  * ── Warum der Test hier steht und nicht im Modul ─────────────────────────
  *
+ * -- Nachtrag MF-884: was diesen Waechter traegt, stand nirgends ---------
+ *
+ * Der Fall unten (`ohne_gueltige_crc_bleibt_das_byte_voting`) laesst das
+ * Byte-Voting im WEAK-Zweig absichtlich stehen, und das ist richtig:
+ * liegt keine CRC-valide Lesung vor, ist die byteweise Mehrheit eine
+ * vertretbare Schaetzung — bei vielen Lesungen eines echt schwachen
+ * Sektors sogar die BESSERE Wiederherstellung als irgendeine einzelne
+ * Lesung, weil sie die stabilen Bits behaelt.
+ *
+ * Gemessen (MF-884) ist dabei aber auch: in dieser Klasse ist die
+ * Ausgabe fast immer eine Bytefolge, die KEINE Lesung geliefert hat --
+ * bei zwei Lesungen ohne CRC in 99,9 % der Faelle, bei drei und vier in
+ * 100,0 % (je 20 000 Zufallslaeufe). Grund: jede abweichende
+ * Byteposition ist dann ein Gleichstand, und `vote_byte()` behaelt
+ * stillschweigend den kleineren Bytewert.
+ *
+ * Dass das folgenlos bleibt, haengt an EINER Kopplung, die bis MF-884
+ * nirgends ausgesprochen war:
+ *
+ *     recovered = (confidence >= min_confidence) && (good_reads > 0)
+ *
+ * In der WEAK-Klasse ist `good_reads` per Definition 0 -- sonst waere es
+ * keine WEAK-Klasse. Also ist `recovered` dort immer false, und beide
+ * Produktionsverbraucher schreiben nur bei `recovered`
+ * (`uft_format_convert_flux.c:190` und `:541`). Das Fabrikat erreicht
+ * das Zielabbild nie.
+ *
+ * Zwei getrennte Regeln -- MF-466 (`good_reads > 0`) und die
+ * Klassendefinition -- ergeben zusammen eine dritte, die niemand
+ * aufgeschrieben hat. Wer MF-466 lockert, macht das Fabrikat still
+ * erreichbar. `wer_recovered_meldet_hat_wirklich_gelesen` unten haelt
+ * genau diese Kopplung fest; gemessen an 2 000 000 Zufallseingaben:
+ * 948 434 mit `recovered`, 380 014 Fabrikate, 0 zugleich.
+ *
  * `uft_multiread_pipeline.c` hat am Dateiende einen `#ifdef
  * UFT_UNIT_TESTS`-Block. Gemessen ueber `git ls-files`: **`UFT_UNIT_TESTS`
  * wird im ganzen Baum nirgends definiert** — der Block wird nie
@@ -260,6 +294,104 @@ TEST(die_mehrheit_gewinnt_nicht_die_erste_lesung)
     multiread_destroy(ctx);
 }
 
+/* -- MF-884 -----------------------------------------------------------
+ *
+ * Die tragende Zusage, erstmals ausgesprochen und geprueft:
+ *
+ *     Meldet `multiread_execute()` `recovered`, dann ist `output` eine
+ *     Bytefolge, die MINDESTENS EINE Lesung wirklich geliefert hat.
+ *
+ * Sie gilt heute, aber nicht weil jemand sie geschrieben haette -- sie
+ * faellt aus zwei anderen Regeln heraus (siehe Dateikopf). Deshalb wird
+ * sie nicht an einem Beispiel geprueft, sondern an einem Streifzug durch
+ * den Eingaberaum: der Fall, der sie bricht, waere genau der, den ein
+ * Beispiel nicht trifft.
+ *
+ * Gegenprobe von Hand (MF-884): faellt in `multiread_execute()` die
+ * Bedingung `good_reads > 0` weg, meldet dieser Test binnen weniger
+ * hundert Runden eine Verletzung. */
+static uint32_t mf884_z = 2463534242u;
+static uint32_t mf884_wurf(void)
+{
+    mf884_z ^= mf884_z << 13;
+    mf884_z ^= mf884_z >> 17;
+    mf884_z ^= mf884_z << 5;
+    return mf884_z & 0x7FFFFFFFu;
+}
+
+TEST(wer_recovered_meldet_hat_wirklich_gelesen)
+{
+    enum { LEN = 12, MAXP = 5, RUNDEN = 20000 };
+    uint8_t eingabe[MAXP][LEN];
+    bool    crc[MAXP];
+
+    long recovered_n = 0, fabrikat_n = 0, verletzt = 0;
+    mf884_z = 2463534242u;                 /* fester Startwert */
+
+    for (int runde = 0; runde < RUNDEN; runde++) {
+        int anzahl = 2 + (int)(mf884_wurf() % (MAXP - 1));
+        /* Kleines Alphabet, damit Uebereinstimmungen ueberhaupt
+         * vorkommen -- mit 256 Werten waere jede Lesung einzigartig. */
+        unsigned alphabet = 2 + mf884_wurf() % 3;
+        for (int i = 0; i < anzahl; i++) {
+            crc[i] = (mf884_wurf() % 100) < 40;
+            for (int k = 0; k < LEN; k++)
+                eingabe[i][k] = (uint8_t)(mf884_wurf() % alphabet);
+        }
+
+        multiread_config_t cfg = multiread_config_default();
+        cfg.min_passes = 1;
+        multiread_ctx_t *ctx = multiread_create(&cfg);
+        ASSERT(ctx != NULL);
+        for (int i = 0; i < anzahl; i++)
+            ASSERT(multiread_add_pass(ctx, eingabe[i], LEN, 100, crc[i])
+                   == MULTIREAD_OK);
+
+        uint8_t out[LEN];
+        multiread_sector_t res;
+        memset(&res, 0, sizeof res);
+        if (multiread_execute(ctx, out, LEN, &res) == MULTIREAD_OK) {
+            bool beobachtet = false;
+            for (int i = 0; i < anzahl; i++)
+                if (memcmp(out, eingabe[i], LEN) == 0) {
+                    beobachtet = true;
+                    break;
+                }
+            if (res.recovered) recovered_n++;
+            if (!beobachtet)   fabrikat_n++;
+
+            if (res.recovered && !beobachtet) {
+                if (verletzt == 0)
+                    printf("\n      Runde %d: recovered=JA, aber die "
+                           "Ausgabe stammt aus KEINER Lesung\n"
+                           "      klasse=%s good_reads=%u conf=%u\n      ",
+                           runde, multiread_class_name(res.class_),
+                           res.good_reads, res.confidence);
+                verletzt++;
+            }
+        }
+        free(res.weak_mask);
+        multiread_destroy(ctx);
+    }
+
+    /* Der Streifzug muss BEIDE Seiten wirklich erreicht haben -- sonst
+     * waere ein gruener Lauf nur ein Lauf, der nichts geprueft hat. */
+    if (recovered_n == 0 || fabrikat_n == 0) {
+        printf("\n      Streifzug untauglich: recovered=%ld, "
+               "Fabrikate=%ld -- beides muss vorkommen\n      ",
+               recovered_n, fabrikat_n);
+        _fail++;
+        return;
+    }
+
+    if (verletzt != 0) {
+        printf("      %ld Verletzung(en) in %d Runden "
+               "(recovered=%ld, Fabrikate=%ld)\n      ",
+               verletzt, RUNDEN, recovered_n, fabrikat_n);
+        _fail++;
+    }
+}
+
 int main(void)
 {
     printf("=== Multi-Read: kein erfundenes Mischbyte (MF-845) ===\n");
@@ -268,6 +400,7 @@ int main(void)
     RUN(ohne_gueltige_crc_bleibt_das_byte_voting);
     RUN(die_kennzahlen_bleiben_gefuellt);
     RUN(die_mehrheit_gewinnt_nicht_die_erste_lesung);
+    RUN(wer_recovered_meldet_hat_wirklich_gelesen);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

@@ -26,7 +26,7 @@ dieser Form nicht ausgeführt werden.
 | 7 | `uft_precomp_track_mac800k` hat keinen Aufrufer | ⚠ **halb falsch** | sie **hat** einen: `uft_write_precomp.c:95`. Verwaist ist der **Moduleingang** `uft_precomp_apply()` — 0 Aufrufer in `src/` |
 | 8 | `flux_raw_reverse()` ist verdrahtet | ✅ zutreffend | `uft_format_convert_flux.c:1048,1076` |
 | 9 | `vote_byte()` mischt Bytes über Lesungen hinweg | ✅ zutreffend | `uft_multiread_pipeline.c:120`, Aufruf `:457` |
-| 10 | …und das landet unverändert im Zielabbild | ⚠ **teilweise behoben** | **MF-845/MF-860** haben den Fall `AMBIGUOUS_GOOD` geschlossen. **Vier andere Klassen nicht** — s. Phase 1 |
+| 10 | …und das landet unverändert im Zielabbild | ❌ **trifft nicht zu** (MF-884 nachgemessen) | Fabriziert wird nur in `WEAK`, und dort ist `good_reads == 0`, also `recovered == false` — beide Verbraucher (`uft_format_convert_flux.c:190`, `:541`) schreiben nur bei `recovered`. MF-466 hält die Tür zu. Meine erste Fassung dieser Zeile nannte vier Klassen und war aus der Lektüre abgeleitet, nicht gemessen |
 | 11 | UFT kennt keine Gruppierung nach Winkelposition | ✅ zutreffend | kein `position`/`angular`/`phantom` in der Fusion außer einem Doxygen-Wort |
 | 12 | `-p` (Taktperiode in Prozent) fehlt | ✅ zutreffend | 0 Treffer für `clock_period_pct`/`period_percent`/`speed_percent` |
 
@@ -52,130 +52,92 @@ keine Messung. Bedingung (a) wäre erfüllt, (b) nicht.
 
 ### Was von den beiden Dokumenten übrig bleibt
 
-Ein einziger Befund berührt **erreichbaren, falschen** Code:
-**Phase 1**. Alles andere ist Doku-Berichtigung, Bestandsaufnahme oder
-Fundus. Das ist kein schlechtes Ergebnis — es heißt, dass die
-Vorgängerarbeit (MF-845/859/860/861) bereits gegriffen hat.
+**Kein Befund berührt erreichbaren, falschen Code.** Beim Schreiben
+dieses Plans war das noch anders gedacht — Phase 1 sollte der eine sein;
+die Messung in MF-884 hat auch das widerlegt (siehe dort). Übrig bleiben
+Doku-Berichtigung, Bestandsaufnahme und Fundus.
+
+Das ist kein schlechtes Ergebnis, sondern das erwartbare: die
+Vorgängerarbeit (MF-466, MF-845, MF-859, MF-860, MF-861) hat genau die
+Stellen bereits geschlossen, auf die beide Zulieferungen zeigen. Beide
+sind gegen einen älteren Stand geschrieben.
 
 ---
 
-## Phase 1 — Vier von fünf Fusionsklassen erzeugen weiterhin Bytefolgen, die nie auf einer Diskette standen
+## Phase 1 — ERLEDIGT (MF-884), und die Prämisse dieses Abschnitts war falsch
 
-**Kennzahl:** keine der vier direkt. Es ist ein **Korrektheits-/
-Forensikbefund auf erreichbarem Produktionscode** — nach der
-Konfliktordnung („Ehrlichkeit vor Vollständigkeit", und Forensik schlägt
-alles) rangiert er vor Kennzahlarbeit. Erlaubt unter EINFRIER als
-**Bugfix an Bestehendem**.
+**Kennzahl:** keine. Das Ergebnis ist eine **ausgesprochene und geprüfte
+Zusage**, kein Fehlerfix — weil es keinen Fehler gab.
 
-### Was gemessen ist
+### Was hier stand, und warum es nicht trug
 
-`multiread_execute()` (`src/recovery/uft_multiread_pipeline.c:590`) ist
-**in Produktion erreichbar**:
+Die erste Fassung dieses Abschnitts behauptete: vier von fünf
+Fusionsklassen erzeugen Bytefolgen, die nie auf einer Diskette standen,
+und das lande über `uft_format_convert_flux.c` im Zielabbild. Das war aus
+der Lektüre **abgeleitet, nicht gemessen** — genau der Fehler, den dieser
+Baum an anderen Stellen dreizehnmal geführt hat. Gemessen ergibt sich ein
+anderes Bild:
 
-```
-src/formats/uft_format_convert_flux.c:181,188   SCP -> D64  (256-B-Sektoren)
-src/formats/uft_format_convert_flux.c:530,539   SCP -> ADF  (512-B-Sektoren)
-```
+| Klasse | fabriziert die Ausgabe? | `recovered` |
+|---|---|---|
+| `STABLE_GOOD` | nein — ein Inhalt, das Voting liefert ihn | ja |
+| `STABLE_BAD_CRC` | **nein** (der Plan sagte ja) | nein |
+| `AMBIGUOUS_GOOD` | nein — MF-845/860 | nein |
+| **`WEAK`** | **ja, in 99,9–100 %** | **nein** |
+| `UNKNOWN` | **nein** (der Plan sagte ja) — `execute()` kehrt mit Fehler zurück, der Puffer bleibt unberührt | — |
 
-Der Ausgabepuffer entsteht in **jedem** Fall aus `vote_buffer()`
-(`:641`), das `output[i] = vote_byte(...)` je Byteposition unabhängig
-setzt (`:457`). Nur **eine** der fünf Klassen bekommt danach eine ganze
-beobachtete Lesung zurückgeschrieben (`:651-681`, MF-845/860):
+**Und das Entscheidende:** `recovered = (confidence >= min_confidence)
+&& (good_reads > 0)`. In der `WEAK`-Klasse ist `good_reads` per
+Definition 0 — sonst wäre es keine `WEAK`-Klasse. Beide
+Produktionsverbraucher schreiben nur bei `recovered`
+(`uft_format_convert_flux.c:190` und `:541`). **Das Fabrikat erreicht das
+Zielabbild nie.** MF-466 hält die Tür zu, seit es sie geschlossen hat.
 
-| Klasse | Ausgabe heute |
-|---|---|
-| `AMBIGUOUS_GOOD` | ✅ ganze beobachtete Lesung (`memcpy` vom populärsten Pass) |
-| `STABLE_GOOD` | byteweise gevotet — bei Einigkeit folgenlos |
-| `STABLE_BAD_CRC` | **byteweise gevotet** |
-| `WEAK` | **byteweise gevotet** |
-| `UNKNOWN` | **byteweise gevotet** |
+Zweitens: `tests/test_multiread_kein_mischbyte.c` bewacht das Byte-Voting
+im `WEAK`-Zweig **ausdrücklich** — „Der Fix darf diesen Zweig NICHT
+anfassen." MF-845 hat das bewusst entschieden, und die Begründung trägt:
+ohne CRC ist die byteweise Mehrheit die beste verfügbare Schätzung, und
+bei einem echt schwachen Sektor mit vielen Lesungen ist sie **besser** als
+jede einzelne Lesung, weil sie die stabilen Bits behält. Der Plan hätte
+das umgestoßen, ohne das Argument zu kennen.
 
-Bei `WEAK`/`STABLE_BAD_CRC` besteht **keine** Lesung ihre CRC. Dann setzt
-`vote_buffer()` `only_crc_ok = false` (`:115-120`), und `vote_byte()`
-stimmt über **alle** Lesungen ab — genau die Lage, für die der Kommentar
-bei `:610-630` das Problem schon beschreibt:
+### Was tatsächlich offen war
 
-```
-Pass A   01 FF 02 FF 03 FF 04 FF
-Pass B   FF 01 FF 02 FF 03 FF 04
-Voting   01 01 02 02 03 03 04 04   <- war auf keiner Diskette
-```
+Die Sicherheit ruht auf einer Kopplung **zweier getrennter Regeln** —
+MF-466 (`good_reads > 0`) und der Klassendefinition —, und die daraus
+folgende dritte Regel stand nirgends:
 
-Der Kommentar nennt das selbst *„für ein Werkzeug mit dem Grundsatz
-‚Keine erfundenen Daten' die schwerste Klasse"* — und die Behebung
-darunter greift nur für `AMBIGUOUS_GOOD`.
+> Meldet `multiread_execute()` `recovered`, dann ist `output` eine
+> Bytefolge, die mindestens eine Lesung wirklich geliefert hat.
 
-**Bei Gleichstand gewinnt der kleinere Bytewert** (`vote_byte:157-161`,
-`counts[v] > max_count` — der erste Höchstwert bleibt stehen). Bei zwei
-Lesungen ohne CRC ist jede Byteposition ein Gleichstand: das Ergebnis ist
-dann systematisch die byteweise Minimum-Folge beider Lesungen.
+Sie wurde an **2 000 000** Zufallseingaben gesucht zu brechen: 948 434
+mit `recovered`, 380 014 Fabrikate, **0** zugleich. Sie hält — aber
+niemand hatte sie aufgeschrieben, und der öffentliche Header sagte zu
+`data` nur „Recovered data".
 
-### Das Referenzverhalten (benannt, nicht erfunden)
+### Was MF-884 liefert
 
-`src/a8rawconv/disk.cpp` — **im Baum vendoriert**, GPL-2.0-or-later,
-Attribution bereits geführt (`docs/QUARANTINE.md:126`). Sein Zweig für
-„keine Kopie besteht die CRC":
+1. **Der Vertrag steht im Header** (`include/uft/recovery/
+   uft_multiread_pipeline.h`): eine Tafel, was `data` je Klasse ist, und
+   die ausdrückliche Zusage an `recovered`.
+2. **Ein Streifzug-Test** in `tests/test_multiread_kein_mischbyte.c`
+   (`wer_recovered_meldet_hat_wirklich_gelesen`), 20 000 Runden mit
+   festem Startwert. Er prüft zusätzlich, dass der Streifzug **beide
+   Seiten erreicht hat** — sonst wäre ein grüner Lauf nur ein Lauf, der
+   nichts geprüft hat.
+3. **Gegenprobe gefahren:** entfällt `good_reads > 0`, meldet der Test
+   625 Verletzungen in 20 000 Runden, erste in Runde 20 — und fällt
+   **nur** diesen einen der sechs Fälle.
 
-```cpp
-for (uint32_t i = 0; i < max_match; ++i)
-    if ((*it)->mData[i] != best_sector->mData[i]) { max_match = i; break; }
-best_sector->mWeakOffset = max_match;
-```
+**Kein Verhalten geändert.** `vote_byte()`, `vote_buffer()` und die
+Klassenlogik sind unverändert.
 
-Also: **längster gemeinsamer Präfix einer echten Lesung**, Rest als „ab
-hier unsicher" markiert — nie eine synthetisierte Folge. Zweite
-unabhängige Quelle, ebenfalls schon im Baum genannt: FluxEngine
-`readerwriter.cc::collectSectors()` markiert zwei abweichende `Sector::OK`
-als `Sector::CONFLICT`.
+### Was daraus für den Rest des Plans folgt
 
-`result->weak_offset` **existiert bereits** (`:632`, gesetzt von
-`classify_passes()`). Das Feld ist da; es wird für die Ausgabe nur nicht
-benutzt.
-
-### Aufgabe
-
-1. **Rotbeweis zuerst.** Ein Test, der `multiread_execute()` mit zwei
-   Lesungen ohne gültige CRC füttert, die sich unterscheiden, und prüft:
-   *der Ausgabepuffer ist byteidentisch mit **einer** der Eingaben.*
-   Gegen den Vorzustand muss er rot sein. Als Datenmuster das Beispiel
-   aus `:614-617` verwenden — es steht bereits im Baum und ist damit
-   keine erfundene Konstruktion.
-   *Muster:* `tests/test_multiread_selbsttests_leben.c` (bestehend).
-2. **Erst danach** die Ausgabe für `WEAK`, `STABLE_BAD_CRC` und
-   `UNKNOWN` auf denselben Weg wie `AMBIGUOUS_GOOD` bringen: ganze
-   beobachtete Lesung über `multiread_popular_pass()` (existiert,
-   `:667`), plus `weak_offset` als Präfixgrenze setzen.
-3. Die Fälle, in denen der Bezugspass **kürzer** ist als der
-   Ausgabepuffer, so behandeln wie MF-845 es für `AMBIGUOUS_GOOD` schon
-   tut (`:679-681`: dann bleibt es beim Voting, und die Klasse meldet den
-   Fall) — **keine** neue Sonderregel erfinden.
-4. `docs/DESIGN_PRINCIPLES.md` NICHT ändern (geschützte Datei). Wenn ein
-   Prinzip berührt scheint: STOPP und fragen.
-
-### Abnahme
-
-- [ ] Rotbeweis war rot gegen den Vorzustand, Ausgabe im Commit zitiert
-- [ ] `ctest` vollständig grün (heute 345/345)
-- [ ] `check_consistency.py` alle Tore 0
-- [ ] Gegenprobe: mindestens eine Mutation je geänderter Klasse fällt
-      genau die zugehörige Prüfung
-- [ ] Der Kommentar bei `:610-630` ist nachgezogen — er sagt heute, das
-      Problem sei „die schwerste Klasse", und beschreibt eine Behebung,
-      die nur für eine von fünf Klassen gilt
-
-### Anti-Muster
-
-- ❌ **Nicht** `vote_byte()` löschen. Es liefert weiterhin Konfidenz und
-  Weak-Maske, und die kommen aus den Lesungen (`:636-639` sagt das
-  ausdrücklich). Nur seine **Byte-Ausgabe** ist in diesen Klassen die
-  falsche Antwort.
-- ❌ **Keine** neue Schwelle, kein neuer Prozentwert. Jede Zahl, die
-  nicht aus `a8rawconv`/FluxEngine oder einer Messung stammt, ist eine
-  Erfindung.
-- ❌ **Nicht** Code aus `src/a8rawconv/` kopieren. Es ist
-  GPL-2.0-or-later und als Referenz geführt, nicht als Vorlage. Das
-  Verhalten nachbauen, die Quelle im Header nennen (MF-636: eine
-  Attribution ist eine rechtliche Aussage).
+Die Zulieferung `a8rawconv-full-analysis.md` §2 hatte in der Sache recht
+(UFT mischt Bytes, a8rawconv nie) — aber die Folgerung „das landet
+unverändert im Zielabbild" gilt seit MF-466/845 nicht mehr. Wer den
+Abschnitt weiterverwendet, sollte das mitlesen.
 
 ---
 
@@ -342,14 +304,14 @@ Ohne die wäre der Schalter selbst ungeprüft.
 
 | Phase | Art | Umfang | eigener Commit |
 |---|---|---|---|
-| 1 | Korrektheit/Forensik, erreichbar | mittel — Rotbeweis + 3 Klassen | ja |
+| 1 | ~~Korrektheit~~ → Zusage aussprechen + prüfen | **erledigt (MF-884)** | ja |
 | 2 | Bestandsaufnahme | klein — ein P3-Eintrag | mit 3 zusammen |
 | 3 | Ehrlichkeit | klein | mit 2 zusammen |
 | 4 | Doku-Berichtigung + Rückstand | mittel | ja |
 | 5 | Fundus | klein — ein P3-Eintrag | mit 4 zusammen |
 
-**Phase 1 zuerst und allein.** Sie ist die einzige, die erreichbaren,
-falschen Code berührt; die übrigen sind Buchhaltung und dürfen warten.
+**Phase 1 ist erledigt** — und ihr Ergebnis war, dass sie keinen falschen
+Code berührte. Die übrigen sind Buchhaltung.
 
 ## Was dieser Plan bewusst NICHT enthält
 
@@ -359,3 +321,5 @@ falschen Code berührt; die übrigen sind Buchhaltung und dürfen warten.
 - Einen `-P`- oder `-p`-Schalter (Schalter ohne Wirkung bzw. ohne
   Prüfmöglichkeit)
 - Jede Änderung an `multiread_pass_t` (ABI, Eigentümer-Entscheidung)
+- Eine Änderung am Byte-Voting der `WEAK`-Klasse — MF-845 hat sie
+  begründet abgelehnt, und die Begründung hat MF-884 gemessen bestätigt

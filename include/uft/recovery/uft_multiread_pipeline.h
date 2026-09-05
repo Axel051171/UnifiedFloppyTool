@@ -131,7 +131,33 @@ typedef struct {
     uint8_t     track;              /**< Track number */
     uint8_t     head;               /**< Head (side) */
     uint8_t     sector;             /**< Sector number */
-    uint8_t    *data;               /**< Recovered data */
+    /** Das Ergebnis der Zusammenfuehrung.
+     *
+     *  ACHTUNG (MF-884) — das ist NICHT in jedem Fall eine Bytefolge, die
+     *  eine Lesung wirklich geliefert hat:
+     *
+     *  | Klasse             | Inhalt von @ref data                       |
+     *  |--------------------|--------------------------------------------|
+     *  | STABLE_GOOD        | die (einzige) beobachtete Bytefolge        |
+     *  | STABLE_BAD_CRC     | die (einzige) beobachtete Bytefolge        |
+     *  | AMBIGUOUS_GOOD     | eine GANZE beobachtete Lesung (MF-845/860) |
+     *  | **WEAK**           | **byteweise Mehrheit — meist eine Folge,   |
+     *  |                    | die KEINE Lesung geliefert hat**           |
+     *
+     *  Gemessen (MF-884): bei zwei Lesungen ohne gueltige CRC ist die
+     *  WEAK-Ausgabe in 99,9 % der Faelle eine solche Folge, bei drei und
+     *  vier in 100,0 %. Das ist Absicht und kein Fehler — ohne CRC ist die
+     *  byteweise Mehrheit die beste verfuegbare Schaetzung, und bei einem
+     *  echt schwachen Sektor mit vielen Lesungen ist sie besser als jede
+     *  einzelne Lesung. Aber sie ist eine SCHAETZUNG.
+     *
+     *  Die Regel dafuer ist @ref recovered: ist es true, stammt @ref data
+     *  garantiert aus mindestens einer echten Lesung. Wer den Puffer in ein
+     *  Abbild schreibt, MUSS darauf pruefen — beide Verbraucher im Baum tun
+     *  das (`src/formats/uft_format_convert_flux.c:190` und `:541`).
+     *  Festgehalten in `tests/test_multiread_kein_mischbyte.c`
+     *  (`wer_recovered_meldet_hat_wirklich_gelesen`). */
+    uint8_t    *data;
     size_t      data_len;           /**< Data length */
     /** Agreement between the passes, 0-100. NOT a statement about the CRC:
      *  reads that all say the same wrong thing reach 100. */
@@ -142,7 +168,17 @@ typedef struct {
      *  verified read. A stable sector with a bad CRC — what a copy protection
      *  writes on purpose — is returned in @ref data but is NOT recovered
      *  (MF-466). Check `good_reads == 0 && confidence` high to tell that case
-     *  from a genuinely uncertain one. */
+     *  from a genuinely uncertain one.
+     *
+     *  MF-884 — die zweite, bis dahin unausgesprochene Zusage dieses
+     *  Feldes: ist es true, ist @ref data eine WIRKLICH GELESENE
+     *  Bytefolge. Das faellt heute aus zwei anderen Regeln heraus
+     *  (`good_reads > 0` hier, und in der WEAK-Klasse ist `good_reads`
+     *  per Definition 0), nicht aus einer eigenen. Wer die Bedingung
+     *  oben lockert, macht die byteweise Schaetzung still schreibbar —
+     *  der Streifzug-Test in `test_multiread_kein_mischbyte.c` faengt
+     *  genau das (gemessen: 625 Verletzungen in 20 000 Runden, sobald
+     *  `good_reads > 0` entfaellt). */
     bool        recovered;
     bool        has_weak_bits;      /**< Passes disagreed somewhere */
     uint8_t    *weak_mask;          /**< Weak bit mask (optional) */
