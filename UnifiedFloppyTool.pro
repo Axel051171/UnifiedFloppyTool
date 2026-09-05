@@ -1065,6 +1065,7 @@ SOURCES += \
     src/formats/ipf/uft_ipf_caps.c \
     src/formats/ipf/uft_ipf_ctraw_v2.c \
     src/formats/ipf/uft_ipf_air.c \
+    src/formats/ipf/uft_ipf_helper.c \
     src/formats/jv/uft_jv_parser_v2.c \
     src/formats/msa/uft_msa.c \
     src/formats/msa/uft_msa_parser_v2.c \

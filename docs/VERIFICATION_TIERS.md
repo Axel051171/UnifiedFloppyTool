@@ -83,7 +83,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
-| `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_plugin_probe_real` | — | — | — |
+| `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_ipf_helper`, `test_plugin_probe_real` | — | — | — |
 | `jv1` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `jv3` | **T3** | — | — | — | — |
 | `kfx` | **T3** | — | — | — | — |

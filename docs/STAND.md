@@ -2,7 +2,7 @@
 
 **NICHT von Hand editieren** — erzeugt von `scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im Baum und wird bei jedem Lauf neu gelesen.
 
-Stand: 2026-09-05
+Stand: 2026-09-06
 
 ---
 
@@ -25,7 +25,7 @@ Stand: 2026-09-05
 - **6** Port-Erklärungen im Quellkopf, davon **1** ohne SPDX-Kopf
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
-- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **186**
+- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **187**
 - Quarantäne: 1 vollzogen, 7 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
@@ -41,7 +41,7 @@ Stand: 2026-09-05
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **7524** Zeilen in **82** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **7525** Zeilen in **82** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)

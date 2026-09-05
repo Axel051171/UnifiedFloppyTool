@@ -1783,6 +1783,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
@@ -1826,6 +1827,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
@@ -2109,6 +2111,13 @@ foreach(test_source ${TEST_SOURCES})
         # Include Amiga virus signature DB source directly
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/fs/uft_amiga_virus_db.c)
+    elseif(${test_name} STREQUAL "test_ipf_helper")
+        # MF-917: die Prozessgrenze fuer IPF (Weg 3, QUARANTINE_PROCESS
+        # §5). Braucht NUR den Helfer-Baustein — bewusst nicht das
+        # Plugin und nicht den AIR-Parser: was hier gemessen wird, ist
+        # UFTs Seite der Grenze, nichts dahinter.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c)
     elseif(${test_name} STREQUAL "test_ipf_air_accessors")
         # Include IPF AIR parser source directly (TUs-private types stay
         # encapsulated; the test exercises the opaque-handle API).

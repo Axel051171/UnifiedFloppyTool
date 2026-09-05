@@ -57,13 +57,55 @@ der Fälle eine Fähigkeit kostet.
 
 | Datei | Zeilen | Verdacht (Beleg im **eigenen** Kopf) | Fähigkeit | Weg | Oracle |
 |---|---|---|---|---|---|
-| `src/formats/ipf/uft_ipf_air.c` | 975 | „**Full port** of AIR `IPFReader.cs`/`IPFStruct.cs`/`IPFWriter.cs` to C. Original: © 2014 Jean Louis-Guerin (**GPL-3.0**)" | **IPF-Lesen** — das Plugin ruft `ipf_air_alloc` (`:70`), `_free` (`:78`), `_get_geometry` (`:85`), `_get_track_meta` (`:135`); keine statischen Gleichnamen | **3** (capsimg als Helper) oder 2 | capsimg — Lizenz ungeprüft |
+| `src/formats/ipf/uft_ipf_air.c` | 975 | „**Full port** of AIR `IPFReader.cs`/`IPFStruct.cs`/`IPFWriter.cs` to C. Original: © 2014 Jean Louis-Guerin (**GPL-3.0**)" | **IPF-Lesen** — das Plugin ruft `ipf_air_alloc` (`:70`), `_free` (`:78`), `_get_geometry` (`:85`), `_get_track_meta` (`:135`); keine statischen Gleichnamen | **3** — entschieden, Register unten (MF-917) | capsimg — Lizenz **gemessen** (SPS DECODER LIBRARY v1.02, GPL-**un**vereinbar): Helfer über Prozessgrenze, nie Oracle im Baum |
 | `src/formats/kfx/uft_kfstream_air.c` | 908 | „Full port of AIR `KFReader.cs` to C. © 2013-2015 SPS & Jean Louis-Guerin (**GPL-3.0**)" | **keine** — 0 Aufrufer, steht in `orphan_baseline.txt` | 2 | KryoFlux DTC |
 | `src/formats/stx/uft_stx_air.c` | 914 | „Full port of AIR `PastiRead.cs`/`PastiStruct.cs`/`PastiWrite.cs` to C. © 2014 Jean Louis-Guerin (**GPL-3.0**)" | **keine** — 0 Aufrufer, steht in `orphan_baseline.txt` | 2 | Pasti-Spec liegt (T2-Quelle) |
 | `src/formats/amiga/uft_amiga_protection.c` | 766 | „C99 **port** of XCopy Pro (1989-2011) 68000 Assembly algorithms", `:47` „Port of `ROL.L #1,D0`" — **keine Lizenz genannt** | **keine** — 0 Produktions-Aufrufer, 1 Test | **entfernen** — MF-744: die Lizenz liegt vor und gestattet **keine Bearbeitung** . **BERICHTIGT MF-746:** ein Bearbeitungsrecht gibt es sehr wohl — `Readme 2011` sagt „You are welcome to enhance it or develop further versions". Es ist aber an „**just keep it free (don't sell it)**" geknüpft, und die Lizenz daneben verbietet kommerzielle und behördliche Nutzung. Ein Verkaufsvorbehalt ist eine zusätzliche Beschränkung im Sinne von GPL §6 — damit **GPL-inkompatibel**, keine Rechtsverletzung. Kein Nachbau: die Fakten sind zu 1 von 4 belegt und 2 widerlegt (MF-740). | entfällt |
 | `src/analysis/uft_track_analysis.c` + `.h` | 1050 | „Universal track analysis algorithms **derived from** XCopy Pro (1989-2011)“ — **keine Lizenz genannt**. Nachgetragen MF-741: der Idiom-Test (MF-696) belegt **dieselbe** Ableitung wie die Zeile darueber — **zwoelf** Bezeichner kommen in genau diesen beiden Dateien vor und in **keiner** der uebrigen 715 (`detect_breakpoints`, `has_breakpoints`, `gap_sector_index`, `unique_lengths`, `rol32`, …). „Breakpoint“ ist die Uebersetzung von „Bruchstelle“ aus dem Original-Assembly-Kommentar. Die Textaehnlichkeit betraegt **1,8 %** und haette Entwarnung bedeutet. | **keine** — 20 Exporte, 0 Aufrufer ausserhalb; steht aber im Gegensatz zur Zeile darueber **noch im qmake-Bau** (`.pro:1219`) | 2 | fehlt — und die Fakten selbst sind unbelegt (MF-740) |
 | `include/uft/formats/supercopy_formats.h` + `src/formats/cpm/uft_supercopy_detect.c` | 851 | „**SuperCopy v3.40 SELECT.DAT** — CP/M-Format-Datenbank … 313 CP/M-Diskettenformate **aus dem SuperCopy-Kopierprogramm** (1991) … Quelle: SuperCopy v3.40 von Oliver Müller“ — **keine Lizenz genannt, kein SPDX in beiden Dateien**. Es ist keine Portierung von Code, sondern eine **extrahierte Datentabelle** aus einer fremden Anwendung; ob die Sammlung von Geometrieparametern eine eigene Schutzfähigkeit hat, ist ungeprüft. Gefunden MF-914, nachdem das Herkunfts-Tor um `quelle:` erweitert wurde — vorher war die Datei für das Tor **unsichtbar** | **keine** — alle fünf Exporte (`sc_detect_by_geometry`, `sc_detect_refine`, `sc_get_stats`, `sc_detect_print`, `sc_iterate_by_density`) haben **0 Aufrufer** außerhalb der eigenen Datei; die Datei steht aber im qmake-Bau | **1** (Rehabilitierung) prüfen: sind reine Geometrieparameter überhaupt schöpferisch? Sonst **2** | `cpmtools` diskdefs — selbst noch ungemessen (`LIZ-1`) |
 | `src/formats/ipf/uft_caps_ipf.c` | 790 | „**Based on SPS CAPS Library** (Software Preservation Society)" — **kein SPDX-Bezeichner, keine Lizenzangabe, keine Fundstelle** (nachgemessen MF-815: `grep -c SPDX` = 0). Die CAPS-Bibliothek der SPS ist **proprietär und quellgeschlossen**; das IPF-Format ist unveröffentlicht, und die SPS behält sich die Erzeugung von IPF-Dateien vor. „Based on" ist bei einer solchen Quelle keine Fußnote, sondern eine Aussage über **Verteilbarkeit** — in einem GPL-Baum, dessen `CONTRIBUTING.md` verlangt, dass portierter Code die Lizenz seiner Herkunft behält und sie benennt | **IPF-Erkennung** — `uft_caps_is_ipf()` (`:400`) wird von `uft_ipf_plugin.c:46` in der Probe gerufen. **Erreichbar**, anders als die drei AIR-Dateien darüber | **offen** — die Datei muss eine von zwei Antworten bekommen: entweder ist sie aus den **öffentlichen** SPS-Headern nachgebaut, dann gehört genau das hin („reimplemented from the public CAPS headers, no library code"), oder sie enthält abgeleiteten Bibliothekscode, dann ist sie **nicht verteilbar**. Der Baum hat zwei Muster, wie die saubere Fassung aussieht: MF-698 (`uft_ipf_air.c`, SPDX + Eigentümer-Entscheidung + Begründung für `-only`) und MF-614 (`uft_dms.c`, `LicenseRef-PublicDomain-xDMS` mit wörtlichem Debian-copyright-Zitat und Upstream-URL) | entfällt — die Frage ist rechtlich, nicht messtechnisch |
+### Register nach MF-699 — `uft_ipf_air.c` (IPF-Lesen)
+
+> **Aufgestellt MF-917.** Die Zeile oben stand seit MF-638 mit dem Feld
+> „Weg **3** oder 2" und „Lizenz ungeprüft" — also ohne Entscheidung.
+> §5 nennt das ausdrücklich keinen Ausgang: „Bloßes Liegenlassen ist
+> kein Weg X."
+
+| Pflichtfeld | Inhalt |
+|---|---|
+| **Nachbau-Route** | **Weg 3** — Helfer über Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt: das IPF-Format ist **bewusst** undokumentiert, die SPS behält sich seine Erzeugung vor. Weg 1 scheidet aus, weil die Datei sich im eigenen Kopf als „Full port" erklärt |
+| **Oracle-Kandidat** | `capsimg` selbst — in **Doppelrolle**: Helfer im Betrieb *und* Prüfreferenz für den Datenfluss-Schnitt. **Nie** Teil der Verteilung, nie im Baum |
+| **Kennzahl-Bezug** | **fünfte** Kennzahl (Dateien mit ungeklärter Herkunft). Ein fertiger Helfer macht `uft_ipf_air.c` entbehrlich und schließt die **teuerste** Zeile dieser Liste — die einzige der fünf, die eine Fähigkeit kostet |
+| **Aufwand** | **mittel.** UFT-Seite: **erledigt** (MF-917). Helfer-Seite: offen, aber ohne Dekodierlogik — `capsimg` deutet, der Helfer schreibt nur Index und Beilage |
+
+**Die Lizenz ist jetzt gemessen, nicht geschätzt.** `LICENCE.txt` der
+SPS DECODER LIBRARY v1.02 (Quelle: `simonowen/capsimage`, dort das
+vollständige v5.1-Paket) sagt wörtlich: *„Redistributions may not be
+sold, nor may they be used in a commercial product or activity."* Das
+ist eine **zusätzliche Beschränkung** im Sinne von GPL §6 — dieselbe
+Rechtslage wie bei XCopy Pro (MF-746), also **unvereinbar**, nicht
+verletzt. Folge: kein Einlinken, keine Quelle im Baum, keine
+Auslieferung; der Benutzer installiert den Helfer selbst und stimmt
+dabei der Lizenz der SPS zu.
+
+**Was seit MF-917 im Baum steht** — und was ausdrücklich nicht:
+
+| | |
+|---|---|
+| Vertrag | `docs/specs/capsimg-helper/PROTOCOL.md` (Fassung 1, mit Prüfvektoren H1–H6 für die andere Seite) |
+| UFT-Seite | `src/formats/ipf/uft_ipf_helper.c` + Kopf; **verdrahtet** — `uft_ipf_plugin.c` fragt den Helfer **zuerst** |
+| gemessen | `tests/test_ipf_helper.c`, 8 Prüfungen, **7 von 7 Mutationen fallen an der erwarteten Stelle** |
+| **nicht** im Baum | der Helfer selbst, `capsimg`, irgendein davon abgeleiteter Code |
+| **nicht belegt** | dass ein gegen `capsimg` gebauter Helfer diese Antwort erzeugt — auf dieser Maschine liegt kein `capsimg` (gemessen: `which capsimg` leer, keine `CAPSImg.dll`). Offen als **P3-190** |
+
+**Die Reihenfolge bleibt die von MF-699:** erst der Ersatz, dann die
+Löschung. `uft_ipf_air.c` bleibt der Rückfall, solange kein Helfer
+eingerichtet ist — aber wer einen einrichtet, bekommt ihn nie mehr zu
+sehen. Damit ist die ausgelieferte Fähigkeit dieselbe wie vorher, und
+der legale Weg ist **ab sofort** benutzbar statt nur beschrieben.
+
+---
+
 **Audit-Stand aller fünf: portiert** — bei den drei AIR-Dateien ohne
 jedes Ähnlichkeitsaudit, weil sie sich **selbst** als „Full port"
 erklären und die Lizenz im eigenen Kopf nennen. Bei XCopy Pro nach §4

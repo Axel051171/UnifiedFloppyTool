@@ -23,6 +23,7 @@
 #include "uft/uft_format_common.h"
 #include "uft/profiles/uft_ipf_format.h"
 #include "uft/formats/ipf/uft_ipf_air.h"
+#include "uft/formats/ipf/uft_ipf_helper.h"
 #include "uft/uft_log.h"
 
 extern bool uft_caps_is_ipf(const uint8_t *data, size_t size);
@@ -56,7 +57,54 @@ typedef struct {
     size_t          size;
     ipf_air_disk_t *air;      /* parsed handle from ipf_air_parse() */
     uint32_t        primary_platform;
+
+    /* MF-917 — Weg 3 (QUARANTINE_PROCESS §5): wenn ein Helfer
+     * eingerichtet ist, deutet ER die Datei, und `air` bleibt
+     * unbenutzt. `via_helper` sagt, welcher der beiden Wege diese
+     * Sitzung getragen hat — das ist keine Kosmetik: die beiden Wege
+     * haben verschiedene Rechtslagen, und ein Benutzer, der ein
+     * forensisches Ergebnis weitergibt, muss sagen koennen, woher es
+     * kommt. */
+    bool                   via_helper;
+    uft_ipf_helper_reply_t reply;
+    char                   idx_path[512];
+    char                   blob_path[512];
 } ipf_data_t;
+
+/* Verzeichnis fuer die zwei Zwischendateien. Die IPF-Datei selbst wird
+ * NIE angefasst — sie kann auf einem schreibgeschuetzten Traeger
+ * liegen, und der Datenfluss-Schnitt aus §5 verlangt ohnehin, dass die
+ * Quelle bei UFT bleibt. */
+static const char *ipf_tmpdir(void)
+{
+    const char *v;
+    if ((v = getenv("TMPDIR")) && *v) return v;
+    if ((v = getenv("TEMP"))   && *v) return v;
+    if ((v = getenv("TMP"))    && *v) return v;
+#ifdef _WIN32
+    return ".";
+#else
+    return "/tmp";
+#endif
+}
+
+/* Versucht den Helfer. UFT_OK = er hat geantwortet und p->reply steht.
+ * Jeder andere Wert heisst: dieser Weg traegt nicht — der Grund steht
+ * in @p err und wird vom Aufrufer BENANNT weitergegeben, nie
+ * verschluckt. */
+static uft_error_t ipf_try_helper(ipf_data_t *p, const char *path,
+                                  char *err, size_t errcap)
+{
+    static unsigned long lauf = 0;
+    const char *td = ipf_tmpdir();
+    snprintf(p->idx_path,  sizeof p->idx_path,  "%s/uft_ipf_%lu.idx",
+             td, ++lauf);
+    snprintf(p->blob_path, sizeof p->blob_path, "%s/uft_ipf_%lu.bin",
+             td, lauf);
+    return uft_ipf_helper_query(uft_ipf_helper_system_runner(), path,
+                                p->idx_path, p->blob_path,
+                                &p->reply, err, errcap);
+}
 
 static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
     (void)ro;
@@ -68,6 +116,43 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     if (!p) { free(data); return UFT_ERR_MEMORY; }
     p->data = data; p->size = sz;
 
+    /* ── MF-917: zuerst die Prozessgrenze ───────────────────────────
+     *
+     * Ist ein Helfer eingerichtet, deutet er — das ist der legale Weg
+     * (QUARANTINE_PROCESS §5, Weg 3; Lizenzlage in
+     * `uft_ipf_helper.h`). Ist keiner eingerichtet, uebernimmt der
+     * vorhandene Leser, der unter LIZ-2 in Quarantaene vorgemerkt ist.
+     *
+     * Die Reihenfolge ist Absicht und steht in MF-699: "erst der
+     * Ersatz, dann die Loeschung". Solange die Eigentuemer-
+     * Entscheidung ueber `uft_ipf_air.c` offen ist, bleibt er der
+     * Rueckfall — aber wer einen Helfer einrichtet, bekommt ihn nie
+     * mehr zu sehen. */
+    char herr[UFT_IPF_HELPER_ERRLEN] = {0};
+    if (uft_ipf_helper_path() != NULL) {
+        uft_error_t he = ipf_try_helper(p, path, herr, sizeof herr);
+        if (he == UFT_OK) {
+            p->via_helper       = true;
+            p->primary_platform = p->reply.platform;
+            disk->plugin_data   = p;
+            disk->geometry.cylinders = p->reply.cylinders;
+            disk->geometry.heads     = p->reply.heads;
+            disk->geometry.sectors     = 11;
+            disk->geometry.sector_size = 512;
+            disk->geometry.total_sectors =
+                (uint32_t)disk->geometry.cylinders *
+                (uint32_t)disk->geometry.heads *
+                (uint32_t)disk->geometry.sectors;
+            UFT_INFO("IPF ueber Helfer gelesen: %d Spuren, %d/%d",
+                     (int)p->reply.track_count,
+                     disk->geometry.cylinders, disk->geometry.heads);
+            return UFT_OK;
+        }
+        /* Ein eingerichteter Helfer, der nicht traegt, ist ein
+         * Ereignis — nicht etwas, das man still uebergeht. */
+        UFT_WARN("IPF-Helfer nicht verwendbar: %s", herr);
+    }
+
     p->air = ipf_air_alloc();
     if (!p->air) {
         free(data); free(p);
@@ -76,6 +161,18 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
 
     ipf_air_status_t st = ipf_air_parse(data, sz, p->air);
     if (st != IPF_AIR_OK) {
+        /* MF-917: bis hierher stand hier ein stummes
+         * UFT_ERR_FORMAT_INVALID. Der Benutzer sah "Format ungueltig"
+         * und hatte keinen Anhaltspunkt, dass es einen zweiten,
+         * besseren Weg gibt. Jetzt nennt die Meldung ihn — und genau
+         * dieser Satz ist es, der nach einer Entscheidung zu LIZ-2 die
+         * EINZIGE Antwort waere. */
+        UFT_WARN("IPF '%s' nicht lesbar (Parser-Status %d). %s",
+                 path, (int)st,
+                 uft_ipf_helper_path()
+                   ? "Der eingerichtete Helfer trug ebenfalls nicht."
+                   : "IPF erkannt — Inhalt nicht lesbar. Helfer einrichten: "
+                     UFT_IPF_HELPER_ENV "=<pfad>");
         ipf_air_free(p->air);
         free(p->air); free(data); free(p);
         return UFT_ERR_FORMAT_INVALID;
@@ -105,6 +202,13 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
 static void ipf_plugin_close(uft_disk_t *disk) {
     ipf_data_t *p = disk->plugin_data;
     if (!p) return;
+    if (p->via_helper) {
+        uft_ipf_helper_reply_free(&p->reply);
+        /* Die zwei Zwischendateien gehoeren UFT, nicht dem Helfer —
+         * also raeumt UFT sie weg. */
+        if (p->idx_path[0])  remove(p->idx_path);
+        if (p->blob_path[0]) remove(p->blob_path);
+    }
     if (p->air) {
         ipf_air_free(p->air);
         free(p->air);
@@ -124,8 +228,64 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
     ipf_data_t *p = (ipf_data_t *)disk->plugin_data;
-    if (!p || !p->air) return UFT_ERR_INVALID_STATE;
+    if (!p) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, head);
+
+    /* ── MF-917: der Helfer-Weg ─────────────────────────────────────
+     * Dieselben Felder wie unten, dieselbe Ehrlichkeit: was der Helfer
+     * nicht gemeldet hat, wird nicht erfunden. Eine Spur, die er nicht
+     * nennt, gibt es nicht (UFT_ERR_MISSING_SECTOR) — sie wird nicht
+     * als leere Spur ausgegeben. */
+    if (p->via_helper) {
+        const uft_ipf_helper_track_t *ht =
+            uft_ipf_helper_find(&p->reply, cyl, head);
+        if (!ht) return UFT_ERR_MISSING_SECTOR;
+
+        track->encoding = (p->primary_platform == IPF_PLUGIN_PLATFORM_AMIGA)
+            ? UFT_ENC_AMIGA_MFM : UFT_ENC_MFM;
+        track->bitrate               = 500000;
+        track->nominal_bit_rate_kbps = 250.0;
+        track->nominal_rpm           = 300.0;
+        track->avg_bit_cell_ns       = 2000.0;
+        track->raw_bits              = ht->bits;
+
+        if ((ht->flags & IPF_PLUGIN_TF_FUZZY) || ht->fuzzy) {
+            track->status |= (uint32_t)UFT_TRACK_FUZZY |
+                             (uint32_t)UFT_TRACK_PROTECTED;
+            track->copy_protected = true;
+        }
+        if (ht->density >= 3) {
+            track->status |= (uint32_t)UFT_TRACK_PROTECTED;
+            track->copy_protected = true;
+            UFT_INFO("IPF Spur %d/%d: Schutzart laut Datei: %s (Dichte %d)",
+                     cyl, head, ipf_air_density_name(ht->density),
+                     (int)ht->density);
+        }
+
+        uint8_t *buf = NULL; size_t n = 0;
+        char herr[UFT_IPF_HELPER_ERRLEN] = {0};
+        uft_error_t pe = uft_ipf_helper_payload(&p->reply, ht, &buf, &n,
+                                                herr, sizeof herr);
+        if (pe != UFT_OK) {
+            /* Die Nutzdaten fehlen — das wird GESAGT, und die Spur
+             * behaelt ihre Beschreibung. Kein stilles UFT_OK mit
+             * leerem Inhalt. */
+            UFT_WARN("IPF Spur %d/%d: Nutzdaten nicht lesbar: %s",
+                     cyl, head, herr);
+            return pe;
+        }
+        if (buf) {
+            track->raw_data     = buf;
+            track->raw_size     = n;
+            track->raw_len      = n;
+            track->raw_capacity = n;
+            track->owns_data    = true;
+            if (ht->bits == 0) track->raw_bits = (uint32_t)(n * 8u);
+        }
+        return UFT_OK;
+    }
+
+    if (!p->air) return UFT_ERR_INVALID_STATE;
 
     if (!ipf_air_track_present(p->air, cyl, head)) {
         return UFT_ERR_MISSING_SECTOR;
@@ -235,6 +395,12 @@ static const uft_plugin_feature_t ipf_features[] = {
     { "SPS Protection Markers",        UFT_FEATURE_UNSUPPORTED, NULL },
     { "Write / encode",                UFT_FEATURE_UNSUPPORTED,
       "requires closed-source libcapsimage" },
+    /* MF-917 */
+    { "Lesen ueber Helfer-Prozess",    UFT_FEATURE_PARTIAL,
+      "UFT-Seite gebaut und gemessen (Protokoll v1, docs/specs/capsimg-helper/); "
+      "der Helfer selbst ist nicht Teil dieses Baums und muss vom Benutzer "
+      "eingerichtet werden (UFT_IPF_HELPER). Ohne ihn liest der vorhandene "
+      "Parser, der unter LIZ-2 in Quarantaene vorgemerkt ist" },
 };
 
 const uft_format_plugin_t uft_format_plugin_ipf = {
