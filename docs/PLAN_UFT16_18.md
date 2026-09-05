@@ -211,7 +211,43 @@ nicht gehoben werden kann.
 
 ---
 
-## Phase 3 — HFE `write_allowed`: Vermerk statt Verhalten
+## Phase 3 — HFE `write_allowed`: die Polarität war verdreht
+
+> **✅ ERLEDIGT — MF-898. Und der Plan lag hier falsch.**
+>
+> Diese Phase war als „zwei Zeilen Kommentar, kein Verhaltenswechsel“
+> geplant. **Die Messung vor dem Eingriff sagte etwas anderes.** Gemessen
+> an `tests/corpus_free/gw_amigados.hfe`, einer völlig gewöhnlichen, von
+> greaseweazle 1.23 geschriebenen Datei:
+>
+> ```
+> write_allowed                    = 0xFF
+> disk.read_only nach dem Oeffnen  = JA
+> read_metadata("write_protected") = "yes"
+> ```
+>
+> An dieser Diskette ist nichts schreibgeschützt. Das Werkzeug sagte es
+> trotzdem — und sperrte den Schreibpfad gleich mit. **Jede von
+> greaseweazle oder SAMdisk geschriebene HFE** war davon betroffen: beide
+> schreiben 0xFF.
+>
+> Sechs Belege im Baum sagen „0xFF = Schreiben erlaubt“ (der Feldname
+> selbst, zwei Kopfdeklarationen, eine Vorbelegung, `src/samdisk/hfe.cpp:274`,
+> `uft_hfe_parser_v2.c:313`); dagegen stand allein `uft_hfe.c` —
+> ausgerechnet die Datei, die handelt. Dazu widersprach sich UFT selbst:
+> `hfe_create()` schrieb 0x00 mit dem Kommentar „Schreiben erlaubt“,
+> `uft_hfe_header_init()` für denselben Zweck 0xFF.
+>
+> Rotbeweis `tests/test_hfe_write_allowed.c`: **4 von 6 rot**. Gegenprobe
+> 4 Mutationen — darunter zwei, die dieselben Tests an **verschiedenen
+> Zeilen** fällen und damit belegen, dass Schreibschutz-Fahne und
+> Metadaten-Antwort unabhängig festgehalten sind. `ctest` **351/351**,
+> alle Tore 0. Befund als **P3-176**.
+>
+> **Der Bericht UFT-17 hatte recht** — er fand für `write_allowed` keinen
+> Beleg in der Referenz-Implementierung. Falsch war der Schluss, den mein
+> Plan daraus zog: „harmlos, sie schadet nicht“. Sie schadete.
+
 
 `src/formats/hfe/uft_hfe.c:513` setzt `read_only`, wenn
 `write_allowed == 0xFF`. UFT-17 hat Leser **und** Schreiber der
@@ -297,7 +333,7 @@ nicht verfallen (MF-695).
 | # | Phase | Nutzen für den Benutzer | Aufwand | Vorbedingung |
 |---|---|---|---|---|
 | 1 | Phase 2 — HFE Spur-0-Kodierung | behebt einen **stillen Lesefehler**, und einen Schreibfehler dazu | klein–mittel | **✅ erledigt, MF-897** |
-| 2 | Phase 3 — `write_allowed`-Vermerk | Ehrlichkeit | sehr klein | keine |
+| 2 | Phase 3 — `write_allowed` | behebt eine **sichtbare Falschaussage** über jede gw-/SAMdisk-HFE | klein | **✅ erledigt, MF-898** |
 | 3 | Phase 5 — `VENDORED.md` | Ehrlichkeit | sehr klein | keine |
 | 4 | Phase 1 — FAT12-Verzeichnis | **neue sichtbare Fähigkeit** | mittel–groß | **Korpus-Abbild mit Dateien fehlt** |
 

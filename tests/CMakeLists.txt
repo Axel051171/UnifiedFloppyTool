@@ -496,6 +496,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_hfe_v3_weak")
         # HFE v3 weak/fuzzy-bit RAND-opcode detection (MF-354)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+    elseif(${test_name} STREQUAL "test_hfe_write_allowed")
+        # MF-898: `write_allowed` wurde mit VERDREHTER Polaritaet gelesen —
+        # eine gewoehnliche greaseweazle-HFE galt als schreibgeschuetzt.
+        # Der Test braucht das Korpus-Abbild als fremden Zeugen.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_hfe_track0_encoding")
         # MF-897: die vier Spur-0-Kodierungsfelder des HFE-Kopfes wurden in
         # DREI Strukturen eingelesen und in KEINER Verzweigung ausgewertet.

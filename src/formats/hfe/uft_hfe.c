@@ -110,7 +110,9 @@ typedef struct {
     uint8_t     uft_floppy_interface_mode;  // hfe_interface_t
     uint8_t     reserved;               // 0x01
     uint16_t    track_list_offset;      // Offset zur Track-LUT (in Blocks)
-    uint8_t     write_allowed;          // 0xFF = schreibgeschützt
+    /* MF-898: hier stand "0xFF = schreibgeschützt" — die Polaritaet
+     * war VERDREHT. Belege an `hfe_write_erlaubt()` weiter unten. */
+    uint8_t     write_allowed;          // 0x00 = nicht erlaubt, sonst erlaubt
     uint8_t     single_step;            // 0xFF = single step, 0x00 = double
     /* MF-897: hier stand "0xFF = alternate encoding Track 0" — die
      * Polaritaet war UMGEKEHRT, und der Baum widersprach sich selbst:
@@ -170,6 +172,49 @@ static uft_encoding_t hfe_to_uft_encoding(uint8_t hfe_enc) {
         case HFE_ENC_EMU_FM:     return UFT_ENC_FM;
         default:                 return UFT_ENC_UNKNOWN;
     }
+}
+
+/**
+ * @brief Darf in dieses Abbild geschrieben werden? (MF-898)
+ *
+ * `hfe_open()` setzte bis MF-898
+ *
+ *     disk->read_only = read_only || (header.write_allowed == 0xFF);
+ *
+ * — also 0xFF = schreibgeschuetzt. Gemessen an
+ * `tests/corpus_free/gw_amigados.hfe`, einer voellig gewoehnlichen, von
+ * **greaseweazle 1.23** geschriebenen Datei: `write_allowed` ist dort
+ * 0xFF, und UFT meldete `read_only = JA` sowie
+ * `read_metadata("write_protected") = "yes"`. An dieser Diskette ist
+ * nichts schreibgeschuetzt. Das Werkzeug sagte es trotzdem — und
+ * sperrte den Schreibpfad gleich mit.
+ *
+ * SECHS Belege sagen "0xFF heisst SCHREIBEN ERLAUBT", alle im Baum:
+ *
+ *   1. der Feldname selbst — `write_allowed`, 0xFF = wahr = erlaubt
+ *   2. include/uft/flux/uft_hfe.h:108        "0xFF = writable"
+ *   3. include/uft/uft_hfe_format.h:99       "0xFF = write allowed"
+ *   4. include/uft/uft_hfe_format.h:197      setzt 0xFF, "Writeable"
+ *   5. src/samdisk/hfe.cpp:274               schreibt 0xff fuer ein ganz
+ *                                            gewoehnliches Abbild
+ *   6. src/formats/hfe/uft_hfe_parser_v2.c:313
+ *                                            `write_allowed ? "Yes":"No"`
+ *
+ * Waere 0xFF Schreibschutz, dann waere JEDE jemals von SAMdisk oder
+ * greaseweazle geschriebene HFE schreibgeschuetzt.
+ *
+ * NICHT BELEGT und deshalb nicht behauptet: dass 0x00 in freier Wildbahn
+ * "schreibgeschuetzt" BEDEUTET. Kein bekannter Schreiber setzt je etwas
+ * anderes als 0xFF, und `src/samdisk/hfe.cpp` liest das Feld ueberhaupt
+ * nie. UFT liest es nach dem Feldnamen — 0 = nicht erlaubt, alles
+ * andere = erlaubt —, weil das die konservative Richtung ist: sie
+ * sperrt den Benutzer nicht ungefragt aus.
+ *
+ * Der Wunsch des AUFRUFERS bleibt davon unberuehrt; er wird in
+ * `hfe_open()` weiterhin mit ODER verknuepft.
+ */
+static bool hfe_write_erlaubt(const hfe_header_t* hdr) {
+    return hdr && hdr->write_allowed != 0x00;
 }
 
 /**
@@ -568,8 +613,9 @@ static uft_error_t hfe_open(uft_disk_t* disk, const char* path, bool read_only) 
                                    disk->geometry.sectors;
     disk->geometry.double_step = (header.single_step != 0xFF);
     
-    // Write-Schutz
-    disk->read_only = read_only || (header.write_allowed == 0xFF);
+    // Write-Schutz (MF-898: Polaritaet war verdreht — siehe
+    // `hfe_write_erlaubt()`)
+    disk->read_only = read_only || !hfe_write_erlaubt(&header);
     
     return UFT_OK;
 }
@@ -633,7 +679,12 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     header.uft_floppy_interface_mode = HFE_IF_IBMPC_DD;
     header.reserved = 0x01;
     header.track_list_offset = 1;  // LUT beginnt bei Block 1
-    header.write_allowed = 0x00;   // Schreiben erlaubt
+    /* MF-898: hier stand 0x00 mit dem Kommentar "Schreiben erlaubt" —
+     * waehrend `uft_hfe_header_init()` im selben Baum fuer denselben
+     * Zweck 0xFF setzt, und SAMdisk (hfe.cpp:274) wie greaseweazle
+     * ebenfalls 0xFF. Zwei Schreiber, entgegengesetzte Werte, eine
+     * Absicht. */
+    header.write_allowed = 0xFF;   // Schreiben erlaubt
     header.single_step = 0xFF;     // Single step
 
     /* MF-897: hier fehlten die vier Spur-0-Felder. `hfe_header_t header
@@ -1071,7 +1122,7 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
     
     if (strcmp(key, "write_protected") == 0) {
         snprintf(value, max_len, "%s", 
-                 pdata->header.write_allowed == 0xFF ? "yes" : "no");
+                 hfe_write_erlaubt(&pdata->header) ? "no" : "yes");
         return UFT_OK;
     }
     
