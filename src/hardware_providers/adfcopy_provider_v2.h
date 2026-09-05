@@ -50,9 +50,29 @@
  *   DetectsDrive      v  do_detect_drive()    -> DetectOutcome
  *
  * Intentionally omitted mixins (and why):
+ *   MF-915 — DIE BEIDEN FOLGENDEN ZEILEN WAREN FALSCH, und zwar in
+ *   einer Weise, die dieser Baum sonst bei anderen ruegt: sie schlossen
+ *   von UFTs EIGENER unvollstaendiger Umsetzung auf die FAEHIGKEIT DER
+ *   HARDWARE. Erstgeprueft an der oeffentlichen Firmware
+ *   (`Niteto/ADF-Drive-Firmware`, GPL-3.0, geklont nach
+ *   `tools/uft-scout/work/ADF-Drive-Firmware/`):
+ *
+ *     `write`  existiert in `doCommand()` (src/main.cpp) und ruft
+ *              `writeTrack(preErase)`; Antwort "OK" / "Write failed!".
+ *              -> Die Hardware KANN schreiben.
+ *     `index`  ruft `measureRPM()` (src/floppy_control.cpp) und
+ *              antwortet "%d microseconds\nOK\n" bzw. "NO DISK".
+ *              -> Die Drehzahlmessung IST eine echte Faehigkeit.
+ *
+ *   Was stimmt: UFTs V1-Code tat beides nicht. Was daraus NICHT folgt:
+ *   dass die Hardware es nicht kann. Die Mixins bleiben vorerst
+ *   ausgelassen — aber aus dem richtigen Grund (siehe die
+ *   Protokoll-Notiz unten), nicht aus dem falschen.
+ *
  *   WritesRawFlux   x  V1 writeRawFlux() explicitly returns false with
  *                      "Raw flux writing is not supported by ADF-Copy hardware".
- *                      Honest audit: hardware cannot do this.
+ *                      "Honest audit: hardware cannot do this" —
+ *                      WIDERLEGT MF-915, siehe oben.
  *   ReadsSectors    x  ADFCopy is a flux device at the HAL layer. Sector
  *                      decode (Amiga MFM: 11 sectors / track, 512 bytes each)
  *                      happens in the upstream analysis pipeline.
@@ -61,7 +81,8 @@
  *                      pipeline output, not a HAL capability.
  *   MeasuresRPM     x  V1 measureRPM() returns constant 300.0 with no serial
  *                      dialog. This is a silent stub — it does not measure
- *                      anything. Honest audit: not a real capability.
+ *                      anything. "Honest audit: not a real capability" —
+ *                      WIDERLEGT MF-915: `index` -> `measureRPM()`.
  *
  * SpecStatus: CommunityConsensus — ADF-Copy is a DIY open-source Teensy-based
  *   project with community-documented protocol. No official vendor spec exists.

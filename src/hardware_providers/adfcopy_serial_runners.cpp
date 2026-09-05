@@ -25,6 +25,36 @@ uint8_t read_status_byte(IADFCopyTransport* tx, int timeout_ms = 5000)
 }
 
 /** Send a single command byte. Returns false on transport error. */
+/*
+ * MF-915: DIESES PROTOKOLLMODELL TRIFFT DIE ECHTE FIRMWARE NICHT.
+ *
+ * Erstgeprueft an `Niteto/ADF-Drive-Firmware` (GPL-3.0, geklont nach
+ * `tools/uft-scout/work/ADF-Drive-Firmware/`):
+ *
+ *   `getCommand()` in src/utility_functions.cpp liest Zeichen bis '\n'.
+ *   `doCommand()` in src/main.cpp vergleicht den Puffer gegen
+ *   ZEICHENKETTEN — gemessen 67 Vergleiche der Form `cmd == "..."`,
+ *   darunter "read", "read81", "write", "erase", "goto", "init",
+ *   "index". Antworten sind Text ("OK", "NO DISK", "Reading Track %d").
+ *
+ * Was hier steht, sendet EIN ROHES BYTE und erwartet EIN Statusbyte.
+ * Ein `0x0B` landet im Textpuffer, trifft keinen Vergleich und wird nie
+ * abgeschlossen. Die beiden Modelle sind nicht per Byte-Offset
+ * versoehnbar.
+ *
+ * WARUM DAS HIER TROTZDEM STEHEN BLEIBT: die Umstellung waere neuer,
+ * UNGEPRUEFTER Code auf einem Pfad, den niemand gegen Hardware messen
+ * kann — dieses Projekt hat KEINE Geraete (MF-310), und die
+ * EINFRIER-REGEL sperrt genau das. Ein Umbau gegen eine Firmware, die
+ * wir nur LESEN koennen, waere eine Wette mit dem Anschein von Arbeit.
+ *
+ * Was ein Benutzer heute erlebt, ist deshalb ehrlich, wenn auch
+ * nutzlos: die Runner melden "GET_STATUS response timeout" statt ein
+ * falsches Ergebnis zu liefern.
+ *
+ * Der Befund ist gefuehrt als ADFC-1 (HIGH) in
+ * `tests/emulators/adfcopy/DIVERGENCES.md` und als P3-188.
+ */
 bool send_cmd(IADFCopyTransport* tx, uint8_t cmd)
 {
     return tx->write_bytes({cmd}) == 1;
