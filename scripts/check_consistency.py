@@ -1084,6 +1084,25 @@ def main() -> int:
         import audit_fat_boundary as _fb
         all_errors.append(("FAT12/16-Grenze", _fb.check(repo)))
 
+        # Tor 56 (MF-881): ein Include-Guard, zwei Bedeutungen.
+        #
+        # Setzen zwei Header denselben *_DEFINED-Guard mit verschiedenem
+        # Inhalt, gewinnt der zuerst eingebundene — still. Das ist die
+        # einzige Fehlerklasse im Baum, die ein FALSCHES Ergebnis erzeugt
+        # statt eines fehlenden: orphan_baseline misst Module,
+        # uft-innendienst misst Symbole, keines sieht das hier.
+        #
+        # Gemessen: 11 Guards wuerfeln wirklich (nach Abzug derer, die
+        # durch die Include-Reihenfolge festgelegt sind, und derer, die
+        # keine Uebersetzungseinheit gemeinsam sieht). Zwei davon vergeben
+        # denselben NAMEN an verschiedene ZAHLEN — sie stehen benannt in
+        # KONFLIKT_GRUNDLINIE und als P3-155 in OPEN_ITEMS.
+        #
+        # HARTES Tor fuer einen DRITTEN Zahlkonflikt; Grundlinie 11 fuer
+        # die Gesamtzahl, darf fallen.
+        import audit_guard_kollision as _gk
+        all_errors.append(("Guard-Kollision", _gk.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
