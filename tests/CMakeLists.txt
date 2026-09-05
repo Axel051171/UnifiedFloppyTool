@@ -3216,6 +3216,23 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/widgets)
         endif()
 
+        # MF-895: der Sektoreditor fuehrte eine EIGENE Zonentabelle und
+        # summierte sie mit `t < 35` — bei einer D71 bildeten damit alle
+        # 35 Spuren der zweiten Seite auf denselben Versatz ab, und
+        # `saveSector()` schrieb dorthin zurueck. Der Test braucht das
+        # Widget, den CBM-Geometrie-SSOT und das Korpus-Abbild.
+        # Ohne UFT_CORPUS_DIR ueberspringen sich alle fuenf Pruefungen
+        # BENANNT (QSKIP) — nicht still, das ist die Falle aus MF-598.
+        if(${qt_test_name} STREQUAL "test_sector_editor_geometry")
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp
+                ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/gui)
+            target_compile_definitions(${qt_test_name} PRIVATE
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        endif()
+
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was
         # deleted with the V1 provider hierarchy. Qt-side tests now
         # link only against Qt6::Core+Test+Widgets+SerialPort. The V2

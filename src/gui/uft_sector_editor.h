@@ -186,7 +186,18 @@ private:
     
     void loadSector(int track, int sector);
     void saveSector();
+    /**
+     * @brief Legt Sektorgroesse, Spurzahl und Zaehlerbereiche fest (MF-895).
+     *
+     * Frueher stand diese Zuordnung nur in `loadDisk()` und war damit an
+     * die Dateiendung gebunden; die Format-Auswahl darueber war
+     * dekorativ. Jetzt ist sie der eine Weg — die Endung schlaegt sie
+     * beim Laden vor, der Benutzer kann sie umstellen.
+     */
+    void applyFormat(const QString &format);
+    /** @return Byteversatz, oder -1 wenn Spur/Sektor ausserhalb liegen. */
     int sectorOffset(int track, int sector) const;
+    /** @return Sektoren der Spur, oder 0 wenn die Spur ausserhalb liegt. */
     int sectorsPerTrack(int track) const;
     
     /* Toolbar */

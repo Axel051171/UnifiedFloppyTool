@@ -7,6 +7,11 @@
  */
 
 #include "uft_sector_editor.h"
+/* MF-895: die Zonenaufteilung kommt aus dem einen Ort, an dem sie steht.
+ * Der Kopf dieser Datei zaehlt auf, dass der Baum vorher 24 Kopien davon
+ * trug; die Tabelle, die hier stand, war die 25. */
+#include "uft/formats/cbm/uft_cbm_geometry.h"
+#include <QSignalBlocker>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -531,11 +536,13 @@ void UftSectorEditor::createNavigationPanel()
     
     grid->addWidget(new QLabel(tr("Track:")), 0, 0);
     m_trackSpin = new QSpinBox();
+    m_trackSpin->setObjectName("sectorEditorTrackSpin");
     m_trackSpin->setRange(0, 84);
     grid->addWidget(m_trackSpin, 0, 1);
     
     grid->addWidget(new QLabel(tr("Sector:")), 1, 0);
     m_sectorSpin = new QSpinBox();
+    m_sectorSpin->setObjectName("sectorEditorSectorSpin");
     m_sectorSpin->setRange(0, 20);
     grid->addWidget(m_sectorSpin, 1, 1);
     
@@ -549,16 +556,30 @@ void UftSectorEditor::createNavigationPanel()
     
     grid->addWidget(new QLabel(tr("Format:")), 3, 0);
     m_formatCombo = new QComboBox();
-    m_formatCombo->addItems({"D64 (C64)", "D71 (C128)", "ADF (Amiga)", 
-                             "ATR (Atari)", "DSK (Apple)", "Raw"});
+    m_formatCombo->setObjectName("sectorEditorFormatCombo");
+    /* MF-895: "DSK (Apple)" ist raus. Das Widget hatte fuer diesen Eintrag
+     * NIE eine Geometrie — er fiel in den Rueckfallzweig, der `sector`
+     * ueberhaupt nicht beruecksichtigte. Ein Eintrag, der etwas anderes
+     * anzeigt, als er verspricht, gehoert nicht in die Liste. */
+    m_formatCombo->addItems({"D64 (C64)", "D71 (C128)", "ADF (Amiga)",
+                             "ATR (Atari)", "Raw"});
     grid->addWidget(m_formatCombo, 3, 1);
+
+    /* MF-895: die Auswahl war angelegt, gefuellt, eingehaengt — und im
+     * ganzen Widget weder gelesen noch gesetzt noch verbunden (gemessen).
+     * Nach dem Laden einer .d71 stand dort weiter "D64 (C64)". Jetzt
+     * spiegelt sie das geladene Format UND wirkt: die Endung schlaegt vor,
+     * der Benutzer entscheidet. */
+    connect(m_formatCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+        applyFormat(m_formatCombo->currentText().section(QLatin1Char(' '), 0, 0));
+    });
     
     connect(m_prevButton, &QPushButton::clicked, [this]() {
         if (m_currentSector > 0) {
             m_sectorSpin->setValue(m_currentSector - 1);
         } else if (m_currentTrack > 0) {
             m_trackSpin->setValue(m_currentTrack - 1);
-            m_sectorSpin->setValue(sectorsPerTrack(m_currentTrack - 1) - 1);
+            m_sectorSpin->setValue(qMax(0, sectorsPerTrack(m_currentTrack - 1) - 1));
         }
     });
     
@@ -579,6 +600,7 @@ void UftSectorEditor::createInfoPanel()
     
     grid->addWidget(new QLabel(tr("Offset:")), 0, 0);
     m_offsetLabel = new QLabel("-");
+    m_offsetLabel->setObjectName("sectorEditorOffsetLabel");
     grid->addWidget(m_offsetLabel, 0, 1);
     
     grid->addWidget(new QLabel(tr("Value:")), 1, 0);
@@ -607,48 +629,84 @@ void UftSectorEditor::loadDisk(const QString &path)
     m_diskData = file.readAll();
     file.close();
     
-    /* Detect format */
-    QFileInfo fi(path);
-    QString ext = fi.suffix().toLower();
-    
-    if (ext == "d64") {
-        m_format = "D64";
-        m_totalTracks = 35;
-        m_sectorSize = 256;
-    } else if (ext == "d71") {
-        m_format = "D71";
-        m_totalTracks = 70;
-        m_sectorSize = 256;
-    } else if (ext == "adf") {
-        m_format = "ADF";
-        m_totalTracks = 160;
-        m_sectorSize = 512;
-    } else if (ext == "atr") {
-        m_format = "ATR";
-        m_totalTracks = 40;
-        m_sectorSize = 128;
-    } else {
-        m_format = "Raw";
-        m_totalTracks = m_diskData.size() / 256;
-        m_sectorSize = 256;
-    }
-    
-    m_trackSpin->setRange(0, m_totalTracks - 1);
+    /* Die Dateiendung SCHLAEGT das Format VOR — sie beweist es nicht.
+     * Die Auswahl daneben zeigt es an und laesst es umstellen (MF-895). */
+    const QString ext = QFileInfo(path).suffix().toLower();
     m_currentTrack = 0;
     m_currentSector = 0;
-    
-    loadSector(0, 0);
+
+    if (ext == "d64")      applyFormat(QStringLiteral("D64"));
+    else if (ext == "d71") applyFormat(QStringLiteral("D71"));
+    else if (ext == "adf") applyFormat(QStringLiteral("ADF"));
+    else if (ext == "atr") applyFormat(QStringLiteral("ATR"));
+    else                   applyFormat(QStringLiteral("Raw"));
+
     m_modified = false;
     m_saveAction->setEnabled(true);
-    
+}
+
+void UftSectorEditor::applyFormat(const QString &format)
+{
+    m_format = format;
+    if (format == QLatin1String("D64")) {
+        m_sectorSize = 256; m_totalTracks = 35;
+    } else if (format == QLatin1String("D71")) {
+        m_sectorSize = 256; m_totalTracks = 70;
+    } else if (format == QLatin1String("ADF")) {
+        m_sectorSize = 512; m_totalTracks = 160;
+    } else if (format == QLatin1String("ATR")) {
+        m_sectorSize = 128; m_totalTracks = 40;
+    } else {
+        m_format      = QStringLiteral("Raw");
+        m_sectorSize  = 256;
+        m_totalTracks = static_cast<int>(m_diskData.size() / 256);
+    }
+    if (m_totalTracks < 1) m_totalTracks = 1;
+
+    /* Die Auswahl spiegelt das Format, ohne sich selbst erneut auszuloesen. */
+    if (m_formatCombo) {
+        const QSignalBlocker stumm(m_formatCombo);
+        const int i = m_formatCombo->findText(m_format, Qt::MatchStartsWith);
+        if (i >= 0) m_formatCombo->setCurrentIndex(i);
+    }
+
+    if (m_currentTrack > m_totalTracks - 1) m_currentTrack = 0;
+    {
+        const QSignalBlocker stumm(m_trackSpin);
+        m_trackSpin->setRange(0, m_totalTracks - 1);
+        m_trackSpin->setValue(m_currentTrack);
+    }
+
+    const int proSpur = sectorsPerTrack(m_currentTrack);
+    if (m_currentSector > proSpur - 1) m_currentSector = 0;
+    {
+        const QSignalBlocker stumm(m_sectorSpin);
+        m_sectorSpin->setRange(0, proSpur > 0 ? proSpur - 1 : 0);
+        m_sectorSpin->setValue(m_currentSector);
+    }
+
+    loadSector(m_currentTrack, m_currentSector);
     updateSectorInfo();
 }
 
 void UftSectorEditor::loadSector(int track, int sector)
 {
-    int offset = sectorOffset(track, sector);
+    const int offset = sectorOffset(track, sector);
     if (offset < 0 || offset + m_sectorSize > m_diskData.size()) {
-        m_hexEdit->setData(QByteArray(m_sectorSize, 0));
+        /* MF-895: hier stand `QByteArray(m_sectorSize, 0)` — 256 Nullbytes,
+         * von einem echt leeren Sektor nicht zu unterscheiden. Dieselbe
+         * Klasse wie die feste Rampe aus MF-892. Ausserhalb des Abbilds
+         * gibt es keinen Inhalt, also wird auch keiner gezeigt, und die
+         * Anzeige sagt warum. */
+        m_hexEdit->setData(QByteArray());
+        m_currentTrack  = track;
+        m_currentSector = sector;
+        if (m_offsetLabel) {
+            m_offsetLabel->setText(
+                tr("Spur %1 / Sektor %2 liegt ausserhalb des Abbilds")
+                    .arg(track).arg(sector));
+        }
+        emit sectorChanged(track, sector);
         return;
     }
     
@@ -663,8 +721,16 @@ void UftSectorEditor::loadSector(int track, int sector)
 
 void UftSectorEditor::saveSector()
 {
-    int offset = sectorOffset(m_currentTrack, m_currentSector);
-    if (offset < 0) return;
+    const int offset = sectorOffset(m_currentTrack, m_currentSector);
+    if (offset < 0 || offset + m_hexEdit->data().size() > m_diskData.size()) {
+        /* MF-895: `if (offset < 0) return;` hat die Aenderung still
+         * verworfen — die Hex-Ansicht zeigte sie weiter, `m_modified`
+         * blieb falsch, und beim Speichern fehlte sie. Lieber laut. */
+        qWarning("Sektoreditor: Spur %d / Sektor %d liegt ausserhalb des "
+                 "Abbilds - die Aenderung wird NICHT uebernommen",
+                 m_currentTrack, m_currentSector);
+        return;
+    }
     
     QByteArray data = m_hexEdit->data();
     for (int i = 0; i < data.size() && offset + i < m_diskData.size(); i++) {
@@ -675,50 +741,61 @@ void UftSectorEditor::saveSector()
     emit diskModified();
 }
 
+/* Spuren je Seite bei den Commodore-GCR-Laufwerken. Eine D71 ist zweimal
+ * diese Seite hintereinander — der SSOT beschreibt EINE Seite
+ * (`UFT_CBM_1571`: max_track 42, heads 2), nicht 70 fortlaufende Spuren. */
+static const int kCbmSpurenJeSeite = 35;
+
 int UftSectorEditor::sectorOffset(int track, int sector) const
 {
-    if (m_format == "D64" || m_format == "D71") {
-        /* D64: Variable sectors per track */
-        static const int sectorsPerTrackD64[] = {
-            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-            19, 19, 19, 19, 19, 19, 19,
-            18, 18, 18, 18, 18, 18,
-            17, 17, 17, 17, 17
-        };
-        
-        int offset = 0;
-        for (int t = 0; t < track && t < 35; t++) {
-            offset += sectorsPerTrackD64[t] * 256;
-        }
-        offset += sector * 256;
-        return offset;
-    } else if (m_format == "ADF") {
-        return (track * 11 + sector) * 512;
-    } else if (m_format == "ATR") {
-        return 16 + (track * 18 + sector) * 128;
-    } else {
-        return track * m_sectorSize;
+    /* MF-895: Vorher gab es diese Pruefung NICHT. `sector` ging ungeprueft
+     * in die Rechnung, und die Spursumme war mit `t < 35` gedeckelt —
+     * bei einer D71 landeten damit alle 35 Spuren der zweiten Seite auf
+     * demselben Versatz 0x2AB00. Da `saveSector()` denselben Versatz
+     * benutzt und `save()` `m_diskData` zurueckschreibt, war das stille
+     * Veraenderung auf einem Schreibpfad. */
+    if (track < 0 || sector < 0 || track >= m_totalTracks) return -1;
+    const int proSpur = sectorsPerTrack(track);
+    if (proSpur <= 0 || sector >= proSpur) return -1;
+
+    if (m_format == QLatin1String("D64") || m_format == QLatin1String("D71")) {
+        const int seite = track / kCbmSpurenJeSeite;              /* 0 oder 1 */
+        const int spur  = track % kCbmSpurenJeSeite + 1;          /* 1-basiert */
+        const int blockversatz = uft_cbm_block_offset(UFT_CBM_1541, spur);
+        if (blockversatz < 0) return -1;
+        const int seitenversatz =
+            seite * uft_cbm_total_blocks(UFT_CBM_1541, kCbmSpurenJeSeite);
+        return (seitenversatz + blockversatz + sector) * 256;
     }
+    if (m_format == QLatin1String("ADF"))
+        return (track * 11 + sector) * 512;
+    if (m_format == QLatin1String("ATR"))
+        return 16 + (track * 18 + sector) * 128;
+    /* Rueckfall: flacher Sektorstrom. Vorher stand hier `track * m_sectorSize`
+     * — `sector` fiel unter den Tisch. */
+    return (track * proSpur + sector) * m_sectorSize;
 }
 
 int UftSectorEditor::sectorsPerTrack(int track) const
 {
-    if (m_format == "D64") {
-        if (track < 17) return 21;
-        if (track < 24) return 19;
-        if (track < 30) return 18;
-        return 17;
-    } else if (m_format == "ADF") {
-        return 11;
-    } else if (m_format == "ATR") {
-        return 18;
+    if (track < 0 || track >= m_totalTracks) return 0;
+    if (m_format == QLatin1String("D64") || m_format == QLatin1String("D71")) {
+        /* MF-895: der D71-Zweig fehlte ganz. `sectorsPerTrack()` kannte nur
+         * "D64" und fiel sonst auf `return 1` durch — der Sektor-Zaehler
+         * stand bei einer D71 auf 0..0, von 21 Sektoren war einer
+         * erreichbar. */
+        return uft_cbm_sectors_per_track(UFT_CBM_1541,
+                                         track % kCbmSpurenJeSeite + 1);
     }
+    if (m_format == QLatin1String("ADF")) return 11;
+    if (m_format == QLatin1String("ATR")) return 18;
     return 1;
 }
 
 void UftSectorEditor::onTrackChanged(int track)
 {
-    m_sectorSpin->setRange(0, sectorsPerTrack(track) - 1);
+    const int proSpur = sectorsPerTrack(track);
+    m_sectorSpin->setRange(0, proSpur > 0 ? proSpur - 1 : 0);
     loadSector(track, m_sectorSpin->value());
     updateSectorInfo();
 }
@@ -776,11 +853,27 @@ void UftSectorEditor::goToSector(int track, int sector)
 
 void UftSectorEditor::goToOffset(int offset)
 {
-    /* Calculate track/sector from offset */
-    /* Simplified for now */
-    int track = offset / (m_sectorSize * 18);
-    int sector = (offset / m_sectorSize) % 18;
-    goToSector(track, sector);
+    /* MF-895: hier stand eine feste 18 als Sektoren-je-Spur — fuer JEDES
+     * Format, mit dem Kommentar "Simplified for now". Bei einer D64 fuehrte
+     * jede Eingabe im "Go To"-Dialog damit auf die falsche Spur. Jetzt wird
+     * die Zuordnung ueber dieselbe Rechnung gesucht, die auch anzeigt. */
+    if (offset < 0) return;
+    for (int t = 0; t < m_totalTracks; t++) {
+        const int proSpur = sectorsPerTrack(t);
+        for (int s = 0; s < proSpur; s++) {
+            const int o = sectorOffset(t, s);
+            if (o >= 0 && offset >= o && offset < o + m_sectorSize) {
+                goToSector(t, s);
+                return;
+            }
+        }
+    }
+    /* Kein Sektor deckt diesen Versatz. Raten waere eine Erfindung. */
+    if (m_offsetLabel) {
+        m_offsetLabel->setText(
+            tr("0x%1 liegt in keinem Sektor dieses Abbilds")
+                .arg(offset, 6, 16, QChar('0')));
+    }
 }
 
 void UftSectorEditor::save()
