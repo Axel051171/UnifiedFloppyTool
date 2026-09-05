@@ -67,6 +67,16 @@ typedef struct {
     uft_cbmdos_type_t   type;        /**< Dateityp */
     bool                closed;      /**< Bit 7 des Typbytes: sauber geschlossen */
     bool                locked;      /**< Bit 6: schreibgeschuetzt */
+    /**
+     * Der Eintrag bezeichnet eine GELOESCHTE Datei (MF-909).
+     *
+     * CBM DOS setzt beim Scratchen nur die Typkennung auf DEL; Name,
+     * Blockzahl und die Zeiger auf den ersten Datensektor bleiben
+     * stehen. Ein solcher Eintrag ist Bestand, kein Nichts — und
+     * unterscheidet sich von einer NIE BENUTZTEN Zeile, deren Typbyte
+     * 0x00 ist und die gar nicht erst in die Liste kommt.
+     */
+    bool                deleted;
     uint16_t            blocks;      /**< belegte Bloecke laut Eintrag */
     uint8_t             track;       /**< erster Datensektor */
     uint8_t             sector;

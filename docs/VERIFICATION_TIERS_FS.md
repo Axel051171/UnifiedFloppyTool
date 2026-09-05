@@ -25,7 +25,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_amigados` | **FS-T2** | `test_adf`, `test_adf_directory_crosstool`, `test_amiga_extract`, `test_amigados_cycle` | `xdftool_dd_ofs.adf` stammt von `amitools xdftool 0.8.1 (pip amitools, installiert 2026-08; Version per importlib.metadata.version("amitools") gemessen MF-778)` — im Oracle-Register als `xdftool`, der Beleg ist zitierfaehig |
 | `uft_amigados_extended` | **FS-T1** | `test_amigados_validate` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_bootblock_scanner` | **FS-T1** | `test_amigados_validate`, `test_bootblock_scanner` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
-| `uft_cbmdos` | **FS-T2** | `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
+| `uft_cbmdos` | **FS-T2** | `test_cbm_geloeschte_eintraege`, `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
 | `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
 | `uft_fs_amigados_driver` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 

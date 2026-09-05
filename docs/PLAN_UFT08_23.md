@@ -243,6 +243,24 @@ angebotenen Pfades ist Teil seines Angebots).
 
 ## Phase 4 — Zwei Verzeichnistüren, zwei Antworten auf denselben Eintrag
 
+> **✅ ERLEDIGT — MF-909.** Rotbeweis 1 von 3 rot, zwei Wächter;
+> Gegenprobe 3 Mutationen, eine davon fällt den Wächter und zeigt
+> damit, dass er seinen Platz verdient.
+>
+> **Der Fund war größer als die Divergenz.** `deleted_count` gibt es
+> seit MF-889 und wurde gemessen **nirgends gelesen** — der Explorer,
+> den ich damals selbst verdrahtet habe, zeigte gelöschte Einträge
+> weder an noch ihre Zahl. Behoben **bis zur Anzeige**: der Eintrag
+> geht mit, `GELOESCHT` steht als erstes Merkmal, die Zahl darunter.
+> Sonst wäre die Korrektur unsichtbar geblieben — eine Fähigkeit ohne
+> Tür.
+>
+> **Die zweite Tür bewusst nicht angefasst:** `d64_disk_v3_t.directory`
+> ist dateilokal und wird außerhalb nicht gelesen. Dieselbe Abwägung
+> wie bei den verwaisten Geometrietabellen in MF-906. Als **P3-185**
+> festgehalten.
+
+
 **Gemessen.** `src/fs/uft_cbmdos.c` **überspringt** jeden DEL-Eintrag;
 `src/formats/d64/uft_d64_parser_v3.c` **nimmt ihn auf** (`ftype != 0 &&
 first_track > 0`). Dieselbe Diskette, zwei Antworten — die Klasse, die
@@ -320,5 +338,5 @@ Dazu drei Beobachtungen ohne Auftrag:
 | 1 | OPD-Geometrie | still abgelehnte Disketten werden lesbar | **✅ erledigt, MF-905** |
 | 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **✅ erledigt, MF-906** |
 | 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **⚠ halb erledigt, MF-908** — Sonde offen (P3-184) |
-| 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **ja**, synthetisch |
+| 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **✅ erledigt, MF-909** |
 | 5 | Ehrlichkeit ohne Code | schließt P3-79 | **ja** |

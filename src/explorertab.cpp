@@ -426,6 +426,15 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
             for (int i = 0; i < dir.entry_count; i++) {
                 const uft_cbmdos_entry_t *e = &dir.entries[i];
                 QStringList merkmale;
+                /* MF-909: ein gescratchter Eintrag wurde bis heute
+                 * ueberhaupt nicht gezeigt — `uft_cbmdos.c` zaehlte ihn
+                 * und warf ihn weg, und `deleted_count` las ausserhalb
+                 * jener Datei niemand. Fuer ein forensisches Werkzeug
+                 * ist er Bestand: Name, Blockzahl und die Zeiger auf den
+                 * ersten Datensektor stehen noch da. Er kommt jetzt mit
+                 * — und ZUERST gekennzeichnet, damit ihn niemand fuer
+                 * eine vorhandene Datei haelt. */
+                if (e->deleted) merkmale << tr("GELOESCHT");
                 merkmale << tr("%1 Bl.").arg(e->blocks);
                 if (e->locked)  merkmale << tr("schreibgeschuetzt");
                 if (!e->closed) merkmale << tr("nicht geschlossen");
@@ -440,6 +449,15 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
                     QString::fromUtf8(uft_cbmdos_type_name(e->type)),
                     false,
                     merkmale.join(", ")});
+            }
+            /* MF-909: die Zahl stand seit MF-889 in `deleted_count` und
+             * wurde ausserhalb von `uft_cbmdos.c` NIRGENDS gelesen. Sie
+             * gehoert dem Benutzer, nicht dem Leser. */
+            if (dir.deleted_count > 0) {
+                entries.append({
+                    tr("  (%1 geloeschte Eintraege, oben mit GELOESCHT "
+                       "gekennzeichnet)").arg(dir.deleted_count),
+                    0, "", false, ""});
             }
             uft_cbmdos_free(&dir);
             return entries;

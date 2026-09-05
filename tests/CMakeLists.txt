@@ -1490,6 +1490,14 @@ foreach(test_source ${TEST_SOURCES})
         # das Kommentarflag aus dem falschen Byte.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_parser_v2.c)
+    elseif(${test_name} STREQUAL "test_cbm_geloeschte_eintraege")
+        # MF-909: zwei Verzeichnistueren, zwei Antworten auf denselben
+        # gescratchten Eintrag. Der Test setzt EIN Byte im Korpus-Abbild
+        # (Typ 0x82 -> 0x80) und arbeitet auf einer Kopie.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d64_schreiber_symmetrie")
         # MF-908: der D64-LESER nimmt seit MF-871 vier Spurzahlen an
         # (35/40/41/42), der D64-SCHREIBER erzeugt zwei. Beide Tueren im

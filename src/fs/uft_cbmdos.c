@@ -220,7 +220,26 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
             if (tb == 0x00) continue;            /* nie benutzt */
 
             uft_cbmdos_type_t typ = (uft_cbmdos_type_t)(tb & 0x0F);
-            if (typ == UFT_CBMDOS_DEL) { out->deleted_count++; continue; }
+
+            /* MF-909: hier stand `{ out->deleted_count++; continue; }` —
+             * der Eintrag wurde GEZAEHLT und WEGGEWORFEN.
+             *
+             * CBM DOS setzt beim Scratchen nur die Typkennung auf DEL;
+             * Name, Blockzahl und die Zeiger auf den ersten Datensektor
+             * bleiben stehen. Genau das will ein Forensiker sehen — und
+             * `deleted_count` allein gab ihm eine Zahl ohne Namen.
+             *
+             * Der Zaehler bleibt (die Oberflaeche nennt ihn), aber der
+             * Eintrag geht mit, gekennzeichnet. Die zweite Tuer,
+             * `uft_d64_parser_v3.c`, machte den entgegengesetzten Fehler:
+             * sie nahm ihn auf, OHNE ihn zu kennzeichnen — dort steht
+             * jetzt dieselbe Antwort.
+             *
+             * Ein NIE BENUTZTER Eintrag (Typbyte 0x00) faellt schon
+             * darueber heraus und bleibt draussen; das ist etwas anderes
+             * als eine geloeschte Datei. */
+            const bool geloescht = (typ == UFT_CBMDOS_DEL);
+            if (geloescht) out->deleted_count++;
 
             if (n == cap) {
                 int neu = cap ? cap * 2 : 16;
@@ -233,6 +252,7 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
             memset(&kandidat, 0, sizeof(kandidat));
             cbm_name_to_ascii(e + 5, kandidat.name, sizeof(kandidat.name));
             kandidat.type   = typ;
+            kandidat.deleted = geloescht;
             kandidat.closed = (tb & 0x80) != 0;
             kandidat.locked = (tb & 0x40) != 0;
             kandidat.track  = e[3];
