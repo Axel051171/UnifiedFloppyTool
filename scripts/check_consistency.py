@@ -1118,6 +1118,20 @@ def main() -> int:
         import audit_schreibzusage as _sz
         all_errors.append(("Schreibzusage", _sz.check(repo)))
 
+        # Tor 58 (MF-906): zwei Zeilen derselben Geometrietabelle mit
+        # gleicher Gesamtgroesse. Die Sonde laeuft durch und kehrt beim
+        # ERSTEN Treffer zurueck — die zweite Zeile ist damit toter Code,
+        # und das Abbild wird still als die erste Geometrie ausgegeben,
+        # obwohl die Groesse die beiden nicht unterscheidet. Dieselbe
+        # Form wie die Guard-Kollision aus MF-881.
+        #
+        # Grundlinie 3, BENANNT: alle drei liegen heute in Dateien, die
+        # `docs/orphan_baseline.txt` als verwaist fuehrt — kein Benutzer
+        # trifft sie. Wird eine davon verdrahtet, muss die Kollision
+        # vorher aufgeloest werden.
+        import audit_geometrie_kollision as _gk
+        all_errors.append(("Geometrie-Kollision", _gk.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

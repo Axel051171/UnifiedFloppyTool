@@ -33,7 +33,7 @@ eigentliche Wert dieses Durchgangs: **zwölf Behauptungen tragen nicht.**
 | „`d64_is_valid_size()` kennt nur 35 und 40" (10) | seit MF-871 auch 41 und 42, inkl. Fehlerkarten | **trägt nicht** |
 | „DEL-Einträge erzeugen Falschpositive" (08 F4) | es gibt **keine** Prüfung „Zeiger auf der Verzeichnisspur"; der reale Fund ist die **Divergenz zweier Türen** | **Prämisse trägt nicht** |
 | „1581-Gaps fehlen, weil µPD765" (08 F1) | der Baum führt den 1581 als MFM/WD, nicht µPD765; die Gap-Tabelle hat **keinen Verbraucher** | **Begründung trägt nicht** |
-| „DG-Nova-Fabrikation ist DRINGEND" (21) | die Fabrikation **trägt**, die Dringlichkeit nicht: `uft_dg_nova_*` hat **keinen Aufrufer**, steht nicht in der Plugin-Liste, nicht in den Stufen | **teilweise** |
+| „DG-Nova-Fabrikation ist DRINGEND" (21) | **berichtigt MF-906/P3-183**: `77×26×1×128 = 256256` ist der **IBM-3740-Standard**, den vier Dateien führen und `mfm_detect.c` selbst so benennt — keine Fabrikation. Es bleibt: 0 CRC-Zeilen, kein Aufrufer | **trägt nicht** |
 
 Zwei Berichte haben außerdem Zahlen, die der Baum selbst schon führt:
 die Gutachten-Bibliothek hat **45**, nicht 43; `docs/format_specs/commodore/`
@@ -133,6 +133,29 @@ kein fremd erzeugtes Abbild).
 ---
 
 ## Phase 2 — Eine unerreichbare Zeile, und das Tor für ihre Klasse
+
+> **✅ ERLEDIGT — MF-906 (Tor 58).** Gemessen über alle `src/**/*.c`
+> aus `git ls-files`: **14** Tabellen dieser Gestalt, **3** Kollisionen.
+> Der Bericht nannte **eine** — die anderen zwei (`g_hitachi_geom`
+> 655360, `g_bk_geom` 409600) fand erst das Tor. Selbsttest 5/5,
+> Gegenprobe beidseitig (neue Kollision → Exit 1; Grundlinie aufgelöst
+> → als erledigt gemeldet).
+>
+> **Code bewusst NICHT angefasst.** Alle drei Dateien sind verwaist —
+> kein Aufrufer, nicht in der Plugin-Liste, nicht in den Prüfstufen.
+> Kein Benutzer trifft sie. Drei verwaiste Tabellen umzuschreiben wäre
+> Bewegung ohne Gewinn; sie sind **benannt** eingefroren, und wer eine
+> dieser Dateien verdrahtet, muss die Kollision vorher auflösen.
+> Befund als **P3-182**.
+>
+> **BERICHTIGUNG (P3-183).** Die Phase-0-Tabelle unten führte die
+> DG-Nova-Geometrie als *Fabrikation, die trägt*. Das ist falsch, und
+> mein eigener Agent hat den Irrtum übernommen: `77 × 26 × 1 × 128 =
+> 256256` ist der **IBM-3740-Standard** für 8-Zoll SSSD — vier Dateien
+> führen ihn, und `src/detect/mfm/mfm_detect.c` benennt ihn selbst so.
+> Vier Maschinen mit derselben Geometrie sind kein Kopierfehler,
+> sondern derselbe Standard. Es bleibt: 0 CRC-Zeilen, kein Aufrufer.
+
 
 **Gemessen.** `g_heathkit_geom[]` in `src/formats/industrial/uft_heathkit.c`:
 
@@ -275,7 +298,7 @@ Dazu drei Beobachtungen ohne Auftrag:
 | # | Phase | Nutzen | Beweisbar heute? |
 |---|---|---|---|
 | 1 | OPD-Geometrie | still abgelehnte Disketten werden lesbar | **✅ erledigt, MF-905** |
-| 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **ja** |
+| 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **✅ erledigt, MF-906** |
 | 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **ja**, synthetisch |
 | 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **ja**, synthetisch |
 | 5 | Ehrlichkeit ohne Code | schließt P3-79 | **ja** |
