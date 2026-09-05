@@ -203,6 +203,7 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_g64")
         # Include D64/G64 conversion source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
 
@@ -1507,6 +1508,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
@@ -1629,10 +1631,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_d64_42_spuren_rundlauf")
+        # MF-920 (P3-184): dieselben Quellen wie test_convert_via_plugin —
+        # der Rundlauf laeuft ueber genau dieselben zwei Tueren.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_convert_via_plugin")
         # MF-433: converter seam — blob loader vs plugin, byte-identical
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
@@ -1862,6 +1877,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             # MF-405: the GUI's own G64 reader, so its data path is testable
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
@@ -1945,7 +1961,8 @@ foreach(test_source ${TEST_SOURCES})
         # ist gemessen verlustfrei (MF-532/533).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
-            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d64_writer_sektorfolge")
         # MF-859: die 21er-Tabelle erzeugte auf 18 von 35 Spuren doppelte
         # und fehlende Sektoren.

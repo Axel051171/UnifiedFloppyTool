@@ -19,6 +19,7 @@
  * @date 2026-01-16
  */
 
+#include "uft/uft_log.h"
 #include "uft/formats/c64/uft_d64_g64.h"
 #include "uft/uft_d64_writer.h"
 #include "uft/uft_format_plugin.h"   /* MF-433: read sectors through a plugin */
@@ -1060,6 +1061,7 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
     if (!img) return -2;
     
     int tracks_converted = 0;
+    int tracks_refused   = 0;   /* MF-920 */
     int sectors_converted = 0;
     
     /* Convert each track */
@@ -1102,6 +1104,27 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
             if (g64_set_track(img, halftrack, gcr_track, gcr_len,
                               speed_map[track]) == 0) {
                 tracks_converted++;
+            } else {
+                /* MF-920 (P3-184): MF-555 hat die Antwort des Schreibers
+                 * GELESEN — aber niemandem gesagt. Eine abgewiesene Spur
+                 * fehlte im Abbild, wurde richtig nicht mitgezaehlt, und
+                 * der Aufrufer bekam trotzdem `success = true` und eine
+                 * Beschreibung ohne jeden Hinweis.
+                 *
+                 * Gemessen tritt das bei Spur 42 IMMER ein:
+                 * `halftrack = track * 2` ergibt 84, und `g64_set_track()`
+                 * weist `halftrack >= G64_MAX_TRACKS` (84) ab. Das
+                 * Speichermodell hat fuer Spur 42 keinen Platz. Ursache
+                 * und die zweite, abweichende Abbildung im v3-Parser
+                 * (`g64_full_to_half(t) = t * 2 - 1`) sind als P3-194
+                 * gefuehrt.
+                 *
+                 * Bis das entschieden ist gilt der Grundsatz dieses
+                 * Baums: der Verlust wird BENANNT, nicht verschwiegen. */
+                tracks_refused++;
+                UFT_WARN("D64->G64: Spur %d (Halbspur %d) wurde vom "
+                         "Schreiber abgewiesen und fehlt im Abbild",
+                         track, halftrack);
             }
         }
     }
@@ -1109,12 +1132,23 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
     *g64 = img;
     
     if (result) {
-        result->success = true;
+        /* MF-920: `success = true` galt auch dann, wenn Spuren
+         * abgewiesen wurden. Ein Aufrufer, der nur dieses Feld liest,
+         * erfuhr von einem Datenverlust nichts. */
+        result->success = (tracks_refused == 0);
         result->tracks_converted = tracks_converted;
         result->sectors_converted = sectors_converted;
-        result->errors_found = 0;
-        snprintf(result->description, sizeof(result->description),
-                 "Converted %d tracks, %d sectors", tracks_converted, sectors_converted);
+        result->errors_found = tracks_refused;
+        if (tracks_refused > 0) {
+            snprintf(result->description, sizeof(result->description),
+                     "Converted %d tracks, %d sectors - %d Spur(en) vom "
+                     "Schreiber abgewiesen und NICHT im Abbild",
+                     tracks_converted, sectors_converted, tracks_refused);
+        } else {
+            snprintf(result->description, sizeof(result->description),
+                     "Converted %d tracks, %d sectors",
+                     tracks_converted, sectors_converted);
+        }
     }
     
     return 0;
@@ -1183,6 +1217,7 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
     if (!img) return -2;
 
     int tracks_converted = 0;
+    int tracks_refused   = 0;   /* MF-920 */
     int sectors_converted = 0;
 
     for (int track = 1; track <= num_tracks; track++) {
@@ -1225,6 +1260,27 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
             if (g64_set_track(img, halftrack, gcr_track, gcr_len,
                               speed_map[track]) == 0) {
                 tracks_converted++;
+            } else {
+                /* MF-920 (P3-184): MF-555 hat die Antwort des Schreibers
+                 * GELESEN — aber niemandem gesagt. Eine abgewiesene Spur
+                 * fehlte im Abbild, wurde richtig nicht mitgezaehlt, und
+                 * der Aufrufer bekam trotzdem `success = true` und eine
+                 * Beschreibung ohne jeden Hinweis.
+                 *
+                 * Gemessen tritt das bei Spur 42 IMMER ein:
+                 * `halftrack = track * 2` ergibt 84, und `g64_set_track()`
+                 * weist `halftrack >= G64_MAX_TRACKS` (84) ab. Das
+                 * Speichermodell hat fuer Spur 42 keinen Platz. Ursache
+                 * und die zweite, abweichende Abbildung im v3-Parser
+                 * (`g64_full_to_half(t) = t * 2 - 1`) sind als P3-194
+                 * gefuehrt.
+                 *
+                 * Bis das entschieden ist gilt der Grundsatz dieses
+                 * Baums: der Verlust wird BENANNT, nicht verschwiegen. */
+                tracks_refused++;
+                UFT_WARN("D64->G64: Spur %d (Halbspur %d) wurde vom "
+                         "Schreiber abgewiesen und fehlt im Abbild",
+                         track, halftrack);
             }
         }
     }
@@ -1232,13 +1288,23 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
     *out = img;
 
     if (result) {
-        result->success = true;
+        /* MF-920: `success = true` galt auch dann, wenn Spuren
+         * abgewiesen wurden. Ein Aufrufer, der nur dieses Feld liest,
+         * erfuhr von einem Datenverlust nichts. */
+        result->success = (tracks_refused == 0);
         result->tracks_converted = tracks_converted;
         result->sectors_converted = sectors_converted;
-        result->errors_found = 0;
-        snprintf(result->description, sizeof(result->description),
-                 "Converted %d tracks, %d sectors", tracks_converted,
-                 sectors_converted);
+        result->errors_found = tracks_refused;
+        if (tracks_refused > 0) {
+            snprintf(result->description, sizeof(result->description),
+                     "Converted %d tracks, %d sectors - %d Spur(en) vom "
+                     "Schreiber abgewiesen und NICHT im Abbild",
+                     tracks_converted, sectors_converted, tracks_refused);
+        } else {
+            snprintf(result->description, sizeof(result->description),
+                     "Converted %d tracks, %d sectors",
+                     tracks_converted, sectors_converted);
+        }
     }
 
     return 0;
@@ -1359,6 +1425,28 @@ int uft_cbm_gcr_track_to_sectors(d64_image_t *img, int track,
  * Plugin-sourced decoding (MF-436)
  * ============================================================================ */
 
+/* MF-920 (P3-184) — die Ausdehnung aus dem INHALT, nicht aus einem
+ * Deckel.
+ *
+ * Der D64-Leser kennt seit MF-871 vier Ausdehnungen (35, 40, 41, 42),
+ * der Schreiber seit MF-908 dieselben. Die beiden Sonden darunter
+ * hoerten trotzdem bei 40 auf — eine 42-Spur-G64 verlor still zwei
+ * Spuren.
+ *
+ * Warum aufgerundet und nicht die genaue Zahl genommen wird: D64 hat
+ * KEINE Ausdehnung 36..39 oder 41 fuer beliebige Werte. Endet der
+ * Inhalt auf Spur 38, ist die kleinste Form, die ihn traegt, die
+ * 40-Spur-Form; die zwei leeren Spuren sind dann Form, nicht erfundene
+ * Daten. Nach oben wird NIE gerundet, wenn nichts da ist — genau das
+ * war der Fehler in MF-436 (85 Bloecke Fuellung als geborgene Daten). */
+static int d64_extent_for_highest(int highest)
+{
+    if (highest <= 35) return 35;
+    if (highest <= 40) return 40;
+    if (highest <= 41) return 41;
+    return 42;
+}
+
 int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
                                   struct uft_disk *disk,
                                   const convert_options_t *options,
@@ -1391,19 +1479,26 @@ int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
      * a container with a capacity header like G64, it is the addressable
      * range. A decoder must ask the content. */
     if (disk->geometry.cylinders <= 0) return -3;
-    int num_tracks = 35;
-    for (int probe = 36; probe <= 40; probe++) {
+
+    /* MF-920: hier stand `probe <= 40` und `num_tracks = 40; break;` —
+     * die Schleife hoerte beim ERSTEN Treffer auf und deckelte bei 40.
+     * Eine 42-Spur-Diskette verlor damit zwei Spuren, ohne Meldung.
+     *
+     * Jetzt wird bis 42 gesucht und die HOECHSTE Spur mit Inhalt
+     * behalten — nicht die erste. Ein `break` beim ersten Treffer kann
+     * die Frage „wie weit geht die Diskette" gar nicht beantworten. */
+    int highest = 35;
+    for (int probe = 36; probe <= 42; probe++) {
         if (probe > disk->geometry.cylinders) break;
         uft_track_t pt;
         memset(&pt, 0, sizeof(pt));
         if (plugin->read_track(disk, probe - 1, 0, &pt) == UFT_OK &&
             pt.raw_data && pt.raw_size > 0) {
-            num_tracks = 40;
-            uft_track_release(&pt);
-            break;
+            highest = probe;
         }
         uft_track_release(&pt);
     }
+    int num_tracks = d64_extent_for_highest(highest);
 
     d64_image_t *img = d64_create(num_tracks);
     if (!img) return -2;
@@ -1490,14 +1585,24 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
         convert_get_defaults(&opts);
     }
     
-    /* Determine number of tracks */
-    int num_tracks = 35;
-    for (int t = 36 * 2; t <= 40 * 2; t += 2) {
+    /* Determine number of tracks — MF-920 (P3-184).
+     *
+     * Hier stand `t <= 40 * 2` und `num_tracks = 40; break;`. Dieselbe
+     * Deckelung wie im Plugin-Weg darueber, und dieselbe Folge: eine
+     * 42-Spur-G64 wurde still zu einer 40-Spur-D64. Gemessen im
+     * Rotbeweis `tests/test_d64_42_spuren_rundlauf.c`:
+     * „g64_to_d64() gibt 40 Spuren zurueck, hineingegangen sind 42 —
+     * 2 Spuren still verloren".
+     *
+     * Die Halbspur-Indizierung bleibt (`t += 2`): `track_data[]` ist
+     * ueber Halbspuren indiziert, Spur n liegt auf Index 2n. */
+    int highest = 35;
+    for (int t = 36 * 2; t <= 42 * 2; t += 2) {
         if (g64->track_data[t] && g64->tracks[t].length > 0) {
-            num_tracks = 40;
-            break;
+            highest = t / 2;
         }
     }
+    int num_tracks = d64_extent_for_highest(highest);
     
     /* Create D64 image */
     d64_image_t *img = d64_create(num_tracks);
