@@ -10,6 +10,34 @@
  * Die Lizenz der Quelle ist am vendorten Baum gemessen
  * (`src/a8rawconv/a8rawconv.cpp:5-7`), nicht dem
  * Kopfkommentar entnommen (MF-697).
+ *
+ * -- WORAUF DIESES MODUL WARTET (MF-886) -------------------------------
+ *
+ * `uft_precomp_apply()` — der Eingang dieses Moduls — hat im ganzen Baum
+ * KEINEN Aufrufer in `src/`. Nur `tests/test_write_precomp.c` ruft die
+ * Rechenfunktion darunter. Das Modul ist also GEPRUEFT UND UNVERDRAHTET,
+ * derselbe Zustand wie MF-471/473/474 (siehe Kopf von
+ * `scripts/audit_orphan_modules.py`).
+ *
+ * Es steht bewusst NICHT in `docs/orphan_baseline.txt`: jene Liste fuehrt
+ * Module, die NIEMAND ruft, auch kein Test.
+ *
+ * Der Grund fuer die Lage ist gemessen, nicht vermutet: es gibt in UFT
+ * keinen Mac-800K-FLUSSPFAD, an den man die Kompensation haengen koennte.
+ * `src/formats/apple/mac_dsk.c` (77 Zeilen) ist ein Container-Leser fuer
+ * bereits dekodierte Abbilder, kein Dekoder. Eine Aufrufstelle zu
+ * erzwingen waere eine Verdrahtung ohne Verbraucher — genau das, was
+ * MF-630/632 als falsche Reihenfolge festgehalten haben.
+ *
+ * WAS ES OEFFNEN WUERDE: ein Flusspfad, der Mac-800K-GCR dekodiert. Dann
+ * gehoert `uft_precomp_apply()` dorthin, und zwar an dieselbe Stelle wie
+ * im Referenzwerkzeug: auf die ROHEN Uebergangszeiten, BEVOR die Bits
+ * dekodiert werden (a8rawconv `compensation.cpp`, Schalter `-P mac800k`).
+ *
+ * Ein `-P`-aequivalenter Regler wird bis dahin ausdruecklich NICHT
+ * angelegt. Ein Schalter ohne Wirkung ist ein Workaround-Stub.
+ *
+ * Gefuehrt als P3-160 in `docs/OPEN_ITEMS.md`.
  */
 
 #include "uft/core/uft_write_precomp.h"
