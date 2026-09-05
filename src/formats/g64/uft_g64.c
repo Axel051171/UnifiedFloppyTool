@@ -17,17 +17,21 @@
  * - Verhindert mehr als 2 aufeinanderfolgende 0-Bits
  * - Sync: 10× 0xFF (40 Bits = 8× "11111")
  * 
- * SPEED ZONES (wie D64):
- * - Zone 0 (Tracks 1-17):  21 Sektoren, 3.25 RPM-Korrektur
- * - Zone 1 (Tracks 18-24): 19 Sektoren
- * - Zone 2 (Tracks 25-30): 18 Sektoren  
- * - Zone 3 (Tracks 31-42): 17 Sektoren
+ * SPEED ZONES (wie D64) — Quelle: docs/format_specs/commodore/G64.TXT:285-291
+ * (Peter Schepers, Rev 1.9). Die Zone zaehlt von INNEN nach AUSSEN ABWAERTS:
+ * - Zone 3 (Tracks 1-17):  21 Sektoren  (langsamste Schreibgeschwindigkeit)
+ * - Zone 2 (Tracks 18-24): 19 Sektoren
+ * - Zone 1 (Tracks 25-30): 18 Sektoren
+ * - Zone 0 (Tracks 31-42): 17 Sektoren  (schnellste Schreibgeschwindigkeit)
+ * Diese Datei fuehrt die Zahlen NICHT selbst, sondern fragt die SSOT
+ * uft_cbm_speed_zone() — siehe den Kommentar bei g64_create().
  * 
  * @author UFT Team
  * @date 2025
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,28 +49,13 @@
 #define G64_HEADER_SIZE     12
 #define G64_TRACK_ENTRY     4           // Offset + 2 Bytes Size
 
-// Speed Zone Bits
-#define G64_SPEED_ZONE_0    0x00        // Tracks 1-17 (schnellste)
-#define G64_SPEED_ZONE_1    0x01        // Tracks 18-24
-#define G64_SPEED_ZONE_2    0x02        // Tracks 25-30
-#define G64_SPEED_ZONE_3    0x03        // Tracks 31-42 (langsamste)
-
-// Typische Track-Größen pro Zone (GCR-kodiert)
-static const uint16_t g64_track_sizes[4] = {
-    7692,   // Zone 0: 21 Sektoren × 366 Bytes
-    7142,   // Zone 1: 19 Sektoren × 376 Bytes
-    6666,   // Zone 2: 18 Sektoren × 370 Bytes
-    6250    // Zone 3: 17 Sektoren × 368 Bytes
-};
-
-// Speed Zone für jeden Track (1-basiert wie in D64)
-static const uint8_t g64_track_speed[43] = {
-    0,  // Track 0 (nicht verwendet)
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 1-17: Zone 0
-    1, 1, 1, 1, 1, 1, 1,                                  // 18-24: Zone 1
-    2, 2, 2, 2, 2, 2,                                     // 25-30: Zone 2
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3                    // 31-42: Zone 3
-};
+// MF-877: hier standen drei eigene Zonentabellen — vier `G64_SPEED_ZONE_*`-
+// Defines, ein `g64_track_sizes[4]` und ein `g64_track_speed[43]`. Die
+// Speed-Tabelle war GESPIEGELT (Spur 1 bekam 0, Spur 42 bekam 3) und wurde
+// von g64_create() in jede erzeugte Datei geschrieben. Die Zonengroessen und
+// die Defines hatten ausserhalb ihrer eigenen Definition keinen einzigen
+// Leser. Alle drei sind entfernt statt korrigiert: der Baum fuehrt diese
+// Zahlen einmal, in uft_cbm_speed_zone(). Siehe g64_create().
 
 // GCR Dekodierungs-Tabelle (5 Bits → 4 Bits)
 static const uint8_t gcr_decode_table[32] = {
@@ -439,11 +428,34 @@ static uft_error_t g64_create(uft_disk_t* disk, const char* path,
         }
     }
     
-    // Speed-Zone-Tabelle
+    // Speed-Zone-Tabelle (MF-877)
+    //
+    // Der Wert kommt aus der SSOT uft_cbm_speed_zone(UFT_CBM_1541, track)
+    // (src/formats/cbm/uft_cbm_geometry.c), NICHT aus einer eigenen Tabelle.
+    // Bis MF-877 stand hier eine lokale Kopie, und sie war gespiegelt:
+    // Spur 1 bekam 0, Spur 42 bekam 3.
+    //
+    // Referenz: docs/format_specs/commodore/G64.TXT:285-291 (Peter Schepers,
+    // Rev 1.9) — Spuren 1-17 Zone 3 (langsamste), 18-24 Zone 2, 25-30 Zone 1,
+    // 31-4x Zone 0 (schnellste).
+    // Gemessen an tests/corpus_free/vice_c1541_35trk.g64 (VICE c1541): Spur 1
+    // und 17 -> 3, 18 und 24 -> 2, 25 und 30 -> 1, 31 und 35 -> 0.
+    // Der zweite G64-Schreiber im Baum, src/formats/c64/uft_d64_g64.c:58,
+    // bezieht denselben Wert bereits aus derselben SSOT.
+    // Rotbeweis: tests/test_g64_speedzonen.c
+    //
+    // Spuren ausserhalb 1..uft_cbm_max_track() liefern -1; solche Slots gibt
+    // es hier nicht (g64_tracks ist auf 42 Zylinder begrenzt), der Zweig ist
+    // dennoch explizit statt still.
     for (int i = 0; i < g64_tracks; i++) {
         int track = (i / 2) + 1;
+        int zone  = uft_cbm_speed_zone(UFT_CBM_1541, track);
+        if (zone < 0) {
+            fclose(f);
+            return UFT_ERROR_OUT_OF_RANGE;
+        }
         uint8_t speed[4];
-        write_le32(speed, track <= 42 ? g64_track_speed[track] : 3);
+        write_le32(speed, (uint32_t)zone);
         if (fwrite(speed, 4, 1, f) != 1) {
             fclose(f);
             return UFT_ERROR_FILE_WRITE;
