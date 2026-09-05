@@ -1284,10 +1284,20 @@ void HardwareTab::onDetectOutcome(const ::uft::hal::DriveDetected &v)
 {
     m_detectedTracks = v.tracks;
     m_detectedHeads = v.heads;
-    updateStatus(tr("Drive detected: %1 (%2 tracks, %3 heads, %4 RPM nominal)")
+
+    /* MF-894: 0 heisst "nicht erkannt" und muss auch so dastehen. Vorher
+     * las sich ein nicht gemessener Wert als "0 tracks, 0 heads, 0 RPM
+     * nominal" — eine Zahl, wo keine Messung war. */
+    const QString geo = (v.tracks > 0 && v.heads > 0)
+        ? tr("%1 Spuren, %2 Koepfe").arg(v.tracks).arg(v.heads)
+        : tr("Geometrie nicht ermittelt");
+    const QString rpm = (v.rpm_nominal > 0.0)
+        ? tr("%1 U/min").arg(v.rpm_nominal, 0, 'f', 0)
+        : tr("Drehzahl nicht ermittelt");
+
+    updateStatus(tr("Laufwerk gemeldet: %1 (%2, %3)")
                      .arg(QString::fromStdString(v.drive_kind))
-                     .arg(v.tracks).arg(v.heads)
-                     .arg(v.rpm_nominal, 0, 'f', 0));
+                     .arg(geo).arg(rpm));
 }
 void HardwareTab::onDetectOutcome(const ::uft::hal::DriveAbsent &v)
 {

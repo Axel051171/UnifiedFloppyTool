@@ -858,23 +858,29 @@ DetectOutcome FluxEngineProviderV2::do_detect_drive()
     /* Parse RPM from output. */
     double rpm_nominal = parse_rpm_from_fe_output(combined);
 
-    /* Default to standard 3.5" DD/HD drive parameters when fluxengine output
-     * does not specify RPM. This is the documented nominal for the most common
-     * FluxEngine use case — not an invented value. */
-    if (rpm_nominal <= 0.0) {
-        rpm_nominal = 300.0;  /* Standard 3.5" DD/HD 300 RPM nominal */
-    }
-
-    /* Infer drive type from RPM (mirrors V1 parseDriveInfo). */
+    /* MF-894: Hier wurde eine Drehzahl ERFUNDEN — 300.0, wenn fluxengine
+     * keine meldete —, und daraus der Laufwerkstyp abgeleitet. Beides ging
+     * als `DriveDetected` an die Oberflaeche und war dort von einer echten
+     * Erkennung nicht zu unterscheiden. Die ausfuehrliche Begruendung und
+     * die beiden Vorbilder im Baum stehen in
+     * `kryoflux_provider_v2.cpp::do_detect_drive` — dieselbe Stelle,
+     * derselbe Fehler, dieselbe Loesung. */
     std::string drive_kind;
-    if (rpm_nominal > 350.0) {
-        drive_kind = "5.25\" HD (1.2M)";
+    if (rpm_nominal <= 0.0) {
+        drive_kind  = "Unknown (no RPM signal)";
+        rpm_nominal = 0.0;
+    } else if (rpm_nominal > 350.0) {
+        drive_kind = "5.25\" HD (1.2M), measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else if (rpm_nominal > 280.0 && rpm_nominal <= 320.0) {
-        drive_kind = "3.5\" DD/HD";
+        drive_kind = "3.5\" DD/HD, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else if (rpm_nominal > 250.0 && rpm_nominal <= 280.0) {
-        drive_kind = "5.25\" DD/SD";
+        drive_kind = "5.25\" DD/SD, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else {
-        drive_kind = "3.5\" DD/HD";  /* Conservative default */
+        drive_kind = "Unknown, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     }
 
     /* FE-F6: query the real fluxengine version with a dedicated `version`
@@ -888,8 +894,10 @@ DetectOutcome FluxEngineProviderV2::do_detect_drive()
 
     DriveDetected detected;
     detected.drive_kind  = drive_kind;
-    detected.tracks      = 80;        /* FluxEngine default: 80 cylinders */
-    detected.heads       = 2;         /* Standard 2-sided floppy */
+    /* `fluxengine rpm` meldet keine Geometrie. 0 heisst "nicht erkannt" —
+     * dasselbe Sentinel wie in `fc5025_provider_v2.cpp`. */
+    detected.tracks      = 0;
+    detected.heads       = 0;
     detected.rpm_nominal = rpm_nominal;
     detected.firmware    = version;
 

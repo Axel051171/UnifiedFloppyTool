@@ -833,8 +833,15 @@ DetectOutcome GreaseweazleProviderV2::do_detect_drive()
 
     DriveDetected detected;
     detected.drive_kind  = drive_kind;
-    detected.tracks      = 80;
-    detected.heads       = 2;
+    /* MF-894: die Drehzahl war hier schon ehrlich (0 bei fehlendem
+     * Signal), die Geometrie nicht: 80/2 stand fest, auch wenn nichts
+     * gemessen wurde — und landete ueber `HardwareTab::onDetectOutcome`
+     * in der Geometrie des Fluss-Mitschnitts. 0 heisst "nicht erkannt"
+     * (Sentinel aus `fc5025_provider_v2.cpp`);
+     * `WorkflowTab::setHardwareDevice()` prueft `if (cylinders > 0)` und
+     * behaelt seine eigene Vorbelegung 80/2. */
+    detected.tracks      = 0;
+    detected.heads       = 0;
     detected.rpm_nominal = rpm_nominal;
     detected.firmware    = fw_str;
 

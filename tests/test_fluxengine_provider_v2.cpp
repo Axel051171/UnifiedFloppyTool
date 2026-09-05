@@ -41,8 +41,8 @@
  *   7. Empty flux stream guard:
  *      - Call write_raw_flux with empty FluxStream → ProviderError.
  *   8. ProviderError 3-part contract (F-4).
- *   9. detect_drive — no RPM in output (uses default 300.0).
- *  10. RPM nominal = default 300.0 when output has no parseable value.
+ *   9. detect_drive — keine Drehzahl in der Ausgabe: es wird keine
+ *      erfunden (MF-894).
  *
  * FluxEngineRunner adapter:
  *   SubprocessMock::run() returns SubprocessMock::RunResult, while the V2
@@ -258,8 +258,12 @@ static void smoke_detect_drive_happy_path()
         [&](const DriveDetected& d) {
             got_detected = true;
             assert(!d.drive_kind.empty() && "drive_kind must be non-empty");
-            assert(d.tracks > 0          && "tracks must be > 0");
-            assert(d.heads >= 1          && "heads must be >= 1");
+            /* MF-894: DTC bzw. fluxengine melden KEINE Geometrie. 0 heisst
+             * "nicht erkannt" — dasselbe Sentinel wie in
+             * `fc5025_provider_v2.cpp`. Vorher stand hier `tracks > 0`,
+             * also die Forderung nach der festen 80/2. */
+            assert(d.tracks == 0 && "tracks must be 0 - no geometry is detected");
+            assert(d.heads  == 0 && "heads must be 0 - no geometry is detected");
             assert(d.rpm_nominal > 0.0   && "rpm_nominal must be > 0");
             assert(d.rpm_nominal >= 290.0 && d.rpm_nominal <= 310.0
                    && "rpm_nominal must be ~300 for '300.0 rpm' in output");
@@ -838,11 +842,15 @@ static void smoke_detect_drive_no_rpm_in_output()
     std::visit(overloaded{
         [&](const DriveDetected& d) {
             got_detected = true;
-            /* Without RPM info, provider defaults to 300.0 RPM. */
-            assert(d.rpm_nominal == 300.0
-                   && "rpm_nominal must default to 300.0 when RPM not in output");
-            assert(d.tracks > 0  && "tracks must be > 0");
-            assert(d.heads >= 1  && "heads must be >= 1");
+            /* MF-894: Ohne Drehzahl in der Ausgabe wird KEINE erfunden.
+             * Begruendung ausfuehrlich im KryoFlux-Test, Abschnitt 7. */
+            assert(d.rpm_nominal == 0.0
+                   && "rpm_nominal must be 0 (not measured) when FE reports no RPM");
+            assert(d.drive_kind.find("no RPM signal") != std::string::npos
+                   && "drive_kind must say the RPM was not measured");
+            assert(d.tracks == 0
+                   && "tracks must be 0 (not detected)");
+            assert(d.heads == 0 && "heads must be 0 - no geometry is detected");
         },
         [&](const DriveAbsent&)              {},
         [&](const CapabilityRequiresPolicy&) {},

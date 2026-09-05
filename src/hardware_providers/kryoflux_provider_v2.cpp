@@ -484,29 +484,56 @@ DetectOutcome KryoFluxProviderV2::do_detect_drive()
     /* Parse RPM if DTC reported it in its output. */
     double rpm_nominal = parse_rpm_from_dtc_output(combined);
 
-    /* Default to standard 3.5" HD drive parameters when DTC output does
-     * not specify. This is the documented nominal for the most common
-     * KryoFlux use case — not an invented value. */
-    if (rpm_nominal <= 0.0) {
-        rpm_nominal = 300.0;  /* Standard 3.5" DD/HD 300 RPM nominal */
-    }
-
-    /* Infer drive type from RPM if available (mirrors V1 parseDriveInfo). */
+    /* MF-894: Hier wurde eine Drehzahl ERFUNDEN.
+     *
+     * Meldete das Werkzeug keine, setzte der Provider 300.0 — mit dem
+     * Kommentar "This is the documented nominal for the most common use
+     * case - not an invented value". Der Nennwert mag dokumentiert sein;
+     * ihn als `rpm_nominal` in einem `DriveDetected` zu fuehren macht ihn
+     * zum BEFUND. Und er blieb nicht folgenlos: der Laufwerkstyp wurde
+     * daraus abgeleitet (300 liegt zwischen 280 und 320, also
+     * "3.5\" DD/HD"), und die Oberflaeche zeigt das als
+     *
+     *     Drive detected: 3.5" DD/HD (80 tracks, 2 heads, 300 RPM nominal)
+     *
+     * — von einer echten Erkennung nicht zu unterscheiden.
+     *
+     * Der Baum hat fuer diesen Fall bereits eine Konvention, zweimal
+     * ausgeschrieben: `greaseweazle_provider_v2.cpp` meldet
+     * "Unknown (no RPM signal)" mit `rpm_nominal = 0.0`, und
+     * `fc5025_provider_v2.cpp` setzt tracks/heads/rpm auf 0 mit der
+     * Begruendung "Report 0 = 'not auto-detected' ... rather than
+     * fabricating a 5.25\" DD default".
+     *
+     * Dass die festen 80/2 gefahrlos entfallen, ist gemessen:
+     * `WorkflowTab::setHardwareDevice()` prueft `if (cylinders > 0)`, und
+     * `WorkflowTab` traegt selbst die Vorbelegung 80/2. Die Vorgabe
+     * wandert damit dorthin, wo sie hingehoert — in die
+     * Aufnahme-Einstellung, nicht in einen Befund. */
     std::string drive_kind;
-    if (rpm_nominal > 350.0) {
-        drive_kind = "5.25\" HD (1.2M)";
+    if (rpm_nominal <= 0.0) {
+        drive_kind  = "Unknown (no RPM signal)";
+        rpm_nominal = 0.0;
+    } else if (rpm_nominal > 350.0) {
+        drive_kind = "5.25\" HD (1.2M), measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else if (rpm_nominal > 280.0 && rpm_nominal <= 320.0) {
-        drive_kind = "3.5\" DD/HD";
+        drive_kind = "3.5\" DD/HD, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else if (rpm_nominal > 250.0 && rpm_nominal <= 280.0) {
-        drive_kind = "5.25\" DD/SD";
+        drive_kind = "5.25\" DD/SD, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     } else {
-        drive_kind = "3.5\" DD/HD";  /* Conservative default */
+        drive_kind = "Unknown, measured "
+                   + std::to_string(static_cast<int>(rpm_nominal + 0.5)) + " RPM";
     }
 
     DriveDetected detected;
-    detected.drive_kind  = drive_kind;
-    detected.tracks      = 80;        /* KryoFlux default: 80 cylinders */
-    detected.heads       = 2;         /* Standard 2-sided floppy */
+    detected.drive_kind = drive_kind;
+    /* DTC meldet keine Geometrie. 0 heisst "nicht erkannt" — dasselbe
+     * Sentinel wie in `fc5025_provider_v2.cpp`. */
+    detected.tracks      = 0;
+    detected.heads       = 0;
     detected.rpm_nominal = rpm_nominal;
     detected.firmware    = firmware;
 

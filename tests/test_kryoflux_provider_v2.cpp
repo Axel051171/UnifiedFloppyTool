@@ -196,8 +196,12 @@ static void smoke_detect_drive_happy_path() {
         [&](const DriveDetected& d) {
             got_detected = true;
             assert(!d.drive_kind.empty() && "drive_kind must be non-empty");
-            assert(d.tracks > 0          && "tracks must be > 0");
-            assert(d.heads >= 1          && "heads must be >= 1");
+            /* MF-894: DTC bzw. fluxengine melden KEINE Geometrie. 0 heisst
+             * "nicht erkannt" — dasselbe Sentinel wie in
+             * `fc5025_provider_v2.cpp`. Vorher stand hier `tracks > 0`,
+             * also die Forderung nach der festen 80/2. */
+            assert(d.tracks == 0 && "tracks must be 0 - no geometry is detected");
+            assert(d.heads  == 0 && "heads must be 0 - no geometry is detected");
             assert(d.rpm_nominal > 0.0   && "rpm_nominal must be > 0");
             /* Verify firmware was parsed from DTC output. */
             assert(d.firmware.find("3.00a") != std::string::npos
@@ -477,7 +481,37 @@ static void smoke_provider_error_3part_contract() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- *  7. detect_drive — no RPM in DTC output (uses default 300.0)
+ *  7. detect_drive — keine Drehzahl in der Ausgabe (MF-894)
+ *
+ *  Bis MF-894 stand hier:
+ *
+ *      assert(d.rpm_nominal == 300.0
+ *             && "rpm_nominal must default to 300.0 when DTC does not
+ *                 report RPM");
+ *      assert(d.tracks > 0 && "tracks must be > 0");
+ *
+ *  Der Pruefstand FORDERTE die Erfindung. Meldet DTC keine Drehzahl,
+ *  setzte der Provider 300.0 — und leitete daraus den Laufwerkstyp ab
+ *  ("3.5\" DD/HD", weil 300 zwischen 280 und 320 liegt). Beides ging als
+ *  `DriveDetected` an die Oberflaeche, die es als
+ *  "Drive detected: 3.5\" DD/HD (80 tracks, 2 heads, 300 RPM nominal)"
+ *  anzeigt — von einer echten Erkennung nicht zu unterscheiden.
+ *
+ *  Der Baum hat fuer diesen Fall bereits eine Konvention, und zwar
+ *  zweimal ausgeschrieben:
+ *
+ *    `greaseweazle_provider_v2.cpp:830` — "Unknown (no RPM signal)",
+ *                                        rpm_nominal = 0.0
+ *    `fc5025_provider_v2.cpp:357-365`   — tracks/heads/rpm = 0, mit dem
+ *                                        Kommentar "Report 0 = 'not
+ *                                        auto-detected' ... rather than
+ *                                        fabricating a 5.25\" DD default"
+ *
+ *  Dass die 80/2 gefahrlos entfallen koennen, ist gemessen:
+ *  `WorkflowTab::setHardwareDevice()` prueft `if (cylinders > 0)`, und
+ *  `WorkflowTab` traegt selbst die Vorbelegung 80/2. Die Vorgabe wandert
+ *  damit dorthin, wo sie hingehoert — in die Aufnahme-Einstellung, nicht
+ *  in einen Befund.
  * ──────────────────────────────────────────────────────────────────────── */
 
 static void smoke_detect_drive_no_rpm_in_output() {
@@ -499,11 +533,15 @@ static void smoke_detect_drive_no_rpm_in_output() {
     std::visit(overloaded{
         [&](const DriveDetected& d) {
             got_detected = true;
-            /* Without RPM info, provider defaults to 300.0 RPM. */
-            assert(d.rpm_nominal == 300.0
-                   && "rpm_nominal must default to 300.0 when DTC does not report RPM");
-            assert(d.tracks > 0  && "tracks must be > 0");
-            assert(d.heads >= 1  && "heads must be >= 1");
+            /* MF-894: Ohne Drehzahl in der Ausgabe wird KEINE erfunden. */
+            assert(d.rpm_nominal == 0.0
+                   && "rpm_nominal must be 0 (not measured) when DTC reports no RPM");
+            assert(d.drive_kind.find("no RPM signal") != std::string::npos
+                   && "drive_kind must say the RPM was not measured, not name a drive type");
+            assert(d.tracks == 0
+                   && "tracks must be 0 (not detected) - DTC reports no geometry");
+            assert(d.heads == 0
+                   && "heads must be 0 (not detected) - DTC reports no geometry");
         },
         [&](const DriveAbsent&)              {},
         [&](const CapabilityRequiresPolicy&) {},
