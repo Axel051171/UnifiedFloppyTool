@@ -3,6 +3,21 @@
 # SAMdisk als hauseigenes Oracle (MF-911)
 # =======================================
 #
+# ⚠ UNGEPRUEFT — DIESER BAU IST NIE GELAUFEN.
+#
+# Er ist geschrieben, aber nicht uebersetzt: auf dieser Maschine fehlt in
+# beiden WSL-Distributionen jeder Compiler (gemessen: gcc/g++/make/cmake
+# alle nicht vorhanden), und `sudo` verlangt ein Passwort. Die
+# Dateiauswahl unten ist aus dem Bestand GEMESSEN (vier hardwarenahe
+# Quellen, `capsimage` 0 Treffer), die Uebersetzbarkeit ist es NICHT.
+#
+# Er kam versehentlich mit MF-911 in den Baum (`git add -A`), obwohl er
+# bis zum ersten gruenen Lauf draussen bleiben sollte. Statt ihn wieder
+# zu entfernen steht die Einschraenkung jetzt hier, wo sie jeder liest,
+# der ihn benutzen will. Wer ihn zum Laufen bringt, streicht diesen
+# Absatz — und nennt im Commit, was tatsaechlich uebersetzt wurde.
+#
+#
 # WOZU
 # ----
 # `src/samdisk/` ist seit v4.1.0 ein vollstaendiger, MIT-lizenzierter
