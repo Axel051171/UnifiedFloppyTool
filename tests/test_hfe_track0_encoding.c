@@ -53,10 +53,10 @@
  *      -> **nur 0x00** schaltet den Ersatz ein.
  *
  *   2. **SAMdisk** (fremde Umsetzung, im Baum unter `src/samdisk/`),
- *      `hfe.cpp:24-27`:
+ *      `hfe.cpp`, an `track0s0_altencoding` in `struct HFE_HEADER`:
  *        "0xff = ignore, otherwise use encoding below"
  *      -> **alles ausser 0xFF** schaltet den Ersatz ein.
- *      SAMdisks Schreiber setzt selbst immer 0xFF (`hfe.cpp:276-279`).
+ *      SAMdisks Schreiber (`WriteHFE`) setzt selbst immer 0xFF.
  *
  * Die beiden decken sich an den einzigen Werten, die in freier Wildbahn
  * vorkommen — 0x00 (Ersatz) und 0xFF (kein Ersatz) — und **widersprechen
@@ -79,6 +79,8 @@
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
 
+#include "fixtures/hfe_v1_fixture.h"
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -94,76 +96,38 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                         _fail++; return; } } while (0)
 
-/* HFE-Kodierungswerte, wie sie im Kopf stehen (uft_hfe.c:47-51). */
+/* HFE-Kodierungswerte, wie sie im Kopf stehen (`hfe_encoding_t` in
+ * `src/formats/hfe/uft_hfe.c`). */
 #define ENC_ISOIBM_MFM  0x00
 #define ENC_AMIGA_MFM   0x01
 #define ENC_ISOIBM_FM   0x02
 
-#define BLOCK 512u
-
 /*
- * Baut eine minimale, gueltige HFE v1 mit zwei Spuren und zwei Seiten.
- *
- * Aufbau (HFE v1, nachgelesen in `src/samdisk/hfe.cpp` und in UFTs
- * eigenem Leser `hfe_open()`):
- *
- *   Block 0 (0x000)  512-Byte-Kopf, Kennung "HXCPICFE"
- *   Block 1 (0x200)  Spurtabelle, je Spur 4 Byte: Versatz(Bloecke), Laenge
- *   Block 2 (0x400)  Spur 0, verschraenkt: 256 B Seite 0, dann 256 B Seite 1
- *   Block 3 (0x600)  Spur 1, ebenso
- *
- * Der Inhalt der Spurdaten spielt fuer diesen Test keine Rolle — geprueft
- * wird ausschliesslich, mit welcher KODIERUNG der Leser sie meldet.
+ * MF-903: hier stand derselbe HFE-v1-Kopfbauer wie in
+ * `test_hfe_write_allowed.c` — rund 40 Zeilen doppelt, vom Code-Review
+ * als Duplicated Code benannt. Er liegt jetzt in
+ * `tests/fixtures/hfe_v1_fixture.h`, samt der Beschreibung des Aufbaus.
  */
 static int schreibe_hfe(const char *pfad,
                         uint8_t diskweit,
                         uint8_t s0_alt, uint8_t s0_enc,
                         uint8_t s1_alt, uint8_t s1_enc)
 {
-    uint8_t datei[4 * BLOCK];
-    memset(datei, 0, sizeof(datei));
-
-    /* ── Kopf ── */
-    memcpy(datei + 0, "HXCPICFE", 8);
-    datei[8]  = 0;              /* format_revision */
-    datei[9]  = 2;              /* number_of_tracks */
-    datei[10] = 2;              /* number_of_sides  */
-    datei[11] = diskweit;       /* track_encoding   */
-    datei[12] = 250; datei[13] = 0;             /* bitrate 250 kbit/s LE */
-    datei[14] = 44;  datei[15] = 1;             /* rpm 300 LE */
-    datei[16] = 0x07;           /* interface: Generic Shugart */
-    datei[17] = 0x01;           /* reserved */
-    datei[18] = 1;   datei[19] = 0;             /* track_list_offset = Block 1 */
-    datei[20] = 0x00;           /* write_allowed */
-    datei[21] = 0xFF;           /* single_step */
-    datei[22] = s0_alt;
-    datei[23] = s0_enc;
-    datei[24] = s1_alt;
-    datei[25] = s1_enc;
-
-    /* ── Spurtabelle in Block 1 ── */
-    uint8_t *lut = datei + BLOCK;
-    lut[0] = 2; lut[1] = 0;                     /* Spur 0: Block 2 */
-    lut[2] = (uint8_t)(BLOCK & 0xFF); lut[3] = (uint8_t)(BLOCK >> 8);
-    lut[4] = 3; lut[5] = 0;                     /* Spur 1: Block 3 */
-    lut[6] = (uint8_t)(BLOCK & 0xFF); lut[7] = (uint8_t)(BLOCK >> 8);
-
-    /* ── Spurdaten: unterscheidbar, damit ein Verwechseln auffiele ── */
-    memset(datei + 2 * BLOCK,       0xA5, BLOCK);
-    memset(datei + 3 * BLOCK,       0x5A, BLOCK);
-
-    FILE *f = fopen(pfad, "wb");
-    if (!f) return 0;
-    size_t n = fwrite(datei, 1, sizeof(datei), f);
-    fclose(f);
-    return n == sizeof(datei);
+    const uft_test_hfe_v1_t o = {
+        /* tracks */ 2, /* sides */ 2,
+        /* track_encoding */ diskweit,
+        /* write_allowed  */ 0x00,
+        s0_alt, s0_enc, s1_alt, s1_enc,
+    };
+    return uft_test_write_hfe_v1(pfad, &o);
 }
 
+/* MF-903: hier formatierte `snprintf` die Konstante 0xAF7 in den Namen
+ * — eine Eindeutigkeit, die nie eingeloest wurde. Ein fester Name tut
+ * dasselbe und behauptet weniger. */
 static const char *tmp_pfad(void)
 {
-    static char p[512];
-    snprintf(p, sizeof(p), "uft_hfe_track0_%u.hfe", (unsigned)0xAF7);
-    return p;
+    return "uft_hfe_track0.hfe";
 }
 
 /* Liest EINE Spur ueber den echten Plugin-Pfad und liefert ihre Kodierung. */
@@ -258,7 +222,8 @@ TEST(beide_seiten_eigener_ersatz)
 /* ─────────────────────────────────────────────────────────────────────────
  *  5. 0xFF heisst KEIN Ersatz — auch wenn ein Kodierungsbyte danebensteht.
  *
- *  Das ist die Richtung, die der falsche Kommentar in `uft_hfe.c:115`
+ *  Das ist die Richtung, die der frueher falsche Kommentar an
+ *  `track0s0_altencoding` in `uft_hfe.c`
  *  behauptete ("0xFF = alternate encoding"). Wer ihm folgte, wuerde hier
  *  FM melden, wo MFM steht.
  * ───────────────────────────────────────────────────────────────────────── */
@@ -282,7 +247,7 @@ TEST(ff_heisst_kein_ersatz)
  *     Urheber und wendet NICHTS an.
  *
  *  HxC (hfe_loader.c): nur 0x00 schaltet ein.
- *  SAMdisk (hfe.cpp:24): alles ausser 0xFF schaltet ein.
+ *  SAMdisk (`HFE_HEADER` in hfe.cpp): alles ausser 0xFF schaltet ein.
  *
  *  Eine Kodierung wegen eines strittigen Bytes zu wechseln waere
  *  geraten. Der Vermerk darueber steht im Quelltext, nicht nur hier.
@@ -315,7 +280,7 @@ TEST(strittiger_wert_wendet_nichts_an)
  *  als Ersatz und wuerde Spur 0 einer UFT-HFE anders dekodieren als den
  *  Rest. Alle drei Referenz-Schreiber setzen 0xFF — gemessen an
  *  `tests/corpus_free/gw_amigados.hfe` (greaseweazle 1.23: 0xFF in allen
- *  vieren) und an `src/samdisk/hfe.cpp:276-279`.
+ *  vieren) und an SAMdisks Schreiber `WriteHFE`.
  * ───────────────────────────────────────────────────────────────────────── */
 TEST(eigener_schreiber_erklaert_keinen_ersatz)
 {

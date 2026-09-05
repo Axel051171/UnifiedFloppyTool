@@ -199,14 +199,23 @@ static uft_encoding_t hfe_to_uft_encoding(uint8_t hfe_enc) {
  *
  * SECHS Belege sagen "0xFF heisst SCHREIBEN ERLAUBT", alle im Baum:
  *
+ * (MF-903: hier standen ZEILENNUMMERN. Vier von ihnen waren nach der
+ * naechsten Aenderung an denselben Dateien falsch — verschoben durch
+ * eine SPDX-Zeile und einen Kommentarblock aus derselben Hand. Verweise
+ * nennen ab jetzt das SYMBOL: Zeilen driften, Namen nicht.)
+ *
  *   1. der Feldname selbst — `write_allowed`, 0xFF = wahr = erlaubt
- *   2. include/uft/flux/uft_hfe.h:108        "0xFF = writable"
- *   3. include/uft/uft_hfe_format.h:99       "0xFF = write allowed"
- *   4. include/uft/uft_hfe_format.h:197      setzt 0xFF, "Writeable"
- *   5. src/samdisk/hfe.cpp:274               schreibt 0xff fuer ein ganz
- *                                            gewoehnliches Abbild
- *   6. src/formats/hfe/uft_hfe_parser_v2.c:313
- *                                            `write_allowed ? "Yes":"No"`
+ *   2. include/uft/flux/uft_hfe.h        `write_allowed`: "0xFF = writable"
+ *   3. include/uft/uft_hfe_format.h      `write_allowed`: "0xFF = write
+ *                                        allowed"
+ *   4. include/uft/uft_hfe_format.h      `uft_hfe_header_init()` setzt
+ *                                        0xFF, Vermerk "Writeable"
+ *   5. src/samdisk/hfe.cpp               der Schreiber setzt
+ *                                        `hh.write_allowed = 0xff` fuer
+ *                                        ein ganz gewoehnliches Abbild
+ *   6. src/formats/hfe/uft_hfe_parser_v2.c
+ *                                        `hfe_info_to_text()`:
+ *                                        `write_allowed ? "Yes" : "No"`
  *
  * Waere 0xFF Schreibschutz, dann waere JEDE jemals von SAMdisk oder
  * greaseweazle geschriebene HFE schreibgeschuetzt.
@@ -249,10 +258,11 @@ static bool hfe_write_allowed(const hfe_header_t* hdr) {
  *                   bleibt die Vorgabe 0xFF stehen.
  *     -> NUR 0x00 schaltet den Ersatz ein.
  *
- *   SAMdisk (fremde Umsetzung, im Baum unter src/samdisk/hfe.cpp:24-27):
+ *   SAMdisk (fremde Umsetzung, im Baum unter src/samdisk/hfe.cpp, an
+ *   `track0s0_altencoding` in `struct HFE_HEADER`):
  *     "0xff = ignore, otherwise use encoding below"
  *     -> ALLES AUSSER 0xFF schaltet den Ersatz ein.
- *     Ihr eigener Schreiber setzt immer 0xFF (hfe.cpp:276-279).
+ *     Ihr eigener Schreiber setzt immer 0xFF (`WriteHFE`).
  *
  * Die beiden decken sich an den einzigen Werten, die vorkommen — 0x00
  * und 0xFF — und widersprechen sich fuer 0x01..0xFE. Dort folgt UFT dem
@@ -689,7 +699,7 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     header.track_list_offset = 1;  // LUT beginnt bei Block 1
     /* MF-898: hier stand 0x00 mit dem Kommentar "Schreiben erlaubt" —
      * waehrend `uft_hfe_header_init()` im selben Baum fuer denselben
-     * Zweck 0xFF setzt, und SAMdisk (hfe.cpp:274) wie greaseweazle
+     * Zweck 0xFF setzt, und SAMdisks Schreiber wie greaseweazle
      * ebenfalls 0xFF. Zwei Schreiber, entgegengesetzte Werte, eine
      * Absicht. */
     header.write_allowed = 0xFF;   // Schreiben erlaubt
@@ -702,7 +712,7 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
      *
      * Gemessen, dass alle drei Referenz-Schreiber es anders machen:
      *   greaseweazle 1.23  -> 0xFF in allen vieren (gw_amigados.hfe)
-     *   SAMdisk            -> 0xFF, ausdruecklich (hfe.cpp:276-279)
+     *   SAMdisk            -> 0xFF, ausdruecklich (`WriteHFE`)
      *   HxC                -> 0xFF als Vorgabe, 0x00 nur beim Abweichen
      *
      * Ohne diese Zeilen wuerde ein konformer fremder Leser — SAMdisk

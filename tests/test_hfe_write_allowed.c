@@ -24,14 +24,18 @@
  *
  * Fuer "0xFF heisst SCHREIBEN ERLAUBT" sprechen, alle im Baum nachlesbar:
  *
+ * (MF-903: hier standen Zeilennummern; vier waren binnen zweier
+ * Commits falsch. Verweise nennen jetzt das SYMBOL.)
+ *
  *   1. der Feldname selbst — `write_allowed`, 0xFF = wahr = erlaubt
- *   2. include/uft/flux/uft_hfe.h:108      "0xFF = writable"
- *   3. include/uft/uft_hfe_format.h:99     "0xFF = write allowed"
- *   4. include/uft/uft_hfe_format.h:197    setzt 0xFF mit "Writeable"
- *   5. src/samdisk/hfe.cpp:274             schreibt 0xff fuer ein ganz
- *                                          gewoehnliches Abbild
- *   6. src/formats/hfe/uft_hfe_parser_v2.c:313
- *                                          `write_allowed ? "Yes" : "No"`
+ *   2. include/uft/flux/uft_hfe.h      `write_allowed`: "0xFF = writable"
+ *   3. include/uft/uft_hfe_format.h    `write_allowed`: "0xFF = write allowed"
+ *   4. include/uft/uft_hfe_format.h    `uft_hfe_header_init()` setzt 0xFF
+ *   5. src/samdisk/hfe.cpp             der Schreiber setzt 0xff fuer ein
+ *                                      ganz gewoehnliches Abbild
+ *   6. src/formats/hfe/uft_hfe_parser_v2.c
+ *                                      `hfe_info_to_text()`:
+ *                                      `write_allowed ? "Yes" : "No"`
  *
  * Dazu die Messung: greaseweazle schreibt 0xFF. **Waere 0xFF
  * Schreibschutz, dann waere jede jemals von SAMdisk oder greaseweazle
@@ -62,6 +66,8 @@
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
 
+#include "fixtures/hfe_v1_fixture.h"
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -81,8 +87,6 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                         _fail++; return; } } while (0)
 
-#define BLOCK 512u
-
 static const char *korpus_hfe(void)
 {
     static char p[512];
@@ -90,39 +94,23 @@ static const char *korpus_hfe(void)
     return p;
 }
 
-/* Minimale gueltige HFE v1, eine Spur, eine Seite — nur der Kopfwert
- * `write_allowed` ist hier von Belang. Aufbau wie in
- * `test_hfe_track0_encoding.c` beschrieben. */
+/*
+ * MF-903: derselbe HFE-v1-Kopfbauer wie in
+ * `test_hfe_track0_encoding.c` lag hier ein zweites Mal - rund 40
+ * Zeilen doppelt, vom Code-Review als Duplicated Code benannt. Er liegt
+ * jetzt in `tests/fixtures/hfe_v1_fixture.h`, samt der Beschreibung des
+ * Aufbaus. Hier ist nur `write_allowed` von Belang; die Spur-0-Felder
+ * stehen auf 0xFF, also "kein Ersatz" (MF-897).
+ */
 static int schreibe_hfe(const char *pfad, uint8_t write_allowed)
 {
-    uint8_t datei[3 * BLOCK];
-    memset(datei, 0, sizeof(datei));
-
-    memcpy(datei + 0, "HXCPICFE", 8);
-    datei[8]  = 0;
-    datei[9]  = 1;              /* number_of_tracks */
-    datei[10] = 1;              /* number_of_sides  */
-    datei[11] = 0x00;           /* track_encoding: ISO MFM */
-    datei[12] = 250; datei[13] = 0;
-    datei[14] = 44;  datei[15] = 1;
-    datei[16] = 0x07;
-    datei[17] = 0x01;
-    datei[18] = 1;   datei[19] = 0;    /* track_list_offset = Block 1 */
-    datei[20] = write_allowed;
-    datei[21] = 0xFF;                  /* single_step */
-    datei[22] = 0xFF; datei[23] = 0xFF;  /* kein Spur-0-Ersatz (MF-897) */
-    datei[24] = 0xFF; datei[25] = 0xFF;
-
-    uint8_t *lut = datei + BLOCK;
-    lut[0] = 2; lut[1] = 0;
-    lut[2] = (uint8_t)(BLOCK & 0xFF); lut[3] = (uint8_t)(BLOCK >> 8);
-    memset(datei + 2 * BLOCK, 0xA5, BLOCK);
-
-    FILE *f = fopen(pfad, "wb");
-    if (!f) return 0;
-    size_t n = fwrite(datei, 1, sizeof(datei), f);
-    fclose(f);
-    return n == sizeof(datei);
+    const uft_test_hfe_v1_t o = {
+        /* tracks */ 1, /* sides */ 1,
+        /* track_encoding */ 0x00,          /* ISO MFM */
+        write_allowed,
+        0xFF, 0xFF, 0xFF, 0xFF,
+    };
+    return uft_test_write_hfe_v1(pfad, &o);
 }
 
 /* Oeffnet und liefert Schreibschutz-Fahne und Metadaten-Antwort. */

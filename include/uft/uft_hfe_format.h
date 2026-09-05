@@ -199,7 +199,7 @@ static inline void hfe_init_header(hfe_header_t *hdr, bool v3) {
     hdr->single_step = 0xFF;        /* Single step */
     /* MF-897: die beiden Kodierungsbytes fehlten hier. Alle drei
      * Referenz-Schreiber setzen auch sie auf 0xFF (greaseweazle 1.23 in
-     * gw_amigados.hfe, SAMdisk hfe.cpp:276-279, HxC als Vorgabe). */
+     * gw_amigados.hfe, SAMdisks `WriteHFE`, HxC als Vorgabe). */
     hdr->track0s0_altencoding = 0xFF;   /* kein Ersatz */
     hdr->track0s0_encoding    = 0xFF;
     hdr->track0s1_altencoding = 0xFF;   /* kein Ersatz */
