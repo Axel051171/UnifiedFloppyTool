@@ -26,7 +26,19 @@ typedef struct {
  * copy-protected and 40-track-formatted disks do. They continue zone 0.
  * Gap lengths from the same source as the rest of the encoder they replace
  * (uft_d64_g64.c), which produces byte-identical G64 output against the
- * c1541 reference image. */
+ * c1541 reference image.
+ *
+ * MF-910: was diese Herkunft belegt und was nicht, ausgeschrieben.
+ * BELEGT ist, dass die vier Werte {9, 19, 13, 10} zusammen mit dem
+ * uebrigen Encoder eine G64 erzeugen, die gegen das c1541-Referenzbild
+ * byteidentisch ist — das ist eine Messung am Ergebnis, und sie traegt.
+ * NICHT BELEGT ist, woher die vier Zahlen urspruenglich stammen: der
+ * Encoder, aus dem sie kamen, nennt keine Quelle. Sie sind damit
+ * "gemessen wirksam", nicht "aus einer benannten Spezifikation".
+ *
+ * Der Unterschied zaehlt, sobald jemand sie ausserhalb dieses Encoders
+ * benutzen will — etwa fuer eine Aussage ueber eine ECHTE Diskette.
+ * Dafuer braucht es eine zweite, unabhaengige Quelle. */
 static const cbm_zone_t zones_1541[] = {
     {  1, 17, 21, 3,  9 },
     { 18, 24, 19, 2, 19 },

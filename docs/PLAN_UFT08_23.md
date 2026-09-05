@@ -287,6 +287,31 @@ schlägt Regel 9, wenn zwei Ansichten desselben Abbilds sich widersprechen.
 
 ## Phase 5 — Billige Ehrlichkeit (kein Code)
 
+> **✅ ERLEDIGT — MF-910. Und der Plan lag hier falsch.**
+>
+> Geplant war ein **Statuswechsel** an P3-79: der Bericht liefere das,
+> was dem Eigentümer 2026 fehlte. **Das wäre genau der Fehler gewesen,
+> den die Rücknahme behoben hat.** Der Extraktions-Agent hat
+> ausdrücklich vermerkt, die Archive nicht gesehen zu haben — die
+> Aussage ist ein Berichtszitat, keine Messung. Ein zurückgezogenes
+> Urteil auf ein ungeprüftes Zitat hin zu drehen, wäre dieselbe Klasse
+> wie die Rücknahme selbst.
+>
+> P3-79 bleibt **ZURÜCKGEZOGEN**. Eingetragen ist stattdessen **P3-186**:
+> der Kandidat, ausdrücklich als ungeprüft gekennzeichnet, mit dem
+> benannten Weg, der ihn schlösse — und der Lizenzlage dazu.
+>
+> Ebenfalls erledigt: der **Herkunftsvermerk** an den 1541-Gaps
+> `{9, 19, 13, 10}`. Er sagt jetzt, was belegt ist (die Werte erzeugen
+> zusammen mit dem Encoder eine byteidentische G64 gegen c1541) und was
+> **nicht** (woher die vier Zahlen ursprünglich stammen — der Encoder
+> nennt keine Quelle). Sie sind „gemessen wirksam“, nicht „aus einer
+> benannten Spezifikation“.
+>
+> Der dritte Punkt — die drei verwaisten Geometriedateien — ist in
+> **MF-906** aufgegangen (Tor 58 + P3-182/183).
+
+
 1. **P3-79 Statuswechsel.** `docs/OPEN_ITEMS.md` führt die
    Burst-Nibbler-`$01`-Behauptung als *vom Eigentümer zurückgezogen /
    UNRESOLVED*, Grund: das untersuchte Binary war ein gepackter Crack.
@@ -339,4 +364,4 @@ Dazu drei Beobachtungen ohne Auftrag:
 | 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **✅ erledigt, MF-906** |
 | 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **⚠ halb erledigt, MF-908** — Sonde offen (P3-184) |
 | 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **✅ erledigt, MF-909** |
-| 5 | Ehrlichkeit ohne Code | schließt P3-79 | **ja** |
+| 5 | Ehrlichkeit ohne Code | P3-79 bleibt zurückgezogen — Kandidat als P3-186 benannt | **✅ erledigt, MF-910** |
