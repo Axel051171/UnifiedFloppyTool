@@ -2997,6 +2997,7 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
            ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_disk_analyzer_no_fiction" OR
+           ${qt_test_name} STREQUAL "test_gw2dmk_no_simulation" OR
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
@@ -3027,6 +3028,12 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
                 target_include_directories(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/hardware_providers)
+            elseif(${qt_test_name} STREQUAL "test_gw2dmk_no_simulation")
+                # MF-891: das Panel war eine Schlafschleife, die ein
+                # Geraet und eine fertige Aufnahme meldete, ohne dass
+                # eine Datei entstand.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp)
             elseif(${qt_test_name} STREQUAL "test_disk_analyzer_no_fiction")
                 # MF-890: der Sektorbericht baute seinen ganzen Inhalt aus
                 # einer festen Zeichenkette - inklusive zweier erfundener

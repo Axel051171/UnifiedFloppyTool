@@ -68,53 +68,74 @@ void UftGw2DmkWorker::requestStop()
     m_stopRequested = true;
 }
 
+/**
+ * Kein Geraet, keine Aufnahme — und beides wird gesagt.
+ *
+ * ── Was hier stand (MF-891) ──────────────────────────────────────────────
+ *
+ * Eine Schlafschleife mit fest verdrahteten Ergebnissen. Der Quelltext
+ * sagte es selbst: `// Simulate device detection`, `// Simulate reading`,
+ * `// Simulate track result`.
+ *
+ *     OP_DETECT     msleep(500)
+ *                   -> deviceDetected("Greaseweazle F7 Plus v1.3 on
+ *                                      /dev/ttyACM0")
+ *     OP_READ_DISK  je Spur msleep(100)
+ *                   -> trackRead(cyl, head, 10,
+ *                                (cyl == 15 && head == 0) ? 1 : 0)
+ *                   -> operationComplete(true, "Disk read complete: <pfad>")
+ *
+ * Ein Geraetename mit Modell, Firmware-Fassung und Schnittstelle. Zehn
+ * Sektoren je Spur und ein Lesefehler auf Spur 15. Und am Ende ein
+ * gemeldeter Dateipfad, unter dem **keine Datei entsteht**: im ganzen
+ * Panel steht kein einziger Schreibaufruf (gemessen — der einzige Treffer
+ * ist ein `QFileDialog::getSaveFileName`, dessen Ergebnis nirgends
+ * beschrieben wird).
+ *
+ * Fuer einen Benutzer ist das von einer echten Aufnahme nicht zu
+ * unterscheiden, bis er das Zielverzeichnis oeffnet. Dieselbe Klasse wie
+ * MF-889 (der Extract-Knopf zaehlte hoch und schrieb nichts) und MF-880.
+ *
+ * ── Warum hier nicht die echte Hardware verdrahtet wird ──────────────────
+ *
+ * Es gibt einen funktionierenden Greaseweazle-Weg: `GreaseweazleProviderV2`
+ * ueber `src/hal/uft_greaseweazle_full.c`, production-wired und im
+ * Hardware-Reiter erreichbar. Ihn hierher zu ziehen waere die richtige
+ * Richtung — aber nicht pruefbar: dieses Projekt hat **kein Geraet**
+ * (MF-310, Tier-3 ist community-delegiert), und
+ * `uft_greaseweazle_full.c` ist ein geschuetzter Pfad
+ * (`.claude/CLAUDE.md` §2).
+ *
+ * Also gilt die `honest-stub`-Regel, die derselbe Text fuer unverdrahtete
+ * Hardware-Pfade ausdruecklich vorsieht: ein Fehler MIT BEGRUENDUNG, nie
+ * ein stiller Erfolg. Das Signal dafuer gab es schon — `deviceError()`
+ * war deklariert und wurde nie benutzt.
+ */
 void UftGw2DmkWorker::run()
 {
     m_stopRequested = false;
-    
+
+    /* Eine Begruendung, kein Fehlercode. Sie nennt, was nicht passiert,
+     * warum, und wo Lesen heute wirklich funktioniert. */
+    const QString grund = tr(
+        "Dieses Panel hat keinen Geraete-Zugang: es ist nicht mit dem "
+        "Greaseweazle-Treiber verdrahtet.\n\n"
+        "Bis MF-891 hat es hier eine Aufnahme SIMULIERT und Erfolg "
+        "gemeldet, ohne eine Datei anzulegen. Das ist entfernt.\n\n"
+        "Zum wirklichen Lesen: Reiter \"Hardware\" — dort laeuft der "
+        "produktiv verdrahtete Greaseweazle-Pfad.");
+
     switch (m_operation) {
     case OP_DETECT:
-        // Simulate device detection
-        msleep(500);
-        emit deviceDetected("Greaseweazle F7 Plus v1.3 on /dev/ttyACM0");
+        emit deviceError(grund);
         break;
-        
+
     case OP_READ_DISK:
-        {
-            int totalTracks = (m_endTrack - m_startTrack + 1) * m_heads;
-            int currentTrack = 0;
-            
-            for (int cyl = m_startTrack; cyl <= m_endTrack && !m_stopRequested; cyl++) {
-                for (int head = 0; head < m_heads && !m_stopRequested; head++) {
-                    emit progressChanged(cyl, head, totalTracks, 
-                        QString("Reading track %1:%2").arg(cyl).arg(head));
-                    
-                    msleep(100); // Simulate reading
-                    
-                    // Simulate track result (mostly good, occasional errors)
-                    int sectors = 10;
-                    int errors = (cyl == 15 && head == 0) ? 1 : 0;
-                    emit trackRead(cyl, head, sectors, errors);
-                    
-                    currentTrack++;
-                }
-            }
-            
-            if (m_stopRequested) {
-                emit operationComplete(false, "Operation cancelled by user");
-            } else {
-                emit operationComplete(true, QString("Disk read complete: %1").arg(m_outputPath));
-            }
-        }
-        break;
-        
     case OP_READ_TRACK:
-        emit progressChanged(m_startTrack, 0, 1, "Reading single track");
-        msleep(200);
-        emit trackRead(m_startTrack, 0, 10, 0);
-        emit operationComplete(true, "Track read complete");
+        /* Kein `trackRead` — jedes Spurergebnis waere erfunden. */
+        emit operationComplete(false, grund);
         break;
-        
+
     default:
         break;
     }
@@ -326,6 +347,31 @@ void UftGw2DmkPanel::setupUi()
     mainLayout->addWidget(m_logText);
     
     // === Connections ===
+    /* MF-891: die drei Aktionsknoepfe sind abgeschaltet, mit Grund.
+     *
+     * Vorbild `src/xcopytab.cpp:145-162`: nicht verstecken, nicht
+     * entfernen — abschalten und sagen warum. Die UI-Form bleibt
+     * sichtbar, damit erkennbar ist, was dieses Panel einmal koennen
+     * soll; `Browse` und die Einstellungen bleiben bedienbar.
+     *
+     * Der Arbeiter dahinter meldet ohnehin einen Fehler mit Begruendung
+     * (siehe `UftGw2DmkWorker::run()`) — die Knoepfe sind die zweite
+     * Schranke, nicht die einzige. */
+    {
+        const QString warum = tr(
+            "Kein Geraete-Zugang: dieses Panel ist nicht mit dem "
+            "Greaseweazle-Treiber verdrahtet.\n"
+            "Bis MF-891 hat es eine Aufnahme simuliert und Erfolg "
+            "gemeldet, ohne eine Datei anzulegen.\n"
+            "Zum wirklichen Lesen: Reiter \"Hardware\".");
+        m_detectBtn->setEnabled(false);
+        m_detectBtn->setToolTip(warum);
+        m_readDiskBtn->setEnabled(false);
+        m_readDiskBtn->setToolTip(warum);
+        m_readTrackBtn->setEnabled(false);
+        m_readTrackBtn->setToolTip(warum);
+    }
+
     connect(m_detectBtn, &QPushButton::clicked, this, &UftGw2DmkPanel::detectDevice);
     connect(m_browseBtn, &QPushButton::clicked, this, &UftGw2DmkPanel::browseOutput);
     connect(m_readDiskBtn, &QPushButton::clicked, this, &UftGw2DmkPanel::readDisk);
@@ -339,7 +385,10 @@ void UftGw2DmkPanel::updateControlsState()
 {
     bool idle = !m_operationInProgress;
     
-    m_detectBtn->setEnabled(idle);
+    /* MF-891: NICHT wieder anschalten — sie haben keinen Zugang.
+     * `idle` beschreibt den Arbeiter, nicht das Vorhandensein eines
+     * Geraets. */
+    (void)idle;
     m_diskTypeCombo->setEnabled(idle);
     m_tracksSpin->setEnabled(idle);
     m_headsSpin->setEnabled(idle);
@@ -349,8 +398,10 @@ void UftGw2DmkPanel::updateControlsState()
     m_revolutionsSpin->setEnabled(idle);
     m_outputPathEdit->setEnabled(idle);
     m_browseBtn->setEnabled(idle);
-    m_readDiskBtn->setEnabled(idle);
-    m_readTrackBtn->setEnabled(idle);
+    /* MF-891: die zwei bleiben aus. `idle` sagt, ob der Arbeiter frei
+     * ist — nicht, ob ein Geraet da ist. Sie hier wieder anzuschalten
+     * hat die erste Fassung dieses Fixes still unterlaufen; der
+     * Rotbeweis hat es gefangen. */
     m_stopBtn->setEnabled(!idle);
 }
 
