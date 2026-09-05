@@ -21,7 +21,24 @@
 extern "C" {
 #endif
 
-/* OPUS Discovery disk parameters */
+/**
+ * @brief Die im Bootsektor ANGESAGTE Geometrie (MF-905).
+ *
+ * Die Konstanten darunter sind die VORGABE einer gewoehnlichen
+ * Opus-Diskette — nicht die Bedingung. Belege an
+ * `uft_opus_geometrie_lesen()` in `src/formats/opus/uft_opus.c`.
+ */
+typedef struct {
+    uint8_t  cylinders;
+    uint8_t  heads;        /**< 1 oder 2, aus Flags-Bit 4 */
+    uint8_t  sectors;
+    uint16_t sector_size;  /**< 128 << (flags >> 6) */
+} uft_opus_geometrie_t;
+
+bool uft_opus_geometrie_lesen(const uint8_t *data, size_t size,
+                              uft_opus_geometrie_t *out);
+
+/* OPUS Discovery disk parameters (Vorgabe, siehe oben) */
 #define OPUS_CYLINDERS          40
 #define OPUS_HEADS              1
 #define OPUS_SECTORS            18

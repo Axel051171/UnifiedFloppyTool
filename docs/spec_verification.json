@@ -116,5 +116,9 @@
   "adf_arc": {
     "spec_source": "DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur.",
     "evidence": "MF-654"
+  },
+  "opus": {
+    "spec_source": "MF-905 Geometrie aus dem Bootsektor: src/samdisk/opd.h (struct OPD_BOOT) und src/samdisk/opd.cpp — ReadOPD() UND WriteOPD() werten identisch aus (cyls, sectors, heads = flags & 0x10, Groessencode = flags >> 6). SAMdisk ist im Baum vendort unter MIT (src/samdisk/License.txt). Loest die frueher genannte, ausdruecklich UNVERIFIZIERTE Referenz libdsk drvopus.c ab (MF-651).",
+    "evidence": "MF-905"
   }
 }

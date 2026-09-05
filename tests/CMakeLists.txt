@@ -496,6 +496,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_hfe_v3_weak")
         # HFE v3 weak/fuzzy-bit RAND-opcode detection (MF-354)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+    elseif(${test_name} STREQUAL "test_opd_geometrie")
+        # MF-905: OPD las EINE fest verdrahtete Geometrie und wies jede
+        # doppelseitige Diskette still ab, obwohl der Bootsektor die
+        # Geometrie selbst traegt. Referenz: src/samdisk/opd.cpp (MIT).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
     elseif(${test_name} STREQUAL "test_hfe_write_allowed")
         # MF-898: `write_allowed` wurde mit VERDREHTER Polaritaet gelesen —
         # eine gewoehnliche greaseweazle-HFE galt als schreibgeschuetzt.

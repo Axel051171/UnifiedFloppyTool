@@ -1,10 +1,24 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_opus.c
  * @brief OPUS Discovery disk format implementation
  * @version 3.9.0
- * 
- * OPUS Discovery for ZX Spectrum: 40 tracks, SS, 18 sectors, 256 bytes.
- * Reference: libdsk drvopus.c (libdsk ist LGPL-2.0-or-later; der genannte Treiber liegt NICHT in der geprueften Fassung 1.5.12 -- Datei unverifiziert, MF-651)
+ *
+ * OPUS Discovery fuer den ZX Spectrum. Die Vorgabe ist 40 Spuren, eine
+ * Seite, 18 Sektoren zu 256 Byte — aber sie ist eine VORGABE, keine
+ * Bedingung: die Geometrie steht im Bootsektor.
+ *
+ * REFERENZ (MF-905), im eigenen Baum und lesbar:
+ *   `src/samdisk/opd.h`   — `struct OPD_BOOT`, der Bytespiegel
+ *   `src/samdisk/opd.cpp` — `ReadOPD()` UND `WriteOPD()` werten ihn
+ *                           gleich aus; zwei Richtungen, eine Aussage
+ * SAMdisk liegt unter MIT (`src/samdisk/License.txt`, (c) 2002-2020
+ * Simon Owen) und ist im Baum ausdruecklich als Referenz-Orakel
+ * gefuehrt (`src/samdisk/README.md`).
+ *
+ * Bis MF-905 nannte dieser Kopf `libdsk drvopus.c` mit dem Zusatz, die
+ * Datei liege NICHT in der geprueften Fassung vor — also eine
+ * unverifizierte Referenz (MF-651). Die neue ist nachlesbar.
  */
 
 #include "uft/formats/uft_opus.h"
@@ -14,18 +28,88 @@
 #include <stdio.h>
 
 /* ============================================================================
+ * Geometrie aus dem Bootsektor (MF-905)
+ * ============================================================================ */
+
+/** Z80: unbedingter relativer Sprung. Steht am Anfang jedes OPD-Bootsektors. */
+#define OPUS_JR_OPCODE 0x18
+
+/**
+ * @brief Liest die ANGESAGTE Geometrie aus dem Bootsektor.
+ *
+ * Bis MF-905 verwendete dieses Plugin ausschliesslich die Konstanten aus
+ * `uft_opus.h` und wies mit
+ *
+ *     if (size != OPUS_DISK_SIZE) return false;
+ *
+ * jede Datei ab, die nicht 40 x 1 x 18 x 256 = 184320 Byte gross war.
+ * Jede doppelseitige Opus-Diskette wurde damit STILL abgelehnt, obwohl
+ * ihr Bootsektor die Geometrie mitbringt.
+ *
+ * Der Aufbau, nachgelesen in `src/samdisk/opd.h` (`struct OPD_BOOT`):
+ *
+ *     [0..1] jr_boot   Z80-JR auf den Startcode; [0] ist 0x18
+ *     [2]    cyls
+ *     [3]    sectors
+ *     [4]    flags     b7-6 FDC-Groessencode (128 << code)
+ *                      b4   Seiten: 0 = eine, 1 = zwei
+ *
+ * Die Auswertung folgt `ReadOPD()`/`WriteOPD()` in
+ * `src/samdisk/opd.cpp` — beide Richtungen dort enthalten woertlich
+ * `fmt.heads = (ob.flags & 0x10) ? 2 : 1;` und `fmt.size = ob.flags >> 6;`.
+ *
+ * Die Annahme wird GEPRUEFT, nicht geglaubt: die angesagte Geometrie
+ * muss die Dateigroesse genau ergeben, und der Sprungbefehl muss stehen.
+ * Das Oracle verlangt dasselbe („the JR opcode and exact file size"),
+ * wenn keine Dateiendung buergt — und eine Sonde hat keine Endung.
+ *
+ * @return true, wenn der Bootsektor eine mit der Groesse vereinbare
+ *         Geometrie ansagt.
+ */
+bool uft_opus_geometrie_lesen(const uint8_t *data, size_t size,
+                              uft_opus_geometrie_t *out) {
+    if (!data || !out || size < 5) return false;
+    if (data[0] != OPUS_JR_OPCODE) return false;
+
+    const uint8_t  cyls    = data[2];
+    const uint8_t  sectors = data[3];
+    const uint8_t  flags   = data[4];
+    const uint8_t  heads   = (flags & 0x10) ? 2 : 1;
+    const uint16_t ssize   = (uint16_t)(128u << (flags >> 6));
+
+    if (cyls == 0 || sectors == 0) return false;
+    if ((size_t)cyls * heads * sectors * ssize != size) return false;
+
+    out->cylinders   = cyls;
+    out->heads       = heads;
+    out->sectors     = sectors;
+    out->sector_size = ssize;
+    return true;
+}
+
+/* ============================================================================
  * Probe Function
  * ============================================================================ */
 
 bool uft_opus_probe(const uint8_t *data, size_t size, int *confidence) {
-    /* Check exact file size */
-    if (size != OPUS_DISK_SIZE) {
+    /* MF-905: nicht mehr "genau 184320 Byte", sondern "der Bootsektor
+     * sagt eine Geometrie an, die zur Dateigroesse passt". Das weist
+     * mehr ab als vorher (lauter Nullen in Opus-Groesse haben keinen
+     * Sprungbefehl) und nimmt zugleich die doppelseitigen an. */
+    uft_opus_geometrie_t geom;
+    if (!uft_opus_geometrie_lesen(data, size, &geom)) {
         return false;
     }
-    
-    /* Check directory structure on track 0 */
-    /* Directory entries start at sector 1 */
-    const uint8_t *dir_start = data + OPUS_SECTOR_SIZE;  /* Skip sector 0 */
+
+    /* Das Verzeichnis liegt auf Spur 0 ab dem zweiten Sektor. Die
+     * Feinpruefung darunter kennt nur das 256-Byte-Layout; bei anderen
+     * Sektorgroessen bleibt es bei der Aussage des Bootsektors. */
+    if (geom.sector_size != OPUS_SECTOR_SIZE) {
+        if (confidence) *confidence = 50;
+        return true;
+    }
+
+    const uint8_t *dir_start = data + geom.sector_size;  /* Sektor 0 ueberspringen */
     
     int valid_entries = 0;
     int used_entries = 0;
@@ -81,67 +165,82 @@ uft_error_t uft_opus_read_mem(const uint8_t *data, size_t size,
         result->image_size = size;
     }
     
-    /* Validate size */
-    if (size != OPUS_DISK_SIZE) {
+    /* MF-905: die Geometrie kommt aus dem Bootsektor, nicht aus den
+     * Konstanten. Passt die Ansage nicht zur Groesse, wird abgelehnt —
+     * eine halb gelesene Diskette waere schlimmer als keine. */
+    uft_opus_geometrie_t geom;
+    if (!uft_opus_geometrie_lesen(data, size, &geom)) {
         if (result) {
             result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid OPUS disk size";
+            result->error_detail =
+                "OPD-Bootsektor sagt keine mit der Dateigroesse vereinbare "
+                "Geometrie an";
         }
         return UFT_ERR_FORMAT;
     }
-    
+
     /* Allocate disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(OPUS_CYLINDERS, OPUS_HEADS);
+    uft_disk_image_t *disk = uft_disk_alloc(geom.cylinders, geom.heads);
     if (!disk) {
         return UFT_ERR_MEMORY;
     }
-    
+
     disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "OPUS");
-    disk->sectors_per_track = OPUS_SECTORS;
-    disk->bytes_per_sector = OPUS_SECTOR_SIZE;
-    
-    /* Read track data */
+    disk->sectors_per_track = geom.sectors;
+    disk->bytes_per_sector = geom.sector_size;
+
+    /* FDC-Groessencode zurueckrechnen: 128 << code == sector_size. */
+    uint8_t size_code = 0;
+    while ((128u << size_code) < geom.sector_size && size_code < 3) size_code++;
+
+    /* Read track data. Die Reihenfolge im Abbild ist Spur-dur, innerhalb
+     * einer Spur Seite 0 vor Seite 1 — dieselbe, die `WriteRegularDisk()`
+     * im Oracle erzeugt. */
     size_t data_pos = 0;
-    
-    for (uint8_t c = 0; c < OPUS_CYLINDERS; c++) {
-        uft_track_t *track = uft_track_alloc(OPUS_SECTORS, 0);
-        if (!track) {
-            uft_disk_free(disk);
-            return UFT_ERR_MEMORY;
-        }
-        
-        track->cylinder = c;
-        track->head = 0;
-        track->encoding = UFT_ENC_MFM;
-        
-        for (uint8_t s = 0; s < OPUS_SECTORS; s++) {
-            uft_sector_t *sect = &track->sectors[s];
-            sect->id.cylinder = c;
-            sect->id.head = 0;
-            sect->id.sector = s + OPUS_FIRST_SECTOR;
-            sect->id.size_code = 1;  /* 256 bytes */
-            sect->status = UFT_SECTOR_OK;
-            
-            sect->data = malloc(OPUS_SECTOR_SIZE);
-            sect->data_size = OPUS_SECTOR_SIZE;
-            
-            if (sect->data) {
-                memcpy(sect->data, data + data_pos, OPUS_SECTOR_SIZE);
+
+    for (uint8_t c = 0; c < geom.cylinders; c++) {
+        for (uint8_t h = 0; h < geom.heads; h++) {
+            uft_track_t *track = uft_track_alloc(geom.sectors, 0);
+            if (!track) {
+                uft_disk_free(disk);
+                return UFT_ERR_MEMORY;
             }
-            data_pos += OPUS_SECTOR_SIZE;
-            track->sector_count++;
+
+            track->cylinder = c;
+            track->head = h;
+            track->encoding = UFT_ENC_MFM;
+
+            for (uint8_t s = 0; s < geom.sectors; s++) {
+                uft_sector_t *sect = &track->sectors[s];
+                sect->id.cylinder = c;
+                sect->id.head = h;
+                sect->id.sector = s + OPUS_FIRST_SECTOR;
+                sect->id.size_code = size_code;
+                sect->status = UFT_SECTOR_OK;
+
+                sect->data = malloc(geom.sector_size);
+                sect->data_size = geom.sector_size;
+
+                if (sect->data) {
+                    memcpy(sect->data, data + data_pos, geom.sector_size);
+                }
+                data_pos += geom.sector_size;
+                track->sector_count++;
+            }
+
+            /* Der Container sieht `[track * heads + head]` vor — siehe
+             * den Kommentar an `uft_disk_image_compat`. */
+            disk->track_data[(size_t)c * geom.heads + h] = track;
         }
-        
-        disk->track_data[c] = track;
     }
-    
+
     if (result) {
         result->success = true;
-        result->cylinders = OPUS_CYLINDERS;
-        result->heads = OPUS_HEADS;
-        result->sectors = OPUS_SECTORS;
-        result->sector_size = OPUS_SECTOR_SIZE;
+        result->cylinders = geom.cylinders;
+        result->heads = geom.heads;
+        result->sectors = geom.sectors;
+        result->sector_size = geom.sector_size;
     }
     
     *out_disk = disk;
@@ -189,41 +288,55 @@ uft_error_t uft_opus_write(const uft_disk_image_t *disk,
         return UFT_ERR_INVALID_PARAM;
     }
     
-    /* Create output buffer */
-    uint8_t *output = malloc(OPUS_DISK_SIZE);
+    /* MF-905: hier stand ueberall OPUS_DISK_SIZE. Ein doppelseitiges
+     * Abbild waere damit auf 184320 Byte ABGESCHNITTEN worden — richtiger
+     * Name, richtige Endung, halber Inhalt. Dieselbe Klasse wie MF-877.
+     * Die Groesse kommt jetzt aus dem Abbild selbst. */
+    const uint16_t cyls    = disk->tracks;
+    const uint8_t  heads   = disk->heads ? disk->heads : 1;
+    const uint8_t  sectors = disk->sectors_per_track
+                           ? disk->sectors_per_track : OPUS_SECTORS;
+    const uint16_t ssize   = disk->bytes_per_sector
+                           ? disk->bytes_per_sector : OPUS_SECTOR_SIZE;
+    const size_t gesamt = (size_t)cyls * heads * sectors * ssize;
+    if (gesamt == 0) return UFT_ERR_INVALID_PARAM;
+
+    uint8_t *output = malloc(gesamt);
     if (!output) {
         return UFT_ERR_MEMORY;
     }
-    memset(output, 0xE5, OPUS_DISK_SIZE);
-    
+    memset(output, 0xE5, gesamt);
+
     /* Write track data */
     size_t data_pos = 0;
-    
-    for (uint8_t c = 0; c < OPUS_CYLINDERS && c < disk->tracks; c++) {
-        uft_track_t *track = disk->track_data[c];
-        
-        for (uint8_t s = 0; s < OPUS_SECTORS; s++) {
-            if (track && s < track->sector_count && track->sectors[s].data) {
-                size_t copy_size = (track->sectors[s].data_size < OPUS_SECTOR_SIZE) ?
-                                   track->sectors[s].data_size : OPUS_SECTOR_SIZE;
-                memcpy(output + data_pos, track->sectors[s].data, copy_size);
+
+    for (uint16_t c = 0; c < cyls; c++) {
+        for (uint8_t h = 0; h < heads; h++) {
+            uft_track_t *track = disk->track_data[(size_t)c * heads + h];
+
+            for (uint8_t s = 0; s < sectors; s++) {
+                if (track && s < track->sector_count && track->sectors[s].data) {
+                    size_t copy_size = (track->sectors[s].data_size < ssize)
+                                     ? track->sectors[s].data_size : ssize;
+                    memcpy(output + data_pos, track->sectors[s].data, copy_size);
+                }
+                data_pos += ssize;
             }
-            data_pos += OPUS_SECTOR_SIZE;
         }
     }
-    
+
     /* Write file */
     FILE *fp = fopen(path, "wb");
     if (!fp) {
         free(output);
         return UFT_ERR_IO;
     }
-    
-    size_t written = fwrite(output, 1, OPUS_DISK_SIZE, fp);
+
+    size_t written = fwrite(output, 1, gesamt, fp);
     fclose(fp);
     free(output);
-    
-    return (written == OPUS_DISK_SIZE) ? UFT_OK : UFT_ERR_IO;
+
+    return (written == gesamt) ? UFT_OK : UFT_ERR_IO;
 }
 
 /* ============================================================================
@@ -314,13 +427,19 @@ static uft_error_t opus_read_track(uft_disk_t *disk, int cyl, int head,
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
-    if (!image || !track || head != 0) return UFT_ERR_INVALID_PARAM;
+    if (!image || !track) return UFT_ERR_INVALID_PARAM;
+
+    /* MF-905: hier stand `head != 0` und `track_data[cyl]`. Beides ging
+     * von einer einseitigen Diskette aus; der Container sieht dagegen
+     * `[track * heads + head]` vor. Seite 1 einer doppelseitigen OPD war
+     * damit unerreichbar, selbst wenn sie gelesen worden waere. */
+    if (head >= image->heads) return UFT_ERR_INVALID_PARAM;
 
     if (cyl >= image->tracks) {
         return UFT_ERR_INVALID_PARAM;
     }
 
-    uft_track_t *src = image->track_data[cyl];
+    uft_track_t *src = image->track_data[(size_t)cyl * image->heads + head];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
     track->cylinder = cyl;

@@ -59,6 +59,26 @@ Bericht hat ihn wiederentdeckt, nicht gefunden.
 
 ## Phase 1 — OPD liest eine Geometrie, die der Bootsektor widerlegt
 
+> **✅ ERLEDIGT — MF-905.** Rotbeweis `tests/test_opd_geometrie.c`,
+> **4 von 5 Prüfungen rot**; die sechste (Schreibpfad) kam dazu, **bevor**
+> der Schreibpfad als geändert galt — die Lehre aus P3-178, gleich
+> angewandt. Gegenprobe 5 Mutationen, jede fällt genau ihre Prüfungen.
+>
+> **Drei Stellen zogen dieselbe falsche Folge**, nicht nur die Sonde:
+> `read_mem` legte mit Konstanten an, `read_track` wies Seite 1 ab und
+> indizierte ohne Kopf, und `uft_opus_write()` hätte ein zweiseitiges
+> Abbild auf 184320 Byte **abgeschnitten** (MF-877-Klasse).
+>
+> **Eine eigene Zusicherung fiel dabei durch**: `seite_eins_ist_lesbar`
+> prüfte nur `== UFT_OK`, und mit `track_data[cyl]` liefert der Leser
+> für beide Seiten dieselbe Spur — zweimal OK, Mutation überlebt.
+> Verschärft auf den Inhalt; seither fällt sie.
+>
+> **Kennzahl bewegt:** `opus` von T3 auf **T2**, T3 von 37 auf **36**.
+> `CLAUDE.md` und `README.md` mussten nachgezogen werden — das
+> Drift-Tor hat beide gemeldet, wie es soll.
+
+
 **Was der Benutzer davon hat:** eine doppelseitige Opus-Discovery-Diskette
 wird heute **still abgelehnt**. `opd` ist über `uft_format_registry.c`
 registriert, also erreichbar — und hat **null Tests**.
@@ -254,7 +274,7 @@ Dazu drei Beobachtungen ohne Auftrag:
 
 | # | Phase | Nutzen | Beweisbar heute? |
 |---|---|---|---|
-| 1 | OPD-Geometrie | still abgelehnte Disketten werden lesbar | **ja** — Oracle im Baum |
+| 1 | OPD-Geometrie | still abgelehnte Disketten werden lesbar | **✅ erledigt, MF-905** |
 | 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **ja** |
 | 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **ja**, synthetisch |
 | 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **ja**, synthetisch |
