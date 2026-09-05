@@ -74,10 +74,20 @@ EIGENE_SPDX = re.compile(r"SPDX-License-Identifier")
 # stillschweigend in die harmlose Klasse. Ein Rueckstand, der sich durch
 # Wegsortieren verkleinern laesst, misst nichts.
 
+# MF-914: `quelle:` und `source:` kamen dazu. Das Muster kannte
+# `reference:` und `referenz:`, aber nicht das deutsche `Quelle:` —
+# waehrend `quelle` im Klassifikator CODE_STARK sehr wohl steht. Gemessen
+# fielen dadurch ACHT Dateien durch, darunter `uft_ipf_air.{c,h}`: die
+# Familie, die wegen ihrer Lizenz in Quarantaene steht, meldete ihre
+# Herkunft in einer Schreibweise, die das Lizenz-Tor nicht lesen konnte.
+#
+# Das ist der vierzehnte Fall der Klasse "eine Aufzaehlung, die genau eine
+# Schreibweise kennt" in diesem Baum (MF-796, MF-901, ...). Ein Tor, das
+# nach Woertern sucht, veraltet an jedem Wort, das es nicht kennt.
 AUSLOESER = re.compile(
     r"(?i)^(based on|adapted from|derived from|port(?:ed)? of|"
     r"portiert aus|nach dem Vorbild|taken from|originally (?:by|from)|"
-    r"reference:|referenz:|verhalten nach)\s*")
+    r"reference:|referenz:|quelle:|source:|verhalten nach)\s*")
 
 # STARKE Marker: sie benennen selbst ein Artefakt und genuegen allein.
 CODE_STARK = re.compile(
@@ -189,7 +199,31 @@ def klassifiziere(text: str) -> tuple[str, str]:
 # Die Kennzahl: benannte fremde CODEBASIS ohne Lizenz daneben. Sie darf
 # sinken, nicht steigen — wie `audit_todo_without_plan`. Gemessen am
 # 2026-08-31 nach der Einordnung.
-CODE_OHNE_LIZENZ_MAX = 30
+#
+# MF-914: von 30 auf 31. NICHT weil neue Schuld entstanden waere, sondern
+# weil das Tor mehr SIEHT: der Ausloeser kannte `reference:`/`referenz:`,
+# aber nicht `quelle:`/`source:`. Acht Dateien meldeten ihre Herkunft in
+# der ungelesenen Schreibweise.
+#
+# Die Bilanz der Erweiterung, gemessen:
+#   +2  vorbestehende Faelle, die vorher unsichtbar waren:
+#         include/uft/protection/uft_schutzbefund.h:32
+#           -> ein DOKUMENT-Verweis (info-coach.fr, Atari-Kopierschutz).
+#              Der Einordner nimmt ihn als CODE; das ist streng, aber
+#              nicht falsch — wer eine fremde Quelle benennt, nennt ihre
+#              Lizenz. Aufloesbar durch eine Zeile in jener Datei.
+#         src/formats/atr/uft_atr.c:20
+#           -> "Joe Allen, `atari-tools`" — eine echte fremde Codebasis
+#              ohne Lizenzangabe. Gehoert abgearbeitet, nicht geduldet.
+#   -1  aufgeloest: xum1541_provider_v2.h nennt jetzt GPL-2.0-or-later
+#       fuer OpenCBM (der Baum wusste es an anderer Stelle laengst).
+#    0  Fehlalarm vermieden: eine Quelle, die auf eine Datei IM BAUM
+#       zeigt, zaehlt nicht mehr (`_zeigt_in_den_baum`) — sonst haette
+#       "SSOT source: data/amiga_bootblock_viruses.tsv" hier gestanden.
+#
+# 31 ist damit die ehrliche Zahl bei besserer Sicht, nicht eine
+# nachgegebene Grenze. Beide neuen Faelle sind oben benannt.
+CODE_OHNE_LIZENZ_MAX = 31
 
 
 def messe(repo: pathlib.Path):

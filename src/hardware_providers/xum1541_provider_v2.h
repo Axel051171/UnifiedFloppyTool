@@ -52,7 +52,10 @@
  *   The CBM IEC/IEEE-488 bus protocol is documented in the Commodore 1541
  *   User's Guide and Service Manual (1982). The U1/U2 block-read/write
  *   commands are documented in Commodore DOS manuals and the OpenCBM SDK.
- *   OpenCBM is open source: https://github.com/OpenCBM/OpenCBM.
+ *   OpenCBM is open source: https://github.com/OpenCBM/OpenCBM
+ *   (**GPL-2.0-or-later** — MF-914; der Baum fuehrt diese Lizenz
+ *   bereits in `src/hal/uft_xum1541.c`, hier fehlte sie. Eine
+ *   Lizenzangabe ist eine rechtliche Aussage, MF-636).
  *   ZoomFloppy schematics: http://www.retroinnovations.com/zoomfloppy.html.
  *
  * Backend: single injectable runner (OpenCBM path) + detect runner.

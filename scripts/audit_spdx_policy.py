@@ -112,6 +112,13 @@ ATTRIBUTION = re.compile(
     r"(based\s+on|adapted\s+from|derived\s+from|port(?:ed)?\s+of|"
     r"portiert\s+aus|nach\s+dem\s+Vorbild|taken\s+from|"
     r"originally\s+(?:by|from)|reference:|referenz:|"
+    # MF-914: `quelle:` und `source:` kamen dazu — die naechste Auflage
+    # desselben Fehlers, den der Absatz darunter schon fuenfmal zaehlt.
+    # Gemessen fielen ACHT Dateien durch, die ihre Herkunft mit dem
+    # deutschen `Quelle:` melden, darunter `uft_ipf_air.{c,h}`: die
+    # Familie, die WEGEN ihrer Lizenz in Quarantaene steht, meldete sie
+    # in einer Schreibweise, die das Lizenz-Tor nicht lesen konnte.
+    r"quelle:|source:|"
     r"verhalten\s+nach)\s+(.{0,60})",
     re.IGNORECASE)
 # MF-651: `reference:` fehlte hier — und das war die fuenfte Auflage
@@ -127,6 +134,25 @@ ATTRIBUTION = re.compile(
 ATTRIB_HARMLOS = re.compile(
     r"^(the\s+)?(spec|specification|documentation|docs?|format|layout|"
     r"standard|MF-\d+|uft_|src/|include/|docs/)", re.IGNORECASE)
+
+
+def _zeigt_in_den_baum(repo: pathlib.Path, quelle: str) -> bool:
+    """Nennt die Quelle einen Pfad, den dieses Repository selbst fuehrt?
+
+    @return True, wenn das erste pfadartige Wort auf eine existierende
+            Datei im Baum zeigt. Dann ist es ein interner Verweis und
+            keine Attribution an Fremdcode (MF-914).
+    """
+    for wort in re.findall(r"[\w./-]+", quelle):
+        if "/" not in wort and "." not in wort:
+            continue
+        kandidat = repo / wort.strip("`'\"")
+        try:
+            if kandidat.is_file():
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def scan_attributions(repo: pathlib.Path) -> list[tuple[str, int, str]]:
@@ -153,6 +179,17 @@ def scan_attributions(repo: pathlib.Path) -> list[tuple[str, int, str]]:
             for m in ATTRIBUTION.finditer(kopf):
                 quelle = m.group(2).strip().strip("*/ ").strip()
                 if not quelle or ATTRIB_HARMLOS.match(quelle):
+                    continue
+                # MF-914: eine Quelle, die auf eine Datei IM BAUM zeigt,
+                # ist keine fremde Ableitung, sondern ein interner
+                # Verweis — "SSOT source: data/amiga_bootblock_viruses.tsv"
+                # etwa. Ohne diese Pruefung erzeugte die Erweiterung des
+                # Ausloesers um `source:` genau dort einen Fehlalarm.
+                #
+                # Gemessen wird die EXISTENZ, nicht die Schreibweise:
+                # eine Aufzaehlung interner Pfade waere wieder die Klasse,
+                # die dieses Tor gerade behoben hat.
+                if _zeigt_in_den_baum(repo, quelle):
                     continue
                 zeile = kopf[:m.start()].count("\n") + 1
                 treffer.append((rel, zeile, "%s %s" % (m.group(1), quelle)))
