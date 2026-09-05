@@ -290,6 +290,40 @@ Fassung des heutigen Wissensstandes und bleibt stehen.
 
 ## Phase 5 — `src/samdisk/VENDORED.md`: den Stand eintragen
 
+> **✅ ERLEDIGT — MF-899. Und es war nicht das, was der Plan erwartete.**
+>
+> Geplant war, eine Fremdaussage („92 von 100 byteidentisch“) als solche
+> einzutragen. Beim Messen zeigte sich: **die als offen geführte Frage war
+> seit MF-458 im Nachbardokument beantwortet.** `src/samdisk/README.md`
+> nennt „SAMdisk 4.0 ALPHA“ — `VENDORED.md` daneben sagte weiter
+> „exakter Stand unbekannt“, und `config.h:13` ein drittes Mal etwas
+> anderes (`PACKAGE_VERSION "3.7.3"`, ohne jeden Konsumenten im Baum).
+> **Ein Verzeichnis, drei Antworten.**
+>
+> Statt einer Übernahme wurde gemessen. **Sechs der acht** in UFT-18
+> benannten Upstream-Abweichungen sind im eigenen Baum nachprüfbar — und
+> alle sechs bestätigen die Richtung: die drei Tippfehler stehen noch in
+> unserer Kopie, die drei Funktionszusätze fehlen. Die Zahl 92/100 selbst
+> bleibt **Fremdaussage**, ausdrücklich gekennzeichnet, mit dem Weg zur
+> eigenen Messung daneben; ein Commit-Hash fehlt weiter und steht als
+> offener Punkt.
+>
+> Mitgenommen, weil in denselben Dateien und sonst wissentlich falsch
+> stehengelassen: die Lizenz stand als „siehe Upstream“, obwohl
+> `License.txt` daneben **MIT im Volltext** führt (MF-636: eine
+> Lizenzangabe ist eine rechtliche Aussage); und zwei von Hand gepflegte
+> Zahlen in `README.md` waren gedriftet — „145 Dateien“ gegen gemessene
+> **147**, „62 T3-Formate“ gegen gemessene **37**. Von den 17 dort
+> genannten SAMdisk-Formaten stehen noch acht auf T3; **neun sind
+> seither gehoben** — der Ansatz hat sich also bereits teilweise
+> eingelöst, was vorher niemand sehen konnte.
+>
+> Kein Codepfad berührt: `src/samdisk/` wird von keinem Build kompiliert,
+> und keine gebaute Datei inkludiert `SAMdisk.h` oder `config.h`
+> (gemessen). Bau ohne Warnung, `ctest` **351/351**, alle Tore 0.
+> Befund als **P3-177**.
+
+
 `VENDORED.md` führt seit MF-369/AUD-7 „Version/Commit: nicht dokumentiert
 … exakter Stand unbekannt". UFT-18 hat alle 100 vendorten `.cpp` gegen
 den aktuellen HEAD verglichen: **92 byteidentisch**, 5 reine
@@ -334,7 +368,7 @@ nicht verfallen (MF-695).
 |---|---|---|---|---|
 | 1 | Phase 2 — HFE Spur-0-Kodierung | behebt einen **stillen Lesefehler**, und einen Schreibfehler dazu | klein–mittel | **✅ erledigt, MF-897** |
 | 2 | Phase 3 — `write_allowed` | behebt eine **sichtbare Falschaussage** über jede gw-/SAMdisk-HFE | klein | **✅ erledigt, MF-898** |
-| 3 | Phase 5 — `VENDORED.md` | Ehrlichkeit | sehr klein | keine |
+| 3 | Phase 5 — `VENDORED.md` | Ehrlichkeit; löst drei widersprüchliche Angaben auf | klein | **✅ erledigt, MF-899** |
 | 4 | Phase 1 — FAT12-Verzeichnis | **neue sichtbare Fähigkeit** | mittel–groß | **Korpus-Abbild mit Dateien fehlt** |
 
 Phase 2 zuerst, weil sie einen Fehler behebt statt eine Fähigkeit

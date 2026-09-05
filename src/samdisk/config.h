@@ -8,9 +8,19 @@
 #ifndef SAMDISK_CONFIG_H
 #define SAMDISK_CONFIG_H
 
-/* Version info */
+/* Version info.
+ *
+ * MF-899: hier stand `PACKAGE_VERSION "3.7.3"`. Das war die DRITTE, mit
+ * den beiden anderen unvereinbare Angabe zum Stand dieses Bestandes —
+ * `README.md` nennt seit MF-458 "SAMdisk 4.0 ALPHA", `VENDORED.md` nannte
+ * ihn "unbekannt". Gemessen ueber `git ls-files`: die 3.7.3 hatte im
+ * ganzen Baum KEINEN Konsumenten, nur ihre eigene Definition.
+ *
+ * Diese Datei ist NICHT upstream — sie ist fuer UFT geschrieben (daher
+ * `PACKAGE_NAME "UnifiedFloppyTool"`), faellt also nicht unter die
+ * "pristine lassen"-Regel des Ordners. Der Stand des Bestandes steht an
+ * EINER Stelle: `VENDORED.md`. Hier steht er deshalb nicht mehr. */
 #define PACKAGE_NAME "UnifiedFloppyTool"
-#define PACKAGE_VERSION "3.7.3"
 
 /* Platform detection */
 #ifdef _WIN32

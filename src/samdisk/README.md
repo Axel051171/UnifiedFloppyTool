@@ -8,7 +8,10 @@
 
 ## Was das hier ist
 
-Diese 145 Dateien werden **von keinem Build kompiliert**. Nachgeprüft
+Diese **147 Dateien** — 100 `.cpp`, 44 `.h`, 3 Textdateien, gemessen am
+2026-09-05 mit `git ls-files src/samdisk` — werden **von keinem Build
+kompiliert**. (Hier stand „145“; die Zahl war von Hand gepflegt und ist
+gedriftet, MF-899.) Nachgeprüft
 (MF-458): weder `UnifiedFloppyTool.pro` noch `CMakeLists.txt` führen eine
 Quelldatei daraus; beide binden lediglich `src/samdisk` als **Include-Pfad**
 ein. Im Build-Verzeichnis liegt keine einzige Objektdatei dazu.
@@ -56,13 +59,26 @@ Zeile, so wie es die Zitate oben tun.
 
 ## Wofür es als Nächstes nützlich ist
 
-Von den 62 Formaten, die `docs/VERIFICATION_TIERS.md` als **T3**
-(unverifiziert) führt, hat SAMdisk für **17** einen eigenen Handler:
+`docs/VERIFICATION_TIERS.md` führt am 2026-09-05 noch **37** Formate als
+**T3** (unverifiziert) — hier stand „62“, eine von Hand gepflegte Zahl,
+die seither zweimal gedriftet ist (MF-899).
 
-```
-adf_arc  cfi  cpm  cqm  do  fdi_pc98  ipf  mfi  mgt  msa
-sad  sap_thomson  scl  st  td0  trd  udi
-```
+Von den ursprünglich **17** hier genannten Formaten mit eigenem
+SAMdisk-Handler stehen heute noch **acht** auf T3; **neun sind seither
+gehoben** — was der Ansatz also wert war, ist bereits teilweise
+eingelöst. Gemessen, Stufe je Format:
+
+| noch T3 | seither gehoben |
+|---|---|
+| `cfi` `cpm` `fdi_pc98` `ipf` `mgt` `sap_thomson` `scl` `udi` | `msa` T1b · `sad` T1b · `trd` T1b · `adf_arc` T2 · `cqm` T2 · `do` T2 · `mfi` T2 · `st` T2 · `td0` T2 |
+
+`ipf` ist dabei ein Sonderfall: es steht unter Lizenz-Quarantäne
+(MF-638), ein Cross-Check dorthin ist keine Frage der Referenz, sondern
+der Erlaubnis.
+
+**Diese Zahlen sind gemessen, nicht gepflegt** — sie driften wieder.
+Nachzählen mit
+`grep -cE '^\| \`[a-z0-9_]+\` \| \*\*T3\*\*' docs/VERIFICATION_TIERS.md`.
 
 Für die lässt sich ein Cross-Check durchführen, **ohne eine reale
 Referenzdiskette zu besitzen** — und Referenzmaterial ist der Engpass beim
