@@ -112,10 +112,16 @@ typedef struct {
     uint16_t    track_list_offset;      // Offset zur Track-LUT (in Blocks)
     uint8_t     write_allowed;          // 0xFF = schreibgeschützt
     uint8_t     single_step;            // 0xFF = single step, 0x00 = double
-    uint8_t     track0s0_altencoding;   // 0xFF = alternate encoding Track 0
-    uint8_t     track0s0_encoding;      // Encoding für Track 0 Side 0
-    uint8_t     track0s1_altencoding;   // 0xFF = alternate encoding
-    uint8_t     track0s1_encoding;      // Encoding für Track 0 Side 1
+    /* MF-897: hier stand "0xFF = alternate encoding Track 0" — die
+     * Polaritaet war UMGEKEHRT, und der Baum widersprach sich selbst:
+     * `include/uft/flux/uft_hfe.h:110` sagt "0xFF = use default
+     * encoding", `include/uft/uft_hfe_format.h:196` setzt 0xFF mit dem
+     * Vermerk "Disabled". Zwei gegen einen — und die zwei haben recht.
+     * Siehe `hfe_header_track_encoding()` fuer die Belege. */
+    uint8_t     track0s0_altencoding;   // 0x00 = Ersatz gilt, 0xFF = keiner
+    uint8_t     track0s0_encoding;      // Ersatz-Kodierung Spur 0 Seite 0
+    uint8_t     track0s1_altencoding;   // 0x00 = Ersatz gilt, 0xFF = keiner
+    uint8_t     track0s1_encoding;      // Ersatz-Kodierung Spur 0 Seite 1
     uint8_t     padding[478];           // Auffüllen auf 512 Bytes
 } hfe_header_t;
 
@@ -164,6 +170,59 @@ static uft_encoding_t hfe_to_uft_encoding(uint8_t hfe_enc) {
         case HFE_ENC_EMU_FM:     return UFT_ENC_FM;
         default:                 return UFT_ENC_UNKNOWN;
     }
+}
+
+/**
+ * @brief Kodierung EINER Spur — mit dem Ersatz fuer Spur 0 (MF-897).
+ *
+ * Der HFE-Kopf traegt vier Felder, mit denen Spur 0 je Seite eine ANDERE
+ * Kodierung tragen darf als der Rest der Diskette. Bis MF-897 las dieser
+ * Baum sie in DREI Strukturen ein und wertete sie in KEINER Verzweigung
+ * aus — `hfe_read_track()` setzte fuer jede Spur unbedingt die diskweite
+ * `track_encoding`.
+ *
+ * Der Fall ist nicht exotisch: bei 8-Zoll- und manchen 5,25-Zoll-Medien
+ * ist Spur 0 in FM und der Rest in MFM geschrieben (IBM-3740). Eine so
+ * erzeugte HFE wurde auf Spur 0 mit der falschen Kodierung gelesen, und
+ * die Sektoren dieser Spur fielen still weg.
+ *
+ * ZWEI unabhaengige Quellen zur Polaritaet, beide selbst nachgelesen:
+ *
+ *   HxC (Urheber des Formats, GPL-2-or-later, mit UFT vereinbar):
+ *     hfe_loader.c  `if(!header.track0s0_altencoding)
+ *                       currentside->track_encoding =
+ *                           header.track0s0_encoding;`
+ *     hfe_writer.c  setzt beim Abweichen `altencoding = 0x00`; sonst
+ *                   bleibt die Vorgabe 0xFF stehen.
+ *     -> NUR 0x00 schaltet den Ersatz ein.
+ *
+ *   SAMdisk (fremde Umsetzung, im Baum unter src/samdisk/hfe.cpp:24-27):
+ *     "0xff = ignore, otherwise use encoding below"
+ *     -> ALLES AUSSER 0xFF schaltet den Ersatz ein.
+ *     Ihr eigener Schreiber setzt immer 0xFF (hfe.cpp:276-279).
+ *
+ * Die beiden decken sich an den einzigen Werten, die vorkommen — 0x00
+ * und 0xFF — und widersprechen sich fuer 0x01..0xFE. Dort folgt UFT dem
+ * URHEBER und wendet nichts an. Eine Kodierung wegen eines Bytes zu
+ * wechseln, dessen Bedeutung strittig ist, waere geraten, und Raten ist
+ * hier nicht vorgesehen.
+ *
+ * Nachgemessen an echten Schreibern: greaseweazle 1.23 setzt in
+ * `tests/corpus_free/gw_amigados.hfe` alle vier Felder auf 0xFF.
+ *
+ * @param cylinder Spurnummer; nur 0 kann einen Ersatz tragen
+ * @param head     Seite; 0 und 1 haben je EIGENE Felder
+ */
+static uint8_t hfe_header_track_encoding(const hfe_header_t* hdr,
+                                         int cylinder, int head) {
+    if (!hdr || cylinder != 0 || head < 0 || head > 1) {
+        return hdr ? hdr->track_encoding : (uint8_t)HFE_ENC_UNKNOWN;
+    }
+    const uint8_t alt = (head == 0) ? hdr->track0s0_altencoding
+                                    : hdr->track0s1_altencoding;
+    const uint8_t enc = (head == 0) ? hdr->track0s0_encoding
+                                    : hdr->track0s1_encoding;
+    return (alt == 0x00) ? enc : hdr->track_encoding;
 }
 
 /**
@@ -576,6 +635,24 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     header.track_list_offset = 1;  // LUT beginnt bei Block 1
     header.write_allowed = 0x00;   // Schreiben erlaubt
     header.single_step = 0xFF;     // Single step
+
+    /* MF-897: hier fehlten die vier Spur-0-Felder. `hfe_header_t header
+     * = {0}` liess sie auf 0x00 stehen — und 0x00 heisst "Ersatz gilt".
+     * Jede von UFT geschriebene HFE erklaerte damit einen Ersatz, den
+     * sie nie gemeint hat, auf die Kodierung 0x00 (ISO MFM).
+     *
+     * Gemessen, dass alle drei Referenz-Schreiber es anders machen:
+     *   greaseweazle 1.23  -> 0xFF in allen vieren (gw_amigados.hfe)
+     *   SAMdisk            -> 0xFF, ausdruecklich (hfe.cpp:276-279)
+     *   HxC                -> 0xFF als Vorgabe, 0x00 nur beim Abweichen
+     *
+     * Ohne diese Zeilen wuerde ein konformer fremder Leser — SAMdisk
+     * liest "alles ausser 0xFF" als Ersatz — Spur 0 einer von UFT
+     * geschriebenen HFE anders dekodieren als den Rest der Diskette. */
+    header.track0s0_altencoding = 0xFF;   /* kein Ersatz */
+    header.track0s0_encoding    = 0xFF;
+    header.track0s1_altencoding = 0xFF;
+    header.track0s1_encoding    = 0xFF;
     
     // Header schreiben (Block 0)
     if (fwrite(&header, sizeof(header), 1, f) != 1) {
@@ -715,7 +792,11 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
         raw_data[i] = bit_reverse(raw_data[i]);
     }
     
-    track->encoding = hfe_to_uft_encoding(pdata->header.track_encoding);
+    /* MF-897: nicht mehr unbedingt diskweit — Spur 0 darf je Seite
+     * eine eigene Kodierung tragen. Begruendung und Belege stehen an
+     * `hfe_header_track_encoding()`. */
+    track->encoding = hfe_to_uft_encoding(
+        hfe_header_track_encoding(&pdata->header, cylinder, head));
 
     /* MF-596: alles, was unten an die Spur geht, ist unser eigener Speicher
      * — `side0`/`side1` aus dem De-Interleave, im v3-Fall `dbits`/`dweak`

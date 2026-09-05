@@ -107,9 +107,12 @@ typedef struct {
     uint16_t track_list_offset;     /**< Track LUT offset in 512-byte blocks */
     uint8_t  write_allowed;         /**< 0xFF = writable */
     uint8_t  single_step;           /**< 0xFF = normal, 0x00 = double-step */
-    uint8_t  track0s0_altencoding;  /**< 0xFF = use default encoding */
+    /* MF-897: Polaritaet an allen drei Fundstellen im Baum gleich
+     * geschrieben. Begruendung und die zwei fremden Belege stehen an
+     * `hfe_header_track_encoding()` in src/formats/hfe/uft_hfe.c. */
+    uint8_t  track0s0_altencoding;  /**< 0x00 = override gilt, 0xFF = keiner */
     uint8_t  track0s0_encoding;     /**< Track 0 side 0 encoding override */
-    uint8_t  track0s1_altencoding;  /**< 0xFF = use default encoding */
+    uint8_t  track0s1_altencoding;  /**< 0x00 = override gilt, 0xFF = keiner */
     uint8_t  track0s1_encoding;     /**< Track 0 side 1 encoding override */
 } uft_hfe_header_t;
 #pragma pack(pop)

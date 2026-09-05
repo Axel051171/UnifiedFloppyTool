@@ -98,10 +98,13 @@ typedef struct {
     uint16_t track_list_offset;     /* Offset to track LUT (in 512-byte blocks) */
     uint8_t  write_allowed;         /* 0xFF = write allowed */
     uint8_t  single_step;           /* 0xFF = single step, 0x00 = double step */
-    uint8_t  track0s0_altencoding;  /* Alternative encoding for track 0, side 0 */
-    uint8_t  track0s0_encoding;     /* Encoding if alt enabled */
-    uint8_t  track0s1_altencoding;  /* Alternative encoding for track 0, side 1 */
-    uint8_t  track0s1_encoding;     /* Encoding if alt enabled */
+    /* MF-897: 0x00 schaltet den Ersatz EIN, 0xFF laesst ihn aus — die
+     * Belege stehen an `hfe_header_track_encoding()` in
+     * src/formats/hfe/uft_hfe.c. */
+    uint8_t  track0s0_altencoding;  /* 0x00 = Ersatz gilt, 0xFF = keiner */
+    uint8_t  track0s0_encoding;     /* Ersatz-Kodierung Spur 0 Seite 0 */
+    uint8_t  track0s1_altencoding;  /* 0x00 = Ersatz gilt, 0xFF = keiner */
+    uint8_t  track0s1_encoding;     /* Ersatz-Kodierung Spur 0 Seite 1 */
     uint8_t  reserved2[464];        /* Padding to 512 bytes */
 } hfe_header_t;
 
@@ -193,8 +196,13 @@ static inline void hfe_init_header(hfe_header_t *hdr, bool v3) {
     hdr->track_list_offset = 1;     /* Immediately after header */
     hdr->write_allowed = 0xFF;      /* Writeable */
     hdr->single_step = 0xFF;        /* Single step */
-    hdr->track0s0_altencoding = 0xFF;   /* Disabled */
-    hdr->track0s1_altencoding = 0xFF;   /* Disabled */
+    /* MF-897: die beiden Kodierungsbytes fehlten hier. Alle drei
+     * Referenz-Schreiber setzen auch sie auf 0xFF (greaseweazle 1.23 in
+     * gw_amigados.hfe, SAMdisk hfe.cpp:276-279, HxC als Vorgabe). */
+    hdr->track0s0_altencoding = 0xFF;   /* kein Ersatz */
+    hdr->track0s0_encoding    = 0xFF;
+    hdr->track0s1_altencoding = 0xFF;   /* kein Ersatz */
+    hdr->track0s1_encoding    = 0xFF;
 }
 
 /*============================================================================

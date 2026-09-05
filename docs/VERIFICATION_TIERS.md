@@ -31,7 +31,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dim_atari` | **T1b** | `test_dim_atari_magic` | — | — | 1 |
 | `edsk` | **T1b** | `test_format_probe_fuzz`, `test_korpus_container`, `test_plugin_probe_real` | — | — | 1 |
 | `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
-| `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_interface_modes`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
+| `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_interface_modes`, `test_hfe_track0_encoding`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
 | `img` | **T1b** | `test_corpus_gw_geometrie`, `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | 1 |
 | `jvc` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `micropolis` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |

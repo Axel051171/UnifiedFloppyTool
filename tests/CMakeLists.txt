@@ -496,6 +496,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_hfe_v3_weak")
         # HFE v3 weak/fuzzy-bit RAND-opcode detection (MF-354)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+    elseif(${test_name} STREQUAL "test_hfe_track0_encoding")
+        # MF-897: die vier Spur-0-Kodierungsfelder des HFE-Kopfes wurden in
+        # DREI Strukturen eingelesen und in KEINER Verzweigung ausgewertet.
+        # Der Test baut sein Abbild selbst; die BEDEUTUNG der Felder stammt
+        # aus zwei fremden Quellen (HxC hfe_loader.c/hfe_writer.c und dem
+        # vendorten src/samdisk/hfe.cpp), nicht aus diesem Baum.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
     elseif(${test_name} STREQUAL "test_g71_read")
         # G71 1571 GCR per-track raw read (MF-355)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)

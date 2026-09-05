@@ -119,6 +119,37 @@ Der Bezug wird als solcher im Commit benannt, nicht kaschiert.
 
 ## Phase 2 — HFE: die abweichende Kodierung der Spur 0 anwenden
 
+> **✅ ERLEDIGT — MF-897.** Rotbeweis `tests/test_hfe_track0_encoding.c`,
+> **2 von 7 Prüfungen rot** — genau die beiden, die das Anwenden des
+> Ersatzes verlangen. Die übrigen fünf sind **Wächter**: sie stehen
+> vorher wie nachher grün und halten die Grenzen fest (0xFF, Spur 1,
+> Seite 1, strittiger Wert, eigener Schreiber). Gegenprobe **5
+> Mutationen, jede fällt genau ihre Prüfungen**. Bau ohne Warnung,
+> `ctest` **350/350** mit dem bekannten benannten Skip, alle Tore 0.
+> Befund als **P3-175** in `docs/OPEN_ITEMS.md`.
+>
+> **Beim Messen fiel ein zweiter Fehler mit an — auf der SCHREIBSEITE,
+> und er wiegt schwerer.** `hfe_create()` legte den Kopf mit
+> `hfe_header_t header = {0}` an und rührte die vier Spur-0-Felder nie
+> an. Sie blieben auf **0x00** — und 0x00 heißt „Ersatz gilt“. **Jede
+> von UFT geschriebene HFE erklärte damit einen Ersatz, den sie nie
+> gemeint hat.** Gemessen, dass alle drei Referenz-Schreiber 0xFF setzen
+> (greaseweazle 1.23 in `gw_amigados.hfe`, SAMdisk `hfe.cpp:276-279`,
+> HxC als Vorgabe). Ein konformer fremder Leser — SAMdisk liest „alles
+> außer 0xFF“ als Ersatz — hätte Spur 0 einer UFT-HFE anders dekodiert
+> als den Rest. Das musste in denselben Commit, sonst hätte die
+> Leser-Korrektur UFT dazu gebracht, seine **eigenen** Dateien falsch zu
+> lesen.
+>
+> **Nicht getan, und so gesagt:** `read_metadata("encoding")` bleibt die
+> diskweite Angabe. Sie ist nicht falsch — sie ist der Wert des
+> diskweiten Feldes —, und ein Zusatz hätte einen grünen Test
+> (`test_disk_metadata_variant`) für einen kosmetischen Gewinn gebrochen.
+> Ebenfalls offen: das Verhalten an einer **echten** gemischt kodierten
+> Aufnahme. Im Korpus liegt keine; das Prüfabbild ist synthetisch, und
+> der Testkopf sagt das.
+
+
 **Was der Benutzer davon hat:** eine HFE-Aufnahme, deren Spur 0 in FM und
 deren Rest in MFM geschrieben ist — der IBM-3740-Fall, bei 8-Zoll- und
 manchen 5,25-Zoll-Medien der Normalfall — wird auf Spur 0 heute mit der
@@ -265,7 +296,7 @@ nicht verfallen (MF-695).
 
 | # | Phase | Nutzen für den Benutzer | Aufwand | Vorbedingung |
 |---|---|---|---|---|
-| 1 | Phase 2 — HFE Spur-0-Kodierung | behebt einen **stillen Lesefehler** | klein–mittel | Fixture aus dem vorhandenen Generator |
+| 1 | Phase 2 — HFE Spur-0-Kodierung | behebt einen **stillen Lesefehler**, und einen Schreibfehler dazu | klein–mittel | **✅ erledigt, MF-897** |
 | 2 | Phase 3 — `write_allowed`-Vermerk | Ehrlichkeit | sehr klein | keine |
 | 3 | Phase 5 — `VENDORED.md` | Ehrlichkeit | sehr klein | keine |
 | 4 | Phase 1 — FAT12-Verzeichnis | **neue sichtbare Fähigkeit** | mittel–groß | **Korpus-Abbild mit Dateien fehlt** |
