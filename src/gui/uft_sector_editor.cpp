@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_sector_editor.cpp
  * @brief Sector Editor Implementation (BONUS-GUI-002)

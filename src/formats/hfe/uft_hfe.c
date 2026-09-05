@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_hfe.c
  * @brief UnifiedFloppyTool - HFE (UFT HFE Format) Format Plugin

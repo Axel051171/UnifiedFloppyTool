@@ -125,6 +125,30 @@ def _quarantine_open_count(repo: Path):
         return None
 
 
+def _samdisk_file_count(repo: Path):
+    """Dateien unter src/samdisk/, aus git statt aus einer Liste (MF-901).
+
+    MF-899 hat in `src/samdisk/README.md` und `VENDORED.md` genau die
+    Klasse neu hergestellt, die es dort beheben wollte: eine von Hand
+    gepflegte Zahl ("147 Dateien"). Sie stimmte am Tag des Eintrags —
+    und das taten "145" und "62" auch einmal. Aufgefallen im
+    Code-Review.
+    """
+    try:
+        from repo_scope import repo_files
+    except ImportError:
+        return None
+    alle = repo_files(repo)
+    if alle is None:
+        return None
+    # `repo_files()` liefert ABSOLUTE, aufgeloeste Pfade — die erste
+    # Fassung verglich gegen "src/samdisk/" und zaehlte deshalb 0. Das
+    # neue Tor hat den Fehler im ersten Lauf gemeldet; ein Tor, das nur
+    # bei falschen Zahlen anschlaegt, haette ihn verschwiegen.
+    wurzel = (repo / "src" / "samdisk").resolve()
+    return sum(1 for p in alle if wurzel in p.parents)
+
+
 def _matrix_entry_count(repo: Path):
     """Autoritativ: Eintraege in g_matrix[] (src/core/uft_roundtrip.c).
 
@@ -235,6 +259,16 @@ DERIVED_CLAIMS = [
     ("CLAUDE.md", r"\*\*(\d+) nur mit ausdruecklichem `accept_data_loss`",
      _matrix_consent_count,
      "CLAUDE.md: Paare, die Einverstaendnis verlangen (LOSSY_DOCUMENTED)"),
+    # MF-901: die Bestandszahl des vendorten SAMdisk-Ordners. MF-899 hat
+    # sie von Hand eingetragen — in genau dem Commit, der zwei andere
+    # von Hand gepflegte Zahlen desselben Ordners als gedriftet
+    # nachgewiesen hat.
+    ("src/samdisk/README.md", r"\*\*(\d+) Dateien\*\*",
+     _samdisk_file_count,
+     "src/samdisk/README.md: Dateien unter src/samdisk/ (git ls-files)"),
+    ("src/samdisk/VENDORED.md", r"\*\*(\d+) Dateien\*\*",
+     _samdisk_file_count,
+     "src/samdisk/VENDORED.md: Dateien unter src/samdisk/ (git ls-files)"),
 ]
 
 
@@ -326,8 +360,11 @@ def check_inventory(repo: Path) -> list[str]:
     # durchweg aktuelle Zusagen, kein Verlauf. Gemessen beim Einbau —
     # ein Befund, kein Fehlalarm.
     STRENG = ("README.md", "CLAUDE.md")
+    # MF-901: `src/samdisk/README.md` traegt seit MF-899 eine aktuelle
+    # T3-Zahl UND einen historischen Satz daneben ("hier stand 62") —
+    # also LISTE, nicht STRENG.
     LISTE = ("docs/OPEN_ITEMS.md", "docs/PLAN_NAECHSTE_STRECKE.md",
-             "CLAUDE.md", "docs/MASTER_PLAN.md")
+             "CLAUDE.md", "docs/MASTER_PLAN.md", "src/samdisk/README.md")
 
     for name in STRENG + LISTE:
         datei = repo / name
@@ -339,8 +376,17 @@ def check_inventory(repo: Path) -> list[str]:
             # Nur nachsehen, nicht blockieren: welche Stufen-Zahlen
             # stehen hier, und stimmen sie mit der Rechnung ueberein?
             for m in re.finditer(
-                    r"(?<!\d)(?<!of )(?<!von )(\d+)\s+(?:Formate?|formats?)"
-                    r"\s+(?:auf|are|on)\s+\*{0,2}T3",
+                    # MF-901: ZWEI Erweiterungen, beide aus einer
+                    # Gegenprobe, die zuerst NICHT feuerte:
+                    #   - "als" neben "auf|are|on"
+                    #   - `**` um die ZAHL herum ("**37** Formate")
+                    # Der Kommentar oben warnt vor genau dem: ein
+                    # Ausdruck, der eine Schreibweise kennt. Es war die
+                    # zweite Erweiterung noetig, weil die erste allein
+                    # den eigenen Satz noch verfehlte.
+                    r"(?<!\d)(?<!of )(?<!von )\*{0,2}(\d+)\*{0,2}"
+                    r"\s+(?:Formate?|formats?)"
+                    r"\s+(?:auf|are|on|als)\s+\*{0,2}T3",
                     text):
                 if int(m.group(1)) != counts.get("T3", 0):
                     print(f"[tier-liste] {name}: '{m.group(0)}' - gerechnet "

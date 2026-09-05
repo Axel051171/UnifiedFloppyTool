@@ -57,8 +57,8 @@
     "evidence": "MF-359"
   },
   "hfe": {
-    "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1)",
-    "evidence": "MF-354, MF-362"
+    "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1); MF-897 Spur-0-Ersatz: HxC hfe_loader.c + hfe_writer.c, gegengelesen an src/samdisk/hfe.cpp (track0s0_altencoding), gemessen an tests/corpus_free/gw_amigados.hfe; MF-898 write_allowed: src/samdisk/hfe.cpp + Feldname, gemessen an derselben Datei",
+    "evidence": "MF-354, MF-362, MF-897, MF-898"
   },
   "imd": {
     "spec_source": "MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: \"offs += 5 + sector_num\"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256)",

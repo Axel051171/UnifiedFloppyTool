@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_hfe_format.h
  * @brief HFE (UFT HFE Format) Image Format Support
