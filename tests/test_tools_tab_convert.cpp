@@ -58,6 +58,8 @@
 
 #include "toolstab.h"
 
+#include <uft/uft_format_plugin.h>
+
 class TestToolsTabConvert : public QObject
 {
     Q_OBJECT
@@ -251,6 +253,103 @@ private slots:
                  qPrintable("Das unbekannte Zielformat wird nicht benannt:\n"
                             + out));
     }
+
+    /* ══════════════════════════════════════════════════════════════════
+     * MF-893: „Scanning for errors..." / „No errors found" — und nichts
+     * dazwischen.
+     *
+     * `onRepair()` schrieb beide Zeilen unmittelbar nacheinander, ohne
+     * eine einzige Datei zu oeffnen. Jede Datei bekam einen Freispruch:
+     *
+     *     appendOutput(tr("Scanning for errors..."));
+     *     appendOutput(tr("No errors found that can be automatically "
+     *                     "repaired."));
+     *
+     * Der schaerfste Pruefstein ist eine Datei, die GAR KEIN Abbild ist.
+     * Wer sie nicht lesen kann, darf sie nicht freisprechen.
+     * ══════════════════════════════════════════════════════════════════ */
+
+    /** Was `main()` tut — sonst ist die Registry leer (MF-447). */
+    void initTestCase()
+    {
+        QCOMPARE(uft_register_all_formats(), UFT_OK);
+    }
+
+    /* ── Kein Freispruch fuer etwas, das nicht gelesen wurde ───────────── */
+    void repairDoesNotClearAFileItCannotRead()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+
+        /* 4 KB Zufall mit ungerader Groesse — kein Plugin kann das
+         * oeffnen, und keine Groessenheuristik trifft zu. */
+        const QString kaputt = dir.filePath("keinabbild.bin");
+        {
+            QFile f(kaputt);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            QByteArray b(17, '\0');
+            for (int i = 0; i < b.size(); i++)
+                b[i] = static_cast<char>((i * 37 + 11) & 0xFF);
+            QCOMPARE(f.write(b), qint64(b.size()));
+        }
+
+        ToolsTab tab;
+        auto *edit = tab.findChild<QLineEdit *>("editRepairFile");
+        QVERIFY(edit != nullptr);
+        edit->setText(kaputt);
+
+        QVERIFY(QMetaObject::invokeMethod(&tab, "onRepair",
+                                          Qt::DirectConnection));
+
+        const QString out = outputOf(&tab);
+        QVERIFY2(!out.isEmpty(), "Keine Ausgabe - dann prueft dies nichts.");
+        QVERIFY2(!out.contains("No errors found"),
+                 qPrintable("Eine Datei, die kein Plugin oeffnen kann, wird "
+                            "als fehlerfrei gemeldet:\n" + out));
+    }
+
+    /* ── Und eine echte Diskette wird wirklich abgesucht ───────────────── */
+    void repairActuallyExaminesTheImage()
+    {
+#ifdef UFT_CORPUS_DIR
+        const QString img =
+            QString(UFT_CORPUS_DIR) + "/vice_c1541_35trk.d64";
+#else
+        const QString img;
+#endif
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        /* Auf einer KOPIE arbeiten. Der Reiter legt bei angehaktem
+         * Haekchen eine `.backup`-Datei NEBEN das Abbild — beim ersten
+         * Lauf ist damit eine Datei im Korpusverzeichnis entstanden.
+         * Ein Test, der seinen eigenen Pruefstand veraendert, ist keiner;
+         * und der Korpus ist die Bezugsgroesse mehrerer anderer Tests. */
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString kopie = dir.filePath("probe.d64");
+        QVERIFY2(QFile::copy(img, kopie), "Korpus-Abbild nicht kopierbar");
+
+        ToolsTab tab;
+        auto *edit = tab.findChild<QLineEdit *>("editRepairFile");
+        QVERIFY(edit != nullptr);
+        edit->setText(kopie);
+
+        QVERIFY(QMetaObject::invokeMethod(&tab, "onRepair",
+                                          Qt::DirectConnection));
+
+        const QString out = outputOf(&tab);
+
+        /* Eine 35-Spur-Diskette hat 683 Sektoren. Die Zahl steht im
+         * Format, nicht in unserem Code — deshalb darf der Test darauf
+         * bestehen, dass sie in einem Bericht ueber DIESE Diskette
+         * vorkommt. */
+        QVERIFY2(out.contains("683"),
+                 qPrintable(QString("Der Bericht nennt nicht, wie viele "
+                                    "Sektoren abgesucht wurden (683 auf "
+                                    "einer 35-Spur-Diskette):\n%1").arg(out)));
+    }
+
 };
 
 QTEST_MAIN(TestToolsTabConvert)

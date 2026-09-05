@@ -3008,6 +3008,10 @@ if(TARGET Qt6::Test)
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui)
+                # MF-893: onRepair() sprach jede Datei frei, ohne eine zu
+                # oeffnen. Der Rotbeweis braucht das Korpus-Abbild.
+                target_compile_definitions(${qt_test_name} PRIVATE
+                    UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
                 # MF-577: die zwei Reiter, an denen NICHTS zu beanstanden
                 # war — festgehalten, damit sie es bleiben. Workflow zieht

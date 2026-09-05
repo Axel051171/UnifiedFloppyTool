@@ -6,6 +6,9 @@
  */
 
 #include "toolstab.h"
+
+#include <uft/uft_core.h>
+#include <uft/uft_format_plugin.h>
 #include "ui_tab_tools.h"
 #include "disk_image_validator.h"
 
@@ -325,6 +328,38 @@ void ToolsTab::onConvert()
     appendOutput(QString());
 }
 
+/**
+ * Was auf der Diskette steht — und was dieses Werkzeug NICHT tut.
+ *
+ * ── Was hier stand (MF-893) ──────────────────────────────────────────────
+ *
+ *     appendOutput(tr("Scanning for errors..."));
+ *     appendOutput(tr("No errors found that can be automatically "
+ *                     "repaired."));
+ *
+ * Zwei Zeilen, unmittelbar nacheinander, ohne dass eine Datei geoeffnet
+ * wurde. Jede Datei bekam einen Freispruch — auch eine, die gar kein
+ * Abbild ist. Das ist eine Unbedenklichkeitsbescheinigung ohne Messung,
+ * dieselbe Klasse wie MF-892 (die gruene Belegungskarte) und MF-570.
+ *
+ * Zwischen den beiden Zeilen stand der einzige echte Vorgang der
+ * Funktion: eine Sicherungskopie. Die scheiterte STILL, wenn die
+ * Zieldatei schon existierte — `QFile::copy()` gibt dann false zurueck,
+ * und die Erfolgsmeldung wurde einfach uebersprungen. Wer eine Sicherung
+ * angehakt hatte, konnte nicht erkennen, dass keine entstand.
+ *
+ * ── Was jetzt passiert ───────────────────────────────────────────────────
+ *
+ * Die Spuren werden wirklich gelesen (`plugin->read_track()`) und
+ * gezaehlt, was das Plugin meldet: fehlerhafte CRC, schwache Bits,
+ * Sektoren ohne Daten, nicht lesbare Spuren. Der Bericht nennt, WIE VIEL
+ * untersucht wurde — eine Aussage ueber Fehler ohne die Zahl der
+ * geprueften Sektoren ist nicht nachpruefbar.
+ *
+ * Und er sagt klar, dass eine automatische Reparatur NICHT umgesetzt
+ * ist. Der Knopf heisst „Repair"; solange er nur sucht, muss das
+ * dastehen.
+ */
 void ToolsTab::onRepair()
 {
     QString path = ui->editRepairFile->text();
@@ -333,19 +368,120 @@ void ToolsTab::onRepair()
             tr("Please specify a disk image to repair."));
         return;
     }
-    
-    appendOutput(QString("═══════════════════════════════════════"));
-    appendOutput(tr("Repair Analysis: %1").arg(QFileInfo(path).fileName()));
-    
+
+    appendOutput(QString("======================================="));
+    appendOutput(tr("Pruefung: %1").arg(QFileInfo(path).fileName()));
+
+    /* MF-893: eine gescheiterte Sicherung wird gemeldet, nicht
+     * uebersprungen. `QFile::copy()` scheitert unter anderem, wenn die
+     * Zieldatei schon da ist. */
     if (ui->checkBackup->isChecked()) {
-        QString backup = path + ".backup";
-        if (QFile::copy(path, backup)) {
-            appendOutput(tr("Backup created: %1").arg(backup));
+        const QString backup = path + ".backup";
+        if (QFile::exists(backup)) {
+            appendOutput(tr("Sicherung NICHT angelegt: %1 existiert bereits.")
+                             .arg(backup));
+        } else if (QFile::copy(path, backup)) {
+            appendOutput(tr("Sicherung angelegt: %1").arg(backup));
+        } else {
+            appendOutput(tr("Sicherung FEHLGESCHLAGEN: %1 konnte nicht "
+                            "geschrieben werden.").arg(backup));
         }
     }
-    
-    appendOutput(tr("Scanning for errors..."));
-    appendOutput(tr("No errors found that can be automatically repaired."));
+
+    uft_disk_t *disk = uft_disk_open(path.toUtf8().constData(), true);
+    if (!disk) {
+        appendOutput(tr("Nicht lesbar: kein Plugin konnte diese Datei "
+                        "oeffnen. Ueber Fehler auf der Diskette ist damit "
+                        "NICHTS bekannt - das ist kein Freispruch."));
+        appendOutput(QString());
+        return;
+    }
+
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
+    if (!plugin || !plugin->read_track) {
+        appendOutput(tr("Das Plugin \"%1\" liest keine ganzen Spuren. Ueber "
+                        "einzelne Sektoren ist damit nichts bekannt - das "
+                        "ist kein Freispruch.")
+                         .arg(plugin && plugin->name
+                                  ? QString::fromUtf8(plugin->name)
+                                  : tr("(unbenannt)")));
+        uft_disk_close(disk);
+        appendOutput(QString());
+        return;
+    }
+
+    uft_geometry_t geom;
+    memset(&geom, 0, sizeof(geom));
+    uft_disk_get_geometry(disk, &geom);
+    const int zylinder = geom.cylinders > 0 ? geom.cylinders : 0;
+    const int koepfe   = geom.heads > 0 ? geom.heads : 1;
+
+    appendOutput(tr("Plugin: %1, %2 Zylinder x %3 Kopf/Koepfe")
+                     .arg(plugin->name ? QString::fromUtf8(plugin->name)
+                                       : tr("(unbenannt)"))
+                     .arg(zylinder).arg(koepfe));
+
+    long sektoren = 0, crc_fehler = 0, schwach = 0, ohne_daten = 0;
+    long spuren_gelesen = 0, spuren_stumm = 0;
+    QStringList auffaellig;
+
+    for (int c = 0; c < zylinder; c++) {
+        for (int h = 0; h < koepfe; h++) {
+            uft_track_t spur;
+            memset(&spur, 0, sizeof(spur));
+            if (plugin->read_track(disk, c, h, &spur) != UFT_OK) {
+                spuren_stumm++;
+                if (auffaellig.size() < 20)
+                    auffaellig << tr("  Spur %1/%2: nicht lesbar").arg(c).arg(h);
+                continue;
+            }
+            spuren_gelesen++;
+            for (size_t i = 0; i < spur.sector_count; i++) {
+                const uft_sector_t *s = &spur.sectors[i];
+                sektoren++;
+                if (!s->crc_ok) {
+                    crc_fehler++;
+                    if (auffaellig.size() < 20)
+                        auffaellig << tr("  Spur %1/%2 Sektor %3: CRC falsch")
+                                          .arg(c).arg(h).arg(s->id.sector);
+                }
+                if (s->weak) {
+                    schwach++;
+                    if (auffaellig.size() < 20)
+                        auffaellig << tr("  Spur %1/%2 Sektor %3: schwache Bits")
+                                          .arg(c).arg(h).arg(s->id.sector);
+                }
+                if (!s->data || s->data_len == 0) ohne_daten++;
+                free(s->data);
+            }
+            free(spur.sectors);
+        }
+    }
+    uft_disk_close(disk);
+
+    appendOutput(tr("Untersucht: %1 Spuren gelesen, %2 stumm, %3 Sektoren.")
+                     .arg(spuren_gelesen).arg(spuren_stumm).arg(sektoren));
+
+    if (crc_fehler || schwach || ohne_daten || spuren_stumm) {
+        appendOutput(tr("Auffaellig: %1 mit falscher CRC, %2 mit schwachen "
+                        "Bits, %3 ohne Daten.")
+                         .arg(crc_fehler).arg(schwach).arg(ohne_daten));
+        for (const QString &z : auffaellig) appendOutput(z);
+        if (auffaellig.size() >= 20)
+            appendOutput(tr("  (weitere nicht aufgefuehrt)"));
+    } else if (sektoren > 0) {
+        appendOutput(tr("Keine Auffaelligkeit in den %1 gelesenen Sektoren. "
+                        "Das ist eine Aussage ueber DIESE Lesung, nicht "
+                        "ueber die Diskette.").arg(sektoren));
+    } else {
+        appendOutput(tr("Kein einziger Sektor gelesen - ueber Fehler ist "
+                        "damit nichts bekannt."));
+    }
+
+    /* MF-893: der Knopf heisst „Repair". Solange er nur sucht, gehoert
+     * das dahin, wo der Benutzer hinsieht. */
+    appendOutput(tr("Eine automatische Reparatur ist NICHT umgesetzt; es "
+                    "wurde nichts veraendert."));
     appendOutput(QString());
 }
 
