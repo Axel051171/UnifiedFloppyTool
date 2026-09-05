@@ -13,6 +13,8 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/formats/kryoflux_checker.h"
+#include "uft/uft_log.h"
 
 /* ============================================================================
  * Forward declarations from uft_kfstream_air.c
@@ -60,50 +62,48 @@ bool kfx_probe(const uint8_t *data, size_t size, size_t file_size,
     (void)file_size;
     if (size < 16) return false;
 
-    /* KryoFlux streams start with flux data or OOB blocks.
-     * OOB marker 0x0D appears early in valid streams.
-     * Also check for common Flux2 headers (0x00-0x07). */
-    size_t scan = (size < 512) ? size : 512;
-    int oob_count = 0;
-
-    for (size_t i = 0; i < scan; i++) {
-        if (data[i] == 0x0D) oob_count++;
+    /* MF-919 (P3-171) — HIER WURDE DAS BYTE 0x0D GEZAEHLT.
+     *
+     * Der Rumpf lautete: `for (i..scan) if (data[i]==0x0D) oob_count++;`
+     * und danach `>= 2 -> 45, true` / `>= 1 -> 35, true`. In 512
+     * Zufallsbytes stehen erwartungsgemaess zwei 0x0D — die Sonde
+     * konnte also NIE „nein" sagen. Gemessen (MF-893): 4097 Byte
+     * Pseudozufall wurden angenommen und als `1 Zylinder x 1 Kopf,
+     * 1 Sektor` gemeldet.
+     *
+     * MF-729 hatte die ZAHLEN gesenkt (80/40 -> 45/35). Das war
+     * richtig und reichte nicht: eine gesenkte Konfidenz macht aus
+     * einem Erkenner ohne „nein" keinen Erkenner. `uft_disk_open()`
+     * nimmt den Sieger, nicht den Selbstbewussten.
+     *
+     * Jetzt wird STRUKTUR gelesen — und zwar von Code, den dieser Baum
+     * seit jeher hat und nie gerufen hat: `uft_kfc_check_stream()` in
+     * `src/formats/kryoflux/uft_kryoflux_checker.c` laeuft die
+     * OOB-Kette ab und haelt die in den Bloecken eingebettete
+     * Stromposition gegen die eigene Zaehlung. Das ist ein
+     * 32-Bit-Vergleich; Zufall besteht ihn praktisch nicht.
+     *
+     * Der frueher hier stehende Verweis auf FMT-20 („dafuer braucht es
+     * die Stream-Spezifikation, dtc ist nicht vorhanden") ist damit
+     * ueberholt: die Kenntnis liegt ZWEIMAL im Baum, unabhaengig —
+     * der Pruefer oben und `src/a8rawconv/rawdiskkf.cpp` (Avery Lee,
+     * GPL-2.0-or-later). Beide stimmen in allen Opcodes ueberein.
+     * Messung vor Plan.
+     *
+     * Die Sonde bekommt bewusst den GANZEN Puffer, nicht die ersten
+     * 512 Byte: die Kette laesst sich nur als Ganzes pruefen — wer bei
+     * 512 abschneidet, bricht sie mitten im Block ab und misst nichts.
+     */
+    uint32_t oob = 0, index = 0;
+    if (!uft_kfc_stream_is_valid(data, size, &oob, &index)) {
+        return false;
     }
 
-    /* MF-729: hier standen 80 (>= 2 Vorkommen) und 40 (>= 1). Beides ist
-     * KEINE Strukturpruefung — es ist eine Byte-Zaehlung. Gemessen an
-     * Eichung 2 (`tests/test_probe_confidence_on_random.c`) stimmte diese
-     * Sonde bei **61,7 %** zufaelliger Puffer ins Band „Struktur
-     * gelesen": in 512 Zufallsbytes stehen erwartungsgemaess zwei 0x0D,
-     * und genau zwei genuegten fuer 80.
-     *
-     * Die Folge war messbar (MF-726): ein MOOF- und ein A2R-Kopf tragen
-     * `FF 0A 0D 0A`, und weil beide Formate kein eigenes Plugin haben,
-     * GEWANN KFX — `uft_disk_open()` uebergab eine MOOF-Datei dem
-     * KryoFlux-Strom-Leser.
-     *
-     * Beide Werte sinken darum ins Band „nur eine Vermutung" (30..49).
-     * Die relative Ordnung bleibt: mehr Marker ist ein staerkerer
-     * Hinweis als einer — aber keiner davon ist eine gelesene Struktur.
-     *
-     * Was es richtig machen wuerde, steht in `docs/OPEN_ITEMS.md`
-     * FMT-20: den OOB-Blockaufbau parsen (0x0D, Typbyte,
-     * 16-Bit-Groesse) statt Bytes zu zaehlen. Das braucht die
-     * KryoFlux-Stream-Spezifikation als benannte Referenz; `dtc` ist
-     * registriert, aber nicht vorhanden. Bis dahin ist eine ehrliche
-     * Vermutung besser als eine unehrliche Gewissheit. */
-    if (oob_count >= 2) {
-        *confidence = 45;
-        return true;
-    }
-
-    /* Weaker: file extension would help, but probe only sees data */
-    if (oob_count >= 1) {
-        *confidence = 35;
-        return true;
-    }
-
-    return false;
+    /* Band 50..79 = „Struktur gelesen" (MF-729). NICHT hoeher: ein
+     * KryoFlux-Strom hat keine Kennung am Dateianfang, es gibt also
+     * kein Merkmal zu treffen — nur einen Aufbau, der aufgeht. */
+    *confidence = 75;
+    return true;
 }
 
 /* ============================================================================
@@ -124,6 +124,20 @@ static uft_error_t kfx_open(uft_disk_t *disk, const char *path,
         return UFT_ERROR_FORMAT_INVALID;
     }
 
+    /* MF-919 (P3-171): hier stand NICHTS ausser der Groessenpruefung.
+     * Wer dieses Plugin ausdruecklich waehlte, bekam fuer JEDE Datei
+     * ab 16 Byte ein `UFT_OK` und danach eine erfundene Geometrie.
+     * Die Sonde allein reicht nicht — sie ist eine Empfehlung, `open()`
+     * ist die Tuer. */
+    uint32_t oob = 0, index = 0;
+    if (!uft_kfc_stream_is_valid(file_data, file_size, &oob, &index)) {
+        UFT_WARN("KFX: '%s' ist kein KryoFlux-Strom "
+                 "(%u OOB-Bloecke, %u Indexmarken, Positionskette nicht "
+                 "schluessig)", path, oob, index);
+        free(file_data);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+
     kfx_data_t *pdata = calloc(1, sizeof(kfx_data_t));
     if (!pdata) { free(file_data); return UFT_ERROR_NO_MEMORY; }
 
@@ -131,12 +145,18 @@ static uft_error_t kfx_open(uft_disk_t *disk, const char *path,
     pdata->file_size = file_size;
 
     disk->plugin_data = pdata;
-    /* KryoFlux: each file = 1 track, geometry unknown from single file */
-    disk->geometry.cylinders = 1;
-    disk->geometry.heads = 1;
-    disk->geometry.sectors = 1;
-    disk->geometry.sector_size = 0;  /* flux = variable */
-    disk->geometry.total_sectors = 1;
+    /* KryoFlux: eine Datei = eine Spur; die Geometrie der Diskette ist
+     * aus einer einzelnen Spurdatei nicht ableitbar.
+     *
+     * MF-919: hier stand `sectors = 1` und `total_sectors = 1`. Dieses
+     * Plugin dekodiert KEINEN Sektor — es haelt einen Flussstrom. Eine
+     * Eins an dieser Stelle ist eine Zusage an jeden Aufrufer, der die
+     * Geometrie liest, und sie war unwahr. */
+    disk->geometry.cylinders     = 1;
+    disk->geometry.heads         = 1;
+    disk->geometry.sectors       = 0;   /* nichts dekodiert */
+    disk->geometry.sector_size   = 0;   /* Fluss = variabel */
+    disk->geometry.total_sectors = 0;
 
     return UFT_OK;
 }
@@ -167,13 +187,43 @@ static uft_error_t kfx_read_track(uft_disk_t *disk, int cyl, int head,
 
     uft_track_init(track, cyl, head);
 
-    /* Store raw stream data as a single sector for now.
-     * Full flux parsing would use kf_stream_parse() to extract
-     * flux_values[], but that requires the full kf_stream_t struct
-     * which is internal to uft_kfstream_air.c. */
-    uint16_t chunk = (pdata->file_size > 65535) ?
-                     65535 : (uint16_t)pdata->file_size;
-    uft_format_add_sector(track, 0, pdata->file_data, chunk, 0, 0);
+    /* MF-919 (P3-171) — HIER WURDE EIN SEKTOR ERFUNDEN.
+     *
+     * Der Rumpf lautete:
+     *
+     *     uint16_t chunk = (file_size > 65535) ? 65535 : file_size;
+     *     uft_format_add_sector(track, 0, file_data, chunk, 0, 0);
+     *
+     * Damit wurden die ROHEN DATEIBYTES eines Flussstroms als „Sektor 0"
+     * ausgegeben. Ein KryoFlux-Strom ist Fluss: Zeitabstaende zwischen
+     * Magnetuebergaengen, verschachtelt mit OOB-Bloecken. Er enthaelt
+     * keinen Sektor, bevor ihn jemand dekodiert hat — und dieses Plugin
+     * dekodiert ihn nicht.
+     *
+     * Das ist die Klasse aus MF-883, nur andersherum: dort wurde ein
+     * Schreibvorgang gemeldet, der nicht stattfand; hier ein Sektor,
+     * der nicht gelesen wurde. Und es kam obendrein mit einer stillen
+     * Kuerzung: alles ueber 65535 Byte fiel weg (MF-877-Klasse).
+     *
+     * Was jetzt passiert: der Strom wird als Rohdaten der Spur
+     * durchgereicht — VOLLSTAENDIG, ohne Kuerzung — und als das
+     * benannt, was er ist. Kein Sektor, keine Erfindung.
+     *
+     * Was damit NICHT geloest ist und ausdruecklich offen bleibt: die
+     * Zellzeiten aus dem Strom zu gewinnen. Der Pruefer hat mit
+     * `extract_flux_values()` bereits eine Umsetzung dafuer; sie an
+     * `track->flux_*` zu haengen ist ein eigener Eingriff mit eigener
+     * Messung. Bis dahin gilt die Merkmalstafel unten. */
+    uint8_t *kopie = malloc(pdata->file_size);
+    if (!kopie) return UFT_ERROR_NO_MEMORY;
+    memcpy(kopie, pdata->file_data, pdata->file_size);
+
+    track->raw_data     = kopie;
+    track->raw_size     = pdata->file_size;
+    track->raw_len      = pdata->file_size;
+    track->raw_capacity = pdata->file_size;
+    track->owns_data    = true;
+    track->encoding     = UFT_ENC_UNKNOWN;
 
     return UFT_OK;
 }
@@ -216,7 +266,12 @@ static uft_error_t kfx_write_track(uft_disk_t *disk, int cyl, int head,
  * ============================================================================ */
 
 static const uft_plugin_feature_t uft_format_plugin_kfx_features[] = {
-    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    /* MF-919: „Read SUPPORTED" war zu viel gesagt. Der Strom wird
+     * geoeffnet, strukturell geprueft und roh durchgereicht — dekodiert
+     * wird er nicht. */
+    { "Read", UFT_FEATURE_PARTIAL,
+      "Strom wird strukturell geprueft und roh durchgereicht; "
+      "keine Sektor- oder Zelldekodierung" },
     { "Write", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_SUPPORTED, NULL },

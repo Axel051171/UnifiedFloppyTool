@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "uft/formats/kryoflux_checker.h"
+
 /*============================================================================
  * CONSTANTS
  *============================================================================*/
@@ -569,6 +571,37 @@ int uft_kfc_check_stream(
     }
     
     return 0;
+}
+
+/**
+ * @brief Ist das ein KryoFlux-Strom? — die schmale Tuer (MF-919)
+ *
+ * Vertrag und Begruendung: include/uft/formats/kryoflux_checker.h.
+ *
+ * Warum die drei Zusatzbedingungen noetig sind, ist GEMESSEN und nicht
+ * vermutet: `verify_stream_position()` bricht bei einem OOB-Block, der
+ * nicht mehr in den Puffer passt, mit `break` ab und laesst `valid` auf
+ * `true` stehen. Ein Puffer ohne jeden positionstragenden Block ist
+ * damit TRIVIAL gueltig — genau die Sonde, die nie „nein" sagt.
+ *
+ * `position_match` traegt uebrigens keine zusaetzliche Information: es
+ * wird in derselben Zeile aus demselben `valid` gesetzt. Hier steht
+ * deshalb `stream_valid`, nicht beides.
+ */
+bool uft_kfc_stream_is_valid(const uint8_t* data, size_t len,
+                             uint32_t* out_oob, uint32_t* out_index)
+{
+    if (out_oob)   *out_oob = 0;
+    if (out_index) *out_index = 0;
+    if (!data || len < 16) return false;
+
+    uft_kfc_result_t r;
+    if (uft_kfc_check_stream(data, len, &r) != 0) return false;
+
+    if (out_oob)   *out_oob   = r.oob_count;
+    if (out_index) *out_index = r.index_count;
+
+    return r.stream_valid && r.oob_count >= 2 && r.index_count >= 1;
 }
 
 /**

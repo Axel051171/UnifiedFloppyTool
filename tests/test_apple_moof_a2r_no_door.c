@@ -70,6 +70,9 @@
  * nichts — genau die Falle aus MF-446/447. Die Gegenpruefung unten
  * faengt es, falls der Aufruf je wegfaellt. */
 uft_error_t uft_register_all_formats(void);
+/* MF-919: direkt befragt, weil uft_probe_ranking_t keine Liste aller
+ * Bewerber traegt — nur Sieger, Zweiten und die Gleichplatzierten. */
+extern const uft_format_plugin_t uft_format_plugin_kfx;
 
 static int fehler = 0;
 
@@ -137,19 +140,29 @@ int main(void)
                "%s: niemand beansprucht den Kopf — dann ist kfx_probe() "
                "geschaerft worden und dieser Test nachzuziehen", fremd[i]);
         if (r.winner) {
-            PRUEFE(strcmp(r.winner->name, "KFX") == 0,
-                   "%s: Gewinner ist jetzt '%s' statt KFX. Wenn das ein "
-                   "echtes %s-Plugin ist: wurde der Leser geprueft, bevor "
-                   "er eine Tuer bekam? Sonst ist es die Lage von 86f "
-                   "(MF-707)", fremd[i], r.winner->name, fremd[i]);
-            /* MF-729 hat KFX von 40 auf 35 gesenkt: Byte-Zaehlung ist
-             * keine Strukturpruefung (Eichung 2 mass 61,7 % Zustimmung
-             * auf Zufallspuffern). Der falsche Sieger bleibt, aber er
-             * behauptet nichts mehr — das Urteil lautet jetzt
-             * MEHRDEUTIG statt eindeutig. */
-            PRUEFE(r.confidence == 35,
-                   "%s: KFX gewinnt jetzt mit %d statt 35", fremd[i],
-                   r.confidence);
+            /* ── MF-919: NACHGEZOGEN, UND DER BEFUND HAT UEBERLEBT ────
+             *
+             * Hier stand `strcmp(r.winner->name, "KFX") == 0` und
+             * `r.confidence == 35`. Beides ist seit MF-919 falsch: die
+             * KFX-Sonde liest jetzt die OOB-Kette statt 0x0D zu zaehlen
+             * und beansprucht diese Koepfe nicht mehr.
+             *
+             * **Der Befund ist damit NICHT erledigt.** Gemessen gewinnt
+             * jetzt **XFD mit 25** — ein reiner Groessenanspruch. Die
+             * Klasse ist unveraendert: eine Datei ohne eigenes Plugin
+             * wird weiterhin vom FALSCHEN beantwortet, es ist nur ein
+             * anderes falsches.
+             *
+             * Das ist der Grund, warum hier ab jetzt keine NAMEN mehr
+             * zugesichert werden, sondern eine EIGENSCHAFT: wer diese
+             * Koepfe beansprucht, darf nicht behaupten, sie erkannt zu
+             * haben. Ein Name haelt einen Eingriff lang; die
+             * Eigenschaft haelt. */
+            PRUEFE(r.confidence < 50,
+                   "%s: '%s' beansprucht den Kopf mit %d — das Band ab 50 "
+                   "heisst 'Struktur gelesen' (MF-729), und fuer dieses "
+                   "Format hat niemand etwas gelesen",
+                   fremd[i], r.winner->name, r.confidence);
             PRUEFE(r.verdict == UFT_PROBE_VERDICT_MEHRDEUTIG,
                    "%s: das Urteil ist nicht MEHRDEUTIG — ein Sieger im "
                    "Vermutungsband darf nicht als erkannt gelten",
@@ -173,10 +186,20 @@ int main(void)
     memset(&rc2, 0, sizeof(rc2));
     (void)uft_probe_buffer_ranked(buf, sizeof(buf), sizeof(buf), &rc2);
     (void)wer_beansprucht(buf, sizeof(buf), "Nullen + ein 0x0D");
-    PRUEFE(rc2.winner && strcmp(rc2.winner->name, "KFX") == 0,
-           "ein Puffer aus Nullen mit einem einzigen 0x0D wird nicht mehr "
-           "von KFX beansprucht — dann ist kfx_probe() geschaerft worden. "
-           "Gut; dieser Test ist nachzuziehen");
+    /* MF-919: hier wurde zugesichert, dass KFX diesen Puffer gewinnt.
+     * Seit der Schaerfung tut es das nicht mehr — genau wie die alte
+     * Fehlermeldung es vorhergesagt hat („Gut; dieser Test ist
+     * nachzuziehen"). Was bleibt und jetzt gemessen wird: KFX
+     * beansprucht ihn NICHT mehr. */
+    {
+        int kconf = 0;
+        bool kfx_nimmt = uft_format_plugin_kfx.probe(
+            buf, sizeof(buf), sizeof(buf), &kconf);
+        PRUEFE(!kfx_nimmt,
+               "KFX beansprucht wieder einen Puffer aus Nullen mit einem "
+               "einzigen 0x0D (Konfidenz %d) — die Strukturpruefung aus "
+               "MF-919 ist ausgehebelt", kconf);
+    }
 
     printf("\n  Was die gruene Ampel heisst — und es ist schlimmer als "
            "'keine Tuer':\n"
