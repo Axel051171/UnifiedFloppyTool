@@ -38,7 +38,34 @@ typedef struct {
  *
  * Der Unterschied zaehlt, sobald jemand sie ausserhalb dieses Encoders
  * benutzen will — etwa fuer eine Aussage ueber eine ECHTE Diskette.
- * Dafuer braucht es eine zweite, unabhaengige Quelle. */
+ * Dafuer braucht es eine zweite, unabhaengige Quelle.
+ *
+ * MF-916: WOFUER die Messung gilt — MF-910 hat das offen gelassen, und
+ * der Absatz darueber liest sich weiter, als deckte er die ganze
+ * Tabelle. Nachgemessen:
+ *
+ *   `vice_c1541_35trk.d64` hat 174 848 Byte = 683 Bloecke = **35
+ *   Spuren**. Damit beruehrt der Rundlauf ALLE VIER Zonenzeilen —
+ *   Zone 3 ueber die Spuren 1-17, Zone 2 ueber 18-24, Zone 1 ueber
+ *   25-30, und Zone 0 ueber 31-35. Die vier GAP-WERTE sind also je
+ *   gedeckt.
+ *
+ *   NICHT gedeckt ist die REICHWEITE der letzten Zeile. Dass Zone 0 von
+ *   31 bis **42** weiterlaeuft, ist eine Fortschreibung: im Korpus
+ *   liegt kein Abbild mit mehr als 35 Spuren, weder D64 noch G64.
+ *
+ *   Und `tests/test_cbm_geometry.c` schliesst die Luecke nicht: er haelt
+ *   die Tabelle gegen die ALTTABELLEN (`legacy_43`, `legacy_41`), also
+ *   gegen die 24 Kopien, die sie abgeloest hat. Der Kopf jener Datei
+ *   sagt es selbst — gemessen werden soll gegen "disks that VICE c1541
+ *   produced, not to what UFT already believed"; fuer die erweiterten
+ *   Spuren gibt es diese Diskette nicht.
+ *
+ *   Was die Luecke NICHT schliesst: ein Rundlauf mit einer 42-Spur-D64,
+ *   die UFT seit MF-908 selbst erzeugen kann. Der belegt
+ *   Selbstkonsistenz, nicht die Zonenaufteilung einer echten Diskette.
+ *   Dafuer braucht es ein fremd erzeugtes Abbild mit mehr als 35
+ *   Spuren. */
 static const cbm_zone_t zones_1541[] = {
     {  1, 17, 21, 3,  9 },
     { 18, 24, 19, 2, 19 },

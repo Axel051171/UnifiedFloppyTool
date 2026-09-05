@@ -151,6 +151,24 @@ Befund-Stufe. Rückstand steht bei 30 (Grundlinie 30).
 
 ## Phase 3 — `zones_1541` beansprucht eine Verifikation, die nur 35 Spuren deckt
 
+> **✅ ERLEDIGT — MF-916, und beim Messen genauer geworden als der
+> Bericht.** Er sprach pauschal von einer ungedeckten „extended zone“.
+> Nachgemessen berührt die 35-Spur-Diskette **alle vier** Zonenzeilen —
+> Zone 0 über die Spuren 31–35. Die vier **Gap-Werte** sind also je
+> gedeckt.
+>
+> Ungedeckt ist die **Reichweite**: dass Zone 0 bis 42 weiterläuft, ist
+> eine Fortschreibung. Und `tests/test_cbm_geometry.c` schließt das
+> nicht — er hält die Tabelle gegen die **Alttabellen**, also gegen die
+> 24 Kopien, die sie abgelöst hat. Einigkeit unter Kopien ist keine
+> äußere Instanz.
+>
+> Ausdrücklich festgehalten, weil es naheliegt und nicht trüge: ein
+> Rundlauf mit einer 42-Spur-D64, die UFT **seit MF-908 selbst
+> erzeugen kann**, beläge Selbstkonsistenz — nicht die Zonenaufteilung
+> einer echten Diskette. Befund als **P3-189**.
+
+
 **Gegen mich selbst.** Der Kopf von `src/formats/cbm/uft_cbm_geometry.c`
 beschreibt die Spuren 36–42 als „extended range" und belegt die
 Gap-Werte mit *„byte-identical G64 output against the c1541 reference
@@ -190,4 +208,4 @@ dieselbe Überdehnung, die MF-910 an anderer Stelle behoben hat.
 |---|---|---|---|
 | 1 | Signaturkonstanten + Test | ein Test, der scheitern **kann** | **✅ erledigt, MF-913** |
 | 2 | Herkunft der 313 Formate + Torlücke | Lizenzklarheit, und ein Tor, das sieht | **ja** |
-| 3 | `zones_1541`-Vermerk | Ehrlichkeit gegen die eigene Überdehnung | **ja** |
+| 3 | `zones_1541`-Vermerk | Ehrlichkeit gegen die eigene Überdehnung | **✅ erledigt, MF-916** |
