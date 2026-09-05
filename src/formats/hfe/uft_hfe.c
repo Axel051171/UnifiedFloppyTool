@@ -112,7 +112,7 @@ typedef struct {
     uint8_t     reserved;               // 0x01
     uint16_t    track_list_offset;      // Offset zur Track-LUT (in Blocks)
     /* MF-898: hier stand "0xFF = schreibgeschützt" — die Polaritaet
-     * war VERDREHT. Belege an `hfe_write_erlaubt()` weiter unten. */
+     * war VERDREHT. Belege an `hfe_write_allowed()` weiter unten. */
     uint8_t     write_allowed;          // 0x00 = nicht erlaubt, sonst erlaubt
     uint8_t     single_step;            // 0xFF = single step, 0x00 = double
     /* MF-897: hier stand "0xFF = alternate encoding Track 0" — die
@@ -221,7 +221,7 @@ static uft_encoding_t hfe_to_uft_encoding(uint8_t hfe_enc) {
  * Der Wunsch des AUFRUFERS bleibt davon unberuehrt; er wird in
  * `hfe_open()` weiterhin mit ODER verknuepft.
  */
-static bool hfe_write_erlaubt(const hfe_header_t* hdr) {
+static bool hfe_write_allowed(const hfe_header_t* hdr) {
     return hdr && hdr->write_allowed != 0x00;
 }
 
@@ -622,8 +622,8 @@ static uft_error_t hfe_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.double_step = (header.single_step != 0xFF);
     
     // Write-Schutz (MF-898: Polaritaet war verdreht — siehe
-    // `hfe_write_erlaubt()`)
-    disk->read_only = read_only || !hfe_write_erlaubt(&header);
+    // `hfe_write_allowed()`)
+    disk->read_only = read_only || !hfe_write_allowed(&header);
     
     return UFT_OK;
 }
@@ -1130,7 +1130,7 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
     
     if (strcmp(key, "write_protected") == 0) {
         snprintf(value, max_len, "%s", 
-                 hfe_write_erlaubt(&pdata->header) ? "no" : "yes");
+                 hfe_write_allowed(&pdata->header) ? "no" : "yes");
         return UFT_OK;
     }
     

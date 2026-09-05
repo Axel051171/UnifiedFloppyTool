@@ -80,6 +80,15 @@ private:
 #endif
     }
 
+    static QString korpus(const char *name)
+    {
+#ifdef UFT_CORPUS_DIR
+        return QString(UFT_CORPUS_DIR) + "/" + QString::fromLatin1(name);
+#else
+        Q_UNUSED(name); return QString();
+#endif
+    }
+
     /** Bytes direkt aus der Datei — unabhaengig von jeder Editor-Rechnung. */
     static QByteArray ausDerDatei(const QString &pfad, qint64 versatz, int laenge)
     {
@@ -223,7 +232,8 @@ private slots:
 
         QLabel *versatz = editor.findChild<QLabel *>("sectorEditorOffsetLabel");
         QVERIFY2(versatz, "Versatz-Feld nicht auffindbar (Objektname fehlt)");
-        QVERIFY2(versatz->text().contains("ausserhalb"),
+        /* MF-902: das Panel spricht englisch, die Meldung jetzt auch. */
+        QVERIFY2(versatz->text().contains("outside the image"),
                  "Die Anzeige sagt nicht, dass die Auswahl ausserhalb liegt");
     }
 
@@ -255,6 +265,70 @@ private slots:
         QSpinBox *spur = spin(&editor, "sectorEditorTrackSpin");
         QVERIFY(spur);
         QCOMPARE(spur->maximum(), 34);
+    }
+
+    /* ────────────────────────────────────────────────────────────────────────
+     *  6. ATR: der 16-Byte-Kopf des Containers wird uebersprungen.
+     *
+     *  MF-902 hat ADF und ATR aus einzelnen Formeln in eine Tabelle
+     *  geholt (`kopf_bytes`, `sektoren_je_spur`). Diese beiden Formate
+     *  hatte KEIN Test gedeckt — ein ungeprueftes Umschreiben eines
+     *  lebenden Pfades ist genau das, was dieser Baum nicht will.
+     *
+     *  `atrcopy_dos2sd.atr` stammt aus `atrcopy`, also von fremder Hand:
+     *  92176 Byte = 16 Kopf + 720 Sektoren zu 128 Byte (40 Spuren x 18).
+     * ──────────────────────────────────────────────────────────────────────── */
+    void atrUeberspringtDenKopf()
+    {
+        const QString atr = korpus("atrcopy_dos2sd.atr");
+        if (atr.isEmpty() || !QFile::exists(atr))
+            QSKIP("Korpus-Abbild atrcopy_dos2sd.atr nicht vorhanden");
+
+        UftSectorEditor editor;
+        editor.loadDisk(atr);
+
+        editor.goToSector(0, 0);
+        QCOMPARE(hex(&editor)->data(), ausDerDatei(atr, 16, 128));
+
+        /* Spur 1 Sektor 0 = 18 Sektoren weiter, hinter dem Kopf. */
+        editor.goToSector(1, 0);
+        QCOMPARE(hex(&editor)->data(), ausDerDatei(atr, 16 + 18 * 128, 128));
+
+        QSpinBox *sektor = spin(&editor, "sectorEditorSectorSpin");
+        QVERIFY(sektor);
+        QCOMPARE(sektor->maximum(), 17);          /* 18 Sektoren je Spur */
+    }
+
+    /* ────────────────────────────────────────────────────────────────────────
+     *  7. ADF: kein Kopf, 11 Sektoren zu 512 Byte, 160 Spuren.
+     *
+     *  `xdftool_dd_ofs.adf` stammt aus `xdftool` (amitools), fremde Hand:
+     *  901120 Byte = 1760 Bloecke zu 512 = 80 Zylinder x 2 Seiten x 11.
+     * ──────────────────────────────────────────────────────────────────────── */
+    void adfOhneKopfElfSektoren()
+    {
+        const QString adf = korpus("xdftool_dd_ofs.adf");
+        if (adf.isEmpty() || !QFile::exists(adf))
+            QSKIP("Korpus-Abbild xdftool_dd_ofs.adf nicht vorhanden");
+
+        UftSectorEditor editor;
+        editor.loadDisk(adf);
+
+        editor.goToSector(0, 0);
+        QCOMPARE(hex(&editor)->data(), ausDerDatei(adf, 0, 512));
+
+        /* Der Wurzelblock einer DD-ADF liegt auf Block 880:
+         * Spur 80, Sektor 0 (880 = 80 * 11). Er beginnt mit 00 00 00 02. */
+        editor.goToSector(80, 0);
+        const QByteArray wurzel = hex(&editor)->data();
+        QCOMPARE(wurzel, ausDerDatei(adf, 880 * 512, 512));
+        QCOMPARE(wurzel.left(4), QByteArray("\x00\x00\x00\x02", 4));
+
+        QSpinBox *sektor = spin(&editor, "sectorEditorSectorSpin");
+        QSpinBox *spur   = spin(&editor, "sectorEditorTrackSpin");
+        QVERIFY(sektor && spur);
+        QCOMPARE(sektor->maximum(), 10);          /* 11 Sektoren je Spur */
+        QCOMPARE(spur->maximum(), 159);           /* 80 x 2 Seiten       */
     }
 };
 
