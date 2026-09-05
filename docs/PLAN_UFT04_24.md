@@ -114,6 +114,21 @@ Buch (P3-178).
 
 ## Phase 2 — 313 CP/M-Formate ohne Tür, ohne SPDX, ohne Lizenzurteil
 
+> **⚠ STAND NACHGEZOGEN (MF-918). Die Tabelle oben führte diese Phase
+> als „ja" — also unangetastet. Gemessen ist sie zu zwei Dritteln
+> erledigt, und zwar seit MF-914:**
+>
+> | Schritt | Stand |
+> |---|---|
+> | 1. Eintrag in `docs/QUARANTINE.md` | **✅ erledigt** — die Zeile steht unter „Vorgemerkt", mit gemessener Fundlage |
+> | 2. SPDX / Lizenzurteil | **⚠ offen — Eigentümer-Entscheidung.** Die Frage ist rechtlich, nicht messtechnisch: hat eine Sammlung von 313 Geometrieparametern überhaupt eigene Schöpfungshöhe? Ist die Antwort nein, ist es **Weg 1** (Kopf berichtigen, weiterbauen); ist sie ja, **Weg 2** |
+> | 3. Die Lücke im Tor | **✅ erledigt** — `audit_spdx_policy.py` liest seit MF-914 auch `quelle:`/`source:`; acht bis dahin unsichtbare Dateien wurden dadurch überhaupt erst sichtbar |
+>
+> Dass diese Zeile zwei Wochen lang „ja" sagte, obwohl der teurere Teil
+> längst lief, ist dieselbe Klasse wie MF-742: **unterberichtete
+> erledigte Arbeit**. Sie fällt am spätesten auf, weil niemand
+> nachfragt, warum etwas noch offen ist.
+
 **Gemessen.** `include/uft/formats/supercopy_formats.h` (411 Z.) und
 `src/formats/cpm/uft_supercopy_detect.c` (440 Z.) führen **313
 CP/M-Diskettenformate**. Der Kopf nennt die Herkunft:
@@ -207,5 +222,5 @@ dieselbe Überdehnung, die MF-910 an anderer Stelle behoben hat.
 | # | Phase | Nutzen | beweisbar heute? |
 |---|---|---|---|
 | 1 | Signaturkonstanten + Test | ein Test, der scheitern **kann** | **✅ erledigt, MF-913** |
-| 2 | Herkunft der 313 Formate + Torlücke | Lizenzklarheit, und ein Tor, das sieht | **ja** |
+| 2 | Herkunft der 313 Formate + Torlücke | Lizenzklarheit, und ein Tor, das sieht | **⚠ zwei von drei Schritten erledigt (MF-914); Schritt 2 ist Eigentümer-Sache** |
 | 3 | `zones_1541`-Vermerk | Ehrlichkeit gegen die eigene Überdehnung | **✅ erledigt, MF-916** |
