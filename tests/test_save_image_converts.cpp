@@ -123,6 +123,56 @@ private slots:
                                 .arg(QString::fromLatin1(k.toHex()))));
     }
 
+    /* 2b. MF-879: Speichern auf sich selbst schreibt NICHTS.
+     *
+     * `MainWindow::onSave()` (Strg+S) ruft `uftSaveImageAs(x, x)`. Ohne
+     * die Identitaets-Erkennung lief das in `kopiere()`, und dort steht
+     * `out.open(WriteOnly)` auf der QUELLE — das kuerzt sie, bevor
+     * irgendetwas geschrieben ist. Bei einer Kurzschreibung entfernt die
+     * Aufraeumzeile `QFile::remove(target)` anschliessend genau das
+     * Original.
+     *
+     * Der Rotbeweis nutzt eine SCHREIBGESCHUETZTE Datei. Sie deckt beides
+     * auf einmal auf:
+     *   - vorher: `out.open(WriteOnly)` schlaegt fehl, das Speichern wird
+     *     abgelehnt. Eine Datei, die bereits gespeichert IST, laesst sich
+     *     also nicht speichern.
+     *   - nachher: es wird gar nicht erst geoeffnet, also gelingt es.
+     *
+     * Und er ist gefahrlos: gerade weil die Datei schreibgeschuetzt ist,
+     * kann der Rotbeweis das Korpus-Abbild nicht beschaedigen. */
+    void speichern_auf_sich_selbst_schreibt_nichts()
+    {
+        const QString datei = m_dir.filePath("identitaet.d64");
+        QVERIFY2(QFile::copy(korpus("vice_c1541_35trk.d64"), datei),
+                 "Arbeitskopie liess sich nicht anlegen");
+
+        QFile f(datei);
+        const qint64 groesseVorher = QFileInfo(datei).size();
+        QVERIFY(groesseVorher > 0);
+        const QByteArray kopfVorher = kopf(datei, 32);
+
+        /* Schreibgeschuetzt: jeder Schreibversuch muss auffallen. */
+        QVERIFY2(f.setPermissions(QFile::ReadOwner | QFile::ReadUser),
+                 "Schreibschutz liess sich nicht setzen");
+
+        const UftSaveOutcome r = uftSaveImageAs(datei, datei);
+
+        /* Zuruecksetzen, damit das Temporaerverzeichnis aufraeumen kann —
+         * vor den Pruefungen, sonst bleibt es bei einem Fehlschlag liegen. */
+        f.setPermissions(QFile::ReadOwner | QFile::WriteOwner |
+                         QFile::ReadUser  | QFile::WriteUser);
+
+        QVERIFY2(r.ok, qPrintable(
+            "Speichern auf sich selbst wurde abgelehnt: " + r.message +
+            "  — die Datei ist bereits gespeichert; hier wird versucht, "
+            "sie neu zu schreiben, und genau dieser Schreibversuch kann "
+            "das Original kuerzen"));
+        QVERIFY2(!r.converted, "eine Identitaet ist keine Wandlung");
+        QCOMPARE(QFileInfo(datei).size(), groesseVorher);
+        QCOMPARE(kopf(datei, 32), kopfVorher);
+    }
+
     /* 3. Ein NEUER Zielname muss funktionieren. */
     void neuer_zielname_funktioniert()
     {

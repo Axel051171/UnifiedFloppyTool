@@ -107,6 +107,49 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
         return r;
     }
 
+    /* MF-879: Ziel IST die Quelle — dann gibt es nichts zu schreiben.
+     *
+     * `MainWindow::onSave()` (Strg+S) ruft genau so auf:
+     * `speichereNach(m_currentFile)` mit `m_currentFile` als Quelle UND
+     * Ziel. Ohne diesen Zweig lief das in `kopiere()`, und dort ist die
+     * Reihenfolge fuer diesen Fall gefaehrlich:
+     *
+     *     in.open(ReadOnly); daten = in.readAll(); in.close();
+     *     out.open(WriteOnly);      <- KUERZT die Datei ... die Quelle
+     *     ist = out.write(daten);
+     *     if (ist != soll) QFile::remove(target);   <- LOESCHT die Quelle
+     *
+     * Im Normalfall entsteht dabei dieselbe Datei. Im Fehlerfall — volle
+     * Platte, entzogenes Medium, Abbruch zwischen Kuerzen und Schreiben —
+     * ist das geladene Abbild weg oder abgeschnitten, und die
+     * Aufraeumzeile entfernt genau das Original, das sie schuetzen soll.
+     * `kopiere()` ist fuer Quelle != Ziel geschrieben; dort ist das
+     * Entfernen einer halben Zieldatei richtig (MF-571).
+     *
+     * Fuer ein Werkzeug mit dem Grundsatz „Kein Bit verloren" ist ein
+     * Bedienweg, der beim Speichern das Original kuerzen KANN, nicht
+     * hinnehmbar — auch wenn er es meistens nicht tut.
+     *
+     * Aenderungen an einem geoeffneten Abbild schreibt der Explorer-Reiter
+     * unmittelbar und hinter dem Schreibtor (`gateBeforeModify()`,
+     * `explorertab.cpp:442,540,661,746,846`). Die Datei auf der Platte ist
+     * also bereits aktuell; „Speichern" hat nichts nachzutragen.
+     *
+     * Verglichen werden aufgeloeste Pfade, nicht Zeichenketten: „./x.d64"
+     * und „x.d64" sind dieselbe Datei. */
+    {
+        const QString qKanon = QFileInfo(source).canonicalFilePath();
+        const QString zKanon = QFileInfo(target).canonicalFilePath();
+        if (!qKanon.isEmpty() && qKanon == zKanon) {
+            r.ok = true;
+            r.converted = false;
+            r.message = QObject::tr(
+                "%1 ist bereits gespeichert — es wurde nichts geschrieben.")
+                    .arg(QFileInfo(target).fileName());
+            return r;
+        }
+    }
+
     const QString endung = QFileInfo(target).suffix();
     const uft_format_t zielFmt =
         endung.isEmpty() ? UFT_FORMAT_UNKNOWN
