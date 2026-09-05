@@ -18,9 +18,35 @@ Filesystem/Layout), L = groß (Flux/variable-Speed, neues Subsystem).
   Die Ziel-Vorlage bat, das „zuerst zu klären" — geklärt: DEC ist vollständig.
 - **Ensoniq Mirage/ASR** — **teilweise abgedeckt**: `src/formats/edk/uft_edk.c`
   (EDK = Ensoniq EPS/ASR/TS, 80×2×spt×512, gebaut). Read-Pfad vorhanden.
-- **Roland D-20** (Synthesizer, kein Sampler) — bereits als Katalog-ID
-  `{"RolandD20","d20",...}` (`rolandd20.h`). Die S-Serie-Sampler unten sind
-  davon getrennt.
+- **Roland D-20** — ~~bereits als Katalog-ID abgedeckt~~ **BERICHTIGT
+  (MF-887): das trifft nicht zu.** Hier stand, D-20 sei „bereits als
+  Katalog-ID `{"RolandD20","d20",...}` (`rolandd20.h`)" abgedeckt.
+  Gemessen ist `include/uft/formats/rolandd20.h` **vier Zeilen lang** und
+  besteht vollständig aus:
+
+  ```c
+  #ifndef UFT_ROLANDD20_H
+  #define UFT_ROLANDD20_H
+  #include <stdint.h>
+  #endif
+  ```
+
+  Keine Struktur, keine Geometrie, keine Konstante — und **keine
+  Katalog-ID**: der Eintrag `{"RolandD20", ...}`, den dieser Absatz zitierte,
+  steht **nicht** in der Registry (`src/formats/format_registry/`, gemessen:
+  null Treffer für `Roland`).
+
+  Im ganzen Baum gibt es drei weitere Nennungen, und sie sind zweierlei:
+
+  | Fundstelle | was es ist |
+  |---|---|
+  | `src/parsers/lexy_experimental/scp_parser_complete.hpp:61,418` | Enum-Tag + Anzeigename in einem Verzeichnis, das **in keinem Build steht** |
+  | `include/uft/uft_scp_format.h:100` | `UFT_SCP_DISK_ROLAND_D20 = 0x60` — **legitim**: der Disk-Typ-Bytewert aus der SCP-Dateispezifikation, keine Zusage über Formatunterstützung. Gemessen ohne Verbraucher (nur definiert) |
+
+  Ein leerer Header ist keine Katalog-ID, sondern ein Etikett; ein
+  SCP-Typbyte ist eine Spezifikationskonstante. Beides zusammen ergibt keine
+  Formatunterstützung. Die S-Serie-Sampler unten sind davon getrennt und
+  weiterhin richtig eingeordnet.
 
 ## KERN-SCOPE-BEFUND (Phase-2/3, 2026-07-05) — Größen-Kollisionen
 
@@ -79,6 +105,78 @@ geometrie-kollidierend ohne Disk-Level-Neuwert (Roland/NeXT — Wert im FS,
 out-of-scope), geometrie-unverifizierbar (Akai — Fabrikations-Risiko) oder
 aufwands-/spec-blockiert (Twiggy Flux, ABB Spec). Das ist gemäß Ziel ein
 zulässiges Ergebnis, dokumentiert statt erfunden.
+
+## FluxEngine-Abgleich: 15 Formate ohne UFT-Entsprechung (MF-887)
+
+_Quelle: `davidgiven/fluxengine`, 34 Formatprofile unter
+`src/formats/*.textpb`. Die Profile nennen ihre eigenen Primärquellen und
+tragen eine **eigene Reifekennzeichnung** (`read_support_status`) — die ist
+hier mitgeführt, weil `DINOSAUR` FluxEngines **niedrigste** Stufe ist und
+nicht als „verifiziert" gelesen werden darf._
+
+> **GESPERRT bis Moratoriumsende.** `docs/VERIFICATION_PLAN.md:234` sagt:
+> *„Das **Moratorium bleibt in Kraft**, bis NFD-r0 auf T1/T1b ist."*
+> Gemessen in `docs/VERIFICATION_TIERS.md:67` steht `nfd` auf **T2**. Danach
+> gilt **1:2** — ein neues Format kostet zwei Hebungen. Diese Tabelle ist
+> **Entscheidungsvorlage**, keine Aufgabenliste; sie steht hier, damit die
+> Entscheidung vorbereitet ist, wenn die Sperre fällt.
+
+| FluxEngine | Beschreibung | Aufwand | Anmerkung |
+|---|---|---|---|
+| `agat` | 840 kB, sowjetischer Apple-II-Klon | M | `soviet/` enthält nur `uft_bk0010.c` |
+| `mx` | DVK, sowjetischer PDP-11-Klon, FM | M | Profil dokumentiert das Spurlayout vollständig (8×0x0000-Sync, 0x00F3-Kennung, 11×128 Wörter + 16-bit-Summe, little-endian); Primärquellen im Profil zitiert |
+| `tartu` | „Palivere", TTL-Logik | M | — |
+| `juku` | CP/M, estnischer Rechner | S–M | `cpm/` deckt nur das Dateisystem, nicht diese Geometrie |
+| `n88basic` | NEC PC-8800/PC-98, 77 Spuren × 26 Sekt. HD | M | `nec/` enthält nur `uft_pce.c` (andere Plattform) |
+| `tids990` | TI-990 Minicomputer, 8″ DSSD | M | `minicomputer/` hat nur DG Nova und Prime |
+| `f85` | proprietäre 4-in-5-GCR | L | eigener Kodierer nötig |
+| `fb100` | FM, eigenes Record-Format | M–L | — |
+| `aeslanier` | 77 Spuren, hartsektoriert | M | `hardsector/` kennt dieses Profil nicht |
+| `ampro`, `eco1`, `epsonpf10`, `icl30`, `tiki` | fünf CP/M-Geometrien | je S | `cpm/` deckt nur das Dateisystem |
+| `ms2000` | Microdisk Development System | M | — |
+| `psos` | 800 kB DSDD, PHILE-Dateisystem | M | — |
+| `smaky6` | Schweizer Rechner, experimenteller FS-Read | M | — |
+
+### Der Abkürzungsweg für Roland D-20 existiert nicht (MF-887)
+
+Die Zulieferung schlug vor, D-20 über den vorhandenen Brother-Decoder zu
+bauen: FluxEngines Profil sagt *„it seems to use precisely the same format as
+the Brother word processors: a thoroughly non-IBM-compatible custom GCR
+system"*, und UFT habe „bereits eine echte, funktionierende Implementierung
+genau dieser GCR-Kodierung".
+
+**Gemessen trägt das nicht.** `src/formats/brother/brother.c` (107 Zeilen;
+die Zulieferung nennt `uft_brother.c`, so heißt die Datei nicht) ist **kein
+GCR-Decoder**, sondern ein Sektor-Offset-Leser:
+
+```c
+size_t offset = (t * dev->sectors + s) * dev->sectorSize;
+fseek(f, offset, SEEK_SET); fread(buf, 1, dev->sectorSize, f);
+```
+
+Eine GCR-Tabelle gibt es — `BROTHER_GCR_ENCODE[32]` und die daraus in
+`init_decode_table()` gebaute Umkehrtabelle `g_brother_decode[256]`. Sie wird
+**nie gelesen**: kommentarfrei über `git ls-files` gezählt kommt
+`g_brother_decode` **dreimal** vor, alle drei in derselben Datei —
+Deklaration, `memset`, und die Schleife, die sie befüllt. Kein Dekodierpfad
+benutzt sie.
+
+Dazu: die gesamte Brother-API (`brother_probe`/`_open`/`_read_sector`/
+`_write_sector`) hat **null Aufrufer** außerhalb ihrer eigenen zwei Dateien.
+`src/formats/brother/brother.c` steht folgerichtig seit MF-509 in
+`docs/orphan_baseline.txt` (Zeile 89) — unabhängig von dieser Messung.
+
+**Es gibt also nichts wiederzuverwenden.** Wer D-20 nach Moratoriumsende
+angeht, schreibt den GCR-Dekoder neu — und dann für Brother gleich mit, denn
+der fehlt dort ebenso. Das ist kein Argument gegen den Fund: der Hinweis
+„gleiches Format wie Brother" bleibt wertvoll, weil er **zwei** Formate an
+denselben Dekoder bindet. Er senkt nur den Aufwand nicht, wie die Zulieferung
+annahm — er verdoppelt den Nutzen des einen, der noch zu bauen ist.
+
+**Was D-20 zusätzlich blockiert:** im Korpus liegt kein D-20-Abbild. Die
+Geometrie 78/1/256/12/Skew 5 stammt aus FluxEngines Profil (dort
+`read_support_status: UNICORN`, die höchste Stufe) — das ist eine **benannte
+Referenz**, aber keine Messung. Die EINFRIER-REGEL verlangt beides.
 
 ## Klassifizierungs-Hinweise (Basis-Niveau, wie im Ziel gefordert)
 
