@@ -44,10 +44,31 @@
  * Wird das Lesen verdrahtet, gehoert hierher ein zweiter Test, der echte
  * Namen gegen ein benanntes Abbild prueft. Bis dahin bewacht dieser, dass
  * die Anzeige nichts behauptet.
+ *
+ * -- MF-889: die Bedingung ist erfuellt, der zweite Test steht unten -----
+ *
+ * Seit MF-683 gibt es `uft_cbmdos_read_directory()`, und sie steht auf
+ * **FS-T2**: geprueft gegen `tests/corpus_free/vice_c1541_35trk.d64`, das
+ * VICE 3.10 `c1541` erzeugt hat. Der Inhalt dieses Abbilds ist bekannt,
+ * BEVOR man es aufmacht — er steht als Befehl im Korpus-Manifest:
+ *
+ *     c1541 -format "uftcorpus,42" d64 <img> -write marker.txt "uft marker"
+ *
+ * Daraus folgt: ein Diskname `UFTCORPUS`, eine ID `42`, GENAU EINE Datei
+ * namens `UFT MARKER`. Das ist der Unterschied zwischen einer Pruefung
+ * und einem Zirkelschluss — dieselbe Begruendung wie in
+ * `tests/test_cbmdos_directory.c`.
+ *
+ * `realD64ListingComesFromTheImage` unten prueft die ANZEIGE gegen diese
+ * vier Werte. Die drei Tests darueber bleiben unveraendert gueltig: ein
+ * SYNTHETISCHES Abbild (lauter Nullen) hat kein plausibles Verzeichnis,
+ * faellt also weiter auf die ehrliche Meldung zurueck. Genau das prueft
+ * `everyFormatGetsTheSameHonestAnswer` mit.
  */
 #include <QtTest/QtTest>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QDir>
 
 #include "explorertab.h"
 
@@ -70,6 +91,16 @@ private:
             out << cells.join(" | ");
         }
         return out.join("\n");
+    }
+
+    /** Das Korpus-Abbild, dessen Inhalt aus dem c1541-Befehl bekannt ist. */
+    static QString korpusD64()
+    {
+#ifdef UFT_CORPUS_DIR
+        return QString(UFT_CORPUS_DIR) + "/vice_c1541_35trk.d64";
+#else
+        return QString();
+#endif
     }
 
     /** Ein Abbild anlegen, das `DiskImageValidator` an der GROESSE
@@ -181,6 +212,99 @@ private slots:
                                         "die uebrigen:\n%2")
                                 .arg(c.name, shown)));
         }
+    }
+    /* -- MF-889: die Anzeige liest das Verzeichnis wirklich ------------ */
+    void realD64ListingComesFromTheImage()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        ExplorerTab tab;
+        tab.loadImage(img);
+
+        const QString shown = tableText(&tab);
+        QVERIFY2(!shown.isEmpty(),
+                 "Die Tabelle ist leer - dann prueft dieser Test nichts.");
+
+        /* Der Name stammt aus dem c1541-Befehl, nicht aus dem Abbild. */
+        QVERIFY2(shown.contains("UFT MARKER", Qt::CaseInsensitive),
+                 qPrintable(QString("Die Datei 'UFT MARKER' steht nicht in "
+                                    "der Anzeige. Der c1541-Befehl im "
+                                    "Korpus-Manifest hat sie geschrieben:\n%1")
+                            .arg(shown)));
+
+        /* Und die Ehrlichkeitsmeldung darf hier NICHT mehr stehen - sie
+         * waere jetzt selbst die falsche Aussage. */
+        QVERIFY2(!shown.contains("not wired"),
+                 qPrintable(QString("Die Anzeige sagt weiter, sie lese kein "
+                                    "Dateisystem - obwohl sie es tut:\n%1")
+                            .arg(shown)));
+
+        /* Genau EIN -write, also genau ein Eintrag. Mehr waere erfunden. */
+        auto *tbl = tab.findChild<QTableWidget *>("tableFiles");
+        QVERIFY(tbl != nullptr);
+        QCOMPARE(tbl->rowCount(), 1);
+    }
+
+    /* -- MF-889: und der Extract-Knopf schreibt wirklich ---------------- */
+    void extractWritesARealFile()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        QTemporaryDir ziel;
+        QVERIFY(ziel.isValid());
+
+        ExplorerTab tab;
+        tab.loadImage(img);
+
+        QStringList fehler;
+        const int geschrieben = tab.extractFilesTo(
+            QStringList() << "UFT MARKER", ziel.path(), &fehler);
+
+        QVERIFY2(fehler.isEmpty(),
+                 qPrintable("Extraktion meldete Fehler: " + fehler.join("; ")));
+        QCOMPARE(geschrieben, 1);
+
+        /* DER PUNKT: eine Datei auf der Platte, nicht eine Zahl im Dialog. */
+        QDir d(ziel.path());
+        const QStringList da = d.entryList(QDir::Files);
+        QVERIFY2(!da.isEmpty(),
+                 "Der Extract-Pfad meldete Erfolg, im Zielverzeichnis liegt "
+                 "aber keine Datei.");
+        QFileInfo fi(d.filePath(da.first()));
+        QVERIFY2(fi.size() > 0,
+                 qPrintable(QString("Die geschriebene Datei '%1' ist leer.")
+                            .arg(da.first())));
+    }
+
+    /* -- Gegenprobe: ein Name, den es nicht gibt, meldet KEINEN Erfolg -- */
+    void extractOfAnUnknownNameFails()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        QTemporaryDir ziel;
+        QVERIFY(ziel.isValid());
+
+        ExplorerTab tab;
+        tab.loadImage(img);
+
+        QStringList fehler;
+        const int geschrieben = tab.extractFilesTo(
+            QStringList() << "GIBTESNICHT", ziel.path(), &fehler);
+
+        QCOMPARE(geschrieben, 0);
+        QVERIFY2(!fehler.isEmpty(),
+                 "Ein nicht vorhandener Name muss einen Fehler melden, nicht "
+                 "still 0 zurueckgeben.");
+        QDir d(ziel.path());
+        QVERIFY2(d.entryList(QDir::Files).isEmpty(),
+                 "Es wurde eine Datei geschrieben, obwohl der Name nicht "
+                 "im Verzeichnis steht.");
     }
 };
 

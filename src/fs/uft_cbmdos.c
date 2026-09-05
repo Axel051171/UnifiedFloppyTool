@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 /* ── Geometrie ───────────────────────────────────────────────────────────
  *
@@ -100,6 +101,44 @@ void uft_cbmdos_free(uft_cbmdos_dir_t *dir)
     memset(dir, 0, sizeof(*dir));
 }
 
+/**
+ * Ist dieser Eintrag STRUKTURELL ein CBM-DOS-Eintrag?
+ *
+ * MF-889: bis hierher galt jeder Eintrag, dessen Typ-Nibble weder 0 noch
+ * DEL war. Gemessen an einem pseudozufaelligen 174848-Byte-Puffer meldete
+ * der Leser daraufhin `UFT_OK` mit acht Eintraegen, Diskname
+ * `?????ELSZ???????` und einem ersten Eintrag `V??????????#*18?`,
+ * Typ SEQ, **35973 Bloecke**.
+ *
+ * 35973 Bloecke auf einer Diskette mit 683 ist keine beschaedigte Datei,
+ * das ist Rauschen. Ein Leser, der Rauschen als Verzeichnis annimmt, kann
+ * die Frage "ist das ein D64?" nicht beantworten — dieselbe Klasse wie
+ * MF-729, wo Sonden Konfidenz ohne Bedeutung vergaben.
+ *
+ * Geprueft werden nur STRUKTURFAKTEN des Formats, keine erfundenen
+ * Schwellen (CBM DOS 2.6, `docs/format_specs/commodore/D64.TXT`):
+ *
+ *   - Der Typ steht in den unteren vier Bit und kennt fuenf Werte
+ *     (DEL/SEQ/PRG/USR/REL). 5..15 ist kein Dateityp.
+ *   - Der erste Datensektor liegt auf einer Spur, die es gibt, und in
+ *     einem Sektor, den diese Spur hat. Spur 0 gibt es nicht.
+ *   - Eine Datei kann nicht mehr Bloecke belegen, als die Diskette hat.
+ *
+ * Was hier NICHT geprueft wird: der Name. Ein CBM-Name darf jedes Byte
+ * enthalten, auch unsinnig aussehende — daran zu entscheiden hiesse,
+ * ungewoehnliche echte Namen zu verwerfen.
+ */
+static bool cbm_entry_plausibel(const uft_cbmdos_entry_t *d,
+                                int spuren, int bloecke_gesamt)
+{
+    if ((int)d->type > (int)UFT_CBMDOS_REL) return false;
+    if (d->track == 0 || d->track > spuren) return false;
+    int spt = cbm_sectors_per_track(d->track);
+    if (spt <= 0 || d->sector >= spt) return false;
+    if (d->blocks > bloecke_gesamt) return false;
+    return true;
+}
+
 uft_error_t uft_cbmdos_read_directory(const char *path,
                                       uft_cbmdos_dir_t *out)
 {
@@ -157,8 +196,14 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
      * Geduld — und auf beschaedigten Disketten der Normalfall, nicht
      * die Ausnahme. 683 Bloecke ist die Obergrenze eines 35-Spur-D64;
      * mehr Schritte kann keine gueltige Kette haben. */
-    int cap = 0, n = 0;
+    int cap = 0, n = 0, verworfen = 0;
     uft_cbmdos_entry_t *list = NULL;
+
+    /* Wie viele Spuren hat dieses Abbild? Die Groesse sagt es; mehr als
+     * 42 Spuren gibt es bei CBM DOS nicht. */
+    int spuren = 35, bloecke_gesamt = 683;
+    if (size >= 205312)      { spuren = 42; bloecke_gesamt = 802; }
+    else if (size >= 196608) { spuren = 40; bloecke_gesamt = 768; }
 
     int track = CBM_DIR_TRACK, sector = CBM_DIR_SECTOR;
     for (int schritt = 0; schritt < 683 && track != 0; schritt++) {
@@ -184,15 +229,21 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
                 if (!p) { free(list); fclose(f); return UFT_ERR_MEMORY; }
                 list = p; cap = neu;
             }
-            uft_cbmdos_entry_t *d = &list[n++];
-            memset(d, 0, sizeof(*d));
-            cbm_name_to_ascii(e + 5, d->name, sizeof(d->name));
-            d->type   = typ;
-            d->closed = (tb & 0x80) != 0;
-            d->locked = (tb & 0x40) != 0;
-            d->track  = e[3];
-            d->sector = e[4];
-            d->blocks = (uint16_t)(e[30] | (e[31] << 8));
+            uft_cbmdos_entry_t kandidat;
+            memset(&kandidat, 0, sizeof(kandidat));
+            cbm_name_to_ascii(e + 5, kandidat.name, sizeof(kandidat.name));
+            kandidat.type   = typ;
+            kandidat.closed = (tb & 0x80) != 0;
+            kandidat.locked = (tb & 0x40) != 0;
+            kandidat.track  = e[3];
+            kandidat.sector = e[4];
+            kandidat.blocks = (uint16_t)(e[30] | (e[31] << 8));
+
+            if (!cbm_entry_plausibel(&kandidat, spuren, bloecke_gesamt)) {
+                verworfen++;
+                continue;
+            }
+            list[n++] = kandidat;
         }
 
         track  = sec[0];
@@ -200,6 +251,21 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
     }
 
     fclose(f);
+
+    /* MF-889: Kein einziger tragfaehiger Eintrag, aber welche verworfen —
+     * dann ist das kein CBM-Verzeichnis, sondern etwas anderes an dieser
+     * Stelle. Eine leere Diskette ist davon unterscheidbar: sie hat 0
+     * Eintraege UND 0 Verwuerfe.
+     *
+     * Der Unterschied zaehlt fuer den Aufrufer: `UFT_OK` mit 0 Eintraegen
+     * heisst "gelesen, leer", `UFT_ERR_FORMAT` heisst "nicht gelesen". Die
+     * Oberflaeche zeigt im zweiten Fall wieder ihre ehrliche Meldung
+     * (`src/explorertab.cpp`), statt Rauschen als Dateiliste. */
+    if (n == 0 && verworfen > 0) {
+        free(list);
+        return UFT_ERR_FORMAT;
+    }
+
     out->entries     = list;
     out->entry_count = n;
     return UFT_OK;

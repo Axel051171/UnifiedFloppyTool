@@ -13,6 +13,7 @@
 #include <uft/uft_file_ops.h>
 #include <uft/uft_adf.h>
 #include <uft/formats/uft_fat12.h>
+#include <uft/fs/uft_cbmdos.h>
 #include <uft/uft_format_validate.h>
 
 #include <QFileDialog>
@@ -28,6 +29,7 @@
 #include <QApplication>
 #include <QAction>
 #include <QTextEdit>
+#include <QRegularExpression>
 #include <QVBoxLayout>
 #include <QDialog>
 #include <QFont>
@@ -209,16 +211,41 @@ void ExplorerTab::onExtractSelected()
         rows.insert(item->row());
     }
     
-    int extracted = 0;
+    QStringList namen;
     for (int row : rows) {
-        QString filename = ui->tableFiles->item(row, 0)->text();
-        // Real: uft_extract(image, filename, destPath)
-        extracted++;
+        if (auto *it = ui->tableFiles->item(row, 0)) namen << it->text();
     }
-    
-    emit statusMessage(tr("Extracted %1 file(s) to %2").arg(extracted).arg(destPath));
-    QMessageBox::information(this, tr("Extract Complete"),
-        tr("Extracted %1 file(s) to:\n%2").arg(extracted).arg(destPath));
+
+    QStringList fehler;
+    const int geschrieben = extractFilesTo(namen, destPath, &fehler);
+    meldeExtraktion(geschrieben, namen.size(), destPath, fehler);
+}
+
+/**
+ * Die Meldung — und sie nennt, was WIRKLICH geschrieben wurde.
+ *
+ * MF-889: bis hierher meldete der Dialog die Zahl der ausgewaehlten
+ * Zeilen. Jetzt kommt die Zahl aus `extractFilesTo()`, also von der
+ * Stelle, die die Dateien anlegt. Weichen ausgewaehlt und geschrieben
+ * voneinander ab, steht beides da; die Gruende darunter.
+ */
+void ExplorerTab::meldeExtraktion(int geschrieben, int angefordert,
+                                  const QString& ziel,
+                                  const QStringList& fehler)
+{
+    const QString kopf = (geschrieben == angefordert)
+        ? tr("%1 Datei(en) nach %2 geschrieben.").arg(geschrieben).arg(ziel)
+        : tr("%1 von %2 Datei(en) nach %3 geschrieben.")
+              .arg(geschrieben).arg(angefordert).arg(ziel);
+
+    emit statusMessage(kopf);
+
+    if (fehler.isEmpty()) {
+        QMessageBox::information(this, tr("Extraktion"), kopf);
+    } else {
+        QMessageBox::warning(this, tr("Extraktion unvollstaendig"),
+                             kopf + "\n\n" + fehler.join("\n"));
+    }
 }
 
 void ExplorerTab::onExtractAll()
@@ -232,12 +259,14 @@ void ExplorerTab::onExtractAll()
         ui->editExtractPath->setText(destPath);
     }
     
-    // Real: uft_extract_all(image, destPath)
-    int fileCount = ui->tableFiles->rowCount();
-    
-    emit statusMessage(tr("Extracted all files to %1").arg(destPath));
-    QMessageBox::information(this, tr("Extract Complete"),
-        tr("Extracted %1 file(s) to:\n%2").arg(fileCount).arg(destPath));
+    QStringList namen;
+    for (int row = 0; row < ui->tableFiles->rowCount(); row++) {
+        if (auto *it = ui->tableFiles->item(row, 0)) namen << it->text();
+    }
+
+    QStringList fehler;
+    const int geschrieben = extractFilesTo(namen, destPath, &fehler);
+    meldeExtraktion(geschrieben, namen.size(), destPath, fehler);
 }
 
 void ExplorerTab::onBrowseExtractPath()
@@ -314,6 +343,11 @@ void ExplorerTab::populateFileTable(const QList<FileEntry>& entries)
 
 QString ExplorerTab::formatSize(qint64 size) const
 {
+    /* MF-889: 0 heisst hier "keine Groesse bekannt" — CBM DOS speichert
+     * nur Blockzahlen. "0 B" waere die Aussage "leere Datei", und das ist
+     * etwas anderes. */
+    if (size <= 0) return QStringLiteral("\u2014");
+
     if (size >= 1024*1024) {
         return QString::number(size / (1024.0*1024.0), 'f', 1) + " MB";
     } else if (size >= 1024) {
@@ -366,6 +400,53 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
      * verdrahtet, bringt seinen Beleg mit -- eine Messung gegen ein
      * benanntes Abbild, dessen Inhalt jemand anders kennt. */
     QFileInfo fi(m_imagePath);
+
+    /* MF-889: fuer D64 ist die Bedingung erfuellt, die MF-569 oben
+     * gestellt hat — "wer das Lesen verdrahtet, bringt seinen Beleg mit".
+     *
+     * `uft_cbmdos_read_directory()` steht seit MF-683 auf **FS-T2**:
+     * geprueft gegen `tests/corpus_free/vice_c1541_35trk.d64`, erzeugt von
+     * VICE 3.10 `c1541`. Der Inhalt jenes Abbilds ist bekannt, BEVOR man
+     * es aufmacht — er steht als Befehl im Korpus-Manifest. Das ist der
+     * Unterschied zwischen einer Pruefung und einem Zirkelschluss.
+     *
+     * ADF und FAT12 stehen ebenfalls auf FS-T2, sind hier aber bewusst
+     * NICHT mitverdrahtet: jedes Format bringt seinen eigenen Beleg mit,
+     * und ein Sammel-Commit ohne Sammel-Messung waere genau die Wette,
+     * die die EINFRIER-REGEL sperrt.
+     *
+     * Schlaegt das Lesen fehl — beschaedigtes Verzeichnis, fremde
+     * Groesse, kein D64 —, bleibt es bei der ehrlichen Meldung darunter.
+     * Eine halb gelesene Liste waere schlimmer als keine. */
+    if (fi.suffix().compare("d64", Qt::CaseInsensitive) == 0) {
+        uft_cbmdos_dir_t dir;
+        memset(&dir, 0, sizeof(dir));
+        if (uft_cbmdos_read_directory(m_imagePath.toUtf8().constData(), &dir)
+                == UFT_OK) {
+            for (int i = 0; i < dir.entry_count; i++) {
+                const uft_cbmdos_entry_t *e = &dir.entries[i];
+                QStringList merkmale;
+                merkmale << tr("%1 Bl.").arg(e->blocks);
+                if (e->locked)  merkmale << tr("schreibgeschuetzt");
+                if (!e->closed) merkmale << tr("nicht geschlossen");
+
+                /* CBM DOS speichert die BLOCKZAHL, nicht die Bytegroesse.
+                 * `blocks * 254` waere eine gerechnete Zahl in einer
+                 * Spalte, die gemessene verspricht — deshalb bleibt die
+                 * Groesse leer und die Bloecke stehen als Merkmal. */
+                entries.append({
+                    QString::fromUtf8(e->name),
+                    0,
+                    QString::fromUtf8(uft_cbmdos_type_name(e->type)),
+                    false,
+                    merkmale.join(", ")});
+            }
+            uft_cbmdos_free(&dir);
+            return entries;
+        }
+        /* sonst: durchfallen zur ehrlichen Meldung */
+    }
+
     entries.append({
         tr("(no directory listing - filesystem reading is not wired)"),
         0, "", false, ""});
@@ -1097,6 +1178,193 @@ void ExplorerTab::showContextMenu(const QPoint& pos)
     if (item && m_imageLoaded) {
         m_contextMenu->exec(ui->tableFiles->mapToGlobal(pos));
     }
+}
+
+bool ExplorerTab::readFileBytes(const QString& fileName, QByteArray* out,
+                               QString* fehler, QString* warnung)
+{
+    if (!out) return false;
+    out->clear();
+    if (fehler) fehler->clear();
+    if (warnung) warnung->clear();
+
+    if (!m_imageLoaded) {
+        if (fehler) *fehler = tr("Kein Abbild geladen.");
+        return false;
+    }
+
+    QFileInfo imgInfo(m_imagePath);
+    const QString ext = imgInfo.suffix().toLower();
+    bool gelesen = false;
+
+    if (ext == "d64" || ext == "d71" || ext == "d81") {
+        /* d64_extract_file() fills a d64_file_t; the previous five-argument
+         * call went through a prototype that did not match the definition and
+         * had the callee write the struct over this function's stack (MF-464). */
+        d64_file_t outFile;
+        memset(&outFile, 0, sizeof(outFile));
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (d64_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outFile) == 0 && outFile.data) {
+                (*out) = QByteArray(reinterpret_cast<const char*>(outFile.data),
+                                      static_cast<int>(outFile.data_size));
+                free(outFile.data);
+                gelesen = true;
+            }
+        }
+    } else if (ext == "adf") {
+        uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), true);
+        if (vol) {
+            uft_adf_entry_t entry;
+            QString fullPath = m_currentDir + fileName;
+            if (uft_adf_lookup(vol, fullPath.toUtf8().constData(), &entry) == 0 && !entry.is_dir) {
+                (*out).resize(static_cast<int>(entry.size));
+                ssize_t bytesRead = uft_adf_read_file(vol, entry.block, 0,
+                    (*out).data(), static_cast<size_t>(entry.size));
+                if (bytesRead > 0) {
+                    (*out).resize(static_cast<int>(bytesRead));
+                    gelesen = true;
+                }
+            }
+            uft_adf_close(vol);
+        }
+    } else if (ext == "img" || ext == "ima" || ext == "st") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            /* MF-874: 1 heisst „gelesen, aber die beiden FAT-Kopien
+             * beschreiben fuer diese Datei verschiedene Clusterketten".
+             * Der Zugriff bleibt offen — gemeldet wird die Beobachtung,
+             * nicht ihre Deutung. WELCHE Kopie massgeblich ist, haengt
+             * vom schreibenden System ab (P3-56): MS-DOS/MSXDOS fuehren
+             * FAT 1, TOS liest FAT 2. Der gelieferte Inhalt folgt FAT 1. */
+            int fatRc = fat12_extract_file(
+                reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                static_cast<size_t>(imgBytes.size()),
+                fileName.toUtf8().constData(),
+                &outData, &outSize);
+            if (fatRc >= 0 && outData) {
+                (*out) = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                gelesen = true;
+                if (fatRc == 1 && warnung) {
+                    *warnung = tr(
+                        "Die beiden FAT-Kopien beschreiben fuer \"%1\" "
+                        "verschiedene Clusterketten.\n\n"
+                        "Der gelieferte Inhalt folgt FAT 1. Welche Kopie "
+                        "massgeblich ist, haengt vom schreibenden System ab: "
+                        "MS-DOS und MSX-DOS fuehren FAT 1, TOS liest FAT 2. "
+                        "Das wird gemeldet, nicht entschieden.")
+                            .arg(fileName);
+                }
+            }
+        }
+    } else if (ext == "ssd" || ext == "dsd") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (ssd_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outData, &outSize) == 0 && outData) {
+                (*out) = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                gelesen = true;
+            }
+        }
+    }
+
+
+    if (!gelesen && fehler && fehler->isEmpty()) {
+        *fehler = tr("\"%1\" konnte aus dem Abbild nicht gelesen werden "
+                     "(Format .%2).").arg(fileName, ext);
+    }
+    return gelesen;
+}
+
+/**
+ * MF-889: Der Extract-Knopf meldete Erfolg, ohne eine Datei anzulegen.
+ *
+ * Hier stand:
+ *
+ *     int extracted = 0;
+ *     for (int row : rows) {
+ *         QString filename = ui->tableFiles->item(row, 0)->text();
+ *         // Real: uft_extract(image, filename, destPath)
+ *         extracted++;
+ *     }
+ *     QMessageBox::information(... "Extracted %1 file(s) to: %2" ...);
+ *
+ * Die Schleife zaehlte hoch und tat nichts. Der Benutzer bekam die Zahl
+ * seiner ausgewaehlten Zeilen als Zahl geretteter Dateien gemeldet — und
+ * das in einem Werkzeug, dessen erster Satz "Keine erfundenen Daten" ist.
+ * Dieselbe Klasse wie MF-880 (PRO meldete Schreiberfolg ohne Schreiben)
+ * und MF-522 (D64/D81): "Eine Erfolgsmeldung ohne Tat ist in einem
+ * forensischen Werkzeug schlimmer als ein Fehler."
+ *
+ * Der Ausleseweg selbst war da — er lag zweimal wortgleich in
+ * `onViewHex()` und `onViewText()` und wurde von keinem der beiden
+ * Knoepfe gerufen.
+ */
+int ExplorerTab::extractFilesTo(const QStringList& fileNames,
+                                const QString& destDir,
+                                QStringList* fehler)
+{
+    if (fehler) fehler->clear();
+    if (!m_imageLoaded) {
+        if (fehler) *fehler << tr("Kein Abbild geladen.");
+        return 0;
+    }
+    QDir ziel(destDir);
+    if (!ziel.exists()) {
+        if (fehler) *fehler << tr("Zielverzeichnis existiert nicht: %1").arg(destDir);
+        return 0;
+    }
+
+    int geschrieben = 0;
+    for (const QString& name : fileNames) {
+        QByteArray daten;
+        QString einzelfehler, warnung;
+        if (!readFileBytes(name, &daten, &einzelfehler, &warnung)) {
+            if (fehler) *fehler << einzelfehler;
+            continue;
+        }
+        /* Ein CBM-Name darf Zeichen enthalten, die kein Dateisystem mag. */
+        QString sicher = name;
+        sicher.replace(QRegularExpression("[\\\\/:*?\"<>|]"), "_");
+        sicher = sicher.trimmed();
+        if (sicher.isEmpty()) sicher = QStringLiteral("unbenannt");
+
+        QFile f(ziel.filePath(sicher));
+        if (!f.open(QIODevice::WriteOnly)) {
+            if (fehler) *fehler << tr("%1 ist nicht beschreibbar.").arg(f.fileName());
+            continue;
+        }
+        const qint64 n = f.write(daten);
+        f.close();
+        if (n != daten.size()) {
+            if (fehler)
+                *fehler << tr("%1: nur %2 von %3 Byte geschrieben.")
+                               .arg(f.fileName()).arg(n).arg(daten.size());
+            continue;
+        }
+        geschrieben++;
+        if (!warnung.isEmpty() && fehler) *fehler << warnung;
+    }
+    return geschrieben;
 }
 
 void ExplorerTab::onViewHex()

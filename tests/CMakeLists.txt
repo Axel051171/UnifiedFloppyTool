@@ -3049,8 +3049,16 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c
                     ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c
                     ${CMAKE_SOURCE_DIR}/src/fs/uft_fat12.c
+                    ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c
                     ${CMAKE_SOURCE_DIR}/src/fileops/uft_file_ops_extended.c
                     ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
+                # MF-889: der Explorer liest das D64-Verzeichnis jetzt
+                # wirklich, und der Test prueft es gegen das Korpus-Abbild,
+                # das VICE c1541 erzeugt hat. Ohne diese Definition
+                # UEBERSPRINGEN sich die drei neuen Pruefungen still —
+                # genau die Falle aus MF-598.
+                target_compile_definitions(${qt_test_name} PRIVATE
+                    UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             endif()
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/disk_image_validator.cpp
