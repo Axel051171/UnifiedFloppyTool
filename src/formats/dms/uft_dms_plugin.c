@@ -191,23 +191,37 @@ static uft_error_t dms_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->adf) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    size_t trk_off = ((size_t)cyl * AMIGA_HEADS + head) * AMIGA_TRACK_SIZE;
-    for (size_t s = 0; s < track->sector_count && (int)s < AMIGA_SPT; s++) {
-        size_t soff = trk_off + s * AMIGA_SS;
-        if (soff + AMIGA_SS > p->adf_size) break;
-        const uint8_t *data = track->sectors[s].data;
-        uint8_t pad[AMIGA_SS];
-        if (!data || track->sectors[s].data_len == 0) {
-            memset(pad, 0xE5, AMIGA_SS); data = pad;
-        }
-        memcpy(p->adf + soff, data, AMIGA_SS);
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_dms_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -218,7 +232,7 @@ static const uft_plugin_feature_t uft_format_plugin_dms_features[] = {
 const uft_format_plugin_t uft_format_plugin_dms = {
     .name = "DMS", .description = "Amiga DMS (Disk Masher System)",
     .extensions = "dms", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = dms_probe, .open = dms_open, .close = dms_close,
     .read_track = dms_read_track, .write_track = dms_write_track,
     .verify_track = uft_generic_verify_track,

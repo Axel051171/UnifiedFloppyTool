@@ -171,39 +171,37 @@ static uft_error_t f86_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    int idx = cyl * (p->sides > 0 ? p->sides : 2) + head;
-    size_t entry_off = F86_HDR_SIZE + (size_t)idx * 12;
-    if (entry_off + 12 > p->size) return UFT_ERROR_INVALID_ARG;
-
-    uint32_t trk_off = uft_read_le32(p->data + entry_off);
-    uint32_t trk_len = uft_read_le32(p->data + entry_off + 4);
-    uint8_t flags = p->data[entry_off + 8];
-    uint8_t nsec = p->data[entry_off + 9];
-
-    if (trk_off == 0 || trk_off + trk_len > p->size) return UFT_ERROR_INVALID_ARG;
-    if (!(flags & 0x01)) return UFT_ERROR_INVALID_ARG;
-
-    if (nsec > 0 && trk_len >= (uint32_t)nsec * disk->geometry.sector_size) {
-        size_t pos = trk_off;
-        for (int s = 0; s < nsec && pos + disk->geometry.sector_size <= p->size; s++) {
-            /* Find matching sector in input track */
-            for (size_t ts = 0; ts < track->sector_count; ts++) {
-                if (track->sectors[ts].id.sector == (uint8_t)s) {
-                    const uint8_t *src = track->sectors[ts].data;
-                    if (src && track->sectors[ts].data_len >= disk->geometry.sector_size)
-                        memcpy(p->data + pos, src, disk->geometry.sector_size);
-                    break;
-                }
-            }
-            pos += disk->geometry.sector_size;
-        }
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_86f_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_SUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -214,7 +212,7 @@ static const uft_plugin_feature_t uft_format_plugin_86f_features[] = {
 const uft_format_plugin_t uft_format_plugin_86f = {
     .name = "86F", .description = "86Box/PCem Floppy Image",
     .extensions = "86f", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = f86_probe, .open = f86_open,
     .close = f86_close, .read_track = f86_read_track,
     .write_track = f86_write_track,

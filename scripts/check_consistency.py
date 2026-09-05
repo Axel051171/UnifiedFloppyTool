@@ -1103,6 +1103,21 @@ def main() -> int:
         import audit_guard_kollision as _gk
         all_errors.append(("Guard-Kollision", _gk.check(repo)))
 
+        # Tor 57 (MF-883): ein Plugin, das UFT_FORMAT_CAP_WRITE beansprucht
+        # und ein write_track hat, muss in seiner Datei eine Schreiboperation
+        # haben. Die Klasse ist dreimal aufgetreten — MF-522 (D64/D81),
+        # MF-880 (PRO), MF-883 (neun auf einmal) —, und das bestehende Tor
+        # `test_capability_manifest.c:147` konnte sie nicht sehen: es prueft
+        # `write_track != NULL`, also ob ein ZEIGER existiert, nicht ob die
+        # Funktion etwas tut (P3-154).
+        #
+        # Grundlinie 0, darf nur fallen. Bewusst konservativ: eine Datei mit
+        # irgendeinem fwrite wird durchgelassen, auch wenn dieses fwrite vom
+        # Schreibpfad aus unerreichbar ist — die Luecke steht benannt im
+        # Kopf des Skripts.
+        import audit_schreibzusage as _sz
+        all_errors.append(("Schreibzusage", _sz.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

@@ -106,23 +106,37 @@ static uft_error_t scl_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->data || head != 0) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    for (size_t s = 0; s < track->sector_count && (int)s < 16; s++) {
-        uint32_t sec_idx = (uint32_t)cyl * 16 + (uint32_t)s;
-        size_t off = p->data_start + (size_t)sec_idx * SCL_SECTOR_SIZE;
-        if (off + SCL_SECTOR_SIZE > p->data_size) break;
-        const uint8_t *data = track->sectors[s].data;
-        uint8_t pad[SCL_SECTOR_SIZE];
-        if (!data || track->sectors[s].data_len == 0) {
-            memset(pad, 0xE5, SCL_SECTOR_SIZE); data = pad;
-        }
-        memcpy(p->data + off, data, SCL_SECTOR_SIZE);
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_scl_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -133,7 +147,7 @@ static const uft_plugin_feature_t uft_format_plugin_scl_features[] = {
 const uft_format_plugin_t uft_format_plugin_scl = {
     .name = "SCL", .description = "ZX Spectrum SCL Container",
     .extensions = "scl", .format = UFT_FORMAT_SCL,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = scl_plugin_probe, .open = scl_open,
     .close = scl_close, .read_track = scl_read_track,
     .write_track = scl_write_track,

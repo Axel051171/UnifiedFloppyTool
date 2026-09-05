@@ -196,23 +196,37 @@ static uft_error_t msa_plugin_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->st_data) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    size_t trk_off = ((size_t)cyl * p->heads + head) * p->spt * 512;
-    for (size_t s = 0; s < track->sector_count && (int)s < p->spt; s++) {
-        size_t soff = trk_off + s * 512;
-        if (soff + 512 > p->st_size) break;
-        const uint8_t *data = track->sectors[s].data;
-        uint8_t pad[512];
-        if (!data || track->sectors[s].data_len == 0) {
-            memset(pad, 0xE5, 512); data = pad;
-        }
-        memcpy(p->st_data + soff, data, 512);
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_msa_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -223,7 +237,7 @@ static const uft_plugin_feature_t uft_format_plugin_msa_features[] = {
 const uft_format_plugin_t uft_format_plugin_msa = {
     .name = "MSA", .description = "Atari ST Compressed (Magic Shadow)",
     .extensions = "msa", .format = UFT_FORMAT_MSA,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = msa_plugin_probe, .open = msa_plugin_open,
     .close = msa_plugin_close, .read_track = msa_plugin_read_track,
     .write_track = msa_plugin_write_track,

@@ -217,67 +217,37 @@ static uft_error_t imd_plugin_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    size_t pos = imd_skip_comment(p->data, p->size);
-
-    while (pos + 5 <= p->size) {
-        uint8_t trk_cyl = p->data[pos + 1];
-        uint8_t head_raw = p->data[pos + 2];
-        uint8_t trk_head = head_raw & 0x0F;
-        uint8_t nsec = p->data[pos + 3];
-        uint8_t scode = p->data[pos + 4];
-        uint16_t ss = imd_sec_size(scode);
-        bool is_target = ((int)trk_cyl == cyl && (int)trk_head == head);
-
-        pos += 5;
-
-        /* sector numbering map */
-        const uint8_t *sec_map = p->data + pos;
-        pos += nsec;
-        /* optional cylinder map */
-        if (head_raw & 0x80) pos += nsec;
-        /* optional head map */
-        if (head_raw & 0x40) pos += nsec;
-
-        /* sector data */
-        for (int s = 0; s < nsec && pos < p->size; s++) {
-            uint8_t dtype = p->data[pos++];
-            if (dtype == 0) {
-                /* unavailable — skip */
-                continue;
-            }
-            bool compressed = (dtype == 2 || dtype == 4 || dtype == 6 || dtype == 8);
-            if (compressed) {
-                /* Cannot write to compressed sectors without buffer realloc.
-                 * Skip — read_track already expands these for the caller. */
-                pos += 1;
-            } else {
-                /* Raw sector (type 1/3/5/7) — writable in-place */
-                if (is_target && pos + ss <= p->size) {
-                    /* Find matching sector in input track by sector_map ID.
-                     * id.sector is 1-based (uft_format_add_sector adds 1),
-                     * so id.sector = sec_map[s] + 1. */
-                    for (size_t ts = 0; ts < track->sector_count; ts++) {
-                        if (track->sectors[ts].id.sector == (uint8_t)(sec_map[s] + 1)) {
-                            const uint8_t *data = track->sectors[ts].data;
-                            if (data && track->sectors[ts].data_len >= ss) {
-                                memcpy(p->data + pos, data, ss);
-                            }
-                            break;
-                        }
-                    }
-                }
-                pos += ss;
-            }
-        }
-
-        if (is_target) break;
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_imd_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -288,7 +258,7 @@ static const uft_plugin_feature_t uft_format_plugin_imd_features[] = {
 const uft_format_plugin_t uft_format_plugin_imd = {
     .name = "IMD", .description = "ImageDisk",
     .extensions = "imd", .format = UFT_FORMAT_IMD,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = imd_plugin_probe, .open = imd_plugin_open,
     .close = imd_plugin_close, .read_track = imd_plugin_read_track,
     .write_track = imd_plugin_write_track,

@@ -303,35 +303,38 @@ static uft_error_t cqm_write_track(uft_disk_t* disk, int cyl, int head,
         return UFT_ERR_INVALID_STATE;
     if (disk->read_only)
         return UFT_ERR_NOT_SUPPORTED;
-    if (cyl < 0 || head < 0 || cyl >= p->cyls || head >= p->heads)
-        return UFT_ERR_INVALID_ARG;
 
-    size_t trk_off = ((size_t)cyl * p->heads + (size_t)head) * p->spt * p->sec_size;
-    for (size_t s = 0; s < track->sector_count && s < p->spt; s++) {
-        size_t soff = trk_off + s * p->sec_size;
-        if (soff + p->sec_size > p->size)
-            break;
-
-        const uint8_t* data = track->sectors[s].data;
-        size_t len = track->sectors[s].data_len;
-        if (!data || len == 0) {
-            memset(p->data + soff, p->fill, p->sec_size);
-            continue;
-        }
-        if (len > p->sec_size)
-            len = p->sec_size;
-        memcpy(p->data + soff, data, len);
-        if (len < p->sec_size)
-            memset(p->data + soff + len, p->fill, p->sec_size - len);
-    }
-    if (trk_off + (size_t)p->spt * p->sec_size > p->decoded)
-        p->decoded = trk_off + (size_t)p->spt * p->sec_size;
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_cqm_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -341,7 +344,7 @@ static const uft_plugin_feature_t uft_format_plugin_cqm_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_cqm = {
     .name = "CQM", .description = "CopyQM Compressed", .extensions = "cqm",
-    .format = UFT_FORMAT_CQM, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .format = UFT_FORMAT_CQM, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = cqm_probe, .open = cqm_open, .close = cqm_close,
     .read_track = cqm_read_track, .write_track = cqm_write_track,
     .verify_track = uft_generic_verify_track,

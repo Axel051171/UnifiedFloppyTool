@@ -62,8 +62,18 @@ static const format_sig_t FORMAT_SIGS[] = {
      UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
     
     /* ZX Spectrum */
+    /* MF-883: UFT_FMT_CAP_WRITE hier entfernt. `uft_format_plugin_scl`
+     * schrieb nur in den Speicher — in `uft_scl_plugin.c` steht keine
+     * Schreiboperation, das Plugin hat kein `.flush`, und `close()` gibt
+     * den Puffer frei. Das Schreibtor haette einen Vorgang durchgewinkt,
+     * den der Schreiber nicht ausfuehren kann.
+     *
+     * Das war die VIERTE Stelle derselben Zusage. MF-880 nannte drei
+     * (Rueckgabewert, Merkmalstafel, .capabilities) — diese Tabelle fehlte
+     * in der Aufzaehlung, und gefunden hat sie nicht die Aufzaehlung,
+     * sondern das Tor `[write-gate caps vs plugins]`. */
     {"SCL (Sinclair)", 0, 0, MAGIC_SCL, 8, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_LOGICAL, 950},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_LOGICAL, 950},
     {"TRD (TR-DOS)", 655360, 655360, NULL, 0, 0,
      UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL, 800},
     

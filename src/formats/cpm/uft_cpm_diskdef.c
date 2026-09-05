@@ -993,29 +993,37 @@ static uft_error_t cpm_write_track(uft_disk_t *disk, int cyl, int head,
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
-
-    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
-        const uint8_t *src_data = track->sectors[s].data;
-        if (!src_data) continue;
-        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
-            size_t src_len = track->sectors[s].data_size;
-            size_t n = src_len < dst->sectors[s].data_size
-                       ? src_len : dst->sectors[s].data_size;
-            memcpy(dst->sectors[s].data, src_data, n);
-        }
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_cpm_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -1028,7 +1036,7 @@ const uft_format_plugin_t uft_format_plugin_cpm = {
     .description = "CP/M Disk Image",
     .extensions = "cpm,dsk",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = cpm_probe_plugin,
     .open = cpm_open,
     .close = cpm_close,

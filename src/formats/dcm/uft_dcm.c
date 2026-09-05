@@ -316,25 +316,31 @@ static uft_error_t dcm_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->disk_data || head != 0) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    for (int s = 0; s < 18; s++) {
-        uint32_t sec_num = (uint32_t)(cyl * 18 + s + 1);
-        if (sec_num > p->total_sectors) break;
-
-        uint16_t sz = dcm_sec_size(sec_num, p->sector_size);
-        size_t off = dcm_sector_offset(sec_num, p->sector_size);
-        if (off + sz > p->disk_size) break;
-
-        /* Find matching sector in input track */
-        for (size_t ts = 0; ts < track->sector_count; ts++) {
-            if (track->sectors[ts].id.sector == (uint8_t)s) {
-                const uint8_t *src = track->sectors[ts].data;
-                if (src && track->sectors[ts].data_len >= sz)
-                    memcpy(p->disk_data + off, src, sz);
-                break;
-            }
-        }
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 /* ============================================================================
@@ -343,7 +349,8 @@ static uft_error_t dcm_write_track(uft_disk_t *disk, int cyl, int head,
 
 static const uft_plugin_feature_t uft_format_plugin_dcm_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -357,7 +364,7 @@ const uft_format_plugin_t uft_format_plugin_dcm = {
     .extensions   = "dcm",
     .version      = 0x00020000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe        = uft_dcm_plugin_probe,
     .open         = dcm_open,
     .close        = dcm_close,

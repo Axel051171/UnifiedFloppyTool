@@ -62,6 +62,30 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > nennt, was **gelesen werden soll**, nicht was **geprüft ist** — pro
 > Format: [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md).
 
+> **Ehrlichkeits-Hinweis (MF-883) — „schreibt" traf für neun Formate nicht
+> zu, und sie sagten das Gegenteil.** 86F, CP/M, CQM, DCM, DMS, IMD, MSA,
+> SAP und SCL änderten beim Schreiben ihre **Speicherkopie**, meldeten
+> `UFT_OK` und gaben sie beim Schließen frei. Gemessen: in keiner der neun
+> Dateien steht eine Schreiboperation (`fwrite`/`fputc`/`fprintf`/
+> `ftruncate`/`WriteFile`), keine hat ein `.flush` — und `plugin->flush`
+> wird im **ganzen Baum von niemandem gerufen**, `uft_disk_close()` ruft nur
+> `close`. Selbst ein Plugin mit Flush käme nicht durch.
+>
+> Alle neun beanspruchten zugleich `{ "Write", SUPPORTED }` und
+> `UFT_FORMAT_CAP_WRITE`; für SCL kam eine **vierte** Zusage hinzu, die
+> MF-880 noch nicht kannte (`src/policy/uft_write_gate.c`). Der Rotbeweis
+> war eine einzige Ergänzung: der seit Jahren grüne Test
+> `test_imd_write_roundtrip` schrieb und las **denselben Speicherpuffer** —
+> mit `close()` und Neu-Öffnen dazwischen fiel er sofort.
+>
+> Seit MF-883 antworten alle neun `UFT_ERROR_NOT_SUPPORTED`, und
+> **Tor 57** (`scripts/audit_schreibzusage.py`, Grundlinie 0) hält die
+> Klasse fest. Was das Tor bewusst **nicht** sieht, steht in seinem Kopf und
+> als P3-154/P3-157 in `docs/OPEN_ITEMS.md`.
+>
+> Die Liste unten nennt, was **gelesen** werden soll. Ob ein Format auch
+> **geschrieben** wird, sagt seine Merkmalstafel — nicht diese Überschrift.
+
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42

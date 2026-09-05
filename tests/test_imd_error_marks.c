@@ -130,7 +130,17 @@ TEST(read_surfaces_error_marks) {
     remove(path);
 }
 
-TEST(marks_survive_write_read) {
+/* MF-883: Dieser Test hiess `marks_survive_write_read` und schrieb die Spur
+ * unveraendert zurueck, um sie danach WIEDER ZU LESEN. Beide Seiten liefen
+ * auf demselben Speicherpuffer — `imd_plugin_write_track` erreichte die
+ * Platte nie (kein `fwrite` in der ganzen Datei, kein `.flush`, `close()`
+ * gibt frei). Der Rueckschreibteil belegte also nichts ueber Erhaltung; er
+ * belegte, dass ein memcpy in denselben Puffer ihn nicht kaputtmacht.
+ *
+ * Seit MF-883 lehnt `write_track` ab. Was forensisch zaehlt, bleibt und ist
+ * jetzt WIRKLICH gemessen: dieselbe Datei, zweimal geoeffnet, muss dieselben
+ * Marken liefern — und die Absage darf sie nicht angetastet haben. */
+TEST(marken_ueberleben_schliessen_und_neu_oeffnen) {
     char path[300];
     get_temp_path(path, sizeof(path));
     ASSERT(build_imd_with_marks(path));
@@ -143,24 +153,34 @@ TEST(marks_survive_write_read) {
     uft_track_t t;
     memset(&t, 0, sizeof(t));
     ASSERT(uft_format_plugin_imd.read_track(&disk, 0, 0, &t) == UFT_OK);
-    /* write the track back unchanged, then re-read */
-    ASSERT(uft_format_plugin_imd.write_track(&disk, 0, 0, &t) == UFT_OK);
+    assert_marks(&t);
+
+    /* Die Absage darf die Datei nicht anfassen. */
+    ASSERT(uft_format_plugin_imd.write_track(&disk, 0, 0, &t)
+           == UFT_ERROR_NOT_SUPPORTED);
     free_track_sectors(&t);
+    if (uft_format_plugin_imd.close) uft_format_plugin_imd.close(&disk);
+
+    /* Neu oeffnen — jetzt kommt es wirklich von der Platte. */
+    uft_disk_t disk2;
+    memset(&disk2, 0, sizeof(disk2));
+    disk2.read_only = false;
+    ASSERT(uft_format_plugin_imd.open(&disk2, path, false) == UFT_OK);
 
     uft_track_t t2;
     memset(&t2, 0, sizeof(t2));
-    ASSERT(uft_format_plugin_imd.read_track(&disk, 0, 0, &t2) == UFT_OK);
-    assert_marks(&t2);                 /* deleted + CRC-error still present */
+    ASSERT(uft_format_plugin_imd.read_track(&disk2, 0, 0, &t2) == UFT_OK);
+    assert_marks(&t2);                 /* deleted + CRC-Fehler weiterhin da */
 
     free_track_sectors(&t2);
-    if (uft_format_plugin_imd.close) uft_format_plugin_imd.close(&disk);
+    if (uft_format_plugin_imd.close) uft_format_plugin_imd.close(&disk2);
     remove(path);
 }
 
 int main(void) {
     printf("=== IMD disk-error marking (read / represent / preserve) ===\n");
     RUN(read_surfaces_error_marks);
-    RUN(marks_survive_write_read);
+    RUN(marken_ueberleben_schliessen_und_neu_oeffnen);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

@@ -1,15 +1,50 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file test_imd_write_roundtrip.c
- * @brief IMD plugin write_track -> read_track round-trip verification.
+ * @brief `write_track` lehnt ab und laesst die Datei unberuehrt (MF-883)
  *
- * Links the real IMD plugin (src/formats/imd/uft_imd_plugin.c) and proves a
- * written sector is read back: open a synthetic IMD, read a track, change a
- * sector byte, write_track, re-read, and assert the change persisted.
+ * -- Was dieser Test bis MF-883 tat, und warum es nichts belegte --------
  *
- * This is the safety gate that exposed a real bug: uft_format_add_sector()
- * (used by read_track) populates uft_sector_t.data_size but NOT .data_len,
- * while imd_plugin_write_track() gated its memcpy on `.data_len >= ss` — so
- * every IMD write was a silent no-op for read-produced tracks.
+ * Er hiess „write_track -> read_track round-trip verification" und war
+ * jahrelang gruen. Der Ablauf war: oeffnen, lesen, ein Byte aendern,
+ * `write_track`, ZURUECKLESEN, „die Aenderung ist da" behaupten — und
+ * ERST DANACH `close()`. Beide Seiten arbeiteten auf demselben
+ * `p->data`-Puffer im Speicher.
+ *
+ * Der Test konnte per Konstruktion nicht merken, dass nichts auf die
+ * Platte ging. Als in MF-883 ein `close()` + Neu-Oeffnen eingefuegt wurde,
+ * fiel er sofort:
+ *
+ *     FAIL @ 127: t3.sectors[0].data[0] == 0xAB
+ *
+ * -- Der Befund --------------------------------------------------------
+ *
+ * `src/formats/imd/uft_imd_plugin.c` enthielt keine einzige
+ * Schreiboperation — kein `fwrite`, `fopen`, `fseek`, `fputc`. Das
+ * Plugin hatte kein `.flush`, `close()` gab den Puffer frei, und
+ * `plugin->flush` wird im GANZEN Baum von niemandem gerufen. IMD war
+ * einer von NEUN registrierten Plugins in dieser Lage; alle neun
+ * meldeten zugleich `{ "Write", SUPPORTED }` und
+ * `UFT_FORMAT_CAP_WRITE`.
+ *
+ * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+ * bei `UFT_OK` ein `tracks_converted++` und schreibt danach nichts
+ * hinaus.
+ *
+ * -- Was der Test jetzt festhaelt --------------------------------------
+ *
+ * 1. `write_track` meldet `UFT_ERROR_NOT_SUPPORTED`, nicht `UFT_OK`.
+ * 2. Die Datei auf der Platte ist danach BYTEIDENTISCH — die Absage ist
+ *    keine halbe Tat.
+ * 3. Lesen funktioniert unveraendert weiter; die Ruecknahme hat den
+ *    Leseweg nicht beschaedigt.
+ * 4. Die Merkmalstafel und `.capabilities` sagen dasselbe wie der
+ *    Rueckgabewert — die Zusage stand an DREI Stellen und muss an allen
+ *    dreien fallen (die Lehre aus MF-880/PRO).
+ *
+ * Gegenprobe (von Hand, MF-883): wird `UFT_OK` zurueckgegeben, faellt
+ * Pruefung 1; bleibt die Speicher-Mutation stehen, faellt Pruefung 2;
+ * bleibt `UFT_FORMAT_CAP_WRITE` gesetzt, faellt Pruefung 4.
  */
 
 #include "uft/uft_format_plugin.h"
@@ -75,51 +110,90 @@ static int build_imd(const char *path, uint8_t s1_first, uint8_t s2_first) {
 
 /* ── A. a written sector byte is read back ─────────────────────────── */
 
-TEST(write_track_persists_to_read) {
+TEST(write_track_lehnt_ab_und_laesst_die_datei_unberuehrt) {
     char path[300];
     get_temp_path(path, sizeof(path));
     ASSERT(build_imd(path, 0x11, 0x22));
+
+    /* Die Datei vorher in den Speicher nehmen — Byte fuer Byte. */
+    long vorher_len = 0;
+    unsigned char *vorher = NULL;
+    {
+        FILE *f = fopen(path, "rb");
+        ASSERT(f != NULL);
+        fseek(f, 0, SEEK_END); vorher_len = ftell(f); fseek(f, 0, SEEK_SET);
+        vorher = malloc((size_t)vorher_len);
+        ASSERT(vorher != NULL);
+        ASSERT(fread(vorher, 1, (size_t)vorher_len, f) == (size_t)vorher_len);
+        fclose(f);
+    }
 
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
     disk.read_only = false;
     ASSERT(uft_format_plugin_imd.open(&disk, path, false) == UFT_OK);
 
-    /* read the track */
+    /* 3. Lesen funktioniert weiter. */
     uft_track_t t;
     memset(&t, 0, sizeof(t));
     ASSERT(uft_format_plugin_imd.read_track(&disk, 0, 0, &t) == UFT_OK);
     ASSERT(t.sector_count == 2);
     ASSERT(t.sectors[0].data != NULL);
-    ASSERT(t.sectors[0].data[0] == 0x11);   /* original sector-1 first byte */
-    /* FMT-5: a good sector read via uft_format_add_sector must report CRC OK
-     * under all three fields, not just id.crc_ok — consumers that check
-     * crc_valid / data_crc_ok used to see good data as CRC-failed. */
+    ASSERT(t.sectors[0].data[0] == 0x11);
     ASSERT(t.sectors[0].crc_ok == true);
     ASSERT(t.sectors[0].crc_valid == true);
     ASSERT(t.sectors[0].data_crc_ok == true);
 
-    /* change sector 1's first byte and write it back */
+    /* 1. Die Absage. */
     t.sectors[0].data[0] = 0xAB;
-    ASSERT(uft_format_plugin_imd.write_track(&disk, 0, 0, &t) == UFT_OK);
+    ASSERT(uft_format_plugin_imd.write_track(&disk, 0, 0, &t)
+           == UFT_ERROR_NOT_SUPPORTED);
     free_track_sectors(&t);
 
-    /* re-read: the change must have persisted (this failed before the fix) */
-    uft_track_t t2;
-    memset(&t2, 0, sizeof(t2));
-    ASSERT(uft_format_plugin_imd.read_track(&disk, 0, 0, &t2) == UFT_OK);
-    ASSERT(t2.sector_count == 2);
-    ASSERT(t2.sectors[0].data[0] == 0xAB);   /* THE POINT: write took effect */
-    ASSERT(t2.sectors[1].data[0] == 0x22);   /* sector 2 untouched */
-    free_track_sectors(&t2);
-
     uft_format_plugin_imd.close(&disk);
+
+    /* 2. Byteidentisch. */
+    {
+        FILE *f = fopen(path, "rb");
+        ASSERT(f != NULL);
+        fseek(f, 0, SEEK_END); long nachher_len = ftell(f); fseek(f, 0, SEEK_SET);
+        ASSERT(nachher_len == vorher_len);
+        unsigned char *nachher = malloc((size_t)nachher_len);
+        ASSERT(nachher != NULL);
+        ASSERT(fread(nachher, 1, (size_t)nachher_len, f) == (size_t)nachher_len);
+        fclose(f);
+        ASSERT(memcmp(vorher, nachher, (size_t)vorher_len) == 0);
+        free(nachher);
+    }
+    free(vorher);
+
     remove(path);
+}
+
+/* 4. Die Zusage faellt an ALLEN drei Stellen — nicht nur im Rueckgabewert. */
+TEST(die_zusage_faellt_an_allen_drei_stellen) {
+    ASSERT((uft_format_plugin_imd.capabilities & UFT_FORMAT_CAP_WRITE) == 0);
+
+    int gefunden = 0;
+    for (size_t i = 0; i < uft_format_plugin_imd.feature_count; i++) {
+        const uft_plugin_feature_t *f = &uft_format_plugin_imd.features[i];
+        if (f->name && strcmp(f->name, "Write") == 0) {
+            gefunden = 1;
+            ASSERT(f->status == UFT_FEATURE_UNSUPPORTED);
+            ASSERT(f->note != NULL);      /* mit Begruendung, nicht nur NULL */
+        }
+    }
+    ASSERT(gefunden == 1);
+
+    /* write_track bleibt GESETZT: ein Nullzeiger gaebe dem Aufrufer keine
+     * Begruendung. */
+    ASSERT(uft_format_plugin_imd.write_track != NULL);
 }
 
 int main(void) {
     printf("=== IMD write_track round-trip test ===\n");
-    RUN(write_track_persists_to_read);
+    RUN(write_track_lehnt_ab_und_laesst_die_datei_unberuehrt);
+    RUN(die_zusage_faellt_an_allen_drei_stellen);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

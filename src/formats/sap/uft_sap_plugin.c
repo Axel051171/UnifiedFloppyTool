@@ -200,46 +200,38 @@ static uft_error_t sap_plugin_write_track(uft_disk_t *disk, int cyl, int head,
     sap_pd_t *p = disk->plugin_data;
     if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
-    if (head != 0) return UFT_ERROR_INVALID_STATE;
-    if (cyl < 0 || cyl >= SAP_TRACKS) return UFT_ERROR_INVALID_STATE;
 
-    size_t sector_record = SAP_SEC_HDR + p->sector_size + SAP_CRC_SIZE;
-    size_t track_offset = SAP_HEADER_SIZE +
-                          (size_t)cyl * SAP_SPT * sector_record;
-
-    for (int s = 0; s < SAP_SPT; s++) {
-        size_t sec_offset = track_offset + (size_t)s * sector_record;
-        if (sec_offset + sector_record > p->data_size) break;
-
-        /* Read sector number from SAP header to find matching input sector */
-        uint8_t sec_num = p->data[sec_offset + 3];
-        uint8_t sec_idx = (sec_num > 0) ? (sec_num - 1) : (uint8_t)s;
-
-        /* Find matching sector in input track */
-        for (size_t ts = 0; ts < track->sector_count; ts++) {
-            if (track->sectors[ts].id.sector == sec_idx) {
-                const uint8_t *src = track->sectors[ts].data;
-                if (src && track->sectors[ts].data_len >= p->sector_size) {
-                    /* Write sector data after the 4-byte header */
-                    uint8_t *sec_data = p->data + sec_offset + SAP_SEC_HDR;
-                    memcpy(sec_data, src, p->sector_size);
-
-                    /* Update CRC-16-CCITT */
-                    uint16_t crc = sap_crc16(sec_data, p->sector_size);
-                    uint8_t *crc_bytes = sec_data + p->sector_size;
-                    crc_bytes[0] = (crc >> 8) & 0xFF;
-                    crc_bytes[1] = crc & 0xFF;
-                }
-                break;
-            }
-        }
-    }
-    return UFT_OK;
+    /* MF-883: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Gemessen: in dieser Datei steht keine einzige Schreiboperation
+     * (`fwrite`/`fputc`/`fprintf`/`ftruncate`/`WriteFile`), das Plugin hat
+     * kein `.flush`, und `close()` gibt den Puffer frei. Kein Byte hat je
+     * die Platte erreicht — der Aufrufer bekam Erfolg gemeldet.
+     *
+     * Und es gibt auch keinen allgemeinen Rueckweg: `plugin->flush` wird im
+     * ganzen Baum von NIEMANDEM gerufen (gemessen ueber `git ls-files`,
+     * kommentarfrei), `uft_disk_close()` ruft nur `close`. Selbst ein
+     * Plugin MIT Flush kaeme nicht durch.
+     *
+     * Betroffen war auch der Wandlungspfad: `uft_disk_convert.c:41` zaehlt
+     * `tracks_converted++` bei `UFT_OK` und schreibt danach nichts hinaus.
+     *
+     * Warum kein echter Schreiber gebaut wurde: die EINFRIER-REGEL
+     * (MF-363/498) verlangt benannte Referenz, gemessene Zahlen und die
+     * Referenz im Header. Neun Container-Schreiber gegen diese Lage waeren
+     * neun Wetten. Die Zusage wahr zu machen ist der kleinere und richtige
+     * Schritt — dieselbe Entscheidung wie MF-880 (PRO).
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_sap_thomson_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-883: schreibt nur in den Speicher — kein fwrite in der Datei, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -252,7 +244,7 @@ const uft_format_plugin_t uft_format_plugin_sap_thomson = {
     .description = "Thomson MO/TO SAP",
     .extensions = "sap",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = sap_plugin_probe,
     .open = sap_plugin_open,
     .close = sap_plugin_close,
