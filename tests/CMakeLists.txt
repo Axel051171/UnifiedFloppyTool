@@ -425,6 +425,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_ml_schutz_kann_nicht_freisprechen")
+        # MF-882: der Signaturvergleich konnte keine Diskette freisprechen —
+        # 0 von 500000 abgetasteten Merkmalsvektoren — und meldete jeder
+        # Diskette einen Produktnamen. Zurueckgenommen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_ml_protection.c)
     elseif(${test_name} STREQUAL "test_pro_schreibt_nicht")
         # MF-880: pro_write_track meldete UFT_OK, ohne dass ein Byte die
         # Platte erreichte — im ganzen File steht kein fwrite.

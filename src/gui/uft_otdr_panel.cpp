@@ -994,6 +994,26 @@ void UftOtdrPanel::runMLAnalysis()
             }
 
             /* ── ML Protection Classification ── */
+            /* MF-882: Diese Anzeige meldete frueher fuer JEDE Diskette
+             * einen Schutz-Befund mit Herstellernamen und Prozentzahl,
+             * fett rot. Zwei Ursachen, beide gemessen:
+             *
+             *  (1) Der Signaturvergleich in uft_ml_protection.c konnte
+             *      keine Diskette freisprechen - 0 von 500000 abgetasteten
+             *      Merkmalsvektoren. Er ist seit MF-882 zurueckgenommen
+             *      und meldet UFT_ML_PROT_NICHT_GEPRUEFT.
+             *
+             *  (2) Der Aufruf unten uebergibt SECHS der acht Merkmale als
+             *      Festwerte (1.0f, 0, 0, 0, false, false). Nur Entropie
+             *      und Jitter stammen aus Messdaten. Selbst mit einer
+             *      belegten Signaturtabelle waere ein Urteil von hier aus
+             *      ein Vergleich gegen die eigenen Platzhalter.
+             *
+             * Die Festwerte bleiben stehen, weil das Panel die anderen
+             * sechs Groessen nicht erhebt - sie wegzulassen wuerde die
+             * Luecke nur unsichtbar machen. Was sich geaendert hat: das
+             * Ergebnis wird als NICHT GEPRUEFT angezeigt, nicht als
+             * Befund und nicht als Strich. */
             /* Extract feature vectors from the histogram data and track stats */
             float (*features)[UFT_ML_PROT_FEATURES] =
                 (float (*)[UFT_ML_PROT_FEATURES])calloc((size_t)nTracks,
@@ -1015,7 +1035,22 @@ void UftOtdrPanel::runMLAnalysis()
 
                 uft_ml_prot_result_t protResult;
                 memset(&protResult, 0, sizeof(protResult));
-                if (uft_ml_detect_protection(features, nTracks, &protResult) == 0) {
+                const int mlRc = uft_ml_detect_protection(features, nTracks,
+                                                          &protResult);
+                if (mlRc == UFT_ML_PROT_NICHT_GEPRUEFT) {
+                    /* Kein Urteil - und das muss man sehen. Grau, damit es
+                     * weder als Entwarnung (gruen) noch als Befund (rot)
+                     * gelesen wird. */
+                    m_lblMLProtection->setText(
+                        tr("nicht gepr\u00fcft \u2014 %1")
+                            .arg(QString::fromUtf8(protResult.summary)));
+                    m_lblMLProtection->setStyleSheet("color: #999999;");
+                    m_lblMLProtection->setToolTip(
+                        tr("Der Signaturvergleich ist zur\u00fcckgenommen "
+                           "(MF-882): er konnte keine Diskette freisprechen, "
+                           "und seine Signaturen haben keine benannte Quelle. "
+                           "Dies ist ausdr\u00fccklich KEINE Entwarnung."));
+                } else if (mlRc == 0) {
                     m_lblMLProtection->setText(QString::fromUtf8(protResult.summary));
                     if (protResult.is_protected)
                         m_lblMLProtection->setStyleSheet("color: #ff4444; font-weight: bold;");

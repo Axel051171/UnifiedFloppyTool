@@ -15,12 +15,53 @@
  *   [6] half_track_flag      — 0.0 or 1.0
  *   [7] custom_sync_flag     — 0.0 or 1.0
  *
- * Classification algorithm:
- *   1. Average feature vectors across all tracks
- *   2. Compute cosine similarity against each known protection signature
- *   3. Rank by similarity, return top 5 candidates
- *   4. If best match > 0.7: confident classification
- *   5. If best match < 0.5 but features suggest anomalies: "unknown"
+ * -- MF-882: der Signaturvergleich ist zurueckgenommen ----------------
+ *
+ * Bis MF-882 verglich dieses Modul den Merkmalsvektor per Cosinus gegen
+ * 15 handgesetzte Signaturen und meldete ab 0.70 einen PRODUKTNAMEN mit
+ * Prozentzahl. Gemessen am uebersetzten Modul, drei unabhaengige
+ * Abtastungen:
+ *
+ *   Eingaberaum, den die GUI erzeugen kann :    441 Punkte, 0 freigesprochen
+ *   Raster ueber den ganzen 8D-Raum (3^8)  :   6561 Punkte, 0 freigesprochen
+ *   Zufallsabtastung ueber den 8D-Raum     : 500000 Punkte, 0 freigesprochen
+ *
+ * Der Zweig „No copy protection detected" war fuer JEDE Eingabe
+ * unerreichbar. Kleinste je erreichte beste Aehnlichkeit: 0.5134 — die
+ * Schwelle war 0.70, und was darunter fiel, fing der `weirdness`-Zweig.
+ * Eine mustergueltig SAUBERE Diskette (Nennlaenge, kein Sync, kein
+ * schlechtes GCR, kaum Jitter) wurde mit 99.1 % als „Long Track Generic"
+ * benannt; ein LEERER Vektor — also „nichts gemessen" — als „Unknown
+ * protection scheme suspected (weirdness: 50.0%)", weil eine ungemessene
+ * Null als maximale Abweichung vom Nennwert gelesen wurde.
+ *
+ * Ursache: alle 15 Signaturen trugen an Stelle [1] (Laengenverhaeltnis)
+ * einen Wert um 1.0 — die groesste Komponente jedes Vektors. Der Cosinus
+ * ist skaleninvariant und mass danach im Wesentlichen die gemeinsame
+ * Grosskomponente gegen sich selbst.
+ *
+ * Erschwerend war der einzige Aufrufer: `src/gui/uft_otdr_panel.cpp`
+ * uebergab SECHS der acht Merkmale als Festwerte (1.0f, 0, 0, 0, false,
+ * false). Nur Entropie und Jitter stammten aus Messdaten — der Vergleich
+ * lief gegen die eigenen Platzhalter, und das Ergebnis wurde fett rot
+ * gefaerbt.
+ *
+ * Die Tabelle wurde NICHT nachgebessert, sondern entfernt. Sie hatte
+ * keine Quelle: kein Spezifikationsverweis, kein Korpus, kein
+ * Trainingslauf. Schwellen oder Geometrie zu justieren hiesse, einen
+ * zweiten Satz unbelegter Zahlen ueber den ersten zu legen — die Klasse,
+ * an der dieser Baum fuenfmal verbrannt ist (FMT-2/3/10/11/12).
+ *
+ * Vorbild im selben Baum, dreimal: `uft_protection_extended.c:522`
+ * („NOT IMPLEMENTED — returns an error, not 'not detected'"),
+ * `uft_speedlock.c` und `uft_c64_protection_enhanced.c`
+ * („A missing implementation must not look like a measurement.").
+ *
+ * Was bleibt: `uft_ml_extract_features()`. Sie normiert nur und
+ * behauptet nichts — Entropie, Verhaeltnisse, Flaggen. Wer die
+ * Klassifikation zurueckholen will, braucht zuerst eine BELEGTE
+ * Signaturtabelle und eine Geometrie, die beide Antworten geben kann;
+ * `tests/test_ml_schutz_kann_nicht_freisprechen.c` haelt beides fest.
  *
  * @author UFT Project
  * @license GPL-3.0
@@ -33,69 +74,6 @@
 #include <math.h>
 #include <stdio.h>
 
-/* ===================================================================
- * Known protection reference signatures
- *
- * Each row: [entropy, length_ratio, sync, bad_gcr, dup_id,
- *            jitter, half_track, custom_sync]
- *
- * Values are normalised to the same 0-1 (or ratio) space as
- * uft_ml_extract_features() produces.
- * =================================================================== */
-
-typedef struct {
-    const char *name;
-    float       signature[UFT_ML_PROT_FEATURES];
-} protection_ref_t;
-
-static const protection_ref_t KNOWN_SCHEMES[] = {
-    /* Commodore 64 protection schemes */
-    { "V-MAX!",
-      { 0.70f, 1.00f, 0.90f, 0.10f, 0.00f, 0.30f, 0.00f, 1.00f } },
-    { "RapidLok",
-      { 0.50f, 1.00f, 0.80f, 0.00f, 0.00f, 0.20f, 1.00f, 1.00f } },
-    { "Vorpal",
-      { 0.65f, 0.95f, 0.70f, 0.05f, 0.00f, 0.25f, 0.00f, 1.00f } },
-    { "FatBits",
-      { 0.80f, 1.10f, 0.20f, 0.30f, 0.00f, 0.60f, 0.00f, 0.00f } },
-    { "Pirate Slayer",
-      { 0.55f, 1.05f, 0.60f, 0.15f, 0.00f, 0.40f, 0.00f, 1.00f } },
-    { "ProLok",
-      { 0.60f, 1.00f, 0.50f, 0.20f, 0.50f, 0.35f, 0.00f, 0.00f } },
-
-    /* Amiga protection schemes */
-    { "CopyLock (Amiga)",
-      { 0.80f, 1.00f, 0.30f, 0.00f, 0.00f, 0.80f, 0.00f, 0.00f } },
-    { "Rob Northen",
-      { 0.75f, 1.05f, 0.40f, 0.00f, 0.00f, 0.70f, 0.00f, 0.00f } },
-
-    /* Atari ST protection schemes */
-    { "CopyLock (ST)",
-      { 0.75f, 1.00f, 0.35f, 0.00f, 0.00f, 0.75f, 0.00f, 0.00f } },
-    { "Macrodos",
-      { 0.60f, 1.15f, 0.20f, 0.00f, 0.80f, 0.30f, 0.00f, 0.00f } },
-
-    /* PC/Generic protection schemes */
-    { "Speedlock",
-      { 0.60f, 1.05f, 0.40f, 0.00f, 0.00f, 0.50f, 0.00f, 0.00f } },
-    { "Dungeon Master Fuzzy",
-      { 0.90f, 1.00f, 0.10f, 0.00f, 0.00f, 0.90f, 0.00f, 0.00f } },
-
-    /* Amstrad/Spectrum */
-    { "Speedlock (CPC)",
-      { 0.55f, 1.05f, 0.45f, 0.00f, 0.00f, 0.45f, 0.00f, 0.00f } },
-
-    /* Long-track / density-mismatch based */
-    { "Long Track Generic",
-      { 0.50f, 1.20f, 0.10f, 0.00f, 0.00f, 0.20f, 0.00f, 0.00f } },
-    { "Density Mismatch",
-      { 0.85f, 0.80f, 0.10f, 0.40f, 0.00f, 0.60f, 0.00f, 0.00f } },
-};
-
-#define N_KNOWN_SCHEMES ((int)(sizeof(KNOWN_SCHEMES) / sizeof(KNOWN_SCHEMES[0])))
-
-/** Fixed upper bound for score arrays (must be >= N_KNOWN_SCHEMES) */
-#define MAX_KNOWN_SCHEMES  32
 
 /* ===================================================================
  * Internal helpers
@@ -129,36 +107,6 @@ static float shannon_entropy(const float *hist, int n)
     return (float)entropy;
 }
 
-/**
- * Compute cosine similarity between two feature vectors.
- *
- * cos(a,b) = (a . b) / (|a| * |b|)
- *
- * Returns 0.0 if either vector has zero magnitude.
- */
-static float cosine_similarity(const float *a, const float *b, int n)
-{
-    double dot = 0.0, mag_a = 0.0, mag_b = 0.0;
-
-    for (int i = 0; i < n; i++) {
-        dot   += (double)a[i] * (double)b[i];
-        mag_a += (double)a[i] * (double)a[i];
-        mag_b += (double)b[i] * (double)b[i];
-    }
-
-    double denom = sqrt(mag_a) * sqrt(mag_b);
-    if (denom < 1e-12)
-        return 0.0f;
-
-    float sim = (float)(dot / denom);
-
-    /* Clamp to [0, 1] — negative similarity means anti-correlated,
-     * which we treat as zero similarity for protection matching */
-    if (sim < 0.0f) sim = 0.0f;
-    if (sim > 1.0f) sim = 1.0f;
-
-    return sim;
-}
 
 /**
  * Clamp a float value to [min, max].
@@ -170,22 +118,6 @@ static float clampf(float value, float lo, float hi)
     return value;
 }
 
-/**
- * Insertion sort candidates by confidence (descending).
- * Used for the small (max 5) candidate array.
- */
-static void sort_candidates(uft_ml_prot_candidate_t *cands, int count)
-{
-    for (int i = 1; i < count; i++) {
-        uft_ml_prot_candidate_t tmp = cands[i];
-        int j = i - 1;
-        while (j >= 0 && cands[j].confidence < tmp.confidence) {
-            cands[j + 1] = cands[j];
-            j--;
-        }
-        cands[j + 1] = tmp;
-    }
-}
 
 /* ===================================================================
  * Public API
@@ -247,140 +179,30 @@ int uft_ml_detect_protection(const float (*track_features)[UFT_ML_PROT_FEATURES]
 
     memset(result, 0, sizeof(*result));
 
-    /* Step 1: Compute per-feature average across all tracks */
-    float avg_features[UFT_ML_PROT_FEATURES];
-    memset(avg_features, 0, sizeof(avg_features));
+    /* MF-882: Dieses Modul spricht kein Urteil mehr aus.
+     *
+     * Der frueher hier stehende Signaturvergleich konnte gemessen KEINE
+     * Diskette freisprechen — 0 von 441 (GUI-erreichbar), 0 von 6561
+     * (Raster ueber den ganzen Merkmalsraum) und 0 von 500000
+     * (Zufallsabtastung). Ein Erkenner, der nur „ja" sagen kann, ist
+     * keiner; die Begruendung steht ausfuehrlich im Dateikopf.
+     *
+     * Der Rueckgabewert ist bewusst NICHT 0. Ein `0` mit
+     * `is_protected == false` waere ein stiller FREISPRUCH — derselbe
+     * Fehler in die andere Richtung, und genau die Form, die
+     * `docs/DESIGN_PRINCIPLES.md` „nicht gefunden" gegen „nicht geprueft"
+     * abgrenzt.
+     *
+     * Die Merkmale werden bewusst NICHT ausgewertet: jede Aussage ueber
+     * sie waere wieder eine aus unbelegten Schwellen. */
+    result->is_protected        = false;
+    result->count               = 0;
+    result->unknown_probability = 0.0f;
+    snprintf(result->summary, sizeof(result->summary),
+             "Nicht geprueft: der Signaturvergleich ist zurueckgenommen "
+             "(MF-882). Er konnte keine Diskette freisprechen - gemessen "
+             "0 von 500000 Merkmalsvektoren -, und seine 15 Signaturen "
+             "haben keine benannte Quelle. Dies ist KEIN Freispruch.");
 
-    for (int t = 0; t < n_tracks; t++) {
-        for (int f = 0; f < UFT_ML_PROT_FEATURES; f++)
-            avg_features[f] += track_features[t][f];
-    }
-    {
-        float inv_n = 1.0f / (float)n_tracks;
-        for (int f = 0; f < UFT_ML_PROT_FEATURES; f++)
-            avg_features[f] *= inv_n;
-    }
-
-    /* Step 2: Also compute max features (some protections only affect
-     * a few tracks — the max captures the peak anomaly). */
-    float max_features[UFT_ML_PROT_FEATURES];
-    memset(max_features, 0, sizeof(max_features));
-
-    for (int t = 0; t < n_tracks; t++) {
-        for (int f = 0; f < UFT_ML_PROT_FEATURES; f++) {
-            if (track_features[t][f] > max_features[f])
-                max_features[f] = track_features[t][f];
-        }
-    }
-
-    /* Step 3: Blend average and max features (60/40) to capture both
-     * disk-wide and localized protection signatures. */
-    float blended[UFT_ML_PROT_FEATURES];
-    for (int f = 0; f < UFT_ML_PROT_FEATURES; f++)
-        blended[f] = 0.6f * avg_features[f] + 0.4f * max_features[f];
-
-    /* Step 4: Score against all known signatures using cosine similarity */
-    typedef struct {
-        int   index;
-        float similarity;
-    } score_entry_t;
-
-    score_entry_t scores[MAX_KNOWN_SCHEMES];
-
-    for (int s = 0; s < N_KNOWN_SCHEMES; s++) {
-        scores[s].index = s;
-        scores[s].similarity = cosine_similarity(
-            blended, KNOWN_SCHEMES[s].signature, UFT_ML_PROT_FEATURES);
-    }
-
-    /* Sort by similarity descending (simple selection sort, N is small) */
-    for (int i = 0; i < N_KNOWN_SCHEMES - 1; i++) {
-        int best = i;
-        for (int j = i + 1; j < N_KNOWN_SCHEMES; j++) {
-            if (scores[j].similarity > scores[best].similarity)
-                best = j;
-        }
-        if (best != i) {
-            score_entry_t tmp = scores[i];
-            scores[i] = scores[best];
-            scores[best] = tmp;
-        }
-    }
-
-    /* Step 5: Populate candidates (top 5) */
-    float best_similarity = 0.0f;
-    int n_cands = 0;
-
-    for (int i = 0; i < N_KNOWN_SCHEMES && n_cands < UFT_ML_PROT_MAX_CANDS; i++) {
-        /* Only include candidates with non-trivial similarity */
-        if (scores[i].similarity < 0.30f)
-            break;
-
-        const protection_ref_t *ref = &KNOWN_SCHEMES[scores[i].index];
-
-        uft_ml_prot_candidate_t *c = &result->candidates[n_cands];
-        snprintf(c->scheme_name, sizeof(c->scheme_name), "%s", ref->name);
-        c->confidence = scores[i].similarity;
-
-        if (i == 0)
-            best_similarity = scores[i].similarity;
-
-        n_cands++;
-    }
-    result->count = n_cands;
-
-    /* Step 6: Determine overall classification */
-
-    /* Compute a "weirdness" metric: how far from a normal disk?
-     * A normal unprotected disk has: entropy ~0.3-0.5, length ~1.0,
-     * no custom sync, no bad GCR, no half-tracks, low jitter. */
-    float weirdness = 0.0f;
-    weirdness += fabsf(blended[1] - 1.0f) * 5.0f;   /* length deviation */
-    weirdness += blended[2] * 2.0f;                   /* custom sync */
-    weirdness += blended[3] * 3.0f;                   /* bad GCR */
-    weirdness += blended[4] * 2.0f;                   /* duplicate IDs */
-    weirdness += blended[5] * 2.0f;                   /* jitter */
-    weirdness += blended[6] * 3.0f;                   /* half tracks */
-    weirdness += blended[7] * 2.0f;                   /* custom sync flag */
-    weirdness = clampf(weirdness / 10.0f, 0.0f, 1.0f);
-
-    if (best_similarity >= UFT_ML_PROT_MATCH_MIN) {
-        /* High-confidence match */
-        result->is_protected = true;
-        result->unknown_probability = 0.0f;
-        snprintf(result->summary, sizeof(result->summary),
-                 "Copy protection detected: %s (confidence: %.1f%%)",
-                 result->candidates[0].scheme_name,
-                 (double)(best_similarity * 100.0f));
-    } else if (best_similarity >= UFT_ML_PROT_UNKNOWN_TH) {
-        /* Moderate match — possible but uncertain */
-        result->is_protected = true;
-        result->unknown_probability = 1.0f - best_similarity;
-        snprintf(result->summary, sizeof(result->summary),
-                 "Possible copy protection: %s (confidence: %.1f%%, "
-                 "%.0f%% chance of unknown scheme)",
-                 result->candidates[0].scheme_name,
-                 (double)(best_similarity * 100.0f),
-                 (double)(result->unknown_probability * 100.0f));
-    } else if (weirdness > 0.4f) {
-        /* Features are abnormal but no known scheme matches */
-        result->is_protected = true;
-        result->unknown_probability = weirdness;
-        snprintf(result->summary, sizeof(result->summary),
-                 "Unknown protection scheme suspected "
-                 "(weirdness: %.1f%%, no known signature match)",
-                 (double)(weirdness * 100.0f));
-    } else {
-        /* Clean disk — no protection detected */
-        result->is_protected = false;
-        result->unknown_probability = 0.0f;
-        snprintf(result->summary, sizeof(result->summary),
-                 "No copy protection detected (best match: %.1f%%)",
-                 (double)(best_similarity * 100.0f));
-    }
-
-    /* Final sort of candidates by confidence */
-    sort_candidates(result->candidates, result->count);
-
-    return 0;
+    return UFT_ML_PROT_NICHT_GEPRUEFT;
 }

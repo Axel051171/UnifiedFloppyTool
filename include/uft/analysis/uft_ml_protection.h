@@ -2,11 +2,24 @@
  * @file uft_ml_protection.h
  * @brief ML-based Copy Protection Classifier
  *
- * Feature-based classifier that identifies floppy disk copy protection
- * schemes from statistical track features.  Uses cosine similarity
- * against hardcoded reference vectors for known schemes (V-MAX!,
- * RapidLok, CopyLock, Speedlock, etc.) and a decision threshold
- * for unknown-but-suspicious patterns.
+ * Merkmalsextraktion aus Spurstatistiken.
+ *
+ * ACHTUNG (MF-882): Die Klassifikation ist ZURUECKGENOMMEN.
+ * `uft_ml_detect_protection()` meldet seither ausschliesslich
+ * UFT_ML_PROT_NICHT_GEPRUEFT und spricht kein Urteil aus — weder
+ * „geschuetzt" noch „sauber".
+ *
+ * Grund, gemessen: der frueher hier verankerte Cosinus-Vergleich gegen
+ * 15 handgesetzte Signaturen konnte KEINE Diskette freisprechen — 0 von
+ * 441 GUI-erreichbaren, 0 von 6561 Rasterpunkten, 0 von 500000
+ * Zufallspunkten. Eine mustergueltig saubere Diskette wurde mit 99.1 %
+ * als „Long Track Generic" benannt. Die Signaturtabelle hatte keine
+ * benannte Quelle. Vollstaendige Herleitung im Kopf von
+ * `src/analysis/uft_ml_protection.c`, festgehalten in
+ * `tests/test_ml_schutz_kann_nicht_freisprechen.c`.
+ *
+ * `uft_ml_extract_features()` bleibt unveraendert nutzbar: sie normiert
+ * Rohgroessen und behauptet nichts.
  *
  * No external ML libraries required -- pure C with math.h.
  *
@@ -40,6 +53,17 @@ extern "C" {
 /** Threshold below which anomalous tracks are "unknown protection" */
 #define UFT_ML_PROT_UNKNOWN_TH  0.50f
 
+/**
+ * Rueckgabewert von uft_ml_detect_protection(): NICHT GEPRUEFT.
+ *
+ * Bewusst weder 0 (Erfolg) noch -1 (Argumentfehler). Ein `0` mit
+ * `is_protected == false` waere ein stiller Freispruch, und genau den
+ * kann dieses Modul seit MF-882 nicht mehr aussprechen. Aufrufer, die
+ * dies erhalten, muessen dem Benutzer „nicht geprueft" anzeigen — nicht
+ * „keine Auffaelligkeit" und nicht einen leeren Strich.
+ */
+#define UFT_ML_PROT_NICHT_GEPRUEFT  1
+
 /* ===================================================================
  * Types
  * =================================================================== */
@@ -64,11 +88,16 @@ typedef struct {
  * =================================================================== */
 
 /**
- * Classify disk protection using feature-based ML.
+ * ZURUECKGENOMMEN (MF-882) — spricht kein Urteil mehr aus.
  *
- * Averages per-track feature vectors across all tracks, then computes
- * cosine similarity against known protection reference signatures.
- * Returns up to 5 candidate matches sorted by confidence.
+ * Fuellt `result` mit `is_protected = false`, `count = 0` und einer
+ * Begruendung in `summary`, und meldet UFT_ML_PROT_NICHT_GEPRUEFT.
+ * Das ist KEIN Freispruch: das Modul kann seit der Messung in MF-882
+ * keinen aussprechen. Die Merkmale werden nicht ausgewertet.
+ *
+ * Der Vollstaendigkeit halber bleibt die frueher erwartete
+ * Vektorbelegung dokumentiert — sie gilt weiterhin fuer
+ * `uft_ml_extract_features()`.
  *
  * Feature vector layout per track (8 floats):
  *   [0] histogram_entropy     Shannon entropy of flux timing histogram
@@ -83,7 +112,8 @@ typedef struct {
  * @param track_features  Array of n_tracks x 8 feature vectors.
  * @param n_tracks        Number of tracks.
  * @param result          Output classification result (caller allocates).
- * @return 0 on success, -1 on error.
+ * @return UFT_ML_PROT_NICHT_GEPRUEFT, oder -1 bei Argumentfehler.
+ *         0 wird seit MF-882 NICHT mehr zurueckgegeben.
  */
 int uft_ml_detect_protection(const float (*track_features)[UFT_ML_PROT_FEATURES],
                               int n_tracks,
