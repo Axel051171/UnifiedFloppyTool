@@ -152,7 +152,7 @@ private:
     void updateHexDump(const QByteArray& data);
     void updateTrackInfo(const TrackInfo& info);
     void analyzeWithFormats();
-    void generateSampleData();
+    void clearTrackData();
     void updateInfoLabels();
 };
 

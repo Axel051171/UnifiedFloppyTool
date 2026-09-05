@@ -263,7 +263,7 @@ VisualDiskDialog::VisualDiskDialog(QWidget *parent)
     setupFormatCheckboxes();
     
     // Generate sample data for demonstration
-    generateSampleData();
+    clearTrackData();
 }
 
 VisualDiskDialog::~VisualDiskDialog()
@@ -321,61 +321,30 @@ void VisualDiskDialog::setupFormatCheckboxes()
     ui->checkIsoMfm->setChecked(true);
 }
 
-void VisualDiskDialog::generateSampleData()
+/**
+ * Kein Bestand, solange nichts gelesen wurde.
+ *
+ * ── Was hier stand (MF-892) ──────────────────────────────────────────────
+ *
+ * `generateSampleData()` legte 80 Spuren x 2 Seiten x 18 Sektoren an, mit
+ * erfundenen Fehlstellen bei 15/3, 42/7 und 71/12, schwachen Bits bei
+ * 20/5 und 55/2 und den CRCs `0x1234`/`0x5678`. Der Quelltext sagte es
+ * selbst: „Simulate some bad sectors for visual effect".
+ *
+ * Sie wurde im KONSTRUKTOR gerufen. Ein frisch geoeffnetes Fenster
+ * meldete darum „Side 0, 80 Tracks | 1440 Sectors, 3 bad | 737280 Bytes",
+ * bevor irgendein Abbild geladen war — drei Lesefehler auf einer
+ * Diskette, die niemand eingelegt hatte.
+ *
+ * Nichts anzuzeigen ist die richtige Antwort, solange nichts gelesen
+ * wurde. Eine leere Karte und eine gruene Karte sehen verschieden aus;
+ * eine erfundene und eine echte nicht.
+ */
+void VisualDiskDialog::clearTrackData()
 {
-    // Generate sample track data for demonstration
-    for (int t = 0; t < m_totalTracks; t++) {
-        for (int s = 0; s < 2; s++) {
-            TrackInfo info;
-            info.trackNum = t;
-            info.side = s;
-            info.sectorCount = 18;  // Standard PC format
-            info.goodSectors = 18;
-            info.badSectors = 0;
-            info.missingSectors = 0;
-            info.weakSectors = 0;
-            info.format = FormatIsoMfm;
-            info.formatName = "ISO MFM";
-            
-            // Create sector info
-            for (int sec = 0; sec < 18; sec++) {
-                SectorInfo si;
-                si.track = t;
-                si.side = s;
-                si.sectorId = sec + 1;
-                si.size = 512;
-                
-                // Simulate some bad sectors for visual effect
-                if ((t == 15 && sec == 3) || (t == 42 && sec == 7) || (t == 71 && sec == 12)) {
-                    si.status = SectorBad;
-                    info.badSectors++;
-                    info.goodSectors--;
-                } else if ((t == 20 && sec == 5) || (t == 55 && sec == 2)) {
-                    si.status = SectorWeak;
-                    info.weakSectors++;
-                    info.goodSectors--;
-                } else {
-                    si.status = SectorGood;
-                }
-                
-                si.headerCrc = 0x1234;
-                si.dataCrc = 0x5678;
-                si.headerCrcOk = true;
-                si.dataCrcOk = (si.status == SectorGood);
-                si.startCell = sec * 5000;
-                si.endCell = si.startCell + 4896;
-                si.cellCount = 4896;
-                
-                info.sectors.append(si);
-            }
-            
-            info.totalBytes = info.sectorCount * 512;
-            
-            setTrackData(t, s, info);
-        }
-    }
-    
-    // Update info labels
+    m_trackData.clear();
+    if (m_diskWidget0) m_diskWidget0->clear();
+    if (m_diskWidget1) m_diskWidget1->clear();
     updateInfoLabels();
 }
 
@@ -396,10 +365,24 @@ void VisualDiskDialog::updateInfoLabels()
         }
     }
     
-    ui->labelSide0Info->setText(QString("Side 0, %1 Tracks | %2 Sectors, %3 bad | %4 Bytes | ISO MFM")
-                                .arg(m_totalTracks).arg(totalSectors0).arg(badSectors0).arg(totalBytes0));
-    ui->labelSide1Info->setText(QString("Side 1, %1 Tracks | %2 Sectors, %3 bad | %4 Bytes | ISO MFM")
-                                .arg(m_totalTracks).arg(totalSectors1).arg(badSectors1).arg(totalBytes1));
+    /* MF-892: kein Bestand ohne Lesung — und kein festes "ISO MFM".
+     * Die Kodierung stand hier fuer jedes Format da; woher sie kaeme,
+     * sagte niemand. Genau das hat MF-662 im Analysefenster entfernt. */
+    if (m_trackData.isEmpty()) {
+        const QString leer = tr("Kein Abbild geladen.");
+        ui->labelSide0Info->setText(leer);
+        ui->labelSide1Info->setText(leer);
+        return;
+    }
+
+    ui->labelSide0Info->setText(
+        tr("Seite 0, %1 Spuren | %2 Sektoren, %3 fehlerhaft | %4 Byte")
+            .arg(m_totalTracks).arg(totalSectors0).arg(badSectors0)
+            .arg(totalBytes0));
+    ui->labelSide1Info->setText(
+        tr("Seite 1, %1 Spuren | %2 Sektoren, %3 fehlerhaft | %4 Byte")
+            .arg(m_totalTracks).arg(totalSectors1).arg(badSectors1)
+            .arg(totalBytes1));
 }
 
 void VisualDiskDialog::setDiskGeometry(int tracks, int sides)
@@ -438,7 +421,7 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
         /* Fall back to file-size heuristic */
         QFile f(path);
         if (!f.open(QIODevice::ReadOnly)) {
-            generateSampleData();
+            clearTrackData();
             return;
         }
         qint64 fileSize = f.size();
@@ -454,36 +437,30 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
 
         setDiskGeometry(tracks, sides);
 
+        /* MF-892: In diesem Zweig konnte KEIN Plugin die Datei oeffnen.
+         * Die Geometrie oben ist aus der Dateigroesse geschaetzt (512 B,
+         * 2 Seiten, 18 Sektoren — feste Annahmen), und ueber die
+         * einzelnen Sektoren ist gar nichts bekannt.
+         *
+         * Frueher wurde hier trotzdem jeder Sektor als gut eingetragen.
+         * Die Spuren bleiben jetzt LEER: eine unbekannte Diskette sieht
+         * anders aus als eine fehlerfreie. Dieselbe Entscheidung wie
+         * MF-662 im Analysefenster. */
+        (void)sectorSize;
+        (void)spt;
         for (int t = 0; t < tracks; t++) {
             for (int s = 0; s < sides; s++) {
                 TrackInfo info;
                 info.trackNum = t;
                 info.side = s;
-                info.sectorCount = spt;
-                info.goodSectors = spt;
+                info.sectorCount = 0;
+                info.goodSectors = 0;
                 info.badSectors = 0;
                 info.missingSectors = 0;
                 info.weakSectors = 0;
-                info.format = FormatIsoMfm;
-                info.formatName = "ISO MFM";
-
-                for (int sec = 0; sec < spt; sec++) {
-                    SectorInfo si;
-                    si.track = t;
-                    si.side = s;
-                    si.sectorId = sec + 1;
-                    si.size = sectorSize;
-                    si.status = SectorGood;
-                    si.headerCrc = 0;
-                    si.dataCrc = 0;
-                    si.headerCrcOk = true;
-                    si.dataCrcOk = true;
-                    si.startCell = sec * 5000;
-                    si.endCell = si.startCell + 4896;
-                    si.cellCount = 4896;
-                    info.sectors.append(si);
-                }
-                info.totalBytes = spt * sectorSize;
+                info.totalBytes = 0;
+                info.format = FormatUnknown;
+                info.formatName = tr("nicht ermittelt");
                 setTrackData(t, s, info);
             }
         }
@@ -502,36 +479,86 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
 
     setDiskGeometry(tracks, sides);
 
+    /* MF-892: HIER wurde nie gelesen.
+     *
+     * Der Erfolgspfad nahm die Geometrie und setzte jeden Sektor auf
+     * `SectorGood`, beide CRC-Flaggen wahr, das Format fest „ISO MFM" —
+     * ohne `read_track()` je zu rufen. Die Karte war gruen, unabhaengig
+     * davon, was auf der Diskette steht. Das ist eine
+     * Unbedenklichkeitsbescheinigung ohne Messung, und in einem
+     * Forensik-Werkzeug die gefaehrlichere Haelfte von MF-890: dort
+     * wurden Fehler erfunden, hier ihre Abwesenheit.
+     *
+     * `startCell`/`endCell`/`cellCount` sind Fluss-Groessen. Ein
+     * Sektorabbild kennt sie nicht, und dieser Weg liefert sie nicht —
+     * sie bleiben 0 statt gerechnet. */
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
+    const bool kann_lesen = (plugin && plugin->read_track);
+
     for (int t = 0; t < tracks; t++) {
         for (int s = 0; s < sides; s++) {
             TrackInfo info;
             info.trackNum = t;
             info.side = s;
-            info.sectorCount = spt;
-            info.goodSectors = spt;
+            info.sectorCount = 0;
+            info.goodSectors = 0;
             info.badSectors = 0;
             info.missingSectors = 0;
             info.weakSectors = 0;
-            info.format = FormatIsoMfm;
-            info.formatName = "ISO MFM";
+            info.format = FormatUnknown;
+            info.formatName = plugin && plugin->name
+                                  ? QString::fromUtf8(plugin->name)
+                                  : tr("nicht ermittelt");
+            info.totalBytes = 0;
 
-            for (int sec = 0; sec < spt; sec++) {
-                SectorInfo si;
-                si.track = t;
-                si.side = s;
-                si.sectorId = sec + 1;
-                si.size = sectorSize;
-                si.status = SectorGood;
-                si.headerCrc = 0;
-                si.dataCrc = 0;
-                si.headerCrcOk = true;
-                si.dataCrcOk = true;
-                si.startCell = sec * 5000;
-                si.endCell = si.startCell + 4896;
-                si.cellCount = 4896;
-                info.sectors.append(si);
+            uft_track_t spur;
+            memset(&spur, 0, sizeof(spur));
+            const bool gelesen =
+                kann_lesen && plugin->read_track(disk, t, s, &spur) == UFT_OK;
+
+            if (gelesen) {
+                for (size_t i = 0; i < spur.sector_count; i++) {
+                    const uft_sector_t *q = &spur.sectors[i];
+                    SectorInfo si;
+                    si.track = t;
+                    si.side = s;
+                    si.sectorId = q->id.sector;
+                    si.size = static_cast<int>(q->data_len);
+
+                    if (q->weak)            si.status = SectorWeak;
+                    else if (!q->crc_ok)    si.status = SectorBad;
+                    else if (!q->data || q->data_len == 0)
+                                            si.status = SectorNoData;
+                    else                    si.status = SectorGood;
+
+                    switch (si.status) {
+                    case SectorWeak: info.weakSectors++;   break;
+                    case SectorBad:  info.badSectors++;    break;
+                    case SectorGood: info.goodSectors++;   break;
+                    default:         info.missingSectors++; break;
+                    }
+
+                    si.headerCrc   = static_cast<uint16_t>(q->crc_stored);
+                    si.dataCrc     = static_cast<uint16_t>(q->crc_calculated);
+                    si.headerCrcOk = q->crc_ok;
+                    si.dataCrcOk   = q->data_crc_ok;
+                    si.startCell = si.endCell = si.cellCount = 0;
+
+                    if (q->data && q->data_len > 0) {
+                        si.data = QByteArray(
+                            reinterpret_cast<const char *>(q->data),
+                            static_cast<int>(q->data_len));
+                        info.totalBytes += static_cast<int>(q->data_len);
+                    }
+                    info.sectors.append(si);
+                }
+                info.sectorCount = info.sectors.size();
+
+                for (size_t i = 0; i < spur.sector_count; i++)
+                    free(spur.sectors[i].data);
+                free(spur.sectors);
             }
-            info.totalBytes = spt * sectorSize;
+
             setTrackData(t, s, info);
         }
     }
@@ -590,14 +617,24 @@ void VisualDiskDialog::updateStatusPanel(const SectorInfo& sector)
     info += QString("Sector ID:0x%1\n").arg(sector.sectorId, 2, 16, QChar('0')).toUpper();
     info += QString("Track ID:%1 - Side ID:%2\n").arg(sector.track, 3, 10, QChar('0')).arg(sector.side);
     info += QString("Size:0x%1 (ID: 0x%2)\n").arg(sector.size, 4, 16, QChar('0')).arg(sector.size / 128);
-    info += QString("DataMark:0xFB\n");
-    info += QString("Head CRC:0x%1 (%2)\n").arg(sector.headerCrc, 4, 16, QChar('0')).arg(sector.headerCrcOk ? "OK" : "BAD");
-    info += QString("Data CRC:0x%1 (%2)\n").arg(sector.dataCrc, 4, 16, QChar('0')).arg(sector.dataCrcOk ? "OK" : "BAD CRC!");
-    info += QString("\n");
-    info += QString("Start sector cell:%1\n").arg(sector.startCell);
-    info += QString("Start Sector Data cell:%1\n").arg(sector.startCell + 100);
-    info += QString("End Sector cell:%1\n").arg(sector.endCell);
-    info += QString("Number of cells:%1\n").arg(sector.cellCount);
+    /* MF-892: `DataMark:0xFB` stand hier fest — fuer jeden Sektor jedes
+     * Formats. Die vier Zellpositionen sind Fluss-Groessen, die ein
+     * Sektorabbild nicht kennt; sie sind ersatzlos weg statt gerechnet.
+     *
+     * CRC-Werte nur, wenn das Plugin welche gemeldet hat. Ein D64 traegt
+     * keine Pruefsumme — dort waere "OK" dieselbe Erfindung wie "BAD",
+     * nur in die andere Richtung (die Messung dazu steht in MF-890). */
+    if (sector.headerCrc != 0 || sector.dataCrc != 0) {
+        info += QString("Head CRC:0x%1 (%2)\n")
+                    .arg(sector.headerCrc, 4, 16, QChar('0'))
+                    .arg(sector.headerCrcOk ? "OK" : "BAD");
+        info += QString("Data CRC:0x%1 (%2)\n")
+                    .arg(sector.dataCrc, 4, 16, QChar('0'))
+                    .arg(sector.dataCrcOk ? "OK" : "BAD CRC!");
+    } else {
+        info += tr("Keine Pruefsumme: dieses Format speichert keine, und "
+                   "das Plugin hat keine gemeldet.\n");
+    }
     
     ui->textSectorInfo->setPlainText(info);
     
@@ -609,14 +646,17 @@ void VisualDiskDialog::updateHexDump(const QByteArray& data)
 {
     QString hex;
     
-    // Generate sample data if empty
-    QByteArray displayData = data;
-    if (displayData.isEmpty()) {
-        displayData.resize(64);
-        for (int i = 0; i < 64; i++) {
-            displayData[i] = static_cast<char>(i);
-        }
+    /* MF-892: hier wurde die Rampe 00 01 02 ... erzeugt, wenn keine Daten
+     * da waren — und `SectorInfo::data` wurde im ganzen Fenster nirgends
+     * zugewiesen. Der "Sektorinhalt" war also IMMER dieselbe Rampe, fuer
+     * jeden Sektor jeder Diskette. */
+    if (data.isEmpty()) {
+        ui->textHexDump->setPlainText(
+            tr("Keine Sektordaten. Entweder ist kein Sektor gewaehlt, oder "
+               "das Plugin liefert fuer diesen keine Daten."));
+        return;
     }
+    const QByteArray &displayData = data;
     
     for (int row = 0; row < 4 && row * 16 < displayData.size(); row++) {
         // Address
