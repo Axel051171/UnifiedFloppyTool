@@ -302,13 +302,21 @@ Ohne die wäre der Schalter selbst ungeprüft.
 
 ## Reihenfolge und Zuschnitt
 
+> **Stand 2026-09-05: alle Phasen abgeschlossen.** MF-884 (Phase 1),
+> MF-886 (Phasen 2+3), MF-887 (Phasen 4+5). Abnahme nach Phase 6 gefahren:
+> Bau **0 Warnungen**, `ctest` **345/345**, alle 57 Tore 0,
+> `verify_build_sources.py` ohne neue Abweichung. Anti-Muster-Gegenprobe
+> gegen den Plan-Commit: **0** neue Dateien unter `src/formats/`,
+> `rolandd20.h` unverändert, **0** Zeilen aus `src/a8rawconv/` berührt,
+> `multiread_pass_t` unverändert.
+
 | Phase | Art | Umfang | eigener Commit |
 |---|---|---|---|
 | 1 | ~~Korrektheit~~ → Zusage aussprechen + prüfen | **erledigt (MF-884)** | ja |
-| 2 | Bestandsaufnahme | klein — ein P3-Eintrag | mit 3 zusammen |
-| 3 | Ehrlichkeit | klein | mit 2 zusammen |
-| 4 | Doku-Berichtigung + Rückstand | mittel | ja |
-| 5 | Fundus | klein — ein P3-Eintrag | mit 4 zusammen |
+| 2 | Bestandsaufnahme | **erledigt (MF-886)** — P3-159 | mit 3 zusammen |
+| 3 | Ehrlichkeit | **erledigt (MF-886)** — P3-160 + Modulkopf | mit 2 zusammen |
+| 4 | Doku-Berichtigung + Rückstand | **erledigt (MF-887)** | ja |
+| 5 | Fundus | **erledigt (MF-887)** — P3-161 | mit 4 zusammen |
 
 **Phase 1 ist erledigt** — und ihr Ergebnis war, dass sie keinen falschen
 Code berührte. Die übrigen sind Buchhaltung.
