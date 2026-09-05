@@ -270,7 +270,7 @@ TEST(class_names_are_all_present) {
     };
     for (size_t i = 0; i < sizeof(all)/sizeof(all[0]); i++) {
         const char *n = multiread_class_name(all[i]);
-        ASSERT(n != NULL && n[0] != ' ');
+        ASSERT(n != NULL && n[0] != '\0');
         for (size_t j = 0; j < i; j++)
             ASSERT(strcmp(n, multiread_class_name(all[j])) != 0);
     }

@@ -50,6 +50,7 @@
 #include "uft/recovery/uft_multiread_pipeline.h"
 
 #include <stdio.h>
+#include <stdlib.h>   /* free() — fehlte, GCC warnte implicit-decl */
 #include <string.h>
 
 static int fehler;
