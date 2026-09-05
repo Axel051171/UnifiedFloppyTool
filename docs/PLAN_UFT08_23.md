@@ -191,6 +191,26 @@ begründet, nicht kaschiert.
 
 ## Phase 3 — G64→D64 ist angeboten und verschweigt die Spurabschneidung
 
+> **⚠ HALB ERLEDIGT — MF-908.** Beim Messen kam ein **dritter** Befund
+> hinzu, der unter den beiden Türen lag: `d64_create()` nahm nur 35 und
+> 40 Spuren an, während der **Leser** seit MF-871 vier Ausdehnungen
+> kennt. Der Baum konnte D64-Abbilder **lesen, die er nicht schreiben
+> konnte** — die Wandlung *musste* also abschneiden.
+>
+> **Erledigt:** `d64_create()` kennt jetzt dieselben vier Ausdehnungen
+> wie der Leser, Blockzahlen aus dem Geometrie-SSOT (785/802), und die
+> Verlustliste in `uft_roundtrip.c` nennt die Abschneidung ausdrücklich.
+> Rotbeweis 1 von 4 rot (drei Wächter), Gegenprobe 3 Mutationen — eine
+> davon fällt **beide Türen unabhängig**.
+>
+> **Offen:** die Sonde. Beide Türen finden Spur 41/42 weiterhin nicht.
+> Der Beweis dafür ist durch diesen Eingriff **billig geworden**: ein
+> 42-Spur-D64 lässt sich jetzt erzeugen, und D64→G64 steht in derselben
+> Matrix als verlustfrei **gemessen** (MF-533) — also ist
+> D64(42) → G64 → D64 ein Rotbeweis ohne jede Beschaffung. Als
+> **P3-184** benannt statt stillschweigend gelassen.
+
+
 **Gemessen.** `src/core/uft_roundtrip.c` führt bei `UFT_FORMAT_G64 →
 UFT_FORMAT_D64` das Urteil `UFT_RT_LOSSY_DOCUMENTED` mit der Verlustliste
 *„680 von 683 Sektoren bitgleich; ab: Spur 17/0, Spur 18/0 (BAM), Spur
@@ -299,6 +319,6 @@ Dazu drei Beobachtungen ohne Auftrag:
 |---|---|---|---|
 | 1 | OPD-Geometrie | still abgelehnte Disketten werden lesbar | **✅ erledigt, MF-905** |
 | 2 | Unerreichbare Zeile + Tor 58 | verhindert die Klasse baumweit | **✅ erledigt, MF-906** |
-| 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **ja**, synthetisch |
+| 3 | G64→D64-Verlustliste | ein angebotener Pfad sagt die Wahrheit | **⚠ halb erledigt, MF-908** — Sonde offen (P3-184) |
 | 4 | DEL-Divergenz | zwei Ansichten, eine Antwort | **ja**, synthetisch |
 | 5 | Ehrlichkeit ohne Code | schließt P3-79 | **ja** |

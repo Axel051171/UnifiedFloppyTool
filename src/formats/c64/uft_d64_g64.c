@@ -388,15 +388,42 @@ void d64_free(d64_image_t *image)
 /**
  * @brief Create new D64 image
  */
+/**
+ * @brief Legt ein leeres D64-Abbild an.
+ *
+ * MF-908: hier stand `if (num_tracks != 35 && num_tracks != 40) return
+ * NULL;` — der SCHREIBER kannte zwei Ausdehnungen, waehrend der LESER
+ * seit MF-871 VIER annimmt (`d64_is_valid_size()` in
+ * `src/formats/d64/uft_d64_parser_v3.c`: 35, 40, 41, 42, je mit und
+ * ohne Fehlerkarte). Der Baum konnte D64-Abbilder lesen, die er nicht
+ * schreiben konnte.
+ *
+ * Das blieb nicht folgenlos: die Wandlung G64 -> D64 steht in
+ * `src/core/uft_roundtrip.c` als ANGEBOTENER Pfad mit einer
+ * Verlustliste, die sich vollstaendig gibt — die Spurabschneidung stand
+ * nicht darin.
+ *
+ * Die Blockzahlen kommen aus dem Geometrie-SSOT (MF-434), nicht aus
+ * neuen Konstanten; `tests/test_d64_schreiber_symmetrie.c` prueft, dass
+ * die Herleitung die bestehenden `D64_BLOCKS_35`/`_40` trifft, bevor
+ * sie sich auf 41/42 stuetzt.
+ *
+ * @param num_tracks 35, 40, 41 oder 42 — dieselbe Menge, die der Leser
+ *                   annimmt. Alles andere ist keine D64-Ausdehnung.
+ */
 d64_image_t *d64_create(int num_tracks)
 {
-    if (num_tracks != 35 && num_tracks != 40) return NULL;
-    
+    if (num_tracks != 35 && num_tracks != 40 &&
+        num_tracks != 41 && num_tracks != 42) return NULL;
+
+    const int bloecke = uft_cbm_total_blocks(UFT_CBM_1541, num_tracks);
+    if (bloecke <= 0) return NULL;
+
     d64_image_t *img = calloc(1, sizeof(d64_image_t));
     if (!img) return NULL;
-    
+
     img->num_tracks = num_tracks;
-    img->num_blocks = (num_tracks == 35) ? D64_BLOCKS_35 : D64_BLOCKS_40;
+    img->num_blocks = bloecke;
     
     img->data = calloc(img->num_blocks, D64_SECTOR_SIZE);
     if (!img->data) {

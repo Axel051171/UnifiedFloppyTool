@@ -1490,6 +1490,18 @@ foreach(test_source ${TEST_SOURCES})
         # das Kommentarflag aus dem falschen Byte.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_parser_v2.c)
+    elseif(${test_name} STREQUAL "test_d64_schreiber_symmetrie")
+        # MF-908: der D64-LESER nimmt seit MF-871 vier Spurzahlen an
+        # (35/40/41/42), der D64-SCHREIBER erzeugt zwei. Beide Tueren im
+        # selben Binaer, dazu der Geometrie-SSOT als aeussere Instanz
+        # ueber den Blockzahlen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d64_42_spuren")
         # MF-871: BEIDE D64-Tueren im selben Binaer, damit messbar ist,
         # ob sie dieselben Groessen annehmen — das Plugin kannte acht,

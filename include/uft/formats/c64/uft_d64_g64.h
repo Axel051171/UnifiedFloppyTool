@@ -119,7 +119,7 @@ typedef enum {
 typedef struct {
     uint8_t     *data;                  /**< Sector data */
     uint8_t     *errors;                /**< Error info (can be NULL) */
-    int         num_tracks;             /**< Number of tracks (35 or 40) */
+    int         num_tracks;             /**< Spuren: 35, 40, 41 oder 42 (MF-908) */
     int         num_blocks;             /**< Total number of blocks */
     bool        has_errors;             /**< Error info present */
     uint8_t     disk_id[2];             /**< Disk ID */
@@ -219,7 +219,8 @@ void d64_free(d64_image_t *image);
 
 /**
  * @brief Create new D64 image
- * @param num_tracks Number of tracks (35 or 40)
+ * @param num_tracks Spuren: 35, 40, 41 oder 42 — dieselbe Menge, die
+ *                   `d64_size_is_valid()` annimmt (MF-908)
  * @return New image, or NULL on error
  */
 d64_image_t *d64_create(int num_tracks);

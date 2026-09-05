@@ -174,10 +174,35 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      *
      * Und wie bei ADF -> HFE (MF-535): die Liste stammt aus EINER Datei.
      * Fuer diese ist sie vollstaendig, fuer das Format ist sie ein Beleg. */
+    /* MF-908: die Liste war UNVOLLSTAENDIG, und das wiegt auf einem
+     * ANGEBOTENEN Pfad schwerer als eine fehlende Zeile.
+     *
+     * Sie nannte drei Sektoren und die Bauart — nicht aber, dass die
+     * Wandlung die Spuren jenseits ihrer Sonde ABSCHNEIDET. Gemessen
+     * standen dabei ZWEI Tueren mit ZWEI verschiedenen Grenzen, beide
+     * ohne Meldung:
+     *
+     *   `uft_cbm_d64_decode_via_plugin()` sondiert die Spuren 36..40 —
+     *   41 und 42 sieht sie nie.
+     *   `g64_export_d64()` (uft_g64_parser_v3.c) laeuft `t <= 35`.
+     *
+     * Dahinter lag ein dritter Befund: `d64_create()` nahm nur 35 und 40
+     * an, waehrend der LESER seit MF-871 vier Ausdehnungen kennt. Der
+     * Baum konnte D64-Abbilder lesen, die er nicht schreiben konnte —
+     * behoben in MF-908, Blockzahlen aus dem Geometrie-SSOT.
+     *
+     * Was hier steht, ist damit der Stand NACH der Schreibseite und VOR
+     * der Sonde: das Ziel kann 41/42 tragen, die Sonde findet sie noch
+     * nicht. Der Rest der Strecke ist als P3-184 benannt, nicht
+     * stillschweigend gelassen. */
     { UFT_FORMAT_G64, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
       "MF-536: gegen VICE-Referenz geprueft — 680 von 683 Sektoren "
       "bitgleich; ab: Spur 17/0, Spur 18/0 (BAM), Spur 18/1 (Verzeichnis). "
-      "GCR-Kodierung und Fehlerinfo gehen bauartbedingt verloren" },
+      "GCR-Kodierung und Fehlerinfo gehen bauartbedingt verloren. "
+      "MF-908: dazu die SPURABSCHNEIDUNG — die Wandlung sondiert die "
+      "Spuren 36..40 und legt Inhalt auf Spur 41/42 NICHT ab, obwohl D64 "
+      "beide Ausdehnungen kennt (785 bzw. 802 Bloecke). Eine G64 mit 42 "
+      "Spuren verliert zwei" },
 
     /* Flux → Sector: timing/weak-bits/index-pulses dropped */
     { UFT_FORMAT_SCP, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
