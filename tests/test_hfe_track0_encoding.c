@@ -34,9 +34,13 @@
  * Der Baum trug bis MF-897 ZWEI EINANDER WIDERSPRECHENDE Kommentare zu
  * demselben Feld:
  *
- *   include/uft/flux/uft_hfe.h:110     "0xFF = use default encoding"
- *   include/uft/uft_hfe_format.h:196   `= 0xFF;` mit dem Vermerk "Disabled"
- *   src/formats/hfe/uft_hfe.c:115      "0xFF = alternate encoding"   <-- falsch
+ *   include/uft/flux/uft_hfe.h        "0xFF = use default encoding"
+ *   include/uft/uft_hfe_format.h      setzte 0xFF, Vermerk "Disabled"
+ *   src/formats/hfe/uft_hfe.c         "0xFF = alternate encoding"  <-- falsch
+ *
+ * (MF-900: hier standen Zeilennummern. Der Eingriff von MF-897 hat sie
+ * selbst verschoben, die Verweise waren schon beim Committen falsch.
+ * Fremdverweise nennen ab jetzt das Symbol — `track0s0_altencoding`.)
  *
  * Zwei unabhaengige Quellen wurden herangezogen, beide selbst nachgelesen:
  *

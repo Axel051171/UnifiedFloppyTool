@@ -119,14 +119,24 @@ Der Bezug wird als solcher im Commit benannt, nicht kaschiert.
 
 ## Phase 2 — HFE: die abweichende Kodierung der Spur 0 anwenden
 
-> **✅ ERLEDIGT — MF-897.** Rotbeweis `tests/test_hfe_track0_encoding.c`,
-> **2 von 7 Prüfungen rot** — genau die beiden, die das Anwenden des
-> Ersatzes verlangen. Die übrigen fünf sind **Wächter**: sie stehen
-> vorher wie nachher grün und halten die Grenzen fest (0xFF, Spur 1,
-> Seite 1, strittiger Wert, eigener Schreiber). Gegenprobe **5
+> **✅ ERLEDIGT — MF-897.** Rotbeweis
+> `tests/test_hfe_track0_encoding.c`, **3 von 7 Prüfungen rot**. Vier
+> sind **Wächter**, die vorher wie nachher grün stehen und die Grenzen
+> festhalten (0xFF, Spur 1, Seite 1, strittiger Wert). Gegenprobe **5
 > Mutationen, jede fällt genau ihre Prüfungen**. Bau ohne Warnung,
 > `ctest` **350/350** mit dem bekannten benannten Skip, alle Tore 0.
 > Befund als **P3-175** in `docs/OPEN_ITEMS.md`.
+>
+> **BERICHTIGT MF-900.** Hier stand „2 von 7 rot“ und führte den
+> Schreiber-Test als fünften Wächter, *„er steht vorher wie nachher
+> grün“*. Beides ist falsch. Der Rotbeweis lief mit **sechs**
+> Prüfungen (2 rot); die siebte kam **nach** dem Eingriff dazu und wurde
+> gegen den Vorzustand **nie beobachtet**. Nachträglich gemessen —
+> `origin/main`s `uft_hfe.c` eingesetzt, den heutigen Test laufen
+> lassen: **4 bestanden, 3 gefallen**. Die Aussage „vorher wie nachher
+> grün“ war eine Behauptung über eine Messung, die nie stattfand —
+> genau die Klasse, die dieser Baum sonst jagt. Aufgefallen im
+> Code-Review, nicht beim Schreiben; Lehre als **P3-178**.
 >
 > **Beim Messen fiel ein zweiter Fehler mit an — auf der SCHREIBSEITE,
 > und er wiegt schwerer.** `hfe_create()` legte den Kopf mit
@@ -140,6 +150,17 @@ Der Bezug wird als solcher im Commit benannt, nicht kaschiert.
 > als den Rest. Das musste in denselben Commit, sonst hätte die
 > Leser-Korrektur UFT dazu gebracht, seine **eigenen** Dateien falsch zu
 > lesen.
+>
+> **BERICHTIGT MF-900 — der zweite Parser.** Die Spec dieser Phase
+> verlangte, die Auswahl *„an beiden Parsern“* zu benutzen. Getan wurde
+> es nur in `uft_hfe.c`. Das ist **richtig so, aber es stand nicht da**:
+> `uft_hfe_parser_v2.c` hat ueberhaupt keinen Spur-Dekodierpfad, dem ein
+> Ersatz zugute käme — und gemessen exportiert die Datei **nichts**
+> (jede Funktion `static`, `main()` hinter `#ifdef HFE_PARSER_TEST`),
+> ist also in jedem Ziel eine leere Übersetzungseinheit. Die Zusage der
+> Spec war vor dieser Messung geschrieben. Die Datei trägt jetzt einen
+> Vermerk, damit der nächste Leser die Lücke nicht für ein Versehen
+> hält; der Waisen-Befund steht als **P3-179**.
 >
 > **Nicht getan, und so gesagt:** `read_metadata("encoding")` bleibt die
 > diskweite Angabe. Sie ist nicht falsch — sie ist der Wert des

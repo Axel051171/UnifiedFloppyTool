@@ -115,11 +115,18 @@ typedef struct {
     uint8_t     write_allowed;          // 0x00 = nicht erlaubt, sonst erlaubt
     uint8_t     single_step;            // 0xFF = single step, 0x00 = double
     /* MF-897: hier stand "0xFF = alternate encoding Track 0" — die
-     * Polaritaet war UMGEKEHRT, und der Baum widersprach sich selbst:
-     * `include/uft/flux/uft_hfe.h:110` sagt "0xFF = use default
-     * encoding", `include/uft/uft_hfe_format.h:196` setzt 0xFF mit dem
-     * Vermerk "Disabled". Zwei gegen einen — und die zwei haben recht.
-     * Siehe `hfe_header_track_encoding()` fuer die Belege. */
+     * Polaritaet war UMGEKEHRT, und der Baum widersprach sich selbst.
+     * Die beiden anderen Fundstellen sagten das Richtige und sagen es
+     * weiter: `include/uft/flux/uft_hfe.h` und
+     * `include/uft/uft_hfe_format.h`, je an `track0s0_altencoding`.
+     * Zwei gegen einen — und die zwei hatten recht.
+     * Siehe `hfe_header_track_encoding()` fuer die Belege.
+     *
+     * MF-900: hier standen ZEILENNUMMERN (`uft_hfe.h:110`,
+     * `uft_hfe_format.h:196`). Der Eingriff von MF-897 hat sie selbst
+     * verschoben — die Verweise waren schon beim Committen falsch.
+     * Verweise auf fremde Dateien nennen ab jetzt das SYMBOL; Zeilen
+     * driften, Namen nicht. */
     uint8_t     track0s0_altencoding;   // 0x00 = Ersatz gilt, 0xFF = keiner
     uint8_t     track0s0_encoding;      // Ersatz-Kodierung Spur 0 Seite 0
     uint8_t     track0s1_altencoding;   // 0x00 = Ersatz gilt, 0xFF = keiner

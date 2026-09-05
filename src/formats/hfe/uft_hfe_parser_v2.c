@@ -80,10 +80,20 @@ typedef struct {
     uint16_t track_list_offset; /* Track list offset (in blocks) */
     uint8_t write_allowed;      /* Write allowed flag */
     uint8_t single_step;        /* Single step (0=double, 1=single, 0xFF=both) */
-    uint8_t track0s0_altenc;    /* Track 0 side 0 alternate encoding */
-    uint8_t track0s0_enc;       /* Track 0 side 0 encoding */
-    uint8_t track0s1_altenc;    /* Track 0 side 1 alternate encoding */
-    uint8_t track0s1_enc;       /* Track 0 side 1 encoding */
+    /* MF-897/900: 0x00 = Ersatz gilt, 0xFF = keiner. Die Belege stehen
+     * an `hfe_header_track_encoding()` in `uft_hfe.c`.
+     *
+     * Hier wird der Ersatz NICHT angewendet, und das ist kein Versehen:
+     * diese Datei hat ueberhaupt keinen Spur-Dekodierpfad — sie liest
+     * den Kopf und die Spurtabelle und gibt Text aus. Gemessen ist
+     * ausserdem, dass sie NICHTS exportiert: jede Funktion ist `static`,
+     * `main()` steht hinter `#ifdef HFE_PARSER_TEST` (im Bau nie
+     * gesetzt). Die Uebersetzungseinheit ist in jedem Ziel leer.
+     * Festgehalten als P3-179. */
+    uint8_t track0s0_altenc;    /* 0x00 = Ersatz gilt, 0xFF = keiner */
+    uint8_t track0s0_enc;       /* Ersatz-Kodierung Spur 0 Seite 0 */
+    uint8_t track0s1_altenc;    /* 0x00 = Ersatz gilt, 0xFF = keiner */
+    uint8_t track0s1_enc;       /* Ersatz-Kodierung Spur 0 Seite 1 */
 } hfe_header_t;
 UFT_PACK_END
 
