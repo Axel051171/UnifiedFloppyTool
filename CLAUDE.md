@@ -343,14 +343,35 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 > **Atari 810/1050, TRS-80 SD, IBM 3740** — lieferte null Sektoren.
 >
 > Seit MF-864 liest er. Was dabei die halbe Arbeit war, gehört dazu
-> gesagt: der Baum hat **keinen FM- und keinen MFM-Encoder** (an vier
-> Stellen als Blocker vermerkt), also gibt es keine hauseigene Möglichkeit,
+> gesagt: der Baum hat **keinen FM-Encoder**, also gibt es keine hauseigene Möglichkeit,
 > eine Prüfspur zu erzeugen. Ein Fixture aus derselben Hand wie der
 > Dekoder wäre wertlos gewesen. Die Spur ist deshalb an **vier** Stellen
 > von `fluxtoimd` (Eric Smith 2016, GPL-3-only) abgenommen — ausgeführt,
 > nicht übernommen —, das Layout stammt aus **ECMA 54 / ISO 5654 / ANSI
 > X3.73**, und die Prüfsummen erzeugt die fremde Klasse, während **UFTs
 > eigene** `flux_crc16_ccitt()` sie nachrechnet.
+>
+> **BERICHTIGUNG MF-938 — hier stand „keinen FM- und keinen
+> MFM-Encoder (an vier Stellen als Blocker vermerkt)". Die zweite Hälfte
+> trug nicht.** Einen **IBM-MFM-Encoder gibt es**:
+> `src/core/uft_mfm_encoder.c`, seit **2026-04-18** (`7087a565`), mit
+> IDAM/DAM, A1-Sync `0x4489`, CRC-16-CCITT und Gaps. Er wird in
+> **Produktion** gerufen — `src/formats/udi/uft_udi_plugin.c:215` und
+> `src/formats/uft_format_convert_bitstream.c:978` (IMG→HFE) — und hat
+> mit `tests/test_mfm_encoder_decodes_back.c` einen Rundlauftest.
+>
+> Was **wirklich** fehlt, ist der **AmigaDOS**-MFM-Encoder. Genau so
+> stand es in MF-539: *„für AmigaDOS gibt es in diesem Baum keinen
+> MFM-Encoder"*. Der Satz hier hat die Einschränkung verloren — **elf
+> Tage** nach MF-539, dessen Commit-Titel *„der richtige MFM-Encoder lag
+> die ganze Zeit daneben"* lautet. Und die Belegstelle trug nicht:
+> `uft_kfx.c:199` handelt von fabrizierten Sektoren aus rohem Fluss
+> (MF-919), nicht von einem fehlenden Encoder.
+>
+> Für den FM-Weg ändert das nichts — dort ist die Aussage richtig, und
+> die Fremdabnahme durch `fluxtoimd` war der richtige Weg. Aber es ist
+> derselbe Vorgang wie in MF-930: **eine Behauptung wurde weitergetragen
+> statt nachgemessen**, und sie stand am Ende auf der Titelseite.
 >
 > **Nachtrag MF-869 — inzwischen an einer echten Aufnahme belegt.** Hier
 > stand: „das Verhalten an einer echten Aufnahme ist nicht belegt, im

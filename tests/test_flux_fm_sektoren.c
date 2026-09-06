@@ -23,10 +23,34 @@
  *
  * ── Woher die Spur kommt, und warum das die halbe Arbeit war ─────────
  *
- * Der Baum hat KEINEN FM- und keinen MFM-Encoder; das ist an vier
- * Stellen als Blocker vermerkt (u.a. `src/formats/kfx/uft_kfx.c:199`).
- * Ein Fixture, das ich baue, gelesen von einem Dekoder, den ich baue,
- * waere EINE Hand zweimal — die fuenfte Frage aus MF-644/760.
+ * Der Baum hat KEINEN FM-Encoder. Ein Fixture, das ich baue, gelesen
+ * von einem Dekoder, den ich baue, waere EINE Hand zweimal — die
+ * fuenfte Frage aus MF-644/760.
+ *
+ * BERICHTIGUNG MF-938: hier stand "KEINEN FM- und keinen MFM-Encoder;
+ * das ist an vier Stellen als Blocker vermerkt (u.a.
+ * `src/formats/kfx/uft_kfx.c:199`)". Beide Haelften trugen nicht.
+ *
+ * Einen IBM-MFM-Encoder GIBT ES: `src/core/uft_mfm_encoder.c`, seit
+ * 2026-04-18 (7087a565), mit IDAM/DAM, A1-Sync 0x4489, CRC-16-CCITT und
+ * Gaps. Er wird in Produktion gerufen — `src/formats/udi/
+ * uft_udi_plugin.c:215` und `src/formats/uft_format_convert_bitstream.c:978`
+ * (IMG->HFE) — und hat mit `tests/test_mfm_encoder_decodes_back.c` einen
+ * Rundlauftest.
+ *
+ * Was WIRKLICH fehlt, ist der AmigaDOS-MFM-Encoder. Genau so stand es in
+ * MF-539 (`tests/test_convert_roundtrip_measured.c:420`): "fuer AmigaDOS
+ * gibt es in diesem Baum keinen MFM-Encoder". Der Satz hier hat die
+ * Einschraenkung verloren und daraus einen unbedingten gemacht — elf Tage
+ * nach MF-539, dessen Commit-Titel lautet "der richtige MFM-Encoder lag
+ * die ganze Zeit daneben".
+ *
+ * Und die Belegstelle traegt nicht: `uft_kfx.c:199` handelt von
+ * fabrizierten Sektoren aus rohem Fluss (MF-919), nicht von einem
+ * fehlenden Encoder.
+ *
+ * Fuer DIESEN Test aendert das nichts — fuer FM bleibt es richtig, und
+ * die Fremdabnahme durch `fluxtoimd` war und ist der richtige Weg.
  *
  * Deshalb ist die Spur (`tests/fixtures/fm_ibm3740_track.h`,
  * erzeugt von `scripts/gen_fm_fixture.py`) an vier Stellen von einer
