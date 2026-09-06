@@ -185,7 +185,8 @@ jeder Befund eine Registerzeile hat.
 |---|---|
 | 0 | ✅ erledigt (§3) |
 | 1 | ◐ **Verträge vollständig, `src/core` teilweise** — zwei Artefakte liegen: `memory/arch_kernvertraege.md` (Header, ABI-Regeln) und `memory/arch_kern_src_core.md` (Registry, Öffnungspfad, Wandlungsmatrix, Preflight-Tor). Ungelesen bleiben 32 der 38 `.c`-Dateien, **namentlich in der Notiz aufgeführt** |
-| 2–10 | offen |
+| 2 | ◐ **Verträge vollständig gemessen, Umsetzungen teilweise** — Artefakt `memory/arch_flusspfad.md`. Zwei Phantome gefunden (P3-222, P3-223); was ungelesen blieb, steht namentlich in der Notiz |
+| 3–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 
