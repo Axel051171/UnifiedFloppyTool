@@ -262,7 +262,12 @@ VisualDiskDialog::VisualDiskDialog(QWidget *parent)
     setupConnections();
     setupFormatCheckboxes();
     
-    // Generate sample data for demonstration
+    /* MF-927: hier stand "Generate sample data for demonstration".
+     * MF-892 hat die Erfindung entfernt und den Kommentar stehen
+     * lassen — `clearTrackData()` erzeugt nichts, es raeumt auf. Ein
+     * Kommentar, der eine Erfindung ankuendigt, die es nicht mehr
+     * gibt, ist selbst eine Falschaussage: der naechste Leser sucht
+     * eine Attrappe, die weg ist, oder glaubt sie noch da. */
     clearTrackData();
 }
 
@@ -638,7 +643,10 @@ void VisualDiskDialog::updateStatusPanel(const SectorInfo& sector)
     
     ui->textSectorInfo->setPlainText(info);
     
-    // Generate sample hex dump
+    /* MF-927: hier stand "Generate sample hex dump". Auch das ist
+     * seit MF-892 falsch — uebergeben werden die ECHTEN Sektorbytes
+     * (`sector.data`), und `test_visual_disk_no_fiction.cpp` haelt
+     * genau das gegen den BAM-Sektor der Korpusdiskette. */
     updateHexDump(sector.data);
 }
 

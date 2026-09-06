@@ -1,4 +1,4 @@
-<!-- stufe: 2 — mechanischer Entwurf, Tiefenpruefung ausstehend (MF-646) -->
+<!-- stufe: 3 — Tiefenpruefung durchgefuehrt (MF-927), Befund korrigiert -->
 # Gutachten-Entwurf: superdiskindex
 Stand: 2026-08-26 · Messung: `superdiskindex.messung.json`
 (HEAD `52463ced6d`, letzter Commit 2020-05-07)
@@ -60,3 +60,58 @@ Stand: 2026-08-26 · Messung: `superdiskindex.messung.json`
 ## Regeln, die für diesen Fund gelten
 - Zone GRUEN: Code portierbar mit Attribution (samdisk-Muster)
 - Kein Code aus diesem Agenten (AGENT.md Regel 1)
+
+
+---
+
+## Tiefenprüfung (MF-927) — und der Befund war anders als erwartet
+
+> Anlass: Bericht `UFT-29-superdiskindex-Diskmap`. Er hat die Checkliste
+> unten ausgefüllt und einen scharfen Befund gemeldet:
+> *„UFT hat bereits eine Diskettenkarten-Ansicht (`src/visualdisk.cpp`),
+> aber sie zeigt erfundene Werte."*
+>
+> **Die Fundstelle stimmt. Die Folgerung nicht.**
+
+### Gemessen: der Baum hat DREI Diskettenkarten, nicht eine
+
+| Datei | Zeilen | erreichbar? | erfindet? |
+|---|---|---|---|
+| `src/visualdiskdialog.cpp` | 778 | **ja** — `toolstab.cpp:817` erzeugt `VisualDiskDialog` | **nein** — seit MF-892 ruft sie `read_track()` (`:517`) |
+| `src/visualdisk.cpp` | 197 | **nein** — `VisualDiskWindow` wird **nirgends** erzeugt; `m_visualDiskWindow` in `mainwindow.cpp` ist `nullptr` und wird nur `delete`d | **ja** — `:137-141` „simulate a few bad ones", `t==15 && s==3`; `:181` dasselbe in der Gitteransicht |
+| `src/widgets/diskvisualizationwindow.cpp` | 416 | **nein** — kein Nenner außerhalb der eigenen Datei | — |
+
+**Was der Bericht nicht wissen konnte:** die *erreichbare* Karte wurde
+bereits repariert (MF-892, bewacht von
+`tests/test_visual_disk_no_fiction.cpp`, das den BAM-Sektor der
+Korpusdiskette gegen die Anzeige hält). Die Erfindung, die er gefunden
+hat, sitzt in einer **toten** Zwillingsdatei.
+
+Das ist dieselbe Form wie P3-196 (zwei G64-Leser, nur einer richtig):
+**eine Reparatur landet auf einem von mehreren Zwillingen, und der
+Befund überlebt im anderen.** Der Bericht hat den falschen Zwilling
+gemessen — aber ohne ihn wäre der zweite nicht aufgefallen.
+
+### Was trotzdem trägt
+
+Das `DiskMap`-Muster selbst ist gut und unabhängig von der obigen
+Korrektur: **ein Flag-Wort je Adresseinheit mit zwei getrennt
+maskierten Dimensionen** — Gesundheit (`DMF_HEALTH_MASK`) und
+Inhaltsart (`DMF_CONTENT_MASK`). Damit kann ein Sektor gleichzeitig
+„Verzeichnis" **und** „CRC schlecht" sein, ohne dass eine Aussage die
+andere überschreibt. UFT führt beides heute getrennt und nirgends
+zusammen.
+
+Lizenz **MIT** — Zone GRÜN. Ein Port wäre erlaubt; nötig ist er nicht,
+das Muster sind zwölf Zeilen Aufzählung.
+
+### Checkliste, gefüllt
+
+| Feld | Inhalt |
+|---|---|
+| Kategorie | **Verbesserung** (Datenmodell), nicht fehlende Fähigkeit |
+| Einhängepunkt | `src/visualdiskdialog.cpp` — die **erreichbare** Karte, nicht `visualdisk.cpp` |
+| Oracle-Kandidat | keiner nötig — UI-Datenquelle, kein Formatparser |
+| Beschaffung | keine |
+| Aufwandsklasse | **M**, und zwar unverändert: das Modell einzuführen ist billig, es an **jedem** Formatparser echt zu befüllen ist die Arbeit |
+| Kennzahl | keine der vier — Fundus nach Regel 9 |
