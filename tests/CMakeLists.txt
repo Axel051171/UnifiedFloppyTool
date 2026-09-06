@@ -55,7 +55,14 @@ set(EXCLUDED_TESTS
     # missing, so the list stays auditable — scripts/update_inventory.py
     # checks the count against docs/MASTER_PLAN.md (MF-410).
     "test_libdsk_formats"      # libdsk-style format glue absent
-    "test_fat_extensions"      # uft_fs lib not registered in root CMake
+    # MF-940: der Grund hier lautete "uft_fs lib not registered in root
+    # CMake". Das legt nahe, der Code existiere und sei nur nicht
+    # gelinkt. Gemessen ueber `git ls-files`: `include/uft/fs/
+    # uft_fat_atari.h` sagt ELF Funktionen zu und es gibt zu KEINER
+    # eine Umsetzung — kein `uft_fat_atari.c` im Baum. Der Test kann
+    # nicht linken, weil die Funktionen nicht existieren, nicht weil
+    # eine Bibliothek fehlt. Siehe P3-219.
+    "test_fat_extensions"      # 11/11 Funktionen sind Phantom-API (MF-940)
 )
 
 # Previously excluded, now running again — kept as a record of what the

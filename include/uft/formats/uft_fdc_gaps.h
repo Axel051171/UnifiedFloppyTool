@@ -261,12 +261,40 @@ static const uft_fdc_format_t UFT_FDC_PC_2880K = {
     .track_bytes = 25000, .raw_bits = 400000
 };
 
-/* Atari ST Formats */
+/* Atari ST Formats
+ *
+ * MF-940: `gap4a` stand hier auf 60 und ist jetzt 0 — beide ST-Eintraege
+ * belegten dadurch 6310 Byte auf einer 6250-Byte-Spur (`audit_fdc_gaps.py`
+ * meldete beide als Widerspruch in sich, -60).
+ *
+ * QUELLE: FastCopy III (Martin Backschat, Atari ST), Quelltext-Fassung
+ * vom 5.2.1990, `FDC.S`, Unterprogramm `fdc_buildtrack`. Es schreibt am
+ * Spuranfang UNMITTELBAR Gap1 (`moveq #60-1,d3` fuer 9 Sektoren, dann
+ * `wbmult` mit Fuellbyte 0x4E) — davor steht NICHTS. Ein gap4a existiert
+ * im ST-Spurlayout nicht; UFT fuehrte 60+60 = 120 Byte, wo real 60 stehen.
+ *
+ * Die Rechnung geht damit exakt auf:
+ *     0 (gap4a) + 60 (gap1) + 9 x (574 + 40) + 664 (gap4b) = 6250
+ *
+ * Dieselbe Quelle bestaetigt die uebrigen drei Werte unabhaengig:
+ * Gap1 = 60, post-IDAM = 22 (dort "Gap3.1"), post-Daten = 40 (dort
+ * "Gap4"). Der Eintrag war also bis auf gap4a richtig — was die
+ * Kopfnotiz oben ("Der ST-Eintrag ist also richtig") bereits sagte,
+ * ohne das gap4a mitzuzaehlen.
+ *
+ * Lizenz der Quelle: Freeware (FCOPYENG.TXT, Abschnitt 3A) — Kopieren und
+ * Benutzen frei, KEINE Aenderungs- oder Einbau-Erlaubnis. Uebernommen ist
+ * daher nichts: der Wert 0 ist eine Tatsache ueber das ST-Spurlayout,
+ * abgelesen, nicht kopiert (Kanal "Spec" nach MF-695).
+ *
+ * NICHT geaendert wurde UFT_FDC_ATARI_HD (18 Sektoren) — dafuer traegt
+ * FastCopy keine Zahlen; es kennt nur 9, 10 und 11 Sektoren. Siehe P3-220.
+ */
 static const uft_fdc_format_t UFT_FDC_ATARI_SS = {
     .name = "Atari ST SS (360K)",
     .tracks = 80, .sides = 1, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 60, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
+    .gaps = { .gap4a = 0, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
     .track_bytes = 6250, .raw_bits = 100000
 };
 
@@ -274,7 +302,7 @@ static const uft_fdc_format_t UFT_FDC_ATARI_DS = {
     .name = "Atari ST DS (720K)",
     .tracks = 80, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 60, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
+    .gaps = { .gap4a = 0, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
     .track_bytes = 6250, .raw_bits = 100000
 };
 

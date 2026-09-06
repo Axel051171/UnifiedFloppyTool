@@ -25,19 +25,42 @@
 # Was die Zahl bereits erklaert:
 #
 #   Die PC-, MSX- und Amstrad-Eintraege liegen um 430 bzw. 186 Byte
-#   darueber, die Atari-Eintraege um exakt **60**. Bei den ersten steht
-#   `gap4b = 664` — das ist der ATARI-ST-Wert (60 + 9 x 614 = 5586;
-#   6250 - 5586 = 664, siehe MF-828), fuer IBM waeren es 234. Bei den
-#   Atari-Eintraegen ist der 60-Byte-Vorspann DOPPELT gezaehlt
-#   (gap4a = 60 UND gap1 = 60), wo Brods Write-Track-Tabelle nur einen
-#   nennt: „Intro: 60 bytes of $4E".
+#   darueber. Bei ihnen steht `gap4b = 664` — das ist der ATARI-ST-Wert
+#   (60 + 9 x 614 = 5586; 6250 - 5586 = 664, siehe MF-828), fuer IBM
+#   waeren es 234. Das bleibt eine Herleitung ohne Quelle.
 #
-#   Beides ist eine Herleitung, keine Quelle — deshalb steht es hier und
-#   nicht im Code.
+# ── MF-940: die beiden Atari-Eintraege sind BEHOBEN (11 -> 9) ─────────
+#
+#   Hier stand: „Bei den Atari-Eintraegen ist der 60-Byte-Vorspann
+#   DOPPELT gezaehlt (gap4a = 60 UND gap1 = 60), wo Brods
+#   Write-Track-Tabelle nur einen nennt: ,Intro: 60 bytes of $4E'.
+#   Beides ist eine Herleitung, keine Quelle — deshalb steht es hier
+#   und nicht im Code."
+#
+#   Die Diagnose war richtig; es fehlte nur die Quelle. Sie liegt jetzt
+#   vor: FastCopy III (Martin Backschat, Atari ST), Quelltext-Fassung
+#   vom 5.2.1990, `FDC.S`, Unterprogramm `fdc_buildtrack`. Es schreibt am
+#   Spuranfang UNMITTELBAR Gap1 — `moveq #60-1,d3` fuer 9 Sektoren, dann
+#   `wbmult` mit Fuellbyte $4E; davor steht nichts. Ein gap4a existiert
+#   im ST-Spurlayout nicht.
+#
+#   `gap4a = 0` laesst die Rechnung exakt aufgehen:
+#       0 + 60 + 9 x (574 + 40) + 664 = 6250 = track_bytes
+#
+#   Dieselbe Quelle bestaetigt unabhaengig Gap1 = 60, post-IDAM = 22
+#   (dort „Gap3.1") und post-Daten = 40 (dort „Gap4") — der Eintrag war
+#   also bis auf gap4a richtig.
+#
+#   Lizenz: Freeware (FCOPYENG.TXT §3A) — Kopieren und Benutzen frei,
+#   keine Aenderungs- oder Einbau-Erlaubnis. Uebernommen ist nichts; die
+#   0 ist eine abgelesene Tatsache ueber das Spurlayout (Kanal „Spec"
+#   nach MF-695). Der Quelltext gehoert NICHT ins Repository.
+#
+#   Stand danach: 17 Eintraege, 9 widerspruechlich.
 #
 # Grenze des Verfahrens: „passt" heisst nicht „stimmt". Das Tor prueft
 # Selbstkonsistenz, nicht Richtigkeit.
 #
 # Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
 
-11
+9
