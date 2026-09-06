@@ -273,6 +273,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_moof_roundtrip")
         # MOOF writer save->read semantic round-trip (MF-319)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_moof_parser.c)
+    elseif(${test_name} STREQUAL "test_mgt_verzeichnis_vollstaendig")
+        # MF-933: uft_mgt_read_directory() las 8 der 80 Eintraege, die
+        # der eigene Header nennt — still, mit UFT_OK. Referenz fuer die
+        # Anordnung: src/samdisk/Util.cpp (vendort, MIT) laeuft
+        # dir_tracks * MGT_SECTORS * 2 Eintraege; UFTs eigene Konstante
+        # MGT_DIR_ENTRIES = 80 trifft sich damit bei dir_tracks = 4.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
     elseif(${test_name} STREQUAL "test_schreibzusage_erreicht_die_datei")
         # MF-930: `write_track` darf keinen Erfolg melden, den die Datei
         # nicht traegt. Gemessen am ERGEBNIS (schreiben -> close ->

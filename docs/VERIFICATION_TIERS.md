@@ -88,7 +88,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `jv3` | **T3** | — | — | — | — |
 | `kfx` | **T3** | `test_apple_moof_a2r_no_door`, `test_kfx_probe_overclaims`, `test_kfx_sonde_sagt_nein` | — | — | — |
 | `logical` | **T3** | — | — | — | — |
-| `mgt` | **T3** | — | — | — | — |
+| `mgt` | **T3** | `test_mgt_verzeichnis_vollstaendig` | — | — | — |
 | `myz80` | **T3** | — | — | — | — |
 | `nanowasp` | **T3** | — | — | — | — |
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |

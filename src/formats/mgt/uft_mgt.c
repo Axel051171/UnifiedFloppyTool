@@ -252,24 +252,39 @@ uft_error_t uft_mgt_read_directory(const uft_disk_image_t *disk,
         return UFT_ERR_INVALID_PARAM;
     }
     
-    /* Directory is on track 0, side 0, sectors 1-4 */
-    uft_track_t *track0 = disk->track_data[0];
-    if (!track0) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
+    /* MF-933: hier lief die Schleife ueber MGT_SECTORS_PER_DIR (4)
+     * Sektoren von track_data[0] — also ueber ACHT Eintraege, waehrend
+     * der eigene Header 80 nennt. Alles darueber hinaus fiel weg, und
+     * die Funktion meldete UFT_OK.
+     *
+     * Das Verzeichnis liegt auf den Zylindern 0..MGT_DIR_TRACKS-1,
+     * SEITE 0, ueber alle MGT_SECTORS Sektoren, zwei Eintraege je
+     * Sektor. Referenz: src/samdisk/Util.cpp (vendort, MIT) laeuft
+     * `dir_tracks` x `MGT_SECTORS` x 2; MGT_DIR_TRACKS ist hier aus
+     * MGT_DIR_ENTRIES abgeleitet und trifft sich damit bei 4.
+     *
+     * Seite 0 heisst Index `c * MGT_HEADS`, nicht `c` — dieselbe
+     * Stelle, an der MF-931 die Schreibseite von opus fand. */
     size_t count = 0;
-    
-    for (int s = 0; s < MGT_SECTORS_PER_DIR && count < max_entries; s++) {
-        if (s >= track0->sector_count || !track0->sectors[s].data) continue;
-        
-        for (int e = 0; e < 2 && count < max_entries; e++) {
-            mgt_dir_entry_t *src = (mgt_dir_entry_t *)(track0->sectors[s].data + 
-                                                       e * MGT_DIR_ENTRY_SIZE);
-            
-            if (src->type >= 1 && src->type <= 11) {
-                memcpy(&entries[count], src, sizeof(mgt_dir_entry_t));
-                count++;
+
+    for (int c = 0; c < MGT_DIR_TRACKS && count < max_entries; c++) {
+        size_t idx = (size_t)c * MGT_HEADS;   /* Seite 0 */
+        uft_track_t *tr = disk->track_data[idx];
+        if (!tr) continue;
+
+        for (int s = 0; s < MGT_SECTORS && count < max_entries; s++) {
+            if ((size_t)s >= tr->sector_count || !tr->sectors[s].data) continue;
+            if (tr->sectors[s].data_size < MGT_SECTOR_SIZE) continue;
+
+            for (int e = 0; e < MGT_DIR_ENTRIES_PER_SECTOR
+                            && count < max_entries; e++) {
+                mgt_dir_entry_t *src = (mgt_dir_entry_t *)
+                    (tr->sectors[s].data + e * MGT_DIR_ENTRY_SIZE);
+
+                if (src->type >= 1 && src->type <= 11) {
+                    memcpy(&entries[count], src, sizeof(mgt_dir_entry_t));
+                    count++;
+                }
             }
         }
     }

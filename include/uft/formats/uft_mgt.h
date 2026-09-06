@@ -36,11 +36,43 @@ extern "C" {
 #define MGT_40_CYLINDERS        40
 #define MGT_40_DISK_SIZE        (MGT_40_CYLINDERS * MGT_HEADS * MGT_TRACK_SIZE)
 
-/* Directory structure */
-#define MGT_DIR_TRACK           0       /* Directory on track 0 */
+/* Directory structure
+ *
+ * MF-933: hier standen zwei Zahlen, die einander widersprachen —
+ * `MGT_DIR_ENTRIES 80` und `MGT_SECTORS_PER_DIR 4`. Vier Sektoren zu
+ * 512 Byte fassen bei 256 Byte je Eintrag genau ACHT Eintraege, nicht
+ * 80, und `uft_mgt_read_directory()` folgte der kleineren Zahl: eine
+ * Diskette mit mehr als acht Dateien lieferte acht, mit `UFT_OK`.
+ *
+ * Die Anordnung stammt aus zwei Quellen im Baum, die unabhaengig
+ * dasselbe sagen:
+ *
+ *   1. `src/samdisk/Util.cpp` (vendort, MIT) laeuft das Verzeichnis als
+ *      `dir_tracks` Zylinder x `MGT_SECTORS` Sektoren x 2 Eintraege.
+ *   2. `MGT_DIR_ENTRIES 80` hier — beide treffen sich bei
+ *      `dir_tracks = 4`: 4 * 10 * 2 = 80.
+ *
+ * `MGT_DIR_TRACKS` wird deshalb ABGELEITET statt getippt: wer eine der
+ * beiden Zahlen aendert, bekommt die andere mitgezogen.
+ *
+ * NICHT belegt: bei SAMdisk ist `dir_tracks` eine VARIABLE, die
+ * `GetDiskInfo()` aus Sektor 0 liest. Deren Definition steht in
+ * `SAMCoupe.h`, und diese Datei fehlt im vendorten Bestand (gemessen
+ * MF-933). Eine Diskette mit abweichendem `dir_tracks` ist hier nicht
+ * abgedeckt; siehe P3-207.
+ */
+#define MGT_DIR_TRACK           0       /* Directory starts on track 0 */
 #define MGT_DIR_ENTRIES         80      /* Maximum directory entries */
 #define MGT_DIR_ENTRY_SIZE      256     /* Bytes per directory entry */
-#define MGT_SECTORS_PER_DIR     4       /* 4 sectors for directory */
+#define MGT_DIR_ENTRIES_PER_SECTOR  (MGT_SECTOR_SIZE / MGT_DIR_ENTRY_SIZE)  /* 2 */
+#define MGT_DIR_TRACKS \
+    (MGT_DIR_ENTRIES / (MGT_SECTORS * MGT_DIR_ENTRIES_PER_SECTOR))  /* 4 */
+
+/* Wie viele Sektoren die SONDE anschaut. Bewusst klein und bewusst
+ * getrennt von der Verzeichnisausdehnung: die Sonde braucht nur einen
+ * plausiblen Anfang, nicht das ganze Verzeichnis. Bis MF-933 wurde
+ * diese Zahl faelschlich AUCH als Ausdehnung benutzt. */
+#define MGT_SECTORS_PER_DIR     4       /* nur fuer uft_mgt_probe() */
 
 /* File types */
 #define MGT_TYPE_FREE           0       /* Free slot */
