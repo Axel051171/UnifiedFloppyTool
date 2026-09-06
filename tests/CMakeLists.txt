@@ -1643,6 +1643,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_adfcopy_firmware_protokoll")
+        # MF-922 (P3-188): derselbe Controller, aber gegen die
+        # VEROEFFENTLICHTE Firmware statt gegen UFTs Annahme. Der
+        # Emulator daneben (firmware_state_machine.c) bildet ein
+        # Byteprotokoll nach; die echte Firmware liest Zeilen bis '\n'
+        # und vergleicht gegen Zeichenketten. Dieser Test misst genau
+        # diesen Unterschied — ohne Geraet.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/emulators/adfcopy/firmware_line_protocol.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests)
     elseif(${test_name} STREQUAL "test_geometrie_kollision_schweigt_nicht")
         # MF-921 (P3-182): die drei Module mit Groessen-Kollision in ihrer
         # Geometrietabelle. Alle drei sind Waisen — der Test misst einen
