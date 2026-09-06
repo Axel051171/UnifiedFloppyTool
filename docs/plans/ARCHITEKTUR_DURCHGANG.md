@@ -188,7 +188,8 @@ jeder Befund eine Registerzeile hat.
 | 2 | ◐ **Verträge vollständig gemessen, Umsetzungen teilweise** — Artefakt `memory/arch_flusspfad.md`. Zwei Phantome gefunden (P3-222, P3-223); was ungelesen blieb, steht namentlich in der Notiz |
 | 3 | ◐ **Verträge vollständig gemessen** — Artefakt `memory/arch_dateisysteme.md`. Vier Phantom-Header und 26 Header-Namenskollisionen gefunden (P3-228, P3-229) |
 | 4a | ◐ **CBM gemessen** (49 Dateien, 23 122 Z.) — Artefakt `memory/arch_formate_cbm.md`. Registry sauber: 88 Plugin-Tafeln, **kein `.name` doppelt**, also fällt keines still heraus. Zwei Befunde (P3-232 GCR-Tabelle sechsfach + getestete API ohne Produktionspfad, P3-233 zweite BAM-API ohne Umsetzung und ohne Einbinder). **Nicht** gemessen: ob die Leser richtig lesen — das hängt an `VERIFICATION_TIERS.md` |
-| 4b–10 | offen |
+| 4b | ◐ **Atari + Apple gemessen** (62 Dateien, 24 188 Z.) — Artefakt `memory/arch_formate_atari_apple.md`. Zwei Befunde (P3-234 Apple-GCR-Tabelle siebenfach, oracle-geprüfte Einheit ohne Produktionsaufrufer, `nib` auf T3; P3-235 fünf Zusagen ohne Rumpf). Drei Prüfungen kamen **sauber** zurück: kein neuer Phantom-Header, kein Format fehlt in der Tier-Tafel (88 = 88, zwei Schreibweisen), Tor 57 auf 0. Elf Schreib-Rundlauf-Tests verschärft — **ohne Defekt**, die Vermutung „blind" wurde gemessen und verworfen |
+| 4c–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 

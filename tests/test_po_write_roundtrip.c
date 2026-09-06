@@ -56,12 +56,25 @@ TEST(write_persists_to_read) {
     ASSERT(uft_format_plugin_po.write_track(&disk, 0, 0, &t) == UFT_OK);
     free_ts(&t);
     uft_track_t t2; memset(&t2, 0, sizeof(t2));
-    ASSERT(uft_format_plugin_po.read_track(&disk, 0, 0, &t2) == UFT_OK);
+    /* MF-947: ERST SCHLIESSEN, DANN NEU OEFFNEN.
+     *
+     * Hier stand ein zweites read_track auf DEMSELBEN offenen Griff. Das
+     * prueft den Speicherpuffer des Plugins, nicht die Datei — genau die
+     * Konstruktion, mit der test_imd_write_roundtrip jahrelang gruen war,
+     * waehrend IMD keine einzige Schreiboperation besass (MF-883). */
+    if (uft_format_plugin_po.close) uft_format_plugin_po.close(&disk);
+
+    uft_disk_t disk2;
+    memset(&disk2, 0, sizeof(disk2));
+    disk2.read_only = true;
+    ASSERT(uft_format_plugin_po.open(&disk2, path, true) == UFT_OK);
+
+    ASSERT(uft_format_plugin_po.read_track(&disk2, 0, 0, &t2) == UFT_OK);
     ASSERT(t2.sectors[3].data[0] == 0xC7);
     ASSERT(t2.sectors[3].data[SS-1] == 0x5A);
     ASSERT(t2.sectors[2].data[0] == 0x00);
     free_ts(&t2);
-    if (uft_format_plugin_po.close) uft_format_plugin_po.close(&disk);
+    if (uft_format_plugin_po.close) uft_format_plugin_po.close(&disk2);
     remove(path);
 }
 int main(void) {
