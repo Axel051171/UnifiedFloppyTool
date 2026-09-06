@@ -995,13 +995,24 @@ time_t uft_fat_to_unix_time(uint16_t fat_time, uint16_t fat_date);
  */
 void uft_fat_from_unix_time(time_t unix_time, uint16_t *fat_time, uint16_t *fat_date);
 
-/**
- * @brief Format entry as string
- * @param entry Directory entry
- * @param buffer Output buffer (at least 80 bytes)
- * @return buffer
- */
-char *uft_fat_entry_to_string(const uft_fat_entry_t *entry, char *buffer);
+/* MF-945: hier stand
+ *
+ *     char *uft_fat_entry_to_string(const uft_fat_entry_t *entry,
+ *                                   char *buffer);
+ *
+ * Deklariert, NIE umgesetzt, und im ganzen Baum nirgends genannt —
+ * gemessen ueber `git ls-files`. Sie war die EINZIGE der 56 Zusagen
+ * dieses Headers ohne Rumpf; die uebrigen 55 gibt es.
+ *
+ * Entfernt statt umgesetzt, nach dem Vorbild von MF-366
+ * (`uft_audit_trail.h`, `uft_forensic_report.h`): eine Funktion, die
+ * niemand ruft, zu bauen hiesse, eine Zusage zu erfuellen, die niemand
+ * gestellt hat.
+ *
+ * Ersatz benannt (MF-699 verlangt das vor jeder Loeschung): es braucht
+ * keinen. `uft_fat_entry_t` traegt Name, Groesse, Attribute und Zeit als
+ * eigene Felder; wer anzeigt, formatiert daraus selbst. Eine zweite
+ * Darstellung im Header waere eine zweite Wahrheit ueber dasselbe. */
 
 /**
  * @brief Format attributes as string
