@@ -273,6 +273,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_moof_roundtrip")
         # MOOF writer save->read semantic round-trip (MF-319)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_moof_parser.c)
+    elseif(${test_name} STREQUAL "test_schreibzusage_erreicht_die_datei")
+        # MF-930: `write_track` darf keinen Erfolg melden, den die Datei
+        # nicht traegt. Gemessen am ERGEBNIS (schreiben -> close ->
+        # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
+        # die P3-154 seit MF-880 verlangt.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
     elseif(${test_name} STREQUAL "test_imd_write_roundtrip")
         # IMD write_track round-trip; caught the data_len/data_size write no-op bug (MF-320)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)

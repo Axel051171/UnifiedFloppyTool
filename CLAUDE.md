@@ -83,6 +83,30 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > Klasse fest. Was das Tor bewusst **nicht** sieht, steht in seinem Kopf und
 > als P3-154/P3-157 in `docs/OPEN_ITEMS.md`.
 >
+> **Nachtrag MF-930 — es waren nicht neun, sondern zwanzig, und der
+> Torkopf hat den Rest verdeckt.** Tor 57 fragt, ob in der Plugin-Datei
+> eine Schreiboperation **steht**. Sein Kopf nannte die Lücke ehrlich und
+> **zählte acht Verdächtige auf**. Gemessen sind es **elf** — `apridisk`,
+> `cfi`, `hardsector`, `logical`, `mgt`, `myz80`, `nanowasp`, `opus`,
+> `posix`, `qrst`, `rcpmfs` —, und **vier davon standen auf keiner Liste**.
+> Jede dieser Dateien enthält ein vollständiges `uft_<fmt>_write()` mit
+> `fwrite`; nur führt **kein Weg** dorthin: kein `.flush`, `close()` gibt
+> den Puffer frei, `write_track` macht ein `memcpy` und meldet `UFT_OK`.
+> Bei `apridisk` stand der Rückweg wörtlich im Quelltext — *„Call
+> flush/close to persist changes"* — und es gab ihn nicht.
+>
+> Das ist der **vierzehnte** Fall von Aufzählung statt Messung in diesem
+> Baum, und der teuerste denkbare Ort dafür: die Aufzählung stand im Kopf
+> eines **Tores** und beschrieb dessen Grenze.
+>
+> Seit MF-930 antworten auch diese elf `UFT_ERROR_NOT_SUPPORTED`, und
+> Tor 57 trägt eine **zweite Messung**: erreicht `flush`/`close`/
+> `write_track` den Schreiber — transitiv innerhalb der Datei, damit ein
+> Helfer dazwischen kein Fehlalarm ist. **11 gegen den Vorzustand, 0
+> heute**, Selbsttest 10/10. Über **Dateigrenzen** wird nicht verfolgt;
+> das steht benannt im Torkopf. Die elf fertigen, unverdrahteten Schreiber
+> sind **P3-204** — Arbeit, kein Fehler.
+>
 > Die Liste unten nennt, was **gelesen** werden soll. Ob ein Format auch
 > **geschrieben** wird, sagt seine Merkmalstafel — nicht diese Überschrift.
 

@@ -649,22 +649,46 @@ static uft_error_t qrst_write_track(uft_disk_t *disk, int cyl, int head,
     uft_track_t *dst = image->track_data[idx];
     if (!dst) return UFT_ERR_INVALID_PARAM;
 
-    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
-        const uint8_t *src_data = track->sectors[s].data;
-        if (!src_data) continue;
-        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
-            size_t src_len = track->sectors[s].data_size;
-            size_t n = src_len < dst->sectors[s].data_size
-                       ? src_len : dst->sectors[s].data_size;
-            memcpy(dst->sectors[s].data, src_data, n);
-        }
-    }
-    return UFT_OK;
+    /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     *
+     * Diese Datei HAT einen echten Dateischreiber — `uft_qrst_write()`,
+     * mit `fwrite` und allem. Nur fuehrt kein Weg dorthin: die
+     * Plugin-Tafel hat kein `.flush`, `close()` gibt den Puffer frei
+     * ohne zu schreiben, und dieses `write_track` fasste nur den
+     * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
+     * erreichte die Platte.
+     *
+     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
+     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
+     * Schreiboperation STEHT — und die steht. Sie wird nur nie
+     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
+     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
+     * der dort aufgezaehlten Verdachtslisten.
+     *
+     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
+     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
+     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
+     * Quelltext — „Call flush/close to persist changes" —, und es gab
+     * ihn nicht.
+     *
+     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
+     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
+     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
+     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
+     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
+     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
+     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
+     *
+     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
+     * Aufrufer keine Begruendung. */
+    (void)dst;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_qrst_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED,
+      "MF-930: schreibt nur in den Speicher — der echte uft_qrst_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -677,7 +701,7 @@ const uft_format_plugin_t uft_format_plugin_qrst = {
     .description = "Compaq Quick Release Sector Transfer",
     .extensions = "qrst",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = qrst_probe_plugin,
     .open = qrst_open,
     .close = qrst_close,

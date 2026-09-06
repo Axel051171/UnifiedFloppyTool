@@ -59,9 +59,9 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/trd/uft_trd_parser_v2.c` | 23 | 666 |
 | `src/formats/c64/uft_bam_editor.c` | 20 | 976 |
 | `src/formats/nintendo/uft_switch.c` | 13 | 411 |
-| `src/formats/opus/uft_opus.c` | 10 | 544 |
+| `src/formats/opus/uft_opus.c` | 10 | 568 |
 | `src/formats/atari/uft_atari_dos.c` | 9 | 511 |
-| `src/formats/mgt/uft_mgt.c` | 9 | 437 |
+| `src/formats/mgt/uft_mgt.c` | 9 | 461 |
 | `src/formats/atari/uft_atari8_disk.c` | 8 | 338 |
 | `src/formats/c64/uft_d64_file.c` | 8 | 849 |
 | `src/formats/c64/uft_t64.c` | 8 | 759 |
