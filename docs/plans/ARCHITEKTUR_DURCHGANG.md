@@ -184,11 +184,23 @@ jeder Befund eine Registerzeile hat.
 | Phase | Stand |
 |---|---|
 | 0 | ✅ erledigt (§3) |
-| 1 | ◐ begonnen — `arch_kernvertraege.md` liegt, `src/core` erst zu ~40 % gelesen |
+| 1 | ◐ **Verträge vollständig, `src/core` teilweise** — zwei Artefakte liegen: `memory/arch_kernvertraege.md` (Header, ABI-Regeln) und `memory/arch_kern_src_core.md` (Registry, Öffnungspfad, Wandlungsmatrix, Preflight-Tor). Ungelesen bleiben 32 der 38 `.c`-Dateien, **namentlich in der Notiz aufgeführt** |
 | 2–10 | offen |
 
-**Bereits aus Phase 1 gefallen:** MF-938 (`3e0025e4`) — die Titelseiten-Aussage
-„der Baum hat keinen MFM-Encoder" war seit vier Monaten falsch.
+**Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
+
+* **MF-938** (`3e0025e4`) — die Titelseiten-Aussage „der Baum hat keinen
+  MFM-Encoder" war seit vier Monaten falsch. Das Gegenteil stand an **drei**
+  Stellen im Baum, u.a. `uft_roundtrip.c:64`: *„den Encoder, der die ganze Zeit
+  im Baum lag und den niemand rief"*.
+* **MF-940** (`e6ec1c40`) — `uft_fdc_gaps.h` zählte den Atari-ST-Vorspann
+  doppelt. Die Grundlinien-Datei hatte die Ursache seit MF-838 **richtig
+  diagnostiziert** und den Fix mangels Quelle abgelehnt; FastCopy III (1990)
+  lieferte sie. Tor-Grundlinie 11 → 9.
+
+**Was das über den Plan sagt:** beide Funde kamen aus §5.1 Schritt 3 (die vier
+Fragen), nicht aus dem Durchlesen. Das ist der Grund, warum §5.1 so und nicht
+anders steht.
 
 Verwandt: [`VARIANTEN_UND_FAEHIGKEITEN.md`](VARIANTEN_UND_FAEHIGKEITEN.md),
 [`TORE_BUENDEL.md`](TORE_BUENDEL.md), `docs/OPEN_ITEMS.md`.
