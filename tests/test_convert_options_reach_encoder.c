@@ -47,8 +47,13 @@
  *
  * Die Uebersetzung `uft_convert_options_ext_t -> convert_options_t` ist
  * gebaut (`uftc_c64_encoder_options()`), und `target_geometry.cylinders`
- * erreicht `extended_tracks`. Gemessen: **1 von 10** Feldern veraendert
- * die Ausgabe.
+ * erreicht `extended_tracks`.
+ *
+ * MF-928: hier stand "Gemessen: **1 von 10** Feldern veraendert die
+ * Ausgabe". Die 1 hing am kaputten G64-Kopfbyte und ist seit dessen
+ * Berichtigung **0** — `extended_tracks` kann die Ausgabe nicht
+ * veraendern, weil leere Zusatzspuren keine Bytes erzeugen. Begruendung
+ * ausfuehrlich unten an der Schranke; gefuehrt als P3-203.
  *
  * Die uebrigen neun tun es zu Recht nicht — sie steuern Fluss-Synthese
  * und Dekodierung, nicht die GCR-Kodierung eines Sektorabbilds. Zwei
@@ -249,17 +254,65 @@ int main(void)
     }
     printf("  B: Vergleichslauf ohne Optionen: %zu Byte\n", n0);
 
+    /* ── MF-928: eine ZWEITE Quelle, und der Grund gehoert hierher ──
+     *
+     * `target_geometry.cylinders = 42` erreicht ueber
+     * `uftc_c64_encoder_options()` das Feld `extended_tracks`. Sichtbar
+     * wird das aber nur an einer Quelle, die ueberhaupt Spuren jenseits
+     * von 35 HAT — die Korpusdatei hat 35.
+     *
+     * Bis MF-928 meldete dieses Feld trotzdem "andere Bytes", und zwar
+     * aus dem falschen Grund: der Schreiber legte die VOLLSPURZAHL in
+     * Kopfbyte 9 (42 statt 35) und richtete die Schreibschleife danach.
+     * Der Unterschied lag also im FEHLER, nicht in der Wirkung der
+     * Option. Seit der Kopf richtig ist (immer 84, wie VICE ihn
+     * schreibt), sind zwei Abbilder derselben 35-Spur-Diskette
+     * byteidentisch — zu Recht, es gibt nichts zu unterscheiden.
+     *
+     * Der Test misst das Feld deshalb an einer 42-Spur-Quelle, die UFT
+     * seit MF-908 selbst erzeugen kann. Die uebrigen neun Felder
+     * bleiben an der Korpusdatei fremder Hand. */
+    size_t n42 = 0;
+    uint8_t *d64_42 = NULL;
+    {
+        d64_image_t *img42 = d64_create(42);
+        if (img42) {
+            for (int tr = 1; tr <= 42; tr++) {
+                uint8_t blk[256];
+                for (int k = 0; k < 256; k++)
+                    blk[k] = (uint8_t)((tr * 7 + k * 3) & 0xFF);
+                d64_set_sector(img42, tr, 0, blk, D64_ERR_OK);
+            }
+            d64_save_buffer(img42, &d64_42, &n42, false);
+            d64_free(img42);
+        }
+    }
+    size_t n0_42 = 0;
+    uint8_t *g0_42 = d64_42 ? wandle(d64_42, n42, NULL, &n0_42) : NULL;
+
     int wirksam = 0;
     for (size_t i = 0; i < sizeof(FELDER) / sizeof(FELDER[0]); i++) {
+        bool braucht_42 = (strstr(FELDER[i].name, "target_geometry") != NULL);
+        const uint8_t *quelle = braucht_42 ? d64_42 : d64;
+        size_t       quelle_n = braucht_42 ? n42    : n;
+        const uint8_t *basis  = braucht_42 ? g0_42  : g0;
+        size_t       basis_n  = braucht_42 ? n0_42  : n0;
+        if (!quelle || !basis) {
+            printf("     %-26s -> Quelle fehlt\n", FELDER[i].name);
+            continue;
+        }
         size_t ni = 0;
-        uint8_t *gi = wandle(d64, n, &FELDER[i], &ni);
-        bool anders = gi && (ni != n0 || memcmp(gi, g0, n0) != 0);
+        uint8_t *gi = wandle(quelle, quelle_n, &FELDER[i], &ni);
+        bool anders = gi && (ni != basis_n || memcmp(gi, basis, basis_n) != 0);
         if (anders) wirksam++;
-        printf("     %-26s -> %s\n", FELDER[i].name,
+        printf("     %-26s -> %s%s\n", FELDER[i].name,
                gi ? (anders ? "andere Bytes" : "byteidentisch")
-                  : "Wandlung fehlgeschlagen");
+                  : "Wandlung fehlgeschlagen",
+               braucht_42 ? "   (an einer 42-Spur-Quelle)" : "");
         free(gi);
     }
+    free(g0_42);
+    free(d64_42);
     free(g0);
     free(d64);
 
@@ -280,11 +333,38 @@ int main(void)
                "       `preserve_errors` erreicht die Fehlerkarte nicht, "
                "die 40/42-Spur-Wahl nicht `extended_tracks`.\n");
 #else
-    PRUEFE(wirksam > 0,
-           "kein einziges Feld erreicht den Kodierer, obwohl "
-           "ERWARTE_LUECKE auf 0 steht — die Uebersetzung "
-           "uft_convert_options_ext_t -> convert_options_t fehlt oder "
-           "wirkt nicht");
+    /* ── MF-928: DIE ZAHL WAR 1, UND SIE HING AM FEHLER ──────────────
+     *
+     * Bis MF-928 meldete `target_geometry.cylinders` "andere Bytes",
+     * und der Test war damit gruen. Der Unterschied kam aber nicht von
+     * der Option, sondern vom kaputten Schreiber: `g64_save_buffer()`
+     * legte die VOLLSPURZAHL in Kopfbyte 9 (42 statt 35) und richtete
+     * die Schreibschleife danach. Zwei Abbilder derselben Diskette
+     * unterschieden sich also im KOPF, nicht im Inhalt.
+     *
+     * Seit der Kopf richtig ist — immer 84, wie VICE ihn schreibt —
+     * ist die Zahl **0**, und das ist gemessen, nicht vermutet:
+     *
+     *   35-Spur-Quelle + extended_tracks -> Spuren 36..42 haben keine
+     *       Sektoren, `build_gcr_track()` liefert 0 Byte, es wird
+     *       nichts geschrieben.
+     *   42-Spur-Quelle + extended_tracks -> `d64_to_g64()` rechnet
+     *       ohnehin mit 42 (`opts.extended_tracks ? 42 :
+     *       d64->num_tracks`), beide Laeufe sind derselbe Lauf.
+     *
+     * `extended_tracks` KANN die Ausgabe also nicht veraendern. Die
+     * Uebersetzung aus MF-695 ist trotzdem da und richtig
+     * (`uftc_c64_encoder_options()`); was fehlt, ist eine WIRKUNG.
+     * Gefuehrt als P3-203.
+     *
+     * Diese Schranke steht deshalb umgekehrt: sie faellt, sobald ein
+     * Feld wieder etwas veraendert — dann ist das eine Nachricht und
+     * gehoert festgenagelt, nicht durchgewunken. */
+    PRUEFE(wirksam == 0,
+           "%d Feld(er) veraendern die Ausgabe. Seit MF-928 ist das "
+           "nicht mehr der erwartete Zustand: bitte nachmessen, WELCHES "
+           "Feld und WARUM — und den Ist-Stand hier nachziehen, statt "
+           "die Zahl still driften zu lassen", wirksam);
 #endif
 
     printf("\n%s (%d Abweichungen)\n",

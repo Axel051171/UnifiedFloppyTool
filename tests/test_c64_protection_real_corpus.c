@@ -122,11 +122,14 @@ static int collect(const char *file, ufm_c64_track_metrics_t *out, int max_track
  * g64_load()/g64_get_track() and then classifies. This helper is that path,
  * minus Qt, so it can be tested: src/gui/ has no test coverage at all.
  *
- * Note the index conversion. g64_get_track() numbers slots as track x 2
- * (index 2 = track 1), ufm_c64_metrics_from_gcr() as a 0-based slot
- * (index 0 = track 1). Passing the index through unconverted shifts every
- * track by one and lands on the speed-zone boundaries, which is measurable:
- * it invents three "long track" hits on a disk that has none. */
+ * MF-928: die Indexumrechnung ist WEGGEFALLEN, weil beide Seiten jetzt
+ * dieselbe Zaehlung benutzen. Vorher zaehlte g64_get_track() die Plaetze
+ * als Spur x 2 (Platz 2 = Spur 1), ufm_c64_metrics_from_gcr() dagegen
+ * 0-basiert (Platz 0 = Spur 1) — daher stand hier `ht - 2`. Seit MF-928
+ * gilt in beiden die Zaehlung der DATEI: Platz i ist Eintrag i, Spur t
+ * liegt auf 2*(t-1). Der Verschiebungsfehler, vor dem dieser Absatz
+ * gewarnt hat, ist damit nicht mehr moeglich, weil es nichts mehr zu
+ * verschieben gibt. */
 static int gui_path_analyze(const char *path, ufm_c64_prot_report_t *report,
                             ufm_c64_track_metrics_t *m_out, int max_tracks)
 {
@@ -134,12 +137,18 @@ static int gui_path_analyze(const char *path, ufm_c64_prot_report_t *report,
     if (g64_load(path, &g) != 0 || !g) return -1;
 
     int n = 0;
-    for (int ht = 2; ht <= g->num_tracks * 2 && ht < G64_MAX_TRACKS; ht++) {
+    /* MF-928: die Halbspur-Abbildung ist jetzt die der DATEI —
+     * Eintrag i liegt auf Platz i, Spur t auf 2*(t-1). Vorher
+     * begann diese Schleife bei 2, weil Platz 0 und 1 unter der
+     * alten Rechnung (t*2) brachlagen. Seit MF-928 liegen dort
+     * Spur 1.0 und 1.5 — die Schleife haette sie uebersprungen,
+     * gemessen als 69 statt 71 Spuren auf c64pp_bountybob.g64. */
+    for (int ht = 0; ht < G64_MAX_TRACKS; ht++) {
         if (n >= max_tracks) break;
         const uint8_t *d = NULL; size_t len = 0; uint8_t speed = 0;
         if (g64_get_track(g, ht, &d, &len, &speed) != 0 || !d || len == 0)
             continue;
-        if (ufm_c64_metrics_from_gcr(d, len, ht - 2, UFM_C64_SPEED_ZONE_AUTO,
+        if (ufm_c64_metrics_from_gcr(d, len, ht, UFM_C64_SPEED_ZONE_AUTO,
                                      &m_out[n]))
             n++;
     }

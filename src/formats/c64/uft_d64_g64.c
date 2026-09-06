@@ -537,7 +537,7 @@ int g64_load_buffer(const uint8_t *data, size_t size, g64_image_t **image)
     
     /* Read track entries */
     for (int i = 0; i < img->num_tracks && i < G64_MAX_TRACKS; i++) {
-        int halftrack = i + 2;  /* G64 starts at halftrack 2 */
+        int halftrack = i;   /* MF-928: Eintrag i IST Platz i */
         if (halftrack >= G64_MAX_TRACKS) break;
         
         /* Track offset */
@@ -615,7 +615,12 @@ int g64_save_buffer(const g64_image_t *image, uint8_t **data, size_t *size)
     /* Calculate total size */
     size_t total_size = G64_HEADER_SIZE;
     
-    for (int i = 2; i < G64_MAX_TRACKS; i++) {
+    /* MF-928: ab Index 0, nicht ab 2. Mit der neuen Abbildung
+     * (2*(Spur-1)) liegen Spur 1.0 und 1.5 auf den Plaetzen 0 und 1 —
+     * die Groessenrechnung uebersah sie, waehrend die Schreibschleife
+     * sie schrieb. Ergebnis: Schreiben hinter das Pufferende,
+     * gemessen als STATUS_HEAP_CORRUPTION in drei Wandler-Tests. */
+    for (int i = 0; i < G64_MAX_TRACKS; i++) {
         if (image->track_data[i] && image->tracks[i].length > 0) {
             total_size += 2 + image->tracks[i].length;  /* 2 bytes for length + data */
         }
@@ -628,15 +633,21 @@ int g64_save_buffer(const g64_image_t *image, uint8_t **data, size_t *size)
     /* Write header */
     memcpy(buf, G64_SIGNATURE, G64_SIGNATURE_LEN);
     buf[8] = image->version;
-    buf[9] = image->num_tracks;
+    /* MF-928: Byte 9 ist die Zahl der EINTRAEGE (Halbspuren), nicht
+     * der Vollspuren. VICE schreibt hier 84; UFT schrieb 42, und der
+     * eigene Leser rechnete daraus (42+1)/2 = 21 Zylinder. */
+    buf[9] = G64_MAX_TRACKS;
     buf[10] = image->max_track_size & 0xFF;
     buf[11] = (image->max_track_size >> 8) & 0xFF;
     
     /* Write track offsets and data */
     uint32_t current_offset = G64_HEADER_SIZE;
     
-    for (int i = 0; i < image->num_tracks && i < G64_MAX_TRACKS - 2; i++) {
-        int halftrack = i + 2;
+    /* MF-928: ALLE Eintraege schreiben, nicht `num_tracks` viele. Mit
+     * der Vollspurzahl (42) endete die Schleife bei Eintrag 41 = Spur
+     * 21, und der Rest der Diskette fehlte in der Datei. */
+    for (int i = 0; i < G64_MAX_TRACKS; i++) {
+        int halftrack = i;
         
         if (image->track_data[halftrack] && image->tracks[halftrack].length > 0) {
             /* Write offset */
@@ -714,6 +725,36 @@ void g64_free(g64_image_t *image)
 /**
  * @brief Create new G64 image
  */
+
+/* ── MF-928 (P3-195/P3-194): EINE Halbspur-Abbildung, die der DATEI ──
+ *
+ * Bis hierher galt `halftrack = track * 2` und `Dateieintrag i ↔
+ * halftrack i + 2`. Beides zusammen war in sich stimmig — Leser und
+ * Schreiber machten denselben Fehler, also schwieg der Rundlauf. Nach
+ * aussen war es falsch, und zwar dreifach:
+ *
+ *   1. Spur 42 ergab halftrack 84. Das Feld hat 84 Plaetze (0..83),
+ *      also KEINEN fuer Spur 42 — `g64_set_track()` wies sie ab.
+ *   2. Die Plaetze 0 und 1 lagen brach.
+ *   3. `buf[9]` bekam die VOLLSPURZAHL (42) statt der Eintragszahl,
+ *      und die Schreibschleife lief `i < num_tracks` — geschrieben
+ *      wurden die Eintraege 0..41, also die Spuren 1..21. ALLES
+ *      DARUEBER FEHLTE, still, auf einem Weg, den die Wandlungsmatrix
+ *      als verlustfrei fuehrt.
+ *
+ * Wie es richtig ist, sagt die Datei, nicht die Auslegung. Gemessen an
+ * `tests/corpus_free/vice_c1541_35trk.g64` (VICE, fremde Hand):
+ *
+ *     Kopf Byte 9  = 84    Halbspuren, nicht Vollspuren
+ *     Eintrag 0    -> 684  Spurdaten   <- Spur 1.0
+ *     Eintrag 1    -> 0    leer        <- Spur 1.5
+ *     Eintrag 2    -> 8614 Spurdaten   <- Spur 2.0
+ *
+ * Also: Dateieintrag i IST der Speicherplatz i, und Spur t liegt auf
+ * Platz 2*(t-1). Damit passen alle 42 Spuren, kein Platz liegt brach,
+ * und die geschriebene Datei entspricht der, die VICE schreibt. */
+#define G64_TRACK_TO_HALFTRACK(t)  (((t) - 1) * 2)   /* 1..42 -> 0..82 */
+
 g64_image_t *g64_create(int num_tracks, bool include_halftracks)
 {
     g64_image_t *img = calloc(1, sizeof(g64_image_t));
@@ -732,7 +773,7 @@ g64_image_t *g64_create(int num_tracks, bool include_halftracks)
 int g64_get_track(const g64_image_t *image, int halftrack,
                   const uint8_t **data, size_t *length, uint8_t *speed)
 {
-    if (!image || halftrack < 2 || halftrack >= G64_MAX_TRACKS) return -1;
+    if (!image || halftrack < 0 || halftrack >= G64_MAX_TRACKS) return -1;
     if (!image->track_data[halftrack]) return -2;
     
     if (data) *data = image->track_data[halftrack];
@@ -748,7 +789,7 @@ int g64_get_track(const g64_image_t *image, int halftrack,
 int g64_set_track(g64_image_t *image, int halftrack,
                   const uint8_t *data, size_t length, uint8_t speed)
 {
-    if (!image || !data || halftrack < 2 || halftrack >= G64_MAX_TRACKS) return -1;
+    if (!image || !data || halftrack < 0 || halftrack >= G64_MAX_TRACKS) return -1;
     
     /* Free existing */
     free(image->track_data[halftrack]);
@@ -1066,7 +1107,7 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
     
     /* Convert each track */
     for (int track = 1; track <= num_tracks; track++) {
-        int halftrack = track * 2;
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);   /* MF-928 */
         int num_sectors = sector_map[track];
         
         if (track > d64->num_tracks) {
@@ -1221,7 +1262,7 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
     int sectors_converted = 0;
 
     for (int track = 1; track <= num_tracks; track++) {
-        int halftrack = track * 2;
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);   /* MF-928 */
 
         const uint8_t *sector_ptrs[21] = {0};
         uint8_t sector_data[21][256];
@@ -1597,9 +1638,11 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
      * Die Halbspur-Indizierung bleibt (`t += 2`): `track_data[]` ist
      * ueber Halbspuren indiziert, Spur n liegt auf Index 2n. */
     int highest = 35;
-    for (int t = 36 * 2; t <= 42 * 2; t += 2) {
-        if (g64->track_data[t] && g64->tracks[t].length > 0) {
-            highest = t / 2;
+    for (int spur = 36; spur <= 42; spur++) {
+        int h = G64_TRACK_TO_HALFTRACK(spur);   /* MF-928 */
+        if (h < G64_MAX_TRACKS &&
+            g64->track_data[h] && g64->tracks[h].length > 0) {
+            highest = spur;
         }
     }
     int num_tracks = d64_extent_for_highest(highest);
@@ -1622,7 +1665,7 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
     
     /* Convert each track */
     for (int track = 1; track <= num_tracks; track++) {
-        int halftrack = track * 2;
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);   /* MF-928 */
         
         if (!g64->track_data[halftrack] || g64->tracks[halftrack].length == 0) {
             continue;
@@ -1638,13 +1681,24 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
         }
     }
     
-    /* Try to extract disk ID from track 18 */
-    if (g64->track_data[36] && g64->tracks[36].length > 0) {
+    /* Try to extract disk ID from track 18.
+     *
+     * MF-928: hier stand die feste Zahl **36** — Spur 18 unter der
+     * alten Rechnung (18*2). Mit der Abbildung der Datei (2*(t-1))
+     * liegt Spur 18 auf Platz **34**, und der BAM wurde nicht mehr
+     * gefunden: die Disk-ID blieb auf dem Vorgabewert '00' aus
+     * `d64_create()`, waehrend der Plugin-Weg '42' las. Gemessen im
+     * Rotbeweis `test_convert_via_plugin`.
+     *
+     * Eine feste Zahl an dieser Stelle ist genau das, was das Makro
+     * verhindern soll. */
+    const int bam_ht = G64_TRACK_TO_HALFTRACK(D64_BAM_TRACK);
+    if (g64->track_data[bam_ht] && g64->tracks[bam_ht].length > 0) {
         uint8_t bam[256];
         int track_num, sector_num;
         uint8_t id[2];
-        
-        if (gcr_to_sector(g64->track_data[36], g64->tracks[36].length,
+
+        if (gcr_to_sector(g64->track_data[bam_ht], g64->tracks[bam_ht].length,
                           bam, &track_num, &sector_num, id, NULL) == 0) {
             if (track_num == 18 && sector_num == 0) {
                 img->disk_id[0] = bam[D64_BAM_ID_OFFSET];

@@ -575,7 +575,13 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
     }
 
     /* Iterate tracks and analyze GCR data per track */
-    for (int halftrack = 2; halftrack <= g64->num_tracks * 2 && halftrack < G64_MAX_TRACKS; halftrack++) {
+    /* MF-928: die Halbspur-Abbildung ist jetzt die der DATEI —
+     * Eintrag i liegt auf Platz i, Spur t auf 2*(t-1). Vorher
+     * begann diese Schleife bei 2, weil Platz 0 und 1 unter der
+     * alten Rechnung (t*2) brachlagen. Seit MF-928 liegen dort
+     * Spur 1.0 und 1.5 — die Schleife haette sie uebersprungen,
+     * gemessen als 69 statt 71 Spuren auf c64pp_bountybob.g64. */
+    for (int halftrack = 0; halftrack < G64_MAX_TRACKS; halftrack++) {
         const uint8_t *trackData = nullptr;
         size_t trackLen = 0;
         uint8_t speed = 0;
@@ -610,7 +616,7 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
          * the conversion, the clean disks report zero hits through this reader,
          * matching the plugin reader exactly. */
         ufm_c64_track_metrics_t metrics = {};
-        if (!ufm_c64_metrics_from_gcr(trackData, trackLen, halftrack - 2,
+        if (!ufm_c64_metrics_from_gcr(trackData, trackLen, halftrack,   /* MF-928 */
                                       UFM_C64_SPEED_ZONE_AUTO, &metrics)) {
             continue;
         }
