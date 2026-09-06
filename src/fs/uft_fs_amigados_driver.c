@@ -114,9 +114,21 @@ static uft_error_t amigados_readdir(uft_filesystem_t *fs, const char *path,
         d->is_protected  = (e->protection & (1u << 2)) == 0;
     }
 
+    /* MF-935: hier stand `*count = dir.count;` NACH dem Freigeben.
+     *
+     * `uft_amiga_free_dir()` setzt `dir->count = dir->capacity = 0`.
+     * Die Anzahl wurde also genullt, bevor sie gelesen wurde — der
+     * Treiber gab einen korrekt gefuellten Eintragsblock zurueck UND
+     * meldete dazu 0, mit UFT_OK. Wer darueber iteriert, sah ein leeres
+     * Verzeichnis, egal was auf der Diskette stand.
+     *
+     * `amigados_driver` ist der EINZIGE registrierte uft_fs_driver_t im
+     * Baum; es gab keinen zweiten, an dem der Unterschied aufgefallen
+     * waere, und keinen Test, der diesen Weg lief. */
+    const size_t n = dir.count;
     uft_amiga_free_dir(&dir);
     *entries = out;
-    *count = dir.count;
+    *count = n;
     return UFT_OK;
 }
 
