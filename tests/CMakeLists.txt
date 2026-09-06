@@ -1936,6 +1936,13 @@ foreach(test_source ${TEST_SOURCES})
             # MF-404: the half-track test needs the rights-free VICE G64 as
             # its negative control (a disk that has none).
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_copylock_seed_wird_nicht_erfunden")
+        # MF-943: uft_copylock_extract_seed() erfand bei fehlgeschlagener
+        # Rueckgewinnung einen Seed aus Byte-Positionen und meldete 0 —
+        # seed_valid war damit immer wahr, "estimated" unerreichbar, und
+        # uft_protection_classify.c:433 leitete daraus `reconstructable` ab.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_copylock.c)
     elseif(${test_name} STREQUAL "test_corpus_protection_copylock")
         # Real-corpus protection: CopyLock ST vs dec0de game samples, local-only (MF-377)
         target_sources(${test_name} PRIVATE

@@ -522,8 +522,17 @@ uint8_t uft_copylock_expected_timing(uint16_t sync);
  * @param track_data Raw MFM track data
  * @param track_bits Number of bits in track
  * @param variant Detected variant
- * @param seed Output: extracted seed
- * @return UFT_OK if seed extracted, error code otherwise
+ * @param seed Output: extracted seed (auch bei Rueckgabe 1 gesetzt)
+ * @return 0  Seed ZURUECKGEWONNEN und gegen die Folge geprueft
+ * @return 1  Seed ist eine SCHAETZUNG (Positionsverfahren) — er steht in
+ *            @p seed, ist aber NICHT belegt. Aufrufer duerfen ihn nicht
+ *            als gemessen ausgeben (MF-943).
+ * @return <0 kein Seed (kein Sync, ungueltige Argumente, Spur zu kurz)
+ *
+ * MF-943: bis dahin lieferte auch der Schaetzpfad 0, und `seed_valid`
+ * beim Aufrufer war damit immer wahr — bis hin zu
+ * `det->reconstructable`. Gemessen greift die Rueckgewinnung in 4 von
+ * 512 Faellen (P3-225), der Schaetzpfad also fast immer.
  */
 int uft_copylock_extract_seed(const uint8_t *track_data,
                                uint32_t track_bits,

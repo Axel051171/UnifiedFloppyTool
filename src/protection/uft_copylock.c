@@ -388,13 +388,41 @@ int uft_copylock_extract_seed(const uint8_t *track_data,
         return 0;
     }
     
-    /* Fallback: use position-based estimation */
+    /* MF-943: hier stand `return 0` — und damit galt eine aus BYTE-
+     * POSITIONEN gerechnete Zahl als zurueckgewonnener Seed.
+     *
+     * Die Folge reichte weit: `uft_copylock_detect()` setzt
+     * `result->seed_valid = (err == 0)`, der Bericht druckt
+     * `seed_valid ? "verified" : "estimated"` — das Wort „estimated" war
+     * also vorhanden und UNERREICHBAR —, und
+     * `src/protection/uft_protection_classify.c:433` leitet daraus
+     * `det->reconstructable` ab. UFT sagte damit zu, ein Schutz sei
+     * REKONSTRUIERBAR, gestuetzt auf einen geratenen Wert.
+     *
+     * Wie oft das griff, ist gemessen: `uft_copylock_lfsr_recover_seed()`
+     * gewinnt aus der Ausgabe des EIGENEN Erzeugers in **4 von 512**
+     * Faellen etwas zurueck (0,8 %; beide Phasenlagen geprueft). In ueber
+     * 99 % der Faelle wurde also dieser Zweig genommen — und meldete
+     * Erfolg. Warum die Rueckgewinnung so selten greift, ist ein eigener
+     * offener Punkt (P3-225): die Zustandsrekonstruktion setzt Bit 7 nie
+     * und bildet die Bits von `data[1]` an die falsche Stelle ab.
+     *
+     * Der Header-Vertrag sagte es bereits richtig: „UFT_OK if seed
+     * extracted, error code otherwise". Eine Schaetzung ist nicht
+     * „extracted".
+     *
+     * Seither:  0 = zurueckgewonnen und gegen die Folge geprueft
+     *           1 = SCHAETZUNG, steht in *seed, ist aber nicht belegt
+     *          <0 = gar kein Seed
+     *
+     * Der Schaetzwert wird weiterhin GELIEFERT — „Kein Bit verloren".
+     * Er wird nur nicht mehr als Messung ausgegeben. */
     *seed = ((uint32_t)track_data[data_start] << 15) |
             ((uint32_t)track_data[data_start + 1] << 7) |
             (track_data[data_start + 2] >> 1);
     *seed &= UFT_COPYLOCK_LFSR_MASK;
-    
-    return 0;
+
+    return 1;   /* Schaetzung, nicht zurueckgewonnen */
 }
 
 bool uft_copylock_verify_seed(uint32_t seed,
