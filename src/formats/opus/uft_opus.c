@@ -475,8 +475,18 @@ static uft_error_t opus_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
-/* In-memory write (side 0 only — OPUS is a single-sided Spectrum format).
- * Persist via uft_opus_write(). */
+/* MF-931: schreibt die Speicherkopie UND die Datei.
+ *
+ * Der Weg fuehrt bewusst NICHT ueber `close()`: das ist `void`. Ein dort
+ * scheiternder Schreibvorgang waere eine STILLE Veraenderung — genau
+ * das, was `docs/DESIGN_PRINCIPLES.md` verbietet. `write_track` hat
+ * einen Fehlerkanal, also benutzt er ihn.
+ *
+ * Und es entsteht KEINE neue Layout-Rechnung: nach der Speicheraenderung
+ * schreibt `uft_opus_write()` das ganze Abbild neu — derselbe Schreiber,
+ * den MF-905 gegen `src/samdisk/opd.cpp` (ReadOPD/WriteOPD, im Baum
+ * vendort unter MIT) belegt hat. Ein eigener Versatz waere eine zweite
+ * Umsetzung neben der geprueften, und die driftet. */
 static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track) {
     /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
@@ -494,10 +504,28 @@ static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
-    if (head != 0) return UFT_ERR_NOT_SUPPORTED;
+
+    /* MF-931: hier stand `head != 0` und `track_data[cyl]`.
+     *
+     * MF-905 hat genau das auf der LESESEITE repariert — `head >=
+     * image->heads` und `[cyl * heads + head]` — und die Schreibseite
+     * stehen lassen. Dieselbe Halbierung wie MF-519 gegen MF-529: die
+     * Leseseite geholt, die Schreibseite uebersehen.
+     *
+     * Der Fehler war doppelt gefaehrlich, weil er sich selbst gedeckt
+     * haette: Lesen und Schreiben mit demselben falschen Index laufen
+     * rund. Der Rotbeweis prueft deshalb, dass Seite 0 UNVERAENDERT
+     * bleibt, wenn Seite 1 geschrieben wird. */
+    if (head >= image->heads) return UFT_ERR_INVALID_PARAM;
     if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
 
-    uft_track_t *dst = image->track_data[cyl];
+    /* Ohne Ziel kann niemand schreiben — dann wird das GESAGT, nicht
+     * Erfolg gemeldet. `uft_disk_open()` setzt `disk->path`, bevor es
+     * das Plugin ruft (`src/core/uft_core_stubs.c`); wer das Plugin
+     * direkt oeffnet, muss es selbst tun. */
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+    uft_track_t *dst = image->track_data[(size_t)cyl * image->heads + head];
     if (!dst) return UFT_ERR_INVALID_PARAM;
 
     /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
@@ -532,14 +560,32 @@ static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
      *
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
      * Aufrufer keine Begruendung. */
-    (void)dst;
-    return UFT_ERROR_NOT_SUPPORTED;
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. Das ist
+     * der Unterschied zu MF-930, wo genau hier `UFT_OK` stand. */
+    uft_error_t werr = uft_opus_write(image, disk->path);
+    if (werr != UFT_OK) return werr;
+
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_opus_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_opus_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-931: write_track aendert die Speicherkopie und schreibt ueber "
+      "uft_opus_write() durch; belegt in tests/test_schreibzusage_erreicht_die_datei.c" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -552,7 +598,8 @@ const uft_format_plugin_t uft_format_plugin_opus = {
     .description = "OPUS Discovery (ZX Spectrum)",
     .extensions = "opd,opus",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = opus_probe_plugin,
     .open = opus_open,
     .close = opus_close,

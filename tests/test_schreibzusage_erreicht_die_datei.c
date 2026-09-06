@@ -96,10 +96,12 @@ static void temp_pfad(char *p, size_t n) {
 /* Ein gueltiges OPD, gebaut wie in tests/test_opd_geometrie.c (MF-905).
  * Bootsektor: jr, Fuellbyte, Zylinder, Sektoren, Flags. */
 #define OP_JR 0x18
-static int baue_opd(const char *pfad, uint8_t cyls, uint8_t sektoren_je_spur)
+static int baue_opd_n(const char *pfad, uint8_t cyls, uint8_t sektoren_je_spur,
+                      int zwei_seiten)
 {
     const size_t sektorgroesse = 256;           /* Groessencode 1 */
-    const size_t n = (size_t)cyls * sektoren_je_spur * sektorgroesse;
+    const uint8_t heads = zwei_seiten ? 2 : 1;
+    const size_t n = (size_t)cyls * heads * sektoren_je_spur * sektorgroesse;
     uint8_t *p = calloc(1, n);
     if (!p) return 0;
 
@@ -107,7 +109,9 @@ static int baue_opd(const char *pfad, uint8_t cyls, uint8_t sektoren_je_spur)
     p[1] = 0x28;
     p[2] = cyls;
     p[3] = sektoren_je_spur;
-    p[4] = (uint8_t)(1u << 6);                  /* 256 B, einseitig */
+    /* Flags: Groessencode in Bit 6/7, zwei Seiten in Bit 4 — nach
+     * src/samdisk/opd.cpp (ReadOPD/WriteOPD), MF-905. */
+    p[4] = (uint8_t)((1u << 6) | (zwei_seiten ? 0x10u : 0x00u));
 
     /* Jeden Sektor unterscheidbar fuellen. */
     for (size_t s = 1; s < n / sektorgroesse; s++)
@@ -119,6 +123,22 @@ static int baue_opd(const char *pfad, uint8_t cyls, uint8_t sektoren_je_spur)
     fclose(f);
     free(p);
     return w == n;
+}
+
+static int baue_opd(const char *pfad, uint8_t cyls, uint8_t sektoren_je_spur)
+{
+    return baue_opd_n(pfad, cyls, sektoren_je_spur, 0);
+}
+
+/* Spiegelt, was `uft_disk_open()` tut, bevor es das Plugin ruft:
+ * Pfad in `path_buf`, `path` darauf zeigen lassen
+ * (`src/core/uft_core_stubs.c`, gemessen MF-931). Ohne diesen Schritt
+ * hat das Plugin keinen Ort, an den es schreiben koennte — und muss
+ * das dann auch sagen, statt Erfolg zu melden. */
+static void setze_pfad(uft_disk_t *d, const char *pfad)
+{
+    snprintf(d->path_buf, sizeof(d->path_buf), "%s", pfad);
+    d->path = d->path_buf;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -155,8 +175,16 @@ TEST(erfolg_bedeutet_die_datei_traegt_es)
     sektoren_frei(&t);
     uft_format_plugin_opus.close(&disk);
 
-    if (r == UFT_ERROR_NOT_SUPPORTED) {
-        /* Ehrliche Absage — dann muss die Datei unberuehrt sein. */
+    if (r != UFT_OK) {
+        /* Ehrliche Absage — dann muss die Datei unberuehrt sein.
+         *
+         * MF-931: hier stand `r == UFT_ERROR_NOT_SUPPORTED`. Das war zu
+         * eng: es gibt einen DRITTEN ehrlichen Ausgang neben „kann ich
+         * nicht" und „erledigt" — „ich kann nicht, und zwar aus diesem
+         * Grund" (hier `UFT_ERR_INVALID_STATE`, wenn kein Pfad gesetzt
+         * ist). Die Zusicherung dieses Tests ist NICHT, welcher
+         * Fehlercode kommt, sondern: was nicht `UFT_OK` meldet, darf die
+         * Datei nicht angefasst haben. */
         uft_disk_t d2;
         memset(&d2, 0, sizeof(d2));
         ASSERT(uft_format_plugin_opus.open(&d2, pfad, true) == UFT_OK);
@@ -171,7 +199,6 @@ TEST(erfolg_bedeutet_die_datei_traegt_es)
     }
 
     /* Erfolg gemeldet — dann MUSS die Aenderung in der Datei stehen. */
-    ASSERT(r == UFT_OK);
 
     uft_disk_t d2;
     memset(&d2, 0, sizeof(d2));
@@ -225,6 +252,189 @@ TEST(die_zusage_und_die_tat_stimmen_ueberein)
     }
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+ *  MF-931: opus schreibt bis in die Datei.
+ *
+ *  Das Gegenstueck zu MF-930. Dort wurde die Zusage ZURUECKGENOMMEN,
+ *  weil elf Formate keinen Weg zu ihrem eigenen Schreiber hatten. Fuer
+ *  `opus` ist der Weg jetzt gebaut — und zwar so, dass KEINE neue
+ *  Layout-Rechnung entsteht: `write_track` aendert die Speicherkopie
+ *  und ruft danach `uft_opus_write()`, denselben Schreiber, den MF-905
+ *  gegen `src/samdisk/opd.cpp` belegt hat.
+ *
+ *  Warum nicht ueber `close()`: das ist `void`. Ein dort scheiternder
+ *  Schreibvorgang waere eine STILLE Veraenderung — genau das, was
+ *  DESIGN_PRINCIPLES verbietet. `write_track` hat einen Fehlerkanal.
+ * ───────────────────────────────────────────────────────────────────── */
+TEST(opus_schreibt_bis_in_die_datei)
+{
+    ASSERT(uft_format_plugin_opus.write_track != NULL);
+
+    char pfad[400];
+    temp_pfad(pfad, sizeof(pfad));
+    ASSERT(baue_opd(pfad, 40, 18));
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = false;
+    setze_pfad(&disk, pfad);
+    ASSERT(uft_format_plugin_opus.open(&disk, pfad, false) == UFT_OK);
+
+    uft_track_t t;
+    memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_opus.read_track(&disk, 5, 0, &t) == UFT_OK);
+    ASSERT(t.sector_count > 0 && t.sectors[0].data != NULL);
+    const uint8_t vorher = t.sectors[0].data[0];
+    const uint8_t neu    = (uint8_t)(vorher ^ 0xFF);
+    t.sectors[0].data[0] = neu;
+
+    /* DIE ZEILE: keine Absage mehr. */
+    ASSERT(uft_format_plugin_opus.write_track(&disk, 5, 0, &t) == UFT_OK);
+    sektoren_frei(&t);
+    uft_format_plugin_opus.close(&disk);
+
+    uft_disk_t d2;
+    memset(&d2, 0, sizeof(d2));
+    ASSERT(uft_format_plugin_opus.open(&d2, pfad, true) == UFT_OK);
+    uft_track_t t2;
+    memset(&t2, 0, sizeof(t2));
+    ASSERT(uft_format_plugin_opus.read_track(&d2, 5, 0, &t2) == UFT_OK);
+    ASSERT(t2.sectors[0].data != NULL);
+    ASSERT(t2.sectors[0].data[0] == neu);
+    sektoren_frei(&t2);
+    uft_format_plugin_opus.close(&d2);
+    remove(pfad);
+}
+
+/* Ohne Pfad kann niemand schreiben — dann muss das Plugin es SAGEN.
+ * Ein `write_track`, das ohne Ziel `UFT_OK` meldet, waere MF-930 von
+ * vorn. */
+TEST(ohne_pfad_wird_abgesagt_statt_gelogen)
+{
+    char pfad[400];
+    temp_pfad(pfad, sizeof(pfad));
+    ASSERT(baue_opd(pfad, 40, 18));
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = false;
+    /* KEIN setze_pfad() — genau der Unterschied. */
+    ASSERT(uft_format_plugin_opus.open(&disk, pfad, false) == UFT_OK);
+
+    uft_track_t t;
+    memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_opus.read_track(&disk, 5, 0, &t) == UFT_OK);
+    uft_error_t r = uft_format_plugin_opus.write_track(&disk, 5, 0, &t);
+    sektoren_frei(&t);
+    uft_format_plugin_opus.close(&disk);
+    remove(pfad);
+
+    ASSERT(r != UFT_OK);
+}
+
+/* Seite 1 einer doppelseitigen OPD.
+ *
+ * MF-905 hat `read_track` von `track_data[cyl]` auf
+ * `[cyl * heads + head]` gezogen und `head != 0` entfernt — auf der
+ * SCHREIBSEITE blieb beides stehen. Dieselbe Halbierung wie MF-519 vs.
+ * MF-529: die Leseseite repariert, die Schreibseite uebersehen. */
+TEST(opus_schreibt_auch_auf_seite_1)
+{
+    char pfad[400];
+    temp_pfad(pfad, sizeof(pfad));
+    ASSERT(baue_opd_n(pfad, 40, 18, /*zwei_seiten*/1));
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = false;
+    setze_pfad(&disk, pfad);
+    ASSERT(uft_format_plugin_opus.open(&disk, pfad, false) == UFT_OK);
+    ASSERT(disk.geometry.heads == 2);
+
+    uft_track_t t;
+    memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_opus.read_track(&disk, 5, 1, &t) == UFT_OK);
+    ASSERT(t.sector_count > 0 && t.sectors[0].data != NULL);
+    const uint8_t neu = (uint8_t)(t.sectors[0].data[0] ^ 0xFF);
+    t.sectors[0].data[0] = neu;
+
+    ASSERT(uft_format_plugin_opus.write_track(&disk, 5, 1, &t) == UFT_OK);
+    sektoren_frei(&t);
+    uft_format_plugin_opus.close(&disk);
+
+    uft_disk_t d2;
+    memset(&d2, 0, sizeof(d2));
+    ASSERT(uft_format_plugin_opus.open(&d2, pfad, true) == UFT_OK);
+
+    /* Seite 1 traegt den neuen Wert ... */
+    uft_track_t t2;
+    memset(&t2, 0, sizeof(t2));
+    ASSERT(uft_format_plugin_opus.read_track(&d2, 5, 1, &t2) == UFT_OK);
+    ASSERT(t2.sectors[0].data[0] == neu);
+    sektoren_frei(&t2);
+
+    /* ... und Seite 0 derselben Spur wurde NICHT mitgeschrieben.
+     * Ohne diese Zusicherung wuerde ein falscher Index (track_data[cyl]
+     * statt [cyl*heads+head]) unbemerkt durchgehen, weil Lesen und
+     * Schreiben denselben Fehler machen wuerden. */
+    uft_track_t t0;
+    memset(&t0, 0, sizeof(t0));
+    ASSERT(uft_format_plugin_opus.read_track(&d2, 5, 0, &t0) == UFT_OK);
+    ASSERT(t0.sectors[0].data[0] != neu);
+    sektoren_frei(&t0);
+
+    uft_format_plugin_opus.close(&d2);
+    remove(pfad);
+}
+
+/* Der Schreiber scheitert — und das MUSS beim Aufrufer ankommen.
+ *
+ * Diese Luecke fand die Mutationsmatrix (M4): `(void)werr;` statt
+ * `if (werr != UFT_OK) return werr;` blieb GRUEN, weil kein Fall den
+ * Schreiber ueberhaupt scheitern liess — die Pfadpruefung griff vorher.
+ * Ein verschluckter Schreibfehler ist exakt die MF-930-Klasse.
+ *
+ * Der Aufbau: regulaer oeffnen (das Abbild liegt danach im Speicher),
+ * dann das Ziel auf einen Pfad umbiegen, den `fopen(..., "wb")` nicht
+ * anlegen kann — ein Verzeichnis, das es nicht gibt. */
+TEST(scheitert_der_schreiber_erfaehrt_es_der_aufrufer)
+{
+    char pfad[400];
+    temp_pfad(pfad, sizeof(pfad));
+    ASSERT(baue_opd(pfad, 40, 18));
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = false;
+    setze_pfad(&disk, pfad);
+    ASSERT(uft_format_plugin_opus.open(&disk, pfad, false) == UFT_OK);
+
+    uft_track_t t;
+    memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_opus.read_track(&disk, 5, 0, &t) == UFT_OK);
+    ASSERT(t.sector_count > 0 && t.sectors[0].data != NULL);
+    t.sectors[0].data[0] ^= 0xFF;
+
+    char kaputt[500];
+    snprintf(kaputt, sizeof(kaputt),
+             "%s_gibt_es_nicht/darin/x.opd", pfad);
+    setze_pfad(&disk, kaputt);
+
+    /* Nicht welcher Code — nur: NICHT UFT_OK. */
+    uft_error_t r = uft_format_plugin_opus.write_track(&disk, 5, 0, &t);
+    sektoren_frei(&t);
+    uft_format_plugin_opus.close(&disk);
+
+    ASSERT(r != UFT_OK);
+
+    /* Und die urspruengliche Datei ist unberuehrt geblieben. */
+    uft_disk_t d2;
+    memset(&d2, 0, sizeof(d2));
+    ASSERT(uft_format_plugin_opus.open(&d2, pfad, true) == UFT_OK);
+    uft_format_plugin_opus.close(&d2);
+    remove(pfad);
+}
+
 int main(void)
 {
     printf("=== Schreibzusage erreicht die Datei (MF-930) ===\n");
@@ -233,6 +443,10 @@ int main(void)
      * irgendeine Zusicherung etwas sagen kann. */
     RUN(die_zusage_und_die_tat_stimmen_ueberein);
     RUN(erfolg_bedeutet_die_datei_traegt_es);
+    RUN(opus_schreibt_bis_in_die_datei);
+    RUN(ohne_pfad_wird_abgesagt_statt_gelogen);
+    RUN(opus_schreibt_auch_auf_seite_1);
+    RUN(scheitert_der_schreiber_erfaehrt_es_der_aufrufer);
     printf("\n%d passed, %d failed\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

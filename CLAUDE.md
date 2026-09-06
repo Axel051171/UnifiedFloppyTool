@@ -104,8 +104,21 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > `write_track` den Schreiber — transitiv innerhalb der Datei, damit ein
 > Helfer dazwischen kein Fehlalarm ist. **11 gegen den Vorzustand, 0
 > heute**, Selbsttest 10/10. Über **Dateigrenzen** wird nicht verfolgt;
-> das steht benannt im Torkopf. Die elf fertigen, unverdrahteten Schreiber
+> das steht benannt im Torkopf. Die fertigen, unverdrahteten Schreiber
 > sind **P3-204** — Arbeit, kein Fehler.
+>
+> **MF-931 — der erste ist gegangen, und der Weg ist damit vorgeführt
+> statt beschrieben.** `opus` schreibt jetzt bis in die Datei (noch zehn).
+> Vier Regeln, die für alle übrigen gelten: **nicht über `close()`** (das
+> ist `void` — ein dort scheiternder Schreibvorgang wäre eine *stille
+> Veränderung*); **keine eigene Versatzrechnung**, sondern den vorhandenen
+> geprüften `uft_<fmt>_write()` rufen; **`disk->path` prüfen** und ohne
+> Ziel *absagen* statt zu lügen; und **die Schreibseite gegen die
+> Leseseite halten** — bei `opus` stand dort noch `head != 0` und
+> `track_data[cyl]`, was MF-905 auf der Leseseite längst behoben hatte.
+> Das ist der dritte Fall von „Leseseite geholt, Schreibseite übersehen“
+> nach MF-519/MF-529; in diesem Baum ist die Schreibseite **systematisch
+> die ältere**.
 >
 > Die Liste unten nennt, was **gelesen** werden soll. Ob ein Format auch
 > **geschrieben** wird, sagt seine Merkmalstafel — nicht diese Überschrift.
