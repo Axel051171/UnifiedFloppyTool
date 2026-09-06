@@ -44,6 +44,48 @@ static const struct {
     { 0, 0, 0, 0, 0, NULL }
 };
 
+
+/* ── MF-921 (P3-182): was tragen ALLE Zeilen dieser Groesse? ─────────
+ *
+ * Die Sonde/der Leser darunter kehrte bei der ERSTEN passenden Zeile
+ * zurueck. Steht dieselbe Gesamtgroesse zweimal, gab das still die
+ * erste Geometrie aus — eine Auswahl, die entscheidet, wo sie nicht
+ * entscheiden kann (dieselbe Form wie die Guard-Kollision MF-881,
+ * gemessen von Tor 58 aus MF-906).
+ *
+ * Der forensische Punkt: aus der Dateilaenge allein ist die Aufteilung
+ * nicht ableitbar — sie steht auf dem Traeger, nicht im Abzug. 409600
+ * Byte sind 40 Spuren doppelseitig ODER 80 Spuren einseitig.
+ *
+ * Die Bytes bleiben immer. Zurueckgenommen wird je FELD: worin sich
+ * alle passenden Zeilen einig sind, bleibt stehen; wo sie sich
+ * unterscheiden, steht 0. */
+
+static int bk_einigung(size_t size, int *tracks, int *sectors, int *heads, int *sector_size) {
+    int treffer = 0;
+    int v_tracks = 0; int u_tracks = 0;
+    int v_sectors = 0; int u_sectors = 0;
+    int v_heads = 0; int u_heads = 0;
+    int v_sector_size = 0; int u_sector_size = 0;
+    for (int i = 0; g_bk_geom[i].name; i++) {
+        if (size != g_bk_geom[i].total_size) continue;
+        treffer++;
+        if (treffer == 1) v_tracks = g_bk_geom[i].tracks;
+        else if (v_tracks != g_bk_geom[i].tracks) u_tracks = 1;
+        if (treffer == 1) v_sectors = g_bk_geom[i].sectors;
+        else if (v_sectors != g_bk_geom[i].sectors) u_sectors = 1;
+        if (treffer == 1) v_heads = g_bk_geom[i].heads;
+        else if (v_heads != g_bk_geom[i].heads) u_heads = 1;
+        if (treffer == 1) v_sector_size = g_bk_geom[i].sector_size;
+        else if (v_sector_size != g_bk_geom[i].sector_size) u_sector_size = 1;
+    }
+    if (tracks) *tracks = u_tracks ? 0 : v_tracks;
+    if (sectors) *sectors = u_sectors ? 0 : v_sectors;
+    if (heads) *heads = u_heads ? 0 : v_heads;
+    if (sector_size) *sector_size = u_sector_size ? 0 : v_sector_size;
+    return treffer;
+}
+
 static int bk_calc_offset(int track, int head, int sector, int heads) {
     /* Sectors are 1-based in RT-11 */
     return ((track * heads + head) * BK_SECTORS + (sector - 1)) * BK_SECTOR_SIZE;
@@ -57,16 +99,13 @@ int uft_bk0010_probe(const uint8_t *data, size_t size, int *out_tracks,
     int tracks = 0, heads = 0;
     bk_dos_type_t dos = BK_DOS_UNKNOWN;
     
-    /* Check size */
-    for (int i = 0; g_bk_geom[i].name; i++) {
-        if (size == g_bk_geom[i].total_size) {
-            tracks = g_bk_geom[i].tracks;
-            heads = g_bk_geom[i].heads;
-            confidence = 35;
-            break;
-        }
-    }
-    
+    /* Check size — MF-921: und ob sie EINDEUTIG ist. 409600 Byte
+     * stehen zweimal in g_bk_geom (80T/1H und 40T/2H). */
+    int sektoren = 0, sektorgroesse = 0;
+    int treffer = bk_einigung(size, &tracks, &sektoren, &heads,
+                              &sektorgroesse);
+    if (treffer > 0) confidence = 35;
+
     if (confidence == 0) return 0;
     
     /* Check RT-11 home block (block 1) */
@@ -115,6 +154,11 @@ int uft_bk0010_probe(const uint8_t *data, size_t size, int *out_tracks,
     if (out_heads) *out_heads = heads;
     if (out_dos) *out_dos = dos;
     
+    /* MF-921: ist die Groesse mehrdeutig, wurde nichts ueber die
+     * Dateilaenge hinaus BELEGT — die Zahl bleibt im Band „nur die
+     * Groesse" (30..49, MF-729), egal was die Heuristiken addiert
+     * haben. */
+    if (treffer > 1 && confidence > 49) confidence = 49;
     return confidence;
 }
 

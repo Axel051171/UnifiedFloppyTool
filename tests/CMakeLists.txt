@@ -1643,6 +1643,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_geometrie_kollision_schweigt_nicht")
+        # MF-921 (P3-182): die drei Module mit Groessen-Kollision in ihrer
+        # Geometrietabelle. Alle drei sind Waisen — der Test misst einen
+        # Vertrag, keinen Vorfall.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/industrial/uft_heathkit.c
+            ${CMAKE_SOURCE_DIR}/src/formats/japanese_ext/uft_hitachi_s1.c
+            ${CMAKE_SOURCE_DIR}/src/formats/soviet/uft_bk0010.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_convert_via_plugin")
         # MF-433: converter seam — blob loader vs plugin, byte-identical
         target_sources(${test_name} PRIVATE
