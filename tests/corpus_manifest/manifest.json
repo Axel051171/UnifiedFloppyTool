@@ -19,7 +19,8 @@
       "source": "c1541 -format \"uftcorpus,42\" d64 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
       "test": "test_corpus_d64",
       "oracle": "c1541",
-      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)"
+      "fremdcode": "nein - Block 0 gemessen: 0 von 1024 Bytes ungleich null (Kennung + Nullen), kein ausfuehrbarer Bootblock (MF-779)",
+      "content": "UFTCORPUS,42"
     },
     {
       "file": "tests/corpus_free/xdftool_dd_ofs.adf",
@@ -116,7 +117,8 @@
       "source": "c1541 -format \"uftg64,42\" g64 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Real 1541 GCR bitstreams: 35 tracks, speed zones 3/2/1/0, 21/19/18/17 sectors, no half-tracks",
       "test": "test_c64_metrics_corpus",
       "oracle": "c1541",
-      "fremdcode": "nein - per ABSTAMMUNG: erzeugt aus einem Abbild, dessen Block 0 gemessen sauber ist; der Containerkopf ist Werkzeug-Metadaten, nicht Diskettenblock 0 (MF-779)"
+      "fremdcode": "nein - per ABSTAMMUNG: erzeugt aus einem Abbild, dessen Block 0 gemessen sauber ist; der Containerkopf ist Werkzeug-Metadaten, nicht Diskettenblock 0 (MF-779)",
+      "content": "84 Halbspur-Eintraege, 35 belegt"
     },
     {
       "file": "tests/corpus/c64pp_bountybob.g64",
@@ -125,7 +127,8 @@
       "origin": "real",
       "tool": "historical (Bounty Bob Strikes Back, Big Five Software 1985, v1.2 original disk)",
       "source": "archive.org item C64_Preservation_Project_10th_Anniversary_Collection, file C64_Preservation_Project_10th_Anniversary_Collection_G64.zip, inner path c64pp-g64-zip/b/bounty_bob_strikes_back[big_five_1985](v1_2).zip; collection released by Pete Rittwage for \"no strings attached\" download, game code copyrighted -> LOCAL-ONLY. PROTECTED: 71 populated slots, 35 true half-tracks, whole tracks 1-10/13-16/37 carry sync without standard 1541 headers; track 1 is short (6250 vs 7692 nominal)",
-      "test": "test_c64_protection_real_corpus"
+      "test": "test_c64_protection_real_corpus",
+      "content": "84 Halbspur-Eintraege, 71 belegt"
     },
     {
       "file": "tests/corpus/c64pp_aliensyndrome.g64",
@@ -134,7 +137,8 @@
       "origin": "real",
       "tool": "historical (Alien Syndrome, Sega 1987, PAL original disk)",
       "source": "same collection, inner path c64pp-g64-zip/a/alien_syndrome[sega_1987](pal)(!).zip; LOCAL-ONLY. NEGATIVE control: a genuine production disk, 40 tracks, every one carrying standard 1541 headers and no anomaly",
-      "test": "test_c64_protection_real_corpus"
+      "test": "test_c64_protection_real_corpus",
+      "content": "84 Halbspur-Eintraege, 40 belegt"
     },
     {
       "file": "tests/corpus/dec0de_RAINBISL.BIN",

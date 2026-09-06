@@ -85,6 +85,23 @@ def _fn(rumpf: str, kopf: str = "static int f(int cyl, int head)") -> str:
     return kopf + "\n{\n" + rumpf + "\n}\n"
 
 
+# Eine D64 aus lauter ASCII (siehe den Fall-Block zu Tor 59 unten).
+# Die BAM liegt auf Spur 18 Sektor 0 = (17 * 21) * 256 = 91392; der
+# Diskettenname bei +0x90, die ID bei +0xA2.
+def _d64(name: str, kennung: str) -> str:
+    b = ["."] * (91392 + 0xA2 + 2)
+    for i, c in enumerate(name):
+        b[91392 + 0x90 + i] = c
+    for i, c in enumerate(kennung):
+        b[91392 + 0xA2 + i] = c
+    return "".join(b)
+
+
+def _manifest(inhalt: str) -> str:
+    return ('{"images": [{"file": "tests/corpus_free/x.d64", '
+            '"format": "d64", "content": "%s"}]}\n' % inhalt)
+
+
 FAELLE: dict[str, list[Fall]] = {
 
     # ---------------------------------------------------------------
@@ -683,6 +700,45 @@ FAELLE: dict[str, list[Fall]] = {
                      for i in range(40)},
             erwartet="treffer", muster="ohne Lizenz daneben",
             warum="dieselbe Form, anderer Wirt — und damit Code."),
+    ],
+    # ---------------------------------------------------------------
+    # Tor 59 (MF-929). Die gepflanzte D64 besteht aus lauter ASCII —
+    # `Fall.dateien` wird als Text geschrieben, und ein `\xa0`-Fuellbyte
+    # (die echte CBM-Auffuellung) wuerde als ZWEI Bytes landen und alle
+    # Versaetze verschieben. Punkte tun es genauso: gemessen wird, ob
+    # Manifest und Datei uebereinstimmen, nicht ob die Diskette huebsch
+    # ist.
+    "audit_korpus_inhalt": [
+        Fall(
+            name="Manifest widerspricht der Datei",
+            dateien={
+                "tests/corpus_manifest/manifest.json":
+                    _manifest("ANDERE..........,77"),
+                "tests/corpus_free/x.d64": _d64("TESTDISK", "77"),
+            },
+            erwartet="treffer", muster="TESTDISK",
+            warum="der Kern: die Angabe wird gegen die DATEI gehalten, "
+                  "nicht gegen sich selbst. Genau die Luecke, durch die "
+                  "MF-923 drei Runden verlor."),
+        Fall(
+            name="Manifest stimmt mit der Datei ueberein",
+            dateien={
+                "tests/corpus_manifest/manifest.json":
+                    _manifest("TESTDISK........,77"),
+                "tests/corpus_free/x.d64": _d64("TESTDISK", "77"),
+            },
+            erwartet="sauber",
+            warum="eine richtige Angabe darf nicht gemeldet werden."),
+        Fall(
+            name="Abbild ohne Datei",
+            dateien={
+                "tests/corpus_manifest/manifest.json":
+                    _manifest("IRGENDWAS,00"),
+            },
+            erwartet="sauber",
+            warum="`tests/corpus/` ist gitignored — in CI fehlen die "
+                  "Dateien. Ein fehlendes Abbild ist Rueckstand, kein "
+                  "Befund; meldete das Tor hier, waere es in CI dauerrot."),
     ],
 }
 

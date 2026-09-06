@@ -1132,6 +1132,22 @@ def main() -> int:
         import audit_geometrie_kollision as _gk
         all_errors.append(("Geometrie-Kollision", _gk.check(repo)))
 
+        # Tor 59 (MF-929): das Korpus-Manifest fuehrt Herkunft und Hash,
+        # aber nicht den INHALT. Gemessen (MF-923): `vice_c1541_35trk.d64`
+        # traegt `UFTCORPUS`, `vice_c1541_35trk.g64` traegt `UFTG64` —
+        # gleicher Namensstamm, zwei verschiedene Disketten. Daraus wurde
+        # beim Bau eines Rotbeweises eine Zusicherung, die den einen BAM
+        # im anderen Abbild erwartete; die Fehlersuche kostete drei Runden.
+        #
+        # Geprueft wird `content` gegen die Datei — nur fuer D64 und G64,
+        # deren Kennung an einer dokumentierten festen Stelle steht. Fuer
+        # alles andere waere die Pruefung ein ZWEITER Leser neben dem des
+        # Baums, und genau diese Klasse jagt dieser Baum sonst.
+        #
+        # Grundlinie 45 (Abbilder ohne Angabe), darf nur fallen.
+        import audit_korpus_inhalt as _ki
+        all_errors.append(("Korpus-Inhalt", _ki.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
