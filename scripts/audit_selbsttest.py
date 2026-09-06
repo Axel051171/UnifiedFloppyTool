@@ -88,6 +88,25 @@ def _fn(rumpf: str, kopf: str = "static int f(int cyl, int head)") -> str:
 # Eine D64 aus lauter ASCII (siehe den Fall-Block zu Tor 59 unten).
 # Die BAM liegt auf Spur 18 Sektor 0 = (17 * 21) * 256 = 91392; der
 # Diskettenname bei +0x90, die ID bei +0xA2.
+def _zonen_baum() -> str:
+    """24 CBM-Zonentabellen in 10 Zaehlweisen (siehe Tor 60 unten).
+
+    Die Zaehlweise ergibt sich bei `audit_cbm_zonen` aus Laenge und
+    erstem Wert — variierende Laenge reicht also, um Zaehlweisen zu
+    erzeugen. Beide Grundlinien (23 Stellen, 9 Zaehlweisen) muessen
+    gerissen werden, sonst meldet ein Tor mit ABSOLUTER Grundlinie im
+    gepflanzten Baum grundsaetzlich nichts.
+    """
+    z = []
+    for i in range(10):                       # 10 Zaehlweisen
+        werte = [21, 19, 18, 17] + [17] * i
+        z.append("static const int za%02d[%d] = { %s };"
+                 % (i, len(werte), ", ".join(str(x) for x in werte)))
+    for i in range(14):                       # auf 24 Stellen auffuellen
+        z.append("static const int zb%02d[4] = { 21, 19, 18, 17 };" % i)
+    return "\n".join(z) + "\n"
+
+
 def _d64(name: str, kennung: str) -> str:
     b = ["."] * (91392 + 0xA2 + 2)
     for i, c in enumerate(name):
@@ -739,6 +758,45 @@ FAELLE: dict[str, list[Fall]] = {
             warum="`tests/corpus/` ist gitignored — in CI fehlen die "
                   "Dateien. Ein fehlendes Abbild ist Rueckstand, kein "
                   "Befund; meldete das Tor hier, waere es in CI dauerrot."),
+    ],
+    # ---------------------------------------------------------------
+    # Tor 60 (MF-932). Die Zaehlweise ergibt sich aus Laenge und erstem
+    # Wert; entscheidend ist der Filter auf die WERTEMENGE — ohne ihn
+    # melden auch Skew- und Dekodiertabellen, die 21/19/18/17 zufaellig
+    # enthalten (gemessen: 27 Kandidaten roh, 23 nach dem Filter).
+    "audit_cbm_zonen": [
+        Fall(
+            name="Grundlinie gerissen: 24 Stellen, 10 Zaehlweisen",
+            dateien={"src/formats/x.c": _zonen_baum()},
+            erwartet="treffer", muster="Zonenlaengen",
+            warum="Die Grundlinie von Tor 60 ist ABSOLUT (23 Stellen, "
+                  "9 Zaehlweisen). Eine einzelne gepflanzte Tabelle liegt "
+                  "darunter und loest nichts aus — die erste Fassung dieses "
+                  "Falls war genau deshalb blind, gemessen statt vermutet. "
+                  "Gepflanzt wird, was das Tor wirklich ausloest: mehr "
+                  "Stellen UND mehr Zaehlweisen als die Grundlinie."),
+        Fall(
+            name="Skew-Tabelle mit denselben Zahlen",
+            dateien={"src/formats/x.c":
+                     "static const int s[8] = "
+                     "{ 1, 7, 13, 19, 21, 5, 17, 18 };\n"},
+            erwartet="sauber",
+            warum="CP/M-Verzahnung, keine 1541-Zone. Ohne den Filter auf "
+                  "die Wertemenge war sie ein Fund."),
+        Fall(
+            name="nur drei der vier Zonenwerte",
+            dateien={"src/formats/x.c":
+                     "static const int z[3] = { 21, 19, 18 };\n"},
+            erwartet="sauber",
+            warum="unvollstaendig ist keine Zonentabelle."),
+        Fall(
+            name="im Kommentar",
+            dateien={"src/formats/x.c":
+                     "/* static int z[4] = { 21, 19, 18, 17 }; */\n"
+                     "int f(void) { return 0; }\n"},
+            erwartet="sauber",
+            warum="die Entkernung muss greifen — sonst zaehlt das Tor "
+                  "Erinnerungen an geloeschte Tabellen mit."),
     ],
 }
 

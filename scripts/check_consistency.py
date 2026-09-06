@@ -1148,6 +1148,22 @@ def main() -> int:
         import audit_korpus_inhalt as _ki
         all_errors.append(("Korpus-Inhalt", _ki.check(repo)))
 
+        # Tor 60 (MF-932): die vier CBM-Zonenlaengen liegen vielfach im
+        # Baum, und NICHT in einer gemeinsamen Zaehlweise. P3-150 hielt
+        # seit MF-877 „elffach, in vier Zaehlweisen" fest — eine
+        # Handzaehlung. Gemessen sind es 23 Fundstellen in 9 Zaehlweisen.
+        #
+        # Das Tor fuehrt nichts zusammen und urteilt nicht darueber,
+        # welche Zaehlweise richtig ist. Es haelt fest, WIE VIELE es
+        # gibt, damit eine zehnte auffaellt — denn Zaehlweisen sind
+        # nicht mechanisch ineinander ueberfuehrbar, und genau daran
+        # sind P3-148 und P3-149 gescheitert (zwei Kopien lesen falsch).
+        #
+        # Grundlinie 23/9, beide duerfen nur fallen. Benannte Luecke:
+        # Zonenlogik als `if`-Kette statt als Tabelle sieht es nicht.
+        import audit_cbm_zonen as _cz
+        all_errors.append(("CBM-Zonen", _cz.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
