@@ -1991,6 +1991,20 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_amigados_treiber_meldet_eintraege")
+        # MF-935: amigados_readdir() las die Anzahl NACH uft_amiga_free_dir(),
+        # das sie nullt — der einzige registrierte FS-Treiber meldete fuer
+        # jedes ADF ein leeres Verzeichnis, mit UFT_OK.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_fs_amigados_driver.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_fs_registry.c)
+    elseif(${test_name} STREQUAL "test_amigados_pruefsumme_wird_geprueft")
+        # MF-934: `verify_checksums` war gesetzt und wurde nirgends
+        # gelesen; uft_amiga_verify_checksum() hatte null Aufrufer. Ein
+        # AmigaDOS-Block mit falscher Pruefsumme ging als gueltig durch.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
     elseif(${test_name} STREQUAL "test_amigados_cycle")
         # MF-639: Ringschluss in der AmigaDOS-Hashkette — beide Ketten
         # brachen nur bei einer Selbst-Schleife ab

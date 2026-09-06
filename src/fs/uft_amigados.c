@@ -336,6 +336,27 @@ static void parse_entry(const uft_amiga_ctx_t *ctx, uint32_t block_num,
                          uft_amiga_entry_t *out) {
     const uint8_t *b = ctx->data + block_num * BLOCK_SIZE;
     memset(out, 0, sizeof(*out));
+
+    /* MF-934: hier wurde bis heute NICHT geprueft.
+     *
+     * `ctx->verify_checksums` wird in uft_amiga_create() auf `true`
+     * gesetzt und ist ueber uft_amiga_options_t einstellbar — gemessen
+     * ueber `git ls-files` wurde das Feld an zwei Stellen GESCHRIEBEN
+     * und an keiner GELESEN. Es entschied nichts.
+     *
+     * Ebenso hatte die oeffentliche `uft_amiga_verify_checksum()` NULL
+     * Aufrufer, obwohl sie richtig rechnet (im Pruefstand belegt). Ein
+     * AmigaDOS-Block mit falscher Pruefsumme ging damit als gueltiger
+     * Verzeichniseintrag durch — eine zugesicherte Pruefung, die nie
+     * stattfand.
+     *
+     * Der Eintrag wird trotzdem AUSGEGEBEN, nur gekennzeichnet: ihn
+     * wegzulassen verletzte „Kein Bit verloren", ihn unmarkiert
+     * auszugeben „Keine erfundenen Daten". */
+    out->checksum_ok = true;
+    if (ctx->verify_checksums)
+        out->checksum_ok = uft_amiga_verify_checksum(b);
+
     out->header_block = block_num;
     out->header_key   = block_num;
     out->type         = be32(b + OFF_TYPE);
@@ -434,6 +455,7 @@ int uft_amiga_load_dir(const uft_amiga_ctx_t *ctx, uint32_t block_num,
 
             uft_amiga_entry_t e;
             parse_entry(ctx, head, &e);
+            if (!e.checksum_ok) dir->bad_checksums++;   /* MF-934 */
             if (dir_append(dir, &e) != 0) {
                 free(visited);
                 uft_amiga_free_dir(dir);

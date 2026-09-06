@@ -154,6 +154,19 @@ typedef struct {
     uint32_t            days;              /**< Days since 1978-01-01 */
     uint32_t            mins;              /**< Minutes of day */
     uint32_t            ticks;             /**< Ticks (1/50 second) */
+    /* MF-934: ANGEHAENGT, nicht eingeschoben — eine Einfuegung mitten in
+     * die Struktur waere ein ABI-Bruch ohne Compiler-Warnung.
+     *
+     * BEDEUTUNG, genau: `false` heisst „eine Pruefung lief und schlug
+     * fehl". `true` heisst „kein Einwand" — und das ist NICHT dasselbe
+     * wie „geprueft": ist `ctx->verify_checksums` aus, laeuft keine
+     * Pruefung und das Feld bleibt `true`. Wer wissen muss, ob geprueft
+     * WURDE, fragt `verify_checksums`; wer wissen will, ob etwas
+     * GEFUNDEN wurde, nimmt `uft_amiga_dir_t.bad_checksums`.
+     *
+     * Ein Bool kann drei Zustaende nicht tragen. Diese Zeile steht hier,
+     * damit die Luecke benannt ist statt versteckt. */
+    bool                checksum_ok;       /**< false = verification ran and failed */
 } uft_amiga_entry_t;
 
 /**
@@ -165,6 +178,10 @@ typedef struct {
     size_t              capacity;          /**< Allocated capacity */
     char                dir_name[UFT_AMIGA_MAX_FILENAME_LFS + 1];
     uint32_t            dir_block;         /**< Directory block */
+    /* MF-934: angehaengt. Wie viele der `count` Eintraege eine falsche
+     * Blockpruefsumme tragen. 0 heisst nicht "geprueft" — dafuer muss
+     * `verify_checksums` gesetzt sein. */
+    size_t              bad_checksums;     /**< Entries with bad checksum */
 } uft_amiga_dir_t;
 
 /**
