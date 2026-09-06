@@ -1643,6 +1643,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_g64_v3_halbspur_index")
+        # MF-923 (P3-36): der v3-G64-Parser gegen eine VICE-erzeugte
+        # Datei. Kein Blick in `struct g64_disk` — gemessen wird das
+        # Ergebnis von g64_export_d64(), genau wie es die Bruecke tut.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_adfcopy_firmware_protokoll")
         # MF-922 (P3-188): derselbe Controller, aber gegen die
         # VEROEFFENTLICHTE Firmware statt gegen UFTs Annahme. Der

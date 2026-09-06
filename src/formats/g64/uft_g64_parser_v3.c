@@ -55,6 +55,45 @@
 
 /* Track table starts at offset 12 */
 #define G64_TRACK_TABLE_OFFSET  12
+
+/* ── MF-923 (P3-36): EINE Konvention fuer die Dateitabellen ──────────
+ *
+ * Die Leseschleifen fuellen `track_offsets[]` und `speed_zones[]` mit
+ * den Dateieintraegen 0..83. Die Verbraucher lasen sie mit
+ * `[half_track]`, und `half_track` laeuft 1..84 — also um genau einen
+ * Eintrag verschoben.
+ *
+ * Welche Zuordnung stimmt, entscheidet nicht die Auslegung, sondern
+ * die Datei. Gemessen an `tests/corpus_free/vice_c1541_35trk.g64`
+ * (von VICE erzeugt, fremde Hand):
+ *
+ *     Kopf Byte 9     = 84    Halbspuren, nicht Vollspuren
+ *     Eintrag 0       -> 684  Spurdaten  <- Spur 1.0
+ *     Eintrag 1       -> 0    leer       <- Spur 1.5
+ *     Eintrag 2       -> 8614 Spurdaten  <- Spur 2.0
+ *     Speed-Eintrag 0 = 3     Zone 3, richtig fuer Spur 1
+ *
+ * DATEIEINTRAG 0 IST SPUR 1.0. Halbspur n liegt auf Eintrag n-1.
+ *
+ * Gemessene Folge des Fehlers: `g64_parse()` auf genau diese Datei und
+ * anschliessend `g64_export_d64()` ergab ein D64 mit **0 Nicht-Null-
+ * Bytes** — jede Vollspur wurde aus dem leeren Halbspur-Fach gelesen.
+ *
+ * Der Kommentar bei der Leseschleife feiert, dass MF-119 einen
+ * Off-by-one behoben hat. Das stimmt — aber nur fuer die SCHLEIFE. Der
+ * Verbraucher blieb 1-basiert, und weil der Schreiber denselben Fehler
+ * macht, schwieg der Rundlauf. Deshalb steht die Zuordnung ab jetzt an
+ * EINER Stelle und wird nicht an jeder Fundstelle neu erfunden. */
+#define G64_HT_TO_FILE_INDEX(ht)  ((ht) - 1)   /* 1..84 -> 0..83 */
+
+/* Ein Speed-Eintrag >= 4 ist kein Zonenwert, sondern ein DATEIOFFSET
+ * auf eine feinere Tabelle (Spec Schepers/Brenner/Moser Rev. 1.6).
+ * UFT loest diese Tabelle nicht auf — und sagt das, statt den Wert auf
+ * Zone 0 zu maskieren. Haltungsvorbild im eigenen Baum: der
+ * 2040-Gap-Wert in `uft_cbm_geometry.c` bleibt mit der Begruendung
+ * "no authoritative source found" auf 0 stehen, statt geraten zu
+ * werden. */
+#define G64_SPEED_ZONE_UNRESOLVED  0xFF
 #define G64_SPEED_TABLE_OFFSET  (G64_TRACK_TABLE_OFFSET + G64_TRACK_TABLE_SIZE)
 #define G64_TRACK_DATA_OFFSET   (G64_SPEED_TABLE_OFFSET + G64_SPEED_TABLE_SIZE)
 
@@ -461,6 +500,27 @@ typedef struct g64_disk {
     
 } g64_disk_t;
 
+/* ── MF-923: die Groesse dieses Typs, vom Eigentuemer des Typs ───────
+ *
+ * `src/formats/uft_v3_bridge.c` hielt die drei v3-Strukturen in EINEM
+ * Feld `uint8_t disk_buffer[256 * 1024]`. Gemessen passt keine einzige
+ * hinein:
+ *
+ *     g64_disk_t     1 440 256 Byte   5,5x  Ueberlauf 1 178 112 Byte
+ *     d64_disk_v3_t    600 664 Byte   2,3x  Ueberlauf   338 520 Byte
+ *     scp_disk_t     3 119 512 Byte  11,9x  Ueberlauf 2 857 368 Byte
+ *
+ * Jeder Parse schrieb damit Megabytes ueber das Feldende — mitten in
+ * eine heap-allozierte Struktur. Dass bisher nichts abgestuerzt ist,
+ * liegt allein daran, dass die Bruecke keinen Aufrufer hat (P3-193).
+ *
+ * Der Puffer ist jetzt dynamisch, und die Groesse wird nicht mehr
+ * GEPFLEGT, sondern ABGEFRAGT: eine zweite Konstante waere beim
+ * naechsten Feld in der Struktur wieder falsch — und still. Das ist
+ * derselbe Grundsatz wie bei den abgeleiteten Zahlen in MF-541. */
+size_t g64_disk_sizeof(void) { return sizeof(g64_disk_t); }
+
+
 /**
  * @brief G64 parameters
  */
@@ -816,11 +876,29 @@ char* g64_diagnosis_to_text(const g64_diagnosis_list_t* list, const g64_disk_t* 
             uint8_t full = g64_half_to_full(current_track);
             bool is_half = g64_is_half_track(current_track);
             
+            /* MF-923 (P3-36): hier stand `g64_get_speed_zone(full)` —
+             * die aus der TRACKNUMMER abgeleitete SOLL-Zone. Fuer eine
+             * geschuetzte Diskette meldete der Bericht damit, was dort
+             * stehen sollte, nicht was dort steht.
+             *
+             * Die Diagnoseliste traegt keinen Verweis auf die Spur,
+             * also wird der gespeicherte Wert hier aus der Disk geholt.
+             * Ist er unaufgeloest, sagt der Bericht genau das. */
+            uint8_t ist_zone = (current_track >= 1 &&
+                                current_track <= G64_MAX_TRACKS)
+                             ? disk->tracks[current_track].speed_zone
+                             : G64_SPEED_ZONE_UNRESOLVED;
+            char zone_txt[16];
+            if (ist_zone == G64_SPEED_ZONE_UNRESOLVED)
+                snprintf(zone_txt, sizeof zone_txt, "?");
+            else
+                snprintf(zone_txt, sizeof zone_txt, "%u", ist_zone);
+
             off += snprintf(buf + off, buf_size - off,
-                "── Track %u%s (zone %u, %u sectors) ──────────────────────\n",
+                "── Track %u%s (zone %s, %u sectors) ──────────────────────\n",
                 full,
                 is_half ? ".5" : "",
-                g64_get_speed_zone(full),
+                zone_txt,
                 g64_get_sectors(full));
         }
         
@@ -1328,12 +1406,32 @@ static bool g64_parse_track(
     track->half_track = half_track;
     track->full_track = g64_half_to_full(half_track);
     track->is_half_track = g64_is_half_track(half_track);
-    track->speed_zone = disk->speed_zones[half_track] & 0x03;
+    /* MF-923 (P3-36) — HIER STAND `speed_zones[half_track] & 0x03`.
+     *
+     * Zwei Fehler in einer Zeile: der falsche Eintrag (siehe
+     * G64_HT_TO_FILE_INDEX) und die Maskierung, die aus einem
+     * Dateioffset wie 0x00005E1C stillschweigend "Zone 0" machte. */
+    uint32_t speed_roh = disk->speed_zones[G64_HT_TO_FILE_INDEX(half_track)];
     track->expected_sectors = g64_get_sectors(track->full_track);
-    track->expected_size = g64_get_track_size(track->speed_zone);
+
+    if (speed_roh < 4) {
+        track->speed_zone   = (uint8_t)speed_roh;
+        track->expected_size = g64_get_track_size(track->speed_zone);
+    } else {
+        /* Ein Verweis, den dieser Parser nicht aufloest. Er wird
+         * BENANNT, nicht auf 0 gerundet — und `expected_size` bleibt
+         * 0, damit die Groessenpruefung weiter unten nicht auch noch
+         * einen "kurzen" Track meldet, der aus einer erfundenen
+         * Erwartung folgt. */
+        track->speed_zone    = G64_SPEED_ZONE_UNRESOLVED;
+        track->expected_size = 0;
+        g64_diagnosis_add(diag, G64_DIAG_SPEED_MISMATCH, half_track, 0xFF,
+            "Speed-Eintrag %u ist ein Tabellenverweis (>= 4), nicht "
+            "ausgewertet - keine Zonenangabe fuer diese Spur", speed_roh);
+    }
     
     /* Get track offset */
-    uint32_t offset = disk->track_offsets[half_track];
+    uint32_t offset = disk->track_offsets[G64_HT_TO_FILE_INDEX(half_track)];
     if (offset == 0) {
         /* Empty track */
         disk->empty_tracks++;
@@ -1376,8 +1474,12 @@ static bool g64_parse_track(
         disk->full_tracks++;
     }
     
-    /* Check track size */
-    if (track_size > track->expected_size * 1.15f) {
+    /* Check track size — MF-923: nur, wenn es ueberhaupt eine
+     * Erwartung gibt. Ohne aufgeloeste Zone ist jede Aussage ueber
+     * "zu kurz" oder "zu lang" erfunden. */
+    if (track->expected_size == 0) {
+        /* nichts zu vergleichen; die Diagnose steht schon oben */
+    } else if (track_size > track->expected_size * 1.15f) {
         g64_diagnosis_add(diag, G64_DIAG_LONG_TRACK, half_track, 0xFF,
             "Track size %u exceeds expected %u", track_size, track->expected_size);
     } else if (track_size < track->expected_size * 0.85f) {
@@ -1515,7 +1617,12 @@ uint8_t* g64_write(
         }
         
         /* Write track offset */
-        size_t off_pos = G64_TRACK_TABLE_OFFSET + ht * 4;
+        /* MF-923: bei ht = 84 ergab `+ ht * 4` den Dateiversatz
+         * 12 + 336 = 348 — und das ist bereits der ERSTE Eintrag der
+         * Speed-Tabelle. Der Schreiber trat also aus der
+         * Offset-Tabelle heraus und ueberschrieb einen fremden Wert. */
+        size_t off_pos = G64_TRACK_TABLE_OFFSET +
+                         G64_HT_TO_FILE_INDEX(ht) * 4;
         if (track->gcr_size > 0) {
             data[off_pos] = offset & 0xFF;
             data[off_pos + 1] = (offset >> 8) & 0xFF;
@@ -1531,7 +1638,8 @@ uint8_t* g64_write(
         }
         
         /* Write speed zone */
-        size_t spd_pos = G64_SPEED_TABLE_OFFSET + ht * 4;
+        size_t spd_pos = G64_SPEED_TABLE_OFFSET +
+                         G64_HT_TO_FILE_INDEX(ht) * 4;
         data[spd_pos] = track->speed_zone;
     }
     

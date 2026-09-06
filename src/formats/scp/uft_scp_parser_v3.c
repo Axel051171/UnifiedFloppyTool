@@ -468,6 +468,27 @@ typedef struct scp_disk {
     
 } scp_disk_t;
 
+/* ── MF-923: die Groesse dieses Typs, vom Eigentuemer des Typs ───────
+ *
+ * `src/formats/uft_v3_bridge.c` hielt die drei v3-Strukturen in EINEM
+ * Feld `uint8_t disk_buffer[256 * 1024]`. Gemessen passt keine einzige
+ * hinein:
+ *
+ *     g64_disk_t     1 440 256 Byte   5,5x  Ueberlauf 1 178 112 Byte
+ *     d64_disk_v3_t    600 664 Byte   2,3x  Ueberlauf   338 520 Byte
+ *     scp_disk_t     3 119 512 Byte  11,9x  Ueberlauf 2 857 368 Byte
+ *
+ * Jeder Parse schrieb damit Megabytes ueber das Feldende — mitten in
+ * eine heap-allozierte Struktur. Dass bisher nichts abgestuerzt ist,
+ * liegt allein daran, dass die Bruecke keinen Aufrufer hat (P3-193).
+ *
+ * Der Puffer ist jetzt dynamisch, und die Groesse wird nicht mehr
+ * GEPFLEGT, sondern ABGEFRAGT: eine zweite Konstante waere beim
+ * naechsten Feld in der Struktur wieder falsch — und still. Das ist
+ * derselbe Grundsatz wie bei den abgeleiteten Zahlen in MF-541. */
+size_t scp_disk_sizeof(void) { return sizeof(scp_disk_t); }
+
+
 /**
  * @brief SCP parameters
  */

@@ -67,17 +67,63 @@ extern void scp_get_default_params(struct scp_params* params);
  * Handle Structure
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#define V3_DISK_BUFFER_SIZE   (256 * 1024)
+/* MF-923 — HIER STAND `uint8_t disk_buffer[256 * 1024]`, UND KEINE DER
+ * DREI STRUKTUREN PASSTE HINEIN.
+ *
+ * Gemessen (Bisektion bzw. sizeof gegen dieselben Uebersetzungsschalter):
+ *
+ *     g64_disk_t     1 440 256 Byte    5,5x   Ueberlauf 1 178 112 Byte
+ *     d64_disk_v3_t    600 664 Byte    2,3x   Ueberlauf   338 520 Byte
+ *     scp_disk_t     3 119 512 Byte   11,9x   Ueberlauf 2 857 368 Byte
+ *
+ * `g64_parse()` & Co. bekamen einen Zeiger auf dieses Feld und
+ * schrieben ihre volle Struktur hinein — bis zu 2,8 MB hinter das
+ * Feldende, mitten in eine heap-allozierte `v3_handle_t`. Ein
+ * Testaufruf endete reproduzierbar mit STATUS_HEAP_CORRUPTION
+ * (0xC0000374).
+ *
+ * Dass davon bisher niemand betroffen war, ist kein Verdienst: die
+ * Bruecke hat keinen Aufrufer ausserhalb ihrer selbst (P3-193). Sie
+ * war eine Mine mit gezogenem Stift, nicht ein harmloser Rest.
+ *
+ * Der Puffer ist jetzt dynamisch, und die Groesse wird ABGEFRAGT statt
+ * gepflegt: `<x>_disk_sizeof()` liegt bei dem, der den Typ besitzt.
+ * Eine zweite Konstante hier waere beim naechsten Feld in einer der
+ * drei Strukturen wieder falsch — und wieder still. */
+extern size_t g64_disk_sizeof(void);
+extern size_t d64_disk_v3_sizeof(void);
+extern size_t scp_disk_sizeof(void);
+
 #define V3_PARAMS_BUFFER_SIZE (4096)
 
 typedef struct {
     uint8_t*    raw_data;
     size_t      raw_size;
-    uint8_t     disk_buffer[V3_DISK_BUFFER_SIZE];
+    uint8_t*    disk_buffer;        /* MF-923: belegt nach *_disk_sizeof() */
+    size_t      disk_buffer_size;
     uint8_t     params_buffer[V3_PARAMS_BUFFER_SIZE];
     char        path[1024];
     bool        valid;
 } v3_handle_t;
+
+/* Legt einen Griff samt passend grossem Strukturpuffer an. */
+static v3_handle_t *v3_handle_new(size_t disk_size)
+{
+    v3_handle_t *h = calloc(1, sizeof(v3_handle_t));
+    if (!h) return NULL;
+    h->disk_buffer = calloc(1, disk_size);
+    if (!h->disk_buffer) { free(h); return NULL; }
+    h->disk_buffer_size = disk_size;
+    return h;
+}
+
+static void v3_handle_free(v3_handle_t *h)
+{
+    if (!h) return;
+    free(h->disk_buffer);
+    free(h->raw_data);
+    free(h);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * D64 v3 Bridge
@@ -91,22 +137,18 @@ static uft_error_t d64_v3_open(const char* path, void** handle) {
     size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    v3_handle_t* h = calloc(1, sizeof(v3_handle_t));
-    if (!h) {
-        fclose(f);
-        return UFT_ERR_MEMORY;
-    }
+    v3_handle_t* h = v3_handle_new(d64_disk_v3_sizeof());
+    if (!h) { fclose(f); return UFT_ERR_MEMORY; }
     
     h->raw_data = malloc(size);
     if (!h->raw_data) {
-        free(h);
         fclose(f);
+        v3_handle_free(h);
         return UFT_ERR_MEMORY;
     }
     
     if (fread(h->raw_data, 1, size, f) != size) {
-        free(h->raw_data);
-        free(h);
+        v3_handle_free(h);
         fclose(f);
         return UFT_ERR_IO;
     }
@@ -120,8 +162,7 @@ static uft_error_t d64_v3_open(const char* path, void** handle) {
     if (!d64_parse(h->raw_data, size, 
                    (struct d64_disk_v3*)h->disk_buffer,
                    (struct d64_params*)h->params_buffer)) {
-        free(h->raw_data);
-        free(h);
+        v3_handle_free(h);
         return UFT_ERR_FORMAT;
     }
     
@@ -137,8 +178,7 @@ static void d64_v3_close(void* handle) {
     if (h->valid) {
         d64_disk_free((struct d64_disk_v3*)h->disk_buffer);
     }
-    free(h->raw_data);
-    free(h);
+    v3_handle_free(h);
 }
 
 static uft_error_t d64_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
@@ -161,14 +201,14 @@ static uft_error_t g64_v3_open(const char* path, void** handle) {
     size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    v3_handle_t* h = calloc(1, sizeof(v3_handle_t));
+    v3_handle_t* h = v3_handle_new(g64_disk_sizeof());
     if (!h) { fclose(f); return UFT_ERR_MEMORY; }
     
     h->raw_data = malloc(size);
-    if (!h->raw_data) { free(h); fclose(f); return UFT_ERR_MEMORY; }
+    if (!h->raw_data) { fclose(f); v3_handle_free(h); return UFT_ERR_MEMORY; }
     
     if (fread(h->raw_data, 1, size, f) != size) {
-        free(h->raw_data); free(h); fclose(f);
+        fclose(f); v3_handle_free(h);
         return UFT_ERR_IO;
     }
     fclose(f);
@@ -181,7 +221,7 @@ static uft_error_t g64_v3_open(const char* path, void** handle) {
     if (!g64_parse(h->raw_data, size,
                    (struct g64_disk*)h->disk_buffer,
                    (struct g64_params*)h->params_buffer)) {
-        free(h->raw_data); free(h);
+        v3_handle_free(h);
         return UFT_ERR_FORMAT;
     }
     
@@ -194,8 +234,7 @@ static void g64_v3_close(void* handle) {
     if (!handle) return;
     v3_handle_t* h = (v3_handle_t*)handle;
     if (h->valid) g64_disk_free((struct g64_disk*)h->disk_buffer);
-    free(h->raw_data);
-    free(h);
+    v3_handle_free(h);
 }
 
 static uft_error_t g64_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
@@ -218,14 +257,14 @@ static uft_error_t scp_v3_open(const char* path, void** handle) {
     size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    v3_handle_t* h = calloc(1, sizeof(v3_handle_t));
+    v3_handle_t* h = v3_handle_new(scp_disk_sizeof());
     if (!h) { fclose(f); return UFT_ERR_MEMORY; }
     
     h->raw_data = malloc(size);
-    if (!h->raw_data) { free(h); fclose(f); return UFT_ERR_MEMORY; }
+    if (!h->raw_data) { fclose(f); v3_handle_free(h); return UFT_ERR_MEMORY; }
     
     if (fread(h->raw_data, 1, size, f) != size) {
-        free(h->raw_data); free(h); fclose(f);
+        fclose(f); v3_handle_free(h);
         return UFT_ERR_IO;
     }
     fclose(f);
@@ -238,7 +277,7 @@ static uft_error_t scp_v3_open(const char* path, void** handle) {
     if (!scp_parse(h->raw_data, size,
                    (struct scp_disk*)h->disk_buffer,
                    (struct scp_params*)h->params_buffer)) {
-        free(h->raw_data); free(h);
+        v3_handle_free(h);
         return UFT_ERR_FORMAT;
     }
     
@@ -251,8 +290,7 @@ static void scp_v3_close(void* handle) {
     if (!handle) return;
     v3_handle_t* h = (v3_handle_t*)handle;
     if (h->valid) scp_disk_free((struct scp_disk*)h->disk_buffer);
-    free(h->raw_data);
-    free(h);
+    v3_handle_free(h);
 }
 
 static uft_error_t scp_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
