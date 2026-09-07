@@ -75,9 +75,25 @@ typedef struct {
     int side;               /**< Side (0 or 1) */
     uint32_t *flux;         /**< Flux transition times (KF ticks) */
     size_t flux_count;      /**< Number of flux transitions */
-    uint32_t *index;        /**< Index pulse positions (KF ticks) */
+    /** Index pulse positions as the KryoFlux stream reports them:
+     *  the StreamPosition field of each Index OOB block, counted in
+     *  CELL-STREAM BYTES (OOB bytes are not counted).
+     *
+     *  Hier stand bis MF-956 „(KF ticks)". Das war falsch — gemessen am
+     *  Fueller (`uft_kryoflux_dtc.c`, OOB-Zweig): dort werden die ersten
+     *  vier Nutzlastbytes gelesen, und das ist laut der Protokoll-
+     *  beschreibung, gegen die `src/flux/uft_kryoflux_stream.c`
+     *  geschrieben ist (SPS / Jean Louis-Guerin), die StreamPosition.
+     *  Ticks und Bytes sind hier nicht ineinander ueberfuehrbar.
+     *
+     *  ACHTUNG, offene Doppeldeutigkeit (P3-243): `uft_kf_flux_to_raw()`
+     *  in derselben Datei erwartet in seinem `index`-Argument einen
+     *  INDEX IN `flux[]`, nicht diese Byte-Position. Heute stossen die
+     *  beiden nicht zusammen — der einzige Aufrufer uebergibt dort NULL,
+     *  gemessen MF-956 —, aber die Namensgleichheit bleibt eine Falle. */
+    uint32_t *index_stream_bytes;
     size_t index_count;     /**< Number of index pulses */
-    double sample_clock;    /**< Sample clock frequency (Hz) */
+    double sample_clock_hz; /**< Sample clock frequency (Hz) */
     bool success;           /**< true if capture succeeded */
     const char *error_msg;  /**< Error message if !success */
 } uft_kf_track_data_t;

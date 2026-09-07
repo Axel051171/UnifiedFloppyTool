@@ -59,13 +59,13 @@ struct uft_hal_driver_s {
     int (*read_flux)(uft_hal_t *hal, int track, int side, int revs,
                      uint32_t **flux, size_t *count);
     /* MF-954: optional. Fehlt der Zeiger, meldet uft_hal_read_flux_ex()
-     * NULL Umdrehungsgrenzen — es ERFINDET keine. `rev_versaetze[k]` ist
+     * NULL Umdrehungsgrenzen — es ERFINDET keine. `rev_versaetze_in_flux[k]` ist
      * der Index in `flux`, an dem Umdrehung k beginnt; die Umrechnung
      * aus der geraetetypischen Groesse geschieht HIER, an der Kante, wo
      * die Einheit bekannt ist. Begruendung im Header. */
     int (*read_flux_ex)(uft_hal_t *hal, int track, int side, int revs,
                         uint32_t **flux, size_t *count,
-                        size_t **rev_versaetze, size_t *rev_count);
+                        size_t **rev_versaetze_in_flux, size_t *rev_count);
     int (*write_flux)(uft_hal_t *hal, int track, int side,
                       const uint32_t *flux, size_t count);
     int (*seek)(uft_hal_t *hal, int track);
@@ -94,7 +94,7 @@ struct uft_hal_s {
             uint8_t hw_model;
             uint8_t hw_submodel;
             uint32_t fw_version;
-            uint32_t sample_freq;
+            uint32_t sample_freq_hz;
         } gw;
         struct {
             uint32_t firmware;
@@ -148,7 +148,7 @@ static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
                          uint32_t **flux, size_t *count);
 static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
                             uint32_t **flux, size_t *count,
-                            size_t **rev_versaetze, size_t *rev_count);
+                            size_t **rev_versaetze_in_flux, size_t *rev_count);
 static int scp_enumerate(uft_hal_controller_t *out, int max);
 
 /* Stub driver for unimplemented controllers */
@@ -474,7 +474,7 @@ static int gw_open(uft_hal_t *hal, const char *path) {
     hal->state.gw.hw_submodel = info[5];
     hal->state.gw.fw_version = info[0] | (info[1] << 8) | 
                                ((uint32_t)info[2] << 16) | ((uint32_t)info[3] << 24);
-    hal->state.gw.sample_freq = 72000000;  /* Default for GW */
+    hal->state.gw.sample_freq_hz = 72000000;  /* Default for GW */
     
     hal->is_open = true;
     return 0;
@@ -495,7 +495,7 @@ static int gw_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps) {
     caps->max_sides = 2;
     caps->can_read_flux = true;
     caps->can_write_flux = true;
-    caps->sample_rate_hz = hal->state.gw.sample_freq;
+    caps->sample_rate_hz = hal->state.gw.sample_freq_hz;
     caps->capabilities = HAL_CAP_READ_FLUX | HAL_CAP_WRITE_FLUX |
                         HAL_CAP_INDEX_SENSE | HAL_CAP_MOTOR_CTRL |
                         HAL_CAP_HALF_TRACK | HAL_CAP_WRITE_PROTECT;
@@ -610,8 +610,8 @@ static int gw_read_flux(uft_hal_t *hal, int track, int side, int revs,
 
     /* Der Dekoder liefert TICKS. Die Schnittstelle sagt Nanosekunden zu
      * — also wird hier umgerechnet, mit der Frequenz des Geraets. */
-    if (hal->state.gw.sample_freq > 0) {
-        const double ns_per_tick = 1e9 / (double)hal->state.gw.sample_freq;
+    if (hal->state.gw.sample_freq_hz > 0) {
+        const double ns_per_tick = 1e9 / (double)hal->state.gw.sample_freq_hz;
         for (uint32_t k = 0; k < out_pos; k++)
             data[k] = (uint32_t)((double)data[k] * ns_per_tick + 0.5);
     }
@@ -680,13 +680,13 @@ static int gw_write_flux(uft_hal_t *hal, int track, int side,
      * dieses Projekt hat keine Hardware (MF-310). Geprueft ist der
      * Rundlauf Kodierer -> Dekoder, und der ist jetzt bitgenau. */
     const double ticks_per_ns =
-        (hal->state.gw.sample_freq > 0)
-            ? (double)hal->state.gw.sample_freq / 1000000000.0
+        (hal->state.gw.sample_freq_hz > 0)
+            ? (double)hal->state.gw.sample_freq_hz / 1000000000.0
             : 0.0;
     if (ticks_per_ns <= 0.0) {
         free(wire);
         snprintf(hal->error, sizeof(hal->error),
-                 "GW: sample_freq unbekannt — ohne sie ist keine "
+                 "GW: sample_freq_hz unbekannt — ohne sie ist keine "
                  "Umrechnung ns->Ticks moeglich");
         return -1;
     }
@@ -705,7 +705,7 @@ static int gw_write_flux(uft_hal_t *hal, int track, int side,
 
     size_t pos = uft_gw_encode_flux_stream(ticks_buf, (uint32_t)count,
                                            wire, wire_size,
-                                           hal->state.gw.sample_freq);
+                                           hal->state.gw.sample_freq_hz);
     free(ticks_buf);
 
     if (pos == 0) {
@@ -1037,8 +1037,8 @@ static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
  * Geprueft ist der Vertrag der HUELLE, nicht das Geraetegespraech. */
 static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
                             uint32_t **flux, size_t *count,
-                            size_t **rev_versaetze, size_t *rev_count) {
-    if (rev_versaetze) *rev_versaetze = NULL;
+                            size_t **rev_versaetze_in_flux, size_t *rev_count) {
+    if (rev_versaetze_in_flux) *rev_versaetze_in_flux = NULL;
     if (rev_count)     *rev_count = 0;
     if (!hal || !flux || !count) return -1;
 
@@ -1047,7 +1047,7 @@ static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
 
     size_t *vers = NULL;
     size_t  vers_max = 0;
-    if (rev_versaetze && revs > 0) {
+    if (rev_versaetze_in_flux && revs > 0) {
         vers = (size_t *)calloc((size_t)revs, sizeof(size_t));
         if (!vers) return -1;
         vers_max = (size_t)revs;
@@ -1210,14 +1210,14 @@ static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
      * Beides zu melden hiesse, Umdrehungen zu behaupten, die der Strom
      * nicht traegt (dieselbe Regel wie
      * `uft_rev_grenzen_aus_dauern()`, MF-951). */
-    if (vers && rev_versaetze && rev_count) {
+    if (vers && rev_versaetze_in_flux && rev_count) {
         size_t n = 0;
         for (size_t k = 0; k < vers_max; k++) {
             if (vers[k] >= out_idx) break;                /* jenseits */
             if (k > 0 && vers[k] == vers[k - 1]) break;   /* leer */
             n++;
         }
-        *rev_versaetze = vers;
+        *rev_versaetze_in_flux = vers;
         *rev_count = n;
     } else {
         free(vers);
@@ -1451,8 +1451,8 @@ int uft_hal_read_flux(uft_hal_t *hal, int track, int side, int revolutions,
 
 int uft_hal_read_flux_ex(uft_hal_t *hal, int track, int side, int revolutions,
                          uint32_t **flux, size_t *count,
-                         size_t **rev_versaetze, size_t *rev_count) {
-    if (rev_versaetze) *rev_versaetze = NULL;
+                         size_t **rev_versaetze_in_flux, size_t *rev_count) {
+    if (rev_versaetze_in_flux) *rev_versaetze_in_flux = NULL;
     if (rev_count)     *rev_count = 0;
 
     if (!hal || !hal->driver) return -1;
@@ -1463,7 +1463,7 @@ int uft_hal_read_flux_ex(uft_hal_t *hal, int track, int side, int revolutions,
     if (hal->driver->read_flux_ex) {
         return hal->driver->read_flux_ex(hal, track, side, revolutions,
                                          flux, count,
-                                         rev_versaetze, rev_count);
+                                         rev_versaetze_in_flux, rev_count);
     }
 
     /* Kein `read_flux_ex`: der Fluss kommt, die Grenzen nicht. Das ist

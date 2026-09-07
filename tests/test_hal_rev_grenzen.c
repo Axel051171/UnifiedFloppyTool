@@ -140,7 +140,7 @@ TEST(null_grenzen_heisst_kann_ich_nicht_sagen)
         _fail++;
     }
     if (vers != NULL) {
-        printf("\n      rev_versaetze zeigt noch auf %p\n      ",
+        printf("\n      rev_versaetze_in_flux zeigt noch auf %p\n      ",
                (void *)vers);
         _fail++;
     }

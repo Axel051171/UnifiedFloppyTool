@@ -1164,6 +1164,31 @@ def main() -> int:
         import audit_cbm_zonen as _cz
         all_errors.append(("CBM-Zonen", _cz.check(repo)))
 
+        # Tor 61 (MF-956): eine Groesse in der HAL ohne Einheit im Namen.
+        #
+        # In EINER Sitzung hat dieselbe Verwechslung fuenfmal zugeschlagen
+        # — Tick-Dauer als Abtast-Index, Byte-Position als Index, Rohwoerter
+        # als Ausgabe-Abtastungen, Nanosekunden als Takte, volle Dauer als
+        # Restzeit. Vier davon HAETTEN still falsche Daten erzeugt; einer
+        # hat es getan (MF-955: 2000 von 2000 Werten falsch beim Lesen,
+        # 12 von 12 beim Schreiben).
+        #
+        # Ein Kommentar zaehlt ausdruecklich NICHT. Der Grund steht im
+        # Baum: `uft_kryoflux.h` dokumentierte `index` als „(KF ticks)",
+        # und der Fueller schreibt dort Byte-Positionen. Ein Kommentar
+        # kann luegen, ohne dass es auffaellt — ein Name wird bei jeder
+        # Benutzung mitgelesen.
+        #
+        # Grundlinie 3, darf nur fallen. Die drei sind benannt: Felder in
+        # `uft_greaseweazle_full.h`, deren Umbenennung die GESCHUETZTE
+        # Datei `src/hal/uft_greaseweazle_full.c` beruehrt — Eigentuemer-
+        # Entscheidung, P3-248.
+        #
+        # Benannte Luecke: das Tor prueft, ob eine Einheit DASTEHT, nicht
+        # ob sie STIMMT. Ein `flux_ns[]` voller Takte geht durch.
+        import audit_einheiten as _eh
+        all_errors.append(("Einheit im Namen", _eh.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

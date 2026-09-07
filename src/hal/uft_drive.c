@@ -9,25 +9,25 @@
 /* Simple profiles table - basic functionality */
 static const uft_drive_profile_t DRIVE_PROFILES[] = {
     { .type = UFT_DRIVE_525_DD, .name = "5.25\" DD", .cylinders = 40, .heads = 2,
-      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_dd = 250.0,
+      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_MFM },
     { .type = UFT_DRIVE_525_HD, .name = "5.25\" HD", .cylinders = 80, .heads = 2,
-      .rpm = 360.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd = 500.0,
+      .rpm = 360.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd_kbps = 500.0,
       .default_encoding = DRIVE_ENC_MFM },
     { .type = UFT_DRIVE_35_DD, .name = "3.5\" DD", .cylinders = 80, .heads = 2,
-      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_dd = 250.0,
+      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_MFM },
     { .type = UFT_DRIVE_35_HD, .name = "3.5\" HD", .cylinders = 80, .heads = 2,
-      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd = 500.0,
+      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd_kbps = 500.0,
       .default_encoding = DRIVE_ENC_MFM },
     { .type = UFT_DRIVE_35_ED, .name = "3.5\" ED", .cylinders = 80, .heads = 2,
-      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd = 1000.0,
+      .rpm = 300.0, .step_time_ms = 15, .settle_time_ms = 15, .data_rate_hd_kbps = 1000.0,
       .default_encoding = DRIVE_ENC_MFM },
     { .type = UFT_DRIVE_1541, .name = "C64 1541", .cylinders = 35, .heads = 1,
-      .rpm = 300.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .rpm = 300.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_GCR },
     { .type = UFT_DRIVE_APPLE, .name = "Apple II", .cylinders = 35, .heads = 1,
-      .rpm = 300.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .rpm = 300.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_GCR },
 
     /* Atari 8-bit — die einzigen Laufwerke hier, die NICHT mit 300 min^-1
@@ -45,13 +45,13 @@ static const uft_drive_profile_t DRIVE_PROFILES[] = {
      * Geometrien aus src/a8rawconv/diskatr.cpp:42-56:
      *   SD 18x128 FM, ED 26x128 MFM, DD 18x256 MFM (zweiseitig = 1440). */
     { .type = UFT_DRIVE_ATARI_810, .name = "Atari 810 (SD)", .cylinders = 40, .heads = 1,
-      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_FM },
     { .type = UFT_DRIVE_ATARI_1050, .name = "Atari 1050 (SD/ED)", .cylinders = 40, .heads = 1,
-      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd_kbps = 250.0,
       .default_encoding = DRIVE_ENC_FM },
     { .type = UFT_DRIVE_ATARI_XF551, .name = "Atari XF551 (DS/DD)", .cylinders = 40, .heads = 2,
-      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 500.0,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd_kbps = 500.0,
       .default_encoding = DRIVE_ENC_MFM }
 };
 

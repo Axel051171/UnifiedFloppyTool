@@ -213,8 +213,8 @@ int uft_hal_read_flux(uft_hal_t* hal, int track, int side, int revolutions,
  *
  * ── EINE Bedeutung, und sie steht hier ───────────────────────────────
  *
- * `rev_versaetze[k]` ist der INDEX IN `flux`, an dem Umdrehung k
- * beginnt. `rev_versaetze[0]` ist immer 0.
+ * `rev_versaetze_in_flux[k]` ist der INDEX IN `flux`, an dem Umdrehung k
+ * beginnt. `rev_versaetze_in_flux[0]` ist immer 0.
  *
  * Das muss ausgeschrieben stehen, weil die drei Geraete DREI
  * VERSCHIEDENE Groessen liefern (gemessen MF-954):
@@ -239,7 +239,7 @@ int uft_hal_read_flux(uft_hal_t* hal, int track, int side, int revolutions,
  * Verhalten bei NULL-Ausgaben und dass ein Treiber ohne diese Faehigkeit
  * NICHTS ERFINDET. Was ein echtes Geraet liefert, steht aus.
  *
- * @param rev_versaetze Ausgabe, darf NULL sein — dann verhaelt sich der
+ * @param rev_versaetze_in_flux Ausgabe, darf NULL sein — dann verhaelt sich der
  *                      Aufruf wie uft_hal_read_flux(). Der Aufrufer gibt
  *                      das Feld mit free() zurueck.
  * @param rev_count     Ausgabe: Zahl der Umdrehungen, deren Beginn
@@ -253,7 +253,7 @@ int uft_hal_read_flux(uft_hal_t* hal, int track, int side, int revolutions,
 int uft_hal_read_flux_ex(uft_hal_t* hal, int track, int side,
                          int revolutions,
                          uint32_t** flux, size_t* count,
-                         size_t** rev_versaetze, size_t* rev_count);
+                         size_t** rev_versaetze_in_flux, size_t* rev_count);
 
 /**
  * @brief Write flux data to disk

@@ -123,16 +123,28 @@ static int create_directory(const char *path) {
 /**
  * @brief Parse raw KryoFlux stream data into flux timing values.
  *
- * Delegates to the full stream parser in uft_kryoflux_stream.c.
  * KryoFlux stream format: flux values encoded as 1/2/3-byte sequences
  * with OOB (Out-Of-Band) blocks for index pulses and stream metadata.
  * Sample clock: 24.027428 MHz (18.432 MHz * 73/56).
+ *
+ * HIER STAND „Delegates to the full stream parser in
+ * uft_kryoflux_stream.c" (berichtigt MF-956). Das trifft nicht zu:
+ * gemessen enthaelt der Rumpf keinen Aufruf von `uft_kf_decode()`,
+ * sondern eine EIGENE, zweite Umsetzung desselben Protokolls — und in
+ * derselben Datei liegt mit `parse_kf_raw_file()` noch eine dritte.
+ * Der geprueften Fassung in `src/flux/uft_kryoflux_stream.c` fehlt hier
+ * also nicht der Weg, sondern der Wille; das ist als P3-249 vermerkt.
  *
  * @param raw Raw stream data (contents of .raw file)
  * @param raw_size Size of raw data
  * @param flux_out Output flux array in sample ticks (caller frees)
  * @param flux_count_out Number of flux values
- * @param index_out Optional index positions (can be NULL)
+ * @param index_out Optional. EIN Wert, kein Feld: der Stand von
+ *                  `flux_count` beim ZULETZT gesehenen Index-Puls, also
+ *                  ein Index in `flux[]` — nicht die StreamPosition in
+ *                  Bytes wie in `uft_kf_track_data_t`. Dritte Bedeutung
+ *                  von „index" in dieser Datei; heute uebergibt der
+ *                  einzige Aufrufer NULL (gemessen MF-956).
  * @param index_count_out Optional index count (can be NULL)
  * @return 0 on success, non-zero on error
  */
@@ -388,7 +400,19 @@ static int parse_kf_raw_file(const char *path, uint32_t **flux_out,
     size_t index_count = 0;
     uint32_t overflow = 0;
     size_t pos = 0;
-    uint32_t stream_pos = 0;
+    /* HIER STAND `uint32_t stream_pos = 0;` (entfernt MF-956).
+     *
+     * Die Variable wurde dreimal beschrieben (`stream_pos += val`, also
+     * mit dem FLUSSWERT) und nirgends gelesen. Ihr Name bezeichnet im
+     * KryoFlux-Stromprotokoll etwas anderes: die StreamPosition zaehlt
+     * Zellstrom-BYTES, nicht Takte -- so dokumentiert in
+     * `src/flux/uft_kryoflux_stream.c` gegen die Beschreibung von
+     * SPS / Jean Louis-Guerin.
+     *
+     * Ein toter Zaehler mit falschem Namen ist doppelt gefaehrlich: der
+     * naechste Leser haelt ihn fuer die StreamPosition und benutzt ihn.
+     * Genau diese Verwechslung -- Takte gegen Bytes gegen Abtast-Index --
+     * hat in dieser Sitzung fuenfmal zugeschlagen (Tor 61). */
     
     while (pos < (size_t)file_size) {
         uint8_t byte = data[pos++];
@@ -403,7 +427,6 @@ static int parse_kf_raw_file(const char *path, uint32_t **flux_out,
             if (flux_count < max_flux) {
                 flux[flux_count++] = val;
             }
-            stream_pos += val;
             
         } else if (byte == KF_BLK_NOP1) {
             /* 1-byte NOP - skip */
@@ -431,7 +454,6 @@ static int parse_kf_raw_file(const char *path, uint32_t **flux_out,
             if (flux_count < max_flux) {
                 flux[flux_count++] = val;
             }
-            stream_pos += val;
             
         } else if (byte == KF_BLK_OOB) {
             /* Out-of-band block */
@@ -465,7 +487,6 @@ static int parse_kf_raw_file(const char *path, uint32_t **flux_out,
             if (flux_count < max_flux) {
                 flux[flux_count++] = val;
             }
-            stream_pos += val;
         }
     }
     
@@ -805,12 +826,15 @@ int uft_kf_capture_disk(uft_kf_config_t *cfg, uft_kf_disk_callback_t callback,
         for (int side = side_start; side <= side_end; side++) {
             uint32_t *flux = NULL;
             size_t flux_count = 0;
-            uint32_t *index = NULL;
+            /* StreamPosition je Index-OOB, in Zellstrom-BYTES — nicht in
+             * Takten und nicht als Index in `flux[]`. Siehe MF-956. */
+            uint32_t *index_stream_bytes = NULL;
             size_t index_count = 0;
-            
+
             int result = uft_kf_capture_track(cfg, track, side,
                                                &flux, &flux_count,
-                                               &index, &index_count);
+                                               &index_stream_bytes,
+                                               &index_count);
             
             /* Call user callback */
             uft_kf_track_data_t data = {
@@ -818,9 +842,9 @@ int uft_kf_capture_disk(uft_kf_config_t *cfg, uft_kf_disk_callback_t callback,
                 .side = side,
                 .flux = flux,
                 .flux_count = flux_count,
-                .index = index,
+                .index_stream_bytes = index_stream_bytes,
                 .index_count = index_count,
-                .sample_clock = KF_SAMPLE_CLOCK,
+                .sample_clock_hz = KF_SAMPLE_CLOCK,
                 .success = (result == 0),
                 .error_msg = (result != 0) ? cfg->last_error : NULL
             };
@@ -829,8 +853,8 @@ int uft_kf_capture_disk(uft_kf_config_t *cfg, uft_kf_disk_callback_t callback,
             
             /* Cleanup */
             free(flux);
-            free(index);
-            
+            free(index_stream_bytes);
+
             if (result == 0) {
                 captured++;
             } else {

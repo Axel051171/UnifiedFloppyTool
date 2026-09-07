@@ -88,11 +88,11 @@ typedef struct {
     double motor_spinup_ms;       /**< Motor spinup time (milliseconds) */
     
     /* Data rates */
-    double data_rate_dd;          /**< DD data rate (kbit/s) */
-    double data_rate_hd;          /**< HD data rate (kbit/s) */
-    double data_rate_ed;          /**< ED data rate (kbit/s) */
-    double bit_cell_dd;           /**< DD bit cell (µs) */
-    double bit_cell_hd;           /**< HD bit cell (µs) */
+    double data_rate_dd_kbps;          /**< DD data rate (kbit/s) */
+    double data_rate_hd_kbps;          /**< HD data rate (kbit/s) */
+    double data_rate_ed_kbps;          /**< ED data rate (kbit/s) */
+    double bit_cell_dd_us;           /**< DD bit cell (µs) */
+    double bit_cell_hd_us;           /**< HD bit cell (µs) */
     
     /* Track format */
     int track_length_bits;        /**< Nominal track length (bits) */
