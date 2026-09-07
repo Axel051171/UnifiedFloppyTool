@@ -54,6 +54,14 @@ struct uft_hal_driver_s {
     int (*get_caps)(uft_hal_t *hal, uft_hal_caps_t *caps);
     int (*read_flux)(uft_hal_t *hal, int track, int side, int revs,
                      uint32_t **flux, size_t *count);
+    /* MF-954: optional. Fehlt der Zeiger, meldet uft_hal_read_flux_ex()
+     * NULL Umdrehungsgrenzen — es ERFINDET keine. `rev_versaetze[k]` ist
+     * der Index in `flux`, an dem Umdrehung k beginnt; die Umrechnung
+     * aus der geraetetypischen Groesse geschieht HIER, an der Kante, wo
+     * die Einheit bekannt ist. Begruendung im Header. */
+    int (*read_flux_ex)(uft_hal_t *hal, int track, int side, int revs,
+                        uint32_t **flux, size_t *count,
+                        size_t **rev_versaetze, size_t *rev_count);
     int (*write_flux)(uft_hal_t *hal, int track, int side,
                       const uint32_t *flux, size_t count);
     int (*seek)(uft_hal_t *hal, int track);
@@ -134,6 +142,9 @@ static void scp_close(uft_hal_t *hal);
 static int scp_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps);
 static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
                          uint32_t **flux, size_t *count);
+static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
+                            uint32_t **flux, size_t *count,
+                            size_t **rev_versaetze, size_t *rev_count);
 static int scp_enumerate(uft_hal_controller_t *out, int max);
 
 /* Stub driver for unimplemented controllers */
@@ -200,6 +211,9 @@ static const uft_hal_driver_t g_drivers[] = {
         .close = scp_close,
         .get_caps = scp_get_caps,
         .read_flux = scp_read_flux,
+        /* MF-954: als einziges der drei Backends belegt. GW und KryoFlux
+         * bleiben bewusst ohne — siehe die Kommentare dort. */
+        .read_flux_ex = scp_read_flux_ex,
         .write_flux = stub_write_flux,
         .seek = stub_seek,
         .motor = stub_motor,
@@ -567,10 +581,38 @@ static int gw_read_flux(uft_hal_t *hal, int track, int side, int revs,
                 data[out_pos++] = (uint32_t)(ticks * ns_per_tick);
                 ticks = 0;
             } else if (b == 0xFF) {
-                /* Index pulse marker */
+                /* MF-954, GEMESSEN UND FALSCH — hier wird kein
+                 * `read_flux_ex` aufgesetzt, solange das hier steht.
+                 *
+                 * Im GW-Protokoll ist 0xFF ein ESCAPE: es folgen ein
+                 * Opcode (Index=1, Space=2, Astable=3) und eine
+                 * N28-Nutzlast. Diese Zeile behandelt 0xFF als
+                 * eigenstaendige Marke und addiert 200 ERFUNDENE Ticks.
+                 *
+                 * Ebenso ist 0xFE (254) im Protokoll Teil des
+                 * 2-Byte-Bereichs 250..254, nicht „Space".
+                 *
+                 * Gemessen gegen `uft_gw_decode_flux_stream()` an einem
+                 * erzeugten Strom (2 Umdrehungen, 1000 Wechsel):
+                 *
+                 *     Produktionsdekoder  2000 Abtastungen
+                 *     dieser Dekoder      2015 Abtastungen
+                 *     abweichend          2000 von 2000
+                 *     erste Werte         1152 1152 …  gegen  201 1 1 1 …
+                 *
+                 * JEDER Wert ist falsch; die 201 ist die erfundene
+                 * Zugabe. Dieser Pfad kann einen Greaseweazle-Strom
+                 * nicht lesen — und `uft_fuzzy_bits.c` liest ueber ihn.
+                 *
+                 * Nicht in MF-954 behoben, weil das eine eigene Sache
+                 * ist: der richtige Weg ist die Abtretung an
+                 * `uft_gw_decode_flux_stream()`, also dieselbe Klasse
+                 * wie „wo ein Port neben einem nativen Parser steht".
+                 * Als eigener Punkt eingetragen. */
                 ticks += 200;
             } else if (b == 0xFE) {
-                /* Space: accumulator += 0x100 */
+                /* Space: accumulator += 0x100 — siehe oben, ebenfalls
+                 * nicht protokollgemaess. */
                 ticks += 0x100;
             } else {
                 /* 2-byte encoding: 0xFA-0xFD */
@@ -832,7 +874,27 @@ static int kf_read_flux(uft_hal_t *hal, int track, int side, int revs,
         return -1;
     }
     
-    /* Free index array (not used in HAL interface currently) */
+    /* MF-954: die Grenzen sind DA und werden weiterhin verworfen — und
+     * das ist diesmal begruendet, nicht versehentlich.
+     *
+     * `parse_kf_raw_file()` schreibt in `index[]` die STREAM-POSITION in
+     * Bytes (die ersten vier Bytes des Index-OOB-Blocks), nicht den
+     * Abtastindex. `uft_hal_read_flux_ex()` sagt aber ausdruecklich
+     * Abtast-VERSAETZE zu — das ist eine andere Groesse, und die beiden
+     * ineinander umzurechnen braucht die laufende Flusszahl, die nur der
+     * Parser selbst kennt und nicht herausgibt.
+     *
+     * Die Byte-Position als Versatz durchzureichen waere genau der
+     * Fehler, den MF-951 beim Bericht gefunden hat: eine Groesse mit dem
+     * Namen einer anderen. Deshalb bleibt der KryoFlux-Treiber ohne
+     * `read_flux_ex`, und `uft_hal_read_flux_ex()` meldet fuer ihn 0
+     * Grenzen — was „kann ich nicht sagen" heisst, nicht „eine
+     * Umdrehung".
+     *
+     * Was fehlt, ist benannt: `parse_kf_raw_file()` muesste beim
+     * Index-Puls den Abtastindex statt der Byte-Position melden. Das ist
+     * eine Aenderung an einer dokumentierten Ausgabe mit eigenem
+     * Vertrag und gehoert in einen eigenen Schritt. */
     if (index) free(index);
     
     hal->current_track = track;
@@ -926,10 +988,38 @@ static int scp_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps) {
 
 static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
                          uint32_t **flux, size_t *count) {
+    return scp_read_flux_ex(hal, track, side, revs, flux, count, NULL, NULL);
+}
+
+/* MF-954: SCP ist das einzige der drei Backends, dessen Umdrehungsgrenzen
+ * sich HIER schon belegen lassen.
+ *
+ * Es liest je Umdrehung `rev_hdr[8]` = [index_time(4), data_len(4)] und
+ * verwarf bisher beides bis auf die Laenge. Der Beginn jeder Umdrehung
+ * im Ausgabefeld wird jetzt beim Schreiben mitgefuehrt — nicht aus den
+ * Laengen gerechnet, denn die Schleife ueberspringt
+ * Ueberlauf-Abtastungen.
+ *
+ * NICHT ABGENOMMEN: dieser Pfad spricht mit einem Geraet ueber die
+ * serielle Schnittstelle. Dieses Projekt hat keine Hardware (MF-310).
+ * Geprueft ist der Vertrag der HUELLE, nicht das Geraetegespraech. */
+static int scp_read_flux_ex(uft_hal_t *hal, int track, int side, int revs,
+                            uint32_t **flux, size_t *count,
+                            size_t **rev_versaetze, size_t *rev_count) {
+    if (rev_versaetze) *rev_versaetze = NULL;
+    if (rev_count)     *rev_count = 0;
     if (!hal || !flux || !count) return -1;
 
     *flux = NULL;
     *count = 0;
+
+    size_t *vers = NULL;
+    size_t  vers_max = 0;
+    if (rev_versaetze && revs > 0) {
+        vers = (size_t *)calloc((size_t)revs, sizeof(size_t));
+        if (!vers) return -1;
+        vers_max = (size_t)revs;
+    }
 
     /*
      * SuperCard Pro serial protocol for track read:
@@ -1032,6 +1122,17 @@ static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
     double ns_per_tick = 25.0;  /* 40MHz clock = 25ns per tick */
 
     for (int r = 0; r < revs; r++) {
+        /* MF-954: der Beginn dieser Umdrehung im AUSGABEFELD.
+         *
+         * Er wird hier mitgeschrieben und NICHT aus `rev_lengths[]`
+         * gerechnet — die Schleife darunter ueberspringt
+         * Ueberlauf-Abtastungen (`sample == 0` -> `continue`), also
+         * waechst `out_idx` langsamer als `rev_lengths[r] / 2`. Wer den
+         * Versatz aus den Laengen ableitete, laege bei jeder Spur mit
+         * Ueberlauf daneben — und der Umdrehungsvergleich verglaeche
+         * dann verschobene Stellen (MF-950). */
+        if (vers && (size_t)r < vers_max) vers[r] = out_idx;
+
         size_t samples_in_rev = rev_lengths[r] / 2;
         for (size_t s = 0; s < samples_in_rev && out_idx < total_samples; s++) {
             uint8_t sample_bytes[2];
@@ -1041,6 +1142,7 @@ static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
                 /* Return what we have so far */
                 if (out_idx > 0) break;
                 free(flux_data);
+                free(vers);
                 return -1;
             }
 
@@ -1061,7 +1163,35 @@ static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
     *flux = flux_data;
     *count = out_idx;
 
-    return (out_idx > 0) ? 0 : -1;
+    if (out_idx == 0) {
+        free(vers);
+        return -1;
+    }
+
+    /* MF-954: nur so viele Umdrehungen melden, wie auch Daten tragen.
+     *
+     * Bricht die Lesung ab, laeuft die aeussere Schleife weiter und
+     * schreibt fuer jede weitere Umdrehung DENSELBEN `out_idx`. Solche
+     * Eintraege sind keine Umdrehungen — sie haben nichts beigetragen.
+     * Und ein Beginn jenseits des Gelesenen ist erst recht keiner.
+     *
+     * Beides zu melden hiesse, Umdrehungen zu behaupten, die der Strom
+     * nicht traegt (dieselbe Regel wie
+     * `uft_rev_grenzen_aus_dauern()`, MF-951). */
+    if (vers && rev_versaetze && rev_count) {
+        size_t n = 0;
+        for (size_t k = 0; k < vers_max; k++) {
+            if (vers[k] >= out_idx) break;                /* jenseits */
+            if (k > 0 && vers[k] == vers[k - 1]) break;   /* leer */
+            n++;
+        }
+        *rev_versaetze = vers;
+        *rev_count = n;
+    } else {
+        free(vers);
+    }
+
+    return 0;
 }
 
 static int scp_enumerate(uft_hal_controller_t *out, int max) {
@@ -1281,8 +1411,35 @@ int uft_hal_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps) {
 
 int uft_hal_read_flux(uft_hal_t *hal, int track, int side, int revolutions,
                       uint32_t **flux, size_t *count) {
+    /* MF-954: unveraendert. Wer keine Umdrehungsgrenzen braucht, merkt
+     * von der Erweiterung nichts. */
+    return uft_hal_read_flux_ex(hal, track, side, revolutions,
+                                flux, count, NULL, NULL);
+}
+
+int uft_hal_read_flux_ex(uft_hal_t *hal, int track, int side, int revolutions,
+                         uint32_t **flux, size_t *count,
+                         size_t **rev_versaetze, size_t *rev_count) {
+    if (rev_versaetze) *rev_versaetze = NULL;
+    if (rev_count)     *rev_count = 0;
+
     if (!hal || !hal->driver) return -1;
-    return hal->driver->read_flux(hal, track, side, revolutions, flux, count);
+
+    /* Kennt der Treiber die Erweiterung, bekommt er sie auch dann, wenn
+     * der Aufrufer keine Grenzen will — dann liegen die NULL-Zeiger an,
+     * und das Backend spart sich die Arbeit. */
+    if (hal->driver->read_flux_ex) {
+        return hal->driver->read_flux_ex(hal, track, side, revolutions,
+                                         flux, count,
+                                         rev_versaetze, rev_count);
+    }
+
+    /* Kein `read_flux_ex`: der Fluss kommt, die Grenzen nicht. Das ist
+     * KEIN Fehler und wird auch nicht als einer gemeldet — aber es wird
+     * auch nichts erfunden. `*rev_count` bleibt 0, und der Aufrufer
+     * sieht daran, dass kein Umdrehungsvergleich moeglich ist. */
+    return hal->driver->read_flux(hal, track, side, revolutions,
+                                  flux, count);
 }
 
 int uft_hal_write_flux(uft_hal_t *hal, int track, int side,

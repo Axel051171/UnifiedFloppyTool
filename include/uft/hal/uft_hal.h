@@ -188,6 +188,74 @@ int uft_hal_read_flux(uft_hal_t* hal, int track, int side, int revolutions,
                       uint32_t** flux, size_t* count);
 
 /**
+ * @brief Wie uft_hal_read_flux(), aber mit den UMDREHUNGSGRENZEN.
+ *
+ * ── Warum es diese zweite Fassung gibt (MF-954, P3-238) ──────────────
+ *
+ * `uft_hal_read_flux()` liefert eine flache Liste und einen Zaehler.
+ * Wo eine Umdrehung endet und die naechste beginnt, steht nirgends —
+ * obwohl ALLE DREI Flusspfade es vom Geraet bekommen und wegwerfen:
+ *
+ *   `greaseweazle_backend.c:249`  kopiert nur `fd->samples`, dann
+ *       `uft_gw_flux_free(fd)` — `index_times` sterben dort
+ *   KryoFlux in `uft_hal_unified.c` holt sie ausdruecklich und gibt sie
+ *       sofort frei: „Free index array (not used in HAL interface
+ *       currently)"
+ *   SCP in `uft_hal_unified.c`    liest je Umdrehung `rev_hdr[8]` =
+ *       [index_time(4), data_len(4)] und benutzt nur die Laenge
+ *
+ * Ohne diese Grenzen kann niemand Umdrehungen VERGLEICHEN — und der
+ * Vergleich ist das Einzige, was ein schwaches Bit von einer
+ * ungewoehnlichen, aber stabilen Kodierung unterscheidet (MF-949).
+ * `uft_fuzzy_bits.c` fordert deshalb fuenf Umdrehungen an, bekommt
+ * einen zusammenhanglosen Gesamtstrom und behilft sich mit einer
+ * Einzelmessungs-Heuristik.
+ *
+ * ── EINE Bedeutung, und sie steht hier ───────────────────────────────
+ *
+ * `rev_versaetze[k]` ist der INDEX IN `flux`, an dem Umdrehung k
+ * beginnt. `rev_versaetze[0]` ist immer 0.
+ *
+ * Das muss ausgeschrieben stehen, weil die drei Geraete DREI
+ * VERSCHIEDENE Groessen liefern (gemessen MF-954):
+ *
+ *   Greaseweazle  Tick-DAUER je Umdrehung
+ *   KryoFlux      Stream-POSITION in Bytes
+ *   SuperCard Pro Tick-Zeit UND Byte-Laenge
+ *
+ * Ein Vorschlag aus einem Bericht (57. Durchgang) wollte ein Feld
+ * „rev_offsets" mit `index_times[i]` fuellen — also Dauern, beschriftet
+ * als Indizes. Bei 72 MHz und 200 ms stehen dort rund 14 400 000,
+ * waehrend der Strom vielleicht 50 000 Abtastungen hat. Wer das eine
+ * fuer das andere haelt, schneidet an willkuerlichen Stellen.
+ *
+ * Deshalb wird an der KANTE umgerechnet, wo die Einheit bekannt ist,
+ * und die Schnittstelle traegt nur noch eine Groesse.
+ *
+ * ── Was NICHT belegt ist ─────────────────────────────────────────────
+ *
+ * Die GERAETEPFADE sind nicht abgenommen. Dieses Projekt hat keine
+ * Hardware (MF-310); geprueft sind der Rueckwaertsvertrag, das
+ * Verhalten bei NULL-Ausgaben und dass ein Treiber ohne diese Faehigkeit
+ * NICHTS ERFINDET. Was ein echtes Geraet liefert, steht aus.
+ *
+ * @param rev_versaetze Ausgabe, darf NULL sein — dann verhaelt sich der
+ *                      Aufruf wie uft_hal_read_flux(). Der Aufrufer gibt
+ *                      das Feld mit free() zurueck.
+ * @param rev_count     Ausgabe: Zahl der Umdrehungen, deren Beginn
+ *                      belegt ist. **0 heisst: dieses Backend kann es
+ *                      nicht sagen** — nicht „eine Umdrehung".
+ *
+ * @return 0 bei Erfolg, -1 bei Fehler. Ein Backend ohne
+ *         Umdrehungsgrenzen ist KEIN Fehler; es liefert den Fluss und
+ *         setzt @p rev_count auf 0.
+ */
+int uft_hal_read_flux_ex(uft_hal_t* hal, int track, int side,
+                         int revolutions,
+                         uint32_t** flux, size_t* count,
+                         size_t** rev_versaetze, size_t* rev_count);
+
+/**
  * @brief Write flux data to disk
  * @param hal HAL handle
  * @param track Track number
