@@ -646,6 +646,81 @@ static inline uint32_t uft_gw_ticks_to_ns(uint32_t ticks, uint32_t sample_freq) 
 }
 
 /**
+ * @brief Umdrehungs-DAUERN in KUMULIERTE Zeitstempel wandeln (MF-957).
+ *
+ * `uft_gw_decode_flux_index_times()` liefert je Indexpuls die Zeit SEIT
+ * DEM VORIGEN Puls — eine DAUER. Gemessen an der Funktion selbst: nach
+ * jedem Puls steht dort `ticks_since_index = -(ticks + iv)`, und diese
+ * RUECKSETZUNG macht den Eintrag zur Dauer. So macht es greaseweazle
+ * selbst.
+ *
+ * `FluxCaptured::index_times_ns` (include/uft/hal/outcomes.h) verlangt
+ * dagegen ausdruecklich „cumulative nanoseconds from the start of the
+ * capture" und „INVARIANT when non-empty: strictly increasing".
+ *
+ * Zwischen beiden liegt diese Funktion. Vorher wurde nur ticks->ns
+ * gewandelt und die Dauer unter dem Namen eines Zeitstempels
+ * durchgereicht — mit der Folge, dass ein Verbraucher, der `transitions_ns`
+ * an diesen Grenzen schneidet, ab der ZWEITEN Umdrehung gar nichts mehr
+ * schrieb. An einem erzeugten Strom mit drei Umdrehungen gemessen:
+ * **1 von 3 Umdrehungen** kamen in der Datei an, still.
+ *
+ * Zwei Regeln, beide mit Grund:
+ *
+ *   * Eine FUEHRENDE Null wird uebersprungen. Bei `index_sync` setzt
+ *     Greaseweazle einen Indexpuls an den Stromanfang; die Zeit von dort
+ *     bis dorthin ist null. Das ist genau die „implied 0 before the
+ *     first entry" des Vertrags und keine Umdrehung. Dieselbe Regel und
+ *     dieselbe Begruendung stehen in `uft_rev_grenzen_aus_dauern()`
+ *     (MF-951).
+ *   * Eine Null MITTEN in der Liste beendet die Wandlung. Dort waere sie
+ *     eine Umdrehung ohne Dauer, und die gibt es nicht.
+ *
+ * Laeuft die kumulierte Zeit ueber `UINT32_MAX` (rund 4,29 s), bricht die
+ * Funktion ab, statt umzubrechen: ein Umbruch meldete eine FALLENDE
+ * Grenze, also eine erfundene Struktur.
+ *
+ * Sie steht hier und nicht in `uft_hal_unified.c`, weil fuenf Tests den
+ * Provider linken, aber nicht die HAL-Einheit — und weil sie neben
+ * `uft_gw_ticks_to_ns()` gehoert, dort sucht sie der naechste Leser.
+ *
+ * @param dauern_ticks    Dauern je Umdrehung in Geraetetakten
+ * @param dauer_count     Anzahl Eintraege in @p dauern_ticks
+ * @param sample_freq_hz  Taktfrequenz in Hertz; 0 liefert 0 Eintraege
+ * @param aus_ns          Ausgabe: kumulierte Nanosekunden, streng steigend
+ * @param max_aus         Platz in @p aus_ns
+ * @return Anzahl geschriebener Eintraege
+ */
+static inline size_t uft_gw_index_dauern_zu_kumulativ_ns(
+        const uint32_t *dauern_ticks, size_t dauer_count,
+        uint32_t sample_freq_hz, uint32_t *aus_ns, size_t max_aus) {
+    if (!dauern_ticks || !aus_ns || dauer_count == 0 || max_aus == 0)
+        return 0;
+    if (sample_freq_hz == 0)
+        return 0;              /* ohne Taktfrequenz keine Umrechnung */
+
+    size_t   n   = 0;
+    uint64_t kum = 0;          /* kumulierte Takte seit Aufnahmebeginn */
+
+    for (size_t i = 0; i < dauer_count && n < max_aus; i++) {
+        const uint32_t dauer = dauern_ticks[i];
+        if (dauer == 0) {
+            if (i == 0) continue;          /* fuehrende Null: index_sync */
+            break;                         /* Umdrehung ohne Dauer */
+        }
+        kum += dauer;
+        {
+            const uint64_t ns =
+                (kum * 1000000000ULL) / (uint64_t)sample_freq_hz;
+            if (ns > 0xFFFFFFFFULL)
+                break;                     /* lieber kuerzer als falsch */
+            aus_ns[n++] = (uint32_t)ns;
+        }
+    }
+    return n;
+}
+
+/**
  * @brief Convert nanoseconds to ticks
  * @param ns Time in nanoseconds
  * @param sample_freq Sample frequency in Hz

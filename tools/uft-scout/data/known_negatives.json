@@ -39,7 +39,7 @@
   },
   "yas-sim/fdc_bitstream": {
    "status": "integriert",
-   "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream)"
+   "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream) — NACHTRAG 2026-09-07: Eintrag 'integriert' ist veraltet, CLAUDE.md nennt fdc_bitstream seit MF-626 entfernt; test_data/*.raw sind KEIN KryoFlux-Strom (Textkopf **TRACK_RANGE/**SAMPLING_RATE, gemessen)"
   },
   "kristomu/flux-analyze": {
    "status": "bewertet",
@@ -232,6 +232,18 @@
   "hpingel/pyAccess1581": {
    "status": "bewertet",
    "grund": "GPL-3.0, 856 Zeilen Python, DrawBridge-Linie (Rob-Smith-Serienprotokoll). Drei Fundus-Posten, 0 Kennzahl-Bewegung: (1) DrawBridge-Protokoll-Zweitdoku (Verhaltens-Spec, haengt am bestehenden ArduinoFloppyDiskReader-Eintrag); (2) hardwarefreier Simulationsmodus als Decoder-Oracle, gemessen deterministisch, aber d81 schon T1b und kein Abbild-Leseweg -> keine zweite Hand fuer uft_cbmdos; (3) mitgelieferte Real-Aufnahme 160 Spuren, Nutzlast komplett 0xF6 (leer formatiert). Gutachten out/pyAccess1581.gutachten.md, 2026-08-30"
+  },
+  "dbalsom/fluxfox": {
+   "status": "bewertet",
+   "grund": "Gutachten P3-247 (2026-09-07, out/p3-247_stroeme.gutachten.md): MIT (LICENSE woertlich); tests/images/sector_test = EINE 360K-Diskette in 19 Containern inkl. KryoFlux-Strom (von Greaseweazle 1.18 geschrieben, KFInfo gemessen, 3 Umdr.) + SCP (3 Umdr.) + .img/.86f/.pri/.imd/.td0/.mfi; Kennzahl T3 runter (86f, pri). monster_disk (Prolok) und transylvania (eigene Rechte-Notiz) im Fundus. Vorschlag KOR-d"
+  },
+  "Datamuseum-DK/FloppyToolsExamples": {
+   "status": "bewertet",
+   "grund": "Gutachten P3-247 (2026-09-07): BSD-2 woertlich; 173 DTC-3.00s-Stroeme (KFInfo gemessen, 6 Index/5 Umdr., 253 976 Flusswerte in 000_bin00.0.raw); Neubesuch mit neuem Anlass (Strom-Ebene statt Voting; Vorgutachten FloppyTools V3 = Fundus in OPEN_ITEMS Z.2845). Inhalt Q1 = Moratorium. Vorschlag KOR-f"
+  },
+  "davidlrand/mame-system-media": {
+   "status": "bewertet",
+   "grund": "Gutachten P3-247 (2026-09-07): GitHub-Spiegel der archive.org-Objekte von David L. Rand (CC-BY-4.0 im Wortlaut, LICENSE mit zwei Abschnitten); fuehrt IMD/MFI/HFE, die SCP-Flux-Master liegen NUR auf archive.org (trs80-model3-cpm-cheap, toshiba-t250-t200-cpm). Vorschlaege KOR-g/KOR-h; uebrige Objekte nur IMD -> Fundus"
   }
  }
 }

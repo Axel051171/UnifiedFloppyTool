@@ -35,6 +35,10 @@
  * Treiber fragt, sonst liest der Aufrufer im Fehlerfall Muell.
  */
 #include "uft/hal/uft_hal.h"
+/* MF-957: uft_gw_index_dauern_zu_kumulativ_ns() liegt neben
+ * uft_gw_ticks_to_ns(), weil fuenf Tests den GW-Provider linken, aber
+ * nicht die HAL-Einheit. */
+#include "uft/hal/uft_greaseweazle_full.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,6 +150,124 @@ TEST(null_grenzen_heisst_kann_ich_nicht_sagen)
     }
 }
 
+/* ── MF-957: Dauern sind keine Zeitstempel ──────────────────────────── */
+
+/* Die Zahlen stammen NICHT aus dem Kopf, sondern aus einem Lauf von
+ * `uft_gw_decode_flux_index_times()` ueber einen Strom des
+ * GW-Flussgebers (3 Umdrehungen, 72 MHz, 1200 Abtastungen):
+ *
+ *     Dekoder liefert   0  353088  348192  337824  Ticks
+ *     Gesamtdauer des Stroms          14 432 000 ns
+ *     Summe der Eintraege ab dem 2.   14 432 000 ns   <- identisch
+ *
+ * Die Gleichheit der letzten beiden Zeilen ist der Beweis, dass es
+ * DAUERN sind: waeren es Zeitstempel, muesste der LETZTE Eintrag der
+ * Gesamtdauer entsprechen, nicht ihre Summe. */
+static const uint32_t GW_GEMESSEN[4] = { 0u, 353088u, 348192u, 337824u };
+#define GW_FREQ 72000000u
+
+TEST(dauern_werden_zu_streng_steigenden_zeitstempeln)
+{
+    uint32_t aus[8] = {0};
+    size_t n = uft_gw_index_dauern_zu_kumulativ_ns(GW_GEMESSEN, 4, GW_FREQ,
+                                                   aus, 8);
+    /* Drei Umdrehungen, die fuehrende Null ist keine. */
+    ASSERT(n == 3);
+    ASSERT(aus[0] == 4904000u);
+    ASSERT(aus[1] == 9740000u);
+    ASSERT(aus[2] == 14432000u);
+
+    /* Der Vertrag von FluxCaptured::index_times_ns. */
+    ASSERT(aus[0] < aus[1]);
+    ASSERT(aus[1] < aus[2]);
+
+    /* Und die Umkehrung: die Differenzen sind wieder die Dauern. */
+    ASSERT(aus[0] - 0u        == 4904000u);
+    ASSERT(aus[1] - aus[0]    == 4836000u);
+    ASSERT(aus[2] - aus[1]    == 4692000u);
+}
+
+TEST(der_alte_weg_verletzte_den_vertrag)
+{
+    /* Was der Provider vor MF-957 tat: jeden Eintrag einzeln ticks->ns
+     * und unveraendert durchreichen. Dieser Test haelt fest, dass das
+     * NICHT streng steigend ist — damit „behoben" nachpruefbar bleibt,
+     * wenn niemand mehr den alten Stand auscheckt. */
+    uint32_t alt[4];
+    for (int i = 0; i < 4; i++)
+        alt[i] = (uint32_t)((uint64_t)GW_GEMESSEN[i] * 1000000000ULL
+                            / (uint64_t)GW_FREQ);
+
+    int steigend = 1;
+    for (int i = 1; i < 4; i++)
+        if (alt[i] <= alt[i - 1]) steigend = 0;
+    ASSERT(steigend == 0);          /* der Rotbeweis */
+
+    /* Und die Folge davon, wortgetreu nach der Schleife in
+     * src/fluxcapturejob.cpp: ein Verbraucher, der `transitions_ns` an
+     * diesen Grenzen schneidet, schreibt nur EINE der drei Umdrehungen
+     * — die anderen beiden fallen still weg. */
+    uint32_t trans[1200];
+    for (int i = 0; i < 1200; i++) trans[i] = 14432000u / 1200u;
+
+    int geschrieben_alt = 0, geschrieben_neu = 0;
+    {   /* alt */
+        size_t start = 0; uint64_t kum = 0;
+        for (int r = 0; r < 4 && geschrieben_alt < 3; r++) {
+            size_t end = start;
+            while (end < 1200 && kum < alt[r]) { kum += trans[end]; end++; }
+            if (end > start) geschrieben_alt++;
+            start = end;
+        }
+    }
+    {   /* neu */
+        uint32_t neu[8] = {0};
+        size_t n = uft_gw_index_dauern_zu_kumulativ_ns(GW_GEMESSEN, 4,
+                                                       GW_FREQ, neu, 8);
+        size_t start = 0; uint64_t kum = 0;
+        for (size_t r = 0; r < n && geschrieben_neu < 3; r++) {
+            size_t end = start;
+            while (end < 1200 && kum < neu[r]) { kum += trans[end]; end++; }
+            if (end > start) geschrieben_neu++;
+            start = end;
+        }
+    }
+    if (geschrieben_alt != 1 || geschrieben_neu != 3) {
+        printf("\n      alt %d von 3, neu %d von 3\n      ",
+               geschrieben_alt, geschrieben_neu);
+        _fail++;
+    }
+}
+
+TEST(nullen_und_grenzen_der_wandlung)
+{
+    uint32_t aus[8] = {0};
+
+    /* Eine Null MITTEN in der Liste ist eine Umdrehung ohne Dauer und
+     * beendet die Wandlung — im Unterschied zur fuehrenden. */
+    const uint32_t mittendrin[4] = { 0u, 353088u, 0u, 337824u };
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(mittendrin, 4, GW_FREQ,
+                                               aus, 8) == 1);
+
+    /* Ohne Taktfrequenz ist keine Umrechnung moeglich — 0 Eintraege,
+     * nicht geratene. */
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(GW_GEMESSEN, 4, 0,
+                                               aus, 8) == 0);
+
+    /* Kein Eintrag ohne Platz, kein Schreiben durch NULL. */
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(GW_GEMESSEN, 4, GW_FREQ,
+                                               aus, 0) == 0);
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(NULL, 4, GW_FREQ,
+                                               aus, 8) == 0);
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(GW_GEMESSEN, 4, GW_FREQ,
+                                               NULL, 8) == 0);
+
+    /* Ueberlauf: lieber kuerzer als falsch. Bei 1 Hz ist schon die
+     * erste Umdrehung groesser als UINT32_MAX Nanosekunden. */
+    const uint32_t lang[2] = { 0u, 4294967295u };
+    ASSERT(uft_gw_index_dauern_zu_kumulativ_ns(lang, 2, 1u, aus, 8) == 0);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -154,6 +276,10 @@ int main(void)
     RUN(null_ausgaben_sind_erlaubt);
     RUN(die_alte_schnittstelle_verhaelt_sich_unveraendert);
     RUN(null_grenzen_heisst_kann_ich_nicht_sagen);
+    printf("\n=== HAL: Dauern sind keine Zeitstempel (MF-957) ===\n");
+    RUN(dauern_werden_zu_streng_steigenden_zeitstempeln);
+    RUN(der_alte_weg_verletzte_den_vertrag);
+    RUN(nullen_und_grenzen_der_wandlung);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     printf("\nNICHT geprueft: die Geraetepfade. Dieses Projekt hat keine\n"
            "Hardware (MF-310); was ein echtes Geraet liefert, steht aus.\n");

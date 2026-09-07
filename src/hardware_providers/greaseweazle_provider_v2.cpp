@@ -12,8 +12,15 @@
  * Rule F-3 (multi-revolution preservation):
  *   uft_gw_read_track() / uft_gw_read_flux_simple() capture N complete
  *   revolutions of flux data indexed by uft_gw_flux_data_t::index_times[].
- *   All samples and all index timestamps are copied verbatim into the
- *   FluxCaptured::transitions_ns vector — no averaging, no pruning.
+ *   All samples are copied verbatim into FluxCaptured::transitions_ns —
+ *   no averaging, no pruning.
+ *
+ *   HIER STAND „and all index timestamps are copied verbatim"
+ *   (berichtigt MF-957). Sie werden NICHT unveraendert kopiert, und das
+ *   waere auch falsch: index_times[] sind DAUERN je Umdrehung,
+ *   FluxCaptured::index_times_ns verlangt KUMULIERTE Zeitstempel. Genau
+ *   dieses „verbatim" war der Fehler — siehe
+ *   uft_gw_index_dauern_zu_kumulativ_ns().
  *
  * Rule F-4 (3-part errors):
  *   Every ProviderError has non-empty what / why / fix. The constructor
@@ -34,6 +41,7 @@
 #include <cstring>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace uft::hal {
 
@@ -335,18 +343,51 @@ FluxOutcome GreaseweazleProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     }
 
     /* Rule F-3: preserve the per-revolution index boundaries the
-     * firmware reported. uft_gw_flux_data_t::index_times[] holds
-     * index_count cumulative-tick timestamps; convert each to ns with
-     * the SAME scale already applied to the samples and store them in
-     * FluxCaptured::index_times_ns. Do NOT synthesise entries — if the
-     * firmware reported none, leave the vector empty (an honest
-     * "boundaries unknown", per the FluxCaptured contract). */
+     * firmware reported. Do NOT synthesise entries — if the firmware
+     * reported none, leave the vector empty (an honest "boundaries
+     * unknown", per the FluxCaptured contract).
+     *
+     * HIER STAND „uft_gw_flux_data_t::index_times[] holds index_count
+     * cumulative-tick timestamps" (berichtigt MF-957). Das war falsch,
+     * und der Fehler war die einzige Umrechnung, die hier stattfand:
+     * jeder Eintrag wurde ticks->ns gewandelt und unveraendert
+     * durchgereicht.
+     *
+     * Gemessen an `uft_gw_decode_flux_index_times()` selbst
+     * (src/hal/uft_greaseweazle_full.c): nach jedem Indexpuls steht
+     * dort `ticks_since_index = -(ticks + iv)`. Diese RUECKSETZUNG
+     * macht jeden Eintrag zur Zeit SEIT DEM VORIGEN Index — eine
+     * Dauer, keinen Zeitstempel. So macht es greaseweazle selbst.
+     *
+     * An einem erzeugten Strom mit drei Umdrehungen nachgefahren:
+     *
+     *     Dekoder liefert     0  353088  348192  337824  Ticks
+     *     streng steigend?    NEIN
+     *     Summe ab dem 2.     14,4 ms  ==  Gesamtdauer des Stroms
+     *
+     * `FluxCaptured::index_times_ns` verlangt aber ausdruecklich
+     * „cumulative nanoseconds from the start of the capture" und
+     * „INVARIANT when non-empty: strictly increasing"
+     * (include/uft/hal/outcomes.h). Die alte Fassung verletzte beides
+     * ab der ZWEITEN Umdrehung — ein Verbraucher, der `transitions_ns`
+     * an diesen Grenzen schneidet, haette Umdrehung 2 und 3 am
+     * Stromanfang gesucht.
+     *
+     * Die fuehrende Null ist protokollgemaess und keine Umdrehung:
+     * bei `index_sync` setzt Greaseweazle einen Indexpuls an den
+     * Stromanfang, und die Zeit von dort bis dorthin ist null. Sie ist
+     * genau die „implied 0 before the first entry" des Vertrags und
+     * gehoert deshalb NICHT in die Liste. Dieselbe Regel und dieselbe
+     * Begruendung stehen in `uft_rev_grenzen_aus_dauern()` (MF-951).
+     * Eine Null MITTEN in der Liste bleibt ein Abbruch — dort waere
+     * sie eine Umdrehung ohne Dauer, und die gibt es nicht. */
     if (flux->index_times && flux->index_count > 0) {
-        captured.index_times_ns.reserve(flux->index_count);
-        for (uint8_t r = 0; r < flux->index_count; ++r) {
-            captured.index_times_ns.push_back(
-                uft_gw_ticks_to_ns(flux->index_times[r], sample_freq));
-        }
+        std::vector<std::uint32_t> kumulativ_ns(flux->index_count);
+        const std::size_t n = uft_gw_index_dauern_zu_kumulativ_ns(
+            flux->index_times, flux->index_count, sample_freq,
+            kumulativ_ns.data(), kumulativ_ns.size());
+        kumulativ_ns.resize(n);
+        captured.index_times_ns = std::move(kumulativ_ns);
     }
 
     uft_gw_flux_free(flux);
