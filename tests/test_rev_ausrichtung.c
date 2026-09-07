@@ -193,6 +193,152 @@ TEST(unaehnliche_stroeme_werden_abgelehnt)
     }
 }
 
+/**
+ * Baut eine Spur, die vorne eine periodische Luecke traegt und ihren
+ * unterscheidenden Inhalt erst ab @p unique_ab.
+ *
+ * Das ist der Normalfall einer echten Spur, nicht ein Sonderfall:
+ * Gap-Bytes sind periodisch und machen den groessten Teil aus, die
+ * Sektorkoepfe stehen dazwischen.
+ */
+static void spur_mit_luecke_bauen(uint8_t *b, size_t bits,
+                                  size_t unique_ab, uint32_t saat)
+{
+    uint32_t z = saat ? saat : 1u;
+    for (size_t i = 0; i < bits; i++) {
+        if (i < unique_ab) {
+            bit_setzen(b, i, (int)(i & 1u));          /* 0101… */
+        } else {
+            z ^= z << 13; z ^= z >> 17; z ^= z << 5;
+            bit_setzen(b, i, (int)(z & 1u));
+        }
+    }
+}
+
+TEST(der_inhalt_darf_ueberall_auf_der_spur_liegen)
+{
+    /* Diesen Fall hatte die MUTATIONSPROBE nicht — und deshalb blieb
+     * „Fenster an den Rand legen" gruen.
+     *
+     * Bis MF-953 verglich die Ausrichtung ein Fenster aus der MITTE
+     * (12,5 % bis 62,5 %). Liegt die unterscheidende Stelle dahinter,
+     * sieht sie nur gleichfoermiges Muster, und dort passen viele
+     * Versaetze gleich gut. Gemessen:
+     *
+     *     Inhalt in der Mitte        Versatz +2  richtig
+     *     Inhalt im letzten Viertel  Versatz +0  FALSCH
+     *     Inhalt im letzten Achtel   Versatz +0  FALSCH
+     *
+     * Und zwar mit Abweichung 0,0000 — also als VERLAESSLICH gemeldet.
+     * Ein zuversichtlich falscher Versatz geht in die Fusion und erzeugt
+     * dort erfundene Befunde (MF-950).
+     *
+     * Meine bisherigen Pruefmuster waren gleichmaessig zufaellig, also
+     * ueberall unterscheidend — sie konnten den Fehler nicht sehen. */
+    static const size_t AB[] = { 0u, BITS / 4u, BITS / 2u,
+                                 BITS * 3u / 4u, BITS * 7u / 8u };
+
+    for (size_t k = 0; k < sizeof AB / sizeof *AB; k++) {
+        uint8_t a[BYTES], b[BYTES];
+        spur_mit_luecke_bauen(a, BITS, AB[k], 0xC0FFEEu);
+        verschieben(a, BITS, +2, b);
+
+        uft_rev_ausrichtung_t aus;
+        memset(&aus, 0, sizeof aus);
+        bool ok = uft_revolutionen_ausrichten(a, BITS, b, BITS, 32, &aus);
+
+        if (!ok || aus.versatz != +2) {
+            printf("\n      Inhalt ab %zu von %u: Versatz %+ld statt +2 "
+                   "(Abweichung %.4f, %s)\n      ",
+                   AB[k], BITS, aus.versatz, aus.abweichung,
+                   aus.verlaesslich ? "verlaesslich" : "unverlaesslich");
+            _fail++;
+            return;
+        }
+    }
+}
+
+TEST(auch_mit_luecke_am_ENDE_wird_ausgerichtet)
+{
+    /* Der Spiegelfall zu `der_inhalt_darf_ueberall_auf_der_spur_liegen`.
+     * Die Mutationsprobe „nur das letzte Viertel vergleichen" blieb
+     * gruen, weil dort ueberall Inhalt lag.
+     *
+     * Eine Spur kann ihren Inhalt aber auch VORNE tragen und hinten
+     * eine Luecke — beides kommt vor, und der Vergleich darf sich auf
+     * keine der beiden Seiten verlassen. */
+    static const size_t BIS[] = { BITS, BITS * 3u / 4u, BITS / 2u,
+                                  BITS / 4u, BITS / 8u };
+
+    for (size_t k = 0; k < sizeof BIS / sizeof *BIS; k++) {
+        uint8_t a[BYTES], b[BYTES];
+        /* Inhalt bis BIS[k], danach gleichfoermiges 0101. */
+        uint32_t z = 0xBEEF77u;
+        for (size_t i = 0; i < BITS; i++) {
+            if (i < BIS[k]) {
+                z ^= z << 13; z ^= z >> 17; z ^= z << 5;
+                bit_setzen(a, i, (int)(z & 1u));
+            } else {
+                bit_setzen(a, i, (int)(i & 1u));
+            }
+        }
+        verschieben(a, BITS, +2, b);
+
+        uft_rev_ausrichtung_t aus;
+        memset(&aus, 0, sizeof aus);
+        bool ok = uft_revolutionen_ausrichten(a, BITS, b, BITS, 32, &aus);
+
+        if (!ok || aus.versatz != +2) {
+            printf("\n      Inhalt bis %zu von %u: Versatz %+ld statt +2 "
+                   "(Abweichung %.4f)\n      ",
+                   BIS[k], BITS, aus.versatz, aus.abweichung);
+            _fail++;
+            return;
+        }
+    }
+}
+
+TEST(jeder_versatz_sieht_dieselbe_menge_bits)
+{
+    /* Die Rand-Einrueckung ist keine unbelegte Vorsorge, sondern eine
+     * ZUSICHERUNG — und hier steht sie als solche.
+     *
+     * Verglichen wird von `max_versatz` bis `kurz - max_versatz`. Fuer
+     * jeden Versatz in diesem Bereich liegt jede Position beider Stroeme
+     * im gueltigen Bereich, also vergleicht JEDER Versatz exakt
+     * `kurz - 2*max_versatz` Bits. Kein Versatz kann gewinnen, weil er
+     * weniger Beweis sehen musste.
+     *
+     * GEMESSEN, und das gehoert dazu: ohne die Einrueckung schlug in 120
+     * Faellen (3 Laengen x 40 Saaten) KEINER fehl. Ihre Notwendigkeit
+     * ist also nicht durch einen Fehlerfall belegt. Sie kostet nichts
+     * (64 von 101 343 Bits) und kann — anders als das Mittelfenster,
+     * das MF-953 entfernt hat — keine Beweisstelle ausschliessen.
+     * Deshalb bleibt sie, und deshalb wird ihre Eigenschaft hier
+     * geprueft statt behauptet. */
+    static const long MAXV[] = { 8, 32, 64 };
+
+    uint8_t a[BYTES], b[BYTES];
+    muster_bauen(a, BITS, 0x99AA55u);
+    verschieben(a, BITS, +3, b);
+
+    for (size_t k = 0; k < sizeof MAXV / sizeof *MAXV; k++) {
+        uft_rev_ausrichtung_t aus;
+        memset(&aus, 0, sizeof aus);
+        ASSERT(uft_revolutionen_ausrichten(a, BITS, b, BITS,
+                                           MAXV[k], &aus) == true);
+
+        const size_t soll = (size_t)BITS - 2u * (size_t)MAXV[k];
+        if (aus.verglichen != soll) {
+            printf("\n      max_versatz %ld: %zu Bits verglichen, "
+                   "zugesagt %zu\n      ",
+                   MAXV[k], aus.verglichen, soll);
+            _fail++;
+            return;
+        }
+    }
+}
+
 TEST(die_fusion_lehnt_unausrichtbare_umdrehungen_ab)
 {
     /* Diesen Fall hat die MUTATIONSPROBE gefunden.
@@ -424,6 +570,9 @@ int main(void)
     RUN(ein_bekannter_versatz_wird_gefunden);
     RUN(gleicher_inhalt_ergibt_versatz_null);
     RUN(unaehnliche_stroeme_werden_abgelehnt);
+    RUN(der_inhalt_darf_ueberall_auf_der_spur_liegen);
+    RUN(auch_mit_luecke_am_ENDE_wird_ausgerichtet);
+    RUN(jeder_versatz_sieht_dieselbe_menge_bits);
     RUN(die_fusion_lehnt_unausrichtbare_umdrehungen_ab);
     RUN(ausgerichtet_meldet_identischer_inhalt_nichts);
     RUN(echte_schwache_bits_ueberleben_die_ausrichtung);

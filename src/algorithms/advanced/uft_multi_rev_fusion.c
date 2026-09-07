@@ -212,27 +212,43 @@ bool uft_revolutionen_ausrichten(const uint8_t *a, size_t a_bits,
     memset(out, 0, sizeof(*out));
     out->abweichung = 1.0;
 
-    /* Fenster aus der MITTE, aus zwei Gruenden — und einer davon ist
-     * gemessen, der andere nicht. Das gehoert getrennt gesagt:
+    /* Verglichen wird die GANZE Ueberlappung, nur um `max_versatz` an
+     * beiden Enden eingerueckt — damit jeder Versatz dieselbe Menge
+     * Bits sieht und kein Rand ihn bevorzugt.
      *
-     * GEMESSEN: Aufwand. Der Vergleich laeuft ueber (2*max_versatz+1)
-     * Versaetze. Bei der Korpus-Spur sind das 101 343 Bits x 129
-     * Versaetze; das halbe Fenster halbiert das.
+     * MF-953: hier stand ein Fenster aus der MITTE (12,5 % bis 62,5 %),
+     * begruendet mit Aufwand und mit der Vermutung, die Raender fuehrten
+     * in die Irre. Beide Haelften der Begruendung sind gemessen worden,
+     * und beide tragen nicht:
      *
-     * NICHT BELEGT: dass die Raender in die Irre fuehren. Der Gedanke
-     * ist, dass dort beim Verschieben Fuellung steht und periodische
-     * Luecken (Gap-Bytes) zu vielen Versaetzen gleich gut passen. Die
-     * Mutationsprobe „Fenster an den Rand legen" blieb GRUEN — mit den
-     * vorhandenen Pruefmustern liess sich kein Fall bauen, in dem die
-     * Fensterwahl das Ergebnis aendert. Es bleibt Vorsorge ohne Beleg,
-     * und so steht es hier. */
+     * AUFWAND: 4,8 ms mit Fenster, 9,6 ms ohne, bei 101 343 Bits und
+     * 129 Versaetzen. Bei 80 Spuren ist das unter einer Sekunde.
+     *
+     * RICHTIGKEIT: das Fenster war nicht bloss unbelegt, es war
+     * SCHAEDLICH. Liegt die unterscheidende Stelle einer Spur dahinter,
+     * sieht die Ausrichtung nur gleichfoermiges Muster — und dort passen
+     * viele Versaetze gleich gut. Gemessen an einer Spur, die vorne eine
+     * periodische Luecke traegt und ihren Inhalt hinten:
+     *
+     *     Inhalt in der Mitte        Versatz +2  richtig
+     *     Inhalt im letzten Viertel  Versatz +0  FALSCH
+     *     Inhalt im letzten Achtel   Versatz +0  FALSCH
+     *
+     * Und zwar mit Abweichung 0,0000, also als VERLAESSLICH gemeldet.
+     * Ein zuversichtlich falscher Versatz geht in die Fusion und erzeugt
+     * genau die erfundenen Befunde, gegen die MF-950 gebaut wurde.
+     *
+     * Das ist realistisch und nicht konstruiert: Luecken sind periodisch
+     * und machen den groessten Teil einer Spur aus.
+     *
+     * Warum die Mutationsprobe gruen blieb: kein Pruefmuster hatte die
+     * unterscheidende Stelle ausserhalb des Fensters — sie waren
+     * gleichmaessig zufaellig, also ueberall unterscheidend. */
     const size_t kurz = (a_bits < b_bits) ? a_bits : b_bits;
-    if (kurz <= (size_t)(4 * max_versatz) + 16u) return false;
+    if (kurz <= (size_t)(2 * max_versatz) + 16u) return false;
 
-    size_t von = kurz / 8u;
-    size_t bis = von + kurz / 2u;
-    if (bis > kurz) bis = kurz;
-    if ((size_t)max_versatz > von) von = (size_t)max_versatz;
+    const size_t von = (size_t)max_versatz;
+    const size_t bis = kurz - (size_t)max_versatz;
     if (von >= bis) return false;
 
     long   bester = 0;
