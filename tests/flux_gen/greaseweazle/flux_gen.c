@@ -170,6 +170,22 @@ uft_gw_flux_gen_err_t uft_gw_flux_gen_clean(
             }
         }
 
+        /* MF-952: Jitter und Long-Track wirken auf den FLUSS, nicht auf
+         * eine Index-Nutzlast.
+         *
+         * Vorher veraenderten sie `rev_index_ticks`, das als Nutzlast in
+         * den Index-Opcode ging. Seit die Nutzlast 0 ist und die
+         * Umdrehungsdauer aus dem emittierten Fluss folgt, waeren beide
+         * Defekte wirkungslos — ein Merkmal, das nichts mehr tut, ist
+         * schlimmer als keines.
+         *
+         * Auf den Fluss angewandt sind sie ausserdem das bessere Modell:
+         * eine Drehzahlschwankung dehnt Zellen UND Umdrehung gemeinsam;
+         * sie verschiebt nicht den Indexpuls gegen eine starre Spur. */
+        const uint64_t rev_faktor_zaehler = rev_index_ticks;
+        const uint64_t rev_faktor_nenner  = base_index_ticks
+                                          ? base_index_ticks : 1u;
+
         uint64_t ticks_in_rev = 0;
         for (uint32_t t = 0; t < params->transitions_per_rev; t++) {
             uint64_t r = rng_next(&rng);
@@ -190,6 +206,14 @@ uft_gw_flux_gen_err_t uft_gw_flux_gen_clean(
 
             uint64_t cell_ticks_64 = (uint64_t)cell_ns *
                                      (uint64_t)freq / 1000000000ull;
+            /* MF-952: die Drehzahlabweichung dieser Umdrehung dehnt die
+             * Zelle. Bei rev_faktor == 1 (keine Defekte) bleibt der Wert
+             * unveraendert — die bestehenden Faelle sehen also dasselbe
+             * wie vorher. */
+            if (rev_faktor_zaehler != rev_faktor_nenner) {
+                cell_ticks_64 = cell_ticks_64 * rev_faktor_zaehler
+                              / rev_faktor_nenner;
+            }
             if (cell_ticks_64 == 0) cell_ticks_64 = 1;
             ticks_in_rev += cell_ticks_64;
 
@@ -210,18 +234,61 @@ uft_gw_flux_gen_err_t uft_gw_flux_gen_clean(
                                           space_ticks, astable_ticks);
         }
 
-        /* Index opcode at end of revolution. The N28 payload is the
-         * ticks since the previous index — the running rev tick count. */
-        size_t n = encode_index(buf + pos, cap_bytes - pos,
-                                 rev_index_ticks);
+        /* MF-952: the Index opcode carries payload 0, and the reported
+         * revolution duration is the flux that was actually emitted.
+         *
+         * WHAT WAS WRONG BEFORE. The payload used to be
+         * `rev_index_ticks` — a whole nominal revolution — with the
+         * comment "informative only — Index payload is exact". That is
+         * backwards. The GW protocol, and `uft_gw_decode_flux_index_
+         * times()` which implements the upstream formula it cites,
+         * treat the payload as the RESIDUAL from the last emitted flux
+         * sample to the index pulse, and ADD it to the accumulated
+         * flux:
+         *
+         *     index.append(ticks_since_index + ticks + val)
+         *
+         * So the revolution was counted twice. Measured: the generator
+         * set 14 400 000 ticks, the decoder read 17 843 040 =
+         * 3 443 040 (actually emitted) + 14 400 000 (payload).
+         *
+         * Nobody noticed because no test held the two against each
+         * other — the emulator tests check determinism and byte length,
+         * not meaning. `tests/test_rev_grenzen.c` now does.
+         *
+         * WHY THE PAYLOAD IS 0. This generator places the Index opcode
+         * on a sample boundary, right after a complete interval. The
+         * residual from that sample to the pulse is zero by
+         * construction, and the decoder then reads exactly the flux
+         * that was emitted.
+         *
+         * WHY NOT PAD OUT TO `index_period_ns`. That was tried and is
+         * wrong. `transitions_per_rev` (30…4000 in the tests) and
+         * `index_period_ns` (200 ms) are not reconcilable: no
+         * in-specification cell sequence bridges the gap, and a single
+         * padding interval of ~151 ms is a stream that cannot exist —
+         * `uft_gw_flux_gen_count_unsafe()` rejects it, rightly.
+         *
+         * So `index_period_ns` does NOT set the decoded revolution
+         * length here; the emitted flux does. That is the honest
+         * reading of what this generator is: a fixture for the stream
+         * encoding, not a model of a full track.
+         *
+         * WHAT THAT COSTS, AND HOW IT IS PAID. Jittering the index
+         * period alone would now have no effect at all. It is therefore
+         * applied to the FLUX instead — which is also the better
+         * physical model: rotational speed variation stretches the
+         * cells and the revolution together, it does not move the index
+         * pulse against a rigid track. See `rev_faktor` above. */
+        size_t n = encode_index(buf + pos, cap_bytes - pos, 0);
         if (n == 0) {
             free(buf);
             return UFT_GW_FLUX_GEN_ERR_BUF_SMALL;
         }
         pos += n;
 
-        out_capture->rev_index_ticks[rev] = rev_index_ticks;
-        (void)ticks_in_rev; /* informative only — Index payload is exact */
+        /* Report what was produced, not what was intended. */
+        out_capture->rev_index_ticks[rev] = (uint32_t)ticks_in_rev;
     }
 
     /* EOS terminator. */

@@ -344,37 +344,46 @@ TEST(die_ganze_kette_an_einem_erzeugten_gw_strom)
         goto ende;
     }
 
-    /* Der Strom traegt insgesamt weniger Ticks, als der Dekoder fuer
-     * EINE Umdrehung meldet. Das ist die Unstimmigkeit oben, in Zahlen:
-     * ~10,4 Mio geflossen gegen 17,9 Mio behauptet. */
+    /* Der Strom traegt jetzt genau das, was die Indexzeiten sagen: drei
+     * Umdrehungen zu 14 400 000 Ticks, zusammen 43 200 000. Vor MF-952
+     * waren es ~10,4 Mio geflossen gegen 17,9 Mio behauptet — die
+     * Unstimmigkeit zwischen Generator und Dekoder (P3-241). */
     uint64_t gesamt = 0;
     for (uint32_t x = 0; x < n; x++) gesamt += samples[x];
-    if (gesamt >= groesste) {
-        printf("\n      Strom traegt %llu Ticks, groesste Indexzeit %u — "
-               "die Unstimmigkeit waere behoben\n"
-               "      -> dieser Fall ist ueberholt und gehoert erweitert\n"
-               "      ", (unsigned long long)gesamt, groesste);
+    if (gesamt < groesste) {
+        printf("\n      Strom traegt nur %llu Ticks, groesste Indexzeit "
+               "%u — die Umdrehungen sind nicht ausgefuellt\n      ",
+               (unsigned long long)gesamt, groesste);
         _fail++;
         goto ende;
     }
 
-    /* UND JETZT DER PUNKT: die Umrechnung erfindet daraufhin KEINE
-     * Grenzen. Sie meldet die eine, die sie belegen kann — den Anfang —
-     * und hoert auf.
+    /* UND JETZT DER PUNKT: die Umrechnung findet die drei Grenzen.
      *
-     * Ein Aufrufer sieht an der Eins, dass kein Umdrehungsvergleich
-     * moeglich ist; `uft_fuse_revolutions()` lehnt eine einzelne
-     * Umdrehung ausdruecklich ab (MF-949). Die Kette bricht also an der
-     * richtigen Stelle, statt drei Umdrehungen an willkuerlichen
-     * Schnitten zu behaupten. */
+     * `dauern[0]` ist die fuehrende Null (Indexpuls am Stromanfang);
+     * die eigentlichen Dauern folgen. Jede Umdrehung traegt ihre
+     * `transitions_per_rev` Wechsel plus die eine Auffuellung bis zum
+     * Indexpuls. */
     size_t v[8];
     size_t g = uft_rev_grenzen_aus_dauern(samples, n, dauern, k, v, 8);
 
-    if (g != 1 || v[0] != 0) {
-        printf("\n      %zu Grenzen aus Dauern, die der Strom nicht "
-               "traegt — erwartet 1 (nur der Anfang)\n      ", g);
+    if (g != REVS || v[0] != 0) {
+        printf("\n      %zu Grenzen aus %u Indexzeiten — erwartet %d\n"
+               "      ", g, k, REVS);
         _fail++;
         goto ende;
+    }
+
+    size_t laengen[8];
+    uft_rev_laengen_aus_grenzen(v, g, n, laengen);
+    for (size_t r = 0; r < g; r++) {
+        const long ist = (long)laengen[r];
+        if (ist != PRO_REV) {
+            printf("\n      Umdrehung %zu: %ld Abtastungen, erwartet %d\n"
+                   "      ", r, ist, PRO_REV);
+            _fail++;
+            goto ende;
+        }
     }
 
     /* KEIN Abgleich gegen `cap.rev_index_ticks[]` — und das ist ein
@@ -404,6 +413,198 @@ ende:
     uft_gw_flux_gen_free(&cap);
 }
 
+TEST(generator_und_dekoder_meinen_dieselbe_umdrehungsdauer)
+{
+    /* DER ROTBEWEIS zu P3-241 (MF-952).
+     *
+     * Der GW-Flussgenerator sagt, welche Umdrehungsdauer er gesetzt hat
+     * (`rev_index_ticks[]`). Der Produktionsdekoder liest sie aus dem
+     * Strom zurueck. Beide muessen dasselbe meinen — sonst misst jeder
+     * Test, der auf dem Generator steht, die Unstimmigkeit statt der
+     * Sache.
+     *
+     * Vor MF-952 taten sie das nicht:
+     *
+     *     Generator setzt   14 400 000 Ticks je Umdrehung
+     *     Dekoder liest     17 867 232 = 3 467 232 + 14 400 000
+     *
+     * Der Generator legte die volle Umdrehungsdauer in die N28-Nutzlast
+     * des Index-Opcodes. Der Dekoder setzt die greaseweazle-Formel um,
+     * wo die Nutzlast nur der REST vom letzten Flusswechsel bis zum
+     * Indexpuls ist und zur aufgelaufenen Flusszeit ADDIERT wird:
+     *
+     *     index.append(ticks_since_index + ticks + val)
+     *
+     * Also wurde doppelt gezaehlt. Der Generator verwarf dabei genau die
+     * Zahl, die er gebraucht haette — `ticks_in_rev` —, mit dem
+     * Kommentar „informative only — Index payload is exact".
+     *
+     * Dass es niemandem auffiel, hat einen Grund: **kein Test hat die
+     * beiden je gegeneinander gehalten.** Der Emulator-Test prueft
+     * Determinismus und Bytelaenge, nicht die Bedeutung. */
+    enum { REVS = 3, PRO_REV = 4000, MAX_S = 64u * 1024u };
+
+    uft_gw_flux_params_t p;
+    memset(&p, 0, sizeof p);
+    p.seed                = 0xA11CEu;
+    p.revolutions         = REVS;
+    p.index_period_ns     = 200000000u;
+    p.transitions_per_rev = PRO_REV;
+    p.sample_freq_hz      = 72000000u;
+
+    uft_gw_flux_capture_t cap;
+    memset(&cap, 0, sizeof cap);
+    if (uft_gw_flux_gen_clean(&p, &cap) != UFT_GW_FLUX_GEN_OK) {
+        printf("\n      Generator lieferte keinen Strom\n      ");
+        _fail++;
+        return;
+    }
+
+    uint32_t dauern[8] = { 0 };
+    uint32_t k = uft_gw_decode_flux_index_times(cap.bytes, cap.bytes_len,
+                                                dauern, 8);
+
+    /* `dauern[0]` ist die fuehrende Null (Indexpuls am Stromanfang);
+     * die Dauer der Umdrehung r steht in `dauern[r + 1]`. */
+    if (k < (uint32_t)REVS + 1u) {
+        printf("\n      %u Indexzeiten — erwartet %d (fuehrende Null plus "
+               "je Umdrehung eine)\n      ", k, REVS + 1);
+        _fail++;
+        goto ende;
+    }
+    if (dauern[0] != 0) {
+        printf("\n      erste Indexzeit %u statt 0 — der Puls am "
+               "Stromanfang hat keine Vorgeschichte\n      ", dauern[0]);
+        _fail++;
+        goto ende;
+    }
+
+    for (int r = 0; r < cap.rev_count && r < REVS; r++) {
+        const long soll = (long)cap.rev_index_ticks[r];
+        const long ist  = (long)dauern[r + 1];
+        const long ab   = (ist > soll) ? ist - soll : soll - ist;
+        /* Ein Promille Toleranz: die Flusszeit wird in ganzen Ticks
+         * gerechnet, da bleibt Rundung. */
+        if (soll <= 0 || ab > soll / 1000) {
+            printf("\n      Umdrehung %d: Dekoder liest %ld Ticks, "
+                   "Generator setzte %ld (Abweichung %ld)\n      ",
+                   r, ist, soll, ab);
+            _fail++;
+            goto ende;
+        }
+    }
+
+ende:
+    uft_gw_flux_gen_free(&cap);
+}
+
+/** Liest die Umdrehungsdauern eines erzeugten Stroms; 0 = Fehlschlag. */
+static int dauern_holen(uft_gw_defect_flags_t defekte, uint32_t *aus,
+                        int max, size_t *unsicher)
+{
+    uft_gw_flux_params_t p;
+    memset(&p, 0, sizeof p);
+    p.seed                = 0x1234u;
+    p.revolutions         = 3;
+    p.index_period_ns     = 200000000u;
+    p.transitions_per_rev = 2000;
+    p.sample_freq_hz      = 72000000u;
+    p.defects             = defekte;
+
+    uft_gw_flux_capture_t cap;
+    memset(&cap, 0, sizeof cap);
+    if (uft_gw_flux_gen_clean(&p, &cap) != UFT_GW_FLUX_GEN_OK) return 0;
+
+    uint32_t d[8] = { 0 };
+    uint32_t k = uft_gw_decode_flux_index_times(cap.bytes, cap.bytes_len,
+                                                d, 8);
+    if (unsicher) *unsicher = uft_gw_flux_gen_count_unsafe(&cap);
+
+    int n = 0;
+    for (uint32_t i = 1; i < k && n < max; i++) aus[n++] = d[i];
+
+    /* Nebenbei die Uebereinstimmung mit dem Generator, in jedem Aufruf. */
+    for (int r = 0; r < cap.rev_count && r < n; r++) {
+        if (cap.rev_index_ticks[r] != aus[r]) {
+            uft_gw_flux_gen_free(&cap);
+            return -1;
+        }
+    }
+    uft_gw_flux_gen_free(&cap);
+    return n;
+}
+
+TEST(jitter_und_long_track_bleiben_wirksam)
+{
+    /* Der Wachposten zu MF-952.
+     *
+     * Bis dahin veraenderten `UFT_GW_DEFECT_INDEX_JITTER` und
+     * `UFT_GW_DEFECT_LONG_TRACK` die Index-NUTZLAST. Seit die 0 ist und
+     * die Umdrehungsdauer aus dem emittierten Fluss folgt, waeren beide
+     * wirkungslos gewesen — ein Merkmal, das nichts mehr tut, ist
+     * schlimmer als keines, weil es weiter im Katalog steht.
+     *
+     * Sie wirken deshalb jetzt auf den FLUSS. Gemessen (Seed 0x1234,
+     * 3 Umdrehungen, 2000 Wechsel, 72 MHz):
+     *
+     *     ohne Defekt    1 720 224   1 731 168   1 734 048
+     *     INDEX_JITTER   1 724 197   1 738 531   1 736 556
+     *     LONG_TRACK     1 770 656   1 731 168   1 734 048   (+2,93 %)
+     *
+     * `LONG_TRACK` dehnt ausdruecklich nur die erste Umdrehung — das
+     * ist die Kopierschutz-Nachstellung, und die anderen beiden muessen
+     * unveraendert bleiben. */
+    uint32_t rein[4], jit[4], lang[4];
+    size_t u_rein = 1, u_jit = 1, u_lang = 1;
+
+    int n_rein = dauern_holen(UFT_GW_DEFECT_NONE,         rein, 4, &u_rein);
+    int n_jit  = dauern_holen(UFT_GW_DEFECT_INDEX_JITTER, jit,  4, &u_jit);
+    int n_lang = dauern_holen(UFT_GW_DEFECT_LONG_TRACK,   lang, 4, &u_lang);
+
+    if (n_rein < 0 || n_jit < 0 || n_lang < 0) {
+        printf("\n      Generator und Dekoder weichen ab\n      ");
+        _fail++;
+        return;
+    }
+    ASSERT(n_rein >= 3 && n_jit >= 3 && n_lang >= 3);
+
+    /* Medium-Sicherheit: kein Intervall darf ausserhalb der
+     * Spezifikation liegen. Eine erste Fassung von MF-952 fuellte die
+     * Umdrehung mit EINEM 151-ms-Intervall auf und verletzte genau
+     * das — der Emulator-Test hat es gefangen. */
+    if (u_rein || u_jit || u_lang) {
+        printf("\n      unsichere Intervalle: %zu / %zu / %zu\n      ",
+               u_rein, u_jit, u_lang);
+        _fail++;
+    }
+
+    /* Jitter muss jede Umdrehung veraendern — sonst tut er nichts. */
+    int veraendert = 0;
+    for (int r = 0; r < 3; r++) if (jit[r] != rein[r]) veraendert++;
+    if (veraendert < 3) {
+        printf("\n      INDEX_JITTER veraendert nur %d von 3 Umdrehungen\n"
+               "      ", veraendert);
+        _fail++;
+    }
+
+    /* Long-Track dehnt die ERSTE um rund 3 % und laesst die anderen in
+     * Ruhe. Beide Haelften gehoeren geprueft: ein Defekt, der alles
+     * dehnt, waere kein Long-Track. */
+    const long soll = (long)rein[0] * 103 / 100;
+    const long ist  = (long)lang[0];
+    const long ab   = (ist > soll) ? ist - soll : soll - ist;
+    if (ab > soll / 100) {
+        printf("\n      LONG_TRACK: %ld statt rund %ld (+3 %%)\n      ",
+               ist, soll);
+        _fail++;
+    }
+    if (lang[1] != rein[1] || lang[2] != rein[2]) {
+        printf("\n      LONG_TRACK hat auch Umdrehung 1 oder 2 gedehnt\n"
+               "      ");
+        _fail++;
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -416,7 +617,9 @@ int main(void)
     RUN(eine_fuehrende_null_ist_keine_umdrehung_eine_mittlere_schon);
     RUN(unbrauchbare_eingaben_liefern_null);
     RUN(der_ueberhang_zaehlt_zur_naechsten_umdrehung);
+    RUN(generator_und_dekoder_meinen_dieselbe_umdrehungsdauer);
     RUN(die_ganze_kette_an_einem_erzeugten_gw_strom);
+    RUN(jitter_und_long_track_bleiben_wirksam);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
