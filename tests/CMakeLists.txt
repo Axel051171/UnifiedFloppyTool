@@ -1588,6 +1588,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_multi_rev_fusion")
+        # MF-949: der Umdrehungsvergleich hatte 272 Zeilen, null Aufrufer und
+        # keinen Prototyp. Erst messen, dann verdrahten.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/algorithms/advanced/uft_multi_rev_fusion.c)
     elseif(${test_name} STREQUAL "test_flux_fm_sektoren")
         # MF-864: der FM-Weg legte keine Sektoren an ("FM sector decoding
         # would go here"). Die Pruefspur ist an vier Stellen von fluxtoimd

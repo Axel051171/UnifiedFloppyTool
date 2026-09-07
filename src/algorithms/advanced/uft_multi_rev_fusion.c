@@ -1,269 +1,288 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_multi_rev_fusion.c
- * @brief GOD MODE: Multi-Revolution Confidence Fusion
- * 
- * Combines multiple flux revolutions to improve data recovery.
- * Identifies weak bits through inconsistency analysis.
- * 
- * @author Superman QA - GOD MODE
- * @date 2026
+ * @brief Weak-Bit-Erkennung durch Umdrehungsvergleich
+ *
+ * Vertrag, Prinzip und Herkunft stehen im Header
+ * `include/uft/algorithms/uft_multi_rev_fusion.h`.
+ *
+ * ── Was MF-949 geaendert hat ─────────────────────────────────────────
+ *
+ * Das Modul gab es schon; gemessen hatte es **null** Aufrufer und
+ * keinen Prototyp, obwohl es in `UnifiedFloppyTool.pro:791` steht und
+ * uebersetzt wird. Der Rotbeweis `tests/test_multi_rev_fusion.c` fand
+ * beim ersten Lauf drei Dinge:
+ *
+ *   1. **Eine einzelne Umdrehung wurde beantwortet** — mit Konfidenz
+ *      1,0 fuer jedes Bit und „null schwache Bits". Das ist genau die
+ *      Aussage, die aus einer Lesung nicht ableitbar ist, und damit ein
+ *      Verstoss gegen Prinzip 1. Sie wird jetzt abgelehnt.
+ *
+ *   2. **Alle Umdrehungen mussten gleich lang sein.** Die Schnittstelle
+ *      nahm EINE Bitzahl fuer alle und las bei einer kuerzeren ueber den
+ *      Rand. Drehzahlschwankung ist der Normalfall; dafuer gibt es jetzt
+ *      `uft_fuse_revolutions_laengen()`.
+ *
+ *   3. **Ein Widerspruch von 1 zu 4 fiel durch die Schwelle.** Bei fuenf
+ *      Umdrehungen ergibt 4:1 die Konfidenz 0,8, und der Vergleich
+ *      lautet `< 0.8` — also kein Befund. Der seltene Widerspruch ist
+ *      aber das Signal. Die Zahlen lagen bereits in
+ *      `vote_ones`/`vote_zeros` und wurden nur nicht ausgewertet; jetzt
+ *      steht die Tatsache als `revolutions_disagreed` neben dem Urteil
+ *      `weak_bit`.
+ *
+ * Die Bezeichner tragen seit MF-949 das `uft_`-Praefix.
  */
+#include "uft/algorithms/uft_multi_rev_fusion.h"
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
-#include <math.h>
+#include <string.h>
 
-// ============================================================================
-// Types
-// ============================================================================
+/* ==========================================================================
+ * Vorgabe
+ * ========================================================================== */
 
-typedef struct {
-    uint8_t value;              // 0 or 1
-    float confidence;           // 0.0 - 1.0
-    bool weak_bit;              // Inconsistent across revolutions
-    uint32_t vote_ones;         // How many revolutions had 1 (>=256 supported)
-    uint32_t vote_zeros;        // How many revolutions had 0 (>=256 supported)
-} fused_bit_t;
-
-typedef struct {
-    fused_bit_t* bits;
-    size_t bit_count;
-    
-    // Statistics
-    float overall_confidence;
-    size_t weak_bit_count;
-    size_t total_votes;
-    float avg_agreement;
-} fused_bitstream_t;
-
-typedef struct {
-    float weak_threshold;       // Below this = weak bit (default 0.8)
-    float strong_threshold;     // Above this = high confidence (default 0.95)
-    bool weight_by_timing;      // Weight revolutions by PLL quality
-    float* revolution_weights;  // Per-revolution weights (optional)
-} fusion_config_t;
-
-// ============================================================================
-// Default Configuration
-// ============================================================================
-
-static const fusion_config_t DEFAULT_FUSION_CONFIG = {
-    .weak_threshold = 0.8f,
-    .strong_threshold = 0.95f,
-    .weight_by_timing = false,
-    .revolution_weights = NULL
+static const uft_fusion_config_t UFT_FUSION_CONFIG_DEFAULT = {
+    .weak_threshold      = 0.8f,
+    .strong_threshold    = 0.95f,
+    .weight_by_timing    = false,
+    .revolution_weights  = NULL
 };
 
-// ============================================================================
-// Core Fusion
-// ============================================================================
+/** Bit @p pos aus @p buf, hoechstwertiges Bit zuerst je Byte. */
+static inline uint8_t bit_lesen(const uint8_t *buf, size_t pos)
+{
+    return (uint8_t)((buf[pos / 8] >> (7 - (pos % 8))) & 1u);
+}
+
+/* ==========================================================================
+ * Kern
+ * ========================================================================== */
 
 /**
- * @brief Fuse multiple bitstream revolutions
- * 
- * @param revolutions Array of bitstream arrays
- * @param num_revolutions Number of revolutions
- * @param bits_per_rev Bits in each revolution
- * @param config Fusion configuration
- * @param result Output fused bitstream (caller frees)
- * @return true on success
+ * Gemeinsamer Rumpf. @p bits_per_rev ist bereits auf die kuerzeste
+ * Umdrehung begrenzt.
  */
-bool fuse_revolutions(const uint8_t** revolutions, size_t num_revolutions,
-                      size_t bits_per_rev, const fusion_config_t* config,
-                      fused_bitstream_t* result) {
-    if (!revolutions || num_revolutions == 0 || bits_per_rev == 0) {
-        return false;
-    }
-    
-    if (!config) {
-        config = &DEFAULT_FUSION_CONFIG;
-    }
-    
-    // Allocate result
-    result->bits = calloc(bits_per_rev, sizeof(fused_bit_t));
+static bool fusion_rechnen(const uint8_t **revolutions,
+                           size_t num_revolutions, size_t bits_per_rev,
+                           const uft_fusion_config_t *config,
+                           uft_fused_bitstream_t *result)
+{
+    result->bits = (uft_fused_bit_t *)calloc(bits_per_rev,
+                                             sizeof(uft_fused_bit_t));
     if (!result->bits) return false;
     result->bit_count = bits_per_rev;
-    
-    float total_confidence = 0;
-    size_t weak_count = 0;
-    
-    // Process each bit position
+
+    float  gesamt_konfidenz = 0.0f;
+    size_t schwach = 0;
+    size_t uneinig = 0;
+
     for (size_t i = 0; i < bits_per_rev; i++) {
-        fused_bit_t* fb = &result->bits[i];
-        float weighted_ones = 0, weighted_zeros = 0;
-        float total_weight = 0;
-        
-        // Count votes from each revolution
+        uft_fused_bit_t *fb = &result->bits[i];
+        float einsen = 0.0f, nullen = 0.0f, gewicht_summe = 0.0f;
+
         for (size_t r = 0; r < num_revolutions; r++) {
-            float weight = 1.0f;
-            if (config->weight_by_timing && config->revolution_weights) {
-                weight = config->revolution_weights[r];
-            }
-            
-            // Get bit from this revolution
-            size_t byte_idx = i / 8;
-            int bit_idx = 7 - (i % 8);
-            uint8_t bit = (revolutions[r][byte_idx] >> bit_idx) & 1;
-            
-            if (bit) {
-                weighted_ones += weight;
+            float gewicht = 1.0f;
+            if (config->weight_by_timing && config->revolution_weights)
+                gewicht = config->revolution_weights[r];
+
+            if (bit_lesen(revolutions[r], i)) {
+                einsen += gewicht;
                 fb->vote_ones++;
             } else {
-                weighted_zeros += weight;
+                nullen += gewicht;
                 fb->vote_zeros++;
             }
-            total_weight += weight;
+            gewicht_summe += gewicht;
         }
-        
-        // Determine value by weighted majority
-        fb->value = (weighted_ones > weighted_zeros) ? 1 : 0;
-        
-        // Calculate confidence
-        float majority = (weighted_ones > weighted_zeros) ? 
-                         weighted_ones : weighted_zeros;
-        fb->confidence = majority / total_weight;
-        
-        // Determine if weak bit
+
+        fb->value = (einsen > nullen) ? 1u : 0u;
+
+        /* Ein Gewichtssatz aus lauter Nullen ist kein Ergebnis, sondern
+         * eine Division durch null. Dann zaehlt nur die Tatsache. */
+        if (gewicht_summe > 0.0f) {
+            const float mehrheit = (einsen > nullen) ? einsen : nullen;
+            fb->confidence = mehrheit / gewicht_summe;
+        } else {
+            fb->confidence = 0.0f;
+        }
+
+        /* TATSACHE: haben die Umdrehungen dasselbe gelesen? Ungewichtet —
+         * ein Gewicht aendert nichts daran, WAS gelesen wurde. */
+        fb->revolutions_disagreed =
+            (fb->vote_ones > 0u && fb->vote_zeros > 0u);
+        if (fb->revolutions_disagreed) uneinig++;
+
+        /* URTEIL: wie sicher ist der Mehrheitswert? */
         fb->weak_bit = (fb->confidence < config->weak_threshold);
-        if (fb->weak_bit) {
-            weak_count++;
-        }
-        
-        total_confidence += fb->confidence;
+        if (fb->weak_bit) schwach++;
+
+        gesamt_konfidenz += fb->confidence;
     }
-    
-    // Calculate statistics
-    result->overall_confidence = total_confidence / bits_per_rev;
-    result->weak_bit_count = weak_count;
-    result->total_votes = num_revolutions * bits_per_rev;
-    result->avg_agreement = result->overall_confidence;
-    
+
+    result->overall_confidence = gesamt_konfidenz / (float)bits_per_rev;
+    result->weak_bit_count     = schwach;
+    result->disagreement_count = uneinig;
+    result->total_votes        = num_revolutions * bits_per_rev;
+    result->avg_agreement      = result->overall_confidence;
     return true;
 }
 
-/**
- * @brief Convert fused bitstream to byte array
- */
-size_t fused_to_bytes(const fused_bitstream_t* fused, uint8_t* output,
-                      size_t max_bytes) {
-    size_t bytes = (fused->bit_count + 7) / 8;
-    if (bytes > max_bytes) bytes = max_bytes;
-    
-    memset(output, 0, bytes);
-    
-    for (size_t i = 0; i < fused->bit_count && i < max_bytes * 8; i++) {
-        if (fused->bits[i].value) {
-            output[i / 8] |= (1 << (7 - (i % 8)));
-        }
+bool uft_fuse_revolutions(const uint8_t **revolutions,
+                          size_t num_revolutions, size_t bits_per_rev,
+                          const uft_fusion_config_t *config,
+                          uft_fused_bitstream_t *result)
+{
+    if (!revolutions || !result || bits_per_rev == 0) return false;
+
+    /* MF-949: EINE Umdrehung wird abgelehnt, nicht beantwortet.
+     *
+     * Die Frage „ist dieses Bit schwach" ist aus einer einzelnen Lesung
+     * nicht beantwortbar — das ist der ganze Inhalt des Prinzips. Bis
+     * MF-949 kam hier `true` heraus, Konfidenz 1,0 fuer jedes Bit und
+     * `weak_bit_count = 0`: eine Antwort, die niemand geben konnte.
+     * Dieselbe Absage trifft `uft_bitstream_recovery.c:136`. */
+    if (num_revolutions < 2) return false;
+
+    for (size_t r = 0; r < num_revolutions; r++)
+        if (!revolutions[r]) return false;
+
+    if (!config) config = &UFT_FUSION_CONFIG_DEFAULT;
+    return fusion_rechnen(revolutions, num_revolutions, bits_per_rev,
+                          config, result);
+}
+
+bool uft_fuse_revolutions_laengen(const uint8_t **revolutions,
+                                  const size_t *bit_counts,
+                                  size_t num_revolutions,
+                                  const uft_fusion_config_t *config,
+                                  uft_fused_bitstream_t *result)
+{
+    if (!revolutions || !bit_counts || !result) return false;
+    if (num_revolutions < 2) return false;
+
+    /* Verglichen wird nur, was ALLE Umdrehungen tragen. Alles darueber
+     * hinaus waere ein Vergleich gegen nicht vorhandene Daten. */
+    size_t gemeinsam = bit_counts[0];
+    for (size_t r = 0; r < num_revolutions; r++) {
+        if (!revolutions[r]) return false;
+        if (bit_counts[r] < gemeinsam) gemeinsam = bit_counts[r];
     }
-    
+    if (gemeinsam == 0) return false;
+
+    if (!config) config = &UFT_FUSION_CONFIG_DEFAULT;
+    return fusion_rechnen(revolutions, num_revolutions, gemeinsam,
+                          config, result);
+}
+
+/* ==========================================================================
+ * Abfragen
+ * ========================================================================== */
+
+size_t uft_fused_to_bytes(const uft_fused_bitstream_t *fused,
+                          uint8_t *output, size_t max_bytes)
+{
+    if (!fused || !fused->bits || !output || max_bytes == 0) return 0;
+
+    size_t bytes = (fused->bit_count + 7u) / 8u;
+    if (bytes > max_bytes) bytes = max_bytes;
+    memset(output, 0, bytes);
+
+    for (size_t i = 0; i < fused->bit_count && i < bytes * 8u; i++)
+        if (fused->bits[i].value)
+            output[i / 8] |= (uint8_t)(1u << (7 - (i % 8)));
+
     return bytes;
 }
 
-/**
- * @brief Get weak bit positions
- */
-size_t get_weak_bit_positions(const fused_bitstream_t* fused,
-                              size_t* positions, size_t max_positions) {
-    size_t count = 0;
-    
-    for (size_t i = 0; i < fused->bit_count && count < max_positions; i++) {
-        if (fused->bits[i].weak_bit) {
-            positions[count++] = i;
-        }
-    }
-    
-    return count;
+size_t uft_get_weak_bit_positions(const uft_fused_bitstream_t *fused,
+                                  size_t *positions, size_t max_positions)
+{
+    if (!fused || !fused->bits || !positions) return 0;
+    size_t n = 0;
+    for (size_t i = 0; i < fused->bit_count && n < max_positions; i++)
+        if (fused->bits[i].weak_bit) positions[n++] = i;
+    return n;
 }
 
-/**
- * @brief Free fused bitstream
- */
-void fused_bitstream_free(fused_bitstream_t* fused) {
+size_t uft_get_disagreement_positions(const uft_fused_bitstream_t *fused,
+                                      size_t *positions, size_t max_positions)
+{
+    if (!fused || !fused->bits || !positions) return 0;
+    size_t n = 0;
+    for (size_t i = 0; i < fused->bit_count && n < max_positions; i++)
+        if (fused->bits[i].revolutions_disagreed) positions[n++] = i;
+    return n;
+}
+
+void uft_fused_bitstream_free(uft_fused_bitstream_t *fused)
+{
+    if (!fused) return;
     free(fused->bits);
     fused->bits = NULL;
     fused->bit_count = 0;
 }
 
-// ============================================================================
-// Advanced: Weighted Fusion with Timing Quality
-// ============================================================================
+/* ==========================================================================
+ * Gewichtung aus Qualitaetsmerkmalen
+ * ========================================================================== */
 
-typedef struct {
-    float pll_confidence;       // From PLL statistics
-    float sync_quality;         // From sync detection
-    float crc_rate;             // CRC pass rate for this rev
-} revolution_quality_t;
+void uft_calculate_revolution_weights(const uft_revolution_quality_t *qualities,
+                                      size_t num_revs, float *weights)
+{
+    if (!qualities || !weights || num_revs == 0) return;
 
-/**
- * @brief Calculate revolution weights from quality metrics
- */
-void calculate_revolution_weights(const revolution_quality_t* qualities,
-                                   size_t num_revs, float* weights) {
-    float total = 0;
-    
-    // Combine quality metrics
+    float summe = 0.0f;
     for (size_t r = 0; r < num_revs; r++) {
         weights[r] = qualities[r].pll_confidence * 0.3f +
-                     qualities[r].sync_quality * 0.3f +
-                     qualities[r].crc_rate * 0.4f;
-        total += weights[r];
+                     qualities[r].sync_quality   * 0.3f +
+                     qualities[r].crc_rate       * 0.4f;
+        summe += weights[r];
     }
-    
-    // Normalize
-    if (total > 0) {
+
+    if (summe > 0.0f) {
         for (size_t r = 0; r < num_revs; r++) {
-            weights[r] /= total;
-            weights[r] *= num_revs;  // Scale so sum = num_revs
+            weights[r] /= summe;
+            weights[r] *= (float)num_revs;   /* Summe = num_revs */
         }
+    } else {
+        /* Keine Qualitaetsaussage: gleich gewichten statt alles auf null
+         * zu setzen — sonst waere die Gewichtssumme 0 und die Konfidenz
+         * jedes Bits undefiniert. */
+        for (size_t r = 0; r < num_revs; r++) weights[r] = 1.0f;
     }
 }
 
-// ============================================================================
-// Weak Bit Pattern Analysis
-// ============================================================================
+/* ==========================================================================
+ * Zusammenhaengende Bereiche
+ * ========================================================================== */
 
-typedef struct {
-    size_t start_bit;
-    size_t end_bit;
-    size_t length;
-    float avg_confidence;
-} weak_region_t;
+size_t uft_find_weak_regions(const uft_fused_bitstream_t *fused,
+                             uft_weak_region_t *regions, size_t max_regions)
+{
+    if (!fused || !fused->bits || !regions || max_regions == 0) return 0;
 
-/**
- * @brief Find contiguous weak bit regions
- */
-size_t find_weak_regions(const fused_bitstream_t* fused,
-                          weak_region_t* regions, size_t max_regions) {
-    size_t count = 0;
-    size_t region_start = SIZE_MAX;
-    
-    for (size_t i = 0; i <= fused->bit_count && count < max_regions; i++) {
-        bool is_weak = (i < fused->bit_count) && fused->bits[i].weak_bit;
-        
-        if (is_weak && region_start == SIZE_MAX) {
-            // Start new region
-            region_start = i;
-        } else if (!is_weak && region_start != SIZE_MAX) {
-            // End region
-            weak_region_t* r = &regions[count++];
-            r->start_bit = region_start;
-            r->end_bit = i;
-            r->length = i - region_start;
-            
-            // Calculate average confidence in region
-            float sum = 0;
-            for (size_t j = region_start; j < i; j++) {
-                sum += fused->bits[j].confidence;
-            }
-            r->avg_confidence = sum / r->length;
-            
-            region_start = SIZE_MAX;
+    size_t n = 0;
+    size_t start = SIZE_MAX;
+
+    for (size_t i = 0; i <= fused->bit_count && n < max_regions; i++) {
+        const bool schwach = (i < fused->bit_count) && fused->bits[i].weak_bit;
+
+        if (schwach && start == SIZE_MAX) {
+            start = i;
+        } else if (!schwach && start != SIZE_MAX) {
+            uft_weak_region_t *r = &regions[n++];
+            r->start_bit = start;
+            r->end_bit   = i;
+            r->length    = i - start;
+
+            float summe = 0.0f;
+            for (size_t j = start; j < i; j++)
+                summe += fused->bits[j].confidence;
+            r->avg_confidence = summe / (float)r->length;
+
+            start = SIZE_MAX;
         }
     }
-    
-    return count;
+    return n;
 }
