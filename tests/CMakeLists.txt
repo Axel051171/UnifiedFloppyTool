@@ -1588,6 +1588,26 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_rev_ausrichtung")
+        # MF-950: ohne Ausrichtung meldete der Umdrehungsvergleich auf der
+        # echten gw-Aufnahme 99,71 % der Spur als schwach — die beiden
+        # Umdrehungen sind um EIN Bit verschoben. Der Korpus-Fall
+        # ueberspringt sich benannt, wenn tests/corpus/ fehlt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/algorithms/advanced/uft_multi_rev_fusion.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_multi_rev_fusion")
         # MF-949: der Umdrehungsvergleich hatte 272 Zeilen, null Aufrufer und
         # keinen Prototyp. Erst messen, dann verdrahten.

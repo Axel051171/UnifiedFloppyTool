@@ -176,6 +176,171 @@ bool uft_fuse_revolutions_laengen(const uint8_t **revolutions,
 }
 
 /* ==========================================================================
+ * Ausrichtung (MF-950)
+ *
+ * Die Begruendung und die Messzahlen stehen im Header. Kurz: ohne
+ * Ausrichtung meldete der Vergleich auf einer echten gw-Aufnahme 99,71 %
+ * der Spur als schwach, obwohl beide Umdrehungen dasselbe Signal tragen
+ * und nur um EIN Bit verschoben sind.
+ * ========================================================================== */
+
+/** Zaehlt abweichende Bits zwischen a[i] und b[i+versatz] im Fenster. */
+static size_t abweichung_zaehlen(const uint8_t *a, size_t a_bits,
+                                 const uint8_t *b, size_t b_bits,
+                                 long versatz, size_t von, size_t bis,
+                                 size_t *out_verglichen)
+{
+    size_t ab = 0, n = 0;
+    for (size_t i = von; i < bis && i < a_bits; i++) {
+        const long j = (long)i + versatz;
+        if (j < 0 || (size_t)j >= b_bits) continue;
+        if (bit_lesen(a, i) != bit_lesen(b, (size_t)j)) ab++;
+        n++;
+    }
+    if (out_verglichen) *out_verglichen = n;
+    return ab;
+}
+
+bool uft_revolutionen_ausrichten(const uint8_t *a, size_t a_bits,
+                                 const uint8_t *b, size_t b_bits,
+                                 long max_versatz,
+                                 uft_rev_ausrichtung_t *out)
+{
+    if (!a || !b || !out || a_bits == 0 || b_bits == 0) return false;
+    if (max_versatz < 0) max_versatz = -max_versatz;
+
+    memset(out, 0, sizeof(*out));
+    out->abweichung = 1.0;
+
+    /* Fenster aus der MITTE, aus zwei Gruenden — und einer davon ist
+     * gemessen, der andere nicht. Das gehoert getrennt gesagt:
+     *
+     * GEMESSEN: Aufwand. Der Vergleich laeuft ueber (2*max_versatz+1)
+     * Versaetze. Bei der Korpus-Spur sind das 101 343 Bits x 129
+     * Versaetze; das halbe Fenster halbiert das.
+     *
+     * NICHT BELEGT: dass die Raender in die Irre fuehren. Der Gedanke
+     * ist, dass dort beim Verschieben Fuellung steht und periodische
+     * Luecken (Gap-Bytes) zu vielen Versaetzen gleich gut passen. Die
+     * Mutationsprobe „Fenster an den Rand legen" blieb GRUEN — mit den
+     * vorhandenen Pruefmustern liess sich kein Fall bauen, in dem die
+     * Fensterwahl das Ergebnis aendert. Es bleibt Vorsorge ohne Beleg,
+     * und so steht es hier. */
+    const size_t kurz = (a_bits < b_bits) ? a_bits : b_bits;
+    if (kurz <= (size_t)(4 * max_versatz) + 16u) return false;
+
+    size_t von = kurz / 8u;
+    size_t bis = von + kurz / 2u;
+    if (bis > kurz) bis = kurz;
+    if ((size_t)max_versatz > von) von = (size_t)max_versatz;
+    if (von >= bis) return false;
+
+    long   bester = 0;
+    double beste  = 1.0;
+    size_t beste_n = 0;
+
+    for (long d = -max_versatz; d <= max_versatz; d++) {
+        size_t n = 0;
+        const size_t ab = abweichung_zaehlen(a, a_bits, b, b_bits, d,
+                                             von, bis, &n);
+        if (n == 0) continue;
+        const double q = (double)ab / (double)n;
+        /* Bei Gleichstand gewinnt der kleinere Betrag: ein Versatz von 0
+         * ist die sparsamere Erklaerung als einer von 12. */
+        if (q < beste || (q == beste && labs(d) < labs(bester))) {
+            beste = q; bester = d; beste_n = n;
+        }
+    }
+
+    if (beste_n == 0) return false;
+
+    out->versatz      = bester;
+    out->abweichung   = beste;
+    out->verglichen   = beste_n;
+    out->verlaesslich = (beste <= UFT_REV_AUSRICHTUNG_SCHWELLE);
+    return true;
+}
+
+bool uft_fuse_revolutions_ausgerichtet(const uint8_t **revolutions,
+                                       const size_t *bit_counts,
+                                       size_t num_revolutions,
+                                       long max_versatz,
+                                       const uft_fusion_config_t *config,
+                                       uft_fused_bitstream_t *result)
+{
+    if (!revolutions || !bit_counts || !result) return false;
+    if (num_revolutions < 2) return false;
+    for (size_t r = 0; r < num_revolutions; r++)
+        if (!revolutions[r]) return false;
+
+    long *versatz = (long *)calloc(num_revolutions, sizeof(long));
+    if (!versatz) return false;
+
+    /* Alles wird an Umdrehung 0 ausgerichtet. */
+    for (size_t r = 1; r < num_revolutions; r++) {
+        uft_rev_ausrichtung_t aus;
+        if (!uft_revolutionen_ausrichten(revolutions[0], bit_counts[0],
+                                         revolutions[r], bit_counts[r],
+                                         max_versatz, &aus) ||
+            !aus.verlaesslich) {
+            /* Kein belegbarer Versatz. Weitermachen hiesse, auf einer
+             * geratenen Ausrichtung zu vergleichen — und das erzeugt
+             * Befunde, die es nicht gibt. */
+            free(versatz);
+            return false;
+        }
+        versatz[r] = aus.versatz;
+    }
+
+    /* Gemeinsamer Bereich nach der Ausrichtung. */
+    long lo = 0;
+    long hi = (long)bit_counts[0];
+    for (size_t r = 0; r < num_revolutions; r++) {
+        const long u = -versatz[r];
+        const long o = (long)bit_counts[r] - versatz[r];
+        if (u > lo) lo = u;
+        if (o < hi) hi = o;
+    }
+    if (hi <= lo) { free(versatz); return false; }
+
+    const size_t gemeinsam = (size_t)(hi - lo);
+
+    /* Ausgerichtete Kopien anlegen. Das kostet Speicher, haelt aber den
+     * Kern (`fusion_rechnen`) frei von Versatz-Arithmetik — und der Kern
+     * ist der gepruefte Teil. */
+    const size_t bytes = (gemeinsam + 7u) / 8u;
+    uint8_t **kopie = (uint8_t **)calloc(num_revolutions, sizeof(uint8_t *));
+    const uint8_t **zeiger =
+        (const uint8_t **)calloc(num_revolutions, sizeof(uint8_t *));
+    if (!kopie || !zeiger) {
+        free(kopie); free((void *)zeiger); free(versatz);
+        return false;
+    }
+
+    bool ok = true;
+    for (size_t r = 0; r < num_revolutions && ok; r++) {
+        kopie[r] = (uint8_t *)calloc(bytes, 1);
+        if (!kopie[r]) { ok = false; break; }
+        for (size_t i = 0; i < gemeinsam; i++) {
+            const size_t q = (size_t)((long)i + lo + versatz[r]);
+            if (bit_lesen(revolutions[r], q))
+                kopie[r][i / 8] |= (uint8_t)(1u << (7 - (i % 8)));
+        }
+        zeiger[r] = kopie[r];
+    }
+
+    if (ok) {
+        if (!config) config = &UFT_FUSION_CONFIG_DEFAULT;
+        ok = fusion_rechnen(zeiger, num_revolutions, gemeinsam,
+                            config, result);
+    }
+
+    for (size_t r = 0; r < num_revolutions; r++) free(kopie[r]);
+    free(kopie); free((void *)zeiger); free(versatz);
+    return ok;
+}
+
+/* ==========================================================================
  * Abfragen
  * ========================================================================== */
 

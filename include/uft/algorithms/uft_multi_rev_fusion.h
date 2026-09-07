@@ -137,6 +137,80 @@ bool uft_fuse_revolutions_laengen(const uint8_t **revolutions,
                                   const uft_fusion_config_t *config,
                                   uft_fused_bitstream_t *result);
 
+/* ── Ausrichtung: die Voraussetzung, die MF-949 noch nicht hatte ──────
+ *
+ * `uft_fuse_revolutions()` vergleicht STELLENWEISE. Das setzt voraus,
+ * dass die Umdrehungen an derselben Bitposition beginnen — und genau das
+ * tun sie in der Wirklichkeit nicht.
+ *
+ * GEMESSEN an `tests/corpus/gw_amigados.scp`, einer echten Aufnahme von
+ * `gw` (Spur 0, zwei Umdrehungen):
+ *
+ *     Fluss-Rohdaten          50 525 von 50 526 Intervallen GLEICH
+ *     stellenweise verglichen 101 343 Bits
+ *     davon uneinig           101 051   = 99,71 %
+ *     mittlere Konfidenz      0,5014
+ *     bester Bitversatz  +1   0,00 % Abweichung ueber 20 000 Bits
+ *
+ * Die beiden Umdrehungen tragen DASSELBE Signal. Sie sind um ein
+ * einziges Bit verschoben, weil der Index-Splice das erste Intervall
+ * anders teilt (1975 statt 3950 ns). Der stellenweise Vergleich meldete
+ * daraufhin 99,71 % der Spur als schwach.
+ *
+ * Das ist der gefaehrlichste Fehler dieser Klasse: still und gross. Er
+ * sagt nichts Falsches ueber ein Bit, sondern etwas Falsches ueber die
+ * ganze Diskette — und zwar zuversichtlich.
+ *
+ * Deshalb: erst ausrichten, dann vergleichen. Und wo sich kein Versatz
+ * finden laesst, der die Stroeme zur Deckung bringt, wird ABGELEHNT
+ * statt den am wenigsten schlechten zu nehmen.
+ */
+
+/** Ab dieser Abweichung gilt eine Ausrichtung als nicht belegt. */
+#define UFT_REV_AUSRICHTUNG_SCHWELLE  0.10
+
+typedef struct {
+    long   versatz;       /**< Bitversatz von b gegen a (b[i+versatz] ~ a[i]) */
+    double abweichung;    /**< Anteil abweichender Bits beim besten Versatz */
+    size_t verglichen;    /**< wie viele Bits dabei verglichen wurden */
+    bool   verlaesslich;  /**< abweichung <= UFT_REV_AUSRICHTUNG_SCHWELLE */
+} uft_rev_ausrichtung_t;
+
+/**
+ * @brief Misst den Bitversatz zwischen zwei Umdrehungen.
+ *
+ * Verglichen wird ein Fenster aus der MITTE beider Stroeme — an den
+ * Raendern steht bei einem Versatz Fuellung, kein Inhalt.
+ *
+ * @param max_versatz  wie weit in beide Richtungen gesucht wird
+ * @return true, wenn eine Messung zustande kam. Das ist NICHT dasselbe
+ *         wie ein Treffer: ob der gefundene Versatz die Stroeme zur
+ *         Deckung bringt, sagt `out->verlaesslich`. Die gemessene
+ *         Abweichung wird in jedem Fall berichtet — sie ist der Grund
+ *         fuer das Urteil und gehoert dem Aufrufer.
+ */
+bool uft_revolutionen_ausrichten(const uint8_t *a, size_t a_bits,
+                                 const uint8_t *b, size_t b_bits,
+                                 long max_versatz,
+                                 uft_rev_ausrichtung_t *out);
+
+/**
+ * @brief Richtet alle Umdrehungen an der ersten aus und fusioniert dann.
+ *
+ * Laesst sich fuer eine Umdrehung kein verlaesslicher Versatz finden,
+ * wird ABGELEHNT — ein Vergleich auf geratener Ausrichtung erzeugt
+ * Befunde, die es nicht gibt (siehe die Messung oben).
+ *
+ * Verglichen wird der Bereich, den nach der Ausrichtung ALLE
+ * Umdrehungen tragen; wie gross er war, steht in `result->bit_count`.
+ */
+bool uft_fuse_revolutions_ausgerichtet(const uint8_t **revolutions,
+                                       const size_t *bit_counts,
+                                       size_t num_revolutions,
+                                       long max_versatz,
+                                       const uft_fusion_config_t *config,
+                                       uft_fused_bitstream_t *result);
+
 /** Mehrheitswerte als Bytes. @return geschriebene Bytes. */
 size_t uft_fused_to_bytes(const uft_fused_bitstream_t *fused,
                           uint8_t *output, size_t max_bytes);
