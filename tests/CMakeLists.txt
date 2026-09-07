@@ -1588,6 +1588,16 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_rev_grenzen")
+        # MF-951: Umdrehungs-DAUERN sind keine Abtast-INDIZES. Der
+        # Kettentest laeuft ueber den GW-Flussgenerator und den
+        # Produktionsdekoder — ohne Hardware (MF-310).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_rev_grenzen.c
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/greaseweazle/flux_gen.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests)
     elseif(${test_name} STREQUAL "test_rev_ausrichtung")
         # MF-950: ohne Ausrichtung meldete der Umdrehungsvergleich auf der
         # echten gw-Aufnahme 99,71 % der Spur als schwach — die beiden

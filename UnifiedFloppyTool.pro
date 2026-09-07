@@ -320,6 +320,7 @@ SOURCES += \
     src/forensic/uft_fundus_provenance.c \
     src/flux/uft_decode_timeline.c \
     src/flux/uft_dewarp.c \
+    src/flux/uft_rev_grenzen.c \
     src/flux/uft_flux_sync_search.c \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
