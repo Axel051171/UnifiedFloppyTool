@@ -15,6 +15,10 @@
  */
 
 #include "uft/hal/uft_hal.h"
+/* MF-955: der GW-Draht-Codec kommt von hier. Er ist der Massstab —
+ * er setzt das Protokoll um und ist ueber den Fluss-Generator
+ * geprueft (MF-951/952). */
+#include "uft/hal/uft_greaseweazle_full.h"
 #include "uft/compat/uft_alloc.h"
 #include <stdlib.h>
 #include <string.h>
@@ -554,76 +558,66 @@ static int gw_read_flux(uft_hal_t *hal, int track, int side, int revs,
         return -1;
     }
     
-    /* Receive and decode GW variable-length flux stream
-     * 0x01-0xF9: 1-byte delta
-     * 0xFA-0xFD: 2-byte (high nibble | low byte)
-     * 0xFE:      Space (+0x100 ticks)
-     * 0xFF:      Index pulse
-     * 0x00:      End-of-stream */
+    /* MF-955: der Strom wird gesammelt und vom PRODUKTIONSDEKODER
+     * gelesen, nicht mehr hier nebenbei.
+     *
+     * Was hier stand, konnte einen Greaseweazle-Strom nicht lesen.
+     * Gemessen gegen `uft_gw_decode_flux_stream()` an einem erzeugten
+     * Strom (2 Umdrehungen, 1000 Wechsel):
+     *
+     *     Produktionsdekoder  2000 Abtastungen  1152 1152 1152 …
+     *     dieser Dekoder      2015 Abtastungen   201    1    1 …
+     *     abweichend          2000 von 2000
+     *
+     * Drei Fehler: `0xFF` ist ein ESCAPE (Opcode + N28-Nutzlast), keine
+     * eigenstaendige Marke — die alte Fassung addierte dafuer 200
+     * ERFUNDENE Ticks, daher die 201. `0xFE` (254) gehoert in den
+     * 2-Byte-Bereich 250..254, nicht zu „Space". Und die 2-Byte-Form
+     * ist `250 + (val-250)*255 + next - 1`, nicht `(val & 0x0F) << 8`.
+     *
+     * Dass es niemandem auffiel, hat einen Grund: dieses Modul war bis
+     * MF-954 in KEINEM Test eingebunden (gemessen ueber
+     * `git show HEAD~1:tests/CMakeLists.txt`) — 1503 Zeilen, fuenf
+     * Treiber, null Abdeckung.
+     *
+     * „Wo ein Port neben einem nativen Parser steht, ist der Port
+     * richtig" — im Baum der siebte Fall. */
+    size_t raw_cap = 1u << 20;      /* 1 MiB Rohstrom reicht fuer 5 Umdr. */
+    uint8_t *raw = (uint8_t *)malloc(raw_cap);
+    if (!raw) {
+        free(data);
+        snprintf(hal->error, sizeof(hal->error), "Memory allocation failed");
+        return -1;
+    }
+
+    size_t raw_len = 0;
     uint8_t rbuf[4096];
-    size_t out_pos = 0;
-    uint32_t ticks = 0;
-    double ns_per_tick = 1000000000.0 / hal->state.gw.sample_freq;
     bool stream_done = false;
-    
-    while (!stream_done && out_pos < max_flux) {
+
+    while (!stream_done && raw_len < raw_cap) {
         int n = serial_read(hal->serial, rbuf, sizeof(rbuf));
         if (n <= 0) break;
-        
-        for (int bi = 0; bi < n && out_pos < max_flux; bi++) {
-            uint8_t b = rbuf[bi];
-            
-            if (b == 0x00) {
-                stream_done = true;
-                break;
-            } else if (b <= 0xF9) {
-                ticks += b;
-                data[out_pos++] = (uint32_t)(ticks * ns_per_tick);
-                ticks = 0;
-            } else if (b == 0xFF) {
-                /* MF-954, GEMESSEN UND FALSCH — hier wird kein
-                 * `read_flux_ex` aufgesetzt, solange das hier steht.
-                 *
-                 * Im GW-Protokoll ist 0xFF ein ESCAPE: es folgen ein
-                 * Opcode (Index=1, Space=2, Astable=3) und eine
-                 * N28-Nutzlast. Diese Zeile behandelt 0xFF als
-                 * eigenstaendige Marke und addiert 200 ERFUNDENE Ticks.
-                 *
-                 * Ebenso ist 0xFE (254) im Protokoll Teil des
-                 * 2-Byte-Bereichs 250..254, nicht „Space".
-                 *
-                 * Gemessen gegen `uft_gw_decode_flux_stream()` an einem
-                 * erzeugten Strom (2 Umdrehungen, 1000 Wechsel):
-                 *
-                 *     Produktionsdekoder  2000 Abtastungen
-                 *     dieser Dekoder      2015 Abtastungen
-                 *     abweichend          2000 von 2000
-                 *     erste Werte         1152 1152 …  gegen  201 1 1 1 …
-                 *
-                 * JEDER Wert ist falsch; die 201 ist die erfundene
-                 * Zugabe. Dieser Pfad kann einen Greaseweazle-Strom
-                 * nicht lesen — und `uft_fuzzy_bits.c` liest ueber ihn.
-                 *
-                 * Nicht in MF-954 behoben, weil das eine eigene Sache
-                 * ist: der richtige Weg ist die Abtretung an
-                 * `uft_gw_decode_flux_stream()`, also dieselbe Klasse
-                 * wie „wo ein Port neben einem nativen Parser steht".
-                 * Als eigener Punkt eingetragen. */
-                ticks += 200;
-            } else if (b == 0xFE) {
-                /* Space: accumulator += 0x100 — siehe oben, ebenfalls
-                 * nicht protokollgemaess. */
-                ticks += 0x100;
-            } else {
-                /* 2-byte encoding: 0xFA-0xFD */
-                if (bi + 1 < n) {
-                    uint16_t delta = ((uint16_t)(b & 0x0F) << 8) | rbuf[++bi];
-                    ticks += delta;
-                }
-            }
+        for (int bi = 0; bi < n && raw_len < raw_cap; bi++) {
+            raw[raw_len++] = rbuf[bi];
+            if (rbuf[bi] == 0x00) { stream_done = true; break; }
         }
     }
-    
+
+    uint32_t decoded_freq = 0;
+    uint32_t out_pos = uft_gw_decode_flux_stream(raw, raw_len, data,
+                                                 (uint32_t)max_flux,
+                                                 &decoded_freq);
+
+    /* Der Dekoder liefert TICKS. Die Schnittstelle sagt Nanosekunden zu
+     * — also wird hier umgerechnet, mit der Frequenz des Geraets. */
+    if (hal->state.gw.sample_freq > 0) {
+        const double ns_per_tick = 1e9 / (double)hal->state.gw.sample_freq;
+        for (uint32_t k = 0; k < out_pos; k++)
+            data[k] = (uint32_t)((double)data[k] * ns_per_tick + 0.5);
+    }
+
+    free(raw);
+
     *flux = data;
     *count = out_pos;
     
@@ -660,28 +654,66 @@ static int gw_write_flux(uft_hal_t *hal, int track, int side,
         return -1;
     }
     
-    double ticks_per_ns = (double)hal->state.gw.sample_freq / 1000000000.0;
-    size_t pos = 0;
-    
-    for (size_t i = 0; i < count && pos < wire_size - 4; i++) {
-        uint32_t ticks = (uint32_t)(flux[i] * ticks_per_ns + 0.5);
-        if (ticks == 0) ticks = 1;
-        
-        while (ticks > 0xF9) {
-            if (ticks >= 0x100 && ticks <= 0xFFF) {
-                wire[pos++] = 0xFA | (uint8_t)((ticks >> 8) & 0x03);
-                wire[pos++] = (uint8_t)(ticks & 0xFF);
-                ticks = 0;
-            } else {
-                wire[pos++] = 0xFE;  /* Space: +0x100 */
-                ticks -= 0x100;
-            }
-        }
-        if (ticks > 0) {
-            wire[pos++] = (uint8_t)ticks;
-        }
+    /* MF-955: DER SCHWERSTE BEFUND DIESER REIHE — und er ist behoben,
+     * indem hier nichts mehr selbst kodiert wird.
+     *
+     * Was hier stand, kodierte nach derselben falschen Tabelle wie der
+     * Lesepfad. Gemessen im Rundlauf gegen `uft_gw_decode_flux_stream()`,
+     * mit typischen MFM-DD-Zellzeiten bei 72 MHz:
+     *
+     *     geschrieben 4000 ns -> gemeint 288 Ticks -> gelesen 536 Ticks
+     *     geschrieben 6000 ns -> gemeint 432 Ticks -> gelesen 680 Ticks
+     *     geschrieben 8000 ns -> gemeint 576 Ticks -> gelesen 313 Ticks
+     *
+     *     12 von 12 Wechseln kommen falsch an.
+     *
+     * Das ist nicht bloss ein Lesefehler. Ein Schreibvorgang auf eine
+     * ECHTE Diskette haette eine Spur mit durchweg falschen Zeiten
+     * erzeugt — und das Werkzeug haette Erfolg gemeldet. Genau davor
+     * steht „Keine stille Veraenderung".
+     *
+     * Kodiert wird jetzt vom Produktionskodierer, der dasselbe
+     * Protokoll umsetzt wie der Dekoder. Er nimmt TICKS; die
+     * Schnittstelle liefert Nanosekunden, also wird vorher umgerechnet.
+     *
+     * NICHT ABGENOMMEN bleibt, was ein echtes Geraet daraus macht —
+     * dieses Projekt hat keine Hardware (MF-310). Geprueft ist der
+     * Rundlauf Kodierer -> Dekoder, und der ist jetzt bitgenau. */
+    const double ticks_per_ns =
+        (hal->state.gw.sample_freq > 0)
+            ? (double)hal->state.gw.sample_freq / 1000000000.0
+            : 0.0;
+    if (ticks_per_ns <= 0.0) {
+        free(wire);
+        snprintf(hal->error, sizeof(hal->error),
+                 "GW: sample_freq unbekannt — ohne sie ist keine "
+                 "Umrechnung ns->Ticks moeglich");
+        return -1;
     }
-    wire[pos++] = 0x00;  /* End-of-stream */
+
+    uint32_t *ticks_buf = (uint32_t *)malloc(count * sizeof(uint32_t));
+    if (!ticks_buf) {
+        free(wire);
+        snprintf(hal->error, sizeof(hal->error), "Memory allocation failed");
+        return -1;
+    }
+    for (size_t i = 0; i < count; i++) {
+        double tk = (double)flux[i] * ticks_per_ns + 0.5;
+        if (tk < 1.0) tk = 1.0;
+        ticks_buf[i] = (uint32_t)tk;
+    }
+
+    size_t pos = uft_gw_encode_flux_stream(ticks_buf, (uint32_t)count,
+                                           wire, wire_size,
+                                           hal->state.gw.sample_freq);
+    free(ticks_buf);
+
+    if (pos == 0) {
+        free(wire);
+        snprintf(hal->error, sizeof(hal->error),
+                 "GW: Flusskodierung fehlgeschlagen");
+        return -1;
+    }
     
     /* Send WRITE_FLUX command: params=[ticks_to_index(4), terminate(1)] */
     uint8_t write_params[5] = {0, 0, 0, 0, 1};

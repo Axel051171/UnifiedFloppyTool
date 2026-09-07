@@ -1588,13 +1588,22 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_gw_draht_codec")
+        # MF-955: der GW-Draht-Codec in uft_hal_unified.c war in BEIDE
+        # Richtungen falsch — Lesen 2000/2000 abweichend, Schreiben
+        # 12/12. Geprueft wird die Abtretung samt Einheitenwechsel.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
     elseif(${test_name} STREQUAL "test_hal_rev_grenzen")
         # MF-954: der Vertrag von uft_hal_read_flux_ex(). Die
         # GERAETEPFADE sind nicht abgenommen — dieses Projekt hat keine
         # Hardware (MF-310); geprueft ist die Huelle.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hal/uft_hal_unified.c
-            ${CMAKE_SOURCE_DIR}/src/hal/uft_kryoflux_dtc.c)
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_kryoflux_dtc.c
+            # MF-955: seit der Abtretung des GW-Draht-Codecs braucht
+            # uft_hal_unified.c den Produktionscodec.
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
     elseif(${test_name} STREQUAL "test_rev_grenzen")
         # MF-951: Umdrehungs-DAUERN sind keine Abtast-INDIZES. Der
         # Kettentest laeuft ueber den GW-Flussgenerator und den
