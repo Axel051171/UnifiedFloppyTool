@@ -424,6 +424,86 @@ int uft_detect_dm_protection(void *ctx, uft_copy_protection_t *result)
 }
 
 /*============================================================================
+ * Reine Umrechnungen zwischen HAL-Fluss und Timing-Liste (MF-958)
+ *============================================================================*/
+
+/* Toleranz um jedes MFM-Fenster, in Prozent. Politik, keine Physik —
+ * der Wert (15 %) stand schon vorher an dieser Stelle und ist gegen
+ * keine reale Diskette geeicht. Er wird hier nur weitergereicht, damit
+ * die Berichtigung das Verhalten nicht zusaetzlich verschiebt. */
+#define UFT_FUZZY_FENSTER_TOLERANZ_PCT 15.0
+
+size_t uft_fuzzy_timings_aus_flux_ns(const uint32_t *flux_ns, size_t count,
+                                     uft_flux_timing_t *out, size_t max_out)
+{
+    if (!flux_ns || !out || count == 0 || max_out == 0) return 0;
+
+    size_t n = 0;
+    double position_us = 0.0;
+
+    for (size_t i = 0; i < count && n < max_out; i++) {
+        /* `flux_ns[i]` IST schon das Intervall in Nanosekunden.
+         *
+         * HIER STAND `(flux[i] - prev) * ns_per_tick` (berichtigt
+         * MF-958) — zwei Fehler uebereinander: die Differenz behandelte
+         * Intervalle wie kumulierte Zeitstempel (auf einer sauberen Spur
+         * ergibt das Werte nahe null und, bei fallendem Abstand, einen
+         * Unterlauf in `uint32_t`), und die Multiplikation skalierte
+         * Werte, die bereits Nanosekunden waren, mit 13,89. */
+        const double delta_ns = (double)flux_ns[i];
+        const double delta_us = delta_ns / 1000.0;
+
+        out[n].timing_us   = delta_us;
+        out[n].position_us = position_us;
+
+        /* HIER STAND eine EIGENE Fenstertabelle, `4000.0 * w / 2.0` mit
+         * `w = 1..3` (berichtigt MF-958). Das ergibt 2, 4 und 6 us und
+         * widersprach dem Kommentar zwei Zeilen darueber („4us=short,
+         * 6us=medium, 8us=long"), der Konstanten `UFT_MFM_FLUX_8US` im
+         * eigenen Header UND `uft_is_valid_mfm_timing()` weiter oben in
+         * DIESER Datei — drei Zeugen gegen eine handgerechnete Formel.
+         *
+         * Folgenreich war es auch: ein sauberer 8-us-Abstand, der
+         * haeufigste lange auf jeder DD-Spur, liegt in keinem der drei
+         * falschen Fenster und wurde als „mehrdeutig" gemeldet.
+         *
+         * Statt die Tabelle zu berichtigen wird jetzt die vorhandene,
+         * benannte Pruefung gerufen. Zwei Fensterdefinitionen in einer
+         * Datei waren der Fehler; drei waeren keine Loesung. */
+        out[n].is_ambiguous =
+            !uft_is_valid_mfm_timing(delta_us,
+                                     UFT_FUZZY_FENSTER_TOLERANZ_PCT);
+
+        position_us += delta_us;
+        n++;
+    }
+    return n;
+}
+
+size_t uft_fuzzy_flux_ns_aus_timings(const uft_flux_timing_t *timings,
+                                     size_t count,
+                                     uint32_t *out_ns, size_t max_out)
+{
+    if (!timings || !out_ns || count == 0 || max_out == 0) return 0;
+
+    size_t n = 0;
+    for (size_t i = 0; i < count && n < max_out; i++) {
+        /* HIER STAND eine Umrechnung nach TAKTEN und eine KUMULIERUNG
+         * (`cumulative += ticks; flux[i] = cumulative;`), berichtigt
+         * MF-958. `uft_hal_write_flux()` nimmt ns-INTERVALLE; der
+         * Treiber rechnet an der Geraetekante selbst nach Takten um. Ein
+         * kumulierter Tick-Strom haette dort eine Spur mit voellig
+         * falschen Zeiten gebrannt — und das Werkzeug haette Erfolg
+         * gemeldet. */
+        double ns = timings[i].timing_us * 1000.0;
+        if (ns < 1.0) ns = 1.0;          /* ein Wechsel dauert nie 0 ns */
+        if (ns > 4294967295.0) ns = 4294967295.0;
+        out_ns[n++] = (uint32_t)(ns + 0.5);
+    }
+    return n;
+}
+
+/*============================================================================
  * Preservation Functions (Stubs - require hardware support)
  *============================================================================*/
 
@@ -453,37 +533,9 @@ int uft_capture_fuzzy_flux(void *ctx, uint8_t track, uint8_t sector,
         return -1;
     }
     
-    /* Convert raw flux transitions to timing data */
-    double ns_per_tick = 1e9 / 72000000.0;  /* Default GW sample rate */
-    size_t count = 0;
-    double position_us = 0;
-    uint32_t prev = 0;
-    
-    for (size_t i = 0; i < flux_count && count < max_timings; i++) {
-        double delta_ns = (flux[i] - prev) * ns_per_tick;
-        double delta_us = delta_ns / 1000.0;
-        
-        timings[count].timing_us = delta_us;
-        timings[count].position_us = position_us;
-        
-        /* Mark as ambiguous if timing falls between expected MFM windows */
-        /* Standard MFM: 4µs=short, 6µs=medium, 8µs=long (±15%) */
-        double t = delta_ns;
-        bool in_window = false;
-        for (int w = 1; w <= 3; w++) {
-            double center = 4000.0 * w / 2.0;  /* DD bitcell */
-            if (fabs(t - center) < center * 0.15) {
-                in_window = true;
-                break;
-            }
-        }
-        timings[count].is_ambiguous = !in_window;
-        
-        position_us += delta_us;
-        prev = flux[i];
-        count++;
-    }
-    
+    size_t count = uft_fuzzy_timings_aus_flux_ns(flux, flux_count,
+                                                 timings, max_timings);
+
     free(flux);
     if (timing_count) *timing_count = count;
     
@@ -501,20 +553,14 @@ int uft_write_fuzzy_flux(void *ctx, uint8_t track, uint8_t sector,
     uft_hal_t *hal = (uft_hal_t *)ctx;
     if (!hal || !timings || timing_count == 0) return -1;
     
-    /* Convert timing data to raw flux transition array */
-    double ns_per_tick = 1e9 / 72000000.0;  /* Default GW sample rate */
     uint32_t *flux = (uint32_t *)malloc(timing_count * sizeof(uint32_t));
     if (!flux) return -1;
-    
-    uint32_t cumulative = 0;
-    for (size_t i = 0; i < timing_count; i++) {
-        uint32_t ticks = (uint32_t)(timings[i].timing_us * 1000.0 / ns_per_tick + 0.5);
-        if (ticks == 0) ticks = 1;
-        cumulative += ticks;
-        flux[i] = cumulative;
-    }
-    
-    int ret = uft_hal_write_flux(hal, track, 0, flux, timing_count);
+
+    const size_t n = uft_fuzzy_flux_ns_aus_timings(timings, timing_count,
+                                                   flux, timing_count);
+    if (n == 0) { free(flux); return -1; }
+
+    int ret = uft_hal_write_flux(hal, track, 0, flux, n);
     free(flux);
     
     (void)sector;  /* Full track write — sector isolation not feasible at flux level */

@@ -225,11 +225,62 @@ uint8_t uft_calc_dm_serial_crc(const uint8_t serial[4]);
  * Preservation Functions
  *============================================================================*/
 
+/*============================================================================
+ * Reine Umrechnungen zwischen HAL-Fluss und Timing-Liste (MF-958)
+ *
+ * Sie stehen hier getrennt, weil `uft_capture_fuzzy_flux()` und
+ * `uft_write_fuzzy_flux()` ein GERAET brauchen und deshalb ohne Hardware
+ * nicht durchlaufen werden koennen (MF-310). Die Rechnung dagegen laesst
+ * sich pruefen — und genau in ihr lagen die Fehler.
+ *
+ * DIE EINHEIT DER HAL-GRENZE, gemessen, nicht angenommen:
+ * `uft_hal_read_flux()` und `uft_hal_write_flux()` fuehren
+ * **Nanosekunden**, und zwar **INTERVALLE** (Abstand zum vorigen
+ * Wechsel), nicht kumulierte Zeitstempel. Belegt an zwei Stellen:
+ * `src/hal/uft_hal_unified.c` rechnet im Lesepfad Takte->ns und im
+ * Schreibpfad ns->Takte, jeweils an der Geraetekante; und die Summe der
+ * Werte eines erzeugten Stroms ergibt dessen Gesamtdauer (MF-957,
+ * 1200 Werte = 14,432 ms).
+ *
+ * Damit braucht diese Datei die Taktfrequenz des Geraets NICHT. Ein
+ * Vorschlag, sie hier durchzureichen (UFT-33 E2), wuerde die falsche
+ * Annahme festschreiben, die HAL liefere Takte.
+ *============================================================================*/
+
+/**
+ * @brief HAL-Fluss (ns-Intervalle) in eine Timing-Liste wandeln.
+ *
+ * @param flux_ns   Intervalle in Nanosekunden, wie von uft_hal_read_flux()
+ * @param count     Anzahl Eintraege in @p flux_ns
+ * @param out       Ausgabe
+ * @param max_out   Platz in @p out
+ * @return Anzahl geschriebener Eintraege
+ */
+size_t uft_fuzzy_timings_aus_flux_ns(const uint32_t *flux_ns, size_t count,
+                                     uft_flux_timing_t *out, size_t max_out);
+
+/**
+ * @brief Timing-Liste zurueck in HAL-Fluss (ns-Intervalle) wandeln.
+ *
+ * Die Umkehrung von uft_fuzzy_timings_aus_flux_ns(). Ein Intervall von
+ * 0 ns gibt es nicht; solche Eintraege werden auf 1 ns gehoben, damit
+ * kein Wechsel still verschwindet.
+ *
+ * @param timings   Timing-Liste
+ * @param count     Anzahl Eintraege
+ * @param out_ns    Ausgabe: Intervalle in Nanosekunden
+ * @param max_out   Platz in @p out_ns
+ * @return Anzahl geschriebener Eintraege
+ */
+size_t uft_fuzzy_flux_ns_aus_timings(const uft_flux_timing_t *timings,
+                                     size_t count,
+                                     uint32_t *out_ns, size_t max_out);
+
 /**
  * @brief Create flux-level image of fuzzy sector
- * 
+ *
  * Captures raw flux timings for accurate preservation.
- * 
+ *
  * @param ctx UFT context
  * @param track Track number
  * @param sector Sector number

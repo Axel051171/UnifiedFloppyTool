@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>   /* fabs — MF-958 */
 
 /* ── Linker-satisfying stubs ─────────────────────────────────────────
  * uft_fuzzy_bits.c also contains ctx-based functions
@@ -327,6 +328,149 @@ static void test_dm_serial_crc_gegen_veroeffentlichtes_paar(void)
           "DM-CRC: der veroeffentlichte Block muss als gueltig gelten");
 }
 
+/* ── MF-958: die HAL-Grenze fuehrt ns-INTERVALLE ────────────────────────
+ *
+ * `uft_hal_read_flux()` und `uft_hal_write_flux()` fuehren Nanosekunden,
+ * und zwar Intervalle. Gemessen an `src/hal/uft_hal_unified.c`, das an
+ * der Geraetekante Takte<->ns rechnet, und an einem erzeugten Strom
+ * (MF-957: 1200 Werte, Summe 14,432 ms = Stromdauer).
+ *
+ * `uft_capture_fuzzy_flux()` rechnete daraus `(flux[i] - prev) *
+ * (1e9/72e6)` — Intervalle wie Zeitstempel behandelt UND bereits fertige
+ * Nanosekunden nochmals mit 13,89 skaliert. */
+
+/** Der ALTE Weg, wortgetreu, als Gegenbeweis. Damit „falsch" nachpruefbar
+ *  bleibt, wenn niemand mehr den alten Stand auscheckt. */
+static double alt_delta_us(const uint32_t *flux_ns, size_t i, uint32_t prev)
+{
+    const double ns_per_tick = 1e9 / 72000000.0;
+    return ((double)(flux_ns[i] - prev) * ns_per_tick) / 1000.0;
+}
+
+static void test_hal_fluss_ist_ns_intervall(void)
+{
+    /* Eine saubere DD-MFM-Spur: 4, 6, 8 us als ns-Intervalle. */
+    const uint32_t flux_ns[6] = { 4000u, 6000u, 8000u, 4000u, 6000u, 8000u };
+    uft_flux_timing_t t[6];
+    memset(t, 0, sizeof(t));
+
+    const size_t n = uft_fuzzy_timings_aus_flux_ns(flux_ns, 6, t, 6);
+    CHECK(n == 6, "MF-958: alle sechs Intervalle muessen ankommen");
+
+    CHECK(fabs(t[0].timing_us - 4.0) < 1e-9, "MF-958: 4000 ns sind 4,0 us");
+    CHECK(fabs(t[1].timing_us - 6.0) < 1e-9, "MF-958: 6000 ns sind 6,0 us");
+    CHECK(fabs(t[2].timing_us - 8.0) < 1e-9, "MF-958: 8000 ns sind 8,0 us");
+
+    /* `position_us` ist die laufende Summe, nicht der Wert selbst. */
+    CHECK(fabs(t[0].position_us - 0.0)  < 1e-9, "MF-958: erste Position 0");
+    CHECK(fabs(t[1].position_us - 4.0)  < 1e-9, "MF-958: zweite Position 4");
+    CHECK(fabs(t[2].position_us - 10.0) < 1e-9, "MF-958: dritte Position 10");
+
+    /* Keiner dieser drei Abstaende ist mehrdeutig — sie SIND die
+     * gueltigen MFM-Fenster. Mit der alten Fenstertabelle (2/4/6 us)
+     * waere der 8-us-Abstand als mehrdeutig gemeldet worden. */
+    CHECK(!t[0].is_ambiguous, "MF-958: 4 us ist gueltiges MFM");
+    CHECK(!t[1].is_ambiguous, "MF-958: 6 us ist gueltiges MFM");
+    CHECK(!t[2].is_ambiguous, "MF-958: 8 us ist gueltiges MFM, nicht fuzzy");
+
+    /* Und ein Abstand MITTEN im Zweifelsband bleibt mehrdeutig. */
+    const uint32_t fuzzy_ns[1] = { 5000u };
+    uft_flux_timing_t f[1];
+    memset(f, 0, sizeof(f));
+    CHECK(uft_fuzzy_timings_aus_flux_ns(fuzzy_ns, 1, f, 1) == 1,
+          "MF-958: der Zweifelsfall muss ankommen");
+    CHECK(f[0].is_ambiguous, "MF-958: 5 us liegt in keinem Fenster");
+}
+
+static void test_alter_weg_lieferte_unsinn(void)
+{
+    /* Der Rotbeweis. Dieselbe saubere Spur durch die alte Rechnung. */
+    const uint32_t flux_ns[3] = { 4000u, 6000u, 8000u };
+
+    /* i = 0: prev war 0, also 4000 * 13,889 / 1000 = 55,6 us —
+     * das Vierzehnfache des wahren Werts. */
+    const double a0 = alt_delta_us(flux_ns, 0, 0u);
+    CHECK(a0 > 55.0 && a0 < 56.0,
+          "MF-958 Rotbeweis: der alte Weg machte aus 4 us rund 55,6 us");
+
+    /* i = 1: (6000 - 4000) * 13,889 / 1000 = 27,8 us. */
+    const double a1 = alt_delta_us(flux_ns, 1, flux_ns[0]);
+    CHECK(a1 > 27.0 && a1 < 28.0,
+          "MF-958 Rotbeweis: aus 6 us wurden rund 27,8 us");
+
+    /* Und der schlimmste Fall: FAELLT der Abstand, unterlaeuft die
+     * Subtraktion in uint32_t. 4000 - 8000 = 4294963296 Takte. */
+    const uint32_t fallend[2] = { 8000u, 4000u };
+    const double a2 = alt_delta_us(fallend, 1, fallend[0]);
+    CHECK(a2 > 5.9e7,
+          "MF-958 Rotbeweis: ein fallender Abstand unterlief zu ~59 s");
+
+    /* Die neue Rechnung liefert fuer denselben Fall den wahren Wert. */
+    uft_flux_timing_t t[2];
+    memset(t, 0, sizeof(t));
+    CHECK(uft_fuzzy_timings_aus_flux_ns(fallend, 2, t, 2) == 2,
+          "MF-958: beide Werte muessen ankommen");
+    CHECK(fabs(t[1].timing_us - 4.0) < 1e-9,
+          "MF-958: neu bleibt ein fallender Abstand 4,0 us");
+}
+
+static void test_schreibweg_ist_die_umkehrung(void)
+{
+    /* Der Schreibpfad ist der gefaehrlichere: er brennt auf eine echte
+     * Diskette. Er rechnete nach TAKTEN und KUMULIERTE, waehrend
+     * `uft_hal_write_flux()` ns-Intervalle nimmt. */
+    const uint32_t flux_ns[4] = { 4000u, 6000u, 8000u, 4000u };
+    uft_flux_timing_t t[4];
+    memset(t, 0, sizeof(t));
+    CHECK(uft_fuzzy_timings_aus_flux_ns(flux_ns, 4, t, 4) == 4,
+          "MF-958: Hinweg");
+
+    uint32_t zurueck[4] = { 0 };
+    CHECK(uft_fuzzy_flux_ns_aus_timings(t, 4, zurueck, 4) == 4,
+          "MF-958: Rueckweg");
+
+    for (size_t i = 0; i < 4; i++) {
+        CHECK(zurueck[i] == flux_ns[i],
+              "MF-958: der Rundlauf muss bitgenau sein");
+    }
+
+    /* Ein Intervall von 0 ns gibt es nicht — es wird auf 1 gehoben,
+     * damit kein Wechsel still verschwindet. */
+    uft_flux_timing_t null_t[1];
+    memset(null_t, 0, sizeof(null_t));
+    null_t[0].timing_us = 0.0;
+    uint32_t einer[1] = { 0 };
+    CHECK(uft_fuzzy_flux_ns_aus_timings(null_t, 1, einer, 1) == 1,
+          "MF-958: auch der Nullfall liefert einen Eintrag");
+    CHECK(einer[0] == 1u, "MF-958: 0 ns wird zu 1 ns, nicht verworfen");
+}
+
+static void test_wandlung_lehnt_unsinn_ab(void)
+{
+    uft_flux_timing_t t[2];
+    uint32_t f[2];
+    const uint32_t flux_ns[2] = { 4000u, 6000u };
+
+    CHECK(uft_fuzzy_timings_aus_flux_ns(NULL, 2, t, 2) == 0,
+          "MF-958: kein Lesen durch NULL");
+    CHECK(uft_fuzzy_timings_aus_flux_ns(flux_ns, 2, NULL, 2) == 0,
+          "MF-958: kein Schreiben durch NULL");
+    CHECK(uft_fuzzy_timings_aus_flux_ns(flux_ns, 0, t, 2) == 0,
+          "MF-958: nichts hinein, nichts heraus");
+    CHECK(uft_fuzzy_timings_aus_flux_ns(flux_ns, 2, t, 0) == 0,
+          "MF-958: kein Eintrag ohne Platz");
+
+    memset(t, 0, sizeof(t));
+    CHECK(uft_fuzzy_flux_ns_aus_timings(NULL, 2, f, 2) == 0,
+          "MF-958: Rueckweg, kein Lesen durch NULL");
+    CHECK(uft_fuzzy_flux_ns_aus_timings(t, 2, NULL, 2) == 0,
+          "MF-958: Rueckweg, kein Schreiben durch NULL");
+
+    /* Weniger Platz als Werte: es wird gekuerzt, nicht ueberschrieben. */
+    CHECK(uft_fuzzy_timings_aus_flux_ns(flux_ns, 2, t, 1) == 1,
+          "MF-958: bei knappem Platz wird gekuerzt");
+}
+
 int main(void)
 {
     test_longtrack_protec();
@@ -339,6 +483,11 @@ int main(void)
     test_fuzzy_timing_boundaries();
     test_dm_serial_crc_roundtrip();
     test_dm_serial_crc_gegen_veroeffentlichtes_paar();
+
+    test_hal_fluss_ist_ns_intervall();
+    test_alter_weg_lieferte_unsinn();
+    test_schreibweg_ist_die_umkehrung();
+    test_wandlung_lehnt_unsinn_ab();
 
     if (g_errors) {
         fprintf(stderr, "[protection] %d check(s) failed\n", g_errors);
