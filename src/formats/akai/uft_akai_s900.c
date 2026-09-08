@@ -18,8 +18,28 @@
  * a LOWER confidence than the D81 plugin: `.d81` auto-detects as D81, and an
  * Akai image is opened via its own extension (`.akai` / `.s900`) or explicit
  * selection. The value is correct reading of an Akai disk (5/10 x 1024) which
- * the D81 plugin would mis-read as CBM 40 x 256 sectors. The HD size
- * (1,638,400) is unambiguous and probed with higher confidence.
+ * the D81 plugin would mis-read as CBM 40 x 256 sectors.
+ *
+ * MF-976: hier stand "The HD size (1,638,400) is unambiguous and probed
+ * with higher confidence." BEIDE HAELFTEN TRAGEN NICHT.
+ *
+ * Gemessen ueber `git ls-files src/formats`: mindestens drei Plugins
+ * beanspruchen 1 638 400 Byte, und zwei davon setzen dabei
+ * VERSCHIEDENE Geometrien an —
+ *
+ *     uft_adf_arc.c   80 x 2 x 10 x 1024   (Acorn ADFS F, T2-geprueft)
+ *     uft_edk.c       80 x 2 x 20 x  512
+ *     hier            80 x 2 x 10 x 1024
+ *
+ * Die Groesse ist also gerade NICHT eindeutig; Acorn ADFS F hat exakt
+ * dieselbe Geometrie wie eine Akai-HD-Diskette (P3-278).
+ *
+ * Und die hoehere Konfidenz war ein Bandverstoss: die Sonde liest
+ * `(void)d; (void)s;` — also KEINEN Inhalt — und meldete 70. Nach
+ * MF-729 heisst 50..79 "Struktur gelesen" und 30..49 "nur die Groesse".
+ * Gefangen von der Eichung `tests/test_probe_confidence_on_zeros.c`,
+ * nachdem 1 638 400 in deren Groessenliste ERGAENZT wurde — sie fehlte
+ * dort, und genau deshalb lief der Verstoss jahrelang durch.
  *
  * Classification: Sektor-Image (Klasse 3). The Akai sample FILESYSTEM
  * (volumes/programs/samples, accessible via akaiutil) is a separate layer and
@@ -39,7 +59,12 @@ typedef struct { FILE *file; int spt; } akai_pd_t;
 
 static bool akai_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     (void)d; (void)s;
-    if (fs == AKAI_HD_SIZE) { *c = 70; return true; }   /* HD size is distinct */
+    /* MF-976: war 70. Diese Sonde liest keinen Inhalt (siehe die zwei
+     * `(void)` oben), also gehoert sie ins Band "nur die Groesse"
+     * (30..49, MF-729). Und die Groesse ist nicht einmal eindeutig —
+     * `uft_adf_arc.c` liest dieselbe als Acorn ADFS F mit derselben
+     * Geometrie. 45 statt 70. */
+    if (fs == AKAI_HD_SIZE) { *c = 45; return true; }
     /* DD size collides with D81 / Korg — modest confidence below D81 (80). */
     if (fs == AKAI_DD_SIZE) { *c = 40; return true; }
     return false;

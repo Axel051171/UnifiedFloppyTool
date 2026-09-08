@@ -4,9 +4,12 @@
  *
  * Links the real Akai plugin (src/formats/akai/uft_akai_s900.c). Verifies the
  * 1024-byte block geometry (DD 80x2x5x1024 = 819200, HD 80x2x10x1024 = 1638400),
- * that the DD probe stays below D81's confidence (no auto-detect hijack) while
- * the HD size is probed with higher confidence, and that a modified sector
- * round-trips in both variants.
+ * that the DD probe stays below D81's confidence (no auto-detect hijack),
+ * and that a modified sector round-trips in both variants.
+ *
+ * MF-976: hier stand zusaetzlich „while the HD size is probed with higher
+ * confidence". Das war falsch und wurde von diesem Test EINGEFORDERT —
+ * siehe die Begruendung an `probe_meldet_nur_die_groesse` unten.
  */
 
 #include "uft/uft_format_plugin.h"
@@ -51,12 +54,28 @@ static int build_img(const char *path, uint32_t size) {
     fclose(f); free(d); return ok;
 }
 
-TEST(probe_dd_below_d81_hd_higher) {
+/* MF-976: hier stand `ASSERT(c >= 70)` mit dem Kommentar
+ * „HD size distinct".
+ *
+ * Beides war falsch, und der Test hat den Fehler als ANFORDERUNG
+ * festgeschrieben — er war gruen, WEIL der Verstoss da war.
+ *
+ *   * Die Groesse ist nicht eindeutig: `uft_adf_arc.c` liest 1 638 400
+ *     als Acorn ADFS F, mit derselben Geometrie (80x2x10x1024);
+ *     `uft_edk.c` beansprucht sie ebenfalls, mit 80x2x20x512 (P3-278).
+ *   * Die Sonde liest keinen Inhalt (`(void)d; (void)s;`). Nach MF-729
+ *     heisst 50..79 „Struktur gelesen"; wer nichts liest, gehoert ins
+ *     Band 30..49.
+ *
+ * Die Zusicherung ist jetzt das BAND, nicht die alte Zahl — damit
+ * faengt sie auch den umgekehrten Fehler (jemand setzt sie wieder
+ * hoch), statt ihn zu verlangen. */
+TEST(probe_meldet_nur_die_groesse) {
     int c = 0;
     ASSERT(uft_format_plugin_akai_s900.probe(NULL, 0, DD_SIZE, &c) == true);
-    ASSERT(c > 0 && c < 80);                       /* DD collides with D81 */
+    ASSERT(c >= 30 && c <= 49);          /* nur die Groesse (MF-729) */
     ASSERT(uft_format_plugin_akai_s900.probe(NULL, 0, HD_SIZE, &c) == true);
-    ASSERT(c >= 70);                                /* HD size distinct */
+    ASSERT(c >= 30 && c <= 49);          /* dito — der Inhalt bleibt ungelesen */
     ASSERT(uft_format_plugin_akai_s900.probe(NULL, 0, 174848, &c) == false);
 }
 
@@ -106,7 +125,7 @@ TEST(dd_write_roundtrip) {
 
 int main(void) {
     printf("=== Akai S900/S950 plugin (Phase-3 new format) ===\n");
-    RUN(probe_dd_below_d81_hd_higher);
+    RUN(probe_meldet_nur_die_groesse);
     RUN(dd_geometry_5x1024);
     RUN(hd_geometry_10x1024);
     RUN(dd_write_roundtrip);
