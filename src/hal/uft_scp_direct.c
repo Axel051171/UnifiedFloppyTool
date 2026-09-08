@@ -2,10 +2,21 @@
  * @file uft_scp_direct.c
  * @brief SuperCard Pro direct-USB HAL backend (MF-254 — libusb wiring).
  *
- * SPEC_STATUS: VENDOR-DOCUMENTED — based on the SuperCard Pro SDK v1.7
- *   reference release (cbmstuff.com, December 2015) AND cross-checked
- *   against samdisk's SuperCardPro.h + SuperCardPro.cpp port
- *   (simonowen/samdisk on GitHub). Protocol details:
+ * SPEC_STATUS: VENDOR-DOCUMENTED — eigenstaendig umgesetzt nach der
+ *   SuperCard-Pro-SDK-Referenz v1.7 (cbmstuff.com, Dezember 2015);
+ *   das Verhalten wurde gegen samdisks `SuperCardPro.h`/`.cpp`
+ *   gegengeprueft. **Kein Code uebernommen.**
+ *
+ *   MF-965 — die Lizenzen gehoeren hierher, weil eine Quellenangabe eine
+ *   rechtliche Aussage ist (CLAUDE.md, MF-636):
+ *     - samdisk: **MIT**, Volltext in `src/samdisk/License.txt`,
+ *       Herkunft in `src/samdisk/README.md`. Der Bestand ist
+ *       Referenz-Orakel und wird von keinem Build uebersetzt.
+ *     - SuperCard-Pro-SDK v1.7: Herstellerdokumentation; ihre
+ *       Weitergabebedingungen sind in diesem Baum **nicht gemessen**
+ *       (LIZ-1). Verwendet wurde die Protokollbeschreibung, kein Code.
+ *
+ *   Protocol details:
  *
  *   - Wire framing (TX): [CMD, LEN, params..., CHECKSUM]
  *     where CHECKSUM = CMD + LEN + sum(params) + 0x4A (UFT_SCP_CHECKSUM_INIT)

@@ -405,6 +405,6 @@ int main(void)
     t_beilage_fehlt();
     remove(BLOB_DATEI);
     remove(INDEX_DATEI);
-    printf("%d/%d Pruefungen gruen\n", g_tests, g_tests);
+    printf("%d Pruefungen gruen\n", g_tests);
     return 0;
 }

@@ -305,6 +305,6 @@ int main(void)
     t_gueltiger_strom();
     t_open_weist_ab();
     t_kein_erfundener_sektor();
-    printf("%d/%d Pruefungen gruen\n", g_ok, g_ok);
+    printf("%d Pruefungen gruen\n", g_ok);
     return 0;
 }

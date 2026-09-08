@@ -234,6 +234,6 @@ int main(void)
     t_bytekommando_verhallt();
     t_gegenprobe();
     t_firmware_antwortet();
-    printf("%d/%d Pruefungen gruen\n", g_ok, g_ok);
+    printf("%d Pruefungen gruen\n", g_ok);
     return 0;
 }

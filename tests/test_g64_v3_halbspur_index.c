@@ -278,6 +278,6 @@ int main(void)
     t_bruecken_puffer();
     t_spuren_aus_dem_richtigen_fach();
     t_dekoder_ist_weiter_falsch();
-    printf("%d/%d Pruefungen gruen\n", g_ok, g_ok);
+    printf("%d Pruefungen gruen\n", g_ok);
     return 0;
 }

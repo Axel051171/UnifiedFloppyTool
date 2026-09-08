@@ -248,6 +248,6 @@ int main(void)
     t_heathkit_eindeutig_bleibt();
     t_hitachi_mehrdeutig();
     t_hitachi_eindeutig_bleibt();
-    printf("%d/%d Pruefungen gruen\n", g_ok, g_ok);
+    printf("%d Pruefungen gruen\n", g_ok);
     return 0;
 }
