@@ -4,21 +4,21 @@
  * @version 3.8.0
  */
 #include "uft/uft_format_common.h"
+#include "uft/formats/apple/uft_apple_gcr.h"
 
 #define NIB_TRACKS 35
 #define NIB_TRACK_SIZE 6656
 #define NIB_FILE_SIZE 232960
 
-static const uint8_t gcr62_decode[256] = {
-    [0x96]=0,[0x97]=1,[0x9A]=2,[0x9B]=3,[0x9D]=4,[0x9E]=5,[0x9F]=6,[0xA6]=7,
-    [0xA7]=8,[0xAB]=9,[0xAC]=10,[0xAD]=11,[0xAE]=12,[0xAF]=13,[0xB2]=14,[0xB3]=15,
-    [0xB4]=16,[0xB5]=17,[0xB6]=18,[0xB7]=19,[0xB9]=20,[0xBA]=21,[0xBB]=22,[0xBC]=23,
-    [0xBD]=24,[0xBE]=25,[0xBF]=26,[0xCB]=27,[0xCD]=28,[0xCE]=29,[0xCF]=30,[0xD3]=31,
-    [0xD6]=32,[0xD7]=33,[0xD9]=34,[0xDA]=35,[0xDB]=36,[0xDC]=37,[0xDD]=38,[0xDE]=39,
-    [0xDF]=40,[0xE5]=41,[0xE6]=42,[0xE7]=43,[0xE9]=44,[0xEA]=45,[0xEB]=46,[0xEC]=47,
-    [0xED]=48,[0xEE]=49,[0xEF]=50,[0xF2]=51,[0xF3]=52,[0xF4]=53,[0xF5]=54,[0xF6]=55,
-    [0xF7]=56,[0xF9]=57,[0xFA]=58,[0xFB]=59,[0xFC]=60,[0xFD]=61,[0xFE]=62,[0xFF]=63
-};
+/* MF-948: hier stand eine EIGENE 64-Byte-Umsetzungstabelle.
+ *
+ * Sie war die dritte Kopie derselben Abbildung im Baum (P3-234, sieben
+ * Fundstellen). Byteidentisch mit den anderen — der Schaden lag nicht
+ * in der Tabelle, sondern in der Rechnung daneben. Beides ist jetzt
+ * `src/formats/apple/uft_apple_gcr.c`: eine benannte Referenz
+ * (`Beneath Apple DOS`, Kap. 3) und eine Messung gegen das Oracle
+ * `to_woz2` (560 von 560 Sektoren byteidentisch, MF-715). */
+
 
 typedef struct { uint8_t* data; } nib_data_t;
 
@@ -67,79 +67,73 @@ static void nib_close(uft_disk_t* disk) {
     if (p) { free(p->data); free(p); disk->plugin_data = NULL; }
 }
 
-static int find_addr(const uint8_t* t, size_t len, size_t start, uint8_t* vol, uint8_t* trk, uint8_t* sec) {
-    for (size_t i = start; i + 14 < len; i++) {
-        if (t[i] == 0xD5 && t[i+1] == 0xAA && t[i+2] == 0x96) {
-            *vol = ((t[i+3] << 1) | 1) & t[i+4];
-            *trk = ((t[i+5] << 1) | 1) & t[i+6];
-            *sec = ((t[i+7] << 1) | 1) & t[i+8];
-            return i + 14;
-        }
-    }
-    return -1;
-}
-
-static int find_data(const uint8_t* t, size_t len, size_t start) {
-    for (size_t i = start; i < start + 100 && i + 3 < len; i++) {
-        if (t[i] == 0xD5 && t[i+1] == 0xAA && t[i+2] == 0xAD) return i + 3;
-    }
-    return -1;
-}
-
-static int decode_sector(const uint8_t* gcr, uint8_t* out) {
-    /* Returns: 1=OK, 0=GCR decode error, -1=checksum error */
-    uint8_t buf[343]; /* 342 data + 1 checksum */
-    for (int i = 0; i < 343; i++) {
-        uint8_t b = gcr[i];
-        if (gcr62_decode[b] == 0 && b != 0x96) return 0;
-        buf[i] = gcr62_decode[b];
-    }
-    uint8_t prev = 0;
-    for (int i = 0; i < 343; i++) { buf[i] ^= prev; prev = buf[i]; }
-    /* After XOR chain, byte 342 should be 0 (checksum) */
-    bool checksum_ok = (buf[342] == 0);
-    for (int i = 0; i < 256; i++) {
-        int aux_idx = i % 86, shift = (i / 86) * 2;
-        out[i] = (buf[86 + i] << 2) | ((buf[aux_idx] >> shift) & 0x03);
-    }
-    return checksum_ok ? 1 : -1;
-}
-
+/* MF-948: liest ueber `uft_apple_gcr_scan_track()`.
+ *
+ * Hier standen `find_addr`, `find_data` und `decode_sector` — eine
+ * private Zweitfassung des Apple-GCR-Abtasters neben der
+ * oracle-geprueften Einheit. Drei Fehler auf einmal, alle STILL:
+ *
+ *  1. Die zwei niederwertigen Bits jedes Bytes kamen VERTAUSCHT heraus.
+ *     Apple-6-and-2 legt jede Zweiergruppe bitverdreht ins Hilfsbyte;
+ *     die Rueckvertauschung fehlte. Gemessen an 64 Sektoren:
+ *     **8192 von 16384 Bytes falsch — genau 50 %**, waehrend die
+ *     gepruefte Einheit 0 von 16384 falsch hatte.
+ *
+ *     Und die Pruefsumme merkt davon NICHTS: sie laeuft ueber den
+ *     Nibble-Strom, also VOR dem Zusammensetzen. Alle 64 Sektoren
+ *     wurden mit „Pruefsumme ok" gemeldet. Das ist stille Veraenderung
+ *     im Wortsinn (DESIGN_PRINCIPLES).
+ *
+ *     Der Baum WUSSTE es: `src/flux/uft_flux_decoder.c:1591` traegt die
+ *     Warnung woertlich — „Undo it, or every data byte's low 2 bits
+ *     come out swapped." Zwei von drei Umsetzungen hatten sie, die
+ *     dritte nicht. Genau der Preis, den P3-234 an der Doppelung
+ *     benennt.
+ *
+ *  2. Kein Umlauf. Eine Apple-Spur ist ein RING; `find_addr` suchte nur
+ *     bis `i + 14 < len`. Ein Sektor auf dem Umbruch war verloren.
+ *
+ *  3. Eine Blindzone: `while (pos < NIB_TRACK_SIZE - 400)` brach die
+ *     Suche 400 Bytes vor dem Spurende ab.
+ *
+ * Alle drei sind mit der Verdrahtung weg — die gepruefte Einheit liest
+ * als Ring und kennt die Bitverdrehung. Ein NIB-Spurpuffer IST ein
+ * MSB-zuerst gepackter Bitstrom (jedes Diskettenbyte acht Bits), also
+ * passt er ohne Umformung in ihren Vertrag. */
 static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
-     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
-     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
-     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+     * gerechnet oder indiziert wird. */
     if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
     nib_data_t* p = disk->plugin_data;
     if (!p || !p->data || head != 0 || cyl >= NIB_TRACKS) return UFT_ERR_INVALID_STATE;
-    
+
     uft_track_init(track, cyl, head);
-    const uint8_t* tdata = p->data + cyl * NIB_TRACK_SIZE;
-    uint8_t sec_buf[256];
-    size_t pos = 0;
-    
-    while (pos < NIB_TRACK_SIZE - 400) {
-        uint8_t vol, trk, sec;
-        int addr_end = find_addr(tdata, NIB_TRACK_SIZE, pos, &vol, &trk, &sec);
-        if (addr_end < 0) break;
-        if (trk != cyl) { pos = addr_end; continue; }
-        
-        int data_start = find_data(tdata, NIB_TRACK_SIZE, addr_end);
-        if (data_start < 0 || data_start + 343 > NIB_TRACK_SIZE) { pos = addr_end; continue; }
-        
-        int dec_rc = decode_sector(&tdata[data_start], sec_buf);
-        if (dec_rc != 0) {
-            /* `sec` was decoded from the address field — it IS the number
-             * on the disk, so it must not be shifted (ARCH-20). */
-            uft_format_add_sector_with_id(track, sec, sec_buf, 256, cyl, head);
-            /* GCR checksum mismatch → mark CRC error but keep data */
-            if (dec_rc == -1 && track->sector_count > 0)
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
-        }
-        pos = data_start + 343;
+    const uint8_t* tdata = p->data + (size_t)cyl * NIB_TRACK_SIZE;
+
+    /* Platz fuer mehr als eine Formatierung: 16 Sektoren sind der
+     * Normalfall, 13 der DOS-3.2-Fall; doppelt so viel faengt eine
+     * Spur mit Zusatzfeldern ab, ohne dass etwas still wegfaellt. */
+    uft_a2_sector_t sek[UFT_A2_SECTORS_16 * 2];
+    int n = uft_apple_gcr_scan_track(tdata, (uint32_t)NIB_TRACK_SIZE * 8u,
+                                     sek, sizeof(sek) / sizeof(sek[0]));
+    if (n < 0) return UFT_ERROR_INVALID_PARAM;
+
+    for (int i = 0; i < n; i++) {
+        if (sek[i].track != (uint8_t)cyl) continue;
+
+        /* Ein Feld in einer Kodierung, die die Einheit nicht beherrscht
+         * (DOS-3.2-Bootsektor, MF-721), traegt KEINE Bytes. Es wird
+         * uebergangen statt geraten — der alte Weg haette hier Inhalt
+         * geliefert, der nirgends auf der Diskette steht. */
+        if (!sek[i].has_data || sek[i].alt_encoding) continue;
+
+        /* `sec` stammt aus dem Adressfeld — es IST die Nummer auf der
+         * Diskette und darf nicht verschoben werden (ARCH-20). */
+        uft_format_add_sector_with_id(track, sek[i].sector, sek[i].data,
+                                      UFT_A2_SECTOR_SIZE, cyl, head);
+        if (!sek[i].data_checksum_ok && track->sector_count > 0)
+            uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
     }
     return UFT_OK;
 }
