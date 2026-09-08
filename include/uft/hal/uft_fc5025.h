@@ -96,7 +96,16 @@ typedef int (*uft_fc_callback_t)(const uft_fc_track_t *track, void *user);
  *============================================================================*/
 
 
-int uft_fc_open(uft_fc_config_t *cfg);
+/* MF-963: hier stand `int uft_fc_open(uft_fc_config_t *cfg);` — eine
+ * Zusage ohne Rumpf. MF-549 hat die Fehlermeldung berichtigt, die den
+ * Namen nannte, und die Deklaration stehen gelassen; damit blieb genau
+ * das moeglich, was der dortige Kommentar beschreibt: „er sucht sie,
+ * findet den Header, ruft sie, und der Linker sagt ihm als erster die
+ * Wahrheit."
+ *
+ * FC5025 ist lesend und laeuft ueber das Kommandozeilenwerkzeug
+ * `fcimage`; einen hauseigenen Oeffner gibt es nicht. Wer einen baut,
+ * traegt die Deklaration mit dem Rumpf zusammen ein. */
 
 /*============================================================================
  * CONFIGURATION

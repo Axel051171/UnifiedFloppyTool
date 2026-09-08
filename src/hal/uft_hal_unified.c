@@ -1286,12 +1286,16 @@ static int stub_open(uft_hal_t *hal, const char *path) {
         case HAL_CTRL_FC5025:
             /* MF-549: hier stand "Use uft_fc_open() from uft_fc5025.h".
              *
-             * `uft_fc_open()` ist in `include/uft/hal/uft_fc5025.h:99`
+             * `uft_fc_open()` war in `include/uft/hal/uft_fc5025.h`
              * DEKLARIERT und nirgends definiert — gemessen: die beiden
              * einzigen Vorkommen im Baum waren die Deklaration und dieser
              * Satz. Wir haben einem Benutzer im Fehlerfall eine Funktion
              * genannt, die es nicht gibt: er sucht sie, findet den Header,
              * ruft sie, und der Linker sagt ihm als erster die Wahrheit.
+             *
+             * NACHTRAG MF-963: die Meldung war berichtigt, die
+             * **Deklaration** blieb stehen — der Weg ueber den Header war
+             * also weiter offen. Sie ist jetzt entfernt.
              *
              * Eine Fehlermeldung ist kein Ort fuer Absichtserklaerungen.
              * Sie sagt jetzt, was tatsaechlich geht. */
