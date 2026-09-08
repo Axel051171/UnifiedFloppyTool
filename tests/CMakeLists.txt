@@ -293,6 +293,11 @@ foreach(test_source ${TEST_SOURCES})
         # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
         # die P3-154 seit MF-880 verlangt.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
+    elseif(${test_name} STREQUAL "test_dmk_rx02_absage")
+        # MF-972: Bit 5 des Optionsbytes meldet RX02 (FM-Kopf, M2FM-Daten).
+        # Der Leser erkannte es nicht und haette die Daten als FM gelesen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dmk/uft_dmk.c)
     elseif(${test_name} STREQUAL "test_td0_kommentarflag")
         # MF-971: das registrierte Plugin prueft `version >= 0x10` statt
         # Bit 7 von Byte 7 — vier Quellen sagen das Flag, darunter die

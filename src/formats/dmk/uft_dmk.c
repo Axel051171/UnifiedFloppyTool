@@ -71,6 +71,28 @@ static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) 
     
     uint8_t hdr[DMK_HDR];
     if (fread(hdr, 1, DMK_HDR, f) != DMK_HDR) { fclose(f); return UFT_ERR_IO; }
+
+    /* MF-972: RX02 wird ABGELEHNT, nicht falsch gelesen.
+     *
+     * Bit 5 des Optionsbytes ist eine von Tim Mann definierte
+     * DMK-Erweiterung: die Spur traegt DEC-RX02, also einen
+     * FM-ADRESSKOPF mit M2FM-DATEN. `dmk.h` von `dmklib 0.2`:
+     *
+     *     #define DMK_FLAG_RX02_BIT   5
+     *
+     * Dieser Leser erkennt MFM an den drei echten `0xA1`-Sync-Bytes vor
+     * der Adressmarke — ein inhaltsbasiertes Verfahren, weshalb die
+     * Dichtebits 0x40/0x80 hier folgenlos bleiben. RX02 unterlaeuft
+     * genau das: sein Adresskopf IST FM (kein A1), also wird er als FM
+     * erkannt, und die anschliessenden M2FM-Daten werden als FM
+     * dekodiert. Das Ergebnis waere Muell mit `UFT_OK`.
+     *
+     * Ein M2FM-Dekoder waere neuer Decoder-Code und faellt unter die
+     * EINFRIER-REGEL (MF-363/498). Bis dahin ist die Absage die
+     * ehrliche Antwort: „erkannt, nicht lesbar" statt stiller
+     * Falschdaten (DESIGN_PRINCIPLES). Verzeichnet als offener Punkt. */
+    if (hdr[4] & 0x20) { fclose(f); return UFT_ERROR_NOT_SUPPORTED; }
+
     dmk_data_t* p = calloc(1, sizeof(dmk_data_t));
     if (!p) { fclose(f); return UFT_ERR_MEMORY; }
     p->file = f;
