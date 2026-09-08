@@ -189,7 +189,8 @@ jeder Befund eine Registerzeile hat.
 | 3 | ◐ **Verträge vollständig gemessen** — Artefakt `memory/arch_dateisysteme.md`. Vier Phantom-Header und 26 Header-Namenskollisionen gefunden (P3-228, P3-229) |
 | 4a | ◐ **CBM gemessen** (49 Dateien, 23 122 Z.) — Artefakt `memory/arch_formate_cbm.md`. Registry sauber: 88 Plugin-Tafeln, **kein `.name` doppelt**, also fällt keines still heraus. Zwei Befunde (P3-232 GCR-Tabelle sechsfach + getestete API ohne Produktionspfad, P3-233 zweite BAM-API ohne Umsetzung und ohne Einbinder). **Nicht** gemessen: ob die Leser richtig lesen — das hängt an `VERIFICATION_TIERS.md` |
 | 4b | ◐ **Atari + Apple gemessen** (62 Dateien, 24 188 Z.) — Artefakt `memory/arch_formate_atari_apple.md`. Zwei Befunde (P3-234 Apple-GCR-Tabelle siebenfach, oracle-geprüfte Einheit ohne Produktionsaufrufer, `nib` auf T3; P3-235 fünf Zusagen ohne Rumpf). Drei Prüfungen kamen **sauber** zurück: kein neuer Phantom-Header, kein Format fehlt in der Tier-Tafel (88 = 88, zwei Schreibweisen), Tor 57 auf 0. Elf Schreib-Rundlauf-Tests verschärft — **ohne Defekt**, die Vermutung „blind" wurde gemessen und verworfen |
-| 4c–10 | offen |
+| 4c | ◐ **PC / CP-M / Japan gemessen** (50 Dateien, 23 672 Z.) — Artefakt `memory/arch_formate_pc.md`. Ein Befund, aber ein scharfer: **P3-254** — PH-2/MF-549 entfernte **einen von fünf** gleichartigen Phantom-Headern aus einer zusammenhängenden `#include`-Gruppe und meldete den Gesamtstand; die vier übrigen (900 Z., 39 Prototypen, 0 Umsetzungen, 0 Aufrufe) stehen seit v4.1.0. `src/formats/xdf/DEFERRED.md` auf den gemessenen Stand gesetzt — der Befund war **nicht neu**, er stand seit MF-459 in `KNOWN_ISSUES` |
+| 4d–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 

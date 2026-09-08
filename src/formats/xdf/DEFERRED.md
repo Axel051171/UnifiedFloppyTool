@@ -1,41 +1,48 @@
-# XDF Restore — Deferred Files
+# XDF — Stand, gemessen (MF-959, 2026-09-08)
 
-Two v3.7.0 XDF files were intentionally NOT restored in this pass
-because they depend on modules that don't exist in v4.1.x or break
-Windows/MinGW portability.
+**Diese Datei stand 4½ Monate falsch.** Sie erklärte
+`uft_xdf_adapter.c` und `uft_xdf_api_impl.c` für *„intentionally NOT
+restored"* und nannte `<fnmatch.h>` als Windows-Blocker. **Am Tag nach
+ihrer Entstehung** lieferte `1535dfab` (2026-04-25) beides — der
+Commit-Titel sagt wörtlich *„fnmatch shim + xdf adapter"*.
 
-## `uft_xdf_adapter.c` (256 LOC) — deferred
+`docs/KNOWN_ISSUES.md` hielt schon in MF-459 fest, das Dokument sei
+veraltet; korrigiert wurde es nicht. Das ist dieselbe Klasse wie MF-938:
+eine Behauptung wird weitergetragen statt nachgemessen.
 
-Depends on `include/uft/core/uft_error_codes.h` (14 KB) and its
-companion `.c` (13 KB). Restoring those would pull a parallel error-
-code system into the tree, conflicting with the SSOT-error work
-closed by MF-003 in M1 (`data/errors.tsv` → `include/uft/uft_error.h`).
+## Was heute wirklich im Baum liegt
 
-Re-implementing the adapter against the current SSOT error system
-is a separate task — scope: ~50 LOC of error-code remapping.
+| Datei | Zeilen | in `SOURCES` |
+|---|---|---|
+| `uft_xdf_core.c` | 1006 | ja |
+| `uft_xdf_api.c` | 941 | ja |
+| `uft_xdf_api_impl.c` | 1124 | ja |
+| `uft_xdf_adapter.c` | 254 | ja |
 
-The adapter's header `include/uft/xdf/uft_xdf_adapter.h` is restored
-so consumers can see the API surface; they'll just get unresolved
-references until the impl lands.
+Der `fnmatch`-Blocker ist gelöst: `uft_xdf_api_impl.c:39` bindet
+`uft/compat/uft_fnmatch.h` ein, hinter `#ifdef _WIN32`.
 
-## `uft_xdf_api_impl.c` (1088 LOC) — deferred
+## Was wirklich offen ist
 
-Uses `<fnmatch.h>` (POSIX) for filename-pattern matching at
-`uft_xdf_api.c:103` (`fnmatch(pattern, entry->d_name, 0)`). MinGW/
-Windows does not provide this header. Restoration requires either:
+**Nicht die Restaurierung — die Erreichbarkeit.** Der Zweig wird gebaut
+und ruft niemand:
 
-  (a) A portable fnmatch replacement (small, ~80 LOC glob matcher)
-  (b) `#ifdef _WIN32` guards around the fnmatch branches
-  (c) A conditional include that falls back to our own globbing
+* die öffentliche API (`xdf_api_batch_create`, `xdf_api_batch_process`,
+  `xdf_api_compare`) hat **null** Aufrufer in `src/` und `tests/`
+  (ARCH-18)
+* `import_d64` liest D64 mit **eigener** Zonentabelle — eine zweite
+  Format-Schicht neben dem D64-Plugin (ARCH-6)
+* vier Header sagen zusammen **39 Funktionen** zu, die es nicht gibt:
+  `uft_xdf_{dxdf,pxdf,txdf,zxdf}.h`, 900 Zeilen, **0** Umsetzungen,
+  **0** Aufrufe. `uft_xdf_api_impl.c` bindet alle vier ein und ruft
+  keine. Sie stehen seit dem v4.1.0-Release (2026-02-08). **P3-254** —
+  ihr fünfter Bruder `uft_xdf_mxdf.h` wurde in PH-2/MF-549 aus
+  derselben `#include`-Gruppe entfernt, die vier blieben stehen.
 
-The other ~1000 LOC of this file is portable and is the main
-catalog-of-disk-images implementation. Well worth a follow-up.
+## Was hier NICHT entschieden ist
 
-## Restored successfully
-
-- `uft_xdf_core.c` (875 LOC) — XDF file-format reader/writer core
-- `uft_xdf_api.c` (910 LOC) — public API + probe functions for 6
-  source formats (ADF, D64, IMG, ST, TRD, XDF)
-
-Both compile clean under `-Wall -Wextra -Werror` after minor
-unused-parameter fixes that v3.7 shipped with.
+Ob der Zweig verdrahtet oder entfernt wird. Verdrahten hieße, eine
+zweite Format-Schicht scharf zu schalten, die ARCH-6 gerade abbaut;
+Entfernen ist ein eigener Schritt mit der MF-369-Beweispipeline. Beides
+gehört zu **ARCH-6**, nicht hierher. Diese Datei sagt nur noch, was
+gemessen ist.
