@@ -195,7 +195,8 @@ jeder Befund eine Registerzeile hat.
 | 4f | ◐ **Rest gemessen** (112 Dateien, 29 648 Z. — als Differenz zu 4a–4e gerechnet, damit nichts durchfällt) — Artefakt `memory/arch_formate_rest.md`. Schwerpunkt `dsk_generic`, das **49 der 137 Plugin-Tafeln** erzeugt: drei tote Tabellenspalten **entfernt** (Drift in 4 von 49, darunter ein Name), **P3-260** Größe widerspricht der Geometrie bei 2 von 49, **P3-261** 38 von 49 kollidieren auf der Dateigröße bei gleicher Konfidenz |
 | 5 | ◐ **Schutz/Analyse/Recovery gemessen** (99 Dateien, 46 597 Z.) — Artefakt `memory/arch_schutz_analyse.md`. **P3-262:** die OTDR-Ereignis-Pipeline, 14 Dateien / 4720 Z. im Build, **0 Produktiv-Aufrufer** bei 146 Funktionen — und dem Verwaisten-Tor völlig unsichtbar, weil Tests sie rufen (dritter Beleg P3-223). **P3-263:** P0-2 beziffert — 813 Funktionen, 59 % ohne jeden Aufrufer. Header-Durchgang über 71 Header **sauber** |
 | 6 | ◐ **HAL + Provider gemessen** (50 Dateien, 20 815 Z.) — Artefakt `memory/arch_hardware.md`. **Die sauberste Schicht des Durchgangs:** die Honest-Stub-Konvention hält (nur 2 leere `UFT_OK`-Rümpfe, beide legitim benannt), die Provider-Zahl stimmt (9), ein einziges Phantom — und das ist **behoben** (P3-264). Erreichbarkeit: `src/hal` 174 Fkt. (33 extern, 55 nur Test, 86 ohne) |
-| 7–10 | offen |
+| 7 | ◐ **Oberflaeche gemessen** — Artefakt `memory/arch_oberflaeche.md`. **Zwei Altbefunde nachgeprueft und als BEHOBEN bestaetigt** (`onRepair()` MF-893, die erfundene Belegungskarte MF-569); die eigene Gedaechtnisnotiz war veraltet. Offen bleibt **P3-265**: `appendLog()` ohne Senke (14 Aufrufe) und fuenf Signale ohne Empfaenger. **Scope-Korrektur:** der Plan zaehlte 27 Dateien / 12 568 Z. fuer `src/gui`+`widgets`+`display`+`diag` — die Reiter liegen in `src/*.cpp`, zusammen **334 Dateien / 65 209 Zeilen** |
+| 8–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 
