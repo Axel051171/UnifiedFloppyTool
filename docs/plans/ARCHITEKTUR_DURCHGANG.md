@@ -179,6 +179,33 @@ jeder Befund eine Registerzeile hat.
 
 ---
 
+### Die Zerlegung, maschinenlesbar (MF-966)
+
+`scripts/audit_durchgang_vollstaendigkeit.py` haelt diesen Block gegen
+`git ls-files`. Faellt eine Datei durch, ist die Vollstaendigkeit keine —
+beim ersten Lauf waren es **sechs** (`src/crc`, `src/whdload`,
+`src/compat`, `src/tracks`), und zwei davon trugen einen Befund.
+
+<!-- PHASEN-SCOPE -->
+```
+1:  src/core src/crc
+2:  src/flux src/detect src/parsers src/algorithms src/tracks
+3:  src/fs src/forensic src/policy src/fileops
+4:  src/formats
+5:  src/protection src/analysis src/recovery
+6:  src/hal src/hardware_providers
+7:  src/gui src/widgets src/display src/diag src/* src/whdload
+8:  src/samdisk src/a8rawconv
+9:  src/compat
+```
+<!-- /PHASEN-SCOPE -->
+
+Die Teilphasen 4a–4f liegen zusammen unter `4`: ihre Aufteilung steht in
+§4 und in den Artefakten, die Vollstaendigkeit haengt an `src/formats`
+als Ganzem.
+
+---
+
 ## 8. Stand
 
 | Phase | Stand |
@@ -198,7 +225,7 @@ jeder Befund eine Registerzeile hat.
 | 7 | ◐ **Oberflaeche gemessen** — Artefakt `memory/arch_oberflaeche.md`. **Zwei Altbefunde nachgeprueft und als BEHOBEN bestaetigt** (`onRepair()` MF-893, die erfundene Belegungskarte MF-569); die eigene Gedaechtnisnotiz war veraltet. Offen bleibt **P3-265**: `appendLog()` ohne Senke (14 Aufrufe) und fuenf Signale ohne Empfaenger. **Scope-Korrektur:** der Plan zaehlte 27 Dateien / 12 568 Z. fuer `src/gui`+`widgets`+`display`+`diag` — die Reiter liegen in `src/*.cpp`, zusammen **334 Dateien / 65 209 Zeilen** |
 | 8 | ✅ **Fremdcode gemessen — sauber** (193 Dateien, 32 888 Z.). Beide READMEs stimmen **exakt** (samdisk 147 = 100+44+3; a8rawconv 44 Quelldateien / 9194 Z.), Lizenzen mit Volltext benannt (MIT bzw. GPL-2.0-or-later), **0 Eintraege in der `.pro`** — nicht gebaut, wie erklaert. Ein Fund: `src/hal/uft_scp_direct.c` trug eine Ableitungserklaerung ohne Lizenzangabe, **behoben MF-965** |
 | 9 | ◐ **Pruefstand gemessen** (560 Dateien, 181 271 Z. — der Plan sagte 351/97 883). **P3-266** sechs selbstbestaetigende Zusammenfassungen, behoben. Die Frage „welcher Test kann nicht rot werden“ kam **sauber** zurueck: die 22 Verdaechtigen scheitern ueber `assert(0)`, und `-UNDEBUG` haengt an jedem Ziel |
-| 10 | offen |
+| 10 | ✅ **Abnahme erledigt (MF-966).** (1) **Vollstaendigkeit ist jetzt gemessen**, nicht behauptet: `scripts/audit_durchgang_vollstaendigkeit.py` (Tor 61) haelt den `PHASEN-SCOPE`-Block gegen `git ls-files` — beim ersten Lauf fielen **sechs Dateien** durch (`src/crc`, `src/whdload`, `src/compat`, `src/tracks`), heute **0 ohne Phase, 0 doppelt**, Selbsttest 6/6. Aus den sechs kamen **P3-267** (WHDLoad-Autodoc-Texte ohne Lizenz) und **P3-268** (zwei `config.h`). (2) Tore laufen: `audit_selbsttest.py` **60 gruen, 0 rot**. (3) Jede P3-Zeile dieses Durchgangs traegt ✅ oder einen benannten Blocker. (4) `MEMORY.md` fuehrt **alle 15** Artefakte mit je einer Zeile |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 

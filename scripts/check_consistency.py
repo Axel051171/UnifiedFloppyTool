@@ -1148,6 +1148,16 @@ def main() -> int:
         import audit_korpus_inhalt as _ki
         all_errors.append(("Korpus-Inhalt", _ki.check(repo)))
 
+        # Tor 61 (MF-966): der Architektur-Durchgang beansprucht, `src/`
+        # vollstaendig zerlegt zu haben. Eine Zerlegung ist nur dann
+        # eine, wenn jede Datei in GENAU EINER Phase liegt — sonst ist
+        # „alles gelesen" eine Aussage ueber die Phasen und nicht ueber
+        # den Baum. Beim ersten Lauf fielen sechs Dateien durch
+        # (`src/crc`, `src/whdload`, `src/compat`, `src/tracks`), zwei
+        # davon mit Befund. Grundlinie: 0 ohne Phase, 0 doppelt.
+        import audit_durchgang_vollstaendigkeit as _dv
+        all_errors.append(("Durchgang-Vollstaendigkeit", _dv.check(repo)))
+
         # Tor 60 (MF-932): die vier CBM-Zonenlaengen liegen vielfach im
         # Baum, und NICHT in einer gemeinsamen Zaehlweise. P3-150 hielt
         # seit MF-877 „elffach, in vier Zaehlweisen" fest — eine
