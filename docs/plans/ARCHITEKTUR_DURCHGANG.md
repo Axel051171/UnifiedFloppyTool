@@ -193,7 +193,8 @@ jeder Befund eine Registerzeile hat.
 | 4d | ◐ **Sinclair/Amstrad/BBC gemessen** (40 Dateien, 13 316 Z.) — Artefakt `memory/arch_formate_8bit.md`. **P3-258:** die „dritte Format-Schicht" (`FloppyDevice`) ist **75 Dateien / 8207 Zeilen / 386 Funktionen**, nicht die 19 aus MF-461; 18 Funktionen haben einen externen Aufrufer, **alle 18 sind Tests**. Header-Durchgang sauber (ein Phantom, bereits P3-228) |
 | 4e | ◐ **Fluss + Wandler gemessen** (56 Dateien, 30 258 Z.) — Artefakt `memory/arch_formate_fluss.md`. **P3-259:** das Quarantäne-Register driftete in beiden handgepflegten Spalten; Zeilenspalte jetzt vom Tor abgeleitet, Fähigkeitsspalte berichtigt aber weiter gepflegt. Wandler-Frage war bereits durch `test_convert_table_has_dispatch` beantwortet: **46 angeboten, 14 bedient, 32 vom Preflight abgewiesen, 0 ohne Zweig** |
 | 4f | ◐ **Rest gemessen** (112 Dateien, 29 648 Z. — als Differenz zu 4a–4e gerechnet, damit nichts durchfällt) — Artefakt `memory/arch_formate_rest.md`. Schwerpunkt `dsk_generic`, das **49 der 137 Plugin-Tafeln** erzeugt: drei tote Tabellenspalten **entfernt** (Drift in 4 von 49, darunter ein Name), **P3-260** Größe widerspricht der Geometrie bei 2 von 49, **P3-261** 38 von 49 kollidieren auf der Dateigröße bei gleicher Konfidenz |
-| 5–10 | offen |
+| 5 | ◐ **Schutz/Analyse/Recovery gemessen** (99 Dateien, 46 597 Z.) — Artefakt `memory/arch_schutz_analyse.md`. **P3-262:** die OTDR-Ereignis-Pipeline, 14 Dateien / 4720 Z. im Build, **0 Produktiv-Aufrufer** bei 146 Funktionen — und dem Verwaisten-Tor völlig unsichtbar, weil Tests sie rufen (dritter Beleg P3-223). **P3-263:** P0-2 beziffert — 813 Funktionen, 59 % ohne jeden Aufrufer. Header-Durchgang über 71 Header **sauber** |
+| 6–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 
