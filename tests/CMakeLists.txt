@@ -293,6 +293,11 @@ foreach(test_source ${TEST_SOURCES})
         # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
         # die P3-154 seit MF-880 verlangt.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
+    elseif(${test_name} STREQUAL "test_multiread_adaptive_passes")
+        # MF-975: `adaptive_passes` wird genau einmal gelesen — um im
+        # forensischen Bericht als "yes" zu erscheinen. Die Schleife ist fest.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c)
     elseif(${test_name} STREQUAL "test_dmk_rx02_absage")
         # MF-972: Bit 5 des Optionsbytes meldet RX02 (FM-Kopf, M2FM-Daten).
         # Der Leser erkannte es nicht und haette die Daten als FM gelesen.

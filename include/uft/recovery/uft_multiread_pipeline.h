@@ -235,7 +235,30 @@ typedef struct {
      *
      * Die wirksame Strenge ist @ref min_confidence — seit MF-673 von
      * aussen einstellbar ueber uft_convert_options_t. */
-    bool        adaptive_passes;    /**< Increase passes on failure */
+    /** OHNE WIRKUNG (MF-975) — hier stand „Increase passes on failure".
+     *
+     * Gemessen: das Feld kommt in `uft_multiread_pipeline.c` nur in der
+     * Vorgabe (`multiread_config_default`) vor. Die Leseschleife ist
+     * fest — sie laeuft bis `max_passes` und bricht ab, sobald
+     * `successful_reads >= min_passes`. Ein Fehlschlag erhoeht nichts.
+     *
+     * Belegt in `tests/test_multiread_adaptive_passes.c`: ein
+     * `read_callback`, der immer fehlschlaegt und mitzaehlt, wird mit
+     * `true` und mit `false` GLEICH OFT gerufen. Diese Zusicherung ist
+     * eine Charakterisierung und faellt an dem Tag, an dem die
+     * Adaptivitaet gebaut wird — dann gehoert auch die Zeile im
+     * forensischen Bericht zurueck, die MF-975 entfernt hat.
+     *
+     * Das Feld BLEIBT: `uft_multiread_pipeline.h` ist ein oeffentlicher
+     * Header, und die ABI-Regel dieses Baums lautet „nur anhaengen".
+     * Ein stiller Wegfall waere schlimmer als eine ehrliche Notiz.
+     *
+     * Der Weg zur Wirkung ist bekannt und benannt: die Regel „seit
+     * letzter Aenderung" — der Zaehler setzt sich bei jeder echten
+     * Verbesserung zurueck und laeuft erst ab, wenn N Versuche in Folge
+     * nichts Neues liefern (produktionserprobt in `samdisk_plus`,
+     * `RetryPolicy`; siehe offene Punkte). */
+    bool        adaptive_passes;
     bool        detect_weak_bits;   /**< Enable weak bit detection */
 
     /* Callbacks */

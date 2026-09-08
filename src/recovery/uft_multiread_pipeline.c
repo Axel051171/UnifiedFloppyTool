@@ -899,12 +899,33 @@ char *multiread_generate_report(const multiread_ctx_t *ctx,
         "  Min passes: %u\n"
         "  Max passes: %u\n"
         "  Min confidence: %u%%\n"
-        "  Adaptive passes: %s\n"
+        /* MF-975: hier stand `"  Adaptive passes: %s\n"` mit
+         * `ctx->config.adaptive_passes ? "yes" : "no"`.
+         *
+         * Der Schalter WIRKT NICHT. Gemessen in dieser Datei: er kommt
+         * ausser in der Vorgabe (`multiread_config_default`) nur in
+         * dieser Berichtszeile vor. Die Leseschleife ist fest —
+         *
+         *     for (pass = 0; pass < max_passes; pass++) { ...
+         *         if (successful_reads >= min_passes) break; }
+         *
+         * — und kennt ihn nicht. Der Header verspricht dagegen
+         * "Increase passes on failure".
+         *
+         * Ein FORENSISCHER BERICHT, der eine Faehigkeit zusagt, die es
+         * nicht gibt, ist schlimmer als ein totes Feld: er wird gelesen
+         * und geglaubt. Bis die Adaptivitaet gebaut ist, sagt der
+         * Bericht sie nicht zu.
+         *
+         * `min_confidence` und `detect_weak_bits` wirken dagegen
+         * wirklich (eine Entscheidung bzw. eine Verzweigung weiter
+         * oben) und bleiben stehen. Und es ist der ZWEITE Schalter ohne
+         * Schaltung in dieser Struktur — der erste, `generate_report`,
+         * steht benannt im Header. */
         "  Weak bit detection: %s\n\n",
         ctx->config.min_passes,
         ctx->config.max_passes,
         ctx->config.min_confidence,
-        ctx->config.adaptive_passes ? "yes" : "no",
         ctx->config.detect_weak_bits ? "yes" : "no");
     
     pos += snprintf(report + pos, buf_size - pos,
