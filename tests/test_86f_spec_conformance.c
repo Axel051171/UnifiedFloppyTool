@@ -150,6 +150,148 @@ static void kopf_nach_spec(uint8_t *b, size_t n, const char *magic)
     b[8] = 0x00; b[9] = 0x10; b[10] = 0x00; b[11] = 0x00;
 }
 
+/* ── Die echte Datei: Pfad, Erwartung, Prüfung (MF-960) ───────────── */
+
+/* Der Pfad kommt aus dem Bausystem: `UFT_CORPUS_RESTRICTED_DIR` ist die
+ * Konvention dieses Baums für den rechtlich geführten Teil des Korpus.
+ * Der Rückfall auf einen relativen Pfad ist da, damit ein Übersetzen
+ * ohne CMake nicht still etwas anderes liest — er findet die Datei
+ * dann in aller Regel nicht, und der Abschnitt überspringt sich. */
+#ifndef UFT_CORPUS_RESTRICTED_DIR
+#define UFT_CORPUS_RESTRICTED_DIR "tests/corpus"
+#endif
+
+#define F86_ECHT UFT_CORPUS_RESTRICTED_DIR \
+                 "/fluxfox_sector_test/sector_test_360k.86f"
+
+/* Am Container gemessen, bevor eine Zeile Code geschrieben wurde. */
+#define ECHT_ZYLINDER      86      /* 172 belegte Eintraege / 2 Seiten */
+#define ECHT_KOEPFE         2
+#define ECHT_SEKTOREN       9      /* 54 Sync-Treffer / 3 / 2 Marken */
+#define ECHT_SEKTORGROESSE  512
+
+/* Das Oracle: Sektor k des 360K-Abbilds traegt 512-mal (k mod 256).
+ * Auf Zylinder 0 Kopf 0 liegen die Sektoren 1..9 = Abbild-Sektoren 0..8,
+ * also die Bytes 0x00 bis 0x08. */
+static void echte_datei(void)
+{
+    const char *pfad = F86_ECHT;
+    FILE *pruef = fopen(pfad, "rb");
+    if (!pruef) {
+        printf("\n  [UEBERSPRUNGEN] %s fehlt.\n", F86_ECHT);
+        printf("  Beschaffung: tests/corpus_manifest/manifest.json\n");
+        return;
+    }
+    fclose(pruef);
+
+    printf("\n  ── 5 · Die ECHTE Datei ──────────────────────────────\n");
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    disk.read_only = true;
+
+    uft_error_t rc = uft_format_plugin_86f.open(&disk, pfad, true);
+    PRUEFE(rc == UFT_OK,
+           "das Plugin nimmt die echte 86F-Datei nicht an (rc=%d). Genau "
+           "das war der Befund von MF-707/708: es sucht ein Magic, das in "
+           "keiner echten Datei steht", (int)rc);
+    if (rc != UFT_OK) return;
+
+    printf("     Geometrie: %u Zyl x %u Koepfe x %u Sekt x %u B\n",
+           disk.geometry.cylinders, disk.geometry.heads,
+           disk.geometry.sectors, disk.geometry.sector_size);
+
+    PRUEFE(disk.geometry.cylinders == ECHT_ZYLINDER,
+           "Zylinder: %u statt %d — die Offset-Tabelle fuehrt 172 belegte "
+           "Eintraege bei zwei Seiten", disk.geometry.cylinders,
+           ECHT_ZYLINDER);
+    PRUEFE(disk.geometry.heads == ECHT_KOEPFE,
+           "Koepfe: %u statt %d (Disk-Flag Bit 3)",
+           disk.geometry.heads, ECHT_KOEPFE);
+
+    /* Die Abbildung 86F-Spur -> Abbild-Sektor, und WARUM sie so lautet.
+     *
+     * Das lineare .img legt die Sektoren in CHS-Reihenfolge ab:
+     *     Abbild-Sektor = (Zylinder * Koepfe + Kopf) * 9 + (R - 1)
+     *
+     * Die 86F-Datei fuehrt aber 86 Zylinder fuer eine 40-spurige
+     * Diskette. Gemessen an den Synchronpositionen tragen 86F-Zylinder 0
+     * und 1 DASSELBE Muster — die Aufnahme stammt aus einem 80-spurigen
+     * Laufwerk, jede physische Spur steht zweimal da. Also:
+     *
+     *     Abbild-Zylinder = 86F-Zylinder / 2
+     *
+     * Das ist eine HYPOTHESE, und sie wird hier geprueft statt gesetzt:
+     * schlaegt sie fehl, faellt der Test und sagt, an welcher Spur. */
+    static const struct { int cyl, head; } proben[] = {
+        { 0, 0 }, { 0, 1 },     /* erste Spur, beide Seiten            */
+        { 1, 0 },               /* die Verdopplung: wie Zylinder 0     */
+        { 2, 0 }, { 2, 1 },     /* Abbild-Zylinder 1                   */
+        { 20, 0 },              /* Abbild-Zylinder 10, mitten drin     */
+        { 78, 1 },              /* Abbild-Zylinder 39, die letzte      */
+    };
+    unsigned spuren_ok = 0, sektoren_ok = 0, sektoren_gesamt = 0;
+
+    for (size_t pi = 0; pi < sizeof proben / sizeof proben[0]; pi++) {
+        const int c = proben[pi].cyl, h = proben[pi].head;
+        uft_track_t t;
+        memset(&t, 0, sizeof t);
+        rc = uft_format_plugin_86f.read_track(&disk, c, h, &t);
+        PRUEFE(rc == UFT_OK, "read_track(%d,%d) gab %d", c, h, (int)rc);
+        if (rc != UFT_OK) continue;
+
+        PRUEFE(t.sector_count == ECHT_SEKTOREN,
+               "Zyl %d Kopf %d: %u Sektoren statt %d — im Bitstrom stehen "
+               "54 Synchronmarken, also 9 Sektoren",
+               c, h, (unsigned)t.sector_count, ECHT_SEKTOREN);
+
+        const unsigned abbild_cyl = (unsigned)c / 2u;
+        unsigned ok = 0;
+
+        for (size_t i = 0; i < t.sector_count; i++) {
+            const uft_sector_t *s = &t.sectors[i];
+            sektoren_gesamt++;
+            if (!s->data || s->data_len != ECHT_SEKTORGROESSE) {
+                PRUEFE(0, "Zyl %d Kopf %d Sektor %u: %u Byte statt %d",
+                       c, h, (unsigned)i, (unsigned)s->data_len,
+                       ECHT_SEKTORGROESSE);
+                continue;
+            }
+            const unsigned r = s->id.sector;
+            if (r < 1 || r > ECHT_SEKTOREN) {
+                PRUEFE(0, "Zyl %d Kopf %d: Sektornummer %u ausserhalb 1..%d",
+                       c, h, r, ECHT_SEKTOREN);
+                continue;
+            }
+            const unsigned lfd =
+                (abbild_cyl * ECHT_KOEPFE + (unsigned)h) * ECHT_SEKTOREN
+                + (r - 1u);
+            const uint8_t soll = (uint8_t)(lfd % 256u);
+
+            size_t abweichend = 0;
+            for (size_t k = 0; k < s->data_len; k++)
+                if (s->data[k] != soll) abweichend++;
+            PRUEFE(abweichend == 0,
+                   "Zyl %d Kopf %d Sektor R=%u: %u von %u Bytes weichen ab "
+                   "(Abbild-Sektor %u, erwartet ueberall 0x%02X, "
+                   "gelesen 0x%02X)", c, h, r, (unsigned)abweichend,
+                   (unsigned)s->data_len, lfd, soll, s->data[0]);
+            if (abweichend == 0) { ok++; sektoren_ok++; }
+        }
+        if (ok == ECHT_SEKTOREN) spuren_ok++;
+
+        for (size_t i = 0; i < t.sector_count; i++) free(t.sectors[i].data);
+        free(t.sectors);
+    }
+
+    printf("     %u von %u Spuren vollstaendig; %u von %u Sektoren "
+           "byteweise nach der Formel\n",
+           spuren_ok, (unsigned)(sizeof proben / sizeof proben[0]),
+           sektoren_ok, sektoren_gesamt);
+
+    uft_format_plugin_86f.close(&disk);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -165,13 +307,20 @@ int main(void)
                                                 sizeof(buf), &konf);
     printf("  Kopf nach Spec (\"86BF\") -> Probe: %s (Konfidenz %d)\n",
            ja_spec ? "JA" : "NEIN", konf);
-    PRUEFE(!ja_spec,
-           "das Plugin nimmt jetzt echte 86F-Dateien an — dann ist das "
-           "Magic berichtigt worden, und dieser Test gehoert mitgezogen "
-           "(zusammen mit Kopfgroesse und Spurtabelle, sonst wird aus "
-           "'weist ab' ein 'nimmt an und zerlegt falsch')");
-    if (!ja_spec)
-        printf("       ^ jede echte 86F-Datei faellt hier durch\n");
+    /* MF-961: umgedreht. Bis dahin stand hier `PRUEFE(!ja_spec, ...)` —
+     * die Zusicherung, dass jede echte 86F-Datei durchfällt. Sie hat
+     * ihren eigenen Anlass überlebt: der Leser ist neu gefasst.
+     *
+     * Die Konfidenz ist hier 45 und nicht 95, und das ist richtig: der
+     * erzeugte Kopf trägt einen Spur-Offset, hinter dem in diesem
+     * kleinen Puffer nichts steht. Nach der Skala von MF-729 heißt
+     * 30..49 „nur die Kennung", 80..100 „Merkmal getroffen". Die hohe
+     * Zahl beansprucht das Plugin erst, wenn die Offset-Tabelle wirklich
+     * aufgeht — siehe die echte Datei in Abschnitt 5. */
+    PRUEFE(ja_spec, "das Plugin weist den spec-konformen Kopf ab");
+    PRUEFE(konf >= 30 && konf < 50,
+           "Konfidenz %d fuer einen Kopf ohne auswertbare Spurtabelle — "
+           "nach MF-729 gehoert der in 30..49", konf);
 
     /* ── 2 · Und der Kopf, den der Baum erfunden hat ────────────────── */
     kopf_nach_spec(buf, sizeof(buf), "86BX");
@@ -180,21 +329,22 @@ int main(void)
                                                 sizeof(buf), &konf);
     printf("  Kopf mit \"86BX\"          -> Probe: %s (Konfidenz %d)\n",
            ja_baum ? "JA" : "NEIN", konf);
-    PRUEFE(ja_baum && konf == 98,
-           "erwartet war der dokumentierte Ist-Stand (JA, Konfidenz 98), "
-           "gemessen %s/%d", ja_baum ? "JA" : "NEIN", konf);
-    if (ja_baum)
-        printf("       ^ mit Konfidenz 98 — hoeher als jedes andere "
-               "Plugin fuer diese Bytes\n");
+    /* MF-961: umgedreht. Hier stand `PRUEFE(ja_baum && konf == 98, ...)`
+     * — der dokumentierte Ist-Stand, in dem das ERFUNDENE Magic bejaht
+     * wurde, und zwar mit höherer Konfidenz als jedes andere Plugin für
+     * dieselben Bytes. */
+    PRUEFE(!ja_baum,
+           "\"86BX\" wird immer noch angenommen — dieses Magic steht in "
+           "keiner 86F-Datei");
 
     /* ── 3 · Die Umkehrung ist der eigentliche Befund ───────────────── */
-    PRUEFE(ja_baum != ja_spec,
-           "beide Koepfe werden gleich behandelt — dann misst dieser Test "
-           "nicht, was er zu messen vorgibt");
-    if (ja_baum && !ja_spec)
-        printf("\n  Genau umgekehrt zur Spezifikation: das erfundene "
-               "Magic wird bejaht,\n"
-               "  das echte abgewiesen.\n");
+    /* MF-961: hier stand `PRUEFE(ja_baum != ja_spec, ...)`, weil der
+     * Befund war, dass die beiden Köpfe GENAU UMGEKEHRT zur
+     * Spezifikation behandelt wurden. Jetzt ist die Unterscheidung
+     * richtig herum, und das ist die Zusicherung. */
+    PRUEFE(ja_spec && !ja_baum,
+           "die Unterscheidung stimmt nicht: spec-Kopf %s, erfundener "
+           "Kopf %s", ja_spec ? "JA" : "NEIN", ja_baum ? "JA" : "NEIN");
 
     /* ── 3b · Der zweite Leser im selben Baum (MF-708) ──────────────────
      *
@@ -218,10 +368,18 @@ int main(void)
            "(erwartet: JA auf \"86BF\", NEIN auf \"86BX\") — dann ist "
            "einer der beiden Leser angefasst worden und dieser Test "
            "nachzuziehen");
-    PRUEFE(pc_spec != ja_spec,
-           "beide Leser antworten jetzt gleich — dann ist die Spaltung "
-           "aufgeloest (gut) und dieser Test hat seinen Gegenstand "
-           "verloren");
+    /* MF-961: hier stand `PRUEFE(pc_spec != ja_spec, ...)` — die
+     * Zusicherung, dass die beiden Leser sich WIDERSPRECHEN. Genau das
+     * war der Befund von MF-708: der Leser mit dem richtigen Magic war
+     * der ohne Tür. Die Spaltung ist aufgelöst.
+     *
+     * Was damit NICHT erledigt ist: `src/formats/pc/uft_86f.c` bleibt
+     * unregistriert und ohne Aufrufer. Zwei Leser für ein Format sind
+     * einer zu viel — welcher geht, ist eine eigene Entscheidung. */
+    PRUEFE(pc_spec == ja_spec,
+           "die beiden Leser widersprechen sich wieder: pc/uft_86f.c "
+           "sagt %s, das Plugin %s",
+           pc_spec ? "JA" : "NEIN", ja_spec ? "JA" : "NEIN");
     if (pc_spec && !ja_spec)
         printf("       ^ genau umgekehrt zum registrierten Plugin: der "
                "Leser MIT\n"
@@ -240,14 +398,55 @@ int main(void)
     printf("     .write_track ist verdrahtet: %s\n",
            uft_format_plugin_86f.write_track ? "ja" : "nein");
 
-    printf("\n  Was die gruene Ampel NICHT heisst: dass 86F gelesen "
-           "werden kann.\n"
-           "  Sie haelt fest, dass der Leser die Spezifikation "
-           "verfehlt — Magic, Kopfgroesse,\n"
-           "  Spurtabelle und Geometriemodell. Die Neufassung ist eine "
-           "eigene Aufgabe;\n"
-           "  ein Ein-Zeilen-Fix am Magic waere schlimmer als der "
-           "jetzige Zustand.\n");
+    /* ── 5 · Die ECHTE Datei (MF-960) ───────────────────────────────
+     *
+     * Alles bisher Geprüfte ist Struktur gegen Spezifikation: erzeugte
+     * Köpfe, die zeigen, dass der Leser sie verfehlt. Kein Byte davon
+     * stammt von einem Gerät.
+     *
+     * `tests/corpus/fluxfox_sector_test/sector_test_360k.86f` ist eine
+     * echte 5,25″-360K-Diskette (dbalsom/fluxfox, MIT; Herkunft und
+     * Prüfsumme im Korpus-Manifest). An ihr ist die Spezifikation
+     * nachgemessen, bevor hier eine Zeile stand:
+     *
+     *     Magic 86BF, Version 2.0C, Disk-Flags 0x1088
+     *     Offset-Tabelle 512 Einträge, davon 172 belegt (86 Zyl × 2)
+     *     Spurkopf: Flags 0x000A = MFM, 250 kbps
+     *     Ende der letzten Spur == Dateigröße, Differenz 0
+     *     Bitstrom MSB zuerst: 54 Treffer 0x4489 je Spur
+     *              = 18 Marken × 3 = 9 Sektoren
+     *
+     * Der INHALT folgt einer Formel statt einem Werkzeug: Sektor k
+     * trägt 512-mal das Byte (k mod 256). Selbst nachgerechnet an der
+     * beiliegenden `.img` — 0 von 720 Sektoren weichen ab. Ein Oracle,
+     * das man nachrechnen statt ausführen kann.
+     *
+     * Ohne Korpus überspringt sich dieser Abschnitt benannt. */
+    echte_datei();
+
+    /* MF-961: hier stand „Was die gruene Ampel NICHT heisst: dass 86F
+     * gelesen werden kann" — richtig, solange der Leser die
+     * Spezifikation verfehlte. Jetzt liest er, und der Satz waere eine
+     * Untertreibung in dieselbe Richtung, in die der alte Zustand
+     * uebertrieb. Also gezogen. */
+    printf("\n  Was die gruene Ampel jetzt heisst: der Container ist "
+           "nach der Spezifikation\n"
+           "  des Urhebers gelesen, und eine ECHTE 360K-Datei geht "
+           "byteweise gegen eine\n"
+           "  unabhaengig nachgerechnete Formel auf.\n"
+           "\n"
+           "  Was sie NICHT heisst:\n"
+           "    - dass 86F GESCHRIEBEN werden kann (write_track sagt "
+           "ausdruecklich ab)\n"
+           "    - dass FM-, M2FM- oder GCR-Spuren gelesen werden — "
+           "dafuer fehlt der\n"
+           "      Bitstrom-Dekoder; solche Spuren liefern 0 Sektoren "
+           "mit benanntem Grund\n"
+           "    - dass die Oberflaechenbeschreibung (schwache Bits) "
+           "ausgewertet wird\n"
+           "    - dass der zweite, unregistrierte Leser in "
+           "src/formats/pc/uft_86f.c\n"
+           "      damit erledigt waere\n");
 
     printf("\n%s (%d Abweichungen)\n", fehler ? "ROT" : "GRUEN", fehler);
     return fehler ? 1 : 0;

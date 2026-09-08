@@ -1,124 +1,128 @@
 {
+  "86f": {
+    "evidence": "MF-961 — der Leser ist gegen die Spezifikation neu gefasst und an einer ECHTEN Datei abgenommen. Vorzustand: das Plugin probte auf \"86BX\", ein Magic, das in keiner 86F-Datei steht, nahm einen 32-Byte-Kopf an und erfand eine 12-Byte-Spurtabelle mit offset/length/flags/sectors/rpm — es wies damit JEDE echte Datei ab und meldete dabei Read/Flux als SUPPORTED (MF-707/708). Neu gefasst: Magic \"86BF\", 8-Byte-Kopf, 32-Bit-Spur-Offsets je Seite je Spur, Spurkopf mit Zellzahl (Disk-Flags Bit 7 und 12), MFM-Bitstrom durch den geprueften uft_mfm_decode_track(). An der Datei nachgemessen, BEVOR eine Zeile geschrieben wurde: Tabelle 512 Eintraege, 172 belegt (86 Zyl x 2 Seiten), Spur-Flags 0x000A = MFM/250 kbps, Ende der letzten Spur == Dateigroesse (Differenz 0), Bitstrom MSB zuerst mit 54 Treffern 0x4489 je Spur = 9 Sektoren. Abnahme: 7 von 7 Spuren, 63 von 63 Sektoren byteweise gegen eine unabhaengig nachgerechnete FORMEL (Sektor k = 512 x Byte (k mod 256), 0 von 720 Abweichungen an der beiliegenden .img gemessen). NICHT verifiziert: Schreiben (write_track sagt ab), FM/M2FM/GCR-Spuren (kein Bitstrom-Dekoder), die Oberflaechenbeschreibung (schwache Bits). T2 und nicht T1b, weil der Erzeuger der .86f nach Messung des Scouts sehr wahrscheinlich fluxfox selbst ist und nicht das KANONISCHE 86Box — eine fremde Hand, aber nicht die richtige.",
+    "spec_source": "86Box/docs, dev/formats/86f.rst — die Beschreibung des Formats durch dessen URHEBER (abgerufen 2026-09-08). Zweite, unabhaengige Quelle: Digitoxin1/DiskImageTool, ImageFormats/86F/86FImage.vb, ein eigenstaendiger Leser mit demselben Magic und derselben Kopfgroesse (belegt MF-708). KEINE Zeile fremden QUELLCODES gelesen — weder 86Box' fdd_86f.c noch fluxfox' Rust-Leser; der Kanal ist die Spezifikation (MF-695)."
+  },
   "_doc": "Per-plugin declaration that the on-disk byte layout was verified against an AUTHORITATIVE external reference (spec document or reference implementation). Consumed by scripts/gen_verification_tiers.py: a plugin with a synthetic test AND an entry here rates T2; without an entry, a synthetic test alone rates T3 (green tests against invented specs are exactly the fabrication trap, see docs/VERIFICATION_PLAN.md). Only add an entry with concrete evidence (MF-NNN commit that did the cross-check). Keys are plugin symbols from gen_format_list.py.",
+  "adf_arc": {
+    "evidence": "MF-654",
+    "spec_source": "DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur."
+  },
   "adf_ext": {
-    "spec_source": "WinUAE disk.cpp read_header_ext2 (UAE-1ADF)",
-    "evidence": "MF-352"
-  },
-  "akai_s900": {
-    "spec_source": "akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400",
-    "evidence": "MF-348"
-  },
-  "atx": {
-    "spec_source": "a8rawconv 0.95 (GPL-2-or-later, Referenz-Orakel in src/a8rawconv/, wird nicht gebaut): src/a8rawconv/diskatx.cpp:3-62 (ATXFileHeader/ATXTrackHeader/ATXSectorHeader/ATXTrackChunkHeader mit static_assert auf 48 bzw. 32 Byte), :64-190 read_atx, :216-416 write_atx. Der Schreiber ist hier die staerkere Quelle: er legt Feld fuer Feld fest, was der Leser konsumiert.",
-    "evidence": "MF-467 — Datei-, Spur-, Chunk- und Sektorkopf Feld fuer Feld verglichen. Vier Fehler gefunden und behoben, zwei davon toedlich: (1) Spurkopf-Flags standen bei uns auf 0x14, richtig ist 0x10; (2) der Chunk-Offset stand auf 0x18, richtig ist 0x14 — dadurch kam der Offset aus Fuellbytes, also 0, der Chunk-Scan begann auf dem Spurkopf selbst, fand keine Sektorliste und lieferte eine leere Spur. JEDE ATX-Datei las sich als leere Diskette, ohne Fehlermeldung. (3) Die Dichte wurde von 0x13 gelesen (Fuellbyte) statt von 0x12. (4) Der Leser erwartete eine Tabelle von LE32-Spur-Offsets und eine Spurzahl im Dateikopf bei 0x14 — beides gibt es im Format nicht: 0x14 ist mImageId, und die Spuraufzeichnungen stehen hintereinander und werden der Reihe nach abgelaufen (read_atx:75-101, write_atx:300-317). Neu belegt uebernommen: FDC-Status-Semantik (0x18 zusammen = Adressfeld-CRC, 0x08 allein = Datenfeld-CRC, 0x10 = kein Datenfeld, 0x20 = Deleted-Mark 0xF8, 0x04|0x02 = langer Sektor, 0x40 = weak), doppelte Sektornummern als Phantomsektoren (UFT_SECTOR_DUPLICATE), und die Zuordnung der Weak-Chunks ueber den Index in der SEKTORLISTE statt ueber die Reihenfolge der erzeugten Sektoren. Abgesichert mit tests/test_atx_layout.c gegen ein bytegenau nach diskatx.cpp gebautes Abbild; Rot-Probe: alle drei Faelle fallen auf der alten Fassung um, der erste schon an der Spurzahl. NICHT verifiziert: Verhalten an einem realen ATX-Abbild — keines im Korpus, daher T2 und nicht T1."
-  },
-  "cqm": {
-    "spec_source": "Primaer: \"CopyQM Format (*.cqm) — Disk image layout\", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE.",
-    "evidence": "MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um."
-  },
-  "d13": {
-    "spec_source": "Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md). Die Zuordnung logisch<->physisch ist die IDENTITAET, zweifach belegt: mamedev/mame ap2_dsk.cpp:410 `a2_13sect_format::logical_sector_index(int p) { return p; }` (BSD-3-Clause) und ciderpress2.com/formatdoc/Unadorned-notes.html '13-sector floppies use physical sector order'. Der Kontrast traegt den Beleg: die 16-Sektor-Fassung steht bei :666 und benutzt dos_skewing[]/prodos_skewing[].",
-    "evidence": "MF-722: linke Seite uft_format_plugin_d13 (Versatz (cyl*13+s)*256, Sektor-ID = s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() auf dem 5-and-3-Weg (MF-721). Gemessen: 454 dekodiert, 454 verglichen, 454 BYTEIDENTISCH. Der 455. ist Spur 0 Sektor 0 — DOS 3.2 schreibt den Bootsektor mit einer ANDEREN 5-and-3-Variante (to_woz2.c deduce_encoding(): ENC_53A statt ENC_53); er wird als alt_encoding BENANNT, nicht geraten, und liefert keine Bytes. Regressionsschutz: tests/test_d13_layout_verified.c — dort auch die Messung, dass d13_open() jede Datei mit falscher Groesse abweist (der 0xE5-Fuellzweig in read_track ist dadurch unerreichbar)."
-  },
-  "d64": {
-    "spec_source": "VICE D64 sizes incl. error-block trailer + 40/42-track variants",
-    "evidence": "MF-333, MF-350"
-  },
-  "d67": {
-    "spec_source": "VICE/Schepers D67 690-block geometry (176640 bytes)",
-    "evidence": "MF-314"
-  },
-  "d77": {
-    "spec_source": "pc98.org D88 (D77 teilt das Layout) + MAME d88_dsk — Kopf 688 ODER 672 Byte, Spurtabelle 164 bzw. 160 Eintraege, erster Versatz 0x2B0 oder 0x2A0",
-    "evidence": "MF-625"
-  },
-  "d88": {
-    "spec_source": "pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08)",
-    "evidence": "MF-336"
-  },
-  "dc42": {
-    "spec_source": "DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1)",
-    "evidence": "MF-324"
-  },
-  "dmk": {
-    "spec_source": "David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1",
-    "evidence": "MF-353"
-  },
-  "do": {
-    "spec_source": "Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md) plus die DOS-3.3-Interleave-Tabelle aus a8rawconv diska2.cpp:3-5 als unabhaengige zweite Quelle",
-    "evidence": "MF-716: linke Seite uft_format_plugin_do (Versatz (cyl*16+s)*256, Sektor-ID = logisch s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() in physische Sektoren, verbunden ueber die Interleave-Tabelle. Gemessen: 560 dekodiert, 560 verglichen, 560 BYTEIDENTISCH, 0 fehlend. Der Regressionsschutz steht in tests/test_do_layout_verified.c. Gilt NUR fuer die DOS-Ordnung — `po` war nicht beteiligt und bleibt T3."
-  },
-  "dsk_cpc": {
-    "spec_source": "EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested)",
-    "evidence": "MF-332"
-  },
-  "fdi": {
-    "spec_source": "SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ",
-    "evidence": "MF-359"
-  },
-  "hfe": {
-    "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1); MF-897 Spur-0-Ersatz: HxC hfe_loader.c + hfe_writer.c, gegengelesen an src/samdisk/hfe.cpp (track0s0_altencoding), gemessen an tests/corpus_free/gw_amigados.hfe; MF-898 write_allowed: src/samdisk/hfe.cpp + Feldname, gemessen an derselben Datei",
-    "evidence": "MF-354, MF-362, MF-897, MF-898"
-  },
-  "imd": {
-    "spec_source": "MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: \"offs += 5 + sector_num\"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256)",
-    "evidence": "MF-430"
-  },
-  "korg_dss1": {
-    "spec_source": "chickensys Korg DSS-1 geometry (80x2x5x1024)",
-    "evidence": "MF-347"
-  },
-  "lisa_twiggy": {
-    "spec_source": "bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt)",
-    "evidence": "MF-349"
-  },
-  "mfi": {
-    "spec_source": "MAME, src/lib/formats/mfi_dsk.h (struct header / struct entry, RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff) und src/lib/formats/mfi_dsk.cpp:81-82 (sign[16] = \"MAMEFLOPPYIMAGE\", sign_old[16] = \"MESSFLOPPYIMAGE\", je einschliesslich der abschliessenden Null), identify() vergleicht alle 16 Byte, load() liest die Eintragstabelle ab sizeof(header) = 0x20. Beide Dateien BSD-3-Clause per SPDX-Header; kein Code uebernommen, nur das Layout verglichen.",
-    "evidence": "MF-614 — gefunden im vierten Scout-Zyklus. Der Leser prueste ACHT Byte (\"MAMEFLOP\"), ein Praefix der echten Kennung: er wies echte MAME-Dateien deshalb nicht ab, sondern nahm sie AN und las sie falsch. Die Spurtabelle las er ab 0x10 (sein eigener Kopfkommentar beschrieb das so) — dort liegen cyl_count und head_count; die Eintraege beginnen bei 0x20. form_factor holte er von 0x08, also aus der Kennung. Die Eintragszahl leitete er aus der Dateigroesse ab statt aus (cyl_count << resolution) * head_count. Alle vier berichtigt; zusaetzlich uebernommen: die Schranken aus identify() (Zylinder <= 84, Aufloesung < 3, Koepfe <= 2). Abgesichert mit tests/test_mfi_layout.c gegen ein bytegenau nach mfi_dsk.h gebautes Abbild; Rotprobe: beide Zusicherungen fallen auf der alten Fassung, die erste schon daran, dass ein verfaelschtes Byte 8 noch als gueltig durchging. NICHT verifiziert: die Spurnutzlast. Das Fixture traegt Kopf und Eintragstabelle, keine echten MFI-Zellendaten — dafuer braucht es eine reale Datei, und im Korpus liegt keine. Deshalb T2 und nicht T1."
-  },
-  "msa": {
-    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet",
-    "evidence": "MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes."
-  },
-  "nfd": {
-    "spec_source": "pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet)",
-    "evidence": "MF-358, MF-360"
-  },
-  "savedskf": {
-    "nonplugin": true,
-    "spec_source": "Deark modules/fat.c de_run_loaddskf + foreign/dskdcmps.h (uncompressed path only; LZW deferred). Standalone API (src/formats/pc/uft_savedskf.c), not in the plugin registry",
-    "evidence": "MF-356"
-  },
-  "scp": {
-    "spec_source": "cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length)",
-    "evidence": "MF-318, MF-351"
-  },
-  "st": {
-    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt. MF-873: die TOS-Boot-Pruefsumme haengt nicht mehr an SAMdisk allein. Zweite Quelle disktype, Dokumentation §3.3.1 \"The GEMDOS File System\" (https://disktype.sourceforge.net/doc/ch03s03.html): \"the boot sector must have a checksum of $1234 (computed from 16-bit words in big-endian byte order)\" — benennt Wert, Wortbreite UND Byte-Reihenfolge. Dritte Quelle Richard Karsmakers, \"The Ultimate Virus Killer Book\", Anhang I \"Atari Boot Flowchart\", Schritt 9 (https://st-news.com/uvk-book/the-book/part-iii-appendices/i-atari-boot-flowchart): \"the Operating System will load the bootsector off that particular floppy disk and execute it when the checksum is $1234\" — benennt Wert und Folge, nicht die Mechanik.",
-    "evidence": "MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats. MF-873: seit diesem Stand DREIFACH belegt (disktype §3.3.1 und das UVK-Buch, siehe spec_source); disktype spricht als einzige die Byte-Reihenfolge aus, was die Bedingung \"nicht doppelt gegengelesen\" aufhebt. Dazu tests/test_st_bootpruefsumme.c mit einer GEGENSPUR: ein Bootsektor, dessen LITTLE-Endian-Summe 0x1234 trifft und dessen Big-Endian-Summe nicht — er unterscheidet sich vom gueltigen ausschliesslich im Ausgleichswort an $1FE. Zwei Mutationen gemessen: (1) Pruefer little-endian — test_st_geometry wird ebenfalls rot, der neue Test fuegt hier NICHTS hinzu; (2) Pruefer nimmt BE ODER LE — test_st_geometry bleibt GRUEN, nur der neue Test faengt es. Nur der zweite Fall rechtfertigt die Datei, und das steht so in ihrem Kopf. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2."
-  },
-  "stx": {
-    "spec_source": "Pasti STX descriptor spec (atari.8bitchip.info/STXdesc)",
-    "evidence": "MF-335"
-  },
-  "td0": {
-    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag",
-    "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. BERICHTIGT MF-870: falsch war BEIDES. Die Beschreibung stimmte nicht, und uft_td0_parser_v2.c:412 las das Kommentar-Flag tatsaechlich aus drive_type statt aus stepping - MF-460 hat den Vermerk gesetzt und die Zeile darunter nie nachgezogen. Dazu war die Kompressionserkennung invertiert: die Grossbuchstaben-Kennung galt als komprimiert, obwohl sie die unkomprimierte Fassung bezeichnet. Beides behoben, Rotbeweis tests/test_td0_signatur.c (4 von 6 rot gegen den Vorzustand)."
-  },
-  "woz": {
-    "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",
-    "evidence": "MF-317, MF-357, MF-361"
+    "evidence": "MF-352",
+    "spec_source": "WinUAE disk.cpp read_header_ext2 (UAE-1ADF)"
   },
   "adl": {
-    "spec_source": "DiscImageManager (geraldholdsworth), als Spec gelesen: DiscImage_Private.pas:188 bindet .adl an ADFS L; DiscImage_ADFS.pas:73-75 gibt 163840/327680/655360 = S/M/L; DiscImage_Private.pas:547-570 gibt die Seitenverschraenkung fuer ADFS L (FInterleave=2): offset = (cyl*2+head)*4096. Gegenprobe am mitgelieferten ADFS_L.adl = 655360 Byte, selbst gemessen. Geprueft wurden Groesse, Seitenzahl und Spurablage — NICHT die Verzeichnisstruktur.",
-    "evidence": "MF-654"
+    "evidence": "MF-654",
+    "spec_source": "DiscImageManager (geraldholdsworth), als Spec gelesen: DiscImage_Private.pas:188 bindet .adl an ADFS L; DiscImage_ADFS.pas:73-75 gibt 163840/327680/655360 = S/M/L; DiscImage_Private.pas:547-570 gibt die Seitenverschraenkung fuer ADFS L (FInterleave=2): offset = (cyl*2+head)*4096. Gegenprobe am mitgelieferten ADFS_L.adl = 655360 Byte, selbst gemessen. Geprueft wurden Groesse, Seitenzahl und Spurablage — NICHT die Verzeichnisstruktur."
   },
-  "adf_arc": {
-    "spec_source": "DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur.",
-    "evidence": "MF-654"
+  "akai_s900": {
+    "evidence": "MF-348",
+    "spec_source": "akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400"
+  },
+  "atx": {
+    "evidence": "MF-467 — Datei-, Spur-, Chunk- und Sektorkopf Feld fuer Feld verglichen. Vier Fehler gefunden und behoben, zwei davon toedlich: (1) Spurkopf-Flags standen bei uns auf 0x14, richtig ist 0x10; (2) der Chunk-Offset stand auf 0x18, richtig ist 0x14 — dadurch kam der Offset aus Fuellbytes, also 0, der Chunk-Scan begann auf dem Spurkopf selbst, fand keine Sektorliste und lieferte eine leere Spur. JEDE ATX-Datei las sich als leere Diskette, ohne Fehlermeldung. (3) Die Dichte wurde von 0x13 gelesen (Fuellbyte) statt von 0x12. (4) Der Leser erwartete eine Tabelle von LE32-Spur-Offsets und eine Spurzahl im Dateikopf bei 0x14 — beides gibt es im Format nicht: 0x14 ist mImageId, und die Spuraufzeichnungen stehen hintereinander und werden der Reihe nach abgelaufen (read_atx:75-101, write_atx:300-317). Neu belegt uebernommen: FDC-Status-Semantik (0x18 zusammen = Adressfeld-CRC, 0x08 allein = Datenfeld-CRC, 0x10 = kein Datenfeld, 0x20 = Deleted-Mark 0xF8, 0x04|0x02 = langer Sektor, 0x40 = weak), doppelte Sektornummern als Phantomsektoren (UFT_SECTOR_DUPLICATE), und die Zuordnung der Weak-Chunks ueber den Index in der SEKTORLISTE statt ueber die Reihenfolge der erzeugten Sektoren. Abgesichert mit tests/test_atx_layout.c gegen ein bytegenau nach diskatx.cpp gebautes Abbild; Rot-Probe: alle drei Faelle fallen auf der alten Fassung um, der erste schon an der Spurzahl. NICHT verifiziert: Verhalten an einem realen ATX-Abbild — keines im Korpus, daher T2 und nicht T1.",
+    "spec_source": "a8rawconv 0.95 (GPL-2-or-later, Referenz-Orakel in src/a8rawconv/, wird nicht gebaut): src/a8rawconv/diskatx.cpp:3-62 (ATXFileHeader/ATXTrackHeader/ATXSectorHeader/ATXTrackChunkHeader mit static_assert auf 48 bzw. 32 Byte), :64-190 read_atx, :216-416 write_atx. Der Schreiber ist hier die staerkere Quelle: er legt Feld fuer Feld fest, was der Leser konsumiert."
+  },
+  "cqm": {
+    "evidence": "MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um.",
+    "spec_source": "Primaer: \"CopyQM Format (*.cqm) — Disk image layout\", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE."
+  },
+  "d13": {
+    "evidence": "MF-722: linke Seite uft_format_plugin_d13 (Versatz (cyl*13+s)*256, Sektor-ID = s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() auf dem 5-and-3-Weg (MF-721). Gemessen: 454 dekodiert, 454 verglichen, 454 BYTEIDENTISCH. Der 455. ist Spur 0 Sektor 0 — DOS 3.2 schreibt den Bootsektor mit einer ANDEREN 5-and-3-Variante (to_woz2.c deduce_encoding(): ENC_53A statt ENC_53); er wird als alt_encoding BENANNT, nicht geraten, und liefert keine Bytes. Regressionsschutz: tests/test_d13_layout_verified.c — dort auch die Messung, dass d13_open() jede Datei mit falscher Groesse abweist (der 0xE5-Fuellzweig in read_track ist dadurch unerreichbar).",
+    "spec_source": "Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md). Die Zuordnung logisch<->physisch ist die IDENTITAET, zweifach belegt: mamedev/mame ap2_dsk.cpp:410 `a2_13sect_format::logical_sector_index(int p) { return p; }` (BSD-3-Clause) und ciderpress2.com/formatdoc/Unadorned-notes.html '13-sector floppies use physical sector order'. Der Kontrast traegt den Beleg: die 16-Sektor-Fassung steht bei :666 und benutzt dos_skewing[]/prodos_skewing[]."
+  },
+  "d64": {
+    "evidence": "MF-333, MF-350",
+    "spec_source": "VICE D64 sizes incl. error-block trailer + 40/42-track variants"
+  },
+  "d67": {
+    "evidence": "MF-314",
+    "spec_source": "VICE/Schepers D67 690-block geometry (176640 bytes)"
+  },
+  "d77": {
+    "evidence": "MF-625",
+    "spec_source": "pc98.org D88 (D77 teilt das Layout) + MAME d88_dsk — Kopf 688 ODER 672 Byte, Spurtabelle 164 bzw. 160 Eintraege, erster Versatz 0x2B0 oder 0x2A0"
+  },
+  "d88": {
+    "evidence": "MF-336",
+    "spec_source": "pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08)"
+  },
+  "dc42": {
+    "evidence": "MF-324",
+    "spec_source": "DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1)"
+  },
+  "dmk": {
+    "evidence": "MF-353",
+    "spec_source": "David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1"
+  },
+  "do": {
+    "evidence": "MF-716: linke Seite uft_format_plugin_do (Versatz (cyl*16+s)*256, Sektor-ID = logisch s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() in physische Sektoren, verbunden ueber die Interleave-Tabelle. Gemessen: 560 dekodiert, 560 verglichen, 560 BYTEIDENTISCH, 0 fehlend. Der Regressionsschutz steht in tests/test_do_layout_verified.c. Gilt NUR fuer die DOS-Ordnung — `po` war nicht beteiligt und bleibt T3.",
+    "spec_source": "Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md) plus die DOS-3.3-Interleave-Tabelle aus a8rawconv diska2.cpp:3-5 als unabhaengige zweite Quelle"
+  },
+  "dsk_cpc": {
+    "evidence": "MF-332",
+    "spec_source": "EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested)"
+  },
+  "fdi": {
+    "evidence": "MF-359",
+    "spec_source": "SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ"
+  },
+  "hfe": {
+    "evidence": "MF-354, MF-362, MF-897, MF-898",
+    "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1); MF-897 Spur-0-Ersatz: HxC hfe_loader.c + hfe_writer.c, gegengelesen an src/samdisk/hfe.cpp (track0s0_altencoding), gemessen an tests/corpus_free/gw_amigados.hfe; MF-898 write_allowed: src/samdisk/hfe.cpp + Feldname, gemessen an derselben Datei"
+  },
+  "imd": {
+    "evidence": "MF-430",
+    "spec_source": "MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: \"offs += 5 + sector_num\"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256)"
+  },
+  "korg_dss1": {
+    "evidence": "MF-347",
+    "spec_source": "chickensys Korg DSS-1 geometry (80x2x5x1024)"
+  },
+  "lisa_twiggy": {
+    "evidence": "MF-349",
+    "spec_source": "bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt)"
+  },
+  "mfi": {
+    "evidence": "MF-614 — gefunden im vierten Scout-Zyklus. Der Leser prueste ACHT Byte (\"MAMEFLOP\"), ein Praefix der echten Kennung: er wies echte MAME-Dateien deshalb nicht ab, sondern nahm sie AN und las sie falsch. Die Spurtabelle las er ab 0x10 (sein eigener Kopfkommentar beschrieb das so) — dort liegen cyl_count und head_count; die Eintraege beginnen bei 0x20. form_factor holte er von 0x08, also aus der Kennung. Die Eintragszahl leitete er aus der Dateigroesse ab statt aus (cyl_count << resolution) * head_count. Alle vier berichtigt; zusaetzlich uebernommen: die Schranken aus identify() (Zylinder <= 84, Aufloesung < 3, Koepfe <= 2). Abgesichert mit tests/test_mfi_layout.c gegen ein bytegenau nach mfi_dsk.h gebautes Abbild; Rotprobe: beide Zusicherungen fallen auf der alten Fassung, die erste schon daran, dass ein verfaelschtes Byte 8 noch als gueltig durchging. NICHT verifiziert: die Spurnutzlast. Das Fixture traegt Kopf und Eintragstabelle, keine echten MFI-Zellendaten — dafuer braucht es eine reale Datei, und im Korpus liegt keine. Deshalb T2 und nicht T1.",
+    "spec_source": "MAME, src/lib/formats/mfi_dsk.h (struct header / struct entry, RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff) und src/lib/formats/mfi_dsk.cpp:81-82 (sign[16] = \"MAMEFLOPPYIMAGE\", sign_old[16] = \"MESSFLOPPYIMAGE\", je einschliesslich der abschliessenden Null), identify() vergleicht alle 16 Byte, load() liest die Eintragstabelle ab sizeof(header) = 0x20. Beide Dateien BSD-3-Clause per SPDX-Header; kein Code uebernommen, nur das Layout verglichen."
+  },
+  "msa": {
+    "evidence": "MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes.",
+    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet"
+  },
+  "nfd": {
+    "evidence": "MF-358, MF-360",
+    "spec_source": "pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet)"
   },
   "opus": {
-    "spec_source": "MF-905 Geometrie aus dem Bootsektor: src/samdisk/opd.h (struct OPD_BOOT) und src/samdisk/opd.cpp — ReadOPD() UND WriteOPD() werten identisch aus (cyls, sectors, heads = flags & 0x10, Groessencode = flags >> 6). SAMdisk ist im Baum vendort unter MIT (src/samdisk/License.txt). Loest die frueher genannte, ausdruecklich UNVERIFIZIERTE Referenz libdsk drvopus.c ab (MF-651).",
-    "evidence": "MF-905"
+    "evidence": "MF-905",
+    "spec_source": "MF-905 Geometrie aus dem Bootsektor: src/samdisk/opd.h (struct OPD_BOOT) und src/samdisk/opd.cpp — ReadOPD() UND WriteOPD() werten identisch aus (cyls, sectors, heads = flags & 0x10, Groessencode = flags >> 6). SAMdisk ist im Baum vendort unter MIT (src/samdisk/License.txt). Loest die frueher genannte, ausdruecklich UNVERIFIZIERTE Referenz libdsk drvopus.c ab (MF-651)."
+  },
+  "savedskf": {
+    "evidence": "MF-356",
+    "nonplugin": true,
+    "spec_source": "Deark modules/fat.c de_run_loaddskf + foreign/dskdcmps.h (uncompressed path only; LZW deferred). Standalone API (src/formats/pc/uft_savedskf.c), not in the plugin registry"
+  },
+  "scp": {
+    "evidence": "MF-318, MF-351",
+    "spec_source": "cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length)"
+  },
+  "st": {
+    "evidence": "MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats. MF-873: seit diesem Stand DREIFACH belegt (disktype §3.3.1 und das UVK-Buch, siehe spec_source); disktype spricht als einzige die Byte-Reihenfolge aus, was die Bedingung \"nicht doppelt gegengelesen\" aufhebt. Dazu tests/test_st_bootpruefsumme.c mit einer GEGENSPUR: ein Bootsektor, dessen LITTLE-Endian-Summe 0x1234 trifft und dessen Big-Endian-Summe nicht — er unterscheidet sich vom gueltigen ausschliesslich im Ausgleichswort an $1FE. Zwei Mutationen gemessen: (1) Pruefer little-endian — test_st_geometry wird ebenfalls rot, der neue Test fuegt hier NICHTS hinzu; (2) Pruefer nimmt BE ODER LE — test_st_geometry bleibt GRUEN, nur der neue Test faengt es. Nur der zweite Fall rechtfertigt die Datei, und das steht so in ihrem Kopf. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2.",
+    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt. MF-873: die TOS-Boot-Pruefsumme haengt nicht mehr an SAMdisk allein. Zweite Quelle disktype, Dokumentation §3.3.1 \"The GEMDOS File System\" (https://disktype.sourceforge.net/doc/ch03s03.html): \"the boot sector must have a checksum of $1234 (computed from 16-bit words in big-endian byte order)\" — benennt Wert, Wortbreite UND Byte-Reihenfolge. Dritte Quelle Richard Karsmakers, \"The Ultimate Virus Killer Book\", Anhang I \"Atari Boot Flowchart\", Schritt 9 (https://st-news.com/uvk-book/the-book/part-iii-appendices/i-atari-boot-flowchart): \"the Operating System will load the bootsector off that particular floppy disk and execute it when the checksum is $1234\" — benennt Wert und Folge, nicht die Mechanik."
+  },
+  "stx": {
+    "evidence": "MF-335",
+    "spec_source": "Pasti STX descriptor spec (atari.8bitchip.info/STXdesc)"
+  },
+  "td0": {
+    "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. BERICHTIGT MF-870: falsch war BEIDES. Die Beschreibung stimmte nicht, und uft_td0_parser_v2.c:412 las das Kommentar-Flag tatsaechlich aus drive_type statt aus stepping - MF-460 hat den Vermerk gesetzt und die Zeile darunter nie nachgezogen. Dazu war die Kompressionserkennung invertiert: die Grossbuchstaben-Kennung galt als komprimiert, obwohl sie die unkomprimierte Fassung bezeichnet. Beides behoben, Rotbeweis tests/test_td0_signatur.c (4 von 6 rot gegen den Vorzustand).",
+    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag"
+  },
+  "woz": {
+    "evidence": "MF-317, MF-357, MF-361",
+    "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)"
   }
 }

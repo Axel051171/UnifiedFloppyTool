@@ -293,6 +293,15 @@ foreach(test_source ${TEST_SOURCES})
         # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
         # die P3-154 seit MF-880 verlangt.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
+    elseif(${test_name} STREQUAL "test_nib_ring_und_blindzone")
+        # MF-948: der NIB-Leser fuehrt eine private Zweitfassung des
+        # Apple-GCR-Abtasters, die weder umlaeuft noch die letzten 400
+        # Bytes durchsucht (P3-234).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            # MF-948: uft_nib.c liest ueber die oracle-gepruefte
+            # Einheit statt ueber eine private Zweitfassung (P3-234).
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c)
     elseif(${test_name} STREQUAL "test_imd_write_roundtrip")
         # IMD write_track round-trip; caught the data_len/data_size write no-op bug (MF-320)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
@@ -1501,7 +1510,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_encoding_caps")
-        # MF-865: die Faehigkeitstabelle. Was sie ueber `can_decode`
+        # MF-949: die Faehigkeitstabelle. Was sie ueber `can_decode`
         # sagt, misst zusaetzlich scripts/audit_encoding_caps.py gegen
         # den Verteiler — ein C-Test kann den Quelltext nicht lesen.
         target_sources(${test_name} PRIVATE
@@ -1890,6 +1899,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            # MF-948: uft_nib.c liest ueber die oracle-gepruefte
+            # Einheit statt ueber eine private Zweitfassung (P3-234).
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c
             ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
@@ -1933,6 +1945,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            # MF-948: uft_nib.c liest ueber die oracle-gepruefte
+            # Einheit statt ueber eine private Zweitfassung (P3-234).
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c
             ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
@@ -2006,9 +2021,16 @@ foreach(test_source ${TEST_SOURCES})
         # darum die Plugin-Quelle statt eines Kern-Moduls.
         # MF-708: dazu der ZWEITE 86F-Leser des Baums — gebaut, nicht
         # registriert, ohne Aufrufer, aber mit dem richtigen Magic.
+        # MF-961: der Leser ist gegen die Spezifikation neu gefasst und
+        # dekodiert MFM-Spuren ueber den geprueften Sektor-Dekoder des
+        # Baums — der muss deshalb mitgelinkt werden. Und er braucht den
+        # Korpuspfad, weil der Test jetzt eine ECHTE 86F-Datei oeffnet.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_2img_nib_stride")
         # MF-725: NIB-Inhalt in einem 2IMG — falsche Schrittweite und
         # erfundene Sektorstruktur. Rotbeweis vor der Abweisung.
@@ -3215,7 +3237,7 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/fluxcapturejob.cpp
                     ${CMAKE_SOURCE_DIR}/src/fluxwritejob.cpp
                     ${CMAKE_SOURCE_DIR}/src/uft_flux_histogram_widget.cpp
-                    # MF-865: das Widget fragt seit der Faehigkeitstabelle,
+                    # MF-949: das Widget fragt seit der Faehigkeitstabelle,
                     # ob eine Kodierung ueberhaupt dekodiert werden kann.
                     ${CMAKE_SOURCE_DIR}/src/core/uft_encoding_caps.c
                     # fluxcapturejob spricht den Greaseweazle-V2-Provider an

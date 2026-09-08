@@ -210,6 +210,152 @@ TEST(a_capture_without_stream_end_is_flagged_but_kept) {
     uft_kf_free(&s);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+ *  MF-960: der erste ECHTE Gerätestrom durch diesen Dekoder
+ *
+ *  Alles darüber ist gegen handgeschriebene Byte-Felder in DIESER Datei
+ *  geprüft. Die sind gut — sie kodieren Protokollwissen, etwa dass Flux2
+ *  und Flux3 denselben Wert liefern müssen —, aber sie sind DIESELBE
+ *  HAND wie der Dekoder. Ein systematisches Missverständnis, das
+ *  Spezifikationslesung und Code teilen, kann kein solcher Test fangen
+ *  (MF-644/760, die fünfte Frage).
+ *
+ *  `tests/corpus/fluxfox_sector_test/track00.0.raw` ist die Aufnahme
+ *  eines Greaseweazle 1.18 von einer echten 5,25″-360K-Diskette,
+ *  abgelegt im Repositorium `dbalsom/fluxfox` unter MIT. Herkunft,
+ *  Prüfsumme und Rechtelage: `tests/corpus_manifest/manifest.json`.
+ *
+ *  Was hier geprüft wird, ist deshalb nicht dasselbe wie oben:
+ *
+ *    1. Die KFInfo-Zeile — vom Gerät geschrieben, nicht von uns.
+ *    2. Die Zahl der Index-Blöcke, unabhängig vorgezählt.
+ *    3. Die UMDREHUNGSDAUER. Das ist die eigentliche Gegenprobe: 300
+ *       U/min ist die Physik eines 5,25″-Laufwerks und steht nirgends
+ *       im Dekoder. Wer die Abstände falsch aufsummiert, landet nicht
+ *       bei 200 ms.
+ *    4. Dieselbe Dauer über ZWEI verschiedene Felder — `rotation_time`
+ *       (das der Dekoder aus dem Index-OOB liest) und die Summe der
+ *       Flusswerte zwischen zwei Indizes. Sie müssen übereinstimmen,
+ *       ohne dass eines aus dem anderen berechnet wird.
+ *
+ *  Ohne Korpus überspringt sich der Fall benannt (77 = SKIP).
+ * ══════════════════════════════════════════════════════════════════════ */
+
+#define SKIP_CODE 77
+
+/* Der Korpuspfad wird aus `__FILE__` abgeleitet, nicht aus einer
+ * `-D`-Definition im Bausystem.
+ *
+ * Grund, benannt: `tests/CMakeLists.txt` definiert
+ * `UFT_CORPUS_RESTRICTED_DIR` je Test, und dieser Test hat sie nicht.
+ * Sie nachzutragen wäre eine Zeile — die Datei war beim Schreiben
+ * dieses Tests aber von einer parallelen Arbeit belegt, und fremde
+ * Änderungen mitzucommitten ist keine Option. `__FILE__` ist im Bau
+ * dieses Baums ABSOLUT (gemessen: der Übersetzer wird mit dem vollen
+ * Quellpfad gerufen), also genügt es, hinter `tests/` abzuschneiden.
+ *
+ * GRENZE: ein Bau, der mit relativen Quellpfaden übersetzt, findet den
+ * Korpus so nicht — dann überspringt sich der Fall, statt falsch zu
+ * melden. Wer `UFT_CORPUS_RESTRICTED_DIR` für diesen Test nachträgt,
+ * darf diesen Block ersatzlos streichen. */
+static int korpus_pfad(char *out, size_t n, const char *rest)
+{
+    const char *f = __FILE__;
+    const char *marke = NULL;
+    for (const char *p = f; *p; p++)
+        if ((p[0] == 't') && strncmp(p, "tests", 5) == 0 &&
+            (p == f || p[-1] == '/' || p[-1] == '\\'))
+            marke = p;
+    if (!marke) return -1;
+    size_t wurzel = (size_t)(marke - f);
+    if (wurzel + strlen(rest) + 1 >= n) return -1;
+    memcpy(out, f, wurzel);
+    out[wurzel] = '\0';
+    strncat(out, rest, n - strlen(out) - 1);
+    return 0;
+}
+
+#define KF_ECHT "tests/corpus/fluxfox_sector_test/track00.0.raw"
+
+/* Erwartungswerte. Jede Zahl hat eine Quelle:
+ *   - KFINFO_TEIL  steht in der Datei, vom Gerät geschrieben
+ *   - INDIZES      unabhängig vorgezählt, bevor der Dekoder lief
+ *   - UMDR_MS      Physik: 300 U/min = 200 ms, Toleranz 1 %
+ */
+#define KFINFO_TEIL   "name=Greaseweazle, version=1.18"
+#define INDIZES       4u
+#define UMDR_MS_MIN   198.0
+#define UMDR_MS_MAX   202.0
+
+/* Wie ASSERT, aber in einer Funktion mit Rueckgabewert brauchbar. */
+#define ASSERT2(c) do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
+                        _fail++; free(buf); return 0; } } while (0)
+
+static int echte_aufnahme(void)
+{
+    char pfad[1024];
+    if (korpus_pfad(pfad, sizeof pfad, KF_ECHT) != 0) {
+        printf("  [SKIP] Korpuspfad nicht ableitbar (__FILE__ relativ?)\n");
+        return SKIP_CODE;
+    }
+    FILE *f = fopen(pfad, "rb");
+    if (!f) {
+        printf("  [SKIP] %s fehlt.\n", KF_ECHT);
+        printf("         Beschaffung und Pruefsumme: "
+               "tests/corpus_manifest/manifest.json\n");
+        return SKIP_CODE;
+    }
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    uint8_t *buf = (uint8_t *)malloc((size_t)(n > 0 ? n : 1));
+    if (!buf || n <= 0 || fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        fclose(f); free(buf);
+        printf("FAIL: Korpusdatei nicht lesbar\n"); _fail++; return 0;
+    }
+    fclose(f);
+
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) {
+        free(buf); printf("FAIL: init\n"); _fail++; return 0;
+    }
+
+    printf("  [TEST] %-44s ... ", "echte_greaseweazle_aufnahme");
+    int vorher = _fail;
+
+    ASSERT2(uft_kf_decode(&s, buf, (size_t)n) == UFT_UFT_KF_STATUS_OK);
+
+    /* 1 — die Kennzeile stammt vom Geraet. */
+    ASSERT2(strstr(s.info_string, KFINFO_TEIL) != NULL);
+
+    /* 2 — Zahl der Indexbloecke, unabhaengig vorgezaehlt. */
+    ASSERT2(s.index_count == INDIZES);
+
+    /* 3+4 — die Umdrehungsdauer, ueber ZWEI Felder. */
+    ASSERT2(s.sample_clock > 0.0 && s.index_clock > 0.0);
+    for (uint32_t i = 1; i < s.index_count; i++) {
+        uint64_t takte = 0;
+        for (uint32_t k = s.indexes[i - 1].flux_position;
+             k < s.indexes[i].flux_position && k < s.flux_count; k++)
+            takte += s.flux_values[k];
+
+        const double aus_fluss = (double)takte / s.sample_clock * 1000.0;
+        const double aus_feld  =
+            (double)s.indexes[i].rotation_time / s.index_clock * 1000.0;
+
+        ASSERT2(aus_fluss > UMDR_MS_MIN && aus_fluss < UMDR_MS_MAX);
+        /* Die beiden Wege duerfen um hoechstens 0,1 % auseinanderliegen.
+         * Keiner wird aus dem anderen berechnet. */
+        const double d = aus_fluss - aus_feld;
+        ASSERT2((d < 0 ? -d : d) < aus_fluss * 0.001);
+    }
+
+    if (_fail == vorher) { printf("OK\n"); _pass++; }
+    uft_kf_free(&s);
+    free(buf);
+    return 0;
+}
+
 int main(void) {
     printf("=== KryoFlux stream decoder, real code (MF-399) ===\n");
     RUN(single_byte_flux_cells_are_decoded_in_order);
@@ -222,6 +368,20 @@ int main(void) {
     RUN(a_truncated_cell_is_reported_not_silently_dropped);
     RUN(flux_to_time_conversion_uses_the_sample_clock);
     RUN(decoder_rejects_degenerate_arguments);
+
+    /* MF-960: der erste echte Geraetestrom. Fehlt der Korpus, wird der
+     * GANZE Test uebersprungen — nicht dieser eine Fall stillschweigend
+     * weggelassen. Ein Test, der ohne Korpus dasselbe „bestanden" meldet
+     * wie mit, verschweigt den Unterschied. */
+    const int kf = echte_aufnahme();
+
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
-    return _fail == 0 ? 0 : 1;
+    if (_fail != 0) return 1;
+    if (kf == SKIP_CODE) {
+        printf("UEBERSPRUNGEN: die synthetischen Faelle liefen, der ECHTE\n"
+               "Strom fehlt. Der Dekoder ist damit nur gegen die eigene\n"
+               "Hand geprueft (MF-644, fuenfte Frage).\n");
+        return SKIP_CODE;
+    }
+    return 0;
 }

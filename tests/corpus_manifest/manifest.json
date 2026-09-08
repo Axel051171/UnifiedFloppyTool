@@ -536,6 +536,18 @@
       "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
       "oracle": "offen",
       "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+    },
+    {
+      "file": "tests/corpus/fluxfox_sector_test/track00.0.raw",
+      "sha256": "dec2381d2dba9491e2a9b77c22acc5adf8c5788574e8ecc4443f38beb267350c",
+      "format": "kfraw",
+      "origin": "real",
+      "tool": "Greaseweazle 1.18 (aus der KFInfo-Zeile der Datei selbst gelesen: name=Greaseweazle, version=1.18, host_date=2024.11.09, host_time=11:57:59)",
+      "source": "github.com/dbalsom/fluxfox, tests/images/sector_test/, Commit 2b852552, abgerufen 2026-09-08. Lizenz: MIT, Repo-LICENSE (\"Copyright (c) 2024 Daniel Balsom\"); derselbe MIT-Text steht im Kopf von scripts/make_sector_test_img.py, dem Skript, das den Diskettinhalt erzeugt. Wieder-Beschaffung: das ZIP sector_test_kryoflux_360k.zip (SHA-256 26c0c077f9227e49e804a04bd8423542874905af81e4b0bd2a692d4977def00e) entpacken, track00.0.raw entnehmen und diesen Hash pruefen.",
+      "test": "test_external_integration",
+      "content": "5,25-Zoll-360K-Diskette, Zylinder 0 Kopf 0, 3 Umdrehungen. Der Inhalt folgt einer FORMEL statt einem Werkzeug: Sektor k traegt 512-mal das Byte (k mod 256). An der beiliegenden .img nachgerechnet — 0 von 720 Sektoren weichen ab (MF-960). Ein Oracle, das man nachrechnen statt ausfuehren kann.",
+      "fremdcode": "nein - der Datentraeger traegt kein Programm, sondern ein erzeugtes Zaehlmuster (siehe content). Die Aufnahme selbst ist Fluss, kein Code.",
+      "gemessen": "uft_kf_decode() liefert 127782 Flusswechsel, 4 Index-OOBs, sample_clock 24027428.5714286 Hz, index_clock 3003428.5714286 Hz; Umdrehungsdauern 199.94 / 199.94 / 199.93 ms = 300.1 U/min (MF-960)."
     }
   ]
 }
