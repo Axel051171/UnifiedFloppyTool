@@ -51,6 +51,31 @@ desktop.ini
 *.tar.gz
 *.zip
 
+# Rohmaterial-Ablage des Eigentuemers (MF-973).
+#
+# `neue-ideen/` sammelt Fremdquellen zur SICHTUNG — Archive, lose
+# Quelldateien, Handbuecher. Sie gehoeren NICHT in dieses Repository:
+# es steht unter GPL-2.0, und ein Teil des Materials steht das
+# ausdruecklich nicht.
+#
+# Gemessen am 2026-09-08: `neue-ideen/CapsFDCEmulator.cpp` sind 52 KB
+# C++ aus dem capsimage-Quellbaum, dessen LICENSE vollstaendig lautet
+#
+#     THIS IS NOT FREE SOFTWARE. PLEASE SEE LICENCE.TXT IN PARENT
+#     ARCHIVE.
+#
+# Die Datei lag ungetrackt UND nicht ignoriert im Arbeitsbaum. Ein
+# `git add -A` haette sie eingecheckt — und das waere keine
+# Nachlaessigkeit gewesen, sondern eine Lizenzverletzung, die kein
+# Rotbeweis faengt (CLAUDE.md, „Der staerkste legale Kanal").
+#
+# `*.zip` und `*.tar.gz` waren bereits erfasst; lose `.cpp`, `.h`, `.md`
+# und `.pdf` nicht. Deshalb das ganze Verzeichnis.
+#
+# Was hier hineinsoll, geht ueber `docs/QUARANTINE.md` und den Prozess
+# in `docs/QUARANTINE_PROCESS.md` — nicht ueber `git add`.
+neue-ideen/
+
 # Claude Code agent scratch space (worktrees, session state)
 .claude/worktrees/
 .claude/settings.local.json
