@@ -16,10 +16,13 @@
  * Geometry table — one entry per computer/variant
  * ============================================================================ */
 
+/* MF-961: `name`, `description` und `extensions` standen hier und wurden
+ * von **niemandem** gelesen — die Registry bekommt sie aus den
+ * DSK_PLUGIN()-Argumenten unten. Zwei Quellen fuer dieselbe Angabe, eine
+ * unbenutzt: in 4 von 49 Zeilen waren sie auseinandergelaufen, darunter
+ * ein Name (`DSK_DC42` gegen `DSK_DC42V`). Die tote Spalte ist entfernt;
+ * die benutzte Angabe steht jetzt an genau einer Stelle. */
 typedef struct {
-    const char *name;           /* Plugin name */
-    const char *description;    /* Human-readable description */
-    const char *extensions;     /* File extensions */
     uint8_t     cylinders;
     uint8_t     heads;
     uint8_t     spt;            /* Sectors per track */
@@ -29,56 +32,56 @@ typedef struct {
 
 static const dsk_geometry_t dsk_geometries[] = {
     /* Computer-specific DSK variants */
-    {"DSK_FM7",   "Fujitsu FM-7",          "dsk;d77",   40, 2, 16, 256, 327680},
-    {"DSK_MSX",   "MSX",                   "dsk",       80, 2, 9,  512, 737280},
-    {"DSK_PCW",   "Amstrad PCW",           "dsk",       80, 1, 9,  512, 368640},
-    {"DSK_CG",    "SHARP MZ (CG)",         "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_BK",    "Elektronika BK-0010",   "dsk;bkd",   80, 2, 10, 512, 819200},
-    {"DSK_KC",    "Robotron KC85",         "dsk",       80, 2, 5,  1024, 819200},
-    {"DSK_MTX",   "Memotech MTX",          "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_NAS",   "Nascom",                "dsk",       77, 1, 16, 256, 315392},
-    {"DSK_SC3",   "SHARP SC-3000",         "dsk;sc",    40, 1, 16, 256, 163840},
-    {"DSK_SV",    "Spectravideo SVI",      "dsk",       40, 1, 18, 128, 92160},
-    {"DSK_VEC",   "Vectrex (BIOS disk)",   "dsk",       40, 1, 18, 128, 92160},
-    {"DSK_NB",    "Bondwell (NB)",         "dsk",       40, 2, 9,  512, 368640},
-    {"DSK_SMC",   "SMC-777",               "dsk",       70, 2, 16, 256, 573440},
-    {"DSK_UNI",   "Universal DSK",         "dsk",       80, 2, 9,  512, 737280},
-    {"DSK_AQ",    "Mattel Aquarius",       "dsk",       40, 1, 16, 256, 163840},
-    {"DSK_EMU",   "Emulator Generic",      "dsk;img",   80, 2, 9,  512, 737280},
-    {"DSK_EQX",   "Equinox",              "dsk",       80, 2, 10, 512, 819200},
-    {"DSK_KRG",   "Kreigsmarine",          "dsk",       40, 2, 9,  512, 368640},
-    {"DSK_PX",    "Epson PX-8",            "dsk",       40, 1, 8,  512, 163840},
-    {"DSK_ALN",   "Alphatronic PC",        "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_M5",    "Sord M5",               "dsk",       40, 1, 16, 256, 163840},
-    {"DSK_LYN",   "Camputers Lynx",        "dsk",       40, 1, 10, 512, 204800},
-    {"DSK_TOK",   "Toshiba T100",          "dsk",       40, 2, 9,  512, 368640},
-    {"DSK_RLD",   "Roland DSK",            "dsk",       77, 2, 8,  1024, 1261568},
-    {"DSK_FP",    "Epson FP-1100",         "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_AK",    "AKI Keyboard",          "dsk",       40, 1, 16, 256, 163840},
-    {"DSK_EIN",   "Einstein TC-01",        "dsk",       40, 1, 10, 512, 204800},
-    {"DSK_AGT",   "AGT",                   "dsk",       40, 2, 9,  512, 368640},
-    {"DSK_NEC",   "NEC PC-6001",           "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_RC",    "RC702/Piccoline",       "dsk",       77, 2, 16, 256, 634880},
-    {"DSK_SAN",   "Sanyo MBC-55x",         "dsk",       40, 2, 8,  512, 327680},
-    {"DSK_X820",  "Xerox 820",             "dsk",       77, 1, 26, 128, 256256},
-    {"DSK_BW",    "Bondwell 12/14",        "dsk",       40, 1, 9,  512, 184320},
-    {"DSK_XM",    "Sharp X1 (XM)",         "dsk;2d",    40, 2, 16, 256, 327680},
-    {"DSK_VT",    "DEC VT180",             "dsk",       40, 1, 10, 512, 204800},
-    {"DSK_MZ",    "SHARP MZ-800",          "dsk",       80, 2, 16, 256, 655360},
-    {"DSK_OLI",   "Olivetti M20",          "dsk",       35, 2, 16, 256, 286720},
-    {"DSK_CRO",   "Cromemco",              "dsk",       77, 1, 18, 128, 177408},
-    {"DSK_WNG",   "Wang",                  "dsk",       77, 2, 26, 128, 512512},
-    {"DSK_HK",    "Hong Kong Computer",    "dsk",       40, 2, 16, 256, 327680},
-    {"DSK_HP",    "HP LIF",                "dsk",       77, 2, 16, 256, 634880},
-    {"DSK_ACE",   "Jupiter Ace",           "dsk;ace",   40, 1, 10, 512, 204800},
-    {"DSK_FLEX",  "Flex OS",               "dsk",       80, 1, 36, 256, 737280},
-    {"DSK_NS",    "North Star",            "dsk",       35, 1, 10, 512, 179200},
-    {"DSK_VIC",   "Commodore VIC-1540",    "dsk",       35, 1, 17, 256, 152320},
-    {"DSK_OS9",   "OS-9",                  "dsk",       80, 2, 18, 256, 737280},
-    {"DSK_ORC",   "Oric Microdisc",        "dsk;ort",   80, 2, 17, 256, 696320},
-    {"DSK_DC42",  "DiskCopy variant",      "dsk",       80, 2, 9,  512, 737280},
-    {"DSK_P3",    "Spectrum +3",           "dsk",       40, 1, 9,  512, 184320},
-    {NULL, NULL, NULL, 0, 0, 0, 0, 0}
+    {40, 2, 16, 256, 327680}  /* DSK_FM7 */,
+    {80, 2, 9,  512, 737280}  /* DSK_MSX */,
+    {80, 1, 9,  512, 368640}  /* DSK_PCW */,
+    {40, 2, 16, 256, 327680}  /* DSK_CG */,
+    {80, 2, 10, 512, 819200}  /* DSK_BK */,
+    {80, 2, 5,  1024, 819200}  /* DSK_KC */,
+    {40, 2, 16, 256, 327680}  /* DSK_MTX */,
+    {77, 1, 16, 256, 315392}  /* DSK_NAS */,
+    {40, 1, 16, 256, 163840}  /* DSK_SC3 */,
+    {40, 1, 18, 128, 92160}  /* DSK_SV */,
+    {40, 1, 18, 128, 92160}  /* DSK_VEC */,
+    {40, 2, 9,  512, 368640}  /* DSK_NB */,
+    {70, 2, 16, 256, 573440}  /* DSK_SMC */,
+    {80, 2, 9,  512, 737280}  /* DSK_UNI */,
+    {40, 1, 16, 256, 163840}  /* DSK_AQ */,
+    {80, 2, 9,  512, 737280}  /* DSK_EMU */,
+    {80, 2, 10, 512, 819200}  /* DSK_EQX */,
+    {40, 2, 9,  512, 368640}  /* DSK_KRG */,
+    {40, 1, 8,  512, 163840}  /* DSK_PX */,
+    {40, 2, 16, 256, 327680}  /* DSK_ALN */,
+    {40, 1, 16, 256, 163840}  /* DSK_M5 */,
+    {40, 1, 10, 512, 204800}  /* DSK_LYN */,
+    {40, 2, 9,  512, 368640}  /* DSK_TOK */,
+    {77, 2, 8,  1024, 1261568}  /* DSK_RLD */,
+    {40, 2, 16, 256, 327680}  /* DSK_FP */,
+    {40, 1, 16, 256, 163840}  /* DSK_AK */,
+    {40, 1, 10, 512, 204800}  /* DSK_EIN */,
+    {40, 2, 9,  512, 368640}  /* DSK_AGT */,
+    {40, 2, 16, 256, 327680}  /* DSK_NEC */,
+    {77, 2, 16, 256, 634880}  /* DSK_RC */,
+    {40, 2, 8,  512, 327680}  /* DSK_SAN */,
+    {77, 1, 26, 128, 256256}  /* DSK_X820 */,
+    {40, 1, 9,  512, 184320}  /* DSK_BW */,
+    {40, 2, 16, 256, 327680}  /* DSK_XM */,
+    {40, 1, 10, 512, 204800}  /* DSK_VT */,
+    {80, 2, 16, 256, 655360}  /* DSK_MZ */,
+    {35, 2, 16, 256, 286720}  /* DSK_OLI */,
+    {77, 1, 18, 128, 177408}  /* DSK_CRO */,
+    {77, 2, 26, 128, 512512}  /* DSK_WNG */,
+    {40, 2, 16, 256, 327680}  /* DSK_HK */,
+    {77, 2, 16, 256, 634880}  /* DSK_HP */,
+    {40, 1, 10, 512, 204800}  /* DSK_ACE */,
+    {80, 1, 36, 256, 737280}  /* DSK_FLEX */,
+    {35, 1, 10, 512, 179200}  /* DSK_NS */,
+    {35, 1, 17, 256, 152320}  /* DSK_VIC */,
+    {80, 2, 18, 256, 737280}  /* DSK_OS9 */,
+    {80, 2, 17, 256, 696320}  /* DSK_ORC */,
+    {80, 2, 9,  512, 737280}  /* DSK_DC42 */,
+    {40, 1, 9,  512, 184320}  /* DSK_P3 */,
+    {0, 0, 0, 0, 0}
 };
 
 #define DSK_GEOM_COUNT (sizeof(dsk_geometries)/sizeof(dsk_geometries[0]) - 1)

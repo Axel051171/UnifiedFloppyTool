@@ -192,7 +192,8 @@ jeder Befund eine Registerzeile hat.
 | 4c | ◐ **PC / CP-M / Japan gemessen** (50 Dateien, 23 672 Z.) — Artefakt `memory/arch_formate_pc.md`. Ein Befund, aber ein scharfer: **P3-254** — PH-2/MF-549 entfernte **einen von fünf** gleichartigen Phantom-Headern aus einer zusammenhängenden `#include`-Gruppe und meldete den Gesamtstand; die vier übrigen (900 Z., 39 Prototypen, 0 Umsetzungen, 0 Aufrufe) stehen seit v4.1.0. `src/formats/xdf/DEFERRED.md` auf den gemessenen Stand gesetzt — der Befund war **nicht neu**, er stand seit MF-459 in `KNOWN_ISSUES` |
 | 4d | ◐ **Sinclair/Amstrad/BBC gemessen** (40 Dateien, 13 316 Z.) — Artefakt `memory/arch_formate_8bit.md`. **P3-258:** die „dritte Format-Schicht" (`FloppyDevice`) ist **75 Dateien / 8207 Zeilen / 386 Funktionen**, nicht die 19 aus MF-461; 18 Funktionen haben einen externen Aufrufer, **alle 18 sind Tests**. Header-Durchgang sauber (ein Phantom, bereits P3-228) |
 | 4e | ◐ **Fluss + Wandler gemessen** (56 Dateien, 30 258 Z.) — Artefakt `memory/arch_formate_fluss.md`. **P3-259:** das Quarantäne-Register driftete in beiden handgepflegten Spalten; Zeilenspalte jetzt vom Tor abgeleitet, Fähigkeitsspalte berichtigt aber weiter gepflegt. Wandler-Frage war bereits durch `test_convert_table_has_dispatch` beantwortet: **46 angeboten, 14 bedient, 32 vom Preflight abgewiesen, 0 ohne Zweig** |
-| 4f–10 | offen |
+| 4f | ◐ **Rest gemessen** (112 Dateien, 29 648 Z. — als Differenz zu 4a–4e gerechnet, damit nichts durchfällt) — Artefakt `memory/arch_formate_rest.md`. Schwerpunkt `dsk_generic`, das **49 der 137 Plugin-Tafeln** erzeugt: drei tote Tabellenspalten **entfernt** (Drift in 4 von 49, darunter ein Name), **P3-260** Größe widerspricht der Geometrie bei 2 von 49, **P3-261** 38 von 49 kollidieren auf der Dateigröße bei gleicher Konfidenz |
+| 5–10 | offen |
 
 **Aus Phase 1 gefallen — beide durch Lesen mit Frage, nicht durch Lektüre:**
 
