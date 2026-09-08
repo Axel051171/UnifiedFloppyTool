@@ -293,6 +293,12 @@ foreach(test_source ${TEST_SOURCES})
         # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
         # die P3-154 seit MF-880 verlangt.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
+    elseif(${test_name} STREQUAL "test_td0_kommentarflag")
+        # MF-971: das registrierte Plugin prueft `version >= 0x10` statt
+        # Bit 7 von Byte 7 — vier Quellen sagen das Flag, darunter die
+        # eigene T2-Referenz src/samdisk/td0.cpp.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
     elseif(${test_name} STREQUAL "test_otdr_kein_nullintervall")
         # MF-967: der SCP-Ueberlauf-Platzhalter (0) lief als echter
         # Uebergang in Histogramm und PLL. Zwei von drei Verbrauchern

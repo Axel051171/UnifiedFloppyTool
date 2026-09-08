@@ -310,7 +310,37 @@ static bool trd_parse_system_sector(const uint8_t* data, size_t size,
     info->file_count = sys[0xE4];
     info->free_sectors = sys[0xE5] | (sys[0xE6] << 8);
     info->tr_dos_id = sys[0xE7];  /* Should be 0x10 */
-    info->deleted_files = sys[0xE9] | (sys[0xEA] << 8);
+
+    /* MF-970: hier stand `sys[0xE9] | (sys[0xEA] << 8)`.
+     *
+     * Beides sind RESERVIERTE Bytes. Die Belegung des TR-DOS-Infoblocks,
+     * abgezaehlt aus `trd.h` von `trdetz 0.3b3` (boo_boo, GPL) — die
+     * Struktur ist `#pragma pack(1)` und beginnt bei 0xDF:
+     *
+     *     +2  0xE1  next_free_sector     <- stimmt oben
+     *     +6  0xE5  free_sectors_l/h     <- stimmt oben
+     *     +8  0xE7  sectors_on_track
+     *     +9  0xE8  zero1[2]             0xE8, 0xE9
+     *     +11 0xEA  spc1[9]              0xEA .. 0xF2
+     *     +20 0xF3  zero2
+     *     +21 0xF4  deleted_files        EIN Byte
+     *     +22 0xF5  disc_name[8]
+     *
+     * Gelesen wurden also `zero1[1]` und `spc1[0]` — undefinierter
+     * Reservebereich. Bei den meisten TR-DOS-Fassungen genullt, aber
+     * nicht garantiert; die gemeldete Zahl war entweder zufaellig 0 oder
+     * falsch.
+     *
+     * DIE DATEI WUSSTE ES SELBST: drei Zeilen tiefer liest sie das
+     * Diskettenlabel bei `sys + 0xF5`. Liegt das Label dort, ist das
+     * Byte davor 0xF4 — die Belegung stand also bereits im Widerspruch
+     * zu sich selbst.
+     *
+     * Und das Feld ist EIN Byte breit, nicht zwei: `disc_name` beginnt
+     * bei 0xF5. Ein 16-Bit-Lesen faltete den ersten Buchstaben des
+     * Diskettennamens in die Zaehlung. (Der Bericht, der den Fehler
+     * meldete, schlug genau das vor — „0xF4-0xF5".) */
+    info->deleted_files = sys[0xF4];
     
     /* Disk label at offset 0xF5 (8 bytes) */
     trd_copy_filename(info->disk_label, sys + 0xF5, 8);

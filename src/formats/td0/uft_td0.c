@@ -66,8 +66,36 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
     pdata->sides = header[9];
     pdata->compressed = (magic == TD0_MAGIC_ADVANCED);
     
-    // Skip comment if present
-    if (pdata->version >= 0x10) {
+    /* MF-971: hier stand `if (pdata->version >= 0x10)`.
+     *
+     * Der Kommentarblock haengt am FLAG, nicht an der Version. Byte 7
+     * des Kopfes (`bTrackDensity`) traegt in Bit 7 die Angabe, ob einer
+     * folgt. Vier voneinander unabhaengige Quellen sagen dasselbe:
+     *
+     *   src/samdisk/td0.cpp:28   "Optional comment block, present if
+     *                             bit 7 is set in bTrackDensity above"
+     *                            :208  if (th.bTrackDensity & 0x80)
+     *   src/formats/td0/uft_td0_lzss.c:469
+     *                            if (img->header.stepping & 0x80)
+     *   libdisk/teledisk.c:341 (KCemu 0.5.1)
+     *                            if ((h.track_density & 0x80) != 0)
+     *   Die Kopfbelegung selbst — die Dichtewerte 0/1/2 belegen nur die
+     *   unteren Bits.
+     *
+     * Die ERSTE davon ist die Referenz, mit der `VERIFICATION_TIERS.md`
+     * TD0 auf T2 fuehrt. Sie liegt im eigenen Baum, und das Plugin
+     * widersprach ihr.
+     *
+     * Gemessen an gebauten Pruefdateien (2 Spuren, 9 Sektoren):
+     *
+     *   Version 0x15, Flag GELOESCHT -> gelesen 1 Zylinder / 16 Sektoren
+     *   Version 0x09, Flag GESETZT   -> gelesen 33 Zylinder / 84 Sektoren
+     *
+     * Beide Male mit `UFT_OK`. Im ersten Fall wurden 10 Byte Spurdaten
+     * als Kommentarkopf gelesen und danach eine Laenge uebersprungen,
+     * die aus Spurdaten stammte; im zweiten begann die Spursuche im
+     * Kommentartext. `header[7]` wurde bis hierher gar nicht gelesen. */
+    if (header[7] & 0x80) {
         uint8_t com_hdr[10];
         if (fread(com_hdr, 1, 10, f) != 10) { free(pdata); fclose(f); return UFT_ERR_IO; }
         uint16_t com_len = uft_read_le16(com_hdr + 2);
