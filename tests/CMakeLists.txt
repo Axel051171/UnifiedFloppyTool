@@ -293,6 +293,12 @@ foreach(test_source ${TEST_SOURCES})
         # neu oeffnen -> lesen), nicht am Funktionszeiger — die Form,
         # die P3-154 seit MF-880 verlangt.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c)
+    elseif(${test_name} STREQUAL "test_otdr_kein_nullintervall")
+        # MF-967: der SCP-Ueberlauf-Platzhalter (0) lief als echter
+        # Uebergang in Histogramm und PLL. Zwei von drei Verbrauchern
+        # lassen ihn fallen, der OTDR-Lader nicht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c)
     elseif(${test_name} STREQUAL "test_nib_ring_und_blindzone")
         # MF-948: der NIB-Leser fuehrt eine private Zweitfassung des
         # Apple-GCR-Abtasters, die weder umlaeuft noch die letzten 400

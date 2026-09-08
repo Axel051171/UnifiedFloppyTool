@@ -267,31 +267,85 @@ void otdr_track_free(otdr_track_t *track) {
     free(track);
 }
 
+/* MF-967: 0-Eintraege sind UEBERLAUFMARKEN, keine Uebergaenge.
+ *
+ * Eine SCP-Datei speichert Flusszeiten als 16-Bit-Werte. Ist ein
+ * Intervall groesser als 65535 Einheiten, schreibt das Format `0x0000`
+ * als Marke und rechnet 65536 auf den naechsten Eintrag drauf. Die
+ * offizielle Spezifikation sagt das woertlich:
+ *
+ *     "0x0000 [...] the time overflowed [...] 65536 is added for each
+ *      entry"
+ *     — SCP Image Specification v1.9, Jim Drew (SuperCard Pro)
+ *
+ * `uft_scp_parser.c` setzt das richtig um und laesst an der Stelle der
+ * Marke einen 0-Platzhalter stehen. Zwei von drei Verbrauchern wissen
+ * das und lassen ihn fallen:
+ *
+ *     src/flux/uft_flux_decoder.c   if (intervals[i] == 0) continue;
+ *     src/fluxwritejob.cpp          if (ns == 0) continue;
+ *
+ * Dieser hier tat es NICHT — ein glattes `memcpy` — und damit lief die
+ * Marke als ECHTER Uebergang in die Analyse:
+ *
+ *   * `otdr_track_histogram()` legte sie in Bin 0 (`ns / 100`),
+ *   * `otdr_track_analyze()` fuetterte sie in den PLL
+ *     (`otdr_pll_feed(&track->pll, 0, ...)`) — ein Phasenstoss aus dem
+ *     Nichts, dessen Abweichung als echte Messung ins Qualitaetsprofil
+ *     einging.
+ *
+ * Ein Flussintervall von 0 ns ist physikalisch unmoeglich: zwei
+ * Uebergaenge zur selben Zeit gibt es nicht. Das war eine ERFUNDENE
+ * MESSUNG, und sie traf genau die Disketten, um derentwillen die
+ * OTDR-Analyse existiert — Ueberlaeufe entstehen bei langen Luecken,
+ * unformatierten Bereichen und No-Flux-Zonen, also an
+ * Kopierschutz-Merkmalen.
+ *
+ * Gefiltert wird HIER und nicht bei den Aufrufern: es gibt zwei
+ * (`uft_otdr_bridge.c`, `uft_otdr_panel.cpp`), und keiner filterte.
+ * Eine Zusicherung an der Grenze gilt fuer alle kuenftigen mit.
+ *
+ * `revolution_ns` bleibt unveraendert: die Marke traegt 0 ns, ihre Zeit
+ * steckt bereits im naechsten Eintrag. Der Test sichert das ab, damit
+ * ein spaeterer "Fix", der die Zeitachse verkuerzt, nicht durchgeht. */
 void otdr_track_load_flux(otdr_track_t *track, const uint32_t *flux_ns,
                           uint32_t count, uint8_t rev) {
     if (!track || !flux_ns || count == 0) return;
 
+    /* Erst zaehlen, dann anlegen — die Zahl der echten Uebergaenge ist
+     * die Groesse, die alles weitere benutzt. */
+    uint32_t echt = 0;
+    for (uint32_t i = 0; i < count; i++)
+        if (flux_ns[i] != 0) echt++;
+    if (echt == 0) return;
+
     if (rev == 0) {
         /* Primary flux data */
         free(track->flux_ns);
-        track->flux_ns = malloc(count * sizeof(uint32_t));
+        track->flux_ns = malloc(echt * sizeof(uint32_t));
         if (!track->flux_ns) return;
-        memcpy(track->flux_ns, flux_ns, count * sizeof(uint32_t));
-        track->flux_count = count;
 
-        /* Compute revolution time */
+        uint32_t n = 0;
         track->revolution_ns = 0;
-        for (uint32_t i = 0; i < count; i++)
+        for (uint32_t i = 0; i < count; i++) {
+            /* Die Umdrehungsdauer summiert ueber ALLE Eintraege — die
+             * Marken tragen 0, aendern also nichts, und der Ausdruck
+             * bleibt der der Quelle. */
             track->revolution_ns += flux_ns[i];
+            if (flux_ns[i] != 0) track->flux_ns[n++] = flux_ns[i];
+        }
+        track->flux_count = n;
     }
 
     /* Multi-read storage */
     if (rev < OTDR_MAX_REVOLUTIONS) {
         free(track->flux_multi[rev]);
-        track->flux_multi[rev] = malloc(count * sizeof(uint32_t));
+        track->flux_multi[rev] = malloc(echt * sizeof(uint32_t));
         if (track->flux_multi[rev]) {
-            memcpy(track->flux_multi[rev], flux_ns, count * sizeof(uint32_t));
-            track->flux_multi_count[rev] = count;
+            uint32_t n = 0;
+            for (uint32_t i = 0; i < count; i++)
+                if (flux_ns[i] != 0) track->flux_multi[rev][n++] = flux_ns[i];
+            track->flux_multi_count[rev] = n;
             if (rev >= track->num_revolutions)
                 track->num_revolutions = rev + 1;
         }
