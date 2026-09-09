@@ -169,7 +169,13 @@ typedef struct uft_forensic_track {
     float    quality_score;             /**< average sector quality */
 
     /* Timing. */
-    uint32_t rotation_time_ms;          /**< observed rotation */
+    /* MF-995: **0 heisst „nicht gemessen"**, nicht „null Millisekunden".
+     *
+     * Hier stand „observed rotation". Beobachtet wurde nichts:
+     * `analyze_timing()` setzte unbedingt 200.0f — eine Konstante fuer
+     * 300 U/min, unabhaengig von der Aufnahme. Eine Umdrehungszeit
+     * braucht Indexmarken, und die kennt diese Ebene nicht. */
+    uint32_t rotation_time_ms;          /**< 0 = nicht gemessen */
     uint32_t timing_anomalies;          /**< count of irregularities */
 } uft_forensic_track_t;
 

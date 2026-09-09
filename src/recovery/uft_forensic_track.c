@@ -59,9 +59,20 @@ static int analyze_timing(
     timing_analysis_t *out_analysis,
     uft_forensic_session_t *session)
 {
+    /* MF-995: das `memset` steht VOR den Pruefungen.
+     *
+     * Vorher sprang diese Funktion bei `flux_count < 10` zurueck, ohne
+     * `out_analysis` anzufassen — der Aufrufer bekam seine eigene
+     * uninitialisierte Stapelvariable zurueck und benutzte sie weiter.
+     * Eine genullte Struktur ist hier ehrlich: kein Histogramm (NULL,
+     * also `free()`-sicher), keine Zeiten, keine Anomalien.
+     *
+     * Das allein genuegt aber NICHT — Null ist als Umdrehungszeit
+     * genauso erfunden wie Muell. Deshalb prueft der Aufrufer seit
+     * MF-995 zusaetzlich den Rueckgabewert. */
+    if (out_analysis) memset(out_analysis, 0, sizeof(*out_analysis));
+
     if (!flux_timestamps || flux_count < 10 || !out_analysis) return -1;
-    
-    memset(out_analysis, 0, sizeof(*out_analysis));
     
     // Compute deltas
     float *deltas = calloc(flux_count - 1, sizeof(float));
@@ -90,9 +101,26 @@ static int analyze_timing(
     float variance = var_sum / (flux_count - 1);
     float stddev = sqrtf(variance);
     
-    // Estimate rotation time (assuming ~200ms for 300RPM)
-    // In real implementation, this would use index pulses
-    out_analysis->rotation_time_ms = 200.0f;  // Default
+    /* MF-995: hier stand `rotation_time_ms = 200.0f` — eine Konstante
+     * mit dem Etikett einer Messung.
+     *
+     * Der Wert hing an KEINER Eingabe. Er ging als
+     * `uft_forensic_track_t.rotation_time_ms` hinaus, und dessen
+     * Kopfzeile nannte ihn „observed rotation". Der Kommentar daneben
+     * gab es selbst zu: „In real implementation, this would use index
+     * pulses".
+     *
+     * Eine Umdrehungszeit LAESST SICH aus dieser Eingabe nicht
+     * bestimmen: `analyze_timing()` bekommt Zeitstempel von
+     * Flusswechseln, keine Indexmarken. Ohne Index gibt es keinen
+     * Umlaufanfang und damit keine Umdrehung.
+     *
+     * Bleibt also 0 aus dem `memset` — und 0 heisst hier ausdruecklich
+     * „nicht gemessen", nicht „null Millisekunden". Dieselbe Regel wie
+     * bei `uft_write_protect_t` (MF-986): eine genullte Struktur soll
+     * ehrlich sein, nicht plausibel. Wer die Zahl braucht, muss sie aus
+     * den Indexmarken holen; die stehen in `flux_raw_data_t`, nicht
+     * hier. */
     
     // Cell time is the most common delta (mode)
     // Build histogram to find mode
@@ -317,10 +345,35 @@ int uft_forensic_recover_track(
     out_track->cylinder = cylinder;
     out_track->head = head;
     
-    // Phase 1: Timing Analysis (use first revolution)
+    /* Phase 1: Timing Analysis (use first revolution)
+     *
+     * MF-995: der Rueckgabewert wird GEPRUEFT.
+     *
+     * `analyze_timing()` sagt ab, wenn eine Umdrehung weniger als zehn
+     * Flusswechsel hat. Das ist kein Kunstgriff, sondern **eine leere
+     * oder schwer beschaedigte Spur** — also genau der Fall, fuer den es
+     * dieses Modul gibt.
+     *
+     * Vorher wurde die Absage verschluckt und die Struktur an vier
+     * Stellen weiterbenutzt: als gemessene Umdrehungszeit (unten), im
+     * NENNER einer Division (`timing.cell_time_ns`), als Anomalienzahl,
+     * und als Zeiger an `free()`. Bei einer uninitialisierten Struktur
+     * war das letzte eine Freigabe von Stapelinhalt.
+     *
+     * Jetzt wird abgesagt. Eine Spur, deren Zeiten nicht messbar sind,
+     * bekommt keine erfundenen — das ist dieselbe Regel wie in MF-980
+     * fuer Sektoren und in MF-987 fuer Spuren. */
     timing_analysis_t timing;
-    analyze_timing(flux_timestamps[0], flux_counts[0], &timing, session);
-    
+    if (analyze_timing(flux_timestamps[0], flux_counts[0],
+                       &timing, session) != 0) {
+        uft_forensic_log(session, 1,
+            "C%u H%u: Umdrehung mit %zu Flusswechseln — zu wenig fuer eine "
+            "Zeitmessung. Keine Spur erzeugt (erfundene Zeiten waeren "
+            "schlimmer als keine).",
+            cylinder, head, flux_counts[0]);
+        return -1;
+    }
+
     out_track->rotation_time_ms = timing.rotation_time_ms;
     
     // Determine expected format

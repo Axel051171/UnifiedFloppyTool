@@ -1670,6 +1670,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_forensik_kurze_spur_erfindet_keine_zeiten")
+        # MF-995: `analyze_timing()` sprang bei unter zehn Flusswechseln
+        # zurueck VOR seinem eigenen `memset`; der Aufrufer prueft seither
+        # den Rueckgabewert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_forensic_track.c
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_forensic_recovery.c)
     elseif(${test_name} STREQUAL "test_pll_klemme")
         # MF-866: die Periodenklemme zaehlt ihre Treffer. Der Bericht
         # meldete "keine Klemme" — die gibt es seit jeher; gefehlt hat
