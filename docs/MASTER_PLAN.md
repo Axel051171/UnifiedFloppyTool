@@ -58,7 +58,11 @@ Jede Session beginnt hier — nicht mit einem frischen Scan.
   hält nur die generierte Datei aktuell, nicht diese Aufzählung. (Die frühere
   „41 % mit realen Tests"-Angabe war hand-gepflegt und zählte synthetische
   Tests mit.)
-- 45 Konvertierungspfade, 13 Roundtrip-Matrix-Einträge
+- 44 Konvertierungspfade registriert, 16 Roundtrip-Matrix-Einträge
+  (MF-983: hier stand „45 … 13“. Beide Zahlen hingen seit MF-541 an
+  einer Ableitung — aber nur in `CLAUDE.md`; dieses Dokument fuehrte
+  sie von Hand und ist mitgedriftet. Seit MF-983 gilt die Ableitung
+  auch hier.)
 - Noch 11 Alt-Dateien im Pattern-A-Stil (`*_parser_v3.c`) — Rest der
   ehemals „287 Stubs" wurde in MF-011 gelöscht oder nach Pattern B migriert
 

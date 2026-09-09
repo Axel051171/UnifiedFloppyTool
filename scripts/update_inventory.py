@@ -282,6 +282,25 @@ DERIVED_CLAIMS = [
     ("CLAUDE.md", r"\*\*(\d+)\*\* offene Zeilen", _quarantine_open_count,
      "CLAUDE.md: offene Zeilen in QUARANTINE.md "
      "(vollzogen + vorgemerkt)"),
+    # MF-983: dieselben zwei Groessen stehen in vier WEITEREN Dokumenten,
+    # und alle vier waren gedriftet (45/13 statt 44/16, „nur 8" statt 14,
+    # „29 ungeprueft" statt 30). MF-541 hat die Ableitung eingefuehrt und
+    # nur `CLAUDE.md` daran gehaengt — wer die Zahl anderswo pflegte,
+    # pflegte sie falsch. Das ist genau der Fall, den A2 beschreibt, im
+    # Dokument, das A2 fuehrt.
+    ("docs/MASTER_PLAN.md", r"(\d+) Konvertierungspfade registriert",
+     _table_pair_count, "Paare in g_conversion_paths[]"),
+    ("docs/MASTER_PLAN.md", r"(\d+) Roundtrip-Matrix-Eintr",
+     _matrix_entry_count, "Eintraege in g_matrix[]"),
+    ("docs/SUBSYSTEM_MATURITY.md", r"\| (\d+) Pfade registriert \|",
+     _table_pair_count, "Paare in g_conversion_paths[]"),
+    ("docs/SUBSYSTEM_MATURITY.md", r"(\d+) Roundtrip-Matrix-Eintr",
+     _matrix_entry_count, "Eintraege in g_matrix[]"),
+    ("docs/SHOWCASE.md", r"an allen (\d+) Konvertierungspfaden",
+     _table_pair_count, "Paare in g_conversion_paths[]"),
+    ("docs/BACKLOG.md", r"von (\d+) Wandlungspfaden ungepr",
+     _table_pair_count, "Paare in g_conversion_paths[]"),
+
     # MF-982: die Tabellenzahl, dreimal in CLAUDE.md, bis heute gepflegt.
     ("CLAUDE.md", r"\((\d+) Pfade registriert", _table_pair_count,
      "Paare in g_conversion_paths[] (ohne UNKNOWN und Identitaet)"),

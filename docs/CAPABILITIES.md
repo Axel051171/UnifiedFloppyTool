@@ -176,20 +176,56 @@ fields). Vollständige Liste über `audit_plugin_compliance.py --list`.
 | Revolution Fingerprint | wired | unit-getestet |
 | Soft-Decision LLR | wired | unit-getestet |
 
-**Caveat:** Alle 8 DeepRead-Module sind als C-Modul implementiert und in der
-GUI über `UftOtdrPanel` zugänglich. Real-Disk-Validierung gegen schwer
-beschädigte Disketten ist work-in-progress; aktuelle Tests verwenden
-synthetische Flux-Vektoren aus `tests/vectors/`.
+**Caveat (berichtigt MF-983):** hier stand „Alle 8 DeepRead-Module sind als
+C-Modul implementiert und in der GUI über `UftOtdrPanel` zugänglich." Der
+erste Halbsatz stimmt, der zweite nicht.
+
+Gemessen (MF-767, nachgemessen MF-983 je Bezeichner über `git ls-files`):
+**1 von 8 ist erreichbar.** Zugänglich ist allein der *Encoding Boost*
+(`uft_otdr_detect_encoding`, gerufen in `src/gui/uft_otdr_panel.cpp`). Die
+fünf Forensik-Module in `src/analysis/deepread/` tragen **13 Funktionen mit
+null Aufrufern außerhalb ihres Verzeichnisses**; *Adaptive Decode* und die
+float-gewichtete Fusion (`uft_otdr_fuse_sector`) werden nur innerhalb ihrer
+eigenen Datei genannt.
+
+Das ist **Bestand, nicht Fähigkeit** — dieselbe Lage wie beim
+Kopierschutz-Katalog unten. Real-Disk-Validierung gegen schwer beschädigte
+Disketten ist ohnehin offen; aktuelle Tests verwenden synthetische
+Flux-Vektoren.
 
 ---
 
 ## Kopierschutz-Erkennung
 
-55+ historische Schutz-Schemes erkannt (V-MAX!, RapidLok, CopyLock, Speedlock,
-ProLok, Vorpal, Rob Northen, Dungeon Master Fuzzy Bits, …). Liste in
-`src/protection/` + Tests in `tests/test_protection_*.c`.
+Der **Katalog** nennt 55+ historische Schutz-Schemes (V-MAX!, RapidLok,
+CopyLock, Speedlock, ProLok, Vorpal, Rob Northen, Dungeon Master Fuzzy
+Bits, …) in `src/protection/`.
 
-**Erkennung ≠ Bypass.** UFT dokumentiert, was es findet — kein Cracking-Tool.
+**Was davon läuft, und was nicht (berichtigt MF-983).** Hier stand „55+
+historische Schutz-Schemes **erkannt**" — ohne Vorbehalt, während
+`CLAUDE.md` und `README.md` seit MF-508/509 das Gegenteil sagen. Gemessen
+(`scripts/audit_protection_claims.py`, Stand `docs/BACKLOG.md` C1):
+
+| | |
+|---|---|
+| Dateien in `src/protection/` | 39 |
+| Funktionen | 363 |
+| **von außerhalb gerufen** | **9** |
+| von einem Test berührt | 39 |
+| weder verdrahtet noch geprüft | **324** |
+
+Automatisch läuft die Erkennung von Schutz-**Signalen** (Fuzzy Bits,
+lange/kurze Spuren, No-Flux-Bereiche, Overlap, Desync, Weak Bits, Illegal
+GCR) plus drei heuristisch benannten Schemata. Der **Katalog der benannten
+Verfahren hat keinen Aufrufer** (P0-2 / C1).
+
+Das ist Absicht und kein Versäumnis: ihn anzuschließen hieße, 324
+ungeprüfte Funktionen an ein forensisches Urteil zu hängen — genau die
+Lage, aus der die fünf fabrizierten Parser kamen (FMT-2/3/10/11/12). Die
+Oberfläche sagt es von sich aus (`src/gui/ProtectionAnalysisWidget.cpp`).
+
+**Erkennung ≠ Bypass.** UFT dokumentiert, was es findet — kein
+Cracking-Tool.
 
 ---
 

@@ -12,9 +12,12 @@ Floppy-Disketten**. Sie liest Flux-Transitions auf 25-ns-Auflösung, dekodiert
 über alle gängigen 8-Bit/16-Bit-Format-Konventionen hinweg (Commodore, Apple,
 Atari, Amiga, IBM PC, Amstrad, BBC, Japan), und dokumentiert jedes Bit das
 verloren ginge **bevor** es verloren geht — über einen Single-Chokepoint
-LOSS.preflight an allen 44 Konvertierungspfaden — und es LAESST nur 8
-davon durch: 2 verlustfrei, 6 mit ausdruecklicher Zustimmung, 3 als
-unmoeglich, **33 als ungeprueft abgewiesen** (MF-526).
+LOSS.preflight an allen 44 Konvertierungspfaden — und es laesst nur 14
+davon durch: **6 verlustfrei** (jedes mit einer Bit-Identitaets-Messung
+im Baum) und **8 nur mit ausdruecklicher Zustimmung**; 30 weist es als
+**ungeprueft** ab, 2 als **unmoeglich** (Stand MF-982; hier stand
+„nur 8 … 2 verlustfrei, 6 mit Zustimmung, 3 unmoeglich, 33 ungeprueft“
+aus MF-526).
 
 Die Architektur ist **Type-Driven**: 9 Hardware-Controller liegen hinter einer
 einheitlichen V2-Provider-Abstraktion mit Compile-Time-Konzepten und Honest-
