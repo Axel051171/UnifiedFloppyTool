@@ -1158,6 +1158,20 @@ def main() -> int:
         import audit_durchgang_vollstaendigkeit as _dv
         all_errors.append(("Durchgang-Vollstaendigkeit", _dv.check(repo)))
 
+        # Tor 63 (MF-985): eine Faehigkeitszusage in einem getrackten
+        # Dokument braucht den Vorbehalt, den die Messung verlangt.
+        #
+        # `docs/CAPABILITIES.md` trug bis MF-983 „55+ historische
+        # Schutz-Schemes erkannt" ohne Einschraenkung — waehrend
+        # CLAUDE.md und README.md seit MF-508 das Gegenteil sagen und
+        # BACKLOG C1 die Zahlen unter einem Tor haelt. Kein Tor sah
+        # es: `audit_protection_claims.py` prueft die ZAHL IM
+        # EINTRAG, nicht die ZUSAGE IM BAUM.
+        #
+        # Grundlinie 0. Was es nicht sehen kann, steht in seinem Kopf.
+        import audit_faehigkeitszusage as _fz
+        all_errors.append(("Faehigkeitszusage", _fz.check(repo)))
+
         # Tor 60 (MF-932): die vier CBM-Zonenlaengen liegen vielfach im
         # Baum, und NICHT in einer gemeinsamen Zaehlweise. P3-150 hielt
         # seit MF-877 „elffach, in vier Zaehlweisen" fest — eine
