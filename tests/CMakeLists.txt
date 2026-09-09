@@ -1432,7 +1432,10 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_disk_metadata_variant"
            OR ${test_name} STREQUAL "test_format_variants"
            OR ${test_name} STREQUAL "test_decode_options_reach"
-           OR ${test_name} STREQUAL "test_convert_roundtrip_measured")
+           OR ${test_name} STREQUAL "test_convert_roundtrip_measured"
+           # MF-991: erzeugt ueber die Registry und oeffnet das Ergebnis
+           # mit uft_disk_open() wieder -- braucht dieselbe Menge.
+           OR ${test_name} STREQUAL "test_abbild_erzeugen")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

@@ -1005,6 +1005,7 @@ HEADERS += \
 
 SOURCES += \
     src/core/uft_core_stubs.c \
+    src/core/uft_disk_create_image.c \
     src/core/uft_pll.c
 
 # ═══════════════════════════════════════════════════════════════════════════════

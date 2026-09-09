@@ -10,6 +10,7 @@ find_package(ZLIB QUIET)
 set(CORE_SOURCES
     uft_advanced_mode.c
     uft_core_stubs.c           # glue: real plugin-delegation for disk API
+    uft_disk_create_image.c    # MF-991: die Tuer zu plugin->create
     ../flux/uft_scp_parser.c   # MF-418: uft_core_stubs' SCP adapters call into it
     uft_decode_pipeline.c
     uft_format_plugin.c        # plugin registry + probe helpers
