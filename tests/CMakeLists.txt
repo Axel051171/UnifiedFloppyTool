@@ -2291,7 +2291,8 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/analysis)
     elseif(${test_name} STREQUAL "test_write_gate"
-           OR ${test_name} STREQUAL "test_write_gate_snapshot_survives")
+           OR ${test_name} STREQUAL "test_write_gate_snapshot_survives"
+           OR ${test_name} STREQUAL "test_write_gate_unbekannt_verweigert")
         # Include write-gate policy + snapshot sources
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c

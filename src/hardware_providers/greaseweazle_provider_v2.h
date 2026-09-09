@@ -152,6 +152,23 @@ public:
     /** True iff `open()` succeeded and `close()` has not been called. */
     bool is_open() const noexcept { return m_handle != nullptr; }
 
+    /**
+     * @brief Schreibschutz VORAB abfragen (MF-986, Concept
+     *        `uft::hal::SensesWriteProtect`).
+     *
+     * Greaseweazle ist der einzige Controller in diesem Baum, der den
+     * Schreibschutz-Stift lesen kann, **bevor** etwas geschrieben wird.
+     * XUM1541, Applesauce und UFI erfahren ihn erst aus einem
+     * Schreib*ergebnis* — da ist die Diskette schon angefasst; SCP,
+     * KryoFlux und FC5025 nennen ihn gar nicht.
+     *
+     * Dreiwertig, nicht `bool`: ist das Geraet nicht offen, lautet die
+     * Antwort `UFT_WP_UNKNOWN` und **nicht** „ungeschuetzt". Der
+     * Unterschied entscheidet, ob auf ein Original geschrieben werden
+     * darf; das Schreibtor verweigert bei UNKNOWN (MF-986a).
+     */
+    ::uft_write_protect_t sense_write_protect() noexcept;
+
     /* MF-202 (P1.22): `raw_handle()` — the V1-shape C-API escape hatch —
      * is removed. Its only consumers, FluxCaptureJob and FluxWriteJob,
      * were migrated to the V2 outcome surface in P1.20 / P1.21; every

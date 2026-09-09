@@ -36,6 +36,9 @@ typedef enum {
     UFT_GATE_VERIFY_FAILED = -203,      /**< Snapshot verification failed */
     UFT_GATE_NEEDS_OVERRIDE = -204,     /**< Requires explicit user override */
     UFT_GATE_PRECHECK_FAILED = -205,    /**< General precheck failure */
+    /* MF-986 */
+    UFT_GATE_TARGET_NOT_RELEASED = -206, /**< Ziel nicht ausdruecklich freigegeben */
+    UFT_GATE_WRITE_PROTECT_UNKNOWN = -207, /**< Schreibschutz nicht ermittelbar */
 } uft_gate_status_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -62,6 +65,33 @@ typedef struct {
  * Drive Diagnostics (for gate check)
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * @brief Schreibschutz-Zustand des Mediums — DREIWERTIG (MF-986).
+ *
+ * Ein `bool` kann „nicht geschuetzt" und „weiss es nicht" nicht
+ * unterscheiden, und **diese Verwechslung erlaubt das Schreiben auf ein
+ * Original**. Genau daran ist der Bestand vor MF-986 vorbeigelaufen: der
+ * Diagnose-Schritt endete mit
+ *
+ *     } else { result->checks_passed |= UFT_CHECK_DRIVE; }
+ *
+ * — das Fehlen des Flags `UFT_DRIVE_DIAG_WRITE_PROTECT` hiess „gefragt,
+ * nicht geschuetzt" ODER „niemand hat gefragt". Eine genullte
+ * `uft_drive_diag_t`, also genau das, was ein Backend ohne Sensor
+ * liefert, kam als **bestandene Pruefung** durch.
+ *
+ * `UFT_WP_UNKNOWN` ist **0**, damit eine genullte Struktur ehrlich ist:
+ * wer nichts eintraegt, behauptet nichts. Das Tor verweigert darauf.
+ *
+ * Vorbild fuer die Regel: `read_flux_ex` (MF-954) — „Fehlt der Zeiger,
+ * meldet die API NULL Umdrehungsgrenzen; es ERFINDET keine."
+ */
+typedef enum {
+    UFT_WP_UNKNOWN     = 0,  /**< Niemand hat gefragt, oder niemand konnte */
+    UFT_WP_PROTECTED   = 1,  /**< Gefragt: Medium ist schreibgeschuetzt */
+    UFT_WP_UNPROTECTED = 2,  /**< Gefragt: Medium ist NICHT schreibgeschuetzt */
+} uft_write_protect_t;
+
 typedef enum {
     UFT_DRIVE_DIAG_UNSTABLE_RPM   = (1u << 0),  /**< RPM out of spec */
     UFT_DRIVE_DIAG_BAD_INDEX      = (1u << 1),  /**< Index pulse issues */
@@ -78,6 +108,14 @@ typedef struct {
     double seek_error_tracks;    /**< Seek error in tracks */
     uint32_t flags;              /**< Bitmask of uft_drive_diag_flag_t */
     char controller[64];         /**< Controller name */
+    /* MF-986 — ANGEHAENGT (ABI-Regel: nur anhaengen).
+     *
+     * Das Flag `UFT_DRIVE_DIAG_WRITE_PROTECT` oben bleibt fuer Aufrufer,
+     * die es setzen; es ist aber **zweiwertig** und sagt nichts ueber den
+     * Fall „nicht gefragt". Wer den Schreibschutz ermittelt hat, traegt
+     * ihn HIER ein. Wer es nicht konnte, laesst das Feld auf
+     * `UFT_WP_UNKNOWN` — und bekommt eine Absage statt einer Erlaubnis. */
+    uft_write_protect_t write_protect;
 } uft_drive_diag_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -92,6 +130,20 @@ typedef struct {
     bool allow_unsafe_drive;        /**< Allow override for unsafe drives */
     bool strict_mode;               /**< Fail on any warning */
     uint32_t min_confidence;        /**< Minimum format confidence (0-1000) */
+    /* MF-986 — ANGEHAENGT.
+     *
+     * Die ausdrueckliche Freigabe des ZIELMEDIUMS. Analog zu
+     * `accept_data_loss` im Wandler: der Benutzer sagt, dass diese
+     * Diskette beschrieben werden darf.
+     *
+     * Vorgabe ist `false`, und das ist die Aussage: ein nicht
+     * schreibgeschuetztes Medium ist noch **kein freigegebenes Ziel**.
+     * Pasti ST verweigert aus demselben Grund sogar das LESEN von
+     * Quelldisketten, die nicht schreibgeschuetzt sind (P3-298).
+     *
+     * Die Designated-Initialiser-Makros unten lassen das Feld
+     * absichtlich weg — wer eine Vorgabe uebernimmt, gibt nichts frei. */
+    bool target_media_released;
 } uft_write_gate_policy_t;
 
 /**

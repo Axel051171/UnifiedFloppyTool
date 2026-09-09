@@ -213,6 +213,11 @@ const char *uft_gate_status_str(uft_gate_status_t status) {
         case UFT_GATE_VERIFY_FAILED: return "Snapshot verification failed";
         case UFT_GATE_NEEDS_OVERRIDE: return "Requires user override";
         case UFT_GATE_PRECHECK_FAILED: return "Precheck failed";
+        /* MF-986 */
+        case UFT_GATE_TARGET_NOT_RELEASED:
+            return "Ziel nicht freigegeben";
+        case UFT_GATE_WRITE_PROTECT_UNKNOWN:
+            return "Schreibschutz unbekannt - verweigert";
         default: return "Unknown gate status";
     }
 }
@@ -325,7 +330,8 @@ uft_gate_status_t uft_write_gate_precheck_with_diag(
                     result->checks_failed |= UFT_CHECK_DRIVE;
                     return result->status;
                 }
-            } else if (drive_diag->flags & UFT_DRIVE_DIAG_WRITE_PROTECT) {
+            } else if ((drive_diag->flags & UFT_DRIVE_DIAG_WRITE_PROTECT) ||
+                       drive_diag->write_protect == UFT_WP_PROTECTED) {
                 set_reason(result, "Disk is write-protected");
                 result->status = UFT_GATE_DRIVE_UNSAFE;
                 result->checks_failed |= UFT_CHECK_DRIVE;
@@ -333,6 +339,47 @@ uft_gate_status_t uft_write_gate_precheck_with_diag(
             } else if (drive_diag->flags & UFT_DRIVE_DIAG_NO_DISK) {
                 set_reason(result, "No disk in drive");
                 result->status = UFT_GATE_DRIVE_UNSAFE;
+                result->checks_failed |= UFT_CHECK_DRIVE;
+                return result->status;
+
+            /* ── MF-986: hier stand ein pauschales `else`, das die
+             * Laufwerkspruefung als BESTANDEN markierte.
+             *
+             * Das Fehlen des Schreibschutz-Flags hiess damit zweierlei:
+             * „gefragt, nicht geschuetzt" ODER „niemand hat gefragt".
+             * Eine genullte `uft_drive_diag_t` — genau das, was ein
+             * Backend ohne Sensor liefert — kam als bestandene Pruefung
+             * durch. Das ist der Bool-Fehler, gegen den der dreiwertige
+             * Zustand gebaut ist: drei Werte helfen nur, wenn der
+             * VERBRAUCHER den dritten richtig behandelt.
+             *
+             * Zwei Absagen, in dieser Reihenfolge:
+             *
+             *   UNBEKANNT              -> Verweigerung. Nicht Warnung,
+             *                             nicht Vorgabewert.
+             *   UNGESCHUETZT, aber das Ziel ist nicht ausdruecklich
+             *   freigegeben           -> Verweigerung.
+             *
+             * Der zweite Fall ist der unbequeme und der wichtigere: ein
+             * Medium ohne Schreibschutzkerbe ist kein freigegebenes
+             * Ziel. Pasti ST verweigert aus demselben Grund sogar das
+             * LESEN nicht schreibgeschuetzter Quellen (P3-298). */
+            } else if (drive_diag->write_protect == UFT_WP_UNKNOWN) {
+                set_reason(result,
+                           "Schreibschutz nicht ermittelbar (%s meldet ihn "
+                           "nicht vorab) - Schreiben verweigert. Unbekannt "
+                           "ist keine Erlaubnis.",
+                           drive_diag->controller[0] ? drive_diag->controller
+                                                     : "dieser Controller");
+                result->status = UFT_GATE_WRITE_PROTECT_UNKNOWN;
+                result->checks_failed |= UFT_CHECK_DRIVE;
+                return result->status;
+            } else if (!policy->target_media_released) {
+                set_reason(result,
+                           "Medium ist nicht schreibgeschuetzt, aber als Ziel "
+                           "nicht freigegeben - Schreiben verweigert");
+                result->status = UFT_GATE_TARGET_NOT_RELEASED;
+                result->override_required = true;
                 result->checks_failed |= UFT_CHECK_DRIVE;
                 return result->status;
             } else {

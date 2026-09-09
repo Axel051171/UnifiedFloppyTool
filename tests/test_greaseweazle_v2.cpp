@@ -66,6 +66,12 @@ static_assert(MeasuresRPM<GreaseweazleProviderV2>,
     "GreaseweazleProviderV2 must satisfy MeasuresRPM");
 static_assert(DetectsDrive<GreaseweazleProviderV2>,
     "GreaseweazleProviderV2 must satisfy DetectsDrive");
+/* MF-986: der einzige Controller im Baum, der den Schreibschutz VORAB
+ * lesen kann. Diese Zusicherung ist zugleich der Beleg, dass das Concept
+ * `SensesWriteProtect` nicht leer ist — ein Vertrag, den niemand
+ * erfuellt, waere selbst ein Schalter ohne Schaltung. */
+static_assert(SensesWriteProtect<GreaseweazleProviderV2>,
+    "GreaseweazleProviderV2 must satisfy SensesWriteProtect");
 
 /* Negative: intentionally-omitted capabilities.
  * GW reads/writes raw flux — sector decoding is upstream. */

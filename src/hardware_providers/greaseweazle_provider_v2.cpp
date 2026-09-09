@@ -262,6 +262,32 @@ ProviderError GreaseweazleProviderV2::gw_err_to_provider_error(
  *  uft_gw_read_track()'s revolutions argument exactly.
  * ──────────────────────────────────────────────────────────────────────── */
 
+/* ── Schreibschutz VORAB (MF-986, Concept SensesWriteProtect) ─────────
+ *
+ * Greaseweazle ist der einzige Controller in diesem Baum, der den
+ * Schreibschutz-Stift lesen kann, BEVOR etwas geschrieben wird.
+ * XUM1541, Applesauce und UFI erfahren ihn erst aus einem
+ * Schreib-ERGEBNIS — da ist die Diskette schon angefasst; SCP,
+ * KryoFlux und FC5025 nennen ihn in null Dateien.
+ *
+ * `do_write_raw_flux()` unten fragt denselben Stift und lehnt mit
+ * WriteRefused ab. Diese Methode macht die Antwort ABFRAGBAR, ohne
+ * einen Schreibversuch: das ist der Unterschied, den P3-298 meint.
+ */
+::uft_write_protect_t GreaseweazleProviderV2::sense_write_protect() noexcept
+{
+    /* Nicht offen heisst NICHT „ungeschuetzt".
+     *
+     * Der Unterschied ist der ganze Zweck des dreiwertigen Zustands: wer
+     * nicht fragen konnte, sagt das, statt eine Erlaubnis zu erfinden.
+     * Das Schreibtor macht daraus eine Verweigerung (MF-986a). */
+    if (!is_open())
+        return UFT_WP_UNKNOWN;
+
+    return uft_gw_is_write_protected(m_handle) ? UFT_WP_PROTECTED
+                                               : UFT_WP_UNPROTECTED;
+}
+
 FluxOutcome GreaseweazleProviderV2::do_read_raw_flux(const ReadFluxParams& p)
 {
     if (!m_handle || !uft_gw_is_connected(m_handle)) {

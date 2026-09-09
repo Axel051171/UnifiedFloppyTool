@@ -45,6 +45,11 @@
 
 #include "uft/hal/outcomes.h"
 
+/* MF-986: `uft_write_protect_t` — der dreiwertige Zustand. Er lebt im
+ * Policy-Header, weil ihn Sensor UND Guard brauchen und eine zweite
+ * Definition genau die Doppelung waere, die dieser Baum sonst jagt. */
+#include "uft/policy/uft_write_gate.h"
+
 namespace uft::hal {
 
 /* ───────────────────────────────────────────────────────────────────────
@@ -178,6 +183,60 @@ template<class P>
 concept DetectsDrive = HasIdentity<P> &&
     requires(P p) {
         { p.detect_drive() } -> std::same_as<DetectOutcome>;
+    };
+
+/* ───────────────────────────────────────────────────────────────────────
+ *  SensesWriteProtect — die VORAB-Abfrage (MF-986, P3-298b)
+ *
+ *  Heute erfaehrt der Baum den Schreibschutz an vier Stellen, und nur
+ *  eine davon fragt vorher:
+ *
+ *    Greaseweazle   fragt den Stift VORAB (uft_gw_is_write_protected)
+ *    XUM1541        CBM-Status 26      \
+ *    Applesauce     Fehlerantwort       > erst aus einem SCHREIB-ERGEBNIS
+ *    UFI            SCSI Sense 0x07    /
+ *    SCP, KryoFlux, FC5025             nennen ihn in NULL Dateien
+ *
+ *  „Erst aus dem Ergebnis" heisst: die Diskette ist bereits angefasst.
+ *  Fuer ein forensisches Werkzeug ist das die falsche Reihenfolge —
+ *  darum dieser Vertrag.
+ *
+ *  ── Warum der Rueckgabewert dreiwertig ist ──────────────────────────
+ *
+ *  `uft_write_protect_t` (aus dem Policy-Header) kennt UNKNOWN,
+ *  PROTECTED, UNPROTECTED. Ein `bool` kann „nicht geschuetzt" und
+ *  „weiss es nicht" nicht unterscheiden, und diese Verwechslung
+ *  **erlaubt das Schreiben auf ein Original**.
+ *
+ *  Drei Werte allein loesen das aber NICHT. Sie loesen es nur, wenn der
+ *  Verbraucher den dritten richtig behandelt: `uft_write_gate_precheck`
+ *  verweigert bei UNKNOWN, und bei UNPROTECTED ohne ausdrueckliche
+ *  Zielfreigabe ebenfalls (MF-986a, drei Testfaelle plus Gegenzweig in
+ *  `tests/test_write_gate_unbekannt_verweigert.c`, je mit Mutation
+ *  belegt). Ein Sensor, der UNKNOWN liefert, und ein Guard, der daraus
+ *  „dann eben schreiben" macht, waere der Bool-Fehler mit mehr Aufwand.
+ *
+ *  ── Warum kein Outcome-Typ ──────────────────────────────────────────
+ *
+ *  Die uebrigen Concepts liefern `*Outcome`, weil ihre Operation
+ *  scheitern kann. Diese kann es nicht: ein Geraetefehler, eine fehlende
+ *  Leitung und ein Controller ohne Sensor fuehren alle zu derselben
+ *  ehrlichen Antwort — UNKNOWN. Ein Fehlerkanal daneben waere ein
+ *  zweiter Weg fuer dieselbe Aussage.
+ *
+ *  ── Wer es NICHT implementiert ──────────────────────────────────────
+ *
+ *  Der Vertrag ist optional. Ein Provider ohne `sense_write_protect()`
+ *  erfuellt das Concept nicht, und der Aufrufer traegt UNKNOWN in die
+ *  Diagnose ein — was das Tor verweigern laesst. Das ist dieselbe Regel
+ *  wie bei `read_flux_ex` (MF-954): fehlt der Zeiger, meldet die API
+ *  NULL Umdrehungsgrenzen; sie ERFINDET keine.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+template<class P>
+concept SensesWriteProtect = HasIdentity<P> &&
+    requires(P p) {
+        { p.sense_write_protect() } -> std::same_as<::uft_write_protect_t>;
     };
 
 /* ───────────────────────────────────────────────────────────────────────
