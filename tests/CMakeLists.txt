@@ -245,6 +245,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d82_plugin")
         # Real end-to-end test: link the Commodore 8250 module (MF-313)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/commodore/d82.c)
+    elseif(${test_name} STREQUAL "test_ldbs_erfindet_keine_spur")
+        # MF-987: abgeschnittene LDBS-Datei darf keine Spur erfinden.
+        # Der Leser hat sonst KEINEN Aufrufer im Baum -- dieser Test ist
+        # die einzige Tuer zu ihm, und genau deshalb gibt es ihn.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ldbs/uft_ldbs.c)
     elseif(${test_name} STREQUAL "test_woz_roundtrip")
         # WOZ2 writer read->write byte-identity test (MF-317)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c)

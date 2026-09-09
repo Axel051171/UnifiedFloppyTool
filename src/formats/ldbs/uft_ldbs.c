@@ -184,7 +184,13 @@ int uft_ldbs_read(const char *path, uft_disk_image_t **out) {
         if (fread(&bh, sizeof(bh), 1, f) != 1) break;
         
         if (read_le16((uint8_t*)&bh.type) == LDBS_BT_GEOM) {
-            fread(&geom, sizeof(geom), 1, f);
+            /* MF-987: das Ergebnis pruefen, nicht auf die Null-Init
+             * bauen. Bisher war der Ausgang zwar richtig — `geom` ist
+             * `= {0}` und faellt unten durch `cylinders == 0` —, aber
+             * nur, weil Null-Init und Plausibilitaetspruefung zufaellig
+             * zusammenpassen. Ein spaeteres Feld mit gueltiger Null
+             * haette das still gekippt. */
+            if (fread(&geom, sizeof(geom), 1, f) != 1) break;
             break;
         }
         
@@ -231,8 +237,26 @@ int uft_ldbs_read(const char *path, uft_disk_image_t **out) {
         
         if (btype == LDBS_BT_TRACK && blen >= sizeof(ldbs_track_header_t)) {
             ldbs_track_header_t th;
-            fread(&th, sizeof(th), 1, f);
-            
+            /* MF-987: OHNE diese Pruefung entstand aus einer
+             * abgeschnittenen Datei eine Spur aus STAPELSPEICHER.
+             *
+             * `th` ist nicht initialisiert; schlug der `fread` fehl,
+             * las der Code darunter `th.cylinder`, `th.head` und
+             * `th.sector_count` aus dem Rahmen des vorigen Aufrufs —
+             * also aus den Werten der ZULETZT GELESENEN Diskette — und
+             * legte damit eine Spur an, die aussah, als stuende sie in
+             * der Datei. Der Bereichstest verhindert nur den
+             * Speicherfehler, nicht die Erfindung.
+             *
+             * Das ist die Klasse aus MF-980. Nachweis:
+             * tests/test_ldbs_erfindet_keine_spur.c faerbt den Stapel
+             * mit einem bekannten Muster und zeigt es im Fehlerfall an.
+             *
+             * Absichtlich KEIN `= {0}` als Ersatz: Zylinder 0 / Kopf 0
+             * sind gueltige Werte, eine genullte Struktur waere hier
+             * also keine ehrliche, sondern eine plausible Erfindung. */
+            if (fread(&th, sizeof(th), 1, f) != 1) break;
+
             int idx = th.cylinder * disk->heads + th.head;
             if (idx >= 0 && idx < (int)disk->track_count) {
                 uft_track_t *track = uft_track_alloc(th.sector_count, 0);

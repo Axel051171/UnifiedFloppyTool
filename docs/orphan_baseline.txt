@@ -132,7 +132,6 @@ src/formats/japanese_ext/uft_sharp_x1.c
 src/formats/jv/uft_jv_parser_v2.c
 src/formats/kfx/uft_kf_histogram.c
 src/formats/kfx/uft_kfstream_air.c
-src/formats/ldbs/uft_ldbs.c
 src/formats/legacy/uft_altair_hd.c
 src/formats/legacy/uft_fdi.c
 src/formats/mame/uft_chd.c
