@@ -75,11 +75,23 @@ static uft_error_t trd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uint8_t buf[TRD_SEC_SIZE];
     for (int s = 0; s < TRD_SPT; s++) {
         if (fseek(p->file, off + s * TRD_SEC_SIZE, SEEK_SET) != 0) return UFT_ERROR_IO;
-        if (fread(buf, 1, TRD_SEC_SIZE, p->file) != TRD_SEC_SIZE) {
-            memset(buf, 0xE5, TRD_SEC_SIZE);
-        }
+        /* MF-980: der kurze Lesevorgang wird GEMERKT, nicht nur gefuellt.
+         *
+         * Hier stand `if (fread(...) != N) memset(buf, 0xE5, N);` und
+         * danach der unveraenderte `add_sector`. Der legt jeden Sektor
+         * mit `status = UFT_SECTOR_OK` und „CRC gueltig" an — die
+         * Fuellung war damit von echten 0xE5-Daten nicht zu
+         * unterscheiden. `trd_open()` nimmt jede Dateigroesse an, der
+         * Fall entsteht also bei jedem abgebrochenen Abzug.
+         *
+         * Die Bytes bleiben stehen („Kein Bit verloren"); sie gelten nur
+         * nicht mehr als Messwert. */
+        const bool kurz =
+            (fread(buf, 1, TRD_SEC_SIZE, p->file) != TRD_SEC_SIZE);
+        if (kurz) memset(buf, 0xE5, TRD_SEC_SIZE);
         uft_format_add_sector(track, (uint8_t)s, buf, TRD_SEC_SIZE,
                               (uint8_t)cyl, (uint8_t)head);
+        if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
 }

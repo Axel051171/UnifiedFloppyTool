@@ -95,11 +95,12 @@ static uft_error_t ns_read_track(uft_disk_t *disk, int cyl, int head,
     for (int s = 0; s < NS_SPT; s++) {
         if (fseek(p->file, off + (long)s * ss, SEEK_SET) != 0)
             return UFT_ERROR_IO;
-        if (fread(buf, 1, ss, p->file) != (size_t)ss) {
-            memset(buf, 0xE5, ss);
-        }
+        /* MF-980: gemerkt, nicht nur gefuellt — siehe uft_trd.c. */
+        const bool kurz = (fread(buf, 1, ss, p->file) != (size_t)ss);
+        if (kurz) memset(buf, 0xE5, ss);
         uft_format_add_sector(track, (uint8_t)s, buf, ss,
                               (uint8_t)cyl, 0);
+        if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
 }

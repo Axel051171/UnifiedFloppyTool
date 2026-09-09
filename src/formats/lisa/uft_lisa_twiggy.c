@@ -100,9 +100,16 @@ static uft_error_t twiggy_read_track(uft_disk_t *disk, int cyl, int head,
     for (int s = 0; s < spt; s++) {
         if (fseek(p->file, off + (long)s * TWIGGY_SS, SEEK_SET) != 0)
             return UFT_ERROR_IO;
-        if (fread(buf, 1, TWIGGY_SS, p->file) != TWIGGY_SS) memset(buf, 0xE5, TWIGGY_SS);
+        /* MF-980: der kurze Lesevorgang wird GEMERKT, nicht nur
+         * gefuellt. `uft_format_add_sector*()` legt jeden Sektor mit
+         * `status = UFT_SECTOR_OK` und „CRC gueltig" an — die Fuellung
+         * war damit von echten Daten nicht zu unterscheiden. Die Bytes
+         * bleiben stehen, sie gelten nur nicht mehr als Messwert. */
+        const bool kurz = (fread(buf, 1, TWIGGY_SS, p->file) != TWIGGY_SS);
+        if (kurz) memset(buf, 0xE5, TWIGGY_SS);
         uft_format_add_sector(track, (uint8_t)s, buf, TWIGGY_SS,
                               (uint8_t)cyl, (uint8_t)head);
+        if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
 }

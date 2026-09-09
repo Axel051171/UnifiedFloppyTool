@@ -169,6 +169,36 @@ static inline uft_error_t uft_format_add_sector(
 }
 
 /**
+ * @brief Kennzeichnet den zuletzt angelegten Sektor als NICHT gelesen (MF-980)
+ *
+ * `uft_format_add_sector_with_id()` setzt fuer jeden Sektor, den es
+ * anlegt, unbedingt `status = UFT_SECTOR_OK` und beide CRC-Flags auf
+ * „gut". Das ist richtig fuer den Normalfall — und falsch, sobald der
+ * Aufrufer die Bytes gar nicht aus der Datei bekommen hat.
+ *
+ * Gemessen MF-980: **19 Sektor-Leser** fuellten einen kurzen `fread` mit
+ * 0xE5 auf und legten den Sektor unveraendert an. Das Ergebnis war von
+ * echten 0xE5-Daten nicht zu unterscheiden und trug „CRC gueltig".
+ * `uft_atr.c` nannte es im Kommentar „forensic fill on read error" —
+ * eine Fuellung ohne Kennzeichnung ist das Gegenteil davon.
+ *
+ * Nach dem Anlegen gerufen, dreht diese Funktion die Aussage um:
+ * `UFT_SECTOR_MISSING` gesetzt, beide CRC-Flags auf „nicht gut". Die
+ * Daten bleiben stehen — „Kein Bit verloren" gilt auch fuer die
+ * Fuellung, sie ist nur nicht mehr als Messwert ausgegeben.
+ *
+ * Wirkungslos (und ohne Fehler), wenn die Spur leer ist.
+ */
+static inline void uft_format_mark_last_missing(uft_track_t* track)
+{
+    if (!track || track->sector_count == 0 || !track->sectors) return;
+    uft_sector_t* s = &track->sectors[track->sector_count - 1];
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_MISSING);
+    uft_sector_set_crc(s, false);
+    uft_sector_set_id_crc(s, false);
+}
+
+/**
  * @brief Erstellt einen leeren Sektor
  */
 static inline uft_error_t uft_format_add_empty_sector(

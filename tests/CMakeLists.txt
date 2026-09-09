@@ -287,6 +287,12 @@ foreach(test_source ${TEST_SOURCES})
         # dir_tracks * MGT_SECTORS * 2 Eintraege; UFTs eigene Konstante
         # MGT_DIR_ENTRIES = 80 trifft sich damit bei dir_tracks = 4.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_kurze_datei_erfindet_keine_sektoren")
+        # MF-980: was nicht in der Datei stand, darf nicht als gelesener,
+        # CRC-gueltiger Sektor durchgehen. Gefahren an TRD, weil trd_open()
+        # jede Dateigroesse annimmt — der Fall entsteht bei jedem
+        # abgebrochenen Abzug, ohne Kunstgriff.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
     elseif(${test_name} STREQUAL "test_schreibzusage_erreicht_die_datei")
         # MF-930: `write_track` darf keinen Erfolg melden, den die Datei
         # nicht traegt. Gemessen am ERGEBNIS (schreiben -> close ->

@@ -1174,6 +1174,24 @@ def main() -> int:
         import audit_cbm_zonen as _cz
         all_errors.append(("CBM-Zonen", _cz.check(repo)))
 
+        # Tor 62 (MF-980): wer einen Sektor FUELLT, muss ihn KENNZEICHNEN.
+        # `uft_format_add_sector*()` setzt fuer jeden Sektor unbedingt
+        # UFT_SECTOR_OK und beide CRC-Flags auf „gut". 23 Leser fuellten
+        # einen kurzen `fread` mit 0xE5 auf und legten den Sektor
+        # unveraendert an — von echten Daten nicht zu unterscheiden.
+        # `uft_atr.c` nannte es im Kommentar „forensic fill on read
+        # error"; eine Fuellung ohne Kennzeichnung ist das Gegenteil.
+        #
+        # Geprueft wird der FEHLERZWEIG eines `fread`, nicht „irgendwo im
+        # Rumpf steht ein memset" — die erste Fassung meldete sonst
+        # `uft_fds_plugin.c` und `uft_dsk_cpc.c`, die beide richtig sind
+        # (Initialisierung, und Abbruch statt Fuellung).
+        #
+        # Grundlinie 0. „Keine erfundenen Daten" ist die dritte Zeile
+        # des Mottos.
+        import audit_erfundene_sektoren as _es
+        all_errors.append(("Erfundene Sektoren", _es.check(repo)))
+
         # Tor 61 (MF-956): eine Groesse in der HAL ohne Einheit im Namen.
         #
         # In EINER Sitzung hat dieselbe Verwechslung fuenfmal zugeschlagen

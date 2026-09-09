@@ -270,11 +270,16 @@ static uft_error_t dim_atari_read_track(uft_disk_t *disk, int cyl, int head,
 
     uint8_t buf[DIM_ATARI_SEC_SIZE];
     for (int s = 0; s < p->spt; s++) {
-        if (fread(buf, 1, DIM_ATARI_SEC_SIZE, p->file) != DIM_ATARI_SEC_SIZE) {
-            memset(buf, 0xE5, DIM_ATARI_SEC_SIZE);
-        }
+        /* MF-980: der kurze Lesevorgang wird GEMERKT, nicht nur
+         * gefuellt. `uft_format_add_sector*()` legt jeden Sektor mit
+         * `status = UFT_SECTOR_OK` und „CRC gueltig" an — die Fuellung
+         * war damit von echten Daten nicht zu unterscheiden. Die Bytes
+         * bleiben stehen, sie gelten nur nicht mehr als Messwert. */
+        const bool kurz = (fread(buf, 1, DIM_ATARI_SEC_SIZE, p->file) != DIM_ATARI_SEC_SIZE);
+        if (kurz) memset(buf, 0xE5, DIM_ATARI_SEC_SIZE);
         uft_format_add_sector(track, (uint8_t)s, buf, DIM_ATARI_SEC_SIZE,
                               (uint8_t)cyl, (uint8_t)head);
+        if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
 }

@@ -58,8 +58,15 @@ static uft_error_t v9t9_read_track(uft_disk_t *disk, int cyl, int head, uft_trac
     uint8_t buf[256];
     for (int s = 0; s < p->spt; s++) {
         if (fseek(p->file, off + s * 256, SEEK_SET) != 0) return UFT_ERROR_IO;
-        if (fread(buf, 1, 256, p->file) != 256) { memset(buf, 0xE5, 256); }
+        /* MF-980: der kurze Lesevorgang wird GEMERKT, nicht nur
+         * gefuellt. `uft_format_add_sector*()` legt jeden Sektor mit
+         * `status = UFT_SECTOR_OK` und „CRC gueltig" an — die Fuellung
+         * war damit von echten Daten nicht zu unterscheiden. Die Bytes
+         * bleiben stehen, sie gelten nur nicht mehr als Messwert. */
+        const bool kurz = (fread(buf, 1, 256, p->file) != 256);
+        if (kurz) memset(buf, 0xE5, 256);
         uft_format_add_sector(track, (uint8_t)s, buf, 256, (uint8_t)cyl, (uint8_t)head);
+        if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
 }

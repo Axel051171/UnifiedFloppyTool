@@ -88,6 +88,23 @@ def _fn(rumpf: str, kopf: str = "static int f(int cyl, int head)") -> str:
 # Eine D64 aus lauter ASCII (siehe den Fall-Block zu Tor 59 unten).
 # Die BAM liegt auf Spur 18 Sektor 0 = (17 * 21) * 256 = 91392; der
 # Diskettenname bei +0x90, die ID bei +0xA2.
+def _leser(rumpf: str) -> str:
+    """Ein Plugin mit `read_track` — Geruest fuer Tor 62 (MF-980)."""
+    return ("#include \"uft/uft_format_common.h\"\n"
+            "static uft_error_t x_read_track(uft_disk_t *d, int cyl, int head,\n"
+            "                                uft_track_t *track) {\n"
+            "    uint8_t buf[256];\n"
+            "    for (int s = 0; s < 16; s++) {\n"
+            + rumpf + "\n"
+            "    }\n"
+            "    return UFT_OK;\n"
+            "}\n"
+            "const uft_format_plugin_t uft_format_plugin_x = {\n"
+            "    .name = \"X\",\n"
+            "    .read_track = x_read_track,\n"
+            "};\n")
+
+
 def _zonen_baum() -> str:
     """24 CBM-Zonentabellen in 10 Zaehlweisen (siehe Tor 60 unten).
 
@@ -797,6 +814,49 @@ FAELLE: dict[str, list[Fall]] = {
             erwartet="sauber",
             warum="die Entkernung muss greifen — sonst zaehlt das Tor "
                   "Erinnerungen an geloeschte Tabellen mit."),
+    ],
+
+    # ---------------------------------------------------------------
+    # Tor 62 (MF-980). Entscheidend ist nicht „steht ein memset im
+    # Rumpf", sondern „fuellt der FEHLERZWEIG eines fread". Die erste
+    # Fassung des Tores meldete sonst zwei RICHTIGE Leser
+    # (`uft_fds_plugin.c`, `uft_dsk_cpc.c`): beide setzen memset zur
+    # Initialisierung und brechen bei kurzem Lesen ab.
+    "audit_erfundene_sektoren": [
+        Fall(
+            name="fuellt ohne zu kennzeichnen",
+            dateien={"src/formats/x/x.c": _leser(
+                "        if (fread(buf, 1, 256, d->f) != 256) "
+                "memset(buf, 0xE5, 256);\n"
+                "        uft_format_add_sector(track, s, buf, 256, cyl, head);")},
+            erwartet="treffer", muster="kennzeichnen",
+            warum="der offene Fall — 23-mal im Baum gefunden. Der Sektor "
+                  "traegt danach UFT_SECTOR_OK und „CRC gueltig\"."),
+        Fall(
+            name="fuellt UND kennzeichnet",
+            dateien={"src/formats/x/x.c": _leser(
+                "        const bool k = (fread(buf, 1, 256, d->f) != 256);\n"
+                "        if (k) memset(buf, 0xE5, 256);\n"
+                "        uft_format_add_sector(track, s, buf, 256, cyl, head);\n"
+                "        if (k) uft_format_mark_last_missing(track);")},
+            erwartet="sauber",
+            warum="die richtige Form."),
+        Fall(
+            name="bricht ab statt zu fuellen",
+            dateien={"src/formats/x/x.c": _leser(
+                "        if (fread(buf, 1, 256, d->f) != 256) return UFT_ERROR_IO;\n"
+                "        uft_format_add_sector(track, s, buf, 256, cyl, head);")},
+            erwartet="sauber",
+            warum="auch richtig — wer nichts anlegt, muss nichts "
+                  "kennzeichnen."),
+        Fall(
+            name="memset als Initialisierung, Abbruch bei kurzem Lesen",
+            dateien={"src/formats/x/x.c": _leser(
+                "        memset(buf, 0, 256);\n"
+                "        if (fread(buf, 1, 256, d->f) != 256) return UFT_ERROR_IO;\n"
+                "        uft_format_add_sector(track, s, buf, 256, cyl, head);")},
+            erwartet="sauber",
+            warum="genau der Fehlalarm der ersten Torfassung."),
     ],
 }
 
