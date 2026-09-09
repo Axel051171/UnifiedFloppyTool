@@ -1639,6 +1639,19 @@ foreach(test_source ${TEST_SOURCES})
         # an einer echten Applesauce-Aufnahme nachgemessen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_zellenklemme_zaehlt_mit")
+        # MF-993: die ZELLEN-Klemme zaehlt mit -- dieselbe Bauart und
+        # dieselbe Quellenmenge wie test_pll_klemme (MF-866), das direkt
+        # darunter steht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_pll_klemme")
         # MF-866: die Periodenklemme zaehlt ihre Treffer. Der Bericht
         # meldete "keine Klemme" — die gibt es seit jeher; gefehlt hat

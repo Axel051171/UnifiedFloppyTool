@@ -419,6 +419,56 @@ typedef struct {
      * bekannter Ratenaenderung. */
     double   period_nominal;    /* Ausgangswert; Bezug fuer die Grenzen */
     uint32_t clamp_hits;        /* wie oft die Klemme griff */
+
+    /* ── MF-993: die ZELLEN-Klemme zaehlt ebenfalls mit ─────────────
+     *
+     * `flux_to_bitstream()` rechnet jedes Flussintervall in eine
+     * Zellenzahl um und begrenzt sie auf 1..8. Die Grenzen sind
+     * richtig — ohne die obere koennte eine einzige lange Luecke den
+     * ganzen Bitpuffer fuellen. Falsch war, dass das Ergebnis danach
+     * WIE EIN MESSWERT weiterlief:
+     *
+     *   cell_clamp_lo  ein Uebergang kam vor der halben Zelle. Rauschen,
+     *                  ein schwaches Bit, ein Splice — daraus wurde ein
+     *                  regulaeres Bit.
+     *   cell_clamp_hi  ein Intervall war laenger als acht Zellen.
+     *                  No-Flux-Area, Schnittstelle, Schaden — die Luecke
+     *                  wurde auf acht gekuerzt.
+     *
+     * Das ist dasselbe Muster, das MF-866 zwoelf Zeilen weiter oben an
+     * der PERIODEN-Klemme behoben hat, mit derselben Begruendung: die
+     * Grenze gab es seit jeher, gezaehlt wurde nie.
+     *
+     * NICHT geaendert wird die Zahl 8. Fuer MFM waeren vier Zellzeiten
+     * das Maximum (RLL(1,3), `UFT-70`), fuer M2FM fuenf, fuer GCR drei —
+     * aber `flux_to_bitstream()` kennt die Kodierung nicht, und eine
+     * kodierungsabhaengige Grenze waere neue Decoder-Logik. Was hier
+     * steht, ist allein: die Klemme sagt, dass sie gegriffen hat.
+     *
+     * ── Die beiden Zaehler sind NICHT unabhaengig ──────────────────
+     *
+     * Gemessen (Zelle 2000 ns, 24 MHz, eine Stoerung je Spur):
+     *
+     *     Stoerung      hi   lo
+     *     keine          0    0
+     *     5 Zellen       0    0     <- innerhalb der Grenze
+     *     0.2 Zellen     0    1
+     *     9 Zellen       1    1
+     *     20 Zellen      1    1
+     *
+     * Eine zu lange Luecke loest IMMER auch die untere Klemme aus. Der
+     * Grund steht in der Regelung: nach der Luecke ist `pll->phase` weit
+     * daneben, und `delta_ns -= pll->phase` drueckt den NAECHSTEN Abstand
+     * unter die halbe Zelle.
+     *
+     * Das ist kein Fehler, aber es ist eine Falle fuer den Auswerter:
+     * **wer die beiden Zahlen addiert, zaehlt zwei Anomalien, wo ein
+     * physisches Ereignis war.** Sie stehen deshalb getrennt und werden
+     * getrennt gemeldet.
+     *
+     * ABI: angehaengt, wie MF-866 es vorgemacht hat. */
+    uint32_t cell_clamp_lo;     /* Uebergang kam vor der halben Zelle */
+    uint32_t cell_clamp_hi;     /* Intervall laenger als acht Zellen  */
 } flux_pll_t;
 
 /* ============================================================================

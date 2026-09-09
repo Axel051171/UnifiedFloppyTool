@@ -379,8 +379,16 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
         double cells = delta_ns / pll->period;
         int num_cells = (int)(cells + 0.5);
 
-        if (num_cells < 1) num_cells = 1;
-        if (num_cells > 8) num_cells = 8;  /* Sanity limit */
+        /* MF-993: die Klemme greift wie bisher — sie sagt es jetzt.
+         *
+         * Ohne die obere Grenze koennte eine einzige lange Luecke den
+         * ganzen Bitpuffer mit Nullen fuellen; sie bleibt. Aber ein auf
+         * acht gekuerztes Intervall ist kein Messwert mehr, und ein zu
+         * frueher Uebergang, der zu einem regulaeren Bit wird, auch
+         * nicht. Wer das Ergebnis auswertet, soll es unterscheiden
+         * koennen. Dieselbe Bauart wie die Perioden-Klemme (MF-866). */
+        if (num_cells < 1) { num_cells = 1; pll->cell_clamp_lo++; }
+        if (num_cells > 8) { num_cells = 8; pll->cell_clamp_hi++; }
 
         /* Output zeros for empty cells, then a one for the transition */
         for (int c = 0; c < num_cells - 1 && out_bits < max_bits; c++) {
@@ -447,6 +455,36 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
                  "%.0f ns) — Hinweis auf Bitratenaenderung, Write Splice "
                  "oder eine No-Flux-Area, nicht zwingend ein Defekt",
                  (unsigned)pll->clamp_hits, pll->period_nominal);
+    }
+
+    /* MF-993: dasselbe fuer die Zellen-Klemme. Getrennt gemeldet, weil
+     * die beiden Richtungen verschiedene Dinge bedeuten — die eine sagt
+     * „hier war eine Luecke", die andere „hier kam ein Uebergang zu
+     * frueh". Sie in eine Zahl zu werfen waere die Information, die der
+     * Zaehler gerade retten soll, wieder wegzuwerfen.
+     *
+     * Ohne `use_pll` gilt es genauso: die Zellen-Klemme haengt nicht an
+     * der Regelung, anders als die Perioden-Klemme. */
+    if (pll->cell_clamp_hi > 0) {
+        UFT_WARN("Zellenklemme: %u Intervall(e) laenger als 8 Zellen, auf 8 "
+                 "gekuerzt — No-Flux-Area, Write Splice oder Schaden. Die "
+                 "Bitfolge dort ist nicht gemessen, sondern begrenzt",
+                 (unsigned)pll->cell_clamp_hi);
+    }
+    if (pll->cell_clamp_lo > 0) {
+        /* Gemessen: nach einer zu langen Luecke schlaegt diese Klemme
+         * regelmaessig MIT an, weil die Phasenkorrektur den naechsten
+         * Abstand unter die halbe Zelle drueckt. Der Hinweis steht in
+         * der Meldung, damit niemand die beiden Zahlen addiert und zwei
+         * Anomalien zaehlt, wo eine war. */
+        UFT_WARN("Zellenklemme: %u Uebergang/Uebergaenge kamen vor der halben "
+                 "Zelle und wurden als ein Bit gewertet — Rauschen, schwaches "
+                 "Bit oder Splice, nicht zwingend ein Defekt%s",
+                 (unsigned)pll->cell_clamp_lo,
+                 pll->cell_clamp_hi > 0
+                     ? " (nach einer zu langen Luecke ist das die Nachwirkung "
+                       "der Phasenkorrektur, kein zweites Ereignis)"
+                     : "");
     }
 
     *bit_count = out_bits;
