@@ -30,6 +30,25 @@ static const char *file_type_names[] = {
  * ============================================================================ */
 
 /**
+ * @brief Der BAM-Eintrag einer Spur (1-basiert), oder NULL.
+ *
+ * MF-992: das Abbild hat KEINEN Eintrag fuer eine „Spur 0". Frueher war
+ * diese Verschiebung in die Struktur eingebaut; dadurch lag jeder
+ * Eintrag vier Byte zu spaet. Die Umrechnung steht jetzt an EINER
+ * Stelle statt in sechzehn.
+ *
+ * NULL fuer Spuren > 35: die haben im BAM-Sektor keinen Platz, und wo
+ * ihre Belegung bei 40-Spur-Abbildern steht, ist Variantenfrage ohne
+ * Korpus-Beleg. NULL statt einer Vermutung.
+ */
+static bam_track_entry_t *bam_spur(const bam_editor_t *editor, int track)
+{
+    if (!editor || !editor->bam) return NULL;
+    if (track < 1 || track > BAM_TRACKS_IM_SEKTOR) return NULL;
+    return (bam_track_entry_t *)&editor->bam->tracks[track - 1];
+}
+
+/**
  * @brief Initialize track offset table
  */
 static void init_track_offsets(void)
@@ -256,7 +275,8 @@ int bam_get_free_blocks(const bam_editor_t *editor)
     
     for (int t = 1; t <= editor->num_tracks; t++) {
         if (t == DIR_TRACK) continue;  /* Skip directory track in count */
-        free_count += editor->bam->tracks[t].free_sectors;
+        const bam_track_entry_t *e = bam_spur(editor, t);
+        if (e) free_count += e->free_sectors;
     }
     
     return free_count;
@@ -277,7 +297,9 @@ bool bam_is_block_free(const bam_editor_t *editor, int track, int sector)
     int byte_idx = sector / 8;
     int bit_idx = sector % 8;
     
-    return (editor->bam->tracks[track].bitmap[byte_idx] & (1 << bit_idx)) != 0;
+    const bam_track_entry_t *e = bam_spur(editor, track);
+    if (!e) return false;
+    return (e->bitmap[byte_idx] & (1 << bit_idx)) != 0;
 }
 
 /**
@@ -294,8 +316,10 @@ int bam_allocate_block(bam_editor_t *editor, int track, int sector)
     int bit_idx = sector % 8;
     
     /* Clear bit (0 = allocated) */
-    editor->bam->tracks[track].bitmap[byte_idx] &= ~(1 << bit_idx);
-    editor->bam->tracks[track].free_sectors--;
+    bam_track_entry_t *e = bam_spur(editor, track);
+    if (!e) return -1;
+    e->bitmap[byte_idx] &= ~(1 << bit_idx);
+    e->free_sectors--;
     
     editor->modified = true;
     return 0;
@@ -315,8 +339,10 @@ int bam_free_block(bam_editor_t *editor, int track, int sector)
     int bit_idx = sector % 8;
     
     /* Set bit (1 = free) */
-    editor->bam->tracks[track].bitmap[byte_idx] |= (1 << bit_idx);
-    editor->bam->tracks[track].free_sectors++;
+    bam_track_entry_t *e = bam_spur(editor, track);
+    if (!e) return -1;
+    e->bitmap[byte_idx] |= (1 << bit_idx);
+    e->free_sectors++;
     
     editor->modified = true;
     return 0;
@@ -371,7 +397,8 @@ int bam_allocate_next_free(bam_editor_t *editor, int start_track,
 int bam_get_track_free(const bam_editor_t *editor, int track)
 {
     if (!editor || track < 1 || track > editor->num_tracks) return -1;
-    return editor->bam->tracks[track].free_sectors;
+    const bam_track_entry_t *e = bam_spur(editor, track);
+    return e ? e->free_sectors : -1;
 }
 
 /* ============================================================================
@@ -598,18 +625,24 @@ int bam_validate(const bam_editor_t *editor, int *errors,
     size_t msg_pos = 0;
     
     /* Check each track's free count matches bitmap */
-    for (int t = 1; t <= editor->num_tracks; t++) {
+    /* MF-992: nur die Spuren, die im BAM-Sektor stehen. Frueher lief
+     * die Schleife bis num_tracks (bis 40) und griff dabei auf
+     * Eintraege zu, die es im Abbild nicht gibt. */
+    for (int t = 1; t <= BAM_TRACKS_IM_SEKTOR && t <= editor->num_tracks; t++) {
+        const bam_track_entry_t *e = bam_spur(editor, t);
+        if (!e) continue;
+
         int counted = 0;
         for (int s = 0; s < bam_sectors_per_track[t]; s++) {
             if (bam_is_block_free(editor, t, s)) counted++;
         }
         
-        if (counted != editor->bam->tracks[t].free_sectors) {
+        if (counted != e->free_sectors) {
             error_count++;
             if (messages && msg_pos < msg_size - 50) {
                 msg_pos += snprintf(messages + msg_pos, msg_size - msg_pos,
                                     "Track %d: BAM says %d free, counted %d\n",
-                                    t, editor->bam->tracks[t].free_sectors, counted);
+                                    t, e->free_sectors, counted);
             }
         }
     }
@@ -628,15 +661,20 @@ int bam_repair(bam_editor_t *editor, int *fixed)
     int fix_count = 0;
     
     /* First, mark all blocks as free */
-    for (int t = 1; t <= editor->num_tracks; t++) {
-        editor->bam->tracks[t].free_sectors = bam_sectors_per_track[t];
-        memset(editor->bam->tracks[t].bitmap, 0xFF, 3);
+    /* MF-992: bis 35, nicht bis num_tracks — jenseits davon gibt es im
+     * BAM-Sektor keinen Eintrag. Frueher schrieb diese Schleife bei
+     * 40-Spur-Abbildern in den Bereich, in dem der Diskettenname steht. */
+    for (int t = 1; t <= BAM_TRACKS_IM_SEKTOR && t <= editor->num_tracks; t++) {
+        bam_track_entry_t *e = bam_spur(editor, t);
+        if (!e) continue;
+        e->free_sectors = (uint8_t)bam_sectors_per_track[t];
+        memset(e->bitmap, 0xFF, 3);
         
         /* Clear bits for non-existent sectors */
         for (int s = bam_sectors_per_track[t]; s < 24; s++) {
             int byte_idx = s / 8;
             int bit_idx = s % 8;
-            editor->bam->tracks[t].bitmap[byte_idx] &= ~(1 << bit_idx);
+            e->bitmap[byte_idx] &= ~(1 << bit_idx);
         }
     }
     
@@ -748,15 +786,20 @@ int bam_format_disk(bam_editor_t *editor, const char *disk_name, const char *dis
     editor->bam->unused1 = 0x00;
     
     /* Initialize track entries */
-    for (int t = 1; t <= editor->num_tracks; t++) {
-        editor->bam->tracks[t].free_sectors = bam_sectors_per_track[t];
-        memset(editor->bam->tracks[t].bitmap, 0xFF, 3);
+    /* MF-992: bis 35, nicht bis num_tracks — jenseits davon gibt es im
+     * BAM-Sektor keinen Eintrag. Frueher schrieb diese Schleife bei
+     * 40-Spur-Abbildern in den Bereich, in dem der Diskettenname steht. */
+    for (int t = 1; t <= BAM_TRACKS_IM_SEKTOR && t <= editor->num_tracks; t++) {
+        bam_track_entry_t *e = bam_spur(editor, t);
+        if (!e) continue;
+        e->free_sectors = (uint8_t)bam_sectors_per_track[t];
+        memset(e->bitmap, 0xFF, 3);
         
         /* Clear bits for non-existent sectors */
         for (int s = bam_sectors_per_track[t]; s < 24; s++) {
             int byte_idx = s / 8;
             int bit_idx = s % 8;
-            editor->bam->tracks[t].bitmap[byte_idx] &= ~(1 << bit_idx);
+            e->bitmap[byte_idx] &= ~(1 << bit_idx);
         }
     }
     
@@ -964,7 +1007,9 @@ void bam_print_map(const bam_editor_t *editor, FILE *fp)
     fprintf(fp, "-----  ----  -------\n");
     
     for (int t = 1; t <= editor->num_tracks; t++) {
-        fprintf(fp, "%5d  %4d  ", t, editor->bam->tracks[t].free_sectors);
+        const bam_track_entry_t *e = bam_spur(editor, t);
+        if (!e) continue;
+        fprintf(fp, "%5d  %4d  ", t, e->free_sectors);
         
         for (int s = 0; s < bam_sectors_per_track[t]; s++) {
             fprintf(fp, "%c", bam_is_block_free(editor, t, s) ? '.' : '#');

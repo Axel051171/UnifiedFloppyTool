@@ -219,6 +219,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/protection/c64/uft_c64_protection_ext.c)
 
 
+    elseif(${test_name} STREQUAL "test_bam_gegen_vice")
+        # MF-992: misst die erzeugte BAM gegen ein von VICE erzeugtes
+        # Abbild. Der Korpuspfad ist Teil der Abnahme -- ohne ihn
+        # prueft der Test nichts.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_bam_editor.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_bam_editor")
         # Include BAM Editor source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_bam_editor.c)

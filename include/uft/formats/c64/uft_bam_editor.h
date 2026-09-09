@@ -95,12 +95,55 @@ typedef struct {
 /**
  * @brief Complete BAM structure
  */
+/**
+ * @brief Spuren, die im BAM-Sektor (18/0) selbst beschrieben werden.
+ *
+ * MF-992: **35, nicht BAM_MAX_TRACKS+1.** Das ist keine Vorliebe, das ist
+ * das Format. Gemessen an `tests/corpus_free/vice_c1541_35trk.d64`, von
+ * VICEs `c1541` erzeugt:
+ *
+ *     +0x00  dir_track, dir_sector, dos_version, unused
+ *     +0x04  Eintrag Spur 1     <- DIREKT dahinter, keine „Spur 0"
+ *     +0x48  Eintrag Spur 18
+ *     +0x90  Diskettenname, 16 Byte
+ *     +0xA2  Kennung, +0xA5 DOS-Typ „2A"
+ *
+ * Vorher stand hier `tracks[BAM_MAX_TRACKS + 1]` — 43 Eintraege statt 35
+ * —, damit der Code 1-basiert indizieren kann. Der Preis war, dass **jeder**
+ * Spureintrag vier Byte zu spaet lag und der Diskettenname zweiunddreissig:
+ *
+ *     erzeugt:  12 01 41 00  00 00 00 00  15 FF FF 1F ...
+ *     VICE:     12 01 41 00  15 FF FF 1F  15 FF FF 1F ...
+ *
+ * Ein 1541-DOS liest bei +0x04 die Belegung von Spur 1 und fand dort
+ * Nullen — „keine freien Sektoren" — und bei +0x90 den Diskettennamen,
+ * wo ebenfalls nichts stand.
+ *
+ * Dass es niemandem auffiel, hat einen Grund, der zum Befund gehoert:
+ * `tests/test_bam_editor.c` liest durch **dieselbe** Struktur zurueck,
+ * mit der geschrieben wurde. Die Tests waren in sich schluessig und
+ * gegen die Welt falsch. Erst der Vergleich mit einem fremd erzeugten
+ * Abbild hat es gezeigt.
+ *
+ * Die 1-basierte Sicht bleibt — sie ist die des Formats —, aber ueber
+ * `bam_spur()` statt ueber einen Phantom-Eintrag im Abbild.
+ *
+ * **Spuren jenseits von 35** haben im BAM-Sektor keinen Platz. Wo ihre
+ * Belegung bei 40-Spur-Abbildern steht, ist eine Frage der Variante
+ * (SpeedDOS und DolphinDOS legen sie verschieden ab), und dafuer liegt
+ * im Korpus kein Abbild. Ein 40-Spur-Abbild bekommt deshalb den
+ * regulaeren 35-Spur-BAM und sonst nichts — genau das, was ein
+ * Standard-1541-DOS erwartet.
+ */
+#define BAM_TRACKS_IM_SEKTOR    35
+
 typedef struct {
     uint8_t             dir_track;          /**< Directory track (18) */
     uint8_t             dir_sector;         /**< Directory first sector (1) */
     uint8_t             dos_version;        /**< DOS version ('A') */
     uint8_t             unused1;            /**< Unused (0x00) */
-    bam_track_entry_t   tracks[BAM_MAX_TRACKS + 1];  /**< Track entries */
+    /* Spuren 1..35, Index t-1. Zugriff ueber bam_spur(). */
+    bam_track_entry_t   tracks[BAM_TRACKS_IM_SEKTOR];
     char                disk_name[16];      /**< Disk name (PETSCII) */
     uint8_t             padding1[2];        /**< Padding (0xA0) */
     char                disk_id[2];         /**< Disk ID */
