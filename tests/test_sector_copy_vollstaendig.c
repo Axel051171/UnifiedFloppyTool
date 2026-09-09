@@ -45,6 +45,7 @@
 #include <string.h>
 
 #include "uft/uft_types.h"
+#include "uft/core/uft_unified_types.h"  /* MF-996: uft_sector_copy() */
 
 static int _pass = 0, _fail = 0;
 #define RUN(n)  do { printf("  [TEST] %-44s ... ", #n); test_##n(); \

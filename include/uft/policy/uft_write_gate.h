@@ -146,6 +146,21 @@ typedef struct {
     bool target_media_released;
 } uft_write_gate_policy_t;
 
+/* ── Warum `.target_media_released` in allen drei Vorgaben steht (MF-996)
+ *
+ * `-Wmissing-field-initializers` meldete das Feld als fehlend. Das
+ * Ergebnis war trotzdem richtig: C fuellt mit Null auf, und Null heisst
+ * hier „nicht als Schreibziel freigegeben" — die sichere Seite, das Tor
+ * sagt ab (MF-986).
+ *
+ * Es war nur kein ENTSCHIEDENES Ergebnis, sondern ein aufgefuelltes. Das
+ * ist genau die Form, die MF-987 an `ldbs_geometry_t geom = {0}`
+ * beanstandet hat: richtig, weil zwei unabhaengige Regeln zufaellig
+ * zusammenpassen. Wer eine Vorgabe liest, soll sehen, dass ueber das Feld
+ * nachgedacht wurde — und wer eines Tages ein Feld anhaengt, dessen Null
+ * NICHT die sichere Seite ist, faellt dann ueber den Unterschied.
+ * ─────────────────────────────────────────────────────────────────── */
+
 /**
  * @brief Default strict policy
  */
@@ -156,7 +171,8 @@ typedef struct {
     .allow_readonly_override = false, \
     .allow_unsafe_drive = false, \
     .strict_mode = true, \
-    .min_confidence = 800 \
+    .min_confidence = 800, \
+    .target_media_released = false, \
 }
 
 /**
@@ -169,7 +185,8 @@ typedef struct {
     .allow_readonly_override = true, \
     .allow_unsafe_drive = false, \
     .strict_mode = false, \
-    .min_confidence = 500 \
+    .min_confidence = 500, \
+    .target_media_released = false, \
 }
 
 /**
@@ -182,7 +199,8 @@ typedef struct {
     .allow_readonly_override = false, \
     .allow_unsafe_drive = false, \
     .strict_mode = false, \
-    .min_confidence = 700 \
+    .min_confidence = 700, \
+    .target_media_released = false, \
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

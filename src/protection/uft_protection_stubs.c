@@ -72,7 +72,11 @@ protection_result_t detect_vorpal(const uft_disk_image_t *disk) {
                                              "Vorpal", 
                                              "Non-standard GCR with extra syncs");
     
-    if (!disk || disk->format != UFT_FMT_D64 && disk->format != UFT_FMT_G64) {
+    /* MF-996: die Klammern sind neu, die Bedeutung nicht — `&&` bindet
+     * staerker als `||`, der Ausdruck war schon vorher der gemeinte.
+     * Geaendert ist, dass man das jetzt sieht statt es zu wissen. */
+    if (!disk || (disk->format != UFT_FMT_D64 &&
+                  disk->format != UFT_FMT_G64)) {
         return result;
     }
     

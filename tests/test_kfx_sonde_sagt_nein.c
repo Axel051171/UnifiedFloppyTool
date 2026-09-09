@@ -66,6 +66,9 @@
 #include <string.h>
 
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_track.h"   /* MF-996: uft_track_release() -- ohne
+                              * diesen Kopf implizit deklariert; unter
+                              * Clang und in C23 ist das ein Fehler. */
 
 extern bool kfx_probe(const uint8_t *data, size_t size, size_t file_size,
                       int *confidence);

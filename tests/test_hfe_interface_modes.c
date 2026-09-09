@@ -80,7 +80,12 @@ static bool schreibe_hfe(const char *pfad, uint8_t interface_mode,
     buf[10] = 1;                 /* number_of_sides            */
     buf[11] = track_encoding;    /* track_encoding             */
     buf[12] = 250; buf[13] = 0;  /* bitRate (LE16), 250 kbit/s */
-    buf[14] = 300; buf[15] = 1;  /* floppyRPM (LE16)           */
+    /* MF-996: 300 = 0x012C, also 0x2C und 0x01. Vorher stand hier
+     * `buf[14] = 300` — das schnitt auf 44 ab und ergab **zufaellig**
+     * genau das richtige niedrige Byte. Die Datei war korrekt, der
+     * Ausdruck sagte es nur nicht. */
+    buf[14] = 300u & 0xFFu;      /* floppyRPM (LE16), niedrig   */
+    buf[15] = (300u >> 8) & 0xFFu;  /* floppyRPM, hoch          */
     buf[16] = interface_mode;    /* floppyinterfacemode        */
     buf[17] = 0;                 /* dnu / reserved             */
     buf[18] = 1; buf[19] = 0;    /* track_list_offset (LE16)   */
