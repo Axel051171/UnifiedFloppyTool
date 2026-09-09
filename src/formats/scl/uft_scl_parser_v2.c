@@ -255,7 +255,16 @@ typedef struct {
     uint8_t* data;
     size_t capacity;
     size_t size;
-    uint8_t file_count;
+    /* MF-988: `uint8_t` konnte SCL_MAX_FILES (256) nie erreichen — die
+     * Schranke in scl_builder_add_file() war damit wirkungslos, und beim
+     * 257. Eintrag lief der Zaehler auf 0 zurueck und ueberschrieb still
+     * den ersten. Kein Speicherfehler (das Feld hat genau 256 Plaetze),
+     * aber ein stiller Datenverlust mit Erfolgsmeldung.
+     *
+     * Ohne Rotbeweis behoben, und das steht hier so: `scl_builder_add_file`
+     * ist `static` und hat im ganzen Baum keinen Aufrufer — es gibt kein
+     * Verhalten, das rot werden koennte. Belegt durch Rechnung. */
+    uint16_t file_count;
 } scl_builder_t;
 
 /**

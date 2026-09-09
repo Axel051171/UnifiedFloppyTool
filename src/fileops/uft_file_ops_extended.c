@@ -185,10 +185,22 @@ int d81_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
     memcpy(name, header + 4, 16);
     name[16] = '\0';
     
-    /* Convert PETSCII and trim */
+    /* Convert PETSCII and trim.
+     *
+     * MF-988: ueber `unsigned char`, nicht ueber `char`. Auf x86-64 (und
+     * unter MSVC) ist `char` VORZEICHENBEHAFTET und deckt -128..127 ab —
+     * 0xA0 ist 160, 0xC1 ist 193, beide ausserhalb. Die Wandlung lief
+     * also durch, ohne ein einziges Zeichen anzufassen; `-Wtype-limits`
+     * meldete alle drei Vergleiche als vom Typ entschieden.
+     *
+     * Der Effekt war plattformabhaengig: mit vorzeichenlosem `char`
+     * (Linux/ARM) wandelte dieselbe Quelle korrekt. Ein Diskettenname sah
+     * je nach Bauplattform anders aus — in einem forensischen Werkzeug
+     * eine stille Veraenderung. */
+    unsigned char *pet = (unsigned char *)name;
     for (int i = 0; i < 16; i++) {
-        if (name[i] == 0xA0) name[i] = ' ';
-        else if (name[i] >= 0xC1 && name[i] <= 0xDA) name[i] -= 0x80;
+        if (pet[i] == 0xA0) pet[i] = ' ';
+        else if (pet[i] >= 0xC1 && pet[i] <= 0xDA) pet[i] -= 0x80;
     }
     for (int i = 15; i >= 0 && name[i] == ' '; i--) name[i] = '\0';
     strncpy(dir->disk_name, name, 16); dir->disk_name[16] = '\0';
@@ -246,9 +258,13 @@ int d81_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
             char fname[17];
             memcpy(fname, entry + 5, 16);
             fname[16] = '\0';
+            /* MF-988: wie beim Diskettennamen oben — ueber
+             * `unsigned char`, sonst entscheidet das Vorzeichen des
+             * `char` die Vergleiche und die Wandlung tut nichts. */
+            unsigned char *pf = (unsigned char *)fname;
             for (int i = 0; i < 16; i++) {
-                if (fname[i] == 0xA0) fname[i] = ' ';
-                else if (fname[i] >= 0xC1 && fname[i] <= 0xDA) fname[i] -= 0x80;
+                if (pf[i] == 0xA0) pf[i] = ' ';
+                else if (pf[i] >= 0xC1 && pf[i] <= 0xDA) pf[i] -= 0x80;
             }
             for (int i = 15; i >= 0 && fname[i] == ' '; i--) fname[i] = '\0';
             strncpy(f->name, fname, sizeof(f->name)-1); f->name[sizeof(f->name)-1] = '\0';

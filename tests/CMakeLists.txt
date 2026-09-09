@@ -245,6 +245,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d82_plugin")
         # Real end-to-end test: link the Commodore 8250 module (MF-313)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/commodore/d82.c)
+    elseif(${test_name} STREQUAL "test_schranken_die_nie_greifen")
+        # MF-988: Pruefungen, die der Typ schon entschieden hat.
+        # Zwei Fundstellen, zwei Quellen -- absichtlich EIN Test, weil es
+        # EIN Fehler ist.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/jvc/uft_jvc_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/fileops/uft_file_ops_extended.c)
     elseif(${test_name} STREQUAL "test_ldbs_erfindet_keine_spur")
         # MF-987: abgeschnittene LDBS-Datei darf keine Spur erfinden.
         # Der Leser hat sonst KEINEN Aufrufer im Baum -- dieser Test ist

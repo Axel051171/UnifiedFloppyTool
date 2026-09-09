@@ -34,7 +34,7 @@ typedef struct {
     uint8_t  first_sector;  /* first sector ID */
     bool     has_attribs;   /* sector attribute flag present */
     size_t   hdr_size;      /* header length in bytes */
-    uint8_t  cylinders;
+    uint16_t cylinders;     /* MF-988: uint8_t konnte 256 nicht tragen */
 } jvc_pd_t;
 
 static bool jvc_probe(const uint8_t *data, size_t size, size_t file_size,
@@ -106,10 +106,31 @@ static uft_error_t jvc_open(uft_disk_t *disk, const char *path, bool ro)
         fclose(f); return UFT_ERROR_FORMAT_INVALID;
     }
     uint32_t total_tracks = (uint32_t)(body / track_bytes);
-    uint8_t cyls = (uint8_t)(total_tracks / sides);
-    if (cyls == 0 || cyls > UFT_MAX_CYLINDERS) {
+
+    /* MF-988: die Schranke prueft den GELESENEN Wert, nicht das Ergebnis
+     * ihrer eigenen Verstuemmelung.
+     *
+     * Vorher stand hier `uint8_t cyls = (uint8_t)(total_tracks / sides);`
+     * und danach `cyls > UFT_MAX_CYLINDERS`. Beides zusammen war wirkungs-
+     * los: `UFT_MAX_CYLINDERS` ist 256, ein `uint8_t` erreicht 255 — die
+     * Bedingung konnte nie zutreffen (`-Wtype-limits` meldete es), und sie
+     * haette auch nichts genuetzt, weil der Cast eine Zeile davor bereits
+     * abgeschnitten hatte.
+     *
+     * Gemessen an einer Datei mit 300 Spuren: das Plugin meldete
+     * `UFT_OK` und **44 Zylinder** — eine voellig plausible Zahl fuer eine
+     * TRS-80-Diskette, und 256 Spuren waren still verloren. Genau das
+     * macht die Klasse gefaehrlich: das Ergebnis sieht richtig aus.
+     *
+     * `uft_geometry_t.cylinders` ist `uint16_t` und koennte 300 tragen;
+     * abgewiesen wird trotzdem, weil UFT_MAX_CYLINDERS die vereinbarte
+     * Obergrenze des Baums ist. Eine Absage ist ehrlich, eine gekuerzte
+     * Zahl nicht. */
+    uint32_t cyl_count = total_tracks / sides;
+    if (cyl_count == 0 || cyl_count > UFT_MAX_CYLINDERS) {
         fclose(f); return UFT_ERROR_FORMAT_INVALID;
     }
+    uint16_t cyls = (uint16_t)cyl_count;
 
     jvc_pd_t *p = calloc(1, sizeof(jvc_pd_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
