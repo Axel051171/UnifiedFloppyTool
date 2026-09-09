@@ -9,6 +9,7 @@
  */
 #include "uft/uft_format_common.h"
 #include "uft/formats/cbm/uft_cbm_geometry.h"
+#include "uft/formats/c64/uft_bam_editor.h"  /* MF-994: bam_create_d64 */
 
 /* MF-434: the zone table lived here as d64_spt[43]. It is a property of the
  * 1541, not of the D64 container, and the tree carried 24 copies of it. */
@@ -209,18 +210,125 @@ static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
 static const uft_plugin_feature_t uft_format_plugin_d64_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
     { "Write", UFT_FEATURE_SUPPORTED, NULL },
-    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    /* MF-994: `.create` ist verdrahtet, also sagt die Tafel es auch.
+     * Der Hinweis nennt die Grenze mit, weil „Create" allein zu viel
+     * verspraeche: 35 und 40 Spuren, einseitig, 256 Byte je Sektor. */
+    { "Create", UFT_FEATURE_SUPPORTED,
+      "35 oder 40 Spuren, einseitig; die Diskette ist formatiert "
+      "(BAM + Verzeichnis), aber unbenannt" },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+ *  Ein leeres, FORMATIERTES D64 anlegen (MF-994)
+ *
+ *  Hier entsteht keine neue Formatlogik. `bam_create_d64()` in
+ *  `src/formats/c64/uft_bam_editor.c` legt seit jeher eine vollstaendige,
+ *  formatierte D64 im Speicher an — BAM, Verzeichniskette, DOS-Kennung —
+ *  und ist in `tests/test_bam_editor.c` an **zehn** Stellen geprueft.
+ *
+ *  Gemessen hatte sie **keinen einzigen Aufrufer** ausserhalb ihrer
+ *  eigenen Datei und ihrer Tests. Dieselbe Lage wie bei den zehn
+ *  Dateischreibern aus P3-204 und beim LDBS-Leser aus MF-987: eine
+ *  belegte Faehigkeit hinter einer Tuer, die niemand gebaut hat. Diese
+ *  Funktion ist die Tuer.
+ *
+ *  ── Was an der Vorlage geprueft wurde, bevor sie verdrahtet wurde ───
+ *
+ *  Zwei Fragen, zwei verschiedene Antworten — und die Reihenfolge, in
+ *  der sie kamen, ist die eigentliche Lehre.
+ *
+ *  **Erste Frage, widerlegt.** Der Verdacht war, `bam_format_disk()`
+ *  reserviere die Verzeichnisspur 18 nicht vollstaendig — sie setzt alle
+ *  Spuren frei und belegt danach nur zwei Bloecke. Gemessen an
+ *  `tests/corpus_free/vice_c1541_35trk.d64` (von VICEs `c1541` erzeugt,
+ *  der De-facto-Referenz, die das Plugin in seinem `spec_status` selbst
+ *  nennt):
+ *
+ *      Spur 18:  frei = 17,  Bitmap = FC FF 07
+ *
+ *  VICE belegt auf Spur 18 **ebenfalls nur 18/0 und 18/1** — die uebrigen
+ *  17 Verzeichnissektoren stehen frei, weil das Verzeichnis bei Bedarf
+ *  hineinwaechst. Die bekannten „664 BLOCKS FREE" entstehen dadurch, dass
+ *  der Zaehler die Spur 18 ueberspringt (`bam_get_free_blocks`), nicht
+ *  dadurch, dass sie belegt waere. Der Verdacht trug nicht.
+ *
+ *  **Zweite Frage, und sie traf.** Derselbe Vergleich zeigte etwas, wonach
+ *  niemand gesucht hatte: die BAM stand **gar nicht an ihrem Platz**.
+ *  `bam_t.tracks` fuehrte 43 Eintraege, wo eine D64 35 hat, samt einem
+ *  Phantom-Eintrag fuer eine „Spur 0". Jeder Spureintrag lag vier Byte zu
+ *  spaet, der Diskettenname zweiunddreissig — behoben in **MF-992**,
+ *  belegt in `tests/test_bam_gegen_vice.c`.
+ *
+ *  Hier stand vor MF-992 der Satz „die Vorlage ist richtig". Er war die
+ *  Antwort auf die erste Frage und las sich wie ein Freispruch fuer die
+ *  ganze Vorlage. **Eine widerlegte Vermutung entlastet nur das, wonach
+ *  sie gefragt hat** — und die zehn gruenen Faelle in
+ *  `tests/test_bam_editor.c` entlasteten gar nichts, weil sie durch
+ *  dieselbe falsche Struktur zurueckgelesen haben.
+ *
+ *  ── Der Diskettenname ───────────────────────────────────────────────
+ *
+ *  `plugin->create` bekommt nur eine Geometrie. Fuer Name und Kennung
+ *  einer CBM-Diskette gibt es darin keinen Platz, und **erfunden wird
+ *  hier nichts**: beide bleiben blank (0xA0), was auf einer CBM-Diskette
+ *  genau „kein Name angegeben" bedeutet. Wer einen Namen will, setzt ihn
+ *  danach mit `bam_set_disk_name()`. Dass der Erzeugungs-API dieser Weg
+ *  fehlt, steht als Grenze in P3-308.
+ * ═══════════════════════════════════════════════════════════════════ */
+static uft_error_t d64_plugin_create(uft_disk_t *disk, const char *path,
+                                      const uft_geometry_t *geometry) {
+    if (!disk || !path || !geometry) return UFT_ERROR_INVALID_ARG;
+
+    /* `bam_create_d64` kennt genau 35 und 40 Spuren. Die 41/42-Spur-
+     * Varianten liest `d64_plugin_open` zwar, aber es gibt keine
+     * gepruefte Formatierung dafuer — also wird sie nicht angeboten. */
+    const int tracks = geometry->cylinders ? (int)geometry->cylinders : 35;
+    if (tracks != 35 && tracks != 40) return UFT_ERROR_INVALID_ARG;
+
+    /* Eine D64 ist einseitig mit 256-Byte-Sektoren. Wer etwas anderes
+     * verlangt, bekommt eine Absage und kein stillschweigend anderes
+     * Ergebnis. 0 heisst „keine Angabe" und ist zulaessig. */
+    if (geometry->heads > 1) return UFT_ERROR_INVALID_ARG;
+    if (geometry->sector_size && geometry->sector_size != 256)
+        return UFT_ERROR_INVALID_ARG;
+
+    uint8_t *data = NULL;
+    size_t   size = 0;
+    /* Name blank; die Kennung braucht zwei gueltige Bytes, weil
+     * bam_format_disk() `disk_id[0]` und `[1]` unbedingt liest. */
+    if (bam_create_d64(tracks, "", "\xA0\xA0", &data, &size) != 0 || !data)
+        return UFT_ERROR_INVALID_ARG;
+
+    FILE *f = fopen(path, "wb");
+    if (!f) { free(data); return UFT_ERROR_FILE_OPEN; }
+
+    const size_t geschrieben = fwrite(data, 1, size, f);
+
+    /* `fclose` wird GEPRUEFT. Ein fehlgeschlagenes fclose heisst, dass die
+     * gepufferten Daten die Platte nicht erreicht haben — ein `UFT_OK`
+     * danach waere „Erfolg ohne Tat". (`img_create` prueft es nicht;
+     * das ist dort ein eigener, kleinerer Fall.) */
+    const int schliessfehler = fclose(f);
+    free(data);
+
+    if (geschrieben != size || schliessfehler != 0)
+        return UFT_ERROR_FILE_WRITE;
+
+    /* Wie img_create: das Ergebnis gleich oeffnen, damit der Aufrufer ein
+     * benutzbares Abbild in der Hand haelt und nicht bloss eine Datei. */
+    return d64_plugin_open(disk, path, false);
+}
+
 const uft_format_plugin_t uft_format_plugin_d64 = {
     .name = "D64", .description = "Commodore 1541 D64",
     .extensions = "d64", .format = UFT_FORMAT_D64,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d64_plugin_probe, .open = d64_plugin_open,
+    .create = d64_plugin_create,   /* MF-994 */
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
     .write_track = d64_plugin_write_track,
     .verify_track = uft_generic_verify_track,

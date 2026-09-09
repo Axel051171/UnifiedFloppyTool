@@ -90,6 +90,21 @@ set(EXCLUDED_TESTS
 # sagt den Grund selbst: "eine zweite, eigene Liste waere eine zweite
 # Wahrheit ueber dieselbe Sache; sie wuerde driften."
 # ==========================================================================
+# ── Das D64-Plugin und was es braucht (MF-994) ─────────────────────────
+#
+# Seit `d64_plugin_create()` die geprueffte Formatierung `bam_create_d64()`
+# ruft, haengt das Plugin am BAM-Editor. Diese Kopplung steht an EINER
+# Stelle, nicht an den vierzehn Testzielen, die das Plugin einbinden.
+#
+# Der Grund ist der Grundsatz aus MF-636: eine gepflegte Liste veraltet
+# still, und dieser Baum hat vier belegte Vorfaelle. Wer kuenftig eine
+# weitere Abhaengigkeit des D64-Plugins einzieht, aendert diese Zeile —
+# und nicht vierzehn.
+set(UFT_D64_PLUGIN_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+    ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_bam_editor.c
+    )
+
 set(UFT_FORMAT_LAYER_DEPS
             # what the format layer calls out to
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
@@ -367,10 +382,10 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c)
     elseif(${test_name} STREQUAL "test_d64_errormap")
         # D64 error-info block read/represent — surfaces 1541 error codes (Phase-4 WP5, MF-333)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+        target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_geometry_zones")
         # Phase-0 geometry: D64 GCR zoned per-track sector counts (MF-337)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+        target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
     elseif(${test_name} STREQUAL "test_hfe_interface_modes")
         # MF-659: das registrierte Plugin meldete ab 0x08 die falsche
         # Maschine. Der Test geht durch den ECHTEN Anzeigepfad
@@ -397,7 +412,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+        target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
     elseif(${test_name} STREQUAL "test_dms_plugin_gegen_bibliothek")
         # MF-837: das Plugin las den Track-Kopf vollstaendig falsch; die
         # verifizierte Bibliothek uft_dms.c war ohne Produktionsaufrufer.
@@ -736,7 +751,7 @@ foreach(test_source ${TEST_SOURCES})
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+        target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_schutzbefund")
@@ -1442,7 +1457,10 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_convert_roundtrip_measured"
            # MF-991: erzeugt ueber die Registry und oeffnet das Ergebnis
            # mit uft_disk_open() wieder -- braucht dieselbe Menge.
-           OR ${test_name} STREQUAL "test_abbild_erzeugen")
+           OR ${test_name} STREQUAL "test_abbild_erzeugen"
+           # MF-994: erzeugt eine D64 ueber die Registry und misst sie
+           # gegen das VICE-Abbild im Korpus.
+           OR ${test_name} STREQUAL "test_d64_erzeugen_gegen_vice")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
@@ -1490,7 +1508,7 @@ foreach(test_source ${TEST_SOURCES})
         # MF-445: registration order is the trap, so the same four plugins as
         # test_smart_open_quality — registered D64-first on purpose.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
@@ -1506,7 +1524,7 @@ foreach(test_source ${TEST_SOURCES})
         # counted. Four plugins, registered by the test itself — the registry
         # is the single detection source, so an empty one must be visible.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
@@ -1597,7 +1615,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d64_42_spuren")
         # MF-871: BEIDE D64-Tueren im selben Binaer, damit messbar ist,
@@ -1609,7 +1627,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_fm_echte_aufnahme")
         # MF-869: der FM-Dekoder gegen eine echte Aufnahme von 1979,
@@ -1771,7 +1789,7 @@ foreach(test_source ${TEST_SOURCES})
         # ARCH-20/MF-465: id.sector is the number on the medium. Proof is the
         # D64/G64 corpus pair — same disk, same tool, two representations.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
@@ -1788,7 +1806,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
@@ -1830,7 +1848,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
@@ -1950,7 +1968,7 @@ foreach(test_source ${TEST_SOURCES})
         # MF-392: adversarial input for every linked probe; runs under the
         # ASan/UBSan CI jobs. Same plugin set as test_plugin_probe_real.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
@@ -1996,7 +2014,7 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_plugin_probe_real")
         # MF-385: probes the SHIPPED plugins instead of a copy in the test
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
@@ -2224,7 +2242,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d77/uft_d77.c)
     elseif(${test_name} STREQUAL "test_d64_write_roundtrip")
         # D64 write_track round-trip; confirms the systemic data_len fix on the CBM family (MF-323)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+        target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
     elseif(${test_name} STREQUAL "test_dc42_checksum_roundtrip")
         # DC42 write must keep the data checksum valid; caught stale-checksum bug (MF-324)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c)
