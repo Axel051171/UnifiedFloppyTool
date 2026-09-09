@@ -822,15 +822,38 @@ def audit_skripte() -> list[str]:
 
 
 def tor_skripte() -> set[str]:
-    """Die Audit-Skripte, die ein Tor in check_consistency.py speisen."""
+    """Die Skripte, die ein Tor in check_consistency.py speisen.
+
+    MF-979: hier stand `re.findall(r"\\baudit_[a-z_]+", text)`. Das las die
+    Verdrahtung — aber nur fuer Namen mit dem Praefix `audit_`. Ein Tor,
+    das anders heisst, fiel aus BEIDEN Spalten heraus: es galt weder als
+    geprueft noch als ungeprueft, es kam schlicht nicht vor.
+
+    Gemessen: `check_consistency.py` verdrahtet **50** Tore, davon tragen
+    **13** einen anderen Namen (`*_gate.py`, `quarantine_stand`) —
+    darunter `orphan_module_gate`, dessen Grundlinie in derselben Runde
+    mit 14 veralteten Eintraegen gefunden wurde. Der Zensus meldete
+    „36 Tore", und die Differenz war unsichtbar.
+
+    Das ist der siebzehnte Fall von Aufzaehlung statt Messung in diesem
+    Baum, und wieder an der teuersten Stelle: die Aufzaehlung stand in
+    dem Werkzeug, das zaehlt, WER ungeprueft ist.
+
+    Gemessen wird jetzt die Verdrahtung selbst: ein Modul, das per
+    `import X as Y` geholt wird und dessen `Y.check(` gerufen wird.
+    """
     p = SKRIPTE / "check_consistency.py"
     if not p.exists():
         return set()
     text = p.read_text(encoding="utf-8", errors="replace")
     import re
+    tore = set()
+    for modul, alias in re.findall(r"import\s+(\w+)\s+as\s+(\w+)", text):
+        if re.search(r"\b%s\.check\s*\(" % re.escape(alias), text):
+            tore.add(modul)
     # Sich selbst nicht mitzaehlen: ein Pruefstand, der seinen eigenen
     # Pruefstand verlangt, ist ein Zirkel. Seine Faelle SIND sein Test.
-    return set(re.findall(r"\baudit_[a-z_]+", text)) - {"audit_selbsttest"}
+    return tore - {"audit_selbsttest"}
 
 
 def lade(name: str):
@@ -976,8 +999,12 @@ def main() -> int:
     ap.add_argument("--nur", default="", help="nur dieses Werkzeug")
     args = ap.parse_args()
 
-    alle = audit_skripte()
     tore = tor_skripte()
+    # MF-979: die Grundmenge ist `scripts/audit_*.py` PLUS die verdrahteten
+    # Tore, die anders heissen. Ohne die Vereinigung fielen 13 Tore
+    # (`*_gate.py`, `quarantine_stand`) aus beiden Spalten heraus — sie
+    # galten weder als geprueft noch als ungeprueft.
+    alle = sorted(set(audit_skripte()) | tore)
     rot = 0
     gruen = 0
 

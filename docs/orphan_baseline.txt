@@ -37,7 +37,6 @@ src/algorithms/advanced/uft_decoder_metrics.c
 src/algorithms/advanced/uft_fuzzy_sync_v2.c
 src/algorithms/advanced/uft_gcr_viterbi.c
 src/algorithms/advanced/uft_gcr_viterbi_v2.c
-src/algorithms/advanced/uft_multi_rev_fusion.c
 src/algorithms/recovery/uft_otdr_adaptive_decode.c
 src/analysis/deepread/uft_deepread_aging.c
 src/analysis/deepread/uft_deepread_crosstrack.c
@@ -70,7 +69,6 @@ src/formats/apple/uft_dart.c
 src/formats/apple/uft_edd.c
 src/formats/apple/uft_ndif.c
 src/formats/apple/woz.c
-src/formats/atari/atari_check.c
 src/formats/atari/atari_util.c
 src/formats/atari/atr.c
 src/formats/atari/atx.c
@@ -116,7 +114,6 @@ src/formats/flux/f86.c
 src/formats/flux/gwraw.c
 src/formats/flux/ipf.c
 src/formats/flux/kfraw.c
-src/formats/flux/mfi.c
 src/formats/flux/pfi.c
 src/formats/flux/pri.c
 src/formats/flux/psi.c
@@ -128,16 +125,13 @@ src/formats/hp/lif.c
 src/formats/imd/uft_imd_parser_v2.c
 src/formats/imz/uft_imz.c
 src/formats/industrial/uft_cromemco.c
-src/formats/industrial/uft_heathkit.c
 src/formats/ipf/uft_ipf_caps.c
 src/formats/ipf/uft_ipf_ctraw_v2.c
-src/formats/japanese_ext/uft_hitachi_s1.c
 src/formats/japanese_ext/uft_sanyo_mbc.c
 src/formats/japanese_ext/uft_sharp_x1.c
 src/formats/jv/uft_jv_parser_v2.c
 src/formats/kfx/uft_kf_histogram.c
 src/formats/kfx/uft_kfstream_air.c
-src/formats/kryoflux/uft_kryoflux_checker.c
 src/formats/ldbs/uft_ldbs.c
 src/formats/legacy/uft_altair_hd.c
 src/formats/legacy/uft_fdi.c
@@ -178,7 +172,6 @@ src/formats/obscure/uft_calcomp.c
 src/formats/obscure/uft_pmc_micromate.c
 src/formats/obscure/uft_pyldin.c
 src/formats/obscure/uft_rc759.c
-src/formats/pc/uft_86f.c
 src/formats/pc98/d88.c
 src/formats/pc98/dim.c
 src/formats/pc98/fdd.c
@@ -191,9 +184,7 @@ src/formats/retro_image/uft_retro_image_detect.c
 src/formats/sap/uft_sap_parser_v2.c
 src/formats/scl/uft_scl.c
 src/formats/scl/uft_scl_parser_v2.c
-src/formats/soviet/uft_bk0010.c
 src/formats/ssd/uft_ssd_parser_v2.c
-src/formats/stx/uft_stx_air.c
 src/formats/stx/uft_stx_parser_v2.c
 src/formats/tap/uft_tap_parser_v2.c
 src/formats/thomson/sap.c
@@ -222,12 +213,8 @@ src/hal/greaseweazle_backend.c
 src/hal/sync_backends.c
 src/hal/uft_drive.c
 src/hal/uft_hal_profiles.c
-src/hardware_providers/adfcopy_serial_runners.cpp
-src/hardware_providers/applesauce_serial_runners.cpp
-src/hardware_providers/qprocess_subprocess_runner.cpp
 src/hardware_providers/ufi_runners.cpp
 src/main.cpp
-src/parsers/a2r/uft_a2r_parser.c
 src/protection/uft_amiga_caps.c
 src/protection/uft_amiga_missing_schemes.c
 src/protection/uft_amiga_protection.c
@@ -242,7 +229,6 @@ src/protection/uft_pc_cdrom_protection.c
 src/protection/uft_pc_protection.c
 src/protection/uft_protection.c
 src/protection/uft_protection_classify.c
-src/protection/uft_protection_detect.c
 src/protection/uft_protection_params.c
 src/protection/uft_protection_stubs.c
 src/protection/uft_protection_unified.c

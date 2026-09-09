@@ -136,9 +136,37 @@ def main() -> int:
 def check(repo) -> list:
     """Schnittstelle fuer check_consistency.py.
 
-    Gibt die NEUEN Verwaisten als Befundliste zurueck. Ein Rueckgang
-    gegenueber der Grundlinie ist kein Befund — Fortschritt darf nicht rot
-    leuchten; der eigenstaendige Lauf nennt ihn trotzdem.
+    Meldet BEIDE Richtungen.
+
+    Hier stand bis MF-979: „Ein Rueckgang gegenueber der Grundlinie ist
+    kein Befund — Fortschritt darf nicht rot leuchten; der eigenstaendige
+    Lauf nennt ihn trotzdem." Der zweite Halbsatz stimmte, der Schluss
+    daraus nicht.
+
+    Gemessen: die Grundlinie fuehrte **223** Pfade, gemessen waren es
+    **209**. Vierzehn Eintraege behaupteten etwas, das nicht mehr galt —
+    fuenf davon ueber Module mit PRODUKTIONS-Aufrufer
+    (`uft_stx_air.c`, `uft_kryoflux_checker.c`,
+    `adfcopy_serial_runners.cpp`, `applesauce_serial_runners.cpp`,
+    `qprocess_subprocess_runner.cpp`).
+
+    Warum das kein Schoenheitsfehler ist: der Kopf von
+    `docs/orphan_baseline.txt` sagt woertlich „Wird eines behoben, gehoert
+    seine Zeile hier heraus — DAS TOR SAGT DANN, WELCHE". Das tat nur
+    `main()`, und zwar ohne Fehlercode; `check()` — das in der Kette
+    haengt und bei jedem Commit laeuft — liess es weg. Die Zusage stand
+    also in der Datei, und niemand hielt sie.
+
+    Und es ist folgenreich: P3-259 hat genau diese Falschaussage ueber
+    `uft_stx_air.c` im QUARANTAENE-Register gefunden und berichtigt, weil
+    dort die Spalte „Faehigkeit — 0 Aufrufer" ueber den Loeschweg
+    entscheidet. In der Verwaisten-Grundlinie blieb sie stehen. Ein
+    Register, das „ruft niemand auf" sagt, ist eine Entscheidungsgrundlage
+    — es muss dem Code folgen, nicht umgekehrt.
+
+    Ein Rueckgang ist weiterhin FORTSCHRITT. Rot wird nicht der
+    Fortschritt, sondern die **nicht nachgezogene Zeile** — und die
+    kuerzt man in einer Zeile.
     """
     base = load_baseline()
     if base is None:
@@ -147,8 +175,20 @@ def check(repo) -> list:
         now = measure()
     except Exception as exc:           # noqa: BLE001
         return ["Verwaisten-Audit nicht ausfuehrbar: %s" % exc]
-    return ["neu verwaist (ruft niemand auf): " + p
-            for p in sorted(now - base)]
+
+    fehler = ["neu verwaist (ruft niemand auf): " + p
+              for p in sorted(now - base)]
+
+    veraltet = sorted(base - now)
+    if veraltet:
+        fehler.append(
+            "%d Grundlinien-Eintrag/-Eintraege treffen nicht mehr zu — das "
+            "Modul hat inzwischen einen Aufrufer. Die Zeile gehoert aus "
+            "`docs/orphan_baseline.txt` heraus (`python "
+            "scripts/orphan_module_gate.py` nennt sie): %s"
+            % (len(veraltet), ", ".join(veraltet[:8])
+               + (" …" if len(veraltet) > 8 else "")))
+    return fehler
 
 
 if __name__ == "__main__":
