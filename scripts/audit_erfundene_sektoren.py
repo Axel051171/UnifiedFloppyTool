@@ -34,25 +34,38 @@ mit `Sektor 4 stand nicht in der Datei, gilt aber als gelesen
 ── WAS DIESES TOR PRUEFT ─────────────────────────────────────────────
 
 Je `read_track`/`write_track` eines Plugins, im kommentar- und
-zeichenkettenfreien Text:
+zeichenkettenfreien Text, ZWEI Wege — und keiner davon darf ohne
+`uft_format_mark_last_missing(...)` bleiben:
 
-    enthaelt der Rumpf ein `memset(...)` im Fehlerzweig eines `fread`
-    UND einen `uft_format_add_sector*(...)`
-    ABER KEIN `uft_format_mark_last_missing(...)`
+    (a) ein `memset(...)` im FEHLERZWEIG eines `fread`,
+        zusammen mit einem `uft_format_add_sector*(...)`
 
-Dann gilt: gefuellt, aber nicht gekennzeichnet.
+    (b) ein `uft_format_add_empty_sector(...)` — der legt per
+        Definition einen Sektor an, der keine gelesenen Daten traegt,
+        und geht durch dieselbe Helferkette, die UFT_SECTOR_OK setzt
+        (MF-981)
 
 ── WAS ES AUSDRUECKLICH NICHT SIEHT ──────────────────────────────────
 
-Es prueft die ANWESENHEIT der Kennzeichnung im selben Rumpf, nicht ihre
-Erreichbarkeit. Ein `mark_last_missing` hinter einer Bedingung, die nie
-wahr wird, wuerde durchgelassen. Das ist bewusst konservativ: eine
-Erreichbarkeitsanalyse waere ratender, als ein Tor tragen darf — und die
-Kennzeichnung steht in allen 19 Faellen direkt neben ihrer Bedingung.
+**Eine Kennzeichnung im Rumpf befriedigt das Tor fuer ALLE Fuellwege
+derselben Funktion.** Gemessen an `td0_read_track()`, das zwei hat:
+wird eine der beiden `mark_last_missing`-Zeilen entfernt, bleibt das Tor
+stumm; erst wenn beide fehlen, meldet es. Die Grenze ist also nicht
+theoretisch — sie ist vorgefuehrt.
 
-Ebenso unsichtbar: Fuellungen, die nicht `memset` heissen (Schleife,
-`calloc`), und Leser, die den Sektor gar nicht erst anlegen (das ist der
-richtige Weg und braucht keine Kennzeichnung).
+Es prueft ebenso die ANWESENHEIT, nicht die Erreichbarkeit: ein
+`mark_last_missing` hinter einer Bedingung, die nie wahr wird, wuerde
+durchgelassen. Beides ist bewusst konservativ; eine Fluss- oder
+Erreichbarkeitsanalyse waere ratender, als ein Tor tragen darf.
+
+Unsichtbar bleibt auch die dritte Form aus MF-981: ein **genullter
+`calloc`-Puffer**, den ein Dekoder nur teilweise fuellt, waehrend die
+volle Sektorgroesse weitergereicht wird. Dagegen hilft kein Muster,
+sondern nur ein Zaehler im Leser selbst (`decoded_len` in
+`uft_td0.c`) — und ein Test, der ihn ausloest.
+
+Leser, die den Sektor gar nicht erst anlegen, sind der richtige Weg und
+brauchen keine Kennzeichnung.
 
 ── Grundlinie ────────────────────────────────────────────────────────
 
@@ -72,6 +85,7 @@ GRUNDLINIE = 0
 FUELLT = re.compile(r"memset\s*\(")
 FREAD = re.compile(r"\bfread\s*\(")
 ANLEGT = re.compile(r"uft_format_add_sector(?:_with_id)?\s*\(")
+LEER_ANLEGT = re.compile(r"uft_format_add_empty_sector\s*\(")
 KENNZEICHNET = re.compile(r"uft_format_mark_last_missing\s*\(")
 
 
@@ -187,13 +201,19 @@ def messe(repo: Path):
             r = rumpf(t, m.group(1))
             if r is None:
                 continue
-            if not ANLEGT.search(r):
-                continue
-            if not fuellt_im_fehlerzweig(r):
-                continue
             if KENNZEICHNET.search(r):
                 continue
-            befunde.append((rel, feld, m.group(1)))
+            # (a) Fuellung im Fehlerzweig eines fread
+            if ANLEGT.search(r) and fuellt_im_fehlerzweig(r):
+                befunde.append((rel, feld, m.group(1), "fread-Fehlerzweig"))
+                continue
+            # (b) MF-981: `uft_format_add_empty_sector()` legt einen
+            #     Sektor an, der per Definition keine gelesenen Daten
+            #     traegt — und geht durch dieselbe Helferkette, die
+            #     UFT_SECTOR_OK setzt. Kein fread, kein memset; die
+            #     erste Torfassung sah diesen Weg nicht (TD0).
+            if LEER_ANLEGT.search(r):
+                befunde.append((rel, feld, m.group(1), "add_empty_sector"))
     return befunde, []
 
 
@@ -201,15 +221,15 @@ def check(repo) -> list:
     befunde, fehler = messe(Path(repo))
     if befunde is None:
         return fehler
-    for rel, feld, fn in befunde:
+    for rel, feld, fn, art in befunde:
         fehler.append(
-            "%s (%s = %s): fuellt einen kurzen Lesevorgang mit `memset` und "
-            "legt den Sektor an, ohne ihn zu kennzeichnen. "
+            "%s (%s = %s, %s): legt einen Sektor an, ohne ihn zu "
+            "kennzeichnen. "
             "`uft_format_add_sector*()` setzt UFT_SECTOR_OK und beide "
             "CRC-Flags auf „gut\" — die Fuellung ist damit von echten Daten "
             "nicht zu unterscheiden. Nach dem Anlegen "
-            "`uft_format_mark_last_missing(track)` rufen (MF-980), oder den "
-            "Sektor gar nicht erst anlegen." % (rel, feld, fn))
+            "`uft_format_mark_last_missing(track)` rufen (MF-980/981), oder "
+            "den Sektor gar nicht erst anlegen." % (rel, feld, fn, art))
     if len(befunde) > GRUNDLINIE:
         fehler.append(
             "%d Leser fuellen ohne zu kennzeichnen, Grundlinie %d. "
@@ -285,8 +305,8 @@ def main() -> int:
         return 1
     print("Fuellt ohne zu kennzeichnen: %d (Grundlinie %d)"
           % (len(befunde), GRUNDLINIE))
-    for rel, feld, fn in befunde:
-        print("  %-50s %-12s %s" % (rel, feld, fn))
+    for rel, feld, fn, art in befunde:
+        print("  %-46s %-12s %-22s %s" % (rel, feld, fn, art))
     errs = check(repo)
     if not errs:
         print("OK")

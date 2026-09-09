@@ -206,6 +206,14 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                     uft_format_add_empty_sector(track, sec_num > 0 ? sec_num - 1 : 0,
                                                  (uint16_t)sec_size, 0xE5,
                                                  (uint8_t)cyl, (uint8_t)head);
+                    /* MF-981: die Zeile darueber sagt es selbst — „No data
+                     * for this sector". `uft_format_add_empty_sector()`
+                     * geht durch `uft_format_add_sector_with_id()`, und der
+                     * setzt UFT_SECTOR_OK und beide CRC-Flags auf „gut".
+                     * Die 0xE5 waeren damit von echten Daten nicht zu
+                     * unterscheiden gewesen. Kein `fread`, kein `memset` —
+                     * Tor 62 sieht diesen Weg nicht. */
+                    uft_format_mark_last_missing(track);
                     if (track->sector_count > 0) {
                         if (sec_flags & 0x01)
                             uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
@@ -231,11 +239,20 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
 
                 /* TD0 encoding: byte 0 = method (0=raw, 1=repeat, 2=pattern) */
                 uint8_t *decoded = calloc(1, sec_size);
+                /* MF-981: WIE VIELE Bytes der Dekoder wirklich erzeugt hat.
+                 *
+                 * `decoded` ist ein genulltes `calloc`, und weiter unten
+                 * bekommt `uft_format_add_sector()` immer die volle
+                 * `sec_size` uebergeben. Endete der Dekoder frueher, ging
+                 * der genullte Rest als Sektorinhalt durch — bei einem
+                 * UNBEKANNTEN Verfahrensbyte sogar der ganze Sektor. */
+                size_t decoded_len = 0;
                 if (decoded) {
                     if (raw[0] == 0 && data_len > 1) {
                         /* Raw data */
                         size_t cp = (data_len - 1 < sec_size) ? data_len - 1 : sec_size;
                         memcpy(decoded, raw + 1, cp);
+                        decoded_len = cp;
                     } else if (raw[0] == 1 && data_len >= 5) {
                         /* Repeat: 2-byte count + 2-byte pattern */
                         uint16_t count = uft_read_le16(raw + 1);
@@ -243,6 +260,7 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                         for (uint16_t i = 0; i < count && i * 2 + 1 < sec_size; i++) {
                             decoded[i * 2] = p0;
                             decoded[i * 2 + 1] = p1;
+                            decoded_len = (size_t)i * 2 + 2;
                         }
                     } else if (raw[0] == 2 && data_len > 1) {
                         /* Pattern blocks */
@@ -264,11 +282,18 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                                         decoded[dp++] = raw[pat_start + j];
                             }
                         }
+                        decoded_len = dp;
                     }
 
                     uft_format_add_sector(track, sec_num > 0 ? sec_num - 1 : 0,
                                           decoded, (uint16_t)sec_size,
                                           (uint8_t)cyl, (uint8_t)head);
+                    /* MF-981: weniger dekodiert als der Sektor gross ist —
+                     * der Rest ist genullter `calloc`, kein Messwert. Bei
+                     * einem unbekannten Verfahrensbyte ist `decoded_len`
+                     * null und der ganze Sektor erfunden. */
+                    if (decoded_len < sec_size)
+                        uft_format_mark_last_missing(track);
                     /* Propagate TD0 sector flags */
                     if (track->sector_count > 0) {
                         if (sec_flags & 0x01)

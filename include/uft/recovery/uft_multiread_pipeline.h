@@ -40,7 +40,26 @@ extern "C" {
 /** Maximum read passes */
 #define MULTIREAD_MAX_PASSES        16
 
-/** Default number of passes */
+/** Default number of passes.
+ *
+ * MF-981 — die Zahl hatte bis heute keine Quelle. Sie stand hier und in
+ * `multiread_config_default()` (`min_passes = 3`), uebernommen aus einem
+ * aelteren Code-Kommentar; die EINFRIER-REGEL (c) verlangt die Referenz
+ * im Header.
+ *
+ * Beleg, zweiter Hand: der SuperCard-Pro-Entwickler im Atari-Forum-Thread
+ * „SCP disk images!" —
+ *
+ *   „For preservation you must sample the flux transitions of at least
+ *    three revolutions in splice mode. […] it is recommended to sample
+ *    5 revolutions."
+ *
+ * Damit sind **beide** Vorgaben belegt: `min_passes = 3` als Untergrenze,
+ * `MULTIREAD_DEFAULT_PASSES = 5` als Empfehlung. **Ehrlich dazu:** das
+ * Zitat stammt aus einer Auswertung (`UFT-43`), nicht aus eigener Lektuere
+ * des Threads — es ist eine Gemeinschaftsquelle mit Entwicklerbeteiligung,
+ * keine Spezifikation. Die Zahlen aendern sich dadurch nicht; nur ihr
+ * Status geht von „uebernommen" auf „belegt". */
 #define MULTIREAD_DEFAULT_PASSES    5
 
 /** Minimum confidence for success */

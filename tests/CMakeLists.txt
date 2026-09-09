@@ -287,6 +287,12 @@ foreach(test_source ${TEST_SOURCES})
         # dir_tracks * MGT_SECTORS * 2 Eintraege; UFTs eigene Konstante
         # MGT_DIR_ENTRIES = 80 trifft sich damit bei dir_tracks = 4.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_td0_erfindet_keine_sektoren")
+        # MF-981: TD0 entzieht sich Tor 62 auf zwei Wegen — die Fuellung
+        # kommt aus einem Format-Flag (sec_flags & 0x30) statt aus einem
+        # kurzen fread, und der Dekodierpuffer ist calloc.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
     elseif(${test_name} STREQUAL "test_kurze_datei_erfindet_keine_sektoren")
         # MF-980: was nicht in der Datei stand, darf nicht als gelesener,
         # CRC-gueltiger Sektor durchgehen. Gefahren an TRD, weil trd_open()

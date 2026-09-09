@@ -115,9 +115,32 @@ static void xum_set_error(uft_xum_config_t *cfg, const char *msg) {
  *   1571: 35 tracks, double-sided GCR.
  *   1581: 80 tracks, double-sided MFM, fixed 10 sectors/track at
  *     512 bytes (LDOS native; 40 sectors/track from CBM-LBA view).
+ *
+ *     ACHTUNG, SEITENVERTAUSCHUNG (MF-981): beim 1581 liegen die
+ *     Sektoren der LOGISCHEN Seite 0 physisch auf Seite 1 — und
+ *     umgekehrt —, tragen aber die Kennung der logischen Seite. Wer
+ *     physisch Seite fuer Seite liest und in dieser Reihenfolge
+ *     ablegt, erzeugt ein D81 mit vertauschten Seiten, und zwar
+ *     STILL: die Sektorkennungen sehen richtig aus.
+ *
+ *     Der Linux-Kernel fuehrt das als Bit 1 des `stretch`-Feldes in
+ *     `struct floppy_struct` (`drivers/block/floppy.c`, GPL-2) und
+ *     nennt dort dieselbe Eigenart fuer das Sharp-MZ-80-CP/M-Format
+ *     im 5,25-Zoll-Mass, mit einem Unterschied: beim 1581 liegt die
+ *     logische Seite 0 physisch auf Seite 1, beim Sharp liegt sie
+ *     physisch auf Seite 0 und nur die Kennungen sind vertauscht.
+ *
+ *     Heute beruehrt das keinen Weg in diesem Baum — es gibt keinen
+ *     Fluss-nach-D81-Pfad, und die CBM-DOS-Kommandoebene dieses HAL
+ *     ist unumgesetzt (MF-650). Die Angabe steht hier fuer den, der
+ *     sie verdrahtet, BEVOR er es tut.
+ *
  *   SFD-1001 / 8050 / 8250: 77 tracks, IEEE-488 (rare with XUM1541).
  *
- * Reference: VIC-1541 service manual + CBM 8000-series tech ref.
+ * Reference: VIC-1541 service manual + CBM 8000-series tech ref;
+ * Seitenvertauschung nach `linux/drivers/block/floppy.c` (Torvalds
+ * 1991, Knaff 1993/94, Cox 1998) — Sachverhalt uebernommen, kein Code
+ * und kein Wortlaut.
  * ──────────────────────────────────────────────────────────────────── */
 
 const char *uft_xum_drive_name(uft_cbm_drive_t type) {
