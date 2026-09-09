@@ -149,6 +149,44 @@ def _samdisk_file_count(repo: Path):
     return sum(1 for p in alle if wurzel in p.parents)
 
 
+def _table_pair_count(repo: Path):
+    """Autoritativ: Paare in g_conversion_paths[] (uft_format_convert_tables.c).
+
+    MF-982 — diese Zahl war als EINZIGE der sechs Wandlungszahlen nicht
+    abgeleitet. MF-541 hat die fuenf Matrix-Zahlen an die Quelle gehaengt
+    und die Tabellenzahl von Hand stehen lassen; sie steht **dreimal** in
+    CLAUDE.md.
+
+    Was dabei driftete, war nicht die Doku, sondern die TABELLE: der
+    MF-655-Block (ATR<->XFD, Kommentar und beide Eintraege) stand
+    wortgleich zweimal darin, also 46 statt 44 Paare. `uft_conversion_get_path()`
+    nimmt den ersten Treffer — die zweite Fassung war unerreichbar und
+    trotzdem gezaehlt.
+
+    Gezaehlt wird wie `tests/test_convert_table_has_dispatch.c` zaehlt,
+    sonst widersprechen sich Doku und Pruefstand:
+      - ohne Kommentare (die Tabelle traegt Begruendungstexte, in denen
+        `UFT_FORMAT_` woertlich vorkommt),
+      - ohne den `UNKNOWN`-Abschluss,
+      - ohne Identitaetspaare (`src == dst`) — die pruefen den Rundlauf,
+        nicht eine Wandlung.
+    """
+    f = repo / "src/formats/uft_format_convert_tables.c"
+    if not f.exists():
+        return None
+    text = f.read_text(encoding="utf-8", errors="replace")
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    m = re.search(r"g_conversion_paths\[\]\s*=\s*\{(.*?)\n\};", text, re.S)
+    if not m:
+        return None
+    paare = re.findall(
+        r"\.source\s*=\s*UFT_FORMAT_(\w+)\s*,\s*\.target\s*=\s*UFT_FORMAT_(\w+)",
+        m.group(1))
+    return len([(s, d) for s, d in paare
+                if "UNKNOWN" not in (s, d) and s != d])
+
+
 def _matrix_entry_count(repo: Path):
     """Autoritativ: Eintraege in g_matrix[] (src/core/uft_roundtrip.c).
 
@@ -244,6 +282,14 @@ DERIVED_CLAIMS = [
     ("CLAUDE.md", r"\*\*(\d+)\*\* offene Zeilen", _quarantine_open_count,
      "CLAUDE.md: offene Zeilen in QUARANTINE.md "
      "(vollzogen + vorgemerkt)"),
+    # MF-982: die Tabellenzahl, dreimal in CLAUDE.md, bis heute gepflegt.
+    ("CLAUDE.md", r"\((\d+) Pfade registriert", _table_pair_count,
+     "Paare in g_conversion_paths[] (ohne UNKNOWN und Identitaet)"),
+    ("CLAUDE.md", r"Wandlungstabelle fuehrt \*\*(\d+)\*\* Paare",
+     _table_pair_count,
+     "Paare in g_conversion_paths[] (ohne UNKNOWN und Identitaet)"),
+    ("CLAUDE.md", r"(\d+) Konvertierungspfade registriert", _table_pair_count,
+     "Paare in g_conversion_paths[] (ohne UNKNOWN und Identitaet)"),
     ("CLAUDE.md", r"(\d+) Roundtrip-Matrix-Eintr", _matrix_entry_count,
      "CLAUDE.md: Eintraege in g_matrix[]"),
     ("CLAUDE.md", r"(\d+) verlustfrei \(je mit Messung\)",

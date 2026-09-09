@@ -85,28 +85,15 @@ const uft_conversion_path_t g_conversion_paths[] = {
         .warning = "XFD carries no sector size; the generated ATR header declares 128 bytes per sector. Wrong for a double-density image.",
         .description = "XFD to ATR (16-byte header generated)"
     },
-    /* === SEKTOR -> SEKTOR (Atari 8-bit), MF-655 ===
-     * XFD ist das ATR ohne seinen 16-Byte-Kopf — byteweise gemessen am
-     * Korpus-Paar atrcopy_dos2sd.atr/.xfd: atr[16:] == xfd.
-     * Verlustfrei ist das genau dann, wenn der Kopf nichts traegt, was
-     * die Dateigroesse nicht schon sagt: Sektorgroesse 128, Reserve
-     * leer, Paragraphenzahl stimmig. Sonst lehnt der Wandler ohne
-     * accept_data_loss ab — die Sektorgroesse ist in XFD nicht
-     * darstellbar und aus der Groesse nicht ableitbar (184 320 Byte
-     * sind 1440x128 ODER 720x256). */
-    {
-        .source = UFT_FORMAT_ATR, .target = UFT_FORMAT_XFD,
-        .quality = UFT_CONV_LOSSLESS,
-        .preserves_timing = false, .preserves_weak = false,
-        .description = "ATR to XFD (16-byte header removed)"
-    },
-    {
-        .source = UFT_FORMAT_XFD, .target = UFT_FORMAT_ATR,
-        .quality = UFT_CONV_LOSSLESS,
-        .preserves_timing = false, .preserves_weak = false,
-        .warning = "XFD carries no sector size; the generated ATR header declares 128 bytes per sector. Wrong for a double-density image.",
-        .description = "XFD to ATR (16-byte header generated)"
-    },
+    /* MF-982: hier stand der MF-655-Block ein ZWEITES Mal, wortgleich —
+     * Kommentar und beide Eintraege. Der Patch war doppelt angewandt.
+     *
+     * Folgenlos war es nicht: `uft_conversion_get_path()` nimmt den
+     * ersten Treffer, die zweite Fassung war also unerreichbar, und die
+     * Tabelle meldete 48 statt 46 Paare. Genau diese Zahl steht dreimal
+     * in CLAUDE.md — und war als einzige der sechs Wandlungszahlen NICHT
+     * abgeleitet (MF-541 leitet die fuenf Matrix-Zahlen ab, die
+     * Tabellenzahl nicht). Seit MF-982 haengt auch sie an der Ableitung. */
     {
         .source = UFT_FORMAT_SCP, .target = UFT_FORMAT_HFE,
         .quality = UFT_CONV_LOSSY,
