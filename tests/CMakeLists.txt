@@ -353,6 +353,26 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_jv1_ist_einseitig")
+        # MF-1016: `jv1` stand auf T3. Zwei Befunde, beide gemessen an
+        # einer Pruefdatei von 204 800 Byte (80 x 10 x 256):
+        #
+        #  1. Der Leser nahm bei >40 Spuren eine ZWEITE SEITE an und
+        #     meldete 40 Zylinder / 2 Koepfe. Tim Manns
+        #     Formatbeschreibung sagt woertlich „only one side", MAMEs
+        #     Tafel fuehrt 35/40/80 Spuren mit `head_count = 1`. Die
+        #     Spuren 40..79 lagen damit auf Kopf 1.
+        #  2. Die Sektornummern waren 1..10 statt 0..9, weil
+        #     `uft_format_add_sector()` laut eigenem Kopf einen
+        #     0-basierten Index nimmt und 1 addiert.
+        #
+        # Dabei fiel auf, dass `tests/test_plugin_probe_real.c` den
+        # Fehler BEWACHT hat: „41..79 tracks are only valid when even
+        # (two heads)". Diese Zusage folgte aus der zweiten Seite, die
+        # es nicht gibt — dieselbe Gestalt wie MF-992.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_udi_gegen_die_spezifikation")
         # MF-1015: `udi` stand auf T3. Drei Befunde, gemessen am
         # Quelltext und an einer Pruefdatei in ECHTER Groesse:

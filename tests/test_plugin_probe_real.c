@@ -328,8 +328,8 @@ TEST(imd_requires_its_ascii_signature) {
  * These four had NO test touching production code at all before this wave.
  *   atx  LE32 signature 0x58385441 "AT8X", header 48   (uft_atx.c:32,33)
  *   cqm  'C','Q',0x14                                   (uft_cqm.c)
- *   jv1  size-only: multiple of 10*256, <=40 tracks 1 head,
- *        <=80 and even 2 heads                          (uft_jv1.c:22,23)
+ *   jv1  size-only: multiple of 10*256, up to 80 tracks, ALWAYS one
+ *        head (MF-1016 — hier stand "<=80 and even 2 heads")
  *   xfd  four canonical sizes, plus a permissive fallback
  *                                                       (uft_xfd.c)
  *--------------------------------------------------------------------------*/
@@ -384,9 +384,26 @@ TEST(jv1_accepts_only_whole_track_multiples) {
     /* not a whole number of tracks */
     ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), TRACK + 1, &conf));
     ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 0, &conf));
-    /* 41..79 tracks are only valid when even (two heads) */
-    ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 41 * TRACK, &conf));
-    /* beyond 80 tracks there is no JV1 geometry */
+    /* BERICHTIGT MF-1016. Hier stand:
+     *
+     *     // 41..79 tracks are only valid when even (two heads)
+     *     ASSERT(!probe_sized(..., 41 * TRACK, ...));
+     *
+     * Diese Zusage folgte aus einer zweiten Seite, die JV1 nicht hat.
+     * Tim Manns Formatbeschreibung sagt woertlich „There are 10 sectors
+     * per track (i.e., single density), numbered 0 through 9, and only
+     * one side"; MAMEs `trs80_dsk.cpp` fuehrt 35, 40 und 80 Spuren, alle
+     * drei mit `head_count = 1`.
+     *
+     * Der Test hat damit den Fehler FESTGEHALTEN statt ihn zu fangen —
+     * dieselbe Gestalt wie MF-992, wo zehn gruene Tests durch dieselbe
+     * falsche Struktur zurueckgelesen haben. 41 Spuren sind jetzt 41
+     * einseitige Spuren und gehen durch. */
+    ASSERT(probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 41 * TRACK, &conf));
+    /* Jenseits von 80 Spuren gibt es keine Geometrie, die das Orakel
+     * umsetzt — MAMEs Tafel endet bei SSQD 80/1. Sein Beschreibungstext
+     * sagt daneben „There's no limit on the number of tracks"; genommen
+     * wird die umgesetzte Aussage, nicht die weitere. */
     ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 82 * TRACK, &conf));
 
     /* size-only detection, so the plugin says so with a low confidence */
