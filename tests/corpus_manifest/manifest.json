@@ -716,6 +716,30 @@
       "oracle": "libsap",
       "fremdcode": "nein - der Dateiinhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; Kopf und Sektorstruktur stammen von libsap",
       "content": "UFT-K Selbstbeschreibungsmuster (nach XOR 0xB3), Thomson SAP Format 1, Kopf \"SYSTEME D'ARCHIVAGE PUKALL S.A.P.\" bei Versatz 1"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_kfx_t00.0.raw",
+      "sha256": "076fed3dd6803842c2595a908d22ebb964973357cf84949e2b28c137865c0d8d",
+      "format": "kfx",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:ibm_dd.img -foutput:aus_kfx.raw -conv:KRYOFLUXSTREAM (ACCESS = RW aus `hxcfe -modulelist`); das Modul schreibt je Spur eine eigene Datei in der kanonischen KryoFlux-Benennung trackNN.S.raw - dies ist Spur 00, Seite 0. Eingabe ist tests/differential/corpus/sources/ibm_dd.img aus dem eigenen Differential-Korpus. Inhalt strukturell nachgewiesen: uft_kfc_stream_is_valid() zaehlt 10 OOB-Bloecke und 3 Indexmarken und prueft die in den Bloecken eingebettete Stromposition gegen die eigene Zaehlung - ein Nachweis am Strom selbst, nicht an einem Fuellmuster.",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - Flussstrom aus einem Sektorabbild des eigenen Korpus; kein Bootblock, kein Dateisystem",
+      "content": "KryoFlux-Strom einer Spur, 10 OOB-Bloecke, 3 Indexmarken (gemessen)"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_kfx_t40.0.raw",
+      "sha256": "e603bccbd37964e06f023639dea1bcccaf3e039475cb3b2fe99a81a24c69e661",
+      "format": "kfx",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:ibm_dd.img -foutput:aus_kfx.raw -conv:KRYOFLUXSTREAM (ACCESS = RW aus `hxcfe -modulelist`); das Modul schreibt je Spur eine eigene Datei in der kanonischen KryoFlux-Benennung trackNN.S.raw - dies ist Spur 40, Seite 0. Eingabe ist tests/differential/corpus/sources/ibm_dd.img aus dem eigenen Differential-Korpus. Inhalt strukturell nachgewiesen: uft_kfc_stream_is_valid() zaehlt 10 OOB-Bloecke und 3 Indexmarken und prueft die in den Bloecken eingebettete Stromposition gegen die eigene Zaehlung - ein Nachweis am Strom selbst, nicht an einem Fuellmuster.",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - Flussstrom aus einem Sektorabbild des eigenen Korpus; kein Bootblock, kein Dateisystem",
+      "content": "KryoFlux-Strom einer Spur, 10 OOB-Bloecke, 3 Indexmarken (gemessen)"
     }
   ]
 }

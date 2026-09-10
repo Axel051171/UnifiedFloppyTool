@@ -113,6 +113,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
+#include "uft/formats/kryoflux_checker.h"
 
 #ifndef UFT_CORPUS_DIR
 #define UFT_CORPUS_DIR "tests/corpus_free"
@@ -180,6 +181,8 @@ extern const uft_format_plugin_t uft_format_plugin_st;
  * ausgefuehrt. Zwei Orakel in einer Tafel sind kein Widerspruch: die
  * Frage ist je Format, welche fremde Hand das Abbild geschrieben hat. */
 extern const uft_format_plugin_t uft_format_plugin_sap_thomson;
+extern const uft_format_plugin_t uft_format_plugin_mfi;
+extern const uft_format_plugin_t uft_format_plugin_kfx;
 int uft_sap_pruefsumme(const uft_disk_t *disk, int cyl, int sektor,
                        uint16_t *soll, uint16_t *ist);
 
@@ -355,6 +358,164 @@ int main(void)
                 pruefe("sap     — alle 16 Pukall-Pruefsummen der Spur 0 "
                        "gehen auf", 0, "open schlug fehl");
             }
+        }
+    }
+
+    /* ── MFI: ein Flussformat, das seine Geometrie selbst ansagt ────
+     *
+     * MF-1023. `mfi` kann hier nicht in der Sektortafel oben stehen —
+     * MFI speichert je Spur einen **zlib-gepackten** Strom von
+     * 32-Bit-Flusszellen, keine Sektoren. Die Zusicherungen sind
+     * deshalb andere, und sie pruefen genau das, was der Leser heute
+     * leisten KANN und was er absagen MUSS.
+     *
+     * Die Zahlen stehen in der Datei und sind unabhaengig nachgelesen
+     * (Python, gegen `src/samdisk/mfi.cpp`): Kennung
+     * "MAMEFLOPPYIMAGE\0", `cyl_count = 42` (Aufloesung 0),
+     * `head_count = 1`, 42 belegte Spureintraege.
+     *
+     * **Vorzustand, gemessen:** 21 Zylinder / 2 Koepfe — der Leser
+     * rechnete `count / 2` und `count % 2`, ignorierte also die
+     * Kopfzahl der Datei. Und `read_track` gab den gepackten Strom als
+     * Sektor aus, beginnend mit `78 9C` (zlib-Kopf). */
+    {
+        char pfad[600];
+        snprintf(pfad, sizeof(pfad), "%s/hxcfe_pc160.mfi", UFT_CORPUS_DIR);
+        FILE *f = fopen(pfad, "rb");
+        if (!f) {
+            printf("  [SKIP] hxcfe_pc160.mfi fehlt im Korpus\n");
+            uebersprungen++;
+        } else {
+            fclose(f);
+            uft_disk_t d;
+            memset(&d, 0, sizeof(d));
+            uft_error_t rc = uft_format_plugin_mfi.open(&d, pfad, true);
+            char h3[220];
+            snprintf(h3, sizeof(h3), "open=%d, %u Zyl, %u Koepfe "
+                     "(die Datei sagt 42 / 1)", (int)rc,
+                     d.geometry.cylinders, d.geometry.heads);
+            pruefe("mfi     — die Geometrie kommt aus dem Kopf der Datei, "
+                   "nicht aus einer festen 2", rc == UFT_OK
+                   && d.geometry.cylinders == 42
+                   && d.geometry.heads == 1, h3);
+
+            if (rc == UFT_OK) {
+                uft_track_t t;
+                memset(&t, 0, sizeof(t));
+                uft_error_t r = uft_format_plugin_mfi.read_track(&d, 0, 0,
+                                                                &t);
+                snprintf(h3, sizeof(h3), "rc=%d, %zu Sektoren, %zu Rohbyte",
+                         (int)r, (size_t)t.sector_count,
+                         (size_t)t.raw_size);
+                pruefe("mfi     — und die gepackten Spurdaten werden "
+                       "ABGESAGT, nicht als Sektor ausgegeben",
+                       r != UFT_OK && t.sector_count == 0
+                       && t.raw_size == 0, h3);
+                free(t.sectors);
+                free(t.raw_data);
+                uft_format_plugin_mfi.close(&d);
+            }
+        }
+    }
+
+    /* ── kfx: ein KryoFlux-Strom, und der Pruefer sagt auch NEIN ────
+     *
+     * MF-1024. Ein KryoFlux-Strom ist EINE Spur je Datei, also kann
+     * die Sektortafel oben ihn nicht pruefen. Die Frage ist stattdessen:
+     * erkennt UFT die STRUKTUR des Stroms, und weist es Fremdes ab?
+     *
+     * `uft_kfc_stream_is_valid()` (MF-919) laeuft die OOB-Kette ab und
+     * prueft die in den Bloecken EINGEBETTETE Stromposition gegen die
+     * eigene Zaehlung der Nicht-OOB-Bytes. Das ist eine Aussage ueber
+     * die Datei, nicht ueber unseren Code — und es ist der Grund, warum
+     * `kfx` hier eine Stufe tragen kann, obwohl es keine Sektoren
+     * liefert.
+     *
+     * Gemessen an den beiden Stroemen: je **10 OOB-Bloecke** und
+     * **3 Indexmarken**. Und der Pruefer sagt nachweislich auch nein —
+     * 65536 Byte Zufall (OOB 1, Index 0), ein Strom mit EINEM
+     * gekippten 0x0D (OOB 7 statt 10) und eine IMD-Datei (OOB 24,
+     * Index 0) fallen alle durch. Das ist wichtig, weil `kfx`s Sonde
+     * einmal genau daran gescheitert ist: MF-919 hat gemessen, dass
+     * sie 0x0D-Bytes ZAEHLTE und in 512 Zufallsbytes nie „nein" sagen
+     * konnte. */
+    {
+        static const char *stroeme[2] = { "hxcfe_kfx_t00.0.raw",
+                                          "hxcfe_kfx_t40.0.raw" };
+        int gut = 0, vorhanden = 0;
+        char detail[200] = "";
+        for (int k = 0; k < 2; k++) {
+            char pfad[600];
+            snprintf(pfad, sizeof(pfad), "%s/%s", UFT_CORPUS_DIR,
+                     stroeme[k]);
+            FILE *f = fopen(pfad, "rb");
+            if (!f) continue;
+            vorhanden++;
+            fseek(f, 0, SEEK_END);
+            long len = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            uint8_t *b = (uint8_t *)malloc((size_t)len);
+            size_t gelesen = b ? fread(b, 1, (size_t)len, f) : 0;
+            fclose(f);
+            if (!b || gelesen != (size_t)len) { free(b); continue; }
+
+            uint32_t oob = 0, idx = 0;
+            bool gueltig = uft_kfc_stream_is_valid(b, (size_t)len,
+                                                   &oob, &idx);
+            int conf = -1;
+            bool p = uft_format_plugin_kfx.probe(b, (size_t)len,
+                                                 (size_t)len, &conf);
+            uft_disk_t d;
+            memset(&d, 0, sizeof(d));
+            uft_error_t rc = uft_format_plugin_kfx.open(&d, pfad, true);
+            size_t roh = 0;
+            if (rc == UFT_OK) {
+                uft_track_t t;
+                memset(&t, 0, sizeof(t));
+                if (uft_format_plugin_kfx.read_track(&d, 0, 0, &t) == UFT_OK)
+                    roh = t.raw_size;
+                free(t.sectors);
+                free(t.raw_data);
+                uft_format_plugin_kfx.close(&d);
+            }
+            if (gueltig && oob == 10 && idx == 3 && p && conf >= 50
+                && conf < 80 && rc == UFT_OK && roh == (size_t)len)
+                gut++;
+            else if (detail[0] == '\0')
+                snprintf(detail, sizeof(detail),
+                         "%s: gueltig=%d OOB=%u Index=%u Sonde=%d(%d) "
+                         "open=%d roh=%zu von %ld", stroeme[k], gueltig,
+                         oob, idx, p, conf, (int)rc, roh, len);
+            free(b);
+        }
+        if (vorhanden == 0) {
+            printf("  [SKIP] die KryoFlux-Stroeme fehlen im Korpus\n");
+            uebersprungen++;
+        } else {
+            char h4[240];
+            snprintf(h4, sizeof(h4), "%d von %d Stroemen vollstaendig%s%s",
+                     gut, vorhanden, detail[0] ? "; " : "", detail);
+            pruefe("kfx     — zwei KryoFlux-Stroeme aus hxcfe: OOB-Kette "
+                   "geprueft, 10 Bloecke, 3 Indexmarken, Rohstrom "
+                   "vollstaendig", gut == 2 && vorhanden == 2, h4);
+        }
+
+        /* Und der Pruefer sagt nein, wenn er nein sagen muss. */
+        {
+            static uint8_t zufall[65536];
+            uint32_t z = 12345u;
+            for (size_t i = 0; i < sizeof(zufall); i++) {
+                z = z * 1103515245u + 12345u;
+                zufall[i] = (uint8_t)(z >> 16);
+            }
+            uint32_t oob = 0, idx = 0;
+            bool gueltig = uft_kfc_stream_is_valid(zufall, sizeof(zufall),
+                                                   &oob, &idx);
+            char h5[160];
+            snprintf(h5, sizeof(h5), "gueltig=%d, OOB=%u, Index=%u",
+                     gueltig, oob, idx);
+            pruefe("kfx     — und 64 KB Pseudozufall werden ABGEWIESEN "
+                   "(die Luecke aus MF-919)", !gueltig, h5);
         }
     }
 

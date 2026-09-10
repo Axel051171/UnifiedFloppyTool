@@ -205,16 +205,37 @@ static uft_error_t mfi_open(uft_disk_t *disk, const char *path,
         pdata->tracks[count].uncompressed_size = uft_read_le32(entry + 8);
         pdata->tracks[count].write_splice = uft_read_le32(entry + 12);
 
-        /* End marker: offset 0 and size 0 */
-        if (pdata->tracks[count].offset == 0 &&
-            pdata->tracks[count].compressed_size == 0)
-            break;
-
-        /* Track index → cyl/head */
-        uint8_t c = count / 2;
-        uint8_t h = count % 2;
-        if (c > max_cyl) max_cyl = c;
-        if (h > max_head) max_head = h;
+        /* MF-1023, zwei Berichtigungen an dieser Stelle.
+         *
+         * **(a) Die Kopfzahl wurde ignoriert.** Hier stand
+         * `uint8_t c = count / 2; uint8_t h = count % 2;` — fest
+         * zwei Koepfe, egal was der Kopf der Datei sagt. Gemessen an
+         * `tests/corpus_free/hxcfe_pc160.mfi`, die selbst **42
+         * Zylinder und 1 Kopf** ansagt und 42 belegte Eintraege hat:
+         * gemeldet wurden **21 Zylinder und 2 Koepfe**. Die halbe
+         * Diskette lag damit auf einem Kopf, den es nicht gibt —
+         * dieselbe Gestalt wie MF-1016, wo `jv1` eine zweite Seite
+         * erfand.
+         *
+         * **(b) Der „End marker" gibt es im Format nicht.** Hier stand
+         * `if (offset == 0 && compressed_size == 0) break;`. MAMEs
+         * `mfi_dsk.cpp` liest genau `cyl_count * head_count` Eintraege
+         * und behandelt einen leeren als **leere Spur**
+         * (`if (data.empty()) return TrackData(cylhead);`). Ein
+         * Abbruch verliert alles dahinter — die Gestalt von MF-1017,
+         * wo `jv3` beim ersten freien Satzkopf abbrach.
+         *
+         * In dieser Pruefdatei ist **kein** Eintrag leer, der Abbruch
+         * hat hier also nicht zugeschlagen; (a) allein erklaert die
+         * 21. Das gehoert so dagestanden, weil eine Ursache, die man
+         * nicht gemessen hat, keine ist. */
+        uint8_t c = (uint8_t)(count / hdr_heads);
+        uint8_t h = (uint8_t)(count % hdr_heads);
+        if (pdata->tracks[count].compressed_size != 0) {
+            /* Nur belegte Spuren erweitern die Geometrie. */
+            if (c > max_cyl) max_cyl = c;
+            if (h > max_head) max_head = h;
+        }
 
         count++;
         remaining -= MFI_TRACK_ENTRY;
@@ -279,31 +300,59 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
     if (idx >= pdata->track_count) return UFT_ERROR_INVALID_STATE;
 
     mfi_track_entry_t *te = &pdata->tracks[idx];
-    if (te->compressed_size == 0) return UFT_ERROR_INVALID_STATE;
 
     uft_track_init(track, cyl, head);
 
-    /* Read compressed track data */
-    if (fseek(pdata->file, (long)te->offset, SEEK_SET) != 0)
-        return UFT_ERROR_IO;
+    /* Eine leere Spur ist eine Aussage, kein Fehler: MAME liefert dort
+     * `TrackData(cylhead)` ohne Inhalt. */
+    if (te->compressed_size == 0) return UFT_OK;
 
-    uint8_t *buf = malloc(te->compressed_size);
-    if (!buf) return UFT_ERROR_NO_MEMORY;
-
-    if (fread(buf, 1, te->compressed_size, pdata->file) !=
-        te->compressed_size) {
-        free(buf);
-        return UFT_ERROR_IO;
-    }
-
-    /* Store as single raw sector (compressed flux data)
-     * Full decompression would require zlib — deferred to analysis layer */
-    uint16_t chunk = (te->compressed_size > 65535) ?
-                     65535 : (uint16_t)te->compressed_size;
-    uft_format_add_sector(track, 0, buf, chunk, (uint8_t)cyl, (uint8_t)head);
-    free(buf);
-
-    return UFT_OK;
+    /* MF-1023: hier stand
+     *
+     *     // Store as single raw sector (compressed flux data)
+     *     // Full decompression would require zlib
+     *     uft_format_add_sector(track, 0, buf, chunk, cyl, head);
+     *
+     * und damit gab der Leser den **zlib-gepackten Strom als
+     * Sektordaten** aus. Gemessen an einer von hxcfe erzeugten Datei
+     * (`tests/corpus_free/hxcfe_pc160.mfi`) begann „Sektor 0" mit
+     * `78 9C ED` — `78 9C` ist der zlib-Kopf. Dazu wurde bei mehr als
+     * 65535 Byte still abgeschnitten.
+     *
+     * Das ist die Klasse MF-864: das Wissen stand im Kommentar
+     * („Track data is zlib-compressed", Zeile 43 dieses Kopfes) und
+     * nicht im Code, und der Aufrufer bekam `UFT_OK`.
+     *
+     * **Warum hier nicht entpackt wird:** der Baum hat keinen
+     * erreichbaren Entpacker. `src/core/CMakeLists.txt` setzt
+     * `UFT_HAS_ZLIB=1`, wenn CMake zlib findet — und **keine einzige
+     * C-Datei liest dieses Makro**. `src/formats/imz/uft_imz.c`
+     * prueft `HAVE_ZLIB`, das niemand definiert; die `.pro`-Datei des
+     * primaeren Baus kennt zlib ueberhaupt nicht. zlib ist also
+     * gefunden, gelinkt und erreicht keinen Code (P3-329).
+     *
+     * **Und eine Warnung an die naechste Hand:** dieses Makro darf
+     * hier nur im KOMMENTAR stehen, nicht in einem
+     * Zeichenketten-Literal. `scripts/define_parity_gate.py`
+     * streift Kommentare ab, Zeichenketten aber nicht (zu Recht —
+     * ein Makro kann als WERT benutzt werden). Eine Nennung in der
+     * Merkmalstafel hat das Tor deshalb einmal glauben lassen, die
+     * Abweichung `C:UFT_HAS_ZLIB` („kein Verbraucher im
+     * Quellcode“) sei aufgeloest, und es verlangte die Zeile aus
+     * seiner Grundlinie. Prosa darf kein Tor erfuellen.
+     *
+     * Solange das nicht entschieden ist, ist **absagen** die richtige
+     * Antwort: MFI ist ein Flussformat mit gepackten Spuren, und ein
+     * gepackter Strom als „Sektor" ist eine erfundene Angabe. Das
+     * Muster ist MF-883/930 — die Zusage wahr machen, nicht die
+     * Faehigkeit behaupten.
+     *
+     * Was zum Lesen fehlt, steht vollstaendig fest (aus
+     * `src/samdisk/mfi.cpp`, MIT, im Baum): entpacken auf
+     * `uncompressed_size`, dann je 32 Bit LE eine Zelle mit 28 Bit
+     * Zeit (`& 0x0FFFFFFF`) und 4 Bit magnetischer Ausrichtung, und
+     * die Summe der Zeiten einer Spur muss **200 000 000** sein. */
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 /* ============================================================================
@@ -342,7 +391,19 @@ static uft_error_t mfi_write_track(uft_disk_t *disk, int cyl, int head,
  * ============================================================================ */
 
 static const uft_plugin_feature_t uft_format_plugin_mfi_features[] = {
-    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    /* MF-1023: **PARTIAL**, nicht SUPPORTED und nicht UNSUPPORTED —
+     * und das ist keine Bequemlichkeit, sondern die genaue Lage.
+     * Gelesen werden Kennung, Kopf, Geometrie und die Spurtabelle; die
+     * SPURDATEN nicht, weil sie zlib-gepackt sind und der Baum keinen
+     * erreichbaren Entpacker hat (P3-329). `read_track` sagt das mit
+     * `UFT_ERROR_NOT_SUPPORTED`, statt den gepackten Strom als Sektor
+     * auszugeben (so stand es vorher). */
+    { "Read", UFT_FEATURE_PARTIAL,
+      "MF-1023: Kennung, Kopf, Geometrie und Spurtabelle werden gelesen; "
+      "die Spurdaten nicht — sie sind zlib-gepackt, und das zlib-Makro "
+      "erreicht keine C-Datei (P3-329). Vorher gab read_track den "
+      "gepackten Strom als Sektor aus, beginnend mit dem zlib-Kopf "
+      "78 9C" },
     { "Write", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_SUPPORTED, NULL },
@@ -357,7 +418,16 @@ const uft_format_plugin_t uft_format_plugin_mfi = {
     .extensions   = "mfi",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1023: `CAP_READ` bleibt GESETZT, und die Einschraenkung
+     * traegt das PARTIAL-Etikett der Merkmalstafel. Der Behaelter
+     * WIRD gelesen — Kennung, Kopf, Geometrie, Spurtabelle —, nur die
+     * gepackten Spurdaten nicht (P3-329). Es einmal entfernt zu haben
+     * war zu grob: „nicht lesbar" ist eine andere Aussage als „liest
+     * den Behaelter, nicht die Daten", und die Merkmalstafel kann die
+     * zweite ausdruecken. Gemessen: das Bit wird ausserhalb der
+     * Plugins und Tests von NIEMANDEM geprueft. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX |
+                    UFT_FORMAT_CAP_VERIFY,
     .probe        = mfi_probe,
     .open         = mfi_open,
     .close        = mfi_close,
