@@ -175,6 +175,13 @@ extern const uft_format_plugin_t uft_format_plugin_stx;
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
 /* MF-1021, Welle 2 */
 extern const uft_format_plugin_t uft_format_plugin_st;
+/* MF-1022: SAP kommt nicht von hxcfe, sondern von `libsap` aus `sap2`
+ * (Alexandre Pukall / Eric Botcazou, GPL-2), lokal gebaut und
+ * ausgefuehrt. Zwei Orakel in einer Tafel sind kein Widerspruch: die
+ * Frage ist je Format, welche fremde Hand das Abbild geschrieben hat. */
+extern const uft_format_plugin_t uft_format_plugin_sap_thomson;
+int uft_sap_pruefsumme(const uft_disk_t *disk, int cyl, int sektor,
+                       uint16_t *soll, uint16_t *ist);
 
 typedef struct {
     const uft_format_plugin_t *p;
@@ -184,12 +191,12 @@ typedef struct {
 } fall_t;
 
 static const fall_t FAELLE[] = {
-    { &uft_format_plugin_imd,     "imd",     "hxcfe_pc160.imd", "IMD_IMG"        },
-    { &uft_format_plugin_jv3,     "jv3",     "hxcfe_pc160.jv3", "TRS80_JV3"      },
-    { &uft_format_plugin_dmk,     "dmk",     "hxcfe_pc160.dmk", "TRS80_DMK"      },
-    { &uft_format_plugin_d88,     "d88",     "hxcfe_pc160.d88", "NEC_D88"        },
-    { &uft_format_plugin_stx,     "stx",     "hxcfe_pc160.stx", "ATARIST_STX"    },
-    { &uft_format_plugin_dsk_cpc, "dsk_cpc", "hxcfe_pc160.dsk", "AMSTRADCPC_DSK" },
+    { &uft_format_plugin_imd,     "imd",     "hxcfe_pc160.imd", "hxcfe IMD_IMG"        },
+    { &uft_format_plugin_jv3,     "jv3",     "hxcfe_pc160.jv3", "hxcfe TRS80_JV3"      },
+    { &uft_format_plugin_dmk,     "dmk",     "hxcfe_pc160.dmk", "hxcfe TRS80_DMK"      },
+    { &uft_format_plugin_d88,     "d88",     "hxcfe_pc160.d88", "hxcfe NEC_D88"        },
+    { &uft_format_plugin_stx,     "stx",     "hxcfe_pc160.stx", "hxcfe ATARIST_STX"    },
+    { &uft_format_plugin_dsk_cpc, "dsk_cpc", "hxcfe_pc160.dsk", "hxcfe AMSTRADCPC_DSK" },
     /* MF-1021, Welle 2. Beide brauchen ihre EIGENE Geometrie — mit der
      * 160K-Eingabe der ersten Welle weist hxcfe sie ab:
      *   st    80 Spuren x 2 Koepfe x 9 Sektoren x 512 (uft_720k.img)
@@ -197,7 +204,8 @@ static const fall_t FAELLE[] = {
      * Eine Eingabe, die zum Format passt, ist keine Bequemlichkeit:
      * hxcfe erzeugt sonst gar nichts, und ein erzwungenes Layout waere
      * eine erfundene Diskette. */
-    { &uft_format_plugin_st,      "st",      "hxcfe_720k.st",   "ATARIST_ST"     },
+    { &uft_format_plugin_st,      "st",      "hxcfe_720k.st",   "hxcfe ATARIST_ST"     },
+    { &uft_format_plugin_sap_thomson, "sap", "sap2_thomson.sap", "libsap (sap2)" },
 };
 #define N_FAELLE ((int)(sizeof(FAELLE) / sizeof(FAELLE[0])))
 
@@ -247,7 +255,10 @@ int main(void)
 
         const uft_format_plugin_t *p = FAELLE[i].p;
         char name[200], h[220];
-        snprintf(name, sizeof(name), "%-7s liest die %s-Datei von hxcfe",
+        /* Der Erzeuger steht je Fall in `modul` — nicht pauschal
+         * „von hxcfe", denn SAP kommt von libsap. Eine Meldung, die
+         * das falsche Werkzeug nennt, ist eine falsche Aussage. */
+        snprintf(name, sizeof(name), "%-7s liest ein Abbild aus %s",
                  FAELLE[i].kurz, FAELLE[i].modul);
         if (!p->open || !p->read_track) {
             snprintf(h, sizeof(h), "Plugin hat kein open/read_track");
@@ -296,6 +307,55 @@ int main(void)
                  getroffen, detail[0] ? "; " : "", detail);
         pruefe(name, getroffen == 2 && spuren_gelesen == 2, h);
         if (p->close) p->close(&d);
+    }
+
+    /* ── Die Pruefsummen stehen in der DATEI, nicht in unserem Code ──
+     *
+     * MF-1022: SAP legt je Sektor eine Pukall-Pruefsumme ab, gebildet
+     * ueber die vier Kopfbytes UND die ENTSCHLUESSELTEN Daten. Der
+     * Parametersatz (gespiegeltes CCITT 0x8408, Start 0xFFFF, kein
+     * Abschluss-XOR) ist aus dem VERHALTEN von `libsap` abgeleitet, nicht
+     * aus seinem Quelltext abgeschrieben — eine Tafel abzuschreiben waere
+     * eine GPL-2-Uebernahme.
+     *
+     * Gehen alle 16 Pruefsummen einer Spur auf, ist das eine Aussage
+     * ueber die Wirklichkeit: `libsap` hat sie geschrieben, UFT rechnet
+     * sie nach. Derselbe Weg wie MF-869 (FM-CRCs auf der Diskette) und
+     * MF-1013 (GCR-Pruefsummen auf der Diskette). */
+    {
+        char pfad[600];
+        snprintf(pfad, sizeof(pfad), "%s/sap2_thomson.sap", UFT_CORPUS_DIR);
+        FILE *f = fopen(pfad, "rb");
+        if (!f) {
+            printf("  [SKIP] sap2_thomson.sap fehlt im Korpus\n");
+            uebersprungen++;
+        } else {
+            fclose(f);
+            uft_disk_t d;
+            memset(&d, 0, sizeof(d));
+            if (uft_format_plugin_sap_thomson.open(&d, pfad, true) == UFT_OK) {
+                int gut = 0, schlecht = 0;
+                uint16_t erst_soll = 0, erst_ist = 0;
+                for (int sek = 0; sek < 16; sek++) {
+                    uint16_t soll = 0, ist = 0;
+                    int rc2 = uft_sap_pruefsumme(&d, 0, sek, &soll, &ist);
+                    if (sek == 0) { erst_soll = soll; erst_ist = ist; }
+                    if (rc2 == 0) gut++;
+                    else schlecht++;
+                }
+                char h2[200];
+                snprintf(h2, sizeof(h2),
+                         "%d gut, %d schlecht; Sektor 0: Datei %04X, "
+                         "nachgerechnet %04X", gut, schlecht,
+                         erst_soll, erst_ist);
+                pruefe("sap     — alle 16 Pukall-Pruefsummen der Spur 0 "
+                       "gehen auf", gut == 16 && schlecht == 0, h2);
+                uft_format_plugin_sap_thomson.close(&d);
+            } else {
+                pruefe("sap     — alle 16 Pukall-Pruefsummen der Spur 0 "
+                       "gehen auf", 0, "open schlug fehl");
+            }
+        }
     }
 
     printf("\n%d gruen, %d rot, %d uebersprungen\n",

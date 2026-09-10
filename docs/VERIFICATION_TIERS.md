@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 34 |
+| T1b | 35 |
 | T2 | 25 |
-| T3 | 27 |
+| T3 | 26 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -53,6 +53,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `po` | **T1b** | `test_apple_do_po_bounds`, `test_corpus_gw_geometrie`, `test_do_po_probe_ignores_content`, `test_durchschreibprobe`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | 1 |
 | `sad` | **T1b** | `test_sad_magic` | — | — | 1 |
 | `sam` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
+| `sap_thomson` | **T1b** | `test_fremde_hand_liest` | — | — | 1 |
 | `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_flux_jitter_vectors`, `test_format_probe_fuzz`, `test_g64_v3_halbspur_index`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_layout`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `ssd` | **T1b** | `test_corpus_gw_geometrie`, `test_ssd_hadfs_nicht_dfs` | — | — | 1 |
 | `st` | **T1b** | `test_fremde_hand_liest`, `test_st_bootpruefsumme`, `test_st_geometry`, `test_st_spiralfaktor`, `test_st_write_roundtrip` | SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt. MF-873: die TOS-Boot-Pruefsumme haengt nicht mehr an SAMdisk allein. Zweite Quelle disktype, Dokumentation §3.3.1 "The GEMDOS File System" (https://disktype.sourceforge.net/doc/ch03s03.html): "the boot sector must have a checksum of $1234 (computed from 16-bit words in big-endian byte order)" — benennt Wert, Wortbreite UND Byte-Reihenfolge. Dritte Quelle Richard Karsmakers, "The Ultimate Virus Killer Book", Anhang I "Atari Boot Flowchart", Schritt 9 (https://st-news.com/uvk-book/the-book/part-iii-appendices/i-atari-boot-flowchart): "the Operating System will load the bootsector off that particular floppy disk and execute it when the checksum is $1234" — benennt Wert und Folge, nicht die Mechanik. | MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats. MF-873: seit diesem Stand DREIFACH belegt (disktype §3.3.1 und das UVK-Buch, siehe spec_source); disktype spricht als einzige die Byte-Reihenfolge aus, was die Bedingung "nicht doppelt gegengelesen" aufhebt. Dazu tests/test_st_bootpruefsumme.c mit einer GEGENSPUR: ein Bootsektor, dessen LITTLE-Endian-Summe 0x1234 trifft und dessen Big-Endian-Summe nicht — er unterscheidet sich vom gueltigen ausschliesslich im Ausgleichswort an $1FE. Zwei Mutationen gemessen: (1) Pruefer little-endian — test_st_geometry wird ebenfalls rot, der neue Test fuegt hier NICHTS hinzu; (2) Pruefer nimmt BE ODER LE — test_st_geometry bleibt GRUEN, nur der neue Test faengt es. Nur der zweite Fall rechtfertigt die Datei, und das steht so in ihrem Kopf. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2. | 1 |
@@ -106,7 +107,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_atari_verlorene_sektoren`, `test_floppy_formats`, `test_pro_schreibt_nicht`, `test_st_plugin` | — | — | — |
 | `qrst` | **T3** | — | — | — | — |
 | `rcpmfs` | **T3** | — | — | — | — |
-| `sap_thomson` | **T3** | — | — | — | — |
 | `syn` | **T3** | — | — | — | — |
 | `tan` | **T3** | — | — | — | — |
 | `v9t9` | **T3** | — | — | — | — |

@@ -397,6 +397,38 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="libsap",
+        env="LIBSAP",
+        exes=("mach_sap", "mach_sap.exe", "sap2", "sap2.exe"),
+        version_args=("-h",),
+        version_re=r"([0-9a-f]{7,40})",
+        reference_for="Thomson MO/TO SAP: Dateikopf, Formattafel "
+                      "(1 = 80x16x256, 2 = 40x16x128), die Verschleierung "
+                      "der Sektordaten mit XOR 0xB3 und die "
+                      "Pukall-Pruefsumme. Bezug fuer T1b bei "
+                      "`sap_thomson` (MF-1022)",
+        origin="tools/uft-scout/work/sap2 (Klon cab6105); Urheber des "
+               "Formats: Alexandre PUKALL, Bibliothek und Werkzeug von "
+               "Eric Botcazou",
+        licence="GPL-2.0",
+        version_exit_ok=(0, 1),
+        abstammung=(
+            "KEINE UEBERNAHME, gemessen: `src/formats/sap/` enthaelt "
+            "keine Zeile aus libsap. Aus dem QUELLTEXT abgelesen sind "
+            "nur Fakten ueber das Format — die Signatur "
+            "\"SYSTEME D'ARCHIVAGE PUKALL S.A.P.\" bei Versatz 1, die "
+            "Kopfgroesse 66, die Formattafel und der XOR-Wert 0xB3. "
+            "Die Pruefsumme ist ausdruecklich NICHT uebernommen: "
+            "libsap rechnet mit einer eigenen Tafel (`crc_pukall`), und "
+            "eine Tafel abzuschreiben waere eine GPL-2-Uebernahme. Der "
+            "Parametersatz (gespiegeltes CCITT 0x8408, Start 0xFFFF, "
+            "kein Abschluss-XOR, Spanne = 4 Kopfbytes + entschluesselte "
+            "Daten) ist an sechs Sektoren einer erzeugten Datei GESUCHT "
+            "und eindeutig GEFUNDEN worden — der Nachbau-Weg aus "
+            "docs/QUARANTINE_PROCESS.md §5."
+        ),
+    ),
+    Oracle(
         name="hxcfe",
         env="HXCFE",
         exes=("hxcfe", "hxcfe.exe"),

@@ -704,6 +704,18 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - kein Inhalt, nur Fuellbytes",
       "content": "leer formatierte TI-99-Diskette, 100 % 0xF6 (Befund P3-327)"
+    },
+    {
+      "file": "tests/corpus_free/sap2_thomson.sap",
+      "sha256": "d07331223fd6943188c7487232627cef2ee1d8c72a6135f6f055872f836f5a38",
+      "format": "sap_thomson",
+      "origin": "cross-tool",
+      "tool": "libsap aus sap2 (Klon cab6105), lokal gebaut aus tools/uft-scout/work/sap2",
+      "source": "Erzeugt mit einem Wegwerf-Treiber, der libsap ruft: sap_CreateArchive(datei, 1) - sap_FormatArchive(id, 1) - je Sektor sap_WriteSectorEx(id, spur, sektor, 1, daten) - sap_CloseArchive(). Format 1 = 80 Spuren x 16 Sektoren x 256 Byte; 1280 von 1280 Sektoren geschrieben, alle mit SAP_OK. Der Inhalt ist UFT-eigen und rechtefrei: je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\". Inhalt nachgewiesen: 1280 Treffer fuer \"UFT-K\" nach XOR 0xB3 - roh sucht man es vergeblich, weil SAP jedes Datenbyte verschleiert. libsap wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695); die Pruefsummen-Parameter sind aus seinem VERHALTEN abgeleitet, nicht aus seinem Quelltext uebernommen.",
+      "test": "test_fremde_hand_liest",
+      "oracle": "libsap",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; Kopf und Sektorstruktur stammen von libsap",
+      "content": "UFT-K Selbstbeschreibungsmuster (nach XOR 0xB3), Thomson SAP Format 1, Kopf \"SYSTEME D'ARCHIVAGE PUKALL S.A.P.\" bei Versatz 1"
     }
   ]
 }
