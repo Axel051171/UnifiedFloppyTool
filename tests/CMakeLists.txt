@@ -1688,7 +1688,10 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_abbild_erzeugen"
            # MF-994: erzeugt eine D64 ueber die Registry und misst sie
            # gegen das VICE-Abbild im Korpus.
-           OR ${test_name} STREQUAL "test_d64_erzeugen_gegen_vice")
+           OR ${test_name} STREQUAL "test_d64_erzeugen_gegen_vice"
+           # MF-1020: oeffnet Abbilder, die hxcfe erzeugt hat, durch die
+           # benannten Plugins der Registry — die T1b-Frage schlechthin.
+           OR ${test_name} STREQUAL "test_fremde_hand_liest")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

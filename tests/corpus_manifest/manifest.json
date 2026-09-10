@@ -548,6 +548,114 @@
       "content": "5,25-Zoll-360K-Diskette, Zylinder 0 Kopf 0, 3 Umdrehungen. Der Inhalt folgt einer FORMEL statt einem Werkzeug: Sektor k traegt 512-mal das Byte (k mod 256). An der beiliegenden .img nachgerechnet — 0 von 720 Sektoren weichen ab (MF-960). Ein Oracle, das man nachrechnen statt ausfuehren kann.",
       "fremdcode": "nein - der Datentraeger traegt kein Programm, sondern ein erzeugtes Zaehlmuster (siehe content). Die Aufnahme selbst ist Fluss, kein Code.",
       "gemessen": "uft_kf_decode() liefert 127782 Flusswechsel, 4 Index-OOBs, sample_clock 24027428.5714286 Hz, index_clock 3003428.5714286 Hz; Umdrehungsdauern 199.94 / 199.94 / 199.93 ms = 300.1 U/min (MF-960)."
+    },
+    {
+      "file": "tests/corpus_free/uft_pc160.img",
+      "sha256": "c8a5874722c5d894dcaea916c6b5a8bcc0f0a30fe710558997932dd78aefeb49",
+      "format": "img",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1020)",
+      "source": "40 Spuren x 16 Sektoren x 256 Byte; je Sektor Byte 0 = Spur, Byte 1 = Sektor (1-basiert), Byte 2..6 = \"UFT-K\", Byte 7.. = (Spur*31 + Sektor*7 + Versatz) & 0xFF. EINGABE fuer die hxcfe-Wandlungen dieser Welle - sie ist selbst KEIN Beleg und traegt keine Stufe (origin: derived). Ihr Zweck ist, dass der Inhalt SICH SELBST BENENNT: damit sagt ein Leseergebnis nicht nur, DASS etwas geliefert wurde, sondern ob die RICHTIGE Stelle getroffen war.",
+      "test": "test_fremde_hand_liest",
+      "oracle": "-",
+      "fremdcode": "nein - vollstaendig UFT-eigen erzeugt",
+      "content": "UFT-K Selbstbeschreibungsmuster: Spur 0 Sektor 1 beginnt mit 00 01 55 46 54 2D 4B (\"UFT-K\")"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.imd",
+      "sha256": "3f29a9418501d378ef7ef59459b4f119c9ae26bb1267df15f88732d58d513a81",
+      "format": "imd",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.imd -conv:IMD_IMG  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, ImageDisk IMD"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.jv3",
+      "sha256": "116f5276b4f669b633f5861ceebd8229ea231a3b9cb387e28b91876d1b701cc7",
+      "format": "jv3",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.jv3 -conv:TRS80_JV3  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, TRS-80 JV3"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.dmk",
+      "sha256": "35d19080d060bc980402b15ad5c0f5fa9cebede4a6619228a4b663f30849ab1a",
+      "format": "dmk",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.dmk -conv:TRS80_DMK  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, TRS-80 DMK"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.d88",
+      "sha256": "97590885b5d657c2178bc8ebd9be5f910de3cc6ac8068a3353b36aef56b3ddc7",
+      "format": "d88",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.d88 -conv:NEC_D88  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, NEC D88"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.stx",
+      "sha256": "bb5d69d137fd3cbebe0d227c89013262f20de6f8da93f7fb536fa89bd006a572",
+      "format": "stx",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.stx -conv:ATARIST_STX  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, Atari ST STX/Pasti"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.dsk",
+      "sha256": "3b3f0d9c50b2199776478d8b1230bcdad489776fca5a51ea47b032c7aa3cc9ab",
+      "format": "dsk_cpc",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.dsk -conv:AMSTRADCPC_DSK  (Modul-Kennung aus `hxcfe -modulelist`, ACCESS = RW). Eingabe ist tests/corpus_free/uft_pc160.img, UFT-eigen und rechtefrei. hxcfe liegt gebaut unter tools/uft-scout/work/HxCFloppyEmulator/build/ - es wird AUSGEFUEHRT, nicht portiert (Kanal Oracle, MF-695).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Dateiinhalt ist UFT-eigen: 40 Spuren x 16 Sektoren x 256 Byte, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", dahinter ein Muster aus Spur und Sektor. Kein Bootblock, kein Dateisystem, kein fremder Code - nur der Containerkopf stammt von hxcfe (MF-779)",
+      "content": "UFT-K Selbstbeschreibungsmuster, Amstrad CPC DSK"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_pc160.mfi",
+      "sha256": "db15011a3ba35d387d805ea5ad0bcd7bd150c541ac5bd91c0c424fef007b2003",
+      "format": "mfi",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.mfi -conv:MAME_MFI  (ACCESS = RW aus `hxcfe -modulelist`). P3-326: liegt bereit, aber der MFI-Leser entpackt das zlib-gepackte Spurdatum nicht und gab beim Messlauf den Kopf 78 9C als Spurdaten aus. Kein Test verknuepft, also KEINE Stufen-Anrechnung - die Datei ist der Pruefstand fuer die Reparatur, nicht ihr Beleg.",
+      "test": "-",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
+      "content": "UFT-K Selbstbeschreibungsmuster, MAME Floppy Image (Fluss, zlib)"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_ibmdd.ipf",
+      "sha256": "2bb66507d61110ea921a9230d41628afca879a7273e4ff066f05c5b2609006cc",
+      "format": "ipf",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:tests/differential/corpus/sources/ibm_dd.img -foutput:hxcfe_ibmdd.ipf -conv:SPS_IPF  (ACCESS = RW aus `hxcfe -modulelist`). IPF von fremder Hand - erzeugt, weil P3-315 den IPF-Weg als \"lizenzfrei ersetzbar, aber DATEN-blockiert\" fuehrt. Die Datei ist Daten, kein Code (Kanal Daten/Fixture nach MF-695), und sie nimmt genau diesen Blocker weg. Kein Test verknuepft, also KEINE Stufen-Anrechnung, solange die Quarantaenefrage des Lesers offen ist.",
+      "test": "-",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
+      "content": "UFT-eigene Sektordaten aus ibm_dd.img, SPS/CAPS IPF"
     }
   ]
 }
