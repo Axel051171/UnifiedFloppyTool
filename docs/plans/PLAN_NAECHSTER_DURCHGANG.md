@@ -153,17 +153,66 @@ Betroffen sind drei Dateien:
 | `uft_caps_ipf.c` (790 Z.) | „Based on SPS CAPS Library" — **kein SPDX, keine Lizenz**, und **erreichbar** (`uft_ipf_plugin.c:46`) |
 | `uft_ipf_helper.c` | verdrahtet, Gegenseite existiert nicht (P3-190) |
 
-**Die Frage, die vor jedem Handgriff steht** — und sie ist eine
-Eigentümerfrage, keine Messung:
+**Die Frage, die vor jedem Handgriff stand** — eine Eigentümerfrage,
+keine Messung:
 
 > Ist MAMEs IPF-Leser wirklich unabhängig entstanden, oder leitet er sich
 > seinerseits von SPS-Material ab? Der BSD-3-Kopf ist Galiberts Zusage,
 > und nach der Regel dieses Baums ist eine Attribution eine **rechtliche
 > Aussage** (MF-636), keine Höflichkeit.
 
-Fällt die Antwort günstig aus, ersetzt eine Neufassung nach MF-614-Muster
-**beide** Problemdateien — und schließt „die einzige der fünf
-Quarantänezeilen, die eine Fähigkeit kostet".
+> ### ✅ Beantwortet am 2026-09-10 — **ja** (MF-1003)
+>
+> Der Eigentümer hat bestätigt: MAMEs `ipf_dsk.cpp` gilt als unabhängig
+> entstanden. Damit ist er nach dem **MF-614-Muster** eine benannte
+> Referenz — lesen, eigenständig umsetzen, Datei und Zeile zitieren,
+> ausdrücklich festhalten, dass nichts kopiert wurde. BSD-3 ist mit
+> UFTs GPL-2-or-later verträglich. Das Register in
+> `docs/QUARANTINE.md` führt für `uft_ipf_air.c` jetzt **Weg 1/2**
+> statt Weg 3; Weg 3 bleibt Rückfall.
+
+### 3.0 Was das ja gebracht hat — und was es NICHT gebracht hat
+
+**Die eine der beiden Problemdateien ist weg, ohne dass das ja dafür
+nötig war.** Eine Messung vor dem ersten Handgriff hat `uft_caps_ipf.c`
+(790 Z., keine Lizenz) anders entschieden als erwartet — sie kostete
+**keine Fähigkeit**:
+
+```
+uft_caps_is_ipf(echtes IPF, "CAPS")      = FALSE
+uft_caps_is_ipf(kein IPF, 00 00 00 01)   = TRUE
+```
+
+`read_block_header()` legt den rohen ASCII-Vierer als BE-u32 ab und
+vergleicht gegen eine interne Aufzählung `1..10`. Für `"CAPS"` steht dort
+`0x43415053`, nie `1` — kein `case` konnte je greifen. Die Datei war
+strukturell außerstande, ein IPF zu lesen, und der einzige erreichbare
+Zweig konnte nur **falsch positiv** werden. Gelöscht in **MF-1002**;
+Quarantäne-Befundstufe **7 → 6**.
+
+**Die zweite Datei bleibt — und der Blocker hat gewechselt.**
+`uft_ipf_air.c` (1042 Z., **GPL-3-only**) ist der wirkliche IPF-Leser und
+bindet den ganzen Baum an GPL-3. Ihn zu ersetzen ist jetzt
+**lizenzseitig frei**. Was stattdessen blockiert, ist **Daten**:
+
+| | |
+|---|---|
+| IPF im Korpus | **null** (`find tests -iname '*.ipf'` leer, kein Manifest-Eintrag) |
+| heutiger Test | `test_ipf_air_accessors.c` baut einen **synthetischen** `"CAPS"`-Puffer |
+| Stufe | `ipf` = **T3** |
+
+Ein Ersatz, der heute geschrieben würde, ließe sich nur gegen die eigene
+Vorstellung vom Format prüfen — die Selbstbestätigung aus **MF-992**, und
+die EINFRIER-REGEL (b) verlangt gemessene Zahlen.
+
+**Kanal nach MF-695: Daten/Fixture.** Es braucht ein IPF, dessen
+Weitergabe geklärt ist. Das ist die **nächste Eigentümerfrage** — und
+eine kleinere als die beantwortete.
+
+**Reihenfolge, belegt statt geraten:** erst Daten, dann Code. `f3c8099a`
+(MF-905) hob den OPD-Leser gegen ein Orakel, erst danach verdrahtete
+`c601a789` (MF-931) den Schreiber; MF-864 baute den FM-Dekoder erst,
+nachdem `fluxtoimd` als fremde Hand die Prüfspur abnehmen konnte.
 
 ### 3.1 `caps.zip` beantwortet die Frage nicht — es wiederholt sie
 
@@ -238,7 +287,10 @@ kann · Aufwand. **Auftrag für `uft-scout` / `uft-github-scout`** — sie
 liefern Dokumente, keinen Code.
 
 Zwei stehen fest: **`hfe`** braucht eine von HxC oder greaseweazle *leer
-erzeugte* HFE (P3-309). **`ipf`** braucht die Antwort aus §3.
+erzeugte* HFE (P3-309). **`ipf`** braucht seit MF-1003 kein Lizenzurteil
+mehr, sondern **eine Datei** — siehe §3.0; es ist damit von der
+teuersten Zeile der Liste zu einem gewöhnlichen Beschaffungsposten
+geworden.
 
 ---
 
@@ -346,8 +398,11 @@ unveränderte Prince of Persia lasse sich bis heute nicht emulieren.
 
 ## 8. Reihenfolge
 
-1. **§3 zur Entscheidung vorlegen** — die IPF-Herkunftsfrage. Sie ist die
-   einzige, die eine *Fähigkeit* zurückbringt, und sie braucht dich.
+1. ~~**§3 zur Entscheidung vorlegen** — die IPF-Herkunftsfrage.~~
+   **Erledigt 2026-09-10 (MF-1003): ja.** Eine der beiden Dateien ist
+   dabei ganz weggefallen (MF-1002), die andere wartet jetzt auf eine
+   Datei statt auf ein Urteil. Die verbleibende Eigentümerfrage ist
+   klein: **darf ein IPF in den Korpus** (§3.0).
 2. **Phase A**, Format für Format, `cfi` → `mgt` → `apridisk` zuerst.
 3. **UFT-83** dazwischen — klein, unabhängig, verbessert eine Quelle.
 4. **Phase B als Auftrag an die Aufklärungs-Agenten**, parallel.
