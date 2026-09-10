@@ -640,66 +640,246 @@ size_t gcr_compare_sectors(const uint8_t *track1, size_t len1,
  * Track Verification
  * ============================================================================ */
 
+/* ============================================================================
+ * Satzkoepfe und Datenbloecke -- die echte Zerlegung (MF-1013)
+ *
+ * Aufbau einer 1541-Spur, je Sektor:
+ *
+ *   Sync (>= 5 x 0xFF)
+ *   Kopfblock   10 GCR-Byte -> 8 Klarbyte:
+ *               [0] 0x08  [1] Pruefsumme  [2] Sektor  [3] Spur
+ *               [4] ID2   [5] ID1         [6] 0x0F    [7] 0x0F
+ *   Luecke
+ *   Sync
+ *   Datenblock  325 GCR-Byte -> 260 Klarbyte:
+ *               [0] 0x07  [1..256] Daten  [257] Pruefsumme  [258..259] 0
+ *   Luecke
+ *
+ * Die Pruefsummen sind XOR -- Kopf: Spur ^ Sektor ^ ID1 ^ ID2
+ * (`gcr_calc_header_checksum`), Daten: XOR ueber die 256 Byte
+ * (`gcr_calc_data_checksum`).
+ *
+ * **Warum das ohne fremdes Werkzeug beweisbar ist:** die Pruefsummen
+ * stehen auf der DISKETTE, nicht in unserem Code. Wird eine echte
+ * Aufnahme dekodiert und gehen alle Pruefsummen auf, ist das eine
+ * Aussage ueber die Wirklichkeit -- derselbe Weg wie MF-869 beim
+ * FM-Pfad ("Die CRCs stehen auf der Diskette selbst, 1979
+ * geschrieben"). Ein Rundlauf gegen unser eigenes `gcr_encode` waere
+ * dagegen die Selbstbestaetigung aus MF-992.
+ * ============================================================================ */
+
+#define GCR_HEADER_GCR_LEN  10      /* 8 Klarbyte   */
+#define GCR_DATA_GCR_LEN    325     /* 260 Klarbyte */
+
+/**
+ * @brief Dekodiert den Kopfblock an `pos` (hinter einem Sync).
+ * @return true, wenn dort ein Kopfblock steht (Marke 0x08).
+ */
+static bool gcr_read_header(const uint8_t *gcr, size_t size, size_t pos,
+                            gcr_sector_verify_t *out, size_t *gcr_fehler)
+{
+    if (!gcr || !out || pos + GCR_HEADER_GCR_LEN > size) return false;
+
+    uint8_t klar[8];
+    size_t fehler = 0;
+    if (gcr_decode(gcr + pos, GCR_HEADER_GCR_LEN, klar, &fehler) < 8)
+        return false;
+    if (klar[0] != 0x08) return false;
+
+    /* Erst ab hier steht fest, dass hier wirklich ein Kopfblock liegt --
+     * vorher waeren die Dekodierfehler die eines Blocks, den es nicht
+     * gibt (jeder Sync wird zunaechst als Kopf probiert). */
+    if (gcr_fehler) *gcr_fehler += fehler;
+
+    out->sector_in_header = klar[2];
+    out->track_in_header  = klar[3];
+    out->id[0] = klar[5];               /* ID1 */
+    out->id[1] = klar[4];               /* ID2 */
+    out->header_checksum = klar[1];
+    out->sector = klar[2];
+
+    uint8_t soll = gcr_calc_header_checksum(klar[3], klar[2], out->id);
+    out->header_ok = (soll == klar[1]) && (fehler == 0);
+    return true;
+}
+
+/**
+ * @brief Dekodiert den Datenblock an `pos` (hinter einem Sync).
+ * @param daten Ziel fuer 256 Byte (darf NULL sein)
+ * @return true, wenn dort ein Datenblock steht (Marke 0x07).
+ */
+static bool gcr_read_data(const uint8_t *gcr, size_t size, size_t pos,
+                          uint8_t *daten, gcr_sector_verify_t *out,
+                          size_t *gcr_fehler)
+{
+    if (!gcr || !out || pos + GCR_DATA_GCR_LEN > size) return false;
+
+    uint8_t klar[260];
+    size_t fehler = 0;
+    if (gcr_decode(gcr + pos, GCR_DATA_GCR_LEN, klar, &fehler) < 260)
+        return false;
+    if (klar[0] != 0x07) return false;
+
+    if (gcr_fehler) *gcr_fehler += fehler;
+
+    out->data_checksum = klar[257];
+    uint8_t soll = gcr_calc_data_checksum(klar + 1);
+    out->data_ok = (soll == klar[257]) && (fehler == 0);
+
+    if (daten) memcpy(daten, klar + 1, SECTOR_SIZE);
+    return true;
+}
+
+/**
+ * @brief Sucht den naechsten Blockanfang ab `von`.
+ * @return Versatz hinter dem Sync, oder `size` wenn keiner mehr kommt.
+ */
+static size_t gcr_naechster_block(const uint8_t *gcr, size_t size, size_t von)
+{
+    int sync = gcr_find_sync(gcr, size, von);
+    if (sync < 0) return size;
+    return gcr_find_sync_end(gcr, size, (size_t)sync);
+}
+
 /**
  * @brief Verify track data
+ *
+ * MF-1013: hier stand `header_ok = true;` und `sectors_good++`
+ * **bedingungslos**, sobald die obere Nibble wie `0x50` aussah -- kein
+ * Kopf dekodiert, keine Pruefsumme. Und der Parameter `disk_id` wurde
+ * **nie benutzt**: eine Signatur, die eine Pruefung zusagte, die nicht
+ * stattfand (P3-319).
+ *
+ * Jetzt wird jeder Kopf- und Datenblock wirklich dekodiert und gegen
+ * die Pruefsummen auf der Diskette gehalten. Ist `disk_id` gesetzt,
+ * wird die ID aus dem Kopf damit verglichen und eine Abweichung als
+ * `header_errors` gezaehlt -- die Pruefung, die der Parameter schon
+ * immer versprochen hat.
+ *
+ * @return Zahl der gefundenen Fehler (Kopf + Daten + GCR).
  */
 int gcr_verify_track(const uint8_t *gcr, size_t size, int track,
                      const uint8_t *disk_id, gcr_verify_result_t *result)
 {
     if (!gcr || !result || size == 0) return -1;
-    
+
     memset(result, 0, sizeof(gcr_verify_result_t));
-    
-    int expected_sectors = gcr_sectors_per_track(track);
-    int errors = 0;
-    size_t pos = 0;
-    
+
+    size_t gcr_fehler = 0;      /* Dekodierfehler in echten Bloecken */
+    size_t pos = gcr_naechster_block(gcr, size, 0);
     while (pos < size && result->sectors_found < 21) {
-        /* Find next sync */
-        int sync = gcr_find_sync(gcr, size, pos);
-        if (sync < 0) break;
-        
-        pos = gcr_find_sync_end(gcr, size, sync);
-        if (pos >= size - 5) break;
-        
-        /* Check for header marker (GCR encoded 0x08 = 0x52) */
-        if ((gcr[pos] & 0xF0) == 0x50) {
-            int sector_idx = result->sectors_found;
-            result->sectors_found++;
-            
-            /* Simplified header parsing - full version would decode GCR */
-            result->sectors[sector_idx].header_ok = true;
-            result->sectors_good++;
+        gcr_sector_verify_t kopf;
+        memset(&kopf, 0, sizeof(kopf));
+
+        if (gcr_read_header(gcr, size, pos, &kopf, &gcr_fehler)) {
+            /* Spurnummer: der Aufrufer sagt, welche er erwartet. Eine
+             * Abweichung ist ein Kopffehler, kein Grund zu schweigen. */
+            if (track > 0 && kopf.track_in_header != (uint8_t)track)
+                kopf.header_ok = false;
+
+            /* Der ID-Vergleich, den der Parameter zusagt. */
+            if (disk_id
+                && (kopf.id[0] != disk_id[0] || kopf.id[1] != disk_id[1]))
+                kopf.header_ok = false;
+
+            size_t dpos = gcr_naechster_block(gcr, size,
+                                              pos + GCR_HEADER_GCR_LEN);
+            if (dpos < size)
+                (void)gcr_read_data(gcr, size, dpos, NULL, &kopf,
+                                    &gcr_fehler);
+
+            int idx = result->sectors_found++;
+            result->sectors[idx] = kopf;
+            if (!kopf.header_ok) result->header_errors++;
+            if (!kopf.data_ok)   result->data_errors++;
+            if (kopf.header_ok && kopf.data_ok) result->sectors_good++;
+
+            if (dpos < size) {
+                size_t weiter = gcr_naechster_block(gcr, size,
+                                                    dpos + GCR_DATA_GCR_LEN);
+                if (weiter > pos) { pos = weiter; continue; }
+            }
         }
-        
-        pos++;
+
+        size_t weiter = gcr_naechster_block(gcr, size, pos + 1);
+        if (weiter <= pos) break;
+        pos = weiter;
     }
-    
-    result->gcr_errors = gcr_check_errors(gcr, size);
-    errors = result->header_errors + result->data_errors + result->gcr_errors;
-    
-    return errors;
+
+    /* MF-1013: hier stand `result->gcr_errors = gcr_check_errors(gcr,
+     * size)`. Das ist eine sinnlose Zahl an dieser Stelle:
+     * `gcr_check_errors()` prueft JEDEN Byteversatz auf gueltige
+     * 5-Bit-Codes, und in einem byteweise ausgerichteten Strom sind die
+     * meisten Versaetze schon von der Bauart her ungueltig. Gemessen an
+     * Spur 18 der Korpus-Aufnahme (7142 Byte, 19 fehlerfreie Sektoren)
+     * kamen so **5212 „Fehler"** heraus (gemessen ueber `gcr_verify_track` selbst,
+     * nicht ueber eine Wegwerf-Schleife) — bei einer Spur, deren
+     * saemtliche Pruefsummen aufgehen.
+     *
+     * Gezaehlt werden jetzt die Dekodierfehler, die in den WIRKLICHEN
+     * Bloecken auftreten -- `gcr_read_header`/`gcr_read_data` addieren
+     * sie in `gcr_fehler`, und zwar erst, nachdem die Blockmarke (0x08
+     * bzw. 0x07) den Block als solchen bestaetigt hat. Eine Zahl, die
+     * niemand deuten kann, ist keine Messung. */
+    result->gcr_errors = (int)gcr_fehler;
+    return result->header_errors + result->data_errors + result->gcr_errors;
 }
 
 /**
  * @brief Extract sector data
+ *
+ * MF-1013: hier stand ein `memset(output, 0, SECTOR_SIZE)` mit
+ * `return 0` und dem Kommentar "This is a simplified implementation".
+ * Der Aufrufer bekam 256 Nullbytes **und Erfolg** -- erfundene Daten,
+ * nicht bloss fehlende. Gefuehrt als P3-319; Klasse MF-864
+ * (`flux_decode_fm()`, dessen Sektorteil aus zwei Kommentaren bestand),
+ * hier schaerfer, weil Daten geliefert statt weggelassen wurden.
+ *
+ * Jetzt: die Blockkette ablaufen, den Kopf mit der gesuchten
+ * Sektornummer finden, den folgenden Datenblock dekodieren, beide
+ * Pruefsummen gegen die Werte auf der DISKETTE halten.
+ *
+ * @return 0 wenn der Sektor gefunden wurde UND beide Pruefsummen
+ *         aufgehen; -1 wenn er nicht gefunden wurde; -2 wenn er
+ *         gefunden wurde, aber eine Pruefsumme nicht stimmt. Im Fall
+ *         -2 stehen die Daten trotzdem in `output` -- "Kein Bit
+ *         verloren" -- und `verify` sagt, welche Pruefsumme fiel.
  */
 int gcr_extract_sector(const uint8_t *gcr, size_t size, int sector,
                        uint8_t *output, gcr_sector_verify_t *verify)
 {
     if (!gcr || !output || size == 0) return -1;
-    
-    /* This is a simplified implementation */
-    /* Full version would properly locate and decode the sector */
-    
-    memset(output, 0, SECTOR_SIZE);
-    
-    if (verify) {
-        memset(verify, 0, sizeof(gcr_sector_verify_t));
-        verify->sector = sector;
+
+    gcr_sector_verify_t eigen;
+    gcr_sector_verify_t *v = verify ? verify : &eigen;
+    memset(v, 0, sizeof(*v));
+    v->sector = sector;
+
+    size_t pos = gcr_naechster_block(gcr, size, 0);
+    while (pos < size) {
+        gcr_sector_verify_t kopf;
+        memset(&kopf, 0, sizeof(kopf));
+
+        if (gcr_read_header(gcr, size, pos, &kopf, NULL)
+            && kopf.sector_in_header == (uint8_t)sector) {
+            size_t dpos = gcr_naechster_block(gcr, size,
+                                              pos + GCR_HEADER_GCR_LEN);
+            if (dpos < size) {
+                *v = kopf;
+                if (gcr_read_data(gcr, size, dpos, output, v, NULL)) {
+                    return (v->header_ok && v->data_ok) ? 0 : -2;
+                }
+            }
+            /* Kopf gefunden, Daten nicht -- weitersuchen: die Spur ist
+             * ein Ring und kann den Sektor ein zweites Mal tragen. */
+        }
+
+        size_t weiter = gcr_naechster_block(gcr, size, pos + 1);
+        if (weiter <= pos) break;
+        pos = weiter;
     }
-    
-    return 0;
+
+    return -1;
 }
 
 /* ============================================================================

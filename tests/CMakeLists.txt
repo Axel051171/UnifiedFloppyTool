@@ -353,6 +353,22 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_gcr_liest_echte_spur")
+        # MF-1013: `gcr_extract_sector()` lieferte 256 Nullbytes mit
+        # Erfolgsmeldung, `gcr_verify_track()` setzte `header_ok = true`
+        # bedingungslos und ignorierte seinen `disk_id` (P3-319).
+        #
+        # Gefahren an einer ECHTEN Aufnahme
+        # (`tests/corpus_free/vice_c1541_35trk.g64`, VICE c1541), und
+        # der Beweis kommt von der Diskette selbst: Kopf- und
+        # Datenpruefsummen stehen dort, nicht in unserem Code. Ein
+        # Rundlauf gegen `gcr_encode()` waere die Selbstbestaetigung
+        # aus MF-992.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_durchschreibprobe")
         # MF-1010: SPF („Stress ProDOS Filesystem", ADTPro, GPL-2+) auf
         # Blockebene — jeder Sektor beschrieben und zurueckgelesen, quer
