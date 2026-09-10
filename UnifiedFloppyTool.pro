@@ -1063,7 +1063,6 @@ SOURCES += \
     src/formats/g64/uft_g64.c \
     src/formats/g64/uft_g64_parser_v3.c \
     src/formats/imd/uft_imd_parser_v2.c \
-    src/formats/ipf/uft_caps_ipf.c \
     src/formats/ipf/uft_ipf_caps.c \
     src/formats/ipf/uft_ipf_ctraw_v2.c \
     src/formats/ipf/uft_ipf_air.c \

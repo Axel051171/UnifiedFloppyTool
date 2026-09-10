@@ -23,8 +23,8 @@
 - **7** Port-Erklärungen im Quellkopf, davon **1** ohne SPDX-Kopf
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
-- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **187**
-- Quarantäne: 1 vollzogen, 7 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
+- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **186**
+- Quarantäne: 2 vollzogen, 6 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 

@@ -236,10 +236,24 @@ typedef struct {
  * Function Prototypes - IPF Parsing
  *===========================================================================*/
 
-/**
- * @brief Check if file is valid IPF
+/* MF-1002: hier stand
+ *
+ *     bool uft_caps_is_ipf(const uint8_t *data, size_t size);
+ *
+ * Umgesetzt war sie in `src/formats/ipf/uft_caps_ipf.c`, und sie
+ * antwortete verkehrt herum: `false` fuer ein echtes IPF („CAPS"),
+ * `true` fuer jede Datei, die mit 00 00 00 01 beginnt. Gemessen am
+ * belegten Pfad, Rotbeweis in
+ * `tests/test_ipf_sonde_beansprucht_nur_ipf.c`.
+ *
+ * Die Datei ist mit MF-1002 entfernt (sie trug ausserdem keine Lizenz —
+ * `docs/QUARANTINE.md`). Die Deklaration geht mit: eine Zusage ohne
+ * Umsetzung ist die Lage aus P3-264, wo MF-549 die Fehlermeldung
+ * berichtigt und die Deklaration stehen gelassen hatte.
+ *
+ * Die IPF-Erkennung macht `ipf_plugin_probe()` selbst — mit dem
+ * ASCII-Vierer „CAPS", der wirklich am Anfang jeder IPF-Datei steht.
  */
-bool uft_caps_is_ipf(const uint8_t *data, size_t size);
 
 /**
  * @brief Parse IPF header

@@ -334,6 +334,18 @@ foreach(test_source ${TEST_SOURCES})
         # jede Dateigroesse annimmt — der Fall entsteht bei jedem
         # abgebrochenen Abzug, ohne Kunstgriff.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+    elseif(${test_name} STREQUAL "test_ipf_sonde_beansprucht_nur_ipf")
+        # MF-1002: die IPF-Sonde beanspruchte jede Datei, die mit
+        # 00 00 00 01 beginnt, mit Konfidenz 90 — und wies ein echtes
+        # IPF ("CAPS") im zweiten Zweig ab. Gemessen am belegten Pfad.
+        #
+        # `uft_caps_ipf.c` ist hier NICHT eingebunden: der zweite Zweig
+        # ist seit MF-1002 weg, und die Datei damit ohne Aufrufer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_kurzes_cfi_erfindet_keinen_sektor")
         # MF-1001: neun Plugins schreiben direkt in track->sectors[s],
         # setzen `status = UFT_SECTOR_OK` von Hand — vor der
@@ -2019,7 +2031,6 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
@@ -2066,7 +2077,6 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c

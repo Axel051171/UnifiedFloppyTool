@@ -26,8 +26,6 @@
 #include "uft/formats/ipf/uft_ipf_helper.h"
 #include "uft/uft_log.h"
 
-extern bool uft_caps_is_ipf(const uint8_t *data, size_t size);
-
 /* IPF IMGE.track_flags — fuzzy-bit indicator (matches IPF_TF_FUZZY in
  * uft_ipf_air.c). Local copy because the constant is TU-private there. */
 #define IPF_PLUGIN_TF_FUZZY  0x01u
@@ -45,10 +43,29 @@ static bool ipf_plugin_probe(const uint8_t *data, size_t size,
         *confidence = 95;
         return true;
     }
-    if (uft_caps_is_ipf(data, size)) {
-        *confidence = 90;
-        return true;
-    }
+    /* MF-1002: hier stand ein zweiter Zweig
+     *
+     *     if (uft_caps_is_ipf(data, size)) { *confidence = 90; return true; }
+     *
+     * Er war nicht nur ueberfluessig, sondern falsch. Gemessen am
+     * belegten Pfad (uebersetzt und ausgefuehrt):
+     *
+     *     uft_caps_is_ipf(echtes IPF, "CAPS")      = FALSE
+     *     uft_caps_is_ipf(kein IPF, 00 00 00 01)   = TRUE
+     *
+     * `uft_caps_ipf.c` vergleicht den ROHEN ASCII-Vierer des Satzkopfs
+     * gegen eine interne Aufzaehlung 1..10 (`IPF_BLOCK_CAPS 1`). Fuer
+     * „CAPS" steht dort 0x43415053, nie 1. Fuer ein echtes IPF war der
+     * Zweig also unerreichbar — der Zweig darueber hat schon
+     * zugegriffen —, und uebrig blieb allein die Moeglichkeit, mit
+     * Konfidenz 90 eine Datei zu beanspruchen, die mit vier Bytes
+     * 00 00 00 01 beginnt. Nach MF-729 heisst 80..100 „Merkmal
+     * getroffen"; das war keins.
+     *
+     * Klasse aus MF-961 (`86f` probte auf „86BX", ein Magic, das in
+     * keiner echten Datei steht). Rotbeweis:
+     * tests/test_ipf_sonde_beansprucht_nur_ipf.c
+     */
     return false;
 }
 

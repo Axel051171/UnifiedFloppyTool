@@ -7,7 +7,13 @@ Schema der Felder dort in §3.
 > ist die Datenquelle für „Dateien mit ungeklärter Herkunft" — die
 > begründete fünfte Release-Kennzahl (CLAUDE.md, MF-640).
 >
-> **Stand 2026-09-05: 1 vollzogen, 7 vorgemerkt, 2 aufgelöst.**
+> **Stand 2026-09-10: 2 vollzogen, 6 vorgemerkt, 2 aufgelöst.**
+>
+> MF-1002: `uft_caps_ipf.c` ist von „vorgemerkt" nach „vollzogen"
+> gewandert — gelöscht. Die Zeile galt als die teuerste der Liste,
+> weil sie als einzige eine **Fähigkeit** kostete. Gemessen kostete
+> sie keine: die eine erreichbare Funktion antwortete verkehrt herum
+> (`false` für ein echtes IPF, `true` für vier Bytes `00 00 00 01`).
 >
 > MF-742: hier stand **0 aufgelöst**. Gemessen an den Tabellen sind
 > es **zwei** — `uft_gcr_ops.c` und `uft_d64_g64.c` unter
@@ -49,6 +55,22 @@ Schema der Felder dort in §3.
 
 ---
 
+### `src/formats/ipf/uft_caps_ipf.c`
+
+| Feld | Inhalt |
+|---|---|
+| **Datei** | `src/formats/ipf/uft_caps_ipf.c` (790 Z.) — gelöscht MF-1002 |
+| **Verdacht** | „**Based on SPS CAPS Library** (Software Preservation Society)", `:5` — **kein SPDX, keine Lizenzangabe, keine Fundstelle** (nachgemessen MF-815: `grep -c SPDX` = 0). Die CAPS-Bibliothek ist proprietär und quellgeschlossen; IPF ist unveröffentlicht, und die SPS behält sich seine Erzeugung vor. „Based on" ist bei einer solchen Quelle eine Aussage über **Verteilbarkeit** |
+| **Betroffene Fähigkeit** | **keine — gemessen, nicht geschätzt.** Bis MF-1002 stand hier „IPF-Erkennung, erreichbar". Erreichbar war sie; eine Fähigkeit war es nicht. Am belegten Pfad übersetzt und ausgeführt:<br>`uft_caps_is_ipf(echtes IPF, "CAPS")` = **FALSE**<br>`uft_caps_is_ipf(kein IPF, 00 00 00 01)` = **TRUE** |
+| **Ursache** | `read_block_header()` legt den **rohen ASCII-Vierer** des Satzkopfs als BE-u32 in `header->type`. Verglichen wird gegen eine interne Aufzählung `1..10` (`IPF_BLOCK_CAPS 1`). Für „CAPS" steht dort `0x43415053`, nie `1` — deshalb kann `switch (header.type)` in `uft_caps_load_image()` für **keinen** der zehn Satztypen je greifen. Die Datei war strukturell außerstande, ein IPF zu lesen. Übrig blieb ein **falsch positiver** Zweig in der Sonde: Konfidenz **90** für jede Datei, die mit `00 00 00 01` beginnt — nach MF-729 die Stufe „Merkmal getroffen" |
+| **Klasse** | **MF-961** — dort probte `86f` auf „86BX", ein Magic, das in **keiner** echten Datei steht. Beide Male sah die Merkmalstafel gesund aus, während der Leser an der Wirklichkeit vorbeigriff |
+| **Vollzogener Weg** | **Löschung.** MF-699 („erst der Ersatz, dann die Löschung") ist erfüllt, ohne dass etwas zu ersetzen war: die richtige Erkennung stand schon eine Zeile darüber in `ipf_plugin_probe()` — der ASCII-Vierer „CAPS", der wirklich am Anfang jeder IPF-Datei steht |
+| **Mitentfernt** | der falsch-positive Sondenzweig, die `.pro`-Zeile, zwei Testziele in `tests/CMakeLists.txt` und die Deklaration in `include/uft/protection/uft_amiga_caps.h` — **P3-264-Lehre**: keine Zusage ohne Umsetzung stehen lassen (MF-549 hatte damals die Fehlermeldung berichtigt und die Deklaration vergessen) |
+| **Beweis** | **Lösch-Beweispipeline** aus `audit_cleanup_2026_08.md`, sechs Stufen. Stufe 1 („steht der `.pro`-Eintrag in einem bedingten Block?") schlug an und war ein **Fehlalarm meines Zählers** — von Hand nachgesehen, der Eintrag steht in einer schlichten `SOURCES`-Liste. Stufe 4: alle 13 exportierten Symbole ohne Aufrufer. Rotbeweis `tests/test_ipf_sonde_beansprucht_nur_ipf.c` (4 Fälle) |
+| **MF** | **MF-1002** |
+
+---
+
 ## Vorgemerkt — Audit fertig, Vollzug wartet auf `LIZ-2`
 
 Diese vier liegen **noch im Baum und werden gebaut**. Das Audit ist
@@ -63,7 +85,6 @@ der Fälle eine Fähigkeit kostet.
 | `src/formats/amiga/uft_amiga_protection.c` | 766 | „C99 **port** of XCopy Pro (1989-2011) 68000 Assembly algorithms", `:47` „Port of `ROL.L #1,D0`" — **keine Lizenz genannt** | **keine** — 0 Produktions-Aufrufer, 1 Test | **entfernen** — MF-744: die Lizenz liegt vor und gestattet **keine Bearbeitung** . **BERICHTIGT MF-746:** ein Bearbeitungsrecht gibt es sehr wohl — `Readme 2011` sagt „You are welcome to enhance it or develop further versions". Es ist aber an „**just keep it free (don't sell it)**" geknüpft, und die Lizenz daneben verbietet kommerzielle und behördliche Nutzung. Ein Verkaufsvorbehalt ist eine zusätzliche Beschränkung im Sinne von GPL §6 — damit **GPL-inkompatibel**, keine Rechtsverletzung. Kein Nachbau: die Fakten sind zu 1 von 4 belegt und 2 widerlegt (MF-740). | entfällt |
 | `src/analysis/uft_track_analysis.c` + `.h` | 1050 | „Universal track analysis algorithms **derived from** XCopy Pro (1989-2011)“ — **keine Lizenz genannt**. Nachgetragen MF-741: der Idiom-Test (MF-696) belegt **dieselbe** Ableitung wie die Zeile darueber — **zwoelf** Bezeichner kommen in genau diesen beiden Dateien vor und in **keiner** der uebrigen 715 (`detect_breakpoints`, `has_breakpoints`, `gap_sector_index`, `unique_lengths`, `rol32`, …). „Breakpoint“ ist die Uebersetzung von „Bruchstelle“ aus dem Original-Assembly-Kommentar. Die Textaehnlichkeit betraegt **1,8 %** und haette Entwarnung bedeutet. | **keine** — 20 Exporte, 0 Aufrufer ausserhalb; steht aber im Gegensatz zur Zeile darueber **noch im qmake-Bau** (`.pro:1219`) | 2 | fehlt — und die Fakten selbst sind unbelegt (MF-740) |
 | `include/uft/formats/supercopy_formats.h` + `src/formats/cpm/uft_supercopy_detect.c` | 851 | „**SuperCopy v3.40 SELECT.DAT** — CP/M-Format-Datenbank … 313 CP/M-Diskettenformate **aus dem SuperCopy-Kopierprogramm** (1991) … Quelle: SuperCopy v3.40 von Oliver Müller“ — **keine Lizenz genannt, kein SPDX in beiden Dateien**. Es ist keine Portierung von Code, sondern eine **extrahierte Datentabelle** aus einer fremden Anwendung; ob die Sammlung von Geometrieparametern eine eigene Schutzfähigkeit hat, ist ungeprüft. Gefunden MF-914, nachdem das Herkunfts-Tor um `quelle:` erweitert wurde — vorher war die Datei für das Tor **unsichtbar** | **keine** — alle fünf Exporte (`sc_detect_by_geometry`, `sc_detect_refine`, `sc_get_stats`, `sc_detect_print`, `sc_iterate_by_density`) haben **0 Aufrufer** außerhalb der eigenen Datei; die Datei steht aber im qmake-Bau | **1** (Rehabilitierung) prüfen: sind reine Geometrieparameter überhaupt schöpferisch? Sonst **2** | `cpmtools` diskdefs — selbst noch ungemessen (`LIZ-1`) |
-| `src/formats/ipf/uft_caps_ipf.c` | 790 | „**Based on SPS CAPS Library** (Software Preservation Society)" — **kein SPDX-Bezeichner, keine Lizenzangabe, keine Fundstelle** (nachgemessen MF-815: `grep -c SPDX` = 0). Die CAPS-Bibliothek der SPS ist **proprietär und quellgeschlossen**; das IPF-Format ist unveröffentlicht, und die SPS behält sich die Erzeugung von IPF-Dateien vor. „Based on" ist bei einer solchen Quelle keine Fußnote, sondern eine Aussage über **Verteilbarkeit** — in einem GPL-Baum, dessen `CONTRIBUTING.md` verlangt, dass portierter Code die Lizenz seiner Herkunft behält und sie benennt | **IPF-Erkennung** — `uft_caps_is_ipf()` (`:400`) wird von `uft_ipf_plugin.c:46` in der Probe gerufen. **Erreichbar**, anders als die drei AIR-Dateien darüber | **offen** — die Datei muss eine von zwei Antworten bekommen: entweder ist sie aus den **öffentlichen** SPS-Headern nachgebaut, dann gehört genau das hin („reimplemented from the public CAPS headers, no library code"), oder sie enthält abgeleiteten Bibliothekscode, dann ist sie **nicht verteilbar**. Der Baum hat zwei Muster, wie die saubere Fassung aussieht: MF-698 (`uft_ipf_air.c`, SPDX + Eigentümer-Entscheidung + Begründung für `-only`) und MF-614 (`uft_dms.c`, `LicenseRef-PublicDomain-xDMS` mit wörtlichem Debian-copyright-Zitat und Upstream-URL) | entfällt — die Frage ist rechtlich, nicht messtechnisch |
 ### Register nach MF-699 — `uft_ipf_air.c` (IPF-Lesen)
 
 > **Aufgestellt MF-917.** Die Zeile oben stand seit MF-638 mit dem Feld
