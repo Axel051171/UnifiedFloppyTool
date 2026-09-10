@@ -353,6 +353,18 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_durchschreibprobe")
+        # MF-1010: SPF („Stress ProDOS Filesystem", ADTPro, GPL-2+) auf
+        # Blockebene — jeder Sektor beschrieben und zurueckgelesen, quer
+        # ueber die Formate mit verdrahteter Schreibseite. Schliesst die
+        # Luecke aus P3-309: die Tier-Stufen messen nur das LESEN.
+        #
+        # Zeitmass und Datei-Ebene aus SPF sind ausdruecklich NICHT
+        # dabei — kein Laufwerk (MF-310), und kein ProDOS-Verzeichnis-
+        # leser im Baum (prodos_po_do.c: 130 Zeilen, 0 Verzeichnisbezug).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
+            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
     elseif(${test_name} STREQUAL "test_apridisk_schreibt_in_die_datei")
         # MF-1009: `apridisk` ist der vierte der elf aus MF-930 (nach
         # `opus`, `cfi`, `mgt`) — und der erste, bei dem der
