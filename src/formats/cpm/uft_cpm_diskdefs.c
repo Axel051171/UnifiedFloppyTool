@@ -1353,6 +1353,10 @@ uft_error_t uft_cpm_read_with_def(const char *path,
                         memcpy(sect->data, data + data_pos, def->sector_size);
                     } else {
                         memset(sect->data, 0xE5, def->sector_size);
+                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
+                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
+                         * unterscheiden -- und `status` stand schon auf OK. */
+                        uft_sector_mark_missing(sect);
                     }
                 }
                 data_pos += def->sector_size;
@@ -1477,6 +1481,10 @@ uft_error_t uft_cpm_format(uft_disk_image_t **out_disk,
                     } else {
                         /* Data sector */
                         memset(sect->data, 0xE5, def->sector_size);
+                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
+                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
+                         * unterscheiden -- und `status` stand schon auf OK. */
+                        uft_sector_mark_missing(sect);
                     }
                 }
                 

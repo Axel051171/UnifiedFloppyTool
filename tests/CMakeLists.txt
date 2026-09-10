@@ -334,6 +334,19 @@ foreach(test_source ${TEST_SOURCES})
         # jede Dateigroesse annimmt — der Fall entsteht bei jedem
         # abgebrochenen Abzug, ohne Kunstgriff.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+    elseif(${test_name} STREQUAL "test_kurzes_cfi_erfindet_keinen_sektor")
+        # MF-1001: neun Plugins schreiben direkt in track->sectors[s],
+        # setzen `status = UFT_SECTOR_OK` von Hand — vor der
+        # Fuellentscheidung — und fuellen im Fehlzweig 0xE5. Tor 62
+        # (MF-980) sieht das nicht: es misst die
+        # uft_format_add_sector*-Kette, an der diese neun vorbeigehen.
+        #
+        # Gefahren an CFI, weil dort der Fuellzweig ERREICHBAR ist: die
+        # Geometrie kommt aus der BPB innerhalb der entpackten Daten und
+        # ist von deren Laenge unabhaengig. Bei `hardsector` (Groessen-
+        # wache) und `posix` (Zylinder aus der Dateigroesse) ist er es
+        # nicht — ein Rotbeweis dort haette nicht feuern koennen.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/cfi/uft_cfi.c)
     elseif(${test_name} STREQUAL "test_schreibzusage_erreicht_die_datei")
         # MF-930: `write_track` darf keinen Erfolg melden, den die Datei
         # nicht traegt. Gemessen am ERGEBNIS (schreiben -> close ->

@@ -45,6 +45,33 @@ zeichenkettenfreien Text, ZWEI Wege — und keiner davon darf ohne
         und geht durch dieselbe Helferkette, die UFT_SECTOR_OK setzt
         (MF-981)
 
+Dazu eine dritte Messung, die NICHT an der Helferkette haengt:
+
+    (c) ein `memset(X->data, 0xE5, ...)` ohne
+        `uft_sector_mark_missing(X)` in den folgenden 6 Zeilen —
+        gemessen am FUELLORT, auf DERSELBEN Variablen (MF-1001)
+
+── Warum es (c) gibt: das Tor sah an sich selbst vorbei ──────────────
+
+(a) und (b) steigen aus, wenn `uft_format_add_sector` in der Datei
+nicht vorkommt. Neun Plugins schreiben aber direkt in
+`track->sectors[s]`, setzen `sect->status = UFT_SECTOR_OK` von Hand —
+und zwar BEVOR die Fuellentscheidung faellt — und fuellen im Fehlzweig
+0xE5. Sie hielten die Regel dieses Tores nicht ein und wurden nie
+gemeldet, weil sie den gemessenen Weg gar nicht benutzen.
+
+`uft_hardsector.c` war der schaerfste Fall: es zaehlt im selben Zweig
+`result->bad_sectors++`, WEISS also, dass der Sektor erfunden ist, und
+liess ihn trotzdem als gueltig gekennzeichnet stehen.
+
+**Und (c) selbst musste zweimal gemessen werden.** Die erste Fassung
+zaehlte jedes `memset(..., 0xE5, ...)` je DATEI und traf damit auch den
+SCHREIBpfad, wo ein Ausgabepuffer voraufgefuellt wird (`uft_opus.c:308`,
+`uft_mgt.c:210`) — richtiges Verhalten, kein erfundener Lesewert. Drei
+Handproben haben es gefangen, nicht das Lesen. Deshalb ist das Ziel
+scharf auf `->data` eingegrenzt, und deshalb steht die Regel „kein
+Massenbefund ohne drei Handproben" ueber diesem Tor.
+
 ── WAS ES AUSDRUECKLICH NICHT SIEHT ──────────────────────────────────
 
 **Eine Kennzeichnung im Rumpf befriedigt das Tor fuer ALLE Fuellwege
@@ -180,6 +207,68 @@ def fuellt_im_fehlerzweig(r: str) -> bool:
     return False
 
 
+# Messung (c), MF-1001: die Fuellung geht gar nicht durch die
+# Helferkette, sondern direkt in den Puffer des Sektors.
+#
+# Die Messungen (a) und (b) oben setzen `uft_format_add_sector*` in der
+# Datei voraus — `messe()` steigt sonst sofort aus. Neun Plugins
+# schreiben aber direkt in `track->sectors[s]`, setzen
+# `sect->status = UFT_SECTOR_OK` von Hand (und zwar VOR der
+# Fuellentscheidung) und fuellen im Fehlzweig 0xE5. Sie gingen an
+# diesem Tor vorbei, obwohl es genau ihre Regel haelt.
+#
+# Gemessen wird deshalb am FUELLORT statt an der Funktion, und die
+# Bedingung ist scharf: ein `memset(X->data, 0xE5, ...)` muss innerhalb
+# der naechsten Zeilen ein `uft_sector_mark_missing(X)` nach sich
+# ziehen — auf DERSELBEN Variablen.
+#
+# Warum das Ziel `->data` sein muss und nicht irgendein Puffer: eine
+# erste Fassung zaehlte jedes `memset(..., 0xE5, ...)` je Datei und traf
+# damit auch den SCHREIBpfad, wo ein Ausgabepuffer voraufgefuellt wird
+# (`uft_opus.c`, `uft_mgt.c`). Das ist richtiges Verhalten. Die
+# Handprobe hat es gefangen, nicht das Lesen — Regel des Durchgangs:
+# kein Massenbefund ohne drei Handproben.
+FUELLT_SEKTOR = re.compile(
+    r"memset\s*\(\s*(\w+)\s*->\s*data\s*,\s*0x[eE]5\s*,")
+
+#: Zeilen, innerhalb derer die Kennzeichnung folgen muss. Sechs, weil
+#: die Fuellung in allen gemessenen Faellen unmittelbar davor steht;
+#: mehr Spielraum wuerde eine Kennzeichnung in einem ANDEREN Zweig
+#: durchgehen lassen.
+FENSTER = 6
+
+
+def messe_direkt(repo: Path):
+    """Fuellungen direkt in den Sektorpuffer ohne Kennzeichnung."""
+    pfade = dateien(repo)
+    if pfade is None:
+        return None, ["Guard-frei: `git ls-files` war nicht befragbar, "
+                      "Messung (c) hat NICHTS geprueft."]
+    befunde = []
+    for rel in pfade:
+        try:
+            roh = (repo / rel).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "0xE5" not in roh and "0xe5" not in roh:
+            continue
+        t = entkerne(roh)
+        zeilen = t.splitlines()
+        for i, z in enumerate(zeilen):
+            m = FUELLT_SEKTOR.search(z)
+            if not m:
+                continue
+            var = m.group(1)
+            fenster = "\n".join(zeilen[i:i + FENSTER + 1])
+            if re.search(r"uft_sector_mark_missing\s*\(\s*%s\s*\)"
+                         % re.escape(var), fenster):
+                continue
+            if re.search(r"mark_last_missing\s*\(", fenster):
+                continue
+            befunde.append((rel, i + 1, var))
+    return befunde, []
+
+
 def messe(repo: Path):
     pfade = dateien(repo)
     if pfade is None:
@@ -235,6 +324,23 @@ def check(repo) -> list:
             "%d Leser fuellen ohne zu kennzeichnen, Grundlinie %d. "
             "„Keine erfundenen Daten\" ist die dritte Zeile des Mottos."
             % (len(befunde), GRUNDLINIE))
+
+    # Messung (c), MF-1001 — die Helferkette wird gar nicht benutzt.
+    direkt, dfehler = messe_direkt(Path(repo))
+    if direkt is None:
+        return fehler + dfehler
+    for rel, zeile, var in direkt:
+        fehler.append(
+            "%s:%d: `memset(%s->data, 0xE5, ...)` ohne "
+            "`uft_sector_mark_missing(%s)`. Der Sektor wurde GEFUELLT, "
+            "nicht gelesen — und `status` steht in diesen Lesern schon "
+            "auf UFT_SECTOR_OK, bevor die Fuellentscheidung faellt. "
+            "Erfundene 0xE5 sind dann von echten 0xE5-Daten nicht zu "
+            "unterscheiden (MF-1001)." % (rel, zeile, var, var))
+    if direkt:
+        fehler.append(
+            "%d Fuellorte schreiben direkt in den Sektorpuffer, "
+            "Grundlinie 0." % len(direkt))
     return fehler
 
 
@@ -290,8 +396,70 @@ const uft_format_plugin_t uft_format_plugin_x = {
             else:
                 print("  ROT  %-34s erwartet %d, gemessen %d"
                       % (name, soll, ist))
-    print("Selbsttest: %d/%d" % (gut, len(faelle)))
-    return 0 if gut == len(faelle) else 1
+
+    # ── Messung (c), MF-1001 ────────────────────────────────────────
+    #
+    # Eigenes Geruest, weil diese Faelle die Helferkette gerade NICHT
+    # benutzen — das ist ihr Kennzeichen.
+    GERUEST_C = """
+#include "uft/uft_format_common.h"
+static void x_fuellt(uft_track_t *track, const uint8_t *data,
+                     size_t size, size_t data_pos, uint16_t ss) {
+    uft_sector_t *sect = &track->sectors[0];
+    sect->status = UFT_SECTOR_OK;
+    sect->data = malloc(ss);
+    if (sect->data) {
+%s
+    }
+}
+"""
+
+    faelle_c = [
+        ("direkt gefuellt, nicht gekennzeichnet",
+         "        if (data_pos + ss <= size) {\n"
+         "            memcpy(sect->data, data + data_pos, ss);\n"
+         "        } else {\n"
+         "            memset(sect->data, 0xE5, ss);\n"
+         "        }", 1),
+        ("direkt gefuellt UND gekennzeichnet",
+         "        if (data_pos + ss <= size) {\n"
+         "            memcpy(sect->data, data + data_pos, ss);\n"
+         "        } else {\n"
+         "            memset(sect->data, 0xE5, ss);\n"
+         "            uft_sector_mark_missing(sect);\n"
+         "        }", 0),
+        ("Kennzeichnung auf ANDERER Variablen zaehlt nicht",
+         "        if (data_pos + ss <= size) {\n"
+         "            memcpy(sect->data, data + data_pos, ss);\n"
+         "        } else {\n"
+         "            memset(sect->data, 0xE5, ss);\n"
+         "            uft_sector_mark_missing(anderer);\n"
+         "        }", 1),
+        ("Ausgabepuffer im Schreibpfad ist KEIN Befund",
+         "        memset(ausgabe, 0xE5, ss);\n"
+         "        memcpy(ausgabe, sect->data, ss);", 0),
+        ("Fuellung nur im Kommentar",
+         "        /* frueher: memset(sect->data, 0xE5, ss); */\n"
+         "        memcpy(sect->data, data + data_pos, ss);", 0),
+    ]
+
+    for name, rumpf_text, soll in faelle_c:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            (p / "src" / "formats" / "x").mkdir(parents=True, exist_ok=True)
+            (p / "src" / "formats" / "x" / "x.c").write_text(
+                GERUEST_C % rumpf_text, encoding="utf-8")
+            ist = len(messe_direkt(p)[0])
+            if ist == soll:
+                gut += 1
+            else:
+                print("  ROT  (c) %-30s erwartet %d, gemessen %d"
+                      % (name, soll, ist))
+
+    gesamt = len(faelle) + len(faelle_c)
+    print("Selbsttest: %d/%d" % (gut, gesamt))
+    return 0 if gut == gesamt else 1
 
 
 def main() -> int:

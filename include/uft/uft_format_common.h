@@ -188,14 +188,17 @@ static inline uft_error_t uft_format_add_sector(
  * Fuellung, sie ist nur nicht mehr als Messwert ausgegeben.
  *
  * Wirkungslos (und ohne Fehler), wenn die Spur leer ist.
+ *
+ * Seit MF-1001 nur noch die Adressierung; WAS „fehlt" bedeutet, steht
+ * einmal in `uft_sector_mark_missing()` darueber. Der Grund ist
+ * gemessen: neun Plugins schreiben direkt in `track->sectors[s]` und
+ * kommen an dieser Kette gar nicht vorbei — sie brauchen dieselbe
+ * Bedeutung, ohne den Umweg ueber `sector_count`.
  */
 static inline void uft_format_mark_last_missing(uft_track_t* track)
 {
     if (!track || track->sector_count == 0 || !track->sectors) return;
-    uft_sector_t* s = &track->sectors[track->sector_count - 1];
-    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_MISSING);
-    uft_sector_set_crc(s, false);
-    uft_sector_set_id_crc(s, false);
+    uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
 }
 
 /**

@@ -484,6 +484,7 @@ static inline void uft_sector_set_crc(uft_sector_t *s, bool ok) {
     s->data_crc_ok = ok;
 }
 
+
 /**
  * @brief Set a sector's ID-field (address-mark) CRC-OK state.
  *
@@ -496,6 +497,31 @@ static inline void uft_sector_set_crc(uft_sector_t *s, bool ok) {
 static inline void uft_sector_set_id_crc(uft_sector_t *s, bool ok) {
     if (!s) return;
     s->id_crc_ok = ok;
+}
+
+/**
+ * @brief Kennzeichnet EINEN Sektor als nicht gelesen (MF-1001).
+ *
+ * Fuer jeden Sektor, dessen Inhalt gefuellt statt gelesen wurde — ein
+ * kurzes Abbild, ein abgebrochener Abzug, eine Geometrie, die mehr
+ * verlangt als die Datei hergibt.
+ *
+ * Die Daten bleiben stehen: „Kein Bit verloren" gilt auch fuer die
+ * Fuellung. Sie ist nur nicht laenger als Messwert ausgegeben — genau
+ * das ist der Unterschied zwischen erfundenen 0xE5 und echten
+ * 0xE5-Daten, die es auf formatierten Disketten reichlich gibt.
+ *
+ * Steht hier und nicht in `uft_format_common.h`, weil neun Plugins
+ * direkt in `track->sectors[s]` schreiben und die Helferkette
+ * `uft_format_add_sector*()` gar nicht benutzen (MF-1001). Sie brauchen
+ * dieselbe Bedeutung ohne den Umweg ueber `sector_count`;
+ * `uft_format_mark_last_missing()` ruft seit MF-1001 hierher.
+ */
+static inline void uft_sector_mark_missing(uft_sector_t *s) {
+    if (!s) return;
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_MISSING);
+    uft_sector_set_crc(s, false);
+    uft_sector_set_id_crc(s, false);
 }
 #endif /* UFT_SECTOR_T_DEFINED */
 

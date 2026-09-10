@@ -74,7 +74,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `2img` | **T3** | `test_2img_nib_stride`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `apridisk` | **T3** | — | — | — | — |
 | `cas` | **T3** | — | — | — | — |
-| `cfi` | **T3** | — | — | — | — |
+| `cfi` | **T3** | `test_kurzes_cfi_erfindet_keinen_sektor` | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |

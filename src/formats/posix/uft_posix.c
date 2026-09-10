@@ -278,6 +278,10 @@ uft_error_t uft_posix_read(const char *path,
                         memcpy(sect->data, data + data_pos, geometry.sector_size);
                     } else {
                         memset(sect->data, 0xE5, geometry.sector_size);
+                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
+                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
+                         * unterscheiden -- und `status` stand schon auf OK. */
+                        uft_sector_mark_missing(sect);
                     }
                 }
                 data_pos += geometry.sector_size;

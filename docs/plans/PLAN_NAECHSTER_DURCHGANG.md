@@ -312,6 +312,33 @@ Prince of Persia) · `UFT-90` (SSI RDOS) · `UFT-92` (GEOS-Seriennummern) ·
 `UFT-93` (GeoCopy-Schreibseite) · dazu `UFT-71/72/75/76/77/79/81/82` ·
 **und die 42 MAME-Formate aus §2.4.**
 
+#### `neue-ideen/spf-main.zip` — Port legal offen, heute ohne Nutzen
+
+Gemessen: **SPF „Stress ProDOS Filesystem"** (ADTPro, David Schmidt),
+67 Einträge, 34 Assemblerdateien für den Apple II.
+
+| | |
+|---|---|
+| Lizenz | **GPL-2.0-or-later**, in *jeder* Quelldatei im Kopf (keine `LICENSE`-Datei) |
+| Kanal nach MF-695 | **Port** — der stärkste; GPL-2+ ist mit UFTs GPL-2 verträglich |
+| Inhalt | ProDOS-Dateisystem-Belastungstest; `format.asm` (1035 Z.), `diskii.asm` (1539 Z.) |
+
+**Und trotzdem: heute kein Auftrag.** `diskii.asm:1326` trägt
+`NIB_2_6BB`, die 6&2-Entschlüsselungstafel ab `$96` — genau die
+Apple-GCR-Tafel. UFT **braucht sie nicht**: `uft_apple_gcr.c` ist gegen
+*Beneath Apple DOS* und das Oracle `to_woz2` abgenommen (560 von 560
+Sektoren). Was `nib` auf T3 hält, ist nach **P3-234** nicht eine
+fehlende Tafel, sondern dass das geprüfte Modul **nur von Tests**
+gerufen wird und `nib` eine eigene Kopie führt.
+
+**Der Fix für `nib` ist Verdrahtung, kein Import** — und Verdrahten
+vorhandenen, geprüften Codes ist unter der EINFRIER-REGEL ausdrücklich
+erlaubt. Diese Messung hat damit einen unnötigen Import verhindert; das
+ist ihr Ertrag.
+
+Der Rest von SPF zielt auf **echte Apple-II-Hardware**, die dieses
+Projekt nicht hat (MF-310).
+
 **`UFT-89` verdient eine eigene Notiz:** der Originalautor sagt, das
 unveränderte Prince of Persia lasse sich bis heute nicht emulieren.
 

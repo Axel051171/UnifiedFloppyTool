@@ -1,8 +1,50 @@
 /**
  * @file uft_fuzzy_bits.c
  * @brief Fuzzy bit copy protection detection and analysis implementation
- * 
- * Based on Dungeon Master / Chaos Strikes Back copy protection
+ *
+ * Referenz (benannt, wie die EINFRIER-REGEL es verlangt):
+ *   [1] Doug Bell (FTL Games, Hauptentwickler von Dungeon Master),
+ *       eigene Beschreibung des Mechanismus, zitiert in den Kommentaren
+ *       zu Jimmy Maher, „A Pirate's Life for Me, Part 3: Case Studies in
+ *       Copy Protection", filfre.net, 15. Jan. 2016.
+ *   [2] US-Patent 4.849.836 (ueber UFT-57 erschlossen) — die aeltere,
+ *       groebere Lesart.
+ *
+ * ── Was [1] belegt, und was NICHT (MF-1000) ─────────────────────────
+ *
+ * Hier stand bis MF-1000 nur „Based on Dungeon Master / Chaos Strikes
+ * Back copy protection" — eine Ableitungserklaerung ohne Quelle. Nach
+ * MF-636 ist eine Attribution eine rechtliche Aussage; diese nannte
+ * niemanden, den man haette fragen koennen.
+ *
+ * Bell beschreibt den Mechanismus so:
+ *
+ *   „The position of the magnetic signature was moved in a sinusoidal
+ *    pattern from one side of the track to the other side and back.
+ *    […] So instead of random bits, it would read random length
+ *    sequences of bits."
+ *
+ * **Das bestaetigt die Umsetzung unten, statt sie zu widerlegen** — und
+ * zwar an ihrer eigentuemlichsten Stelle: `uft_detect_dm_fuzzy_pattern()`
+ * sucht KOMPENSIERENDE PAARE (`pair_sum ~ 10 us`). Genau das erzeugt eine
+ * sinusfoermige Positionsverschiebung: wandert ein Uebergang nach vorn,
+ * kommt der naechste um denselben Betrag zurueck, und die Summe bleibt
+ * stehen. Die Umsetzung war damit naeher an [1] als ihr eigener
+ * Kopfkommentar und naeher als [2].
+ *
+ * **Was [1] ausdruecklich NICHT deckt** — damit niemand die Quelle fuer
+ * mehr in Anspruch nimmt, als sie sagt:
+ *
+ *   - Die Zahlen 4,0 / 5,5 / 6,0 / 4,5 us und die Summe 10 us. Bell
+ *     nennt keine Zeiten. Sie stehen hier weiterhin ohne Quelle.
+ *   - Die Schwellen 30 % / 40 %. Ebenfalls ungemessen.
+ *   - Bells eigentliches Kennzeichen, die ZUFAELLIG LANGEN LAEUFE von
+ *     Einsen oder Nullen, wird hier gar nicht gemessen: der Erkenner
+ *     zaehlt Paare, keine Lauflaengen. Das waere eine zusaetzliche,
+ *     unabhaengige Probe — sie faellt unter das Moratorium und steht
+ *     als Fundus, nicht als Auftrag (Regel 9, MF-695).
+ *
+ * Kein fremder Quelltext uebernommen; [1] ist eine Prosabeschreibung.
  */
 
 #include "uft/protection/uft_fuzzy_bits.h"
