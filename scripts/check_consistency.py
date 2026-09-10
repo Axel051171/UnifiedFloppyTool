@@ -1142,6 +1142,29 @@ def main() -> int:
         import audit_schreibzusage as _sz
         all_errors.append(("Schreibzusage", _sz.check(repo)))
 
+        # Tor 64 (MF-1000): ein Selbsttest hinter einem Waechter, den kein
+        # Bausystem definiert, ist kein Test — er ist ein Versprechen.
+        # `#ifdef FOO_TEST` … `assert(...)` … `#endif` sieht aus wie
+        # Pruefung; wird `FOO_TEST` nirgends definiert, hat kein Compiler
+        # den Block je gesehen. Er kann nicht rot werden, nicht einmal
+        # syntaktisch auffallen, und driftet mit jeder Aenderung darueber.
+        #
+        # Die Klasse ist schon einmal behandelt worden: P3-89 / MF-845 fand
+        # DREI Dateien mit `#ifdef UFT_UNIT_TESTS`, MF-851 hob die 19
+        # Zusagen nach tests/. Das haelt bis heute. Gemessen wurde damals
+        # aber EIN Makroname — ueber alle Waechter sind es 36 Bloecke mit
+        # 604 Zusagen unter 44 Namen (P3-313). Aufzaehlung statt Messung,
+        # dieselbe Form wie MF-930.
+        #
+        # Der Waechtername wird deshalb hier ABGELEITET: gesucht wird jedes
+        # Makro in *.pro, CMakeLists.txt, *.cmake und den CI-Ablaeufen. Es
+        # gibt keine Liste bekannter Testmakros; wer morgen einen neuen
+        # Waechter erfindet, ist am selben Tag erfasst.
+        #
+        # Grundlinie 36 (docs/selbsttest_baseline.txt), darf nur fallen.
+        import audit_selbsttest_ohne_uebersetzung as _su
+        all_errors.append(("Selbsttest ohne Uebersetzung", _su.check(repo)))
+
         # Tor 58 (MF-906): zwei Zeilen derselben Geometrietabelle mit
         # gleicher Gesamtgroesse. Die Sonde laeuft durch und kehrt beim
         # ERSTEN Treffer zurueck — die zweite Zeile ist damit toter Code,

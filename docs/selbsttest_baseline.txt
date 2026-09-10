@@ -1,0 +1,45 @@
+# Selbsttests hinter einem Waechter, den kein Bausystem definiert (MF-1000).
+#
+# Erzeugt von scripts/audit_selbsttest_ohne_uebersetzung.py.
+# Format: pfad:zeile:MAKRO:anzahl_asserts
+#
+# Diese Zeilen sind BESTAND, kein Freibrief. Das Tor faellt bei
+# jedem NEUEN Eintrag. Wer einen Block nach tests/ hebt (Muster:
+# MF-851), nimmt seine Zeile heraus — die Zahl kann nur sinken.
+
+src/formats/2img/uft_2img_parser_v2.c:487:IMG2_PARSER_TEST:14
+src/formats/adf/uft_adf_parser_v2.c:517:ADF_PARSER_TEST:17
+src/formats/adf/uft_adf_parser_v3.c:470:ADF_V3_TEST:13
+src/formats/amstrad/uft_edsk_parser.c:600:EDSK_PARSER_TEST:12
+src/formats/apple/uft_2mg_parser.c:546:IMG2_PARSER_TEST:9
+src/formats/atari/uft_atx_parser_v2.c:669:ATX_PARSER_TEST:12
+src/formats/atari/uft_pro_parser_v2.c:489:PRO_PARSER_TEST:20
+src/formats/atari/uft_stx_parser.c:715:STX_PARSER_TEST:10
+src/formats/d64/uft_d64_parser_v3.c:1744:D64_V3_TEST:32
+src/formats/d71/uft_d71_parser_v2.c:338:D71_PARSER_TEST:10
+src/formats/d81/uft_d81_parser_v2.c:393:D81_PARSER_TEST:15
+src/formats/dmk/uft_dmk_parser_v2.c:440:DMK_PARSER_TEST:8
+src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c:760:DSK_TEST:29
+src/formats/fdi/uft_fdi_parser_v2.c:598:FDI_TEST:22
+src/formats/g64/uft_g64_parser_v2.c:551:G64_PARSER_TEST:19
+src/formats/g64/uft_g64_parser_v3.c:1898:G64_V3_TEST:35
+src/formats/hfe/uft_hfe_parser_v2.c:334:HFE_PARSER_TEST:15
+src/formats/ipf/uft_ipf_air.c:976:IPF_AIR_TEST:9
+src/formats/ipf/uft_ipf_ctraw_v2.c:697:IPF_CTRAW_TEST:18
+src/formats/jv/uft_jv_parser_v2.c:427:JV_PARSER_TEST:16
+src/formats/kfx/uft_kfstream_air.c:761:KF_AIR_TEST:17
+src/formats/kryoflux/uft_kryoflux_checker.c:742:UFT_KFC_TEST:8
+src/formats/msa/uft_msa_parser_v2.c:566:MSA_TEST:21
+src/formats/nib/uft_nib_parser_v2.c:525:NIB_PARSER_TEST:13
+src/formats/sap/uft_sap_parser_v2.c:293:SAP_PARSER_TEST:11
+src/formats/scl/uft_scl_parser_v2.c:432:SCL_PARSER_TEST:16
+src/formats/scp/uft_scp_parser_v3.c:1680:SCP_V3_TEST:35
+src/formats/ssd/uft_ssd_parser_v2.c:467:SSD_PARSER_TEST:20
+src/formats/stx/uft_stx_air.c:950:STX_AIR_TEST:13
+src/formats/stx/uft_stx_parser_v2.c:468:STX_PARSER_TEST:15
+src/formats/tap/uft_tap_parser_v2.c:255:TAP_PARSER_TEST:9
+src/formats/trd/uft_trd_parser_v2.c:615:TRD_PARSER_TEST:21
+src/formats/tzx/uft_tzx_wav.c:1217:TZX_WAV_TEST:14
+src/formats/tzx/uft_zxtap.c:597:ZXTAP_TEST:13
+src/formats/uff/uft_uff.c:1292:UFT_TEST:21
+src/recovery/uft_recovery_meta.c:731:UFT_RECOVERY_META_TEST:22
