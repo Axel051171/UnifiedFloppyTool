@@ -9,8 +9,67 @@
  *   Offset  Size  Description
  *   0x00    1     Media type (0x00=2HD, 0x01=2HS, 0x02=2HC, 0x09=2HQ, ...)
  *   0x01-AA       Reserved/track flags
- *   0xAB    1     Overtrack flag
- *   0xAC-FF       Reserved
+ *   0xAB   13     "DIFC HEADER  " — die Kennung des Formats
+ *   0xB8-FF       Reserved
+ *
+ * ── Befund 1 (MF-1019): die Kennung wurde nie geprueft ────────────────
+ *
+ * Hier stand „0xAB 1 Overtrack flag", und weder `dim_probe()` noch
+ * `dim_open()` sahen dort hin. Bei 0xAB steht aber die **Kennung des
+ * Formats**, und darin sind sich drei Stellen einig:
+ *
+ *   MAMEs `dim_format::identify()`  liest 16 Byte ab **0xAB** und
+ *     vergleicht `strncmp(h, "DIFC HEADER", 11)`
+ *   `src/formats/pc98/dim.c:37`    `/* 0xAB..0xB7 = "DIFC HEADER  "
+ *     (13 bytes) *\/` und prueft es
+ *   `src/formats/misc/dcp_dcu.c:51` nennt dieselbe Kennung
+ *
+ * Ohne diese Pruefung nahm die Sonde **jede** Datei an, deren erstes
+ * Byte einer von sieben Medienwerten ist und die gross genug ist —
+ * beim Medienwert 0x00 also jede hinreichend grosse Datei, die mit
+ * einer Null beginnt.
+ *
+ * **Die richtige Pruefung lag in der Datei, die niemand ruft** —
+ * `src/formats/pc98/dim.c` steht in `docs/orphan_baseline.txt`. Das ist
+ * in dieser Runde der dritte Fall dieser Gestalt nach `udi` (MF-1015,
+ * Pruefsumme) und `scl` (MF-1014, TR-DOS-Layout).
+ *
+ * ── Befund 2 (MF-1019): `open` prueft die Dateigroesse nicht ──────────
+ *
+ * `dim_probe()` verlangt `file_size >= 256 + cyl*heads*spt*ss`,
+ * `dim_open()` verlangt nichts davon. Wer eine DIM ueber `open`
+ * anfasst, bekam fuer eine zu kurze Datei die volle angesagte
+ * Geometrie und Sektoren, die nicht in der Datei stehen.
+ *
+ * ── UNGEKLAERT und deshalb NICHT angefasst: die Medientabelle ─────────
+ *
+ * Drei Umsetzungen, drei verschiedene Tabellen, und keine zwei stimmen
+ * ueberein (gemessen MF-1019):
+ *
+ * | Medienbyte | hier | `pc98/dim.c` | MAME |
+ * |---|---|---|---|
+ * | 0x00 | 8 spt · 1024 | 9 · 512 | 8 · 1024 |
+ * | 0x01 | 8 · 1024 | 9 · 512 | **9** · 1024 |
+ * | 0x02 | 8 · 1024 | **15** · 512 | **15** · 512 |
+ * | 0x03 | 8 · 1024 | 18 · 512 | **9** · 1024 |
+ * | 0x09 | 18 · 512 | (abgewiesen) | 18 · 512 |
+ * | 0x11 | 8 · 512 | (abgewiesen) | **26** · 256 |
+ * | 0x19 | 9 · 512 | (abgewiesen) | (Vorgabe) 8 · 1024 |
+ *
+ * Dazu die Spurzahl: MAME nimmt fuer **jeden** Typ 77 Spuren, hier
+ * stehen 77 oder 80 je Typ, `pc98/dim.c` immer 80.
+ *
+ * Diese Tabelle wird **nicht** auf eine Quelle hin umgeschrieben. Bei
+ * fuenf von sieben Werten waere das eine Wette, und genau so sind die
+ * fuenf fabrizierten Parser entstanden (FMT-2/3/10/11/12). Gefuehrt als
+ * offener Punkt mit dem, was ihn aufloesen wuerde: eine echte
+ * DIM-Datei je Medientyp, oder die Formatnotizen, auf die sich
+ * `pc98/dim.c` beruft.
+ *
+ * **Was die Groessenpruefung dabei leistet:** ist ein Tabelleneintrag
+ * falsch, passt die angesagte Geometrie nicht zur Dateigroesse, und die
+ * Datei wird abgewiesen statt falsch zerlegt. Die Pruefung ersetzt die
+ * Klaerung nicht, aber sie macht den Fehler laut statt still.
  *
  * Media types and geometry:
  *   0x00 2HD:  77 cyl, 2 heads,  8 spt, 1024 byte/sec = 1,261,568
@@ -21,7 +80,15 @@
  *   0x11 2DD8: 80 cyl, 2 heads,  8 spt,  512 byte/sec
  *   0x19 2DD9: 80 cyl, 2 heads,  9 spt,  512 byte/sec = 737,280
  *
- * Reference: X68000 DIM format specification
+ * Referenzen (EINFRIER-REGEL MF-363/498, Bedingung c):
+ *   MAME `formats/dim_dsk.cpp` (BSD-3-Clause, Olivier Galibert), in
+ *     `neue-ideen/formats.zip` — Kennung bei 0xAB, Daten ab 0x100
+ *   `src/formats/pc98/dim.c` (eigener Baum) — dieselbe Kennung an
+ *     derselben Stelle, 13 Byte lang
+ *
+ * Vorher stand hier nur „X68000 DIM format specification" ohne
+ * Fundstelle — eine Referenz, die man nicht nachlesen kann, ist
+ * keine.
  */
 
 #include "uft/uft_format_common.h"
@@ -31,6 +98,9 @@
  * ============================================================================ */
 
 #define DIM_HEADER_SIZE     256
+#define DIM_SIG_OFF         0xAB
+#define DIM_SIG             "DIFC HEADER"
+#define DIM_SIG_LEN         11      /* MAME vergleicht 11 Byte */
 #define DIM_MAX_SECTOR_SIZE 1024
 #define DIM_MAX_CYLINDERS   82
 #define DIM_MAX_SPT         18
@@ -43,6 +113,16 @@
 #define DIM_MEDIA_2HQ       0x09
 #define DIM_MEDIA_2DD_8     0x11
 #define DIM_MEDIA_2DD_9     0x19
+
+/* Die Kennung bei 0xAB. MAME vergleicht 11 Byte („DIFC HEADER"),
+ * `src/formats/pc98/dim.c` 13 („DIFC HEADER  " mit zwei Leerzeichen).
+ * Genommen werden die 11, weil sie die schwaechere Annahme sind: eine
+ * Datei mit 11 passenden Byte wird angenommen, auch wenn die beiden
+ * Leerzeichen fehlen. */
+static bool dim_has_signature(const uint8_t *hdr)
+{
+    return memcmp(hdr + DIM_SIG_OFF, DIM_SIG, DIM_SIG_LEN) == 0;
+}
 
 /* ============================================================================
  * Geometry lookup
@@ -93,8 +173,10 @@ typedef struct {
 bool dim_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
-    (void)data;
-    if (size < DIM_HEADER_SIZE) return false;
+    if (!data || size < DIM_HEADER_SIZE) return false;
+
+    /* MF-1019, Befund 1: die Kennung bei 0xAB — vorher ungeprueft. */
+    if (!dim_has_signature(data)) return false;
 
     uint8_t media = data[0];
     uint8_t cyl, heads, spt;
@@ -109,7 +191,9 @@ bool dim_probe(const uint8_t *data, size_t size, size_t file_size,
     if (file_size < expected)
         return false;
 
-    *confidence = 45;  /* MF-729: nur die Groesse */
+    /* MF-729/MF-1019: mit der Kennung ist das ein getroffenes Merkmal
+     * (80..100), nicht mehr „nur die Groesse". Vorher stand hier 45. */
+    *confidence = 88;
     return true;
 }
 
@@ -129,9 +213,33 @@ static uft_error_t dim_open(uft_disk_t *disk, const char *path,
         return UFT_ERROR_IO;
     }
 
+    /* MF-1019, Befund 1: dieselbe Kennung wie in der Sonde. */
+    if (!dim_has_signature(hdr)) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+
     uint8_t cyl, heads, spt;
     uint16_t ss;
     if (!dim_get_geometry(hdr[0], &cyl, &heads, &spt, &ss)) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+
+    /* MF-1019, Befund 2: `open` prueft die Dateigroesse jetzt genauso
+     * wie die Sonde. Eine zu kurze Datei bekam vorher die volle
+     * angesagte Geometrie und Sektoren, die nicht darin stehen.
+     *
+     * Und das ist gleichzeitig die Sicherung gegen die ungeklaerte
+     * Medientabelle (siehe Dateikopf): ist ein Eintrag falsch, passt
+     * die Rechnung nicht zur Datei, und sie wird abgewiesen statt
+     * falsch zerlegt. */
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    long fs = ftell(f);
+    if (fs < 0) { fclose(f); return UFT_ERROR_IO; }
+    uint32_t erwartet = DIM_HEADER_SIZE
+                      + (uint32_t)cyl * heads * spt * ss;
+    if ((uint32_t)fs < erwartet) {
         fclose(f);
         return UFT_ERROR_FORMAT_INVALID;
     }

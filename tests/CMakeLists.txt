@@ -353,6 +353,24 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_dim_kennung_und_groesse")
+        # MF-1019: `dim` prueft die Kennung „DIFC HEADER" bei 0xAB nicht.
+        # Gemessen am Vorzustand: ein Puffer aus 512 NULLBYTES mit
+        # plausibler Dateigroesse wurde mit Konfidenz 45 angenommen.
+        # Die richtige Pruefung lag in `src/formats/pc98/dim.c` — der
+        # verwaisten Schicht; dritter Fall dieser Gestalt in derselben
+        # Runde nach `udi`/MF-1015 und `scl`/MF-1014.
+        #
+        # Dazu: `open` prueft die Dateigroesse jetzt wie die Sonde.
+        #
+        # WICHTIG — `dim` bleibt T3. Die Medientabelle ist UNGEKLAERT:
+        # drei Umsetzungen (hier, `pc98/dim.c`, MAME `dim_dsk.cpp`),
+        # drei Tabellen, keine zwei gleich bei fuenf von sieben Werten.
+        # Der Test NAGELT den heutigen Stand FEST, er beweist ihn nicht
+        # (P3-325).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dim/uft_dim.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_vdk_gegen_mame")
         # MF-1018: `vdk` stand auf T3. Drei Befunde, gemessen an
         # Pruefdateien, deren Spuren und Sektoren sich selbst benennen:

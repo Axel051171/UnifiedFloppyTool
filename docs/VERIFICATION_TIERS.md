@@ -89,7 +89,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `cas` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
-| `dim` | **T3** | — | — | — | — |
+| `dim` | **T3** | `test_dim_kennung_und_groesse` | — | — | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
