@@ -257,8 +257,9 @@ Reihenfolge nach Doppelnutzen:
 | # | Format | Orakel | zusätzlich |
 |---|---|---|---|
 | ~~1~~ | ✅ **`cfi` — erledigt MF-1004** | `src/samdisk/cfi.cpp` (74 Z.) | **Schreiber verdrahtet**, zweiter der elf nach `opus` |
-| 2 | `mgt` | MAME `coupedsk.cpp` | Schreiber (P3-204), Blocker weg |
-| 3 | `apridisk` | MAME `apridisk.cpp` | Schreiber (P3-204) |
+| ~~2~~ | ✅ **`mgt` — erledigt MF-1006** | MAME `coupedsk.cpp` | **Schreiber verdrahtet**; P3-312 abgeschwaecht |
+
+| ~~3~~ | ✅ **`apridisk` — erledigt MF-1009** | MAME `apridisk.cpp` | **Schreiber verdrahtet** — und er musste dafuer erst berichtigt werden |
 | 4–12 | `cpm` `dim` `jv1` `jv3` `nib` `scl` `udi` `vdk` `victor9k` | samdisk bzw. MAME | — |
 
 **Je Durchgang** (das MF-905-Muster): fremden Leser Feld für Feld gegen

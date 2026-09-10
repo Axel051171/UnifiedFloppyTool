@@ -60,26 +60,55 @@ TEST(apridisk_signature) {
     ASSERT(uft_apridisk_probe(invalid_header, sizeof(invalid_header), &confidence) == false);
 }
 
-TEST(apridisk_rle_compression) {
-    /* Test RLE round-trip */
-    uint8_t input[512];
-    uint8_t compressed[1024];
-    uint8_t decompressed[512];
-    
-    /* Create test pattern with runs */
-    memset(input, 0xAA, 100);
-    memset(input + 100, 0xBB, 200);
-    memset(input + 300, 0xCC, 212);
-    
-    int comp_len = apridisk_rle_compress(input, sizeof(input), 
-                                          compressed, sizeof(compressed));
-    ASSERT(comp_len > 0);
-    ASSERT((size_t)comp_len < sizeof(input));  /* Should compress */
-    
-    int decomp_len = apridisk_rle_decompress(compressed, comp_len,
-                                              decompressed, sizeof(decompressed));
-    ASSERT(decomp_len == sizeof(input));
-    ASSERT(memcmp(input, decompressed, sizeof(input)) == 0);
+TEST(apridisk_fuelllauf) {
+    /* MF-1009: hier stand `TEST(apridisk_rle_compression)` — ein
+     * Rundlauf durch `apridisk_rle_compress()` und
+     * `apridisk_rle_decompress()`. Er war jahrelang gruen und hat
+     * NICHTS ueber die Welt bewiesen: beide Funktionen waren
+     * Spiegelbilder voneinander, und das Format, das sie umsetzten,
+     * gibt es nicht. Ein Prueffall mit drei Laeufen (0xAA/0xBB/0xCC)
+     * ging durch, weil der eigene Packer ihn so erzeugt hatte.
+     *
+     * Das ist die Klasse aus MF-992 — zehn gruene BAM-Tests, die durch
+     * dieselbe falsche Struktur zuruecklasen.
+     *
+     * Die echte APRIDISK-Kompression (MAME `apridisk.cpp`) ist EIN
+     * Fuelllauf ueber den ganzen Sektor: drei Byte, u16le Laenge +
+     * Fuellbyte. Genau das wird jetzt geprueft — und ausdruecklich
+     * auch, dass ein NICHT gleichfoermiger Sektor abgelehnt wird,
+     * statt irgendetwas zu liefern. */
+    uint8_t gleich[512];
+    uint8_t gepackt[8];
+    uint8_t zurueck[512];
+
+    memset(gleich, 0x6D, sizeof(gleich));
+
+    int n = apridisk_make_fill(gleich, sizeof(gleich),
+                               gepackt, sizeof(gepackt));
+    ASSERT(n == 3);
+    /* u16le Laenge = 512, dann das Fuellbyte */
+    ASSERT(gepackt[0] == 0x00 && gepackt[1] == 0x02);
+    ASSERT(gepackt[2] == 0x6D);
+
+    int m = apridisk_expand_fill(gepackt, (size_t)n,
+                                 zurueck, sizeof(zurueck));
+    ASSERT(m == (int)sizeof(zurueck));
+    ASSERT(memcmp(gleich, zurueck, sizeof(gleich)) == 0);
+
+    /* Ein Sektor mit zwei verschiedenen Bytes ist nicht packbar. */
+    uint8_t bunt[512];
+    memset(bunt, 0x6D, sizeof(bunt));
+    bunt[511] = 0x6E;
+    ASSERT(apridisk_make_fill(bunt, sizeof(bunt),
+                              gepackt, sizeof(gepackt)) < 0);
+
+    /* Eine Laenge, die nicht der Sektorgroesse entspricht, ist ein
+     * Formatfehler — MAME bricht dort ab („Invalid compression
+     * length"), und ein stillschweigend anderes Ergebnis waere eine
+     * erfundene Angabe. */
+    uint8_t falsch[3] = { 0x00, 0x01, 0x6D };   /* 256 statt 512 */
+    ASSERT(apridisk_expand_fill(falsch, sizeof(falsch),
+                                zurueck, sizeof(zurueck)) < 0);
 }
 
 /* ============================================================================
@@ -315,7 +344,7 @@ int main(int argc, char *argv[]) {
     
     printf("ApriDisk Tests:\n");
     RUN_TEST(apridisk_signature);
-    RUN_TEST(apridisk_rle_compression);
+    RUN_TEST(apridisk_fuelllauf);
     RUN_TEST(apridisk_write_options);
     
     printf("\nNanoWasp Tests:\n");

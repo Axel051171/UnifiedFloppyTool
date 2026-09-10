@@ -353,6 +353,22 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_apridisk_schreibt_in_die_datei")
+        # MF-1009: `apridisk` ist der vierte der elf aus MF-930 (nach
+        # `opus`, `cfi`, `mgt`) — und der erste, bei dem der
+        # Dateischreiber vor der Verdrahtung REPARIERT werden musste:
+        # er erzeugte dasselbe erfundene Satzformat, das der Leser
+        # erwartete. Ein Rundlauf haette das nicht gefangen, deshalb
+        # prueft der Test auch die ROHEN Satzkopf-Bytes.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apridisk/uft_apridisk.c)
+    elseif(${test_name} STREQUAL "test_apridisk_gegen_mame")
+        # MF-1009: `apridisk` von T3 gegen MAMEs
+        # `src/lib/formats/apridisk.cpp` (BSD-3, Dirk Best) gehalten.
+        # Der Abgleich fand drei unabhaengige Gruende, warum UFT keine
+        # echte APRIDISK-Datei lesen konnte: Satztypen ohne die obere
+        # Haelfte 0xE31D (und Sektor/Kommentar vertauscht), 32-Bit- statt
+        # 16-Bit-Felder, Sektorfelder an der falschen Stelle.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apridisk/uft_apridisk.c)
     elseif(${test_name} STREQUAL "test_mgt_gegen_mame")
         # MF-1006: `mgt` von T3 auf T2 — Feldabgleich gegen MAMEs
         # `src/lib/formats/coupedsk.cpp` (BSD-3, benannte Referenz nach
