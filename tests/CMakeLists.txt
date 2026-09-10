@@ -353,6 +353,32 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_udi_gegen_die_spezifikation")
+        # MF-1015: `udi` stand auf T3. Drei Befunde, gemessen am
+        # Quelltext und an einer Pruefdatei in ECHTER Groesse:
+        #
+        #  1. Der Kopf war um vier Byte verschoben — das Kopfkommentar
+        #     liess das 4-Byte-Groessenfeld weg, und `udi_open()` las
+        #     Zylinder/Kopfzahl aus `data[5]`/`data[6]`, also aus der
+        #     little-endian Dateigroesse. Gemessen: eine gueltige UDI
+        #     von 1 125 620 Byte (80x2x6250) wird mit -25 ABGEWIESEN,
+        #     weil data[6] = 17 > 1. Klasse MF-961.
+        #  2. Die Taktmarken folgen JEDEM zerlegbaren Spurtyp; der
+        #     Versatzlauf sprang nur bei MFM darueber. Klasse MF-794.
+        #  3. Drei Pruefsummen im Baum, keine zwei gleich. Richtig ist
+        #     die Fassung des Urhebers (Invertierung je Byte) — sie
+        #     stand in `uft_udi.c`, das niemand ruft, waehrend das
+        #     Plugin das gewoehnliche CRC-32 in die Datei schrieb.
+        #
+        # Referenz: Alex Makeev, UDI 1.0 final (24.03.2002), Sinclair
+        # Wiki „UDI format". Das ist die Spezifikation des URHEBERS und
+        # sie schlaegt das Orakel: `src/samdisk/udi.cpp` rechnet mit
+        # `int32_t` und liegt daneben.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/udi/uft_udi_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_scl_ist_eine_trdos_diskette")
         # MF-1014: `scl` stand auf T3 ohne einen einzigen Test, und der
         # Leser legte die DATEIDATEN auf Zylinder 0 / Sektor 0 — dorthin,
