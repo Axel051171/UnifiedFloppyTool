@@ -2,8 +2,6 @@
 
 **NICHT von Hand editieren** — erzeugt von `scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im Baum und wird bei jedem Lauf neu gelesen.
 
-Stand: 2026-09-10
-
 ---
 
 ## Die vier Release-Kennzahlen

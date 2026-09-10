@@ -853,6 +853,30 @@ def main() -> int:
                            [l for l in _r.stdout.splitlines()
                             if "FAIL" in l] or ["test_scout_stand.py rot"]))
 
+        # 41b. Kategorie (MF-999): DAS FRISCHETOR SELBST.
+        #
+        # `check_stand_fresh()` weiter oben vergleicht die erzeugte
+        # Uebersicht mit dem Baum. Das ist richtig — nur hing die Zahl,
+        # die es vergleicht, an der UHR: `gen_stand.py` schrieb
+        # `date.today()`, also das LOKALE Datum, und CI prueft in UTC.
+        # Auf `e4b1fbc3` war CI deshalb rot, obwohl jede Zahl stimmte:
+        # erzeugt um 01:36 Ortszeit (GMT+2) ergab 2026-09-10, geprueft um
+        # 23:36 UTC ergab 2026-09-09.
+        #
+        # Ein Tor, das aus einem Grund ohne Bezug zum Inhalt schreit,
+        # wird ignoriert — und faengt dann auch die echten Faelle nicht
+        # mehr. Dieser Selbsttest haelt fest, dass keine der drei
+        # erzeugten Uebersichten einen Zeitstempel traegt.
+        _r = _sp.run([sys.executable,
+                      str(repo / "tests"
+                          / "test_stand_tor_haengt_nicht_an_der_uhr.py")],
+                     capture_output=True, text=True, timeout=120)
+        all_errors.append(("Uebersicht mit Zeitstempel",
+                           [] if _r.returncode == 0 else
+                           [l.strip() for l in _r.stdout.splitlines()
+                            if "[ROT]" in l]
+                           or ["test_stand_tor_haengt_nicht_an_der_uhr.py rot"]))
+
         # 42. Kategorie (MF-735): DIE TORE SELBST.
         #
         # Bis heute hatte keines der 25 `scripts/audit_*.py` einen

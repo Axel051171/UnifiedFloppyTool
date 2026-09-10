@@ -55,7 +55,6 @@ import os
 import re
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 WURZEL = Path(__file__).resolve().parent.parent
@@ -245,7 +244,27 @@ def bericht() -> str:
          "**NICHT von Hand editieren** — erzeugt von "
          "`scripts/gen_stand.py` (MF-704). Jede Zahl hat eine Quelle im "
          "Baum und wird bei jedem Lauf neu gelesen.", "",
-         f"Stand: {date.today().isoformat()}", "", "---", ""]
+         # MF-999: hier stand `f"Stand: {date.today().isoformat()}"`.
+         #
+         # Ein LOKALES Datum, geprueft gegen ein UTC-Datum: CI war auf
+         # `e4b1fbc3` rot, obwohl jede Zahl stimmte. Erzeugt um 01:36
+         # Ortszeit (GMT+2) ergab 2026-09-10, geprueft um 23:36 UTC
+         # ergab 2026-09-09. Jeder Commit zwischen 00:00 und 02:00
+         # Ortszeit hat dasselbe Bild — und die Meldung forderte auf,
+         # `gen_stand.py` zu laufen, was lokal nichts aendert.
+         #
+         # Auf UTC umzustellen verschiebt die Grenze nur (erzeugt
+         # 23:59 UTC, geprueft 00:01 UTC). Die Zeile ist deshalb weg,
+         # und das ist keine Notloesung, sondern der Praezedenzfall im
+         # eigenen Baum: `gen_verification_tiers.py` und
+         # `gen_fs_tiers.py` erzeugen ihre Tabellen mit demselben
+         # Frischetor daneben und tragen KEIN Datum.
+         #
+         # Ein erzeugtes Dokument soll aus dem Baum ableitbar sein.
+         # Ein Zeitstempel ist das nicht: er ist am naechsten Tag
+         # falsch, ohne dass sich im Baum etwas geaendert haette. Wann
+         # die Datei entstand, steht im git-Verlauf, und dort genauer.
+         "---", ""]
     z += kennzahlen() + ["---", ""] + lizenz() + ["---", ""]
     z += offen() + ["---", ""] + dokumente()
     return "\n".join(z) + "\n"
