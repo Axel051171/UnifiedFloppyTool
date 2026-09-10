@@ -256,7 +256,7 @@ Reihenfolge nach Doppelnutzen:
 
 | # | Format | Orakel | zusätzlich |
 |---|---|---|---|
-| 1 | `cfi` | `src/samdisk/cfi.cpp` (74 Z.) | Schreiber (P3-204) |
+| ~~1~~ | ✅ **`cfi` — erledigt MF-1004** | `src/samdisk/cfi.cpp` (74 Z.) | **Schreiber verdrahtet**, zweiter der elf nach `opus` |
 | 2 | `mgt` | MAME `coupedsk.cpp` | Schreiber (P3-204), Blocker weg |
 | 3 | `apridisk` | MAME `apridisk.cpp` | Schreiber (P3-204) |
 | 4–12 | `cpm` `dim` `jv1` `jv3` `nib` `scl` `udi` `vdk` `victor9k` | samdisk bzw. MAME | — |
@@ -270,6 +270,29 @@ danach den Schreiber nach dem MF-931-Rezept verdrahten.
 braucht es ein von fremder Hand *erzeugtes Abbild*, und für keines liegt
 eines im Korpus. Ein gelesener Quelltext belegt die Struktur, nicht die
 Wirklichkeit.
+
+### 4.1 Was der erste Durchgang gelehrt hat (MF-1004, `cfi`)
+
+**T3 → T2 erreicht, Schreiber verdrahtet, T3 = 34.** Sieben Abweichungen
+gegen `ReadCFI()`, sechs davon dieselbe Klasse: das Orakel bricht ab, UFT
+kürzte still (leerer Spurblock verwarf den **Rest der Datei**;
+Pufferüberlauf wurde geklemmt und die Geometrie danach aus der
+*geklemmten* Größe erfunden).
+
+**Die siebte ist die lehrreiche, und sie kam nicht aus dem
+Feldabgleich.** `uft_cfi_read_mem()` wies jede Datei unter 512 Byte ab.
+CFI *komprimiert*: der eigene Schreiber erzeugte aus 9216 Byte Nutzlast
+eine **39 Byte** große, strukturell einwandfreie Datei — und der eigene
+Leser lehnte sie ab. `ReadCFI()` hat keine solche Konstante.
+
+> **Ein Feldabgleich vergleicht Verhalten. Eine Konstante, die das
+> Orakel gar nicht hat, fällt dabei nicht auf.** Gefunden hat es der
+> Rundlauf der Schreibseite.
+
+**Für die restlichen elf heißt das: Leseabgleich UND Rundlauf, nicht
+eines von beiden.** Die Reihenfolge bleibt (erst Leser, dann Schreiber —
+MF-905 → MF-931), aber der Rundlauf ist Teil der Hebung, nicht ein
+Nachtrag.
 
 ---
 

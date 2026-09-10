@@ -70,6 +70,19 @@ typedef struct {
  * @brief Decompress CFI track data
  * @return Decompressed size, or -1 on error
  */
+/* Fehlerwerte von cfi_decompress_track() — negativ, damit der bisherige
+ * Wertebereich (>= 0 = entpackte Bytes) unberuehrt bleibt.
+ *
+ * MF-1004: bis dahin gab es keine. Der Entpacker KLEMMTE still auf die
+ * Restkapazitaet und brach bei zu kurzer Eingabe mit einem Teilergebnis
+ * ab, das der Aufrufer nicht von einem vollstaendigen unterscheiden
+ * konnte. `src/samdisk/cfi.cpp` bricht an denselben drei Stellen ab —
+ * „short file reading CFI track block", „expanded CFI image is too big",
+ * „track data overflows CFI track block".
+ */
+#define CFI_DECOMP_KURZ       (-1)  /**< Eingabe endet mitten im Block   */
+#define CFI_DECOMP_ZU_GROSS   (-2)  /**< Ausgabe spraenge die Kapazitaet */
+
 int cfi_decompress_track(const uint8_t *input, size_t track_block_size,
                          uint8_t *output, size_t output_capacity);
 

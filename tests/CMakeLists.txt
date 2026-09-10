@@ -346,6 +346,18 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_cfi_schreibt_in_die_datei")
+        # MF-1004: `cfi` ist der zweite der elf aus MF-930, deren
+        # Dateischreiber vollstaendig, aber unerreichbar war (P3-204).
+        # Gemessen am ERGEBNIS — schreiben, close, neu oeffnen, lesen —,
+        # nicht am Funktionszeiger; die Form, die P3-154 seit MF-880
+        # verlangt.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/cfi/uft_cfi.c)
+    elseif(${test_name} STREQUAL "test_cfi_gegen_samdisk")
+        # MF-1004: `cfi` von T3 auf T2 gehoben — Feldabgleich gegen
+        # `src/samdisk/cfi.cpp` (`ReadCFI`), das Orakel im eigenen Baum.
+        # Dieselbe Form wie MF-905 (`opus` gegen `src/samdisk/opd.cpp`).
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/cfi/uft_cfi.c)
     elseif(${test_name} STREQUAL "test_kurzes_cfi_erfindet_keinen_sektor")
         # MF-1001: neun Plugins schreiben direkt in track->sectors[s],
         # setzen `status = UFT_SECTOR_OK` von Hand — vor der

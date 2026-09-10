@@ -2,9 +2,61 @@
  * @file uft_cfi.c
  * @brief CFI (Compressed Floppy Image) format implementation
  * @version 3.9.0
- * 
+ *
  * CFI format from FDCOPY.COM, used for Amstrad PC distribution.
- * Reference: libdsk drvcfi.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ *
+ * Referenzen (benannt, wie die EINFRIER-REGEL es verlangt):
+ *   [1] libdsk `drvcfi.c`, John Elliott (LGPL-2.0-or-later;
+ *       Fassung 1.5.12 geprueft) — Ausgangsreferenz
+ *   [2] SAMdisk (MIT), `src/samdisk/cfi.cpp` — `ReadCFI()`.
+ *       Zweite, unabhaengige Hand; Grundlage der Hebung T3 -> T2
+ *       (MF-1004). Kein fremder Quelltext uebernommen.
+ *   [3] Die Formatquelle, die [2] im eigenen Kopf nennt: Amstrad FDCOPY
+ *       „compressed floppy image", web.archive.org/web/20100706002713/
+ *       http://www.fdos.org/ripcord/rawrite/cfi.html
+ *
+ * ── Was der Abgleich mit [2] ergab (MF-1004) ────────────────────────
+ *
+ * Das Blockformat selbst stimmte ueberein: 2-Byte-Kopf, Laenge =
+ * `lo | ((hi & 0x7F) << 8)`, Bit 15 = RLE mit einem Fuellbyte.
+ *
+ * **Sechs Abweichungen, alle in derselben Richtung** — das Orakel
+ * bricht ab, UFT kuerzte still:
+ *
+ *   D1  Spurblock der Laenge 0    [2] liest ihn als leere Spur und
+ *                                 laeuft weiter; UFT verwarf den Rest
+ *                                 der DATEI. Gemessen an einer
+ *                                 Pruefdatei mit leerem Block in der
+ *                                 Mitte ging der ganze zweite Kopf
+ *                                 verloren — mit UFT_OK.
+ *   D2  Teilblock der Laenge 0    dito, auf Spurebene
+ *   D3  Ausgabepuffer voll        [2]: „expanded CFI image is too big".
+ *                                 UFT klemmte still und erfand die
+ *                                 Geometrie danach aus der GEKLEMMTEN
+ *                                 Groesse: 2 949 120 / 512 = 5760
+ *                                 Sektoren = 80/2/36.
+ *   D4  Eingabe zu kurz           [2]: „short file reading CFI track
+ *                                 block". UFT: Teilergebnis = Erfolg.
+ *   D5  Spurlaenge > Datei        [2]: „short file in CFI track block".
+ *   D6  Teilbloecke != track_end  [2]: „track data overflows CFI track
+ *                                 block". UFT prueft es jetzt dadurch,
+ *                                 dass die Schleife nur bei GENAUEM
+ *                                 Aufgehen endet.
+ *
+ * Rotbeweis: `tests/test_cfi_gegen_samdisk.c` — 4 von 6 Faellen rot vor
+ * dem Fix, 6/6 danach.
+ *
+ * **Stufe T2, nicht T1b.** Ein gelesener fremder Quelltext belegt die
+ * STRUKTUR, nicht die Wirklichkeit; dafuer braeuchte es ein von fremder
+ * Hand erzeugtes CFI, und im Korpus liegt keines.
+ *
+ * ── Eine benannte Abweichung, die BLEIBT ────────────────────────────
+ *
+ * Scheitert `parse_bpb()`, raet UFT die Geometrie aus der Dateigroesse
+ * (720/1440/2880/5760 Sektoren). [2] wirft dort „invalid packed CFI
+ * content". Das ist bewusst NICHT angeglichen: der Rueckfall trifft
+ * nur Abbilder ohne lesbaren Bootsektor, und die Daten liegen auch dann
+ * linear. Er steht hier, damit er benannt ist statt still.
  */
 
 #include "uft/formats/uft_cfi.h"
@@ -50,39 +102,59 @@ int cfi_decompress_track(const uint8_t *input, size_t track_block_size,
     size_t in_pos = 0;
     size_t out_pos = 0;
     
-    while (in_pos < track_block_size && out_pos < output_capacity) {
-        if (in_pos + 2 > track_block_size) break;
-        
+    /* MF-1004 — Feldabgleich gegen `src/samdisk/cfi.cpp` (`ReadCFI`).
+     *
+     * Hier stand eine Schleife, die an DREI Stellen still kuerzte:
+     *
+     *   - `if (block_len == 0) break;`      Rest der Spur verworfen
+     *   - `block_len = output_capacity - out_pos;`   still geklemmt
+     *   - `if (in_pos + block_len > ...) break;`     Teilergebnis
+     *
+     * Das Orakel bricht an allen drei Stellen ab. Ein Teilergebnis, das
+     * der Aufrufer nicht von einem vollstaendigen unterscheiden kann,
+     * ist eine stille Veraenderung — die zweite Zeile des Mottos.
+     *
+     * Ein Block der Laenge 0 ist KEIN Abbruchgrund: samdisk liest ihn
+     * (0 Byte) und laeuft bis `track_end` weiter. Die Schleife tut das
+     * jetzt auch — `in_pos` waechst um den Kopf, also terminiert sie.
+     *
+     * Die Schleife endet damit nur noch, wenn `in_pos` GENAU auf
+     * `track_block_size` steht; jeder angebrochene Kopf ist ein Fehler.
+     * Das ist samdisks „track data overflows CFI track block".
+     */
+    while (in_pos < track_block_size) {
+        if (in_pos + 2 > track_block_size) return CFI_DECOMP_KURZ;
+
         uint8_t lo = input[in_pos++];
         uint8_t hi = input[in_pos++];
-        
+
         uint16_t block_len = lo | ((hi & 0x7F) << 8);
         bool is_rle = (hi & 0x80) != 0;
-        
-        if (block_len == 0) break;
-        
+
         if (is_rle) {
             /* RLE block */
-            if (in_pos >= track_block_size) break;
+            if (in_pos >= track_block_size) return CFI_DECOMP_KURZ;
             uint8_t fill = input[in_pos++];
-            
+
             if (out_pos + block_len > output_capacity) {
-                block_len = output_capacity - out_pos;
+                return CFI_DECOMP_ZU_GROSS;
             }
             memset(output + out_pos, fill, block_len);
             out_pos += block_len;
         } else {
             /* Literal block */
-            if (in_pos + block_len > track_block_size) break;
+            if (in_pos + block_len > track_block_size) {
+                return CFI_DECOMP_KURZ;
+            }
             if (out_pos + block_len > output_capacity) {
-                block_len = output_capacity - out_pos;
+                return CFI_DECOMP_ZU_GROSS;
             }
             memcpy(output + out_pos, input + in_pos, block_len);
             in_pos += block_len;
             out_pos += block_len;
         }
     }
-    
+
     return (int)out_pos;
 }
 
@@ -204,7 +276,25 @@ static bool parse_bpb(const uint8_t *data, size_t size,
 uft_error_t uft_cfi_read_mem(const uint8_t *data, size_t size,
                              uft_disk_image_t **out_disk,
                              cfi_read_result_t *result) {
-    if (!data || !out_disk || size < CFI_MIN_FILE_SIZE) {
+    /* MF-1004, D7: hier stand `size < CFI_MIN_FILE_SIZE` (512).
+     *
+     * Das ist eine willkuerliche Untergrenze, und sie war falsch. CFI
+     * ist ein KOMPRIMIERendes Format; eine gleichfoermige Diskette
+     * schrumpft auf wenige Dutzend Byte. `ReadCFI()` kennt keine solche
+     * Regel — es prueft die Endung und laeuft dann die Bloecke ab.
+     *
+     * Gefunden hat es nicht der Feldabgleich, sondern der RUNDLAUF
+     * (MF-1004, Schreibseite): `uft_cfi_write()` erzeugte aus einer
+     * 1x2x9-Diskette eine **39 Byte** grosse, strukturell einwandfreie
+     * Datei — zwei Spurbloecke, von Hand nachdekodiert, beide genau
+     * 4608 Byte entpackend —, und der eigene Leser wies sie ab. Ein
+     * Feldabgleich vergleicht Verhalten; eine Konstante, die das Orakel
+     * gar nicht hat, faellt dabei nicht auf.
+     *
+     * Was bleibt, sind die STRUKTURellen Pruefungen: mindestens ein
+     * Spurblockkopf, und nach dem Entpacken mindestens ein Sektor
+     * (`decomp_pos < 512` weiter unten). Die entscheiden das jetzt. */
+    if (!data || !out_disk || size < 2) {
         return UFT_ERR_INVALID_PARAM;
     }
     
@@ -225,20 +315,58 @@ uft_error_t uft_cfi_read_mem(const uint8_t *data, size_t size,
     size_t decomp_pos = 0;
     uint32_t track_count = 0;
     
+    /* MF-1004 — Feldabgleich gegen `src/samdisk/cfi.cpp` (`ReadCFI`).
+     *
+     * Hier standen zwei stille Abbrueche:
+     *
+     *   `if (track_len == 0) break;`     -> D1
+     *   `if (pos + track_len > size) break;` -> D5
+     *
+     * D1 war der teuerste: ein Spurblock der LAENGE 0 beendete das
+     * Lesen der ganzen Datei. samdisk liest ihn als leere Spur und
+     * laeuft weiter; gemessen an einer Pruefdatei mit leerem Block in
+     * der Mitte verlor UFT den gesamten zweiten Kopf — mit UFT_OK, und
+     * seit MF-1001 immerhin als „fehlend" gekennzeichnet.
+     *
+     * D5 ist eine abgeschnittene Datei. samdisk wirft „short file in
+     * CFI track block"; hier wurde das Teilergebnis als Erfolg
+     * gemeldet.
+     */
     while (pos + 2 <= size) {
         uint16_t track_len = read_le16(data + pos);
         pos += 2;
-        
-        if (track_len == 0) break;
-        if (pos + track_len > size) break;
-        
+
+        if (track_len == 0) {
+            /* Leere Spur — kein Abbruchgrund (D1). */
+            track_count++;
+            continue;
+        }
+        if (pos + track_len > size) {
+            free(decompressed);
+            if (result) {
+                result->error = UFT_ERR_FORMAT;
+                result->error_detail =
+                    "CFI track block extends past end of file";
+            }
+            return UFT_ERR_FORMAT;
+        }
+
         int decomp_len = cfi_decompress_track(data + pos, track_len,
                                                decompressed + decomp_pos,
                                                max_size - decomp_pos);
-        if (decomp_len > 0) {
-            decomp_pos += decomp_len;
+        if (decomp_len < 0) {
+            free(decompressed);
+            if (result) {
+                result->error = UFT_ERR_FORMAT;
+                result->error_detail =
+                    (decomp_len == CFI_DECOMP_ZU_GROSS)
+                        ? "expanded CFI image is too big"
+                        : "short or inconsistent CFI track block";
+            }
+            return UFT_ERR_FORMAT;
         }
-        
+        decomp_pos += (size_t)decomp_len;
+
         pos += track_len;
         track_count++;
     }
@@ -393,11 +521,21 @@ uft_error_t uft_cfi_read(const char *path,
  * ============================================================================ */
 
 bool uft_cfi_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < CFI_MIN_FILE_SIZE) return false;
-    
+    /* MF-1004, D7: hier stand `size < CFI_MIN_FILE_SIZE` (512).
+     *
+     * Dieselbe willkuerliche Untergrenze wie im Leser — und hier waere
+     * die Folge, dass ein legitim winziges CFI gar nicht erst erkannt
+     * wird. Die Sonde prueft ohnehin STRUKTURELL: sie entpackt die erste
+     * Spur und verlangt eine gueltige BPB. Das ist ein schaerferer
+     * Filter als eine Groessenschwelle, und er bleibt.
+     *
+     * Konfidenz 70 = „Struktur gelesen" nach der Skala aus MF-729 —
+     * unveraendert richtig: CFI hat keine Kennung. */
+    if (!data) return false;
+
     /* CFI has no signature - must try to decompress and validate BPB */
     /* For probing, just check if first track looks valid */
-    
+
     if (size < 4) return false;
     
     uint16_t first_track_len = read_le16(data);
@@ -637,9 +775,24 @@ static uft_error_t cfi_write_track(uft_disk_t *disk, int cyl, int head,
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
+    /* MF-1004, Regel 4 des MF-931-Rezepts: die Schreibseite gegen die
+     * Leseseite halten. `cfi_read_track()` und die Aufbauschleife in
+     * `uft_cfi_read_mem()` rechnen beide `cyl * heads + head`; die
+     * Schranke hier prueft dasselbe Produkt. Bei `opus` war genau das
+     * auseinandergelaufen — die Leseseite war in MF-905 berichtigt, die
+     * Schreibseite stand noch auf `head != 0`. */
+    if (head >= image->heads) return UFT_ERR_INVALID_PARAM;
+    if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
+
     size_t idx = (size_t)cyl * image->heads + head;
     if (idx >= (size_t)(image->tracks * image->heads))
         return UFT_ERR_INVALID_PARAM;
+
+    /* Ohne Ziel kann niemand schreiben — dann wird das GESAGT, nicht
+     * Erfolg gemeldet. `uft_disk_open()` setzt `disk->path`, bevor es
+     * das Plugin ruft (`src/core/uft_core_stubs.c`); wer das Plugin
+     * direkt oeffnet, muss es selbst tun. */
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
 
     uft_track_t *dst = image->track_data[idx];
     if (!dst) return UFT_ERR_INVALID_PARAM;
@@ -675,15 +828,54 @@ static uft_error_t cfi_write_track(uft_disk_t *disk, int cyl, int head,
      * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
      *
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
-    return UFT_ERROR_NOT_SUPPORTED;
+     * Aufrufer keine Begruendung.
+     *
+     * ── MF-1004: der Weg ist jetzt da ───────────────────────────────
+     *
+     * `cfi` ist der zweite der elf (nach `opus`/MF-931), und er kam an
+     * die Reihe, weil seine LESESEITE zuerst gehoben wurde: MF-1004 hat
+     * sie Feld fuer Feld gegen `src/samdisk/cfi.cpp` gehalten und vier
+     * stille Kuerzungen beseitigt. Das ist die Reihenfolge aus P3-204 —
+     * erst der Leser gegen eine fremde Hand, dann der Schreiber; einen
+     * Rundlauf durch einen ungeprueften Leser zu fuehren beweist nur,
+     * dass unser Leser unseren Schreiber versteht (MF-992).
+     *
+     * **Was der Rundlaufbeweis belegt und was nicht.** Er belegt, dass
+     * die Bytes die DATEI erreichen — schreiben, `close()`, neu
+     * oeffnen, zurueklesen. Er belegt NICHT, dass die erzeugte
+     * CFI-Datei kanonisch ist: sie wird von `cfi_compress_track()`
+     * gepackt und von `cfi_decompress_track()` wieder gelesen, beide
+     * aus diesem Baum. Fuer diese Aussage braeuchte es eine fremde
+     * Hand, und im Korpus liegt kein CFI. Steht so in
+     * `tests/test_cfi_schreibt_in_die_datei.c`. */
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. Das ist
+     * der Unterschied zu MF-930, wo genau hier `UFT_OK` stand. */
+    uft_error_t werr = uft_cfi_write(image, disk->path, NULL);
+    if (werr != UFT_OK) return werr;
+
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_cfi_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_cfi_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1004: write_track aendert die Speicherkopie und schreibt ueber "
+      "uft_cfi_write() durch; belegt in tests/test_cfi_schreibt_in_die_datei.c. "
+      "Der Rundlauf belegt, dass die Bytes die Datei erreichen — nicht, dass "
+      "die erzeugte CFI-Datei kanonisch ist (kein CFI im Korpus)" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -696,7 +888,17 @@ const uft_format_plugin_t uft_format_plugin_cfi = {
     .description = "Compressed Floppy Image (FDCOPY)",
     .extensions = "cfi",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1004: `UFT_FORMAT_CAP_WRITE` ist zurueck. MF-930 hatte es
+     * entfernt, als der Schreiber stillgelegt wurde — die Zusage stand
+     * damals an drei Stellen und keine davon traf zu. Jetzt trifft sie
+     * zu, belegt in tests/test_cfi_schreibt_in_die_datei.c.
+     *
+     * Gefangen hat die Lücke `test_capability_manifest` („ZU VIEL: CFI
+     * \"Write\" = SUPPORTED, aber UFT_FORMAT_CAP_WRITE fehlt") — das Tor
+     * aus MF-658, das die Merkmalstafel gegen die Faehigkeitsbits
+     * haelt. Es hat genau das getan, wofuer es da ist. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = cfi_probe_plugin,
     .open = cfi_open,
     .close = cfi_close,
