@@ -152,7 +152,7 @@ Nach Regel 9 (MF-640) bewegt keiner davon eine der vier Kennzahlen. Sie
 werden notiert, nicht eingeplant. Wer sie aufgreift, braucht zuerst die
 zweite Quelle.
 
-**Lizenz-Hinweis:** nibtools ist GPL-3.0 (Lizenzdatei gelesen). In einem
+**Lizenz-Hinweis:** nibtools ist **Apache-2.0** (Lizenzdatei gelesen; berichtigt MF-1008, hier stand GPL-3.0 — Eigentuemer-Feststellung 2026-09-10). In einem
 GPL-2.0-Baum nicht portierbar — nutzbar allein als **Oracle**, also zum
 Vergleichen von Ausgaben, nie als Codequelle. Lizenz vor Fähigkeit.
 

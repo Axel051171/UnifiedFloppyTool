@@ -40,7 +40,7 @@ zwischen MF-818 und MF-908 bereits behoben hat.
 | „Kernbefund neu" (04/08) | P3-38/P3-39 führen die Rittwage-Widerlegung seit MF-818 | **trägt nicht** |
 
 **Lizenz, und sie entscheidet über den größten Teil der Berichte:**
-`tools/uft-scout/work/nibtools/LICENSE` ist **GPL-3.0**, UFT ist GPL-2.
+`tools/uft-scout/work/nibtools/LICENSE` ist **Apache-2.0** (berichtigt MF-1008; hier stand GPL-3.0 — Eigentuemer-Feststellung 2026-09-10), UFT ist GPL-2. Unvereinbar bleibt unvereinbar.
 Der Anweisungsteil beider C64-Berichte — *„Konstanten übernehmen,
 Fundstelle in den Kommentar"* — ist **kein zulässiger Kanal**. GPL-3
 verbindet sich mit GPL-2-**or-later**, aber jede weitere GPL-3-Quelle
@@ -63,7 +63,7 @@ Zulässig bleiben **Nachbau** (Hand B sieht die Quelle nie) und **Oracle**.
 > hält fest: die Konstante muss sein, was der Test erwartet — nicht
 > umgekehrt. Der widerlegte Vermerk „(bit-shifted)“ ist gestrichen.
 >
-> **Keine nibtools-Bytes übernommen** (GPL-3 gegen GPL-2). Was der
+> **Keine nibtools-Bytes übernommen** (Apache-2.0 gegen GPL-2; berichtigt MF-1008, hier stand GPL-3). Was der
 > Kommentar jetzt sagt, ist eine **Beschreibung** des Unterschieds —
 > Folge gegen Menge —, keine Übernahme von Werten. Befund als
 > **P3-187**.

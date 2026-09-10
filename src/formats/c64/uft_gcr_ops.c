@@ -6,9 +6,19 @@
  * c64preservation.com) — EIGENSTAENDIGE Implementierung, kein Port.
  *
  * MF-635: hier stand "Based on nibtools gcr.c". Das ist eine
- * Ableitungserklaerung, und nibtools steht seit 2025-01-30 unter GPL-3;
- * fuer diesen GPL-2.0-or-later-Baum waere das eine Lizenzfrage. Ein
- * Aehnlichkeitsaudit gegen gcr.c @0abdc11 hat sie entschieden:
+ * Ableitungserklaerung, und die Lizenz der Quelle waere fuer diesen
+ * GPL-2.0-or-later-Baum eine Lizenzfrage. Ein Aehnlichkeitsaudit gegen
+ * gcr.c @0abdc11 hat sie entschieden:
+ *
+ * MF-1008 berichtigt die Lizenzangabe, die hier stand ("seit
+ * 2025-01-30 unter GPL-3"): nibtools steht unter der **Apache License
+ * 2.0** — Eigentuemer-Feststellung 2026-09-10, Quelle
+ * `nibtools-extra/LICENSE`. Am Ergebnis aendert das nichts, und zwar
+ * aus einem Grund, der hierhin gehoert: **Apache-2.0 ist mit GPL-2
+ * ebenso unvereinbar wie GPL-3-only**, nur auf anderem Weg (Patent-
+ * und Beendigungsklauseln statt Versionsschritt). Der Schluss "waere
+ * eine Lizenzfrage, also Audit" traegt unveraendert — die frueher
+ * genannte Lizenz war falsch, die Vorsicht nicht.
  *
  *   strip_runs        nibtools kompaktiert in-place ueber source/buffer-
  *                     Zeiger mit run-Zaehler und Parametern

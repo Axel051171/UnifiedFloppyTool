@@ -20,7 +20,9 @@ target_compile_definitions(uft_c64_protection PRIVATE
 )
 
 # MF-637: das Ziel `uft_track_align` ist entfernt. Die Quelle war ein Port
-# aus nibtools (GPL-3.0 seit 2025-01-30, davor lizenzlos) und liegt seit
+# aus nibtools (**Apache-2.0** — berichtigt MF-1008; hier stand "GPL-3.0
+# seit 2025-01-30, davor lizenzlos". Am Ergebnis aendert das nichts:
+# Apache-2.0 ist mit GPL-2 ebenso unvereinbar wie GPL-3-only) und liegt seit
 # MF-635 in Quarantaene — Beweis: `shift_buffer_left` zeichengleich samt
 # des erfundenen Bezeichners `carryshift`, sieben woertliche
 # Kommentar-Echos, Entsprechungen zu allen 14 prot.c-Funktionen.

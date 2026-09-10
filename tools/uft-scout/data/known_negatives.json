@@ -127,7 +127,7 @@
   },
   "rittwage/nibtools": {
    "status": "bewertet",
-   "grund": "Gutachten Zyklus 7 (2026-08-28): GPL-3.0 (GELB) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
+   "grund": "Gutachten Zyklus 7 (2026-08-28): Apache-2.0 (GELB; berichtigt MF-1008, hier stand GPL-3.0 — Eigentuemer-Feststellung 2026-09-10. Mit GPL-2 ebenso unvereinbar) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
   },
   "pbakota/amigadx": {
    "status": "bewertet",
