@@ -163,6 +163,32 @@ static size_t count_consecutive(const uint8_t *data, size_t max_len, uint8_t val
     return count;
 }
 
+/**
+ * @brief Zaehlt einen Lauf aus ZWEI erlaubten Bytes und trennt die Anteile.
+ *
+ * MF-1011: gebraucht fuer die RapidLok-THX-Variante. `count_consecutive`
+ * bricht beim ersten Fremdbyte ab; nibtools dokumentiert aber, dass auf
+ * echten Originalen einzelne `0x7B` durch `0x4B` ersetzt sind, und
+ * zaehlt beide zusammen (`prot.c:675`,
+ * `MaxNum7B` **und** `MaxNum4B`).
+ *
+ * @param out_a  Anzahl der `a`-Bytes im Lauf (darf NULL sein)
+ * @param out_b  Anzahl der `b`-Bytes im Lauf (darf NULL sein)
+ * @return Gesamtlaenge des Laufs.
+ */
+static size_t count_consecutive_two(const uint8_t *data, size_t max_len,
+                                    uint8_t a, uint8_t b,
+                                    size_t *out_a, size_t *out_b) {
+    size_t count = 0, na = 0, nb = 0;
+    while (count < max_len && (data[count] == a || data[count] == b)) {
+        if (data[count] == a) na++; else nb++;
+        count++;
+    }
+    if (out_a) *out_a = na;
+    if (out_b) *out_b = nb;
+    return count;
+}
+
 /*============================================================================
  * C64 Protection Detection
  *============================================================================*/
@@ -291,10 +317,47 @@ const uint8_t *uft_prot_detect_rapidlok(const uint8_t *track_data,
         size_t id_pos = i + sync_count;
         if (id_pos >= track_len || track_data[id_pos] != 0x55) continue;
         
-        /* Count 0x7B bytes */
-        size_t header_count = count_consecutive(track_data + id_pos + 1,
-                                                 track_len - id_pos - 1, 0x7B);
-        if (header_count >= 164) {
+        /* MF-1011 — die THX-Variante.
+         *
+         * Hier stand `count_consecutive(..., 0x7B)`. Das verlangt 164
+         * ZUSAMMENHAENGENDE `0x7B` und bricht beim ersten Fremdbyte ab.
+         *
+         * Referenz (benannt), nibtools `prot.c:341-345`, woertlich:
+         *
+         *   "TH:21+1+164+1->166" means the RL-TH starts with 21 sync
+         *   bytes, 1 0x55 ID byte, 164 $7B bytes and (possibly) 1
+         *   off-byte. ... **Sometimes a few $7B bytes are replaced with
+         *   $4B bytes on originals**, this will be output as "THX"
+         *   instead of "TH".
+         *
+         * `prot.c:675` zaehlt beide und erkennt die Spur weiterhin:
+         * `printf(":THX:%d+%d+%d{%d}+%d->%d]", MaxNumFF, MaxNum55,
+         * MaxNum7B, MaxNum4B, ...)`.
+         *
+         * Eine echte, unveraenderte Originaldiskette mit dieser
+         * bekannten Variante wurde also NICHT erkannt — still, ohne
+         * Hinweis. Rotbeweis: `tests/test_schutz_erkennung_lebt.c`,
+         * `rapidlok_thx_variante`.
+         *
+         * **Was die Referenz NICHT sagt, und was daraus folgt:** sie
+         * nennt keine Obergrenze fuer die Zahl der `0x4B`. "A few ...
+         * are replaced" heisst aber, dass die Ersetzungen die
+         * Minderheit sind — mehr steht dort nicht, und mehr wird hier
+         * nicht angenommen. Die Bedingung ist deshalb
+         * `n_4b < n_7b`, ohne erfundene Schwelle. Ein Lauf aus
+         * ueberwiegend `0x4B` gilt nicht als RapidLok.
+         *
+         * Kein nibtools-Code uebernommen: nibtools ist **Apache-2.0**
+         * (Eigentuemer-Feststellung MF-1008) und damit mit GPL-2
+         * unvereinbar. Nachgebaut ist allein das dokumentierte
+         * Verhalten — Kanal "Nachbau" nach MF-695, wie MF-635 es fuer
+         * `uft_gcr_ops.c` festgelegt hat.
+         */
+        size_t n_7b = 0, n_4b = 0;
+        size_t header_count = count_consecutive_two(
+            track_data + id_pos + 1, track_len - id_pos - 1,
+            0x7B, 0x4B, &n_7b, &n_4b);
+        if (header_count >= 164 && n_4b < n_7b) {
             if (result) {
                 result->type = UFT_PROT_RAPIDLOK;
                 result->name = "RapidLok";
@@ -306,9 +369,21 @@ const uint8_t *uft_prot_detect_rapidlok(const uint8_t *track_data,
                 result->signature[2] = 0x7B;
                 result->signature_len = 3;
                 result->align_point = track_data + id_pos + 1;
-                snprintf(result->notes, sizeof(result->notes),
-                         "RapidLok at offset 0x%zX: %zu sync, %zu header bytes",
-                         i, sync_count, header_count);
+                /* MF-1011: die Variante wird BENANNT, nicht verschwiegen
+                 * — nibtools schreibt dafuer "THX" statt "TH" und gibt
+                 * die Zahl der 0x4B in Klammern aus. Wer den Bericht
+                 * liest, soll sehen, dass es die ersetzte Fassung ist. */
+                if (n_4b > 0) {
+                    snprintf(result->notes, sizeof(result->notes),
+                             "RapidLok (THX) at offset 0x%zX: %zu sync, "
+                             "%zu header bytes (%zu x 0x7B, %zu x 0x4B "
+                             "ersetzt)", i, sync_count, header_count,
+                             n_7b, n_4b);
+                } else {
+                    snprintf(result->notes, sizeof(result->notes),
+                             "RapidLok at offset 0x%zX: %zu sync, %zu header bytes",
+                             i, sync_count, header_count);
+                }
             }
             return track_data + i;
         }

@@ -139,6 +139,102 @@ TEST(rapidlok_schweigt_ohne_kopf)
     ASSERT(uft_prot_detect_rapidlok(track, sizeof track, &result) == NULL);
 }
 
+TEST(rapidlok_thx_variante)
+{
+    /* MF-1011 — die THX-Variante.
+     *
+     * Referenz (benannt): nibtools `prot.c:341-345`, woertlich:
+     *
+     *   "TH:21+1+164+1->166" means the RL-TH starts with 21 sync bytes,
+     *   1 0x55 ID byte, 164 $7B bytes and (possibly) 1 off-byte. ...
+     *   **Sometimes a few $7B bytes are replaced with $4B bytes on
+     *   originals**, this will be output as "THX" instead of "TH".
+     *
+     * Und `prot.c:675` zaehlt die 0x4B MIT und erkennt die Spur
+     * weiterhin: `printf(":THX:%d+%d+%d{%d}+%d->%d]", MaxNumFF,
+     * MaxNum55, MaxNum7B, MaxNum4B, ...)`.
+     *
+     * UFT verlangte 164 ZUSAMMENHAENGENDE 0x7B (`count_consecutive`
+     * bricht beim ersten Fremdbyte ab). Eine echte, unveraenderte
+     * Originaldiskette mit dieser bekannten Variante wurde damit NICHT
+     * erkannt — und zwar still, ohne Hinweis.
+     *
+     * Das ist kein hypothetischer Fall: nibtools beschreibt ihn als
+     * beobachtetes Verhalten "on originals".
+     *
+     * Kein nibtools-Code uebernommen. nibtools ist **Apache-2.0**
+     * (Eigentuemer-Feststellung MF-1008) und damit mit GPL-2
+     * unvereinbar; hier ist allein das dokumentierte VERHALTEN
+     * nachgebaut — Kanal "Nachbau" nach MF-695, wie MF-635 es fuer
+     * `uft_gcr_ops.c` festgelegt hat. */
+    uint8_t track[300];
+    memset(track, 0x00, sizeof track);
+    memset(track + 10, 0xFF, 25);      /* 25 Sync-Bytes */
+    track[35] = 0x55;                  /* Kennbyte      */
+    memset(track + 36, 0x7B, 170);     /* 170 Kopfbytes */
+
+    /* "a few $7B bytes are replaced with $4B" — vier Stueck, verstreut,
+     * NICHT am Anfang: der erste Lauf bleibt kurz genug, dass
+     * `count_consecutive` allein scheitern muss. */
+    track[36 + 40]  = 0x4B;
+    track[36 + 77]  = 0x4B;
+    track[36 + 120] = 0x4B;
+    track[36 + 151] = 0x4B;
+
+    uft_protection_result_t result;
+    memset(&result, 0, sizeof result);
+    const uint8_t *pos = uft_prot_detect_rapidlok(track, sizeof track,
+                                                  &result);
+
+    ASSERT(pos != NULL);
+    ASSERT(result.type == UFT_PROT_RAPIDLOK);
+    ASSERT(result.confidence >= 90);
+}
+
+TEST(rapidlok_schweigt_bei_fremdem_fuellbyte)
+{
+    /* GEGENPROBE zur THX-Erweiterung: 0x7B und 0x4B sind die beiden
+     * Bytes, die nibtools nennt — kein drittes. Eine Spur mit 170
+     * Bytes 0x6B darf NICHT als RapidLok gelten, sonst waere aus der
+     * Erweiterung ein Erkenner geworden, der auf jeden langen Lauf
+     * anschlaegt. Genau diese Falle hat MF-570 gekostet. */
+    uint8_t track[300];
+    memset(track, 0x00, sizeof track);
+    memset(track + 10, 0xFF, 25);
+    track[35] = 0x55;
+    memset(track + 36, 0x6B, 170);     /* falsches Fuellbyte */
+
+    uft_protection_result_t result;
+    memset(&result, 0, sizeof result);
+    ASSERT(uft_prot_detect_rapidlok(track, sizeof track, &result) == NULL);
+}
+
+TEST(rapidlok_schweigt_bei_ueberwiegend_4b)
+{
+    /* MF-1011, Grenze der eigenen Ableitung.
+     *
+     * nibtools nennt KEINE Obergrenze fuer die Zahl der 0x4B — es
+     * sagt nur "a few $7B bytes are replaced". Daraus ist hier
+     * `n_4b < n_7b` abgeleitet: die Ersetzungen sind die Minderheit.
+     *
+     * Eine Ableitung, die niemand bewacht, ist eine stille Annahme.
+     * Dieser Fall haelt sie fest: ein Lauf aus UEBERWIEGEND 0x4B ist
+     * kein RapidLok-Spurkopf. Faellt die Bedingung weg, meldet der
+     * Erkenner ihn — und waere damit ein Erkenner, der auf jeden
+     * langen Zweibyte-Lauf anschlaegt. */
+    uint8_t track[300];
+    memset(track, 0x00, sizeof track);
+    memset(track + 10, 0xFF, 25);
+    track[35] = 0x55;
+    memset(track + 36, 0x4B, 170);     /* 170 x 0x4B */
+    /* ein Dutzend 0x7B dazwischen — die MINDERHEIT */
+    for (int k = 0; k < 12; k++) track[36 + k * 13] = 0x7B;
+
+    uft_protection_result_t result;
+    memset(&result, 0, sizeof result);
+    ASSERT(uft_prot_detect_rapidlok(track, sizeof track, &result) == NULL);
+}
+
 TEST(schwache_bits)
 {
     uint8_t read1[] = { 0x01, 0x02, 0x03, 0x04, 0x05 };
@@ -229,6 +325,9 @@ int main(void)
     RUN(vmax_schweigt_ohne_marke);
     RUN(rapidlok_erkennung);
     RUN(rapidlok_schweigt_ohne_kopf);
+    RUN(rapidlok_thx_variante);
+    RUN(rapidlok_schweigt_bei_fremdem_fuellbyte);
+    RUN(rapidlok_schweigt_bei_ueberwiegend_4b);
     RUN(schwache_bits);
     RUN(schwache_bits_schweigen_bei_einigkeit);
     RUN(kontextverwaltung);
