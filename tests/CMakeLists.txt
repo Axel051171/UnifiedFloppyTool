@@ -353,6 +353,30 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_vdk_gegen_mame")
+        # MF-1018: `vdk` stand auf T3. Drei Befunde, gemessen an
+        # Pruefdateien, deren Spuren und Sektoren sich selbst benennen:
+        #
+        #  1. `hdr_size` war ein `uint8_t` und nahm einen LE16-Wert auf.
+        #     Bei einem Kopf von exakt 0x0100 Byte wurde daraus 0 —
+        #     gemessen lieferte Sektor 1 die Bytes `64 6B`, also
+        #     `'d' 'k'`: die EIGENE KENNUNG der Datei als Sektordaten.
+        #  2. `if (p->tracks == 0) p->tracks = 35;` erfand eine
+        #     Geometrie, die die Datei verneint (gemessen: 35 Zylinder
+        #     aus einer 0 im Kopf).
+        #  3. Das Kompressionsbyte hdr[11] wurde ignoriert; gesetzt las
+        #     UFT gepackte Daten als Sektorabzug. Hier ist MAME selbst
+        #     stumm — abgesagt wird trotzdem.
+        #
+        # Und was gemessen wurde und STIMMT: die Sektor-IDs 1..18
+        # (MAME FIRST_SECTOR_ID = 1) — anders als bei `jv1`/MF-1016.
+        #
+        # Orakel: MAME `formats/vdk_dsk.cpp` (BSD-3, Dirk Best), in
+        # `neue-ideen/formats.zip`. Es liest 0x100 Byte Kopf, BEVOR es
+        # die Kopfgroesse benutzt — ein 256-Byte-Kopf ist vorgesehen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/vdk/uft_vdk_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_jv3_gegen_mame")
         # MF-1017: `jv3` stand auf T3. Fuenf Befunde, und die ersten
         # zwei zusammen bedeuteten, dass JEDER Sektor JEDER JV3-Datei
