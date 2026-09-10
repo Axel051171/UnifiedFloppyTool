@@ -346,6 +346,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_mgt_schreibt_in_die_datei")
+        # MF-1006: `mgt` ist der dritte der elf aus MF-930 (nach `opus`
+        # und `cfi`), dessen Dateischreiber verdrahtet wurde (P3-204).
+        # Gemessen am ERGEBNIS, und zusaetzlich am ROHEN Dateiinhalt am
+        # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
+        # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_mgt_gegen_mame")
+        # MF-1006: `mgt` von T3 auf T2 — Feldabgleich gegen MAMEs
+        # `src/lib/formats/coupedsk.cpp` (BSD-3, benannte Referenz nach
+        # dem MF-614-Muster). Anders als bei `cfi` fand der Abgleich
+        # KEINEN Fehler; der Test nagelt die Uebereinstimmung fest,
+        # damit sie bewacht ist statt behauptet.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
     elseif(${test_name} STREQUAL "test_cfi_schreibt_in_die_datei")
         # MF-1004: `cfi` ist der zweite der elf aus MF-930, deren
         # Dateischreiber vollstaendig, aber unerreichbar war (P3-204).

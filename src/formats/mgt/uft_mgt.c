@@ -401,9 +401,22 @@ static uft_error_t mgt_write_track(uft_disk_t *disk, int cyl, int head,
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
+    /* MF-1006, Regel 4 des MF-931-Rezepts: die Schreibseite gegen die
+     * Leseseite halten. Beide rechnen `cyl * heads + head`, und MF-1006
+     * hat das gegen MAMEs `(track*2 + head) * track_size` gemessen und
+     * als gleich befunden — mit einer Mutation abgesichert, die die
+     * Anordnung vertauscht. */
+    if (head >= image->heads) return UFT_ERR_INVALID_PARAM;
+    if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
+
     size_t idx = (size_t)cyl * image->heads + head;
     if (idx >= (size_t)(image->tracks * image->heads))
         return UFT_ERR_INVALID_PARAM;
+
+    /* Ohne Ziel kann niemand schreiben — dann wird das GESAGT, nicht
+     * Erfolg gemeldet. `uft_disk_open()` setzt `disk->path`, bevor es
+     * das Plugin ruft (`src/core/uft_core_stubs.c`). */
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
 
     uft_track_t *dst = image->track_data[idx];
     if (!dst) return UFT_ERR_INVALID_PARAM;
@@ -439,15 +452,51 @@ static uft_error_t mgt_write_track(uft_disk_t *disk, int cyl, int head,
      * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
      *
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
-    return UFT_ERROR_NOT_SUPPORTED;
+     * Aufrufer keine Begruendung.
+     *
+     * ── MF-1006: der Weg ist jetzt da ───────────────────────────────
+     *
+     * `mgt` ist der dritte der elf (nach `opus`/MF-931 und
+     * `cfi`/MF-1004), und wieder kam er an die Reihe, WEIL seine
+     * Leseseite zuerst gehoben wurde: MF-1006 hat sie Feld fuer Feld
+     * gegen MAMEs `coupedsk.cpp` gehalten. Anders als bei `cfi` fand
+     * der Abgleich keinen Fehler — die Uebereinstimmung ist jetzt
+     * bewacht (`tests/test_mgt_gegen_mame.c`, Mutationsmatrix 3/3).
+     *
+     * **Was der Rundlaufbeweis belegt und was nicht.** Er belegt, dass
+     * die Bytes die DATEI erreichen — schreiben, `close()`, neu
+     * oeffnen, zuruecklesen. MGT ist ein reines Sektorabbild ohne
+     * Kopf, also ist die erzeugte Datei zugleich strukturell
+     * kanonisch: 80 x 2 x 10 x 512 an denselben Versaetzen, die
+     * MF-1006 gegen das Orakel gemessen hat. Das ist mehr, als bei
+     * `cfi` moeglich war (dort packt und liest derselbe Baum). */
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. */
+    uft_error_t werr = uft_mgt_write(image, disk->path);
+    if (werr != UFT_OK) return werr;
+
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_mgt_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_mgt_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1006: write_track aendert die Speicherkopie und schreibt ueber "
+      "uft_mgt_write() durch; belegt in tests/test_mgt_schreibt_in_die_datei.c. "
+      "MGT ist ein kopfloses Sektorabbild, die erzeugte Datei ist damit "
+      "strukturell kanonisch (Versaetze gegen MAME gemessen, MF-1006)" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -460,7 +509,12 @@ const uft_format_plugin_t uft_format_plugin_mgt = {
     .description = "MGT +D/DISCiPLE (ZX Spectrum)",
     .extensions = "mgt,img",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1006: `UFT_FORMAT_CAP_WRITE` ist zurueck (MF-930 hatte es
+     * entfernt, als der Schreiber stillgelegt wurde). Bei `cfi` hat
+     * `test_capability_manifest` das Nachziehen erzwungen — hier steht
+     * es von Anfang an richtig. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = mgt_probe_plugin,
     .open = mgt_open,
     .close = mgt_close,
