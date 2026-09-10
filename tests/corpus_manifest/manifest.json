@@ -656,6 +656,54 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
       "content": "UFT-eigene Sektordaten aus ibm_dd.img, SPS/CAPS IPF"
+    },
+    {
+      "file": "tests/corpus_free/uft_720k.img",
+      "sha256": "cdc179153c5c98ac81ce3d773668bbfbb8961dab397954f941db67b30cc19049",
+      "format": "img",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1021)",
+      "source": "80 Spuren x 2 Koepfe x 9 Sektoren x 512 = 737280. 40 bzw. 80 Spuren, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", Byte 7 = Kopf, dahinter ein Muster aus Spur, Sektor und Kopf. EINGABE fuer die hxcfe-Wandlungen mit 720K-Geometrie (Atari ST, Amiga, MSA, IPF, HFE) - selbst KEIN Beleg, traegt keine Stufe.",
+      "test": "-",
+      "oracle": "-",
+      "fremdcode": "nein - vollstaendig UFT-eigen erzeugt",
+      "content": "UFT-K Selbstbeschreibungsmuster, Spur 0 Sektor 1 beginnt mit 00 01 55 46 54 2D 4B"
+    },
+    {
+      "file": "tests/corpus_free/uft_ti_dssd.img",
+      "sha256": "686ee676d092a5420c5457e2b9440c0dca0a7815f3451eb6f110a9722b6901f3",
+      "format": "img",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1021)",
+      "source": "40 Spuren x 2 Koepfe x 9 Sektoren x 256 = 184320, TI-99/4A-DSSD-Geometrie. 40 bzw. 80 Spuren, je Sektor Byte 0 = Spur, Byte 1 = Sektor, Byte 2..6 = \"UFT-K\", Byte 7 = Kopf, dahinter ein Muster aus Spur, Sektor und Kopf. EINGABE fuer den V9T9-Versuch; hxcfe erkennt diese Geometrie NICHT und erzeugte daraus eine leere Diskette (P3-327). Traegt keine Stufe.",
+      "test": "-",
+      "oracle": "-",
+      "fremdcode": "nein - vollstaendig UFT-eigen erzeugt",
+      "content": "UFT-K Selbstbeschreibungsmuster, 720 Treffer gemessen"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_720k.st",
+      "sha256": "cdc179153c5c98ac81ce3d773668bbfbb8961dab397954f941db67b30cc19049",
+      "format": "st",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_720k.img -foutput:hxcfe_720k.st -conv:ATARIST_ST  (ACCESS = RW aus `hxcfe -modulelist`). Eingabe ist tests/corpus_free/uft_720k.img, UFT-eigen und rechtefrei. Inhalt nachgewiesen: 1440 Treffer fuer \"UFT-K\" in der erzeugten Datei - ein Fixture ist erst dann ein Beleg, wenn sein Inhalt gemessen ist (MF-1021, siehe P3-327).",
+      "test": "test_fremde_hand_liest",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
+      "content": "UFT-K Selbstbeschreibungsmuster, Atari ST .st (Rohsektoren)"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_ti.v9t9",
+      "sha256": "048a6d5b90ad95991635c492bc0ffb131ec36ada77a8bddd3cc2df1c70ee41ad",
+      "format": "v9t9",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:uft_ti_dssd.img -foutput:hxcfe_ti.v9t9 -conv:TI994A_V9T9. **Das Erzeugnis ist LEER**: gemessen 100 % 0xF6, null Treffer fuer \"UFT-K\" - hxcfes RAW-Lader erkennt die TI-Geometrie nicht und sein Layout-Verzeichnis hat keinen TI-Eintrag, also fand der Schreiber keine Spuren und fuellte mit dem Formatier-Fuellbyte, bei gemeldetem Erfolg. Die Datei liegt als BELEG DES BEFUNDS im Korpus, nicht als Beleg des Lesers; kein Test verknuepft, keine Stufen-Anrechnung (P3-327).",
+      "test": "-",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - kein Inhalt, nur Fuellbytes",
+      "content": "leer formatierte TI-99-Diskette, 100 % 0xF6 (Befund P3-327)"
     }
   ]
 }

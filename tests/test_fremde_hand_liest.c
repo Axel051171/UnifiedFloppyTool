@@ -74,6 +74,36 @@
  * (Zellenzahl, Gesamtzeit, Ausrichtungsbits), nicht hier. Der Befund
  * ist gemessen und steht als P3-326.
  *
+ * ── Der wichtigste Fund dieser Welle betrifft die METHODE ───────────
+ *
+ * `v9t9` sollte hier stehen. hxcfe hat die Datei erzeugt, 184 320 Byte,
+ * die richtige Groesse, und **Erfolg gemeldet**. UFTs Leser oeffnete
+ * sie, meldete 40 Zylinder / 2 Koepfe / 9 Sektoren — alles richtig —
+ * und lieferte als Inhalt `F6 F6 F6`.
+ *
+ * Gemessen an der Datei selbst: **100 % `0xF6`**, null Treffer fuer
+ * `UFT-K`. hxcfe hatte eine **leer formatierte** Diskette geschrieben,
+ * weil sein RAW-Lader die TI-Geometrie nicht erkennt und sein
+ * Layout-Verzeichnis keinen TI-Eintrag hat (`-rawlist` durchsucht:
+ * kein Treffer fuer ti99/TI_/texas; erfundene Layoutnamen werden
+ * abgewiesen). Der V9T9-Schreiber fand also keine Spuren und fuellte
+ * mit dem Formatier-Fuellbyte.
+ *
+ * **UFT ist hier nicht der Fehler.** Und ohne das
+ * Selbstbeschreibungs-Muster in der Eingabe haette dieser Test `v9t9`
+ * auf einer Fuellbyte-Diskette „gehoben": ein gruener Test, der nichts
+ * beweist, aus einem Werkzeug, das Erfolg meldet. Genau die
+ * Unentscheidbarkeit, gegen die das Muster gebaut ist.
+ *
+ * **Regel daraus:** ein erzeugtes Fixture ist erst dann ein Beleg, wenn
+ * sein INHALT nachgewiesen ist. Fuer die Sektorformate hier leistet das
+ * die Zusicherung selbst (sie sucht das Muster). Fuer gepackte
+ * Container (`mfi`, `ipf`) ist der Nachweis nur ueber einen Entpacker
+ * zu fuehren — deshalb tragen die beiden **keine** Stufe, obwohl ihre
+ * Dateien im Korpus liegen.
+ *
+ * `v9t9` bleibt T3, mit benanntem Blocker (P3-327).
+ *
  * Ohne Korpus ueberspringt er sich benannt, nicht schweigend gruen.
  */
 #include <stdio.h>
@@ -143,6 +173,8 @@ extern const uft_format_plugin_t uft_format_plugin_dmk;
 extern const uft_format_plugin_t uft_format_plugin_d88;
 extern const uft_format_plugin_t uft_format_plugin_stx;
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
+/* MF-1021, Welle 2 */
+extern const uft_format_plugin_t uft_format_plugin_st;
 
 typedef struct {
     const uft_format_plugin_t *p;
@@ -158,6 +190,14 @@ static const fall_t FAELLE[] = {
     { &uft_format_plugin_d88,     "d88",     "hxcfe_pc160.d88", "NEC_D88"        },
     { &uft_format_plugin_stx,     "stx",     "hxcfe_pc160.stx", "ATARIST_STX"    },
     { &uft_format_plugin_dsk_cpc, "dsk_cpc", "hxcfe_pc160.dsk", "AMSTRADCPC_DSK" },
+    /* MF-1021, Welle 2. Beide brauchen ihre EIGENE Geometrie — mit der
+     * 160K-Eingabe der ersten Welle weist hxcfe sie ab:
+     *   st    80 Spuren x 2 Koepfe x 9 Sektoren x 512 (uft_720k.img)
+     *   v9t9  40 Spuren x 2 Koepfe x 9 Sektoren x 256 (uft_ti_dssd.img)
+     * Eine Eingabe, die zum Format passt, ist keine Bequemlichkeit:
+     * hxcfe erzeugt sonst gar nichts, und ein erzwungenes Layout waere
+     * eine erfundene Diskette. */
+    { &uft_format_plugin_st,      "st",      "hxcfe_720k.st",   "ATARIST_ST"     },
 };
 #define N_FAELLE ((int)(sizeof(FAELLE) / sizeof(FAELLE[0])))
 
