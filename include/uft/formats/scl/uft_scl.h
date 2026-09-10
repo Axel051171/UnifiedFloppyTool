@@ -30,8 +30,36 @@ extern "C" {
 typedef struct {
     char name[9];               /**< 8 chars, space-padded; NUL-terminated here */
     uint8_t type;               /**< TR-DOS type byte */
-    uint8_t param[3];           /**< Type-dependent params */
+    /**
+     * @brief Eintragsbytes 9..11 — **nicht** die vollstaendige Angabe.
+     *
+     * MF-1014: hier stand „Type-dependent params", und `uft_scl_parse()`
+     * fuellte `param[0..2]` mit den Bytes 9, 10 und 11. Byte **12** wurde
+     * dabei nie gelesen. Der echte TR-DOS-Katalogeintrag ist:
+     *
+     *     0..7  Name        8  Typ
+     *     9..10 Startadresse (LSB zuerst)
+     *     11..12 Laenge in Byte (LSB zuerst)
+     *     13    Laenge in Sektoren
+     *     14    Startsektor   15  Startspur   (nur auf der Diskette)
+     *
+     * `param[2]` traegt also das UNTERE Byte der Laenge, und das obere
+     * fiel weg — jede Datei ueber 255 Byte war um ein Vielfaches von 256
+     * zu kurz angegeben. Benannt in `src/samdisk/cmd_dir.cpp`
+     * (`TRDOS_DIR`: `abStart[2]`, `abLen[2]`) und in `src/samdisk/scl.cpp`
+     * (`SCL_FILE`); HxCs `scl_loader.c` kopiert alle 14 Byte unverae ndert
+     * und bestaetigt damit, dass die 14 die ersten 14 des 16-Byte-
+     * Eintrags sind.
+     *
+     * Das Feld bleibt stehen (ABI: nur anhaengen) und behaelt seine
+     * Bedeutung; die richtige Angabe stehen in `start_address` und
+     * `length_bytes` darunter.
+     */
+    uint8_t param[3];
     uint8_t length_sectors;     /**< Data length in 256-byte sectors */
+    /* ── seit MF-1014 angehaengt ────────────────────────────────────── */
+    uint16_t start_address;     /**< Eintragsbytes 9..10, LSB zuerst */
+    uint16_t length_bytes;      /**< Eintragsbytes 11..12, LSB zuerst */
 } uft_scl_entry_t;
 
 /**

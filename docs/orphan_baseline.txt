@@ -181,7 +181,12 @@ src/formats/pc98/uft_pc98.c
 src/formats/ql/qdos.c
 src/formats/retro_image/uft_retro_image_detect.c
 src/formats/sap/uft_sap_parser_v2.c
-src/formats/scl/uft_scl.c
+# MF-1014: `src/formats/scl/uft_scl.c` ist hier HERAUS, und der Grund gehoert dazugesagt.
+# Das Modul hat einen Aufrufer bekommen — aber es ist ein TEST (`tests/test_scl_ist_eine_trdos_diskette.c`).
+# Das ist genau die Luecke P3-223: ein Modul, dessen Tests es rufen, saettigt das Modul-Tor,
+# ohne dass die Produktion es erreicht. Die Zeile muss hier heraus, weil das Tor auf Modul-
+# ebene messt und dort recht hat; die offene Frage steht als **P3-322** in docs/OPEN_ITEMS.md
+# — Aufrufer geben oder nach MF-699 loeschen. Nicht entscheiden heisst behalten.
 src/formats/scl/uft_scl_parser_v2.c
 src/formats/ssd/uft_ssd_parser_v2.c
 src/formats/stx/uft_stx_parser_v2.c

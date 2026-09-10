@@ -99,6 +99,10 @@ int uft_scl_parse(const uint8_t *buf, size_t len, uft_scl_t *out) {
         e->param[1] = h[10];
         e->param[2] = h[11];
         e->length_sectors = h[13];
+        /* MF-1014: h[12] war nie gelesen worden -- das obere Byte der
+         * Laengenangabe. Siehe uft_scl.h zum Eintragsaufbau. */
+        e->start_address = (uint16_t)(h[9] | ((uint16_t)h[10] << 8));
+        e->length_bytes  = (uint16_t)(h[11] | ((uint16_t)h[12] << 8));
 
         size_t need = (size_t)e->length_sectors * 256u;
         if (need > remaining) {
@@ -154,6 +158,9 @@ int uft_scl_get_file(const uint8_t *buf, size_t len, size_t index,
         meta_out->param[1] = h[10];
         meta_out->param[2] = h[11];
         meta_out->length_sectors = h[13];
+        /* MF-1014, wie in uft_scl_parse() */
+        meta_out->start_address = (uint16_t)(h[9] | ((uint16_t)h[10] << 8));
+        meta_out->length_bytes  = (uint16_t)(h[11] | ((uint16_t)h[12] << 8));
     }
 
     *data_out = buf + off;
@@ -205,10 +212,29 @@ int uft_scl_build(const uft_scl_entry_t *entries,
             h[j] = (uint8_t)(c ? c : ' ');
         }
         h[8] = e->type;
-        h[9] = e->param[0];
-        h[10] = e->param[1];
-        h[11] = e->param[2];
-        h[12] = 0; /* TR-DOS in-disk start sector; SCL omits */
+        /* MF-1014: hier stand `h[12] = 0` mit dem Kommentar
+         * "TR-DOS in-disk start sector; SCL omits". Das war zweifach
+         * falsch: h[12] ist das OBERE Byte der Laengenangabe, und der
+         * Startsektor steht bei h[14] (den die SCL tatsaechlich nicht
+         * traegt -- er wird beim Ausbau errechnet, siehe
+         * uft_scl_plugin.c).
+         *
+         * Vorrang haben die benannten Felder; sind sie null, bleiben
+         * die alten `param`-Bytes gueltig, damit vorhandene Aufrufer
+         * nicht still ihre Angabe verlieren. */
+        uint16_t start = e->start_address;
+        uint16_t laenge = e->length_bytes;
+        if (start == 0 && laenge == 0) {
+            h[9]  = e->param[0];
+            h[10] = e->param[1];
+            h[11] = e->param[2];
+            h[12] = 0;
+        } else {
+            h[9]  = (uint8_t)(start & 0xFF);
+            h[10] = (uint8_t)(start >> 8);
+            h[11] = (uint8_t)(laenge & 0xFF);
+            h[12] = (uint8_t)(laenge >> 8);
+        }
         h[13] = (uint8_t)(file_sizes[i] / 256u);
     }
 

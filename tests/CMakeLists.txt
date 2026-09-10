@@ -353,6 +353,24 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_scl_ist_eine_trdos_diskette")
+        # MF-1014: `scl` stand auf T3 ohne einen einzigen Test, und der
+        # Leser legte die DATEIDATEN auf Zylinder 0 / Sektor 0 — dorthin,
+        # wo bei TR-DOS der Katalog steht. Gemessen am alten Stand:
+        # 1 Zylinder / 1 Kopf / 5 Sektoren gesamt, Byte 0 der ersten Spur
+        # war `A0` (Dateiinhalt) statt `"TESTA   "` (Katalogeintrag), und
+        # Kopf 1 wurde abgewiesen. Klasse MF-794.
+        #
+        # Zwei unabhaengige Orakel: `src/samdisk/scl.cpp` (MIT, im Baum)
+        # und HxCs `scl_loader.c` (GPL-2, nur gelesen). Neun
+        # Feldpositionen im TR-DOS-Infosatz stimmen byteweise; ein
+        # drittes Mal bestaetigt sie `src/formats/trd/uft_trd.c` mit
+        # seinem `0x8E4`.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scl/uft_scl_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scl/uft_scl.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_gcr_liest_echte_spur")
         # MF-1013: `gcr_extract_sector()` lieferte 256 Nullbytes mit
         # Erfolgsmeldung, `gcr_verify_track()` setzte `header_ok = true`
