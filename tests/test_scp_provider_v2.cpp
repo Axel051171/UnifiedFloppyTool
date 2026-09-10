@@ -187,12 +187,19 @@ static void smoke_provider_error_3part_contract() {
     /* Well-formed ProviderError must NOT throw. */
     bool threw = false;
     try {
+        /* MF-1025: der Beispieltext trug bis hierher denselben
+         * falschen Satz wie die Produktionsmeldung („use the V1
+         * SCPHardwareProvider until M3.1 lands"). Dieser Test
+         * BEHAUPTET den Text nicht — er braucht nur eine wohlgeformte
+         * Nutzlast —, und genau deshalb waere er nicht rot geworden,
+         * als die Produktionsmeldung berichtigt wurde. Eine falsche
+         * Aussage an zwei Stellen ueberlebt jede Korrektur, die nur
+         * eine davon anfasst. */
         ProviderError ok{UFT_ERR_HARDWARE,
             "SCP flux read failed",
             "uft_scp_direct_read_flux returned UFT_ERR_NOT_IMPLEMENTED "
-            "(M3.1 USB layer not yet wired)",
-            "Use the V1 SCPHardwareProvider (serial path) until M3.1 lands, "
-            "or wait for the M3.1 libusb integration commit."};
+            "(this build has no libusb)",
+            "Rebuild with libusb available so UFT_HAS_LIBUSB is defined."};
         (void)ok;
     } catch (...) {
         threw = true;

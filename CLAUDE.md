@@ -26,8 +26,18 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
   partial. **Berichtigt MF-650:** das libusb-Wiring ist seit MF-301 da
   (16 `UFT_HAS_LIBUSB`-Stellen), und `KNOWN_ISSUES.md` §M.4 führt die
   Protokoll-Deltas seit MF-301 als „RESOLVED IN CODE". Offen ist die
-  **CBM-DOS-Kommandoebene** (`U1:`/`M-R`/Kanal 15) — sieben Funktionen
-  geben unbedingt `UFT_ERR_NOT_IMPLEMENTED` —, plus die Tier-3-Bank
+  **CBM-DOS-Kommandoebene** (`U1:`/`M-R`/Kanal 15) — **sechs** Funktionen
+  geben unbedingt `UFT_ERR_NOT_IMPLEMENTED` (`identify_drive`,
+  `get_status`, `read_track_gcr`, `read_track`, `read_disk`,
+  `write_track`; hier stand „sieben", gemessen MF-1025 sind es sechs) —,
+  plus die Tier-3-Bank. **Und MF-1025 hat eine zweite Hälfte gemessen:**
+  die einzige Konstruktionsstelle im Produkt ist
+  `XUM1541ProviderV2(nullptr, nullptr, nullptr)`, einen
+  `make_xum1541_*_runner` gibt es im Baum überhaupt nicht — die
+  all-null-Konstruktion ist also kein Verdrahtungsversehen, sondern die
+  ehrliche Folge davon, dass es nichts zu verdrahten gibt.
+  `docs/CAPABILITIES.md` führte XUM1541 dabei als 🟡/🟡; berichtigt
+  auf ⬜/⬜
 - **Applesauce** (Apple-spezialisiert, 8 MHz / 125 ns, Text-Protokoll
   über serielle USB-Verbindung) — HAL [~] M3.3 partial (utility + tick-
   conversion + lifecycle real, serial I/O pending)

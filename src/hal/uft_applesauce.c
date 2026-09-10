@@ -232,12 +232,24 @@ uft_error_t uft_as_detect(char ports[][64], int max_ports) {
      *          build of the C HAL.
      *   Why:   Serial integration (open + "info\n" probe + parse) is
      *          the M3.3 multi-session continuation.
-     *   Fix:   serial-port detection is not available in this build —
-     *          the M3.3 serial integration wires it. See
-     *          docs/MASTER_PLAN.md §M3.3. (The V1 Qt provider that
-     *          previously walked QSerialPortInfo was deleted in P1.18;
-     *          ApplesauceProviderV2 does not yet have a production
-     *          construction site either — audit finding ARCH-4.)
+     *   Fix:   in the Qt build, use the Hardware tab: it opens the
+     *          selected port through QSerialPortApplesauceTransport and
+     *          builds a runner-bound ApplesauceProviderV2. This C HAL
+     *          entry point has no serial enumeration of its own.
+     *
+     * BERICHTIGT MF-1025. Hier stand: „ApplesauceProviderV2 does not
+     * yet have a production construction site either — audit finding
+     * ARCH-4." Gemessen sind es **drei** Konstruktionsstellen, alle in
+     * `src/hardwaretab.cpp` (877, 889, 899), und die erste bindet
+     * SIEBEN echte Runner — read, write, motor, seek, recal, rpm,
+     * detect — an einen QSerialPort. Verdrahtet wurde das mit
+     * MF-250, also lange vor dieser Zeile; die Aussage wurde
+     * weitergetragen statt nachgemessen (Klasse MF-767/MF-938).
+     *
+     * Was RICHTIG bleibt und deshalb stehen bleibt: dieses C-HAL
+     * ruft keine Aufzählung auf, und `uft_as_open()` hat weiterhin
+     * keine serielle Umsetzung. Die Fähigkeit liegt im Qt-Pfad, nicht
+     * hier — zwei Schichten, zwei Zustände.
      */
     return UFT_ERR_NOT_IMPLEMENTED;
 }

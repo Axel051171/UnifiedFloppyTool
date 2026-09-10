@@ -1165,6 +1165,27 @@ def main() -> int:
         import audit_selbsttest_ohne_uebersetzung as _su
         all_errors.append(("Selbsttest ohne Uebersetzung", _su.check(repo)))
 
+        # Tor 65 (MF-1025): eine Fehlermeldung, die dem Benutzer einen
+        # Ausweg nennt, muss einen Ausweg nennen, den es GIBT. Der
+        # Fix-Teil des Drei-Teile-Vertrags (Regel F-4) ist die einzige
+        # Stelle im Werkzeug, an der eine veraltete Aussage nicht nur
+        # falsch informiert, sondern Arbeit kostet.
+        #
+        # Gemessen am Vorzustand: vier Fix-Saetze in
+        # scp_provider_v2.cpp verwiesen auf `SCPHardwareProvider` —
+        # eine Klasse, die mit P1.17/MF-169 gefallen ist; `git grep
+        # "class.*HardwareProvider"` liefert null Treffer. Sie warteten
+        # dabei auf „M3.1", das mit MF-254 gelandet war.
+        #
+        # Gemessen wird nur, wer NUR in Zeichenketten lebt — wer
+        # irgendwo im Baum als Code vorkommt, geht durch.
+        # `static_assert`-Meldungen sind ausgenommen, weil sie
+        # compiler- und nicht benutzergerichtet sind; die Abgrenzung
+        # haengt an der ART der Zeichenkette, nicht an ihrer Prosa
+        # (Lehre aus MF-1023). Grundlinie 0, Selbsttest 6/6.
+        import audit_meldung_nennt_geloeschtes as _mg
+        all_errors.append(("Meldung nennt Geloeschtes", _mg.check(repo)))
+
         # Tor 58 (MF-906): zwei Zeilen derselben Geometrietabelle mit
         # gleicher Gesamtgroesse. Die Sonde laeuft durch und kehrt beim
         # ERSTEN Treffer zurueck — die zweite Zeile ist damit toter Code,

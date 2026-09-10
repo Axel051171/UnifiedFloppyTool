@@ -55,8 +55,13 @@
  * Rule F-4: every ProviderError carries non-empty what/why/fix strings.
  *   The ProviderError constructor throws std::logic_error on empty strings.
  *
- * The V1 SCPHardwareProvider is NOT deleted here (task P1.17).
- * This file introduces the V2 type in parallel.
+ * Berichtigt MF-1025: hier stand „The V1 SCPHardwareProvider is NOT
+ * deleted here (task P1.17)". Das war richtig, als es geschrieben
+ * wurde, und ist es seit dem Abschluss von P1.17 nicht mehr — die
+ * V1-Hierarchie fiel mit MF-169, `git grep "class.*HardwareProvider"`
+ * liefert null Treffer. Der Satz stand danach noch in vier
+ * benutzersichtbaren Fehlermeldungen dieser Datei; Tor 65
+ * (`scripts/audit_meldung_nennt_geloeschtes.py`) haelt die Klasse.
  */
 #ifndef SCP_PROVIDER_V2_H
 #define SCP_PROVIDER_V2_H

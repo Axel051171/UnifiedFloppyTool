@@ -47,8 +47,8 @@ Dokument anpassen, nicht die Behauptung wegerklären.
 | FluxEngine    | ✅   | ✅    | -         | SIMULATED    | CLI subprocess  | read+write (CLI-wrapper) |
 | FC5025        | ✅   | -     | -         | SIMULATED    | fcimage CLI     | read-only (fcimage-wrapper) |
 | SCP-Direct    | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired, 22/22 opcodes byte-exact vs samdisk |
-| XUM1541       | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired; Drahtprotokoll gegen die **OpenCBM-Quelle** geprüft (MF-301) — die alte Opcode-Tabelle war erfunden |
-| Applesauce    | 🟡   | ⬜    | -         | byte-compile | USB-CDC serial  | `?vers` handshake wired; `?disk` read-state-machine **weiter offen** |
+| XUM1541       | ⬜   | ⬜    | -         | mock-only    | libusb-direct   | **berichtigt MF-1025:** die IEC-Grundbefehle sind seit MF-301 gegen die OpenCBM-Quelle verdrahtet, die Ebene darüber nicht — `read_track`, `read_disk`, `write_track` und drei weitere sagen unbedingt ab (6 Funktionen, gemessen), und die einzige Konstruktionsstelle im Produkt ist `XUM1541ProviderV2(nullptr, nullptr, nullptr)`. Einen `make_xum1541_*_runner` gibt es im Baum nicht. Lesen und Schreiben können auf **keinem** der beiden Wege stattfinden |
+| Applesauce    | 🟡   | 🟡    | -         | byte-compile | USB-CDC serial  | **berichtigt MF-1025:** die Lese-*und* Schreib-Zustandsmaschine sind vollständig und seit MF-250 im Produkt verdrahtet (`hardwaretab.cpp:877`, sieben Runner an einem QSerialPort). Lesen: `sync:on` → `head:track` → `head:side` → `disk:readx R` → `data:?size` → `data:< N`, mit `sync:off` auf jedem Fehlerpfad. Schreiben: `disk:?write` (Schreibschutz) → `data:clear` → `data:> N` → Ack → `disk:write`. Hier stand „`?disk` read-state-machine weiter offen" und Write ⬜ — beides trug nicht. Die C-HAL `src/hal/uft_applesauce.c` sagt weiterhin ab; das sind zwei Schichten mit zwei Zuständen |
 | ADF-Copy      | 🟡   | ⬜    | -         | SIMULATED    | USB-CDC serial  | QSerialPort verdrahtet, **Protokoll ungeprüft** (Opcodes aus eigenen Kommentaren, P3-31) |
 | USB-Floppy    | Linux| Linux | -         | -            | SG_IO ioctl     | Linux-only via SG_IO; Win/Mac (DeviceIoControl/IOKit) **weiter offen** |
 
@@ -64,8 +64,8 @@ Für Hardware heißt das: **wann** wurde zuletzt an echtem Gerät geprüft?
 | FluxEngine | **nie** | dito, `fluxengine` CLI |
 | FC5025 | **nie** | dito, `fcimage` CLI |
 | SCP-Direct | **nie** | 22/22 Opcodes byte-exakt gegen samdisk — eine benannte Referenz, kein Gerät (UFT-008 offen) |
-| XUM1541 | **nie** | Protokoll gegen OpenCBM-Quelle geprüft (MF-301), Emulator 56/56 — kein Gerät |
-| Applesauce | **nie** | `?vers`-Handshake verdrahtet, byte-kompiliert — kein Gerät |
+| XUM1541 | **nie** | IEC-Grundbefehle gegen OpenCBM-Quelle geprüft (MF-301), Emulator 56/56 — aber **Lesen und Schreiben sagen ab** (6 Funktionen), und der Produkt-Provider wird mit drei `nullptr` gebaut. Kein Gerät, und ohne Gerät auch kein Weg (MF-1025) |
+| Applesauce | **nie** | Lese- und Schreib-Zustandsmaschine vollständig, seit MF-250 im Produkt verdrahtet, Protokolltest `tests/test_applesauce_runners_protocol.cpp` — kein Gerät (berichtigt MF-1025: hier stand nur der `?vers`-Handshake) |
 | ADF-Copy | **nie** | Transport verdrahtet, Teensy-Sonde — kein Gerät |
 | USB-Floppy | **nie** | SG_IO nur unter Linux; UFI-Emulator treibt den Produktions-HAL |
 
@@ -106,14 +106,15 @@ muss von einem fremden Schreibtisch kommen — siehe den Aufruf im
 **TL;DR Hardware-Status v4.1.6 (unverändert gegenüber v4.1.5):**
 - **1/9 production:** Greaseweazle (Tier-3 PASS).
 - **3/9 lesen real:** KryoFlux/FluxEngine/FC5025 über Subprocess-Wrapper.
-- **3/9 wired aber mock-only:** SCP-Direct/XUM1541/Applesauce (libusb-mock-validiert; Tier-3 braucht echte HW + Bench-Session).
+- **3/9 wired aber mock-only:** SCP-Direct/Applesauce (libusb- bzw. serien-mock-validiert; Tier-3 braucht echte HW + Bench-Session) — und **XUM1541 gehört seit MF-1025 nicht mehr dazu**: seine IEC-Grundbefehle sind verdrahtet, Lesen und Schreiben nicht. Es ist damit `⬜`, nicht `🟡`.
 - **1/9 Linux-only:** USB-Floppy (SG_IO).
 - **1/9 honest-stub mit Sim:** ADF-Copy.
 
 **Was das für einen Demo-User heißt:**
 - "Funktioniert garantiert ohne Tweak":  Greaseweazle.
 - "Funktioniert wenn HW + Driver da":   KryoFlux, FluxEngine, FC5025.
-- "Funktioniert wenn Mock-Validation Reality matched": SCP, XUM, Applesauce, ADFCopy.
+- "Funktioniert wenn Mock-Validation Reality matched": SCP, Applesauce, ADFCopy.
+- "Kann heute weder lesen noch schreiben, auf keinem Weg": XUM1541 (MF-1025 — die CBM-DOS-Kommandoebene fehlt, und es gibt keinen Runner, den man verdrahten könnte).
 - "Funktioniert nur unter Linux":       USB-Floppy.
 - "Wird beim Connect-Click sauber abgelehnt mit Diagnose": alles wo `⬜`.
 

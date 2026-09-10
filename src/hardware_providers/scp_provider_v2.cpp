@@ -68,11 +68,28 @@ ProviderError SCPProviderV2::scp_err_to_provider_error(
 
     std::string fix;
     if (rc == UFT_ERR_NOT_IMPLEMENTED) {
-        /* M3.1 scaffold: USB layer is pending but the type shape is correct. */
-        fix = "SCP direct USB I/O is pending (M3.1 scaffold). "
-              "The libusb layer has not been wired yet. "
-              "Use the V1 SCPHardwareProvider (serial path) until M3.1 lands, "
-              "or wait for the M3.1 libusb integration commit.";
+        /* MF-1025: hier stand „the libusb layer has not been wired
+         * yet ... use the V1 SCPHardwareProvider until M3.1 lands".
+         * Alle drei Aussagen trugen nicht. Das libusb-Wiring ist seit
+         * MF-254 da (`uft_scp_direct_open/close/seek/read_flux` haben
+         * je einen vollstaendigen `#ifdef UFT_HAS_LIBUSB`-Zweig), M3.1
+         * ist damit gelandet, und `SCPHardwareProvider` gibt es im
+         * ganzen Baum nicht mehr — die V1-Hierarchie fiel in P1.17
+         * (MF-169). Der Fix-Teil ist eine Handlungsanweisung an den
+         * BENUTZER; er nannte einen Ausweg, den es nicht gibt, um auf
+         * ein Ereignis zu warten, das eingetreten war.
+         *
+         * Gemessen bleiben genau zwei Gruende fuer NOT_IMPLEMENTED aus
+         * dieser Schicht, und beide stehen jetzt da. */
+        fix = "Two causes are possible. (1) This build was compiled "
+              "without libusb: the SCP direct backend needs "
+              "UFT_HAS_LIBUSB, otherwise open/seek/read-flux all return "
+              "NOT_IMPLEMENTED. Rebuild with libusb available. "
+              "(2) You attempted a flux WRITE: uft_scp_direct_write_flux() "
+              "refuses by policy until the read path has been verified on "
+              "real hardware, because malformed flux can physically "
+              "damage forensic media. Use Greaseweazle for writing until "
+              "the SCP bench (UFT-008) has been run.";
     } else if (rc == UFT_ERR_IO) {
         fix = "Check that the SuperCard Pro device is connected via USB "
               "and that the USB driver (FTDI / libusb) is installed. "
@@ -124,10 +141,17 @@ FluxOutcome SCPProviderV2::do_read_raw_flux(const ReadFluxParams& p)
             "SuperCard Pro flux read failed: null context handle",
             "The SCP provider was constructed with a null handle. "
             "This occurs in test/mock mode or when the USB open failed.",
-            "SCP direct USB I/O is pending (M3.1 scaffold). "
             "Construct SCPProviderV2 with a valid handle from "
-            "uft_scp_direct_open(), or use the V1 SCPHardwareProvider "
-            "until the M3.1 libusb layer is wired."
+            "uft_scp_direct_open(). A null handle means no device was "
+            /* MF-1025: hier stand zusaetzlich der Verweis auf einen
+             * „V1 SCPHardwareProvider" — eine Klasse, die P1.17
+             * geloescht hat. Der Hinweis darauf steht jetzt hier im
+             * Kommentar und nicht mehr in der Meldung: Tor 65 hat
+             * meinen ersten Ersatztext abgewiesen, weil er den Namen
+             * weiterhin nannte, nur diesmal in der Vergangenheitsform.
+             * Das Tor hat recht — den Benutzer interessiert P1.17
+             * nicht, und ein Name in einer Meldung ist ein Angebot. */
+            "opened, which is the expected state in test and mock mode."
         };
     }
 
@@ -242,10 +266,17 @@ WriteOutcome SCPProviderV2::do_write_raw_flux(
             "SuperCard Pro flux write failed: null context handle",
             "The SCP provider was constructed with a null handle. "
             "This occurs in test/mock mode or when the USB open failed.",
-            "SCP direct USB I/O is pending (M3.1 scaffold). "
             "Construct SCPProviderV2 with a valid handle from "
-            "uft_scp_direct_open(), or use the V1 SCPHardwareProvider "
-            "until the M3.1 libusb layer is wired."
+            "uft_scp_direct_open(). A null handle means no device was "
+            /* MF-1025: hier stand zusaetzlich der Verweis auf einen
+             * „V1 SCPHardwareProvider" — eine Klasse, die P1.17
+             * geloescht hat. Der Hinweis darauf steht jetzt hier im
+             * Kommentar und nicht mehr in der Meldung: Tor 65 hat
+             * meinen ersten Ersatztext abgewiesen, weil er den Namen
+             * weiterhin nannte, nur diesmal in der Vergangenheitsform.
+             * Das Tor hat recht — den Benutzer interessiert P1.17
+             * nicht, und ein Name in einer Meldung ist ein Angebot. */
+            "opened, which is the expected state in test and mock mode."
         };
     }
 
@@ -348,10 +379,17 @@ DetectOutcome SCPProviderV2::do_detect_drive()
             "SuperCard Pro drive detection failed: null context handle",
             "The SCP provider was constructed with a null handle. "
             "This occurs in test/mock mode or when the USB open failed.",
-            "SCP direct USB I/O is pending (M3.1 scaffold). "
             "Construct SCPProviderV2 with a valid handle from "
-            "uft_scp_direct_open(), or use the V1 SCPHardwareProvider "
-            "until the M3.1 libusb layer is wired."
+            "uft_scp_direct_open(). A null handle means no device was "
+            /* MF-1025: hier stand zusaetzlich der Verweis auf einen
+             * „V1 SCPHardwareProvider" — eine Klasse, die P1.17
+             * geloescht hat. Der Hinweis darauf steht jetzt hier im
+             * Kommentar und nicht mehr in der Meldung: Tor 65 hat
+             * meinen ersten Ersatztext abgewiesen, weil er den Namen
+             * weiterhin nannte, nur diesmal in der Vergangenheitsform.
+             * Das Tor hat recht — den Benutzer interessiert P1.17
+             * nicht, und ein Name in einer Meldung ist ein Angebot. */
+            "opened, which is the expected state in test and mock mode."
         };
     }
 
