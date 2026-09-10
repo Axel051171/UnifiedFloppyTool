@@ -353,6 +353,33 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_jv3_gegen_mame")
+        # MF-1017: `jv3` stand auf T3. Fuenf Befunde, und die ersten
+        # zwei zusammen bedeuteten, dass JEDER Sektor JEDER JV3-Datei
+        # falsche Bytes lieferte. Gemessen an einer nach MAMEs
+        # Arithmetik gebauten Datei (Fuellbytes A0/B1/CC/D2):
+        #
+        #     Spur 0/0   : 2 Sektoren   (Orakel: 3)
+        #        Sektor 1: Fuellbyte B1   <- gehoert Sektor 1
+        #        Sektor 1: Fuellbyte CC   <- der FREIE Datenraum
+        #
+        #  1. `JV3_HEADER_SIZE` war 0x2300; wirklich sind es
+        #     2901*3+1 = 0x2200. Jeder Sektor lag 256 Byte zu weit.
+        #  2. Der Verzeichnislauf brach beim ersten freien Satz ab —
+        #     MAME sagt „These can be intermixed with valid
+        #     descriptors" und ueberspringt sie.
+        #  3. Der Freimarker ist `track == 0xFF` ALLEIN.
+        #  4. `if (sec_num > 0) sec_num--` liess die IDs 0 und 1 beide
+        #     auf 1 fallen.
+        #  5. Dichte ist Bit 7 und der DAM-Kode Bits 5-6; der Code las
+        #     `flags & 0x40` als „deleted", was die 0xF9 trifft.
+        #
+        # Orakel: MAME `formats/trs80_dsk.cpp` (BSD-3, Dirk Best) und
+        # Tim Manns `dskspec.html` — zwei unabhaengige Haende, dieselbe
+        # XOR-1/XOR-2-Regel fuer die Sektorgroesse.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/jv3/uft_jv3.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_jv1_ist_einseitig")
         # MF-1016: `jv1` stand auf T3. Zwei Befunde, beide gemessen an
         # einer Pruefdatei von 204 800 Byte (80 x 10 x 256):

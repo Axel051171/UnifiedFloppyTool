@@ -394,14 +394,24 @@ TEST(jv3_no_longer_matches_arbitrary_bytes) {
         good[i * 3 + 1] = (unsigned char)(i % 10);   /* sector id */
         good[i * 3 + 2] = 0x00;                      /* flags: 256 bytes */
     }
-    const size_t total = 0x2300 + 20 * 256;
+    /* BERICHTIGT MF-1017: hier stand `0x2300` als Kopfgroesse — der Wert
+     * aus dem Defekt, den MF-1017 behoben hat. Wirklich sind es
+     * `2901*3 + 1 = 0x2200`; das Schreibschutz-Byte ist das LETZTE Byte
+     * des Kopfbereichs (0x21FF), es gibt keine Polsterung. Beides steht
+     * so in MAMEs `jv3_format::identify()`
+     * (`const uint32_t header_size = entries * 3 + 1;`) und bei Tim Mann.
+     *
+     * Der Test hat den falschen Wert damit FESTGEHALTEN statt ihn zu
+     * fangen — der zweite Fall dieser Art in derselben Runde nach
+     * `test_plugin_probe_real.c`/MF-1016, und die Gestalt von MF-992. */
+    const size_t total = 0x2200 + 20 * 256;
     c = 0;
     ASSERT(jv3->probe(good, sizeof(good), total, &c));
     ASSERT(c >= 85);                        /* exact fit */
 
     /* one sector more than the file can hold */
     c = 0;
-    ASSERT(!jv3->probe(good, sizeof(good), 0x2300 + 19 * 256, &c));
+    ASSERT(!jv3->probe(good, sizeof(good), 0x2200 + 19 * 256, &c));
 }
 
 TEST(the_smart_open_report_says_when_the_format_is_not_certain) {
