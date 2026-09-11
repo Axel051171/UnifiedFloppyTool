@@ -179,3 +179,29 @@ build-*/
 # `.playwright-mcp/page-<zeit>.yml` MITTEN IM REPO. Werkzeug-Nebenprodukte
 # gehoeren nicht in den Baum.
 .playwright-mcp/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# claude-flow/Plugin-Installation unter .claude/ — Werkzeug-Beigaben, kein
+# Projektinhalt (MF-1026). Das Tor „ungetrackte Flut" hatte 343 Dateien
+# gemeldet, 304 davon aus dieser Quelle.
+#
+# WICHTIG, und deshalb so eng gefasst: die **27 projekteigenen** Agenten
+# liegen FLACH in `.claude/agents/*.md` und sind getrackt (`git ls-files
+# .claude/agents` = 27). Die Beigaben liegen ausschliesslich in
+# UNTERVERZEICHNISSEN (`analysis/`, `architecture/`, `consensus/`, …).
+# Die Regel ignoriert deshalb nur Verzeichnisse unter `agents/` — ein
+# neuer projekteigener Agent bleibt sichtbar.
+.claude/agents/*/
+.claude/commands/
+.claude/helpers/
+.claude/proven-config.json
+.claude/.proven-config-version

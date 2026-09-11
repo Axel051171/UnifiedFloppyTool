@@ -1,6 +1,30 @@
 /**
  * @file victor9k.c
  * @brief Victor 9000 / Sirius 1 disk format implementation
+ *
+ * ── WARNUNG: die Geometrie unten ist FALSCH (MF-1026) ───────────────
+ *
+ * Diese Datei hat **keinen Aufrufer** — sie steht in
+ * `docs/orphan_baseline.txt:212` und gehoert zur `FloppyDevice`-Schicht
+ * (75 Dateien ohne Tuer). Sie wird deshalb nicht repariert, sondern
+ * beschriftet: **erst der Ersatz, dann die Loeschung** (MF-699).
+ *
+ * `victor9k_get_sectors_for_track()` gibt fuer die Spuren 38..79 flach
+ * **15** Sektoren zurueck. Das ergibt 1285 Sektoren = 657920 Byte — eine
+ * Groesse, die **keine** Victor-Diskette hat. Gemessen gegen MAME
+ * `formats/victor9k_dsk.cpp` (BSD-3-Clause, Curt Coder):
+ *
+ *   Kopf 0: 19/18/17/16/15/14/13/12 mit Grenzen bei 3/15/26/37/47/59/70
+ *           — Summe **1224** Sektoren = 626688 Byte
+ *   Kopf 1: 18/17/16/15/14/13/12/11 mit Grenzen bei 7/18/29/39/51/62/74
+ *           — Summe **1167** Sektoren
+ *   zusammen 2391 Sektoren = **1224192** Byte (MAMEs `formats[]` nennt
+ *           genau diese 2391)
+ *
+ * Damit lagen im Baum **drei** verschiedene Victor-Geometrien. Die
+ * gepruefte und benutzte steht in `src/formats/victor9k/uft_victor9k.c`,
+ * festgenagelt von `tests/test_victor9k_gegen_mame.c`. Wer diese Datei
+ * je verdrahtet, nimmt die Tafeln von dort — nicht die hier.
  */
 
 #include "uft/formats/victor9k.h"

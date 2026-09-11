@@ -8,7 +8,7 @@
 
 | Kennzahl | Stand | Richtung | Quelle |
 |---|---|---|---|
-| ungeprüfte **Format-Plugins** (T3) | **25** von 88 | runter | `docs/VERIFICATION_TIERS.md` |
+| ungeprüfte **Format-Plugins** (T3) | **22** von 88 | runter | `docs/VERIFICATION_TIERS.md` |
 | ungeprüfte **Dateisystem-Leser** | T0 1 · T1 4 · T1b 0 · T2 3 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
 | angebotene **Wandlungspfade** | **14**, davon 6 verlustfrei | rauf | `src/core/uft_roundtrip.c` |
 | leckende Tests | 0 zu halten | null halten | ASan/UBSan in CI |
@@ -23,7 +23,7 @@
 - **7** Port-Erklärungen im Quellkopf, davon **1** ohne SPDX-Kopf
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
-- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **184**
+- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **183**
 - Quarantäne: 2 vollzogen, 6 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
@@ -39,7 +39,7 @@
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **7666** Zeilen in **82** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **7667** Zeilen in **82** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)

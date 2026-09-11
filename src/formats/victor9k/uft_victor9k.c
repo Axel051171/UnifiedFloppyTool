@@ -1,61 +1,117 @@
 /**
  * @file uft_victor9k.c
- * @brief Victor 9000 / Sirius 1 Plugin-B
+ * @brief Victor 9000 / Sirius 1 — zonierte GCR-Geometrie
  *
- * Victor 9000 uses GCR encoding with variable-speed zones (like C64 but
- * with different zone boundaries).  80 tracks per side, 1 or 2 sides.
+ * Victor 9000 (Sirius 1) benutzt GCR mit **neun** Geschwindigkeitszonen
+ * und hat damit eine variable Sektorzahl je Spur. 80 Spuren je Seite,
+ * 512 Byte je Sektor, 1 oder 2 Seiten.
  *
- * Zone layout (sectors per track):
- *   Zone 0  tracks  0- 3:  19 spt
- *   Zone 1  tracks  4-15:  18 spt
- *   Zone 2  tracks 16-26:  17 spt
- *   Zone 3  tracks 27-37:  16 spt
- *   Zone 4  tracks 38-48:  15 spt
- *   Zone 5  tracks 49-59:  14 spt
- *   Zone 6  tracks 60-69:  13 spt
- *   Zone 7  tracks 70-79:  12 spt
+ * ── Referenz ────────────────────────────────────────────────────────
  *
- * Sector size: 512 bytes.  Total per side: 1224 sectors = 626688 bytes.
- * Raw image: SS = 626688, DS = 1253376.
+ * MAME `src/lib/formats/victor9k_dsk.cpp` / `.h`, **BSD-3-Clause**,
+ * Copyright Curt Coder. Gelesen, nicht uebernommen — die Zonentafeln
+ * unten sind Messwerte der Hardware, und die Vorlage nennt sie
+ * woertlich:
  *
- * Reference: FluxEngine (davidgiven/fluxengine, GPL-2.0 laut
- * COPYING.md), MAME Victor 9000 driver (mamedev/mame, GPL-2.0 laut
- * COPYING). Beide vereinbar mit GPL-2.0-or-later; Lizenzen aus den
- * Lizenzdateien gelesen, MF-739.
+ *   `sectors_per_track[2][80]` (Z. 392-414) — ZWEI Tafeln, eine je Kopf
+ *   `formats[]` (Z. 378-386)   — SSDD 1224 / DSDD 2391 Sektoren
+ *   `find_size()` (Z. 136-149) — genau `sector_count * 512` Byte
+ *   `build_sector_description()` (Z. 280-289) — `sector_id = i`
+ *
+ * Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit
+ * **2391** Sektoren, und 1224 + 1167 = 2391 — die Summen der beiden
+ * Kopftafeln ergeben genau die Formatangabe.
+ *
+ * ── Was hier bis MF-1026 stand, und was es bedeutete ────────────────
+ *
+ * Der Kopf beschrieb ACHT Zonen mit einer Tafel fuer BEIDE Koepfe und
+ * `DS = 1253376`. Fuenf Folgen, gemessen:
+ *
+ *   1. **Jede echte zweiseitige Datei wurde abgewiesen.** Kopf 1 hat
+ *      1167 statt 1224 Sektoren; richtig sind **1224192** Byte, nicht
+ *      1253376 — eine Differenz von 57 Sektoren. `vic9k_open()`
+ *      antwortete `UFT_ERROR_FORMAT_INVALID` (Klasse MF-1015).
+ *   2. **Kopf 1 wurde mit der Tafel von Kopf 0 gelesen:** 57 von 80
+ *      Spuren mit falscher Sektorzahl, **79 von 80** am falschen
+ *      Versatz, bei Spur 79 um 28672 Byte.
+ *   3. **Auf Kopf 0 lagen zwei Zonengrenzen um eins daneben** (Spur 48:
+ *      15 statt 14, Spur 70: 12 statt 13). Da sich +1 und -1
+ *      aufheben, blieb die Summe 1224 — die Groessenpruefung konnte es
+ *      nie bemerken, und **22 Spuren (49..70) wurden 512 Byte zu hoch
+ *      gelesen**. Spur 48 gab einen 15. Sektor aus, der Spur 49
+ *      gehoert; Spur 70 lieferte ihren 13. Sektor nie.
+ *   4. **Die Sektornummern waren 1..n statt 0..n-1**, weil
+ *      `uft_format_add_sector()` laut eigenem Kopf einen 0-basierten
+ *      INDEX nimmt und 1 addiert. MAME setzt `sector_id = i`. Gestalt
+ *      von MF-1016 (`jv1`).
+ *   5. **Ein Zylinder ausserhalb 0..79 kam als `UFT_OK` mit null
+ *      Sektoren zurueck** — `vic9k_spt()` gab 0, die Schleife lief
+ *      nicht, der Aufrufer bekam Erfolg fuer eine Spur, die es nicht
+ *      gibt.
+ *
+ * Der alte Kopf nannte FluxEngine und MAME als Referenz, und
+ * `.spec_status` stand auf `UFT_SPEC_REVERSE_ENGINEERED`. Beides
+ * zusammen ist die Lage, vor der die EINFRIER-REGEL warnt: eine
+ * Referenz war benannt, aber ihre Zahlen standen nicht im Code.
+ *
+ * Regressionsschutz: `tests/test_victor9k_gegen_mame.c`.
  */
 #include "uft/uft_format_common.h"
 
 #define VIC9K_TRACKS    80
 #define VIC9K_SS        512
-#define VIC9K_SIDE_SECTORS  1224    /* sum of all spt for 80 tracks */
-#define VIC9K_SS_SIZE   626688     /* 1224 * 512 */
-#define VIC9K_DS_SIZE   1253376    /* 626688 * 2 */
+#define VIC9K_SIDE0_SECTORS 1224   /* Summe vic9k_spt[0][] */
+#define VIC9K_SIDE1_SECTORS 1167   /* Summe vic9k_spt[1][] — NICHT 1224 */
+#define VIC9K_SS_SIZE   626688     /* 1224 * 512, MAME formats[0] */
+#define VIC9K_DS_SIZE   1224192    /* 2391 * 512, MAME formats[1] */
 
-/* Sectors per track, indexed by zone */
-static const uint8_t vic9k_zone_table[VIC9K_TRACKS] = {
-    19,19,19,19,                        /* zone 0: tracks  0- 3 */
-    18,18,18,18,18,18,18,18,18,18,18,18,/* zone 1: tracks  4-15 */
-    17,17,17,17,17,17,17,17,17,17,17,   /* zone 2: tracks 16-26 */
-    16,16,16,16,16,16,16,16,16,16,16,   /* zone 3: tracks 27-37 */
-    15,15,15,15,15,15,15,15,15,15,15,   /* zone 4: tracks 38-48 */
-    14,14,14,14,14,14,14,14,14,14,14,   /* zone 5: tracks 49-59 */
-    13,13,13,13,13,13,13,13,13,13,      /* zone 6: tracks 60-69 */
-    12,12,12,12,12,12,12,12,12,12       /* zone 7: tracks 70-79 */
+/* Sektoren je Spur, EINE Tafel JE KOPF.
+ *
+ * Woertlich aus MAME `victor9k_dsk.cpp:392-414`. Die beiden Tafeln sind
+ * verschieden — das ist der Kern von MF-1026 —, und die Zonengrenzen
+ * liegen nicht dort, wo der alte Kopf sie beschrieb: auf Kopf 0 wechselt
+ * 15 -> 14 nach Spur **47** (nicht 48) und 13 -> 12 nach Spur **70**
+ * (nicht 69). */
+static const uint8_t vic9k_spt_tafel[2][VIC9K_TRACKS] = {
+    {   /* Kopf 0 — Summe 1224 */
+        19,19,19,19,                             /*  0.. 3 */
+        18,18,18,18,18,18,18,18,18,18,18,18,     /*  4..15 */
+        17,17,17,17,17,17,17,17,17,17,17,        /* 16..26 */
+        16,16,16,16,16,16,16,16,16,16,16,        /* 27..37 */
+        15,15,15,15,15,15,15,15,15,15,           /* 38..47 */
+        14,14,14,14,14,14,14,14,14,14,14,14,     /* 48..59 */
+        13,13,13,13,13,13,13,13,13,13,13,        /* 60..70 */
+        12,12,12,12,12,12,12,12,12               /* 71..79 */
+    },
+    {   /* Kopf 1 — Summe 1167, eine Zone versetzt */
+        18,18,18,18,18,18,18,18,                 /*  0.. 7 */
+        17,17,17,17,17,17,17,17,17,17,17,        /*  8..18 */
+        16,16,16,16,16,16,16,16,16,16,16,        /* 19..29 */
+        15,15,15,15,15,15,15,15,15,15,           /* 30..39 */
+        14,14,14,14,14,14,14,14,14,14,14,14,     /* 40..51 */
+        13,13,13,13,13,13,13,13,13,13,13,        /* 52..62 */
+        12,12,12,12,12,12,12,12,12,12,12,12,     /* 63..74 */
+        11,11,11,11,11                           /* 75..79 */
+    }
 };
 
-static int vic9k_spt(int track) {
+/** Sektoren auf (head, track); 0 heisst „gibt es nicht". */
+static int vic9k_spt(int head, int track) {
+    if (head < 0 || head > 1) return 0;
     if (track < 0 || track >= VIC9K_TRACKS) return 0;
-    return vic9k_zone_table[track];
+    return vic9k_spt_tafel[head][track];
 }
 
-/** Byte offset of the first sector of (cyl, head) in a raw image */
+/** Byteversatz des ersten Sektors von (cyl, head).
+ *
+ * Nach MAME `get_image_offset()`: Kopf 1 beginnt hinter der GANZEN
+ * Seite 0, danach summiert jede Seite mit ihrer EIGENEN Tafel. */
 static long vic9k_track_offset(int cyl, int head) {
     long off = 0;
-    /* Sum all previous tracks on this side */
-    for (int t = 0; t < cyl; t++)
-        off += (long)vic9k_spt(t) * VIC9K_SS;
     if (head == 1)
-        off += (long)VIC9K_SIDE_SECTORS * VIC9K_SS;   /* side 1 after side 0 */
+        off += (long)VIC9K_SIDE0_SECTORS * VIC9K_SS;
+    for (int t = 0; t < cyl; t++)
+        off += (long)vic9k_spt(head, t) * VIC9K_SS;
     return off;
 }
 
@@ -97,9 +153,13 @@ static uft_error_t vic9k_open(uft_disk_t *disk, const char *path, bool ro) {
     disk->plugin_data = p;
     disk->geometry.cylinders = VIC9K_TRACKS;
     disk->geometry.heads     = heads;
-    disk->geometry.sectors   = 19;           /* max spt (zone 0) */
+    disk->geometry.sectors   = 19;           /* groesste Zone, Kopf 0 */
     disk->geometry.sector_size = VIC9K_SS;
-    disk->geometry.total_sectors = (uint32_t)VIC9K_SIDE_SECTORS * heads;
+    /* MF-1026: NICHT `1224 * heads`. Kopf 1 hat 1167 Sektoren, und
+     * MAMEs Formattafel fuehrt DSDD mit genau 2391. */
+    disk->geometry.total_sectors =
+        (uint32_t)VIC9K_SIDE0_SECTORS
+        + (heads == 2 ? (uint32_t)VIC9K_SIDE1_SECTORS : 0u);
     return UFT_OK;
 }
 
@@ -121,9 +181,23 @@ static uft_error_t vic9k_read_track(uft_disk_t *disk, int cyl, int head,
 
     vic9k_pd_t *p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+
+    /* MF-1026: die OBERE Schranke fehlte, und das war kein
+     * Schoenheitsfehler. `vic9k_spt()` gab fuer einen Zylinder
+     * ausserhalb 0..79 die Zahl 0, die Sektorschleife lief null Mal,
+     * und der Aufrufer bekam `UFT_OK` mit einer leeren Spur — Erfolg
+     * fuer eine Spur, die es nicht gibt. Dasselbe fuer Kopf 1 einer
+     * einseitigen Datei: der Versatz lag hinter dem Dateiende, jeder
+     * `fread` war kurz, und heraus kamen 0xE5-Fuellsektoren. Dank
+     * MF-980 waren die als fehlend gekennzeichnet — aber „diese Spur
+     * ist beschaedigt" ist eine andere Aussage als „diese Seite
+     * existiert nicht". */
+    if (cyl >= VIC9K_TRACKS || head >= p->heads)
+        return UFT_ERROR_INVALID_PARAM;
+
     uft_track_init(track, cyl, head);
 
-    int spt = vic9k_spt(cyl);
+    int spt = vic9k_spt(head, cyl);
     long off = vic9k_track_offset(cyl, head);
     uint8_t buf[VIC9K_SS];
 
@@ -137,8 +211,14 @@ static uft_error_t vic9k_read_track(uft_disk_t *disk, int cyl, int head,
          * bleiben stehen, sie gelten nur nicht mehr als Messwert. */
         const bool kurz = (fread(buf, 1, VIC9K_SS, p->file) != VIC9K_SS);
         if (kurz) memset(buf, 0xE5, VIC9K_SS);
-        uft_format_add_sector(track, (uint8_t)s, buf, VIC9K_SS,
-                              (uint8_t)cyl, (uint8_t)head);
+        /* MF-1026: `uft_format_add_sector()` nimmt laut eigenem Kopf
+         * einen 0-basierten INDEX und addiert 1 — der Kommentar dort
+         * nennt Apple, Amiga und Commodore als Faelle, fuer die das
+         * falsch ist. Victor 9000 gehoert dazu: MAME setzt
+         * `sectors[i].sector_id = i`, also 0..n-1. Gestalt von
+         * MF-1016 (`jv1`). */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, VIC9K_SS,
+                                      (uint8_t)cyl, (uint8_t)head);
         if (kurz) uft_format_mark_last_missing(track);
     }
     return UFT_OK;
@@ -163,7 +243,14 @@ static uft_error_t vic9k_write_track(uft_disk_t *disk, int cyl, int head,
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    int spt = vic9k_spt(cyl);
+    /* MF-1026, und beim Schreiben wiegt es schwerer als beim Lesen:
+     * ohne obere Schranke bestimmte ein falscher Zylinder, WOHIN
+     * geschrieben wird — dieselbe Erwaegung, die MF-529 hier schon
+     * einmal fuer die untere Schranke angestellt hat. */
+    if (cyl >= VIC9K_TRACKS || head >= p->heads)
+        return UFT_ERROR_INVALID_PARAM;
+
+    int spt = vic9k_spt(head, cyl);
     long off = vic9k_track_offset(cyl, head);
 
     for (size_t s = 0; s < track->sector_count && (int)s < spt; s++) {

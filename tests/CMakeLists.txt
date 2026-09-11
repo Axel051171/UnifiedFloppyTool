@@ -353,6 +353,76 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_victor9k_gegen_mame")
+        # MF-1026: `victor9k` stand auf T3, und der Kopf des Plugins
+        # beschrieb ACHT Zonen mit EINER Tafel fuer BEIDE Koepfe.
+        # Victor 9000 hat NEUN Zonen und zwei verschiedene Tafeln.
+        # Fuenf Befunde, gemessen gegen MAME `formats/victor9k_dsk.cpp`
+        # (BSD-3-Clause, Curt Coder):
+        #
+        #  1. `VIC9K_DS_SIZE` war 1253376 (= 1224 x 2 x 512). Wirklich
+        #     sind es 1224192 (= 2391 x 512), denn Kopf 1 hat 1167
+        #     statt 1224 Sektoren. JEDE echte zweiseitige Datei wurde
+        #     mit UFT_ERROR_FORMAT_INVALID abgewiesen (Klasse MF-1015).
+        #  2. Kopf 1 wurde mit der Tafel von Kopf 0 gelesen: 57 von 80
+        #     Spuren mit falscher Sektorzahl, 79 von 80 am falschen
+        #     Versatz, bei Spur 79 um 28672 Byte.
+        #  3. Auf Kopf 0 lagen zwei Zonengrenzen um eins daneben
+        #     (Spur 48: 15 statt 14; Spur 70: 12 statt 13). Weil sich
+        #     +1 und -1 aufheben, blieb die Summe 1224 — die
+        #     Groessenpruefung konnte es NIE bemerken, und 22 Spuren
+        #     (49..70) wurden 512 Byte zu hoch gelesen.
+        #  4. Sektornummern 1..n statt 0..n-1; MAME setzt
+        #     `sectors[i].sector_id = i`. Gestalt von MF-1016.
+        #  5. Ein Zylinder ausserhalb 0..79 kam als UFT_OK mit null
+        #     Sektoren zurueck — „Erfolg ohne Tat".
+        #
+        # Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt
+        # DSDD mit 2391, und 1224 + 1167 = 2391.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/victor9k/uft_victor9k.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_tan_ist_einseitig")
+        # MF-1026: `tan` liest dieselbe Anordnung wie `jv1` — und trug
+        # BEIDE Befunde, die MF-1016 an `jv1` behoben hat. Das ist die
+        # Gestalt von MF-519/MF-529, nur zwischen zwei DATEIEN statt
+        # zwei Funktionen:
+        #
+        #  1. `if (tracks <= 40) heads = 1; else { cyl = tracks/2;
+        #     heads = 2; }` — bei 204800 Byte kamen 40 Zylinder / 2
+        #     Koepfe heraus. MAMEs jv1-Tafel (`formats/trs80_dsk.cpp`,
+        #     BSD-3-Clause, Dirk Best) fuehrt 35/40/80 Spuren mit
+        #     durchweg `head_count = 1`; Tim Mann schreibt „only one
+        #     side".
+        #  2. Sektornummern 1..10 statt 0..9; MAMEs `sector_base_id`
+        #     ist 0.
+        #
+        # Dritter Punkt, bewusst NICHT abgewiesen: 179200 Byte steht in
+        # MAMEs Tafel nicht, wird aber angenommen — jetzt als 70
+        # EINSEITIGE Spuren, nicht als 35 x 2. Nachsichtig bei der
+        # Spurzahl, nicht bei der Seitigkeit.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/tan/uft_tan.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_fdi_pc98_gegen_mame")
+        # MF-1026: Feldabgleich gegen MAME `formats/pc98fdi_dsk.cpp`
+        # (BSD-3-Clause, Olivier Galibert) — und er fand KEINEN Fehler.
+        # Kopffelder, beide Konsistenzbedingungen aus `identify()`
+        # (`size == hsize + psize` UND
+        # `psize == ssize*scnt*sides*ntrk`), die zylinder-dure
+        # Versatzformel und die 1-basierten Sektornummern stimmen
+        # ueberein.
+        #
+        # Das ist die Lage aus MF-1006 (`mgt`), und dort steht die
+        # Lehre: Uebereinstimmung reicht nur, wenn sie BEWACHT ist statt
+        # behauptet. Der Test nagelt jede Zahl fest.
+        #
+        # T2 und nicht T1b: die Pruefdatei ist hauseigen — es liegt
+        # keine fremd erzeugte PC-98-FDI im Korpus, und keines der hier
+        # verfuegbaren Werkzeuge schreibt eine.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_dim_kennung_und_groesse")
         # MF-1019: `dim` prueft die Kennung „DIFC HEADER" bei 0xAB nicht.
         # Gemessen am Vorzustand: ein Puffer aus 512 NULLBYTES mit
