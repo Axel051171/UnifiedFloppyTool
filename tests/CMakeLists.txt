@@ -2513,6 +2513,15 @@ foreach(test_source ${TEST_SOURCES})
         # 12/12. Geprueft wird die Abtretung samt Einheitenwechsel.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+    elseif(${test_name} STREQUAL "test_kryoflux_schreibweg")
+        # MF-1045: der KryoFlux-Schreibweg. docs/CAPABILITIES.md fuehrte
+        # Write als `-` („protokoll-bedingt nicht vorgesehen") — eine
+        # Aussage ueber das GERAET, belegt durch eine quellenlose Zeile
+        # in .claude/CLAUDE.md. Gemessen enthaelt uft_kryoflux_dtc.c
+        # einen vollstaendigen Schreiber, den niemand ruft. Geprueft
+        # wird der Vertrag, NICHT das Geraet (MF-310).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_kryoflux_dtc.c)
     elseif(${test_name} STREQUAL "test_hal_rev_grenzen")
         # MF-954: der Vertrag von uft_hal_read_flux_ex(). Die
         # GERAETEPFADE sind nicht abgenommen — dieses Projekt hat keine

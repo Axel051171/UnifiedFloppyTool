@@ -362,7 +362,16 @@ Aktuell 9 Provider, nicht 6 (siehe MF-201/MF-207 Erweiterungen):
 // Unterstützte V2-Provider (siehe src/hardwaretab.h:45-62)
 //   1. GreaseweazleProviderV2 — production-wired
 //   2. SCPProviderV2           — honest-stub (M3.1 libusb pending)
-//   3. KryoFluxProviderV2      — honest-stub (M3 runner pending)
+//   3. KryoFluxProviderV2      — BERICHTIGT MF-1045: hier stand
+//                                "honest-stub (M3 runner pending)".
+//                                Der Laeufer ist seit MF-256 da:
+//                                hardwaretab.cpp:842 baut den Provider
+//                                mit make_kryoflux_qprocess_runner(),
+//                                einem echten QProcess-Aufruf auf `dtc`
+//                                (qprocess_subprocess_runner.cpp:128).
+//                                Lesen und Erkennen gehen also durch
+//                                einen wirklichen Prozess — Schreiben
+//                                nicht, siehe unten und P3-341.
 //   4. FluxEngineProviderV2    — honest-stub
 //   5. FC5025ProviderV2        — honest-stub (read-only when wired)
 //   6. XUM1541ProviderV2       — honest-stub (M3.2 libusb pending)
@@ -374,8 +383,23 @@ Aktuell 9 Provider, nicht 6 (siehe MF-201/MF-207 Erweiterungen):
 // FC5025 kann keinen Flux lesen — nur Sektordaten
 bool can_read_flux = (type != FC5025);
 
-// KryoFlux ist read-only
-bool can_write = (type != KryoFlux);
+// BERICHTIGT MF-1045. Hier stand "// KryoFlux ist read-only" — ohne
+// Quelle, und genau diese Zeile war der einzige Beleg einer Kette:
+// docs/CAPABILITIES.md fuehrte Write als `-` ("protokoll-bedingt nicht
+// vorgesehen"), kryoflux_provider_v2.h begruendete sein
+// static_assert(!WritesRawFlux) woertlich mit "CLAUDE.md states
+// 'KryoFlux ist read-only' explicitly" — und CLAUDE.md sagte es hier,
+// ohne irgendetwas zu nennen. Drei Dokumente, ein Zirkel, keine Messung.
+//
+// Was gemessen ist: src/hal/uft_kryoflux_dtc.c enthaelt einen
+// VOLLSTAENDIGEN Schreiber (uft_kf_write_track, 75 Zeilen, baut
+// `dtc -w …` und fuehrt es aus), und im ganzen `git ls-files` ruft ihn
+// NIEMAND. UFT kann also nicht schreiben — nicht weil das Geraet es
+// nicht koennte, sondern weil kein Weg dorthin fuehrt (P3-204-Klasse).
+// Ob ein KryoFlux schreiben KANN, ist offen: P3-341.
+//
+// Die Regel unten bleibt also richtig und heisst jetzt, was sie misst.
+bool can_write = (type != KryoFlux);   // UFT-Faehigkeit, nicht Geraet
 
 // 44 Konvertierungspfade im Format Converter
 // Verlustbehaftet kennzeichnen: Flux→Sektor verliert Timing+WeakBits

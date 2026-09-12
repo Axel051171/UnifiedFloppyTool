@@ -78,9 +78,16 @@ static_assert(DetectsDrive<KryoFluxProviderV2>,
 static_assert(!ReadsSectors<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy ReadsSectors");
 static_assert(!WritesRawFlux<KryoFluxProviderV2>,
-    "KryoFluxProviderV2 must NOT satisfy WritesRawFlux (read-only device)");
+    /* Berichtigt MF-1045: hier stand "(read-only device)" — eine Aussage
+     * ueber die Hardware, fuer die es im Baum keine Quelle gibt. Gemessen
+     * ist etwas anderes: src/hal/uft_kryoflux_dtc.c haelt einen
+     * vollstaendigen uft_kf_write_track(), den niemand ruft. Siehe
+     * tests/test_kryoflux_schreibweg.c und P3-341. */
+    "KryoFluxProviderV2 must NOT satisfy WritesRawFlux "
+    "(no wired write path in UFT; device capability unmeasured, P3-341)");
 static_assert(!WritesSectors<KryoFluxProviderV2>,
-    "KryoFluxProviderV2 must NOT satisfy WritesSectors (read-only device)");
+    "KryoFluxProviderV2 must NOT satisfy WritesSectors "
+    "(KF is a flux device; and no write path is wired — MF-1045)");
 static_assert(!ControlsMotor<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy ControlsMotor (DTC no standalone motor cmd)");
 static_assert(!SeeksHead<KryoFluxProviderV2>,
@@ -95,7 +102,8 @@ static_assert(!MeasuresRPM<KryoFluxProviderV2>,
 static_assert(ImagesFlux<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must satisfy ImagesFlux (ReadsRawFlux + DetectsDrive)");
 static_assert(!WritesAnything<KryoFluxProviderV2>,
-    "KryoFluxProviderV2 must NOT satisfy WritesAnything (read-only)");
+    "KryoFluxProviderV2 must NOT satisfy WritesAnything "
+    "(no wired write path — corrected MF-1045, device capability is P3-341)");
 static_assert(!FullDriveControl<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy FullDriveControl "
     "(ControlsMotor + SeeksHead + Recalibrates all absent)");

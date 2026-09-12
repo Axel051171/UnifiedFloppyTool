@@ -1232,6 +1232,24 @@ def main() -> int:
         import audit_erzeugte_doku_eingecheckt as _ede
         all_errors.append(("Erzeugte Doku eingecheckt", _ede.check(repo)))
 
+        # Tor 67 (MF-1045): eine Faehigkeitsabsage, die der eigene Baum
+        # widerlegt. `docs/CAPABILITIES.md` fuehrte KryoFlux Write als
+        # `-` — laut Legende „protokoll-bedingt nicht vorgesehen", also
+        # eine Aussage ueber das GERAET. Belegt war sie durch eine
+        # quellenlose Zeile in `.claude/CLAUDE.md`, auf die sich
+        # `kryoflux_provider_v2.h` wiederum berief: ein Zirkel aus drei
+        # Dokumenten und keiner Messung. Gemessen enthaelt
+        # `src/hal/uft_kryoflux_dtc.c` einen vollstaendigen Schreiber
+        # von 75 Zeilen, den niemand ruft (MF-930-Gestalt, P3-204).
+        #
+        # Gefragt wird genau eins: steht einem `-` in der Write-Spalte
+        # ein AUSGEFUEHRTER Schreiber gegenueber? Ob das Geraet es kann,
+        # entscheidet dieses Tor ausdruecklich nicht (P3-341).
+        #
+        # Grundlinie 0. Selbsttest 5/5.
+        import audit_faehigkeitszusage_gedeckt as _fzg
+        all_errors.append(("Faehigkeitsabsage gedeckt", _fzg.check(repo)))
+
         import audit_korpus_inhalt as _ki
         all_errors.append(("Korpus-Inhalt", _ki.check(repo)))
 

@@ -9,13 +9,44 @@
  *   DetectsDrive   v  do_detect_drive()   -> DetectOutcome
  *
  * Intentionally omitted mixins (and why):
- *   WritesRawFlux   x  KryoFlux is read-only by design. CLAUDE.md states
- *                      "KryoFlux ist read-only" explicitly. Although the V1
- *                      provider wraps DTC -w, the KryoFlux hardware itself
- *                      does not officially support write operations and the
- *                      project design policy designates it as read-only.
- *                      The compile error on `provider.do_write_raw_flux(...)`
- *                      IS the documentation — per anti-pragmatism rule.
+ *   WritesRawFlux   x  BERICHTIGT MF-1045. Hier stand: "KryoFlux is
+ *                      read-only by design. CLAUDE.md states 'KryoFlux ist
+ *                      read-only' explicitly. Although the V1 provider wraps
+ *                      DTC -w, the KryoFlux hardware itself does not
+ *                      officially support write operations." Das traegt
+ *                      nicht, und zwar dreifach:
+ *                        (a) Die Begruendung ist ein ZIRKEL — sie beruft
+ *                            sich auf CLAUDE.md, und CLAUDE.md sagt es ohne
+ *                            Quelle (`// KryoFlux ist read-only`).
+ *                        (b) Sie raeumt den Gegenbeleg selbst ein ("Although
+ *                            the V1 provider wraps DTC -w") und ueberstimmt
+ *                            ihn mit einer Richtlinie statt mit einer
+ *                            Messung. Messung vor Plan (MF-640).
+ *                        (c) "does not officially support write" ist eine
+ *                            Aussage ueber die HARDWARE. Eine Quelle dafuer
+ *                            gibt es im Baum nicht: der echte DTC liegt
+ *                            nicht vor (tools/hw_simulators/ haelt nur
+ *                            Simulatoren), und weder das fremde
+ *                            DiskImageTool noch die genannten
+ *                            Community-Notizen nennen die Schreibseite.
+ *                      Was GEMESSEN ist: src/hal/uft_kryoflux_dtc.c fuehrt
+ *                      einen vollstaendigen Schreiber von 75 Zeilen
+ *                      (uft_kf_write_track, Zeile 1322) plus
+ *                      uft_kf_write_disk und uft_kf_write_supported. Er
+ *                      baut `dtc -w …` und fuehrt es aus. Ueber
+ *                      git ls-files gemessen ruft ihn NIEMAND — ausser den
+ *                      drei Deklarationen in include/uft/hal/uft_kryoflux.h
+ *                      gibt es keine Fundstelle.
+ *                      Der Mixin bleibt also weg, aber aus dem richtigen
+ *                      Grund: nicht weil das Geraet es nicht kann, sondern
+ *                      weil UFT keinen Weg dorthin hat — P3-204-Klasse,
+ *                      Gestalt von MF-930 (elf Format-Plugins mit fertigem,
+ *                      unerreichbarem Schreiber), hier zum ersten Mal bei
+ *                      einem Controller. Ob das Geraet es kann, ist offen
+ *                      und steht als P3-341.
+ *                      Der Compile-Fehler auf
+ *                      `provider.do_write_raw_flux(...)` bleibt die
+ *                      Dokumentation — er sagt jetzt nur die Wahrheit.
  *   WritesSectors   x  Same rationale as WritesRawFlux.
  *   ReadsSectors    x  KF is a flux device; sector decoding happens in the
  *                      upstream analysis pipeline, not the HAL layer.
@@ -49,8 +80,20 @@
  *   Source: KryoFlux community wiki, CAPS/SPS documentation, UFT V1 impl.
  *
  * Backend: DTC (Disk Tool Console) subprocess.
- *   KryoFlux has no C-HAL backbone in this codebase (no uft_kryoflux_*.c).
- *   Instead the provider calls DTC via a pluggable runner function.
+ *   BERICHTIGT MF-1045. Hier stand: "KryoFlux has no C-HAL backbone in this
+ *   codebase (no uft_kryoflux_*.c)." Das ist schlicht falsch und mit einem
+ *   `ls` widerlegbar: src/hal/uft_kryoflux_dtc.c gibt es, sie ist 49 345
+ *   Byte gross, steht in UnifiedFloppyTool.pro (Zeile 1172) und wird von
+ *   zwei Testzielen mitgebaut — test_kryoflux_emulator und
+ *   test_hal_rev_grenzen, beide gemessen an ihren Objektdateien unter
+ *   build-tests-ci/. Sie enthaelt den
+ *   ganzen DTC-Umgang in C: uft_kf_capture_track(), die OOB-Kette, die
+ *   Flusswandlung — und einen Schreiber, den niemand ruft (siehe oben).
+ *   Der Satz war der Grund, warum die Schreibseite hier nie nachgemessen
+ *   wurde: wo kein Unterbau ist, sucht man auch keinen Schreiber.
+ *   Richtig ist: der V2-Provider BENUTZT diesen Unterbau nicht, sondern
+ *   ruft DTC ueber eine einspeisbare Runner-Funktion. Das ist eine Aussage
+ *   ueber diese Klasse, keine ueber den Baum.
  *
  * DTC runner design — Option (A): std::function injection.
  *   The V2 constructor takes a `DtcRunner` — a std::function with signature:
@@ -252,10 +295,14 @@ static_assert(!ReadsSectors<KryoFluxProviderV2>,
     "(KryoFlux reads flux; sector decode is upstream)");
 static_assert(!WritesRawFlux<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy WritesRawFlux "
-    "(KryoFlux is read-only by design — CLAUDE.md and REFACTOR_TASKS.md P1.9)");
+    "(UFT has no wired path to a KryoFlux writer — src/hal/uft_kryoflux_dtc.c "
+    "holds a complete but UNREACHABLE uft_kf_write_track(); whether the "
+    "device itself can write is unmeasured, see P3-341. Corrected MF-1045: "
+    "this said 'read-only by design' and cited CLAUDE.md, which says it "
+    "without a source)");
 static_assert(!WritesSectors<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy WritesSectors "
-    "(KryoFlux is read-only by design)");
+    "(KF is a flux device; and no write path is wired at all — MF-1045)");
 static_assert(!ControlsMotor<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy ControlsMotor "
     "(DTC does not expose a standalone motor command; "
@@ -278,7 +325,8 @@ static_assert(ImagesFlux<KryoFluxProviderV2>,
     "(has both ReadsRawFlux and DetectsDrive)");
 static_assert(!WritesAnything<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy WritesAnything "
-    "(read-only device)");
+    "(no wired write path — corrected MF-1045: this said 'read-only device', "
+    "a claim about the hardware that was never measured)");
 static_assert(!FullDriveControl<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy FullDriveControl "
     "(ControlsMotor + SeeksHead + Recalibrates are all absent)");
