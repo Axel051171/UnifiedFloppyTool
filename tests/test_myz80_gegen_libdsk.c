@@ -70,6 +70,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
+#include "uft/uft_track.h"
 
 extern const uft_format_plugin_t uft_format_plugin_myz80;
 
@@ -393,6 +394,70 @@ int main(void)
         } else {
             pruefe("eine Datei aus NUR 256 Byte 0xE5 ist gueltig", 0,
                    "Pruefdatei liess sich nicht schreiben");
+        }
+    }
+
+    /* ── MF-1033: libdsk hat die VOLLE MYZ80 GESCHRIEBEN ──────────
+     *
+     * 8 388 864 Byte = 256 Byte reservierter Bereich + 64 x 128 x 1024 —
+     * genau die Groesse, die MF-1029 als Rueckfall gemessen hat und die
+     * das vorhandene Fixture bewusst NICHT hat (es traegt einen
+     * Zylinder). libdsk fuellt die fehlenden Sektoren nach seiner
+     * eigenen Regel mit 0xE5.
+     *
+     * Bis MF-1032 galt P3-333 („libdsk erzeugt keine Fixtures"); der
+     * Kanal war `-format <name>`, und fuer Formate mit eigener
+     * `getgeom` braucht es ihn nicht einmal. Damit steht `myz80` auf
+     * **T1b** statt T2, und die VOLLE Geometrie ist erstmals an einem
+     * Fremderzeugnis geprueft. */
+    {
+        char fpfad[600], d[260];
+        uft_disk_t da, db;
+        int gleich = 0, ungleich = 0;
+        size_t s;
+        uft_track_t ta, tb;
+
+        snprintf(fpfad, sizeof(fpfad), "%s/%s", UFT_CORPUS_DIR,
+                 "libdsk_myz80_voll.myz80");
+        memset(&da, 0, sizeof(da));
+        memset(&db, 0, sizeof(db));
+        snprintf(pfad, sizeof(pfad), "%s/%s", UFT_CORPUS_DIR, FIXTURE);
+        if (p->open(&da, pfad, true) == UFT_OK
+            && p->open(&db, fpfad, true) == UFT_OK) {
+            memset(&ta, 0, sizeof(ta));
+            memset(&tb, 0, sizeof(tb));
+            if (p->read_track(&da, 0, 0, &ta) == UFT_OK
+                && p->read_track(&db, 0, 0, &tb) == UFT_OK
+                && ta.sector_count == tb.sector_count) {
+                for (s = 0; s < ta.sector_count; s++) {
+                    if (ta.sectors[s].data && tb.sectors[s].data
+                        && ta.sectors[s].data_len == tb.sectors[s].data_len
+                        && ta.sectors[s].id.sector == tb.sectors[s].id.sector
+                        && memcmp(ta.sectors[s].data, tb.sectors[s].data,
+                                  ta.sectors[s].data_len) == 0) gleich++;
+                    else ungleich++;
+                }
+            }
+            snprintf(d, sizeof(d), "fremde Datei %ux%ux%ux%u, Zylinder 0: "
+                     "%d Sektoren gleich, %d ungleich",
+                     db.geometry.cylinders, db.geometry.heads,
+                     db.geometry.sectors, db.geometry.sector_size,
+                     gleich, ungleich);
+            pruefe("MF-1033: das von libdsk GESCHRIEBENE volle Abbild "
+                   "meldet 64 x 1 x 128 x 1024, und Zylinder 0 liefert "
+                   "alle 128 Sektoren byteidentisch (T1b)",
+                   gleich == 128 && ungleich == 0
+                   && db.geometry.cylinders == 64 && db.geometry.heads == 1
+                   && db.geometry.sectors == 128
+                   && db.geometry.sector_size == 1024, d);
+            uft_track_release(&ta);
+            uft_track_release(&tb);
+            p->close(&da);
+            p->close(&db);
+        } else {
+            pruefe("MF-1033: das von libdsk geschriebene volle Abbild "
+                   "laesst sich oeffnen", 0,
+                   "eine der beiden Dateien fehlt");
         }
     }
 

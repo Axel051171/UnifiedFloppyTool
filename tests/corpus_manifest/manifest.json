@@ -769,9 +769,9 @@
       "file": "tests/corpus_free/nwasp_spec_400k.nanowasp",
       "sha256": "bdab165d295f898d15ef5bd477e4531a7953d87482d4c2931b55a5c1f242d2e1",
       "format": "nanowasp",
-      "origin": "derived",
-      "tool": "UFT-eigenes Python-Skript (MF-1030), nach libdsks lib/drvnwasp.c",
-      "source": "409600 Byte = 40 Zylinder x 2 Koepfe x 10 Sektoren x 512 Byte, OHNE Kopf - libdsks `nwasp_open()` (Z. 71-94) prueft nichts, es gibt keine Kennung. Die Anordnung ist KOPF-DUR (SIDES_OUTOUT: erst die ganze Seite 0, dann Seite 1), und innerhalb der Spur liegen die Sektoren GESKEWT: `skew[10] = {1,4,7,0,3,6,9,2,5,8}` (Z. 127), wobei skew[s-1] der physische Platz des logischen Sektors s ist. Versatz: `204800*head + 5120*cylinder + 512*skew[sector-1]` (Z. 147). Geometrie fest nach `nwasp_getgeom()` (Z. 286-301) mit `dg_secbase = 1`. Der Treiberkopf nennt seine eigene Skew-Behandlung ausdruecklich \"an abuse of libdsk ... cpmtools doesn't support the type of skewing done by the microbee (sector 1 doesn't map to sector 1)\".",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk GESCHRIEBEN.** Bis MF-1032 galt `P3-333` — „libdsk erzeugt keine Fixtures“ —, und das traf nicht: der Kanal fuer die Geometrie eines kopflosen Abbilds ist `-format <name>`, und fuer Formate mit eigener `getgeom` braucht es ihn nicht einmal. Diese Datei ist die Ausgabe von `dsktrans -itype nanowasp -otype nanowasp` — libdsks eigener Leser und sein eigener Schreiber, die Sektorversaetze rechnet also fremder Code. **Und sie ist byteidentisch mit dem, was UFTs eigenes Skript geschrieben hat** (unveraenderte SHA-256 bdab165d295f898d…): zwei unabhaengige Schreiber, dieselben 409 600 Byte, alle 800 Sektoren an derselben Stelle. Genau deshalb wird hier kein Duplikat angelegt — die Gleichheit IST der Beleg. 409600 Byte = 40 Zylinder x 2 Koepfe x 10 Sektoren x 512 Byte, OHNE Kopf - libdsks `nwasp_open()` (Z. 71-94) prueft nichts, es gibt keine Kennung. Die Anordnung ist KOPF-DUR (SIDES_OUTOUT: erst die ganze Seite 0, dann Seite 1), und innerhalb der Spur liegen die Sektoren GESKEWT: `skew[10] = {1,4,7,0,3,6,9,2,5,8}` (Z. 127), wobei skew[s-1] der physische Platz des logischen Sektors s ist. Versatz: `204800*head + 5120*cylinder + 512*skew[sector-1]` (Z. 147). Geometrie fest nach `nwasp_getgeom()` (Z. 286-301) mit `dg_secbase = 1`. Der Treiberkopf nennt seine eigene Skew-Behandlung ausdruecklich \"an abuse of libdsk ... cpmtools doesn't support the type of skewing done by the microbee (sector 1 doesn't map to sector 1)\".",
       "test": "test_nanowasp_gegen_libdsk",
       "oracle": "libdsk",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einem gelesenen Treiber; keine Zeile fremden Quellcodes uebernommen",
@@ -824,6 +824,30 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
       "content": "OUTBACK heisst: Kopf 0 nach aussen, Kopf 1 wieder zurueck, also `spur = 2*zylinder - 1 - zyl` fuer Kopf 1 — **dasselbe Gesetz, das MF-1027 an `v9t9` einzeln wiederentdeckt hat**. **Am Objekt nachweisbar:** die LETZTE logische Spur (Versatz 732672) traegt Zylinder 0 Kopf 1. Und `dg_secbase = 1` ist hier mitgeprueft, weil `dg_ps2ls()` ihn subtrahiert."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_qrst_160k.qrst",
+      "sha256": "c88948c79d6b328ea9e001dc59507bee234b5fe54622bd1ac78553a01e8bffa6",
+      "format": "qrst",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk GESCHRIEBEN.** Bis MF-1032 galt `P3-333` — „libdsk erzeugt keine Fixtures“ —, und das traf nicht: der Kanal fuer die Geometrie eines kopflosen Abbilds ist `-format <name>`, und fuer Formate mit eigener `getgeom` braucht es ihn nicht einmal. Reproduzierbar mit `dsktrans -itype qrst -otype qrst qrst_spec_160k.qrst <diese Datei>` (der Aufruf laeuft durch libdsks eigenen Leser UND seinen eigenen Schreiber; die Sektorversaetze rechnet also fremder Code).",
+      "test": "test_qrst_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT stammt aus der UFT-eigenen Pruefdatei, die DATEI hat libdsk geschrieben; keine Zeile fremden Quellcodes uebernommen",
+      "content": "QRST ist ein **gepacktes** Format; libdsks Ausgabe ist deshalb nicht byteidentisch mit der Eingabe (5363 statt 156679 Byte), sondern eine eigene, von libdsks Packer erzeugte Fassung derselben Diskette — **genau das macht sie zum Fremderzeugnis**. Gemessen: UFT liest sie als 40 x 1 x 8 x 512 und liefert **320 von 320** Sektoren byteidentisch mit denen aus der UFT-eigenen Datei, samt gleicher Sektornummern. Damit gehen alle drei Spursatz-Arten und der Packer einer fremden Hand durch UFTs Entpacker. Der Inhalt ist derselbe selbstbeschreibende Satz wie in `qrst_spec_160k.qrst`."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_myz80_voll.myz80",
+      "sha256": "88dfc26f238345fc315db306783d9613795264e72d7860f3defaac4736daea02",
+      "format": "myz80",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk GESCHRIEBEN.** Bis MF-1032 galt `P3-333` — „libdsk erzeugt keine Fixtures“ —, und das traf nicht: der Kanal fuer die Geometrie eines kopflosen Abbilds ist `-format <name>`, und fuer Formate mit eigener `getgeom` braucht es ihn nicht einmal. Reproduzierbar mit `dsktrans -itype myz80 -otype myz80 myz80_spec_1zyl.myz80 <diese Datei>` (der Aufruf laeuft durch libdsks eigenen Leser UND seinen eigenen Schreiber; die Sektorversaetze rechnet also fremder Code).",
+      "test": "test_myz80_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT stammt aus der UFT-eigenen Pruefdatei, die DATEI hat libdsk geschrieben; keine Zeile fremden Quellcodes uebernommen",
+      "content": "**Die VOLLE Datei: 8 388 864 Byte** = 256 Byte reservierter Bereich + 64 x 128 x 1024. Das ist die Groesse, die MF-1029 als Rueckfall gemessen hat und die das vorhandene Fixture bewusst NICHT hatte (es traegt einen Zylinder). libdsk fuellt die fehlenden Sektoren nach seiner eigenen Regel mit **0xE5** (`myz80_open()`: „it is not an error to try to read a missing sector“). Gemessen: UFT liest sie als 64 x 1 x 128 x 1024, und Zylinder 0 liefert **128 von 128** Sektoren byteidentisch mit denen aus der kurzen UFT-Datei. Damit ist die volle Geometrie erstmals an einem Fremderzeugnis geprueft."
     }
   ]
 }

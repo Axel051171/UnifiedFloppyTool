@@ -92,6 +92,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
+#include "uft/uft_track.h"
 
 extern const uft_format_plugin_t uft_format_plugin_qrst;
 
@@ -475,6 +476,72 @@ int main(void)
                            : "kein Spursatz gefunden");
         }
         free(kaputt);
+    }
+
+    /* ── MF-1033: libdsk hat eine QRST GESCHRIEBEN ─────────────────
+     *
+     * Bis MF-1032 galt P3-333 („libdsk erzeugt keine Fixtures"), und das
+     * traf nicht. `dsktrans -itype qrst -otype qrst` laeuft durch
+     * libdsks eigenen Leser UND seinen eigenen **Packer**; die Ausgabe
+     * ist deshalb NICHT byteidentisch mit der Eingabe (5363 statt
+     * 156679 Byte), sondern eine eigene Fassung derselben Diskette.
+     *
+     * Genau das macht sie zum Fremderzeugnis: alle drei Spursatz-Arten
+     * und ein fremder Packer gehen hier durch UFTs Entpacker. Damit
+     * steht `qrst` auf **T1b** statt T2. */
+    {
+        char fpfad[600], d[260];
+        uft_disk_t da, db;
+        int c, gleich = 0, ungleich = 0, spuren = 0;
+
+        snprintf(fpfad, sizeof(fpfad), "%s/%s", UFT_CORPUS_DIR,
+                 "libdsk_qrst_160k.qrst");
+        memset(&da, 0, sizeof(da));
+        memset(&db, 0, sizeof(db));
+        snprintf(pfad, sizeof(pfad), "%s/%s", UFT_CORPUS_DIR, FIXTURE);
+        if (p->open(&da, pfad, true) == UFT_OK
+            && p->open(&db, fpfad, true) == UFT_OK) {
+            for (c = 0; c < 40; c++) {
+                uft_track_t ta, tb;
+                memset(&ta, 0, sizeof(ta));
+                memset(&tb, 0, sizeof(tb));
+                if (p->read_track(&da, c, 0, &ta) != UFT_OK
+                    || p->read_track(&db, c, 0, &tb) != UFT_OK) continue;
+                spuren++;
+                if (ta.sector_count != tb.sector_count) {
+                    ungleich += (int)ta.sector_count;
+                } else {
+                    size_t s;
+                    for (s = 0; s < ta.sector_count; s++) {
+                        if (ta.sectors[s].data && tb.sectors[s].data
+                            && ta.sectors[s].data_len == tb.sectors[s].data_len
+                            && ta.sectors[s].id.sector == tb.sectors[s].id.sector
+                            && memcmp(ta.sectors[s].data, tb.sectors[s].data,
+                                      ta.sectors[s].data_len) == 0) gleich++;
+                        else ungleich++;
+                    }
+                }
+                uft_track_release(&ta);
+                uft_track_release(&tb);
+            }
+            snprintf(d, sizeof(d), "%d Spuren verglichen, %d Sektoren "
+                     "gleich, %d ungleich; fremde Datei %ux%ux%ux%u",
+                     spuren, gleich, ungleich, db.geometry.cylinders,
+                     db.geometry.heads, db.geometry.sectors,
+                     db.geometry.sector_size);
+            pruefe("MF-1033: das von libdsk GESCHRIEBENE Abbild liefert "
+                   "alle 320 Sektoren byteidentisch — fremder Packer, "
+                   "UFTs Entpacker (T1b)",
+                   gleich == 320 && ungleich == 0
+                   && db.geometry.cylinders == 40 && db.geometry.heads == 1
+                   && db.geometry.sectors == 8
+                   && db.geometry.sector_size == 512, d);
+            p->close(&da);
+            p->close(&db);
+        } else {
+            pruefe("MF-1033: das von libdsk geschriebene Abbild laesst "
+                   "sich oeffnen", 0, "eine der beiden Dateien fehlt");
+        }
     }
 
     free(datei);
