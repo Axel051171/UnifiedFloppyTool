@@ -341,7 +341,7 @@ formats are lifted (enforced by CI gate, see
 | IBM PC | IMG, IMA, IMD, TD0, CQM, DMK |
 | Amstrad/Spectrum | DSK, EDSK, TRD, SCL, MGT, TAP, TZX |
 | BBC/Acorn | SSD, DSD, ADF, UEF |
-| Japanese | D88, D77, NFD, HDM, XDF, DIM, FDX |
+| Japanese | D88, D77, NFD, DIM — **berichtigt MF-1064:** hier standen auch HDM, XDF und FDX, und für die drei gibt es **kein registriertes Plugin**. `fdx.c` (123 Z.) und `hdm.c` (187 Z.) liegen in der verwaisten `FloppyDevice`-Schicht und stehen beide in `docs/orphan_baseline.txt`; `fdx.c` nennt sich im eigenen Kopf „FDX heuristic raw sector image“ — es liest den FDX-Kopf gar nicht. `uft_xdf_api.c` (876 Z.) wird gerufen, ist aber in der Format-Registry nicht eingetragen. Gemessen über `gen_format_list.py`: kein `uft_format_plugin_fdx`, `_hdm`, `_xdf`. **hxcfe schreibt FDX** (`FDX68_FDX;RW`), der Erzeuger wäre also da — siehe P3-349 |
 | Flux | SCP, KryoFlux stream, HFE (v1/v2/v3), A2R, DFI |
 | Other | MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis |
 

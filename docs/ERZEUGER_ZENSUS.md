@@ -82,10 +82,30 @@ Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die **Dateiendung** — abgel
 **Was hier steht, ist also eine Untergrenze.** Die unzugeordneten Namen unten sind der Rueckstand, aus dem die naechsten Kandidaten kommen — jeder von Hand aufzuloesen und dann als gemessener Kanal einzutragen, nicht als Namenstafel.
 
 
-**hxcfe-Module mit `RW`, die keinem Plugin zugeordnet wurden (13):** `AMIGA_ADZ`, `ARBURG`, `ATARIST_STW`, `FDX68_FDX`, `GENERIC_XML`, `H17_HEATHKIT`, `HEATHKIT`, `HXCMFM_IMG`, `HXC_AFI`, `HXC_QD`, `SPECCYDOS_SDD`, `THOMSON_FD`, `VTR_IMG`
+**hxcfe-`RW`-Module, deren Endung KEIN Plugin traegt (13)** — ein Werkzeug im Baum schreibt sie, UFT liest sie nicht. Das ist die **Lückenliste**, und jeder Eintrag käme als **T1b** auf die Welt statt als T3, weil der Erzeuger vom ersten Tag an da ist (Preis der 1:2-Regel damit gedeckt):
+
+
+* `AMIGA_ADZ` — `*.adz`
+* `ARBURG` — `*.arburgfd`
+* `ATARIST_STW` — `*.stw`
+* `FDX68_FDX` — `*.fdx`
+* `GENERIC_XML` — `*.xml`
+* `H17_HEATHKIT` — `*.h17`
+* `HEATHKIT` — `*.h8d`
+* `HXCMFM_IMG` — `*.mfm`
+* `HXC_AFI` — `*.afi`
+* `HXC_QD` — `*.qd`
+* `SPECCYDOS_SDD` — `*.sdd`
+* `THOMSON_FD` — `*.fd`
+* `VTR_IMG` — `*.vtr`
+
+**hxcfe-`RW`-Module, deren Endung ein Plugin traegt, die aber trotzdem nicht zugeordnet wurden (0):** keine — hier fehlt die ZUORDNUNG, nicht das Format.
 
 
 **libdsk-Typen ohne Zuordnung (12):** `copyqm`, `floppy`, `gotek`, `gotek72`, `ldbs`, `ntwdm`, `rawob`, `rawoo`, `remote`, `simh`, `tele`, `ydsk`
+
+
+Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung**, nur einen internen Namen. `copyqm` und `tele` standen genau deshalb hier, obwohl UFT sie als `cqm` und `td0` längst liest — MF-1063 hat sie von Hand aufgelöst und gehoben. Der Rest dieser Liste ist ungeprüft und kann beides sein.
 
 
 ## Bereits belegt

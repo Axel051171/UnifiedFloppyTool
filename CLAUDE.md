@@ -141,7 +141,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Amstrad/Spectrum:** DSK, EDSK, TRD, SCL, MGT, TAP, TZX
 - **BBC/Acorn:** SSD, DSD, ADF, UEF
 - **Flux-Formate:** SCP, HFE (v1/v2/v3), KryoFlux RAW
-- **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
+- **Japanisch:** D88, D77, NFD, DIM — **berichtigt MF-1064:** hier standen auch HDM, XDF und FDX. Für die drei gibt es **kein registriertes Plugin** (gemessen über `gen_format_list.py`). `fdx.c` und `hdm.c` liegen in der verwaisten `FloppyDevice`-Schicht — beide in `docs/orphan_baseline.txt` —, und `fdx.c` nennt sich selbst „heuristic raw sector image“, liest den FDX-Kopf also nicht; `uft_xdf_api.c` ist nicht registriert. Das ist die Klasse MF-930/P3-204 (Leser ohne Tür), verschränkt mit der Klasse MF-509 (die Liste nennt, was gelesen werden SOLL). Ein Verdrahten wäre unter der EINFRIER-REGEL erlaubt — sie lässt ausdrücklich vorhandenen, unerreichbaren Code zu —, aber ein heuristischer Roh-Leser als FDX verdrahtet wäre genau die Wette, die MF-961 bei `86f` ABGELEHNT hat. Siehe P3-349
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
 > **Ehrlichkeits-Hinweis (MF-729) — kopflose Formate werden nur an der

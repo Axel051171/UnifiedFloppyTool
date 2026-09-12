@@ -338,13 +338,46 @@ def main() -> int:
     frei_h = sorted(n for n, d in hxc.items()
                     if d["rw"] == "RW" and n not in zugeordnet_h)
     frei_l = sorted(t for t in ldk if t not in zugeordnet_l)
-    out.append("**hxcfe-Module mit `RW`, die keinem Plugin zugeordnet "
-               "wurden (%d):** %s\n" % (len(frei_h), ", ".join(
-                   "`%s`" % n for n in frei_h) or "keine"))
+
+    # Ein unzugeordnetes Modul ist ZWEIERLEI, und das zu vermengen waere
+    # genau der Fehler, gegen den diese Tafel gebaut ist:
+    #   * seine Endung traegt ein Plugin  -> die ZUORDNUNG fehlt
+    #   * seine Endung traegt KEINES      -> das FORMAT fehlt
+    alle_ext = {e for e in ext_zaehler}
+    luecke, unklar = [], []
+    for n in frei_h:
+        (unklar if (hxc[n]["ext"] & alle_ext) else luecke).append(n)
+
+    out.append("**hxcfe-`RW`-Module, deren Endung KEIN Plugin traegt "
+               "(%d)** — ein Werkzeug im Baum schreibt sie, UFT "
+               "liest sie nicht. Das ist die **Lückenliste**, und "
+               "jeder Eintrag käme als **T1b** auf die Welt statt "
+               "als T3, weil der Erzeuger vom ersten Tag an da ist "
+               "(Preis der 1:2-Regel damit gedeckt):\n" % len(luecke))
+    out.append("")
+    for n in luecke:
+        out.append("* `%s` — %s" % (n, ", ".join(
+            "`*.%s`" % e for e in sorted(hxc[n]["ext"])) or "keine Endung"))
+    if not luecke:
+        out.append("* keine")
+    out.append("")
+    out.append("**hxcfe-`RW`-Module, deren Endung ein Plugin traegt, die "
+               "aber trotzdem nicht zugeordnet wurden (%d):** %s — "
+               "hier fehlt die ZUORDNUNG, nicht das Format.\n"
+               % (len(unklar), ", ".join("`%s`" % n for n in unklar)
+                  or "keine"))
     out.append("")
     out.append("**libdsk-Typen ohne Zuordnung (%d):** %s\n"
                % (len(frei_l), ", ".join("`%s`" % t for t in frei_l)
                   or "keine"))
+    out.append("")
+    out.append("Bei libdsk lässt sich das nicht trennen: seine Typen "
+               "tragen **keine Dateiendung**, nur einen internen Namen. "
+               "`copyqm` und `tele` standen genau deshalb hier, obwohl "
+               "UFT sie als `cqm` und `td0` längst liest — "
+               "MF-1063 hat sie von Hand aufgelöst und gehoben. Der "
+               "Rest dieser Liste ist ungeprüft und kann beides "
+               "sein.\n")
     out.append("")
     out.append("## Bereits belegt\n")
     out.append("")
