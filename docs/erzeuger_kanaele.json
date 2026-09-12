@@ -83,6 +83,11 @@
       "kanal": "keiner",
       "werkzeug": "dsktrans -itype imd -otype raw -format mgt800",
       "bemerkung": "MF-1064, gemessen und VERWORFEN. libdsk fuehrt `mgt800` in seiner Formatliste, und der Lauf liefert 819 200 Byte mit 1600/1600 Mustertreffern — sieht nach einem Fixture aus. Die Gegenprobe entscheidet dagegen: DIESELBE Datei kommt heraus, wenn man `-format` ganz weglaesst, und auch mit `-format pcw800`. Alle drei sha256-identisch. libdsk reicht die IMD-Sektoren also in DATEIREIHENFOLGE durch; der Schalter aendert beim Schreiben eines FLACHEN Ziels nichts. Ein so erzeugtes Abbild waere eine Tautologie wie bei `akai_s900` (MF-1061). **Der Unterschied zu MF-1032/1033, wo derselbe Schalter trug:** dort war die RAW-Seite die EINGABE und brauchte eine Geometrie, das Ziel war ein Container mit eigener Anordnung. Beim Schreiben nach raw bestimmt die Eingabe die Reihenfolge. Der Kanal taugt also fuer Container, nicht fuer flache Ziele."
+    },
+    "_werkzeuge_im_baum": {
+      "kanal": "keiner",
+      "werkzeug": "gemessen MF-1069",
+      "bemerkung": "**Kein Format-Eintrag, sondern das Ergebnis einer Suche.** Der Zensus misst hxcfe und libdsk; im Baum liegen aber weitere GEBAUTE Werkzeuge, und ob eines davon ein offenes Format schreibt, war nie gemessen. Gemessen wurde es am 2026-09-12, durch Ausfuehren mit `--help`: **`Jacknife/samaritan.exe`** baut Atari-ST-Abbilder mit eigener Geometrie (`-t` Spuren, `-s` Sektoren, `-i` Seiten) — `st` und `msa` stehen beide auf T1b; **`nibtools/nibconv.exe`** wandelt NIB/NB2/D64/G64 nach **D64 oder G64** — `d64` ist T1b, `g64` ist T1; **`mkatr/mkatr.exe`** schreibt ATR — T1b; **`libcbmimage/cbmimage.exe`** gibt zu `--help` nichts aus. **Keines der vier trifft ein offenes T2-Format.** Damit ist die ueber Werkzeuge IM BAUM loesbare Teilmenge der Tier-Hebungen erschoepft — was fuer die 26 verbliebenen T2-Formate bleibt, sind: `mfi` (blockiert auf P3-329, zlib erreicht keine C-Datei), `ipf` (Port seit P3-353 moeglich, braucht ein Gutachten statt Code) und 24 Formate, fuer die kein Werkzeug im Baum einen Schreiber hat. Die naechste Quelle ist deshalb keine weitere Messung an vorhandenen Werkzeugen, sondern ein BESCHAFFTES Werkzeug oder ein echtes Abbild."
     }
   }
 }
