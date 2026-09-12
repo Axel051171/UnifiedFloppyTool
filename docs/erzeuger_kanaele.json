@@ -1,0 +1,58 @@
+{
+  "_doc": "Gemessene Erzeuger-Kanaele je Format. Gespeist wird diese Datei AUSSCHLIESSLICH aus Laeufen, die stattgefunden haben — nie aus einer Modulliste, nie aus einer Vermutung. Ein Format, das hier FEHLT, ist NICHT GEMESSEN; das ist kein Urteil ueber seine Machbarkeit. Gelesen von scripts/gen_erzeuger_zensus.py.",
+  "_warum": "Die R/W-Spalte einer Modulliste ist eine Zusage des Werkzeugs ueber sich selbst und luegt in beide Richtungen. TI994A_V9T9 traegt RW und lieferte aus einem RAW-Abbild 100 % Fuellbyte (MF-1021), aus einem IMD-Traeger 720 von 720 richtigen Sektoren (MF-1060). APPLE2_DO traegt dasselbe RW und liefert aus derselben Eingabe 0 Byte (MF-1061). Nur der ausgefuehrte Lauf entscheidet.",
+  "_kanal": "raw = rohes Sektorabbild genuegt | layout:<name> = hxcfes -uselayout wird gebraucht | imd = ein IMD-Traeger, der die Geometrie selbst mitbringt | keiner = gemessen, dieser Weg traegt nicht",
+  "_pruefung": "Ein Kanal gilt erst als tragend, wenn das Erzeugnis DREI Fragen besteht: (1) richtige Groesse, (2) kein Fuellbyte (MF-1021 — hxcfe lieferte einmal 184 320 Byte zu 100 % 0xF6), (3) UNTERSCHEIDUNGSKRAFT — passt eine falsche Anordnung genauso gut, ist die Datei als Beleg wertlos (Klasse MF-1014/1026/1028).",
+  "formate": {
+    "v9t9": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TI994A_V9T9",
+      "bemerkung": "MF-1060. DSSD 184 320 B: 720/720 Mustertreffer, Gegenprobe LINEAR nur 18 — unterscheidet. SSSD 92 160 B unterscheidet NICHT (einseitig fallen beide Formeln zusammen), DSDD 368 640 B ist hxcfe misslungen (50,2 % 0xF6, 9 statt 18 Sektoren je Spur)."
+    },
+    "xdm86": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TI994A_V9T9",
+      "bemerkung": "MF-1060. Dasselbe Abbild wie `v9t9` — beide Plugins lesen 184 320 Byte als 40 x 2 x 9 x 256."
+    },
+    "vdk": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:DRAGON3264_VDK",
+      "bemerkung": "MF-1061. Zweiseitig 368 652 B = 12 Kopf + 40 x 2 x 18 x 256; hxcfe setzt den Kopf selbst. Drei Anordnungs-Hypothesen: zylinder-verschraenkt 1440/1440, kopf-dur 36, kopf-dur rueckwaerts 36 — unterscheidet. EINSEITIG waere es wertlos."
+    },
+    "d77": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:NEC_D88",
+      "bemerkung": "MF-1061. 348 848 B, voller D88-Container: 80 von 164 Spurzeigern, Sektorkoepfe C/H/R/N, Groessenfeld bei 0x1C trifft die Dateilaenge (Beleg am Objekt). Ueberhang 21 168 = 32 + 656 + 80 x 16 x 16."
+    },
+    "jv3": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TRS80_JV3",
+      "bemerkung": "MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2200 — genau die Kopfgroesse, die MF-1017 von 0x2300 berichtigt hat, hier von fremder Hand bestaetigt. 400/400 Mustertreffer."
+    },
+    "trd": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:ZXSPECTRUM_TRD",
+      "bemerkung": "MF-1061, am Rand gemessen. 655 360 B ohne Ueberhang, 2560/2560 Mustertreffer."
+    },
+    "do": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:APPLE2_DO",
+      "bemerkung": "MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus)."
+    },
+    "po": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:APPLE2_PO",
+      "bemerkung": "MF-1061, P3-348. Wie `do`: rc = 0, Datei 0 Byte."
+    },
+    "akai_s900": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -uselayout:AKAIS950_DD_800KB",
+      "bemerkung": "MF-1061, gemessen und VERWORFEN. hxcfe zerlegt ein flaches 819 200-Byte-Abbild mit dieser Anordnung richtig — 800 von 800 Sektoren tragen ihren eigenen Namen, und die Gegenprobe mit ENSONIQ_DD_800KB (gleiche Groesse, 10 x 512 statt 5 x 1024) trifft nur 320 von 1600. Die ZERLEGUNG ist also eine echte zweite Hand auf die Geometrie. Aber das Zurueckschreiben ins flache Format ist LAYOUT-UNABHAENGIG byteidentisch — auch ueber die Ensoniq-Anordnung kommt dieselbe Datei heraus. Ein so erzeugtes Fixture waere eine Tautologie, kein Beleg."
+    },
+    "korg_dss1": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -uselayout:KORGDSS1_DD_800KB",
+      "bemerkung": "MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch."
+    }
+  }
+}
