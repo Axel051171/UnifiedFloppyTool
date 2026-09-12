@@ -11,7 +11,7 @@ src/formats/2img/uft_2img_parser_v2.c:487:IMG2_PARSER_TEST:14
 src/formats/adf/uft_adf_parser_v2.c:517:ADF_PARSER_TEST:17
 src/formats/adf/uft_adf_parser_v3.c:470:ADF_V3_TEST:13
 src/formats/amstrad/uft_edsk_parser.c:600:EDSK_PARSER_TEST:12
-src/formats/apple/uft_2mg_parser.c:546:IMG2_PARSER_TEST:9
+src/formats/apple/uft_2mg_parser.c:572:IMG2_PARSER_TEST:9
 src/formats/atari/uft_atx_parser_v2.c:669:ATX_PARSER_TEST:12
 src/formats/atari/uft_pro_parser_v2.c:489:PRO_PARSER_TEST:20
 src/formats/atari/uft_stx_parser.c:715:STX_PARSER_TEST:10

@@ -776,6 +776,30 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einem gelesenen Treiber; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Kopf, 1 = Zylinder, 2 = LOGISCHE Sektornummer (1..10), 3..7 = \"UFT-N\", Rest 0x5A. Bei Versatz 0 steht deshalb der logische Sektor **4** (weil skew[3] == 0) - das ist zugleich der Nachweis, dass die Datei keinen Kopf hat. **Und der Inhalt ist von FREMDER HAND nachgewiesen:** libdsks aus dem Klon gebaute Werkzeuge (siehe docs/ORACLES.md) lesen die Datei - `dskid` meldet 40 Zylinder, 2 Koepfe, 10 Sektoren, 512 Byte und \"First sector: 1\" - und `dsktrans -itype nanowasp -otype raw` liefert 409600 Byte, in denen **alle 800 Sektoren in logischer Reihenfolge** stehen. Dieser zweite Lauf prueft Skew UND kopf-dure Anordnung zugleich, denn nur wenn beide stimmen, kommt die Diskette sortiert heraus. origin bleibt `derived`, weil die Datei von UFT ERZEUGT wurde."
+    },
+    {
+      "file": "tests/corpus_free/2img_spec_140k.2img",
+      "sha256": "cdce8709bcdf8e7e00fbd0d4e867e0a7eb863667c79c73e93c86c74771e96a94",
+      "format": "2img",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1031), nach MAMEs ap_dsk35.cpp",
+      "source": "Kopf 64 Byte nach der 2IMG-v1-Beschreibung, Feldlagen gegen MAMEs `src/lib/formats/ap_dsk35.cpp` gehalten (BSD-3-Clause, nur gelesen): `s_formats[]` Z. 452-459 nennt die drei gueltigen Paare aus Anordnung und Datenlaenge, `identify()` Z. 463-501 die Kennungen `\"2IMG\"` UND `\"GMI2\"` samt der Struktur-Probe `Versatz + Laenge == Dateigroesse`, `load()` Z. 503-580 die Geometrie. Diese Datei: Anordnung 1 (ProDOS), 143360 Nutzbytes = 35 Spuren x 1 Kopf x 16 Sektoren x 256 Byte, 280 ProDOS-Bloecke, Datenversatz 64.",
+      "test": "test_2img_gegen_mame",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Feldlagen folgen einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf, Sektor und Versatz gebildetes Muster. Ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war, und bei einem Fehler, welche Nachbarstelle geliefert wurde. **Von fremder Hand nachgewiesen:** `hxcfe -infos` meldet 35 Spuren, 1 Seite, 560 Sektoren, 143360 Byte, 0 schlechte Sektoren; `hxcfe -conv:APPLE2_DO` gibt die 143360 Nutzbytes **byteidentisch** zurueck (560 von 560 Sektoren). origin bleibt `derived`, weil UFT die Datei geschrieben hat - fremd ist der LESER, nicht der Erzeuger (P3-333)."
+    },
+    {
+      "file": "tests/corpus_free/2img_spec_800k.2img",
+      "sha256": "1cf73841b5bd11ea36eb5e8518269efcf7af2aacf7716bf422ce00e5ec3be956",
+      "format": "2img",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1031), nach MAMEs ap_dsk35.cpp",
+      "source": "Kopf 64 Byte nach der 2IMG-v1-Beschreibung, Feldlagen gegen MAMEs `src/lib/formats/ap_dsk35.cpp` gehalten (BSD-3-Clause, nur gelesen): `s_formats[]` Z. 452-459 nennt die drei gueltigen Paare aus Anordnung und Datenlaenge, `identify()` Z. 463-501 die Kennungen `\"2IMG\"` UND `\"GMI2\"` samt der Struktur-Probe `Versatz + Laenge == Dateigroesse`, `load()` Z. 503-580 die Geometrie. Diese Datei: Anordnung 1 (ProDOS), 409600 Nutzbytes = 3,5\" einseitig, 800 ProDOS-Bloecke von 512 Byte. Die Anordnung ist **Spur aussen, Kopf innen**, und die Sektorzahl je Spur kommt aus der **Zonentafel** `ns = 12 - Spur/16` (load() Z. 560), also 12/11/10/9/8 fuer die Spurbereiche 0-15/16-31/32-47/48-63/64-79. Die Tafel bestaetigt sich aus sich selbst: 16 x (12+11+10+9+8) x 512 = 409600 ist genau die Laenge in MAMEs eigenem `s_formats[]`.",
+      "test": "test_2img_gegen_mame",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - siehe den Eintrag der 5,25\"-Datei",
+      "content": "SELBSTBESCHREIBEND wie die 5,25\"-Datei, aber mit 512 Byte je Sektor und der Zonentafel. **Hier ist die fremde Hand ausdruecklich NICHT die Abnahme:** hxcfes `APPLE2_2MG`-Modul hat keine Zonentafel und meldet fuer diese Datei 133 Spuren x 12 Sektoren x 256 Byte, also 408576 statt 409600 Byte (gemessen). Abgenommen ist die Datei deshalb gegen MAME und gegen die Arithmetik der Zonentafel, die sich selbst auf die Laenge in MAMEs Tafel aufrechnet - und der Test prueft alle 800 Sektoren einzeln gegen ihren eigenen Namen, was Zonentafel und Spurversatz zugleich faellt, wenn eines von beiden falsch ist."
     }
   ]
 }

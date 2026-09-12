@@ -3,6 +3,21 @@
  * @brief Apple II 2MG universal disk image
  * @version 3.8.0
  */
+/*
+ * ── WARNUNG (MF-1031): nur die 5,25"-Groesse, und nur `"2IMG"` ──────
+ *
+ * Diese Datei steht in `docs/orphan_baseline.txt` — gebaut, von
+ * niemandem gerufen, und deshalb NICHT repariert (MF-699).
+ *
+ * Sie kennt genau eine Geometrie (`35*16*256`) und verlangt die
+ * Kennung `"2IMG"`. MAME nimmt auch die byte-vertauschte `"GMI2"` an,
+ * mit benanntem Erzeuger (`ap_dsk35.cpp` Z. 469-470), und kennt drei
+ * gueltige Laengen: 143360 (5,25"), 409600 und 819200 (3,5", mit der
+ * Zonentafel `ns = 12 - Spur/16`).
+ *
+ * Geprueft und abgenommen ist das in `src/formats/2img/uft_2img.c`
+ * gegen `tests/test_2img_gegen_mame.c`.
+ */
 // 2mg.c - Apple IIgs 2MG implementation (C11)
 
 #include "uft/floppy/uft_floppy_device.h"

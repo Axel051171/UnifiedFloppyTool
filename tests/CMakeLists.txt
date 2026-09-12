@@ -353,6 +353,56 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_2img_gegen_mame")
+        # MF-1031: `2img` stand auf T3. Gemessen gegen MAMEs
+        # `src/lib/formats/ap_dsk35.cpp` (BSD-3-Clause; nur GELESEN,
+        # Kanal Spec nach MF-695) und gegen hxcfes `APPLE2_2MG`-Modul
+        # (GPL-2; nur AUSGEFUEHRT). Acht Befunde, zwei davon schwer:
+        #
+        #   Kennung     nur `"2IMG"` -> MAME nimmt auch die
+        #               byte-vertauschte `"GMI2"`, mit benanntem
+        #               Erzeuger: „Bernie ][ The Rescue wrote 2MGs with
+        #               the signature byte-flipped, other fields are
+        #               valid" (Z. 469-470). Jede solche Datei wurde
+        #               ABGEWIESEN.
+        #   Geometrie   IMMER 35 x 1 x 16 x 256, Spurzahl aus
+        #               `Datenlaenge / 4096` und auf 80 gedeckelt ->
+        #               eine 3,5"-Apple-Diskette hat **512-Byte-
+        #               Sektoren** und eine **Zonentafel**
+        #               (`ns = 12 - Spur/16`, Z. 560), also 12/11/10/9/8.
+        #               Bei 819200 Nutzbytes waren damit **327680**
+        #               erreichbar und der Rest nicht.
+        #   Laenge      byte-vertauschte Datenlaenge nicht erkannt
+        #               (MAME berichtigt sie, Z. 483-486)
+        #   Sonde       `(void)file_size` -> MAMEs Struktur-Probe
+        #               `Versatz + Laenge == Dateigroesse` (Z. 497) war
+        #               nicht nachbaubar. Die Falle aus MF-1029, zum
+        #               **fuenften** Mal.
+        #   Tafel       es gab keine: jede Datenlaenge wurde angenommen
+        #   Versatz     ein Datenversatz unter 64 wurde STILL auf 64
+        #               gehoben
+        #   Ueberlauf   `(uint8_t)(Datenlaenge / 4096)` wird bei >= 1 MB
+        #               zu 0, und die Zeile danach setzte 35 — eine
+        #               1-MB-2MG wurde still eine 35-Spur-Diskette
+        #   Schreiben   dieselbe erfundene Geometrie (MF-931)
+        #
+        # **Die beiden Haende widersprechen sich zweimal, und beide Male
+        # gewinnt MAME mit Begruendung:** hxcfe weist `"GMI2"` ohne Grund
+        # ab, und fuer die 3,5"-Datei meldet es 133 Spuren x 12 x 256
+        # (1024 Byte zu wenig) — es hat keine Zonentafel. MAMEs Tafel
+        # rechnet sich dagegen selbst auf: 16 x (12+11+10+9+8) x 512 =
+        # 409600, genau die Laenge in seinem eigenen `s_formats[]`.
+        #
+        # **Die Pruefdateien sind kein Selbstgespraech:** hxcfe liest
+        # `2img_spec_140k.2img` (35 Spuren, 560 Sektoren, 0 schlecht) und
+        # gibt die Nutzlast ueber `-conv:APPLE2_DO` **byteidentisch**
+        # zurueck. T2 und nicht T1b, weil T1b einen fremden ERZEUGER
+        # verlangt (P3-333).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
         # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
         # NanoWasp-Datei lesen**. Gemessen gegen libdsks

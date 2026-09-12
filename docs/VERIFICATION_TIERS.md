@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 36 |
-| T2 | 32 |
-| T3 | 18 |
+| T2 | 33 |
+| T3 | 17 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -62,6 +62,31 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `t1k` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `trd` | **T1b** | `test_corpus_gw_geometrie`, `test_kurze_datei_erfindet_keine_sektoren` | — | — | 1 |
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
+| `2img` | **T2** | `test_2img_gegen_mame`, `test_2img_nib_stride`, `test_format_probe_fuzz`, `test_plugin_probe_real` | MAME `src/lib/formats/ap_dsk35.cpp` (**BSD-3-Clause**; **nur gelesen**, Kanal *Spec* nach MF-695). Fuenf Stellen: Z. 452-459 (`s_formats[]`), Z. 469-470 (die byte-vertauschte Kennung samt Erzeuger), Z. 483-486 (die byte-vertauschte Datenlaenge), Z. 497-499 (die Struktur-Probe), Z. 558-567 (3,5"-Zonentafel, Spur aussen / Kopf innen, Sektornummer = Stelle in der Datei). **Zweite, unabhaengige Hand durch AUSFUEHRUNG**: `hxcfe`s `APPLE2_2MG`-Modul (GPL-2, nur ausgefuehrt) liest die 5,25"-Pruefdatei und gibt ihre Nutzlast byteidentisch zurueck — und weicht an zwei Stellen ab, die im Befund benannt sind. | MF-1031 — acht Befunde, und **zwei davon trafen jede 3,5"-Datei**.
+
+**(1) Die byte-vertauschte Kennung `"GMI2"` wurde abgewiesen.** MAME nimmt sie ausdruecklich an, mit **benanntem Erzeuger**: „Bernie ][ The Rescue wrote 2MGs with the signature byte-flipped, other fields are valid“ (Z. 469-470). UFT verlangte `"2IMG"` in Sonde UND `open`.
+
+**(2) Die 3,5"-Geometrie war erfunden.** UFT rechnete fuer JEDE Datei `35 x 1 x 16 x 256` und leitete die Spurzahl aus `Datenlaenge / 4096` ab, gedeckelt auf 80. Eine 3,5"-Apple-Diskette hat **512-Byte-Sektoren** und eine **Zonentafel**: `ns = 12 - Spur/16` (MAME Z. 560), also 12/11/10/9/8. Gemessen an 819200 Nutzbytes: **327680 Byte erreichbar**, der Rest nicht — und die 1280 gemeldeten „Sektoren“ waren 256-Byte-Haelften von 512-Byte-Bloecken mit falschen Nummern.
+
+**(3) Eine byte-vertauschte Datenlaenge wurde nicht erkannt.** MAME prueft `format.data_length == swapendian_int32(data_length)` und **berichtigt** (Z. 483-486); UFT rechnete mit dem vertauschten Wert weiter.
+
+**(4) Die Sonde verwarf die Dateigroesse** (`(void)file_size`), womit MAMEs Struktur-Probe `Versatz + Laenge == Dateigroesse` (Z. 497-499) gar nicht nachbaubar war. Das ist die Falle aus **MF-1029**, zum **fuenften** Mal in diesem Baum.
+
+**(5) Es gab keine Tafel.** Jede Datenlaenge wurde angenommen und die Geometrie daraus geraten; MAME weist ab, was nicht in `s_formats[]` steht.
+
+**(6) Ein Datenversatz unter 64 wurde still auf 64 gehoben.** Eine Datei, die ihre Daten bei Versatz 0 behauptet, wurde woanders gelesen, als sie sagt — eine stille Veraenderung.
+
+**(7) Ein Ueberlauf VOR der Schranke.** `p->cylinders` war ein `uint8_t`; `(uint8_t)(Datenlaenge / 4096)` wird bei >= 1 MB zu 0, und die Zeile danach lautete `if (p->cylinders == 0) p->cylinders = 35;`. Eine 1-MB-2MG wurde **still** zu einer 35-Spur-Diskette; die Schranke `> 80` kam erst danach.
+
+**(8) Die Schreibseite trug denselben Fehler** (MF-931: die Schreibseite gegen die Leseseite halten).
+
+**Zwei unabhaengige Haende, und sie widersprechen sich zweimal — beide Male gewinnt MAME mit Begruendung.** `hxcfe`s `APPLE2_2MG`-Modul weist `"GMI2"` ab, **ohne Grund zu nennen**; und fuer die 409664 Byte grosse 3,5"-Datei meldet es **133 Spuren x 12 Sektoren x 256 Byte** (408576 Byte, 1024 zu wenig) — es hat keine Zonentafel. MAMEs Tafel rechnet sich dagegen **selbst auf**: `16 x (12+11+10+9+8) x 512 = 409600` und das Doppelte `819200` sind genau die beiden 3,5"-Laengen in seinem eigenen `s_formats[]`. Ein Orakel ist eine Referenz, kein Beweis (MF-1015).
+
+**Die Pruefdateien sind kein Selbstgespraech.** `hxcfe -infos` liest `2img_spec_140k.2img` als 35 Spuren, 1 Seite, 560 Sektoren, 143360 Byte, 0 schlechte; `hxcfe -conv:APPLE2_DO` gibt die Nutzlast **byteidentisch** zurueck (560 von 560 Sektoren). Jeder Sektor benennt sich selbst, also sagt ein Leseergebnis nicht nur DASS Bytes kamen, sondern ob die richtige Stelle getroffen war.
+
+**Was NICHT geaendert wurde:** die Sektornummern folgen weiter der **Dateireihenfolge**, wie bei `do` (MF-716) und `po` — das ist dieselbe Zuordnung, die MAME trifft (`sectors[si].sector = i`, Z. 567). Und `blocks` bei 0x14 wird geprueft, nicht als Quelle benutzt: MAMEs Rueckfall `get_u24le(&header[0x1d]) / 2` liest die **oberen drei Bytes der Datenlaenge** — 0x1D..0x1F liegen in dem 4-Byte-Feld bei 0x1C — und reduziert sich auf `Datenlaenge / 512`. Eine Fundstelle, die wie ein eigenes Feld aussieht, ist der obere Teil eines anderen.
+
+**T2 und nicht T1b**, weil T1b einen fremden *Erzeuger* verlangt; hier hat eine fremde Umsetzung nur *gelesen* (P3-333). | — |
 | `86f` | **T2** | `test_86f_spec_conformance` | 86Box/docs, dev/formats/86f.rst — die Beschreibung des Formats durch dessen URHEBER (abgerufen 2026-09-08). Zweite, unabhaengige Quelle: Digitoxin1/DiskImageTool, ImageFormats/86F/86FImage.vb, ein eigenstaendiger Leser mit demselben Magic und derselben Kopfgroesse (belegt MF-708). KEINE Zeile fremden QUELLCODES gelesen — weder 86Box' fdd_86f.c noch fluxfox' Rust-Leser; der Kanal ist die Spezifikation (MF-695). | MF-961 — der Leser ist gegen die Spezifikation neu gefasst und an einer ECHTEN Datei abgenommen. Vorzustand: das Plugin probte auf "86BX", ein Magic, das in keiner 86F-Datei steht, nahm einen 32-Byte-Kopf an und erfand eine 12-Byte-Spurtabelle mit offset/length/flags/sectors/rpm — es wies damit JEDE echte Datei ab und meldete dabei Read/Flux als SUPPORTED (MF-707/708). Neu gefasst: Magic "86BF", 8-Byte-Kopf, 32-Bit-Spur-Offsets je Seite je Spur, Spurkopf mit Zellzahl (Disk-Flags Bit 7 und 12), MFM-Bitstrom durch den geprueften uft_mfm_decode_track(). An der Datei nachgemessen, BEVOR eine Zeile geschrieben wurde: Tabelle 512 Eintraege, 172 belegt (86 Zyl x 2 Seiten), Spur-Flags 0x000A = MFM/250 kbps, Ende der letzten Spur == Dateigroesse (Differenz 0), Bitstrom MSB zuerst mit 54 Treffern 0x4489 je Spur = 9 Sektoren. Abnahme: 7 von 7 Spuren, 63 von 63 Sektoren byteweise gegen eine unabhaengig nachgerechnete FORMEL (Sektor k = 512 x Byte (k mod 256), 0 von 720 Abweichungen an der beiliegenden .img gemessen). NICHT verifiziert: Schreiben (write_track sagt ab), FM/M2FM/GCR-Spuren (kein Bitstrom-Dekoder), die Oberflaechenbeschreibung (schwache Bits). T2 und nicht T1b, weil der Erzeuger der .86f nach Messung des Scouts sehr wahrscheinlich fluxfox selbst ist und nicht das KANONISCHE 86Box — eine fremde Hand, aber nicht die richtige. | — |
 | `adf_arc` | **T2** | `test_acorn_adfs_identity` | DiscImageManager (geraldholdsworth), als Spec gelesen: die drei verbliebenen Groessen sind gegen DiscImage_ADFS.pas:73-79 und die mitgelieferten Leer-Abbilder geprueft — ADFS_D.adf/ADFS_E.adf = 819200 (80x2x5x1024), ADFS_F.adf = 1638400 (80x2x10x1024), 327680 = ADFS M einseitig (80x1x16x256). 655360 wurde mit MF-654 ENTFERNT: es ist ADFS L, gehoert uft_adl.c und liegt spurverschraenkt, was dieser lineare Leser falsch getroffen haette. Geprueft wurden Groessen und Geometrien — NICHT die Verzeichnisstruktur. | MF-654 | — |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
@@ -198,7 +223,6 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 
 **Am Rand gefunden, nicht angefasst:** `src/formats/victor/victor9k.c` (verwaist, `docs/orphan_baseline.txt:212`) fuehrt eine **dritte** Geometrie — flach 15 Sektoren fuer Spur 38..79, Summe 1285 Sektoren = 657920 Byte, eine Groesse, die keine Victor-Diskette hat. Es gibt keinen Aufrufer; ein Hinweis steht jetzt in der Datei, damit die naechste Hand die falschen Zahlen nicht erbt (MF-699: erst der Ersatz, dann die Loeschung). | — |
 | `woz` | **T2** | `test_apple_gcr_6and2`, `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
-| `2img` | **T3** | `test_2img_nib_stride`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `cas` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `dcm` | **T3** | — | — | — | — |

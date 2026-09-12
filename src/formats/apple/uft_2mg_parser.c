@@ -17,6 +17,32 @@
  * - 409,600 bytes → 3.5" 400K (80 tracks × 10 sectors × 512 bytes)
  * - 1,474,560 bytes → 3.5" 1.44M (80 tracks × 36 sectors × 512 bytes)
  */
+/*
+ * ── WARNUNG (MF-1031): die Groessentafel hier ist ERFUNDEN ──────────
+ *
+ * Diese Datei steht in `docs/orphan_baseline.txt` — sie wird gebaut und
+ * von niemandem gerufen. Sie wird NICHT repariert (MF-699: erst der
+ * Ersatz, dann die Loeschung); dieser Hinweis haelt nur fest, was an
+ * ihr gemessen falsch ist, damit die naechste Hand nicht daraus
+ * abschreibt.
+ *
+ * `SIZE_PRODOS_400K` ist mit „80 x 10 x 512" kommentiert und
+ * `SIZE_PRODOS_800K` mit „80 x 20 x 512". **Beides gibt es nicht.**
+ * Eine 3,5"-Apple-Diskette hat eine **Zonentafel**: `ns = 12 -
+ * Spur/16`, also 12/11/10/9/8 Sektoren fuer die Spurbereiche
+ * 0-15/16-31/32-47/48-63/64-79 (MAME `src/lib/formats/ap_dsk35.cpp`
+ * `load()` Z. 560, BSD-3-Clause, nur gelesen). 409600 Byte sind
+ * `16 x (12+11+10+9+8) x 512` **einseitig**, 819200 dasselbe mit **zwei
+ * Koepfen** — nicht 20 Sektoren je Spur.
+ *
+ * Dazu fehlt die byte-vertauschte Kennung `"GMI2"`, die MAME
+ * ausdruecklich annimmt („Bernie ][ The Rescue wrote 2MGs with the
+ * signature byte-flipped", Z. 469-470).
+ *
+ * Die geprueften Zahlen stehen in `src/formats/2img/uft_2img.c` und
+ * `include/uft/formats/uft_2img.h`, abgenommen von
+ * `tests/test_2img_gegen_mame.c`.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

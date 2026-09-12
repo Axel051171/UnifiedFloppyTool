@@ -751,24 +751,72 @@ TEST(stx_requires_the_pasti_magic_including_its_nul) {
  * the symbol names differ from the old test file names: test_2mg_plugin.c and
  * test_dsk_plugin.c named formats that exist in the registry as `2img` and
  * `dsk_cpc`.
- *   2img     LE32 magic "2IMG" 0x474D4932, header 64  (uft_2img.c:28,29)
+ *   2img     LE32 magic "2IMG" 0x474D4932 **oder** "GMI2" 0x32494D47,
+ *            header 64, plus MAMEs Tafel aus Anordnung und Datenlaenge
+ *            (uft_2img.c, MF-1031)
  *   dsk_cpc  "EXTENDED" or "MV - CPC", >= 8 bytes      (uft_dsk_cpc.c)
  *--------------------------------------------------------------------------*/
 
-TEST(img2_requires_its_four_byte_magic) {
+/* ── BERICHTIGT MF-1031 ──────────────────────────────────────────────
+ *
+ * Diese Zusage hat einen Defekt BEWACHT. Sie verlangte woertlich, dass
+ * `"GMI2"` **abgewiesen** wird („reversed") — und MAME nimmt die
+ * byte-vertauschte Kennung ausdruecklich an, mit benanntem Erzeuger:
+ * „Bernie ][ The Rescue wrote 2MGs with the signature byte-flipped,
+ * other fields are valid" (`ap_dsk35.cpp` Z. 469-470). Jede solche
+ * Datei wies UFT ab, und diese Zeile hielt das fest.
+ *
+ * Zweitens nahm sie einen Kopf an, in dem **alles ausser der Kennung
+ * null** ist — Datenversatz 0, Datenlaenge 0. MAMEs `identify()` weist
+ * das ab: der Versatz darf nicht in den Kopf zeigen, und die
+ * Datenlaenge muss in `s_formats[]` stehen.
+ *
+ * Das ist der **dritte** Fall dieser Gestalt in derselben Runde — und
+ * der zweite in DIESER Datei: MF-1016 hat hier die Zeile „41..79
+ * tracks are only valid when even" entfernt, die aus `jv1`s erfundener
+ * zweiter Seite folgte, und MF-1017 dasselbe an
+ * `test_register_all_formats.c`. Die Tests, die je ein Loch
+ * geschlossen haben, hielten das Nachbarloch fuer richtig.
+ */
+TEST(img2_nimmt_beide_kennungen_und_prueft_die_tafel) {
     uint8_t hdr[128];
     int conf = -1;
 
+    /* Ein STRUKTURELL gueltiger Kopf: Anordnung 1 (ProDOS),
+     * Datenversatz 64, Datenlaenge 143360 — der 5,25"-Eintrag aus
+     * MAMEs `s_formats[]`. */
     memset(hdr, 0, sizeof(hdr));
     memcpy(hdr, "2IMG", 4);
-    ASSERT(probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    hdr[0x08] = 64;                       /* Kopfgroesse */
+    hdr[0x0A] = 1;                        /* Version */
+    hdr[0x0C] = 1;                        /* ProDOS-Anordnung */
+    hdr[0x18] = 64;                       /* Datenversatz */
+    hdr[0x1C] = 0x00; hdr[0x1D] = 0x30;   /* 143360 = 0x00023000 */
+    hdr[0x1E] = 0x02; hdr[0x1F] = 0x00;
+    ASSERT(probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr),
+                       64u + 143360u, &conf));
     ASSERT(conf >= 95);
 
-    memcpy(hdr, "GMI2", 4);                  /* reversed */
-    ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    /* Die byte-vertauschte Kennung gilt GENAUSO (MF-1031/B1). */
+    memcpy(hdr, "GMI2", 4);
+    ASSERT(probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr),
+                       64u + 143360u, &conf));
+    ASSERT(conf >= 95);
+
+    /* Eine Datenlaenge, die in keinem Tafeleintrag steht, faellt. */
+    memcpy(hdr, "2IMG", 4);
+    hdr[0x1C] = 0x01;
+    ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr),
+                        64u + 143361u, &conf));
+    hdr[0x1C] = 0x00;
+
+    /* Ein Datenversatz IM Kopf faellt — vorher wurde er still gehoben. */
+    hdr[0x18] = 32;
+    ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr),
+                        64u + 143360u, &conf));
+    hdr[0x18] = 64;
 
     /* the 64-byte header must be present */
-    memcpy(hdr, "2IMG", 4);
     ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, 32, 32, &conf));
 }
 
@@ -857,7 +905,7 @@ int main(void) {
     RUN(ipf_requires_the_caps_magic);
     RUN(scp_requires_magic_and_a_full_header);
     RUN(stx_requires_the_pasti_magic_including_its_nul);
-    RUN(img2_requires_its_four_byte_magic);
+    RUN(img2_nimmt_beide_kennungen_und_prueft_die_tafel);
     RUN(dsk_cpc_and_edsk_both_claim_extended_dsk_files);
     RUN(adf_accepts_dd_and_hd_and_grades_the_bootblock);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
