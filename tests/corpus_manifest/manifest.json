@@ -466,8 +466,8 @@
       "format": "imd",
       "origin": "real",
       "tool": "aus der Aufnahme abgeleitet (Uploader)",
-      "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).imd\", 404633 Byte, md5 laut Archiv cf27a911477bec22b90d1629da6fa43f, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).imd\", 404633 Byte, md5 laut Archiv cf27a911477bec22b90d1629da6fa43f, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand. || **MF-1068:** **Die zweite Hand ist der Aufnahme-Log selbst.** Zu dieser Diskette gehoert ein Imaging Log von **Applesauce v1.88.4** (30. Mai 2024), geschrieben vom aufnehmenden Geraet: „Media: 8\" Floppy Disk / Physical: 611K SS500kbps FM+MFM encoded disk with IBM sector structure. 8 x 1024 byte sectors per track“. Seine Disk-Map zeigt die Sektoren **1..8 ueber alle 77 Spuren** und die Sektoren **9..26 nur auf Spur 0** — daraus folgt 26 + 76 x 8 = **634**, und genau diese Zahl liest UFT, mit **0** falschen ID-CRC. Die Verteilung (Spur 0 in FM zu 128 Byte, dann MFM zu 1024) kann ein Leser mit fester Geometrie nicht treffen — er liefert 77 x 26 oder 77 x 8, nie 26 + 76 x 8.",
+      "test": "test_imd_hfe_echte_aufnahme",
       "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
       "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
     },
@@ -522,8 +522,8 @@
       "format": "hfe",
       "origin": "real",
       "tool": "aus der Aufnahme abgeleitet (Uploader)",
-      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe\", 1004544 Byte, md5 laut Archiv 6dc7c8cbbaac4e468b73fdef3d6ae15c, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe\", 1004544 Byte, md5 laut Archiv 6dc7c8cbbaac4e468b73fdef3d6ae15c, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223. || **MF-1068:** Dieselbe Diskette wie die IMD daneben. **HFE ist ein Bitstromformat**, also sind null Sektoren hier die richtige Antwort und nicht ein Defekt — P3-326 haelt genau diesen Fehlschluss fest. Geprueft wird der **Strom**: alle 80 Spuren liefern einen, 12 382 bis 12 544 Byte. **Gemessener Widerspruch am Rand:** `geometry.sectors` meldet **9**, waehrend die IMD derselben Diskette **10** sagt — fuer ein Bitstromformat ist die Sektorzahl eine Schaetzung ohne Grundlage; nicht festgenagelt, weil die richtige Antwort waere, sie gar nicht erst zu behaupten.",
+      "test": "test_imd_hfe_echte_aufnahme",
       "oracle": "offen",
       "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
     },
@@ -533,8 +533,8 @@
       "format": "imd",
       "origin": "real",
       "tool": "aus der Aufnahme abgeleitet (Uploader)",
-      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.imd\", 127433 Byte, md5 laut Archiv 97cd9bafc90447689f9dcb196d3d9919, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.imd\", 127433 Byte, md5 laut Archiv 97cd9bafc90447689f9dcb196d3d9919, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223. || **MF-1068:** Dieselbe Diskette liegt doppelt vor, als IMD **und** als HFE. Die IMD liefert 40 x 2 x 10 x 512 = **800 Sektoren**, alle mit richtiger ID-CRC und voller Laenge.",
+      "test": "test_imd_hfe_echte_aufnahme",
       "oracle": "offen",
       "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
     },

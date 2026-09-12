@@ -1209,6 +1209,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_imd_hfe_echte_aufnahme")
+        # MF-1068: drei ECHTE Aufnahmen echter Disketten lagen seit dem
+        # 2026-09-04 im Korpus, und ihr Manifest-Eintrag sagte im Feld
+        # `test` woertlich „noch keiner" — dieselbe Lage wie bei der ATX
+        # in MF-1065. Die zweite Hand ist hier der Applesauce-Imaging-Log
+        # des aufnehmenden Geraets, nicht UFT.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # Ohne den Korpuspfad prueft der Test nichts und sagt das
+        # (Rueckgabe 77, benannter Skip).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_do_gegen_hxcfe")
         # MF-1067: `do` stand auf T2, weil sein einziges Korpus-Abbild
         # `origin: "derived"` trug — UFT-eigen, kein Stufenkredit. Die

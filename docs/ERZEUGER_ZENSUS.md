@@ -134,8 +134,8 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `fdi` | T1 | — | — |
 | `g64` | T1 | — | — |
 | `g71` | T1b | — | — |
-| `hfe` | T1b | HXC_HFE, HXC_HFEV3, HXC_STREAMHFE | — |
-| `imd` | T1b | IMD_IMG | imd |
+| `hfe` | T1 | HXC_HFE, HXC_HFEV3, HXC_STREAMHFE | — |
+| `imd` | T1 | IMD_IMG | imd |
 | `img` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |
 | `jv3` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TRS80_JV3 | dsk (?), jv3 |
 | `jvc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
