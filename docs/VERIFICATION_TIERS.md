@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 41 |
-| T2 | 31 |
-| T3 | 14 |
+| T2 | 32 |
+| T3 | 13 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -184,6 +184,28 @@ Der spezifikationsgerechte `uft_qrst_write()` bleibt ohne Aufrufer (P3-204, MF-9
 | `d13` | **T2** | `test_d13_layout_verified` | Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md). Die Zuordnung logisch<->physisch ist die IDENTITAET, zweifach belegt: mamedev/mame ap2_dsk.cpp:410 `a2_13sect_format::logical_sector_index(int p) { return p; }` (BSD-3-Clause) und ciderpress2.com/formatdoc/Unadorned-notes.html '13-sector floppies use physical sector order'. Der Kontrast traegt den Beleg: die 16-Sektor-Fassung steht bei :666 und benutzt dos_skewing[]/prodos_skewing[]. | MF-722: linke Seite uft_format_plugin_d13 (Versatz (cyl*13+s)*256, Sektor-ID = s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() auf dem 5-and-3-Weg (MF-721). Gemessen: 454 dekodiert, 454 verglichen, 454 BYTEIDENTISCH. Der 455. ist Spur 0 Sektor 0 — DOS 3.2 schreibt den Bootsektor mit einer ANDEREN 5-and-3-Variante (to_woz2.c deduce_encoding(): ENC_53A statt ENC_53); er wird als alt_encoding BENANNT, nicht geraten, und liefert keine Bytes. Regressionsschutz: tests/test_d13_layout_verified.c — dort auch die Messung, dass d13_open() jede Datei mit falscher Groesse abweist (der 0xE5-Fuellzweig in read_track ist dadurch unerreichbar). | — |
 | `d77` | **T2** | `test_d88_header_variants` | pc98.org D88 (D77 teilt das Layout) + MAME d88_dsk — Kopf 688 ODER 672 Byte, Spurtabelle 164 bzw. 160 Eintraege, erster Versatz 0x2B0 oder 0x2A0 | MF-625 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
+| `dim` | **T2** | `test_dim_gegen_hxcfe`, `test_dim_kennung_und_groesse` | Die Formatbeschreibung im Kopf von hxcfes `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` — **Dokumentation**, Kanal *Spec* nach MF-695: gelesen wird der Kommentar, keine Zeile Code. Sie nennt den 256-Byte-Kopf (0x00 Medienbyte, 0x01–0xA0 die 160 „sector present“-Bytes, 0xAB–0xB7 "DIFC HEADER  ", 0xFE–0xFF ein WORD, Daten ab 0x100 in C/H/S-Reihenfolge) und **vier** Medienbytes mit Kapazitaet, die DCP-Werte getrennt daneben. Abgenommen am **ausgefuehrten** `X68000_DIM`-Loader (hxcfe v2.16.15.2) und an der IMD-Zerlegung derselben Dateien. Zweite Hand, begruendet ueberstimmt: MAMEs `formats/dim_dsk.cpp` (BSD-3-Clause), nur gelesen. | MF-1037 — **die Medientabelle ist aufgeloest, und zwei von vier Medienbytes wurden vorher FALSCH ZERLEGT.** MF-1019 hatte sie ausdruecklich offen gelassen (P3-325), weil drei Umsetzungen drei Tabellen hatten. **Der Grund dafuer ist jetzt gemessen: zwei der drei sind Tabellen fuer ZWEI VERSCHIEDENE FORMATE** — 0x09, 0x11 und 0x19 sind **DCP**-Medienbytes, nicht DIM.
+
+**Der Rotbeweis.** Am unveraenderten Produktionspfad, je Medienbyte eine Pruefdatei mit selbstbenennenden Sektoren:
+
+    0x00  1 261 824 Byte  probe 88  open   0  77x2x8x1024  RICHTIG
+    0x01  1 474 816 Byte  probe 88  open   0  77x2x8x1024  FALSCH
+    0x02  1 229 056 Byte  probe  0  open -25               ABGEWIESEN
+    0x03  1 474 816 Byte  probe 88  open   0  77x2x8x1024  FALSCH
+
+Zwei von vier wurden also **angenommen und falsch zerlegt, mit Konfidenz 88**. Spur (40,1) — die aeusserste Spur der zweiten Seite — lieferte in beiden Faellen "UFT-K C36 H0 S01": einen Block von der **anderen Seite**, vier Zylinder daneben. Und weil 77 x 2 x 8 x 1024 nur 1 261 568 der 1 474 560 Nutzbytes abdeckt, fielen **212 992 Byte** still weg.
+
+**Und der Schutzsatz aus MF-1019 hielt nur in eine Richtung.** Dort stand, eine falsche Tabelle werde durch die Groessenpruefung „laut statt still“ — gerettet hat sie genau **eine** Datei (0x02, zu klein). Bei 0x01 und 0x03 ist die Datei **groesser** als die falsche Rechnung verlangt, und `fs < erwartet` sieht ein Zuviel nicht.
+
+**Die neue Tabelle:** 0x00 = 77x2x8x1024 (1232k), 0x01 = 80x2x9x1024 (1440k), 0x02 = 80x2x15x512 (1200k), 0x03 = 80x2x18x512 (1440k, IBM-1.44MB-Aufteilung). Alles andere wird **abgewiesen**.
+
+**Einmal wird MAME begruendet ueberstimmt, und zwar mit einer Messung.** Fuer 0x03 sagt `dim_dsk.cpp` `spt = 9, size = 3` (9 x 1024), hxcfes Beschreibung sagt 18 x 512 — beide ergeben 1 474 560 Byte, die Dateigroesse kann es also nicht entscheiden. Entschieden hat es hxcfes **ausgefuehrter** Loader: 2880 Sektoren. Dieselbe Lage wie MF-1015 (`udi`), nur diesmal mit einem Lauf statt einem Argument. Die Mutationsmatrix haelt genau diesen Wert fest (M4).
+
+**Die Abnahme ist eine fremde ZERLEGUNG, nicht nur ein Lesen.** hxcfes `X68000_DIM` liest die vier Dateien, sein `IMD_IMG` schreibt sie als ImageDisk — und eine IMD nennt je Sektor Zylinder, Kopf und Sektornummer ausdruecklich. Byteweise gegen UFTs eigene Formel gehalten: **7952 von 7952 Sektoren byteidentisch, 0 abweichend** (1232 + 1440 + 2400 + 2880). Die einzigen Spuren mit abweichender Sektorgroesse sind hxcfes **leere** Anhangsspuren jenseits der Zylinderzahl — es schreibt einen Behaelter fester Groesse.
+
+Mutationsmatrix **13 von 13 gefangen, im ersten Lauf**, darunter die Schreibseite (Durchschreibprobe auf Spur 79/1) und die MF-1029-Falle (die Sonde nimmt die Dateigroesse, nicht die Puffergroesse).
+
+**T2 und nicht T1b**, weil hxcfes DIM-Modul nur **lesen** kann (`X68000_DIM;R `) — es gibt keinen fremden *Erzeuger*. Anders als bei libdsk (MF-1032/1033) hilft hier kein `-otype`. | — |
 | `do` | **T2** | `test_apple_do_po_bounds`, `test_do_layout_verified`, `test_do_po_probe_ignores_content`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | Differenzlauf gegen die Referenz-Implementierung `to_woz2` (Apple-II-Disk-Tools, Commit 639dc1c; registriertes Oracle, docs/ORACLES.md) plus die DOS-3.3-Interleave-Tabelle aus a8rawconv diska2.cpp:3-5 als unabhaengige zweite Quelle | MF-716: linke Seite uft_format_plugin_do (Versatz (cyl*16+s)*256, Sektor-ID = logisch s), rechte Seite dieselbe Diskette ueber to_woz2 -> WOZ 2.0 -> uft_apple_gcr_scan_track() in physische Sektoren, verbunden ueber die Interleave-Tabelle. Gemessen: 560 dekodiert, 560 verglichen, 560 BYTEIDENTISCH, 0 fehlend. Der Regressionsschutz steht in tests/test_do_layout_verified.c. Gilt NUR fuer die DOS-Ordnung — `po` war nicht beteiligt und bleibt T3. | — |
 | `fdi_pc98` | **T2** | `test_fdi_pc98_gegen_mame` | MAME `src/lib/formats/pc98fdi_dsk.cpp`, **BSD-3-Clause**, Copyright Olivier Galibert, aus `neue-ideen/FORMATS.ZIP` — 110 Zeilen; getragen haben `identify()` (Z. 37-58), `load()` (Z. 60-107) und die Kopffeld-Versaetze (Z. 48-53 / 71-75). Gelesen, nicht uebernommen (Kanal *Spec* nach MF-695). | MF-1026 — `pc98fdi_format` Feld fuer Feld gegen `uft_fdi_pc98.c` gehalten, und **der Abgleich fand KEINEN Fehler**: die Kopffelder (`hsize` 0x08, `psize` 0x0C, `ssize` 0x10, `scnt` 0x14, `sides` 0x18, `ntrk` 0x1C, alle u32le), **beide** Konsistenzbedingungen aus `identify()` (`size == hsize + psize` UND `psize == ssize*scnt*sides*ntrk`), die zylinder-dure Versatzformel (`hsize + ssize*scnt*(track*head_count + head)`) und die 1-basierten Sektornummern (`sects[i].sector = i + 1`) stimmen ueberein. Auch die Geometrie kommt bei beiden aus dem Kopf und nicht aus dem Typfeld bei 0x04 — das liest MAME ueberhaupt nicht.
 
@@ -281,7 +303,6 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 | `cas` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
-| `dim` | **T3** | `test_dim_kennung_und_groesse` | — | — | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |

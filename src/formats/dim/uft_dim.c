@@ -41,46 +41,101 @@
  * anfasst, bekam fuer eine zu kurze Datei die volle angesagte
  * Geometrie und Sektoren, die nicht in der Datei stehen.
  *
- * ── UNGEKLAERT und deshalb NICHT angefasst: die Medientabelle ─────────
+ * ── AUFGELOEST (MF-1037): die Medientabelle, und warum sie strittig war
  *
- * Drei Umsetzungen, drei verschiedene Tabellen, und keine zwei stimmen
- * ueberein (gemessen MF-1019):
+ * MF-1019 liess sie offen, weil drei Umsetzungen drei verschiedene
+ * Tabellen hatten (gefuehrt als P3-325). **Der Grund dafuer ist jetzt
+ * gemessen: zwei der drei sind Tabellen fuer ZWEI VERSCHIEDENE
+ * Formate.**
  *
- * | Medienbyte | hier | `pc98/dim.c` | MAME |
- * |---|---|---|---|
- * | 0x00 | 8 spt · 1024 | 9 · 512 | 8 · 1024 |
- * | 0x01 | 8 · 1024 | 9 · 512 | **9** · 1024 |
- * | 0x02 | 8 · 1024 | **15** · 512 | **15** · 512 |
- * | 0x03 | 8 · 1024 | 18 · 512 | **9** · 1024 |
- * | 0x09 | 18 · 512 | (abgewiesen) | 18 · 512 |
- * | 0x11 | 8 · 512 | (abgewiesen) | **26** · 256 |
- * | 0x19 | 9 · 512 | (abgewiesen) | (Vorgabe) 8 · 1024 |
+ * Die vierte Quelle ist die Formatbeschreibung im Kopf von hxcfes
+ * `libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` —
+ * **Dokumentation**, Kanal *Spec* nach MF-695: gelesen wird die
+ * Beschreibung, keine Zeile Code. Sie nennt genau **vier**
+ * DIM-Medienbytes, mit Kapazitaet:
  *
- * Dazu die Spurzahl: MAME nimmt fuer **jeden** Typ 77 Spuren, hier
- * stehen 77 oder 80 je Typ, `pc98/dim.c` immer 80.
+ *     DIM    DCP  Format  Geometrie
+ *     0x00 = 0x02 (2HS)   ( 8 sec/trk 1232k)
+ *     0x01 = 0x02 (2HS)   ( 9 sec/trk 1440k)
+ *     0x02 = 0x01 (2HC)   (15 sec/trk 1200k) [80/2/15/512]
+ *     0x03 = 0x09 (2HQ)   (18 sec/trk 1440k) IBM 1.44MB 2HD format
  *
- * Diese Tabelle wird **nicht** auf eine Quelle hin umgeschrieben. Bei
- * fuenf von sieben Werten waere das eine Wette, und genau so sind die
- * fuenf fabrizierten Parser entstanden (FMT-2/3/10/11/12). Gefuehrt als
- * offener Punkt mit dem, was ihn aufloesen wuerde: eine echte
- * DIM-Datei je Medientyp, oder die Formatnotizen, auf die sich
- * `pc98/dim.c` beruft.
+ * — und listet die **DCP**-Medienbytes getrennt daneben, darunter
+ * `0x11 = 2HD-BASIC` und `0x19 = 2DD-BASIC`. Genau diese Werte standen
+ * in UFTs DIM-Tabelle. **Sie gehoeren einer anderen Nummerierung**, und
+ * damit ist erklaert, warum die drei Tabellen nie zusammenpassten.
  *
- * **Was die Groessenpruefung dabei leistet:** ist ein Tabelleneintrag
- * falsch, passt die angesagte Geometrie nicht zur Dateigroesse, und die
- * Datei wird abgewiesen statt falsch zerlegt. Die Pruefung ersetzt die
- * Klaerung nicht, aber sie macht den Fehler laut statt still.
+ * **Und das ist nicht nur gelesen, sondern gemessen.** hxcfes
+ * `X68000_DIM`-Loader wurde mit je einer Pruefdatei befragt (Kopf mit
+ * gueltigem `"DIFC HEADER  "`, 2 MB Nutzlast), Sektorzahl aus
+ * `hxcfe -infos`:
  *
- * Media types and geometry:
- *   0x00 2HD:  77 cyl, 2 heads,  8 spt, 1024 byte/sec = 1,261,568
- *   0x01 2HS:  77 cyl, 2 heads,  8 spt, 1024 byte/sec
- *   0x02 2HC:  77 cyl, 2 heads,  8 spt, 1024 byte/sec
- *   0x03 2HDE: 77 cyl, 2 heads,  8 spt, 1024 byte/sec
- *   0x09 2HQ:  80 cyl, 2 heads, 18 spt,  512 byte/sec = 1,474,560
- *   0x11 2DD8: 80 cyl, 2 heads,  8 spt,  512 byte/sec
- *   0x19 2DD9: 80 cyl, 2 heads,  9 spt,  512 byte/sec = 737,280
+ *     Medienbyte   hxcfe meldet
+ *     0x00         1232 Sektoren  (= 77 x 2 x  8)
+ *     0x01         1440 Sektoren  (= 80 x 2 x  9)
+ *     0x02         2400 Sektoren  (= 80 x 2 x 15)
+ *     0x03         2880 Sektoren  (= 80 x 2 x 18)
+ *     0x04 0x05 0x08 0x09 0x11 0x19 0x21 0xFF
+ *                  "No loader support the file" — ABGEWIESEN
+ *
+ * Damit steht die Tabelle:
+ *
+ *     0x00  77 x 2 x  8 x 1024 = 1 261 568  (1232k, "2HS")
+ *     0x01  80 x 2 x  9 x 1024 = 1 474 560  (1440k, "2HS")
+ *     0x02  80 x 2 x 15 x  512 = 1 228 800  (1200k, "2HC")
+ *     0x03  80 x 2 x 18 x  512 = 1 474 560  (1440k, "2HQ", IBM 1.44MB)
+ *
+ * **Was UFT vorher hatte:** 0x00 bis 0x03 **alle** auf 77 x 2 x 8 x
+ * 1024. Fuer 0x00 ist das richtig, fuer die drei anderen falsch — und
+ * **wie falsch, ist gemessen**, nicht gerechnet. Am unveraenderten
+ * Vorzustand, je Medienbyte eine Pruefdatei mit selbstbenennenden
+ * Sektoren ("UFT-K Cnn Hh Snn "):
+ *
+ *     0x00  1 261 824 Byte  probe 88  open   0  77x2x8x1024  RICHTIG
+ *     0x01  1 474 816 Byte  probe 88  open   0  77x2x8x1024  FALSCH
+ *     0x02  1 229 056 Byte  probe  0  open -25               ABGEWIESEN
+ *     0x03  1 474 816 Byte  probe 88  open   0  77x2x8x1024  FALSCH
+ *
+ * **Zwei von vier wurden also angenommen und falsch zerlegt, mit
+ * Konfidenz 88.** Spur (40,1) — die aeusserste Spur der zweiten Seite
+ * — lieferte in beiden Faellen den Sektor "UFT-K C36 H0 S01": einen
+ * Block von der **anderen Seite** und vier Zylinder daneben. Und weil
+ * 77 x 2 x 8 x 1024 nur 1 261 568 der 1 474 560 Nutzbytes abdeckt,
+ * fielen **212 992 Byte** still weg.
+ *
+ * Genau **eine** Datei hat die Groessenpruefung gerettet: 0x02, weil
+ * 1 229 056 kleiner ist als die verlangten 1 261 824. Bei 0x01 und 0x03
+ * ist die Datei **groesser** als die falsche Rechnung verlangt, und
+ * `fs < erwartet` sieht ein Zuviel nicht. Das ist der Grund, warum der
+ * Schutzsatz aus MF-1019 — "ist ein Eintrag falsch, passt die Rechnung
+ * nicht zur Datei, und sie wird abgewiesen statt falsch zerlegt" — nur
+ * in **eine** Richtung hielt. Er stand hier als Ersatz fuer die
+ * Klaerung; er war nur die halbe Sicherung.
+ *
+ * **Und 0x09, 0x11, 0x19 werden jetzt abgewiesen.** Fuer sie als
+ * DIM-Medienbytes gibt es keinen Beleg: hxcfes Loader weist sie
+ * gemessen ab, und seine Beschreibung fuehrt 0x11/0x19 unter DCP. MAMEs
+ * `dim_dsk.cpp` kennt `case 9` (18 spt) und `case 17` (26 spt) — es
+ * behandelt die beiden Familien in **einer** Funktion, und genau daraus
+ * ist die Vermischung entstanden.
+ *
+ * **Einmal wird MAME begruendet ueberstimmt, und zwar mit einer
+ * Messung.** Fuer 0x03 sagt `dim_dsk.cpp` `spt = 9, size = 3` (also
+ * 9 x 1024), hxcfes Beschreibung sagt 18 x 512 — **beide ergeben
+ * 1 474 560 Byte**, die Dateigroesse kann es also nicht entscheiden.
+ * Entschieden hat es hxcfes **ausgefuehrter** Loader: 2880 Sektoren.
+ * Dieselbe Lage wie MF-1015 (`udi`), nur diesmal mit einem Lauf statt
+ * einem Argument. Dass MAME fuer 0x01 UND 0x03 dasselbe (9 x 1024)
+ * sagt, passt dazu: ein Wert waere dann bedeutungslos.
+ *
+ * Nebenbei traegt MAME einen zweiten Widerspruch in sich: es setzt
+ * `track_total = 77` fuer **jeden** Typ, was fuer 0x01/0x02/0x03 nicht
+ * zu den Kapazitaeten seiner eigenen Sektorgroessen passt.
+ *
  *
  * Referenzen (EINFRIER-REGEL MF-363/498, Bedingung c):
+ *   hxcfe `dim_x68k_loader/dim_x68k_format.h` (GPL-2) — nur der
+ *     Kopfkommentar gelesen (Kanal Spec); der Lader AUSGEFUEHRT
  *   MAME `formats/dim_dsk.cpp` (BSD-3-Clause, Olivier Galibert), in
  *     `neue-ideen/formats.zip` — Kennung bei 0xAB, Daten ab 0x100
  *   `src/formats/pc98/dim.c` (eigener Baum) — dieselbe Kennung an
@@ -106,13 +161,14 @@
 #define DIM_MAX_SPT         18
 
 /* Media type codes */
-#define DIM_MEDIA_2HD       0x00
-#define DIM_MEDIA_2HS       0x01
-#define DIM_MEDIA_2HC       0x02
-#define DIM_MEDIA_2HDE      0x03
-#define DIM_MEDIA_2HQ       0x09
-#define DIM_MEDIA_2DD_8     0x11
-#define DIM_MEDIA_2DD_9     0x19
+/* MF-1037: **vier** Medienbytes, und die Namen folgen der
+ * Beschreibung. Die frueheren `DIM_MEDIA_2HQ 0x09`,
+ * `DIM_MEDIA_2DD_8 0x11` und `DIM_MEDIA_2DD_9 0x19` sind
+ * entfallen: das sind DCP-Medienbytes, nicht DIM. */
+#define DIM_MEDIA_2HS_8     0x00   /* 1232k,  8 spt x 1024 */
+#define DIM_MEDIA_2HS_9     0x01   /* 1440k,  9 spt x 1024 */
+#define DIM_MEDIA_2HC       0x02   /* 1200k, 15 spt x  512 */
+#define DIM_MEDIA_2HQ       0x03   /* 1440k, 18 spt x  512 */
 
 /* Die Kennung bei 0xAB. MAME vergleicht 11 Byte („DIFC HEADER"),
  * `src/formats/pc98/dim.c` 13 („DIFC HEADER  " mit zwei Leerzeichen).
@@ -128,27 +184,38 @@ static bool dim_has_signature(const uint8_t *hdr)
  * Geometry lookup
  * ============================================================================ */
 
-static bool dim_get_geometry(uint8_t media,
-                             uint8_t *cyl, uint8_t *heads,
+/**
+ * @brief Geometrie aus dem Medienbyte — vier Werte, alle gemessen.
+ *
+ * Quelle: die Formatbeschreibung in hxcfes `dim_x68k_format.h`
+ * (Dokumentation, Kanal *Spec*), abgenommen an hxcfes **ausgefuehrtem**
+ * `X68000_DIM`-Loader; die Zahlen und die Messung stehen im Dateikopf.
+ *
+ * Alles andere wird ABGEWIESEN. Vorher standen hier auch 0x09, 0x11 und
+ * 0x19 — das sind **DCP**-Medienbytes, eine andere Nummerierung, und
+ * hxcfes Loader weist sie gemessen ab.
+ */
+static bool dim_get_geometry(uint8_t media, uint8_t *cyl, uint8_t *heads,
                              uint8_t *spt, uint16_t *sector_size)
 {
     switch (media) {
-        case DIM_MEDIA_2HD:
-        case DIM_MEDIA_2HS:
-        case DIM_MEDIA_2HC:
-        case DIM_MEDIA_2HDE:
-            *cyl = 77; *heads = 2; *spt = 8; *sector_size = 1024;
+        case DIM_MEDIA_2HS_8:   /* 0x00 — 1232k */
+            *cyl = 77; *heads = 2; *spt = 8;  *sector_size = 1024;
             return true;
-        case DIM_MEDIA_2HQ:
+        case DIM_MEDIA_2HS_9:   /* 0x01 — 1440k */
+            *cyl = 80; *heads = 2; *spt = 9;  *sector_size = 1024;
+            return true;
+        case DIM_MEDIA_2HC:     /* 0x02 — 1200k, Geometrie woertlich in
+                                 * der Beschreibung: [80/2/15/512] */
+            *cyl = 80; *heads = 2; *spt = 15; *sector_size = 512;
+            return true;
+        case DIM_MEDIA_2HQ:     /* 0x03 — 1440k, IBM-1.44MB-Aufteilung */
             *cyl = 80; *heads = 2; *spt = 18; *sector_size = 512;
             return true;
-        case DIM_MEDIA_2DD_8:
-            *cyl = 80; *heads = 2; *spt = 8; *sector_size = 512;
-            return true;
-        case DIM_MEDIA_2DD_9:
-            *cyl = 80; *heads = 2; *spt = 9; *sector_size = 512;
-            return true;
         default:
+            /* MF-1037: keine Geometrie ohne Beleg. Insbesondere 0x09,
+             * 0x11 und 0x19 — sie standen hier, gehoeren aber der
+             * DCP-Nummerierung, und hxcfes Loader weist sie ab. */
             return false;
     }
 }
@@ -379,6 +446,12 @@ const uft_format_plugin_t uft_format_plugin_dim = {
     .read_track   = dim_read_track,
     .write_track  = dim_write_track,
     .verify_track = uft_generic_verify_track,
+    /* MF-1037: bleibt DERIVED, und das ist eine Entscheidung, keine
+     * Unterlassung. Es gibt keine Spezifikation des Urhebers — was
+     * es gibt, ist die BESCHREIBUNG eines Dritten (hxcfe) plus ein
+     * ausgefuehrter Lader. Das ist genau „De-facto-Standard ohne
+     * formale Spec“. Anders als bei `pri` (MF-1036), wo der Text vom
+     * Urheber selbst stammt und deshalb OFFICIAL_FULL traegt. */
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_dim_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_dim_features) / sizeof(uft_format_plugin_dim_features[0]),

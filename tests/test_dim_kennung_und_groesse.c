@@ -41,29 +41,28 @@
  * der dritte Fall dieser Gestalt nach `udi` (MF-1015, Pruefsumme) und
  * `scl` (MF-1014, TR-DOS-Layout).
  *
- * ── Was dieser Test NICHT behauptet ──────────────────────────────────
+ * ── Was hier festgenagelt war — und seit MF-1037 BEWIESEN ist ─────
  *
- * **Die Medientabelle bleibt ungeklaert, und `dim` bleibt deshalb T3.**
- * Drei Umsetzungen, drei Tabellen, keine zwei gleich (gemessen):
+ * Hier stand: „Die Medientabelle bleibt ungeklaert, und `dim` bleibt
+ * deshalb T3" — drei Umsetzungen, drei Tabellen, keine zwei gleich bei
+ * fuenf von sieben Werten (P3-325). Die Tafel unten hielt den
+ * damaligen Stand ausdruecklich **festgenagelt und nicht bewiesen**,
+ * damit eine Aenderung absichtlich geschieht.
  *
- *     Medienbyte   hier          pc98/dim.c    MAME
- *     0x00         8 spt/1024    9/512         8/1024
- *     0x01         8/1024        9/512         9/1024
- *     0x02         8/1024        15/512        15/512
- *     0x03         8/1024        18/512        9/1024
- *     0x09         18/512        abgewiesen    18/512
- *     0x11         8/512         abgewiesen    26/256
- *     0x19         9/512         abgewiesen    Vorgabe 8/1024
+ * **Genau das ist eingetreten.** MF-1037 hat den Grund fuer den
+ * Widerspruch gemessen: **zwei der drei Tabellen sind Tabellen fuer
+ * ZWEI VERSCHIEDENE FORMATE** — 0x09, 0x11 und 0x19 sind
+ * **DCP**-Medienbytes, nicht DIM. Die Tafel unten fuehrt deshalb jetzt
+ * **vier** Werte, und die drei DCP-Werte stehen als *abgewiesen*.
  *
- * Dazu die Spurzahl: MAME nimmt fuer **jeden** Typ 77, hier stehen 77
- * oder 80 je Typ, `pc98/dim.c` immer 80.
+ * Der Beleg liegt in `tests/test_dim_gegen_hxcfe.c`: vier Pruefdateien
+ * im Korpus, von hxcfe selbst zerlegt (DIM → IMD), **7952 von 7952
+ * Sektoren byteidentisch** an UFTs eigenen Versaetzen. `dim` steht
+ * seither auf **T2**.
  *
- * Bei fuenf von sieben Werten waere ein Umschreiben auf eine Quelle
- * eine Wette — und genau so sind die fuenf fabrizierten Parser
- * entstanden. Die Tabelle unten wird deshalb **festgenagelt, nicht
- * bewiesen**: sie haelt den heutigen Stand, damit eine Aenderung
- * absichtlich geschieht und nicht nebenbei. Was sie aufloesen wuerde,
- * steht als P3-325 in `docs/OPEN_ITEMS.md`.
+ * Dieser Test bleibt, weil er etwas anderes prueft: die **Kennung** und
+ * die **Groessenpruefung**, beides ohne Korpus.
+
  */
 #include <stdio.h>
 #include <stdint.h>
@@ -219,21 +218,17 @@ int main(void)
 
     /* ── Die Medientabelle: FESTGENAGELT, nicht bewiesen ─────────────── */
     {
-        /* Diese Tafel haelt den heutigen Stand von `dim_get_geometry()`.
-         * Sie ist KEIN Beweis — drei Umsetzungen widersprechen sich bei
-         * fuenf von sieben Werten (siehe Dateikopf und P3-325). Ihr
-         * Zweck ist, dass eine Aenderung absichtlich geschieht: wer die
-         * Tabelle anfasst, faellt hier auf und muss die Klaerung
-         * mitliefern. */
+        /* MF-1037: die aufgeloeste Tafel. Belegt an hxcfes
+         * Formatbeschreibung (Kanal Spec) und an seinem AUSGEFUEHRTEN
+         * `X68000_DIM`-Lader; der Sektor-fuer-Sektor-Abgleich steht in
+         * `tests/test_dim_gegen_hxcfe.c`. Vorher standen hier alle vier
+         * Werte auf 77x2x8x1024, dazu die drei DCP-Medienbytes. */
         struct { uint8_t media; uint8_t cyl, heads, spt; uint16_t ss; }
         tafel[] = {
             { 0x00, 77, 2,  8, 1024 },
-            { 0x01, 77, 2,  8, 1024 },
-            { 0x02, 77, 2,  8, 1024 },
-            { 0x03, 77, 2,  8, 1024 },
-            { 0x09, 80, 2, 18,  512 },
-            { 0x11, 80, 2,  8,  512 },
-            { 0x19, 80, 2,  9,  512 },
+            { 0x01, 80, 2,  9, 1024 },
+            { 0x02, 80, 2, 15,  512 },
+            { 0x03, 80, 2, 18,  512 },
         };
         int alle = 1;
         for (size_t i = 0; i < sizeof(tafel)/sizeof(tafel[0]); i++) {
@@ -260,8 +255,32 @@ int main(void)
             if (r == UFT_OK) uft_format_plugin_dim.close(&d);
             remove(pfad);
         }
-        pruefe("die sieben Medienwerte liefern den heutigen Stand "
-               "(festgenagelt, NICHT bewiesen — P3-325)", alle, NULL);
+        pruefe("die VIER DIM-Medienwerte liefern die belegte Geometrie "
+               "(MF-1037 — vorher standen alle vier auf 77x2x8x1024)",
+               alle, NULL);
+
+        /* Und die drei DCP-Werte, die hier standen, fallen jetzt. */
+        {
+            static const uint8_t dcp[] = { 0x09, 0x11, 0x19 };
+            int weg = 1;
+            size_t k;
+            for (k = 0; k < sizeof(dcp); k++) {
+                uft_disk_t dd;
+                uft_error_t rr;
+                baue_dim(pfad, dcp[k], 1, 2u * 1024 * 1024 - HDR);
+                memset(&dd, 0, sizeof(dd));
+                rr = uft_format_plugin_dim.open(&dd, pfad, true);
+                if (rr == UFT_OK) {
+                    printf("       0x%02X wird noch angenommen\n", dcp[k]);
+                    uft_format_plugin_dim.close(&dd);
+                    weg = 0;
+                }
+                remove(pfad);
+            }
+            pruefe("die drei DCP-Medienbytes 0x09/0x11/0x19 werden "
+                   "abgewiesen — sie gehoeren einer anderen Nummerierung",
+                   weg, NULL);
+        }
 
         /* Ein unbekanntes Medienbyte wird abgewiesen. */
         baue_dim(pfad, 0x7F, 1, 4096);

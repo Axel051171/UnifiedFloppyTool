@@ -815,6 +815,30 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_dim_gegen_hxcfe")
+        # MF-1037: die Medientabelle von `dim` ist AUFGELOEST, und zwei
+        # von vier Medienbytes wurden vorher falsch zerlegt. Gemessen am
+        # Vorzustand: 0x01 und 0x03 wurden mit Konfidenz 88 angenommen
+        # und mit 77x2x8x1024 gelesen statt mit 80x2x9x1024 bzw.
+        # 80x2x18x512; Spur (40,1) lieferte "UFT-K C36 H0 S01" — ein
+        # Block von der anderen Seite. 0x02 wurde abgewiesen.
+        #
+        # Der Grund fuer die drei widersprechenden Tabellen aus P3-325
+        # ist gemessen: zwei davon sind Tabellen fuer ZWEI VERSCHIEDENE
+        # Formate (0x09/0x11/0x19 sind DCP-Medienbytes).
+        #
+        # Abnahme von fremder Hand: hxcfe liest die vier Pruefdateien
+        # (`X68000_DIM`) und schreibt sie als IMD (`IMD_IMG`) — eine IMD
+        # nennt je Sektor Zylinder, Kopf und Nummer. 7952 von 7952
+        # Sektoren byteidentisch an UFTs eigenen Versaetzen.
+        #
+        # T2 und nicht T1b: hxcfes DIM-Modul kann nur LESEN
+        # (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dim/uft_dim.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_dim_kennung_und_groesse")
         # MF-1019: `dim` prueft die Kennung „DIFC HEADER" bei 0xAB nicht.
         # Gemessen am Vorzustand: ein Puffer aus 512 NULLBYTES mit
@@ -825,11 +849,14 @@ foreach(test_source ${TEST_SOURCES})
         #
         # Dazu: `open` prueft die Dateigroesse jetzt wie die Sonde.
         #
-        # WICHTIG — `dim` bleibt T3. Die Medientabelle ist UNGEKLAERT:
-        # drei Umsetzungen (hier, `pc98/dim.c`, MAME `dim_dsk.cpp`),
-        # drei Tabellen, keine zwei gleich bei fuenf von sieben Werten.
-        # Der Test NAGELT den heutigen Stand FEST, er beweist ihn nicht
-        # (P3-325).
+        # BERICHTIGT MF-1037 — hier stand: "`dim` bleibt T3, die
+        # Medientabelle ist UNGEKLAERT, der Test NAGELT den heutigen
+        # Stand FEST, er beweist ihn nicht (P3-325)". Genau dieser Fall
+        # ist eingetreten: der Grund fuer die drei widersprechenden
+        # Tabellen ist gemessen — zwei davon gelten fuer ZWEI
+        # VERSCHIEDENE Formate (0x09/0x11/0x19 sind DCP-Medienbytes).
+        # Die Tafel fuehrt jetzt vier Werte, `dim` steht auf T2, und
+        # der Beleg liegt in `test_dim_gegen_hxcfe`.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/dim/uft_dim.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)

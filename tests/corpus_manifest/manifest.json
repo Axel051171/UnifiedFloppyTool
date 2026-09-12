@@ -908,6 +908,54 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen, auch nicht die CRC-Schleife (sie ist aus der Parameterangabe neu geschrieben und an 0x3D64AF78 geeicht)",
       "content": "SELBSTBESCHREIBEND: die ersten 17 Byte jeder Spur nennen Zylinder und Kopf. **Der Zweck dieser Datei ist eine Unterscheidung:** nur an ihr laesst sich pruefen, ob die Spurlaenge aus dem TRAK-Chunk oder aus der DATA-Groesse kommt — in den beiden anderen Pruefdateien sind beide gleich, und die Mutation „Spurlaenge aus DATA nehmen\" rutschte deshalb durch. Erwartet: 6250 Byte je Spur, die ersten 100 aus der Datei, der Rest **null**. Von fremder Hand gelesen: hxcfe meldet 5 Spuren, 2 Seiten."
+    },
+    {
+      "file": "tests/corpus_free/dim_x68k_m00_1232k.dim",
+      "sha256": "febad0eabda4b589ff6995bdb56d4882dd75778228ef2629433cd64fbcf18925",
+      "format": "dim",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1037), nach der Formatbeschreibung im Kopf von hxcfes `dim_x68k_loader/dim_x68k_format.h`",
+      "source": "Nach der Formatbeschreibung im Kopf von hxcfes `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` gebaut — **Dokumentation**, Kanal *Spec* nach MF-695, keine Zeile Code. Kopf: 0x00 Medienbyte, 0x01–0xA0 die 160 „sector present“-Bytes, 0xAB–0xB7 \"DIFC HEADER  \", 0xFE–0xFF WORD 0x0016; Daten ab 0x100 in C/H/S-Reihenfolge. Diese Datei: Medienbyte 0x00, 77 x 2 x 8 x 1024 = 1 261 568 Byte Nutzlast (1232k, „2HS“).",
+      "test": "test_dim_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf und Sektor gebildetes Muster — ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war. **Von fremder Hand ZERLEGT:** hxcfes `X68000_DIM`-Modul liest die Datei (`-infos` meldet „1232kB, 77 tracks, 2 side(s), 8 sectors/track, rpm:360“) und sein `IMD_IMG`-Modul schreibt sie als ImageDisk, die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt; byteweise gegen UFTs Versatzformel gehalten sind **1232 von 1232 Sektoren identisch**. `origin` bleibt `derived`, weil hxcfe DIM nur LESEN kann (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger."
+    },
+    {
+      "file": "tests/corpus_free/dim_x68k_m01_1440k.dim",
+      "sha256": "211030d5f492abb3b5334a3098d05e71060a052030e7eefec98977b557ea75f9",
+      "format": "dim",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1037), nach der Formatbeschreibung im Kopf von hxcfes `dim_x68k_loader/dim_x68k_format.h`",
+      "source": "Nach der Formatbeschreibung im Kopf von hxcfes `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` gebaut — **Dokumentation**, Kanal *Spec* nach MF-695, keine Zeile Code. Kopf: 0x00 Medienbyte, 0x01–0xA0 die 160 „sector present“-Bytes, 0xAB–0xB7 \"DIFC HEADER  \", 0xFE–0xFF WORD 0x0016; Daten ab 0x100 in C/H/S-Reihenfolge. Diese Datei: Medienbyte 0x01, 80 x 2 x 9 x 1024 = 1 474 560 Byte Nutzlast (1440k, „2HS“) — **diese Geometrie war im Vorzustand unerreichbar**, die Datei wurde mit 77x2x8x1024 zerlegt und 212 992 Byte fielen still weg.",
+      "test": "test_dim_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf und Sektor gebildetes Muster — ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war. **Von fremder Hand ZERLEGT:** hxcfes `X68000_DIM`-Modul liest die Datei (`-infos` meldet „1440kB, 80 tracks, 2 side(s), 9 sectors/track, rpm:300“) und sein `IMD_IMG`-Modul schreibt sie als ImageDisk, die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt; byteweise gegen UFTs Versatzformel gehalten sind **1440 von 1440 Sektoren identisch**. `origin` bleibt `derived`, weil hxcfe DIM nur LESEN kann (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger."
+    },
+    {
+      "file": "tests/corpus_free/dim_x68k_m02_1200k.dim",
+      "sha256": "ed2ec297271bfd5839cdf0968f24c295f3256774cc1dc5fc540b533649879a98",
+      "format": "dim",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1037), nach der Formatbeschreibung im Kopf von hxcfes `dim_x68k_loader/dim_x68k_format.h`",
+      "source": "Nach der Formatbeschreibung im Kopf von hxcfes `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` gebaut — **Dokumentation**, Kanal *Spec* nach MF-695, keine Zeile Code. Kopf: 0x00 Medienbyte, 0x01–0xA0 die 160 „sector present“-Bytes, 0xAB–0xB7 \"DIFC HEADER  \", 0xFE–0xFF WORD 0x0016; Daten ab 0x100 in C/H/S-Reihenfolge. Diese Datei: Medienbyte 0x02, 80 x 2 x 15 x 512 = 1 228 800 Byte Nutzlast (1200k, „2HC“; die Beschreibung nennt die Geometrie woertlich: [80/2/15/512]) — **im Vorzustand wurde sie ABGEWIESEN**.",
+      "test": "test_dim_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf und Sektor gebildetes Muster — ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war. **Von fremder Hand ZERLEGT:** hxcfes `X68000_DIM`-Modul liest die Datei (`-infos` meldet „1200kB, 80 tracks, 2 side(s), 15 sectors/track, rpm:360“) und sein `IMD_IMG`-Modul schreibt sie als ImageDisk, die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt; byteweise gegen UFTs Versatzformel gehalten sind **2400 von 2400 Sektoren identisch**. `origin` bleibt `derived`, weil hxcfe DIM nur LESEN kann (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger."
+    },
+    {
+      "file": "tests/corpus_free/dim_x68k_m03_1440k.dim",
+      "sha256": "fc790e2c4c6b87df29f9557a9586eb95848fd92f4e04f374a2de204987f8a4a1",
+      "format": "dim",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1037), nach der Formatbeschreibung im Kopf von hxcfes `dim_x68k_loader/dim_x68k_format.h`",
+      "source": "Nach der Formatbeschreibung im Kopf von hxcfes `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/dim_x68k_loader/dim_x68k_format.h` gebaut — **Dokumentation**, Kanal *Spec* nach MF-695, keine Zeile Code. Kopf: 0x00 Medienbyte, 0x01–0xA0 die 160 „sector present“-Bytes, 0xAB–0xB7 \"DIFC HEADER  \", 0xFE–0xFF WORD 0x0016; Daten ab 0x100 in C/H/S-Reihenfolge. Diese Datei: Medienbyte 0x03, 80 x 2 x 18 x 512 = 1 474 560 Byte Nutzlast (1440k, „2HQ“, IBM-1.44MB-Aufteilung) — **hier wird MAME begruendet ueberstimmt**: sein `dim_dsk.cpp` sagt 9 x 1024, dieselbe Dateigroesse; entschieden hat es hxcfes ausgefuehrter Loader mit 2880 Sektoren.",
+      "test": "test_dim_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf und Sektor gebildetes Muster — ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war. **Von fremder Hand ZERLEGT:** hxcfes `X68000_DIM`-Modul liest die Datei (`-infos` meldet „1440kB, 80 tracks, 2 side(s), 18 sectors/track, rpm:300“) und sein `IMD_IMG`-Modul schreibt sie als ImageDisk, die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt; byteweise gegen UFTs Versatzformel gehalten sind **2880 von 2880 Sektoren identisch**. `origin` bleibt `derived`, weil hxcfe DIM nur LESEN kann (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger."
     }
   ]
 }
