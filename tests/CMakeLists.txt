@@ -1192,6 +1192,18 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_xdm86_ist_ti99")
+        # MF-1057: `xdm86` trug WOERTLICH die zwei Befunde, die MF-1027
+        # an `v9t9` behoben hat — die lineare Anordnung (statt kopf-dur
+        # mit rueckwaerts laufender Seite 1) und die 1-basierten
+        # Sektornummern. Gemessen: DSSD 702 von 720 Sektoren falsch,
+        # DSDD 1404 von 1440. Die Referenz lag die ganze Zeit im Baum,
+        # weil beide Plugins DIESELBEN drei Dateigroessen fuehren.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/xdm86/uft_xdm86.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_edk_gegen_ensoniq")
         # MF-1056: `edk` hatte laut eigenem Kopf „keine nachpruefbare
         # Referenz" (P3-340). Gesucht wurde an der falschen Stelle —
