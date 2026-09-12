@@ -766,6 +766,61 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="fluxfox",
+        env="FLUXFOX",
+        exes=(),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "DATENQUELLE, kein ausgefuehrtes Werkzeug — und das ist der "
+            "Unterschied zu jedem anderen Eintrag hier. `exes` ist "
+            "ABSICHTLICH leer: fluxfox ist in Rust geschrieben und in "
+            "diesem Baum NICHT gebaut. Was es liefert, sind seine "
+            "**Testabbilder**. "
+            "In `tests/images/sector_test/` liegt dieselbe "
+            "360K-Diskette in VIERZEHN Formaten (.86f .hfe .imd .img "
+            ".imz .mfi .mfm .pfi .pri .psi .scp .tc .td0 + "
+            "KryoFlux-ZIP). Drei davon sind seit MF-1071 im Korpus und "
+            "pruefen einander: die .img ist linear durchnummeriert "
+            "(Block n traegt n) und damit die Bruecke, gegen die .86f "
+            "und .pri gehalten werden. Entscheidet die Stufe fuer "
+            "`86f` und `pri` — beide T2 -> T1b. "
+            "GEMESSEN daran: 86F speichert PHYSISCHE Positionen (172 "
+            "Eintraege, 160 belegt, jede logische Spur an 2c UND 2c+1), "
+            "daraus 1440 Sektoren, alle byteidentisch mit der .img. PRI "
+            "traegt 80 TRAK-Chunks zu je 100 000 Bit bei Bittakt "
+            "250 000 — genau das liefert UFT. "
+            "ZWEI GRENZEN: fuer `86f` bleibt der Vorbehalt aus MF-961 "
+            "in praeziserer Form — die Datei ist BELEGT von fluxfox, "
+            "nicht vom kanonischen 86Box; und die zweite Sammlung "
+            "desselben Klons (`tests/images/transylvania/`) ist NICHT "
+            "benutzbar, ihre LICENSE.txt erlaubt das Kopieren nur "
+            "„as long as you do not charge any money“ — unvereinbar "
+            "mit GPL-2-or-later."
+        ),
+        origin=(
+            "https://github.com/dbalsom/fluxfox — im Baum geklont "
+            "unter `tools/uft-scout/work/fluxfox`, Quellstand "
+            "`1d72ff1b329cc072cec00fe42ae51bededf5374f` (2026-08-11). "
+            "NICHT gebaut: es braucht eine Rust-Kette, die dieses "
+            "Projekt nicht verlangt. Der Anker ist deshalb der "
+            "QUELLSTAND plus die SHA-256 JE BENUTZTER DATEI im "
+            "Manifest — dieselbe Bauform wie bei `to_woz2`, nur dass "
+            "hier gar kein Binaer entsteht."
+        ),
+        licence="MIT (Daniel Balsom, 2024)",
+        abstammung=(
+            "GEPRUEFT: aus fluxfox ist KEINE Zeile Code eingewandert. "
+            "Gelesen wurde dreierlei, alles als *Spec* bzw. *Daten*: "
+            "die LICENSE, das Testverzeichnis, und fuer MF-1070 die "
+            "Stelle in `src/file_parsers/mfi.rs`, an der fluxfox die "
+            "MFI-Zeitsumme rechnet und NICHT prueft (die Konstante "
+            "steht dort auskommentiert). Genau dieser Befund hat "
+            "SAMdisks strikte Pruefung als zu eng belegt."
+        ),
+    ),
+    Oracle(
         name="to_woz2",
         env="TO_WOZ2",
         exes=("to_woz2", "to_woz2.exe"),

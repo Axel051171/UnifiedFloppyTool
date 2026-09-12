@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 30 |
+| davon auf T2/T3 (offen) | 28 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
@@ -36,7 +36,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | Format | Stufe | hxcfe (RW) | libdsk | Kanal | Klasse |
 |---|---|---|---|---|---|
 | `2img` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `86f` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `adf_arc` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `adl` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
@@ -57,7 +56,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `mgt` | T2 | RAW_LOADER (?) | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `nfd` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `pri` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `pro` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `rcpmfs` | T3 | — | rcpmfs | nicht gemessen | **A?** — Werkzeug sagt RW, Kanal UNGEMESSEN |
 | `scl` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -109,6 +107,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 
 | Format | Stufe | hxcfe (RW) | libdsk |
 |---|---|---|---|
+| `86f` | T1b | — | — |
 | `adf` | T1b | AMIGA_ADF (?) | — |
 | `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
@@ -151,6 +150,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `pdp` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `po` | T1b | AMSTRADCPC_DSK (?), APPLE2_PO, ORIC_DSK (?) | dsk (?) |
 | `posix` | T1b | AMSTRADCPC_DSK (?), KRYOFLUXSTREAM (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?), raw (?) |
+| `pri` | T1b | — | — |
 | `qrst` | T1b | — | qrst |
 | `sad` | T1b | — | — |
 | `sam` | T1b | — | — |

@@ -1256,6 +1256,42 @@
       "test": "test_do_gegen_hxcfe",
       "oracle": "hxcfe",
       "fremdcode": "keiner — beide Werkzeuge werden AUSGEFÜHRT (Kanal Oracle nach MF-695). Keine Zeile aus hxcfes `woz_loader.c` oder seinem DO-Schreiber ist in den Baum gekommen; die einzige Beruehrung mit fremdem Quelltext war LESEND, um zu belegen, dass hxcfe das CRC-Feld unbedingt vergleicht — ein Befund UEBER das Werkzeug, keine Uebernahme AUS ihm."
+    },
+    {
+      "file": "tests/corpus_free/fluxfox_sector_test_360k.img",
+      "sha256": "0e61e0e0a01d799f87566621a96882d1020b6e9445af0096949a03e31d457668",
+      "format": "img",
+      "origin": "cross-tool",
+      "tool": "fluxfox (Daniel Balsom, 2024, MIT), Quellstand 1d72ff1b329cc072cec00fe42ae51bededf5374f (2026-08-11), im Baum geklont unter tools/uft-scout/work/fluxfox. **Nicht ausgefuehrt** — die Datei liegt als Testabbild in seinem eigenen Repositorium; Kanal *Daten* nach MF-695, nicht *Oracle*.",
+      "source": "Aus fluxfox' `tests/images/sector_test/`. Dort liegt **dieselbe 360K-Diskette in vierzehn Formaten**; drei davon sind hier uebernommen und dienen einander als Gegenprobe. **Die Bruecke.** 368 640 Byte = 40 x 2 x 9 x 512, **linear durchnummeriert**: Block n traegt das Byte n & 0xFF — an allen 720 Bloecken geprueft, bevor daraus eine Erwartung gebaut wird. Gegen diese Datei werden `.86f` und `.pri` gehalten.",
+      "test": "test_86f_pri_gegen_fluxfox",
+      "oracle": "fluxfox",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code; aus fluxfox ist keine Zeile uebernommen. Der Klon wurde fuer diese Arbeit nur GELESEN (Lizenz, Testverzeichnis, und fuer MF-1070 die Stelle, an der fluxfox die MFI-Zeitsumme NICHT prueft).",
+      "content": "Synthetische Pruefdiskette: 720 Bloecke zu 512 Byte, **Block n durchgehend mit dem Byte n & 0xFF gefuellt** — an allen 720 Bloecken geprueft. Kein Bootsektor, kein Dateisystem."
+    },
+    {
+      "file": "tests/corpus_free/fluxfox_sector_test_360k.86f",
+      "sha256": "180d898495454a0ec627866c853cf1b9a1e6a460cb289bb90dcf78eb4f5130b6",
+      "format": "86f",
+      "origin": "cross-tool",
+      "tool": "fluxfox (Daniel Balsom, 2024, MIT), Quellstand 1d72ff1b329cc072cec00fe42ae51bededf5374f (2026-08-11), im Baum geklont unter tools/uft-scout/work/fluxfox. **Nicht ausgefuehrt** — die Datei liegt als Testabbild in seinem eigenen Repositorium; Kanal *Daten* nach MF-695, nicht *Oracle*.",
+      "source": "Aus fluxfox' `tests/images/sector_test/`. Dort liegt **dieselbe 360K-Diskette in vierzehn Formaten**; drei davon sind hier uebernommen und dienen einander als Gegenprobe. **Hebt `86f` von T2 auf T1b.** MF-961 sagte: „T2 und nicht T1b, weil die Pruefdatei nach Messung **sehr wahrscheinlich** von fluxfox stammt und nicht vom kanonischen 86Box“ — jetzt ist die Herkunft **belegt statt vermutet**: es ist fluxfox' eigenes Testabbild aus fluxfox' eigenem Repositorium. Gemessen: 86F speichert **physische Positionen**, die Tabelle hat 86 Zylinder x 2 Seiten = 172 Eintraege, und **160 davon tragen eine Spur** (12 leer). Ein 40-Spur-Medium liegt darin wie in einem 80-Spur-Laufwerk gelesen: jede logische Spur an **zwei** Positionen, 2c und 2c+1. Daraus folgen **1440** Sektoren statt 720 — und **alle 1440 sind byteidentisch** mit der .img, verbunden ueber die logische Spur aus dem ADRESSFELD, nicht ueber die Position. **Der Vorbehalt bleibt in praeziserer Form:** die Datei ist von fluxfox, nicht von 86Box.",
+      "test": "test_86f_pri_gegen_fluxfox",
+      "oracle": "fluxfox",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code; aus fluxfox ist keine Zeile uebernommen. Der Klon wurde fuer diese Arbeit nur GELESEN (Lizenz, Testverzeichnis, und fuer MF-1070 die Stelle, an der fluxfox die MFI-Zeitsumme NICHT prueft).",
+      "content": "Dieselbe Diskette wie die .img daneben, als 86F-Bitstrom. 172 Positionen (86 Zylinder x 2 Seiten), davon 160 mit Inhalt: jede logische Spur an ZWEI Positionen (2c und 2c+1). 1440 Sektoren, alle byteidentisch mit der .img."
+    },
+    {
+      "file": "tests/corpus_free/fluxfox_sector_test_360k.pri",
+      "sha256": "8e8c4f274118882412515114a1a9d3543f7840ce7a7f9a95cb8869d84fc25c5a",
+      "format": "pri",
+      "origin": "cross-tool",
+      "tool": "fluxfox (Daniel Balsom, 2024, MIT), Quellstand 1d72ff1b329cc072cec00fe42ae51bededf5374f (2026-08-11), im Baum geklont unter tools/uft-scout/work/fluxfox. **Nicht ausgefuehrt** — die Datei liegt als Testabbild in seinem eigenen Repositorium; Kanal *Daten* nach MF-695, nicht *Oracle*.",
+      "source": "Aus fluxfox' `tests/images/sector_test/`. Dort liegt **dieselbe 360K-Diskette in vierzehn Formaten**; drei davon sind hier uebernommen und dienen einander als Gegenprobe. **Hebt `pri` von T2 auf T1b.** MF-1036 sagte: „T2 und nicht T1b, weil hxcfe PRI nur **lesen** kann“ — ein Schreiber fehlte, und hier ist ein Erzeugnis. PRI ist ein **Bitstromformat** (PCE Raw Image, Hampa Hug); Sektoren waeren die falsche Frage (P3-326). Aus der Datei selbst gelesen: **80 TRAK-Chunks**, je **100 000 Bit** = 12 500 Byte, Bittakt **250 000** — und genau das liefert UFT fuer alle 80 Spuren. **Ein Befund am Rand, gemessen und benannt statt geaendert:** der Bitstrom kommt als Sektor 0 mit 12 500 Byte und nicht in `track->raw_data` — dieselbe Gestalt, die MF-1066 bei `woz` und MF-1023 bei `mfi` behoben hat; ein eigener Eingriff mit eigener Abnahme.",
+      "test": "test_86f_pri_gegen_fluxfox",
+      "oracle": "fluxfox",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code; aus fluxfox ist keine Zeile uebernommen. Der Klon wurde fuer diese Arbeit nur GELESEN (Lizenz, Testverzeichnis, und fuer MF-1070 die Stelle, an der fluxfox die MFI-Zeitsumme NICHT prueft).",
+      "content": "Dieselbe Diskette wie die .img daneben, als PRI-Bitstrom. 80 TRAK-Chunks (40 x 2), je 100 000 Bit = 12 500 Byte, Bittakt 250 000. Keine Sektoren — PRI ist ein Bitstromformat."
     }
   ]
 }

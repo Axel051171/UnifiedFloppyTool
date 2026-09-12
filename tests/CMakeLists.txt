@@ -1230,6 +1230,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_86f_pri_gegen_fluxfox")
+        # MF-1071: `86f` und `pri` standen auf T2, weil beiden ein Abbild
+        # von fremder Hand fehlte. fluxfox (MIT) traegt in seinem eigenen
+        # Testverzeichnis dieselbe 360K-Diskette in vierzehn Formaten;
+        # drei davon liegen jetzt im Korpus und dienen einander als
+        # Gegenprobe. `uft_mfm_sector_parser.c` muss mit, weil der
+        # 86F-Leser `uft_mfm_decode_track()` ruft.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/pri/uft_pri.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_mfi_entpackt")
         # MF-1070: `mfi` lieferte NULL Spuren aus seinem eigenen
         # Korpus-Abbild, weil zlib zwar gefunden und gelinkt wurde, das
