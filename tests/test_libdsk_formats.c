@@ -115,26 +115,64 @@ TEST(apridisk_fuelllauf) {
  * NanoWasp Tests
  * ============================================================================ */
 
+/* BERICHTIGT MF-1030. Hier stand eine Pruefung auf die Kennung
+ * `"nanowasp floppy image\r\n\032"` in einem 80-Byte-Kopf. **Beides
+ * gibt es nicht** — libdsks `nwasp_open()` prueft nichts, und eine
+ * NanoWasp-Datei beginnt mit dem ersten Sektor. Die alte Zusage hat
+ * damit ein erfundenes Format festgenagelt.
+ *
+ * Wie bei `qrst` (MF-1028) gilt: diese Datei steht in
+ * `EXCLUDED_TESTS` und **wird nicht gebaut** — der Grund ist
+ * gemessen und als P3-336 gefuehrt (`uft_disk_image_t` ist zweimal
+ * definiert). Die Zusagen werden trotzdem berichtigt, damit die
+ * naechste Hand, die den Ausschluss aufhebt, die richtigen vorfindet.
+ *
+ * Was jetzt geprueft wird: die Groesse ist die einzige pruefbare
+ * Eigenschaft (409600 Byte = 40 x 2 x 10 x 512), und die Sonde nimmt
+ * die **Dateigroesse**, nicht die Puffergroesse — die Lehre aus
+ * MF-1029, wo genau dieser Fehler einen Groessenrueckfall zu totem
+ * Code gemacht hat. */
 TEST(nanowasp_signature) {
-    uint8_t valid_header[80];
-    memset(valid_header, 0, sizeof(valid_header));
-    memcpy(valid_header, NANOWASP_SIGNATURE, NANOWASP_SIGNATURE_LEN);
-    
+    uint8_t puffer[4096];
     int confidence = 0;
-    ASSERT(uft_nanowasp_probe(valid_header, sizeof(valid_header), &confidence) == true);
-    ASSERT(confidence >= 90);
+    memset(puffer, 0, sizeof(puffer));
+
+    /* richtige Dateigroesse -> angenommen, Band „nur die Groesse" */
+    ASSERT(uft_nanowasp_probe(puffer, sizeof(puffer),
+                              NANOWASP_FILE_SIZE, &confidence) == true);
+    ASSERT(confidence >= 30 && confidence < 50);
+
+    /* ein Byte zu wenig -> keine NanoWasp */
+    ASSERT(uft_nanowasp_probe(puffer, sizeof(puffer),
+                              NANOWASP_FILE_SIZE - 1, &confidence)
+           == false);
+
+    /* und die Puffergroesse darf nicht fuer die Dateigroesse
+     * einstehen (MF-1029) */
+    ASSERT(uft_nanowasp_probe(puffer, NANOWASP_FILE_SIZE, 4096u,
+                              &confidence) == false);
 }
 
+/* BERICHTIGT MF-1030: hier stand `uft_nanowasp_validate_header()` mit
+ * einer `nanowasp_header_t`. Es gibt keinen Kopf, also gibt es die
+ * Struktur nicht mehr und die Funktion auch nicht. Was stattdessen
+ * pruefbar ist: die **Versatzformel** samt Skew — und die ist die
+ * eigentliche Aussage dieses Formats. */
 TEST(nanowasp_header_validation) {
-    nanowasp_header_t header;
-    memset(&header, 0, sizeof(header));
-    
-    /* Invalid without signature */
-    ASSERT(uft_nanowasp_validate_header(&header) == false);
-    
-    /* Valid with signature */
-    memcpy(header.signature, NANOWASP_SIGNATURE, NANOWASP_SIGNATURE_LEN);
-    ASSERT(uft_nanowasp_validate_header(&header) == true);
+    /* libdsk drvnwasp.c:127 + :147
+     *     skew[10] = { 1,4,7,0,3,6,9,2,5,8 }
+     *     offset = 204800*head + 5120*cylinder + 512*skew[sector-1] */
+    ASSERT(uft_nanowasp_offset(0, 0, 1) == 512);    /* skew[0] == 1 */
+    ASSERT(uft_nanowasp_offset(0, 0, 4) == 0);      /* skew[3] == 0 */
+    ASSERT(uft_nanowasp_offset(0, 0, 7) == 9 * 512);/* skew[6] == 9 */
+    ASSERT(uft_nanowasp_offset(1, 0, 1) == 5120 + 512);
+    ASSERT(uft_nanowasp_offset(0, 1, 1) == 204800 + 512);
+
+    /* Und die Grenzen: es gibt 40 Zylinder, 2 Koepfe, Sektoren 1..10 */
+    ASSERT(uft_nanowasp_offset(40, 0, 1) == -1);
+    ASSERT(uft_nanowasp_offset(0, 2, 1) == -1);
+    ASSERT(uft_nanowasp_offset(0, 0, 0) == -1);
+    ASSERT(uft_nanowasp_offset(0, 0, 11) == -1);
 }
 
 /* ============================================================================

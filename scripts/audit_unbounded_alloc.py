@@ -146,18 +146,17 @@ BASELINE: dict[str, str] = {
         "deckelt, nicht eine Stelle im Code. Zusaetzlich haelt die "
         "LUT-Schranke aus MF-526 den Zugriff in der Datei.",
 
-    "src/formats/nanowasp/uft_nanowasp.c:157:cylinders":
-        "uint8_t aus `header->cylinders`, also hoechstens 255. Das PRODUKT "
-        "der vier Groessen wird seit MF-543 gegen die Dateigroesse geprueft "
-        "(`data_size > available` -> UFT_ERR_FORMAT). Das Tor sieht die "
-        "Schranke nicht, weil sie auf `data_size` steht und nicht auf den "
-        "vier Einzelwerten.",
-
-    "src/formats/nanowasp/uft_nanowasp.c:158:heads":
-        "uint8_t aus `header->heads`. Siehe den Eintrag darueber.",
-
-    "src/formats/nanowasp/uft_nanowasp.c:171:sectors":
-        "uint8_t aus `header->sectors`. Siehe oben.",
+    # ── MF-1030: drei nanowasp-Eintraege sind hier ENTFALLEN ─────────
+    # Sie lauteten "uint8_t aus `header->cylinders`" / `->heads` /
+    # `->sectors` und deckten eine Geometrie, die aus einem **erfundenen
+    # 80-Byte-Dateikopf** gelesen wurde. Den Kopf gibt es nicht (libdsks
+    # `nwasp_open()` prueft nichts, die Datei beginnt mit dem ersten
+    # Sektor); die Geometrie ist seit MF-1030 fest 40 x 2 x 10 x 512.
+    # Damit ist die Frage nicht "begruendet", sondern **gegenstandslos** —
+    # es gibt keine gelesene Zahl mehr, die entgleisen koennte. Das Tor
+    # hat das selbst gemeldet ("ohne Fundstelle"), und genau dafuer ist
+    # diese Rueckmeldung da: eine Ausnahmeliste, die ihre eigenen
+    # erledigten Eintraege nicht abstoesst, waechst zur Aufzaehlung.
 
     "src/formats/scp/uft_scp_parser_v3.c:1262:flux_count":
         "Seit MF-554 in 64 Bit geprueft: `flux_offset64 + flux_need > "

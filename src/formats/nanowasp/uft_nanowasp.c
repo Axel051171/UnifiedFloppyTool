@@ -1,10 +1,32 @@
 /**
  * @file uft_nanowasp.c
- * @brief NanoWasp floppy image format implementation
- * @version 3.9.0
- * 
- * NanoWasp format from the NanoWasp Microbee emulator.
- * Reference: libdsk drvnwasp.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief NanoWasp — Microbee-Abbild des NanoWasp-Emulators
+ *
+ * Referenz und die Befunde von MF-1030 stehen im Kopf von
+ * `include/uft/formats/uft_nanowasp.h`. Kurz:
+ *
+ *   * Es gibt **keine Kennung und keinen Kopf**. `nwasp_open()` prueft
+ *     nichts. UFT verlangte eine 24 Byte lange Kennung
+ *     `"nanowasp floppy image\r\n\032"` und einen 80-Byte-Kopf —
+ *     beides erfunden, und damit war **keine echte Datei lesbar**.
+ *   * Die Geometrie ist **fest**: 40 Zylinder, 2 Koepfe, 10 Sektoren,
+ *     512 Byte, `dg_secbase = 1`. UFT nahm 80 Zylinder als Vorgabe.
+ *   * Die Anordnung ist **kopf-dur** (SIDES_OUTOUT): erst die ganze
+ *     Seite 0, dann Seite 1.
+ *   * Und innerhalb der Spur liegen die Sektoren **geskewt**:
+ *     `skew[10] = { 1,4,7,0,3,6,9,2,5,8 }`, wobei `skew[s-1]` der
+ *     physische Platz des logischen Sektors `s` ist. Der physische
+ *     Platz 0 traegt also den logischen Sektor **4**.
+ *
+ * Abgenommen an `tests/corpus_free/nwasp_spec_400k.nanowasp` — von UFT
+ * nach der Vorlage gebaut und von **fremder Hand nachgewiesen**:
+ * libdsks `dskid` meldet 40/2/10/512 mit „First sector: 1", und
+ * `dsktrans -itype nanowasp -otype raw` liefert 409600 Byte, in denen
+ * **alle 800 Sektoren in logischer Reihenfolge** stehen — womit Skew
+ * UND kopf-dure Anordnung von einer unabhaengigen Umsetzung bestaetigt
+ * sind.
+ *
+ * Regressionsschutz: `tests/test_nanowasp_gegen_libdsk.c`.
  */
 
 #include "uft/formats/uft_nanowasp.h"
@@ -13,315 +35,246 @@
 #include <string.h>
 #include <stdio.h>
 
-/* ============================================================================
- * Utility Functions
- * ============================================================================ */
+/* libdsk `drvnwasp.c:127` woertlich. */
+const int uft_nanowasp_skew[NANOWASP_SECTORS] = { 1, 4, 7, 0, 3, 6, 9, 2, 5, 8 };
 
-static uint16_t read_le16(const uint8_t *p) {
-    return p[0] | (p[1] << 8);
+void uft_nanowasp_read_options_init(nanowasp_read_options_t *opts) {
+    if (!opts) return;
+    opts->ignore_size = false;
 }
 
-static void write_le16(uint8_t *p, uint16_t v) {
-    p[0] = v & 0xFF;
-    p[1] = (v >> 8) & 0xFF;
+void uft_nanowasp_write_options_init(nanowasp_write_options_t *opts) {
+    if (!opts) return;
+    opts->reserved = false;
 }
 
-static uint8_t code_from_size(uint16_t size) {
-    switch (size) {
-        case 128:  return 0;
-        case 256:  return 1;
-        case 512:  return 2;
-        case 1024: return 3;
-        default:   return 2;
-    }
-}
-
-/* ============================================================================
- * Header Validation
- * ============================================================================ */
-
-bool uft_nanowasp_validate_header(const nanowasp_header_t *header) {
-    if (!header) return false;
-    return memcmp(header->signature, NANOWASP_SIGNATURE, NANOWASP_SIGNATURE_LEN) == 0;
-}
-
-bool uft_nanowasp_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < NANOWASP_HEADER_SIZE) return false;
-    
-    if (memcmp(data, NANOWASP_SIGNATURE, NANOWASP_SIGNATURE_LEN) == 0) {
-        if (confidence) *confidence = 95;
-        return true;
-    }
-    
-    return false;
+long uft_nanowasp_offset(uint32_t cylinder, uint32_t head,
+                         uint32_t sector_1based) {
+    if (cylinder >= NANOWASP_CYLINDERS) return -1;
+    if (head >= NANOWASP_HEADS) return -1;
+    if (sector_1based < 1 || sector_1based > NANOWASP_SECTORS) return -1;
+    /* libdsk `drvnwasp.c:147` woertlich:
+     *     offset = 204800L * head + 5120L * cylinder
+     *              + 512 * skew[sector-1]; */
+    return (long)NANOWASP_SIDE_SIZE * (long)head
+           + (long)NANOWASP_TRACK_SIZE * (long)cylinder
+           + (long)NANOWASP_SECTOR_SIZE
+             * (long)uft_nanowasp_skew[sector_1based - 1];
 }
 
 /* ============================================================================
- * Read Implementation
- * ============================================================================ */
+ * Sonde
+ * ==========================================================================*/
+
+bool uft_nanowasp_probe(const uint8_t *data, size_t size,
+                        size_t file_size, int *confidence) {
+    (void)data;
+    (void)size;
+
+    /* **Die Dateigroesse ist die EINZIGE pruefbare Eigenschaft.**
+     * libdsks `nwasp_open()` prueft nichts — es gibt keine Kennung und
+     * keinen Kopf. Eine Datei ist genau dann eine NanoWasp-Datei, wenn
+     * sie 409600 Byte gross ist und der Benutzer das behauptet.
+     *
+     * Deshalb nimmt diese Sonde `file_size` und nicht `size`: MF-1029
+     * hat an `myz80` gemessen, dass ein Groessenrueckfall gegen die
+     * PUFFERgroesse toter Code ist — der Sondenpuffer ist 4096 Byte,
+     * und `size == 409600` kann nie zutreffen. Genau diese Falle stand
+     * dort seit Jahren im Code. */
+    if (file_size != NANOWASP_FILE_SIZE) return false;
+
+    /* MF-729: 30..49 heisst „nur die Groesse", und genau das ist es.
+     * Hoeher waere unehrlich — 409600 Byte ist auch die Groesse einer
+     * Apple-800K-Diskette und eines 2MG-Rumpfs. */
+    if (confidence) *confidence = 40;
+    return true;
+}
+
+/* ============================================================================
+ * Lesen
+ * ==========================================================================*/
+
+static void nwasp_ergebnis_init(nanowasp_read_result_t *r) {
+    if (!r) return;
+    memset(r, 0, sizeof(*r));
+}
 
 uft_error_t uft_nanowasp_read_mem(const uint8_t *data, size_t size,
                                   uft_disk_image_t **out_disk,
+                                  const nanowasp_read_options_t *opts,
                                   nanowasp_read_result_t *result) {
-    if (!data || !out_disk || size < NANOWASP_HEADER_SIZE) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Initialize result */
-    if (result) {
-        memset(result, 0, sizeof(*result));
-    }
-    
-    /* Validate header */
-    const nanowasp_header_t *header = (const nanowasp_header_t *)data;
-    if (!uft_nanowasp_validate_header(header)) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid NanoWasp signature";
-        }
-        return UFT_ERR_FORMAT;
-    }
-    
-    /* Extract geometry */
-    uint8_t cylinders = header->cylinders;
-    uint8_t heads = header->heads;
-    uint8_t sectors = header->sectors;
-    uint16_t sector_size = read_le16((const uint8_t*)&header->sector_size);
-    
-    /* Apply defaults if values are zero */
-    if (cylinders == 0) cylinders = NANOWASP_DEF_CYLS;
-    if (heads == 0) heads = NANOWASP_DEF_HEADS;
-    if (sectors == 0) sectors = NANOWASP_DEF_SECTORS;
-    if (sector_size == 0) sector_size = NANOWASP_DEF_SECSIZE;
-    
-    /* Calculate expected data size */
-    size_t data_size = (size_t)cylinders * heads * sectors * sector_size;
-    size_t available = size - NANOWASP_HEADER_SIZE;
+    nanowasp_read_options_t vorgabe;
+    uft_disk_image_t *image;
+    uint32_t c, h, s;
 
-    /* MF-543: `available` wurde berechnet und NIE BENUTZT.
-     *
-     * Die Zeile darueber rechnet aus, wie viel der Kopf behauptet; die
-     * Zeile darunter rechnet aus, wie viel wirklich da ist; verglichen
-     * wurden sie nie. Bei `sector_size = 65535` und 255 x 255 x 255
-     * Sektoren ergibt das 1,1 TB Anspruch auf eine 80-Byte-Datei — und
-     * die Schleife weiter unten ruft `malloc(sector_size)` je Sektor,
-     * bis der Speicher voll ist.
-     *
-     * Gefunden zusammen mit dem QRST-Fall (siehe dort), als der
-     * Oeffnungs-Fuzzer um 25 Sondenkennungen erweitert wurde und beide
-     * Plugins zum ersten Mal ueberhaupt eine Eingabe bekamen. Der Lauf
-     * starb bei 21 GB Arbeitsspeicher.
-     *
-     * Die Schleifen sind hier uint8-begrenzt, es gibt also keinen
-     * Ueberlauf des Feldes wie bei QRST — der Schaden ist "nur" die
-     * Erschoepfung des Speichers. Fuer ein Werkzeug, das unbeaufsichtigt
-     * ueber ein Archiv laeuft, ist das derselbe Ausfall.
-     *
-     * Eine berechnete Groesse, die niemand vergleicht, ist keine
-     * Pruefung. Sie sieht nur so aus. */
-    if (data_size > available) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail =
-                "NanoWasp header claims more data than the file holds";
-        }
-        return UFT_ERR_FORMAT;
-    }
+    nwasp_ergebnis_init(result);
+    if (!data || !out_disk) return UFT_ERR_INVALID_PARAM;
+    *out_disk = NULL;
+    if (!opts) { uft_nanowasp_read_options_init(&vorgabe); opts = &vorgabe; }
 
+    if (!opts->ignore_size && size != NANOWASP_FILE_SIZE)
+        return UFT_ERROR_FORMAT_INVALID;
+    if (size < NANOWASP_FILE_SIZE) return UFT_ERROR_FORMAT_INVALID;
 
-    if (result) {
-        result->cylinders = cylinders;
-        result->heads = heads;
-        result->sectors = sectors;
-        result->sector_size = sector_size;
-        result->image_size = size;
-        result->data_size = data_size;
-    }
-    
-    /* Allocate disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(cylinders, heads);
-    if (!disk) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    disk->format = UFT_FORMAT_RAW;
-    snprintf(disk->format_name, sizeof(disk->format_name), "NanoWasp");
-    disk->sectors_per_track = sectors;
-    disk->bytes_per_sector = sector_size;
-    
-    /* Read track data */
-    const uint8_t *track_data = data + NANOWASP_HEADER_SIZE;
-    size_t data_pos = 0;
-    uint8_t size_code = code_from_size(sector_size);
-    
-    for (uint8_t c = 0; c < cylinders; c++) {
-        for (uint8_t h = 0; h < heads; h++) {
-            size_t idx = c * heads + h;
-            
-            uft_track_t *track = uft_track_alloc(sectors, 0);
-            if (!track) {
-                uft_disk_free(disk);
-                return UFT_ERR_MEMORY;
-            }
-            
-            track->cylinder = c;
-            track->head = h;
-            track->encoding = UFT_ENC_MFM;
-            
-            for (uint8_t s = 0; s < sectors; s++) {
-                uft_sector_t *sect = &track->sectors[s];
-                sect->id.cylinder = c;
-                sect->id.head = h;
-                sect->id.sector = s + 1;
-                sect->id.size_code = size_code;
-                sect->status = UFT_SECTOR_OK;
-                
-                sect->data = malloc(sector_size);
-                sect->data_size = sector_size;
-                
-                if (sect->data) {
-                    if (data_pos + sector_size <= available) {
-                        memcpy(sect->data, track_data + data_pos, sector_size);
-                    } else {
-                        memset(sect->data, 0xE5, sector_size);
-                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
-                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
-                         * unterscheiden -- und `status` stand schon auf OK. */
-                        uft_sector_mark_missing(sect);
-                    }
+    image = uft_disk_alloc(NANOWASP_CYLINDERS, NANOWASP_HEADS);
+    if (!image) return UFT_ERROR_NO_MEMORY;
+    image->format = UFT_FORMAT_DSK;
+    snprintf(image->format_name, sizeof(image->format_name), "NanoWasp");
+    image->sectors_per_track = NANOWASP_SECTORS;
+    image->bytes_per_sector  = NANOWASP_SECTOR_SIZE;
+
+    for (c = 0; c < NANOWASP_CYLINDERS; c++) {
+        for (h = 0; h < NANOWASP_HEADS; h++) {
+            const size_t idx = (size_t)c * NANOWASP_HEADS + h;
+            uft_track_t *tr = (uft_track_t *)calloc(1, sizeof(uft_track_t));
+            if (!tr) { uft_disk_free(image); return UFT_ERROR_NO_MEMORY; }
+            uft_track_init(tr, (int)c, (int)h);
+
+            for (s = 1; s <= NANOWASP_SECTORS; s++) {
+                const long off = uft_nanowasp_offset(c, h, s);
+                if (off < 0
+                    || (size_t)off + NANOWASP_SECTOR_SIZE > size) {
+                    uft_disk_free(image);
+                    free(tr->sectors);
+                    free(tr);
+                    return UFT_ERROR_FORMAT_INVALID;
                 }
-                data_pos += sector_size;
-                
-                track->sector_count++;
+                /* Sektor-IDs sind **1-basiert** (`dg_secbase = 1`), und
+                 * `uft_format_add_sector()` addiert laut eigenem Kopf 1
+                 * auf den 0-basierten Laufindex — hier also richtig.
+                 * Geprueft und deshalb NICHT auf `_with_id` umgestellt
+                 * (anders als bei `myz80`, wo `dg_secbase = 0` ist). */
+                uft_format_add_sector(tr, (uint8_t)(s - 1), data + off,
+                                      NANOWASP_SECTOR_SIZE,
+                                      (uint8_t)c, (uint8_t)h);
             }
-            
-            disk->track_data[idx] = track;
+            image->track_data[idx] = tr;
         }
     }
-    
+
     if (result) {
         result->success = true;
+        result->error = UFT_OK;
+        result->cylinders   = NANOWASP_CYLINDERS;
+        result->heads       = NANOWASP_HEADS;
+        result->sectors     = NANOWASP_SECTORS;
+        result->sector_size = NANOWASP_SECTOR_SIZE;
+        result->file_size   = (uint64_t)size;
     }
-    
-    *out_disk = disk;
+
+    *out_disk = image;
     return UFT_OK;
 }
 
 uft_error_t uft_nanowasp_read(const char *path,
                               uft_disk_image_t **out_disk,
+                              const nanowasp_read_options_t *opts,
                               nanowasp_read_result_t *result) {
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        return UFT_ERR_IO;
+    FILE *f;
+    uint8_t *buf;
+    long len;
+    uft_error_t rc;
+
+    nwasp_ergebnis_init(result);
+    if (!path || !out_disk) return UFT_ERR_INVALID_PARAM;
+
+    f = fopen(path, "rb");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    len = ftell(f);
+    if (len <= 0) { fclose(f); return UFT_ERROR_IO; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
+
+    buf = (uint8_t *)malloc((size_t)len);
+    if (!buf) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    if (fread(buf, 1, (size_t)len, f) != (size_t)len) {
+        free(buf); fclose(f); return UFT_ERROR_IO;
     }
-    
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    
-    uint8_t *data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return UFT_ERR_MEMORY;
-    }
-    
-    if (fread(data, 1, size, fp) != size) {
-        free(data);
-        fclose(fp);
-        return UFT_ERR_IO;
-    }
-    
-    fclose(fp);
-    
-    uft_error_t err = uft_nanowasp_read_mem(data, size, out_disk, result);
-    free(data);
-    
-    return err;
+    fclose(f);
+
+    rc = uft_nanowasp_read_mem(buf, (size_t)len, out_disk, opts, result);
+    free(buf);
+    return rc;
 }
 
 /* ============================================================================
- * Write Implementation
- * ============================================================================ */
+ * Schreiben
+ *
+ * Spezifikationsgerecht, aber weiterhin ohne Aufrufer aus dem
+ * Plugin-Pfad (P3-204, MF-930).
+ * ==========================================================================*/
 
 uft_error_t uft_nanowasp_write(const uft_disk_image_t *disk,
-                               const char *path) {
-    if (!disk || !path) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Calculate output size */
-    size_t data_size = (size_t)disk->tracks * disk->heads * 
-                       disk->sectors_per_track * disk->bytes_per_sector;
-    size_t total_size = NANOWASP_HEADER_SIZE + data_size;
-    
-    uint8_t *output = malloc(total_size);
-    if (!output) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    /* Build header */
-    nanowasp_header_t *header = (nanowasp_header_t *)output;
-    memset(header, 0, sizeof(*header));
-    memcpy(header->signature, NANOWASP_SIGNATURE, NANOWASP_SIGNATURE_LEN);
-    header->version = 0;
-    header->cylinders = disk->tracks;
-    header->heads = disk->heads;
-    header->sectors = disk->sectors_per_track;
-    write_le16((uint8_t*)&header->sector_size, disk->bytes_per_sector);
-    
-    /* Write track data */
-    uint8_t *track_data = output + NANOWASP_HEADER_SIZE;
-    size_t data_pos = 0;
-    
-    for (uint16_t c = 0; c < disk->tracks; c++) {
-        for (uint8_t h = 0; h < disk->heads; h++) {
-            size_t idx = c * disk->heads + h;
-            uft_track_t *track = disk->track_data[idx];
-            
-            for (uint8_t s = 0; s < disk->sectors_per_track; s++) {
-                if (track && s < track->sector_count && track->sectors[s].data) {
-                    memcpy(track_data + data_pos, track->sectors[s].data,
-                           disk->bytes_per_sector);
-                } else {
-                    memset(track_data + data_pos, 0xE5, disk->bytes_per_sector);
-                }
-                data_pos += disk->bytes_per_sector;
+                               const char *path,
+                               const nanowasp_write_options_t *opts) {
+    uint8_t *puffer;
+    FILE *f;
+    uint32_t c, h, s;
+
+    (void)opts;
+    if (!disk || !path) return UFT_ERR_INVALID_PARAM;
+
+    /* NanoWasp hat EINE Geometrie. Was nicht hineinpasst, wird
+     * ABGEWIESEN statt gerundet. */
+    if (disk->tracks != NANOWASP_CYLINDERS
+        || disk->heads != NANOWASP_HEADS
+        || disk->sectors_per_track != NANOWASP_SECTORS
+        || disk->bytes_per_sector != NANOWASP_SECTOR_SIZE)
+        return UFT_ERROR_NOT_SUPPORTED;
+
+    puffer = (uint8_t *)calloc(1, NANOWASP_FILE_SIZE);
+    if (!puffer) return UFT_ERROR_NO_MEMORY;
+
+    for (c = 0; c < NANOWASP_CYLINDERS; c++) {
+        for (h = 0; h < NANOWASP_HEADS; h++) {
+            const size_t idx = (size_t)c * NANOWASP_HEADS + h;
+            const uft_track_t *tr = disk->track_data
+                                    ? disk->track_data[idx] : NULL;
+            if (!tr) continue;
+            for (s = 1; s <= NANOWASP_SECTORS; s++) {
+                const long off = uft_nanowasp_offset(c, h, s);
+                const uft_sector_t *sek;
+                size_t n;
+                if (off < 0 || (s - 1) >= tr->sector_count) continue;
+                sek = &tr->sectors[s - 1];
+                if (!sek->data) continue;
+                n = sek->data_len < NANOWASP_SECTOR_SIZE
+                    ? sek->data_len : NANOWASP_SECTOR_SIZE;
+                memcpy(puffer + off, sek->data, n);
             }
         }
     }
-    
-    /* Write file */
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        free(output);
-        return UFT_ERR_IO;
+
+    f = fopen(path, "wb");
+    if (!f) { free(puffer); return UFT_ERROR_FILE_OPEN; }
+    if (fwrite(puffer, 1, NANOWASP_FILE_SIZE, f) != NANOWASP_FILE_SIZE) {
+        fclose(f); free(puffer); return UFT_ERROR_IO;
     }
-    
-    size_t written = fwrite(output, 1, total_size, fp);
-    fclose(fp);
-    free(output);
-    
-    if (written != total_size) {
-        return UFT_ERR_IO;
-    }
-    
+    free(puffer);
+    if (fclose(f) != 0) return UFT_ERROR_IO;
     return UFT_OK;
 }
 
 /* ============================================================================
- * Format Plugin Registration
- * ============================================================================ */
+ * Plugin
+ * ==========================================================================*/
 
 static bool nanowasp_probe_plugin(const uint8_t *data, size_t size,
                                   size_t file_size, int *confidence) {
-    (void)file_size;
-    return uft_nanowasp_probe(data, size, confidence);
+    /* **`file_size` wird hier WEITERGEGEBEN, nicht verworfen.**
+     * MF-1029 hat an `myz80` gemessen, dass `(void)file_size` aus einem
+     * Groessenrueckfall toten Code macht: der Sondenpuffer ist 4096
+     * Byte, und ein Vergleich gegen 409600 kann dann nie zutreffen.
+     * Bei NanoWasp ist die Groesse die EINZIGE Pruefung — hier waere
+     * derselbe Fehler das ganze Format. */
+    return uft_nanowasp_probe(data, size, file_size, confidence);
 }
 
-static uft_error_t nanowasp_open(uft_disk_t *disk, const char *path, bool read_only) {
+static uft_error_t nanowasp_open(uft_disk_t *disk, const char *path,
+                                 bool read_only) {
     (void)read_only;
     uft_disk_image_t *image = NULL;
-    uft_error_t err = uft_nanowasp_read(path, &image, NULL);
+    uft_error_t err = uft_nanowasp_read(path, &image, NULL, NULL);
     if (err == UFT_OK && image) {
         disk->plugin_data = image;
         disk->geometry.cylinders = image->tracks;
@@ -343,123 +296,57 @@ static void nanowasp_close(uft_disk_t *disk) {
 
 static uft_error_t nanowasp_read_track(uft_disk_t *disk, int cyl, int head,
                                         uft_track_t *track) {
-    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
-     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
-     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
-     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen gerechnet
+     * oder indiziert wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
-
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
+    if (cyl >= (int)image->tracks || head >= (int)image->heads)
         return UFT_ERR_INVALID_PARAM;
-    }
 
-    uft_track_t *src = image->track_data[idx];
+    uft_track_t *src = image->track_data[(size_t)cyl * image->heads + head];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
     track->cylinder = cyl;
     track->head = head;
     track->encoding = src->encoding;
 
-    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
-     *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
+    /* MF-516: `uft_track_t.sectors` ist ein dynamischer Zeiger, und
+     * `uft_track_init()` legt ihn nicht an. */
     for (size_t s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
     }
-
     return UFT_OK;
 }
 
-/* In-memory write: updates cached disk image. Persist via uft_nanowasp_write(). */
 static uft_error_t nanowasp_write_track(uft_disk_t *disk, int cyl, int head,
                                          const uft_track_t *track) {
-    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+    /* MF-529: negative Koordinaten abweisen, bevor mit ihnen gerechnet
+     * wird. Beim Schreiben bestimmt ein falscher Index, WOHIN
+     * geschrieben wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
-
-    /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     * Der echte `uft_nanowasp_write()` in derselben Datei hat keinen
+     * Aufrufer — kein `.flush`, `close()` gibt nur frei (P3-204).
      *
-     * Diese Datei HAT einen echten Dateischreiber — `uft_nanowasp_write()`,
-     * mit `fwrite` und allem. Nur fuehrt kein Weg dorthin: die
-     * Plugin-Tafel hat kein `.flush`, `close()` gibt den Puffer frei
-     * ohne zu schreiben, und dieses `write_track` fasste nur den
-     * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
-     * erreichte die Platte.
-     *
-     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
-     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
-     * Schreiboperation STEHT — und die steht. Sie wird nur nie
-     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
-     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
-     * der dort aufgezaehlten Verdachtslisten.
-     *
-     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
-     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
-     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
-     * Quelltext — „Call flush/close to persist changes" —, und es gab
-     * ihn nicht.
-     *
-     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
-     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
-     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
-     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
-     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
-     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
-     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
-     *
-     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
+     * MF-1030 aendert daran nichts, aber es aendert den Wert einer
+     * spaeteren Verdrahtung: vorher haette sie eine Datei mit einem
+     * erfundenen 80-Byte-Kopf und ohne Skew geschrieben, die keine
+     * fremde Umsetzung lesen kann. */
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_nanowasp_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_nanowasp_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-930/P3-204: der spezifikationsgerechte uft_nanowasp_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -479,6 +366,10 @@ const uft_format_plugin_t uft_format_plugin_nanowasp = {
     .read_track = nanowasp_read_track,
     .write_track = nanowasp_write_track,
     .verify_track = uft_generic_verify_track,
+    /* Geprueft und nicht angefasst: NanoWasp hat keine
+     * Herstellerspezifikation; libdsks Treiber ist selbst eine
+     * RE-Referenz — und nennt seine eigene Skew-Behandlung
+     * ausdruecklich „an abuse of libdsk". */
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_nanowasp_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_nanowasp_features) / sizeof(uft_format_plugin_nanowasp_features[0]),

@@ -353,6 +353,48 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
+        # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
+        # NanoWasp-Datei lesen**. Gemessen gegen libdsks
+        # `lib/drvnwasp.c` (John Elliott, LGPL-2+; nur GELESEN, Kanal
+        # Spec nach MF-695):
+        #
+        #   Kennung    24 Byte `"nanowasp floppy image\r\n\032"`
+        #              -> **es gibt keine**; `nwasp_open()` prueft nichts
+        #   Kopf       80 Byte mit Geometriefeldern -> **es gibt keinen**;
+        #              die Datei beginnt mit dem ersten Sektor
+        #   Zylinder   80 -> **40** (40 x 2 x 10 x 512 = 409600 Byte)
+        #   Anordnung  linear -> **kopf-dur** (SIDES_OUTOUT)
+        #   Sektoren   in Reihenfolge -> **geskewt**:
+        #              `skew[10] = {1,4,7,0,3,6,9,2,5,8}`, wobei
+        #              skew[s-1] der physische Platz des logischen
+        #              Sektors s ist
+        #
+        # Der Treiberkopf nennt das selbst: „an abuse of libdsk ...
+        # cpmtools doesn't support the type of skewing done by the
+        # microbee (**sector 1 doesn't map to sector 1**)". Bei Versatz
+        # 0 steht deshalb der logische Sektor **4**.
+        #
+        # Das ist die Klasse von MF-961 (`86f`/`"86BX"`), MF-1022
+        # (`sap`/`"SAP"`) und MF-1029 (`myz80`/`"MYZ80 "`) — zum
+        # **vierten** Mal, und dreimal davon in dieser Runde.
+        #
+        # **Und eine Zusage haelt die Lehre aus MF-1029 fest:** die
+        # Sonde nimmt die DATEIgroesse, nicht die Puffergroesse. Bei
+        # `myz80` war ein Groessenrueckfall gegen `size` toter Code
+        # (Puffer = 4096 Byte); bei NanoWasp waere derselbe Fehler das
+        # ganze Format, weil die Groesse die einzige Pruefung ist.
+        #
+        # **Das Fixture ist kein Selbstgespraech:** `dsktrans -itype
+        # nanowasp -otype raw` liefert 409600 Byte, in denen **alle 800
+        # Sektoren in logischer Reihenfolge** stehen — das prueft Skew
+        # UND Anordnung zugleich. T2 und nicht T1b, weil T1b einen
+        # fremden ERZEUGER verlangt.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/nanowasp/uft_nanowasp.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_myz80_gegen_libdsk")
         # MF-1029: `myz80` stand auf T3, und **UFT konnte keine einzige
         # MYZ80-Datei lesen** — aus einem zwingenden Grund. Gemessen

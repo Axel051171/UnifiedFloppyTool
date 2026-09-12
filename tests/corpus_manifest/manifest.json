@@ -764,6 +764,18 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einem gelesenen Treiber; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Zylinder, 1 = Kopf, 2..3 = Sektornummer (LE16), 4..8 = \"UFT-M\", Rest 0x5A. **Und der Inhalt ist von FREMDER HAND nachgewiesen:** libdsks aus dem Klon gebaute Werkzeuge (siehe docs/ORACLES.md) lesen die Datei - `dskid` meldet 64 Zylinder, 1 Kopf, 128 Sektoren, 1024 Byte und \"First sector: 0\" - und `dsktrans -itype myz80 -otype raw` liefert 8388608 Byte zurueck, in denen **Zylinder 0 byteidentisch** ist (131072 von 131072) und die Zylinder 1..63 **zu 100 % 0xE5** sind. Damit sind Versatzformel UND Kurzdatei-Regel von einer unabhaengigen Umsetzung bestaetigt. origin bleibt `derived`, weil die Datei von UFT ERZEUGT wurde; T1b verlangt einen fremden ERZEUGER."
+    },
+    {
+      "file": "tests/corpus_free/nwasp_spec_400k.nanowasp",
+      "sha256": "bdab165d295f898d15ef5bd477e4531a7953d87482d4c2931b55a5c1f242d2e1",
+      "format": "nanowasp",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1030), nach libdsks lib/drvnwasp.c",
+      "source": "409600 Byte = 40 Zylinder x 2 Koepfe x 10 Sektoren x 512 Byte, OHNE Kopf - libdsks `nwasp_open()` (Z. 71-94) prueft nichts, es gibt keine Kennung. Die Anordnung ist KOPF-DUR (SIDES_OUTOUT: erst die ganze Seite 0, dann Seite 1), und innerhalb der Spur liegen die Sektoren GESKEWT: `skew[10] = {1,4,7,0,3,6,9,2,5,8}` (Z. 127), wobei skew[s-1] der physische Platz des logischen Sektors s ist. Versatz: `204800*head + 5120*cylinder + 512*skew[sector-1]` (Z. 147). Geometrie fest nach `nwasp_getgeom()` (Z. 286-301) mit `dg_secbase = 1`. Der Treiberkopf nennt seine eigene Skew-Behandlung ausdruecklich \"an abuse of libdsk ... cpmtools doesn't support the type of skewing done by the microbee (sector 1 doesn't map to sector 1)\".",
+      "test": "test_nanowasp_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einem gelesenen Treiber; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Kopf, 1 = Zylinder, 2 = LOGISCHE Sektornummer (1..10), 3..7 = \"UFT-N\", Rest 0x5A. Bei Versatz 0 steht deshalb der logische Sektor **4** (weil skew[3] == 0) - das ist zugleich der Nachweis, dass die Datei keinen Kopf hat. **Und der Inhalt ist von FREMDER HAND nachgewiesen:** libdsks aus dem Klon gebaute Werkzeuge (siehe docs/ORACLES.md) lesen die Datei - `dskid` meldet 40 Zylinder, 2 Koepfe, 10 Sektoren, 512 Byte und \"First sector: 1\" - und `dsktrans -itype nanowasp -otype raw` liefert 409600 Byte, in denen **alle 800 Sektoren in logischer Reihenfolge** stehen. Dieser zweite Lauf prueft Skew UND kopf-dure Anordnung zugleich, denn nur wenn beide stimmen, kommt die Diskette sortiert heraus. origin bleibt `derived`, weil die Datei von UFT ERZEUGT wurde."
     }
   ]
 }

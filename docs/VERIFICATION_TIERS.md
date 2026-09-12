@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 36 |
-| T2 | 31 |
-| T3 | 19 |
+| T2 | 32 |
+| T3 | 18 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -104,6 +104,27 @@ Mutationsmatrix **10 von 10**. Die Konfidenz steht bei **70** und nicht hoeher: 
 **T2 und nicht T1b**, weil T1b einen fremden *Erzeuger* verlangt; hier hat eine fremde Umsetzung nur *gelesen*. Der Weg zu T1b steht als P3-333.
 
 Der spezifikationsgerechte `uft_myz80_write()` bleibt ohne Aufrufer (P3-204). Was MF-1029 daran aendert: vorher haette eine Verdrahtung eine Datei mit der erfundenen `"MYZ80 "`-Kennung geschrieben, die jede fremde Umsetzung abweist. | — |
+| `nanowasp` | **T2** | `test_nanowasp_gegen_libdsk` | `tools/uft-scout/work/libdsk/lib/drvnwasp.c` (John Elliott, **LGPL-2+**). **Nur gelesen** — Kanal *Spec* nach MF-695. Fuenf Stellen: Z. 23-30 (der Kopfkommentar mit SIDES_OUTOUT und der Skew-Begruendung), Z. 71-94 (`nwasp_open()` prueft nichts), Z. 127 (die Skew-Tafel), Z. 147 (die Versatzformel), Z. 286-301 (`nwasp_getgeom()`). **Zweite Bestaetigung durch AUSFUEHRUNG**: die aus dem Klon gebauten Werkzeuge lesen das Fixture in logischer Sektorreihenfolge zurueck. | MF-1030 — **UFT konnte keine NanoWasp-Datei lesen**, und der Grund war derselbe wie bei `myz80` einen Schritt vorher: eine Kennung, die es nicht gibt.
+
+**(1) Kennung und Kopf sind erfunden.** `uft_nanowasp.h` verlangte eine **24 Byte** lange Kennung `"nanowasp floppy image\r\n\032"` und einen **80-Byte-Kopf** mit Geometriefeldern. libdsks `nwasp_open()` (Z. 71-94) prueft **nichts** — es gibt keine Kennung und keinen Kopf, die Datei beginnt mit dem ersten Sektor. Klasse von **MF-961** (`86f`/`"86BX"`), **MF-1022** (`sap`/`"SAP"`) und **MF-1029** (`myz80`/`"MYZ80 "`) — zum **vierten** Mal, dreimal davon in dieser Runde.
+
+**(2) Und haette die Kennung gestimmt, waere es doppelt falsch gewesen:** 80 Byte Sektordaten waeren als Kopf verworfen worden (die Mutation „einen 80-Byte-Kopf ueberspringen“ faellt genau daran), UND die Anordnung ist nicht linear.
+
+**(3) Die Anordnung ist kopf-dur** (SIDES_OUTOUT: erst die ganze Seite 0, dann Seite 1) — libdsks Kopfkommentar sagt das ausdruecklich, samt der Bemerkung „though the MicroBee actually writes them in SIDES_ALT order“.
+
+**(4) Und innerhalb der Spur liegen die Sektoren GESKEWT:** `skew[10] = { 1,4,7,0,3,6,9,2,5,8 }`, wobei `skew[s-1]` der physische Platz des logischen Sektors `s` ist. Der physische Platz 0 traegt damit den logischen Sektor **4**. libdsk nennt seine eigene Behandlung davon „an abuse of libdsk (skewing should be done at the cpmtools level). However, cpmtools doesn't support the type of skewing done by the microbee (**sector 1 doesn't map to sector 1**)“ — eine Quelle, die ihre eigene Schichtverletzung benennt, ist eine gute Quelle.
+
+**(5) Geometrie fest** 40 x 2 x 10 x 512 = **409600** Byte, mit `dg_secbase = 1` (1-basierte Sektornummern; hier ist `uft_format_add_sector()` also richtig, anders als bei `myz80`). UFT nahm **80** Zylinder als Vorgabe.
+
+**Eine Zusage haelt ausdruecklich die Lehre aus MF-1029 fest.** Dort war ein Groessenrueckfall toter Code, weil `myz80_probe_plugin()` die Dateigroesse verwarf (`(void)file_size`) und gegen die **Puffergroesse** verglich — 4096 Byte. Bei NanoWasp waere derselbe Fehler das ganze Format, weil die Groesse die **einzige** pruefbare Eigenschaft ist. `uft_nanowasp_probe()` nimmt `file_size` deshalb als eigenes Argument, und eine Gegenprobe prueft es: ein 409600 Byte grosser Puffer mit Dateigroesse 4096 wird abgewiesen. Die Mutation, die auf `size` zurueckdreht, faellt.
+
+**Das Fixture ist kein Selbstgespraech.** `tests/corpus_free/nwasp_spec_400k.nanowasp` ist von UFT nach der Vorlage gebaut, aber von **fremder Hand nachgewiesen**: libdsks `dskid` meldet 40/2/10/512 mit „First sector: 1“, und `dsktrans -itype nanowasp -otype raw` liefert 409600 Byte, in denen **alle 800 Sektoren in logischer Reihenfolge** stehen. Dieser zweite Lauf ist der entscheidende: er prueft **Skew und kopf-dure Anordnung zugleich**, denn nur wenn beide stimmen, kommt die Diskette sortiert heraus.
+
+Mutationsmatrix **9 von 9** — und eine Verdrehung der Skew-Tafel um EINE Stelle genuegt, um sie zu faellen.
+
+Die Konfidenz steht bei **40** (MF-729: „nur die Groesse“) und darf nicht hoeher sein: 409600 Byte ist auch die Groesse einer Apple-800K-Diskette.
+
+**T2 und nicht T1b**, weil T1b einen fremden *Erzeuger* verlangt (P3-333). | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `opus` | **T2** | `test_opd_geometrie`, `test_schreibzusage_erreicht_die_datei` | MF-905 Geometrie aus dem Bootsektor: src/samdisk/opd.h (struct OPD_BOOT) und src/samdisk/opd.cpp — ReadOPD() UND WriteOPD() werten identisch aus (cyls, sectors, heads = flags & 0x10, Groessencode = flags >> 6). SAMdisk ist im Baum vendort unter MIT (src/samdisk/License.txt). Loest die frueher genannte, ausdruecklich UNVERIFIZIERTE Referenz libdsk drvopus.c ab (MF-651). | MF-905 | — |
 | `qrst` | **T2** | `test_qrst_gegen_libdsk` | `tools/uft-scout/work/libdsk/doc/qrst.html` — die Formatbeschreibung von **John Elliott**, und dieselbe, die libdsks `lib/drvqrst.c` umsetzt (**LGPL-2+**). **Nur gelesen** — Kanal *Spec* nach MF-695; keine Zeile Quelltext uebernommen. Die Beschreibung gibt Kopfaufbau, die sieben Kapazitaetskodes, alle drei Spursatz-Arten und den Pruefsummen-Algorithmus woertlich; die Geometrien der Kodes stehen in `include/libdsk.h:134-141`. **Zweite, unabhaengige Bestaetigung durch AUSFUEHRUNG**: libdsks eigene Werkzeuge, aus dem Klon gebaut (siehe `docs/ORACLES.md`), lesen das nach dieser Beschreibung gebaute Fixture byteweise zurueck. | MF-1028 — **UFT konnte keine einzige echte QRST-Datei lesen, und sein Schreiber erzeugte ein Format, das es nicht gibt.** Sieben Abweichungen gegen die Formatbeschreibung, jede gemessen:
@@ -188,7 +209,6 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_ipf_helper`, `test_ipf_sonde_beansprucht_nur_ipf`, `test_plugin_probe_real` | — | — | — |
 | `logical` | **T3** | — | — | — | — |
-| `nanowasp` | **T3** | — | — | — | — |
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real` | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
