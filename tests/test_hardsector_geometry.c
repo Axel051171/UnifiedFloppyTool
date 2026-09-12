@@ -149,48 +149,86 @@ int main(void)
      *
      * `uft_hardsector_probe()` beginnt mit `(void)data;` und dem
      * Kommentar "Content doesn't matter for hard-sector detection".
-     * Sie sagt `true` mit Konfidenz 50 fuer jede bekannte Groesse.
+     * Sie sagt `true` fuer jede bekannte Groesse — seit MF-1059 mit
+     * Konfidenz **40** statt 50, weil sie kein Byte liest und 50 nach
+     * MF-729 „Struktur gelesen" beansprucht.
      *
      * Zusammen mit `.extensions = "img,ima,8in"` und einem
      * verdrahteten `.write_track` ist das die Lage aus FMT-15 und
      * MF-688 in einem: ein kopfloses Format, das allein an der
      * Groesse erkannt wird UND ein Schreibziel anbietet. */
-    /* Und der zweite, GEKOPPELTE Mangel (MF-706): der Vertrag lautet
-     * `p->probe(data, size, file_size, &conf)` — die Probe bekommt die
-     * Pufferlaenge UND die echte Dateigroesse
-     * (`uft_format_plugin.c`, `uft_probe_buffer_ranked`).
-     * `hardsector_probe_plugin` verwirft `file_size` mit `(void)` und
-     * reicht `size` weiter. Verglichen wird also die PUFFERLAENGE gegen
-     * Abbildgroessen wie 256 256.
+    /* Und der zweite, GEKOPPELTE Mangel (MF-706) — BEHOBEN MF-1059.
      *
-     * Folge: die Probe trifft nur, wenn zufaellig die ganze Datei im
-     * Puffer liegt (`uft_detect_buffer_impl.c:41` ruft mit
-     * `(data, size, size)`) — und nie, wenn ein Aufrufer nur einen
-     * Kopf-Ausschnitt liest.
+     * Hier stand: der Vertrag lautet `p->probe(data, size, file_size,
+     * &conf)`, und `hardsector_probe_plugin` verwerfe `file_size` mit
+     * `(void)` und reiche `size` weiter; verglichen werde also die
+     * PUFFERLAENGE gegen Abbildgroessen wie 256 256. Das war richtig —
+     * und die Folge war schwerer als die Zeile darunter sagte.
      *
-     * Die beiden Maengel sind gekoppelt, und darum steht hier KEIN Fix:
-     * repariert man nur `file_size`, trifft die Probe haeufiger — und
-     * verteilt damit die falsche Hartsektor-Etikettierung weiter. Erst
-     * die Geometrie, dann die Groessenquelle. */
+     * Dort stand: „die Probe trifft nur, wenn zufaellig die ganze Datei
+     * im Puffer liegt". Gemessen MF-1059 traf sie auf dem
+     * PRODUKTIONSPFAD **nie**: `uft_format_plugin.c:365-366` deckelt den
+     * Puffer bei `UFT_PROBE_BUFFER_SIZE` (65 536), und **alle fuenf**
+     * Groessen der Tafel liegen darueber — 89 600 / 163 840 / 256 256 /
+     * 512 512 / 1 025 024. Das Plugin war ueber die Erkennung
+     * unerreichbar; nur der Direktaufruf hier im Test und
+     * `uft_detect_buffer_impl.c:41` (das mit `(data, size, size)` ruft)
+     * kamen je hinein. Siebte Auspraegung der MF-1029-Falle.
+     *
+     * **Die Reihenfolge aus MF-706 ist eingehalten, nur anders als sie
+     * gedacht war.** Hier stand: „repariert man nur `file_size`, trifft
+     * die Probe haeufiger — und verteilt damit die falsche
+     * Hartsektor-Etikettierung weiter. Erst die Geometrie, dann die
+     * Groessenquelle." Die Geometrie zu reparieren verlangt eine
+     * Beschaffung, die es nicht gibt (welche Spurzahl? welcher erste
+     * Sektor?) — MF-1058 hat inzwischen gemessen, dass dort ueberhaupt
+     * keine Zahl fehlt, sondern eine Eigentuemer-Entscheidung (P3-340).
+     * Was die Etikettierung wirklich verteilt haette, war nicht das
+     * Treffen an sich, sondern der ANSPRUCH: Konfidenz 50 heisst nach
+     * MF-729 „Struktur gelesen", und gelesen wird hier kein Byte.
+     *
+     * MF-1059 senkt sie deshalb im SELBEN Schritt auf 40 („nur die
+     * Groesse"), und die Wirkung ist gemessen, nicht behauptet —
+     * `tests/test_probe_verdict_bands.c`, Zeile PC 160K (163 840 Byte,
+     * die Groesse, um die es geht):
+     *
+     *     vor  MF-1059:  Sieger TRD 45, MEHRDEUTIG, 10 von 12 im Band
+     *     nach MF-1059:  Sieger TRD 45, MEHRDEUTIG, 11 von 13 im Band
+     *
+     * `hardsector` tritt dem Rennen bei und **gewinnt es nicht**; das
+     * Urteil war vorher mehrdeutig und bleibt es. Die Etikettierung wird
+     * also nicht verteilt — der Benutzer bekommt dieselbe Rueckfrage wie
+     * zuvor.
+     *
+     * Der Rotbeweis dazu ist `tests/test_hardsector_erreichbar.c`
+     * (7 Zusagen, 5 fielen gegen den Vorzustand), Mutationsmatrix 9/9.
+     *
+     * Die zwei Aufrufe unten gehen weiterhin DIREKT an
+     * `uft_hardsector_probe()`; deren zweites Argument ist seit MF-1059
+     * die DATEIgroesse, nicht die Pufferlaenge. Die Ausgabe sagt das. */
     int konf = -1;
     uint8_t leer[512];
     memset(leer, 0, sizeof(leer));
     bool ja = uft_hardsector_probe(leer, sizeof(leer), &konf);
-    printf("\n  Probe mit Pufferlaenge 512: %s (Konfidenz %d)\n",
+    printf("\n  Probe mit Dateigroesse 512: %s (Konfidenz %d)\n",
            ja ? "JA" : "nein", konf);
     PRUEFE(!ja, "512 Byte werden als Hartsektor-Abbild bejaht");
 
     konf = -1;
     ja = uft_hardsector_probe(leer, 256256u, &konf);
-    printf("  Probe mit Pufferlaenge 256 256: %s (Konfidenz %d)\n",
+    printf("  Probe mit Dateigroesse 256 256: %s (Konfidenz %d)\n",
            ja ? "JA" : "nein", konf);
-    PRUEFE(ja && konf == 50,
-           "erwartet JA mit Konfidenz 50 (der dokumentierte Ist-Stand), "
+    PRUEFE(ja && konf == 40,
+           "erwartet JA mit Konfidenz 40 (seit MF-1059: Band \"nur die "
+           "Groesse\", 30..49 nach MF-729 — vorher stand hier 50, also "
+           "\"Struktur gelesen\", was diese Sonde nicht kann), "
            "gemessen %s/%d", ja ? "JA" : "nein", konf);
     printf("       ^ dieselbe Funktion, dieselben Nullbytes — nur die "
-           "LAENGE entscheidet.\n"
+           "GROESSE entscheidet.\n"
            "         `(void)data;` steht so im Quelltext: \"Content "
-           "doesn't matter\".\n");
+           "doesn't matter\" —\n"
+           "         und genau das begrenzt seit MF-1059 die Konfidenz "
+           "auf 30..49.\n");
 
     printf("\n  Was die gruene Ampel NICHT heisst: dass hier nichts "
            "zu tun waere.\n"

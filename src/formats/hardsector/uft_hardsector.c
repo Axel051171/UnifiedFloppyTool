@@ -1,10 +1,54 @@
 /**
  * @file uft_hardsector.c
- * @brief Hard-sector floppy disk format implementation
+ * @brief Rohe Sektorabbilder nach einer Groessentafel — siehe die
+ *        Berichtigung unten, „Hartsektor" trifft nur teilweise zu
  * @version 3.9.0
- * 
- * Supports 8" and 5.25" hard-sectored disk formats.
- * Reference: IBM 3740/System 34 specs, Catweasel hard-sector support
+ *
+ * ── BERICHTIGUNG MF-1058/MF-1059 ────────────────────────────────────────
+ *
+ * Hier stand: *„Supports 8\" and 5.25\" hard-sectored disk formats.
+ * Reference: IBM 3740/System 34 specs, Catweasel hard-sector support"*.
+ * Das trifft fuer die drei 8-Zoll-Eintraege **nicht** zu, und der
+ * Unterschied ist an einer benannten Quelle gemessen.
+ *
+ * `hardsector_tool` (Apache-2.0, im Baum unter
+ * `tools/uft-scout/work/`) trennt in `wang.py` zwei Dinge, die diese
+ * Tafel vermengt:
+ *
+ *     sectors_per_rotation = 32   <- PHYSISCHE Sektorloecher (Medium)
+ *     expected_sectors     = 16   <- LOGISCHE Aufteilung (Rechner)
+ *     sector_size          = 256
+ *     hardsector.py:365   33 Intervalle je Umdrehung
+ *                         (32 Sektorloecher + ein Indexloch)
+ *
+ * **Die Hartsektorung ist eine Eigenschaft des MEDIUMS, die logische
+ * Aufteilung eine des RECHNERS.** Eine 8-Zoll-Hartsektor-Diskette hat 32
+ * Loecher; der Wang 2200 legt darauf 16 Sektoren zu 256 Byte auf 77
+ * Spuren.
+ *
+ * Was `HS_8IN_SSSD`, `HS_8IN_DSSD` und `HS_8IN_DSDD` unten fuehren, sind
+ * dagegen die **weichsektorierten** IBM-3740- und System-34-Geometrien
+ * (26 x 128 bzw. 26 x 256) — dieselben, die `uft_flux_decoder.c:1127`
+ * nach ECMA 54 / ISO 5654 / ANSI X3.73 dekodiert. Sie stehen hier unter
+ * einem Namen, der nicht ihrer ist.
+ *
+ * Das ist die Gestalt von **MF-1037**, wo sich drei einander
+ * widersprechende Medientafeln als **zwei Tafeln fuer zwei Formate**
+ * aufloesten: ein Widerspruch nicht durch eine Entscheidung, sondern
+ * durch eine Unterscheidung.
+ *
+ * **Die Tafel bleibt deshalb unangetastet.** Was fehlt, ist keine Zahl,
+ * sondern eine Eigentuemer-Entscheidung — soll `hardsector` ein
+ * DATEIFORMAT sein (dann braucht es je Rechner eine belegte Aufteilung)
+ * oder ein GEOMETRIE-KATALOG (dann gehoert der Name berichtigt)? Klasse
+ * P3-338, verzeichnet als **P3-340**. Solange sie offensteht, bleibt das
+ * Plugin auf **T3**, und seine Sonde sagt mit Konfidenz 40, was sie
+ * wirklich weiss: die Dateigroesse.
+ *
+ * Was dieses Modul heute tut, laesst sich dagegen genau sagen: es liest
+ * ein rohes, kopfloses Sektorabbild, dessen Geometrie ueber die
+ * Dateigroesse aus einer Tafel von fuenf Eintraegen gewaehlt wird.
+ * Geprueft in `tests/test_hardsector_erreichbar.c`.
  */
 
 #include "uft/formats/uft_hardsector.h"
@@ -419,19 +463,44 @@ uft_error_t uft_ibm3740_write(const uft_disk_image_t *disk,
  * ============================================================================ */
 
 bool uft_hardsector_probe(const uint8_t *data, size_t size, int *confidence) {
-    (void)data;  /* Content doesn't matter for hard-sector detection */
-    
+    /* `size` ist hier die DATEIgroesse, nicht die Puffergroesse — siehe
+     * die Begruendung an hardsector_probe_plugin() weiter unten. */
+    (void)data;  /* Es wird kein Byte gelesen. Genau das begrenzt die
+                  * Konfidenz unten auf das Band „nur die Groesse". */
+
     hardsector_type_t type = hardsector_detect_type(size);
-    
+
     if (type != HS_TYPE_CUSTOM) {
-        /* Known hard-sector size */
         if (confidence) {
-            /* Lower confidence because these sizes could match other formats */
-            *confidence = 50;
+            /* MF-1059: hier stand 50, und das war nach MF-729 zu hoch.
+             *
+             * 50..79 heisst „Struktur gelesen", und wer es beansprucht,
+             * muss >= 95 % zufaelliger Puffer abweisen
+             * (tests/test_probe_confidence_on_random.c). Diese Sonde
+             * liest ueberhaupt nichts — `(void)data` oben —, sie
+             * vergleicht eine Zahl mit fuenf Zahlen. Erkannt ist
+             * ausschliesslich die Dateigroesse, also Band 30..49.
+             *
+             * **Und die Eichung konnte es nicht bemerken**, weil sie mit
+             * Puffern von UFT_PROBE_BUFFER_SIZE (65 536) arbeitet und
+             * alle fuenf Groessen der Tafel darueber liegen: die Sonde
+             * sagte dort ohnehin immer „nein", die Abweisungsquote war
+             * 100 %, der Test gruen. Der Erreichbarkeits-Fehler hat den
+             * Konfidenz-Fehler verdeckt — dieselbe Gestalt wie MF-1031,
+             * wo ein uint8_t-Ueberlauf eine falsche Laengenpruefung
+             * verbarg. Deshalb werden beide zusammen berichtigt; die
+             * Sonde erreichbar zu machen, ohne die Zahl zu senken,
+             * haette die Eichung verletzt (Reihenfolge nach MF-706).
+             *
+             * 40 wie bei `nanowasp` (MF-1030) und `cpm` (MF-1039), aus
+             * demselben Grund: die Groesse allein unterscheidet nicht —
+             * 163 840 Byte ist auch eine gewoehnliche 160K-PC-Diskette,
+             * und 256 256 Byte fuehrt `myz80` als Rueckfallgroesse. */
+            *confidence = 40;
         }
         return true;
     }
-    
+
     return false;
 }
 
@@ -441,8 +510,39 @@ bool uft_hardsector_probe(const uint8_t *data, size_t size, int *confidence) {
 
 static bool hardsector_probe_plugin(const uint8_t *data, size_t size,
                                     size_t file_size, int *confidence) {
-    (void)file_size;
-    return uft_hardsector_probe(data, size, confidence);
+    /* MF-1059: hier stand `(void)file_size;` — und damit bekam
+     * `uft_hardsector_probe()` die PUFFERgroesse statt der Dateigroesse.
+     *
+     * Das Plugin war dadurch ueber die Erkennung UNERREICHBAR, und der
+     * Grund laesst sich ausrechnen. Der Produktionspfad deckelt den
+     * Puffer bei UFT_PROBE_BUFFER_SIZE (65 536,
+     * `src/core/uft_format_plugin.c:365-366`), und die fuenf Eintraege
+     * der HS_*-Tafel sind:
+     *
+     *     35 x  1 x 10 x 256 =    89 600
+     *     40 x  1 x 16 x 256 =   163 840
+     *     77 x  1 x 26 x 128 =   256 256
+     *     77 x  2 x 26 x 128 =   512 512
+     *     77 x  2 x 26 x 256 = 1 025 024
+     *
+     * **Jede einzelne liegt darueber.** Die Bedingung in
+     * `hardsector_detect_type()` konnte also nie zutreffen — nicht nur
+     * ein Rueckfall war toter Code wie bei MF-1029 (`myz80`), sondern
+     * der GANZE Erkenner, wie bei MF-1039 (`cpm`). Gemessen am
+     * Vorzustand antwortete `probe` an einer gueltigen 163 840-Byte-Datei
+     * mit **0**, und an einem 163 840 Byte grossen PUFFER mit
+     * Dateigroesse 4096 mit **1 (50)** — die Antwort auf die falsche
+     * Frage.
+     *
+     * Siebte Ausprägung dieser Falle: MF-1029, MF-1030, MF-1031,
+     * MF-1036, MF-1039, MF-1054 — und hier.
+     *
+     * `size` bleibt bewusst unbenutzt: der Inhalt entscheidet bei einem
+     * kopflosen Abbild nichts, und das zu behaupten waere genau die
+     * Ueberzeichnung, die MF-729 misst. Was die Sonde weiss, sagt ihre
+     * Konfidenz (40, Band „nur die Groesse"). */
+    (void)size;
+    return uft_hardsector_probe(data, file_size, confidence);
 }
 
 static uft_error_t hardsector_open(uft_disk_t *disk, const char *path, bool read_only) {

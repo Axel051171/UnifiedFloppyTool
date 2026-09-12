@@ -1192,6 +1192,21 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_hardsector_erreichbar")
+        # MF-1059: `hardsector_probe_plugin()` verwarf `file_size` und gab
+        # die PUFFERgroesse weiter. Alle fuenf Groessen der HS_*-Tafel
+        # (89 600 / 163 840 / 256 256 / 512 512 / 1 025 024) sind groesser
+        # als UFT_PROBE_BUFFER_SIZE (65 536) — die Sonde konnte auf dem
+        # Produktionspfad NIE zustimmen. Siebte Ausprägung der
+        # MF-1029-Falle. Zweiter Befund, vom ersten verdeckt: Konfidenz 50
+        # („Struktur gelesen") bei `(void)data` — die MF-729-Eichung
+        # konnte es nicht sehen, weil die Sonde bei 65 536 Byte ohnehin
+        # immer „nein" sagte. Der Test baut seine Pruefdatei selbst.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hardsector/uft_hardsector.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_xdm86_ist_ti99")
         # MF-1057: `xdm86` trug WOERTLICH die zwei Befunde, die MF-1027
         # an `v9t9` behoben hat — die lineare Anordnung (statt kopf-dur
