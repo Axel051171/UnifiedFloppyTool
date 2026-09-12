@@ -1213,6 +1213,25 @@ def main() -> int:
         # Baums, und genau diese Klasse jagt dieser Baum sonst.
         #
         # Grundlinie 45 (Abbilder ohne Angabe), darf nur fallen.
+        # Tor 66 (MF-1044): ein erzeugtes Dokument, das im Arbeitsbaum
+        # frisch ist und im Commit veraltet.
+        #
+        # MF-1043: CI war DREI Laeufe lang rot, und der Unterschied war
+        # eine Zeile in docs/VERIFICATION_TIERS_FS.md. `gen_fs_tiers.py`
+        # war jedes Mal gelaufen — seine Ausgabe nur nie `git add`
+        # gegeben. Der Haken sah einen frischen Arbeitsbaum, CI einen
+        # veralteten Commit; beide pruefen dasselbe Skript.
+        #
+        # Die Dateimenge ist abgeleitet (MF-636): erzeugte Dokumente
+        # tragen im Kopf „erzeugt von `scripts/gen_...`", und danach wird
+        # ueber `git ls-files` gesucht. In CI ist das Tor wirkungslos —
+        # dort ist der Arbeitsbaum eine frische Auscheckung. Das ist
+        # Absicht: es gehoert an die Stelle, an der der Fehler entsteht.
+        #
+        # Grundlinie 0. Selbsttest 5/5.
+        import audit_erzeugte_doku_eingecheckt as _ede
+        all_errors.append(("Erzeugte Doku eingecheckt", _ede.check(repo)))
+
         import audit_korpus_inhalt as _ki
         all_errors.append(("Korpus-Inhalt", _ki.check(repo)))
 
