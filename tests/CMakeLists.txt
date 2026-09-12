@@ -815,6 +815,32 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_fds_gegen_die_beschreibung")
+        # MF-1038: `fds` meldete je Seite 36 Byte, die es nicht gibt.
+        # UFT legt eine 65-500-Byte-Seite als 128 virtuelle 512-Byte-
+        # Sektoren ab (eigene Konvention, keine Formateigenschaft) —
+        # 128 x 512 ist aber 65 536. Gemessen am Vorzustand: V127 meldete
+        # 512 Byte mit Status UFT_SECTOR_OK, die letzten 36 mit Null
+        # gefuellt. Jetzt traegt er 476, und 127 x 512 + 476 = 65 500.
+        #
+        # Drei weitere Befunde, alle gemessen: ein Kopf mit "8 Seiten" und
+        # einer Seite Daten wurde geoeffnet (Seite 7 dann nicht lesbar);
+        # 131 000 NULLBYTES gingen als zwei Seiten auf, weil `open` keine
+        # Kennung prueft; und eine Datei mit 'A' in der Polsterung bekam
+        # Konfidenz 95 wie die gueltige.
+        #
+        # Quelle: nesdev-Wiki `FDS_file_format` + `FDS_disk_format`
+        # (Kanal Spec nach MF-695). Zweite Hand, nur gelesen: MAMEs
+        # nes_dsk.cpp — es erkennt allein ueber die Dateigroesse und
+        # vergleicht nur DREI Byte der Kennung.
+        #
+        # T2 und nicht T1b: im Baum gibt es kein Werkzeug, das FDS liest
+        # oder schreibt (hxcfe kennt kein FDS, libdsk auch nicht).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/fds/uft_fds_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_dim_gegen_hxcfe")
         # MF-1037: die Medientabelle von `dim` ist AUFGELOEST, und zwei
         # von vier Medienbytes wurden vorher falsch zerlegt. Gemessen am

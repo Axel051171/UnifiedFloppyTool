@@ -956,6 +956,42 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \", der Rest ist ein aus Zylinder, Kopf und Sektor gebildetes Muster — ein Leseergebnis sagt damit, ob die RICHTIGE Stelle getroffen war. **Von fremder Hand ZERLEGT:** hxcfes `X68000_DIM`-Modul liest die Datei (`-infos` meldet „1440kB, 80 tracks, 2 side(s), 18 sectors/track, rpm:300“) und sein `IMD_IMG`-Modul schreibt sie als ImageDisk, die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt; byteweise gegen UFTs Versatzformel gehalten sind **2880 von 2880 Sektoren identisch**. `origin` bleibt `derived`, weil hxcfe DIM nur LESEN kann (`X68000_DIM;R `) — es gibt keinen fremden Erzeuger."
+    },
+    {
+      "file": "tests/corpus_free/fds_spec_2seiten.fds",
+      "sha256": "fbf0a0acb0b81ac0fb718b4e709c00b82d7ef8155dd27e2a6d200bc7118ccb4f",
+      "format": "fds",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1038), nach den nesdev-Seiten `FDS_file_format` und `FDS_disk_format`",
+      "source": "Nach den nesdev-Beschreibungen `FDS_file_format` und `FDS_disk_format` gebaut — Kanal *Spec* nach MF-695, keine Zeile Code. Mit fwNES-Kopf (16 Byte, Seitenzahl 2, Polsterung null). Je Seite 65 500 Byte, beginnend mit Block 1 (56 Byte: Typ 0x01, dann „*NINTENDO-HVC*“ bei Versatz $01) und Block 2 (2 Byte). 131 016 Byte — eine der drei Groessen, die MAMEs `nes_dsk.cpp` ueberhaupt kennt.",
+      "test": "test_fds_gegen_die_beschreibung",
+      "oracle": "keines - im Baum liest und schreibt kein Werkzeug FDS (P3-339)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: UFT legt eine Seite als 128 virtuelle 512-Byte-Sektoren ab, und jeder Sektor ab Nummer 1 beginnt mit „UFT-K Sn Vsss “ — ein falscher Versatz nennt damit den Nachbarn. Sektor 0 traegt den echten Block 1 samt Kennung. **Der letzte Sektor ist der eigentliche Pruefstein:** 128 x 512 waere 65 536, eine Seite hat 65 500, also traegt V127 nur **476 Byte** — vorher meldete UFT dort 512 und fuellte 36 Byte mit Null. `origin` ist `derived`, weil im Baum kein Werkzeug FDS liest oder schreibt (P3-339); die Abnahme ist die Beschreibung plus MAMEs Groessentabelle."
+    },
+    {
+      "file": "tests/corpus_free/fds_spec_4seiten.fds",
+      "sha256": "c55bc16b095b90a310eead9d2410a1087f209ddae4a50dfa0942f8dd042e21b8",
+      "format": "fds",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1038), nach den nesdev-Seiten `FDS_file_format` und `FDS_disk_format`",
+      "source": "Nach den nesdev-Beschreibungen `FDS_file_format` und `FDS_disk_format` gebaut — Kanal *Spec* nach MF-695, keine Zeile Code. Mit fwNES-Kopf (16 Byte, Seitenzahl 4, Polsterung null). Je Seite 65 500 Byte, beginnend mit Block 1 (56 Byte: Typ 0x01, dann „*NINTENDO-HVC*“ bei Versatz $01) und Block 2 (2 Byte). 262 016 Byte — MAMEs dritte und groesste erkannte Groesse; prueft, dass auch Seite 3 an der richtigen Stelle liegt.",
+      "test": "test_fds_gegen_die_beschreibung",
+      "oracle": "keines - im Baum liest und schreibt kein Werkzeug FDS (P3-339)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: UFT legt eine Seite als 128 virtuelle 512-Byte-Sektoren ab, und jeder Sektor ab Nummer 1 beginnt mit „UFT-K Sn Vsss “ — ein falscher Versatz nennt damit den Nachbarn. Sektor 0 traegt den echten Block 1 samt Kennung. **Der letzte Sektor ist der eigentliche Pruefstein:** 128 x 512 waere 65 536, eine Seite hat 65 500, also traegt V127 nur **476 Byte** — vorher meldete UFT dort 512 und fuellte 36 Byte mit Null. `origin` ist `derived`, weil im Baum kein Werkzeug FDS liest oder schreibt (P3-339); die Abnahme ist die Beschreibung plus MAMEs Groessentabelle."
+    },
+    {
+      "file": "tests/corpus_free/fds_spec_kopflos.fds",
+      "sha256": "379bca69b8fe1369cb13af50b58e7e604879e85ca0a5ba0d0091d982823fbe8a",
+      "format": "fds",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1038), nach den nesdev-Seiten `FDS_file_format` und `FDS_disk_format`",
+      "source": "Nach den nesdev-Beschreibungen `FDS_file_format` und `FDS_disk_format` gebaut — Kanal *Spec* nach MF-695, keine Zeile Code. OHNE Kopf — die Beschreibung erlaubt das ausdruecklich: „Some .FDS images may omit the header.“ Je Seite 65 500 Byte, beginnend mit Block 1 (56 Byte: Typ 0x01, dann „*NINTENDO-HVC*“ bei Versatz $01) und Block 2 (2 Byte). 65 500 Byte; erkannt wird sie allein an Block 1, und genau das ist seit MF-1038 auch im `open` verlangt.",
+      "test": "test_fds_gegen_die_beschreibung",
+      "oracle": "keines - im Baum liest und schreibt kein Werkzeug FDS (P3-339)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: UFT legt eine Seite als 128 virtuelle 512-Byte-Sektoren ab, und jeder Sektor ab Nummer 1 beginnt mit „UFT-K Sn Vsss “ — ein falscher Versatz nennt damit den Nachbarn. Sektor 0 traegt den echten Block 1 samt Kennung. **Der letzte Sektor ist der eigentliche Pruefstein:** 128 x 512 waere 65 536, eine Seite hat 65 500, also traegt V127 nur **476 Byte** — vorher meldete UFT dort 512 und fuellte 36 Byte mit Null. `origin` ist `derived`, weil im Baum kein Werkzeug FDS liest oder schreibt (P3-339); die Abnahme ist die Beschreibung plus MAMEs Groessentabelle."
     }
   ]
 }
