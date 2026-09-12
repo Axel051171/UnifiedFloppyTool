@@ -1209,6 +1209,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_do_gegen_hxcfe")
+        # MF-1067: `do` stand auf T2, weil sein einziges Korpus-Abbild
+        # `origin: "derived"` trug — UFT-eigen, kein Stufenkredit. Die
+        # seit MF-1066 vorhandene FREMDE WOZ macht den Weg auf: hxcfe
+        # liest WOZ und schreibt DO, also entsteht ein DO von fremder
+        # Hand. Kein Plugin ausser `do` wird gebraucht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_atx_gegen_a8rawconv")
         # MF-1065: die erste ECHTE ATX im Korpus (`origin: real`, seit
         # 2026-09-04 da) bekommt endlich einen Test — im Manifest stand

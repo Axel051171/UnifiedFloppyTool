@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 32 |
+| davon auf T2/T3 (offen) | 31 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
@@ -46,7 +46,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `d13` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `dim` | T2 | ATARIST_DIM (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `dms` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `do` | T2 | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `edk` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fdi_pc98` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fds` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -129,6 +128,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `dcm` | T1b | — | — |
 | `dim_atari` | T1b | ATARIST_DIM (?) | — |
 | `dmk` | T1b | TRS80_DMK | — |
+| `do` | T1b | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) |
 | `dsk_cpc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `edsk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?), edsk |
 | `fdi` | T1 | — | — |

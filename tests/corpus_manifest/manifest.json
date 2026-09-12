@@ -1245,6 +1245,17 @@
       "oracle": "to_woz2",
       "content": "252 416 Byte, WOZ 2.0, 35 Spuren zu 16 Sektoren à 256 Byte = **560**. **Und genau daran ist ein Befund aufgefallen:** vor MF-1066 lieferte das Plugin **35** Sektoren — einen je Spur, den rohen Bitstrom als „Sektor 0“ —, während `open` 16 je Spur meldete (Gestalt MF-796). Behoben durch Verdrahtung des seit MF-948 vorhandenen, oracle-geprüften `uft_apple_gcr_scan_track()`.",
       "fremdcode": "keiner — to_woz2 wird AUSGEFÜHRT (Kanal Oracle nach MF-695); die Interleave-Tafel ist eine Zahlenfolge aus a8rawconvs Dokumentation, kein Code"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_woz2do_dos33.do",
+      "sha256": "e7145bf9263eacf995de23fb96c4e084198557e1f1647a7dbf10054a363b5d33",
+      "format": "do",
+      "origin": "cross-tool",
+      "tool": "hxcfe 2.16.15.2 (HxC Floppy Emulator, Jean-Francois DEL NERO, GPL-2), Klon 05b53aa, im Baum gebaut unter `tools/uft-scout/work/HxCFloppyEmulator/build/`; registriertes Oracle. AUSGEFUEHRT — nicht portiert (Kanal *Oracle*, MF-695). Vorstufe: to_woz2 (Apple-II-Disk-Tools, GPL-3), Quellstand 639dc1c3281f2e1156af5d739ecbb72aca72cf09",
+      "source": "**Drei fremde Umsetzungen zwischen Eingang und Ausgang.** `to_woz2 uftk_dos33_35trk.do to_woz2_uftk_dos33.woz` erzeugt aus dem UFT-eigenen DOS-3.3-Abbild einen GCR-Bitstrom (MF-1066, seither im Korpus); daraus `hxcfe -finput:<woz> -conv:APPLE2_DO -foutput:<do>` — hxcfes eigener WOZ-Lader und sein eigener DO-Schreiber. **Die Ausgabe ist mit `uftk_dos33_35trk.do` byteidentisch** (143 360 Byte, 0 abweichende Byte, sha e7145bf9263eacf9…), und genau das ist die Aussage — dieselbe Lage wie bei `nanowasp` (MF-1033): zwei unabhaengige Schreiber, dieselben Bytes, jeder Sektor an derselben Stelle. **Gegenprobe aus derselben Messung:** dasselbe hxcfe schreibt aus DERSELBEN WOZ mit `-conv:APPLE2_PO` eine Datei, die in **119 420 von 143 360 Byte** abweicht — das Werkzeug reicht also nicht durch, es ordnet an. **Eine Huerde lag dazwischen und ist ein eigener Befund:** hxcfe weist die to_woz2-Datei mit „BAD CRC32, Corrupted file !“ ab, weil sein `woz_loader.c` das CRC-Feld unbedingt vergleicht. Die Beschreibung des Urhebers (Applesauce, WOZ 2.0) sagt woertlich „If the CRC is 0x00000000, then no CRC has been calculated for the file and should be ignored“ — to_woz2 laesst das Feld bei 0, ist damit spec-konform, und **hxcfe hat hier den Fehler** (UFT kennt die Regel, `uft_woz.c:188`). Fuer diese Wandlung wurde deshalb eine Arbeitskopie mit nachgerechneter CRC benutzt; die vier CRC-Bytes sind das einzige, was sich unterscheidet, die 252 404 Diskettenbytes sind unveraendert.",
+      "test": "test_do_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "fremdcode": "keiner — beide Werkzeuge werden AUSGEFÜHRT (Kanal Oracle nach MF-695). Keine Zeile aus hxcfes `woz_loader.c` oder seinem DO-Schreiber ist in den Baum gekommen; die einzige Beruehrung mit fremdem Quelltext war LESEND, um zu belegen, dass hxcfe das CRC-Feld unbedingt vergleicht — ein Befund UEBER das Werkzeug, keine Uebernahme AUS ihm."
     }
   ]
 }
