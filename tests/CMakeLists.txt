@@ -448,6 +448,48 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_posix_gegen_libdsk")
+        # MF-1034: `posix` stand auf T3. Gemessen gegen libdsk 1.5.12
+        # (John Elliott, LGPL-2+; Quelltext nur GELESEN, Kanal Spec nach
+        # MF-695, `dsktrans` AUSGEFUEHRT). Vier Befunde:
+        #
+        #   Q1  Die Attribution trug nicht: der Dateikopf nannte libdsks
+        #       `drvposix.c` als „geprueft", und die `.geom`-Nachbardatei
+        #       kommt im GANZEN libdsk-Baum nicht vor. Sie ist UFTs
+        #       eigene Konvention und wird jetzt so geführt.
+        #   Q2  Von den DREI Spielarten war nur eine umgesetzt.
+        #       `drvposix.c` Z. 38-98 definiert `raw`/`rawalt`
+        #       (SIDES_ALT), `rawoo` (SIDES_OUTOUT) und `rawob`
+        #       (SIDES_OUTBACK); `posix_offset()` Z. 232-254 schaltet
+        #       darauf, mit dem Kommentar „based on the sidedness of the
+        #       disk image (not the sidedness of the geometry)". UFT legte
+        #       die Spuren IMMER linear ab — bei `acorn640` (80 x 2,
+        #       OUTOUT) liegen damit 158 von 160 Spuren anderswo.
+        #   Q3  Ohne `.geom` wurde eine Geometrie ERFUNDEN: Rueckfall
+        #       80x2x9x512 und `cylinders = (groesse / 4608) / 2`. Eine
+        #       174848 Byte grosse D64 wurde damit 18x2x9x512, und 8960
+        #       Byte fielen weg — still. Vorgabe ist jetzt
+        #       `require_geom = true`.
+        #   Q4  Der Schreiber konnte nur `alt` und nannte die Anordnung
+        #       nicht.
+        #
+        # **Die Rechnung steht nicht zum zweiten Mal im Baum:** der
+        # Versatz kommt aus `uft_logical_track_index()`/`_offset()`, in
+        # MF-1032 gegen libdsk abgenommen. Eine zweite Kopie waere die
+        # Lage aus MF-1015 (drei Pruefsummen) und MF-1026 (drei
+        # Victor-Geometrien).
+        #
+        # **T1b: libdsk hat die Abbilder GESCHRIEBEN** — `dsktrans -itype
+        # raw -format acorn640 -otype rawoo` und `-format ibm720 -otype
+        # rawob`. Und gemessen: beide sind byteidentisch mit den
+        # `logical`-Pruefdateien aus MF-1032, was genau die Abgrenzung
+        # belegt, die libdsk selbst benennt.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/posix/uft_posix.c
+            ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
         # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
         # NanoWasp-Datei lesen**. Gemessen gegen libdsks

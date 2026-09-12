@@ -1,10 +1,72 @@
 /**
  * @file uft_posix.c
- * @brief POSIX disk format implementation
- * @version 3.9.0
- * 
- * Raw disk image with separate geometry file (.geom).
- * Reference: libdsk drvposix.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief POSIX — rohe Sektordatei plus UFT-eigene `.geom`-Nachbardatei
+ *
+ * Was das Format ist und warum die Sidecar-Datei UFT-eigen ist, steht im
+ * Kopf von `include/uft/formats/uft_posix.h`. Hier stehen die Befunde.
+ *
+ * ── MF-1034: vier Befunde ───────────────────────────────────────────
+ *
+ * **Q1 — die Attribution trug nicht.** Der alte Dateikopf sagte
+ * „Reference: libdsk drvposix.c (LGPL-2.0-or-later; Fassung 1.5.12
+ * geprueft)". Die Zeichenfolge `.geom` kommt im **ganzen**
+ * libdsk-Baum nicht vor (gemessen ueber `lib/`, `include/`, `tools/`,
+ * `doc/`); libdsk loest die Geometriefrage, indem der Aufrufer sie
+ * **nennt**. Die Sidecar-Datei ist UFTs eigene Konvention und wird
+ * jetzt so geführt. Eine Attribution ist eine rechtliche Aussage
+ * (MF-636), ein Pruefvermerk eine gemessene — dieselbe Berichtigung wie
+ * bei `logical` (MF-1032).
+ *
+ * **Q2 — zwei von drei Spielarten fehlten, und das IST das Format.**
+ * `drvposix.c` definiert **drei** Treiberklassen (Z. 38-98): `raw`/
+ * `rawalt` (`SIDES_ALT`), `rawoo` (`SIDES_OUTOUT`) und `rawob`
+ * (`SIDES_OUTBACK`). `posix_offset()` (Z. 232-254) schaltet auf die
+ * Sidedness, und der Kommentar dort grenzt ausdruecklich gegen
+ * `logical` ab: *„Work out the offset based on the sidedness of the
+ * disk image (not the sidedness of the geometry)"*. UFT legte die
+ * Spuren **immer** linear ab — also nur `raw`. Ein `rawoo`- oder
+ * `rawob`-Abbild wurde damit spurweise falsch gelesen; bei
+ * `acorn640` (80 x 2) liegen mit OUTOUT **158 von 160** Spuren an
+ * anderer Stelle.
+ *
+ * Die Rechnung dafuer steht **nicht zum zweiten Mal** hier: sie ist
+ * `uft_logical_track_index()`, in MF-1032 gegen libdsk abgenommen. Eine
+ * zweite Kopie waere genau die Lage, die MF-1015 an drei Pruefsummen
+ * und MF-1026 an drei Victor-Geometrien gefunden hat.
+ *
+ * **Q3 — ohne `.geom` wurde eine Geometrie ERFUNDEN.**
+ * `uft_posix_read_options_init()` setzte `require_geom = false` und den
+ * Rueckfall 80 x 2 x 9 x 512; danach rechnete der Leser
+ * `cylinders = (groesse / (sektoren * sektorgroesse)) / koepfe`. Damit
+ * wurde **jede** Datei angenommen. Gemessen an einer 174 848 Byte
+ * grossen D64: 4608 Byte je Spur, 37 Spuren, **18** Zylinder — und
+ * 8960 Byte fielen weg, still. Seit MF-1034 ist `require_geom = true`
+ * die Vorgabe; wer den Rueckfall will, setzt ihn ausdruecklich, und er
+ * gilt nur, wenn die Geometrie die Dateigroesse **restlos** erklaert.
+ *
+ * **Q4 — der Schreiber schrieb nur `alt` und nannte die Anordnung
+ * nicht.** `uft_posix_write()` legte die Spuren linear ab und schrieb
+ * eine `.geom` ohne Anordnungsfeld; ein `rawoo`-Abbild liess sich damit
+ * nicht erzeugen. Er bleibt ohne Aufrufer (P3-204, MF-930), kann jetzt
+ * aber alle drei Spielarten.
+ *
+ * ── Was NICHT geaendert wurde ───────────────────────────────────────
+ *
+ * Die Plugin-Sonde stimmt weiter nie zu (MF-546) — die Identitaet
+ * steckt in der Nachbardatei, und die Sonde sieht nur den Inhalt.
+ * `posix_open()` dagegen **sieht den Pfad** und ist damit erreichbar,
+ * sobald eine `.geom` daneben liegt; das ist der Unterschied zu
+ * `logical`, wo es diesen Kanal nicht gibt (P3-337).
+ *
+ * `first_sector` wurde geprueft und nicht angefasst: libdsks
+ * `posix_offset()` rechnet `offset += (sector - geom->dg_secbase)`,
+ * UFT vergibt die IDs ab `first_sector` und liest linear — bei einem
+ * vollstaendigen Spurdurchlauf ist das dasselbe.
+ *
+ * Referenz: libdsk **1.5.12** (John Elliott, **LGPL-2+**),
+ * `lib/drvposix.c` Z. 23-24/38-98/232-254 und `lib/dsklphys.c`
+ * Z. 91-118 — **nur gelesen**, Kanal *Spec* nach MF-695; `dsktrans`
+ * **ausgefuehrt** zur Abnahme.
  */
 
 #include "uft/formats/uft_posix.h"
@@ -14,8 +76,8 @@
 #include <stdio.h>
 
 /* ============================================================================
- * Utility Functions
- * ============================================================================ */
+ * Hilfen
+ * ========================================================================== */
 
 static uint8_t code_from_size(uint16_t size) {
     switch (size) {
@@ -37,348 +99,398 @@ static char* get_geom_path(const char *path) {
     return geom_path;
 }
 
+const char *uft_posix_sides_name(uft_logical_sides_t sides) {
+    switch (sides) {
+        case UFT_LOGI_SIDES_ALT:        return "alt";
+        case UFT_LOGI_SIDES_OUTOUT:     return "outout";
+        case UFT_LOGI_SIDES_OUTBACK:    return "outback";
+        case UFT_LOGI_SIDES_EXTSURFACE: return "extsurface";
+    }
+    return "alt";
+}
+
+int uft_posix_sides_from_name(const char *name, uft_logical_sides_t *out) {
+    if (!name || !out) return 0;
+    if (strcmp(name, "alt") == 0 || strcmp(name, "rawalt") == 0
+        || strcmp(name, "raw") == 0) {
+        *out = UFT_LOGI_SIDES_ALT; return 1;
+    }
+    if (strcmp(name, "outout") == 0 || strcmp(name, "rawoo") == 0) {
+        *out = UFT_LOGI_SIDES_OUTOUT; return 1;
+    }
+    if (strcmp(name, "outback") == 0 || strcmp(name, "rawob") == 0) {
+        *out = UFT_LOGI_SIDES_OUTBACK; return 1;
+    }
+    if (strcmp(name, "extsurface") == 0) {
+        *out = UFT_LOGI_SIDES_EXTSURFACE; return 1;
+    }
+    return 0;
+}
+
+void uft_posix_to_logical_geometry(const posix_geometry_t *in,
+                                   uft_logical_geometry_t *out) {
+    if (!in || !out) return;
+    memset(out, 0, sizeof(*out));
+    out->cylinders   = in->cylinders;
+    out->heads       = in->heads;
+    out->sectors     = in->sectors;
+    out->sector_size = in->sector_size;
+    out->first_sector = in->first_sector;
+    out->sides       = in->sides;
+    out->encoding    = in->encoding;
+}
+
 /* ============================================================================
- * Options Initialization
- * ============================================================================ */
+ * Optionen
+ * ========================================================================== */
 
 void uft_posix_read_options_init(posix_read_options_t *opts) {
     if (!opts) return;
     memset(opts, 0, sizeof(*opts));
-    
-    opts->require_geom = false;
+
+    /* MF-1034: `true` statt `false`. Der Rueckfall hat vorher JEDE Datei
+     * angenommen und eine Geometrie daraus gerechnet; siehe Q3 im
+     * Dateikopf. */
+    opts->require_geom = true;
     opts->fallback.cylinders = 80;
     opts->fallback.heads = 2;
     opts->fallback.sectors = 9;
     opts->fallback.sector_size = 512;
     opts->fallback.first_sector = 1;
     opts->fallback.encoding = UFT_ENC_MFM;
+    opts->fallback.sides = UFT_LOGI_SIDES_ALT;
 }
 
 /* ============================================================================
- * Geometry File I/O
- * ============================================================================ */
+ * Die `.geom`-Nachbardatei — UFT-eigene Konvention
+ * ========================================================================== */
 
 uft_error_t uft_posix_read_geometry(const char *geom_path,
                                     posix_geometry_t *geometry) {
-    if (!geom_path || !geometry) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    FILE *fp = fopen(geom_path, "r");
-    if (!fp) {
-        return UFT_ERR_IO;
-    }
-    
+    FILE *fp;
     char line[POSIX_GEOM_MAX_LINE];
-    if (!fgets(line, sizeof(line), fp)) {
-        fclose(fp);
-        return UFT_ERR_FORMAT;
-    }
-    fclose(fp);
-    
-    /* Parse: cylinders heads sectors secsize [first_sector] */
+    char sides_name[32];
     int cyls, heads, sects, secsize;
     int first = 1;
-    
-    int parsed = sscanf(line, "%d %d %d %d %d", &cyls, &heads, &sects, &secsize, &first);
-    
-    if (parsed < 4) {
-        return UFT_ERR_FORMAT;
-    }
-    
+    int parsed;
+
+    if (!geom_path || !geometry) return UFT_ERR_INVALID_PARAM;
+
+    fp = fopen(geom_path, "r");
+    if (!fp) return UFT_ERR_IO;
+    if (!fgets(line, sizeof(line), fp)) { fclose(fp); return UFT_ERR_FORMAT; }
+    fclose(fp);
+
+    memset(sides_name, 0, sizeof(sides_name));
+    /* `<zylinder> <koepfe> <sektoren> <sektorgroesse> [erster] [anordnung]` */
+    parsed = sscanf(line, "%d %d %d %d %d %31s",
+                    &cyls, &heads, &sects, &secsize, &first, sides_name);
+    if (parsed < 4) return UFT_ERR_FORMAT;
+
     geometry->cylinders = (uint16_t)cyls;
     geometry->heads = (uint8_t)heads;
     geometry->sectors = (uint8_t)sects;
     geometry->sector_size = (uint16_t)secsize;
     geometry->first_sector = (uint8_t)first;
     geometry->encoding = UFT_ENC_MFM;
-    
+    /* Ohne sechsten Wert bleibt es `alt` — jede bisher geschriebene
+     * `.geom` gilt damit unveraendert weiter. */
+    geometry->sides = UFT_LOGI_SIDES_ALT;
+    if (parsed >= 6 && sides_name[0]) {
+        uft_logical_sides_t s;
+        if (!uft_posix_sides_from_name(sides_name, &s)) {
+            /* Ein unbekannter Name wird ABGEWIESEN, nicht auf `alt`
+             * zurechtgebogen: sonst waere eine Tippfehler-`.geom` eine
+             * stille Falschlesung. */
+            return UFT_ERR_FORMAT;
+        }
+        geometry->sides = s;
+    }
     return UFT_OK;
 }
 
 uft_error_t uft_posix_write_geometry(const char *geom_path,
                                      const posix_geometry_t *geometry) {
-    if (!geom_path || !geometry) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    FILE *fp = fopen(geom_path, "w");
-    if (!fp) {
-        return UFT_ERR_IO;
-    }
-    
-    fprintf(fp, "%d %d %d %d %d\n",
+    FILE *fp;
+
+    if (!geom_path || !geometry) return UFT_ERR_INVALID_PARAM;
+    fp = fopen(geom_path, "w");
+    if (!fp) return UFT_ERR_IO;
+
+    fprintf(fp, "%d %d %d %d %d %s\n",
             geometry->cylinders,
             geometry->heads,
             geometry->sectors,
             geometry->sector_size,
-            geometry->first_sector);
-    
+            geometry->first_sector,
+            uft_posix_sides_name(geometry->sides));
+
     fclose(fp);
     return UFT_OK;
 }
 
 /* ============================================================================
- * Probe Function
- * ============================================================================ */
+ * Erkennung
+ * ========================================================================== */
 
 bool uft_posix_probe(const char *path, int *confidence) {
+    char *geom_path;
+    FILE *fp;
+
     if (!path) return false;
-    
-    /* Check if .geom file exists */
-    char *geom_path = get_geom_path(path);
+    geom_path = get_geom_path(path);
     if (!geom_path) return false;
-    
-    FILE *fp = fopen(geom_path, "r");
+
+    fp = fopen(geom_path, "r");
     free(geom_path);
-    
     if (fp) {
         fclose(fp);
         if (confidence) *confidence = 80;
         return true;
     }
-    
     return false;
 }
 
 /* ============================================================================
- * Read Implementation
- * ============================================================================ */
+ * Lesen
+ * ========================================================================== */
 
 uft_error_t uft_posix_read(const char *path,
                            uft_disk_image_t **out_disk,
                            const posix_read_options_t *opts,
                            posix_read_result_t *result) {
-    if (!path || !out_disk) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Initialize result */
-    if (result) {
-        memset(result, 0, sizeof(*result));
-    }
-    
-    /* Default options */
     posix_read_options_t default_opts;
+    posix_geometry_t geometry;
+    uft_logical_geometry_t lg;
+    char *geom_path;
+    bool geom_found = false;
+    FILE *fp;
+    long len;
+    size_t size, brauche;
+    uint8_t *data;
+    uft_disk_image_t *disk;
+    uint8_t size_code;
+    uint16_t c, h, s;
+
+    if (result) memset(result, 0, sizeof(*result));
+    if (!path || !out_disk) return UFT_ERR_INVALID_PARAM;
+
     if (!opts) {
         uft_posix_read_options_init(&default_opts);
         opts = &default_opts;
     }
-    
-    /* Try to read geometry file */
-    posix_geometry_t geometry;
-    char *geom_path = get_geom_path(path);
-    bool geom_found = false;
-    
+
+    memset(&geometry, 0, sizeof(geometry));
+    geom_path = get_geom_path(path);
     if (geom_path) {
-        if (uft_posix_read_geometry(geom_path, &geometry) == UFT_OK) {
+        if (uft_posix_read_geometry(geom_path, &geometry) == UFT_OK)
             geom_found = true;
-        }
         free(geom_path);
     }
-    
+
     if (!geom_found) {
         if (opts->require_geom) {
             if (result) {
                 result->error = UFT_ERR_NOT_FOUND;
-                result->error_detail = "Geometry file not found";
+                result->error_detail =
+                    "POSIX: keine `.geom` daneben, und ohne sie ist die "
+                    "Geometrie nicht bekannt (MF-1034)";
             }
             return UFT_ERR_NOT_FOUND;
         }
         geometry = opts->fallback;
     }
-    
+
+    uft_posix_to_logical_geometry(&geometry, &lg);
+    if (!uft_logical_geometry_ok(&lg)) {
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "POSIX: die Geometrie ist unbrauchbar (MF-543-Schranken)";
+        }
+        return UFT_ERR_FORMAT;
+    }
+
+    fp = fopen(path, "rb");
+    if (!fp) return UFT_ERR_IO;
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_ERR_IO; }
+    len = ftell(fp);
+    if (len <= 0 || fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
+    size = (size_t)len;
+
+    brauche = uft_logical_image_size(&lg);
+    if (size < brauche) {
+        fclose(fp);
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "POSIX: die Datei ist kleiner als die Geometrie verlangt";
+        }
+        return UFT_ERR_FORMAT;
+    }
+    /* MF-1034/Q3: ein Rueckfall gilt nur, wenn er die Datei RESTLOS
+     * erklaert. Vorher wurde die Zylinderzahl aus der Groesse gerechnet
+     * und der Rest verworfen. */
+    if (!geom_found && size != brauche) {
+        fclose(fp);
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "POSIX: der Rueckfall erklaert die Dateigroesse nicht "
+                "restlos — ohne `.geom` wird nicht geraten (MF-1034)";
+        }
+        return UFT_ERR_FORMAT;
+    }
+
+    data = malloc(size);
+    if (!data) { fclose(fp); return UFT_ERR_MEMORY; }
+    if (fread(data, 1, size, fp) != size) {
+        free(data); fclose(fp); return UFT_ERR_IO;
+    }
+    fclose(fp);
+
     if (result) {
         result->geom_found = geom_found;
         result->geometry = geometry;
-    }
-    
-    /* Read disk image file */
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        return UFT_ERR_IO;
-    }
-    
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    
-    if (result) {
         result->image_size = size;
     }
-    
-    uint8_t *data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return UFT_ERR_MEMORY;
-    }
-    
-    if (fread(data, 1, size, fp) != size) {
-        free(data);
-        fclose(fp);
-        return UFT_ERR_IO;
-    }
-    fclose(fp);
-    
-    /* Auto-detect geometry from size if no .geom file */
-    if (!geom_found) {
-        size_t track_size = (size_t)geometry.sectors * geometry.sector_size;
-        if (track_size > 0) {
-            size_t total_tracks = size / track_size;
-            if (geometry.heads > 0) {
-                geometry.cylinders = total_tracks / geometry.heads;
-            }
-        }
-    }
-    
-    /* Create disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(geometry.cylinders, geometry.heads);
-    if (!disk) {
-        free(data);
-        return UFT_ERR_MEMORY;
-    }
-    
+
+    disk = uft_disk_alloc(geometry.cylinders, geometry.heads);
+    if (!disk) { free(data); return UFT_ERR_MEMORY; }
+
     disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "POSIX");
     disk->sectors_per_track = geometry.sectors;
     disk->bytes_per_sector = geometry.sector_size;
-    
-    /* Read track data */
-    size_t data_pos = 0;
-    uint8_t size_code = code_from_size(geometry.sector_size);
-    
-    for (uint16_t c = 0; c < geometry.cylinders; c++) {
-        for (uint8_t h = 0; h < geometry.heads; h++) {
-            size_t idx = c * geometry.heads + h;
-            
+    size_code = code_from_size(geometry.sector_size);
+
+    for (c = 0; c < geometry.cylinders; c++) {
+        for (h = 0; h < geometry.heads; h++) {
+            size_t idx = (size_t)c * geometry.heads + h;
             uft_track_t *track = uft_track_alloc(geometry.sectors, 0);
-            if (!track) {
-                uft_disk_free(disk);
-                free(data);
-                return UFT_ERR_MEMORY;
-            }
-            
+            if (!track) { uft_disk_free(disk); free(data); return UFT_ERR_MEMORY; }
+
             track->cylinder = c;
             track->head = h;
             track->encoding = geometry.encoding;
-            
-            for (uint8_t s = 0; s < geometry.sectors; s++) {
+
+            for (s = 0; s < geometry.sectors; s++) {
+                int nummer = (int)geometry.first_sector + (int)s;
+                /* MF-1034/Q2: der Versatz kommt aus der in MF-1032
+                 * abgenommenen Rechnung, nicht aus einer zweiten Kopie
+                 * der vier Gesetze. */
+                long off = uft_logical_offset(c, h, nummer, &lg);
                 uft_sector_t *sect = &track->sectors[s];
-                sect->id.cylinder = c;
-                sect->id.head = h;
-                sect->id.sector = s + geometry.first_sector;
+
+                sect->id.cylinder = (uint8_t)c;
+                sect->id.head = (uint8_t)h;
+                sect->id.sector = (uint8_t)nummer;
                 sect->id.size_code = size_code;
                 sect->status = UFT_SECTOR_OK;
-                
                 sect->data = malloc(geometry.sector_size);
                 sect->data_size = geometry.sector_size;
-                
+
                 if (sect->data) {
-                    if (data_pos + geometry.sector_size <= size) {
-                        memcpy(sect->data, data + data_pos, geometry.sector_size);
+                    if (off >= 0 && (size_t)off + geometry.sector_size <= size) {
+                        memcpy(sect->data, data + off, geometry.sector_size);
                     } else {
                         memset(sect->data, 0xE5, geometry.sector_size);
-                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
-                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
-                         * unterscheiden -- und `status` stand schon auf OK. */
+                        /* MF-1001: gefuellt, nicht gelesen (MF-980). */
                         uft_sector_mark_missing(sect);
                     }
                 }
-                data_pos += geometry.sector_size;
                 track->sector_count++;
             }
-            
             disk->track_data[idx] = track;
         }
     }
-    
+
     free(data);
-    
-    if (result) {
-        result->success = true;
-        result->geometry = geometry;
-    }
-    
+    if (result) result->success = true;
     *out_disk = disk;
     return UFT_OK;
 }
 
 /* ============================================================================
- * Write Implementation
- * ============================================================================ */
+ * Schreiben — Abbild und `.geom`
+ * ========================================================================== */
 
 uft_error_t uft_posix_write(const uft_disk_image_t *disk,
+                            const posix_geometry_t *geometry,
                             const char *path) {
-    if (!disk || !path) {
+    posix_geometry_t g;
+    uft_logical_geometry_t lg;
+    size_t gesamt;
+    uint8_t *aus;
+    FILE *fp;
+    size_t geschrieben;
+    char *geom_path;
+    uint16_t c, h, s;
+
+    if (!disk || !path) return UFT_ERR_INVALID_PARAM;
+
+    if (geometry) {
+        g = *geometry;
+    } else {
+        /* Ohne Angabe: die Geometrie des Abbilds, Anordnung `alt` — das
+         * Verhalten vor MF-1034. */
+        memset(&g, 0, sizeof(g));
+        g.cylinders = disk->tracks;
+        g.heads = disk->heads;
+        g.sectors = disk->sectors_per_track;
+        g.sector_size = disk->bytes_per_sector;
+        g.first_sector = 1;
+        g.encoding = UFT_ENC_MFM;
+        g.sides = UFT_LOGI_SIDES_ALT;
+    }
+    if (g.cylinders != disk->tracks || g.heads != disk->heads)
         return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Calculate output size */
-    size_t data_size = (size_t)disk->tracks * disk->heads *
-                       disk->sectors_per_track * disk->bytes_per_sector;
-    
-    uint8_t *output = malloc(data_size);
-    if (!output) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    /* Write track data */
-    size_t data_pos = 0;
-    
-    for (uint16_t c = 0; c < disk->tracks; c++) {
-        for (uint8_t h = 0; h < disk->heads; h++) {
-            size_t idx = c * disk->heads + h;
+
+    uft_posix_to_logical_geometry(&g, &lg);
+    if (!uft_logical_geometry_ok(&lg)) return UFT_ERR_INVALID_PARAM;
+
+    gesamt = uft_logical_image_size(&lg);
+    aus = malloc(gesamt);
+    if (!aus) return UFT_ERR_MEMORY;
+    memset(aus, 0xE5, gesamt);
+
+    for (c = 0; c < g.cylinders; c++) {
+        for (h = 0; h < g.heads; h++) {
+            size_t idx = (size_t)c * g.heads + h;
             uft_track_t *track = disk->track_data[idx];
-            
-            for (uint8_t s = 0; s < disk->sectors_per_track; s++) {
-                if (track && s < track->sector_count && track->sectors[s].data) {
-                    memcpy(output + data_pos, track->sectors[s].data,
-                           disk->bytes_per_sector);
-                } else {
-                    memset(output + data_pos, 0xE5, disk->bytes_per_sector);
-                }
-                data_pos += disk->bytes_per_sector;
+            if (!track) continue;
+            for (s = 0; s < track->sector_count && s < g.sectors; s++) {
+                int nummer = (int)g.first_sector + (int)s;
+                long off = uft_logical_offset(c, h, nummer, &lg);
+                const uft_sector_t *sect = &track->sectors[s];
+                if (off < 0 || (size_t)off + g.sector_size > gesamt) continue;
+                if (sect->data && sect->data_size >= g.sector_size)
+                    memcpy(aus + off, sect->data, g.sector_size);
             }
         }
     }
-    
-    /* Write disk image */
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        free(output);
-        return UFT_ERR_IO;
-    }
-    
-    size_t written = fwrite(output, 1, data_size, fp);
+
+    fp = fopen(path, "wb");
+    if (!fp) { free(aus); return UFT_ERR_IO; }
+    geschrieben = fwrite(aus, 1, gesamt, fp);
     fclose(fp);
-    free(output);
-    
-    if (written != data_size) {
-        return UFT_ERR_IO;
-    }
-    
-    /* Write geometry file */
-    char *geom_path = get_geom_path(path);
+    free(aus);
+    if (geschrieben != gesamt) return UFT_ERR_IO;
+
+    geom_path = get_geom_path(path);
     if (geom_path) {
-        posix_geometry_t geometry = {
-            .cylinders = disk->tracks,
-            .heads = disk->heads,
-            .sectors = disk->sectors_per_track,
-            .sector_size = disk->bytes_per_sector,
-            .first_sector = 1,
-            .encoding = UFT_ENC_MFM
-        };
-        
-        uft_posix_write_geometry(geom_path, &geometry);
+        uft_error_t ge = uft_posix_write_geometry(geom_path, &g);
         free(geom_path);
+        /* Ohne `.geom` ist die Datei nicht wieder lesbar — das ist ein
+         * Fehler, kein Nebenumstand. */
+        if (ge != UFT_OK) return ge;
     }
-    
     return UFT_OK;
 }
 
 /* ============================================================================
- * Format Plugin Registration
- * ============================================================================ */
+ * Plugin
+ * ========================================================================== */
 
 /**
  * @brief Sonde, die niemals zustimmt — und warum das richtig ist (MF-546).
@@ -393,28 +505,12 @@ uft_error_t uft_posix_write(const uft_disk_image_t *disk,
  * jede beliebige rohe Sektordatei saehe aus wie ein POSIX-Abbild.
  *
  * Die echte Erkennung ist `uft_posix_probe(path, confidence)` weiter oben.
- * Sie oeffnet die `.geom` und ist deshalb pfadgebunden.
+ * Sie oeffnet die `.geom` und ist deshalb pfadgebunden — und `open()`
+ * sieht den Pfad, ist also erreichbar. Genau darin unterscheidet sich
+ * `posix` von `logical`, wo es diesen Kanal nicht gibt (P3-337).
  *
- * ── Was daraus folgt, und was nicht ──────────────────────────────────────
- *
- * `uft_disk_open()` waehlt sein Plugin AUSSCHLIESSLICH ueber den Inhalt;
- * die Endungs-Rueckfalllinie wurde in MF-444/449 absichtlich entfernt.
- * Dieses Plugin kann dort also nie gewinnen — es ist ueber den
- * Standardweg unerreichbar.
- *
- * Es bleibt trotzdem registriert, damit seine Lese-API (`uft_posix_read`,
- * `uft_posix_probe`) erreichbar ist und der Formatcode an einer Stelle
- * liegt. Was NICHT gilt: dass „POSIX" in einer Liste unterstuetzter
- * Formate dasselbe bedeutet wie die anderen 136. Es bedeutet: der Code ist
- * da, der Weg dorthin fuehrt aber nicht ueber die Erkennung.
- *
- * Ueberwacht von `scripts/audit_dead_probe.py` (26. Kategorie in
- * `check_consistency.py`). Gemessen beim Anlegen: dies ist die EINZIGE
- * Sonde im Baum, die niemals zustimmen kann — 1 bekannt, 0 weitere.
- *
- * Der ordentliche Weg waere eine Sonde, die den Pfad sieht. Das ist eine
- * additive Erweiterung der Plugin-Schnittstelle hinter dem bestehenden
- * `api_version`-Tor und gehoert nicht in eine Release-Vorbereitung.
+ * Gefuehrt in `scripts/audit_dead_probe.py` (26. Kategorie in
+ * `check_consistency.py`).
  */
 static bool posix_probe_plugin(const uint8_t *data, size_t size,
                                size_t file_size, int *confidence) {
@@ -426,17 +522,17 @@ static bool posix_probe_plugin(const uint8_t *data, size_t size,
     return false;
 }
 
-static uft_error_t posix_open(uft_disk_t *disk, const char *path, bool read_only) {
-    (void)read_only;
-    
-    /* Check for .geom file */
+static uft_error_t posix_open(uft_disk_t *disk, const char *path,
+                             bool read_only) {
     int conf;
-    if (!uft_posix_probe(path, &conf)) {
-        return UFT_ERR_FORMAT;
-    }
-    
     uft_disk_image_t *image = NULL;
-    uft_error_t err = uft_posix_read(path, &image, NULL, NULL);
+    uft_error_t err;
+
+    (void)read_only;
+
+    if (!uft_posix_probe(path, &conf)) return UFT_ERR_FORMAT;
+
+    err = uft_posix_read(path, &image, NULL, NULL);
     if (err == UFT_OK && image) {
         disk->plugin_data = image;
         disk->geometry.cylinders = image->tracks;
@@ -458,6 +554,10 @@ static void posix_close(uft_disk_t *disk) {
 
 static uft_error_t posix_read_track(uft_disk_t *disk, int cyl, int head,
                                      uft_track_t *track) {
+    uft_disk_image_t *image;
+    size_t idx, s;
+    uft_track_t *src;
+
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
      * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
      * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
@@ -465,116 +565,62 @@ static uft_error_t posix_read_track(uft_disk_t *disk, int cyl, int head,
      * opus_read_track() von tests/test_disk_open_fuzz.c. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
-    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
+    image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
 
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
+    idx = (size_t)cyl * image->heads + head;
+    if (idx >= (size_t)(image->tracks * image->heads))
         return UFT_ERR_INVALID_PARAM;
-    }
 
-    uft_track_t *src = image->track_data[idx];
+    src = image->track_data[idx];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
     track->cylinder = cyl;
     track->head = head;
     track->encoding = src->encoding;
 
-    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
-     *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
-    for (size_t s = 0; s < src->sector_count; s++) {
+    /* MF-516: `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, und
+     * `uft_track_init()` legt ihn nicht an — ein
+     * `track->sectors[s] = src->sectors[s];` schreibt durch NULL.
+     * `uft_track_add_sector()` legt den Puffer an und kopiert tief.
+     * Derselbe Rumpf stand woertlich in 12 Plugins;
+     * `scripts/audit_read_track_contract.py` meldet den 13ten. */
+    for (s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
     }
-
     return UFT_OK;
 }
 
-/* In-memory write: updates cached disk image. Persist via uft_posix_write(). */
 static uft_error_t posix_write_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *track) {
     /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+     * gerechnet oder indiziert wird. Beim SCHREIBEN wiegt das
+     * schwerer als beim Lesen: ein falscher Index bestimmt, WOHIN
+     * geschrieben wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
+    if (!disk || !track) return UFT_ERR_INVALID_PARAM;
 
-    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
-    if (!image || !track) return UFT_ERR_INVALID_PARAM;
-    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
-
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
-
-    /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     * Der echte Dateischreiber ist `uft_posix_write()`; es fuehrt kein
+     * Weg dorthin (`plugin->flush` hat im ganzen Baum keinen Aufrufer,
+     * `close()` gibt nur frei). Verzeichnet als P3-204.
      *
-     * Diese Datei HAT einen echten Dateischreiber — `uft_posix_write()`,
-     * mit `fwrite` und allem. Nur fuehrt kein Weg dorthin: die
-     * Plugin-Tafel hat kein `.flush`, `close()` gibt den Puffer frei
-     * ohne zu schreiben, und dieses `write_track` fasste nur den
-     * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
-     * erreichte die Platte.
-     *
-     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
-     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
-     * Schreiboperation STEHT — und die steht. Sie wird nur nie
-     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
-     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
-     * der dort aufgezaehlten Verdachtslisten.
-     *
-     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
-     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
-     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
-     * Quelltext — „Call flush/close to persist changes" —, und es gab
-     * ihn nicht.
-     *
-     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
-     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
-     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
-     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
-     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
-     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
-     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
-     *
-     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
+     * Seit MF-1034 kann dieser Schreiber alle drei Spielarten und
+     * schreibt die Anordnung in die `.geom`; vorher haette eine
+     * Verdrahtung nur `alt` erzeugen koennen. */
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_posix_features[] = {
-    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Read", UFT_FEATURE_SUPPORTED,
+      "MF-1034: alle drei Spielarten (raw/rawalt, rawoo, rawob). Die "
+      "Geometrie kommt aus der UFT-eigenen `.geom`-Nachbardatei; ohne sie "
+      "wird abgesagt statt geraten" },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_posix_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-930: der echte uft_posix_write() in derselben Datei hat keinen "
+      "Aufrufer, kein flush, close() gibt frei (P3-204). Seit MF-1034 "
+      "kann er alle drei Spielarten" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -584,7 +630,7 @@ static const uft_plugin_feature_t uft_format_plugin_posix_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_posix = {
     .name = "POSIX",
-    .description = "POSIX Raw Disk with Geometry File",
+    .description = "Raw sector image with a `.geom` sidecar",
     .extensions = "dsk,img,raw",
     .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,

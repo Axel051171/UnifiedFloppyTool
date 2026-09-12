@@ -848,6 +848,30 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der INHALT stammt aus der UFT-eigenen Pruefdatei, die DATEI hat libdsk geschrieben; keine Zeile fremden Quellcodes uebernommen",
       "content": "**Die VOLLE Datei: 8 388 864 Byte** = 256 Byte reservierter Bereich + 64 x 128 x 1024. Das ist die Groesse, die MF-1029 als Rueckfall gemessen hat und die das vorhandene Fixture bewusst NICHT hatte (es traegt einen Zylinder). libdsk fuellt die fehlenden Sektoren nach seiner eigenen Regel mit **0xE5** (`myz80_open()`: „it is not an error to try to read a missing sector“). Gemessen: UFT liest sie als 64 x 1 x 128 x 1024, und Zylinder 0 liefert **128 von 128** Sektoren byteidentisch mit denen aus der kurzen UFT-Datei. Damit ist die volle Geometrie erstmals an einem Fremderzeugnis geprueft."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_acorn640.rawoo",
+      "sha256": "75b7297a2b592b6c71f25ef5fe90bcd10d330e01bd180f60fc8b8db71745b318",
+      "format": "posix",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk GESCHRIEBEN.** Die Eingabe ist ein flaches ALT-Abbild mit selbstbenennenden Sektoren („UFT-K Cnn Hh Snn “); `dsktrans` hat es mit libdsks eigener Geometrie in die Zielanordnung gewandelt. Feldlagen und Gesetze: `lib/drvposix.c` Z. 23-24 (der Kopfkommentar), Z. 38-98 (die DREI Treiberklassen `raw`/`rawalt`, `rawoo`, `rawob`), Z. 232-254 (`posix_offset()` samt der Abgrenzung gegen `logical`: „based on the sidedness of the disk image (not the sidedness of the geometry)“) und `lib/dsklphys.c` Z. 91-118 (`dg_pt2lt()`) — nur gelesen, Kanal *Spec* nach MF-695. Diese Datei: `dsktrans -itype raw -format acorn640 -otype rawoo` — **SIDES_OUTOUT**, 80 x 2 x 16 x 256 = 655360 Byte, dg_secbase = 0.",
+      "test": "test_posix_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit \"UFT-K Cnn Hh Snn \". **Am Objekt nachweisbar:** bei Versatz 327680 — genau der Haelfte — steht Zylinder 0 Kopf 1; bei ALT stuende dort Zylinder 40 Kopf 0. **Und gemessen:** diese Datei ist **byteidentisch** mit `libdsk_acorn640_outout.logical` aus MF-1032. Das ist kein Zufall, sondern genau die Abgrenzung, die libdsk selbst benennt — dort kommt die Sidedness aus der Geometrie, hier aus dem Dateityp; sagen beide dasselbe, sind die Dateien gleich. Die `.geom`-Nachbardatei schreibt der Test selbst; sie ist UFT-eigen (libdsk hat keine)."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_ibm720.rawob",
+      "sha256": "9e4b124ce96007d3f158081f8c6bacca8fb7286fef8dca814c3229e2e2223c4b",
+      "format": "posix",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk GESCHRIEBEN.** Die Eingabe ist ein flaches ALT-Abbild mit selbstbenennenden Sektoren („UFT-K Cnn Hh Snn “); `dsktrans` hat es mit libdsks eigener Geometrie in die Zielanordnung gewandelt. Feldlagen und Gesetze: `lib/drvposix.c` Z. 23-24 (der Kopfkommentar), Z. 38-98 (die DREI Treiberklassen `raw`/`rawalt`, `rawoo`, `rawob`), Z. 232-254 (`posix_offset()` samt der Abgrenzung gegen `logical`: „based on the sidedness of the disk image (not the sidedness of the geometry)“) und `lib/dsklphys.c` Z. 91-118 (`dg_pt2lt()`) — nur gelesen, Kanal *Spec* nach MF-695. Diese Datei: `dsktrans -itype raw -format ibm720 -otype rawob` — **SIDES_OUTBACK**, 80 x 2 x 9 x 512 = 737280 Byte, dg_secbase = 1.",
+      "test": "test_posix_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND wie die `rawoo`-Datei, aber mit 512 Byte je Sektor und `dg_secbase = 1`. **Am Objekt nachweisbar:** die LETZTE logische Spur (Versatz 732672) traegt Zylinder 0 Kopf 1 — genau das meint „out and back“. Byteidentisch mit `libdsk_ibm720_outback.logical` aus MF-1032, aus demselben Grund."
     }
   ]
 }
