@@ -353,6 +353,49 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_v9t9_gegen_mame")
+        # MF-1027: `v9t9` stand auf T3 — und die Spurreihenfolge war an
+        # ZWEI unabhaengigen Stellen falsch. MAMEs `ti99_dsk.cpp`
+        # (LGPL-2.1+, Michael Zapf; nur GELESEN, Kanal Spec nach MF-695)
+        # dokumentiert sie woertlich:
+        #
+        #   The TI file system orders all tracks on side 0 as going
+        #   inwards, and then all tracks on side 1 going outwards.
+        #       00 01 02 03 ... 38 39     side 0
+        #       79 78 77 76 ... 41 40     side 1
+        #
+        # Die Datei ist also KOPF-dur, und auf Seite 1 laeuft die
+        # Spurzahl RUECKWAERTS. UFT rechnete
+        # `(cyl * heads + head) * spt * 256` — zylinder-verschraenkt und
+        # ohne Umkehrung. Gemessen:
+        #
+        #   SSSD  ( 92160 B, 40 Spuren)   0 von 40 falsch
+        #   DSSD  (184320 B, 80 Spuren)  78 von 80 falsch, bis 179712 B
+        #   DSDD  (368640 B, 80 Spuren)  78 von 80 falsch, bis 359424 B
+        #
+        # Bei EINSEITIGEN Dateien geht die alte Formel in die richtige
+        # ueber (`heads == 1`) — deshalb ist es nie aufgefallen.
+        # Zweiseitig trafen zwei Spuren, die zweite (K1/S26) zufaellig,
+        # weil `2t+1 = 79-t` bei t=26 aufgeht.
+        #
+        # Vier weitere Befunde: nur 3 von 7 Groessen aus MAMEs
+        # `identify()` angenommen; die Spurzahl fest auf 40 (die beiden
+        # 80-Spur-Formate also unerreichbar); die VIB in Sektor 0 nie
+        # gelesen, obwohl sie Sektoren je Spur, Spuren je Seite und
+        # Seitenzahl nennt; keine obere Schranke fuer Zylinder/Kopf.
+        #
+        # Die VIB entscheidet echte Faelle: **184320 Byte sind
+        # zweideutig** (SSDD 1x40x18 gegen DSSD 2x40x9), und MAMEs
+        # Kommentar sagt das woertlich. UFT nahm immer DSSD — MAMEs
+        # Rueckfall — auch wenn die Datei selbst SSDD sagt.
+        #
+        # Eine bewusste Abweichung vom Orakel ist festgenagelt: MAME
+        # benutzt die VIB auch bei Widerspruch zur Dateigroesse und
+        # warnt nur; hier gewinnt die Groesse, weil eine Geometrie, die
+        # nicht in die Datei passt, hinter das Dateiende liest.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/v9t9/uft_v9t9.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_victor9k_gegen_mame")
         # MF-1026: `victor9k` stand auf T3, und der Kopf des Plugins
         # beschrieb ACHT Zonen mit EINER Tafel fuer BEIDE Koepfe.
