@@ -1192,6 +1192,25 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_ti99_gegen_hxcfe")
+        # MF-1060: das erste TI-99-Abbild von fremder Hand im Korpus.
+        # MF-1021 hatte es versucht und ein Abbild richtiger Groesse
+        # bekommen, das zu 100 % aus dem Fuellbyte 0xF6 bestand — hxcfes
+        # RAW-Lader kennt die TI-Geometrie nicht. Der fehlende Kanal ist
+        # ein Traeger, der seine Geometrie SELBST mitbringt: IMD. Der
+        # Test prueft BEIDE TI-Leser gegen dieselbe Datei, weil MF-1057
+        # gemessen hat, dass `xdm86` woertlich die Fehler von `v9t9`
+        # trug (Lage MF-519/MF-529).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/v9t9/uft_v9t9.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xdm86/uft_xdm86.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        # Ohne Korpuspfad prueft der Test nichts und sagt das
+        # (Rueckgabe 77, benannter Skip).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_hardsector_erreichbar")
         # MF-1059: `hardsector_probe_plugin()` verwarf `file_size` und gab
         # die PUFFERgroesse weiter. Alle fuenf Groessen der HS_*-Tafel

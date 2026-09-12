@@ -1124,6 +1124,30 @@
       "oracle": "atrip",
       "fremdcode": "nein - der Inhalt stammt Byte fuer Byte aus der UFT-eigenen Eingabe; fremd ist nur die Packung",
       "content": "UFT-K S001 ... (zwei Haelften zu je 360 Sektoren)"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_uftk_ti99_dssd.v9t9",
+      "sha256": "f49c0a9991de07eda493401dcdc428e9edb68a79cfc0c2e57304fbc94f09b36b",
+      "format": "v9t9",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe v2.16.15.2 (Klon 05b53aa)",
+      "source": "Zwei Schritte, beide nachvollziehbar. (1) Ein IMD-TRAEGER, 40 x 2 x 9 x 256 mit 0-basierten Sektornummern und selbstbenennenden Sektoren („UFT-K Cnn Hn Snn “, Methode MF-1020), geschrieben von einem eigenständigen Python-Schreiber nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 / MF-1028). (2) `hxcfe.exe -finput:<imd> -conv:TI994A_V9T9 -foutput:<v9t9>`. **Warum der Umweg über IMD:** MF-1021 hatte hxcfe direkt aus einem RAW-Abbild ein v9t9 schreiben lassen und bekam 184 320 Byte, die zu 100 % aus dem Füllbyte 0xF6 bestanden — sein RAW-Lader kennt die TI-Geometrie nicht, und `-rawlist` führt keine TI-Anordnung. IMD trägt die Geometrie IN DER DATEI, also braucht der Lader keine Tabelle (Gestalt MF-1033: der fehlende Kanal war ein Aufruf, nicht eine Fähigkeit). **Der Inhalt ist nachgewiesen und er UNTERSCHEIDET** — gemessen außerhalb von UFT: häufigstes Byte 0x20 mit 1,9 % (kein Füllbyte), 720 von 720 Mustertreffern, 720 Sektoren an der Stelle, die MAMEs TI-Regel ihnen zuweist — und die Gegenprobe mit LINEARER Anordnung trifft nur **18**, also genau 2 Spuren x 9 Sektoren: (0,0) und (26,1), weil `2*40 - c - 1 == c*2 + 1` bei c = 26 aufgeht. Das sind exakt die zwei Spuren, die MF-1027 benannt hat. **Von den drei TI-Größen taugt nur diese:** SSSD (92 160) unterscheidet nicht, weil bei einem Kopf beide Formeln zusammenfallen; DSDD (368 640) ist hxcfe misslungen — 50,2 % 0xF6 und nur 720 von 1440 Mustertreffern, es schrieb 9 statt 18 Sektoren je Spur.",
+      "test": "test_ti99_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "content": "184 320 Byte, TI-99/4A DSSD 40 x 2 x 9 x 256, 720 Sektoren, jeder selbstbenennend. Kopf-dur mit rückwärts laufender Seite 1 (MAMEs `ti99_dsk.cpp`): Kopf 1 / Zylinder 0 liegt bei Versatz 182 016, nicht 2304.",
+      "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_uftk_ti99_dssd.v9t9",
+      "sha256": "f49c0a9991de07eda493401dcdc428e9edb68a79cfc0c2e57304fbc94f09b36b",
+      "format": "xdm86",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe v2.16.15.2 (Klon 05b53aa)",
+      "source": "Zwei Schritte, beide nachvollziehbar. (1) Ein IMD-TRAEGER, 40 x 2 x 9 x 256 mit 0-basierten Sektornummern und selbstbenennenden Sektoren („UFT-K Cnn Hn Snn “, Methode MF-1020), geschrieben von einem eigenständigen Python-Schreiber nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 / MF-1028). (2) `hxcfe.exe -finput:<imd> -conv:TI994A_V9T9 -foutput:<v9t9>`. **Warum der Umweg über IMD:** MF-1021 hatte hxcfe direkt aus einem RAW-Abbild ein v9t9 schreiben lassen und bekam 184 320 Byte, die zu 100 % aus dem Füllbyte 0xF6 bestanden — sein RAW-Lader kennt die TI-Geometrie nicht, und `-rawlist` führt keine TI-Anordnung. IMD trägt die Geometrie IN DER DATEI, also braucht der Lader keine Tabelle (Gestalt MF-1033: der fehlende Kanal war ein Aufruf, nicht eine Fähigkeit). **Der Inhalt ist nachgewiesen und er UNTERSCHEIDET** — gemessen außerhalb von UFT: häufigstes Byte 0x20 mit 1,9 % (kein Füllbyte), 720 von 720 Mustertreffern, 720 Sektoren an der Stelle, die MAMEs TI-Regel ihnen zuweist — und die Gegenprobe mit LINEARER Anordnung trifft nur **18**, also genau 2 Spuren x 9 Sektoren: (0,0) und (26,1), weil `2*40 - c - 1 == c*2 + 1` bei c = 26 aufgeht. Das sind exakt die zwei Spuren, die MF-1027 benannt hat. **Von den drei TI-Größen taugt nur diese:** SSSD (92 160) unterscheidet nicht, weil bei einem Kopf beide Formeln zusammenfallen; DSDD (368 640) ist hxcfe misslungen — 50,2 % 0xF6 und nur 720 von 1440 Mustertreffern, es schrieb 9 statt 18 Sektoren je Spur.",
+      "test": "test_ti99_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "content": "184 320 Byte, TI-99/4A DSSD 40 x 2 x 9 x 256, 720 Sektoren, jeder selbstbenennend. Kopf-dur mit rückwärts laufender Seite 1 (MAMEs `ti99_dsk.cpp`): Kopf 1 / Zylinder 0 liegt bei Versatz 182 016, nicht 2304.",
+      "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
     }
   ]
 }
