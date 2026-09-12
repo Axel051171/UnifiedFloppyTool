@@ -1,10 +1,29 @@
 /**
  * @file uft_myz80.c
- * @brief MYZ80 Hard Drive Image format implementation
- * @version 3.9.0
- * 
- * MYZ80 CP/M emulator hard drive format with 256-byte header.
- * Reference: libdsk drvmyz80.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief MYZ80 — Festplattenabbild des CP/M-Emulators MYZ80
+ *
+ * Referenz und die fuenf Befunde von MF-1029 stehen im Kopf von
+ * `include/uft/formats/uft_myz80.h`. Kurz:
+ *
+ *   * Die ersten **256 Byte sind durchgehend `0xE5`** — das ist die
+ *     einzige Erkennung; eine Kennung gibt es nicht. UFT suchte
+ *     `"MYZ80 "` und konnte damit **keine einzige** echte Datei lesen.
+ *   * Die Geometrie ist **fest**: 64 Zylinder, 1 Kopf, 128 Sektoren,
+ *     1024 Byte. UFT nahm 77 x 2 x 26 x 128 an.
+ *   * Die Sektornummern sind **0-basiert** (`dg_secbase = 0`).
+ *   * `offset = 131072 * Zylinder + 1024 * Sektor + 256`.
+ *   * **Kurze Dateien sind gueltig**, und fehlende Sektoren gelten als
+ *     `0xE5`.
+ *
+ * Abgenommen an `tests/corpus_free/myz80_spec_1zyl.myz80` — von UFT
+ * nach der Vorlage gebaut und von **fremder Hand nachgewiesen**:
+ * libdsks `dskid` meldet 64/1/128/1024 mit „First sector: 0", und
+ * `dsktrans -itype myz80 -otype raw` liefert 8388608 Byte zurueck, in
+ * denen **Zylinder 0 byteidentisch** ist (131072 von 131072) und die
+ * Zylinder 1..63 **zu 100 % `0xE5`** sind — die Kurzdatei-Regel also
+ * von einer unabhaengigen Umsetzung bestaetigt.
+ *
+ * Regressionsschutz: `tests/test_myz80_gegen_libdsk.c`.
  */
 
 #include "uft/formats/uft_myz80.h"
@@ -14,299 +33,173 @@
 #include <stdio.h>
 
 /* ============================================================================
- * Utility Functions
- * ============================================================================ */
-
-static uint16_t read_le16(const uint8_t *p) {
-    return p[0] | (p[1] << 8);
-}
-
-static void write_le16(uint8_t *p, uint16_t v) {
-    p[0] = v & 0xFF;
-    p[1] = (v >> 8) & 0xFF;
-}
-
-static uint8_t size_code(uint16_t size) {
-    switch (size) {
-        case 128:  return 0;
-        case 256:  return 1;
-        case 512:  return 2;
-        case 1024: return 3;
-        default:   return 0;
-    }
-}
-
-/* ============================================================================
- * Options Initialization
- * ============================================================================ */
+ * Optionen
+ * ==========================================================================*/
 
 void uft_myz80_read_options_init(myz80_read_options_t *opts) {
     if (!opts) return;
-    memset(opts, 0, sizeof(*opts));
     opts->ignore_header = false;
 }
 
 void uft_myz80_write_options_init(myz80_write_options_t *opts) {
     if (!opts) return;
-    memset(opts, 0, sizeof(*opts));
-    strncpy(opts->label, "UFT DISK", sizeof(opts->label) - 1);
-    opts->label[sizeof(opts->label) - 1] = '\0';
+    opts->cylinders = MYZ80_CYLINDERS;
 }
 
 /* ============================================================================
- * Header Validation
- * ============================================================================ */
+ * Erkennung und Versatz
+ * ==========================================================================*/
 
-bool uft_myz80_validate_header(const myz80_header_t *header) {
-    if (!header) return false;
-    
-    /* Check magic */
-    if (memcmp(header->magic, MYZ80_MAGIC, MYZ80_MAGIC_LEN) != 0) {
-        return false;
-    }
-    
-    /* Sanity check geometry */
-    uint16_t cyls = read_le16((const uint8_t*)&header->cylinders);
-    uint16_t secsize = read_le16((const uint8_t*)&header->sector_size);
-    
-    if (cyls == 0 || cyls > 1024) return false;
-    if (header->heads == 0 || header->heads > 16) return false;
-    if (header->sectors == 0 || header->sectors > 255) return false;
-    if (secsize != 128 && secsize != 256 && secsize != 512 && secsize != 1024) {
-        return false;
-    }
-    
+bool uft_myz80_validate_header(const uint8_t *data, size_t size) {
+    size_t i;
+    if (!data || size < MYZ80_HEADER_SIZE) return false;
+    /* libdsk `drvmyz80.c:87-91`:
+     *     for (n = 0; n < 256; n++) if (header[n] != 0xE5) ... NOTME
+     * Es gibt keine Kennung; der reservierte Bereich IST die Kennung. */
+    for (i = 0; i < MYZ80_HEADER_SIZE; i++)
+        if (data[i] != MYZ80_FILL) return false;
     return true;
 }
 
+long uft_myz80_offset(uint32_t cylinder, uint32_t sector) {
+    /* libdsk `drvmyz80.c:178` woertlich:
+     *     offset = (131072L * cylinder) + (1024L * sector) + 256; */
+    return (long)MYZ80_TRACK_SIZE * (long)cylinder
+           + (long)MYZ80_SECTOR_SIZE * (long)sector
+           + MYZ80_HEADER_SIZE;
+}
+
 bool uft_myz80_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < MYZ80_HEADER_SIZE) return false;
-    
-    const myz80_header_t *header = (const myz80_header_t *)data;
-    
-    if (uft_myz80_validate_header(header)) {
-        if (confidence) *confidence = 90;
-        return true;
-    }
-    
-    /* Check if it could be headerless MYZ80 by size */
-    /* Standard 8" SSSD: 77 * 1 * 26 * 128 = 256,256 bytes */
-    /* Standard 8" DSDD: 77 * 2 * 26 * 256 = 1,025,024 bytes */
-    if (size == 256256 || size == 256256 + MYZ80_HEADER_SIZE ||
-        size == 1025024 || size == 1025024 + MYZ80_HEADER_SIZE) {
-        if (confidence) *confidence = 30;
-        return true;
-    }
-    
-    return false;
+    if (!uft_myz80_validate_header(data, size)) return false;
+
+    /* MF-729: welche Stufe ist das?
+     *
+     * Es ist **keine** Kennung — 256 gleiche Bytes sind eine
+     * Konvention, kein Merkmal im Sinne einer Signatur. Damit gehoert
+     * es in das Band „Struktur gelesen" (50..79) und nicht in „Merkmal
+     * getroffen" (80..100). Die Eichung tragen beide Richtungen: ein
+     * NULLpuffer wird abgewiesen (0x00 ist nicht 0xE5), und ein
+     * Zufallspuffer praktisch immer (256 Byte muessen zusammenfallen).
+     *
+     * Dass es nicht mehr als 70 sein darf, ist eine ehrliche Grenze:
+     * eine Datei, die durchgehend 0xE5 ist — etwa eine leer
+     * formatierte Diskette eines anderen Formats — erfuellt die
+     * Bedingung ebenfalls. libdsk hat dasselbe Problem und lebt damit. */
+    if (confidence) *confidence = 70;
+    return true;
 }
 
 /* ============================================================================
- * Read Implementation
- * ============================================================================ */
+ * Lesen
+ * ==========================================================================*/
+
+static void myz80_ergebnis_init(myz80_read_result_t *r) {
+    if (!r) return;
+    memset(r, 0, sizeof(*r));
+}
 
 uft_error_t uft_myz80_read_mem(const uint8_t *data, size_t size,
                                uft_disk_image_t **out_disk,
                                const myz80_read_options_t *opts,
                                myz80_read_result_t *result) {
-    if (!data || !out_disk || size < MYZ80_HEADER_SIZE) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Initialize result */
-    if (result) {
-        memset(result, 0, sizeof(*result));
-        result->image_size = size;
-    }
-    
-    /* Check header */
-    const myz80_header_t *header = (const myz80_header_t *)data;
-    bool has_header = uft_myz80_validate_header(header);
-    
-    uint16_t cylinders, sector_size;
-    uint8_t heads, sectors, first_sector;
-    const uint8_t *disk_data;
-    size_t disk_data_size;
-    
-    if (has_header && !(opts && opts->ignore_header)) {
-        /* Use header geometry */
-        cylinders = read_le16((const uint8_t*)&header->cylinders);
-        heads = header->heads;
-        sectors = header->sectors;
-        sector_size = read_le16((const uint8_t*)&header->sector_size);
-        first_sector = header->first_sector ? header->first_sector : 1;
-        
-        disk_data = data + MYZ80_HEADER_SIZE;
-        disk_data_size = size - MYZ80_HEADER_SIZE;
-        
-        if (result) {
-            result->has_valid_header = true;
-            memcpy(result->label, header->label, sizeof(header->label));
-            memcpy(result->comment, header->comment, sizeof(header->comment));
-        }
-    } else {
-        /* Guess geometry from file size */
-        disk_data = data;
-        disk_data_size = size;
-        first_sector = 1;
-        
-        /* Try common CP/M geometries */
-        if (size == 256256 || size == 256256 + MYZ80_HEADER_SIZE) {
-            /* 8" SSSD */
-            cylinders = 77;
-            heads = 1;
-            sectors = 26;
-            sector_size = 128;
-            if (size == 256256 + MYZ80_HEADER_SIZE) {
-                disk_data = data + MYZ80_HEADER_SIZE;
-                disk_data_size = 256256;
-            }
-        } else if (size == 1025024 || size == 1025024 + MYZ80_HEADER_SIZE) {
-            /* 8" DSDD */
-            cylinders = 77;
-            heads = 2;
-            sectors = 26;
-            sector_size = 256;
-            if (size == 1025024 + MYZ80_HEADER_SIZE) {
-                disk_data = data + MYZ80_HEADER_SIZE;
-                disk_data_size = 1025024;
-            }
-        } else {
-            /* Default to 77/2/26/128 */
-            cylinders = MYZ80_DEFAULT_CYLINDERS;
-            heads = MYZ80_DEFAULT_HEADS;
-            sectors = MYZ80_DEFAULT_SECTORS;
-            sector_size = MYZ80_DEFAULT_SECSIZE;
-        }
-        
-        if (result) {
-            result->has_valid_header = false;
-        }
-    }
-    
-    if (result) {
-        result->cylinders = cylinders;
-        result->heads = heads;
-        result->sectors = sectors;
-        result->sector_size = sector_size;
-    }
-    
-    /* Create disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(cylinders, heads);
-    if (!disk) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    disk->format = UFT_FORMAT_RAW;
-    snprintf(disk->format_name, sizeof(disk->format_name), "MYZ80");
-    disk->sectors_per_track = sectors;
-    disk->bytes_per_sector = sector_size;
-    
-    /* MF-554: die Geometrie aus dem Kopf ist eine BEHAUPTUNG.
-     *
-     * Gefunden von `scripts/audit_unbounded_alloc.py`, das nach der Form
-     * von MF-543 sucht: eine Zahl kommt aus der Datei und bestimmt eine
-     * Allokation oder Schleifengrenze, ohne dass dazwischen eine Schranke
-     * gegen die Dateigroesse oder eine Konstante steht.
-     *
-     * Hier war genau das der Fall. Aus dem Kopf kamen `cylinders` (uint16,
-     * bis 65535), `heads`, `sectors` und `sector_size` (uint16, bis 65535),
-     * und keine dieser vier Zahlen wurde je gegen etwas geprueft. Die
-     * Schleife darunter laeuft `cylinders * heads` mal und ruft je Sektor
-     * `malloc(sector_size)`.
-     *
-     * Bei den Maximalwerten sind das 65535 x 255 x 255 Sektoren zu je
-     * 65535 Byte. Der Anspruch uebersteigt jeden Arbeitsspeicher, und die
-     * Eingabe dafuer ist ein Kopf von wenigen Byte.
-     *
-     * Dieselben zwei Schranken wie in `uft_qrst.c` (MF-543):
-     *
-     *   (1) Einzelgrenzen, die kein reales Laufwerk ueberschreitet.
-     *   (2) Das PRODUKT muss in die Datei passen. Das faengt die Faelle,
-     *       in denen jede Zahl fuer sich plausibel aussieht und nur ihr
-     *       Produkt nicht.
-     *
-     * Die zweite Schranke ist die wichtigere: sie prueft gegen etwas, das
-     * NICHT aus derselben Datei stammt — die tatsaechliche Laenge. Eine
-     * Zahl aus der Datei gegen eine andere Zahl aus der Datei zu pruefen
-     * ist keine Pruefung (vgl. MF-551, MF-542). */
-    if (cylinders == 0 || cylinders > 1024 ||
-        heads == 0     || heads > 2 ||
-        sectors == 0   || sectors > 1024 ||
-        sector_size == 0 || sector_size > 16384) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail =
-                "MYZ80 geometry out of range (MF-554)";
-        }
-        return UFT_ERR_FORMAT;
-    }
+    myz80_read_options_t vorgabe;
+    uft_disk_image_t *image;
+    uint32_t zyl_in_datei, zyl_gefuellt = 0;
+    uint32_t c, s;
+
+    myz80_ergebnis_init(result);
+    if (!data || !out_disk) return UFT_ERR_INVALID_PARAM;
+    *out_disk = NULL;
+    if (!opts) { uft_myz80_read_options_init(&vorgabe); opts = &vorgabe; }
+
+    if (!opts->ignore_header && !uft_myz80_validate_header(data, size))
+        return UFT_ERROR_FORMAT_INVALID;
+    if (size < MYZ80_HEADER_SIZE) return UFT_ERROR_FORMAT_INVALID;
+
+    /* Wie viele Zylinder traegt die Datei wirklich? Eine Kurzdatei ist
+     * gueltig (libdsk `drvmyz80.c:182-190`), also wird das GEMESSEN und
+     * nicht aus der Groesse geschlossen. Ein angefangener Zylinder
+     * zaehlt mit; seine fehlenden Sektoren werden unten gekennzeichnet. */
     {
-        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
-        if (need > (uint64_t)size) {
-            if (result) {
-                result->error = UFT_ERR_FORMAT;
-                result->error_detail =
-                    "MYZ80 header claims more data than the file holds "
-                    "(MF-554)";
-            }
-            return UFT_ERR_FORMAT;
-        }
+        const size_t daten = size - MYZ80_HEADER_SIZE;
+        zyl_in_datei = (uint32_t)((daten + MYZ80_TRACK_SIZE - 1)
+                                  / MYZ80_TRACK_SIZE);
+        if (zyl_in_datei > MYZ80_CYLINDERS) zyl_in_datei = MYZ80_CYLINDERS;
     }
 
-    /* Read disk data */
-    size_t data_pos = 0;
-    uint8_t sz_code = size_code(sector_size);
-    
-    for (uint16_t c = 0; c < cylinders; c++) {
-        for (uint8_t h = 0; h < heads; h++) {
-            size_t idx = c * heads + h;
-            
-            uft_track_t *track = uft_track_alloc(sectors, 0);
-            if (!track) {
-                uft_disk_free(disk);
-                return UFT_ERR_MEMORY;
+    image = uft_disk_alloc(MYZ80_CYLINDERS, MYZ80_HEADS);
+    if (!image) return UFT_ERROR_NO_MEMORY;
+    image->format = UFT_FORMAT_DSK;
+    snprintf(image->format_name, sizeof(image->format_name), "MYZ80");
+    image->sectors_per_track = MYZ80_SECTORS;
+    image->bytes_per_sector  = MYZ80_SECTOR_SIZE;
+
+    for (c = 0; c < MYZ80_CYLINDERS; c++) {
+        uft_track_t *tr = (uft_track_t *)calloc(1, sizeof(uft_track_t));
+        bool zylinder_ganz_fehlt = true;
+        if (!tr) { uft_disk_free(image); return UFT_ERROR_NO_MEMORY; }
+        uft_track_init(tr, (int)c, 0);
+
+        for (s = 0; s < MYZ80_SECTORS; s++) {
+            const long off = uft_myz80_offset(c, s);
+            uint8_t puffer[MYZ80_SECTOR_SIZE];
+            bool fehlt;
+
+            if (off >= 0 && (size_t)off + MYZ80_SECTOR_SIZE <= size) {
+                memcpy(puffer, data + off, MYZ80_SECTOR_SIZE);
+                fehlt = false;
+                zylinder_ganz_fehlt = false;
+            } else if (off >= 0 && (size_t)off < size) {
+                /* angefangener Sektor am Dateiende */
+                const size_t da = size - (size_t)off;
+                memcpy(puffer, data + off, da);
+                memset(puffer + da, MYZ80_FILL, MYZ80_SECTOR_SIZE - da);
+                fehlt = true;
+                zylinder_ganz_fehlt = false;
+            } else {
+                memset(puffer, MYZ80_FILL, MYZ80_SECTOR_SIZE);
+                fehlt = true;
             }
-            
-            track->cylinder = c;
-            track->head = h;
-            track->encoding = UFT_ENC_FM;  /* CP/M typically uses FM */
-            
-            for (uint8_t s = 0; s < sectors; s++) {
-                uft_sector_t *sect = &track->sectors[s];
-                sect->id.cylinder = c;
-                sect->id.head = h;
-                sect->id.sector = s + first_sector;
-                sect->id.size_code = sz_code;
-                sect->status = UFT_SECTOR_OK;
-                
-                sect->data = malloc(sector_size);
-                sect->data_size = sector_size;
-                
-                if (sect->data) {
-                    if (data_pos + sector_size <= disk_data_size) {
-                        memcpy(sect->data, disk_data + data_pos, sector_size);
-                    } else {
-                        memset(sect->data, 0xE5, sector_size);
-                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
-                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
-                         * unterscheiden -- und `status` stand schon auf OK. */
-                        uft_sector_mark_missing(sect);
-                    }
-                }
-                data_pos += sector_size;
-                track->sector_count++;
+
+            /* MF-1029: die Sektornummern sind **0-basiert** —
+             * `dg_secbase = 0` in libdsks `myz80_getgeom()`.
+             * `uft_format_add_sector()` haette laut eigenem Kopf 1
+             * addiert. Gestalt von MF-1016. */
+            uft_format_add_sector_with_id(tr, (uint8_t)s, puffer,
+                                          MYZ80_SECTOR_SIZE, (uint8_t)c, 0);
+
+            if (fehlt) {
+                /* **Hier folgt UFT dem Orakel bewusst nur zur Haelfte.**
+                 *
+                 * libdsk sagt ausdruecklich, ein fehlender Sektor sei
+                 * KEIN Fehler und gelte als `0xE5`. Die Bytes werden
+                 * deshalb auch so geliefert. Aber „das Format sagt,
+                 * hier ist 0xE5" und „hier wurde 0xE5 gelesen" sind
+                 * zwei verschiedene Aussagen, und ein forensisches
+                 * Werkzeug darf sie nicht gleichsetzen (MF-980). Der
+                 * Sektor wird deshalb gekennzeichnet — der Aufrufer
+                 * bekommt die Bytes UND die Auskunft, dass sie nicht
+                 * in der Datei standen. */
+                uft_format_mark_last_missing(tr);
             }
-            
-            disk->track_data[idx] = track;
         }
+        if (zylinder_ganz_fehlt) zyl_gefuellt++;
+        image->track_data[c] = tr;
     }
-    
+
     if (result) {
         result->success = true;
+        result->error = UFT_OK;
+        result->cylinders   = MYZ80_CYLINDERS;
+        result->heads       = MYZ80_HEADS;
+        result->sectors     = MYZ80_SECTORS;
+        result->sector_size = MYZ80_SECTOR_SIZE;
+        result->cylinders_in_file = zyl_in_datei;
+        result->cylinders_filled  = zyl_gefuellt;
+        result->file_size = (uint64_t)size;
     }
-    
-    *out_disk = disk;
+
+    *out_disk = image;
     return UFT_OK;
 }
 
@@ -314,115 +207,97 @@ uft_error_t uft_myz80_read(const char *path,
                            uft_disk_image_t **out_disk,
                            const myz80_read_options_t *opts,
                            myz80_read_result_t *result) {
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        return UFT_ERR_IO;
+    FILE *f;
+    uint8_t *buf;
+    long len;
+    uft_error_t rc;
+
+    myz80_ergebnis_init(result);
+    if (!path || !out_disk) return UFT_ERR_INVALID_PARAM;
+
+    f = fopen(path, "rb");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    len = ftell(f);
+    if (len < MYZ80_HEADER_SIZE) { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
+
+    buf = (uint8_t *)malloc((size_t)len);
+    if (!buf) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    if (fread(buf, 1, (size_t)len, f) != (size_t)len) {
+        free(buf); fclose(f); return UFT_ERROR_IO;
     }
-    
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    
-    uint8_t *data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return UFT_ERR_MEMORY;
-    }
-    
-    if (fread(data, 1, size, fp) != size) {
-        free(data);
-        fclose(fp);
-        return UFT_ERR_IO;
-    }
-    fclose(fp);
-    
-    uft_error_t err = uft_myz80_read_mem(data, size, out_disk, opts, result);
-    free(data);
-    
-    return err;
+    fclose(f);
+
+    rc = uft_myz80_read_mem(buf, (size_t)len, out_disk, opts, result);
+    free(buf);
+    return rc;
 }
 
 /* ============================================================================
- * Write Implementation
- * ============================================================================ */
+ * Schreiben
+ *
+ * Spezifikationsgerecht, aber weiterhin ohne Aufrufer aus dem
+ * Plugin-Pfad (P3-204, MF-930). Was MF-1029 aendert: vorher haette eine
+ * Verdrahtung ein Format geschrieben, das es nicht gibt — mit einer
+ * erfundenen `"MYZ80 "`-Kennung, die jede fremde Umsetzung abweist.
+ * ==========================================================================*/
 
 uft_error_t uft_myz80_write(const uft_disk_image_t *disk,
                             const char *path,
                             const myz80_write_options_t *opts) {
-    if (!disk || !path) {
-        return UFT_ERR_INVALID_PARAM;
+    myz80_write_options_t vorgabe;
+    uint8_t kopf[MYZ80_HEADER_SIZE];
+    FILE *f;
+    uint32_t c, s, zyl;
+
+    if (!disk || !path) return UFT_ERR_INVALID_PARAM;
+    if (!opts) { uft_myz80_write_options_init(&vorgabe); opts = &vorgabe; }
+
+    /* MYZ80 hat EINE Geometrie. Eine Diskette, die nicht hineinpasst,
+     * wird ABGEWIESEN statt gerundet — gerundet waeren es erfundene
+     * Daten. */
+    if (disk->heads != MYZ80_HEADS
+        || disk->sectors_per_track != MYZ80_SECTORS
+        || disk->bytes_per_sector != MYZ80_SECTOR_SIZE
+        || disk->tracks > MYZ80_CYLINDERS)
+        return UFT_ERROR_NOT_SUPPORTED;
+
+    zyl = opts->cylinders;
+    if (zyl == 0 || zyl > MYZ80_CYLINDERS) zyl = MYZ80_CYLINDERS;
+    if (zyl > disk->tracks) zyl = disk->tracks;
+
+    f = fopen(path, "wb");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+
+    memset(kopf, MYZ80_FILL, sizeof(kopf));
+    if (fwrite(kopf, 1, sizeof(kopf), f) != sizeof(kopf)) {
+        fclose(f); return UFT_ERROR_IO;
     }
-    
-    /* Calculate data size */
-    size_t disk_data_size = (size_t)disk->tracks * disk->heads *
-                            disk->sectors_per_track * disk->bytes_per_sector;
-    size_t total_size = MYZ80_HEADER_SIZE + disk_data_size;
-    
-    uint8_t *output = malloc(total_size);
-    if (!output) {
-        return UFT_ERR_MEMORY;
-    }
-    memset(output, 0, total_size);
-    
-    /* Build header */
-    myz80_header_t *header = (myz80_header_t *)output;
-    memcpy(header->magic, MYZ80_MAGIC, MYZ80_MAGIC_LEN);
-    header->version = 1;
-    header->flags = 0;
-    write_le16((uint8_t*)&header->cylinders, disk->tracks);
-    header->heads = disk->heads;
-    header->sectors = disk->sectors_per_track;
-    write_le16((uint8_t*)&header->sector_size, disk->bytes_per_sector);
-    header->first_sector = 1;
-    
-    if (opts) {
-        strncpy(header->label, opts->label, sizeof(header->label) - 1);
-        strncpy(header->comment, opts->comment, sizeof(header->comment) - 1);
-    } else {
-        strncpy(header->label, "UFT DISK", sizeof(header->label) - 1);
-        header->label[sizeof(header->label) - 1] = '\0';
-    }
-    
-    /* Write disk data */
-    uint8_t *data_ptr = output + MYZ80_HEADER_SIZE;
-    
-    for (uint16_t c = 0; c < disk->tracks; c++) {
-        for (uint8_t h = 0; h < disk->heads; h++) {
-            size_t idx = c * disk->heads + h;
-            uft_track_t *track = disk->track_data[idx];
-            
-            for (uint8_t s = 0; s < disk->sectors_per_track; s++) {
-                if (track && s < track->sector_count && track->sectors[s].data) {
-                    memcpy(data_ptr, track->sectors[s].data, disk->bytes_per_sector);
-                } else {
-                    memset(data_ptr, 0xE5, disk->bytes_per_sector);
-                }
-                data_ptr += disk->bytes_per_sector;
+
+    for (c = 0; c < zyl; c++) {
+        const uft_track_t *tr = disk->track_data ? disk->track_data[c] : NULL;
+        for (s = 0; s < MYZ80_SECTORS; s++) {
+            uint8_t puffer[MYZ80_SECTOR_SIZE];
+            memset(puffer, MYZ80_FILL, sizeof(puffer));
+            if (tr && s < tr->sector_count && tr->sectors[s].data) {
+                size_t n = tr->sectors[s].data_len;
+                if (n > MYZ80_SECTOR_SIZE) n = MYZ80_SECTOR_SIZE;
+                memcpy(puffer, tr->sectors[s].data, n);
+            }
+            if (fwrite(puffer, 1, sizeof(puffer), f) != sizeof(puffer)) {
+                fclose(f); return UFT_ERROR_IO;
             }
         }
     }
-    
-    /* Write file */
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        free(output);
-        return UFT_ERR_IO;
-    }
-    
-    size_t written = fwrite(output, 1, total_size, fp);
-    fclose(fp);
-    free(output);
-    
-    if (written != total_size) {
-        return UFT_ERR_IO;
-    }
-    
+
+    if (fclose(f) != 0) return UFT_ERROR_IO;
     return UFT_OK;
 }
 
 /* ============================================================================
- * Format Plugin Registration
- * ============================================================================ */
+ * Plugin
+ * ==========================================================================*/
 
 static bool myz80_probe_plugin(const uint8_t *data, size_t size,
                                size_t file_size, int *confidence) {
@@ -430,7 +305,8 @@ static bool myz80_probe_plugin(const uint8_t *data, size_t size,
     return uft_myz80_probe(data, size, confidence);
 }
 
-static uft_error_t myz80_open(uft_disk_t *disk, const char *path, bool read_only) {
+static uft_error_t myz80_open(uft_disk_t *disk, const char *path,
+                              bool read_only) {
     (void)read_only;
     uft_disk_image_t *image = NULL;
     uft_error_t err = uft_myz80_read(path, &image, NULL, NULL);
@@ -456,122 +332,59 @@ static void myz80_close(uft_disk_t *disk) {
 static uft_error_t myz80_read_track(uft_disk_t *disk, int cyl, int head,
                                      uft_track_t *track) {
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
-     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
-     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
-     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+     * gerechnet oder indiziert wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
-
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
+    if (cyl >= (int)image->tracks || head >= (int)image->heads)
         return UFT_ERR_INVALID_PARAM;
-    }
 
-    uft_track_t *src = image->track_data[idx];
+    uft_track_t *src = image->track_data[(size_t)cyl * image->heads + head];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
     track->cylinder = cyl;
     track->head = head;
     track->encoding = src->encoding;
 
-    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
-     *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
+    /* MF-516: `uft_track_t.sectors` ist ein dynamischer Zeiger, und
+     * `uft_track_init()` legt ihn nicht an — eine Zuweisung
+     * `track->sectors[s] = ...` schreibt durch NULL. */
     for (size_t s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
     }
-
     return UFT_OK;
 }
 
-/* In-memory write: updates cached disk image. Persist via uft_myz80_write(). */
 static uft_error_t myz80_write_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *track) {
-    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+    /* MF-529: negative Koordinaten abweisen, bevor mit ihnen gerechnet
+     * wird. Beim Schreiben wiegt es schwerer: ein falscher Index
+     * bestimmt, WOHIN geschrieben wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
-
-    /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     * Der echte `uft_myz80_write()` in derselben Datei hat keinen
+     * Aufrufer — kein `.flush`, `close()` gibt nur frei. Die
+     * Verdrahtung ist je Format eine eigene Aufgabe mit eigenem
+     * Rundlaufbeweis (P3-204).
      *
-     * Diese Datei HAT einen echten Dateischreiber — `uft_myz80_write()`,
-     * mit `fwrite` und allem. Nur fuehrt kein Weg dorthin: die
-     * Plugin-Tafel hat kein `.flush`, `close()` gibt den Puffer frei
-     * ohne zu schreiben, und dieses `write_track` fasste nur den
-     * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
-     * erreichte die Platte.
-     *
-     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
-     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
-     * Schreiboperation STEHT — und die steht. Sie wird nur nie
-     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
-     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
-     * der dort aufgezaehlten Verdachtslisten.
-     *
-     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
-     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
-     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
-     * Quelltext — „Call flush/close to persist changes" —, und es gab
-     * ihn nicht.
-     *
-     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
-     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
-     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
-     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
-     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
-     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
-     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
-     *
-     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
+     * MF-1029 aendert daran nichts, aber es aendert den Wert einer
+     * spaeteren Verdrahtung: vorher haette sie eine Datei mit einer
+     * erfundenen `"MYZ80 "`-Kennung geschrieben, die jede fremde
+     * Umsetzung abweist. */
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_myz80_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_myz80_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-930/P3-204: der spezifikationsgerechte uft_myz80_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -591,6 +404,9 @@ const uft_format_plugin_t uft_format_plugin_myz80 = {
     .read_track = myz80_read_track,
     .write_track = myz80_write_track,
     .verify_track = uft_generic_verify_track,
+    /* Geprueft und nicht angefasst: MYZ80 hat keine
+     * Herstellerspezifikation; libdsks Treiber ist selbst eine
+     * RE-Referenz. Die Verifikationsstufe traegt das Tier-System. */
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_myz80_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_myz80_features) / sizeof(uft_format_plugin_myz80_features[0]),

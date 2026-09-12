@@ -353,6 +353,49 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_myz80_gegen_libdsk")
+        # MF-1029: `myz80` stand auf T3, und **UFT konnte keine einzige
+        # MYZ80-Datei lesen** — aus einem zwingenden Grund. Gemessen
+        # gegen libdsks `lib/drvmyz80.c` (John Elliott, LGPL-2+; nur
+        # GELESEN, Kanal Spec nach MF-695):
+        #
+        #   Erkennung   `magic[6] = "MYZ80 "` -> die ersten **256 Byte
+        #               sind durchgehend 0xE5**; es gibt KEINE Kennung
+        #   Kopf        `myz80_header_t` mit version/flags/cylinders/
+        #               heads/sectors/sector_size/first_sector/
+        #               label[32]/comment[64] + 142 Byte Polsterung
+        #               -> **nichts davon existiert**
+        #   Geometrie   77 x 2 x 26 x 128 -> **64 x 1 x 128 x 1024**
+        #   Sektor-IDs  1-basiert -> **0-basiert** (`dg_secbase = 0`)
+        #   Versatz     -> `131072*Zyl + 1024*Sektor + 256`
+        #   Groessen    256256 / 1025024 angenommen -> eine volle Datei
+        #               ist **8388864** Byte gross
+        #
+        # `memcmp(header->magic, "MYZ80 ", 6)` gegen sechs Byte 0xE5
+        # scheitert immer, und der Groessenrueckfall kannte 8388864
+        # nicht. Das ist die Klasse von MF-961 (`86f` probte auf
+        # `"86BX"`) und MF-1022 (`sap` suchte `"SAP"` bei Versatz 0) —
+        # zum **dritten** Mal.
+        #
+        # **Und eine Regel der Vorlage wird nur zur Haelfte
+        # uebernommen, absichtlich:** libdsk sagt, kurze Dateien seien
+        # gueltig und fehlende Sektoren gaelten als 0xE5 („it is not an
+        # error to try to read a missing sector"). UFT liefert die
+        # Bytes so — kennzeichnet sie aber als fehlend, weil „das
+        # Format sagt 0xE5" und „hier wurde 0xE5 gelesen" zwei
+        # Aussagen sind (MF-980). Der Test nagelt beides fest.
+        #
+        # **Das Fixture ist kein Selbstgespraech:** libdsks `dskid`
+        # meldet 64/1/128/1024 mit „First sector: 0", und `dsktrans
+        # -itype myz80 -otype raw` liefert 8388608 Byte zurueck, in
+        # denen Zylinder 0 **byteidentisch** ist (131072 von 131072) und
+        # die Zylinder 1..63 **zu 100 % 0xE5** sind. T2 und nicht T1b,
+        # weil T1b einen fremden ERZEUGER verlangt.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/myz80/uft_myz80.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_qrst_gegen_libdsk")
         # MF-1028: `qrst` stand auf T3, und **der ganze Aufbau war
         # erfunden** — UFT konnte keine echte QRST-Datei lesen, und sein

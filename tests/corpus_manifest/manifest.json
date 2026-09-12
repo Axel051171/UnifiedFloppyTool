@@ -752,6 +752,18 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einer gelesenen Formatbeschreibung; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Zylinder, 1 = Kopf, 2 = Sektor, 3..7 = \"UFT-Q\", Rest 0x5A; Spur 1 ist durchgehend 0xE5. **Und der Inhalt ist von FREMDER HAND nachgewiesen**, nicht nur behauptet: libdsks eigene Werkzeuge (aus dem Klon gebaut, siehe docs/ORACLES.md) lesen die Datei und melden 40/1/8/512 samt Beschreibung und Etikett; `dsktrans -itype qrst -otype raw` stellt die Diskette **163840 von 163840 Byte identisch** wieder her. Damit gehen alle drei Spursatz-Arten durch einen fremden Entpacker - die Datei ist kein Selbstgespraech. origin bleibt `derived`, weil sie von UFT ERZEUGT wurde; T1b verlangt einen fremden ERZEUGER."
+    },
+    {
+      "file": "tests/corpus_free/myz80_spec_1zyl.myz80",
+      "sha256": "f1b7d8a21e3b60352de6da548730d157bc94b0f238d4faa1dfdd5db448bff502",
+      "format": "myz80",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1029), nach libdsks lib/drvmyz80.c",
+      "source": "256 Byte 0xE5 als reservierter Bereich (libdsk `drvmyz80.c:87-91` verlangt, dass JEDES der 256 Byte 0xE5 ist - es gibt keine Kennung), danach EIN Zylinder mit 128 Sektoren zu 1024 Byte. Die feste Geometrie ist 64 x 1 x 128 x 1024 (`myz80_getgeom()`, Z. 288-297, mit `dg_secbase = 0`); eine volle Datei waere 8388864 Byte gross. Die Datei nutzt ausdruecklich die Kurzdatei-Erlaubnis aus Z. 182-190 - \"MYZ80 disc files can be shorter than the full 8Mb ... it is not an error to try to read a missing sector\" - und prueft damit genau diese Regel mit, bei 131328 statt 8388864 Byte.",
+      "test": "test_myz80_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einem gelesenen Treiber; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Zylinder, 1 = Kopf, 2..3 = Sektornummer (LE16), 4..8 = \"UFT-M\", Rest 0x5A. **Und der Inhalt ist von FREMDER HAND nachgewiesen:** libdsks aus dem Klon gebaute Werkzeuge (siehe docs/ORACLES.md) lesen die Datei - `dskid` meldet 64 Zylinder, 1 Kopf, 128 Sektoren, 1024 Byte und \"First sector: 0\" - und `dsktrans -itype myz80 -otype raw` liefert 8388608 Byte zurueck, in denen **Zylinder 0 byteidentisch** ist (131072 von 131072) und die Zylinder 1..63 **zu 100 % 0xE5** sind. Damit sind Versatzformel UND Kurzdatei-Regel von einer unabhaengigen Umsetzung bestaetigt. origin bleibt `derived`, weil die Datei von UFT ERZEUGT wurde; T1b verlangt einen fremden ERZEUGER."
     }
   ]
 }

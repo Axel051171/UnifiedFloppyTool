@@ -1,18 +1,51 @@
 /**
  * @file uft_myz80.h
- * @brief MYZ80 Hard Drive Image format support
- * @version 3.9.0
- * 
- * MYZ80 is a CP/M emulator by Simeon Cran. The hard drive image
- * format is essentially raw disk data with a 256-byte header
- * containing geometry and identification information.
- * 
- * Features:
- * - 256-byte header with geometry
- * - Raw sector data follows header
- * - Used for CP/M 2.2 and CP/M 3 emulation
- * 
- * Reference: libdsk drvmyz80.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief MYZ80 — Festplattenabbild des CP/M-Emulators MYZ80
+ *
+ * ── Referenz ────────────────────────────────────────────────────────
+ *
+ * `tools/uft-scout/work/libdsk/lib/drvmyz80.c` (John Elliott,
+ * **LGPL-2+**). **Nur gelesen** — Kanal *Spec* nach MF-695; keine Zeile
+ * Quelltext uebernommen. Vier Aussagen tragen diese Datei:
+ *
+ *   Z.  82-91   `myz80_open()` liest 256 Byte und verlangt, dass
+ *               **jedes einzelne `0xE5`** ist. Es gibt **keine**
+ *               Kennung.
+ *   Z. 288-297  `myz80_getgeom()`: **64** Zylinder, **1** Kopf,
+ *               **128** Sektoren, `dg_secbase = 0` (**0-basierte**
+ *               Sektornummern), **1024** Byte je Sektor.
+ *   Z. 178      `offset = (131072L * cylinder) + (1024L * sector) + 256`
+ *   Z. 182-190  **Kurze Dateien sind gueltig:** „MYZ80 disc files can
+ *               be shorter than the full 8Mb. If so, the missing
+ *               sectors are all assumed to be full of 0xE5s. Unlike in
+ *               'raw' files, it is not an error to try to read a
+ *               missing sector."
+ *
+ * Die Geometrie ist damit **fest** — sie steht nicht in der Datei und
+ * ist auch nicht aus ihrer Groesse abzuleiten.
+ *
+ * ── BERICHTIGT MF-1029: hier stand ein Format, das es nicht gibt ────
+ *
+ * Bis MF-1029 beschrieb diese Datei eine `myz80_header_t` mit
+ * `magic[6] = "MYZ80 "`, `version`, `flags`, `cylinders`, `heads`,
+ * `sectors`, `sector_size`, `first_sector`, `label[32]`,
+ * `comment[64]` und 142 Byte Polsterung. **Nichts davon existiert.**
+ * Die ersten 256 Byte einer echten MYZ80-Datei sind durchgehend
+ * `0xE5`.
+ *
+ * Die Folge war zwingend: `uft_myz80_validate_header()` verglich
+ * `memcmp(header->magic, "MYZ80 ", 6)` gegen sechs Byte `0xE5` und
+ * scheiterte immer; der Groessenrueckfall der Sonde kannte nur 256256
+ * und 1025024 Byte (77 x 2 x 26 x 128, eine 8-Zoll-CP/M-Geometrie, die
+ * mit MYZ80 nichts zu tun hat). Eine volle MYZ80-Datei ist **8388864**
+ * Byte gross. **UFT konnte keine einzige lesen.**
+ *
+ * Das ist die Klasse von MF-961 (`86f` probte auf `"86BX"`, ein Magic,
+ * das in keiner echten Datei steht) und MF-1022 (`sap` suchte `"SAP"`
+ * bei Versatz 0, wo das Formatbyte steht) — **zum dritten Mal**. Und
+ * wie bei `qrst` (MF-1028) nannte der alte Dateikopf `libdsk
+ * drvmyz80.c ... Fassung 1.5.12 geprueft`: eine benannte Referenz,
+ * deren Verhalten der Code nicht umsetzte.
  */
 
 #ifndef UFT_MYZ80_H
@@ -26,119 +59,87 @@
 extern "C" {
 #endif
 
-/* MYZ80 Constants */
+/** Der reservierte Bereich am Dateianfang — 256 Byte, alle `0xE5`. */
 #define MYZ80_HEADER_SIZE       256
-#define MYZ80_MAGIC             "MYZ80 "
-#define MYZ80_MAGIC_LEN         6
+/** Das Fuellbyte. Es ist zugleich die einzige Erkennung. */
+#define MYZ80_FILL              0xE5
 
-/* Default geometry (CP/M standard) */
-#define MYZ80_DEFAULT_CYLINDERS 77
-#define MYZ80_DEFAULT_HEADS     2
-#define MYZ80_DEFAULT_SECTORS   26
-#define MYZ80_DEFAULT_SECSIZE   128
+/* Feste Geometrie, libdsk `drvmyz80.c:288-297`. */
+#define MYZ80_CYLINDERS         64
+#define MYZ80_HEADS             1
+#define MYZ80_SECTORS           128
+#define MYZ80_SECTOR_SIZE       1024
+#define MYZ80_SECTOR_BASE       0       /**< `dg_secbase = 0` */
+#define MYZ80_TRACK_SIZE        131072  /**< 128 * 1024 */
+#define MYZ80_FULL_SIZE         8388864 /**< 256 + 64 * 131072 */
 
 /**
- * @brief MYZ80 header structure (256 bytes)
+ * @brief Was in einer MYZ80-Datei ueberhaupt steht.
+ *
+ * Es gibt kein Kopf-Layout. Diese Struktur haelt fest, was gemessen
+ * wurde — nicht, was gelesen wird.
  */
-#pragma pack(push, 1)
 typedef struct {
-    char     magic[6];          /* "MYZ80 " */
-    uint8_t  version;           /* Format version */
-    uint8_t  flags;             /* Flags */
-    uint16_t cylinders;         /* Number of cylinders */
-    uint8_t  heads;             /* Number of heads */
-    uint8_t  sectors;           /* Sectors per track */
-    uint16_t sector_size;       /* Bytes per sector */
-    uint8_t  first_sector;      /* First sector number (usually 1) */
-    uint8_t  reserved1;
-    char     label[32];         /* Volume label */
-    char     comment[64];       /* Comment */
-    uint8_t  reserved[142];     /* Padding to 256 bytes */
+    bool     header_all_fill;   /**< alle 256 Byte sind `0xE5` */
+    uint64_t file_size;         /**< die tatsaechliche Groesse */
+    uint32_t cylinders_in_file; /**< wie viele Zylinder die Datei traegt */
+    bool     short_file;        /**< kuerzer als 8388864 Byte */
 } myz80_header_t;
-#pragma pack(pop)
 
-/**
- * @brief MYZ80 read options
- */
+/** @brief Leseoptionen. */
 typedef struct {
-    bool     ignore_header;     /* Treat as raw if header invalid */
+    bool ignore_header;   /**< den 0xE5-Kopf nicht verlangen */
 } myz80_read_options_t;
 
-/**
- * @brief MYZ80 write options
- */
+/** @brief Schreiboptionen. */
 typedef struct {
-    char     label[32];         /* Volume label */
-    char     comment[64];       /* Comment */
+    uint32_t cylinders;   /**< wie viele Zylinder geschrieben werden (1..64) */
 } myz80_write_options_t;
 
-/**
- * @brief MYZ80 read result
- */
+/** @brief Ergebnis eines Lesevorgangs. */
 typedef struct {
     bool success;
     uft_error_t error;
     const char *error_detail;
-    
+
     uint16_t cylinders;
-    uint8_t  heads;
-    uint8_t  sectors;
+    uint16_t heads;
+    uint16_t sectors;
     uint16_t sector_size;
-    
-    char     label[32];
-    char     comment[64];
-    
-    size_t   image_size;
-    bool     has_valid_header;
-    
+
+    uint32_t cylinders_in_file;   /**< aus der Datei gelesen */
+    uint32_t cylinders_filled;    /**< als `0xE5` ergaenzt (Kurzdatei) */
+    uint64_t file_size;
 } myz80_read_result_t;
 
 /* ============================================================================
- * MYZ80 Functions
- * ============================================================================ */
+ * Datei-E/A
+ * ==========================================================================*/
 
-/**
- * @brief Initialize read options
- */
-void uft_myz80_read_options_init(myz80_read_options_t *opts);
-
-/**
- * @brief Initialize write options
- */
-void uft_myz80_write_options_init(myz80_write_options_t *opts);
-
-/**
- * @brief Read MYZ80 file
- */
 uft_error_t uft_myz80_read(const char *path,
                            uft_disk_image_t **out_disk,
                            const myz80_read_options_t *opts,
                            myz80_read_result_t *result);
 
-/**
- * @brief Read MYZ80 from memory
- */
 uft_error_t uft_myz80_read_mem(const uint8_t *data, size_t size,
                                uft_disk_image_t **out_disk,
                                const myz80_read_options_t *opts,
                                myz80_read_result_t *result);
 
-/**
- * @brief Write MYZ80 file
- */
 uft_error_t uft_myz80_write(const uft_disk_image_t *disk,
                             const char *path,
                             const myz80_write_options_t *opts);
 
-/**
- * @brief Probe if data is MYZ80 format
- */
+/** @brief Sind die ersten 256 Byte durchgehend `0xE5`? */
+bool uft_myz80_validate_header(const uint8_t *data, size_t size);
+
+/** @brief Byteversatz eines Sektors, libdsk `drvmyz80.c:178`. */
+long uft_myz80_offset(uint32_t cylinder, uint32_t sector);
+
 bool uft_myz80_probe(const uint8_t *data, size_t size, int *confidence);
 
-/**
- * @brief Validate MYZ80 header
- */
-bool uft_myz80_validate_header(const myz80_header_t *header);
+void uft_myz80_read_options_init(myz80_read_options_t *opts);
+void uft_myz80_write_options_init(myz80_write_options_t *opts);
 
 #ifdef __cplusplus
 }
