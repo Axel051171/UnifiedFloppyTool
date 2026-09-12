@@ -1148,6 +1148,30 @@
       "oracle": "hxcfe",
       "content": "184 320 Byte, TI-99/4A DSSD 40 x 2 x 9 x 256, 720 Sektoren, jeder selbstbenennend. Kopf-dur mit rückwärts laufender Seite 1 (MAMEs `ti99_dsk.cpp`): Kopf 1 / Zylinder 0 liegt bei Versatz 182 016, nicht 2304.",
       "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_uftk_dragon_ds.vdk",
+      "sha256": "1ba58778ed23688e27a416e8a0e76491baeaf259cb37270372d5cd0d79020982",
+      "format": "vdk",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe v2.16.15.2 (Klon 05b53aa)",
+      "source": "`hxcfe.exe -finput:<imd> -conv:DRAGON3264_VDK -foutput:<vdk>`, IMD-Träger 40 x 2 x 18 x 256 mit Sektornummern ab 1. Die Eingabe ist ein **IMD-TRÄGER**, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Jeder Sektor benennt sich selbst („UFT-K Cnn Hn Snn “, Methode MF-1020). **Warum der Umweg über IMD:** ein rohes Sektorabbild trägt seine Geometrie nicht, und hxcfes `-rawlist` hat für keines dieser Systeme eine Anordnung — IMD nennt je Spur Zylinder, Kopf, Sektorzahl und Sektorgröße ausdrücklich, also braucht der Lader keine Tabelle. Derselbe Kanal wie MF-1060; die Gestalt ist MF-1033, wo „das Werkzeug kann es nicht“ eine Aussage über den benutzten Aufruf war. **Das Fixture ist bewusst ZWEISEITIG**, weil eine einseitige VDK zwischen den Anordnungs-Hypothesen nicht unterscheiden würde: bei `seiten == 1` geht jede Formel in `c` über — genau der Grund, aus dem der Fehler bei `v9t9` (MF-1027) so lange unbemerkt blieb. Gemessen außerhalb von UFT, drei Hypothesen an derselben Datei: zylinder-verschränkt **1440 von 1440**, kopf-dur **36**, kopf-dur rückwärts **36**. Häufigstes Byte 0x20 mit 1,9 %, also kein Füllbyte (die Falle aus MF-1021).",
+      "test": "test_vdk_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "content": "368 652 Byte = 12 Byte Kopf + 40 x 2 x 18 x 256. Der Kopf ist von hxcfe gesetzt und trägt genau die Felder, die MAMEs `vdk_dsk.cpp` beschreibt: `64 6b` („dk“), Kopfgröße 12 als LE16 bei 2, Spurzahl 0x28 = 40 bei 8, Seitenzahl 2 bei 9, Kompressionsbyte 0 bei 11. Sektornummern 1..18 (`FIRST_SECTOR_ID = 1`), 1440 Sektoren, jeder selbstbenennend.",
+      "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_uftk_nec_2d.d77",
+      "sha256": "f1aa4f63b3fcbdcf7cc8ab14671ce4a16b72a87594df304f9573f07b01bd6b91",
+      "format": "d77",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe v2.16.15.2 (Klon 05b53aa)",
+      "source": "`hxcfe.exe -finput:<imd> -conv:NEC_D88 -foutput:<d77>`, IMD-Träger 40 x 2 x 16 x 256 mit Sektornummern ab 1. Die Eingabe ist ein **IMD-TRÄGER**, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Jeder Sektor benennt sich selbst („UFT-K Cnn Hn Snn “, Methode MF-1020). **Warum der Umweg über IMD:** ein rohes Sektorabbild trägt seine Geometrie nicht, und hxcfes `-rawlist` hat für keines dieser Systeme eine Anordnung — IMD nennt je Spur Zylinder, Kopf, Sektorzahl und Sektorgröße ausdrücklich, also braucht der Lader keine Tabelle. Derselbe Kanal wie MF-1060; die Gestalt ist MF-1033, wo „das Werkzeug kann es nicht“ eine Aussage über den benutzten Aufruf war. **Bei einem CONTAINER wiegt ein Fremderzeugnis schwerer als bei einem flachen Abbild:** ein D88 hat einen 32-Byte-Kopf, eine Tafel mit 164 Spurzeigern und je Sektor einen 16-Byte-Kopf — und genau dort saßen die Fehler von `apridisk` (MF-1009), `qrst` (MF-1028) und `pri` (MF-1036), jedes Mal mit grünem Rundlauftest, weil Schreiber und Leser Spiegelbilder derselben Erfindung waren. Alle bisherigen D88-Prüfdateien baut der Baum selbst.",
+      "test": "test_d77_gegen_hxcfe",
+      "oracle": "hxcfe",
+      "content": "348 848 Byte. Von hxcfe gesetzt: Diskettenname „HxCFE“ bei 0x00, Schreibschutz 0x00 bei 0x1A, Medienkennung **0x00 = 2D** bei 0x1B, Gesamtgröße 348 848 bei 0x1C — und die Datei ist genau so groß, ein **Beleg am Objekt** (Art MF-869 / MF-1013 / MF-1028). 80 von 164 Spurzeigern belegt = 40 x 2. Sektorkopf Spur 0: C=0 H=0 R=1 N=1 SPT=16. Der Überhang gegenüber der Nutzlast (327 680) ist **21 168** = 32 + 656 + 80 x 16 x 16 — auch das geht auf. 1280 Sektoren, jeder selbstbenennend.",
+      "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
     }
   ]
 }

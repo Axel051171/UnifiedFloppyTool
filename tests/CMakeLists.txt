@@ -1192,6 +1192,35 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_d77_gegen_hxcfe")
+        # MF-1061: der erste D88-CONTAINER von fremder Hand im Korpus.
+        # Bei einem Container wiegt das schwerer als bei einem flachen
+        # Abbild — 32-Byte-Kopf, 164 Spurzeiger, je Sektor ein 16-Byte-
+        # Kopf; genau dort sassen die Fehler von `apridisk` (MF-1009),
+        # `qrst` (MF-1028) und `pri` (MF-1036), jedes Mal mit gruenem
+        # Rundlauftest, weil Schreiber und Leser Spiegelbilder waren.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d77/uft_d77.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_vdk_gegen_hxcfe")
+        # MF-1061: `vdk` war seit MF-1018 gegen MAMEs `vdk_dsk.cpp`
+        # berichtigt, hatte aber kein Abbild von fremder Hand. Derselbe
+        # Kanal wie MF-1060: ein IMD-TRAEGER bringt die Geometrie mit,
+        # `hxcfe -conv:DRAGON3264_VDK` schreibt daraus eine VDK und setzt
+        # den 12-Byte-Kopf selbst. Das Fixture ist ZWEISEITIG, weil eine
+        # einseitige Datei zwischen den drei Anordnungs-Hypothesen nicht
+        # unterscheiden wuerde.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/vdk/uft_vdk_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_ti99_gegen_hxcfe")
         # MF-1060: das erste TI-99-Abbild von fremder Hand im Korpus.
         # MF-1021 hatte es versucht und ein Abbild richtiger Groesse
