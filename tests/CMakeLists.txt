@@ -815,6 +815,33 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_cpm_gegen_libdsk")
+        # MF-1039: `cpm_probe_plugin()` konnte NIE zustimmen. Es verwarf
+        # `file_size` und gab die PUFFERgroesse (4096) an eine Erkennung
+        # weiter, die `size == Gesamtgroesse des Abbilds` verlangt —
+        # gemessen hat KEINE der 17 Definitionen 4096 Byte. Das Plugin
+        # war damit ueber die Erkennung unerreichbar (MF-1029-Falle in
+        # reinster Form, Gestalt von MF-635).
+        #
+        # Zweiter Befund: 184 320 Byte trifft amstrad-pcw (erster Sektor
+        # 1), amstrad-cpc (193) und spectrum-p3 (1); die alte Auswahl
+        # nahm die erste. Eine CPC-Datendiskette bekam damit alle 360
+        # Sektornummern falsch. Jetzt wird abgesagt statt geraten — wie
+        # `logical` seit MF-1032.
+        #
+        # Referenz: libdsks Geometrietafel lib/dsksgeom.c (stdg[],
+        # LGPL-2+, nur gelesen). Sie bestaetigt UFTs Zahlen: pcw180
+        # 40/1/9/512 ab 1, cpcdata ab 0xC1, pcw720 80/2/9/512 ab 1.
+        #
+        # T2 und nicht T1b: libdsk koennte diese Rohabbilder zwar
+        # schreiben, aber bei einem kopflosen SIDES_ALT-Format waere das
+        # Ergebnis mit der Eingabe identisch — eine Gleichheit ohne
+        # Aussage.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_fds_gegen_die_beschreibung")
         # MF-1038: `fds` meldete je Seite 36 Byte, die es nicht gibt.
         # UFT legt eine 65-500-Byte-Seite als 128 virtuelle 512-Byte-

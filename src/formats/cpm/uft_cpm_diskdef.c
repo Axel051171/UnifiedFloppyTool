@@ -1,10 +1,72 @@
 /**
  * @file uft_cpm_diskdef.c
- * @brief CP/M Disk Definition implementation
- * @version 3.9.0
- * 
- * Comprehensive CP/M disk definition support compatible with cpmtools.
- * Reference: libdsk diskdefs, cpmtools by Michael Haardt (libdsk: LGPL-2.0-or-later, Fassung 1.5.12 geprueft; cpmtools NICHT gemessen -- Lizenz offen, LIZ-1)
+ * @brief CP/M-Geometrietafel — und eine Sonde, die NIE zustimmen konnte
+ *        (MF-1039)
+ *
+ * Referenz: libdsks Geometrietafel `lib/dsksgeom.c` (`stdg[]`, John
+ * Elliott, **LGPL-2+**, im Baum unter `tools/uft-scout/work/libdsk`;
+ * **nur gelesen**, Kanal *Spec* nach MF-695) und cpmtools von Michael
+ * Haardt (**Lizenz NICHT gemessen** — LIZ-1; hier ist nichts daraus
+ * uebernommen).
+ *
+ * ── Befund 1: die Sonde konnte nie zustimmen ───────────────────
+ *
+ * `uft_cpm_detect_diskdef()` vergleicht `size` mit
+ * `Zylinder * Koepfe * Sektoren * Sektorgroesse`, also mit der
+ * **Gesamtgroesse des Abbilds**. `cpm_probe_plugin()` verwarf aber
+ * `file_size` (`(void)file_size`) und gab die **Puffergroesse** weiter —
+ * und die ist 4096 Byte.
+ *
+ * Gemessen: von den 17 Definitionen hat **keine** die Gesamtgroesse
+ * 4096. Die Bedingung traf also nie zu. An einem
+ * spezifikationsgerechten Abbild von 256 256 Byte (`ibm-8ss`):
+ *
+ *     probe(4096-Puffer, Dateigroesse 256256) : 0
+ *     probe(VOLLER Puffer)                    : 1, Konfidenz 60
+ *     open                                    : 0, liest richtig
+ *
+ * Das Plugin war damit **ueber die Erkennung unerreichbar** — nur eine
+ * ausdrueckliche Formatwahl kam hin. Das ist die Falle aus MF-1029 in
+ * ihrer reinsten Gestalt: dort war ein Groessenrueckfall toter Code, hier
+ * ist es der **ganze** Erkenner. Und es ist die Form von MF-635: eine
+ * Tuer, hinter der viel Koennen liegt, die aber niemand oeffnet.
+ *
+ * ── Befund 2: die Groesse entscheidet nicht, aber sie entschied ────
+ *
+ * Gemessen ueber alle Paare der Tafel:
+ *
+ *     184 320 Byte : amstrad-pcw (erster Sektor   1, 1 Systemspur)
+ *                    amstrad-cpc (erster Sektor 193, 2 Systemspuren)
+ *                    spectrum-p3 (erster Sektor   1, 1 Systemspur)
+ *     143 360 Byte : nec-pc8001  (3 Systemspuren)
+ *                    sharp-mz80  (2 Systemspuren)
+ *
+ * Die alte Auswahl nahm die **erste** passende Definition. Fuer eine
+ * CPC-Datendiskette waere das `amstrad-pcw`, und damit haetten **alle
+ * 360 Sektoren** die Nummern 1..9 statt 0xC1..0xC9 — die Gestalt von
+ * MF-1016 (`jv1`: IDs 1..10 statt 0..9) und MF-1026 (`tan`).
+ *
+ * **Die Zahlen selbst sind richtig, und das ist an libdsk geprueft:**
+ * `stdg[]` fuehrt `pcw180` mit 40/1/9, erstem Sektor 1 und 512 Byte,
+ * `cpcdata` mit erstem Sektor **0xC1**, `pcw720` mit 80/2/9 — alle drei
+ * stimmen mit UFTs Eintraegen ueberein. Falsch war nicht die Tafel,
+ * sondern die **Auswahl**.
+ *
+ * Seit MF-1039 sagen Sonde und `open` bei Mehrdeutigkeit **ab**, statt zu
+ * raten — genau wie `logical` seit MF-1032, wo die Dateigroesse die
+ * Anordnung ebenfalls nicht entscheiden kann. Mehrdeutig heisst: zwei
+ * passende Definitionen unterscheiden sich in Geometrie **oder** im
+ * ersten Sektor. Unterscheiden sie sich nur in der Zahl der
+ * Systemspuren, aendert das keinen gelesenen Sektor; dann wird die erste
+ * genommen.
+ *
+ * Die Konfidenz faellt dabei von 60 auf **40**: erkannt sind die
+ * Dateigroesse und ein einzelnes Byte am Verzeichnisanfang, und das ist
+ * nach MF-729 das Band „nur die Groesse" (30-49), nicht „Struktur
+ * gelesen".
+ *
+ * Der fehlende Kanal, um eine Definition von aussen zu benennen, ist
+ * derselbe wie bei `logical` und `posix`: **P3-337**.
  */
 
 #include "uft/formats/uft_cpm_diskdef.h"
@@ -585,31 +647,76 @@ const cpm_diskdef_t* uft_cpm_find_diskdef_by_geometry(
     return NULL;
 }
 
-const cpm_diskdef_t* uft_cpm_detect_diskdef(const uint8_t *data, size_t size) {
-    if (!data || size == 0) return NULL;
-    
-    /* Try each definition by size first */
-    for (size_t i = 0; i < cpm_diskdef_count; i++) {
+/**
+ * @brief Waehlt die Definition — und sagt ab, wenn die Datei die Wahl
+ *        nicht traegt.
+ *
+ * @param data       Anfang der Datei (mindestens `size` Byte lesbar)
+ * @param size       wie viel von `data` lesbar ist
+ * @param file_size  die GESAMTE Dateigroesse. **Das ist der Unterschied
+ *                   zu vorher:** die Groessengleichheit muss gegen die
+ *                   Datei gehalten werden, nicht gegen den Puffer
+ *                   (MF-1039, Befund 1).
+ * @param mehrdeutig wird auf 1 gesetzt, wenn mehrere Definitionen passen
+ *                   und sich in Geometrie oder erstem Sektor
+ *                   unterscheiden — dann ist die Rueckgabe NULL.
+ */
+static const cpm_diskdef_t *cpm_waehle(const uint8_t *data, size_t size,
+                                       size_t file_size, int *mehrdeutig)
+{
+    const cpm_diskdef_t *erste = NULL;
+    size_t i;
+
+    if (mehrdeutig) *mehrdeutig = 0;
+    if (!data || size == 0 || file_size == 0) return NULL;
+
+    for (i = 0; i < cpm_diskdef_count; i++) {
         const cpm_diskdef_t *def = cpm_diskdefs[i];
-        size_t expected = (size_t)def->cylinders * def->heads * 
+        size_t expected = (size_t)def->cylinders * def->heads *
                           def->sectors * def->sector_size;
-        
-        if (size == expected) {
-            /* Verify by checking for 0xE5 in directory area */
-            size_t dir_offset = (size_t)def->system_tracks * def->heads *
-                               def->sectors * def->sector_size;
-            
-            if (dir_offset < size) {
-                /* Check first directory entry */
-                if (data[dir_offset] == 0xE5 || data[dir_offset] <= 15) {
-                    return def;
-                }
-            }
+        size_t dir_offset;
+
+        if (file_size != expected) continue;
+
+        /* Das Verzeichnis beginnt hinter den Systemspuren und traegt dort
+         * 0xE5 (leer) oder einen Benutzerbereich 0..15. Liegt die Stelle
+         * nicht im gelesenen Puffer, wird sie NICHT geraten — die
+         * Definition gilt dann allein ueber die Groesse. */
+        dir_offset = (size_t)def->system_tracks * def->heads *
+                     def->sectors * def->sector_size;
+        if (dir_offset < size
+            && !(data[dir_offset] == 0xE5 || data[dir_offset] <= 15))
+            continue;
+
+        if (!erste) {
+            erste = def;
+            continue;
+        }
+        /* MF-1039, Befund 2: eine zweite passende Definition. Sie ist nur
+         * dann harmlos, wenn sie dieselbe Geometrie UND denselben ersten
+         * Sektor hat — sonst waere jede Wahl geraten. */
+        if (def->cylinders       != erste->cylinders
+            || def->heads        != erste->heads
+            || def->sectors      != erste->sectors
+            || def->sector_size  != erste->sector_size
+            || def->first_sector != erste->first_sector) {
+            if (mehrdeutig) *mehrdeutig = 1;
+            return NULL;
         }
     }
-    
-    return NULL;
+    return erste;
 }
+
+/**
+ * @brief Oeffentliche Fassung. **Achtung:** `size` muss die GESAMTE
+ *        Dateigroesse sein, nicht die eines Sondenpuffers — genau diese
+ *        Verwechslung war MF-1039, Befund 1.
+ */
+const cpm_diskdef_t* uft_cpm_detect_diskdef(const uint8_t *data, size_t size)
+{
+    return cpm_waehle(data, size, size, NULL);
+}
+
 
 size_t uft_cpm_list_diskdefs(const cpm_diskdef_t **defs, size_t max) {
     if (!defs || max == 0) return 0;
@@ -803,16 +910,23 @@ uft_error_t uft_cpm_read_directory(const uft_disk_image_t *disk,
 
 static bool cpm_probe_plugin(const uint8_t *data, size_t size,
                              size_t file_size, int *confidence) {
-    (void)file_size;
-    
-    const cpm_diskdef_t *def = uft_cpm_detect_diskdef(data, size);
-    if (def) {
-        if (confidence) *confidence = 60;  /* Medium confidence */
-        return true;
-    }
-    
-    return false;
+    int mehrdeutig = 0;
+    /* MF-1039, Befund 1: hier stand `(void)file_size;`, und die
+     * Groessengleichheit wurde gegen die PUFFERgroesse geprueft. Keine
+     * der Definitionen ist 4096 Byte gross, also sagte die Sonde
+     * **immer** nein — gemessen an einer gueltigen 256 256-Byte-Datei. */
+    const cpm_diskdef_t *def = cpm_waehle(data, size, file_size,
+                                          &mehrdeutig);
+    if (!def) return false;      /* auch bei mehrdeutig: kein Anspruch */
+
+    /* MF-729: erkannt sind die Dateigroesse und ein Byte am
+     * Verzeichnisanfang. Das ist das Band „nur die Groesse" (30-49).
+     * Vorher standen hier 60 — eine Zahl aus dem Band „Struktur
+     * gelesen", fuer die es keine Deckung gab. */
+    if (confidence) *confidence = 40;
+    return true;
 }
+
 
 static uft_error_t cpm_open(uft_disk_t *disk, const char *path, bool read_only) {
     (void)read_only;
@@ -838,11 +952,20 @@ static uft_error_t cpm_open(uft_disk_t *disk, const char *path, bool read_only) 
     }
     fclose(fp);
     
-    /* Detect format */
-    const cpm_diskdef_t *def = uft_cpm_detect_diskdef(data, size);
+    /* Detect format.
+     *
+     * MF-1039, Befund 2: hier entschied die Tabellenreihenfolge. Bei
+     * 184 320 Byte passen drei Definitionen, und `amstrad-cpc` hat den
+     * ersten Sektor 0xC1 statt 1 — eine CPC-Datendiskette bekam damit
+     * alle 360 Sektornummern falsch. Jetzt wird abgesagt, statt zu
+     * raten; der fehlende Kanal fuer eine benannte Definition ist
+     * P3-337, dieselbe Lage wie bei `logical` (MF-1032) und `posix`
+     * (MF-1034). */
+    int mehrdeutig = 0;
+    const cpm_diskdef_t *def = cpm_waehle(data, size, size, &mehrdeutig);
     if (!def) {
         free(data);
-        return UFT_ERR_FORMAT;
+        return mehrdeutig ? UFT_ERROR_NOT_SUPPORTED : UFT_ERR_FORMAT;
     }
     
     /* Create disk image */

@@ -992,6 +992,30 @@
       "oracle": "keines - im Baum liest und schreibt kein Werkzeug FDS (P3-339)",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: UFT legt eine Seite als 128 virtuelle 512-Byte-Sektoren ab, und jeder Sektor ab Nummer 1 beginnt mit „UFT-K Sn Vsss “ — ein falscher Versatz nennt damit den Nachbarn. Sektor 0 traegt den echten Block 1 samt Kennung. **Der letzte Sektor ist der eigentliche Pruefstein:** 128 x 512 waere 65 536, eine Seite hat 65 500, also traegt V127 nur **476 Byte** — vorher meldete UFT dort 512 und fuellte 36 Byte mit Null. `origin` ist `derived`, weil im Baum kein Werkzeug FDS liest oder schreibt (P3-339); die Abnahme ist die Beschreibung plus MAMEs Groessentabelle."
+    },
+    {
+      "file": "tests/corpus_free/cpm_ibm8ss_256k.cpm",
+      "sha256": "cc7c61f1b3c9cf8cc19a5457633beea32617aefd648468f2a309c7ac94d6d513",
+      "format": "cpm",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1039), Geometrien aus UFTs Tafel, gegengelesen an libdsks `stdg[]`",
+      "source": "`ibm-8ss`: 77 x 1 x 26 x 128 = 256 256 Byte, erster Sektor 1, zwei Systemspuren. In UFTs Tafel die einzige Definition dieser Groesse — deshalb eindeutig.",
+      "test": "test_cpm_gegen_libdsk",
+      "oracle": "libdsk (nur die Geometrietafel gelesen, keine Datei erzeugt - siehe content)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Geometrie ist an libdsks Tafel gegengelesen; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Sektor beginnt mit „UFT-K Cnn Hh Snnn “, am Verzeichnisanfang (Versatz 6656) steht 0xE5, weil genau dieses Byte die Erkennung prueft. **Der Pruefstein ist die Sonde:** vor MF-1039 sagte sie zu dieser Datei nein, weil sie die Puffergroesse (4096) statt der Dateigroesse weitergab — und keine der 17 Definitionen ist 4096 Byte gross."
+    },
+    {
+      "file": "tests/corpus_free/cpm_mehrdeutig_180k.cpm",
+      "sha256": "1d508e74c9e4765599d1a9c6d692d61503c4127f953f5c2543bfe03e625a13a8",
+      "format": "cpm",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1039), Geometrien aus UFTs Tafel, gegengelesen an libdsks `stdg[]`",
+      "source": "40 x 1 x 9 x 512 = 184 320 Byte — eine Groesse, die in UFTs Tafel **drei** Definitionen trifft: `amstrad-pcw` (erster Sektor 1), `amstrad-cpc` (**193**) und `spectrum-p3` (1). 0xE5 steht an **beiden** Verzeichnisanfaengen (1 und 2 Systemspuren), damit wirklich alle drei zutreffen.",
+      "test": "test_cpm_gegen_libdsk",
+      "oracle": "libdsk (nur die Geometrietafel gelesen, keine Datei erzeugt - siehe content)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Geometrie ist an libdsks Tafel gegengelesen; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND wie die andere Datei. Sie ist die **Gegenprobe**: die Datei allein kann nicht sagen, ob ihre Sektoren ab 1 oder ab 0xC1 nummeriert sind, also muessen Sonde und `open` absagen statt die erste Definition zu nehmen. Vor MF-1039 haette eine CPC-Datendiskette alle 360 Sektornummern falsch bekommen."
     }
   ]
 }
