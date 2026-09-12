@@ -521,6 +521,58 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/rcpmfs/uft_rcpmfs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_pri_gegen_die_beschreibung")
+        # MF-1036: `pri` stand auf T3, und **UFT konnte keine PRI-Datei
+        # lesen, waehrend die Sonde mit Konfidenz 95 zustimmte**.
+        # Gemessen an einer spezifikationsgerechten Datei: probe = 1
+        # (Konfidenz 95), open = **-25**. Gestalt von MF-961 (`86f`) und
+        # MF-1022 (`sap`) — eine zuversichtliche Sonde vor einem Leser,
+        # der nichts kann.
+        #
+        # Quelle: der Spezifikationstext „PRI File Format (2020-03-26)"
+        # des URHEBERS (Hampa Hug, PCE), der im Baum als DOKUMENTATION im
+        # Kopf von hxcfes `pri_loader/pri_format.h` liegt — Kanal Spec
+        # nach MF-695, keine Zeile Code. Acht Befunde:
+        #
+        #   Chunk      gelesen wurde `Groesse = be32(pos)`, Kennung bei
+        #              pos+4. Richtig ist **Kennung bei pos, Groesse bei
+        #              pos+4**. Der alte Leser nahm damit die KENNUNG als
+        #              Groesse — bei `TEXT` ergibt das 0x54455854, ueber
+        #              1,4 Milliarden, und die Schleife brach beim ERSTEN
+        #              Chunk ab.
+        #   CRC        stand im alten Modell VOR den Daten und wurde nie
+        #              geprueft; sie steht DAHINTER und deckt Kennung +
+        #              Groessenfeld + Daten.
+        #   Groesse    `payload = chunk_size - 12` und `pos += chunk_size`;
+        #              die Beschreibung sagt, die Groesse zaehle die drei
+        #              Rahmenfelder NICHT. Richtig: `pos += 8 + n + 4`.
+        #   Kopf       12 Byte angenommen, wirklich **16**. Der alte Leser
+        #              begann die Schleife IN der Kopf-CRC und hielt
+        #              0x38D2C99D fuer 953 MB.
+        #   Version    aus dem Groessenfeld gelesen, also immer 4; sie ist
+        #              ein 16-Bit-Wert bei Versatz 8.
+        #   TRAK       „cylinder, head, bit_rate, bit_count"; richtig ist
+        #              **Spurlaenge bei +8, Bittakt bei +12**.
+        #   Sonde      `(void)file_size` und Konfidenz 95 auf vier Byte
+        #              Kennung allein (MF-1029-Falle, zum sechsten Mal).
+        #   Schreiben  die Anleitung im Kommentar nannte „FXMD"- und
+        #              „DONE"-Chunks und einen 4-Byte-TRAK-Kopf — nichts
+        #              davon gibt es.
+        #
+        # **Die Eichung ist ein Beleg AM OBJEKT:** die Beschreibung nennt
+        # die CRC des leeren `"END "`-Chunks mit 0x3D64AF78, und UFTs aus
+        # der Parameterangabe NEU GESCHRIEBENE `uft_pri_crc()` trifft
+        # genau diese Zahl.
+        #
+        # Zweite Hand, nur AUSGEFUEHRT: hxcfes `PRI`-Modul liest beide
+        # Pruefdateien (5 Spuren, 2 Seiten). **T2 und nicht T1b**, weil
+        # hxcfe PRI nur LESEN kann (`PRI;R ` in seiner Modulliste) — es
+        # gibt keinen fremden ERZEUGER.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/pri/uft_pri.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
         # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
         # NanoWasp-Datei lesen**. Gemessen gegen libdsks

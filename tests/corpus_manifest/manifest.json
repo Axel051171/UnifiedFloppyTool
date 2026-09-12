@@ -872,6 +872,42 @@
       "oracle": "libdsk",
       "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND wie die `rawoo`-Datei, aber mit 512 Byte je Sektor und `dg_secbase = 1`. **Am Objekt nachweisbar:** die LETZTE logische Spur (Versatz 732672) traegt Zylinder 0 Kopf 1 — genau das meint „out and back“. Byteidentisch mit `libdsk_ibm720_outback.logical` aus MF-1032, aus demselben Grund."
+    },
+    {
+      "file": "tests/corpus_free/pri_spec_5x2.pri",
+      "sha256": "7cc7fab8950630c7bd80244b1229d36960a775f04196568343fbd58a12b7fdb7",
+      "format": "pri",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1036), nach der PRI-Beschreibung des Urhebers",
+      "source": "Nach dem Spezifikationstext „PRI File Format (2020-03-26)“ des **Urhebers** (Hampa Hug, PCE) gebaut. Der Text liegt im Baum als **Dokumentation** im Kopf von `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/pri_loader/pri_format.h` — Kanal *Spec* nach MF-695, keine Zeile Code. Aufbau je Chunk: Kennung(4) + Groesse(4) + Daten(n) + CRC(4), big-endian; die Groesse zaehlt die drei Rahmenfelder nicht, die CRC deckt Kennung + Groessenfeld + Daten. CRC-32 mit Polynom 0x1EDC6F41, Startwert 0 — **geeicht an der Zahl, die die Beschreibung selbst nennt**: die CRC des leeren `\"END \"`-Chunks ist 0x3D64AF78, und die neu geschriebene Rechnung trifft sie. Diese Datei: 5 Zylinder x 2 Koepfe, je 50 000 Bit bei 250 kbit/s; Chunks `PRI `/`TEXT`/`TRAK`+`DATA` je Spur/`END `.",
+      "test": "test_pri_gegen_die_beschreibung",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen, auch nicht die CRC-Schleife (sie ist aus der Parameterangabe neu geschrieben und an 0x3D64AF78 geeicht)",
+      "content": "SELBSTBESCHREIBEND: jeder Bitstrom beginnt mit dem Klartext \"UFT-K Cnn Hh PRI \" (MSB zuerst), der Rest ist ein aus Zylinder, Kopf und Versatz gebildetes Muster. Ein Leseergebnis sagt damit, ob die RICHTIGE Spur getroffen war. **Von fremder Hand gelesen:** hxcfes `PRI`-Modul meldet 5 Spuren und 2 Seiten. origin bleibt `derived`, weil hxcfe PRI nur LESEN kann (`PRI;R `) — es gibt keinen fremden Erzeuger (P3-333 gilt hier weiter, anders als bei libdsk)."
+    },
+    {
+      "file": "tests/corpus_free/pri_spec_voll.pri",
+      "sha256": "8f3a1d9100f5986934ed6638d2e4b5df4cee2cd99df181e29a9742f5d4305dc3",
+      "format": "pri",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1036), nach der PRI-Beschreibung des Urhebers",
+      "source": "Nach dem Spezifikationstext „PRI File Format (2020-03-26)“ des **Urhebers** (Hampa Hug, PCE) gebaut. Der Text liegt im Baum als **Dokumentation** im Kopf von `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/pri_loader/pri_format.h` — Kanal *Spec* nach MF-695, keine Zeile Code. Aufbau je Chunk: Kennung(4) + Groesse(4) + Daten(n) + CRC(4), big-endian; die Groesse zaehlt die drei Rahmenfelder nicht, die CRC deckt Kennung + Groessenfeld + Daten. CRC-32 mit Polynom 0x1EDC6F41, Startwert 0 — **geeicht an der Zahl, die die Beschreibung selbst nennt**: die CRC des leeren `\"END \"`-Chunks ist 0x3D64AF78, und die neu geschriebene Rechnung trifft sie. Diese Datei: dieselbe Diskette, zusaetzlich mit einem `WEAK`- und einem `BCLK`-Chunk (je ein Paar Bitversatz + Wert).",
+      "test": "test_pri_gegen_die_beschreibung",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen, auch nicht die CRC-Schleife (sie ist aus der Parameterangabe neu geschrieben und an 0x3D64AF78 geeicht)",
+      "content": "SELBSTBESCHREIBEND wie die andere Datei. Sie prueft, dass die beiden Chunkarten das Lesen nicht stoeren: UFT erkennt und zaehlt sie, wendet sie aber NICHT an — ein Schwachbit-Muster auf einen Bitstrom zu legen, ohne ein Abbild zu haben, an dem man es prueft, waere geraten. Die Merkmalstafel sagt das (Weak Bits/Timing = PARTIAL mit Grund). hxcfe liest sie ebenfalls als 5 Spuren, 2 Seiten."
+    },
+    {
+      "file": "tests/corpus_free/pri_spec_kurzedata.pri",
+      "sha256": "e8ebb21442ae148a28f5df2236c85583f80890c4b74242e9a5a6b1f38ed4b802",
+      "format": "pri",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1036), nach der PRI-Beschreibung des Urhebers",
+      "source": "Nach dem Spezifikationstext „PRI File Format (2020-03-26)“ des **Urhebers** (Hampa Hug, PCE) gebaut. Der Text liegt im Baum als **Dokumentation** im Kopf von `tools/uft-scout/work/HxCFloppyEmulator/libhxcfe/sources/loaders/pri_loader/pri_format.h` — Kanal *Spec* nach MF-695, keine Zeile Code. Aufbau je Chunk: Kennung(4) + Groesse(4) + Daten(n) + CRC(4), big-endian; die Groesse zaehlt die drei Rahmenfelder nicht, die CRC deckt Kennung + Groessenfeld + Daten. CRC-32 mit Polynom 0x1EDC6F41, Startwert 0 — **geeicht an der Zahl, die die Beschreibung selbst nennt**: die CRC des leeren `\"END \"`-Chunks ist 0x3D64AF78, und die neu geschriebene Rechnung trifft sie. Diese Datei: 5 Zylinder x 2 Koepfe, Spurlaenge 50 000 Bit (= 6250 Byte) — aber jede `DATA` traegt nur **100 Byte**. Die Beschreibung erlaubt das ausdruecklich: „The DATA chunk may be shorter than the track length in the preceding TRAK chunk suggests. In that case the remainder of the track data should be set to 0.“",
+      "test": "test_pri_gegen_die_beschreibung",
+      "oracle": "hxcfe",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Beschreibung; keine Zeile fremden Quellcodes uebernommen, auch nicht die CRC-Schleife (sie ist aus der Parameterangabe neu geschrieben und an 0x3D64AF78 geeicht)",
+      "content": "SELBSTBESCHREIBEND: die ersten 17 Byte jeder Spur nennen Zylinder und Kopf. **Der Zweck dieser Datei ist eine Unterscheidung:** nur an ihr laesst sich pruefen, ob die Spurlaenge aus dem TRAK-Chunk oder aus der DATA-Groesse kommt — in den beiden anderen Pruefdateien sind beide gleich, und die Mutation „Spurlaenge aus DATA nehmen\" rutschte deshalb durch. Erwartet: 6250 Byte je Spur, die ersten 100 aus der Datei, der Rest **null**. Von fremder Hand gelesen: hxcfe meldet 5 Spuren, 2 Seiten."
     }
   ]
 }
