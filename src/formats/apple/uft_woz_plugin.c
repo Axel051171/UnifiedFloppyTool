@@ -7,6 +7,9 @@
  */
 #include "uft/uft_format_common.h"
 #include "uft/formats/apple/uft_woz.h"
+/* MF-1066: der oracle-gepruefte Apple-GCR-Abtaster. Vorhandener Code,
+ * hier nur verdrahtet — siehe die Begruendung an woz_plugin_read_track(). */
+#include "uft/formats/apple/uft_apple_gcr.h"
 
 static bool woz_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
@@ -65,8 +68,68 @@ static uft_error_t woz_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         rc = woz_get_track_35(img, cyl, head, &bits, &bit_count);
     }
 
-    if (rc == 0 && bits && bit_count > 0) {
-        /* Store raw bitstream as sector 0 */
+    if (rc != 0 || !bits || bit_count == 0) return UFT_OK;
+
+    /* MF-1066: hier wurde der ROHE BITSTROM als „Sektor 0" abgelegt —
+     * ein Sektor je Spur, waehrend `woz_plugin_open()` weiter oben
+     * `disk->geometry.sectors = 16` meldet.
+     *
+     * Gemessen an einem `to_woz2`-Erzeugnis (35 Spuren, 6-and-2):
+     * **35 Sektoren statt 560**, und `track->raw_data` blieb dabei leer,
+     * es kam also auch kein Bitstrom an der dafuer vorgesehenen Stelle
+     * an. Das ist die Gestalt von MF-796, wo `edsk` „9 Sektoren" meldete
+     * und fuer jede Spur keinen einzigen lieferte — still, mit `UFT_OK`.
+     *
+     * **Der Dekoder dafuer liegt seit MF-948 im Baum und ist
+     * oracle-geprueft:** `uft_apple_gcr_scan_track()` beherrscht beide
+     * Kodierungen (6-and-2 und 5-and-3, am Adressvorspann erkannt, nicht
+     * vom Aufrufer mitgegeben), laeuft GENAU eine Umdrehung (MF-715 hat
+     * dort die Doppelsektor-Falle gemessen: 595 statt 560) und wird von
+     * `uft_nib.c` in Produktion gerufen. Ihn hier zu rufen ist das
+     * Verdrahten vorhandenen, unerreichbaren Codes — von der
+     * EINFRIER-REGEL ausdruecklich erlaubt, und es kommt keine Zeile
+     * neuer Dekodierlogik hinzu.
+     *
+     * Das Aufrufmuster ist woertlich das aus `uft_nib.c:117-137`. */
+    if (img->is_525) {
+        uft_a2_sector_t sek[UFT_A2_SECTORS_16 * 2];
+        int n = uft_apple_gcr_scan_track(bits, bit_count, sek,
+                                         sizeof(sek) / sizeof(sek[0]));
+        if (n > 0) {
+            for (int i = 0; i < n; i++) {
+                if (sek[i].track != (uint8_t)cyl) continue;
+                /* Ein Feld in einer Kodierung, die die Einheit nicht
+                 * beherrscht (DOS-3.2-Bootsektor, MF-721), traegt KEINE
+                 * Bytes. Es wird uebergangen statt geraten. */
+                if (!sek[i].has_data || sek[i].alt_encoding) continue;
+                /* `sector` stammt aus dem Adressfeld — es IST die Nummer
+                 * auf der Diskette und darf nicht verschoben werden
+                 * (ARCH-20). */
+                uft_format_add_sector_with_id(track, sek[i].sector,
+                                              sek[i].data,
+                                              UFT_A2_SECTOR_SIZE,
+                                              (uint8_t)cyl, (uint8_t)head);
+                if (!sek[i].data_checksum_ok && track->sector_count > 0)
+                    uft_sector_set_crc(
+                        &track->sectors[track->sector_count - 1], false);
+            }
+            return UFT_OK;
+        }
+        /* Kein Adressfeld gefunden — eine ungeformte oder
+         * kopiergeschuetzte Spur. Der Bitstrom bleibt erhalten, siehe
+         * unten; verschwiegen wird er nicht. */
+    }
+
+    /* 3,5 Zoll und Spuren ohne lesbare Adressfelder: der rohe Bitstrom
+     * als ein Pseudosektor 0.
+     *
+     * **Das ist fuer 3,5 Zoll eine offene Stelle, keine Loesung.**
+     * Apple-3,5"-Disketten sind zonenaufgezeichnet (8 bis 12 Sektoren je
+     * Spur), und `uft_apple_gcr_scan_track()` ist der 5,25"-Abtaster —
+     * er kennt die GCR-Variante der 3,5"-Laufwerke nicht. Die Geometrie
+     * meldet dort weiterhin fest 12, geliefert wird ein Pseudosektor;
+     * verzeichnet als P3-352. */
+    {
         uint32_t byte_count = (bit_count + 7) / 8;
         uint16_t chunk = (byte_count > 65535) ? 65535 : (uint16_t)byte_count;
         /* The comment above says sector 0, so it must BE 0 (ARCH-20) */

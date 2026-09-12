@@ -456,7 +456,7 @@
       "origin": "real",
       "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
       "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).a2r\", 27958725 Byte, md5 laut Archiv 3ec28534b16f32b51de8cf97c2b58bcb, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "test": "test_fm_echte_aufnahme — **berichtigt MF-1066:** hier stand „noch keiner“, und das war seit **MF-869** falsch. `tests/test_fm_echte_aufnahme.c:77` öffnet genau diese Datei (`KOR_A \".a2r\"`) und misst Zylinder 0 des FM-Flusspfads gegen die IMD aus demselben Objekt — 26 von 26 Sektoren byteidentisch. Die Zeile ist der zweite Fall von Manifest-Drift in dieser Runde nach `atx` (MF-1065); dort fehlte der Test wirklich, hier fehlte nur der Eintrag. **Stufenwirkung hat keiner von beiden:** `a2r` hat kein Plugin, also kann `gen_verification_tiers.py` es gar nicht bewerten — siehe P3-351.",
       "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
       "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
     },
@@ -1233,6 +1233,18 @@
       "oracle": "libdsk",
       "content": "737 442 Byte (+162). Gepackter Strom ohne Kennung.",
       "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/to_woz2_uftk_dos33.woz",
+      "sha256": "4330fd3fb692c4263e8ea81493e5991d16ca590a89038e3db9b21b0e83aa99ef",
+      "format": "woz",
+      "origin": "cross-tool",
+      "tool": "to_woz2 (Apple-II-Disk-Tools, GPL-3), Quellstand `639dc1c3281f2e1156af5d739ecbb72aca72cf09` (2019-01-11), im Klon unter `tools/uft-scout/work/apple2-cmosher/` gebaut; registriertes Oracle seit MF-712. AUSGEFUEHRT — nicht portiert (Kanal *Oracle*, MF-695). Das Werkzeug traegt keine Versionsnummer und hat keine `-version`-Abfrage; der Quellstand ist deshalb der Anker, wie `docs/ORACLES.md` es fuer dieses Oracle eigens begruendet.",
+      "source": "`to_woz2 uftk_dos33_35trk.do to_woz2_uftk_dos33.woz`. Eingabe ist das UFT-eigene DOS-3.3-Abbild aus demselben Korpus (143 360 Byte), Ausgabe ein WOZ 2.0 mit **synthetisiertem** GCR-Strom. **Die zwei Seiten kennen einander nicht:** links der Dateiversatz `(spur*16 + logisch)*256` im `.do`, rechts dieselbe Diskette über GCR kodiert und von UFTs PLUGIN wieder in PHYSISCHE Sektoren zerlegt; verbunden durch die DOS-3.3-Interleave-Tafel `{0,13,11,9,7,5,3,1,14,12,10,8,6,4,2,15}` (Quelle `a8rawconv diska2.cpp:3-5`). Wäre der Versatz falsch, die Nummerierung anders oder die Verschränkung eine andere, fände der Vergleich die Bytes nicht.",
+      "test": "test_woz_gegen_to_woz2",
+      "oracle": "to_woz2",
+      "content": "252 416 Byte, WOZ 2.0, 35 Spuren zu 16 Sektoren à 256 Byte = **560**. **Und genau daran ist ein Befund aufgefallen:** vor MF-1066 lieferte das Plugin **35** Sektoren — einen je Spur, den rohen Bitstrom als „Sektor 0“ —, während `open` 16 je Spur meldete (Gestalt MF-796). Behoben durch Verdrahtung des seit MF-948 vorhandenen, oracle-geprüften `uft_apple_gcr_scan_track()`.",
+      "fremdcode": "keiner — to_woz2 wird AUSGEFÜHRT (Kanal Oracle nach MF-695); die Interleave-Tafel ist eine Zahlenfolge aus a8rawconvs Dokumentation, kein Code"
     }
   ]
 }

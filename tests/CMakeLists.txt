@@ -1192,6 +1192,23 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_woz_gegen_to_woz2")
+        # MF-1066: WOZ durch das PLUGIN gegen ein to_woz2-Erzeugnis.
+        # `woz_plugin_read_track()` legte den rohen Bitstrom als
+        # „Sektor 0" ab — 35 Sektoren statt der gemeldeten 560, die
+        # Gestalt von MF-796. Behoben durch VERDRAHTUNG des seit MF-948
+        # vorhandenen, oracle-gepruefsten `uft_apple_gcr_scan_track()`,
+        # deshalb muss `uft_apple_gcr.c` mit.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_atx_gegen_a8rawconv")
         # MF-1065: die erste ECHTE ATX im Korpus (`origin: real`, seit
         # 2026-09-04 da) bekommt endlich einen Test — im Manifest stand
