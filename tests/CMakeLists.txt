@@ -490,6 +490,37 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/posix/uft_posix.c
             ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_rcpmfs_ist_kein_dateiformat")
+        # MF-1035: `rcpmfs` beschrieb ein „network-accessible CP/M file
+        # system format" mit der Kennung `"RCPM"`, einem 64-Byte-Kopf,
+        # mehreren Disketten in einem Behaelter, Benutzerbereichen,
+        # Dateiattributen und optionaler Kompression — und nannte als
+        # Referenz libdsks `drvrcpm.c`.
+        #
+        # **Diese Referenz beschreibt einen VERZEICHNISTREIBER.** Ihr
+        # eigener Kopfkommentar (Z. 24-27): „It simulates a CP/M disc
+        # using a collection of separate files; the idea being to make a
+        # host directory appear as a CP/M filesystem." libdsks Handbuch
+        # (`doc/libdsk.txt` Z. 407-409) sagt dasselbe. Und der Beweis
+        # steht in einer Zeile von `rcpmfs_open()` (Z. 1239-1240):
+        #
+        #     if (!S_ISDIR(st.st_mode)) return DSK_ERR_NOTME;
+        #
+        # — nur ein Verzeichnis; Dateien werden ausdruecklich abgewiesen.
+        # Die Einstellungen liegen in einer `.libdsk.ini` IM Verzeichnis.
+        #
+        # Fuer das beschriebene Behaelterformat gibt es keinen Beleg.
+        # Klasse FMT-2/3/10/11/12 — und der erste Fall in dieser Runde,
+        # bei dem nicht die Kennung, sondern das ganze Format samt Zweck
+        # erfunden war.
+        #
+        # Dieser Test haelt fest, dass die Grenzen absagen — auch fuer
+        # eine Datei, die genau die erfundene Kennung traegt. Die Stufe
+        # bleibt T3, und das ist die richtige Antwort; die beiden Wege
+        # daraus stehen als P3-338.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/rcpmfs/uft_rcpmfs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
         # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
         # NanoWasp-Datei lesen**. Gemessen gegen libdsks

@@ -265,6 +265,6 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real` | — | — | — |
 | `pri` | **T3** | — | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_atari_verlorene_sektoren`, `test_floppy_formats`, `test_pro_schreibt_nicht`, `test_st_plugin` | — | — | — |
-| `rcpmfs` | **T3** | — | — | — | — |
+| `rcpmfs` | **T3** | `test_rcpmfs_ist_kein_dateiformat` | — | — | — |
 | `syn` | **T3** | — | — | — | — |
 | `xdm86` | **T3** | — | — | — | — |

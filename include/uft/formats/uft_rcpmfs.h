@@ -1,19 +1,73 @@
 /**
  * @file uft_rcpmfs.h
- * @brief RCPMFS (Remote CP/M File System) support
+ * @brief RCPMFS — und was die benannte Referenz WIRKLICH beschreibt
  * @version 3.9.0
- * 
- * RCPMFS is a network-accessible CP/M file system format used
- * by some CP/M emulators and servers. It provides a standardized
- * way to access CP/M disk images over a network or as a container.
- * 
- * Features:
- * - Multiple disk definitions in one container
- * - User area support (0-15)
- * - File attributes (R/O, SYS, ARC)
- * - Optional compression
- * 
- * Reference: libdsk drvrcpm.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ *
+ * ── BERICHTIGT MF-1035 ──────────────────────────────────────────────
+ *
+ * Hier stand:
+ *
+ *     „RCPMFS is a network-accessible CP/M file system format used by
+ *      some CP/M emulators and servers. It provides a standardized way
+ *      to access CP/M disk images over a network or as a container."
+ *     Features: Multiple disk definitions in one container · User area
+ *     support (0-15) · File attributes (R/O, SYS, ARC) · Optional
+ *     compression
+ *     Reference: libdsk drvrcpm.c (LGPL-2.0-or-later; Fassung 1.5.12
+ *     geprueft)
+ *
+ * **Die benannte Referenz beschreibt etwas ganz anderes.** libdsks
+ * `lib/drvrcpm.c` ist kein Dateiformat, sondern ein
+ * **Verzeichnistreiber**. Sein eigener Kopfkommentar (Z. 24-27):
+ *
+ *     „This driver is probably the weirdest I've written so far. It
+ *      simulates a CP/M disc using a collection of separate files; the
+ *      idea being to make a host directory appear as a CP/M filesystem."
+ *
+ * Und libdsks Handbuch (`doc/libdsk.txt` Z. 407-409) sagt dasselbe:
+ *
+ *     „rcpmfs": Reverse CP/M filesystem. A directory is made to appear
+ *      as a CP/M disk. This is a complex system and should be
+ *      approached with caution.
+ *
+ * **Der Beweis steht in einer Zeile des Treibers.** `rcpmfs_open()`
+ * (Z. 1226-1240) tut als Erstes:
+ *
+ *     if (stat(passed, &st)) return DSK_ERR_NOTME;
+ *     if (!S_ISDIR(st.st_mode)) return DSK_ERR_NOTME;
+ *
+ * — es nimmt **nur ein Verzeichnis** und weist alles, was eine Datei
+ * ist, ausdruecklich ab. Seine Einstellungen liegen in einer
+ * `.libdsk.ini` **im** Verzeichnis (`CONFIGFILE`, Z. 72), nicht in
+ * einem Dateikopf.
+ *
+ * Es gibt dort also: keine Kennung `"RCPM"`, keinen 64-Byte-Kopf, keine
+ * mehreren Disketten in einem Behaelter, keine Kompression — und nichts
+ * „netzwerkfaehiges". Fuer das oben beschriebene Format gibt es in
+ * diesem Baum **keinen Beleg**.
+ *
+ * ── Was daraus folgt ────────────────────────────────────────────────
+ *
+ * Die Strukturen unten bleiben stehen — sie sind der einzige Beleg
+ * dafuer, WAS behauptet wurde, und MF-699 sagt: erst der Ersatz, dann
+ * die Loeschung. Aber die Grenzen sagen ab:
+ *
+ *   * `uft_rcpmfs_probe()` stimmt nicht mehr zu,
+ *   * `rcpmfs_open()` antwortet `UFT_ERROR_NOT_SUPPORTED`,
+ *   * `uft_rcpmfs_write()` ebenso — UFT soll keine Datei in einem
+ *     Format erzeugen, fuer das es keine Referenz gibt. Das ist die
+ *     Lehre aus MF-1009 (`apridisk`) und MF-1028 (`qrst`), wo je ein
+ *     gruener Rundlauftest nur belegte, dass Packer und Entpacker
+ *     Spiegelbilder derselben Erfindung waren.
+ *
+ * Die beiden Wege aus dieser Lage stehen als **P3-338** in
+ * `docs/OPEN_ITEMS.md`: eine echte Referenz finden, oder das Plugin
+ * entfernen (dann fallen die Formatzahlen um eins).
+ *
+ * Klasse: FMT-2/3/10/11/12 — die fuenf Parser, die gegen erfundene
+ * Spezifikationen gebaut waren und gruen liefen. Dies ist der erste
+ * Fall in dieser Runde, bei dem nicht die Kennung, sondern das
+ * **ganze Format samt Zweck** erfunden war.
  */
 
 #ifndef UFT_RCPMFS_H

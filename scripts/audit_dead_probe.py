@@ -61,6 +61,24 @@ from pathlib import Path
 # Sonden, die bekanntermassen nie zustimmen — mit dem Grund, warum das so
 # bleibt. Ein Eintrag hier ist keine Freigabe, sondern eine Erklaerung.
 DEAD_PROBE_BASELINE = {
+    "uft_rcpmfs_probe":
+        "MF-1035: dieselbe Sache wie `rcpmfs_probe_plugin` darunter — "
+        "das ist die API-Sonde, die der Plugin-Wrapper ruft. Beide "
+        "stimmen nicht mehr zu, weil die benannte Referenz (libdsks "
+        "`drvrcpm.c`) ein VERZEICHNIStreiber ist und fuer das "
+        "beschriebene Behaelterformat kein Beleg existiert. P3-338.",
+    "rcpmfs_probe_plugin":
+        "MF-1035: die benannte Referenz (libdsks `drvrcpm.c`) ist ein "
+        "VERZEICHNIStreiber — ihr `rcpmfs_open()` weist mit "
+        "`if (!S_ISDIR(st.st_mode)) return DSK_ERR_NOTME;` jede DATEI "
+        "ausdruecklich ab, und ihre Einstellungen liegen in einer "
+        "`.libdsk.ini` IM Verzeichnis. Fuer das beschriebene "
+        "Behaelterformat mit der Kennung `\"RCPM\"` und einem "
+        "64-Byte-Kopf gibt es in diesem Baum keinen Beleg. Die Sonde "
+        "hat nie etwas anderes getroffen als Dateien, die UFTs eigener "
+        "Schreiber erzeugt hat — ein geschlossener Kreis, dieselbe "
+        "Gestalt wie FMT-2/3/10/11/12. Sie stimmt deshalb nicht mehr "
+        "zu; die beiden Wege aus der Lage stehen als P3-338.",
     "logical_probe_plugin":
         "MF-1032: eine Logical-Datei hat KEINEN Kopf — libdsks "
         "`logical_open()` prueft nichts —, und ihre Anordnung "

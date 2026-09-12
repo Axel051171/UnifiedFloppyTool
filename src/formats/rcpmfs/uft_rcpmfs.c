@@ -1,6 +1,19 @@
 /**
  * @file uft_rcpmfs.c
- * @brief RCPMFS (Remote CP/M File System) implementation
+ * @brief RCPMFS — die Grenzen sagen ab (MF-1035)
+ *
+ * Was gemessen wurde und warum dieses Plugin nichts mehr annimmt,
+ * steht im Kopf von `include/uft/formats/uft_rcpmfs.h`. Kurzfassung:
+ * die benannte Referenz (libdsks `drvrcpm.c`) ist ein
+ * **Verzeichnistreiber**, der Dateien ausdruecklich abweist
+ * (`if (!S_ISDIR(st.st_mode)) return DSK_ERR_NOTME;`), und fuer das
+ * hier beschriebene Behaelterformat mit der Kennung `"RCPM"` gibt es
+ * in diesem Baum keinen Beleg.
+ *
+ * Die Umsetzung bleibt stehen (MF-699), die Grenzen sagen ab. Damit
+ * kann UFT weder eine solche Datei annehmen noch eine erzeugen.
+ *
+ * (frueherer Titel: RCPMFS (Remote CP/M File System) implementation)
  * @version 3.9.0
  * 
  * Multi-disk CP/M container format.
@@ -72,15 +85,23 @@ bool uft_rcpmfs_validate_header(const rcpmfs_header_t *header) {
     return memcmp(header->magic, RCPMFS_MAGIC, RCPMFS_MAGIC_LEN) == 0;
 }
 
+/**
+ * MF-1035: stimmt nicht mehr zu, und der Grund ist gemessen.
+ *
+ * Die Kennung `"RCPM"` und der 64-Byte-Kopf stehen in keiner Referenz.
+ * libdsks `rcpmfs` — die benannte Quelle — ist ein Verzeichnistreiber
+ * und weist Dateien ausdruecklich ab. Eine Sonde, die hier mit
+ * Konfidenz 95 zustimmt, behauptet ein Format, fuer das es keinen
+ * Beleg gibt; getroffen haette sie ohnehin nur Dateien, die UFT selbst
+ * geschrieben hat — ein geschlossener Kreis (MF-1009, MF-1028).
+ *
+ * `uft_rcpmfs_validate_header()` darueber bleibt stehen, damit der Test
+ * die erfundene Kennung noch benennen kann.
+ */
 bool uft_rcpmfs_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < RCPMFS_HEADER_SIZE) return false;
-    
-    const rcpmfs_header_t *header = (const rcpmfs_header_t *)data;
-    if (uft_rcpmfs_validate_header(header)) {
-        if (confidence) *confidence = 95;
-        return true;
-    }
-    
+    (void)data;
+    (void)size;
+    if (confidence) *confidence = 0;
     return false;
 }
 
@@ -342,6 +363,25 @@ uft_error_t uft_rcpmfs_write(const uft_disk_image_t *disk,
     if (!disk || !path) {
         return UFT_ERR_INVALID_PARAM;
     }
+
+    /* MF-1035: sagt ab. UFT soll keine Datei in einem Format erzeugen,
+     * fuer das es keine Referenz gibt — das waere eine erfundene Datei,
+     * und keine fremde Umsetzung koennte sie lesen. Genau diese Gestalt
+     * hatten `apridisk` (MF-1009) und `qrst` (MF-1028): ein gruener
+     * Rundlauftest, der nur belegte, dass Packer und Entpacker
+     * Spiegelbilder derselben Erfindung waren.
+     *
+     * Der Rumpf darunter bleibt UEBERSETZT und unerreichbar — kein
+     * `#if 0`, denn ein nie uebersetzter Block ist die Klasse, die
+     * Tor 64 jagt. Dieselbe Gestalt wie die elf honest-stub-
+     * `write_track` aus MF-930. Er ist zugleich der einzige Beleg
+     * dafuer, WAS behauptet wurde (MF-699), und die beiden Wege aus der
+     * Lage stehen als P3-338. */
+    (void)disk_name;
+    (void)diskdef_name;
+    (void)opts;
+    return UFT_ERROR_NOT_SUPPORTED;
+
     
     /* Calculate disk data size */
     size_t disk_data_size = (size_t)disk->tracks * disk->heads *
@@ -471,80 +511,11 @@ static bool rcpmfs_probe_plugin(const uint8_t *data, size_t size,
     return uft_rcpmfs_probe(data, size, confidence);
 }
 
-static uft_error_t rcpmfs_open(uft_disk_t *disk, const char *path, bool read_only) {
-    (void)read_only;
-    uft_disk_image_t *image = NULL;
-    uft_error_t err = uft_rcpmfs_read(path, &image, NULL, NULL);
-    if (err == UFT_OK && image) {
-        disk->plugin_data = image;
-        disk->geometry.cylinders = image->tracks;
-        disk->geometry.heads = image->heads;
-        disk->geometry.sectors = image->sectors_per_track;
-        disk->geometry.sector_size = image->bytes_per_sector;
-        disk->geometry.total_sectors = (uint32_t)image->tracks * image->heads *
-                                       image->sectors_per_track;
-    }
-    return err;
-}
-
 static void rcpmfs_close(uft_disk_t *disk) {
     if (disk && disk->plugin_data) {
         uft_disk_free((uft_disk_image_t*)disk->plugin_data);
         disk->plugin_data = NULL;
     }
-}
-
-static uft_error_t rcpmfs_read_track(uft_disk_t *disk, int cyl, int head,
-                                      uft_track_t *track) {
-    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
-     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
-     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
-     * opus_read_track() von tests/test_disk_open_fuzz.c. */
-    if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
-
-    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
-    if (!image || !track) return UFT_ERR_INVALID_PARAM;
-
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-
-    uft_track_t *src = image->track_data[idx];
-    if (!src) return UFT_ERR_INVALID_PARAM;
-
-    track->cylinder = cyl;
-    track->head = head;
-    track->encoding = src->encoding;
-
-    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
-     *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
-    for (size_t s = 0; s < src->sector_count; s++) {
-        uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
-        if (add_err != UFT_OK) return add_err;
-    }
-
-    return UFT_OK;
 }
 
 /* In-memory write: updates cached disk image. Persist via uft_rcpmfs_write(). */
@@ -610,9 +581,15 @@ static uft_error_t rcpmfs_write_track(uft_disk_t *disk, int cyl, int head,
 }
 
 static const uft_plugin_feature_t uft_format_plugin_rcpmfs_features[] = {
-    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Read", UFT_FEATURE_UNSUPPORTED,
+      "MF-1035: die benannte Referenz (libdsks drvrcpm.c) ist ein "
+      "VERZEICHNIStreiber und weist Dateien ausdruecklich ab; fuer das "
+      "hier beschriebene Behaelterformat mit der Kennung \"RCPM\" gibt es "
+      "keinen Beleg. Sonde und open() sagen deshalb ab. P3-338" },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_rcpmfs_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-1035: sagt ab, damit UFT keine Datei in einem unbelegten Format "
+      "erzeugt. Vorher: MF-930 — der Schreiber hatte ohnehin keinen "
+      "Aufrufer, kein flush, close() gibt frei (P3-204)" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -622,14 +599,25 @@ static const uft_plugin_feature_t uft_format_plugin_rcpmfs_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_rcpmfs = {
     .name = "RCPMFS",
-    .description = "Remote CP/M File System Container",
+    .description = "unbelegt — die Referenz ist ein Verzeichnistreiber (MF-1035)",
     .extensions = "rcpmfs,rcpm",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1035: KEINE Faehigkeit. `open` und `read_track` sind **NULL**,
+     * nicht bloss absagende Rumpffunktionen — `test_capability_manifest`
+     * (MF-658) verlangt das fuer „Read = UNSUPPORTED", und es ist die
+     * staerkere Aussage: das Plugin kann nicht geoeffnet werden, statt
+     * es zu versuchen und abzusagen. Alle Aufrufstellen im Kern pruefen
+     * `plugin->open` auf NULL (`uft_core_stubs.c:122`,
+     * `uft_disk_convert.c:101`, `uft_smart_open.c:247`).
+     *
+     * `write_track` bleibt GESETZT und sagt ab, weil ein Nullzeiger dem
+     * Aufrufer keine Begruendung gaebe — dieselbe Regel wie bei den elf
+     * aus MF-930. */
+    .capabilities = 0,
     .probe = rcpmfs_probe_plugin,
-    .open = rcpmfs_open,
+    .open = NULL,
     .close = rcpmfs_close,
-    .read_track = rcpmfs_read_track,
+    .read_track = NULL,
     .write_track = rcpmfs_write_track,
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */

@@ -235,7 +235,12 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
     { "\x1F\xA6\xDE\xBA\xCC\x13\x7D\x74", 8, "CAS" },  /* uft_cas.c:32 */
     { "ACT Apricot disk image\x1A\x04", 24, "ApriDisk" },
                                              /* uft_apridisk.h:29 ("\032\004") */
-    { "RCPM",              4, "RCPMFS"   },  /* uft_rcpmfs.h:32 */
+    /* MF-1035: die Kennung `"RCPM"` steht in KEINER Referenz — sie
+     * war erfunden, und `rcpmfs`s Sonde stimmt seither nicht mehr
+     * zu. Der Startwert bleibt stehen: ein Muster, das kein Plugin
+     * mehr annimmt, ist fuer den Fuzzer ein gueltiger Fall, und die
+     * Zeile haelt fest, WAS einmal behauptet wurde. */
+    { "RCPM",              4, "RCPMFS"   },  /* uft_rcpmfs.h, MF-1035 */
     { "nanowasp floppy image\r\n\x1A", 24, "NanoWasp" },
                                              /* uft_nanowasp.h:24 ("\r\n\032") */
     { "QRST",              4, "QRST"     },  /* uft_qrst.h:24 */
