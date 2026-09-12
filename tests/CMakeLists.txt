@@ -45,7 +45,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_teensy_probe.cpp"           # MF-213 ARCH-7-C
     "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp"            # MF-226 P3.3 #110a
     "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_runners_protocol.cpp" # MF-251
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp")   # MF-252
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp"    # MF-252
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp")        # MF-1046
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -3225,6 +3226,25 @@ foreach(test_source ${TEST_SOURCES})
         if(LIBUSB_FOUND)
             target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_kryoflux_dtc_befehl")
+        # MF-1046: die DTC-Befehlszeile gegen das Handbuch des Urhebers
+        # (KryoFlux Manual, DTC option list — Kanal *Spec*, nur gelesen).
+        # Der Produktions-Lesepfad setzte den Kopf als START-SPUR (-s),
+        # den Zylinder als Track-0-Justage von Seite 1 (-b) und waehlte
+        # gar keine Seite (-g fehlte). Gleiche Quellen wie der
+        # Provider-Test darunter.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-1046: der ZWEITE Befehlsbauer. uft_kf_build_capture_command()
+            # war bis dahin `static build_dtc_command` und deshalb nicht
+            # abnehmbar — genau darum blieben dort fuenf Abweichungen gegen
+            # das Handbuch stehen.
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_kryoflux_dtc.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_kryoflux_provider_v2")
         # MF-162 P1.9: KryoFluxProviderV2 mixin composition test.

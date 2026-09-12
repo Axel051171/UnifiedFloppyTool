@@ -91,15 +91,58 @@ KryoFluxProviderV2::KryoFluxProviderV2(DtcRunner runner, std::string dtc_binary)
 std::vector<std::string> KryoFluxProviderV2::build_read_argv(
     int cylinder, int head, const std::string& prefix) const
 {
+    /* BERICHTIGT MF-1046 gegen das Handbuch des Urhebers (KryoFlux
+     * Manual, (c) 2009-2024 KryoFlux Products and Services Ltd,
+     * „DTC offers the following command line options"). Kanal *Spec*
+     * nach MF-695: gelesen, keine Zeile Code uebernommen.
+     *
+     * Vorher stand hier:
+     *
+     *     -c2 -d0 -s<head> -b<cylinder> -e<cylinder> -f<prefix> -i0
+     *
+     * Zwei Argumente lagen an der falschen Option, eines fehlte:
+     *
+     *   -s<trk>  ist die START-SPUR („set start track"), nicht die
+     *            Seite. Kopf 1 setzte damit Startspur 1.
+     *   -b<trk>  ist die physische Track-0-Position von SEITE 1
+     *            („set side 1/b track0 physical position") und im
+     *            Handbuch ausdruecklich als GLOBALE Einstellung
+     *            gefuehrt („track 0 positions (-a/-b)") — ein
+     *            Justageparameter fuer schiefe Laufwerke, kein
+     *            Spurwaehler. Dort landete die Zylindernummer.
+     *   -g<side> fehlte ganz. Ohne Seitenwahl gilt „default auto",
+     *            also BEIDE Seiten.
+     *
+     * Zylinder 10 / Kopf 0 ergab damit gemessen
+     * `dtc -c2 -d0 -s0 -b10 -e10 -f<praefix> -i0`: Spuren 0 bis 10,
+     * beide Seiten, Track-0-Position von Seite 1 auf 10 verstellt.
+     *
+     * **Jedes falsche Argument traf dabei eine GUELTIGE andere Option.**
+     * DTC haette den Befehl angenommen und etwas anderes getan — ohne
+     * Fehlermeldung. Das ist die Lage, gegen die „Keine stille
+     * Veraenderung" steht.
+     *
+     * Die REIHENFOLGE ist nicht beliebig, und auch das steht im
+     * Handbuch („IMPORTANT NOTE on command line parameters order"):
+     * -f, -s, -e und -g sind „image local" und muessen VOR dem
+     * Bildtyp -i stehen, sonst wirken sie nicht auf ihn. -c und -d
+     * sind global und duerfen ueberall stehen.
+     *
+     * NICHT geaendert, weil das Handbuch es nicht entscheidet: `-c2`
+     * („read calibration mode", 2=maximum track) steht bei jedem
+     * einzelnen Spurlesen. Ob das gewollt ist, ist eine Frage an ein
+     * echtes DTC (P3-341), keine an die Beschreibung.
+     *
+     * Abnahme ohne Geraet: tests/test_kryoflux_dtc_befehl.cpp. */
     std::vector<std::string> args;
     args.push_back(m_dtc_binary);
-    args.push_back("-c2");
-    args.push_back("-d0");
-    args.push_back("-s" + std::to_string(head));
-    args.push_back("-b" + std::to_string(cylinder));
-    args.push_back("-e" + std::to_string(cylinder));
-    args.push_back("-f" + prefix);
-    args.push_back("-i0");
+    args.push_back("-c2");                              /* global */
+    args.push_back("-d0");                              /* global */
+    args.push_back("-f" + prefix);                      /* image local */
+    args.push_back("-s" + std::to_string(cylinder));    /* start track */
+    args.push_back("-e" + std::to_string(cylinder));    /* end track   */
+    args.push_back("-g" + std::to_string(head));        /* 0=Seite 0, 1=Seite 1 */
+    args.push_back("-i0");                              /* zuletzt: Bildtyp */
     return args;
 }
 

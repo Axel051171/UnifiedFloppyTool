@@ -454,6 +454,102 @@ int uft_kf_write_track(uft_kf_config_t* config, int track, int side,
                         const uint32_t* flux, size_t count);
 
 /**
+ * @brief Baut die DTC-Befehlszeile fuer die Aufnahme EINER Spur (MF-1046)
+ *
+ * War bis MF-1046 `static build_dtc_command()` und damit nicht
+ * abnehmbar — was der Grund ist, warum fuenf Abweichungen gegen das
+ * Handbuch des Urhebers unbemerkt blieben (`-f` bekam eine Zahl statt
+ * eines Namens, die Spurnummer landete im Bildtyp `-i`, die Seite in
+ * der Startspur `-s`, `-g0` hiess „beide Seiten" statt „Seite 0", und
+ * `-p` bekam ein Argument, das es nicht nimmt).
+ *
+ * Die Befehlszeile ist eine reine Funktion ihrer Eingaben, also ist
+ * sie OHNE Hardware pruefbar (MF-310) — genau das tut
+ * `tests/test_kryoflux_dtc_befehl.cpp` gegen die woertlichen
+ * Optionsbeschreibungen aus dem KryoFlux Manual
+ * ((c) 2009-2024 KryoFlux Products and Services Ltd, Kanal *Spec*
+ * nach MF-695: gelesen, nichts uebernommen).
+ *
+ * Erzeugt wird, in dieser Reihenfolge (das Handbuch verlangt sie:
+ * „image local"-Optionen muessen vor dem Bildtyp stehen):
+ *
+ *     "<dtc>" -p [-d<idx>] [-t<try>] -f"<temp_dir>/track"
+ *             -s<start> -e<end> -g<side> [-k2] -i<typ>
+ *
+ * @param cfg       Konfiguration; liefert dtc_path, temp_dir,
+ *                  device_index, retry_count, double_step, side,
+ *                  start_track, end_track und output_format
+ * @param track     Spur, oder < 0 fuer den Bereich aus der Konfiguration
+ * @param side      Seite (0/1), oder < 0 fuer die Vorgabe aus cfg->side
+ * @param cmd       Zielpuffer
+ * @param cmd_size  Groesse des Zielpuffers
+ * @return Laenge der erzeugten Zeichenkette
+ *
+ * @note Das `-f`-Praefix wird mit DERSELBEN Separator-Regel gebildet
+ *       wie der Dateiname, den `uft_kf_capture_track()` danach oeffnet
+ *       (`<temp_dir>[/]trackNN.S.raw`). Stimmen die beiden nicht
+ *       ueberein, liest niemand, was DTC geschrieben hat — genau das
+ *       war der Zustand vor MF-1046.
+ */
+int uft_kf_build_capture_command(const uft_kf_config_t *cfg,
+                                  int track, int side,
+                                  char *cmd, size_t cmd_size);
+
+/**
+ * @brief Baut die DTC-Befehlszeile fuer das Schreiben EINER Spur (MF-1046)
+ *
+ * Die Schreibseite war schwerer betroffen als die Leseseite. Vorher
+ * stand in `uft_kf_write_track()`:
+ *
+ *     dtc -w -p -i0 -e<spur> -s<seite> -g<schritt> -t<spur> "<pfad>"
+ *
+ * Gegen das Handbuch des Urhebers gehalten lagen VIER der sieben
+ * Argumente an der falschen Option — und jede davon ist eine GUELTIGE
+ * andere Option, DTC haette den Befehl also angenommen:
+ *
+ *   `-s<seite>`   ist die START-SPUR, nicht die Seite.
+ *   `-g<schritt>` ist die SEITENWAHL (0/1/2), nicht der Spurabstand;
+ *                 der ist `-k<step>`. Mit Schritt 1 stand dort `-g1`,
+ *                 also „Seite 1" — Seite 0 war nie erreichbar.
+ *   `-t<spur>`    ist die Zahl der WIEDERHOLUNGEN je Spur („min 1"),
+ *                 nicht die Spur. Spur 0 ergab `-t0`, unterhalb des
+ *                 dokumentierten Minimums.
+ *   `"<pfad>"`    stand positionell da; der Dateiname ist `-f<name>`.
+ *
+ * Zusammengerechnet haette „Spur 5, Seite 0, Einzelschritt" die
+ * Spuren 0 bis 5 auf SEITE 1 geschrieben — eine stille
+ * Falschschreibung auf eine physische Diskette, in einem Werkzeug mit
+ * dem Grundsatz „Keine stille Veraenderung".
+ *
+ * Erzeugt wird jetzt, in der vom Handbuch verlangten Reihenfolge
+ * („image local" vor dem Bildtyp, `-w` zuletzt wie im Beispiel des
+ * Handbuchs `DTC -f<praefix> -w`):
+ *
+ *     "<dtc>" -p [-d<idx>] -t<try> -f"<temp_dir>/track"
+ *             -s<spur> -e<spur> -g<seite> [-k2] -w
+ *
+ * @param cfg       Konfiguration
+ * @param track     zu schreibende Spur (>= 0)
+ * @param side      Seite (0 oder 1)
+ * @param cmd       Zielpuffer
+ * @param cmd_size  Groesse des Zielpuffers
+ * @return Laenge der erzeugten Zeichenkette, oder -1 bei ungueltigen
+ *         Argumenten
+ *
+ * @note Der Schreiber hat im ganzen Baum weiterhin KEINEN Aufrufer
+ *       (MF-1045, P3-204). Diese Berichtigung macht ihn nicht
+ *       erreichbar — sie sorgt dafuer, dass er nicht falsch ist, falls
+ *       ihn jemand verdrahtet. Ob ein KryoFlux ueberhaupt schreiben
+ *       kann, sagt das Handbuch ausdruecklich JA („-w : write image to
+ *       disk", und „The GUI does not support writing to disk, please
+ *       use the command line"); was UFT davon je erreicht hat, ist
+ *       ungemessen (P3-341).
+ */
+int uft_kf_build_write_command(const uft_kf_config_t *cfg,
+                                int track, int side,
+                                char *cmd, size_t cmd_size);
+
+/**
  * @brief Write disk from raw files
  * 
  * Writes all tracks from a directory of .raw files.

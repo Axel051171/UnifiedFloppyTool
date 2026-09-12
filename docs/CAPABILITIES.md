@@ -44,7 +44,7 @@ Dokument anpassen, nicht die Behauptung wegerklären.
 | Controller    | Read | Write | Tier-3 HW | Tier-2.5 Sim | Transport       | Status |
 |---------------|------|-------|-----------|--------------|-----------------|--------|
 | Greaseweazle  | ✅   | ✅    | PASS      | SIMULATED    | USB-CDC serial  | **production** |
-| KryoFlux      | ✅   | ⬜     | nie       | SIMULATED    | DTC subprocess  | **berichtigt MF-1045:** hier stand Write `-` mit der Legende „protokoll-bedingt nicht vorgesehen — read-only by design“. Das ist eine Aussage über das **Gerät**, und gemessen war sie nie — belegt war sie durch eine Zeile in `.claude/CLAUDE.md`. Der eigene Baum widerspricht: `src/hal/uft_kryoflux_dtc.c` führt mit `uft_kf_write_track()` einen **vollständigen Schreiber von 75 Zeilen**, der die Flussdaten ins KryoFlux-RAW wandelt, in eine Zwischendatei legt und `dtc -w -p -i0 -e<t> -s<s> -g<n> -t<t> "<datei>"` ausführt. **Gerufen wird er von niemandem:** über `git ls-files` gemessen gibt es außer den drei Deklarationen in `include/uft/hal/uft_kryoflux.h` keine einzige Fundstelle. Die Absage stimmte also im **Ergebnis** (mit einem KryoFlux kann UFT nicht schreiben) und irrte in der **Begründung**. Das ist die Gestalt von MF-930, einen Stock höher: ein fertiger, unerreichbarer Schreiber — P3-204-Klasse, jetzt bei einem Controller statt bei einem Format. Das Tor davor, `uft_kf_write_supported()`, sagt in seinem eigenen Kommentar „*For now, assume write is supported if DTC is available*“ und prüft dann nur, ob DTC gefunden wurde — die im Kommentar genannte Versionsprüfung („*firmware 3.0+*“) gibt es nicht. Ob ein KryoFlux schreiben **kann**, ist damit weiterhin offen und steht als P3-341; hier steht nur, was gemessen ist |
+| KryoFlux      | 🟡   | ⬜     | nie       | SIMULATED    | DTC subprocess  | **berichtigt MF-1045 und MF-1046.** *Write:* hier stand `-` („protokoll-bedingt nicht vorgesehen — read-only by design“), eine Aussage über das **Gerät**, belegt nur durch eine quellenlose Zeile in `.claude/CLAUDE.md`. **Das Handbuch des Urhebers sagt das Gegenteil:** `-w : write image to disk`, dazu „*The GUI does not support writing to disk, please use the command line to write images back to disk*“. UFT kann es trotzdem nicht — aber aus einem anderen Grund: `src/hal/uft_kryoflux_dtc.c` führt einen vollständigen Schreiber, den **niemand ruft** (P3-204). *Read:* von ✅ auf 🟡, weil der **Produktions**-Lesebefehl gemessen falsch war: `build_read_argv()` gab den Kopf an `-s` (START-SPUR), den Zylinder an `-b` (Track-0-Justage von Seite 1) und setzte **kein** `-g` — Zylinder 10/Kopf 0 hieß damit „Spuren 0–10, beide Seiten“. Der **zweite** Befehlsbauer im Baum (`uft_kf_build_capture_command`, erreichbar über `uft_hal_unified.c:901`) trug fünf weitere Abweichungen und konnte **nie** etwas lesen: er schrieb nach `-f0`, während der Leser `<temp_dir>/trackNN.S.raw` öffnete. Beides ist seit MF-1046 gegen das KryoFlux Manual berichtigt und mit `tests/test_kryoflux_dtc_befehl.cpp` festgenagelt (Mutationsmatrix 15/15); an einem **echten** DTC gemessen ist weiterhin nichts — P3-341 |
 | FluxEngine    | ✅   | ✅    | nie       | SIMULATED    | CLI subprocess  | read+write (CLI-wrapper) |
 | FC5025        | ✅   | -     | nie       | SIMULATED    | fcimage CLI     | read-only (fcimage-wrapper). **Geprüft MF-1045:** das `-` hält im Ergebnis — im ganzen Baum gibt es **keinen** FC5025-Schreiber (keine `.c` unter `src/hal/`, keine Deklaration in `include/uft/hal/uft_fc5025.h`). Seine **Begründung** ist aber ebenfalls ungemessen: `fc5025_provider_v2.h` nennt „*no write CBW opcode exists*“, und `audit/fc5025/evidence.json` führt die Opcode-Tafel selbst als `"cbw_opcodes": "needs-source"` — „*CBW/CLI layer not establishable*“. Anders als bei KryoFlux widerspricht dem nichts im Baum; belegt ist es trotzdem nicht (P3-341) |
 | SCP-Direct    | 🟡   | 🟡    | nie       | mock-only    | libusb-direct   | libusb wired, 22/22 opcodes byte-exact vs samdisk |
@@ -106,7 +106,19 @@ muss von einem fremden Schreibtisch kommen — siehe den Aufruf im
 
 **TL;DR Hardware-Status v4.1.6 (unverändert gegenüber v4.1.5):**
 - **1/9 production:** Greaseweazle (Tier-3 PASS).
-- **3/9 lesen real:** KryoFlux/FluxEngine/FC5025 über Subprocess-Wrapper.
+- **3/9 lesen über einen fremden Prozess:** KryoFlux/FluxEngine/FC5025.
+  **Berichtigt MF-1046:** hier stand „lesen **real**". Für KryoFlux traf
+  das nicht zu — der abgesetzte Befehl war gemessen falsch (Kopf in der
+  Startspur, Zylinder in der Track-0-Justage, keine Seitenwahl), und der
+  zweite Befehlsbauer im Baum konnte **nie** etwas lesen. Seit MF-1046
+  ist die Befehlszeile gegen das Handbuch des Urhebers geprüft; „real"
+  hieße an einem **Gerät** geprüft, und das ist bei allen dreien **nie**
+  geschehen (siehe Bench-Tafel). Für FluxEngine sagt der eigene
+  Provider-Kopf dasselbe: *„like build_read_argv() it has not been
+  end-to-end-tested against a real binary"*; für FC5025 führt
+  `audit/fc5025/evidence.json` die Opcode-Tafel als `needs-source`.
+  Beide stehen damit unter derselben Frage wie KryoFlux vor MF-1046 —
+  P3-341.
 - **3/9 wired aber mock-only:** SCP-Direct/Applesauce (libusb- bzw. serien-mock-validiert; Tier-3 braucht echte HW + Bench-Session) — und **XUM1541 gehört seit MF-1025 nicht mehr dazu**: seine IEC-Grundbefehle sind verdrahtet, Lesen und Schreiben nicht. Es ist damit `⬜`, nicht `🟡`.
 - **1/9 Linux-only:** USB-Floppy (SG_IO).
 - **1/9 honest-stub mit Sim:** ADF-Copy.

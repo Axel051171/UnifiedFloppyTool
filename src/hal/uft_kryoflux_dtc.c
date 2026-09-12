@@ -526,50 +526,105 @@ static int parse_kf_raw_file(const char *path, uint32_t **flux_out,
 /**
  * @brief Build DTC command line
  */
-static int build_dtc_command(const uft_kf_config_t *cfg, int track, int side,
-                              char *cmd, size_t cmd_size) {
+int uft_kf_build_capture_command(const uft_kf_config_t *cfg, int track, int side,
+                                  char *cmd, size_t cmd_size) {
     int len = 0;
-    
-    /* Base command with output format */
-    len = snprintf(cmd, cmd_size, "\"%s\" -f%d",
-                   cfg->dtc_path,
-                   cfg->output_format);
-    
-    /* Track range: -i<start> -e<end> */
-    if (track >= 0) {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -i%d -e%d", track, track);
-    } else {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -i%d -e%d",
-                       cfg->start_track, cfg->end_track);
-    }
-    
-    /* Side selection: -s<side> or -g0/1 for both */
-    if (side >= 0) {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -s%d", side);
-    } else if (cfg->side >= 0) {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -s%d", cfg->side);
-    } else {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -g0");
-    }
-    
-    /* Device index */
+
+    /* BERICHTIGT MF-1046 gegen das Handbuch des Urhebers (KryoFlux
+     * Manual, (c) 2009-2024 KryoFlux Products and Services Ltd,
+     * „DTC offers the following command line options"). Kanal *Spec*
+     * nach MF-695: gelesen, keine Zeile Code uebernommen.
+     *
+     * Dies ist der ZWEITE DTC-Befehlsbauer im Baum — der erste ist
+     * `KryoFluxProviderV2::build_read_argv()`. Beide sind erreichbar
+     * (dieser ueber `uft_kf_capture_track` <- `uft_hal_unified.c:901`),
+     * beide waren falsch, und jeder anders. Das ist die Gestalt von
+     * MF-1015 (drei Pruefsummen) und MF-1026 (drei Victor-Geometrien):
+     * zwei Umsetzungen derselben Sache driften auseinander, und keine
+     * Messung haelt sie zusammen.
+     *
+     * Fuenf Abweichungen, jede gegen eine woertliche Zeile des
+     * Handbuchs:
+     *
+     *   1. `-f%d` mit cfg->output_format. `-f<name>` ist der
+     *      DATEINAME („set filename"). Dort landete eine Zahl, und
+     *      der Bildtyp wurde nie gesetzt.
+     *   2. `-i%d` mit der Spurnummer, kommentiert als
+     *      „Track range: -i<start> -e<end>". `-i<type>` ist der
+     *      BILDTYP („set image type"); die Startspur ist `-s<trk>`.
+     *   3. `-s%d` mit der Seite. `-s<trk>` ist die START-SPUR.
+     *   4. `-g0` als „beide Seiten". Das Handbuch sagt
+     *      `-g<side>`: 0=side 0, 1=side 1, **2=both sides** — `-g0`
+     *      waehlt also genau eine Seite, nicht beide.
+     *   5. `-p"<temp_dir>"`. `-p` ist ein Schalter OHNE Argument
+     *      („create path"); das Ausgabeziel ist `-f<name>`.
+     *
+     * Dazu die Reihenfolge: `-s` stand HINTER `-i`. Das Handbuch
+     * („IMPORTANT NOTE on command line parameters order") fuehrt
+     * -f/-s/-e/-g/-k als „image local" — sie muessen VOR dem Bildtyp
+     * stehen, sonst wirken sie nicht auf ihn.
+     *
+     * Die Folge war, dass dieser Pfad NIE etwas lesen konnte: DTC
+     * schrieb nach `-f0`, waehrend `uft_kf_capture_track()` danach
+     * `<temp_dir>[/]trackNN.S.raw` oeffnet — eine Datei, die so nie
+     * entstand. Der Fehlschlag war wenigstens ehrlich (fopen
+     * scheitert, last_error wird gesetzt), aber er war unausweichlich.
+     *
+     * Das Praefix wird hier mit DERSELBEN Regel gebildet wie in
+     * `uft_kf_capture_track()` — DTC haengt an `-f<praefix>` sein
+     * `NN.S.raw` an. Die beiden Stellen muessen uebereinstimmen; das
+     * ist die Lehre aus MF-519/MF-529 (Leseseite geholt, Gegenstelle
+     * uebersehen).
+     *
+     * Abnahme ohne Geraet: tests/test_kryoflux_dtc_befehl.cpp. */
+    const char *sep =
+        (cfg->temp_dir[0] != '\0' &&
+         cfg->temp_dir[strlen(cfg->temp_dir) - 1] == PATH_SEP) ? "" : "/";
+
+    /* Globale Einstellungen: duerfen laut Handbuch ueberall stehen. */
+    len = snprintf(cmd, cmd_size, "\"%s\" -p", cfg->dtc_path);
+
     if (cfg->device_index >= 0) {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -d%d", cfg->device_index);
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -d%d",
+                        cfg->device_index);
     }
-    
-    /* Double step for 40-track drives */
+    if (cfg->retry_count > 0) {
+        /* Handbuch: „min 1". Ein Wert darunter ist kein gueltiger
+         * Wiederholungszaehler. */
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -t%d",
+                        cfg->retry_count);
+    }
+
+    /* Bild-lokale Einstellungen: muessen VOR -i stehen. */
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -f\"%s%strack\"",
+                    cfg->temp_dir, sep);
+
+    if (track >= 0) {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -s%d -e%d",
+                        track, track);
+    } else {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -s%d -e%d",
+                        cfg->start_track, cfg->end_track);
+    }
+
+    /* Seitenwahl: 0=Seite 0, 1=Seite 1, 2=beide. */
+    if (side >= 0) {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -g%d", side);
+    } else if (cfg->side >= 0) {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -g%d", cfg->side);
+    } else {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -g2");
+    }
+
+    /* Spurabstand: 1 = 80 Spuren, 2 = 40 Spuren. */
     if (cfg->double_step) {
         len += snprintf(cmd + len, cmd_size - (size_t)len, " -k2");
     }
-    
-    /* Retries */
-    if (cfg->retry_count > 0) {
-        len += snprintf(cmd + len, cmd_size - (size_t)len, " -t%d", cfg->retry_count);
-    }
-    
-    /* Output path */
-    len += snprintf(cmd + len, cmd_size - (size_t)len, " -p\"%s\"", cfg->temp_dir);
-    
+
+    /* Zuletzt der Bildtyp — alles Bild-lokale davor wirkt auf ihn. */
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -i%d",
+                    cfg->output_format);
+
     return len;
 }
 
@@ -782,7 +837,7 @@ int uft_kf_capture_track(uft_kf_config_t *cfg, int track, int side,
     
     /* Build and execute command */
     char cmd[2048];
-    build_dtc_command(cfg, track, side, cmd, sizeof(cmd));
+    uft_kf_build_capture_command(cfg, track, side, cmd, sizeof(cmd));
     
     if (execute_dtc(cfg, cmd) != 0) {
         return -1;
@@ -1319,6 +1374,50 @@ int uft_kf_flux_to_raw(const uint32_t* flux, size_t count,
     return (int)pos;
 }
 
+int uft_kf_build_write_command(const uft_kf_config_t *cfg,
+                                int track, int side,
+                                char *cmd, size_t cmd_size) {
+    if (!cfg || !cmd || cmd_size == 0) return -1;
+    if (track < 0 || track > KF_MAX_TRACKS) return -1;
+    if (side < 0 || side > 1) return -1;
+
+    /* Die Zuordnung jeder Option steht im Header. Kurz: `-s`/`-e` sind
+     * Spuren, `-g` ist die Seite, `-k` der Spurabstand, `-t` die Zahl
+     * der Wiederholungen (Handbuch: „min 1"), `-f` der Dateiname. Vor
+     * MF-1046 lagen vier davon an der falschen Option. */
+    const char *sep =
+        (cfg->temp_dir[0] != '\0' &&
+         cfg->temp_dir[strlen(cfg->temp_dir) - 1] == PATH_SEP) ? "" : "/";
+
+    int len = snprintf(cmd, cmd_size, "\"%s\" -p", cfg->dtc_path);
+
+    if (cfg->device_index >= 0) {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -d%d",
+                        cfg->device_index);
+    }
+    /* Handbuch: „min 1". `retry_count` ist per Vorgabe 3; ein Wert
+     * darunter waere kein gueltiger Zaehler, also wird auf 1 gehoben
+     * statt eine 0 abzusetzen. */
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -t%d",
+                    cfg->retry_count > 0 ? cfg->retry_count : 1);
+
+    /* Bild-lokal, also vor dem Abschluss. */
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -f\"%s%strack\"",
+                    cfg->temp_dir, sep);
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -s%d -e%d",
+                    track, track);
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -g%d", side);
+    if (cfg->double_step) {
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -k2");
+    }
+
+    /* Zuletzt der Schreibbefehl — wie im Beispiel des Handbuchs
+     * („DTC -fD:\\dump\\track -w"). */
+    len += snprintf(cmd + len, cmd_size - (size_t)len, " -w");
+
+    return len;
+}
+
 int uft_kf_write_track(uft_kf_config_t* config, int track, int side,
                         const uint32_t* flux, size_t count) {
     if (!config || !flux || count == 0) return -1;
@@ -1341,11 +1440,28 @@ int uft_kf_write_track(uft_kf_config_t* config, int track, int side,
         return -1;
     }
     
-    /* Write to temp file */
+    /* BERICHTIGT MF-1046: hier stand ein fest verdrahtetes
+     * "/tmp/uft_kf_write_%d_%d.raw". Zwei Fehler in einer Zeile:
+     *
+     *   1. `/tmp` gibt es unter Windows nicht — `fopen` waere dort
+     *      immer gescheitert. Das Temp-Verzeichnis steht in
+     *      `cfg->temp_dir` und kommt aus `get_temp_directory()`.
+     *   2. DTC findet Stromdateien ueber das `-f`-Praefix und die
+     *      Benennung `<praefix>NN.S.raw` (Handbuch: „test_23.1.raw
+     *      will be stream test_"). `uft_kf_write_<t>_<s>.raw` passt
+     *      auf kein Praefix, das wir uebergeben — DTC haette die
+     *      Datei nicht als Strom erkannt.
+     *
+     * Geschrieben wird deshalb nach `<temp_dir>[/]trackNN.S.raw`,
+     * genau die Benennung, die auch `uft_kf_capture_track()` liest. */
+    const char *wsep =
+        (config->temp_dir[0] != '\0' &&
+         config->temp_dir[strlen(config->temp_dir) - 1] == PATH_SEP)
+        ? "" : "/";
     char temp_path[1024];
-    snprintf(temp_path, sizeof(temp_path), "/tmp/uft_kf_write_%d_%d.raw", 
-             track, side);
-    
+    snprintf(temp_path, sizeof(temp_path), "%s%strack%02d.%d.raw",
+             config->temp_dir, wsep, track, side);
+
     FILE* f = fopen(temp_path, "wb");
     if (!f) {
         free(raw_data);
@@ -1358,17 +1474,18 @@ int uft_kf_write_track(uft_kf_config_t* config, int track, int side,
     fclose(f);
     free(raw_data);
     
-    /* Build DTC command for write */
+    /* Build DTC command for write — berichtigt MF-1046 gegen das
+     * Handbuch des Urhebers; die Zuordnung steht bei
+     * uft_kf_build_write_command(). */
     char cmd[2048];
-    snprintf(cmd, sizeof(cmd),
-             "%s -w -p -i0 -e%d -s%d -g%d -t%d \"%s\"",
-             config->dtc_path,
-             track,       /* End track */
-             side,        /* Side */
-             config->double_step ? 2 : 1,  /* Step */
-             track,       /* Track */
-             temp_path);
-    
+    if (uft_kf_build_write_command(config, track, side,
+                                    cmd, sizeof(cmd)) < 0) {
+        remove(temp_path);
+        snprintf(config->last_error, sizeof(config->last_error),
+                 "Cannot build DTC write command");
+        return -1;
+    }
+
     /* Execute */
     FILE* pipe = popen(cmd, "r");
     if (!pipe) {
