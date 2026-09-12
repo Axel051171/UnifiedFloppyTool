@@ -74,12 +74,23 @@ static int _pass = 0, _fail = 0, _last = 0;
 #define ASSERT(c) do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                        _fail++; return; } } while (0)
 
-#define KOPF     16
-#define SEKGR   128
-#define SPUREN    2
-#define SPT       2
-#define SEKTOREN (SPUREN * SPT)
-#define GROESSE  (KOPF + SEKTOREN * 4 + SEKTOREN * SEKGR)
+/* MF-1054: hier stand ein Abbild mit der Kennung "APRO" und einer
+ * 4-Byte-Sektortabelle — beides gibt es im Format nicht. Der Pruefstand
+ * war also auf den erfundenen Aufbau gebaut und HIELT ihn fest; genau
+ * die Gestalt von MF-1016 und MF-1017, wo ein gruener Test den
+ * Nachbardefekt fuer richtig hielt.
+ *
+ * Die Zusage dieses Tests ist davon unberuehrt: ein `write_track`, das
+ * OK meldet, muss die Datei geaendert haben. Nur die Pruefdatei ist
+ * jetzt eine echte PRO — 16-Byte-Kopf mit BE16-Satzzahl und 'P' bei
+ * Versatz 2, danach je Satz 12 Byte Kopf (Status 0xFF = ohne Befund)
+ * und 128 Byte Nutzlast. */
+#define KOPF      16
+#define SEKGR    128
+#define SEC_HDR   12
+#define RECORD   (SEC_HDR + SEKGR)
+#define SEKTOREN   4
+#define GROESSE  (KOPF + SEKTOREN * RECORD)
 
 static void pfad(char *p, size_t n)
 {
@@ -90,18 +101,23 @@ static void pfad(char *p, size_t n)
     snprintf(p, n, "%s/uft_pro_%d.pro", d, rand() % 100000);
 }
 
-/** Ein Abbild, das `pro_open()` annimmt. Kopf: "APRO", spt in Byte 6,
- *  Spurzahl in Byte 7 — so, wie der Leser es tatsaechlich liest. */
+/** Ein Abbild, das `pro_open()` annimmt — nach dem ECHTEN Aufbau
+ *  (MF-1054): die Satzzahl im Kopf muss die Dateigroesse restlos
+ *  erklaeren, und bei Versatz 2 steht 'P'. */
 static bool baue(const char *p)
 {
     uint8_t *d = calloc(1, GROESSE);
     if (!d) return false;
-    memcpy(d, "APRO", 4);
-    d[6] = SPT;
-    d[7] = SPUREN;
+    d[0] = (uint8_t)((SEKTOREN >> 8) & 0xFF);
+    d[1] = (uint8_t)(SEKTOREN & 0xFF);
+    d[2] = 'P';
+    d[3] = '2';
     /* Nutzdaten erkennbar fuellen, damit eine Aenderung auffiele. */
-    for (int i = 0; i < SEKTOREN; i++)
-        memset(d + KOPF + SEKTOREN * 4 + i * SEKGR, 0xA0 + i, SEKGR);
+    for (int i = 0; i < SEKTOREN; i++) {
+        uint8_t *satz = d + KOPF + (size_t)i * RECORD;
+        satz[1] = 0xFF;                       /* Status: ohne Befund */
+        memset(satz + SEC_HDR, 0xA0 + i, SEKGR);
+    }
 
     FILE *f = fopen(p, "wb");
     if (!f) { free(d); return false; }
@@ -227,14 +243,18 @@ TEST(lesen_bleibt_unberuehrt)
     uft_disk_t disk;
     memset(&disk, 0, sizeof disk);
     ASSERT(uft_format_plugin_pro.open(&disk, p, true) == UFT_OK);
-    ASSERT(disk.geometry.cylinders == SPUREN);
-    ASSERT(disk.geometry.sectors == SPT);
+    /* MF-1054: PRO traegt keine Spur-/Sektorzahl im Kopf — nur die
+     * Satzzahl. Der Leser rechnet mit 18 Sektoren je Spur (Atari), also
+     * passen vier Saetze in eine Spur. */
+    ASSERT(disk.geometry.cylinders == 1);
+    ASSERT(disk.geometry.sectors == 18);
+    ASSERT((unsigned)disk.geometry.total_sectors == SEKTOREN);
 
     uft_track_t spur;
     memset(&spur, 0, sizeof spur);
     const uft_error_t rc = uft_format_plugin_pro.read_track(&disk, 0, 0, &spur);
     ASSERT(rc == UFT_OK);
-    ASSERT(spur.sector_count == SPT);
+    ASSERT(spur.sector_count == SEKTOREN);
     ASSERT(spur.sectors != NULL);
     ASSERT(spur.sectors[0].data != NULL);
     ASSERT(spur.sectors[0].data[0] == 0xA0);   /* wie gebaut */

@@ -1192,6 +1192,20 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_pro_gegen_atari800")
+        # MF-1054: `pro` gegen ZWEI benannte Haende — die
+        # sio2arduino-Beschreibung, die ihre eigene Richtigkeit
+        # bestreitet, und `atari800/src/sio.c` (GPL-2, nur gelesen), die
+        # sie Feld fuer Feld bestaetigt. Der Vorzustand suchte eine
+        # erfundene Kennung "APRO"/"KPRO": probe = 0, open = -25 fuer
+        # JEDE echte PRO-Datei. Die Pruefdatei baut der Test selbst —
+        # `pro` erreicht T2 und nicht T1b, weil es keinen fremden
+        # ERZEUGER gibt (atari800: „.pro is read only for now").
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/uft_pro_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_dcm_gegen_atrip")
         # MF-1053: das erste DCM von FREMDER Hand. `atrip` (Rob McMullen,
         # GPL-2) hat beide Pruefdateien mit seinem Kodierer erzeugt —
