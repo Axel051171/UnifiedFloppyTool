@@ -274,11 +274,55 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                                 for (int i = 0; i < count && sp < data_len && dp < sec_size; i++)
                                     decoded[dp++] = raw[sp++];
                             } else {
-                                /* Repeat pattern */
+                                /* Wiederhol-Lauf.
+                                 *
+                                 * MF-1063: hier stand `sp += type` und
+                                 * `j < type` — der Typ wurde als
+                                 * MUSTERLAENGE genommen. Die Musterlaenge
+                                 * ist `1 << type`.
+                                 *
+                                 * Belegt an libdsks `lib/drvtele.c`
+                                 * (LGPL-2+, John Elliott; **nur gelesen**,
+                                 * Kanal Spec nach MF-695 — keine Zeile
+                                 * uebernommen):
+                                 *
+                                 *     err = tele_fread(self, pattern,
+                                 *                      (1 << ptype));
+                                 *     memcpy(secbuf + pos, pattern,
+                                 *            1 << ptype);
+                                 *     pos += (1 << ptype);
+                                 *
+                                 * Und unabhaengig davon nachgerechnet: der
+                                 * erste Sektor eines libdsk-TD0 zerlegt
+                                 * sich als `lit 27 | wdh 241x 0000 |
+                                 * lit 3` = 27 + 482 + 3 = **genau 512**.
+                                 * Mit `type` als Laenge kaeme 27 + 241 = 268
+                                 * heraus, und die drei Schlussbytes — bei
+                                 * einem PC-Bootsektor `00 55 AA` — fielen
+                                 * weg.
+                                 *
+                                 * **Warum es so lange unbemerkt blieb:**
+                                 * das haeufigste Muster ist `00 00`, und
+                                 * `decoded` ist ein genulltes `calloc` —
+                                 * die fehlenden Byte sahen aus wie die
+                                 * richtigen. Erst ein Sektor mit Inhalt
+                                 * HINTER dem Nullbereich hat es gezeigt
+                                 * (MF-1063; das Fixture traegt deshalb
+                                 * einen echten Bootsektor). Bei jedem
+                                 * anderen Muster waere der halbe Sektor
+                                 * falsch gewesen.
+                                 *
+                                 * Die MF-981-Kennzeichnung hat dabei
+                                 * gehalten: `decoded_len` blieb unter
+                                 * `sec_size`, der Sektor wurde als fehlend
+                                 * markiert. Falsch war er trotzdem. */
+                                const size_t musterlaenge = (size_t)1u << type;
                                 size_t pat_start = sp;
-                                sp += type;
+                                if (pat_start + musterlaenge > data_len) break;
+                                sp += musterlaenge;
                                 for (int i = 0; i < count; i++)
-                                    for (int j = 0; j < type && dp < sec_size; j++)
+                                    for (size_t j = 0; j < musterlaenge
+                                                       && dp < sec_size; j++)
                                         decoded[dp++] = raw[pat_start + j];
                             }
                         }

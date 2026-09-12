@@ -24,9 +24,9 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 39 |
+| davon auf T2/T3 (offen) | 34 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
-| davon mit Werkzeug-Zusage, Kanal ungemessen | 4 |
+| davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
 | libdsk-Typen (alle les- und schreibbar) | 26 |
 
@@ -41,14 +41,10 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `adl` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `akai_s900` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `apridisk` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) | nicht gemessen | **A?** — Werkzeug sagt RW, Kanal UNGEMESSEN |
 | `atx` | T2 | — | — | nicht gemessen | — (hat bereits ein Fremdabbild) |
 | `cas` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `cfi` | T2 | — | cfi | nicht gemessen | **A?** — Werkzeug sagt RW, Kanal UNGEMESSEN |
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `cqm` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `d13` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `dc42` | T2 | RAW_LOADER (?) | dc42 | nicht gemessen | **A?** — Werkzeug sagt RW, Kanal UNGEMESSEN |
 | `dim` | T2 | ATARIST_DIM (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `dms` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `do` | T2 | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -70,7 +66,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `scl` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `td0` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `udi` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `victor9k` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `woz` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -99,7 +94,10 @@ Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die **Dateiendung** — abgel
 | Format | Stufe | hxcfe (RW) | libdsk |
 |---|---|---|---|
 | `adf` | T1b | AMIGA_ADF (?) | — |
+| `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
+| `cfi` | T1b | — | cfi |
+| `cqm` | T1b | — | — |
 | `d64` | T1b | — | — |
 | `d67` | T1b | — | — |
 | `d71` | T1b | — | — |
@@ -108,6 +106,7 @@ Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die **Dateiendung** — abgel
 | `d81` | T1b | — | — |
 | `d82` | T1b | — | — |
 | `d88` | T1b | NEC_D88 | — |
+| `dc42` | T1b | RAW_LOADER (?) | dc42 |
 | `dcm` | T1b | — | — |
 | `dim_atari` | T1b | ATARIST_DIM (?) | — |
 | `dmk` | T1b | TRS80_DMK | — |
@@ -142,6 +141,7 @@ Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die **Dateiendung** — abgel
 | `st` | T1b | ATARIST_ST | — |
 | `stx` | T1b | ATARIST_STX | — |
 | `t1k` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `td0` | T1b | — | — |
 | `trd` | T1b | ZXSPECTRUM_TRD | — |
 | `v9t9` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
 | `vdk` | T1b | AMSTRADCPC_DSK (?), DRAGON3264_VDK, ORIC_DSK (?) | dsk (?) |

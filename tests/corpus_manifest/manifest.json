@@ -1172,6 +1172,66 @@
       "oracle": "hxcfe",
       "content": "348 848 Byte. Von hxcfe gesetzt: Diskettenname „HxCFE“ bei 0x00, Schreibschutz 0x00 bei 0x1A, Medienkennung **0x00 = 2D** bei 0x1B, Gesamtgröße 348 848 bei 0x1C — und die Datei ist genau so groß, ein **Beleg am Objekt** (Art MF-869 / MF-1013 / MF-1028). 80 von 164 Spurzeigern belegt = 40 x 2. Sektorkopf Spur 0: C=0 H=0 R=1 N=1 SPT=16. Der Überhang gegenüber der Nutzlast (327 680) ist **21 168** = 32 + 656 + 80 x 16 x 16 — auch das geht auf. 1280 Sektoren, jeder selbstbenennend.",
       "fremdcode": "keiner — hxcfe wird AUSGEFÜHRT, nicht portiert (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/libdsk_uftk_pc720.apridisk",
+      "sha256": "7857b85c164d6922ec89ade77c92944e8a7d61a0db6034632ad2052ee0bd33be",
+      "format": "apridisk",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 dsktrans (John Elliott, LGPL-2+; im Baum gebaut, AUSGEFUEHRT — nicht portiert)",
+      "source": "Erzeugt mit `dsktrans -itype imd -otype apridisk <traeger.imd> <ziel>` (libdsk 1.5.12, im Baum gebaut). Die Eingabe ist ein **IMD-Träger** 80 x 2 x 9 x 512 mit Sektornummern ab 1, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Bei `apridisk` wäre das besonders bitter gewesen: dort WAR der Rundlauftest grün, weil Packer und Entpacker Spiegelbilder derselben Erfindung waren. **Ein Träger, fünf Ziele** — fünf Container, fünf eigene Aufbauten, fünf unabhängige Entscheidungen einer fremden Hand darüber, wo ein Sektor liegt. **Sektor 1 der Spur 0/0 trägt einen echten PC-720K-Bootsektor** (1440 Sektoren, 9 je Spur, 2 Köpfe, Medienbyte 0xF9, Bootkennung 0x55AA), die übrigen 1439 benennen sich selbst (MF-1020). Der Bootsektor ist kein Beiwerk: `uft_cfi_probe()` hat keine Kennung zu prüfen — CFI hat keine — und verlangt strukturell eine gültige BPB; ohne sie wies die Sonde das Erzeugnis ab, während `open` es vollständig las.",
+      "test": "test_libdsk_erzeugnisse",
+      "oracle": "libdsk",
+      "content": "760 552 Byte (+23 272 Container). Kopf „ACT Apricot “.",
+      "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/libdsk_uftk_pc720.cqm",
+      "sha256": "e2c21322e68017292938f892f3df7ca6a45dfeabe2825cf563334d822f3e0e83",
+      "format": "cqm",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 dsktrans (John Elliott, LGPL-2+; im Baum gebaut, AUSGEFUEHRT — nicht portiert)",
+      "source": "Erzeugt mit `dsktrans -itype imd -otype copyqm <traeger.imd> <ziel>` (libdsk 1.5.12, im Baum gebaut). Die Eingabe ist ein **IMD-Träger** 80 x 2 x 9 x 512 mit Sektornummern ab 1, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Bei `apridisk` wäre das besonders bitter gewesen: dort WAR der Rundlauftest grün, weil Packer und Entpacker Spiegelbilder derselben Erfindung waren. **Ein Träger, fünf Ziele** — fünf Container, fünf eigene Aufbauten, fünf unabhängige Entscheidungen einer fremden Hand darüber, wo ein Sektor liegt. **Sektor 1 der Spur 0/0 trägt einen echten PC-720K-Bootsektor** (1440 Sektoren, 9 je Spur, 2 Köpfe, Medienbyte 0xF9, Bootkennung 0x55AA), die übrigen 1439 benennen sich selbst (MF-1020). Der Bootsektor ist kein Beiwerk: `uft_cfi_probe()` hat keine Kennung zu prüfen — CFI hat keine — und verlangt strukturell eine gültige BPB; ohne sie wies die Sonde das Erzeugnis ab, während `open` es vollständig las.",
+      "test": "test_libdsk_erzeugnisse",
+      "oracle": "libdsk",
+      "content": "737 311 Byte (+31). Kennung „CQ“.",
+      "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/libdsk_uftk_pc720.td0",
+      "sha256": "0e245b0c030265d8723f063d6ab3af60ef262b47f9d3f78fe4f675c04ebb3d7d",
+      "format": "td0",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 dsktrans (John Elliott, LGPL-2+; im Baum gebaut, AUSGEFUEHRT — nicht portiert)",
+      "source": "Erzeugt mit `dsktrans -itype imd -otype tele <traeger.imd> <ziel>` (libdsk 1.5.12, im Baum gebaut). Die Eingabe ist ein **IMD-Träger** 80 x 2 x 9 x 512 mit Sektornummern ab 1, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Bei `apridisk` wäre das besonders bitter gewesen: dort WAR der Rundlauftest grün, weil Packer und Entpacker Spiegelbilder derselben Erfindung waren. **Ein Träger, fünf Ziele** — fünf Container, fünf eigene Aufbauten, fünf unabhängige Entscheidungen einer fremden Hand darüber, wo ein Sektor liegt. **Sektor 1 der Spur 0/0 trägt einen echten PC-720K-Bootsektor** (1440 Sektoren, 9 je Spur, 2 Köpfe, Medienbyte 0xF9, Bootkennung 0x55AA), die übrigen 1439 benennen sich selbst (MF-1020). Der Bootsektor ist kein Beiwerk: `uft_cfi_probe()` hat keine Kennung zu prüfen — CFI hat keine — und verlangt strukturell eine gültige BPB; ohne sie wies die Sonde das Erzeugnis ab, während `open` es vollständig las.",
+      "test": "test_libdsk_erzeugnisse",
+      "oracle": "libdsk",
+      "content": "750 488 Byte (+13 208). Kennung „TD“, Sektoren teils RLE-kodiert — und genau daran hat dieses Fixture einen stillen Datenverlust in UFTs Dekoder gefunden (siehe spec_verification).",
+      "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/libdsk_uftk_pc720.dc42",
+      "sha256": "d12eebdc644e2ef3aedfbcfe0b03626d191dc59781c02655af8b5742e02bebf6",
+      "format": "dc42",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 dsktrans (John Elliott, LGPL-2+; im Baum gebaut, AUSGEFUEHRT — nicht portiert)",
+      "source": "Erzeugt mit `dsktrans -itype imd -otype dc42 <traeger.imd> <ziel>` (libdsk 1.5.12, im Baum gebaut). Die Eingabe ist ein **IMD-Träger** 80 x 2 x 9 x 512 mit Sektornummern ab 1, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Bei `apridisk` wäre das besonders bitter gewesen: dort WAR der Rundlauftest grün, weil Packer und Entpacker Spiegelbilder derselben Erfindung waren. **Ein Träger, fünf Ziele** — fünf Container, fünf eigene Aufbauten, fünf unabhängige Entscheidungen einer fremden Hand darüber, wo ein Sektor liegt. **Sektor 1 der Spur 0/0 trägt einen echten PC-720K-Bootsektor** (1440 Sektoren, 9 je Spur, 2 Köpfe, Medienbyte 0xF9, Bootkennung 0x55AA), die übrigen 1439 benennen sich selbst (MF-1020). Der Bootsektor ist kein Beiwerk: `uft_cfi_probe()` hat keine Kennung zu prüfen — CFI hat keine — und verlangt strukturell eine gültige BPB; ohne sie wies die Sonde das Erzeugnis ab, während `open` es vollständig las.",
+      "test": "test_libdsk_erzeugnisse",
+      "oracle": "libdsk",
+      "content": "737 364 Byte (+84). Pascal-String-Diskettenname im Kopf.",
+      "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
+    },
+    {
+      "file": "tests/corpus_free/libdsk_uftk_pc720.cfi",
+      "sha256": "342e026bec2b1409be1082d03bf373a3d00c95c5d260fa6e342eff6b40c93540",
+      "format": "cfi",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 dsktrans (John Elliott, LGPL-2+; im Baum gebaut, AUSGEFUEHRT — nicht portiert)",
+      "source": "Erzeugt mit `dsktrans -itype imd -otype cfi <traeger.imd> <ziel>` (libdsk 1.5.12, im Baum gebaut). Die Eingabe ist ein **IMD-Träger** 80 x 2 x 9 x 512 mit Sektornummern ab 1, eigenständig in Python geschrieben nach Dave Dunfields öffentlicher ImageDisk-Beschreibung — ausdrücklich NICHT über UFTs `uft_imd.c`, sonst wäre die Kette ein geschlossener Kreis (MF-1009 `apridisk`, MF-1028 `qrst`). Bei `apridisk` wäre das besonders bitter gewesen: dort WAR der Rundlauftest grün, weil Packer und Entpacker Spiegelbilder derselben Erfindung waren. **Ein Träger, fünf Ziele** — fünf Container, fünf eigene Aufbauten, fünf unabhängige Entscheidungen einer fremden Hand darüber, wo ein Sektor liegt. **Sektor 1 der Spur 0/0 trägt einen echten PC-720K-Bootsektor** (1440 Sektoren, 9 je Spur, 2 Köpfe, Medienbyte 0xF9, Bootkennung 0x55AA), die übrigen 1439 benennen sich selbst (MF-1020). Der Bootsektor ist kein Beiwerk: `uft_cfi_probe()` hat keine Kennung zu prüfen — CFI hat keine — und verlangt strukturell eine gültige BPB; ohne sie wies die Sonde das Erzeugnis ab, während `open` es vollständig las.",
+      "test": "test_libdsk_erzeugnisse",
+      "oracle": "libdsk",
+      "content": "737 442 Byte (+162). Gepackter Strom ohne Kennung.",
+      "fremdcode": "keiner — libdsk wird AUSGEFÜHRT (Kanal Oracle nach MF-695); der IMD-Träger ist eigenständig geschrieben"
     }
   ]
 }

@@ -53,6 +53,31 @@
       "kanal": "keiner",
       "werkzeug": "hxcfe -uselayout:KORGDSS1_DD_800KB",
       "bemerkung": "MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch."
+    },
+    "apridisk": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype apridisk",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "cqm": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype copyqm",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "td0": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype tele",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "dc42": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype dc42",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "cfi": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype cfi",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
     }
   }
 }

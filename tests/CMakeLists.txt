@@ -1192,6 +1192,27 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_libdsk_erzeugnisse")
+        # MF-1063: fuenf Container von fremder Hand aus EINEM
+        # IMD-Traeger — `dsktrans -itype imd -otype <typ>`. Drei der
+        # fuenf hat `docs/ERZEUGER_ZENSUS.md` als Kandidaten
+        # ausgewiesen, zwei (`cqm`, `td0`) standen in seinem ebenfalls
+        # ausgewiesenen blinden Fleck: libdsks Typnamen `copyqm` und
+        # `tele` haben mit keiner Dateiendung zu tun.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/apridisk/uft_apridisk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cfi/uft_cfi.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            # `uft_cqm.c` meldet ueber uft_log_msg(); ohne dieses Modul
+            # scheitert erst der LINKER, nicht der Compiler.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d77_gegen_hxcfe")
         # MF-1061: der erste D88-CONTAINER von fremder Hand im Korpus.
         # Bei einem Container wiegt das schwerer als bei einem flachen
