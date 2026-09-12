@@ -89,18 +89,53 @@ typedef struct {
     uint32_t    track_offsets[SCP_MAX_TRACKS];
     scp_track_data_t tracks[SCP_MAX_TRACKS];
     int         track_count;
-    uint32_t    checksum;
+    /* MF-1055: welche Seiten WIRKLICH geschrieben wurden. Bit 0 =
+     * Seite 0, Bit 1 = Seite 1. Vorher stand `heads` fest auf 0
+     * ("beide"), egal was hinzukam - eine einseitige Aufnahme
+     * behauptete damit, beidseitig zu sein, und hxcfe meldete je
+     * Spur "Sanity Checker: Track n/Side 1 not allocated ?!?". */
+    unsigned    sides_seen;
 } scp_writer_t;
 
 /*===========================================================================
  * CHECKSUM
  *===========================================================================*/
 
-static void update_checksum(scp_writer_t *w, const void *data, size_t size) {
-    const uint8_t *bytes = (const uint8_t *)data;
-    for (size_t i = 0; i < size; i++) {
-        w->checksum += bytes[i];
+/* MF-1055: hier stand `update_checksum()`, das waehrend des
+ * Schreibens mitsummierte - aber NUR ueber die Spurkoepfe, die
+ * Umdrehungskoepfe und den Fluss.
+ *
+ * Die Regel steht in `src/samdisk/scp.cpp` (MIT, im Baum): die
+ * Pruefsumme ist die Summe **ab Versatz 0x10 bis EOF** (`:34`), und
+ * SAMdisk rechnet sie auch nach (`:157`). Damit gehoeren auch die
+ * 672 Byte Spuroffset-Tafel, die Herkunftszeichenketten und der
+ * 48-Byte-Footer hinein. Gemessen fehlten sie: im Kopf stand
+ * 0x01FAA3EC, die Regel ergab 0x01FAB15A.
+ *
+ * Mitsummieren geht dafuer gar nicht: die Offset-Tafel steht beim
+ * ersten Durchgang noch auf Null und bekommt ihre Werte erst am
+ * Ende. Deshalb wird jetzt am Schluss ueber die FERTIGE Datei
+ * gelesen - siehe `pruefsumme_ueber_datei()`. */
+
+/* Summiert die fertige Datei ab Versatz 0x10 bis EOF.
+ * Gibt 0 zurueck und setzt *ok auf false, wenn das Lesen scheitert -
+ * eine still falsche Pruefsumme waere schlimmer als ein Fehler. */
+static uint32_t pruefsumme_ueber_datei(FILE *f, bool *ok)
+{
+    uint8_t puffer[8192];
+    uint32_t summe = 0;
+    size_t gelesen;
+
+    *ok = false;
+    if (fflush(f) != 0) return 0;
+    if (fseek(f, 0x10, SEEK_SET) != 0) return 0;
+    while ((gelesen = fread(puffer, 1, sizeof puffer, f)) > 0) {
+        size_t i;
+        for (i = 0; i < gelesen; i++) summe += puffer[i];
     }
+    if (ferror(f)) return 0;
+    *ok = true;
+    return summe;
 }
 
 /*===========================================================================
@@ -147,6 +182,9 @@ int scp_writer_add_track(
     
     /* Calculate SCP track number (interleaved) */
     int scp_track = track_num * 2 + side;
+
+    /* MF-1055: festhalten, welche Seite wirklich vorkommt. */
+    w->sides_seen |= 1u << side;
     
     /* Find or create track entry */
     scp_track_data_t *track = NULL;
@@ -196,10 +234,13 @@ int scp_writer_add_track(
 int scp_writer_save(scp_writer_t *w, const char *path) {
     if (!w || !path) return -1;
     
-    w->file = fopen(path, "wb");
+    /* MF-1055: "w+b" statt "wb" - die Pruefsumme wird am Ende ueber
+     * die fertige Datei gelesen, nicht mitgezaehlt. */
+    w->file = fopen(path, "w+b");
     if (!w->file) return -1;
     
-    w->checksum = 0;
+    /* MF-1055: hier stand `w->checksum = 0;` — das Feld gibt es nicht
+     * mehr. Die Pruefsumme entsteht am Ende ueber die fertige Datei. */
     
     /* Track data offsets are recorded live via ftell() below. */
 
@@ -225,7 +266,6 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
             .track_num = (uint8_t)track->track_num
         };
         fwrite(&trk_hdr, sizeof(trk_hdr), 1, w->file);
-        update_checksum(w, &trk_hdr, sizeof(trk_hdr));
         
         /* Calculate revolution data offsets */
         size_t rev_headers_size = track->rev_count * sizeof(scp_revolution_t);
@@ -251,7 +291,6 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
                 .offset = (uint32_t)flux_offset
             };
             fwrite(&rev_hdr, sizeof(rev_hdr), 1, w->file);
-            update_checksum(w, &rev_hdr, sizeof(rev_hdr));
 
             flux_offset += data_bytes;
         }
@@ -268,7 +307,6 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
                 while (ticks > 65535) {
                     uint16_t overflow = 0;
                     fwrite(&overflow, sizeof(uint16_t), 1, w->file);
-                    update_checksum(w, &overflow, sizeof(uint16_t));
                     ticks -= 65536;
                 }
                 
@@ -276,7 +314,6 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
                 /* Big-endian in SCP */
                 uint16_t be_val = ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
                 fwrite(&be_val, sizeof(uint16_t), 1, w->file);
-                update_checksum(w, &be_val, sizeof(uint16_t));
             }
         }
     }
@@ -311,10 +348,15 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
         w->header.flags |= SCP_FLAG_FOOTER;
     }
 
-    /* Update header with checksum */
-    w->header.checksum = w->checksum;
+    /* MF-1055: `heads` sagt, WELCHE Seiten in der Datei stehen -
+     * 0 = beide, 1 = nur Kopf 0, 2 = nur Kopf 1
+     * (`src/samdisk/scp.cpp:32`). Abgeleitet statt behauptet. */
+    if (w->sides_seen == 1u)      w->header.heads = 1;
+    else if (w->sides_seen == 2u) w->header.heads = 2;
+    else                          w->header.heads = 0;
 
-    /* Rewrite header and offset table */
+    /* Kopf und Offset-Tafel zuerst zurueckschreiben: die Tafel stand
+     * bis hierher auf Null, und sie zaehlt zur Pruefsumme. */
     if (fseek(w->file, 0, SEEK_SET) != 0) {
         fclose(w->file);
         w->file = NULL;
@@ -322,7 +364,32 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
     }
     fwrite(&w->header, sizeof(scp_header_t), 1, w->file);
     fwrite(w->track_offsets, sizeof(w->track_offsets), 1, w->file);
-    
+
+    if (ferror(w->file)) {
+        fclose(w->file);
+        w->file = NULL;
+        return -1;
+    }
+
+    /* Jetzt erst die Pruefsumme, ueber die FERTIGE Datei. */
+    {
+        bool ok = false;
+        uint32_t summe = pruefsumme_ueber_datei(w->file, &ok);
+        if (!ok) {
+            fclose(w->file);
+            w->file = NULL;
+            return -1;
+        }
+        w->header.checksum = summe;
+        if (fseek(w->file, 0, SEEK_SET) != 0
+            || fwrite(&w->header, sizeof(scp_header_t), 1,
+                      w->file) != 1) {
+            fclose(w->file);
+            w->file = NULL;
+            return -1;
+        }
+    }
+
     if (ferror(w->file)) {
         fclose(w->file);
         w->file = NULL;

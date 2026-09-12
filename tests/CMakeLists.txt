@@ -1192,6 +1192,18 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_scp_schreiber_gegen_samdisk")
+        # MF-1055: der erste Aufrufer und der erste Test des
+        # SCP-Schreibers ueberhaupt. P3-342 nannte ihn als Schritt (a)
+        # zum FluxEngine-Schreibpfad — „es fehlt nur die Verdrahtung";
+        # gemessen fehlten auch Test und Aufrufer, und er hatte zwei
+        # Befunde: `heads` fest auf 0 („beide Seiten") und eine
+        # Pruefsumme ueber die falsche Spanne. Referenz ist
+        # `src/samdisk/scp.cpp` (MIT, im Baum). Der Test liest die
+        # erzeugte Datei BYTEWEISE, nicht ueber UFTs eigenen SCP-Leser —
+        # sonst waere es ein geschlossener Kreis (MF-1009/MF-1028).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c)
     elseif(${test_name} STREQUAL "test_pro_gegen_atari800")
         # MF-1054: `pro` gegen ZWEI benannte Haende — die
         # sio2arduino-Beschreibung, die ihre eigene Richtigkeit
