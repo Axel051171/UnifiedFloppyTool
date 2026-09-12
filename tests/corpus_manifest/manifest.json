@@ -1076,6 +1076,30 @@
       "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
+    },
+    {
+      "file": "tests/corpus_free/uftk_dos33_35trk.do",
+      "sha256": "e7145bf9263eacf995de23fb96c4e084198557e1f1647a7dbf10054a363b5d33",
+      "format": "do",
+      "origin": "derived",
+      "tool": "UFT-eigen (MF-1050) — kein Fremdwerkzeug, daher KEIN Stufenkredit; der Kredit haengt allein am NIB daneben",
+      "source": "35 x 16 x 256 Byte in DOS-3.3-Reihenfolge; jeder Sektor beginnt mit \"UFT-K Tnn Snn \" und wird mit (spur*37 + sektor*11 + i) & 0xFF gefuellt, damit keine zwei Sektoren denselben Inhalt haben (selbstbenennende Pruefdatei nach MF-1020). Rechtefrei, weil vollstaendig eigener Text.",
+      "test": "test_nib_gegen_a2nibblize",
+      "oracle": "—",
+      "fremdcode": "nein — jedes Byte ist von UFT erzeugt",
+      "content": "UFT-K T00 S00 …"
+    },
+    {
+      "file": "tests/corpus_free/a2nibblize_uftk_35trk.nib",
+      "sha256": "c09155a2662fe3bb85afc49f65223381df628b47319d111af9a0bacc919b372e",
+      "format": "nib",
+      "origin": "cross-tool",
+      "tool": "a2nibblize aus Apple-II-Disk-Tools (Christopher A. Mosher, GPL-3.0), Quellstand 639dc1c3281f — dasselbe Paket wie das seit MF-712 registrierte Oracle to_woz2. Baurezept in docs/ORACLES.md",
+      "source": "a2nibblize < uftk_dos33_35trk.do > a2nibblize_uftk_35trk.nib (Vorgabe-Bandnummer 254). Die Eingabe ist UFT-eigen und rechtefrei (siehe den .do-Eintrag); die Ausgabe ist deren mechanische Umformung durch fremden Code — Kanal *Oracle* nach MF-695: ausgefuehrt, nichts uebernommen.",
+      "test": "test_nib_gegen_a2nibblize",
+      "oracle": "a2nibblize",
+      "fremdcode": "nein — der Inhalt stammt Byte fuer Byte aus der UFT-eigenen .do; fremd ist nur die Umformung",
+      "content": "UFT-K T00 S00 … (6-and-2-nibblisiert, physische Sektorfolge nach DOS-3.3-Verschraenkung)"
     }
   ]
 }

@@ -758,6 +758,90 @@ REGISTRY: tuple[Oracle, ...] = (
             "SPEC faellt nicht auf. "
         ),
     ),
+    Oracle(
+        name="a2nibblize",
+        env="A2NIBBLIZE",
+        exes=("a2nibblize", "a2nibblize.exe"),
+        # Kein `version_args`: das Register laesst hoechstens EINEN Weg
+        # zur Version zu, und hier ist es `version_is_unaskable`. Der
+        # Registertest hat genau das gefangen, als beides gesetzt war.
+        # Grund: `--version` gibt es zwar, druckt aber `PACKAGE_STRING`
+        # aus `config.h` — ohne Autotools setzt das Baurezept den Wert
+        # selbst, die Ausgabe pinnt also den BAU, nicht das Werkzeug.
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Apple-II-Sektorabbild -> NIB: `a2nibblize < ein.do > aus.nib`. "
+            "Die eigene Hilfe sagt: \"Converts an Apple ][ floppy disk "
+            "image from .do format to .nib nibble format.\" Damit ist es "
+            "die fremde Hand fuer **`nib`** — auf der Leiter aus "
+            "`scripts/gen_verification_tiers.py` **T1b** "
+            "(Fremdwerkzeug-Abbild), seit MF-1050. "
+            "ES LAG IM SELBEN KLON WIE `to_woz2`, seit derselben "
+            "Sichtung, und wurde nur nie bemerkt. Der Eintrag zu nibtools "
+            "in `docs/ORACLES.md` sagt voellig richtig, ueber `nibconv` "
+            "fuehre kein Weg zu T1b — das ist **Commodore**-NIB. Die "
+            "Frage, ob das **Apple**-Paket einen Erzeuger enthaelt, hat "
+            "niemand gestellt. Lehre: ein geklontes Paket ist mehr als "
+            "das eine Werkzeug, wegen dessen man es geklont hat. "
+            "DIE SPURLAENGE IST DORT GERECHNET, NICHT BEHAUPTET "
+            "(`a2nibblize.c:78`): 6 Vorspann + 3 Adress-Prolog + 8 "
+            "(Spur/Sektor/Band in 4-and-4) + 3 Adress-Epilog + 3 "
+            "Daten-Prolog + 343 6-and-2-Nutzlast + 3 Daten-Epilog + 27 "
+            "Luecke = 396 je Sektor; x16 + 0x30 + 0x110 = 6656; x35 = "
+            "232960. Genau die Konstanten, die `src/formats/nib/uft_nib.c` "
+            "fuehrt — bis MF-1050 ohne genannte Quelle. "
+            "GEMESSEN, und daher `version_is_unaskable`: `--version` "
+            "druckt `PACKAGE_STRING`, das aus `config.h` kaeme; ohne "
+            "Autotools setzt das Baurezept es selbst, die Ausgabe pinnt "
+            "also den Bau und nicht das Werkzeug. "
+            "DER ANKER IST NICHT DER BINAERHASH — wie bei `to_woz2` und "
+            "aus demselben Grund. Zitierfaehig sind Quellstand "
+            "(`639dc1c`), Baurezept (`origin`) und die AUSGABE-SHA fuer "
+            "eine benannte Eingabe: "
+            "`c09155a2662fe3bb85afc49f65223381df628b47319d111af9a0bacc919b372e` "
+            "fuer `tests/corpus_free/uftk_dos33_35trk.do`. "
+            "FALLSTRICK, gemessen und nicht theoretisch: das Werkzeug "
+            "schreibt mit `putchar` nach stdout und ruft dafuer gnulibs "
+            "`SET_BINARY(1)`. Faellt der Ersatz-Header weg, wandelt die "
+            "Windows-C-Bibliothek JEDES 0x0A-Nibble in `0D 0A` — die NIB "
+            "waere still verfaelscht und haette nicht einmal die richtige "
+            "Groesse. Der dreizeilige Ersatz steht im Baurezept in "
+            "`docs/ORACLES.md`. "
+            "GRENZE, benannt: die Pruefdatei ist 16-sektorig (6-and-2). "
+            "13-Sektor-Abbilder (5-and-3) kann `a2nibblize` ebenfalls "
+            "erzeugen; gemessen ist das NICHT."),
+        origin="https://github.com/cmosher01/Apple-II-Disk-Tools "
+               "(Charles Mosher), Commit `639dc1c` — derselbe Klon wie "
+               "`to_woz2`, vom Upstream als DEPRECATED gekennzeichnet. "
+               "Autotools werden NICHT gebraucht; hier direkt gebaut, "
+               "gcc 13.1.0 (MinGW), rc=0, aus `src/`: "
+               "`gcc -O2 -DPACKAGE_STRING=... -o a2nibblize a2nibblize.c "
+               "a2nibblize_opt.c nibblize_4_4.c nibblize_5_3.c "
+               "nibblize_5_3_alt.c nibblize_5_3_common.c nibblize_6_2.c "
+               "ctest/ctest.c -I.` — plus ein dreizeiliger Ersatz fuer "
+               "gnulibs `<binary-io.h>` (siehe `docs/ORACLES.md`), der in "
+               "`tools/uft-scout/work/` liegt und damit ausserhalb der "
+               "Versionskontrolle",
+        licence="GPL-3.0 (`COPYING`, woertlicher Text; Zone GELB) — kein "
+                "Port zulaessig, verglichen wird ausschliesslich die "
+                "AUSGABE, es wandert kein Code ein. Dieselbe "
+                "nachgelagerte Attribution wie bei `to_woz2`: `nibblize` "
+                "\"Based on code by Andy McFadden\" (CiderPress, BSD-3) — "
+                "zweistufig, und nur bei einem Port zu klaeren",
+        abstammung=(
+            "GEPRUEFT, mit benannter Luecke: `a2nibblize` ist gegenueber "
+            "unserem Baum eine fremde Hand — UFT hat gemessen keinen "
+            "Apple-GCR-ENCODER, nur den Dekoder. Die Luecke liegt "
+            "woanders als bei `to_woz2`: beide Werkzeuge stammen aus "
+            "DEMSELBEN Paket und teilen die `nibblize_*.c`. Ein Fehler "
+            "IN DIESER GEMEINSAMEN NIBBLISIERUNG faellt gegen `to_woz2` "
+            "also NICHT auf — die beiden sind keine unabhaengigen Haende "
+            "voneinander. Unabhaengig sind sie von UFT, und das ist es, "
+            "was die Stufe traegt. "
+        ),
+    ),
     # NICHT registriert: `adfrescue`. Die Unabhaengigkeits-Messung oben
     # steht, aber der Eintrag haengt an einer Eigentuemer-Entscheidung —
     # das Repo hat **keine** Lizenzdatei (Zone ROT: alle Rechte

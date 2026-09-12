@@ -1176,6 +1176,22 @@ foreach(test_source ${TEST_SOURCES})
         # lassen ihn fallen, der OTDR-Lader nicht.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c)
+    elseif(${test_name} STREQUAL "test_nib_gegen_a2nibblize")
+        # MF-1050: das erste NIB von FREMDER Hand. `a2nibblize` aus
+        # Apple-II-Disk-Tools (cmosher01, GPL-3) — dasselbe Paket wie
+        # das seit MF-712 registrierte Oracle `to_woz2`. Gegen die
+        # selbstbenennende Quelle verglichen, unter Anwendung der
+        # DOS-3.3-Verschraenkung: 560 von 560 Sektoren byteidentisch.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        # Der Korpuspfad ist Teil der Abnahme — ohne ihn prueft der
+        # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_nib_ring_und_blindzone")
         # MF-948: der NIB-Leser fuehrt eine private Zweitfassung des
         # Apple-GCR-Abtasters, die weder umlaeuft noch die letzten 400

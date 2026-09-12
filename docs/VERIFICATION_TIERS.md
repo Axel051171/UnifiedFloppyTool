@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 41 |
+| T1b | 42 |
 | T2 | 35 |
-| T3 | 10 |
+| T3 | 9 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -102,6 +102,7 @@ Mutationsmatrix **9 von 9** — und eine Verdrehung der Skew-Tafel um EINE Stell
 Die Konfidenz steht bei **40** (MF-729: „nur die Groesse“) und darf nicht hoeher sein: 409600 Byte ist auch die Groesse einer Apple-800K-Diskette.
 
 **T2 und nicht T1b**, weil T1b einen fremden *Erzeuger* verlangt (P3-333). | 1 |
+| `nib` | **T1b** | `test_format_probe_fuzz`, `test_nib_gegen_a2nibblize`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real` | — | — | 1 |
 | `northstar` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `pdp` | **T1b** | `test_corpus_gw_geometrie` | — | — | 1 |
 | `po` | **T1b** | `test_apple_do_po_bounds`, `test_corpus_gw_geometrie`, `test_do_po_probe_ignores_content`, `test_durchschreibprobe`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | 1 |
@@ -350,13 +351,12 @@ Abgenommen an **selbstbeschreibenden** Pruefdateien (jeder Sektor nennt Kopf, Sp
 Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** Sektoren, und 1224 + 1167 = 2391. Abgenommen an einer nach MAMEs Arithmetik gebauten **selbstbeschreibenden** Datei (jeder Sektor nennt Kopf, Spur und Sektornummer): 160 von 160 Spuren mit richtiger Sektorzahl, richtiger 0-basierter ID und den EIGENEN Bytes. Mutationsmatrix **5 von 5**. **T2 und nicht T1b**, weil die Pruefdatei hauseigen ist — hxcfe kennt Victor 9000 nicht, FluxEngine ist hier nicht baubar.
 
 **Am Rand gefunden, nicht angefasst:** `src/formats/victor/victor9k.c` (verwaist, `docs/orphan_baseline.txt:212`) fuehrt eine **dritte** Geometrie — flach 15 Sektoren fuer Spur 38..79, Summe 1285 Sektoren = 657920 Byte, eine Groesse, die keine Victor-Diskette hat. Es gibt keinen Aufrufer; ein Hinweis steht jetzt in der Datei, damit die naechste Hand die falschen Zahlen nicht erbt (MF-699: erst der Ersatz, dann die Loeschung). | — |
-| `woz` | **T2** | `test_apple_gcr_6and2`, `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
+| `woz` | **T2** | `test_apple_gcr_6and2`, `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_nib_gegen_a2nibblize`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
 | `edk` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_ipf_helper`, `test_ipf_sonde_beansprucht_nur_ipf`, `test_plugin_probe_real` | — | — | — |
-| `nib` | **T3** | `test_format_probe_fuzz`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real` | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_atari_verlorene_sektoren`, `test_floppy_formats`, `test_pro_schreibt_nicht`, `test_st_plugin` | — | — | — |
 | `rcpmfs` | **T3** | `test_rcpmfs_ist_kein_dateiformat` | — | — | — |
 | `syn` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |

@@ -190,6 +190,7 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
 | `libdsk` | — (im Baum geklont und dort gebaut) | LGPL-2+ (John Elliott) | Pfad `tools/uft-scout/work/libdsk` + **Fassung 1.5.12** (`dsktrans -version`, berichtigt MF-1032 — hier stand „das Werkzeug hat keine Versionsabfrage“, und das trifft nicht: `dsktrans -version` antwortet „libdsk version 1.5.12“, und `config.h` fuehrt `PACKAGE_VERSION "1.5.12"`) plus **SHA-256** der gebauten Werkzeuge (`dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df, `dskid.exe` 14abc39bc4ffebf4b2d8690d2e3be9a17955de0ef498337b367a2e77afd56e29) | **Fünfundzwanzig** Container-Formate, darunter `qrst`, `myz80`, `nanowasp`, `logical`, `rcpmfs`, `cfi`, `jv3`, `sap`, `imd`, `apridisk`, `dc22`/`dc42`, `dsk`/`edsk`, `copyqm`, `tele`, `ydsk`, `simh`, `ldbs` — und, was hier den Unterschied macht, **Formatbeschreibungen** in `doc/` (`qrst.html`, `cfi.html`, `apridisk.html`, `libdsk.txt` mit 121 KB). MF-1028 hat `qrst` daraus gehoben. Registriert mit dem Vorbehalt aus dem Abschnitt darunter: **der Bau geht nur an den Autotools vorbei** |
 | `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |
+| `a2nibblize` | — (im Baum geklont, dort gebaut) | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA**, wie bei `to_woz2` und aus demselben Grund: Quellstand `639dc1c3281f`, Rezept unten, Ausgabe-SHA-256 `c09155a2662fe3bb85afc49f65223381df628b47319d111af9a0bacc919b372e` für die benannte Eingabe `tests/corpus_free/uftk_dos33_35trk.do` | **Apple-II-Sektorabbild (`.do`) → NIB.** Seine eigene Hilfe: „*Converts an Apple ][ floppy disk image from .do format to .nib nibble format*". Die fremde Hand für **`nib`** — seit MF-1050 Stufe **T1b** (Fremdwerkzeug-Abbild). **Es lag im selben Klon wie `to_woz2`, seit derselben Sichtung, und wurde nur nie bemerkt:** der Eintrag zu nibtools weiter unten sagt völlig richtig, über `nibconv` führe kein Weg zu T1b — das ist **Commodore**-NIB. Die Frage, ob das **Apple**-Paket einen Erzeuger enthält, hat niemand gestellt. **Lehre: ein geklontes Paket ist mehr als das eine Werkzeug, wegen dessen man es geklont hat.** Und die Spurlänge ist dort nicht behauptet, sondern **gerechnet** — `a2nibblize.c:78` baut 6656 aus der Feldanordnung auf (6 + 3 + 8 + 3 + 3 + 343 + 3 + 27 = 396 je Sektor, ×16, + 0x30 + 0x110), also genau die Konstante, die `uft_nib.c` führt |
 
 ### libdsk — der Bau geht nur an den Autotools vorbei (MF-1028)
 
@@ -304,6 +305,52 @@ gcc -O2 -o to_woz2 to_woz2.c nibblize_4_4.c nibblize_5_3.c \
     nibblize_5_3_alt.c nibblize_5_3_common.c nibblize_6_2.c \
     ctest/ctest.c -I.
 ```
+
+### a2nibblize — dasselbe Paket, zwei Handgriffe mehr (MF-1050)
+
+`a2nibblize` liegt neben `to_woz2` im selben Klon und erzeugt aus einem
+`.do`-Sektorabbild eine **NIB**. Damit hat `nib` seit MF-1050 ein Abbild
+von fremder Hand — Stufe **T1b**.
+
+Der Bau braucht zwei Dinge mehr als `to_woz2`, beide wegen der
+Autotools, die hier nicht laufen (dieselbe Lage wie bei libdsk):
+
+1. **`-DPACKAGE_STRING=…`** — `a2nibblize_opt.c:51` druckt es in
+   `--version` und bekommt es sonst aus `config.h`.
+2. **Ein Ersatz für gnulibs `<binary-io.h>`.** `a2nibblize.c` ruft
+   `SET_BINARY(1)`, bevor es die Nibbles nach stdout schreibt. Ohne den
+   Schalter wandelt die Windows-C-Bibliothek beim `putchar` jedes `\n`
+   in `\r\n` — die erzeugte NIB wäre um **jedes 0x0A-Nibble** verfälscht.
+   Der Ersatz ist drei Zeilen und gehört ins Rezept, nicht in den Baum:
+
+```c
+/* src/binary-io.h — nur fuer den Oracle-Bau, liegt in
+   tools/uft-scout/work/ (gitignored) */
+#if defined(_WIN32) || defined(__CYGWIN__)
+#  include <io.h>
+#  include <fcntl.h>
+#  define SET_BINARY(fd)  ((void)_setmode((fd), _O_BINARY))
+#else
+#  define SET_BINARY(fd)  ((void)0)
+#endif
+```
+
+```
+gcc -O2 -DPACKAGE_STRING='"Apple-II-Disk-Tools (UFT oracle build)"' \
+    -o a2nibblize a2nibblize.c a2nibblize_opt.c \
+    nibblize_4_4.c nibblize_5_3.c nibblize_5_3_alt.c \
+    nibblize_5_3_common.c nibblize_6_2.c ctest/ctest.c -I.
+
+./a2nibblize < uftk_dos33_35trk.do > a2nibblize_uftk_35trk.nib
+```
+
+**Die Spurlänge ist dort nicht behauptet, sondern gerechnet**
+(`a2nibblize.c:78`): 6 Byte Vorspann + 3 Adress-Prolog + 8 (Spur,
+Sektor, Band in 4-and-4) + 3 Adress-Epilog + 3 Daten-Prolog + 343
+6-and-2-Nutzlast + 3 Daten-Epilog + 27 Lücke = **396** je Sektor; mal 16,
+plus 0x30 und 0x110 = **6656**; mal 35 Spuren = **232 960**. Genau die
+Konstanten, die `src/formats/nib/uft_nib.c` führt — bis MF-1050 ohne
+genannte Quelle.
 
 gcc 13.1.0 (MinGW), rc=0, 0 Warnungen.
 
