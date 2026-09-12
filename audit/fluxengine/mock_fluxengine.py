@@ -44,6 +44,14 @@ KNOWN_FLAGS = {  # flag -> takes a separate value token?
     "-t": True,  "--cylinder": True,  # cylinder flag — only valid for `seek`
     "--tracks": True,                 # e.g. --tracks=c40h0  (value can be inline)
     "--drive.revolutions": True,      # e.g. --drive.revolutions=2
+    # MF-1047/MF-1049: der FLUSS-Ausgang. Fehlte hier, weil UFT ihn nicht
+    # setzte — und weil dieser Mock „nur die Flaggenmenge annimmt, die UFT
+    # uebergibt", war sein Nichtvorhandensein kein Befund, sondern ein
+    # Spiegel. doc/using.md:
+    #   $ fluxengine read -c brother240 -s drive:0 -o brother.img
+    #     --copy-flux-to=brother.flux
+    # `-o` ist dabei das dekodierte Abbild, NICHT der Fluss.
+    "--copy-flux-to": True,           # e.g. --copy-flux-to=spur.scp (inline)
     "--version": False, "--help": False, "--doc": False,
 }
 

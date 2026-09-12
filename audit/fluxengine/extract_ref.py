@@ -81,20 +81,81 @@ READ_ARGV = {
                              "\"ibm\"), so a {profile} placeholder is emitted",
     "-s":                    "expected — source drive spec flag",
     "drive:0":               "expected — drive spec (value of -s)",
-    "--tracks=cNhM":         "expected — track selector (was: -c N -h H)",
+    "--tracks=cNhM":         "expected — track selector (was: -c N -h H); "
+                             "doc/using.md: --tracks='c0h0 c1h0 c3-5h1'",
     "--drive.revolutions={N}": "expected — revolution count (was: --revs)",
-    "-o":                    "expected — output flux file flag",
+    # BERICHTIGT MF-1047/MF-1049. Hier stand fuer `-o` woertlich
+    # „expected — output FLUX file flag". Das ist die Stelle, an der der
+    # Irrtum schriftlich vorlag: doc/using.md des Urhebers sagt
+    #   `fluxengine read -c <profile> <options> -s <flux source>
+    #    -o <image output>`
+    #   „Reads flux (possibly from a disk) and DECODES IT INTO A FILE
+    #    SYSTEM IMAGE."
+    # `-o` nimmt also das DEKODIERTE ABBILD; der Fluss geht ueber
+    # `--copy-flux-to=`, und im Beispiel des Urhebers stehen beide
+    # nebeneinander:
+    #   $ fluxengine read -c brother240 -s drive:0 -o brother.img
+    #     --copy-flux-to=brother.flux
+    "-o":                    "expected — DECODED IMAGE output flag "
+                             "(doc/using.md: '-o <image output>'), NICHT der "
+                             "Flussausgang",
+    "--copy-flux-to={N}":    "expected — der Flussausgang (doc/using.md). "
+                             "Seit MF-1047 setzt der Provider ihn; vorher "
+                             "erwartete er den Fluss an `-o` und las ein "
+                             "dekodiertes Abbild als SCP-Behaelter",
+}
+
+# BERICHTIGT MF-1047/MF-1049 — alle Zeilen von PASS auf UNVERIFIED.
+#
+# `build_write_argv()` erzeugt diese Token weiterhin, aber seit MF-1047
+# RUFT SIE NIEMAND: `do_write_raw_flux()` sagt ab, bevor ein Prozess
+# laeuft. Der Bauer bleibt stehen (MF-699: erst der Ersatz, dann die
+# Loeschung) — als Beleg dafuer, WAS behauptet wurde.
+#
+# Und behauptet wurde das Falsche. doc/using.md des Urhebers:
+#
+#   `fluxengine rawwrite -s <flux source> -d <flux destination>`
+#     „Reads flux from a file and writes it (possibly to a disk)
+#      WITHOUT DOING ANY ENCODING."
+#
+# `write -i <datei>` KODIERT dagegen ein Dateisystem-Abbild. Dazu
+# uebergab der Provider die `transitions_ns` als rohe 32-Bit-Worte —
+# kein Behaelter, den fluxengine liest (dokumentiert: eigenes `.flux`,
+# `.scp`, KryoFlux-Strom).
+#
+# Diese Zeilen als PASS zu fuehren hiesse, eine Form zu bestaetigen,
+# deren Bedeutung falsch ist — genau der Fehler, den MF-1047 an
+# „PASS (recalled)" gemessen hat. Sie stehen deshalb als
+# needs-source/UNVERIFIED, bis P3-342 erledigt ist: SCP-Behaelter
+# erzeugen (`src/formats/scp/uft_scp_writer.c` liegt im Baum) und
+# `rawwrite` statt `write` rufen. Danach gehoert dieser Block auf die
+# dokumentierte Form umgeschrieben, nicht auf die heutige.
+_WRITE_UNVERIFIED = {
+    "kind": "needs-source — der Schreibpfad ist seit MF-1047 unerreichbar; "
+            "die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, "
+            "nicht `write -i <datei>` (P3-342)",
 }
 
 WRITE_ARGV = {
-    "write":         "expected — subcommand",
-    "-c":            "expected — loads profile BY NAME",
-    "{profile}":     "expected — profile name (value of -c); FE-F2 m_profile "
-                     "ctor parameter, emitted as a {profile} placeholder",
-    "-d":            "expected — destination drive spec flag",
-    "drive:0":       "expected — drive spec (value of -d)",
-    "--tracks=cNhM": "expected — track selector",
-    "-i":            "expected — input flux file flag",
+    "write":         dict(_WRITE_UNVERIFIED,
+                          ref="doc/using.md: fuer Fluss ist es `rawwrite`, "
+                              "nicht `write` (das kodiert ein Abbild)"),
+    "-c":            dict(_WRITE_UNVERIFIED,
+                          ref="Profil; bei `rawwrite` laut Doku nur noetig, "
+                              "um eine Teilmenge der Diskette zu schreiben"),
+    "{profile}":     dict(_WRITE_UNVERIFIED,
+                          ref="Profilname (Wert von -c)"),
+    "-d":            dict(_WRITE_UNVERIFIED,
+                          ref="doc/using.md: `-d <flux destination>` — bei "
+                              "`rawwrite` das Ziel, also drive:N"),
+    "drive:0":       dict(_WRITE_UNVERIFIED,
+                          ref="Laufwerksangabe (Wert von -d)"),
+    "--tracks=cNhM": dict(_WRITE_UNVERIFIED,
+                          ref="Spurwahl"),
+    "-i":            dict(_WRITE_UNVERIFIED,
+                          ref="doc/using.md: `-i` ist der Eingang fuer das "
+                              "DATEISYSTEM-ABBILD. Die Flussquelle von "
+                              "`rawwrite` ist `-s`"),
 }
 
 # `fluxengine rpm` — exists in FE; used for both measure-rpm and detect.

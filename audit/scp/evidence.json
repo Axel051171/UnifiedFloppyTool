@@ -122,7 +122,7 @@
         "ref": "UFT implementation choice (3) \u2014 not a fixed SCP protocol constant",
         "verdict": "UNVERIFIED",
         "detail": "impl-choice \u2014 reference cannot be established without a vendored source",
-        "uft_line": 120
+        "uft_line": 175
       },
       {
         "key": "UFT_SCP_FLUX_NS_PER_SAMPLE",
@@ -130,7 +130,7 @@
         "ref": 25,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 112
+        "uft_line": 167
       },
       {
         "key": "UFT_SCP_MAX_REVOLUTIONS",
@@ -138,7 +138,7 @@
         "ref": 5,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 119
+        "uft_line": 174
       },
       {
         "key": "UFT_SCP_MAX_TRACK_INDEX",
@@ -146,7 +146,7 @@
         "ref": 167,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 95
+        "uft_line": 150
       }
     ]
   }

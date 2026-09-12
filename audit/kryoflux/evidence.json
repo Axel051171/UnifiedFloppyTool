@@ -15,19 +15,21 @@
     "cpp": "src\\hardware_providers\\kryoflux_provider_v2.cpp"
   },
   "counts": {
-    "UNVERIFIED": 8,
-    "MISSING": 2,
+    "MISSING": 4,
+    "UNVERIFIED": 7,
     "PASS": 2
   },
   "sections": {
     "read_argv_flags": [
       {
         "key": "-b{N}",
-        "uft": "-b{N}",
-        "ref": "begin track (recalled; needs-source for exactness)",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 99
+        "uft": null,
+        "ref": {
+          "ref": "begin track (recalled; needs-source for exactness)",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "flag expected by reference but not emitted by UFT"
       },
       {
         "key": "-c2",
@@ -35,7 +37,7 @@
         "ref": "command 2 = read-to-stream (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 96
+        "uft_line": 139
       },
       {
         "key": "-d0",
@@ -43,7 +45,7 @@
         "ref": "drive 0 (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 97
+        "uft_line": 140
       },
       {
         "key": "-e{N}",
@@ -51,7 +53,7 @@
         "ref": "end track (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 100
+        "uft_line": 143
       },
       {
         "key": "-f{N}",
@@ -59,7 +61,14 @@
         "ref": "output file-name prefix (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 101
+        "uft_line": 141
+      },
+      {
+        "key": "-g{N}",
+        "uft": "-g{N}",
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "UFT emits a flag with no reference entry"
       },
       {
         "key": "-i0",
@@ -67,7 +76,7 @@
         "ref": "image type 0 / raw stream (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 102
+        "uft_line": 145
       },
       {
         "key": "-s{N}",
@@ -75,7 +84,7 @@
         "ref": "side/start-track select \u2014 SEMANTICS AMBIGUOUS across DTC versions (recalled; needs-source \u2014 see KF-D1-1)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 98
+        "uft_line": 142
       }
     ],
     "detect_argv_flags": [
@@ -85,7 +94,7 @@
         "ref": "UFT uses 'dtc -i0' as a bare probe \u2014 validity unverified (recalled; needs-source \u2014 see KF-D1-2)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 468
+        "uft_line": 511
       }
     ],
     "timing": [
@@ -111,7 +120,7 @@
         "ref": 83,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 256
+        "uft_line": 299
       },
       {
         "key": "max_head",
@@ -119,7 +128,7 @@
         "ref": 1,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 266
+        "uft_line": 309
       }
     ]
   }

@@ -140,9 +140,22 @@ def main():
         for r in fails:
             print(f"  {r['key']}: {r['detail']}")
         return 1
-    print("OK — no FAIL. The MF-178 CLI correction matches the corrected "
-          "FluxEngine CLI form (cross-checked vs tests/external_audits/"
-          "fluxengine/). Run mock_fluxengine.py for the FE-flag-semantics "
+    # BERICHTIGT MF-1049. Hier stand: „The MF-178 CLI correction matches
+    # the corrected FluxEngine CLI form (cross-checked vs
+    # tests/external_audits/fluxengine/)." Dieser Satz war eine
+    # Selbstbestaetigung: die Referenz war `recalled` (aus dem
+    # Gedaechtnis), und „matches" hiess nur, dass UFT zu ihr passt.
+    # MF-1047 hat sie gegen doc/using.md gehalten — `-o` ist der Ausgang
+    # fuer das DEKODIERTE ABBILD, der Fluss geht ueber `--copy-flux-to=`,
+    # und roher Fluss wird mit `rawwrite` geschrieben, nicht mit
+    # `write -i`.
+    print("OK — no FAIL. Der LESE-Vertrag ist seit MF-1047 gegen "
+          "doc/using.md des Urhebers geprueft (nicht mehr `recalled`); "
+          "abgenommen in tests/test_fluxengine_befehl.cpp. Die "
+          "SCHREIB-Zeilen stehen bewusst als UNVERIFIED: der Bauer "
+          "erzeugt sie noch, aber seit MF-1047 ruft ihn niemand, und die "
+          "dokumentierte Form waere `rawwrite -s <flux> -d <ziel>` "
+          "(P3-342). Run mock_fluxengine.py for the FE-flag-semantics "
           "check (a copy lives at tests/external_audits/fluxengine/).")
     return 0
 
