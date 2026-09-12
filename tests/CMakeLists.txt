@@ -1192,6 +1192,18 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_edk_gegen_ensoniq")
+        # MF-1056: `edk` hatte laut eigenem Kopf „keine nachpruefbare
+        # Referenz" (P3-340). Gesucht wurde an der falschen Stelle —
+        # draussen liegen zwei: die Beschreibung auf youngmonkey.ca
+        # (live geprueft) und EpsLin v1.58. Befund: die Sektornummern
+        # waren 1-basiert, die Beschreibung sagt 0..9. Die Pruefdateien
+        # baut der Test selbst.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/edk/uft_edk.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_scp_schreiber_gegen_samdisk")
         # MF-1055: der erste Aufrufer und der erste Test des
         # SCP-Schreibers ueberhaupt. P3-342 nannte ihn als Schritt (a)

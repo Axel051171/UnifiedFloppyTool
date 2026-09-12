@@ -73,7 +73,20 @@ static uft_error_t edk_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     uint8_t buf[512];
     for (int s = 0; s < p->spt; s++) {
         if (fread(buf, 1, 512, p->file) != 512) return UFT_ERROR_IO;
-        uft_format_add_sector(t, (uint8_t)s, buf, 512, (uint8_t)cyl, (uint8_t)head);
+        /* MF-1056: hier stand `uft_format_add_sector(t, s, …)`, und
+         * dieser Helfer addiert laut seinem eigenen Kopf 1 — er ist
+         * „fuer Formate mit Sektoren 1..N (IBM PC und Verwandte)", und
+         * derselbe Kopf sagt: „Formate, deren Sektoren bei 0 beginnen,
+         * benutzen `uft_format_add_sector_with_id()`."
+         *
+         * Ensoniq beginnt bei 0. Die Beschreibung sagt woertlich: „Each
+         * track has ten 512 byte sectors numbered consecutively from
+         * zero to nine" (youngmonkey.ca, siehe Dateikopf). Gemessen kamen
+         * vorher 1..10 statt 0..9 heraus — 4800 Sektoren ueber beide
+         * Geometrien. Dieselbe Falle wie MF-1016 (`jv1`) und MF-1026
+         * (`tan`), zum dritten Mal. */
+        uft_format_add_sector_with_id(t, (uint8_t)s, buf, 512,
+                                      (uint8_t)cyl, (uint8_t)head);
     }
     return UFT_OK;
 }
@@ -116,7 +129,14 @@ static const uft_plugin_feature_t uft_format_plugin_edk_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_edk = {
     .name = "EDK", .description = "Ensoniq EPS/ASR Disk",
-    .extensions = "ede;edk;eds", .format = UFT_FORMAT_DSK,
+    /* MF-1056: hier stand "ede;edk;eds". **EDE ist Gieblers
+     * KOMPRIMIERTES Format**, kein rohes Abbild — EpsLins Konstanten
+     * fuehren dafuer eine Uebersprungtabelle (`EDE_SKIP_SIZE 200`), und
+     * eine EDE-Datei hat keine der vier Ensoniq-Bildgroessen. Dieser
+     * Leser nimmt nur rohe Abbilder; die Endung zu fuehren war eine
+     * Zusage ohne Deckung, dieselbe Klasse wie `pro`s "pro;atx"
+     * (MF-1054). */
+    .extensions = "edk;eds", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = edk_probe, .open = edk_open, .close = edk_close,
     .read_track = edk_read_track, .write_track = edk_write_track,
