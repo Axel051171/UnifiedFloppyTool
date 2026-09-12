@@ -353,11 +353,11 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 | `woz` | **T2** | `test_apple_gcr_6and2`, `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
-| `edk` | **T3** | — | — | — | — |
+| `edk` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_ipf_helper`, `test_ipf_sonde_beansprucht_nur_ipf`, `test_plugin_probe_real` | — | — | — |
 | `nib` | **T3** | `test_format_probe_fuzz`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real` | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_atari_dir_past_end`, `test_atari_verlorene_sektoren`, `test_floppy_formats`, `test_pro_schreibt_nicht`, `test_st_plugin` | — | — | — |
 | `rcpmfs` | **T3** | `test_rcpmfs_ist_kein_dateiformat` | — | — | — |
-| `syn` | **T3** | — | — | — | — |
-| `xdm86` | **T3** | — | — | — | — |
+| `syn` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |
+| `xdm86` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |

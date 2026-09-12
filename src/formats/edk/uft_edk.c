@@ -1,10 +1,30 @@
 /**
  * @file uft_edk.c
- * @brief EDK (Ensoniq EPS/ASR) Plugin
+ * @brief EDK (Ensoniq EPS/ASR): `open` las die Dateigroesse und verwarf
+ *        sie (MF-1041)
  *
- * Ensoniq EPS/ASR/TS synthesizer disk format.
- * 80 cyl × 2 heads × 10 spt × 512 = 819200 (DD) or
- * 80 × 2 × 20 × 512 = 1638400 (HD).
+ * Zwei Geometrien: 80 x 2 x 10 x 512 = 819 200 (DD) und
+ * 80 x 2 x 20 x 512 = 1 638 400 (HD). **Beide Rechnungen gehen auf** —
+ * das ist gemessen, anders als bei `syn` im selben Commit.
+ *
+ * ── Der Befund ────────────────────────────────────────
+ *
+ * `edk_open()` holte die Dateigroesse (`fseek`/`ftell`) und benutzte sie
+ * **nur fuer die Unterscheidung** DD gegen HD:
+ *
+ *     p->spt = (fs == 1638400) ? 20 : 10;
+ *
+ * Geprueft wurde sie nie. Alles, was nicht 1 638 400 ist, wurde damit zur
+ * DD-Diskette — gemessen ging eine **100 Byte** grosse Datei auf und
+ * bekam 80 x 2 x 10 x 512 = 819 200 Byte angesagt. Seit MF-1041 nimmt
+ * `edk_open()` nur die zwei Groessen an, die seine Sonde nennt.
+ *
+ * ── Was hier NICHT belegt ist ────────────────────────────
+ *
+ * **Dieses Plugin hat keine nachpruefbare Referenz** — der Kopf nannte
+ * keine, und im Baum liegt keine. Die beiden Geometrien sind in sich
+ * stimmig, aber gegen keine fremde Hand abgenommen. `edk` bleibt auf
+ * **T3**; gefuehrt als **P3-340**.
  */
 #include "uft/uft_format_common.h"
 typedef struct { FILE* file; uint8_t spt; } edk_data_t;
@@ -17,6 +37,13 @@ static uft_error_t edk_open(uft_disk_t *disk, const char *path, bool ro) {
     if (!f) return UFT_ERROR_FILE_OPEN;
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     long fs = ftell(f); if (fs < 0) { fclose(f); return UFT_ERROR_IO; }
+    /* MF-1041: die Groesse wurde gelesen und nur fuer DD-gegen-HD
+     * benutzt, nie geprueft. Gemessen ging eine 100-Byte-Datei auf und
+     * bekam 80 x 2 x 10 x 512 angesagt. */
+    if (fs != 819200L && fs != 1638400L) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
     edk_data_t *p = calloc(1, sizeof(edk_data_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }

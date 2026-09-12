@@ -1,25 +1,89 @@
 /**
  * @file uft_syn.c
- * @brief SYN (Synclavier) Plugin
+ * @brief SYN (Synclavier): eine Gleichung, die nicht aufgeht (MF-1041)
  *
- * Synclavier floppy: 77 cyl × 2 heads × 16 spt × 256 = 634880 bytes.
- * Headerless raw format used by Synclavier digital synthesizer.
+ * ── Befund 1: die beiden Haelften der Gleichung standen in zwei
+ *    verschiedenen Funktionen ───────────────────────────────────
+ *
+ * Hier stand woertlich:
+ *
+ *     Synclavier floppy: 77 cyl x 2 heads x 16 spt x 256 = 634880 bytes.
+ *
+ * **77 x 2 x 16 x 256 sind 630 784.** Die Gleichung im eigenen Kopf ging
+ * um genau **eine Spur** (4096 Byte) nicht auf — und ihre zwei Haelften
+ * landeten in zwei verschiedenen Funktionen: die Sonde nahm die rechte
+ * Seite (634 880), `syn_open()` sagte die linke an (77 x 2 x 16 x 256).
+ *
+ * Gemessen am Vorzustand:
+ *
+ *     Datei 634 880 Byte : open = 0, Geometrie 77x2x16x256 = 630 784
+ *                          -> 4096 Byte unerreichbar, ohne ein Wort
+ *     Datei 630 784 Byte : open = 0, dieselbe Geometrie — passt
+ *
+ * **Dieselbe Zahl steht schon als offener Punkt im Baum:** P3-260 fuehrt
+ * zwei der 49 DSK-Varianten mit „`expected_size` widerspricht der eigenen
+ * Geometrie um genau eine Spur (634880 statt 630784)". Es ist dieselbe
+ * Verwechslung, nur hier in einem eigenstaendigen Plugin.
+ *
+ * Seit MF-1041 nimmt die Sonde **die Groesse, die die Geometrie
+ * erzeugt** — 630 784 —, und `syn_open()` prueft sie ebenfalls. Welche
+ * der beiden Zahlen eine echte Synclavier-Diskette hat, ist **nicht
+ * belegt** (siehe unten); belegt ist nur, dass die alte Fassung sich
+ * selbst widersprach.
+ *
+ * ── Befund 2: `open` prueft die Dateigroesse gar nicht ────────────
+ *
+ * Gemessen: eine **100 Byte** grosse Datei wurde geoeffnet und als
+ * 77 x 2 x 16 x 256 angesagt — 630 684 Byte, die es nicht gibt. Jetzt
+ * verlangt `syn_open()` dieselbe Groesse wie die Sonde.
+ *
+ * ── Was hier NICHT belegt ist ────────────────────────────
+ *
+ * **Dieses Plugin hat keine nachpruefbare Referenz.** Der alte Kopf nannte
+ * keine Quelle, und im Baum liegt keine; die Geometrie ist nicht gegen
+ * eine fremde Hand abgenommen. `syn` steht deshalb weiter auf **T3**, und
+ * diese Aenderung hebt es nicht — sie behebt einen Widerspruch, den das
+ * Plugin mit sich selbst hatte. Gefuehrt als **P3-340**.
  */
 #include "uft/uft_format_common.h"
 typedef struct { FILE* file; } syn_data_t;
+/* MF-1041: die Groesse, die die eigene Geometrie erzeugt. Vorher stand
+ * hier 634880 — eine Spur mehr, als 77 x 2 x 16 x 256 ergibt. */
+#define SYN_CYL   77
+#define SYN_HEADS  2
+#define SYN_SPT   16
+#define SYN_SS   256
+#define SYN_SIZE ((size_t)SYN_CYL * SYN_HEADS * SYN_SPT * SYN_SS)
+
 bool syn_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     (void)d; (void)s;
-    if (fs == 634880) { *c = 35; return true; } return false;
+    /* MF-729: erkannt ist allein die Dateigroesse — Band 30..49. */
+    if (fs == SYN_SIZE) { *c = 35; return true; } return false;
 }
 static uft_error_t syn_open(uft_disk_t *disk, const char *path, bool ro) {
     FILE *f = fopen(path, ro ? "rb" : "r+b");
+    long fs;
+    syn_data_t *p;
     if (!f) return UFT_ERROR_FILE_OPEN;
-    syn_data_t *p = calloc(1, sizeof(syn_data_t));
+    /* MF-1041, Befund 2: hier wurde die Dateigroesse gar nicht geprueft.
+     * Gemessen ging eine 100-Byte-Datei auf und bekam eine volle
+     * Diskette angesagt. */
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    fs = ftell(f);
+    if (fs < 0) { fclose(f); return UFT_ERROR_IO; }
+    if ((size_t)fs != SYN_SIZE) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
+    p = calloc(1, sizeof(syn_data_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f; disk->plugin_data = p;
-    disk->geometry.cylinders = 77; disk->geometry.heads = 2;
-    disk->geometry.sectors = 16; disk->geometry.sector_size = 256;
-    disk->geometry.total_sectors = 77*2*16; return UFT_OK;
+    disk->geometry.cylinders = SYN_CYL; disk->geometry.heads = SYN_HEADS;
+    disk->geometry.sectors = SYN_SPT;
+    disk->geometry.sector_size = SYN_SS;
+    disk->geometry.total_sectors = SYN_CYL * SYN_HEADS * SYN_SPT;
+    return UFT_OK;
 }
 static void syn_close(uft_disk_t *d) {
     syn_data_t *p = d->plugin_data;

@@ -815,6 +815,27 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_groessenerkenner_stimmig")
+        # MF-1041: drei kopflose Groessenerkenner. Die einzige Aussage,
+        # die sich ohne fremde Referenz pruefen laesst, ist die innere
+        # Stimmigkeit: was die Sonde annimmt, muss `open` restlos
+        # auslegen koennen.
+        #
+        # Gemessen am Vorzustand: `syn` nahm 634 880 Byte an und sagte
+        # 77x2x16x256 = 630 784 zu — 4096 Byte unerreichbar, still. Die
+        # Zahl stand im eigenen Kopfkommentar als „= 634880 bytes",
+        # obwohl die linke Seite 630 784 ergibt; dieselbe Verwechslung
+        # fuehrt P3-260 fuer zwei DSK-Varianten. Dazu oeffneten `syn`
+        # und `edk` eine 100-Byte-Datei und sagten eine volle Diskette
+        # an; `xdm86` wies sie schon ab.
+        #
+        # Der Test HEBT NICHTS: keines der drei hat eine nachpruefbare
+        # Referenz, alle bleiben T3 (P3-340).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/syn/uft_syn.c
+            ${CMAKE_SOURCE_DIR}/src/formats/edk/uft_edk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xdm86/uft_xdm86.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_cas_gegen_mame")
         # MF-1040: `cas` verlor dreimal still. Gemessen am Vorzustand:
         # 300 Bloecke ergaben 256 Sektoren (44 Bloecke, 2112 Byte weg,
