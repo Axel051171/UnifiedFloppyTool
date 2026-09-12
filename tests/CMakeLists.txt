@@ -1192,6 +1192,25 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_atx_gegen_a8rawconv")
+        # MF-1065: die erste ECHTE ATX im Korpus (`origin: real`, seit
+        # 2026-09-04 da) bekommt endlich einen Test — im Manifest stand
+        # im Feld `test` woertlich „noch keiner". Zweite Hand ist
+        # a8rawconv v0.95 (GPL-2+, AUSGEFUEHRT, nicht portiert); sein
+        # `-l` gibt die Spur-/Sektorkarte aus, also eine fremde
+        # ZERLEGUNG. `uft_interleave.c` muss mit: `uft_atx.c` ruft
+        # uft_compute_interleave(), sonst scheitert erst der LINKER.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_interleave.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # Der rechtlich gefuehrte Korpusteil ist gitignoriert; ohne ihn
+        # ueberspringt sich der Test benannt (Rueckgabe 77).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_libdsk_erzeugnisse")
         # MF-1063: fuenf Container von fremder Hand aus EINEM
         # IMD-Traeger — `dsktrans -itype imd -otype <typ>`. Drei der

@@ -489,9 +489,10 @@
       "origin": "real",
       "tool": "aus der Aufnahme abgeleitet (Uploader)",
       "source": "archive.org @floppyarchaeology, https://archive.org/details/f-15-strike-eagle-f-15-strike-eagle — Datei \"F-15 Strike Eagle - F-15 Strike Eagle.atx\", 100344 Byte, md5 laut Archiv 7cb0bee0a91e72675369c7e784365cb0, abgerufen 2026-09-04. ZWECK: Erstes reales ATX und erstes reales MFI im Korpus — beide Tier-Vermerke \"kein reales Abbild\" (VERIFICATION_TIERS.md Z.54/66) faellig. Dazu Atari-FM-Fluss (P3-123c Vorrang 2, UFT_MEDIA_ATARI_FM). Herkunftsluecke benannt: kein Imaging-Log im Objekt.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
-      "oracle": "offen",
-      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+      "test": "test_atx_gegen_a8rawconv",
+      "oracle": "a8rawconv",
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht.",
+      "content": "40 Spuren, 721 Sektoren (39 x 18 + eine Spur mit 19), Sektorgröße 128, 9:1-Verschränkung des Atari 810. ZWEI Schutzmerkmale, beide von a8rawconv v0.95 unabhängig benannt: ein PHANTOMSEKTOR auf Spur 2 (ID 5 steht zweimal, an Position 11 statt der verdrängten 6, die ans Ende rückt) und ein Daten-CRC-Fehler auf Spur 39 / ID 3 bei INTAKTER ID-Feld-CRC. UFT und a8rawconv stimmen Position für Position überein. Keine Weak Bits — beide Hände nennen keine."
     },
     {
       "file": "tests/corpus/kor_b/F-15 Strike Eagle - F-15 Strike Eagle.mfi",

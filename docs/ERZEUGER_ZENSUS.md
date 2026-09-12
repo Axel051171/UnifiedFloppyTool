@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 34 |
+| davon auf T2/T3 (offen) | 33 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
@@ -41,7 +41,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `adl` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `akai_s900` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `atx` | T2 | — | — | nicht gemessen | — (hat bereits ein Fremdabbild) |
 | `cas` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `d13` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -57,7 +56,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `mfi` | T2 | MAME_MFI | — | nicht gemessen | — (hat bereits ein Fremdabbild) |
-| `mgt` | T2 | RAW_LOADER (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
+| `mgt` | T2 | RAW_LOADER (?) | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `nfd` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `pri` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -116,6 +115,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `adf` | T1b | AMIGA_ADF (?) | — |
 | `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
+| `atx` | T1 | — | — |
 | `cfi` | T1b | — | cfi |
 | `cqm` | T1b | — | — |
 | `d64` | T1b | — | — |

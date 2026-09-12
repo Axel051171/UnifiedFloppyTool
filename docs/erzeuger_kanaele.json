@@ -78,6 +78,11 @@
       "kanal": "imd",
       "werkzeug": "dsktrans -itype imd -otype cfi",
       "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "mgt": {
+      "kanal": "keiner",
+      "werkzeug": "dsktrans -itype imd -otype raw -format mgt800",
+      "bemerkung": "MF-1064, gemessen und VERWORFEN. libdsk fuehrt `mgt800` in seiner Formatliste, und der Lauf liefert 819 200 Byte mit 1600/1600 Mustertreffern — sieht nach einem Fixture aus. Die Gegenprobe entscheidet dagegen: DIESELBE Datei kommt heraus, wenn man `-format` ganz weglaesst, und auch mit `-format pcw800`. Alle drei sha256-identisch. libdsk reicht die IMD-Sektoren also in DATEIREIHENFOLGE durch; der Schalter aendert beim Schreiben eines FLACHEN Ziels nichts. Ein so erzeugtes Abbild waere eine Tautologie wie bei `akai_s900` (MF-1061). **Der Unterschied zu MF-1032/1033, wo derselbe Schalter trug:** dort war die RAW-Seite die EINGABE und brauchte eine Geometrie, das Ziel war ein Container mit eigener Anordnung. Beim Schreiben nach raw bestimmt die Eingabe die Reihenfolge. Der Kanal taugt also fuer Container, nicht fuer flache Ziele."
     }
   }
 }
