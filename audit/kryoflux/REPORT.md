@@ -47,13 +47,42 @@ well-formed against the recalled DTC flag model" — **not** "byte-exact
 against real DTC".
 
 **Findings:**
-- **KF-D1-1** (high): UFT passes the **head number** through DTC's `-s`
-  flag (`kryoflux_provider_v2.cpp:90`). Community documentation indicates
-  `-s` in some DTC versions means *start track*, not *side*. If the real
-  DTC interprets `-s0`/`-s1` as a start-track override, UFT would
-  silently capture the wrong physical track for head 1. This cannot be
-  resolved without a vendored DTC manual or a runnable DTC. `mock_dtc.py`
-  flags `-s{0,1}` as a WARN for exactly this reason.
+- **KF-D1-1** (high) — **GELÖST MF-1046, und der Verdacht war richtig.**
+  Der Befund lautete: UFT übergibt die **Kopfnummer** an DTCs `-s`
+  (`kryoflux_provider_v2.cpp:90`); die Community-Doku deute an, `-s`
+  bedeute in manchen DTC-Fassungen *start track* statt *side*, und dann
+  nähme UFT für Kopf 1 still die falsche physische Spur auf. Abschluss:
+  „*This cannot be resolved without a vendored DTC manual or a runnable
+  DTC.*"
+
+  **Das Handbuch war frei abrufbar.** KryoFlux Manual,
+  (c) 2009-2024 KryoFlux Products and Services Ltd, Abschnitt „DTC
+  offers the following command line options":
+
+      -s<trk>  : set start track (default at least 0)
+      -e<trk>  : set end track (default at most 83)
+      -g<side> : set single sided mode
+                 0=side 0, 1=side 1, 2=both sides
+      -b<trk>  : set side 1/b track0 physical position (default 0)
+
+  `-s` ist die **Startspur**, ohne Fassungsvorbehalt. Der Kopf gehört
+  an `-g`. Zwei weitere Abweichungen kamen bei der Messung dazu, die der
+  Befund nicht kannte: `-b<zylinder>` verstellte die **Track-0-Position
+  von Seite 1** (ein Justageparameter, im Handbuch ausdrücklich als
+  *global* geführt), und `-g` fehlte ganz — ohne Seitenwahl gilt
+  „default auto", also **beide Seiten**. Zylinder 10 / Kopf 0 hieß damit
+  „Spuren 0–10, beide Seiten".
+
+  Alles drei ist in MF-1046 berichtigt und in
+  `tests/test_kryoflux_dtc_befehl.cpp` festgenagelt (Mutationsmatrix
+  15/15). `mock_dtc.py` hat mit seiner WARN auf `-s{0,1}` die ganze Zeit
+  auf die richtige Stelle gezeigt.
+
+  **Die Lehre steht in `audit/README.md`:** dieser Bericht hat die Zeile
+  *nicht* durchgewunken, sondern als `needs-source` geführt und die
+  Quelle benannt, die fehlte. Genau deshalb war er reparierbar. Wo statt
+  dessen `PASS (recalled)` steht, fehlt diese Frage — siehe
+  `audit/fluxengine/REPORT.md` und MF-1047.
 - **KF-D1-2** (medium): UFT's drive-detect uses the bare invocation
   `dtc -i0` with no `-c` command and no `-d` drive selector (`:380`).
   Whether `-i0` alone is a valid DTC probe — or whether DTC requires a

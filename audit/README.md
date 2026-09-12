@@ -63,14 +63,47 @@ The "reference" column is only as strong as its source. Three grades:
 
 - **vendored** — a copy of the official source is in the repo. (none yet)
 - **recalled** — the reference value is well-known protocol knowledge but
-  not vendored. Marked as such; the value is correct but the *audit* of
-  it is one step weaker than a vendored diff.
+  not vendored. Marked as such; the *audit* of it is one step weaker
+  than a vendored diff.
+
+  > **BERICHTIGT MF-1047.** Hier stand: „*the value is correct but the
+  > audit of it is one step weaker*". Die erste Hälfte trägt nicht — sie
+  > sagt über einen ungeprüften Wert aus, er sei richtig, und das ist
+  > genau die Aussage, die der Grad `recalled` nicht decken kann.
+  >
+  > Gemessen an einem Fall: `audit/fluxengine/REPORT.md` führte
+  > `fluxengine read … -o <datei>` als **PASS (recalled) — 8/8 tokens**.
+  > Gegen `doc/using.md` des Urhebers gehalten ist `-o` der Ausgang für
+  > das **dekodierte Dateisystem-Abbild**; Fluss geht über
+  > `--copy-flux-to=`. Die Tokenform stimmte, die Bedeutung nicht — und
+  > eine Form-Prüfung gegen eine aus dem Gedächtnis geschriebene
+  > Erwartung kann den Unterschied nicht sehen.
+  >
+  > **Was `recalled` wirklich heißt:** die Referenz ist plausibel und
+  > ungeprüft. Sie taugt als *Arbeitsannahme*, nicht als Freigabe. Ein
+  > `recalled` PASS ist deshalb **kein** PASS im Sinne der anderen
+  > Grade, sondern ein offener Punkt mit einer Vermutung darin.
+  >
+  > **Und der Gegenfall gehört dazu:** `audit/kryoflux/REPORT.md` hat
+  > dieselbe Frage **nicht** durchgewunken. Er führte die DTC-Lesezeile
+  > als `UNVERIFIED (needs-source)` und benannte den Defekt wörtlich
+  > (`KF-D1-1`: „*UFT passes the head number through DTC's `-s`*").
+  > MF-1046 hat die Quelle geholt — das frei abrufbare KryoFlux Manual —
+  > und ihm recht gegeben. **Das Risiko sitzt nicht bei
+  > „needs-source", sondern bei „PASS (recalled)":** der eine Grad
+  > fragt nach der Quelle, der andere ersetzt sie.
+
 - **needs-source** — the reference could not be established →
   the dimension is UNVERIFIED with a note on what to vendor.
 
 A `recalled` D1 PASS means "UFT matches the protocol as documented in the
 official project, cross-checked from memory" — not "byte-diffed against a
-checked-in copy". Upgrading `recalled` → `vendored` is a tracked follow-up.
+checked-in copy". Upgrading `recalled` → `vendored` is a tracked follow-up,
+**und seit MF-1047 ist es der einzige Weg, aus einem `recalled` PASS eine
+Aussage zu machen.** Wo die offizielle Beschreibung frei abrufbar ist —
+bei KryoFlux ein PDF auf der Herstellerseite, bei FluxEngine eine
+Markdown-Datei im eigenen Repo —, ist „nicht vendored" keine Lage,
+sondern eine unerledigte Handgriffsache.
 
 ## Reproduce
 

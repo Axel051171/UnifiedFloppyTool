@@ -185,6 +185,41 @@ std::vector<std::string> FluxEngineProviderV2::build_read_argv(
     int cylinder, int head, int revolutions,
     const std::string& output_path) const
 {
+    /* BERICHTIGT MF-1047 gegen doc/using.md des Urhebers
+     * (davidgiven/fluxengine). Kanal *Spec* nach MF-695: gelesen,
+     * keine Zeile Code uebernommen.
+     *
+     * Hier stand `-o <pfad>` fuer eine FLUSS-Aufnahme. Die Doku sagt:
+     *
+     *   `fluxengine read -c <profile> <options> -s <flux source>
+     *    -o <image output>`
+     *     „Reads flux (possibly from a disk) and DECODES IT INTO A
+     *      FILE SYSTEM IMAGE."
+     *
+     * `-o` ist also der Ausgang fuer das **dekodierte Abbild**. Der
+     * Fluss geht ueber `--copy-flux-to=`, und im Beispiel des Urhebers
+     * stehen beide nebeneinander:
+     *
+     *   $ fluxengine read -c brother240 -s drive:0 -o brother.img
+     *     --copy-flux-to=brother.flux
+     *
+     * UFT bat also um ein dekodiertes Abbild und las das Ergebnis
+     * anschliessend als SCP-Flussbehaelter. **Die Flagge war gueltig —
+     * sie meinte nur etwas anderes**, dieselbe Gestalt wie bei DTC in
+     * MF-1046.
+     *
+     * Warum es nicht auffiel: `audit/fluxengine/REPORT.md` meldet fuer
+     * genau diese Zeile „PASS (recalled) — 8/8 tokens". Geprueft wurde
+     * die Token-FORM gegen eine aus dem Gedaechtnis geschriebene
+     * Erwartung (`extract_ref.py`: „PROVENANCE: grade = recalled"),
+     * nicht die BEDEUTUNG gegen das Dokument.
+     *
+     * `-o` bleibt gesetzt — auf einen eigenen Pfad —, weil `read` sonst
+     * ein Abbild unter seinem Vorgabenamen ablegt („producing a disk
+     * image with the default name (ibm.img)"); eine Datei, die
+     * unangekuendigt irgendwo landet, waere eine stille Nebenwirkung.
+     *
+     * Abnahme ohne Hardware: tests/test_fluxengine_befehl.cpp. */
     std::vector<std::string> args;
     args.push_back(m_fe_binary);
     args.push_back("read");
@@ -195,8 +230,12 @@ std::vector<std::string> FluxEngineProviderV2::build_read_argv(
     args.push_back("--tracks=c" + std::to_string(cylinder)
                    + "h" + std::to_string(head));
     args.push_back("--drive.revolutions=" + std::to_string(revolutions));
+    /* Der Fluss — das, was dieser Provider wirklich will. */
+    args.push_back("--copy-flux-to=" + output_path);
+    /* Das dekodierte Abbild, das `read` ohnehin erzeugt: an einen
+     * benannten Ort statt an den Vorgabenamen im Arbeitsverzeichnis. */
     args.push_back("-o");
-    args.push_back(output_path);
+    args.push_back(output_path + ".img");
     return args;
 }
 
@@ -703,6 +742,61 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
             "is generating valid flux data before invoking write_raw_flux()."
         };
     }
+
+    /* MF-1047: ABSAGE, bevor irgendein Prozess laeuft.
+     *
+     * Was hier stand, hat zwei Dinge getan, die die Doku des Urhebers
+     * beide anders vorsieht:
+     *
+     *   1. Es rief `fluxengine write -c <profil> -d drive:0 -i <datei>`.
+     *      Laut doc/using.md ist das der Weg, ein **Dateisystem-Abbild
+     *      zu KODIEREN**. Fluss ohne Kodierung schreibt ein eigenes
+     *      Unterkommando:
+     *        `fluxengine rawwrite -s <flux source> -d <flux destination>`
+     *        „Reads flux from a file and writes it (possibly to a disk)
+     *         WITHOUT DOING ANY ENCODING."
+     *   2. Es uebergab als „Flussdatei" die `transitions_ns` als rohe
+     *      32-Bit-Worte in Little-Endian — **kein Behaelter, den
+     *      fluxengine liest**. Die Doku nennt als Flussformate das
+     *      eigene `.flux`, SuperCard Pros `.scp` und den
+     *      KryoFlux-Strom.
+     *
+     * Zusammen heisst das: der Pfad konnte nie gelingen. Im guenstigen
+     * Fall bricht fluxengine ab. Im unguenstigen nimmt es die Worte als
+     * Abbild an und **kodiert sie auf die Diskette** — eine stille
+     * Veraenderung am Objekt, und damit genau das, was dieses Werkzeug
+     * ausschliesst.
+     *
+     * Also wird abgesagt statt gehandelt (MF-883: keine Zusage ohne
+     * Tat), und die Absage sagt, was fehlt. Der Weg dorthin ist kurz
+     * und steht als P3-342: einen SCP-Behaelter erzeugen — der
+     * Schreiber dafuer liegt im Baum
+     * (`src/formats/scp/uft_scp_writer.c`) — und `rawwrite -s <datei>
+     * -d drive:0` rufen. Beides ist Arbeit, kein Fehler; solange sie
+     * nicht getan ist, luegt diese Stelle nicht.
+     *
+     * docs/CAPABILITIES.md fuehrt FluxEngine Write seit MF-1047
+     * entsprechend als Geruest, nicht als Faehigkeit. */
+    return ProviderError{
+        UFT_E_GENERIC,
+        "FluxEngine flux write: not wired (MF-1047)",
+        "UFT cannot currently write raw flux with FluxEngine. The former "
+        "code path invoked `fluxengine write -i <file>`, which per the "
+        "author's doc/using.md ENCODES a filesystem image, while raw flux "
+        "is written by the separate `fluxengine rawwrite -s <flux source> "
+        "-d <flux destination>` subcommand. It also handed over the flux "
+        "as raw little-endian 32-bit words, which is not a container "
+        "fluxengine reads (documented flux formats: its own .flux, "
+        "SuperCard Pro .scp, KryoFlux stream). The path could therefore "
+        "never succeed, and in the worst case fluxengine would have "
+        "encoded those words onto the disk as if they were an image.",
+        "Two steps, tracked as P3-342: (1) serialise the FluxStream into "
+        "an SCP container — the writer already exists at "
+        "src/formats/scp/uft_scp_writer.c — and (2) invoke "
+        "`fluxengine rawwrite -s <that file> -d drive:0`. Until then, use "
+        "Greaseweazle for writing, or write the flux to an SCP file and "
+        "run `fluxengine rawwrite` by hand."
+    };
 
     /* Convert FluxStream::transitions_ns (uint32_t words) back to raw bytes
      * (little-endian) to pass as stdin_data to the runner.

@@ -21,12 +21,24 @@ Audited files:
 
 ## D1 — CLI-Vertrag (fluxengine)
 
-CLI-arg diff: `python diff.py` -> `evidence.json`. **17 PASS / 0 FAIL / 0 MISSING / 2 UNVERIFIED.** Complementary FE-flag-semantics check: `python mock_fluxengine.py`.
+CLI-arg diff: `python diff.py` -> `evidence.json`. **BERICHTIGT MF-1047:**
+hier stand „**17 PASS / 0 FAIL / 0 MISSING / 2 UNVERIFIED**". Die Zahl
+zählte Token-Übereinstimmungen gegen eine `recalled`-Referenz — und
+**zwei der gezählten PASS waren falsch**, weil sie die Form trafen und
+die Bedeutung verfehlten (`-o` statt `--copy-flux-to=`, `write -i` statt
+`rawwrite -s`). Eine Zahl, die aus einer ungeprüften Erwartung entsteht,
+ist keine Abnahme; sie wird deshalb nicht neu gerechnet, sondern
+zurückgenommen. Was heute gilt, steht in den zwei Zeilen unten, gemessen
+gegen `doc/using.md`, und in `tests/test_fluxengine_befehl.cpp`.
+Complementary FE-flag-semantics check: `python mock_fluxengine.py` —
+**der prüft ebenfalls nur die Form**: er nimmt „only the flag *set* UFT
+passes" an, ist also aus UFTs eigener Ausgabe gebaut und kann eine
+falsche Bedeutung nicht bemerken.
 
 | Aspect | UFT value | Reference value | Status |
 |--------|-----------|-----------------|--------|
-| Read argv | `fluxengine read -c ibm -s drive:0 --tracks=cNhM --drive.revolutions={N} -o {out}` (`fluxengine_provider_v2.cpp:164-181`) | corrected post-2022 FE CLI form, cross-checked vs FE source via the in-repo audit | **PASS (recalled)** — 8/8 tokens |
-| Write argv | `fluxengine write -c ibm -d drive:0 --tracks=cNhM -i {in}` (`:183-198`) | corrected FE CLI form | **PASS (recalled)** — 7/7 tokens |
+| Read argv | `fluxengine read -c ibm -s drive:0 --tracks=cNhM --drive.revolutions={N} --copy-flux-to={out} -o {out}.img` | **`doc/using.md` des Urhebers** (Kanal *Spec*, nur gelesen) | **BERICHTIGT MF-1047.** Hier stand die Zeile mit `-o {out}` und dem Verdikt „PASS (recalled) — 8/8 tokens". Die **Tokenform** stimmte; die **Bedeutung** nicht. Die Doku sagt `-o <image output>` — „*Reads flux … and decodes it into a file system image*"; der Fluss geht über `--copy-flux-to=`, und im Beispiel des Urhebers stehen **beide nebeneinander** (`-s drive:0 -o brother.img --copy-flux-to=brother.flux`). UFT bat also um ein dekodiertes Abbild und las das Ergebnis als SCP-Behälter. **Eine Form-Prüfung gegen eine aus dem Gedächtnis geschriebene Erwartung kann das nicht sehen** — `-o` ist eine gültige Flagge, sie meint nur etwas anderes. Jetzt gegen das Dokument geprüft und mit `tests/test_fluxengine_befehl.cpp` festgenagelt |
+| Write argv | — (der Pfad sagt ab) | **`doc/using.md`** | **BERICHTIGT MF-1047.** Hier stand `fluxengine write -c ibm -d drive:0 --tracks=cNhM -i {in}` mit „PASS (recalled) — 7/7 tokens". Zwei Befunde: `write -i` **kodiert** laut Doku ein Dateisystem-Abbild, während roher Fluss das eigene Unterkommando `rawwrite -s <flux source> -d <flux destination>` hat; und übergeben wurden die `transitions_ns` als rohe 32-Bit-Worte — **kein Behälter, den fluxengine liest** (dokumentiert: `.flux`, `.scp`, KryoFlux-Strom). Der Pfad konnte nie gelingen. Seit MF-1047 **sagt er ab, bevor ein Prozess läuft**; die Verdrahtung (SCP schreiben + `rawwrite`) steht als **P3-342** |
 | RPM argv | `fluxengine rpm` (`:650`) | `rpm` subcommand exists in current FE | PASS (recalled) |
 | Detect argv | `fluxengine rpm` (`:698`) | detect reuses `rpm` — V1 parity | PASS (recalled) |
 | `.flux` sample clock | `125.0` ns / 8 MHz hard-coded (`:470`, `.h:78`) | FE's actual `.flux` tick rate not vendored; FE has historically used a **12 MHz** device clock (~83 ns) | **UNVERIFIED (needs-source)** -> FE-D1-2 |

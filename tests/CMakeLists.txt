@@ -46,7 +46,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp"            # MF-226 P3.3 #110a
     "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_runners_protocol.cpp" # MF-251
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp"    # MF-252
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp")        # MF-1046
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp"         # MF-1046
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_befehl.cpp")          # MF-1047
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -3280,6 +3281,18 @@ foreach(test_source ${TEST_SOURCES})
         # no sources and no Qt — just src/ on the include path.
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_fluxengine_befehl")
+        # MF-1047: die fluxengine-Befehlszeile gegen doc/using.md des
+        # Urhebers. `-o` ist dort der Ausgang fuer das DEKODIERTE
+        # Dateisystem-Abbild; der Fluss geht ueber --copy-flux-to=.
+        # Gleiche Quellen wie der Provider-Test darunter.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_fluxengine_provider_v2")
         # MF-163 P1.10: FluxEngineProviderV2 mixin composition test.

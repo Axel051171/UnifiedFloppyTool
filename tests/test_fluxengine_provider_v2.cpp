@@ -26,15 +26,25 @@
  *      - Call read_raw_flux() — MF-203 (P1.24/ARCH-2): the undecoded
  *        .flux container must NOT be mislabelled as a FluxCaptured;
  *        verify an honest, F-4-compliant ProviderError is returned.
- *      - Queue a successful fluxengine write reply.
- *      - Call write_raw_flux(verify=false) — verify WriteCompleted.
- *      - Queue write + read-back replies for verify=true path.
- *      - Call write_raw_flux(verify=true) — verify WriteCompleted.
+ *      - BERICHTIGT MF-1047: hier stand „Queue a successful fluxengine
+ *        write reply … verify WriteCompleted" fuer beide Schreibproben.
+ *        Das war ein geschlossener Kreis — dem Mock wurde Erfolg ins
+ *        Skript gestellt, und geprueft wurde, dass der Provider ihn
+ *        durchreicht. Ob der abgesetzte BEFEHL stimmte, kam nicht vor,
+ *        und er stimmte nicht (`write -i` kodiert laut doc/using.md ein
+ *        Dateisystem-Abbild; roher Fluss geht ueber `rawwrite`).
+ *        Jetzt: write_raw_flux SAGT AB, bevor ein Prozess laeuft —
+ *        mit und ohne Verify-Wunsch.
  *   4. Error path smoke:
- *      - Queue failing exits for detect/read/write — verify ProviderError, F-4.
- *   5. Write verify-failed path:
- *      - Queue write success but read-back failure — verify WriteVerifyFailed,
- *        rule F-3 (intended preserved, readback empty).
+ *      - Queue failing exits for detect/read — verify ProviderError, F-4.
+ *        (Der Schreibpfad braucht dafuer keinen Lauf mehr; seine
+ *        ProviderError entsteht vor dem Prozess.)
+ *   5. Write verify-Pfad:
+ *      - BERICHTIGT MF-1047: die frueher hier gepruefte Variante
+ *        `WriteVerifyFailed` ist ueber diesen Provider unerreichbar,
+ *        solange der Schreibpfad absagt. Sie bleibt mit echter
+ *        Zusicherung in tests/test_usbfloppy_provider_v2.cpp gedeckt;
+ *        hier kehrt sie zurueck, wenn P3-342 erledigt ist.
  *   6. Geometry guard smoke:
  *      - Call read_raw_flux / write_raw_flux with cylinder=255 → ProviderError.
  *      - Call read_raw_flux / write_raw_flux with head=5 → ProviderError.
@@ -428,84 +438,83 @@ static void smoke_read_raw_flux_decodes_scp()
     mock.assert_consumed();
 }
 
-static void smoke_write_raw_flux_no_verify()
+static void smoke_write_raw_flux_sagt_ab()
 {
-    SubprocessMock mock;
-
-    /* Queue a fluxengine write success reply (exit_code=0). */
-    mock.queue_run(SubprocessMock::ScriptedRun{
-        { "fluxengine", "write" },
-        "",    /* stdout_reply: write stdout is typically empty */
-        "",
-        0
-    });
+    /* BERICHTIGT MF-1047. Hier standen zwei Proben,
+     * `smoke_write_raw_flux_no_verify` und `..._with_verify`. Beide
+     * waren ein GESCHLOSSENER KREIS: sie stellten dem Mock „Erfolg"
+     * ins Skript und prueften dann, dass der Provider diesen Erfolg
+     * durchreicht. Ob der abgesetzte BEFEHL der richtige war, kam
+     * darin nicht vor.
+     *
+     * Er war es nicht. `fluxengine write -i <datei>` KODIERT laut
+     * doc/using.md ein Dateisystem-Abbild; rohen Fluss schreibt das
+     * eigene Unterkommando `rawwrite -s <flux source> -d <flux
+     * destination>`. Uebergeben wurden ausserdem die `transitions_ns`
+     * als rohe 32-Bit-Worte — kein Behaelter, den fluxengine liest.
+     *
+     * Dieselbe Gestalt wie MF-1016 und MF-1017: ein gruener Test, der
+     * einen Defekt bewacht, weil seine Zusage aus dem Defekt folgte.
+     *
+     * Seit MF-1047 sagt der Schreibpfad ab, BEVOR ein Prozess laeuft.
+     * Dass kein Unterprozess startet, ist der Teil, der zaehlt — eine
+     * Absage, die vorher noch `fluxengine` anwirft, haette das
+     * Laufwerk schon angefasst. */
+    SubprocessMock mock;   /* absichtlich OHNE queue_run */
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
 
-    /* Supply a minimal flux stream. */
     FluxStream flux{{ 4000u, 6000u, 4000u, 6000u }};
     auto outcome = p.write_raw_flux(WriteFluxParams{5, 0, false, false}, flux);
 
-    bool got_completed = false;
+    bool got_error = false;
     std::visit(overloaded{
-        [&](const WriteCompleted& w) {
-            got_completed = true;
-            assert(w.bytes_written > 0  && "bytes_written must be > 0");
-            assert(!w.verified          && "verified must be false (no verify requested)");
-        },
+        [&](const WriteCompleted&)           {},
         [&](const WriteVerifyFailed&)        {},
         [&](const WriteRefused&)             {},
         [&](const CapabilityRequiresPolicy&) {},
         [&](const HardwareDisconnected&)     {},
-        [&](const ProviderError&)            {},
+        [&](const ProviderError& e)          {
+            got_error = true;
+            /* Rule F-4: jede ProviderError traegt what/why/fix. */
+            assert(!e.what.empty() && "ProviderError.what must not be empty");
+            assert(!e.why.empty()  && "ProviderError.why must not be empty");
+            assert(!e.fix.empty()  && "ProviderError.fix must not be empty");
+        },
     }, outcome);
 
-    assert(got_completed && "write_raw_flux(no verify) with scripted success must return WriteCompleted");
-    mock.assert_consumed();
-}
+    assert(got_error &&
+           "write_raw_flux must refuse until an SCP container and "
+           "`rawwrite` are wired (MF-1047, P3-342)");
+    assert(mock.recorded_runs().empty() &&
+           "the refusal must happen BEFORE any fluxengine invocation");
 
-static void smoke_write_raw_flux_with_verify()
-{
-    SubprocessMock mock;
+    /* Mit Verify-Wunsch gilt dasselbe: die Absage steht vor jedem
+     * Pfad, der ein Geraet anfassen wuerde. */
+    SubprocessMock mock2;
+    FluxEngineProviderV2 p2(make_runner(mock2), "fluxengine");
+    auto outcome2 = p2.write_raw_flux(WriteFluxParams{3, 1, true, false}, flux);
 
-    /* Queue write success reply, then read-back success reply (verify=true
-     * triggers a second runner invocation). */
-    mock.queue_run(SubprocessMock::ScriptedRun{
-        { "fluxengine", "write" },
-        "",  /* write stdout */
-        "",
-        0
-    });
-    /* Read-back (verify pass) — return non-empty stdout to indicate success. */
-    mock.queue_run(SubprocessMock::ScriptedRun{
-        { "fluxengine", "read" },
-        "\xAA\xBB\xCC\xDD",   /* some non-empty readback data */
-        "",
-        0
-    });
-
-    FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
-
-    FluxStream flux{{ 4000u, 6000u }};
-    auto outcome = p.write_raw_flux(WriteFluxParams{3, 1, true, false}, flux);
-
-    bool got_completed = false;
+    bool got_error2 = false;
     std::visit(overloaded{
-        [&](const WriteCompleted& w) {
-            got_completed = true;
-            assert(w.bytes_written > 0  && "bytes_written must be > 0");
-            assert(w.verified           && "verified must be true (verify requested)");
-        },
+        [&](const ProviderError&)            { got_error2 = true; },
+        [&](const WriteCompleted&)           {},
         [&](const WriteVerifyFailed&)        {},
         [&](const WriteRefused&)             {},
         [&](const CapabilityRequiresPolicy&) {},
         [&](const HardwareDisconnected&)     {},
-        [&](const ProviderError&)            {},
-    }, outcome);
+    }, outcome2);
 
-    assert(got_completed && "write_raw_flux(verify) with scripted success must return WriteCompleted");
-    mock.assert_consumed();
+    assert(got_error2 && "verify-requested write must refuse as well");
+    assert(mock2.recorded_runs().empty() &&
+           "no invocation on the verify path either");
 }
+
+/* `smoke_write_raw_flux_with_verify` stand hier und ist in
+ * `smoke_write_raw_flux_sagt_ab` aufgegangen (MF-1047): sie unterschied
+ * sich von ihrer Schwester nur darin, dass sie ZWEI Erfolge ins Skript
+ * stellte statt einem. Beide pruefen seither dasselbe — dass abgesagt
+ * wird, bevor ein Prozess laeuft. */
 
 /* ────────────────────────────────────────────────────────────────────────
  *  4. Error path smoke
@@ -566,8 +575,17 @@ static void smoke_read_raw_flux_failure()
 
 static void smoke_write_raw_flux_failure()
 {
-    SubprocessMock mock;
-    mock.queue_run_failed("fluxengine: write-protect notch active", 1);
+    /* BERICHTIGT MF-1047: hier stand ein
+     * `queue_run_failed("fluxengine: write-protect notch active")`.
+     * Seit der Schreibpfad absagt, BEVOR ein Prozess laeuft, wuerde
+     * dieser Lauf nie abgerufen — `assert_consumed()` haette den Test
+     * mit „1 scripted run left UNCONSUMED" abgebrochen.
+     *
+     * Die Zusage bleibt dieselbe und gilt weiter: **write_raw_flux
+     * liefert eine ProviderError mit vollstaendigem what/why/fix.**
+     * Nur ihr Grund hat gewechselt — vorher „fluxengine ist
+     * gescheitert", jetzt „UFT hat keinen Weg dorthin" (P3-342). */
+    SubprocessMock mock;   /* ohne queue_run: es darf keiner laufen */
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
     FluxStream flux{{ 4000u, 6000u }};
@@ -588,7 +606,10 @@ static void smoke_write_raw_flux_failure()
         },
     }, outcome);
 
-    assert(got_error && "write_raw_flux with failing fluxengine must return ProviderError");
+    assert(got_error && "write_raw_flux must return ProviderError "
+                        "(seit MF-1047: Absage vor dem Prozess)");
+    assert(mock.recorded_runs().empty() &&
+           "und es darf dafuer kein fluxengine gestartet worden sein");
     mock.assert_consumed();
 }
 
@@ -625,42 +646,56 @@ static void smoke_read_empty_stream()
  *  5. Write verify-failed path (rule F-3 on writes)
  * ──────────────────────────────────────────────────────────────────────── */
 
-static void smoke_write_verify_failed()
+static void smoke_write_verify_unerreichbar()
 {
-    SubprocessMock mock;
-
-    /* Write succeeds, but verify read-back fails (exit_code=1). */
-    mock.queue_run(SubprocessMock::ScriptedRun{
-        { "fluxengine", "write" },
-        "",
-        "",
-        0
-    });
-    mock.queue_run_failed("fluxengine: read-back error", 1);
+    /* BERICHTIGT MF-1047, und der Verlust wird benannt statt
+     * verschwiegen.
+     *
+     * Hier stand `smoke_write_verify_failed`: Schreiben gelingt,
+     * Rueckleseprobe scheitert, Ergebnis `WriteVerifyFailed` mit
+     * erhaltenen `intended`-Bytes (Regel F-3). Diese Zusage war an
+     * einen Pfad geknuepft, der seit MF-1047 gar nicht mehr laeuft —
+     * `do_write_raw_flux()` sagt ab, bevor ein Prozess startet, weil
+     * `fluxengine write -i` laut doc/using.md ein Dateisystem-Abbild
+     * KODIERT und der uebergebene Behaelter ohnehin keiner war, den
+     * fluxengine liest.
+     *
+     * **Was damit an Abdeckung verloren geht, und was nicht:** die
+     * Variante `WriteVerifyFailed` bleibt geprueft — mit echter
+     * Zusicherung in `tests/test_usbfloppy_provider_v2.cpp`. Was hier
+     * fehlt, ist der Verify-Pfad DIESES Providers; er kehrt zurueck,
+     * sobald P3-342 erledigt ist (SCP-Behaelter erzeugen, `rawwrite`
+     * rufen). Solange das offen ist, waere ein Test darueber ein Test
+     * ueber nichts.
+     *
+     * Geprueft wird deshalb genau das, was heute gilt: der
+     * Verify-Wunsch aendert an der Absage nichts, und er fasst kein
+     * Laufwerk an. */
+    SubprocessMock mock;   /* ohne queue_run */
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
     FluxStream flux{{ 0xDEADu, 0xBEEFu }};
     auto outcome = p.write_raw_flux(WriteFluxParams{2, 0, true, false}, flux);
 
-    bool got_verify_failed = false;
+    bool got_error = false;
     std::visit(overloaded{
         [&](const WriteCompleted&)           {},
-        [&](const WriteVerifyFailed& v)      {
-            got_verify_failed = true;
-            assert(v.bytes_written > 0 && "bytes_written must be > 0");
-            /* Rule F-3: intended data must be preserved. */
-            assert(!v.intended.empty() && "intended bytes must be non-empty");
-            /* readback is empty (read-back failed). */
-            assert(v.readback.empty()  && "readback must be empty on failed read-back");
-        },
+        [&](const WriteVerifyFailed&)        {},
         [&](const WriteRefused&)             {},
         [&](const CapabilityRequiresPolicy&) {},
         [&](const HardwareDisconnected&)     {},
-        [&](const ProviderError&)            {},
+        [&](const ProviderError& e)          {
+            got_error = true;
+            assert(!e.what.empty() && "ProviderError.what must not be empty");
+            assert(!e.why.empty()  && "ProviderError.why must not be empty");
+            assert(!e.fix.empty()  && "ProviderError.fix must not be empty");
+        },
     }, outcome);
 
-    assert(got_verify_failed &&
-           "write_raw_flux(verify=true) + failing read-back must return WriteVerifyFailed");
+    assert(got_error &&
+           "ein Verify-Wunsch hebt die Absage nicht auf (MF-1047)");
+    assert(mock.recorded_runs().empty() &&
+           "und er startet keinen Prozess");
     mock.assert_consumed();
 }
 
@@ -909,13 +944,12 @@ int main()
     smoke_detect_drive_happy_path();
     smoke_measure_rpm_happy_path();
     smoke_read_raw_flux_decodes_scp();
-    smoke_write_raw_flux_no_verify();
-    smoke_write_raw_flux_with_verify();
+    smoke_write_raw_flux_sagt_ab();
     smoke_detect_drive_failure();
     smoke_read_raw_flux_failure();
     smoke_write_raw_flux_failure();
     smoke_read_empty_stream();
-    smoke_write_verify_failed();
+    smoke_write_verify_unerreichbar();
     smoke_out_of_range_cylinder_read();
     smoke_out_of_range_head_read();
     smoke_out_of_range_cylinder_write();
