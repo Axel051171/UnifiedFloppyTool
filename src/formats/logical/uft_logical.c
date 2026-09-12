@@ -1,10 +1,69 @@
 /**
  * @file uft_logical.c
- * @brief Logical Disk format implementation
- * @version 3.9.0
- * 
- * Logical disk format with explicit geometry header.
- * Reference: libdsk drvlogi.c (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief „Logical" — flaches Abbild in LOGISCHER Sektorreihenfolge
+ *
+ * Was das Format ist, welche vier Anordnungsgesetze es gibt und warum
+ * es keine Sonde geben kann, steht im Kopf von
+ * `include/uft/formats/uft_logical.h`. Hier stehen die Befunde.
+ *
+ * ── MF-1032: fuenf Befunde, und der zweite war das ganze Format ─────
+ *
+ * **L1 — Kennung und Kopf waren erfunden.** `uft_logical.h` verlangte
+ * eine Kennung `"LGD\0"` und einen **32-Byte-Kopf** mit
+ * `cylinders/heads/sectors/sector_size/first_sector/encoding/
+ * data_rate`. libdsks `logical_open()` (`lib/drvlogi.c` Z. 67-85)
+ * prueft **nichts** — es gibt keine Kennung und keinen Kopf, die Datei
+ * beginnt mit dem ersten Sektor. UFT wies damit **jede** echte Datei ab
+ * und nahm nur seine eigenen an.
+ *
+ * Das ist die Klasse von **MF-961** (`86f`/`"86BX"`), **MF-1022**
+ * (`sap`), **MF-1029** (`myz80`) und **MF-1030** (`nanowasp`) — zum
+ * **fuenften** Mal.
+ *
+ * **L2 — und die Anordnung, die das Format AUSMACHT, wurde ignoriert.**
+ * Der Leser lief `for (c) for (h)` und schob den Datenzeiger linear
+ * weiter — das ist `SIDES_ALT`, und zwar immer. Damit war „logical"
+ * byteweise dasselbe wie ein gewoehnliches flaches Abbild, und der
+ * einzige Grund, warum das Format ueberhaupt existiert, war weg. Die
+ * vier Gesetze stehen in `dg_pt2lt()`; bei OUTOUT liegt Kopf 1
+ * hinter der ganzen Seite 0, bei OUTBACK laeuft Kopf 1 **rueckwaerts**.
+ *
+ * **L3 — `first_sector == 0` wurde still zu 1.** Die Zeile lautete
+ * `if (first_sector == 0) first_sector = 1;`. libdsks eigene Tafel
+ * fuehrt `acorn160`, `acorn320` und `acorn640` mit `dg_secbase = 0`
+ * (`lib/dsksgeom.c` Z. 53-55) — bei jedem Acorn-Abbild war damit
+ * **jede** Sektornummer um eins zu hoch, und `dg_ps2ls()` subtrahiert
+ * `dg_secbase`, der Versatz also ebenso.
+ *
+ * **L4 — die Geometrie kam aus dem erfundenen Kopf.** Sie kommt jetzt
+ * von aussen, weil das Format sie nicht mitbringt. Dass die
+ * **Dateigroesse** sie nicht ersetzen kann, ist gemessen und nicht
+ * vermutet: in libdsks eigener Tafel teilt **jede** der acht
+ * nicht-ALT-Geometrien ihre Groesse mit mindestens einer ALT-Geometrie
+ * (Aufstellung im Header). Acht von acht — die Groesse entscheidet die
+ * Anordnung in **keinem** Fall.
+ *
+ * **L5 — der Schreiber erzeugte das erfundene Format.**
+ * `uft_logical_write()` setzte den 32-Byte-Kopf in jede Datei; keine
+ * fremde Umsetzung haette sie lesen koennen. Er bleibt ohne Aufrufer
+ * (P3-204, MF-930), schreibt jetzt aber das richtige Format.
+ *
+ * ── Und die Zusage im alten Dateikopf trug nicht ────────────────────
+ *
+ * Dort stand: *„Reference: libdsk drvlogi.c (LGPL-2.0-or-later;
+ * Fassung 1.5.12 geprueft)"*. Eine Attribution ist eine rechtliche
+ * Aussage (MF-636) — und „geprueft" ist eine Tatsachenbehauptung.
+ * Gegen einen Treiber, der **keinen Kopf** hat, kann ein 32-Byte-Kopf
+ * nicht geprueft worden sein.
+ *
+ * ── Abnahme ─────────────────────────────────────────────────────────
+ *
+ * `tests/test_logical_gegen_libdsk.c`, und die Anordnung ist von
+ * **fremder Hand** nachgerechnet: zwei Pruefdateien, jede in einem
+ * anderen Gesetz gebaut, von `dsktrans` in die ALT-Anordnung gewandelt
+ * und mit der unabhaengig gerechneten ALT-Fassung verglichen —
+ * OUTOUT (`acorn640`, 80x2x16x256) und OUTBACK (`ibm720`, 80x2x9x512,
+ * `dg_secbase = 1`), beide **byteidentisch**.
  */
 
 #include "uft/formats/uft_logical.h"
@@ -14,17 +73,8 @@
 #include <stdio.h>
 
 /* ============================================================================
- * Utility Functions
- * ============================================================================ */
-
-static uint16_t read_le16(const uint8_t *p) {
-    return p[0] | (p[1] << 8);
-}
-
-static void write_le16(uint8_t *p, uint16_t v) {
-    p[0] = v & 0xFF;
-    p[1] = (v >> 8) & 0xFF;
-}
+ * Geometrie und Versatz — die vier Gesetze
+ * ========================================================================== */
 
 static uint8_t code_from_size(uint16_t size) {
     switch (size) {
@@ -36,333 +86,302 @@ static uint8_t code_from_size(uint16_t size) {
     }
 }
 
-/* ============================================================================
- * Header Validation
- * ============================================================================ */
-
-bool uft_logical_validate_header(const logical_header_t *header) {
-    if (!header) return false;
-    return memcmp(header->signature, LOGICAL_SIGNATURE, LOGICAL_SIGNATURE_LEN) == 0;
-}
-
-bool uft_logical_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < LOGICAL_HEADER_SIZE) return false;
-    
-    if (memcmp(data, LOGICAL_SIGNATURE, LOGICAL_SIGNATURE_LEN) == 0) {
-        /* Validate geometry values */
-        const logical_header_t *hdr = (const logical_header_t *)data;
-        uint16_t cyls = read_le16((const uint8_t*)&hdr->cylinders);
-        uint16_t heads = read_le16((const uint8_t*)&hdr->heads);
-        uint16_t sects = read_le16((const uint8_t*)&hdr->sectors);
-        uint16_t secsize = read_le16((const uint8_t*)&hdr->sector_size);
-        
-        if (cyls > 0 && cyls <= 256 &&
-            heads > 0 && heads <= 4 &&
-            sects > 0 && sects <= 64 &&
-            (secsize == 128 || secsize == 256 || secsize == 512 || secsize == 1024)) {
-            if (confidence) *confidence = 95;
-            return true;
-        }
+int uft_logical_geometry_ok(const uft_logical_geometry_t *g) {
+    if (!g) return 0;
+    if (g->cylinders == 0 || g->heads == 0 || g->sectors == 0
+        || g->sector_size == 0) return 0;
+    /* MF-543: dieselben Schranken wie in jedem anderen Einstieg —
+     * `uft_disk_alloc()` nimmt `heads` als uint8_t, waehrend die
+     * Fuellschleife mit dem ungekuerzten Wert indiziert. */
+    if (g->cylinders > UFT_LOGI_MAX_CYLINDERS) return 0;
+    if (g->heads > UFT_LOGI_MAX_HEADS) return 0;
+    if (g->sectors > UFT_LOGI_MAX_SECTORS) return 0;
+    if (g->sector_size > UFT_LOGI_MAX_SECTOR_SIZE) return 0;
+    switch (g->sector_size) {
+        case 128: case 256: case 512: case 1024: break;
+        default: return 0;
     }
-    
-    return false;
+    /* `SIDES_OUTBACK` ist bei mehr als zwei Koepfen nicht definiert —
+     * libdsk sagt das selbst: `if (self->dg_heads > 2) return
+     * DSK_ERR_BADPARM;` (dsklphys.c Z. 107). */
+    if (g->sides == UFT_LOGI_SIDES_OUTBACK && g->heads > 2) return 0;
+    if ((int)g->sides < 0 || (int)g->sides > (int)UFT_LOGI_SIDES_EXTSURFACE)
+        return 0;
+    return 1;
+}
+
+size_t uft_logical_image_size(const uft_logical_geometry_t *g) {
+    if (!uft_logical_geometry_ok(g)) return 0;
+    return (size_t)g->cylinders * g->heads * g->sectors * g->sector_size;
+}
+
+long uft_logical_track_index(int cyl, int head,
+                             const uft_logical_geometry_t *g) {
+    if (!uft_logical_geometry_ok(g)) return -1;
+    if (cyl < 0 || head < 0) return -1;
+    if (cyl >= (int)g->cylinders || head >= (int)g->heads) return -1;
+
+    switch (g->sides) {
+        case UFT_LOGI_SIDES_EXTSURFACE:
+        case UFT_LOGI_SIDES_ALT:
+            return (long)cyl * g->heads + head;
+        case UFT_LOGI_SIDES_OUTBACK:
+            /* Kopf 0 nach aussen, Kopf 1 wieder zurueck. */
+            return (head == 0) ? (long)cyl
+                               : (long)(2 * g->cylinders) - (1 + (long)cyl);
+        case UFT_LOGI_SIDES_OUTOUT:
+            return (long)head * g->cylinders + cyl;
+    }
+    return -1;
+}
+
+long uft_logical_offset(int cyl, int head, int sector,
+                        const uft_logical_geometry_t *g) {
+    long spur;
+    if (!uft_logical_geometry_ok(g)) return -1;
+    if (sector < (int)g->first_sector
+        || sector >= (int)g->first_sector + (int)g->sectors) return -1;
+    spur = uft_logical_track_index(cyl, head, g);
+    if (spur < 0) return -1;
+    return (spur * (long)g->sectors + (sector - (long)g->first_sector))
+           * (long)g->sector_size;
 }
 
 /* ============================================================================
- * Read Implementation
- * ============================================================================ */
+ * Lesen
+ * ========================================================================== */
 
 uft_error_t uft_logical_read_mem(const uint8_t *data, size_t size,
+                                 const uft_logical_geometry_t *g,
                                  uft_disk_image_t **out_disk,
                                  logical_read_result_t *result) {
-    if (!data || !out_disk || size < LOGICAL_HEADER_SIZE) {
+    uft_disk_image_t *disk;
+    size_t brauche;
+    uint8_t size_code;
+    uint16_t c, h, s;
+
+    if (result) memset(result, 0, sizeof(*result));
+    if (!data || !out_disk || !g) return UFT_ERR_INVALID_PARAM;
+
+    if (!uft_logical_geometry_ok(g)) {
+        if (result) {
+            result->error = UFT_ERR_INVALID_PARAM;
+            result->error_detail =
+                "Logical: die Geometrie ist unbrauchbar (MF-543-Schranken)";
+        }
         return UFT_ERR_INVALID_PARAM;
     }
-    
-    /* Initialize result */
-    if (result) {
-        memset(result, 0, sizeof(*result));
-    }
-    
-    /* Validate header */
-    const logical_header_t *header = (const logical_header_t *)data;
-    if (!uft_logical_validate_header(header)) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid Logical disk signature";
-        }
-        return UFT_ERR_FORMAT;
-    }
-    
-    /* Extract geometry */
-    uint16_t cylinders = read_le16((const uint8_t*)&header->cylinders);
-    uint16_t heads = read_le16((const uint8_t*)&header->heads);
-    uint16_t sectors = read_le16((const uint8_t*)&header->sectors);
-    uint16_t sector_size = read_le16((const uint8_t*)&header->sector_size);
-    uint8_t first_sector = header->first_sector;
-    uft_encoding_t encoding = (header->encoding == 0) ? UFT_ENC_FM : UFT_ENC_MFM;
-    
-    if (cylinders == 0 || heads == 0 || sectors == 0 || sector_size == 0) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid Logical disk geometry";
-        }
-        return UFT_ERR_FORMAT;
-    }
-    
-    /* MF-543: dieselben Schranken wie in der Sonde, noch einmal hier.
-     *
-     * `uft_logical_probe()` (oben) deckelt `heads` auf 4, und ueber
-     * `uft_disk_open()` kommt niemand an ihr vorbei. Trotzdem steht die
-     * Pruefung jetzt auch hier, denn `uft_logical_read_mem()` ist ein
-     * eigener oeffentlicher Einstieg — und die Schranke traegt
-     * Speichersicherheit: `uft_disk_alloc()` nimmt `heads` als uint8_t,
-     * waehrend die Fuellschleife unten mit dem ungekuerzten uint16 aus
-     * dem Kopf indiziert.
-     *
-     * Genau diese Bauart hat in `uft_qrst.c` einen Schreibzugriff weit
-     * hinter das Feld erzeugt (22 Byte Eingabe, Index 599 in einem Feld
-     * mit 88 Plaetzen). Dort fehlte die Sonden-Schranke; hier gibt es sie.
-     * Auf die Sonde als einzige Verteidigung zu setzen heisst, dass ein
-     * spaeterer zweiter Aufrufer den Fehler stillschweigend zurueckholt. */
-    if (heads > 4 || cylinders > 256 || sectors > 64 || sector_size > 1024) {
+
+    brauche = uft_logical_image_size(g);
+    if (size < brauche) {
         if (result) {
             result->error = UFT_ERR_FORMAT;
             result->error_detail =
-                "Logical geometry out of range (see MF-543)";
+                "Logical: die Datei ist kleiner als die Geometrie verlangt";
         }
         return UFT_ERR_FORMAT;
     }
 
-    {
-        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
-        if (need > (uint64_t)(size - LOGICAL_HEADER_SIZE)) {
-            if (result) {
-                result->error = UFT_ERR_FORMAT;
-                result->error_detail =
-                    "Logical header claims more data than the file holds";
-            }
-            return UFT_ERR_FORMAT;
-        }
-    }
-
-    if (first_sector == 0) first_sector = 1;
-    
     if (result) {
-        result->cylinders = cylinders;
-        result->heads = heads;
-        result->sectors = sectors;
-        result->sector_size = sector_size;
+        result->cylinders = g->cylinders;
+        result->heads = g->heads;
+        result->sectors = g->sectors;
+        result->sector_size = g->sector_size;
         result->image_size = size;
     }
-    
-    /* Allocate disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(cylinders, heads);
-    if (!disk) {
-        return UFT_ERR_MEMORY;
-    }
-    
+
+    disk = uft_disk_alloc(g->cylinders, (uint8_t)g->heads);
+    if (!disk) return UFT_ERR_MEMORY;
+
     disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "Logical");
-    disk->sectors_per_track = sectors;
-    disk->bytes_per_sector = sector_size;
-    
-    /* Read track data */
-    const uint8_t *track_data = data + LOGICAL_HEADER_SIZE;
-    size_t available = size - LOGICAL_HEADER_SIZE;
-    size_t data_pos = 0;
-    uint8_t size_code = code_from_size(sector_size);
-    
-    for (uint16_t c = 0; c < cylinders; c++) {
-        for (uint16_t h = 0; h < heads; h++) {
-            size_t idx = c * heads + h;
-            
-            uft_track_t *track = uft_track_alloc(sectors, 0);
-            if (!track) {
-                uft_disk_free(disk);
-                return UFT_ERR_MEMORY;
-            }
-            
+    disk->sectors_per_track = (uint8_t)g->sectors;
+    disk->bytes_per_sector = g->sector_size;
+    size_code = code_from_size(g->sector_size);
+
+    for (c = 0; c < g->cylinders; c++) {
+        for (h = 0; h < g->heads; h++) {
+            size_t idx = (size_t)c * g->heads + h;
+            uft_track_t *track = uft_track_alloc(g->sectors, 0);
+            if (!track) { uft_disk_free(disk); return UFT_ERR_MEMORY; }
+
             track->cylinder = c;
             track->head = h;
-            track->encoding = encoding;
-            
-            for (uint16_t s = 0; s < sectors; s++) {
+            track->encoding = g->encoding;
+
+            for (s = 0; s < g->sectors; s++) {
+                /* Die auf der Diskette stehende Nummer, nicht ein Index. */
+                int nummer = (int)g->first_sector + (int)s;
+                long off = uft_logical_offset(c, h, nummer, g);
                 uft_sector_t *sect = &track->sectors[s];
-                sect->id.cylinder = c;
-                sect->id.head = h;
-                sect->id.sector = s + first_sector;
+
+                sect->id.cylinder = (uint8_t)c;
+                sect->id.head = (uint8_t)h;
+                sect->id.sector = (uint8_t)nummer;
                 sect->id.size_code = size_code;
                 sect->status = UFT_SECTOR_OK;
-                
-                sect->data = malloc(sector_size);
-                sect->data_size = sector_size;
-                
+                sect->data = malloc(g->sector_size);
+                sect->data_size = g->sector_size;
+
                 if (sect->data) {
-                    if (data_pos + sector_size <= available) {
-                        memcpy(sect->data, track_data + data_pos, sector_size);
+                    if (off >= 0 && (size_t)off + g->sector_size <= size) {
+                        memcpy(sect->data, data + off, g->sector_size);
                     } else {
-                        memset(sect->data, 0xE5, sector_size);
-                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
-                         * erfundene 0xE5 von echten 0xE5-Daten nicht zu
-                         * unterscheiden -- und `status` stand schon auf OK. */
+                        memset(sect->data, 0xE5, g->sector_size);
+                        /* MF-1001: gefuellt, nicht gelesen. Ohne diese
+                         * Zeile sind erfundene 0xE5 von echten nicht zu
+                         * unterscheiden — und `status` stand schon auf
+                         * OK (MF-980). */
                         uft_sector_mark_missing(sect);
                     }
                 }
-                data_pos += sector_size;
                 track->sector_count++;
             }
-            
             disk->track_data[idx] = track;
         }
     }
-    
-    if (result) {
-        result->success = true;
-    }
-    
+
+    if (result) result->success = true;
     *out_disk = disk;
     return UFT_OK;
 }
 
 uft_error_t uft_logical_read(const char *path,
+                             const uft_logical_geometry_t *g,
                              uft_disk_image_t **out_disk,
                              logical_read_result_t *result) {
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        return UFT_ERR_IO;
-    }
-    
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    
-    uint8_t *data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return UFT_ERR_MEMORY;
-    }
-    
+    FILE *fp;
+    long len;
+    size_t size;
+    uint8_t *data;
+    uft_error_t err;
+
+    if (!path) return UFT_ERR_INVALID_PARAM;
+    fp = fopen(path, "rb");
+    if (!fp) return UFT_ERR_IO;
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_ERR_IO; }
+    len = ftell(fp);
+    if (len <= 0 || fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
+    size = (size_t)len;
+
+    data = malloc(size);
+    if (!data) { fclose(fp); return UFT_ERR_MEMORY; }
     if (fread(data, 1, size, fp) != size) {
-        free(data);
-        fclose(fp);
-        return UFT_ERR_IO;
+        free(data); fclose(fp); return UFT_ERR_IO;
     }
-    
     fclose(fp);
-    
-    uft_error_t err = uft_logical_read_mem(data, size, out_disk, result);
+
+    err = uft_logical_read_mem(data, size, g, out_disk, result);
     free(data);
-    
     return err;
 }
 
 /* ============================================================================
- * Write Implementation
- * ============================================================================ */
+ * Schreiben — ohne Kopf, in der Anordnung von `g`
+ * ========================================================================== */
 
 uft_error_t uft_logical_write(const uft_disk_image_t *disk,
+                              const uft_logical_geometry_t *g,
                               const char *path) {
-    if (!disk || !path) {
+    size_t gesamt;
+    uint8_t *aus;
+    FILE *fp;
+    size_t geschrieben;
+    uint16_t c, h, s;
+
+    if (!disk || !g || !path) return UFT_ERR_INVALID_PARAM;
+    if (!uft_logical_geometry_ok(g)) return UFT_ERR_INVALID_PARAM;
+    if (disk->tracks != g->cylinders || disk->heads != g->heads)
         return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Calculate output size */
-    size_t data_size = (size_t)disk->tracks * disk->heads *
-                       disk->sectors_per_track * disk->bytes_per_sector;
-    size_t total_size = LOGICAL_HEADER_SIZE + data_size;
-    
-    uint8_t *output = malloc(total_size);
-    if (!output) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    /* Build header */
-    logical_header_t *header = (logical_header_t *)output;
-    memset(header, 0, sizeof(*header));
-    memcpy(header->signature, LOGICAL_SIGNATURE, LOGICAL_SIGNATURE_LEN);
-    write_le16((uint8_t*)&header->cylinders, disk->tracks);
-    write_le16((uint8_t*)&header->heads, disk->heads);
-    write_le16((uint8_t*)&header->sectors, disk->sectors_per_track);
-    write_le16((uint8_t*)&header->sector_size, disk->bytes_per_sector);
-    header->first_sector = 1;
-    header->encoding = 1;  /* MFM */
-    write_le16((uint8_t*)&header->data_rate, 250);  /* 250 kbps */
-    
-    /* Write track data */
-    uint8_t *track_data = output + LOGICAL_HEADER_SIZE;
-    size_t data_pos = 0;
-    
-    for (uint16_t c = 0; c < disk->tracks; c++) {
-        for (uint8_t h = 0; h < disk->heads; h++) {
-            size_t idx = c * disk->heads + h;
+
+    gesamt = uft_logical_image_size(g);
+    aus = malloc(gesamt);
+    if (!aus) return UFT_ERR_MEMORY;
+    /* Ungeschriebene Sektoren bleiben 0xE5 — dasselbe Fuellbyte, das
+     * libdsks `seekto()` in Loecher schreibt (`drvlogi.c` Z. 150-165):
+     * „Fill any 'holes' in the file with 0xE5". */
+    memset(aus, 0xE5, gesamt);
+
+    for (c = 0; c < g->cylinders; c++) {
+        for (h = 0; h < g->heads; h++) {
+            size_t idx = (size_t)c * g->heads + h;
             uft_track_t *track = disk->track_data[idx];
-            
-            for (uint8_t s = 0; s < disk->sectors_per_track; s++) {
-                if (track && s < track->sector_count && track->sectors[s].data) {
-                    memcpy(track_data + data_pos, track->sectors[s].data,
-                           disk->bytes_per_sector);
-                } else {
-                    memset(track_data + data_pos, 0xE5, disk->bytes_per_sector);
-                }
-                data_pos += disk->bytes_per_sector;
+            if (!track) continue;
+            for (s = 0; s < track->sector_count && s < g->sectors; s++) {
+                int nummer = (int)g->first_sector + (int)s;
+                long off = uft_logical_offset(c, h, nummer, g);
+                const uft_sector_t *sect = &track->sectors[s];
+                if (off < 0 || (size_t)off + g->sector_size > gesamt) continue;
+                if (sect->data && sect->data_size >= g->sector_size)
+                    memcpy(aus + off, sect->data, g->sector_size);
             }
         }
     }
-    
-    /* Write file */
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        free(output);
-        return UFT_ERR_IO;
-    }
-    
-    size_t written = fwrite(output, 1, total_size, fp);
+
+    fp = fopen(path, "wb");
+    if (!fp) { free(aus); return UFT_ERR_IO; }
+    geschrieben = fwrite(aus, 1, gesamt, fp);
     fclose(fp);
-    free(output);
-    
-    if (written != total_size) {
-        return UFT_ERR_IO;
-    }
-    
-    return UFT_OK;
+    free(aus);
+    return (geschrieben == gesamt) ? UFT_OK : UFT_ERR_IO;
 }
 
 /* ============================================================================
- * Format Plugin Registration
- * ============================================================================ */
+ * Plugin
+ * ========================================================================== */
 
+/**
+ * Die Sonde kann nicht zustimmen, und der Grund ist gemessen.
+ *
+ * Die Datei hat keinen Kopf, also sagt der Inhalt nichts. Und die
+ * Groesse kann die Anordnung nicht entscheiden: in libdsks eigener
+ * Geometrietafel teilt JEDE der acht nicht-ALT-Geometrien ihre
+ * Dateigroesse mit mindestens einer ALT-Geometrie (Aufstellung im
+ * Header). Acht von acht.
+ *
+ * Wer hier nach Groesse zustimmte, wuerde ein gewoehnliches PC-720K-
+ * Abbild mit der OUTBACK-Anordnung lesen und die halbe Diskette
+ * verkehrt ausliefern — erfundene Daten mit richtiger Dateigroesse.
+ *
+ * Geprueft und erreichbar ist `uft_logical_read_mem()`, das die
+ * Geometrie als Argument nimmt. Gefuehrt in
+ * `scripts/audit_dead_probe.py` (DEAD_PROBE_BASELINE), wie
+ * `posix_probe_plugin` seit MF-546.
+ */
 static bool logical_probe_plugin(const uint8_t *data, size_t size,
                                  size_t file_size, int *confidence) {
-    (void)file_size;
-    return uft_logical_probe(data, size, confidence);
+    (void)data; (void)size; (void)file_size;
+    if (confidence) *confidence = 0;
+    return false;
 }
 
-static uft_error_t logical_open(uft_disk_t *disk, const char *path, bool read_only) {
-    (void)read_only;
-    uft_disk_image_t *image = NULL;
-    uft_error_t err = uft_logical_read(path, &image, NULL);
-    if (err == UFT_OK && image) {
-        disk->plugin_data = image;
-        disk->geometry.cylinders = image->tracks;
-        disk->geometry.heads = image->heads;
-        disk->geometry.sectors = image->sectors_per_track;
-        disk->geometry.sector_size = image->bytes_per_sector;
-        disk->geometry.total_sectors = (uint32_t)image->tracks * image->heads *
-                                       image->sectors_per_track;
-    }
-    return err;
+/**
+ * `open` sagt ab, weil die Plugin-Schnittstelle keinen Kanal fuer eine
+ * benutzergesetzte Geometrie hat (P3-337). libdsk loest dasselbe
+ * Problem, indem der Aufrufer sie NENNT: `dsktrans -itype logical
+ * -format acorn640`. Raten waere hier keine Notloesung, sondern eine
+ * Erfindung — siehe den Kommentar an der Sonde.
+ */
+static uft_error_t logical_open(uft_disk_t *disk, const char *path,
+                               bool read_only) {
+    (void)disk; (void)path; (void)read_only;
+    return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static void logical_close(uft_disk_t *disk) {
     if (disk && disk->plugin_data) {
-        uft_disk_free((uft_disk_image_t*)disk->plugin_data);
+        uft_disk_free((uft_disk_image_t *)disk->plugin_data);
         disk->plugin_data = NULL;
     }
 }
 
 static uft_error_t logical_read_track(uft_disk_t *disk, int cyl, int head,
-                                       uft_track_t *track) {
+                                      uft_track_t *track) {
+    uft_disk_image_t *image;
+    size_t idx;
+    uft_track_t *src;
+    size_t s;
+
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
      * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
      * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
@@ -370,116 +389,67 @@ static uft_error_t logical_read_track(uft_disk_t *disk, int cyl, int head,
      * opus_read_track() von tests/test_disk_open_fuzz.c. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
-    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
+    image = (uft_disk_image_t *)disk->plugin_data;
+    /* Ohne `open` gibt es kein `plugin_data`; dieser Weg ist heute nicht
+     * erreichbar und sagt das, statt an einem Nullzeiger zu arbeiten. */
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
 
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
+    idx = (size_t)cyl * image->heads + head;
+    if (idx >= (size_t)(image->tracks * image->heads))
         return UFT_ERR_INVALID_PARAM;
-    }
 
-    uft_track_t *src = image->track_data[idx];
+    src = image->track_data[idx];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
     track->cylinder = cyl;
     track->head = head;
     track->encoding = src->encoding;
 
-    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
-     *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
-    for (size_t s = 0; s < src->sector_count; s++) {
+    /* MF-516: `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein
+     * Feld, und `uft_track_init()` legt ihn nicht an. Ein
+     * `track->sectors[s] = src->sectors[s];` schreibt durch NULL.
+     * `uft_track_add_sector()` legt den Puffer an und kopiert tief. */
+    for (s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
     }
-
     return UFT_OK;
 }
 
-/* In-memory write: updates cached disk image. Persist via uft_logical_write(). */
 static uft_error_t logical_write_track(uft_disk_t *disk, int cyl, int head,
-                                        const uft_track_t *track) {
+                                       const uft_track_t *track) {
     /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+     * gerechnet oder indiziert wird. Beim SCHREIBEN wiegt das
+     * schwerer als beim Lesen: ein falscher Index bestimmt, WOHIN
+     * geschrieben wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
+    if (!disk || !track) return UFT_ERR_INVALID_PARAM;
 
-    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
-    if (!image || !track) return UFT_ERR_INVALID_PARAM;
-    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
-
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
-
-    /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
+     * Der echte Dateischreiber ist `uft_logical_write()`; es fuehrt kein
+     * Weg dorthin (`plugin->flush` hat im ganzen Baum keinen Aufrufer,
+     * `close()` gibt nur frei). Verzeichnet als P3-204.
      *
-     * Diese Datei HAT einen echten Dateischreiber — `uft_logical_write()`,
-     * mit `fwrite` und allem. Nur fuehrt kein Weg dorthin: die
-     * Plugin-Tafel hat kein `.flush`, `close()` gibt den Puffer frei
-     * ohne zu schreiben, und dieses `write_track` fasste nur den
-     * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
-     * erreichte die Platte.
-     *
-     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
-     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
-     * Schreiboperation STEHT — und die steht. Sie wird nur nie
-     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
-     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
-     * der dort aufgezaehlten Verdachtslisten.
-     *
-     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
-     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
-     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
-     * Quelltext — „Call flush/close to persist changes" —, und es gab
-     * ihn nicht.
-     *
-     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
-     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
-     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
-     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
-     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
-     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
-     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
-     *
-     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    (void)dst;
+     * Seit MF-1032 schreibt `uft_logical_write()` wenigstens das
+     * RICHTIGE Format: vorher setzte er einen erfundenen 32-Byte-Kopf
+     * in jede Datei, und eine Verdrahtung haette Dateien erzeugt, die
+     * keine fremde Umsetzung lesen kann. */
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_logical_features[] = {
-    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Read", UFT_FEATURE_PARTIAL,
+      "MF-1032: die gepruefte Leseseite ist uft_logical_read_mem() und "
+      "nimmt die Geometrie als Argument. Ueber uft_disk_open() ist das "
+      "Format nicht erreichbar, weil es keinen Kopf hat und die "
+      "Dateigroesse die Anordnung nicht entscheiden kann — in libdsks "
+      "eigener Tafel teilt jede der acht nicht-ALT-Geometrien ihre "
+      "Groesse mit einer ALT-Geometrie. Kein Kanal fuer eine "
+      "benutzergesetzte Geometrie: P3-337" },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_logical_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-930: der echte uft_logical_write() in derselben Datei hat "
+      "keinen Aufrufer, kein flush, close() gibt frei (P3-204). Seit "
+      "MF-1032 erzeugt er wenigstens das richtige Format" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -489,7 +459,7 @@ static const uft_plugin_feature_t uft_format_plugin_logical_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_logical = {
     .name = "Logical",
-    .description = "Logical Disk Image",
+    .description = "Raw image in logical sector order (no header)",
     .extensions = "logical,logi",
     .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,

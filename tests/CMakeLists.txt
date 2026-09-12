@@ -403,6 +403,51 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_logical_gegen_libdsk")
+        # MF-1032: `logical` stand auf T3, und **UFT konnte keine echte
+        # Datei lesen — die Anordnung, die das Format AUSMACHT, war gar
+        # nicht umgesetzt**. Gemessen gegen libdsk 1.5.12 (John Elliott,
+        # LGPL-2+; Quelltext nur GELESEN, Kanal Spec nach MF-695, und
+        # `dsktrans` AUSGEFUEHRT):
+        #
+        #   Kennung    `"LGD\0"` -> **es gibt keine**; `logical_open()`
+        #              (drvlogi.c Z. 67-85) prueft nichts
+        #   Kopf       32 Byte mit Geometriefeldern -> **es gibt keinen**;
+        #              die Datei beginnt mit dem ersten Sektor
+        #   Anordnung  der Leser lief `for (c) for (h)` linear, also
+        #              **immer SIDES_ALT**. Es gibt **vier** Gesetze
+        #              (`dg_pt2lt()`, dsklphys.c Z. 91-118), und der
+        #              Unterschied IST das Format:
+        #                ALT      zyl * koepfe + kopf
+        #                OUTOUT   kopf * zylinder + zyl
+        #                OUTBACK  Kopf 1 laeuft RUECKWAERTS
+        #                EXTSURFACE wie ALT
+        #   secbase    `if (first_sector == 0) first_sector = 1;` —
+        #              libdsks Tafel fuehrt acorn160/320/640 mit
+        #              `dg_secbase = 0`, also war dort JEDE Sektornummer
+        #              um eins zu hoch
+        #   Schreiber  setzte den erfundenen 32-Byte-Kopf in jede Datei
+        #
+        # **Warum es keine Sonde gibt, ist GEMESSEN:** in libdsks eigener
+        # Geometrietafel teilt JEDE der acht nicht-ALT-Geometrien ihre
+        # Dateigroesse mit mindestens einer ALT-Geometrie. Acht von acht —
+        # die Groesse kann die Anordnung nie entscheiden. libdsk loest das
+        # so, dass der Aufrufer sie NENNT (`-format acorn640`); UFTs
+        # Plugin-Schnittstelle hat dafuer keinen Kanal (P3-337), und
+        # deshalb sagt `open()` ab statt zu raten.
+        #
+        # **T1b: die Pruefdateien hat libdsk GESCHRIEBEN.** `dsktrans
+        # -itype raw -format acorn640 -otype logical` (und dasselbe mit
+        # `ibm720`) erzeugt sie aus einem flachen ALT-Abbild mit
+        # selbstbenennenden Sektoren; beide sind byteidentisch mit der
+        # unabhaengig aus `dg_pt2lt()`/`dg_ps2ls()` nachgerechneten
+        # Fassung. Damit ist **P3-333 berichtigt** — der fehlende Kanal
+        # war `-format <name>`, nicht eine Grenze von libdsk.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_nanowasp_gegen_libdsk")
         # MF-1030: `nanowasp` stand auf T3, und **UFT konnte keine
         # NanoWasp-Datei lesen**. Gemessen gegen libdsks

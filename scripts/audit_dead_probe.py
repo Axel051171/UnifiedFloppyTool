@@ -61,6 +61,19 @@ from pathlib import Path
 # Sonden, die bekanntermassen nie zustimmen — mit dem Grund, warum das so
 # bleibt. Ein Eintrag hier ist keine Freigabe, sondern eine Erklaerung.
 DEAD_PROBE_BASELINE = {
+    "logical_probe_plugin":
+        "MF-1032: eine Logical-Datei hat KEINEN Kopf — libdsks "
+        "`logical_open()` prueft nichts —, und ihre Anordnung "
+        "(SIDES_ALT/OUTOUT/OUTBACK/EXTSURFACE) steht nirgends in der "
+        "Datei. Aus der Groesse laesst sie sich auch nicht ableiten, "
+        "und das ist gemessen: in libdsks EIGENER Geometrietafel teilt "
+        "jede der acht nicht-ALT-Geometrien ihre Dateigroesse mit "
+        "mindestens einer ALT-Geometrie — acht von acht. Wer hier nach "
+        "Groesse zustimmte, wuerde ein PC-720K-Abbild mit der "
+        "OUTBACK-Anordnung lesen und die halbe Diskette verkehrt "
+        "ausliefern. Die gepruefte Leseseite ist "
+        "uft_logical_read_mem(), die die Geometrie als Argument nimmt; "
+        "der fehlende Kanal dafuer in plugin->open ist P3-337.",
     "posix_probe_plugin":
         "MF-546: die Identitaet eines POSIX-Abbilds steckt in einer "
         "NACHBARDATEI (<pfad>.geom), nicht im Inhalt. Die Plugin-Sonde "

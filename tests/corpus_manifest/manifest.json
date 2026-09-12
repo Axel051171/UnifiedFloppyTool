@@ -800,6 +800,30 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - siehe den Eintrag der 5,25\"-Datei",
       "content": "SELBSTBESCHREIBEND wie die 5,25\"-Datei, aber mit 512 Byte je Sektor und der Zonentafel. **Hier ist die fremde Hand ausdruecklich NICHT die Abnahme:** hxcfes `APPLE2_2MG`-Modul hat keine Zonentafel und meldet fuer diese Datei 133 Spuren x 12 Sektoren x 256 Byte, also 408576 statt 409600 Byte (gemessen). Abgenommen ist die Datei deshalb gegen MAME und gegen die Arithmetik der Zonentafel, die sich selbst auf die Laenge in MAMEs Tafel aufrechnet - und der Test prueft alle 800 Sektoren einzeln gegen ihren eigenen Namen, was Zonentafel und Spurversatz zugleich faellt, wenn eines von beiden falsch ist."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_acorn640_outout.logical",
+      "sha256": "75b7297a2b592b6c71f25ef5fe90bcd10d330e01bd180f60fc8b8db71745b318",
+      "format": "logical",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk ERZEUGT**, nicht von UFT. Die Eingabe ist ein flaches Abbild in ALT-Anordnung mit selbstbenennenden Sektoren („UFT-K Cnn Hh Snn “); `dsktrans` hat es mit libdsks **eigener** Geometrie in die `logical`-Anordnung gewandelt:\n\n    dsktrans -itype raw -format <name> -otype logical in.raw out\n\nDie Anordnung hat damit eine fremde Hand gerechnet. Nachgeprueft: das Ergebnis ist **byteidentisch** mit der unabhaengig aus libdsks `dg_pt2lt()`/`dg_ps2ls()` nachgerechneten Fassung, und der Rueckweg (`-otype raw`) liefert wieder genau die Eingabe. Feldlagen und Gesetze: `lib/drvlogi.c` Z. 24-26/67-85/124-147, `lib/dsklphys.c` Z. 28-48/91-118, `lib/dsksgeom.c` (Tafel samt Sidedness und `dg_secbase`) — nur gelesen, Kanal *Spec* nach MF-695. Diese Datei: libdsk-Geometrie `acorn640` (`lib/dsksgeom.c`) — **SIDES_OUTOUT**, 80 x 2 x 16 x 256 = 655360 Byte, dg_secbase = 0.",
+      "test": "test_logical_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
+      "content": "OUTOUT heisst: erst die ganze Seite 0, dann Seite 1, also `spur = kopf * zylinder + zyl`. **Am Objekt nachweisbar:** bei Versatz 327680 — genau der Haelfte — steht Zylinder 0 Kopf 1; bei ALT stuende dort Zylinder 40 Kopf 0. Und bei Versatz 0 steht sofort ein Sektor, was zugleich belegt, dass die Datei keinen Kopf hat."
+    },
+    {
+      "file": "tests/corpus_free/libdsk_ibm720_outback.logical",
+      "sha256": "9e4b124ce96007d3f158081f8c6bacca8fb7286fef8dca814c3229e2e2223c4b",
+      "format": "logical",
+      "origin": "cross-tool",
+      "tool": "libdsk 1.5.12 `dsktrans` (John Elliott, LGPL-2+), im Baum geklont und gebaut unter `tools/uft-scout/work/libdsk`; SHA-256 der benutzten `dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df",
+      "source": "**Von libdsk ERZEUGT**, nicht von UFT. Die Eingabe ist ein flaches Abbild in ALT-Anordnung mit selbstbenennenden Sektoren („UFT-K Cnn Hh Snn “); `dsktrans` hat es mit libdsks **eigener** Geometrie in die `logical`-Anordnung gewandelt:\n\n    dsktrans -itype raw -format <name> -otype logical in.raw out\n\nDie Anordnung hat damit eine fremde Hand gerechnet. Nachgeprueft: das Ergebnis ist **byteidentisch** mit der unabhaengig aus libdsks `dg_pt2lt()`/`dg_ps2ls()` nachgerechneten Fassung, und der Rueckweg (`-otype raw`) liefert wieder genau die Eingabe. Feldlagen und Gesetze: `lib/drvlogi.c` Z. 24-26/67-85/124-147, `lib/dsklphys.c` Z. 28-48/91-118, `lib/dsksgeom.c` (Tafel samt Sidedness und `dg_secbase`) — nur gelesen, Kanal *Spec* nach MF-695. Diese Datei: libdsk-Geometrie `ibm720` (`lib/dsksgeom.c`) — **SIDES_OUTBACK**, 80 x 2 x 9 x 512 = 737280 Byte, dg_secbase = 1.",
+      "test": "test_logical_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der INHALT ist UFTs Selbstbeschreibungsmuster, die ANORDNUNG hat libdsk gerechnet; keine Zeile fremden Quellcodes uebernommen",
+      "content": "OUTBACK heisst: Kopf 0 nach aussen, Kopf 1 wieder zurueck, also `spur = 2*zylinder - 1 - zyl` fuer Kopf 1 — **dasselbe Gesetz, das MF-1027 an `v9t9` einzeln wiederentdeckt hat**. **Am Objekt nachweisbar:** die LETZTE logische Spur (Versatz 732672) traegt Zylinder 0 Kopf 1. Und `dg_secbase = 1` ist hier mitgeprueft, weil `dg_ps2ls()` ihn subtrahiert."
     }
   ]
 }
