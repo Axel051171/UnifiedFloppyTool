@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 42 |
+| T1b | 43 |
 | T2 | 35 |
-| T3 | 9 |
+| T3 | 8 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -29,6 +29,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `d82` | **T1b** | `test_corpus_cbm_vice`, `test_d82_write_roundtrip` | — | — | 1 |
 | `d88` | **T1b** | `test_d88_error_marks`, `test_d88_header_variants`, `test_format_probe_fuzz`, `test_fremde_hand_liest`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | 1 |
+| `dcm` | **T1b** | `test_dcm_gegen_atrip` | — | — | 2 |
 | `dim_atari` | **T1b** | `test_dim_atari_magic` | — | — | 1 |
 | `dmk` | **T1b** | `test_dmk_crc`, `test_dmk_rx02_absage`, `test_fremde_hand_liest` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | 1 |
 | `dsk_cpc` | **T1b** | `test_edsk_error_marks`, `test_format_probe_fuzz`, `test_fremde_hand_liest`, `test_plugin_probe_real` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | 1 |
@@ -352,7 +353,6 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 
 **Am Rand gefunden, nicht angefasst:** `src/formats/victor/victor9k.c` (verwaist, `docs/orphan_baseline.txt:212`) fuehrt eine **dritte** Geometrie — flach 15 Sektoren fuer Spur 38..79, Summe 1285 Sektoren = 657920 Byte, eine Groesse, die keine Victor-Diskette hat. Es gibt keinen Aufrufer; ein Hinweis steht jetzt in der Datei, damit die naechste Hand die falschen Zahlen nicht erbt (MF-699: erst der Ersatz, dann die Loeschung). | — |
 | `woz` | **T2** | `test_apple_gcr_6and2`, `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_nib_gegen_a2nibblize`, `test_nib_ring_und_blindzone`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
-| `dcm` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
 | `edk` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |
 | `hardsector` | **T3** | `test_hardsector_geometry` | — | — | — |

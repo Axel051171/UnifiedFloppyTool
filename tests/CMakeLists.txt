@@ -1192,6 +1192,23 @@ foreach(test_source ${TEST_SOURCES})
         # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_dcm_gegen_atrip")
+        # MF-1053: das erste DCM von FREMDER Hand. `atrip` (Rob McMullen,
+        # GPL-2) hat beide Pruefdateien mit seinem Kodierer erzeugt —
+        # gelesen und AUSGEFUEHRT, keine Zeile uebernommen. Der
+        # Vorzustand konnte KEINE echte DCM lesen (`open` = -25), waehrend
+        # die Sonde mit Konfidenz 90 zustimmte; die Befehlstafel war
+        # durchgehend anders belegt und die Anordnung folgte der
+        # ATR-Konvention statt der flachen DCM-Anordnung.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dcm/uft_dcm.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        # Der Korpuspfad ist Teil der Abnahme — ohne ihn prueft der
+        # Test nichts und sagt das (Rueckgabe 77, benannter Skip).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_nib_ring_und_blindzone")
         # MF-948: der NIB-Leser fuehrt eine private Zweitfassung des
         # Apple-GCR-Abtasters, die weder umlaeuft noch die letzten 400

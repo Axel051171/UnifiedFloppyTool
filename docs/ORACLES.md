@@ -191,6 +191,7 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `libdsk` | — (im Baum geklont und dort gebaut) | LGPL-2+ (John Elliott) | Pfad `tools/uft-scout/work/libdsk` + **Fassung 1.5.12** (`dsktrans -version`, berichtigt MF-1032 — hier stand „das Werkzeug hat keine Versionsabfrage“, und das trifft nicht: `dsktrans -version` antwortet „libdsk version 1.5.12“, und `config.h` fuehrt `PACKAGE_VERSION "1.5.12"`) plus **SHA-256** der gebauten Werkzeuge (`dsktrans.exe` d0d826c2fc212d26725192418f53da1bec50a758d79f65f0500a7f086e3136df, `dskid.exe` 14abc39bc4ffebf4b2d8690d2e3be9a17955de0ef498337b367a2e77afd56e29) | **Fünfundzwanzig** Container-Formate, darunter `qrst`, `myz80`, `nanowasp`, `logical`, `rcpmfs`, `cfi`, `jv3`, `sap`, `imd`, `apridisk`, `dc22`/`dc42`, `dsk`/`edsk`, `copyqm`, `tele`, `ydsk`, `simh`, `ldbs` — und, was hier den Unterschied macht, **Formatbeschreibungen** in `doc/` (`qrst.html`, `cfi.html`, `apridisk.html`, `libdsk.txt` mit 121 KB). MF-1028 hat `qrst` daraus gehoben. Registriert mit dem Vorbehalt aus dem Abschnitt darunter: **der Bau geht nur an den Autotools vorbei** |
 | `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |
 | `a2nibblize` | — (im Baum geklont, dort gebaut) | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA**, wie bei `to_woz2` und aus demselben Grund: Quellstand `639dc1c3281f`, Rezept unten, Ausgabe-SHA-256 `c09155a2662fe3bb85afc49f65223381df628b47319d111af9a0bacc919b372e` für die benannte Eingabe `tests/corpus_free/uftk_dos33_35trk.do` | **Apple-II-Sektorabbild (`.do`) → NIB.** Seine eigene Hilfe: „*Converts an Apple ][ floppy disk image from .do format to .nib nibble format*". Die fremde Hand für **`nib`** — seit MF-1050 Stufe **T1b** (Fremdwerkzeug-Abbild). **Es lag im selben Klon wie `to_woz2`, seit derselben Sichtung, und wurde nur nie bemerkt:** der Eintrag zu nibtools weiter unten sagt völlig richtig, über `nibconv` führe kein Weg zu T1b — das ist **Commodore**-NIB. Die Frage, ob das **Apple**-Paket einen Erzeuger enthält, hat niemand gestellt. **Lehre: ein geklontes Paket ist mehr als das eine Werkzeug, wegen dessen man es geklont hat.** Und die Spurlänge ist dort nicht behauptet, sondern **gerechnet** — `a2nibblize.c:78` baut 6656 aus der Feldanordnung auf (6 + 3 + 8 + 3 + 3 + 343 + 3 + 27 = 396 je Sektor, ×16, + 0x30 + 0x110), also genau die Konstante, die `uft_nib.c` führt |
+| `atrip` | — (im Baum geklont, als Bibliothek benutzt) | GPL-2 (Zone GELB, mit UFTs GPL-2-or-later vertraeglich — hier trotzdem **nur ausgefuehrt**, keine Zeile uebernommen) | **Quellstand + Baurezept + Ausgabe-SHA.** Klon `tools/uft-scout/work/atrip/`, Ausgabe-SHA-256 `6f25703ef425943918261d6c7b6a8ff4a4fca16c98cdc829c29c6dbcd237ba35` (SD) und `f9d3a5a3f172c79772fb318481aa6d2ca06d949b951b7717b59e8f856f94152d` (DD) fuer die im Rezept benannten Eingaben | **Atari-Sektorabbild → DCM.** `atrip/compressors/dcm.py` ist der einzige vollstaendige DCM-Kodec, der diesem Baum offensteht; sein **Kodierer** `calc_packed_data` hat die beiden Pruefdateien erzeugt, und sein Dekoder liest die drei echten, historischen DCMs aus `atrip/samples/`. Die fremde Hand fuer **`dcm`** — seit MF-1053 Stufe **T1b**. **Und er ist ein Orakel mit gemessenen Grenzen:** fuer Doppeldichte ist sein Pfad defekt (Rezept unten), `atrcopy/dcm.py` ist trotz gleichen Dateinamens **kein** Dekoder (MF-1052), und seine flache Sektoranordnung steht im Widerspruch zu seiner eigenen ATR-Konvention — entschieden wurde das nicht durch das Orakel, sondern am Objekt (gueltige VTOC und ein lesbarer Dateiname bei Sektor 360/361) |
 
 ### libdsk — der Bau geht nur an den Autotools vorbei (MF-1028)
 
@@ -397,6 +398,106 @@ Registry-Eintrag. Sie zählen deshalb für kein T1b-Manifest.
 | `atrcopy` | erzeugt unseren ATR-Korpus; `crc`-Unterbefehl liefert CRC32 je Datei über den Inhalt | **Auflage:** braucht `numpy<1.23` — unter NumPy 2.5.1 drei gemessene Abstürze bei jedem Abbild-Open. Nur zusammen mit `lsatr` eintragen (Zirkularität) |
 | **fdc_bitstream** (yas-sim) | **extern**, nicht im Baum — die vendorte Kopie ist mit MF-626 gelöscht | als **Upstream-Oracle** bauen und eintragen, **nicht** zurückholen (siehe unten) |
 
+### atrip — ein Kodierer, drei Umgehungen und zwei eigene Fehler (MF-1053)
+
+`atrip` (Rob McMullen, GPL-2) liegt als Klon unter
+`tools/uft-scout/work/atrip/`. Benutzt wird **nur** die Klasse
+`atrip.compressors.dcm.DCMCompressor`, und zwar ausgefuehrt — UFTs
+Entpacker ist aus dem beobachteten Verhalten eigenstaendig geschrieben
+(Muster MF-614).
+
+Drei Handgriffe sind noetig, und **keiner davon gehoert in den Klon**;
+sie leben im eigenen Skript:
+
+1. **Ein `pkg_resources`-Ersatz.** `atrip/container.py:4` importiert es,
+   um ueber `iter_entry_points` installierte Plugins zu finden. setuptools
+   fehlt in dieser Umgebung, und wer die Klasse direkt benutzt, braucht
+   die Plugin-Suche nicht:
+
+```python
+# pkg_resources.py — nur fuer den Oracle-Lauf, im Scratchpad
+def iter_entry_points(group, name=None):
+    return iter(())
+
+class DistributionNotFound(Exception):
+    pass
+
+def get_distribution(name):
+    raise DistributionNotFound(name)
+```
+
+2. **Ein `media`-Huellenobjekt.** Der Packer fragt genau vier Dinge ab:
+
+```python
+class Medium:
+    def __init__(self, daten, sektoren, sgr):
+        self.daten = np.frombuffer(daten, dtype=np.uint8)
+        self.sector_size = sgr
+        self.num_sectors = sektoren
+    def get_index_of_sector(self, n):
+        return ((n - 1) * self.sector_size, self.sector_size)
+    def __getitem__(self, s):
+        return self.daten[s]
+```
+
+3. **Zwei numpy-Ersetzungen fuer den DEKODER** (nur fuer die Gegenprobe;
+   der Kodierer braucht sie nicht). Unter numpy >= 2 rechnen drei Stellen
+   in `uint8` und laufen ueber — `get_current_sector` (`hi * 256`,
+   `dcm.py:93`) sowie die Indexzaehler in `decode_41`/`decode_44`, die
+   bei 256-Byte-Sektoren die 256 nie erreichen. Dieselbe Rechnung in
+   Python-Ganzzahlen behebt es.
+
+**Der Lauf:**
+
+```python
+c = DCMCompressor()
+dcm = bytes(c.calc_packed_data(np.frombuffer(roh, dtype=np.uint8),
+                               Medium(roh, 720, 128)))
+```
+
+Die **Eingaben** sind UFT-eigen, selbstbenennend und rechtefrei; sie
+werden im Test aus derselben Regel neu gerechnet statt als Blob
+mitgefuehrt:
+
+* **SD**, 720 x 128: sechs Zonen zu je 120 Sektoren, eine je Blocktyp —
+  Kopf `"UFT-K Snnn "` + Lauf `0xAA` · alle gleich (`"UFT-K ZONE1 "` +
+  `0x5A`) · 128 x `0x33` mit vier wechselnden Bytes bei 124..127 ·
+  `0xC3` mit Kopf am Anfang · `0x7E` mit Kopf am Ende · alles
+  verschieden. Gemessen loest das **alle sechs** Blocktypen aus:
+  `0x41` x238, `0x42` x1, `0x43` x4, `0x44` x357, `0x46` x119,
+  `0x47` x1.
+* **DD**, 720 x 256: Sektor 1..360 ein Fuellbyte `(s*11+37) & 0xFF` bis
+  zum Sektorende mit Kopf davor, Sektor 361..720 die feste Grundlage
+  `(i*37+91) & 0xFF` mit Kopf am Ende. Gemessen `0x43` x360,
+  `0x44` x359, `0x47` x1.
+
+**Warum die DD-Datei nicht ebenfalls alle sechs traegt — gemessen, nicht
+vermutet.** atrips Doppeldichte-Pfad ist an drei Stellen defekt:
+
+* sein `encode_43` legt `rle_start = 256` in einen `uint8`-Puffer und
+  bricht mit `OverflowError` ab (`dcm.py:196`), sobald ein **woertlicher**
+  Lauf bis zum Sektorende reicht;
+* sein Packer waehlt fuer 256-Byte-Sektoren `0x42`, das nur die Bytes
+  0..127 festlegt — sein **eigener** Dekoder liest das dann falsch, der
+  Rundlauf ist nicht mehr identisch;
+* `decode_41`/`decode_44` zaehlen den Index als `uint8`.
+
+Eine Pruefdatei, die um einen Orakel-Defekt herumgebaut ist, waere keine.
+Deshalb deckt die DD-Datei die **Anordnung** und die **Dichte** ab, nicht
+die Befehlsvielfalt — und die eine Regel, die dabei ungeprueft bliebe
+(`ende == 0` heisst 256 in der **woertlichen** Phase), ist an den **drei
+echten** DCM-Dateien nachgemessen: mit entfernter Regel antwortet `open`
+dort `SCHEITERT`.
+
+**Die staerkste Abnahme liegt ausserhalb des Korpus.** `atrip/samples/`
+enthaelt drei echte, historische DCM-Dateien (`mydos_dd_bm301318.dcm`,
+`mydos_dd_bm301419.dcm`, `mydos_sd_mydos4534.dcm`), die niemand in
+diesem Baum geschrieben hat. UFTs Entpacker und atrips Dekoder liefern
+fuer alle drei **720 von 720 Sektoren byteidentisch**. Sie koennen nicht
+in den Korpus — ihre Weitergabe ist nicht geklaert —, deshalb steht
+das Ergebnis im Commit-Text und nicht in einer Zusage.
+
+
 ### Warum fdc_bitstream extern bleibt (MF-644)
 
 Der Wunsch dahinter ist richtig: ein **zweiter, unabhängiger
@@ -427,7 +528,7 @@ urteilt.
 | `ADFDiskBox` | ruft nur `cmd.exe /C gw …`; **keine** eigene ADF-Ebene (0 Treffer auf `ReadAllBytes\|FileStream\|adflib\|RootBlock`) |
 | `FloppyControl` selbst | WinForms-GUI, nicht skriptbar. Nur sein `dskx` ist ein Konsolenprogramm |
 | `WinUAE` | ADFlib-unabhängig und damit inhaltlich interessant, aber GUI **und** ohne Lizenzdatei im Repo — Referenz ja, Oracle nein |
-| `atrip` | **dieselbe Hand wie der Korpus.** `README.rst:6` nennt es wörtlich „The successor to atrcopy", gleicher Autor — fünfte Registrierungsfrage, ausgeschlossen. Unabhängig davon auf dieser Maschine nicht lauffähig: `pkg_resources` fehlt unter Python 3.13, und `np.fromstring` steht neunmal im Code (tot unter NumPy 2.5.1) |
+| `atrip` | **dieselbe Hand wie der Korpus.** `README.rst:6` nennt es wörtlich „The successor to atrcopy", gleicher Autor — fünfte Registrierungsfrage, ausgeschlossen. Unabhängig davon auf dieser Maschine nicht lauffähig: `pkg_resources` fehlt unter Python 3.13, und `np.fromstring` steht neunmal im Code (tot unter NumPy 2.5.1) **NACHTRAG MF-1053 — beide Haelften dieser Absage sind nachgemessen, und eine faellt.** *Nicht lauffaehig* trifft nicht mehr zu: `pkg_resources` braucht einen **dreizeiligen** Ersatz (leeres `iter_entry_points`), und `np.fromstring` liegt auf einem Pfad, den der DCM-Kodierer nie betritt — er laeuft. *Dieselbe Hand wie der Korpus* dagegen **stimmt und bleibt stehen**: fuer `atr`/`xfd` stammen die Korpus-Abbilder von `atrcopy`, und atrip ist dessen Nachfolger vom selben Autor; als Zweitmeinung ueber diese Formate ist es weiterhin ausgeschlossen. Fuer **`dcm`** greift der Einwand nicht: dort gibt es kein atrcopy-Abbild und kann keines geben — `atrcopy/dcm.py` ist **kein** Dekoder und erst recht kein Packer (MF-1052). Verglichen wird UFTs eigenstaendig geschriebener Entpacker gegen ein Abbild fremder Hand; das ist genau, was T1b verlangt. Registriert ist atrip deshalb **nur fuer DCM** — siehe Haupttafel oben. |
 
 **Offene Lücke:** eine **ADFlib-unabhängige, skriptbare** Zweitmeinung
 für ADF fehlt weiterhin. Drei Zyklen haben sie gesucht und nicht

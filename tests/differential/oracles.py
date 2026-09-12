@@ -632,6 +632,90 @@ REGISTRY: tuple[Oracle, ...] = (
             "atrcopy/robmcmullen/omnivore. Der Nachfolger atrip ist "
             "ausdruecklich KEIN Oracle — `README.rst:6` nennt ihn den "
             "Nachfolger von atrcopy, also dieselbe Hand. "
+            "PRAEZISIERT MF-1053: dieser Satz gilt fuer ATR und XFD, und "
+            "dort bleibt er stehen. Fuer DCM gilt er nicht — es gibt "
+            "kein atrcopy-Abbild und kann keines geben, weil "
+            "`atrcopy/atrcopy/dcm.py` kein Dekoder ist (MF-1052). atrip "
+            "ist seit MF-1053 registriert, NUR fuer DCM; siehe seinen "
+            "eigenen Eintrag. "
+        ),
+    ),
+    Oracle(
+        name="atrip",
+        env="ATRIP",
+        # atrip hat KEINEN Konsolen-Einstiegspunkt (`setup.py` definiert
+        # keine `console_scripts`). Benutzt wird die Klasse
+        # `atrip.compressors.dcm.DCMCompressor` direkt — gefunden wird
+        # deshalb der Interpreter, der sie laedt. Das ist ehrlicher als
+        # ein `exes=("atrip",)`, das nie zutraefe.
+        exes=("python", "python3", "python.exe"),
+        version_args=(),
+        # Die Version steht im Paket (`atrip/_version.py`), nicht im
+        # Werkzeug. Der Klon liegt neben diesem Baum und wird deshalb
+        # ausdruecklich in den Suchpfad gelegt — wer `atrip` installiert
+        # hat, bekommt dessen Fassung, und genau das soll die Ausgabe
+        # sagen.
+        version_via=(sys.executable, "-c",
+                     "import sys, os; sys.path.insert(0, os.path.join("
+                     "os.getcwd(), 'tools', 'uft-scout', 'work', 'atrip'"
+                     ")); import atrip; print('atrip', atrip.__version__)"),
+        version_re=r"atrip ([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+        reference_for=(
+            "Atari-Sektorabbild -> DCM: `DCMCompressor().calc_packed_data("
+            "bytes, medium)`. Der einzige vollstaendige DCM-Kodec, der "
+            "diesem Baum offensteht, und die fremde Hand fuer **`dcm`** — "
+            "auf der Leiter aus `scripts/gen_verification_tiers.py` "
+            "**T1b** (Fremdwerkzeug-Abbild), seit MF-1053. "
+            "SEINE GRENZEN SIND GEMESSEN, nicht vermutet. Fuer "
+            "Doppeldichte ist sein Pfad an drei Stellen defekt: "
+            "`encode_43` legt `rle_start = 256` in einen `uint8`-Puffer "
+            "und bricht mit OverflowError ab, sobald ein woertlicher Lauf "
+            "bis zum Sektorende reicht; sein Packer waehlt fuer "
+            "256-Byte-Sektoren `0x42`, das nur die Bytes 0..127 festlegt, "
+            "und sein EIGENER Dekoder liest das dann falsch; "
+            "`decode_41`/`decode_44` zaehlen den Index als `uint8` und "
+            "erreichen 256 nie. Unter numpy >= 2 braucht der DEKODER "
+            "ausserdem eine Ersetzung in `get_current_sector` "
+            "(`hi * 256`, dcm.py:93). Der KODIERER ist von alldem nicht "
+            "betroffen, solange die Eingabe keinen woertlichen Lauf bis "
+            "zum Sektorende erzwingt. "
+            "DAS BAUREZEPT steht vollstaendig in `docs/ORACLES.md` — "
+            "ohne den dreizeiligen `pkg_resources`-Ersatz (leeres "
+            "`iter_entry_points`) laedt das Paket nicht, weil setuptools "
+            "fehlt. "
+            "VERGLICHEN WIRD NUR DIE AUSGABE: UFTs Entpacker ist aus dem "
+            "beobachteten Verhalten eigenstaendig geschrieben (Muster "
+            "MF-614), es wandert keine Zeile ein."),
+        origin="https://github.com/robmcmullen/atrip (Rob McMullen); hier "
+               "als Klon unter `tools/uft-scout/work/atrip/`, Quellstand "
+               "170ab327754bed9373b15afeaca2f00e1f19eaa7 (2019-07-05), "
+               "Paketversion 0.5.0 — nicht installiert, sondern aus dem "
+               "Klon importiert",
+        licence="GPL-2 (Datei `LICENSE`, Volltext GPLv2). Mit UFTs "
+                "GPL-2-or-later vertraeglich, ein Port waere also "
+                "erlaubt; hier wird trotzdem NUR ausgefuehrt und nichts "
+                "uebernommen — dieselbe Entscheidung wie MF-1022 bei "
+                "libsap",
+        abstammung=(
+            "TEILWEISE DIESELBE HAND — und deshalb NUR FUER DCM "
+            "registriert. `README.rst:6` nennt atrip woertlich den "
+            "Nachfolger von atrcopy, gleicher Autor; fuer `atr` und "
+            "`xfd` stammen die Korpus-Abbilder von atrcopy, dort bleibt "
+            "atrip nach der fuenften Frage (MF-644) AUSGESCHLOSSEN, und "
+            "die Eintraege bei `mkatr` und in `docs/ORACLES.md` sagen das "
+            "weiterhin zu Recht. "
+            "FUER DCM greift der Einwand nicht, und das ist gemessen: es "
+            "gibt kein atrcopy-Abbild und kann keines geben — "
+            "`atrcopy/atrcopy/dcm.py` ist 48 Zeilen, liest den Kopf und "
+            "wirft dann `UnsupportedContainer(\"DCM archives are not yet "
+            "supported\")`; es ist KEIN Dekoder und erst recht kein "
+            "Packer (MF-1052). Verglichen wird UFTs eigenstaendig "
+            "geschriebener Entpacker gegen ein Abbild fremder Hand. "
+            "ZUSAETZLICH ausserhalb des Korpus abgenommen: die drei "
+            "echten, historischen DCM-Dateien in `atrip/samples/` "
+            "(mydos_dd_bm301318, mydos_dd_bm301419, mydos_sd_mydos4534) "
+            "hat niemand in diesem Baum geschrieben; UFT und atrip "
+            "liefern fuer alle drei 720 von 720 Sektoren byteidentisch. "
         ),
     ),
     Oracle(

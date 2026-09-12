@@ -1100,6 +1100,30 @@
       "oracle": "a2nibblize",
       "fremdcode": "nein — der Inhalt stammt Byte fuer Byte aus der UFT-eigenen .do; fremd ist nur die Umformung",
       "content": "UFT-K T00 S00 … (6-and-2-nibblisiert, physische Sektorfolge nach DOS-3.3-Verschraenkung)"
+    },
+    {
+      "file": "tests/corpus_free/atrip_uftk_sd_alle6.dcm",
+      "sha256": "6f25703ef425943918261d6c7b6a8ff4a4fca16c98cdc829c29c6dbcd237ba35",
+      "format": "dcm",
+      "origin": "cross-tool",
+      "tool": "atrip 0.5.0 (Rob McMullen, GPL-2), Klon unter tools/uft-scout/work/atrip/, Quellstand 170ab327754bed9373b15afeaca2f00e1f19eaa7 (2019-07-05) - `atrip/compressors/dcm.py`, Kodierer `calc_packed_data`. Baurezept in docs/ORACLES.md",
+      "source": "Einzeldichte 720 x 128 (Kennbyte 0x81: Dichte 0, Durchgang 1, letzter Durchgang). Die Eingabe hat SECHS Zonen zu je 120 Sektoren, eine je Blocktyp - gemessen loest sie beim Zurueckentpacken durch atrip selbst 0x41 x238, 0x42 x1, 0x43 x4, 0x44 x357, 0x46 x119 und 0x47 x1 aus, also ALLE sechs. atrips DCM-Kodierer, direkt benutzt: `DCMCompressor().calc_packed_data(bytes, medium)`. Zwei Handgriffe sind noetig und stehen vollstaendig in docs/ORACLES.md - (a) ein `pkg_resources`-Ersatz mit leerem `iter_entry_points` (setuptools fehlt; die Plugin-Suche wird bei direkter Benutzung nicht gebraucht), (b) ein `media`-Huellenobjekt mit `sector_size`, `num_sectors`, `get_index_of_sector(n) -> (pos, size)` und Indizierung. Die EINGABE ist UFT-eigen, selbstbenennend und rechtefrei; sie wird im Test aus derselben Regel neu gerechnet statt als Blob mitgefuehrt. Kanal *Oracle* nach MF-695: ausgefuehrt, nichts uebernommen.",
+      "test": "test_dcm_gegen_atrip",
+      "oracle": "atrip",
+      "fremdcode": "nein - der Inhalt stammt Byte fuer Byte aus der UFT-eigenen Eingabe; fremd ist nur die Packung",
+      "content": "UFT-K S001 ... (sechs Zonen, je 120 Sektoren)"
+    },
+    {
+      "file": "tests/corpus_free/atrip_uftk_dd_720x256.dcm",
+      "sha256": "f9d3a5a3f172c79772fb318481aa6d2ca06d949b951b7717b59e8f856f94152d",
+      "format": "dcm",
+      "origin": "cross-tool",
+      "tool": "atrip 0.5.0 (Rob McMullen, GPL-2), Klon unter tools/uft-scout/work/atrip/, Quellstand 170ab327754bed9373b15afeaca2f00e1f19eaa7 (2019-07-05) - `atrip/compressors/dcm.py`, Kodierer `calc_packed_data`. Baurezept in docs/ORACLES.md",
+      "source": "Doppeldichte 720 x 256 (Kennbyte 0xA1: Dichte 1, Durchgang 1, letzter Durchgang). Zwei Haelften: Sektor 1..360 ein Fuellbyte bis zum Sektorende (erzwingt 0x43 mit einem Lauf bis 256 und damit die Regel \"ende == 0 heisst 256\", die bei 128 Byte nie auftritt), Sektor 361..720 feste Grundlage mit wechselndem Ende (0x44). Gemessen: 0x43 x360, 0x44 x359, 0x47 x1. Diese Datei belegt zugleich, dass die Anordnung FLACH ist - Sektor 4 liegt bei 3 x 256 und nicht bei 3 x 128 wie in einer ATR. atrips DCM-Kodierer, direkt benutzt: `DCMCompressor().calc_packed_data(bytes, medium)`. Zwei Handgriffe sind noetig und stehen vollstaendig in docs/ORACLES.md - (a) ein `pkg_resources`-Ersatz mit leerem `iter_entry_points` (setuptools fehlt; die Plugin-Suche wird bei direkter Benutzung nicht gebraucht), (b) ein `media`-Huellenobjekt mit `sector_size`, `num_sectors`, `get_index_of_sector(n) -> (pos, size)` und Indizierung. Die EINGABE ist UFT-eigen, selbstbenennend und rechtefrei; sie wird im Test aus derselben Regel neu gerechnet statt als Blob mitgefuehrt. Kanal *Oracle* nach MF-695: ausgefuehrt, nichts uebernommen.",
+      "test": "test_dcm_gegen_atrip",
+      "oracle": "atrip",
+      "fremdcode": "nein - der Inhalt stammt Byte fuer Byte aus der UFT-eigenen Eingabe; fremd ist nur die Packung",
+      "content": "UFT-K S001 ... (zwei Haelften zu je 360 Sektoren)"
     }
   ]
 }
