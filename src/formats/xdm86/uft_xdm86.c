@@ -1,10 +1,34 @@
 /**
  * @file uft_xdm86.c
- * @brief XDM86 (TI-99/4A Disk Manager) Plugin
+ * @brief XDM86 (TI-99/4A Disk Manager): stimmig, aber unbelegt
  *
- * XDM86-format TI-99 disk images. Standard geometry:
- * 40 cyl × 1-2 heads × 9 spt × 256 bytes.
- * SS/SD: 92160, DS/SD: 184320, DS/DD: 368640.
+ * Drei Groessen, drei Geometrien: 92 160 = 40 x 1 x 9 x 256,
+ * 184 320 = 40 x 2 x 9 x 256, 368 640 = 40 x 2 x 18 x 256.
+ *
+ * ── Was MF-1041 hier gemessen hat ────────────────────────────
+ *
+ * **Dieses Plugin war in Ordnung, und das ist der Punkt.** Alle drei
+ * Rechnungen gehen auf, und `xdm86_open()` prueft die Dateigroesse
+ * bereits — eine 100 Byte grosse Datei wird mit -25 abgewiesen. Seine
+ * beiden Nachbarn im selben Commit taten das nicht: `syn` widersprach
+ * sich in der eigenen Kopfzeile, `edk` las die Groesse und verwarf sie.
+ * Festgehalten in `tests/test_groessenerkenner_stimmig.c`, damit es so
+ * bleibt.
+ *
+ * ── Was hier NICHT belegt ist ───────────────────────────
+ *
+ * **Es gibt keine nachpruefbare Referenz.** Der Kopf nannte nie eine
+ * Quelle, und im Baum liegt keine. Innere Stimmigkeit ersetzt keine
+ * Referenz — sie zeigt, dass das Plugin mit sich im Reinen ist, nicht
+ * dass es die Wirklichkeit trifft (die Unterscheidung aus MF-1035).
+ *
+ * Dazu kommt eine offene Frage, die eine Messung entscheiden muesste:
+ * die drei Groessen sind **dieselben**, die `v9t9` fuehrt, und bei
+ * 184 320 Byte ist die Aufteilung nach MAMEs eigenem Kommentar
+ * **zweideutig** (SSDD 1 x 40 x 18 gegen DSSD 2 x 40 x 9, siehe
+ * MF-1027). `xdm86` nimmt hier fest 40 x 2 x 9 an.
+ *
+ * `xdm86` steht deshalb auf **T3**. Gefuehrt als **P3-340**.
  */
 #include "uft/uft_format_common.h"
 
