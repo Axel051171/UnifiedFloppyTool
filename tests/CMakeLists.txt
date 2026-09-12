@@ -815,6 +815,27 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_cas_gegen_mame")
+        # MF-1040: `cas` verlor dreimal still. Gemessen am Vorzustand:
+        # 300 Bloecke ergaben 256 Sektoren (44 Bloecke, 2112 Byte weg,
+        # open = 0); ein Block mit 70 000 Byte wurde auf 65 535 gekuerzt
+        # und als UFT_SECTOR_OK gemeldet (4465 Byte weg); und eine Datei
+        # aus genau den acht Kopfbytes ergab einen Sektor mit data_len 0
+        # und Status OK — Erfolg ohne Tat (MF-1009).
+        #
+        # Referenz: MAMEs formats/fmsx_cas.cpp (BSD-3-Clause, Sean
+        # Young, nur gelesen). Kopf und byteweiser Blocklauf stimmen
+        # ueberein; MAMEs `pos + 8 < caslen` ist um eine Stelle strenger
+        # als UFTs `<=`, das ist im Dateikopf benannt.
+        #
+        # T2 und nicht T1b: MAMEs Lader wandelt CAS in WAV-Abtastwerte
+        # und gibt keine Bloecke zurueck — er taugt nicht als
+        # zerlegendes Orakel.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cas/uft_cas.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_cpm_gegen_libdsk")
         # MF-1039: `cpm_probe_plugin()` konnte NIE zustimmen. Es verwarf
         # `file_size` und gab die PUFFERgroesse (4096) an eine Erkennung

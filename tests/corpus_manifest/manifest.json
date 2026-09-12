@@ -1016,6 +1016,66 @@
       "oracle": "libdsk (nur die Geometrietafel gelesen, keine Datei erzeugt - siehe content)",
       "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Geometrie ist an libdsks Tafel gegengelesen; keine Zeile fremden Quellcodes uebernommen",
       "content": "SELBSTBESCHREIBEND wie die andere Datei. Sie ist die **Gegenprobe**: die Datei allein kann nicht sagen, ob ihre Sektoren ab 1 oder ab 0xC1 nummeriert sind, also muessen Sonde und `open` absagen statt die erste Definition zu nehmen. Vor MF-1039 haette eine CPC-Datendiskette alle 360 Sektornummern falsch bekommen."
+    },
+    {
+      "file": "tests/corpus_free/cas_msx_drei.cas",
+      "sha256": "8c24cef41d186412acc73f9aa303335cb1cdc022761480632e84c9a00a195c9b",
+      "format": "cas",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1040), Aufbau nach MAMEs `formats/fmsx_cas.cpp`",
+      "source": "Drei Bloecke mit den drei MSX-Blockarten (0xD3 BASIC, 0xD0 Binaer, 0xEA ASCII), 674 Byte.",
+      "test": "test_cas_gegen_mame",
+      "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
+    },
+    {
+      "file": "tests/corpus_free/cas_msx_300bloecke.cas",
+      "sha256": "319b2fc7f75f064f61f02cab86de9211954c20054466e84e4db9f812650c4670",
+      "format": "cas",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1040), Aufbau nach MAMEs `formats/fmsx_cas.cpp`",
+      "source": "300 Bloecke — mehr als UFTs Hausgrenze von 256. **Der Pruefstein:** vorher wurden es 256 Sektoren, und 44 Bloecke mit 2112 Byte fielen still weg.",
+      "test": "test_cas_gegen_mame",
+      "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
+    },
+    {
+      "file": "tests/corpus_free/cas_msx_grossblock.cas",
+      "sha256": "2d7245aa377541e416fecedf48d809d78280793879055214036e7e989ee058c2",
+      "format": "cas",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1040), Aufbau nach MAMEs `formats/fmsx_cas.cpp`",
+      "source": "EIN Block mit 70 000 Byte Nutzlast — mehr als ein Sektor fassen kann (16-Bit-Laenge). Vorher auf 65 535 gekuerzt und als UFT_SECTOR_OK gemeldet.",
+      "test": "test_cas_gegen_mame",
+      "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
+    },
+    {
+      "file": "tests/corpus_free/cas_msx_nurkopf.cas",
+      "sha256": "e777fbfe8d26530ab94bdd3935bfca4c7c700bad414108153c313b13f4878b5c",
+      "format": "cas",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1040), Aufbau nach MAMEs `formats/fmsx_cas.cpp`",
+      "source": "Genau die acht Kopfbytes und sonst nichts. Vorher: `open` = 0 mit einem Sektor der Laenge 0 — Erfolg ohne Tat (MF-1009).",
+      "test": "test_cas_gegen_mame",
+      "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
+    },
+    {
+      "file": "tests/corpus_free/cas_msx_leerblock.cas",
+      "sha256": "3feb7799ee020ff6d4b683c70f42266cece0a5455f00e107a101fd288d8353c1",
+      "format": "cas",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1040), Aufbau nach MAMEs `formats/fmsx_cas.cpp`",
+      "source": "Ein voller Block, danach ein Kopf am Dateiende. **Diese Datei isoliert den dritten Befund:** gegen den Vorzustand uebersetzt endet der Prozess mit 0xC0000374, STATUS_HEAP_CORRUPTION.",
+      "test": "test_cas_gegen_mame",
+      "oracle": "MAME fmsx_cas.cpp (nur gelesen)",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, der Aufbau folgt einer gelesenen Quelle; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: jeder Block traegt 10 Byte MSX-Blockart, dann „UFT-K BLOCKnnn “ und ein Muster — ein Leseergebnis sagt damit, welcher Block getroffen wurde. `origin` ist `derived`, weil MAMEs Lader CAS in WAV-Abtastwerte wandelt und keine Bloecke zurueckgibt; er taugt nicht als zerlegendes Orakel."
     }
   ]
 }

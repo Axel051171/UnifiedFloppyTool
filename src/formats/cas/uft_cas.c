@@ -16,7 +16,83 @@
  * Since CAS is a tape format (not disk), we represent the data as a
  * single-track image with one virtual sector per CAS block.
  *
- * Reference: MSX Resource Center wiki, openMSX source
+ * ── Die Referenz ─────────────────────────────────────
+ *
+ * MAMEs `formats/fmsx_cas.cpp` (BSD-3-Clause, Sean Young) — **nur
+ * gelesen**, Kanal *Spec* nach MF-695. Es sagt drei Dinge woertlich:
+ *
+ *     static const uint8_t CasHeader[8] =
+ *         { 0x1F,0xA6,0xDE,0xBA,0xCC,0x13,0x7D,0x74 };
+ *
+ *     if (caslen < 8) return -1;
+ *     if (memcmp (casdata, CasHeader, sizeof (CasHeader))) return -1;
+ *
+ * Die Datei muss also mit dem Kopf **beginnen**; danach laeuft MAME
+ * **byteweise** und beginnt ueberall dort einen neuen Block, wo der Kopf
+ * wieder auftaucht. UFTs Leser tut beides genauso — das ist gemessen
+ * und stimmt.
+ *
+ * ── Was NICHT stimmte: dreimal ein stiller Verlust (MF-1040) ─────
+ *
+ * **(1) Mehr als 256 Bloecke fielen weg.** `CAS_MAX_BLOCKS` ist 256, und
+ * der Suchlauf hoerte dort einfach auf. Gemessen an einer Datei mit 300
+ * Bloecken: `open` = 0, **256** Sektoren, Summe **10 240 statt 12 352
+ * Byte** — 44 Bloecke und 2112 Byte still verloren, ohne ein Wort.
+ * Dieselbe Klasse wie die sechs Befunde aus MF-1004: das Orakel bricht
+ * ab, UFT kuerzte still.
+ *
+ * **(2) Ein Block ueber 65 535 Byte wurde gekuerzt und als GUTER Sektor
+ * gemeldet.** Gemessen an einem Block mit 70 000 Byte Nutzlast: gemeldet
+ * wurden **65 535**, Status `UFT_SECTOR_OK` — **4465 Byte** weg. Die
+ * Grenze kommt aus UFTs Sektormodell (die Laenge ist 16 Bit), nicht aus
+ * dem Format; MAME kennt sie nicht, es gibt den ganzen Strom aus.
+ *
+ * **(3) Ein Kopf ohne Daten ergab einen 0-Byte-Sektor mit Status OK —
+ * und dahinter eine HEAP-KORRUPTION.**
+ * Gemessen an einer Datei aus genau den 8 Kopfbytes: ein Sektor,
+ * `data_len` = 0, Status `UFT_SECTOR_OK`. (Der Zeiger ist dabei **nicht**
+ * NULL — das war eine Vermutung, die die Messung widerlegt hat.)
+ *
+ * **Und der Fall ist schwerer als ein Schoenheitsfehler.** An einer
+ * Datei mit einem vollen Block und einem Kopf am Dateiende gemessen,
+ * gegen den Vorzustand uebersetzt:
+ *
+ *     open = 0, sector_count = 2
+ *       Sektor 0: 200 Byte, Status 0
+ *       Sektor 1:   0 Byte, Status 0
+ *     Rueckgabe des Prozesses: 0xC0000374
+ *
+ * `0xC0000374` ist `STATUS_HEAP_CORRUPTION`. Ein Sektor der Laenge
+ * null, dessen Zeiger auf das Byte HINTER dem Puffer zeigt, hat den
+ * Heap zerstoert — der Prozess starb beim Aufraeumen. **Welche
+ * Zuteilung genau es war, ist nicht bestimmt**; gemessen ist die
+ * Wirkung, und sie reicht: ein Abbild dieser Gestalt liess UFT
+ * abstuerzen.
+ *
+ * Seit MF-1040 wird in allen drei Faellen **abgesagt oder uebersprungen
+ * statt gekuerzt**: zu viele Bloecke und ein zu grosser Block lassen
+ * `open` mit einer Begruendung scheitern, und leere Bloecke werden nicht
+ * als Sektor ausgegeben. „Kein Bit verloren" heisst auch: lieber keine
+ * Antwort als eine gekuerzte.
+ *
+ * ── Eine Abweichung von MAME, benannt statt verschwiegen ────────
+ *
+ * MAMEs Bedingung ist `if ((pos + 8) < caslen)` — **streng kleiner**.
+ * Ein Kopf, der GENAU am Dateiende endet, ist dort also kein Kopf, und
+ * MAME gibt die acht Bytes als Banddaten aus. UFT erkennt ihn (`next + 8
+ * <= size`), findet dahinter nichts und hat seit MF-1040 damit **null**
+ * Bloecke — die Datei wird abgewiesen. Beides ist vertretbar; UFT
+ * entscheidet sich gegen das Ausgeben von acht Bytes, die erkennbar eine
+ * Marke sind und keine Daten (Grundsatz „keine erfundenen Daten").
+ *
+ * ── Und was eine Hausregel ist ───────────────────────────
+ *
+ * CAS ist ein **Band**, kein Datentraeger mit Spuren und Sektoren. Die
+ * Abbildung „eine Spur, je Block ein virtueller Sektor" ist UFTs eigene
+ * Konvention — wie die 128 x 512 bei `fds` (MF-1038). Sie steht in
+ * keiner Quelle, und sie wird hier als Hausregel benannt statt als
+ * Formateigenschaft. `geometry.sector_size` meldet 512, obwohl die
+ * Bloecke beliebig lang sind; das ist derselbe Behelf.
  */
 
 #include "uft/uft_format_common.h"
@@ -49,14 +125,24 @@ typedef struct {
  * Block scanner — find all CAS header signatures
  * ============================================================================ */
 
+/**
+ * @brief Findet die Bloecke — und zaehlt auch die, die nicht mehr
+ *        hineinpassen.
+ *
+ * MF-1040: vorher hielt die Schleife bei `max_blocks` an und der Rest
+ * der Datei fiel **still** weg (gemessen: 300 Bloecke ergaben 256
+ * Sektoren und 2112 Byte Verlust). Jetzt laeuft sie weiter und meldet
+ * ueber `gesamt`, wie viele es wirklich sind; der Aufrufer sagt ab.
+ */
 static uint16_t cas_scan_blocks(const uint8_t *data, size_t size,
                                 uint32_t *offsets, uint32_t *sizes,
-                                uint16_t max_blocks)
+                                uint16_t max_blocks, uint32_t *gesamt)
 {
     uint16_t count = 0;
     size_t pos = 0;
 
-    while (pos + CAS_HEADER_SIZE <= size && count < max_blocks) {
+    if (gesamt) *gesamt = 0;
+    while (pos + CAS_HEADER_SIZE <= size) {
         if (memcmp(data + pos, CAS_MSX_MAGIC, CAS_HEADER_SIZE) == 0) {
             size_t block_start = pos + CAS_HEADER_SIZE;
 
@@ -69,9 +155,12 @@ static uint16_t cas_scan_blocks(const uint8_t *data, size_t size,
             }
             if (next + CAS_HEADER_SIZE > size) next = size;
 
-            offsets[count] = (uint32_t)block_start;
-            sizes[count] = (uint32_t)(next - block_start);
-            count++;
+            if (gesamt) (*gesamt)++;
+            if (count < max_blocks) {
+                offsets[count] = (uint32_t)block_start;
+                sizes[count] = (uint32_t)(next - block_start);
+                count++;
+            }
             pos = next;
         } else {
             pos++;
@@ -88,10 +177,17 @@ static uint16_t cas_scan_blocks(const uint8_t *data, size_t size,
 bool cas_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
-    (void)file_size;
-    if (size < CAS_HEADER_SIZE) return false;
+    /* MF-1040: hier stand `(void)file_size;` — die Falle aus MF-1029.
+     * MAME verlangt `if (caslen < 8) return -1`, und das ist eine
+     * Aussage ueber die DATEI, nicht ueber einen Sondenpuffer. Und eine
+     * Datei, die nur aus den acht Kopfbytes besteht, traegt keinen
+     * Block: sie wird abgewiesen, nicht mit 95 angenommen. */
+    if (!data || size < CAS_HEADER_SIZE) return false;
+    if (file_size <= CAS_HEADER_SIZE) return false;
 
     if (memcmp(data, CAS_MSX_MAGIC, CAS_HEADER_SIZE) == 0) {
+        /* MF-729: acht feste Byte an Versatz 0 sind ein getroffenes
+         * Merkmal (80..100). */
         *confidence = 95;
         return true;
     }
@@ -123,15 +219,49 @@ static uft_error_t cas_open(uft_disk_t *disk, const char *path,
 
     pdata->data = file_data;
     pdata->data_size = file_size;
-    pdata->block_count = cas_scan_blocks(file_data, file_size,
-                                          pdata->block_offsets,
-                                          pdata->block_sizes,
-                                          CAS_MAX_BLOCKS);
+    {
+        uint32_t gesamt = 0;
+        uint16_t bi;
+        pdata->block_count = cas_scan_blocks(file_data, file_size,
+                                              pdata->block_offsets,
+                                              pdata->block_sizes,
+                                              CAS_MAX_BLOCKS, &gesamt);
 
-    if (pdata->block_count == 0) {
-        free(file_data);
-        free(pdata);
-        return UFT_ERROR_FORMAT_INVALID;
+        /* MF-1040, Befund 1: lieber keine Antwort als eine gekuerzte.
+         * Gemessen fielen bei 300 Bloecken 44 davon und 2112 Byte
+         * still weg, und `open` meldete UFT_OK. */
+        if (gesamt > CAS_MAX_BLOCKS) {
+            free(file_data);
+            free(pdata);
+            return UFT_ERROR_NOT_SUPPORTED;
+        }
+
+        /* MF-1040, Befund 2: ein Block, den ein Sektor nicht fassen
+         * kann (die Laenge ist 16 Bit), wurde auf 65 535 gekuerzt und
+         * als UFT_SECTOR_OK gemeldet — gemessen 4465 Byte weg. */
+        for (bi = 0; bi < pdata->block_count; bi++) {
+            if (pdata->block_sizes[bi] > 65535u) {
+                free(file_data);
+                free(pdata);
+                return UFT_ERROR_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    /* MF-1040: nicht nur „kein Block", sondern „kein Block MIT INHALT".
+     * Eine Datei aus genau den acht Kopfbytes hat einen Block der Laenge
+     * null; sie ging vorher mit UFT_OK und **null Sektoren** auf —
+     * Erfolg ohne Tat, die Gestalt von MF-1009 (`apridisk`: 1 Spur, 0
+     * Sektoren, UFT_OK). */
+    {
+        uint16_t bi, mit_inhalt = 0;
+        for (bi = 0; bi < pdata->block_count; bi++)
+            if (pdata->block_sizes[bi] > 0) mit_inhalt++;
+        if (mit_inhalt == 0) {
+            free(file_data);
+            free(pdata);
+            return UFT_ERROR_FORMAT_INVALID;
+        }
     }
 
     disk->plugin_data = pdata;
@@ -175,11 +305,18 @@ static uft_error_t cas_read_track(uft_disk_t *disk, int cyl, int head,
         uint32_t sz = pdata->block_sizes[s];
 
         if (off + sz > pdata->data_size) break;
-        if (sz > CAS_MAX_BLOCK_SIZE) sz = CAS_MAX_BLOCK_SIZE;
 
+        /* MF-1040, Befund 3: ein Kopf ohne Daten dahinter ergab einen
+         * Sektor mit `data_len` 0 und Status UFT_SECTOR_OK — gemessen
+         * an einer Datei aus genau den acht Kopfbytes. Ein Block ohne
+         * Inhalt ist kein Sektor; er wird uebersprungen. */
+        if (sz == 0) continue;
+
+        /* Ueber 65 535 kommt hier nichts mehr an: `cas_open` hat solche
+         * Dateien bereits abgewiesen, statt sie zu kuerzen. */
         uft_format_add_sector(track, (uint8_t)s,
                               pdata->data + off,
-                              (uint16_t)(sz > 65535 ? 65535 : sz),
+                              (uint16_t)sz,
                               0, 0);
     }
 
