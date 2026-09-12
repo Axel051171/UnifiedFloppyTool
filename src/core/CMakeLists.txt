@@ -5,7 +5,44 @@
 # the build fails fast (no more "/* stub */" fallback library).
 # ============================================================================
 
-find_package(ZLIB QUIET)
+# MF-1070: REQUIRED statt QUIET, Eigentuemer-Entscheidung zu P3-329.
+#
+# Vorher fand CMake zlib still, linkte es und setzte `UFT_HAS_ZLIB`
+# PRIVATE — womit das Makro `uft_core` nicht verliess und KEINE `.c`-Datei
+# es las. Wer zlib braucht, sitzt in `src/formats/` (mfi, imz), nicht im
+# Kern. Gemessen war die Folge, dass `mfi` aus seinem eigenen
+# Korpus-Abbild NULL Spuren lieferte.
+#
+# `REQUIRED` und `PUBLIC` sind zusammen die Entscheidung: kein stiller
+# Ersatzpfad mehr, und das Makro erreicht jedes Ziel, das gegen uft_core
+# linkt.
+# Und ein zweiter Befund kam beim Umstellen heraus, der in P3-329 noch
+# nicht stand: **CMake hat zlib auf dieser Werkzeugkette NIE gefunden.**
+# `find_package(ZLIB QUIET)` meldete nichts, der else()-Zweig lief immer,
+# und die Meldung „uft_core: zlib found — APD extras enabled" ist hier
+# kein einziges Mal erschienen. P3-329 sagte „zlib wird gefunden,
+# gelinkt" — das traf fuer den qmake-Bau ohnehin nicht zu (er kannte zlib
+# gar nicht) und fuer CMake auf MinGW ebenso wenig.
+#
+# Der Grund ist kein Fehlen: `libz.a` und `zlib.h` liegen in der
+# Qt-MinGW-Toolchain (gemessen: 127 434 bzw. 97 323 Byte unter
+# `<toolchain>/x86_64-w64-mingw32/`), und der Compiler findet sie mit
+# `-lz` sofort. CMakes `find_library` durchsucht diesen Pfad nur nicht
+# von sich aus.
+#
+# Deshalb derselbe Kandidaten-Ansatz, den die `.pro` fuer libusb benutzt:
+# vom Compiler auf die Toolchain-Wurzel schliessen und nachsehen. Ein
+# von aussen gesetztes `ZLIB_ROOT` hat Vorrang und wird nicht ueberschrieben.
+if(MINGW AND NOT ZLIB_ROOT)
+    get_filename_component(_uft_cc_bin "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_uft_tc_root "${_uft_cc_bin}/.." ABSOLUTE)
+    if(EXISTS "${_uft_tc_root}/x86_64-w64-mingw32/include/zlib.h")
+        set(ZLIB_ROOT "${_uft_tc_root}/x86_64-w64-mingw32")
+        message(STATUS "uft_core: zlib in der MinGW-Toolchain gefunden — ${ZLIB_ROOT}")
+    endif()
+endif()
+
+find_package(ZLIB REQUIRED)
 
 set(CORE_SOURCES
     uft_advanced_mode.c
@@ -42,14 +79,20 @@ target_include_directories(uft_core PUBLIC
     ${CMAKE_SOURCE_DIR}/include/uft/compat
 )
 
-if(ZLIB_FOUND)
-    target_link_libraries(uft_core PUBLIC uft_crc ZLIB::ZLIB)
-    target_compile_definitions(uft_core PRIVATE UFT_HAS_ZLIB=1)
-    message(STATUS "uft_core: zlib found — APD extras enabled")
-else()
-    target_link_libraries(uft_core PUBLIC uft_crc)
-    message(STATUS "uft_core: zlib not found — APD extras disabled")
-endif()
+# MF-1070: PUBLIC statt PRIVATE, und kein else()-Zweig mehr.
+#
+# PRIVATE hiess: das Makro endet an der Grenze von `uft_core`. Die
+# Verbraucher sitzen aber in `src/formats/` — `uft_mfi.c` und
+# `uft_imz.c` —, also kam es nie an. PUBLIC gibt es an jedes Ziel
+# weiter, das gegen uft_core linkt.
+#
+# Der frühere else()-Zweig meldete „APD extras disabled" und baute
+# weiter. Das ist genau der stille Ersatzpfad aus P3-329: der Bau
+# gelingt, eine Faehigkeit fehlt, und niemand erfaehrt es. `REQUIRED`
+# oben macht daraus einen sichtbaren Abbruch.
+target_link_libraries(uft_core PUBLIC uft_crc ZLIB::ZLIB)
+target_compile_definitions(uft_core PUBLIC UFT_HAS_ZLIB=1)
+message(STATUS "uft_core: zlib VERBINDLICH (UFT_HAS_ZLIB) — MFI/IMZ entpacken")
 
 # uft_interleave uses floorf from libm
 if(UNIX)

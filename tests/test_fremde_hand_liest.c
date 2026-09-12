@@ -404,15 +404,34 @@ int main(void)
                 memset(&t, 0, sizeof(t));
                 uft_error_t r = uft_format_plugin_mfi.read_track(&d, 0, 0,
                                                                 &t);
-                snprintf(h3, sizeof(h3), "rc=%d, %zu Sektoren, %zu Rohbyte",
+                snprintf(h3, sizeof(h3),
+                         "rc=%d, %zu Sektoren, %zu Zellen, %zu Rohbyte",
                          (int)r, (size_t)t.sector_count,
-                         (size_t)t.raw_size);
-                pruefe("mfi     — und die gepackten Spurdaten werden "
-                       "ABGESAGT, nicht als Sektor ausgegeben",
-                       r != UFT_OK && t.sector_count == 0
-                       && t.raw_size == 0, h3);
+                         (size_t)t.flux_count, (size_t)t.raw_size);
+                /* MF-1070: hier stand bis heute
+                 *
+                 *     „und die gepackten Spurdaten werden ABGESAGT,
+                 *      nicht als Sektor ausgegeben"
+                 *     r != UFT_OK && t.sector_count == 0 && t.raw_size == 0
+                 *
+                 * Das war RICHTIG, solange zlib keine C-Datei erreichte
+                 * (P3-329): absagen war damals die ehrliche Antwort, und
+                 * die Zusage hat sie festgehalten. Seit der
+                 * Eigentuemer-Entscheidung ist zlib verbindlich, der Leser
+                 * entpackt, und die Spur liefert **Zellzeiten**.
+                 *
+                 * Die Zusage ist damit nicht ueberfluessig geworden,
+                 * sondern faellig — sie prueft jetzt dieselbe Sache in
+                 * ihrer neuen Form: **kein gepackter Strom als Sektor**.
+                 * Sektoren bleiben 0, denn MFI ist ein Flussformat
+                 * (P3-326); was dazukommt, ist der Fluss. */
+                pruefe("mfi     — die gepackten Spurdaten werden ENTPACKT "
+                       "und als Zellzeiten geliefert, nicht als Sektor",
+                       r == UFT_OK && t.sector_count == 0
+                       && t.raw_size == 0 && t.flux_count > 1000, h3);
                 free(t.sectors);
                 free(t.raw_data);
+                uft_track_release(&t);
                 uft_format_plugin_mfi.close(&d);
             }
         }

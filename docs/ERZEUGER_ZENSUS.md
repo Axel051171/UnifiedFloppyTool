@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 31 |
+| davon auf T2/T3 (offen) | 30 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
@@ -54,7 +54,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `jv1` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `mfi` | T2 | MAME_MFI | — | nicht gemessen | — (hat bereits ein Fremdabbild) |
 | `mgt` | T2 | RAW_LOADER (?) | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `nfd` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -141,6 +140,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `jvc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `kfx` | T1b | KRYOFLUXSTREAM (?) | raw (?) |
 | `logical` | T1b | — | logical |
+| `mfi` | T1b | MAME_MFI | — |
 | `micropolis` | T1b | — | — |
 | `msa` | T1b | ATARIST_MSA | — |
 | `msx_disk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |

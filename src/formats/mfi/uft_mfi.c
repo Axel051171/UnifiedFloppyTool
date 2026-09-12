@@ -61,6 +61,13 @@
 #include "uft/uft_format_common.h"
 #include "uft/formats/mfi.h"
 
+/* MF-1070: zlib ist seit der Eigentuemer-Entscheidung zu P3-329
+ * VERBINDLICH — beide Bausysteme setzen `UFT_HAS_ZLIB` unbedingt und
+ * linken die Bibliothek. Es gibt deshalb hier KEIN `#ifdef`: ein
+ * Ersatzpfad waere genau der stille Rueckfall, den P3-329 beschreibt,
+ * und der Bau soll sichtbar scheitern statt leise weniger zu koennen. */
+#include <zlib.h>
+
 /* ============================================================================
  * Constants
  * ============================================================================ */
@@ -77,6 +84,20 @@
 #define MFI_CYLINDER_MASK   0x3FFFFFFFu
 #define MFI_TRACK_ENTRY     16
 #define MFI_MAX_TRACKS      168     /* 84 cyl * 2 heads */
+
+/* MF-1070: eine MFI-Zelle misst 1/200 000 000 einer Umdrehung. Bei
+ * 300 RPM ist eine Umdrehung 200 ms, eine Einheit also **1 ns** —
+ * fluxfox sagt das woertlich: „increments of 1/200_000_000th of a track,
+ * or 1 nanosecond increments at 300RPM"
+ * (`tools/uft-scout/work/fluxfox/src/file_parsers/mfi.rs:34`).
+ *
+ * **Das ist eine Konvention und keine Messung**, und der Unterschied
+ * gehoert benannt: MFI speichert im Kopf KEINE Drehzahl (nur
+ * `cyl_count`, `head_count`, `form_factor`, `variant`). Bei 360 RPM
+ * waere dieselbe Zelle 0,833 ns. Wer die Zeitbasis braucht, muss die
+ * Drehzahl von aussen kennen; wer nur die Zellen vergleicht, braucht
+ * sie nicht. */
+#define MFI_TICK_NS         1u
 
 /* Form factors */
 #define MFI_FF_35           1       /* 3.5" */
@@ -331,16 +352,16 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
      * primaeren Baus kennt zlib ueberhaupt nicht. zlib ist also
      * gefunden, gelinkt und erreicht keinen Code (P3-329).
      *
-     * **Und eine Warnung an die naechste Hand:** dieses Makro darf
-     * hier nur im KOMMENTAR stehen, nicht in einem
-     * Zeichenketten-Literal. `scripts/define_parity_gate.py`
-     * streift Kommentare ab, Zeichenketten aber nicht (zu Recht —
-     * ein Makro kann als WERT benutzt werden). Eine Nennung in der
-     * Merkmalstafel hat das Tor deshalb einmal glauben lassen, die
-     * Abweichung `C:UFT_HAS_ZLIB` („kein Verbraucher im
-     * Quellcode“) sei aufgeloest, und es verlangte die Zeile aus
-     * seiner Grundlinie. Prosa darf kein Tor erfuellen.
-     *
+     * **Und eine Warnung an die naechste Hand:** dieses Makro darf
+     * hier nur im KOMMENTAR stehen, nicht in einem
+     * Zeichenketten-Literal. `scripts/define_parity_gate.py`
+     * streift Kommentare ab, Zeichenketten aber nicht (zu Recht —
+     * ein Makro kann als WERT benutzt werden). Eine Nennung in der
+     * Merkmalstafel hat das Tor deshalb einmal glauben lassen, die
+     * Abweichung `C:UFT_HAS_ZLIB` („kein Verbraucher im
+     * Quellcode“) sei aufgeloest, und es verlangte die Zeile aus
+     * seiner Grundlinie. Prosa darf kein Tor erfuellen.
+     *
      * Solange das nicht entschieden ist, ist **absagen** die richtige
      * Antwort: MFI ist ein Flussformat mit gepackten Spuren, und ein
      * gepackter Strom als „Sektor" ist eine erfundene Angabe. Das
@@ -351,8 +372,87 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
      * `src/samdisk/mfi.cpp`, MIT, im Baum): entpacken auf
      * `uncompressed_size`, dann je 32 Bit LE eine Zelle mit 28 Bit
      * Zeit (`& 0x0FFFFFFF`) und 4 Bit magnetischer Ausrichtung, und
-     * die Summe der Zeiten einer Spur muss **200 000 000** sein. */
-    return UFT_ERROR_NOT_SUPPORTED;
+     * die Summe der Zeiten einer Spur muss **200 000 000** sein.
+     *
+     * ── MF-1070: die Entscheidung ist gefallen, der Weg ist offen ──────
+     *
+     * Der Eigentuemer hat P3-329 mit Weg (a) entschieden: **zlib ist
+     * verbindlich**. Seither setzen BEIDE Bausysteme `UFT_HAS_ZLIB`
+     * unbedingt und linken zlib — die `.pro` des primaeren Baus (die es
+     * vorher ueberhaupt nicht kannte) und `src/core/CMakeLists.txt`
+     * (`REQUIRED` statt `QUIET`, `PUBLIC` statt `PRIVATE`).
+     *
+     * **Eine Abweichung vom Orakel ist bewusst und steht hier:**
+     * `src/samdisk/mfi.cpp:89` wirft eine Ausnahme, wenn die Zeitsumme
+     * nicht EXAKT 200 000 000 ist. Gemessen an zwei Erzeugnissen fremder
+     * Hand haelt das keines — `hxcfe_pc160.mfi` hat auf allen 42 Spuren
+     * **200 064 000**, fluxfox' eigenes `sector_test_360k.mfi` hat
+     * **199 999 972 … 975**. SAMdisk wuerde also BEIDE ablehnen. Die
+     * beiden anderen Umsetzungen im Baum bestehen nicht darauf: fluxfox
+     * rechnet die Summe und prueft sie nicht (die Konstante steht
+     * auskommentiert), hxcfes eigener Lader erwaehnt sie gar nicht.
+     * **Zwei von drei nehmen die Abweichung hin**, und „Kein Bit
+     * verloren" spricht fuers Lesen. Das ist die Gestalt von MF-1015
+     * (`udi`), wo ein Orakel begruendet ueberstimmt wurde: ein Orakel
+     * ist eine Referenz, kein Beweis.
+     *
+     * Die Zellen gehen in `track->flux` — das Feld, das der Spur-Vertrag
+     * dafuer hat — ueber `uft_track_set_flux()`. Das kopiert und setzt
+     * `owns_data`, ohne das `uft_track_release()` nichts freigibt
+     * (MF-599 hat dort genau dieses Leck gemessen). */
+    {
+        uLongf ziel = (uLongf)te->uncompressed_size;
+        uint8_t *roh = NULL;
+        uint8_t *ent = NULL;
+        uint32_t *zellen = NULL;
+        size_t n, i;
+        uft_error_t rc = UFT_OK;
+
+        /* Eine Spur ohne entpackte Groesse hat keine Zellen — das ist
+         * eine Aussage der Datei, kein Fehler. */
+        if (te->uncompressed_size < 4u) return UFT_OK;
+
+        roh = (uint8_t *)malloc(te->compressed_size);
+        ent = (uint8_t *)malloc(te->uncompressed_size);
+        if (!roh || !ent) { free(roh); free(ent); return UFT_ERROR_NO_MEMORY; }
+
+        if (fseek(pdata->file, (long)te->offset, SEEK_SET) != 0
+            || fread(roh, 1, te->compressed_size, pdata->file)
+               != te->compressed_size) {
+            free(roh); free(ent);
+            return UFT_ERROR_IO;
+        }
+
+        /* `uncompress` prueft die Zielgroesse selbst und meldet
+         * Z_BUF_ERROR, wenn die Spur mehr ergibt als ihr Eintrag sagt.
+         * Ein Zuviel ist damit ein Fehler und keine stille Kuerzung —
+         * die Klasse, die MF-1040 an `cas` gemessen hat. */
+        if (uncompress(ent, &ziel, roh, (uLong)te->compressed_size) != Z_OK
+            || ziel != (uLongf)te->uncompressed_size) {
+            free(roh); free(ent);
+            return UFT_ERROR_FORMAT_INVALID;
+        }
+        free(roh);
+
+        n = (size_t)te->uncompressed_size / 4u;
+        zellen = (uint32_t *)malloc(n * sizeof(uint32_t));
+        if (!zellen) { free(ent); return UFT_ERROR_NO_MEMORY; }
+
+        /* Jede Zelle ist LE32 — byteweise gelesen, damit die Endianness
+         * der Maschine nichts aendert. Die oberen 4 Bit (magnetische
+         * Ausrichtung) bleiben unangetastet: sie gehoeren zur Zelle, und
+         * sie wegzuwerfen waere ein stiller Verlust. */
+        for (i = 0; i < n; i++)
+            zellen[i] = uft_read_le32(ent + i * 4u);
+        free(ent);
+
+        rc = uft_track_set_flux(track, zellen, n, MFI_TICK_NS);
+        free(zellen);
+        if (rc != UFT_OK) return rc;
+
+        track->encoding = UFT_ENC_UNKNOWN;   /* MFI sagt es nicht */
+        return UFT_OK;
+    }
 }
 
 /* ============================================================================

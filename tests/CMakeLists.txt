@@ -9,6 +9,27 @@ enable_testing()
 # as -luft_ride, only failing during link with a confusing error.
 set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
+# MF-1070: zlib ist seit der Eigentuemer-Entscheidung zu P3-329
+# verbindlich. `find_package` laeuft zwar schon in
+# `src/core/CMakeLists.txt`, aber das dort erzeugte `ZLIB::ZLIB` ist ein
+# IMPORTED target mit Verzeichnis-Gueltigkeit — und die strenge Pruefung
+# `CMAKE_LINK_LIBRARIES_ONLY_TARGETS` oben laesst nur echte Targets
+# durch. Der Aufruf hier ist idempotent und macht es in diesem
+# Verzeichnis sichtbar.
+#
+# Der Kandidaten-Hinweis ist derselbe wie in `src/core/CMakeLists.txt`
+# und aus demselben gemessenen Grund: CMake findet zlib auf MinGW nicht
+# von sich aus, obwohl `libz.a` in der Qt-Toolchain liegt und der
+# Compiler sie mit `-lz` sofort nimmt.
+if(MINGW AND NOT ZLIB_ROOT)
+    get_filename_component(_uft_cc_bin "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_uft_tc_root "${_uft_cc_bin}/.." ABSOLUTE)
+    if(EXISTS "${_uft_tc_root}/x86_64-w64-mingw32/include/zlib.h")
+        set(ZLIB_ROOT "${_uft_tc_root}/x86_64-w64-mingw32")
+    endif()
+endif()
+find_package(ZLIB REQUIRED)
+
 # System libs (libm) need to be resolved as imported paths so the strict
 # ONLY_TARGETS check above accepts them.
 if(UNIX)
@@ -1209,6 +1230,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_mfi_entpackt")
+        # MF-1070: `mfi` lieferte NULL Spuren aus seinem eigenen
+        # Korpus-Abbild, weil zlib zwar gefunden und gelinkt wurde, das
+        # Makro aber keine C-Datei erreichte (P3-329). Seit der
+        # Eigentuemer-Entscheidung ist zlib verbindlich; `uft_core`
+        # gibt `UFT_HAS_ZLIB` jetzt PUBLIC weiter und linkt ZLIB::ZLIB,
+        # deshalb braucht dieses Ziel beides ausdruecklich.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/mfi/uft_mfi.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_HAS_ZLIB=1
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_link_libraries(${test_name} PRIVATE ZLIB::ZLIB)
     elseif(${test_name} STREQUAL "test_imd_hfe_echte_aufnahme")
         # MF-1068: drei ECHTE Aufnahmen echter Disketten lagen seit dem
         # 2026-09-04 im Korpus, und ihr Manifest-Eintrag sagte im Feld

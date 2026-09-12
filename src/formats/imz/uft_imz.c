@@ -15,8 +15,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Use zlib if available, otherwise simple deflate */
-#ifdef HAVE_ZLIB
+/* MF-1070: hier stand `#ifdef HAVE_ZLIB`, und **das hat niemand
+ * definiert** — nicht CMake (das setzte `UFT_HAS_ZLIB`), nicht die
+ * `.pro` (die zlib ueberhaupt nicht kannte). `USE_ZLIB` war damit
+ * IMMER 0, und diese Datei fiel ausnahmslos in ihren Ersatzpfad
+ * („stored only"). Zwei Namen fuer dieselbe Faehigkeit, keiner
+ * wirksam — so stand es als P3-329 im Register.
+ *
+ * Seit der Eigentuemer-Entscheidung gilt EIN Name, `UFT_HAS_ZLIB`, und
+ * beide Bausysteme setzen ihn unbedingt.
+ *
+ * **Was das heisst und gemessen ist:** die vier `#if USE_ZLIB`-Zweige
+ * unten wurden bis MF-1070 **nie uebersetzt**. Vor der Umstellung
+ * wurde das geprueft — `gcc -std=c11 -DHAVE_ZLIB=1 -c` uebersetzt die
+ * Datei ohne Fehler und ohne Warnung. Der `#if !USE_ZLIB`-Zweig weiter
+ * unten ist damit unerreichbar; er bleibt vorerst stehen, weil ihn zu
+ * entfernen eine eigene Aenderung mit eigener Abnahme waere (MF-699:
+ * erst der Ersatz, dann die Loeschung) — aber er ist hier benannt,
+ * damit niemand ihn fuer eine bestehende Wahlmoeglichkeit haelt. */
+#ifdef UFT_HAS_ZLIB
 #include <zlib.h>
 #define USE_ZLIB 1
 #else

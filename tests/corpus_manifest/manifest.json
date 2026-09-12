@@ -640,8 +640,8 @@
       "format": "mfi",
       "origin": "cross-tool",
       "tool": "HxC libhxcfe hxcfe.exe 2.16.15.2 (Klon 05b53aa)",
-      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.mfi -conv:MAME_MFI  (ACCESS = RW aus `hxcfe -modulelist`). P3-326: liegt bereit, aber der MFI-Leser entpackt das zlib-gepackte Spurdatum nicht und gab beim Messlauf den Kopf 78 9C als Spurdaten aus. Kein Test verknuepft, also KEINE Stufen-Anrechnung - die Datei ist der Pruefstand fuer die Reparatur, nicht ihr Beleg.",
-      "test": "-",
+      "source": "hxcfe.exe -finput:uft_pc160.img -foutput:hxcfe_pc160.mfi -conv:MAME_MFI  (ACCESS = RW aus `hxcfe -modulelist`). P3-326: liegt bereit, aber der MFI-Leser entpackt das zlib-gepackte Spurdatum nicht und gab beim Messlauf den Kopf 78 9C als Spurdaten aus. Kein Test verknuepft, also KEINE Stufen-Anrechnung - die Datei ist der Pruefstand fuer die Reparatur, nicht ihr Beleg. || **MF-1070: aus dem Pruefstand ist der Beleg geworden.** Der Eigentuemer hat P3-329 mit Weg (a) entschieden — zlib ist verbindlich —, und der Leser entpackt jetzt. Gemessen ueber den Produktionspfad: **alle 42 Spuren** liefern Zellzeiten, je Spur genau `uncompressed_size / 4` Zellen (die Zahl steht in der DATEI, nicht in UFT), und die Zeitsumme jeder Spur liegt innerhalb **0,05 %** von 200 000 000 — einer Umdrehung. Gemessen sind es **200 064 000** auf jeder der 42 Spuren. **Die Toleranz ist kein Nachlass, sondern belegt:** `src/samdisk/mfi.cpp:89` wirft eine Ausnahme bei jeder Abweichung und wuerde damit **auch fluxfox' eigenes** `sector_test_360k.mfi` ablehnen (dort 199 999 972…975); fluxfox rechnet die Summe und prueft sie nicht, hxcfes eigener Lader erwaehnt sie gar nicht — zwei von drei nehmen die Abweichung hin. Keine Spur reicht mehr den gepackten Strom durch; der Befund aus MF-1020 („Sektor 0“ begann mit `78 9C ED`) ist damit geschlossen.",
+      "test": "test_mfi_entpackt",
       "oracle": "hxcfe",
       "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
       "content": "UFT-K Selbstbeschreibungsmuster, MAME Floppy Image (Fluss, zlib)"

@@ -118,6 +118,30 @@ equals(UFT_LIBUSB_FOUND, 1) {
 DEFINES += UFT_HAS_HAL
 message("HAL (Hardware Abstraction Layer) ENABLED")
 
+# ═══════════════════════════════════════════════════════════════════════════
+# zlib - VERBINDLICH (MF-1070, Eigentuemer-Entscheidung zu P3-329)
+#
+# Bis MF-1070 war zlib in diesem Bau UEBERHAUPT NICHT vorhanden: kein
+# `-lz`, kein Makro. CMake fand es, linkte es und setzte `UFT_HAS_ZLIB`
+# PRIVATE fuer `uft_core` — und KEINE `.c`-Datei las das Makro; die
+# einzige Datei, die zlib wollte (`src/formats/imz/uft_imz.c`), prueft
+# `HAVE_ZLIB`, das niemand definierte. Zwei Namen fuer dieselbe
+# Faehigkeit, keiner wirksam. Gemessen war die Folge, dass `mfi` aus
+# seinem eigenen Korpus-Abbild NULL Spuren lieferte.
+#
+# Ab hier gilt EIN Name — `UFT_HAS_ZLIB` — und er ist unbedingt gesetzt.
+# Kein Ersatzpfad, kein `if(ZLIB_FOUND)`: ein stiller Rueckfall waere
+# genau die Lage, die P3-329 beschreibt, nur eine Ebene tiefer.
+#
+# Die Abhaengigkeit ist KEINE neue: zlib liegt in der Qt-MinGW-Toolchain,
+# die dieses Projekt ohnehin verlangt (gemessen MF-1028 und hier erneut:
+# `<toolchain>/x86_64-w64-mingw32/{include/zlib.h,lib/libz.a}`), und auf
+# Linux/macOS gehoert sie zum Systemumfang.
+# ═══════════════════════════════════════════════════════════════════════════
+DEFINES += UFT_HAS_ZLIB
+LIBS += -lz
+message("zlib: VERBINDLICH (UFT_HAS_ZLIB, -lz) - MFI/IMZ entpacken")
+
 TARGET = UnifiedFloppyTool
 TEMPLATE = app
 
