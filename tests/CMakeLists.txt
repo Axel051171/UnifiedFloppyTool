@@ -353,6 +353,50 @@ foreach(test_source ${TEST_SOURCES})
         # Versatz, den MF-1006 gegen MAME gemessen hat — MGT ist ein
         # kopfloses Sektorabbild, die Ausgabe also strukturell pruefbar.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_qrst_gegen_libdsk")
+        # MF-1028: `qrst` stand auf T3, und **der ganze Aufbau war
+        # erfunden** — UFT konnte keine echte QRST-Datei lesen, und sein
+        # Schreiber erzeugte ein Format, das es nicht gibt. Gemessen
+        # gegen `tools/uft-scout/work/libdsk/doc/qrst.html` (John
+        # Elliott, LGPL-2+; nur GELESEN, Kanal Spec nach MF-695):
+        #
+        #   Kopfgroesse  22 -> **796**
+        #   Kennung      "QRST" (4) -> "QRST",0 (**5**)
+        #   Kopfaufbau   u16-Felder ab Versatz 4 -> 0x08 Pruefsumme,
+        #                **0x0C Kapazitaetskode** (1..7)
+        #   Geometrie    aus dem Kopf -> aus dem **Kode** ueber eine Tafel
+        #   Spursatz     8 Byte (cyl u16 / head / compressed / size u32)
+        #                -> **3** Byte, und das dritte ist der TYP
+        #   Spurarten    0/1 -> **0/1/2** (roh / leer+Fuellbyte / gepackt)
+        #   Packung      `0x00 count value`-Strom -> **abwechselnd**
+        #                Literal-Lauf <len><bytes> und Wiederhol-Lauf
+        #                <len><byte>
+        #   Pruefsumme   fehlte ganz -> LE32 bei 0x08, Summe
+        #                byte*(1+Versatz) ueber die Diskette
+        #
+        # Die Packung ist woertlich die Klasse aus MF-1009 (`apridisk`:
+        # „ein Byte-Strom statt drei Byte Laenge plus Fuellbyte, dessen
+        # Rundlauftest gruen war, weil Packer und Entpacker Spiegelbilder
+        # waren") — **ein zweites Mal**. Und der Dateikopf nannte
+        # `libdsk drvqrst.c ... Fassung 1.5.12 geprueft`: eine benannte
+        # Referenz, deren Verhalten der Code nicht umsetzte (Gestalt von
+        # MF-1026).
+        #
+        # **Das Fixture ist kein Selbstgespraech.**
+        # `tests/corpus_free/qrst_spec_160k.qrst` ist von UFT erzeugt,
+        # aber ihr Bytelayout ist von fremder Hand NACHGEWIESEN: libdsks
+        # aus dem Klon gebaute Werkzeuge lesen sie (`dskid` meldet
+        # 40/1/8/512 samt Beschreibung und Etikett) und `dsktrans
+        # -itype qrst -otype raw` stellt die Diskette **163840 von
+        # 163840 Byte identisch** wieder her — alle drei Satzarten gehen
+        # also durch einen fremden Entpacker. Das ist der Unterschied zu
+        # MF-1009. T2 und nicht T1b, weil T1b einen fremden ERZEUGER
+        # verlangt.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/qrst/uft_qrst.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_v9t9_gegen_mame")
         # MF-1027: `v9t9` stand auf T3 — und die Spurreihenfolge war an
         # ZWEI unabhaengigen Stellen falsch. MAMEs `ti99_dsk.cpp`

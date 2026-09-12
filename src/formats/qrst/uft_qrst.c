@@ -1,10 +1,70 @@
 /**
  * @file uft_qrst.c
- * @brief QRST (Compaq Quick Release Sector Transfer) format implementation
- * @version 3.9.0
- * 
- * QRST format with RLE compression support.
- * Reference: libdsk drvqrst.c by John Elliott (LGPL-2.0-or-later; Fassung 1.5.12 geprueft)
+ * @brief QRST (Compaq Quick Release Sector Transfer)
+ *
+ * ── Referenz ────────────────────────────────────────────────────────
+ *
+ * `tools/uft-scout/work/libdsk/doc/qrst.html` — die Formatbeschreibung
+ * von John Elliott, und dieselbe, die libdsks `lib/drvqrst.c` umsetzt
+ * (**LGPL-2+**, John Elliott). **Nur gelesen** — Kanal *Spec* nach
+ * MF-695; keine Zeile Quelltext uebernommen. Der Aufbau steht
+ * vollstaendig im Kopf von `include/uft/formats/uft_qrst.h`.
+ *
+ * ── MF-1028: der ganze Aufbau war erfunden ──────────────────────────
+ *
+ * Bis MF-1028 konnte UFT **keine** echte QRST-Datei lesen, und sein
+ * Schreiber erzeugte ein Format, das es nicht gibt. Sieben Abweichungen,
+ * jede gegen die Beschreibung gemessen:
+ *
+ *   1. `QRST_HEADER_SIZE` war **22**; der Kopf ist **796** Byte.
+ *   2. Die Kennung galt als vier Byte `"QRST"`; sie ist **fuenf**
+ *      (`'QRST',0`). Gemessen: die Sonde nahm `"QRSTX"` mit Konfidenz
+ *      **95** an.
+ *   3. Der Kopf wurde als `version`/`cylinders`/`heads`/`sectors`/
+ *      `sector_size` (u16 ab Versatz 4) gelesen. Dort stehen in
+ *      Wirklichkeit drei unbenutzte Bytes, die **Pruefsumme** (0x08)
+ *      und der **Kapazitaetskode** (0x0C).
+ *   4. Die **Geometrie steht nicht im Kopf** — sie folgt aus dem
+ *      Kapazitaetskode ueber eine Tafel von sieben Standardformaten.
+ *      Der Kode wurde nie gelesen; gemessen wurde auch ein Kode 8
+ *      angenommen.
+ *   5. Der Spursatz galt als 8 Byte (`cyl` u16, `head`, `compressed`,
+ *      `data_size` u32). Er ist **3** Byte, und das dritte ist der
+ *      **Typ**.
+ *   6. Es gab zwei Spurarten (keine/RLE); es gibt **drei** — roh,
+ *      **leer mit Fuellbyte** und gepackt. Die leere Spur fehlte ganz.
+ *   7. Die **Pruefsumme fehlte vollstaendig**, obwohl sie in der Datei
+ *      steht: Summe `byte*(1+Versatz)` ueber die ganze Diskette. Das
+ *      ist ein Beleg AM OBJEKT und damit die staerkste Abnahme, die
+ *      dieses Format hergibt (dieselbe Art wie MF-869 und MF-1013).
+ *
+ * **Und die Packung ist woertlich die Klasse aus MF-1009.** Dort war es
+ * `apridisk` mit „einem Byte-Strom statt drei Byte Laenge plus
+ * Fuellbyte, dessen Rundlauftest gruen war, weil Packer und Entpacker
+ * Spiegelbilder waren". Hier stand ein Strom, in dem `0x00` ein
+ * Wiederhol-Tripel einleitete; wirklich wechseln sich ein Literal-Lauf
+ * (`<len>` + `len` Bytes) und ein Wiederhol-Lauf (`<len>` + ein Byte)
+ * ab, beginnend mit dem Literal-Lauf. Und wie dort war der
+ * Rundlauftest gruen: `tests/test_libdsk_formats.c::qrst_rle_compression`
+ * prueft `compress` gegen `decompress` — zwei Spiegel derselben
+ * Erfindung.
+ *
+ * Der alte Dateikopf nannte `libdsk drvqrst.c (LGPL-2.0-or-later;
+ * Fassung 1.5.12 geprueft)`. Eine benannte Referenz, deren Verhalten
+ * der Code nicht umsetzte — dieselbe Gestalt wie MF-1026, wo
+ * `victor9k` MAME nannte und in fuenf Punkten abwich.
+ *
+ * ── Abnahme ─────────────────────────────────────────────────────────
+ *
+ * `tests/corpus_free/qrst_spec_160k.qrst` ist nach dieser Beschreibung
+ * gebaut und von **fremder Hand nachgewiesen**: libdsks aus dem Klon
+ * gebaute Werkzeuge lesen sie (`dskid` meldet 40/1/8/512 samt
+ * Beschreibung und Etikett), und `dsktrans -itype qrst -otype raw`
+ * stellt die Diskette **163840 von 163840 Byte identisch** wieder her.
+ * Alle drei Spursatz-Arten gehen damit durch einen fremden Entpacker —
+ * das ist der Unterschied zu MF-1009.
+ *
+ * Regressionsschutz: `tests/test_qrst_gegen_libdsk.c`.
  */
 
 #include "uft/formats/uft_qrst.h"
@@ -14,536 +74,602 @@
 #include <stdio.h>
 
 /* ============================================================================
- * Utility Functions
- * ============================================================================ */
+ * Kleine Helfer
+ * ==========================================================================*/
 
-static uint16_t read_le16(const uint8_t *p) {
-    return p[0] | (p[1] << 8);
-}
-
-/* MF-594: die Klammern trugen bis hierher keinen Cast — `p[3] << 24`
+/* MF-594: die Klammern trugen bis dahin keinen Cast — `p[3] << 24`
  * befoerdert `uint8_t` zu `int`, und ab 128 passt das Ergebnis nicht mehr
  * hinein. In C ist das undefiniert, nicht bloss haesslich; UBSan meldet es,
- * der Uebersetzer nicht. Gefunden vom Fuzzer in uft_apridisk.c:22, sieben
- * Geschwister derselben Bauart standen daneben. */
-static uint32_t read_le32(const uint8_t *p) {
+ * der Uebersetzer nicht. Gefunden vom Fuzzer in uft_apridisk.c:22. */
+static uint32_t qrst_le32(const uint8_t *p) {
     return (uint32_t)p[0]         | ((uint32_t)p[1] << 8) |
            ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-static void write_le16(uint8_t *p, uint16_t v) {
-    p[0] = v & 0xFF;
-    p[1] = (v >> 8) & 0xFF;
+static uint16_t qrst_le16(const uint8_t *p) {
+    return (uint16_t)(p[0] | ((uint16_t)p[1] << 8));
 }
 
-static void write_le32(uint8_t *p, uint32_t v) {
-    p[0] = v & 0xFF;
-    p[1] = (v >> 8) & 0xFF;
-    p[2] = (v >> 16) & 0xFF;
-    p[3] = (v >> 24) & 0xFF;
+static void qrst_put_le16(uint8_t *p, uint16_t v) {
+    p[0] = (uint8_t)(v & 0xFF);
+    p[1] = (uint8_t)((v >> 8) & 0xFF);
 }
 
-static uint8_t code_from_size(uint16_t size) {
-    switch (size) {
-        case 128:  return 0;
-        case 256:  return 1;
-        case 512:  return 2;
-        case 1024: return 3;
-        default:   return 2;
-    }
+static void qrst_put_le32(uint8_t *p, uint32_t v) {
+    p[0] = (uint8_t)(v & 0xFF);
+    p[1] = (uint8_t)((v >> 8) & 0xFF);
+    p[2] = (uint8_t)((v >> 16) & 0xFF);
+    p[3] = (uint8_t)((v >> 24) & 0xFF);
 }
 
 /* ============================================================================
- * RLE Compression/Decompression
- * 
- * QRST RLE format:
- * - 0x00 count value: repeat 'value' count times
- * - Other: literal byte
- * ============================================================================ */
+ * Die Kapazitaetstafel
+ *
+ * `doc/qrst.html` nennt bei 0x0C sieben Kodes; die Geometrien sind
+ * libdsks Standardformate (`include/libdsk.h:134-141`: 160k = 8
+ * Sektoren 1 Seite, 180k = 9 Sektoren 1 Seite, 320k = 8 Sektoren
+ * 2 Seiten, 360k = 9 Sektoren 2 Seiten).
+ * ==========================================================================*/
+
+typedef struct {
+    uint8_t  capacity;
+    uint8_t  cylinders;
+    uint8_t  heads;
+    uint8_t  sectors;
+    uint16_t sector_size;
+} qrst_kapazitaet_t;
+
+static const qrst_kapazitaet_t qrst_tafel[] = {
+    { QRST_CAP_360K,  40, 2,  9, 512 },
+    { QRST_CAP_1200K, 80, 2, 15, 512 },
+    { QRST_CAP_720K,  80, 2,  9, 512 },
+    { QRST_CAP_1440K, 80, 2, 18, 512 },
+    { QRST_CAP_160K,  40, 1,  8, 512 },
+    { QRST_CAP_180K,  40, 1,  9, 512 },
+    { QRST_CAP_320K,  40, 2,  8, 512 },
+};
+
+bool uft_qrst_geometry(uint8_t capacity, uint8_t *cyl, uint8_t *heads,
+                       uint8_t *spt, uint16_t *sector_size) {
+    size_t i;
+    for (i = 0; i < sizeof(qrst_tafel) / sizeof(qrst_tafel[0]); i++) {
+        if (qrst_tafel[i].capacity != capacity) continue;
+        if (cyl)         *cyl         = qrst_tafel[i].cylinders;
+        if (heads)       *heads       = qrst_tafel[i].heads;
+        if (spt)         *spt         = qrst_tafel[i].sectors;
+        if (sector_size) *sector_size = qrst_tafel[i].sector_size;
+        return true;
+    }
+    return false;
+}
+
+bool uft_qrst_validate_header(const qrst_header_t *header) {
+    if (!header) return false;
+    return uft_qrst_geometry(header->capacity, NULL, NULL, NULL, NULL);
+}
+
+/* ============================================================================
+ * Pruefsumme
+ *
+ * doc/qrst.html: „The checksum is the sum of all bytes on the disc,
+ * each byte multiplied by (1 + its offset on the disc)."
+ * ==========================================================================*/
+
+uint32_t uft_qrst_checksum(const uint8_t *disc, size_t size) {
+    uint32_t summe = 0;
+    size_t i;
+    if (!disc) return 0;
+    for (i = 0; i < size; i++)
+        summe += (uint32_t)disc[i] * (uint32_t)(i + 1);
+    return summe;
+}
+
+/* ============================================================================
+ * Packung: abwechselnd Literal-Lauf und Wiederhol-Lauf
+ *
+ * doc/qrst.html:
+ *
+ *     The compressed data consists of alternating runs of literal
+ *     bytes:   <count> <byte1..byten>
+ *     and repeat bytes: <count> <byte_to_repeat>
+ *
+ * Der Wechsel beginnt beim Literal-Lauf. Ein Lauf der Laenge 0 ist
+ * zulaessig und noetig, wenn der Block mit einem Wiederhol-Lauf
+ * anfaengt.
+ *
+ * Die Namen `qrst_rle_*` sind historisch und bleiben, weil
+ * `tests/test_libdsk_formats.c` sie ruft; die Regel dahinter ist keine
+ * gewoehnliche RLE.
+ * ==========================================================================*/
 
 int qrst_rle_decompress(const uint8_t *input, size_t input_size,
                         uint8_t *output, size_t output_size) {
-    size_t in_pos = 0;
-    size_t out_pos = 0;
-    
-    while (in_pos < input_size && out_pos < output_size) {
-        uint8_t byte = input[in_pos++];
-        
-        if (byte == 0x00 && in_pos + 2 <= input_size) {
-            /* RLE sequence: 0x00 count value */
-            uint8_t count = input[in_pos++];
-            uint8_t value = input[in_pos++];
-            
-            for (int i = 0; i < count && out_pos < output_size; i++) {
-                output[out_pos++] = value;
-            }
+    size_t in_pos = 0, out_pos = 0;
+    bool literal = true;
+
+    if (!input || !output) return -1;
+
+    while (in_pos < input_size) {
+        uint8_t count = input[in_pos++];
+        if (literal) {
+            if (in_pos + count > input_size) return -1;
+            if (out_pos + count > output_size) return -1;
+            memcpy(output + out_pos, input + in_pos, count);
+            in_pos  += count;
+            out_pos += count;
         } else {
-            /* Literal byte */
-            output[out_pos++] = byte;
+            uint8_t wert;
+            if (in_pos >= input_size) return -1;
+            wert = input[in_pos++];
+            if (out_pos + count > output_size) return -1;
+            memset(output + out_pos, wert, count);
+            out_pos += count;
         }
+        literal = !literal;
     }
-    
     return (int)out_pos;
 }
 
 int qrst_rle_compress(const uint8_t *input, size_t input_size,
                       uint8_t *output, size_t output_capacity) {
-    size_t in_pos = 0;
-    size_t out_pos = 0;
-    
+    size_t in_pos = 0, out_pos = 0;
+    bool literal = true;
+
+    if (!input || !output) return -1;
+
     while (in_pos < input_size) {
-        /* Check for a run */
-        uint8_t run_byte = input[in_pos];
-        size_t run_len = 1;
-        
-        while (in_pos + run_len < input_size &&
-               input[in_pos + run_len] == run_byte &&
-               run_len < 255) {
-            run_len++;
-        }
-        
-        if (run_len >= 4 || (run_byte == 0x00 && run_len >= 1)) {
-            /* Encode as RLE */
-            if (out_pos + 3 > output_capacity) return -1;
-            output[out_pos++] = 0x00;
-            output[out_pos++] = (uint8_t)run_len;
-            output[out_pos++] = run_byte;
-            in_pos += run_len;
-        } else {
-            /* Literal byte */
-            if (out_pos + 1 > output_capacity) return -1;
-            
-            /* If byte is 0x00, encode as RLE to avoid confusion */
-            if (run_byte == 0x00) {
-                if (out_pos + 3 > output_capacity) return -1;
-                output[out_pos++] = 0x00;
-                output[out_pos++] = 1;
-                output[out_pos++] = 0x00;
-            } else {
-                output[out_pos++] = run_byte;
+        if (literal) {
+            /* Literale sammeln, bis ein Lauf von mindestens drei
+             * gleichen Bytes beginnt — darunter kostet der
+             * Wiederhol-Lauf mehr, als er spart. */
+            size_t j = in_pos;
+            size_t n;
+            while (j < input_size && (j - in_pos) < 255) {
+                if (j + 2 < input_size && input[j] == input[j + 1]
+                        && input[j] == input[j + 2])
+                    break;
+                j++;
             }
-            in_pos++;
+            n = j - in_pos;
+            if (out_pos + 1 + n > output_capacity) return -1;
+            output[out_pos++] = (uint8_t)n;
+            memcpy(output + out_pos, input + in_pos, n);
+            out_pos += n;
+            in_pos = j;
+        } else {
+            uint8_t wert = input[in_pos];
+            size_t n = 0;
+            while (in_pos + n < input_size && input[in_pos + n] == wert
+                   && n < 255)
+                n++;
+            if (out_pos + 2 > output_capacity) return -1;
+            output[out_pos++] = (uint8_t)n;
+            output[out_pos++] = wert;
+            in_pos += n;
         }
+        literal = !literal;
     }
-    
-    /* Only return if compression is beneficial */
-    if (out_pos >= input_size) {
-        return -1;
-    }
-    
+    /* Endet der Block auf einem Literal-Lauf, folgt kein weiterer
+     * Satz — der Entpacker hoert auf, wenn die gepackte Laenge
+     * erschoepft ist. */
     return (int)out_pos;
 }
 
 /* ============================================================================
- * Header Validation
- * ============================================================================ */
-
-bool uft_qrst_validate_header(const qrst_header_t *header) {
-    if (!header) return false;
-    return memcmp(header->signature, QRST_SIGNATURE, QRST_SIGNATURE_LEN) == 0;
-}
+ * Sonde
+ * ==========================================================================*/
 
 bool uft_qrst_probe(const uint8_t *data, size_t size, int *confidence) {
-    if (!data || size < QRST_HEADER_SIZE) return false;
-    
-    if (memcmp(data, QRST_SIGNATURE, QRST_SIGNATURE_LEN) == 0) {
-        if (confidence) *confidence = 95;
-        return true;
-    }
-    
-    return false;
+    uint8_t kode;
+    if (!data || size < QRST_OFF_CAPACITY + 1) return false;
+
+    /* MF-1028: FUENF Byte. Das Nullbyte gehoert zur Kennung; ohne es
+     * nahm die Sonde `"QRSTX"` mit Konfidenz 95 an. */
+    if (memcmp(data, "QRST\0", QRST_SIGNATURE_LEN) != 0) return false;
+
+    /* Und der Kapazitaetskode muss einer von sieben sein — er traegt
+     * die Geometrie, also ist ein unbekannter Kode keine lesbare
+     * Datei, sondern eine, deren Geometrie UFT erfinden muesste. */
+    kode = data[QRST_OFF_CAPACITY];
+    if (!uft_qrst_geometry(kode, NULL, NULL, NULL, NULL)) return false;
+
+    /* MF-729: 80..100 heisst „Merkmal getroffen". Eine 5-Byte-Kennung
+     * plus ein gueltiger Kode ist genau das. */
+    if (confidence) *confidence = 90;
+    return true;
 }
 
 /* ============================================================================
- * Read Implementation
- * ============================================================================ */
+ * Lesen
+ * ==========================================================================*/
+
+static void qrst_ergebnis_init(qrst_read_result_t *r) {
+    if (!r) return;
+    memset(r, 0, sizeof(*r));
+}
+
+/** Kopf byteweise auslesen — keine Struktur ueber die Datei legen. */
+static bool qrst_kopf_lesen(const uint8_t *data, size_t size,
+                            qrst_header_t *h) {
+    size_t i;
+    if (size < QRST_HEADER_SIZE) return false;
+    if (memcmp(data, "QRST\0", QRST_SIGNATURE_LEN) != 0) return false;
+
+    memset(h, 0, sizeof(*h));
+    h->checksum = qrst_le32(data + QRST_OFF_CHECKSUM);
+    h->capacity = data[QRST_OFF_CAPACITY];
+    h->volume   = data[QRST_OFF_VOLUME];
+    h->volumes  = data[QRST_OFF_VOLUMES];
+
+    for (i = 0; i < QRST_DESCRIPTION_MAX; i++) {
+        char c = (char)data[QRST_OFF_DESCRIPTION + i];
+        h->description[i] = c;
+        if (c == '\0') break;
+    }
+    h->description[QRST_DESCRIPTION_MAX] = '\0';
+    for (i = 0; i < QRST_LABEL_MAX; i++) {
+        char c = (char)data[QRST_OFF_LABEL + i];
+        h->label[i] = c;
+        if (c == '\0') break;
+    }
+    h->label[QRST_LABEL_MAX] = '\0';
+
+    return uft_qrst_geometry(h->capacity, &h->cylinders, &h->heads,
+                             &h->sectors, &h->sector_size);
+}
 
 uft_error_t uft_qrst_read_mem(const uint8_t *data, size_t size,
                               uft_disk_image_t **out_disk,
                               qrst_read_result_t *result) {
-    if (!data || !out_disk || size < QRST_HEADER_SIZE) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    /* Initialize result */
-    if (result) {
-        memset(result, 0, sizeof(*result));
-    }
-    
-    /* Validate header */
-    const qrst_header_t *header = (const qrst_header_t *)data;
-    if (!uft_qrst_validate_header(header)) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid QRST signature";
-        }
-        return UFT_ERR_FORMAT;
-    }
-    
-    /* Extract geometry */
-    uint16_t cylinders = read_le16((const uint8_t*)&header->cylinders);
-    uint16_t heads = read_le16((const uint8_t*)&header->heads);
-    uint16_t sectors = read_le16((const uint8_t*)&header->sectors);
-    uint16_t sector_size = read_le16((const uint8_t*)&header->sector_size);
-    
-    if (cylinders == 0 || heads == 0 || sectors == 0 || sector_size == 0) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail = "Invalid QRST geometry";
-        }
-        return UFT_ERR_FORMAT;
-    }
+    qrst_header_t h;
+    uft_disk_image_t *image = NULL;
+    uint8_t *disc = NULL;
+    size_t tracklen, disc_size, pos;
+    uint32_t summe;
+    int c, hd, s;
 
-    /* MF-543: eine Geometrie aus der Datei ist eine BEHAUPTUNG.
-     *
-     * Hier stand nur `!= 0`. Alles andere kam ungeprueft aus einem
-     * 22-Byte-Kopf, und zwei Zeilen weiter passierte das hier:
-     *
-     *     uft_disk_alloc(cylinders, heads)     heads ist uint8_t
-     *         -> track_count = cylinders * (heads & 0xFF)
-     *     for (uint16_t h = 0; h < heads; h++) heads ist uint16_t
-     *         idx = c * heads + h;             ungekuerzt
-     *         disk->track_data[idx] = track;   schreibt weit dahinter
-     *
-     * Bei `heads = 300` hat das Feld 2 x 44 = 88 Plaetze und wird bis
-     * Index 599 beschrieben. Gefunden vom Oeffnungs-Fuzzer, nachdem er um
-     * 25 Sondenkennungen erweitert wurde und QRST zum ersten Mal ueberhaupt
-     * eine Eingabe bekam: 55 GB Arbeitsspeicher, dann 0xC0000409
-     * (STATUS_STACK_BUFFER_OVERRUN). 22 Byte genuegen.
-     *
-     * Zwei Schranken, und beide sind noetig:
-     *
-     * (1) `heads > 255` kann nicht ehrlich angelegt werden, weil
-     *     `uft_disk_alloc()` den Wert als uint8_t nimmt. Eine Kuerzung
-     *     stillschweigend hinzunehmen hiesse, mit zwei verschiedenen
-     *     Zahlen zu rechnen — genau das war der Fehler.
-     *
-     * (2) Die behaupteten Nutzdaten muessen in die Datei passen. Das
-     *     faengt auch die Faelle, in denen jede Einzelzahl fuer sich
-     *     plausibel aussieht (80 x 2 x 255 x 8192) und nur ihr Produkt
-     *     nicht. Bei Kompression steht im Kopf ein kleinerer Rest, deshalb
-     *     wird nur bei `QRST_COMP_NONE` gegen die Dateigroesse geprueft;
-     *     Schranke (1) und die Einzelgrenzen gelten immer.
-     *
-     * Die Sonde prueft weiterhin nur Kennung und Mindestlaenge — sie
-     * bekommt die Dateigroesse, aber ein Sondenfehler wuerde ein
-     * legitimes Abbild unsichtbar machen. Die Ablehnung gehoert hierher,
-     * wo sie eine Begruendung mitgeben kann. */
-    if (heads > 255 || cylinders > 1024 || sectors > 1024 ||
-        sector_size > 16384) {
-        if (result) {
-            result->error = UFT_ERR_FORMAT;
-            result->error_detail =
-                "QRST geometry out of range (heads must fit uint8; see MF-543)";
-        }
-        return UFT_ERR_FORMAT;
-    }
+    qrst_ergebnis_init(result);
+    if (!data || !out_disk) return UFT_ERR_INVALID_PARAM;
+    *out_disk = NULL;
 
-    if (header->compression == QRST_COMP_NONE) {
-        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
-        if (need > (uint64_t)(size - QRST_HEADER_SIZE)) {
-            if (result) {
-                result->error = UFT_ERR_FORMAT;
-                result->error_detail =
-                    "QRST header claims more data than the file holds";
+    if (!qrst_kopf_lesen(data, size, &h)) return UFT_ERROR_FORMAT_INVALID;
+
+    tracklen  = (size_t)h.sectors * h.sector_size;
+    disc_size = (size_t)h.cylinders * h.heads * tracklen;
+    disc = (uint8_t *)calloc(1, disc_size);
+    if (!disc) return UFT_ERROR_NO_MEMORY;
+
+    /* ── die Spursaetze abgehen ─────────────────────────────────────
+     *
+     * Die Saetze stehen in der Reihenfolge der Datei und nennen ihre
+     * Lage selbst (Zylinder, Kopf). Es wird NICHT angenommen, dass sie
+     * vollstaendig oder geordnet sind; was fehlt, bleibt genullt und
+     * wird unten als fehlend gekennzeichnet. */
+    pos = QRST_HEADER_SIZE;
+    {
+        uint8_t *gesehen = (uint8_t *)calloc(1, (size_t)h.cylinders * h.heads);
+        if (!gesehen) { free(disc); return UFT_ERROR_NO_MEMORY; }
+
+        while (pos + 3 <= size) {
+            const uint8_t tcyl = data[pos];
+            const uint8_t thead = data[pos + 1];
+            const uint8_t ttyp = data[pos + 2];
+            size_t idx;
+            pos += 3;
+
+            if (tcyl >= h.cylinders || thead >= h.heads) {
+                /* Ein Satz, der eine Spur nennt, die es in dieser
+                 * Geometrie nicht gibt. Abweisen statt ueberspringen:
+                 * entweder ist der Kapazitaetskode falsch oder die
+                 * Datei ist beschaedigt, und beides heisst, dass jede
+                 * weitere Auslegung geraten waere. */
+                free(gesehen);
+                free(disc);
+                return UFT_ERROR_FORMAT_INVALID;
             }
-            return UFT_ERR_FORMAT;
-        }
-    }
+            idx = (size_t)tcyl * h.heads + thead;
 
-
-    if (result) {
-        result->cylinders = cylinders;
-        result->heads = heads;
-        result->sectors = sectors;
-        result->sector_size = sector_size;
-    }
-    
-    /* Allocate disk image */
-    uft_disk_image_t *disk = uft_disk_alloc(cylinders, heads);
-    if (!disk) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    disk->format = UFT_FORMAT_RAW;
-    snprintf(disk->format_name, sizeof(disk->format_name), "QRST");
-    disk->sectors_per_track = sectors;
-    disk->bytes_per_sector = sector_size;
-    
-    /* Allocate tracks */
-    for (uint16_t c = 0; c < cylinders; c++) {
-        for (uint16_t h = 0; h < heads; h++) {
-            size_t idx = c * heads + h;
-            uft_track_t *track = uft_track_alloc(sectors, 0);
-            if (!track) {
-                uft_disk_free(disk);
-                return UFT_ERR_MEMORY;
-            }
-            track->cylinder = c;
-            track->head = h;
-            track->encoding = UFT_ENC_MFM;
-            disk->track_data[idx] = track;
-        }
-    }
-    
-    /* Read track data */
-    size_t pos = QRST_HEADER_SIZE;
-    size_t track_size = (size_t)sectors * sector_size;
-    uint8_t *decomp_buffer = malloc(track_size);
-    uint32_t total_tracks = 0, compressed_tracks = 0;
-    
-    if (!decomp_buffer) {
-        uft_disk_free(disk);
-        return UFT_ERR_MEMORY;
-    }
-    
-    while (pos + sizeof(qrst_track_header_t) <= size) {
-        qrst_track_header_t thdr;
-        memcpy(&thdr, data + pos, sizeof(thdr));
-        pos += sizeof(thdr);
-        
-        uint16_t cyl = read_le16((uint8_t*)&thdr.cylinder);
-        uint8_t head = thdr.head;
-        uint8_t compressed = thdr.compressed;
-        uint32_t data_size = read_le32((uint8_t*)&thdr.data_size);
-        
-        if (pos + data_size > size) break;
-        
-        if (cyl >= cylinders || head >= heads) {
-            pos += data_size;
-            continue;
-        }
-        
-        total_tracks++;
-        if (compressed) compressed_tracks++;
-        
-        size_t idx = cyl * heads + head;
-        uft_track_t *track = disk->track_data[idx];
-        
-        const uint8_t *track_data = data + pos;
-        uint8_t *final_data = (uint8_t*)track_data;
-        size_t final_size = data_size;
-        
-        /* Decompress if needed */
-        if (compressed) {
-            int decomp_len = qrst_rle_decompress(track_data, data_size,
-                                                  decomp_buffer, track_size);
-            if (decomp_len > 0) {
-                final_data = decomp_buffer;
-                final_size = decomp_len;
-            }
-        }
-        
-        /* Copy sector data */
-        uint8_t size_code = code_from_size(sector_size);
-        size_t data_pos = 0;
-        
-        for (uint16_t s = 0; s < sectors; s++) {
-            uft_sector_t *sect = &track->sectors[s];
-            sect->id.cylinder = cyl;
-            sect->id.head = head;
-            sect->id.sector = s + 1;
-            sect->id.size_code = size_code;
-            sect->status = UFT_SECTOR_OK;
-            
-            sect->data = malloc(sector_size);
-            sect->data_size = sector_size;
-            
-            if (sect->data) {
-                if (data_pos + sector_size <= final_size) {
-                    memcpy(sect->data, final_data + data_pos, sector_size);
-                } else {
-                    memset(sect->data, 0xE5, sector_size);
-                    /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
-                     * erfundene 0xE5 von echten 0xE5-Daten nicht zu
-                     * unterscheiden -- und `status` stand schon auf OK. */
-                    uft_sector_mark_missing(sect);
+            if (ttyp == QRST_TRACK_RAW) {
+                if (pos + tracklen > size) {
+                    free(gesehen); free(disc);
+                    return UFT_ERROR_FORMAT_INVALID;
                 }
+                memcpy(disc + idx * tracklen, data + pos, tracklen);
+                pos += tracklen;
+                if (result) result->raw_tracks++;
+            } else if (ttyp == QRST_TRACK_BLANK) {
+                if (pos + 1 > size) {
+                    free(gesehen); free(disc);
+                    return UFT_ERROR_FORMAT_INVALID;
+                }
+                memset(disc + idx * tracklen, data[pos], tracklen);
+                pos += 1;
+                if (result) result->blank_tracks++;
+            } else if (ttyp == QRST_TRACK_PACKED) {
+                uint16_t clen;
+                int n;
+                if (pos + 2 > size) {
+                    free(gesehen); free(disc);
+                    return UFT_ERROR_FORMAT_INVALID;
+                }
+                clen = qrst_le16(data + pos);
+                pos += 2;
+                if (pos + clen > size) {
+                    free(gesehen); free(disc);
+                    return UFT_ERROR_FORMAT_INVALID;
+                }
+                n = qrst_rle_decompress(data + pos, clen,
+                                        disc + idx * tracklen, tracklen);
+                if (n < 0 || (size_t)n != tracklen) {
+                    free(gesehen); free(disc);
+                    return UFT_ERROR_FORMAT_INVALID;
+                }
+                pos += clen;
+                if (result) result->packed_tracks++;
+            } else {
+                /* MF-1028: eine Satzart, die es nicht gibt, wird
+                 * ABGEWIESEN. Sie stillschweigend zu ueberspringen
+                 * waere unmoeglich — die Satzlaenge haengt am Typ,
+                 * also weiss niemand, wo der naechste Satz beginnt. */
+                free(gesehen); free(disc);
+                return UFT_ERROR_FORMAT_INVALID;
             }
-            data_pos += sector_size;
-            track->sector_count++;
+            gesehen[idx] = 1;
         }
-        
-        pos += data_size;
+
+        /* ── das Abbild aufbauen ────────────────────────────────── */
+        image = uft_disk_alloc(h.cylinders, h.heads);
+        if (!image) { free(gesehen); free(disc); return UFT_ERROR_NO_MEMORY; }
+        image->format = UFT_FORMAT_DSK;
+        snprintf(image->format_name, sizeof(image->format_name), "QRST");
+        image->sectors_per_track = h.sectors;
+        image->bytes_per_sector  = h.sector_size;
+
+        for (c = 0; c < h.cylinders; c++) {
+            for (hd = 0; hd < h.heads; hd++) {
+                const size_t idx = (size_t)c * h.heads + hd;
+                uft_track_t *tr = (uft_track_t *)calloc(1, sizeof(uft_track_t));
+                if (!tr) { free(gesehen); free(disc); uft_disk_free(image);
+                           return UFT_ERROR_NO_MEMORY; }
+                uft_track_init(tr, c, hd);
+                for (s = 0; s < h.sectors; s++) {
+                    const uint8_t *sek = disc + idx * tracklen
+                                         + (size_t)s * h.sector_size;
+                    /* Sektor-IDs sind 1-basiert: libdsks `.libdskrc`
+                     * fuehrt fuer alle ibm/pcw-Formate `SecBase=1`, und
+                     * `uft_format_add_sector()` addiert laut eigenem
+                     * Kopf 1 auf den 0-basierten Laufindex. Geprueft
+                     * und deshalb NICHT auf `_with_id` umgestellt
+                     * (anders als bei `jv1`/`victor9k`). */
+                    uft_format_add_sector(tr, (uint8_t)s, sek,
+                                          h.sector_size, (uint8_t)c,
+                                          (uint8_t)hd);
+                    if (!gesehen[idx]) {
+                        /* MF-980: eine Spur, fuer die kein Satz in der
+                         * Datei stand, ist nicht „lauter Nullen" —
+                         * sie ist nicht da. Ohne diese Kennzeichnung
+                         * waeren die genullten Bytes von echten Daten
+                         * nicht zu unterscheiden. */
+                        uft_format_mark_last_missing(tr);
+                    }
+                }
+                image->track_data[idx] = tr;
+            }
+        }
+        free(gesehen);
     }
-    
-    free(decomp_buffer);
-    
+
+    summe = uft_qrst_checksum(disc, disc_size);
     if (result) {
         result->success = true;
-        result->total_tracks = total_tracks;
-        result->compressed_tracks = compressed_tracks;
+        result->error = UFT_OK;
+        result->cylinders   = h.cylinders;
+        result->heads       = h.heads;
+        result->sectors     = h.sectors;
+        result->sector_size = h.sector_size;
+        result->total_tracks = (uint32_t)h.cylinders * h.heads;
+        result->checksum_header   = h.checksum;
+        result->checksum_computed = summe;
+        result->checksum_ok = (summe == h.checksum);
+        result->original_size   = disc_size;
+        result->compressed_size = size;
     }
-    
-    *out_disk = disk;
+
+    if (h.description[0]) {
+        image->comment = (char *)malloc(strlen(h.description) + 1);
+        if (image->comment) {
+            strcpy(image->comment, h.description);
+            image->comment_len = strlen(h.description);
+        }
+    }
+
+    free(disc);
+    *out_disk = image;
     return UFT_OK;
 }
 
 uft_error_t uft_qrst_read(const char *path,
                           uft_disk_image_t **out_disk,
                           qrst_read_result_t *result) {
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        return UFT_ERR_IO;
+    FILE *f;
+    uint8_t *buf;
+    long len;
+    uft_error_t rc;
+
+    qrst_ergebnis_init(result);
+    if (!path || !out_disk) return UFT_ERR_INVALID_PARAM;
+
+    f = fopen(path, "rb");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    len = ftell(f);
+    if (len <= 0) { fclose(f); return UFT_ERROR_IO; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
+
+    buf = (uint8_t *)malloc((size_t)len);
+    if (!buf) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    if (fread(buf, 1, (size_t)len, f) != (size_t)len) {
+        free(buf); fclose(f); return UFT_ERROR_IO;
     }
-    
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    
-    uint8_t *data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return UFT_ERR_MEMORY;
-    }
-    
-    if (fread(data, 1, size, fp) != size) {
-        free(data);
-        fclose(fp);
-        return UFT_ERR_IO;
-    }
-    
-    fclose(fp);
-    
-    uft_error_t err = uft_qrst_read_mem(data, size, out_disk, result);
-    free(data);
-    
-    return err;
+    fclose(f);
+
+    rc = uft_qrst_read_mem(buf, (size_t)len, out_disk, result);
+    free(buf);
+    return rc;
 }
 
 /* ============================================================================
- * Write Implementation
- * ============================================================================ */
+ * Schreiben
+ *
+ * Der Schreiber ist spezifikationsgerecht, hat aber weiterhin **keinen
+ * Aufrufer** aus dem Plugin-Pfad — `write_track` sagt ab und `close()`
+ * schreibt nicht. Das ist P3-204 (MF-930/931) und wird hier NICHT
+ * mitverdrahtet: die Verdrahtung ist je Format eine eigene Aufgabe mit
+ * eigenem Rundlaufbeweis. Was MF-1028 aendert, ist, dass der Schreiber
+ * nicht mehr ein erfundenes Format erzeugt.
+ * ==========================================================================*/
 
 void uft_qrst_write_options_init(qrst_write_options_t *opts) {
     if (!opts) return;
-    memset(opts, 0, sizeof(*opts));
     opts->use_compression = true;
 }
 
 uft_error_t uft_qrst_write(const uft_disk_image_t *disk,
                            const char *path,
                            const qrst_write_options_t *opts) {
-    if (!disk || !path) {
-        return UFT_ERR_INVALID_PARAM;
-    }
-    
-    qrst_write_options_t default_opts;
-    if (!opts) {
-        uft_qrst_write_options_init(&default_opts);
-        opts = &default_opts;
-    }
-    
-    /* Calculate max output size */
-    size_t track_size = (size_t)disk->sectors_per_track * disk->bytes_per_sector;
-    size_t max_size = QRST_HEADER_SIZE +
-                      (size_t)disk->tracks * disk->heads * 
-                      (sizeof(qrst_track_header_t) + track_size + 256);
-    
-    uint8_t *output = malloc(max_size);
-    if (!output) {
-        return UFT_ERR_MEMORY;
-    }
-    
-    /* Build header */
-    qrst_header_t *header = (qrst_header_t *)output;
-    memset(header, 0, sizeof(*header));
-    memcpy(header->signature, QRST_SIGNATURE, QRST_SIGNATURE_LEN);
-    write_le16((uint8_t*)&header->version, 1);
-    write_le16((uint8_t*)&header->cylinders, disk->tracks);
-    write_le16((uint8_t*)&header->heads, disk->heads);
-    write_le16((uint8_t*)&header->sectors, disk->sectors_per_track);
-    write_le16((uint8_t*)&header->sector_size, disk->bytes_per_sector);
-    header->compression = opts->use_compression ? QRST_COMP_RLE : QRST_COMP_NONE;
-    
-    size_t out_pos = QRST_HEADER_SIZE;
-    
-    /* Allocate buffers */
-    uint8_t *track_buffer = malloc(track_size);
-    uint8_t *comp_buffer = malloc(track_size + 256);
-    
-    if (!track_buffer || !comp_buffer) {
-        free(track_buffer);
-        free(comp_buffer);
-        free(output);
-        return UFT_ERR_MEMORY;
-    }
-    
-    /* Write track data */
-    for (uint16_t c = 0; c < disk->tracks; c++) {
-        for (uint8_t h = 0; h < disk->heads; h++) {
-            size_t idx = c * disk->heads + h;
-            uft_track_t *track = disk->track_data[idx];
-            
-            /* Build track data */
-            memset(track_buffer, 0xE5, track_size);
-            for (uint8_t s = 0; s < disk->sectors_per_track; s++) {
-                if (track && s < track->sector_count && track->sectors[s].data) {
-                    memcpy(track_buffer + s * disk->bytes_per_sector,
-                           track->sectors[s].data, disk->bytes_per_sector);
-                }
-            }
-            
-            /* Try compression */
-            const uint8_t *write_data = track_buffer;
-            size_t write_size = track_size;
-            uint8_t compressed = 0;
-            
-            if (opts->use_compression) {
-                int comp_len = qrst_rle_compress(track_buffer, track_size,
-                                                  comp_buffer, track_size + 256);
-                if (comp_len > 0 && (size_t)comp_len < track_size) {
-                    write_data = comp_buffer;
-                    write_size = comp_len;
-                    compressed = 1;
-                }
-            }
-            
-            /* Write track header */
-            qrst_track_header_t thdr = {0};
-            write_le16((uint8_t*)&thdr.cylinder, c);
-            thdr.head = h;
-            thdr.compressed = compressed;
-            write_le32((uint8_t*)&thdr.data_size, write_size);
-            
-            if (out_pos + sizeof(thdr) + write_size > max_size) {
-                free(track_buffer);
-                free(comp_buffer);
-                free(output);
-                return UFT_ERR_IO;
-            }
-            
-            memcpy(output + out_pos, &thdr, sizeof(thdr));
-            out_pos += sizeof(thdr);
-            memcpy(output + out_pos, write_data, write_size);
-            out_pos += write_size;
+    qrst_write_options_t vorgabe;
+    uint8_t kopf[QRST_HEADER_SIZE];
+    uint8_t *disc = NULL, *gepackt = NULL;
+    size_t tracklen, disc_size;
+    uint8_t kode = 0;
+    size_t i;
+    int c, hd, s;
+    FILE *f;
+
+    if (!disk || !path) return UFT_ERR_INVALID_PARAM;
+    if (!opts) { uft_qrst_write_options_init(&vorgabe); opts = &vorgabe; }
+
+    /* Kapazitaetskode aus der Geometrie — QRST kann nur die sieben
+     * Formate seiner Tafel tragen, und eine Diskette, die nicht
+     * hineinpasst, wird ABGEWIESEN statt gerundet. */
+    for (i = 0; i < sizeof(qrst_tafel) / sizeof(qrst_tafel[0]); i++) {
+        if (qrst_tafel[i].cylinders == disk->tracks
+            && qrst_tafel[i].heads == disk->heads
+            && qrst_tafel[i].sectors == disk->sectors_per_track
+            && qrst_tafel[i].sector_size == disk->bytes_per_sector) {
+            kode = qrst_tafel[i].capacity;
+            break;
         }
     }
-    
-    free(track_buffer);
-    free(comp_buffer);
-    
-    /* Write file */
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        free(output);
-        return UFT_ERR_IO;
+    if (!kode) return UFT_ERROR_NOT_SUPPORTED;
+
+    tracklen  = (size_t)disk->sectors_per_track * disk->bytes_per_sector;
+    disc_size = (size_t)disk->tracks * disk->heads * tracklen;
+    disc = (uint8_t *)calloc(1, disc_size);
+    if (!disc) return UFT_ERROR_NO_MEMORY;
+
+    for (c = 0; c < disk->tracks; c++) {
+        for (hd = 0; hd < disk->heads; hd++) {
+            const size_t idx = (size_t)c * disk->heads + hd;
+            const uft_track_t *tr = disk->track_data
+                                    ? disk->track_data[idx] : NULL;
+            if (!tr) continue;
+            for (s = 0; s < (int)tr->sector_count
+                        && s < disk->sectors_per_track; s++) {
+                const uft_sector_t *sek = &tr->sectors[s];
+                size_t n = sek->data_len < disk->bytes_per_sector
+                           ? sek->data_len : disk->bytes_per_sector;
+                if (sek->data && n)
+                    memcpy(disc + idx * tracklen
+                           + (size_t)s * disk->bytes_per_sector,
+                           sek->data, n);
+            }
+        }
     }
-    
-    size_t written = fwrite(output, 1, out_pos, fp);
-    fclose(fp);
-    free(output);
-    
-    if (written != out_pos) {
-        return UFT_ERR_IO;
+
+    memset(kopf, 0, sizeof(kopf));
+    memcpy(kopf, "QRST\0", QRST_SIGNATURE_LEN);
+    kopf[QRST_OFF_UNUSED]     = 0x00;
+    kopf[QRST_OFF_UNUSED + 1] = 0x80;
+    kopf[QRST_OFF_UNUSED + 2] = 0x3F;
+    qrst_put_le32(kopf + QRST_OFF_CHECKSUM,
+                  uft_qrst_checksum(disc, disc_size));
+    kopf[QRST_OFF_CAPACITY] = kode;
+    kopf[QRST_OFF_VOLUME]   = 1;
+    kopf[QRST_OFF_VOLUMES]  = 1;
+    if (disk->comment && disk->comment[0]) {
+        size_t n = strlen(disk->comment);
+        if (n > QRST_DESCRIPTION_MAX - 1) n = QRST_DESCRIPTION_MAX - 1;
+        memcpy(kopf + QRST_OFF_DESCRIPTION, disk->comment, n);
     }
-    
+
+    f = fopen(path, "wb");
+    if (!f) { free(disc); return UFT_ERROR_FILE_OPEN; }
+    if (fwrite(kopf, 1, sizeof(kopf), f) != sizeof(kopf)) {
+        fclose(f); free(disc); return UFT_ERROR_IO;
+    }
+
+    if (opts->use_compression) {
+        gepackt = (uint8_t *)malloc(tracklen * 2 + 16);
+        if (!gepackt) { fclose(f); free(disc); return UFT_ERROR_NO_MEMORY; }
+    }
+
+    for (c = 0; c < disk->tracks; c++) {
+        for (hd = 0; hd < disk->heads; hd++) {
+            const size_t idx = (size_t)c * disk->heads + hd;
+            const uint8_t *spur = disc + idx * tracklen;
+            uint8_t satz[5];
+            int gleich = 1;
+            size_t k;
+
+            for (k = 1; k < tracklen; k++)
+                if (spur[k] != spur[0]) { gleich = 0; break; }
+
+            if (gleich) {
+                satz[0] = (uint8_t)c;
+                satz[1] = (uint8_t)hd;
+                satz[2] = QRST_TRACK_BLANK;
+                satz[3] = spur[0];
+                if (fwrite(satz, 1, 4, f) != 4) goto fehler;
+                continue;
+            }
+            if (opts->use_compression) {
+                int n = qrst_rle_compress(spur, tracklen, gepackt,
+                                          tracklen * 2 + 16);
+                if (n > 0 && (size_t)n < tracklen) {
+                    satz[0] = (uint8_t)c;
+                    satz[1] = (uint8_t)hd;
+                    satz[2] = QRST_TRACK_PACKED;
+                    qrst_put_le16(satz + 3, (uint16_t)n);
+                    if (fwrite(satz, 1, 5, f) != 5) goto fehler;
+                    if (fwrite(gepackt, 1, (size_t)n, f) != (size_t)n)
+                        goto fehler;
+                    continue;
+                }
+            }
+            satz[0] = (uint8_t)c;
+            satz[1] = (uint8_t)hd;
+            satz[2] = QRST_TRACK_RAW;
+            if (fwrite(satz, 1, 3, f) != 3) goto fehler;
+            if (fwrite(spur, 1, tracklen, f) != tracklen) goto fehler;
+        }
+    }
+
+    free(gepackt);
+    free(disc);
+    if (fclose(f) != 0) return UFT_ERROR_IO;
     return UFT_OK;
+
+fehler:
+    free(gepackt);
+    free(disc);
+    fclose(f);
+    return UFT_ERROR_IO;
 }
 
 /* ============================================================================
- * Format Plugin Registration
- * ============================================================================ */
+ * Plugin
+ * ==========================================================================*/
 
 static bool qrst_probe_plugin(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
@@ -551,7 +677,8 @@ static bool qrst_probe_plugin(const uint8_t *data, size_t size,
     return uft_qrst_probe(data, size, confidence);
 }
 
-static uft_error_t qrst_open(uft_disk_t *disk, const char *path, bool read_only) {
+static uft_error_t qrst_open(uft_disk_t *disk, const char *path,
+                             bool read_only) {
     (void)read_only;
     uft_disk_image_t *image = NULL;
     uft_error_t err = uft_qrst_read(path, &image, NULL);
@@ -586,11 +713,10 @@ static uft_error_t qrst_read_track(uft_disk_t *disk, int cyl, int head,
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
 
-    size_t idx = cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads)) {
+    if (cyl >= (int)image->tracks || head >= (int)image->heads)
         return UFT_ERR_INVALID_PARAM;
-    }
 
+    size_t idx = (size_t)cyl * image->heads + head;
     uft_track_t *src = image->track_data[idx];
     if (!src) return UFT_ERR_INVALID_PARAM;
 
@@ -600,25 +726,10 @@ static uft_error_t qrst_read_track(uft_disk_t *disk, int cyl, int head,
 
     /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
      *
-     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
-     *
-     *     uft_sector_t*  sectors;
-     *     size_t         sector_count, sector_capacity;
-     *
-     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
-     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
-     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
-     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
-     * kann nie funktioniert haben.
-     *
-     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
-     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
-     * versuchte, nur ohne den Nullzeiger.
-     *
-     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
-     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
-     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
-     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
+     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld, und
+     * `uft_track_init()` legt ihn NICHT an. `track->sectors` war hier
+     * also bei JEDEM erfolgreichen Lesen NULL, und die Schleife schrieb
+     * hindurch. Derselbe Rumpf stand woertlich in 12 Plugins. */
     for (size_t s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
@@ -627,31 +738,17 @@ static uft_error_t qrst_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
-/* In-memory write: updates cached disk image. Persist via uft_qrst_write(). */
 static uft_error_t qrst_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track) {
     /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
-     * gerechnet oder indiziert wird. MF-519 hat das fuer
-     * read_track getan und write_track uebersehen. Das ASan-Tor
-     * der CI fand die Folge an d80_write_track: die Schranke
-     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
-     * vor der Tabelle.
-     *
-     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
-     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
-     * WOHIN geschrieben wird. */
+     * gerechnet oder indiziert wird. Beim SCHREIBEN wiegt das schwerer
+     * als beim Lesen: ein falscher Index liefert nicht nur falsche
+     * Daten, er bestimmt, WOHIN geschrieben wird. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
-
-    size_t idx = (size_t)cyl * image->heads + head;
-    if (idx >= (size_t)(image->tracks * image->heads))
-        return UFT_ERR_INVALID_PARAM;
-
-    uft_track_t *dst = image->track_data[idx];
-    if (!dst) return UFT_ERR_INVALID_PARAM;
 
     /* MF-930: Hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
      *
@@ -662,37 +759,25 @@ static uft_error_t qrst_write_track(uft_disk_t *disk, int cyl, int head,
      * Speicher an. Der Aufrufer bekam Erfolg gemeldet; kein Byte
      * erreichte die Platte.
      *
-     * Genau deshalb hat Tor 57 (`scripts/audit_schreibzusage.py`) die
-     * Klasse hier NICHT gesehen: es prueft, ob in der Datei eine
-     * Schreiboperation STEHT — und die steht. Sie wird nur nie
-     * betreten. Der blinde Fleck war im Kopf des Tors benannt und als
-     * P3-154 gefuehrt; elf Plugins lagen darin, drei davon auf keiner
-     * der dort aufgezaehlten Verdachtslisten.
+     * Die Verdrahtung ist je Format eine eigene Aufgabe mit eigenem
+     * Rundlaufbeweis, verzeichnet als P3-204 (MF-930/931).
      *
-     * `plugin->flush` wird im ganzen Baum von NIEMANDEM gerufen
-     * (MF-883, ueber `git ls-files` gemessen), `uft_disk_close()` ruft
-     * nur `close`. Bei `apridisk` stand der Rueckweg woertlich im
-     * Quelltext — „Call flush/close to persist changes" —, und es gab
-     * ihn nicht.
-     *
-     * Warum `close()` nicht einfach verdrahtet wurde: das waere neues
-     * Verhalten auf dem Schreibpfad fuer elf Formate ohne je ein
-     * Pruefabbild. Die EINFRIER-REGEL (MF-363/498) verlangt benannte
-     * Referenz, gemessene Zahlen, Referenz im Header. Elf Wetten sind
-     * keine Verifikation. Dieselbe Entscheidung wie MF-880 (PRO) und
-     * MF-883 (die neun) — die Verdrahtung ist je Format eine eigene
-     * Aufgabe mit eigenem Rundlaufbeweis, verzeichnet als P3-204.
+     * **MF-1028 aendert daran nichts — aber es aendert, WAS dort
+     * verdrahtet werden wuerde.** Bis MF-1028 haette ein verdrahteter
+     * `uft_qrst_write()` ein Format geschrieben, das es nicht gibt:
+     * 22-Byte-Kopf, 8-Byte-Spursaetze, ein erfundener Packstrom. Jetzt
+     * schreibt er, was `doc/qrst.html` beschreibt, samt Pruefsumme —
+     * die Verdrahtung ist damit erst sinnvoll geworden.
      *
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
      * Aufrufer keine Begruendung. */
-    (void)dst;
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_qrst_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
     { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_qrst_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+      "MF-930/P3-204: der spezifikationsgerechte uft_qrst_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -712,6 +797,9 @@ const uft_format_plugin_t uft_format_plugin_qrst = {
     .read_track = qrst_read_track,
     .write_track = qrst_write_track,
     .verify_track = uft_generic_verify_track,
+    /* Geprueft und nicht angefasst: QRST hat keine Herstellerspec,
+     * John Elliotts Beschreibung ist selbst eine RE-Referenz. Die
+     * Verifikationsstufe traegt das Tier-System. */
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_qrst_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_qrst_features) / sizeof(uft_format_plugin_qrst_features[0]),

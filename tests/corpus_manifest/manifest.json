@@ -740,6 +740,18 @@
       "oracle": "hxcfe",
       "fremdcode": "nein - Flussstrom aus einem Sektorabbild des eigenen Korpus; kein Bootblock, kein Dateisystem",
       "content": "KryoFlux-Strom einer Spur, 10 OOB-Bloecke, 3 Indexmarken (gemessen)"
+    },
+    {
+      "file": "tests/corpus_free/qrst_spec_160k.qrst",
+      "sha256": "e4bd1606bbd6367256db58050068e814c06fc584fe1d6fa24631e86bfbb8f659",
+      "format": "qrst",
+      "origin": "derived",
+      "tool": "UFT-eigenes Python-Skript (MF-1028), nach der Formatbeschreibung in libdsk doc/qrst.html",
+      "source": "Kapazitaetskode 5 (160k) = 40 Zylinder x 1 Kopf x 8 Sektoren x 512 Byte. Kopf 796 Byte nach doc/qrst.html: \"QRST\",0 bei 0x00, die drei unbenutzten Bytes 00 80 3F bei 0x05, Pruefsumme LE32 bei 0x08, Kapazitaetskode bei 0x0C, Bandnummer/Bandzahl bei 0x0D/0x0E, Beschreibung bei 0x0F, Etikett bei 0x4B. Danach 40 Spursaetze in ALLEN DREI Arten: 38 roh (Typ 0), eine leere (Typ 1, Fuellbyte 0xE5, Spur 1), eine gepackte (Typ 2, Spur 2) mit abwechselnden Literal- und Wiederhol-Laeufen. Die Pruefsumme im Kopf ist die Summe byte*(1+Versatz) ueber die gesamte Diskette.",
+      "test": "test_qrst_gegen_libdsk",
+      "oracle": "libdsk",
+      "fremdcode": "nein - der Inhalt ist UFTs Selbstbeschreibungsmuster, die Struktur folgt einer gelesenen Formatbeschreibung; keine Zeile fremden Quellcodes uebernommen",
+      "content": "SELBSTBESCHREIBEND: je Sektor Byte 0 = Zylinder, 1 = Kopf, 2 = Sektor, 3..7 = \"UFT-Q\", Rest 0x5A; Spur 1 ist durchgehend 0xE5. **Und der Inhalt ist von FREMDER HAND nachgewiesen**, nicht nur behauptet: libdsks eigene Werkzeuge (aus dem Klon gebaut, siehe docs/ORACLES.md) lesen die Datei und melden 40/1/8/512 samt Beschreibung und Etikett; `dsktrans -itype qrst -otype raw` stellt die Diskette **163840 von 163840 Byte identisch** wieder her. Damit gehen alle drei Spursatz-Arten durch einen fremden Entpacker - die Datei ist kein Selbstgespraech. origin bleibt `derived`, weil sie von UFT ERZEUGT wurde; T1b verlangt einen fremden ERZEUGER."
     }
   ]
 }

@@ -173,7 +173,7 @@ Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
 von ihnen war bisher an einem Inhalts-Differenzlauf beteiligt. Wer den
 ersten fährt, kalibriert vorher.
 
-## Registrierte Oracles (9)
+## Registrierte Oracles (10)
 
 Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 
@@ -188,7 +188,58 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `fluxtoimd` | — (Python, im Baum geklont) | GPL-3.0-**only** | Pfad `tools/uft-scout/work/fluxtoimd` | FM- und M2FM-Modulation. Seit MF-864 die zweite Hand fuer die FM-Pruefspur: Adressmarken, `FM.decode()`, CRC-Parameter. **Wird ausgefuehrt, nicht portiert** — GPL-3-only vertraegt sich mit dem Baum, aber der Kanal ist ausdruecklich „Oracle" |
 | `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |
+| `libdsk` | — (im Baum geklont und dort gebaut) | LGPL-2+ (John Elliott) | Pfad `tools/uft-scout/work/libdsk` + **SHA-256** der gebauten `dskid.exe`/`dsktrans.exe` (das Werkzeug hat keine Versionsabfrage) | **Fünfundzwanzig** Container-Formate, darunter `qrst`, `myz80`, `nanowasp`, `logical`, `rcpmfs`, `cfi`, `jv3`, `sap`, `imd`, `apridisk`, `dc22`/`dc42`, `dsk`/`edsk`, `copyqm`, `tele`, `ydsk`, `simh`, `ldbs` — und, was hier den Unterschied macht, **Formatbeschreibungen** in `doc/` (`qrst.html`, `cfi.html`, `apridisk.html`, `libdsk.txt` mit 121 KB). MF-1028 hat `qrst` daraus gehoben. Registriert mit dem Vorbehalt aus dem Abschnitt darunter: **der Bau geht nur an den Autotools vorbei** |
 | `to_woz2` | `TO_WOZ2` | GPL-3.0 (Zone GELB) | **Quellstand + Baurezept + Ausgabe-SHA** — nicht der Binaerhash (siehe unten) | Apple-II-Sektorabbild → WOZ 2.0 mit **synthetisiertem** GCR-Strom (6-and-2 / 5-and-3). Die fremde Hand fuer `do`, `po`, `d13` — Stufe **T1b** (Fremdwerkzeug-Abbild), nicht T2 |
+
+### libdsk — der Bau geht nur an den Autotools vorbei (MF-1028)
+
+libdsk liegt seit der Scout-Welle als Klon unter
+`tools/uft-scout/work/libdsk` (gitignored). Bis MF-1028 galt es als
+nicht baubar; gemessen ist es baubar, und der Weg dorthin gehört
+aufgeschrieben, weil er nicht der dokumentierte ist.
+
+**Erstens: `make` gibt es auf dieser Maschine.** Es heißt
+`mingw32-make.exe` und liegt in der Qt-Toolchain
+(`/c/Qt/Tools/mingw1310_64/bin/`, GNU Make 4.2.1) — nur nicht unter dem
+Namen `make` und nicht im `PATH`. Wer `which make` fragt, bekommt nichts
+und schließt falsch.
+
+**Zweitens: `./configure` läuft durch, `make` nicht.** Die erzeugten
+Makefiles setzen `SHELL` auf `C:/Program Files/Git/usr/bin/sh.exe` —
+**mit Leerzeichen, unquotiert**. Jeder libtool-/depcomp-Aufruf scheitert
+mit `/usr/bin/sh: line 1: C:/Program: No such file or directory`. Ein
+`SHELL=`-Override auf der Kommandozeile hilft nicht, weil der Pfad in
+weitere Variablen expandiert ist.
+
+**Drittens: direkt übersetzen geht.** libdsk ist reines C:
+
+```sh
+export PATH=/c/Qt/Tools/mingw1310_64/bin:$PATH
+cd tools/uft-scout/work/libdsk
+./configure --disable-shared          # nur fuer config.h
+gcc -c -O1 -w -I include -I . -DHAVE_CONFIG_H -DNOTWINDLL lib/*.c
+ar rcs libdsk_static.a *.o
+for t in dskid dskform dsktrans; do
+  gcc -O1 -w -I include -I . -DHAVE_CONFIG_H -DNOTWINDLL -o $t.exe \
+      tools/$t.c tools/crc16.c tools/utilopts.c tools/formname.c \
+      tools/bootsec.c libdsk_static.a -lz
+done
+```
+
+**70 von 70** Bibliotheksdateien übersetzen fehlerfrei. Zwei Fallen dabei:
+`tools/dskutil.c` darf **nicht** mitgelinkt werden (es hat ein eigenes
+`main`), und `-lz` ist nötig — zlib liegt im Qt-MinGW-Toolchain
+(`libz.a` und `zlib.h` sind beide da; siehe P3-329, wo genau diese Frage
+als Eigentümer-Entscheidung offensteht).
+
+**Was libdsk damit entscheidet und was nicht.** Es **liest** die
+Formate seiner Treibertafel und beschreibt einige davon in `doc/`; damit
+ist es Referenz für Aufbau und Inhalt. Es **erzeugt** sie auch — aber
+für ein kopfloses Eingabeabbild bekommt sein `raw`-Treiber die Geometrie
+nicht (er nimmt 85 Zylinder / 2 Köpfe / 70 Sektoren an), und `dsktrans`
+hat kein `-format`. Damit sind Fixtures **fremder Erzeugung** heute
+nicht herstellbar; die Formate bleiben auf T2 statt T1b. Der Blocker ist
+als **P3-333** gefasst, mit dem, was ihn öffnen würde.
 
 ### floptool — lag einmal auf dieser Maschine (MF-720: nicht mehr)
 

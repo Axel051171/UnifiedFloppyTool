@@ -429,6 +429,55 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="libdsk",
+        env="LIBDSK",
+        exes=("dskid", "dskid.exe", "dsktrans", "dsktrans.exe"),
+        # Keine Versionsabfrage: `dskid --version` gibt den Usage-Text.
+        # Der Anker ist deshalb der Klonpfad plus die SHA-256 der
+        # gebauten Datei — nach MF-623 der STAERKERE Anker.
+        version_args=("--version",),
+        version_re=r"()",
+        reference_for="Fuenfundzwanzig Container-Formate, darunter "
+                      "`qrst`, `myz80`, `nanowasp`, `logical`, "
+                      "`rcpmfs`, `cfi`, `jv3`, `sap`, `imd`, "
+                      "`apridisk`, `dc42`, `dsk`/`edsk`, `copyqm`, "
+                      "`tele`, `ydsk`, `simh`, `ldbs`. **Und, was den "
+                      "Unterschied macht, Formatbeschreibungen in "
+                      "`doc/`** — `qrst.html`, `cfi.html`, "
+                      "`apridisk.html`, `libdsk.txt` (121 KB). "
+                      "MF-1028 hat `qrst` daraus gehoben: Kopfaufbau, "
+                      "die sieben Kapazitaetskodes, alle drei "
+                      "Spursatz-Arten und den Pruefsummen-Algorithmus. "
+                      "Zugleich die fremde Hand, die das erzeugte "
+                      "Fixture ZURUECKLIEST — 163840 von 163840 Byte "
+                      "identisch.",
+        origin="tools/uft-scout/work/libdsk (Klon, gitignored), dort "
+               "gebaut. **Der Bau geht nur an den Autotools vorbei** "
+               "— `./configure` laeuft, `make` scheitert an einem "
+               "unquotierten `C:/Program Files/...` in SHELL; "
+               "uebersetzt wird direkt mit gcc (70 von 70 Dateien, "
+               "ohne `tools/dskutil.c`, mit `-lz`). Das Rezept steht "
+               "in docs/ORACLES.md. Nebenbefund: `make` GIBT es auf "
+               "dieser Maschine — als `mingw32-make.exe` in der "
+               "Qt-Toolchain.",
+        licence="LGPL-2+",
+        version_exit_ok=(0, 1),
+        abstammung=(
+            "KEINE UEBERNAHME. Aus `doc/qrst.html` sind Fakten ueber "
+            "das FORMAT abgelesen — Kopfgroesse 796, die Kennung "
+            "'QRST',0, die Versatze 0x08/0x0C/0x0D/0x0E/0x0F/0x4B, die "
+            "sieben Kapazitaetskodes, die drei Spursatz-Arten und die "
+            "Regel der abwechselnden Laeufe. Der Quelltext "
+            "(`lib/drvqrst.c`) wurde GELESEN, um die Beschreibung "
+            "gegenzupruefen, und keine Zeile uebertragen; die "
+            "Umsetzung in `src/formats/qrst/uft_qrst.c` ist "
+            "eigenstaendig. Zweitens ausgefuehrt: die gebauten "
+            "Werkzeuge lesen das nach der Beschreibung gebaute Fixture "
+            "byteweise zurueck — Kanal *Oracle*, nicht *Port* "
+            "(MF-695)."
+        ),
+    ),
+    Oracle(
         name="hxcfe",
         env="HXCFE",
         exes=("hxcfe", "hxcfe.exe"),

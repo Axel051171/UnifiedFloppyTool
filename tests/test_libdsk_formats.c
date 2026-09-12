@@ -141,35 +141,99 @@ TEST(nanowasp_header_validation) {
  * QRST Tests
  * ============================================================================ */
 
+/* BERICHTIGT MF-1028. Hier stand ein 22-Byte-Kopf mit einer
+ * VIER-Byte-Kennung, und beides war erfunden: der QRST-Kopf ist **796**
+ * Byte lang und die Kennung **fuenf** Byte (`'QRST',0`). Dieser Test
+ * hat den Fehler festgenagelt — gemessen nahm die Sonde damit auch
+ * `"QRSTX"` mit Konfidenz 95 an.
+ *
+ * Quelle: `tools/uft-scout/work/libdsk/doc/qrst.html` (John Elliott,
+ * LGPL-2+; nur gelesen). Die Gegenprobe gehoert dazu, sonst ist eine
+ * Kennungspruefung nicht vorgefuehrt. */
 TEST(qrst_signature) {
-    uint8_t valid_header[22];
-    memset(valid_header, 0, sizeof(valid_header));
-    memcpy(valid_header, QRST_SIGNATURE, QRST_SIGNATURE_LEN);
-    
+    uint8_t hdr[QRST_HEADER_SIZE];
     int confidence = 0;
-    ASSERT(uft_qrst_probe(valid_header, sizeof(valid_header), &confidence) == true);
-    ASSERT(confidence >= 90);
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "QRST\0", QRST_SIGNATURE_LEN);
+    hdr[QRST_OFF_CAPACITY] = QRST_CAP_160K;     /* 5 = 160k */
+
+    ASSERT(uft_qrst_probe(hdr, sizeof(hdr), &confidence) == true);
+    ASSERT(confidence >= 80);
+
+    /* ohne das Nullbyte ist es keine QRST-Datei */
+    hdr[4] = 'X';
+    ASSERT(uft_qrst_probe(hdr, sizeof(hdr), &confidence) == false);
+
+    /* und ein Kapazitaetskode, den die Tafel nicht kennt, auch nicht —
+     * er traegt die Geometrie, also waere sie sonst erfunden */
+    memcpy(hdr, "QRST\0", QRST_SIGNATURE_LEN);
+    hdr[QRST_OFF_CAPACITY] = 8;
+    ASSERT(uft_qrst_probe(hdr, sizeof(hdr), &confidence) == false);
 }
 
+/* BERICHTIGT MF-1028, und das war die teurere Haelfte.
+ *
+ * Hier stand ein Rundlauf `compress` -> `decompress` mit der Zusage
+ * `memcmp(input, decompressed) == 0`. Der war **gruen, weil Packer und
+ * Entpacker Spiegelbilder derselben Erfindung waren** — woertlich die
+ * Klasse aus MF-1009 (`apridisk`). Ueber das FORMAT sagte er nichts.
+ *
+ * Wirklich besteht ein gepackter Block aus **abwechselnden** Laeufen,
+ * beginnend mit dem Literal-Lauf:
+ *
+ *     <len> <byte1..byten>     Literal-Lauf
+ *     <len> <byte_to_repeat>   Wiederhol-Lauf
+ *
+ * Geprueft wird deshalb gegen einen **von Hand aus der Beschreibung
+ * abgeleiteten** Bytestrom, nicht gegen den eigenen Packer. Der
+ * Rundlauf bleibt zusaetzlich — er zeigt Selbstkonsistenz, und die ist
+ * nuetzlich, sobald die Regel unabhaengig belegt ist. */
 TEST(qrst_rle_compression) {
-    uint8_t input[256];
-    uint8_t compressed[512];
-    uint8_t decompressed[256];
-    
-    /* Create test pattern */
-    memset(input, 0x55, 128);
-    for (int i = 128; i < 256; i++) {
-        input[i] = i & 0xFF;
+    /* 03 41 42 43 | 05 FF | 00 | 02 7E
+     *  literal 3    rep 5   lit 0  rep 2   */
+    static const uint8_t strom[] = {
+        0x03, 0x41, 0x42, 0x43,
+        0x05, 0xFF,
+        0x00,
+        0x02, 0x7E
+    };
+    static const uint8_t soll[] = {
+        0x41, 0x42, 0x43,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0x7E, 0x7E
+    };
+    uint8_t aus[64];
+    int n = qrst_rle_decompress(strom, sizeof(strom), aus, sizeof(aus));
+    ASSERT(n == (int)sizeof(soll));
+    ASSERT(memcmp(aus, soll, sizeof(soll)) == 0);
+
+    /* Und die Gegenprobe: ein Strom, der mitten im Wiederhol-Lauf
+     * endet, ist keine gueltige Packung. */
+    {
+        static const uint8_t kaputt[] = { 0x00, 0x05 };  /* len ohne Byte */
+        ASSERT(qrst_rle_decompress(kaputt, sizeof(kaputt), aus,
+                                   sizeof(aus)) == -1);
     }
-    
-    int comp_len = qrst_rle_compress(input, sizeof(input),
-                                      compressed, sizeof(compressed));
-    ASSERT(comp_len > 0);
-    
-    int decomp_len = qrst_rle_decompress(compressed, comp_len,
-                                          decompressed, sizeof(decompressed));
-    ASSERT(decomp_len == sizeof(input));
-    ASSERT(memcmp(input, decompressed, sizeof(input)) == 0);
+
+    /* Rundlauf ueber ein Muster mit beiden Lauf-Arten. */
+    {
+        uint8_t input[256];
+        uint8_t compressed[600];
+        uint8_t decompressed[256];
+        int comp_len, decomp_len;
+        memset(input, 0x55, 128);
+        for (int i = 128; i < 256; i++) input[i] = i & 0xFF;
+
+        comp_len = qrst_rle_compress(input, sizeof(input),
+                                     compressed, sizeof(compressed));
+        ASSERT(comp_len > 0);
+        decomp_len = qrst_rle_decompress(compressed, comp_len,
+                                         decompressed,
+                                         sizeof(decompressed));
+        ASSERT(decomp_len == (int)sizeof(input));
+        ASSERT(memcmp(input, decompressed, sizeof(input)) == 0);
+    }
 }
 
 /* ============================================================================
