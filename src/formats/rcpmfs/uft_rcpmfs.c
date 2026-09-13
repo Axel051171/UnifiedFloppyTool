@@ -290,7 +290,16 @@ uft_error_t uft_rcpmfs_read_mem(const uint8_t *data, size_t size,
                 sect->status = UFT_SECTOR_OK;
                 
                 sect->data = malloc(sector_size);
+                /* MF-1080: beide Laengenfelder, auch hier. Dieser
+                 * Zweig ist seit MF-1035 unerreichbar — Sonde und
+                 * `open()` sagen jede Eingabe ab, es verlaesst also
+                 * kein Sektor dieses Plugin. Die Zeile steht trotzdem,
+                 * damit das Tor `audit_sektor_laenge.py` ohne
+                 * Ausnahmeliste auskommt: eine gepflegte Ausnahme
+                 * veraltet still, und genau das ist in diesem Baum
+                 * viermal belegt (MF-636). */
                 sect->data_size = sector_size;
+                sect->data_len  = sector_size;
                 
                 if (sect->data) {
                     if (data_pos + sector_size <= disk_size) {

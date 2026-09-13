@@ -1010,11 +1010,47 @@ static uft_error_t cpm_open(uft_disk_t *disk, const char *path, bool read_only) 
                 sect->id.size_code = size_code;
                 sect->status = UFT_SECTOR_OK;
                 
-                sect->data = malloc(def->sector_size);
+                /* MF-1080: zwei Dinge an einer Stelle.
+                 *
+                 * (1) Es stand nur `data_size`, und das ist laut
+                 * `uft_types.h` ausdruecklich das LEGACY-Feld;
+                 * verbindlich ist `data_len`. Gemessen an einem von
+                 * cpmtools erzeugten ibm-3740-Abbild: **2002 von
+                 * 2002** Sektoren trugen ihre Bytes und meldeten
+                 * Laenge 0. `uft_sector_copy()` gab darauf rc=0 —
+                 * Erfolg — und einen Sektor mit `data == NULL`
+                 * zurueck.
+                 *
+                 * (2) `malloc` ohne Initialisierung: greift die
+                 * Bedingung darunter nicht, wurde uninitialisierter
+                 * Heap als Sektordaten mit Status OK gemeldet. Die
+                 * Geschwisterplugins (`cfi`, `hardsector`,
+                 * `logical`, `posix`) fuellen dort seit MF-1001 mit
+                 * 0xE5 UND kennzeichnen den Sektor als fehlend; hier
+                 * fehlte beides. Der Zweig ist am belegten Pfad
+                 * **nicht erreichbar** — `uft_cpm_detect_diskdef()`
+                 * waehlt eine Definition nur bei exakter
+                 * Groessengleichheit (`file_size != expected`
+                 * -> `continue`) — aber eine Sicherung, die man
+                 * nicht misst, ist keine. */
+                sect->data = calloc(1, def->sector_size);
                 sect->data_size = def->sector_size;
-                
-                if (sect->data && data_pos + def->sector_size <= size) {
-                    memcpy(sect->data, data + data_pos, def->sector_size);
+
+                if (sect->data) {
+                    if (data_pos + def->sector_size <= size) {
+                        memcpy(sect->data, data + data_pos,
+                               def->sector_size);
+                        sect->data_len = def->sector_size;
+                    } else {
+                        memset(sect->data, 0xE5, def->sector_size);
+                        sect->data_len = def->sector_size;
+                        /* Der HELFER, nicht das Bit von Hand: das Tor
+                         * `audit_erfundene_sektoren.py` (MF-1001) sucht
+                         * genau diesen Aufruf, und es hat meine
+                         * handgesetzte Variante beim ersten Lauf
+                         * gemeldet. */
+                        uft_sector_mark_missing(sect);
+                    }
                 }
                 data_pos += def->sector_size;
                 track->sector_count++;

@@ -643,7 +643,13 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
         sector.data = malloc(256);
         if (sector.data) {
             memcpy(sector.data, &data_block[1], 256);
+            /* MF-1080: beide Laengenfelder — `data_len` ist das
+             * verbindliche, `data_size` laut `uft_types.h` legacy.
+             * Ein Sektor mit Bytes und Laenge 0 geht durch
+             * `uft_sector_copy()` als LEERER Sektor heraus, mit
+             * Rueckgabe 0 fuer Erfolg. */
             sector.data_size = 256;
+            sector.data_len  = 256;
         }
         
         sector.status = UFT_SECTOR_OK;

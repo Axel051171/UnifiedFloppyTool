@@ -315,7 +315,13 @@ uft_error_t uft_apridisk_read_mem(const uint8_t *data, size_t size,
                 sect->id.head = h;
                 sect->id.sector = (uint8_t)(s + 1);
                 sect->id.size_code = code_from_sector_size(sector_size);
+                /* MF-1080: beide Laengenfelder. Hier ist der Sektor
+                 * noch leer — gesetzt wird das im zweiten Durchlauf
+                 * unten. Die Null steht ausdruecklich da, weil ein
+                 * ungesetztes `data_len` genau der Defekt ist, den das
+                 * Tor `audit_sektor_laenge.py` sucht. */
                 sect->data_size = 0;
+                sect->data_len  = 0;
                 uft_sector_mark_missing(sect);
             }
 
@@ -399,7 +405,14 @@ uft_error_t uft_apridisk_read_mem(const uint8_t *data, size_t size,
                             /* MF-1001: gefuellt, nicht gelesen. */
                             uft_sector_mark_missing(sect);
                         }
+                        /* MF-1080: `data_len` ist das verbindliche Feld;
+                         * hier stand nur das legacy `data_size`. Die
+                         * dateiweite Suche hat diese Stelle UEBERSEHEN,
+                         * weil in derselben Datei eine LOKALE Variable
+                         * `data_len` heisst (Z. 345) — gefunden hat sie
+                         * erst das an die Variable gebundene Tor. */
                         sect->data_size = sec_size;
+                        sect->data_len  = sec_size;
                     }
                 }
             }

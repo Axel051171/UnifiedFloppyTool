@@ -59,9 +59,9 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/trd/uft_trd_parser_v2.c` | 23 | 696 |
 | `src/formats/c64/uft_bam_editor.c` | 20 | 1021 |
 | `src/formats/nintendo/uft_switch.c` | 13 | 411 |
-| `src/formats/opus/uft_opus.c` | 11 | 630 |
+| `src/formats/opus/uft_opus.c` | 11 | 643 |
 | `src/formats/atari/uft_atari_dos.c` | 9 | 511 |
-| `src/formats/mgt/uft_mgt.c` | 9 | 561 |
+| `src/formats/mgt/uft_mgt.c` | 9 | 574 |
 | `src/formats/atari/uft_atari8_disk.c` | 8 | 338 |
 | `src/formats/c64/uft_d64_file.c` | 8 | 849 |
 | `src/formats/c64/uft_t64.c` | 8 | 759 |
@@ -79,7 +79,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/legacy/uft_fdi.c` | 5 | 512 |
 | `src/formats/atari/atari_util.c` | 4 | 315 |
 | `src/formats/bbc/uft_bbc_dfs.c` | 4 | 359 |
-| `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1175 |
+| `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1211 |
 | `src/formats/d64/uft_d64_parser_v3.c` | 4 | 1866 |
 | `src/formats/adf/uft_adf_parser_v3.c` | 3 | 545 |
 | `src/formats/cbm/uft_cbm_formats.c` | 2 | 969 |

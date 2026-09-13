@@ -220,7 +220,20 @@ uft_error_t uft_opus_read_mem(const uint8_t *data, size_t size,
                 sect->status = UFT_SECTOR_OK;
 
                 sect->data = malloc(geom.sector_size);
+                /* MF-1080: BEIDE Laengenfelder. `data_len` ist laut
+                 * `uft_types.h` das verbindliche Feld, `data_size`
+                 * ist dort ausdruecklich als `legacy` bezeichnet —
+                 * und hier stand nur das legacy-Feld. Gemessen an
+                 * einem von cpmtools erzeugten Abbild: alle Sektoren
+                 * trugen ihre Bytes und meldeten Laenge 0; danach gab
+                 * `uft_sector_copy()` rc=0 zurueck UND einen Sektor
+                 * ohne ein einziges Byte. Der gemeinsame Helfer
+                 * `uft_format_add_sector_with_id()` setzt laengst
+                 * beide Felder und sein Kommentar benennt genau diese
+                 * Gefahr — diese acht Plugins bauen ihre Sektoren
+                 * von Hand und sind daran vorbeigelaufen. */
                 sect->data_size = geom.sector_size;
+                sect->data_len = geom.sector_size;
 
                 if (sect->data) {
                     memcpy(sect->data, data + data_pos, geom.sector_size);

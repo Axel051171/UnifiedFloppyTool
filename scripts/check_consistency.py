@@ -944,6 +944,21 @@ def main() -> int:
         import audit_namensrolle as _nr
         all_errors.append(("Namensrolle", _nr.check(repo)))
 
+        # 49. Kategorie (MF-1080): die SEKTOR-LAENGE.
+        #
+        # `uft_sector_t` hat zwei Laengenfelder, und neun registrierte
+        # Plugins setzten nur das legacy-Feld. Gemessen: 2002 von 2002
+        # CP/M-Sektoren trugen ihre Bytes und meldeten Laenge 0; danach
+        # gab `uft_sector_copy()` rc=0 zurueck UND einen Sektor ohne ein
+        # einziges Byte. Der MFM-Encoder schrieb an 4743 von 65 536 Byte
+        # einer Spur Nullen statt der Daten.
+        #
+        # Das Tor bindet an die VARIABLE, nicht an den Feldnamen: eine
+        # dateiweite Suche hat `apridisk` uebersehen, weil dort eine
+        # lokale Variable `data_len` heisst.
+        import audit_sektor_laenge as _sl
+        all_errors.append(("Sektor-Laenge", _sl.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"

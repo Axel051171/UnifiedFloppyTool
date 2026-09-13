@@ -370,6 +370,18 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_sektor_laenge_stimmt")
+        # MF-1080: neun Plugins setzten nur das legacy-Laengenfeld.
+        # 2002 von 2002 CP/M-Sektoren trugen ihre Bytes und meldeten
+        # Laenge 0; `uft_sector_copy()` gab darauf rc=0 UND einen
+        # Sektor ohne ein Byte zurueck. Der Test baut seine
+        # Pruefdateien selbst und braucht keinen Korpus.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdefs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_ipf_zellstrom")
         # MF-1079 (P3-360): `raw_data` versprach einen Zellstrom und
         # trug die dekodierten Bytes. Spur 0/0 lieferte 48 272 Bit,
