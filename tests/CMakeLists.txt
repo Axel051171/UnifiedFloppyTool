@@ -1633,6 +1633,25 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_edk_gegen_epstool")
+        # MF-1103: `edk` T2 -> T1b. Das Abbild kommt aus `epstool`
+        # (Ensoniq-Dateisystem, gebaut MF-1103) und ist ueber einen
+        # HFE-Zellstrom von 2 008 064 Byte gelaufen — ein Durchreichen
+        # der Bytes ist damit ausgeschlossen. Der Beleg liegt unter
+        # tests/corpus_free/, also braucht der Test KEINEN
+        # eingeschraenkten Korpus; ohne die Datei endet er mit 77.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/edk/uft_edk.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # Ohne diese Zeile findet der Test seinen Beleg unter `ctest`
+        # nicht (Arbeitsverzeichnis = Bauverzeichnis) und meldet SKIP.
+        # Beim ersten Lauf stand er genau so in einem "100 % passed"
+        # ueber 453 Tests — ein uebersprungener Test ist kein gruener.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_edk_gegen_ensoniq")
         # MF-1056: `edk` hatte laut eigenem Kopf „keine nachpruefbare
         # Referenz" (P3-340). Gesucht wurde an der falschen Stelle —

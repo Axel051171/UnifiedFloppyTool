@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 16 |
+| davon auf T2/T3 (offen) | 15 |
 | davon mit **gemessenem** Erzeuger-Kanal | **1** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -43,7 +43,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), cpm, flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), smx, svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dms` | T3 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `edk` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fdi_pc98` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fds` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -112,9 +111,9 @@ MF-1097. **Das Orakel ist da, das Objekt fehlt — und damit ist SCOUT-11 schaer
 
 MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus).
 
-**`edk`** (Kanal: keiner)
+**`edk`** (Kanal: layout:ENSONIQ_DD_800KB)
 
-MF-1085, P3-364. floptools `esq16` (Ensoniq VFX-SD/SD-1/EPS-16) nimmt genau die 819 200 Byte, die UFTs `edk` als DD-Fassung fuehrt - aber SEIN EIGENER RUNDLAUF VERSCHIEBT DIE DISKETTE. `esqimg_format::load()` setzt `sectors[i].sector_id = i` (0..9), `save()` sammelt ueber `get_track_data_mfm_pc()` die Nummern 1..10 ein. Gemessen an 80 x 2 x 10 mit Ortsmarken je Sektor: 1440 von 1600 Sektoren kommen um GENAU EINE STELLE verschoben zurueck, 160 genullt (einer je Spur), 83 360 Byte abweichend, 0 an ihrer Stelle. Ein Werkzeug, dessen eigener Rundlauf eine Diskette verschiebt, ist kein Erzeuger.
+MF-1103, und der Eintrag berichtigt meinen eigenen von MF-1097. Dort stand `kanal: keiner` — gemessen gegen **ein** Werkzeug (floptools `esq16`, P3-364), waehrend im Baum **59 Klone** liegen und ich drei befragt hatte. Das ist woertlich die Lehre aus MF-1033/MF-1024: "das Werkzeug kann es nicht" war eine Aussage ueber den benutzten Aufruf. **Der Kanal traegt, in vier Schritten:** `epstool mkhfe --os` legt die EPS-Diskette an (1600 Bloecke, FAT ab Block 5, Wurzelverzeichnis 3); `epstool <img> import` schreibt 1200 selbstbenennende Bloecke durch epstools eigenen Dateisystemcode; `hxcfe -uselayout:ENSONIQ_DD_800KB -conv:HXC_HFE` kodiert in einen **2 008 064 Byte** grossen MFM-Zellstrom; `epstool hfe2img` dekodiert zurueck — eine ZWEITE fremde Hand — byteidentisch, und epstools Dateisystemleser findet beide Dateien darin wieder. Gemessen liest UFT **1600 von 1600 Bloecken an ihrer Stelle, 0 abweichend**; davon tragen **1379 Inhalt** und **1200 die Marke `UFT-EDK #NNNN`**. **Der erste Versuch wurde verworfen und das gehoert dazu:** dieselbe Kette ohne importierte Nutzlast ergab 1421 Nullbloecke und nur 158 verschiedene — der Abgleich haette zu 89 % Fuellung gegen Fuellung gehalten (MF-1021), und die Gegenprobe "um einen Block versetzt" fand dort noch 2 von 9 Uebereinstimmungen statt 0. **Was floptool angeht, bleibt P3-364 stehen:** sein `esq16` verschiebt im eigenen Rundlauf 1440 von 1600 Sektoren um eine Stelle. Nicht jedes Werkzeug, das die Groesse kennt, ist ein Erzeuger. Offen bleibt die **HD**-Spielart (1 638 400 Byte) — dafuer gibt es weiterhin kein Abbild von fremder Hand.
 
 **`fdi_pc98`** (Kanal: keiner)
 
@@ -250,6 +249,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `dmk` | T1b | TRS80_DMK | — |
 | `do` | T1b | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) |
 | `dsk_cpc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `edk` | T1b | — | — |
 | `edsk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?), edsk |
 | `fdi` | T1 | — | — |
 | `g64` | T1 | — | — |

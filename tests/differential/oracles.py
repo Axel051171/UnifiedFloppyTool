@@ -607,6 +607,63 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="epstool",
+        env="EPSTOOL",
+        exes=("epstool", "epstool.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Ensoniq EPS / EPS-16+ / ASR-10/88: der erste ERZEUGER fuer "
+            "`edk` (MF-1103). Drei Befehle zaehlen. `mkhfe <ziel.hfe>` "
+            "legt eine leere EPS-Diskette an und schreibt sie ueber "
+            "libhxcfe als HFE heraus; `<img> import <datei> <name> "
+            "<typ>` schreibt Nutzdaten durch epstools EIGENEN "
+            "Dateisystemcode hinein (FAT, Verzeichniseintrag); "
+            "`hfe2img <in.hfe> <out.img>` dekodiert einen Zellstrom in "
+            "ein rohes 819 200-Byte-Abbild. "
+            "**Der Wert liegt im Umweg:** ein Werkzeug, das `edk` nach "
+            "`edk` wandelt, koennte die Bytes durchreichen; ueber "
+            "`hxcfe -uselayout:ENSONIQ_DD_800KB -conv:HXC_HFE` und "
+            "zurueck muss die Anordnung wirklich modelliert werden. "
+            "Gemessen an dem so gebauten Beleg liest UFT 1600 von 1600 "
+            "Bloecken an ihrer Stelle, 0 abweichend. "
+            "**FALLSTRICK, gemessen:** `mkhfe --os` bettet ein 83 KB "
+            "grosses EPS-1-Betriebssystem ein — Ensoniqs Code. Belege "
+            "fuer `tests/corpus_free/` werden OHNE den Schalter gebaut; "
+            "`test_edk_gegen_epstool` prueft, dass `EPS-1`, `O.S.`, "
+            "`ENSONIQ` und `Ensoniq` **0 Mal** vorkommen. "
+            "ZWEITER FALLSTRICK: `mkimage <datei> <groesse_mb>` weist "
+            "0 MB ab ('must be 1-8192'), obwohl der interne Aufruf genau "
+            "damit die Diskette baut — der Weg zur Diskettengroesse "
+            "fuehrt ueber `mkhfe`, nicht ueber `mkimage`. NICHT geeignet "
+            "fuer die HD-Spielart (1 638 400 Byte): dafuer gibt es "
+            "bisher kein Abbild."),
+        origin="https://github.com/handsthatstrike (Klon "
+               "tools/uft-scout/work/epstool), Commit "
+               "ddf41653a2c584a4fd326085e1d146d1766d2dd0 vom 2026-03-26. "
+               "KEINE Versionsabfrage — `version` und `--version` drucken "
+               "nur den Kopf; die Herkunft ankert am Commit und am "
+               "SHA-256 des gebauten Binaers "
+               "1df2f50e828b9929c07c64cb34a519312e2feffbefcd4229aedf6f400"
+               "917c5ec",
+        licence="KEINE. Das README sagt woertlich \"provided for "
+                "educational and archival purposes\" — das ist keine "
+                "Rechteeinraeumung, sondern eine Absichtserklaerung. "
+                "Damit ist epstool ein Oracle in derselben Lage wie "
+                "`dtc`: ausfuehren ja, weitergeben nein. Der Quelltext "
+                "bleibt unter tools/uft-scout/work/ und wird nicht "
+                "uebernommen; verglichen wird die AUSGABE.",
+        abstammung=(
+            "KEIN VERDACHT, gemessen: im ganzen Baum nennt keine Datei "
+            "epstool, EpsLin oder EnsoniqFS als Quelle. `uft_edk.c` "
+            "sagte bis MF-1103 ausdruecklich, es habe **keine** "
+            "nachpruefbare Referenz — das ist die Gegenrichtung einer "
+            "Abstammung. Die Geometrie 80 x 2 x 10 x 512 ist in beiden "
+            "unabhaengig da und folgt aus der Diskettengroesse."
+        ),
+    ),
+    Oracle(
         name="lsatr",
         env="LSATR",
         exes=("lsatr", "lsatr.exe"),
