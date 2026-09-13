@@ -79,6 +79,33 @@ jobs:
       # Speicher-FEHLER sind etwas anderes als Speicher-Verlust; die
       # ersten werden hier scharf geprueft, die zweiten weiter unten
       # gemeldet.
+      # ─────────────────────────────────────────────────────────────────
+      # MF-1110 — VOR dem Tor zaehlen, wie viele Prueflinge es ueberhaupt
+      # hat. `--no-tests=error` unten feuert NUR, wenn die Regex GAR
+      # KEINEN Test trifft. Faellt einer von neun weg — umbenannt, in
+      # EXCLUDED_TESTS gewandert, oder schlicht nicht uebersetzt, weil
+      # der Bauschritt darueber `|| true` traegt —, dann laeuft das Tor
+      # mit ACHT und meldet GRUEN. Niemand zaehlt.
+      #
+      # Die Sollzahl wird aus der Regex ABGELEITET (Zahl der
+      # `|`-Alternativen), nicht danebengeschrieben: eine zweite
+      # gepflegte Zahl waere genau die Drift, die das hier verhindern
+      # soll (MF-1077). Die statische Haelfte — existieren die Namen
+      # ueberhaupt noch? — haelt `scripts/audit_tor_abdeckung.py`.
+      - name: Gate coverage — all named tests present (ARMED)
+        run: |
+          cd build
+          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+          SOLL=$(printf '%s' "$REGEX" | tr '|' '\n' | grep -c .)
+          IST=$(ctest -N --tests-regex "$REGEX" | grep -cE '^[[:space:]]+Test[[:space:]]+#') || true
+          echo "scharfes ASan-Tor: $IST von $SOLL Prueflingen registriert"
+          if [ "$IST" -ne "$SOLL" ]; then
+            echo "::error::Das scharfe Tor haette mit $IST statt $SOLL Tests laufen und GRUEN melden koennen."
+            echo "Registriert sind:"
+            ctest -N --tests-regex "$REGEX" | grep -E '^[[:space:]]+Test[[:space:]]+#' || true
+            exit 1
+          fi
+
       - name: Memory-safety gate — open path (ARMED)
         run: |
           cd build
@@ -164,6 +191,24 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
           cmake --build build --parallel $(nproc) 2>&1 || true
           # GUI may fail (missing headers) — tests are what matters
+
+      # MF-1110 — dieselbe Zaehlung wie im ASan-Auftrag; die Begruendung
+      # steht dort. Sie gehoert in BEIDE Auftraege, weil jeder seinen
+      # eigenen Bau hat und ein Ziel im einen uebersetzen kann und im
+      # anderen nicht.
+      - name: Gate coverage — all named tests present (ARMED)
+        run: |
+          cd build
+          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+          SOLL=$(printf '%s' "$REGEX" | tr '|' '\n' | grep -c .)
+          IST=$(ctest -N --tests-regex "$REGEX" | grep -cE '^[[:space:]]+Test[[:space:]]+#') || true
+          echo "scharfes UBSan-Tor: $IST von $SOLL Prueflingen registriert"
+          if [ "$IST" -ne "$SOLL" ]; then
+            echo "::error::Das scharfe Tor haette mit $IST statt $SOLL Tests laufen und GRUEN melden koennen."
+            echo "Registriert sind:"
+            ctest -N --tests-regex "$REGEX" | grep -E '^[[:space:]]+Test[[:space:]]+#' || true
+            exit 1
+          fi
 
       # SCHARF (MF-517) — siehe die Begruendung im ASan-Auftrag oben.
       - name: UB gate — open path (ARMED)

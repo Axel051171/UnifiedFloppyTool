@@ -1017,6 +1017,15 @@ def main() -> int:
         import audit_cpm_dpb as _dpb
         all_errors.append(("CP/M-DPB", _dpb.check(repo)))
 
+        # MF-1110: die scharfen Sanitizer-Stufen nennen NEUN Tests
+        # namentlich, und `--no-tests=error` feuert nur, wenn die Regex
+        # GAR KEINEN trifft. Faellt einer weg, laeuft das Tor mit acht
+        # und meldet gruen. Hier steht die statische Haelfte — existieren
+        # die Namen noch, und tragen beide Stufen dieselbe Liste? Die
+        # Zaehlung im laufenden Bau macht `sanitizers.yml` selbst.
+        import audit_tor_abdeckung as _ta
+        all_errors.append(("Tor-Abdeckung", _ta.check(repo)))
+
         import quarantine_stand as _qsc
         all_errors.append(("Quarantaene-Stand", _qsc.check(repo)))
 
