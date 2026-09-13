@@ -24,7 +24,7 @@ src/formats/fdi/uft_fdi_parser_v2.c:598:FDI_TEST:22
 src/formats/g64/uft_g64_parser_v2.c:551:G64_PARSER_TEST:19
 src/formats/g64/uft_g64_parser_v3.c:1898:G64_V3_TEST:35
 src/formats/hfe/uft_hfe_parser_v2.c:334:HFE_PARSER_TEST:15
-src/formats/ipf/uft_ipf_air.c:976:IPF_AIR_TEST:9
+src/formats/ipf/uft_ipf_air.c:1032:IPF_AIR_TEST:9
 src/formats/ipf/uft_ipf_ctraw_v2.c:697:IPF_CTRAW_TEST:18
 src/formats/jv/uft_jv_parser_v2.c:427:JV_PARSER_TEST:16
 src/formats/kfx/uft_kfstream_air.c:761:KF_AIR_TEST:17

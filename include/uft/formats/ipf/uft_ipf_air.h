@@ -173,6 +173,29 @@ int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
  * Quelle: Jean Louis-Guerin, „IPF Documentation" V0.0 (Januar 2012),
  * mit dem Vorbehalt des Autors, dass die Angaben nur an Atari-ST-IPFs
  * geprueft sind. */
+/**
+ * @brief MF-1079: Zugriff auf die schon geparsten Blockelemente.
+ *
+ * `ipf_air_get_track_raw()` haengt die Elementwerte aneinander und
+ * verliert dabei Blockgrenzen und Typen. Fuer einen ZELLSTROM braucht
+ * es beides: SYNC und RAW sind bereits Zellen, DATA und GAP sind
+ * dekodierte Bytes und ergeben je Bit ZWEI Zellen.
+ *
+ * Rueckgabe 0 = gut, -1 = Spur, Block oder Element gibt es nicht.
+ */
+int ipf_air_get_block_count(const ipf_air_disk_t *disk, int cyl,
+                            int head);
+int ipf_air_get_block_sizes(const ipf_air_disk_t *disk, int cyl,
+                            int head, uint32_t block,
+                            uint32_t *out_data_bits,
+                            uint32_t *out_gap_bits);
+int ipf_air_get_elem_count(const ipf_air_disk_t *disk, int cyl,
+                           int head, uint32_t block);
+int ipf_air_get_elem(const ipf_air_disk_t *disk, int cyl, int head,
+                     uint32_t block, uint32_t elem,
+                     uint32_t *out_type, uint32_t *out_bits,
+                     const uint8_t **out_value, uint32_t *out_len);
+
 const char* ipf_air_density_name(uint32_t d);
 
 #endif /* UFT_IPF_AIR_H */

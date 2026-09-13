@@ -367,8 +367,22 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_ipf_zellstrom")
+        # MF-1079 (P3-360): `raw_data` versprach einen Zellstrom und
+        # trug die dekodierten Bytes. Spur 0/0 lieferte 48 272 Bit,
+        # die Datei sagt 101 304. Braucht den eingeschraenkten Korpus
+        # (zwei SPS-Abbilder), sonst 77.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_ipf_erfindet_keine_geometrie")
         # MF-1073: `ipf_plugin_open()` setzte sectors=11 und
         # sector_size=512 unbedingt - "Amiga DD typical" - und fiel
@@ -380,6 +394,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
@@ -3181,6 +3196,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
@@ -3227,6 +3243,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
@@ -3553,7 +3570,8 @@ foreach(test_source ${TEST_SOURCES})
         # Include IPF AIR parser source directly (TUs-private types stay
         # encapsulated; the test exercises the opaque-handle API).
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c)
     elseif(${test_name} STREQUAL "test_greaseweazle_v2")
         # MF-154 P1.1: GreaseweazleProviderV2 mixin composition test.
         # Needs: V2 provider .cpp + GW C backend (for uft_gw_strerror etc.).

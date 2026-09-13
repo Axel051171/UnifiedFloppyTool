@@ -1428,8 +1428,8 @@
       "origin": "real",
       "tool": "SPS/CAPS (IPF-Erhaltungsabbild, encoder=2/SPS, release 3058)",
       "source": "neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz -> LethalXcess-WingsOfDeathII_DiskA.ipf. **Urheberrechtlich geschuetzte Spielsoftware in einer proprietaeren Distribution** — wird nicht weitergegeben. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
-      "test": "-",
-      "content": "1 004 597 Byte, 64,5 % belegt. 164 IMGE-Saetze (Zylinder 0..81, zwei Koepfe), **160 davon mit Bloecken**, 4 leer. UFT liest 164 Spuren und 900 822 Byte Bitstrom — aber **null Sektoren**, obwohl die IMGE-Saetze 10 bis 11 Bloecke je Spur ansagen. `test` bleibt „-“, bis dieser Befund behandelt ist."
+      "test": "test_ipf_zellstrom",
+      "content": "1 004 597 Byte, 64,5 % belegt. 164 IMGE-Saetze (Zylinder 0..81, zwei Koepfe), **160 davon mit Bloecken**, 4 leer. **MF-1079 hat den Inhalt nachgewiesen** (Regel MF-1021): aus den Blockelementen gebaut ergibt jede Spur genau ihr eigenes `trackbits` — 159 Spuren, 16 106 832 Zellen, 0 Abweichungen; Spur 0/0 traegt das Amiga-Synchronwort 0x4489 unkodiert an Zelle 32, und der ganze Strom haelt die MFM-Zellregel (0 benachbarte 1-Zellen, laengster Nulllauf 3). **Spur 79/0 sagt 35 Bloecke an, `IPF_MAX_BLOCKS` ist 16** — sie wird abgesagt statt gekuerzt (P3-361). Was weiterhin fehlt, ist die **Sektorebene**: die Blockbeschreibungen tragen sie, und sie wird nicht ausgewertet (P3-360 Teil 1)."
     },
     {
       "file": "tests/corpus/sps_lethalxcess_b.ipf",
@@ -1438,8 +1438,8 @@
       "origin": "real",
       "tool": "SPS/CAPS (IPF-Erhaltungsabbild, Disk B)",
       "source": "neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz -> LethalXcess-WingsOfDeathII_DiskB.ipf. **Urheberrechtlich geschuetzte Spielsoftware** — wird nicht weitergegeben. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
-      "test": "-",
-      "content": "1 008 380 Byte, 78,4 % belegt. Zweite Diskette desselben Titels; dient als zweites Objekt fuer denselben Leser."
+      "test": "test_ipf_zellstrom",
+      "content": "1 008 380 Byte. **MF-1079**: 160 von 160 Spuren mit Bloecken bauen ihren Zellstrom auf das Bit genau, keine einzige Absage, 0 Abweichungen; auch hier 0 benachbarte 1-Zellen und laengster Nulllauf 3. Die zweite Diskette ist der Beleg, dass die Rechnung nicht an einem Einzelfall haengt — und die einzige der beiden ohne eine gekappte Spur. Sektorebene weiterhin offen (P3-360 Teil 1)."
     }
   ]
 }

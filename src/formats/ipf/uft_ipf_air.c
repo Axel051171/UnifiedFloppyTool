@@ -779,6 +779,62 @@ static const char* ipf_density_names[] = {
  * Quelle: Jean Louis-Guerin, „Interchangeable Preservation Format (IPF)
  * Documentation", V0.0, Januar 2012 — mit dem ausdruecklichen Vorbehalt
  * des Autors, dass die Angaben nur an Atari-ST-IPFs geprueft sind. */
+
+/* -- MF-1079: die Tuer zu den Bloecken ---------------------------
+ *
+ * Der Parser zerlegt die Blockbeschreibungen und ihre Datenelemente
+ * seit jeher — und `ipf_air_get_track_raw()` daneben haengte
+ * sie aneinander und warf dabei die Blockgrenzen UND die Typen weg.
+ * Was herauskam, waren die DEKODIERTEN Bytes, waehrend das Feld
+ * `raw_bits` einen Zellstrom versprach (P3-360).
+ *
+ * Diese vier Funktionen reichen heraus, was schon geparst ist. Sie
+ * rechnen nichts und leiten nichts ab; die Zellrechnung steht in
+ * `uft_ipf_zellstrom.c`, einer eigenstaendigen Datei.
+ */
+int ipf_air_get_block_count(const ipf_air_disk_t *disk, int cyl,
+                            int head) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    return (int)disk->tracks[cyl][head].actual_blocks;
+}
+
+int ipf_air_get_block_sizes(const ipf_air_disk_t *disk, int cyl,
+                            int head, uint32_t block,
+                            uint32_t *out_data_bits,
+                            uint32_t *out_gap_bits) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+    if (block >= trk->actual_blocks) return -1;
+    if (out_data_bits) *out_data_bits = trk->blocks[block].data_bits;
+    if (out_gap_bits)  *out_gap_bits  = trk->blocks[block].gap_bits;
+    return 0;
+}
+
+int ipf_air_get_elem_count(const ipf_air_disk_t *disk, int cyl,
+                           int head, uint32_t block) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+    if (block >= trk->actual_blocks) return -1;
+    return (int)trk->blocks[block].data_elem_count;
+}
+
+int ipf_air_get_elem(const ipf_air_disk_t *disk, int cyl, int head,
+                     uint32_t block, uint32_t elem,
+                     uint32_t *out_type, uint32_t *out_bits,
+                     const uint8_t **out_value, uint32_t *out_len) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+    if (block >= trk->actual_blocks) return -1;
+    const ipf_block_desc_t *bd = &trk->blocks[block];
+    if (elem >= bd->data_elem_count) return -1;
+    const ipf_data_elem_t *de = &bd->data_elems[elem];
+    if (out_type)  *out_type  = (uint32_t)de->type;
+    if (out_bits)  *out_bits  = de->data_bits;
+    if (out_value) *out_value = de->value;
+    if (out_len)   *out_len   = de->value_size;
+    return 0;
+}
+
 const char* ipf_air_density_name(uint32_t d) {
     const size_t n = sizeof(ipf_density_names) / sizeof(ipf_density_names[0]);
     return ((size_t)d < n) ? ipf_density_names[d] : "Unknown";

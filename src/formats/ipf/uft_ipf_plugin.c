@@ -9,8 +9,9 @@
  *
  * Coverage matrix:
  *   - SPS-encoded IPFs (encoder_type=2): full geometry, IMGE metadata
- *     and concatenated data-element payload bytes are surfaced via
- *     read_track().
+ *     und seit MF-1079 der **Zellstrom** der Spur — `raw_data`
+ *     traegt Zellen und `raw_bits` deren Zahl, nicht mehr die
+ *     dekodierten Bytes (P3-360, siehe `uft_ipf_zellstrom.h`).
  *   - CAPS-encoded IPFs (encoder_type=1): geometry + IMGE metadata
  *     only — data-element layout for CAPS encoder is not yet decoded
  *     in uft_ipf_air.c. read_track() returns metadata + raw_data=NULL.
@@ -24,6 +25,7 @@
 #include "uft/profiles/uft_ipf_format.h"
 #include "uft/formats/ipf/uft_ipf_air.h"
 #include "uft/formats/ipf/uft_ipf_helper.h"
+#include "uft/formats/ipf/uft_ipf_zellstrom.h"
 #include "uft/uft_log.h"
 
 /* IPF IMGE.track_flags — fuzzy-bit indicator (matches IPF_TF_FUZZY in
@@ -400,27 +402,53 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                  cyl, head, ipf_air_density_name(density), density);
     }
 
-    /* Pull concatenated data-element payload bytes from the AIR parser.
-     * For SPS-encoded files this gives the deterministic-decoded portion
-     * of the track (SYNC/DATA/RAW/IGAP byte sequences as recorded in the
-     * IPF DATA records). For CAPS-encoded files the accessor returns -2
-     * — we honor that by leaving raw_data NULL without claiming success
-     * was partial. */
-    uint8_t *payload = NULL;
-    uint32_t payload_bits = 0;
-    int rc = ipf_air_get_track_raw(p->air, cyl, head, &payload, &payload_bits);
-    if (rc == 0 && payload && payload_bits > 0) {
-        size_t bytes = ((size_t)payload_bits + 7) / 8;
-        track->raw_data    = payload;        /* ownership transfers; track_free will release */
-        track->raw_size    = bytes;
-        track->raw_len     = bytes;
-        track->raw_bits    = payload_bits;
+    /* MF-1079 (P3-360): `raw_data` traegt jetzt ZELLEN.
+     *
+     * Hier stand `ipf_air_get_track_raw()`, und das haengt die Werte
+     * der Datenelemente aneinander — also die **dekodierten Bytes**.
+     * `uft_track_t::raw_data` verspricht aber einen Zellstrom und
+     * `raw_bits` eine Zellzahl. Gemessen an Spur 0/0 von
+     * `sps_lethalxcess_a.ipf`: geliefert wurden 6034 Byte / 48 272 Bit,
+     * die Datei sagt `trackbits = 101 304`. Zwei Aussagen, ein Feld.
+     *
+     * `uft_ipf_zellstrom()` baut den Strom aus denselben Elementen und
+     * prueft dabei die Gleichung, die ueber 1618 Bloecke aufgeht; sie
+     * steht samt Referenz im Kopf von `uft_ipf_zellstrom.h`.
+     *
+     * **Es gibt keinen Rueckfall auf die dekodierten Bytes.** Der waere
+     * genau die Falschaussage, die hier behoben wird. Kann der Strom
+     * nicht belegt werden, bleibt `raw_data` NULL — und der Grund
+     * wird GENANNT statt verschwiegen. */
+    uint8_t *zellen = NULL;
+    uint32_t zell_bits = 0;
+    const int zrc = uft_ipf_zellstrom(p->air, cyl, head,
+                                      &zellen, &zell_bits);
+    if (zrc == 0 && zellen && zell_bits > 0) {
+        const size_t bytes = ((size_t)zell_bits + 7u) / 8u;
+        track->raw_data     = zellen;   /* uebernimmt der Aufrufer */
+        track->raw_size     = bytes;
+        track->raw_len      = bytes;
+        track->raw_bits     = zell_bits;
         track->raw_capacity = bytes;
-        track->owns_data   = true;
-    } else if (payload) {
-        free(payload);   /* defensive — should be NULL if rc != 0 */
+        track->owns_data    = true;
+    } else {
+        free(zellen);   /* vorsichtshalber — sollte NULL sein */
+        if (zrc == -3) {
+            uint32_t angesagt = 0, gehalten = 0;
+            bool gekappt = false;
+            (void)ipf_air_get_track_loss(p->air, cyl, head, &angesagt,
+                                         &gehalten, &gekappt);
+            UFT_WARN("IPF Spur %d/%d: kein Zellstrom — die Datei sagt "
+                     "%u Bloecke an, der Leser haelt %u (MF-830)",
+                     cyl, head, angesagt, gehalten);
+        } else if (zrc == -2) {
+            UFT_WARN("IPF Spur %d/%d: kein Zellstrom — die Zellzahl "
+                     "trifft die angesagten %u Bit nicht",
+                     cyl, head, track_bits);
+        }
+        /* zrc == -1: CAPS-Kodierer oder keine Bloecke. Metadaten stehen,
+         * `raw_data` bleibt NULL — wie vorher. */
     }
-    /* rc == -2 (CAPS-encoder fallback): leave raw_data NULL; metadata only. */
 
     return UFT_OK;
 }
@@ -433,7 +461,7 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 /* Prinzip 7 Feature-Matrix — see docs/DESIGN_PRINCIPLES.md §7 */
 static const uft_plugin_feature_t ipf_features[] = {
     { "Standard MFM Tracks (SPS)",     UFT_FEATURE_PARTIAL,
-      "SPS encoder: data-element payload concatenated; gap-padding not synthesized into bitstream" },
+      "SPS-Kodierer: raw_data ist der MFM-ZELLSTROM (MF-1079); Gap-Elemente werden als 0x00-Muster gefuellt, nicht ausgewertet" },
     { "Standard MFM Tracks (CAPS)",    UFT_FEATURE_PARTIAL,
       "CAPS encoder: metadata only; data-element decode for CAPS layout deferred" },
     { "Timing Tracks",                 UFT_FEATURE_PARTIAL,
