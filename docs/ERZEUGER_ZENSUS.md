@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 21 |
+| davon auf T2/T3 (offen) | 20 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -50,7 +50,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `nfd` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `pro` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
@@ -221,6 +220,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `nanowasp` | T1b | — | nanowasp |
 | `nib` | T1b | — | — |
 | `northstar` | T1b | NORTHSTAR | — |
+| `opus` | T1b | — | — |
 | `pdp` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `po` | T1b | AMSTRADCPC_DSK (?), APPLE2_PO, ORIC_DSK (?) | dsk (?) |
 | `posix` | T1b | AMSTRADCPC_DSK (?), KRYOFLUXSTREAM (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?), raw (?) |

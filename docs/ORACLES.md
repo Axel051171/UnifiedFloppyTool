@@ -184,7 +184,64 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `hxcfe` | `HXCFE` | GPL-2.0 | `-help` | Format-Wandlung über viele Container (HFE, IMG, DSK, …); Bezug für T1b-Eingaben |
 | `samdisk` | `SAMDISK` | MIT | `--version` | Container-Formate und ihre Randfälle. Die **Quelle** liegt zusätzlich im Baum (`src/samdisk/`) und dient als Spec-Referenz |
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
-| `floptool` | `FLOPTOOL` | GPL-2.0-or-later (MAME) | **SHA-256** (keine Versionsabfrage) | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem |
+| `floptool` | `FLOPTOOL` | **BSD-3-Clause** (MAME) | `version` **und** SHA-256 | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem; seit MF-1083 auch **Erzeuger**: `flopconvert` schreibt **122 von 151** Formaten. **Zwei Berichtigungen MF-1083:** hier stand *keine Versionsabfrage* — `floptool version` gibt es, und sie meldet die Bauzeichenkette; und *GPL-2.0-or-later* — MAMEs `floptool.cpp` und die Formatschicht tragen `// license:BSD-3-Clause` |
+
+### Baurezept `floptool` (MF-1083)
+
+Aufgeschrieben, weil es **nicht** der dokumentierte Weg ist — genau
+wie bei libdsk (MF-1028). Der gelieferte Schnappschuss
+`neue-ideen/exsource/mame-master.zip` (SHA-256
+`e7955339ded6a27357bedd195e8ee27bf8310a9e5f87f9df0ca389c90c0832c8`)
+enthaelt **nur** `src/lib/` — 845 Eintraege, 7,4 MB, ohne `tools`,
+ohne `osd`, ohne `3rdparty`. `floptool.cpp` selbst fehlt darin.
+
+Gebaut unter `tools/uft-scout/work/mame-master/` (gitignored):
+
+1. Archiv entpacken (`src/lib/formats` 221 `.cpp`, `src/lib/util` 46).
+2. Von `mamedev/mame@master` nachgeholt, weil im Archiv nicht
+   enthalten: `src/tools/floptool.cpp`, `src/tools/image_handler.{h,cpp}`,
+   `src/osd/{osdcomm,osdcore,osdfile,eminline,eigcc*,eivc*,strconv}.h`,
+   `src/osd/osdcore.cpp`, `src/osd/strconv.cpp`,
+   `src/osd/modules/file/win*.cpp`, `src/osd/modules/lib/osdlib_win32.cpp`,
+   `src/osd/windows/winut*.{h,cpp}`; dazu **utf8proc** (MIT) aus
+   `JuliaStrings/utf8proc`.
+3. Uebersetzt mit `g++ -std=c++20 -DCRLF=3 -DUNICODE -D_UNICODE`
+   (MAME-master ist C++20 und erwartet `UNICODE`), gelinkt gegen
+   `-lz -lws2_32 -luser32 -lshlwapi`. **267 Objektdateien.**
+
+**Drei Stellen brauchten eine Ergaenzung, und alle drei stehen
+ausserhalb der Versionskontrolle:**
+
+* `rotr_32`/`rotl_32`/`rotr_64`/`rotl_64` — das Archiv ist **aelter**
+  als master (sein `ap_dsk35.cpp` ruft `rotr_32`, master benutzt
+  `std::rotr`), und die von master geholten osd-Koepfe kennen sie nicht
+  mehr. Uebernommen wurde **MAMEs eigene Definition** aus `mame0250`,
+  woertlich, nicht nachgebaut.
+* `src/emu/logmacro.h` — ein dreizeiliger, wirkungsloser Ersatz fuer
+  `ti99_dsk.cpp`. Dieselbe Bauform wie der `<binary-io.h>`-Ersatz beim
+  Bau von `a2nibblize`.
+* `src/osd/uft_nicht_gebaut.cpp` — CHD (braucht libFLAC), ZIP/7z
+  (LZMA) und XML (expat) sind ohne `3rdparty` nicht baubar. Sie sind
+  **nicht weggelassen**, sondern als Stellen definiert, die **laut
+  abbrechen**. Ein floptool, das eine CHD stillschweigend falsch
+  behandelt, waere schlimmer als eines, das sagt: dieser Teil ist nicht
+  gebaut (UFT-A02).
+
+**Nicht gebaut und benannt:** `flacfile.cpp` (FLAC-Kassetten),
+`h17d_dsk.cpp` und `hti_tap.cpp` — die letzten beiden fehlen **im
+Archiv selbst**, obwohl `all.cpp` sie nennt. `has_formats.h` wird
+deshalb aus den **tatsaechlich uebersetzten** Objektdateien erzeugt
+(184 von 186), nicht aus einer Wunschliste.
+
+**Eichung (MF-1083), am Objekt:**
+
+| Datei | floptool sagt |
+|---|---|
+| `tests/corpus_free/vice_c1541_35trk.d64` | `..++. d64` (Hoechstwertung) |
+| `tests/corpus_free/gw_amigados.hfe` | `.+.+. hfe` (Kennung getroffen) |
+| `tests/corpus_free/hxcfe_pc160.imd` | `.+.+. imd` |
+| `flopconvert d64 g64` | 278 164 Byte, als `g64` wiedererkannt |
+| SHA-256 des Binaers | `bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a` |
 | `fluxtoimd` | — (Python, im Baum geklont) | GPL-3.0-**only** | Pfad `tools/uft-scout/work/fluxtoimd` | FM- und M2FM-Modulation. Seit MF-864 die zweite Hand fuer die FM-Pruefspur: Adressmarken, `FM.decode()`, CRC-Parameter. **Wird ausgefuehrt, nicht portiert** — GPL-3-only vertraegt sich mit dem Baum, aber der Kanal ist ausdruecklich „Oracle" |
 | `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
 | `xdftool` | `XDFTOOL` | GPL-2.0-or-later | **Paketversion** (`importlib.metadata.version("amitools")`) — das Werkzeug gibt selbst keine aus; die SHA-256 der aufgeloesten Datei steht im Manifest daneben | AmigaDOS-Verzeichnis und Dateiinhalte in ADF. Zugleich der **Erzeuger** von `xdftool_dd_ofs.adf` — beantwortet damit die Provenienz-, nicht die Richtigkeitsfrage. Laengensemantik **roh** (127, nicht 488), Unabhaengigkeit gegen `adfrescue` gemessen (MF-693) |

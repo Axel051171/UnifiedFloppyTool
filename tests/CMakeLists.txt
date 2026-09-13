@@ -371,6 +371,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_opus_gegen_floptool")
+        # MF-1084: `opus` T2 -> T1b. Das Abbild kommt aus MAMEs
+        # floptool (seit MF-1083 gebaut), gefuehrt ueber einen
+        # HFE-Zellstrom von 2 008 020 Byte - ein Durchreichen der
+        # Bytes ist damit ausgeschlossen. Braucht den
+        # eingeschraenkten Korpus, sonst 77.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_sektor_laenge_stimmt")
         # MF-1080: neun Plugins setzten nur das legacy-Laengenfeld.
         # 2002 von 2002 CP/M-Sektoren trugen ihre Bytes und meldeten

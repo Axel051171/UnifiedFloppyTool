@@ -1440,6 +1440,18 @@
       "source": "neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz -> LethalXcess-WingsOfDeathII_DiskB.ipf. **Urheberrechtlich geschuetzte Spielsoftware** — wird nicht weitergegeben. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
       "test": "test_ipf_zellstrom",
       "content": "1 008 380 Byte. **MF-1079**: 160 von 160 Spuren mit Bloecken bauen ihren Zellstrom auf das Bit genau, keine einzige Absage, 0 Abweichungen; auch hier 0 benachbarte 1-Zellen und laengster Nulllauf 3. Die zweite Diskette ist der Beleg, dass die Rechnung nicht an einem Einzelfall haengt — und die einzige der beiden ohne eine gekappte Spur. Sektorebene weiterhin offen (P3-360 Teil 1)."
+    },
+    {
+      "file": "tests/corpus/floptool_opus_inhalt.opd",
+      "sha256": "4e160ad68289a126dcd882650e6751b57d3c1dccc975d01420589ad6d3ba6546",
+      "format": "opus",
+      "origin": "cross-tool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083 aus `neue-ideen/exsource/mame-master.zip` (SHA-256 e7955339ded6a27357bedd195e8ee27bf8310a9e5f87f9df0ca389c90c0832c8) plus Dateien von mamedev/mame@master; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a; `floptool version` meldet 'UFT-Bau MF-1083 (MAME-Schnappschuss ohne 3rdparty)'. Rezept in docs/ORACLES.md",
+      "source": "MF-1084. Erzeugt in ZWEI Schritten aus einer Grundlage, die den ECHTEN Bootsektor von `tests/corpus/zxfd_opus_sssd.opd` behaelt (dort steht die Geometrie, die UFT seit MF-905 liest) und deren 719 uebrige Sektoren sich SELBST BENENNEN ('UFT-OPUS #NNNN', MF-1020). Darauf: `floptool flopconvert opd hfe` — ein **2 008 020 Byte** grosser MFM-Zellstrom — und zurueck `flopconvert hfe opd`. Der Umweg ueber HFE ist der Punkt: er zwingt floptool, die Geometrie, die Sektorreihenfolge und die Nummerierung wirklich zu MODELLIEREN; ein Durchreichen der Bytes waere damit ausgeschlossen. Die Grundlage erbt die ungeklaerte Lizenz der Korpusdatei (P3-359), liegt deshalb in `tests/corpus/` (seit MF-364 gitignored) und wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_opus_gegen_floptool",
+      "content": "184 320 Byte, 40 x 1 x 18 x 256. **719 Mustertreffer** 'UFT-OPUS' — je Sektor einer, der seinen eigenen Index traegt. Der Rest ist das Fuellbyte 0xE5 der Grundlage (94,4 % der Datei); der Beleg sind die 719 Marken, nicht die Fuellung (MF-1021). Gemessen liest UFT **719 von 719 an der richtigen Stelle, 0 abweichend**.",
+      "oracle": "floptool",
+      "fremdcode": "nein — gemessen: die Datei ist ein reines Sektorabbild von 184 320 Byte (40 x 1 x 18 x 256). Ihr Inhalt sind 719 selbst erzeugte Marken 'UFT-OPUS #NNNN' und das Fuellbyte 0xE5; der einzige fremde Teil ist der 256 Byte grosse BOOTSEKTOR aus `zxfd_opus_sssd.opd`, der die Geometrie traegt und unveraendert uebernommen wurde. Kein ausfuehrbarer Code, keine Anwendungsdaten; die Lizenzfrage der Grundlage bleibt die von P3-359, weshalb die Datei in `tests/corpus/` liegt (gitignored) und nicht weitergegeben wird."
     }
   ]
 }

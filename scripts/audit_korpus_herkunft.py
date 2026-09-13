@@ -57,7 +57,14 @@ MANIFEST = WURZEL / "tests" / "corpus_manifest" / "manifest.json"
 
 # Version ODER Commit-Hash — siehe Kopfkommentar.
 VERSION = re.compile(r"\b\d+\.\d+")
-HASH = re.compile(r"\b[0-9a-f]{7,40}\b")
+# MF-1084: die Obergrenze war **40** — die Laenge einer git-SHA-1. Eine
+# **SHA-256** hat 64 Zeichen und fiel damit durch, obwohl sie in diesem
+# Baum der uebliche Anker ist: jeder Manifest-Eintrag traegt eine im Feld
+# `sha256`. Ein Herkunftstor, das den staerkeren Beleg nicht sehen kann,
+# ist genau verkehrt herum gebaut. Gefunden hat es der erste Eintrag, der
+# ein Binaer ueber seine SHA-256 statt ueber eine Versionsnummer benennt
+# (floptool, MF-1083).
+HASH = re.compile(r"\b[0-9a-f]{7,64}\b")
 
 
 def registernamen(wurzel: Path) -> set[str]:
@@ -142,6 +149,12 @@ def _selbsttest() -> int:
         ("tool ohne Version/Hash", {**_GUT, "tool": "VICE c1541"}, True),
         ("Hash statt Version -> still",
          {**_GUT, "tool": "hxcfe (Klon 05b53aa)"}, False),
+        # MF-1084: eine SHA-256 ist 64 Zeichen lang und fiel bis dahin
+        # durch, weil die Obergrenze auf 40 (git-SHA-1) stand.
+        ("SHA-256 statt Version -> still",
+         {**_GUT, "tool": "floptool, Binaer-SHA-256 bbf893dd41a3e58bacb5a0"
+                          "c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a"},
+         False),
         ("kein source", {**_GUT, "source": "x"}, True),
         ("kein fremdcode", {**_GUT, "fremdcode": ""}, True),
         ("fremdcode UNGEMESSEN -> still",
