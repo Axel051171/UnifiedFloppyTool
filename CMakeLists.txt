@@ -416,6 +416,52 @@ include(CPack)
 # Build library targets that the test suite links against, then add tests.
 # The main app above uses a monolithic GLOB; tests use modular static libs.
 
+# ============================================================================
+# Sanitizer — EINE Option, kein zweiter Bauzweig (MF-1102)
+#
+#   cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug \
+#         -DUFT_SANITIZE=address,undefined
+#
+# `-fno-sanitize-recover=all` ist hier NICHT schmueckendes Beiwerk,
+# sondern der Unterschied zwischen einer Stufe, die rot werden kann, und
+# einer, die es nicht kann. Gemessen (WSL2, gcc 15.2.0, Rotbeweis
+# `tests/kalibrierung/sanitizer_kann_rot.c`):
+#
+#   UBSan ohne das Flag, halt_on_error=0  -> Exit 0, 695 Byte Befund
+#   UBSan mit dem Flag                    -> Exit 1
+#   ASan, beide Male                      -> Exit 1
+#
+# UBSan setzt nach einem wiederaufsetzbaren Fehler wieder auf und laeuft
+# weiter; ASan-Fehler sind von Haus aus nicht wiederaufsetzbar. Genau
+# dieser Unterschied hat den gatenden UBSan-Schritt in
+# `.github/workflows/sanitizers.yml` gruen gehalten, obwohl er meldete.
+#
+# Nachpruefen laesst sich das mit `scripts/kalibriere_sanitizer.sh` —
+# es besteht nur, wenn beide Stufen mit Kode != 0 UND mit einer
+# Diagnose abbrechen, und es prueft zusaetzlich, dass die laxe Fassung
+# wirklich durchlaeuft.
+set(UFT_SANITIZE "" CACHE STRING
+    "Sanitizer: address, undefined, oder address,undefined (leer = aus)")
+
+if(UFT_SANITIZE AND NOT MSVC)
+    set(_uft_san
+        -fsanitize=${UFT_SANITIZE}
+        -fno-omit-frame-pointer
+        -fno-sanitize-recover=all)
+    add_compile_options(${_uft_san} -g -O1)
+    add_link_options(${_uft_san})
+    message(STATUS "UFT Sanitizer AKTIV: ${UFT_SANITIZE} (mit -fno-sanitize-recover=all)")
+elseif(UFT_SANITIZE AND MSVC)
+    # MSVC kann ASan, aber kein UBSan und keine Leck-Erkennung; /RTC1
+    # und /INCREMENTAL vertragen sich nicht damit.
+    add_compile_options(/fsanitize=address /Zi /Od)
+    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    add_link_options(/INCREMENTAL:NO)
+    message(STATUS "UFT Sanitizer AKTIV: MSVC /fsanitize=address "
+                   "(kein UBSan, keine Leck-Erkennung)")
+endif()
+
 option(UFT_BUILD_TESTS "Build the UFT test suite" ON)
 
 if(UFT_BUILD_TESTS)

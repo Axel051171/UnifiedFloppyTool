@@ -159,8 +159,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DUFT_BUILD_TESTS=ON \
             -DUFT_WITH_DTC_COMPONENTS=ON \
-            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
-            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
           cmake --build build --parallel $(nproc) 2>&1 || true
           # GUI may fail (missing headers) — tests are what matters
@@ -172,8 +172,35 @@ jobs:
           ctest --output-on-failure --timeout 300 --no-tests=error \
             --tests-regex "test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
         env:
-          # Wie beim ASan-Tor: ein Lauf, alle Funde.
-          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=0:exitcode=1
+          # MF-1102 — hier stand `halt_on_error=0` mit der Begruendung
+          # "wie beim ASan-Tor: ein Lauf, alle Funde". Die Begruendung
+          # stimmt fuer ASan und NICHT fuer UBSan, und der Unterschied
+          # ist gemessen (WSL2, gcc 15.2.0, Rotbeweis mit einem
+          # signed-integer-overflow):
+          #
+          #   UBSan, genau diese Zeile          -> Exit 0, 524 Byte Befund
+          #   dieselbe Zeile, halt_on_error=1   -> Exit 1
+          #   -fno-sanitize-recover=all         -> Exit 1, auch ohne Option
+          #
+          # ASan-Fehler sind von Haus aus nicht wiederaufsetzbar und
+          # beenden den Prozess ohnehin (gemessen: Exit 1 auch voellig
+          # ohne ASAN_OPTIONS). UBSan setzt dagegen wieder auf, meldet
+          # und laeuft weiter — `exitcode` greift nur, wenn es ueberhaupt
+          # abbricht. Dieses Tor konnte damit NICHT rot werden.
+          #
+          # Die Konfiguration war zudem VERTAUSCHT: der gatende Schritt
+          # hier trug den milden Wert, der berichtende Schritt darunter
+          # (mit `|| true`) den strengen. Der strenge stand dort, wo er
+          # nichts bewirkt.
+          #
+          # Jetzt doppelt gehalten: das Uebersetzungs-Flag oben laesst
+          # UBSan gar nicht erst wieder aufsetzen, und die Laufzeitoption
+          # sagt dasselbe noch einmal — damit haengt das Tor nicht an
+          # einer Umgebungsvariablen, die jemand streicht. Der Preis ist
+          # benannt: ein Lauf zeigt nur noch den ERSTEN Fund. Die
+          # vollstaendige Liste liefert der berichtende Schritt darunter,
+          # und der ist genau dafuer da.
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:exitcode=1
 
       # BERICHTEND. Vorher liefen hier neun Testnamen mit `|| true`; die
       # restlichen 232 sah niemand unter UBSan.
