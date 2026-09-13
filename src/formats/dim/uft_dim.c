@@ -436,7 +436,24 @@ static const uft_plugin_feature_t uft_format_plugin_dim_features[] = {
 const uft_format_plugin_t uft_format_plugin_dim = {
     .name         = "DIM",
     .description  = "Sharp X68000 Disk Image",
-    .extensions   = "dim;xdf",
+    /* MF-1087: hier stand `"dim;xdf"`. XDF ist IBMs *eXtended Density
+     * Format* und NICHT das Sharp-X68000-DIM, das diese Datei liest -
+     * das Wort kommt sonst nirgends in ihr vor. Das war kein
+     * Schoenheitsfehler: `uft_resolve_format_plugin()` waehlt das
+     * ZIEL eines Schreibvorgangs ueber die Endung, sobald die
+     * Format-ID nicht eindeutig ist - und gemessen tragen **101**
+     * registrierte Plugins `UFT_FORMAT_DSK`. Weil `.xdf` im ganzen
+     * Baum nur HIER stand, lieferte `out.xdf` gemessen "DIM": eine
+     * Schreibabsicht wurde still in eine andere uebersetzt.
+     *
+     * Fuer XDF gibt es kein Plugin - MF-1064 hat gemessen, dass
+     * `uft_xdf_api.c` nicht registriert ist. Ein Ziel `out.xdf` loest
+     * deshalb jetzt auf NICHTS auf, und das ist die ehrliche Antwort.
+     * Festgehalten in `tests/test_endung_nennt_kein_fremdes_format.c`.
+     *
+     * `.dim` bleibt - die Endung teilt sich dieses Plugin mit
+     * `dim_atari`, und der Verteiler sagt dort ohnehin ab. */
+    .extensions   = "dim",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,

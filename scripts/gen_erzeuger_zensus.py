@@ -66,6 +66,8 @@ WURZEL = Path(__file__).resolve().parent.parent
 HXCFE = (WURZEL / "tools" / "uft-scout" / "work" / "HxCFloppyEmulator"
          / "build" / "hxcfe.exe")
 DSKTRANS = WURZEL / "tools" / "uft-scout" / "work" / "libdsk" / "dsktrans.exe"
+FLOPTOOL = (WURZEL / "tools" / "uft-scout" / "work" / "mame-master"
+            / "floptool.exe")
 KANAELE = WURZEL / "docs" / "erzeuger_kanaele.json"
 ZIEL = WURZEL / "docs" / "ERZEUGER_ZENSUS.md"
 TIERS = WURZEL / "docs" / "VERIFICATION_TIERS.md"
@@ -117,6 +119,50 @@ def libdsk_typen() -> set[str]:
     return aus
 
 
+FLOP_ZEILE = re.compile(r"^  ([a-z0-9_]+)\s+(rw|r-|-w)\s+-\s+"
+                        r"(?:[^\[]*)\[([^\]]*)\]\s*$")
+
+
+def floptool_module() -> dict[str, dict]:
+    """`floptool help all` auswerten: Modulname -> {rw, endungen}.
+
+    **MF-1087 - dieser Leser hat gefehlt, und das war teuer.** Der
+    Zensus fragte hxcfe und libdsk; `floptool` ist seit MF-1083
+    gebaut und hat in MF-1085 **vier** Hebungen getragen (`2img`,
+    `d13`, `jv1`, `victor9k`). Gefunden habe ich zwei davon **von
+    Hand**, weil dieses Skript sie nicht sehen konnte: die
+    Kandidatenliste aus MF-1083 nannte drei Formate, gemessen sind
+    es fuenf. Ein Zensus, der einen ganzen Erzeuger nicht kennt,
+    ist dieselbe Klasse wie eine gepflegte Ausschlussliste
+    (MF-636) - nur an der Stelle, die bestimmt, wonach ueberhaupt
+    gesucht wird.
+
+    Die Formatliste steht zwischen `Supported floppy formats:` und
+    `Supported filesystems`; die Dateisystemnamen danach sind KEINE
+    Behaelterformate und werden ausdruecklich nicht gelesen.
+    """
+    txt = lauf(FLOPTOOL, ["help", "all"])
+    if txt is None:
+        return {}
+    aus: dict[str, dict] = {}
+    drin = False
+    for z in txt.splitlines():
+        if z.startswith("Supported floppy formats"):
+            drin = True
+            continue
+        if z.startswith("Supported filesystems"):
+            break
+        if not drin:
+            continue
+        m = FLOP_ZEILE.match(z)
+        if not m:
+            continue
+        endungen = {e.strip().lstrip("*.").lower()
+                    for e in m.group(3).split(",") if e.strip()}
+        aus[m.group(1)] = {"rw": m.group(2), "ext": endungen}
+    return aus
+
+
 def stufen() -> dict[str, str]:
     if not TIERS.exists():
         return {}
@@ -142,7 +188,7 @@ def gemessene_kanaele() -> dict[str, dict]:
     return json.loads(KANAELE.read_text(encoding="utf-8")).get("formate", {})
 
 
-def selbsttest(hxc: dict, ldk: set, st: dict) -> bool:
+def selbsttest(hxc: dict, ldk: set, st: dict, flp: dict | None = None) -> bool:
     """Vor dem Nenner. Eine Erstfassung von `tuersucher.py` meldete
     „Selbsttest 3/3" und lieferte gemessen 0/3 — seither prueft jedes
     dieser Skripte sich selbst, bevor es eine Zahl nennt."""
@@ -154,6 +200,18 @@ def selbsttest(hxc: dict, ldk: set, st: dict) -> bool:
                        hxc.get("APPLE2_DO", {}).get("rw") == "RW"))
         proben.append(("die v9t9-Endung ist erfasst",
                        "v9t9" in hxc.get("TI994A_V9T9", {}).get("ext", set())))
+    if flp:
+        # MF-1085 hat diese drei AUSGEFUEHRT: `a2_13sect` schrieb die
+        # `.d13` im Korpus, `nfd` meldet sich selbst als nur lesend
+        # (was den Zensus der NFD-Familie aus MF-1082 bestaetigt).
+        proben.append(("floptool kennt `a2_13sect` als rw",
+                       flp.get("a2_13sect", {}).get("rw") == "rw"))
+        proben.append(("die d13-Endung ist erfasst",
+                       "d13" in flp.get("a2_13sect", {}).get("ext", set())))
+        proben.append(("floptool meldet `nfd` als NUR LESEND",
+                       flp.get("nfd", {}).get("rw") == "r-"))
+        proben.append(("die Dateisystemliste ist NICHT mitgelesen",
+                       "prodos" not in flp and "cbmdos" not in flp))
     if ldk:
         proben.append(("libdsk fuehrt den Typ `apridisk`",
                        "apridisk" in ldk))
@@ -177,11 +235,12 @@ def main() -> int:
     plugins = scan_plugins(WURZEL)
     hxc = hxcfe_module()
     ldk = libdsk_typen()
+    flp = floptool_module()
     st = stufen()
     belegt = hat_fremdabbild()
     kanaele = gemessene_kanaele()
 
-    if not selbsttest(hxc, ldk, st):
+    if not selbsttest(hxc, ldk, st, flp):
         print("ABBRUCH: Selbsttest rot — kein Zensus geschrieben",
               file=sys.stderr)
         return 1
@@ -199,6 +258,7 @@ def main() -> int:
 
     zugeordnet_h: set[str] = set()
     zugeordnet_l: set[str] = set()
+    zugeordnet_f: set[str] = set()
 
     zeilen = []
     for p in sorted(plugins, key=lambda x: x["symbol"]):
@@ -226,6 +286,21 @@ def main() -> int:
                 zugeordnet_l.add(t)
                 l_treffer.append(t if t in eindeutige else t + " (?)")
 
+        # floptool: wie libdsk ueber den Namen UND ueber die Endung,
+        # aber nur, was es auch SCHREIBEN kann. `r-` faellt heraus -
+        # ein Leser ist kein Erzeuger (MF-1082/MF-1083 bei `nfd`).
+        f_treffer = []
+        for n, d in sorted(flp.items()):
+            if "w" not in d["rw"]:
+                continue
+            if n == sym:
+                zugeordnet_f.add(n)
+                f_treffer.append(n)
+            elif d["ext"] & exts:
+                zugeordnet_f.add(n)
+                f_treffer.append(n if (d["ext"] & eindeutige)
+                                 else n + " (?)")
+
         k = kanaele.get(sym)
         if k:
             kanal = k.get("kanal", "?")
@@ -234,7 +309,8 @@ def main() -> int:
             kanal = "nicht gemessen"
             bemerkung = ""
 
-        sicher = [t for t in h_treffer + l_treffer if not t.endswith("(?)")]
+        sicher = [t for t in h_treffer + l_treffer + f_treffer
+                  if not t.endswith("(?)")]
         if sym in belegt:
             klasse = "— (hat bereits ein Fremdabbild)"
         elif kanal not in ("nicht gemessen", "keiner"):
@@ -243,7 +319,7 @@ def main() -> int:
             klasse = "**C** — gemessen: dieser Weg traegt nicht"
         elif sicher:
             klasse = "**A?** — Werkzeug sagt RW, Kanal UNGEMESSEN"
-        elif h_treffer or l_treffer:
+        elif h_treffer or l_treffer or f_treffer:
             klasse = "**?** — nur ueber eine GETEILTE Endung zugeordnet"
         else:
             klasse = "**B/C** — kein Werkzeug im Baum, das schreibt"
@@ -252,6 +328,7 @@ def main() -> int:
             "sym": sym, "stufe": stufe,
             "hxc": ", ".join(h_treffer) or "—",
             "ldk": ", ".join(l_treffer) or "—",
+            "flp": ", ".join(f_treffer) or "—",
             "kanal": kanal, "klasse": klasse, "bemerkung": bemerkung,
         })
 
@@ -301,15 +378,19 @@ def main() -> int:
     out.append("| hxcfe-Module mit `RW` | %d |"
                % sum(1 for d in hxc.values() if d["rw"] == "RW"))
     out.append("| libdsk-Typen (alle les- und schreibbar) | %d |" % len(ldk))
+    out.append("| floptool-Module gesamt | %d |" % len(flp))
+    out.append("| davon schreibfaehig (`rw`/`-w`) | %d |"
+               % sum(1 for d in flp.values() if "w" in d["rw"]))
     out.append("")
     out.append("## Die offenen Formate\n")
     out.append("")
-    out.append("| Format | Stufe | hxcfe (RW) | libdsk | Kanal | Klasse |")
-    out.append("|---|---|---|---|---|---|")
+    out.append("| Format | Stufe | hxcfe (RW) | libdsk | floptool (w) "
+               "| Kanal | Klasse |")
+    out.append("|---|---|---|---|---|---|---|")
     for z in offen:
-        out.append("| `%s` | %s | %s | %s | %s | %s |"
+        out.append("| `%s` | %s | %s | %s | %s | %s | %s |"
                    % (z["sym"], z["stufe"], z["hxc"], z["ldk"],
-                      z["kanal"], z["klasse"]))
+                      z["flp"], z["kanal"], z["klasse"]))
     out.append("")
     out.append("`(?)` hinter einem Werkzeugnamen heisst: die Zuordnung "
                "laeuft ueber eine Endung, die sich **mehrere** Plugins "

@@ -2794,7 +2794,11 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_d64_erzeugen_gegen_vice"
            # MF-1020: oeffnet Abbilder, die hxcfe erzeugt hat, durch die
            # benannten Plugins der Registry — die T1b-Frage schlechthin.
-           OR ${test_name} STREQUAL "test_fremde_hand_liest")
+           OR ${test_name} STREQUAL "test_fremde_hand_liest"
+           # MF-1087: fragt die REGISTRY, welches Plugin eine Endung
+           # beansprucht und welches Ziel `out.<ext>` waehlt - das geht
+           # nur mit der vollstaendigen Tafel.
+           OR ${test_name} STREQUAL "test_endung_nennt_kein_fremdes_format")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

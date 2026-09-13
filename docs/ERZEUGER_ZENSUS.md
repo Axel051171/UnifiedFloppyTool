@@ -29,28 +29,30 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
 | libdsk-Typen (alle les- und schreibbar) | 26 |
+| floptool-Module gesamt | 151 |
+| davon schreibfaehig (`rw`/`-w`) | 122 |
 
 ## Die offenen Formate
 
 
-| Format | Stufe | hxcfe (RW) | libdsk | Kanal | Klasse |
-|---|---|---|---|---|---|
-| `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `akai_s900` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `cas` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `dim` | T2 | ATARIST_DIM (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `dms` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `edk` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `fdi_pc98` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `fds` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `nfd` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `pro` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `udi` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| Format | Stufe | hxcfe (RW) | libdsk | floptool (w) | Kanal | Klasse |
+|---|---|---|---|---|---|---|
+| `adf_ext` | T2 | AMIGA_ADF (?) | — | adf (?), adfs_n (?), adfs_o (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
+| `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `cas` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), cpm, flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), smx, svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `dim` | T2 | ATARIST_DIM (?) | — | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
+| `dms` | T3 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `edk` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `fdi_pc98` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `fds` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `lisa_twiggy` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `nfd` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `pro` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `syn` | T3 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
+| `udi` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 
 `(?)` hinter einem Werkzeugnamen heisst: die Zuordnung laeuft ueber eine Endung, die sich **mehrere** Plugins teilen. `.dsk` tragen `apridisk`, `cpm`, `do`, `jv1` und `tan` gemeinsam, und `AMSTRADCPC_DSK` schreibt keines davon. Ein solcher Treffer ist ein Verdacht, kein Kandidat.
 
@@ -74,6 +76,10 @@ MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten
 
 MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
 
+**`cpm`** (Kanal: keiner)
+
+MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber "Poly CP/M disk image" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` ("Specialist MX/Orion/B2M"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht.
+
 **`cqm`** (Kanal: imd)
 
 MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
@@ -89,6 +95,10 @@ MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten
 **`do`** (Kanal: keiner)
 
 MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus).
+
+**`edk`** (Kanal: keiner)
+
+MF-1085, P3-364. floptools `esq16` (Ensoniq VFX-SD/SD-1/EPS-16) nimmt genau die 819 200 Byte, die UFTs `edk` als DD-Fassung fuehrt - aber SEIN EIGENER RUNDLAUF VERSCHIEBT DIE DISKETTE. `esqimg_format::load()` setzt `sectors[i].sector_id = i` (0..9), `save()` sammelt ueber `get_track_data_mfm_pc()` die Nummern 1..10 ein. Gemessen an 80 x 2 x 10 mit Ortsmarken je Sektor: 1440 von 1600 Sektoren kommen um GENAU EINE STELLE verschoben zurueck, 160 genullt (einer je Spur), 83 360 Byte abweichend, 0 an ihrer Stelle. Ein Werkzeug, dessen eigener Rundlauf eine Diskette verschiebt, ist kein Erzeuger.
 
 **`jv3`** (Kanal: imd)
 
