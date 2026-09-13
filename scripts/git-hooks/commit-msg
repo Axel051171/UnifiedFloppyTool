@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# UFT commit-msg hook — Loeschungen brauchen eine Begruendung.
+#
+# MF-1077. Wer eine Datei unter `src/formats/` oder
+# `include/uft/formats/` entfernt, nimmt einen Anspruch zurueck. Das
+# ist erlaubt — aber nicht stillschweigend: die Commit-Nachricht
+# muss eine Zeile `Ruecknahme: <Grund, MF-/P3-Verweis>` tragen.
+#
+# Der Grund steht im Kopf von `scripts/audit_namensrolle.py`: die
+# Kosten einer Loeschung liegen immer in der Zukunft und tun in der
+# Gegenwart nicht weh. Deshalb muss die Gegenwart eine Zeile kosten.
+#
+# Installieren:  cp scripts/git-hooks/commit-msg .git/hooks/commit-msg
+
+set -e
+MSG_FILE="$1"
+
+GELOESCHT=$(git diff --cached --diff-filter=D --name-only \
+            -- 'src/formats/*' 'include/uft/formats/*' || true)
+
+if [ -n "$GELOESCHT" ]; then
+    if ! grep -qiE '^[[:space:]]*Ruecknahme:' "$MSG_FILE"; then
+        echo ""
+        echo "[commit-msg] ABBRUCH - dieser Commit entfernt Dateien"
+        echo "            aus der Formatschicht:"
+        echo "$GELOESCHT" | sed 's/^/              /'
+        echo ""
+        echo "  Eine Loeschung ist eine Ruecknahme eines Anspruchs."
+        echo "  Die Nachricht braucht deshalb eine Zeile:"
+        echo ""
+        echo "      Ruecknahme: <warum, mit MF-NNN oder P3-NNN>"
+        echo ""
+        echo "  Und docs/FORMAT_ROLL.md braucht im SELBEN Commit den"
+        echo "  Status zurueckgenommen samt Beleg - sonst schlaegt"
+        echo "  ohnehin das Tor Namensrolle an."
+        echo ""
+        exit 1
+    fi
+fi
+
+exit 0

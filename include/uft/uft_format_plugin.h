@@ -49,6 +49,31 @@ typedef enum uft_format_caps {
  *
  * Werte explizit nummeriert (ABI-bomb-detector: enum ohne Nummern ist Risiko).
  */
+/**
+ * @brief Was ein Eintrag IST — nicht, wie gut er geprueft ist.
+ *
+ * MF-1077: die Stufentabelle beantwortete bis dahin eine Frage, die
+ * fuer vier Eintraege gar nicht gestellt werden kann. `T3` heisst in
+ * ihrer Skala „Format unverifiziert“ — das
+ * behauptet, es gaebe ein Format, das man verifizieren koennte. Fuer
+ * `rcpmfs` ist das falsch (libdsks `rcpmfs` ist ein
+ * VERZEICHNISTREIBER, MF-1035), und `logical` sagt im eigenen Kopf,
+ * warum es dort keine Sonde geben kann.
+ *
+ * Das ist eine Einordnungs-, keine Messfrage — also wird sie
+ * eingeordnet statt geloescht. Die Stufenzahlen aendern sich als
+ * FOLGE einer wahreren Einordnung, nie als deren Anlass.
+ */
+#ifndef UFT_PLUGIN_KIND_DEFINED
+#define UFT_PLUGIN_KIND_DEFINED
+typedef enum uft_plugin_kind {
+    UFT_KIND_UNBEKANNT        = 0,  ///< nicht erklaert (Vorgabe)
+    UFT_KIND_BEHAELTERFORMAT  = 1,  ///< Datei mit eigenem Aufbau
+    UFT_KIND_TREIBER_QUELLE   = 2,  ///< Konvention ueber rohe Sektoren
+    UFT_KIND_GEOMETRIEKATALOG = 3   ///< Tafel, kein Dateiaufbau
+} uft_plugin_kind_t;
+#endif
+
 #ifndef UFT_SPEC_STATUS_DEFINED
 #define UFT_SPEC_STATUS_DEFINED
 typedef enum uft_spec_status {
@@ -615,6 +640,16 @@ typedef struct uft_format_plugin {
     size_t                           variant_count;
 
     uint32_t            api_version;
+
+    /** Was dieser Eintrag IST (`uft_plugin_kind_t`). Vorgabe 0 =
+     * unbekannt, also aendert sich fuer bestehende Tafeln nichts.
+     *
+     * MF-1077: angehaengt nach dem Verfahren im Groessen-Waechter,
+     * und **ohne ABI-Folge** — gemessen lagen hinter
+     * `api_version` genau 4 Fuellbytes (offsetof = 232, Ende = 236,
+     * sizeof = 240). Das Feld passt hinein; der Wert 240 im
+     * `_Static_assert` bleibt deshalb unveraendert. */
+    uint32_t            kind;
 
 } uft_format_plugin_t;
 

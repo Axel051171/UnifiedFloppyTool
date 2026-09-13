@@ -61,7 +61,8 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > neues Format = zwei Hebungen). Verbindliche Fassung:
 > [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
 > **Was „unterstützt" hier heißt (MF-509):** von den 88 tier-geführten
-> Plugins stehen **5 auf T3 — ungeprüft** (MF-654: `adl` und
+> Plugins stehen **3 auf T3 — ungeprüft** und **2 auf `n/a`**,
+> weil sie gar keine Behälterformate sind (MF-1077) (MF-654: `adl` und
 > `adf_arc` auf T2; MF-690: `dim_atari` auf T1b, erstes fremd erzeugtes
 > DIM im Korpus; MF-716: `do` auf T2, das erste Apple-Format —
 > Differenzlauf gegen das Oracle `to_woz2`, 560 von 560 Sektoren
@@ -510,6 +511,37 @@ Eigentümer-Entscheidungen und MF-Reihenfolge hängen damit am selben Maß,
 ohne dass jemand Reihenfolgen verhandeln muss. Das Release ist kein
 Endpunkt, sondern der Messpunkt der Schleife — seine Zahlen sagen, wo der
 nächste Durchlauf ansetzt.
+
+### Grundsatz: Kennzahlen sind Folgen, keine Ziele (MF-1077)
+
+**Eine Zahl darf sich nur aendern, weil eine neue Messung vorliegt.**
+Wenn eine Änderung eine Kennzahl verbessert, ohne dass es eine neue
+Messung dazu gibt, ist sie verboten — auch wenn sie sachlich
+richtig aussieht.
+
+**Fehlklassifikation wird umgeschrieben, nicht entfernt.** Löschen
+ist keine Behebung. Das Entfernen von Code, Tests, Registereinträgen
+oder Doku-Abschnitten ist nur mit ausdrücklicher
+Eigentümerentscheidung erlaubt.
+
+**Wo du löschen willst, liefere stattdessen die Auswahl:**
+umschreiben / zurücknehmen / lassen — je mit Kosten und mit
+der Angabe, welche Kennzahl sich wie ändert und aus welchem Anlass.
+Dann halte an.
+
+Der Anlass ist gemessen, nicht ausgedacht: bei `rcpmfs` (P3-338) war
+die Fehlbewegung **nicht** das Löschen, sondern **die Zahl als
+Motiv** — die Begründung lautete wörtlich, T3 sinke dann
+„ohne einen Beweis zu fälschen“. Das ist der
+Spiegelfehler zum Fälschen von Belegen, nicht sein Gegenteil. Wer
+die Regel nur auf Löschungen legt, verschiebt denselben Reflex zum
+nächsten Werkzeug: Ausnahmeliste erweitern, Test ausschließen,
+Format umbenennen.
+
+Mechanisch gehalten wird das von der **Namensrolle**
+(`docs/FORMAT_ROLL.md`, Tor `scripts/audit_namensrolle.py`) und einem
+`commit-msg`-Hook: eine Löschung in der Formatschicht verlangt eine
+Zeile `Ruecknahme:` und einen Status `zurueckgenommen` mit Beleg.
 
 ### Konfliktordnung: was gewinnt, wenn Teile sich widersprechen (MF-640)
 

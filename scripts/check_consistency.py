@@ -929,6 +929,21 @@ def main() -> int:
         import audit_korpus_herkunft as _kh
         all_errors.append(("Korpus-Herkunft", _kh.check(repo)))
 
+        # 48. Kategorie (MF-1077): die NAMENSROLLE.
+        #
+        # Alle Tore darueber pruefen, was DA ist. Dieses prueft, was
+        # WEG ist - und das kann Code ueber sich selbst nicht.
+        #
+        # Anlass war ein Reflex, nicht ein Fehler im Code: `rcpmfs`
+        # war als Fehlklassifikation erkannt, und der erste Griff
+        # ging zur Loeschung, mit der Begruendung, die Kennzahl
+        # sinke dann "ohne einen Beweis zu faelschen". Das ist der
+        # Koeder: wenn Loeschen die Zahl verbessert, ist die Zahl
+        # das Motiv. Zurueckgenommen vor dem Commit - aber ein
+        # Satz in einer Anweisung haelt das nicht dauerhaft.
+        import audit_namensrolle as _nr
+        all_errors.append(("Namensrolle", _nr.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"

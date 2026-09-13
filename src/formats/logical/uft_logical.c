@@ -470,6 +470,11 @@ const uft_format_plugin_t uft_format_plugin_logical = {
     .write_track = logical_write_track,
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    /* MF-1077: flaches Abbild in logischer Sektorreihenfolge; es kann dort keine Sonde geben (MF-1032).
+     * Kein Behaelterformat, also ist „unverifiziert“
+     * die falsche Aussage — die Stufentabelle fuehrt diesen
+     * Eintrag seither als `n/a`. */
+    .kind = UFT_KIND_TREIBER_QUELLE,
     .features = uft_format_plugin_logical_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_logical_features) / sizeof(uft_format_plugin_logical_features[0]),
 };

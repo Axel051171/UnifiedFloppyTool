@@ -641,6 +641,11 @@ const uft_format_plugin_t uft_format_plugin_posix = {
     .write_track = posix_write_track,
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    /* MF-1077: rohe Sektordatei plus UFT-eigene `.geom`-Nachbardatei (MF-1034).
+     * Kein Behaelterformat, also ist „unverifiziert“
+     * die falsche Aussage — die Stufentabelle fuehrt diesen
+     * Eintrag seither als `n/a`. */
+    .kind = UFT_KIND_TREIBER_QUELLE,
     .features = uft_format_plugin_posix_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_posix_features) / sizeof(uft_format_plugin_posix_features[0]),
 };

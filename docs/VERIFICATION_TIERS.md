@@ -11,7 +11,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | T1 | 7 |
 | T1b | 57 |
 | T2 | 19 |
-| T3 | 5 |
+| T3 | 3 |
+| n/a | 2 |  <!-- MF-1077: kein Behaelterformat -->
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -357,7 +358,7 @@ Bestaetigt durch MAMEs eigene Konsistenz: `formats[]` fuehrt DSDD mit **2391** S
 
 **Am Rand gefunden, nicht angefasst:** `src/formats/victor/victor9k.c` (verwaist, `docs/orphan_baseline.txt:212`) fuehrt eine **dritte** Geometrie — flach 15 Sektoren fuer Spur 38..79, Summe 1285 Sektoren = 657920 Byte, eine Groesse, die keine Victor-Diskette hat. Es gibt keinen Aufrufer; ein Hinweis steht jetzt in der Datei, damit die naechste Hand die falschen Zahlen nicht erbt (MF-699: erst der Ersatz, dann die Loeschung). | — |
 | `dms` | **T3** | `test_dms_plugin_gegen_bibliothek`, `test_uft_dms` | — | — | — |
-| `hardsector` | **T3** | `test_hardsector_erreichbar`, `test_hardsector_geometry` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_ipf_erfindet_keine_geometrie`, `test_ipf_helper`, `test_ipf_sonde_beansprucht_nur_ipf`, `test_plugin_probe_real` | — | — | — |
-| `rcpmfs` | **T3** | `test_rcpmfs_ist_kein_dateiformat` | — | — | — |
 | `syn` | **T3** | `test_groessenerkenner_stimmig` | — | — | — |
+| `hardsector` | **n/a** | `test_hardsector_erreichbar`, `test_hardsector_geometry` | — | — | — |
+| `rcpmfs` | **n/a** | `test_rcpmfs_ist_kein_dateiformat` | — | — | — |

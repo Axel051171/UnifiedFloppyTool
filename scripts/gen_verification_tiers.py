@@ -172,6 +172,17 @@ def compute_tiers(repo: Path) -> list[dict]:
         else:
             tier = "T3"
 
+        # MF-1077: `T3` heisst in dieser Skala "Format unverifiziert"
+        # und behauptet damit, es gaebe ein Format, das man
+        # verifizieren koennte. Fuer einen Eintrag, der KEIN
+        # Behaelterformat ist, ist das die falsche Aussage - dort
+        # steht `n/a`. Eine WAHRE Stufe (T1/T1b/T2) bleibt stehen:
+        # "gegen ein Fremderzeugnis geprueft" ist auch dann richtig,
+        # wenn der Eintrag kein Behaelter ist.
+        if tier == "T3" and p.get("kind") not in (
+                "UFT_KIND_UNBEKANNT", "UFT_KIND_BEHAELTERFORMAT"):
+            tier = "n/a"
+
         rows.append({
             "symbol": sym,
             "name": p["name"],
@@ -182,7 +193,7 @@ def compute_tiers(repo: Path) -> list[dict]:
             "evidence": (spec_entry or {}).get("evidence", ""),
             "corpus": len(real) + len(xtool),
         })
-    order = {"T1": 0, "T1b": 1, "T2": 2, "T3": 3}
+    order = {"T1": 0, "T1b": 1, "T2": 2, "T3": 3, "n/a": 4}
     rows.sort(key=lambda r: (order[r["tier"]], r["symbol"]))
     return rows
 
@@ -197,6 +208,10 @@ def render_md(rows: list[dict]) -> str:
     lines.append("|---|---|")
     for t in ("T1", "T1b", "T2", "T3"):
         lines.append(f"| {t} | {counts.get(t, 0)} |")
+    if counts.get("n/a"):
+        lines.append(
+            "| n/a | %d |  <!-- MF-1077: kein Behaelterformat -->"
+            % counts["n/a"])
     lines.append(f"| **gesamt** | **{len(rows)}** |")
     lines.append("")
     lines.append("## Pro Format\n")

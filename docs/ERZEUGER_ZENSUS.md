@@ -24,9 +24,9 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 24 |
+| davon auf T2/T3 (offen) | 22 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
-| davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
+| davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
 | libdsk-Typen (alle les- und schreibbar) | 26 |
 
@@ -46,7 +46,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `edk` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fdi_pc98` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fds` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `hardsector` | T3 | RAW_LOADER (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `ipf` | T3 | SPS_IPF | — | nicht gemessen | — (hat bereits ein Fremdabbild) |
 | `jv1` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -54,7 +53,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `nfd` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `pro` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `rcpmfs` | T3 | — | rcpmfs | nicht gemessen | **A?** — Werkzeug sagt RW, Kanal UNGEMESSEN |
 | `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `udi` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -130,6 +128,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `fdi` | T1 | — | — |
 | `g64` | T1 | — | — |
 | `g71` | T1b | — | — |
+| `hardsector` | ? | RAW_LOADER (?) | — |
 | `hfe` | T1 | HXC_HFE, HXC_HFEV3, HXC_STREAMHFE | — |
 | `imd` | T1 | IMD_IMG | imd |
 | `img` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |
@@ -151,6 +150,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `posix` | T1b | AMSTRADCPC_DSK (?), KRYOFLUXSTREAM (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?), raw (?) |
 | `pri` | T1b | — | — |
 | `qrst` | T1b | — | qrst |
+| `rcpmfs` | ? | — | rcpmfs |
 | `sad` | T1b | — | — |
 | `sam` | T1b | — | — |
 | `sap_thomson` | T1b | — | sap |

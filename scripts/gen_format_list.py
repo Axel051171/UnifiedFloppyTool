@@ -27,6 +27,15 @@ def field(body: str, name: str) -> str | None:
     return m.group(1) if m else None
 
 
+def ident(body: str, name: str) -> str | None:
+    """Wie field(), aber fuer BEZEICHNER statt Zeichenketten.
+
+    MF-1077: `.kind = UFT_KIND_TREIBER_QUELLE` steht ohne
+    Anfuehrungszeichen; field() haette es nie gesehen."""
+    m = re.search(rf"\.{name}\s*=\s*([A-Za-z_][A-Za-z0-9_]*)", body)
+    return m.group(1) if m else None
+
+
 def scan(root: Path) -> list[dict]:
     plugins: list[dict] = []
     for f in sorted((root / "src" / "formats").rglob("*.c")):
@@ -34,13 +43,25 @@ def scan(root: Path) -> list[dict]:
         has_macro = "UFT_REGISTER_FORMAT_PLUGIN" in text
         for m in PLUGIN_RE.finditer(text):
             sym = m.group(1)
-            # grab a slice of the struct body for field extraction
-            body = text[m.end():m.end() + 1200]
+            # MF-1077: hier stand `body = text[m.end():m.end() + 1200]`
+            # - ein WILLKUERLICHES Fenster. Gemessen sind **fuenf**
+            # Plugin-Tafeln laenger als 1200 Zeichen (rcpmfs 1604, mfi
+            # 1297, cfi 1268, pro 1235, scp 1207); was dahinter steht,
+            # war fuer BEIDE Generatoren unsichtbar. Gekostet hat es
+            # bis heute nichts - bei den anderen vier liegen `name`,
+            # `extensions` und `description` innerhalb -, aber beim
+            # ersten hinten angefuegten Feld (`.kind`) schnappte die
+            # Falle zu: `rcpmfs` behielt seine falsche Stufe.
+            #
+            # Jetzt reicht der Rumpf bis zum ECHTEN Ende der Tafel.
+            ende = text.find("\n};", m.end())
+            body = text[m.end():ende if ende > 0 else len(text)]
             plugins.append({
                 "symbol": sym,
                 "name": field(body, "name") or sym.upper(),
                 "ext": field(body, "extensions") or "",
                 "desc": field(body, "description") or "",
+                "kind": ident(body, "kind") or "UFT_KIND_UNBEKANNT",
                 "auto": has_macro,
                 "file": str(f.relative_to(root)).replace("\\", "/"),
             })
