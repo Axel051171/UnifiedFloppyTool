@@ -30,19 +30,36 @@ sie jedes Mal neu von Hand zu suchen.
 **H4** Kein Treffer auf die Muster aus Klasse A1/A2 — Bauartefakte und
        Werkzeugabfall. Heute **0**.
 
-── Was hier nur BERICHTET, und warum ────────────────────────────────────
+       **A1 ist seit MF-1091 an der MAGIE gefasst, nicht an der
+       Endung** (Entscheidung des Eigentuemers). Eine Datei gilt als
+       Bauartefakt, wenn ihre ersten Bytes `ELF`, `MZ`, ein
+       Mach-O-Wort oder `!<arch>` sind — unabhaengig davon, wie sie
+       heisst. Die Endungsliste bleibt DANEBEN stehen, weil sie
+       `*.o`, `*.gcda` und `build/` auch dann fasst, wenn die Datei
+       leer ist und gar keine Magie hat.
 
-**H3** Herkunft der Fremddokumente unter `docs/format_specs/`. Gemessen
-       **0 von 47** Dateien (552 KB, alle unter `commodore/`) haben eine
-       Herkunftsdatei. Das ist ein echter Befund — aber die Anweisung
-       nennt dafuer ausdruecklich **zwei zulaessige Fassungen**
-       (behalten mit README, oder auslagern mit Verweis), und welche es
-       wird, ist eine **Eigentuemer-Entscheidung** (Klasse C2). Ein Tor,
-       das hier blockiert, wuerde sie erzwingen statt sie vorzulegen.
-       Dieselbe Bauart wie `audit_spdx_policy.py`, das seine
-       Attributions-Erklaerungen bewusst als Liste fuehrt: "eine
-       Attribution ist nichts Verbotenes, sondern etwas
-       Entscheidungsbeduerftiges" (MF-636).
+       Der Anlass ist gemessen: `tests/test_smoke` war eine
+       **endungslose** ELF-Datei und fiel durch jede Endungsregel.
+       Ueber die Magie gesucht war sie die einzige ihrer Art unter
+       2779 versionierten Dateien. Entfernt in MF-1091 — nicht weil
+       sie gross war, sondern weil ihr Quelltext seit MF-011
+       geloescht ist und GPL-2 ihn verlangt.
+
+**H3** Jede Datei unter `docs/format_specs/` steht in der `README.md`
+       ihres Verzeichnisses, **mit ihrer SHA-256**. Heute **47/47**.
+       Damit ist die Herkunftsdatei nicht nur da, sondern sie DECKT
+       auch, was daneben liegt — eine neue Datei ohne Eintrag laesst
+       das Tor feuern, und ein geaenderter Inhalt ebenso.
+
+       **Bis MF-1091 hat H3 nur GEZAEHLT** (0 von 47 mit
+       Herkunftsdatei) und ausdruecklich nicht blockiert, weil die
+       Entscheidung zwischen „behalten mit README" und „auslagern"
+       dem Eigentuemer zustand (Klasse C2). Sie ist gefallen —
+       behalten —, also darf das Tor jetzt halten, was entschieden
+       ist. Die WEITERGABEFRAGE bleibt davon unberuehrt offen
+       (P3-372); ein Tor kann eine Herkunft belegen, keine Erlaubnis.
+
+── Was hier nur BERICHTET, und warum ────────────────────────────────────
 
 **H2** Positivliste der versionierten Binaerdateien. Gemessen **108**
        Stueck, 56 279 KB; **94** davon liegen in den Korpus-
@@ -52,7 +69,8 @@ sie jedes Mal neu von Hand zu suchen.
        vor der MF-636 warnt. Deshalb wird gezaehlt und aufgefuehrt, und
        die Liste bleibt eine Entscheidung.
 
-**H4b** Ausfuehrbare Dateien an der KENNUNG statt an der Endung.
+**H4b** (aufgegangen in H4, siehe oben.) Ausfuehrbare Dateien an der
+       KENNUNG statt an der Endung.
        A1 zaehlt Endungen auf — `*.o`, `*.exe`, `*.so`, … — und eine
        endungslose Binaerdatei faellt durch jede davon. Gemessen
        MF-1090: **`tests/test_smoke`, 34 848 Byte, `ELF`**,
@@ -67,11 +85,16 @@ sie jedes Mal neu von Hand zu suchen.
        Pruefung P1 der Anweisung sie in der vorliegenden Fassung
        ablehnt (siehe unten).
 
-**H5** Repo-Groesse gegen eine Obergrenze. **Nicht umgesetzt.** Die
-       Anweisung sagt in G2 selbst: eine Kennzahl ist nie ein Grund. Ein
-       Groessentor braucht eine Zahl, die jemand setzt — und sie zu
-       erfinden hiesse, dem Baum ein Motiv unterzuschieben, das die
-       Anweisung ausdruecklich verbietet.
+**H5** Groesse des versionierten Bestands — **ohne Schwelle und ohne
+       Blockade**, nur zwei Zahlen je Lauf: Gesamtgroesse und
+       Zuwachs seit dem letzten Stand in `docs/repo_groesse.json`.
+
+       Die erste Fassung war ABSICHTLICH nicht umgesetzt, mit der
+       Begruendung, G2 verbiete die Kennzahl als Motiv und eine
+       Schwelle mache genau daraus eines. Der Eigentuemer hat dem
+       zugestimmt und die Anweisung geaendert: **eine berichtete
+       Zahl kann kein Motiv werden, eine erzwungene schon.** Also
+       wird berichtet.
 
 Aufruf:
     python scripts/audit_repo_hygiene.py            # prueft
@@ -119,6 +142,30 @@ def manifest_pfade(wurzel: Path) -> tuple[set[str], set[str]]:
     return pfade, {f.rsplit("/", 1)[-1] for f in pfade}
 
 
+MAGIE = {
+    bytes([0x7F]) + b"ELF": "ELF",
+    b"MZ": "PE/DOS",
+    b"!<arch>": "ar",
+    bytes([0xCA, 0xFE, 0xBA, 0xBE]): "Mach-O",
+    bytes([0xCF, 0xFA, 0xED, 0xFE]): "Mach-O",
+    bytes([0xFE, 0xED, 0xFA, 0xCE]): "Mach-O",
+}
+
+
+def magie(p: Path) -> str:
+    """Programmdatei nach den ersten Bytes. Leer, wenn keine."""
+    try:
+        if not p.is_file():
+            return ""
+        k = p.open("rb").read(8)
+    except OSError:
+        return ""
+    for m, name in MAGIE.items():
+        if k.startswith(m):
+            return name
+    return ""
+
+
 def check(wurzel: Path) -> list[str]:
     """Nur die BLOCKIERENDEN Zusagen: H1 und H4."""
     dat = versionierte(wurzel)
@@ -136,11 +183,51 @@ def check(wurzel: Path) -> list[str]:
             f"H1 {d}: kein Eintrag in tests/corpus_manifest/manifest.json — "
             f"ein Abbild ohne Herkunft belegt nichts")
 
+    # H3: Herkunftsdatei je Verzeichnis unter docs/format_specs/,
+    # und sie muss die Nachbarn mit SHA-256 DECKEN.
+    import hashlib
+    nach_verz: dict[str, list[str]] = {}
+    for d in dat:
+        if d.startswith(SPECS) and "/" in d[len(SPECS):]:
+            nach_verz.setdefault(d.rsplit("/", 1)[0], []).append(d)
+    for verz, dateien_ in sorted(nach_verz.items()):
+        rm = wurzel / verz / "README.md"
+        if not rm.exists():
+            befunde.append(
+                f"H3 {verz}: keine README.md — Fremddokumente ohne "
+                f"Herkunftsangabe (Klasse C2 der Aufraeum-Anweisung)")
+            continue
+        text = rm.read_text(encoding="utf-8", errors="replace")
+        for f in sorted(dateien_):
+            name = f.rsplit("/", 1)[-1]
+            if name.lower() == "readme.md":
+                continue
+            if f"`{name}`" not in text:
+                befunde.append(
+                    f"H3 {f}: steht nicht in {verz}/README.md")
+                continue
+            try:
+                h = hashlib.sha256(
+                    (wurzel / f).read_bytes()).hexdigest()
+            except OSError:
+                continue
+            if h not in text:
+                befunde.append(
+                    f"H3 {f}: SHA-256 in {verz}/README.md stimmt nicht "
+                    f"— gemessen {h[:16]}…")
+
     for d in dat:
         if A1.search(d):
             befunde.append(f"H4 {d}: Bauartefakt (Klasse A1) ist versioniert")
         elif A2.search(d):
             befunde.append(f"H4 {d}: Werkzeugabfall (Klasse A2) ist versioniert")
+        else:
+            art = magie(wurzel / d)
+            if art:
+                befunde.append(
+                    f"H4 {d}: {art}-Programmdatei ist versioniert — "
+                    f"Bauartefakt nach der MAGIE, nicht nach der Endung "
+                    f"(A1 neu gefasst, MF-1091)")
     return befunde
 
 
@@ -152,8 +239,9 @@ def bericht(wurzel: Path) -> None:
            in ("readme.md", "readme.txt", "herkunft.md", "quellen.md")]
     kb = sum((wurzel / d).stat().st_size for d in spec
              if (wurzel / d).is_file()) // 1024
-    print(f"H3  {SPECS}: {len(mit)} von {len(spec)} Dateien mit "
-          f"Herkunftsdatei ({kb} KB) — Entscheidung C2 offen")
+    print(f"H3  {SPECS}: {len(spec)} Dateien, {kb} KB, "
+          f"{len(mit)} Herkunftsdatei(en) — blockierend seit MF-1091; "
+          f"die Weitergabefrage bleibt offen (P3-372)")
 
     binaer = []
     for d in dat:
@@ -192,6 +280,35 @@ def bericht(wurzel: Path) -> None:
     for s, d in sorted(ausser, reverse=True)[:10]:
         print(f"      {s // 1024:6d} KB  {d}")
 
+    # H5 — zwei Zahlen, keine Schwelle. Siehe Kopf: eine berichtete Zahl
+    # kann kein Motiv werden, eine erzwungene schon.
+    gesamt = 0
+    for d in dat:
+        p = wurzel / d
+        if p.is_file():
+            try:
+                gesamt += p.stat().st_size
+            except OSError:
+                pass
+    stand_datei = wurzel / "docs" / "repo_groesse.json"
+    vorher = None
+    if stand_datei.exists():
+        try:
+            vorher = json.loads(stand_datei.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            vorher = None
+    if vorher and isinstance(vorher.get("byte"), int):
+        diff = gesamt - vorher["byte"]
+        vz = "+" if diff >= 0 else "-"
+        print(f"H5  versionierter Bestand: {gesamt // 1024} KB "
+              f"({len(dat)} Dateien) — {vz}{abs(diff) // 1024} KB seit "
+              f"{vorher.get('stand', '?')} ({vorher['byte'] // 1024} KB). "
+              f"Keine Schwelle, keine Blockade.")
+    else:
+        print(f"H5  versionierter Bestand: {gesamt // 1024} KB "
+              f"({len(dat)} Dateien) — kein frueherer Stand in "
+              f"docs/repo_groesse.json")
+
 
 # ── Selbsttest ──────────────────────────────────────────────────────────
 #
@@ -203,7 +320,21 @@ def _selbsttest() -> int:
 
     faelle = [
         ("sauberer Baum -> still", [], None, False),
+        # H3 — die Herkunftsdatei muss die Nachbarn DECKEN.
+        ("format_specs ohne README", ["docs/format_specs/x/A.TXT"],
+         None, True),
+        ("README, aber Datei nicht gelistet",
+         ["docs/format_specs/x/A.TXT", "docs/format_specs/x/README.md"],
+         None, True),
+        ("README mit Name UND richtiger SHA-256 -> still",
+         ["docs/format_specs/x/A.TXT", "!README-gut"], None, False),
+        ("README mit Name, aber FALSCHER SHA-256",
+         ["docs/format_specs/x/A.TXT", "!README-falsch"], None, True),
         ("Bauartefakt versioniert", ["src/foo.o"], None, True),
+        # A1 nach MAGIE: der Fall, den die Endungsliste nicht sah.
+        ("ELF OHNE Endung", ["!ELF:tests/werkzeug"], None, True),
+        ("PE OHNE Endung", ["!MZ:tools/helfer"], None, True),
+        ("Textdatei ohne Endung -> still", ["tools/shim"], None, False),
         ("Werkzeugabfall versioniert", ["src/foo.c.orig"], None, True),
         ("CMakeFiles versioniert", ["build/CMakeFiles/x.txt"], None, True),
         ("Fixture MIT Manifest-Eintrag -> still",
@@ -221,7 +352,25 @@ def _selbsttest() -> int:
             (baum / "tests" / "corpus_manifest" / "manifest.json").write_text(
                 json.dumps({"images": ([{"file": eintrag}] if eintrag else [])}),
                 encoding="utf-8")
+            import hashlib as _h
             for rel in extra:
+                if rel.startswith("!README"):
+                    ziel = baum / "docs" / "format_specs" / "x"
+                    ziel.mkdir(parents=True, exist_ok=True)
+                    echt = _h.sha256(b"x").hexdigest()
+                    sha = echt if rel == "!README-gut" else "00" * 32
+                    (ziel / "README.md").write_text(
+                        "| `A.TXT` | 1 | `" + sha + "` |\n",
+                        encoding="utf-8")
+                    continue
+                if rel.startswith("!ELF:") or rel.startswith("!MZ:"):
+                    art, ziel_rel = rel[1:].split(":", 1)
+                    kopf = (bytes([0x7F]) + b"ELF" if art == "ELF"
+                            else b"MZ\x90\x00")
+                    p = baum / ziel_rel
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_bytes(kopf + b"\x00" * 32)
+                    continue
                 p = baum / rel
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text("x", encoding="utf-8")

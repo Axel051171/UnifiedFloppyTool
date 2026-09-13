@@ -1,0 +1,7 @@
+{
+  "_doc": "MF-1091 (H5): Stand des versionierten Bestands. OHNE Schwelle - die Zahl wird BERICHTET, nie erzwungen. G2 der Aufraeum-Anweisung: eine Kennzahl ist nie ein Grund; eine berichtete Zahl kann kein Motiv werden, eine erzwungene schon.",
+  "_pflege": "Von Hand fortschreiben, wenn ein Stand festgehalten werden soll. `scripts/audit_repo_hygiene.py --bericht` liest die Datei und meldet den Zuwachs; es schreibt sie NICHT.",
+  "stand": "2026-09-13",
+  "dateien": 2777,
+  "byte": 89506436
+}
