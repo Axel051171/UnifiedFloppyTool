@@ -59,9 +59,15 @@ Zeile, so wie es die Zitate oben tun.
 
 ## Wofür es als Nächstes nützlich ist
 
-`docs/VERIFICATION_TIERS.md` führt am 2026-09-05 noch **37** Formate als
-**T3** (unverifiziert) — hier stand „62“, eine von Hand gepflegte Zahl,
-die seither zweimal gedriftet ist (MF-899).
+`docs/VERIFICATION_TIERS.md` führt am **2026-09-13** noch **2** Formate als
+**T3** (unverifiziert), beide mit benanntem Blocker: `dms` fehlt ein
+ERZEUGER (P3-347), `syn` eine nachpruefbare Referenz (P3-340).
+
+Hier stand zuerst „62“ und dann „37 am 2026-09-05“ — beides von Hand
+gepflegte Zahlen, und beide sind gedriftet (MF-899, jetzt MF-1085). Die
+Lehre ist dieselbe wie in MF-636: **diese Zahl gehört nicht in eine
+Prosazeile.** Sie steht abgeleitet in `docs/VERIFICATION_TIERS.md`, und
+wer sie braucht, liest sie dort.
 
 Von den ursprünglich **17** hier genannten Formaten mit eigenem
 SAMdisk-Handler stehen heute noch **acht** auf T3; **neun sind seither
