@@ -44,15 +44,15 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `dim` | T2 | ATARIST_DIM (?) | — | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `dms` | T3 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `edk` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `fdi_pc98` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `fdi_pc98` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fds` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `nfd` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `pro` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `pro` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `syn` | T3 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `udi` | T2 | — | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `udi` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 
 `(?)` hinter einem Werkzeugnamen heisst: die Zuordnung laeuft ueber eine Endung, die sich **mehrere** Plugins teilen. `.dsk` tragen `apridisk`, `cpm`, `do`, `jv1` und `tan` gemeinsam, und `AMSTRADCPC_DSK` schreibt keines davon. Ein solcher Treffer ist ein Verdacht, kein Kandidat.
 
@@ -78,7 +78,7 @@ MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten
 
 **`cpm`** (Kanal: keiner)
 
-MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber "Poly CP/M disk image" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` ("Specialist MX/Orion/B2M"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht.
+MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber "Poly CP/M disk image" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` ("Specialist MX/Orion/B2M"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht. **DRITTE Kollision, gemessen MF-1093:** auch **SAMdisk** fuehrt einen Eintrag `cpm` — und sein `src/types/cpm.cpp` sagt in der ersten Zeile, was es ist: "Basic support for SAM Coupe Pro-DOS images", 720K, erkannt an der Endung `.cpm`. Damit ist `.cpm` die Endung, ueber die sich in diesem Baum **drei verschiedene Formate** zuordnen lassen (Poly CP/M, Specialist MX, SAM Coupe Pro-DOS) — und keines davon ist UFTs libdsk-staemmiges CP/M.
 
 **`cqm`** (Kanal: imd)
 
@@ -100,6 +100,10 @@ MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-k
 
 MF-1085, P3-364. floptools `esq16` (Ensoniq VFX-SD/SD-1/EPS-16) nimmt genau die 819 200 Byte, die UFTs `edk` als DD-Fassung fuehrt - aber SEIN EIGENER RUNDLAUF VERSCHIEBT DIE DISKETTE. `esqimg_format::load()` setzt `sectors[i].sector_id = i` (0..9), `save()` sammelt ueber `get_track_data_mfm_pc()` die Nummern 1..10 ein. Gemessen an 80 x 2 x 10 mit Ortsmarken je Sektor: 1440 von 1600 Sektoren kommen um GENAU EINE STELLE verschoben zurueck, 160 genullt (einer je Spur), 83 360 Byte abweichend, 0 an ihrer Stelle. Ein Werkzeug, dessen eigener Rundlauf eine Diskette verschiebt, ist kein Erzeuger.
 
+**`fdi_pc98`** (Kanal: keiner)
+
+MF-1093. Zwei Werkzeuge fuehren ein `fdi`, und **keines meint dieses Format**: floptools `pc98_fdi` ist `r-`, also nur lesend (gemessen MF-1083), und SAMdisks `fdi` ist laut Kopfzeile seiner `src/types/fdi.cpp` das **Spectrum**-FDI ("Full Disk Image for Spectrum", worldofspectrum.org) — das ist UFTs `fdi`, das bereits auf T1 steht, nicht `fdi_pc98`. Ein Schreiber fuer das PC-98-FDI ist im Baum nicht vorhanden.
+
 **`jv3`** (Kanal: imd)
 
 MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2200 — genau die Kopfgroesse, die MF-1017 von 0x2300 berichtigt hat, hier von fremder Hand bestaetigt. 400/400 Mustertreffer.
@@ -120,6 +124,10 @@ MF-1082, Erzeuger-Zensus der NFD-Familie. **Leser (gemessen): sechs.** Greasewea
 
 MF-1061, P3-348. Wie `do`: rc = 0, Datei 0 Byte.
 
+**`pro`** (Kanal: keiner)
+
+MF-1093. `pro` ist APE ProSystem (Atari 8-bit) — ein Kopierschutz-Format mit 12-Byte-Sektorkopf und Phantomsektoren. Das naheliegende Werkzeug im Baum ist `a8rawconv`; gemessen ueber seine Formatmodule kennt es **a2, adf, atr, atx, vfd, xfd** und **kein PRO**. Der Erzeuger waere APE selbst (proprietaer, Windows) — eine Beschaffungsfrage.
+
 **`td0`** (Kanal: imd)
 
 MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
@@ -127,6 +135,10 @@ MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten
 **`trd`** (Kanal: imd)
 
 MF-1061, am Rand gemessen. 655 360 B ohne Ueberhang, 2560/2560 Mustertreffer.
+
+**`udi`** (Kanal: keiner)
+
+MF-1093. SAMdisk ist das naheliegende Werkzeug — MF-1015 hat UFTs UDI-Leser gegen `src/samdisk/udi.cpp` gemessen und es dabei in der Pruefsumme **begruendet ueberstimmt**. Es kann UDI aber nur LESEN: seine Formattafel (`include/types.h`) fuehrt `ADD_IMAGE_RO(UDI)`, nicht `ADD_IMAGE_RW`. Ein Bau von SAMdisk wuerde fuer `udi` also nichts oeffnen. Von den **28** schreibbaren SAMdisk-Formaten trifft keines eines der offenen UFT-Formate; der einzige Namenstreffer ist `cpm`, und der ist eine Kollision (siehe dort).
 
 **`v9t9`** (Kanal: imd)
 

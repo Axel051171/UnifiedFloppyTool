@@ -6,9 +6,16 @@
 > SHA-256 stimmt. Eine Datei hinzufuegen, ohne diese Tafel zu ergaenzen,
 > laesst das Tor feuern.
 
+> **Die SHA-256 gilt fuer die Datei, wie sie im Repository liegt** — mit
+> **LF** als Zeilenende. `.gitattributes` fuehrt `docs/format_specs/**`
+> seit MF-1094 als `-text`, damit kein Auschecken sie umwandelt; ohne
+> diese Zeile lieferte ein Windows-Klon mit `core.autocrlf=true` andere
+> Bytes und damit andere Hashes. Nachrechnen:
+> `git show HEAD:docs/format_specs/commodore/D64.TXT | sha256sum`
+
 ## Was hier liegt
 
-**47 Textdateien, 566056 Byte**, Beschreibungen der Dateiformate, die auf
+**47 Textdateien, 554 487 Byte**, Beschreibungen der Dateiformate, die auf
 Commodore-Rechnern und ihren Emulatoren vorkommen — Diskettenabbilder
 (D64, D71, D81, D80/D82, G64), Archive (ARC, LNX, LHA, ZIP), Bandformate
 (T64, TAP), Einzeldateien (PRG, P00, REL, GEOS) und Emulator-Container.
@@ -70,50 +77,50 @@ Quelle.
 
 | Datei | Byte | Rev. | Stand | SHA-256 | Titel |
 |---|---|---|---|---|---|
-| `64LAN.TXT` | 2860 | 1.3 | March 11, 2004 | `07e9ced7e576316097bfb8f136b270df2a5794f242c1b0509e326e81dce45191` | L64 (64LAN container files) |
-| `64NET.TXT` | 4234 | 1.3 | March 11, 2004 | `a0ecb4201efdfc92acba8f5b1b992d98498467b8f2c741b2e8470be7081cc45b` | N64 (64NET container files) |
-| `ARC.TXT` | 2955 | 1.4 | March 11, 2004 | `4a70ee42310e8f009ce5c18421332b185cdc51adad55f79aa0716781acdafe9b` | ARC (compressed ARChive) |
-| `ARK-SRK.TXT` | 7343 | 1.3 | March 11, 2004 | `0d8c102a2c4d831f4a7093b2f16ae3a2845c80d7517c4bdf90437728fe763050` | ARK (ARKive containers) |
-| `BINARY.TXT` | 5453 | 1.3 | March 11, 2004 | `62611ad290cf1cb3f73e1168aaf298b1be64d931f2561a7981e0f1a212bdd4f4` | Binary/Raw files |
-| `BITMAP.TXT` | 1892 | 1.3 | March 11, 2004 | `75f8d50ef6318f09b2cf79511344ae78000a66d0f98f59b1211e054ce7fed6a8` | Standard C64 BITMAP Files (HIRES & HIRES-MULTICOLOR) |
-| `C128BOOT.TXT` | 2416 | 1.1 | March 11, 2004 | `2a12302201fd2b94787e4933013030bec3569d7399a722d87a66e12a41a2d071` | C128 Auto-boot sector layout |
-| `C64S_FRZ.TXT` | 2609 | 1.3 | March 11, 2004 | `0ace7bc18c4b1f50a01a9d71f982957a3f9203169451d78142ca4672b4f41dd7` | FRZ (C64s saved-session FRoZen files) |
-| `CKIT.TXT` | 2189 | 1.3 | March 11, 2004 | `0906acb413d4faf5b2ac7a3018a0a1f1917340d2be8b7bad76c10458406d4835` | CKIT (Compression KIT compressed files) |
-| `CPK.TXT` | 5268 | 1.3 | March 11, 2004 | `815837a8a94954bdda277d50bce2be88dfbf141e30b1f8df35b89ecd20be06ad` | CPK |
-| `CRT.TXT` | 54018 | 1.15 | Dec 10, 2009 | `add5588e142a493b45321e59c6dd3cfd810f8c84346c54a4813f54dc334e6e03` | CRT - CaRTridge Images (from the CCS64 emulator) |
-| `CVT.TXT` | 8127 | 1.3 | Oct 1, 2007 | `da4678b48faf4018d470ecc733390a20dfdeb97d1fe2d9fc3a8f1226634f9fb1` | CVT (ConVerT containers) |
-| `D2M-DNP.TXT` | 38488 | 1.3 | Nov 27, 2005 | `12228f97d242cf1e5224cf00a39e6e1821022be5c4a2dedea8dd4d894802e5e9` | D2M (Electronic form of a CMD FD2000 1.56 Mb floppy disk) |
-| `D64.TXT` | 34230 | 1.11 | Nov 7, 2008 | `f15cec6f4c7f3761d824c634edcd84770d667ab4a27896e0586d76f7d8ce7ef9` | D64 (Electronic form of a physical 1541 disk) |
-| `D71.TXT` | 21434 | 1.5 | Nov 7, 2008 | `c6430abfe85914345d8f74934b85e9f5dae7273fc63cbb55966920e1e91b29b6` | D71 (Electronic form of a double-sided 1571 disk) |
-| `D80-D82.TXT` | 25546 | 1.3 | Nov 7, 2008 | `997e49e1154855f7cba97e1ca1839fc04cfb09832d3033a1f99729ae08f79031` | D80 (Disk image of an 8050 diskette, single-sided) |
-| `D81.TXT` | 29709 | 1.4 | Nov 7, 2008 | `73645253f0a3fa2c35de3d81a8dec6bb7ab541d4e818b4871942ce55ed5b3736` | D81 (Electronic form of a physical 1581 disk) |
-| `DISK.TXT` | 31572 | 1.3 | March 11, 2004 | `c529d19a12a687067371d78bd918c8c86d74653710602e242dedacecbaab4c25` | Disk File Layout (D64, D71, D81) |
-| `F64.TXT` | 10107 | 1.6 | March 19, 2004 | `f8b09f0391605cd7420a4e8f62a23d7e9b1b913b3ca0076ed560bb2760c24229` | F64 (a companion file to certain D64's) |
-| `G64.TXT` | 27094 | 1.9 | Feb 19, 2008 | `6dfa432f1b0601e50912318fb9026445aab42d960a1c5579860b22ac16940036` | G64 (raw GCR binary representation of a 1541 diskette) |
-| `GEOS.TXT` | 15654 | 1.4 | Nov 27, 2005 | `3f568f7dfe74b71a9987d2c802adfb8668e16b601b0a98afadce19d1dbdc5c4a` | GEOS VLIR (Variable Length Index Record) |
-| `INTRO.TXT` | 13612 | — | December 10, 2009 | `59657f438f34a46e295728345034c15d7847dd8d9051fbf6d3a40ebc875706d7` | Introduction to the various Emulator File Formats |
-| `LBR.TXT` | 6528 | 1.3 | March 11, 2004 | `2376637a7fa012031253c45ef224c2710f0663495981519bc7870cdf60efa058` | LBR (LiBRary containers, C64 version only) |
-| `LHA.TXT` | 6739 | 1.3 | March 11, 2004 | `64f0c968ca6cb743153226b836a0cc4ae33f99fe2510b7642c4ffa09bd2838c2` | LHA, LZH, LZS (LHArc compressed files) |
-| `LNX.TXT` | 11407 | 1.3 | March 11, 2004 | `7059b7539916793e440b3e927447c75049c9ee6dff74053996478c494732b892` | LNX (LyNX containers) |
-| `PC64.TXT` | 10059 | 1.4 | March 11, 2004 | `d62985c3ba696ab6c1956b33f6e8341c08e254502a5fb9c0498faaab9cdbfae2` | P00/S00/U00/R00 (Container files for the PC64 emulator) |
-| `PC64_FRZ.TXT` | 2090 | 1.4 | March 11, 2004 | `46fe6376017dc0bfc1a68dc7313b5bb40e0df6b1fdfbecc60b28a695c41b8a82` | C64 (PC64 saved-session file) |
-| `PC64_ROM.TXT` | 966 | 1.1 | March 11, 2004 | `05373c4f861c631870f39569a31544c602e3c4601e64336bf11835491fd6fdd9` | 64x (PC64/DOS ROM files) |
-| `PCLINK.TXT` | 1537 | 1.3 | March 11, 2004 | `7dbfb431872542e78b802c9f4c7070f3df00a1e9723462bda380da26435d6997` | C64 (PCLINK container files) |
-| `PCVIC.TXT` | 4805 | 1.1 | March 11, 2004 | `dcbe6a334c8305fd03fe255a16c8e1f9dda6af894afb021d5b75d3a327bb2a07` | PCV (PCVIC VIC-20 emulator saved-session files) |
-| `PHAUZEH.TXT` | 6964 | 1.2 | March 11, 2004 | `e9135844a2b4e58a4ec62a3b26f54fed90a5b8a826c64628023a2081def8621f` | S20 (Phau Zeh VIC-20 emulator saved-session files) |
-| `POWER64.TXT` | 3004 | 1.2 | March 11, 2004 | `b7f50ddf602e3852b240b11b643ea61ebc1c44d5db5276825ca275aa98976fdc` | Power 64 RAM Snapshot File (C64 emulator on Apple Power Macintosh) |
-| `REL.TXT` | 5924 | 1.1 | March 11, 2004 | `55dbf1a6f424eae0de2ba341066889fecbfd7693ec812b56dd75897076e98c08` | REL (RELative file layout) |
-| `SDA.TXT` | 2732 | 1.4 | March 11, 2004 | `dd501066f89fed82a58909469046bae39a3677ec9cf22427da4f4f12ed9f0d5b` | SDA (Self-Dissolving compressed Archive) |
-| `SFX.TXT` | 3457 | 1.3 | March 11, 2004 | `c7343926f4bf7096ff043da6a4561a11e3e0d2f5b898f27f13b649cc85298588` | SFX (SelF-eXtracting LHA/LZH compressed files) |
-| `SIDPLAY.TXT` | 22327 | 1.2 | March 15, 2004 | `f4288ae5ab925c9d1b8c86714bc95a0dc5c9b51259e14df5e97eaab33cdc243b` | SID/PSID (Various SIDPlay / PlaySID Formats) |
-| `SPYNE.TXT` | 7471 | 1.3 | March 11, 2004 | `701b7b47d1bef926243226dbd4b4c6e6c830ff0573dfe5541126f442b7f21afb` | SPY (SPYne containers) |
-| `T64.TXT` | 10295 | 1.5 | March 11, 2004 | `2c4061abbe17b4b9c1be125dd3a4c6b2a750d229c5877e33f6b465155f6cee9c` | T64 (Tape containers for C64s) |
-| `TAP.TXT` | 3704 | 1.1 | March 11, 2004 | `35acd8025a1fb6fbf22eccd4fdd53ae2152ae7fe3e779964844b23328e050440` | TAP (raw C64 cassette TAPE images) |
-| `VICE_FRZ.TXT` | 45924 | 1.2 | Oct 1, 2007 | `d3eeeb52b5c59f36ce1552778ab1426b6d1ed7947dd93002b9b614c6fa5ad2a1` | VSF (Vice Snapshot File, saved-session file) |
-| `WAV.TXT` | 7289 | 1.1 | March 11, 2004 | `67d8c7bb1ee502d7dde9c83df5ebf16a5c7c856b6923591a2fc7bf28d63bd751` | WAV (RIFF audio files) Resource Interchange File Format |
-| `WRA-WR3.TXT` | 8238 | 1.4 | March 11, 2004 | `cb1b7ea0625c92ab5da1c6069e650dc679112d244be0f6b21881fb12936045b3` | WRA, WR3 (WRAptor compressed files, and version 3.0 files) |
-| `X64.TXT` | 4490 | 1.3 | March 11, 2004 | `a069c5ad7cc6bbbd91e9abdf182b869061fd352d7aa6ed9d3bc448bc53df34dd` | X64 (X64 and VICE emulator image files) |
-| `ZIP.TXT` | 5140 | 1.3 | March 11, 2004 | `ee283a0f5574bd4d7bd9203bc6565baecaba0ee70f4ce8a5d59bda85a22a6a52` | ZIP (PKZip compressed files) |
-| `ZIP_DISK.TXT` | 8932 | 1.2 | March 11, 2004 | `dea4ed4b3d3dc7e6a2ee247229e18c3832f42082495243269f2790b582b70388` | DiskPacked ZipCode (4 or 5 file version, 1!xxxxxx, 2!xxxxxx, etc) |
-| `ZIP_FILE.TXT` | 10013 | 1.4 | March 11, 2004 | `4a4d75d86d18f73f4f562f3bc7c991037b538ddcbf97da8e49eb943dd6916194` | FilePacked ZipCode (A!xxxxxx, B!xxxxxx, etc) |
-| `ZIP_SIX.TXT` | 19211 | 1.4 | March 11, 2004 | `b9fa9320ce99843cc617744b8641e9b819bdfd991f4cbec7457e49e4b98b7e4d` | SixPack Zipcode (6-file version, 1!!xxxxx, 2!!xxxxx, etc) |
+| `64LAN.TXT` | 2808 | 1.3 | March 11, 2004 | `dc64afb7b648f4c00e01857f2b4a4fd52a57c9ca6b4ac3802f3aa3ae7470f0e7` | L64 (64LAN container files) |
+| `64NET.TXT` | 4152 | 1.3 | March 11, 2004 | `36b2f6219b172fe74b54e7781ca422fb5b76f47dc4a78e7aaf0f10e13d14333b` | N64 (64NET container files) |
+| `ARC.TXT` | 2896 | 1.4 | March 11, 2004 | `79327dbfca48bb553d1e5db4bbb3d8050757258cead7e7edcf5131264eb8dd6e` | ARC (compressed ARChive) |
+| `ARK-SRK.TXT` | 7207 | 1.3 | March 11, 2004 | `8adddf974f8ff05913308f888008b32478795a25b567caa6ccfc91a5e44a7fe6` | ARK (ARKive containers) |
+| `BINARY.TXT` | 5342 | 1.3 | March 11, 2004 | `ef150d7f2abe1cd6d48b963ace7b9d6cfdccd79c7d60dd6d9fab70073379b7c5` | Binary/Raw files |
+| `BITMAP.TXT` | 1852 | 1.3 | March 11, 2004 | `d6c8e70b37e4da667353419571d370076019e7af244408143a8df248bf3833ab` | Standard C64 BITMAP Files (HIRES & HIRES-MULTICOLOR) |
+| `C128BOOT.TXT` | 2358 | 1.1 | March 11, 2004 | `e0719d8781b8d713cca1de2d126d44b9fdaeb3251c08dda57d4ee184f5a22eba` | C128 Auto-boot sector layout |
+| `C64S_FRZ.TXT` | 2554 | 1.3 | March 11, 2004 | `43c4ea3cffbfe8b85e9aa9ce69ef6627d22f199214aaffe233c3e9eb64616808` | FRZ (C64s saved-session FRoZen files) |
+| `CKIT.TXT` | 2147 | 1.3 | March 11, 2004 | `7a117a3251d97ca967ef52dae3ceeba4aca632f15f772dfc027c8f812884af6a` | CKIT (Compression KIT compressed files) |
+| `CPK.TXT` | 5166 | 1.3 | March 11, 2004 | `d1c27ae40410efcaff35fd4220196ba66e7ae2f52a60d7bbf5c561ea5e1fade1` | CPK |
+| `CRT.TXT` | 52728 | 1.15 | Dec 10, 2009 | `5d9c9397bed15205c33dc9c4b8b88ed9c9fc0a264f34f3f83902f278915116a1` | CRT - CaRTridge Images (from the CCS64 emulator) |
+| `CVT.TXT` | 7990 | 1.3 | Oct 1, 2007 | `4e60097a2e22b538bfb657a1ef88e3f9a6d635afea27ba75c34ae23091e8f49a` | CVT (ConVerT containers) |
+| `D2M-DNP.TXT` | 37799 | 1.3 | Nov 27, 2005 | `10a9acbe542d13f4c5b2dffd045dac1e2dd8c513556b1341232603f7b4e75df6` | D2M (Electronic form of a CMD FD2000 1.56 Mb floppy disk) |
+| `D64.TXT` | 33540 | 1.11 | Nov 7, 2008 | `6361809ac15412307b146c544ee007f2189e529239ffc9e8b1776c45279effc3` | D64 (Electronic form of a physical 1541 disk) |
+| `D71.TXT` | 21014 | 1.5 | Nov 7, 2008 | `ec2744991df7443299f53764e9b80ca69266ece25eb400d4db1107250c3f1b4e` | D71 (Electronic form of a double-sided 1571 disk) |
+| `D80-D82.TXT` | 25082 | 1.3 | Nov 7, 2008 | `2254503902d98e68ebff4385065b9de8f7611ebc73ccad160ab231e7a7f270ed` | D80 (Disk image of an 8050 diskette, single-sided) |
+| `D81.TXT` | 29134 | 1.4 | Nov 7, 2008 | `63b7f5ee44411cab54a7b9fb79027190c5317c45395f72b59523d4cd53b0a181` | D81 (Electronic form of a physical 1581 disk) |
+| `DISK.TXT` | 30781 | 1.3 | March 11, 2004 | `09eafaafbd1f40d0a5d940dd130482494a870e6690a5e79b0671c587a06039a5` | Disk File Layout (D64, D71, D81) |
+| `F64.TXT` | 9911 | 1.6 | March 19, 2004 | `1401e79d9e48baa652eb7301d398708876e4e38a437ef99259711eeec6c9ec0c` | F64 (a companion file to certain D64's) |
+| `G64.TXT` | 26621 | 1.9 | Feb 19, 2008 | `acc85991c41ac482edf64ad8f9ae118039381009201cd6c64b3a210e5e4edfc2` | G64 (raw GCR binary representation of a 1541 diskette) |
+| `GEOS.TXT` | 15350 | 1.4 | Nov 27, 2005 | `0a319c206054f89e5d49b03aafceb45ae93c28e46bd883879229723011150832` | GEOS VLIR (Variable Length Index Record) |
+| `INTRO.TXT` | 13338 | — | December 10, 2009 | `b885c3337ff32635ea5733916ffc2adc59902fcd2ae7d74b36c95ceddcd4616d` | Introduction to the various Emulator File Formats |
+| `LBR.TXT` | 6403 | 1.3 | March 11, 2004 | `09a5c367d8ec9e237cfa1e25f1c44c10499a0ac7fd0c36f0f8d0eef36822c081` | LBR (LiBRary containers, C64 version only) |
+| `LHA.TXT` | 6620 | 1.3 | March 11, 2004 | `00ca26aa1ba62ea3969481d8311a40c6e572b2923a96bf77d31a652115e1f142` | LHA, LZH, LZS (LHArc compressed files) |
+| `LNX.TXT` | 11181 | 1.3 | March 11, 2004 | `326252900cbc1116123d3ebc8cfbc3cd07e5a29693adf09409f525d128d9245d` | LNX (LyNX containers) |
+| `PC64.TXT` | 9834 | 1.4 | March 11, 2004 | `b162dbdb02aedec01f67ed55e36ad15033afc7ba5220580c65d66e43b7cdf4ef` | P00/S00/U00/R00 (Container files for the PC64 emulator) |
+| `PC64_FRZ.TXT` | 2044 | 1.4 | March 11, 2004 | `5465dffee768f54b1bcfb2d1ae292ae52bd3d97901e8012a5d665bddfcaa22e2` | C64 (PC64 saved-session file) |
+| `PC64_ROM.TXT` | 944 | 1.1 | March 11, 2004 | `2e63a9cc8d8b6e8375672312b2e4cf4e328f0f5a965896b693b384ae2958b6fc` | 64x (PC64/DOS ROM files) |
+| `PCLINK.TXT` | 1505 | 1.3 | March 11, 2004 | `1cd66346c97b131e3116ecaeca3081d8664aa84816d18bf3fe6ec8ccee744582` | C64 (PCLINK container files) |
+| `PCVIC.TXT` | 4698 | 1.1 | March 11, 2004 | `b9d1c6aa35af4908a628bb8db4f2cdd211235902141554dee9d55d0fcf85f97f` | PCV (PCVIC VIC-20 emulator saved-session files) |
+| `PHAUZEH.TXT` | 6826 | 1.2 | March 11, 2004 | `724358922116b4b266bf09cf1d9c0633c749b4000885e638220ac43d5ccf07ad` | S20 (Phau Zeh VIC-20 emulator saved-session files) |
+| `POWER64.TXT` | 2942 | 1.2 | March 11, 2004 | `1968acff0d9916d6ecf6b3be65703d87b7fc9e8ce72530a768d39fba4021af50` | Power 64 RAM Snapshot File (C64 emulator on Apple Power Macintosh) |
+| `REL.TXT` | 5814 | 1.1 | March 11, 2004 | `3249bdf8cd1aa1bb97475fe084cef4b10c898323c589592746995e792a2c4068` | REL (RELative file layout) |
+| `SDA.TXT` | 2672 | 1.4 | March 11, 2004 | `f078a2482621886b835d110064728682515fd8f8b0d75783c2391e1492875203` | SDA (Self-Dissolving compressed Archive) |
+| `SFX.TXT` | 3390 | 1.3 | March 11, 2004 | `39fc3326f4a1624f2378b4f1ac9e4685d4baa725e6ae3f5f399e247612836f03` | SFX (SelF-eXtracting LHA/LZH compressed files) |
+| `SIDPLAY.TXT` | 21817 | 1.2 | March 15, 2004 | `0172ba16207c855b2016d5a469f7db2394960da257b93308935eb1ce613c890f` | SID/PSID (Various SIDPlay / PlaySID Formats) |
+| `SPYNE.TXT` | 7340 | 1.3 | March 11, 2004 | `3ddabc3b2fca9be29a8225cc1b867b6408830fafef9b22bc9a792708332b74b2` | SPY (SPYne containers) |
+| `T64.TXT` | 10074 | 1.5 | March 11, 2004 | `800ae628de8e18cabc8847a09f08b769df74f67793da792b0de92f927225da34` | T64 (Tape containers for C64s) |
+| `TAP.TXT` | 3629 | 1.1 | March 11, 2004 | `d197c1915da2feb5e2c163f8246993efe945412955f944b7609322cda0143e4f` | TAP (raw C64 cassette TAPE images) |
+| `VICE_FRZ.TXT` | 44955 | 1.2 | Oct 1, 2007 | `7fa5ac7e533fa1217fcbd3c61093232ca9cfabb79fb733e21087294c834b123e` | VSF (Vice Snapshot File, saved-session file) |
+| `WAV.TXT` | 7144 | 1.1 | March 11, 2004 | `82b159b8d300e8addf893e379d5aba224481c90aa24348bbb023ae63c3a1bd61` | WAV (RIFF audio files) Resource Interchange File Format |
+| `WRA-WR3.TXT` | 8012 | 1.4 | March 11, 2004 | `facc941c124169bad6ba1486645ed00d45746f45b928350026d8bce5128ad00c` | WRA, WR3 (WRAptor compressed files, and version 3.0 files) |
+| `X64.TXT` | 4396 | 1.3 | March 11, 2004 | `fa225862d3f2dc2317dbe57295fdcf82097e2be9c1455f17a460ead9df196084` | X64 (X64 and VICE emulator image files) |
+| `ZIP.TXT` | 5043 | 1.3 | March 11, 2004 | `59bd46d11283b3b9d12aca20eb90b743a6f483ef123870a4b7455f5215b8c225` | ZIP (PKZip compressed files) |
+| `ZIP_DISK.TXT` | 8747 | 1.2 | March 11, 2004 | `e264fffd0afd7ee750c9cb4645949bcb1845064cb9eb86fd94882e7e9a7dd02a` | DiskPacked ZipCode (4 or 5 file version, 1!xxxxxx, 2!xxxxxx, etc) |
+| `ZIP_FILE.TXT` | 9848 | 1.4 | March 11, 2004 | `96e8d228351994ac4d268692da5e8d72dae8b92936b44d7a1bfd300efe4a6267` | FilePacked ZipCode (A!xxxxxx, B!xxxxxx, etc) |
+| `ZIP_SIX.TXT` | 18839 | 1.4 | March 11, 2004 | `a787c741a567227cd3dc364e35fcf3c9a31e7c53b0f86e64dd44bd47e7394201` | SixPack Zipcode (6-file version, 1!!xxxxx, 2!!xxxxx, etc) |

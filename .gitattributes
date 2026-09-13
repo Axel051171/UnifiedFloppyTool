@@ -31,3 +31,11 @@ tests/golden/**        binary
 
 # Die Manifeste daneben sind Text und sollen es bleiben.
 tests/corpus_manifest/*.json   text
+
+# MF-1094: Fremddokumente sind byte-genaues Beweismaterial. Ihre SHA-256
+# steht in `docs/format_specs/<x>/README.md` und wird vom Tor H3 geprueft —
+# eine Zeilenende-Umwandlung beim Auschecken macht aus jedem dieser Hashes
+# eine Falschaussage. Gemessen: mit `core.autocrlf=true` war `D64.TXT` im
+# Arbeitsbaum 34 230 Byte gross (690 CR), als Blob 33 540 (0 CR), und die
+# CI meldete daraufhin ALLE 47 Hashes als falsch.
+docs/format_specs/** -text

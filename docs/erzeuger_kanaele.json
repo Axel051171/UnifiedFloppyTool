@@ -97,12 +97,27 @@
     "cpm": {
       "kanal": "keiner",
       "werkzeug": "floptool flopconvert cpm ... (MAME, gebaut MF-1083)",
-      "bemerkung": "MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber \"Poly CP/M disk image\" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` (\"Specialist MX/Orion/B2M\"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht."
+      "bemerkung": "MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber \"Poly CP/M disk image\" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` (\"Specialist MX/Orion/B2M\"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht. **DRITTE Kollision, gemessen MF-1093:** auch **SAMdisk** fuehrt einen Eintrag `cpm` — und sein `src/types/cpm.cpp` sagt in der ersten Zeile, was es ist: \"Basic support for SAM Coupe Pro-DOS images\", 720K, erkannt an der Endung `.cpm`. Damit ist `.cpm` die Endung, ueber die sich in diesem Baum **drei verschiedene Formate** zuordnen lassen (Poly CP/M, Specialist MX, SAM Coupe Pro-DOS) — und keines davon ist UFTs libdsk-staemmiges CP/M."
     },
     "edk": {
       "kanal": "keiner",
       "werkzeug": "floptool flopconvert esq16 mfi ... (MAME, gebaut MF-1083)",
       "bemerkung": "MF-1085, P3-364. floptools `esq16` (Ensoniq VFX-SD/SD-1/EPS-16) nimmt genau die 819 200 Byte, die UFTs `edk` als DD-Fassung fuehrt - aber SEIN EIGENER RUNDLAUF VERSCHIEBT DIE DISKETTE. `esqimg_format::load()` setzt `sectors[i].sector_id = i` (0..9), `save()` sammelt ueber `get_track_data_mfm_pc()` die Nummern 1..10 ein. Gemessen an 80 x 2 x 10 mit Ortsmarken je Sektor: 1440 von 1600 Sektoren kommen um GENAU EINE STELLE verschoben zurueck, 160 genullt (einer je Spur), 83 360 Byte abweichend, 0 an ihrer Stelle. Ein Werkzeug, dessen eigener Rundlauf eine Diskette verschiebt, ist kein Erzeuger."
+    },
+    "udi": {
+      "kanal": "keiner",
+      "werkzeug": "SAMdisk (Quelle in src/samdisk/ und neue-ideen/samdisk_plus.zip)",
+      "bemerkung": "MF-1093. SAMdisk ist das naheliegende Werkzeug — MF-1015 hat UFTs UDI-Leser gegen `src/samdisk/udi.cpp` gemessen und es dabei in der Pruefsumme **begruendet ueberstimmt**. Es kann UDI aber nur LESEN: seine Formattafel (`include/types.h`) fuehrt `ADD_IMAGE_RO(UDI)`, nicht `ADD_IMAGE_RW`. Ein Bau von SAMdisk wuerde fuer `udi` also nichts oeffnen. Von den **28** schreibbaren SAMdisk-Formaten trifft keines eines der offenen UFT-Formate; der einzige Namenstreffer ist `cpm`, und der ist eine Kollision (siehe dort)."
+    },
+    "fdi_pc98": {
+      "kanal": "keiner",
+      "werkzeug": "SAMdisk `fdi` / floptool `pc98_fdi`",
+      "bemerkung": "MF-1093. Zwei Werkzeuge fuehren ein `fdi`, und **keines meint dieses Format**: floptools `pc98_fdi` ist `r-`, also nur lesend (gemessen MF-1083), und SAMdisks `fdi` ist laut Kopfzeile seiner `src/types/fdi.cpp` das **Spectrum**-FDI (\"Full Disk Image for Spectrum\", worldofspectrum.org) — das ist UFTs `fdi`, das bereits auf T1 steht, nicht `fdi_pc98`. Ein Schreiber fuer das PC-98-FDI ist im Baum nicht vorhanden."
+    },
+    "pro": {
+      "kanal": "keiner",
+      "werkzeug": "a8rawconv (Quelle in src/a8rawconv/)",
+      "bemerkung": "MF-1093. `pro` ist APE ProSystem (Atari 8-bit) — ein Kopierschutz-Format mit 12-Byte-Sektorkopf und Phantomsektoren. Das naheliegende Werkzeug im Baum ist `a8rawconv`; gemessen ueber seine Formatmodule kennt es **a2, adf, atr, atx, vfd, xfd** und **kein PRO**. Der Erzeuger waere APE selbst (proprietaer, Windows) — eine Beschaffungsfrage."
     }
   }
 }

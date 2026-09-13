@@ -142,6 +142,9 @@ def manifest_pfade(wurzel: Path) -> tuple[set[str], set[str]]:
     return pfade, {f.rsplit("/", 1)[-1] for f in pfade}
 
 
+CRLF = bytes([0x0D, 0x0A])
+LF = bytes([0x0A])
+
 MAGIE = {
     bytes([0x7F]) + b"ELF": "ELF",
     b"MZ": "PE/DOS",
@@ -212,9 +215,32 @@ def check(wurzel: Path) -> list[str]:
             except OSError:
                 continue
             if h not in text:
-                befunde.append(
-                    f"H3 {f}: SHA-256 in {verz}/README.md stimmt nicht "
-                    f"— gemessen {h[:16]}…")
+                # MF-1094: die erste Fassung hat hier NUR "stimmt
+                # nicht" gemeldet, und genau das war der teure Teil.
+                # Lokal war sie gruen, in CI fielen ALLE 47 Dateien —
+                # weil `core.autocrlf=true` den Arbeitsbaum auf CRLF
+                # stellt und ich die Hashes darueber gerechnet hatte.
+                # Die Meldung sagt jetzt, WELCHE der beiden Ursachen
+                # vorliegt, statt den Leser suchen zu lassen.
+                try:
+                    roh = (wurzel / f).read_bytes()
+                    h_lf = hashlib.sha256(
+                        roh.replace(CRLF, LF)).hexdigest()
+                except OSError:
+                    h_lf = ""
+                if h_lf and h_lf in text:
+                    befunde.append(
+                        f"H3 {f}: die SHA-256 stimmt erst nach "
+                        f"LF-Normalisierung — dieser Arbeitsbaum hat "
+                        f"die Datei mit CRLF ausgecheckt. "
+                        f"`.gitattributes` fuehrt "
+                        f"`docs/format_specs/** -text`; pruefe "
+                        f"`git check-attr text -- {f}`")
+                else:
+                    befunde.append(
+                        f"H3 {f}: SHA-256 in {verz}/README.md stimmt "
+                        f"nicht — gemessen {h[:16]}…, und auch nicht "
+                        f"nach LF-Normalisierung: der INHALT weicht ab")
 
     for d in dat:
         if A1.search(d):
@@ -330,6 +356,11 @@ def _selbsttest() -> int:
          ["docs/format_specs/x/A.TXT", "!README-gut"], None, False),
         ("README mit Name, aber FALSCHER SHA-256",
          ["docs/format_specs/x/A.TXT", "!README-falsch"], None, True),
+        # MF-1094: der Fall, der die CI rot gemacht hat — Datei mit CRLD
+        # ausgecheckt, README traegt den LF-Hash. Muss feuern, und die
+        # Meldung muss die ZEILENENDEN nennen, nicht den Inhalt.
+        ("Datei mit CRLF, README mit LF-Hash",
+         ["!CRLF:docs/format_specs/x/A.TXT", "!README-lf"], None, True),
         ("Bauartefakt versioniert", ["src/foo.o"], None, True),
         # A1 nach MAGIE: der Fall, den die Endungsliste nicht sah.
         ("ELF OHNE Endung", ["!ELF:tests/werkzeug"], None, True),
@@ -358,10 +389,22 @@ def _selbsttest() -> int:
                     ziel = baum / "docs" / "format_specs" / "x"
                     ziel.mkdir(parents=True, exist_ok=True)
                     echt = _h.sha256(b"x").hexdigest()
-                    sha = echt if rel == "!README-gut" else "00" * 32
+                    if rel == "!README-gut":
+                        sha = echt
+                    elif rel == "!README-lf":
+                        # Der LF-Hash von "a\nb" — die Datei daneben liegt
+                        # als "a\r\nb" vor (MF-1094).
+                        sha = _h.sha256(b"a" + LF + b"b").hexdigest()
+                    else:
+                        sha = "00" * 32
                     (ziel / "README.md").write_text(
                         "| `A.TXT` | 1 | `" + sha + "` |\n",
                         encoding="utf-8")
+                    continue
+                if rel.startswith("!CRLF:"):
+                    p = baum / rel.split(":", 1)[1]
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_bytes(b"a" + CRLF + b"b")
                     continue
                 if rel.startswith("!ELF:") or rel.startswith("!MZ:"):
                     art, ziel_rel = rel[1:].split(":", 1)
