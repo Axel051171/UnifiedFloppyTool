@@ -1,123 +1,163 @@
 {
   "_doc": "Gemessene Erzeuger-Kanaele je Format. Gespeist wird diese Datei AUSSCHLIESSLICH aus Laeufen, die stattgefunden haben — nie aus einer Modulliste, nie aus einer Vermutung. Ein Format, das hier FEHLT, ist NICHT GEMESSEN; das ist kein Urteil ueber seine Machbarkeit. Gelesen von scripts/gen_erzeuger_zensus.py.",
   "_warum": "Die R/W-Spalte einer Modulliste ist eine Zusage des Werkzeugs ueber sich selbst und luegt in beide Richtungen. TI994A_V9T9 traegt RW und lieferte aus einem RAW-Abbild 100 % Fuellbyte (MF-1021), aus einem IMD-Traeger 720 von 720 richtigen Sektoren (MF-1060). APPLE2_DO traegt dasselbe RW und liefert aus derselben Eingabe 0 Byte (MF-1061). Nur der ausgefuehrte Lauf entscheidet.",
-  "_kanal": "raw = rohes Sektorabbild genuegt | layout:<name> = hxcfes -uselayout wird gebraucht | imd = ein IMD-Traeger, der die Geometrie selbst mitbringt | keiner = gemessen, dieser Weg traegt nicht",
+  "_kanal": "raw = rohes Sektorabbild genuegt | layout:<name> = hxcfes -uselayout wird gebraucht | imd = ein IMD-Traeger, der die Geometrie selbst mitbringt | keiner = gemessen, dieser Weg traegt nicht | artefaktgleich:<fmt> = ein fremd erzeugtes Abbild von <fmt> ist byteweise zugleich ein gueltiges Abbild dieses Formats; ob die Stufe darauf ruhen darf, ist eine Eigentuemer-Entscheidung",
   "_pruefung": "Ein Kanal gilt erst als tragend, wenn das Erzeugnis DREI Fragen besteht: (1) richtige Groesse, (2) kein Fuellbyte (MF-1021 — hxcfe lieferte einmal 184 320 Byte zu 100 % 0xF6), (3) UNTERSCHEIDUNGSKRAFT — passt eine falsche Anordnung genauso gut, ist die Datei als Beleg wertlos (Klasse MF-1014/1026/1028).",
   "formate": {
-    "v9t9": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:TI994A_V9T9",
-      "bemerkung": "MF-1060. DSSD 184 320 B: 720/720 Mustertreffer, Gegenprobe LINEAR nur 18 — unterscheidet. SSSD 92 160 B unterscheidet NICHT (einseitig fallen beide Formeln zusammen), DSDD 368 640 B ist hxcfe misslungen (50,2 % 0xF6, 9 statt 18 Sektoren je Spur)."
-    },
-    "xdm86": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:TI994A_V9T9",
-      "bemerkung": "MF-1060. Dasselbe Abbild wie `v9t9` — beide Plugins lesen 184 320 Byte als 40 x 2 x 9 x 256."
-    },
-    "vdk": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:DRAGON3264_VDK",
-      "bemerkung": "MF-1061. Zweiseitig 368 652 B = 12 Kopf + 40 x 2 x 18 x 256; hxcfe setzt den Kopf selbst. Drei Anordnungs-Hypothesen: zylinder-verschraenkt 1440/1440, kopf-dur 36, kopf-dur rueckwaerts 36 — unterscheidet. EINSEITIG waere es wertlos."
-    },
-    "d77": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:NEC_D88",
-      "bemerkung": "MF-1061. 348 848 B, voller D88-Container: 80 von 164 Spurzeigern, Sektorkoepfe C/H/R/N, Groessenfeld bei 0x1C trifft die Dateilaenge (Beleg am Objekt). Ueberhang 21 168 = 32 + 656 + 80 x 16 x 16."
-    },
-    "jv3": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:TRS80_JV3",
-      "bemerkung": "MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2200 — genau die Kopfgroesse, die MF-1017 von 0x2300 berichtigt hat, hier von fremder Hand bestaetigt. 400/400 Mustertreffer."
-    },
-    "trd": {
-      "kanal": "imd",
-      "werkzeug": "hxcfe -conv:ZXSPECTRUM_TRD",
-      "bemerkung": "MF-1061, am Rand gemessen. 655 360 B ohne Ueberhang, 2560/2560 Mustertreffer."
-    },
-    "do": {
+    "_werkzeuge_im_baum": {
       "kanal": "keiner",
-      "werkzeug": "hxcfe -conv:APPLE2_DO",
-      "bemerkung": "MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus)."
+      "werkzeug": "gemessen MF-1069",
+      "bemerkung": "**Kein Format-Eintrag, sondern das Ergebnis einer Suche.** Der Zensus misst hxcfe und libdsk; im Baum liegen aber weitere GEBAUTE Werkzeuge, und ob eines davon ein offenes Format schreibt, war nie gemessen. Gemessen wurde es am 2026-09-12, durch Ausfuehren mit `--help`: **`Jacknife/samaritan.exe`** baut Atari-ST-Abbilder mit eigener Geometrie (`-t` Spuren, `-s` Sektoren, `-i` Seiten) — `st` und `msa` stehen beide auf T1b; **`nibtools/nibconv.exe`** wandelt NIB/NB2/D64/G64 nach **D64 oder G64** — `d64` ist T1b, `g64` ist T1; **`mkatr/mkatr.exe`** schreibt ATR — T1b; **`libcbmimage/cbmimage.exe`** gibt zu `--help` nichts aus. **Keines der vier trifft ein offenes T2-Format.** Damit ist die ueber Werkzeuge IM BAUM loesbare Teilmenge der Tier-Hebungen erschoepft — was fuer die 26 verbliebenen T2-Formate bleibt, sind: `mfi` (blockiert auf P3-329, zlib erreicht keine C-Datei), `ipf` (Port seit P3-353 moeglich, braucht ein Gutachten statt Code) und 24 Formate, fuer die kein Werkzeug im Baum einen Schreiber hat. Die naechste Quelle ist deshalb keine weitere Messung an vorhandenen Werkzeugen, sondern ein BESCHAFFTES Werkzeug oder ein echtes Abbild."
     },
-    "po": {
+    "adf_ext": {
       "kanal": "keiner",
-      "werkzeug": "hxcfe -conv:APPLE2_PO",
-      "bemerkung": "MF-1061, P3-348. Wie `do`: rc = 0, Datei 0 Byte."
+      "werkzeug": "hxcfe -conv:AMIGA_EXTADF / -conv:AMIGA_OLDEXTADF",
+      "bemerkung": "MF-1097, gemessen an LAEUFEN statt an der Modulliste. hxcfe fuehrt ZWEI Lader fuer die erweiterte ADF, und beide sagen beim Ausfuehren woertlich ab: `No export support in AMIGA_EXTADF!` bzw. `... in AMIGA_OLDEXTADF!`. Die Eingabe wird dabei richtig geladen und kodiert (880 kB, 80 Spuren, 2 Seiten, 11 Sektoren) — es fehlt allein der Schreiber. floptools `adf` ist das FLACHE Amiga-ADF: MAMEs `adf_format::identify()` nimmt ausschliesslich 901 120 / 912 384 / 1 802 240 Byte und kennt die Kennung `UAE-1ADF` nicht (0 Treffer in `ami_dsk.cpp`). libdsk fuehrt kein ADF. Der kanonische Erzeuger ist WinUAE selbst; im Baum liegt davon nur `FloppyControl/Docs/disk.cpp` — Dokumentation, Kanal *Spec*, und genau die Quelle, die UFTs Leser nennt."
     },
     "akai_s900": {
       "kanal": "keiner",
       "werkzeug": "hxcfe -uselayout:AKAIS950_DD_800KB",
       "bemerkung": "MF-1061, gemessen und VERWORFEN. hxcfe zerlegt ein flaches 819 200-Byte-Abbild mit dieser Anordnung richtig — 800 von 800 Sektoren tragen ihren eigenen Namen, und die Gegenprobe mit ENSONIQ_DD_800KB (gleiche Groesse, 10 x 512 statt 5 x 1024) trifft nur 320 von 1600. Die ZERLEGUNG ist also eine echte zweite Hand auf die Geometrie. Aber das Zurueckschreiben ins flache Format ist LAYOUT-UNABHAENGIG byteidentisch — auch ueber die Ensoniq-Anordnung kommt dieselbe Datei heraus. Ein so erzeugtes Fixture waere eine Tautologie, kein Beleg."
     },
-    "korg_dss1": {
-      "kanal": "keiner",
-      "werkzeug": "hxcfe -uselayout:KORGDSS1_DD_800KB",
-      "bemerkung": "MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch."
-    },
     "apridisk": {
       "kanal": "imd",
       "werkzeug": "dsktrans -itype imd -otype apridisk",
       "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
     },
-    "cqm": {
-      "kanal": "imd",
-      "werkzeug": "dsktrans -itype imd -otype copyqm",
-      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
-    },
-    "td0": {
-      "kanal": "imd",
-      "werkzeug": "dsktrans -itype imd -otype tele",
-      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
-    },
-    "dc42": {
-      "kanal": "imd",
-      "werkzeug": "dsktrans -itype imd -otype dc42",
-      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    "cas": {
+      "kanal": "keiner",
+      "werkzeug": "floptool flopconvert auto cas; hxcfe -modulelist/-rawlist",
+      "bemerkung": "MF-1097, misst nach, was MF-1040 benannt hatte. Gemessen im Lauf: `Error: Format 'cas' unknown`. Der Grund ist kategorial: CAS ist ein KASSETTEN-Strom, floptool und hxcfe sind Disketten-Werkzeuge. MAMEs `fmsx_cas.cpp` wandelt in WAV-Abtastwerte und gibt keine Bloecke zurueck — es ist eine Spec-Quelle, kein Erzeuger. Die fuenf Korpus-`.cas` sind `derived`. Ein Erzeuger muesste von aussen kommen (openMSX, castools)."
     },
     "cfi": {
       "kanal": "imd",
       "werkzeug": "dsktrans -itype imd -otype cfi",
       "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
     },
-    "mgt": {
-      "kanal": "keiner",
-      "werkzeug": "dsktrans -itype imd -otype raw -format mgt800",
-      "bemerkung": "MF-1064, gemessen und VERWORFEN. libdsk fuehrt `mgt800` in seiner Formatliste, und der Lauf liefert 819 200 Byte mit 1600/1600 Mustertreffern — sieht nach einem Fixture aus. Die Gegenprobe entscheidet dagegen: DIESELBE Datei kommt heraus, wenn man `-format` ganz weglaesst, und auch mit `-format pcw800`. Alle drei sha256-identisch. libdsk reicht die IMD-Sektoren also in DATEIREIHENFOLGE durch; der Schalter aendert beim Schreiben eines FLACHEN Ziels nichts. Ein so erzeugtes Abbild waere eine Tautologie wie bei `akai_s900` (MF-1061). **Der Unterschied zu MF-1032/1033, wo derselbe Schalter trug:** dort war die RAW-Seite die EINGABE und brauchte eine Geometrie, das Ziel war ein Container mit eigener Anordnung. Beim Schreiben nach raw bestimmt die Eingabe die Reihenfolge. Der Kanal taugt also fuer Container, nicht fuer flache Ziele."
-    },
-    "_werkzeuge_im_baum": {
-      "kanal": "keiner",
-      "werkzeug": "gemessen MF-1069",
-      "bemerkung": "**Kein Format-Eintrag, sondern das Ergebnis einer Suche.** Der Zensus misst hxcfe und libdsk; im Baum liegen aber weitere GEBAUTE Werkzeuge, und ob eines davon ein offenes Format schreibt, war nie gemessen. Gemessen wurde es am 2026-09-12, durch Ausfuehren mit `--help`: **`Jacknife/samaritan.exe`** baut Atari-ST-Abbilder mit eigener Geometrie (`-t` Spuren, `-s` Sektoren, `-i` Seiten) — `st` und `msa` stehen beide auf T1b; **`nibtools/nibconv.exe`** wandelt NIB/NB2/D64/G64 nach **D64 oder G64** — `d64` ist T1b, `g64` ist T1; **`mkatr/mkatr.exe`** schreibt ATR — T1b; **`libcbmimage/cbmimage.exe`** gibt zu `--help` nichts aus. **Keines der vier trifft ein offenes T2-Format.** Damit ist die ueber Werkzeuge IM BAUM loesbare Teilmenge der Tier-Hebungen erschoepft — was fuer die 26 verbliebenen T2-Formate bleibt, sind: `mfi` (blockiert auf P3-329, zlib erreicht keine C-Datei), `ipf` (Port seit P3-353 moeglich, braucht ein Gutachten statt Code) und 24 Formate, fuer die kein Werkzeug im Baum einen Schreiber hat. Die naechste Quelle ist deshalb keine weitere Messung an vorhandenen Werkzeugen, sondern ein BESCHAFFTES Werkzeug oder ein echtes Abbild."
-    },
-    "nfd": {
-      "kanal": "keiner",
-      "werkzeug": "gemessen MF-1082: sechs Leser, zwei Schreiber, beide nur r1",
-      "bemerkung": "MF-1082, Erzeuger-Zensus der NFD-Familie. **Leser (gemessen): sechs.** Greaseweazle `src/greaseweazle/image/nfd.py` (Keir Fraser, PUBLIC DOMAIN) - traegt `read_only = True`, liest NUR r0 (`T98FDDIMAGE.R0`) und wirft bei r1 ausdruecklich; in `tools/util.py:303` als `'.nfd': 'NFD'` REGISTRIERT. MAMEs `nfd_dsk.cpp` (BSD-3) - liest r0 UND r1, kein `save`. FluxEngine `nfdimagereader.cc`. `d88split`/`nfd2mhlt.pl` (tomari, Public Domain) - liest r0 und r1 (r1 ungetestet), schreibt NUR Mahalito. FIVEC. UFT selbst. **Schreiber (gemessen): zwei, und BEIDE nur r1.** FIVEC speichert laut pc98.org alle NFD als r1, weil r0 deutlich anders und veraltet ist - reine Software. `NFDMAKE.EXE` aus dem T98-NEXT TOOL ist der urspruengliche Erzeuger, dokumentiert sind heute `-r1` und `-r1d`; ein `-r0` findet sich in keiner der gesichteten Quellen, und es laeuft auf ECHTER PC-9801-Hardware (MF-310). Dasselbe gilt fuer T98-Nexts eigenes 'FD zu Abbild wandeln' - es braucht ein echtes Laufwerk. **Fuer r0 ist damit kein reiner Software-Schreiber gefunden**, und das ist eine Messung ueber sechs Werkzeuge statt ueber eines. **Was dabei frei ist:** die Formatbeschreibungen beider Fassungen stammen vom Urheber und tragen eine ausdrueckliche Freigabe - woertlich 'Freely used for data analysis, tool development, etc.', 2001/01/22 LED (pc98.org/project/doc/nfdr0.html und nfdr1.html). Kanal *Spec*, unbeschraenkt."
-    },
     "cpm": {
       "kanal": "keiner",
       "werkzeug": "floptool flopconvert cpm ... (MAME, gebaut MF-1083)",
       "bemerkung": "MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber \"Poly CP/M disk image\" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` (\"Specialist MX/Orion/B2M\"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht. **DRITTE Kollision, gemessen MF-1093:** auch **SAMdisk** fuehrt einen Eintrag `cpm` — und sein `src/types/cpm.cpp` sagt in der ersten Zeile, was es ist: \"Basic support for SAM Coupe Pro-DOS images\", 720K, erkannt an der Endung `.cpm`. Damit ist `.cpm` die Endung, ueber die sich in diesem Baum **drei verschiedene Formate** zuordnen lassen (Poly CP/M, Specialist MX, SAM Coupe Pro-DOS) — und keines davon ist UFTs libdsk-staemmiges CP/M."
+    },
+    "cqm": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype copyqm",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "d77": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:NEC_D88",
+      "bemerkung": "MF-1061. 348 848 B, voller D88-Container: 80 von 164 Spurzeigern, Sektorkoepfe C/H/R/N, Groessenfeld bei 0x1C trifft die Dateilaenge (Beleg am Objekt). Ueberhang 21 168 = 32 + 656 + 80 x 16 x 16."
+    },
+    "dc42": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype dc42",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "dim": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:X68000_DIM; floptool flopconvert auto dim",
+      "bemerkung": "MF-1097. **Zwei Werkzeuge fuehren ein DIM, und das schreibende meint ein anderes Format** — die Gestalt von `fdi_pc98` (MF-1093) und `cpm` (MF-1085). hxcfes Liste hat `X68000_DIM` UND `ATARIST_DIM`; letzteres ist UFTs `dim_atari`, seit MF-690 auf T1b. Gemessen im Lauf: hxcfe LAEDT die Korpus-Datei richtig (`File loader found : X68000_DIM`) und sagt dann `No export support in X68000_DIM!`; floptool antwortet `Error: Saving to format 'dim' unsupported`. Fuer das X68000-DIM gibt es damit keinen Erzeuger. Die fremde ZERLEGUNG aus MF-1037 bleibt davon unberuehrt (hxcfe liest DIM und schreibt IMD) — sie belegt die Auslegung, nicht die Herkunft."
+    },
+    "dms": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:AMIGA_DMS",
+      "bemerkung": "MF-1097. **Das Orakel ist da, das Objekt fehlt — und damit ist SCOUT-11 schaerfer als bisher.** xDMS 1.3.2 liegt ZWEIMAL als Quelle im Baum (`HxCFloppyEmulator/.../thirdpartylibs/xdms/xdms-1.3.2/src/` und `amigadx/lib/xdmslib/`), und hxcfe fuehrt `AMIGA_DMS`. Gemessen im Lauf: `No export support in AMIGA_DMS!`. Das ist kein Versaeumnis, sondern die Bauart — beide Quellen tragen ausschliesslich ENTPACKER (`u_deep`, `u_heavy`, `u_medium`, `u_quick`, `u_rle`, `u_init`), keinen Packer; DMS-Dateien entstehen mit dem Original-DMS auf dem Amiga. Und im ganzen Baum liegt **keine einzige `.dms`** (`find -iname '*.dms'` = 0 Treffer). Der Differenzlauf aus SCOUT-11 scheitert also nicht am Werkzeug, sondern am KORPUS."
+    },
+    "do": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:APPLE2_DO",
+      "bemerkung": "MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus)."
     },
     "edk": {
       "kanal": "keiner",
       "werkzeug": "floptool flopconvert esq16 mfi ... (MAME, gebaut MF-1083)",
       "bemerkung": "MF-1085, P3-364. floptools `esq16` (Ensoniq VFX-SD/SD-1/EPS-16) nimmt genau die 819 200 Byte, die UFTs `edk` als DD-Fassung fuehrt - aber SEIN EIGENER RUNDLAUF VERSCHIEBT DIE DISKETTE. `esqimg_format::load()` setzt `sectors[i].sector_id = i` (0..9), `save()` sammelt ueber `get_track_data_mfm_pc()` die Nummern 1..10 ein. Gemessen an 80 x 2 x 10 mit Ortsmarken je Sektor: 1440 von 1600 Sektoren kommen um GENAU EINE STELLE verschoben zurueck, 160 genullt (einer je Spur), 83 360 Byte abweichend, 0 an ihrer Stelle. Ein Werkzeug, dessen eigener Rundlauf eine Diskette verschiebt, ist kein Erzeuger."
     },
-    "udi": {
-      "kanal": "keiner",
-      "werkzeug": "SAMdisk (Quelle in src/samdisk/ und neue-ideen/samdisk_plus.zip)",
-      "bemerkung": "MF-1093. SAMdisk ist das naheliegende Werkzeug — MF-1015 hat UFTs UDI-Leser gegen `src/samdisk/udi.cpp` gemessen und es dabei in der Pruefsumme **begruendet ueberstimmt**. Es kann UDI aber nur LESEN: seine Formattafel (`include/types.h`) fuehrt `ADD_IMAGE_RO(UDI)`, nicht `ADD_IMAGE_RW`. Ein Bau von SAMdisk wuerde fuer `udi` also nichts oeffnen. Von den **28** schreibbaren SAMdisk-Formaten trifft keines eines der offenen UFT-Formate; der einzige Namenstreffer ist `cpm`, und der ist eine Kollision (siehe dort)."
-    },
     "fdi_pc98": {
       "kanal": "keiner",
       "werkzeug": "SAMdisk `fdi` / floptool `pc98_fdi`",
       "bemerkung": "MF-1093. Zwei Werkzeuge fuehren ein `fdi`, und **keines meint dieses Format**: floptools `pc98_fdi` ist `r-`, also nur lesend (gemessen MF-1083), und SAMdisks `fdi` ist laut Kopfzeile seiner `src/types/fdi.cpp` das **Spectrum**-FDI (\"Full Disk Image for Spectrum\", worldofspectrum.org) — das ist UFTs `fdi`, das bereits auf T1 steht, nicht `fdi_pc98`. Ein Schreiber fuer das PC-98-FDI ist im Baum nicht vorhanden."
     },
+    "fds": {
+      "kanal": "keiner",
+      "werkzeug": "floptool flopconvert auto fds; hxcfe -modulelist/-rawlist",
+      "bemerkung": "MF-1097, bestaetigt P3-339. Gemessen im Lauf: floptool antwortet `Error: Format 'fds' unknown` — es ist ein Disketten-Werkzeug, und MAMEs `nes_dsk.cpp` hat keine `save`-Funktion (0 Treffer fuer `::save`/`supports_save`). hxcfes 207 Module und 95 Diskettenanordnungen fuehren kein FDS; libdsks 26 Treiber ebenfalls nicht. Die drei Korpus-`.fds` sind `derived` (nach den nesdev-Seiten gebaut), also kein Fremderzeugnis. Ein echtes FDS-Abbild waere ein Spiel-Abzug — das ist eine KORPUS- und Rechtefrage, keine Werkzeugfrage."
+    },
+    "jv3": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TRS80_JV3",
+      "bemerkung": "MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2200 — genau die Kopfgroesse, die MF-1017 von 0x2300 berichtigt hat, hier von fremder Hand bestaetigt. 400/400 Mustertreffer."
+    },
+    "korg_dss1": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -uselayout:KORGDSS1_DD_800KB",
+      "bemerkung": "MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch."
+    },
+    "lisa_twiggy": {
+      "kanal": "keiner",
+      "werkzeug": "floptool flopconvert auto twiggy/lisa; MAME ap_dsk35.cpp; fluxfox moof.rs",
+      "bemerkung": "MF-1097. **Zwei Werkzeuge kennen Twiggy, und keines erzeugt ein rohes Twiggy-Abbild.** MAMEs `ap_dsk35.cpp` nennt `871424 // Apple Twiggy 851KiB` — aber im **DC42**-Lader, und direkt danach legt derselbe Lader die 3,5-Zoll-Zonentafel an (`for track<80`, `ns = 12 - track/16`) statt der Twiggy-Tafel (46 Spuren je Seite, 22..15 Sektoren). fluxfox kennt Twiggy in `file_parsers/as/moof.rs`, also im MOOF-Behaelter. Beide reden ueber einen ANDEREN Behaelter als UFTs rohes `lisa_twiggy`. Gemessen im Lauf: floptool antwortet fuer `twiggy` wie fuer `lisa` `Error: Format ... unknown`; hxcfes 95 Anordnungen fuehren keine Lisa."
+    },
+    "mgt": {
+      "kanal": "keiner",
+      "werkzeug": "dsktrans -itype imd -otype raw -format mgt800",
+      "bemerkung": "MF-1064, gemessen und VERWORFEN. libdsk fuehrt `mgt800` in seiner Formatliste, und der Lauf liefert 819 200 Byte mit 1600/1600 Mustertreffern — sieht nach einem Fixture aus. Die Gegenprobe entscheidet dagegen: DIESELBE Datei kommt heraus, wenn man `-format` ganz weglaesst, und auch mit `-format pcw800`. Alle drei sha256-identisch. libdsk reicht die IMD-Sektoren also in DATEIREIHENFOLGE durch; der Schalter aendert beim Schreiben eines FLACHEN Ziels nichts. Ein so erzeugtes Abbild waere eine Tautologie wie bei `akai_s900` (MF-1061). **Der Unterschied zu MF-1032/1033, wo derselbe Schalter trug:** dort war die RAW-Seite die EINGABE und brauchte eine Geometrie, das Ziel war ein Container mit eigener Anordnung. Beim Schreiben nach raw bestimmt die Eingabe die Reihenfolge. Der Kanal taugt also fuer Container, nicht fuer flache Ziele."
+    },
+    "nfd": {
+      "kanal": "keiner",
+      "werkzeug": "gemessen MF-1082: sechs Leser, zwei Schreiber, beide nur r1",
+      "bemerkung": "MF-1082, Erzeuger-Zensus der NFD-Familie. **Leser (gemessen): sechs.** Greaseweazle `src/greaseweazle/image/nfd.py` (Keir Fraser, PUBLIC DOMAIN) - traegt `read_only = True`, liest NUR r0 (`T98FDDIMAGE.R0`) und wirft bei r1 ausdruecklich; in `tools/util.py:303` als `'.nfd': 'NFD'` REGISTRIERT. MAMEs `nfd_dsk.cpp` (BSD-3) - liest r0 UND r1, kein `save`. FluxEngine `nfdimagereader.cc`. `d88split`/`nfd2mhlt.pl` (tomari, Public Domain) - liest r0 und r1 (r1 ungetestet), schreibt NUR Mahalito. FIVEC. UFT selbst. **Schreiber (gemessen): zwei, und BEIDE nur r1.** FIVEC speichert laut pc98.org alle NFD als r1, weil r0 deutlich anders und veraltet ist - reine Software. `NFDMAKE.EXE` aus dem T98-NEXT TOOL ist der urspruengliche Erzeuger, dokumentiert sind heute `-r1` und `-r1d`; ein `-r0` findet sich in keiner der gesichteten Quellen, und es laeuft auf ECHTER PC-9801-Hardware (MF-310). Dasselbe gilt fuer T98-Nexts eigenes 'FD zu Abbild wandeln' - es braucht ein echtes Laufwerk. **Fuer r0 ist damit kein reiner Software-Schreiber gefunden**, und das ist eine Messung ueber sechs Werkzeuge statt ueber eines. **Was dabei frei ist:** die Formatbeschreibungen beider Fassungen stammen vom Urheber und tragen eine ausdrueckliche Freigabe - woertlich 'Freely used for data analysis, tool development, etc.', 2001/01/22 LED (pc98.org/project/doc/nfdr0.html und nfdr1.html). Kanal *Spec*, unbeschraenkt."
+    },
+    "po": {
+      "kanal": "keiner",
+      "werkzeug": "hxcfe -conv:APPLE2_PO",
+      "bemerkung": "MF-1061, P3-348. Wie `do`: rc = 0, Datei 0 Byte."
+    },
     "pro": {
       "kanal": "keiner",
       "werkzeug": "a8rawconv (Quelle in src/a8rawconv/)",
       "bemerkung": "MF-1093. `pro` ist APE ProSystem (Atari 8-bit) — ein Kopierschutz-Format mit 12-Byte-Sektorkopf und Phantomsektoren. Das naheliegende Werkzeug im Baum ist `a8rawconv`; gemessen ueber seine Formatmodule kennt es **a2, adf, atr, atx, vfd, xfd** und **kein PRO**. Der Erzeuger waere APE selbst (proprietaer, Windows) — eine Beschaffungsfrage."
+    },
+    "syn": {
+      "kanal": "keiner",
+      "werkzeug": "floptool flopconvert auto syn/synclavier; hxcfe -modulelist/-rawlist",
+      "bemerkung": "MF-1097, schliesst die Erzeuger-Frage zu P3-340. Gemessen im Lauf: floptool antwortet `Error: Format 'syn' unknown` und ebenso fuer `synclavier`; hxcfes 207 Module und 95 Diskettenanordnungen fuehren keine Synclavier-Zeile, libdsks 26 Treiber auch nicht. **Der Blocker ist hier doppelt, und beide Haelften sind benannt:** es fehlt ein Erzeuger UND eine nachlesbare Beschreibung — der einzige Fund aus MF-1085 ist ein KryoFlux-Forumsfaden, der mit 403 antwortet. Ohne Beschreibung waere selbst ein Abbild nicht auswertbar."
+    },
+    "tan": {
+      "kanal": "artefaktgleich:jv1",
+      "werkzeug": "floptool flopconvert jv1 (MF-1085); floptool flopconvert auto tan",
+      "bemerkung": "MF-1097, und die Zeile ist bewusst KEIN Negativ. Gemessen im Lauf: floptool kennt weder `tan` noch `trs80` als Zielnamen (`Error: Format ... unknown`) — ein eigener TAN-Schreiber existiert also nicht. **Aber der Kanal existiert trotzdem:** TAN ist ein kopfloser Sektorabzug in JV1-Anordnung (10 x 256, EINE Seite; belegt gegen MAMEs `jv1_format::formats[]` und Tim Mann), und damit ist `tests/corpus_free/floptool_jv1_80spuren.jv1` byteweise zugleich ein gueltiges TAN-Abbild — dieselben 204 800 Byte, andere Endung. Ob die Stufe darauf ruhen darf, ist eine **Eigentuemer-Entscheidung**: sie truege sonst eine Aussage, die der Beleg nicht deckt (dass die im Feld kursierenden `.tan` wirklich diese Anordnung tragen). Drei Wege mit Kosten und Kennzahl stehen in **P3-365**."
+    },
+    "td0": {
+      "kanal": "imd",
+      "werkzeug": "dsktrans -itype imd -otype tele",
+      "bemerkung": "MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte."
+    },
+    "trd": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:ZXSPECTRUM_TRD",
+      "bemerkung": "MF-1061, am Rand gemessen. 655 360 B ohne Ueberhang, 2560/2560 Mustertreffer."
+    },
+    "udi": {
+      "kanal": "keiner",
+      "werkzeug": "SAMdisk (Quelle in src/samdisk/ und neue-ideen/samdisk_plus.zip)",
+      "bemerkung": "MF-1093. SAMdisk ist das naheliegende Werkzeug — MF-1015 hat UFTs UDI-Leser gegen `src/samdisk/udi.cpp` gemessen und es dabei in der Pruefsumme **begruendet ueberstimmt**. Es kann UDI aber nur LESEN: seine Formattafel (`include/types.h`) fuehrt `ADD_IMAGE_RO(UDI)`, nicht `ADD_IMAGE_RW`. Ein Bau von SAMdisk wuerde fuer `udi` also nichts oeffnen. Von den **28** schreibbaren SAMdisk-Formaten trifft keines eines der offenen UFT-Formate; der einzige Namenstreffer ist `cpm`, und der ist eine Kollision (siehe dort)."
+    },
+    "v9t9": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TI994A_V9T9",
+      "bemerkung": "MF-1060. DSSD 184 320 B: 720/720 Mustertreffer, Gegenprobe LINEAR nur 18 — unterscheidet. SSSD 92 160 B unterscheidet NICHT (einseitig fallen beide Formeln zusammen), DSDD 368 640 B ist hxcfe misslungen (50,2 % 0xF6, 9 statt 18 Sektoren je Spur)."
+    },
+    "vdk": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:DRAGON3264_VDK",
+      "bemerkung": "MF-1061. Zweiseitig 368 652 B = 12 Kopf + 40 x 2 x 18 x 256; hxcfe setzt den Kopf selbst. Drei Anordnungs-Hypothesen: zylinder-verschraenkt 1440/1440, kopf-dur 36, kopf-dur rueckwaerts 36 — unterscheidet. EINSEITIG waere es wertlos."
+    },
+    "xdm86": {
+      "kanal": "imd",
+      "werkzeug": "hxcfe -conv:TI994A_V9T9",
+      "bemerkung": "MF-1060. Dasselbe Abbild wie `v9t9` — beide Plugins lesen 184 320 Byte als 40 x 2 x 9 x 256."
     }
   }
 }
