@@ -61,7 +61,7 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > neues Format = zwei Hebungen). Verbindliche Fassung:
 > [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
 > **Was „unterstützt" hier heißt (MF-509):** von den 88 tier-geführten
-> Plugins stehen **10 auf T3 — ungeprüft** (MF-654: `adl` und
+> Plugins stehen **5 auf T3 — ungeprüft** (MF-654: `adl` und
 > `adf_arc` auf T2; MF-690: `dim_atari` auf T1b, erstes fremd erzeugtes
 > DIM im Korpus; MF-716: `do` auf T2, das erste Apple-Format —
 > Differenzlauf gegen das Oracle `to_woz2`, 560 von 560 Sektoren

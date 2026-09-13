@@ -431,11 +431,18 @@ def check_inventory(repo: Path) -> list[str]:
     LISTE = ("docs/OPEN_ITEMS.md", "docs/PLAN_NAECHSTE_STRECKE.md",
              "CLAUDE.md", "docs/MASTER_PLAN.md", "src/samdisk/README.md")
 
-    for name in STRENG + LISTE:
+    # MF-1076: hier stand `for name in STRENG + LISTE:` mit
+    # `streng = name in STRENG`. `CLAUDE.md` steht in BEIDEN Tupeln,
+    # und damit war `streng` bei **beiden** Durchgaengen wahr —
+    # der Listen-Zweig darunter (die T3-Zahl nachsehen) lief fuer
+    # diese Datei **nie**, obwohl jemand sie ausdruecklich in `LISTE`
+    # eingetragen hat. Die Rolle gehoert an den Durchgang, nicht an
+    # die Mitgliedschaft.
+    for name, streng in ([(n, True) for n in STRENG]
+                         + [(n, False) for n in LISTE]):
         datei = repo / name
         if not datei.exists():
             continue
-        streng = name in STRENG
         text = datei.read_text(encoding="utf-8", errors="replace")
         if not streng:
             # Nur nachsehen, nicht blockieren: welche Stufen-Zahlen
@@ -449,9 +456,17 @@ def check_inventory(repo: Path) -> list[str]:
                     # Ausdruck, der eine Schreibweise kennt. Es war die
                     # zweite Erweiterung noetig, weil die erste allein
                     # den eigenen Satz noch verfehlte.
+                    # MF-1076: die DRITTE Erweiterung desselben
+                    # Ausdrucks, und diesmal wird das Substantiv
+                    # optional. `CLAUDE.md` schrieb "88 tier-
+                    # gefuehrte Plugins stehen **10 auf T3**" —
+                    # die Zahl steht direkt vor "auf T3", das
+                    # Substantiv weit davor. Wer eine Schreibweise
+                    # nachtraegt, hat beim naechsten Satz wieder
+                    # verloren.
                     r"(?<!\d)(?<!of )(?<!von )\*{0,2}(\d+)\*{0,2}"
-                    r"\s+(?:Formate?|formats?)"
-                    r"\s+(?:auf|are|on|als)\s+\*{0,2}T3",
+                    r"\s+(?:(?:Formate?|formats?|Plugins?|plugins?)\s+)?"
+                    r"(?:auf|are|on|als)\s+\*{0,2}T3",
                     text):
                 if int(m.group(1)) != counts.get("T3", 0):
                     print(f"[tier-liste] {name}: '{m.group(0)}' - gerechnet "
