@@ -186,6 +186,64 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
 | `floptool` | `FLOPTOOL` | **BSD-3-Clause** (MAME) | `version` **und** SHA-256 | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem; seit MF-1083 auch **Erzeuger**: `flopconvert` schreibt **122 von 151** Formaten. **Zwei Berichtigungen MF-1083:** hier stand *keine Versionsabfrage* — `floptool version` gibt es, und sie meldet die Bauzeichenkette; und *GPL-2.0-or-later* — MAMEs `floptool.cpp` und die Formatschicht tragen `// license:BSD-3-Clause` |
 
+### Kein Abbild-Oracle, aber ein gebautes Messwerkzeug: `hdlen` (MF-1089)
+
+**Es steht bewusst NICHT in der Tafel oben und nicht in
+`tests/differential/oracles.py`**, und der Grund ist der Zweck: `hdlen`
+erzeugt kein Abbild und kann in keinem Manifest-Eintrag als `oracle`
+stehen. Es entscheidet eine Eigenschaft von **Polynomen**, nicht von
+Disketten. Ein Eintrag in der Tafel waere eine Zusage, die es nicht
+einloesen kann.
+
+| | |
+|---|---|
+| Was | Hamming-Distanz-Profil eines CRC-Polynoms: bis zu welcher **Datenwortlaenge** eine HD garantiert ist |
+| Urheber | Philip Koopman, Carnegie Mellon University |
+| Lizenz | **CC BY-SA 4.0** — Ausfuehren und Lesen frei; ein PORT waere eine Eigentuemer-Entscheidung (siehe unten) |
+| Quelle | `neue-ideen/hdlen.tar.gz` und `neue-ideen/ChecksumCRC_BookCode.zip` — **gemessen identisch**, 60 Dateien, 0 Unterschiede |
+| Ort | `tools/uft-scout/work/hdlen/` (gitignoriert wie alle Orakel-Klone) |
+| Quell-SHA-256 | `fast_hdlen.cpp` `ce5bdd7afdbe534125759b3ad61698180fe85733dc1bd37a4062b63a703dfba1` |
+| Binaer-SHA-256 | `2fc7cd30c11322a9fef2b007a1f06f0b008a7dc65b76c3b42872f20b1f0aa8fd` |
+
+**Bau** — das mitgelieferte `build.sh` schaltet rund vierzig Warnungen
+scharf (`-Werror -Weffc++ -Wpadded -Wunsafe-loop-optimizations`); mit
+gcc 13 genuegt der schlichte Aufruf:
+
+```bash
+export PATH=/c/Qt/Tools/mingw1310_64/bin:$PATH
+g++ -O2 -std=c++11 fast_hdlen.cpp -o hdlen.exe
+```
+
+**Eichung — und sie ist die des Urhebers, nicht meine.** Das Archiv
+bringt 24 Paare aus Eingabe und `.gold`-Sollausgabe mit. Gemessen:
+**24 von 24 getroffen**.
+
+**Der erste Lauf meldete 0 von 24.** Die Ausgabe des Windows-Baus
+traegt CRLF, die `.gold`-Dateien LF — Inhalt Zeichen fuer Zeichen
+gleich. Das ist in dieser Sitzung das **dritte** Mal, dass ein
+Byte-Vergleich Zeilenenden als Unterschied gemeldet hat (nach dem
+`hardsector_tool`-Abgleich in P3-368 und dem `.gitattributes`-Befund
+in MF-1085). Wer Rohbytes hasht, hasst die Zeilenenden mit.
+
+**Wozu es hier taugt** — die Notation ist der halbe Nutzen:
+`hdlen` erwartet **Koopman-Notation** (impliziter +1-Term, hoechstes
+Bit weggelassen, links ausgerichtet). `0x1021` heisst dort `0x8810`.
+Wer den normalen Wert einsetzt, misst ein anderes Polynom, ohne dass
+irgendetwas warnt:
+
+```
+./hdlen.exe 0x8810       ->  0x8810 {32751,32751}        CCITT-16
+./hdlen.exe 0xc002       ->  0xc002 {32751,32751}        CRC-16-IBM/ARC
+./hdlen.exe 0x82608edb   ->  {4294967263,91607,2974,...} CRC-32
+```
+
+**Was ein Port kosten wuerde:** UFT ist GPL-2.0-**or-later**. CC BY-SA
+4.0 ist einseitig nach GPL-3 vertraeglich — ein uebernommener Rumpf
+zwingt das Gesamtwerk also auf GPL-3 und nimmt dem Projekt die
+GPL-2-Option. Dieselbe Lage wie bei CRC RevEng (P3-370) und bei
+`hardsector_tool` (P3-368). Ausfuehren bindet nichts; deshalb wird
+ausgefuehrt und nicht uebernommen.
+
 ### Baurezept `floptool` (MF-1083)
 
 Aufgeschrieben, weil es **nicht** der dokumentierte Weg ist — genau

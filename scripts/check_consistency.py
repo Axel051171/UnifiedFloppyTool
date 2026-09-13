@@ -959,6 +959,41 @@ def main() -> int:
         import audit_sektor_laenge as _sl
         all_errors.append(("Sektor-Laenge", _sl.check(repo)))
 
+        # 50. Kategorie (MF-1089): die CRC-SCHREIBWEISE.
+        #
+        # Dasselbe Polynom hat vier Schreibweisen, und eine
+        # verwechselte rechnet still ein anderes Polynom - Koopman
+        # nennt das die haeufigste Fehlerquelle bei CRCs. Mechanisch
+        # entscheidbar ist: `crc << 1` verlangt die normale Form,
+        # `crc >> 1` die reflektierte, und eine Koopman-Konstante
+        # gehoert in keine Implementierung - sie ist die Eingabe fuer
+        # `hdlen`, sonst nichts.
+        #
+        # P3-78 hat gemessen, dass dieser Baum 36 eigenstaendige
+        # CRC-16-Definitionen traegt; das Tor sieht 38 Schritte mit
+        # bekanntem Polynom und meldet die Zahl mit, damit
+        # "0 Befunde" nicht mit "nichts angesehen" verwechselt
+        # werden kann (MF-1000 / Tor 64).
+        import audit_crc_notation as _cn
+        all_errors.append(("CRC-Schreibweise", _cn.check(repo)))
+
+        # 51. Kategorie (MF-1090): REPO-HYGIENE.
+        #
+        # Aus der Aufraeum-Anweisung des Eigentuemers. Klasse A -
+        # was ohne Rueckfrage weg darf - ist zweimal gemessen LEER,
+        # und der Auftrag lautet deshalb woertlich nicht
+        # "aufraeumen", sondern "Tor H4 einrichten, damit es so
+        # bleibt".
+        #
+        # Blockierend sind nur H1 (jede Datei unter
+        # tests/corpus_free/ hat einen Manifest-Eintrag; heute
+        # 99/99) und H4 (kein versioniertes Bauartefakt). H2, H3
+        # und H4b BERICHTEN nur - sie haengen an offenen
+        # Eigentuemer-Entscheidungen, und ein Tor, das dort
+        # blockiert, wuerde sie erzwingen statt sie vorzulegen.
+        import audit_repo_hygiene as _rh
+        all_errors.append(("Repo-Hygiene", _rh.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"
