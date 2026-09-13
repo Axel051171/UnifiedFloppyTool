@@ -1322,9 +1322,14 @@ foreach(test_source ${TEST_SOURCES})
         # Zeitmass und Datei-Ebene aus SPF sind ausdruecklich NICHT
         # dabei — kein Laufwerk (MF-310), und kein ProDOS-Verzeichnis-
         # leser im Baum (prodos_po_do.c: 130 Zeilen, 0 Verzeichnisbezug).
+        #
+        # MF-1095: `nanowasp` kommt dazu, weil sein Schreiber seit
+        # dieser Aenderung wirklich bis in die Datei schreibt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
-            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/nanowasp/uft_nanowasp.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_apridisk_schreibt_in_die_datei")
         # MF-1009: `apridisk` ist der vierte der elf aus MF-930 (nach
         # `opus`, `cfi`, `mgt`) — und der erste, bei dem der

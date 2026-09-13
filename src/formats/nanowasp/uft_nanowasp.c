@@ -332,21 +332,58 @@ static uft_error_t nanowasp_write_track(uft_disk_t *disk, int cyl, int head,
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
-    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
-     * Der echte `uft_nanowasp_write()` in derselben Datei hat keinen
-     * Aufrufer — kein `.flush`, `close()` gibt nur frei (P3-204).
+    /* MF-1095: der fuenfte der elf aus MF-930 ist verdrahtet — nach
+     * `opus` (MF-931), `cfi` (MF-1004), `mgt` (MF-1006) und `apridisk`
+     * (MF-1009). Vier Regeln aus dem MF-931-Rezept, hier eingehalten:
      *
-     * MF-1030 aendert daran nichts, aber es aendert den Wert einer
-     * spaeteren Verdrahtung: vorher haette sie eine Datei mit einem
-     * erfundenen 80-Byte-Kopf und ohne Skew geschrieben, die keine
-     * fremde Umsetzung lesen kann. */
-    return UFT_ERROR_NOT_SUPPORTED;
+     *   1. NICHT ueber `close()` — das ist `void`, ein dort
+     *      scheiternder Schreibvorgang waere eine stille Veraenderung.
+     *   2. KEINE eigene Versatzrechnung, sondern der vorhandene,
+     *      geprueffte `uft_nanowasp_write()` aus derselben Datei. Er
+     *      traegt den Skew `{1,4,7,0,3,6,9,2,5,8}` und die kopf-dure
+     *      Anordnung, die MF-1030 gegen libdsk abgenommen hat.
+     *   3. `disk->path` pruefen und ohne Ziel ABSAGEN statt zu luegen.
+     *   4. Die Schreibseite gegen die Leseseite halten — beide
+     *      indizieren `cyl * heads + head`.
+     *
+     * **Und die Verdrahtung ist erst jetzt etwas wert:** vor MF-1030
+     * haette sie eine Datei mit einem erfundenen 80-Byte-Kopf und ohne
+     * Skew geschrieben, die keine fremde Umsetzung lesen kann. */
+    if (head >= (int)image->heads) return UFT_ERR_INVALID_PARAM;
+    if (cyl >= (int)image->tracks) return UFT_ERR_INVALID_PARAM;
+
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+    uft_track_t *dst = image->track_data[(size_t)cyl * image->heads + head];
+    if (!dst) return UFT_ERR_INVALID_PARAM;
+
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. Das ist
+     * der Unterschied zu MF-930, wo genau hier `UFT_OK` stand. */
+    {
+        uft_error_t werr = uft_nanowasp_write(image, disk->path, NULL);
+        if (werr != UFT_OK) return werr;
+    }
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_nanowasp_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930/P3-204: der spezifikationsgerechte uft_nanowasp_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1095: verdrahtet — write_track ruft uft_nanowasp_write() mit disk->path; belegt durch tests/test_durchschreibprobe.c "
+      "(80 Spuren, 800 Sektoren, Datei geschlossen und neu geoeffnet)" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -359,7 +396,12 @@ const uft_format_plugin_t uft_format_plugin_nanowasp = {
     .description = "NanoWasp Microbee Image",
     .extensions = "nw",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1095: CAP_WRITE kommt dazu, weil `write_track` seit dieser
+     * Aenderung wirklich bis in die Datei schreibt. Vorher waere das
+     * Flag eine Zusage ohne Tat gewesen — genau die Klasse, die
+     * MF-883 an neun Plugins gefunden hat. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = nanowasp_probe_plugin,
     .open = nanowasp_open,
     .close = nanowasp_close,

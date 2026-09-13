@@ -96,6 +96,7 @@ static void pruefe(const char *name, int bedingung, const char *hinweis)
 
 extern const uft_format_plugin_t uft_format_plugin_po;
 extern const uft_format_plugin_t uft_format_plugin_mgt;
+extern const uft_format_plugin_t uft_format_plugin_nanowasp;
 
 /* ── Das Muster ──────────────────────────────────────────────────────
  *
@@ -136,6 +137,23 @@ static const pruefling_t PRUEFLINGE[] = {
     { "po",  &uft_format_plugin_po,  "po",  35, 1, 16, 256 },
     /* SAM Coupe MGT: 80 x 2 x 10 x 512 = 819200 */
     { "mgt", &uft_format_plugin_mgt, "mgt", 80, 2, 10, 512 },
+    /* MF-1095: NanoWasp, der fuenfte der elf aus MF-930. Feste
+     * Geometrie 40 x 2 x 10 x 512 = 409600, und `nwasp_open()`
+     * verlangt GENAU diese Groesse (MF-1030) — ein rohes Abbild
+     * dieser Masse ist ohne Kunstgriff baubar.
+     *
+     * Innerhalb der Spur sind die Sektoren geskewt
+     * (`skew[10] = {1,4,7,0,3,6,9,2,5,8}`). Fuer diese Probe ist
+     * das ohne Belang, weil sie durch DASSELBE Plugin schreibt und
+     * liest; was sie prueft, ist der Weg bis in die DATEI.
+     *
+     * Der Eintrag stand hier schon einmal — und war verfrueht: vor
+     * der Verdrahtung meldete er „0 von 80 Spuren geschrieben, 80
+     * Fehler", weil `nanowasp_write_track` mit -40 absagte. Genau
+     * dieser Rotbeweis hat gezeigt, dass P3-204 nicht zehn, sondern
+     * sieben Formate fuehrt. */
+    { "nanowasp", &uft_format_plugin_nanowasp, "nanowasp",
+      40, 2, 10, 512 },
 };
 
 static void setze_pfad(uft_disk_t *d, const char *pfad)
