@@ -205,3 +205,10 @@ build-*/
 .claude/helpers/
 .claude/proven-config.json
 .claude/.proven-config-version
+
+# MF-1092: CTest schreibt `Testing/Temporary/` bei jedem Lauf neu.
+# `CTestCostData.txt` war daraus versehentlich versioniert (5 Byte, Inhalt
+# "---", also CTests LEERE Kostentafel) und von keiner Zeile im Baum
+# genannt. Die Muster der Aufraeum-Anweisung kennen `build/` und
+# `CMakeFiles/`, aber nicht dieses Verzeichnis.
+Testing/
