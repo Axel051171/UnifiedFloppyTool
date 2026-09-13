@@ -482,6 +482,42 @@ qtHaveModule(serialport) {
 # the committed copy is in sync with a fresh regeneration.
 SOURCES += generated/tab_hardware_wiring.gen.cpp
 
+# ---------------------------------------------------------------------------
+# dtc_components — zusaetzliche Option, ausdruecklich OPT-IN (MF-1100)
+#
+# Der uebernommene Fremdbestand aus src/dtc_components/ (MF-1099) laesst
+# sich hier zuschalten, OHNE dass sich am Vorgabebau etwas aendert:
+#
+#     qmake CONFIG+=uft_dtc_components
+#
+# Ohne das Flag wird keine einzige dieser Dateien uebersetzt und kein
+# Include-Pfad gebunden — der Eintrag in NOT_BUILT_BY_DESIGN
+# (scripts/verify_build_sources.py) bleibt deshalb richtig.
+#
+# Herkunft, Lizenzlage und die Eigentuemer-Entscheidung, die diese
+# Uebernahme traegt, stehen in src/dtc_components/UEBERNAHME.md. Kurz:
+# der MIT-Text des Pakets nimmt "decompiler output" ausdruecklich von
+# der Erteilung aus, und nach eigener Darstellung ist das Paket genau
+# daraus entstanden. Wer das Flag setzt, setzt es in Kenntnis dessen.
+#
+# Die Abnahme liegt auf der CMake-Seite (Ziel `test_dtc_components`,
+# -Werror und -UNDEBUG); hier steht nur der Bau.
+contains(CONFIG, uft_dtc_components) {
+    INCLUDEPATH += src/dtc_components/include
+    SOURCES += \
+        src/dtc_components/src/bitbuffer.c \
+        src/dtc_components/src/crc.c \
+        src/dtc_components/src/encoding.c \
+        src/dtc_components/src/flux.c \
+        src/dtc_components/src/track.c \
+        src/dtc_components/src/detect.c \
+        src/dtc_components/src/protection.c \
+        src/dtc_components/src/match.c \
+        src/dtc_components/src/ctraw.c \
+        src/dtc_components/src/ipf.c
+    message("UFT dtc_components ENABLED (opt-in): 10 Module")
+}
+
 # USB Floppy UFI Backend (C)
 SOURCES += src/hal/ufi.c
 SOURCES += src/hal/ufi_backend.c

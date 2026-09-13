@@ -57,6 +57,7 @@ jobs:
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DUFT_BUILD_TESTS=ON \
+            -DUFT_WITH_DTC_COMPONENTS=ON \
             -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
             -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
@@ -157,6 +158,7 @@ jobs:
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DUFT_BUILD_TESTS=ON \
+            -DUFT_WITH_DTC_COMPONENTS=ON \
             -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
             -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"

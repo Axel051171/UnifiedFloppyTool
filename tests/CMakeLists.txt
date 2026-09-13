@@ -5135,6 +5135,89 @@ if(UFT_ENABLE_BENCHMARKS)
     message(STATUS "UFT Benchmarks ENABLED: bench_decode_hotpath")
 endif()
 
+# ════════════════════════════════════════════════════════════════════════════
+# dtc_components — zusaetzliche Option, ausdruecklich OPT-IN (MF-1100)
+#
+# Der uebernommene Fremdbestand aus `src/dtc_components/` (MF-1099) wird
+# hier baubar gemacht, OHNE irgendetwas Bestehendes zu ersetzen: Vorgabe
+# ist AUS, und nichts im Produktpfad ruft ihn. Herkunft, Lizenzlage und
+# die Eigentuemer-Entscheidung stehen in
+# `src/dtc_components/UEBERNAHME.md`.
+#
+#     cmake -S . -B build -DUFT_WITH_DTC_COMPONENTS=ON
+#
+# ── Warum `-UNDEBUG` hier nicht verhandelbar ist ────────────────────────
+#
+# Die mitgelieferte Testreihe prueft AUSSCHLIESSLICH mit `assert()`, und
+# `CMAKE_C_FLAGS_RELEASE` ist "-O3 -DNDEBUG". Gemessen am Objekt, nicht
+# vermutet:
+#
+#     mit -DNDEBUG : druckt "all tests passed", Kode 0 — und prueft NICHTS
+#     mit -UNDEBUG : ein verfaelschter CRC-Erwartungswert bricht ab, Kode 3
+#
+# Das ist woertlich die Lage aus MF-830, wo 21 Testdateien in genau dem
+# Job, der Merges blockiert, gar nicht rot werden konnten. Die Reihe
+# bekommt deshalb dieselbe Behandlung wie jedes andere Testziel dieses
+# Baums.
+#
+# ── Was hier bewusst NICHT passiert ─────────────────────────────────────
+#
+# Die Dateien unter `src/dtc_components/` werden nicht angefasst — wer
+# sie aendert, macht aus einem Beleg eine Ableitung. Die Reihe sagt
+# "all tests passed" ohne Nenner; das ist die Form aus MF-596, aber sie
+# zu berichtigen hiesse, die fremde Datei umzuschreiben. Der Nenner steht
+# stattdessen hier: **sieben** Pruefgruppen (CRC-32/CCITT gegen die
+# Referenz "123456789", MFM-Rundlauf, Commodore-GCR-Rundlauf, Bitpuffer,
+# Flussstatistik, Formaterkennung, CT-Raw-Rundlauf), und der Rotbeweis
+# oben zeigt, dass sie fallen koennen.
+# ════════════════════════════════════════════════════════════════════════════
+option(UFT_WITH_DTC_COMPONENTS
+    "Build the dtc_components reference bundle (opt-in; see src/dtc_components/UEBERNAHME.md)"
+    OFF)
+
+if(UFT_WITH_DTC_COMPONENTS)
+    set(DTC_DIR ${CMAKE_SOURCE_DIR}/src/dtc_components)
+    add_library(dtc_components STATIC
+        ${DTC_DIR}/src/bitbuffer.c
+        ${DTC_DIR}/src/crc.c
+        ${DTC_DIR}/src/encoding.c
+        ${DTC_DIR}/src/flux.c
+        ${DTC_DIR}/src/track.c
+        ${DTC_DIR}/src/detect.c
+        ${DTC_DIR}/src/protection.c
+        ${DTC_DIR}/src/match.c
+        ${DTC_DIR}/src/ctraw.c
+        ${DTC_DIR}/src/ipf.c)
+    target_include_directories(dtc_components PUBLIC ${DTC_DIR}/include)
+    if(NOT MSVC)
+        # Gemessen mit gcc 13.1.0: alle zehn Module uebersetzen damit
+        # ohne eine einzige Warnung, also darf `-Werror` stehen.
+        target_compile_options(dtc_components PRIVATE
+            -Wall -Wextra -Wpedantic -Werror)
+    endif()
+
+    add_executable(test_dtc_components ${DTC_DIR}/tests/test_main.c)
+    target_link_libraries(test_dtc_components PRIVATE dtc_components)
+    if(NOT MSVC)
+        target_compile_options(test_dtc_components PRIVATE
+            -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
+    else()
+        target_compile_options(test_dtc_components PRIVATE /U NDEBUG)
+    endif()
+    if(UNIX)
+        # `flux.c` zieht <math.h>. Unter MinGW liegt die Funktion in der
+        # libc und der Link geht ohne (gemessen); glibc braucht sie.
+        # Als LINK-OPTION statt als Bibliothek, weil der Coverage- und
+        # der Sanitizer-Lauf `LINK_LIBRARIES_ONLY_TARGETS` setzen und
+        # ein roher Bibliotheksname sie rot macht.
+        target_link_options(test_dtc_components PRIVATE -lm)
+    endif()
+    add_test(NAME test_dtc_components COMMAND test_dtc_components)
+
+    message(STATUS "UFT dtc_components ENABLED (opt-in): "
+                   "10 Module, Testziel test_dtc_components")
+endif()
+
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "UFT Tests: Run 'ctest' after build to execute")
 message(STATUS "════════════════════════════════════════════════════")

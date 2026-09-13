@@ -244,6 +244,36 @@ src/recovery/uft_flux_recovery.c
 src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 
+# ── dtc_components, zuschaltbar seit MF-1100 ──────────────────────────
+#
+# Vier von zehn Modulen des uebernommenen Fremdbestands
+# (src/dtc_components/, MF-1099) haben keinen Aufrufer. Das ist KEINE
+# Formalie, sondern der aufschlussreichste Befund der Verdrahtung:
+#
+#   Aufgerufen von der mitgelieferten Testreihe (6):
+#     bitbuffer.c  crc.c  encoding.c  flux.c  detect.c  ctraw.c
+#   NICHT aufgerufen, also ungeprueft (4):
+#     ipf.c  match.c  protection.c  track.c
+#
+# Uebersetzt auf die zugesagten Faehigkeiten heisst das: CRC, FM/MFM,
+# GCR, Bitpuffer, Flussstatistik, Formaterkennung und der CT-Raw-
+# Rundlauf sind belegt — der IBM-MFM-Sektorkopf-Scanner, die
+# Amiga-Sync-Erkennung, der Weak-Bit-Vergleich, das verschiebungs-
+# tolerante Track-Matching, die Schutz-Heuristiken und die
+# IPF-Chunk-Analyse sind es NICHT. Sie stehen im README des Pakets
+# unter "Implemented", und die Testreihe fasst sie nicht an.
+#
+# Plan-Anker nach der Verwaisten-Regel (MF-621): sie bleiben, weil die
+# Verdrahtung modulweise laeuft und die Orakel je Scheibe in
+# docs/QUARANTINE.md benannt sind (MFM gegen den eigenen Encoder seit
+# MF-938, IPF gegen die zwei SPS-Erhaltungsabbilder aus MF-1079). Ohne
+# eigene Abnahme wird keines davon an einen Produktpfad gehaengt —
+# genau das waere die Wette der fuenf fabrizierten Parser.
+src/dtc_components/src/ipf.c
+src/dtc_components/src/match.c
+src/dtc_components/src/protection.c
+src/dtc_components/src/track.c
+
 
 # ── ERLEDIGT MF-663: src/diskanalyzerwindow.cpp hat eine Tuer ────────────
 #

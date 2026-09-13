@@ -81,19 +81,60 @@ schreibt, ist keiner. Festgehalten ist, dass es sie gab und was sie
 sagte; die Aussage ueber die Herkunft steht ohnehin unveraendert in
 `RECONSTRUCTION_STATUS.md`.
 
-## Bauzustand
+## Bauzustand: zuschaltbar, Vorgabe AUS (MF-1100)
 
-**Kein Baubestandteil.** Weder `UnifiedFloppyTool.pro` noch ein
-`CMakeLists.txt` des Baums uebersetzt eine dieser Dateien; der Eintrag
-steht in `NOT_BUILT_BY_DESIGN` in `scripts/verify_build_sources.py`.
-Die mitgelieferten `Makefile` und `CMakeLists.txt` gehoeren zum Paket
-und bauen es fuer sich allein — sie werden von UFTs Bau nicht gerufen.
+**Im Vorgabebau wird keine einzige dieser Dateien uebersetzt.** Der
+Eintrag in `NOT_BUILT_BY_DESIGN` (`scripts/verify_build_sources.py`)
+bleibt deshalb richtig, und `verify_build_sources.py` meldet **0 neue
+Abweichungen**.
 
-Das ist ein **Zwischenstand**, kein Urteil: die Verdrahtung erfolgt
-modulweise, jede Scheibe mit eigener Abnahme nach der EINFRIER-REGEL
-(benannte Referenz oder Rotbeweis zuerst, jede Zahl gemessen, Referenz
-im Header). Wer ein Modul verdrahtet, nimmt es aus `NOT_BUILT_BY_DESIGN`
-heraus.
+Zugeschaltet wird ueber je ein Flag, auf beiden Bauwegen:
+
+```
+cmake -S . -B build -DUFT_WITH_DTC_COMPONENTS=ON
+qmake CONFIG+=uft_dtc_components
+```
+
+**Gegenprobe, gemessen:** mit ausgeschalteter Option nennt der
+CMake-Lauf `dtc_components` **null Mal**, und `ctest -N` fuehrt **kein**
+Ziel dieses Namens. Eingeschaltet entsteht die statische Bibliothek
+`dtc_components` (10 Module) und das ctest-Ziel `test_dtc_components`.
+
+### Was dabei gemessen wurde, und was nicht
+
+| Prüfung | Ergebnis |
+|---|---|
+| 10 Module, `-Wall -Wextra -Wpedantic -Werror`, gcc 13.1.0 | **10 gruen, 0 rot** — keine einzige Warnung |
+| Testreihe mit `-UNDEBUG` | „all tests passed", Kode 0 |
+| Testreihe mit `-DNDEBUG` (CMake-Release) | druckt dasselbe und **prueft nichts**, Kode 0 |
+| Rotbeweis: ein CRC-Erwartungswert verfaelscht, `-UNDEBUG` | bricht ab, **Kode 3** |
+| Release-Typ: kommt `-UNDEBUG` am Ziel an? | Befehlszeile traegt `-DNDEBUG -O3 -UNDEBUG` — das `-U` gewinnt |
+| ctest, zugeschaltet | `test_dtc_components` **bestanden** |
+| libm noetig? | unter MinGW nein (gemessen); fuer glibc als **Link-Option** `-lm` gesetzt, nicht als Bibliothek — ein roher Bibliotheksname macht die Coverage- und Sanitizer-Laeufe rot (`LINK_LIBRARIES_ONLY_TARGETS`) |
+| **ASan / UBSan** | **hier NICHT messbar** — die MinGW-Toolchain hat weder `libasan` noch `libubsan` (`cannot find -lasan`). Deshalb schalten die beiden Linux-Jobs in `.github/workflows/sanitizers.yml` die Option ein; **gemessen wird dort, nicht hier** |
+
+Der `NDEBUG`-Befund ist der wichtigste: die Reihe prueft ausschliesslich
+mit `assert()`, und ohne `-UNDEBUG` waere sie im gatenden Release-Lauf
+ein leerer Ausdruck, der Erfolg meldet. Das ist woertlich die Lage aus
+**MF-830** (21 Testdateien, die in genau dem Job nicht rot werden
+konnten) und die Form aus **MF-596**.
+
+**Was die Reihe nicht leistet und was deshalb hier steht:** sie meldet
+„all tests passed" ohne Nenner. Die fremde Datei wird dafuer **nicht**
+umgeschrieben — wer sie aendert, macht aus einem Beleg eine Ableitung.
+Der Nenner steht stattdessen im Kommentar der CMake-Option: **sieben**
+Pruefgruppen (CRC-32 und CRC-16/CCITT gegen die Referenzeingabe
+`"123456789"`, MFM-Rundlauf, Commodore-GCR-Rundlauf, Bitpuffer,
+Flussstatistik, Formaterkennung, CT-Raw-Rundlauf).
+
+### Was damit noch NICHT geschehen ist
+
+Der Bestand ist **baubar und gepruefbar**, aber **kein Produktpfad ruft
+ihn**. Ein Modul in den Lese- oder Dekoderpfad zu haengen ist ein
+eigener Schritt und faellt unter die EINFRIER-REGEL: benannte Referenz
+oder Rotbeweis zuerst, jede Zahl gemessen, Referenz im Header. Die
+Orakel dafuer liegen bereit und stehen je Scheibe in
+`docs/QUARANTINE.md`.
 
 ## Sicherheitsdurchsicht bei der Uebernahme
 
