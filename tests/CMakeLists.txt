@@ -384,6 +384,22 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_zx_und_pc98_echte_abbilder")
+        # MF-1075: die Abbilder lagen IN ARCHIVEN im Baum - `find`
+        # sieht dort nicht hinein, und deshalb meldete die
+        # Regalsuche zu MF-1073 zuerst faelschlich "null Treffer".
+        # Ihre Lizenz ist ungeklaert (P3-359), also liegen sie unter
+        # tests/corpus/ (gitignored seit MF-364); ohne sie
+        # ueberspringt sich der Test benannt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scl/uft_scl.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scl/uft_scl_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_kopflose_sonden_sind_erreichbar")
         # MF-1074: `mgt_probe_plugin()` und `opus_probe_plugin()`
         # begannen beide mit `(void)file_size;` und reichten die

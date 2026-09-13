@@ -1340,6 +1340,106 @@
       "oracle": "DiscImageManager",
       "fremdcode": "nein — die Datei ist ein Abbild, kein Code. Aus DiscImageManager ist keine Zeile uebernommen; seine Pascal-Quellen sind an drei Stellen als SPEC zitiert (Kopf von `uft_adl.c`).",
       "content": "Frisch formatierte, leere ADFS-F-Diskette (doppelte Kapazitaet), Verzeichnis Nick bei 0xC8801."
+    },
+    {
+      "file": "tests/corpus/zxfd_plusd_gdos_tools.mgt",
+      "sha256": "8eae9cf5c06cf5dd4392ae40067e9dee3f0d272504f70a92ef3592b5d87738d4",
+      "format": "mgt",
+      "origin": "real",
+      "tool": "historical (MGT +D, GDOS-Systemdiskette mit Werkzeugen)",
+      "source": "neue-ideen/1/ZX-Spectrum-FD-Images-main.zip -> mgt_plus_d/plusd_gdos_tools_dsdd.mgt. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "819 200 Byte, **3,0 % belegt** (gemessen). Traegt ein echtes GDOS-Verzeichnis: `+SYS 2a`, `CONFIG`, `CONFIG1_C`… und Programmtext („PLUS D“, „The program will“). `CONFIG1_C` kommt im gelieferten Sektor 2 der Spur 0/0 zurueck."
+    },
+    {
+      "file": "tests/corpus/zxfd_plusd_gdos_clean.mgt",
+      "sha256": "87a3c8ae4a7ff742eee2d12e797f3a10c3a34e7cf2309ed4a77d51552cae2f8d",
+      "format": "mgt",
+      "origin": "real",
+      "tool": "historical (MGT +D, GDOS-Systemdiskette ohne Werkzeuge)",
+      "source": "neue-ideen/1/ZX-Spectrum-FD-Images-main.zip -> mgt_plus_d/plusd_gdos_clean_dsdd.mgt. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "819 200 Byte, **0,5 % belegt** (gemessen), darunter „MGT PLUS D  DISC“ und „Insert TARGET di…“."
+    },
+    {
+      "file": "tests/corpus/zxfd_plusd_clean.mgt",
+      "sha256": "dce79b8fea025a282b35a56f716c4766ca2949f23c30630060db91814710f4f5",
+      "format": "mgt",
+      "origin": "derived",
+      "tool": "unbekannt (frisch formatiert, Erzeuger nicht genannt)",
+      "source": "neue-ideen/1/ZX-Spectrum-FD-Images-main.zip -> mgt_plus_d/plusd_clean_dsdd.mgt. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "819 200 Byte und **zu 100 % Nullbytes** (gemessen) — kein Verzeichnis, keine Kennung. Traegt deshalb KEINE Stufe (`derived`, MF-1021: ein Abbild ist erst ein Beleg, wenn sein Inhalt nachgewiesen ist). Sein Wert ist die GEGENPROBE: dieselbe Groesse, dasselbe Format, und die Sonde faellt von 75 auf 40."
+    },
+    {
+      "file": "tests/corpus/zxfd_opus_dsdd.opd",
+      "sha256": "ca5c4d6c21507e870eb0bbfde13abadc28c5c5aef0cbe7397c96016d27ff7cb3",
+      "format": "opus",
+      "origin": "derived",
+      "tool": "unbekannt (Opus Discovery, frisch formatiert)",
+      "source": "neue-ideen/1/ZX-Spectrum-FD-Images-main.zip -> opus_discovery/opus_discovery_dsdd.opd. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "737 280 Byte, **zu ~100 % mit dem Fuellbyte 0xE5** (gemessen); ausser dem Etikett „SpeccyPL“ kein Inhalt. Traegt deshalb KEINE Stufe. Der Bootsektor ist echt und geprueft: `18 05 50 12 50` = 80 Zylinder, 18 Sektoren, zwei Koepfe, 256 Byte."
+    },
+    {
+      "file": "tests/corpus/zxfd_opus_sssd.opd",
+      "sha256": "ac1403413b4cb7f368a23c83920ba98b7351b78e80fa7c28d4d2bf3a9233a628",
+      "format": "opus",
+      "origin": "derived",
+      "tool": "unbekannt (Opus Discovery, einseitig, frisch formatiert)",
+      "source": "neue-ideen/1/ZX-Spectrum-FD-Images-main.zip -> opus_discovery/opus_discovery_sssd.opd. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "184 320 Byte, ~99,9 % Fuellbyte 0xE5 (gemessen). Bootsektor `18 05 28 12 40` = 40 Zylinder, 18 Sektoren, EIN Kopf — die Kopfzahl kommt aus dem Flagbyte."
+    },
+    {
+      "file": "tests/corpus/scl_detroyt.scl",
+      "sha256": "8a89e9430960aec81fde03f1a9c4932ea8406f28e8260ba1933c70e5f1c4b1a0",
+      "format": "scl",
+      "origin": "real",
+      "tool": "historical (Demoszene-Produktion „detroYT“)",
+      "source": "neue-ideen/copy/detroyt_scl.zip -> detroYT.scl. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "76 585 Byte, **97,7 % belegt** (gemessen). Kennung `SINCLAIR`, zwei Katalogeintraege (`detroYT` Typ B, `DETROyt` Typ c). Der Name `detroYT` kommt im gelieferten Sektor 1 der Spur 0/0 zurueck — dort fuehrt TR-DOS sein Verzeichnis (MF-1014)."
+    },
+    {
+      "file": "tests/corpus/scl_getup.scl",
+      "sha256": "0074496e69473f89f563a02efe62b562fc9ea06a1dcc95ed0b119903683adc85",
+      "format": "scl",
+      "origin": "real",
+      "tool": "historical (Demoszene-Produktion „Get-Up“)",
+      "source": "neue-ideen/copy/detroyt_scl.zip -> GET_UP.SCL. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "25 115 Byte, 96,3 % belegt (gemessen), Kennung `SINCLAIR`."
+    },
+    {
+      "file": "tests/corpus/pc98_blank.fdi",
+      "sha256": "8aa584e7074b0999cdf62e94928880a8e51fd19ea60e01cb22afff4e061bed78",
+      "format": "fdi_pc98",
+      "origin": "derived",
+      "tool": "unbekannt (pc98-disk-tools, leeres 1,25-MB-Abbild)",
+      "source": "neue-ideen/pc98-disk-tools-master.zip -> blank.fdi — das Paket hat **keine Lizenzdatei** (14 Dateien geprueft, P3-356). Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "test_zx_und_pc98_echte_abbilder",
+      "content": "1 265 664 Byte = 4096 Byte Kopf + 1 261 568 Byte Nutzlast, und die **Nutzlast ist zu 100 % Null** (gemessen). Traegt deshalb KEINE Stufe. Geprueft ist allein der KOPF: er sagt 77 x 2 x 8 x 1024 an, und genau das liefert der Leser."
+    },
+    {
+      "file": "tests/corpus/sps_lethalxcess_a.ipf",
+      "sha256": "659f1bf8216d194556f5614a83a81bd6c8ef80fdcc5e6d02f175e5663de9a46a",
+      "format": "ipf",
+      "origin": "real",
+      "tool": "SPS/CAPS (IPF-Erhaltungsabbild, encoder=2/SPS, release 3058)",
+      "source": "neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz -> LethalXcess-WingsOfDeathII_DiskA.ipf. **Urheberrechtlich geschuetzte Spielsoftware in einer proprietaeren Distribution** — wird nicht weitergegeben. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "-",
+      "content": "1 004 597 Byte, 64,5 % belegt. 164 IMGE-Saetze (Zylinder 0..81, zwei Koepfe), **160 davon mit Bloecken**, 4 leer. UFT liest 164 Spuren und 900 822 Byte Bitstrom — aber **null Sektoren**, obwohl die IMGE-Saetze 10 bis 11 Bloecke je Spur ansagen. `test` bleibt „-“, bis dieser Befund behandelt ist."
+    },
+    {
+      "file": "tests/corpus/sps_lethalxcess_b.ipf",
+      "sha256": "3c1d21a89ad4edcc6101e3b54779018d347a08f11fc583de1d17ee061b099a02",
+      "format": "ipf",
+      "origin": "real",
+      "tool": "SPS/CAPS (IPF-Erhaltungsabbild, Disk B)",
+      "source": "neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz -> LethalXcess-WingsOfDeathII_DiskB.ipf. **Urheberrechtlich geschuetzte Spielsoftware** — wird nicht weitergegeben. Archivinhalt im Baum, gefunden MF-1073 — `find` sieht nicht in `.zip`/`.tar.gz` hinein, weshalb die erste Regalsuche „null Treffer“ meldete. LIZENZ UNGEKLAERT (P3-359): liegt in `tests/corpus/` (gitignored seit MF-364), wird NICHT weitergegeben; Anker ist die SHA-256 hier.",
+      "test": "-",
+      "content": "1 008 380 Byte, 78,4 % belegt. Zweite Diskette desselben Titels; dient als zweites Objekt fuer denselben Leser."
     }
   ]
 }
