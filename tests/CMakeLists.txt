@@ -384,6 +384,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_kopflose_sonden_sind_erreichbar")
+        # MF-1074: `mgt_probe_plugin()` und `opus_probe_plugin()`
+        # begannen beide mit `(void)file_size;` und reichten die
+        # PUFFERGROESSE weiter. Beide Formate sind kopflos und werden
+        # an der Dateigroesse erkannt - die Sonden konnten also nie
+        # zustimmen, waehrend `open()` dieselben Dateien las.
+        # Siebter Fall der MF-1029-Falle. Dazu zaehlte MGTs Sonde
+        # freie Verzeichniseintraege als Strukturbeleg (75 fuer einen
+        # Nullpuffer) - was niemand sehen konnte, weil sie
+        # unerreichbar war.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/opus/uft_opus.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_mgt_schreibt_in_die_datei")
         # MF-1006: `mgt` ist der dritte der elf aus MF-930 (nach `opus`
         # und `cfi`), dessen Dateischreiber verdrahtet wurde (P3-204).

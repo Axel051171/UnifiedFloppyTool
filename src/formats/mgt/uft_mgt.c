@@ -56,14 +56,32 @@ bool uft_mgt_probe(const uint8_t *data, size_t size, int *confidence) {
         }
     }
     
-    if (valid_entries >= 4) {
-        if (confidence) *confidence = 75;
+    /* MF-1074, zweiter Befund: hier stand `valid_entries >= 4 -> 75`,
+     * und `valid_entries` zaehlte den FREIEN Eintrag (`type == 0`) mit.
+     * Acht freie Plaetze sind aber kein Strukturbeleg, sondern die
+     * Abwesenheit von Struktur — eine Diskette aus lauter
+     * Nullen haette damit **75** bekommen, also das Band „Struktur
+     * gelesen“ (MF-729). Dass es nie auffiel, liegt am ERSTEN
+     * Befund daneben: die Sonde war ueber `mgt_probe_plugin()` gar nicht
+     * erreichbar, und die Eichung auf Nullpuffern konnte sie deshalb
+     * nicht befragen. Zwei Defekte, und der eine hat den anderen
+     * verdeckt — dieselbe Gestalt wie MF-1029.
+     *
+     * Jetzt zaehlt als Beleg nur ein BENUTZTER Eintrag mit gueltigem
+     * Namen, und dann muessen alle acht Plaetze plausibel sein. Ohne
+     * das bleibt es bei der Groesse, und die liegt nach MF-729 unter
+     * 50 — hier stand 50, also genau auf der Bandgrenze. */
+    if (used_entries >= 1 && valid_entries == MGT_SECTORS_PER_DIR * 2) {
+        if (confidence) *confidence = 75;   /* Struktur gelesen */
         return true;
     }
-    
-    /* Fall back to size-only detection */
-    if (confidence) *confidence = 50;
-    return true;
+
+    if (valid_entries >= 4) {
+        if (confidence) *confidence = 40;   /* nur die Groesse */
+        return true;
+    }
+
+    return false;
 }
 
 /* ============================================================================
@@ -302,8 +320,21 @@ uft_error_t uft_mgt_read_directory(const uft_disk_image_t *disk,
 
 static bool mgt_probe_plugin(const uint8_t *data, size_t size,
                              size_t file_size, int *confidence) {
-    (void)file_size;
-    return uft_mgt_probe(data, size, confidence);
+    /* MF-1074: hier stand `(void)file_size;` — und MGT ist ein
+     * KOPFLOSES Format, das `uft_mgt_probe()` allein an der Groesse
+     * erkennt (819 200 oder 409 600). Weitergereicht wurde aber die
+     * PUFFERGROESSE, und die ist 4096. Die Bedingung `size !=
+     * MGT_DISK_SIZE` traf damit **immer** zu: das Plugin war ueber die
+     * Erkennung unerreichbar, waehrend `open()` dieselben Dateien
+     * einwandfrei las. Gemessen an drei echten +D-Abbildern (je
+     * 819 200 Byte, P3-359): `probe` = 0, `open` = 0 mit 160 Spuren und
+     * 1600 Sektoren. Das ist die MF-1029-Falle, und sie steht hier zum
+     * siebten Mal in diesem Baum.
+     *
+     * Der Puffer muss gross genug fuer das Verzeichnis sein, sonst
+     * urteilt die Feinpruefung ueber Bytes, die niemand geliefert hat. */
+    if (size < (size_t)MGT_SECTORS_PER_DIR * MGT_SECTOR_SIZE) return false;
+    return uft_mgt_probe(data, file_size, confidence);
 }
 
 static uft_error_t mgt_open(uft_disk_t *disk, const char *path, bool read_only) {

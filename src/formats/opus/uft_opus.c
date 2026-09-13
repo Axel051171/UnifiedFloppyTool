@@ -390,8 +390,23 @@ uft_error_t uft_opus_read_directory(const uft_disk_image_t *disk,
 
 static bool opus_probe_plugin(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
-    (void)file_size;
-    return uft_opus_probe(data, size, confidence);
+    /* MF-1074: hier stand `(void)file_size;`. `uft_opus_probe()` liest
+     * den Bootsektor und verlangt, dass die angesagte Geometrie die
+     * DATEIGROESSE restlos erklaert (`cyls * heads * sectors * ssize ==
+     * size`, MF-905). Bekommen hat es die PUFFERGROESSE 4096 —
+     * eine Zahl, die keine Opus-Geometrie je ergibt. Die Sonde konnte
+     * also NIE zustimmen; gemessen an zwei echten Discovery-Abbildern
+     * (737 280 und 184 320 Byte, P3-359): `probe` = 0, `open` = 0 mit
+     * 160 bzw. 40 Spuren und 2880 bzw. 720 Sektoren.
+     *
+     * Anders als bei `mgt` daneben ist der Sondenrumpf selbst richtig:
+     * `data[0] != OPUS_JR_OPCODE` weist einen Nullpuffer schon in der
+     * ersten Zeile ab, die Eichung nach MF-729 bleibt also gewahrt.
+     *
+     * Der Puffer muss Bootsektor und Verzeichnis tragen. */
+    if (size < (size_t)OPUS_SECTOR_SIZE
+               + (size_t)OPUS_DIR_ENTRIES * OPUS_DIR_ENTRY_SIZE) return false;
+    return uft_opus_probe(data, file_size, confidence);
 }
 
 static uft_error_t opus_open(uft_disk_t *disk, const char *path, bool read_only) {
