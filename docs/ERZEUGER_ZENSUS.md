@@ -49,7 +49,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `jv1` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `nfd` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
+| `nfd` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `opus` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `pro` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
@@ -58,6 +58,82 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `victor9k` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 
 `(?)` hinter einem Werkzeugnamen heisst: die Zuordnung laeuft ueber eine Endung, die sich **mehrere** Plugins teilen. `.dsk` tragen `apridisk`, `cpm`, `do`, `jv1` und `tan` gemeinsam, und `AMSTRADCPC_DSK` schreibt keines davon. Ein solcher Treffer ist ein Verdacht, kein Kandidat.
+
+
+
+## Was bei jedem Lauf herauskam
+
+
+MF-1082: dieser Abschnitt hat gefehlt. Das Feld `docs/erzeuger_kanaele.json` wurde eingelesen, in die Zeile gelegt und **nie ausgegeben** — siebzehn Formate trugen dort eine ausfuehrliche Messung, die niemand zu sehen bekam, in einer Datei, deren Kopf sagt, sie halte die Laeufe fest. Dieselbe Klasse wie ein Leser ohne Tuer (MF-930), nur an den Messdaten.
+
+
+**`akai_s900`** (Kanal: keiner)
+
+MF-1061, gemessen und VERWORFEN. hxcfe zerlegt ein flaches 819 200-Byte-Abbild mit dieser Anordnung richtig — 800 von 800 Sektoren tragen ihren eigenen Namen, und die Gegenprobe mit ENSONIQ_DD_800KB (gleiche Groesse, 10 x 512 statt 5 x 1024) trifft nur 320 von 1600. Die ZERLEGUNG ist also eine echte zweite Hand auf die Geometrie. Aber das Zurueckschreiben ins flache Format ist LAYOUT-UNABHAENGIG byteidentisch — auch ueber die Ensoniq-Anordnung kommt dieselbe Datei heraus. Ein so erzeugtes Fixture waere eine Tautologie, kein Beleg.
+
+**`apridisk`** (Kanal: imd)
+
+MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
+
+**`cfi`** (Kanal: imd)
+
+MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
+
+**`cqm`** (Kanal: imd)
+
+MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
+
+**`d77`** (Kanal: imd)
+
+MF-1061. 348 848 B, voller D88-Container: 80 von 164 Spurzeigern, Sektorkoepfe C/H/R/N, Groessenfeld bei 0x1C trifft die Dateilaenge (Beleg am Objekt). Ueberhang 21 168 = 32 + 656 + 80 x 16 x 16.
+
+**`dc42`** (Kanal: imd)
+
+MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
+
+**`do`** (Kanal: keiner)
+
+MF-1061, P3-348. rc = 0 und eine Datei von 0 BYTE. Apple-II-Disketten sind GCR-kodiert und ihre Sektorreihenfolge folgt einer Verschraenkung, die aus einem IMD-Satz nicht folgt — das Modul erwartet Fluss oder ein bereits Apple-geordnetes Abbild. Keine Aussage ueber andere Kanaele (to_woz2 steht aus).
+
+**`jv3`** (Kanal: imd)
+
+MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2200 — genau die Kopfgroesse, die MF-1017 von 0x2300 berichtigt hat, hier von fremder Hand bestaetigt. 400/400 Mustertreffer.
+
+**`korg_dss1`** (Kanal: keiner)
+
+MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch.
+
+**`mgt`** (Kanal: keiner)
+
+MF-1064, gemessen und VERWORFEN. libdsk fuehrt `mgt800` in seiner Formatliste, und der Lauf liefert 819 200 Byte mit 1600/1600 Mustertreffern — sieht nach einem Fixture aus. Die Gegenprobe entscheidet dagegen: DIESELBE Datei kommt heraus, wenn man `-format` ganz weglaesst, und auch mit `-format pcw800`. Alle drei sha256-identisch. libdsk reicht die IMD-Sektoren also in DATEIREIHENFOLGE durch; der Schalter aendert beim Schreiben eines FLACHEN Ziels nichts. Ein so erzeugtes Abbild waere eine Tautologie wie bei `akai_s900` (MF-1061). **Der Unterschied zu MF-1032/1033, wo derselbe Schalter trug:** dort war die RAW-Seite die EINGABE und brauchte eine Geometrie, das Ziel war ein Container mit eigener Anordnung. Beim Schreiben nach raw bestimmt die Eingabe die Reihenfolge. Der Kanal taugt also fuer Container, nicht fuer flache Ziele.
+
+**`nfd`** (Kanal: keiner)
+
+MF-1082, Erzeuger-Zensus der NFD-Familie. **Leser (gemessen): sechs.** Greaseweazle `src/greaseweazle/image/nfd.py` (Keir Fraser, PUBLIC DOMAIN) - traegt `read_only = True`, liest NUR r0 (`T98FDDIMAGE.R0`) und wirft bei r1 ausdruecklich; in `tools/util.py:303` als `'.nfd': 'NFD'` REGISTRIERT. MAMEs `nfd_dsk.cpp` (BSD-3) - liest r0 UND r1, kein `save`. FluxEngine `nfdimagereader.cc`. `d88split`/`nfd2mhlt.pl` (tomari, Public Domain) - liest r0 und r1 (r1 ungetestet), schreibt NUR Mahalito. FIVEC. UFT selbst. **Schreiber (gemessen): zwei, und BEIDE nur r1.** FIVEC speichert laut pc98.org alle NFD als r1, weil r0 deutlich anders und veraltet ist - reine Software. `NFDMAKE.EXE` aus dem T98-NEXT TOOL ist der urspruengliche Erzeuger, dokumentiert sind heute `-r1` und `-r1d`; ein `-r0` findet sich in keiner der gesichteten Quellen, und es laeuft auf ECHTER PC-9801-Hardware (MF-310). Dasselbe gilt fuer T98-Nexts eigenes 'FD zu Abbild wandeln' - es braucht ein echtes Laufwerk. **Fuer r0 ist damit kein reiner Software-Schreiber gefunden**, und das ist eine Messung ueber sechs Werkzeuge statt ueber eines. **Was dabei frei ist:** die Formatbeschreibungen beider Fassungen stammen vom Urheber und tragen eine ausdrueckliche Freigabe - woertlich 'Freely used for data analysis, tool development, etc.', 2001/01/22 LED (pc98.org/project/doc/nfdr0.html und nfdr1.html). Kanal *Spec*, unbeschraenkt.
+
+**`po`** (Kanal: keiner)
+
+MF-1061, P3-348. Wie `do`: rc = 0, Datei 0 Byte.
+
+**`td0`** (Kanal: imd)
+
+MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
+
+**`trd`** (Kanal: imd)
+
+MF-1061, am Rand gemessen. 655 360 B ohne Ueberhang, 2560/2560 Mustertreffer.
+
+**`v9t9`** (Kanal: imd)
+
+MF-1060. DSSD 184 320 B: 720/720 Mustertreffer, Gegenprobe LINEAR nur 18 — unterscheidet. SSSD 92 160 B unterscheidet NICHT (einseitig fallen beide Formeln zusammen), DSDD 368 640 B ist hxcfe misslungen (50,2 % 0xF6, 9 statt 18 Sektoren je Spur).
+
+**`vdk`** (Kanal: imd)
+
+MF-1061. Zweiseitig 368 652 B = 12 Kopf + 40 x 2 x 18 x 256; hxcfe setzt den Kopf selbst. Drei Anordnungs-Hypothesen: zylinder-verschraenkt 1440/1440, kopf-dur 36, kopf-dur rueckwaerts 36 — unterscheidet. EINSEITIG waere es wertlos.
+
+**`xdm86`** (Kanal: imd)
+
+MF-1060. Dasselbe Abbild wie `v9t9` — beide Plugins lesen 184 320 Byte als 40 x 2 x 9 x 256.
 
 
 ## Der blinde Fleck dieses Zensus

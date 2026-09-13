@@ -318,6 +318,26 @@ def main() -> int:
                "davon. Ein solcher Treffer ist ein Verdacht, kein "
                "Kandidat.\n")
     out.append("")
+    out.append("")
+    out.append("## Was bei jedem Lauf herauskam\n")
+    out.append("")
+    out.append("MF-1082: dieser Abschnitt hat gefehlt. Das Feld "
+               "`docs/erzeuger_kanaele.json` wurde eingelesen, in die "
+               "Zeile gelegt und **nie ausgegeben** — siebzehn "
+               "Formate trugen dort eine ausfuehrliche Messung, die "
+               "niemand zu sehen bekam, in einer Datei, deren Kopf "
+               "sagt, sie halte die Laeufe fest. Dieselbe Klasse wie "
+               "ein Leser ohne Tuer (MF-930), nur an den Messdaten.\n")
+    out.append("")
+    mit_bem = [z for z in zeilen if z["bemerkung"]]
+    if not mit_bem:
+        out.append("_(keine)_\n")
+    for z in mit_bem:
+        out.append("**`%s`** (Kanal: %s)" % (z["sym"], z["kanal"]))
+        out.append("")
+        out.append(z["bemerkung"])
+        out.append("")
+    out.append("")
     out.append("## Der blinde Fleck dieses Zensus\n")
     out.append("")
     out.append("Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die "

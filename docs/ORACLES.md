@@ -179,7 +179,7 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 
 | Kurzname | Variable | Lizenz | Herkunfts-Anker | entscheidet |
 |---|---|---|---|---|
-| `gw` | `GW` | Unlicense | `--version` | Flux-Aufnahme und -Wandlung am Greaseweazle; Bezug für die gw-vs-UFT-Differenztests (P3.2) |
+| `gw` | `GW` | Unlicense | `--version` | Flux-Aufnahme und -Wandlung am Greaseweazle; Bezug für die gw-vs-UFT-Differenztests (P3.2). **Berichtigt MF-1082:** MF-795 hielt fest, `gw` kenne PC-98 nur als Rohgeometrie (`pc98.2d/2dd/2hd/2hs`). Gemessen traegt es ein eigenes **NFD**-Modul (`src/greaseweazle/image/nfd.py`), in `tools/util.py:303` als `'.nfd': 'NFD'` registriert. Es ist `read_only = True` und liest **nur r0** — der Blocker faellt dadurch nicht, aber die Begruendung stand auf einer falschen Praemisse |
 | `cpmls` | `CPMLS` | GPL-3.0 | `-h` | CP/M-Verzeichnislesung gegen eine `diskdefs`-Definition. Liest `cpmls` ein Abbild und UFT nicht gleich, liegt es an UFT |
 | `hxcfe` | `HXCFE` | GPL-2.0 | `-help` | Format-Wandlung über viele Container (HFE, IMG, DSK, …); Bezug für T1b-Eingaben |
 | `samdisk` | `SAMDISK` | MIT | `--version` | Container-Formate und ihre Randfälle. Die **Quelle** liegt zusätzlich im Baum (`src/samdisk/`) und dient als Spec-Referenz |
