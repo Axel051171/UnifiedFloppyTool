@@ -1512,6 +1512,18 @@
       "content": "819 200 Byte = 80 x 2 x 10 x 512. Gemessen: **1574 der 1600 Bloecke sind NICHT leer**, davon **1560 mit `UFT-EDK`-Marke**; 1575 verschiedene Bloecke, nur 26 reine Nullbloecke. **Das ist der Unterschied zu zwei verworfenen Vorstufen:** ein Abbild ohne importierte Nutzlast hatte 1421 Nullbloecke und nur 158 verschiedene - dort haette der Abgleich zu 89 % Fuellung gegen Fuellung gehalten und nichts belegt (MF-1021). Die Gegenprobe zeigt es unmittelbar: um EINEN Block verschoben stimmten beim leeren Abbild noch 2 von 9 Bloecken ueberein, bei diesem **0 von 9**.",
       "oracle": "epstool",
       "fremdcode": "GEMESSEN, 0 Treffer. Das Abbild ist ausdruecklich OHNE `--os` gebaut; mit dem Schalter bettet epstool ein 83 KB grosses EPS-1-Betriebssystem ein (Ensoniqs Code). Gesucht wurde nach `EPS-1`, `O.S.`, `ENSONIQ` und `Ensoniq`: **0 von 4** kommen vor. Was drinsteht, ist die eigene selbstbenennende Nutzlast (1560 Bloecke) plus epstools Dateisystemstrukturen (FAT, ein Verzeichniseintrag). `test_edk_gegen_epstool` haelt diese Null fest, damit eine spaetere Neuerzeugung den Beleg nicht still kontaminiert."
+    },
+    {
+      "file": "tests/corpus_free/floptool_jv1_80spuren.jv1",
+      "sha256": "b0c8eed5e29c1dd3bab5f9af1cce1eb9c2ab8c8306b80f4e429166819d9c240f",
+      "format": "tan",
+      "origin": "cross-tool",
+      "oracle": "floptool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a. DIESELBE Datei wie der jv1-Eintrag - der Anker steht hier ausgeschrieben statt als Verweis, weil ein Querverweis kein Herkunfts-Anker ist (das Tor hat es zu Recht abgewiesen).",
+      "source": "**Dieselbe Datei wie der `jv1`-Eintrag, und das ist Absicht.** TAN (Tandy TRS-80) ist ein kopfloser Sektorabzug in JV1-Anordnung - 10 Sektoren je Spur, 256 Byte, EINE Seite, Sektornummern ab 0 -, belegt gegen MAMEs `jv1_format::formats[]` und Tim Manns Formatbeschreibung. Damit ist das floptool-Abbild byteweise zugleich ein gueltiges TAN: dieselben 204 800 Byte, nur eine andere Endung. Eine zweite Datei waere dasselbe Artefakt zweimal (Gestalt MF-1033 bei `nanowasp`, wo zwei unabhaengige Schreiber dieselben Bytes erzeugten und die GLEICHHEIT der Beleg war). Herkunft und Kette stehen im `jv1`-Eintrag: erzeugt von MAMEs floptool ueber einen Zellstrom (MF-1085).",
+      "fremdcode": "GEMESSEN wie beim jv1-Eintrag: der Inhalt ist UFT-eigen (800 Marken `UFT-JV1 #NNNN`, Rest Fuellbyte 0xE5). Kein fremder Programmcode und keine fremden Nutzdaten.",
+      "test": "test_tan_gegen_floptool",
+      "content": "204 800 Byte = 80 x 10 x 256 auf EINEM Kopf. 800 Marken `UFT-JV1 #NNNN`, eine je Sektor, Rest 0xE5. Gemessen liest UFTs `tan` alle **800 Marken an ihrer eigenen Stelle**, 0 abweichend, und vergibt die Sektornummern **800 von 800 ab 0** - die beiden Befunde, an denen `tan` in MF-1026 gescheitert war (erfundene zweite Seite, IDs ab 1). Gegenprobe: Spur 1 traegt die Marken von Spur 0 **0 Mal**. **WAS DIESER BELEG NICHT SAGT, und das ist der Kern von P3-365:** dass die Dateien, die im Feld als `.tan` kursieren, wirklich diese Anordnung tragen. Dafuer gibt es keine zweite Quelle. Belegt ist der LESER, nicht das Format draussen. Die Stufe steht auf ausdrueckliche Eigentuemer-Entscheidung vom 2026-09-13 (P3-365, Weg a)."
     }
   ]
 }

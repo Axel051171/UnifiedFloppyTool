@@ -1633,6 +1633,21 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_tan_gegen_floptool")
+        # MF-1104: `tan` T2 -> T1b, auf ausdrueckliche
+        # Eigentuemer-Entscheidung (P3-365, Weg a). Der Pruefling ist
+        # DIESELBE Datei wie bei `jv1` — TAN ist ein kopfloser
+        # Sektorabzug in JV1-Anordnung, also ist das floptool-Abbild
+        # byteweise zugleich ein gueltiges TAN. Es wird deshalb keine
+        # zweite Datei angelegt (Gestalt MF-1033).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/tan/uft_tan.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_edk_gegen_epstool")
         # MF-1103: `edk` T2 -> T1b. Das Abbild kommt aus `epstool`
         # (Ensoniq-Dateisystem, gebaut MF-1103) und ist ueber einen

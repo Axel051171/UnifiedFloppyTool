@@ -24,8 +24,8 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 15 |
-| davon mit **gemessenem** Erzeuger-Kanal | **1** |
+| davon auf T2/T3 (offen) | 14 |
+| davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
 | libdsk-Typen (alle les- und schreibbar) | 26 |
@@ -50,7 +50,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `nfd` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `pro` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `syn` | T3 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | artefaktgleich:jv1 | **A** — Erzeuger belegt, Kanal gemessen |
 | `udi` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 
 `(?)` hinter einem Werkzeugnamen heisst: die Zuordnung laeuft ueber eine Endung, die sich **mehrere** Plugins teilen. `.dsk` tragen `apridisk`, `cpm`, `do`, `jv1` und `tan` gemeinsam, und `AMSTRADCPC_DSK` schreibt keines davon. Ein solcher Treffer ist ein Verdacht, kein Kandidat.
@@ -157,7 +156,7 @@ MF-1097, schliesst die Erzeuger-Frage zu P3-340. Gemessen im Lauf: floptool antw
 
 **`tan`** (Kanal: artefaktgleich:jv1)
 
-MF-1097, und die Zeile ist bewusst KEIN Negativ. Gemessen im Lauf: floptool kennt weder `tan` noch `trs80` als Zielnamen (`Error: Format ... unknown`) — ein eigener TAN-Schreiber existiert also nicht. **Aber der Kanal existiert trotzdem:** TAN ist ein kopfloser Sektorabzug in JV1-Anordnung (10 x 256, EINE Seite; belegt gegen MAMEs `jv1_format::formats[]` und Tim Mann), und damit ist `tests/corpus_free/floptool_jv1_80spuren.jv1` byteweise zugleich ein gueltiges TAN-Abbild — dieselben 204 800 Byte, andere Endung. Ob die Stufe darauf ruhen darf, ist eine **Eigentuemer-Entscheidung**: sie truege sonst eine Aussage, die der Beleg nicht deckt (dass die im Feld kursierenden `.tan` wirklich diese Anordnung tragen). Drei Wege mit Kosten und Kennzahl stehen in **P3-365**.
+MF-1097, und die Zeile ist bewusst KEIN Negativ. Gemessen im Lauf: floptool kennt weder `tan` noch `trs80` als Zielnamen (`Error: Format ... unknown`) — ein eigener TAN-Schreiber existiert also nicht. **Aber der Kanal existiert trotzdem:** TAN ist ein kopfloser Sektorabzug in JV1-Anordnung (10 x 256, EINE Seite; belegt gegen MAMEs `jv1_format::formats[]` und Tim Mann), und damit ist `tests/corpus_free/floptool_jv1_80spuren.jv1` byteweise zugleich ein gueltiges TAN-Abbild — dieselben 204 800 Byte, andere Endung. Die **Eigentuemer-Entscheidung ist am 2026-09-13 gefallen** (P3-365, Weg a; MF-1104): die Stufe ruht darauf, und der Test benennt ausdruecklich, was sie NICHT sagt. Vorher galt: sie truege sonst eine Aussage, die der Beleg nicht deckt (dass die im Feld kursierenden `.tan` wirklich diese Anordnung tragen). Drei Wege mit Kosten und Kennzahl stehen in **P3-365**.
 
 **`td0`** (Kanal: imd)
 
@@ -289,6 +288,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `st` | T1b | ATARIST_ST | — |
 | `stx` | T1b | ATARIST_STX | — |
 | `t1k` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `tan` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `td0` | T1b | — | — |
 | `trd` | T1b | ZXSPECTRUM_TRD | — |
 | `v9t9` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
