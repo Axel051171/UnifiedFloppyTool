@@ -27,6 +27,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
 BAUM = Path(r'C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0')
 ORACLE = BAUM / 'tools' / 'uft-scout' / 'work' / 'fluxtoimd'
 sys.path.insert(0, str(ORACLE))
@@ -284,6 +287,7 @@ def fixture_schreiben(spur: list[tuple[int, int]]) -> Path:
     z.append('};\n\n')
     z.append('#endif /* UFT_TEST_FM_IBM3740_TRACK_H */\n')
 
+    sperre_pruefen(Path(__file__).resolve().parent.parent, str(ziel))
     ziel.write_text(''.join(z), encoding='utf-8')
     return ziel
 

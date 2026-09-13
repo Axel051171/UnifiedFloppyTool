@@ -57,6 +57,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
 WURZEL = Path(__file__).resolve().parent.parent
 ZIEL = WURZEL / "docs" / "STAND.md"
 
@@ -282,6 +285,7 @@ def main() -> int:
             return 0
         print("docs/STAND.md ist VERALTET — python scripts/gen_stand.py")
         return 1
+    sperre_pruefen(WURZEL, "docs/STAND.md")
     ZIEL.write_text(neu, encoding="utf-8", newline="\n")
     print(f"-> {ZIEL.relative_to(WURZEL)} ({len(neu.splitlines())} Zeilen)")
     return 0

@@ -62,6 +62,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_format_list import scan as scan_plugins   # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
 WURZEL = Path(__file__).resolve().parent.parent
 HXCFE = (WURZEL / "tools" / "uft-scout" / "work" / "HxCFloppyEmulator"
          / "build" / "hxcfe.exe")
@@ -490,6 +493,7 @@ def main() -> int:
                        % (z["sym"], z["stufe"], z["hxc"], z["ldk"]))
     out.append("")
 
+    sperre_pruefen(WURZEL, str(ZIEL.relative_to(WURZEL)).replace("\\", "/"))
     ZIEL.write_text("\n".join(out) + "\n", encoding="utf-8")
     print("-> %s (%d Zeilen, %d offen, %d mit gemessenem Kanal)"
           % (ZIEL.relative_to(WURZEL), len(out), len(offen), len(gemessen)))

@@ -25,6 +25,34 @@ cd "$REPO_ROOT"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 echo "[pre-commit] branch: $CURRENT_BRANCH"
 
+# ── Baumsperre (MF-1096, Sperre 2) ──────────────────────────────────────
+#
+# Dieser Haken laeuft Minuten, und nichts im Baum zeigt an, dass er
+# laeuft. Drei Commits in Folge sind daran gescheitert, dass waehrend
+# dieser Zeit `gen_stand.py` bzw. `gen_verification_tiers.py` die
+# abgeleiteten Dokumente NEU geschrieben haben: der Haken vergleicht sie
+# mit ihren Quellen und meldete `[STAND.md stale]` — einen Zustand, den
+# erst die Messung selbst erzeugt hat (Klasse MF-1043).
+#
+# Die Sperre ist eine Datei, die Generatoren vor ihrem Schreibvorgang
+# abfragen (`scripts/commit_lock.py`). `UFT_COMMIT_HOOK` erbt jeder
+# Prozess, den DIESER Haken startet — sonst wuerde die Sperre den Commit
+# blockieren, den sie schuetzt.
+#
+# Grenze, benannt statt verschwiegen: der `trap` feuert, wenn der HAKEN
+# endet, nicht wenn `git commit` endet. Die Sekunde danach (commit-msg,
+# Schreiben des Commit-Objekts) ist ungedeckt; die teure Strecke ist es
+# nicht.
+GIT_DIR_ABS="$(git rev-parse --absolute-git-dir)"
+COMMIT_LOCK="$GIT_DIR_ABS/uft-commit.lock"
+trap 'rm -f "$COMMIT_LOCK"' EXIT
+{
+    echo "pid $$"
+    echo "zweig $CURRENT_BRANCH"
+    echo "seit $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$COMMIT_LOCK"
+export UFT_COMMIT_HOOK=1
+
 # ── Gate 1: consistency + parity ────────────────────────────────────────
 echo "[pre-commit] check_consistency.py..."
 if ! python3 scripts/check_consistency.py >/tmp/uft-consistency.log 2>&1; then

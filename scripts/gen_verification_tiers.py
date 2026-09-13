@@ -34,6 +34,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_format_list import scan  # noqa: E402
 
 GENERATED_DOC = "docs/VERIFICATION_TIERS.md"
@@ -246,6 +249,7 @@ def main() -> int:
         print(md)
         return 0
     if args.write:
+        sperre_pruefen(repo, GENERATED_DOC)
         doc.write_text(md, encoding="utf-8", newline="\n")
         print(f"wrote {GENERATED_DOC} ({len(rows)} plugins)")
         return 0

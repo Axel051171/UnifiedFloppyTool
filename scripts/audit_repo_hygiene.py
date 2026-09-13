@@ -169,8 +169,81 @@ def magie(p: Path) -> str:
     return ""
 
 
-def check(wurzel: Path) -> list[str]:
-    """Nur die BLOCKIERENDEN Zusagen: H1 und H4."""
+def git_bytes(wurzel: Path, pfad: str) -> tuple[bytes, str]:
+    """Der Inhalt, wie GIT ihn fuehrt — nicht wie der Arbeitsbaum ihn zeigt.
+
+    MF-1096, Sperre 3. MF-1094 hat gemessen, was der Unterschied kostet:
+    mit `core.autocrlf=true` sind die Bytes im Arbeitsbaum NICHT die Bytes
+    im Blob, und eine Pruefsumme ueber den Arbeitsbaum ist deshalb eine
+    Aussage ueber die lokale Auscheckung, nicht ueber den Beleg. Lokal
+    gruen, in CI fielen ALLE 47 Dateien.
+
+    Gefragt wird der INDEX (`:<pfad>`), nicht `HEAD` — das ist der Stand,
+    der committet WIRD, und in CI sind Index und HEAD ohnehin dasselbe.
+    Faellt beides aus (Datei neu und ungestaged), wird der Arbeitsbaum
+    gelesen und die Herkunft GENANNT, statt still etwas anderes zu messen.
+    """
+    for spec, herkunft in ((f":{pfad}", "Index"), (f"HEAD:{pfad}", "HEAD")):
+        aus = subprocess.run(["git", "cat-file", "blob", spec],
+                             cwd=wurzel, capture_output=True)
+        if aus.returncode == 0:
+            return aus.stdout, herkunft
+    try:
+        return (wurzel / pfad).read_bytes(), "Arbeitsbaum"
+    except OSError:
+        return b"", ""
+
+
+def text_unset(wurzel: Path, pfade: list[str]) -> dict[str, str]:
+    """`git check-attr text` fuer viele Pfade auf einmal.
+
+    Rueckgabe je Pfad der gemeldete Wert (`unset`, `set`, `auto`,
+    `unspecified`). Ein leerer Rueckgabewert heisst: git war nicht
+    befragbar — dann sagt der Aufrufer das, statt zu schweigen.
+
+    ── Warum `-z` und BYTES, und nicht die lesbare Form ────────────────
+
+    Die erste Fassung gab die Pfade als Text mit `\\n` hinein und las die
+    Zeilen `<pfad>: text: <wert>` zurueck. Unter Windows uebersetzt
+    Pythons `text=True` beim SCHREIBEN jedes `\\n` in `\\r\\n` — git bekam
+    also Pfade mit angehaengtem Wagenruecklauf, hielt den fuer Teil des
+    Namens und gab ihn ZITIERT zurueck (`"…D64.TXT\\r"`). Der Schluessel
+    passte damit auf keinen der gefragten Pfade, und H6 meldete **47
+    Befunde** — an einem Baum, in dem `git check-attr text --` fuer jede
+    dieser Dateien `unset` sagt.
+
+    Das ist die Klasse MF-1000 in ihrer teuersten Richtung: nicht ein Tor,
+    das nichts sieht, sondern eines, das etwas sieht, das es nicht gibt.
+    `-z` trennt mit NUL, kennt keine Zeilenenden und keine Zitierung; die
+    Ein- und Ausgabe laeuft deshalb als Bytes.
+    """
+    if not pfade:
+        return {}
+    aus = subprocess.run(["git", "check-attr", "-z", "--stdin", "text"],
+                         cwd=wurzel,
+                         input=b"\0".join(p.encode("utf-8") for p in pfade),
+                         capture_output=True)
+    if aus.returncode != 0:
+        return {}
+    # Ausgabe: <pfad>NUL<merkmal>NUL<wert>NUL … , also Dreiergruppen.
+    felder = aus.stdout.split(b"\0")
+    werte: dict[str, str] = {}
+    for i in range(0, len(felder) - 2, 3):
+        pfad, merkmal, wert = felder[i:i + 3]
+        if merkmal == b"text":
+            werte[pfad.decode("utf-8", "replace")] = \
+                wert.decode("utf-8", "replace")
+    return werte
+
+
+def check(wurzel: Path, zaehler: dict[str, int] | None = None) -> list[str]:
+    """Die BLOCKIERENDEN Zusagen: H1, H3, H4 und (seit MF-1096) H6.
+
+    `zaehler` nimmt auf Wunsch die Groessen der geprueften Mengen auf,
+    damit die Zusammenfassung "0 Befunde bei N geprueften" sagen kann
+    statt nur "0 Befunde" — eine Null ohne Nenner ist keine Auskunft
+    (Klasse MF-1000).
+    """
     dat = versionierte(wurzel)
     if not dat:
         return []
@@ -189,6 +262,7 @@ def check(wurzel: Path) -> list[str]:
     # H3: Herkunftsdatei je Verzeichnis unter docs/format_specs/,
     # und sie muss die Nachbarn mit SHA-256 DECKEN.
     import hashlib
+    gedeckt: list[str] = []
     nach_verz: dict[str, list[str]] = {}
     for d in dat:
         if d.startswith(SPECS) and "/" in d[len(SPECS):]:
@@ -209,38 +283,68 @@ def check(wurzel: Path) -> list[str]:
                 befunde.append(
                     f"H3 {f}: steht nicht in {verz}/README.md")
                 continue
-            try:
-                h = hashlib.sha256(
-                    (wurzel / f).read_bytes()).hexdigest()
-            except OSError:
+            gedeckt.append(f)
+            roh, herkunft = git_bytes(wurzel, f)
+            if not herkunft:
                 continue
+            h = hashlib.sha256(roh).hexdigest()
             if h not in text:
-                # MF-1094: die erste Fassung hat hier NUR "stimmt
-                # nicht" gemeldet, und genau das war der teure Teil.
-                # Lokal war sie gruen, in CI fielen ALLE 47 Dateien —
-                # weil `core.autocrlf=true` den Arbeitsbaum auf CRLF
-                # stellt und ich die Hashes darueber gerechnet hatte.
-                # Die Meldung sagt jetzt, WELCHE der beiden Ursachen
-                # vorliegt, statt den Leser suchen zu lassen.
+                # MF-1094 hat hier die Ursache benannt statt nur "stimmt
+                # nicht" zu melden. MF-1096 dreht die Richtung um: seit
+                # `git_bytes()` wird der BLOB gehasht, also kann der
+                # Arbeitsbaum nicht mehr der Grund sein — wohl aber die
+                # README, wenn ihre Summe ueber den Arbeitsbaum gebildet
+                # wurde. Genau das war der Fehler vom 13.09.
                 try:
-                    roh = (wurzel / f).read_bytes()
-                    h_lf = hashlib.sha256(
-                        roh.replace(CRLF, LF)).hexdigest()
+                    ab = (wurzel / f).read_bytes()
                 except OSError:
-                    h_lf = ""
-                if h_lf and h_lf in text:
+                    ab = b""
+                h_ab = hashlib.sha256(ab).hexdigest() if ab else ""
+                if h_ab and h_ab in text:
                     befunde.append(
-                        f"H3 {f}: die SHA-256 stimmt erst nach "
-                        f"LF-Normalisierung — dieser Arbeitsbaum hat "
-                        f"die Datei mit CRLF ausgecheckt. "
-                        f"`.gitattributes` fuehrt "
-                        f"`docs/format_specs/** -text`; pruefe "
-                        f"`git check-attr text -- {f}`")
+                        f"H3 {f}: die Summe in {verz}/README.md gehoert "
+                        f"zum ARBEITSBAUM, nicht zum Blob ({h[:16]}…). "
+                        f"Genau der Fehler aus MF-1094 — jede Pruefsumme "
+                        f"ueber eine Beweisdatei wird gegen "
+                        f"`git show HEAD:{f}` gebildet")
                 else:
                     befunde.append(
                         f"H3 {f}: SHA-256 in {verz}/README.md stimmt "
-                        f"nicht — gemessen {h[:16]}…, und auch nicht "
-                        f"nach LF-Normalisierung: der INHALT weicht ab")
+                        f"nicht — gemessen {h[:16]}… ueber den Blob "
+                        f"({herkunft}): der INHALT weicht ab")
+
+    # ── H6: was H3 mit einer Summe deckt, muss git BYTEWEISE fuehren ────
+    #
+    # MF-1096, Sperre 3, zweite Haelfte. H3 haelt die Belege gegen ihre
+    # Hashes; das hilft nur, solange git die Bytes nicht unterwegs
+    # aendert. Steht eine Beweisdatei NICHT als `-text`, normalisiert git
+    # beim Auschecken die Zeilenenden, und derselbe Beleg hat auf zwei
+    # Rechnern zwei Summen — die Lage, die am 13.09. eine ganze
+    # CI-Matrix rot gemacht hat.
+    #
+    # Das ist keine Wiederholung von H3, sondern seine Voraussetzung:
+    # H3 vergleicht Zahlen, H6 sorgt dafuer, dass es ueberhaupt EINE
+    # Zahl gibt. Und weil ein neuer Beweis-Ordner sonst erst in CI
+    # auffiele, blockiert H6 — die `.gitattributes`-Zeile gehoert in
+    # denselben Commit wie der Ordner.
+    attr = text_unset(wurzel, gedeckt)
+    if gedeckt and not attr:
+        befunde.append(
+            "H6: `git check-attr` nicht befragbar — die "
+            "Byte-Treue der Belege ist UNGEPRUEFT, nicht bestaetigt")
+    else:
+        for f in gedeckt:
+            wert = attr.get(f, "unspecified")
+            if wert != "unset":
+                befunde.append(
+                    f"H6 {f}: `text` ist `{wert}`, nicht `unset` — git "
+                    f"darf die Zeilenenden aendern, und dann hat der "
+                    f"Beleg je Auscheckung eine andere SHA-256. "
+                    f"`.gitattributes` braucht eine `-text`-Zeile fuer "
+                    f"diesen Ordner, im selben Commit wie der Ordner")
+
+    if zaehler is not None:
+        zaehler["belege"] = len(gedeckt)
 
     for d in dat:
         if A1.search(d):
@@ -341,6 +445,56 @@ def bericht(wurzel: Path) -> None:
 # Gepflanzte Faelle in einem Wegwerfbaum mit eigenem git — ein Tor, das
 # nicht feuert, beweist nichts (MF-1000).
 
+def _bauen(baum: Path, extra: list[str]) -> None:
+    """Legt die Pruefdateien eines Selbsttest-Falls an.
+
+    Stand bis MF-1096 im Rumpf der Fallschleife; herausgezogen, weil die
+    Meldungs-Proben denselben Aufbau brauchen und zwei Kopien genau die
+    Drift waeren, die dieser Baum an drei Victor-Geometrien und drei
+    UDI-Pruefsummen schon bezahlt hat (MF-1015, MF-1026).
+    """
+    import hashlib as _h
+    for rel in extra:
+        if rel.startswith("!README"):
+            ziel = baum / "docs" / "format_specs" / "x"
+            ziel.mkdir(parents=True, exist_ok=True)
+            if rel == "!README-gut":
+                sha = _h.sha256(b"x").hexdigest()
+            elif rel == "!README-crlf":
+                # Die Summe ueber den ARBEITSBAUM ("a\r\nb"), waehrend
+                # git im Blob "a\nb" fuehrt (MF-1096).
+                sha = _h.sha256(b"a" + CRLF + b"b").hexdigest()
+            else:
+                sha = "00" * 32
+            (ziel / "README.md").write_text(
+                "| `A.TXT` | 1 | `" + sha + "` |\n", encoding="utf-8")
+            continue
+        if rel in ("!ATTR", "!ATTRTEXT"):
+            # `-text` = git fuehrt die Bytes unveraendert (H6 still).
+            # `text` = git normalisiert — genau die Lage, in der eine
+            # Summe ueber den Arbeitsbaum falsch wird.
+            schalter = "-text" if rel == "!ATTR" else "text"
+            (baum / ".gitattributes").write_text(
+                f"docs/format_specs/** {schalter}\n", encoding="utf-8")
+            continue
+        if rel.startswith("!CRLF:"):
+            p = baum / rel.split(":", 1)[1]
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(b"a" + CRLF + b"b")
+            continue
+        if rel.startswith("!ELF:") or rel.startswith("!MZ:"):
+            art, ziel_rel = rel[1:].split(":", 1)
+            kopf = (bytes([0x7F]) + b"ELF" if art == "ELF"
+                    else b"MZ\x90\x00")
+            p = baum / ziel_rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(kopf + b"\x00" * 32)
+            continue
+        p = baum / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("x", encoding="utf-8")
+
+
 def _selbsttest() -> int:
     import tempfile
 
@@ -353,14 +507,24 @@ def _selbsttest() -> int:
          ["docs/format_specs/x/A.TXT", "docs/format_specs/x/README.md"],
          None, True),
         ("README mit Name UND richtiger SHA-256 -> still",
-         ["docs/format_specs/x/A.TXT", "!README-gut"], None, False),
+         ["docs/format_specs/x/A.TXT", "!README-gut", "!ATTR"], None, False),
         ("README mit Name, aber FALSCHER SHA-256",
-         ["docs/format_specs/x/A.TXT", "!README-falsch"], None, True),
-        # MF-1094: der Fall, der die CI rot gemacht hat — Datei mit CRLD
-        # ausgecheckt, README traegt den LF-Hash. Muss feuern, und die
-        # Meldung muss die ZEILENENDEN nennen, nicht den Inhalt.
-        ("Datei mit CRLF, README mit LF-Hash",
-         ["!CRLF:docs/format_specs/x/A.TXT", "!README-lf"], None, True),
+         ["docs/format_specs/x/A.TXT", "!README-falsch", "!ATTR"], None, True),
+        # MF-1094 in seiner neuen Gestalt (MF-1096). Frueher stand hier
+        # "Datei mit CRLF ausgecheckt, README traegt den LF-Hash". Seit
+        # `git_bytes()` den BLOB hasht, kann die Auscheckung den Befund
+        # nicht mehr ausloesen — die falsche Seite ist jetzt die README.
+        # Gebaut wird deshalb genau der Fehler vom 13.09.: git normalisiert
+        # (`text` gesetzt), im Blob steht LF, und die README traegt die
+        # Summe ueber den ARBEITSBAUM.
+        ("H3: Summe ueber den Arbeitsbaum statt den Blob",
+         ["!CRLF:docs/format_specs/x/A.TXT", "!README-crlf", "!ATTRTEXT"],
+         None, True),
+        # H6, MF-1096: derselbe saubere Fall wie oben, nur OHNE die
+        # `.gitattributes`-Zeile. Muss feuern — sonst hinge jede
+        # H3-Summe an der Auscheckung des Rechners, der sie prueft.
+        ("H6: Beleg ohne `-text`-Zeile",
+         ["docs/format_specs/x/A.TXT", "!README-gut"], None, True),
         ("Bauartefakt versioniert", ["src/foo.o"], None, True),
         # A1 nach MAGIE: der Fall, den die Endungsliste nicht sah.
         ("ELF OHNE Endung", ["!ELF:tests/werkzeug"], None, True),
@@ -383,42 +547,15 @@ def _selbsttest() -> int:
             (baum / "tests" / "corpus_manifest" / "manifest.json").write_text(
                 json.dumps({"images": ([{"file": eintrag}] if eintrag else [])}),
                 encoding="utf-8")
-            import hashlib as _h
-            for rel in extra:
-                if rel.startswith("!README"):
-                    ziel = baum / "docs" / "format_specs" / "x"
-                    ziel.mkdir(parents=True, exist_ok=True)
-                    echt = _h.sha256(b"x").hexdigest()
-                    if rel == "!README-gut":
-                        sha = echt
-                    elif rel == "!README-lf":
-                        # Der LF-Hash von "a\nb" — die Datei daneben liegt
-                        # als "a\r\nb" vor (MF-1094).
-                        sha = _h.sha256(b"a" + LF + b"b").hexdigest()
-                    else:
-                        sha = "00" * 32
-                    (ziel / "README.md").write_text(
-                        "| `A.TXT` | 1 | `" + sha + "` |\n",
-                        encoding="utf-8")
-                    continue
-                if rel.startswith("!CRLF:"):
-                    p = baum / rel.split(":", 1)[1]
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_bytes(b"a" + CRLF + b"b")
-                    continue
-                if rel.startswith("!ELF:") or rel.startswith("!MZ:"):
-                    art, ziel_rel = rel[1:].split(":", 1)
-                    kopf = (bytes([0x7F]) + b"ELF" if art == "ELF"
-                            else b"MZ\x90\x00")
-                    p = baum / ziel_rel
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_bytes(kopf + b"\x00" * 32)
-                    continue
-                p = baum / rel
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_text("x", encoding="utf-8")
+            _bauen(baum, extra)
             subprocess.run(["git", "init", "-q"], cwd=baum,
                            capture_output=True)
+            # Ohne diese Zeile haengt das Ergebnis an der GLOBALEN
+            # `core.autocrlf` des Rechners, auf dem der Selbsttest
+            # laeuft — ein Tor, dessen Abnahme von der Umgebung abhaengt,
+            # misst die Umgebung und nicht sich selbst (MF-1096).
+            subprocess.run(["git", "config", "core.autocrlf", "false"],
+                           cwd=baum, capture_output=True)
             subprocess.run(["git", "add", "-A", "-f"], cwd=baum,
                            capture_output=True)
             feuert = bool(check(baum))
@@ -427,20 +564,60 @@ def _selbsttest() -> int:
         print("  %-44s %-7s%s" % (
             titel, "feuert" if feuert else "still",
             "" if gut else "  <- erwartet: " + ("feuert" if soll else "still")))
-    print("Selbsttest %d/%d" % (ok, len(faelle)))
-    return 0 if ok == len(faelle) else 1
+    # ── Grund statt nur Tatsache ────────────────────────────────────────
+    #
+    # Die Faelle oben pruefen einen Booleschen Wert. In diesem Baum sind
+    # Gegenproben dreimal gruen gewesen, weil ein ANDERER Defekt feuerte
+    # als der gemeinte (MF-1014, MF-1026, MF-1028). Die zwei neuen
+    # Zusagen bekommen deshalb eine Probe auf ihre MELDUNG.
+    gesamt = len(faelle)
+    grund = [
+        ("H3 nennt den Arbeitsbaum als Ursache",
+         ["!CRLF:docs/format_specs/x/A.TXT", "!README-crlf", "!ATTRTEXT"],
+         "H3 ", "ARBEITSBAUM"),
+        ("H6 nennt die fehlende `-text`-Zeile",
+         ["docs/format_specs/x/A.TXT", "!README-gut"],
+         "H6 ", "`text` ist `unspecified`"),
+    ]
+    for titel, extra, praefix, stueck in grund:
+        gesamt += 1
+        with tempfile.TemporaryDirectory() as d:
+            baum = Path(d)
+            (baum / "tests" / "corpus_manifest").mkdir(parents=True)
+            (baum / "tests" / "corpus_manifest" / "manifest.json").write_text(
+                json.dumps({"images": []}), encoding="utf-8")
+            _bauen(baum, extra)
+            subprocess.run(["git", "init", "-q"], cwd=baum,
+                           capture_output=True)
+            subprocess.run(["git", "config", "core.autocrlf", "false"],
+                           cwd=baum, capture_output=True)
+            subprocess.run(["git", "add", "-A", "-f"], cwd=baum,
+                           capture_output=True)
+            treffer = [b for b in check(baum)
+                       if b.startswith(praefix) and stueck in b]
+        gut = bool(treffer)
+        ok += gut
+        print("  %-44s %-7s%s" % (
+            titel, "ok" if gut else "ROT",
+            "" if gut else "  <- Meldung nennt den Grund nicht"))
+
+    print("Selbsttest %d/%d" % (ok, gesamt))
+    return 0 if ok == gesamt else 1
 
 
 def main() -> int:
     if "--selftest" in sys.argv:
         return _selbsttest()
-    befunde = check(WURZEL)
+    zaehler: dict[str, int] = {}
+    befunde = check(WURZEL, zaehler)
     for b in befunde:
         print("  " + b)
     dat = versionierte(WURZEL)
     frei = sum(1 for d in dat if d.startswith(KORPUS_FREI))
     print(f"Repo-Hygiene: {len(befunde)} Befunde "
           f"({frei} Dateien unter {KORPUS_FREI} geprueft, "
+          f"{zaehler.get('belege', 0)} Belege gegen Blob-SHA-256 und "
+          f"`-text` gehalten, "
           f"{len(dat)} versionierte Dateien auf A1/A2 abgesucht)")
     if "--bericht" in sys.argv:
         bericht(WURZEL)

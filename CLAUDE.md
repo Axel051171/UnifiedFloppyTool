@@ -551,6 +551,56 @@ Mechanisch gehalten wird das von der **Namensrolle**
 `commit-msg`-Hook: eine Löschung in der Formatschicht verlangt eine
 Zeile `Ruecknahme:` und einen Status `zurueckgenommen` mit Beleg.
 
+### Grundsatz: drei Sperren gegen die eigenen Wiederholungstäter (MF-1096)
+
+Diese drei Regeln stehen nicht hier, weil sie einleuchten, sondern weil
+jede von ihnen einen Posten mit **zweistelliger Ordnungszahl** im
+Arbeitsprotokoll hat. Sie kosten im Einhalten Sekunden und im Verletzen
+jedes Mal zwischen zehn Minuten und einer roten CI-Matrix.
+
+**1. Mehrzeilige Dateiänderungen laufen über Edit/Write, nie über
+Heredoc. Ein Skript mit mehr als einer Zeile wird als Datei angelegt und
+dann ausgeführt.**
+
+Ein Bash-Heredoc frisst `\n`, `\t`, `\r\n`, `\x7f` und jeden Backslash.
+Gemessen ist das **über zwanzig Mal** passiert, zuletzt viermal an einem
+einzigen Tag: die Mach-O-Magics `\xCA\xFE\xBA\xBE` wurden zu UTF-8, der
+`\r\n`-Test prüfte auf zwei Buchstaben `r` und `n`, und einmal zerriss
+das Heredoc **den Helfer, der das Problem umgehen sollte** (MF-1019).
+Die Regel ist deshalb ausnahmslos, auch für „nur drei Zeilen“ — die
+kaputten Fälle waren alle kurz.
+
+**2. Während ein Commit läuft, schreibt niemand in den Baum.**
+
+Der Pre-Commit-Haken legt `.git/uft-commit.lock` an; jeder Generator
+fragt sie über `scripts/commit_lock.py` ab und bricht ab. Der Grund ist
+gemessen: dreimal hintereinander hat ein `gen_stand.py`-Lauf während des
+laufenden Hakens den Commit abgewiesen — mit `[STAND.md stale]`, einem
+Zustand, den **erst die Messung selbst erzeugt** hat (Klasse MF-1043).
+
+Dazu gehört ein Verbot, und es steht hier, weil es einmal teuer war:
+**`git checkout-index -f -a` ist verboten.** Das `-a` bezieht sich auf
+den GANZEN Index, nicht auf die genannten Pfade; es hat unversionierte
+Änderungen an `docs/erzeuger_kanaele.json` **still** verworfen. Wer eine
+einzelne Datei aus dem Index zurückholen will, nennt sie:
+`git checkout-index -f -- <pfad>`.
+
+**3. Jede Prüfsumme über eine Beweisdatei wird gegen das git-Objekt
+gebildet, nie gegen den Arbeitsbaum — und jeder neue Beweis-Ordner
+bekommt seine `.gitattributes`-Zeile im selben Commit.**
+
+Mit `core.autocrlf=true` sind die Bytes im Arbeitsbaum **nicht** die
+Bytes im Blob. Eine Summe über den Arbeitsbaum ist damit eine Aussage
+über die lokale Auscheckung, nicht über den Beleg. Gemessen MF-1094:
+lokal grün, in CI fielen **alle 47** Hashes der Commodore-Beschreibungen.
+Mechanisch gehalten von **H3** (hasht seit MF-1096 den Blob, nicht die
+Datei) und **H6** (`git check-attr text` muss `unset` melden) in
+`scripts/audit_repo_hygiene.py`, Selbsttest 18/18.
+
+Die zweite Hälfte ist die wichtigere: H3 vergleicht Zahlen, H6 sorgt
+dafür, dass es überhaupt **eine** Zahl gibt. Ohne `-text` hat derselbe
+Beleg auf zwei Rechnern zwei Summen.
+
 ### Konfliktordnung: was gewinnt, wenn Teile sich widersprechen (MF-640)
 
 1. **Messung vor Plan.** Ein Plan, den eine Messung widerlegt, wird

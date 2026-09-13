@@ -30,6 +30,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_format_list import scan  # noqa: E402
 
 BASELINE = "scripts/format_freeze_baseline.json"
@@ -884,6 +887,7 @@ def main() -> int:
         old = json.loads(bl_path.read_text(encoding="utf-8")) if bl_path.exists() else {}
         old["symbols"] = syms
         old.setdefault("whitelist", [])
+        sperre_pruefen(repo, BASELINE)
         bl_path.write_text(json.dumps(old, indent=2) + "\n",
                            encoding="utf-8", newline="\n")
         print(f"baseline updated: {len(syms)} symbols")

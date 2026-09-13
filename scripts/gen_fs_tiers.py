@@ -64,6 +64,9 @@ import sys
 from pathlib import Path
 from repo_scope import repo_files
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from commit_lock import sperre_pruefen  # noqa: E402
+
 WURZEL = Path(__file__).resolve().parent.parent
 ZIEL = WURZEL / "docs" / "VERIFICATION_TIERS_FS.md"
 
@@ -546,6 +549,7 @@ def main() -> int:
         print("VERIFICATION_TIERS_FS.md ist VERALTET — "
               "`python scripts/gen_fs_tiers.py` laufen lassen")
         return 1
+    sperre_pruefen(WURZEL, "docs/VERIFICATION_TIERS_FS.md")
     ZIEL.write_text(neu, encoding="utf-8", newline="\n")
     for zeile in neu.splitlines():
         if zeile.startswith("| FS-T") or zeile.startswith("| **gesamt**"):
