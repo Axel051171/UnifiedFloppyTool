@@ -369,6 +369,21 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_ipf_erfindet_keine_geometrie")
+        # MF-1073: `ipf_plugin_open()` setzte sectors=11 und
+        # sector_size=512 unbedingt - "Amiga DD typical" - und fiel
+        # ohne Geometrie auf 84/2 zurueck. An hxcfes 720K-Erzeugnis
+        # (9 Sektoren je Spur) meldete UFT 11 und 1848 Sektoren, von
+        # denen es keinen gibt. Dieselbe Datei ist zugleich der
+        # zweite hxcfe-Leerlauf nach MF-1021: 168 IMGE-Saetze, alle
+        # mit trackbytes=0. Der Test belegt beides am Objekt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_mgt_schreibt_in_die_datei")
         # MF-1006: `mgt` ist der dritte der elf aus MF-930 (nach `opus`
         # und `cfi`), dessen Dateischreiber verdrahtet wurde (P3-204).

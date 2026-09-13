@@ -110,6 +110,20 @@ class Oracle:
 
     version_is_unaskable: bool = False
     abstammung: str = ""
+
+    # MF-1073: eine DATENQUELLE ist ein Oracle, das nicht ausgefuehrt
+    # wird — der Beleg ist eine Datei aus fremder Hand, nicht die
+    # Ausgabe eines Laufs (`fluxfox` seit MF-1071, `DiscImageManager`
+    # seit MF-1072). Bis dahin pruefte `_selfcheck()` unbedingt
+    # `if not o.exes` und meldete beide als Fehler; der Test
+    # `oracle_registry` war damit **seit MF-1071 rot**, und zwei
+    # Commits sind darueber hinweggegangen. Der Pruefer kannte eine
+    # Art, das Register hatte zwei — dieselbe Klasse wie der
+    # Namensleser in `audit_korpus_herkunft.py`, dessen Zeichenvorrat
+    # enger war als das Register (MF-1072). Das Feld sagt die Art
+    # jetzt AUS, statt sie aus einem leeren Tupel zu erraten, und die
+    # Pruefung unten gilt in BEIDE Richtungen.
+    datenquelle: bool = False
     """PFLICHTFELD seit MF-760 — die fuenfte Frage, VOR dem Eintrag.
 
     Steht dieses Werkzeug in derselben Linie wie das, was es pruefen
@@ -767,6 +781,7 @@ REGISTRY: tuple[Oracle, ...] = (
     ),
     Oracle(
         name="DiscImageManager",
+        datenquelle=True,
         env="DISCIMAGEMANAGER",
         exes=(),
         version_args=(),
@@ -815,6 +830,7 @@ REGISTRY: tuple[Oracle, ...] = (
     ),
     Oracle(
         name="fluxfox",
+        datenquelle=True,
         env="FLUXFOX",
         exes=(),
         version_args=(),
@@ -1273,8 +1289,16 @@ def _selfcheck() -> int:
         if o.name in seen:
             problems.append("Name doppelt: %s" % o.name)
         seen.add(o.name)
-        if not o.exes:
-            problems.append("%s: keine ausfuehrbaren Namen" % o.name)
+        # MF-1073: beidseitig. Ein ausfuehrbares Oracle ohne Namen ist
+        # unbenutzbar; eine Datenquelle MIT Namen behauptet einen Lauf,
+        # den es nicht gibt.
+        if bool(o.exes) == bool(o.datenquelle):
+            problems.append(
+                "%s: %s" % (o.name,
+                            "Datenquelle, aber mit ausfuehrbaren Namen"
+                            if o.datenquelle
+                            else "keine ausfuehrbaren Namen und nicht "
+                                 "als datenquelle=True gekennzeichnet"))
         # Genau EINE der drei Antworten auf "wie wird die Version
         # festgestellt?" darf gesetzt sein. Keine heisst: die Aussage ist
         # nicht zitierfaehig. Zwei heissen: es gibt zwei Wahrheiten ueber
@@ -1327,6 +1351,9 @@ def _selfcheck() -> int:
                      else "Version unbekannt")
             print("  [da]     %-9s %-22s %s"
                   % (o.name, v, resolve(o.name)))
+        elif o.datenquelle:
+            # MF-1073: nicht "[fehlt]" — hier ist nichts zu finden.
+            print("  [daten]  %-9s %s" % (o.name, o.origin))
         else:
             print("  [fehlt]  %-9s %s" % (o.name, o.origin))
     n = sum(1 for v in have.values() if v)

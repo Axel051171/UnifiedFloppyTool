@@ -655,8 +655,8 @@
       "source": "hxcfe.exe -finput:tests/differential/corpus/sources/ibm_dd.img -foutput:hxcfe_ibmdd.ipf -conv:SPS_IPF  (ACCESS = RW aus `hxcfe -modulelist`). IPF von fremder Hand - erzeugt, weil P3-315 den IPF-Weg als \"lizenzfrei ersetzbar, aber DATEN-blockiert\" fuehrt. Die Datei ist Daten, kein Code (Kanal Daten/Fixture nach MF-695), und sie nimmt genau diesen Blocker weg. Kein Test verknuepft, also KEINE Stufen-Anrechnung, solange die Quarantaenefrage des Lesers offen ist.",
       "test": "-",
       "oracle": "hxcfe",
-      "fremdcode": "nein - Inhalt ist UFT-eigen, kein Bootblock, kein Dateisystem; nur der Containerkopf stammt von hxcfe",
-      "content": "UFT-eigene Sektordaten aus ibm_dd.img, SPS/CAPS IPF"
+      "fremdcode": "nein — die Datei traegt ueberhaupt keinen Spurinhalt (gemessen, siehe content); allein der Containerkopf stammt von hxcfe",
+      "content": "18 252 Byte, und **hohl** — gemessen MF-1073, die Satzkette unabhaengig vom Leser abgelaufen: 1x CAPS, 1x INFO, 168x IMGE, 168x DATA, und in JEDEM der 168 IMGE-Saetze stehen trackbytes, databits und blockcount auf 0. Hier stand vorher „UFT-eigene Sektordaten aus ibm_dd.img“; das trifft nicht zu. hxcfes SPS_IPF-Schreiber meldet „9 sectors (512 bytes), 80 tracks, 2 sides“ und schreibt keinen Spurinhalt — eine frische Wandlung ergibt byteweise dieselbe Datei. **Zweiter hxcfe-Leerlauf nach MF-1021** (dort eine v9t9 zu 100 % aus dem Fuellbyte). Deshalb bleibt `test` auf „-“: ein hohles Abbild ist kein Stufenbeleg. Siehe P3-358."
     },
     {
       "file": "tests/corpus_free/uft_720k.img",

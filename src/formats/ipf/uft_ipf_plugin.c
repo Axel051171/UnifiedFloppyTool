@@ -154,12 +154,21 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
             disk->plugin_data   = p;
             disk->geometry.cylinders = p->reply.cylinders;
             disk->geometry.heads     = p->reply.heads;
-            disk->geometry.sectors     = 11;
-            disk->geometry.sector_size = 512;
-            disk->geometry.total_sectors =
-                (uint32_t)disk->geometry.cylinders *
-                (uint32_t)disk->geometry.heads *
-                (uint32_t)disk->geometry.sectors;
+            /* MF-1073: hier stand `sectors = 11; sector_size = 512`,
+             * und `total_sectors` rechnete sie hoch. Beide Zahlen
+             * standen in KEINER Datei — der Kommentar an der
+             * Zwillingsstelle unten sagte es selbst: "sector layer
+             * not derivable from IMGE alone". IPF ist ein Bitstrom-
+             * Behaelter; seine Sektorebene entsteht erst beim
+             * Dekodieren der Spur, nicht aus dem Spurkopf. Gemessen
+             * an `tests/corpus_free/hxcfe_ibmdd.ipf` (aus einem
+             * 720K-Abbild mit 9 Sektoren je Spur) meldete UFT **11**
+             * und **1848** Sektoren gesamt. Das ist „Keine
+             * erfundenen Daten“ im Geometriefeld — Gestalt von
+             * MF-1034 und MF-1018. Unbekannt heisst jetzt 0. */
+            disk->geometry.sectors       = 0;
+            disk->geometry.sector_size   = 0;
+            disk->geometry.total_sectors = 0;
             UFT_INFO("IPF ueber Helfer gelesen: %d Spuren, %d/%d",
                      (int)p->reply.track_count,
                      disk->geometry.cylinders, disk->geometry.heads);
@@ -205,14 +214,39 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     p->primary_platform = platform;
 
     disk->plugin_data = p;
-    disk->geometry.cylinders = (cyls  > 0) ? cyls  : 84;
-    disk->geometry.heads     = (sides > 0) ? sides : 2;
-    disk->geometry.sectors = 11;            /* Amiga DD typical; sector layer not derivable from IMGE alone */
-    disk->geometry.sector_size = 512;
-    disk->geometry.total_sectors =
-        (uint32_t)disk->geometry.cylinders *
-        (uint32_t)disk->geometry.heads *
-        (uint32_t)disk->geometry.sectors;
+    /* MF-1073: hier standen VIER erfundene Zahlen. `: 84` und `: 2`
+     * waren ein Rueckfall auf eine Geometrie, die die Datei gerade
+     * NICHT genannt hat — die Gestalt von MF-1034, wo ein
+     * 80x2x9x512-Rueckfall dazu fuehrte, dass JEDE Datei angenommen
+     * wurde; `11` und `512` waren eine Amiga-DD-Annahme, die der
+     * Kommentar daneben selbst als nicht ableitbar bezeichnete.
+     * Eine IPF ohne Spurkoepfe ist nicht lesbar — das wird jetzt
+     * gesagt statt gefuellt. */
+    /* MF-1073, zweite Haelfte: `cyls`/`sides` allein genuegen nicht.
+     * `ipf_air_get_geometry()` rechnet `max - min + 1`, und ohne
+     * INFO-Satz stehen beide auf 0 - eine Datei mit NUR dem
+     * CAPS-Satz kam damit als **1 x 1** heraus. Gemessen: der
+     * 12-Byte-Kopf allein ergab `open = 0`, Geometrie 1x1. Gezaehlt
+     * wird deshalb, was wirklich da ist: ein Spurkopf. */
+    int vorhanden = 0;
+    for (int zc = 0; zc < cyls; zc++)
+        for (int zh = 0; zh < sides; zh++)
+            if (ipf_air_track_present(p->air, zc, zh)) vorhanden++;
+
+    if (cyls <= 0 || sides <= 0 || vorhanden == 0) {
+        UFT_WARN("IPF '%s': keine lesbare Spurbeschreibung "
+                 "(%d Zyl / %d Koepfe / %d Spurkoepfe) - abgesagt "
+                 "statt geraten", path, cyls, sides, vorhanden);
+        ipf_air_free(p->air);
+        free(p->air); free(data); free(p);
+        disk->plugin_data = NULL;
+        return UFT_ERR_FORMAT_INVALID;
+    }
+    disk->geometry.cylinders = cyls;
+    disk->geometry.heads     = sides;
+    disk->geometry.sectors       = 0;  /* Bitstrom-Behaelter: die   */
+    disk->geometry.sector_size   = 0;  /* Sektorebene entsteht erst */
+    disk->geometry.total_sectors = 0;  /* beim Dekodieren der Spur  */
     return UFT_OK;
 }
 
