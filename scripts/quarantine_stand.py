@@ -61,6 +61,16 @@ RUBRIK = (
     (re.compile(r"^Vollzogen\b", re.I), "vollzogen"),
     (re.compile(r"^Vorgemerkt\b", re.I), "vorgemerkt"),
     (re.compile(r"^Rehabilitiert\b", re.I), "aufgeloest"),
+    # MF-1099. Neue Richtung, neue Rubrik: nicht "im Baum, Herkunft
+    # fraglich, also hinaus", sondern "von aussen hereingeholt, Herkunft
+    # fraglich, Eigentuemer hat entschieden". Sie zaehlt bewusst als
+    # OFFEN — die Kennzahl fragt nach ungeklaerter Herkunft, und die ist
+    # hier nicht geklaert, sondern in Kauf genommen. "vorgemerkt" trifft
+    # es woertlich: das Audit ist fertig (der Urheber erklaert die
+    # Herkunft selbst), der Vollzug — die modulweise Verdrahtung — steht
+    # aus. Damit bleibt die `Stand`-Zeile dreizahlig; eine vierte Zahl
+    # waere eine Schema-Aenderung ohne Messanlass (MF-1077).
+    (re.compile(r"^Aufgenommen\b", re.I), "vorgemerkt"),
 )
 
 # Abschnitte, die erklaeren statt zu fuehren.

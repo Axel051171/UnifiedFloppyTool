@@ -13,7 +13,15 @@ cmake-build-*/
 *.app
 
 # Qt / qmake
-Makefile
+#
+# MF-1099: `Makefile` stand in DIESER Datei ZWEIMAL — hier und weiter
+# unten unter „qmake top-level generated files", beide Male ohne
+# fuehrenden Schraegstrich und damit in jeder Tiefe greifend. Die zweite
+# Stelle war zuerst verankert worden, und die Datei blieb trotzdem
+# unsichtbar: eine Regel zu berichtigen und die Kopie stehen zu lassen
+# ist in diesem Baum die Klasse MF-519/MF-529 (Leseseite geholt,
+# Schreibseite uebersehen), nur zwischen zwei Zeilen derselben Datei.
+/Makefile
 *.pro.user
 *.pro.user.*
 moc_*.cpp
@@ -95,9 +103,19 @@ aqtinstall.log
 .audit/*.tmp
 
 # qmake top-level generated files
-Makefile
-Makefile.Debug
-Makefile.Release
+#
+# MF-1099: die drei Muster standen ohne fuehrenden Schraegstrich und
+# griffen damit in JEDER Tiefe, waehrend der Kommentar darueber
+# "top-level" sagt. Aufgefallen ist es, als `src/dtc_components/Makefile`
+# bei `git add` still verschwand — die Art Fehler, die man erst bemerkt,
+# wenn man zaehlt (18 Dateien uebernommen, 17 vorgemerkt).
+# Gemessen vor der Aenderung: verankert wird GENAU EINE Datei neu
+# sichtbar, naemlich diese; alle uebrigen Makefiles liegen unter
+# `neue-ideen/` oder `tools/uft-scout/work/` und sind dort eigens
+# ignoriert.
+/Makefile
+/Makefile.Debug
+/Makefile.Release
 mocinclude.opt
 debug/
 release/

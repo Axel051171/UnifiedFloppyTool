@@ -195,7 +195,7 @@ beim ersten Lauf waren es **sechs** (`src/crc`, `src/whdload`,
 5:  src/protection src/analysis src/recovery
 6:  src/hal src/hardware_providers
 7:  src/gui src/widgets src/display src/diag src/* src/whdload
-8:  src/samdisk src/a8rawconv
+8:  src/samdisk src/a8rawconv src/dtc_components
 9:  src/compat
 ```
 <!-- /PHASEN-SCOPE -->

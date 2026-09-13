@@ -74,6 +74,18 @@ NOT_BUILT_BY_DESIGN: list[re.Pattern[str]] = [
     # ("Authority: src/samdisk/td0.cpp:10") und
     # include/uft/hal/uft_scp_direct.h:101. Siehe src/samdisk/README.md.
     re.compile(r"^src/samdisk/"),
+    # dtc_components (c) 2026 EMUUAC, MIT mit ausdruecklichem Ausschluss
+    # fuer "decompiler output" — und genau daraus ist es nach eigener
+    # Angabe entstanden (RECONSTRUCTION_STATUS.md: "The supplied
+    # decompiler output recovers 116 named routines"). Uebernommen
+    # MF-1099 als ausdrueckliche EIGENTUEMER-ENTSCHEIDUNG, nicht als
+    # Ergebnis einer Lizenzpruefung; Befund und Zahlen in
+    # src/dtc_components/UEBERNAHME.md, Zeile in docs/QUARANTINE.md.
+    #
+    # Dieser Eintrag ist ein ZWISCHENSTAND. Die Verdrahtung laeuft
+    # modulweise, jede Scheibe mit eigener Abnahme nach der
+    # EINFRIER-REGEL; wer ein Modul verdrahtet, nimmt es hier heraus.
+    re.compile(r"^src/dtc_components/"),
     # a8rawconv 0.95 (c) 2014-2023 Avery Lee, GPL-2.0-or-later. Zweiter
     # Referenzbestand, gleiche Rolle wie SAMdisk und ebenfalls kein
     # Baubestandteil — SAMdisk deckt PC/CPC/Sinclair ab, a8rawconv die

@@ -7,7 +7,14 @@ Schema der Felder dort in §3.
 > ist die Datenquelle für „Dateien mit ungeklärter Herkunft" — die
 > begründete fünfte Release-Kennzahl (CLAUDE.md, MF-640).
 >
-> **Stand 2026-09-10: 2 vollzogen, 6 vorgemerkt, 2 aufgelöst.**
+> **Stand 2026-09-13: 2 vollzogen, 7 vorgemerkt, 2 aufgelöst.**
+>
+> MF-1099: die siebte vorgemerkte Zeile ist `src/dtc_components/` und
+> kommt aus einer Richtung, die es hier bisher nicht gab — nicht im
+> Baum gefunden, sondern **von außen hereingeholt**, mit einer
+> ausdrücklichen Eigentümer-Entscheidung über eine offene Herkunft.
+> Sie zählt als offen, weil die Kennzahl nach ungeklärter Herkunft
+> fragt, und die ist hier nicht geklärt, sondern in Kauf genommen.
 >
 > MF-1002: `uft_caps_ipf.c` ist von „vorgemerkt" nach „vollzogen"
 > gewandert — gelöscht. Die Zeile galt als die teuerste der Liste,
@@ -157,6 +164,33 @@ dieselbe Ableitung ist.
 > Entscheidung ist trotzdem die des Eigentümers, weil sie eine
 > beworbene Fähigkeit zurücknimmt — Schritt 3 des Verfahrens
 > („IPF: erkannt, nicht gelesen").
+
+---
+
+## Aufgenommen trotz offener Herkunft — Eigentümer-Entscheidung
+
+> Diese Rubrik ist neu (MF-1099) und beschreibt eine Richtung, die es
+> bisher nicht gab: nicht „im Baum, Herkunft fraglich, also hinaus",
+> sondern **„von außen hereingeholt, Herkunft fraglich, Eigentümer hat
+> entschieden"**. Sie zählt zur Kennzahl wie jede andere offene Zeile.
+
+### `src/dtc_components/`
+
+| Feld | Inhalt |
+|---|---|
+| **Datei** | `src/dtc_components/` — **18** Dateien, 21 773 Byte, vollständig und byteweise übernommen; Einzelaufstellung mit SHA-256 je Blob in [`src/dtc_components/UEBERNAHME.md`](../src/dtc_components/UEBERNAHME.md) |
+| **Verdacht** | **KryoFlux/SPS `dtc`**, Zone **ROT** (proprietär; in [`ORACLES.md`](ORACLES.md) als *Oracle* geführt — „Ausführung frei, Weitergabe nicht"). Beleg **aus dem Paket selbst**: `RECONSTRUCTION_STATUS.md` sagt „The supplied **decompiler output** recovers 116 named routines from a much larger ARM64 text section", und `LICENSE` nimmt im selben Atemzug „decompiler output" von der Erteilung aus. Die MIT-Erteilung soll „the independently authored files" decken — verfasst wurden sie nach eigener Darstellung **aus** dem ausgenommenen Material. Gestalt von **P0-5**, nur proprietär statt copyleft |
+| **Datum der Quelle** | Paket datiert 2026; übernommen **2026-09-13** aus dem Archivzustand von **20:13** (SHA-256 `d90109037634a3c4…`). Das Archiv lag um **20:01** noch anders vor: 19 statt 18 Dateien, `SOURCE_MAP.md` (die spezifischste Herkunftsangabe) war darin und ist es jetzt nicht mehr; die mitgelieferte `SHA256SUMS` führt weiterhin den **alten** LICENSE-Hash, weshalb genau diese eine Datei von 17 gelisteten nicht aufgeht |
+| **Betroffene Fähigkeit** | **keine — noch.** Kein Baubestandteil (`NOT_BUILT_BY_DESIGN` in `scripts/verify_build_sources.py`), kein Aufrufer, keine Registrierung. Das ist ein Zwischenstand, kein Urteil |
+| **Audit-Stand** | **portiert** — nicht erschlossen, sondern vom Urheber **selbst erklärt**. Kein Idiom-Vergleich nötig; die Quelle sagt es im Klartext |
+| **Vorgesehener Weg** | **3 — Fremdkomponente**, mit ausdrücklicher Eigentümer-Entscheidung vom 2026-09-13, getroffen **nach** Vorlage genau dieses Befundes. Die Verdrahtung läuft modulweise, jede Scheibe mit eigener Abnahme nach der EINFRIER-REGEL (benannte Referenz oder Rotbeweis zuerst, jede Zahl gemessen, Referenz im Header). Ein Modul, das einzieht, wird aus `NOT_BUILT_BY_DESIGN` genommen |
+| **Oracle** | Je Scheibe verschieden und vorhanden: für CRC die Schreibweisen-Prüfung **Tor 50** (`scripts/audit_crc_notation.py`) samt UFTs eigenen geprüften CRC-Umsetzungen; für FM die `fluxtoimd`-Abnahme aus MF-864; für MFM der seit MF-938 belegte eigene Encoder; für IPF die zwei SPS-Erhaltungsabbilder aus MF-1079. **Fehlt** für CT Raw — das Paket sagt selbst, seine Fassung sei „not asserted to be compatible with SPS/KryoFlux CT Raw" |
+| **MF** | Übernahme **MF-1099** |
+
+**Was bei dieser Zeile anders ist als bei allen darüber:** sie nimmt
+einer Fähigkeit nichts weg, sondern stellt eine in Aussicht. Genau
+deshalb ist die Versuchung hier größer, und genau deshalb steht der
+Weg 3 mit einer Bedingung je Scheibe da statt mit einem Datum.
 
 ---
 

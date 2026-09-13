@@ -39,3 +39,10 @@ tests/corpus_manifest/*.json   text
 # Arbeitsbaum 34 230 Byte gross (690 CR), als Blob 33 540 (0 CR), und die
 # CI meldete daraufhin ALLE 47 Hashes als falsch.
 docs/format_specs/** -text
+
+# `src/dtc_components/` — fremder Referenzbestand, uebernommen MF-1099.
+# Dieselbe Begruendung wie die Zeile darueber: sein README fuehrt je
+# Datei eine SHA-256, und ohne `-text` haette derselbe Beleg auf zwei
+# Rechnern zwei Summen (MF-1094/MF-1096). Gemessen bei der Uebernahme:
+# alle 18 Dateien tragen reines LF, kein CRLF.
+src/dtc_components/** -text

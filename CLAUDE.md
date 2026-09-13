@@ -505,7 +505,7 @@ dreimal gesehen hat (MF-645):
 | Stufe | Zahl | Quelle | bedeutet |
 |---|---|---|---|
 | **Verdacht** | **124** | `scripts/audit_attribution_licence.py` (abgeleitet, seit MF-651) | die Frage ist offen — es ist noch kein Befund |
-| **Befund** | **8** offene Zeilen | [`docs/QUARANTINE.md`](docs/QUARANTINE.md) | auditiert, Weg festgelegt oder ausstehend |
+| **Befund** | **9** offene Zeilen | [`docs/QUARANTINE.md`](docs/QUARANTINE.md) | auditiert, Weg festgelegt oder ausstehend |
 
 **Gemeldet wird die Befund-Stufe**, weil sie ein Urteil trägt. Die
 Verdachts-Stufe ist der Rückstand, aus dem sie gespeist wird — und
