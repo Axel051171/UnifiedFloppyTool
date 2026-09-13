@@ -68,7 +68,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_runners_protocol.cpp" # MF-251
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp"    # MF-252
     "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp"         # MF-1046
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_befehl.cpp")          # MF-1047
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_befehl.cpp"           # MF-1047
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_provider_temppfad.cpp")          # MF-1108
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -3853,6 +3854,22 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_provider_temppfad")
+        # MF-1108: die Pfade, die BEIDE Provider an fremde Prozesse
+        # uebergeben, muessen aus der Temp-Umgebung abgeleitet sein statt
+        # "/tmp/..." zu lauten. Der Test biegt TMPDIR/TMP/TEMP um und
+        # verlangt, dass der Pfad mitwandert — deshalb kann er auch auf
+        # Linux rot werden, wo temp_directory_path() gerade /tmp ist
+        # (MF-1000 / Tor 64). Braucht beide Provider samt ihren Dekodern.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)

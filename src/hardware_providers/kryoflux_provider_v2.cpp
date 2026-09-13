@@ -62,6 +62,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <iomanip>
 #include <regex>
 #include <sstream>
@@ -251,11 +252,14 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *
  *  V2 differences vs V1:
  *  - Uses injected DtcRunner instead of hardcoded QProcess.
- *  - Uses a synthetic temp-dir path token ("/tmp/uft_kf_r_{cyl}_{head}")
- *    as the output prefix. In production the runner's QProcess wrapper
- *    must use a real temp directory; in tests the SubprocessMock does not
- *    actually write files, so the file-read path is replaced with data
- *    carried in the mock's stdout_text (see test_kryoflux_provider_v2.cpp).
+ *  - Baut das Ausgabepraefix seit MF-1108 mit
+ *    `std::filesystem::temp_directory_path()`. Hier stand vorher ein
+ *    fest verdrahtetes "/tmp/uft_kf_r_{cyl}_{head}" samt der Angabe, der
+ *    QProcess-Laeufer benutze in Produktion ein echtes Temp-Verzeichnis.
+ *    Gemessen tut er das nicht: `make_kryoflux_qprocess_runner()` reicht
+ *    `argv` unveraendert an QProcess weiter (P3-342 Nachtrag). In Tests
+ *    schreibt der SubprocessMock ohnehin keine Datei, die Bytes kommen
+ *    ueber `stdout_text` (siehe test_kryoflux_provider_v2.cpp).
  *
  *  Rule F-3: The raw KryoFlux stream bytes are stored verbatim in
  *  FluxCaptured::transitions_ns (re-interpreted as uint32_t words,
@@ -267,8 +271,11 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *  correct behavior for "DTC not installed" or "no device".
  *
  *  Temp-dir protocol:
- *  The DTC runner in production must supply the raw stream file bytes
- *  through a real file on disk (DTC writes them). In test/mock mode,
+ *  Der DTC-Laeufer MUESSTE in Produktion die Rohstrom-Bytes aus der Datei
+ *  liefern, die DTC schreibt — gemessen (MF-1108) tut er es nicht; er gibt
+ *  den stdout des Prozesses zurueck. Das ist der offene Teil von P3-342,
+ *  und der naechste Satz benennt die Folge selbst.
+ *  In test/mock mode,
  *  the mock's stdout_text carries the raw bytes as a hex-encoded string
  *  (see test_kryoflux_provider_v2.cpp for the encoding convention). The
  *  V2 provider interprets stdout_text as raw-bytes if the exit_code is 0
@@ -317,11 +324,29 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     }
 
     /* Build DTC invocation.
-     * The output prefix is a synthetic path token. In production, a real
-     * temp directory would be created; in mock/test mode, the runner
-     * does not actually invoke DTC or write files. */
-    const std::string prefix = "/tmp/uft_kf_" + std::to_string(cylinder)
-                               + "_" + std::to_string(head);
+     *
+     * MF-1108: hier stand `"/tmp/uft_kf_" + …` mit dem Kommentar, der
+     * Pfad sei ein "synthetic path token" und in Produktion lege der
+     * Laeufer ein echtes Temp-Verzeichnis an. Gemessen trifft der zweite
+     * Teil nicht zu: `src/hardwaretab.cpp:843` baut diesen Provider mit
+     * `make_kryoflux_qprocess_runner()` — einem ECHTEN QProcess-Aufruf
+     * auf `dtc` —, und der Laeufer bekommt den Pfad fertig uebergeben.
+     * Unter Windows gibt es `/tmp` nicht; DTC haette dorthin schreiben
+     * sollen.
+     *
+     * **Und das ist eine Berichtigung, die zur Haelfte schon gemacht
+     * war.** MF-1046 hat genau diesen Fehler in der C-Ebene behoben:
+     * `src/hal/uft_kryoflux_dtc.c` fuehrt seither `get_temp_directory()`
+     * mit `GetTempPathA` unter Windows, und der Kommentar bei Zeile 1444
+     * nennt den alten Wortlaut `"/tmp/uft_kf_write_%d_%d.raw"` samt
+     * Begruendung „`/tmp` gibt es unter Windows nicht". Der C++-Provider
+     * blieb stehen — dieselbe Klasse wie MF-519/MF-529: eine Korrektur
+     * an einer Stelle sagt nichts ueber ihre Geschwister.
+     */
+    const std::string prefix =
+        (std::filesystem::temp_directory_path()
+         / ("uft_kf_" + std::to_string(cylinder)
+            + "_" + std::to_string(head))).string();
 
     std::vector<std::string> argv = build_read_argv(cylinder, head, prefix);
 

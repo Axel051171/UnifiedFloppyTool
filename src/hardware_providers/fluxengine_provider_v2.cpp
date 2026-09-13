@@ -78,6 +78,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <iomanip>
 #include <regex>
 #include <sstream>
@@ -86,6 +87,34 @@
 #include <vector>
 
 namespace uft::hal {
+
+namespace {
+
+/**
+ * Baut einen Pfad im Temp-Verzeichnis DES LAUFENDEN SYSTEMS.
+ *
+ * MF-1108: hier standen drei fest verdrahtete `"/tmp/uft_fe_…"`-Literale
+ * (Lesen, Schreiben, Nachlese-Probe). Unter Windows gibt es `/tmp` nicht,
+ * und der Pfad wird nicht etwa intern benutzt, sondern als Argument an
+ * `fluxengine` uebergeben — er landet also unveraendert bei einem fremden
+ * Prozess.
+ *
+ * Die Vorlage steht im eigenen Baum: `src/hal/uft_kryoflux_dtc.c:304`
+ * fuehrt seit MF-1046 `get_temp_directory()` mit `GetTempPathA` unter
+ * Windows, und `make_fc5025_read_qprocess_runner()` in
+ * `qprocess_subprocess_runner.cpp:227` benutzt `QDir::tempPath()`. Zwei
+ * von vier Wegen waren richtig, zwei nicht — dieselbe Gestalt wie
+ * MF-519/MF-529, nur ueber drei Dateien verteilt.
+ */
+std::string fe_temp_path(const char* praefix, int cylinder, int head,
+                         const char* endung)
+{
+    return (std::filesystem::temp_directory_path()
+            / (std::string(praefix) + std::to_string(cylinder)
+               + "_" + std::to_string(head) + endung)).string();
+}
+
+} // namespace
 
 /* ────────────────────────────────────────────────────────────────────────
  *  Constructor
@@ -488,12 +517,20 @@ FluxOutcome FluxEngineProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     }
 
     /* Build fluxengine invocation.
-     * The output path is a synthetic token; in production the runner must
-     * use a real temp file; in mock/test mode, the runner does not write
-     * any file. The `.scp` extension makes fluxengine emit an SCP
-     * container (MF-209 / P1.24) — see the SCP decode below. */
-    const std::string output_path = "/tmp/uft_fe_" + std::to_string(cylinder)
-                                    + "_" + std::to_string(head) + ".scp";
+     *
+     * Die `.scp`-Endung laesst fluxengine einen SCP-Behaelter schreiben
+     * (MF-209 / P1.24) — siehe die SCP-Zerlegung weiter unten.
+     *
+     * MF-1108: hier stand „in production the runner must use a real temp
+     * file". Gemessen tut der Produktions-Laeufer das NICHT:
+     * `make_fluxengine_qprocess_runner()` reicht `argv` unveraendert an
+     * QProcess weiter und gibt die stdout-Bytes des Prozesses zurueck —
+     * es legt keine Datei an und liest keine zurueck (P3-342 Nachtrag).
+     * Der Pfad ist also kein „synthetic token", sondern ein Argument, das
+     * wirklich bei `fluxengine` ankommt; er muss deshalb auf DIESEM
+     * System gueltig sein. */
+    const std::string output_path = fe_temp_path("uft_fe_", cylinder, head,
+                                                 ".scp");
 
     std::vector<std::string> argv = build_read_argv(cylinder, head,
                                                      revolutions, output_path);
@@ -810,10 +847,26 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
         stdin_data.push_back(static_cast<char>((w >> 24) & 0xFF));
     }
 
-    /* Synthetic input path token — production runner must write stdin_data
-     * to this path before invoking fluxengine. */
-    const std::string input_path = "/tmp/uft_fe_write_" + std::to_string(cylinder)
-                                   + "_" + std::to_string(head) + ".flux";
+    /* MF-1108: hier stand „production runner must write stdin_data to this
+     * path before invoking fluxengine". Zwei Berichtigungen dazu, beide
+     * gemessen:
+     *
+     * (1) Dieser Block ist UNERREICHBAR. `do_write_raw_flux` kehrt seit
+     *     MF-1047 oben unbedingt mit einem ProviderError zurueck; alles ab
+     *     hier ist stehen gelassene Bauanleitung fuer P3-342 Schritt (b),
+     *     kein laufender Code. Ueber Laufzeitverhalten sagt die Zeile
+     *     also nichts — auch nicht nach dieser Aenderung.
+     * (2) Die Behauptung ueber den Laeufer traegt trotzdem nicht, und das
+     *     gehoert benannt, weil die Bauanleitung sonst einen falschen
+     *     Vertrag weitergibt: `make_fluxengine_qprocess_runner()` PIPET
+     *     `stdin_data` in den Standardeingang des Kindprozesses
+     *     (`qprocess_subprocess_runner.cpp:63`) und ruehrt die Datei nicht
+     *     an. Wer P3-342 (b) baut, muss die Datei selbst schreiben.
+     *
+     * Der Pfad wird hier portabel gemacht, damit die Bauanleitung kein
+     * unter Windows ungueltiges Literal in die Zukunft traegt. */
+    const std::string input_path = fe_temp_path("uft_fe_write_", cylinder,
+                                                head, ".flux");
 
     std::vector<std::string> argv = build_write_argv(cylinder, head, input_path);
 
@@ -829,8 +882,8 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
     if (p.verify) {
         /* Optional verify pass: re-read the track to confirm write.
          * Rule F-3: both intended and readback preserved in WriteVerifyFailed. */
-        const std::string verify_path = "/tmp/uft_fe_vfy_" + std::to_string(cylinder)
-                                        + "_" + std::to_string(head) + ".scp";
+        const std::string verify_path = fe_temp_path("uft_fe_vfy_", cylinder,
+                                                     head, ".scp");
         std::vector<std::string> read_argv = build_read_argv(cylinder, head,
                                                               1, verify_path);
 
