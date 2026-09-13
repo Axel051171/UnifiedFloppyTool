@@ -41,9 +41,15 @@
  * sondern eine Eigentuemer-Entscheidung — soll `hardsector` ein
  * DATEIFORMAT sein (dann braucht es je Rechner eine belegte Aufteilung)
  * oder ein GEOMETRIE-KATALOG (dann gehoert der Name berichtigt)? Klasse
- * P3-338, verzeichnet als **P3-340**. Solange sie offensteht, bleibt das
- * Plugin auf **T3**, und seine Sonde sagt mit Konfidenz 40, was sie
- * wirklich weiss: die Dateigroesse.
+ * P3-338, verzeichnet als **P3-340**. Solange sie offensteht, sagt seine
+ * Sonde mit Konfidenz 40, was sie wirklich weiss: die Dateigroesse.
+ *
+ * **BERICHTIGT MF-1088:** hier stand "bleibt das Plugin auf **T3**".
+ * Gemessen steht es auf **n/a** - `gen_verification_tiers.py` fuehrt
+ * es unter den beiden Eintraegen, die gar keine Behaelterformate sind
+ * (MF-1077), und genau das ist ja der Befund oben: eine
+ * Geometrietafel ist kein Dateiformat. Die Stufe folgte der Einsicht,
+ * der Satz hier nicht.
  *
  * Was dieses Modul heute tut, laesst sich dagegen genau sagen: es liest
  * ein rohes, kopfloses Sektorabbild, dessen Geometrie ueber die
