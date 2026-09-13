@@ -1292,6 +1292,54 @@
       "oracle": "fluxfox",
       "fremdcode": "nein — die Datei ist ein Abbild, kein Code; aus fluxfox ist keine Zeile uebernommen. Der Klon wurde fuer diese Arbeit nur GELESEN (Lizenz, Testverzeichnis, und fuer MF-1070 die Stelle, an der fluxfox die MFI-Zeitsumme NICHT prueft).",
       "content": "Dieselbe Diskette wie die .img daneben, als PRI-Bitstrom. 80 TRAK-Chunks (40 x 2), je 100 000 Bit = 12 500 Byte, Bittakt 250 000. Keine Sektoren — PRI ist ein Bitstromformat."
+    },
+    {
+      "file": "tests/corpus_free/dim_adfs_l.adl",
+      "sha256": "c96b6ac9b6cdb66bc1ff63a65877bf237dbec7d5cfa279a9c987486c868e26b8",
+      "format": "adl",
+      "origin": "cross-tool",
+      "tool": "DiscImageManager (Gerald Holdsworth, GPL-3), Quellstand 5ffe4796fee6bf640f6f32aa67a56a86bdb9926f (2026-08-24), im Baum geklont unter tools/uft-scout/work/DiscImageManager. **Nicht ausgefuehrt** — die Datei liegt als formatiertes Leer-Abbild in `Blank Images/`; Kanal *Daten* nach MF-695.",
+      "source": "Aus `Blank Images/Acorn ADFS/` desselben Klons, aus dem auch die Formatbeschreibung stammt, gegen die `uft_adl.c` geschrieben ist. **Spec und Abbild aus derselben Hand sind keine zwei Zeugen** — was diese Datei belegt, ist die getreue Umsetzung der Beschreibung, nicht deren Richtigkeit; das steht so im Testkopf. **Hebt `adl` von T2 auf T1b.** ADFS L: 655 360 Byte = 80 x 2 x 16 x 256, Spuren verschraenkt. Gemessen: probe=1 (45), 160 Spuren, 2560 Sektoren, und die Verzeichniskennung „Hugo“ (altes ADFS-Verzeichnis, in der Datei bei Versatz 0x201) findet sich **im gelieferten Sektor** — ein Leser mit falschem Versatz traefe sie nicht. **Diese Datei hat einen Befund ausgeloest:** `adl_open()` hatte keine Groessenpruefung und nahm auch `ADFS_S.adl` (323 584 B) an, mit 2560 Sektoren — **1296 davon hinter dem Dateiende**. Die Sonde war ehrlich, das Oeffnen hat ihre Zurueckhaltung aufgehoben (MF-1038). Seit MF-1072 spiegelt `open` die Sonde.",
+      "test": "test_acorn_gegen_dim",
+      "oracle": "DiscImageManager",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code. Aus DiscImageManager ist keine Zeile uebernommen; seine Pascal-Quellen sind an drei Stellen als SPEC zitiert (Kopf von `uft_adl.c`).",
+      "content": "Frisch formatierte, leere ADFS-L-Diskette: echtes Verzeichnis mit Kennung Hugo bei 0x201, sonst unbelegt. Keine Nutzdaten."
+    },
+    {
+      "file": "tests/corpus_free/dim_adfs_d.adf",
+      "sha256": "bc3c4e34d8cc6d1f72cd2f3f643a0e0a573357ce2e957a20a20906c14a8094e3",
+      "format": "adf_arc",
+      "origin": "cross-tool",
+      "tool": "DiscImageManager (Gerald Holdsworth, GPL-3), Quellstand 5ffe4796fee6bf640f6f32aa67a56a86bdb9926f (2026-08-24), im Baum geklont unter tools/uft-scout/work/DiscImageManager. **Nicht ausgefuehrt** — die Datei liegt als formatiertes Leer-Abbild in `Blank Images/`; Kanal *Daten* nach MF-695.",
+      "source": "Aus `Blank Images/Acorn ADFS/` desselben Klons, aus dem auch die Formatbeschreibung stammt, gegen die `uft_adl.c` geschrieben ist. **Spec und Abbild aus derselben Hand sind keine zwei Zeugen** — was diese Datei belegt, ist die getreue Umsetzung der Beschreibung, nicht deren Richtigkeit; das steht so im Testkopf. **Hebt `adf_arc` von T2 auf T1b** (zusammen mit E und F). ADFS D: 819 200 Byte = 80 x 2 x 5 x 1024. Gemessen: 160 Spuren, 800 Sektoren. Traegt beide Verzeichniskennungen — „Nick“ bei 0x401 und „Hugo“ bei 0xC01.",
+      "test": "test_acorn_gegen_dim",
+      "oracle": "DiscImageManager",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code. Aus DiscImageManager ist keine Zeile uebernommen; seine Pascal-Quellen sind an drei Stellen als SPEC zitiert (Kopf von `uft_adl.c`).",
+      "content": "Frisch formatierte, leere ADFS-D-Diskette: Verzeichnis mit Nick (0x401) UND Hugo (0xC01), sonst unbelegt."
+    },
+    {
+      "file": "tests/corpus_free/dim_adfs_e.adf",
+      "sha256": "b6048510ab9627416955f3e24b8b9d467833e79320263f310c36f3520cb655e1",
+      "format": "adf_arc",
+      "origin": "cross-tool",
+      "tool": "DiscImageManager (Gerald Holdsworth, GPL-3), Quellstand 5ffe4796fee6bf640f6f32aa67a56a86bdb9926f (2026-08-24), im Baum geklont unter tools/uft-scout/work/DiscImageManager. **Nicht ausgefuehrt** — die Datei liegt als formatiertes Leer-Abbild in `Blank Images/`; Kanal *Daten* nach MF-695.",
+      "source": "Aus `Blank Images/Acorn ADFS/` desselben Klons, aus dem auch die Formatbeschreibung stammt, gegen die `uft_adl.c` geschrieben ist. **Spec und Abbild aus derselben Hand sind keine zwei Zeugen** — was diese Datei belegt, ist die getreue Umsetzung der Beschreibung, nicht deren Richtigkeit; das steht so im Testkopf. ADFS E: 819 200 Byte = 80 x 2 x 5 x 1024, 160 Spuren, 800 Sektoren. Kennung „Nick“ bei 0x801; anders als D traegt es einen Bootblock (erste Bytes 75 18 82 FF).",
+      "test": "test_acorn_gegen_dim",
+      "oracle": "DiscImageManager",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code. Aus DiscImageManager ist keine Zeile uebernommen; seine Pascal-Quellen sind an drei Stellen als SPEC zitiert (Kopf von `uft_adl.c`).",
+      "content": "Frisch formatierte, leere ADFS-E-Diskette mit Bootblock (75 18 82 FF) und Verzeichnis Nick bei 0x801."
+    },
+    {
+      "file": "tests/corpus_free/dim_adfs_f.adf",
+      "sha256": "cbc1d40e9c996b330cb394d0272555e8c162d77f9934d0b55f0a5d2d4109a69e",
+      "format": "adf_arc",
+      "origin": "cross-tool",
+      "tool": "DiscImageManager (Gerald Holdsworth, GPL-3), Quellstand 5ffe4796fee6bf640f6f32aa67a56a86bdb9926f (2026-08-24), im Baum geklont unter tools/uft-scout/work/DiscImageManager. **Nicht ausgefuehrt** — die Datei liegt als formatiertes Leer-Abbild in `Blank Images/`; Kanal *Daten* nach MF-695.",
+      "source": "Aus `Blank Images/Acorn ADFS/` desselben Klons, aus dem auch die Formatbeschreibung stammt, gegen die `uft_adl.c` geschrieben ist. **Spec und Abbild aus derselben Hand sind keine zwei Zeugen** — was diese Datei belegt, ist die getreue Umsetzung der Beschreibung, nicht deren Richtigkeit; das steht so im Testkopf. ADFS F: 1 638 400 Byte = 80 x 2 x 10 x 1024 — die doppelte Kapazitaet, von `adf_arc` aus der Dateigroesse abgeleitet und nicht fest angenommen. 160 Spuren, 1600 Sektoren, Kennung „Nick“ bei 0xC8801.",
+      "test": "test_acorn_gegen_dim",
+      "oracle": "DiscImageManager",
+      "fremdcode": "nein — die Datei ist ein Abbild, kein Code. Aus DiscImageManager ist keine Zeile uebernommen; seine Pascal-Quellen sind an drei Stellen als SPEC zitiert (Kopf von `uft_adl.c`).",
+      "content": "Frisch formatierte, leere ADFS-F-Diskette (doppelte Kapazitaet), Verzeichnis Nick bei 0xC8801."
     }
   ]
 }

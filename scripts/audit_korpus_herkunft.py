@@ -65,7 +65,18 @@ def registernamen(wurzel: Path) -> set[str]:
     quelle = wurzel / "tests" / "differential" / "oracles.py"
     if not quelle.exists():
         return set()
-    return set(re.findall(r'^\s*name="([a-z0-9_]+)"',
+    # MF-1072: hier stand `[a-z0-9_]+`. Ein Orakel mit Grossbuchstaben
+    # war damit **grundsaetzlich unsichtbar** — `DiscImageManager`
+    # war ordnungsgemaess registriert, und dieses Tor meldete vier
+    # Korpus-Dateien als herkunftslos. Die `Oracle`-Klasse verlangt
+    # nirgends Kleinschreibung; der Zeichenvorrat war die Annahme des
+    # Lesers, nicht die Regel des Registers. Dass es bis dahin nie
+    # auffiel, liegt daran, dass alle 20 Eintraege davor zufaellig
+    # klein geschrieben waren — und der Selbsttest unten benutzte
+    # dieselbe Schreibweise, konnte es also nicht fangen: ein Tor,
+    # dessen Pruefung an derselben Annahme haengt wie der Pruefling
+    # (Klasse MF-1000 / Tor 64).
+    return set(re.findall(r'^\s*name="([A-Za-z0-9_.+-]+)"',
                           quelle.read_text(encoding="utf-8"), re.M))
 
 
@@ -124,6 +135,10 @@ def _selbsttest() -> int:
         ("vollstaendig -> still", dict(_GUT), False),
         ("ohne oracle", {**_GUT, "oracle": ""}, True),
         ("oracle unbekannt", {**_GUT, "oracle": "gibtsnicht"}, True),
+        # MF-1072: der Namensleser sah nur Kleinbuchstaben; ein
+        # registriertes Orakel mit Grossbuchstaben galt als unbekannt.
+        ("oracle mit Grossbuchstaben -> still",
+         {**_GUT, "oracle": "DiscImageManager"}, False),
         ("tool ohne Version/Hash", {**_GUT, "tool": "VICE c1541"}, True),
         ("Hash statt Version -> still",
          {**_GUT, "tool": "hxcfe (Klon 05b53aa)"}, False),
@@ -138,7 +153,8 @@ def _selbsttest() -> int:
         (baum / "tests" / "differential").mkdir(parents=True)
         (baum / "tests" / "corpus_manifest").mkdir(parents=True)
         (baum / "tests" / "differential" / "oracles.py").write_text(
-            '    name="c1541",\n    name="gw",\n', encoding="utf-8")
+            '    name="c1541",\n    name="gw",\n'
+            '    name="DiscImageManager",\n', encoding="utf-8")
         for titel, eintrag, soll_feuern in faelle:
             (baum / "tests" / "corpus_manifest" / "manifest.json").write_text(
                 json.dumps([eintrag]), encoding="utf-8")

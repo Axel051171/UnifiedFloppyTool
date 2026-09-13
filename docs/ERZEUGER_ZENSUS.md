@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 28 |
+| davon auf T2/T3 (offen) | 26 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 1 |
 | hxcfe-Module mit `RW` | 38 |
@@ -36,9 +36,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | Format | Stufe | hxcfe (RW) | libdsk | Kanal | Klasse |
 |---|---|---|---|---|---|
 | `2img` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `adf_arc` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `adl` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `akai_s900` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `cas` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
@@ -109,6 +107,8 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 |---|---|---|---|
 | `86f` | T1b | — | — |
 | `adf` | T1b | AMIGA_ADF (?) | — |
+| `adf_arc` | T1b | AMIGA_ADF (?) | — |
+| `adl` | T1b | AMIGA_ADF (?) | — |
 | `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
 | `atx` | T1 | — | — |

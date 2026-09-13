@@ -1230,6 +1230,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_acorn_gegen_dim")
+        # MF-1072: `adl` und `adf_arc` standen auf T2, weil im Korpus
+        # kein Acorn-Abbild von fremder Hand lag. Die 21 Leer-Abbilder
+        # von DiscImageManager (GPL-3) liegen im selben Klon wie die
+        # Formatbeschreibung, aus der beide Leser gebaut sind.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/adl/uft_adl.c
+            ${CMAKE_SOURCE_DIR}/src/formats/adf_arc/uft_adf_arc.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_86f_pri_gegen_fluxfox")
         # MF-1071: `86f` und `pri` standen auf T2, weil beiden ein Abbild
         # von fremder Hand fehlte. fluxfox (MIT) traegt in seinem eigenen

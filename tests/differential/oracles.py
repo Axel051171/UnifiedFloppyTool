@@ -766,6 +766,54 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="DiscImageManager",
+        env="DISCIMAGEMANAGER",
+        exes=(),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "DATENQUELLE (Lazarus/Pascal, im Baum nicht gebaut) — wie "
+            "`fluxfox`, und `exes` ist aus demselben Grund leer. Was es "
+            "liefert, sind seine **21 formatierten Leer-Abbilder** in "
+            "`Blank Images/`: Acorn ADFS (S/M/L/D/E/E+/F/F+), Acorn DFS "
+            "(ssd/dsd), Amiga (DD/HD), Commodore (d64/d71/d81) und DOS "
+            "(360K bis 2880K). Vier davon sind seit MF-1072 im Korpus "
+            "und entscheiden die Stufe fuer **`adl`** und **`adf_arc`** "
+            "— beide T2 -> T1b. "
+            "BESONDERHEIT: dieselbe Quelle ist zugleich die SPEC, gegen "
+            "die `uft_adl.c` geschrieben wurde (drei Fundstellen im "
+            "Dateikopf, als Spec gelesen, kein Code uebernommen). Spec "
+            "und Abbild aus derselben Hand sind KEINE zwei Zeugen — "
+            "was die Abbilder beweisen, ist die getreue Umsetzung der "
+            "Beschreibung, nicht deren Richtigkeit. Das steht so im "
+            "Testkopf. "
+            "GEMESSEN: ADFS_L (655 360 B) liest 160 Spuren zu 16 "
+            "Sektoren und traegt die Verzeichniskennung Hugo IM SEKTOR; "
+            "ADFS_D/E (819 200) 160 x 5 x 1024; ADFS_F (1 638 400) "
+            "160 x 10 x 1024. Und die Dateien haben einen BEFUND "
+            "ausgeloest: `adl_open()` hatte keine Groessenpruefung und "
+            "lieferte fuer ADFS_S.adl (323 584 B) 2560 Sektoren — "
+            "1296 davon hinter dem Dateiende."
+        ),
+        origin=(
+            "https://github.com/geraldholdsworth/DiscImageManager — im "
+            "Baum geklont unter `tools/uft-scout/work/DiscImageManager`, "
+            "Quellstand `5ffe4796fee6bf640f6f32aa67a56a86bdb9926f` "
+            "(2026-08-24). NICHT gebaut (Lazarus/FPC). Anker ist der "
+            "Quellstand plus die SHA-256 je benutzter Datei im Manifest."
+        ),
+        licence="GPL-3.0 (Gerald Holdsworth)",
+        abstammung=(
+            "GEPRUEFT: kein Code eingewandert. `uft_adl.c` nennt drei "
+            "Pascal-Fundstellen als SPEC (Endungszuordnung, "
+            "Untertyp-Groessen, Verschraenkung) — gelesen, nicht "
+            "portiert. GPL-3 vertraegt sich mit UFTs "
+            "GPL-2-or-later; ein Port waere also erlaubt und ist "
+            "trotzdem nicht erfolgt."
+        ),
+    ),
+    Oracle(
         name="fluxfox",
         env="FLUXFOX",
         exes=(),

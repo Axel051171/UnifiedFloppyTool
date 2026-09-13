@@ -71,6 +71,43 @@ static bool adl_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
 static uft_error_t adl_open(uft_disk_t *disk, const char *path, bool ro) {
     FILE *f = fopen(path, ro ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
+
+    /* MF-1072: hier stand KEINE Groessenpruefung — `open` nahm jede
+     * Datei an und setzte die feste Geometrie darunter.
+     *
+     * **Gemessen** an den Leer-Abbildern von DiscImageManager: sowohl
+     * `ADFS_S.adl` (323 584 Byte) als auch `ADFS_M.adl` (651 264) wurden
+     * geoeffnet und lieferten **2560 Sektoren** — die Zahl der vollen
+     * L-Diskette. Bei der ersten Datei sind das **1296 Sektoren, die es
+     * nicht gibt**, gelesen hinter dem Dateiende.
+     *
+     * Die Sonde daneben war die ganze Zeit ehrlich: `adl_probe()` prueft
+     * `fs == ADL_SIZE` und sagte fuer beide Dateien NEIN (gemessen:
+     * probe=0, und nur `ADFS_L.adl` bekam probe=1 mit Konfidenz 45).
+     * **Das Oeffnen hat ihre Zurueckhaltung aufgehoben** — woertlich die
+     * Gestalt von MF-1038, wo `fds` 131 000 Nullbytes als zwei gute
+     * Seiten aufgehen liess, waehrend die Sonde mit Konfidenz 30 im Band
+     * „nur die Groesse" blieb.
+     *
+     * Die Pruefung spiegelt deshalb genau die der Sonde. Sie darf NICHT
+     * grosszuegiger sein: eine kuerzere Datei ist keine ADFS-L-Diskette,
+     * und welche sie stattdessen ist, sagt die Groesse allein nicht
+     * (`ADFS_S.adl` ist 323 584 Byte — das ist weder S mit 163 840 noch
+     * M mit 327 680, sondern M **minus 4096**; die Datei traegt also
+     * einen irrefuehrenden Namen, und Raten waere hier dasselbe wie
+     * Erfinden). */
+    {
+        long gr;
+        if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+        gr = ftell(f);
+        if (gr < 0) { fclose(f); return UFT_ERROR_IO; }
+        if ((size_t)gr != (size_t)ADL_SIZE) {
+            fclose(f);
+            return UFT_ERROR_FORMAT_INVALID;
+        }
+        rewind(f);
+    }
+
     adl_pd_t *p = calloc(1, sizeof(adl_pd_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
