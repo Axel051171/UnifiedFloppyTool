@@ -1452,6 +1452,54 @@
       "content": "184 320 Byte, 40 x 1 x 18 x 256. **719 Mustertreffer** 'UFT-OPUS' — je Sektor einer, der seinen eigenen Index traegt. Der Rest ist das Fuellbyte 0xE5 der Grundlage (94,4 % der Datei); der Beleg sind die 719 Marken, nicht die Fuellung (MF-1021). Gemessen liest UFT **719 von 719 an der richtigen Stelle, 0 abweichend**.",
       "oracle": "floptool",
       "fremdcode": "nein — gemessen: die Datei ist ein reines Sektorabbild von 184 320 Byte (40 x 1 x 18 x 256). Ihr Inhalt sind 719 selbst erzeugte Marken 'UFT-OPUS #NNNN' und das Fuellbyte 0xE5; der einzige fremde Teil ist der 256 Byte grosse BOOTSEKTOR aus `zxfd_opus_sssd.opd`, der die Geometrie traegt und unveraendert uebernommen wurde. Kein ausfuehrbarer Code, keine Anwendungsdaten; die Lizenzfrage der Grundlage bleibt die von P3-359, weshalb die Datei in `tests/corpus/` liegt (gitignored) und nicht weitergegeben wird."
+    },
+    {
+      "file": "tests/corpus_free/floptool_2img_1600.2mg",
+      "sha256": "fa74f067738aab65a34e2d561cae250734c617a85618e3b0f9ac69ed4c1a8234",
+      "format": "2img",
+      "origin": "cross-tool",
+      "oracle": "floptool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a. Rezept in docs/ORACLES.md",
+      "source": "MF-1085. `floptool flopconvert apple_2mg mfi <in> <tmp>` und zurueck `flopconvert mfi apple_2mg`. Eingabe ist eine SELBST GEBAUTE 1600-Block-2MG (64 Byte Kopf, format=1 ProDOS-Reihenfolge, 1600 x 512 Byte), in der jeder Block seine eigene Nummer traegt ('UFT-2IMG #NNNN'). **Der Umweg ueber `mfi` ist noetig und gemessen:** MAMEs eigenes Flussformat traegt alle 1600 Bloecke, der Weg ueber `hfe` verliert 192 (genau eine Zone von 16 Spuren x 12 Sektoren) und der ueber `mfm` 472. Apple-GCR hat eine Zonentafel, und die aeusserste Zone passt in die feste HFE-Spurlaenge nicht — Klasse MF-539.",
+      "fremdcode": "nein — die Datei ist vollstaendig synthetisch: 64 Byte selbst gebauter 2IMG-Kopf, 1600 Bloecke aus einer Marke und dem Fuellbyte 0xE5 (97,3 %). Kein ausfuehrbarer Code, keine fremden Anwendungsdaten; deshalb liegt sie in `tests/corpus_free/` und ist weitergebbar.",
+      "test": "test_2img_gegen_floptool",
+      "content": "819 264 Byte = 64 + 1600 x 512. **1600 Mustertreffer** 'UFT-2IMG', je Block einer mit seinem eigenen Index. Das Erzeugerfeld des Kopfes steht auf **'MAME'** — floptool hat es beim Schreiben selbst gesetzt, und das sind genau die 4 Byte, in denen sich Ein- und Ausgabe unterscheiden; die 819 200 Byte Daten sind **byteidentisch**. Gemessen liest UFT **1600 von 1600 Bloecken an der richtigen Stelle**."
+    },
+    {
+      "file": "tests/corpus_free/floptool_d13_455.d13",
+      "sha256": "cd91aa0c635ab3d16af0d41104c529cc24f51d16ec683acd33a6a46a58e61f4e",
+      "format": "d13",
+      "origin": "cross-tool",
+      "oracle": "floptool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a. Rezept in docs/ORACLES.md",
+      "source": "MF-1085. `floptool flopconvert a2_13sect mfi <in> <tmp>` und zurueck `flopconvert mfi a2_13sect`. Eingabe ist eine SELBST GEBAUTE .d13 von 116 480 Byte (35 Spuren x 13 Sektoren x 256 Byte), in der jeder Sektor seine eigene Nummer traegt ('UFT-D13 #NNNN', MF-1020), Rest 0xE5. Ergebnis **byteidentisch** mit der Eingabe, 0 von 116 480 Byte abweichend. **Und das ist hier ein Beleg, anders als bei `opd` in MF-1084:** zwischen Ein- und Ausgang liegt MAMEs Flussformat - eine `.mfi` mit 130 384 Byte gepacktem Zellstrom je Spur, Kennung \"MAMEFLOPPYIMAGE\". Ein Durchreichen der Bytes ist damit ausgeschlossen; floptool muss 5-and-3-GCR, die Sektorkoepfe und die physische Reihenfolge `(i * 10) % 13` (ap2_dsk.cpp) modellieren. Gestalt von MF-1033 (`nanowasp`), wo die Gleichheit zweier unabhaengiger Schreiber der Beleg war. **Der Zwischenschritt entscheidet, gemessen:** ueber `mfi` und `mfm` kommen alle 455 Marken zurueck, ueber `hfe` wird die Ausgabe 266 240 Byte gross (80 Spuren statt 35, weil `a2_13sect::load()` die Spurzahl aus der Dateigroesse rechnet) und verliert 35 Marken - in jeder Spur genau Sektor 3.",
+      "fremdcode": "nein - die Datei ist vollstaendig synthetisch: 455 Sektoren aus einer Marke und dem Fuellbyte 0xE5 (94,9 %). Kein ausfuehrbarer Code, keine fremden Anwendungsdaten; deshalb liegt sie in `tests/corpus_free/` und ist weitergebbar.",
+      "test": "test_d13_gegen_floptool",
+      "content": "116 480 Byte = 35 x 13 x 256. **455 Mustertreffer** 'UFT-D13', je Sektor einer mit seinem eigenen Index. Gemessen liest UFT **455 von 455 Sektoren an der richtigen Stelle**. Es ist die erste `.d13` im Korpus ueberhaupt - `test_d13_layout_verified` (MF-722) baut seine Pruefdateien selbst."
+    },
+    {
+      "file": "tests/corpus_free/floptool_jv1_80spuren.jv1",
+      "sha256": "b0c8eed5e29c1dd3bab5f9af1cce1eb9c2ab8c8306b80f4e429166819d9c240f",
+      "format": "jv1",
+      "origin": "cross-tool",
+      "oracle": "floptool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a. Rezept in docs/ORACLES.md",
+      "source": "MF-1085. `floptool flopconvert jv1 mfi <in> <tmp>` und zurueck `flopconvert mfi jv1`. Eingabe ist eine SELBST GEBAUTE .jv1 von 204 800 Byte (80 Spuren x 10 Sektoren x 256 Byte), in der jeder Sektor seine eigene Nummer traegt ('UFT-JV1 #NNNN', MF-1020), Rest 0xE5. Ergebnis **byteidentisch**, 0 von 204 800 Byte abweichend; der Zwischenschritt ist MAMEs Flussformat mit 101 181 Byte gepacktem Zellstrom je Spur, ein Durchreichen der Bytes ist damit ausgeschlossen (Lehre aus MF-1084). **Die Groesse ist nicht beliebig gewaehlt:** 204 800 Byte ist genau die Datei, an der MF-1016 gemessen hat, dass der Leser bei mehr als 40 Spuren eine zweite Seite ANNAHM, die JV1 nicht hat. MAMEs eigene Tafel in `trs80_dsk.cpp` fuehrt 35, 40 und 80 Spuren - alle drei mit `head_count = 1`. Die 35- und die 40-Spur-Fassung laufen bei floptool ebenso durch (350/350 und 400/400 gemessen); im Korpus liegt die 80-Spur-Fassung, weil sie den Befund traegt.",
+      "fremdcode": "nein - die Datei ist vollstaendig synthetisch: 800 Sektoren aus einer Marke und dem Fuellbyte 0xE5 (94,9 %). Kein ausfuehrbarer Code, keine fremden Anwendungsdaten; deshalb liegt sie in `tests/corpus_free/` und ist weitergebbar.",
+      "test": "test_jv1_gegen_floptool",
+      "content": "204 800 Byte = 80 x 10 x 256. **800 Mustertreffer** 'UFT-JV1', je Sektor einer mit seinem eigenen Index. Gemessen liest UFT **800 von 800 Sektoren an der richtigen Stelle**, meldet **80 Zylinder auf EINEM Kopf** und Sektornummern **ab 0** - die beiden Befunde aus MF-1016, jetzt aus fremder Hand belegt statt aus eigener."
+    },
+    {
+      "file": "tests/corpus_free/floptool_victor9k_dsdd.img",
+      "sha256": "1b6980fcb224b01498c74496bbb8578079940a537c68e769799b8b467658c77b",
+      "format": "victor9k",
+      "origin": "cross-tool",
+      "oracle": "floptool",
+      "tool": "floptool (MAME, BSD-3-Clause), gebaut MF-1083; Binaer-SHA-256 bbf893dd41a3e58bacb5a0c773b8728cddd2efe5d3e7a668ed532b059fdb1d2a. Rezept in docs/ORACLES.md",
+      "source": "MF-1085. `floptool flopconvert victor9k mfi <in> <tmp>` und zurueck `flopconvert mfi victor9k`. Die Eingabe ist 1 224 192 Byte gross und NACH MAMES EIGENER Zonentafel aufgebaut (`sectors_per_track[2][80]` in `victor9k_dsk.cpp`, BSD-3-Clause, nur gelesen) sowie in seiner eigenen Reihenfolge - `for head { for track }`, also erst alle 80 Spuren von Kopf 0 (1224 Sektoren), dann Kopf 1 (1167). **Jeder Sektor traegt seine PHYSISCHE Lage als Text** ('UFT-K Cnn Hh Snn', MF-1020) und nicht einen fortlaufenden Index - deshalb faellt der Abgleich bei jeder falschen Zonengrenze, jeder vertauschten Tafel und jeder anderen Anordnung, also genau bei den drei Befunden aus MF-1026. Ergebnis **byteidentisch**, 0 von 1 224 192 Byte abweichend. **Der Zwischenschritt entscheidet, gemessen:** ueber `mfi` kommen 2391 von 2391 Marken an ihrer Stelle zurueck, ueber `mfm` nur 2128 - Victor-GCR hat neun Geschwindigkeitszonen, und das HxC-MFM-Format traegt sie nicht (Klasse MF-539).",
+      "fremdcode": "nein - die Datei ist vollstaendig synthetisch: 2391 Sektoren aus einer Ortsmarke und dem Fuellbyte 0xE5 (96,9 %). Kein ausfuehrbarer Code, keine fremden Anwendungsdaten; deshalb liegt sie in `tests/corpus_free/` und ist weitergebbar.",
+      "test": "test_victor9k_gegen_floptool",
+      "content": "1 224 192 Byte = (1224 + 1167) x 512, also die Summe ZWEIER Zonentafeln und nicht 1224 x 2 x 512 - an dieser Groesse wies UFT vor MF-1026 jede echte zweiseitige Victor-Datei ab. **2391 Ortsmarken**, je Sektor eine. Gemessen liest UFT alle 160 Spuren mit der Sektorzahl der richtigen Tafel und **2391 von 2391** Sektoren an ihrer physischen Stelle."
     }
   ]
 }

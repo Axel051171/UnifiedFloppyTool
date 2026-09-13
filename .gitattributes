@@ -1,0 +1,33 @@
+# Korpus- und Golden-Dateien sind BYTES, nicht Text (MF-1085)
+#
+# `core.autocrlf` steht auf dieser Maschine auf `true`. Git entscheidet
+# von sich aus, ob eine Datei Text ist, und es entscheidet das ueber
+# das Vorkommen eines NUL-Bytes in den ersten 8000 Byte. Ein Diskabbild
+# aus Sektoren mit Fuellbyte 0xE5 und ASCII-Marken hat KEINES - gemessen
+# an den vier Pruefdateien aus MF-1085 und an vier weiteren, die schon
+# laenger im Baum liegen:
+#
+#     tests/corpus_free/a2nibblize_uftk_35trk.nib   232 960 Byte
+#     tests/corpus_free/cas_msx_nurkopf.cas               8 Byte
+#     tests/corpus_free/cpm_ibm8ss_256k.cpm         256 256 Byte
+#     tests/corpus_free/hxcfe_ti.v9t9               184 320 Byte
+#     tests/crashers/dsk_511_edsk_parser.img            511 Byte
+#
+# Von 102 verfolgten Korpusdateien gelten damit **8** fuer git als Text.
+# Heute ist keine davon beschaedigt - Blob und Arbeitsdatei sind bei
+# allen byteidentisch, und `cpm_ibm8ss_256k.cpm` trifft trotz 828 LF und
+# 829 CR noch seine Manifest-SHA-256. Das ist aber GLUECK und keine
+# Regel: die naechste Pruefdatei mit einem einzelnen 0x0A und ohne NUL
+# wird beim Auschecken still veraendert, und genau das ist die
+# Fehlerklasse, die dieses Werkzeug bei anderen sucht.
+#
+# `binary` = `-text -diff`: keine Zeilenende-Umwandlung in beide
+# Richtungen, und kein Textdiff auf einem Sektorabbild. Bereits
+# gespeicherte Blobs bleiben unberuehrt.
+tests/corpus_free/**   binary
+tests/corpus/**        binary
+tests/crashers/**      binary
+tests/golden/**        binary
+
+# Die Manifeste daneben sind Text und sollen es bleiben.
+tests/corpus_manifest/*.json   text

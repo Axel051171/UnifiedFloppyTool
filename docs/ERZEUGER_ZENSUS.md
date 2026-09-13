@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 20 |
+| davon auf T2/T3 (offen) | 16 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -35,18 +35,15 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 
 | Format | Stufe | hxcfe (RW) | libdsk | Kanal | Klasse |
 |---|---|---|---|---|---|
-| `2img` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `akai_s900` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `cas` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
-| `d13` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `dim` | T2 | ATARIST_DIM (?) | — | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `dms` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `edk` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fdi_pc98` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `fds` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `jv1` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `korg_dss1` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `nfd` | T2 | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -54,7 +51,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `syn` | T3 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 | `tan` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | nicht gemessen | **?** — nur ueber eine GETEILTE Endung zugeordnet |
 | `udi` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
-| `victor9k` | T2 | — | — | nicht gemessen | **B/C** — kein Werkzeug im Baum, das schreibt |
 
 `(?)` hinter einem Werkzeugnamen heisst: die Zuordnung laeuft ueber eine Endung, die sich **mehrere** Plugins teilen. `.dsk` tragen `apridisk`, `cpm`, `do`, `jv1` und `tan` gemeinsam, und `AMSTRADCPC_DSK` schreibt keines davon. Ein solcher Treffer ist ein Verdacht, kein Kandidat.
 
@@ -175,6 +171,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 
 | Format | Stufe | hxcfe (RW) | libdsk |
 |---|---|---|---|
+| `2img` | T1b | — | — |
 | `86f` | T1b | — | — |
 | `adf` | T1b | AMIGA_ADF (?) | — |
 | `adf_arc` | T1b | AMIGA_ADF (?) | — |
@@ -184,6 +181,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `atx` | T1 | — | — |
 | `cfi` | T1b | — | cfi |
 | `cqm` | T1b | — | — |
+| `d13` | T1b | — | — |
 | `d64` | T1b | — | — |
 | `d67` | T1b | — | — |
 | `d71` | T1b | — | — |
@@ -207,6 +205,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `imd` | T1 | IMD_IMG | imd |
 | `img` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |
 | `ipf` | T1 | SPS_IPF | — |
+| `jv1` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `jv3` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TRS80_JV3 | dsk (?), jv3 |
 | `jvc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `kfx` | T1b | KRYOFLUXSTREAM (?) | raw (?) |
@@ -240,6 +239,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `trd` | T1b | ZXSPECTRUM_TRD | — |
 | `v9t9` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
 | `vdk` | T1b | AMSTRADCPC_DSK (?), DRAGON3264_VDK, ORIC_DSK (?) | dsk (?) |
+| `victor9k` | T1b | — | — |
 | `woz` | T1b | — | — |
 | `xdm86` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
 | `xfd` | T1b | — | — |

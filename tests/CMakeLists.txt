@@ -511,6 +511,124 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_victor9k_gegen_floptool")
+        # MF-1085: `victor9k` T2 -> T1b, und von den vier Hebungen
+        # dieser Sitzung ist das die schaerfste.
+        #
+        # MF-1026 hatte fuenf Befunde behoben, darunter DEN Fall, den
+        # eine Groessenpruefung nicht sehen kann: auf Kopf 0 lagen zwei
+        # Zonengrenzen um eins daneben (Spur 48: 15 statt 14, Spur 70:
+        # 12 statt 13), und weil sich +1 und -1 aufheben, blieb die
+        # Summe 1224 - waehrend 22 Spuren um 512 Byte zu hoch gelesen
+        # wurden. Dazu: Kopf 1 hat eine EIGENE Zonentafel (1167 statt
+        # 1224 Sektoren), und UFT wies deshalb jede echte zweiseitige
+        # Datei ab.
+        #
+        # `tests/corpus_free/floptool_victor9k_dsdd.img` ist nach MAMEs
+        # eigener Tafel und in seiner eigenen Reihenfolge (kopf-dur)
+        # aufgebaut, durch floptools `flopconvert victor9k mfi` (487 202
+        # Byte Zellstrom) und zurueck gefuehrt, byteidentisch.
+        #
+        # **Die Marke nennt hier die PHYSISCHE Lage** (Zylinder, Kopf,
+        # Sektornummer) und nicht einen fortlaufenden Index - deshalb
+        # faellt die Zusage bei jeder falschen Zonengrenze, jeder
+        # vertauschten Tafel und jeder anderen Anordnung. Die Tafel
+        # steht im Test ein zweites Mal, damit er nicht dieselbe Quelle
+        # befragt wie der Prueflung (Klasse MF-1000).
+        #
+        # Auch hier entscheidet der Zwischenschritt, gemessen: ueber
+        # `mfi` kommen 2391 von 2391 Marken zurueck, ueber `mfm` nur
+        # 2128 - Victor-GCR hat neun Geschwindigkeitszonen, und das
+        # HxC-MFM-Format traegt sie nicht.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/victor9k/uft_victor9k.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_jv1_gegen_floptool")
+        # MF-1085: `jv1` T2 -> T1b, und das Abbild ist GENAU der Fall,
+        # an dem MF-1016 gemessen hat: 204 800 Byte = 80 x 10 x 256.
+        # Dort nahm der Leser bei mehr als 40 Spuren eine zweite Seite
+        # an, die JV1 nicht hat (gemeldet 40 x 2, Zylinder 40 nicht
+        # lesbar), und die Sektornummern liefen 1..10 statt 0..9.
+        # Abgenommen war das gegen zwei GELESENE Beschreibungen (Tim
+        # Mann; MAMEs `trs80_dsk.cpp`, dessen Tafel 35/40/80 Spuren
+        # fuehrt, alle drei mit `head_count = 1`) - ein Abbild von
+        # fremder Hand fehlte.
+        #
+        # `tests/corpus_free/floptool_jv1_80spuren.jv1` kommt aus
+        # floptools `flopconvert jv1 mfi` und zurueck und ist mit der
+        # Eingabe byteidentisch (0 von 204 800 Byte abweichend). Der
+        # Zwischenschritt ist MAMEs Flussformat, 101 181 Byte gepackter
+        # Zellstrom je Spur - ein Durchreichen der Bytes ist damit
+        # ausgeschlossen (die Lehre aus MF-1084).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_d13_gegen_floptool")
+        # MF-1085: `d13` T2 -> T1b. MF-722 hatte `d13` gegen das Oracle
+        # `to_woz2` abgenommen (454 von 454 byteidentisch) - das ist ein
+        # fremder LESER. Ein fremder ERZEUGER fehlte, und im Korpus lag
+        # keine einzige `.d13`; `test_d13_layout_verified` baut seine
+        # Pruefdateien bis heute selbst.
+        #
+        # `tests/corpus_free/floptool_d13_455.d13` kommt aus floptools
+        # `flopconvert a2_13sect mfi` und zurueck und ist mit der
+        # Eingabe **byteidentisch** (0 von 116 480 Byte abweichend).
+        # **Und das ist hier ein Beleg, anders als bei `opd` in
+        # MF-1084:** zwischen Ein- und Ausgang liegt MAMEs Flussformat,
+        # eine `.mfi` mit 130 384 Byte gepacktem ZELLSTROM je Spur. Ein
+        # Durchreichen der Bytes ist damit ausgeschlossen - floptool
+        # muss 5-and-3-GCR, Sektorkoepfe und die physische Reihenfolge
+        # `(i * 10) % 13` modellieren. Gestalt von MF-1033 (`nanowasp`),
+        # wo die Gleichheit zweier Schreiber der Beleg war.
+        #
+        # Auch hier entscheidet der Zwischenschritt, gemessen: ueber
+        # `mfi` und `mfm` kommen alle 455 Marken zurueck, ueber `hfe`
+        # nicht - die Ausgabe wird 266 240 Byte gross (80 Spuren statt
+        # 35) und verliert **in jeder Spur genau Sektor 3**.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d13/uft_d13.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_2img_gegen_floptool")
+        # MF-1085: `2img` T2 -> T1b. MF-1031 hatte den Leser gegen
+        # MAMEs `ap_dsk35.cpp` berichtigt (acht Befunde), aber beide
+        # Korpus-Pruefdateien tragen `origin: derived` — es fehlte ein
+        # Abbild von fremder HAND. Seit MF-1083 ist `floptool` gebaut,
+        # und `tests/corpus_free/floptool_2img_1600.2mg` kommt aus
+        # seinem `flopconvert apple_2mg mfi` und zurueck: **vier Byte**
+        # unterscheiden sich (das Erzeugerfeld `"UFT "` -> `"MAME"`),
+        # die 819 200 Datenbyte sind byteidentisch.
+        #
+        # ZWEI MESSUNGEN STEHEN DAHINTER, und ohne sie ginge es schief:
+        #
+        #   Bloecke  MAMEs `apple_2mg_format::load()` sagt woertlich
+        #            `if(blocks != 1600 && blocks != 16390) return
+        #            false;` — es nimmt NUR die 800K-3,5"-Diskette.
+        #            UFTs Pruefdateien haben 280 und 800 Bloecke und
+        #            werden abgewiesen. Die Spalte `rw` der Modulliste
+        #            sagt weniger, als sie verspricht; deshalb ist
+        #            diese Datei eigens mit 1600 Bloecken gebaut.
+        #   Weg      ueber `mfi` kommen alle 1600 Marken zurueck, ueber
+        #            `hfe` fehlen **192** (genau eine Zone: 16 Spuren x
+        #            12 Sektoren) und ueber `mfm` **472**. Apple-GCR hat
+        #            eine Zonentafel, und die aeusserste Zone passt in
+        #            die feste HFE-Spurlaenge nicht — dieselbe Klasse
+        #            wie MF-539.
+        #
+        # Der Korpus ist der FREIE (`tests/corpus_free`), weil das
+        # Abbild in diesem Baum entstanden ist und keine fremden Daten
+        # traegt: die Nutzlast sind UFTs eigene Selbstbenennungs-Marken
+        # (MF-1020) und 0xE5.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_logical_gegen_libdsk")
         # MF-1032: `logical` stand auf T3, und **UFT konnte keine echte
         # Datei lesen — die Anordnung, die das Format AUSMACHT, war gar
