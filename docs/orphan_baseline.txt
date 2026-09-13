@@ -269,10 +269,48 @@ src/recovery/uft_recovery_meta.c
 # MF-938, IPF gegen die zwei SPS-Erhaltungsabbilder aus MF-1079). Ohne
 # eigene Abnahme wird keines davon an einen Produktpfad gehaengt —
 # genau das waere die Wette der fuenf fabrizierten Parser.
-src/dtc_components/src/ipf.c
-src/dtc_components/src/match.c
-src/dtc_components/src/protection.c
-src/dtc_components/src/track.c
+#
+# NACHTRAG MF-1109 — die Abnahme ist gelaufen, und sie faellt fuer ALLE
+# VIER negativ aus. Sie bleiben damit hier, und zwar nicht mehr als
+# "noch nicht geprueft", sondern als "geprueft und nicht verwendbar":
+#
+#   track.c      `header_ok` rechnet die Kopf-CRC ab dem FE statt ab den
+#                drei A1. Gemessen an einem spezifikationsgerechten
+#                Adressfeld: Rest ueber A1 A1 A1 FE C H R N CRC = 0x0000,
+#                ab FE = 0x90DC — das Pruefbit meldet zuverlaessig 0
+#                (Klasse MF-1000). Dazu traegt `data_crc` einen
+#                Zwischenwert ueber FE C H R N, nicht die Daten-CRC.
+#   match.c      `dtc_track_match()` meldet bei leeren Bitfeldern Erfolg
+#                (rc 0), laesst `compared_bits` UNGESCHRIEBEN (Giftmuster
+#                0xCD ueberlebt) und liefert `differing_bits = SIZE_MAX`.
+#   protection.c der Header zaehlt fuenf Schutzarten auf, die Funktion
+#                setzt zwei. WEAK_BITS, VORPAL und VMAX sind ueber JEDE
+#                Eingabe unerreichbar — die Tafeln liegen in encoding.c,
+#                es fehlt die Verbindung.
+#   ipf.c        die Block-CRC wird gelesen, nicht geprueft (0xDEADBEEF
+#                geht durch); `id` wird unbedingt genullt. Und UFT hat
+#                seit MF-1079 einen IPF-Leser auf T1 — das Modul ersetzt
+#                nichts.
+#
+# Festgehalten von tests/test_dtc_ungeprueft.c (24 Zusagen), der die
+# Dateien NICHT anfasst und bewusst NICHT an UFT_WITH_DTC_COMPONENTS
+# haengt. Die Wege heraus stehen als P3-377.
+#
+# UND DESHALB STEHEN DIE VIER PFADE HIER NICHT MEHR — mit einer
+# Einschraenkung, die groesser ist als der Eintrag selbst.
+#
+# Das Tor hat den MF-1109-Commit im ersten Anlauf ABGEWIESEN: "4
+# Grundlinien-Eintraege treffen nicht mehr zu — das Modul hat inzwischen
+# einen Aufrufer." Der Aufrufer ist der Abnahme-TEST. Produktiv
+# erreichbar ist weiterhin KEINES der vier.
+#
+# Das ist der **vierte** Beleg fuer P3-223 in diesem Baum, nach
+# `src/detect` (Phase 2), der `FloppyDevice`-Schicht (Phase 4d, dort
+# entgingen vier von 75 Dateien dem Tor aus genau diesem Grund) und der
+# OTDR-Ereignis-Pipeline (Phase 5, 14 Dateien / 4720 Zeilen, keine
+# einzige in dieser Datei). Wer diese Zeile in sechs Monaten liest:
+# "nicht mehr in orphan_baseline.txt" heisst hier NICHT "verdrahtet",
+# sondern "ein Test ruft es an, damit belegt ist, dass es nicht taugt".
 
 
 # ── ERLEDIGT MF-663: src/diskanalyzerwindow.cpp hat eine Tuer ────────────

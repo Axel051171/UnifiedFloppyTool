@@ -3858,6 +3858,27 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_dtc_ungeprueft")
+        # MF-1109: die Abnahme der vier dtc_components-Module, die ihre
+        # eigene Testreihe NICHT anfasst (ipf/match/protection/track).
+        # Sie haengt bewusst NICHT an UFT_WITH_DTC_COMPONENTS: ein Test,
+        # der nur unter einem abgeschalteten Schalter gebaut wird, kann
+        # in CI nicht rot werden (MF-1000 / Tor 64, bezahlt bei
+        # test_libdsk_formats.c). Die vier Quellen plus ihre zwei
+        # Helfer werden deshalb direkt eingezogen; die Dateien selbst
+        # werden NICHT angefasst — wer sie aendert, macht aus einem
+        # Beleg eine Ableitung.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/track.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/match.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/protection.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/ipf.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/crc.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/encoding.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/bitbuffer.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_provider_temppfad")
         # MF-1108: die Pfade, die BEIDE Provider an fremde Prozesse
         # uebergeben, muessen aus der Temp-Umgebung abgeleitet sein statt
