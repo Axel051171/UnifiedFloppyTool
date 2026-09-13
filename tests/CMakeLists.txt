@@ -148,6 +148,7 @@ set(UFT_FORMAT_LAYER_DEPS
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
             # gemeinsame Liste, nicht in einen Sonderzweig.
@@ -381,6 +382,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c
             ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdefs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_ipf_zellstrom")
         # MF-1079 (P3-360): `raw_data` versprach einen Zellstrom und
@@ -1145,6 +1147,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/udi/uft_udi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_scl_ist_eine_trdos_diskette")
@@ -2071,6 +2074,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2086,7 +2090,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip")
+    elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip"
+           OR ${test_name} STREQUAL "test_convert_adf_hfe_roundtrip")
         # MF-539: braucht die ganze Format-Schicht wie die uebrigen
         # Wandlungstests, aber keine Korpusdatei.
         file(GLOB_RECURSE IHR_FORMAT_SOURCES
@@ -2109,6 +2114,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2128,6 +2134,7 @@ foreach(test_source ${TEST_SOURCES})
         # Format-Schicht.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
@@ -2169,6 +2176,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2219,6 +2227,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2488,6 +2497,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2527,6 +2537,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2565,6 +2576,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -2605,6 +2617,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
@@ -4666,6 +4679,7 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
                 ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
                 ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
                 ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
                 ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
                 ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c

@@ -122,11 +122,23 @@ TEST(every_lossless_pair_is_named_and_proven) {
              * mit Sektorgroesse 256 wird ohne Zustimmung abgelehnt,
              * weil XFD die Angabe nicht speichern kann. */
             (tbl[i].from == UFT_FORMAT_ATR && tbl[i].to == UFT_FORMAT_XFD) ||
-            (tbl[i].from == UFT_FORMAT_XFD && tbl[i].to == UFT_FORMAT_ATR))
+            (tbl[i].from == UFT_FORMAT_XFD && tbl[i].to == UFT_FORMAT_ATR) ||
+            /* MF-1081: ADF -> HFE. Der AmigaDOS-Encoder ist an einer
+             * ECHTEN Aufnahme abgenommen (11 von 11 Sektoren
+             * byteidentisch in gw_amigados.hfe), und der Rundlauf
+             * ist mit einer Quelle MIT INHALT gemessen — genau das
+             * fehlte MF-538, dessen Ruecknahme an einer LEEREN
+             * Diskette scheiterte. */
+            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_HFE))
             n_known++;
     }
-    ASSERT(n_ll == 6);
-    ASSERT(n_known == 6);
+    /* MF-1081: 6 -> 7. ADF -> HFE ist zurueck, weil der
+     * AmigaDOS-Encoder da ist und der Rundlauf byteidentisch
+     * gemessen wurde — 0 von 901 120 Byte abweichend, an einer
+     * Quelle MIT Inhalt. Die Zahl aendert sich als FOLGE der
+     * Messung (MF-1077), nicht damit sie steigt. */
+    ASSERT(n_ll == 7);
+    ASSERT(n_known == 7);
 }
 
 TEST(known_ld_scp_to_img) {

@@ -12,6 +12,7 @@
 
 #include "uft_format_convert_internal.h"
 #include "uft/uft_mfm_encoder.h"
+#include "uft/uft_amiga_mfm_encoder.h"
 
 /* SCP speichert Flusslaengen als 16-Bit-Vielfache von 25 ns. */
 #ifndef UFT_SCP_TICK_NS
@@ -771,16 +772,54 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
          * Die Gegenrichtung HFE -> ADF ist davon nicht betroffen; sie geht
          * ueber den AmigaDOS-Dekoder und liefert die Quell-ADF byteweise
          * zurueck (tests/test_convert_hfe_adf.c). */
-        (void)encoding;
-        (void)iface;
-        result->error = UFT_ERR_NOT_IMPLEMENTED;
-        uftc_add_warning(result,
-                 "ADF->HFE requires an AmigaDOS MFM encoder; this tree has "
-                 "only an IBM System-34 encoder (src/core/uft_mfm_encoder.c). "
-                 "Writing an IBM-encoded track for an Amiga disk would "
-                 "produce a file no reader can decode, so the conversion is "
-                 "refused (MF-539).");
-        return UFT_ERR_NOT_IMPLEMENTED;
+        /* MF-1081: der Encoder ist da, und die Absage faellt.
+         *
+         * `src/core/uft_amiga_mfm_encoder.c` ist die exakte Umkehrung
+         * des baumeigenen, bereits abgenommenen Dekoders
+         * `decode_amiga_sector()`. Abgenommen wurde er nicht gegen sich
+         * selbst, sondern gegen die ECHTE Aufnahme, an der MF-539 die
+         * Zahlen oben gemessen hat: aus `gw_amigados.hfe` dekodiert,
+         * neu kodiert, und **11 von 11 Sektoren stehen byteidentisch**
+         * in der Originalspur — je 1084 Byte samt Sync, Info,
+         * Label, beiden Pruefsummen und jedem Taktbit.
+         *
+         * Das hat nebenbei einen Widerspruch zwischen zwei Referenzen
+         * entschieden: Keir Frasers `libdisk` (Public Domain) nennt die
+         * Feldreihenfolge `info_even, info_odd`, UFTs Dekoder nennt die
+         * erste Haelfte `odd`. Es sind dieselben Bits — entschieden
+         * am Objekt, nicht durch Auswahl zwischen zwei
+         * Beschreibungen. */
+        sector_size = 512;
+        heads       = 2;
+        encoding    = HFE_ENC_AMIGA_MFM;
+        if (src_size >= 1802240u) {   /* HD: 80 x 2 x 22 x 512 */
+            sectors = 22; bitrate = 500; iface = HFE_IF_AMIGA_HD;
+        } else {                      /* DD: 80 x 2 x 11 x 512 */
+            sectors = 11; bitrate = 250; iface = HFE_IF_AMIGA_DD;
+        }
+        {
+            const size_t spur = (size_t)heads * sectors * sector_size;
+            /* Der REST, nicht nur der Quotient. Der erste Entwurf hier
+             * prueft nur `cylinders <= 0 || > 84` — und eine Datei
+             * von 901 119 Byte ergibt ganzzahlig 79 Zylinder, wurde
+             * also angenommen und eine Spur still verworfen. Gefunden
+             * hat das die Gegenprobe in
+             * `tests/test_convert_adf_hfe_roundtrip.c`, bevor der
+             * Commit lag. */
+            cylinders = (spur && src_size % spur == 0)
+                        ? (int)(src_size / spur) : 0;
+        }
+        if (cylinders <= 0 || cylinders > 84) {
+            /* Keine Amiga-Geometrie, die ein Laufwerk erreicht. Absagen
+             * statt eine Zahl zu erfinden (MF-1073). */
+            result->error = UFT_ERR_INVALID_FORMAT;
+            uftc_add_warning(result,
+                     "ADF->HFE: file size is not a whole number of Amiga "
+                     "tracks (11 or 22 sectors x 512 bytes x 2 heads), "
+                     "so the geometry cannot be derived; refused rather "
+                     "than guessed (MF-1081).");
+            return UFT_ERR_INVALID_FORMAT;
+        }
     } else {
         /* IMG: detect from file size */
         if (src_size <= 368640) {
@@ -975,10 +1014,35 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
                                      : pad;
                 }
 
-                size_t written = uft_mfm_encode_track(secs, (size_t)sectors,
-                                                      (uint8_t)cyl, (uint8_t)hd,
-                                                      &enc_params,
-                                                      head_buf[hd], track_cap);
+                size_t written;
+                if (src_format == UFT_FORMAT_ADF) {
+                    /* MF-1081: AmigaDOS statt IBM System 34.
+                     *
+                     * Die Spurnummer ist `cyl * 2 + head` — so steht
+                     * sie im Info-Long, und so liest der Dekoder sie
+                     * zurueck. Der Rest der Umdrehung wird mit **0xAA**
+                     * gefuellt: das sind die MFM-Zellen fuer 0x00, also
+                     * der Zwischenraum einer echten Amiga-Spur. (Die
+                     * IBM-Seite fuellt mit 0x55; das ist ihr Gap-Byte,
+                     * nicht unseres.) */
+                    const size_t brauche =
+                        (size_t)sectors * UFT_AMIGA_SECTOR_MFM_BYTES;
+                    memset(head_buf[hd], 0xAA, track_cap);
+                    written = (brauche <= track_cap)
+                        ? uft_amiga_mfm_encode_track(
+                              src_data + ((size_t)cyl * heads + hd)
+                                         * sectors * sector_size,
+                              (unsigned)sectors,
+                              (unsigned)(cyl * 2 + hd), NULL,
+                              head_buf[hd], track_cap)
+                        : 0u;
+                    if (written) written = track_cap;   /* Rest ist Gap */
+                } else {
+                    written = uft_mfm_encode_track(secs, (size_t)sectors,
+                                                   (uint8_t)cyl, (uint8_t)hd,
+                                                   &enc_params,
+                                                   head_buf[hd], track_cap);
+                }
                 if (written == 0) {
                     /* Passt nicht in eine Umdrehung. Nicht als Erfolg
                      * zaehlen und keine halbe Spur ablegen — die Seite

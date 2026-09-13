@@ -169,14 +169,22 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 > Rückfrage. **Die Erkennung ist nicht schlechter geworden — sie war
 > vorher nur zuversichtlicher, als sie durfte.**
 
-### 3. Format-Konvertierung (44 Pfade registriert, **14 angeboten**)
+### 3. Format-Konvertierung (44 Pfade registriert, **15 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die
 > Wandlungstabelle fuehrt **44** Paare. Die Rundlauf-Matrix hat **16**
 > Eintraege; **14** davon werden angeboten (zwei stehen als UNMOEGLICH):
 >
-> * **6 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
->   IMG→HFE, **ATR→XFD**, **XFD→ATR**. Jedes einzelne mit einer
+> * **7 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
+>   IMG→HFE, **ATR→XFD**, **XFD→ATR**, **ADF→HFE** (neu MF-1081: der
+>   AmigaDOS-Encoder, den MF-539 als fehlend benannt hat, ist da und an
+>   einer ECHTEN Aufnahme abgenommen — aus `gw_amigados.hfe` dekodiert
+>   und neu kodiert stehen **11 von 11 Sektoren byteidentisch** in der
+>   Originalspur. Rundlauf ADF→HFE→ADF: **0 von 901 120 Byte**
+>   abweichend, an einer Quelle MIT Inhalt — genau das fehlte MF-538,
+>   dessen Ruecknahme an einer LEEREN Diskette scheiterte, deren
+>   Nulllinie 0,08 % Abweichung wie eine fast perfekte Wandlung aussehen
+>   liess. Die erzeugte HFE ist eine **Rekonstruktion, keine Aufnahme**). Jedes einzelne mit einer
 >   Bit-Identitaets-Messung im Baum (MF-532/533/539/655), keines auf
 >   Zusicherung. Die beiden Atari-Paare sind seit MF-655 die ersten
 >   ihrer Familie in der Matrix: XFD ist das ATR ohne seinen
@@ -200,7 +208,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 > woertlich Fabrikation nennt. Der Kommentar an der Stelle sagte seit
 > UFT-A01, der Umweg sei geschlossen.
 >
-> Die Matrix hat **14** Eintraege. Es waren 17; die drei ohne Wandler
+> Die Matrix hat **15** Eintraege (MF-1081: ADF→HFE zurueck). Es waren 17; die drei ohne Wandler
 > (`SCP→IMD`, `IPF→ADF`, `STX→ST`) sind seit MF-567 entfernt. Zwei davon
 > standen hier seit MF-526 als „Verdikte ohne Konsumenten" — festgestellt
 > und stehen gelassen ist nicht behoben, und es war nicht folgenlos: ein
@@ -658,8 +666,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
-  **14 angeboten**, davon **6 verlustfrei (je mit Messung)**
-  (MF-541/567/655), 16 Roundtrip-Matrix-Einträge (SSOT in
+  **15 angeboten**, davon **7 verlustfrei (je mit Messung)**
+  (MF-541/567/655/1081), 17 Roundtrip-Matrix-Einträge (SSOT in
   `src/core/uft_roundtrip.c`;
   die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt; MF-567 hat drei
   Urteile ohne Wandler entfernt)

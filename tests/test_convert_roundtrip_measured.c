@@ -414,22 +414,21 @@ int main(void)
 
     printf("\n");
     {
-        /* MF-539: hier stand der Rundlauf ADF -> HFE -> ADF. Er ist weg,
-         * weil die Hinrichtung seit MF-539 ABLEHNT statt eine Datei zu
-         * erzeugen, die niemand lesen kann — fuer AmigaDOS gibt es in
-         * diesem Baum keinen MFM-Encoder.
+        /* MF-1081: hier stand ein ABLEHNUNGSTEST, und er hat getan,
+         * was er sollte — er ist rot geworden, sobald der
+         * AmigaDOS-Encoder da war. Sein eigener Text sagte, was dann
+         * zu tun ist: "gehoert hier ein Rundlauf hin, kein
+         * Ablehnungstest". Also steht hier wieder ein Rundlauf.
          *
-         * Was hier gemessen wurde und wie es aufgeflogen ist, steht in der
-         * Nulllinien-Erklaerung weiter oben (MF-538). Kurz: die
-         * Rueckwandlung lieferte eine ADF aus lauter Nullen, und weil die
-         * Quelle eine leere OFS-Diskette ist, sah das nach 0,08 %
-         * Abweichung aus.
-         *
-         * Statt dessen wird die Ablehnung geprueft: sie MUSS kommen, und
-         * sie darf keine Datei hinterlassen. Eine Wandlung, die still
-         * wieder funktioniert, ohne dass jemand einen Amiga-Encoder
-         * geschrieben hat, faellt hier auf. */
-        printf("ADF -> HFE: belegte Ablehnung (MF-539)\n");
+         * **Und die Falle aus MF-538 wird mitgeprueft.** Die Quelle
+         * `xdftool_dd_ofs.adf` ist eine LEERE OFS-Diskette mit genau
+         * 733 Byte ungleich null. Damals sah eine Rueckwandlung aus
+         * lauter Nullen wie 0,08 % Abweichung aus. Deshalb genuegt
+         * hier keine Prozentzahl: geprueft wird **0 abweichende
+         * Byte** UND dass die zurueckgewandelte Datei dieselbe Zahl
+         * von Bytes ungleich null traegt wie die Quelle. Eine ADF aus
+         * lauter Nullen faellt daran sofort auf. */
+        printf("ADF -> HFE -> ADF: Rundlauf (MF-1081)\n");
         char src[1024];
         snprintf(src, sizeof(src), "%s/%s", UFT_CORPUS_DIR,
                  "xdftool_dd_ofs.adf");
@@ -441,29 +440,50 @@ int main(void)
             uft_convert_result_t r;
             memset(&o, 0, sizeof(o));
             memset(&r, 0, sizeof(r));
-            o.accept_data_loss = true;   /* auch MIT Zustimmung nein */
             remove("uft_rtm_mid4.hfe");
-            uft_error_t e = adapt_adf_to_hfe(a, n0, NULL, "uft_rtm_mid4.hfe",
-                                             &o, &r);
-            if (e == UFT_OK) {
-                printf("  FAIL: die Wandlung wurde ANGENOMMEN (%d). Wenn ein\n"
-                       "        AmigaDOS-Encoder dazugekommen ist, gehoert\n"
-                       "        hier ein Rundlauf hin, kein Ablehnungstest.\n",
-                       (int)e);
+            uft_error_t e = adapt_adf_to_hfe(a, n0, NULL,
+                                             "uft_rtm_mid4.hfe", &o, &r);
+            if (e != UFT_OK) {
+                printf("  FAIL: ADF -> HFE abgelehnt mit %d\n", (int)e);
+                if (r.warning_count > 0)
+                    printf("        %s\n", r.warnings[0]);
                 failures++;
             } else {
-                printf("  ok   abgelehnt mit %d\n", (int)e);
-                if (r.warning_count > 0)
-                    printf("       Begruendung: %s\n", r.warnings[0]);
-                FILE *f = fopen("uft_rtm_mid4.hfe", "rb");
-                if (f) {
-                    fclose(f);
-                    printf("  FAIL: es liegt trotzdem eine Datei da.\n");
+                size_t hn = slurp("uft_rtm_mid4.hfe", b);
+                printf("  ok   ADF->HFE       -> %8u Byte\n",
+                       (unsigned)hn);
+                memset(&r, 0, sizeof(r));
+                remove("uft_rtm_out4.adf");
+                e = adapt_hfe_to_adf(b, hn, "uft_rtm_mid4.hfe",
+                                     "uft_rtm_out4.adf", &o, &r);
+                if (e != UFT_OK) {
+                    printf("  FAIL: HFE -> ADF abgelehnt mit %d\n",
+                           (int)e);
                     failures++;
-                    remove("uft_rtm_mid4.hfe");
                 } else {
-                    printf("  ok   keine Datei hinterlassen\n");
+                    size_t zn = slurp("uft_rtm_out4.adf", c);
+                    size_t i, ab = 0, nz_q = 0, nz_z = 0;
+                    for (i = 0; i < n0; i++) if (a[i]) nz_q++;
+                    for (i = 0; i < zn; i++) if (c[i]) nz_z++;
+                    if (zn == n0)
+                        for (i = 0; i < n0; i++)
+                            if (a[i] != c[i]) ab++;
+                    printf("  ok   HFE->ADF       -> %8u Byte\n",
+                           (unsigned)zn);
+                    printf("       Bytes ungleich null: Quelle %u, "
+                           "zurueck %u (Nulllinie, MF-538)\n",
+                           (unsigned)nz_q, (unsigned)nz_z);
+                    if (zn == n0 && ab == 0 && nz_z == nz_q) {
+                        printf("  ok   BYTEIDENTISCH, und die Nulllinie "
+                               "stimmt auch\n");
+                    } else {
+                        printf("  FAIL: %u von %u Byte abweichend\n",
+                               (unsigned)ab, (unsigned)n0);
+                        failures++;
+                    }
+                    remove("uft_rtm_out4.adf");
                 }
+                remove("uft_rtm_mid4.hfe");
             }
         }
     }

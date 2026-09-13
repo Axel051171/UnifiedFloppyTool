@@ -267,9 +267,39 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      *
      * `tests/test_convert_roundtrip_measured.c` rechnet seither die
      * Nulllinie mit und sagt ausdruecklich, wenn eine Abweichung nicht
-     * kleiner ist als sie. ADF -> HFE bleibt UNGEPRUEFT, bis eine Quelle
-     * mit Inhalt vorliegt — eine leere Diskette kann keinen Wandler
-     * belegen. */
+     * kleiner ist als sie.
+     *
+     * **MF-1081: der Eintrag kommt zurueck, und diesmal mit Belegen.**
+     * Der Grund fuer die Ruecknahme war nicht die leere Quelldatei
+     * allein — es fehlte der AmigaDOS-Encoder (MF-539). Den gibt es
+     * jetzt (`src/core/uft_amiga_mfm_encoder.c`), und er ist NICHT
+     * gegen sich selbst abgenommen:
+     *
+     *   - Aus der echten Aufnahme `tests/corpus_free/gw_amigados.hfe`
+     *     dekodiert und neu kodiert stehen **11 von 11 Sektoren
+     *     byteidentisch** in der Originalspur (je 1084 Byte samt Sync,
+     *     Info-Long, Label, beiden Pruefsummen und jedem Taktbit).
+     *   - Die Quelldatei der Zusicherung hat INHALT: jeder der 1760
+     *     Sektoren benennt sich selbst. Genau das fehlte MF-538.
+     *   - Rundlauf ADF -> HFE -> ADF: **0 abweichende Byte von
+     *     901 120**.
+     *   - Die kodierte Spur haelt die MFM-Zellregel (0 benachbarte
+     *     1-Zellen, laengster Nulllauf 3) und traegt die Signatur der
+     *     echten Aufnahme: 22 Sync 0x4489, **kein** rohes Nullbyte
+     *     (vorher: 0 Sync, 5969 Nullbytes).
+     *
+     * Dieselbe Grenze wie bei IMG -> HFE und D64 -> G64 gilt mit: die
+     * erzeugte HFE ist eine REKONSTRUKTION, keine Aufnahme. Luecken und
+     * Sektorverschraenkung sind erzeugt; sie taugt zum Zurueckgewinnen
+     * der Sektoren, nicht als Aussage darueber, wie die Diskette
+     * wirklich aussah. Abnahme:
+     * `tests/test_convert_adf_hfe_roundtrip.c`, 5 Zusagen. */
+    { UFT_FORMAT_ADF, UFT_FORMAT_HFE, UFT_RT_LOSSLESS,
+      "MF-1081: Rundlauf ADF -> HFE -> ADF byteidentisch gemessen "
+      "(0 von 901120 Byte abweichend, Quelle mit Inhalt). Der "
+      "AmigaDOS-Encoder ist an einer ECHTEN Aufnahme abgenommen: "
+      "11 von 11 Sektoren byteidentisch in gw_amigados.hfe. Die HFE "
+      "ist eine Rekonstruktion, keine Aufnahme." },
 
 
     /* Sector → Flux: target cannot be reproduced from sectors alone */
