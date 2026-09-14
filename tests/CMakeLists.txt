@@ -2145,7 +2145,13 @@ foreach(test_source ${TEST_SOURCES})
         # Korpuspfad wie test_corpus_hfe — zwei der neun Zusagen messen an
         # `gw_amigados.hfe`, die uebrigen an einem synthetischen Abbild mit
         # einer Spurlaenge, die KEIN Vielfaches von 512 ist.
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+        #
+        # MF-1128: die MFM-Laufregel an der Naht kommt jetzt aus der
+        # Ableitung `src/core/uft_zellregel.c` statt aus einer eigenen
+        # Schleife.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_scp")
@@ -3911,6 +3917,39 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_zellregel")
+        # MF-1128: Abnahme der ABLEITUNG `src/core/uft_zellregel.c`.
+        # Verbessern heisst ableiten, nie bearbeiten — der Fremdbestand
+        # wird hier nur AUSGEFUEHRT, und zwar genau eine Datei
+        # (`bitbuffer.c`), fuer den Differenzlauf ueber 2000
+        # Zufallspuffer. `uft_gcr_ops.c` liefert die CBM-Tafel des Baums
+        # ueber ihren oeffentlichen Zugang.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/bitbuffer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_gcr_tafeln")
+        # MF-1126, Stufe 1: die GCR-Tafeln gegen ihre BEDINGUNG (die
+        # Selbsttaktregel, sie IST die Norm) und gegeneinander. Es steht
+        # KEINE Tabellenkopie im Test — eine abgeschriebene Tafel waere
+        # eine Pruefung gegen eine erinnerte Erwartung.
+        #
+        # Aus dem Fremdbestand genau EINE Datei (`encoding.c`),
+        # ausgefuehrt und nicht angefasst.
+        #
+        # MF-1128: die Laufmessung kommt jetzt aus der Ableitung
+        # `src/core/uft_zellregel.c` statt aus einer eigenen Schleife —
+        # sie war die dritte Kopie derselben Regel im Baum.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/encoding.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_crc_gegen_norm")
         # MF-1126, Stufe 1: die CRCs gegen die NORM (Koopman + RevEng),

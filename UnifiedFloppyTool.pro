@@ -760,6 +760,7 @@ SOURCES += \
     src/core/uft_capture.c \
     src/core/uft_mfm_encoder.c \
     src/core/uft_amiga_mfm_encoder.c \
+    src/core/uft_zellregel.c \
     src/core/uft_detect_format_impl.c \
     src/core/uft_detect_buffer_impl.c \
     src/core/uft_probe_format_impl.c \

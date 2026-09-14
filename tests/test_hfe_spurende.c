@@ -130,6 +130,7 @@
  * Bereich.
  */
 
+#include "uft/core/uft_zellregel.h"
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
@@ -579,25 +580,26 @@ TEST(korpus_naht_haelt_die_mfm_regel)
             if (uft_format_plugin_hfe.read_track(&disk, spuren[k], h, &t) != UFT_OK)
                 continue;
             if (t.raw_data && t.raw_size >= GW_JE_SEITE) {
+                /* MF-1128: hier stand eine eigene Zaehlschleife. Sie war
+                 * eine von drei Kopien derselben Regel im Baum; gemessen
+                 * wird jetzt von `uft_zellregel_messen()`. Der Leser
+                 * spiegelt jedes Byte in die logische Domaene, also wird
+                 * fuer diese Messung LSB-ZUERST gelesen — damit ist die
+                 * Nachbarschaft der Zellen wieder die PHYSISCHE, und
+                 * genau darauf bezieht sich die MFM-Regel. Das spart
+                 * zugleich die Rueckspiegelung von Hand. */
                 const size_t ab = 49u * 256u;      /* Byte der Naht */
-                int lauf = 0, vorher = 0, paare = 0, maxnull = 0;
-                for (size_t i = (ab > 8u ? ab - 8u : 0u); i < GW_JE_SEITE; i++) {
-                    const uint8_t o = spiegel(t.raw_data[i]);
-                    for (int b = 0; b < 8; b++) {
-                        const int c = (o >> b) & 1;
-                        if (c) {
-                            if (vorher) paare++;
-                            if (lauf > maxnull) maxnull = lauf;
-                            lauf = 0;
-                        } else {
-                            lauf++;
-                        }
-                        vorher = c;
-                    }
-                }
-                if (paare || maxnull > 3) {
-                    printf("\n      Spur %d/%d: %d 11-Paare, laengster "
-                           "Nulllauf %d ", spuren[k], h, paare, maxnull);
+                const size_t von = (ab > 8u) ? ab - 8u : 0u;
+                uft_zellregel_t r;
+                if (uft_zellregel_messen(t.raw_data + von,
+                                         (GW_JE_SEITE - von) * 8u,
+                                         UFT_ZELL_LSB_ZUERST,
+                                         UFT_ZELL_MFM_MAX_NULL,
+                                         UFT_ZELL_MFM_MAX_EINS, &r)
+                    && (r.paare || r.max_null > UFT_ZELL_MFM_MAX_NULL)) {
+                    printf("\n      Spur %d/%d: %zu 11-Paare, laengster "
+                           "Nulllauf %u ", spuren[k], h, r.paare,
+                           r.max_null);
                     brueche++;
                 }
             }

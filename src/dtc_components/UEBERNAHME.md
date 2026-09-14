@@ -180,21 +180,50 @@ strenge Wert stand im berichtenden Schritt). Seither haelt es doppelt,
 Uebersetzungs-Flag und Laufzeitoption.
 
 **Die echte Luecke lag daneben, und sie ist geschlossen:** die
-Sanitizer-Stufe laeuft ueber eine **gepflegte Liste von neun
-Testnamen**, und der Fremdbestand stand in keiner davon — waehrend der
-Sanitizer bei minifiziertem Code das einzige Werkzeug ist, das ueber
-Verhalten etwas sagt. `test_dtc_ungeprueft` ist jetzt in allen vier
-Vorkommen der Regex (ASan und UBSan, je gatend und berichtend); die
+**gatenden** Schritte der Sanitizer-Stufe laufen ueber eine gepflegte
+Liste von neun Testnamen, und der Fremdbestand stand in keiner davon —
+waehrend der Sanitizer bei minifiziertem Code das einzige Werkzeug ist,
+das ueber Verhalten etwas sagt. `test_dtc_ungeprueft` ist jetzt in allen
+vier Vorkommen der Regex (ASan und UBSan, je gatend und berichtend); die
 Sollzahl zieht von selbst nach, weil der Workflow sie aus der Zahl der
-`|`-Alternativen ableitet (10 statt 9). Damit laufen **sieben der zehn
-Module** unter ASan und UBSan. **Was weiterhin NICHT laeuft:**
-`flux.c`, `detect.c` und `ctraw.c` — die beruehrt nur das
-Opt-in-Ziel `test_dtc_components`, und ein Ziel, das nur unter einem
-abgeschalteten Schalter existiert, kann in CI nicht rot werden.
-**Und die Wirkung dieser Aufnahme ist hier nicht gemessen:** die
-MinGW-Werkzeugkette hat weder `libasan` noch `libubsan`, die Messung
-findet in den beiden Linux-Jobs statt. Faellt dort etwas, **ist das der
-Befund** und nicht ein Rueckschritt.
+`|`-Alternativen ableitet (10 statt 9).
+
+**BERICHTIGT MF-1128, und der Fehler war meiner.** Hier stand, der
+Fremdbestand sei im Sanitizer-Lauf gar nicht vorgekommen und es liefen
+nun „sieben der zehn Module", waehrend `flux.c`, `detect.c` und
+`ctraw.c` „weiterhin NICHT" laufen wuerden, weil das Opt-in-Ziel unter
+einem abgeschalteten Schalter stehe. **Gemessen am Workflow selbst
+trifft das nicht zu:** `.github/workflows/sanitizers.yml` setzt
+`-DUFT_WITH_DTC_COMPONENTS=ON` in **beiden** Jobs (Zeile 60 und 188),
+und der CI-Lauf zu MF-1126 fuehrt `test_dtc_components` als Nummer 461
+aus — **alle zehn** Module wurden also schon vorher unter ASan und
+UBSan gebaut und ausgefuehrt.
+
+Der Unterschied ist ein anderer, und er ist der wichtigere: sie liefen
+**nur im berichtenden Schritt**, der mit `|| true` laeuft. Ein Befund
+dort blockt nichts. Seit dieser Aufnahme sind sieben der zehn Module
+zusaetzlich im **gatenden** Tor, und dort blockt ein Befund. Das ist
+woertlich die Unterscheidung, die MF-1102 an dieser Datei gemessen hat —
+der strenge Wert stand dort, wo er nichts bewirkt — und ich habe sie in
+meiner eigenen Beschreibung wieder verwischt. „Lief nie" und „lief, wo
+es nichts bewirkt" sind zwei verschiedene Aussagen.
+
+**Gemessen am CI-Lauf zu MF-1126 (`7e7de7c0`, alle vier Laeufe gruen):**
+beide gatenden Tore melden „**10 von 10** Prueflingen registriert" — die
+abgeleitete Sollzahl hat den neuen Namen also wirklich aufgenommen —,
+und `test_dtc_ungeprueft` ist unter ASan **und** UBSan gelaufen und
+bestanden. Auch im berichtenden Vollauf sind `test_dtc_nenner`,
+`test_dtc_ungeprueft` und `test_dtc_components` gruen. **Was dort
+faellt und nicht hierher gehoert:** 30 von 461 Tests im berichtenden
+ASan-Schritt, ausnahmslos Korpus- und Orakel-Tests (`*_gegen_mame`,
+`*_gegen_libdsk`, `*_layout_verified`); kein einziger betrifft den
+Fremdbestand. Ob sie am fehlenden eingeschraenkten Korpus liegen oder an
+Lecks, ist **nicht** festgestellt — ein bestehender Zustand ausserhalb
+dieser Arbeit, benannt statt gedeutet.
+
+**Was hier nach wie vor nicht gemessen werden kann:** die
+MinGW-Werkzeugkette hat weder `libasan` noch `libubsan`; die Messung
+findet in den beiden Linux-Jobs statt.
 
 ### Stufe 1, erste Zeile: `crc.c` braucht KEINE Ableitung
 
@@ -217,11 +246,137 @@ Zustand `UFT_SKELETON_PARTIAL` — 4 Prototypen, 3 ohne Koerper, **null
 Aufrufer**. Das ist Stummel-Arbeit, keine Ableitung, und es steht
 benannt statt uebergangen.
 
-### Stufe 1, zweite Zeile: `encoding.c` — offen, mit einem Fund
+### Stufe 1, zweite Zeile: `encoding.c` — auch hier KEINE Ableitung
 
 Nicht abgeleitet, und der Grund ist gemessen statt vermutet. Das Modul
 traegt vier GCR-Tafeln (`dtc_gcr_cbm_4to5`, `dtc_gcr_vorpal_4to5`,
 `dtc_gcr_apple_6and2`, `dtc_gcr_vmax_6to8`) plus MFM **und FM**.
+
+**Die zwei Normtafeln liegen im Baum schon, und sie sind identisch.**
+`tests/test_gcr_tafeln.c`, gemessen:
+
+* **CBM 4-zu-5**: `gcr_get_encode_table()` (UFT, eigenstaendig nach der
+  nibtools-Dokumentation mit Aehnlichkeitsaudit — nibtools ist
+  Apache-2.0 und mit GPL-2 unvereinbar, MF-1008) und
+  `dtc_gcr_cbm_4to5` sind in **16 von 16** Werten gleich. Die Tafel
+  liegt im Baum **neunfach**; eine Ableitung waere Kopie **zehn**.
+* **Apple 6-und-2**: 64 Werte, identisch mit `A2_WRITE_TAB` in
+  `src/formats/apple/uft_apple_gcr.c` — und DIESE ist gegen das Oracle
+  `to_woz2` abgenommen (MF-715, 5488 Datenbytes, 0 fremde Nibbles). Die
+  Tafel liegt dreifach; eine Ableitung waere Kopie **vier**.
+* **MFM**: `src/core/uft_mfm_encoder.c` gibt es seit 2026-04-18, in
+  Produktion, mit Rundlauftest.
+
+**Statt einer Kopie steht die BEDINGUNG im Test, und sie braucht keine
+Tabelle.** GCR ist selbsttaktend: zwischen zwei Flusswechseln darf nie
+zu viel Zeit liegen, bei 4-zu-5 also **nie mehr als zwei Nullen in
+Folge** — auch nicht ueber die Naht zweier Kodes. Geprueft ueber alle
+**256 Paare**; gemessen laengster Nulllauf genau **2**, kein Paar
+darueber. Rotbeweis an einer KOPIE des Fremdbestands (D1 unberuehrt):
+ein Kode auf `0x11` = `10001` gesetzt -> laengster Nulllauf **3**,
+**31 von 256** Paaren darueber, drei Zusagen fallen. Eine falsche
+Tafelzeile faellt damit auf, **ohne dass irgendwo ein Sollwert steht**.
+
+**Ein Befund am Rand, und er sitzt in UFTs eigenem, orakelgepruefen
+Kopf.** `uft_apple_gcr.c` sagte ueber seine 64 Werte: „mindestens zwei
+benachbarte gesetzte Bits und **nie mehr als eine Null in Folge** …
+*Beneath Apple DOS*, Kapitel 3." Gemessen ist der laengste Nulllauf
+**2**, schon beim ersten Wert `0x96` = `10010110`. Die **Tafel** ist
+richtig, die **angegebene Bedingung** war falsch — wer aus ihr ableitet,
+erzeugt **33** Werte statt 64. Berichtigt mit MF-1126. Eine ersetzende
+hinreichende Regel steht dort ausdruecklich NICHT: mit „hohes Bit",
+„zwei Einsen in Folge" und „Nulllauf <= 2" kommen **74** Werte heraus,
+und welche weitere Bedingung die zehn ueberzaehligen ausschliesst, ist
+ohne die gedruckte Quelle nicht feststellbar. Sie zu erraten waere
+dieselbe Falschaussage in neuem Gewand.
+
+**Zwei Tafeln bleiben ausdruecklich unbewertet:**
+`dtc_gcr_vorpal_4to5` und `dtc_gcr_vmax_6to8` sind
+**Kopierschutz**-Kodierungen. Sie stehen zwar in `encoding.c` und damit
+formal auf Stufe 1, gehoeren aber der Frage nach, fuer die Stufe 3
+gesperrt ist — „Schutzverfahren sind SPS-Wertschoepfung, nicht Norm".
+Sie werden hier weder geprueft noch abgeleitet noch fuer richtig
+erklaert.
+
+### Stufe 1, dritte Zeile: `bitbuffer.c` — die erste echte ABLEITUNG
+
+Bei den ersten zwei Zeilen war die Antwort „nicht ableiten, sondern
+messen", weil der Baum die Inhalte schon hatte. Bei der dritten ist es
+umgekehrt, und das ist gemessen: eine seiner Funktionen hat im ganzen
+Baum **kein Gegenstueck**.
+
+`dtc_find_run_violation` sucht **Lauflaengen-Verstoesse** in einem
+Zellstrom — zwei Schranken (hoechster Null-, hoechster Einslauf), und
+zurueck kommt entweder die erste Fundstelle oder die Trefferzahl. Das
+ist die scharfste Pruefung, die es fuer einen Zellstrom gibt: sie prueft
+**Inhalt** statt Laenge und braucht kein Referenzabbild.
+
+**Gemessen ueber `git ls-files` (2026-09-14): der Baum hatte keine
+einzige Funktion dieser Bedeutung — aber DREI Stellen, die sie inline
+nachbauen:**
+
+| Stelle | Gestalt |
+|---|---|
+| `tests/test_ipf_zellstrom.c` | eigene `zellregel()`, MF-1079 |
+| `tests/test_hfe_spurende.c` | inline, MF-1125 |
+| `tests/test_gcr_tafeln.c` | eigene `laengster_nulllauf()`, MF-1127 |
+
+In der **Produktion** keine; fuenf weitere Dateien nennen die Regel nur
+in Prosa. **Eine eigene Zwischenzahl ist dabei berichtigt worden:** eine
+erste Messung meldete „acht Stellen", und das waren Prosatreffer eines
+zu weiten Suchmusters. Die Zahl stand kurz davor, in einen Dateikopf zu
+wandern.
+
+**Drei Kopien sind die Stelle, an der Drift anfaengt, und die
+Fehlerklasse ist in diesem Baum belegt:** MF-1079 fand in
+IPF-Zwischenraeumen **587** bzw. **760** Paare benachbarter 1-Zellen —
+eine Folge, die es auf einer MFM-Diskette nicht gibt — waehrend jede
+Spurlaenge auf das Bit stimmte.
+
+**Abgeleitet** nach §3 der Weisung: `include/uft/core/uft_zellregel.h`
+und `src/core/uft_zellregel.c`, Referenz A die Norm, Referenz B der
+Fremdbestand mit SHA-256, in dieser Reihenfolge. Die Funktion **misst
+und urteilt nicht** — die Schranken kommen vom Aufrufer, damit die Norm
+an der Stelle bleibt, an der sie gilt. Sie ist bewusst anders gebaut als
+die Vorlage: ein Durchgang, und ALLE Messwerte zurueck (Einsen, Paare,
+beide Maxima, Zahl der Verstoesse, erste Stelle) statt „erste Stelle
+ODER Trefferzahl" — weil ein „erster Verstoss" ohne die Verteilung
+dahinter zum Fehlschluss einlaedt, siehe MF-1079.
+
+**Die Schranken sind jetzt BEWIESEN statt zitiert.**
+`tests/test_zellregel.c` kodiert **alle 8190 Datenfolgen bis 12 Bit**
+nach den Kodierregeln und misst: MFM laengster Nulllauf **3**, Einslauf
+**1**; FM Nulllauf **1**, Einslauf unbegrenzt (24 bei k=12) — deshalb
+steht dort „unbegrenzt" und keine erfundene Zahl. MF-1079 hat die
+MFM-Werte unabhaengig an zwei echten SPS-Abbildern gemessen: Herleitung
+UND Objekt.
+
+**Der Differenzlauf gegen den Fremdbestand:** 2000 Zufallspuffer mit
+zufaelligen Schranken, feste xorshift-Folge statt `rand()`, damit ein
+Fund reproduzierbar ist statt „manchmal rot" — **0 Abweichungen** in der
+ersten Verstossstelle und **0** in der Trefferzahl. Nur ausgefuehrt,
+nichts uebernommen.
+
+**Abnahme:** 16 Zusagen gruen; Mutationsmatrix **10 von 10 im ersten
+Lauf**, 0 Baufehler. **Und der eigene Rotbeweis fiel zuerst, wobei das
+Modul recht hatte:** gepflanzt waren fuenf Nullen bei Zelle 40..44,
+erwartet Lauf 5 ab Index 43 — gemessen Lauf **7** ab Index **42**, weil
+das Grundmuster `0xAA` an den ungeraden Zellen schon Nullen hat und der
+Block an seinen Nachbarn anwaechst. Die Erwartung war falsch, nicht die
+Funktion; die Rechnung steht jetzt ausgeschrieben im Test.
+
+**Sie hat drei echte Aufrufer, nicht null** (Klasse P3-204 vermieden):
+die eigene Abnahme plus die zwei umgestellten Stellen. Bei HFE liest sie
+**LSB-zuerst**, womit die Zellnachbarschaft wieder die PHYSISCHE ist —
+genau die, auf die sich die MFM-Regel bezieht — und die Spiegelung von
+Hand entfaellt. `tests/test_ipf_zellstrom.c` bleibt vorerst bei seiner
+eigenen `zellregel()`: sie arbeitet auf dem IPF-Zellmodell statt auf
+einem Bytepuffer, und sie umzustellen waere eine Aenderung an einem
+Beleg aus MF-1079 ohne Not. Benannt statt stillschweigend uebergangen.
+
+**Kein Produktpfad ruft sie** — das bleibt so, bis §5 je Fall erfuellt
+ist. Sie ist damit heute ein Werkzeug fuer Abnahmen, und genau das war
+der billigste erste Griff.
 
 **Der Fund: `dtc_fm_encode` ist ein FM-Encoder, und der Baum hat
 keinen.** Seit MF-864/P3-218 steht dort: „der Baum hat KEINEN

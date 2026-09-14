@@ -14,10 +14,26 @@
 
 /* ── Die 6-and-2-Umsetzung ──────────────────────────────────────────────
  *
- * 64 zulaessige Diskettenbytes. Jedes hat mindestens zwei benachbarte
- * gesetzte Bits und nie mehr als eine Null in Folge — das ist die
- * Bedingung, die der Apple-Controller an einen lesbaren Strom stellt.
+ * 64 zulaessige Diskettenbytes. Jedes hat das hohe Bit gesetzt und
+ * mindestens zwei benachbarte gesetzte Bits — das ist die Bedingung,
+ * die der Apple-Controller an einen lesbaren Strom stellt.
  * `Beneath Apple DOS`, Kapitel 3.
+ *
+ * BERICHTIGT MF-1126. Hier stand zusaetzlich „und nie mehr als eine
+ * Null in Folge". Das ist falsch, und zwar ueber die eigene Tabelle
+ * darunter: gemessen ist der laengste Nulllauf **2**, schon beim ersten
+ * Wert `0x96` = `10010110`. Die TABELLE ist richtig — MF-715 hat ihre
+ * 64 Werte gegen das Oracle `to_woz2` gehalten, 5488 Datenbytes, 0
+ * fremde Nibbles —, falsch war die angegebene BEDINGUNG. Wer aus ihr
+ * ableitet, erzeugt **33** Werte statt 64 (nachgerechnet).
+ *
+ * Was hier bewusst NICHT steht, ist eine ersetzende hinreichende Regel.
+ * Mit „hohes Bit gesetzt", „zwei Einsen in Folge" und „Nulllauf <= 2"
+ * kommen **74** Werte heraus; welche weitere Bedingung die zehn
+ * ueberzaehligen ausschliesst, ist ohne die gedruckte Quelle nicht
+ * feststellbar, und sie zu erraten waere dieselbe Falschaussage in
+ * neuem Gewand. Die notwendigen Bedingungen haelt
+ * `tests/test_gcr_tafeln.c`, ausdruecklich als notwendige.
  */
 static const uint8_t A2_WRITE_TAB[64] = {
     0x96, 0x97, 0x9A, 0x9B, 0x9D, 0x9E, 0x9F, 0xA6,
