@@ -26,10 +26,33 @@
  * UFT_SKELETON_PARTIAL
  * PARTIALLY IMPLEMENTED — Root-level API
  *
- * This header declares 24 public functions; 22 are NOT implemented
- * in the source tree (only 2 have a definition). Callers exist
- * for some of the unimplemented prototypes, so this file is a live hazard:
- * compile passes but link may fail depending on call pattern.
+ * BERICHTIGT MF-1113 — hier standen zwei Zahlen und eine Aussage, und
+ * alle drei tragen nicht mehr:
+ *
+ *   „declares 24 public functions; 22 are NOT implemented"
+ *      -> gemessen ueber `git ls-files` je Bezeichner: **4 Prototypen,
+ *         3 ohne Koerper**. Die 22 waren einmal richtig; die
+ *         Deklarationen sind laengst entfernt, und zurueck blieben DREI
+ *         LEERE Abschnittsueberschriften (je 0 Nicht-Kommentarzeilen),
+ *         die MF-1113 zu einem Hinweis zusammengefasst hat.
+ *
+ *   „Callers exist for some of the unimplemented prototypes, so this
+ *    file is a live hazard"
+ *      -> gemessen: **keiner der drei hat einen Aufrufer**, im ganzen
+ *         Baum kein Vorkommen ausser der Deklaration. Die Gefahr war
+ *         also latent, nicht akut — und sie ist damit KLEINER als der
+ *         Banner sagte, was genauso eine Falschaussage ist wie das
+ *         Gegenteil.
+ *
+ * Was heute gilt: die drei Prototypen `uft_crc_get_config`,
+ * `uft_crc_get_config_by_name` und `uft_crc_get_table` tragen seit
+ * MF-1113 ein `error`-Attribut. Ein Aufruf bricht damit beim
+ * UEBERSETZEN mit Begruendung statt beim Linken ohne; ein blosses
+ * `#include` uebersetzt unveraendert (beides gemessen). Auf
+ * Uebersetzern ohne das Attribut (MSVC) bleibt der heutige Zustand.
+ *
+ * `uft_crc16_ccitt` ist umgesetzt (`src/protection/uft_protection_ext.c`)
+ * und nicht betroffen.
  *
  * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
  * Scope: see docs/MASTER_PLAN.md (M1/MF-011 IMPLEMENT-Welle).
@@ -285,36 +308,113 @@ static const uft_crc_config_t UFT_CRC_CONFIG_32C = {
  * API Functions
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* ───────────────────────────────────────────────────────────────────────
+ * MF-1113: drei Zusagen ohne Gegenstand — und sie brechen jetzt beim
+ * UEBERSETZEN statt beim Linken.
+ *
+ * Gemessen ueber `git ls-files` je Bezeichner: `uft_crc_get_config`,
+ * `uft_crc_get_config_by_name` und `uft_crc_get_table` haben im GANZEN
+ * Baum **keine Definition und keinen Aufrufer** — kein Vorkommen ausser
+ * dieser Deklaration. Wer sie benutzt, bekommt einen Linkerfehler; das
+ * ist die „Link-Falle", und sie ist echt, nur kleiner als vermutet.
+ *
+ * **Die Zahl gehoert dazu, weil sie in der Ablage anders steht.**
+ * `docs/skeleton_triage.csv:12` fuehrt diesen Header mit
+ * `IMPLEMENT,24,22,2` — 24 Deklarationen, 22 ohne Koerper. Gemessen
+ * sind es **4 und 3**. Die Zahl war einmal richtig: der Header traegt
+ * unten **DREI LEERE** Abschnittsueberschriften — „Convenience
+ * Functions - Floppy", „- Hard Disk" und „Verification", gemessen mit
+ * **0** Nicht-Kommentarzeilen. Dort standen sie; jemand hat sie
+ * entfernt und die Ueberschriften stehen lassen. Die CSV ist zwar
+ * abgeleitet (`scripts/skeleton_consumers.py` schreibt sie), aber sie
+ * ist eine eingecheckte Momentaufnahme und driftet zwischen den
+ * Laeufen; das lebende Tor `scripts/audit_skeleton_headers.py` meldet
+ * fuer diesen Header heute **0**.
+ *
+ * (Die Zahl DREI stand hier zuerst als „vier". Nachgezaehlt sind
+ * „- Standard" und „Table Generation" NICHT leer: dort liegen
+ * `uft_crc16_ccitt` bzw. `uft_crc_get_table`. Gemessen statt geschaetzt,
+ * beim dritten Versuch — die ersten zwei Muster zaehlten Funktionen und
+ * uebersahen Typen und Tafeln.)
+ *
+ * **Warum nicht einfach streichen.** Gemessen ist
+ * `-Werror=implicit-function-declaration` in `CMakeLists.txt`,
+ * `tests/CMakeLists.txt` und `UnifiedFloppyTool.pro` **nicht** gesetzt.
+ * Ein bloss entfernter Prototyp gaebe also eine WARNUNG, und der Fehler
+ * kaeme weiterhin erst vom Linker — ohne Begruendung. Das
+ * `error`-Attribut macht den Aufruf zum Uebersetzungsfehler MIT Grund;
+ * wo der Uebersetzer es nicht kennt (MSVC), bleibt genau der heutige
+ * Zustand, also keine Verschlechterung.
+ *
+ * **Die Deklarationen bleiben stehen** (MF-1077: Fehlklassifikation
+ * wird umgeschrieben, nicht entfernt) — sie sind der einzige Beleg
+ * dafuer, WAS zugesagt war. Wer sie umsetzt, nimmt das Attribut weg.
+ * ─────────────────────────────────────────────────────────────────── */
+#if defined(__clang__)
+#  if defined(__has_attribute)
+#    if __has_attribute(diagnose_if)
+#      define UFT_CRC_OHNE_KOERPER(msg) \
+           __attribute__((diagnose_if(1, msg, "error")))
+#    endif
+#  endif
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#  define UFT_CRC_OHNE_KOERPER(msg) __attribute__((error(msg)))
+#endif
+#ifndef UFT_CRC_OHNE_KOERPER
+/* MSVC u. a.: Linkerfehler wie bisher — keine Verschlechterung. */
+#  define UFT_CRC_OHNE_KOERPER(msg)
+#endif
+
 /**
  * @brief Get CRC configuration by type
  * @param type CRC type
  * @return Configuration pointer or NULL if not found
+ *
+ * NICHT UMGESETZT (MF-1113) — keine Definition im Baum.
  */
-const uft_crc_config_t *uft_crc_get_config(uft_crc_type_t type);
+const uft_crc_config_t *uft_crc_get_config(uft_crc_type_t type)
+    UFT_CRC_OHNE_KOERPER("uft_crc_get_config() ist nicht umgesetzt "
+                         "(MF-1113): der Header sagt sie zu, im Baum "
+                         "gibt es keine Definition. Entweder umsetzen "
+                         "oder die Tafel uft_crc_configs[] direkt lesen.");
 
 /**
  * @brief Get CRC configuration by name
  * @param name CRC name (case-insensitive)
  * @return Configuration pointer or NULL if not found
+ *
+ * NICHT UMGESETZT (MF-1113) — keine Definition im Baum.
  */
-const uft_crc_config_t *uft_crc_get_config_by_name(const char *name);
+const uft_crc_config_t *uft_crc_get_config_by_name(const char *name)
+    UFT_CRC_OHNE_KOERPER("uft_crc_get_config_by_name() ist nicht "
+                         "umgesetzt (MF-1113): der Header sagt sie zu, "
+                         "im Baum gibt es keine Definition.");
 
 
 
 
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Convenience Functions - Floppy
- * ═══════════════════════════════════════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════════════════════
+ * Convenience Functions - Floppy / Hard Disk  +  Verification
+ *
+ * MF-1113: hier standen drei Ueberschriften mit NICHTS darunter —
+ * gemessen je 0 Nicht-Kommentarzeilen. Sie sind der Fingerabdruck einer
+ * frueheren Aufraeumung: die Deklarationen wurden entfernt, die
+ * Ueberschriften blieben. Eine Ueberschrift ohne Inhalt verspricht
+ * optisch eine Gruppe von Funktionen, die es nicht gibt, und genau
+ * daraus stammt die Zahl 22 in `docs/skeleton_triage.csv`.
+ *
+ * Zusammengefasst statt dreifach leer stehen gelassen — die Information
+ * waechst dabei (MF-1077: umschreiben, nicht entfernen). Wer hier
+ * wieder etwas eintraegt, legt seinen eigenen Abschnitt an.
+ * ═════════════════════════════════════════════════════════════════════════════ */
 
 
 
 
 
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Convenience Functions - Hard Disk
- * ═══════════════════════════════════════════════════════════════════════════════ */
+
 
 
 
@@ -342,12 +442,16 @@ uint16_t uft_crc16_ccitt(const uint8_t *data, size_t length);
  * @brief Get precomputed CRC table
  * @param type CRC type
  * @return Pointer to table or NULL
+ *
+ * NICHT UMGESETZT (MF-1113) — keine Definition im Baum. Die Begruendung
+ * und die Messung stehen oben beim ersten der drei.
  */
-const void *uft_crc_get_table(uft_crc_type_t type);
+const void *uft_crc_get_table(uft_crc_type_t type)
+    UFT_CRC_OHNE_KOERPER("uft_crc_get_table() ist nicht umgesetzt "
+                         "(MF-1113): es gibt im Baum keine vorberechnete "
+                         "Tafel und keine Definition dieser Funktion.");
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Verification
- * ═══════════════════════════════════════════════════════════════════════════════ */
+
 
 
 
