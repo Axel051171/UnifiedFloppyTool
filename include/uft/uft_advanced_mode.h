@@ -222,6 +222,22 @@ typedef struct {
     int error_sectors;
     int recovered_sectors;
     int crc_corrections;
+
+    /* MF-1129: `average_quality` ist ohne `measured_tracks` eine Zahl
+     * ohne Nenner (Klasse MF-1000). Vorher stand dort im Fehlerfall
+     * 0.95 und ohne eine einzige Spur 1.0 — beides erfunden. Jetzt
+     * mittelt `uft_advanced_get_stats()` nur ueber Spuren, die sich
+     * wirklich messen liessen, und `measured_tracks` sagt, wie viele
+     * das waren. Ist es 0, ist `average_quality` KEIN Messwert,
+     * sondern die 0.0 aus dem `memset`.
+     *
+     * Angehaengt und nicht eingefuegt: `uft_advanced_stats_t` ist
+     * genau EINMAL definiert (gemessen ueber `git ls-files`, anders
+     * als `uft_track_quality_t`, das dreimal hinter EINEM Waechter
+     * steht — siehe Z. 79) und hat ausser dieser Datei und
+     * `src/core/uft_advanced_mode.c` keinen Nutzer. */
+    int measured_tracks;
+
     double average_quality;
 } uft_advanced_stats_t;
 

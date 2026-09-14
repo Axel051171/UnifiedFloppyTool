@@ -101,7 +101,15 @@ typedef enum {
     FMT_STX
 } internal_format_t;
 
-static internal_format_t detect_format_internal(const uint8_t* data, size_t size, 
+/* MF-1129: EINE Stelle, die aus einem `internal_format_t` den
+ * zustaendigen v3-Handler macht. Sie steht hier vorne, weil drei
+ * Funktionen sie brauchen und vorher jede ihre eigene Zuordnung hatte —
+ * zwei davon mit `uft_format_get_handler()`, das ein `uft_format_t`
+ * nimmt. Definition und Begruendung bei der Umsetzung weiter unten. */
+static const uft_format_handler_t*
+advanced_handler(const uft_advanced_handle_t* handle);
+
+static internal_format_t detect_format_internal(const uint8_t* data, size_t size,
                                                  size_t file_size, int* confidence) {
     int best_conf = 0;
     internal_format_t best_fmt = FMT_UNKNOWN;
@@ -306,19 +314,56 @@ uft_error_t uft_advanced_get_track_quality(uft_advanced_handle_t* handle,
     memset(quality, 0, sizeof(uft_track_quality_t));
     quality->cylinder = cylinder;
     quality->head = head;
-    quality->quality = 1.0;  /* Default to good */
-    
-    /* Analyze track quality via v3 parser if available */
-    if (handle->using_v3 && handle->v3_handle) {
+
+    /* MF-1129: hier stand ein Vorgabewert 1.0 („Default to good") VOR der
+     * Analyse — und jeder Pfad, der nicht analysiert, gab ihn mit
+     * `UFT_OK` heraus. Eine nie gelesene Spur wurde damit als
+     * fehlerfrei gemeldet.
+     *
+     * Das ist nicht kosmetisch, denn der Wert wird ENTSCHIEDEN:
+     * `uft_advanced_read_track()` unten rechnet
+     * `q.quality * 100 < g_config.quality_threshold` — bei erfundenen
+     * 1.0 ergibt das 100 und die Wiederherstellung wird NICHT
+     * angefordert. Und `uft_advanced_analyze_disk()` traegt denselben
+     * Wert in das Feld, das `uft_advanced_get_stats()` mittelt; die
+     * erfundene Vollkommenheit wanderte also in den Durchschnitt.
+     *
+     * Es ist dieselbe Klasse, die MF-444 in DIESER Datei ausgerottet
+     * hat — der Grabstein steht wenige Zeilen unter dem Aufrufer:
+     * „A measurement API that cannot measure is not an unfinished
+     * feature". Die Behebung hat damals eine Funktion erwischt und die
+     * Nachbarschaft nicht.
+     *
+     * Jetzt: kein Vorgabewert. Nach dem `memset` steht 0.0, und das ist
+     * ausdruecklich KEINE Messung — wer nicht messen kann, sagt ab. Die
+     * Funktion hat dafuer einen Fehlerkanal, und der wird benutzt statt
+     * eine Zahl zu erfinden. Beide Aufrufer pruefen ihn seit MF-1129. */
+    if (!handle->using_v3 || !handle->v3_handle)
+        return UFT_ERR_NOT_SUPPORTED;
+
+    {
         /* Read track data to analyze */
         uint8_t track_buf[16384];
         size_t track_size = sizeof(track_buf);
-        const uft_format_handler_t *handler = uft_format_get_handler(handle->format_id);
-        
-        if (handler && handler->read_track) {
+        /* MF-1129: NICHT `uft_format_get_handler(handle->format_id)`.
+         * Das ist ein Typwechsel ohne Umrechnung zwischen
+         * `internal_format_t` und `uft_format_t` — die Rechnung steht
+         * bei `advanced_handler()`. Meine eigene erste Fassung dieser
+         * Zeile hat den Fehler von der Nachbarzeile uebernommen; gefunden
+         * hat ihn die Gegenrichtung des Rotbeweises, nicht ein Lesen. */
+        const uft_format_handler_t *handler = advanced_handler(handle);
+
+        if (!handler || !handler->read_track)
+            return UFT_ERR_NOT_SUPPORTED;
+
+        {
             uft_error_t err = handler->read_track(handle->v3_handle, cylinder, head,
                                                    track_buf, &track_size);
-            if (err == UFT_OK && track_size > 0) {
+            if (err != UFT_OK)
+                return err;
+            if (track_size == 0)
+                return UFT_ERR_FORMAT;
+            {
                 /* Analyze for weak bits and CRC errors */
                 int error_count = 0;
                 int weak_regions = 0;
@@ -376,10 +421,27 @@ uft_error_t uft_advanced_read_track(uft_advanced_handle_t* handle,
     
     /* Get track quality first */
     uft_track_quality_t q;
-    uft_advanced_get_track_quality(handle, cylinder, head, &q);
-    
+    const uft_error_t q_err = uft_advanced_get_track_quality(handle, cylinder,
+                                                             head, &q);
+
+    /* MF-1129: der Rueckgabewert wurde hier verworfen, und `q.quality`
+     * trug dann den erfundenen Vorgabewert 1.0 — die Entscheidung unten
+     * fiel also auf einer Zahl, die keine Messung war. Seit MF-1129 sagt
+     * die Messfunktion ab, statt zu erfinden; hier wird die Absage
+     * gelesen.
+     *
+     * Ohne Messung wird NICHT entschieden: `gemessen == false` heisst,
+     * dass die Guete unbekannt ist. Die Wiederherstellung wird dann
+     * weder angefordert (das waere eine Entscheidung auf 0.0, also auf
+     * „sehr schlecht") noch unterdrueckt (das war der alte Fehler, eine
+     * Entscheidung auf erfundene 1.0). Sie bleibt aus, und `quality`
+     * traegt die 0.0 aus dem `memset` — kenntlich daran, dass der
+     * Aufrufer den Fehler bekommt. */
+    const bool gemessen = (q_err == UFT_OK);
+
     /* Check if God-Mode should be engaged */
-    bool use_god_mode = (g_config.flags & UFT_ADV_GOD_MODE) &&
+    bool use_god_mode = gemessen &&
+                        (g_config.flags & UFT_ADV_GOD_MODE) &&
                         (q.quality * 100 < g_config.quality_threshold);
     
     /* MF-444: God-Mode is requested here, and not performed.
@@ -480,29 +542,78 @@ uft_error_t uft_advanced_read_sector(uft_advanced_handle_t* handle,
     return UFT_ERR_FILE_NOT_FOUND;
 }
 
+/* MF-1129: EINE Geometriequelle fuer dieses Subsystem.
+ *
+ * Es gab zwei, und die zweite fragte mit dem falschen Nummernraum.
+ * `uft_advanced_analyze_disk()` benutzte die v3-Handler (richtig),
+ * `uft_advanced_get_stats()` dagegen
+ * `uft_format_get_handler(handle->format_id)` — und das ist ein
+ * Typwechsel ohne Umrechnung: `handle->format_id` traegt ein
+ * `internal_format_t` (UNKNOWN=0, D64=1, G64=2, SCP=3, …), waehrend
+ * `uft_format_get_handler()` ein `uft_format_t` nimmt (UNKNOWN=0,
+ * RAW=1, IMG=2, ADF=3, …). Gemessen heisst das: eine **G64** hat den
+ * **IMG**-Handler nach ihrer Geometrie gefragt, eine D64 den **RAW**-,
+ * eine SCP den **ADF**-Handler. Alle drei gefuehrten Formate fragten
+ * den falschen, und `stats->total_sectors` stand auf dem Ergebnis.
+ *
+ * Gefunden hat es nicht ein Lesen, sondern die GEGENRICHTUNG des
+ * Rotbeweises: `tests/test_advanced_guete_ohne_messung.c` verlangt,
+ * dass an einem echten Abbild wirklich gemessen wird, und blieb bei
+ * `measured_tracks == 0` stehen, obwohl `using_v3 == 1` und
+ * `total_tracks == 42` waren. Ein Test, der nur die Absage geprueft
+ * haette, waere gruen gewesen.
+ *
+ * Rueckgabe: true, wenn die Geometrie aus dem Abbild kommt. Bei false
+ * steht in `*cyls`/`*heads` die 0 — KEIN Rueckfall auf 35x1. Der alte
+ * Rueckfall ist selbst ein erfundener Wert (eine willkuerliche
+ * 35-Spur-Commodore-Geometrie fuer jedes nicht gefuehrte Format) und
+ * wird von `analyze_disk()` aus Gruenden der Rueckwaertsverträglichkeit
+ * noch gesetzt — dort benannt, hier nicht. */
+static const uft_format_handler_t*
+advanced_handler(const uft_advanced_handle_t* handle) {
+    if (!handle || !handle->using_v3 || !handle->v3_handle) return NULL;
+    switch ((internal_format_t)handle->format_id) {
+        case FMT_D64: return &uft_d64_v3_handler;
+        case FMT_G64: return &uft_g64_v3_handler;
+        case FMT_SCP: return &uft_scp_v3_handler;
+        default:      return NULL;
+    }
+}
+
+static bool advanced_geometrie(const uft_advanced_handle_t* handle,
+                               int* cyls, int* heads) {
+    *cyls = 0;
+    *heads = 0;
+
+    const uft_format_handler_t* h = advanced_handler(handle);
+    if (!h || !h->get_geometry) return false;
+
+    h->get_geometry(handle->v3_handle, cyls, heads, NULL);
+    if (*cyls <= 0 || *heads <= 0) {   /* der Handler hat nichts gesagt */
+        *cyls = 0;
+        *heads = 0;
+        return false;
+    }
+    return true;
+}
+
 uft_error_t uft_advanced_analyze_disk(uft_advanced_handle_t* handle,
                                       uft_track_quality_t* qualities,
                                       int* track_count) {
     if (!handle) return UFT_ERR_INVALID_ARG;
-    
-    /* Get geometry */
+
+    /* MF-1129: eine Quelle (siehe `advanced_geometrie`). Der Rueckfall
+     * 35x1 bleibt hier stehen, WEIL er das bisherige Verhalten dieser
+     * Funktion ist — aber er ist ein erfundener Wert: eine
+     * 35-Spur-Einseiten-Geometrie fuer jedes Format, das dieses
+     * Subsystem nicht fuehrt. `uft_advanced_get_stats()` uebernimmt ihn
+     * seit MF-1129 NICHT mehr in `measured_tracks`, und
+     * `tests/test_advanced_guete_ohne_messung.c` nagelt ihn fest, damit
+     * eine Aenderung auffaellt. Eigener offener Punkt. */
     int cyls = 35, heads = 1;
-    if (handle->using_v3) {
-        switch ((internal_format_t)handle->format_id) {
-            case FMT_D64:
-                uft_d64_v3_handler.get_geometry(handle->v3_handle, &cyls, &heads, NULL);
-                break;
-            case FMT_G64:
-                uft_g64_v3_handler.get_geometry(handle->v3_handle, &cyls, &heads, NULL);
-                break;
-            case FMT_SCP:
-                uft_scp_v3_handler.get_geometry(handle->v3_handle, &cyls, &heads, NULL);
-                break;
-            default:
-                break;
-        }
-    }
-    
+    (void)advanced_geometrie(handle, &cyls, &heads);
+    if (cyls <= 0 || heads <= 0) { cyls = 35; heads = 1; }
+
     int total = cyls * heads;
     if (track_count) *track_count = total;
     
@@ -510,7 +621,36 @@ uft_error_t uft_advanced_analyze_disk(uft_advanced_handle_t* handle,
         for (int c = 0; c < cyls; c++) {
             for (int h = 0; h < heads; h++) {
                 int idx = c * heads + h;
-                uft_advanced_get_track_quality(handle, c, h, &qualities[idx]);
+                /* MF-1129: der Rueckgabewert wurde verworfen. Konnte eine
+                 * Spur nicht gemessen werden, stand vorher der erfundene
+                 * Vorgabewert 1.0 im Feld — und `uft_advanced_get_stats()`
+                 * mittelte ihn mit. Eine Diskette, von der keine einzige
+                 * Spur lesbar war, bekam damit die Durchschnittsguete 1,0.
+                 *
+                 * Seit MF-1129 sagt die Messfunktion ab und laesst die 0.0
+                 * aus ihrem `memset` stehen. Das ist hier noch keine
+                 * vollstaendige Auskunft: eine gemessene Spur KANN 0.0
+                 * haben (der Wert wird unten auf 0 geklammert), eine
+                 * ungemessene hat es immer — dieses Feld allein
+                 * unterscheidet die beiden Faelle also nicht.
+                 *
+                 * Ein Feld `is_measured` waere die saubere Loesung und
+                 * wird hier ABSICHTLICH NICHT angehaengt: `uft_track_quality_t`
+                 * ist im Baum DREIMAL definiert — als Enum in
+                 * `include/uft/core/uft_track_base.h`, als diese Struktur in
+                 * `include/uft/uft_advanced_mode.h` und als eine ANDERE
+                 * Struktur in `include/uft/uft_track.h` —, und alle drei
+                 * haengen am selben Waechter `UFT_TRACK_QUALITY_T_DEFINED`.
+                 * Ein Feld an eine von drei abweichenden Definitionen zu
+                 * haengen macht die Lage schlimmer, nicht besser. Der
+                 * Befund steht als eigener Punkt; hier wird darauf
+                 * NICHT gebaut.
+                 *
+                 * Der Rueckgabewert wird deshalb bewusst verworfen, und
+                 * `uft_advanced_get_stats()` fragt seit MF-1129 selbst je
+                 * Spur, statt diesem Feld zu glauben. */
+                (void)uft_advanced_get_track_quality(handle, c, h,
+                                                     &qualities[idx]);
             }
         }
     }
@@ -561,34 +701,81 @@ void uft_advanced_get_stats(uft_advanced_handle_t* handle, uft_advanced_stats_t*
     
     /* Calculate actual stats from track analysis */
     if (track_count > 0) {
-        /* Get geometry to determine full track count */
-        const uft_format_handler_t *handler = uft_format_get_handler(handle->format_id);
-        int cyls = 0, heads = 0, sects = 0;
-        if (handler && handler->get_geometry) {
-            handler->get_geometry(handle->using_v3 ? handle->v3_handle : handle->handle,
-                                 &cyls, &heads, &sects);
-            stats->total_sectors = cyls * heads * sects;
+        /* MF-1129: Geometrie aus DERSELBEN Quelle wie `analyze_disk`.
+         *
+         * Hier stand `uft_format_get_handler(handle->format_id)` — ein
+         * Typwechsel ohne Umrechnung zwischen `internal_format_t` und
+         * `uft_format_t`, der fuer G64 den IMG-Handler befragte (die
+         * Rechnung steht bei `advanced_geometrie`). Damit war
+         * `total_sectors` fuer alle drei gefuehrten Formate aus der
+         * falschen Tafel, und die Schleife darunter lief null Mal. */
+        int cyls = 0, heads = 0;
+        const bool geo_bekannt = advanced_geometrie(handle, &cyls, &heads);
+
+        /* `total_sectors` braucht die Sektoren je Spur, und die liefert
+         * derselbe v3-Handler mit. Ohne Geometrie bleibt das Feld die 0
+         * aus dem `memset` — nicht ein gerechneter Wert aus Nullen. */
+        if (geo_bekannt) {
+            const uft_format_handler_t* vh =
+                ((internal_format_t)handle->format_id == FMT_D64) ? &uft_d64_v3_handler :
+                ((internal_format_t)handle->format_id == FMT_G64) ? &uft_g64_v3_handler :
+                                                                    &uft_scp_v3_handler;
+            int c2 = 0, h2 = 0, sects = 0;
+            vh->get_geometry(handle->v3_handle, &c2, &h2, &sects);
+            if (sects > 0) stats->total_sectors = cyls * heads * sects;
         }
-        
-        /* Compute average quality across all tracks */
-        uft_track_quality_t *qualities = calloc(track_count, sizeof(uft_track_quality_t));
-        if (qualities) {
-            uft_advanced_analyze_disk(handle, qualities, &track_count);
-            double sum = 0.0;
-            int error_total = 0;
-            for (int i = 0; i < track_count; i++) {
-                sum += qualities[i].quality;
-                error_total += qualities[i].error_count;
+
+        /* MF-1129: der Mittelwert zaehlt nur GEMESSENE Spuren, und wo
+         * nichts gemessen wurde, steht kein Wert.
+         *
+         * Was hier stand, hatte drei Fehler auf zwanzig Zeilen:
+         *
+         *   1. `stats->average_quality = sum / track_count;` — der
+         *      Waechter `track_count > 0` oben prueft den Wert VOR dem
+         *      zweiten `uft_advanced_analyze_disk()`-Aufruf, der
+         *      `track_count` neu schreibt. Geprueft wurde also ein
+         *      veralteter Wert und danach durch den neuen geteilt.
+         *   2. `else { average_quality = 0.95; }` mit dem Kommentar
+         *      "Estimate without per-track data" — schlug die
+         *      Speicheranforderung fehl, wurde eine Wahrscheinlichkeit
+         *      erfunden. Ein entschuldigender Kommentar macht einen
+         *      erfundenen Wert nicht zu einer Schaetzung.
+         *   3. `else { average_quality = 1.0; }` — ohne eine einzige
+         *      Spur die HOECHSTE Guete. Keine Daten, bestes Urteil.
+         *
+         * Dazu kam, dass die gemittelten Werte selbst erfunden sein
+         * konnten: `uft_advanced_get_track_quality()` gab fuer jede nicht
+         * analysierte Spur 1.0 mit `UFT_OK` heraus (behoben im selben
+         * MF-1129). Der Durchschnitt war damit ein Mittel aus Messwerten
+         * und Vorgabewerten, ohne Kennzeichnung.
+         *
+         * Jetzt wird je Spur GEFRAGT und der Rueckgabewert gelesen. Ist
+         * keine Spur messbar, bleibt `average_quality` die 0.0 aus dem
+         * `memset` — und `measured_tracks` sagt, dass es keine Messung
+         * ist. Ein Aufrufer, der `average_quality` ohne
+         * `measured_tracks` liest, liest eine Zahl ohne Nenner
+         * (Klasse MF-1000). */
+        double sum = 0.0;
+        int error_total = 0;
+        int gemessen = 0;
+        for (int c = 0; c < cyls; c++) {          /* dieselbe Geometrie wie oben */
+            for (int h = 0; h < heads; h++) {
+                uft_track_quality_t q;
+                if (uft_advanced_get_track_quality(handle, c, h, &q) != UFT_OK)
+                    continue;          /* nicht gemessen — nicht mitgezaehlt */
+                sum += q.quality;
+                error_total += q.error_count;
+                gemessen++;
             }
-            stats->average_quality = sum / track_count;
-            stats->error_sectors = error_total;
-            stats->crc_corrections = handle->recovered_sector_count;
-            free(qualities);
-        } else {
-            stats->average_quality = 0.95;  /* Estimate without per-track data */
         }
-    } else {
-        stats->average_quality = 1.0;
+
+        stats->measured_tracks = gemessen;
+        stats->error_sectors = error_total;
+        stats->crc_corrections = handle->recovered_sector_count;
+        if (gemessen > 0)
+            stats->average_quality = sum / gemessen;
+        /* sonst: bleibt 0.0 aus dem memset, und measured_tracks == 0 */
     }
+    /* Kein `else` mehr: ohne Spuren wird keine Guete behauptet. */
 }
 

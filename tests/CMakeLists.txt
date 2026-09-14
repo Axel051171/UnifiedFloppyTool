@@ -3992,6 +3992,38 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_advanced_guete_ohne_messung")
+        # MF-1129: der Rotbeweis dafuer, dass `advanced_mode` keine Guete
+        # mehr erfindet.
+        #
+        # Beim Anlegen hat der LINKER einen zweiten Befund geliefert, und
+        # er ist der Grund, warum die drei erfundenen Werte so lange
+        # gestanden haben: `libuft_core.a` enthaelt zwar
+        # `uft_advanced_mode.c.obj`, aber mit NEUN unaufgeloesten
+        # Externals (`uft_d64_probe`, `uft_format_get_handler`,
+        # `uft_log_msg`, sowie die drei v3-Handler und ihre drei
+        # Schutzerkenner). Gemessen ueber `git ls-files`: KEIN Test in
+        # diesem Baum linkte dieses Subsystem — `test_recovery.c` nennt
+        # `uft_god_mode`, steht aber in `_SELF_CONTAINED_TESTS` und
+        # bindet gar keine UFT-Bibliothek.
+        #
+        # Das ist nicht „wenig Abdeckung", sondern die Klasse MF-1000:
+        # ein Subsystem, dessen Tests nicht rot werden KONNTEN, weil
+        # keiner es uebersetzt bekam. Deshalb werden die drei fehlenden
+        # Quellen hier ausdruecklich eingezogen statt den Test zu
+        # verschlanken, bis er linkt.
+        # Die Bruecke zieht die drei v3-Parser nach (18 weitere
+        # Externals, gemessen im zweiten Baulauf) — das ist kein
+        # Zufall, sondern der Umfang, den dieses Subsystem wirklich hat.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_format_registry.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_v3_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${UFT_FORMAT_LAYER_INCLUDES})
     elseif(${test_name} STREQUAL "test_dtc_ungeprueft")
         # MF-1109: die Abnahme der vier dtc_components-Module, die ihre
         # eigene Testreihe NICHT anfasst (ipf/match/protection/track).
