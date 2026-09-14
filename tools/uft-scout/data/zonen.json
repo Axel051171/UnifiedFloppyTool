@@ -1,6 +1,6 @@
 {
  "_kommentar": "Auszug aus tools/uft-scout/work/*.messung.json (MF-705). VERFOLGT, weil docs/STAND.md daraus ableitet und work/ gitignored ist — sonst waere die Uebersicht in CI leer und das Frische-Tor dauerhaft rot. Erzeugt von tools/uft-scout/scripts/zonen_ablegen.py; nicht von Hand pflegen.",
- "_stand": "2026-08-30",
+ "_stand": "2026-09-14",
  "_was_die_zonen_heissen": {
   "GRUEN": "Port moeglich (MIT/BSD/GPL-2 …)",
   "GELB": "kein Port — Nachbau, Oracle, Spec, Helfer",
@@ -20,8 +20,10 @@
   "HxCFloppyEmulator": "PRUEFEN",
   "Jacknife": "ROT",
   "OpenCBM": "PRUEFEN",
+  "Software": "GRUEN",
   "a8rawconv": "PRUEFEN",
   "adf-tools": "ROT",
+  "adf2dms": "GRUEN",
   "adfopus": "ROT",
   "adfrescue": "ROT",
   "amigadx": "PRUEFEN",
@@ -34,6 +36,7 @@
   "disk-peek": "GRUEN",
   "floppydiskimagetool": "ROT",
   "flux-analyze": "GELB",
+  "fluxengine": "PRUEFEN",
   "fluxfox": "PRUEFEN",
   "fluxpy": "GRUEN",
   "fluxtoimd": "GELB",
@@ -53,7 +56,8 @@
   "nibtools": "GELB",
   "picturedsk": "GRUEN",
   "pyAccess1581": "GELB",
-  "st2disk": "ROT"
+  "st2disk": "ROT",
+  "syncextract": "PRUEFEN"
  },
  "hinweise": {
   "DiskToolC64": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",

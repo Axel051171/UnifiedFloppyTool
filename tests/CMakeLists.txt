@@ -3992,6 +3992,26 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_dms_gegen_adf2dms")
+        # MF-1135: `dms` von T3 auf T1b. Der Beleg ist ein Erzeugnis von
+        # `dlitz/adf2dms` (MIT) — P3-347/P3-373 hatten gemessen, dass es
+        # KEINEN fremden DMS-Erzeuger gibt; hxcfe, xdms und amigadx lesen
+        # nur. Zweite fremde Hand ist hxcfe, das das Erzeugnis zu 0 von
+        # 901 120 Byte abweichend zurueckliest.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_include_directories(${test_name} PRIVATE
+            ${UFT_FORMAT_LAYER_INCLUDES})
+        # Der Korpuspfad ist Teil der Abnahme — ohne ihn prueft der Test
+        # nichts und sagt das (Rueckgabe 77, benannter Skip).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_scp_ueberlauf_sagt_ab")
         # MF-1133: der Ueberlauf in der Tick-Rechnung. Der Test geht
         # ueber `uft_disk_open()`, also ueber Erkennung und

@@ -1524,6 +1524,18 @@
       "fremdcode": "GEMESSEN wie beim jv1-Eintrag: der Inhalt ist UFT-eigen (800 Marken `UFT-JV1 #NNNN`, Rest Fuellbyte 0xE5). Kein fremder Programmcode und keine fremden Nutzdaten.",
       "test": "test_tan_gegen_floptool",
       "content": "204 800 Byte = 80 x 10 x 256 auf EINEM Kopf. 800 Marken `UFT-JV1 #NNNN`, eine je Sektor, Rest 0xE5. Gemessen liest UFTs `tan` alle **800 Marken an ihrer eigenen Stelle**, 0 abweichend, und vergibt die Sektornummern **800 von 800 ab 0** - die beiden Befunde, an denen `tan` in MF-1026 gescheitert war (erfundene zweite Seite, IDs ab 1). Gegenprobe: Spur 1 traegt die Marken von Spur 0 **0 Mal**. **WAS DIESER BELEG NICHT SAGT, und das ist der Kern von P3-365:** dass die Dateien, die im Feld als `.tan` kursieren, wirklich diese Anordnung tragen. Dafuer gibt es keine zweite Quelle. Belegt ist der LESER, nicht das Format draussen. Die Stufe steht auf ausdrueckliche Eigentuemer-Entscheidung vom 2026-09-13 (P3-365, Weg a)."
+    },
+    {
+      "file": "tests/corpus_free/adf2dms_uftk_rle_880k.dms",
+      "sha256": "af79c2730e6e9744209305aa0d2dd57db84b35655753b4db2b7efabfb3ef939e",
+      "format": "dms",
+      "origin": "cross-tool",
+      "oracle": "adf2dms",
+      "tool": "dlitz/adf2dms Fassung 0.0.1 (setup.cfg:10), Quellstand 8adfe6acfdc9f18f3627e04eb1d1f798c112f3da; MIT, LICENSE.txt woertlich: `Copyright (c) 2022 Darsey Litzenberger`. Klon unter tools/uft-scout/work/adf2dms; reines Python mit einer Abhaengigkeit (crccheck). Registriert in docs/ORACLES.md. Deterministisch gemessen: zwei Laeufe, gleiche SHA-256.",
+      "source": "Selbst gebaute AmigaDOS-DD-ADF (901 120 Byte, 80 x 2 x 11 x 512), je Sektor die Marke `UFT-K Cnn Hn Snn ` (17 Byte) plus 495 Nullbyte - die Regel ist an ALLEN 1760 Sektoren der Quelle geprueft. Daraus `python -m adf2dms --compression rle`. Der Inhalt ist UFT-eigener Text, rechtefrei.",
+      "fremdcode": "nein - die Nutzlast ist die selbstbenennende UFT-Marke, kein fremder Programmcode und keine fremden Nutzdaten. Das Werkzeug wird AUSGEFUEHRT, nicht portiert (Kanal Oracle nach MF-695).",
+      "test": "test_dms_gegen_adf2dms",
+      "content": "40 376 Byte RLE-komprimiert aus 901 120 - also keine Durchreichung; `cmode 1` in allen 80 Spursaetzen am Kopffeld nachgezaehlt. **Warum dieser Eintrag den geschlossenen Kreis oeffnet:** P3-347 und P3-373 hatten gemessen, dass KEIN Werkzeug im Baum eine DMS erzeugt - hxcfe, xdms und amigadx lesen nur, der originale Packer laeuft auf dem Amiga und ist proprietaer. `adf2dms` ist der fehlende fremde ERZEUGER, und seine Schreiber-Linie (dlitz) ist unabhaengig von xDMS, aus dem sowohl UFTs Leser als auch der von hxcfe stammen. **Zweite fremde Hand:** hxcfe liest das Erzeugnis zurueck zu 0 von 901 120 Byte abweichend, gleiche SHA-256 wie die Eingabe. **Gemessen an UFT:** Sonde 1 (Konfidenz 98), 80 x 2 x 11, 160 von 160 Spuren lesbar, **1760 von 1760 Sektoren an ihrer eigenen Ortsmarke, 0 abweichend**. Der Leser war also richtig; ihm fehlte nur ein Abbild (Gestalt MF-1024, MF-1033). **WAS DIESER BELEG NICHT SAGT:** `adf2dms` kennt die Modi quick/medium/deep/heavy - belegt sind NOCOMP und RLE, die anderen vier hat keine fremde Hand geprueft. Und Weg (a) aus P3-347, eine ECHTE zeitgenoessische .dms mit geklaerter Herkunft fuer T1, bleibt daneben offen."
     }
   ]
 }

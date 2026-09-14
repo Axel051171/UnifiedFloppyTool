@@ -1,0 +1,65 @@
+{
+  "_kommentar": "Streifzug 2026-09-14 (uft-github-scout), Eigentuemer-Auftrag: 'was kann man verbessern fuer alte und neue floppy disk formate mit parser, GCR, Detection, protection'. Vier Blickrichtungen; T3 besteht nur noch aus dms und syn, also sind das die einzigen T3-Beweger. Belege: Messungen dieses Laufs, work/*.messung.json.",
+  "funde": [
+    {
+      "id": "SCOUT-83",
+      "repo": "dlitz/adf2dms",
+      "titel": "dms heben: fremder DMS-ERZEUGER gefunden - der Blocker aus P3-347/P3-373 faellt",
+      "kennzahl": "T3 runter",
+      "kanal": "Oracle",
+      "zone": "GRUEN",
+      "aufwand": "klein",
+      "abhaengig_von": [],
+      "neues_plugin": false,
+      "beleg": "Gemessen 2026-09-14: MIT aus LICENSE.txt (work/adf2dms.messung.json, Zone GRUEN); CLI laeuft (Python, eine pip-Abhaengigkeit crccheck); deterministisch (2 Laeufe, gleiche SHA-256 0429479d7f7a953d...); erzeugt NOCOMP (cmode 0) und RLE (cmode 1) - je 80 Spursaetze, per Kopf-Feld nachgezaehlt; hxcfe (zweite fremde Hand, im Baum gebaut) liest BEIDE zurueck: 0 von 901120 Byte abweichend gegen die selbstbenennende ADF-Eingabe (MF-1021-Regel). Schreiber (dlitz) ist von der xDMS-Linie unabhaengig - der Kreis aus P3-347 ist offen"
+    },
+    {
+      "id": "SCOUT-84",
+      "repo": "Synclavier/Software",
+      "titel": "syn heben: die offizielle Synclavier-Organisation (MIT) traegt Quelltext UND Doku - P3-340s 'Beschreibung unerreichbar' ist widerlegt",
+      "kennzahl": "T3 runter",
+      "kanal": "Spec",
+      "zone": "GRUEN",
+      "aufwand": "mittel",
+      "abhaengig_von": [],
+      "neues_plugin": false,
+      "beleg": "Gemessen 2026-09-14: LICENSE = MIT woertlich ('Copyright (c) 2017 Synclavier Digital'), work/Software.messung.json Zone GRUEN. Der originale NED-Formatierer liegt drin (Able/UTILCAT/MODS/DISKFORM, XPL 1986): 512-Byte-NED-Sektoren, Sektornummern AB 1, Spur-Offset 1-2, MFM/FM, Geometrie aus Konfigurationstafeln (CONDEV/SYSLITS; '77' steht 4x in SYSLITS). Dazu Synclavier/Documentation (Lizenzfeld MIT, 666 MB PDFs, darunter 'APPENDIX - FORMATTING AND DUPLICATING DISKETTES' 1984), Synclavier/Synclavier_Distributions (5242880-Byte-.simg, KEINE Lizenz = alle Rechte vorbehalten) und hansliss/syncextract (AGPL-3, Zone PRUEFEN laut vermessen.py; 512-Byte-Bloecke + Verzeichnisstruktur als zweite Hand). Huerde gemessen: das Software-Repo enthaelt unter Windows unzulaessige Pfade ('*SYSTEM', 'FLPLOAD.'), der Klon ist teilweise (2365 Pfade betroffen laut git status)"
+    },
+    {
+      "id": "SCOUT-85",
+      "repo": "AppleWin/AppleWin",
+      "titel": "Die vierte 6-and-2-Bedingung, die MF-1127 fehlte, steht in AppleWin - und die Regel erzeugt die Tafel EXAKT (bereits nachgemessen)",
+      "kennzahl": null,
+      "kanal": "Spec",
+      "zone": "GRUEN",
+      "aufwand": "klein",
+      "abhaengig_von": [],
+      "neues_plugin": false,
+      "beleg": "AppleWin source/DiskImageHelper.cpp:341-344 (LICENSE = GPL-2 woertlich geprueft): 'A VALID DISK BYTE IS A BYTE THAT HAS THE HIGH BIT SET, AT LEAST TWO ADJACENT BITS SET (EXCLUDING THE HIGH BIT), AND AT MOST ONE PAIR OF CONSECUTIVE ZERO BITS'. Gemessen 2026-09-14: hoechstes Bit + benachbartes Einserpaar in Bits 0..6 + hoechstens EIN ueberlappendes 00-Paar ergibt ueber 0..255 genau 64 Werte, Mengengleichheit mit A2_WRITE_TAB aus src/formats/apple/uft_apple_gcr.c (die ihrerseits gegen to_woz2 abgenommen ist, MF-715). MF-1127 hatte mit drei Bedingungen 74 Werte und liess die vierte ausdruecklich offen ('ohne die gedruckte Quelle nicht feststellbar')"
+    },
+    {
+      "id": "SCOUT-86",
+      "repo": "keirf/disk-utilities",
+      "titel": "Neubesuch mit neuem Anlass: der Amiga-Schutzverfahren-KATALOG in libdisk als Verhaltensreferenz fuer die zweite Protection-Stufe",
+      "kennzahl": null,
+      "kanal": "Nachbau",
+      "zone": "GRUEN",
+      "aufwand": "gross",
+      "abhaengig_von": ["P0-2"],
+      "neues_plugin": false,
+      "beleg": "COPYING = Unlicense woertlich gelesen ('free and unencumbered... public domain') - damit steht sogar der Port offen, nicht nur Nachbau. Gemessen ueber die git-trees-API: 194 .c-Dateien unter libdisk/format/amiga/, davon 17 mit protec|lock|rnc_ im Dateinamen (copylock.c, speedlock.c, rnc_dualformat.c, rnc_triformat.c, ...) - Untergrenze, weil Schutz-Spurformate ohne das Wort im Namen nicht mitzaehlen. Anlass des Neubesuchs (AGENT.md Regel 6): Eigentuemer-Auftrag 2026-09-14 'protection zweistufig'; das Gutachten vom 2026-08 galt dem libdisk-Oracle und den Amiga-Decodern, kein Baum-Dokument weist die Schutz-Handler-Abdeckung aus. UFTs Katalog (55+ Verfahren, src/protection/) hat laut P0-2 keinen Aufrufer - der Blocker ist die eigene Verdrahtung, nicht fehlendes Fremdwissen"
+    },
+    {
+      "id": "SCOUT-87",
+      "repo": "DrCoolzic/AIR",
+      "titel": "Jean Louis-Guerins Atari-ST-Linie (AIR/Aufit + info-coach.fr-Papiere): Schutzverfahren-Beschreibungen als Spec, Code gesperrt",
+      "kennzahl": null,
+      "kanal": "Spec",
+      "zone": "ROT",
+      "aufwand": "mittel",
+      "abhaengig_von": ["P0-2"],
+      "neues_plugin": false,
+      "beleg": "Gemessen 2026-09-14 ueber gh api: AIR ('Atari FD Images Readers/Writers') und Aufit ('Atari Universal FD image Tool') tragen KEIN Lizenzfeld und keine Lizenzdatei im Wurzelverzeichnis = alle Rechte vorbehalten, Zone ROT fuer jeden Port; Aufit-Baum besteht aus C#/.NET (KFStreamReader/KFStreamInfo) und waere hier ohnehin nicht baubar (kein MSBuild fuer .NET Framework). Verwertbar ist die DOKU-Ebene: die .dox-Beschreibungen im Repo und Louis-Guerins Schutzverfahren-Papiere (info-coach.fr) - er ist der Autor der Pasti/STX-Dokumentation, UFTs stx steht auf T1b. Kanal Spec: lesen, benennen, nichts uebernehmen"
+    }
+  ]
+}

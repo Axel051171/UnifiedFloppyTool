@@ -411,6 +411,48 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="adf2dms",
+        env="ADF2DMS",
+        exes=("adf2dms", "adf2dms.exe"),
+        # Reines Python-Paket: die Fassung steht in `setup.cfg`, das
+        # Werkzeug gibt keine eigene aus. Gepinnt wird deshalb der
+        # QUELLSTAND, wie bei `to_woz2` und `a2nibblize`.
+        version_args=("--help",),
+        version_re=r"(adf2dms)",
+        reference_for="AmigaDOS-ADF -> DMS. Der fehlende ERZEUGER: "
+                      "P3-347 und P3-373 hatten gemessen, dass KEIN "
+                      "Werkzeug im Baum eine DMS erzeugt — hxcfe, xdms "
+                      "und amigadx lesen nur, der originale Packer "
+                      "laeuft auf dem Amiga und ist proprietaer. Jeder "
+                      "DMS-Test war damit ein geschlossener Kreis "
+                      "(Gestalt `apridisk`/MF-1009, `qrst`/MF-1028). "
+                      "Bezug fuer T1b bei `dms` (MF-1135). Belegt sind "
+                      "NOCOMP (cmode 0) und RLE (cmode 1); "
+                      "quick/medium/deep/heavy sind NICHT belegt.",
+        origin="https://github.com/dlitz/adf2dms — Klon unter "
+               "tools/uft-scout/work/adf2dms, Quellstand "
+               "8adfe6acfdc9f18f3627e04eb1d1f798c112f3da, Paketfassung "
+               "0.0.1 (setup.cfg:10). Reines Python, eine Abhaengigkeit "
+               "(crccheck).",
+        licence="MIT",
+        version_exit_ok=(0, 1, 2),
+        abstammung=(
+            "KEINE UEBERNAHME, und hier ist die Unabhaengigkeit der "
+            "eigentliche Punkt: die Schreiber-Linie von adf2dms "
+            "(dlitz) ist unabhaengig von xDMS — und aus xDMS stammen "
+            "sowohl UFTs Leser (`src/formats/dms/uft_dms.c`, gegen "
+            "xDMS 1.3 von Andre Rodrigues de la Rocha verifiziert) als "
+            "auch der von hxcfe. Ein Erzeuger aus derselben Linie "
+            "waere kein Fremdbeleg gewesen, sondern derselbe Kreis mit "
+            "einem zweiten Namen. Das Werkzeug wird AUSGEFUEHRT, nicht "
+            "portiert (Kanal Oracle nach MF-695); aus dem Quelltext "
+            "ist nichts abgelesen. Gemessen ist nur sein VERHALTEN: "
+            "deterministisch (zwei Laeufe, gleiche SHA-256), cmode 0 "
+            "und 1 in allen 80 Spursaetzen am Kopffeld nachgezaehlt, "
+            "und hxcfe als zweite fremde Hand liest beide Erzeugnisse "
+            "zu 0 von 901 120 Byte abweichend zurueck."),
+    ),
+    Oracle(
         name="libsap",
         env="LIBSAP",
         exes=("mach_sap", "mach_sap.exe", "sap2", "sap2.exe"),

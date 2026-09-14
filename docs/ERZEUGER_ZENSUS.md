@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 14 |
+| davon auf T2/T3 (offen) | 13 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -42,7 +42,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `cas` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), cpm, flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), smx, svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `dms` | T3 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fdi_pc98` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fds` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -246,6 +245,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `dcm` | T1b | — | — |
 | `dim_atari` | T1b | ATARIST_DIM (?) | — |
 | `dmk` | T1b | TRS80_DMK | — |
+| `dms` | T1b | — | — |
 | `do` | T1b | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) |
 | `dsk_cpc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `edk` | T1b | — | — |

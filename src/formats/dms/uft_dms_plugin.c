@@ -62,6 +62,31 @@
 typedef struct {
     uint8_t *adf;       /* Decompressed raw ADF image */
     size_t   adf_size;
+
+    /* MF-1135: WIE WEIT der Entpacker wirklich gekommen ist.
+     *
+     * `open()` wusste das schon — `dms_unpack()` gibt es in `written`
+     * zurueck, und der Fehlertoleranz-Zweig schreibt es sogar in die
+     * Warnung („N von M Byte wiederhergestellt, Integritaet NICHT
+     * bestaetigt — der Rest bleibt 0xE5"). Die Zahl wurde danach
+     * verworfen.
+     *
+     * Damit sah ein Aufrufer, der `track->sectors[]` liest, gute
+     * Sektoren mit 0xE5-Fuellung: `uft_format_add_sector()` setzt
+     * unbedingt `UFT_SECTOR_OK`. Gemessen an einer gedrittelten Datei
+     * kamen 292 864 von 901 120 Byte zurueck, und Spur 70/1 — die es in
+     * der Datei nicht mehr gibt — meldete elf gute Sektoren.
+     *
+     * Das ist die Klasse, die dieser Baum viermal behoben hat: MF-1001
+     * („gefuellt, nicht gelesen"), MF-1022 (`sap`s Fuellsektor galt als
+     * guter Sektor mit gueltiger CRC), MF-1038 (`fds`, 36 erfundene Byte
+     * je Seite als `UFT_SECTOR_OK`) und MF-980 („das Format sagt 0xE5"
+     * und „hier wurde 0xE5 gelesen" sind zwei Aussagen).
+     *
+     * Der Dateikopf oben sagt es selbst ueber den Vorzustand: „der
+     * Verlust wurde als Datum ausgegeben". Die Warnung hat den Bediener
+     * erreicht, die Datenstruktur nicht. */
+    size_t   gelesen;
 } dms_pd_t;
 
 /* ========================================================================= */
@@ -142,6 +167,12 @@ static uft_error_t dms_open(uft_disk_t *disk, const char *path, bool ro)
     if (!p) { free(adf); return UFT_ERROR_NO_MEMORY; }
     p->adf = adf;
     p->adf_size = adf_size;
+    /* MF-1135: die Grenze zwischen GELESEN und GEFUELLT wird behalten.
+     * Bei einem strengen Erfolg (`de == DMS_OK`) hat `dms_unpack()`
+     * bis `written` geschrieben und alles bestaetigt; im
+     * Fehlertoleranz-Zweig ist `written` genau die Stelle, ab der
+     * 0xE5-Fuellung steht. */
+    p->gelesen = written;
 
     disk->plugin_data = p;
     disk->geometry.cylinders = AMIGA_CYL;
@@ -177,6 +208,24 @@ static uft_error_t dms_read_track(uft_disk_t *disk, int cyl, int head,
         if (soff + AMIGA_SS > p->adf_size) break;
         uft_format_add_sector(track, (uint8_t)s, p->adf + soff,
                               AMIGA_SS, (uint8_t)cyl, (uint8_t)head);
+
+        /* MF-1135: liegt der Sektor GANZ ODER TEILWEISE hinter dem, was
+         * der Entpacker wirklich geschrieben hat, dann traegt er
+         * 0xE5-Fuellung und keine gelesenen Daten. Er wird deshalb
+         * gekennzeichnet.
+         *
+         * `uft_format_add_sector()` setzt unbedingt `UFT_SECTOR_OK` (das
+         * sagt sein eigener Kopf), also muss die Kennzeichnung DANACH
+         * kommen. Ohne sie war eine erfundene 0xE5-Flaeche von einer
+         * echten AmigaDOS-Formatfuellung nicht zu unterscheiden — und
+         * genau das nennt der Dateikopf oben als den behobenen Fehler
+         * des Vorgaengers: „der Verlust wurde als Datum ausgegeben".
+         *
+         * Die Daten bleiben stehen; ein Befund darf den Zugriff nicht
+         * verstellen (MF-830). Er darf nur nicht verschwiegen werden. */
+        if (soff + AMIGA_SS > p->gelesen && track->sector_count > 0) {
+            uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
+        }
     }
     return UFT_OK;
 }
