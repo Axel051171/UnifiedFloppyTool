@@ -368,23 +368,75 @@ static uft_error_t myz80_write_track(uft_disk_t *disk, int cyl, int head,
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
-    /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
-     * Der echte `uft_myz80_write()` in derselben Datei hat keinen
-     * Aufrufer — kein `.flush`, `close()` gibt nur frei. Die
-     * Verdrahtung ist je Format eine eigene Aufgabe mit eigenem
-     * Rundlaufbeweis (P3-204).
+    /* MF-1112: der SECHSTE der elf aus MF-930 ist verdrahtet — nach
+     * `opus` (MF-931), `cfi` (MF-1004), `mgt` (MF-1006), `apridisk`
+     * (MF-1009) und `nanowasp` (MF-1095). Auf Eigentuemer-Entscheidung,
+     * nachdem MF-1111 gemessen hatte, dass hier nichts mehr fehlt.
      *
-     * MF-1029 aendert daran nichts, aber es aendert den Wert einer
-     * spaeteren Verdrahtung: vorher haette sie eine Datei mit einer
-     * erfundenen `"MYZ80 "`-Kennung geschrieben, die jede fremde
-     * Umsetzung abweist. */
-    return UFT_ERROR_NOT_SUPPORTED;
+     * Die vier Regeln aus dem MF-931-Rezept, hier eingehalten:
+     *
+     *   1. NICHT ueber `close()` — das ist `void`, ein dort
+     *      scheiternder Schreibvorgang waere eine stille Veraenderung.
+     *   2. KEINE eigene Versatzrechnung, sondern der vorhandene,
+     *      geprueffte `uft_myz80_write()` aus derselben Datei. Er
+     *      traegt den 256-Byte-Bereich aus 0xE5, die Geometrie
+     *      64 x 1 x 128 x 1024 und die 0-basierten Sektornummern, die
+     *      MF-1029 gegen libdsks `drvmyz80.c` abgenommen hat.
+     *   3. `disk->path` pruefen und ohne Ziel ABSAGEN statt zu luegen.
+     *   4. Die Schreibseite gegen die Leseseite halten. Geprueft und
+     *      NICHT angefasst: `myz80_read_track` indiziert
+     *      `cyl * heads + head`, `uft_myz80_write()` laeuft nur ueber
+     *      `track_data[c]` — das stimmt hier ueberein, weil MYZ80
+     *      GENAU EINEN Kopf hat und der Schreiber jede andere
+     *      Kopfzahl ausdruecklich abweist (`disk->heads !=
+     *      MYZ80_HEADS` -> NOT_SUPPORTED). Es ist also kein
+     *      Zufallstreffer, sondern abgesichert — anders als bei `opus`
+     *      (MF-931/P3-205), wo genau diese Stelle einen Fehler trug.
+     *
+     * **Und die Verdrahtung ist erst jetzt etwas wert:** vor MF-1029
+     * haette sie eine Datei mit einer erfundenen `"MYZ80 "`-Kennung
+     * und der Geometrie 77 x 2 x 26 x 128 geschrieben, die jede fremde
+     * Umsetzung abweist.
+     *
+     * Belegt in `tests/test_durchschreibprobe.c` an der Korpus-Datei
+     * `libdsk_myz80_voll.myz80` — der Ausgangspunkt kommt also von
+     * fremder Hand. Rotbeweis davor: 0 von 64 Spuren geschrieben. */
+    if (head >= (int)image->heads) return UFT_ERR_INVALID_PARAM;
+    if (cyl >= (int)image->tracks) return UFT_ERR_INVALID_PARAM;
+
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+    uft_track_t *dst = image->track_data[(size_t)cyl * image->heads + head];
+    if (!dst) return UFT_ERR_INVALID_PARAM;
+
+    for (size_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *quelle = track->sectors[s].data;
+        if (!quelle) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            const size_t quell_len = track->sectors[s].data_size;
+            const size_t n = quell_len < dst->sectors[s].data_size
+                             ? quell_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, quelle, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. Das ist
+     * der Unterschied zu MF-930, wo genau hier `UFT_OK` stand. */
+    {
+        uft_error_t werr = uft_myz80_write(image, disk->path, NULL);
+        if (werr != UFT_OK) return werr;
+    }
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_myz80_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930/P3-204: der spezifikationsgerechte uft_myz80_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1112: verdrahtet — write_track ruft uft_myz80_write() mit disk->path; belegt in tests/test_durchschreibprobe.c an der "
+      "Korpus-Datei libdsk_myz80_voll.myz80 (64 Spuren, 8192 Sektoren, Datei geschlossen und neu geoeffnet, Groesse gehalten). "
+      "Rotbeweis davor: 0 von 64 Spuren geschrieben" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -397,7 +449,8 @@ const uft_format_plugin_t uft_format_plugin_myz80 = {
     .description = "MYZ80 CP/M Emulator Hard Drive Image",
     .extensions = "myz80,myz",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,  /* MF-1112 */
     .probe = myz80_probe_plugin,
     .open = myz80_open,
     .close = myz80_close,

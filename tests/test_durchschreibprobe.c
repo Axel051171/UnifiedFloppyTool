@@ -97,6 +97,12 @@ static void pruefe(const char *name, int bedingung, const char *hinweis)
 extern const uft_format_plugin_t uft_format_plugin_po;
 extern const uft_format_plugin_t uft_format_plugin_mgt;
 extern const uft_format_plugin_t uft_format_plugin_nanowasp;
+extern const uft_format_plugin_t uft_format_plugin_myz80;   /* MF-1112 */
+extern const uft_format_plugin_t uft_format_plugin_qrst;    /* MF-1112 */
+
+#ifndef UFT_CORPUS_DIR
+#define UFT_CORPUS_DIR "tests/corpus_free"
+#endif
 
 /* ── Das Muster ──────────────────────────────────────────────────────
  *
@@ -130,13 +136,48 @@ typedef struct {
     int  koepfe;
     int  sektoren;
     int  sektorgroesse;
+    /* MF-1112: Dateiname unter `tests/corpus_free/`, wenn die
+     * Ausgangsdatei NICHT als roher Sektorpuffer baubar ist.
+     *
+     * `baue_abbild()` unten legt ein kopfloses Abbild an — das geht bei
+     * `po`, `mgt` und `nanowasp`, weil ihre Dateien genau das sind.
+     * `myz80` hat 256 Byte reservierten Bereich davor, und `qrst` ist
+     * GEPACKT mit 796-Byte-Kopf und einer Pruefsumme ueber die
+     * Diskette; ein roher Puffer waere dort keine gueltige Datei.
+     *
+     * Die Korpus-Datei ist dabei die BESSERE Grundlage, nicht die
+     * notgedrungene: sie kommt von libdsk (MF-1033), also von fremder
+     * Hand. Was die Probe danach prueft, bleibt dasselbe — ob ein
+     * `write_track` bis in die Datei kommt. */
+    const char *korpus;
+    /* MF-1112: das Format PACKT seine Spuren, die Dateigroesse ist
+     * also eine Funktion des INHALTS.
+     *
+     * Die Zusage „die Datei hat ihre Groesse behalten" gilt dort
+     * NICHT — und zwar nicht, weil etwas kaputt ist, sondern weil die
+     * Packung eine Funktion des Inhalts ist. Die Zusage wird deshalb
+     * BENANNT uebersprungen statt still weggelassen: eine Pruefung,
+     * die lautlos entfaellt, ist die Klasse MF-598.
+     *
+     * **Und die RICHTUNG stand hier zuerst falsch.** Der Satz lautete
+     * „das positionsabhaengige Pruefmuster ist unkomprimierbar, also
+     * wird die Datei groesser". Gemessen wird sie KLEINER: 3596 statt
+     * 5363 Byte. Der Grund liegt in dieser Probe selbst — `probe()`
+     * fuellt jeden Sektor per `memset` mit EINEM Byte, also traegt ein
+     * 512-Byte-Sektor 512 gleiche Bytes und packt sich hervorragend.
+     * Das Muster ist von der Position abhaengig, aber INNERHALB eines
+     * Sektors konstant; beides zugleich. Die Zusicherungskraft bleibt
+     * davon unberuehrt (je Sektor ein anderes Byte faengt jede
+     * Vertauschung), die Aussage ueber die Dateigroesse war schlicht
+     * geraten. */
+    int gepackt;
 } pruefling_t;
 
 static const pruefling_t PRUEFLINGE[] = {
     /* Apple II ProDOS-Order: 35 x 1 x 16 x 256 = 143360 */
-    { "po",  &uft_format_plugin_po,  "po",  35, 1, 16, 256 },
+    { "po",  &uft_format_plugin_po,  "po",  35, 1, 16, 256, NULL, 0 },
     /* SAM Coupe MGT: 80 x 2 x 10 x 512 = 819200 */
-    { "mgt", &uft_format_plugin_mgt, "mgt", 80, 2, 10, 512 },
+    { "mgt", &uft_format_plugin_mgt, "mgt", 80, 2, 10, 512, NULL, 0 },
     /* MF-1095: NanoWasp, der fuenfte der elf aus MF-930. Feste
      * Geometrie 40 x 2 x 10 x 512 = 409600, und `nwasp_open()`
      * verlangt GENAU diese Groesse (MF-1030) — ein rohes Abbild
@@ -153,7 +194,29 @@ static const pruefling_t PRUEFLINGE[] = {
      * dieser Rotbeweis hat gezeigt, dass P3-204 nicht zehn, sondern
      * sieben Formate fuehrt. */
     { "nanowasp", &uft_format_plugin_nanowasp, "nanowasp",
-      40, 2, 10, 512 },
+      40, 2, 10, 512, NULL, 0 },
+    /* MF-1112: die sechste und siebte Verdrahtung der elf aus MF-930,
+     * auf Eigentuemer-Entscheidung („myz80 und qrst verdrahten").
+     *
+     * Beide bekommen ihre Ausgangsdatei aus dem KORPUS statt aus
+     * `baue_abbild()` — bei `myz80` wegen der 256 Byte reservierten
+     * Bereichs davor, bei `qrst` weil die Datei gepackt ist und eine
+     * Pruefsumme ueber die ganze Diskette traegt. Beide Dateien hat
+     * libdsk geschrieben (MF-1033), womit die Grundlage dieser Probe
+     * hier von FREMDER Hand kommt und nicht von unserer.
+     *
+     * Geometrien wie von libdsks `dskid` gemeldet und von MF-1029 /
+     * MF-1028 abgenommen: MYZ80 64 x 1 x 128 x 1024 (erster Sektor 0),
+     * QRST 40 x 1 x 8 x 512.
+     *
+     * Auch hier gilt, was bei `nanowasp` stand: die Probe schreibt und
+     * liest durch DASSELBE Plugin. Was sie belegt, ist der Weg bis in
+     * die Datei — nicht, dass das Format richtig ist. Das tun
+     * `test_myz80_gegen_libdsk.c` und `test_qrst_gegen_libdsk.c`. */
+    { "myz80", &uft_format_plugin_myz80, "myz80",
+      64, 1, 128, 1024, "libdsk_myz80_voll.myz80", 0 },
+    { "qrst", &uft_format_plugin_qrst, "qrst",
+      40, 1, 8, 512, "libdsk_qrst_160k.qrst", 1 },
 };
 
 static void setze_pfad(uft_disk_t *d, const char *pfad)
@@ -189,6 +252,30 @@ static uint8_t *baue_abbild(const pruefling_t *p, size_t *out_n)
     return b;
 }
 
+/** MF-1112: laedt die Korpus-Datei eines Prueflings vollstaendig.
+ *
+ * Sie wird NICHT an ihrem Ort beschrieben — die Probe legt eine Kopie
+ * im Temp-Verzeichnis an und arbeitet darauf. Eine Beweisdatei, die ein
+ * Test veraendert, ist danach kein Beweis mehr. */
+static uint8_t *lade_korpus(const pruefling_t *p, size_t *out_n)
+{
+    char pfad[512];
+    snprintf(pfad, sizeof(pfad), "%s/%s", UFT_CORPUS_DIR, p->korpus);
+    FILE *f = fopen(pfad, "rb");
+    if (!f) return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
+    long gr = ftell(f);
+    if (gr <= 0 || fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
+    uint8_t *b = (uint8_t *)malloc((size_t)gr);
+    if (!b) { fclose(f); return NULL; }
+    if (fread(b, 1, (size_t)gr, f) != (size_t)gr) {
+        free(b); fclose(f); return NULL;
+    }
+    fclose(f);
+    *out_n = (size_t)gr;
+    return b;
+}
+
 /** Fuehrt die Probe fuer einen Prueflig durch. */
 static void probe(const pruefling_t *p)
 {
@@ -211,13 +298,26 @@ static void probe(const pruefling_t *p)
              p->endung);
 
     size_t n = 0;
-    uint8_t *ursprung = baue_abbild(p, &n);
-    if (!ursprung) { pruefe("Speicher fuer das Abbild", 0, NULL); return; }
+    uint8_t *ursprung = p->korpus ? lade_korpus(p, &n) : baue_abbild(p, &n);
+    if (!ursprung) {
+        if (p->korpus) {
+            /* Benannt uebersprungen statt still bestanden: ohne die
+             * Korpus-Datei kann diese Probe nichts aussagen, und ein
+             * stilles Gruen waere eine Falschaussage (MF-598). */
+            snprintf(h, sizeof(h), "%s: %s/%s nicht lesbar",
+                     p->name, UFT_CORPUS_DIR, p->korpus);
+            pruefe("Korpus-Grundlage vorhanden", 0, h);
+        } else {
+            pruefe("Speicher fuer das Abbild", 0, NULL);
+        }
+        return;
+    }
 
     FILE *f = fopen(pfad, "wb");
     int gebaut = (f && fwrite(ursprung, 1, n, f) == n);
     if (f) gebaut = (fclose(f) == 0) && gebaut;
-    snprintf(h, sizeof(h), "%s: %zu Byte", p->name, n);
+    snprintf(h, sizeof(h), "%s: %zu Byte%s", p->name, n,
+             p->korpus ? " (aus dem Korpus, libdsk)" : "");
     pruefe("Pruefabbild angelegt", gebaut, h);
     if (!gebaut) { free(ursprung); remove(pfad); return; }
 
@@ -317,9 +417,19 @@ static void probe(const pruefling_t *p)
         long jetzt = -1;
         FILE *g = fopen(pfad, "rb");
         if (g) { fseek(g, 0, SEEK_END); jetzt = ftell(g); fclose(g); }
-        snprintf(h, sizeof(h), "%s: %ld statt %zu Byte", p->name, jetzt, n);
-        pruefe("die Datei hat ihre Groesse behalten",
-               jetzt == (long)n, h);
+        if (p->gepackt) {
+            /* Benannt, nicht still: bei einem gepackten Format ist die
+             * Groesse eine Funktion des Inhalts (MF-1112). */
+            snprintf(h, sizeof(h), "%s: %ld statt %zu Byte — GEPACKTES "
+                     "Format, die Groesse darf sich aendern und der "
+                     "Ruecklesevergleich oben ist die Zusage",
+                     p->name, jetzt, n);
+            printf("  [--]   die Groessenzusage gilt hier nicht  -- %s\n", h);
+        } else {
+            snprintf(h, sizeof(h), "%s: %ld statt %zu Byte", p->name, jetzt, n);
+            pruefe("die Datei hat ihre Groesse behalten",
+                   jetzt == (long)n, h);
+        }
     }
 
     /* ── Ursprung byteweise wiederherstellen ────────────────────── */

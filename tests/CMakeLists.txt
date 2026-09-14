@@ -1326,11 +1326,27 @@ foreach(test_source ${TEST_SOURCES})
         #
         # MF-1095: `nanowasp` kommt dazu, weil sein Schreiber seit
         # dieser Aenderung wirklich bis in die Datei schreibt.
+        # MF-1112: `myz80` und `qrst` kommen dazu — die sechste und
+        # siebte Verdrahtung der elf aus MF-930, auf
+        # Eigentuemer-Entscheidung. Beide holen ihre AUSGANGSdatei aus
+        # `tests/corpus_free/` (von libdsk geschrieben, MF-1033), weil
+        # sie sich nicht als roher Sektorpuffer bauen laesst: `myz80`
+        # hat 256 Byte reservierten Bereich davor, `qrst` ist gepackt
+        # und traegt eine Pruefsumme ueber die ganze Diskette.
+        #
+        # `UFT_CORPUS_DIR` ist deshalb noetig: ein relativer Pfad loest
+        # unter ctest nicht auf — genau daran ist MF-1103 einmal
+        # gescheitert, wo ein Test als „Skipped" in einem
+        # 100%-bestandenen Lauf stand.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
             ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c
             ${CMAKE_SOURCE_DIR}/src/formats/nanowasp/uft_nanowasp.c
+            ${CMAKE_SOURCE_DIR}/src/formats/myz80/uft_myz80.c
+            ${CMAKE_SOURCE_DIR}/src/formats/qrst/uft_qrst.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_apridisk_schreibt_in_die_datei")
         # MF-1009: `apridisk` ist der vierte der elf aus MF-930 (nach
         # `opus`, `cfi`, `mgt`) — und der erste, bei dem der

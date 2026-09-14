@@ -769,15 +769,76 @@ static uft_error_t qrst_write_track(uft_disk_t *disk, int cyl, int head,
      * schreibt er, was `doc/qrst.html` beschreibt, samt Pruefsumme —
      * die Verdrahtung ist damit erst sinnvoll geworden.
      *
-     * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
-     * Aufrufer keine Begruendung. */
-    return UFT_ERROR_NOT_SUPPORTED;
+     * MF-1112: verdrahtet — der SIEBTE der elf aus MF-930, nach `opus`
+     * (MF-931), `cfi` (MF-1004), `mgt` (MF-1006), `apridisk` (MF-1009),
+     * `nanowasp` (MF-1095) und `myz80` (MF-1112). Auf
+     * Eigentuemer-Entscheidung, nachdem MF-1111 gemessen hatte, dass
+     * hier nichts mehr fehlt.
+     *
+     * Die vier Regeln aus dem MF-931-Rezept, hier eingehalten:
+     *
+     *   1. NICHT ueber `close()` — das ist `void`.
+     *   2. KEINE eigene Versatzrechnung, sondern der vorhandene
+     *      `uft_qrst_write()` aus derselben Datei. Er traegt den
+     *      796-Byte-Kopf, die fuenf Byte Kennung `'QRST',0`, den
+     *      Kapazitaetskode bei 0x0C, die drei Spursatz-Arten und die
+     *      Pruefsumme — alles gegen `doc/qrst.html` abgenommen
+     *      (MF-1028). Eine zweite Packumsetzung neben der ersten waere
+     *      genau die Erfindung, die MF-1028 dort entfernt hat.
+     *   3. `disk->path` pruefen und ohne Ziel ABSAGEN statt zu luegen.
+     *   4. Die Schreibseite gegen die Leseseite halten — geprueft:
+     *      `qrst_read_track` und `uft_qrst_write()` indizieren BEIDE
+     *      `(size_t)cyl * heads + head`. Kein Befund.
+     *
+     * **Eine Eigenschaft des Formats gehoert dazu gesagt:** QRST PACKT.
+     * Nach einem Durchschreiben ist die Datei anders gross als vorher,
+     * weil die Packung eine Funktion des Inhalts ist — gemessen an der
+     * Korpus-Datei **3596 statt 5363 Byte**, also KLEINER. Das ist kein
+     * Verlust: der Rundlauf in `tests/test_durchschreibprobe.c` liest
+     * alle 320 Sektoren unveraendert zurueck. Die Zusage „Datei
+     * behaelt ihre Groesse" gilt hier aber nicht und wird dort BENANNT
+     * uebersprungen statt still weggelassen.
+     *
+     * Belegt an der Korpus-Datei `libdsk_qrst_160k.qrst`, also an einem
+     * Erzeugnis fremder Hand. Rotbeweis davor: 0 von 40 Spuren
+     * geschrieben. */
+    if (head >= (int)image->heads) return UFT_ERR_INVALID_PARAM;
+    if (cyl >= (int)image->tracks) return UFT_ERR_INVALID_PARAM;
+
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+    uft_track_t *dst = image->track_data[(size_t)cyl * image->heads + head];
+    if (!dst) return UFT_ERR_INVALID_PARAM;
+
+    for (size_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *quelle = track->sectors[s].data;
+        if (!quelle) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            const size_t quell_len = track->sectors[s].data_size;
+            const size_t n = quell_len < dst->sectors[s].data_size
+                             ? quell_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, quelle, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie der Datei
+     * voraus — und der Aufrufer erfaehrt es am Rueckgabewert. Das ist
+     * der Unterschied zu MF-930, wo genau hier `UFT_OK` stand. */
+    {
+        uft_error_t werr = uft_qrst_write(image, disk->path, NULL);
+        if (werr != UFT_OK) return werr;
+    }
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_qrst_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930/P3-204: der spezifikationsgerechte uft_qrst_write() in derselben Datei hat keinen Aufrufer — kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1112: verdrahtet — write_track ruft uft_qrst_write() mit disk->path; belegt in tests/test_durchschreibprobe.c an der "
+      "Korpus-Datei libdsk_qrst_160k.qrst (40 Spuren, 320 Sektoren unveraendert zurueck). QRST PACKT: die Dateigroesse aendert "
+      "sich dabei (gemessen 3596 statt 5363 Byte) — das ist eine Formateigenschaft, kein Verlust. "
+      "Rotbeweis davor: 0 von 40 Spuren geschrieben" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -790,7 +851,8 @@ const uft_format_plugin_t uft_format_plugin_qrst = {
     .description = "Compaq Quick Release Sector Transfer",
     .extensions = "qrst",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,  /* MF-1112 */
     .probe = qrst_probe_plugin,
     .open = qrst_open,
     .close = qrst_close,
