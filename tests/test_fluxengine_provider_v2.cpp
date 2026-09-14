@@ -779,9 +779,30 @@ static void smoke_write_verify_unerreichbar()
         },
     }, outcome);
 
+    /* BERICHTIGT MF-1121, und die Berichtigung betrifft den GRUND, nicht
+     * das Ergebnis.
+     *
+     * Bis MF-1121 stand hier „ein Verify-Wunsch wird abgesagt, solange
+     * die Nachlese nicht verdrahtet ist". Seit MF-1121 IST sie
+     * verdrahtet — und dieser Test blieb trotzdem gruen. Das ist kein
+     * Glueck, sondern eine zweite Ursache: der Pruefstrom hier hat ZWEI
+     * Uebergaenge, und `uft_flux_histogram_cell_ns()` braucht gemessen
+     * rund 60, um zwei Gipfel zu finden. Die Nachlese sagt also ab,
+     * weil sie kein gemessenes Maß hat — nicht, weil es keinen Weg gibt.
+     *
+     * Ein Test, der aus einem anderen Grund gruen ist als sein Text
+     * behauptet, ist genau die Klasse, die dieser Baum verfolgt (MF-1000
+     * / Tor 64). Die Zusage heisst deshalb jetzt, was sie prueft: OHNE
+     * MFM-artiges Histogramm gibt es kein kalibrierungsfreies Maß, und
+     * dann wird abgesagt statt geraten.
+     *
+     * Die echte Nachlese — gleiche Zellfolge, verschobene Zellfolge,
+     * kurzer Ruecklesestrom — prueft
+     * `smoke_write_verify_zellvergleich()` weiter unten. */
     assert(got_error &&
-           "ein Verify-Wunsch wird abgesagt, solange die Nachlese nicht "
-           "verdrahtet ist (MF-1116, offener Teil von P3-342)");
+           "ohne MFM-artiges Histogramm gibt es kein kalibrierungsfreies "
+           "Maß fuer die Nachlese, also wird abgesagt statt geraten "
+           "(MF-1121)");
     assert(mock.recorded_runs().size() == 1 &&
            "der SCHREIBVORGANG laeuft jetzt - genau EIN Lauf, und zwar "
            "rawwrite; abgesagt wird nur die Nachlese");
@@ -917,6 +938,258 @@ static void smoke_empty_flux_stream_write()
 /* ────────────────────────────────────────────────────────────────────────
  *  8. ProviderError 3-part contract (F-4)
  * ──────────────────────────────────────────────────────────────────────── */
+
+/* ── MF-1121: die Nachlese auf ZELLEBENE ────────────────────────────────
+ *
+ * Auf Eigentuemer-Entscheidung („P3-342 Nachlese verdrahten, Vergleich
+ * auf Zellebene"). Drei Faelle, und der erste ist der, der ohne Hardware
+ * sonst nie gepruefet wuerde.
+ *
+ * Der Pruefstrom ist MFM-geformt (4000/6000/8000 ns im Wechsel) und hat
+ * 90 Uebergaenge. Die 90 sind GEMESSEN und nicht gewaehlt: eine
+ * Wegwerfmessung gegen `uft_flux_histogram_cell_ns()` gab fuer 12 Werte
+ * „nein", fuer 60 und 600 „ja" mit Zelle **2000,0 ns**. Mit einem
+ * kuerzeren Strom wuerde dieser Test die Absage pruefen und aussehen
+ * wie ein Nachlese-Test — genau der Fehler, den
+ * `smoke_write_verify_unerreichbar` vor MF-1121 gemacht hat.
+ *
+ * Die SCP-Seite rechnet in 25-ns-Schritten: 4000/6000/8000 ns sind
+ * 160/240/320. Die Zellzahlen sind damit 2/3/4.
+ */
+static std::vector<std::uint32_t> mfm_pruefstrom(std::size_t n)
+{
+    static const std::uint32_t muster[3] = { 4000u, 6000u, 8000u };
+    std::vector<std::uint32_t> v;
+    v.reserve(n);
+    for (std::size_t i = 0; i < n; ++i) v.push_back(muster[i % 3]);
+    return v;
+}
+
+static std::vector<std::uint16_t> als_scp_zellen(
+    const std::vector<std::uint32_t>& ns)
+{
+    std::vector<std::uint16_t> z;
+    z.reserve(ns.size());
+    for (const std::uint32_t v : ns)
+        z.push_back(static_cast<std::uint16_t>(v / 25u));   /* 25-ns-Basis */
+    return z;
+}
+
+static void smoke_write_verify_zellvergleich()
+{
+    const int cyl = 3, head = 1;
+    const int scp_track = cyl * 2 + head;      /* Provider: cyl*2 + head */
+    const std::vector<std::uint32_t> geschrieben = mfm_pruefstrom(90);
+
+    /* ── Fall A: dieselbe Zellfolge kommt zurueck -> verified = true ── */
+    {
+        SubprocessMock mock;
+        /* 1. der Schreiblauf (`rawwrite`) */
+        mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
+        /* 2. der Ruecklesenlauf: EINE Umdrehung, Ausgabe ist eine SCP */
+        mock.queue_run(SubprocessMock::ScriptedRun{
+            { "fluxengine", "read", "--drive.revolutions=1" },
+            build_synthetic_scp(scp_track, als_scp_zellen(geschrieben),
+                                /*index_time_25ns=*/8000000u),
+            "", 0 });
+
+        FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
+        FluxStream flux{ geschrieben };
+        auto outcome = p.write_raw_flux(
+            WriteFluxParams{cyl, head, /*verify=*/true, false}, flux);
+
+        bool fertig = false, verified = false;
+        std::visit(overloaded{
+            [&](const WriteCompleted& w)         { fertig = true;
+                                                   verified = w.verified; },
+            [&](const WriteVerifyFailed&)        {},
+            [&](const WriteRefused&)             {},
+            [&](const CapabilityRequiresPolicy&) {},
+            [&](const HardwareDisconnected&)     {},
+            [&](const ProviderError& e)          {
+                /* Sichtbar machen, WORAN es lag — eine stumme Absage
+                 * hier waere die teuerste Sorte Fehlschlag. */
+                std::cout << "      ProviderError: " << e.what << std::endl;
+            },
+        }, outcome);
+
+        assert(fertig &&
+               "gleiche Zellfolge zurueck -> WriteCompleted (MF-1121)");
+        assert(verified &&
+               "`verified` muss true sein: es WURDE nachgelesen und die "
+               "Zellfolge stimmt (MF-883 in der Gegenrichtung)");
+        assert(mock.recorded_runs().size() == 2 &&
+               "genau zwei Laeufe: schreiben und zuruecklesen");
+        {
+            /* Der zweite Lauf muss der LESEBEFEHL sein, und er muss EINE
+             * Umdrehung verlangen — daran haengt die Ausrichtung: SCP
+             * trennt Umdrehungen an den Indexmarken, Umdrehung 0 beginnt
+             * also an der Marke, und `rawwrite` schreibt ab Index. */
+            const auto& argv = mock.recorded_runs().at(1).argv;
+            bool hat_read = false, hat_eine_umdrehung = false;
+            for (const auto& a : argv) {
+                if (a == "read")                      hat_read = true;
+                if (a == "--drive.revolutions=1")     hat_eine_umdrehung = true;
+            }
+            assert(hat_read && "der zweite Lauf ist `read`");
+            assert(hat_eine_umdrehung &&
+                   "genau EINE Umdrehung - sonst waere die Ausrichtung "
+                   "an der Indexmarke nicht gegeben");
+        }
+        mock.assert_consumed();
+    }
+
+    /* ── Fall B: eine Zelle verschoben -> WriteVerifyFailed ──────────── */
+    {
+        std::vector<std::uint32_t> gelesen = geschrieben;
+        /* 4000 -> 5000 ns. Bei Zelle 2000 ist das 2,5 und rundet auf 3:
+         * die Zellzahl AENDERT sich, also muss die Nachlese fallen. Ein
+         * Wert innerhalb derselben Zelle (etwa 4200) darf sie NICHT
+         * fallen lassen — das ist der Sinn des Zellvergleichs. */
+        gelesen.at(30) = 5000u;
+
+        SubprocessMock mock;
+        mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
+        mock.queue_run(SubprocessMock::ScriptedRun{
+            { "fluxengine", "read" },
+            build_synthetic_scp(scp_track, als_scp_zellen(gelesen), 8000000u),
+            "", 0 });
+
+        FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
+        FluxStream flux{ geschrieben };
+        auto outcome = p.write_raw_flux(
+            WriteFluxParams{cyl, head, true, false}, flux);
+
+        bool gefallen = false;
+        bool beweis_ist_zellen = false;
+        std::visit(overloaded{
+            [&](const WriteCompleted&)           {},
+            [&](const WriteVerifyFailed& f)      {
+                gefallen = true;
+                /* Der Beweis muss ZELLZAHLEN tragen, nicht rohe
+                 * Nanosekunden: ein Beweisfeld, das eine andere Groesse
+                 * zeigt als die Pruefung benutzt hat, waere
+                 * irrefuehrend. 4000/6000/8000 bei Zelle 2000 sind
+                 * 2/3/4, und jede Zahl muss in [2,4] liegen. */
+                beweis_ist_zellen =
+                    f.intended.size() == 90 && !f.readback.empty();
+                for (const std::uint8_t z : f.intended)
+                    if (z < 2 || z > 4) beweis_ist_zellen = false;
+                /* Und genau an der verschobenen Stelle muss sich der
+                 * Ruecklesewert unterscheiden. */
+                if (f.readback.size() > 30 &&
+                    f.readback.at(30) == f.intended.at(30))
+                    beweis_ist_zellen = false;
+            },
+            [&](const WriteRefused&)             {},
+            [&](const CapabilityRequiresPolicy&) {},
+            [&](const HardwareDisconnected&)     {},
+            [&](const ProviderError& e)          {
+                std::cout << "      ProviderError: " << e.what << std::endl;
+            },
+        }, outcome);
+
+        assert(gefallen &&
+               "eine um mehr als eine halbe Zelle verschobene Stelle muss "
+               "die Nachlese fallen lassen (MF-1121)");
+        assert(beweis_ist_zellen &&
+               "`intended`/`readback` tragen die ZELLFOLGEN - also genau "
+               "das, was verglichen wurde");
+        mock.assert_consumed();
+    }
+
+    /* ── Fall C: Jitter INNERHALB der Zelle -> haelt ─────────────────── */
+    {
+        std::vector<std::uint32_t> gelesen = geschrieben;
+        /* +200 ns auf jeden Wert: 10 % der Zelle, also weit unter der
+         * halben Zelle. Das ist der Fall, der auf echter Hardware der
+         * NORMALFALL ist — eine Nachlese, die daran faellt, waere
+         * unbrauchbar, und ein ns-Vergleich waere genau das. */
+        for (std::uint32_t& v : gelesen) v += 200u;
+
+        SubprocessMock mock;
+        mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
+        mock.queue_run(SubprocessMock::ScriptedRun{
+            { "fluxengine", "read" },
+            build_synthetic_scp(scp_track, als_scp_zellen(gelesen), 8000000u),
+            "", 0 });
+
+        FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
+        FluxStream flux{ geschrieben };
+        auto outcome = p.write_raw_flux(
+            WriteFluxParams{cyl, head, true, false}, flux);
+
+        bool verified = false;
+        std::visit(overloaded{
+            [&](const WriteCompleted& w)         { verified = w.verified; },
+            [&](const WriteVerifyFailed&)        {},
+            [&](const WriteRefused&)             {},
+            [&](const CapabilityRequiresPolicy&) {},
+            [&](const HardwareDisconnected&)     {},
+            [&](const ProviderError& e)          {
+                std::cout << "      ProviderError: " << e.what << std::endl;
+            },
+        }, outcome);
+
+        assert(verified &&
+               "Jitter innerhalb der Zelle darf die Nachlese NICHT fallen "
+               "lassen - sonst wuerde sie auf echter Hardware immer "
+               "scheitern (MF-1121)");
+        mock.assert_consumed();
+    }
+
+    /* ── Fall D: es kommt WENIGER zurueck als geschrieben -> faellt ──
+     *
+     * Dieser Zweig stand nach dem ersten Lauf ohne Zusage da, und ein
+     * ungepruefter Zweig ist in diesem Baum kein Zweig, sondern eine
+     * Behauptung. Die Zusage lautet: die geschriebenen Zellen stehen
+     * VOLLSTAENDIG am Anfang der Umdrehung. Kommt weniger zurueck, ist
+     * nicht alles angekommen — auch wenn jede zurueckgelesene Zelle
+     * stimmt. Ein Vergleich, der nur das Praefix des KUERZEREN prueft,
+     * wuerde einen halb geschriebenen Spurabschnitt bestaetigen. */
+    {
+        std::vector<std::uint32_t> gelesen = geschrieben;
+        gelesen.resize(geschrieben.size() - 12);   /* 78 statt 90 */
+
+        SubprocessMock mock;
+        mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
+        mock.queue_run(SubprocessMock::ScriptedRun{
+            { "fluxengine", "read" },
+            build_synthetic_scp(scp_track, als_scp_zellen(gelesen), 8000000u),
+            "", 0 });
+
+        FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
+        FluxStream flux{ geschrieben };
+        auto outcome = p.write_raw_flux(
+            WriteFluxParams{cyl, head, true, false}, flux);
+
+        bool gefallen = false;
+        bool laengen_belegt = false;
+        std::visit(overloaded{
+            [&](const WriteCompleted&)           {},
+            [&](const WriteVerifyFailed& f)      {
+                gefallen = true;
+                /* Der Beweis muss die Luecke ZEIGEN, nicht nur melden. */
+                laengen_belegt = (f.intended.size() == 90)
+                              && (f.readback.size() == 78);
+            },
+            [&](const WriteRefused&)             {},
+            [&](const CapabilityRequiresPolicy&) {},
+            [&](const HardwareDisconnected&)     {},
+            [&](const ProviderError& e)          {
+                std::cout << "      ProviderError: " << e.what << std::endl;
+            },
+        }, outcome);
+
+        assert(gefallen &&
+               "ein kuerzerer Ruecklesestrom muss die Nachlese fallen "
+               "lassen, auch wenn jede vorhandene Zelle stimmt (MF-1121)");
+        assert(laengen_belegt &&
+               "der Beweis traegt beide Laengen - 90 geschrieben, 78 "
+               "zurueckgelesen");
+        mock.assert_consumed();
+    }
+}
 
 static void smoke_provider_error_3part_contract()
 {
@@ -1080,6 +1353,7 @@ int main()
     LAUF(smoke_out_of_range_head_read);
     LAUF(smoke_out_of_range_cylinder_write);
     LAUF(smoke_empty_flux_stream_write);
+    LAUF(smoke_write_verify_zellvergleich);
     LAUF(smoke_provider_error_3part_contract);
     LAUF(smoke_detect_drive_no_rpm_in_output);
     LAUF(smoke_measure_rpm_no_rpm_in_output);

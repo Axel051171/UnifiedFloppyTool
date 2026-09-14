@@ -38,13 +38,38 @@
  *   throws std::logic_error on empty strings; this is a runtime guard
  *   that catches programming mistakes during development.
  *
- * Write semantics (carried from V1):
- *   The V1 writeTrack() accepts an optional verify pass. The V2
- *   do_write_raw_flux() respects WriteFluxParams::verify. If verify is
- *   requested, a read-back pass is simulated via a second runner invocation.
- *   If the read-back produces empty data, WriteVerifyFailed is returned with
- *   the intended stream bytes and an empty readback — preserving both
- *   (rule F-3 for writes).
+ * Write semantics — BERICHTIGT MF-1121 (P3-342 erledigt):
+ *   Hier stand: „If verify is requested, a read-back pass is SIMULATED via
+ *   a second runner invocation. If the read-back produces EMPTY data,
+ *   WriteVerifyFailed is returned." Beides traf nicht mehr zu und war
+ *   ausserdem schon als Zusage zu schwach: „nicht leer" ist kein
+ *   Vergleich.
+ *
+ *   Heute gilt: `do_write_raw_flux()` schreibt den Fluss als
+ *   SCP-Behaelter und ruft `fluxengine rawwrite -s` (MF-1116). Mit
+ *   `verify = true` wird die Spur WIRKLICH zurueckgelesen — ueber
+ *   `do_read_raw_flux()`, eine Umdrehung — und auf ZELLEBENE
+ *   verglichen:
+ *
+ *     - Die Zellzeit kommt aus dem Histogramm des GESCHRIEBENEN Stroms
+ *       (`uft_flux_histogram_cell_ns`), nicht aus einer gewaehlten
+ *       Toleranz. Antwortet der Schaetzer nicht — der Strom sieht nicht
+ *       wie MFM aus —, sagt die Nachlese ab statt ein Maß zu erfinden.
+ *     - Verglichen werden Zellzahlen, nicht Nanosekunden: ein
+ *       zurueckgelesener Fluss ist eine andere Umdrehung, exakte
+ *       ns-Gleichheit ist physikalisch unmoeglich.
+ *     - Die Ausrichtung kommt von der Indexmarke (SCP trennt
+ *       Umdrehungen dort, `rawwrite` schreibt ab Index) — deshalb genau
+ *       EINE Umdrehung und kein Rotationssuchlauf.
+ *     - Verglichen wird das PRAEFIX: die geschriebenen Zellen stehen in
+ *       dieser Reihenfolge am Anfang der Umdrehung. Was dahinter liegt,
+ *       stand vorher auf der Diskette und gehoert nicht zur Zusage.
+ *
+ *   `WriteVerifyFailed` traegt in `intended`/`readback` die ZELLFOLGEN,
+ *   also genau das Verglichene (rule F-3 fuer Schreibvorgaenge). Was
+ *   `verified = true` NICHT heisst: dass ein fremdes Laufwerk die
+ *   Diskette liest — ohne Geraet ist das nicht pruefbar (MF-310), und
+ *   `docs/CAPABILITIES.md` fuehrt Write deshalb als gelb.
  *
  * Read output format — SCP, not .flux (MF-209 / P1.24):
  *   do_read_raw_flux asks fluxengine to write an *SCP* file (`-o ...scp`),
@@ -73,6 +98,9 @@
 #include "fluxengine_provider_v2.h"
 
 #include "uft/flux/uft_scp_parser.h"
+/* MF-1121: die Zellzeit fuer die Nachlese kommt aus dem Histogramm des
+ * GESCHRIEBENEN Stroms — nicht aus einer gewaehlten Toleranz. */
+#include "uft/flux/uft_flux_histogram.h"
 /* MF-1116: P3-342 Schritt (a) — der Fluss geht als SCP-Behaelter zu
  * `fluxengine rawwrite`. Der Schreiber ist seit MF-1055 abgenommen. */
 #include "uft/formats/uft_scp_writer.h"
@@ -937,17 +965,160 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
         fertig.verified      = false;
         return fertig;
     }
-    return ProviderError{
-        UFT_E_GENERIC,
-        "FluxEngine flux write: verify pass not wired (P3-342)",
-        "The write itself went through `fluxengine rawwrite`, but the "
-        "requested verify pass would have to re-read the track and "
-        "compare it against the intended flux. That read-back path is "
-        "not wired for the write case, and reporting success without it "
-        "would be a claim this provider cannot back (MF-883).",
-        "Call write_raw_flux() with verify=false, or verify by reading "
-        "the track back through read_raw_flux() and comparing yourself."
+    /* ── Nachlese (P3-342 erledigt, MF-1121) ───────────────────────────
+     *
+     * Auf Eigentuemer-Entscheidung: „P3-342 Nachlese verdrahten,
+     * Vergleich auf Zellebene."
+     *
+     * WARUM ZELLEBENE UND NICHT NANOSEKUNDEN. Ein zurueckgelesener
+     * Fluss ist eine ANDERE Umdrehung als die geschriebene: Jitter,
+     * Drehzahlabweichung und die Taktrueckgewinnung des Geraets machen
+     * exakte ns-Gleichheit physikalisch unmoeglich. Ein Vergleich, der
+     * sie verlangt, kann nur scheitern; einer mit frei gewaehlter
+     * Toleranz waere eine erfundene Zahl. Die Zelle ist die Einheit, in
+     * der eine Diskette ihre Information TRAEGT — gleiche Zellfolge
+     * heisst: dieselbe Information steht drauf.
+     *
+     * WOHER DIE ZELLZEIT KOMMT — gemessen, nicht gewaehlt.
+     * `uft_flux_histogram_cell_ns()` gewinnt sie aus dem Histogramm des
+     * GESCHRIEBENEN Stroms. Die Funktion liegt seit langem im Baum, wird
+     * im Produktivpfad des Dekoders gerufen
+     * (`src/flux/uft_flux_decoder.c:749`) und hat einen eigenen Test.
+     * Ihr Kopf sagt den Grund, warum sie hier die richtige ist: sie
+     * antwortet NUR, wenn das Histogramm wirklich wie MFM aussieht —
+     * „ein Schaetzer, der immer etwas sagt, waere schlimmer als keiner."
+     * Sagt sie nein, sagt die Nachlese ab statt ein Maß zu erfinden.
+     *
+     * Ausdruecklich NICHT benutzt wird `uft_pll_classify_flux()`: es
+     * sortiert gegen FESTE MFM-Fenster (4/6/8 us), also gegen eine
+     * angenommene Zellzeit. Fuer einen GCR- oder FM-Strom landet dort
+     * alles in `TOO_LONG`, und der Vergleich verliert seine Trennkraft,
+     * ohne es zu sagen.
+     *
+     * Drei Groessen sind an einer Wegwerfmessung belegt (Zelle 2000 ns
+     * fuer einen 4/6/8-us-Strom): die Einheit geht 1:1 durch — ns
+     * hinein, ns heraus, weil der Dekoder nur deshalb skaliert, weil er
+     * TICKS uebergibt; der Schaetzer braucht **rund 60** Uebergaenge (mit
+     * 12 sagt er nein); und der Absage-Zweig ist erreichbar — ein
+     * einzelner Gipfel und ein Verhaeltnis von 1,25 werden abgewiesen.
+     *
+     * DIE AUSRICHTUNG IST GESCHENKT, NICHT GESUCHT. Eine Spur an
+     * beliebiger Winkellage zurueckgelesen waere gegen die geschriebene
+     * VERDREHT, und ein Rotationssuchlauf ueber ~100 000 Uebergaenge
+     * waere quadratisch. Beides entfaellt: SCP trennt Umdrehungen an
+     * den Indexmarken, Umdrehung 0 beginnt also AN der Marke, und
+     * `rawwrite` schreibt ebenfalls ab Index. Deshalb wird genau EINE
+     * Umdrehung gelesen.
+     *
+     * VERGLICHEN WIRD DAS PRAEFIX. Der geschriebene Strom deckt in der
+     * Regel nicht die ganze Umdrehung; was dahinter liegt, ist, was
+     * vorher auf der Diskette stand, und gehoert NICHT zur Zusage. Die
+     * Zusage ist: die geschriebenen Zellen stehen, in dieser Reihenfolge,
+     * am Anfang der Umdrehung. Kommt weniger zurueck als geschrieben,
+     * faellt die Nachlese.
+     *
+     * WAS `verified = true` HEISST UND WAS NICHT. Es heisst: das
+     * Zurueckgelesene ergibt dieselbe Zellfolge. Es heisst NICHT, dass
+     * die Diskette in einem fremden Laufwerk lesbar ist — das ist ohne
+     * Geraet nicht pruefbar (MF-310), und `docs/CAPABILITIES.md` fuehrt
+     * Write deshalb weiter als gelb, nicht gruen. */
+    double zelle_ns = 0.0;
+    if (!uft_flux_histogram_cell_ns(flux.transitions_ns.data(),
+                                    flux.transitions_ns.size(),
+                                    &zelle_ns)
+        || zelle_ns <= 0.0) {
+        return ProviderError{
+            UFT_E_GENERIC,
+            "FluxEngine flux write: verify pass has no calibration-free "
+            "criterion for this stream",
+            "The write itself went through `fluxengine rawwrite`. The "
+            "verify pass compares CELLS, and the cell time is derived "
+            "from the written stream's own interval histogram "
+            "(uft_flux_histogram_cell_ns). That estimator answers only "
+            "when the histogram really looks like MFM — two peaks with a "
+            "ratio in [1.30, 1.70] and at least 70 % coverage of k*cell "
+            "for k in 2..4. It declined for this stream, so there is no "
+            "measured cell to compare against. Picking a tolerance here "
+            "would be an invented number, and reporting success without "
+            "a comparison would be a claim this provider cannot back "
+            "(MF-883).",
+            "Write with verify=false and verify out-of-band, or supply a "
+            "flux stream whose interval histogram is MFM-shaped (the "
+            "estimator needs roughly 60 transitions to find two peaks)."
+        };
+    }
+
+    /* Eine Umdrehung zuruecklesen — siehe Ausrichtung oben. */
+    ReadFluxParams rp;
+    rp.cylinder    = cylinder;
+    rp.head        = head;
+    rp.revolutions = 1;
+    rp.window_ns   = 0;
+    FluxOutcome rueck = do_read_raw_flux(rp);
+
+    const FluxCaptured* gelesen = std::get_if<FluxCaptured>(&rueck);
+    if (!gelesen) {
+        /* Der Lesepfad hat seine eigene, vollstaendige Begruendung —
+         * sie wird DURCHGEREICHT statt durch eine eigene ersetzt: eine
+         * zweite Fassung derselben Aussage wuerde mit der ersten
+         * auseinanderlaufen. */
+        if (const ProviderError* pe = std::get_if<ProviderError>(&rueck))
+            return *pe;
+        return ProviderError{
+            UFT_E_GENERIC,
+            "FluxEngine flux write: verify read-back did not return flux",
+            "The write succeeded, but reading the track back for the "
+            "verify pass produced neither captured flux nor a provider "
+            "error — the read path reported marginal or unreadable flux. "
+            "Without a readable read-back there is nothing to compare, "
+            "and `verified = true` would be unbacked (MF-883).",
+            "Retry the write, or verify out-of-band with read_raw_flux() "
+            "and inspect the flux quality directly."
+        };
+    }
+
+    /* Zellzahl je Intervall, mit DERSELBEN Zelle fuer beide Seiten: die
+     * Frage ist „steht drauf, was wir geschrieben haben", nicht „welche
+     * Zellzeit hat die Diskette". */
+    const auto zellen = [zelle_ns](const std::vector<std::uint32_t>& iv) {
+        std::vector<std::uint8_t> z;
+        z.reserve(iv.size());
+        for (const std::uint32_t v : iv) {
+            long n = std::lround(static_cast<double>(v) / zelle_ns);
+            if (n < 0)   n = 0;
+            if (n > 255) n = 255;   /* Beweisfeld ist ein Byte je Zelle */
+            z.push_back(static_cast<std::uint8_t>(n));
+        }
+        return z;
     };
+    const std::vector<std::uint8_t> soll = zellen(flux.transitions_ns);
+    const std::vector<std::uint8_t> ist  = zellen(gelesen->transitions_ns);
+
+    std::size_t abweichung = soll.size();   /* == keine gefunden */
+    if (ist.size() >= soll.size()) {
+        for (std::size_t i = 0; i < soll.size(); ++i) {
+            if (ist[i] != soll[i]) { abweichung = i; break; }
+        }
+    }
+
+    if (ist.size() < soll.size() || abweichung < soll.size()) {
+        WriteVerifyFailed fehl;
+        fehl.position      = CHS{cylinder, head};
+        fehl.bytes_written = bytes_written;
+        /* Beide Stichproben bleiben erhalten, und zwar als das, was
+         * WIRKLICH verglichen wurde — Zellzahlen, nicht rohe
+         * Nanosekunden. Ein Beweisfeld, das eine andere Groesse zeigt
+         * als die Pruefung benutzt hat, waere irrefuehrend. */
+        fehl.intended = soll;
+        fehl.readback = ist;
+        return fehl;
+    }
+
+    WriteCompleted fertig;
+    fertig.position      = CHS{cylinder, head};
+    fertig.bytes_written = bytes_written;
+    fertig.verified      = true;
+    return fertig;
 
 }
 

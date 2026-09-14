@@ -3891,7 +3891,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            # MF-1121: die Nachlese vergleicht ZELLEN, und die Zellzeit
+            # kommt aus dem Histogramm des GESCHRIEBENEN Stroms statt aus
+            # einer gewaehlten Toleranz. `uft_flux_histogram_cell_ns`
+            # antwortet nur, wenn das Histogramm wirklich wie MFM
+            # aussieht — sonst sagt die Nachlese ab. Beide
+            # fluxengine-Ziele linken denselben Provider und brauchen
+            # das Symbol deshalb beide.
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
@@ -3929,7 +3937,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-1121: die Nachlese des Providers vergleicht ZELLEN;
+            # die Zellzeit kommt aus dem Histogramm des geschriebenen
+            # Stroms. Jedes Ziel, das den Provider linkt, braucht sie.
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
@@ -3943,7 +3955,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            # MF-1121: die Nachlese vergleicht ZELLEN, und die Zellzeit
+            # kommt aus dem Histogramm des GESCHRIEBENEN Stroms statt aus
+            # einer gewaehlten Toleranz. `uft_flux_histogram_cell_ns`
+            # antwortet nur, wenn das Histogramm wirklich wie MFM
+            # aussieht — sonst sagt die Nachlese ab. Beide
+            # fluxengine-Ziele linken denselben Provider und brauchen
+            # das Symbol deshalb beide.
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
@@ -4060,7 +4080,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/adfcopy_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/usbfloppy_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/ufi.c
-            ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp)
+            ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp
+            # MF-1121: die Nachlese des Providers vergleicht ZELLEN;
+            # die Zellzeit kommt aus dem Histogramm des geschriebenen
+            # Stroms. Jedes Ziel, das den Provider linkt, braucht sie.
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
@@ -4110,7 +4134,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            # MF-1121: die Nachlese des Providers vergleicht ZELLEN;
+            # die Zellzeit kommt aus dem Histogramm des geschriebenen
+            # Stroms. Jedes Ziel, das den Provider linkt, braucht sie.
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests
             ${CMAKE_SOURCE_DIR}/src)
@@ -4746,6 +4774,10 @@ if(TARGET Qt6::Test)
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
         ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+        # MF-1121: die Nachlese des FluxEngine-Providers vergleicht ZELLEN,
+        # und die Zellzeit kommt aus dem Histogramm des geschriebenen
+        # Stroms. Jedes Ziel, das den Provider linkt, braucht das Symbol.
+        ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp
