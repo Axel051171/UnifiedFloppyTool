@@ -5,6 +5,14 @@
 
 #include "uft/uft_formats_extended.h"
 #include "uft/uft_error.h"
+/* MF-1130: der gepruefte Uebergang zu den v3-Parsern. Bis dahin standen
+ * ALLE Deklarationen in dieser Datei von Hand — und genau daran hat
+ * MF-442 einen Schreibzugriff auf eine beliebige Adresse gefunden (drei
+ * Parameter deklariert, vier definiert). Alles Neue laeuft ueber diesen
+ * Header, damit eine Abweichung ein Baufehler ist. Die alten externs
+ * darunter bleiben vorerst stehen; sie in denselben Header zu ziehen ist
+ * der naechste Schritt und braucht seinen eigenen Rotbeweis. */
+#include "uft/formats/uft_v3_parsers.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -181,11 +189,53 @@ static void d64_v3_close(void* handle) {
     v3_handle_free(h);
 }
 
+/* MF-1130: hier stand `(void)handle;` und danach 35 / 1 / 21.
+ *
+ * Zwei Dinge daran waren falsch. Die 35 uebergeht einen vorhandenen
+ * Messwert — `d64_disk_v3_t.tracks` traegt die Spurzahl aus der Datei,
+ * und eine erweiterte D64 hat 40. Die 21 ist fuer die meisten Spuren
+ * schlicht unwahr: eine 1541 hat VIER Zonen mit 21/19/18/17 Sektoren,
+ * und die Tafel dafuer liegt im selben Parser.
+ *
+ * `sectors` heisst deshalb jetzt MAXIMUM ueber die Zonen. Wer die
+ * Sektorzahl EINER Spur braucht, fragt `d64_v3_spur_sektoren()`. */
 static uft_error_t d64_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
-    (void)handle;
-    if (cyls) *cyls = 35;
-    if (heads) *heads = 1;
-    if (sectors) *sectors = 21;
+    if (cyls) *cyls = 0;
+    if (heads) *heads = 0;
+    if (sectors) *sectors = 0;
+
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (!h || !h->valid) return UFT_ERR_INVALID_ARG;
+
+    if (!d64_v3_geometrie((const struct d64_disk_v3*)h->disk_buffer,
+                          cyls, heads, sectors)) {
+        /* Kein Rueckfall auf eine Konstante: wer nicht messen kann,
+         * sagt ab (MF-1129). */
+        return UFT_ERR_FORMAT;
+    }
+    return UFT_OK;
+}
+
+/* MF-1130: `read_track` war im Feldsatz von `uft_format_handler_t`
+ * vorhanden und wurde von KEINER Datei in `src/` gesetzt — gemessen ueber
+ * `git ls-files`. `uft_advanced_get_track_quality()` konnte deshalb nie
+ * messen, und die erfundene Guete 1.0 aus MF-1129 hat genau das
+ * verdeckt. */
+static uft_error_t d64_v3_read_track(void* handle, int cyl, int head,
+                                     void* buffer, size_t* size) {
+    if (!size) return UFT_ERR_INVALID_ARG;
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (!h || !h->valid) { *size = 0; return UFT_ERR_INVALID_ARG; }
+
+    size_t n = *size;
+    if (!d64_v3_spur_lesen((const struct d64_disk_v3*)h->disk_buffer,
+                           cyl, head, (uint8_t*)buffer, &n)) {
+        /* `n` traegt bei zu kleinem Puffer den BEDARF — durchgereicht,
+         * damit der Aufrufer nachlegen kann statt zu raten. */
+        *size = n;
+        return (buffer && n > 0) ? UFT_ERR_BUFFER_TOO_SMALL : UFT_ERR_FORMAT;
+    }
+    *size = n;
     return UFT_OK;
 }
 
@@ -237,11 +287,38 @@ static void g64_v3_close(void* handle) {
     v3_handle_free(h);
 }
 
+/* MF-1130: hier stand `(void)handle;` und danach 42 / 1 / 21 — siehe
+ * `d64_v3_get_geometry` fuer die Rechnung. `g64_disk_t.track_count`
+ * zaehlt HALBSPUREN; gemeldet werden Vollspuren, weil ein 0-basierter
+ * Zylinder genau die adressiert. */
 static uft_error_t g64_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
-    (void)handle;
-    if (cyls) *cyls = 42;
-    if (heads) *heads = 1;
-    if (sectors) *sectors = 21;
+    if (cyls) *cyls = 0;
+    if (heads) *heads = 0;
+    if (sectors) *sectors = 0;
+
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (!h || !h->valid) return UFT_ERR_INVALID_ARG;
+
+    if (!g64_v3_geometrie((const struct g64_disk*)h->disk_buffer,
+                          cyls, heads, sectors)) {
+        return UFT_ERR_FORMAT;
+    }
+    return UFT_OK;
+}
+
+static uft_error_t g64_v3_read_track(void* handle, int cyl, int head,
+                                     void* buffer, size_t* size) {
+    if (!size) return UFT_ERR_INVALID_ARG;
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (!h || !h->valid) { *size = 0; return UFT_ERR_INVALID_ARG; }
+
+    size_t n = *size;
+    if (!g64_v3_spur_lesen((const struct g64_disk*)h->disk_buffer,
+                           cyl, head, (uint8_t*)buffer, &n)) {
+        *size = n;
+        return (buffer && n > 0) ? UFT_ERR_BUFFER_TOO_SMALL : UFT_ERR_FORMAT;
+    }
+    *size = n;
     return UFT_OK;
 }
 
@@ -293,17 +370,83 @@ static void scp_v3_close(void* handle) {
     v3_handle_free(h);
 }
 
+/* MF-1130: hier stand `(void)handle;` und danach 84 / 2 / 0. Die 0 bei
+ * den Sektoren war die einzige der neun Konstanten, die nichts erfunden
+ * hat — ein Flussabbild hat keine Sektorebene. 84 und 2 galten dagegen
+ * auch fuer eine einseitige 40-Spur-Aufnahme. */
 static uft_error_t scp_v3_get_geometry(void* handle, int* cyls, int* heads, int* sectors) {
-    (void)handle;
-    if (cyls) *cyls = 84;
-    if (heads) *heads = 2;
+    if (cyls) *cyls = 0;
+    if (heads) *heads = 0;
     if (sectors) *sectors = 0;
+
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (!h || !h->valid) return UFT_ERR_INVALID_ARG;
+
+    if (!scp_v3_geometrie((const struct scp_disk*)h->disk_buffer,
+                          cyls, heads, sectors)) {
+        return UFT_ERR_FORMAT;
+    }
     return UFT_OK;
+}
+
+/* MF-1130: SCP sagt hier AB, und das ist gemessen statt behauptet —
+ * `scp_track_t.merged_bits` ist das einzige Bytefeld und wird in der
+ * ganzen Datei nur deklariert und freigegeben, nie belegt. Flusszeiten
+ * in einen Bytepuffer zu schreiben waere die Umdeutung, die P3-357 bei
+ * `pri` und MF-1079 bei `ipf` gekostet hat. */
+static uft_error_t scp_v3_read_track(void* handle, int cyl, int head,
+                                     void* buffer, size_t* size) {
+    (void)buffer;
+    v3_handle_t* h = (v3_handle_t*)handle;
+    if (size) *size = 0;
+    if (!size) return UFT_ERR_INVALID_ARG;
+    if (!h || !h->valid) return UFT_ERR_INVALID_ARG;
+    (void)scp_v3_spur_lesen((const struct scp_disk*)h->disk_buffer,
+                            cyl, head, NULL, size);
+    return UFT_ERR_NOT_SUPPORTED;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Public Handlers
  * ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * MF-1130 — Befund je Spur, auf Brueckenebene
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * Diese drei nehmen den OPAKEN GRIFF (`v3_handle_t*`, was `open()`
+ * herausgibt) und packen die Parser-Struktur daraus aus. Ohne sie muesste
+ * ein Aufrufer den Griff auf `struct g64_disk*` casten — ein Zugriff auf
+ * die falsche Stelle, weil die Struktur im Griff als `disk_buffer` liegt.
+ * Genau diese Klasse hat MF-442 hier gefunden, nur mit einer
+ * Parameterzahl statt einem Typ.
+ */
+bool uft_v3_griff_befund_d64(void* griff, int zylinder, int kopf,
+                             uft_v3_spurbefund_t* aus) {
+    v3_handle_t* h = (v3_handle_t*)griff;
+    if (!aus) return false;
+    if (!h || !h->valid) { memset(aus, 0, sizeof(*aus)); return false; }
+    return d64_v3_spur_befund((const struct d64_disk_v3*)h->disk_buffer,
+                              zylinder, kopf, aus);
+}
+
+bool uft_v3_griff_befund_g64(void* griff, int zylinder, int kopf,
+                             uft_v3_spurbefund_t* aus) {
+    v3_handle_t* h = (v3_handle_t*)griff;
+    if (!aus) return false;
+    if (!h || !h->valid) { memset(aus, 0, sizeof(*aus)); return false; }
+    return g64_v3_spur_befund((const struct g64_disk*)h->disk_buffer,
+                              zylinder, kopf, aus);
+}
+
+bool uft_v3_griff_befund_scp(void* griff, int zylinder, int kopf,
+                             uft_v3_spurbefund_t* aus) {
+    v3_handle_t* h = (v3_handle_t*)griff;
+    if (!aus) return false;
+    if (!h || !h->valid) { memset(aus, 0, sizeof(*aus)); return false; }
+    return scp_v3_spur_befund((const struct scp_disk*)h->disk_buffer,
+                              zylinder, kopf, aus);
+}
 
 uft_format_handler_t uft_d64_v3_handler = {
     .format             = UFT_FORMAT_D64,
@@ -319,6 +462,9 @@ uft_format_handler_t uft_d64_v3_handler = {
     .open               = d64_v3_open,
     .close              = d64_v3_close,
     .get_geometry       = d64_v3_get_geometry,
+    /* MF-1130: dieses Feld war nie gesetzt — von KEINER Datei in src/,
+     * gemessen ueber git ls-files. */
+    .read_track         = d64_v3_read_track,
 };
 
 uft_format_handler_t uft_g64_v3_handler = {
@@ -335,6 +481,9 @@ uft_format_handler_t uft_g64_v3_handler = {
     .open               = g64_v3_open,
     .close              = g64_v3_close,
     .get_geometry       = g64_v3_get_geometry,
+    /* MF-1130: dieses Feld war nie gesetzt — von KEINER Datei in src/,
+     * gemessen ueber git ls-files. */
+    .read_track         = g64_v3_read_track,
 };
 
 uft_format_handler_t uft_scp_v3_handler = {
@@ -351,6 +500,9 @@ uft_format_handler_t uft_scp_v3_handler = {
     .open               = scp_v3_open,
     .close              = scp_v3_close,
     .get_geometry       = scp_v3_get_geometry,
+    /* MF-1130: dieses Feld war nie gesetzt — von KEINER Datei in src/,
+     * gemessen ueber git ls-files. */
+    .read_track         = scp_v3_read_track,
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════════

@@ -65,12 +65,38 @@
  *
  * `uft_advanced_get_track_quality()` konnte also **nie** messen, und die
  * erfundene 1.0 mit `UFT_OK` war das Einzige, was sie lebendig aussehen
- * liess — sie hat den fehlenden Lesepfad verdeckt. Was damit geschieht,
- * ist eine Eigentuemerentscheidung (MF-1077). Abschnitt 3 nagelt den
- * Zustand deshalb als **Rotbeweis in Wartestellung** fest: er verlangt
- * `read_track == NULL` an allen drei Handlern. Wird einer verdrahtet,
- * faellt die Zusage und zwingt denselben Commit, die echte
- * Messrichtung aufzunehmen.
+ * liess — sie hat den fehlenden Lesepfad verdeckt.
+ *
+ * ── MF-1130: der Lesepfad ist da, und die Guete ist eine Messung ──────────
+ *
+ * Abschnitt 3 trug bis MF-1130 einen **Rotbeweis in Wartestellung**:
+ * `read_track == NULL` an allen drei Handlern, mit dem Satz „wird einer
+ * verdrahtet, faellt die Zusage und zwingt denselben Commit, die echte
+ * Messrichtung aufzunehmen". Sie ist gefallen, und das ist eingetreten.
+ *
+ * Die Verdrahtung hat dabei einen WEITEREN erfundenen Wert freigelegt.
+ * Mit Lesepfad meldete `get_track_quality()` fuer alle 40 Spuren der
+ * KOPIERGESCHUETZTEN `c64pp_aliensyndrome.g64` die Guete **1.0**. Der
+ * Grund war nicht mehr ein Vorgabewert, sondern eine Analyse, die auf ihren
+ * Gegenstand nicht passt: sie sucht `A1 A1 A1 FE` (IBM-MFM-Adressmarke)
+ * und Laeufe von ACHT gleichen 0x00/0xFF-Byte. D64 und G64 tragen
+ * Commodore-GCR — die Marke kommt darin nicht vor, und eine
+ * G64-Synchronmarke ist FUENF Byte lang. Beide Zaehler blieben 0, und
+ * `1.0 - 0 - 0` las sich wie ein Messergebnis. Dazu lief die CRC ueber
+ * ACHT Byte mit Erwartung 0, wo ZEHN richtig sind
+ * (`A1 A1 A1 FE C H R N CRC1 CRC2`) — auf einer echten MFM-Diskette
+ * haette damit JEDE Adressmarke als Fehler gezaehlt.
+ *
+ * Seit MF-1130 kommt die Guete aus dem BEFUND des Parsers
+ * (`uft_v3_spurbefund_t`): gezaehlte erwartete, gefundene, gueltige und
+ * fehlerhafte Sektoren aus dem echten GCR-Lauf. Abschnitt 3 rechnet die
+ * Quote NACH, statt sie zu glauben — waere `quality` wieder eine
+ * Konstante, fiele die Zusage.
+ *
+ * Gemessen an Spur 0 dieser Diskette: `erwartet=21 gefunden=0 gueltig=0
+ * geschuetzt=1`. Die Guete ist also 0/21 = 0.0, und das ist eine ehrliche
+ * Aussage ueber eine Schutzspur, die der GCR-Sektorleser nicht aufloest —
+ * kein Artefakt und keine 100 %.
  *
  * Ohne Korpus ueberspringt sich Abschnitt 3 **benannt** (MF-598: ein
  * stiller Skip ist ein gruenes Licht ohne Messung).
@@ -101,6 +127,7 @@
 
 #include "uft/uft_advanced_mode.h"
 #include "uft/uft_formats_extended.h"
+#include "uft/formats/uft_v3_parsers.h"
 
 static int gruen = 0;
 static int rot = 0;
@@ -285,10 +312,11 @@ static void echte_messung(void) {
     const uft_error_t qe = uft_advanced_get_track_quality(h, 0, 0, &q);
     printf("   get_track_quality(0,0) -> %d, quality=%.4f\n",
            (int)qe, q.quality);
-    ZUSAGE(qe != UFT_OK,
-           "auch an einem echten Abbild wird nicht 1.0/UFT_OK erfunden");
-    ZUSAGE(q.quality == 0.0,
-           "die Guete bleibt 0.0");
+    ZUSAGE(qe == UFT_OK,
+           "an einem echten Abbild MISST die Funktion (seit MF-1130 gibt "
+           "es einen Lesepfad)");
+    ZUSAGE(q.quality >= 0.0 && q.quality <= 1.0 && isfinite(q.quality),
+           "die Guete liegt im Wertebereich");
 
     /* ── Und hier steht der eigentliche Befund, festgenagelt ─────────
      *
@@ -318,19 +346,54 @@ static void echte_messung(void) {
      * sie — und zwingt denselben Commit, die Gegenrichtung oben
      * (`measured_tracks > 0`) mit aufzunehmen. Ohne sie waere dieser
      * Test gruen, waehrend die Messfunktion still nichts tut. */
+    /* ── Die Verdrahtung, festgenagelt (MF-1130) ─────────────────────
+     *
+     * Bis MF-1130 stand hier der umgekehrte Satz: alle drei Handler
+     * hatten `read_track == NULL`, und die Zusage war ein Rotbeweis in
+     * WARTESTELLUNG — „faellt sie, ist ein Lesepfad verdrahtet und die
+     * Gegenrichtung gehoert in denselben Commit".
+     *
+     * Sie ist gefallen. Genau so war sie gebaut, und die Gegenrichtung
+     * steht jetzt darunter. */
     extern uft_format_handler_t uft_d64_v3_handler;
     extern uft_format_handler_t uft_g64_v3_handler;
     extern uft_format_handler_t uft_scp_v3_handler;
 
-    ZUSAGE(uft_g64_v3_handler.read_track == NULL &&
-           uft_d64_v3_handler.read_track == NULL &&
-           uft_scp_v3_handler.read_track == NULL,
-           "ALLE drei v3-Handler haben read_track == NULL — deshalb ist "
-           "measured_tracks 0. Faellt diese Zusage, ist ein Lesepfad "
-           "verdrahtet und die Gegenrichtung gehoert in denselben Commit");
-    ZUSAGE(s.measured_tracks == 0,
-           "und genau deshalb ist measured_tracks hier 0 — die Zahl "
-           "LUEGT nicht, sie sagt 'nicht gemessen'");
+    ZUSAGE(uft_d64_v3_handler.read_track != NULL &&
+           uft_g64_v3_handler.read_track != NULL &&
+           uft_scp_v3_handler.read_track != NULL,
+           "alle drei v3-Handler haben einen Lesepfad (MF-1130)");
+    ZUSAGE(s.measured_tracks > 0,
+           "und deshalb wird an einem echten Abbild WIRKLICH gemessen — "
+           "die Absage aus MF-1129 hat die Funktion nicht unbrauchbar "
+           "gemacht");
+
+    /* ── Und die Zahl hat einen Nenner ───────────────────────────────
+     *
+     * `quality` ist seit MF-1130 `gueltig / erwartet` aus dem Befund des
+     * Parsers, nicht das Ergebnis einer Byteanalyse, die IBM-MFM-Marken
+     * in GCR-Spuren sucht. Hier wird das NACHGERECHNET: der Test holt
+     * denselben Befund und vergleicht. Waere `quality` wieder eine
+     * Konstante, fiele diese Zusage. */
+    uft_v3_spurbefund_t bef;
+    memset(&bef, 0xAA, sizeof(bef));
+    const bool hat_bef = uft_v3_griff_befund_g64(h->v3_handle, 0, 0, &bef);
+    printf("   Befund Spur 0: erwartet=%d gefunden=%d gueltig=%d "
+           "fehler=%d schwach=%d geschuetzt=%d\n",
+           bef.erwartet, bef.gefunden, bef.gueltig, bef.fehler,
+           (int)bef.schwach, (int)bef.geschuetzt);
+
+    ZUSAGE(hat_bef, "der Parser liefert fuer Spur 0 einen Befund");
+    ZUSAGE(bef.erwartet > 0,
+           "der Befund hat einen NENNER (erwartete Sektoren aus der "
+           "Zonentafel des Abbilds)");
+    ZUSAGE(bef.gueltig <= bef.erwartet && bef.gefunden <= bef.erwartet + 3,
+           "gueltige und gefundene Sektoren liegen im Rahmen des Nenners");
+    ZUSAGE(q.quality == (double)bef.gueltig / (double)bef.erwartet,
+           "die Guete IST die Quote aus dem Befund — nachgerechnet, "
+           "nicht geglaubt");
+    ZUSAGE(q.error_count == bef.fehler,
+           "die Fehlerzahl kommt aus demselben Befund");
 
     uft_advanced_close(h);
 }

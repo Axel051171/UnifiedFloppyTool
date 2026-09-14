@@ -275,7 +275,43 @@ uft_track_t* uft_track_alloc(size_t max_sectors, size_t max_raw_bits) {
 void uft_track_release(uft_track_t *track) {
     if (!track) return;
 
-    if (track->owns_data) {
+    /* MF-1132: das SEKTORFELD haengt nicht mehr an `owns_data`.
+     *
+     * Gemessen, und es ist die Ursache von 27 der 29 Leck-Meldungen aus
+     * dem ASan-Lauf (22,3 von 22,9 MB): `uft_track_add_sector()` in
+     * `uft_format_plugin.c` legt je Sektor VIER Bloecke an (`data`,
+     * `confidence_map`, `weak_mask`, `timing_ns`) plus das Sektorfeld
+     * selbst — und setzt `owns_data` NIE. Diese Fahne wird im ganzen
+     * Baum nur an zwei Stellen fuer eine Spur gesetzt, beide fruehere
+     * Reparaturen derselben Klasse (MF-595, MF-599). Alles, was ueber
+     * `add_sector` hereinkam, ist hier also unbemerkt liegen geblieben.
+     *
+     * Die naheliegende Korrektur waere `owns_data = true` in
+     * `add_sector` — und sie ist FALSCH. `owns_data` ist EINE Fahne fuer
+     * NEUN Eigentuemerschaften: Sektorpuffer, Sektorfeld, `raw_data`,
+     * `flux`, `flux_times`, `confidence`, `weak_mask` und die
+     * `revisions`. Wer sie an der Sektorstelle setzt, behauptet Eigentum
+     * an acht Dingen, die `add_sector` nicht angelegt hat — ein `free()`
+     * auf einen geliehenen Zeiger.
+     *
+     * Was DOCH gemessen ist: `uft_track_t::sectors` wird im ganzen Baum
+     * an genau ZWEI Stellen geschrieben — dem `calloc` in
+     * `uft_track_alloc()` (Z. 253 dieser Datei) und dem `realloc` in
+     * `uft_track_add_sector()` (`uft_format_plugin.c:485`). Es ist also
+     * NIE geliehen, und seine Freigabe braucht kein Tor.
+     *
+     * Der zweite Aufraeumer derselben Struktur sagt das seit langem:
+     * `uft_track_cleanup()` (`uft_format_plugin.c:576`) gibt Sektoren
+     * und Sektorfeld BEDINGUNGSLOS frei. Zwei Aufraeumer, dasselbe Feld,
+     * zwei Antworten — genau die Gestalt, die der MF-599-Kommentar
+     * darunter fuer `flux` festhaelt.
+     *
+     * Offen und benannt: `uft_track_cleanup()` benutzt dafuer den
+     * kanonischen `uft_sector_cleanup()`, hier stehen die vier `free`
+     * inline. Ein Include von `uft/uft_format_plugin.h` waere der
+     * saubere Weg, riskiert in dieser Datei aber eine Typkollision;
+     * deshalb wird der vorhandene Block VERSCHOBEN und nicht ersetzt. */
+    if (track->sectors) {
         for (size_t i = 0; i < track->sector_count; i++) {
             free(track->sectors[i].data);
             free(track->sectors[i].confidence_map);
@@ -283,6 +319,9 @@ void uft_track_release(uft_track_t *track) {
             free(track->sectors[i].timing_ns);
         }
         free(track->sectors);
+    }
+
+    if (track->owns_data) {
         free(track->raw_data);
         /* MF-599: `flux` fehlte hier. `uft_track_t` fuehrt DREI
          * Flux-Zeiger — `flux`, `flux_data` (legacy) und `flux_times` —

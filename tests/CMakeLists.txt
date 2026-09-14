@@ -3992,6 +3992,27 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_spur_freigabe_zaehlt")
+        # MF-1132: der Rotbeweis waegt Anforderungen gegen Freigaben.
+        #
+        # `--wrap` ist hier kein Luxus. Ein Leck ist ohne Sanitizer
+        # nicht sichtbar, und die lokale MinGW-Kette hat kein ASan; ein
+        # Test, der das Leck nur BESCHREIBT, waere ein Rotbeweis, der
+        # nicht feuert (EINFRIER-REGEL: nicht ausreichend). Mit den
+        # Wrappern zaehlt der Test selbst, und das Ergebnis ist eine
+        # Zahl statt einer Vermutung.
+        #
+        # Traegt ein Binder `--wrap` nicht, faellt der BAU auf — nicht
+        # der Test auf gruen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c)
+        set(TEST_LIBS "")
+        if(NOT MSVC)
+            target_link_options(${test_name} PRIVATE
+                -Wl,--wrap=malloc -Wl,--wrap=calloc
+                -Wl,--wrap=realloc -Wl,--wrap=free)
+        endif()
     elseif(${test_name} STREQUAL "test_advanced_guete_ohne_messung")
         # MF-1129: der Rotbeweis dafuer, dass `advanced_mode` keine Guete
         # mehr erfindet.

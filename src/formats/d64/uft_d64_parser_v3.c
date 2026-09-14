@@ -32,6 +32,11 @@
 #include <math.h>
 
 #include "uft/uft_log.h"
+/* MF-1130: der gepruefte Uebergang zur Bruecke. Eingebunden, damit der
+ * Uebersetzer Deklaration und Definition vergleicht — MF-442 hat an
+ * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
+ * eine beliebige Adresse gefunden. */
+#include "uft/formats/uft_v3_parsers.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * CONSTANTS
@@ -1735,6 +1740,126 @@ void d64_disk_free(d64_disk_v3_t* disk) {
             }
         }
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MF-1130 — DER GEPRUEFTE UEBERGANG ZUR BRUECKE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Deklariert in `include/uft/formats/uft_v3_parsers.h`; siehe dort, warum
+ * es einen Header gibt und nicht wieder handgeschriebene externs
+ * (MF-442).
+ *
+ * Gemessene Indizierung, nicht angenommen: `d64_parse()` laeuft
+ * `for (int t = 1; t <= disk->tracks; t++)` und schreibt
+ * `disk->track_data[t]` (Z. 1445/1449) — also 1-BASIERT. Die Sektoren
+ * darin laufen `for (uint8_t s = 0; s < track->expected_sectors; s++)`
+ * (Z. 1340) — also 0-BASIERT. Ein `zylinder` von aussen ist 0-basiert,
+ * die Spur mithin `zylinder + 1`.
+ */
+
+bool d64_v3_geometrie(const struct d64_disk_v3* disk,
+                      int* spuren, int* koepfe, int* max_sektoren) {
+    if (spuren) *spuren = 0;
+    if (koepfe) *koepfe = 0;
+    if (max_sektoren) *max_sektoren = 0;
+    if (!disk) return false;
+
+    const d64_disk_v3_t* d = (const d64_disk_v3_t*)disk;
+    if (!d->valid || d->tracks == 0) return false;
+
+    if (spuren) *spuren = (int)d->tracks;
+    if (koepfe) *koepfe = 1;            /* eine 1541-Diskette ist einseitig */
+
+    /* Das Maximum ueber die VIER Zonen (21/19/18/17), aus der Tafel des
+     * Abbilds. Die Bruecke gab hier bis MF-1130 fest 21 heraus — richtig
+     * nur fuer die Spuren 1..17. */
+    if (max_sektoren) {
+        int m = 0;
+        for (int t = 1; t <= (int)d->tracks && t <= 40; t++) {
+            const int s = (int)d->track_data[t].expected_sectors;
+            if (s > m) m = s;
+        }
+        *max_sektoren = m;
+    }
+    return true;
+}
+
+int d64_v3_spur_sektoren(const struct d64_disk_v3* disk, int zylinder) {
+    if (!disk || zylinder < 0) return -1;
+    const d64_disk_v3_t* d = (const d64_disk_v3_t*)disk;
+    if (!d->valid) return -1;
+
+    const int t = zylinder + 1;
+    if (t < 1 || t > (int)d->tracks || t > 40) return -1;
+    return (int)d->track_data[t].expected_sectors;
+}
+
+bool d64_v3_spur_lesen(const struct d64_disk_v3* disk, int zylinder, int kopf,
+                       uint8_t* aus, size_t* groesse) {
+    if (!disk || !groesse || zylinder < 0) return false;
+    if (kopf != 0) return false;        /* einseitig */
+
+    const d64_disk_v3_t* d = (const d64_disk_v3_t*)disk;
+    if (!d->valid) return false;
+
+    const int t = zylinder + 1;
+    if (t < 1 || t > (int)d->tracks || t > 40) return false;
+
+    const d64_track_v3_t* tr = &d->track_data[t];
+    const int n = (int)tr->expected_sectors;
+    if (n <= 0) { *groesse = 0; return false; }
+
+    /* D64 ist ein SEKTORABBILD. Was diese Funktion herausgibt, sind die
+     * Sektordaten hintereinander — 256 Byte je Sektor, in
+     * Sektorreihenfolge. Einen Zellstrom hat D64 nicht, und einen zu
+     * erzeugen waere eine Erfindung (Klasse MF-539/1081: eine
+     * Rekonstruktion ist keine Aufnahme). */
+    const size_t bedarf = (size_t)n * 256u;
+
+    if (!aus) { *groesse = bedarf; return true; }
+    if (*groesse < bedarf) { *groesse = bedarf; return false; }
+
+    /* Ein nicht vorhandener Sektor wird NICHT mit Nullen gefuellt und
+     * als gelesen gemeldet — das ist die Klasse MF-1038 (36 erfundene
+     * Byte je FDS-Seite, gemeldet als UFT_SECTOR_OK) und MF-1022. Fehlt
+     * ein Sektor, sagt die Funktion ab statt die Stelle als Inhalt
+     * auszugeben. */
+    for (int s = 0; s < n; s++) {
+        if (!tr->sectors[s].present) { *groesse = 0; return false; }
+    }
+    for (int s = 0; s < n; s++) {
+        memcpy(aus + (size_t)s * 256u, tr->sectors[s].data, 256u);
+    }
+    *groesse = bedarf;
+    return true;
+}
+
+bool d64_v3_spur_befund(const struct d64_disk_v3* disk, int zylinder, int kopf,
+                        uft_v3_spurbefund_t* aus) {
+    if (!aus) return false;
+    memset(aus, 0, sizeof(*aus));
+    if (!disk || zylinder < 0 || kopf != 0) return false;
+
+    const d64_disk_v3_t* d = (const d64_disk_v3_t*)disk;
+    if (!d->valid) return false;
+
+    const int t = zylinder + 1;
+    if (t < 1 || t > (int)d->tracks || t > 40) return false;
+
+    const d64_track_v3_t* tr = &d->track_data[t];
+    if (tr->expected_sectors == 0) return false;
+
+    /* Gezaehlt von `d64_parse_track()` beim echten Lauf: `found_sectors`
+     * in Z. 1369, `valid_sectors` in Z. 1371, `error_sectors` in
+     * Z. 1362. */
+    aus->erwartet   = (int)tr->expected_sectors;
+    aus->gefunden   = (int)tr->found_sectors;
+    aus->gueltig    = (int)tr->valid_sectors;
+    aus->fehler     = (int)tr->error_sectors;
+    aus->schwach    = tr->has_weak_bits;
+    aus->geschuetzt = tr->is_protected;
+    return true;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

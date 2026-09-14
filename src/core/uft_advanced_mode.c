@@ -7,6 +7,8 @@
 
 #include "uft/uft_advanced_mode.h"
 #include "uft/uft_v3_bridge.h"
+/* MF-1130: der gepruefte Uebergang zu den v3-Parsern (Befund je Spur) */
+#include "uft/formats/uft_v3_parsers.h"
 #include "uft/uft_god_mode.h"
 #include "uft/uft_protection.h"
 #include "uft/uft_log.h"
@@ -108,6 +110,13 @@ typedef enum {
  * nimmt. Definition und Begruendung bei der Umsetzung weiter unten. */
 static const uft_format_handler_t*
 advanced_handler(const uft_advanced_handle_t* handle);
+
+/* MF-1130: der Befund je Spur, aus dem Parser. Siehe die Umsetzung
+ * weiter unten und `include/uft/formats/uft_v3_parsers.h` fuer den
+ * Grund, warum die Guete nicht mehr aus einer Byteanalyse kommt. */
+static bool advanced_befund(const uft_advanced_handle_t* handle,
+                            int zylinder, int kopf,
+                            uft_v3_spurbefund_t* aus);
 
 static internal_format_t detect_format_internal(const uint8_t* data, size_t size,
                                                  size_t file_size, int* confidence) {
@@ -364,48 +373,108 @@ uft_error_t uft_advanced_get_track_quality(uft_advanced_handle_t* handle,
             if (track_size == 0)
                 return UFT_ERR_FORMAT;
             {
-                /* Analyze for weak bits and CRC errors */
-                int error_count = 0;
-                int weak_regions = 0;
-                
-                /* Scan for repeated patterns (weak bit indicator) */
-                for (size_t i = 0; i + 8 < track_size; i++) {
-                    /* Check for 0x00 or 0xFF runs (common weak bit artifacts) */
-                    bool all_same = true;
-                    for (int j = 1; j < 8; j++) {
-                        if (track_buf[i + j] != track_buf[i]) { all_same = false; break; }
-                    }
-                    if (all_same && (track_buf[i] == 0x00 || track_buf[i] == 0xFF)) {
-                        weak_regions++;
-                        i += 7;  /* Skip past this region */
-                    }
-                }
-                
-                /* CRC check on MFM sectors (simplified) */
-                for (size_t i = 0; i + 3 < track_size; i++) {
-                    if (track_buf[i] == 0xA1 && track_buf[i+1] == 0xA1 &&
-                        track_buf[i+2] == 0xA1 && track_buf[i+3] == 0xFE) {
-                        /* Found IDAM - verify CRC of header (6 bytes + 2 CRC) */
-                        if (i + 3 + 8 < track_size) {
-                            uint16_t crc = 0xFFFF;
-                            for (int j = 0; j < 8; j++) {
-                                crc ^= (uint16_t)track_buf[i + j] << 8;
-                                for (int b = 0; b < 8; b++)
-                                    crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
-                            }
-                            if (crc != 0) error_count++;
+                /* MF-1130: die Guete kommt jetzt aus dem BEFUND des
+                 * Parsers, nicht aus einer Byteanalyse des Spurinhalts.
+                 *
+                 * Der Grund ist gemessen. Die Analyse darunter sucht
+                 * `A1 A1 A1 FE`, eine IBM-MFM-Adressmarke, und zaehlt
+                 * Laeufe von ACHT gleichen 0x00/0xFF-Bytes als
+                 * Schwachbits. Die drei erreichbaren Formate tragen
+                 * Commodore-GCR: die Marke kommt darin nicht vor, und
+                 * eine G64-Synchronmarke ist FUENF Byte lang. Beide
+                 * Zaehler blieben damit auf 0, und `1.0 - 0 - 0` ergab
+                 * bestaendig die HOECHSTE Guete — an
+                 * `tests/corpus/c64pp_aliensyndrome.g64`, einer
+                 * KOPIERGESCHUETZTEN Diskette, ueber alle 40 Spuren.
+                 *
+                 * Das ist nicht mehr der Vorgabewert aus MF-1129,
+                 * sondern dieselbe Klasse in anderer Gestalt: eine
+                 * Rechnung, die auf ihren Gegenstand nicht passt, liest
+                 * sich wie eine Messung.
+                 *
+                 * Der Befund dagegen ist gezaehlt — `valid_sectors`
+                 * wird im echten GCR-Lauf hochgezaehlt
+                 * (`uft_g64_parser_v3.c:1259`, `uft_d64_parser_v3.c:1371`).
+                 * Und er hat einen Nenner: `gueltig / erwartet`. */
+                uft_v3_spurbefund_t bef;
+                const bool hat_befund =
+                    advanced_befund(handle, cylinder, head, &bef) &&
+                    bef.erwartet > 0;
+
+                if (hat_befund) {
+                    quality->error_count = bef.fehler;
+                    quality->has_errors  = (bef.fehler > 0);
+                    quality->is_weak     = bef.schwach;
+                    quality->quality     = (double)bef.gueltig /
+                                           (double)bef.erwartet;
+                    if (quality->quality < 0.0) quality->quality = 0.0;
+                    if (quality->quality > 1.0) quality->quality = 1.0;
+                    if (quality->is_weak) handle->weak_track_count++;
+                } else {
+                    /* Kein Befund vom Parser. Der Rueckfall ist die
+                     * IBM-MFM-Analyse — sie bleibt stehen, weil es
+                     * Formate GIBT, fuer die sie gilt, aber sie behauptet
+                     * nichts mehr, wenn sie nichts findet.
+                     *
+                     * Ein Fehler darin ist dabei behoben: die CRC lief
+                     * ueber ACHT Byte ab dem ersten `A1` und erwartete
+                     * 0. Ein IBM-Kopffeld ist
+                     * `A1 A1 A1 FE C H R N CRC1 CRC2` — ZEHN Byte, und
+                     * erst darueber ist der Rest 0. Ueber acht Byte kommt
+                     * der CRC-WERT heraus, der praktisch nie null ist:
+                     * auf einer echten MFM-Diskette haette damit JEDE
+                     * Adressmarke als Fehler gezaehlt. */
+                    int error_count = 0;
+                    int idam_count = 0;
+                    int weak_regions = 0;
+
+                    for (size_t i = 0; i + 8 < track_size; i++) {
+                        bool all_same = true;
+                        for (int j = 1; j < 8; j++) {
+                            if (track_buf[i + j] != track_buf[i]) { all_same = false; break; }
                         }
-                        i += 10;
+                        if (all_same && (track_buf[i] == 0x00 || track_buf[i] == 0xFF)) {
+                            weak_regions++;
+                            i += 7;
+                        }
                     }
+
+                    for (size_t i = 0; i + 3 < track_size; i++) {
+                        if (track_buf[i] == 0xA1 && track_buf[i+1] == 0xA1 &&
+                            track_buf[i+2] == 0xA1 && track_buf[i+3] == 0xFE) {
+                            /* 10 Byte: die drei A1, die FE, C H R N und
+                             * die beiden CRC-Byte. */
+                            if (i + 10 <= track_size) {
+                                uint16_t crc = 0xFFFF;
+                                for (int j = 0; j < 10; j++) {
+                                    crc ^= (uint16_t)track_buf[i + j] << 8;
+                                    for (int b = 0; b < 8; b++)
+                                        crc = (crc & 0x8000) ? (uint16_t)((crc << 1) ^ 0x1021)
+                                                             : (uint16_t)(crc << 1);
+                                }
+                                idam_count++;
+                                if (crc != 0) error_count++;
+                            }
+                            i += 10;
+                        }
+                    }
+
+                    if (idam_count == 0) {
+                        /* Keine Adressmarke gefunden: diese Analyse hat
+                         * zu DIESER Spur nichts zu sagen. Sie gibt
+                         * deshalb keine Note aus (MF-1129 — wer nicht
+                         * messen kann, sagt ab). */
+                        return UFT_ERR_NOT_SUPPORTED;
+                    }
+
+                    quality->error_count = error_count;
+                    quality->has_errors = (error_count > 0);
+                    quality->is_weak = (weak_regions > 2);
+                    quality->quality = 1.0 - ((double)error_count / (double)idam_count);
+                    if (quality->quality < 0.0) quality->quality = 0.0;
+
+                    if (quality->is_weak) handle->weak_track_count++;
                 }
-                
-                quality->error_count = error_count;
-                quality->has_errors = (error_count > 0);
-                quality->is_weak = (weak_regions > 2);
-                quality->quality = 1.0 - (error_count * 0.1) - (weak_regions * 0.05);
-                if (quality->quality < 0.0) quality->quality = 0.0;
-                
-                if (quality->is_weak) handle->weak_track_count++;
             }
         }
     }
@@ -577,6 +646,34 @@ advanced_handler(const uft_advanced_handle_t* handle) {
         case FMT_G64: return &uft_g64_v3_handler;
         case FMT_SCP: return &uft_scp_v3_handler;
         default:      return NULL;
+    }
+}
+
+/* MF-1130: der Befund je Spur. Er ersetzt die Byteanalyse, die
+ * IBM-MFM-Adressmarken in GCR-Spuren suchte und deshalb bestaendig die
+ * Note 1.0 ergab. Die Zahlen hier hat der Parser im echten Lauf
+ * GEZAEHLT; SCP liefert bewusst `erwartet == 0`, weil ein Flussabbild
+ * keine gepruefte Sektorebene hat. */
+static bool advanced_befund(const uft_advanced_handle_t* handle,
+                            int zylinder, int kopf,
+                            uft_v3_spurbefund_t* aus) {
+    if (!aus) return false;
+    memset(aus, 0, sizeof(*aus));
+    if (!handle || !handle->using_v3 || !handle->v3_handle) return false;
+
+    /* Ueber die BRUECKEN-Fassung, nicht die Parser-Fassung:
+     * `handle->v3_handle` ist der opake Griff, und die Parser-Struktur
+     * liegt darin. Ein Cast auf `struct g64_disk*` waere ein Zugriff auf
+     * die falsche Stelle — Klasse MF-442. */
+    switch ((internal_format_t)handle->format_id) {
+        case FMT_D64:
+            return uft_v3_griff_befund_d64(handle->v3_handle, zylinder, kopf, aus);
+        case FMT_G64:
+            return uft_v3_griff_befund_g64(handle->v3_handle, zylinder, kopf, aus);
+        case FMT_SCP:
+            return uft_v3_griff_befund_scp(handle->v3_handle, zylinder, kopf, aus);
+        default:
+            return false;
     }
 }
 

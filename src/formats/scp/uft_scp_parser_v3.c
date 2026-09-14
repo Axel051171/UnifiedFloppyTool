@@ -30,6 +30,11 @@
  */
 
 #include "uft/uft_safe_io.h"
+/* MF-1130: der gepruefte Uebergang zur Bruecke. Eingebunden, damit der
+ * Uebersetzer Deklaration und Definition vergleicht — MF-442 hat an
+ * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
+ * eine beliebige Adresse gefunden. */
+#include "uft/formats/uft_v3_parsers.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1671,6 +1676,133 @@ void scp_disk_free(scp_disk_t* disk) {
             track->weak_mask = NULL;
         }
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MF-1130 — DER GEPRUEFTE UEBERGANG ZUR BRUECKE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Deklariert in `include/uft/formats/uft_v3_parsers.h`; siehe dort, warum
+ * es einen Header gibt und nicht wieder handgeschriebene externs
+ * (MF-442).
+ *
+ * Gemessene Indizierung: `scp_parse()` laeuft
+ * `for (uint8_t t = disk->start_track; t <= disk->end_track; t++)` und
+ * schreibt `disk->tracks[t]` (Z. 1186/1366) — `t` ist der SCP-SPURINDEX,
+ * 0-basiert, bei zwei Seiten `zylinder * 2 + kopf`. `side_count` rechnet
+ * der Parser aus `flags & 0x01`.
+ *
+ * ── Warum `scp_v3_spur_lesen()` ABSAGT ────────────────────────────────────
+ *
+ * SCP traegt Flusszeiten, keine Bytes. Sie in einen Bytepuffer zu
+ * schreiben waere eine stille Umdeutung — genau die Klasse, die P3-357
+ * bei `pri` und MF-1079 bei `ipf` gekostet hat: ein Feld versprach einen
+ * Zellstrom und trug dekodierte Bytes.
+ *
+ * Es gibt in `scp_track_t` ein Feld, das passen WUERDE — `merged_bits`
+ * mit `merged_bit_count`, ein zusammengefuehrter Bitstrom. Gemessen ueber
+ * die ganze Datei hat es genau DREI Fundstellen: die Deklaration und ein
+ * `free()`. Es wird **nie belegt**. Ein nie geschriebenes Feld
+ * auszulesen hiesse, einen NULL-Zeiger als Spurinhalt anzubieten.
+ *
+ * Die Absage ist damit gemessen und nicht behauptet. Sobald jemand
+ * `merged_bits` wirklich erzeugt, ist DAS der Inhalt dieser Funktion —
+ * und der Weg dorthin ist die Multi-Revolutions-Fusion, nicht ein
+ * zweiter Decoder hier.
+ */
+
+bool scp_v3_geometrie(const struct scp_disk* disk,
+                      int* spuren, int* koepfe, int* max_sektoren) {
+    if (spuren) *spuren = 0;
+    if (koepfe) *koepfe = 0;
+    if (max_sektoren) *max_sektoren = 0;
+    if (!disk) return false;
+
+    const scp_disk_t* d = (const scp_disk_t*)disk;
+    if (!d->valid) return false;
+
+    const int seiten = (d->side_count == 2) ? 2 : 1;
+    if (d->end_track < d->start_track) return false;
+
+    /* Der hoechste benutzte SCP-Index bestimmt die Zylinderzahl; bei
+     * zwei Seiten liegen Kopf 0 und 1 verschraenkt (cyl*2+kopf). Die
+     * Bruecke gab hier bis MF-1130 fest 84/2 heraus, ohne das Handle
+     * anzusehen — auch fuer eine einseitige 40-Spur-Aufnahme. */
+    if (spuren) *spuren = (int)(d->end_track / (uint8_t)seiten) + 1;
+    if (koepfe) *koepfe = seiten;
+
+    /* Sektoren: SCP ist ein FLUSSabbild. `detected_sectors` je Spur ist
+     * eine Schaetzung des Parsers aus dem Fluss, kein Feld der Datei —
+     * herausgegeben wird das Maximum darueber, und 0 heisst hier
+     * ausdruecklich „aus dem Fluss nicht bestimmt", nicht „keine
+     * Sektoren". Die alte Konstante war an dieser Stelle schon 0 und
+     * damit die einzige der neun, die nichts erfunden hat. */
+    if (max_sektoren) {
+        int m = 0;
+        for (int t = (int)d->start_track; t <= (int)d->end_track &&
+                                          t < SCP_MAX_TRACKS; t++) {
+            if (!d->tracks[t].present) continue;
+            const int s = (int)d->tracks[t].detected_sectors;
+            if (s > m) m = s;
+        }
+        *max_sektoren = m;
+    }
+    return true;
+}
+
+int scp_v3_spur_sektoren(const struct scp_disk* disk, int zylinder) {
+    (void)disk;
+    (void)zylinder;
+    /* Nicht 0, sondern -1: „nicht anwendbar" und „keine Sektoren" sind
+     * zwei Aussagen (MF-980). Ein Flussabbild hat keine Sektorebene,
+     * bevor es dekodiert ist. */
+    return -1;
+}
+
+bool scp_v3_spur_lesen(const struct scp_disk* disk, int zylinder, int kopf,
+                       uint8_t* aus, size_t* groesse) {
+    (void)disk;
+    (void)zylinder;
+    (void)kopf;
+    (void)aus;
+    /* Siehe den Block oben: SCP traegt Flusszeiten, und das einzige
+     * Bytefeld (`merged_bits`) wird gemessen nie belegt. */
+    if (groesse) *groesse = 0;
+    return false;
+}
+
+bool scp_v3_spur_befund(const struct scp_disk* disk, int zylinder, int kopf,
+                        uft_v3_spurbefund_t* aus) {
+    if (!aus) return false;
+    memset(aus, 0, sizeof(*aus));
+    if (!disk || zylinder < 0 || kopf < 0 || kopf > 1) return false;
+
+    const scp_disk_t* d = (const scp_disk_t*)disk;
+    if (!d->valid) return false;
+
+    const int seiten = (d->side_count == 2) ? 2 : 1;
+    const int idx = zylinder * seiten + ((seiten == 2) ? kopf : 0);
+    if (seiten == 1 && kopf != 0) return false;
+    if (idx < (int)d->start_track || idx > (int)d->end_track ||
+        idx >= SCP_MAX_TRACKS) return false;
+
+    const scp_track_t* t = &d->tracks[idx];
+    if (!t->present) return false;
+
+    /* SCP hat KEINE Sektorebene in der Datei. `detected_sectors` ist
+     * eine Schaetzung des Parsers aus dem Fluss — sie steht deshalb in
+     * `gefunden`, und `erwartet` bleibt 0. Ein Aufrufer, der eine Quote
+     * `gueltig / erwartet` bilden will, bekommt hier also keine, und das
+     * ist richtig: es gibt keine gepruefte Pruefsumme, aus der sie
+     * kaeme. Die Guete einer Flussaufnahme misst man an einem Dekodier-
+     * lauf, nicht an der Aufnahme selbst. */
+    aus->erwartet   = 0;
+    aus->gefunden   = (int)t->detected_sectors;
+    aus->gueltig    = 0;
+    aus->fehler     = 0;
+    aus->schwach    = t->has_weak_bits;
+    aus->geschuetzt = t->is_protected;
+    return true;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

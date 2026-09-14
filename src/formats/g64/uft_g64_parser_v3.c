@@ -38,6 +38,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+/* MF-1130: der gepruefte Uebergang zur Bruecke. Eingebunden, damit der
+ * Uebersetzer Deklaration und Definition vergleicht — MF-442 hat an
+ * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
+ * eine beliebige Adresse gefunden. */
+#include "uft/formats/uft_v3_parsers.h"
 #include <math.h>
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1889,6 +1894,141 @@ void g64_disk_free(g64_disk_t* disk) {
             }
         }
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MF-1130 — DER GEPRUEFTE UEBERGANG ZUR BRUECKE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Diese drei Funktionen sind in `include/uft/formats/uft_v3_parsers.h`
+ * deklariert, und der Header ist der Punkt: `src/formats/uft_v3_bridge.c`
+ * hatte fuer die v3-Parser keinen, hat seine Deklarationen von Hand
+ * geschrieben, und MF-442 hat genau daran einen Schreibzugriff auf eine
+ * beliebige Adresse gefunden (drei Parameter deklariert, vier definiert).
+ * Was ueber diesen Header laeuft, prueft der Uebersetzer.
+ *
+ * Sie ENTNEHMEN, sie dekodieren nicht: alles hier steht schon in der von
+ * `g64_parse()` gefuellten Struktur. Ein zweiter Decoder waere die Lage
+ * aus MF-1015 (drei Pruefsummen) und MF-1026 (drei Victor-Geometrien).
+ *
+ * Die Indizierung ist gemessen, nicht angenommen: `g64_parse_track()`
+ * schreibt `disk->tracks[half_track]` mit `half_track` 1..G64_MAX_TRACKS
+ * (Z. 1403), und die Bewertungsschleife laeuft `ht = 1; ht <=
+ * disk->track_count` (Z. 1537). Ein `zylinder` von aussen ist 0-basiert
+ * (so zaehlt `uft_advanced_get_stats()`), die Vollspur also
+ * `zylinder + 1` und die Halbspur `g64_full_to_half(zylinder + 1)`.
+ * Halbe Spuren sind ueber diesen Weg NICHT erreichbar — ein `int
+ * zylinder` kann 17.5 nicht ausdruecken, und eine stille Rundung waere
+ * ein falscher Spurinhalt (Klasse MF-1027). Wer Halbspuren braucht,
+ * braucht einen Kanal, der sie benennen kann; das ist nicht dieser.
+ */
+
+bool g64_v3_geometrie(const struct g64_disk* disk,
+                      int* spuren, int* koepfe, int* max_sektoren) {
+    if (spuren) *spuren = 0;
+    if (koepfe) *koepfe = 0;
+    if (max_sektoren) *max_sektoren = 0;
+    if (!disk) return false;
+
+    const g64_disk_t* d = (const g64_disk_t*)disk;
+    if (!d->valid || d->track_count == 0) return false;
+
+    /* `track_count` zaehlt HALBSPUREN (84 bei einer vollen G64). Nach
+     * aussen gemeldet wird die Zahl der VOLLSPUREN, weil ein
+     * 0-basierter `zylinder` genau die adressiert. */
+    if (spuren) *spuren = (int)g64_half_to_full(d->track_count);
+    if (koepfe) *koepfe = 1;            /* G64 ist einseitig */
+
+    /* Maximum ueber die vier Zonen, aus der Tafel des Abbilds — nicht
+     * die alte Konstante 21, die nur fuer Spur 1..17 gilt. */
+    if (max_sektoren) {
+        int m = 0;
+        for (uint8_t ht = 1; ht <= d->track_count; ht++) {
+            const int s = (int)d->tracks[ht].expected_sectors;
+            if (s > m) m = s;
+        }
+        *max_sektoren = m;
+    }
+    return true;
+}
+
+int g64_v3_spur_sektoren(const struct g64_disk* disk, int zylinder) {
+    if (!disk || zylinder < 0) return -1;
+    const g64_disk_t* d = (const g64_disk_t*)disk;
+    if (!d->valid) return -1;
+
+    const int voll = zylinder + 1;
+    if (voll < 1 || voll > 42) return -1;
+    const uint8_t ht = g64_full_to_half((uint8_t)voll);
+    if (ht > d->track_count) return -1;
+
+    return (int)d->tracks[ht].expected_sectors;
+}
+
+bool g64_v3_spur_lesen(const struct g64_disk* disk, int zylinder, int kopf,
+                       uint8_t* aus, size_t* groesse) {
+    if (!disk || !groesse || zylinder < 0) return false;
+    if (kopf != 0) return false;        /* einseitig — Kopf 1 gibt es nicht */
+
+    const g64_disk_t* d = (const g64_disk_t*)disk;
+    if (!d->valid) return false;
+
+    const int voll = zylinder + 1;
+    if (voll < 1 || voll > 42) return false;
+    const uint8_t ht = g64_full_to_half((uint8_t)voll);
+    if (ht > d->track_count) return false;
+
+    const g64_track_t* t = &d->tracks[ht];
+    if (!t->gcr_data || t->gcr_size == 0) {
+        /* Eine leere Spur ist kein Fehler des Aufrufers, aber auch keine
+         * Spur mit 0 Byte Inhalt — sie ist NICHT GELESEN. Der
+         * Unterschied gehoert nach oben (MF-980: „das Format sagt 0xE5"
+         * und „hier wurde 0xE5 gelesen" sind zwei Aussagen). */
+        *groesse = 0;
+        return false;
+    }
+
+    const size_t bedarf = (size_t)t->gcr_size;
+
+    /* Bedarfsabfrage */
+    if (!aus) { *groesse = bedarf; return true; }
+
+    /* Kein Kuerzen — die Klasse MF-1040, wo ein 70 000-Byte-Block still
+     * auf 65 535 fiel und als UFT_SECTOR_OK gemeldet wurde. */
+    if (*groesse < bedarf) { *groesse = bedarf; return false; }
+
+    memcpy(aus, t->gcr_data, bedarf);
+    *groesse = bedarf;
+    return true;
+}
+
+bool g64_v3_spur_befund(const struct g64_disk* disk, int zylinder, int kopf,
+                        uft_v3_spurbefund_t* aus) {
+    if (!aus) return false;
+    memset(aus, 0, sizeof(*aus));
+    if (!disk || zylinder < 0 || kopf != 0) return false;
+
+    const g64_disk_t* d = (const g64_disk_t*)disk;
+    if (!d->valid) return false;
+
+    const int voll = zylinder + 1;
+    if (voll < 1 || voll > 42) return false;
+    const uint8_t ht = g64_full_to_half((uint8_t)voll);
+    if (ht > d->track_count) return false;
+
+    const g64_track_t* t = &d->tracks[ht];
+    if (t->expected_sectors == 0) return false;
+
+    /* Alles hier hat `g64_parse_track_sectors()` beim echten GCR-Lauf
+     * gezaehlt — `valid_sectors` wird in Z. 1259 hochgezaehlt, nicht
+     * geschaetzt. */
+    aus->erwartet   = (int)t->expected_sectors;
+    aus->gefunden   = (int)t->sector_count;
+    aus->gueltig    = (int)t->valid_sectors;
+    aus->fehler     = (int)t->error_sectors;
+    aus->schwach    = t->has_weak_bits;
+    aus->geschuetzt = t->is_protected;
+    return true;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
