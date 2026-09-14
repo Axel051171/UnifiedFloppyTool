@@ -192,6 +192,29 @@ einer Fähigkeit nichts weg, sondern stellt eine in Aussicht. Genau
 deshalb ist die Versuchung hier größer, und genau deshalb steht der
 Weg 3 mit einer Bedingung je Scheibe da statt mit einem Datum.
 
+#### Nachtrag 2026-09-14 (MF-1126) — Lizenzfrage geklärt, **Fall A**
+
+Die Felder oben bleiben stehen (Stand 2026-09-13); dies ist die
+Fortschreibung, nicht ihr Ersatz.
+
+| Feld | Fortschreibung |
+|---|---|
+| **Audit-Stand** | **portiert, Lizenzfrage geklärt (Fall A)** — Eigentümer-Angabe vom 2026-09-14: erteilt durch **EMUUAC** (angegebener Urheber), Form **E-Mail**. **Datum, Beleg und Wortlaut sind OFFEN** und vom Eigentümer nachzureichen; sie sind offen *gelassen* statt gefüllt. Schritt 1 ist damit aktenkundig, aber **nicht geschlossen** |
+| **Reichweite** | **Fall A** — Rechte an den **Dateien**, nicht am **Ausgangsmaterial**. Der Ausschlusssatz der `LICENSE` bleibt damit **wirksam**, und die Herkunftsfrage zum Disassemblat ist **nicht** geschlossen. Fall B (Erteilung durch SPS/KryoFlux) liegt **nicht** vor |
+| **Betroffene Fähigkeit** | unverändert **keine** — kein Baubestandteil, kein Aufrufer, keine Registrierung. Die Klärung öffnet eine Tür, sie baut nicht den Weg dahinter |
+| **Vorgesehener Weg** | unverändert **3**, aber jetzt gestuft und nach Beweisbarkeit geordnet: **Stufe 1** (normbestimmt, in Fall A zulässig) `crc.c`, `encoding.c`, `bitbuffer.c` — Ableitung gegen Koopman/RevEng bzw. *Inside Commodore DOS*/IBM-WD177x, **die Norm zuerst, der Fremdbestand als Vergleich**; **Stufe 2** (messbar, ohne Norm) `flux.c`, `track.c`, `detect.c`, `match.c` — je mit Differenzmessung; **Stufe 3 GESPERRT bis Fall B** — `ctraw.c` (das Paket sagt selbst, `DTCCTRW` sei „not asserted to be compatible with SPS/KryoFlux CT Raw"), `ipf.c` (kein vollständiges IPF beansprucht; dazu steht `ipf` bei UFT auf T1 mit einem von außen nicht nachprüfbaren Beleg — zwei unsichere Seiten ergeben keine sichere), `protection.c` (Schutzverfahren sind SPS-Wertschöpfung, nicht Norm) |
+| **Unveränderlichkeit** | seit MF-1126 **gemessen statt beabsichtigt**: `scripts/audit_dtc_unveraendert.py`, 80. Kategorie in `check_consistency.py`, **blockierend**. Vier Richtungen — Summe und Bytezahl gegen das git-Objekt, Tafelzeile ohne Objekt, **Datei ohne Tafelzeile** (aus `git ls-files` getrieben, damit die Tafel keine gepflegte Liste ist, MF-636), und `text=unset`. Selbsttest **9/9**; Rotbeweis am echten Baum: **0 → 1 → 0** Befunde, als eine Hexstelle der Tafel verdreht war |
+| **Bestand** | **19 Dateien statt 18.** `SOURCE_MAP.md` galt als aus dem Archiv verschwunden — gemessen liegt die **vollständige 20:01-Fassung** unversioniert unter `neue-ideen/code-schnipsel/code-schnipsel/`, **18 von 18 Dateien byteidentisch** mit den git-Objekten, und die **mitgelieferte `SHA256SUMS` bezeugt `SOURCE_MAP.md` mit `345410d509d3…e817535` — genau dem Hash der gefundenen Datei**. Es ist das Original, nicht ein Nachbau; aufgenommen auf Eigentümer-Entscheidung. Die Summenliste stimmt damit in **17 von 18** Zeilen statt in 16 von 17, einzige Abweichung bleibt `LICENSE`. **Vorbehalt:** die erhaltene Kopie trägt die `LICENSE` von 20:00 mit schon dem neuen Hash — der alte Stand `2f037558…` ist weiterhin nicht aufbewahrt |
+| **Oracle** | unverändert; für CT Raw weiterhin **keines** — und unter Fall A ist das folgenlos, weil `ctraw.c` gesperrt bleibt |
+| **MF** | Übernahme MF-1099, Klärung und Tor **MF-1126** |
+
+**Was diese Fortschreibung ausdrücklich nicht tut:** sie nimmt keine
+Zeile zurück. Die Zone bleibt **ROT**, die Zeile bleibt **offen** und
+zählt weiter zur Kennzahl. Eine Lizenz beantwortet, ob der Code benutzt
+werden darf — nicht, ob er richtig ist; der Bestand ist eine
+Rekonstruktion aus 116 von unbekannt vielen Routinen, und was nicht
+wiedergewonnen wurde, fehlt still.
+
 ---
 
 ## Was **nicht** auf dieser Liste steht, und warum

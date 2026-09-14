@@ -95,7 +95,7 @@ jobs:
       - name: Gate coverage — all named tests present (ARMED)
         run: |
           cd build
-          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz|test_dtc_ungeprueft"
           SOLL=$(printf '%s' "$REGEX" | tr '|' '\n' | grep -c .)
           IST=$(ctest -N --tests-regex "$REGEX" | grep -cE '^[[:space:]]+Test[[:space:]]+#') || true
           echo "scharfes ASan-Tor: $IST von $SOLL Prueflingen registriert"
@@ -110,7 +110,7 @@ jobs:
         run: |
           cd build
           ctest --output-on-failure --timeout 300 --no-tests=error \
-            --tests-regex "test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+            --tests-regex "test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz|test_dtc_ungeprueft"
         env:
           # halt_on_error=0: EIN Lauf meldet ALLE Funde statt beim ersten
           # abzubrechen. Sonst kostet jeder einzelne Fehler eine eigene
@@ -199,7 +199,7 @@ jobs:
       - name: Gate coverage — all named tests present (ARMED)
         run: |
           cd build
-          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+          REGEX="test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz|test_dtc_ungeprueft"
           SOLL=$(printf '%s' "$REGEX" | tr '|' '\n' | grep -c .)
           IST=$(ctest -N --tests-regex "$REGEX" | grep -cE '^[[:space:]]+Test[[:space:]]+#') || true
           echo "scharfes UBSan-Tor: $IST von $SOLL Prueflingen registriert"
@@ -215,7 +215,7 @@ jobs:
         run: |
           cd build
           ctest --output-on-failure --timeout 300 --no-tests=error \
-            --tests-regex "test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+            --tests-regex "test_convert_roundtrip_measured|test_convert_identity_lossless|test_track_add_sector_owns_copies|test_convert_fuzz|test_convert_roundtrip_lossless|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz|test_dtc_ungeprueft"
         env:
           # MF-1102 — hier stand `halt_on_error=0` mit der Begruendung
           # "wie beim ASan-Tor: ein Lauf, alle Funde". Die Begruendung

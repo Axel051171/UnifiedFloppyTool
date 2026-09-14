@@ -994,6 +994,33 @@ def main() -> int:
         import audit_repo_hygiene as _rh
         all_errors.append(("Repo-Hygiene", _rh.check(repo)))
 
+        # 80. Kategorie (MF-1126): der uebernommene Fremdbestand
+        # `src/dtc_components/` ist unveraendert.
+        #
+        # Die Nummer ist die ABGELEITETE Position (`len(all_errors)`,
+        # die Zahl in der Zusammenfassung) — die Nummerierung der
+        # Kommentare hier ist bei 54 stehengeblieben, waehrend wirklich
+        # 79 Kategorien laufen. Eine von Hand gepflegte Zahl driftet;
+        # gemeldet wird die gerechnete.
+        #
+        # Auf Eigentuemer-Weisung: „Heute ist die Unveraenderlichkeit
+        # eine Absicht in einer Markdown-Datei. Sie gehoert gemessen.
+        # … Ohne dieses Tor ist D1 eine Bitte."
+        #
+        # BLOCKIEREND, und zwar mit Absicht: die 19 SHA-256-Summen sind
+        # der einzige Nachweis, dass der Bestand ist, was er zu sein
+        # behauptet. Wer eine uebernommene Datei aendert, macht aus
+        # einem Beleg eine Ableitung — das ist kein Befund zur Vorlage,
+        # sondern ein unwiederbringlicher Verlust. Verbessert wird durch
+        # Ableitung in eine NEUE Datei unter `src/`.
+        #
+        # Vier Richtungen, davon eine aus git getrieben (D1c), damit die
+        # Tafel keine gepflegte Liste ist (MF-636). Selbsttest 9/9,
+        # Rotbeweis am echten Baum gefuehrt: 0 -> 1 -> 0 Befunde, als
+        # EINE Hexstelle der Tafel verdreht war.
+        import audit_dtc_unveraendert as _du
+        all_errors.append(("dtc-Bestand unveraendert", _du.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"

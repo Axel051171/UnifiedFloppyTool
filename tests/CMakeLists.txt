@@ -3912,6 +3912,47 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_crc_gegen_norm")
+        # MF-1126, Stufe 1: die CRCs gegen die NORM (Koopman + RevEng),
+        # nicht gegeneinander. Die Reihenfolge ist bindend — die Norm
+        # zuerst, der Fremdbestand als Vergleich.
+        #
+        # Eingezogen wird aus dem Fremdbestand GENAU EINE Datei
+        # (`crc.c`); sie wird ausgefuehrt, nicht angefasst. Dazu UFTs
+        # eigener Flusspfad, weil `flux_crc16_ccitt()` dort liegt — die
+        # acht Nachbarquellen sind gemessen, nicht geraten (der Link
+        # nennt sie einzeln, wenn eine fehlt).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/src/crc.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_dtc_nenner")
+        # MF-1126: der NENNER der fremden dtc-Testreihe. Sie meldet
+        # „all tests passed" ohne Zahl; der Nenner stand bisher in
+        # einem Kommentar HIER, und er hatte schon gedriftet (diese
+        # Datei zaehlte die beiden CRCs als eine Gruppe und kam auf
+        # sieben, die Eigentuemer-Weisung nannte acht Posten und
+        # beschriftete sie mit sieben). Ein Kommentar altert, die Datei
+        # nicht — also wird gezaehlt.
+        #
+        # KEINE `target_sources` aus dem Fremdbestand: dieser Test
+        # uebersetzt nichts davon, er LIEST die Quelldatei als Text.
+        # Wie test_dtc_ungeprueft haengt er bewusst NICHT an
+        # UFT_WITH_DTC_COMPONENTS — ein Test, der nur unter einem
+        # abgeschalteten Schalter gebaut wird, kann in CI nicht rot
+        # werden (MF-1000 / Tor 64).
+        target_compile_definitions(${test_name} PRIVATE
+            DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_dtc_ungeprueft")
         # MF-1109: die Abnahme der vier dtc_components-Module, die ihre
         # eigene Testreihe NICHT anfasst (ipf/match/protection/track).
