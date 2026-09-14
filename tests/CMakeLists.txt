@@ -3992,6 +3992,27 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_pll_sagt_was_sie_weiss")
+        # MF-1136: die PI-Regelung im Flusspfad. Fuenf Befunde, alle
+        # ohne Korpus messbar — die adaptive Verstaerkung bleibt
+        # ausdruecklich draussen, weil ihre Werte gegen einen
+        # synthetischen Fluxgenerator kalibriert werden muessen und der
+        # noch fehlt.
+        # Der Flusspfad wird im Baum aufgezaehlt und nicht als
+        # Bibliothek gezogen — `flux_to_bitstream()` liegt NICHT in
+        # `libuft_core.a` (gemessen: „undefined reference"). Derselbe
+        # Satz wie bei `test_geometrie_*`, auf die Flussseite gekuerzt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${UFT_FORMAT_LAYER_INCLUDES})
     elseif(${test_name} STREQUAL "test_dms_gegen_adf2dms")
         # MF-1135: `dms` von T3 auf T1b. Der Beleg ist ein Erzeugnis von
         # `dlitz/adf2dms` (MIT) — P3-347/P3-373 hatten gemessen, dass es

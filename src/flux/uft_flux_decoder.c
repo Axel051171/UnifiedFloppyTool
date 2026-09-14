@@ -350,16 +350,72 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
         return FLUX_ERR_INVALID;
     }
     
-    /* Convert sample rate to nanoseconds per tick */
+    /* MF-1136: `sample_rate == 0` war die EINZIGE ungesicherte
+     * Division dieser Art in der Datei.
+     *
+     * Gemessen: fuenf weitere Stellen rechnen `1e9 / sample_rate` und
+     * pruefen ALLE vorher (`flux->sample_rate > 0 ? … : 1.0`). Nur
+     * diese hier nicht — und es ist die Stelle im Hauptpfad. Bei
+     * `sample_rate == 0` wird `ns_per_tick` unendlich, und danach ist
+     * jedes `delta_ns` unendlich oder NaN; die Zellzahl aus
+     * `(int)(cells + 0.5)` ist dann undefiniert.
+     *
+     * Ein uebersehener Fall in einem vorhandenen Muster — dieselbe
+     * Gestalt wie MF-519/MF-529 (eine Korrektur an einer Stelle sagt
+     * nichts ueber ihre Nachbarn). */
+    if (flux->sample_rate == 0) {
+        *bit_count = 0;
+        return FLUX_ERR_INVALID;
+    }
     double ns_per_tick = 1e9 / flux->sample_rate;
-    
+
+    /* MF-1136: die Regelung selbst muss endlich sein, sonst rechnet
+     * alles danach mit NaN weiter und meldet Erfolg. */
+    if (!isfinite(ns_per_tick) || !isfinite(bitcell_ns) ||
+        bitcell_ns <= 0.0 || !isfinite(pll->period) || pll->period <= 0.0) {
+        pll->nicht_endlich++;
+        *bit_count = 0;
+        return FLUX_ERR_INVALID;
+    }
+
     size_t out_bits = 0;
     size_t max_bits = *bit_count;
-    
+
     uint32_t prev_time = 0;
-    
-    for (size_t i = 0; i < flux->transition_count && out_bits < max_bits; i++) {
+
+    for (size_t i = 0; i < flux->transition_count; i++) {
+        /* MF-1136: die Pufferausschoepfung ist ein eigener Befund.
+         *
+         * Vorher stand `out_bits < max_bits` in der Schleifenbedingung,
+         * und die Schleife hoerte STILL auf. Ein Aufrufer bekam
+         * `*bit_count = out_bits` und konnte „der Strom war zu Ende"
+         * nicht von „mein Puffer war zu klein" unterscheiden — zwei
+         * Aussagen in einer Zahl (Klasse MF-1000/MF-980). */
+        if (out_bits >= max_bits) {
+            pll->puffer_voll++;
+            break;
+        }
+
         uint32_t time = flux->transitions[i];
+
+        /* MF-1136: `flux_raw_data_t::transitions` traegt KUMULATIVE
+         * Zeiten (MF-438). `time - prev_time` in `uint32_t` laeuft
+         * daher unter, sobald ein Zeitstempel nicht aufsteigt — und aus
+         * einem Ruecksprung um eine Einheit wird ein Intervall von
+         * 4,29 Milliarden Ticks. Das ist keine lange Luecke, das ist
+         * Muell mit dem Anschein einer Messung.
+         *
+         * Nicht aufsteigende Zeiten kommen vor: eine beschaedigte
+         * Aufnahme, ein Umbruch am Indexpuls, ein Leser, der zwei
+         * Umdrehungen aneinanderhaengt. Der Uebergang wird deshalb
+         * UEBERSPRUNGEN und gezaehlt, nicht stillschweigend in eine
+         * Riesenluecke verwandelt. */
+        if (time < prev_time) {
+            pll->zeit_rueckwaerts++;
+            prev_time = time;
+            continue;
+        }
+
         uint32_t delta = time - prev_time;
         double delta_ns = delta * ns_per_tick;
 
@@ -404,6 +460,41 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
         if (pll->use_pll) {
             double expected = num_cells * pll->period;
             double error = delta_ns - expected;
+
+            /* MF-1136: der RESIDUALFEHLER, laufend und stabil.
+             *
+             * Der Regelfehler wurde bisher berechnet, benutzt und
+             * verworfen — die Regelung wusste nie, wie gut sie lief.
+             * Gerechnet wird nach Welford: eine laufende Summe der
+             * Quadrate ohne die Ausloeschung, die `sum += e*e` bei
+             * grossen Werten hat.
+             *
+             * Der Nenner steht in `residual_n` daneben. Ein RMS ohne
+             * Anzahl waere eine Zahl ohne Nenner (Klasse MF-1000): bei
+             * EINEM Intervall ist er der Fehler selbst und sagt nichts
+             * ueber die Spur.
+             *
+             * Die Einrastschwelle ist 10 % der NOMINALEN Zelle und
+             * nicht der geregelten: haette die Regelung ihre Periode
+             * weit verstellt, wuerde eine relative Schwelle mit ihr
+             * wandern und sich selbst bestaetigen. Die Zahl ist eine
+             * ANNAHME, keine Messung — sie ist als solche benannt und
+             * wird kalibriert, sobald ein synthetischer Fluxgenerator
+             * mit bekannter Wahrheit vorliegt (Eigentuemer-Vorgabe:
+             * die Werte duerfen nicht geraten werden). Bis dahin ist
+             * `locked` ein HINWEIS, kein Urteil. */
+            if (isfinite(error)) {
+                pll->residual_n++;
+                const double q = error * error;
+                pll->residual_m2 += (q - pll->residual_m2) /
+                                    (double)pll->residual_n;
+                pll->residual_rms = sqrt(pll->residual_m2);
+                const double schwelle = 0.10 * bitcell_ns;
+                pll->locked = (pll->residual_n >= 8) &&
+                              (pll->residual_rms < schwelle);
+            } else {
+                pll->nicht_endlich++;
+            }
 
             /* Phase: leaky integrator. Old phase decays at rate
              * phase_gain, new error integrates at the same rate.

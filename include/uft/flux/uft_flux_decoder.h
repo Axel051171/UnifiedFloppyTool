@@ -469,6 +469,43 @@ typedef struct {
      * ABI: angehaengt, wie MF-866 es vorgemacht hat. */
     uint32_t cell_clamp_lo;     /* Uebergang kam vor der halben Zelle */
     uint32_t cell_clamp_hi;     /* Intervall laenger als acht Zellen  */
+
+    /* ── MF-1136: was die Regelung ueber SICH SELBST weiss ──────────
+     *
+     * Auf Eigentuemer-Liste („Lock-Zustand und Residualfehler messen",
+     * „Ausgabepuffer-Erschoepfung als eigenen Status melden", „Nicht
+     * aufsteigende Zeitstempel vor der Subtraktion erkennen").
+     *
+     * Gemessen vor der Ergaenzung: `locked`, `residual` und `isfinite`
+     * kommen in `src/flux/uft_flux_decoder.c` **null Mal** vor. Die
+     * Regelung lief, ohne je zu sagen, ob sie eingerastet war — und
+     * `flux_to_bitstream()` kuerzte bei vollem Puffer STILL, sodass ein
+     * Aufrufer „Strom zu Ende" nicht von „Puffer voll" unterscheiden
+     * konnte.
+     *
+     * Die Zaehler sind bewusst getrennt, aus dem Grund, den MF-993
+     * benannt hat: wer zwei Zahlen addiert, die dasselbe physische
+     * Ereignis melden, zaehlt doppelt.
+     *
+     * Was hier NICHT gemacht wird: die Verstaerkungen anhand des
+     * Lock-Zustands nachstellen. Die Eigentuemer-Vorgabe sagt dazu
+     * ausdruecklich, die Werte duerften „nicht geraten werden, sondern
+     * muessen gegen Korpus und synthetische Stoerungen kalibriert
+     * werden" — und dieser Baum hat noch keinen synthetischen
+     * Fluxgenerator mit bekannter Wahrheit. Gemessen wird also zuerst;
+     * geregelt wird, wenn es etwas zu regeln gibt.
+     *
+     * ABI: angehaengt am Ende, wie MF-866 und MF-993 es vorgemacht
+     * haben. Ein Einschub mittendrin waere eine binaere Aenderung ohne
+     * Compiler-Warnung. */
+    bool     locked;            /* Residual unter der Einrastschwelle  */
+    double   residual_rms;      /* Wurzel aus dem mittleren Fehlerquadrat, ns */
+    uint32_t residual_n;        /* Anzahl der eingerechneten Intervalle */
+    double   residual_m2;       /* Welford-Zwischensumme (nicht deuten) */
+
+    uint32_t zeit_rueckwaerts;  /* Zeitstempel nicht aufsteigend        */
+    uint32_t nicht_endlich;     /* Rechnung ergab NaN oder unendlich    */
+    uint32_t puffer_voll;       /* Ausgabe abgebrochen: Puffer erschoepft */
 } flux_pll_t;
 
 /* ============================================================================
