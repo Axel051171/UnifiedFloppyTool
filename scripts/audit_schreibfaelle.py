@@ -104,14 +104,31 @@ def _feldwert(body: str, feld: str) -> str | None:
     """
     zeilen = body.split("\n")
     anfang = None
+    rest = ""
     for i, z in enumerate(zeilen):
-        if re.match(r"\s*\." + re.escape(feld) + r"\s*=", z):
+        # MF-1139: hier stand `re.match(...)` — das Feld musste die
+        # Zeile EROEFFNEN. `src/formats/d88/uft_d88.c:276` schreibt
+        # `.format = UFT_FORMAT_D88, .capabilities = ...` in EINER
+        # Zeile, und die Zusage war damit unsichtbar; gemessen fehlten
+        # `d88` und `dmk`, die Zusagenzahl stand auf 59 statt 61.
+        #
+        # Vierter Fall derselben Klasse an diesem Werkzeug (MF-1134
+        # Semikolon statt Komma, MF-1137 Adressoperator und die zweite
+        # Musterkopie, jetzt der Zeilenanfang): **ein Ausdruck, der eine
+        # BAUFORM verlangt statt die Sache, misst die Bauform.**
+        m = re.search(r"\." + re.escape(feld) + r"\s*=", z)
+        if m:
             anfang = i
+            # Ab dem Gleichheitszeichen schneiden, NICHT `split("=", 1)`:
+            # bei zwei Feldern in einer Zeile gehoerte der Wert des
+            # ERSTEN sonst mit zum Ergebnis, und ein CAP_WRITE darin
+            # waere als Zusage des zweiten gelesen worden.
+            rest = z[m.end():]
             break
     if anfang is None:
         return None
 
-    teile = [zeilen[anfang].split("=", 1)[1]]
+    teile = [rest]
     if teile[0].rstrip().endswith(","):
         return teile[0]
     for z in zeilen[anfang + 1:]:
@@ -217,6 +234,21 @@ def selbsttest() -> int:
     f.append(("CAP_WRITE im KOMMENTAR ist keine Zusage",
               cap("    /* UFT_FORMAT_CAP_WRITE entfernt, MF-930 */\n"
                   "    .capabilities = UFT_FORMAT_CAP_READ,"), False))
+    # MF-1139, VIERTE Selbstkorrektur an diesem Werkzeug — und wieder
+    # dieselbe Klasse: `_feldwert` verlangte, dass das Feld die ZEILE
+    # EROEFFNET (`re.match`). `src/formats/d88/uft_d88.c:276` schreibt
+    # zwei Felder in EINE Zeile, und die Zusage war damit unsichtbar.
+    # Gemessen fehlten `d88` und `dmk`; die Zusagenzahl stand auf 59,
+    # gemessen sind es 61.
+    f.append(("Zusage NEBEN einem anderen Feld in derselben Zeile",
+              cap("    .format = UFT_FORMAT_D88, .capabilities = "
+                  "UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,"), True))
+    # Gegenrichtung, damit die Lockerung nicht einfach alles annimmt:
+    # steht in derselben Zeile ein ANDERES Feld mit CAP_WRITE im Wert,
+    # darf `.capabilities` das nicht erben.
+    f.append(("nur Lesen, obwohl die Zeile CAP_WRITE sonst nennt",
+              cap("    .beschreibung = \"kein UFT_FORMAT_CAP_WRITE\", "
+                  ".capabilities = UFT_FORMAT_CAP_READ,"), False))
 
     def fall(dateiname: str, inhalt: str) -> bool:
         n = dateiname.lower()
@@ -335,7 +367,12 @@ def main() -> int:
             "# Aenderung die Datei erreicht (P3-154). Wer einen Fall\n"
             "# ergaenzt, nimmt die Zeile heraus.\n"
             "#\n"
-            "# NEUE Zusagen ohne Fall faerben das Tor rot.\n")
+            "# NEUE Zusagen ohne Fall faerben das Tor rot.\n"
+            "#\n"
+            "# Eine Zeile hier ist die Stufe W0 aus\n"
+            "# docs/WRITE_VERIFICATION_TIERS.md; wer einen Fall\n"
+            "# ergaenzt, hebt das Format auf W1 und nimmt die Zeile\n"
+            "# heraus.\n")
         gl_pfad.write_text(kopf + "\n".join(ohne) + "\n", encoding="utf-8")
         print("\n  Grundlinie geschrieben: %s (%d Zeilen)"
               % (gl_pfad, len(ohne)))

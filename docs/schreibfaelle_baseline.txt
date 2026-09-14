@@ -11,8 +11,9 @@
 # NEUE Zusagen ohne Fall faerben das Tor rot.
 #
 # Eine Zeile hier ist die Stufe W0 aus
-# docs/WRITE_VERIFICATION_TIERS.md; wer einen Fall ergaenzt,
-# hebt das Format auf W1 und nimmt die Zeile heraus.
+# docs/WRITE_VERIFICATION_TIERS.md; wer einen Fall
+# ergaenzt, hebt das Format auf W1 und nimmt die Zeile
+# heraus.
 2img
 adf_arc
 adl
@@ -20,8 +21,10 @@ akai_s900
 d13
 d67
 d77
+d88
 dim
 dim_atari
+dmk
 dsk_cpc
 edk
 fdi

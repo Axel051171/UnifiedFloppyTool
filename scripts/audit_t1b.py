@@ -108,6 +108,31 @@ try:
     from gen_verification_tiers import (                  # noqa: E402
         _tests_from_cmake, _tests_by_symbol_ref, _excluded_tests,
     )
+    # MF-1139: A7 hatte ZWEI eigene Kopien der Schreibfall-Messung, und
+    # beide waren falsch, waehrend das Schwesterwerkzeug daneben richtig
+    # rechnete.
+    #
+    #   (1) `re.finditer(r"&\s*uft_format_plugin_…")` — der
+    #       Adressoperator, den MF-1137 als BAUFORM-Abfrage entlarvt
+    #       hat; die Korrektur landete nur in
+    #       `audit_schreibfaelle.py`. Dritte Kopie desselben Musters.
+    #   (2) `re.compile(r"UFT_FORMAT_CAP_WRITE").search(ptext)` — ein
+    #       Datei-grep statt einer Feldabfrage: ein Kommentar oder eine
+    #       Merkmalstafel, die CAP_WRITE NENNT, galt als Zusage.
+    #
+    # Gemessen war die Folge, dass A7 fuer `cfi`, `d71`, `d81`, `dc42`
+    # und `do` „CAP_WRITE ohne Durchschreibfall" meldete, obwohl alle
+    # fuenf einen Fall haben — fuenf falsche Verdikte in einem Werkzeug,
+    # das Verdikte VERGIBT.
+    #
+    # Deshalb wird jetzt IMPORTIERT statt nachgebaut. Das ist die Lehre
+    # von MF-1137 in ihrer strukturellen Form: dort stand die zweite
+    # Kopie im Selbsttest derselben Datei, hier in einer anderen Datei —
+    # und in beiden Faellen half kein besserer Ausdruck, sondern nur
+    # EINE Quelle (Klasse MF-1015: drei Pruefsummen, keine zwei gleich).
+    from audit_schreibfaelle import (                     # noqa: E402
+        PLUGIN_NENNUNG, FALLDATEI_WORTE, zusagen as _zusagen_im_feld,
+    )
 except ImportError as e:      # pragma: no cover
     print("FEHLER: Helfer nicht gefunden (%s)." % e, file=sys.stderr)
     sys.exit(2)
@@ -287,23 +312,22 @@ def grenzen_kandidaten(text: str) -> dict[str, int]:
     return aus
 
 
-CAP_WRITE = re.compile(r"UFT_FORMAT_CAP_WRITE")
-
-
 def durchschreibfaelle(repo: Path) -> set[str]:
     """Plugins, fuer die ein Durchschreib-/Persistenzfall existiert.
 
     Gelesen aus den Testquellen selbst, nicht aus einer gepflegten Liste
-    (MF-636).
+    (MF-636) — und seit MF-1139 mit DEMSELBEN Ausdruck wie
+    `audit_schreibfaelle.py`, nicht mit einer eigenen Kopie. Die Liste
+    der Falldatei-Worte kommt von dort mit; sie hier zu wiederholen
+    waere dieselbe Doppelung in kleinerer Gestalt.
     """
     aus: set[str] = set()
     for f in sorted((repo / "tests").glob("test_*.c")):
         n = f.name.lower()
-        if not any(w in n for w in ("durchschreib", "schreibt_in_die_datei",
-                                    "persist", "roundtrip", "rundlauf")):
+        if not any(w in n for w in FALLDATEI_WORTE):
             continue
         text = f.read_text(encoding="utf-8", errors="replace")
-        for m in re.finditer(r"&\s*uft_format_plugin_([a-z0-9_]+)", text):
+        for m in PLUGIN_NENNUNG.finditer(text):
             aus.add(m.group(1))
     return aus
 
@@ -326,6 +350,9 @@ def messen(repo: Path) -> list[dict]:
     excluded = _excluded_tests(repo)
     manifest = _load_json(repo / "tests" / "corpus_manifest" / "manifest.json")
     schreibfaelle = durchschreibfaelle(repo)
+    # Die Zusagen kommen aus dem Feld `.capabilities`, gemessen vom
+    # Schwesterwerkzeug (MF-1139) — nicht aus einem Datei-grep.
+    zusagen_im_feld = set(_zusagen_im_feld(repo))
 
     # Korpus je Format, NUR mit Herkunft — dieselbe Regel wie die
     # Stufenleiter: ohne `tool` und `source` kein Kredit.
@@ -372,7 +399,13 @@ def messen(repo: Path) -> list[dict]:
             if pfad.exists() else ""
         grenzen = grenzen_kandidaten(ptext)
 
-        will_schreiben = bool(CAP_WRITE.search(ptext))
+        # MF-1139: hier stand `CAP_WRITE.search(ptext)` — ein Datei-grep
+        # ueber den GANZEN Plugin-Text. Eine Merkmalstafel, ein
+        # MF-930-Kommentar („CAP_WRITE entfernt") oder eine
+        # Feldaufzaehlung genuegte damit als Zusage. Gefragt ist das Feld
+        # `.capabilities`, und genau das misst `zusagen()` im
+        # Schwesterwerkzeug.
+        will_schreiben = kurz in zusagen_im_feld
         hat_schreibfall = kurz in schreibfaelle
 
         gruende = []

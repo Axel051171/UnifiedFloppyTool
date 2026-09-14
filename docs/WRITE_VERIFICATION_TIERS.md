@@ -63,20 +63,41 @@ die Zusagen aus dem Feld `.capabilities` jedes Plugins.
 
 | | Zahl |
 |---|---|
-| Plugins mit `UFT_FORMAT_CAP_WRITE` | **59** |
+| Plugins mit `UFT_FORMAT_CAP_WRITE` | **61** |
 | davon **W1** (Durchschreibfall vorhanden) | **32** |
-| davon **W0** (offene Schuld) | **27** |
+| davon **W0** (offene Schuld) | **29** |
 | Fall ohne Zusage | **2** (`atx`, `imd`) |
 
 **W1 (32):** adf, apridisk, atr, cfi, d64, d71, d80, d81, d82, dc42, do,
 g64, hardsector, img, jv1, mgt, micropolis, msx_disk, myz80, nanowasp,
 northstar, pdp, po, posix, qrst, sam, ssd, st, t1k, tan, trd, xfd
 
-**W0 (27), die Arbeitsliste:** 2img, adf_arc, adl, akai_s900, d13, d67,
-d77, dim, dim_atari, dsk_cpc, edk, fdi, fdi_pc98, fds, hfe, jv3, jvc,
-korg_dss1, lisa_twiggy, nfd, opus, sad, syn, v9t9, vdk, victor9k, xdm86 —
-die laufende Fassung steht in `docs/schreibfaelle_baseline.txt`, eine Zeile
-je offene Schuld.
+**W0 (29), die Arbeitsliste:** 2img, adf_arc, adl, akai_s900, d13, d67,
+d77, **d88**, dim, dim_atari, **dmk**, dsk_cpc, edk, fdi, fdi_pc98, fds,
+hfe, jv3, jvc, korg_dss1, lisa_twiggy, nfd, opus, sad, syn, v9t9, vdk,
+victor9k, xdm86 — die laufende Fassung steht in
+`docs/schreibfaelle_baseline.txt`, eine Zeile je offene Schuld.
+
+> **Berichtigt MF-1139 — hier standen 59 und 27, und die beiden
+> fettgesetzten Namen waren UNSICHTBAR.** `_feldwert` in
+> `scripts/audit_schreibfaelle.py` verlangte, dass `.capabilities` die
+> **Zeile eröffnet** (`re.match`). `src/formats/d88/uft_d88.c:276`
+> schreibt `.format = UFT_FORMAT_D88, .capabilities = … CAP_WRITE …` in
+> **einer** Zeile; `dmk` ebenso. Gemessen sind es **61** Zusagen und
+> damit **29** offene, nicht 59 und 27.
+>
+> **Das ist der vierte Fall derselben Klasse an diesem einen Werkzeug** —
+> MF-1134 suchte bis zum Semikolon statt bis zum Komma (7 statt 62),
+> MF-1137 verlangte den Adressoperator (9 statt 21) und hatte zugleich
+> eine **zweite Kopie** des Ausdrucks im eigenen Selbsttest, und jetzt
+> der Zeilenanfang. Jedes Mal war der Ausdruck an eine **Schreibweise**
+> gebunden statt an die Sache, und jedes Mal meldete er zuverlässig **zu
+> wenig** — ein Erkenner, der nicht „nein" sagen kann, in der Gestalt
+> MF-1000/Tor 64.
+>
+> Die Zahl ist gestiegen, weil eine neue Messung vorliegt, nicht weil
+> sich etwas verschlechtert hat (MF-1077). Die 32 auf W1 sind
+> unverändert.
 
 **W2/W3/W4 sind noch nicht je Format gemessen.** Es wäre falsch, hier
 Zahlen hinzuschreiben: die Belege existieren teilweise, aber für die
@@ -86,7 +107,7 @@ libdsk die Prüfdateien **geschrieben** hat und der Rundlauf byteidentisch
 ist; das als W4 zu führen verlangt aber, die Richtung ausdrücklich zu
 messen — UFT schreibt, libdsk liest — und genau das ist noch nicht getan.
 
-## Warum 27 nicht einfach abzuarbeiten sind
+## Warum 29 nicht einfach abzuarbeiten sind
 
 Die elf aus MF-1138 gingen, weil sie **kopflos** sind und ihre Geometrie
 aus der Dateigröße gewinnen: `tests/test_durchschreibprobe.c` baut sein
