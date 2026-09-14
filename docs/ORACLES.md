@@ -636,6 +636,71 @@ Der Anker gehört deshalb **hierher**, nicht in einen Plan: ein Oracle
 ist kein Baustein, den man später verdrahtet, sondern ein Werkzeug, das
 urteilt.
 
+#### Gebaut MF-1124 — das Rezept, weil es nicht das dokumentierte ist
+
+Auf Eigentümer-Anweisung („fdc_bitstream bauen … eine offene Schuld
+seit MF-626"). Klon unter `tools/uft-scout/work/fdc_bitstream`
+(`--depth 1`, 2026-09-14).
+
+**Lizenz: MIT** (`LICENSE.md`, Copyright 2022 Yasunori Shimura).
+`tools/uft-scout/data/auftraege.json` nannte keine — damit ist auch der
+**Port**-Kanal offen, nicht nur Oracle. Es bleibt trotzdem extern, aus
+den drei Gründen oben.
+
+**Der Bau bricht mit MinGW/GCC 13.1.0 mit 93 Fehlern aus EINER
+Ursache.** Sechs Header benutzen `uint8_t` ohne `#include <cstdint>`:
+`bit_array.h`, `image_fdx.h`, `image_hfe.h`, `image_mfm.h`,
+`image_rdd.h`, `mfm_codec.h`. MSVC zieht `<cstdint>` transitiv herein,
+libstdc++ seit GCC 13 nicht. Sechs eingefügte Zeilen **im Klon** →
+0 Fehler. Das ist ein Befund **über** das Werkzeug, keine Übernahme aus
+ihm; nichts davon kommt in den Baum.
+
+```
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build          # -> bin/: analyzer, create_mfm_image,
+                             #    fdc_test, image_converter,
+                             #    pauline2raw, testCompare,
+                             #    testFormat, testRaw2d77
+```
+
+**Was es kann, gemessen:**
+
+* `create_mfm_image` erzeugt ein **8 410 112 Byte** großes
+  MFM-Bitstromabbild (84 Spuren) — ein **fremder Erzeuger auf
+  Bitstromebene**, und die hat dieser Baum sonst nicht.
+* `image_converter -i … -o …` liest `mfm, raw, d77, hfe, fdx` und
+  schreibt zusätzlich `rdd`, mit **sieben wählbaren VFO-Varianten**
+  (`-vfo 0…9`) und `-gain low high`. **Zwei Eingabeformate liest UFT
+  auch:** `hfe` (T1) und `d77` (T1b).
+* Ausgeführt belegt: `image_converter -i
+  tests/corpus_free/gw_amigados.hfe -o x.raw` — 2 049 024 Byte hinein,
+  **8 533 880** heraus.
+
+**Was es NICHT kann, und das widerlegt eine Annahme aus P3-389:**
+**kein FM.** Klammerfest über den ganzen Baum gemessen
+(`[^m]fm_(encode|decode|codec|write|read)`, `single_density`,
+`FM_MODE`, `is_fm`): **null Treffer**; `mfm_codec.h` führt nur
+`mfm_encoder`/`mfm_write_byte`/`mfm_read_byte`. Die Vermutung, eine
+MB8877/µPD765-Emulation decke „FM und MFM", stammte von mir und war
+falsch — frühere `\bfm\b`-Treffer kamen allein daher, dass „mfm" die
+Zeichen „fm" enthält. **Der FM-Encoder-Blocker aus P3-218/MF-864 bleibt
+offen.**
+
+**Auflage — und sie reicht weiter als im Register vermerkt.** Dort
+stand, `test_data/*.raw` seien kein KryoFlux-Strom. Das trifft auch auf
+das **Ausgabeformat** zu: an der eigenen Ausgabe gemessen beginnt sie
+mit `**BIT_RATE 506000`, `**TRACK_RANGE 0 159`, `**MEDIA_TYPE 2D`. Wer
+eine solche `.raw` UFTs `kfx`-Leser vorwirft, liest falsch. Der Kopf ist
+dafür selbstbeschreibend und taugt als Vergleichsziel.
+
+**Noch nicht registriert, und der Grund ist benannt:** ein Oracle
+braucht einen Test, der es befragt. Der schärfere Vergleich — Bitstrom
+→ **Sektoren** über `d77` — geht am einzigen freien HFE nicht, weil
+`gw_amigados.hfe` **Amiga**-MFM ist und `d77` IBM-Sektorstruktur
+erwartet; `tests/corpus/` ist auf dieser Maschine leer. Was fehlt, ist
+ein IBM-MFM-HFE im freien Korpus. Der reine Bitstromvergleich braucht
+es nicht und ist der erste Schritt.
+
 ## Was ausdrücklich **kein** Oracle ist
 
 | Werkzeug | Grund |
