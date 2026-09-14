@@ -96,8 +96,18 @@ if [ "$CMAKE_TOUCHED" -gt 0 ]; then
         echo "[pre-commit] cmake-Auswertung: skip (kein cmake in PATH)"
         echo "  CI faengt dasselbe; dieses Tor ist eine Bequemlichkeit."
     else
+        # ── MF-1118: gemessen statt aufgezaehlt (MF-636) ─────────────
+        #
+        # Hier stand `for d in build build-cxx20`. Das ist eine
+        # gepflegte Liste, und sie war schon veraltet: das
+        # Build-Verzeichnis dieser Maschine UND der Testlaeufe heisst
+        # `build-tests-ci` und stand nicht darin. Gesucht wird jetzt
+        # nach dem MERKMAL — eine `CMakeCache.txt` unter einem
+        # `build*`-Verzeichnis —, damit ein neuer Name den Haken nicht
+        # stumm macht. Sechzehnter Fall von Aufzaehlung statt Messung.
         BUILD_DIR=""
-        for d in build build-cxx20; do
+        for d in build*/; do
+            d="${d%/}"
             [ -f "$d/CMakeCache.txt" ] && { BUILD_DIR="$d"; break; }
         done
         if [ -z "$BUILD_DIR" ]; then
@@ -147,9 +157,65 @@ case "$CURRENT_BRANCH" in
     refactor/*|main)
         if [ -f tests/test_hal_foundation.cpp ]; then
             CXX="${CXX:-g++}"
+
+            # ── MF-1118: dieselbe Behandlung wie in pre-push (MF-925) ────
+            #
+            # Der Kopf dieses Hakens verspricht woertlich „2. break the
+            # foundation contract (test_hal_foundation must pass)". Auf
+            # dieser Maschine hat er das Versprechen nicht gehalten: er
+            # meldete `skip (no g++ in PATH)` und gab frei. MinGW liegt
+            # unter /c/Qt/Tools/mingw*/bin und war nie im PATH der
+            # Haken-Umgebung.
+            #
+            # Und die Pruefung war dabei nicht unerfuellbar, sondern nur
+            # ABWESEND — gemessen mit der Werkzeugkette im Pfad:
+            # uebersetzt ohne Warnung und meldet „test_hal_foundation:
+            # 0 errors, foundation sound".
+            #
+            # MF-925 hat genau das fuer `pre-push` behoben, und sein
+            # Kopf sagt es selbst: „genau das ist auf dieser Maschine
+            # ueber Monate passiert, ohne dass die dritte Pruefung je
+            # gelaufen waere." Die NACHBARDATEI wurde uebersehen — die
+            # Gestalt von MF-519/MF-529, in diesem Baum der wiederkehrende
+            # Fall „eine Stelle geholt, die andere stehen gelassen".
+            #
+            # Gesucht wird per Muster, nicht mit einem gepflegten Pfad:
+            # ein fester Pfad waere beim naechsten Qt-Update wieder
+            # falsch, und wieder still.
             if ! command -v "$CXX" >/dev/null 2>&1; then
-                echo "[pre-commit] test_hal_foundation: skip (no $CXX in PATH)"
-                echo "  CI catches the same thing; this gate is a developer convenience."
+                for cand in /c/Qt/Tools/mingw*/bin /c/msys64/mingw64/bin \
+                            /c/MinGW/bin "/c/Program Files/LLVM/bin"; do
+                    if [ -x "$cand/g++.exe" ] || [ -x "$cand/clang++.exe" ]; then
+                        PATH="$cand:$PATH"
+                        export PATH
+                        echo "[pre-commit] Werkzeugkette gefunden: $cand"
+                        break
+                    fi
+                done
+            fi
+
+            if ! command -v "$CXX" >/dev/null 2>&1; then
+                # Findet er trotzdem keine, ist das ein FEHLSCHLAG, kein
+                # Hinweis. Wer wirklich keine Werkzeugkette hat, setzt
+                # UFT_PRECOMMIT_ALLOW_NO_COMPILER=1 — dann steht die
+                # Freigabe da, aber als bewusste Entscheidung MIT NAMEN,
+                # nicht als Nebensatz, der sich wie „ok" liest.
+                if [ "${UFT_PRECOMMIT_ALLOW_NO_COMPILER:-0}" = "1" ]; then
+                    echo "[pre-commit] test_hal_foundation: NICHT GELAUFEN"
+                    echo "  UFT_PRECOMMIT_ALLOW_NO_COMPILER=1 ist gesetzt —"
+                    echo "  Freigabe auf ausdrueckliche Entscheidung."
+                else
+                    echo "[pre-commit] test_hal_foundation: FAIL — keine"
+                    echo "  C++-Werkzeugkette gefunden ($CXX nicht im PATH,"
+                    echo "  und /c/Qt/Tools/mingw*/bin, /c/msys64/mingw64/bin,"
+                    echo "  /c/MinGW/bin, /c/Program Files/LLVM/bin tragen"
+                    echo "  weder g++.exe noch clang++.exe)."
+                    echo "  Der Kopf dieses Hakens sagt: test_hal_foundation"
+                    echo "  MUSS bestehen. Ein stiller Skip waere eine"
+                    echo "  Freigabe ohne Pruefung (MF-1118)."
+                    echo "  Ausweg mit Namen: UFT_PRECOMMIT_ALLOW_NO_COMPILER=1"
+                    exit 1
+                fi
             else
                 echo "[pre-commit] test_hal_foundation compile + run..."
                 CC="${CC:-gcc}"
