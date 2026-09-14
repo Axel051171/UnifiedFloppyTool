@@ -144,24 +144,76 @@ static uft_error_t scp_read_revolution_flux(scp_data_t* scp, uint32_t offset,
     }
     
     size_t out_count = 0;
-    uint32_t overflow = 0;
-    
+    /* MF-1133: beide Zaehler in 64 Bit, und ein nicht darstellbares
+     * Intervall wird ABGESAGT statt umlaufen gelassen.
+     *
+     * Hier stand:
+     *
+     *     uint32_t overflow = 0;
+     *     ...
+     *     overflow += 65536;
+     *     uint32_t ticks = overflow + val;
+     *     uint32_t ns = ticks * SCP_TICK_NS * (scp->header.resolution + 1);
+     *
+     * Zwei Ueberlaeufe in vier Zeilen, und beide fuehren zu STILL
+     * FALSCHEN Flusszeiten — der Klasse, gegen die dieses Werkzeug
+     * gebaut ist („Keine stille Veraenderung. Keine erfundenen Daten.").
+     *
+     * Erstens die Multiplikation. `SCP_TICK_NS` ist 25, und
+     * `header.resolution` ist ein `uint8_t` AUS DER DATEI, der im ganzen
+     * Plugin nirgends geprueft wird — gemessen ueber die Datei: drei
+     * Fundstellen, die Deklaration und zwei Rechnungen. `(resolution +
+     * 1)` liegt also in [1, 256], der Faktor damit in [25, 6400], und
+     * `ticks * 6400` laeuft ueber `UINT32_MAX`, sobald
+     * `ticks > 670 433` — das sind **16,8 ms** Flusszeit.
+     *
+     * Das ist kein Randfall. Der Nullwort-Marker dieses Formats
+     * existiert genau dafuer, Intervalle jenseits 65 536 Ticks (1,6 ms)
+     * zu kodieren; eine No-Flux-Flaeche oder eine unformatierte Spur
+     * liefert zweistellige Millisekunden. Ein riesiger Zwischenraum kam
+     * damit als KURZES Intervall heraus.
+     *
+     * Zweitens der Zaehler selbst: `overflow += 65536` in einem
+     * `uint32_t` laeuft nach 65 536 Nullworten um. `num_words` ist nur
+     * durch die Spurlaenge begrenzt.
+     *
+     * Was hier ausdruecklich NICHT gemacht wird: klemmen. Ein auf
+     * `UINT32_MAX` gesaettigtes Intervall waere eine erfundene Zahl mit
+     * dem Anschein einer Messung — die Gestalt von MF-1040, wo ein
+     * 70 000-Byte-Block still auf 65 535 fiel und als `UFT_SECTOR_OK`
+     * gemeldet wurde. `result` ist ein reines `uint32_t*` ohne
+     * Kennzeichnungskanal; es gibt hier also keine Stelle, an der „nicht
+     * darstellbar" vermerkt werden koennte. Deshalb sagt die Funktion ab
+     * und nennt den Grund.
+     *
+     * Eine Schranke fuer `resolution` wird NICHT erfunden: die echte
+     * Bedingung ist, dass das ERGEBNIS passt, und genau die wird
+     * geprueft. */
+    uint64_t overflow = 0;
+    const uint64_t faktor = (uint64_t)SCP_TICK_NS *
+                            ((uint64_t)scp->header.resolution + 1u);
+
     for (size_t i = 0; i < num_words; i++) {
         // Big-Endian zu Little-Endian
-        uint16_t val = (raw[i] >> 8) | (raw[i] << 8);
-        
+        uint16_t val = (uint16_t)((raw[i] >> 8) | (raw[i] << 8));
+
         if (val == 0) {
             // Overflow: 65536 Ticks addieren
-            overflow += 65536;
-        } else {
-            // Normale Transition
-            uint32_t ticks = overflow + val;
-            overflow = 0;
-            
-            // Ticks zu Nanosekunden (25ns pro Tick)
-            uint32_t ns = ticks * SCP_TICK_NS * (scp->header.resolution + 1);
-            result[out_count++] = ns;
+            overflow += 65536u;
+            continue;
         }
+
+        const uint64_t ticks = overflow + (uint64_t)val;
+        overflow = 0;
+
+        // Ticks zu Nanosekunden (25ns pro Tick, mal Auflösung)
+        const uint64_t ns = ticks * faktor;
+        if (ns > 0xFFFFFFFFu) {
+            free(result);
+            free(raw);
+            return UFT_ERROR_FORMAT_INVALID;
+        }
+        result[out_count++] = (uint32_t)ns;
     }
     
     free(raw);
@@ -474,9 +526,32 @@ static uft_error_t scp_read_track(uft_disk_t* disk, int cylinder, int head,
     
     // Metriken setzen
     track->metrics.flux_count = flux_count;
-    track->metrics.index_time_ns = revs[0].duration * SCP_TICK_NS * 
-                                   (pdata->header.resolution + 1);
-    track->metrics.rpm = 60.0e9 / track->metrics.index_time_ns;
+
+    /* MF-1133: dieselbe Rechnung wie in `scp_decode_flux()`, und hier
+     * war sie noch anfaelliger — `revs[0].duration` ist eine GANZE
+     * Umdrehung, also rund 8 Mio. Ticks bei 200 ms. Mit
+     * `25 * (resolution + 1)` und einem ungeprueften `resolution` aus
+     * der Datei ergibt das bis zu 5,1e10 in einem `uint32_t`.
+     *
+     * Und die Zeile darunter teilte durch das Ergebnis. Ein auf 0
+     * umgelaufener Wert haette dort eine Division durch Null ergeben;
+     * ein anders umgelaufener eine erfundene Drehzahl mit dem Anschein
+     * einer Messung.
+     *
+     * Passt es nicht, bleiben BEIDE Felder auf 0 — „nicht gemessen",
+     * nicht ein Ersatzwert (Klasse MF-1129). */
+    {
+        const uint64_t dauer_ns = (uint64_t)revs[0].duration *
+                                  (uint64_t)SCP_TICK_NS *
+                                  ((uint64_t)pdata->header.resolution + 1u);
+        if (dauer_ns > 0 && dauer_ns <= 0xFFFFFFFFu) {
+            track->metrics.index_time_ns = (uint32_t)dauer_ns;
+            track->metrics.rpm = 60.0e9 / (double)dauer_ns;
+        } else {
+            track->metrics.index_time_ns = 0;
+            track->metrics.rpm = 0.0;
+        }
+    }
     
     // Flux dekodieren (wenn Decoder verfügbar)
     const uft_decoder_plugin_t* decoder = uft_find_decoder_plugin_for_flux(

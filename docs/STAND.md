@@ -28,9 +28,9 @@
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
 
-- **GRUEN**: 12 — ADFCommander, ADFDiskBox, FloppyTools, atrcopy, disk-peek, fluxpy, hfs2dfxml, lib1541img, mame, mfmdisk, mfsreader, picturedsk
+- **GRUEN**: 14 — ADFCommander, ADFDiskBox, FloppyTools, Software, adf2dms, atrcopy, disk-peek, fluxpy, hfs2dfxml, lib1541img, mame, mfmdisk, mfsreader, picturedsk
 - **GELB**: 10 — DiscImageManager, DiskImageTool, apple-ii-fluxdoctor, apple2-disk-tools, atari-st-tools, flux-analyze, fluxtoimd, hardsector_tool, nibtools, pyAccess1581
-- **PRUEFEN**: 16 — FloppyControl, FluxBridge, HxCFloppyEmulator, OpenCBM, a8rawconv, amigadx, atrip, dfsimage, fluxfox, fuseadf, gwnbd, ipf-flux, libcbmimage, libdsk, mkatr, mkd64
+- **PRUEFEN**: 18 — FloppyControl, FluxBridge, HxCFloppyEmulator, OpenCBM, a8rawconv, amigadx, atrip, dfsimage, fluxengine, fluxfox, fuseadf, gwnbd, ipf-flux, libcbmimage, libdsk, mkatr, mkd64, syncextract
 - **ROT**: 7 — DiskToolC64, Jacknife, adf-tools, adfopus, adfrescue, floppydiskimagetool, st2disk
 
 > ROT heisst **keine** gefundene Lizenz, nicht „schlecht“. MF-703 prüft der Vermesser auch Lizenzdateien unter anderem Namen (`gpl-3.0.txt`), das Wurzelverzeichnis und Lizenz-Prosa im Quellkopf — zwei von neun ROT-Repos kamen dadurch zurück. Ein Fund ohne Kanal verfällt nicht, er wartet benannt im Fundus (`CLAUDE.md` §Der stärkste legale Kanal).

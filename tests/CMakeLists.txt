@@ -3992,6 +3992,16 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             DTC_TESTQUELLE="${CMAKE_SOURCE_DIR}/src/dtc_components/tests/test_main.c")
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_scp_ueberlauf_sagt_ab")
+        # MF-1133: der Ueberlauf in der Tick-Rechnung. Der Test geht
+        # ueber `uft_disk_open()`, also ueber Erkennung und
+        # Plugin-Auswahl — MF-1039 hat an `cpm` gemessen, dass ein
+        # Plugin ueber die ERKENNUNG unerreichbar sein kann, waehrend
+        # sein interner Leser richtig ist.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c)
     elseif(${test_name} STREQUAL "test_spur_freigabe_zaehlt")
         # MF-1132: der Rotbeweis waegt Anforderungen gegen Freigaben.
         #
