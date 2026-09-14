@@ -696,14 +696,69 @@ static uft_error_t hardsector_write_track(uft_disk_t *disk, int cyl, int head,
      *
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
      * Aufrufer keine Begruendung. */
-    (void)dst;
-    return UFT_ERROR_NOT_SUPPORTED;
+
+    /* MF-1117: der ACHTE der elf aus MF-930 ist verdrahtet, nach den vier
+     * Regeln aus MF-931.
+     *
+     * (1) NICHT ueber `close()` — das ist `void`, ein dort scheiternder
+     *     Schreibvorgang waere eine stille Veraenderung.
+     * (2) KEINE eigene Versatzrechnung: gerufen wird der vorhandene
+     *     `uft_hardsector_write()` aus derselben Datei.
+     * (3) `disk->path` wird geprueft; ohne Ziel wird ABGESAGT statt
+     *     Erfolg gemeldet.
+     * (4) Die Schreibseite gegen die Leseseite gehalten — und hier war
+     *     nichts zu berichtigen, was gemessen ist statt angenommen:
+     *     `uft_hardsector_read_mem()` fuellt `track_data` mit
+     *     `for c { for h }` fortlaufend ueber `data_pos`,
+     *     `uft_hardsector_write()` schreibt mit derselben Schleife, und
+     *     beide Spurzugriffe indizieren `cyl * heads + head`. Drei
+     *     Stellen, eine Anordnung. Das ist der Gegenfall zu MF-931
+     *     (`opus`), wo auf der Schreibseite noch `head != 0` stand.
+     *
+     * Die Kopierlaenge ist auf die KLEINERE der beiden Laengen geklemmt.
+     * Das ist nicht Vorsicht, sondern gemessen notwendig:
+     * `uft_hardsector_write()` kopiert unbedingt `bytes_per_sector` aus
+     * `sectors[s].data`. Ein Sektor des Aufrufers mit kuerzerem Puffer
+     * wuerde dort ueber den Puffer hinaus gelesen (Klasse MF-1040).
+     * Weil hier in die geometriegrosse Zielkopie geschrieben wird, ist
+     * diese Stelle durch DIESE Tuer nicht erreichbar — die Zusage in
+     * `uft_hardsector_write()` selbst bleibt aber, was sie ist, und gilt
+     * fuer jeden anderen Aufrufer.
+     *
+     * Was diese Verdrahtung NICHT behauptet: `hardsector` ist ein
+     * `UFT_KIND_GEOMETRIEKATALOG` (MF-1058 / P3-340 — „beschreibt eine
+     * Geometriefamilie, kein Dateiformat"), steht in der Stufentafel
+     * als `n/a` und bleibt dort. Bewegt wird die `Write`-Zusage, nicht
+     * eine Formatstufe. */
+    if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+    for (size_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *quelle = track->sectors[s].data;
+        if (!quelle) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            const size_t quell_len = track->sectors[s].data_size;
+            const size_t n = quell_len < dst->sectors[s].data_size
+                             ? quell_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, quelle, n);
+        }
+    }
+
+    /* Durchschreiben. Schlaegt es fehl, ist die Speicherkopie schon
+     * geaendert — deshalb wird der Fehler WEITERGEGEBEN und nicht
+     * verschluckt: der Aufrufer muss wissen, dass die Datei jetzt
+     * nicht mehr zur Speicherkopie passt. */
+    {
+        uft_error_t werr = uft_hardsector_write(image, disk->path, NULL);
+        if (werr != UFT_OK) return werr;
+    }
+    disk->modified = true;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_hardsector_features[] = {
     { "Read", UFT_FEATURE_SUPPORTED, NULL },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: schreibt nur in den Speicher — der echte uft_hardsector_write() in derselben Datei hat keinen Aufrufer, kein flush, close() gibt frei" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1117: write_track ruft uft_hardsector_write() und schreibt bis in die Datei — abgenommen von tests/test_durchschreibprobe.c (schreiben, schliessen, neu oeffnen, zuruecklesen)" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -716,7 +771,10 @@ const uft_format_plugin_t uft_format_plugin_hardsector = {
     .description = "Hard-Sector 8\" and 5.25\" Disk Image",
     .extensions = "img,ima,8in",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1117: CAP_WRITE dazu, weil `write_track` jetzt bis in die Datei
+     * schreibt. Vorher waere das Bit eine Zusage ohne Tat gewesen. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = hardsector_probe_plugin,
     .open = hardsector_open,
     .close = hardsector_close,

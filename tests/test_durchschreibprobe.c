@@ -99,6 +99,7 @@ extern const uft_format_plugin_t uft_format_plugin_mgt;
 extern const uft_format_plugin_t uft_format_plugin_nanowasp;
 extern const uft_format_plugin_t uft_format_plugin_myz80;   /* MF-1112 */
 extern const uft_format_plugin_t uft_format_plugin_qrst;    /* MF-1112 */
+extern const uft_format_plugin_t uft_format_plugin_hardsector; /* MF-1117 */
 
 #ifndef UFT_CORPUS_DIR
 #define UFT_CORPUS_DIR "tests/corpus_free"
@@ -217,6 +218,46 @@ static const pruefling_t PRUEFLINGE[] = {
       64, 1, 128, 1024, "libdsk_myz80_voll.myz80", 0 },
     { "qrst", &uft_format_plugin_qrst, "qrst",
       40, 1, 8, 512, "libdsk_qrst_160k.qrst", 1 },
+    /* MF-1117: die ACHTE Verdrahtung der elf aus MF-930.
+     *
+     * `hardsector` braucht KEINE Korpusdatei, und das ist gemessen und
+     * nicht bequem: `hardsector_detect_type()` erkennt den Typ allein
+     * an der Dateigroesse, und 77 x 1 x 26 x 128 = 256 256 Byte ist
+     * genau `HS_8IN_SSSD_SIZE` aus
+     * `include/uft/formats/uft_hardsector.h`. Ein kopfloses rohes
+     * Abbild dieser Masse ist mit `baue_abbild()` baubar — anders als
+     * bei `myz80` (256 Byte reservierter Bereich davor) und `qrst`
+     * (gepackt, mit Pruefsumme ueber die ganze Diskette).
+     *
+     * Was diese Probe hier belegt und was nicht: sie schreibt und
+     * liest durch DASSELBE Plugin, also belegt sie den Weg bis in die
+     * DATEI — nicht, dass die Geometriefamilie richtig ist.
+     * `hardsector` ist ein `UFT_KIND_GEOMETRIEKATALOG` (MF-1058,
+     * P3-340) und steht in der Stufentafel als `n/a`; diese Zeile
+     * bewegt die `Write`-Zusage, keine Formatstufe. */
+    { "hardsector", &uft_format_plugin_hardsector, "img",
+      77, 1, 26, 128, NULL, 0 },
+    /* MF-1117, ZWEITE Zeile, und sie steht hier wegen einer Messung an
+     * der eigenen Mutationsmatrix.
+     *
+     * Mit der SSSD-Geometrie allein war die Mutation „Spurindex
+     * verdreht" (`cyl * heads + head` gegen `head * tracks + cyl`)
+     * NICHT isolierbar: 8"-SSSD hat EINEN Kopf, und bei `heads == 1`
+     * fallen beide Formeln zusammen — `cyl * 1 + 0` ist `0 * 77 + cyl`.
+     * MF-1112 hatte bei `myz80` und `qrst` genau dort aufgehoert und
+     * die fuenfte Mutation „benannt unmoeglich" genannt.
+     *
+     * Hier ist sie nicht unmoeglich, nur ungemessen: 8"-DSSD ist
+     * 77 x 2 x 26 x 128 = 512 512 Byte = `HS_8IN_DSSD_SIZE`, wird von
+     * `hardsector_detect_type()` an der Groesse erkannt und ist
+     * genauso als rohes Abbild baubar. Mit ZWEI Koepfen trennen sich
+     * die beiden Formeln, und die Mutation faellt.
+     *
+     * Die Lehre ist die von MF-1026 in anderer Gestalt: „nicht
+     * isolierbar" ist eine Aussage ueber den gewaehlten Pruefling, bis
+     * man einen anderen gewaehlt hat. */
+    { "hardsector-dsd", &uft_format_plugin_hardsector, "img",
+      77, 2, 26, 128, NULL, 0 },
 };
 
 static void setze_pfad(uft_disk_t *d, const char *pfad)

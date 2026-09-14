@@ -25,6 +25,30 @@ Kopf von Tor 57. **Zwei standen auf keiner Liste:**
 | `uft_atx_write` | `src/formats/atx/uft_atx.c` | 8 `fwrite`, Aufrufer **nur in Tests**, **kein** `.write_track` im Plugin — die Zusage ist aber ehrlich zurückgenommen (`Write = UNSUPPORTED`), also keine Falschaussage |
 | `uft_ibm3740_write` | `src/formats/hardsector/uft_hardsector.c` | **zweiter** Schreiber in einer Datei, die schon einen führt |
 
+**NACHTRAG MF-1117 — beide Zeilen waren als `offen` geführt, und bei
+beiden war das die falsche Aussage. Umgeschrieben, nicht entfernt
+(MF-1077).**
+
+`uft_ibm3740_write` ist **keine unverdrahtete Tür**, sondern ein
+**typisierter Alias**: es gibt kein `uft_format_plugin_ibm3740`, keine
+Format-Kennung und keine Sonde — über `git ls-files` gemessen steht der
+Name im ganzen Baum nur in `uft_hardsector.c`/`.h`, in
+`include/uft/formats/supercopy_formats.h` und in Skripten. Die Funktion
+ruft `uft_hardsector_write()` mit festem `HS_TYPE_8IN_SSSD`. Ein Status
+`offen` hätte dauerhaft Arbeit angezeigt, wo es nichts zu verdrahten
+gibt. Status jetzt `absicht`, Beleg MF-1117.
+
+`uft_atx_write` hat einen **anderen Blocker** als die übrigen aus
+P3-204, und der Plan-Anker zeigte auf die falsche Stelle. Das
+ATX-Plugin hat kein `.write_track`, weil ein ATX eine Kette von
+Spur-Datensätzen **ohne Versatztafel** ist (MF-474): eine Spur zu
+ersetzen heißt, alles danach zu verschieben. Dazu hält `atx_data_t` die
+**Datei**, nicht ein Feld dekodierter Spuren, während
+`uft_atx_write()` die ganze Diskette als `uft_track_t *` verlangt — ein
+Weg darüber müsste erst belegen, dass Weak Bits und Timing einen
+Rundlauf Dekodieren→Neukodieren überleben. Status bleibt `offen`, Beleg
+jetzt **P3-380** statt P3-204, weil P3-204 „nur verdrahten" unterstellt.
+
 Das ist der fünfzehnte Fall von *Aufzählung statt Messung* in diesem
 Baum — und er ist beim Bau des Registers aufgefallen, nicht bei einem
 Sweep drei Monate später. Genau das ist der Zweck.
@@ -71,9 +95,9 @@ Fortschritt (MF-1077, G2).
 | `uft_qrst_write` | schreiber | verdrahtet | MF-1112 |
 | `uft_logical_write` | schreiber | offen | P3-204 |
 | `uft_posix_write` | schreiber | offen | P3-204 |
-| `uft_hardsector_write` | schreiber | offen | P3-204 |
-| `uft_ibm3740_write` | schreiber | offen | MF-1114 |
-| `uft_atx_write` | schreiber | offen | MF-1114 |
+| `uft_hardsector_write` | schreiber | verdrahtet | MF-1117 |
+| `uft_ibm3740_write` | schreiber | absicht | MF-1117 |
+| `uft_atx_write` | schreiber | offen | P3-380 |
 | `uft_rcpmfs_write` | schreiber | absicht | MF-1035 |
 | `uft_crc_get_config` | deklaration | ohne_koerper | MF-1113 |
 | `uft_crc_get_config_by_name` | deklaration | ohne_koerper | MF-1113 |

@@ -1344,6 +1344,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/nanowasp/uft_nanowasp.c
             ${CMAKE_SOURCE_DIR}/src/formats/myz80/uft_myz80.c
             ${CMAKE_SOURCE_DIR}/src/formats/qrst/uft_qrst.c
+            # MF-1117: `hardsector` ist die ACHTE Verdrahtung der elf aus
+            # MF-930 — und die erste, die KEINE Korpusdatei braucht:
+            # `hardsector_detect_type()` erkennt den Typ allein an der
+            # Dateigroesse, und 77 x 1 x 26 x 128 = 256 256 Byte ist genau
+            # `HS_8IN_SSSD_SIZE`. Das kopflose rohe Abbild baut
+            # `baue_abbild()` selbst.
+            ${CMAKE_SOURCE_DIR}/src/formats/hardsector/uft_hardsector.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
