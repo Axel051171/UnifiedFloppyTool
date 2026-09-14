@@ -70,6 +70,19 @@ PLUGIN_RE = re.compile(
 FALLDATEI_WORTE = ("durchschreib", "schreibt_in_die_datei", "persist",
                    "roundtrip", "rundlauf")
 
+# MF-1137: EINE Stelle fuer dieses Muster.
+#
+# Es gab zwei — eine in `faelle()` und eine im Selbsttest — und die
+# zweite hat die Korrektur der ersten nicht mitbekommen: der Selbsttest
+# meldete 6/8, weil er noch mit dem alten Ausdruck prueft. Ein
+# Selbsttest, der eine ANDERE Kopie prueft als der Lauf, prueft nichts
+# (Klasse MF-1000 / Tor 64, und MF-1015 fuer die Doppelung selbst).
+#
+# `(?!t\b)` schliesst den TYPNAMEN aus. `uft_format_plugin_t` steht in
+# fast jeder Testdatei, und ohne den Ausschluss meldete das Tor ein
+# Format namens „t" unter „Fall ohne Zusage" — gemessen.
+PLUGIN_NENNUNG = re.compile(r"\buft_format_plugin_(?!t\b)([a-z0-9_]+)\b")
+
 
 def _feldwert(body: str, feld: str) -> str | None:
     """Der Wert eines Feldes einer Struktur-Initialisierung.
@@ -143,7 +156,21 @@ def faelle(repo: Path) -> dict[str, set[str]]:
         if not any(w in n for w in FALLDATEI_WORTE):
             continue
         text = f.read_text(encoding="utf-8", errors="replace")
-        for m in re.finditer(r"&\s*uft_format_plugin_([a-z0-9_]+)", text):
+        # MF-1137: hier stand `&\s*uft_format_plugin_…` — also mit
+        # ADRESSOPERATOR. Das war die dritte Falschmessung dieses
+        # Werkzeugs, und sie hat den Rueckstand groesser aussehen
+        # lassen, als er ist.
+        #
+        # Gemessen: `tests/test_cfi_schreibt_in_die_datei.c` nennt
+        # `uft_format_plugin_cfi` ELFMAL — und NIE mit `&`, weil es die
+        # Tafel direkt benutzt (`uft_format_plugin_cfi.open(...)`)
+        # statt einen Zeiger darauf in eine Falltabelle zu legen. Nur
+        # `test_durchschreibprobe.c` schreibt `&…`, weil es
+        # tabellengesteuert ist.
+        #
+        # Ein Muster, das eine BAUFORM verlangt statt die Sache, misst
+        # die Bauform. Klasse MF-1000 in kleiner Gestalt.
+        for m in PLUGIN_NENNUNG.finditer(text):
             aus.setdefault(m.group(1), set()).add(f.name)
     return aus
 
@@ -195,11 +222,22 @@ def selbsttest() -> int:
         n = dateiname.lower()
         if not any(w in n for w in FALLDATEI_WORTE):
             return False
-        return bool(re.search(r"&\s*uft_format_plugin_([a-z0-9_]+)", inhalt))
+        return bool(PLUGIN_NENNUNG.search(inhalt))
 
     f.append(("Fall in einer Durchschreibprobe erkannt",
               fall("test_durchschreibprobe.c",
                    '{ "po", &uft_format_plugin_po, "po", 35, 1, 16, 256 },'),
+              True))
+    # MF-1137, dritte Handprobe an diesem Werkzeug: die Form OHNE
+    # Adressoperator. `test_cfi_schreibt_in_die_datei.c` benutzt die
+    # Tafel direkt und wurde deshalb elfmal uebersehen.
+    f.append(("Fall OHNE Adressoperator erkannt",
+              fall("test_cfi_schreibt_in_die_datei.c",
+                   "rc = uft_format_plugin_cfi.open(&disk, pfad, false);"),
+              True))
+    f.append(("und in einer Rundlaufprobe",
+              fall("test_d64_write_roundtrip.c",
+                   "extern const uft_format_plugin_t uft_format_plugin_d64;"),
               True))
     f.append(("dieselbe Nennung in einem GEWOEHNLICHEN Test zaehlt nicht",
               fall("test_po_layout.c",
