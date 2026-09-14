@@ -101,6 +101,21 @@ extern const uft_format_plugin_t uft_format_plugin_myz80;   /* MF-1112 */
 extern const uft_format_plugin_t uft_format_plugin_qrst;    /* MF-1112 */
 extern const uft_format_plugin_t uft_format_plugin_hardsector; /* MF-1117 */
 extern const uft_format_plugin_t uft_format_plugin_posix;      /* MF-1119 */
+/* MF-1138: je Symbol gegen seine Definition geprueft, nicht angenommen —
+ * `src/formats/{jv1/uft_jv1.c,tan/uft_tan.c,trd/uft_trd.c,
+ * ssd/uft_ssd_plugin.c}`. MF-442: eine Fremddeklaration ist ein
+ * Versprechen, das der Uebersetzer ungeprueft glaubt. */
+extern const uft_format_plugin_t uft_format_plugin_jv1;
+extern const uft_format_plugin_t uft_format_plugin_tan;
+extern const uft_format_plugin_t uft_format_plugin_trd;
+extern const uft_format_plugin_t uft_format_plugin_ssd;
+extern const uft_format_plugin_t uft_format_plugin_micropolis;
+extern const uft_format_plugin_t uft_format_plugin_northstar;
+extern const uft_format_plugin_t uft_format_plugin_msx_disk;
+extern const uft_format_plugin_t uft_format_plugin_t1k;
+extern const uft_format_plugin_t uft_format_plugin_sam;
+extern const uft_format_plugin_t uft_format_plugin_xfd;
+extern const uft_format_plugin_t uft_format_plugin_pdp;
 
 #ifndef UFT_CORPUS_DIR
 #define UFT_CORPUS_DIR "tests/corpus_free"
@@ -300,6 +315,119 @@ static const pruefling_t PRUEFLINGE[] = {
      * sondern die Nachbardatei. */
     { "posix-outback", &uft_format_plugin_posix, "raw",
       80, 2, 9, 512, NULL, 0, "80 2 9 512 1 outback" },
+
+    /* ── MF-1138: erste Charge aus dem Rueckstand von MF-1134/1137 ──
+     *
+     * Der Audit hat gemessen: 59 Plugins sagen `UFT_FORMAT_CAP_WRITE`
+     * zu, 21 haben einen Durchschreibfall, 38 nicht
+     * (`docs/schreibfaelle_baseline.txt`). `test_capability_manifest.c`
+     * prueft nur, dass `write_track != NULL` ist — das belegt einen
+     * Funktionszeiger, nicht dass die Aenderung die DATEI erreicht
+     * (P3-154).
+     *
+     * Aufgenommen werden hier nur Formate, deren Geometrie GEMESSEN
+     * ist, nicht geraten — dieser Harness baut sein Abbild selbst, und
+     * eine falsche Geometrie wuerde einen Fehlschlag erzeugen, der
+     * nichts ueber die Schreibseite sagt.
+     *
+     * Zwei Kandidaten sind deshalb ausdruecklich NICHT dabei: `xfd`
+     * (kein Groessen-Define im Plugin) und `v9t9` (dessen Anordnung ist
+     * kopf-dur mit RUECKWAERTS laufender Seite 1, MF-1027 — eine flache
+     * Rohdatei trifft das nicht sicher). Sie bleiben in der Grundlinie
+     * stehen, bis ihre Masse belegt ist. */
+
+    /* TRS-80 JV1: 80 x 1 x 10 x 256 = 204 800. Einseitig — MF-1016 hat
+     * dort die erfundene zweite Seite behoben, das Plugin setzt
+     * `heads = 1` ausdruecklich. */
+    { "jv1", &uft_format_plugin_jv1, "jv1", 80, 1, 10, 256, NULL, 0, NULL },
+
+    /* Tandy TAN: byteweise dieselbe Anordnung wie JV1 — MF-1026 hat
+     * dort genau die beiden JV1-Befunde behoben —, und die Sonde nimmt
+     * 204 800 Byte ausdruecklich an. */
+    { "tan", &uft_format_plugin_tan, "tan", 80, 1, 10, 256, NULL, 0, NULL },
+
+    /* TR-DOS: `sz == 655360` ergibt 80 Spuren und 2 Seiten; mit
+     * `TRD_SPT 16` und `TRD_SEC_SIZE 256` geht die Rechnung
+     * 80 x 2 x 16 x 256 auf. */
+    { "trd", &uft_format_plugin_trd, "trd", 80, 2, 16, 256, NULL, 0, NULL },
+
+    /* Acorn DFS SSD: der Dateikopf des Plugins nennt die Masse selbst —
+     * 80 x 1 x 10 x 256 = 204 800. Einseitig; die doppelseitige
+     * Spielart heisst DSD und ist ein eigenes Plugin. */
+    { "ssd", &uft_format_plugin_ssd, "ssd", 80, 1, 10, 256, NULL, 0, NULL },
+
+    /* ── zweite Charge, dieselbe Bedingung: Masse aus dem PLUGIN ──
+     *
+     * Eine Zwischenmessung ist dabei berichtigt worden: ich hatte die
+     * Kandidaten zuerst danach ausgewaehlt, ob ein `fwrite` und ein
+     * schreibbares `fopen`-Handle in der Datei stehen. Gemessen trifft
+     * das auf 34 von 34 zu — die Hausform `fopen(path, ro ? "rb" :
+     * "r+b")` steht in fast jedem Plugin, und die ERREICHBARKEIT des
+     * Schreibers misst ohnehin Tor 57 (MF-930, Grundlinie 0). Ein
+     * Merkmal, das bei allen zutrifft, unterscheidet nichts.
+     *
+     * Die Bedingung, die wirklich entscheidet, ist eine andere: dieser
+     * Harness baut sein Abbild SELBST, also muss das Format kopflos
+     * sein und seine Geometrie aus der Dateigroesse gewinnen. Formate
+     * mit Behaelterkopf brauchen entweder eine Korpusdatei (wie `myz80`
+     * und `qrst`) oder einen `create`-Weg — das ist die C-Leiter und
+     * eine andere Achse. */
+
+    /* Micropolis MOD II: 77 x 1 x 16 x 256 = 315 392 (`MPLS_SS_SIZE`).
+     *
+     * ACHTUNG, im Baum liegen ZWEI Micropolis-Leser mit
+     * verschiedener Sektorgroesse: der verwaiste
+     * `src/formats/micropolis/micropolis.c` rechnet mit 266 bzw. 275
+     * Byte je Sektor und 35 oder 77 Spuren, das REGISTRIERTE Plugin mit
+     * 256. Gestalt von MF-1026 (drei Victor-Geometrien) und MF-1015
+     * (drei Pruefsummen). Hier gilt das Plugin, weil nur es einen Weg
+     * von aussen hat; der Widerspruch ist beschriftet, nicht behoben
+     * (MF-699). */
+    { "micropolis", &uft_format_plugin_micropolis, "mpls",
+      77, 1, 16, 256, NULL, 0, NULL },
+
+    /* North Star MDS: 35 x 1 x 10 x 256 = 89 600; `heads = 1` steht
+     * ausdruecklich im Plugin, hart sektoriert mit festen 10. */
+    { "northstar", &uft_format_plugin_northstar, "ns",
+      35, 1, 10, 256, NULL, 0, NULL },
+
+    /* MSX 720K: 80 x 2 x 9 x 512 = 737 280 — die Groessentafel des
+     * Plugins nennt alle drei Spielarten, `spt` ist fest 9. Das ist
+     * das Format aus MF-782, das vorher keinen einzigen Test hatte. */
+    { "msx_disk", &uft_format_plugin_msx_disk, "dsk",
+      80, 2, 9, 512, NULL, 0, NULL },
+
+    /* Tandy 1000: 40 x 2 x 9 x 512 = 368 640, erster Eintrag der
+     * Groessentafel (MF-784 hat das Format gegen `gw` abgenommen). */
+    { "t1k", &uft_format_plugin_t1k, "t1k",
+      40, 2, 9, 512, NULL, 0, NULL },
+
+    /* SAM Coupe MGT: 80 x 2 x 10 x 512 = 819 200, alle vier Masse als
+     * Konstante im Plugin (`SAM_CYL/HEAD/SPT/SS`). */
+    { "sam", &uft_format_plugin_sam, "sdf",
+      80, 2, 10, 512, NULL, 0, NULL },
+
+    /* Atari XFD: 40 x 1 x 18 x 128 = 92 160.
+     *
+     * Hier korrigiere ich meine eigene Begruendung aus der ersten
+     * Charge — dort stand, `xfd` bleibe draussen, weil ich seine
+     * Geometrie raten muesste. Muss ich nicht: das Plugin RECHNET sie
+     * aus der Dateigroesse (`ss = (fs % 256 == 0 && fs > 92160) ? 256
+     * : 128`, `total = fs / ss`, `cylinders = (total + 17) / 18`), und
+     * fuer 92 160 Byte ergibt das eindeutig 720 Sektoren a 128 Byte auf
+     * 40 Zylindern. Eine abgeleitete Groesse ist keine geratene. */
+    { "xfd", &uft_format_plugin_xfd, "xfd",
+      40, 1, 18, 128, NULL, 0, NULL },
+
+    /* DEC RX01: 77 x 1 x 26 x 128 = 256 256.
+     *
+     * Dieselbe Dateigroesse wie `hardsector` acht Zeilen weiter oben
+     * (`HS_8IN_SSSD_SIZE`) — zwei Plugins auf einer Groesse. Das ist
+     * hier folgenlos, weil die Probe den Pruefling AM ZEIGER nimmt und
+     * nicht ueber die Registry sucht; ueber die Erkennung waere es ein
+     * Rennen wie in MF-729. */
+    { "pdp", &uft_format_plugin_pdp, "rx01",
+      77, 1, 26, 128, NULL, 0, NULL },
 };
 
 static void setze_pfad(uft_disk_t *d, const char *pfad)

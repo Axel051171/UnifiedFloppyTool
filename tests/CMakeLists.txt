@@ -1365,6 +1365,27 @@ foreach(test_source ${TEST_SOURCES})
             # damit statt mit einer zweiten Kopie; genau deshalb ist es
             # hier eine Abhaengigkeit und kein Duplikat (MF-1034).
             ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
+            # MF-1138: vier aus dem Rueckstand von MF-1134/1137 — 38
+            # `CAP_WRITE`-Zusagen ohne Durchschreibfall. Alle vier sind
+            # kopflos und groessengesondet, also baut `baue_abbild()`
+            # ihre Eingabe selbst; die Geometrien sind aus den Plugins
+            # GEMESSEN (siehe Kommentare an den Tabellenzeilen), nicht
+            # aus der Dateigroesse zurueckgerechnet.
+            ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
+            ${CMAKE_SOURCE_DIR}/src/formats/tan/uft_tan.c
+            ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
+            # Zweite Charge. `micropolis` liegt bewusst als
+            # `uft_micropolis.c` hier und NICHT als `micropolis.c` —
+            # letzteres ist der verwaiste Leser mit 266/275 Byte je
+            # Sektor, das registrierte Plugin rechnet mit 256.
+            ${CMAKE_SOURCE_DIR}/src/formats/micropolis/uft_micropolis.c
+            ${CMAKE_SOURCE_DIR}/src/formats/northstar/uft_northstar.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dsk_msx/uft_dsk_msx.c
+            ${CMAKE_SOURCE_DIR}/src/formats/t1k/uft_t1k.c
+            ${CMAKE_SOURCE_DIR}/src/formats/sam/uft_sam.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/pdp/uft_pdp.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")

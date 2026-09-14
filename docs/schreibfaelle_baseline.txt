@@ -9,6 +9,10 @@
 # ergaenzt, nimmt die Zeile heraus.
 #
 # NEUE Zusagen ohne Fall faerben das Tor rot.
+#
+# Eine Zeile hier ist die Stufe W0 aus
+# docs/WRITE_VERIFICATION_TIERS.md; wer einen Fall ergaenzt,
+# hebt das Format auf W1 und nimmt die Zeile heraus.
 2img
 adf_arc
 adl
@@ -24,26 +28,15 @@ fdi
 fdi_pc98
 fds
 hfe
-jv1
 jv3
 jvc
 korg_dss1
 lisa_twiggy
-micropolis
-msx_disk
 nfd
-northstar
 opus
-pdp
 sad
-sam
-ssd
 syn
-t1k
-tan
-trd
 v9t9
 vdk
 victor9k
 xdm86
-xfd
