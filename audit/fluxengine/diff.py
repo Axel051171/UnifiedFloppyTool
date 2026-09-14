@@ -149,13 +149,22 @@ def main():
     # fuer das DEKODIERTE ABBILD, der Fluss geht ueber `--copy-flux-to=`,
     # und roher Fluss wird mit `rawwrite` geschrieben, nicht mit
     # `write -i`.
+    # BERICHTIGT MF-1120. Hier stand: „Die SCHREIB-Zeilen stehen bewusst
+    # als UNVERIFIED: der Bauer erzeugt sie noch, aber seit MF-1047 ruft
+    # ihn niemand." Beides gilt seit MF-1116 nicht mehr — und dieser Satz
+    # waere dann eine falsche Begruendung unter einem gruenen Tor, also
+    # genau die Klasse, die dieses Audit aufdecken soll.
     print("OK — no FAIL. Der LESE-Vertrag ist seit MF-1047 gegen "
           "doc/using.md des Urhebers geprueft (nicht mehr `recalled`); "
           "abgenommen in tests/test_fluxengine_befehl.cpp. Die "
-          "SCHREIB-Zeilen stehen bewusst als UNVERIFIED: der Bauer "
-          "erzeugt sie noch, aber seit MF-1047 ruft ihn niemand, und die "
-          "dokumentierte Form waere `rawwrite -s <flux> -d <ziel>` "
-          "(P3-342). Run mock_fluxengine.py for the FE-flag-semantics "
+          "SCHREIB-Zeilen sind seit MF-1116/MF-1120 ebenfalls gegen "
+          "doc/using.md geprueft: `rawwrite -s <flux> -d <ziel>` statt "
+          "`write -i <abbild>`, und der Mock-Laeufer belegt, dass die "
+          "unter `-s` genannte SCP-Datei waehrend des Aufrufs wirklich "
+          "existiert. NICHT belegt bleibt, dass ein echtes `fluxengine` "
+          "sie annimmt — keine Hardware (MF-310), CAPABILITIES.md fuehrt "
+          "Write deshalb als gelb. "
+          "Run mock_fluxengine.py for the FE-flag-semantics "
           "check (a copy lives at tests/external_audits/fluxengine/).")
     return 0
 

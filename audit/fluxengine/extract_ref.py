@@ -130,32 +130,62 @@ READ_ARGV = {
 # erzeugen (`src/formats/scp/uft_scp_writer.c` liegt im Baum) und
 # `rawwrite` statt `write` rufen. Danach gehoert dieser Block auf die
 # dokumentierte Form umgeschrieben, nicht auf die heutige.
-_WRITE_UNVERIFIED = {
-    "kind": "needs-source — der Schreibpfad ist seit MF-1047 unerreichbar; "
-            "die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, "
-            "nicht `write -i <datei>` (P3-342)",
-}
-
+# ── UMGESCHRIEBEN MF-1120, wie es der Block oben verlangt hat ──────────
+#
+# Dort stand woertlich: „Danach gehoert dieser Block auf die dokumentierte
+# Form umgeschrieben, nicht auf die heutige."  MF-1116 hat „danach"
+# hergestellt — SCP-Behaelter erzeugen und `rawwrite` rufen — und die
+# Anweisung NICHT gelesen. Folge: der Workflow `Audit` war ab `90742efa`
+# rot, mit sechs FAIL-Zeilen, und drei weitere Commits sind darauf
+# gepusht worden. Gemeldet hat es der Eigentuemer, nicht ich; mein
+# Bericht sagte „alles gruen" und hatte CI nie angesehen.
+#
+# Berichtigt wird dabei auch eine Zahl: „der Audit war immer rot" trifft
+# nicht zu. Gemessen ueber `gh run list --workflow=Audit` war er gruen
+# bis `4aaff56b` (MF-1112) und ist genau bei `90742efa` (MF-1116)
+# gekippt. Nicht immer — seit mir.
+#
+# Umgeschrieben ist die Tabelle auf die Form, die `doc/using.md` des
+# Urhebers nennt, NICHT auf die, die UFT heute abgibt. Der Unterschied
+# ist der ganze Zweck dieses Audits: eine Referenz, die man an die
+# Ausgabe des Prueflings anpasst, ist ein Spiegel und kein Pruefstein —
+# genau die Selbstbestaetigung, die MF-1047 an „PASS (recalled)"
+# gemessen hat.
+#
+# Vier Marken fallen deshalb WEG, und sie stehen hier weiter benannt,
+# damit der Vorgang nachlesbar bleibt (MF-1077: umschreiben, nicht
+# spurlos entfernen):
+#
+#   `write`      — kodiert ein Dateisystem-Abbild, nicht rohen Fluss
+#   `-i`         — Eingang fuer dieses Abbild; die Flussquelle ist `-s`
+#   `-c`         — Profil; `rawwrite` kodiert nicht, ein Profil waere
+#                  dort ein Argument ohne Gegenstand
+#   `{profile}`  — Wert von `-c`
+#
+# Die fuenf verbleibenden Marken sind jetzt ZEICHENKETTEN statt
+# Verzeichnisse und werden damit als PASS gefuehrt (diff.py:56-62). Der
+# Grund ist kein Umstufen von Hand: sie sind seit MF-1116 am Objekt
+# abgenommen. `tests/test_fluxengine_befehl.cpp` prueft IM Mock-Laeufer,
+# dass die unter `-s` genannte Datei zum Zeitpunkt des Aufrufs
+# existiert, groesser als 0 Byte ist und mit der Kennung `SCP` beginnt,
+# dass stdin leer bleibt, und dass die Wegwerfdatei danach entfernt ist.
+# Was weiterhin NICHT belegt ist: dass ein echtes `fluxengine` die Datei
+# annimmt — dafuer fehlt Hardware (MF-310), und `docs/CAPABILITIES.md`
+# fuehrt Write deshalb als gelb, nicht gruen.
 WRITE_ARGV = {
-    "write":         dict(_WRITE_UNVERIFIED,
-                          ref="doc/using.md: fuer Fluss ist es `rawwrite`, "
-                              "nicht `write` (das kodiert ein Abbild)"),
-    "-c":            dict(_WRITE_UNVERIFIED,
-                          ref="Profil; bei `rawwrite` laut Doku nur noetig, "
-                              "um eine Teilmenge der Diskette zu schreiben"),
-    "{profile}":     dict(_WRITE_UNVERIFIED,
-                          ref="Profilname (Wert von -c)"),
-    "-d":            dict(_WRITE_UNVERIFIED,
-                          ref="doc/using.md: `-d <flux destination>` — bei "
-                              "`rawwrite` das Ziel, also drive:N"),
-    "drive:0":       dict(_WRITE_UNVERIFIED,
-                          ref="Laufwerksangabe (Wert von -d)"),
-    "--tracks=cNhM": dict(_WRITE_UNVERIFIED,
-                          ref="Spurwahl"),
-    "-i":            dict(_WRITE_UNVERIFIED,
-                          ref="doc/using.md: `-i` ist der Eingang fuer das "
-                              "DATEISYSTEM-ABBILD. Die Flussquelle von "
-                              "`rawwrite` ist `-s`"),
+    "rawwrite":      "expected — doc/using.md: `fluxengine rawwrite -s "
+                     "<flux source> -d <flux destination>` schreibt Fluss "
+                     "'without doing any encoding'. Seit MF-1116 gerufen.",
+    "-s":            "expected — doc/using.md: `-s <flux source>`, die "
+                     "FLUSSQUELLE. Seit MF-1116 eine echte SCP-Datei im "
+                     "System-Temp (`uft_fe_write_<c>_<h>.scp`), erzeugt mit "
+                     "`src/formats/scp/uft_scp_writer.c` (abgenommen "
+                     "MF-1055, Mutationsmatrix 8 von 8).",
+    "-d":            "expected — doc/using.md: `-d <flux destination>`; bei "
+                     "`rawwrite` das Ziel, also drive:N",
+    "drive:0":       "expected — Laufwerksangabe (Wert von -d)",
+    "--tracks=cNhM": "expected — Spurwahl; doc/using.md nennt `--tracks` "
+                     "als Auswahl einer Teilmenge der Diskette",
 }
 
 # `fluxengine rpm` — exists in FE; used for both measure-rpm and detect.

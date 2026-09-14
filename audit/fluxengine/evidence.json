@@ -16,8 +16,7 @@
     "cpp": "src\\hardware_providers\\fluxengine_provider_v2.cpp"
   },
   "counts": {
-    "PASS": 12,
-    "UNVERIFIED": 7,
+    "PASS": 17,
     "MISSING": 2
   },
   "sections": {
@@ -28,7 +27,7 @@
         "ref": "expected \u2014 der Flussausgang (doc/using.md). Seit MF-1047 setzt der Provider ihn; vorher erwartete er den Fluss an `-o` und las ein dekodiertes Abbild als SCP-Behaelter",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 234
+        "uft_line": 268
       },
       {
         "key": "--drive.revolutions={N}",
@@ -36,7 +35,7 @@
         "ref": "expected \u2014 revolution count (was: --revs)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 232
+        "uft_line": 266
       },
       {
         "key": "--tracks=cNhM",
@@ -44,7 +43,7 @@
         "ref": "expected \u2014 track selector (was: -c N -h H); doc/using.md: --tracks='c0h0 c1h0 c3-5h1'",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 230
+        "uft_line": 264
       },
       {
         "key": "-c",
@@ -52,7 +51,7 @@
         "ref": "expected \u2014 loads profile BY NAME",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 226
+        "uft_line": 260
       },
       {
         "key": "-o",
@@ -60,7 +59,7 @@
         "ref": "expected \u2014 DECODED IMAGE output flag (doc/using.md: '-o <image output>'), NICHT der Flussausgang",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 237
+        "uft_line": 271
       },
       {
         "key": "-s",
@@ -68,7 +67,7 @@
         "ref": "expected \u2014 source drive spec flag",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 228
+        "uft_line": 262
       },
       {
         "key": "drive:0",
@@ -76,7 +75,7 @@
         "ref": "expected \u2014 drive spec (value of -s)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 229
+        "uft_line": 263
       },
       {
         "key": "read",
@@ -84,7 +83,7 @@
         "ref": "expected \u2014 subcommand",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 225
+        "uft_line": 259
       },
       {
         "key": "{profile}",
@@ -92,65 +91,49 @@
         "ref": "expected \u2014 profile name (value of -c); FE-F2 made it the m_profile ctor parameter (was hard-coded \"ibm\"), so a {profile} placeholder is emitted",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 227
+        "uft_line": 261
       }
     ],
     "write_argv": [
       {
         "key": "--tracks=cNhM",
         "uft": "--tracks=cNhM",
-        "ref": "Spurwahl",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 252
-      },
-      {
-        "key": "-c",
-        "uft": "-c",
-        "ref": "Profil; bei `rawwrite` laut Doku nur noetig, um eine Teilmenge der Diskette zu schreiben",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 248
+        "ref": "expected \u2014 Spurwahl; doc/using.md nennt `--tracks` als Auswahl einer Teilmenge der Diskette",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 311
       },
       {
         "key": "-d",
         "uft": "-d",
-        "ref": "doc/using.md: `-d <flux destination>` \u2014 bei `rawwrite` das Ziel, also drive:N",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 250
+        "ref": "expected \u2014 doc/using.md: `-d <flux destination>`; bei `rawwrite` das Ziel, also drive:N",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 309
       },
       {
-        "key": "-i",
-        "uft": "-i",
-        "ref": "doc/using.md: `-i` ist der Eingang fuer das DATEISYSTEM-ABBILD. Die Flussquelle von `rawwrite` ist `-s`",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 254
+        "key": "-s",
+        "uft": "-s",
+        "ref": "expected \u2014 doc/using.md: `-s <flux source>`, die FLUSSQUELLE. Seit MF-1116 eine echte SCP-Datei im System-Temp (`uft_fe_write_<c>_<h>.scp`), erzeugt mit `src/formats/scp/uft_scp_writer.c` (abgenommen MF-1055, Mutationsmatrix 8 von 8).",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 307
       },
       {
         "key": "drive:0",
         "uft": "drive:0",
-        "ref": "Laufwerksangabe (Wert von -d)",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 251
+        "ref": "expected \u2014 Laufwerksangabe (Wert von -d)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 310
       },
       {
-        "key": "write",
-        "uft": "write",
-        "ref": "doc/using.md: fuer Fluss ist es `rawwrite`, nicht `write` (das kodiert ein Abbild)",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 247
-      },
-      {
-        "key": "{profile}",
-        "uft": "{profile}",
-        "ref": "Profilname (Wert von -c)",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 der Schreibpfad ist seit MF-1047 unerreichbar; die dokumentierte Form ist `rawwrite -s <flux> -d <ziel>`, nicht `write -i <datei>` (P3-342)",
-        "uft_line": 249
+        "key": "rawwrite",
+        "uft": "rawwrite",
+        "ref": "expected \u2014 doc/using.md: `fluxengine rawwrite -s <flux source> -d <flux destination>` schreibt Fluss 'without doing any encoding'. Seit MF-1116 gerufen.",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 306
       }
     ],
     "rpm_argv": [
@@ -160,7 +143,7 @@
         "ref": "expected \u2014 subcommand (exists in current FE)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 895
+        "uft_line": 986
       }
     ],
     "version_argv": [
@@ -170,7 +153,7 @@
         "ref": "expected \u2014 `fluxengine version` subcommand (FE-F6)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 399
+        "uft_line": 456
       }
     ],
     "detect_argv": [
@@ -180,7 +163,7 @@
         "ref": "expected \u2014 detect reuses the rpm subcommand (V1 parity)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 943
+        "uft_line": 1034
       }
     ],
     "timing": [
