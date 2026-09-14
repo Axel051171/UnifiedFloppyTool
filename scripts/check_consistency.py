@@ -1021,6 +1021,32 @@ def main() -> int:
         import audit_dtc_unveraendert as _du
         all_errors.append(("dtc-Bestand unveraendert", _du.check(repo)))
 
+        # 81. Kategorie (MF-1134): eine Schreibzusage braucht einen
+        # Durchschreibfall.
+        #
+        # `test_capability_manifest.c` prueft `plugin->write_track !=
+        # NULL` — das belegt einen Funktionszeiger, nicht dass die
+        # Aenderung die Datei erreicht. Genau das ist P3-154.
+        #
+        # Gemessen im Feld `.capabilities`: 59 Plugins sagen
+        # `UFT_FORMAT_CAP_WRITE` zu, 9 haben einen Fall, 50 nicht. Die
+        # 50 stehen als benannte Schuld in
+        # `docs/schreibfaelle_baseline.txt`; rot wird nur, was NEU
+        # hinzukommt oder was einen Fall bekommen hat, ohne aus der
+        # Grundlinie zu verschwinden.
+        #
+        # Selbsttest 6/6, Rotbeweis am echten Baum gefuehrt:
+        # 0 -> 1 -> 0, als eine Zeile aus der Grundlinie fiel.
+        #
+        # Die Messung laeuft ausdruecklich NICHT per Datei-grep:
+        # `src/formats/mgt/uft_mgt.c` nennt `UFT_FORMAT_CAP_WRITE` in
+        # einem MF-1006-Kommentar NEBEN dem Feld, und ein grep sieht
+        # dort eine Zusage, die im Feld nicht steht — gemessen 62 gegen
+        # 59.
+        import audit_schreibfaelle as _sf
+        all_errors.append(("Schreibzusage ohne Durchschreibfall",
+                           _sf.check(repo)))
+
         # 44. Kategorie (MF-742): Quarantaene-Stand, Prosa gegen Messung.
         #
         # Die Zeile „Stand …: N vollzogen, M vorgemerkt, K aufgeloest"

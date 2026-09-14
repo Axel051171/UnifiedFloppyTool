@@ -1,0 +1,61 @@
+# Grundlinie: Plugins mit UFT_FORMAT_CAP_WRITE, die (noch)
+# keinen Durchschreibfall haben. Erzeugt von
+# scripts/audit_schreibfaelle.py --schreibe-grundlinie.
+#
+# Eine Zeile hier ist eine OFFENE SCHULD, kein Freibrief:
+# test_capability_manifest.c prueft nur, dass
+# plugin->write_track != NULL ist — nicht, dass die
+# Aenderung die Datei erreicht (P3-154). Wer einen Fall
+# ergaenzt, nimmt die Zeile heraus.
+#
+# NEUE Zusagen ohne Fall faerben das Tor rot.
+2img
+adf
+adf_arc
+adl
+akai_s900
+apridisk
+atr
+cfi
+d13
+d67
+d71
+d77
+d80
+d81
+d82
+dc42
+dim
+dim_atari
+do
+dsk_cpc
+edk
+fdi
+fdi_pc98
+fds
+hfe
+img
+jv1
+jv3
+jvc
+korg_dss1
+lisa_twiggy
+micropolis
+msx_disk
+nfd
+northstar
+opus
+pdp
+sad
+sam
+ssd
+st
+syn
+t1k
+tan
+trd
+v9t9
+vdk
+victor9k
+xdm86
+xfd
