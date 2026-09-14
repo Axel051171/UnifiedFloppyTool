@@ -43,7 +43,18 @@
  *
  * `kor_c` liegt doppelt vor, als IMD **und** als HFE — dieselbe
  * Diskette, zwei Formate. Die IMD liefert 800 Sektoren; die HFE liefert
- * **null** und je Spur einen Bitstrom von 12 544 bzw. 12 382 Byte.
+ * **null** und je Spur einen Bitstrom.
+ *
+ * **BERICHTIGT MF-1125.** Hier stand „je Spur einen Bitstrom von 12 544
+ * bzw. 12 382 Byte" — und diese zwei Zahlen waren das Erzeugnis eines
+ * Lesefehlers, nicht eine Eigenschaft der Datei. Alle 40 Spurlaengen
+ * (24 922..24 930) sind keine 512er-Vielfachen; `deinterleave_track()`
+ * gab Seite 0 deshalb den ganzen Schlussblock (12 544 Byte, davon
+ * 79..83 Byte **Polster als Fluss**) und Seite 1 nur den Ueberhang
+ * (12 378..12 386, also 79..83 **echte Byte verloren**). Richtig ist
+ * beidseitig `track_len / 2` = 12 461..12 465. Die Zusage unten liest
+ * die Erwartung jetzt aus der Spurtabelle statt aus einer Zahl in
+ * dieser Datei.
  *
  * **Das ist kein Defekt.** HFE ist ein Bitstromformat; Sektoren
  * entstehen dort erst durch einen Dekoder. P3-326 haelt genau diesen
@@ -258,8 +269,35 @@ int main(void)
     if (uft_format_plugin_hfe.open(&disk, pfad, true) != UFT_OK) {
         pruefe("kor_c: open liest die echte HFE", 0, pfad);
     } else {
-        unsigned spuren = 0, mit_strom = 0;
+        unsigned spuren = 0, mit_strom = 0, schief = 0;
         size_t kleinster = (size_t)-1, groesster = 0;
+        /* MF-1125: die Erwartung kommt aus der SPURTABELLE der Datei,
+         * nicht aus einer Zahl in dieser Zeile. `track_len` ist die
+         * Summe der echten Byte BEIDER Seiten, je Seite also die
+         * Haelfte. Vorher stand hier `kleinster > 10000 && groesster <
+         * 20000` — ein Tor, das 20 000 Byte breit war, waehrend der
+         * Fehler 83 Byte gross ist (Gestalt MF-1000 / Tor 64): es
+         * konnte nicht rot werden. */
+        unsigned halb[KOR_C_ZYL];
+        memset(halb, 0, sizeof halb);
+        {
+            FILE *lf = fopen(pfad, "rb");
+            if (lf) {
+                unsigned char k[512];
+                if (fread(k, 1, sizeof k, lf) == sizeof k) {
+                    const long lut = (long)((unsigned)k[18]
+                                            | ((unsigned)k[19] << 8)) * 512L;
+                    if (fseek(lf, lut, SEEK_SET) == 0)
+                        for (c = 0; c < KOR_C_ZYL; c++) {
+                            unsigned char e[4];
+                            if (fread(e, 1, 4, lf) != 4) break;
+                            halb[c] = (unsigned)(((unsigned)e[2]
+                                       | ((unsigned)e[3] << 8)) / 2u);
+                        }
+                }
+                fclose(lf);
+            }
+        }
         for (c = 0; c < KOR_C_ZYL; c++)
             for (h = 0; h < KOR_C_KOEPFE; h++) {
                 uft_track_t t;
@@ -271,23 +309,35 @@ int main(void)
                     mit_strom++;
                     if (t.raw_size < kleinster) kleinster = t.raw_size;
                     if (t.raw_size > groesster) groesster = t.raw_size;
+                    if (halb[c] == 0 || t.raw_size != (size_t)halb[c])
+                        schief++;
                 }
                 uft_track_release(&t);
             }
         uft_format_plugin_hfe.close(&disk);
 
-        snprintf(det, sizeof det, "%u Spuren, %u mit Bitstrom, %u..%u Byte",
+        snprintf(det, sizeof det,
+                 "%u Spuren, %u mit Bitstrom, %u..%u Byte, %u != track_len/2",
                  spuren, mit_strom, (unsigned)(mit_strom ? kleinster : 0),
-                 (unsigned)groesster);
+                 (unsigned)groesster, schief);
         /* HFE ist ein BITSTROMFORMAT. Null Sektoren sind hier richtig;
          * geprueft wird der Strom (P3-326 haelt genau diesen Fehlschluss
-         * fest). */
-        pruefe("kor_c HFE: alle 80 Spuren liefern einen Bitstrom - bei "
-               "einem Bitstromformat ist das die richtige Antwort, nicht "
-               "Sektoren",
+         * fest).
+         *
+         * MF-1125: alle 40 Spurlaengen dieser Datei (24 922..24 930) sind
+         * KEINE 512er-Vielfachen, und der alte Spurschluss lag deshalb in
+         * jeder Spur daneben — Seite 0 kam mit 12 544 Byte zurueck
+         * (79..83 Byte POLSTER als Fluss), Seite 1 mit 12 378..12 386
+         * (79..83 echte Byte verloren). Richtig sind beide Seiten
+         * 12 461..12 465 = `track_len / 2`. Ueber 40 Spuren: rund 3250
+         * Byte Polster als Fluss gemeldet und rund 3250 echte Byte
+         * verloren. */
+        pruefe("kor_c HFE: alle 80 Spuren liefern einen Bitstrom, und jede "
+               "Seite ist genau track_len/2 lang - bei einem Bitstromformat "
+               "ist das die richtige Antwort, nicht Sektoren",
                spuren == KOR_C_ZYL * KOR_C_KOEPFE
-               && mit_strom == spuren && kleinster > 10000
-               && groesster < 20000, det);
+               && mit_strom == spuren && schief == 0
+               && kleinster > 10000 && groesster < 20000, det);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

@@ -128,12 +128,27 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
              * Dateiende von 2049024. Absturz auf einer GUELTIGEN Datei,
              * gefunden von tests/test_convert_fuzz.c.
              *
-             * Belegt durch den Leser, der es richtig macht:
+             * Belegt durch die Datei selbst: eine Amiga-DD-Spur hat rund
+             * 12500 Byte je Seite, 25336 ist das Doppelte.
+             *
+             * BERICHTIGT MF-1125. Hier stand zusaetzlich: „Belegt durch
+             * den Leser, der es richtig macht:
              * src/formats/hfe/uft_hfe.c::deinterleave_track schreitet
              * `pos += 512` und gibt jeder Seite 256 Byte, also
-             * Gesamtlaenge / 2. Und durch die Datei selbst: eine
-             * Amiga-DD-Spur hat rund 12500 Byte je Seite, 25336 ist das
-             * Doppelte. */
+             * Gesamtlaenge / 2." Der Satz stimmte fuer die VOLLEN
+             * Bloecke und nicht fuer den Rest: bei `track_len = 25336`
+             * bleiben 248 Byte, und `deinterleave_track()` gab sie
+             * ungeteilt der Seite 1 — Seite 0 verlor ihre letzten 124
+             * echten Bytes, Seite 1 bekam 124 Byte ECHTEN FLUSS DER
+             * ANDEREN SEITE plus 124 Byte deren Polster. Gemessen:
+             * 12544 statt 12668 und 12792 statt 12668.
+             *
+             * Der genannte Leser war also der einzige im Baum, der es
+             * FALSCH machte; richtig war und ist `hfe_deinterleave_track()`
+             * hier. Ein Kommentar, der eine ANDERE Datei fuer geprueft
+             * erklaert, ist eine Aussage ueber diese Datei — und diese
+             * war ungeprueft. Behoben und festgehalten in
+             * `tests/test_hfe_spurende.c`. */
             const uint16_t head_len = (uint16_t)(track_len / 2);
             if (head_len == 0) continue;
             uint8_t* track_bits = malloc(head_len);

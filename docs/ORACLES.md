@@ -695,11 +695,56 @@ dafür selbstbeschreibend und taugt als Vergleichsziel.
 
 **Noch nicht registriert, und der Grund ist benannt:** ein Oracle
 braucht einen Test, der es befragt. Der schärfere Vergleich — Bitstrom
-→ **Sektoren** über `d77` — geht am einzigen freien HFE nicht, weil
+→ **Sektoren** über `d77` — geht am einzigen **freien** HFE nicht, weil
 `gw_amigados.hfe` **Amiga**-MFM ist und `d77` IBM-Sektorstruktur
-erwartet; `tests/corpus/` ist auf dieser Maschine leer. Was fehlt, ist
-ein IBM-MFM-HFE im freien Korpus. Der reine Bitstromvergleich braucht
-es nicht und ist der erste Schritt.
+erwartet. Der reine Bitstromvergleich braucht es nicht und ist der
+erste Schritt.
+
+**BERICHTIGT MF-1125 — hier stand „`tests/corpus/` ist auf dieser
+Maschine leer", und das war zweifach falsch.** Gemessen hat das
+Verzeichnis **25** Einträge, und darunter liegt genau die Datei, die
+der Satz daneben als fehlend erklärte:
+`tests/corpus/kor_c/OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe`,
+1 004 544 Byte, `track_encoding = 0x00` = **ISOIBM_MFM** — ein
+IBM-MFM-HFE, 40 Spuren × 2 Seiten, Kaypro DSDD 10×512. Und daneben
+liegt dieselbe Diskette als **IMD mit 800 Sektoren**, also eine
+unabhängige Wahrheit auf Sektorebene.
+
+Damit ist der schärfere Weg **nicht** von einer Beschaffung abhängig,
+sondern nur noch Arbeit: `image_converter -i <kor_c.hfe> -o x.d77`,
+dann die Sektoren gegen die IMD halten. Das ist der Vergleich, den
+P3-389 Punkt (2) verlangt, und er ist gegen die Tail-Defekte des
+HFE-Lesers robust, weil Sektordaten in den vollen Blöcken liegen und
+nicht im Polster. Nicht gemacht — benannt, damit „später" nicht „nie"
+heißt. **Der Satz war die Klasse „Aufzählung statt Messung": ich hatte
+nicht nachgesehen.**
+
+**NACHTRAG MF-1125 — der erste Schritt ist gegangen, und er schliesst
+den HFE-Weg AUS: sein HFE-Leser ist gemessen falsch.** Nicht als
+Oracle für HFE registrieren. Zwei Befunde in
+`disk_image/image_hfe.cpp`:
+
+1. **Er liest hinter seinen eigenen Puffer.** Die Schleife lautet
+   `for (blk_id = 0; blk_id <= num_blocks; blk_id++)` — eine Runde zu
+   viel; `buf` ist `num_blocks * 0x200` Byte gross, und der letzte
+   Durchgang greift bei `buf.data() + num_blocks * 0x200` zu.
+2. **Er nimmt dem letzten Block volle 256 Byte je Seite** (Z. 86,
+   `size = (blk_id * hfe_blk_size < track_len) ? hfe_blk_size / 2 :
+   fraction / 2`) und liest damit das Polster als Fluss.
+
+Aufgerechnet an Spur 0/0 von `gw_amigados.hfe`, restlos: UFT nach
+MF-1125 **50 526** Übergänge, fdc_bitstream meldet **50 855**,
+dazwischen **264** aus 132 Byte Polster `0x88` und **65** aus
+124 Byte hinter dem Puffer. 50 526 + 264 + 65 = 50 855.
+
+**Warum das hier steht und nicht nur in P3-389:** ein Test, der 50 855
+festgenagelt hätte, hätte einen Defekt festgenagelt — und wer beim
+Auseinanderlaufen „nach oben" korrigiert, baut den Pufferüberlauf des
+Orakels in den eigenen Leser ein. Für den Spurschluss einer HFE gibt es
+im Feld **keinen** brauchbaren fremden Zeugen; vier Umsetzungen geben
+vier Antworten (P3-391). Als Bitstrom-Zeuge bleibt fdc_bitstream
+brauchbar — aber über `.mfm` aus seinem eigenen `create_mfm_image`,
+nicht über HFE, und dafür fehlt UFT das `.mfm`-Plugin (P3-349).
 
 ## Was ausdrücklich **kein** Oracle ist
 

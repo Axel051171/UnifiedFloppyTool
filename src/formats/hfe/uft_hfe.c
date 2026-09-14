@@ -414,84 +414,137 @@ size_t hfe_v3_decode(const uint8_t *in, size_t in_len,
     return out;
 }
 
-/**
- * @brief De-Interleave Track-Daten
- * 
- * HFE speichert Side 0 und Side 1 interleaved in 256-Byte Blöcken:
- * [Side0-256][Side1-256][Side0-256][Side1-256]...
- */
-static void deinterleave_track(const uint8_t* interleaved, size_t total_len,
-                               uint8_t* side0, uint8_t* side1,
-                               size_t* side0_len, size_t* side1_len) {
-    *side0_len = 0;
-    *side1_len = 0;
-    
-    size_t pos = 0;
-    while (pos + 512 <= total_len) {
-        // Erste 256 Bytes = Side 0
-        memcpy(side0 + *side0_len, interleaved + pos, 256);
-        *side0_len += 256;
-        
-        // Zweite 256 Bytes = Side 1
-        memcpy(side1 + *side1_len, interleaved + pos + 256, 256);
-        *side1_len += 256;
-        
-        pos += 512;
-    }
-    
-    // Rest
-    if (pos < total_len) {
-        size_t remaining = total_len - pos;
-        if (remaining >= 256) {
-            memcpy(side0 + *side0_len, interleaved + pos, 256);
-            *side0_len += 256;
-            remaining -= 256;
-            pos += 256;
-        }
-        if (remaining > 0) {
-            memcpy(side1 + *side1_len, interleaved + pos, remaining);
-            *side1_len += remaining;
-        }
-    }
+/* ────────────────────────────────────────────────────────────────────────────
+ * Spurbereich, Seitenlaengen, Ver- und Entschraenkung   (MF-1125)
+ *
+ * Eine HFE-v1-Spur liegt in 512-Byte-PAAREN: 256 Byte Seite 0, dann
+ * 256 Byte Seite 1. `track_len` aus der Spurtabelle ist die Summe der
+ * ECHTEN Bytes BEIDER Seiten — nicht die Groesse des belegten
+ * Dateibereichs. Ist sie kein Vielfaches von 512, traegt das letzte Paar
+ * je Seite einen kurzen echten Teil und dahinter Polster.
+ *
+ * Gemessen an `tests/corpus_free/gw_amigados.hfe` (Greaseweazle), in
+ * ALLEN 80 Zylindern gleich, `track_len = 25336`:
+ *
+ *     Blockbyte [  0..124)  124 x 0x55   Seite 0, echte Daten
+ *     Blockbyte [124..256)  132 x 0x88   Seite 0, Polster
+ *     Blockbyte [256..380)  124 x 0x55   Seite 1, echte Daten
+ *     Blockbyte [380..512)  132 x 0x88   Seite 1, Polster
+ *
+ * und 25336 = 49*512 + 2*124. Je Seite 12668 Byte = 101344 Zellen, bei
+ * 1976 ns je Zelle 200,26 ms — eine Umdrehung bei 300 U/min.
+ *
+ * Der alte `deinterleave_track()` lief `pos += 512` und gab den REST
+ * ungeteilt der Seite 1 (`if (remaining >= 256) … if (remaining > 0)
+ * side1 += remaining`). Bei 248 fiel der erste Zweig aus: Seite 1 bekam
+ * Blockbyte [0..248) — Seite 0s 124 echte Bytes plus 124 Byte von
+ * Seite 0s Polster. Seite 0 verlor ihre letzten 124 echten Bytes, still,
+ * mit UFT_OK. Ueber 80 Zylinder: 79 360 Zellen weg, 79 360 fremde Zellen
+ * als eigene gemeldet.
+ *
+ * Und Seite 1s echte Schlussbytes liegen bei Blockbyte [256..380), also
+ * HINTER dem deklarierten Ende — wer nur `track_len` Byte einliest, hat
+ * sie nie im Speicher. Gelesen wird deshalb `hfe_spanne()`.
+ *
+ * Das richtige Gesetz stand die ganze Zeit in
+ * `include/uft/uft_hfe_format.h::hfe_deinterleave_track()`, das die
+ * Laenge JE SEITE nimmt; die Wandlerpfade benutzen es seit MF-526 mit
+ * `head_len = track_len / 2`. Belegt: tests/test_hfe_spurende.c.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Der 512-ausgerichtete Bereich, den eine Spur in der Datei belegt. */
+static size_t hfe_spanne(size_t track_len) {
+    return ((track_len + HFE_BLOCK_SIZE - 1u) / HFE_BLOCK_SIZE) * HFE_BLOCK_SIZE;
 }
 
 /**
- * @brief Interleave Track-Daten für Schreiben
+ * @brief Echte Byte je Seite aus der deklarierten Gesamtlaenge.
+ *
+ * Bei UNGERADER `track_len` ist die Aufteilung im Format nicht
+ * darstellbar; das Mehr geht an Seite 0. Der Fall ist NICHT belegt, und
+ * das ist gemessen statt vermutet: von den 80 Spuren in
+ * `gw_amigados.hfe` hat **keine** eine ungerade Laenge (alle 25336).
+ * Deshalb faengt die Mutationsmatrix zu MF-1125 eine Verwechslung der
+ * beiden Rueckgaben hier auch nicht — bei gerader Laenge sind sie gleich.
+ * Benannt statt stillschweigend gerundet.
  */
-static size_t interleave_track(const uint8_t* side0, size_t side0_len,
-                               const uint8_t* side1, size_t side1_len,
-                               uint8_t* output) {
-    size_t out_pos = 0;
-    size_t s0_pos = 0;
-    size_t s1_pos = 0;
-    
-    while (s0_pos < side0_len || s1_pos < side1_len) {
-        // Side 0 Block (256 Bytes)
-        size_t s0_chunk = (side0_len - s0_pos >= 256) ? 256 : (side0_len - s0_pos);
-        if (s0_chunk > 0) {
-            memcpy(output + out_pos, side0 + s0_pos, s0_chunk);
-            s0_pos += s0_chunk;
-        }
-        // Padding falls nötig
-        if (s0_chunk < 256) {
-            memset(output + out_pos + s0_chunk, 0x00, 256 - s0_chunk);
-        }
-        out_pos += 256;
-        
-        // Side 1 Block (256 Bytes)
-        size_t s1_chunk = (side1_len - s1_pos >= 256) ? 256 : (side1_len - s1_pos);
-        if (s1_chunk > 0) {
-            memcpy(output + out_pos, side1 + s1_pos, s1_chunk);
-            s1_pos += s1_chunk;
-        }
-        // Padding falls nötig
-        if (s1_chunk < 256) {
-            memset(output + out_pos + s1_chunk, 0x00, 256 - s1_chunk);
-        }
-        out_pos += 256;
+static void hfe_seitenlaengen(size_t track_len, size_t* s0, size_t* s1) {
+    *s0 = (track_len + 1u) / 2u;
+    *s1 = track_len / 2u;
+}
+
+/**
+ * @brief Holt EINE Seite aus dem verschraenkten Bereich.
+ *
+ * @param interleaved  Beginn des Spurbereichs
+ * @param verfuegbar   wie viele Byte davon wirklich eingelesen wurden
+ * @param seite        0 oder 1
+ * @param soll         echte Byte dieser Seite (aus hfe_seitenlaengen)
+ * @param aus          Ziel, mindestens `soll` Byte
+ * @return             wie viele Byte geliefert wurden (<= soll)
+ *
+ * Liefert nie mehr, als die Datei hergibt — eine kurze Datei ergibt einen
+ * kurzen Strom, keine erfundenen Bytes.
+ */
+static size_t hfe_seite_lesen(const uint8_t* interleaved, size_t verfuegbar,
+                              int seite, size_t soll, uint8_t* aus) {
+    const size_t halb = HFE_BLOCK_SIZE / 2u;
+    size_t hin = 0;
+    for (size_t blk = 0; hin < soll; blk++) {
+        const size_t quelle = blk * HFE_BLOCK_SIZE + (seite ? halb : 0u);
+        size_t n = soll - hin;
+        if (n > halb) n = halb;
+        const size_t da = (verfuegbar > quelle) ? (verfuegbar - quelle) : 0u;
+        if (n > da) n = da;
+        if (n == 0) break;                     /* Datei endet vor dem Soll */
+        memcpy(aus + hin, interleaved + quelle, n);
+        hin += n;
+        if (n < halb) break;                   /* kurz kann nur der letzte sein */
     }
-    
-    return out_pos;
+    return hin;
+}
+
+/**
+ * @brief Ersetzt die echten Byte EINER Seite im verschraenkten Bereich.
+ *
+ * Tritt an die Stelle des alten `interleave_track()`, das den Bereich aus
+ * beiden Seiten NEU aufbaute. Das hatte zwei Folgen, beide gemessen:
+ * es schrieb immer ganze 512er-Paare (`out_pos += 256` zweimal je Runde)
+ * in einen `malloc(track_len)`-Puffer und lief damit bei 25336 Byte
+ * Puffer bis 25600 — **264 Byte Heap-Ueberlauf**, im Vorzustand als
+ * STATUS_HEAP_CORRUPTION (0xC0000374) reproduzierbar; und es polsterte
+ * mit 0x00, wodurch das vorhandene Polster (0x88 bei Greaseweazle)
+ * still ueberschrieben wurde. In-place ersetzen laesst beides weg:
+ * Polster und Nachbarseite bleiben Byte fuer Byte stehen (MF-931 Regel 4).
+ *
+ * @return wie viele Byte uebernommen wurden (<= soll)
+ */
+static size_t hfe_seite_ersetzen(uint8_t* interleaved, size_t spanne,
+                                 int seite, size_t soll, const uint8_t* quelle) {
+    const size_t halb = HFE_BLOCK_SIZE / 2u;
+    size_t hin = 0;
+    for (size_t blk = 0; hin < soll; blk++) {
+        const size_t ziel = blk * HFE_BLOCK_SIZE + (seite ? halb : 0u);
+        /* MF-1125: diese Schranke ist gegen die PUFFERGROESSE nachgemessen
+         * REDUNDANT und steht trotzdem hier. Der Puffer ist `hfe_spanne()`
+         * gross, `soll <= track_len/2 <= spanne/2`, also braucht es
+         * hoechstens `spanne/512` Bloecke, und das letzte Ziel endet bei
+         * `spanne - 256 + 256`. Gemessen: bei track_len 25336 endet der
+         * letzte Schreibvorgang bei 25468 in einem 25600-Byte-Puffer, bei
+         * 1736 bei 1892 in 2048. Die Mutationsmatrix zu MF-1125 hat sie
+         * deshalb NICHT gefangen — benannt statt als Treffer verbucht
+         * (Klasse MF-1031). Tragend wird sie, sobald jemand den Puffer auf
+         * `schreiben` verkleinert; dann haelt sie, was der Name sagt. */
+        if (ziel >= spanne) break;
+        size_t n = soll - hin;
+        if (n > halb) n = halb;
+        if (n > spanne - ziel) n = spanne - ziel;
+        if (n == 0) break;
+        memcpy(interleaved + ziel, quelle + hin, n);
+        hin += n;
+        if (n < halb) break;
+    }
+    return hin;
 }
 
 // ============================================================================
@@ -812,50 +865,55 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
     // Track-Daten lesen
     size_t track_pos = (size_t)entry->offset * HFE_BLOCK_SIZE;
     size_t track_len = entry->track_len;
-    
+
+    /* MF-1125: gelesen wird der auf 512 AUFGERUNDETE Bereich, nicht
+     * `track_len`. Seite 1s echte Schlussbytes liegen im letzten Paar bei
+     * Blockbyte [256 .. 256+rest/2) und damit hinter dem deklarierten
+     * Ende; mit `track_len` Byte im Puffer sind sie unerreichbar.
+     * Begruendung und Messung bei `hfe_spanne()`. */
+    const size_t spanne = hfe_spanne(track_len);
+
     if (fseek(pdata->file, (long)track_pos, SEEK_SET) != 0) {
         return UFT_ERROR_FILE_SEEK;
     }
-    
+
     // Interleaved Daten lesen
-    uint8_t* interleaved = malloc(track_len);
+    uint8_t* interleaved = malloc(spanne);
     if (!interleaved) {
         return UFT_ERROR_NO_MEMORY;
     }
-    
-    if (fread(interleaved, track_len, 1, pdata->file) != 1) {
+
+    /* Byteweise, weil die Datei am Ende der letzten Spur schon bei
+     * `track_len` enden darf — das Polster dahinter ist nicht Teil der
+     * Zusage. Zu wenig fuer die DEKLARIERTE Laenge bleibt ein Fehler, wie
+     * bisher. Was zwischen `track_len` und `spanne` fehlt, wird NICHT
+     * gefuellt: `hfe_seite_lesen()` liefert dann einen kurzen Strom
+     * statt erfundener Bytes. */
+    const size_t da = fread(interleaved, 1, spanne, pdata->file);
+    if (da < track_len) {
         free(interleaved);
         return UFT_ERROR_FILE_READ;
     }
-    
-    // De-Interleave
-    uint8_t* side0 = malloc(track_len);
-    uint8_t* side1 = malloc(track_len);
-    if (!side0 || !side1) {
+
+    // De-Interleave: nur die gewuenschte Seite
+    size_t soll0, soll1;
+    hfe_seitenlaengen(track_len, &soll0, &soll1);
+    const size_t soll = (head == 0) ? soll0 : soll1;
+
+    uint8_t* raw_data = malloc(soll ? soll : 1u);
+    if (!raw_data) {
         free(interleaved);
-        free(side0);
-        free(side1);
         return UFT_ERROR_NO_MEMORY;
     }
-    
-    size_t side0_len, side1_len;
-    deinterleave_track(interleaved, track_len, side0, side1, &side0_len, &side1_len);
+
+    const size_t raw_size = hfe_seite_lesen(interleaved, da, head, soll, raw_data);
     free(interleaved);
-    
-    // Gewünschte Seite auswählen
-    uint8_t* raw_data;
-    size_t raw_size;
-    
-    if (head == 0) {
-        raw_data = side0;
-        raw_size = side0_len;
-        free(side1);
-    } else {
-        raw_data = side1;
-        raw_size = side1_len;
-        free(side0);
+    if (raw_size == 0) {
+        free(raw_data);
+        track->status = UFT_TRACK_UNFORMATTED;
+        return UFT_OK;
     }
-    
+
     // Bit-Reverse (HFE ist LSB-first, wir verwenden MSB-first)
     for (size_t i = 0; i < raw_size; i++) {
         raw_data[i] = bit_reverse(raw_data[i]);
@@ -868,8 +926,9 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
         hfe_header_track_encoding(&pdata->header, cylinder, head));
 
     /* MF-596: alles, was unten an die Spur geht, ist unser eigener Speicher
-     * — `side0`/`side1` aus dem De-Interleave, im v3-Fall `dbits`/`dweak`
-     * aus `hfe_v3_decode()`. `uft_track_release()` gibt aber NUR frei, wenn
+     * — `raw_data` aus `hfe_seite_lesen()` (bis MF-1125 hiess es hier
+     * `side0`/`side1`), im v3-Fall `dbits`/`dweak` aus
+     * `hfe_v3_decode()`. `uft_track_release()` gibt aber NUR frei, wenn
      * diese Fahne steht (uft_unified_types.c:256), und diese Datei kannte
      * sie an keiner Stelle.
      *
@@ -992,69 +1051,62 @@ static uft_error_t hfe_write_track(uft_disk_t* disk, int cylinder, int head,
         return UFT_ERROR_FILE_SEEK;
     }
     
-    uint8_t* interleaved = malloc(track_len);
+    /* MF-1125: derselbe aufgerundete Bereich wie auf der Leseseite
+     * (MF-931 Regel 4). Der alte Weg — beide Seiten entschraenken, eine
+     * ersetzen, alles neu verschraenken — schrieb ganze 512er-Paare in
+     * einen `malloc(track_len)`-Puffer und lief 264 Byte darueber
+     * hinaus; und er polsterte mit 0x00, wodurch das vorhandene Polster
+     * still verschwand. Jetzt wird der Bereich eingelesen und NUR die
+     * echten Byte der genannten Seite darin ersetzt. */
+    const size_t spanne = hfe_spanne(track_len);
+
+    uint8_t* interleaved = malloc(spanne);
     if (!interleaved) {
         return UFT_ERROR_NO_MEMORY;
     }
-    
-    if (fread(interleaved, track_len, 1, pdata->file) != 1) {
+
+    const size_t da = fread(interleaved, 1, spanne, pdata->file);
+    if (da < track_len) {
         free(interleaved);
         return UFT_ERROR_FILE_READ;
     }
-    
-    // De-Interleave
-    uint8_t* side0 = malloc(track_len);
-    uint8_t* side1 = malloc(track_len);
-    if (!side0 || !side1) {
-        free(interleaved);
-        free(side0);
-        free(side1);
-        return UFT_ERROR_NO_MEMORY;
-    }
-    
-    size_t side0_len, side1_len;
-    deinterleave_track(interleaved, track_len, side0, side1, &side0_len, &side1_len);
-    
+    /* Was die Datei hinter `track_len` nicht hergibt, ist Polster und
+     * wird nicht erfunden — aber der Puffer muss definiert sein, bevor er
+     * zurueckgeschrieben wird. Zurueckgeschrieben werden deshalb nur die
+     * Byte, die auch gelesen wurden. */
+    const size_t schreiben = da;
+
     // Neue Daten einfügen (mit Bit-Reverse)
     uint8_t* new_data = malloc(track->raw_size);
     if (!new_data) {
         free(interleaved);
-        free(side0);
-        free(side1);
         return UFT_ERROR_NO_MEMORY;
     }
-    
+
     for (size_t i = 0; i < track->raw_size; i++) {
         new_data[i] = bit_reverse(track->raw_data[i]);
     }
-    
-    if (head == 0) {
-        size_t copy_len = (track->raw_size < side0_len) ? track->raw_size : side0_len;
-        memcpy(side0, new_data, copy_len);
-    } else {
-        size_t copy_len = (track->raw_size < side1_len) ? track->raw_size : side1_len;
-        memcpy(side1, new_data, copy_len);
-    }
-    
+
+    size_t soll0, soll1;
+    hfe_seitenlaengen(track_len, &soll0, &soll1);
+    size_t soll = (head == 0) ? soll0 : soll1;
+    if (track->raw_size < soll) soll = track->raw_size;
+
+    hfe_seite_ersetzen(interleaved, schreiben, head, soll, new_data);
+
     free(new_data);
-    
-    // Re-Interleave
-    interleave_track(side0, side0_len, side1, side1_len, interleaved);
-    
-    free(side0);
-    free(side1);
-    
+
     // Schreiben
     if (fseek(pdata->file, (long)track_pos, SEEK_SET) != 0) {
         free(interleaved);
         return UFT_ERROR_FILE_SEEK;
     }
-    
-    if (fwrite(interleaved, track_len, 1, pdata->file) != 1) {
+
+    if (fwrite(interleaved, 1, schreiben, pdata->file) != schreiben) {
         free(interleaved);
         return UFT_ERROR_FILE_WRITE;
     }
-    
+
     free(interleaved);
     fflush(pdata->file);
     

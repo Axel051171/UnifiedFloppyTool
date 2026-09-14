@@ -2140,6 +2140,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_hfe_spurende")
+        # MF-1125: der Spurschluss gehoert beiden Seiten. Braucht denselben
+        # Korpuspfad wie test_corpus_hfe — zwei der neun Zusagen messen an
+        # `gw_amigados.hfe`, die uebrigen an einem synthetischen Abbild mit
+        # einer Spurlaenge, die KEIN Vielfaches von 512 ist.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_scp")
         # T1b cross-tool corpus: SCP flux by greaseweazle (MF-376, local-only image)
         target_sources(${test_name} PRIVATE
