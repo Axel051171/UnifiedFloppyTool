@@ -102,12 +102,72 @@ def mit_strings(text: str) -> str:
 
 
 def leser() -> dict[str, set[str]]:
-    """Dateisystem-Leser -> seine exportierten Symbole."""
+    """Dateisystem-Leser -> seine exportierten Symbole.
+
+    ── MF-1123: die Leiterzeilen kommen aus der MESSUNG, nicht aus einem
+    Verzeichnis ──────────────────────────────────────────────────────
+
+    Hier stand `for p in sorted(fs.glob("*.c"))` — also ausschliesslich
+    `src/fs/`. Die Leiter hatte deshalb ACHT Zeilen, weil dieses
+    Verzeichnis acht `.c`-Dateien hat, waehrend `kandidaten()` daneben
+    **32** weitere Dateisystem-Leser aus `git ls-files` meldete. Eine
+    Umsetzung ausserhalb von `src/fs/` konnte damit NIEMALS in der
+    Leiter erscheinen, egal wie gut sie geprueft war.
+
+    **MF-710 hat nur die eine Haelfte behoben.** Es hat gemessen, dass
+    die Kennzahl 8 zaehlte und der Baum 34 hat, und daraufhin die
+    KANDIDATENSUCHE auf `git ls-files` umgestellt — die Zeilenmenge der
+    Tafel blieb der Glob. Das ist die Klasse MF-636 („Dateimengen kommen
+    aus git, nicht aus gepflegten Listen") eine Etage hoeher: nicht eine
+    gepflegte Liste, sondern ein gepflegtes VERZEICHNIS.
+
+    Auf Eigentuemer-Anweisung (2026-09-14): „Die 32 Kandidaten
+    aufnehmen, auch wenn sie zunaechst alle auf FS-T0 landen. Eine
+    Leiter mit 40 ehrlichen Eintraegen sagt mehr als eine mit acht."
+
+    **Die Stufe wird dabei NICHT gesetzt, sondern gemessen.** Die
+    Kandidaten laufen durch dieselbe Logik in `erhebe()` wie die acht
+    aus `src/fs/`: wer kein Test nennt, bekommt FS-T0 — aber wenn ein
+    Test seine Symbole ruft, bekommt er die Stufe, die ihm zusteht. Sie
+    alle auf FS-T0 zu SETZEN waere eine Annahme; „zunaechst alle" ist
+    die Erwartung des Eigentuemers, und die Messung entscheidet.
+
+    **Die Zahl wird dadurch SCHLECHTER, und das ist die richtige
+    Richtung** (MF-1077/G2): FS-T0 steigt von 1 auf die Zahl der
+    ungepruefften Leser. Eine Leiter, die 32 Umsetzungen nicht zeigt,
+    meldet keine gute Lage, sondern eine unsichtbare.
+
+    Namenskollisionen sind behandelt statt uebergangen: dieser Baum hat
+    35+ Basisnamen-Kollisionen (CLAUDE.md), und zwei Kandidaten mit
+    demselben Stamm wuerden sich in einem `dict` still ueberschreiben —
+    genau die Sorte stiller Verlust, gegen die dieses Werkzeug gebaut
+    ist. Bei einer Kollision traegt der Schluessel deshalb das
+    Verzeichnis mit.
+    """
     aus: dict[str, set[str]] = {}
+    pfade = []
+
     fs = WURZEL / "src" / "fs"
-    for p in sorted(fs.glob("*.c")):
+    pfade.extend(sorted(fs.glob("*.c")))
+
+    # Die 32 aus `git ls-files` — dieselbe Messung, die die Tafel unten
+    # schon als „ungefuehrte Kandidaten" auflistet.
+    for rel, _treffer, _zeilen in kandidaten():
+        p = WURZEL / rel
+        if p.exists():
+            pfade.append(p)
+
+    for p in pfade:
         text = ohne_kommentare(p.read_text(encoding="utf-8", errors="replace"))
-        aus[p.stem] = set(EXPORT.findall(text))
+        name = p.stem
+        if name in aus:
+            # Kollision: qualifizieren, damit keine Zeile die andere
+            # verdeckt.
+            try:
+                name = p.resolve().relative_to(WURZEL).as_posix()[:-2]
+            except ValueError:
+                name = p.parent.name + "/" + p.stem
+        aus[name] = set(EXPORT.findall(text))
     return aus
 
 

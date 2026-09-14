@@ -8,11 +8,11 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 
 | Stufe | Leser | heisst |
 |---|---|---|
-| FS-T0 | 1 | kein Test |
-| FS-T1 | 4 | nur selbst gebaute Eingaben — zirkulaer |
+| FS-T0 | 29 | kein Test |
+| FS-T1 | 8 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
 | FS-T2 | 3 | Korpus von **registrierter** fremder Hand |
-| **gesamt gefuehrt** | **8** | |
+| **gesamt gefuehrt** | **40** | |
 
 Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
 
@@ -20,20 +20,52 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 
 | Leser | Stufe | Tests | woran es haengt |
 |---|---|---|---|
+| `atari_check` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `atari_dos2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `atari_sparta` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `atari_util` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `cpm_fs` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_adf_bam` | **FS-T1** | `test_adf_bam` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_adf_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_amiga_virus_db` | **FS-T1** | `test_amiga_virus_db` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_amigados` | **FS-T2** | `test_adf`, `test_adf_directory_crosstool`, `test_amiga_extract`, `test_amigados_cycle`, `test_amigados_pruefsumme_wird_geprueft`, `test_amigados_treiber_meldet_eintraege` | `xdftool_dd_ofs.adf` stammt von `amitools xdftool 0.8.1 (pip amitools, installiert 2026-08; Version per importlib.metadata.version("amitools") gemessen MF-778)` — im Oracle-Register als `xdftool`, der Beleg ist zitierfaehig |
 | `uft_amigados_extended` | **FS-T1** | `test_amigados_validate` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_atari8_disk` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_atari_dos` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_bam_editor` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_bbc_dfs` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_bootblock_scanner` | **FS-T1** | `test_amigados_validate`, `test_bootblock_scanner` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_cbm_formats` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_cbmdos` | **FS-T2** | `test_cbm_geloeschte_eintraege`, `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
+| `uft_cmd` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_cpm_diskdef` | **FS-T1** | `test_cpm_gegen_libdsk` | liest ein Korpus-Abbild, dessen Manifest keine fremde Hand nennt |
+| `uft_d64_file` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_d64_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_d71_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_d81_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
+| `uft_fat32_mbr` | **FS-T1** | `test_fat_extensions`, `test_mega65_fat32` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_fdi` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_file_ops_extended` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_flex` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_fs_amigados_driver` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_geos` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_m2i` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_mgt` | **FS-T1** | `test_mgt_gegen_mame`, `test_mgt_verzeichnis_vollstaendig` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_msx` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_opus` | **FS-T1** | `test_opd_geometrie` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
+| `uft_scl_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_ssd_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_switch` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_t64` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_tap_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_trd_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 
 ## Kandidaten ausserhalb von `src/fs/` — ungefuehrt (MF-710)
 
 Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser Abschnitt nennt Dateien im uebrigen Baum, die ein **Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier steht, worueber zu entscheiden ist, nicht ein Urteil.
 
-Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **8** Leser, waehrend der Baum **40** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
+Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **40** Leser, waehrend der Baum **72** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
 
 Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`).
 

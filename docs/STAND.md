@@ -9,7 +9,7 @@
 | Kennzahl | Stand | Richtung | Quelle |
 |---|---|---|---|
 | ungeprüfte **Format-Plugins** (T3) | **2** von 86 | runter | `docs/VERIFICATION_TIERS.md` |
-| ungeprüfte **Dateisystem-Leser** | T0 1 · T1 4 · T1b 0 · T2 3 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
+| ungeprüfte **Dateisystem-Leser** | T0 29 · T1 8 · T1b 0 · T2 3 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
 | angebotene **Wandlungspfade** | **15**, davon 7 verlustfrei | rauf | `src/core/uft_roundtrip.c` |
 | leckende Tests | 0 zu halten | null halten | ASan/UBSan in CI |
 | **Bench-Alter je Controller** | keine Hardware (MF-310) | runter | `docs/CAPABILITIES.md` |
@@ -39,7 +39,7 @@
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **7725** Zeilen in **82** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **7726** Zeilen in **82** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
