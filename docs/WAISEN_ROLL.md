@@ -94,7 +94,7 @@ Fortschritt (MF-1077, G2).
 | `uft_myz80_write` | schreiber | verdrahtet | MF-1112 |
 | `uft_qrst_write` | schreiber | verdrahtet | MF-1112 |
 | `uft_logical_write` | schreiber | offen | P3-204 |
-| `uft_posix_write` | schreiber | offen | P3-204 |
+| `uft_posix_write` | schreiber | verdrahtet | MF-1119 |
 | `uft_hardsector_write` | schreiber | verdrahtet | MF-1117 |
 | `uft_ibm3740_write` | schreiber | absicht | MF-1117 |
 | `uft_atx_write` | schreiber | offen | P3-380 |

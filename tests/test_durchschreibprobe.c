@@ -100,10 +100,16 @@ extern const uft_format_plugin_t uft_format_plugin_nanowasp;
 extern const uft_format_plugin_t uft_format_plugin_myz80;   /* MF-1112 */
 extern const uft_format_plugin_t uft_format_plugin_qrst;    /* MF-1112 */
 extern const uft_format_plugin_t uft_format_plugin_hardsector; /* MF-1117 */
+extern const uft_format_plugin_t uft_format_plugin_posix;      /* MF-1119 */
 
 #ifndef UFT_CORPUS_DIR
 #define UFT_CORPUS_DIR "tests/corpus_free"
 #endif
+
+/* MF-1119: Puffer fuer den Inhalt einer Nachbardatei. Eine `.geom` ist
+ * eine Zeile; 128 Byte sind reichlich und die Probe liest hoechstens so
+ * viel, statt eine Groesse anzunehmen. */
+#define POSIX_NB_MAX 128
 
 /* ── Das Muster ──────────────────────────────────────────────────────
  *
@@ -172,6 +178,21 @@ typedef struct {
      * Vertauschung), die Aussage ueber die Dateigroesse war schlicht
      * geraten. */
     int gepackt;
+    /* MF-1119: eine NACHBARDATEI, die neben dem Abbild liegen muss,
+     * damit es sich ueberhaupt oeffnen laesst.
+     *
+     * `posix` ist der erste Pruefling dieser Art: seine Sonde prueft
+     * KEIN Magic, sondern nur, ob eine `.geom` daneben liegt — die
+     * Geometrie steht nicht in der Datei, und ohne sie sagt das Plugin
+     * seit MF-1034 ab statt zu raten (vorher wurde eine Geometrie
+     * ERFUNDEN, und eine 174 848 Byte grosse D64 wurde als 18 x 2 x 9 x
+     * 512 gelesen, wobei 8960 Byte still wegfielen).
+     *
+     * Der Inhalt ist die Zeile, die `uft_posix_write_geometry()`
+     * schreibt: `cyls heads sectors secsize first_sector sides_name`.
+     * Abgelegt wird sie als `<abbildpfad>.geom` — dieselbe Bildung wie
+     * in `get_geom_path()`. NULL heisst: keine Nachbardatei. */
+    const char *nachbardatei;
 } pruefling_t;
 
 static const pruefling_t PRUEFLINGE[] = {
@@ -258,6 +279,27 @@ static const pruefling_t PRUEFLINGE[] = {
      * man einen anderen gewaehlt hat. */
     { "hardsector-dsd", &uft_format_plugin_hardsector, "img",
       77, 2, 26, 128, NULL, 0 },
+    /* MF-1119: der NEUNTE der elf aus MF-930 — und die Anordnung ist
+     * hier absichtlich `outback`, nicht `alt`.
+     *
+     * `alt` waere die bequeme Wahl und haette NICHTS belegt:
+     * `uft_posix_write()` faellt ohne uebergebene Geometrie genau auf
+     * `UFT_LOGI_SIDES_ALT` zurueck, eine `alt`-Probe waere also auch
+     * bei einem Schreiber gruen, der die Anordnung gar nicht kennt.
+     *
+     * `outback` ist die schaerfste der vier: Kopf 0 laeuft vorwaerts,
+     * Kopf 1 RUECKWAERTS (`2 * zylinder - 1 - zyl`). Ein Schreiber, der
+     * immer linear ablegt, legt damit 158 von 160 Spuren an die falsche
+     * Stelle — genau die Zahl, die MF-1034 auf der Leseseite gemessen
+     * hat. Die Probe schreibt jede Spur und liest jeden Sektor zurueck;
+     * eine vertauschte Anordnung faellt daran sofort auf.
+     *
+     * Geometrie 80 x 2 x 9 x 512 = 737 280 Byte, erster Sektor 1 —
+     * dieselbe wie libdsks `ibm720`, an dem MF-1032 die OUTBACK-Regel
+     * abgenommen hat. Endung `raw`, weil die Sonde kein Magic prueft,
+     * sondern die Nachbardatei. */
+    { "posix-outback", &uft_format_plugin_posix, "raw",
+      80, 2, 9, 512, NULL, 0, "80 2 9 512 1 outback" },
 };
 
 static void setze_pfad(uft_disk_t *d, const char *pfad)
@@ -362,6 +404,23 @@ static void probe(const pruefling_t *p)
     pruefe("Pruefabbild angelegt", gebaut, h);
     if (!gebaut) { free(ursprung); remove(pfad); return; }
 
+    /* MF-1119: die Nachbardatei, ohne die sich `posix` nicht oeffnen
+     * laesst. Der Pfad wird wie in `get_geom_path()` gebildet — Endung
+     * ANGEHAENGT, nicht ersetzt. */
+    char nbpfad[560];
+    nbpfad[0] = '\0';
+    if (p->nachbardatei) {
+        snprintf(nbpfad, sizeof(nbpfad), "%s.geom", pfad);
+        FILE *g = fopen(nbpfad, "w");
+        int nb_ok = (g && fprintf(g, "%s\n", p->nachbardatei) > 0);
+        if (g) nb_ok = (fclose(g) == 0) && nb_ok;
+        snprintf(h, sizeof(h), "%s: %s", p->name, p->nachbardatei);
+        pruefe("Nachbardatei angelegt", nb_ok, h);
+        if (!nb_ok) {
+            free(ursprung); remove(pfad); remove(nbpfad); return;
+        }
+    }
+
     /* ── beschreiben ─────────────────────────────────────────────── */
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
@@ -369,7 +428,7 @@ static void probe(const pruefling_t *p)
     uft_error_t rc = p->plugin->open(&disk, pfad, false);
     snprintf(h, sizeof(h), "%s: open lieferte %d", p->name, (int)rc);
     pruefe("laesst sich schreibend oeffnen", rc == UFT_OK, h);
-    if (rc != UFT_OK) { free(ursprung); remove(pfad); return; }
+    if (rc != UFT_OK) { free(ursprung); remove(pfad); remove(nbpfad); return; }
 
     size_t geschrieben = 0, schreibfehler = 0;
     for (int c = 0; c < p->zylinder; c++) {
@@ -453,6 +512,49 @@ static void probe(const pruefling_t *p)
     pruefe("JEDER Sektor kommt unveraendert zurueck",
            geprueft == sektoren_ges && abweichungen == 0, h);
 
+    /* ── MF-1119: die Nachbardatei darf sich NICHT geaendert haben ──
+     *
+     * Diese Zusage steht hier, weil die Mutationsmatrix eine Luecke
+     * GEMESSEN hat, und zwar eine, die den Rest der Probe entwertet
+     * haette.
+     *
+     * Mutation M1 ersetzte `&pd->geometry` durch `NULL` — die naive
+     * Verdrahtung, bei der `uft_posix_write()` auf
+     * `UFT_LOGI_SIDES_ALT` zurueckfaellt. Die Probe blieb GRUEN, 56 von
+     * 56. Der Grund ist kein Messfehler, sondern ein Befund:
+     * `uft_posix_write()` schreibt die `.geom` NEU, mit seiner eigenen
+     * Annahme. Danach stand dort `alt`, das Neu-Oeffnen las `alt`, und
+     * der Ruecklesevergleich stimmte mit dem ueberein, was `alt`
+     * geschrieben hatte — ein geschlossener Kreis, dieselbe Gestalt wie
+     * die gruenen Rundlauftests von `apridisk` (MF-1009) und `qrst`
+     * (MF-1028), wo Packer und Entpacker Spiegelbilder derselben
+     * Erfindung waren.
+     *
+     * Die Diskette war dabei still von `outback` auf `alt` verwandelt.
+     * Das ist genau das, was das Leitprinzip verbietet: keine stille
+     * Veraenderung.
+     *
+     * Ein Sektorvergleich kann das grundsaetzlich nicht sehen, wenn die
+     * IDENTITAET des Abbilds in einer Nachbardatei steht und der
+     * Schreiber sie mitschreibt. Deshalb wird sie byteweise geprueft. */
+    if (p->nachbardatei) {
+        char inhalt[POSIX_NB_MAX] = {0};
+        FILE *g = fopen(nbpfad, "rb");
+        size_t gel = 0;
+        if (g) {
+            gel = fread(inhalt, 1, sizeof(inhalt) - 1, g);
+            fclose(g);
+        }
+        inhalt[gel] = '\0';
+        /* Zeilenende abschneiden, es gehoert nicht zur Angabe. */
+        while (gel > 0 && (inhalt[gel - 1] == '\n' || inhalt[gel - 1] == '\r'))
+            inhalt[--gel] = '\0';
+        snprintf(h, sizeof(h), "%s: erwartet \"%s\", gelesen \"%s\"",
+                 p->name, p->nachbardatei, inhalt);
+        pruefe("die Nachbardatei ist unveraendert", gel > 0
+               && strcmp(inhalt, p->nachbardatei) == 0, h);
+    }
+
     /* ── Groesse unveraendert ───────────────────────────────────── */
     {
         long jetzt = -1;
@@ -483,6 +585,9 @@ static void probe(const pruefling_t *p)
 
     free(ursprung);
     remove(pfad);
+    /* MF-1119: die Nachbardatei mit aufraeumen; `remove("")` ist
+     * bei Prueflingen ohne Nachbardatei harmlos. */
+    remove(nbpfad);
 }
 
 int main(void)

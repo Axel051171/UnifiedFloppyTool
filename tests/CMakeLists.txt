@@ -1351,6 +1351,20 @@ foreach(test_source ${TEST_SOURCES})
             # `HS_8IN_SSSD_SIZE`. Das kopflose rohe Abbild baut
             # `baue_abbild()` selbst.
             ${CMAKE_SOURCE_DIR}/src/formats/hardsector/uft_hardsector.c
+            # MF-1119: `posix` ist die NEUNTE Verdrahtung der elf aus
+            # MF-930 — und der erste Pruefling mit einer NACHBARDATEI:
+            # seine Sonde prueft kein Magic, sondern ob eine `.geom`
+            # daneben liegt. Die Probe legt sie selbst an, mit der
+            # Anordnung `outback` (Kopf 1 rueckwaerts), weil `alt` auch
+            # bei einem Schreiber gruen waere, der die Anordnung gar
+            # nicht kennt.
+            ${CMAKE_SOURCE_DIR}/src/formats/posix/uft_posix.c
+            # `uft_logical_offset/geometry_ok/image_size` liegen in
+            # `uft_logical.c` — die vier Anordnungsgesetze, die MF-1032
+            # gegen libdsks `dg_pt2lt()` abgenommen hat. `posix` rechnet
+            # damit statt mit einer zweiten Kopie; genau deshalb ist es
+            # hier eine Abhaengigkeit und kein Duplikat (MF-1034).
+            ${CMAKE_SOURCE_DIR}/src/formats/logical/uft_logical.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")

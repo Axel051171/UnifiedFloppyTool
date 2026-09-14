@@ -47,8 +47,41 @@
  * **Q4 — der Schreiber schrieb nur `alt` und nannte die Anordnung
  * nicht.** `uft_posix_write()` legte die Spuren linear ab und schrieb
  * eine `.geom` ohne Anordnungsfeld; ein `rawoo`-Abbild liess sich damit
- * nicht erzeugen. Er bleibt ohne Aufrufer (P3-204, MF-930), kann jetzt
- * aber alle drei Spielarten.
+ * nicht erzeugen. Er kann seit MF-1034 alle drei Spielarten.
+ *
+ * **BERICHTIGT MF-1119:** hier stand „Er bleibt ohne Aufrufer (P3-204,
+ * MF-930)". Das gilt nicht mehr — `posix_write_track()` ruft ihn, und
+ * zwar mit der vom LESER benutzten Anordnung. Der neunte der elf aus
+ * MF-930.
+ *
+ * ── MF-1119: ein Befund, den der Rundlauf allein nicht sehen kann ───
+ *
+ * Die Verdrahtung wurde mit einer Mutationsmatrix abgenommen, und ihre
+ * erste Mutation — `&pd->geometry` durch `NULL` ersetzen, also der
+ * Rueckfall auf `alt` — rutschte DURCH: `tests/test_durchschreibprobe.c`
+ * blieb gruen, 56 von 56.
+ *
+ * Der Grund ist kein Messfehler. `uft_posix_write()` schreibt die
+ * `.geom` NEU, mit der Geometrie, mit der es gerade geschrieben hat.
+ * Nach dem Rueckfall stand dort `alt`, das Neu-Oeffnen las `alt`, und
+ * der Ruecklesevergleich stimmte mit dem ueberein, was `alt`
+ * geschrieben hatte. Ein geschlossener Kreis, dieselbe Gestalt wie die
+ * gruenen Rundlauftests von `apridisk` (MF-1009) und `qrst` (MF-1028).
+ * **Die Diskette war dabei still von `outback` auf `alt` verwandelt** —
+ * genau das, was das Leitprinzip verbietet.
+ *
+ * Ein Sektorvergleich kann das grundsaetzlich nicht sehen, wenn die
+ * IDENTITAET des Abbilds in einer Nachbardatei steht und der Schreiber
+ * sie mitschreibt. Die Probe prueft sie deshalb seit MF-1119 byteweise;
+ * damit faellt die Mutation (Matrix 4 von 5).
+ *
+ * Was dabei OFFEN bleibt und nicht stillschweigend entschieden wird:
+ * ob `uft_posix_write()` eine VORHANDENE `.geom` mit abweichender
+ * Anordnung ueberschreiben darf. Fuer einen Export ist das richtig, fuer
+ * eine Aenderung an Ort und Stelle ist es eine stille Umwandlung. Der
+ * Weg ueber `write_track` ist abgesichert, weil er die gelesene
+ * Anordnung weitergibt; ein anderer Aufrufer mit `NULL` haette das
+ * Problem weiterhin. Verzeichnet als **P3-381**.
  *
  * ── Was NICHT geaendert wurde ───────────────────────────────────────
  *
@@ -535,19 +568,57 @@ static bool posix_probe_plugin(const uint8_t *data, size_t size,
     return false;
 }
 
+/* MF-1119: `plugin_data` traegt jetzt AUCH die Anordnung.
+ *
+ * Der Grund ist gemessen, nicht vorsorglich. `uft_posix_write()` rechnet
+ * mit `uft_logical_offset(c, h, nummer, &lg)`, und `lg` folgt aus
+ * `g.sides` — der Schreiber KANN alle vier Anordnungen (seit MF-1034).
+ * Bekommt er aber keine Geometrie, setzt er `g.sides =
+ * UFT_LOGI_SIDES_ALT`.
+ *
+ * Bis MF-1119 hielt `posix_open()` nur den Bildzeiger, und
+ * `disk->geometry` hat kein Anordnungsfeld — eine Verdrahtung von
+ * `posix_write_track()` haette also IMMER `alt` geschrieben. Das ist
+ * woertlich der Befund, den MF-1034 auf der LESESEITE behoben hat: bei
+ * `acorn640` (80 x 2, OUTOUT) lagen damit 158 von 160 Spuren an
+ * anderer Stelle. Derselbe Fehler auf der Schreibseite waere die
+ * naechste Wiederholung von MF-519/MF-529 in diesem Baum.
+ *
+ * Behalten wird die Geometrie, die der LESER wirklich benutzt hat:
+ * `uft_posix_read()` gibt sie in `posix_read_result_t.geometry`
+ * zurueck. Sie neu aus der `.geom` zu lesen waere nicht dasselbe —
+ * zwischen Oeffnen und Schreiben koennte die Nachbardatei sich
+ * geaendert haben, und dann schriebe der Schreiber eine andere
+ * Anordnung als der Leser gelesen hat. MF-931 Regel 4 ist genau das:
+ * die Schreibseite gegen die Leseseite halten. */
+typedef struct {
+    uft_disk_image_t *image;
+    posix_geometry_t  geometry;   /* die Anordnung, mit der GELESEN wurde */
+} posix_plugin_data_t;
+
 static uft_error_t posix_open(uft_disk_t *disk, const char *path,
                              bool read_only) {
     int conf;
     uft_disk_image_t *image = NULL;
     uft_error_t err;
+    posix_read_result_t res;
+    posix_plugin_data_t *pd;
 
     (void)read_only;
 
     if (!uft_posix_probe(path, &conf)) return UFT_ERR_FORMAT;
 
-    err = uft_posix_read(path, &image, NULL, NULL);
+    memset(&res, 0, sizeof(res));
+    err = uft_posix_read(path, &image, NULL, &res);
     if (err == UFT_OK && image) {
-        disk->plugin_data = image;
+        pd = (posix_plugin_data_t*)calloc(1, sizeof(*pd));
+        if (!pd) {
+            uft_disk_free(image);
+            return UFT_ERR_MEMORY;
+        }
+        pd->image    = image;
+        pd->geometry = res.geometry;
+        disk->plugin_data = pd;
         disk->geometry.cylinders = image->tracks;
         disk->geometry.heads = image->heads;
         disk->geometry.sectors = image->sectors_per_track;
@@ -560,7 +631,12 @@ static uft_error_t posix_open(uft_disk_t *disk, const char *path,
 
 static void posix_close(uft_disk_t *disk) {
     if (disk && disk->plugin_data) {
-        uft_disk_free((uft_disk_image_t*)disk->plugin_data);
+        /* MF-1119: zwei Stufen, weil `plugin_data` jetzt eine eigene
+         * Struktur ist. Das Bild wird wie bisher freigegeben, die
+         * Huelle danach. */
+        posix_plugin_data_t *pd = (posix_plugin_data_t*)disk->plugin_data;
+        if (pd->image) uft_disk_free(pd->image);
+        free(pd);
         disk->plugin_data = NULL;
     }
 }
@@ -578,7 +654,11 @@ static uft_error_t posix_read_track(uft_disk_t *disk, int cyl, int head,
      * opus_read_track() von tests/test_disk_open_fuzz.c. */
     if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
 
-    image = (uft_disk_image_t*)disk->plugin_data;
+    /* MF-1119: `plugin_data` ist jetzt `posix_plugin_data_t`. */
+    {
+        posix_plugin_data_t *pd = (posix_plugin_data_t*)disk->plugin_data;
+        image = pd ? pd->image : NULL;
+    }
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
 
     idx = (size_t)cyl * image->heads + head;
@@ -615,14 +695,72 @@ static uft_error_t posix_write_track(uft_disk_t *disk, int cyl, int head,
     if (!disk || !track) return UFT_ERR_INVALID_PARAM;
 
     /* MF-930: hier stand eine Speicher-Mutation, die `UFT_OK` meldete.
-     * Der echte Dateischreiber ist `uft_posix_write()`; es fuehrt kein
+     * Der echte Dateischreiber ist `uft_posix_write()`; es fuehrte kein
      * Weg dorthin (`plugin->flush` hat im ganzen Baum keinen Aufrufer,
      * `close()` gibt nur frei). Verzeichnet als P3-204.
      *
-     * Seit MF-1034 kann dieser Schreiber alle drei Spielarten und
-     * schreibt die Anordnung in die `.geom`; vorher haette eine
-     * Verdrahtung nur `alt` erzeugen koennen. */
-    return UFT_ERROR_NOT_SUPPORTED;
+     * MF-1119: der Weg ist jetzt da — der NEUNTE der elf aus MF-930,
+     * nach den vier Regeln aus MF-931.
+     *
+     * (1) NICHT ueber `close()`: das ist `void`, ein dort scheiternder
+     *     Schreibvorgang waere eine stille Veraenderung.
+     * (2) KEINE eigene Versatzrechnung: gerufen wird
+     *     `uft_posix_write()`, das mit `uft_logical_offset()` rechnet —
+     *     der seit MF-1032 an libdsk abgenommenen Funktion.
+     * (3) `disk->path` wird geprueft; ohne Ziel wird ABGESAGT.
+     * (4) Die Schreibseite gegen die Leseseite gehalten, und HIER war
+     *     dafuer eine Aenderung noetig: die Anordnung (`alt`, `outout`,
+     *     `outback`, `extsurface`) stand nirgends, wo dieser Rumpf sie
+     *     erreicht haette. `disk->geometry` hat kein solches Feld, und
+     *     `uft_posix_write()` faellt ohne uebergebene Geometrie auf
+     *     `UFT_LOGI_SIDES_ALT` zurueck. Seit MF-1119 behaelt
+     *     `posix_open()` die vom Leser BENUTZTE `posix_geometry_t` in
+     *     `plugin_data`, und genau sie wird hier weitergegeben.
+     *
+     * Ohne (4) waere diese Verdrahtung der Fehler aus MF-1034 auf der
+     * anderen Seite gewesen: dort lagen bei `acorn640` 158 von 160
+     * Spuren an anderer Stelle, weil der Leser immer linear ablegte.
+     *
+     * Die Kopierlaenge ist auf die kleinere der beiden Laengen
+     * geklemmt, weil `uft_posix_write()` unbedingt `g.sector_size` aus
+     * `sect->data` kopiert (Klasse MF-1040). */
+    {
+        posix_plugin_data_t *pd = (posix_plugin_data_t*)disk->plugin_data;
+        uft_disk_image_t *image = pd ? pd->image : NULL;
+        uft_track_t *dst;
+        size_t idx, s;
+        uft_error_t werr;
+
+        if (!image) return UFT_ERR_INVALID_PARAM;
+        if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
+        if (head >= (int)image->heads)  return UFT_ERR_INVALID_PARAM;
+        if (cyl  >= (int)image->tracks) return UFT_ERR_INVALID_PARAM;
+        if (!disk->path || !disk->path[0]) return UFT_ERR_INVALID_STATE;
+
+        idx = (size_t)cyl * image->heads + head;
+        dst = image->track_data[idx];
+        if (!dst) return UFT_ERR_INVALID_PARAM;
+
+        for (s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+            const uint8_t *quelle = track->sectors[s].data;
+            if (!quelle) continue;
+            if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+                const size_t quell_len = track->sectors[s].data_size;
+                const size_t n = quell_len < dst->sectors[s].data_size
+                                 ? quell_len : dst->sectors[s].data_size;
+                memcpy(dst->sectors[s].data, quelle, n);
+            }
+        }
+
+        /* Schlaegt das Durchschreiben fehl, ist die Speicherkopie schon
+         * geaendert — der Fehler wird deshalb WEITERGEGEBEN, damit der
+         * Aufrufer weiss, dass Datei und Speicher auseinanderlaufen. */
+        werr = uft_posix_write(image, &pd->geometry, disk->path);
+        if (werr != UFT_OK) return werr;
+
+        disk->modified = true;
+        return UFT_OK;
+    }
 }
 
 static const uft_plugin_feature_t uft_format_plugin_posix_features[] = {
@@ -630,10 +768,11 @@ static const uft_plugin_feature_t uft_format_plugin_posix_features[] = {
       "MF-1034: alle drei Spielarten (raw/rawalt, rawoo, rawob). Die "
       "Geometrie kommt aus der UFT-eigenen `.geom`-Nachbardatei; ohne sie "
       "wird abgesagt statt geraten" },
-    { "Write", UFT_FEATURE_UNSUPPORTED,
-      "MF-930: der echte uft_posix_write() in derselben Datei hat keinen "
-      "Aufrufer, kein flush, close() gibt frei (P3-204). Seit MF-1034 "
-      "kann er alle drei Spielarten" },
+    { "Write", UFT_FEATURE_SUPPORTED,
+      "MF-1119: write_track ruft uft_posix_write() mit der vom LESER "
+      "benutzten Anordnung und schreibt bis in die Datei — abgenommen an "
+      "einem `outback`-Abbild (Kopf 1 rueckwaerts), damit ein "
+      "immer-`alt`-Schreiber faellt" },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
@@ -646,7 +785,11 @@ const uft_format_plugin_t uft_format_plugin_posix = {
     .description = "Raw sector image with a `.geom` sidecar",
     .extensions = "dsk,img,raw",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    /* MF-1119: CAP_WRITE dazu, weil `write_track` jetzt bis in die Datei
+     * schreibt — und mit der richtigen Anordnung. Vorher waere das Bit
+     * eine Zusage ohne Tat gewesen (MF-883). */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
     .probe = posix_probe_plugin,
     .open = posix_open,
     .close = posix_close,
