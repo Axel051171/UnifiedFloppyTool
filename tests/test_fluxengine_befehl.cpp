@@ -214,17 +214,126 @@ static void schreiben_sagt_ab_statt_das_falsche_kommando_abzusetzen()
      * abzusetzen, den die Doku fuer etwas anderes vorsieht — und mit
      * einem Behaelter, den fluxengine nicht liest. Die Absage muss
      * erfolgen, BEVOR ein Prozess laeuft. */
-    SubprocessMock mock;
-    FluxEngineProviderV2 p(make_runner(mock), "fluxengine", 79, "ibm");
+    /* ── MF-1116: die Absage ist eingeloest, und dieser Test hat den
+     * Wechsel selbst angezeigt ─────────────────────────────────────
+     *
+     * Bis MF-1116 pruefte er `mock.recorded_runs().empty()` — der
+     * Schreibpfad durfte KEINEN Prozess starten. Genau daran ist er
+     * beim ersten Lauf nach der Verdrahtung gescheitert, mit
+     * `SubprocessMock::run(): provider invoked subprocess but no
+     * scripted run was queued`. Das ist der Rotbeweis in der
+     * Gegenrichtung: ein Test, der eine Absage bewacht, faellt, wenn
+     * die Absage eingeloest wird — und er soll fallen.
+     *
+     * Geprueft wird jetzt, was gilt. Und die schaerfste Zusage steckt
+     * IM LAEUFER: er sieht nach, ob die SCP-Datei zum Zeitpunkt des
+     * Aufrufs wirklich da ist. Ein `rawwrite -s <pfad>` auf eine Datei,
+     * die niemand geschrieben hat, waere genau die Lage aus MF-1108 —
+     * dort behauptete ein Kommentar, der Laeufer schreibe sie. */
+    bool datei_da_beim_aufruf = false;
+    long groesse_beim_aufruf = -1;
+    char kennung[4] = { 0, 0, 0, 0 };
+    std::vector<std::string> gesehene_argv;
+
+    FluxEngineProviderV2::FluxEngineRunner pruefender_laeufer =
+        [&](const std::vector<std::string>& argv,
+            const std::string& sin) -> FluxEngineRunResult {
+        gesehene_argv = argv;
+        std::string pfad;
+        for (size_t i = 0; i + 1 < argv.size(); ++i)
+            if (argv[i] == "-s") pfad = argv[i + 1];
+        if (!pfad.empty()) {
+            if (FILE* f = std::fopen(pfad.c_str(), "rb")) {
+                datei_da_beim_aufruf = true;
+                std::fseek(f, 0, SEEK_END);
+                groesse_beim_aufruf = std::ftell(f);
+                std::fseek(f, 0, SEEK_SET);
+                if (std::fread(kennung, 1, 3, f) != 3) kennung[0] = 0;
+                std::fclose(f);
+            }
+        }
+        PRUEFE(sin.empty(),
+               "der Laeufer darf keine stdin-Daten mehr bekommen — "
+               "`rawwrite -s` liest die Datei (MF-1116)");
+        return FluxEngineRunResult{ "", "", 0 };
+    };
+
+    FluxEngineProviderV2 p(pruefender_laeufer, "fluxengine", 79, "ibm");
 
     FluxStream fs;
     fs.transitions_ns = { 100u, 120u, 100u, 140u };
 
     const auto ergebnis = p.write_raw_flux(WriteFluxParams{ 5, 0, false }, fs);
 
-    PRUEFE(mock.recorded_runs().empty(),
-           "der Schreibpfad darf keinen fluxengine-Prozess starten, "
-           "solange er keinen lesbaren Flussbehaelter erzeugen kann");
+    /* 1. Der Behaelter lag wirklich da, als fluxengine gerufen wurde. */
+    PRUEFE(datei_da_beim_aufruf,
+           "die SCP-Datei muss existieren, WENN der Laeufer laeuft — "
+           "sonst liest `rawwrite -s` ins Leere (MF-1108-Klasse)");
+    PRUEFE(groesse_beim_aufruf > 0,
+           "die SCP-Datei darf nicht leer sein");
+    PRUEFE(kennung[0] == 'S' && kennung[1] == 'C' && kennung[2] == 'P',
+           "die Datei muss mit der SCP-Kennung beginnen — ein Behaelter, "
+           "den fluxengine laut doc/using.md liest");
+
+    /* 2. Der Befehl ist der dokumentierte. */
+    PRUEFE(hat(gesehene_argv, "rawwrite"),
+           "das Unterkommando ist `rawwrite` — `write` wuerde KODIEREN");
+    PRUEFE(!hat(gesehene_argv, "write"),
+           "`write` darf nicht mehr vorkommen (es kodiert ein Abbild)");
+    PRUEFE(!hat(gesehene_argv, "-i"),
+           "`-i` ist der Eingang fuer ein ABBILD und gehoert hier nicht hin");
+    PRUEFE(wert_nach(gesehene_argv, "-d") == "drive:0",
+           "-d nennt das Flussziel: drive:0");
+    PRUEFE(hat(gesehene_argv, "--tracks=c5h0"),
+           "--tracks in der dokumentierten Form cNhM");
+    PRUEFE(!hat(gesehene_argv, "-c"),
+           "rawwrite braucht KEIN Profil — es kodiert nicht");
+
+    /* 3. Und der Erfolg wird gemeldet, ohne eine Nachlese zu behaupten. */
+    bool fertig = false, verified_behauptet = true;
+    std::visit([&](auto&& v) {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, WriteCompleted>) {
+            fertig = true;
+            verified_behauptet = v.verified;
+        }
+    }, ergebnis);
+    PRUEFE(fertig, "ohne verify muss WriteCompleted zurueckkommen");
+    PRUEFE(!verified_behauptet,
+           "`verified` muss false sein — es wurde nichts nachgelesen "
+           "(MF-883: keine Zusage ohne Tat)");
+
+    /* 4. Die Wegwerf-Datei ist nach dem Lauf weg. */
+    {
+        std::string pfad;
+        for (size_t i = 0; i + 1 < gesehene_argv.size(); ++i)
+            if (gesehene_argv[i] == "-s") pfad = gesehene_argv[i + 1];
+        bool noch_da = false;
+        if (!pfad.empty()) {
+            if (FILE* f = std::fopen(pfad.c_str(), "rb")) {
+                noch_da = true; std::fclose(f);
+            }
+        }
+        PRUEFE(!noch_da,
+               "die SCP-Wegwerfdatei muss nach dem Lauf entfernt sein — "
+               "eine Datei im Temp-Verzeichnis, die aussieht wie eine "
+               "Aufnahme, ist eine Falle");
+    }
+}
+
+static void mit_verify_wird_abgesagt_statt_behauptet()
+{
+    /* MF-1116: `verify = true` verlangt eine Nachlese. Die ist fuer den
+     * Schreibfall NICHT verdrahtet — also wird abgesagt, statt Erfolg
+     * zu melden. Dieselbe Regel wie bei MF-1047, eine Ebene weiter:
+     * die Zusage endet dort, wo der Beleg endet. */
+    SubprocessMock mock;
+    mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
+    FluxEngineProviderV2 p(make_runner(mock), "fluxengine", 79, "ibm");
+
+    FluxStream fs;
+    fs.transitions_ns = { 100u, 120u, 100u, 140u };
+    const auto ergebnis = p.write_raw_flux(WriteFluxParams{ 5, 0, true }, fs);
 
     bool ist_fehler = false;
     std::visit([&](auto&& v) {
@@ -232,8 +341,8 @@ static void schreiben_sagt_ab_statt_das_falsche_kommando_abzusetzen()
         if constexpr (std::is_same_v<T, ProviderError>) ist_fehler = true;
     }, ergebnis);
     PRUEFE(ist_fehler,
-           "der Schreibpfad muss einen ProviderError liefern, nicht "
-           "Erfolg melden (MF-883: keine Zusage ohne Tat)");
+           "mit verify=true muss ein ProviderError kommen, solange die "
+           "Nachlese nicht verdrahtet ist (P3-342)");
 }
 
 int main()
@@ -244,6 +353,7 @@ int main()
     die_quelle_ist_das_laufwerk();
     die_spurwahl_folgt_der_dokumentierten_form();
     schreiben_sagt_ab_statt_das_falsche_kommando_abzusetzen();
+    mit_verify_wird_abgesagt_statt_behauptet();
 
     if (g_fail == 0) {
         std::printf("test_fluxengine_befehl: 0 Fehler\n");

@@ -440,42 +440,57 @@ static void smoke_read_raw_flux_decodes_scp()
 
 static void smoke_write_raw_flux_sagt_ab()
 {
-    /* BERICHTIGT MF-1047. Hier standen zwei Proben,
-     * `smoke_write_raw_flux_no_verify` und `..._with_verify`. Beide
-     * waren ein GESCHLOSSENER KREIS: sie stellten dem Mock „Erfolg"
-     * ins Skript und prueften dann, dass der Provider diesen Erfolg
-     * durchreicht. Ob der abgesetzte BEFEHL der richtige war, kam
-     * darin nicht vor.
+    /* BERICHTIGT MF-1116 - der Name bleibt, weil eine Absage bleibt;
+     * nur ihr GRUND ist ein anderer.
      *
-     * Er war es nicht. `fluxengine write -i <datei>` KODIERT laut
-     * doc/using.md ein Dateisystem-Abbild; rohen Fluss schreibt das
-     * eigene Unterkommando `rawwrite -s <flux source> -d <flux
-     * destination>`. Uebergeben wurden ausserdem die `transitions_ns`
-     * als rohe 32-Bit-Worte — kein Behaelter, den fluxengine liest.
+     * Geschichte in drei Schritten, weil jeder etwas anderes lehrt:
      *
-     * Dieselbe Gestalt wie MF-1016 und MF-1017: ein gruener Test, der
-     * einen Defekt bewacht, weil seine Zusage aus dem Defekt folgte.
+     *  1. Urspruenglich standen hier `smoke_write_raw_flux_no_verify`
+     *     und `..._with_verify`. Beide waren ein GESCHLOSSENER KREIS:
+     *     sie stellten dem Mock "Erfolg" ins Skript und pruefften
+     *     dann, dass der Provider diesen Erfolg durchreicht. Ob der
+     *     abgesetzte BEFEHL der richtige war, kam darin nicht vor -
+     *     und er war es nicht (`write -i` KODIERT ein Abbild).
+     *     Dieselbe Gestalt wie MF-1016/MF-1017: ein gruener Test, der
+     *     einen Defekt bewacht, weil seine Zusage aus dem Defekt folgt.
      *
-     * Seit MF-1047 sagt der Schreibpfad ab, BEVOR ein Prozess laeuft.
-     * Dass kein Unterprozess startet, ist der Teil, der zaehlt — eine
-     * Absage, die vorher noch `fluxengine` anwirft, haette das
-     * Laufwerk schon angefasst. */
-    SubprocessMock mock;   /* absichtlich OHNE queue_run */
+     *  2. MF-1047 ersetzte sie durch die Absage-Probe: kein
+     *     Unterprozess, bevor der Behaelter stimmt.
+     *
+     *  3. MF-1116 hat den Behaelter gebaut (SCP) und `rawwrite -s`
+     *     verdrahtet. Damit LAEUFT der Schreibvorgang - und diese
+     *     Probe ist beim ersten Lauf danach gefallen, mit `provider
+     *     invoked subprocess but no scripted run was queued`.
+     *     Rotbeweis in der Gegenrichtung.
+     *
+     * Geprueft wird jetzt: OHNE verify kommt `WriteCompleted` mit
+     * `verified = false` (nichts wurde nachgelesen, also wird nichts
+     * behauptet - MF-883), MIT verify eine Absage, und in beiden
+     * Faellen ist der abgesetzte Befehl `rawwrite` und nicht `write`.
+     * Was der abgesetzte Befehl BEDEUTET, prueft
+     * `tests/test_fluxengine_befehl.cpp` gegen doc/using.md - dort
+     * liegt auch die Zusage, dass die SCP-Datei zum Zeitpunkt des
+     * Aufrufs wirklich existiert. */
+    SubprocessMock mock;
+    mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
 
     FluxStream flux{{ 4000u, 6000u, 4000u, 6000u }};
     auto outcome = p.write_raw_flux(WriteFluxParams{5, 0, false, false}, flux);
 
-    bool got_error = false;
+    bool fertig = false;
+    bool verified_behauptet = true;
     std::visit(overloaded{
-        [&](const WriteCompleted&)           {},
+        [&](const WriteCompleted& w)         {
+            fertig = true;
+            verified_behauptet = w.verified;
+        },
         [&](const WriteVerifyFailed&)        {},
         [&](const WriteRefused&)             {},
         [&](const CapabilityRequiresPolicy&) {},
         [&](const HardwareDisconnected&)     {},
         [&](const ProviderError& e)          {
-            got_error = true;
             /* Rule F-4: jede ProviderError traegt what/why/fix. */
             assert(!e.what.empty() && "ProviderError.what must not be empty");
             assert(!e.why.empty()  && "ProviderError.why must not be empty");
@@ -483,15 +498,32 @@ static void smoke_write_raw_flux_sagt_ab()
         },
     }, outcome);
 
-    assert(got_error &&
-           "write_raw_flux must refuse until an SCP container and "
-           "`rawwrite` are wired (MF-1047, P3-342)");
-    assert(mock.recorded_runs().empty() &&
-           "the refusal must happen BEFORE any fluxengine invocation");
+    assert(fertig &&
+           "ohne verify muss WriteCompleted kommen - der Behaelter ist "
+           "seit MF-1116 da und `rawwrite` verdrahtet");
+    assert(!verified_behauptet &&
+           "`verified` muss false sein: es wurde nichts nachgelesen "
+           "(MF-883 - keine Zusage ohne Tat)");
+    assert(mock.recorded_runs().size() == 1 &&
+           "genau ein fluxengine-Lauf");
+    {
+        const auto& argv = mock.recorded_runs().front().argv;
+        bool hat_rawwrite = false, hat_write = false, hat_i = false;
+        for (const auto& a : argv) {
+            if (a == "rawwrite") hat_rawwrite = true;
+            if (a == "write")    hat_write = true;
+            if (a == "-i")       hat_i = true;
+        }
+        assert(hat_rawwrite && "der Befehl ist `rawwrite`");
+        assert(!hat_write && "`write` wuerde KODIEREN");
+        assert(!hat_i && "`-i` ist der Eingang fuer ein ABBILD");
+    }
 
-    /* Mit Verify-Wunsch gilt dasselbe: die Absage steht vor jedem
-     * Pfad, der ein Geraet anfassen wuerde. */
+    /* Mit Verify-Wunsch wird abgesagt: die Nachlese ist fuer den
+     * Schreibfall nicht verdrahtet, und ein `verified = true` ohne
+     * Nachlese waere genau die Zusage ohne Tat. */
     SubprocessMock mock2;
+    mock2.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
     FluxEngineProviderV2 p2(make_runner(mock2), "fluxengine");
     auto outcome2 = p2.write_raw_flux(WriteFluxParams{3, 1, true, false}, flux);
 
@@ -505,9 +537,9 @@ static void smoke_write_raw_flux_sagt_ab()
         [&](const HardwareDisconnected&)     {},
     }, outcome2);
 
-    assert(got_error2 && "verify-requested write must refuse as well");
-    assert(mock2.recorded_runs().empty() &&
-           "no invocation on the verify path either");
+    assert(got_error2 &&
+           "mit verify muss abgesagt werden, solange die Nachlese nicht "
+           "verdrahtet ist (offener Teil von P3-342)");
 }
 
 /* `smoke_write_raw_flux_with_verify` stand hier und ist in
@@ -575,23 +607,43 @@ static void smoke_read_raw_flux_failure()
 
 static void smoke_write_raw_flux_failure()
 {
-    /* BERICHTIGT MF-1047: hier stand ein
-     * `queue_run_failed("fluxengine: write-protect notch active")`.
-     * Seit der Schreibpfad absagt, BEVOR ein Prozess laeuft, wuerde
-     * dieser Lauf nie abgerufen — `assert_consumed()` haette den Test
-     * mit „1 scripted run left UNCONSUMED" abgebrochen.
+    /* BERICHTIGT MF-1116 — und diese Zeile ist zum ZWEITEN Mal
+     * umgeschrieben, weshalb beide Fassungen hier stehen bleiben.
      *
-     * Die Zusage bleibt dieselbe und gilt weiter: **write_raw_flux
-     * liefert eine ProviderError mit vollstaendigem what/why/fix.**
-     * Nur ihr Grund hat gewechselt — vorher „fluxengine ist
-     * gescheitert", jetzt „UFT hat keinen Weg dorthin" (P3-342). */
-    SubprocessMock mock;   /* ohne queue_run: es darf keiner laufen */
+     *   Urspruenglich: `queue_run_failed("fluxengine: write-protect
+     *   notch active")` — ein fehlgeschlagener Lauf, genau was der
+     *   Name sagt.
+     *
+     *   MF-1047: der Schreibpfad sagte ab, BEVOR ein Prozess lief.
+     *   Der vorgemerkte Lauf wurde damit nie abgerufen, und
+     *   `assert_consumed()` haette den Test mit „1 scripted run left
+     *   UNCONSUMED" abgebrochen — also wurde er entfernt und die
+     *   Absage geprueft.
+     *
+     *   MF-1116: der Weg ist wieder da (SCP-Behaelter + `rawwrite
+     *   -s`), und damit ist die urspruengliche Zusage wieder
+     *   ERREICHBAR. Sie kehrt zurueck, statt dass der Name weiter
+     *   etwas anderes behauptet als der Rumpf prueft.
+     *
+     * Gefunden hat diesen Test kein Ueberlegen, sondern der Lauf: er
+     * stand auf KEINER meiner beiden Verdachtslisten. Beide
+     * Bereichspruefungen, die ich verdaechtigt hatte, brechen vor dem
+     * Laeufer ab — deshalb nennt `main()` seit MF-1116 jede Stufe.
+     *
+     * Geprueft wird jetzt, was der Name sagt: **ein fehlgeschlagener
+     * `fluxengine`-Lauf wird als ProviderError gemeldet, nicht als
+     * Erfolg** — mit vollstaendigem what/why/fix (Regel F-4) und mit
+     * dem stderr des Werkzeugs IM Text, damit der Benutzer den Grund
+     * des Geraets erfaehrt und nicht nur „es ging nicht". */
+    SubprocessMock mock;
+    mock.queue_run_failed("fluxengine: write-protect notch active", 1);
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
     FluxStream flux{{ 4000u, 6000u }};
     auto outcome = p.write_raw_flux(WriteFluxParams{0, 0, false, false}, flux);
 
     bool got_error = false;
+    bool stderr_im_text = false;
     std::visit(overloaded{
         [&](const WriteCompleted&)           {},
         [&](const WriteVerifyFailed&)        {},
@@ -603,13 +655,19 @@ static void smoke_write_raw_flux_failure()
             assert(!e.what.empty() && "ProviderError.what must not be empty");
             assert(!e.why.empty()  && "ProviderError.why must not be empty");
             assert(!e.fix.empty()  && "ProviderError.fix must not be empty");
+            stderr_im_text =
+                e.why.find("write-protect notch active") != std::string::npos;
         },
     }, outcome);
 
-    assert(got_error && "write_raw_flux must return ProviderError "
-                        "(seit MF-1047: Absage vor dem Prozess)");
-    assert(mock.recorded_runs().empty() &&
-           "und es darf dafuer kein fluxengine gestartet worden sein");
+    assert(got_error &&
+           "ein fehlgeschlagener fluxengine-Lauf muss als ProviderError "
+           "gemeldet werden, nicht als Erfolg (MF-1116)");
+    assert(mock.recorded_runs().size() == 1 &&
+           "genau EIN Lauf: der Schreibvorgang selbst");
+    assert(stderr_im_text &&
+           "der stderr des Werkzeugs muss im Text stehen — sonst erfaehrt "
+           "der Benutzer den Grund des Geraets nicht (MF-1116)");
     mock.assert_consumed();
 }
 
@@ -648,8 +706,35 @@ static void smoke_read_empty_stream()
 
 static void smoke_write_verify_unerreichbar()
 {
-    /* BERICHTIGT MF-1047, und der Verlust wird benannt statt
-     * verschwiegen.
+    /* BERICHTIGT MF-1116 - und der Grund der Absage hat sich
+     * VERSCHOBEN, nicht aufgehoert.
+     *
+     * Bis MF-1116 sagte `do_write_raw_flux()` ab, BEVOR ein Prozess
+     * startete: `fluxengine write -i` kodiert laut doc/using.md ein
+     * Dateisystem-Abbild, und der uebergebene Behaelter war ohnehin
+     * keiner, den fluxengine liest. Dieser Test pruefte deshalb
+     * `recorded_runs().empty()`.
+     *
+     * Seit MF-1116 ist P3-342 (a)+(b) erledigt: der Fluss geht als
+     * SCP-Behaelter heraus und `rawwrite -s` wird gerufen. Der
+     * SCHREIBVORGANG laeuft also - und genau daran ist dieser Test
+     * beim ersten Lauf gescheitert, mit `provider invoked subprocess
+     * but no scripted run was queued`. Rotbeweis in der
+     * Gegenrichtung, und er soll fallen.
+     *
+     * Was BLEIBT, ist die Absage bei `verify = true`: die Nachlese ist
+     * fuer den Schreibfall nicht verdrahtet, und ein `verified = true`
+     * ohne Nachlese waere die Zusage ohne Tat aus MF-883. Geprueft
+     * wird jetzt also: der Lauf findet statt, und das Ergebnis ist
+     * trotzdem ein ProviderError - weil der Verify-Wunsch nicht
+     * erfuellt werden kann.
+     *
+     * Was an Abdeckung fehlt, und was nicht: die Variante
+     * `WriteVerifyFailed` bleibt mit echter Zusicherung in
+     * `tests/test_usbfloppy_provider_v2.cpp` geprueft. Was hier
+     * weiterhin fehlt, ist der Verify-Pfad DIESES Providers; er kehrt
+     * zurueck, sobald das Zuruecklesen fuer den Schreibfall verdrahtet
+     * ist (offener Teil von P3-342).
      *
      * Hier stand `smoke_write_verify_failed`: Schreiben gelingt,
      * Rueckleseprobe scheitert, Ergebnis `WriteVerifyFailed` mit
@@ -671,7 +756,9 @@ static void smoke_write_verify_unerreichbar()
      * Geprueft wird deshalb genau das, was heute gilt: der
      * Verify-Wunsch aendert an der Absage nichts, und er fasst kein
      * Laufwerk an. */
-    SubprocessMock mock;   /* ohne queue_run */
+    SubprocessMock mock;
+    /* MF-1116: MIT queue_run - der Schreibvorgang laeuft jetzt. */
+    mock.queue_run(SubprocessMock::ScriptedRun{ { "fluxengine" }, "", "", 0 });
 
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
     FluxStream flux{{ 0xDEADu, 0xBEEFu }};
@@ -693,9 +780,25 @@ static void smoke_write_verify_unerreichbar()
     }, outcome);
 
     assert(got_error &&
-           "ein Verify-Wunsch hebt die Absage nicht auf (MF-1047)");
-    assert(mock.recorded_runs().empty() &&
-           "und er startet keinen Prozess");
+           "ein Verify-Wunsch wird abgesagt, solange die Nachlese nicht "
+           "verdrahtet ist (MF-1116, offener Teil von P3-342)");
+    assert(mock.recorded_runs().size() == 1 &&
+           "der SCHREIBVORGANG laeuft jetzt - genau EIN Lauf, und zwar "
+           "rawwrite; abgesagt wird nur die Nachlese");
+    {
+        const auto& argv = mock.recorded_runs().front().argv;
+        bool hat_rawwrite = false, hat_write = false;
+        for (const auto& a : argv) {
+            if (a == "rawwrite") hat_rawwrite = true;
+            if (a == "write")    hat_write = true;
+        }
+        assert(hat_rawwrite &&
+               "der Lauf muss `rawwrite` sein (doc/using.md: schreibt "
+               "Fluss OHNE Kodierung)");
+        assert(!hat_write &&
+               "`write` wuerde ein Abbild KODIEREN und darf nicht "
+               "vorkommen");
+    }
     mock.assert_consumed();
 }
 
@@ -937,26 +1040,49 @@ static void smoke_measure_rpm_no_rpm_in_output()
  *  Entry
  * ──────────────────────────────────────────────────────────────────────── */
 
+/* MF-1116: jede Stufe nennt sich, BEVOR sie laeuft.
+ *
+ * Der Anlass ist gemessen, nicht ausgedacht: nach der Verdrahtung des
+ * SCP-Weges endete dieser Test mit
+ *
+ *   terminate called after throwing an instance of 'std::out_of_range'
+ *     what(): SubprocessMock::run(): provider invoked subprocess but no
+ *             scripted run was queued.
+ *
+ * und NANNTE die Stufe nicht. Ein `catch throw` im Rueckverfolger gab
+ * `#0 <unavailable> in ?? ()` — aus einem `terminate` heraus ist der
+ * Rahmen weg. Damit blieb nur Raten, und geraten habe ich zweimal
+ * falsch: die beiden Bereichspruefungen brechen VOR dem Laeufer ab.
+ *
+ * `std::endl` ist dabei der Punkt, nicht `"\n"`: ohne Leerung steht die
+ * Zeile im Puffer und geht bei `terminate` mit verloren — die Ausgabe
+ * waere genau dann stumm, wenn man sie braucht. */
+#define LAUF(f)                                                    \
+    do {                                                           \
+        std::cout << "  ... " #f << std::endl;                     \
+        f();                                                       \
+    } while (0)
+
 int main()
 {
-    smoke_identity();
-    smoke_null_runner_returns_provider_error();
-    smoke_detect_drive_happy_path();
-    smoke_measure_rpm_happy_path();
-    smoke_read_raw_flux_decodes_scp();
-    smoke_write_raw_flux_sagt_ab();
-    smoke_detect_drive_failure();
-    smoke_read_raw_flux_failure();
-    smoke_write_raw_flux_failure();
-    smoke_read_empty_stream();
-    smoke_write_verify_unerreichbar();
-    smoke_out_of_range_cylinder_read();
-    smoke_out_of_range_head_read();
-    smoke_out_of_range_cylinder_write();
-    smoke_empty_flux_stream_write();
-    smoke_provider_error_3part_contract();
-    smoke_detect_drive_no_rpm_in_output();
-    smoke_measure_rpm_no_rpm_in_output();
+    LAUF(smoke_identity);
+    LAUF(smoke_null_runner_returns_provider_error);
+    LAUF(smoke_detect_drive_happy_path);
+    LAUF(smoke_measure_rpm_happy_path);
+    LAUF(smoke_read_raw_flux_decodes_scp);
+    LAUF(smoke_write_raw_flux_sagt_ab);
+    LAUF(smoke_detect_drive_failure);
+    LAUF(smoke_read_raw_flux_failure);
+    LAUF(smoke_write_raw_flux_failure);
+    LAUF(smoke_read_empty_stream);
+    LAUF(smoke_write_verify_unerreichbar);
+    LAUF(smoke_out_of_range_cylinder_read);
+    LAUF(smoke_out_of_range_head_read);
+    LAUF(smoke_out_of_range_cylinder_write);
+    LAUF(smoke_empty_flux_stream_write);
+    LAUF(smoke_provider_error_3part_contract);
+    LAUF(smoke_detect_drive_no_rpm_in_output);
+    LAUF(smoke_measure_rpm_no_rpm_in_output);
 
     std::cout << "test_fluxengine_provider_v2: 0 errors, V2 provider type-shape sound.\n";
     return 0;

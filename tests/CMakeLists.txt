@@ -3869,6 +3869,7 @@ foreach(test_source ${TEST_SOURCES})
         # Gleiche Quellen wie der Provider-Test darunter.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
@@ -3904,6 +3905,7 @@ foreach(test_source ${TEST_SOURCES})
         # (MF-1000 / Tor 64). Braucht beide Provider samt ihren Dekodern.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
@@ -3919,6 +3921,7 @@ foreach(test_source ${TEST_SOURCES})
         # SubprocessMock is header-only; tests/ must be on the include path.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
@@ -4028,6 +4031,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp
@@ -4083,6 +4087,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/tests/unit/transitions_ns_ffi.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_include_directories(${test_name} PRIVATE
@@ -4718,6 +4723,7 @@ if(TARGET Qt6::Test)
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+        ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
         ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp

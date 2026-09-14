@@ -73,6 +73,11 @@
 #include "fluxengine_provider_v2.h"
 
 #include "uft/flux/uft_scp_parser.h"
+/* MF-1116: P3-342 Schritt (a) — der Fluss geht als SCP-Behaelter zu
+ * `fluxengine rawwrite`. Der Schreiber ist seit MF-1055 abgenommen. */
+#include "uft/formats/uft_scp_writer.h"
+
+#include <cstdio>   /* std::remove fuer die Wegwerf-Datei */
 
 #include <algorithm>
 #include <cmath>
@@ -271,17 +276,40 @@ std::vector<std::string> FluxEngineProviderV2::build_read_argv(
 std::vector<std::string> FluxEngineProviderV2::build_write_argv(
     int cylinder, int head, const std::string& input_path) const
 {
+    /* MF-1116: `rawwrite -s`, nicht `write -i`.
+     *
+     * Die Doku des Urhebers (davidgiven/fluxengine, `doc/using.md`;
+     * Kanal *Spec* nach MF-695, woertlich in
+     * `tests/test_fluxengine_befehl.cpp` zitiert) trennt die beiden:
+     *
+     *   `fluxengine write -c <profile> … -i <image>`
+     *       „Reads a filesystem image and writes it to a disk,
+     *        ENCODING it."
+     *   `fluxengine rawwrite -s <flux source> -d <flux destination>`
+     *       „Reads flux from a file and writes it (possibly to a disk)
+     *        WITHOUT DOING ANY ENCODING."
+     *
+     * Wir haben rohen Fluss, also ist `rawwrite` der Befehl. MF-1047
+     * hatte das gemessen und den Pfad daraufhin ABGESAGT — richtig,
+     * denn damals fehlte der Behaelter. Seit MF-1055 ist der
+     * SCP-Schreiber abgenommen (8 Zusagen, Mutationsmatrix 8/8), und
+     * `do_write_raw_flux` legt die Datei jetzt selbst an.
+     *
+     * **Kein `-c <profil>`:** rawwrite kodiert nicht, also gibt es
+     * nichts zu profilieren. Ein Profil hier waere ein Argument ohne
+     * Gegenstand.
+     *
+     * `--tracks=cNhM` bleibt in der dokumentierten Schreibweise, wie
+     * auf der Leseseite (MF-1047 abgenommen). */
     std::vector<std::string> args;
     args.push_back(m_fe_binary);
-    args.push_back("write");
-    args.push_back("-c");
-    args.push_back(m_profile);  /* FE-F2: profile from ctor (was hard-coded "ibm") */
+    args.push_back("rawwrite");
+    args.push_back("-s");
+    args.push_back(input_path);
     args.push_back("-d");
     args.push_back("drive:0");
     args.push_back("--tracks=c" + std::to_string(cylinder)
                    + "h" + std::to_string(head));
-    args.push_back("-i");
-    args.push_back(input_path);
     return args;
 }
 
@@ -780,137 +808,147 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
         };
     }
 
-    /* MF-1047: ABSAGE, bevor irgendein Prozess laeuft.
+    /* MF-1116: P3-342 (a)+(b) - die Absage aus MF-1047 ist eingeloest.
      *
-     * Was hier stand, hat zwei Dinge getan, die die Doku des Urhebers
-     * beide anders vorsieht:
+     * -- Was MF-1047 hier absagte, und warum es richtig war -----------
      *
-     *   1. Es rief `fluxengine write -c <profil> -d drive:0 -i <datei>`.
-     *      Laut doc/using.md ist das der Weg, ein **Dateisystem-Abbild
-     *      zu KODIEREN**. Fluss ohne Kodierung schreibt ein eigenes
-     *      Unterkommando:
-     *        `fluxengine rawwrite -s <flux source> -d <flux destination>`
-     *        „Reads flux from a file and writes it (possibly to a disk)
-     *         WITHOUT DOING ANY ENCODING."
-     *   2. Es uebergab als „Flussdatei" die `transitions_ns` als rohe
-     *      32-Bit-Worte in Little-Endian — **kein Behaelter, den
-     *      fluxengine liest**. Die Doku nennt als Flussformate das
-     *      eigene `.flux`, SuperCard Pros `.scp` und den
-     *      KryoFlux-Strom.
+     * Der alte Pfad rief `fluxengine write -c <profil> -d drive:0
+     * -i <datei>` und uebergab die `transitions_ns` als rohe 32-Bit-
+     * Worte. Zwei Fehler in einem Aufruf, beide gegen `doc/using.md`
+     * des Urhebers gemessen:
      *
-     * Zusammen heisst das: der Pfad konnte nie gelingen. Im guenstigen
-     * Fall bricht fluxengine ab. Im unguenstigen nimmt es die Worte als
-     * Abbild an und **kodiert sie auf die Diskette** — eine stille
-     * Veraenderung am Objekt, und damit genau das, was dieses Werkzeug
-     * ausschliesst.
+     *   1. `write -i` KODIERT ein Dateisystem-Abbild. Rohen Fluss
+     *      schreibt `rawwrite -s <flux source> -d <flux destination>`,
+     *      "WITHOUT DOING ANY ENCODING".
+     *   2. Rohe Little-Endian-Worte sind KEIN Behaelter, den fluxengine
+     *      liest - die Doku nennt sein eigenes `.flux`, SuperCard Pros
+     *      `.scp` und den KryoFlux-Strom.
      *
-     * Also wird abgesagt statt gehandelt (MF-883: keine Zusage ohne
-     * Tat), und die Absage sagt, was fehlt. Der Weg dorthin ist kurz
-     * und steht als P3-342: einen SCP-Behaelter erzeugen — der
-     * Schreiber dafuer liegt im Baum
-     * (`src/formats/scp/uft_scp_writer.c`) — und `rawwrite -s <datei>
-     * -d drive:0` rufen. Beides ist Arbeit, kein Fehler; solange sie
-     * nicht getan ist, luegt diese Stelle nicht.
+     * Im unguenstigen Fall haette fluxengine die Worte als Abbild
+     * angenommen und auf die Diskette KODIERT: eine stille Veraenderung
+     * am Objekt. Die Absage war deshalb keine Bequemlichkeit, sondern
+     * der einzige ehrliche Zustand, solange der Behaelter fehlte.
      *
-     * docs/CAPABILITIES.md fuehrt FluxEngine Write seit MF-1047
-     * entsprechend als Geruest, nicht als Faehigkeit. */
-    return ProviderError{
-        UFT_E_GENERIC,
-        "FluxEngine flux write: not wired (MF-1047)",
-        "UFT cannot currently write raw flux with FluxEngine. The former "
-        "code path invoked `fluxengine write -i <file>`, which per the "
-        "author's doc/using.md ENCODES a filesystem image, while raw flux "
-        "is written by the separate `fluxengine rawwrite -s <flux source> "
-        "-d <flux destination>` subcommand. It also handed over the flux "
-        "as raw little-endian 32-bit words, which is not a container "
-        "fluxengine reads (documented flux formats: its own .flux, "
-        "SuperCard Pro .scp, KryoFlux stream). The path could therefore "
-        "never succeed, and in the worst case fluxengine would have "
-        "encoded those words onto the disk as if they were an image.",
-        "Two steps, tracked as P3-342: (1) serialise the FluxStream into "
-        "an SCP container — the writer already exists at "
-        "src/formats/scp/uft_scp_writer.c — and (2) invoke "
-        "`fluxengine rawwrite -s <that file> -d drive:0`. Until then, use "
-        "Greaseweazle for writing, or write the flux to an SCP file and "
-        "run `fluxengine rawwrite` by hand."
-    };
+     * -- Was sich geaendert hat ---------------------------------------
+     *
+     * Der Behaelter fehlt nicht mehr. `src/formats/scp/uft_scp_writer.c`
+     * ist seit MF-1055 abgenommen - und dort wurden zwei Befunde
+     * behoben, die genau hier durchgeschlagen haetten: `heads` stand
+     * fest auf 0 ("beide Seiten"), und die Pruefsumme deckte die
+     * falsche Spanne (gemessen `0x01FAA3EC` im Kopf gegen `0x01FAB15A`
+     * nach der Regel). Mutationsmatrix 8 von 8, und hxcfe liest die
+     * erzeugten Dateien ohne Beanstandung.
+     *
+     * Also: Fluss -> SCP-Datei -> `rawwrite -s <datei> -d drive:0`.
+     * `build_write_argv()` traegt den Befehl seit MF-1116.
+     *
+     * -- Was damit NICHT belegt ist -----------------------------------
+     *
+     * Ob ein echtes `fluxengine` die Datei annimmt und ein echtes
+     * Laufwerk sie schreibt. Dieses Projekt hat keine Hardware
+     * (MF-310), und `fluxengine` liegt nicht im Baum. Abgenommen ist
+     * die VORBEREITUNG: dass am genannten Pfad eine Datei liegt, dass
+     * sie ein gueltiger SCP-Behaelter ist und dass die Befehlszeile die
+     * dokumentierte Form hat (`tests/test_fluxengine_schreibt_scp.cpp`).
+     * `docs/CAPABILITIES.md` fuehrt FluxEngine Write deshalb als
+     * TEILWEISE, nicht als Faehigkeit - und die Merkmalstafel unten
+     * sagt denselben Satz.
+     *
+     * Die Wegwerf-Datei wird nach dem Lauf entfernt. Ein Schreibversuch
+     * darf keine Spur im Temp-Verzeichnis lassen, die spaeter jemand
+     * fuer eine Aufnahme haelt. */
+    const std::string scp_pfad = fe_temp_path("uft_fe_write_", cylinder,
+                                              head, ".scp");
+    {
+        /* disk_type 0x00, eine Umdrehung: wir schreiben genau die
+         * Spur, die der Aufrufer uebergeben hat. */
+        scp_writer_t *w = scp_writer_create(0x00, 1);
+        if (!w) {
+            return ProviderError{
+                UFT_E_GENERIC,
+                "FluxEngine flux write: SCP writer allocation failed",
+                "scp_writer_create() returned NULL while preparing the "
+                "container for `fluxengine rawwrite`. This is an "
+                "out-of-memory condition, not a protocol problem.",
+                "Retry; if it persists, the process is out of memory."
+            };
+        }
 
-    /* Convert FluxStream::transitions_ns (uint32_t words) back to raw bytes
-     * (little-endian) to pass as stdin_data to the runner.
-     * The production runner writes these bytes to a temp file for fluxengine -i. */
-    std::string stdin_data;
-    stdin_data.reserve(flux.transitions_ns.size() * 4);
-    for (const uint32_t w : flux.transitions_ns) {
-        stdin_data.push_back(static_cast<char>( w        & 0xFF));
-        stdin_data.push_back(static_cast<char>((w >>  8) & 0xFF));
-        stdin_data.push_back(static_cast<char>((w >> 16) & 0xFF));
-        stdin_data.push_back(static_cast<char>((w >> 24) & 0xFF));
+        /* Spurdauer als Summe der Uebergaenge - SCP traegt sie je
+         * Umdrehung, und eine geratene Zahl waere eine erfundene
+         * Angabe. */
+        uint64_t dauer_ns = 0;
+        for (const uint32_t t : flux.transitions_ns) dauer_ns += t;
+        if (dauer_ns > 0xFFFFFFFFull) dauer_ns = 0xFFFFFFFFull;
+
+        const int add_rc = scp_writer_add_track(
+            w, cylinder, head, flux.transitions_ns.data(),
+            flux.transitions_ns.size(), (uint32_t)dauer_ns, 0);
+        if (add_rc != 0) {
+            scp_writer_free(w);
+            return ProviderError{
+                UFT_E_GENERIC,
+                "FluxEngine flux write: SCP writer rejected the track",
+                "scp_writer_add_track() returned " + std::to_string(add_rc)
+                + " for cylinder " + std::to_string(cylinder) + ", head "
+                + std::to_string(head) + ". The flux stream does not fit "
+                "the SCP container (SCP carries tracks 0-83, sides 0-1).",
+                "Check cylinder/head range and that transitions_ns holds "
+                "plausible nanosecond intervals."
+            };
+        }
+
+        const int save_rc = scp_writer_save(w, scp_pfad.c_str());
+        scp_writer_free(w);
+        if (save_rc != 0) {
+            return ProviderError{
+                UFT_E_GENERIC,
+                "FluxEngine flux write: could not write the SCP container",
+                "scp_writer_save() returned " + std::to_string(save_rc)
+                + " for '" + scp_pfad + "'. Without that file there is "
+                "nothing for `fluxengine rawwrite -s` to read, so the "
+                "write is refused instead of attempted.",
+                "Check that the temp directory is writable."
+            };
+        }
     }
 
-    /* MF-1108: hier stand „production runner must write stdin_data to this
-     * path before invoking fluxengine". Zwei Berichtigungen dazu, beide
-     * gemessen:
-     *
-     * (1) Dieser Block ist UNERREICHBAR. `do_write_raw_flux` kehrt seit
-     *     MF-1047 oben unbedingt mit einem ProviderError zurueck; alles ab
-     *     hier ist stehen gelassene Bauanleitung fuer P3-342 Schritt (b),
-     *     kein laufender Code. Ueber Laufzeitverhalten sagt die Zeile
-     *     also nichts — auch nicht nach dieser Aenderung.
-     * (2) Die Behauptung ueber den Laeufer traegt trotzdem nicht, und das
-     *     gehoert benannt, weil die Bauanleitung sonst einen falschen
-     *     Vertrag weitergibt: `make_fluxengine_qprocess_runner()` PIPET
-     *     `stdin_data` in den Standardeingang des Kindprozesses
-     *     (`qprocess_subprocess_runner.cpp:63`) und ruehrt die Datei nicht
-     *     an. Wer P3-342 (b) baut, muss die Datei selbst schreiben.
-     *
-     * Der Pfad wird hier portabel gemacht, damit die Bauanleitung kein
-     * unter Windows ungueltiges Literal in die Zukunft traegt. */
-    const std::string input_path = fe_temp_path("uft_fe_write_", cylinder,
-                                                head, ".flux");
-
-    std::vector<std::string> argv = build_write_argv(cylinder, head, input_path);
-
-    FluxEngineRunResult result = m_runner(argv, stdin_data);
+    std::vector<std::string> argv = build_write_argv(cylinder, head,
+                                                     scp_pfad);
+    /* Der Laeufer bekommt KEINE stdin-Daten mehr: `rawwrite -s` liest
+     * die Datei selbst. Das ist der Unterschied zu MF-1108, wo ein
+     * Kommentar behauptete, der Laeufer schreibe sie - was er nie tat. */
+    FluxEngineRunResult result = m_runner(argv, std::string());
+    std::remove(scp_pfad.c_str());
 
     if (result.exit_code != 0) {
         return fe_write_error(cylinder, head, result.stderr_text);
     }
 
-    /* Write reported success. */
-    const size_t bytes_written = stdin_data.size();
-
-    if (p.verify) {
-        /* Optional verify pass: re-read the track to confirm write.
-         * Rule F-3: both intended and readback preserved in WriteVerifyFailed. */
-        const std::string verify_path = fe_temp_path("uft_fe_vfy_", cylinder,
-                                                     head, ".scp");
-        std::vector<std::string> read_argv = build_read_argv(cylinder, head,
-                                                              1, verify_path);
-
-        FluxEngineRunResult verify_result = m_runner(read_argv, "");
-
-        if (verify_result.exit_code != 0 || verify_result.stdout_text.empty()) {
-            /* Verify read failed or produced no data.
-             * Rule F-3: preserve intended bytes and empty readback verbatim. */
-            WriteVerifyFailed vf;
-            vf.position      = CHS{cylinder, head};
-            vf.bytes_written = bytes_written;
-            /* intended: the raw bytes we tried to write. */
-            vf.intended.assign(
-                reinterpret_cast<const uint8_t*>(stdin_data.data()),
-                reinterpret_cast<const uint8_t*>(stdin_data.data()) + stdin_data.size());
-            /* readback: empty (verify read returned nothing). */
-            vf.readback.clear();
-            return vf;
-        }
+    const size_t bytes_written = flux.transitions_ns.size() * 4;
+    if (!p.verify) {
+        WriteCompleted fertig;
+        fertig.position      = CHS{cylinder, head};
+        fertig.bytes_written = bytes_written;
+        /* `verified = false` und nicht weggelassen: der Aufrufer hat
+         * keine Nachlese verlangt, also ist auch keine erfolgt. Das
+         * Feld heisst „read-back matched" — ein `true` ohne Nachlese
+         * waere genau die Zusage ohne Tat aus MF-883. */
+        fertig.verified      = false;
+        return fertig;
     }
+    return ProviderError{
+        UFT_E_GENERIC,
+        "FluxEngine flux write: verify pass not wired (P3-342)",
+        "The write itself went through `fluxengine rawwrite`, but the "
+        "requested verify pass would have to re-read the track and "
+        "compare it against the intended flux. That read-back path is "
+        "not wired for the write case, and reporting success without it "
+        "would be a claim this provider cannot back (MF-883).",
+        "Call write_raw_flux() with verify=false, or verify by reading "
+        "the track back through read_raw_flux() and comparing yourself."
+    };
 
-    WriteCompleted completed;
-    completed.position      = CHS{cylinder, head};
-    completed.bytes_written = bytes_written;
-    completed.verified      = p.verify;
-    completed.quality       = QualityFlag::CRC_OK;
-    return completed;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
