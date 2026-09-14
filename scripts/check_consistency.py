@@ -1026,6 +1026,16 @@ def main() -> int:
         import audit_tor_abdeckung as _ta
         all_errors.append(("Tor-Abdeckung", _ta.check(repo)))
 
+        # MF-1114: die Waisenrolle — ein Register statt eines Sweeps.
+        # `orphan_baseline.txt` fuehrt DATEIEN als Pfadliste und wird
+        # ueber die Zeilenzahl verglichen; sie kann nicht sagen, welcher
+        # ART ein Fund ist. Die Rolle tut es fuer SYMBOLE, und sie ist
+        # bei der Art `schreiber` vollstaendig — genau dort sind
+        # `uft_atx_write` und `uft_ibm3740_write` an jeder Liste
+        # vorbeigelaufen, auch am Kopf von Tor 57.
+        import audit_waisenrolle as _wr
+        all_errors.append(("Waisenrolle", _wr.check(repo)))
+
         import quarantine_stand as _qsc
         all_errors.append(("Quarantaene-Stand", _qsc.check(repo)))
 
