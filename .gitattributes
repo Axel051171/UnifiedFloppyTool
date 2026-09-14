@@ -40,6 +40,28 @@ tests/corpus_manifest/*.json   text
 # CI meldete daraufhin ALLE 47 Hashes als falsch.
 docs/format_specs/** -text
 
+# MF-1115: `docs/OPEN_ITEMS.md` wird von MEHREREN Skripten geschrieben,
+# und ohne Pinnung kippen dabei die Zeilenenden.
+#
+# Gemessen an MF-1114: der Blob ging von **7712 LF** auf **7708 CRLF**,
+# waehrend der inhaltliche Diff `--ignore-cr-at-eol` genau **3
+# Einfuegungen und 2 Loeschungen** war. Inhaltlich also nichts verloren
+# — aber ein Commit, der 7710 Zeilen anfasst, um drei einzufuegen,
+# verdeckt seine eigene Aenderung, und jeder kuenftige Diff auf dieser
+# Datei ist unlesbar.
+#
+# Die Datei stand auf `text: unspecified` bei `core.autocrlf=true`, und
+# mindestens fuenf Tore schreiben sie (`audit_einheiten.py`,
+# `audit_evidence_marker.py`, `audit_guard_kollision.py`,
+# `audit_setting_wiring.py`, `audit_todo_without_plan.py`) — dazu jede
+# Nachtrags-Bearbeitung von Hand. Wer sie als naechster anfasst, soll
+# nicht wieder die ganze Datei umschreiben.
+#
+# `text eol=lf` und nicht `-text`: sie ist KEIN Beweismaterial mit
+# Pruefsumme (dafuer stehen die Zeilen darueber), sondern Text, der
+# diffbar bleiben soll — nur mit festem Zeilenende in beide Richtungen.
+docs/OPEN_ITEMS.md   text eol=lf
+
 # `src/dtc_components/` — fremder Referenzbestand, uebernommen MF-1099.
 # Dieselbe Begruendung wie die Zeile darueber: sein README fuehrt je
 # Datei eine SHA-256, und ohne `-text` haette derselbe Beleg auf zwei
