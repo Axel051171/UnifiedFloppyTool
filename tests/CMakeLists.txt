@@ -1151,6 +1151,36 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_cpm_gegen_cpmtools")
+        # MF-1149: dieselbe Quellenmenge wie test_cpm_gegen_libdsk, denn
+        # es ist dasselbe Plugin — was sich geaendert hat, ist die
+        # HERKUNFT der Pruefdatei, nicht der Pruefling.
+        #
+        # Der Satz im Zweig darueber ("T2 und nicht T1b: libdsk koennte
+        # diese Rohabbilder zwar schreiben, aber ... eine Gleichheit ohne
+        # Aussage") bleibt richtig fuer `dsktrans` und traegt nicht fuer
+        # **cpmtools**: `mkfs.cpm` legt kein Abbild um, es legt ein
+        # DATEISYSTEM an, und `cpmcp` legt Dateien hinein — wo die Bytes
+        # landen, entscheidet die Definition. Gemessen an denselben 20
+        # Nutzdateien: unter `cpm86-720` weichen 474 521, unter `altdsdd`
+        # 473 722 von 737 280 Byte ab.
+        #
+        # Die Kette braucht ZWEI Werkzeuge, und das ist gemessen:
+        # `mkfs.cpm` allein schreibt nur Systemspuren und Verzeichnis
+        # (bei ibm-3740 **9984** statt 256 256 Byte), waehrend
+        # `uft_cpm_detect_diskdef()` die exakte Gesamtgroesse verlangt.
+        # Den vollen Behaelter legt libdsks `dskform -format pcw720` an —
+        # den Bruecken-Namen nennt cpmtools selbst in seiner
+        # `diskdefs`-Zeile fuer cf2dd (`libdsk:format pcw720`).
+        #
+        # Lizenzen gemessen: cpmtools 2.21 GPL-3 (COPYING, configure.in),
+        # libdsk 1.5.12 LGPL-2+. Beide AUSGEFUEHRT, nicht uebernommen —
+        # Kanal Oracle nach MF-695.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_fds_gegen_die_beschreibung")
         # MF-1038: `fds` meldete je Seite 36 Byte, die es nicht gibt.
         # UFT legt eine 65-500-Byte-Seite als 128 virtuelle 512-Byte-

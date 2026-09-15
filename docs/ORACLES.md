@@ -173,9 +173,27 @@ Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
 von ihnen war bisher an einem Inhalts-Differenzlauf beteiligt. Wer den
 ersten fährt, kalibriert vorher.
 
-## Registrierte Oracles (10)
+## Registrierte Oracles — diese Tafel ist eine AUSWAHL (MF-1149)
 
-Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
+**Hier stand „Registrierte Oracles (10)", und drei Zahlen widersprachen
+sich.** Gemessen am 2026-09-15: `tests/differential/oracles.py` fuehrt
+**25** Eintraege (`len(REGISTRY)`), diese Tafel hatte **7** Zeilen, und
+die Ueberschrift sagte **10**. Das ist der Zahlendrift-Fall, den dieser
+Baum mehrfach gesehen hat (MF-541, MF-601, MF-626) — eine von Hand
+gepflegte Zahl neben einer abgeleiteten Quelle.
+
+Die Ueberschrift nennt deshalb keine Zahl mehr. **Die Registry ist die
+Quelle**, und ihr eigenes Tor `oracle_registry` haelt sie vollstaendig —
+es prueft je Eintrag Herkunft, Zweck, Abstammung und Fassungsanker und
+faellt, wenn einer fehlt (gemessen: meine beiden neuen Eintraege fielen
+beim ersten Lauf mit „keine Versionsabfrage — dann ist seine Aussage
+nicht zitierfaehig"). Diese Tafel erklaert die Eintraege, die eine
+Erklaerung brauchen. Wer alle sehen will: `ctest -R oracle_registry`
+listet sie samt Verfuegbarkeit. Eine ABGELEITETE Tafel waere besser und
+ist nicht gebaut — als **P3-404** eingetragen statt still gelassen.
+
+Stand der erklaerten Auswahl: 2026-09-15 (MF-1149; vorher 2026-08-30,
+MF-693).
 
 | Kurzname | Variable | Lizenz | Herkunfts-Anker | entscheidet |
 |---|---|---|---|---|
@@ -185,6 +203,8 @@ Stand `tests/differential/oracles.py`, 2026-08-30 (MF-693).
 | `samdisk` | `SAMDISK` | MIT | `--version` | Container-Formate und ihre Randfälle. Die **Quelle** liegt zusätzlich im Baum (`src/samdisk/`) und dient als Spec-Referenz |
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
 | `epstool` | `EPSTOOL` | **keine** — nur Ausführung | SHA-256 des Binärs (keine Versionsabfrage; `version`/`--version` drucken nur den Kopf) | Ensoniq EPS/EPS-16+/ASR: legt Diskettenabbilder an (`mkhfe`), schreibt Dateien durch seinen eigenen Dateisystemcode hinein (`import`) und wandelt HFE↔roh (`hfe2img`). Seit MF-1103 der Erzeuger für `edk`. **Die Lizenzlage gehört dazu:** sein README sagt *„provided for educational and archival purposes"* — das ist **keine Rechteeinräumung**. Damit ist es ein Oracle wie `dtc`: ausführen ja, weitergeben nein. Der Quelltext bleibt unter `tools/uft-scout/work/epstool/` und wird nicht übernommen. **Und eine Grenze ist gemessen, nicht vermutet:** `mkhfe --os` bettet ein **83 KB großes EPS-1-Betriebssystem** ein — Ensoniqs Code. Belege für `tests/corpus_free/` werden deshalb **ohne** `--os` gebaut, und `test_edk_gegen_epstool` hält das fest (0 von 4 verbotenen Zeichenketten) |
+| `mkfs.cpm` (+ `cpmcp`) | `MKFS_CPM` | **GPL-3.0** (cpmtools 2.21, Michael Haardt — gemessen MF-1149 an `COPYING` und `configure.in`) | **keine** Versionsabfrage (gemessen: der Aufruf ohne Argumente druckt nur „Usage: mkfs.cpm …", `-V`/`--version` gibt es nicht); gepinnt ueber SHA-256 `f5ad7261…` bzw. `76f3a12e…` | **Der CP/M-ERZEUGER, seit MF-1149** — und er beantwortet P3-383. `mkfs.cpm` legt kein Abbild um, es legt ein **Dateisystem** an, und `cpmcp` legt Dateien hinein; wo die Bytes landen, entscheidet die Definition. Genau darin liegt der Unterschied zu `dsktrans`, mit dem MF-1039 T1b verneint hat („eine Gleichheit ohne Aussage"). **Gemessen:** dieselben 20 Nutzdateien weichen unter `cpm86-720` in **474 521** und unter `altdsdd` in **473 722** von 737 280 Byte ab. `fsck.cpm` prueft das Erzeugnis fehlerfrei, `cpmls -l` listet es. **Die Grenze gehoert dazu:** allein reicht es nicht — `mkfs.cpm -f ibm-3740` schreibt **9984** statt 256 256 Byte, den vollen Behaelter legt `dskform` |
+| `dskform` | `DSKFORM` | **LGPL-2.0-or-later** (libdsk 1.5.12, John Elliott) | **keine** eigene Versionsabfrage (sie sitzt in `dsktrans -version`, MF-1032); gepinnt ueber SHA-256 `73586b31a80b0cb141dfa3c82ece6556af3b0a52a015e0863f27bdd2c5fe70d2` | **Behaelter-Erzeuger, seit MF-1149**: `dskform -type raw -format <name>` legt ein Rohabbild in der VOLLEN Groesse einer benannten Geometrie an — fuer `pcw720` gemessen 737 280 Byte, 737 270 davon 0xE5. Gebraucht, weil cpmtools nur Systemspuren und Verzeichnis schreibt, waehrend `uft_cpm_detect_diskdef()` die exakte Gesamtgroesse verlangt. **Den Bruecken-Namen nennt cpmtools selbst:** seine `diskdefs`-Zeile fuer `cf2dd` traegt `libdsk:format pcw720` |
 | `floptool` | `FLOPTOOL` | **BSD-3-Clause** (MAME) | `version` **und** SHA-256 | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem; seit MF-1083 auch **Erzeuger**: `flopconvert` schreibt **122 von 151** Formaten. **Zwei Berichtigungen MF-1083:** hier stand *keine Versionsabfrage* — `floptool version` gibt es, und sie meldet die Bauzeichenkette; und *GPL-2.0-or-later* — MAMEs `floptool.cpp` und die Formatschicht tragen `// license:BSD-3-Clause` |
 
 ### Kein Abbild-Oracle, aber ein gebautes Messwerkzeug: `hdlen` (MF-1089)

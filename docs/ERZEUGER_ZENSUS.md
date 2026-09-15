@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 13 |
+| davon auf T2/T3 (offen) | 12 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -40,7 +40,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | `adf_ext` | T2 | AMIGA_ADF (?) | — | adf (?), adfs_n (?), adfs_o (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `cas` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `cpm` | T2 | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) | a2_16sect_dos (?), a2_16sect_prodos (?), abc800i (?), abc_fd2 (?), adam (?), atom (?), bw12 (?), bw2 (?), c8280 (?), cgenie (?), cpis (?), cpm, flex (?), guab (?), itt3030 (?), jv1 (?), jv3 (?), jvc (?), kaypro2 (?), kaypro2x (?), m5 (?), mdos (?), mgt (?), mm1 (?), mm2 (?), msx (?), nabupc (?), nascom (?), oric_dsk (?), oric_jasmin (?), os9 (?), pc (?), pc98 (?), ql (?), smx, svi (?), tandy2k (?), tdf (?), ti99 (?), tiki100 (?), tvc (?), uniflex (?), vtech_dsk (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fdi_pc98` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fds` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -67,7 +66,7 @@ MF-1097, gemessen an LAEUFEN statt an der Modulliste. hxcfe fuehrt ZWEI Lader fu
 
 **`akai_s900`** (Kanal: keiner)
 
-MF-1061, gemessen und VERWORFEN. hxcfe zerlegt ein flaches 819 200-Byte-Abbild mit dieser Anordnung richtig — 800 von 800 Sektoren tragen ihren eigenen Namen, und die Gegenprobe mit ENSONIQ_DD_800KB (gleiche Groesse, 10 x 512 statt 5 x 1024) trifft nur 320 von 1600. Die ZERLEGUNG ist also eine echte zweite Hand auf die Geometrie. Aber das Zurueckschreiben ins flache Format ist LAYOUT-UNABHAENGIG byteidentisch — auch ueber die Ensoniq-Anordnung kommt dieselbe Datei heraus. Ein so erzeugtes Fixture waere eine Tautologie, kein Beleg.
+MF-1061, gemessen und VERWORFEN. hxcfe zerlegt ein flaches 819 200-Byte-Abbild mit dieser Anordnung richtig — 800 von 800 Sektoren tragen ihren eigenen Namen, und die Gegenprobe mit ENSONIQ_DD_800KB (gleiche Groesse, 10 x 512 statt 5 x 1024) trifft nur 320 von 1600. Die ZERLEGUNG ist also eine echte zweite Hand auf die Geometrie. Aber das Zurueckschreiben ins flache Format ist LAYOUT-UNABHAENGIG byteidentisch — auch ueber die Ensoniq-Anordnung kommt dieselbe Datei heraus. Ein so erzeugtes Fixture waere eine Tautologie, kein Beleg. **NACHTRAG MF-1149, und er schliesst die Frage kategorisch statt nur fuer diesen Aufruf:** der ZELLSTROM-Umweg, der `opus` (MF-1084), `d13` (MF-1085) und `edk` (MF-1103) gehoben hat, traegt hier nachweislich nicht. Gemessen mit einer selbstbenennenden 819 200-Byte-Eingabe: `-uselayout:AKAIS950_DD_800KB -conv:HXC_HFE` ergibt einen 2 008 064 Byte grossen MFM-Zellstrom (Schnittstellenmodus S950_DD_FLOPPYMODE, Sektoren 1..5 zu 1024 B), `-uselayout:ENSONIQ_DD_800KB` einen ebenso grossen mit Sektoren 0..9 zu 512 B - die beiden Stroeme unterscheiden sich in **1 790 325 von 2 008 064 Byte**. Zurueck ueber `RAW_LOADER` liefern BEIDE dieselbe Datei: **0** abweichende Byte gegen die Eingabe, identische SHA-256. Das fremde Werkzeug modelliert die Geometrie also wirklich - aber die Auskunft steht im ZWISCHENSTUECK und kann das ZIEL nicht erreichen. **Ein flaches Abbild mit gleichfoermiger Sektorgroesse und linearer Abbildung IST die Bytefolge und hat keinen Platz fuer die Aussage:** jedes Tripel (Zylinder, Koepfe, Sektoren), dessen Produkt mit der Sektorgroesse die Dateigroesse trifft, liest dieselben Bytes in derselben Reihenfolge und beschriftet sie nur anders. Pruefung (3) aus `_pruefung` faellt damit nicht am Werkzeug, sondern am FORMAT; kein Erzeuger kann das aendern. **Nicht in dieser Klasse sind zonierte oder nichtlineare flache Abbilder** - bei `victor9k` (zwei Zonentafeln), `v9t9` (Kopf 1 rueckwaerts) und `nanowasp` (Skew) zeigt die Bytelage die Anordnung, und genau darum trugen die ihre Hebung. Ob eine Stufe hier trotzdem ruhen darf (Gestalt `tan`/P3-365), ist als **P3-403** eine Eigentuemer-Entscheidung.
 
 **`apridisk`** (Kanal: imd)
 
@@ -81,9 +80,9 @@ MF-1097, misst nach, was MF-1040 benannt hatte. Gemessen im Lauf: `Error: Format
 
 MF-1063. Ein IMD-Traeger, fuenf Ziele. Sektor 1 der Spur 0/0 traegt einen echten PC-720K-Bootsektor, damit `cfi`s strukturelle Sonde (sie verlangt eine gueltige BPB) ueberhaupt ansprechen kann; die uebrigen 1439 benennen sich selbst. Kein Fuellbyte.
 
-**`cpm`** (Kanal: keiner)
+**`cpm`** (Kanal: behaelter:libdsk-dskform-pcw720 + cpmtools-cf2dd)
 
-MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber "Poly CP/M disk image" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` ("Specialist MX/Orion/B2M"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht. **DRITTE Kollision, gemessen MF-1093:** auch **SAMdisk** fuehrt einen Eintrag `cpm` — und sein `src/types/cpm.cpp` sagt in der ersten Zeile, was es ist: "Basic support for SAM Coupe Pro-DOS images", 720K, erkannt an der Endung `.cpm`. Damit ist `.cpm` die Endung, ueber die sich in diesem Baum **drei verschiedene Formate** zuordnen lassen (Poly CP/M, Specialist MX, SAM Coupe Pro-DOS) — und keines davon ist UFTs libdsk-staemmiges CP/M.
+MF-1085/MF-1087, P3-363. **Der Treffer ist eine NAMENSGLEICHHEIT, kein Kanal.** Der Zensus ordnet floptools Modul `cpm` diesem Plugin zu, weil beide so heissen - gemessen ist floptools `cpm` aber "Poly CP/M disk image" (ein neuseelaendischer Poly-1-Rechner) und hat mit UFTs libdsk-staemmigem `cpm` (55 diskdefs, Amstrad/PCW/Spectrum+3/...) nichts zu tun. Dasselbe gilt fuer den zweiten Treffer `smx` ("Specialist MX/Orion/B2M"), der nur deshalb als EINDEUTIG gilt, weil er die Endung `.cpm` fuehrt und `.cpm` im Baum nur dieses eine Plugin traegt. Ein gleicher Name ist kein Kanal, und eine eindeutige Endung auch nicht. **DRITTE Kollision, gemessen MF-1093:** auch **SAMdisk** fuehrt einen Eintrag `cpm` — und sein `src/types/cpm.cpp` sagt in der ersten Zeile, was es ist: "Basic support for SAM Coupe Pro-DOS images", 720K, erkannt an der Endung `.cpm`. Damit ist `.cpm` die Endung, ueber die sich in diesem Baum **drei verschiedene Formate** zuordnen lassen (Poly CP/M, Specialist MX, SAM Coupe Pro-DOS) — und keines davon ist UFTs libdsk-staemmiges CP/M. **NACHTRAG MF-1149, P3-383 erledigt: der Kanal ist da, und er lag nicht bei floptool.** Er heisst **cpmtools**, liegt seit MF-1085 gebaut im Baum und stand in keinem Register — `docs/ORACLES.md` fuehrte nur `cpmls`, den LESER. `mkfs.cpm` legt kein Abbild um, es legt ein DATEISYSTEM an, und `cpmcp` legt Dateien hinein; wo die Bytes landen, entscheidet die Definition. Das ist genau der Unterschied zu `dsktrans`, mit dem MF-1039 T1b verneint hat („eine Gleichheit ohne Aussage"). **Gemessen: der Kanal braucht ZWEI Werkzeuge.** `mkfs.cpm -f ibm-3740` erzeugt **9984** Byte statt 256 256 — nur Systemspuren und Verzeichnis —, und selbst eine voll beschriebene ibm-3740 kaeme auf 255 488, weil die letzten 768 Byte hinter dem letzten vollen 1024-Byte-Block liegen; `uft_cpm_detect_diskdef()` verlangt aber die exakte Gesamtgroesse. Den vollen Behaelter legt libdsks `dskform -type raw -format pcw720` an (737 280 Byte, 737 270 davon 0xE5), und **den Bruecken-Namen nennt cpmtools selbst**: seine `diskdefs`-Zeile fuer `cf2dd` traegt `libdsk:format pcw720`. Pruefung (3) ist bestanden statt behauptet: dieselben 20 Nutzdateien unter `cpm86-720` weichen in **474 521**, unter `altdsdd` in **473 722** von 737 280 Byte ab. UFT liest daraus **960 von 960 Nutzsektoren an ihrer eigenen Stelle**, dazu 9 Systemsektoren, 16 Verzeichnissektoren mit 256 Eintraegen und 455 freie — Summe 1440. Fixture `tests/corpus_free/cpmtools_cf2dd_720k.cpm`, Test `test_cpm_gegen_cpmtools`. Lizenzen jetzt gemessen (vorher LIZ-1 „nicht gemessen"): cpmtools 2.21 **GPL-3**, libdsk 1.5.12 **LGPL-2+**, beide AUSGEFUEHRT.
 
 **`cqm`** (Kanal: imd)
 
@@ -127,7 +126,7 @@ MF-1061, am Rand gemessen. 111 104 B = 102 400 Nutzlast + 8704, und 8704 ist 0x2
 
 **`korg_dss1`** (Kanal: keiner)
 
-MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch.
+MF-1061, wie `akai_s900`. Die Zerlegung stimmt (800/800, keine Verschraenkung im Gegensatz zu Akai), das Zurueckschreiben ist tautologisch. **NACHTRAG MF-1149, hier eigens gemessen und nicht von `akai_s900` uebernommen:** dieselbe selbstbenennende 819 200-Byte-Eingabe durch DREI Anordnungen - `KORGDSS1_DD_800KB`, `ENSONIQ_DD_800KB` und `AKAIS950_DD_800KB` - ergibt drei VERSCHIEDENE Zellstroeme (KORGDSS1 gegen AKAIS950 weichen in **1 746 925 von 2 008 064 Byte** ab, obwohl beide 5 x 1024 sind: die Schnittstellenmodi und damit die Zwischenraeume unterscheiden sich). Zurueck ueber `RAW_LOADER` liefern **alle drei** dieselbe Datei, **0** abweichende Byte gegen die Eingabe. Der Grund liegt im FORMAT und nicht im Werkzeug; Begruendung und Abgrenzung bei `akai_s900`, Eigentuemer-Entscheidung als **P3-403**.
 
 **`lisa_twiggy`** (Kanal: keiner)
 
@@ -231,6 +230,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `atr` | T1b | — | — |
 | `atx` | T1 | — | — |
 | `cfi` | T1b | — | cfi |
+| `cpm` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `cqm` | T1b | — | — |
 | `d13` | T1b | — | — |
 | `d64` | T1b | — | — |

@@ -6,8 +6,12 @@
  * Referenz: libdsks Geometrietafel `lib/dsksgeom.c` (`stdg[]`, John
  * Elliott, **LGPL-2+**, im Baum unter `tools/uft-scout/work/libdsk`;
  * **nur gelesen**, Kanal *Spec* nach MF-695) und cpmtools von Michael
- * Haardt (**Lizenz NICHT gemessen** — LIZ-1; hier ist nichts daraus
- * uebernommen).
+ * Haardt (**GPL-3**, gemessen MF-1149 an `COPYING` und `configure.in`
+ * des Klons unter `tools/uft-scout/work/cpmtools`, Fassung 2.21; hier
+ * ist nichts daraus uebernommen — seit MF-1149 wird es AUSGEFUEHRT,
+ * Kanal *Oracle*, siehe `tests/test_cpm_gegen_cpmtools.c`).
+ * Hier stand „Lizenz NICHT gemessen — LIZ-1"; fuer cpmtools ist die
+ * Frage damit beantwortet, LIZ-1 im Ganzen bleibt offen.
  *
  * ── Befund 1: die Sonde konnte nie zustimmen ───────────────────
  *

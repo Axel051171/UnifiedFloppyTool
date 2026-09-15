@@ -411,6 +411,81 @@ REGISTRY: tuple[Oracle, ...] = (
         ),
     ),
     Oracle(
+        name="mkfs.cpm",
+        env="MKFS_CPM",
+        exes=("mkfs.cpm", "mkfs.cpm.exe"),
+        # Keine Versionsabfrage — gemessen, nicht angenommen: der Aufruf
+        # ohne Argumente druckt „Usage: mkfs.cpm [-f format] …", und
+        # weder `-V` noch `--version` gibt es. Die FASSUNG steht in
+        # `configure.in` (VERSION=2.21), die Lizenz in `COPYING` (GPL-3);
+        # gepinnt wird das Programm deshalb ueber seinen SHA-256
+        # f5ad7261a9714a9f3c6c0b8e2406a518ebef9d4ac822babf572f7098f49bb8d4
+        # (cpmcp.exe 76f3a12e1d7428630f4171fdff534d586a45c0b97140f06f53f
+        # fc41802504260), wie bei `epstool` und `floptool`.
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for="CP/M-ERZEUGER, seit MF-1149: `mkfs.cpm` legt ein "
+                      "CP/M-Dateisystem an, `cpmcp` legt Dateien hinein. "
+                      "Das ist der Unterschied zu `dsktrans`, mit dem "
+                      "MF-1039 T1b verneint hat — dort kam ein kopfloses "
+                      "SIDES_ALT-Abbild byteidentisch zurueck (\"eine "
+                      "Gleichheit ohne Aussage\"), hier entscheidet die "
+                      "Definition, WO die Bytes landen. Gemessen: "
+                      "dieselben 20 Nutzdateien weichen unter "
+                      "`cpm86-720` in 474 521 und unter `altdsdd` in "
+                      "473 722 von 737 280 Byte ab.",
+        origin="https://github.com/lipro-cpm4l/cpmtools",
+        licence="GPL-3.0",
+        abstammung=(
+            "GEMESSEN und getrennt: fuer die DISKDEFS ist cpmtools "
+            "moeglicherweise dieselbe Hand wie UFTs Tafel (siehe "
+            "`cpmls`, LIZ-1) — fuer das ERZEUGEN eines Abbilds nicht. "
+            "Der Beleg des Fixtures ist die LAGE der Bytes, und die "
+            "rechnet cpmtools' eigener Dateisystemcode; UFTs Leser "
+            "kennt kein CP/M-Dateisystem. Dazu prueft `fsck.cpm` das "
+            "Erzeugnis und `cpmls -l` listet es — zwei weitere Augen "
+            "derselben Familie, was fuer die STRUKTUR genuegt und fuer "
+            "die Geometrie nicht; die bestaetigt libdsks `pcw720`. "
+            "Eine Zeile Quelltext ist nicht uebernommen. "
+        ),
+    ),
+    Oracle(
+        name="dskform",
+        env="DSKFORM",
+        exes=("dskform", "dskform.exe"),
+        # libdsk HAT eine Versionsabfrage, aber `dskform` selbst nicht —
+        # gemessen: sein Aufruf ohne Argumente druckt „Syntax: …", und
+        # `-version` kennt nur `dsktrans` (MF-1032: „libdsk version
+        # 1.5.12"). Die Fassung ist damit ueber das Geschwisterprogramm
+        # belegt, das Programm selbst ueber seinen SHA-256
+        # 73586b31a80b0cb141dfa3c82ece6556af3b0a52a015e0863f27bdd2c5fe70d2.
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for="BEHAELTER-Erzeuger, seit MF-1149: `dskform -type "
+                      "raw -format <name>` legt ein Rohabbild in der "
+                      "VOLLEN Groesse einer benannten Geometrie an. "
+                      "Gebraucht wird es, weil `mkfs.cpm` nur "
+                      "Systemspuren und Verzeichnis schreibt — bei "
+                      "`ibm-3740` gemessen 9984 statt 256 256 Byte —, "
+                      "waehrend `uft_cpm_detect_diskdef()` die exakte "
+                      "Gesamtgroesse verlangt. Den Bruecken-Namen nennt "
+                      "cpmtools selbst: seine `diskdefs`-Zeile fuer "
+                      "`cf2dd` traegt `libdsk:format pcw720`.",
+        origin="http://www.seasip.info/Unix/LibDsk/",
+        licence="LGPL-2.0-or-later",
+        abstammung=(
+            "Dieselbe Hand wie `libdsk`/`dsktrans` — und fuer die "
+            "GEOMETRIE ist libdsks `stdg[]` zugleich die Referenz, "
+            "gegen die MF-1039 UFTs CP/M-Tafel geprueft hat. Das ist "
+            "hier ausdruecklich kein Kreis, weil der BEHAELTER nur "
+            "Groesse und Fuellbyte beitraegt (737 280 Byte, 737 270 "
+            "davon 0xE5) und die Aussage des Fixtures in der Lage der "
+            "cpmtools-Bytes darin steckt. "
+        ),
+    ),
+    Oracle(
         name="adf2dms",
         env="ADF2DMS",
         exes=("adf2dms", "adf2dms.exe"),

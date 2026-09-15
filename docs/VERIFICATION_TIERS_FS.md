@@ -9,9 +9,9 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 | Stufe | Leser | heisst |
 |---|---|---|
 | FS-T0 | 29 | kein Test |
-| FS-T1 | 8 | nur selbst gebaute Eingaben — zirkulaer |
+| FS-T1 | 7 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
-| FS-T2 | 3 | Korpus von **registrierter** fremder Hand |
+| FS-T2 | 4 | Korpus von **registrierter** fremder Hand |
 | **gesamt gefuehrt** | **40** | |
 
 Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
@@ -38,7 +38,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_cbm_formats` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_cbmdos` | **FS-T2** | `test_cbm_geloeschte_eintraege`, `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
 | `uft_cmd` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
-| `uft_cpm_diskdef` | **FS-T1** | `test_cpm_gegen_libdsk` | liest ein Korpus-Abbild, dessen Manifest keine fremde Hand nennt |
+| `uft_cpm_diskdef` | **FS-T2** | `test_cpm_gegen_cpmtools`, `test_cpm_gegen_libdsk` | `cpmtools_cf2dd_720k.cpm` stammt von `cpmtools 2.21 `mkfs.cpm` + `cpmcp` (Michael Haardt, GPL-3 - gemessen an COPYING und configure.in im Klon) auf einem Behaelter von libdsk 1.5.12 `dskform` (John Elliott, LGPL-2+). Beide im Baum geklont und gebaut unter `tools/uft-scout/work/`; SHA-256 der benutzten Programme: dskform.exe 73586b31a80b0cb141dfa3c82ece6556af3b0a52a015e0863f27bdd2c5fe70d2, mkfs.cpm.exe f5ad7261a9714a9f3c6c0b8e2406a518ebef9d4ac822babf572f7098f49bb8d4, cpmcp.exe 76f3a12e1d7428630f4171fdff534d586a45c0b97140f06f53ffc41802504260, fsck.cpm.exe f7ef3fd36329d1348d0fef50efa2d49eefaf14dc5c25f84e47270160c405b03f. Beide werden AUSGEFUEHRT, nicht uebernommen - Kanal Oracle nach MF-695.` — im Oracle-Register als `mkfs.cpm`, der Beleg ist zitierfaehig |
 | `uft_d64_file` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d64_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d71_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
@@ -111,7 +111,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/legacy/uft_fdi.c` | 5 | 512 |
 | `src/formats/atari/atari_util.c` | 4 | 315 |
 | `src/formats/bbc/uft_bbc_dfs.c` | 4 | 359 |
-| `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1211 |
+| `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1215 |
 | `src/formats/d64/uft_d64_parser_v3.c` | 4 | 1991 |
 | `src/formats/adf/uft_adf_parser_v3.c` | 3 | 545 |
 | `src/formats/cbm/uft_cbm_formats.c` | 2 | 969 |
