@@ -2929,6 +2929,10 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_probe_confidence_on_zeros"
            OR ${test_name} STREQUAL "test_probe_verdict_bands"
            OR ${test_name} STREQUAL "test_probe_confidence_on_random"
+           # MF-1146: Eichung 3 — dasselbe Recht wie die beiden anderen
+           # Eichungen, und aus demselben Grund: sie fragt JEDE Sonde der
+           # Registry, nicht eine gepflegte Auswahl (MF-636/MF-729).
+           OR ${test_name} STREQUAL "test_probe_confidence_on_text"
            OR ${test_name} STREQUAL "test_disk_open_fuzz"
            OR ${test_name} STREQUAL "test_dsk_open_bounds"
            OR ${test_name} STREQUAL "test_disk_write_fuzz"
@@ -2990,7 +2994,12 @@ foreach(test_source ${TEST_SOURCES})
             # abgestuerzt ist. Sie liegen im Repo, weil ein Absturz ohne
             # seine Eingabe kein Regressionsschutz ist, sondern eine
             # Anekdote.
-            UFT_CRASHER_DIR="${CMAKE_SOURCE_DIR}/tests/crashers")
+            UFT_CRASHER_DIR="${CMAKE_SOURCE_DIR}/tests/crashers"
+            # MF-1146: Eichung 3 liest ihre Grundlinie aus `docs/`. Der
+            # Pfad steht hier statt als `UFT_CORPUS_DIR "/../.."`, weil
+            # eine Ableitung ueber zwei Ebenen bei jeder Umstellung des
+            # Korpusverzeichnisses still falsch wuerde.
+            UFT_REPO_DIR="${CMAKE_SOURCE_DIR}")
     elseif(${test_name} STREQUAL "test_amiga_decoder_limits")
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE

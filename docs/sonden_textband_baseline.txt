@@ -1,0 +1,33 @@
+# Grundlinie zu Eichung 3 (MF-1146):
+# Sonden, die auf reinem TEXT das Band "Merkmal getroffen"
+# (>= UFT_PROBE_CONF_MAGIC_MIN, also 80) beanspruchen.
+#
+# Test: tests/test_probe_confidence_on_text.c
+#
+# WARUM ES DIESE DATEI GIBT
+#
+# Eine Kennung KANN druckbares ASCII sein — "SCP", "IMD ", "CAPS",
+# "MAMEFLOPPYIMAGE". Trifft ein Textpuffer eine solche Kennung, ist die
+# hohe Konfidenz RICHTIG. Ein Treffer ist deshalb ein KANDIDAT und kein
+# Befund; dieselbe Lage wie bei Achse A6 des T1b-Audits, die nach 13 von
+# 14 widerlegten Handproben zur Liste herabgestuft wurde (MF-1133).
+#
+# Eine Zeile hier heisst also: die Sonde ist GELESEN und der Anspruch
+# begruendet. Wer eine Zeile ergaenzt, ohne die Sonde gelesen zu haben,
+# macht aus einer Messung eine Aufzaehlung — der vierzehnte Fall dieser
+# Art in diesem Baum (MF-930).
+#
+# NEUE Ueberziehungen faerben den Test rot.
+#
+# DER ANLASS, gemessen (MF-1144)
+#
+# `img_probe()` meldete 85 allein deshalb, weil die Bytes 3..10
+# druckbares ASCII sind — Sprungbefehl und Bootsignatur fehlten beide.
+# Die Folge: von zwoelf kopflosen Formaten gewann ueber den echten
+# `uft_disk_open()` genau EINES sein eigenes Abbild. Keine der beiden
+# vorhandenen Eichungen konnte das sehen: Eichung 1 fuettert Nullen
+# (Byte 3..10 sind 0x00), Eichung 2 regelt ihrem eigenen Kopf nach das
+# Band 50..79.
+#
+# Seit MF-1144 ist die Bootsignatur bei `img` das Tor zum Merkmalsband,
+# und `img` steht deshalb NICHT auf dieser Liste.

@@ -103,14 +103,51 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
     /* BBC Micro DFS catalog: sector 1 bytes 0x100-0x107 contain
      * the disk title (continued from sector 0). Sector 1 byte 0x104
      * holds sector count (low byte), typically 0x20 for 40-track. */
+    /* ── MF-1146: EIN Byte reichte fuer das Merkmalsband ──────────────
+     *
+     * Hier stand:
+     *
+     *     if (sec_count_lo == 0x90 || == 0x20 || == 0xA0) *confidence = 82;
+     *     if ((data[0x106] >> 4) <= 3 && sec_count_lo > 0) *confidence = 85;
+     *
+     * Die erste Bedingung prueft EIN Byte gegen drei Werte — und einer
+     * davon ist **0x20, das Leerzeichen**, das haeufigste Byte in jedem
+     * Text. Gefunden hat es Eichung 3 (`test_probe_confidence_on_text`)
+     * beim ersten Lauf: auf einem selbstbenennenden Pruefpuffer traegt
+     * Versatz 0x107 das achte Byte der Marke `UFT-API C01 H1 S01 `,
+     * also ein Leerzeichen, und `ssd` meldete **82** — Band „Merkmal
+     * getroffen" (MF-729).
+     *
+     * Dieselbe Bauform wie bei `img_probe()` in MF-1144: die Stufen
+     * wurden ZUGEWIESEN statt gesammelt, und eine Ein-Byte-Pruefung
+     * erreichte das Band, das einer Kennung gehoert.
+     *
+     * **Und es hatte eine Folge, die benannt gehoert:** in MF-1144 hat
+     * `ssd` sein eigenes 204 800-Byte-Abbild gegen IMG gewonnen. Die
+     * Geometrie dieses Siegs ist richtig (80 x 1 x 10 x 256), der GRUND
+     * war es nicht — entschieden hat ein Leerzeichen.
+     *
+     * Jetzt ist das Tor zum Merkmalsband die Uebereinstimmung ZWEIER
+     * unabhaengiger Katalogfelder; ein einzelnes Feld traegt „Struktur
+     * gelesen". Eine echte DFS-Diskette verliert nichts: sie hat eine
+     * gueltige Sektorzahl UND eine gueltige Bootoption und kommt damit
+     * unveraendert auf 85. */
     if (size >= 0x108) {
         uint8_t sec_count_lo = data[0x107];
         /* Valid sector counts: 0x90=400, 0x20=800, 0xA0=1280 */
-        if (sec_count_lo == 0x90 || sec_count_lo == 0x20 || sec_count_lo == 0xA0)
-            *confidence = 82;
+        const bool zahl_ok = (sec_count_lo == 0x90 || sec_count_lo == 0x20
+                              || sec_count_lo == 0xA0);
         /* Boot option (bits 4-5 of byte 0x106) should be 0-3 */
-        if ((data[0x106] >> 4) <= 3 && sec_count_lo > 0)
-            *confidence = 85;
+        const bool boot_ok = ((data[0x106] >> 4) <= 3 && sec_count_lo > 0);
+
+        if (zahl_ok && boot_ok) {
+            *confidence = 85;   /* zwei Felder stimmen zusammen */
+        } else if (zahl_ok || boot_ok) {
+            /* Ein Feld allein ist Struktur, kein Merkmal — 0x20 ist das
+             * Leerzeichen, und `>> 4 <= 3` trifft ein Viertel aller
+             * Bytewerte. */
+            *confidence = 60;
+        }
     }
 
     /* MF-836: Der Katalog kann ECHT und die Diskette trotzdem kein
