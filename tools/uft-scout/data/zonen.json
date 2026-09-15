@@ -1,6 +1,6 @@
 {
  "_kommentar": "Auszug aus tools/uft-scout/work/*.messung.json (MF-705). VERFOLGT, weil docs/STAND.md daraus ableitet und work/ gitignored ist — sonst waere die Uebersicht in CI leer und das Frische-Tor dauerhaft rot. Erzeugt von tools/uft-scout/scripts/zonen_ablegen.py; nicht von Hand pflegen.",
- "_stand": "2026-09-14",
+ "_stand": "2026-09-15",
  "_was_die_zonen_heissen": {
   "GRUEN": "Port moeglich (MIT/BSD/GPL-2 …)",
   "GELB": "kein Port — Nachbau, Oracle, Spec, Helfer",
@@ -11,6 +11,7 @@
  "zonen": {
   "ADFCommander": "GRUEN",
   "ADFDiskBox": "GRUEN",
+  "CiderPress2": "PRUEFEN",
   "DiscImageManager": "GELB",
   "DiskImageTool": "GELB",
   "DiskToolC64": "ROT",
@@ -21,6 +22,7 @@
   "Jacknife": "ROT",
   "OpenCBM": "PRUEFEN",
   "Software": "GRUEN",
+  "Synclavier_Distributions": "ROT",
   "a8rawconv": "PRUEFEN",
   "adf-tools": "ROT",
   "adf2dms": "GRUEN",
@@ -62,6 +64,7 @@
  "hinweise": {
   "DiskToolC64": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
   "Jacknife": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
+  "Synclavier_Distributions": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
   "adf-tools": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
   "adfopus": "keine LICENSE/COPYING-Datei gefunden = alle Rechte vorbehalten (Zone ROT)",
   "adfrescue": "weder Lizenzdatei noch Lizenz im Quellkopf gefunden (Wurzel UND src/include/lib/source/core geprueft) = alle Rechte vorbehalten (Zone ROT)",
