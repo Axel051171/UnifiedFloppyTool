@@ -117,9 +117,54 @@ int uft_fdc_calc_track_layout(const uft_fdc_format_t *fmt,
  * Gap Calculation
  *===========================================================================*/
 
-uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
-                          uint16_t sector_size, bool mfm)
+/* MF-1169: GAP 4b ist eine AUSGABE, nicht der Rest der Division.
+ *
+ * Diese Funktion traegt den Rumpf; `uft_fdc_calc_gap3()` darunter ist ein
+ * Aufruf davon mit NULL und bleibt in Signatur und Verhalten unveraendert.
+ *
+ * Warum es sie gibt: der freie Platz einer Spur geht bisher VOLLSTAENDIG in
+ * `gap3`. Was danach uebrig bleibt, ist GAP 4b — die Drehzahlreserve am
+ * Spurende —, und niemand hat es je ausgerechnet oder herausgegeben.
+ * Gemessen an der Tafel des Eigentuemers (3,5" 1.44M, 500 kbps, 300 U/min,
+ * 12 500 Byte Rohkapazitaet):
+ *
+ *   Format       gap_space  gap3  gap3*sec  REST = GAP 4b   Eigentuemer
+ *   18 x  512         2022   112      2016             6            112
+ *   21 x  512          300    14       294             6             22
+ *    9 x 1024         2580   255      2295           285            301
+ *   10 x 1024         1494   149      1490             4            140
+ *   11 x 1024          408    37       407             1             39
+ *    5 x 2048         1804   255      1275           529            545
+ *
+ * Das Muster ist genauer als „hoechstens `sectors - 1` Byte": **wo `gap3`
+ * nicht an der 255-Klemme haengt, kollabiert GAP 4b auf 1 bis 6 Byte.** Wo
+ * es klemmt, bleibt ein grosser Rest, der den Werten des Eigentuemers
+ * nahekommt — die ~16 Byte Differenz dort sind unser Spur-Aufschlag von 146
+ * gegen dessen ~130.
+ *
+ * 11 x 1024 — das vom Eigentuemer empfohlene Format, 1760 KB — bekommt
+ * damit EIN Byte Reserve statt 39. Seine Begruendung: „GAP 4b ist die
+ * Drehzahlversicherung. ... Aber auf null geht sie nie: bei 2 % Langsamlauf
+ * ueberschreibt der letzte Sektor den Spuranfang." Eine 12 500-Byte-Spur
+ * braucht dafuer ~250 Byte.
+ *
+ * WAS DIESE FUNKTION NICHT TUT: sie reserviert nichts. Sie macht die Zahl
+ * sichtbar, damit der Aufrufer die 1 sehen und ablehnen kann — dieselbe
+ * Haltung wie MF-1167 („benennen statt klemmen"). Die Reservepolitik ist
+ * eine Eigentuemer-Entscheidung und ausdruecklich NICHT geraten: die
+ * `gap4b`-Werte der Tafel lassen sich nicht auf eine Regel zurueckrechnen,
+ * und eine feste 2-%-Reserve (250 Byte) wuerde DMF mit `gap3 = 3` unter die
+ * eigene Untergrenze von 12 druecken, wo dort 22 vorgesehen sind.
+ *
+ * Der Aufschlag je Sektor ist dabei gegen eine fremde Herleitung geprueft
+ * und stimmt auf das Byte: „Adressfeld 22 + Datenfeldkopf 16 + GAP 2 22 +
+ * CRC 2 = 62" gegen `overhead_per_sector` 60 plus die `+2` in `data_space`.
+ */
+uint8_t uft_fdc_calc_gaps(uint32_t track_capacity, uint8_t sectors,
+                          uint16_t sector_size, bool mfm,
+                          uint16_t *out_gap4b)
 {
+    if (out_gap4b) *out_gap4b = 0;
     if (sectors == 0) return 0;
     
     /* Calculate fixed overhead per sector */
@@ -186,7 +231,22 @@ uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
      * und ist damit nicht verloren. */
     if (gap3 > 255) gap3 = 255;
 
+    /* MF-1169: was nach den Zwischenraeumen uebrig ist, IST GAP 4b. */
+    if (out_gap4b) {
+        uint32_t rest = gap_space - (uint32_t)gap3 * sectors;
+        *out_gap4b = (rest > 0xFFFFu) ? 0xFFFFu : (uint16_t)rest;
+    }
+
     return (uint8_t)gap3;
+}
+
+uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
+                          uint16_t sector_size, bool mfm)
+{
+    /* MF-1169: unveraendert in Signatur und Verhalten — der Rumpf steht
+     * jetzt in `uft_fdc_calc_gaps()`, damit die Drehzahlreserve nicht
+     * weiter unsichtbar als Divisionsrest liegen bleibt. */
+    return uft_fdc_calc_gaps(track_capacity, sectors, sector_size, mfm, NULL);
 }
 
 /*===========================================================================

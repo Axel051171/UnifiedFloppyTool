@@ -129,6 +129,70 @@ TEST(null_sektoren_bleiben_null)
     ASSERT(uft_fdc_calc_gap3(12500u, 0u, 512u, true) == 0u);
 }
 
+/* ── MF-1169: GAP 4b ist eine Ausgabe, nicht der Rest der Division ──── */
+
+TEST(gap4b_wird_ausgegeben)
+{
+    /* Der Standardfall. `gap_space` ist 2022, 18 Zwischenraeume zu 112
+     * verbrauchen 2016 — es bleiben SECHS Byte fuer die Drehzahlreserve am
+     * Spurende. Die Tafel des Eigentuemers sieht dort 112 vor.
+     *
+     * Die 6 ist hier FESTGENAGELT, nicht gutgeheissen: sie ist der
+     * Messpunkt, an dem eine kuenftige Reservepolitik sichtbar wird. Wer
+     * sie einfuehrt, muss diesen Test aendern — und genau das ist das
+     * Signal. Eine 12 500-Byte-Spur braucht bei 2 % Drehzahlabweichung
+     * ~250 Byte. */
+    uint16_t g4b = 0xFFFFu;
+    uint8_t  g3  = uft_fdc_calc_gaps(12500u, 18u, 512u, true, &g4b);
+    ASSERT(g3  == 112u);
+    ASSERT(g4b ==   6u);
+
+    /* und die alte Schnittstelle antwortet unveraendert */
+    ASSERT(uft_fdc_calc_gap3(12500u, 18u, 512u, true) == 112u);
+}
+
+TEST(gap4b_kollabiert_wenn_g3_nicht_klemmt)
+{
+    /* 11 x 1024 ist das Format, das der Eigentuemer empfiehlt: 1760 KB,
+     * mehr als DMFs 1680 KB, und nach seiner Rechnung mit 39 Byte Reserve.
+     * Unsere Funktion laesst EIN Byte uebrig. Das ist die schaerfste Zahl
+     * dieses Befunds. */
+    uint16_t g4b = 0xFFFFu;
+    uint8_t  g3  = uft_fdc_calc_gaps(12500u, 11u, 1024u, true, &g4b);
+    ASSERT(g3  == 37u);
+    ASSERT(g4b ==  1u);
+}
+
+TEST(gap4b_ist_gross_wenn_g3_klemmt)
+{
+    /* GEGENPROBE. Ohne sie waere „die Ausgabe ist immer klein" eine
+     * genauso gruene Zusage. Bei 9 x 1024 rechnet die Funktion 286 und
+     * klemmt auf 255 (GAP3 ist im FDC-Befehl ein Byte) — die 285 Byte
+     * darueber bleiben als GAP 4b stehen, und der Eigentuemer sieht dort
+     * 301 vor. Die Differenz von 16 ist unser Spur-Aufschlag 146 gegen
+     * seine ~130, nicht ein Rechenfehler. */
+    uint16_t g4b = 0u;
+    uint8_t  g3  = uft_fdc_calc_gaps(12500u, 9u, 1024u, true, &g4b);
+    ASSERT(g3  == 255u);
+    ASSERT(g4b == 285u);
+}
+
+TEST(gap4b_ist_null_wenn_es_nicht_passt)
+{
+    /* Haelt MF-1167 fest: passt das Format nicht, sind BEIDE Zahlen 0 —
+     * die Ausgabe darf den Nichtpass nicht als „viel Reserve" aussehen
+     * lassen. 18 x (512+62) = 10 332 Byte bei 6250 Byte Spur. */
+    uint16_t g4b = 0xFFFFu;
+    uint8_t  g3  = uft_fdc_calc_gaps(6250u, 18u, 512u, true, &g4b);
+    ASSERT(g3  == 0u);
+    ASSERT(g4b == 0u);
+
+    /* und derselbe Schutz bei `sectors == 0` */
+    g4b = 0xFFFFu;
+    ASSERT(uft_fdc_calc_gaps(12500u, 0u, 512u, true, &g4b) == 0u);
+    ASSERT(g4b == 0u);
+}
+
 int main(void)
 {
     printf("=== FDC-Zwischenraum: passt nicht ist keine Luecke (MF-1167) ===\n");
@@ -137,6 +201,11 @@ int main(void)
     RUN(einundzwanzig_sektoren_passen_nicht_in_1_2m);
     RUN(neun_sektoren_passen_weiterhin);
     RUN(null_sektoren_bleiben_null);
+    printf("--- GAP 4b als Ausgabe (MF-1169) ---\n");
+    RUN(gap4b_wird_ausgegeben);
+    RUN(gap4b_kollabiert_wenn_g3_nicht_klemmt);
+    RUN(gap4b_ist_gross_wenn_g3_klemmt);
+    RUN(gap4b_ist_null_wenn_es_nicht_passt);
     printf("\nErgebnis: %d bestanden, %d gefallen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

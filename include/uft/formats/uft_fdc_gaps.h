@@ -473,6 +473,41 @@ uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
                           uint16_t sector_size, bool mfm);
 
 /**
+ * @brief Wie @ref uft_fdc_calc_gap3, gibt zusaetzlich GAP 4b heraus
+ *
+ * @param out_gap4b  darf NULL sein. Erhaelt die Byte, die nach den
+ *                   Zwischenraeumen am Spurende uebrig bleiben — die
+ *                   Drehzahlreserve. Bei Rueckgabe 0 („passt nicht" oder
+ *                   `sectors == 0`) ebenfalls 0.
+ *
+ * MF-1169: bis hierhin ging der freie Platz VOLLSTAENDIG in `gap3`, und
+ * GAP 4b lag unsichtbar als Divisionsrest daneben. Gemessen an einer
+ * 3,5"-1.44M-Spur (12 500 Byte):
+ *
+ *     18 x  512  ->  gap3 112, GAP 4b   6   (Vergleichswert: 112)
+ *     21 x  512  ->  gap3  14, GAP 4b   6   (Vergleichswert:  22)
+ *     10 x 1024  ->  gap3 149, GAP 4b   4   (Vergleichswert: 140)
+ *     11 x 1024  ->  gap3  37, GAP 4b   1   (Vergleichswert:  39)
+ *      9 x 1024  ->  gap3 255, GAP 4b 285   (Vergleichswert: 301)
+ *      5 x 2048  ->  gap3 255, GAP 4b 529   (Vergleichswert: 545)
+ *
+ * **Wo `gap3` nicht an der 255-Klemme haengt, kollabiert GAP 4b auf 1 bis
+ * 6 Byte.** Eine 12 500-Byte-Spur braucht bei 2 % Drehzahlabweichung ~250
+ * Byte, sonst ueberschreibt der letzte Sektor den Spuranfang.
+ *
+ * Diese Funktion RESERVIERT nichts — sie macht die Zahl sichtbar, damit der
+ * Aufrufer sie pruefen kann. Die Reservepolitik (fester Prozentsatz,
+ * `min_gap4b` je Profil, oder aus der gemessenen Drehzahl) ist offen und
+ * bewusst nicht geraten. Ebenfalls offen: die Untergrenze fuer `gap3` —
+ * unter etwa 12 Byte findet der Controller den naechsten Sektor nicht
+ * zuverlaessig (NFORMAT-Angabe; DMFs 14 liegt knapp darueber). Sie gehoert
+ * als Wert in die Profiltafel oben, nicht als Zahl in den Code.
+ */
+uint8_t uft_fdc_calc_gaps(uint32_t track_capacity, uint8_t sectors,
+                          uint16_t sector_size, bool mfm,
+                          uint16_t *out_gap4b);
+
+/**
  * @brief Get size code from sector size
  */
 uint8_t uft_fdc_size_code(uint16_t sector_size);
