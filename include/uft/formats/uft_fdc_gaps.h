@@ -451,7 +451,23 @@ int uft_fdc_calc_track_layout(const uft_fdc_format_t *fmt,
  * @param sectors Sectors per track
  * @param sector_size Bytes per sector
  * @param mfm MFM (true) or FM (false)
- * @return Calculated Gap3 size
+ * @return Gap3 in Byte, oder **0**, wenn es keinen gueltigen Zwischenraum
+ *         gibt — entweder `sectors == 0`, oder das Format passt nicht in
+ *         die angegebene Spurkapazitaet.
+ *
+ * MF-1167: die 0 fuer „passt nicht" ist neu, und sie ersetzt eine
+ * Falschaussage. Vorher lief die vorzeichenlose Differenz
+ * `track_capacity - track_overhead - data_space` bei einem zu grossen
+ * Format ueber, und die Klemme auf 255 machte daraus die
+ * GROESSTMOEGLICHE Luecke. Gemessen: 720 K mit 18 Sektoren zu 512 Byte
+ * (10 332 Byte Nutzdaten bei 6250 Byte Spur) ergab 255.
+ *
+ * Der Aufrufer muss die 0 also pruefen. „Passt nicht" ist kein Fehler
+ * dieser Funktion, sondern eine Aussage ueber das Format in dieser
+ * Spurkapazitaet — und die haengt nach NFORMAT.DOC (1992) auch am
+ * LAUFWERK: dieselbe Diskette hat bei 300 U/min 12 500 und bei 360 U/min
+ * 10 416 Byte Rohkapazitaet (siehe `rpm` und `track_bytes` in den
+ * Profilen oben).
  */
 uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
                           uint16_t sector_size, bool mfm);

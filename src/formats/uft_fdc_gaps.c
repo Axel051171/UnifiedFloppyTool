@@ -138,15 +138,54 @@ uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
     
     /* Calculate available space for gaps */
     uint32_t data_space = (uint32_t)sectors * (sector_size + overhead_per_sector + 2);
+
+    /* MF-1167: „passt nicht" ist eine ANTWORT, keine Zahl zum Klemmen.
+     *
+     * Vorher stand hier:
+     *
+     *     uint32_t gap_space = track_capacity - track_overhead - data_space;
+     *     uint32_t gap3 = gap_space / sectors;
+     *     if (gap3 < 10) gap3 = 10;
+     *     if (gap3 > 255) gap3 = 255;
+     *
+     * `gap_space` ist VORZEICHENLOS. Passte das Format nicht in die Spur,
+     * lief die Subtraktion ueber, `gap3` wurde riesig — und dann griff die
+     * OBERE Klemme. Die Funktion antwortete fuer ein Format, dem Tausende
+     * Byte fehlen, mit 255: der groesstmoeglichen Luecke. Gemessen:
+     *
+     *     720 K  18x512, Kapazitaet  6250  ->  gap_space 4294963068 -> 255
+     *     1,2 M  21x512, Kapazitaet 10416  ->  gap_space 4294965512 -> 255
+     *
+     * Bei 720 K mit 18 Sektoren zu 512 Byte stehen 10 332 Byte Nutzdaten
+     * einer Spurkapazitaet von 6250 Byte gegenueber.
+     *
+     * Die Eigentuemer-Zulieferung (OmniFlop-Analyse §3.4) hat die UNTERE
+     * Klemme benannt — „erzeugt eine unlesbare Diskette" — und das ist
+     * richtig als Entwurfskritik; im Ueberlauffall wurde sie nur nie
+     * erreicht. Beide sind jetzt weg: der Nichtpass wird VOR der
+     * Subtraktion erkannt, und eine zu enge Luecke wird nicht mehr
+     * heraufgeklemmt (das haette „passt mit 10" behauptet, wo 5 gerechnet
+     * war — dieselbe Falschaussage, nur kleiner).
+     *
+     * Dieselbe Doktrin hat der Eigentuemer fuer den PLL ausgesprochen:
+     * Verstoesse MELDEN statt klemmen. Und es ist die Gestalt von MF-1022
+     * und MF-1040, wo ein Kuerzen als Erfolg gemeldet wurde.
+     *
+     * Rueckgabe 0 heisst „es gibt keinen gueltigen Zwischenraum" — derselbe
+     * Wert und dieselbe Bedeutung wie beim Aufruf mit `sectors == 0`. */
+    if ((uint32_t)track_overhead + data_space >= track_capacity)
+        return 0;
+
     uint32_t gap_space = track_capacity - track_overhead - data_space;
-    
+
     /* Divide among sectors */
     uint32_t gap3 = gap_space / sectors;
-    
-    /* Clamp to valid range */
-    if (gap3 < 10) gap3 = 10;
+
+    /* Die obere Schranke bleibt, weil sie eine echte ist: GAP3 ist im
+     * FDC-Befehl ein Byte. Ueberzaehliger Platz wird zu GAP4B am Spurende
+     * und ist damit nicht verloren. */
     if (gap3 > 255) gap3 = 255;
-    
+
     return (uint8_t)gap3;
 }
 

@@ -3507,6 +3507,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_fdc_gap3")
+        # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —
+        # anders als die statischen Profiltafeln, die `test_fdc_gaps_1440k`
+        # direkt nimmt. Das Modul hat im ganzen Baum sonst keinen Aufrufer;
+        # dieser Test ist sein erster.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_fdc_gaps.c)
     elseif(${test_name} STREQUAL "test_xfd_ed_gegen_atr")
         # MF-1164: Enhanced Density durch BEIDE Behaelter. Dieselben zwei
         # Leser wie test_corpus_xfd, aber ohne Korpus — der Test baut seine

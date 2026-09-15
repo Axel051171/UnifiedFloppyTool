@@ -205,7 +205,6 @@ src/formats/udi/uft_udi.c
 src/formats/uff/uft_uff.c
 src/formats/uft_axdf.c
 src/formats/uft_cw_raw.c
-src/formats/uft_fdc_gaps.c
 src/formats/uft_format_extensions.c
 src/formats/uft_format_names_extended.c
 src/formats/uft_format_versions.c
