@@ -13,6 +13,9 @@
 #include "uft_format_convert_internal.h"
 #include "uft/uft_mfm_encoder.h"
 #include "uft/uft_amiga_mfm_encoder.h"
+/* MF-1168: die Profiltafel des FDC. Sie fuehrt rpm und raw_bits fuer 17
+ * Geometrien und hatte bis zu diesem Commit keinen einzigen Aufrufer. */
+#include "uft/formats/uft_fdc_gaps.h"
 
 /* SCP speichert Flusslaengen als 16-Bit-Vielfache von 25 ns. */
 #ifndef UFT_SCP_TICK_NS
@@ -915,9 +918,52 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
      * Vorher stand hier `sectors * (sector_size + 62) * 16 / 8`, eine
      * Schaetzung ueber die Sektorzahl. Sie fiel nicht auf, weil der Inhalt
      * ohnehin nicht kodiert war und die Laenge damit bedeutungslos. */
+    /* MF-1168: die Zeiten kommen aus der Profiltafel, wo es ein Profil gibt
+     * — nicht aus einer zweiten Herleitung.
+     *
+     * MF-1166 hat `rpm` hier eingefuehrt und damit unbemerkt eine ZWEITE
+     * Stelle geschaffen, die dieselbe Zahl herleitet; die erste ist
+     * `include/uft/formats/uft_fdc_gaps.h` mit 17 Profilen, die `rpm` und
+     * `raw_bits` fuehren. Das ist die Klasse MF-1015 (drei Pruefsummen im
+     * Baum, keine zwei gleich), und sie war hier besonders leicht zu
+     * uebersehen, weil die Tafel keinen Aufrufer hatte (P3-204).
+     *
+     * Gemessen, dass beide Wege ueberall dasselbe sagen — fuer die vier
+     * Groessen, die dieser Wandler entscheidet, liefert die Tafel genau die
+     * Werte, die die Herleitung darunter rechnet:
+     *
+     *     40/2/ 9x512  PC 360K   rpm 300  raw 100000   (250 * 60/300 * 2)
+     *     80/2/ 9x512  PC 720K   rpm 300  raw 100000
+     *     80/2/15x512  PC 1.2M   rpm 360  raw 166666   (500 * 60/360 * 2)
+     *     80/2/18x512  PC 1.44M  rpm 300  raw 200000   (500 * 60/300 * 2)
+     *
+     * Die 166666 stimmen einschliesslich der Abschneidung: 500000 * 60/360
+     * sind 83333,33 Datenbits, abgeschnitten 83333, verdoppelt 166666.
+     *
+     * DER RUECKFALL BLEIBT, und er ist nicht Bequemlichkeit: fuer AmigaDOS
+     * gibt es kein Profil. Gemessen antwortet die Tafel auf 80/2/11x512 und
+     * 80/2/22x512 mit NULL — und genau diese zwei Geometrien setzt der
+     * ADF-Zweig oben.
+     *
+     * NICHT von der Tafel genommen wird `bitrate`: ihr Feld `data_rate`
+     * traegt bei den MFM-Eintraegen die Datenrate und bei `BBC DFS` die
+     * Zellrate (siehe die Notiz an `UFT_FDC_FM_SD`). Solange das eine
+     * Konventionsfrage ist, bleibt die Bitrate aus der eigenen Herleitung.
+     *
+     * Ein mehrfacher Treffer ist hier unschaedlich und gemessen: 80/2/18x512
+     * trifft „PC 1.44M" UND „Atari ST HD", beide mit rpm 300 und raw 200000.
+     * Gebraucht werden nur diese zwei Zahlen; Name und Luecken bleiben
+     * unbeansprucht. */
+    const uft_fdc_format_t *profil =
+        uft_fdc_detect_format((uint8_t)cylinders, (uint8_t)heads,
+                              (uint8_t)sectors, (uint16_t)sector_size);
+    if (profil) {
+        rpm = profil->rpm;
+    }
     /* MF-1166: `rpm` statt des Literals 300 — siehe die Herleitung oben. */
-    const int track_cells = (int)((uint32_t)bitrate * 1000u * 60u
-                                  / (uint32_t)rpm * 2u);
+    const int track_cells = profil
+        ? (int)profil->raw_bits
+        : (int)((uint32_t)bitrate * 1000u * 60u / (uint32_t)rpm * 2u);
     int mfm_track_bytes = (track_cells + 7) / 8;
     /* Round up to multiple of 256 for HFE interleaving */
     int track_len_aligned = ((mfm_track_bytes + 255) / 256) * 256;

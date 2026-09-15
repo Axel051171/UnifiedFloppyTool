@@ -26,32 +26,74 @@ const uft_fdc_format_t *uft_fdc_get_format(const char *name)
     return NULL;
 }
 
+/* MF-1168: der zweite Durchlauf hat die SEITENZAHL verworfen, nicht nur die
+ * Spurzahl — und dann den ersten Treffer genommen. Gemessen am Vorzustand:
+ *
+ *     detect_format(35, 1,  9,  512)  ->  „PC 360K (5.25" DD)"  Tafel 40/2
+ *     detect_format( 1, 1,  9,  512)  ->  „PC 360K (5.25" DD)"  Tafel 40/2
+ *
+ * Eine einseitige Diskette bekam ein zweiseitiges Profil, und der Kommentar
+ * an der Stelle sagte nur „Track count can vary". Der Aufrufer haette
+ * daraus `sides = 2` und die Luecken der falschen Maschine gelesen.
+ *
+ * Seit MF-1168 sagt die Funktion bei echter Mehrdeutigkeit ab statt zu
+ * raten (MF-1039, Sondendoktrin MF-1153) und NENNT die Zahl der Kandidaten,
+ * statt sie zu verschweigen — dieselbe Bauform wie `uft_fdc_calc_gaps()`
+ * einen Commit vorher: die alte Schnittstelle bleibt, der neue Wert kommt
+ * als Ausgabeparameter heraus. Der Vertrag steht im Header. */
+const uft_fdc_format_t *uft_fdc_detect_format_counted(
+        uint8_t tracks, uint8_t sides, uint8_t sectors, uint16_t sector_size,
+        unsigned *out_candidates)
+{
+    if (out_candidates) *out_candidates = 0;
+
+    /* Durchlauf 1 — GENAU. Mehrere Treffer sind moeglich und werden
+     * GEZAEHLT statt verschwiegen: „PC 1.44M" und „Atari ST HD" sind beide
+     * 80/2/18x512. Sie stimmen in rpm, track_bytes und raw_bits ueberein,
+     * und genau das haelt der Test mechanisch fest. */
+    const uft_fdc_format_t *genau = NULL;
+    unsigned n_genau = 0;
+    for (int i = 0; UFT_FDC_FORMATS[i]; i++) {
+        const uft_fdc_format_t *fmt = UFT_FDC_FORMATS[i];
+
+        if (fmt->sectors == sectors && fmt->sector_size == sector_size &&
+            fmt->sides == sides && fmt->tracks == tracks) {
+            if (!genau) genau = fmt;
+            n_genau++;
+        }
+    }
+    if (genau) {
+        if (out_candidates) *out_candidates = n_genau;
+        return genau;
+    }
+
+    /* Durchlauf 2 — die SPURZAHL darf abweichen, die Seitenzahl nicht. Und
+     * er nimmt nur EINEN Treffer an: bei mehreren ist das Profil nicht
+     * bestimmt, und der erste zu nehmen war der Befund oben. */
+    const uft_fdc_format_t *frei = NULL;
+    unsigned n_frei = 0;
+    for (int i = 0; UFT_FDC_FORMATS[i]; i++) {
+        const uft_fdc_format_t *fmt = UFT_FDC_FORMATS[i];
+
+        if (fmt->sectors == sectors && fmt->sector_size == sector_size &&
+            fmt->sides == sides) {
+            if (!frei) frei = fmt;
+            n_frei++;
+        }
+    }
+    if (n_frei == 1) {
+        if (out_candidates) *out_candidates = 1;
+        return frei;
+    }
+
+    return NULL;
+}
+
 const uft_fdc_format_t *uft_fdc_detect_format(uint8_t tracks, uint8_t sides,
                                               uint8_t sectors, uint16_t sector_size)
 {
-    for (int i = 0; UFT_FDC_FORMATS[i]; i++) {
-        const uft_fdc_format_t *fmt = UFT_FDC_FORMATS[i];
-        
-        if (fmt->sectors == sectors &&
-            fmt->sector_size == sector_size &&
-            fmt->sides == sides) {
-            /* Track count can vary, prefer exact match */
-            if (fmt->tracks == tracks) {
-                return fmt;
-            }
-        }
-    }
-    
-    /* Second pass: relaxed matching */
-    for (int i = 0; UFT_FDC_FORMATS[i]; i++) {
-        const uft_fdc_format_t *fmt = UFT_FDC_FORMATS[i];
-        
-        if (fmt->sectors == sectors && fmt->sector_size == sector_size) {
-            return fmt;
-        }
-    }
-    
-    return NULL;
+    return uft_fdc_detect_format_counted(tracks, sides, sectors, sector_size,
+                                         NULL);
 }
 
 /*===========================================================================

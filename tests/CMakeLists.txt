@@ -3507,11 +3507,24 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_fdc_gap3")
+    elseif(${test_name} STREQUAL "test_fdc_gap3"
+           OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet")
         # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —
         # anders als die statischen Profiltafeln, die `test_fdc_gaps_1440k`
-        # direkt nimmt. Das Modul hat im ganzen Baum sonst keinen Aufrufer;
-        # dieser Test ist sein erster.
+        # direkt nimmt.
+        #
+        # BERICHTIGT MF-1168: hier stand „Das Modul hat im ganzen Baum sonst
+        # keinen Aufrufer; dieser Test ist sein erster." Das war richtig fuer
+        # MF-1167 und ist seit MF-1168 falsch — `uftc_convert_sectors_to_hfe()`
+        # ruft `uft_fdc_detect_format()`. Jene Datei liegt in `src/formats/`
+        # und kommt bei den drei Wandlungstests ueber den
+        # `IHR_FORMAT_SOURCES`-GLOB mit; hier wird sie einzeln gebraucht.
+        #
+        # `test_fdc_profil_verdrahtet` haengt sich an denselben Zweig: es
+        # braucht dieselbe eine Uebersetzungseinheit, weil sowohl
+        # `uft_fdc_detect_format_counted()` als auch `uft_fdc_calc_gaps()`
+        # dort stehen. Gemessen ohne diesen Zweig: drei undefinierte
+        # Verweise beim Binden, kein anderes Ziel betroffen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/uft_fdc_gaps.c)
     elseif(${test_name} STREQUAL "test_xfd_ed_gegen_atr")

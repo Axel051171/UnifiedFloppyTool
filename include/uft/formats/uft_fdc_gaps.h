@@ -349,12 +349,59 @@ static const uft_fdc_format_t UFT_FDC_BBC_ADFS = {
 };
 
 /* FM Formats (single density) */
+
+/* MF-1168: `track_bytes` stand auf 3125 und `raw_bits` auf 50000 — den
+ * Werten des NACHBARPROFILS `UFT_FDC_BBC_DFS` (5,25 Zoll, 300 U/min, FM).
+ * Alles andere an diesem Eintrag beschreibt eine ACHT-Zoll-Diskette nach
+ * IBM 3740: 77 Spuren, einseitig, 26 x 128 Byte, 360 U/min, Groessenkode 0
+ * — und die Lueckenwerte 40/26/11/27 sind die der Norm (ECMA-54 /
+ * ISO 5654 / ANSI X3.73, dieselbe Quelle, an der MF-864/869 den FM-Dekoder
+ * abgenommen hat).
+ *
+ * Der Eintrag war damit ein Format, das kein Laufwerk formatieren kann:
+ * 26 x 128 = 3328 Byte reine Sektordaten in einer Spur von 3125 Byte, VOR
+ * jeder Luecke. Gemessen hat es die eigene Funktion dieses Moduls, seit
+ * MF-1167 absagt statt zu klemmen:
+ *
+ *     uft_fdc_calc_gaps(3125, 26, 128, false, &g4b)  ->  gap3 0, gap4b 0
+ *
+ * Bemerkt wurde es erst, als MF-1168 das Modul verdrahtet hat — es hatte
+ * bis dahin keinen einzigen Aufrufer (P3-204-Klasse), und ein Profil, das
+ * niemand befragt, kann nicht widersprechen.
+ *
+ * DIE RICHTIGE ZAHL STEHT IN DIESEM EINTRAG SELBST, und das ist der Beleg
+ * statt einer Annahme. Bei FM rechnet das Modul 31 Byte Aufschlag je
+ * Sektor und 73 je Spur, also
+ *
+ *     gap_space = track_bytes - 73 - 26 * (128 + 31 + 2)
+ *               = track_bytes - 4259
+ *
+ * Die hier gefuehrten `gap3_fmt = 27` und `gap4b = 247` verlangen
+ * gap_space = 27 * 26 + 247 = 949, also track_bytes = 5208 — auf das Byte
+ * die dokumentierte Spurkapazitaet der IBM-3740-Diskette. Zweiter,
+ * unabhaengiger Weg zur selben Zahl: 250 kbit/s Datenrate bei 360 U/min
+ * sind 250000 / 6 = 41666,67 Datenbits je Umdrehung, also 5208 Byte; der
+ * Zellenstrom ist doppelt so lang (FM legt je Datenbit ein Taktbit), 83333.
+ *
+ * Die Rundung folgt der Bauform von `UFT_FDC_PC_1200K`, wo aus demselben
+ * Grund 10416 und 166666 nebeneinanderstehen: beide Zahlen sind aus dem
+ * echten Wert abgeschnitten, keine aus der anderen.
+ *
+ * NICHT geaendert und ausdruecklich benannt: `data_rate` traegt in diesem
+ * Eintrag die DATENrate (250 kbit/s, Zellrate 500 kBaud), in
+ * `UFT_FDC_BBC_DFS` dagegen die ZELLrate (250 kBaud = 125 kbit/s Daten,
+ * daher dort 3125 Byte bei 300 U/min — und `uft_pll.h` fuehrt seine
+ * FM-SD-Vorgabe passend dazu mit „125 kbps"). Zwei Bedeutungen in einem
+ * Feld, die Klasse aus MF-1036/P3-357. Das ist eine Konventionsfrage ueber
+ * alle FM-Eintraege hinweg und wird hier nicht im Vorbeigehen entschieden;
+ * `bitrate` bleibt im HFE-Wandler deshalb aus dessen eigener Herleitung.
+ */
 static const uft_fdc_format_t UFT_FDC_FM_SD = {
     .name = "FM Single Density",
     .tracks = 77, .sides = 1, .sectors = 26, .sector_size = 128, .size_code = 0,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 360, .mfm = false,
     .gaps = { .gap4a = 40, .gap1 = 26, .gap2 = 11, .gap3_rw = 27, .gap3_fmt = 27, .gap4b = 247 },
-    .track_bytes = 3125, .raw_bits = 50000
+    .track_bytes = 5208, .raw_bits = 83333
 };
 
 /* NEC PC-98 Formats */
@@ -424,11 +471,58 @@ static const uft_fdc_format_t *UFT_FDC_FORMATS[] = {
 
 /**
  * @brief Get format by name
+ *
+ * MF-1168, benannt statt behoben: vergleicht mit `strstr`, nicht auf
+ * Gleichheit — der Parameter muss ein TEILSTRING des Profilnamens sein, und
+ * der ERSTE Treffer in der Tafel gewinnt. Gemessen:
+ * `uft_fdc_get_format("PC")` liefert „PC 360K (5.25\" DD)", `("2DD")`
+ * liefert „PC-98 2DD (640K)" und nicht „MSX 2DD (720K)", `("Atari")`
+ * liefert „Atari ST SS (360K)". Fuer den vollen Namen ist das richtig, fuer
+ * ein Fragment stillschweigend. Eine Verschaerfung auf Gleichheit waere
+ * eine Eigentuemer-Entscheidung; die Funktion hat keinen Aufrufer.
  */
 const uft_fdc_format_t *uft_fdc_get_format(const char *name);
 
 /**
+ * @brief Profil aus der Geometrie, mit der Anzahl der Kandidaten
+ *
+ * Zwei Durchlaeufe, vom engeren zum weiteren:
+ *
+ *   1. GENAU — `tracks`, `sides`, `sectors` und `sector_size` stimmen alle.
+ *   2. SPURZAHL FREI — `sides`, `sectors` und `sector_size` stimmen, die
+ *      Spurzahl darf abweichen. Greift nur, wenn GENAU EIN Profil passt.
+ *
+ * `*out_candidates` nennt, wie viele Profile der Durchlauf getroffen hat,
+ * der die Antwort geliefert hat. Aus Durchlauf 2 ist das immer 1; aus
+ * Durchlauf 1 kann es mehr sein — „PC 1.44M (3.5\" HD)" und „Atari ST HD"
+ * sind beide 80/2/18x512, gemessen also 2 Kandidaten.
+ *
+ * WAS EIN MEHRFACHER TREFFER BEDEUTET: die ZEITEN sind bestimmt (`rpm`,
+ * `track_bytes`, `raw_bits`), der NAME und die LUECKEN sind es nicht. Dass
+ * die Zeiten in jeder mehrdeutigen Gruppe dieser Tafel uebereinstimmen, ist
+ * keine Zusage dieses Kommentars, sondern wird von
+ * `tests/test_fdc_profil_verdrahtet.c` ueber ALLE Paare mechanisch
+ * gehalten — ein neues Profil, das die Gruppe aufbricht, faellt dort auf.
+ *
+ * `out_candidates` darf NULL sein.
+ *
+ * MF-1168: vorher gab es einen zweiten Durchlauf, der `sides` VERWORFEN hat
+ * und den ersten Treffer nahm. Gemessen lieferte
+ * `uft_fdc_detect_format(35, 1, 9, 512)` — eine EINSEITIGE Diskette —
+ * „PC 360K (5.25\" DD)" mit `sides = 2` und `tracks = 40`, und
+ * `(1, 1, 9, 512)` dasselbe. Der Kommentar dort sagte „Track count can
+ * vary" und meinte auch die Seitenzahl. Bei echter Mehrdeutigkeit wird
+ * jetzt abgesagt statt geraten — die Haltung aus MF-1039 und der
+ * Sondendoktrin (MF-1153: bleibt es gleich, gewinnt keiner).
+ */
+const uft_fdc_format_t *uft_fdc_detect_format_counted(
+        uint8_t tracks, uint8_t sides, uint8_t sectors, uint16_t sector_size,
+        unsigned *out_candidates);
+
+/**
  * @brief Get format by parameters
+ *
+ * Unveraendert in Signatur; ruft `uft_fdc_detect_format_counted()` mit NULL.
  */
 const uft_fdc_format_t *uft_fdc_detect_format(uint8_t tracks, uint8_t sides,
                                               uint8_t sectors, uint16_t sector_size);
