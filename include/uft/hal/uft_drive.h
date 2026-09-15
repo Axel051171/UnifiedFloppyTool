@@ -96,7 +96,16 @@ typedef struct {
     
     /* Track format */
     int track_length_bits;        /**< Nominal track length (bits) */
-    int write_precomp_ns;         /**< Write precompensation (ns) */
+    /* BEFUND MF-1154 (P3-409): `write_precomp_ns` ist in acht Profilen in
+     * src/hal/uft_hal_profiles.c GEFUELLT — bei UFT_DRIVE_PROFILE_525_HD mit
+     * dem klassisch richtigen Wert 125 — und im ganzen Baum LIEST es niemand.
+     * Kein HAL-Backend, kein Schreiber, kein Wandlungspfad fragt das Feld ab.
+     * Die Zahl ist also eine Angabe ueber das Laufwerk, keine Wirkung auf
+     * geschriebenen Fluss. Beschriftet statt entfernt (MF-699); der Rotbeweis
+     * dafuer ist ein Zellzeit-Histogramm mit und ohne Vorkompensation und
+     * braucht Hardware (MF-310). Belastbare Zahlen: Datenblaetter WD177x,
+     * uPD765, WD9216 — nicht Lehrbuchseiten. */
+    int write_precomp_ns;         /**< Write precompensation (ns) — 0 Leser, siehe P3-409 */
     uft_drive_encoding_t default_encoding;  /**< Default encoding */
     
     /* Special features */

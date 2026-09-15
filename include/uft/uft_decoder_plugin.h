@@ -151,9 +151,20 @@ typedef struct uft_encode_options {
     uint8_t     gap_fill;            ///< Fill-Byte für Gaps (0x4E für MFM)
     uint8_t     format_fill;         ///< Fill-Byte für Sektoren (0xE5)
     
-    // Write Precompensation
-    int16_t     precomp_ns;          ///< Precomp in ns (-1 = auto)
-    uint8_t     precomp_track;       ///< Ab welchem Track (typ. 40)
+    /* Write Precompensation
+     *
+     * BEFUND MF-1154 (P3-409): beide Felder haben im ganzen Baum KEINEN
+     * Leser. `precomp_track` kommt gemessen genau zweimal vor — hier und in
+     * der Vorgabe elf Zeilen tiefer; ausserhalb dieser Datei nirgends.
+     * Und `precomp_ns` ist DOPPELT deklariert: dasselbe Feld mit derselben
+     * `-1`-Vorgabe steht ein zweites Mal in uft_types.h als Teil von
+     * `uft_write_options_t` (die ihrerseits 0 Verbraucher hat). Das ist die
+     * Klasse MF-1015 — drei Pruefsummen im Baum, keine zwei gleich: zwei
+     * Orte fuer dieselbe Einstellung driften, sobald einer benutzt wird.
+     * Welcher der beiden der kanonische ist, entscheidet der Eigentuemer;
+     * beschriftet statt vereinigt (MF-699). */
+    int16_t     precomp_ns;          ///< Precomp in ns (-1 = auto) — 0 Leser, doppelt, P3-409
+    uint8_t     precomp_track;       ///< Ab welchem Track (typ. 40) — 0 Leser, P3-409
     
 } uft_encode_options_t;
 

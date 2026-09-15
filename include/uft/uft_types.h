@@ -611,7 +611,15 @@ typedef struct uft_write_options {
     bool     format_track;       ///< Track komplett formatieren
     uint8_t  gap3_size;          ///< Gap3-Größe (0 = default)
     uint8_t  fill_byte;          ///< Füllbyte für Format
-    int16_t  precomp_ns;         ///< Write Precompensation (-1 = auto)
+    /* BEFUND MF-1154 (P3-409): dies ist die ZWEITE Deklaration von
+     * `precomp_ns` — die erste steht in uft_decoder_plugin.h:155 mit
+     * derselben `-1`-Vorgabe. Gemessen hat die umgebende Struktur
+     * `uft_write_options_t` ausserhalb dieser Datei **0** Nennungen im
+     * ganzen Baum: nicht nur das Feld hat keinen Leser, die Struktur hat
+     * keinen Verbraucher. Beschriftet statt entfernt (MF-699); welche der
+     * beiden Deklarationen die kanonische ist, entscheidet der Eigentuemer
+     * (Klasse MF-1015). */
+    int16_t  precomp_ns;         ///< Write Precompensation (-1 = auto) — 0 Leser, doppelt, P3-409
 } uft_write_options_t;
 
 /**
