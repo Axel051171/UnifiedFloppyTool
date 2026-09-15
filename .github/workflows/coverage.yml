@@ -86,6 +86,38 @@ jobs:
             --output-file coverage.info || true
           lcov --list coverage.info || echo "No coverage data collected"
 
+      # MF-1160: bis hierher konnte dieser Auftrag GRUEN werden, ohne ein
+      # Ergebnis erzeugt zu haben. Vier `|| true` und ein Rueckfall auf
+      # `echo "No coverage data collected"` fangen jeden Fehlschlag ab, und
+      # `fail_ci_if_error: false` beim Uploader den Rest. Eine Coverage-Zahl
+      # konnte damit unbemerkt verschwinden — dieselbe Klasse wie ein Tor,
+      # das nicht rot werden kann (MF-1000).
+      #
+      # Dieser Schritt prueft KEINE Hoehe. Er prueft, dass es ueberhaupt
+      # eine Messung gibt: Datei da, nicht leer, mindestens ein `SF:`-Satz
+      # (Quelldatei) und mindestens eine `DA:`-Zeile (Zeilenzaehler).
+      #
+      # Eine MINDESTHOEHE gehoert dazu und fehlt hier bewusst: sie verlangt
+      # die heutige Zahl, und die ist auf der Entwicklermaschine dieses
+      # Baums nicht messbar (kein lcov/gcov-Lauf unter MinGW). Sie aus einer
+      # Zulieferung zu uebernehmen waere eine getippte Zahl. Der erste
+      # echte Lauf dieses Auftrags liefert sie; steht als P3-411 (b).
+      - name: Coverage muss ein Ergebnis haben (MF-1160)
+        run: |
+          if [ ! -s coverage.info ]; then
+            echo "FAIL: coverage.info fehlt oder ist leer."
+            echo "      Der Auftrag hat gemessen und NICHTS erzeugt."
+            exit 1
+          fi
+          sf=$(grep -c '^SF:' coverage.info || true)
+          da=$(grep -c '^DA:' coverage.info || true)
+          echo "coverage.info: ${sf} Quelldateien, ${da} Zeilenzaehler"
+          if [ "$sf" -lt 1 ] || [ "$da" -lt 1 ]; then
+            echo "FAIL: coverage.info enthaelt keine Messdaten."
+            echo "      lcov hat eine Datei geschrieben, aber keinen Satz."
+            exit 1
+          fi
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:

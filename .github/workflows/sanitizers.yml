@@ -143,9 +143,38 @@ jobs:
         if: always()
         run: |
           cd build
-          ctest --output-on-failure --timeout 300 || true
+          # MF-1160: das Protokoll wird zusaetzlich in eine Datei geschrieben,
+          # weil der Schritt darunter es LIEST. Bis hierher war der Rueckstand
+          # gemessen und unbeachtet — eine Zahl im Protokoll ist kein Ergebnis.
+          ctest --output-on-failure --timeout 300 2>&1 | tee asan-full.log || true
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
+
+      # ─────────────────────────────────────────────────────────────────
+      # SCHARF, sobald die Grundlinie gesaet ist (MF-1160).
+      #
+      # Der Vollauf darueber traegt `|| true` mit einer guten Begruendung:
+      # „den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen,
+      # waere derselbe Fehler in die andere Richtung." Das bleibt richtig.
+      # Der Ausweg ist nicht „scharf", sondern FALLEND: der Rueckstand wird
+      # aufgeschrieben, und ab dann darf er nur sinken.
+      #
+      #     bekannte ASan-Fehler: N     neue Fehler: 0   <- sonst rot
+      #     behobene Fehler: M          <- rot, bis sie aus der Grundlinie raus
+      #
+      # Solange `docs/asan_baseline.txt` FEHLT, berichtet das Tor und sagt
+      # ausdruecklich, dass es nicht roeten kann — kein stilles Gruen.
+      # Gesaet wird sie aus einem ECHTEN Lauf dieses Auftrags:
+      #
+      #     python3 scripts/audit_asan_grundlinie.py \
+      #         --log build/asan-full.log --schreibe-grundlinie
+      #
+      # Von Hand darf sie niemand schreiben: auf der Entwicklermaschine
+      # dieses Baums gibt es kein ASan (MinGW), eine getippte Zahl waere
+      # eine Behauptung (P3-411 b).
+      - name: ASan-Rueckstand gegen fallende Grundlinie (MF-1160)
+        if: always()
+        run: python3 scripts/audit_asan_grundlinie.py --log build/asan-full.log
 
       - name: Upload ASan findings
         if: failure()

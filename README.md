@@ -111,8 +111,18 @@ offset table "typical layout". Bending one side to match the other would
 be fabrication, so those 8 checks are **skipped with a printed reason**,
 not made green. The reference image is on the procurement list.
 
-- **The leak backlog went from 58 to 0**, every step measured in CI:
-  **58 → 15 → 2 → 0** of 266 under LeakSanitizer, and UBSan **0 of 266**.
+- **The leak backlog went from 58 to 0** — *measured in CI on 2026-08-26
+  at a suite of 266 tests (MF-592/595/598/599). That is a historical
+  figure, not a current one:* the suite is now **478** tests, and the
+  full ASan run is **not gated** — it reports, and until MF-1160 nothing
+  read the report. The current backlog at 478 tests is therefore
+  **unmeasured**, in either direction; it is tracked as P3-411 (b) and
+  cannot be measured on this tree's development machine, which has MinGW
+  and no LeakSanitizer. Since MF-1160 the number has a falling baseline
+  (`docs/asan_baseline.txt`), so the first real CI run will record it and
+  it can only sink from there.
+  The 2026-08-26 steps were **58 → 15 → 2 → 0** of 266 under
+  LeakSanitizer, and UBSan **0 of 266**.
   The largest cause was not test-code debt, as two earlier audits had
   concluded: `uft_track_add_sector()` **copies**, and the shared helper
   freed its own buffer only on the error path — so **every sector read
@@ -149,8 +159,11 @@ not a footnote:
 - **One test skips 8 of its 14 checks** (`test_freezer`): there is no
   named reference for the Action Replay format, and bending either side
   to match the other would be fabrication. Skipped, not made green.
-  (The ASan leak backlog that stood here — 58 tests — is now **0 of 266**,
-  measured in CI: MF-592/595/598/599.)
+  (The ASan leak backlog that stood here — 58 tests — was brought to
+  **0 of 266** in CI on 2026-08-26: MF-592/595/598/599. That figure is
+  historical: the suite is 478 tests today and the full ASan run is not
+  gated, so the current backlog is unmeasured — see P3-411 (b) and the
+  falling baseline introduced in MF-1160.)
 - **No hands-on acceptance test.** The headless Qt tests cover logic and
   display, not look, flow, or anything behind a modal dialog.
 - **No controller has a documented real-hardware bench pass.**
