@@ -183,14 +183,42 @@ int main(void)
      * das Paar gibt es nicht, die Wandlung fing nie an.
      *
      * Der Fall ist es wert, gepinnt zu werden — aber er ist NICHT der,
-     * um den es MF-545 ging. */
+     * um den es MF-545 ging.
+     *
+     * ── BERICHTIGT MF-1151, und der Grund ist gemessen ──────────────
+     *
+     * Das Ziel war `UFT_FORMAT_HFE`, und dieser Fall hing an einer
+     * ERKENNUNG, nicht am Tor. Die Quellbytes sind `i*5 + (i>>9)`, also
+     * `00 05 0A 0F 14 19 1E …` — und daraus las `dmk_probe()` einen
+     * gueltigen DMK-Kopf: prot = 0x00, tracks = 5, tlen = 0x0F0A = 3850,
+     * Bit 4 von 0x14 gesetzt (eine Seite), also `file_size >= 16 + 5 *
+     * 3850 = 19 266`, was 901 120 Byte erfuellen. DMK gewann mit 65, das
+     * Paar DMK->HFE gibt es nicht, und der Fall war gruen.
+     *
+     * MF-1151 hat diese Ueberziehung behoben (Byte 5..15 muessen null
+     * sein, nach MAMEs `dmk_dsk.cpp`). Damit faellt die Datei an **ADF**
+     * — 901 120 Byte ist die AmigaDOS-Groesse —, und ADF->HFE ist seit
+     * MF-1081 ein VERLUSTFREIER Pfad. Die Wandlung lief also richtig
+     * durch, und der Test meldete das als Fehler.
+     *
+     * Das Ziel ist deshalb jetzt `UFT_FORMAT_G64`: fuer ADF->G64 gibt
+     * es in `src/core/uft_roundtrip.c` **keinen Eintrag**, und das
+     * Preflight-Tor sagt darauf „conversion pair is UNTESTED — not
+     * offered until an entry exists". Damit haengt der Fall an dem, was
+     * er pinnen soll — am TOR —, und nicht daran, welche Sonde ein
+     * Zufallsmuster fuer sich beansprucht.
+     *
+     * Es ist der dritte Test in dieser Runde, der auf einer
+     * Ueberziehung ruhte (nach `test_register_all_formats` und der
+     * A4-Tafel); die beiden Vorgaenger dieser Klasse sind MF-1016 und
+     * MF-1017. */
     const char *src_adf = "uft_ghost_in.adf";
     if (put(src_adf, src, ADF_SZ) != 0) {
         printf("  Quelldatei nicht schreibbar\n");
         return 2;
     }
     one_round("Fall 1 — abgewiesen, bevor etwas anfaengt:",
-              src_adf, UFT_FORMAT_HFE, true);
+              src_adf, UFT_FORMAT_G64, true);
 
     /* ── Fall 2: der Wandler LAEUFT und bringt nichts zustande ───────────
      *

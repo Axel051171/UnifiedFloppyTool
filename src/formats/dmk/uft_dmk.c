@@ -44,22 +44,71 @@ bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     const uint8_t  opts   = data[4];
     const int      sides  = (opts & 0x10) ? 1 : 2;
 
+    /* ── MF-1151: drei Pruefungen, die hier bisher nur BELOHNT wurden ──
+     *
+     * A4 Runde 2 (MF-1150) hat gemessen: `uft_disk_open()` gab
+     * `tests/corpus_free/hxcfe_720k.st` — ein FLACHES Atari-ST-Abbild
+     * von 737 280 Byte ohne jeden DMK-Kopf — an DIESE Sonde, mit
+     * Konfidenz 65. Der Grund sind die ersten sieben Byte der Datei:
+     *
+     *     00 01 55 46 54 2D 4B  =  0x00, 0x01, "UFT-K"
+     *
+     * also UFTs EIGENE Selbstbeschreibungsmarke. Daraus las diese Sonde
+     * prot = 0x00 (+10), tracks = 1, tlen = 0x4655 = 18005 ('U','F' als
+     * LE16) und opts = 0x54 ('T', Bit 4 -> eine Seite). Ihre einzige
+     * Groessenschranke war `file_size >= 18 021`, und die ist gegen
+     * 737 280 Byte wirkungslos: **bei `tracks == 1` prueft eine UNTERE
+     * Schranke nichts.**
+     *
+     * Es ist derselbe Defekt, den MF-447 hier behoben hat — der
+     * Kopfkommentar oben sagt woertlich „a file whose length does not
+     * MATCH that arithmetic", und der Code sagte `>=`.
+     *
+     * Die Tore stehen in MAMEs `dmk_dsk.cpp` (Wilbert Pol,
+     * BSD-3-Clause, im Baum unter `tools/uft-scout/work/mame-master`;
+     * **nur gelesen**, Kanal *Spec* nach MF-695), `identify()`:
+     *
+     *     header[0] != 0x00 && header[0] != 0xff     -> return 0
+     *     for (i = 5; i < 0x10; i++) if (header[i])  -> return 0
+     *     track_size < 0x80 || track_size > 0x3fff   -> return 0
+     *
+     * EINE Abweichung ist bewusst und festgenagelt: MAME nimmt
+     * Spurlaengen ab 0x80, hier bleibt die Untergrenze bei 1000. Eine
+     * untere Schranke kann nur WEITER machen, und eine DMK-Spur unter
+     * 1000 Byte traegt keine Diskette, die dieser Leser lesen koennte
+     * (Gestalt MF-1027).
+     *
+     * Was BEWUSST offen bleibt: `file_size > implied` wird weiter
+     * angenommen, wie bei MAME (`FIFID_HINT` ohne `FIFID_SIZE`). Die
+     * Restweite deckt jetzt Tor 2 — dreizehn Byte Struktur statt eines
+     * Bereichs. Ganz schliessen wuerde sie MAMEs IDAM-Pruefung (jeder
+     * der 64 Eintraege zeigt in die Spur, und dort steht 0xFE); die
+     * braucht die ganze Spur im Sondenpuffer und steht als P3-407. */
+    if (prot != 0x00 && prot != 0xFF) return false;
     if (tracks == 0 || tracks > 96) return false;
-    if (tlen < 1000 || tlen > 20000) return false;
+    if (tlen < 1000 || tlen > 0x3FFF) return false;
+    for (int i = 5; i < DMK_HDR; i++) if (data[i]) return false;
 
     /* the size the reader's own track arithmetic implies */
     const size_t implied = (size_t)DMK_HDR +
                            (size_t)tracks * (size_t)sides * (size_t)tlen;
     if (file_size < implied) return false;
 
-    int conf = 55;
-    if (file_size == implied) conf += 30;       /* exact, no trailing data */
-    if (prot == 0x00 || prot == 0xFF) conf += 10;
-
-    /* bytes 5..11 are reserved and zero in every image this reader can use */
-    bool reserved_zero = true;
-    for (int i = 5; i < 12; i++) if (data[i]) { reserved_zero = false; break; }
-    if (reserved_zero) conf += 5;
+    /* ── Die Leiter: STRUKTUR, nicht Merkmal (MF-729 / MF-1151) ───────
+     *
+     * Hier stand 55 + 30 + 10 + 5, und am echten Korpus-DMK ergab das
+     * gemessen **100** — die Spitze des Bandes „Merkmal getroffen"
+     * (80..100) fuer ein Format, das GAR KEINE Kennung hat. Gelesen
+     * sind elf Nullbyte, ein gueltiges Flagbyte und eine aufgehende
+     * Spurarithmetik: das ist Struktur, und Struktur endet bei 79.
+     *
+     * Die +10 und +5 fallen weg, weil ihre Bedingungen jetzt Tore sind
+     * — ein Tor zweimal zu zaehlen waere dieselbe Ueberziehung in
+     * kleinerer Schrift. Und ein gruener Test hat die 100 bewacht:
+     * `tests/test_register_all_formats.c` verlangte `c >= 95`; seit
+     * MF-1151 verlangt er das Band. */
+    int conf = 60;
+    if (file_size == implied) conf += 15;       /* exact, no trailing data */
 
     *confidence = conf;
     return true;

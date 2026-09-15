@@ -280,7 +280,19 @@ TEST(the_tightened_probes_still_accept_what_their_readers_read) {
 
     c = 0;
     ASSERT(dmk->probe(h, sizeof(h), dmk_size, &c));
-    ASSERT(c >= 95);
+    /* MF-1151: hier stand `ASSERT(c >= 95)`, und diese Zusage hat einen
+     * Bandverstoss BEWACHT. Gemessen am echten Korpus-DMK meldete
+     * `dmk_probe()` **100** — die Spitze des Bandes „Merkmal getroffen"
+     * (80..100 nach MF-729) fuer ein Format, das gar keine Kennung hat.
+     * Was gelesen ist: elf Nullbyte, ein gueltiges Flagbyte und eine
+     * aufgehende Spurarithmetik, also STRUKTUR — und die endet bei 79.
+     * Dieselbe Gestalt wie MF-1016 (ein gruener Test bewachte JV1s
+     * erfundene zweite Seite) und MF-1017 (diese Datei schrieb JV3s
+     * falsche Kopfgroesse fest). Geprueft wird jetzt das BAND, nicht
+     * eine Zahl; die Zahl selbst nagelt `test_dmk_sonde_gegen_mame`
+     * fest. */
+    ASSERT(c >= UFT_PROBE_CONF_STRUCT_MIN);
+    ASSERT(c < UFT_PROBE_CONF_MAGIC_MIN);
 
     /* one byte short of the size its own track arithmetic implies */
     c = 0;

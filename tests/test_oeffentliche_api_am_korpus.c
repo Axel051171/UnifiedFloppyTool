@@ -261,15 +261,22 @@ static const rennen_t RENNEN[] = {
       "das. MYZ80 nimmt ausserdem kurze Dateien an, also entscheidet "
       "die Groesse nichts. Gelesen wuerde 64x1x128x1024 statt "
       "80x2x9x512. P3-406" },
-    { "st", "DMK", "ANDERS",
-      "DMK meldet 65 (\"Struktur gelesen\") auf einem FLACHEN "
-      "737 280-Byte-Abbild ohne DMK-Kopf — und der Grund ist gemessen: "
-      "die ersten Byte sind `00 01 55 46 54 2D 4B`, also UFTs EIGENE "
-      "Marke \"UFT-K\". DMK liest daraus prot=0x00 (+10), tracks=1, "
-      "tlen=0x4655=18005 ('U','F' als LE16) und opts=0x54 ('T', Bit 4 "
-      "gesetzt -> eine Seite). Seine Schranke ist `file_size >= 16 + "
-      "tracks*sides*tlen` = 18 021 — bei tracks=1 ist sie gegen eine "
-      "737 280-Byte-Datei wirkungslos. P3-407" },
+    /* BERICHTIGT MF-1151, und die Tafel hat es selbst gemeldet: hier
+     * stand `DMK` mit dem Grund „meldet 65 auf einem flachen Abbild".
+     * Das war der Befund, MF-1151 hat ihn behoben (drei Tore aus MAMEs
+     * `dmk_dsk.cpp`), und die Zeile fiel daraufhin mit „gemessen war
+     * DMK, jetzt MSX" — genau dafuer ist sie eine Schranke und kein
+     * Zugestaendnis. **Was bleibt, ist nicht der Defekt, sondern das
+     * Rennen:** 737 280 Byte, und MSX-2DD hat dieselbe Teilung wie ein
+     * PC-720K — nur nicht dieselbe wie eine Atari-ST-Diskette. */
+    { "st", "MSX", "ANDERS",
+      "737 280 Byte; MSX 45, `st` selbst darunter. Seit MF-1151 ist DMK "
+      "aus diesem Rennen (es meldete 65, weil die ersten Byte `00 01 "
+      "55 46 54 2D 4B` — UFTs eigene Marke \"UFT-K\" — als DMK-Kopf mit "
+      "tracks=1 lesbar waren und eine UNTERE Groessenschranke dagegen "
+      "nichts prueft). Uebrig ist dieselbe Lage wie bei `img`, "
+      "`logical` und `posix`: vier Formate teilen sich 737 280 Byte, "
+      "und keines kann mehr als die Groesse vorzeigen — P3-401/P3-402" },
     { "edsk", "DSK", "ANDERS",
       "beide melden 95 und liegen GLEICHAUF (tied 2) — den Zuschlag "
       "gibt die Reihenfolge. Eine erweiterte CPC-Datei wuerde mit dem "

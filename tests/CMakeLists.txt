@@ -1523,6 +1523,28 @@ foreach(test_source ${TEST_SOURCES})
         # Der Leser erkannte es nicht und haette die Daten als FM gelesen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/dmk/uft_dmk.c)
+    elseif(${test_name} STREQUAL "test_dmk_sonde_gegen_mame")
+        # MF-1151: `dmk_probe()` gab einem FLACHEN 737 280-Byte-ST-Abbild
+        # die Konfidenz 65 — gemessen in A4 Runde 2 (MF-1150). Seine ersten
+        # Byte sind UFTs eigene Marke `00 01 "UFT-K"`, und daraus liest die
+        # Sonde tracks=1, tlen=0x4655=18005 und eine Seite; ihre einzige
+        # Schranke `file_size >= 16 + tracks*sides*tlen` = 18 021 ist gegen
+        # 737 280 Byte wirkungslos. Bei `tracks == 1` prueft eine UNTERE
+        # Schranke nichts.
+        #
+        # Es ist derselbe Defekt, den MF-447 hier behoben hat: dessen
+        # eigener Kommentar sagt „a file whose length does not MATCH that
+        # arithmetic", der Code sagt `>=`.
+        #
+        # Referenz MAMEs `dmk_dsk.cpp` (Wilbert Pol, BSD-3-Clause, nur
+        # gelesen): drei harte Tore statt UFTs Bonuspunkte — Byte 0 in
+        # {0x00,0xFF}, Byte 5..0x0F alle null, Spurlaenge 0x80..0x3FFF.
+        # Eine Abweichung bleibt bewusst: UFT haelt die UNTERE Grenze bei
+        # 1000, weil sie nur weiter machen koennte.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dmk/uft_dmk.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_td0_kommentarflag")
         # MF-971: das registrierte Plugin prueft `version >= 0x10` statt
         # Bit 7 von Byte 7 — vier Quellen sagen das Flag, darunter die
