@@ -26,6 +26,28 @@ bool d81_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     /* D81 header at track 40 sector 0 (offset 0x61800):
      * Byte 0-1 = directory link (40/3 typical)
      * Byte 2 = DOS version 'D' (0x44) for 1581 */
+    /* ── MF-1147: unerreichbar auf jedem Dateipfad, wie bei `d64` ───────
+     *
+     * `0x61803` sind **399 363** Byte gegen einen Puffer von **65 536**
+     * (`UFT_PROBE_BUFFER_SIZE`); gekappt wird an allen drei
+     * Fuetterstellen (`src/core/uft_format_plugin.c:365`, `:397`,
+     * `src/core/uft_smart_open.c:358`). Diese Sonde meldet ueber
+     * `uft_disk_open()` also **immer 45**, und die Stufen 92/88 sind auf
+     * dem Dateipfad toter Code.
+     *
+     * **Und hier hat es eine gemessene Folge:** bei 819 200 Byte gewinnt
+     * D81 mit diesen 45 gegen `mgt` (40) und `sam` — nicht weil es mehr
+     * erkannt haette, sondern weil die Konstante groesser ist. Das ist
+     * woertlich die Lage, die MF-729 abschaffen wollte („nicht weil die
+     * mehr erkannt haetten, sondern weil ihre Zahl groesser gewaehlt
+     * war"), nur diesmal zwischen zwei Sonden, die BEIDE ehrlich „nur
+     * die Groesse" sagen. Die richtige Antwort waere „unentschieden".
+     *
+     * Der Zweig bleibt beschriftet stehen (MF-699/MF-1077); die
+     * Entwurfsfrage — wie viel darf eine Sonde sehen? — ist **P3-401**.
+     * `src/formats/do/uft_do.c` beschreibt denselben Fall und nennt zwei
+     * aehnliche Konfidenzen fuer dieselben Bytes ausdruecklich die
+     * ehrliche Antwort. */
     if (size >= 0x61803) {
         if (data[0x61800] == 40 && data[0x61801] == 3) *confidence = 92;
         else if (data[0x61802] == 0x44) *confidence = 88;

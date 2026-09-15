@@ -42,7 +42,37 @@ static bool d64_plugin_probe(const uint8_t *data, size_t size,
         return false;
     *confidence = 45;  /* MF-729: nur die Groesse */
 
-    /* BAM at track 18 sector 0 (offset 0x16500 for 35-track) */
+    /* BAM at track 18 sector 0 (offset 0x16500 for 35-track).
+     *
+     * ── MF-1147: dieser Zweig ist auf JEDEM Dateipfad unerreichbar ────
+     *
+     * `0x16600` sind **91 648** Byte, `UFT_PROBE_BUFFER_SIZE` ist
+     * **65 536**. Gemessen kappen alle drei Fuetterstellen auf diese
+     * Groesse — `src/core/uft_format_plugin.c:365`, `:397` und
+     * `src/core/uft_smart_open.c:358` —, die Bedingung trifft also nie
+     * zu und diese Sonde meldet ueber `uft_disk_open()` **immer 45**.
+     * Die Stufen 92 und 88 sind auf dem Dateipfad toter Code; erreichbar
+     * sind sie nur, wenn ein Aufrufer von Hand >= 91 648 Byte uebergibt.
+     *
+     * **Das ist kein Versehen dieses Plugins, sondern eine Eigenschaft
+     * des Formats:** die BAM einer CBM-Diskette liegt auf Spur 18, also
+     * bauartbedingt tief in der Datei. `src/formats/do/uft_do.c` hat
+     * denselben Fall schon beschrieben und entschieden — dort liegt die
+     * DOS-3.3-VTOC bei 0x11000 = 69 632, ebenfalls jenseits des Puffers,
+     * und der Kopf sagt: „Two plugins reporting almost the same
+     * confidence for the same bytes is the honest answer, not a bug."
+     * SAMdisk faellt an derselben Stelle auf Groesse plus Endung zurueck
+     * und sagt es ebenso.
+     *
+     * Der Zweig bleibt deshalb STEHEN und wird beschriftet statt
+     * entfernt (MF-699/MF-1077): er ist die einzige Stelle, die
+     * festhaelt, WELCHE Bytes ein D64 ausweisen wuerden, und er greift,
+     * sobald ihm jemand genug Daten gibt. Die Folge fuer die Rangfolge
+     * ist als **P3-401** gefuehrt.
+     *
+     * NICHT hier behoben, weil es eine Entwurfsfrage ist: wie viel darf
+     * eine Sonde sehen? Sie zu aendern beruehrt jedes Format, dessen
+     * Merkmal tief liegt. */
     if (size >= 0x16600) {
         /* BAM starts with track/sector link to directory (usually 18/1) */
         if (data[0x16500] == 18 && data[0x16501] == 1) *confidence = 92;
