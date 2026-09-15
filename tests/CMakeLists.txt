@@ -2473,9 +2473,13 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip"
-           OR ${test_name} STREQUAL "test_convert_adf_hfe_roundtrip")
+           OR ${test_name} STREQUAL "test_convert_adf_hfe_roundtrip"
+           OR ${test_name} STREQUAL "test_hfe_drehzahl")
         # MF-539: braucht die ganze Format-Schicht wie die uebrigen
         # Wandlungstests, aber keine Korpusdatei.
+        # MF-1166: `test_hfe_drehzahl` haengt sich an denselben Zweig —
+        # es ruft denselben Wandler, nur mit der 15-Sektor-Geometrie, die
+        # der Rundlauf nie betreten hat.
         file(GLOB_RECURSE IHR_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${IHR_FORMAT_SOURCES}

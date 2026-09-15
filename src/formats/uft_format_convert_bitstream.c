@@ -762,6 +762,33 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
     /* Determine geometry based on format and file size */
     int cylinders = 80, heads = 2, sectors = 18, sector_size = 512;
     uint16_t bitrate = 250; /* kbps */
+    /* MF-1166: die Drehzahl gehoert zum MEDIUM und stand fest auf 300.
+     *
+     * MF-539 hat die richtige Regel festgestellt — „die Spurlaenge ergibt
+     * sich aus Bitrate und Drehzahl" — und die Drehzahl dann als Literal
+     * in die Rechnung geschrieben. Die Geometriewahl unten waehlt aber
+     * einen Fall, der 360 braucht: 1 228 800 Byte = 80 x 2 x 15 x 512 ist
+     * die 1,2-MB-Diskette im 5,25-Zoll-HD-Laufwerk, und die dreht mit
+     * **360** U/min. Gemessen am Vorzustand bekam sie eine Spur von
+     * 25 000 statt 20 834 Byte — 20 % zu lang — und der Kopf behauptete
+     * 300 U/min. `IMG->HFE` ist einer der sieben als VERLUSTFREI
+     * angebotenen Wandlungspfade (MF-541/567).
+     *
+     * Die Bitrate allein entscheidet es NICHT: 5,25" HD und 3,5" HD sind
+     * beide 500 kbit/s und drehen verschieden. Deshalb steht die Drehzahl
+     * neben der Geometrie, wo sie hergeleitet wird, und nicht in der
+     * Rechnung.
+     *
+     * Belegt durch `cw2dmk/jv3.h` (GPL-2, nur GELESEN — Kanal *Spec*), das
+     * die Herleitung im Kommentar mitfuehrt, als DATENbytes:
+     *     TRKSIZE_DD    6250    250kHz / 5 Hz [300rpm] / 8
+     *     TRKSIZE_5HD  10416    500kHz / 6 Hz [360rpm] / 8
+     *     TRKSIZE_3HD  12500    500kHz / 5 Hz [300rpm] / 8
+     * UFT zaehlt Zellbytes, also das Doppelte — 2 x 12 500 = 25 000 und
+     * 2 x 6 250 = 12 500 treffen genau, 2 x 10 416 = 20 832 gegen unsere
+     * 20 834 (Ganzzahlteilung 30 000 000 / 360). Zwei unabhaengige
+     * Rechenwege, dieselben Zahlen. */
+    unsigned rpm = 300;
     hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM;
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
@@ -842,7 +869,8 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
         } else if (src_size <= 737280) {
             cylinders = 80; sectors = 9;
         } else if (src_size <= 1228800) {
-            cylinders = 80; sectors = 15; bitrate = 500;
+            /* 1,2 MB im 5,25-Zoll-HD-Laufwerk — 360 U/min (MF-1166). */
+            cylinders = 80; sectors = 15; bitrate = 500; rpm = 360;
             iface = HFE_IF_IBMPC_HD;
         } else {
             cylinders = 80; sectors = 18; bitrate = 500;
@@ -887,7 +915,9 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
      * Vorher stand hier `sectors * (sector_size + 62) * 16 / 8`, eine
      * Schaetzung ueber die Sektorzahl. Sie fiel nicht auf, weil der Inhalt
      * ohnehin nicht kodiert war und die Laenge damit bedeutungslos. */
-    const int track_cells = (int)((uint32_t)bitrate * 1000u * 60u / 300u * 2u);
+    /* MF-1166: `rpm` statt des Literals 300 — siehe die Herleitung oben. */
+    const int track_cells = (int)((uint32_t)bitrate * 1000u * 60u
+                                  / (uint32_t)rpm * 2u);
     int mfm_track_bytes = (track_cells + 7) / 8;
     /* Round up to multiple of 256 for HFE interleaving */
     int track_len_aligned = ((mfm_track_bytes + 255) / 256) * 256;
@@ -911,7 +941,10 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
     hdr->n_heads = (uint8_t)heads;
     hdr->track_encoding = (uint8_t)encoding;
     hdr->data_bit_rate = bitrate;
-    hdr->drive_rpm = 300;
+    /* MF-1166: dieselbe Zahl, die auch die Spurlaenge bestimmt hat. Vorher
+     * stand hier das Literal 300 — der Kopf behauptete es fuer JEDES
+     * Medium, auch fuer die 1,2-MB-Diskette mit 360 U/min. */
+    hdr->drive_rpm = (uint16_t)rpm;
     hdr->uft_floppy_interface = (uint8_t)iface;
     hdr->track_list_offset = 1; /* Block 1 */
 
