@@ -73,6 +73,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from repo_scope import repo_files  # noqa: E402
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+from c_literal import als_int  # noqa: E402
 
 GRUNDLINIE = 11   # Guards, die wirklich wuerfeln, Stand MF-881
 
@@ -160,10 +162,20 @@ def _werte(rumpf):
             continue
         if "=" in teil:
             name, aus = [x.strip() for x in teil.split("=", 1)]
-            try:
-                lauf = int(aus, 0)
-            except ValueError:
-                pass
+            # MF-1171: hier stand `int(aus, 0)` mit `except ValueError:
+            # pass` — und das `pass` ist der Befund. Scheiterte die
+            # Umwandlung, behielt `lauf` den Wert des VORGAENGERS, der
+            # Aufzaehlungseintrag bekam also still eine falsche Zahl. In
+            # einem Tor fuer Kollisionen kann das eine erfinden oder
+            # verdecken. Ein C-Oktalliteral scheitert dort zuverlaessig,
+            # weil Python `0o` verlangt.
+            #
+            # Jetzt wird nur uebernommen, was wirklich gelesen wurde; ein
+            # unlesbarer Ausdruck laesst den Lauf weiterzaehlen, wie es
+            # auch ohne `= ...` geschieht.
+            n = als_int(aus)
+            if n is not None:
+                lauf = n
         else:
             name = teil
         g = MITGLIED.match(name)

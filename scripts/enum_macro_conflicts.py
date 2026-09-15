@@ -48,6 +48,11 @@ import re
 import sys
 from pathlib import Path
 
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+# `scripts/` ist beim direkten Aufruf sys.path[0] und beim Import durch
+# `check_consistency.py` ebenfalls auf dem Pfad, weil jenes daneben liegt.
+from c_literal import als_int
+
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug",
              "graphify-out"}
 HDR_EXT = {".h", ".hpp"}
@@ -61,7 +66,6 @@ _LINE = re.compile(r"//[^\n]*")
 _STR = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 _INC = re.compile(r'^\s*#\s*include\s*[<"]([^">]+)[">]', re.M)
 _DEF = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)(?!\()[ \t]*([^\n]*)", re.M)
-_INT = re.compile(r"^[-+]?(?:0[xX][0-9a-fA-F]+|\d+)[uUlL]*$")
 _IDENT = re.compile(r"^[A-Za-z_]\w*$")
 
 
@@ -80,10 +84,25 @@ def strip_all(text: str) -> str:
 
 
 def _as_int(tok: str):
-    tok = tok.strip()
-    if not _INT.match(tok):
-        return None
-    return int(re.sub(r"[uUlL]+$", "", tok), 0)
+    """MF-1171: dieser Rumpf hat `check_consistency.py` GETOETET.
+
+    Hier stand ein Vormuster `_INT` (`0[xX]hex` oder `\\d+`, Suffixe
+    erlaubt) und danach `int(..., 0)`. Das Muster liess `0170000` durch —
+    es ist `\\d+` —, und `int('0170000', 0)` WIRFT, weil Python fuer Oktal
+    `0o170000` verlangt. Der Traceback kam mit rc 1, bevor die uebrigen
+    23 Kategorien liefen: ein Absturz ist kein Urteil.
+
+    Ausgeloest hat es nicht der eigene Baum, sondern die Rueckfallebene von
+    `repo_scope` — als `git ls-files` einmal nicht antwortete, wurde auch
+    `tools/uft-scout/work/cpmtools/cpmfs.h` gelesen, wo `__S_IFMT 0170000`
+    steht. Das Muster war also nie eine Grenze gegen Unbekanntes, sondern
+    nur gegen Nicht-Ziffern.
+
+    Die Lesart liegt jetzt in `scripts/c_literal.py`, gemeinsam mit den
+    fuenf anderen Stellen derselben Klasse, und ihre Zusage ist, dass sie
+    nie wirft. `_INT` ist damit weg — ein Vorfilter, der weniger versteht
+    als der Parser dahinter, ist kein Schutz."""
+    return als_int(tok)
 
 
 _SCOPE_CACHE = {}

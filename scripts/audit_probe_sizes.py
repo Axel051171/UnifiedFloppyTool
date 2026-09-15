@@ -38,6 +38,9 @@ import pathlib
 import re
 import sys
 
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+from c_literal import als_int  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 FUNC = re.compile(
@@ -71,12 +74,25 @@ def measure() -> tuple[collections.Counter, dict]:
     per_probe: dict[str, list[int]] = {}
     for p in sorted((ROOT / "src" / "formats").rglob("*.c")):
         t = p.read_text(encoding="utf-8", errors="replace")
-        consts = {k: int(v) for k, v in DEFN.findall(t)}
+        # MF-1171: hier stand `int(v)` und `int(v, 16) if 0x else int(v)`,
+        # also Basis 10 fuer alles ohne `0x` — und ungeschuetzt. Das ist
+        # nicht der Absturz von `enum_macro_conflicts.py`, sondern die
+        # schlimmere Haelfte derselben Klasse: `0170000` waere still als
+        # 170000 gelesen worden statt als 61440, und diese Zahl entscheidet
+        # danach, ob sie ins Band MIN_SIZE..MAX_SIZE faellt. Ein Absturz
+        # faellt auf, eine falsche Zahl nicht.
+        consts = {}
+        for k, v in DEFN.findall(t):
+            n = als_int(v)
+            if n is not None:
+                consts[k] = n
         for m in FUNC.finditer(t):
             body = body_of(t, m.start())
             found: set[int] = set()
             for v in CMP.findall(body):
-                n = int(v, 16) if v.lower().startswith("0x") else int(v)
+                n = als_int(v)
+                if n is None:
+                    continue
                 if MIN_SIZE <= n <= MAX_SIZE:
                     found.add(n)
             for name in NAMED.findall(body):

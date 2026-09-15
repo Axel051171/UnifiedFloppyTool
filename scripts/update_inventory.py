@@ -31,6 +31,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from commit_lock import sperre_pruefen  # noqa: E402
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+from c_literal import als_int  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_format_list import scan  # noqa: E402
@@ -651,14 +653,16 @@ def _macro_value(raw: str):
         body = re.sub(r"\\x([0-9A-Fa-f]{2})",
                       lambda m: "\\x" + m.group(1).lower(), v[1:-1])
         return ("str", body)
-    n = re.sub(r"[uUlL]+$", "", v.strip("()").strip())
-    try:
-        if n.lower().startswith("0x"):
-            return ("num", int(n, 16))
-        if re.fullmatch(r"-?\d+", n):
-            return ("num", int(n, 10))
-    except ValueError:
-        pass
+    # MF-1171: hier stand `int(n, 16)` fuer `0x` und `int(n, 10)` fuer
+    # `-?\d+`, umschlossen von `except ValueError`. Fuer ein
+    # C-Oktalliteral feuert dieser `except` NIE — Python erlaubt fuehrende
+    # Nullen in Basis 10, also liest `int('0170000', 10)` still **170000**
+    # statt 61440. Das ist nicht der Absturz aus `enum_macro_conflicts.py`,
+    # sondern die schwerer zu findende Haelfte derselben Klasse: der Wert
+    # wandert als „num" in den Vergleich, und niemand sieht es.
+    n = als_int(v)
+    if n is not None:
+        return ("num", n)
     return ("expr", v)
 
 

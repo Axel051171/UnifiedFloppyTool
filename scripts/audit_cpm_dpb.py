@@ -74,6 +74,9 @@ import re
 import sys
 from pathlib import Path
 
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+from c_literal import als_int  # noqa: E402
+
 WURZEL = Path(__file__).resolve().parent.parent
 QUELLE = WURZEL / "src/formats/cpm/uft_cpm_diskdefs.c"
 
@@ -82,11 +85,12 @@ FELDER = ("spt", "bsh", "blm", "exm", "dsm", "drm", "al0", "al1", "off",
 
 
 def zahl(s: str) -> int | None:
-    s = s.strip().rstrip(",").strip()
-    try:
-        return int(s, 0)
-    except ValueError:
-        return None
+    """MF-1171: `int(s, 0)` mit `except ValueError -> None` war nicht
+    falsch, aber blind: fuer ein C-Oktalliteral wie `0755` wirft Python,
+    und der Wert wurde damit VERWORFEN statt gelesen. Ein DPB-Feld, das
+    jemand oktal schreibt, faellt so aus der Pruefung heraus — still.
+    Die Lesart liegt jetzt an einer Stelle und kennt Oktal."""
+    return als_int(s.strip().rstrip(",").strip())
 
 
 def lies_definitionen(text: str):

@@ -479,8 +479,39 @@ Baum ist genau das **viermal** passiert:
 Die Regel gilt in beide Richtungen: `git ls-files` liefert auch neue,
 noch nicht hinzugefügte Dateien (`--others --exclude-standard`), damit
 sich niemand einem Tor entzieht, indem er `git add` unterlässt. Ist git
-nicht befragbar, lässt der Filter alles durch **und sagt es** — eine
-stille Lücke wäre schlimmer als ein paar Fremdbefunde mit Hinweis.
+nicht befragbar, lässt der Filter alles durch **und sagt es**.
+
+> **BERICHTIGT MF-1171 — hier stand: „eine stille Lücke wäre schlimmer
+> als ein paar Fremdbefunde mit Hinweis". Der erste Halbsatz stimmt, der
+> zweite beschreibt nicht, was gemessen passiert.** Es sind nicht ein paar
+> Fremdbefunde. `repo_scope` meldete einmal `git ls-files nicht
+> verfuegbar`, prüfte daraufhin den ganzen Verzeichnisbaum samt
+> gitignorierter Fremdklone — und `enum_macro_conflicts.py` **starb** an
+> `ValueError: invalid literal for int() with base 0: '0170000'`, dem
+> `__S_IFMT` aus `tools/uft-scout/work/cpmtools/cpmfs.h:13`.
+> `check_consistency.py` endete mit rc 1 und einem Traceback, **bevor die
+> übrigen 23 Kategorien liefen**. Ein Absturz ist kein Urteil — die Klasse
+> MF-1000/Tor 64 in neuer Gestalt.
+>
+> Die Großzügigkeit der Rückfallebene ist also keine Nachsicht, sondern
+> eine **Anforderung an jeden Parser dahinter**: er bekommt dort Eingaben,
+> die im eigenen Baum nicht vorkommen. Sechs Stellen lasen ein
+> C-Ganzzahlliteral selbst, mit vier verschiedenen Ausgängen — zwei
+> stürzten ab, zwei lasen `0170000` still als 170000 statt 61440, eine
+> verwarf den Wert, und eine ließ den Laufwert des **vorherigen**
+> Aufzählungseintrags stehen. Seit MF-1171 liegt die Lesart in
+> `scripts/c_literal.py`, deren Zusage lautet: sie gibt `None` zurück für
+> alles, was sie nicht versteht, und **wirft nie** (Selbsttest 38/38).
+>
+> **Warum `git ls-files` ausfiel, ist ausdrücklich NICHT gemessen** und
+> wird hier nicht durch eine plausible Geschichte gefüllt: der Aufruf
+> braucht im Leerlauf 42 ms gegen eine Zeitgrenze von 120 s, und während
+> eines laufenden Commits wiederholt liefert `repo_files()` 2907 Dateien
+> mit rc 0. Einmal beobachtet, nicht reproduziert — `P3-421`.
+>
+> Und der zweite Teil dieses Befunds ist **offen**: dass die Rückfallebene
+> „alles prüfen" statt „Umfang nicht feststellbar" sagt, betrifft 16
+> Skripte und ist eine Entwurfsentscheidung, kein Nebeneffekt.
 
 ### Grundsatz: jeder Baustein benennt seine Kennzahl (MF-640)
 

@@ -29,6 +29,9 @@ import re
 import sys
 from pathlib import Path
 
+# MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
+from c_literal import als_int  # noqa: E402
+
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug"}
 
 _CONST = re.compile(r"^\s*#define\s+([A-Za-z_]\w*)\s+(0[xX][0-9A-Fa-f]+|\d+)\s*$", re.M)
@@ -47,13 +50,14 @@ def strip_comments(text: str) -> str:
 
 
 def value_of(tok: str, consts: dict[str, int]):
-    if tok.isdigit():
-        return int(tok)
-    if tok[:2].lower() == "0x":
-        try:
-            return int(tok, 16)
-        except ValueError:
-            return None
+    """MF-1171: eine Lesart statt dreier Sonderfaelle.
+
+    Hier stand `tok.isdigit() -> int(tok)`, also Basis 10 — `0170000`
+    waere als 170000 gelesen worden statt als 61440. Der 0x-Zweig war
+    gefangen, dieser nicht, und Oktal und Binaer gab es nicht."""
+    n = als_int(tok)
+    if n is not None:
+        return n
     return consts.get(tok)
 
 
@@ -69,7 +73,18 @@ def scan(repo: Path):
             continue
         raw = p.read_text(encoding="utf-8", errors="replace")
         clean = strip_comments(raw)
-        consts = {k: int(v, 0) for k, v in _CONST.findall(clean)}
+        # MF-1171: hier stand `{k: int(v, 0) for ...}` — ungeschuetzt, in
+        # einem Dict-Comprehension, und der einzige `except ValueError`
+        # dieser Datei liegt in `value_of()`. Ein `#define X 0170000`
+        # haette das Tor mit demselben Traceback getoetet wie
+        # `enum_macro_conflicts.py`. Der Parser entscheidet jetzt, was ein
+        # Literal ist; was er nicht liest, wird uebersprungen statt zu
+        # werfen.
+        consts = {}
+        for k, v in _CONST.findall(clean):
+            n = als_int(v)
+            if n is not None:
+                consts[k] = n
         rel = str(p.relative_to(repo)).replace("\\", "/")
 
         for pm in _PROBE.finditer(clean):
