@@ -610,6 +610,21 @@ def main() -> int:
         import extern_decl_conflicts as _extern
         all_errors.append(("extern vs definition arity",
                            _extern.check(repo)))
+        # Der PREIS der Entscheidung direkt darueber (MF-1155). Das Tor oben
+        # vergleicht bewusst nur die Aritaet, und sein Kopf begruendet es:
+        # `size_t` gegen `unsigned long` ist derselbe Typ, verschieden
+        # geschrieben, und das zu melden ersaeuft den echten Fund. Richtig —
+        # aber `uft_pipeline_run` ist zweimal deklariert, einmal mit
+        # `uft_pipeline_t*` und einmal mit `uft_decode_session_t*`, bei genau
+        # EINER Definition, und beide haben Aritaet 1. Die Wahl kann das nicht
+        # sehen. Gemessen sind es 20 solche Namen, darunter `uft_disk_free`
+        # mit DREI Zeigertypen und `uft_sector_free` mit zwei — free() durch
+        # den falschen Typ. Die enge Regel meldet nur gleiche Aritaet plus
+        # Zeiger auf verschieden BENANNTE Typen; die 20 sind eingefroren,
+        # verhindert wird der 21ste (P3-410).
+        import audit_typkollision as _typkoll
+        all_errors.append(("neue Typkollision je Parameterstelle",
+                           _typkoll.check(repo)))
         # The registry could hold 7 of 88 plugins (duplicate-check on the
         # container id, MAX_FORMAT_PLUGINS=32, and no caller at all), and every
         # cap failed silently because an empty registry answers NULL. MF-445
