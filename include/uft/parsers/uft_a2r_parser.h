@@ -213,6 +213,24 @@ typedef struct {
      * eine binaere Aenderung ohne Compiler-Warnung. 0 heisst „nicht aus
      * der Datei gelesen"; dann gilt weiterhin A2R_TICK_NS. */
     uint32_t        resolution_ps;
+
+    /* MF-1157: was verworfen wurde, steht in der DATENSTRUKTUR und nicht
+     * nur in einem Kommentar.
+     *
+     * Die Lehre ist MF-1135: dort gab `dms_unpack()` in `written` zurueck,
+     * wie weit es gekommen war, `open()` schrieb die Zahl in eine Warnung
+     * und verwarf sie — die Warnung erreichte den Bediener, die
+     * Datenstruktur nicht, und elf Sektoren mit erfundenen Bytes galten
+     * als gut. Ein stiller Verlust ist hier derselbe Fehler.
+     *
+     * Beide Zaehler sind 0, wenn nichts verworfen wurde. Angehaengt wie
+     * `resolution_ps` darueber, aus demselben Grund. */
+    uint32_t        strm_entries_dropped;  /**< STRM-Eintraege verworfen:
+                                            *   Nutzlast passt nicht in den
+                                            *   Chunk, oder Location >= 160 */
+    uint32_t        captures_dropped;      /**< Aufnahmen verworfen, weil
+                                            *   A2R_MAX_CAPTURES (32) je
+                                            *   Spur erreicht war */
 } a2r_context_t;
 
 /**

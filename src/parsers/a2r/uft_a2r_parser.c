@@ -222,36 +222,88 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
                                     const uint8_t *data, size_t size) {
     if (!ctx || !data) return A2R_ERR_NULL_PARAM;
     
-    /* STRM format: location entries followed by flux data */
-    const uint8_t *ptr = data;
-    const uint8_t *end = data + size;
-    
-    /* Count tracks first */
-    uint8_t track_counts[A2R_MAX_TRACKS] = {0};
-    const uint8_t *scan = data;
-    
-    while (scan + 10 <= end) {
-        uint8_t location = scan[0];
-        uint8_t capture_type = scan[1];
-        uint32_t data_len = read_le32(&scan[2]);
-        uint32_t tick_count = read_le32(&scan[6]);
-        
+    /* STRM format: location entries followed by flux data.
+     *
+     * MF-1157: hier standen `const uint8_t *ptr = data;` und
+     * `const uint8_t *end = data + size;`. Beide Durchgaenge rechnen
+     * jetzt mit `off` und `size - off`; die zwei Zeiger sind damit
+     * unbenutzt und fallen weg. Das ist kein Entfernen von Funktion
+     * (MF-1077), sondern die andere Haelfte derselben Umstellung —
+     * stehengelassen waeren sie eine Einladung, die alte Rechnung
+     * wieder aufzunehmen. */
+
+    /* Count tracks first.
+     *
+     * BEFUND MF-1157: hier stand `uint8_t track_counts[A2R_MAX_TRACKS]`,
+     * also ein ZAEHLER je Location. Bei 256 Eintraegen derselben Location
+     * lief er auf 0 ueber, die Location galt als nicht vorhanden, und die
+     * ganze Datei las sich LEER — mit einem gueltigen Griff davor, weil
+     * `a2r_open()` den Rueckgabewert dieser Funktion nicht auswertet.
+     * Gezaehlt werden muss nichts: gebraucht wird allein, WELCHE Locations
+     * vorkommen. Ein Praesenz-Feld kann nicht ueberlaufen. */
+    uint8_t gesehen[A2R_MAX_TRACKS] = {0};
+
+    /* BEFUND MF-1157, dritter Teil: gerechnet wird mit OFFSET und
+     * RESTLAENGE, nicht mit Zeigern.
+     *
+     * Hier stand `scan += 10 + data_len` mit einem `data_len` direkt aus
+     * der Datei — bis zu 4 GB. Ein Lesezugriff daneben kam dabei nicht
+     * zustande, weil die Schleifenbedingung `scan + 10 <= end` danach
+     * faellt; aber schon das BILDEN eines Zeigers weit ausserhalb des
+     * Objekts ist undefiniert, und ein Uebersetzer darf daraus
+     * schliessen, dass es nicht passiert. `size - off` kann nicht
+     * ueberlaufen und braucht keine Annahme. */
+    size_t off = 0;
+
+    while (size - off >= 10) {
+        const uint8_t *e = data + off;
+        uint8_t location = e[0];
+        uint32_t data_len = read_le32(&e[2]);
+
         if (location == 0xFF) break;  /* End marker */
-        if (location >= A2R_MAX_TRACKS) {
-            scan += 10 + data_len;
-            continue;
+
+        /* Beschaedigt: die angesagte Nutzlast passt nicht mehr in den
+         * Chunk. Abgesagt statt gekuerzt — ein gekuerzter Eintrag waere
+         * ein Sektor mit erfundenen Bytes (Klasse MF-1040/MF-1135). Was
+         * danach kommt, ist ebenfalls unbrauchbar, weil der Vorschub an
+         * dieser Laenge haengt: also Ende, nicht Ueberspringen. */
+        if ((size_t)data_len > size - off - 10) {
+            ctx->strm_entries_dropped++;
+            break;
         }
-        
-        track_counts[location]++;
-        scan += 10 + data_len;
+
+        if (location >= A2R_MAX_TRACKS) {
+            ctx->strm_entries_dropped++;
+        } else {
+            gesehen[location] = 1;
+        }
+        off += 10 + (size_t)data_len;
     }
-    
-    /* Count unique tracks */
+
+    /* Count unique tracks — und gleich die Zuordnung Location -> Stelle.
+     *
+     * BEFUND MF-1157, der eigentliche: der zweite Durchgang unten rueckte
+     * bei jedem WECHSEL eine Stelle weiter (`ctx->tracks[track_idx++]`),
+     * ohne Schranke, waehrend hier die VERSCHIEDENEN Locations gezaehlt
+     * werden. Die Folge `0, 1, 0` sind zwei Locations und drei Wechsel:
+     * geschrieben wurde `ctx->tracks[2]` in einem zweielementigen Feld.
+     * Gemessen endet der Prozess damit unter Windows' Heap-Pruefung mit
+     * `0xC0000374` (STATUS_HEAP_CORRUPTION) — dieselbe Signatur wie
+     * MF-1040 bei `cas`. Und ohne Absturz waere es ein STILLER Verlust:
+     * `a2r_read_track()` nimmt den ersten Treffer je `track_number`, die
+     * zweite Aufnahme der Location 0 lag hinter dem Ende und war nicht
+     * erreichbar.
+     *
+     * Die Stelle folgt jetzt aus der Location, nicht aus der Reihenfolge.
+     * `A2R_MAX_TRACKS` ist 160, `int16_t` traegt das mit Reserve. */
+    int16_t stelle_von[A2R_MAX_TRACKS];
+    for (int i = 0; i < A2R_MAX_TRACKS; i++) stelle_von[i] = -1;
+
     ctx->track_count = 0;
     for (int i = 0; i < A2R_MAX_TRACKS; i++) {
-        if (track_counts[i] > 0) ctx->track_count++;
+        if (gesehen[i]) stelle_von[i] = (int16_t)ctx->track_count++;
     }
-    
+
     if (ctx->track_count == 0) return A2R_ERR_NO_FLUX;
 
     /* Overflow check: track_count * sizeof(a2r_track_t) */
@@ -263,33 +315,60 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
     if (!ctx->tracks) return A2R_ERR_ALLOC;
 
     /* Parse entries */
-    uint8_t track_idx = 0;
-    uint8_t current_location = 0xFF;
     a2r_track_t *current_track = NULL;
 
-    ptr = data;
-    while (ptr + 10 <= end) {
-        uint8_t location = ptr[0];
-        uint8_t capture_type = ptr[1];
-        uint32_t data_len = read_le32(&ptr[2]);
-        uint32_t tick_count = read_le32(&ptr[6]);
+    off = 0;
+    while (size - off >= 10) {
+        const uint8_t *e = data + off;
+        uint8_t location = e[0];
+        uint8_t capture_type = e[1];
+        uint32_t data_len = read_le32(&e[2]);
+        uint32_t tick_count = read_le32(&e[6]);
 
         if (location == 0xFF) break;
+
+        /* DIESELBE Absage wie im ersten Durchgang, Wort fuer Wort — sonst
+         * sehen die zwei Laeufe verschiedene Eintragsmengen, und genau
+         * das war der Ausgangsfehler dieser Funktion. Hier wird NICHT
+         * nachgezaehlt: der erste Durchgang hat es schon getan, zweimal
+         * zaehlen waere eine falsche Zahl in einem Feld, das ehrlich sein
+         * soll. */
+        if ((size_t)data_len > size - off - 10) break;
+
         if (location >= A2R_MAX_TRACKS) {
-            ptr += 10 + data_len;
+            off += 10 + (size_t)data_len;
             continue;
         }
 
-        /* New track? */
-        if (location != current_location) {
-            current_location = location;
-            current_track = &ctx->tracks[track_idx++];
-            current_track->track_number = location;
-            current_track->side = 0;  /* v2 is always side 0 */
-            current_track->capture_count = 0;
+        /* Stelle aus der Location, nicht aus der Reihenfolge (MF-1157).
+         * Eine Location, die im ersten Durchgang nicht gesehen wurde, kann
+         * es hier nicht geben — die Schranke steht trotzdem, weil eine
+         * Sicherung, die nur „kann nicht vorkommen" heisst, genau die
+         * Klasse ist, die dieser Baum mehrfach bezahlt hat. `capture_count`
+         * wird NICHT zurueckgesetzt: `calloc` hat genullt, und beim
+         * zweiten Besuch derselben Location wuerde ein Reset die erste
+         * Aufnahme verwerfen. */
+        int16_t stelle = stelle_von[location];
+        if (stelle < 0 || (uint32_t)stelle >= ctx->track_count) {
+            off += 10 + (size_t)data_len;
+            continue;
         }
+        current_track = &ctx->tracks[stelle];
+        current_track->track_number = location;
+        current_track->side = 0;  /* v2 is always side 0 */
 
-        /* Add capture */
+        /* Add capture.
+         *
+         * Die Schranke gegen `A2R_MAX_CAPTURES` (32) ist richtig und
+         * bleibt — `capture_count` ist ein `uint8_t`, 32 liegt weit unter
+         * 255, ein Ueberlauf ist ausgeschlossen. Was fehlte, war die
+         * Ehrlichkeit darueber: eine 33. Aufnahme derselben Spur wurde
+         * STILL verworfen. Sie wird weiterhin verworfen, aber gezaehlt
+         * (MF-1157). */
+        if (current_track &&
+            current_track->capture_count >= A2R_MAX_CAPTURES) {
+            ctx->captures_dropped++;
+        }
         if (current_track &&
             current_track->capture_count < A2R_MAX_CAPTURES) {
 
@@ -298,16 +377,19 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
             cap->data_length = data_len;
             cap->tick_count = tick_count;
 
-            /* Copy flux data */
-            if (ptr + 10 + data_len <= end && data_len > 0) {
+            /* Copy flux data. Die Laengenpruefung steht jetzt oben und
+             * gilt fuer BEIDE Durchgaenge; hier bleibt nur die Frage, ob
+             * ueberhaupt Nutzlast da ist. */
+            if (data_len > 0) {
                 /* Sanity cap on flux data size */
                 if (data_len > A2R_MAX_FLUX_BYTES_PER_CAPTURE) {
-                    ptr += 10 + data_len;
+                    ctx->captures_dropped++;
+                    off += 10 + (size_t)data_len;
                     continue;
                 }
                 cap->data = malloc(data_len);
                 if (cap->data) {
-                    memcpy(cap->data, ptr + 10, data_len);
+                    memcpy(cap->data, e + 10, data_len);
                     
                     /* Calculate duration */
                     uint64_t total_ticks = 0;
@@ -334,10 +416,10 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
             
             current_track->capture_count++;
         }
-        
-        ptr += 10 + data_len;
+
+        off += 10 + (size_t)data_len;
     }
-    
+
     return A2R_OK;
 }
 

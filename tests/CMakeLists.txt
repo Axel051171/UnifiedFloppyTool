@@ -3251,6 +3251,13 @@ foreach(test_source ${TEST_SOURCES})
         # an einer echten Applesauce-Aufnahme nachgemessen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_a2r_strm_verschachtelt")
+        # MF-1157: eine STRM-Folge 0,1,0 schrieb hinter das Ende des
+        # Spurfeldes. Dieselbe Quellenmenge wie test_a2r_layout darueber;
+        # der Rotbeweis gegen den Vorzustand war kein Fehlschlag, sondern
+        # ein Abbruch mit 0xC0000374 (STATUS_HEAP_CORRUPTION).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
     elseif(${test_name} STREQUAL "test_zellenklemme_zaehlt_mit")
         # MF-993: die ZELLEN-Klemme zaehlt mit -- dieselbe Bauart und
         # dieselbe Quellenmenge wie test_pll_klemme (MF-866), das direkt
