@@ -928,9 +928,9 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
      * Baum, keine zwei gleich), und sie war hier besonders leicht zu
      * uebersehen, weil die Tafel keinen Aufrufer hatte (P3-204).
      *
-     * Gemessen, dass beide Wege ueberall dasselbe sagen — fuer die vier
-     * Groessen, die dieser Wandler entscheidet, liefert die Tafel genau die
-     * Werte, die die Herleitung darunter rechnet:
+     * Gemessen, dass beide Wege dasselbe sagen — fuer die vier Groessen,
+     * die dieser Wandler entscheidet, liefert die Tafel genau die Werte,
+     * die die Herleitung darunter rechnet:
      *
      *     40/2/ 9x512  PC 360K   rpm 300  raw 100000   (250 * 60/300 * 2)
      *     80/2/ 9x512  PC 720K   rpm 300  raw 100000
