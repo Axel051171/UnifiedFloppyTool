@@ -162,7 +162,16 @@ typedef struct uft_sector_unified {
  * Function Prototypes
  *===========================================================================*/
 
-void uft_sector_free(uft_sector_unified_t *sector);
+/* MF-1158: hier stand `uft_sector_free(uft_sector_unified_t *)`. Definiert
+ * ist allein `uft_sector_free(uft_sector_t *)` (`uft_unified_types.c:160`),
+ * und die hat gemessen ausserhalb ihrer eigenen Datei KEINEN Aufrufer.
+ * Dieser Header hat 0 Einbinder. Verschaerfend: `uft_sector_t` ist selbst
+ * ZWEIMAL definiert (`uft_types.h:469` und
+ * `src/recovery/uft_sector_recovery.h:48`) — der Name bedeutet also je
+ * nach eingebundenem Header etwas anderes, und die Kategorie
+ * „include guard collisions" sieht es nicht, weil die Waechter
+ * verschieden heissen (Klasse MF-511). Steht als P3-413. */
+void uft_sector_unified_free(uft_sector_unified_t *sector);
 
 
 

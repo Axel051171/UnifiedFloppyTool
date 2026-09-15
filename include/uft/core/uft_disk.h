@@ -183,7 +183,14 @@ typedef struct uft_disk_unified {
  * bind to the WRONG-TYPED symbol — signature-mismatch ABI bomb. When
  * the unified-disk subsystem gets implemented, use a distinct name
  * (e.g. uft_disk_unified_create). */
-void uft_disk_free(uft_disk_unified_t *disk);
+/* MF-1158: hier stand `uft_disk_free(uft_disk_unified_t *)` — derselbe
+ * Name wie die EINZIGE definierte Fassung `uft_disk_free(uft_disk_image_t *)`
+ * (`uft_unified_types.c:455`), bei einem anderen struct. Der C-Binder
+ * unterscheidet das nicht. Fuer `uft_disk_unified_t` gibt es im ganzen
+ * Baum keine Definition und keinen Aufrufer; dieser Header hat gemessen
+ * **0** Einbinder. Umbenannt statt entfernt (MF-1077), Entscheidung ueber
+ * den Bestand als P3-413. */
+void uft_disk_unified_free(uft_disk_unified_t *disk);
 
 
 

@@ -51,9 +51,25 @@ uft_disk_t* uft_disk_create(void);
 void uft_disk_close(uft_disk_t *disk);
 
 /**
- * @brief Free disk handle
+ * @brief Free disk handle — DEKLARIERT, NICHT DEFINIERT (MF-1158)
+ *
+ * Hier stand `uft_disk_free(uft_disk_t *)`, und der Name kollidierte mit
+ * `uft_disk_free(uft_disk_image_t *)` in `core/uft_unified_types.h`, das
+ * als einziges eine Definition hat (`uft_unified_types.c:455`). Der
+ * C-Binder kennt keine Parametertypen: wer diesen Header einbindet und
+ * `uft_disk_free()` ruft, bindet an die Fassung fuer den ANDEREN Typ und
+ * gibt einen Zeiger frei, den die Funktion als etwas anderes
+ * dereferenziert. `uft_disk_t` ist gemessen ein UNDURCHSICHTIGER Typ
+ * (`uft_types.h:34`), also gerade nicht dasselbe struct.
+ *
+ * Umbenannt statt entfernt (MF-1077). Zwei Dinge gehoeren dazu gesagt:
+ *   - Fuer DIESEN Namen gibt es im ganzen Baum keine Definition und
+ *     keinen Aufrufer. Er verspricht etwas, das es nicht gibt.
+ *   - Inhaltlich tut er dasselbe wie `uft_disk_close()` fuenf Zeilen
+ *     hoeher. Ob er ueberhaupt bleiben soll, ist eine
+ *     Eigentuemer-Entscheidung (P3-413) — nicht meine.
  */
-void uft_disk_free(uft_disk_t *disk);
+void uft_disk_handle_free(uft_disk_t *disk);
 
 /**
  * @brief Get disk geometry

@@ -264,7 +264,13 @@ int flux_find_histogram_peaks(flux_histogram_t *histogram, int max_peaks);
  * @param trans Flux transitions
  * @return Detected encoding type
  */
-flux_encoding_t flux_detect_encoding(const flux_transitions_t *trans);
+/* MF-1158: hier stand `flux_detect_encoding(const flux_transitions_t *)`.
+ * Definiert ist allein `flux_detect_encoding(const flux_raw_data_t *)`
+ * (`src/flux/uft_flux_decoder.c:1839`), und beide haben Aritaet 1 — also
+ * unsichtbar fuer das Aritaets-Tor. Fuer `flux_transitions_t` gibt es
+ * keine Definition; dieser Header hat 0 Einbinder. Umbenannt statt
+ * entfernt (MF-1077); P3-413. */
+flux_encoding_t flux_detect_encoding_transitions(const flux_transitions_t *trans);
 
 /* ============================================================================
  * API Functions - Revolution Analysis

@@ -84,7 +84,18 @@ typedef struct uft_mfm_context uft_mfm_context_t;
 /**
  * @brief Close MFM file
  */
-void uft_mfm_close(uft_mfm_context_t *ctx);
+/* MF-1158: die vier `uft_mfm_*`-Namen dieses Headers kollidieren mit der
+ * zweiten MFM-Abbild-Schnittstelle in
+ * `src/formats/mfm_native/uft_mfm_image.h`, die als einzige Definitionen
+ * hat (`uft_mfm_image.c`) — dort heisst der Typ `uft_mfm_ctx_t`, hier
+ * `uft_mfm_context_t`. Zwei von vier (`close`, `read_track`) haben dabei
+ * DIESELBE Aritaet und waren damit fuer das Aritaets-Tor unsichtbar; die
+ * anderen zwei sieht `extern_decl_conflicts.py`. Fuer
+ * `uft_mfm_context_t` gibt es keine Definition; dieser Header hat 1
+ * Einbinder. Alle vier umbenannt statt entfernt (MF-1077) — welche der
+ * zwei Schnittstellen die kanonische ist, entscheidet der Eigentuemer
+ * (P3-413, gehoert zu „One Disk Model"). */
+void uft_mfm_context_close(uft_mfm_context_t *ctx);
 
 /*===========================================================================
  * INFORMATION
@@ -108,19 +119,19 @@ void uft_mfm_close(uft_mfm_context_t *ctx);
  * @param max_size Buffer size
  * @return Bytes read, or -1 on error
  */
-int uft_mfm_read_track(uft_mfm_context_t *ctx, int track, int side,
+int uft_mfm_context_read_track(uft_mfm_context_t *ctx, int track, int side,
                         uint8_t *data, size_t max_size);
 
 /**
  * @brief Write track MFM data
  */
-int uft_mfm_write_track(uft_mfm_context_t *ctx, int track, int side,
+int uft_mfm_context_write_track(uft_mfm_context_t *ctx, int track, int side,
                          const uint8_t *data, size_t size);
 
 /**
  * @brief Get track data length
  */
-size_t uft_mfm_get_track_length(uft_mfm_context_t *ctx, int track, int side);
+size_t uft_mfm_context_get_track_length(uft_mfm_context_t *ctx, int track, int side);
 
 /*===========================================================================
  * BITSTREAM OPERATIONS

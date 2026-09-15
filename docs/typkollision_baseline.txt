@@ -18,10 +18,3 @@ bam_repair
 bam_set_disk_id
 bam_set_disk_name
 bam_write_sector
-cpm_close
-flux_detect_encoding
-uft_disk_free
-uft_mfm_close
-uft_mfm_read_track
-uft_pipeline_run
-uft_sector_free

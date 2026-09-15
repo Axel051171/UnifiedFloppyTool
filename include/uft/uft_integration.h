@@ -351,7 +351,20 @@ typedef struct {
 /**
  * @brief Run full pipeline
  */
-uft_error_t uft_pipeline_run(uft_pipeline_t *pipeline);
+/* MF-1158: hier stand `uft_pipeline_run(uft_pipeline_t *)`. Definiert ist
+ * allein `uft_pipeline_run(uft_decode_session_t *)`
+ * (`src/core/uft_decode_pipeline.c:207`), und beide haben Aritaet 1 —
+ * weshalb `extern_decl_conflicts.py` es nicht sehen konnte, das bewusst
+ * nur die Aritaet vergleicht (MF-1155 hat den Preis dieser Wahl
+ * beziffert). Fuer `uft_pipeline_t` gibt es keine Definition und keinen
+ * Aufrufer. Umbenannt statt entfernt (MF-1077); P3-413.
+ *
+ * Am Rand gemessen und benannt, weil es hierher gehoert: die
+ * Sitzungs-Fassung samt Wiederhol-Schleife (`evaluate_retry()`, vier
+ * benannte Gruende) hat ihrerseits KEINEN Verbraucher —
+ * `uft_decode_session_t` kommt in genau drei Dateien vor: seinem Header,
+ * der Umsetzung und deren Header. */
+uft_error_t uft_integration_pipeline_run(uft_pipeline_t *pipeline);
 
 
 /* ============================================================================
