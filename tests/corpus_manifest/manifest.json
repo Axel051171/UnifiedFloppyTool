@@ -1536,6 +1536,18 @@
       "fremdcode": "nein - die Nutzlast ist die selbstbenennende UFT-Marke, kein fremder Programmcode und keine fremden Nutzdaten. Das Werkzeug wird AUSGEFUEHRT, nicht portiert (Kanal Oracle nach MF-695).",
       "test": "test_dms_gegen_adf2dms",
       "content": "40 376 Byte RLE-komprimiert aus 901 120 - also keine Durchreichung; `cmode 1` in allen 80 Spursaetzen am Kopffeld nachgezaehlt. **Warum dieser Eintrag den geschlossenen Kreis oeffnet:** P3-347 und P3-373 hatten gemessen, dass KEIN Werkzeug im Baum eine DMS erzeugt - hxcfe, xdms und amigadx lesen nur, der originale Packer laeuft auf dem Amiga und ist proprietaer. `adf2dms` ist der fehlende fremde ERZEUGER, und seine Schreiber-Linie (dlitz) ist unabhaengig von xDMS, aus dem sowohl UFTs Leser als auch der von hxcfe stammen. **Zweite fremde Hand:** hxcfe liest das Erzeugnis zurueck zu 0 von 901 120 Byte abweichend, gleiche SHA-256 wie die Eingabe. **Gemessen an UFT:** Sonde 1 (Konfidenz 98), 80 x 2 x 11, 160 von 160 Spuren lesbar, **1760 von 1760 Sektoren an ihrer eigenen Ortsmarke, 0 abweichend**. Der Leser war also richtig; ihm fehlte nur ein Abbild (Gestalt MF-1024, MF-1033). **WAS DIESER BELEG NICHT SAGT:** `adf2dms` kennt die Modi quick/medium/deep/heavy - belegt sind NOCOMP und RLE, die anderen vier hat keine fremde Hand geprueft. Und Weg (a) aus P3-347, eine ECHTE zeitgenoessische .dms mit geklaerter Herkunft fuer T1, bleibt daneben offen."
+    },
+    {
+      "file": "tests/corpus_free/gw_fm_acorn_3trk.scp",
+      "sha256": "ed5edb68c7b3735921285796cdf021ffbfba88b5010f61db2d1adbc05f535db0",
+      "format": "scp",
+      "origin": "cross-tool",
+      "tool": "greaseweazle (keirf/greaseweazle) Host Tools 1.23, Release-Binary greaseweazle-1.23-win64; Unlicense. In docs/ORACLES.md und tests/differential/oracles.py als `gw` registriert.",
+      "source": "gw convert --format=acorn.dfs.ss80 --tracks=\"c=0-2:h=0\" <selbstbenennende SSD> gw_fm_acorn_3trk.scp. Die Eingabe ist UFT-eigen und benennt sich selbst: je 256-Byte-Sektor die Zeichenfolge `UFT-GW Cnn H0 Snn `, Rest genullt (80 x 1 x 10 x 256 = 204 800 Byte), davon sind die Zylinder 0..2 gewandelt. DASS gw wirklich FM KODIERT und nicht durchreicht, ist dreifach gemessen (MF-1142): (1) die Marke kommt im Erzeugnis 0 Mal im Klartext vor; (2) gws eigener Dekoder meldet beim Ruecklesen je Spur `IBM FM (10/10 sectors) from Bitcells (100736 bits, 504.0 kbit/s, 300.2 rpm)`; (3) der Rundlauf SSD -> HFE -> SSD ist byteidentisch, 800 von 800 Sektoren an ihrer eigenen Marke. Encoder-Quelle benannt: src/greaseweazle/codec/ibm/ibm.py:50 fm_encode(), :402-420 master_track(). Kanal *Oracle* nach MF-695 - ausgefuehrt, nicht eingebunden.",
+      "test": "test_fm_gegen_gw",
+      "oracle": "gw",
+      "fremdcode": "nein - der Fluss ist aus einem UFT-eigenen Sektorabbild kodiert; kein Bootblock, kein Dateisystem, kein fremder Inhalt.",
+      "content": "FM-Flussstrom (IBM System 34 / Acorn DFS), 3 Spuren einseitig, je ~28 870 Uebergaenge; gemessen liefert UFTs flux_decode_fm() daraus 30 von 30 selbstbenennenden Sektoren a 256 Byte. Die Sektoren beginnen je Spur an anderer Stelle (S00 / S07 / S04) - gws Rotationsversatz, und der Dekoder findet sie trotzdem alle."
     }
   ]
 }

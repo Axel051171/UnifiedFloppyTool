@@ -1042,6 +1042,36 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_fm_gegen_gw")
+        # MF-1143: der erste inhaltliche Fremdzeuge auf der ZELLEBENE.
+        # P3-389 hat die Lage beziffert — Behaelterebene 72 von 88 mit
+        # Fremdbeleg, Zell-/Bitebene NULL —, und der Grund war der seit
+        # MF-864/P3-218 benannte fehlende FM-ENCODER. `gw` 1.23
+        # (Unlicense, Kanal Oracle) erzeugt einen FM-Flussstrom aus einem
+        # selbstbenennenden Sektorabbild; gemessen liefert
+        # `flux_decode_fm()` daraus 30 von 30 Marken.
+        #
+        # Der Behaelter ist SCP und nicht HFE, und das ist gemessen: gws
+        # HFE traegt `track_encoding = 0xFF` (UNKNOWN), UFT meldet dafuer
+        # ehrlich `can_decode = false`. Ein Flussbehaelter braucht die
+        # Angabe nicht (P3-398).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            # `flux_decode_track()` verteilt auch auf den Amiga-Zweig,
+            # deshalb dessen Sync-Tafel; `uft_decoder_plugin_stub.c`
+            # traegt `uft_find_decoder_plugin_for_flux`, das das
+            # SCP-Plugin ruft.
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_syn_gegen_ned_quellen")
         # MF-1141: `syn` teilte jede Spur in 16 x 256 statt 8 x 512.
         # Belegt an den NED-Originalquellen (MIT, Synclavier Digital):
