@@ -60,6 +60,21 @@ typedef struct {
     FILE*       file;
     uint16_t    sector_size;
     uint32_t    total_sectors;
+    /* MF-1164: die Sektoren je Spur, EINMAL bei `open` bestimmt.
+     *
+     * MF-834 hat sie unten aus der Standardgroesse abgeleitet (26 bei 1040
+     * Sektoren, sonst 18) und in `disk->geometry.sectors` GEMELDET — aber
+     * `atr_read_track` und `atr_write_track` rechneten weiter mit fest 18,
+     * zwoelf Zeilen weiter unten in derselben Datei. Eine ED-Diskette bekam
+     * damit 40 x 26 angesagt und wurde mit `cyl * 18` gelesen: ab Spur 1
+     * lag jeder Sektor falsch, und die Spuren 29..39 lieferten Bytes von
+     * ganz anderer Stelle, ohne Warnung.
+     *
+     * Dieselbe Gestalt wie MF-519/MF-529 — eine Korrektur an einer Stelle
+     * sagt nichts ueber ihre Nachbarn —, nur diesmal INNERHALB einer Datei
+     * und zwischen Meldeseite und Lese-/Schreibseite. Das Feld gibt es,
+     * damit die Zahl nur noch an EINER Stelle entsteht. */
+    uint16_t    sectors_per_track;
     /* MF-833 */
     atr_boot_layout_t boot_layout;
     uint16_t    sector_size_raw;    /**< Kopfwert, auch wenn unbekannt  */
@@ -378,6 +393,8 @@ static uft_error_t atr_open(uft_disk_t* disk, const char* path, bool read_only) 
                  "Standardformate — 18 Sektoren/Spur angenommen",
                  (unsigned)pdata->total_sectors);
     }
+    /* MF-1164: dieselbe Zahl geht an die Geometrie UND an den Leser. */
+    pdata->sectors_per_track = spt;
     disk->geometry.cylinders = (pdata->total_sectors + spt - 1u) / spt;
     disk->geometry.heads = 1;
     disk->geometry.sectors = spt;
@@ -411,8 +428,11 @@ static uft_error_t atr_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     
     uint8_t* sec_buf = malloc(pdata->sector_size);
     if (!sec_buf) return UFT_ERROR_NO_MEMORY;
-    for (int s = 0; s < 18; s++) {
-        uint32_t sector_num = cyl * 18 + s + 1;
+    /* MF-1164: die Spurbreite aus `open`, nicht fest 18. Bei Enhanced
+     * Density sind es 26; mit 18 lag ab Spur 1 jeder Sektor falsch. */
+    const uint32_t spt = pdata->sectors_per_track ? pdata->sectors_per_track : 18u;
+    for (uint32_t s = 0; s < spt; s++) {
+        uint32_t sector_num = (uint32_t)cyl * spt + s + 1;
         if (sector_num > pdata->total_sectors) break;
         
         uint16_t this_size = (sector_num <= ATR_BOOT_SECTORS) ? 
@@ -472,8 +492,13 @@ static uft_error_t atr_write_track(uft_disk_t *disk, int cyl, int head,
     if (!pdata || !pdata->file || head != 0) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    for (size_t s = 0; s < track->sector_count && s < 18; s++) {
-        uint32_t sec_num = (uint32_t)(cyl * 18 + s + 1);
+    /* MF-1164: auch hier die Spurbreite aus `open`. Beim SCHREIBEN wiegt
+     * der falsche Teiler schwerer als beim Lesen — er bestimmt, WOHIN
+     * geschrieben wird; dieselbe Begruendung wie MF-529 eine Funktion
+     * weiter oben. */
+    const size_t spt = pdata->sectors_per_track ? pdata->sectors_per_track : 18u;
+    for (size_t s = 0; s < track->sector_count && s < spt; s++) {
+        uint32_t sec_num = (uint32_t)((size_t)cyl * spt + s + 1);
         if (sec_num > pdata->total_sectors) break;
         uint16_t this_size = (sec_num <= ATR_BOOT_SECTORS) ?
                              ATR_BOOT_SECTOR_SIZE : pdata->sector_size;

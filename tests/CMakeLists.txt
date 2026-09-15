@@ -3503,6 +3503,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_xfd_ed_gegen_atr")
+        # MF-1164: Enhanced Density durch BEIDE Behaelter. Dieselben zwei
+        # Leser wie test_corpus_xfd, aber ohne Korpus — der Test baut seine
+        # 1040x128-Nutzlast selbst, weil im Korpus nur das SD-Paar liegt
+        # (92 160 / 92 176) und genau deshalb die ED-Groesse nie durch die
+        # vorhandene Zusage lief.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            # uft_atr.c meldet die Boot-Layout-Erkennung ueber UFT_WARN (MF-833)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_corpus_xfd")
         # T1b cross-tool corpus: XFD derived from the atrcopy ATR (MF-426).
         # Both readers are linked so the two containers can be compared.

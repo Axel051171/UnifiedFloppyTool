@@ -11,7 +11,72 @@
 #define XFD_SS  128
 #define XFD_DS  256
 
-typedef struct { FILE* file; uint16_t ss; uint32_t total; } xfd_data_t;
+typedef struct { FILE* file; uint16_t ss; uint32_t total; uint16_t spt; } xfd_data_t;
+
+/*
+ * MF-1164: Sektorgroesse und Spurbreite kommen aus einer TAFEL, nicht aus
+ * der Teilbarkeit der Dateigroesse.
+ *
+ * Vorher stand hier:
+ *
+ *     p->ss = ((size_t)fs % 256 == 0 && fs > 92160) ? 256 : 128;
+ *
+ * Eine Enhanced-Density-Diskette hat 1040 Sektoren von 128 Byte, also
+ * 133 120 Byte — und diese Zahl ist durch 256 teilbar und groesser als
+ * 92 160. Der Leser meldete deshalb 520 Sektoren von 256 Byte, dazu mit
+ * fest 18 Sektoren je Spur 29 Zylinder statt 40. Keine Absage, keine
+ * Warnung: die Datei ging auf, und jeder Sektor trug die Bytes zweier
+ * anderer (Klasse MF-1016/MF-1026/MF-1038). Der SD-Fall ging nur durch,
+ * weil die Schranke `> 92160` und nicht `>= 92160` lautet — 92 160 ist
+ * selbst durch 256 teilbar.
+ *
+ * XFD ist ATR ohne den 16-Byte-Kopf, und `atr[16:] == xfd` ist ein
+ * REGISTRIERTER verlustfreier Wandlungspfad (src/core/uft_roundtrip.c:393,
+ * MF-655). Die Spurbreite folgt hier deshalb WOERTLICH derselben Regel wie
+ * in `src/formats/atr/uft_atr.c` (MF-834): 1040 Sektoren -> 26, 720 -> 18.
+ * Nicht weil es huebscher ist, sondern damit die beiden Haelften eines
+ * zugesagten Paares nicht wieder auseinanderlaufen koennen.
+ *
+ * Belegt durch drei unabhaengige Quellen, alle nur GELESEN:
+ *   - SIO2PCs Groessentabelle `2SIOTEXT.S:1125`, ueber uft_atr.c (MF-834):
+ *     5760 Absaetze = 90 K SD = 18, 8320 = 130 K ED = 26, 11520 = 180 K DD = 18
+ *   - Firmware der Atari 1050 Turbo, `FORMAT.M65` FORTAB Z. 830-930, erstes
+ *     Feld `SECCNT` (Feldfolge `EQUATES.M65` Z. 495-530): SD 18, ED 26,
+ *     DD 18. Diese Quelle ist gegen ihr eigenes Erzeugnis geprueft — das
+ *     aus dem Quelltext gebaute `turbo1050-35.rom` und das ausgelieferte
+ *     `T1050_2B.8KB` (v3.5, 1988) sind md5-identisch
+ *     (35be2c58f1e0b04ab5a1f2459e5515bd, 0 abweichende Byte).
+ *     (c) 1986-88 Bernhard Engl, kein Grant — nicht portiert.
+ *   - `jhallen/atari-tools`, readme.md: „133,136 bytes (16 byte .atr header
+ *     + 40 tracks * 26 sectors per track * 128 bytes per sector)".
+ *
+ * Was die Tafel NICHT leistet und was hier ausdruecklich offen bleibt:
+ * fuer eine Groesse ausserhalb der vier gibt es in einem KOPFLOSEN Abbild
+ * keine Angabe, aus der die Sektorgroesse folgen koennte. Der alte
+ * Rueckfall bleibt deshalb unveraendert stehen und ist als ANGENOMMEN
+ * benannt — die Sonde vergibt fuer solche Dateien ohnehin nur 25
+ * (Band „kein Anspruch", MF-729).
+ */
+typedef struct {
+    long     bytes;
+    uint16_t ss;
+    uint32_t total;
+    uint16_t spt;
+} xfd_standardformat_t;
+
+static const xfd_standardformat_t XFD_STANDARD[] = {
+    {  92160, 128,  720, 18 },   /* 90 K  SD  40 x 18 x 128 */
+    { 133120, 128, 1040, 26 },   /* 130 K ED  40 x 26 x 128 */
+    { 184320, 256,  720, 18 },   /* 180 K DD  40 x 18 x 256 */
+    { 266240, 256, 1040, 26 },   /* 260 K     40 x 26 x 256 */
+};
+
+/* Sektoren je Spur nach derselben Regel wie uft_atr.c (MF-834). */
+static uint16_t xfd_spt_aus_sektorzahl(uint32_t total) {
+    if (total == 1040u) return 26u;   /* DOS 2.5 ED */
+    if (total ==  720u) return 18u;   /* SD und DD  */
+    return 18u;                       /* angenommen, siehe Kopf oben */
+}
 
 static bool uft_xfd_plugin_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     if (fs != 92160 && fs != 184320 && fs != 133120 && fs != 266240) {
@@ -39,13 +104,28 @@ static uft_error_t xfd_open(uft_disk_t *disk, const char *path, bool ro) {
     xfd_data_t *p = calloc(1, sizeof(xfd_data_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
-    p->ss = ((size_t)fs % 256 == 0 && fs > 92160) ? XFD_DS : XFD_SS;
-    p->total = (uint32_t)fs / p->ss;
+    /* MF-1164: erst die Tafel, dann der benannte Rueckfall. */
+    p->ss = 0;
+    for (size_t i = 0; i < sizeof(XFD_STANDARD) / sizeof(XFD_STANDARD[0]); i++) {
+        if (XFD_STANDARD[i].bytes == fs) {
+            p->ss    = XFD_STANDARD[i].ss;
+            p->total = XFD_STANDARD[i].total;
+            p->spt   = XFD_STANDARD[i].spt;
+            break;
+        }
+    }
+    if (p->ss == 0) {
+        /* Unbekannte Groesse: die alte Ableitung, unveraendert, und die
+         * Sektorgroesse ist damit ANGENOMMEN (siehe Kopf). */
+        p->ss    = ((size_t)fs % 256 == 0 && fs > 92160) ? XFD_DS : XFD_SS;
+        p->total = (uint32_t)fs / p->ss;
+        p->spt   = xfd_spt_aus_sektorzahl(p->total);
+    }
 
     disk->plugin_data = p;
-    disk->geometry.cylinders = (p->total + 17) / 18;
+    disk->geometry.cylinders = (p->total + p->spt - 1u) / p->spt;
     disk->geometry.heads = 1;
-    disk->geometry.sectors = 18;
+    disk->geometry.sectors = p->spt;
     disk->geometry.sector_size = p->ss;
     disk->geometry.total_sectors = p->total;
     return UFT_OK;
@@ -67,11 +147,14 @@ static uft_error_t xfd_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     xfd_data_t *p = d->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
     uft_track_init(t, cyl, head);
-    long off = (long)cyl * 18 * p->ss;
+    /* MF-1164: die Spurbreite aus `open`, nicht fest 18 — bei Enhanced
+     * Density sind es 26, und mit 18 lag ab Spur 1 jeder Sektor falsch. */
+    const uint32_t spt = p->spt ? p->spt : 18u;
+    long off = (long)cyl * (long)spt * p->ss;
     if (fseek(p->file, off, SEEK_SET) != 0) return UFT_ERROR_IO;
     uint8_t buf[256];
-    for (int s = 0; s < 18; s++) {
-        uint32_t sec = (uint32_t)cyl * 18 + s;
+    for (uint32_t s = 0; s < spt; s++) {
+        uint32_t sec = (uint32_t)cyl * spt + s;
         if (sec >= p->total) break;
         if (fread(buf, 1, p->ss, p->file) != p->ss) return UFT_ERROR_IO;
         uft_format_add_sector(t, (uint8_t)s, buf, p->ss, (uint8_t)cyl, 0);
@@ -114,9 +197,13 @@ static uft_error_t xfd_write_track(uft_disk_t *d, int cyl, int head,
     xfd_data_t *p = d->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
     if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
-    long off = (long)cyl * 18 * p->ss;
-    for (size_t s = 0; s < t->sector_count && s < 18; s++) {
-        uint32_t sec = (uint32_t)cyl * 18 + (uint32_t)s;
+    /* MF-1164: auch hier die Spurbreite aus `open`. Beim SCHREIBEN wiegt
+     * der falsche Teiler schwerer — er bestimmt, WOHIN geschrieben wird
+     * (dieselbe Begruendung wie MF-529). */
+    const size_t spt = p->spt ? p->spt : 18u;
+    long off = (long)cyl * (long)spt * p->ss;
+    for (size_t s = 0; s < t->sector_count && s < spt; s++) {
+        uint32_t sec = (uint32_t)((size_t)cyl * spt + s);
         if (sec >= p->total) break;
         if (fseek(p->file, off + (long)s * p->ss, SEEK_SET) != 0) return UFT_ERROR_IO;
         const uint8_t *data = t->sectors[s].data;
