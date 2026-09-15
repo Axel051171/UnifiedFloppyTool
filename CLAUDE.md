@@ -551,6 +551,41 @@ Mechanisch gehalten wird das von der **Namensrolle**
 `commit-msg`-Hook: eine Löschung in der Formatschicht verlangt eine
 Zeile `Ruecknahme:` und einen Status `zurueckgenommen` mit Beleg.
 
+### Grundsatz: eine Sondenkonfidenz wird abgeleitet, nicht vergeben (MF-1153)
+
+**Verbindliche Fassung: [`docs/SONDEN_DOKTRIN.md`](docs/SONDEN_DOKTRIN.md).**
+Eigentümer-Entscheidung vom 2026-09-15.
+
+Der Anlass ist gemessen: von 23 offenen Punkten in `docs/OPEN_ITEMS.md`
+waren **acht dieselbe Frage** — P3-392, P3-393, P3-394, P3-401, P3-402,
+P3-403, P3-405, P3-406. Und der Beleg, dass sie je Fall neu beantwortet
+wurde, stammt aus **einem Tag**: MF-1151 senkte `dmk` von 100 auf 75,
+weil das Format keine Kennung hat, und MF-1152 ließ `ssd` bei 85, obwohl
+Acorn DFS ebenso keine hat. Dieselbe Zeile in
+`test_register_all_formats.c` musste daraufhin **zweimal am selben Tag**
+berichtigt werden.
+
+Die Leiter (`uft_probe_konfidenz()` in `uft_format_plugin.h`):
+
+| Beleg | Wert |
+|---|---|
+| Kennung an fester Position, formatspezifisch | +50 |
+| Selbstkonsistenz (Kopf sagt Größe = Dateigröße) | +25 |
+| Struktur an berechneter Stelle (Verzeichnis, BAM) | +15 |
+| Geometrie plausibel | +10 |
+| **Größe allein** | **0 — nie hinreichend** |
+
+Fünf Regeln: **ohne Kennung ist die Obergrenze 45** (Klemme hinter der
+Summe, weil 25+15+10 = 50 wäre); bei Gleichstand gewinnt der **engere**
+Anspruch; bleibt es gleich, gewinnt **keiner** („mehrdeutig" mit beiden
+Namen); eine Sonde sieht **nur ihren Puffer**; ein Format ohne
+belegbares Merkmal bekommt **keine Sonde, sondern eine Absage**.
+
+Gehalten von `scripts/audit_sondendoktrin.py` mit **fallender
+Grundlinie** (Bauform Tor 57): Stand **83** Sonden, die ihre Zahl noch
+selbst vergeben, 2 migriert. Die Zahl darf nur sinken — und der Zweck
+ist der Rand: **ein neues Format kann gar nicht mehr anders anfangen.**
+
 ### Grundsatz: drei Sperren gegen die eigenen Wiederholungstäter (MF-1096)
 
 Diese drei Regeln stehen nicht hier, weil sie einleuchten, sondern weil

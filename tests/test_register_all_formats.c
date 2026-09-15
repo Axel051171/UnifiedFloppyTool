@@ -291,8 +291,15 @@ TEST(the_tightened_probes_still_accept_what_their_readers_read) {
      * falsche Kopfgroesse fest). Geprueft wird jetzt das BAND, nicht
      * eine Zahl; die Zahl selbst nagelt `test_dmk_sonde_gegen_mame`
      * fest. */
-    ASSERT(c >= UFT_PROBE_CONF_STRUCT_MIN);
-    ASSERT(c < UFT_PROBE_CONF_MAGIC_MIN);
+    /* BERICHTIGT MF-1153, zum zweiten Mal in derselben Zeile — und das
+     * ist der Beleg fuer die Doktrin. MF-1151 hat hier `c >= 95` durch
+     * das Strukturband ersetzt, weil DMK keine Kennung hat; seit der
+     * Sonden-Doktrin (`docs/SONDEN_DOKTRIN.md`) ist auch das
+     * Strukturband ohne Kennung unerreichbar, und die Obergrenze ist
+     * **45**. Die erste Korrektur war richtig und zu klein — genau die
+     * Kasuistik, die der Eigentuemer beendet hat. */
+    ASSERT(c >= UFT_PROBE_CONF_SIZE_MIN);
+    ASSERT(c < UFT_PROBE_CONF_STRUCT_MIN);
 
     /* one byte short of the size its own track arithmetic implies */
     c = 0;

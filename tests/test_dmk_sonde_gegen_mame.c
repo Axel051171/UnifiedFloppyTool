@@ -205,12 +205,25 @@ int main(void)
             pruefe("das echte DMK aus dem Korpus wird weiter angenommen — "
                    "eine Sonde, die ihren eigenen Leser aussperrt, waere "
                    "die andere Haelfte des Fehlers", ja, d1);
-            pruefe("und es beansprucht NICHT das Band \"Merkmal getroffen\" "
-                   "(80..100): DMK hat keine Kennung, gelesen sind elf "
-                   "Nullbyte, ein Flagbyte und die Spurarithmetik — das "
-                   "ist Struktur, und die endet nach MF-729 bei 79",
-                   ja && k >= UFT_PROBE_CONF_STRUCT_MIN
-                      && k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+            /* BERICHTIGT MF-1153. Hier stand `k >= STRUCT_MIN && k <
+             * MAGIC_MIN`, also 50..79 — und damit hat diese Zusage
+             * MEINE eigene Handzahl festgeschrieben. MF-1151 hatte 100
+             * auf 75 gesenkt, weil DMK keine Kennung hat; die 75 war
+             * aber ebenso vergeben wie die 100 davor, nur kleiner.
+             *
+             * Seit der Sonden-Doktrin (`docs/SONDEN_DOKTRIN.md`) wird
+             * die Zahl abgeleitet, und ohne Kennung ist die Obergrenze
+             * **45** — Band „nur die Groesse". DMK legt STRUKTUR (elf
+             * Nullbyte an fester Stelle) + GEOMETRIE + SELBSTKONSISTENZ
+             * (Groesse trifft die Spurarithmetik) vor, das waere 50, und
+             * die Klemme haelt es bei 45. */
+            pruefe("und es beansprucht ohne Kennung hoechstens das Band "
+                   "\"nur die Groesse\" (30..49): DMK hat keine Kennung, "
+                   "gelesen sind elf Nullbyte, ein Flagbyte und eine "
+                   "aufgehende Spurarithmetik — nach der Doktrin sind "
+                   "das drei Belege ohne Kennung, also 45 statt 50",
+                   ja && k >= UFT_PROBE_CONF_SIZE_MIN
+                      && k < UFT_PROBE_CONF_STRUCT_MIN, d1);
             free(b);
         }
     }

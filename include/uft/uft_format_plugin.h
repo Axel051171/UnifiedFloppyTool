@@ -1098,6 +1098,68 @@ static inline uft_probe_band_t uft_probe_band(int confidence)
     return UFT_PROBE_BAND_NONE;
 }
 
+/* ══ Sonden-Doktrin: die Konfidenz wird ABGELEITET, nicht vergeben ════
+ *
+ * Eigentuemer-Entscheidung vom 2026-09-15 (MF-1153); verbindliche
+ * Fassung: `docs/SONDEN_DOKTRIN.md`.
+ *
+ * **Der Anlass ist gemessen, nicht ausgedacht:** von 23 offenen Punkten
+ * in `docs/OPEN_ITEMS.md` waren ACHT dieselbe Frage — P3-392, P3-393,
+ * P3-394, P3-401, P3-402, P3-403, P3-405, P3-406. Und der Beleg, dass
+ * sie je Fall neu beantwortet wurde, stammt aus einem einzigen Tag:
+ * MF-1151 hat `dmk` von 100 auf 75 gesenkt, weil das Format keine
+ * Kennung hat, und MF-1152 hat `ssd` bei 85 gelassen, obwohl Acorn DFS
+ * ebenso keine hat.
+ *
+ * Eine Zahl, die jemand VERGIBT, traegt keine Begruendung. Eine, die
+ * sich aus benannten Belegen SUMMIERT, traegt sie im Aufruf. */
+
+/** Belege, aus denen sich eine Sondenkonfidenz ableitet (MF-1153). */
+typedef enum {
+    UFT_BELEG_KEINER           = 0u,
+    /** Eine Kennung an FESTER Position, die nur dieses Format dort hat
+     *  — eine Zeichenfolge oder ein Zahlenwert. NICHT: ein Byte in
+     *  einem plausiblen Wertebereich (das ist Geometrie oder
+     *  Struktur). +50 */
+    UFT_BELEG_KENNUNG          = 1u << 0,
+    /** Die Datei bestaetigt sich selbst: ein Feld im Kopf nennt eine
+     *  Groesse, und die Datei hat sie. +25 */
+    UFT_BELEG_SELBSTKONSISTENZ = 1u << 1,
+    /** An einer BERECHNETEN Stelle steht, was dort stehen muss —
+     *  Verzeichnis, BAM, Katalog, Spurtabelle. +15 */
+    UFT_BELEG_STRUKTUR         = 1u << 2,
+    /** Zylinder, Koepfe, Sektoren und Sektorgroesse ergeben zusammen
+     *  ein Laufwerk, das es gab. +10 */
+    UFT_BELEG_GEOMETRIE        = 1u << 3
+} uft_probe_beleg_t;
+
+/** Die Konfidenz zu einem Satz Belege — die EINZIGE erlaubte Quelle
+ *  einer Sondenkonfidenz (MF-1153).
+ *
+ * Die Leiter: Kennung +50 · Selbstkonsistenz +25 · Struktur +15 ·
+ * Geometrie +10 · Groesse allein 0 (nie hinreichend).
+ *
+ * **Und die Klemme ist die eigentliche Regel:** ohne Kennung ist die
+ * Obergrenze **45**. Die Summe der drei uebrigen Belege waere 50 — also
+ * genau das Strukturband —, und die Klemme haelt sie darunter. Damit
+ * gilt an EINER Stelle, was sonst jede Sonde einzeln behaupten muesste:
+ * wer kein formatspezifisches Merkmal vorzeigt, behauptet nicht, den
+ * Inhalt angesehen zu haben.
+ *
+ * Das Merkmalsband (80..100) verlangt deshalb eine Kennung UND zwei
+ * weitere Belege. Eine Kennung allein ergibt 50: sie sagt „diese Bytes
+ * oeffnen ein Tor", nicht „diese Datei ist es". */
+static inline int uft_probe_konfidenz(unsigned belege)
+{
+    int k = 0;
+    if (belege & UFT_BELEG_KENNUNG)          k += 50;
+    if (belege & UFT_BELEG_SELBSTKONSISTENZ) k += 25;
+    if (belege & UFT_BELEG_STRUKTUR)         k += 15;
+    if (belege & UFT_BELEG_GEOMETRIE)        k += 10;
+    if (!(belege & UFT_BELEG_KENNUNG) && k > 45) k = 45;
+    return k;
+}
+
 /** Wie belastbar die Erkennung ist (MF-729). */
 typedef enum {
     UFT_PROBE_VERDICT_NONE = 0,   /**< niemand beansprucht die Daten   */

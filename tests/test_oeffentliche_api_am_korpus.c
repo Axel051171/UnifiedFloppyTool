@@ -332,14 +332,24 @@ static const rennen_t RENNEN[] = {
      *
      * Der alte Grund war: „102 400 Byte; JV1 35, SSD nur 30 — und SSD
      * hat recht, denn ein roher gw-Abzug hat kein DFS-Verzeichnis."
-     * Das erste Halbsatz stimmte, das zweite nicht ganz. Seit MF-1152
+     * Der erste Halbsatz stimmte, der zweite nicht ganz. Seit MF-1152
      * liest die Sonde das Sektorzahlfeld als die zehn Bit, die es ist:
      * `gw_ssd.img` sagt dort **480** Sektoren, ein Vielfaches von zehn
-     * und gross genug fuer 102 400 Byte — das ist Struktur, und die
-     * Sonde meldet jetzt **60**. Die Bootoption faellt weiter aus
-     * (0xC1 >> 4 = 12), also bleibt es unter dem Merkmalsband, und das
-     * ist richtig: ein DFS-Verzeichnis hat die Datei nicht. Mit 60
-     * gegen JV1s 35 gewinnt `ssd` sein eigenes Abbild. */
+     * und gross genug fuer 102 400 Byte.
+     *
+     * **NACHGEZOGEN MF-1153, und die Zahlen sind kleiner geworden:**
+     * seit der Sonden-Doktrin leitet `ssd` seine Konfidenz ab, und ohne
+     * Kennung ist die Obergrenze 45. Hier traegt die Datei
+     * SELBSTKONSISTENZ (480 Sektoren passen) und GEOMETRIE, aber keine
+     * STRUKTUR (die Bootoption faellt aus, 0xC1 >> 4 = 12) — das sind
+     * **35**. JV1 meldet ebenfalls 35, also **gleichauf 2**, und `ssd`
+     * gewinnt sein Abbild jetzt durch die REIHENFOLGE statt durch
+     * Belege. Das ist ehrlicher als vorher und noch nicht gut: Regel 3
+     * der Doktrin („bleibt es gleich, gewinnt keiner") ist bewusst noch
+     * nicht scharf gestellt, weil sie 26 von 72 Abbildern betrifft und
+     * ihre eigene Messung braucht. Die Zeile bleibt deshalb aus der
+     * Rennen-Tafel heraus — `ssd` erreicht sein Plugin —, und der
+     * Gleichstand steht hier benannt. */
     { "jvc", "IMG", "gleich",
       "161 280 Byte; IMG 40, gleichauf 2. MF-1144-Klasse" },
     { "t1k", "IMG", "gleich",

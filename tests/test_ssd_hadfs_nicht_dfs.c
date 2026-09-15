@@ -106,7 +106,16 @@ TEST(ohne_kennung_bleibt_die_dfs_erkennung_stark)
     ASSERT(b != NULL);
     int konf = -1;
     ASSERT(uft_format_plugin_ssd.probe(b, BILDGROESSE, BILDGROESSE, &konf));
-    ASSERT(konf >= 80);          /* Merkmal getroffen — hier zu Recht */
+    /* BERICHTIGT MF-1153. Hier stand `konf >= 80` mit dem Kommentar
+     * „Merkmal getroffen — hier zu Recht". Das war es NICHT zu Recht:
+     * Acorn DFS hat keine Kennung, und das Band 80..100 gehoert einem
+     * getroffenen Merkmal. Seit der Sonden-Doktrin
+     * (`docs/SONDEN_DOKTRIN.md`) leitet die Sonde ihre Zahl ab —
+     * SELBSTKONSISTENZ (400 Sektoren treffen 102 400 Byte) + STRUKTUR
+     * (Katalog: eine Datei, Bootoption 0) + GEOMETRIE, das waere 50,
+     * und ohne Kennung klemmt es bei **45**. */
+    ASSERT(konf >= UFT_PROBE_CONF_SIZE_MIN);
+    ASSERT(konf < UFT_PROBE_CONF_STRUCT_MIN);
     free(b);
 }
 
@@ -121,10 +130,31 @@ TEST(mit_kennung_faellt_der_anspruch_auf_nur_die_groesse)
     ASSERT(uft_format_plugin_ssd.probe(b, BILDGROESSE, BILDGROESSE, &konf));
 
     /* Die Groesse stimmt weiter — die Datei ist ein 40-Spur-Acorn-Abbild.
-     * Beansprucht werden darf nach der MF-729-Skala aber nur das:
-     * 30..49 = „nur die Groesse". */
-    ASSERT(konf >= 30);
-    ASSERT(konf < 50);
+     *
+     * BERICHTIGT MF-1153. Hier stand `>= 30 && < 50`, also das Band
+     * „nur die Groesse". Nach der Sonden-Doktrin ist die **Groesse
+     * allein 0** und nie hinreichend; was bei einer HADFS-Diskette noch
+     * stimmt, ist die GEOMETRIE (zehn Sektoren zu 256 Byte auf 40
+     * Spuren), und das sind **10** — Band „kein Anspruch".
+     *
+     * Die Aussage dieses Tests wird dadurch staerker, nicht schwaecher:
+     * der DFS-Fall traegt 45, dieser 10. Geprueft wird deshalb das
+     * VERHAELTNIS mitsamt dem Band, nicht eine Zahl — sonst waere der
+     * Test auch gruen, wenn beide Faelle auf denselben Wert fielen. */
+    ASSERT(konf > 0);
+    ASSERT(konf < UFT_PROBE_CONF_SIZE_MIN);
+    {
+        /* Derselbe Aufbau OHNE Kennung, zum Vergleich in dieser Zusage
+         * selbst — damit „faellt der Anspruch" gemessen und nicht
+         * behauptet ist. */
+        uint8_t *ohne = baue(false);
+        int k2 = -1;
+        ASSERT(ohne != NULL);
+        ASSERT(uft_format_plugin_ssd.probe(ohne, BILDGROESSE,
+                                           BILDGROESSE, &k2));
+        ASSERT(k2 > konf);
+        free(ohne);
+    }
     free(b);
 }
 
@@ -139,7 +169,12 @@ TEST(die_kennung_wird_byteweise_geprueft_nicht_ungefaehr)
         b[HADFS_OFF + i] ^= 0xFF;
         int konf = -1;
         ASSERT(uft_format_plugin_ssd.probe(b, BILDGROESSE, BILDGROESSE, &konf));
-        ASSERT(konf >= 80);
+        /* BERICHTIGT MF-1153: war `>= 80`. Ohne Kennung ist die
+         * Obergrenze 45; geprueft wird, dass ein einzelnes gekipptes
+         * Byte an der Kennungsstelle die Erkennung NICHT herabsetzt —
+         * der Wert bleibt also im Band „nur die Groesse". */
+        ASSERT(konf >= UFT_PROBE_CONF_SIZE_MIN);
+        ASSERT(konf < UFT_PROBE_CONF_STRUCT_MIN);
         free(b);
     }
 }
@@ -154,7 +189,13 @@ TEST(ein_zu_kurzer_puffer_setzt_nichts_herab)
     int konf = -1;
     /* Nur 0x200 Byte sichtbar, Dateigroesse aber korrekt gemeldet. */
     ASSERT(uft_format_plugin_ssd.probe(b, 0x200, BILDGROESSE, &konf));
-    ASSERT(konf >= 80);
+    /* BERICHTIGT MF-1153: war `>= 80`. Die Aussage bleibt dieselbe —
+     * eine unbeantwortbare Frage (Sektor 70 liegt ausserhalb des
+     * Puffers) darf keine Antwort erzwingen —, nur liegt die Obergrenze
+     * ohne Kennung bei 45. Und das ist zugleich Regel 4 der Doktrin:
+     * eine Sonde sieht nur ihren Puffer. */
+    ASSERT(konf >= UFT_PROBE_CONF_SIZE_MIN);
+    ASSERT(konf < UFT_PROBE_CONF_STRUCT_MIN);
     free(b);
 }
 

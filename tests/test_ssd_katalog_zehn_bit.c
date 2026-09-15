@@ -160,8 +160,38 @@ static int konfidenz(const uint8_t *b, size_t n)
 int main(void)
 {
     char d1[260];
+    int voll = -1;
 
-    printf("\nDFS-Katalog: zehn Bit, nicht acht (MF-1152)\n\n");
+    printf("\nDFS-Katalog: zehn Bit, nicht acht (MF-1152/1153)\n\n");
+
+    /* ── Der BEZUG, gegen den alles andere geprueft wird ──────────────
+     *
+     * MF-1153: bis dahin verglich dieser Test gegen die Schwelle
+     * `UFT_PROBE_CONF_MAGIC_MIN` (80). Seit der Sonden-Doktrin
+     * (`docs/SONDEN_DOKTRIN.md`) kann `ssd` die 80 gar nicht mehr
+     * erreichen — Acorn DFS hat keine Kennung, und ohne Kennung ist die
+     * Obergrenze 45. **Damit waeren alle Zusagen der Form `< 80`
+     * schlagartig wertlos geworden: sie sind jetzt trivial wahr.**
+     *
+     * Das ist die Falle aus MF-1000 in neuer Gestalt — ein Vergleich,
+     * der nicht mehr rot werden KANN. Geprueft wird deshalb gegen einen
+     * ABGELEITETEN Bezug: die Konfidenz, die ein vollstaendiger,
+     * stimmiger DFS-Katalog erreicht. Faellt die Decke, faellt der
+     * Bezug mit, und die Zusagen bleiben scharf. */
+    {
+        size_t n = 0;
+        uint8_t *b = baue(80, 0x00, 0x03, 0x20, &n);
+        if (!b) { pruefe("Bezug bilden", 0, "kein Speicher"); return 1; }
+        voll = konfidenz(b, n);
+        free(b);
+        snprintf(d1, sizeof d1, "ein vollstaendiger DFS-Katalog erreicht "
+                 "%d (ohne Kennung ist 45 die Obergrenze)", voll);
+        pruefe("der Bezug ist abgeleitet, nicht gesetzt: ein stimmiger "
+               "Katalog erreicht das Band \"nur die Groesse\" und bleibt "
+               "unter dem Strukturband",
+               voll >= UFT_PROBE_CONF_SIZE_MIN
+               && voll < UFT_PROBE_CONF_STRUCT_MIN, d1);
+    }
 
     /* ── 1. Der Befund: das floptool-JV1 ──────────────────────────── */
     {
@@ -190,7 +220,7 @@ int main(void)
                        "NICHT mehr: ihr Katalogfeld sagt 288 Sektoren, "
                        "und das ist weder ein Vielfaches von 10 noch "
                        "gross genug fuer 204 800 Byte",
-                       k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                       k < voll, d1);
             }
             free(b);
         }
@@ -212,7 +242,7 @@ int main(void)
                    "0x20 = 0 Dateien, 800 Sektoren, Bootoption 0) werden "
                    "weiter voll anerkannt — ohne diese Zusage waere die "
                    "Verschaerfung die andere Haelfte des Fehlers",
-                   k >= UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k == voll, d1);
             free(b);
         }
     }
@@ -231,8 +261,8 @@ int main(void)
             pruefe("zwei Abbilder mit DEMSELBEN Byte 0x107 (0x20) und "
                    "verschiedenem 0x106 werden verschieden beurteilt — "
                    "die Sonde liest jetzt die oberen zwei Bit mit",
-                   ka >= UFT_PROBE_CONF_MAGIC_MIN
-                   && kb < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   ka == voll
+                   && kb < voll, d1);
         }
         free(a); free(b);
     }
@@ -250,7 +280,7 @@ int main(void)
             pruefe("805 Sektoren werden nicht als Katalog anerkannt — "
                    "DFS hat zehn Sektoren je Spur, und `ssd_detect()` "
                    "rechnet selbst mit `fs / 2560`",
-                   k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k < voll, d1);
             free(b);
         }
     }
@@ -268,7 +298,7 @@ int main(void)
             pruefe("400 angesagte Sektoren in einem 800-Sektor-Abbild "
                    "werden nicht anerkannt — ein Katalog kann nicht "
                    "weniger Sektoren nennen, als die Datei enthaelt",
-                   k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k < voll, d1);
             free(b);
         }
     }
@@ -283,7 +313,7 @@ int main(void)
                      n, k);
             pruefe("dieselben 400 Sektoren in einem 40-Spur-Abbild werden "
                    "anerkannt — der Quervergleich prueft die Richtung, "
-                   "nicht die Zahl", k >= UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   "nicht die Zahl", k == voll, d1);
             free(b);
         }
     }
@@ -302,7 +332,7 @@ int main(void)
             pruefe("eine Dateizahl von 86 Byte wird nicht anerkannt — ein "
                    "DFS-Eintrag ist ACHT Byte lang, dort steht "
                    "Dateizahl x 8 und hoechstens 248",
-                   k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k < voll, d1);
             free(b);
         }
     }
@@ -316,7 +346,7 @@ int main(void)
                      k);
             pruefe("248 — die Obergrenze von 31 Dateien — wird anerkannt; "
                    "ohne diesen Rand waere \"nur 0\" ebenso gruen",
-                   k >= UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k == voll, d1);
             free(b);
         }
     }
@@ -332,7 +362,7 @@ int main(void)
                      "Konfidenz %d", k);
             pruefe("eine Bootoption von 12 wird nicht anerkannt — es gibt "
                    "vier (0..3), und diese Pruefung hatte die Sonde schon",
-                   k < UFT_PROBE_CONF_MAGIC_MIN, d1);
+                   k < voll, d1);
             free(b);
         }
     }
@@ -345,11 +375,18 @@ int main(void)
         else {
             int k = konfidenz(b, n);
             snprintf(d1, sizeof d1, "Konfidenz %d", k);
+            /* BERICHTIGT MF-1153: hier stand `k >= 30`, also das Band
+             * „nur die Groesse". Nach der Sonden-Doktrin ist die
+             * **Groesse allein 0** und nie hinreichend — was hier
+             * bleibt, ist die GEOMETRIE (zehn Sektoren zu 256 Byte auf
+             * 80 Spursaetzen), und das sind 10. Angenommen wird die
+             * Datei weiter, sie beansprucht nur nichts mehr. */
             pruefe("ein Abbild mit passender GROESSE und unbrauchbarem "
-                   "Katalog wird weiter angenommen, aber nur im Band "
-                   "\"nur die Groesse\" (30..49) — ein Befund darf den "
-                   "Zugang nicht versperren (MF-830)",
-                   k >= 30 && k < UFT_PROBE_CONF_STRUCT_MIN, d1);
+                   "Katalog wird weiter ANGENOMMEN (MF-830: ein Befund "
+                   "darf den Zugang nicht versperren), beansprucht aber "
+                   "nichts mehr — die Groesse allein ist nach der "
+                   "Doktrin null wert, uebrig bleibt die Geometrie",
+                   k > 0 && k < UFT_PROBE_CONF_SIZE_MIN && k < voll, d1);
             free(b);
         }
     }

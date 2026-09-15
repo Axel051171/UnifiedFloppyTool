@@ -94,23 +94,36 @@ bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
                            (size_t)tracks * (size_t)sides * (size_t)tlen;
     if (file_size < implied) return false;
 
-    /* ── Die Leiter: STRUKTUR, nicht Merkmal (MF-729 / MF-1151) ───────
+    /* ── Die Konfidenz wird ABGELEITET (MF-1153) ──────────────────────
      *
-     * Hier stand 55 + 30 + 10 + 5, und am echten Korpus-DMK ergab das
-     * gemessen **100** — die Spitze des Bandes „Merkmal getroffen"
-     * (80..100) fuer ein Format, das GAR KEINE Kennung hat. Gelesen
-     * sind elf Nullbyte, ein gueltiges Flagbyte und eine aufgehende
-     * Spurarithmetik: das ist Struktur, und Struktur endet bei 79.
+     * Hier stand zuerst 55 + 30 + 10 + 5, und am echten Korpus-DMK ergab
+     * das gemessen **100** — die Spitze des Bandes „Merkmal getroffen"
+     * fuer ein Format, das GAR KEINE Kennung hat. MF-1151 hat daraus
+     * 60 + 15 gemacht, also 75; **das war eine zweite Handzahl, nur eine
+     * kleinere.** Im selben Lauf blieb `ssd` bei 85, obwohl Acorn DFS
+     * ebenso keine Kennung hat — und genau diese Kasuistik hat der
+     * Eigentuemer beendet (`docs/SONDEN_DOKTRIN.md`, MF-1153).
      *
-     * Die +10 und +5 fallen weg, weil ihre Bedingungen jetzt Tore sind
-     * — ein Tor zweimal zu zaehlen waere dieselbe Ueberziehung in
-     * kleinerer Schrift. Und ein gruener Test hat die 100 bewacht:
-     * `tests/test_register_all_formats.c` verlangte `c >= 95`; seit
-     * MF-1151 verlangt er das Band. */
-    int conf = 60;
-    if (file_size == implied) conf += 15;       /* exact, no trailing data */
-
-    *confidence = conf;
+     * Was diese Sonde WIRKLICH liest, als Belege benannt:
+     *
+     *   STRUKTUR    elf Byte (5..15) sind null, an einer festen Stelle,
+     *               und das Schutzbyte traegt einen der zwei erlaubten
+     *               Werte — beides Tore, also beim Erreichen dieser
+     *               Zeile erfuellt
+     *   GEOMETRIE   Spurzahl 1..96 und Spurlaenge 0x80..0x3FFF ergeben
+     *               zusammen ein Laufwerk, das es gab
+     *   SELBSTKONS. nur wenn die Datei GENAU so gross ist, wie die
+     *               Spurarithmetik sagt — bei Ueberhang fehlt sie
+     *   KENNUNG     hat DMK nicht. Deshalb greift die Klemme, und die
+     *               Obergrenze ist 45.
+     *
+     * Ergebnis: exakte Groesse 45, mit Ueberhang 25. Die Zahl steht
+     * nicht mehr hier, sie folgt aus den drei Zeilen darunter. */
+    {
+        unsigned belege = UFT_BELEG_STRUKTUR | UFT_BELEG_GEOMETRIE;
+        if (file_size == implied) belege |= UFT_BELEG_SELBSTKONSISTENZ;
+        *confidence = uft_probe_konfidenz(belege);
+    }
     return true;
 }
 

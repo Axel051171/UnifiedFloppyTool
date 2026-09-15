@@ -98,7 +98,11 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
 {
     uint8_t cyl, heads;
     if (!ssd_detect(file_size, &cyl, &heads)) return false;
-    *confidence = 30;
+    /* MF-1153: hier stand `*confidence = 30`, also die Groesse allein.
+     * Nach der Doktrin ist die Groesse allein **0** und nie hinreichend;
+     * was `ssd_detect()` bestaetigt hat, ist die GEOMETRIE — 40, 80 oder
+     * 160 Spursaetze zu 10 x 256 Byte. Das sind 10. */
+    *confidence = uft_probe_konfidenz(UFT_BELEG_GEOMETRIE);
 
     /* BBC Micro DFS catalog: sector 1 bytes 0x100-0x107 contain
      * the disk title (continued from sector 0). Sector 1 byte 0x104
@@ -190,23 +194,39 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
         /* Vier Bootoptionen (0..3) im oberen Nibble. */
         const bool boot_ok  = (bootopt <= 3u);
 
-        if (zahl_ok && datei_ok && boot_ok) {
-            *confidence = 85;   /* Katalog und Dateigroesse stimmen zusammen */
-        } else if (zahl_ok) {
-            /* Struktur, kein Merkmal: die Sektorzahl kann zufaellig
-             * passen, aber sie muss dafuer von null verschieden, ein
-             * Vielfaches von zehn UND gross genug sein.
-             *
-             * `datei_ok && boot_ok` steht hier ABSICHTLICH NICHT, und
-             * der Grund ist gemessen: auf einem NULLPUFFER sind beide
-             * wahr — `0 % 8 == 0` und `0 <= 3` —, und diese Fassung gab
-             * dafuer 60. Eichung 1
-             * (`tests/test_probe_confidence_on_zeros.c`) ist beim ersten
-             * Lauf nach dieser Aenderung rot geworden und hat es
-             * gefangen: auf Nullen darf nichts ab 50 melden (MF-729).
-             * Zwei Bereichspruefungen, die die leere Datei erfuellt,
-             * sind keine Struktur. */
-            *confidence = 60;
+        /* ── Die Konfidenz wird ABGELEITET (MF-1153) ──────────────────
+         *
+         * Hier stand 85 bzw. 60. Die 85 war ein Handwert, und sie stand
+         * im Band „Merkmal getroffen" fuer ein Format, das **keine
+         * Kennung hat** — MF-1152 hat das Tor davor verschaerft, aber
+         * die Zahl nicht angetastet. Am selben Tag hat MF-1151 `dmk`
+         * aus demselben Grund von 100 auf 75 gesenkt: zwei Faelle, zwei
+         * Begruendungen. Der Eigentuemer hat die Frage einmal
+         * beantwortet (`docs/SONDEN_DOKTRIN.md`).
+         *
+         * Was diese Sonde WIRKLICH liest, als Belege benannt:
+         *
+         *   SELBSTKONS. die Sektorzahl aus dem Katalog gegen die
+         *               Dateigroesse — `zahl_ok`. Das ist der
+         *               Quervergleich, den MF-1152 eingefuehrt hat.
+         *   STRUKTUR    der Katalog selbst: Dateizahl ein Vielfaches
+         *               von acht UND eine der vier Bootoptionen. Beide
+         *               Felder gehoeren demselben Verzeichnis, also
+         *               EIN Beleg — nicht zwei.
+         *   GEOMETRIE   `ssd_detect()` hat 40, 80 oder 160 Spursaetze
+         *               zu 10 x 256 Byte bestaetigt
+         *   KENNUNG     hat Acorn DFS nicht. Klemme bei 45.
+         *
+         * **Und der Nullpuffer bleibt der Pruefstein:** dort sind
+         * `datei_ok` (0 % 8) und `boot_ok` (0 <= 3) beide wahr, aber
+         * `zahl_ok` ist falsch (Sektorzahl 0), also STRUKTUR|GEOMETRIE
+         * = 25 — Band „kein Anspruch". Eichung 1 hatte diese Sonde
+         * schon einmal rot gemacht, als eine Vorfassung dafuer 60 gab. */
+        {
+            unsigned belege = UFT_BELEG_GEOMETRIE;
+            if (zahl_ok)             belege |= UFT_BELEG_SELBSTKONSISTENZ;
+            if (datei_ok && boot_ok) belege |= UFT_BELEG_STRUKTUR;
+            *confidence = uft_probe_konfidenz(belege);
         }
     }
 
@@ -215,16 +235,22 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
      * Sektor 70 die HADFS-Kennung, wird der Anspruch auf das gesenkt,
      * was dann noch stimmt: die Groesse.
      *
-     * 30 ist die Skalenstufe „nur die Groesse" (MF-729). Bewusst KEIN
-     * `return false` — die Datei IST ein Acorn-Abbild mit 10 Sektoren zu
-     * 256 Byte, und ihr den Zugriff zu verweigern waere schlechter als
-     * eine ehrliche niedrige Zahl. */
+     * Bewusst KEIN `return false` — die Datei IST ein Acorn-Abbild mit
+     * 10 Sektoren zu 256 Byte, und ihr den Zugriff zu verweigern waere
+     * schlechter als eine ehrliche niedrige Zahl (MF-830).
+     *
+     * **MF-1153:** hier stand `*confidence = 30`, die Skalenstufe „nur
+     * die Groesse". Auch das war ein Handwert — nach der Doktrin ist die
+     * Groesse allein 0, und was bei einer HADFS-Diskette noch stimmt,
+     * ist die GEOMETRIE: zehn Sektoren zu 256 Byte auf 40, 80 oder 160
+     * Spursaetzen. Das sind **10**, und der Abstand zum DFS-Fall (45)
+     * bleibt derselbe Gedanke wie in MF-836, nur abgeleitet. */
     if (ssd_traegt_hadfs_kennung(data, size)) {
         UFT_WARN("SSD: Sektor 70 traegt die HADFS-Kennung \"(C)JGH\" — "
                  "der DFS-Katalog in Sektor 0/1 ist HADFS' "
                  "Kompatibilitaetseintrag, kein eigenstaendiges "
                  "DFS-Volume; das Dateisystem beginnt bei Sektor 71");
-        *confidence = 30;
+        *confidence = uft_probe_konfidenz(UFT_BELEG_GEOMETRIE);
     }
     return true;
 }
