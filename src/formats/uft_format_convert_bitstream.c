@@ -888,6 +888,60 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
                  src_size, expected_size);
     }
 
+    /* MF-1170: ein ZUVIEL war bisher still — und bei einer 2,88-M-Diskette
+     * war es die HAELFTE.
+     *
+     * Die Bedingung darueber prueft nur `src_size < expected_size`. Der
+     * letzte Groessenzweig der IMG-Erkennung ist ein `else` ohne obere
+     * Schranke, also wurde JEDE Datei ueber 1 228 800 Byte zu
+     * 80 x 2 x 18 x 512, und die Sektorschleife rechnet
+     *
+     *     src_offset = ((cyl * heads * sectors) + hd * sectors + sec)
+     *                  * sector_size,        mit cyl < cylinders
+     *
+     * erreicht also hoechstens `expected_size`. Gemessen an einer
+     * 2,88-M-ED-Datei (80 x 2 x 36 x 512 = 2 949 120 Byte): 1 474 560 Byte
+     * wurden nie angefasst — genau die Haelfte, weil 36 = 2 x 18 — und
+     * `UFT_OK` kam zurueck. Klasse MF-1001/1022/1038/1040, und ein Verstoss
+     * gegen „Kein Bit verloren" auf dem Hauptpfad.
+     *
+     * DIE ADF-SEITE DERSELBEN FUNKTION PRUEFT DAS SEIT MF-1081, die
+     * IMG-Seite hat es nie bekommen: dort steht ausdruecklich „Der REST,
+     * nicht nur der Quotient", weil 901 119 Byte ganzzahlig 79 Zylinder
+     * ergaben und still eine Spur verwarfen. Zwei Zweige einer Funktion,
+     * einer gehaertet — Klasse MF-519/529/1026, und MF-1164 hat dieselbe
+     * Gestalt schon einmal INNERHALB einer Datei gefunden.
+     *
+     * Fuer ADF kann die Absage nicht greifen, und das ist kein Zufall:
+     * dort ist `cylinders` aus `src_size / spur` MIT Restpruefung
+     * abgeleitet, also gilt `expected_size == src_size` genau. */
+    if (src_size > expected_size) {
+        result->error = UFT_ERR_INVALID_FORMAT;
+        if (src_size == 2949120u) {
+            /* Die naheliegendste Falle, darum mit Namen statt allgemein
+             * (MF-1079/P3-361: die Zahlen nennen, nicht pauschal absagen).
+             * Sie scheitert NICHT an der Diskette — 36 x (512 + 62) + 146
+             * = 20 810 Byte passen in die 25 000-Byte-Spur, `gap3` 116 —,
+             * sondern am Behaelter: `hfe_track_entry_t.length` ist ein
+             * `uint16_t`, und ein ED-Spurpaar braucht 100 352 Byte. */
+            uftc_add_warning(result,
+                     "sectors->HFE: %zu bytes is a 2.88M ED disk "
+                     "(80 x 2 x 36 x 512). HFE v1 cannot carry an ED track: "
+                     "its track table holds a pair length in 16 bits and ED "
+                     "needs 100352 bytes. Refused rather than silently "
+                     "converting the first half (MF-1170).", src_size);
+        } else {
+            uftc_add_warning(result,
+                     "sectors->HFE: source size %zu exceeds the %zu bytes of "
+                     "the derived geometry %d x %d x %d x %d, so %zu bytes "
+                     "would be dropped without notice. Refused rather than "
+                     "truncated (MF-1170).",
+                     src_size, expected_size, cylinders, heads, sectors,
+                     sector_size, src_size - expected_size);
+        }
+        return UFT_ERR_INVALID_FORMAT;
+    }
+
     uftc_report_progress(opts, 20, "Building HFE container");
 
     /*
@@ -967,6 +1021,41 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
     int mfm_track_bytes = (track_cells + 7) / 8;
     /* Round up to multiple of 256 for HFE interleaving */
     int track_len_aligned = ((mfm_track_bytes + 255) / 256) * 256;
+
+    /* MF-1170: die Spurtabelle von HFE v1 traegt die Laenge eines
+     * SPURPAARS in einem `uint16_t` — `hfe_track_entry_t.length`,
+     * `include/uft/uft_hfe_format.h:115-118`. Mehr als 65 535 Byte kann sie
+     * nicht ausdruecken, und die Zuweisung unten wuerde still kuerzen.
+     *
+     * Gemessen, was dieser Wandler heute setzen kann und was nicht:
+     *
+     *      250 kbps / 300 U/min  ->  12 544 je Seite  ->  Paar  25 088
+     *      500 kbps / 360 U/min  ->  20 992           ->  Paar  41 984
+     *      500 kbps / 300 U/min  ->  25 088           ->  Paar  50 176
+     *     1000 kbps / 300 U/min  ->  50 176           ->  Paar 100 352  (ED)
+     *
+     * Die Absage ist damit HEUTE UNERREICHBAR — der Wandler setzt nie mehr
+     * als 500 kbps. Sie steht hier als die Zusage, die einen ED-Zweig
+     * verhindert, solange der Behaelter HFE v1 ist: `(uint16_t)100352` waere
+     * 34 816, eine Spurtabelle, die auf ein Drittel der Daten zeigt — also
+     * ein ZWEITER stiller Verlust ueber dem ersten. Genau dieser Zweig war
+     * der erste Entwurf von MF-1170, und die Messung hat ihn verworfen.
+     *
+     * Die Grenze liegt bei 32 767 Byte je Seite, also etwa 655 kbps bei
+     * 300 U/min. Der Weg zu 2,88 M ist HFE v3, nicht ein Zweig hier.
+     * `tests/test_hfe_kappt_nicht_still.c` haelt beide Haelften fest — dass
+     * die vier heutigen Faelle passen UND dass ED nicht passt. */
+    if ((long)track_len_aligned * 2 > 0xFFFF) {
+        result->error = UFT_ERR_INVALID_FORMAT;
+        uftc_add_warning(result,
+                 "sectors->HFE: a track pair of %ld bytes (%d per side at "
+                 "%u kbps / %u rpm) does not fit the 16-bit length field of "
+                 "the HFE v1 track table (max 65535). Refused rather than "
+                 "truncated (MF-1170).",
+                 (long)track_len_aligned * 2, track_len_aligned,
+                 (unsigned)bitrate, rpm);
+        return UFT_ERR_INVALID_FORMAT;
+    }
 
     /* Total file size */
     size_t lut_blocks = (cylinders * sizeof(hfe_track_entry_t) + 511) / 512;
