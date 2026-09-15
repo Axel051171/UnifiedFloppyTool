@@ -148,39 +148,90 @@ bool img_probe(const uint8_t* data, size_t size, size_t file_size,
         return false;
     }
     
-    *confidence = 40;  // Größe passt
-    
-    // FAT12 Bootsektor prüfen
+    *confidence = 40;  // Größe passt — Band „nur die Groesse" (MF-729)
+
+    /* ── MF-1144: hier wurden die Stufen ZUGEWIESEN, nicht gesammelt ──
+     *
+     * Vorher stand eine Kette aus vier `if`, von denen jedes
+     * `*confidence` ueberschrieb — in dieser Reihenfolge:
+     *
+     *     if (Sprungbefehl)      *confidence = 60;
+     *     if (Bootsignatur)      *confidence = 80;
+     *     if (has_oem)           *confidence = 85;   <-- greift IMMER
+     *     if (bps == 512)        *confidence = 90;
+     *
+     * `has_oem` prueft allein, ob die Bytes 3..10 DRUCKBARES ASCII sind.
+     * Damit ueberschrieb die schwaechste Erkenntnis die staerkste: eine
+     * Datei OHNE Sprungbefehl und OHNE Bootsignatur bekam **85** — das
+     * Band „Merkmal getroffen" (80..100) — weil acht Byte Text darin
+     * standen.
+     *
+     * **Gemessen war die Folge, dass IMG die Abbilder fremder Formate
+     * gewinnt.** Ueber den echten `uft_disk_open()` verloren **11 von
+     * 12** kopflosen Formaten ihr EIGENES Abbild an IMG bzw. DSK_X820,
+     * und IMG meldete dabei eine andere Teilung mit derselben Summe:
+     *
+     *     204 800 Byte  ssd       : 80 x 1 x 10 x 256 -> IMG 50 x 1 x 8 x 512
+     *     655 360 Byte  trd       : 80 x 2 x 16 x 256 -> IMG 80 x 2 x 8 x 512
+     *     409 600 Byte  nanowasp  : 40 x 2 x 10 x 512 -> IMG 50 x 2 x 8 x 512
+     *     315 392 Byte  micropolis: 77 x 1 x 16 x 256 -> IMG 77 x 1 x 8 x 512
+     *
+     * Der einzige Fall, in dem das Format sich selbst durchsetzte, war
+     * 89 600 Byte — und dort sagt IMGs Sonde `nein`. Das ist die
+     * Ursache, nicht ein Zufall.
+     *
+     * **Warum keine Eichung es fing:** Eichung 1 (MF-729) fuettert
+     * NULLEN — Bytes 3..10 sind dann 0x00 und nicht druckbar. Eichung 2
+     * fuettert Zufall, und ihre Regel gilt ihrem eigenen Kopf nach fuer
+     * Band **50..79**; 85 liegt darueber. Das Band 80..100 ist von
+     * keiner Eichung gedeckt, und reiner TEXT kommt in keiner vor —
+     * dieselbe Gestalt wie MF-1000: ein Tor, das schmaler ist als sein
+     * Gegenstand, meldet zuverlaessig null.
+     *
+     * Jetzt ist die **Bootsignatur das Tor zum Merkmalsband**, und das
+     * ist die Sache selbst: `0x55AA` bei 510/511 ist die Signatur eines
+     * PC-Bootsektors. Alles andere sind Strukturmerkmale und heben
+     * innerhalb ihres Bandes.
+     *
+     * Ein echtes FAT12-Abbild verliert dadurch nichts: es hat
+     * Sprungbefehl, Signatur, druckbares OEM-Feld und `bps == 512` und
+     * kommt damit auf **89**. Ein roher Sektorabzug ohne Bootsektor
+     * bleibt bei 40..60 und tritt der spezifischen Sonde den Vortritt
+     * ab — genau die Rangfolge, die MF-729 gewollt hat. */
     if (size >= 512) {
-        // Jump instruction
-        if (data[0] == 0xEB || data[0] == 0xE9) {
-            *confidence = 60;
-        }
-        
-        // Boot signature
-        if (data[510] == 0x55 && data[511] == 0xAA) {
-            *confidence = 80;
-        }
-        
-        // OEM Name prüfen (Bytes 3-10)
+        int struktur = 0;
+
+        /* Sprungbefehl am Anfang eines Bootsektors */
+        if (data[0] == 0xEB || data[0] == 0xE9) struktur++;
+
+        /* OEM-Feld (Bytes 3..10) druckbar — ein Hinweis, kein Merkmal:
+         * acht druckbare Byte hat auch jede Textdatei. */
         bool has_oem = true;
         for (int i = 3; i < 11; i++) {
-            if (data[i] < 0x20 || data[i] > 0x7E) {
-                has_oem = false;
-                break;
-            }
+            if (data[i] < 0x20 || data[i] > 0x7E) { has_oem = false; break; }
         }
-        if (has_oem) {
-            *confidence = 85;
+        if (has_oem) struktur++;
+
+        /* Sektorgroesse im BPB */
+        uint16_t bps = (uint16_t)(data[11] | (data[12] << 8));
+        if (bps == 512) struktur++;
+
+        const bool bootsig = (data[510] == 0x55 && data[511] == 0xAA);
+
+        if (bootsig) {
+            /* Merkmal getroffen; die Strukturmerkmale heben innerhalb
+             * des Bandes. 3 x 3 = 9, also hoechstens 89. */
+            *confidence = 80 + struktur * 3;
+        } else if (struktur >= 2) {
+            *confidence = 60;   /* Struktur gelesen, ohne Signatur */
         }
-        
-        // Bytes per sector (sollte 512 sein)
-        uint16_t bps = data[11] | (data[12] << 8);
-        if (bps == 512) {
-            *confidence = 90;
-        }
+        /* EIN Strukturmerkmal allein hebt NICHT, und das ist gemessen:
+         * die erste Fassung dieser Leiter gab dafuer 50, und damit
+         * gewann IMG weiter gegen `trd` (45) und `nanowasp` (40) — ein
+         * druckbares OEM-Feld ist keine „gelesene Struktur", es ist ein
+         * Hinweis. Es bleibt bei 40, „nur die Groesse". */
     }
-    
+
     return *confidence > 0;
 }
 

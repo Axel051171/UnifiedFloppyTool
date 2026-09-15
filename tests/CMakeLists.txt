@@ -2956,7 +2956,13 @@ foreach(test_source ${TEST_SOURCES})
            # MF-1087: fragt die REGISTRY, welches Plugin eine Endung
            # beansprucht und welches Ziel `out.<ext>` waehlt - das geht
            # nur mit der vollstaendigen Tafel.
-           OR ${test_name} STREQUAL "test_endung_nennt_kein_fremdes_format")
+           OR ${test_name} STREQUAL "test_endung_nennt_kein_fremdes_format"
+           # MF-1144: schickt je Format ein selbst gebautes Abbild durch
+           # den ECHTEN `uft_disk_open()` — also durch die ganze
+           # Registry. Genau die Begruendung, die MF-512 oben fuer
+           # `test_disk_open_fuzz` gibt; eine eigene Quellenliste waere
+           # eine zweite Wahrheit ueber dieselbe Sache.
+           OR ${test_name} STREQUAL "test_oeffentliche_api_erreicht_die_formate")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
