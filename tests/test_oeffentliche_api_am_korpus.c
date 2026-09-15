@@ -243,17 +243,23 @@ typedef struct {
 } rennen_t;
 
 static const rennen_t RENNEN[] = {
-    { "jv1", "SSD", "gleich",
-      "SSD meldet 85 — Band \"Merkmal getroffen\" — auf einem "
-      "floptool-JV1. Dieselbe Klasse wie MF-1146, wo `ssd` auf reinem "
-      "TEXT 82 meldete: das Tor zum Merkmalsband sind zwei "
-      "Katalogfelder, und dieses Abbild trifft beide zufaellig. Die "
-      "Geometrie ist identisch (80x1x10x256), der Inhalt kommt also "
-      "richtig — die FORMATAUSSAGE ist falsch, und MF-1016s "
-      "Regressionsabbild oeffnet heute als DFS. P3-405" },
-    { "tan", "SSD", "gleich",
+    /* BERICHTIGT MF-1152, und wieder hat die Tafel es selbst gemeldet:
+     * hier stand `SSD` mit 85, also im Band „Merkmal getroffen". Das
+     * war der Befund P3-405 — das DFS-Sektorzahlfeld ist zehn Bit
+     * breit, die Sonde las acht, und `0x31 0x20` sah damit aus wie die
+     * gueltigen 800 Sektoren statt wie die unmoeglichen 288. Behoben;
+     * uebrig ist das Rennen bei 204 800 Byte, und dort melden FUENF
+     * Plugins gleichauf 40, waehrend `jv1` selbst nur 35 sagt. */
+    { "jv1", "IMG", "gleich",
+      "204 800 Byte; IMG 40 und **gleichauf 5**, `jv1` selbst 35. Ein "
+      "kopfloser TRS-80-Abzug kann nichts als seine Groesse vorzeigen, "
+      "und die teilt er mit IMG (50x1x8x512 gegen 80x1x10x256 — "
+      "dieselbe Summe). Die Geometrie des Siegers ist hier zufaellig "
+      "folgenlos; die Frage, was bei `gleichauf > 1` geschehen soll, "
+      "ist P3-402" },
+    { "tan", "IMG", "gleich",
       "dieselbe Datei wie `jv1` (artefaktgleich, P3-365), also "
-      "dieselbe Messung. P3-405" },
+      "dieselbe Messung" },
     { "cpm", "MYZ80", "ANDERS",
       "MYZ80 meldet 70 gegen cpms 40 — und es hat recht: seine GANZE "
       "Erkennung ist \"die ersten 256 Byte sind alle 0xE5\" (MF-1029), "
@@ -319,11 +325,21 @@ static const rennen_t RENNEN[] = {
       "40x2x9x256 mit RUECKWAERTS laufender Seite 1 (MF-1027) — die "
       "Teilung weicht ab" },
     { "xdm86", "MSX", "ANDERS", "wie `v9t9`, dieselbe Datei-Groesse" },
-    { "ssd", "JV1", "gleich",
-      "102 400 Byte; JV1 35, SSD nur 30. Und SSD hat recht: seit "
-      "MF-1146 verlangt sein Merkmalsband zwei gueltige Katalogfelder, "
-      "und ein roher gw-Sektorabzug hat kein DFS-Verzeichnis. Beide "
-      "lesen 10x256, also folgenlos fuer den Inhalt" },
+    /* `ssd` STAND HIER und ist heraus — die Tafel hat es gemeldet
+     * („gemessen war JV1, jetzt das eigene Plugin"), und genau dafuer
+     * ist sie da: eine Ausnahme, die der Lauf nicht mehr braucht, faellt
+     * auf statt stillschweigend weiter zu gelten.
+     *
+     * Der alte Grund war: „102 400 Byte; JV1 35, SSD nur 30 — und SSD
+     * hat recht, denn ein roher gw-Abzug hat kein DFS-Verzeichnis."
+     * Das erste Halbsatz stimmte, das zweite nicht ganz. Seit MF-1152
+     * liest die Sonde das Sektorzahlfeld als die zehn Bit, die es ist:
+     * `gw_ssd.img` sagt dort **480** Sektoren, ein Vielfaches von zehn
+     * und gross genug fuer 102 400 Byte — das ist Struktur, und die
+     * Sonde meldet jetzt **60**. Die Bootoption faellt weiter aus
+     * (0xC1 >> 4 = 12), also bleibt es unter dem Merkmalsband, und das
+     * ist richtig: ein DFS-Verzeichnis hat die Datei nicht. Mit 60
+     * gegen JV1s 35 gewinnt `ssd` sein eigenes Abbild. */
     { "jvc", "IMG", "gleich",
       "161 280 Byte; IMG 40, gleichauf 2. MF-1144-Klasse" },
     { "t1k", "IMG", "gleich",
@@ -451,19 +467,28 @@ int main(void)
            "EIGENE und %d ein fremdes; %d uebersprungen\n",
            erreicht, FAELLE_N, eigenes, fremdes, uebersprungen);
 
-    /* Die Bilanz als eigene Zusage, in BEIDE Richtungen — gemessen
-     * 2026-09-15: 72 Abbilder, alle erreichen ein Plugin, 51 das eigene,
-     * 21 ein fremdes. Sie steht hier, weil eine Tafel mit 21 benannten
-     * Ausnahmen sonst wachsen koennte, ohne dass es jemand merkt: eine
-     * NEUE Verdraengung faellt oben an ihrer Zeile auf, aber eine neue
-     * ZEILE in FAELLE mit einer neuen Ausnahme faellt nur hier auf. */
+    /* Die Bilanz als eigene Zusage, in BEIDE Richtungen. Sie steht hier,
+     * weil eine Tafel mit benannten Ausnahmen sonst wachsen koennte,
+     * ohne dass es jemand merkt: eine NEUE Verdraengung faellt oben an
+     * ihrer Zeile auf, aber eine neue ZEILE in FAELLE mit einer neuen
+     * Ausnahme faellt nur hier auf.
+     *
+     * Gemessen 2026-09-15 zuerst 72 / 51 / 21. Seither zwei Korrekturen,
+     * und die Zahl ist ihre FOLGE (MF-1077):
+     *
+     *   MF-1151  `st` ging an DMK (65 auf einem flachen Abbild) und geht
+     *            jetzt an MSX — ein Rennen weniger falsch begruendet,
+     *            aber dieselbe Bilanz.
+     *   MF-1152  `ssd` bekommt sein eigenes Abbild (60 gegen JV1s 35),
+     *            weil das Sektorzahlfeld jetzt mit zehn Bit gelesen
+     *            wird: **52 eigenes, 20 fremdes**. */
     {
         char txt[240];
         snprintf(txt, sizeof txt,
                  "die Bilanz ist unveraendert: %d erreicht, %d eigenes, "
-                 "%d fremdes (gemessen 72 / 51 / 21)",
+                 "%d fremdes (gemessen 72 / 52 / 20)",
                  erreicht, eigenes, fremdes);
-        zusage(txt, erreicht == 72 && eigenes == 51 && fremdes == 21);
+        zusage(txt, erreicht == 72 && eigenes == 52 && fremdes == 20);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

@@ -1959,6 +1959,32 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_ssd_katalog_zehn_bit")
+        # MF-1152: das DFS-Sektorzahlfeld ist ZEHN Bit breit — untere
+        # zwei Bit von 0x106 plus die acht von 0x107 —, und die Sonde
+        # las nur die acht. Gemessen in A4 Runde 2 (MF-1150): eine
+        # floptool-JV1 mit 0x106=0x31, 0x107=0x20 erreichte damit das
+        # Band „Merkmal getroffen" (85), weil 0x20 in der Werteliste
+        # steht; mit den zehn Bit gelesen sagt ihr Katalog **288**
+        # Sektoren, was kein Vielfaches von 10 ist und fuer 204 800 Byte
+        # nicht reicht.
+        #
+        # Das Wissen stand schon im Baum — im Kommentar von
+        # `test_ssd_hadfs_nicht_dfs` (MF-836), das seine Pruefdatei genau
+        # so setzt. Gestalt MF-1020 (`mfi`): der Kommentar wusste es, der
+        # Code nicht.
+        #
+        # Die Feldwerte sind an einem ECHTEN DFS-Katalog abgenommen:
+        # DiscImageManagers `Blank Images/Acorn DFS/` (GPL-3, seit MF-693
+        # als DATENQUELLE registriert) fuehrt in Sektor 1
+        # `00 00 00 00 00 00 03 20` — 0 Dateien, 800 Sektoren,
+        # Bootoption 0. Beide Blank-Dateien sind zu kurz fuer
+        # `ssd_detect()`, kommen also nicht als Pruefdatei in Frage.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ssd/uft_ssd_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_a2r_hilfsfunktionen_leben")
         # MF-851 / P3-89
         target_sources(${test_name} PRIVATE

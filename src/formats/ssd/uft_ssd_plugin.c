@@ -132,20 +132,80 @@ static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_s
      * gelesen". Eine echte DFS-Diskette verliert nichts: sie hat eine
      * gueltige Sektorzahl UND eine gueltige Bootoption und kommt damit
      * unveraendert auf 85. */
+    /* ── MF-1152: das Sektorzahlfeld ist ZEHN Bit breit ───────────────
+     *
+     * Hier stand `sec_count_lo == 0x90 || == 0x20 || == 0xA0` — also
+     * **acht** Bit gegen drei Werte. Die Sektorzahl eines DFS-Katalogs
+     * steht aber in den unteren zwei Bit von 0x106 UND den acht von
+     * 0x107; das obere Nibble von 0x106 ist die Bootoption:
+     *
+     *     Sektoren   = ((data[0x106] & 0x03) << 8) | data[0x107]
+     *     Bootoption = (data[0x106] >> 4) & 0x03
+     *
+     * **Und dieses Wissen stand schon im Baum — im Kommentar von
+     * `tests/test_ssd_hadfs_nicht_dfs.c` (MF-836):** „400 Sektoren =
+     * 0x190 -> High-Bits 0x01 bei 0x106, Low 0x90 bei 0x107", und seine
+     * Pruefdatei setzt es genau so. Der Kommentar wusste es, der Code
+     * nicht — woertlich die Gestalt von MF-1020 bei `mfi`.
+     *
+     * **Die Folge war gemessen (A4 Runde 2, MF-1150):** eine
+     * TRS-80-Diskette von MAMEs floptool traegt bei 0x105/0x106/0x107
+     * die Byte `56 31 20` und erreichte damit **85**, also das Band
+     * „Merkmal getroffen". 0x20 ist das Leerzeichen — genau das Byte,
+     * das MF-1146 als Ursache benannt hat —, und 0x31 ('1') hat das
+     * obere Nibble 3. Mit den zehn Bit gelesen sagt dieser Katalog
+     * **288** Sektoren: kein Vielfaches von zehn, und 288 x 256 sind
+     * weniger als die 204 800 Byte der Datei.
+     *
+     * **Und die alten „zwei Felder" waren nicht unabhaengig:** die
+     * zweite Bedingung verlangte zusaetzlich `sec_count_lo > 0`, was die
+     * erste schon garantierte (0x90, 0x20, 0xA0 sind alle > 0). Neu
+     * geprueft wurde allein `data[0x106] <= 0x3F`. Die Formulierung aus
+     * MF-1146 traegt damit nicht; das ist eine eigene Angabe, und sie
+     * ist hier berichtigt.
+     *
+     * Die Feldwerte sind an einem ECHTEN Katalog abgenommen:
+     * DiscImageManagers `Blank Images/Acorn DFS/` (Gerald Holdsworth,
+     * GPL-3, seit MF-693 als DATENQUELLE registriert) fuehrt in
+     * Sektor 1 `00 00 00 00 00 00 03 20` — 0 Dateien, 800 Sektoren,
+     * Bootoption 0. `tests/test_ssd_katalog_zehn_bit.c` haelt es fest;
+     * Rotbeweis zuerst, 6 gruen / 4 rot vor dieser Aenderung. */
     if (size >= 0x108) {
-        uint8_t sec_count_lo = data[0x107];
-        /* Valid sector counts: 0x90=400, 0x20=800, 0xA0=1280 */
-        const bool zahl_ok = (sec_count_lo == 0x90 || sec_count_lo == 0x20
-                              || sec_count_lo == 0xA0);
-        /* Boot option (bits 4-5 of byte 0x106) should be 0-3 */
-        const bool boot_ok = ((data[0x106] >> 4) <= 3 && sec_count_lo > 0);
+        const unsigned sektoren =
+            ((unsigned)(data[0x106] & 0x03) << 8) | (unsigned)data[0x107];
+        const unsigned bootopt  = (unsigned)(data[0x106] >> 4);
+        const unsigned dateien  = (unsigned)data[0x105];
 
-        if (zahl_ok && boot_ok) {
-            *confidence = 85;   /* zwei Felder stimmen zusammen */
-        } else if (zahl_ok || boot_ok) {
-            /* Ein Feld allein ist Struktur, kein Merkmal — 0x20 ist das
-             * Leerzeichen, und `>> 4 <= 3` trifft ein Viertel aller
-             * Bytewerte. */
+        /* Zehn Sektoren je Spur — dieselbe Annahme, mit der
+         * `ssd_detect()` oben `file_size / 2560` rechnet. Und die Ansage
+         * kann nicht KLEINER sein als die Diskette: bei einer
+         * doppelseitigen DSD fuehrt jede Seite ihren eigenen Katalog mit
+         * ihrer eigenen Sektorzahl, deshalb `* heads`. */
+        const bool zahl_ok = (sektoren > 0 && (sektoren % 10u) == 0
+                              && (size_t)sektoren * 256u * (size_t)heads
+                                 >= file_size);
+        /* Ein DFS-Verzeichniseintrag ist ACHT Byte lang; bei 0x105 steht
+         * Dateizahl x 8, und es gibt hoechstens 31 Dateien. */
+        const bool datei_ok = ((dateien % 8u) == 0 && dateien <= 248u);
+        /* Vier Bootoptionen (0..3) im oberen Nibble. */
+        const bool boot_ok  = (bootopt <= 3u);
+
+        if (zahl_ok && datei_ok && boot_ok) {
+            *confidence = 85;   /* Katalog und Dateigroesse stimmen zusammen */
+        } else if (zahl_ok) {
+            /* Struktur, kein Merkmal: die Sektorzahl kann zufaellig
+             * passen, aber sie muss dafuer von null verschieden, ein
+             * Vielfaches von zehn UND gross genug sein.
+             *
+             * `datei_ok && boot_ok` steht hier ABSICHTLICH NICHT, und
+             * der Grund ist gemessen: auf einem NULLPUFFER sind beide
+             * wahr — `0 % 8 == 0` und `0 <= 3` —, und diese Fassung gab
+             * dafuer 60. Eichung 1
+             * (`tests/test_probe_confidence_on_zeros.c`) ist beim ersten
+             * Lauf nach dieser Aenderung rot geworden und hat es
+             * gefangen: auf Nullen darf nichts ab 50 melden (MF-729).
+             * Zwei Bereichspruefungen, die die leere Datei erfuellt,
+             * sind keine Struktur. */
             *confidence = 60;
         }
     }
