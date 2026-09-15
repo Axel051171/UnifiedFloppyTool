@@ -316,6 +316,39 @@ def main() -> int:
     miss_a = cmake_sources - pro_sources   # on disk, not in .pro
     miss_b = {p for p in pro_sources if not (repo / p).is_file()}
 
+    # ── C: Manifest-Eintraege, die keine Datei nennen (MF-1156) ────────────
+    # Die Existenzpruefung gab es hier schon — aber NUR fuer SOURCES (miss_b
+    # darueber). HEADERS wurde eingelesen (`parse_pro_headers`) und
+    # ausschliesslich fuer `--emit-cmake-headers` benutzt, nie geprueft.
+    # Gemessen waren es sieben von 393 Roheintraegen, und die Aufteilung ist
+    # der Punkt: DREI nannten `include/uft/analysis/...` fuer Header, die
+    # unter `include/uft/detect/` liegen — qmake verwarf die Zeilen, und die
+    # wirklichen Header standen damit in keinem Manifest. Zwei nannten
+    # `include/uft/hal/internal/`, ein Verzeichnis, das es nicht gibt, fuer
+    # `.c`-Dateien, die nie einen Header hatten. Zwei waren Leichen
+    # (`uft_format_probes.h` fiel in MF-295, `uft_hal_v2.h` in MF-011 W17).
+    # Berichtigt statt pauschal entfernt (MF-1077).
+    #
+    # Harte Null, keine Grundlinie: nach MF-1156 nennt jeder Eintrag eine
+    # Datei, und ein Eintrag, der nichts nennt, ist nie richtig.
+    #
+    # Was diese Pruefung NICHT sieht, und das gehoert hierher (MF-1000):
+    # sie ist genau so weit wie `_parse_pro_lists`. Der zaehlt HEADERS auf
+    # 169 Eintraege, waehrend die Datei 393 Pfadvorkommen hat — der
+    # Unterschied sind Mehrfachnennungen ueber die drei `HEADERS +=`-Bloecke
+    # und die absichtlich ausgelassenen `<flag> { ... }`-Bloecke. Ein
+    # toter Eintrag INNERHALB eines Feature-Flag-Blocks faellt hier durch.
+    pro_manifest = {
+        "HEADERS":   _parse_pro_lists(pro, key="HEADERS", exts=(".h", ".hpp")),
+        "FORMS":     _parse_pro_lists(pro, key="FORMS", exts=(".ui",)),
+        "RESOURCES": _parse_pro_lists(pro, key="RESOURCES", exts=(".qrc",)),
+    }
+    miss_c = {
+        art: sorted(p for p in eintraege if not (repo / p).is_file())
+        for art, eintraege in pro_manifest.items()
+    }
+    miss_c = {art: lst for art, lst in miss_c.items() if lst}
+
     if args.rebuild_baseline:
         write_baseline(baseline_path, miss_a, miss_b)
         print(f"rebuilt baseline {baseline_path}:")
@@ -336,6 +369,9 @@ def main() -> int:
     print(f"  Aktuell A/B                 : {len(miss_a):4d} / {len(miss_b):4d}")
     print(f"  NEUE Abweichungen A/B       : {len(new_a):4d} / {len(new_b):4d}")
     print(f"  Baseline-Eintraege erledigt : {len(fixed_a):4d} / {len(fixed_b):4d}")
+    print(f"  C: Eintraege ohne Datei     : "
+          f"{sum(len(v) for v in miss_c.values()):4d}"
+          f"  (HEADERS/FORMS/RESOURCES, harte Null seit MF-1156)")
 
     if args.verbose or new_a or new_b:
         if new_a:
@@ -351,6 +387,20 @@ def main() -> int:
         print("\n  NOTE: baseline entries resolved above — consider running")
         print("        `verify_build_sources.py --rebuild-baseline` to shrink")
         print("        the accepted-gap set.")
+
+    if miss_c:
+        print("\n  === (C) Manifest-Eintrag nennt keine Datei (MF-1156) ===")
+        for art in sorted(miss_c):
+            for p in miss_c[art]:
+                print(f"    - {art}: {p}")
+        print("\nFAIL: .pro nennt Dateien, die es nicht gibt (MF-1156).")
+        print("      qmake verwirft solche Zeilen still. Erst nachsehen, ob")
+        print("      der Pfad nur FALSCH ist — drei der sieben Faelle von")
+        print("      MF-1156 waren `analysis/` statt `detect/`, also echte")
+        print("      Header am falschen Ort. Berichtigen, nicht entfernen")
+        print("      (MF-1077). Und KEIN `#`-Kommentar in einen fortgesetzten")
+        print("      Listenblock: das hat in MF-006 30 Dateien verschluckt.")
+        return 1
 
     if new_a or new_b:
         print("\nFAIL: new build-system divergence since baseline (MF-006).")

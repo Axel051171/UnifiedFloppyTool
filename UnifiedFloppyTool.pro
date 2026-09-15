@@ -385,9 +385,9 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     include/uft/formats/uft_dms.h \
-    include/uft/analysis/mfm_detect.h \
-    include/uft/analysis/cpm_fs.h \
-    include/uft/analysis/uft_mfm_detect_bridge.h \
+    include/uft/detect/mfm_detect.h \
+    include/uft/detect/cpm_fs.h \
+    include/uft/detect/uft_mfm_detect_bridge.h \
     include/uft/analysis/uft_triage.h \
     src/advanceddialogs.h \
     src/mainwindow.h \
@@ -898,8 +898,7 @@ HEADERS += \
     include/uft/analysis/otdr_event_core_v2.h \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
-    include/uft/uft_god_mode.h \
-    include/uft/uft_format_probes.h
+    include/uft/uft_god_mode.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UFT Smart Pipeline
@@ -1263,9 +1262,6 @@ HEADERS += \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     include/uft/hal/uft_greaseweazle_full.h \
     include/uft/hal/uft_hal.h \
-    include/uft/hal/internal/uft_hal_unified.h \
-    include/uft/hal/internal/uft_hal_profiles.h \
-    include/uft/hal/internal/uft_hal_v2.h \
     include/uft/hal/uft_drive.h \
     include/uft/hal/uft_kryoflux.h \
     include/uft/uft_ir_format.h
