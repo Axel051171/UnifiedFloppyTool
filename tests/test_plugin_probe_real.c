@@ -288,7 +288,15 @@ TEST(dc42_requires_big_endian_magic_at_offset_82) {
     memset(hdr, 0, sizeof(hdr));
     hdr[82] = 0x01; hdr[83] = 0x00;          /* BE 0x0100 */
     hdr[0]  = 10;                            /* sane name length */
-    hdr[0x43] = 0x10;                        /* non-zero BE32 data size */
+    /* MF-1140: hier stand `hdr[0x43] = 0x10;` — „non-zero BE32 data
+     * size", willkuerlich gewaehlt, um an der Null-Pruefung
+     * vorbeizukommen. Seit MF-1140 prueft die Sonde die kanonische
+     * Strukturgleichung des Formats, `84 + data_size + tag_size ==
+     * Dateigroesse`, und 84 + 16 ist nicht 128 — das Fixture war also
+     * nie eine gueltige DC42. An die Puffergroesse gebunden, damit es
+     * nicht wieder auseinanderlaeuft. Die Aussage dieses Tests bleibt
+     * die Kennung; nur sein Traeger ist jetzt formgerecht. */
+    hdr[0x43] = (uint8_t)(sizeof(hdr) - 84u);   /* BE32 data size = 44 */
     ASSERT(probe_sized(&uft_format_plugin_dc42, hdr, sizeof(hdr), sizeof(hdr), &conf));
 
     /* swapped magic must be rejected */

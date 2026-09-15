@@ -1608,6 +1608,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
             ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            # MF-1140: `dc42` holt die Apple-3,5"-Zonentafel und die
+            # zonierte Versatzrechnung aus dem `2img`-Modul, wo sie seit
+            # MF-1031 gegen floptool abgenommen sind — Abhaengigkeit
+            # statt zweiter Kopie (Muster MF-1034, `posix` ->
+            # `uft_logical`).
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/cfi/uft_cfi.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
@@ -3711,7 +3717,20 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
     elseif(${test_name} STREQUAL "test_dc42_checksum_roundtrip")
         # DC42 write must keep the data checksum valid; caught stale-checksum bug (MF-324)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c)
+        # MF-1140: dazu die Zonentafel aus dem `2img`-Modul (siehe dort).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c)
+    elseif(${test_name} STREQUAL "test_dc42_zonen")
+        # MF-1140: Apple 3,5"-GCR ist ZONIERT (12/11/10/9/8 je 16 Spuren).
+        # `dc42` rechnete mit festen 10 — die SUMME ging auf (80x10 = 800
+        # = 16x(12+11+10+9+8)), und gemessen lagen **1590 von 1600**
+        # Sektoren an der falschen Stelle, still, mit rc=0. Die
+        # Versatzrechnung kommt aus `uft_2img.c`, wo sie seit MF-1031
+        # gegen floptool abgenommen ist — Abhaengigkeit statt Duplikat.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c)
     elseif(${test_name} STREQUAL "test_hdf_rdb_bounds")
         # RDB parser heap-overflow guard (tiny SummedLongs) — MF-326
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/uft_hdf_parser.c)

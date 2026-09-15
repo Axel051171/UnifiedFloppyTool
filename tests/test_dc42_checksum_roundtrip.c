@@ -34,7 +34,15 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
 #define DC42_HDR      84u
-#define DC42_DATA     409600u          /* 400K GCR: 80 cyl x 1 head x 10 spt x 512 */
+/* 400K GCR: 800 Sektoren x 512.
+ *
+ * MF-1140: hier stand „80 cyl x 1 head x 10 spt x 512", und das war das
+ * FALSCHE Modell — als Kommentar hingeschrieben, also wie eine Quelle
+ * aussehend. Apple 3,5" ist zoniert: 16 x (12+11+10+9+8) = 800. Beide
+ * Rechnungen ergeben 800 Sektoren und 409 600 Byte, und genau diese
+ * Uebereinstimmung hat den Defekt verdeckt. Die ZAHL war richtig, die
+ * VERTEILUNG nicht. */
+#define DC42_DATA     409600u
 #define DC42_FILE     (DC42_HDR + DC42_DATA)
 
 static void free_track_sectors(uft_track_t *tr) {
@@ -94,7 +102,11 @@ TEST(write_updates_data_checksum) {
     uft_track_t t;
     memset(&t, 0, sizeof(t));
     ASSERT(uft_format_plugin_dc42.read_track(&disk, 0, 0, &t) == UFT_OK);
-    ASSERT(t.sector_count == 10);
+    /* MF-1140: hier stand `== 10`, und diese gruene Zusage hat den
+     * Defekt BEWACHT — dieselbe Gestalt wie MF-1016 (`jv1`) und
+     * MF-1017 (`jv3`). Spur 0 liegt in Zone 0 und traegt **12**
+     * Sektoren. */
+    ASSERT(t.sector_count == 12);
     ASSERT(t.sectors[0].data != NULL);
 
     /* modify a sector and write it back (must recompute the checksum) */
