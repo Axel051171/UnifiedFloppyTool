@@ -75,4 +75,60 @@
 # Kopie weg ist. Genau davor warnt der Hinweis weiter oben, dort in
 # der anderen Richtung: "0 gefunden" ist keine Entwarnung.
 
-1168
+#
+# MF-1163: 1168 -> 1161. Das Tor meldete elf Feldnamen, die es im Baum
+# nicht gibt — und der Satz in seinem eigenen Kopf lautete, es koenne
+# "nicht falsch anschlagen".
+#
+# Die Regel DEKL liess den Trenner zwischen Typ und Name leer sein. Bei
+# `unsigned populated;` verbraucht der optionale Praefix `unsigned `
+# bereits, also musste der Typteil in den Namen hineinfressen — und weil
+# eine Regel beim Zuruecksetzen den SPAETEREN Quantor zuerst aufgibt,
+# fand sie `popula` + `ted` und war fertig, bevor sie den Praefix je in
+# Frage stellte. Gemessen: 19 Zeilen dieser Gestalt in `include/`, elf
+# davon an der Oberflaeche als erfundener Name — `ted`, `de0`, `de1`,
+# `irs`, `nge`, `dht`, `unt`, `ead`, `ers` (uft_scp_integrity.h) sowie
+# `ull` und `ins` (uft_zellregel.h:106/107, seit Langem im Baum).
+#
+# Hinter JEDEM der elf liegt ein Feld, das wirklich geschrieben wird:
+# 11 Fehlalarme, 0 verdeckte echte Befunde. Deshalb sinkt die Zahl um
+# genau elf und nicht um mehr.
+#
+# Das ist die Gestalt von MF-867 mit umgekehrtem Vorzeichen: dort kannte
+# das Tor eine Schreibweise nicht, hier LAS es einen Namen falsch. Der
+# Unterschied ist der Preis — ein unbekanntes `++` meldet ein echtes
+# Feld zu viel, ein falsch gelesener Name schickt den Leser zu einem
+# Feld, das es nicht gibt. Gekostet hat es eine halbe Sitzung: gesucht
+# wurde nach `_magic`, `_pad0`, `_pad1`, `_reserved1`, `_reserved2`,
+# weil check() sie als "neu u.a." ausgab — es waren die alphabetisch
+# ersten der GANZEN Liste. Die Grundlinie ist eine Zahl; welche Felder
+# neu sind, kann dieses Tor nicht sagen, und es sagt das seit MF-1163.
+#
+# Zwei weitere Grenzen sind dabei gemessen und stehen jetzt im Torkopf:
+#
+#   - AUS-PARAMETER. Ein Feld, das ueber `&out->feld` gefuellt wird,
+#     steht nirgends links von einem `=`. Gemessen sind 79 der 1161
+#     irgendwo als `&x->feld` uebergeben. Abgezogen wird nichts — eine
+#     Adressuebergabe beweist keinen Schreibvorgang —, aber die Zahl
+#     wird getrennt ausgewiesen, nach demselben Grundsatz wie die
+#     `_`-praefigierte Fuellung.
+#   - `volatile` fehlt im Typ-Praefix. Genau eine Fundstelle im Baum
+#     (`volatile bool* cancel;`), von alter und neuer Fassung schlicht
+#     uebersehen. Nicht blind mitgeweitet.
+#
+# Selbsttest 3/3 -> 5/5. Die zwei neuen Faelle sind der Rotbeweis
+# (`unsigned gezaehlt_wird;` muss als EIN Name gelesen werden, und das
+# Bruchstueck `ird` darf NICHT auftauchen) und sein Gegenbeweis (ein nie
+# geschriebenes `unsigned`-Feld muss weiterhin gemeldet werden, sonst
+# haette die Korrektur das Tor verengt).
+#
+# Zur Zahl selbst: 1159 ist an DIESEM Baum gemessen. Zuerst stand hier
+# 1161 — das war der Wert eines Arbeitsbaums, der zugleich das
+# SCP-Integritaetsmodul aus MF-1162 trug (dessen `checksum_stored` und
+# `tdht` sind zwei der 79 Aus-Parameter-Faelle). Eine Grundlinie, die
+# ueber ihrer eigenen Messung liegt, ist ein Tor, das weniger sieht als
+# sein Gegenstand — Klasse Tor 64. Deshalb steht hier der Wert dieses
+# Commits, und MF-1162 hebt ihn mit der eigenen Begruendung auf 1161,
+# so wie MF-868 es getan hat.
+
+1159

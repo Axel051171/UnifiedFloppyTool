@@ -23,8 +23,29 @@ gueltige Bitposition.
 ── Was dieses Tor kann und was NICHT ───────────────────────────────────────
 
 Gemeldet werden nur Felder, deren Name im ganzen Baum an **keiner** Stelle
-auf der linken Seite einer Zuweisung steht. Das ist eindeutig und kann
-nicht falsch anschlagen.
+auf der linken Seite einer Zuweisung steht.
+
+**BERICHTIGT MF-1163.** Hier stand: „Das ist eindeutig und kann nicht falsch
+anschlagen." Beide Haelften trugen nicht, und beide sind gemessen:
+
+  1. Es hat falsch angeschlagen — mit Namen, die es im Baum gar nicht gibt.
+     Die Regel `DEKL` durfte den Trenner zwischen Typ und Name leer lassen
+     und zerlegte `unsigned populated;` zu `popula` + `ted`. Elf erfundene
+     Feldnamen, hinter jedem ein Feld, das wirklich geschrieben wird.
+     Einzelheiten stehen am Muster selbst.
+
+  2. Es schlaegt weiter falsch an, und diese Luecke bleibt offen: ein Feld,
+     das als AUS-PARAMETER gefuellt wird (`&out->checksum_stored`), steht
+     nirgends links von einem `=`. Gemessen sind **79** der 1161 gemeldeten
+     Felder irgendwo als `&x->feld` uebergeben. Abgezogen wird davon
+     nichts — eine Adressuebergabe beweist keinen Schreibvorgang —, aber
+     die Zahl wird seit MF-1163 getrennt ausgewiesen, damit niemand die
+     Hauptzahl fuer schaerfer haelt, als sie ist.
+
+Die Lehre ist nicht die Regel, sondern der Satz darueber: **eine Zusage,
+ein Tor koenne nicht falsch anschlagen, ist selbst eine ungemessene Zahl.**
+Sie hat hier dazu gefuehrt, dass niemand die gemeldeten Namen nachgesehen
+hat — `ted`, `de0`, `unt`, `ull` standen jahrelang in der Ausgabe.
 
 NICHT gefunden werden Felder, die zwar irgendwo geschrieben werden, aber
 auf einer ANDEREN Struktur mit gleichnamigem Feld. Beispiel aus dem Baum:
@@ -52,9 +73,37 @@ WURZEL = Path(__file__).resolve().parent.parent
 GRUNDLINIE = WURZEL / "docs" / "dead_fields_baseline.txt"
 
 # Eine Feld-Deklaration in einem Header: Typ, Name, Semikolon.
+#
+# MF-1163: der Trenner zwischen Typ und Name ist PFLICHT — Leerzeichen oder
+# Stern. Er stand als `\s*\**\s*` und durfte damit LEER sein, und das war
+# der ganze Fehler: bei `unsigned populated;` verbraucht der optionale
+# Praefix `unsigned ` bereits, danach muss der Typteil in den Namen
+# hineinfressen. Eine Regel gibt beim Zuruecksetzen den SPAETEREN Quantor
+# zuerst auf, also fand sie `popula` + `ted` und war fertig, bevor sie den
+# optionalen Praefix je in Frage stellte.
+#
+# Gemessen: 19 Zeilen dieser Gestalt liegen in `include/`, elf davon traten
+# als ERFUNDENER toter Feldname an die Oberflaeche — `ted` (populated),
+# `de0`/`de1` (populated_side0/1), `irs` (aliased_pairs), `nge`
+# (out_of_range), `dht` (below_tdht), `unt` (head_count), `ead`
+# (first_head), `ers` (cylinders), `ull`/`ins` (max_null/max_eins in
+# `uft_zellregel.h`). Hinter JEDEM der elf liegt ein Feld, das wirklich
+# geschrieben wird — 11 Fehlalarme, 0 verdeckte echte Befunde.
+#
+# Das ist die Gestalt von MF-867 (dort fehlten `++`/`--`) mit umgekehrtem
+# Vorzeichen: dort meldete das Tor Fehlalarm, weil es eine Schreibweise
+# nicht kannte, hier, weil es einen Namen falsch LAS. Ein Tor, das Namen
+# nennt, die es im Baum gar nicht gibt, ist an der teuersten Stelle
+# ungenau — man sucht dann nach dem falschen Feld.
+#
+# Was diese Fassung ausdruecklich NICHT repariert: `volatile` fehlt im
+# Praefix (gemessen genau eine Fundstelle, `volatile bool* cancel;`, von
+# beiden Fassungen schlicht uebersehen — kein Phantom), und Namen unter
+# drei Zeichen bleiben draussen. Beides ist gemessen und nicht blind
+# mitgeweitet.
 DEKL = re.compile(
     r"^\s*(?:const\s+)?(?:struct\s+|union\s+|enum\s+|unsigned\s+|signed\s+)?"
-    r"[A-Za-z_][A-Za-z0-9_]*\s*\**\s*"
+    r"[A-Za-z_][A-Za-z0-9_]*(?:\s*\*+\s*|\s+)"
     r"([a-z_][a-z0-9_]{2,})\s*(?:\[[^\]]*\])?\s*;"
 )
 # Was keine Felddeklaration ist.
@@ -132,29 +181,67 @@ def geschriebene_namen(quellen: list[Path]) -> set[str]:
     return namen
 
 
-def messen() -> tuple[list[tuple[str, str]], int]:
+def adressierte_namen(quellen: list[Path]) -> set[str]:
+    """Jeder Name, der irgendwo als `&x->name` oder `&x.name` auftaucht.
+
+    MF-1163. Ein Feld kann als AUS-PARAMETER gefuellt werden, und dann
+    steht sein Name nirgends links von einem `=`:
+
+        uft_scp_check_integrity(..., &out->checksum_stored, ...)
+
+    Fuer `geschriebene_namen()` ist das Feld tot, obwohl es an der einzigen
+    sinnvollen Stelle gefuellt wird. Dieselbe Gestalt wie MF-866/MF-867,
+    wo `++` fehlte — nur laesst sich diese Luecke NICHT einfach schliessen:
+    eine Adressuebergabe beweist keinen Schreibvorgang, die Funktion
+    dahinter darf auch nur lesen.
+
+    Deshalb wird hier nichts abgezogen. Die Zahl wird GETRENNT
+    ausgewiesen, genau wie die `_`-praefigierte Fuellung — sie benennt die
+    Groesse der Unsicherheit in der Hauptzahl, statt sie stillschweigend
+    zu verrechnen. Gemessen am 2026-09-15: 79 der 1161.
+    """
+    adr = re.compile(r"&\s*[A-Za-z_][A-Za-z0-9_]*\s*(?:->|\.)\s*"
+                     r"([a-z_][a-z0-9_]*)")
+    namen: set[str] = set()
+    for p in quellen:
+        try:
+            namen.update(adr.findall(
+                p.read_text(encoding="utf-8", errors="replace")))
+        except OSError:
+            continue
+    return namen
+
+
+def messen() -> tuple[list[tuple[str, str]], int, set[str]]:
     hdr = dateien("include/*.h")
     quell = (dateien("src/*.c") + dateien("src/*.cpp")
              + dateien("tests/*.c") + dateien("tests/*.cpp")
              + dateien("include/*.h"))          # inline-Setter in Headern
     if not hdr:
-        return [], 0
+        return [], 0, set()
     deklariert = felder_aus_headern(hdr)
     geschrieben = geschriebene_namen(quell)
+    adressiert = adressierte_namen(quell)
     tot = sorted((n, s[0]) for n, s in deklariert.items()
                  if n not in geschrieben)
-    return tot, len(deklariert)
+    return tot, len(deklariert), adressiert
 
 
 def selbsttest() -> bool:
     """Vor dem Nenner. Bricht bei roter Abnahme ab (Muster uft-innendienst)."""
     ok = 0
+    # Die beiden `unsigned`-Felder sind der Rotbeweis zu MF-1163: vor der
+    # Korrektur las die Regel sie als `ird` und `abc` — Namen, die es im
+    # Baum nicht gibt.
     hdr_text = (
         "typedef struct {\n"
         "    int  wird_gesetzt;\n"
         "    bool nie_gesetzt_xyz;\n"
+        "    unsigned gezaehlt_wird;\n"
+        "    unsigned nie_gezaehlt_abc;\n"
         "} probe_t;\n")
-    src_text = "void f(probe_t *p) { p->wird_gesetzt = 1; }\n"
+    src_text = ("void f(probe_t *p) { p->wird_gesetzt = 1;"
+                " p->gezaehlt_wird++; }\n")
 
     import tempfile
     with tempfile.TemporaryDirectory() as d:
@@ -180,8 +267,26 @@ def selbsttest() -> bool:
         else:
             print("  SELBSTTEST 3 ROT: totes Feld faelschlich als "
                   "geschrieben gewertet — das Tor waere blind")
-    print(f"  Selbsttest {ok}/3")
-    return ok == 3
+        # 4: MF-1163 — `unsigned <name>;` wird als EIN Name gelesen, nicht
+        #    in Typ und Bruchstueck zerlegt. Vor der Korrektur stand hier
+        #    `ird` statt `gezaehlt_wird`; die Abwesenheit des Bruchstuecks
+        #    gehoert mitgeprueft, sonst faellt eine Rueckkehr nicht auf.
+        if "gezaehlt_wird" in deklariert and "ird" not in deklariert:
+            ok += 1
+        else:
+            print("  SELBSTTEST 4 ROT: `unsigned <name>;` falsch zerlegt — "
+                  f"gemeldet wurde {sorted(deklariert)}")
+        # 5: GEGENBEWEIS zu 4 — die Korrektur darf das Tor fuer
+        #    `unsigned`-Felder nicht blind machen. Ein nie geschriebenes
+        #    muss weiterhin als tot gelten.
+        if ("nie_gezaehlt_abc" in deklariert
+                and "nie_gezaehlt_abc" not in geschrieben):
+            ok += 1
+        else:
+            print("  SELBSTTEST 5 ROT: totes `unsigned`-Feld nicht mehr "
+                  "gemeldet — die Korrektur hat das Tor verengt")
+    print(f"  Selbsttest {ok}/5")
+    return ok == 5
 
 
 def main() -> int:
@@ -190,7 +295,7 @@ def main() -> int:
         print("  ABBRUCH: Selbsttest rot — kein Nenner ohne Abnahme")
         return 2
 
-    tot, gesamt = messen()
+    tot, gesamt, adressiert = messen()
     # `_pad`/`_reserved` heissen konventionell so, WEIL sie nie geschrieben
     # werden. Das ist eine Regel, keine Aufzaehlung von Faellen — deshalb
     # wird sie getrennt ausgewiesen und nicht stillschweigend abgezogen.
@@ -200,6 +305,11 @@ def main() -> int:
     print(f"    darunter _-praefigiert (Fuellung/reserviert): {len(fuellend)}")
     print(f"    verbleibend, also echte Zusagen ohne Einloesung: "
           f"{len(tot) - len(fuellend)}")
+    # MF-1163: zweite getrennt ausgewiesene Klasse, nach demselben Grundsatz
+    # wie die Fuellung darueber — benennen, nicht abziehen.
+    aus_param = [t for t in tot if t[0] in adressiert]
+    print(f"    darunter irgendwo als &x->feld uebergeben "
+          f"(Aus-Parameter moeglich, NICHT abgezogen): {len(aus_param)}")
 
     grenze = None
     if GRUNDLINIE.exists():
@@ -217,10 +327,20 @@ def main() -> int:
 
     print(f"  Grundlinie                      : {grenze}")
     if len(tot) > grenze:
-        neu = [f"{n} ({wo})" for n, wo in tot]
-        print(f"  FEHLER: {len(tot)} > {grenze} — neue tote Felder.")
-        for z in neu[:40]:
-            print(f"    {z}")
+        print(f"  FEHLER: {len(tot)} > {grenze} — die Zahl ist gestiegen.")
+        # MF-1163: hier stand "neue tote Felder", und die Liste darunter
+        # hiess `neu`. Sie war es nicht. Die Grundlinie ist eine ZAHL,
+        # keine Namensliste — WELCHE Felder neu sind, kann dieses Tor
+        # ueberhaupt nicht sagen, und die Aufzaehlung war die alphabetisch
+        # erste. Das hat einmal eine halbe Sitzung gekostet: gesucht wurde
+        # nach `_magic`, `_pad0`, `_pad1`, `_reserved1`, `_reserved2`, die
+        # seit Jahren im Baum stehen, waehrend der Zuwachs aus einem ganz
+        # anderen Header kam. Eine Beschriftung, die mehr behauptet als die
+        # Messung traegt, schickt den Leser an die falsche Stelle.
+        print(f"  (die ersten 40 von {len(tot)}, ALPHABETISCH — nicht die "
+              f"neuen; die Grundlinie ist eine Zahl)")
+        for n, wo in tot[:40]:
+            print(f"    {n} ({wo})")
         return 1
     if len(tot) < grenze:
         print(f"  Hinweis: Grundlinie auf {len(tot)} senken.")
@@ -248,11 +368,15 @@ def check(repo=None):
             break
     if grenze is None:
         return []
-    tot, _ = messen()
+    tot, _, _ = messen()
     if len(tot) <= grenze:
         return []
-    return ["%d tote Felder > Grundlinie %d; neu u.a.: %s"
-            % (len(tot), grenze,
+    # MF-1163: hier stand "neu u.a." — dieselbe Falschbeschriftung wie in
+    # main(). Dieses Tor kennt nur eine Zahl als Grundlinie und kann die
+    # neuen Namen nicht benennen; es sagt das jetzt.
+    return ["%d tote Felder > Grundlinie %d (Zuwachs %+d); erste fuenf "
+            "ALPHABETISCH, nicht die neuen: %s"
+            % (len(tot), grenze, len(tot) - grenze,
                ", ".join(n for n, _ in tot[:5]))]
 
 
