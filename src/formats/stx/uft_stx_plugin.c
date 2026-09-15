@@ -5,7 +5,16 @@
  * STX preserves sector timing and fuzzy bit masks for copy protection.
  * Magic: "RSY\0" (4 bytes). 16-byte file header + track descriptors.
  *
- * Reference: Pasti specification (Jean Louis-Guerin)
+ * Referenzen (MF-1165 — hier stand nur die erste, waehrend
+ * `docs/VERIFICATION_TIERS.md` nur die zweite nannte; eine Angabe fuer zwei
+ * verschiedene Dokumente, Klasse MF-938):
+ *   - Jean Louis-Guerins Pasti-Beschreibung samt AIR `PastiRead.cs` —
+ *     die Quelle der Tafeln in `uft_stx_air.c`.
+ *   - `atari.8bitchip.info/STXdesc.html` (P. Putnik, nach einem Artikel von
+ *     Markus Fritze) — die genaueste oeffentliche Feldtafel; sie nennt ihre
+ *     eigene Unvollstaendigkeit und raet bei Bit 0 des Spur-Flagworts, wo
+ *     unser Korpus-Abbild gegen sie entscheidet (siehe spec_verification).
+ *   - Hatari `src/includes/floppies/stx.h` als zweite Hand (MF-852).
  */
 #include "uft/uft_format_common.h"
 #include "uft/formats/stx/uft_stx_air.h"

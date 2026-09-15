@@ -107,6 +107,42 @@
 #define STX_TOOL_DC         0xCC    /* Discovery Cartridge */
 #define STX_TOOL_AUFIT      0x10    /* Aufit program */
 
+/*
+ * MF-1165: die Sektorgroesse aus dem Groessenkode — nur Bits 0-1 gelten.
+ *
+ * Die benannte Quelle dieses Formats sagt es woertlich (atari.8bitchip.info/
+ * STXdesc.html, Sektorkopf Versatz 0x0b): „Size of the sector from the
+ * address block identifying the sector (typically: 2=512 or 3=1024 bytes) -
+ * but may be more. **Then only bits 0-1 matter.**"
+ *
+ * Vorher stand an DREI Stellen `128 << sd[snum].id.size` mit dem rohen
+ * Byte. Was daraus folgte, gestaffelt:
+ *
+ *   Kode 4..7 — die Faelle, die die Seite ausdruecklich ankuendigt: die
+ *     Groesse wird 2048..16384 statt 512/1024. Und weil die Schranke
+ *     darunter `sec_pos + sec_size <= size` lautet, faellt dann der
+ *     `memcpy` AUS, waehrend der `malloc` schon gelaufen ist — der Leser
+ *     reichte einen NIE BESCHRIEBENEN Puffer heraus und nannte dessen
+ *     volle Laenge. Gemessen an einer 560-Byte-Pruefdatei mit Kode 6:
+ *     8192 Byte uninitialisierter Speicher als Sektordaten.
+ *   Kode 24 — `128 << 24` ist als `int` INT_MIN, also NEGATIV. Beim
+ *     Fuzzy-Lauf steht `fuzzy_offset += sec_size` ausserhalb der
+ *     Schranke, der naechste Sektor liest damit vor dem Puffer.
+ *   Kode >= 25 — undefiniertes Verhalten (Shift-Ueberlauf).
+ *
+ * Die Regel steht hier EINMAL, damit sie nicht wieder an drei Stellen
+ * auseinanderlaufen kann — dieselbe Ueberlegung wie bei MF-1164, wo die
+ * Spurbreite an drei Stellen gepflegt wurde und nur an einer stimmte.
+ *
+ * Was die Maskierung ausdruecklich NICHT tut: sie schreibt den Kode nicht
+ * um. `uft_stx_sector_view_t.id_size` gibt weiter das rohe Byte heraus —
+ * „das Format sagt 6" und „hier stehen 512 Byte" sind zwei Aussagen
+ * (Muster MF-980).
+ */
+static uint32_t stx_sektorgroesse(uint8_t groessenkode) {
+    return 128u << (groessenkode & 3u);
+}
+
 /*============================================================================
  * STRUCTURES
  *============================================================================*/
@@ -159,7 +195,9 @@ typedef struct {
     uint16_t bit_position;
     uint16_t read_time;
 
-    uint8_t* sector_data;       /* Sector data (128 << id.size bytes) */
+    uint8_t* sector_data;       /* Sektordaten, `sector_size` Byte —
+                                 * MF-1165: hier stand „128 << id.size",
+                                 * und genau das war der Fehler. */
     uint32_t sector_size;
     uint8_t* fuzzy_data;        /* Fuzzy mask (same size, NULL if none) */
     uint16_t* timing_data;      /* Timing values (sector_size/16 entries) */
@@ -351,7 +389,7 @@ stx_air_status_t stx_air_parse(const uint8_t* data, size_t size,
                 sec->has_rnf      = (sd[snum].fdc_flags & STX_SF_RNF) != 0;
                 sec->has_fuzzy    = (sd[snum].fdc_flags & STX_SF_FUZZY) != 0;
                 sec->has_bit_width= (sd[snum].fdc_flags & STX_SF_BIT_WIDTH) != 0;
-                sec->sector_size  = (uint32_t)(128 << sd[snum].id.size);
+                sec->sector_size  = stx_sektorgroesse(sd[snum].id.size);
 
                 /* Stats */
                 disk->total_sectors++;
@@ -430,7 +468,7 @@ stx_air_status_t stx_air_parse(const uint8_t* data, size_t size,
 
                 /* Only read data if not RNF */
                 if (!(sd[snum].fdc_flags & STX_SF_RNF)) {
-                    uint32_t sec_size = (uint32_t)(128 << sd[snum].id.size);
+                    uint32_t sec_size = stx_sektorgroesse(sd[snum].id.size);
                     sec->sector_data = (uint8_t*)malloc(sec_size);
 
                     uint32_t sec_pos = track_data_start + sd[snum].data_offset;
@@ -489,7 +527,7 @@ stx_air_status_t stx_air_parse(const uint8_t* data, size_t size,
 
             for (int snum = 0; snum < nsec; snum++) {
                 stx_air_sector_t* sec = &trk->sectors[snum];
-                int sec_size = (int)(128 << sd[snum].id.size);
+                int sec_size = (int)stx_sektorgroesse(sd[snum].id.size);
 
                 /* Transfer fuzzy mask to sector */
                 if (sec->has_fuzzy && fuzzy_mask) {

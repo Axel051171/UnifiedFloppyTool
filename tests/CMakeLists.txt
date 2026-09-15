@@ -3872,6 +3872,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
         target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+    elseif(${test_name} STREQUAL "test_stx_groessenkode")
+        # MF-1165: nur Bits 0-1 des Groessenkodes gelten. Dieselben drei
+        # Quellen wie test_stx_registrierter_leser, weil der Test durch den
+        # REGISTRIERTEN Pfad geht und zusaetzlich die AIR-Sicht befragt —
+        # nur dort kommt der rohe Kode `id_size` nach aussen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_stx_registrierter_leser")
         # MF-847: der EINZIGE STX-Leser, der an der Registry haengt.
         # Drei weitere liegen im Baum, darunter der vollstaendige
