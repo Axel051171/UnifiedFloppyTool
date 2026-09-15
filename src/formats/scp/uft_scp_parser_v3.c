@@ -35,6 +35,8 @@
  * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
  * eine beliebige Adresse gefunden. */
 #include "uft/formats/uft_v3_parsers.h"
+/* MF-1162: Kopfpruefsumme, Spurtabellen-Befund und Seiten-Deutung. */
+#include "uft/formats/uft_scp_integrity.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1358,6 +1360,76 @@ bool scp_parse(
     }
     
     /* Parse track offsets */
+    /* MF-1162: Kopfpruefsumme pruefen und die Spurtabelle begutachten.
+     *
+     * Beides ist ein BEFUND, kein Abbruch. Eine Ablehnung wuerde Bestaende
+     * unlesbar machen, die sonst brauchbar sind — aber gemeldet wird es, und
+     * das ist die einzige eingebaute Chance, nachtraegliche Veraenderung
+     * ueberhaupt zu bemerken. `SCP_DIAG_CHECKSUM_ERROR` gibt es seit :117
+     * samt Text; ausgeloest wurde es bis heute nie, und `disk->checksum`
+     * (:1139) wurde eingelesen und nirgends verglichen. `disk->modified`
+     * (:471) bekommt hier seine erste Bedeutung.
+     *
+     * Die Regel ist dreifach belegt: Jim Drew, Spezifikation v1.9 (Summe ab
+     * 0x10 bis EOF); `src/samdisk/scp.cpp:34` im eigenen Baum, das sie auch
+     * nachrechnet (:157); und MF-1055 hat sie fuer den UFT-SCHREIBER
+     * hergeleitet und dabei gemessen (0x01FAA3EC im Kopf gegen 0x01FAB15A
+     * nach der Regel). Die Leseseite war die einzige ohne sie. */
+    {
+        uint32_t stored = 0u, computed = 0u;
+        const uft_scp_cksum_result_t ck =
+            uft_scp_integrity_verify_checksum(data, size, &stored, &computed);
+
+        if (ck == UFT_SCP_CKSUM_MISMATCH) {
+            disk->modified = true;
+            scp_diagnosis_add(disk->diagnosis, SCP_DIAG_CHECKSUM_ERROR,
+                              0, 0, 0xFF,
+                              "Kopfpruefsumme falsch: gespeichert 0x%08X, "
+                              "berechnet 0x%08X - Datei nach der Aufnahme "
+                              "veraendert", stored, computed);
+        }
+        /* NOT_STORED (Feld ist 0) ist KEIN Befund: es gibt Erzeuger, die das
+         * Feld leer lassen, und ein Fehlalarm hier wuerde die Warnung
+         * entwerten. TOO_SHORT sieht der Kopf-Zerleger ohnehin schon. */
+
+        uft_scp_tdht_audit_t audit;
+        if (uft_scp_audit_tdht(data, size, &audit)) {
+            if (audit.looks_aliased) {
+                disk->modified = true;
+                scp_diagnosis_add(disk->diagnosis, SCP_DIAG_BAD_TDH, 0, 0, 0xFF,
+                                  "%u Zylinder fuehren beide Seiten auf "
+                                  "denselben Flussstrom - umgeschriebene "
+                                  "Spurtabelle. Die Datei enthaelt EINE Seite, "
+                                  "gibt aber zwei an (belegt: Seite 0 %u, "
+                                  "Seite 1 %u, Zylinder %u..%u)",
+                                  audit.aliased_pairs,
+                                  audit.populated_side0, audit.populated_side1,
+                                  audit.first_cyl == 0xFFFFu ? 0u
+                                                             : audit.first_cyl,
+                                  audit.last_cyl);
+            }
+
+            /* Zwei Zaehler des Befunds melden ECHTE Beschaedigung, und bis
+             * MF-1162 hat sie niemand ausgewertet: ein Spuroffset, der hinter
+             * das Dateiende zeigt, und einer, der in den Kopf oder in die
+             * Spurtabelle selbst zeigt. Beides kann keine Aufnahme erzeugen.
+             *
+             * Der Offsetlauf weist solche Spuren einzeln ab; was fehlte, war
+             * die Aussage, dass es SYSTEMATISCH ist — eine Datei mit 30
+             * Offsets hinter dem Dateiende ist nicht „30 fehlende Spuren",
+             * sie ist beschaedigt. Das ist die Lehre von MF-1026: eine Summe
+             * sagt etwas anderes als ihre Einzelteile. */
+            if (audit.out_of_range > 0u || audit.below_tdht > 0u) {
+                scp_diagnosis_add(disk->diagnosis, SCP_DIAG_BAD_TDH, 0, 0, 0xFF,
+                                  "Spurtabelle beschaedigt: %u Offsets zeigen "
+                                  "hinter das Dateiende, %u in Kopf oder "
+                                  "Tabelle hinein (von %u belegten)",
+                                  audit.out_of_range, audit.below_tdht,
+                                  audit.populated);
+            }
+        }
+    }
+
     if (!scp_parse_offsets(data, size, disk)) {
         return false;
     }
@@ -1368,7 +1440,48 @@ bool scp_parse(
     }
     
     /* Calculate sides */
-    disk->side_count = (disk->flags & 0x01) ? 2 : 1;
+    /* BEFUND MF-1162: hier stand `(disk->flags & 0x01) ? 2 : 1`.
+     *
+     * `SCP_FLAG_INDEX` ist bei :85 genau dieses Bit — „Index mark stored".
+     * Die Seitenzahl kam also aus der Frage, ob eine Indexmarke aufgezeichnet
+     * wurde. Zwei unabhaengige Falschaussagen in einer Zeile: jede indexlose
+     * Aufnahme meldete eine EINSEITIGE Diskette, jede indexgefuehrte eine
+     * ZWEISEITIGE — beides ohne Bezug zum tatsaechlichen Inhalt.
+     *
+     * Und es wirkte: :1724 und :1783 rechnen mit `side_count`. Dazu setzt
+     * `uft_scp_writer.c:159` `flags = SCP_FLAG_INDEX | SCP_FLAG_RW` — JEDE
+     * von UFT geschriebene SCP las sich damit als zweiseitig zurueck.
+     *
+     * Die Seitenzahl steht in Kopfbyte 0x0A, das :1135 schon einliest und
+     * das bis heute nirgends benutzt wurde: 0 = beide, 1 = nur Seite 0,
+     * 2 = nur Seite 1. Quelle: Jim Drew, „SuperCard Pro Image
+     * Specification" v1.9 (17.09.2019), gegengelesen in pySuperCardPro
+     * (`scpfile.py`) und a8rawconv (`rawdiskscp.cpp`).
+     *
+     * `uft_scp_resolve_sides()` entscheidet es, weil es den Kopf UND die
+     * Spurtabelle befragt: ein Erzeuger, der pauschal „beide" schreibt,
+     * obwohl nur eine Seite belegt ist, wird damit erkannt statt geglaubt. */
+    {
+        uft_scp_tdht_audit_t tdht;
+        const bool tdht_ok = uft_scp_audit_tdht(data, size, &tdht);
+        uft_scp_side_plan_t plan;
+        uft_scp_resolve_sides(disk->heads,
+                              (uint8_t)disk->start_track,
+                              (uint8_t)disk->end_track,
+                              tdht_ok ? &tdht : NULL,
+                              UFT_SCP_SIDES_AUTO, UFT_SCP_INTERP_NONE,
+                              &plan);
+        disk->side_count = (uint8_t)plan.head_count;
+
+        if (plan.header_contradicts) {
+            scp_diagnosis_add(disk->diagnosis, SCP_DIAG_BAD_TDH, 0, 0, 0xFF,
+                              "Kopfbyte 0x0A (%u) und Spurtabelle "
+                              "widersprechen sich: Seite 0 %s, Seite 1 %s",
+                              (unsigned)disk->heads,
+                              tdht.side0_empty ? "leer" : "belegt",
+                              tdht.side1_empty ? "leer" : "belegt");
+        }
+    }
     
     /* Calculate average RPM */
     float rpm_sum = 0;

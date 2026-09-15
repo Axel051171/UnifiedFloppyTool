@@ -699,8 +699,14 @@ HEADERS += \
     src/analysis/otdr/FloppyOtdrWidget.h
 
 # SCP - SuperCard Pro raw flux
+# MF-1162: uft_scp_integrity.c traegt Kopfpruefsumme, Spurtabellen-Befund und
+# Seiten-Deutung; der Parser bindet es ein. Abhaengigkeitsfrei (nur C11).
 SOURCES += \
-    src/formats/scp/uft_scp_parser_v3.c
+    src/formats/scp/uft_scp_parser_v3.c \
+    src/formats/scp/uft_scp_integrity.c
+
+HEADERS += \
+    include/uft/formats/uft_scp_integrity.h
 
 # IMD - ImageDisk
 SOURCES += \

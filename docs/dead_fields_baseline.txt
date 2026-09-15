@@ -131,4 +131,27 @@
 # Commits, und MF-1162 hebt ihn mit der eigenen Begruendung auf 1161,
 # so wie MF-868 es getan hat.
 
-1159
+#
+# MF-1162: 1159 -> 1161. Eine ERHOEHUNG um genau zwei, und sie ist
+# benannt: `include/uft/formats/uft_scp_integrity.h` bringt
+# `checksum_stored` und `tdht` mit. Beide WERDEN gefuellt — aber als
+# AUS-PARAMETER:
+#
+#     out->checksum = uft_scp_integrity_verify_checksum(
+#             data, size, &out->checksum_stored, &out->checksum_computed);
+#     uft_scp_audit_tdht(data, size, &out->tdht);
+#
+# `checksum_computed` steht daneben und gilt als geschrieben, weil der
+# Name im Baum auch links von einem `=` vorkommt — die beiden anderen
+# nicht. Das ist genau die Torgrenze, die MF-1163 gemessen und getrennt
+# ausgewiesen hat: 79 der 1161 (vorher 77 der 1159) werden irgendwo als
+# `&x->feld` uebergeben.
+#
+# Warum trotzdem gehoben und nicht umgeschrieben: die Felder sind
+# richtig gefuellt, der Aufruf ist die einzige sinnvolle Gestalt, und
+# eine Zuweisung nur dem Tor zuliebe einzuziehen waere „die Zahl als
+# Motiv" (MF-1077) mit umgekehrtem Vorzeichen. Die zwei stehen damit
+# sichtbar in der Klasse, die das Tor nicht sehen kann — dafuer ist die
+# getrennte Ausweisung da.
+
+1161

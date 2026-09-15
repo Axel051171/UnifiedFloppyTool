@@ -318,6 +318,23 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+    elseif(${test_name} STREQUAL "test_scp_kopf_seitenzahl")
+        # MF-1162: die Seitenzahl kam aus der Indexmarke. Der Rotbeweis
+        # dafuer war vorher nur im toten `#ifdef SCP_V3_TEST`-Block
+        # moeglich, den kein Bausystem definiert — jetzt hier, wo er
+        # fallen kann. Zugang ueber `scp_disk_sizeof()` und
+        # `scp_v3_geometrie()`, nicht ueber das Feldlayout.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_scp_integrity")
+        # MF-1162: Kopfpruefsumme, Spurtabellen-Befund und Seiten-Deutung.
+        # Das Modul ist abhaengigkeitsfrei (nur C11) — der Test braucht
+        # genau eine Quelle, keinen Korpus, keine Hardware, kein Netz, und
+        # baut seine sieben Pruefdateien selbst.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c)
     elseif(${test_name} STREQUAL "test_scp_layout")
         # Punkt 2.3: SCP-Ablage (Spurzahl / Seiten / Startspur)
         target_sources(${test_name} PRIVATE
@@ -3436,6 +3453,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -4278,6 +4296,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${UFT_FORMAT_LAYER_INCLUDES})
