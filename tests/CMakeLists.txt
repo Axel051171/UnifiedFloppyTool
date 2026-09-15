@@ -2996,7 +2996,12 @@ foreach(test_source ${TEST_SOURCES})
            # Registry. Genau die Begruendung, die MF-512 oben fuer
            # `test_disk_open_fuzz` gibt; eine eigene Quellenliste waere
            # eine zweite Wahrheit ueber dieselbe Sache.
-           OR ${test_name} STREQUAL "test_oeffentliche_api_erreicht_die_formate")
+           OR ${test_name} STREQUAL "test_oeffentliche_api_erreicht_die_formate"
+           # MF-1150: A4 Runde 2 — dieselbe Frage wie die Zeile darueber,
+           # nur an ECHTEN Korpusabbildern statt an synthetischen. Also
+           # auch dieselbe Quellenmenge: es geht durch den echten
+           # `uft_disk_open()`, das heisst durch die ganze Registry.
+           OR ${test_name} STREQUAL "test_oeffentliche_api_am_korpus")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
