@@ -1042,6 +1042,16 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_syn_gegen_ned_quellen")
+        # MF-1141: `syn` teilte jede Spur in 16 x 256 statt 8 x 512.
+        # Belegt an den NED-Originalquellen (MIT, Synclavier Digital):
+        # `Able/XPL/DEVUTIL:463` (8 Sektoren im hohen Byte von
+        # s#spdtrk), `Able/UTILCAT/MODS/DISKFORM:164` (Laengencode 2 =
+        # 512 Byte). Beide Teilungen ergeben 4096 Byte je Spur, weshalb
+        # der Groessenerkenner gruen blieb — gemessen war KEIN einziger
+        # der 1232 NED-Sektoren als ganze Einheit sichtbar.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/syn/uft_syn.c)
     elseif(${test_name} STREQUAL "test_groessenerkenner_stimmig")
         # MF-1041: drei kopflose Groessenerkenner. Die einzige Aussage,
         # die sich ohne fremde Referenz pruefen laesst, ist die innere

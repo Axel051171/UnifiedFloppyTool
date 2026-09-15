@@ -125,8 +125,14 @@ int main(void)
         unsigned long g = geoeffnet(&uft_format_plugin_syn, 630784u,
                                     "syn", &e);
         snprintf(d1, sizeof(d1), "open=%d, Geometrie ergibt %lu", (int)e, g);
+        /* MF-1141: hier stand „(77 x 2 x 16 x 256)". Belegt ist seit
+         * MF-1141 **8 x 512** (NED-Originalquellen, MIT) — und diese
+         * Zusage blieb dabei gruen, weil sie das PRODUKT prueft. Genau
+         * das ist die Lehre: ein Groessenerkenner kann eine falsche
+         * TEILUNG nicht sehen. Die Teilung nagelt
+         * `test_syn_gegen_ned_quellen.c` fest. */
         pruefe("syn: 630 784 Byte gehen auf, und die Geometrie erklaert "
-               "sie RESTLOS (77 x 2 x 16 x 256)",
+               "sie RESTLOS (77 x 2 x 8 x 512)",
                e == UFT_OK && g == 630784u, d1);
     }
     {
