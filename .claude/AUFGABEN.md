@@ -61,11 +61,27 @@ laufen fort und werden nie wiederverwendet.
     bestätigt (146 = 80+12+4+50). **S1 gehalten:** keine der fünf
     unbelegten Zahlen der Zulieferung ist übernommen, es gibt kein Feld
     `splice` und kein Herkunfts-Urteil.
-  · Als Nächstes **Phase 3** (`P3-455`, PC-Schutz aus Fehlsektormustern —
-    die Negativbedingung liegt schon vor).
-- **Beleg:** Phase 1 = **MF-1189** = `a27fb2d0` (9 Dateien, 894 Einfügungen,
-  alle Pre-Commit-Tore grün, `mcp=0`) · Phase 2 = **MF-1190**.
-  **Nicht gepusht** — C3.
+  · **Phase 3** (`P3-455`, PC-Schutz aus Fehlsektormustern): **ANGEHALTEN
+    MF-1192, und der Halt ist das Ergebnis.** Kein Code. Drei Gründe, jeder
+    einzeln hinreichend, alle gemessen: (1) im Korpus liegen **103**
+    Dateien und **0** geschützte PC-Abbilder — ein Rotbeweis für einen
+    Herstellernamen könnte nur gegen eine selbst nach der Tafel gebaute
+    Diskette prüfen, der geschlossene Kreis von MF-1009/MF-1028; (2) `P0-2`
+    ist mit der ausdrücklichen Begründung geschlossen, dass Verdrahten die
+    falsche Antwort ist; (3) `uft_pc_disk_if_t.is_bad(lba)` hat im Baum
+    keine Antwort — der Header dafür ist ein Phantom (9 von 9 Funktionen
+    ohne Rumpf, `P3-228`). **Die Lizenz sperrt hier NICHT** (Nachbau,
+    9 Sektorlisten sind keine Datenbank, MF-698 deckt die Bindung).
+    Vierter Befund: zwei der neun Muster sind über die Fehlsektoren nicht
+    unterscheidbar und müssten „mehrdeutig" melden. Nächster Handgriff
+    steht in `P3-455` und ist **nicht** die Tafel.
+  · Als Nächstes **Phase 4** (`P3-449`/`P3-451`, Bitkonfidenz aus A-006 —
+    `flux_count` → `flux_spread_16`, die Schwellen 96/12 mit `beleg`/
+    `quelle` und ohne Beleg `UNDECIDED`).
+- **Beleg:** Phase 1 = **MF-1189** = `a27fb2d0` (9 Dateien, 894 Einfügungen)
+  · Phase 2 = **MF-1190** = `e22e1b78` (6 Dateien, 856 Einfügungen). Beide
+  mit allen Pre-Commit-Toren grün und `mcp=0`. **Nicht gepusht** — C3;
+  gemessen liegen **9** Commits lokal.
 
 ---
 
@@ -80,13 +96,22 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
 **`A-008`** hoch (Zulieferung `UFT_C64PP_Protection_Catalog.zip`).
 
 > **Warteschlange, gezählt statt geschätzt (Stand 2026-09-16):** `A-008`
-> … `A-016` (neun Begutachtungen), dazu die drei heute aufgenommenen
+> … `A-016` (neun Begutachtungen), dazu die sieben heute aufgenommenen
 > `A-018` Apple DOS 3.3, `A-019` TR-DOS, `A-020` Amiga-Medienklassifikation,
-> und am Ende `A-004` (Punkt 7, angehalten am vereinbarten Schnitt) — **13
-> wartende Posten** bei einem laufenden. Die drei Neuen sind die einzigen,
-> die einen **Defekt im erreichbaren Pfad** behaupten (`A-019` Sonde,
-> `A-020` Klassierung); `A-018` ist eine Lücke. Vorgezogen wird nichts von
-> selbst — das ist `/aufgabe vor`.
+> `A-021` FAT12-Robustheit, `A-022` diskstack, `A-023` Apple-Sektorordnung,
+> `A-024` Audit-Umfang, und am Ende `A-004` (Punkt 7, angehalten am
+> vereinbarten Schnitt) — **17 wartende Posten** bei einem laufenden.
+>
+> Nach Art sortiert, damit die Reihenfolge entscheidbar ist:
+> · **Defekt im erreichbaren Pfad behauptet:** `A-019` (TR-DOS-Sonde liest
+>   angeblich drei falsche Felder), `A-020` (Amiga-Klassierung),
+>   `A-021` (FAT12 liefert bei Schaden erfundene Daten)
+> · **Lücke:** `A-018` (Apple DOS 3.3 fehlt auf der FS-Achse ganz),
+>   `A-023` (Apple-Sektorordnung, offener Punkt aus MF-714)
+> · **Begutachtung fremden Codes:** `A-008`…`A-016`, `A-022`
+> · **Methode statt Code:** `A-024`
+>
+> Vorgezogen wird nichts von selbst — das ist `/aufgabe vor`.
 
 > **Ein Befund aus `A-007` betrifft zwei wartende Posten.** MF-698 bindet
 > die verteilbare Fassung an GPL-3, und Apache-2.0 ist GPL-3-verträglich —
@@ -1132,6 +1157,150 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   `CHECK`-Zusagen; §1 heißt „Der Anlass: ein gemessener Gegenbeweis", und
   der wird nachgefahren, bevor er zitiert wird — bei A-006 fielen drei von
   vier meiner eigenen Erwartungen.
+- **Stand:** —
+- **Beleg:** —
+
+### A-021 · Zulieferung `UFT-NN — FAT12 lesen.zip` — FAT12 lesen, wenn die Diskette nicht mehr heil ist
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
+  — FAT12 lesen.zip\"  finde was ich vergessen habe und verbessere damit das"
+- **Kennzahl:** **keine der vier.** FAT12 ist Dateisystem-Ebene (FS-T1 laut
+  `docs/VERIFICATION_TIERS_FS.md`), keine Formatstufe. Der Wert liegt in
+  der Missionszeile: ein beschädigtes Abbild darf nicht erfundene Daten
+  liefern.
+- **Kanal:** **Port** — alle drei Quellen `SPDX: GPL-2.0-or-later`.
+- **Einfrier-Regel:** **ja** → Rotbeweis zuerst.
+- **OPEN_ITEMS:** `P3-15` (FAT12 hat mit `mformat` einen fremden Erzeuger)
+  · `P3-62` (erster fremder Prüfvektor für die Nibbelentpackung)
+  · `P3-142` (die FAT12/16-Grenze hat ZWEI hergeleitete Werte; dazu gibt
+  es ein Tor, gemessen 0)
+- **Fertig heißt:** jede neue Prüfung mit benannter Quelle im Header, die
+  Kettenfälle (abgerissen, im Kreis) mit Rotbeweis, und **kein** Sektor,
+  der erfundene Bytes als `UFT_SECTOR_OK` meldet.
+- **Aufwand:** **nicht schätzbar.**
+- **Die wichtigste Lage dazu, gemessen:** das ist die **direkte
+  Fortsetzung von MF-1183**. Dessen §„Geometrie: BPB, Größe, geraten" ist
+  genau der Dreizustand, den ich dort gebaut habe — BPB stimmt mit der
+  Dateigröße → nehmen; BPB widerspricht → absagen (MF-1039/MF-1027); kein
+  BPB → exakter Treffer in der benannten Achtzeilentafel, sonst absagen.
+  Die „fünfte BPB-Prüfung" der Zulieferung gehört deshalb gegen die vier
+  gehalten, die seit MF-1183 dort stehen, nicht gegen einen leeren Baum.
+  Umfang: 5 Einträge, **966** Zeilen (232 h / 360 c / 374 Test), **51**
+  `CHECK`-Zusagen; der Bericht hat §6 „was mir dabei passiert ist" und §9
+  „was ich nicht gebaut habe".
+- **Stand:** —
+- **Beleg:** —
+
+### A-022 · `Booyaka101/diskstack` auseinandernehmen — mehrere Abzüge EINER Diskette zusammenstimmen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/Booyaka101/diskstack.git nimm den code
+  komplett auseinander , sehr genau / finde alles und alles raussuchen was
+  ich übersehen habe  , stimme es mit mein aktuellen tool ab / - wo können
+  die formate verbessert werden / - ist es auf andere formate übertragbar /
+  - welche einstellungen fehlen noch / - was habe wir noch nicht / - brauch
+  es eine HAL-Erweiterungen verbessere damit mein tool"
+- **Kennzahl:** **keine der vier** unmittelbar. Mittelbar `leckende Tests
+  null` unberührt; der eigentliche Bezug ist die **fünfte, offene Zahl**
+  (MF-640) und `P3-387`.
+- **Kanal:** **Oracle — und das ist stärker als der Port.** Gemessen über
+  `gh api`: **MIT**, Python, 225 KB, 0 Sterne, letzter Push 2026-09-12,
+  nicht archiviert. MIT erlaubt den Port, aber es ist **Python** und UFT
+  ist C/Qt — ein Port wäre eine Neuschreibung. Ausgeführt ist es dagegen
+  eine **fremde Hand**, die `.scp`, KryoFlux-`.raw`, `.hfe` und
+  Sektorabbilder liest und sektorweise **abstimmt**: genau das, was
+  `src/recovery/uft_multiread_pipeline.c` tut (MF-473).
+- **Einfrier-Regel:** **ja**, sobald etwas im Decoder-/Recovery-Pfad
+  entsteht → Rotbeweis zuerst. Die Begutachtung selbst ist
+  Verifikationsarbeit.
+- **OPEN_ITEMS:** `P3-387` (ein Verlustprotokoll, das den Lauf überlebt)
+- **Fertig heißt:** ein Gutachten mit Lizenzurteil, Inventar-Abfrage und
+  Differenzlauf-Plan; jeder Fund mit Kennzahl und Kanal; die Frage nach
+  der HAL-Erweiterung **beantwortet**, nicht offen gelassen.
+- **Aufwand:** **nicht schätzbar.**
+- **Der Fund, der schon in der Beschreibung steht:** *„…and say what is
+  still missing … prints the `gw read --tracks=` command for what is still
+  bad."* Das ist ein Verlustbericht, der den **nächsten Befehl** nennt —
+  und genau diese Gestalt hat `src/core/uft_loss_report.c` heute nicht.
+  Der zweite Teil des Auftrags („wo können die Formate verbessert werden")
+  trifft damit nicht die Formatschicht, sondern die Berichtsschicht.
+- **Stand:** —
+- **Beleg:** —
+
+### A-023 · Zulieferung `Apple-Sektorordnung.zip` — der offene Punkt aus MF-714
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple-Sektorordnung.zip\"
+  finde was ich vergessen habe und verbessere damit das"
+- **Kennzahl:** **keine der vier** direkt; die Anordnungsachse ist
+  Vorarbeit für Formatstufen (`do`/`po`/`d13` stehen auf T1b/T2).
+- **Kanal:** **Port** — alle drei Quellen `GPL-2.0-or-later`.
+- **Einfrier-Regel:** **ja** → Rotbeweis zuerst, und die Skew-Tafel gehört
+  gegen die vorhandene Datenzeile gehalten, nicht daneben.
+- **OPEN_ITEMS:** `P3-422` (`uft_track_layout` hat gemessen **keinen**
+  Aufrufer) · berührt `P3-234` (die Apple-6-and-2-Tafel liegt
+  **siebenfach**, und nur eine Fassung ist oracle-geprüft)
+- **Fertig heißt:** die Ordnung steht als **eine** Datenzeile in
+  `include/uft/core/uft_sector_order.h` (MF-1175) — **kein** siebter
+  Apple-Tafel-Ort —, mit Produktivaufrufer im selben Commit (D2).
+- **Aufwand:** **nicht schätzbar.**
+- **Gemessene Lage:** 814 Zeilen (219 / 252 / 343), **48** `CHECK`. Der
+  Titel sagt „gelöst (**teilweise**)", §5 heißt „und wo der Weg nicht
+  trägt", §7 „was mir dabei passiert ist" — die Zulieferung benennt ihre
+  eigenen Grenzen, und §3 („die Skew-Tabelle ist ihr eigenes Inverses")
+  ist eine prüfbare Behauptung, die vor jeder Übernahme nachgerechnet
+  wird.
+- **Stand:** —
+- **Beleg:** —
+
+### A-024 · AUFTRAG Audit-Umfang: komplettes Repository statt CMake-Liste (Mengen A/B/C)
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „Nur die Dateien aus den CMake-Listen reichen nicht. …
+  Gerade die nicht in CMake stehenden Dateien sind beim UFT wichtig. Dort
+  können fertige, aber unerreichbare Parser, alte Versionen, Stubs oder
+  nicht verdrahtete Algorithmen liegen. … Danach wird in drei Mengen
+  getrennt: A: Von CMake gebauter Produktcode / B: Nur in Tests, Tools
+  oder Sonderkonfigurationen gebauter Code / C: Im Repository vorhandener,
+  aber nicht erreichbarer Code … Menge C wird nicht automatisch
+  repariert, sondern zuerst klassifiziert: REGISTER / MERGE / REFERENCE /
+  PARTIAL / BLOCKED / DELETE … **Keine Datei allein deshalb löschen, weil
+  sie nicht in CMake steht.** … Am Ende sollten drei getrennte Änderungen
+  entstehen"
+  <br>Ein Satz im Auftrag steht ohne Bezug und wird **zitiert, nicht
+  ausgelegt**: „Damit würdest du das Repository ziemlich sicher
+  beschädigen."
+- **Kennzahl:** **keine der vier** — es ist die Verlässlichkeit des
+  Prüfstands, wie `P3-421` und `P3-426`.
+- **Kanal:** **entfällt** (eigener Baum, eigene Methode).
+- **Einfrier-Regel:** **nein** für das Klassifizieren. **Ja**, sobald aus
+  einem REGISTER ein registriertes Plugin würde — dann greift das
+  Moratorium (1 neues Format = 2 Hebungen).
+- **OPEN_ITEMS:** `P3-379` (Waisenrolle: Register statt Sweep) ·
+  `P3-421` (`repo_scope` meldete einmal „git ls-files nicht verfügbar"
+  und prüfte daraufhin den ganzen Verzeichnisbaum) · `P3-426` (zwölf
+  GLOBs im Prüfstand)
+- **Fertig heißt:** die drei Mengen **abgeleitet** erzeugt (nicht
+  gepflegt), jede Datei der Menge C mit **einer** der sechs Dispositionen
+  belegt, und drei getrennte Commits — wobei jede Löschung die
+  `Ruecknahme:`-Zeile trägt, die der `commit-msg`-Haken erzwingt.
+- **Aufwand:** **nicht schätzbar.**
+- **Fünf Messungen, weil vier Teile der Vorgabe hier anders liegen:**
+  · „nicht nur CMake, sondern `git ls-files`" ist **schon Grundsatz** —
+    MF-636 mit `scripts/repo_scope.py` und **vier** belegten Vorfällen
+    veralteter Aufzählungen (MF-567, MF-578, MF-598, MF-633).
+  · `git submodule update --init --recursive` ist hier ein Leerlauf:
+    **`.gitmodules` existiert nicht**.
+  · `git lfs pull` ebenso: **0** `filter=lfs`-Zeilen in `.gitattributes`.
+  · „~155 Einträge unter `src/formats/`" — gemessen sind es **354** `.c`
+    und **11** `.h` (von **2889** versionierten Dateien im Baum). Woher
+    die 155 stammt, ist **offen**; keine der beiden Zahlen wird benutzt,
+    bevor das geklärt ist.
+  · Menge C ist **teils schon da**: `docs/orphan_baseline.txt` (328
+    Zeilen), `scripts/audit_orphan_modules.py`, die Waisenrolle. **Neu**
+    sind die sechs Dispositionen und die drei getrennten Commits.
+- **Und ein Punkt, der die empfohlene Vorgehensweise selbst betrifft:** ein
+  frischer `git clone` von GitHub würde die laufende Arbeit **nicht**
+  enthalten — gemessen liegen **9** Commits nur lokal (MF-1182 … MF-1190,
+  C3). Ein Audit auf dem Klon liefe gegen einen Stand ohne Phase 1 und 2.
+  Quelle ist deshalb der Arbeitsbaum, oder es wird vorher gepusht.
 - **Stand:** —
 - **Beleg:** —
 
