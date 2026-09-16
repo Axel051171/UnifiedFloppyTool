@@ -411,11 +411,19 @@ static const pruefling_t PRUEFLINGE[] = {
      *
      * Hier korrigiere ich meine eigene Begruendung aus der ersten
      * Charge — dort stand, `xfd` bleibe draussen, weil ich seine
-     * Geometrie raten muesste. Muss ich nicht: das Plugin RECHNET sie
-     * aus der Dateigroesse (`ss = (fs % 256 == 0 && fs > 92160) ? 256
-     * : 128`, `total = fs / ss`, `cylinders = (total + 17) / 18`), und
-     * fuer 92 160 Byte ergibt das eindeutig 720 Sektoren a 128 Byte auf
-     * 40 Zylindern. Eine abgeleitete Groesse ist keine geratene. */
+     * Geometrie raten muesste. Muss ich nicht: das Plugin NENNT sie,
+     * und fuer 92 160 Byte eindeutig — 720 Sektoren a 128 Byte auf 40
+     * Zylindern, EIN Kopf. Eine belegte Groesse ist keine geratene.
+     *
+     * BERICHTIGT MF-1175: hier stand die Ableitung als Formel
+     * (`ss = (fs % 256 == 0 && fs > 92160) ? 256 : 128`,
+     * `total = fs / ss`, `cylinders = (total + 17) / 18`). Die gilt
+     * seit MF-1164 nur noch als benannter Rueckfall FUER UNBEKANNTE
+     * Groessen; die vier — seit MF-1175 fuenf — Standardgroessen kommen
+     * aus `XFD_STANDARD[]`, und die Zylinderzahl aus
+     * `(total + spt*heads - 1) / (spt*heads)`. Fuer 92 160 Byte ergeben
+     * alte und neue Rechnung dasselbe; die Begruendung nennt jetzt aber
+     * den Weg, den der Code wirklich geht. */
     { "xfd", &uft_format_plugin_xfd, "xfd",
       40, 1, 18, 128, NULL, 0, NULL },
 

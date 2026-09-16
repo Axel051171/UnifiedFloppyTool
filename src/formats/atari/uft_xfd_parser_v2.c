@@ -54,7 +54,30 @@
 #define XFD_TRACKS_SD       40
 #define XFD_TRACKS_ED       40
 #define XFD_TRACKS_DD       40
-#define XFD_TRACKS_QD       80
+/* MF-1175: hier stand 80, und der QD-Block WIDERSPRACH SICH DAMIT SELBST —
+ * 80 Spuren x 2 Seiten x 18 Sektoren sind 2880, nicht die 1440 aus
+ * XFD_SECTORS_QD. Die XF551 Quad Density ist eine ZWEISEITIGE
+ * 40-Spur-Diskette.
+ *
+ * Belegt doppelt:
+ *   Erwin Reuss, „Die Formate der XF551", Compy-Shop-Magazin 4/88 —
+ *     Sektor 1 auf Track 0, Sektor 720 auf Track 39, Sektor 721 auf
+ *     Track 39, Sektor 1440 auf Track 0.
+ *   a8rawconv 0.95, src/a8rawconv/diskxfd.cpp:67-73 im eigenen Baum —
+ *     fuer `1440 * 256` gilt tracks = 40, sides = 2, spt = 18.
+ *
+ * Die Rueckseite ist dabei SPIEGELBILDLICH beschrieben (diskxfd.cpp:92-116:
+ * Seite 1 beginnt am Dateiende und laeuft rueckwaerts). Diese Abbildung
+ * steht NICHT hier, sondern als Datenzeile in
+ * `include/uft/core/uft_sector_order.h` (UFT_ORDER_SERPENTINE) — D3:
+ * Wissen nicht doppelt halten.
+ *
+ * Diese Datei hat im ganzen Baum KEINEN Aufrufer (gemessen: `git grep`
+ * findet `uft_xfd_parser_v2` nur in ihr selbst). Die Korrektur ist damit
+ * vorbeugend; der erreichbare Leser `src/formats/xfd/uft_xfd.c` trug
+ * dieselbe 80 auf einem anderen Weg und ist mit demselben Commit
+ * berichtigt (Klasse MF-519/MF-529). */
+#define XFD_TRACKS_QD       40
 
 #define XFD_SPT_SD          18
 #define XFD_SPT_ED          26

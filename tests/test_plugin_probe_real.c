@@ -422,9 +422,17 @@ TEST(jv1_accepts_only_whole_track_multiples) {
 TEST(xfd_is_deliberately_permissive_outside_its_canonical_sizes) {
     /* Pins CURRENT behaviour. The canonical Atari sizes score high, but the
      * fallback accepts ANY file that is a multiple of 128 or 256 and not
-     * larger than 266240 — with confidence 25. That is very broad for a
-     * format without a magic number; it only stays harmless because format
-     * selection compares confidences. Worth knowing, hence pinned. */
+     * larger than the biggest entry of the plugin's own size table — with
+     * confidence 25. That is very broad for a format without a magic number;
+     * it only stays harmless because format selection compares confidences.
+     * Worth knowing, hence pinned.
+     *
+     * BERICHTIGT MF-1175: hier stand „not larger than 266240". Die Schranke
+     * war ein zweites Literal neben der Tafel und ist seit MF-1175 die Tafel
+     * selbst — die groesste Zeile ist jetzt die zweiseitige Quad Density mit
+     * 368 640 Byte. Genau diese Doppelhaltung war der Befund: die Tafel
+     * lernte 1040 x 256 (MF-1164), die Schranke blieb bei 266 240, und eine
+     * gueltige 360-K-Diskette wurde abgewiesen. */
     uint8_t hdr[64];
     memset(hdr, 0, sizeof(hdr));
     int conf = -1;

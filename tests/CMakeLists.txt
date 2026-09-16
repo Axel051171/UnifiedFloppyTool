@@ -151,6 +151,14 @@ set(UFT_FORMAT_LAYER_DEPS
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            # MF-1175: die Anordnungsachse. `src/formats/xfd/uft_xfd.c`
+            # rechnet damit jede Dateiposition, statt „einseitig flach"
+            # anzunehmen — und weil der GLOB darueber nur `src/formats/*.c`
+            # einsammelt, fehlte das Modul beim Linken von 20 Zielen mit
+            # 54 undefinierten Bezuegen. Dieselbe Lage wie MF-1168 (13
+            # Bezuege auf drei Symbole), und deshalb steht es HIER und
+            # nicht in 20 Sonderzweigen.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
             # gemeinsame Liste, nicht in einen Sonderzweig.
             ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
@@ -1472,6 +1480,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/t1k/uft_t1k.c
             ${CMAKE_SOURCE_DIR}/src/formats/sam/uft_sam.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/pdp/uft_pdp.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
@@ -2439,6 +2451,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE GEO_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
@@ -2490,6 +2506,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE IHR_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${IHR_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
@@ -2551,6 +2571,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE CFD_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${CFD_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
@@ -2601,6 +2625,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE MREV_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${MREV_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             # uft_scp_parser.c kommt ueber uft_core (siehe src/core/CMakeLists.txt)
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
@@ -2872,6 +2900,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE OUTV_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${OUTV_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
@@ -2912,6 +2944,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE FLIP_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${FLIP_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
@@ -2952,6 +2988,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE GEO_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
@@ -2992,6 +3032,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE CADJ_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${CADJ_FORMAT_SOURCES}
+            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
+            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
+            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
@@ -3134,6 +3178,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_generic/uft_dsk_generic.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_disk_convert.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_disk_stream.c
@@ -3149,7 +3197,11 @@ foreach(test_source ${TEST_SOURCES})
             ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
-            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_scp_readers_agree")
@@ -3525,6 +3577,20 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_xfd_qd_serpentine")
+        # MF-1175: die Anordnungsachse liegt in `src/core/`, also ausserhalb
+        # des `IHR_FORMAT_SOURCES`-GLOBs — eigener Zweig aus demselben Grund
+        # wie `test_track_layout` (MF-1173) und `test_fdc_profil_verdrahtet`
+        # (MF-1168).
+        #
+        # Anders als bei jenen beiden hat dieses Modul einen
+        # PRODUKTIONSAUFRUFER: `src/formats/xfd/uft_xfd.c` rechnet seit
+        # MF-1175 jede Dateiposition damit — deshalb liegt das Plugin hier
+        # mit im Ziel. Die Achse allein zu pruefen waere die Luecke aus
+        # MF-1039/MF-635: Koennen ohne Tuer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
     elseif(${test_name} STREQUAL "test_fdc_gap3"
            OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet")
         # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —
@@ -3553,6 +3619,10 @@ foreach(test_source ${TEST_SOURCES})
         # vorhandene Zusage lief.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
             # uft_atr.c meldet die Boot-Layout-Erkennung ueber UFT_WARN (MF-833)
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -3561,6 +3631,10 @@ foreach(test_source ${TEST_SOURCES})
         # Both readers are linked so the two containers can be compared.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
             # MF-833: uft_atr.c meldet die Boot-Layout-Erkennung ueber UFT_WARN
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -3669,6 +3743,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
             ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
@@ -3715,6 +3793,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
             ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            # MF-1175: `uft_xfd.c` rechnet die Dateiposition mit der
+            # Anordnungsachse (UFT_ORDER_SERPENTINE fuer die
+            # zweiseitige QD) statt mit einer eigenen Formel.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
@@ -5301,6 +5383,12 @@ if(TARGET Qt6::Test)
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1175: `uft_xfd.c` ruft die Anordnungsachse, die in
+            # `src/core/` liegt und vom GLOB darueber nicht erfasst wird.
+            # Angehaengt an die VARIABLE statt an jeden Verbraucher, weil
+            # dieser GLOB drei Qt-Ziele speist.
+            list(APPEND _TOOLSTAB_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
             if(${qt_test_name} STREQUAL "test_tools_tab_convert")
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
@@ -5472,6 +5560,9 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_save_image_converts")
             file(GLOB_RECURSE SAVEIMG_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
+            list(APPEND SAVEIMG_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/uft_save_image.cpp
                 ${SAVEIMG_FORMAT_SOURCES}
@@ -5488,6 +5579,9 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_format_tab_capability_gating")
             file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
+            list(APPEND CAPGATE_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/formattab.cpp
                 ${CMAKE_SOURCE_DIR}/src/advanceddialogs.cpp

@@ -137,7 +137,21 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42
-- **Atari:** ATR, ATX, ST, STX, MSA, DCM, XFD
+- **Atari:** ATR, ATX, ST, STX, MSA, DCM, XFD — **und XFD seit MF-1175 auch
+  zweiseitig** (XF551 Quad Density, 1440 Sektoren zu 256 Byte = 368 640).
+  Vorher wies die Sonde diese Größe AB (`fs > 266240 -> return false`), also
+  war eine gültige Atari-Diskette über die Erkennung unerreichbar; `open`
+  hätte sie mit fest verdrahtetem `heads = 1` als 80-Spur-Diskette zerlegt
+  und `read_track` sagte für Kopf 1 unbedingt ab — **720 von 1440 Sektoren**.
+  Derselbe Fehler stand ein zweites Mal als Konstante im Waisen
+  `src/formats/atari/uft_xfd_parser_v2.c:57`, wo `XFD_TRACKS_QD 80` neben
+  `sides = 2` und 1440 Gesamtsektoren stand — 80 × 2 × 18 = 2880, die Zeilen
+  widersprachen sich selbst. **`ATR` kann es weiterhin NICHT:** dieselbe
+  Nutzlast mit 16 Byte Kopf davor meldet 80 Zylinder auf einem Kopf, und weil
+  seine Sonde 95 gegen 40 vergibt, gewinnt im Erkennungsrennen die falsche
+  Geometrie (gemessen, P3-425). Die Abbildung selbst steht genau **einmal**,
+  als Datenzeile `UFT_ORDER_SERPENTINE` in
+  `include/uft/core/uft_sector_order.h`
 - **IBM PC:** IMG, IMA, IMD, TD0, DMK, CQM
 - **Amstrad/Spectrum:** DSK, EDSK, TRD, SCL, MGT, TAP, TZX
 - **BBC/Acorn:** SSD, DSD, ADF, UEF
@@ -756,6 +770,15 @@ include/uft/          — Alle öffentlichen C-Header
                           das versprochene Modul fehlt. Ob es gebaut werden
                           soll, braucht einen gemessenen Anlass: welcher
                           Pfad kommt aus unvertrauenswürdiger Quelle?)
+                         Seit MF-1173 liegt hier das Spurmodell
+                         (`uft_track_layout.h`, Herkunft eines Sektors), seit
+                         MF-1175 die **Anordnungsachse**
+                         (`uft_sector_order.h`) — sechs Reihenfolgen, in denen
+                         dieselben Sektoren in einer Abbilddatei liegen können,
+                         als EINE Datenzeile je Fall statt als Rechnung in
+                         jedem Plugin. `src/formats/xfd/uft_xfd.c` ist ihr
+                         erster Produktionsaufrufer; `uft_track_layout` hat
+                         weiterhin keinen (P3-422)
   encoding/            — Encoding Detection Boost
   flux/                — Flux Decoder, SCP Parser
   formats/             — Format-spezifische Header
