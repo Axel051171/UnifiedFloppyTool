@@ -157,9 +157,26 @@ Postens wären zwei Wahrheiten (D3).
 
 Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
 `A-007` (MF-1186 = `87abb0b3`), **`A-017`** (Phasen 1–5, MF-1189…MF-1195,
-gepusht; Nachtrag MF-1199). `/aufgabe weiter` arbeitet seit 2026-09-16 am
-hochgezogenen **`A-008`** (Zulieferung `UFT_C64PP_Protection_Catalog.zip`);
-danach zieht es `A-009` hoch.
+gepusht; Nachtrag MF-1199), **`A-008`** und **`A-009`** (MF-1201 =
+`618ff62b`), **`A-010`** und **`A-011`** (MF-1202). Alle vier
+Begutachtungen liegen als Dokument in `tools/uft-scout/out/`; der EINBAU
+ist bei jeder ein eigener, noch nicht aufgenommener Posten.
+
+`/aufgabe weiter` zieht als Nächstes **`A-012`** hoch
+(`yas-sim/xm7-related-tools`, FM-7).
+
+> **Was die vier Begutachtungen zusammen ergeben haben — ein Muster, kein
+> Einzelfall.** Drei der vier Zulieferungen liefern `UnifiedFloppyTool.pro`
+> und `tests/CMakeLists.txt` als „aktuelle Verdrahtung" mit, und sie sind
+> jedes Mal **kleiner als die des Baums**. Bei `A-009` hätte eine
+> Dateiübernahme **vier verdrahtete GUI-Reiter still wieder abgehängt**
+> (MF-1194), bei `A-008` einen gemessenen Kommentar über einen behobenen
+> Defekt gelöscht. Nur `A-010` überschreibt nichts Gemessenes — dort ist die
+> Überlappung eine echte Umschreibung.
+>
+> **Die Regel daraus, für jede künftige Zulieferung: nie die Datei, immer
+> die Zeilen.** Sie kostet beim Einbau mehr und ist der einzige Weg, der
+> keine stille Rücknahme erzeugt.
 
 > **Warteschlange, gezählt statt geschätzt (Stand 2026-09-16):** `A-008`
 > … `A-016` (neun Begutachtungen), dazu die sieben heute aufgenommenen
@@ -467,7 +484,8 @@ danach zieht es `A-009` hoch.
   **MF-1186 = `87abb0b3`**; Korrektur und Nachtrag **MF-1187** (Hash folgt).
 
 ### A-008 · Zulieferung `UFT_C64PP_Protection_Catalog.zip` begutachten
-- **Status:** **in Arbeit** seit 2026-09-16 · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist ein
+  eigener Posten) · MF-1201 = `618ff62b` · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
   raussuchen was ich übersehen habe / - wo können die formate verbessert
   werden / - ist es auf andere formate übertragbar / - welche einstellungen
@@ -634,7 +652,8 @@ danach zieht es `A-009` hoch.
   Sitzung vorübergehend nicht committierbar, siehe A-017 Nachtrag).
 
 ### A-009 · Zulieferung `UFT_Atari_ST_Cartridge_Detection.zip` begutachten
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist ein
+  eigener Posten) · MF-1201 = `618ff62b` · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
   raussuchen was ich übersehen habe / - wo können die formate verbessert
   werden / - ist es auf andere formate übertragbar / - welche einstellungen
@@ -745,7 +764,8 @@ danach zieht es `A-009` hoch.
   `tools/uft-scout/out/a009_atari_st_cartridge.gutachten.md`; Commit folgt.
 
 ### A-010 · Zulieferung `FloImg-extrakt.zip` (Ganzdurchläufe · Mediendiagnosen) auseinandernehmen
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist ein
+  eigener Posten) · MF-1202 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „nimm den code komplett auseinander , sehr genau / finde
   alles und alles raussuchen was ich übersehen habe , stimme es mit mein
   aktuellen tool ab / - wo können die formate verbessert werden / - ist es
@@ -810,11 +830,43 @@ danach zieht es `A-009` hoch.
 - **Aufwand:** Begutachtung eine Sitzung (279 Zeilen Bericht + 4
   Quelldateien + 1 Test + 2 Dateidiffs gegen lebenden Code). Einbau
   **nicht schätzbar** — er hängt am CLI-Konflikt und an P3-284.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a010_floimg_passes_diagnosen.gutachten.md`, (a)…(f).
+  **Die beste der vier heute begutachteten Zulieferungen**, und das ist
+  gemessen, nicht gefühlt:
+  · **(a) Jede der 14 öffentlichen Funktionen einzeln, `rc` je Lauf:**
+    **10 gibt es** (`uft_osvol_open/close/read/write/query_geometry/
+    lba_to_chs/total_sectors/image_size/status_summary`, `uft_osvol_t` —
+    alle aus MF-1176), **4 gibt es nicht** (`uft_mdiag_diagnose/report/
+    writable`, `uft_mdiag_result_t`, je rc 1 / 0 Treffer). Eine Abweichung:
+    `uft_osvol_image_size` steht im Header und im Test, **nicht** in
+    `src/hal/uft_os_volume.c`.
+  · **(b) Zeilendiff:** `.h` **+29/−3** (2 Blöcke), `.c` **+120/−44**
+    (5 Blöcke). **Die 44 entfernten Zeilen sind eine UMSCHREIBUNG von
+    `xfer_range()`, keine Rücknahme** — anders als bei A-008 und A-009
+    geht dabei nichts Gemessenes verloren. **ABI richtig gelöst, gemessen:**
+    `UFT_OSVOL_SEC_OK_LATE_PASS` ist **angehängt**, die vier vorhandenen
+    Zustände behalten ihre Zahl.
+  · **Der inhaltliche Kern trifft `P3-284`.** Nachgemessen mit
+    Kommentarfilter: `adaptive_passes` hat **eine** Deklaration
+    (`uft_multiread_pipeline.h:280`), **eine** Zuweisung
+    (`uft_multiread_pipeline.c:93`) und **zwei Kommentare** — **null
+    lesende Stellen**. Der Begriff „Ganzdurchlauf" aus dieser Zulieferung
+    wäre der erste Ort im Baum, an dem er etwas bedeutet.
+  · **(d) Der CLI-Konflikt entfällt** — gemessen trägt von den vier
+    Quelldateien nur `test_passes.c` ein `int main`, und das ist ein Test.
+  · **(e) Die Lizenz ist NICHT offen** — alle vier Dateien tragen
+    `SPDX-License-Identifier: GPL-2.0-or-later`, die Projektlizenz. Offen
+    bleibt allein, ob die FloImg-Aussage („Ganzdurchläufe bringen mehr als
+    sofortige Wiederholungen") belegt ist; sie ist die Behauptung eines
+    Werkzeugautors von 2011 und im Baum **nirgends nachgemessen**.
+  · **(f)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a010_floimg_passes_diagnosen.gutachten.md`.
 
 ### A-011 · Zulieferung `Metadaten.zip` (Herkunft · Datierung über die VSN) begutachten
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist ein
+  eigener Posten) · MF-1202 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
   raussuchen was ich übersehen habe / - wo können die formate verbessert
   werden / - ist es auf andere formate übertragbar / - welche einstellungen
@@ -877,6 +929,38 @@ danach zieht es `A-009` hoch.
   an der Bytefolge-Frage und daran, ob ein Träger mit bekanntem
   Formatierungsdatum beschafft werden kann (die Zulieferung nennt das
   ausdrücklich als „nicht verifiziert").
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a011_metadaten_vsn_datierung.gutachten.md`, (a)…(f).
+  · **(b) Der Prüfvektor ist SELBST nachgerechnet und trifft.**
+    `19.10.2003 22:33:27.01 -> 2514-1DF4`, gerechnet statt im Kopf:
+    `sekunde*256+hundertstel` = 6913 = `0x1B01`, `monat*256+tag` = 2579 =
+    `0x0A13`, **lo = 9492 = `0x2514`**; `stunde*256+minute` = 5665 =
+    `0x1621`, `jahr` = 2003 = `0x07D3`, **hi = 7668 = `0x1DF4`**. Beide
+    Wörter und alle vier Zwischenwerte treffen. Das ist der einzige
+    Rotbeweis dieser Reihe, der von außen kommt.
+  · **(c) Die Bytefolge-Frage bleibt offen — ist aber jetzt ENTSCHEIDBAR.**
+    Gemessen liest `src/fs/uft_fat12.c:221` `le32(d + 0x27)` (die
+    Zulieferung nennt Zeile 191; die Zeile stimmt, die Nummer nicht). Aus
+    `25 14 1D F4` wird als `le32` **`0xF41D1425`**, als zwei BE-Wörter mit
+    lo zuerst **`0x1DF42514`**. **Der Prüfstein liegt schon im Baum:**
+    `tests/test_win98_fdb.c:279` hält `0x27156C21` aus einem ECHTEN
+    Win98-Abbild fest — wer die vier Rohbytes daneben legt, hat die
+    Bytefolge gemessen statt zitiert. Zweite Probe: ein Zeitstempel muss
+    sich in ein plausibles Datum zurückrechnen lassen.
+  · **(d) Zahl der Metadatenmodelle: ZWÖLF.** `volume_serial` ist als
+    Strukturfeld in zwölf Headern deklariert (`mfm_detect.h`,
+    `uft_fat_bootsector.h` dreimal, `formats/uft_fat12.h`, `uft_fdi.h`,
+    `fs/uft_fat12.h`, `fs/uft_fat32.h` zweimal, `uft/uft_fat12.h`,
+    `uft_xdf_pxdf.h` zweimal) — **plus eine dreizehnte Stelle mit einem
+    ANDEREN Namen**, `src/fs/uft_fat12.c:221` (`v->serial`). Das ist
+    `MF-1177` in der Metadatenschicht.
+  · **(e) Die Lizenz ist NICHT offen** — alle vier Quelldateien tragen
+    `SPDX-License-Identifier: GPL-2.0-or-later`.
+  · **Neu im Baum:** `uft_vsn_compute`, `uft_vsn_from_bytes` je rc 1 /
+    0 Treffer. **Der Baum speichert die VSN und deutet sie nicht.**
+  · **(f)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a011_metadaten_vsn_datierung.gutachten.md`.
 - **Stand:** —
 - **Beleg:** —
 
