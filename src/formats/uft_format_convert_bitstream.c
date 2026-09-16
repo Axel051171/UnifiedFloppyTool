@@ -16,6 +16,10 @@
 /* MF-1168: die Profiltafel des FDC. Sie fuehrt rpm und raw_bits fuer 17
  * Geometrien und hatte bis zu diesem Commit keinen einzigen Aufrufer. */
 #include "uft/formats/uft_fdc_gaps.h"
+/* P3-423: die IMG-Geometrie kommt aus dem BPB der Diskette, nicht aus
+ * Groessenbereichen. Der Leser und die acht Geometriezeilen liegen seit
+ * Jahren daneben und hatten keinen Produktivaufrufer. */
+#include "uft/formats/fat/uft_fat_bootsector.h"
 
 /* SCP speichert Flusslaengen als 16-Bit-Vielfache von 25 ns. */
 #ifndef UFT_SCP_TICK_NS
@@ -866,18 +870,155 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
             return UFT_ERR_INVALID_FORMAT;
         }
     } else {
-        /* IMG: detect from file size */
-        if (src_size <= 368640) {
-            cylinders = 40; sectors = 9;
-        } else if (src_size <= 737280) {
-            cylinders = 80; sectors = 9;
-        } else if (src_size <= 1228800) {
-            /* 1,2 MB im 5,25-Zoll-HD-Laufwerk — 360 U/min (MF-1166). */
-            cylinders = 80; sectors = 15; bitrate = 500; rpm = 360;
-            iface = HFE_IF_IBMPC_HD;
+        /* IMG: die Geometrie steht IN der Diskette (P3-423).
+         *
+         * Hier standen vier `else if`-Bereiche ueber der Dateigroesse, und
+         * MF-1174 hat gemessen, was sie treffen: von zwoelf echten
+         * Diskettengroessen **genau vier** (368 640 / 737 280 / 1 228 800 /
+         * 1 474 560). Die anderen acht bekamen eine falsche Geometrie —
+         * 160K (40x1x8x512) wurde 40x2x9x512, also Kopfzahl UND Sektorzahl
+         * falsch; BBC DFS traf denselben Zweig; PC-98 2HD (77x2x8x1024)
+         * wurde 80x2x18x512. Seit MF-1174 wird abgesagt statt falsch
+         * gelesen — ehrlich, aber unfaehig.
+         *
+         * Eine FAT-Diskette BESCHREIBT SICH SELBST. Der BPB fuehrt
+         * `bytes_per_sector` (0x0B), `total_sectors_16` (0x13),
+         * `media_type` (0x15), `sectors_per_track` (0x18) und
+         * `head_count` (0x1A); `fat_analyze_boot_sector()` liest das
+         * alles, und `fat_find_geometry()` fuehrt acht Geometriezeilen.
+         * Beide lagen im Baum und hatten **keinen** Produktivaufrufer —
+         * dritte Auflage des Musters aus MF-1015 und MF-1168: die richtige
+         * Tafel liegt da, daneben raet Code.
+         *
+         * Drei Regeln, und jede sagt bei Nichterfuellung AB:
+         *
+         *  (1) BPB lesbar UND mit der Dateigroesse vereinbar -> er gilt.
+         *  (2) BPB lesbar, aber im WIDERSPRUCH zur Dateigroesse -> Absage.
+         *      Zwischen zwei Aussagen derselben Diskette wird nicht
+         *      geraten (MF-1039), und eine Geometrie, die nicht in die
+         *      Datei passt, liest hinter das Dateiende (MF-1027).
+         *  (3) kein lesbarer BPB -> EXAKTER Treffer in der benannten
+         *      Achtzeilen-Tafel, sonst Absage. Das ist nicht dasselbe wie
+         *      die alten `<=`-Bereiche: die acht Zeilen haben paarweise
+         *      verschiedene Sektorsummen, ein Treffer ist also eindeutig,
+         *      und 204 800 (BBC DFS) oder 409 600 (Apple 800K) treffen
+         *      keine — sie werden abgesagt statt beansprucht.
+         *
+         * Von fremder Hand bestaetigt, ausgefuehrt und nicht gelesen:
+         * hxcfe meldet fuer eine 163 840-Byte-Datei „40 tracks, 1 side(s),
+         * 8 sectors/track, rpm:300" und schreibt eine IMD, in der 319 von
+         * 319 selbstbenennenden Sektoren an ihrer eigenen Ortsmarke
+         * stehen. floptool taugt hier NICHT als zweite Hand: es erkennt
+         * die BPB-freie Fassung identisch, entscheidet also ueber die
+         * Groesse — dieselbe Falle, die hier behoben wird. */
+        fat_analysis_result_t fa;
+        int bpb_lesbar = 0;
+
+        if (fat_analyze_boot_sector(src_data, src_size, &fa) == 0
+            && fa.has_boot_signature
+            && (fa.bytes_per_sector == 128u || fa.bytes_per_sector == 256u
+                || fa.bytes_per_sector == 512u
+                || fa.bytes_per_sector == 1024u)
+            && fa.sectors_per_track >= 1u && fa.sectors_per_track <= 63u
+            && fa.head_count >= 1u && fa.head_count <= 2u
+            && fa.total_sectors > 0u) {
+            bpb_lesbar = 1;
+        }
+
+        if (bpb_lesbar) {
+            size_t sagt = (size_t)fa.total_sectors * fa.bytes_per_sector;
+            unsigned pro_zyl = (unsigned)fa.sectors_per_track
+                             * (unsigned)fa.head_count;
+
+            if (sagt != src_size || pro_zyl == 0u
+                || fa.total_sectors % pro_zyl != 0u) {
+                /* Regel (2): der Kopf widerspricht der Datei. */
+                result->error = UFT_ERR_INVALID_FORMAT;
+                uftc_add_warning(result,
+                         "sectors->HFE: the BPB describes %u sectors x %u "
+                         "bytes (%zu bytes) but the file has %zu, or %u "
+                         "sectors do not divide into %u per cylinder. The "
+                         "disk contradicts itself; refused rather than "
+                         "choosing one of its two statements (P3-423, "
+                         "MF-1039/MF-1027).",
+                         (unsigned)fa.total_sectors,
+                         (unsigned)fa.bytes_per_sector, sagt, src_size,
+                         (unsigned)fa.total_sectors, pro_zyl);
+                return UFT_ERR_INVALID_FORMAT;
+            }
+            cylinders   = (int)(fa.total_sectors / pro_zyl);
+            heads       = (int)fa.head_count;
+            sectors     = (int)fa.sectors_per_track;
+            sector_size = (int)fa.bytes_per_sector;
         } else {
-            cylinders = 80; sectors = 18; bitrate = 500;
-            iface = HFE_IF_IBMPC_HD;
+            /* Regel (3): kein lesbarer BPB — die benannte Tafel, exakt. */
+            const fat_disk_geometry_t *g =
+                fat_find_geometry((uint32_t)(src_size / 512u), 0u);
+
+            if (!g || (size_t)g->total_sectors * g->bytes_per_sector
+                      != src_size) {
+                result->error = UFT_ERR_INVALID_FORMAT;
+                uftc_add_warning(result,
+                         "sectors->HFE: the image carries no readable FAT "
+                         "BPB (no 0x55AA signature or implausible fields) "
+                         "and its size %zu matches none of the eight "
+                         "geometries in fat_find_geometry() exactly. "
+                         "Refused rather than derived from a size range — "
+                         "the old ranges hit 4 of 12 real sizes and gave "
+                         "the other eight a wrong geometry (P3-423, "
+                         "MF-1174).",
+                         src_size);
+                return UFT_ERR_INVALID_FORMAT;
+            }
+            cylinders   = (int)g->tracks;
+            heads       = (int)g->heads;
+            sectors     = (int)g->sectors_per_track;
+            sector_size = (int)g->bytes_per_sector;
+        }
+
+        /* Bitrate und Drehzahl folgen der SPURBELEGUNG, nicht der
+         * Dateigroesse — und nur, wo es eine Quelle gibt. Belegt durch
+         * cw2dmk `jv3.h` (GPL-2, nur GELESEN — Kanal *Spec*), das die
+         * Herleitung als DATENbytes je Spur mitfuehrt (MF-1166):
+         *     250 kbit/s @ 300 U/min ->  6250
+         *     500 kbit/s @ 360 U/min -> 10416
+         *     500 kbit/s @ 300 U/min -> 12500
+         *
+         * Die Kapazitaet allein entscheidet die beiden HD-Faelle NICHT:
+         * 18 x 512 = 9216 passt auch in 10 416. Unterschieden werden sie
+         * deshalb an der Sektorzahl, und zwar nur fuer die ZWEI Faelle,
+         * fuer die dieser Baum eine Quelle hat — 15 Sektoren sind die
+         * 1,2-M-Diskette im 5,25-Zoll-HD-Laufwerk mit 360 U/min, 18 die
+         * 1,44-M-Diskette mit 300. Alles andere ueber DD wird ABGESAGT,
+         * samt seinen Zahlen: eine Drehzahl zu erfinden waere genau der
+         * Verstoss aus MF-1077. Das trifft die 2,88-M-ED-Diskette
+         * (36 x 512 = 18 432, 1000 kbit/s ohne Quelle im Baum) und
+         * PC-98 2HD (8 x 1024 = 8192, dessen Drehzahl als P3-431
+         * ausdruecklich widersprüchlich belegt ist). */
+        {
+            unsigned je_spur = (unsigned)sectors * (unsigned)sector_size;
+
+            if (je_spur <= 6250u) {
+                bitrate = 250; rpm = 300; iface = HFE_IF_IBMPC_DD;
+            } else if (sectors == 15) {
+                bitrate = 500; rpm = 360; iface = HFE_IF_IBMPC_HD;
+            } else if (sectors == 18) {
+                bitrate = 500; rpm = 300; iface = HFE_IF_IBMPC_HD;
+            } else {
+                result->error = UFT_ERR_INVALID_FORMAT;
+                uftc_add_warning(result,
+                         "sectors->HFE: geometry %d x %d x %d x %d needs "
+                         "%u data bytes per track, which exceeds the "
+                         "6250 of 250 kbit/s at 300 rpm, and %d sectors "
+                         "per track is neither the sourced 15 (1.2M, 500 "
+                         "kbit/s at 360 rpm) nor 18 (1.44M, 500 at 300). "
+                         "No source in this tree names a rate for it, so "
+                         "it is refused instead of invented (P3-423, "
+                         "MF-1166/MF-1077).",
+                         cylinders, heads, sectors, sector_size, je_spur,
+                         sectors);
+                return UFT_ERR_INVALID_FORMAT;
+            }
         }
     }
 

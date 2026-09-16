@@ -91,6 +91,8 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 
 /* HxC-HFE-v1-Kopf, Feldlage aus der Formatbeschreibung — bewusst als
  * Versatzkonstanten und nicht ueber `hfe_header_t`. */
+#define HFE_OFF_TRACKS        9u   /* uint8          */
+#define HFE_OFF_SIDES        10u   /* uint8          */
 #define HFE_OFF_BITRATE      12u   /* LE16, kbit/s */
 #define HFE_OFF_RPM          14u   /* LE16          */
 #define HFE_OFF_IFACE        16u
@@ -101,6 +103,8 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define GR_1440K  ((size_t)80u * 2u * 18u * 512u)   /* 1 474 560 */
 #define GR_1200K  ((size_t)80u * 2u * 15u * 512u)   /* 1 228 800 */
 #define GR_2880K  ((size_t)80u * 2u * 36u * 512u)   /* 2 949 120 */
+#define GR_160K   ((size_t)40u * 1u *  8u * 512u)   /*   163 840 */
+#define GR_BBC    ((size_t)80u * 1u * 10u * 256u)   /*   204 800 */
 
 static uint8_t g_img[GR_2880K];        /* groesster Fall */
 static uint8_t g_kopf[2048];           /* Kopf + erster LUT-Block */
@@ -113,6 +117,38 @@ static void muster(size_t n)
 {
     for (size_t i = 0; i < n; i++)
         g_img[i] = (uint8_t)(i * 7u + (i >> 9) * 13u + 1u);
+}
+
+/* Schreibt einen echten FAT-BPB in die ersten 512 Byte von `g_img`.
+ *
+ * Jedes Feld steht an seiner AUSGESCHRIEBENEN Stelle und nicht ueber
+ * `fat_create_boot_sector()` — sonst befragt die Pruefdatei dieselbe Quelle
+ * wie der Pruefling (Klasse MF-1000, und bei `apridisk`/MF-1009 war genau
+ * das der Grund, warum ein Rundlauf gruen war).
+ *
+ * Aufrufer setzt `muster()` VOR diesem Aufruf, sonst ueberschreibt das
+ * Muster den Bootsektor wieder. */
+static void bpb_schreiben(unsigned spt, unsigned heads, unsigned total,
+                          unsigned bps, uint8_t media, int mit_kennung)
+{
+    memset(g_img, 0, 512);
+    g_img[0x00] = 0xEB; g_img[0x01] = 0x3C; g_img[0x02] = 0x90;  /* JMP/NOP */
+    memcpy(g_img + 0x03, "UFT-P423", 8);                         /* OEM     */
+    g_img[0x0B] = (uint8_t)(bps & 0xFFu);                        /* bps     */
+    g_img[0x0C] = (uint8_t)(bps >> 8);
+    g_img[0x0D] = 1u;                                            /* spc     */
+    g_img[0x0E] = 1u;                                            /* reserved*/
+    g_img[0x10] = 2u;                                            /* FATs    */
+    g_img[0x11] = 64u;                                           /* root    */
+    g_img[0x13] = (uint8_t)(total & 0xFFu);                      /* total16 */
+    g_img[0x14] = (uint8_t)(total >> 8);
+    g_img[0x15] = media;                                         /* media   */
+    g_img[0x16] = 1u;                                            /* spf     */
+    g_img[0x18] = (uint8_t)(spt & 0xFFu);                        /* spt     */
+    g_img[0x19] = (uint8_t)(spt >> 8);
+    g_img[0x1A] = (uint8_t)(heads & 0xFFu);                      /* heads   */
+    g_img[0x1B] = (uint8_t)(heads >> 8);
+    if (mit_kennung) { g_img[0x1FE] = 0x55u; g_img[0x1FF] = 0xAAu; }
 }
 
 static int datei_existiert(const char *pfad)
@@ -272,13 +308,32 @@ TEST(zu_kurze_datei_wird_abgesagt)
     ASSERT(wandeln(GR_1440K - 1u, pfad, NULL) != UFT_OK);
     remove(pfad);
 
-    /* Die Klasse, die die Messung gefunden hat: eine 160-K-Diskette
-     * (40 x 1 x 8 x 512) wurde als 40 x 2 x 9 x 512 gelesen — Kopfzahl und
-     * Sektorzahl falsch — und 204 800 der 368 640 Byte waren erfunden,
-     * mehr als die Diskette selbst hat. */
+    /* BERICHTIGT P3-423. Hier stand, die 160-K-Diskette werde abgesagt —
+     * und diese Zusage nagelte die UNFAEHIGKEIT fest, nicht das richtige
+     * Verhalten. Die Klasse, die MF-1174 gefunden hat, war echt: eine
+     * 160-K-Diskette (40 x 1 x 8 x 512) wurde als 40 x 2 x 9 x 512 gelesen
+     * — Kopfzahl und Sektorzahl falsch — und 204 800 der 368 640 Byte
+     * waren erfunden, mehr als die Diskette selbst hat. Die Absage war die
+     * richtige ERSTE Antwort darauf; sie war nie die richtige letzte.
+     *
+     * Seit P3-423 traegt die Achtzeilen-Tafel diese Groesse exakt, also
+     * geht die Wandlung durch — mit 40 Spuren auf EINEM Kopf. Was der
+     * Test hier weiter bewacht, ist die eigentliche Aussage von MF-1174:
+     * **die Kopfzahl darf nicht erfunden werden.** Eine 2 statt einer 1
+     * waere derselbe Befund in neuer Gestalt, und sie faellt hier auf.
+     *
+     * Dasselbe Muster wie MF-1151 und MF-1182: eine gruene Zusage ruhte
+     * auf dem Mangel. Die beiden Haelften darueber bleiben unberuehrt —
+     * 1 228 288 und 1 474 559 Byte treffen weder einen BPB noch eine
+     * Tafelzeile und werden weiter abgesagt. */
     muster((size_t)40u * 1u * 8u * 512u);
-    pfad = "uft_hfe_160_absage.hfe";
-    ASSERT(wandeln((size_t)40u * 1u * 8u * 512u, pfad, NULL) != UFT_OK);
+    memset(g_img, 0, 512);                  /* kopflos: die Tafel traegt */
+    pfad = "uft_hfe_160_tafel.hfe";
+    size_t gelesen160 = 0;
+    ASSERT(wandeln((size_t)40u * 1u * 8u * 512u, pfad, &gelesen160)
+           == UFT_OK);
+    ASSERT(g_kopf[HFE_OFF_TRACKS] == 40u);
+    ASSERT(g_kopf[HFE_OFF_SIDES]  ==  1u);   /* NICHT 2 — das war der Fund */
     remove(pfad);
 }
 
@@ -321,6 +376,244 @@ TEST(spurtabelle_grenze_ist_arithmetisch_belegt)
     ASSERT((uint16_t)100352u == 34816u);
 }
 
+/* ── ROTBEWEIS 5 (P3-423): die Geometrie steht IN der Diskette ───────── */
+
+TEST(hundertsechzigk_mit_bpb_wird_gelesen)
+{
+    /* DER BEFUND. 163 840 Byte sind 40 x 1 x 8 x 512 — eine einseitige
+     * 8-Sektor-Diskette. Die vier `else if`-Bereiche lesen sie als
+     * 40 x 2 x 9 x 512 (368 640 Byte), also Kopfzahl UND Sektorzahl falsch,
+     * und sagen seit MF-1174 deshalb ab. Absagen ist ehrlich, aber die
+     * Diskette SAGT ihre Geometrie: der BPB fuehrt `sectors_per_track`,
+     * `head_count`, `bytes_per_sector` und `total_sectors_16`.
+     *
+     * Die Zahlen sind von FREMDER HAND bestaetigt, ausgefuehrt und nicht
+     * gelesen: hxcfe (HxCFloppyEmulator, im Baum gebaut) meldet fuer diese
+     * Datei woertlich „Image Size:160kB, 40 tracks, 1 side(s), 8
+     * sectors/track, interleave:1,rpm:300" und schreibt daraus eine IMD,
+     * die je Sektor Zylinder, Kopf und Nummer ausdruecklich nennt — darin
+     * stehen 319 von 319 selbstbenennenden Sektoren an ihrer eigenen
+     * Ortsmarke, 0 fehlend, 0 unerwartet (der 320. ist der Bootsektor
+     * selbst und traegt den BPB statt einer Marke).
+     *
+     * Die Bitrate ist unabhaengig hergeleitet, nicht aus dem Pruefling
+     * geholt: 8 x 512 = 4096 Datenbyte je Spur, und 250 kbit/s bei
+     * 300 U/min tragen 6250 (cw2dmk `jv3.h`, MF-1166) — es passt in DD,
+     * also 250 kbit/s und 300 U/min. */
+    muster(GR_160K);
+    bpb_schreiben(8u, 1u, 320u, 512u, 0xFEu, 1);
+
+    const char *pfad = "uft_hfe_160_bpb.hfe";
+    size_t gelesen = 0;
+    ASSERT(wandeln(GR_160K, pfad, &gelesen) == UFT_OK);
+    ASSERT(gelesen >= 1024u);
+    ASSERT(memcmp(g_kopf, "HXCPICFE", 8) == 0);
+    ASSERT(g_kopf[HFE_OFF_TRACKS] == 40u);
+    ASSERT(g_kopf[HFE_OFF_SIDES]  ==  1u);
+    ASSERT(le16(g_kopf + HFE_OFF_BITRATE) == 250u);
+    ASSERT(le16(g_kopf + HFE_OFF_RPM)     == 300u);
+    remove(pfad);
+}
+
+TEST(ein_bpb_der_der_datei_widerspricht_wird_abgewiesen)
+{
+    /* ANTI-TAUTOLOGIE 1, und sie ist selbst ein Rotbeweis — die erste
+     * Fassung war es nicht, und der Unterschied ist die Lehre aus MF-1014.
+     *
+     * Ohne diese Zusage koennte „nimm den BPB" heissen „glaube dem BPB
+     * blind", und eine Geometrie, die nicht in die Datei passt, liest
+     * hinter das Dateiende (MF-1027, wo UFT der VIB bewusst NICHT gegen
+     * die Dateigroesse folgt). Bei Widerspruch wird deshalb ABGESAGT und
+     * nicht zwischen zwei Aussagen derselben Diskette geraten — die Regel
+     * aus MF-1039.
+     *
+     * Haelfte A, 720 K: 737 280 Byte treffen einen der vier alten
+     * Bereiche EXAKT, heute geht die Wandlung also durch. Der BPB sagt
+     * hier aber 2880 Sektoren (1,44 M) in einer 1440-Sektor-Datei. Heute
+     * wird der BPB ignoriert und die Datei angenommen — die Zusage ist
+     * also ROT vor dem Umbau und gruen danach.
+     *
+     * Die erste Fassung dieses Tests nahm 160 K, und das war gruen aus dem
+     * falschen Grund: 160 K wird heute ohnehin abgesagt, die Zusage haette
+     * den Widerspruch gar nicht gemessen. */
+    size_t gelesen = 0;
+    const size_t gr_720k = (size_t)80u * 2u * 9u * 512u;   /* 737 280 */
+    muster(gr_720k);
+    bpb_schreiben(18u, 2u, 2880u, 512u, 0xF0u, 1);
+    const char *pfad_a = "uft_hfe_720_luegt.hfe";
+    ASSERT(wandeln(gr_720k, pfad_a, &gelesen) != UFT_OK);
+    ASSERT(!datei_existiert(pfad_a));
+
+    /* Haelfte B, 160 K: der BPB sagt 640 Sektoren (40 x 2 x 8), die Datei
+     * hat 320. Gruen vor UND nach dem Umbau — hier soll sich nichts
+     * aendern, und ohne diese Haelfte waere „sagt bei Widerspruch ab"
+     * nur an einer Groesse gemessen. */
+    muster(GR_160K);
+    bpb_schreiben(8u, 2u, 640u, 512u, 0xFFu, 1);
+    const char *pfad_b = "uft_hfe_160_luegt.hfe";
+    ASSERT(wandeln(GR_160K, pfad_b, &gelesen) != UFT_OK);
+    ASSERT(!datei_existiert(pfad_b));
+}
+
+TEST(ohne_bpb_traegt_die_tafel_nur_bei_exakter_groesse)
+{
+    /* ANTI-TAUTOLOGIE 2, und sie hat ZWEI Haelften — eine allein waere
+     * gruen aus dem falschen Grund.
+     *
+     * Haelfte A: eine kopflose Datei von 163 840 Byte darf durchgehen,
+     * denn 320 Sektoren treffen GENAU EINE Zeile der benannten Tafel
+     * `fat_geometry_160k` (src/formats/fat/uft_fat_bootsector.c), und die
+     * acht Zeilen haben paarweise verschiedene Sektorsummen. Das ist nicht
+     * dasselbe wie die alten `<=`-Bereiche: exakter Treffer in einer
+     * benannten Tafel gegen Bereichsraten.
+     *
+     * Haelfte B: 204 800 Byte — die BBC-DFS-Groesse 80 x 1 x 10 x 256 —
+     * muessen WEITER abgesagt werden. 204 800 / 512 = 400 Sektoren, und
+     * 400 steht in keiner der acht Zeilen. Das ist die wichtigere Haelfte:
+     * eine BBC-Diskette ist keine FAT-Diskette, und der alte Bereich hat
+     * sie mit 40 x 2 x 9 beansprucht. Der Anspruch war der Fehler. */
+    muster(GR_160K);
+    memset(g_img, 0, 512);                 /* kein BPB, keine Kennung */
+    const char *pfad_a = "uft_hfe_160_kopflos.hfe";
+    size_t gelesen = 0;
+    ASSERT(wandeln(GR_160K, pfad_a, &gelesen) == UFT_OK);
+    ASSERT(g_kopf[HFE_OFF_TRACKS] == 40u);
+    ASSERT(g_kopf[HFE_OFF_SIDES]  ==  1u);
+    remove(pfad_a);
+
+    muster(GR_BBC);
+    memset(g_img, 0, 512);
+    const char *pfad_b = "uft_hfe_bbc_abgesagt.hfe";
+    ASSERT(wandeln(GR_BBC, pfad_b, &gelesen) != UFT_OK);
+    ASSERT(!datei_existiert(pfad_b));
+}
+
+TEST(eine_ungedeckte_drehzahl_wird_nicht_erfunden)
+{
+    /* ANTI-TAUTOLOGIE 3, und sie haelt eine STOPPBEDINGUNG fest.
+     *
+     * Mit BPB-Geometrie waere die 2,88-M-Diskette (80 x 2 x 36 x 512)
+     * plotzlich ableitbar — 36 x 512 = 18 432 Datenbyte je Spur. Die im
+     * Baum benannte Quelle (cw2dmk `jv3.h`, MF-1166) fuehrt 250 kbit/s bei
+     * 300 U/min (6250 Byte), 500 bei 360 (10 416) und 500 bei 300
+     * (12 500) — 18 432 passt in KEINE davon, und die 1000 kbit/s der
+     * ED-Diskette hat im Baum keine Quelle. Also wird abgesagt, nicht
+     * gerechnet.
+     *
+     * Ohne diese Zusage koennte der Umbau eine Bitrate erfinden, und das
+     * waere genau der Verstoss, den MF-1077 verbietet. Sie bewacht
+     * zugleich MF-1170: die 2,88-M-Absage bleibt, nur ihr GRUND wird
+     * genauer. */
+    muster(GR_2880K);
+    bpb_schreiben(36u, 2u, 5760u, 512u, 0xF0u, 1);
+
+    const char *pfad = "uft_hfe_2880_bpb.hfe";
+    size_t gelesen = 0;
+    ASSERT(wandeln(GR_2880K, pfad, &gelesen) != UFT_OK);
+    ASSERT(!datei_existiert(pfad));
+
+    /* Und die Gegenrichtung, damit „sagt immer ab" nicht gruen ist: mit
+     * 18 Sektoren statt 36 traegt dieselbe Herleitung. */
+    muster(GR_1440K);
+    bpb_schreiben(18u, 2u, 2880u, 512u, 0xF0u, 1);
+    const char *pfad2 = "uft_hfe_1440_bpb.hfe";
+    ASSERT(wandeln(GR_1440K, pfad2, &gelesen) == UFT_OK);
+    ASSERT(le16(g_kopf + HFE_OFF_BITRATE) == 500u);
+    ASSERT(le16(g_kopf + HFE_OFF_RPM)     == 300u);
+    remove(pfad2);
+}
+
+TEST(zwoelf_groessen_einzeln_gemessen)
+{
+    /* P3-423 verlangt woertlich: „jede der acht Groessen braucht ihre
+     * eigene Messung". Das ist sie — und sie steht bewusst als TAFEL da,
+     * damit die Zahl am Ende nicht die einzige Aussage ist (MF-1026: eine
+     * Summe, die aufgeht, sagt nichts ueber die Verteilung darin).
+     *
+     * Die zwoelf Zeilen sind dieselben, die MF-1174 im Wandler gemessen
+     * hat. Je Zeile zwei Laeufe: MIT eigenem BPB und KOPFLOS. `soll_bpb`
+     * und `soll_tafel` sind die erwarteten Ausgaenge, `rpm` die erwartete
+     * Drehzahl im BPB-Lauf. */
+    struct {
+        const char *name;
+        unsigned zyl, kopf, spt, bps;
+        int soll_bpb;      /* 1 = wandelt, 0 = Absage */
+        int soll_tafel;    /* kopflos: 1 = wandelt, 0 = Absage */
+        unsigned rpm;      /* nur wenn soll_bpb */
+    } t[] = {
+      { "160K",  40, 1,  8,  512, 1, 1, 300 },
+      { "180K",  40, 1,  9,  512, 1, 1, 300 },
+      /* BBC DFS ist KEINE FAT-Diskette: mit erfundenem BPB waere sie eine,
+       * kopflos treffen ihre 400 Sektoren keine Tafelzeile -> Absage. Der
+       * alte Bereich hat sie als 40x2x9 beansprucht; der Anspruch war der
+       * Fehler. */
+      { "BBC",   80, 1, 10,  256, 1, 0, 300 },
+      { "320K",  40, 2,  8,  512, 1, 1, 300 },
+      { "360K",  40, 2,  9,  512, 1, 1, 300 },
+      { "400K",  80, 1, 10,  512, 1, 0, 300 },
+      { "640K",  80, 2, 16,  256, 1, 0, 300 },
+      { "720K",  80, 2,  9,  512, 1, 1, 300 },
+      { "800K",  80, 2, 10,  512, 1, 0, 300 },
+      { "1,2M",  80, 2, 15,  512, 1, 1, 360 },
+      /* PC-98 2HD: 8 x 1024 = 8192 Datenbyte je Spur passt nicht in die
+       * 6250 der DD-Zeile, und 8 Sektoren sind weder die belegten 15 noch
+       * 18. Die Drehzahl dieser Diskette ist im Baum ausdruecklich
+       * widerspruechlich belegt (P3-431) — also Absage mit genannten
+       * Zahlen, keine erfundene Rate (MF-1077). */
+      { "PC-98", 77, 2,  8, 1024, 0, 0, 0   },
+      { "1,44M", 80, 2, 18,  512, 1, 1, 300 },
+    };
+    unsigned bpb_ok = 0u, bpb_ab = 0u, tafel_ok = 0u, tafel_ab = 0u;
+
+    for (unsigned i = 0; i < sizeof(t) / sizeof(t[0]); i++) {
+        size_t n = (size_t)t[i].zyl * t[i].kopf * t[i].spt * t[i].bps;
+        unsigned total = t[i].zyl * t[i].kopf * t[i].spt;
+        size_t gelesen = 0;
+        char pfad[64];
+
+        /* Lauf 1: die Diskette sagt ihre Geometrie selbst. */
+        snprintf(pfad, sizeof(pfad), "uft_hfe_z%02u_bpb.hfe", i);
+        muster(n);
+        bpb_schreiben(t[i].spt, t[i].kopf, total, t[i].bps, 0xF0u, 1);
+        uft_error_t rc = wandeln(n, pfad, &gelesen);
+        ASSERT((rc == UFT_OK) == (t[i].soll_bpb != 0));
+        if (rc == UFT_OK) {
+            /* Die GEOMETRIE, nicht nur der Erfolg — sonst waere „wandelt"
+             * auch mit falscher Kopfzahl gruen (der Fund aus MF-1174). */
+            ASSERT(g_kopf[HFE_OFF_TRACKS] == (uint8_t)t[i].zyl);
+            ASSERT(g_kopf[HFE_OFF_SIDES]  == (uint8_t)t[i].kopf);
+            ASSERT(le16(g_kopf + HFE_OFF_RPM) == t[i].rpm);
+            bpb_ok++;
+            remove(pfad);
+        } else {
+            ASSERT(!datei_existiert(pfad));
+            bpb_ab++;
+        }
+
+        /* Lauf 2: kopflos — nur die benannte Achtzeilen-Tafel. */
+        snprintf(pfad, sizeof(pfad), "uft_hfe_z%02u_tafel.hfe", i);
+        muster(n);
+        memset(g_img, 0, 512);
+        rc = wandeln(n, pfad, &gelesen);
+        ASSERT((rc == UFT_OK) == (t[i].soll_tafel != 0));
+        if (rc == UFT_OK) {
+            ASSERT(g_kopf[HFE_OFF_TRACKS] == (uint8_t)t[i].zyl);
+            ASSERT(g_kopf[HFE_OFF_SIDES]  == (uint8_t)t[i].kopf);
+            tafel_ok++;
+            remove(pfad);
+        } else {
+            tafel_ab++;
+        }
+    }
+
+    /* Die Summen stehen ABSICHTLICH zuletzt (MF-1026) — und beide
+     * Richtungen, sonst waere „wandelt alles" genauso gruen. */
+    ASSERT(bpb_ok   == 11u);
+    ASSERT(bpb_ab   ==  1u);
+    ASSERT(tafel_ok ==  7u);
+    ASSERT(tafel_ab ==  5u);
+}
+
 int main(void)
 {
     printf("=== HFE-Wandler: ein Zuviel ist keine Rundung (MF-1170) ===\n");
@@ -333,6 +626,12 @@ int main(void)
     RUN(vier_groessen_gehen_weiterhin);
     printf("--- Grenze der HFE-v1-Spurtabelle ---\n");
     RUN(spurtabelle_grenze_ist_arithmetisch_belegt);
+    printf("--- P3-423: die Geometrie steht IN der Diskette ---\n");
+    RUN(hundertsechzigk_mit_bpb_wird_gelesen);
+    RUN(ein_bpb_der_der_datei_widerspricht_wird_abgewiesen);
+    RUN(ohne_bpb_traegt_die_tafel_nur_bei_exakter_groesse);
+    RUN(eine_ungedeckte_drehzahl_wird_nicht_erfunden);
+    RUN(zwoelf_groessen_einzeln_gemessen);
     printf("\nErgebnis: %d bestanden, %d gefallen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
