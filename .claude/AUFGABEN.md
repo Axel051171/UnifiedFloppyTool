@@ -117,10 +117,24 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   Flaggen). **Der Einbau ist NICHT gemacht** und braucht die
   Lizenzentscheidung — das ist ein eigener Posten, wenn der Eigentümer ihn
   will.
+- **UNGESTOPPT 2026-09-16** — wörtlich „mach A-005 ungestopt". Damit ist die
+  Lizenzsperre **S3** für die CC-BY-SA-4.0-Ernte aufgehoben, und der Einbau
+  ist in Arbeit genommen. **Drei Dinge hebt die Entscheidung nicht auf, und
+  sie bleiben Bedingungen des Einbaus:** (a) eine Sekundärquelle hebt nach
+  `docs/ORACLES.md` **keine Tier-Stufe** — der Katalog kommt als Referenz
+  herein, nicht als Beleg; (b) die Namensnennungs- und Weitergabepflichten
+  von CC BY-SA 4.0 bleiben (die Quell-URL steht in
+  `UFT_FLOPPY_REFERENCE_SOURCE_URL` und in beiden TSV); (c) **der gemessene
+  Defekt des Abgleichers ist zu BEHEBEN, nicht mitzuliefern** — er meldet
+  für eine PC-1,44-M-Diskette drei Sieger mit score 100 und zählt
+  „unbekannt" als „widerspricht" (`P3-445`). Ihn einzubauen wie er ist,
+  wäre eine Falschaussage im Erkennungspfad und verstößt gegen die
+  EINFRIER-REGEL. Der Weg steht als Code im Gutachten §8.1/§8.2.
 - **Beleg:** Gutachten `tools/uft-scout/out/a005_floppy_reference_aard.gutachten.md`,
   **MF-1184 = `2aa7bda6`** (2 Dateien, 1012 Zeilen, alle Vorhaken grün).
   Nachgetragen wie angekündigt: die Zeile lag im MF-1184-Commit selbst und
-  konnte ihren eigenen Hash nicht kennen.
+  konnte ihren eigenen Hash nicht kennen. Befunde als `P3-442`, `P3-444`,
+  `P3-445`, `P3-446` eingetragen (MF-1188).
 
 ### A-006 · Zulieferung `hacking floppy disk.zip` (Kopierschutz/Umdrehungen) begutachten
 - **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist offen) ·
