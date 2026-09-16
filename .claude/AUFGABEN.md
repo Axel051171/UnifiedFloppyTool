@@ -1671,7 +1671,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Beleg:** Halt gemessen MF-1207; keine Änderung am Baum nötig.
 
 ### A-020 · Zulieferung `UFT-NN — Amiga.zip` — Dateisystem-Diskette oder Trackloader mit DOS-Kopf?
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **angehalten am Umfang** (14 Entscheidungsstellen; der Umbau
+  überschreitet die Scope-Regel) · MF-1208 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
   — Amiga.zip\" finde was ich vergessen habe und verbessere damit das"
 - **Kennzahl:** **keine der vier** (MF-640). Der Wert liegt in der
@@ -1706,8 +1707,36 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   `CHECK`-Zusagen; §1 heißt „Der Anlass: ein gemessener Gegenbeweis", und
   der wird nachgefahren, bevor er zitiert wird — bei A-006 fielen drei von
   vier meiner eigenen Erwartungen.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **ANGEHALTEN am Umfang, nicht an der Sache — und die Lage ist
+  besser als bei A-018/A-019.** Beide Belegstücke, die die
+  Abschlussbedingung verlangt, liegen im Baum, gemessen am Wurzelblock
+  (Block 880, Versatz `0x6E000`):
+  | Abbild | Kennung | Wurzelblock | Urteil |
+  |---|---|---|---|
+  | `tests/corpus_free/xdftool_dd_ofs.adf` (901 120 B) | `DOS\0` | `type=2`, `sectype=1` | **echte AmigaDOS-OFS-Diskette, von fremder Hand** (`xdftool`) |
+  | `tests/differential/corpus/sources/amiga_dd.adf` (901 120 B) | `00 21 A4 B6` | kein gültiger | **ADF OHNE Dateisystem**, 99,6 % der Bytes ungleich null — der Trackloader-Fall |
+  | `dim_adfs_{d,e,f}.adf` | — | — | **Acorn ADFS**, nicht Amiga; gehören nicht hierher |
+  · **Was fehlt, ist der dritte Fall:** ein ADF **mit** DOS-Kopf und
+    **ohne** gültigen Wurzelblock. Der wäre aus `xdftool_dd_ofs.adf`
+    herstellbar, aber dann selbstgebaut — und genau darüber wacht MF-1021.
+  · **DER GRUND DES HALTS, gemessen:** die Entscheidung „ist das eine
+    AmigaDOS-Diskette" fällt an **14 Stellen** (ohne Fremdcode und ohne
+    `uft_hdf_parser`, der RDB prüft, nicht ADF): `uft_bayesian_detect.c`,
+    `uft_triage.c`, `mfm_detect.c`, `disk_image_validator.cpp`,
+    `forensictab.cpp`, drei ADF-Parser, `uft_adf_plugin.c`,
+    `polyglot_boot.c`, `uft_adf.c`, `uft_format_validators.c`,
+    `uft_format_versions.c`, `uft_adf_bam.c`, `uft_bootblock_scanner.c`.
+    Die Aufnahme sagte 12; der Unterschied ist die Musterweite, nicht die
+    Sache. **Das ist die größte Verdopplung dieser Sitzung** — größer als
+    die zwölf `volume_serial`-Header aus A-011.
+  · **Vier Zustände als 15. Stelle einzuführen wäre `MF-1177`**: eine
+    Größe, fünfzehn Rechnungen. Richtig ist EINE Stelle, die die
+    vierzehn rufen — und das ist ein Umbau über vierzehn Dateien, weit
+    jenseits der Umfangsregel (`.claude/CLAUDE.md` §Scope: >150 Zeilen,
+    mehrere Subsysteme → anhalten, größtes fertiges Teilstück liefern).
+  · **Das größte fertige Teilstück ist damit die Messung selbst**, und sie
+    steht als `P3-467`.
+- **Beleg:** Halt gemessen MF-1208; Befund `P3-467`.
 
 ### A-021 · Zulieferung `UFT-NN — FAT12 lesen.zip` — FAT12 lesen, wenn die Diskette nicht mehr heil ist
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
