@@ -26,14 +26,20 @@ laufen fort und werden nie wiederverwendet.
 
 *(höchstens einer — leer heißt: nichts läuft)*
 
-**Leer.** `A-006` ist **erledigt** (Gutachten, MF-1185); sein Eintrag steht
+**Leer.** `A-007` ist **erledigt** (Gutachten, MF-1186); sein Eintrag steht
 unverändert an seinem Platz in der Warteschlange unten und trägt dort Status,
 Stand und Beleg. Er wird hier **nicht** wiederholt — zwei Fassungen desselben
 Postens wären zwei Wahrheiten (D3).
 
-Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185).
-`/aufgabe weiter` zieht **`A-007`** hoch (Zulieferung
-`DiskImageTool-extrakt.zip`).
+Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
+`A-007` (MF-1186). `/aufgabe weiter` zieht **`A-008`** hoch (Zulieferung
+`UFT_C64PP_Protection_Catalog.zip`).
+
+> **Ein Befund aus `A-007` betrifft zwei wartende Posten.** MF-698 bindet
+> die verteilbare Fassung an GPL-3, und Apache-2.0 ist GPL-3-verträglich —
+> die Kanal-Zeilen von `A-013` und `A-014` messen dagegen gegen GPL-2 und
+> führen den Port als geschlossen. Sie bleiben unverändert stehen, bis der
+> Eigentümer entscheidet; das Gutachten `a007_…` §8 nennt die Messung.
 
 ---
 
@@ -196,11 +202,11 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185).
   Schwellen, Lizenzfrage zu DrCoolZics „Copyleft" offen).
 - **Beleg:** Gutachten
   `tools/uft-scout/out/a006_kopierschutz_umdrehungen.gutachten.md`,
-  **MF-1185** — Hash wird beim nächsten Commit nachgetragen, aus demselben
-  Grund wie bei `A-005`.
+  **MF-1185 = `6dbb4ebf`** — nachgetragen wie angekündigt.
 
 ### A-007 · Zulieferung `DiskImageTool-extrakt.zip` (Herkunft · Schreibnähte · PC-Schutzmuster) begutachten
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist offen) ·
+  **Aufgenommen:** 2026-09-16 · hochgezogen mit „weiter mit A-007"
 - **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
   raussuchen was ich übersehen habe / - wo können die formate verbessert
   werden / - ist es auf andere formate übertragbar / - welche einstellungen
@@ -260,8 +266,29 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185).
 - **Aufwand:** Begutachtung eine Sitzung (542 Zeilen Analysedokument +
   6 Quelldateien + 1 Test + 1 Wandlerskript). Einbau **nicht schätzbar** —
   er hängt an der Lizenzentscheidung und an der Beschaffung der Datenbank.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Begutachtung fertig.** Gutachten liegt als
+  `tools/uft-scout/out/a007_diskimagetool_herkunft.gutachten.md`.
+  Alle fünf Bedingungen der Zeile `Fertig heißt` erfüllt.
+  **Die drei Funde, je mit Urteil:** Bootstrap-Herkunft **fehlt für den
+  Datenträger** (`oem_name` 9 `.c`, `bootstrap` 0 `.c`; `uft_provenance`
+  6 `.c` führt Dateien, nicht Träger) · Schreibnaht **fehlt für
+  IBM-MFM, aber das Muster hat drei Vorgänger** — `uff_detect_splices()`
+  0 Aufrufer, `uft_deepread_detect_splice()` 0 Aufrufer, und
+  `G64_DIAG_SPLICE_DETECTED` ist **ein Etikett, das niemand setzt**; die
+  Zulieferung nennt zwei Stellen und übersieht die dritte · PC-Schutz aus
+  Fehlsektormustern **fehlt** (`bad_sector` 25 `.c` baumweit, 1 in
+  `src/protection/`, 0 Musterschluss). **Selbstzusagen tragen alle vier**,
+  Bau `-Werror -pedantic` 0 Warnungen, 6 Tests grün mit drei Rot-Proben.
+  **Der Nebenfund reicht über den Posten hinaus:** die Lizenzprämisse ist
+  belegt — alle drei AIR-Dateien tragen `GPL-3.0-only`, und MF-698 bindet
+  „die VERTEILBARE Fassung des Gesamtwerks an GPL-3". Damit messen
+  `P3-385` und mein eigener `A-014`-Eintrag gegen **GPL-2**, während
+  Apache-2.0 mit **GPL-3** verträglich ist — der Port-Kanal für `A-013`
+  und `A-014` ist möglicherweise offen. **Eigentümer-Entscheidung, nicht
+  meine.** Fünf Vorschläge stehen in §13 des Gutachtens.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a007_diskimagetool_herkunft.gutachten.md`,
+  **MF-1186** — Hash wird beim nächsten Commit nachgetragen.
 
 ### A-008 · Zulieferung `UFT_C64PP_Protection_Catalog.zip` begutachten
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
@@ -604,6 +631,226 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185).
   22 Werkzeugen sind mehr als jede bisherige Zulieferung dieser Reihe
   (A-010 hatte 4). Genauer nicht schätzbar. Einbau **nicht schätzbar** und
   in jedem Fall ein eigener Posten.
+- **Stand:** —
+- **Beleg:** —
+
+### A-013 · `thomas-luebker/AmigaDiskKit` auseinandernehmen — **das ist `P3-385(b)`**
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/thomas-luebker/AmigaDiskKit.git nimm den
+  code komplett auseinander , sehr genau / finde alles und alles raussuchen
+  was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
+  können die formate verbessert werden / - ist es auf andere formate
+  übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
+  nicht / - brauch es eine HAL-Erweiterungen"
+- **Kennzahl:** **keine der vier für die Begutachtung.** Der Punkt, den es
+  abtragen könnte, ist `P3-385` — die „ADFlib-unabhängige Zweitmeinung, die
+  `docs/ORACLES.md:650` selbst als ‚Offene Lücke' benennt". Ein
+  unabhängiges Orakel bewegt keine der vier direkt, ist aber die
+  Voraussetzung für Stufenhebungen im Amiga-Zweig.
+- **Kanal:** **`P3-385` hat das Urteil bereits gefällt, und ich habe es
+  nachgemessen — es gilt, aber es ist nicht ausführbar.** Der Punkt sagt
+  wörtlich: „**Lizenz berichtigt:** Apache-2.0, NICHT MIT — mit GPL-2
+  unverträglich, also **kein Port**, nur Orakel." Gemessen bestätigt:
+  `license.spdx_id` = **Apache-2.0**. **Der offene Widerspruch:** `swift`,
+  `swiftc` und `xcodebuild` sind auf diesem Rechner **alle drei nicht
+  vorhanden**, und `docs/ORACLES.md` verlangt „Kein Oracle auf Zusicherung
+  — ein Werkzeug, das nicht gebaut und ausgeführt wurde, ist kein
+  Eintrag". Der einzige Kanal, den P3-385 offenlässt, ist damit hier
+  **verschlossen** — nicht grundsätzlich, aber auf dieser Maschine. Das ist
+  dieselbe Lage wie die Tier-3-Hardwarebank (MF-310): delegierbar, nicht
+  hausintern. Was bleibt: **Spec** (lesen) und **Daten** (die 26 `.bin`).
+  Für Apache-2.0 gibt es dabei **zwei entschiedene Präzedenzfälle** —
+  `P3-316` ✅ MF-1008 und `P3-353` ✅, beide vom Eigentümer festgestellt.
+- **Einfrier-Regel:** **ja** für jeden Einbau; für das Lesen nicht.
+- **OPEN_ITEMS:** **`P3-385`** — dieser Posten IST der Auftrag, ihn
+  abzutragen; der Befund bleibt dort und wird hier nicht abgeschrieben.
+  Berührt `P3-316`/`P3-353` (Apache-Präzedenz) und die Amiga-FS-Stufen.
+- **Bei der Aufnahme gemessen — fünf Dinge:** **(1) Die Zahl von P3-385
+  stimmt:** **139 Blobs**, genau wie dort notiert; davon **97 `.swift`**,
+  26 `.bin`, 11 `.txt`. Oberste Ebene `Sources`, `Tests`, `Package.swift`
+  — eine Swift-Paketstruktur, kein Werkzeugkasten. **(2) Der Umfang ist
+  breiter als „Diskette":** die Beschreibung nennt „RDB/MBR layouts,
+  FFS/OFS/FFS2, PFS3, FAT32, ADF & flux floppies, LHA" und ausdrücklich
+  „No external tools or Python". **(3) Vier dieser Achsen fehlen dem Baum
+  gemessen:** `rdb` 1 Datei / `RDB` 0 / `rigid_disk` 0, `pfs3`/`PFS3`
+  **0**, `ffs2`/`FFS2` **0**, `lha` 0 / `LHA` 1. **(4) Die Amiga-Seite des
+  Baums ist ungleich belegt:** `uft_amigados` steht auf **FS-T2**,
+  `uft_amigados_extended`, `uft_bootblock_scanner` und
+  `uft_amiga_virus_db` auf FS-T1 — und `uft_fs_amigados_driver` auf
+  **FS-T0** mit der Bemerkung „kein Test nennt ein Symbol dieses Lesers".
+  **(5) Es ist aktiv:** letzter Push **2026-07-29**, nicht archiviert —
+  anders als der Nachbar `amigadx` (letzter Commit 2014-07-18, GPL,
+  vendort ADFlib 0.7.10), der laut P3-385 gerade **nicht** unabhängig ist.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** die 97
+  Swift-Dateien nach Achse gruppiert durchgeht (RDB/MBR · FFS/OFS/FFS2 ·
+  PFS3 · FAT32 · ADF · Fluss · LHA) und je Achse „fehlt im Baum / ist da
+  und schwächer / ist da und gleichwertig" mit `git ls-files`-Messung
+  vergibt — der Auftrag sagt „komplett auseinander, sehr genau" und
+  „stimme es mit mein aktuellen tool ab"; **(b)** die Orakel-Frage
+  ausdrücklich entscheidet: ohne Swift-Werkzeugkette ist kein Eintrag nach
+  `docs/ORACLES.md` möglich, also ist zu sagen, **was genau delegiert
+  werden müsste** (Bau auf welcher Plattform, welche Ausgabe wäre der
+  Beleg); **(c)** die 26 `.bin` als möglichen **Daten**-Kanal prüft und
+  ihre Herkunft/Lizenz getrennt von der Apache-Frage nennt (die Lage aus
+  `SCOUT-5`: Repolizenz ≠ Disketteninhalt); **(d)** die fünf Fragen je mit
+  Messung beantwortet; **(e)** `P3-385` mit dem Ergebnis fortschreibt statt
+  einen neuen Punkt anzulegen; und **(f)** kein Byte nach `src/`,
+  `include/` oder `tests/` schreibt — geklont wird nach
+  `tools/uft-scout/work/`.
+- **Aufwand:** Begutachtung **mehr als eine Sitzung** — 97 Swift-Dateien
+  in einer Sprache, für die hier keine Werkzeugkette existiert, also
+  reines Lesen ohne Ausführen. Genauer nicht schätzbar. Einbau
+  **entfällt** unter dem heutigen Lizenzurteil; was bliebe, wäre ein
+  **Nachbau** nach `docs/QUARANTINE_PROCESS.md` §5 — und das ist ein
+  eigener Posten mit eigener Eigentümer-Entscheidung.
+- **Stand:** —
+- **Beleg:** —
+
+### A-014 · `SecurityRonin/disk-forensic` auseinandernehmen — und die Vorfrage lautet: ist das Diskettenarbeit?
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/SecurityRonin/disk-forensic.git nimm den
+  code komplett auseinander , sehr genau / finde alles und alles raussuchen
+  was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
+  können die formate verbessert werden / - ist es auf andere formate
+  übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
+  nicht / - brauch es eine HAL-Erweiterungen"
+- **Kennzahl:** **keine der vier.** Und hier ist die Zeile ausnahmsweise
+  ein echter Einwand, nicht nur Buchhaltung: **der Gegenstand ist keine
+  Diskette.** E01, VMDK, VHDX, VHD, QCOW2 und DMG sind Festplatten- und
+  VM-Behälter, MBR/GPT/APM sind Partitionsschemata für Medien, die größer
+  sind als eine Diskette, und ISO 9660 ist optisch. Eine 3,5-Zoll-Diskette
+  hat keine Partitionstabelle. **Genau ein Teil trägt** — siehe die
+  Aufnahme-Messung.
+- **Kanal:** **Spec, und mehr ist hier nicht zu holen.** Gemessen:
+  `license.spdx_id` = **Apache-2.0**, Sprache **Rust**, 574 KB, angelegt
+  2026-06-05, letzter Push 2026-08-26, 4 Sterne, kein Fork. Apache-2.0
+  gegen GPL-2 ist unverträglich — dieselbe Lage wie `A-013`/`P3-385`, und
+  auch hier gibt es die zwei Präzedenzfälle `P3-316` ✅ und `P3-353` ✅.
+  **Dazu verschlossen: `cargo` und `rustc` sind auf diesem Rechner nicht
+  vorhanden**, also ist auch *Orakel* nach `docs/ORACLES.md` hausintern
+  unmöglich („Kein Oracle auf Zusicherung"). Es bleibt **Lesen**.
+- **Einfrier-Regel:** **nein für das Lesen.** Ein Einbau wäre eine neue
+  Behälterschicht und fiele voll unter das Moratorium — als *neues Format*,
+  nicht als Bugfix.
+- **OPEN_ITEMS:** **`P3-387`** ist der tragende Anker — „Zwei forensische
+  Fähigkeiten, die der Baum nicht hat, und die seine eigene Mission
+  verlangt: ein stückweiser Hash und ein Fehlerprotokoll, das den Lauf
+  überlebt." Dazu `P3-380` (ATX kann exportieren, niemand bietet es an),
+  `P3-381` (darf ein Schreiber die Identitätsdatei überschreiben) und
+  `KI-6.1` (keine CI-Prüfung durch echte Emulatoren).
+- **Bei der Aufnahme gemessen — und ein Fund ist nicht offensichtlich:**
+  **(1) Nichts davon ist im Baum.** Fünfzehn Begriffe gesucht, alle **0
+  Dateien**: `E01`, `ewf`/`EWF`, `vmdk`, `vhdx`, `qcow`, `dmg`,
+  `iso9660`, `GPT`, `APM`. **Mit einer Ausnahme:** `mbr` hat **2 Dateien**
+  — `include/uft/formats/uft_fat32_mbr.h` und
+  `src/formats/fat32/uft_fat32_mbr.c` —, und `partition` hat 0. MBR ist
+  also punktuell da, als FAT32-Anhang, nicht als Achse.
+  **(2) Der eine Teil, der trägt, ist `E01` — und zwar als SCHREIBZIEL,
+  nicht als Leser.** Das EnCase Expert Witness Format führt eine **CRC je
+  32-KiB-Block** und einen Bereichsvermerk für fehlerhafte Sektoren. Das
+  ist wörtlich, was `P3-387` als fehlend benennt: „ein SHA-256 je
+  (Zylinder, Kopf) statt einer Summe über die ganze Datei" und „`uft_format
+  _mark_last_missing()` kennzeichnet im SPEICHER, und keine Datei trägt es
+  hinaus". **E01 ist der bestehende Industriestandard für genau diese zwei
+  Fähigkeiten** — und der Wert dieses Repos liegt darin, seinen Aufbau zu
+  zeigen, nicht darin, VM-Behälter zu lesen. **(3) Die übrigen sieben
+  Behälter sind für dieses Werkzeug Fundus**, nicht Auftrag: sie bewegen
+  keine Kennzahl und gehören nicht zur Mission. Das ist eine Einordnung,
+  keine Abwertung des Repos.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** die Vorfrage
+  ausdrücklich beantwortet — welche der acht Behälter und drei
+  Partitionsschemata für ein **Disketten**werkzeug überhaupt in Betracht
+  kommen, je mit Begründung, und welche als Fundus notiert werden;
+  **(b)** für `E01` den Aufbau aus dem Rust-Code **liest** und daraus
+  benennt, was ein UFT-Schreiber bräuchte (Blockgröße, CRC-Stelle,
+  Fehlerbereichs-Satz, Fallmetadaten) — als **Spec**, ohne eine Zeile zu
+  übernehmen, und mit dem Hinweis, dass die kanonische Quelle
+  libewf/ASR-Dokumentation ist und nicht dieses Repo; **(c)** die Brücke
+  zu `P3-387` herstellt oder begründet verwirft; **(d)** die fünf Fragen je
+  mit Messung beantwortet; **(e)** festhält, dass `cargo`/`rustc` fehlen
+  und ein Orakel damit delegiert werden müsste — samt der Angabe, was
+  genau zu bauen und welche Ausgabe der Beleg wäre; und **(f)** kein Byte
+  nach `src/`, `include/` oder `tests/` schreibt.
+- **Aufwand:** Begutachtung **eine Sitzung, wenn sie sich auf `E01`
+  beschränkt** — genau das ist zu entscheiden, nicht zu unterstellen. Eine
+  Durcharbeitung aller acht Behälter ist **nicht schätzbar** und wäre nach
+  MF-640 Fundus. Einbau **entfällt** unter dem heutigen Lizenzurteil; ein
+  E01-Schreiber wäre ein **Nachbau** nach benannter Spezifikation und ein
+  eigener Posten mit eigener Eigentümer-Entscheidung.
+- **Stand:** —
+- **Beleg:** —
+
+### A-015 · `programandala-net/mkmgt` auseinandernehmen — MGT steht auf T1, die Frage ist Beta DOS
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/programandala-net/mkmgt.git nimm den
+  code komplett auseinander , sehr genau / finde alles und alles raussuchen
+  was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
+  können die formate verbessert werden / - ist es auf andere formate
+  übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
+  nicht / - brauch es eine HAL-Erweiterungen"
+- **Kennzahl:** **keine der vier, und hier ist der Grund ungewöhnlich
+  günstig: der Behälter ist schon fertig.** Gemessen steht `mgt` auf
+  **T1** — die höchste Stufe — mit **sechs** Tests
+  (`test_durchschreibprobe`, `test_kopflose_sonden_sind_erreichbar`,
+  `test_mgt_gegen_mame`, `test_mgt_schreibt_in_die_datei`,
+  `test_mgt_verzeichnis_vollstaendig`, `test_oeffentliche_api_am_korpus`).
+  **Damit korrigiere ich meine eigene Erwartung bei der Aufnahme:** ich
+  hatte MF-1006 im Kopf („`mgt` von T3 auf T2, Feldabgleich gegen MAMEs
+  `coupedsk.cpp`, und er fand KEINEN Fehler") und daraus geschlossen, ein
+  fremder **Schreiber** würde die Stufe heben. Er würde sie nicht heben —
+  sie ist schon oben.
+- **Kanal:** **Spec.** Gemessen: `license.spdx_id` = **GPL-3.0**, Sprache
+  **Forth**, 40 KB, letzter Push **2020-05-14**, 2 Sterne. GPL-3 ist mit
+  diesem Baum verträglich (er trägt GPL-3-Bestandteile), ein *Port* wäre
+  also rechtlich offen — aber **Forth nach C ist eine Neuschreibung, kein
+  Port**. Und *Orakel* ist hausintern verschlossen: `gforth`, `pforth`,
+  `sf` und `swiftforth` sind **alle vier nicht vorhanden**. Es bleibt
+  Lesen. **Das ist die vierte fehlende Werkzeugkette in Folge** —
+  `mkfs.fat`/`mtools` (A-005), Swift (A-013), Rust (A-014), Forth (hier).
+- **Einfrier-Regel:** **nein für das Lesen.** Ein Beta-DOS-Leser wäre eine
+  neue Dateisystemvariante und fiele unter das Moratorium.
+- **OPEN_ITEMS:** kein Treffer zu `mkmgt`, `GDOS` oder `Beta DOS`. Der
+  Nachbar ist die Namensrolle/Variantenfrage: `mgt` ist ein **Behälter**,
+  und was darin liegt, ist GDOS, G+DOS oder Beta DOS — die Achse, für die
+  `uft-variants` zuständig ist („wo sagen wir etwas Falsches, ohne dass es
+  auffällt?").
+- **Bei der Aufnahme gemessen — und ein Wert bleibt:** **(1) Der Behälter
+  ist belegt, das Dateisystem nicht vollständig.** Das Repo nennt
+  ausdrücklich **drei** DOSe: „ZX Spectrum GDOS, G+DOS and Beta DOS".
+  Gemessen im Baum: `DISCiPLE` steht in **5** Dateien, darunter
+  `include/uft/formats/uft_mgt.h`, `src/formats/mgt/uft_mgt.c`,
+  `include/uft/uft_format_plugin.h`, `include/uft/xdf/uft_xdf_zxdf.h` und
+  `src/analysis/profiles/uft_profile_uk.c` — der Baum kennt also die
+  DISCiPLE/+D-Herkunft. **`gdos` und `plusd` stehen dagegen nur in zwei
+  TESTS** (`test_kopflose_sonden_sind_erreichbar.c`,
+  `test_zx_und_pc98_echte_abbilder.c`), sehr wahrscheinlich als
+  Korpus-Dateinamen und nicht als unterschiedene Dateisysteme.
+  **`Beta DOS`/`BetaDOS`/`betados`: 0 Treffer, überall.** Das ist die
+  Lücke, und sie ist klein und benennbar. **(2) Zwei MGT-Leser liegen
+  schon im Baum:** `src/formats/mgt/uft_mgt.c` und `src/samdisk/mgt.cpp`.
+  Ein dritter wäre die Lage aus P3-147 (G64 hat drei Leser), nicht ein
+  Zugewinn. **(3) Eine Messung ist unbrauchbar und wird nicht verwendet:**
+  `grep -F "+D"` meldete 12 Dateien, trifft aber jedes `x+D` in
+  C-Ausdrücken. Für „+D" gibt es damit **keine** belastbare Zahl in dieser
+  Aufnahme.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** ausdrücklich
+  feststellt, was ein Schreiber für `mgt` **nicht** mehr leisten kann,
+  weil das Format auf T1 steht — und damit die Erwartung korrigiert, statt
+  sie zu bedienen; **(b)** die drei DOSe **einzeln** gegen den Baum hält:
+  liest UFT GDOS, G+DOS und Beta DOS, oder nimmt es eines an und schweigt?
+  Je mit `git ls-files`-Messung und, wo möglich, an einem Korpus-Abbild;
+  **(c)** die Forth-Quelle als **Spec** liest — Verzeichnisaufbau,
+  Sektorbelegung, Namensfelder — und daraus einen Prüfauftrag formt statt
+  eines Ports; **(d)** die fünf Fragen je mit Messung beantwortet;
+  **(e)** die vierte fehlende Werkzeugkette in Folge als eigenen
+  Vorschlag für `docs/OPEN_ITEMS.md` benennt, weil ein Orakel-Kanal, der
+  regelmäßig an der Werkzeugkette scheitert, eine Entscheidung braucht
+  (delegieren wie die Tier-3-Bank, oder die Kanalregel präzisieren); und
+  **(f)** kein Byte nach `src/`, `include/` oder `tests/` schreibt.
+- **Aufwand:** Begutachtung **eine Sitzung** — 40 KB Forth sind der
+  kleinste Gegenstand dieser Reihe, und die Frage ist eng (drei DOSe, ein
+  Behälter, der schon belegt ist). Einbau: für Beta DOS **nicht
+  schätzbar** und ein eigener Posten unter dem Moratorium.
 - **Stand:** —
 - **Beleg:** —
 
