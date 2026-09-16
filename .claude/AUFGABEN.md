@@ -75,9 +75,33 @@ laufen fort und werden nie wiederverwendet.
     Vierter Befund: zwei der neun Muster sind über die Fehlsektoren nicht
     unterscheidbar und müssten „mehrdeutig" melden. Nächster Handgriff
     steht in `P3-455` und ist **nicht** die Tafel.
-  · Als Nächstes **Phase 4** (`P3-449`/`P3-451`, Bitkonfidenz aus A-006 —
-    `flux_count` → `flux_spread_16`, die Schwellen 96/12 mit `beleg`/
-    `quelle` und ohne Beleg `UNDECIDED`).
+  · **Phase 4** (`P3-449`/`P3-451`, Bitkonfidenz aus A-006): **ANGEHALTEN
+    MF-1193.** Kein Code, dafür drei Messungen und zwei neue Befunde.
+    Gemessen: das Ziel des Ports — `src/algorithms/advanced/
+    uft_multi_rev_fusion.c` (469 Z., 4 öffentliche Funktionen) — hat **0**
+    Produktivaufrufer, **jede** Aufrufstelle liegt in einem Test; die
+    Vorbedingung der Weak/Fuzzy-Trennung (Phasenlage je Bit) liegt in
+    `src/algorithms/uft_kalman_pll.c` (399 Z., 6 öffentliche Funktionen)
+    mit **0** Aufrufstellen überhaupt; und der erreichbare
+    Abstimmungspfad (`multiread_*`, 1 Produktivaufrufer) stimmt
+    **byteweise** ab, kann eine bitweise Karte also nicht tragen. Ein Port
+    hätte eine **vierte** „weak bit"-Definition hinter eine Tür gelegt, die
+    niemand öffnet. Neu eingetragen: **`P3-457`** (die Berichtigung aus
+    MF-950 ist da und unerreichbar) und **`P3-458`** („weak" wird dreimal
+    verschieden gerechnet, fünf Zahlen ohne Quelle). `P3-448`, `P3-449`
+    und `P3-451` sind um je eine Messung erweitert.
+  · **Und der Fehler liegt hier auch bei MIR, nicht nur an den
+    Zulieferungen.** Ich habe fünf Phasen aus den Gutachten geordnet, ohne
+    vorher die **Erreichbarkeit** ihrer Ziele zu messen. Phasen 1 und 2
+    trugen, weil ihre Ziele Produktivaufrufer hatten
+    (`fat_analyze_boot_sector`, `uft_mfm_decode_track`); Phasen 3 und 4
+    fallen an genau dieser Frage. Ein Plan, der D2 erst beim Bauen prüft,
+    plant die Hälfte seiner Posten gegen eine Wand. **Für Phase 5 wird die
+    Erreichbarkeit zuerst gemessen.**
+  · Als Nächstes **Phase 5** (`P3-445`, A-005: erst der Defekt im
+    Abgleicher — `tied`/`ambiguous`, `FELD_UNBEKANNT`/`TRIFFT`/
+    `WIDERSPRICHT` —, dann der Katalog). Erste Handlung: Aufrufer zählen,
+    Kommentare von Aufrufen getrennt.
 - **Beleg:** Phase 1 = **MF-1189** = `a27fb2d0` (9 Dateien, 894 Einfügungen)
   · Phase 2 = **MF-1190** = `e22e1b78` (6 Dateien, 856 Einfügungen). Beide
   mit allen Pre-Commit-Toren grün und `mcp=0`. **Nicht gepusht** — C3;
