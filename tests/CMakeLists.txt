@@ -3577,6 +3577,18 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_atr_groessen_gegen_jhallen")
+        # MF-1178: die drei ATR-Groessen gegen jhallen/atari-tools
+        # (readme.md, Kanal *Spec*). Der Test baut seine drei Dateien
+        # selbst — kein Korpuseintrag, weil aus `atr2imd` kein
+        # Differenzlauf wurde: seine Ausgabe traegt keine `IMD `-Kennung
+        # und ist byteweise komplementiert (Begruendung im Testkopf).
+        #
+        # `uft_atr.c` meldet die Boot-Layout-Erkennung ueber UFT_WARN
+        # (MF-833), deshalb kommt `uft_log.c` mit.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_roland_osvol")
         # MF-1176: die Roland-Zulieferung. Zwei Module und die
         # HAL-Merkmalstafel, und die Tafel ist der Punkt: dieser Test ist

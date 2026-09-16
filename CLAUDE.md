@@ -819,6 +819,29 @@ das Werkzeug nicht — sie baut einen Defekt ein, den **kein Rotbeweis
 fangen kann**, und trifft am Ende genau das, was dieses Projekt
 herstellt: Vertrauenswürdigkeit.
 
+**Ein Werkzeug kann gebaut, gelaufen UND trotzdem kein Oracle sein
+(MF-1178).** Die Regel in `docs/ORACLES.md` lautet „Kein Oracle auf
+Zusicherung — ein Werkzeug, das nicht gebaut und ausgeführt wurde, ist
+kein Eintrag". Das ist eine **notwendige**, keine hinreichende Bedingung,
+und der Fall dazu ist gemessen: `atr2imd` aus `jhallen/atari-tools`
+übersetzt mit einem `gcc -O2`, läuft, und sein Rundlauf ATR → IMD → ATR
+ist byteidentisch (**0 von 92 176** Byte abweichend). Seine
+**Zwischendatei** ist trotzdem unbrauchbar — sie trägt keine
+`IMD `-Kennung (sondern `ATR2IMD 1.0: <Datum>`) und jedes Datenbyte ist
+komplementiert, was nur der eigene Partner zurücknimmt. Ein Hausformat
+unter fremdem Namen; UFTs IMD-Leser sagt mit
+`UFT_ERROR_FORMAT_INVALID` ab, und das ist richtig.
+
+Die Lehre ist eine **dritte** Frage neben „läuft es" und „dieselbe Hand":
+**kann ein Dritter lesen, was es schreibt?** Aus demselben Paket wurde
+deshalb der Kanal *Spec* statt *Oracle* — seine `readme.md` belegt die
+drei ATR-Größen mit Begründung (92 176 / 133 136 / **183 952**, letzteres
+„− 384 because first three sectors are short"), und genau diese 384 Byte
+sind die Art Wissen, an der ein Leser still scheitert. Festgenagelt in
+`tests/test_atr_groessen_gegen_jhallen.c`; UFT liest alle drei richtig.
+Der verworfene Differenzlauf steht als P3-433, die Interleave-Tafeln
+desselben Werkzeugs als P3-432.
+
 **Und die Bilanz will gemessen sein wie alles andere.** Beim
 Festschreiben dieser Regel wurde die Zeile „cpmtools: 131 diskdefs per
 Laufzeit-Parser, voller Nutzen, null Übernahme" nachgeprüft und trägt
