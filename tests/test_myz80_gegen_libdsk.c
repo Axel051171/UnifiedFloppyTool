@@ -162,12 +162,26 @@ int main(void)
         bool ja = p->probe(datei, n < 4096 ? n : 4096, n, &conf);
         char d[140];
         snprintf(d, sizeof(d), "probe=%d, Konfidenz=%d", ja, conf);
-        /* MF-729: 256 gleiche Bytes sind eine Konvention, keine
-         * Signatur — also Band „Struktur gelesen" (50..79), nicht
-         * „Merkmal getroffen". */
-        pruefe("Sonde nimmt an, Konfidenz im Band 50..79 (eine "
-               "Konvention, keine Kennung)",
-               ja && conf >= 50 && conf < 80, d);
+        /* BERICHTIGT MF-1182, und diese Zusage WAR der Ueberanspruch.
+         *
+         * Hier stand `conf >= 50 && conf < 80` mit der Begruendung, 256
+         * gleiche Byte seien eine Konvention und gehoerten damit in das
+         * Band „Struktur gelesen" (MF-729). Die erste Haelfte stimmt,
+         * die zweite widerspricht sich selbst: die Sonden-Doktrin
+         * (MF-1153) setzt das Band 50..79 auf eine KENNUNG, und MYZ80
+         * hat keine — die Obergrenze ist 45.
+         *
+         * Was die Leiter hergibt, ist Struktur (die 256 geprueften Byte
+         * an berechneter Stelle) plus Geometrie (fest 64x1x128x1024) =
+         * **25**, Band „kein Anspruch". Die alten 70 haben gemessen
+         * jede frisch formatierte CP/M-Diskette gewonnen (P3-406).
+         *
+         * Die wichtigere Haelfte der Zusage ist unveraendert: die Sonde
+         * NIMMT die Datei weiterhin an. Gefallen ist die Hoehe des
+         * Anspruchs, nicht die Erkennung. */
+        pruefe("Sonde nimmt an, Konfidenz 25 (Struktur + Geometrie; "
+               "ohne Kennung ist 50 unerreichbar)",
+               ja && conf == 25, d);
     }
 
     /* ── 3. Gegenprobe: EIN Byte im Kopf ungleich 0xE5 ─────────────── */

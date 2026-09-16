@@ -156,9 +156,21 @@ int main(void)
         bool ja = p->probe(ein, 4096, nein, &conf);
         snprintf(d1, sizeof(d1), "probe(4096 Byte Puffer, Dateigroesse "
                  "%zu) = %d, Konfidenz %d", nein, (int)ja, conf);
+        /* BERICHTIGT MF-1182: hier stand `conf == 40`. Die 40 war von
+         * Hand vergeben; die Leiter gibt **25** (Struktur — ein
+         * geprueftes Verzeichnisbyte an berechneter Stelle — plus
+         * Geometrie). KEINE Selbstkonsistenz, obwohl `cpm_waehle()` die
+         * Gesamtgroesse exakt prueft: die Doktrin bindet den Beleg an
+         * eine Groessenangabe IN der Datei, und CP/M-Abbilder sind
+         * kopflos.
+         *
+         * Die entscheidende Haelfte bleibt: mit 4096-Byte-Puffer und
+         * ECHTER Dateigroesse sagt die Sonde JA. Das ist der Befund aus
+         * MF-1039 — vorher sagte sie nein, weil sie die Dateigroesse
+         * verwarf und gegen die Puffergroesse verglich. */
         pruefe("die Sonde nimmt die DATEIgroesse: mit 4096 Byte Puffer "
-               "sagt sie ja, Konfidenz 40 (Band \"nur die Groesse\", "
-               "MF-729) — vorher sagte sie nein", ja && conf == 40, d1);
+               "sagt sie ja, Konfidenz 25 (Struktur + Geometrie, "
+               "MF-1182) — vorher sagte sie nein", ja && conf == 25, d1);
     }
 
     /* ── 3. Gegenprobe: mit falscher Dateigroesse faellt sie ─────── */

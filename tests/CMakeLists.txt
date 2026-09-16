@@ -3577,6 +3577,23 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_sondendoktrin_engerer_anspruch")
+        # MF-1182, P3-406: MYZ80 gewann mit 70 gegen `cpm`s 40 an einer
+        # CP/M-Diskette mit unbeschriebener Systemspur — gelesen wuerde
+        # 64x1x128x1024 statt 80x2x9x512. Beide Sonden vergaben ihre
+        # Zahl von Hand; seit MF-1182 kommen sie aus
+        # `uft_probe_konfidenz()`, und damit entscheidet die Leiter,
+        # was die Doktrin (MF-1153) als Regel 2 formuliert hat.
+        #
+        # BEIDE Plugin-Dateien kommen mit, weil der Test die Sonden
+        # DURCH ihre oeffentlichen Plugin-Strukturen ruft — eine zweite
+        # Kopie ihrer Rechnung waere die Lage aus MF-1015.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/myz80/uft_myz80.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_win98_fdb")
         # MF-1181: die Win98-FDB-Zulieferung, VERPFLANZT statt kopiert.
         # `uft_fat_bootsector.c` kommt mit, und das ist der Punkt: der

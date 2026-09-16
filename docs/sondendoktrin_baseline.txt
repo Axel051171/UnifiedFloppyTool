@@ -18,7 +18,6 @@ src/formats/atari/uft_pro_plugin.c:pro_plugin_probe
 src/formats/atr/uft_atr.c:atr_probe
 src/formats/atx/uft_atx.c:atx_plugin_probe
 src/formats/cas/uft_cas.c:cas_probe
-src/formats/cpm/uft_cpm_diskdef.c:cpm_probe_plugin
 src/formats/cqm/uft_cqm.c:cqm_probe
 src/formats/d13/uft_d13.c:d13_probe
 src/formats/d64/uft_d64_plugin.c:d64_plugin_probe

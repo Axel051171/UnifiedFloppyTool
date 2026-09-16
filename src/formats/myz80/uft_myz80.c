@@ -69,23 +69,63 @@ long uft_myz80_offset(uint32_t cylinder, uint32_t sector) {
            + MYZ80_HEADER_SIZE;
 }
 
-bool uft_myz80_probe(const uint8_t *data, size_t size, int *confidence) {
+bool uft_myz80_probe(const uint8_t *data, size_t size, int *confidence)
+{
+    if (confidence) *confidence = 0;
     if (!uft_myz80_validate_header(data, size)) return false;
 
-    /* MF-729: welche Stufe ist das?
+    /* MF-1182: die Zahl kommt aus der Leiter, nicht von hier.
      *
-     * Es ist **keine** Kennung — 256 gleiche Bytes sind eine
-     * Konvention, kein Merkmal im Sinne einer Signatur. Damit gehoert
-     * es in das Band „Struktur gelesen" (50..79) und nicht in „Merkmal
-     * getroffen" (80..100). Die Eichung tragen beide Richtungen: ein
-     * NULLpuffer wird abgewiesen (0x00 ist nicht 0xE5), und ein
-     * Zufallspuffer praktisch immer (256 Byte muessen zusammenfallen).
+     * Bis hierhin stand `*confidence = 70` mit einer Begruendung, die
+     * den Defekt WOERTLICH vorhersagte: „eine Datei, die durchgehend
+     * 0xE5 ist — etwa eine leer formatierte Diskette eines anderen
+     * Formats — erfuellt die Bedingung ebenfalls. libdsk hat dasselbe
+     * Problem und lebt damit." Genau das hat P3-406 dann gemessen: an
+     * `tests/corpus_free/cpmtools_cf2dd_720k.cpm` (737 280 Byte, erste
+     * 256 Byte alle 0xE5) gewann MYZ80 mit 70 gegen `cpm`s 40, und
+     * gelesen wuerde 64x1x128x1024 statt 80x2x9x512. Ein Kommentar, der
+     * einen Defekt harmlos nennt, ist eine Aussage — und sie war falsch.
      *
-     * Dass es nicht mehr als 70 sein darf, ist eine ehrliche Grenze:
-     * eine Datei, die durchgehend 0xE5 ist — etwa eine leer
-     * formatierte Diskette eines anderen Formats — erfuellt die
-     * Bedingung ebenfalls. libdsk hat dasselbe Problem und lebt damit. */
-    if (confidence) *confidence = 70;
+     * Belege, jeder einzeln begruendet:
+     *
+     *   KENNUNG          NEIN. 256 gleiche Byte sind eine Konvention,
+     *                    kein formatspezifisches Merkmal (MF-729). Damit
+     *                    liegt die Obergrenze bei 45.
+     *   SELBSTKONSISTENZ NEIN, und ein erster Entwurf dieser Aenderung
+     *                    lag hier falsch. Er gab den Beleg, wenn die
+     *                    Gesamtgroesse `256 + n*131072` traf. Die
+     *                    Doktrin definiert ihn aber woertlich als „der
+     *                    Kopf sagt eine Groesse, und die Datei hat sie
+     *                    — die Datei bestaetigt sich selbst", und MYZ80
+     *                    ist KOPFLOS: die 256 Byte sind reservierter
+     *                    Raum, keine Angabe. Eine Groesse, die zu einer
+     *                    Geometrie passt, ist „Groesse allein" — nach
+     *                    derselben Tafel **0**. Gefangen hat den Fehler
+     *                    eine zweite Testzeile: mit dem Zugestaendnis
+     *                    gewann `cpm` ploetzlich auch das Rennen um die
+     *                    NanoWasp-Datei.
+     *   STRUKTUR         JA. Der reservierte Bereich liegt an einer
+     *                    berechneten Stelle (0..255) und ist vollstaendig
+     *                    geprueft, nicht stichprobenartig.
+     *   GEOMETRIE        JA. 64x1x128x1024 ist fest und plausibel.
+     *
+     * Gemessen ergibt das **25**, Band „kein Anspruch" — statt der 70,
+     * die hier von Hand standen. Der Ueberanspruch ist damit weg.
+     *
+     * **Was damit NICHT erledigt ist.** `cpm` kommt an derselben Datei
+     * ebenfalls auf 25, also steht ein GLEICHSTAND. Die Doktrin
+     * entscheidet ihn mit Regel 2 — der engere Anspruch gewinnt, und
+     * MYZ80 erklaert 256 von 737 280 Byte, `cpm` alle. Genau dieses
+     * Mass fehlt im Sondenvertrag; kein Plugin liefert es, und die
+     * Doktrin nennt es selbst die „naechste Vertragsfrage". Behoben ist
+     * der UEBERANSPRUCH, nicht der Gleichstand — P3-439.
+     *
+     * Die Groessenregel, die MYZ80 diesem Mass anzubieten haette, ist
+     * gemessen und steht im Punkt: `256 + n*131072` mit n <= 64 geht
+     * restlos auf (voll 8 388 864). Sie steht dort und nicht hier, weil
+     * eine Rechnung ohne Leser Bestand und keine Faehigkeit ist. */
+    unsigned belege = UFT_BELEG_STRUKTUR | UFT_BELEG_GEOMETRIE;
+    if (confidence) *confidence = uft_probe_konfidenz(belege);
     return true;
 }
 
@@ -301,6 +341,19 @@ uft_error_t uft_myz80_write(const uft_disk_image_t *disk,
 
 static bool myz80_probe_plugin(const uint8_t *data, size_t size,
                                size_t file_size, int *confidence) {
+    /* MF-1182: das `(void)file_size` bleibt, und zwar BEGRUENDET.
+     *
+     * MF-1029 hatte an dieser Zeile gemessen, dass ein Groessenrueckfall
+     * toter Code war — behoben wurde damals der Rueckfall. Uebrig blieb
+     * ein unbenutzter Parameter, und die naheliegende Lesart „also fehlt
+     * hier ein Groessenbeleg" ist gemessen FALSCH: MYZ80 ist kopflos,
+     * und die Doktrin bindet Selbstkonsistenz an eine Groessenangabe IN
+     * der Datei. Eine Groesse, die zu einer Geometrie passt, ist nach
+     * derselben Tafel „Groesse allein" und damit 0.
+     *
+     * Der Defekt aus P3-406 war nicht das Verwerfen, sondern die von
+     * Hand vergebene 70. Sie ist weg; die Zahl kommt jetzt aus der
+     * Leiter und lautet 25. */
     (void)file_size;
     return uft_myz80_probe(data, size, confidence);
 }

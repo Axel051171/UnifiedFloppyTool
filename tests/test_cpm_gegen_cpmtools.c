@@ -260,8 +260,18 @@ int main(void)
         bool ja = p->probe(roh, 4096, nroh, &conf);
         snprintf(d1, sizeof(d1), "probe(4096-Puffer, Dateigroesse %zu) = %d, "
                  "Konfidenz %d", nroh, (int)ja, conf);
-        pruefe("die Sonde sagt ja mit Konfidenz 40 (Band \"nur die "
-               "Groesse\", MF-729)", ja && conf == 40, d1);
+        /* BERICHTIGT MF-1182: hier stand `conf == 40`, von Hand
+         * vergeben. Die Leiter gibt **25** — Struktur (ein geprueftes
+         * Verzeichnisbyte an berechneter Stelle) plus Geometrie, ohne
+         * Kennung und ohne Selbstkonsistenz, weil CP/M-Abbilder kopflos
+         * sind und die Doktrin den Beleg an eine Groessenangabe IN der
+         * Datei bindet.
+         *
+         * Und diese Datei ist genau die, an der P3-406 gemessen wurde:
+         * ihre ersten 256 Byte sind 0xE5, weshalb MYZ80 mit seinen
+         * damaligen 70 das Rennen gewann. Beide stehen jetzt bei 25. */
+        pruefe("die Sonde sagt ja mit Konfidenz 25 (Struktur + "
+               "Geometrie, MF-1182)", ja && conf == 25, d1);
     }
 
     /* ── 3. Gegenprobe: falsche Dateigroesse faellt ───────────────── */

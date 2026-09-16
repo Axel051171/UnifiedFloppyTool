@@ -260,13 +260,41 @@ static const rennen_t RENNEN[] = {
     { "tan", "IMG", "gleich",
       "dieselbe Datei wie `jv1` (artefaktgleich, P3-365), also "
       "dieselbe Messung" },
-    { "cpm", "MYZ80", "ANDERS",
-      "MYZ80 meldet 70 gegen cpms 40 — und es hat recht: seine GANZE "
-      "Erkennung ist \"die ersten 256 Byte sind alle 0xE5\" (MF-1029), "
-      "und eine CP/M-Diskette mit unbeschriebener Systemspur ist genau "
-      "das. MYZ80 nimmt ausserdem kurze Dateien an, also entscheidet "
-      "die Groesse nichts. Gelesen wuerde 64x1x128x1024 statt "
-      "80x2x9x512. P3-406" },
+    /* BERICHTIGT MF-1182, und die Tafel hat es selbst gemeldet: hier
+     * stand `MYZ80` mit dem Grund „meldet 70 gegen cpms 40". Das war
+     * P3-406 — MYZ80s ganze Erkennung ist „die ersten 256 Byte sind
+     * alle 0xE5", und eine CP/M-Diskette mit unbeschriebener
+     * Systemspur ist genau das; gelesen wuerde 64x1x128x1024 statt
+     * 80x2x9x512. Seit MF-1182 bilden BEIDE Sonden ihre Zahl ueber
+     * `uft_probe_konfidenz()`: MYZ80 faellt auf **25** (Struktur +
+     * Geometrie, ohne Kennung geklemmt), `cpm` steigt auf **45**, weil
+     * `cpm_waehle()` die Gesamtgroesse EXAKT prueft und der Anspruch
+     * damit jedes Byte erklaert. Die Zeile fiel daraufhin mit
+     * „gemessen war MYZ80, jetzt MSX" — genau dafuer ist sie eine
+     * Schranke und kein Zugestaendnis.
+     *
+     * **Und `cpm` gewinnt dadurch NICHT.** Es faellt von 40 auf 25,
+     * weil auch seine 40 von Hand vergeben waren: kopflos, also keine
+     * Kennung und keine Selbstkonsistenz (die Doktrin bindet den Beleg
+     * an eine Groessenangabe IN der Datei, und eine Tafelgroesse ist
+     * „Groesse allein" = 0). Uebrig bleiben Struktur und Geometrie.
+     * Sieger ist jetzt **MSX mit 45 bei gleichauf 1** — MSX-2DD ist
+     * ebenfalls 80x2x9x512.
+     *
+     * Was das Rennen um diese Datei angeht, ist der Befund damit
+     * *verschoben*, nicht geschlossen: MYZ80s Ueberanspruch ist weg,
+     * und zwischen MYZ80 und `cpm` steht jetzt ein Gleichstand bei 25,
+     * den Regel 2 der Doktrin entscheiden wuerde — der engere Anspruch
+     * gewinnt, `cpm` erklaert jedes Byte, MYZ80 256 davon. Fuer diese
+     * Regel fehlt das Mass im Sondenvertrag: **P3-439**. */
+    { "cpm", "MSX", "ANDERS",
+      "737 280 Byte. Seit MF-1182 kommen beide fraglichen Zahlen aus der "
+      "Leiter: MYZ80 von 70 auf 25 (der Befund aus P3-406) und `cpm` von "
+      "40 auf 25 — beide kopflos, also Struktur plus Geometrie und "
+      "sonst nichts. Sieger ist MSX mit 45, gleichauf 1; MSX-2DD hat "
+      "dieselbe Teilung wie ein PC-720K und wie `pcw-720`. Der "
+      "Gleichstand zwischen MYZ80 und `cpm` bei 25 waere Regel 2 der "
+      "Doktrin, und ihr fehlt das Mass — P3-439" },
     /* BERICHTIGT MF-1151, und die Tafel hat es selbst gemeldet: hier
      * stand `DMK` mit dem Grund „meldet 65 auf einem flachen Abbild".
      * Das war der Befund, MF-1151 hat ihn behoben (drei Tore aus MAMEs
@@ -355,9 +383,11 @@ static const rennen_t RENNEN[] = {
     { "t1k", "IMG", "gleich",
       "1 474 560 Byte; IMG 40, gleichauf 3. MF-1144-Klasse" },
     { "nanowasp", "IMG", "ANDERS",
-      "409 600 Byte; IMG 40, und **gleichauf 4** — der Fall, an dem "
+      "409 600 Byte; IMG 40, und **gleichauf 3** — der Fall, an dem "
       "MF-1148 den Gleichstand gemessen hat. IMG teilt 50x2x8x512, "
-      "NanoWasp 40x2x10x512 mit Skew. P3-402" },
+      "NanoWasp 40x2x10x512 mit Skew. Hier standen bis MF-1182 vier "
+      "Gleichauf-Liegende; `cpm` ist ausgeschieden, weil seine 40 von "
+      "Hand vergeben waren und die Leiter 25 ergibt. P3-402" },
     { "pdp", "DSK_X820", "gleich",
       "256 256 Byte; DSK_X820 40, gleichauf 3. Die Geometrie ist "
       "identisch (77x1x26x128), also folgenlos — gemessen MF-1147" },

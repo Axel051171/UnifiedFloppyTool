@@ -215,3 +215,22 @@ eine Quelle, statt eine Liste abzuarbeiten.**
   Datei erklärt der Anspruch), aber kein Plugin liefert es heute. Das
   Feld dafür ist die nächste Vertragsfrage — und die erste, die ohne
   diese Seite gar nicht stellbar wäre.
+
+**Gemessen MF-1182, und die Reihenfolge war umgekehrt zur Erwartung.**
+Der Fall, an dem Regel 2 begründet wurde, war zu dem Zeitpunkt **kein
+Gleichstand**: MYZ80 meldete 70 von Hand, `cpm` 40 von Hand — die Regel
+griff also nie, und was fehlte, war nicht das Maß, sondern die
+Migration. Seit beide über `uft_probe_konfidenz()` gehen, stehen beide
+bei **25**, und *jetzt* steht der Gleichstand wirklich da. Das Feld ist
+damit von einer Vorausschau zu einem gemessenen Bedarf geworden:
+**P3-439** führt die Zahlen (MYZ80 prüft 256 von 737 280 Byte =
+0,0347 %, `cpm` erklärt 100 %) und drei Zuschnitte mit Kosten.
+
+**Und eine Abkürzung ist ausdrücklich verbaut.** Ein erster Entwurf von
+MF-1182 hat die Selbstkonsistenz als Ersatzmaß genommen —
+`cpm_waehle()` prüft die Gesamtgröße exakt, also „bestätigt sich die
+Datei selbst". Das ist falsch, weil diese Seite den Beleg wörtlich an
+eine Größenangabe **in** der Datei bindet und eine kopflose Datei sie
+nicht hat; „Größe allein" ist nach derselben Tafel **0**. Gefangen hat
+den Fehlgriff eine zweite Korpuszeile, nicht das Nachdenken: mit dem
+Zugeständnis gewann `cpm` plötzlich das Rennen um eine NanoWasp-Datei.

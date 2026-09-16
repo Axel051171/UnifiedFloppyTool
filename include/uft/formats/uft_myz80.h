@@ -136,6 +136,25 @@ bool uft_myz80_validate_header(const uint8_t *data, size_t size);
 /** @brief Byteversatz eines Sektors, libdsk `drvmyz80.c:178`. */
 long uft_myz80_offset(uint32_t cylinder, uint32_t sector);
 
+/** @brief Sonde nach der Doktrin (MF-1182).
+ *
+ * Die Konfidenz kommt aus `uft_probe_konfidenz()` und ist **25** —
+ * Struktur (die 256 geprueften Byte an berechneter Stelle) plus
+ * Geometrie (fest 64x1x128x1024). Keine Kennung, also Obergrenze 45;
+ * und keine Selbstkonsistenz, weil MYZ80 KOPFLOS ist und die Doktrin
+ * den Beleg woertlich an eine Groessenangabe IN der Datei bindet.
+ *
+ * Bis MF-1182 standen hier von Hand vergebene **70**, und damit gewann
+ * MYZ80 gegen jedes groessenexakte Format, dessen erste Spur
+ * unbeschrieben ist — gemessen an einer CP/M-Diskette (P3-406).
+ *
+ * **Die Signatur bekommt bewusst KEIN `file_size`.** Ein erster
+ * Entwurf von MF-1182 hat es hinzugefuegt, um damit Selbstkonsistenz zu
+ * belegen; das war falsch (siehe die Begruendung in `uft_myz80.c`), und
+ * ein Parameter, den niemand liest, waere Bestand statt Faehigkeit.
+ * Das Mass, das Regel 2 der Doktrin braucht, ist eine Vertragsfrage
+ * fuer ALLE Sonden und kein Sonderfall hier — P3-439.
+ */
 bool uft_myz80_probe(const uint8_t *data, size_t size, int *confidence);
 
 void uft_myz80_read_options_init(myz80_read_options_t *opts);

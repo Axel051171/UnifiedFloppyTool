@@ -923,11 +923,53 @@ static bool cpm_probe_plugin(const uint8_t *data, size_t size,
                                           &mehrdeutig);
     if (!def) return false;      /* auch bei mehrdeutig: kein Anspruch */
 
-    /* MF-729: erkannt sind die Dateigroesse und ein Byte am
-     * Verzeichnisanfang. Das ist das Band „nur die Groesse" (30-49).
-     * Vorher standen hier 60 — eine Zahl aus dem Band „Struktur
-     * gelesen", fuer die es keine Deckung gab. */
-    if (confidence) *confidence = 40;
+    /* MF-1182: die Zahl kommt aus der Leiter, nicht von hier.
+     *
+     * Vorher standen hier 40 mit der Begruendung „erkannt sind die
+     * Dateigroesse und ein Byte am Verzeichnisanfang" (MF-729, und
+     * davor 60 ohne Deckung). Die Begruendung war richtig, die Zahl
+     * aber von Hand gewaehlt — und sie hat einen gemessenen Preis
+     * bezahlt: an `tests/corpus_free/cpmtools_cf2dd_720k.cpm` gewann
+     * MYZ80 mit 70, weil dessen erste 256 Byte 0xE5 sind. Gelesen
+     * wuerde 64x1x128x1024 statt 80x2x9x512 (P3-406).
+     *
+     * Belege, jeder einzeln begruendet:
+     *
+     *   KENNUNG          NEIN. CP/M-Abbilder sind kopflos; es gibt
+     *                    nichts an fester Stelle, das das Format nennt.
+     *                    Damit liegt die Obergrenze bei 45.
+     *   SELBSTKONSISTENZ NEIN — und das ist der Punkt, an dem ein
+     *                    erster Entwurf dieser Aenderung falsch lag.
+     *                    Die Doktrin definiert den Beleg woertlich als
+     *                    „der Kopf sagt eine Groesse, und die Datei hat
+     *                    sie — die Datei bestaetigt sich selbst".
+     *                    `cpm_waehle()` prueft die Groesse zwar EXAKT
+     *                    (`file_size != expected` verwirft), aber gegen
+     *                    eine TAFEL, nicht gegen eine Angabe IN der
+     *                    Datei. Eine kopflose Datei kann sich nicht
+     *                    selbst bestaetigen; „Groesse allein" ist nach
+     *                    derselben Tafel **0**.
+     *   STRUKTUR         JA. Das Byte am berechneten Verzeichnisanfang
+     *                    ist geprueft (0xE5 oder ein Benutzerbereich
+     *                    <= 15), nicht bloss gelesen.
+     *   GEOMETRIE        JA. Sie kommt aus der Tafel und ist an libdsks
+     *                    `stdg[]` abgenommen (MF-1039).
+     *
+     * Gemessen ergibt das **25**, Band „kein Anspruch" — weniger als
+     * die 40, die hier von Hand standen. Das ist kein Verlust, sondern
+     * die Berichtigung einer Zahl ohne Deckung: erkannt sind eine
+     * Tafelgroesse und ein Byte, und dafuer gibt die Leiter 25.
+     *
+     * **Was damit NICHT erledigt ist.** MYZ80 kommt an derselben Datei
+     * ebenfalls auf 25, also steht ein GLEICHSTAND. Die Doktrin
+     * entscheidet ihn mit Regel 2 — der engere Anspruch gewinnt, und
+     * `cpm` erklaert jedes Byte, waehrend MYZ80 256 von 737 280
+     * erklaert. Fuer diese Regel fehlt das Mass im Sondenvertrag; kein
+     * Plugin liefert es, und die Doktrin nennt es selbst als „naechste
+     * Vertragsfrage". Behoben ist damit der UEBERANSPRUCH (MYZ80s 70),
+     * nicht der Gleichstand — siehe P3-406 und P3-439. */
+    unsigned belege = UFT_BELEG_STRUKTUR | UFT_BELEG_GEOMETRIE;
+    if (confidence) *confidence = uft_probe_konfidenz(belege);
     return true;
 }
 
