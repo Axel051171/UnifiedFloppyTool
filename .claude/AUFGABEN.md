@@ -965,7 +965,8 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
 - **Beleg:** —
 
 ### A-012 · `yas-sim/xm7-related-tools` auseinandernehmen (FM-7: D77 · T77 · FM-Dateisystem · Boot-ROM)
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist ein
+  eigener Posten) · MF-1203 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/yas-sim/xm7-related-tools.git nimm den
   code komplett auseinander , sehr genau / finde alles und alles raussuchen
   was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
@@ -1032,11 +1033,45 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   22 Werkzeugen sind mehr als jede bisherige Zulieferung dieser Reihe
   (A-010 hatte 4). Genauer nicht schätzbar. Einbau **nicht schätzbar** und
   in jedem Fall ein eigener Posten.
-- **Stand:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a012_xm7_related_tools.gutachten.md`, (a)…(e).
+  Repo flach geklont nach `tools/uft-scout/work/xm7-related-tools`
+  (gitignoriert); **70 Quelldateien gemessen — exakt die Zahl der
+  Aufnahme**, 20 Werkzeugverzeichnisse (die Aufnahme sagte 22; gemessen
+  sind es 20, drei davon ohne Quelltext), 8 020 Zeilen.
+  · **(b) Die erste Frage ist mit NEIN beantwortet, und zwar gemessen:
+    das Repo liefert KEINEN FM-Erzeuger.** `P3-389` meint die
+    FM-**Kodierung**; über alle 70 Quelldateien gibt es dafür **zwei**
+    Treffer, und beide sind **Kommentare** zu einem Dichte-Byte im
+    D77-Behälter (`fmfslib/cfloppy.h:17`, `d77img.h:21`). `wav2t77` ist
+    eine **Audio**-Kette (AGC, Komparator, Filter, Tiefpass) — Band-FSK,
+    nicht Diskettenfluss. P3-389 bleibt offen.
+  · **(a) Je Werkzeug ein Urteil:** **6 brauchbar oder Oracle-Kandidat**
+    (`fmtools` 3460 Z., `wav2t77` 920, `t772wav` 519, `d77uty` 341,
+    `t77dec` 332, `d77enc_dec` 322), **11 uninteressant** (2 419 Zeilen
+    S-Record-/ROM-/Grafikwerkzeuge ohne Diskettenbezug), **3 ohne
+    Quelltext** (`BootROM`, `nosys_ipl`, `subtfr` — Kanal *Spec*).
+  · **(c) Kanal: PORT zulässig** — `LICENSE.md` ist **MIT, © 2022
+    Yasunori Shimura**; MIT in GPL-2-or-later ist permissiv in Copyleft.
+    **Einzige Quelle dieser Reihe, bei der ein Port offensteht.** Gemessen
+    trägt allerdings **0** der 70 Quelldateien eine eigene SPDX-Zeile.
+  · **(d/e) Zwei gemessene Lücken:** das **FM-7-Dateisystem**
+    (`fmtools/fmfslib`) — der Baum kennt FM-7 als Plattform (8 Treffer)
+    und D77 als Behälter, „DISK BASIC" trifft aber nur **MSX**; und
+    **T77**, im Baum **rc 1 / 0 Treffer**, vollständig abwesend. Ob T77
+    fehlen SOLL, ist eine Eigentümer-Frage — `SCOPE_DECISION_NON_FLOPPY.md`
+    hat Nicht-Disketten-Inhalte 2026-05-25 gelöscht, während CLAUDE.md drei
+    Bandformate als unterstützt führt.
+  · **Bemerkenswert:** für das FM-7-Dateisystem wäre die Verifikationskette
+    **vollständig führbar** — MIT-Quelle als Referenz, `d77enc_dec` als
+    Erzeuger, `d77` bereits auf T1b. Das ist selten.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a012_xm7_related_tools.gutachten.md`.
 - **Beleg:** —
 
 ### A-013 · `thomas-luebker/AmigaDiskKit` auseinandernehmen — **das ist `P3-385(b)`**
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; Port bleibt gesperrt,
+  Orakel ist delegierbar) · MF-1203 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/thomas-luebker/AmigaDiskKit.git nimm den
   code komplett auseinander , sehr genau / finde alles und alles raussuchen
   was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
@@ -1104,8 +1139,42 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   **entfällt** unter dem heutigen Lizenzurteil; was bliebe, wäre ein
   **Nachbau** nach `docs/QUARANTINE_PROCESS.md` §5 — und das ist ein
   eigener Posten mit eigener Eigentümer-Entscheidung.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a013_amigadiskkit.gutachten.md`, (a)…(f). Repo flach
+  geklont nach `tools/uft-scout/work/AmigaDiskKit`; **97 `.swift`, 26
+  `.bin`, 11 `.txt` — genau die Zahlen aus `P3-385`**, Apache-2.0
+  bestätigt.
+  · **(e) DREI ZAHLEN VON `P3-385` SIND FALSCH**, case-sensitive
+    nachgemessen mit `rc` je Lauf: `RDB` **11 Treffer in 2 Dateien** statt
+    0 — und **umgesetzt**, nicht erwähnt (`uft_hdf_parse_rdb()`,
+    `calc_rdb_checksum()`, BE-Felder bei Versatz 128/132, Schranke gegen
+    „malformed RDB"); `FFS2` **1** statt 0, aber nur als Kommentarzeile;
+    `LHA` **8** statt 1. Richtig bleiben `rigid_disk` 0 und `PFS3` 0.
+  · **(a) Vierzehn Achsen je mit Urteil.** Die eine, die dem Baum wirklich
+    fehlt, ist **`PFS3`** — 6 Dateien, **3207 Zeilen**, die größte
+    Einzelachse des Repos, im Baum **rc 1 / 0 Treffer**. Gleichwertig sind
+    Floppy/ADF, FAT, MBR, ImageIO; schwächer sind RDB, Preview/IFF — und
+    **LHA**.
+  · **LHA ist der schärfste Einzelbefund:** der Baum trägt eine Format-ID
+    (`UFT_FMT_LHA = 203`), drei Funktionsdeklarationen — und
+    `src/fs/uft_amigados_extended.c:683` „LHA Archive - Stubs" mit **drei
+    Rümpfen `return -1; /* Not implemented */`**. Klasse `P3-204`. Das
+    fremde Repo hat 1797 Zeilen davon, und Apache-2.0 verbietet den Port;
+    LHA ist aber dokumentiert, also wäre es ein **Nachbau**, kein Port.
+  · **(b) Die Orakel-Frage ist entschieden: auf dieser Maschine
+    verschlossen.** Keine Swift-Werkzeugkette, und `docs/ORACLES.md`
+    verlangt Bau UND Ausführung. Delegierbar wie die Tier-3-Bank (MF-310).
+    Was delegiert werden müsste, steht im Gutachten §4 — inklusive der
+    Gegenprobe auf **ADFlib-Unabhängigkeit**, ohne die auch ein
+    erfolgreicher Bau nichts belegt (MF-1033).
+  · **(c) Daten-Kanal: 26 Dateien, 5 097 472 Byte**, gezielte Ausschnitte
+    ECHTER Aufbauten (`classic-8g`, `mister-8g`, `pistorm-29g`, `hst-`,
+    `pfs3-2g/8g`) — RDB-Bereiche, Bootblöcke, FAT32-Systembereiche.
+    Ausgezeichnetes Fixture-Material; **Herkunft je Datei fehlt**, und die
+    Repolizenz deckt den Disketteninhalt nicht (`SCOUT-5`).
+  · **(f)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a013_amigadiskkit.gutachten.md`.
 
 ### A-014 · `SecurityRonin/disk-forensic` auseinandernehmen — und die Vorfrage lautet: ist das Diskettenarbeit?
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
