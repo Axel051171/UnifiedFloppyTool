@@ -222,24 +222,63 @@ TEST(eineinhalb_geht_weiterhin)
     remove(pfad);
 }
 
-TEST(zu_kleine_datei_wird_weiter_gepolstert)
+TEST(vier_groessen_gehen_weiterhin)
 {
-    /* Gruen vor UND nach. Die UNTERE Richtung bleibt wie sie war: 1 228 800
-     * Byte gehen restlos in 80 x 2 x 15 x 512 auf (der 1,2-M-Zweig), und
-     * eine kleinere Datei wird mit Warnung gepolstert statt abgesagt.
-     * Ohne diesen Fall waere „lehnt alles ab, was nicht genau passt" eine
+    /* Gruen vor UND nach MF-1174, und die eigentliche Absicherung: die vier
+     * Groessen, die die Bereiche EXAKT treffen, gehen weiter durch. Ohne
+     * diesen Fall waere „lehnt alles ab, was nicht genau passt" eine
      * genauso gruene Zusage. */
-    muster(GR_1200K);
-    const char *pfad = "uft_hfe_1200_ok.hfe";
-    size_t gelesen = 0;
-    ASSERT(wandeln(GR_1200K, pfad, &gelesen) == UFT_OK);
-    ASSERT(le16(g_kopf + HFE_OFF_RPM) == 360u);   /* 5,25-Zoll-HD, MF-1166 */
+    struct { size_t n; unsigned rpm; const char *pfad; } f[] = {
+        { (size_t)40u * 2u *  9u * 512u, 300u, "uft_hfe_360_ok.hfe"  },
+        { (size_t)80u * 2u *  9u * 512u, 300u, "uft_hfe_720_ok.hfe"  },
+        { GR_1200K,                      360u, "uft_hfe_1200_ok.hfe" },
+        { GR_1440K,                      300u, "uft_hfe_1440b_ok.hfe"},
+    };
+    for (unsigned i = 0; i < sizeof(f) / sizeof(f[0]); i++) {
+        size_t gelesen = 0;
+        muster(f[i].n);
+        ASSERT(wandeln(f[i].n, f[i].pfad, &gelesen) == UFT_OK);
+        ASSERT(gelesen >= 1024u);
+        /* 1,2 M laeuft im 5,25-Zoll-HD-Laufwerk mit 360 U/min (MF-1166) */
+        ASSERT(le16(g_kopf + HFE_OFF_RPM) == f[i].rpm);
+        remove(f[i].pfad);
+    }
+}
+
+/* ── ROTBEWEIS 4 (MF-1174): zu kurz ist auch eine falsche Geometrie ──── */
+
+TEST(zu_kurze_datei_wird_abgesagt)
+{
+    /* Bis MF-1174 stand hier das Gegenteil: dieser Test hat in MF-1170
+     * festgenagelt, dass eine zu kurze Datei ANGENOMMEN wird. Gemessen war
+     * das der einzige Abhaengige der Fuellfaehigkeit im ganzen Baum — und
+     * die Messung dazu hat gezeigt, dass „zu kurz" fast immer eine FALSCHE
+     * GEOMETRIE ist und nicht eine kurze Diskette: von zwoelf echten
+     * Groessen treffen die vier Bereiche nur vier exakt.
+     *
+     * 1 228 288 Byte sind 512 weniger als der 1,2-M-Zweig erwartet. Vorher
+     * kamen UFT_OK und 512 erfundene 0xE5-Byte heraus, als Sektordaten
+     * gemeldet. */
+    muster(GR_1200K - 512u);
+    const char *pfad = "uft_hfe_kurz_absage.hfe";
+    ASSERT(wandeln(GR_1200K - 512u, pfad, NULL) != UFT_OK);
+    ASSERT(!datei_existiert(pfad));
     remove(pfad);
 
-    /* und eine Datei UNTER ihrer Geometrie wird weiter angenommen */
-    muster(GR_1200K - 512u);
-    pfad = "uft_hfe_kurz_ok.hfe";
-    ASSERT(wandeln(GR_1200K - 512u, pfad, &gelesen) == UFT_OK);
+    /* Und die schaerfere Fassung, symmetrisch zum Byte zu viel oben:
+     * EIN Byte zu wenig. */
+    muster(GR_1440K - 1u);
+    pfad = "uft_hfe_minus1_absage.hfe";
+    ASSERT(wandeln(GR_1440K - 1u, pfad, NULL) != UFT_OK);
+    remove(pfad);
+
+    /* Die Klasse, die die Messung gefunden hat: eine 160-K-Diskette
+     * (40 x 1 x 8 x 512) wurde als 40 x 2 x 9 x 512 gelesen — Kopfzahl und
+     * Sektorzahl falsch — und 204 800 der 368 640 Byte waren erfunden,
+     * mehr als die Diskette selbst hat. */
+    muster((size_t)40u * 1u * 8u * 512u);
+    pfad = "uft_hfe_160_absage.hfe";
+    ASSERT(wandeln((size_t)40u * 1u * 8u * 512u, pfad, NULL) != UFT_OK);
     remove(pfad);
 }
 
@@ -288,9 +327,10 @@ int main(void)
     RUN(zweikommaachtundachtzig_wird_abgesagt);
     RUN(ein_byte_zu_viel_wird_abgesagt);
     RUN(absage_laesst_keine_datei_zurueck);
+    RUN(zu_kurze_datei_wird_abgesagt);
     printf("--- Gegenproben: was passt, geht weiterhin ---\n");
     RUN(eineinhalb_geht_weiterhin);
-    RUN(zu_kleine_datei_wird_weiter_gepolstert);
+    RUN(vier_groessen_gehen_weiterhin);
     printf("--- Grenze der HFE-v1-Spurtabelle ---\n");
     RUN(spurtabelle_grenze_ist_arithmetisch_belegt);
     printf("\nErgebnis: %d bestanden, %d gefallen\n", _pass, _fail);

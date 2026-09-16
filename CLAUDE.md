@@ -740,7 +740,22 @@ ausdrückliche Port-Erklärungen, 43 mit genannter fremder Codebasis
 ```
 include/uft/          — Alle öffentlichen C-Header
   analysis/            — OTDR, DeepRead, TDFC, Confidence
-  core/                — Fehler, Typen, Pfad-Sicherheit
+  core/                — Fehler, Typen
+                         (BERICHTIGT MF-1174: hier stand zusätzlich
+                          „Pfad-Sicherheit". Ein solches Modul gibt es im
+                          ganzen Baum NICHT — gemessen über `git ls-files`
+                          trägt genau EINE Datei „path" im Namen, und das
+                          ist `tests/benchmarks/bench_decode_hotpath.c`.
+                          Alle `uft_*path*`-Symbole sind Wandlungspfade
+                          oder Verzeichnispfade INNERHALB eines Datei-
+                          systems; Nutzer von `uft_path_safe` /
+                          `uft_safe_fopen`: 0. Klasse MF-1064/MF-767.
+                          Und die Zusage hat gewirkt: die Win98-FDB-
+                          Zulieferung öffnet ihre Datei mit blankem
+                          `fopen` — nicht aus Nachlässigkeit, sondern weil
+                          das versprochene Modul fehlt. Ob es gebaut werden
+                          soll, braucht einen gemessenen Anlass: welcher
+                          Pfad kommt aus unvertrauenswürdiger Quelle?)
   encoding/            — Encoding Detection Boost
   flux/                — Flux Decoder, SCP Parser
   formats/             — Format-spezifische Header

@@ -883,26 +883,63 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 
     size_t expected_size = (size_t)cylinders * heads * sectors * sector_size;
     if (src_size < expected_size) {
-        /* MF-1173: hier stand „padding with zeros" — und gefuellt wird mit
-         * 0xE5 (`memset(pad, 0xE5, sector_size)` weiter unten). Das ist
-         * nicht nur die falsche Zahl in einer Meldung: wer 0x00-Bloecke
-         * sucht, findet keine, und 0xE5 ist ausgerechnet das Fuellbyte
-         * einer frisch formatierten Diskette — die erfundenen Daten sind
-         * also als plausibler Medieninhalt getarnt. Die Meldung sagt
-         * deshalb jetzt das Byte UND dass es erfunden ist.
+        /* MF-1174: hier stand eine WARNUNG, und sie hat den falschen Fehler
+         * beschrieben.
          *
-         * Was sie weiterhin NICHT kann: es in der Datenstruktur
-         * vermerken. Das Vokabular dafuer liegt seit MF-1173 in
-         * `include/uft/core/uft_track_layout.h` (`UFT_SEC_PADDING_SECTOR`)
-         * und hat hier noch keinen Aufrufer — P3-422. Woertlich die Lage
-         * von MF-1135: die Warnung erreicht den Bediener, die
-         * Datenstruktur nicht. */
+         * MF-1173 hat sie schon einmal berichtigt — sie sagte „padding with
+         * zeros", gefuellt wird mit 0xE5 — und P3-422 hat verlangt, erst zu
+         * MESSEN, ob die Fuellfaehigkeit ueberhaupt gebraucht wird. Die
+         * Messung hat etwas anderes gefunden als die Frage.
+         *
+         * Gemessen fuer zwoelf echte Diskettengroessen, was die vier
+         * `else if`-Bereiche der IMG-Erkennung oben daraus machen:
+         *
+         *   160K  40x1x 8x512    163840 -> gelesen als 40x2x 9x512  +204800
+         *   180K  40x1x 9x512    184320 -> gelesen als 40x2x 9x512  +184320
+         *   BBC   80x1x10x256    204800 -> gelesen als 40x2x 9x512  +163840
+         *   320K  40x2x 8x512    327680 -> gelesen als 40x2x 9x512   +40960
+         *   360K  40x2x 9x512    368640 -> GENAU
+         *   400K  80x1x10x512    409600 -> gelesen als 80x2x 9x512  +327680
+         *   640K  80x2x16x256    655360 -> gelesen als 80x2x 9x512   +81920
+         *   720K  80x2x 9x512    737280 -> GENAU
+         *   800K  80x2x10x512    819200 -> gelesen als 80x2x15x512  +409600
+         *   1,2M  80x2x15x512   1228800 -> GENAU
+         *   PC-98 77x2x 8x1024  1261568 -> gelesen als 80x2x18x512  +212992
+         *   1,44M 80x2x18x512   1474560 -> GENAU
+         *
+         * VIER VON ZWOELF. Und das „+" ist nicht die Nachricht: es war keine
+         * Fuellung, sondern eine FALSCHE GEOMETRIE, die die Fuellwarnung
+         * verdeckt hat. Ein einseitiges 8-Sektor-Abbild als 40x2x9 gelesen
+         * legt jeden Sektor hinter Spur 0 Kopf 0 an die falsche Stelle —
+         * `heads` 2 statt 1, `sectors` 9 statt 8. Bei 160K waeren 204 800
+         * von 368 640 Byte erfunden gewesen, mehr als die Diskette hat.
+         * Klasse MF-1016 / MF-1026 / MF-1037.
+         *
+         * Die Absage ist damit SYMMETRISCH zu der nach oben (MF-1170). Fuer
+         * ADF kann keine der beiden greifen, und das ist gemessen: dort ist
+         * `cylinders` aus `src_size / spur` MIT Restpruefung abgeleitet
+         * (MF-1081), also gilt `expected_size == src_size` genau.
+         *
+         * DIE BEHEBUNG LIEGT SCHON IM BAUM, und die Meldung nennt sie:
+         * `src/formats/fat/uft_fat_bootsector.c` fuehrt acht Geometrien
+         * (`fat_geometry_160k` bis `_2880k`) plus
+         * `fat_find_geometry(total_sectors, media_byte)` — genau das, was
+         * die Bereiche oben raten, und ohne Produktionsaufrufer. Der Umbau
+         * (Geometrie aus dem BPB der Diskette lesen) steht als P3-423 und
+         * gehoert je Groesse abgenommen, nicht im Vorbeigehen eingebaut. */
+        result->error = UFT_ERR_INVALID_FORMAT;
         uftc_add_warning(result,
-                 "Source size %zu < expected %zu: %zu invented bytes are "
-                 "appended with the fill byte 0xE5 (not zeros, and not read "
-                 "from any medium) so the geometry stays complete. They are "
-                 "NOT marked as padding in the sector data (MF-1173/P3-422).",
-                 src_size, expected_size, expected_size - src_size);
+                 "sectors->HFE: source size %zu does not fill the derived "
+                 "geometry %d x %d x %d x %d (%zu bytes); %zu bytes would be "
+                 "invented with the fill byte 0xE5 and reported as sector "
+                 "data. Refused rather than padded (MF-1174). The size "
+                 "buckets only handle 368640, 737280, 1228800 and 1474560 "
+                 "exactly; `fat_find_geometry()` in "
+                 "src/formats/fat/uft_fat_bootsector.c knows eight "
+                 "geometries and has no caller yet (P3-423).",
+                 src_size, cylinders, heads, sectors, sector_size,
+                 expected_size, expected_size - src_size);
+        return UFT_ERR_INVALID_FORMAT;
     }
 
     /* MF-1170: ein ZUVIEL war bisher still — und bei einer 2,88-M-Diskette
