@@ -1870,7 +1870,9 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Befund folgt als Fortschreibung an `P3-387`.
 
 ### A-023 · Zulieferung `Apple-Sektorordnung.zip` — der offene Punkt aus MF-714
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **vorgeprüft, baureif** — Behauptung nachgerechnet, Achse
+  bestätigt, Prüfstück vorhanden; der Bau ist ein eigener Commit ·
+  MF-1211 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple-Sektorordnung.zip\"
   finde was ich vergessen habe und verbessere damit das"
 - **Kennzahl:** **keine der vier** direkt; die Anordnungsachse ist
@@ -1891,11 +1893,45 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   eigenen Grenzen, und §3 („die Skew-Tabelle ist ihr eigenes Inverses")
   ist eine prüfbare Behauptung, die vor jeder Übernahme nachgerechnet
   wird.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Vorprüfung durchgeführt — die Behauptung hält, die Achse
+  stimmt, der Bau ist ein eigener Commit.**
+  · **Die prüfbare Behauptung ist nachgerechnet und trifft.** Die Tafel
+    `k_dos_skew[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8, 0x7, 0x6,
+    0x5, 0x4, 0x3, 0x2, 0x1, 0xF}` ist eine **Permutation** von 0–15 und
+    **selbstinvers für alle 16** Einträge: zwei Festpunkte (0 und 15),
+    sieben vertauschte Paare (1↔14, 2↔13, 3↔12, 4↔11, 5↔10, 6↔9, 7↔8).
+    **Eigene Fehlmessung dabei, benannt:** mein erster Auslesevorgang las
+    `0x0u` als zwei Dezimalzahlen und meldete „keine Permutation, 26
+    Einträge" — die Tafel ist hexadezimal. Zweiter Lauf korrekt.
+  · **Die Achse stimmt überein, und das war die offene Entwurfsfrage.**
+    `include/uft/core/uft_sector_order.h` (MF-1175) bildet **linearer
+    Index ↔ CHS** ab (`uft_order_index_to_chs`, `uft_order_chs_to_index`)
+    — und genau das ist die DOS-3.3-Ordnung: Index → (Spur = i/16,
+    Kopf 0, Sektor = `skew[i % 16]`). **Es ist also dieselbe Achse, kein
+    zweiter Begriff.** Damit ist die Abschlussbedingung „eine Datenzeile,
+    kein siebter Apple-Tafel-Ort" erfüllbar.
+  · **Gemessen fehlt sie dort noch:** die Aufzählung führt sechs Ordnungen
+    (`CHS_INTERLEAVED`, `CHS`, `HCS`, `SERPENTINE`, `INTERLEAVED_DS`,
+    `SINGLE_SIDED`), keine Apple-Ordnung; und die Skew-Tafel selbst kommt
+    in `src/` und `include/` **0-mal** vor — sie wäre also wirklich neu
+    und nicht die siebte Kopie (`P3-234` zählt sieben Apple-**GCR**-Tafeln,
+    das ist eine andere Tafel).
+  · **Und das Prüfstück liegt bereit:** `tests/corpus_free/
+    uftk_dos33_35trk.do` ist laut Manifest ein **Sektorordnungs-Prüfmuster
+    mit selbstbenennenden Sektoren** — genau das richtige Objekt, um eine
+    Ordnung zu belegen (und genau das falsche für ein Dateisystem, siehe
+    A-018).
+  · **Nicht gebaut**, und der Grund ist Umfang plus Sorgfalt: es ist Code
+    im Format-Layer unter der EINFRIER-REGEL — Rotbeweis zuerst,
+    Mutationsmatrix, Produktivaufrufer im selben Commit (D2, Kandidat
+    `src/formats/apple/prodos_po_do.c`), Vollsuite. Das ist ein eigener
+    Commit, kein Anhängsel an eine Begutachtungsreihe.
+- **Beleg:** Vorprüfung gemessen MF-1211; der Bau bleibt offen.
 
 ### A-024 · AUFTRAG Audit-Umfang: komplettes Repository statt CMake-Liste (Mengen A/B/C)
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **in Arbeit** — Mengen abgeleitet, Menge C auf **acht**
+  Dateien eingegrenzt; Dispositionen und drei Commits offen · MF-1211 ·
+  **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „Nur die Dateien aus den CMake-Listen reichen nicht. …
   Gerade die nicht in CMake stehenden Dateien sind beim UFT wichtig. Dort
   können fertige, aber unerreichbare Parser, alte Versionen, Stubs oder
@@ -1939,6 +1975,54 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · Menge C ist **teils schon da**: `docs/orphan_baseline.txt` (328
     Zeilen), `scripts/audit_orphan_modules.py`, die Waisenrolle. **Neu**
     sind die sechs Dispositionen und die drei getrennten Commits.
+- **Stand (MF-1211): der erste, tragende Schritt ist getan — die drei
+  Mengen sind ABGELEITET, und die naive Zahl ist dabei gefallen.**
+  · **Roh gemessen** über `git ls-files` (2902 versionierte Dateien,
+    **1301** Übersetzungseinheiten `.c`/`.cpp`), Nennung des Basisnamens in
+    irgendeiner `CMakeLists.txt`/`.cmake`/`.pro`/`.pri`:
+    **605** Übersetzungseinheiten stehen in **keiner** Bauliste.
+  · **Diese 605 sind aber KEINE Menge C, und das ist der eigentliche
+    Befund dieses Schrittes.** Zwei Klassen fallen heraus, beide belegt:
+    **(a) 465 sind Tests**, die CMake per **GLOB** findet —
+    `tests/CMakeLists.txt:46` `file(GLOB TEST_SOURCES_C "test_*.c")` und
+    `:48` für `.cpp`; sie sind verdrahtet, nur nicht *genannt*.
+    **(b) 132 sind Fremdcode und Werkzeuge** (`src/samdisk/`,
+    `src/a8rawconv/`, `tools/`).
+  · **Die echte Menge C sind ACHT Dateien**, alle klein:
+    | Zeilen | Datei |
+    |---|---|
+    | 66 | `audit/applesauce/test_applesauce_vectors.c` |
+    | 57 | `audit/fc5025/test_fc5025_vectors.c` |
+    | 78 | `audit/greaseweazle/test_greaseweazle_vectors.c` |
+    | 94 | `audit/scp/test_scp_vectors.c` |
+    | 51 | `audit/usbfloppy/test_usbfloppy_vectors.c` |
+    | 63 | `audit/xum1541/test_xum1541_vectors.c` |
+    | 146 | `cli/uft-decode/main.c` |
+    | 186 | `src/gui/UftParameterIntegration_example.cpp` |
+  · **Mengen A und B, gezählt:** A (in CMake genannt) **455**, B (in `.pro`
+    genannt) **796**; Schnitt **368**, nur A **87**, nur B **428**. Die
+    428 „nur B" sind der qmake-Produktivbau, den CMake nicht baut — das
+    ist Absicht, kein Befund.
+  · **Symbolprüfung begonnen, Ergebnis so weit:** `parse_format_name`
+    (`cli/uft-decode/main.c`) **0** fremde Dateien;
+    `uft_audit_scp_vectors_ok` (`audit/scp/`) **0**. `main` und `usage`
+    sind Allerweltsnamen und taugen nicht als Beleg.
+  · **KEINE Disposition lautet DELETE**, und das ist kein Zögern:
+    der Auftrag sagt „Keine Datei allein deshalb löschen, weil sie nicht in
+    CMake steht. Löschen erst nach CMake-, Symbol-, Registry-, Test-,
+    Plattform- und Laufzeitprüfung", und `MF-1077` verlangt für jede
+    Löschung eine ausdrückliche Eigentümerentscheidung. Zwei der sechs
+    Prüfungen sind gemacht (CMake, Symbol); vier stehen aus.
+  · **Vorläufige Einordnung, damit die Wahl vorliegt:** die sechs
+    `audit/*/test_*_vectors.c` sind **je Controller ein Prüfvektorsatz** —
+    das ist Bestand, der zu den Emulatoren gehört (9 von 9 fertig), und
+    gehört eher **verdrahtet als entfernt**. `cli/uft-decode/main.c` ist
+    ein **CLI** und steht damit gegen die GUI-only-Regel — das ist der
+    einzige echte Kandidat für eine Eigentümerentscheidung.
+    `UftParameterIntegration_example.cpp` heißt „example" und ist
+    vermutlich Vorlagencode.
+  · **Offen bleiben:** die vier restlichen Prüfungen je Datei, die sechs
+    Dispositionen als Urteil, und die drei getrennten Commits.
 - **Und ein Punkt, der die empfohlene Vorgehensweise selbst betrifft:** ein
   frischer `git clone` von GitHub würde die laufende Arbeit **nicht**
   enthalten — gemessen liegen **9** Commits nur lokal (MF-1182 … MF-1190,
