@@ -47,6 +47,47 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
  echten Pure-Utility-Funktionen + honest USB/Serial-Stubs; libusb-/Serial-
  Wiring multi-session — siehe `docs/MASTER_PLAN.md` §M3.)
 
+> **Siebter Eintrag, aber kein siebter Controller (MF-1176).** Seit MF-1176
+> führt die Merkmalstafel `UFT_CAPS_OS_VOLUME` — den logischen
+> Sektortransport über das **Wirtssystem**, also ein gewöhnliches
+> PC-Laufwerk am gewöhnlichen Rechner. Für die ganze Klasse der
+> Sampler-Formate (Roland S-50/S-330/S-550/W-30, Akai S900/S1000, Korg
+> DSS-1) ist das der richtige und billigste Weg: sie liegen als
+> gewöhnliches MFM auf 512-/1024-/2048-Byte-Sektoren, und Fluss braucht man
+> dort erst, wenn die Diskette beschädigt oder geschützt ist. **Die Zahl
+> der Hardware-Controller bleibt 6** — wer sie zählt, zählt diesen Eintrag
+> nicht mit.
+>
+> Der Eintrag ist eine **Absage, keine Zusage**: `can_read_flux = false`,
+> `can_read_bitstream = false`, `can_read_sector = true`, und seine
+> `limitations[]` sprechen aus, was über diesen Weg **unerreichbar** ist —
+> Weak Bits, Phantomsektoren, Kopierschutz, Drehzahl, Index,
+> Mehrfachumdrehung. Vorlage ist SDISK for Windows v1.7 (MIT, © 2011
+> Miroslav Svetlik), **statisch zerlegt, nicht ausgeführt** — damit ist es
+> nach der eigenen Regel von `docs/ORACLES.md` ausdrücklich **kein
+> Oracle**, sondern der Kanal *Nachbau* (MF-695): übernommen sind Zahlen,
+> keine Zeilen. x50conv wurde dabei anders behandelt, weil seine Lizenz
+> Disassemblierung ausdrücklich untersagt — aus ihm stammt nichts als die
+> mitgelieferte Dokumentation.
+>
+> **Und der Auftrag dazu ist nur zur Hälfte erfüllbar, das gehört gesagt.**
+> Er lautete „die Oberfläche muss das sagen können". Gemessen über
+> `git grep` je Bezeichner haben **alle vier** öffentlichen Funktionen von
+> `src/hal/uft_hal_profiles.c` — `uft_hal_get_drive_profile`,
+> `uft_hal_get_controller_caps`, `uft_hal_print_controller_caps`,
+> `uft_hal_print_drive_profile` — **je 0 Aufrufer** außerhalb ihrer eigenen
+> Datei. Die Tafel mit 8 Laufwerksprofilen und 6 Merkmalssätzen liest
+> niemand; die Einschränkungen stehen im Quelltext und erreichen keinen
+> Bediener. Das ist dieselbe Lage wie beim Kopierschutz-Katalog (P0-2) und
+> bei den DeepRead-Modulen (MF-627/MF-767): **Bestand, nicht Fähigkeit.**
+> Erster Leser überhaupt ist seit MF-1176
+> `tests/test_roland_osvol.c::t_hal_profil_ist_registriert` — ein Test,
+> kein Produktivpfad, und er wird rot, wenn die Registrierung verschwindet
+> (gemessen). Der Weg heraus steht als **P3-429**, samt der zweiten
+> gemessenen Hälfte: die Tafel führt 6 Sätze, `src/hardwaretab.h:45-62`
+> listet **9** V2-Provider — drei haben gar keinen Eintrag, und eine
+> Anzeige ohne Eintrag darf nicht „keine Einschränkungen" bedeuten.
+
 ### 2. Format-Unterstützung (137 Plugins definiert, 138 format IDs)
 
 > **MF-446/447:** 137 = 88 ausgeschrieben + 49 aus dem `DSK_PLUGIN()`-Makro.
@@ -158,6 +199,21 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Flux-Formate:** SCP, HFE (v1/v2/v3), KryoFlux RAW
 - **Japanisch:** D88, D77, NFD, DIM — **berichtigt MF-1064:** hier standen auch HDM, XDF und FDX. Für die drei gibt es **kein registriertes Plugin** (gemessen über `gen_format_list.py`). `fdx.c` und `hdm.c` liegen in der verwaisten `FloppyDevice`-Schicht — beide in `docs/orphan_baseline.txt` —, und `fdx.c` nennt sich selbst „heuristic raw sector image“, liest den FDX-Kopf also nicht; `uft_xdf_api.c` ist nicht registriert. Das ist die Klasse MF-930/P3-204 (Leser ohne Tür), verschränkt mit der Klasse MF-509 (die Liste nennt, was gelesen werden SOLL). Ein Verdrahten wäre unter der EINFRIER-REGEL erlaubt — sie lässt ausdrücklich vorhandenen, unerreichbaren Code zu —, aber ein heuristischer Roh-Leser als FDX verdrahtet wäre genau die Wette, die MF-961 bei `86f` ABGELEHNT hat. Siehe P3-349. **NACHTRAG MF-1087 — die Aussage „für XDF gibt es kein Plugin“ hatte eine Folge, die niemand nachgesehen hat.** `uft_format_plugin_dim` („Sharp X68000 Disk Image“) führte die Endungsliste `"dim;xdf"`, und das Wort XDF kommt in seiner Datei sonst **nirgends** vor. `uft_resolve_format_plugin()` wählt aber das **Ziel eines Schreibvorgangs** über die Endung, sobald die Format-ID nicht eindeutig ist — und gemessen tragen **101** registrierte Plugins `UFT_FORMAT_DSK`. Weil `.xdf` im ganzen Baum nur dort stand, lieferte `out.xdf` **gemessen „DIM“**: eine Schreibabsicht wurde still in eine andere übersetzt. Seit MF-1087 löst `out.xdf` auf **nichts** auf, `tests/test_endung_nennt_kein_fremdes_format.c` hält es fest (Rotbeweis zuerst: 2 von 4 Zusagen fielen vor der Korrektur). **Gefunden hat es kein Lesen, sondern ein Werkzeug** — der Erzeuger-Zensus kennt seit MF-1087 auch `floptool`, und `dim` stand darin als einzige Zeile „Werkzeug sagt RW, Kanal UNGEMESSEN“, zugeordnet über eben diese Endung
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
+
+> **Präzisiert MF-1176 — „Roland" heißt hier etwas anderes, als ein Leser
+> erwartet.** Das einzige registrierte Roland-Plugin ist
+> `DSK_PLUGIN(23, rld, "DSK_RLD", "Roland DSK", "dsk")` in
+> `src/formats/dsk_generic/uft_dsk_generic.c` — einer der 49 aus dem Makro,
+> eine Geometriezeile für einen `.dsk`-Behälter, **ohne Tier-Zeile**
+> (gemessen: `docs/VERIFICATION_TIERS.md` führt weder `rld` noch
+> `dsk_rld`). Die **S-Serie** — S-50/S-330/S-550/W-30, rohe
+> 737 280-Byte-Sektorabzüge mit den Endungen `.sdk/.s50/.s33/.s55/.out/.w30`
+> — ist damit **nicht** gemeint und hat kein Plugin. Erkennen kann UFT sie
+> seit MF-1176 (`uft_roland_identify()`, sieben Fälle aus Sektor 0, doppelt
+> belegt); registriert ist sie nicht, weil das Moratorium der
+> EINFRIER-REGEL gemessen weiter gilt (`nfd` steht auf T2, nicht T1/T1b).
+> Siehe **P3-427**. Und `include/uft/formats/rolandd20.h` ist ein
+> Phantom-Header: vier Zeilen, kein `.c`, kein Inhalt.
 
 > **Ehrlichkeits-Hinweis (MF-729) — kopflose Formate werden nur an der
 > Größe erkannt, und das Werkzeug sagt es jetzt.** Bis dahin vergab jede

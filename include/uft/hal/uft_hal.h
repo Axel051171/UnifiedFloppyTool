@@ -51,6 +51,19 @@ typedef enum {
     UFT_CTRL_SUPERCARD_PRO,
     UFT_CTRL_PAULINE,
     UFT_CTRL_APPLESAUCE,
+    /** MF-1176: KEIN Controller, sondern der logische Sektortransport ueber
+     *  das WIRTSSYSTEM — ein gewoehnliches PC-Laufwerk am gewoehnlichen
+     *  Rechner. Er steht in dieser Aufzaehlung, weil die Merkmalstafel der
+     *  HAL (`uft_controller_caps_t`) der einzige Ort im Baum ist, an dem
+     *  eine Aufnahmefaehigkeit ueberhaupt erklaert wird — und weil genau
+     *  diese Erklaerung gebraucht wird: ueber diesen Weg sind Weak Bits,
+     *  Phantomsektoren und Kopierschutz UNERREICHBAR.
+     *
+     *  Die Zahl der HARDWARE-Controller aendert sich dadurch nicht; wer sie
+     *  zaehlt, zaehlt nicht diesen Eintrag. Neu ANGEHAENGT und nicht
+     *  eingefuegt, damit kein vorhandener Wert seine Zahl wechselt
+     *  (APPLESAUCE bleibt 8). */
+    UFT_CTRL_OS_VOLUME,
     UFT_CTRL_COUNT
 } uft_controller_type_t;
 
@@ -111,6 +124,9 @@ extern const uft_controller_caps_t UFT_CAPS_FLUXENGINE;
 extern const uft_controller_caps_t UFT_CAPS_KRYOFLUX;
 extern const uft_controller_caps_t UFT_CAPS_FC5025;
 extern const uft_controller_caps_t UFT_CAPS_XUM1541;
+/** MF-1176: der Sektortransport ueber das Wirtssystem. Siehe
+ *  `UFT_CTRL_OS_VOLUME` oben und `include/uft/hal/uft_os_volume.h`. */
+extern const uft_controller_caps_t UFT_CAPS_OS_VOLUME;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Capability Flags

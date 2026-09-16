@@ -362,6 +362,80 @@ const uft_controller_caps_t UFT_CAPS_XUM1541 = {
     },
 };
 
+/* ============================================================================
+ * MF-1176 — OS Volume: der Sektortransport ueber das Wirtssystem
+ *
+ * Kein Controller. Ein gewoehnliches PC-Laufwerk am gewoehnlichen Rechner,
+ * gelesen ueber das Betriebssystem. Fuer die ganze Klasse der Sampler-
+ * Formate ist das der richtige und billigste Weg — Roland S-50/S-330/
+ * S-550/W-30, Akai S900/S1000, Korg DSS-1 und die meisten PC-kompatiblen
+ * Fremdformate liegen als gewoehnliches MFM auf 512-, 1024- oder
+ * 2048-Byte-Sektoren.
+ *
+ * DIESER EINTRAG IST EINE ABSAGE, NICHT EINE ZUSAGE. Er steht hier, damit
+ * das Werkzeug sagen KANN, was ueber diesen Weg unerreichbar ist. Vorlage
+ * ist SDISK for Windows v1.7 (MIT, (c) 2011 Miroslav Svetlik), statisch
+ * zerlegt — Beleg in `include/uft/hal/uft_os_volume.h`. Dessen Weg liest
+ * das ganze Abbild in EINEM ReadFile ueber 0xB4000 Byte; faellt ein Sektor
+ * aus, entsteht ein Puffer mit Loch, ueber das nichts protokolliert wird.
+ * `uft_osvol_read()` gibt deshalb je Sektor einen Status zurueck.
+ *
+ * Und was hier fehlt, ist nicht diese Tafel: gemessen hat KEINE der vier
+ * Funktionen dieser Datei einen Aufrufer ausserhalb von ihr selbst
+ * (`uft_hal_get_drive_profile`, `uft_hal_get_controller_caps`,
+ * `uft_hal_print_controller_caps`, `uft_hal_print_drive_profile` — je 0).
+ * Die Oberflaeche kann diese Absage also noch nicht aussprechen, weil
+ * niemand die Tafel liest. Gefuehrt als P3-429; erster Leser ueberhaupt ist
+ * seit MF-1176 `tests/test_roland_osvol.c`.
+ * ============================================================================ */
+
+const uft_controller_caps_t UFT_CAPS_OS_VOLUME = {
+    .type = UFT_CTRL_OS_VOLUME,
+    .name = "OS Volume (PC-Laufwerk ueber das Betriebssystem)",
+    .version = "host OS",
+
+    /* Kein Abtaster. Das Betriebssystem liefert Sektoren, keine Zellen —
+     * diese drei Zahlen sind deshalb 0 und nicht geschaetzt. */
+    .sample_rate_mhz = 0.0,
+    .sample_resolution_ns = 0.0,
+    .jitter_ns = 0.0,
+
+    .can_read_flux = false,         /* bewusst: kein Fluss auf diesem Weg */
+    .can_read_bitstream = false,    /* auch kein Zellstrom */
+    .can_read_sector = true,        /* nur das, und das vollstaendig */
+    .can_write_flux = false,
+    .can_write_bitstream = false,
+
+    .hardware_index = false,        /* kein Indexsignal erreichbar */
+    .index_accuracy_ns = 0.0,
+    .max_revolutions = 1,           /* eine Lesung, keine Mehrfachumdrehung */
+
+    .max_cylinders = 80,
+    .max_heads = 2,
+    .supports_half_tracks = false,
+
+    .max_data_rate_kbps = 500.0,    /* was ein PC-FDC hergibt */
+    .variable_data_rate = false,    /* das Betriebssystem waehlt sie */
+
+    .copy_protection_support = false,
+    .weak_bit_detection = false,
+    .density_select = false,        /* das Laufwerk entscheidet, nicht wir */
+
+    /* Die Selbstbeschraenkung, ausgeschrieben. Sie ist der Grund, warum
+     * dieser Eintrag existiert — nicht seine Fussnote. */
+    .limitations = {
+        "Kein Fluss und kein Zellstrom - nur logische Sektoren",
+        "Weak Bits sind UNERREICHBAR",
+        "Phantomsektoren sind UNERREICHBAR",
+        "Kopierschutz ist UNERREICHBAR",
+        "Keine Drehzahlmessung, kein Indexsignal, keine Mehrfachumdrehung",
+        "Ein beschaedigtes oder geschuetztes Medium gehoert an einen "
+        "Flusscontroller, nicht hierher",
+        "Nur Geometrien, die das Wirts-FDC kennt (keine GCR, keine Zonen)",
+        NULL
+    },
+};
+
 // ============================================================================
 // Profile Lookup
 // ============================================================================
@@ -384,6 +458,9 @@ static const uft_controller_caps_t* g_controller_caps[] = {
     &UFT_CAPS_KRYOFLUX,
     &UFT_CAPS_FC5025,
     &UFT_CAPS_XUM1541,
+    /* MF-1176: kein Controller — siehe den Kommentar an UFT_CAPS_OS_VOLUME.
+     * Wer HARDWARE-Controller zaehlt, zaehlt diesen Eintrag nicht mit. */
+    &UFT_CAPS_OS_VOLUME,
     NULL
 };
 

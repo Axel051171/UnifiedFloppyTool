@@ -417,6 +417,18 @@ int main(void)
     RUN(open_meldet_40_spuren_und_2_koepfe);
     RUN(leser_findet_die_rueckseite_gespiegelt);
     RUN(tafel_traegt_sich_selbst);
+
+    /* BERICHTIGT MF-1176: die drei Plugin-Zusagen raeumen ihre Pruefdatei
+     * am Ende selbst weg — aber `ASSERT` kehrt bei Fehlschlag SOFORT
+     * zurueck, und dann wird das `remove()` nie erreicht. Gemessen am
+     * Rotbeweis-Lauf gegen den Vorzustand: `uft_xfd_qd_probe.xfd` blieb mit
+     * 368 640 Byte im Arbeitsbaum liegen. Ein Test, der bei Fehlschlag
+     * Muell hinterlaesst, ist die kleine Schwester von
+     * `test_convert_leaves_no_ghost` — deshalb hier, hinter allem, noch
+     * einmal. Ein `remove()` auf eine nicht vorhandene Datei ist
+     * folgenlos. */
+    remove(QD_PRUEFDATEI);
+
     printf("\nErgebnis: %d bestanden, %d gefallen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

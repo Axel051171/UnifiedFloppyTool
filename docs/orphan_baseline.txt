@@ -215,7 +215,6 @@ src/formats/zx/uft_zxscreen.c
 src/hal/greaseweazle_backend.c
 src/hal/sync_backends.c
 src/hal/uft_drive.c
-src/hal/uft_hal_profiles.c
 src/hardware_providers/ufi_runners.cpp
 src/main.cpp
 src/protection/uft_amiga_caps.c

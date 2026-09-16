@@ -3577,6 +3577,21 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_roland_osvol")
+        # MF-1176: die Roland-Zulieferung. Zwei Module und die
+        # HAL-Merkmalstafel, und die Tafel ist der Punkt: dieser Test ist
+        # der ERSTE Aufrufer von `uft_hal_get_controller_caps()` im ganzen
+        # Baum (gemessen 0 ausserhalb von `uft_hal_profiles.c`, ebenso fuer
+        # seine drei Nachbarfunktionen).
+        #
+        # `uft_roland_ident.c` ist NICHT als Format-Plugin registriert — das
+        # Moratorium der EINFRIER-REGEL gilt gemessen weiter (`nfd` steht
+        # auf T2, nicht T1/T1b). Dieser Test ist damit sein einziger
+        # Aufrufer, und das steht so in seinem Kopf.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/roland/uft_roland_ident.c
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_os_volume.c
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_hal_profiles.c)
     elseif(${test_name} STREQUAL "test_xfd_qd_serpentine")
         # MF-1175: die Anordnungsachse liegt in `src/core/`, also ausserhalb
         # des `IHR_FORMAT_SOURCES`-GLOBs — eigener Zweig aus demselben Grund

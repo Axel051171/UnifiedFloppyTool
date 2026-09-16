@@ -780,6 +780,7 @@ SOURCES += \
     src/analysis/uft_disk_quickscan.c \
     src/core/uft_decoder_plugin_stub.c \
     src/core/uft_sector_order.c \
+    src/formats/roland/uft_roland_ident.c \
     src/core/uft_sha256.c \
     src/core/uft_snapshot.c \
     src/core/uft_track_layout.c \
@@ -1239,6 +1240,7 @@ SOURCES += \
     src/formats/st/uft_st_order.c \
     src/hal/uft_hal_unified.c \
     src/hal/uft_hal_profiles.c \
+    src/hal/uft_os_volume.c \
     src/hal/uft_kryoflux_dtc.c \
     src/hal/uft_scp_direct.c \
     src/hal/uft_xum1541.c \
