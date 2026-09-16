@@ -162,8 +162,36 @@ gepusht; Nachtrag MF-1199), **`A-008`** und **`A-009`** (MF-1201 =
 Begutachtungen liegen als Dokument in `tools/uft-scout/out/`; der EINBAU
 ist bei jeder ein eigener, noch nicht aufgenommener Posten.
 
-`/aufgabe weiter` zieht als Nächstes **`A-012`** hoch
-(`yas-sim/xm7-related-tools`, FM-7).
+**Der Begutachtungsblock `A-008`…`A-016` ist abgearbeitet** (neun Posten,
+neun Gutachten unter `tools/uft-scout/out/`). `/aufgabe weiter` zieht als
+Nächstes **`A-018`** hoch (Apple DOS 3.3).
+
+> **Was die neun Begutachtungen zusammen ergeben haben, gezählt:**
+> · **Vier Zulieferungen** (A-008…A-011): drei von ihnen liefern `.pro` und
+>   `tests/CMakeLists.txt` als „aktuelle Verdrahtung" mit, jedes Mal
+>   **kleiner als die des Baums**. Bei `A-009` hätte eine Dateiübernahme
+>   **vier verdrahtete GUI-Reiter still wieder abgehängt** (MF-1194).
+>   Nur `A-010` überschreibt nichts Gemessenes.
+> · **Fünf Fremdrepos** (A-012…A-016): **vier fehlende Werkzeugketten in
+>   Folge** — Swift, Rust, Forth, und schon bei A-005 `mkfs.fat`/`mtools`.
+>   *Orakel* ist damit viermal hausintern verschlossen und **delegierbar**,
+>   wie die Tier-3-Bank (MF-310).
+> · **Lizenzlage:** einmal Port zulässig (**A-012**, MIT), zweimal
+>   Apache-2.0 (A-013/A-014, kein Port), einmal **Ms-RL** (A-016, härter —
+>   unverträglich mit GPL in jeder Fassung), einmal GPL-3 (A-015, Port
+>   rechtlich offen, aber Forth nach C ist eine Neuschreibung).
+> · **Drei Annahmen der Aufnahmen sind gefallen**, alle drei gemessen:
+>   A-014 (E01 ist im Repo gar nicht umgesetzt), A-013 (drei Zahlen von
+>   `P3-385` falsch), A-010 (kein CLI-Konflikt, Lizenz nicht offen).
+> · **Zwei neue Befunde**, beide aus A-015: `P3-465` (MGT-Verzeichnis um
+>   ein Byte verschoben, **an einem echten Korpus-Abbild gemessen**, in
+>   einem Format auf **T1**) und `P3-466`.
+> · **Eine Blockade ist gefallen:** `P3-63` war auf einen Erzeuger
+>   gewartet, den **MF-1190 längst gebaut hatte** — bemerkt hat es erst
+>   A-016.
+>
+> **Die Regel, die sich durch alle vier Zulieferungen zieht: nie die Datei,
+> immer die Zeilen.**
 
 > **Was die vier Begutachtungen zusammen ergeben haben — ein Muster, kein
 > Einzelfall.** Drei der vier Zulieferungen liefern `UnifiedFloppyTool.pro`
@@ -1392,7 +1420,8 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   Befunde `P3-465` und `P3-466`.
 
 ### A-016 · `ChrisBertrandDotNet/ST-Recover` — **das ist `P3-63`**, und `P3-59` hat seine Vorbedingung umgekehrt
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **Gutachten erledigt** 2026-09-16, **Erweiterung benannt und
+  begründet zurückgestellt** · MF-1206 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/ChrisBertrandDotNet/ST-Recover.git nimm
   den code komplett auseinander , sehr genau / finde alles und alles
   raussuchen was ich übersehen habe , stimme es mit mein aktuellen tool ab
@@ -1461,8 +1490,35 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   `P3-63` liefert die Vorarbeit). Die **Erweiterung** ist nicht schätzbar —
   sie hängt daran, ob ein Erzeuger für die Feldgrenzen entsteht, und das
   ist Decoder-Arbeit am Spurmodell, nicht ein Feld anhängen.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a016_st_recover.gutachten.md`, (a)…(f).
+  · **(c) DIE VORBEDINGUNG IST GEFALLEN — durch eigene Arbeit, seit der
+    Aufnahme.** `P3-63` war blockiert, weil seine zwei Größen „gefüllte
+    Feldgrenzen voraussetzen" und es „heute keinen Erzeuger dafür" gebe.
+    **Seit MF-1190 gibt es ihn:** `uft_mfm_sector_t` trägt `id_sync_bit`,
+    `data_start_bit`, `gap2` und `lead_gap` — im **Produktivpfad**
+    `uft_mfm_decode_track()`. Die Aufnahme hatte es fast gesehen („wer
+    Phase 2 baut, erzeugt die Hälfte von P3-63 mit"); gebaut ist Phase 2
+    als MF-1190 = `e22e1b78`, und sie hat **beide** Hälften gebracht.
+  · **Entscheidung: nicht zurückgestellt, sondern benannt.** Gebaut wird
+    hier nicht, und der Grund ist die Bauform: die Größen hängen an
+    `uft_sector_t`, der kanonischen Struktur — das ist eine **ABI-Frage**,
+    braucht Rotbeweis-zuerst und einen Aufrufer im selben Commit. Die
+    Gestalt des Auftrags steht im Gutachten §1.4 und als Fortschreibung an
+    `P3-63` selbst, samt der Lösung, die der Baum sich bereits notiert hat
+    (`uft_types.h:397`: Flag `has_bit_positions` nach dem Muster von
+    `has_angular_position`).
+  · **(a) Ein zweites Lesen liefert nichts Neues von Gewicht** — und das
+    ist die ehrliche Antwort. 13 Dateien, 3 222 Zeilen; `P3-63` hat die
+    Quelle bereits ausgewertet (vier belegte Werte). Neu sind allein
+    `Analyse_disque.*` (138 Z.), und das ist **Lesestrategie**, kein
+    Formatwissen — es berührt A-010.
+  · **(b) Ms-RL ist härter als Apache-2.0:** unverträglich mit GPL in
+    **jeder** Fassung, `P3-452` hilft hier ausdrücklich nicht. Das
+    Gutachten zitiert keine Zeile Quelltext.
+  · **(f)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Beleg:** Gutachten `tools/uft-scout/out/a016_st_recover.gutachten.md`;
+  `P3-63` fortgeschrieben (MF-1206).
 
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
