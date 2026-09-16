@@ -1285,7 +1285,8 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
 - **Beleg:** —
 
 ### A-015 · `programandala-net/mkmgt` auseinandernehmen — MGT steht auf T1, die Frage ist Beta DOS
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; **zwei neue Befunde**,
+  `P3-465` und `P3-466`) · MF-1205 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/programandala-net/mkmgt.git nimm den
   code komplett auseinander , sehr genau / finde alles und alles raussuchen
   was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
@@ -1355,8 +1356,40 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   kleinste Gegenstand dieser Reihe, und die Frage ist eng (drei DOSe, ein
   Behälter, der schon belegt ist). Einbau: für Beta DOS **nicht
   schätzbar** und ein eigener Posten unter dem Moratorium.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a015_mkmgt.gutachten.md` — **und der Posten hat
+  etwas gefunden, wonach er nicht gesucht hat.**
+  · **(b) Die gestellte Frage, beantwortet:** UFT benennt **keines** der
+    drei DOSe im Quelltext. `GDOS`, `gdos`, `G+DOS`, `BetaDOS`,
+    `Beta DOS`, `betados`, `plusd` — **alle sieben rc 1 / 0 Treffer** in
+    `src/` und `include/`; nur `DISCiPLE` hat 9 Treffer in 5 Dateien. Der
+    Baum kennt die **Hardware**, nicht das Dateisystem. Steht als
+    `P3-466`.
+  · **DER EIGENTLICHE FUND — `mgt_dir_entry_t` ist ab Versatz 11 um ein
+    Byte verschoben, und `mgt` steht auf T1.** Der Schreiber `mkmgt.fs`
+    kommentiert jede Position: Sektorzahl **16 Bit Big-Endian auf 11-12**,
+    Spur auf **13**, Sektor auf **14**, Karte auf **15-209**, GDOS-Kopf auf
+    **210-219**. UFT führt `uint8_t sectors_used` (11), `track` (12),
+    `sector` (13), `sector_map[195]` (14-208). **An einem ECHTEN
+    Korpus-Abbild gemessen** (`zxfd_plusd_gdos_tools.mgt`): alle vier
+    geprüften Einträge melden nach UFTs Lesart `sectors_used = **0**` —
+    eine vorhandene Datei mit null Sektoren gibt es nicht. Dazu geht die
+    Feldsumme nicht auf: **255 gegen `MGT_DIR_ENTRY_SIZE` 256**. Steht als
+    `P3-465`.
+  · **Warum keiner der sechs Tests anschlägt, ist mitgemessen:**
+    `test_mgt_verzeichnis_vollstaendig` baut seine Daten selbst und prüft
+    nur Versatz 0 und 1-10 — genau die zwei Felder, die stimmen; die vier
+    verschobenen fasst er nie an. `test_mgt_gegen_mame` (MF-1006) verglich
+    den **Behälter**. **Die T1-Stufe ist korrekt vergeben und sagt über das
+    Verzeichnis nichts.**
+  · **(a) Ein Schreiber hebt bei `mgt` nichts** — das Format steht auf T1.
+    Und `mkmgt` wäre ohnehin verschlossen: Forth, und `gforth`, `pforth`,
+    `sf`, `swiftforth` fehlen alle vier. **Vierte fehlende Werkzeugkette in
+    Folge** nach A-005 (mkfs.fat/mtools), A-013 (Swift), A-014 (Rust).
+  · **Urteil: REFERENCE.** Aus dem Repo ist nichts zu übernehmen — sein
+    Wert waren die Feldlagen, und die haben einen Defekt aufgedeckt.
+- **Beleg:** Gutachten `tools/uft-scout/out/a015_mkmgt.gutachten.md`;
+  Befunde `P3-465` und `P3-466`.
 
 ### A-016 · `ChrisBertrandDotNet/ST-Recover` — **das ist `P3-63`**, und `P3-59` hat seine Vorbedingung umgekehrt
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
