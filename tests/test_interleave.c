@@ -9,6 +9,15 @@
  *   128-byte SD (18 sectors per track) → interleave = 9
  *   128-byte ED (26 sectors per track) → interleave = 13
  *   256-byte DD (18 sectors per track) → interleave = 15
+ *
+ * ACHTUNG (MF-1179): diese drei Zahlen sind Aussagen ueber a8rawconv,
+ * NICHT ueber eine Atari-Diskette — dieser Test haelt den Port gegen
+ * seine Vorlage, und das ist seine Aufgabe. Gegen die Firmware der
+ * Atari 1050 Turbo v3.5 gemessen treffen 9 und 15 exakt, 13 nicht: das
+ * ROM schreibt **12**, und der Wert haengt zusaetzlich an der
+ * SIO-Geschwindigkeit (SD 9/5, ED 12/6, DD 15/7), die dieses Modell
+ * nicht kennt. Wer hier eine Zahl aendern will, gehoert zuerst nach
+ * `tests/test_1050_firmware_als_quelle.c` und P3-434.
  */
 
 #include <stdio.h>

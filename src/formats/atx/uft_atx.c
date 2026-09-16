@@ -497,12 +497,31 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
      * verteilen (MF-479).
      *
      * Bis hier stand hier `s / n` — gleiche Abstaende, erster Sektor bei 0.
-     * So liegt keine Atari-Diskette: das Betriebssystem schreibt SD/ED mit
-     * etwa 9:1 bzw. 13:1 Verschraenkung, und jede Spur ist gegen die vorige
-     * um rund 8 % einer Umdrehung versetzt (Kopf-Umsetzzeit). Ein
-     * gleichmaessiges Layout ist damit nicht nur ungenau, es ist eine Form,
-     * die es auf dem Medium nicht gibt — und bei ATX ist die Position
-     * kopierschutzrelevant.
+     * So liegt keine Atari-Diskette: sie ist verschraenkt, und jede Spur ist
+     * gegen die vorige um rund 8 % einer Umdrehung versetzt
+     * (Kopf-Umsetzzeit). Ein gleichmaessiges Layout ist damit nicht nur
+     * ungenau, es ist eine Form, die es auf dem Medium nicht gibt — und bei
+     * ATX ist die Position kopierschutzrelevant.
+     *
+     * BERICHTIGT MF-1179 — hier stand: „das Betriebssystem schreibt SD/ED
+     * mit etwa 9:1 bzw. 13:1 Verschraenkung". Das war eine Aussage ueber das
+     * MEDIUM, und ihre Quelle war die Formel dieser Funktion selbst: 13 ist
+     * genau das, was `(26 + 1) / 2` ergibt. Gemessen gegen die Firmware der
+     * Atari 1050 Turbo v3.5 (`FORMAT.M65:870`, Feld `IFAC`) steht dort
+     * **12**, nicht 13 — und der Wert haengt zusaetzlich an der
+     * SIO-Geschwindigkeit, die dieses Modell gar nicht kennt (SD 9 langsam
+     * gegen 5 schnell, ED 12/6, DD 15/7). Fuer SD und DD trifft der Faktor
+     * des Modells die Firmware exakt (9 und 15); nur bei ED weicht er ab.
+     *
+     * Was daraus NICHT folgt: dass 12 die richtige Zahl fuer eine
+     * Atari-Diskette ist. Die gemessene Firmware ist ein Nachruest-ROM von
+     * Bernhard Engl, nicht das Original-ROM der 1050. Die Abweichung ist
+     * deshalb festgenagelt statt behoben —
+     * `tests/test_1050_firmware_als_quelle.c` haelt beide Zahlen, und
+     * welche gilt, entscheidet erst das Original-ROM, das XF551-ROM oder
+     * ein Flussabzug (P3-434). Die gerechneten Positionen gehen weiterhin
+     * mit einer Warnung hinaus; diese Notiz sagt nur, was gerechnet ist und
+     * was gemessen.
      *
      * `uft_compute_interleave()` (src/core/uft_interleave.c) ist die
      * wortgleiche Portierung von a8rawconvs `compute_interleave` und war bis

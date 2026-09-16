@@ -3577,6 +3577,19 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_1050_firmware_als_quelle")
+        # MF-1179: Laufwerks-Firmware als Quellengattung. Der Differenzlauf
+        # RUFT das Interleave-Modell (`uft_interleave.c`) statt es
+        # nachzubauen — eine zweite Kopie waere die Lage aus MF-1015.
+        # `uft_fdc_gaps.c` kommt mit, weil die letzte Zusage messen muss,
+        # dass die Atari-Geometrie in der Profiltafel NICHT vorkommt
+        # (ohne Quelle fuer `track_bytes` ist das der richtige Zustand,
+        # S1/P3-435). Die Firmware selbst wird NICHT mitgeliefert: ihre
+        # Zahlen stehen mit Fundstelle im Test, der Assembler bleibt
+        # draussen (keine Rechteeinraeumung, Kanal *Spec*).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_interleave.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_fdc_gaps.c)
     elseif(${test_name} STREQUAL "test_atr_groessen_gegen_jhallen")
         # MF-1178: die drei ATR-Groessen gegen jhallen/atari-tools
         # (readme.md, Kanal *Spec*). Der Test baut seine drei Dateien

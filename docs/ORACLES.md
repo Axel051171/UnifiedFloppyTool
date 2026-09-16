@@ -767,6 +767,50 @@ vier Antworten (P3-391). Als Bitstrom-Zeuge bleibt fdc_bitstream
 brauchbar — aber über `.mfm` aus seinem eigenen `create_mfm_image`,
 nicht über HFE, und dafür fehlt UFT das `.mfm`-Plugin (P3-349).
 
+### Laufwerks-Firmware — eine Quellengattung, kein Oracle (MF-1179)
+
+Fast alles in diesem Verzeichnis ist ein **Leser**: ein Werkzeug, das ein
+fremdes Abbild aufmacht und deutet. Eine Laufwerks-Firmware ist der
+**Schreiber** — sie hat die Disketten hergestellt, um die es geht. Das
+macht sie zur staerksten Spec-Quelle, die es fuer ein Format geben kann,
+und zugleich **ausdruecklich zu keinem Oracle**: sie wird nicht
+ausgefuehrt, sie wird gelesen. Kanal *Spec* (MF-695).
+
+Registriert ist bisher **eine**:
+
+| Firmware | Stand | Lizenz | Verankerung | was sie entscheidet |
+|---|---|---|---|---|
+| **Atari 1050 Turbo v3.5** | Atasm-Quelltext `SOFTTRB35`, ausgeliefertes ROM `T1050_2B.8KB` (1988) | (c) 1986-88 Bernhard Engl, Atasm-Fassung (c) 2004 Matthias Reichl — **keine Rechteeinraeumung** | **Gegen ihr eigenes Erzeugnis geprueft:** das aus dem Quelltext gebaute `turbo1050-35.rom` und das ausgelieferte ROM haben denselben md5 `35be2c58f1e0b04ab5a1f2459e5515bd`, **0 abweichende Byte** (MF-1164) | Sektoren/Spur je Dichte · Interleave je Dichte UND SIO-Geschwindigkeit · die drei Zwischenraum-Paare je Dichte · das FM-Fuellbyte `$00` · die Feldlage des 12-Byte-Percom-Blocks · die Kommandokodes `$4E`/`$4F` · das Fehlen eines Index-Address-Marks |
+
+**Die Verankerung ist der Punkt.** Eine Spec-Quelle ohne Anker ist eine
+Behauptung; hier ist der Anker ein Byte-fuer-Byte-Vergleich zwischen dem
+Quelltext und dem Chip, der 1988 ausgeliefert wurde. Damit stammen die
+Konstanten vom Schreiber der Disketten und nicht von einem Deuter — und
+das ist eine andere Aussage als „ein zweites Werkzeug liest es auch so".
+
+**Was daraus NICHT folgt.** Diese Firmware ist ein **Nachruest-ROM**,
+nicht das Original-ROM der Atari 1050. Wo sie von einer anderen Quelle
+abweicht, ist damit nicht entschieden, was auf einer Diskette von Atari
+steht — die Abweichung wird **festgenagelt, nicht aufgeloest** (P3-434).
+Eine Quellengattung sagt, wie stark eine Aussage ist, nicht dass sie die
+einzige waere.
+
+**Und der Assembler bleibt draussen.** Uebernommen sind Zahlen mit
+Fundstelle — `tests/test_1050_firmware_als_quelle.c` laeuft ohne das
+Archiv —, nicht Zeilen. Das Archiv wird nicht mitgeliefert. „ED hat 26
+Sektoren" ist eine Tatsache ueber ein Format; der 6502-Code dahinter ist
+fremdes Eigentum.
+
+**Naechste Kandidaten derselben Gattung**, jeder mit demselben
+Ankerbedarf: das Original-ROM der Atari 1050, das XF551-ROM, die
+Percom-RFD-Firmware. Gepruefter und **abgelehnter** Kandidat: `FLOFOR`
+(Peter Putnik 2006, Freeware mit Quelltext `FO98.S`) — es ist ein
+Formatierer fuer den **Atari ST**, also 512-Byte-MFM auf einer anderen
+Maschine, und traegt zur Atari-8-Bit-Geometrie nichts bei; es stand in
+einem Auftrag neben der 1050-Firmware und gehoert gemessen in eine
+andere Familie. Seine Weitergabebedingung („must be in this ZIP archive,
+with all files included") verbietet ohnehin jede Teiluebernahme.
+
 ## Was ausdrücklich **kein** Oracle ist
 
 | Werkzeug | Grund |
@@ -778,6 +822,7 @@ nicht über HFE, und dafür fehlt UFT das `.mfm`-Plugin (P3-349).
 | `WinUAE` | ADFlib-unabhängig und damit inhaltlich interessant, aber GUI **und** ohne Lizenzdatei im Repo — Referenz ja, Oracle nein |
 | `atrip` | **dieselbe Hand wie der Korpus.** `README.rst:6` nennt es wörtlich „The successor to atrcopy", gleicher Autor — fünfte Registrierungsfrage, ausgeschlossen. Unabhängig davon auf dieser Maschine nicht lauffähig: `pkg_resources` fehlt unter Python 3.13, und `np.fromstring` steht neunmal im Code (tot unter NumPy 2.5.1) **NACHTRAG MF-1053 — beide Haelften dieser Absage sind nachgemessen, und eine faellt.** *Nicht lauffaehig* trifft nicht mehr zu: `pkg_resources` braucht einen **dreizeiligen** Ersatz (leeres `iter_entry_points`), und `np.fromstring` liegt auf einem Pfad, den der DCM-Kodierer nie betritt — er laeuft. *Dieselbe Hand wie der Korpus* dagegen **stimmt und bleibt stehen**: fuer `atr`/`xfd` stammen die Korpus-Abbilder von `atrcopy`, und atrip ist dessen Nachfolger vom selben Autor; als Zweitmeinung ueber diese Formate ist es weiterhin ausgeschlossen. Fuer **`dcm`** greift der Einwand nicht: dort gibt es kein atrcopy-Abbild und kann keines geben — `atrcopy/dcm.py` ist **kein** Dekoder und erst recht kein Packer (MF-1052). Verglichen wird UFTs eigenstaendig geschriebener Entpacker gegen ein Abbild fremder Hand; das ist genau, was T1b verlangt. Registriert ist atrip deshalb **nur fuer DCM** — siehe Haupttafel oben. |
 
+| Atari-1050-Turbo-Firmware | **kein Oracle, weil nicht ausgefuehrt — und das ist keine Schwaeche, sondern die Gattung (MF-1179).** Sie ist eine *Spec*-Quelle, verankert an ihrem eigenen ausgelieferten ROM (md5-identisch, 0 abweichende Byte). Ein Oracle waere sie erst in einem Emulator, der eine Diskette wirklich formatiert; dann waere zu belegen, dass der Emulator die FDC-Zeitlagen trifft — und genau das ist die Wette, die dieser Baum bei `86f` abgelehnt hat (MF-961). Siehe den Abschnitt „Laufwerks-Firmware — eine Quellengattung" oben |
 | `atr2imd` / `imd2atr` aus `jhallen/atari-tools` | **Gebaut, gelaufen und trotzdem verworfen — weil sein Zwischenformat nur es selbst lesen kann (MF-1178).** Commit `835d5a6fc1258921949fe92400adb789c398b9c3` (2021-10-22), GPL v1 oder später, © 2011 Joseph H. Allen; beide Werkzeuge übersetzen mit einem einzigen `gcc -O2` und liefen auf dieser Maschine. Zwei unabhängige Abweichungen vom Format, das sie zu schreiben behaupten, **keine davon dokumentiert**: **(1)** der Kopf trägt keine `IMD `-Kennung, sondern `ATR2IMD 1.0: <Datum>` — eine echte IMD im Korpus beginnt mit `IMD 1.17: …`, und UFTs Leser verlangt die Kennung (`uft_imd_plugin.c:14,34,89`), antwortete auf die erzeugte Datei also gemessen mit `UFT_ERROR_FORMAT_INVALID`. **(2)** jedes Datenbyte ist **komplementiert** (`atr2imd.c:284,290,297` schreibt `~atr->data[…]`), und nur der eigene Partner dreht es zurück (`imd2atr.c:311`, `buf[y] ^= 0xFF`). Gemessen: der Rundlauf des Paars ist byteidentisch — **0 von 92 176** Byte abweichend —, die Zwischendatei aber für jeden anderen IMD-Leser unbrauchbar; aus `UFT-ATR S0001` wird `AA B9 AB D2 …`. Dieselbe Entscheidung wie bei floptools `esq16` (MF-1085, P3-364), nur aus einem anderen Grund: dort verschob der eigene Rundlauf die Diskette, hier ist er in Ordnung und die **Zwischendatei** ist es nicht. **Was das Paket trotzdem beiträgt, über den Kanal *Spec*:** seine `readme.md` nennt die drei ATR-Größen **mit Begründung** (92 176 / 133 136 / 183 952, letzteres „− 384 because first three sectors are short") und zwei Erkennungsschwellen (131 088, 183 952) — festgenagelt in `tests/test_atr_groessen_gegen_jhallen.c`, alle drei von UFT richtig gelesen. Dazu drei **Interleave-Tafeln** (`atr2imd.c:56-65`), eine Aussage, die UFT sonst nirgends hat: P3-432 |
 
 **Offene Lücke:** eine **ADFlib-unabhängige, skriptbare** Zweitmeinung

@@ -808,6 +808,30 @@ den stärksten Kanal, der legal offensteht:
 | **Daten/Fixture** | Abbild frei, Code nicht | Korpus-Zulieferungen |
 | **Fundus** | heute kein Kanal | `ipf-flux`, bis die capsimg-Frage steht |
 
+**Der Kanal *Spec* hat Stufen, und die stärkste ist die Firmware des
+Laufwerks (MF-1179).** Fast jede Quelle dieses Baums ist ein **Leser** —
+ein Werkzeug, das ein fremdes Abbild aufmacht und deutet. Eine
+Laufwerks-Firmware ist der **Schreiber**: sie hat die Disketten
+hergestellt, um die es geht. Sie wird nicht ausgeführt, also ist sie
+kein Oracle; sie ist *Spec* — aber *Spec* mit dem Zeugen auf der
+richtigen Seite.
+
+Was eine solche Quelle registrierbar macht, ist ihr **Anker**. Eine
+Spec-Quelle ohne Anker ist eine Behauptung. Bei der Atari 1050 Turbo
+v3.5 ist der Anker ein Byte-für-Byte-Vergleich zwischen dem Atasm-Quell-
+text und dem 1988 ausgelieferten ROM: derselbe md5
+`35be2c58f1e0b04ab5a1f2459e5515bd`, **0 abweichende Byte**. Verzeichnis
+und Kandidatenliste stehen in
+[`docs/ORACLES.md` §Laufwerks-Firmware](docs/ORACLES.md).
+
+**Und die Gattung entscheidet nicht, sie gewichtet.** Die gemessene 1050
+Turbo ist ein *Nachrüst*-ROM, nicht Ataris eigenes. Wo sie UFTs
+gerechnetem Modell widerspricht — Interleave 12 gegen 13 bei Enhanced
+Density —, ist die Abweichung **festgenagelt, nicht aufgelöst** (P3-434);
+die 12 einzusetzen wäre eine unbelegte Zahl gegen eine andere, also
+genau das Verbot aus MF-1077. Eine starke Quelle ist ein Grund,
+genauer hinzusehen, nie ein Grund, eine Zahl zu ändern.
+
 **Fundus heißt benannt wartend, nicht verfallen.** Ein Fund ohne Kanal
 wird eingetragen — mit dem, was ihn öffnen würde. Sonst ist „später"
 dasselbe wie „nie".
