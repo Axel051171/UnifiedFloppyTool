@@ -27,7 +27,7 @@ laufen fort und werden nie wiederverwendet.
 *(höchstens einer — leer heißt: nichts läuft)*
 
 ### A-017 · Die Befunde der Zulieferungen EINBAUEN (Plan, Phasen 1–5)
-- **Status:** **in Arbeit** · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „bau alles ein mach einen plan und zetzte es um" · später
   „mach A-005 ungestopt" · „beginne phase 1"
 - **Kennzahl:** **keine der vier** für Phase 1 (Trägerprovenienz ist eine
@@ -125,8 +125,28 @@ laufen fort und werden nie wiederverwendet.
   · Phase 2 = **MF-1190** = `e22e1b78` (6 Dateien, 856 Einfügungen)
   · Phase 3 = **MF-1192** = `32685609` (Halt, reine Doku)
   · Phase 4 = **MF-1193** = `503522c0` (Halt, reine Doku)
-  · Phase 5 = **MF-1195**. Alle mit Pre-Commit-Toren grün und `mcp=0`.
-  **Nicht gepusht** — C3.
+  · Phase 5 = **MF-1195** = `38d20378` (12 Dateien, 1607 Einfügungen).
+  Alle mit Pre-Commit-Toren grün und `mcp=0`.
+  **Gepusht** 2026-09-16 als Welle von 12 Commits (`76c56535..38d20378`),
+  alle drei pre-push-Tore bestanden, danach `origin/main..HEAD` = 0.
+- **Abschluss mit einer Einschränkung, die nicht verschwiegen wird:** die
+  Zeile `Fertig heißt` verlangt für **jede** Phase Commit, Rotbeweis,
+  Produktivaufrufer im selben Commit und grüne Vollsuite. Erfüllt ist das
+  von den Phasen **1, 2 und 5**. Die Phasen **3 und 4** sind als
+  **gemessener Halt** abgeschlossen — ein Halt ist nach dem AUFTRAG ein
+  Ergebnis, aber er ist nicht das, was diese Zeile beschreibt. Der Posten
+  gilt als erledigt, weil der PLAN abgearbeitet ist, nicht weil fünf
+  Phasen gebaut wurden.
+- **Nachtrag 2026-09-16 (MF-1199 = `70a940af`):** der Push von MF-1195 hat
+  die CI rot gemacht — `Consistency check`, **1** Befund,
+  `[STAND.md stale]`. Ursache gemessen: `gen_stand.py::offen()` zählt
+  `docs/OPEN_ITEMS.md` aus dem **Arbeitsbaum**, in dem die Parallelsitzung
+  unversionierte Zeilen liegen hatte. Versioniert 7796, Arbeitsbaum 7798,
+  eingecheckt stand **7797** — ein Zwischenstand einer fremden Datei, den
+  es in keinem Commit gab. Behoben mit einer Zeile (Befund `P3-463`),
+  gepusht, `origin/main` = `70a940af`. Die Lehre steht als `P3-463`; der
+  Umweg über einen `git worktree` ist dort **verworfen**, weil er im
+  Hauptdepot zweimal `core.bare = true` hinterlassen hat.
 
 ---
 
@@ -136,9 +156,10 @@ Stand und Beleg. Er wird hier **nicht** wiederholt — zwei Fassungen desselben
 Postens wären zwei Wahrheiten (D3).
 
 Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
-`A-007` (MF-1186 = `87abb0b3`). `/aufgabe weiter` arbeitet am laufenden
-`A-017` weiter (**Phase 2**); erst wenn der abgeschlossen ist, zieht es
-**`A-008`** hoch (Zulieferung `UFT_C64PP_Protection_Catalog.zip`).
+`A-007` (MF-1186 = `87abb0b3`), **`A-017`** (Phasen 1–5, MF-1189…MF-1195,
+gepusht; Nachtrag MF-1199). `/aufgabe weiter` arbeitet seit 2026-09-16 am
+hochgezogenen **`A-008`** (Zulieferung `UFT_C64PP_Protection_Catalog.zip`);
+danach zieht es `A-009` hoch.
 
 > **Warteschlange, gezählt statt geschätzt (Stand 2026-09-16):** `A-008`
 > … `A-016` (neun Begutachtungen), dazu die sieben heute aufgenommenen
@@ -446,7 +467,7 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   **MF-1186 = `87abb0b3`**; Korrektur und Nachtrag **MF-1187** (Hash folgt).
 
 ### A-008 · Zulieferung `UFT_C64PP_Protection_Catalog.zip` begutachten
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **in Arbeit** seit 2026-09-16 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
   raussuchen was ich übersehen habe / - wo können die formate verbessert
   werden / - ist es auf andere formate übertragbar / - welche einstellungen
@@ -506,8 +527,111 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   Katalogeinträge + 1 Test + 1 Werkzeug + GUI-Diff). Einbau **nicht
   schätzbar** — die GUI-Hälfte ist ein Diff gegen lebenden Code und der
   Qt-Bau ist unerprobt.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Messungen liegen, das Gutachten ist noch nicht geschrieben.**
+  Was gemessen ist (je Aussage mit Fundstelle):
+  · **Die Kernleistung der Zulieferung liegt im Baum bereits vor.** Die
+    Aufnahme-Zeile oben nennt als ihren einen kennzahlwirksamen Teil, die
+    RapidLok-Heuristik zu einer neutralen Strukturmeldung herabzustufen.
+    Gemessen hat **MF-402** (`22c35a37`) genau das getan, und gründlicher:
+    `ufm_cbm_check_vmax()` als tautologisch entfernt,
+    `ufm_cbm_check_rapidlok()` in `ufm_cbm_has_half_track_beyond_35()`
+    umbenannt, die Klassifikation auf Strukturnamen umgestellt, jeweils mit
+    der Begründung **zitiert an Ort und Stelle**
+    (`src/protection/ufm_c64_scheme_detect.c:62-78`, `:186-200`;
+    `include/uft/protection/ufm_cbm_protection_methods.h:15-27`).
+  · **Der produktive Pfad ist ein anderer als der, den die Aufnahme
+    vermutet hat — und er ist erreichbar.** Kette gemessen:
+    `src/mainwindow.cpp:107` (`new StatusTab()`) → `src/statustab.cpp:458`
+    (`new ProtectionAnalysisWidget(dlg)`) →
+    `src/gui/ProtectionAnalysisWidget.cpp:215` (`ufm_c64_prot_analyze`) →
+    `src/protection/ufm_c64_scheme_detect.c:124`. Ein Dialog, den ein
+    Bediener anklickt.
+  · **`g64_detect_protection()` ist NICHT erreichbar**, und beide Türen
+    sind gemessen tot: `uft_advanced_open()` hat als einzigen Aufrufer
+    `tests/test_advanced_guete_ohne_messung.c:274`, und
+    `uft_advanced_detect_protection()` hat **nur Prototyp und Definition,
+    null Aufrufer**. Deckt sich mit `P3-147`.
+  · **BERICHTIGT — hier stand ein Fehler von mir, und er bleibt zitiert
+    stehen.** Der Satz lautete: „Zwei Aussagen des Auditberichts tragen
+    gegen DIESEN Baum nicht: er führt `ufm_c64_metrics_from_gcr()` als
+    ‚produktiv aus ProtectionAnalysisWidget erreichbar / gute Grundlage' —
+    der Bezeichner kommt im ganzen Baum **nicht vor** (`git grep`, rc 0,
+    0 Treffer)." **Das ist falsch.** Richtig gemessen ohne Pfadliste:
+    **43 Treffer in 15 Dateien**, darunter `src/protection/ufm_c64_metrics.c`,
+    `include/uft/protection/ufm_c64_metrics.h` und **vier** Stellen in
+    `src/gui/ProtectionAnalysisWidget.cpp`. Der Auditbericht hat an dieser
+    Stelle **recht**: die Kette G64 → rohe GCR-Spur →
+    `ufm_c64_metrics_from_gcr()` → `ufm_c64_prot_analyze()` ist der
+    Produktivpfad, so wie er sie beschreibt.
+    **Ursache meines Fehlers, benannt statt verschwiegen:** die Messung lief
+    als `git grep … -- $(git ls-files) 2>/dev/null`. Die Pfadliste sprengt
+    die Argumentlänge, git bricht mit rc≠0 und leerer Ausgabe ab, `2>/dev/null`
+    verschluckt das `fatal:`, und ich habe die leere Ausgabe als „0 Treffer"
+    gelesen. Das ist die Klasse `grep_exitkode_bricht_die_kette` — **dritter
+    Fall an einem Tag**, und der teuerste, weil die Falschaussage in eine
+    verfolgte Datei geschrieben wurde. Regel ab sofort: **`rc` je Lauf
+    prüfen, nie `2>/dev/null` auf eine Messung, nie `-- $(git ls-files)`.**
+    · Die zweite Hälfte des alten Satzes steht weiter: der Bericht nennt
+    „mehrere parallele Implementierungen" als unverdrahtet, **ohne zu
+    messen, welche** — das ist unverändert richtig und bleibt ein Mangel
+    des Berichts.
+  · **Die Klasse ist bereits mit einem Tor versehen.**
+    `scripts/audit_protection_claims.py` (MF-557, verdrahtet in
+    `scripts/check_consistency.py:752`) misst genau diese Lage: 33 Dateien,
+    369 `uft_`-Funktionen, **3** von außen gerufen, **353** von keinem Test
+    berührt. Sein Kopf warnt wörtlich davor, den Katalog anzuschließen,
+    ohne ihn geprüft zu haben. Die 20 Katalogeinträge der Zulieferung
+    würden genau dorthin gelegt.
+  · **Der eine gemessene Rest ist neu und gehört nicht der Zulieferung:**
+    weder `ufm_c64_scheme_detect.c` noch `ufm_c64_metrics.c` kennen
+    **Nachbarschaft** oder Kopfbreite (gemessen, 0 Treffer). Damit liefern
+    17.0/17.5/18.0 (mit einer 1541 nicht rückschreibbar, weil der
+    Schreibkopf eine ganze Spur breit ist) und 1.5/17.5/35.5 (harmlos)
+    dieselbe Ausgabe — zwei physikalisch entgegengesetzte Disketten, eine
+    Meldung. Das Feld dafür liegt bereit und wird gefüllt:
+    `ufm_c64_track_metrics_t.track_x2` (`ufm_c64_metrics.c:142`), also
+    Nachbarschaft = `|Δ track_x2| == 1`, **ohne eine neue Konstante**.
+    Steht als Kern von `P3-38`; der Einbau ist nach der Zeile
+    `Fertig heißt` (e) **ausdrücklich ein eigener Posten** und wurde hier
+    bewusst NICHT begonnen.
+  · **Verworfen bleibt, was die Aufnahme schon gemessen hat:** die
+    mitgelieferten `UnifiedFloppyTool.pro` (81 628 gegen 83 293 Byte) und
+    `tests/CMakeLists.txt` (341 230 gegen 361 386) sind **älter** als die
+    des Baums; sie zu übernehmen wäre eine stille Rücknahme fremder
+    Verdrahtung. Dazu `tools/uft-c64pp-catalog.c` — ein CLI, das gegen die
+    GUI-only-Regel des Projekts steht.
+  **Das Gutachten ist geschrieben:**
+  `tools/uft-scout/out/a008_c64pp_protection_catalog.gutachten.md`, mit
+  (a)…(e) der Zeile `Fertig heißt`. Die drei Kernzahlen daraus:
+  · **(b) 0 von 20** Katalogeinträgen sind mit dem belegbar, was
+    `ufm_c64_track_metrics_t` trägt. **15 von 20** verlangen mindestens
+    eines von zwölf Merkmalen, die die Struktur gar nicht hat
+    (`FAT_TRACK`, `TRACK_ALIGNMENT`, `CUSTOM_HEADER`, `SLIDING_BITS`,
+    `BYTE_COUNT`, `RPM_SENSITIVE`, `SECTOR_PARITY`, `LOADER_TIMING`,
+    `SYNC_POSITION`, `MIXED_FORMAT`, `GAP_SIGNATURE`, `EXACT_SIGNATURE`);
+    die übrigen fünf verlangen Bytefolgen, Positionen innerhalb der Spur
+    oder Mehrfachlesungs-Vergleiche. Widerlegt ist keiner — wer nichts
+    messen kann, kann auch nichts widerlegen. **Der Katalog ist damit eine
+    Beschaffungsliste, keine Erkennung.**
+  · **(c) Zeilendiff GUI:** 712 gegen 885 Zeilen, **17 Blöcke, +185/−22**.
+    Unter den 22 entfernten steht ein **gemessener** Kommentar über eine
+    behobene Index-Konvention (`g64_get_track()` Index 2 = Spur 1.0 gegen
+    `ufm_c64_metrics_from_gcr()` Index 0 = Spur 1.0; ungerechnet trifft es
+    genau die drei Zonengrenzen 17→18, 24→25, 30→31 und erzeugte drei
+    falsche „long track"-Treffer auf **beiden** sauberen Referenz-
+    disketten). Eine Dateiübernahme löschte die Begründung mit.
+  · **(d)** `.pro` und `tests/CMakeLists.txt` verworfen, Bytezahlen im
+    Gutachten §4; dazu `tools/uft-c64pp-catalog.c` als CLI gegen die
+    GUI-only-Regel.
+  · **Das Neue, das der Baum wirklich nicht hat:** der Beweisgrad hängt bei
+    der Zulieferung von der **Aufnahmequelle** ab
+    (`preserves_flux_timing`). Gemessen `rc 1, 0 Treffer` über
+    `src/protection/` und `include/uft/protection/` — das ist die
+    Tier-Idee, angewandt auf Schutzbefunde.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a008_c64pp_protection_catalog.gutachten.md`;
+  Commit folgt (der Baum ist durch den unversionierten Block einer zweiten
+  Sitzung vorübergehend nicht committierbar, siehe A-017 Nachtrag).
 
 ### A-009 · Zulieferung `UFT_Atari_ST_Cartridge_Detection.zip` begutachten
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
@@ -579,8 +703,46 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
 - **Aufwand:** Begutachtung eine Sitzung (341 Zeilen Modul + Header + Test
   + 1413 Byte Doku + sechs Dateidiffs). Einbau **nicht schätzbar** — er
   hängt an der Quellenangabe und an sechs Diffs gegen lebenden Code.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a009_atari_st_cartridge.gutachten.md`, mit (a)…(e).
+  · **(b) Die Grundfrage ist entschieden, und zwar gemessen:** eine
+    Nicht-Disketten-Absage gehört in den **Prüfpfad**. `DiskImageValidator`
+    wird von **8 produktiven GUI-Dateien** benutzt (`decodejob`,
+    `explorertab`, `forensictab`, `mainwindow`, `nibbletab`, `toolstab`,
+    `xcopytab`, plus `.pro` und ein Test) — der erreichbarste Baustein
+    dieser ganzen Begutachtungsreihe. `src/formats/atari/uft_atari.c`
+    dagegen registriert **kein Plugin** (0 Treffer für `DSK_PLUGIN`,
+    `uft_format_plugin_t`, `.probe`), und die dort liegenden
+    **A78-Cartridge-Strukturen sind unerreichbar** (24+35+7 Nennungen,
+    Test vorhanden, keine Tür — Klasse `P3-204`). Die Zulieferung wählt
+    den richtigen Ort: ihr `disk_image_validator.cpp` ruft den Erkenner
+    wirklich (`info.isNonDiskImage = true`), D2 ist auf ihrer Seite
+    erfüllt. Bauform wie `UFT_CAPS_OS_VOLUME` (MF-1176): eine Absage,
+    keine Zusage.
+  · **(d) DER SCHWERSTE BEFUND — ihre `src/mainwindow.cpp` macht MF-1194
+    rückgängig.** Gemessen **+17/−50**; unter den 50 entfernten Zeilen
+    steht die Verdrahtung von `ProtectionTab`, `ForensicTab`, `NibbleTab`
+    und `XCopyTab` samt dem Messprotokoll, das MF-1194 **vor** dem
+    Verdrahten angelegt hat. Eine Dateiübernahme hängte **vier GUI-Reiter
+    still wieder ab**. Grund ist banal: das Paket ist älter als der Baum.
+    Die übrigen Zahlen: `disk_image_validator.cpp` **+58/−0** (rein
+    additiv), `.h` +2/−0, `explorertab.cpp` +11/−2,
+    `tests/CMakeLists.txt` 341 513 gegen 361 386 B, `.pro` 81 746 gegen
+    83 293 B.
+  · **(c) Der Kanal trägt nicht.** Die Doku sagt „anhand der oeffentlich
+    beschriebenen Atari-ST-Cartridge-Header neu implementiert" und nennt
+    **keine** Seite, Fassung oder Stelle; nach MF-636 ist das zu wenig.
+    Dazu gemessen: **keine** der drei neuen Dateien trägt eine SPDX-,
+    Lizenz- oder Copyright-Zeile (0 Treffer). Bis zur Nachlieferung ist
+    der Kanal **Fundus**, nicht Nachbau.
+  · **Das Neue:** `DiskImageInfo` kennt heute `isValid` und
+    `isFluxFormat`; ein Objekt, das **erkannt und trotzdem abgelehnt**
+    wird, hat kein Feld und fällt mit „unbekannt" in einen Topf — Klasse
+    `MF-980`/D6. `isNonDiskImage`, `nonDisk`, `STCART` und `0x00FA0000`
+    kommen im ganzen Baum nur in dieser Datei hier vor.
+  · **(e)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a009_atari_st_cartridge.gutachten.md`; Commit folgt.
 
 ### A-010 · Zulieferung `FloImg-extrakt.zip` (Ganzdurchläufe · Mediendiagnosen) auseinandernehmen
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
