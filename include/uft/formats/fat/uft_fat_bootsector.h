@@ -260,7 +260,30 @@ typedef struct {
     /* Media descriptor info */
     const char *media_description;  /* Human-readable media description */
     const fat_disk_geometry_t *geometry; /* Matching standard geometry or NULL */
-    
+
+    /* Herkunft des DATENTRAEGERS (P3-454, MF-1189).
+     *
+     * ANGEHAENGT, nicht eingefuegt: `fat_analysis_result_t` ist eine
+     * oeffentliche Struktur, und ein Feld in der Mitte waere ein
+     * ABI-Bruch ohne Compiler-Warnung. Neue Felder gehoeren ans Ende.
+     *
+     * `fat_analyze_boot_sector()` liest den Bootsektor ohnehin und
+     * fuellt den OEM-Namen — der SCHLUESSEL dazu, die CRC-32 ueber den
+     * Bootstrap-Code, fehlte im ganzen Baum (`bootstrap` 0 `.c`-Treffer,
+     * gemessen MF-1186). Hier ist er.
+     *
+     * `bootstrap_lage` traegt DREI Zustaende, und der dritte ist der
+     * Punkt: „dieser Bestand kennt den Schluessel nicht" ist nicht
+     * dasselbe wie „das Werkzeug ist unbekannt" (MF-980, D6). Die
+     * Bedeutungen stehen in `include/uft/forensic/uft_bootstrap.h`;
+     * `bootstrap_lage` ist dort `uft_bs_traeger_t` und hier bewusst als
+     * `int` gefuehrt, damit dieser Header keinen weiteren Header
+     * einziehen muss. */
+    int      bootstrap_lage;     /* uft_bs_traeger_t; 0 = UNBEKANNT   */
+    uint32_t bootstrap_crc32;    /* 0 = nicht gebildet                */
+    uint32_t bootstrap_len;      /* Codelaenge ohne nachlaufende Null */
+    uint32_t bootstrap_offset;   /* Beginn des Codes im Sektor        */
+
 } fat_analysis_result_t;
 
 /* ============================================================================

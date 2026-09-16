@@ -26,7 +26,36 @@ laufen fort und werden nie wiederverwendet.
 
 *(höchstens einer — leer heißt: nichts läuft)*
 
-**Leer.** `A-007` ist **erledigt** (Gutachten, MF-1186); sein Eintrag steht
+### A-017 · Die Befunde der Zulieferungen EINBAUEN (Plan, Phasen 1–5)
+- **Status:** **in Arbeit** · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „bau alles ein mach einen plan und zetzte es um" · später
+  „mach A-005 ungestopt" · „beginne phase 1"
+- **Kennzahl:** **keine der vier** für Phase 1 (Trägerprovenienz ist eine
+  forensische Aussage, keine Tier-Stufe). Phase 4/5 berühren
+  `T3 runter` mittelbar über den Abgleicher.
+- **Kanal:** **Port.** Gemessen (MF-1188): alle fünf gelieferten
+  Quelldateien sind `GPL-2.0-or-later`, also eigener Code unter der
+  Projektlizenz — für die Phasen 1–4 gibt es keine Lizenzfrage. Die
+  **Datenbestände** dahinter sind eine andere Sache und einzeln geprüft.
+- **Einfrier-Regel:** **ja** für jede Phase, die den Format-/Decoder-Layer
+  berührt → Rotbeweis zuerst, benannte Referenz im Header.
+- **OPEN_ITEMS:** `P3-454` (Phase 1) · `P3-453` (Phase 2) · `P3-455`
+  (Phase 3) · `P3-449`/`P3-451` (Phase 4) · `P3-445` (Phase 5)
+- **Fertig heißt:** jede Phase mit eigenem Commit, Rotbeweis belegt,
+  Produktivaufrufer im **selben** Commit (D2), Vollsuite grün.
+- **Stand:** **Phase 1 fertig.** `uft_bootstrap.{h,c}` + Aufruf in
+  `fat_analyze_boot_sector()` + 9 Zusagen; D2-Probe gemessen (Aufruf weg →
+  genau die zwei Verdrahtungs-Zusagen rot, 7/9, rc 1). Suite **494/494**
+  mit dem einen benannten Skip. Nebenbefund gemessen und berichtigt: die
+  Bootstrap-Datenbank **liegt** im gitignorierten Fremdklon (379 Schlüssel,
+  490 Namen, 223 verifiziert) — der leere Bestand ist **S3**
+  (GPL-3.0 + Datenbankherstellerrecht), nicht Abwesenheit. Als Nächstes
+  **Phase 2** (`P3-453`, Spleißerkennung mit Aufrufer im selben Commit).
+- **Beleg:** Phase 1 = **MF-1189**
+
+---
+
+`A-007` ist **erledigt** (Gutachten, MF-1186); sein Eintrag steht
 unverändert an seinem Platz in der Warteschlange unten und trägt dort Status,
 Stand und Beleg. Er wird hier **nicht** wiederholt — zwei Fassungen desselben
 Postens wären zwei Wahrheiten (D3).
@@ -883,6 +912,79 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   kleinste Gegenstand dieser Reihe, und die Frage ist eng (drei DOSe, ein
   Behälter, der schon belegt ist). Einbau: für Beta DOS **nicht
   schätzbar** und ein eigener Posten unter dem Moratorium.
+- **Stand:** —
+- **Beleg:** —
+
+### A-016 · `ChrisBertrandDotNet/ST-Recover` — **das ist `P3-63`**, und `P3-59` hat seine Vorbedingung umgekehrt
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/ChrisBertrandDotNet/ST-Recover.git nimm
+  den code komplett auseinander , sehr genau / finde alles und alles
+  raussuchen was ich übersehen habe , stimme es mit mein aktuellen tool ab
+  / - wo können die formate verbessert werden / - ist es auf andere formate
+  übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
+  nicht / - brauch es eine HAL-Erweiterungen , **erweite das tool**, plan
+  verstanden, was kannst du besser machen ??"
+- **Kennzahl:** **keine der vier.** Beide Größen aus `P3-63` sind
+  forensische Aussagen je Sektor, keine Tier-Stufe und kein
+  Wandlungspfad — sie berühren die fünfte, offene Zahl (MF-640) und
+  `P3-387` (ein Fehlerprotokoll, das den Lauf überlebt).
+- **Kanal:** **Spec — und hier hilft `P3-452` ausdrücklich NICHT.** Gemessen:
+  das Repo führt `Source/Ms-RL License.htm` und `License.htm`, also die
+  **Microsoft Reciprocal License**; `gh api` liefert `NOASSERTION`, weil
+  GitHub sie nicht einordnet. **Ms-RL ist mit GPL in JEDER Fassung
+  unverträglich** — anders als Apache-2.0, das nur gegen GPL-2 scheitert.
+  Die GPL-3-Bindung aus MF-698 öffnet den Port-Kanal hier also nicht.
+  Was bleibt: Werte lesen, keine Zeilen nehmen — und **das ist schon
+  geschehen**: `P3-63` führt vier belegte Bestätigungen aus dieser Quelle
+  (32 µs je Rohbyte aus `200000/6250`, „11 Sektoren/Spur in 2 Umdrehungen",
+  das 50-Byte-Fenster zwischen ID- und Datenmarke, und `128 << (n & 3)`).
+- **Einfrier-Regel:** **ja.** Beide Größen hängen an `uft_sector_t`, der
+  kanonischen Struktur aus `include/uft/uft_types.h` („This is the ONE
+  definition … used across the entire project"). Rotbeweis zuerst, und eine
+  ABI-Frage steht daneben.
+- **OPEN_ITEMS:** **`P3-63`** — dieser Posten IST der Auftrag, ihn
+  abzutragen; der Befund bleibt dort. Vorbedingung war `P3-59`, dazu
+  `P3-387` (Fehlerprotokoll mit Position), `P3-51(1)` (die 11 Sektoren) und
+  `P3-453` (Schreibnaht — siehe unten).
+- **Bei der Aufnahme gemessen — und die Vorbedingung ist der eigentliche
+  Befund:** `P3-63` sagt „die Reihenfolge steht: **nach P3-59**".
+  **`P3-59` ist ✅ erledigt (MF-832) — aber seine Auflösung war eine
+  Umkehrung:** „Vier weitere Felder auf vier tote zu setzen macht die
+  Struktur **irreführender**, nicht reicher." Gemessen hatte MF-831, dass
+  von den fünf Positionsfeldern auf `uft_sector_t` **genau eines** je
+  gefüllt wird — `angular_position`, von `uft_atx.c:366`, dem einzigen
+  Format, das es kann. `id_offset` hat **eine** Fundstelle im ganzen Baum,
+  nämlich die Deklaration; `gap_before` einen Treffer auf einer **fremden**
+  Struktur; `data_offset` und `bit_offset` haben 44 bzw. 14 Schreibstellen,
+  die **alle** anderen Strukturen gehören. Dazu heute nachgemessen:
+  `trouve_par_le_controleur`, `gap_us` und `duree_espace` haben je **0**
+  Treffer. **`P3-63` ist damit in der Reihenfolge frei und in der Sache
+  blockiert:** seine zwei Größen wären das fünfte und sechste tote Feld.
+  Der Punkt sagt das selbst — „die zwei Groessen setzen gefuellte
+  Feldgrenzen voraus; heute gibt es keinen Erzeuger dafuer".
+- **Und eine Verbindung, die den Weg abkürzt:** `duree_espace_libre_en_1er`
+  ist die **Lücke als Messgröße in Mikrosekunden statt als Restmenge** —
+  und genau die entsteht bei `P3-453`/Phase 2 des laufenden Plans
+  (Schreibnaht auf IBM-MFM **aus den Lückenwerten**). Beide Punkte wollen
+  dieselbe Messung von zwei Seiten. Wer Phase 2 baut, erzeugt die Hälfte
+  von `P3-63` mit.
+- **Fertig heißt:** ein Gutachten **plus** die Erweiterung, in dieser
+  Reihenfolge, weil der Auftrag „erweite das tool" sagt:
+  **(a)** die 13 Quelldateien durchgehen und je Fund „schon in `P3-63`
+  genannt / neu / trifft nicht zu" vergeben — `P3-63` ist vom Eigentümer
+  gelesen, ein zweites Lesen muss also **etwas Neues** liefern oder das
+  sagen; **(b)** die Ms-RL-Grenze einhalten: Werte und Verfahren
+  beschreiben, **keine Zeile übernehmen**, und im Header benennen;
+  **(c)** die Vorbedingung ausdrücklich entscheiden — einen **Erzeuger** für
+  die Feldgrenzen bauen (dann sind die zwei Größen sinnvoll) oder die zwei
+  Größen zurückstellen, mit Begründung; **(d)** wenn gebaut wird: Rotbeweis
+  zuerst, ein Aufrufer im selben Commit (D2), und die ABI-Frage zu
+  `uft_sector_t` benannt; **(e)** die fünf Fragen je mit Messung;
+  **(f)** kein Byte des Repos nach `src/`, `include/` oder `tests/`.
+- **Aufwand:** Begutachtung **eine Sitzung** (13 Quelldateien, 127 KB, und
+  `P3-63` liefert die Vorarbeit). Die **Erweiterung** ist nicht schätzbar —
+  sie hängt daran, ob ein Erzeuger für die Feldgrenzen entsteht, und das
+  ist Decoder-Arbeit am Spurmodell, nicht ein Feld anhängen.
 - **Stand:** —
 - **Beleg:** —
 

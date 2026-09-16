@@ -159,6 +159,14 @@ set(UFT_FORMAT_LAYER_DEPS
             # Bezuege auf drei Symbole), und deshalb steht es HIER und
             # nicht in 20 Sonderzweigen.
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
+            # MF-1189: `src/forensic/uft_bootstrap.c` gehoert hier NICHT
+            # her, und das ist gemessen statt gemeint. Der Versuch stand
+            # genau an dieser Stelle und deckte **33** der **58** Ziele,
+            # die `uft_fat_bootsector.c` uebersetzen; 25 blieben uebrig,
+            # weil sie an den zwoelf lokalen `*_FORMAT_SOURCES`-GLOBs aus
+            # P3-426 haengen. Die Abhaengigkeit wird deshalb aus der
+            # Quellenliste des Ziels ABGELEITET —
+            # `uft_wire_traegerherkunft()` vor dieser Schleife.
             # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
             # gemeinsame Liste, nicht in einen Sonderzweig.
             ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
@@ -181,6 +189,50 @@ set(UFT_FORMAT_LAYER_INCLUDES
     ${CMAKE_SOURCE_DIR}/include/uft/flux
     ${CMAKE_SOURCE_DIR}/include/uft/fs
     )
+
+# MF-1189 / P3-454: die Traegerherkunft, ABGELEITET statt aufgezaehlt.
+#
+# `fat_analyze_boot_sector()` ruft seit P3-454 `uft_bs_identifiziere()`.
+# Gemessen aus `build.ninja` uebersetzen **58** Testziele
+# `uft_fat_bootsector.c` — eine Zeile in `UFT_FORMAT_LAYER_DEPS` deckte
+# davon **33** ab, danach blieben **25** uebrig, und mit der Regel unten in
+# NUR der C-Schleife noch **9** (alle drei Zahlen nachgezaehlt, nicht
+# geschaetzt; die letzten 9 sind Qt-Ziele aus der ZWEITEN Schleife).
+#
+# Die 25 haengen an lokalen `*_FORMAT_SOURCES`-GLOBs — davon fuehrt
+# **P3-426** gemessen **ZWOELF** (GEO 2x, IHR, CFD, MREV, OUTV, FLIP,
+# CADJ, ALL, _TOOLSTAB, SAVEIMG, CAPGATE), und nur EINER nimmt
+# `${UFT_FORMAT_LAYER_DEPS}` dazu. Eine DREIZEHNTE Aufzaehlung waere
+# genau der Fehler, den dieser Baum viermal bezahlt hat (MF-636: MF-567
+# Abbruchliste, MF-578 Offscreen-Liste, MF-598 Skip-Namen, MF-633
+# SKIP_DIRS).
+#
+# **Der Preis der anderen Lesart ist bei MF-1175 beziffert:** dieselbe
+# Lage, ein Modul, **17 Einfuegungen in vier Baurunden** (54 undefinierte
+# Bezuege -> 27 -> 21 -> gruen). Hier: eine Funktion, zwei Aufrufstellen,
+# und die Deckung ist nachgezaehlt statt erhofft — 58 von 58, kein
+# Fehlbetrag, kein Ueberschuss.
+#
+# Die Abhaengigkeit kommt deshalb aus der QUELLENLISTE DES ZIELS: wer die
+# Datei uebersetzt, bekommt das Symbol — auch ein Zweig, den es heute noch
+# nicht gibt. Und sie steht als FUNKTION da und nicht zweimal als Block,
+# weil zwei Schleifen sie brauchen (D3).
+#
+# Der zweite Teil der Bedingung ist die Wache gegen Doppelung:
+# `test_traegerprovenienz` nennt beide Quellen selbst und darf
+# `uft_bootstrap.c` nicht zweimal bekommen.
+#
+# Die zwoelf GLOBs sind damit NICHT behoben, nur umgangen — der Befund
+# steht als **P3-426** in `docs/OPEN_ITEMS.md`, und diese Funktion ist
+# kein Ersatz dafuer, sondern der Beleg, dass der Weg dorthin traegt.
+function(uft_wire_traegerherkunft tgt)
+    get_target_property(_uft_srcs ${tgt} SOURCES)
+    if(_uft_srcs MATCHES "uft_fat_bootsector"
+       AND NOT _uft_srcs MATCHES "uft_bootstrap")
+        target_sources(${tgt} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_bootstrap.c)
+    endif()
+endfunction()
 
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
@@ -4192,6 +4244,23 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_fat_bootsector")
         # Include FAT bootsector source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fat/uft_fat_bootsector.c)
+    elseif(${test_name} STREQUAL "test_traegerprovenienz")
+        # MF-1189 / P3-454: Herkunft des DATENTRAEGERS aus dem
+        # Bootstrap-Code. Zwei Quellen, und beide aus einem Grund:
+        #
+        #   `uft_bootstrap.c`      — der Mechanismus.
+        #   `uft_fat_bootsector.c` — der PRODUKTIVAUFRUFER (D2). Ohne ihn
+        #                            waeren die letzten zwei Zusagen nicht
+        #                            uebersetzbar, und der Erkenner waere
+        #                            der vierte ungerufene (P3-204).
+        #
+        # `air_crc32_buffer()` braucht KEINE eigene Uebersetzungseinheit:
+        # es ist `static inline` in `include/uft/formats/uft_air_crc32.h`
+        # (gemessen). Eine zweite CRC-32-Fassung waere MF-1177 — der Baum
+        # hat das Polynom 0xEDB88320 schon in 22 Dateien.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_bootstrap.c
+            ${CMAKE_SOURCE_DIR}/src/formats/fat/uft_fat_bootsector.c)
     elseif(${test_name} STREQUAL "test_diskcopy")
         # Include Disk Copy source directly (Apple format)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_diskcopy.c)
@@ -5091,6 +5160,10 @@ foreach(test_source ${TEST_SOURCES})
         target_link_libraries(${test_name} PRIVATE ${TEST_LIBS})
     endif()
     
+    # MF-1189 / P3-454: Traegerherkunft verdrahten (Regel bei der
+    # Funktionsdefinition oben, samt gemessenen Zahlen).
+    uft_wire_traegerherkunft(${test_name})
+
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
 
@@ -5739,6 +5812,13 @@ if(TARGET Qt6::Test)
                 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
             )
         endif()
+
+        # MF-1189 / P3-454: Traegerherkunft verdrahten. Diese Schleife
+        # braucht es EBENSO — gemessen sind es 9 Qt-Ziele, die
+        # `uft_fat_bootsector.c` uebersetzen; ohne diesen Aufruf fehlt
+        # ihnen `uft_bs_identifiziere`. Genau deshalb ist die Regel eine
+        # Funktion und kein Block (Regel oben, D3).
+        uft_wire_traegerherkunft(${qt_test_name})
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
         # MF-220 / MF-221: the HardwareTab-driving Qt tests construct

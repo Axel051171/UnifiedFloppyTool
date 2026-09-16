@@ -8,6 +8,7 @@
  */
 
 #include "uft/formats/fat/uft_fat_bootsector.h"
+#include "uft/forensic/uft_bootstrap.h"   /* P3-454, MF-1189 */
 #include <string.h>
 #include <stdio.h>
 
@@ -385,10 +386,37 @@ int fat_analyze_boot_sector(const uint8_t *data, size_t size,
     result->geometry = fat_find_geometry(result->total_sectors, result->media_type);
     
     /* Set overall validity */
-    result->valid = result->has_boot_signature && 
+    result->valid = result->has_boot_signature &&
                     result->has_valid_bpb &&
                     (result->has_jump_instruction || result->total_sectors < 10000);
-    
+
+    /* Herkunft des DATENTRAEGERS (P3-454, MF-1189).
+     *
+     * Hier liegt der Bootsektor ohnehin auf dem Tisch — das ist der
+     * einzige Ort im Baum, an dem das so ist, und deshalb steht der
+     * Aufruf hier und nicht in einem eigenen Durchlauf.
+     *
+     * `uft_bs_identifiziere()` beschreibt `id` in JEDEM Fall, auch bei
+     * Absage; die vier Felder tragen dann Nullen und `bootstrap_lage`
+     * ist `UFT_BS_TRAEGER_UNBEKANNT` (= 0, wie schon durch das `memset`
+     * am Anfang).
+     *
+     * KEINE Absage bei false, und das ist Absicht: ein Abbild ohne
+     * Sprungbefehl ist eine gueltige FAT-Diskette, und die Herkunft des
+     * Traegers ist kein Gueltigkeitskriterium. `result->valid` steht
+     * deshalb ueber diesem Block und wird davon nicht beruehrt. Die
+     * Nicht-Aussage bleibt in `bootstrap_lage` und ist von einer Aussage
+     * unterscheidbar (D6, MF-980) — „kein Schluessel bildbar", „Bestand
+     * kennt ihn nicht" und „zugeordnet" sind drei Zustaende. */
+    {
+        uft_bs_traeger_id_t id;
+        (void)uft_bs_identifiziere(data, size, &id);
+        result->bootstrap_lage   = (int)id.lage;
+        result->bootstrap_crc32  = id.crc32;
+        result->bootstrap_len    = (uint32_t)id.code_len;
+        result->bootstrap_offset = (uint32_t)id.code_offset;
+    }
+
     return FAT_OK;
 }
 

@@ -1792,6 +1792,13 @@ INCLUDEPATH += \
 SOURCES += src/forensic/uft_provenance.c
 HEADERS += include/uft/forensic/uft_provenance.h
 
+# Herkunft des DATENTRAEGERS (P3-454, MF-1189) — dieselbe Frage wie oben,
+# anderes Objekt: `uft_provenance` fuehrt die Herkunft von DATEIEN,
+# `uft_bootstrap` die der DISKETTE. Der Produktivaufrufer ist
+# `fat_analyze_boot_sector()` in src/formats/fat/uft_fat_bootsector.c.
+SOURCES += src/forensic/uft_bootstrap.c
+HEADERS += include/uft/forensic/uft_bootstrap.h
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Recovery Wizard + Format Suggestion Engine
 # ═══════════════════════════════════════════════════════════════════════════════
