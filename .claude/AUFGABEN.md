@@ -1739,7 +1739,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Beleg:** Halt gemessen MF-1208; Befund `P3-467`.
 
 ### A-021 · Zulieferung `UFT-NN — FAT12 lesen.zip` — FAT12 lesen, wenn die Diskette nicht mehr heil ist
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **angehalten vor einer API-Entscheidung** (`size` trägt zwei
+  Bedeutungen) · MF-1209 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
   — FAT12 lesen.zip\"  finde was ich vergessen habe und verbessere damit das"
 - **Kennzahl:** **keine der vier.** FAT12 ist Dateisystem-Ebene (FS-T1 laut
@@ -1766,11 +1767,41 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Umfang: 5 Einträge, **966** Zeilen (232 h / 360 c / 374 Test), **51**
   `CHECK`-Zusagen; der Bericht hat §6 „was mir dabei passiert ist" und §9
   „was ich nicht gebaut habe".
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **ANGEHALTEN vor einer API-Entscheidung — und der Befund ist
+  schärfer als die fehlende Prüfung.**
+  · **Die fünfte Prüfung fehlt wirklich.** Gegen die vier aus MF-1183
+    gehalten (`uft_fat_bootsector.c:316-332`): `has_valid_bpb` fällt bei
+    (1) `bytes_per_sector` null / keine Zweierpotenz / > 4096,
+    (2) `sectors_per_cluster` null / keine Zweierpotenz,
+    (3) `fat_count` null oder > 4, (4) `media_type` < 0xF0. **Keine
+    Bedingung fragt, ob das beschriebene Dateisystem in das Abbild
+    passt** — obwohl die Funktion `first_data_sector`, `data_sectors` und
+    `total_bytes` bereits ausrechnet (`:360-375`). Sie vergleicht sie nur
+    mit nichts.
+  · **DER EIGENTLICHE BEFUND: der Parameter, der das beantworten würde,
+    trägt zwei Bedeutungen.** `fat_analyze_boot_sector(data, size, …)`
+    benutzt `size` **nur** als `if (size < FAT_SECTOR_SIZE)` — also
+    Puffergröße. An den Aufrufstellen heißt es Verschiedenes:
+    `uft_win98_fdb_probe()` (`uft_win98_fdb.c:111`) reicht die
+    **Sondenpuffergröße** durch, `uft_format_convert_bitstream.c:917`
+    reicht `src_size` durch — die **Abbildgröße**. Die fünfte Prüfung auf
+    `size` zu bauen wäre für den Wandler richtig und **für die Sonde
+    falsch**: sie sagte gültige Abbilder ab, weil der Sondenpuffer kleiner
+    ist als die Datei. Klasse `MF-1015` („zwei Aussagen in einem Feld")
+    und die Falle aus `MF-1029`.
+  · **Warum das anhält statt zu bauen:** die Behebung ist ein
+    ausdrücklicher Parameter für die Abbildgröße (0 = unbekannt → keine
+    fünfte Prüfung) statt `size` zu überladen. Das berührt **drei
+    Produktivaufrufer** und die Tests — eine API-Entscheidung, kein
+    Zeileneinschub. Steht als `P3-468`.
+  · **Die Missionszeile hängt daran**, und deshalb ist es kein
+    Schönheitsfehler: ein BPB, dessen Summe über die Datei hinausreicht,
+    führt zu gelesenen Bytes, die es nicht gibt.
+- **Beleg:** Halt gemessen MF-1209; Befund `P3-468`.
 
 ### A-022 · `Booyaka101/diskstack` auseinandernehmen — mehrere Abzüge EINER Diskette zusammenstimmen
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; Orakel-Kanal fast
+  offen, ein Paket fehlt) · MF-1210 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/Booyaka101/diskstack.git nimm den code
   komplett auseinander , sehr genau / finde alles und alles raussuchen was
   ich übersehen habe  , stimme es mit mein aktuellen tool ab / - wo können
@@ -1801,8 +1832,42 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   und genau diese Gestalt hat `src/core/uft_loss_report.c` heute nicht.
   Der zweite Teil des Auftrags („wo können die Formate verbessert werden")
   trifft damit nicht die Formatschicht, sondern die Berichtsschicht.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a022_diskstack.gutachten.md`. **Der vorhergesagte
+  Fund ist gemessen bestätigt.**
+  · **Umfang:** MIT, Python, **85 Dateien, 13 036 Zeilen**, letzter Push
+    2026-09-12. Port rechtlich offen, praktisch eine **Neuschreibung** —
+    dieselbe Lage wie `mkmgt` (Forth).
+  · **Der Fund, im Quelltext statt in der Beschreibung:**
+    `report.py:99` erzeugt „Greaseweazle `--tracks=` specs covering every
+    unresolved sector", `:119` ganze `gw read`-Befehlszeilen, `:76` den
+    Satz „`{still_bad}` sectors are still bad. Another pass at …".
+    **Dagegen gemessen:** `src/core/uft_loss_report.c` sind **123 Zeilen**
+    mit fünf Funktionen, die **JSON schreiben** — kein nächster Schritt,
+    keine Spurliste, kein Befehl. Und `--tracks=` steht im ganzen Baum
+    **nur** in `fluxengine_provider_v2.cpp`, dort als **Argumentbau** für
+    einen Lesevorgang, nicht als Vorschlag an einen Bediener.
+  · **Der Unterschied ist gedanklich:** UFTs Bericht sagt, was verloren
+    ist; `diskstack`s Bericht sagt, **was als Nächstes zu tun ist** — und
+    das ist genau die Gestalt, die `P3-387` sucht („ein Fehlerprotokoll,
+    das den Lauf überlebt"). Ein Protokoll, das den nächsten Befehl trägt,
+    überlebt ihn notwendigerweise.
+  · **Die Abstimmung selbst ist KEIN Zugewinn** — `stack.py` und
+    `candidates.py` haben in `src/recovery/uft_multiread_pipeline.c`
+    (MF-473) ihre Entsprechung, und `P3-88` hat dort bereits gemessen,
+    dass Voting einen Sektor erfinden konnte.
+  · **Orakel-Kanal: zum ersten Mal in dieser Reihe fast offen.** Gemessen
+    je Abhängigkeit: `click` **vorhanden**, `crcmod` **vorhanden**,
+    `bitarray` **fehlt**. Nach fünf vollständig verschlossenen
+    Werkzeugketten (Swift, Rust, Forth, mkfs.fat/mtools, Borland) fehlt
+    hier **ein Paket**. **Nicht installiert** — eine Paketinstallation
+    verändert die Umgebung des Eigentümers und ist dessen Entscheidung.
+  · **HAL-Frage beantwortet: nein.** `diskstack` liest Dateien und
+    **druckt** den `gw read`-Befehl, statt ihn auszuführen. Genau diese
+    Trennung ist übertragbar, ohne die HAL zu berühren — der Bericht muss
+    nicht lesen können, um zu sagen, was zu lesen wäre.
+- **Beleg:** Gutachten `tools/uft-scout/out/a022_diskstack.gutachten.md`;
+  Befund folgt als Fortschreibung an `P3-387`.
 
 ### A-023 · Zulieferung `Apple-Sektorordnung.zip` — der offene Punkt aus MF-714
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
