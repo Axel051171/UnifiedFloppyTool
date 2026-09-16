@@ -2054,7 +2054,17 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Fertig heißt:** kein Punkt aus der Restliste mehr ohne Commit **oder**
   ohne benannte Stoppbedingung (S1–S5) in `docs/OPEN_ITEMS.md`
 - **Aufwand:** nicht schätzbar (Restliste offen)
-- **Stand:** **Schnitt erreicht, zwei Commits lokal, nichts gepusht.**
+- **Stand (berichtigt 2026-09-16, MF-1212): der Satz unten ist überholt.**
+  „Zwei Commits lokal, nichts gepusht" stimmte, als er geschrieben wurde;
+  gemessen stehen **beide auf `origin/main`** — MF-1182 = `1d43b345`,
+  MF-1183 = `e5daccf1`, gegangen mit der Welle `76c56535..38d20378`. Der
+  **Schnitt selbst bleibt**: er ist vom Eigentümer genehmigt („ja, schnitt
+  bei P3-423 ist ok"), und der Posten ist damit nicht offen, sondern
+  **entschieden**. Was nach dem Schnitt offen ist, steht unverändert in der
+  `OPEN_ITEMS`-Zeile oben; dazugekommen sind seither `P3-463`, `P3-465`,
+  `P3-466`, `P3-467` und `P3-468`.
+  <br>Die ursprüngliche Fassung bleibt zitiert stehen:
+- **Stand (ursprünglich):** **Schnitt erreicht, zwei Commits lokal, nichts gepusht.**
   MF-1182 (P3-406, Sonden-Doktrin Regel 2) und MF-1183 (P3-423, Geometrie
   aus dem BPB) liegen; `git rev-list --count origin/main..HEAD` = **2**.
   Beide Male Bau 0 Warnungen, Suite **493/493 grün** mit einem benannten
