@@ -3577,6 +3577,21 @@ foreach(test_source ${TEST_SOURCES})
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
+    elseif(${test_name} STREQUAL "test_win98_fdb")
+        # MF-1181: die Win98-FDB-Zulieferung, VERPFLANZT statt kopiert.
+        # `uft_fat_bootsector.c` kommt mit, und das ist der Punkt: der
+        # BPB und die gerechnete Aufteilung stehen im Baum genau einmal
+        # (`fat_analysis_result_t`, abgenommen von test_fat_bootsector,
+        # 64 Zusagen). 22 der 23 BPB-Felder der Zulieferung gab es
+        # bereits — eine zweite Kopie waere die Lage aus MF-1015.
+        #
+        # `uft_win98_fdb.c` ist NICHT als Format-Plugin registriert
+        # (Moratorium der EINFRIER-REGEL, `nfd` steht gemessen auf T2);
+        # es steht im `.pro`, damit es mitgebaut wird — dieselbe
+        # Behandlung wie `uft_roland_ident.c` seit MF-1176.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/fat/uft_win98_fdb.c
+            ${CMAKE_SOURCE_DIR}/src/formats/fat/uft_fat_bootsector.c)
     elseif(${test_name} STREQUAL "test_1050_firmware_als_quelle")
         # MF-1179: Laufwerks-Firmware als Quellengattung. Der Differenzlauf
         # RUFT das Interleave-Modell (`uft_interleave.c`) statt es

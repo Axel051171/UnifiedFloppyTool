@@ -781,6 +781,7 @@ SOURCES += \
     src/core/uft_decoder_plugin_stub.c \
     src/core/uft_sector_order.c \
     src/formats/roland/uft_roland_ident.c \
+    src/formats/fat/uft_win98_fdb.c \
     src/core/uft_sha256.c \
     src/core/uft_snapshot.c \
     src/core/uft_track_layout.c \
