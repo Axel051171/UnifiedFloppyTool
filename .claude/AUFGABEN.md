@@ -43,15 +43,29 @@ laufen fort und werden nie wiederverwendet.
   (Phase 3) · `P3-449`/`P3-451` (Phase 4) · `P3-445` (Phase 5)
 - **Fertig heißt:** jede Phase mit eigenem Commit, Rotbeweis belegt,
   Produktivaufrufer im **selben** Commit (D2), Vollsuite grün.
-- **Stand:** **Phase 1 fertig.** `uft_bootstrap.{h,c}` + Aufruf in
-  `fat_analyze_boot_sector()` + 9 Zusagen; D2-Probe gemessen (Aufruf weg →
-  genau die zwei Verdrahtungs-Zusagen rot, 7/9, rc 1). Suite **494/494**
-  mit dem einen benannten Skip. Nebenbefund gemessen und berichtigt: die
-  Bootstrap-Datenbank **liegt** im gitignorierten Fremdklon (379 Schlüssel,
-  490 Namen, 223 verifiziert) — der leere Bestand ist **S3**
-  (GPL-3.0 + Datenbankherstellerrecht), nicht Abwesenheit. Als Nächstes
-  **Phase 2** (`P3-453`, Spleißerkennung mit Aufrufer im selben Commit).
-- **Beleg:** Phase 1 = **MF-1189**
+- **Stand:** **Phase 1 und Phase 2 fertig.**
+  · **Phase 1** (`P3-454`): `uft_bootstrap.{h,c}` + Aufruf in
+    `fat_analyze_boot_sector()` + 9 Zusagen; D2-Probe gemessen (Aufruf weg →
+    genau die zwei Verdrahtungs-Zusagen rot, 7/9, rc 1). Suite **494/494**.
+    Nebenbefund gemessen und berichtigt: die Bootstrap-Datenbank **liegt**
+    im gitignorierten Fremdklon (379 Schlüssel, 490 Namen, 223 verifiziert)
+    — der leere Bestand ist **S3** (GPL-3.0 + Datenbankherstellerrecht),
+    nicht Abwesenheit.
+  · **Phase 2** (`P3-453`): die Lückenmessung sitzt **im** Produktivpfad
+    `uft_mfm_decode_track()` (2 Produktivaufrufer), kein viertes Modul und
+    kein dritter Wortleser. Rotbeweis zuerst, Mutationsmatrix **13 von 13
+    im ersten Lauf**, Suite **495/495**. Zwei Befunde erst im Lauf: das
+    erste Lückenwort weicht in 5 von 9 Fällen ab — **führende Taktzelle**,
+    `0x9254 ^ 0x1254 = 0x8000`, und genau dort, wo das letzte Bit davor
+    eine 1 war; und die Encoder-Lage ist von der Leseseite byteweise
+    bestätigt (146 = 80+12+4+50). **S1 gehalten:** keine der fünf
+    unbelegten Zahlen der Zulieferung ist übernommen, es gibt kein Feld
+    `splice` und kein Herkunfts-Urteil.
+  · Als Nächstes **Phase 3** (`P3-455`, PC-Schutz aus Fehlsektormustern —
+    die Negativbedingung liegt schon vor).
+- **Beleg:** Phase 1 = **MF-1189** = `a27fb2d0` (9 Dateien, 894 Einfügungen,
+  alle Pre-Commit-Tore grün, `mcp=0`) · Phase 2 = **MF-1190**.
+  **Nicht gepusht** — C3.
 
 ---
 
@@ -61,8 +75,18 @@ Stand und Beleg. Er wird hier **nicht** wiederholt — zwei Fassungen desselben
 Postens wären zwei Wahrheiten (D3).
 
 Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
-`A-007` (MF-1186). `/aufgabe weiter` zieht **`A-008`** hoch (Zulieferung
-`UFT_C64PP_Protection_Catalog.zip`).
+`A-007` (MF-1186 = `87abb0b3`). `/aufgabe weiter` arbeitet am laufenden
+`A-017` weiter (**Phase 2**); erst wenn der abgeschlossen ist, zieht es
+**`A-008`** hoch (Zulieferung `UFT_C64PP_Protection_Catalog.zip`).
+
+> **Warteschlange, gezählt statt geschätzt (Stand 2026-09-16):** `A-008`
+> … `A-016` (neun Begutachtungen), dazu die drei heute aufgenommenen
+> `A-018` Apple DOS 3.3, `A-019` TR-DOS, `A-020` Amiga-Medienklassifikation,
+> und am Ende `A-004` (Punkt 7, angehalten am vereinbarten Schnitt) — **13
+> wartende Posten** bei einem laufenden. Die drei Neuen sind die einzigen,
+> die einen **Defekt im erreichbaren Pfad** behaupten (`A-019` Sonde,
+> `A-020` Klassierung); `A-018` ist eine Lücke. Vorgezogen wird nichts von
+> selbst — das ist `/aufgabe vor`.
 
 > **Ein Befund aus `A-007` betrifft zwei wartende Posten.** MF-698 bindet
 > die verteilbare Fassung an GPL-3, und Apache-2.0 ist GPL-3-verträglich —
@@ -985,6 +1009,129 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   `P3-63` liefert die Vorarbeit). Die **Erweiterung** ist nicht schätzbar —
   sie hängt daran, ob ein Erzeuger für die Feldgrenzen entsteht, und das
   ist Decoder-Arbeit am Spurmodell, nicht ein Feld anhängen.
+- **Stand:** —
+- **Beleg:** —
+
+### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple
+  DOS.zip\" finde was ich vergessen habe und verbessere damit das tool"
+- **Kennzahl:** **keine der vier.** Die FS-Achse ist keine der vier
+  Release-Zahlen (MF-640). Der Wert des Postens ist, dass er `P3-384`
+  abträgt — nicht eine Zahl.
+- **Kanal:** **Port.** Gemessen: alle fünf Quellen tragen
+  `SPDX-License-Identifier: GPL-2.0-or-later`, also eigener Code unter der
+  Projektlizenz — keine Lizenzfrage (dieselbe Messung wie MF-1188).
+  **Aber `P3-384` stellt eine eigene Bedingung, und sie gilt vor:** sein
+  Status sagt „erst Orakel, dann Port" und nennt `catseye/a2tools` (GPL-2,
+  837 Zeilen) als fremde Hand, samt Vormessung — kann `a2tools` ein
+  LEERES DOS-3.3-Abbild anlegen oder nur ein vorhandenes befüllen? Eine
+  zweite Hand desselben Hauses ersetzt das nicht; das ist die Gestalt von
+  `apridisk` (MF-1009) und `qrst` (MF-1028), wo Packer und Entpacker
+  Spiegelbilder derselben Erfindung waren und der Rundlauf grün.
+- **Einfrier-Regel:** **ja** → Rotbeweis zuerst. Es ist die FS-Ebene, kein
+  neues Format-Plugin, also greift das Moratorium nicht; die drei
+  Bedingungen aus `docs/VERIFICATION_PLAN.md` greifen sehr wohl.
+- **OPEN_ITEMS:** **`P3-384`** (wörtlich: „Apple DOS 3.3 fehlt in der
+  Dateisystem-Stufenleiter VOLLSTÄNDIG") · berührt `P3-317` (ProDOS-
+  Verzeichnisleser fehlt), `P3-228`, `P3-235`
+- **Fertig heißt:** ein DOS-3.3-Leser mit Stufe in
+  `docs/VERIFICATION_TIERS_FS.md`, die Stufe gegen eine **fremde Hand**
+  belegt (nicht gegen den eigenen Erzeuger), Produktivaufrufer im selben
+  Commit (D2), Vollsuite grün.
+- **Aufwand:** **nicht schätzbar** — er hängt an der Orakel-Vormessung
+  oben, nicht am Umfang der Zulieferung.
+- **Gemessene Lage im Baum (damit die Lücke belegt ist, nicht behauptet):**
+  Apple liegt ausschließlich auf der Behälterachse —
+  `src/formats/apple/prodos_po_do.c`, 130 Zeilen, null Verzeichnisbezug
+  (MF-710 hat es deshalb aus der FS-Tafel genommen). `applesoft` hat **0**
+  Treffer, `track_sector_list` **0**, `TSLIST` **0**; `detokenize` gibt es
+  genau **zweimal** und beide Male für **ZX**-BASIC
+  (`src/formats/zx/uft_zxbasic.c`). Die 21 `VTOC`-Dateien sind
+  **Atari**-VTOC. Zulieferung: 5 Quellen, **1450** Zeilen (268/340 FS,
+  112/278 BASIC, 452 Test), **71** `CHECK`-Zusagen; der Bericht hat §0
+  „was ich nicht gebaut habe, und warum" und §6 „Belegkette", seine zwei
+  Funde sind §2.3 gelöschte Einträge und §2.4 T/S-Listen mit Löchern.
+- **Stand:** —
+- **Beleg:** —
+
+### A-019 · Zulieferung `UFT-NN — TR-DOS.zip` — drei behauptete Feldadressen, SCL, Hobeta
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
+  — TR-DOS.zip\" finde was ich vergessen habe und verbessere damit das"
+- **Kennzahl:** **keine der vier.** `trd` steht auf **T1b**, `scl` auf
+  **T1** — eine Stufe bewegt sich nicht. Der Posten ist trotzdem Auftrag
+  und nicht Fundus, weil ein falsch lesender Erkenner im **erreichbaren**
+  Pfad die Missionszeile selbst trifft („keine stille Veränderung"); die
+  EINFRIER-REGEL lässt Bugfixes an Bestehendem ausdrücklich zu.
+- **Kanal:** **Port** — alle drei Quellen `GPL-2.0-or-later`.
+- **Einfrier-Regel:** **ja** → Rotbeweis zuerst, und die drei Adressen
+  werden **von Hand gegen die Quelle abgezählt**, bevor eine Zeile fällt.
+  Der Grund steht in `P3-281`: der damalige Bericht derselben Familie
+  meldete einen echten Fehler und **hätte einen neuen eingebaut** — er
+  schlug `0xF4-0xF5` vor, also zwei Byte, und `0xF5` ist bereits das erste
+  Zeichen von `disc_name[8]`.
+- **OPEN_ITEMS:** Nachbarn **`P3-281`** (dieselbe Klasse, ✅ behoben
+  MF-970, aber **andere Datei**: der verwaiste `uft_trd_parser_v2.c`) und
+  **`P3-322`** (SCL-Rest). Ein **eigener** Eintrag wird geschrieben, wenn
+  die Behauptung gemessen ist — nicht vorher. Diese Liste ist keine
+  zweite Befundliste, und eine ungemessene Behauptung ist kein Befund.
+- **Fertig heißt:** jede der drei Adressen einzeln gegen zwei
+  unabhängige Quellen abgezählt, Rotbeweis pro Adresse, und der
+  Widerspruch unten aufgelöst oder als S5 festgenagelt.
+- **Aufwand:** **nicht schätzbar.**
+- **Ein Widerspruch steht schon jetzt im Raum (S5-Gebiet):** MF-729 hat
+  **alle** Sonden geeicht — auf einem Nullpuffer darf nichts ≥ 50 melden,
+  wer 50–79 beansprucht, muss ≥ 95 % zufälliger Puffer abweisen — und
+  `trd` ist dort namentlich als Gewinner gegen ein PC-160K-Abbild (82)
+  gemessen. Liest dieselbe Sonde die falschen Bytes und besteht die
+  Eichung dennoch, sagt eine der beiden Messungen nicht, was sie zu sagen
+  scheint. Welche, entscheidet der Lauf, nicht der Bericht.
+- **Gemessene Lage:** 13 TR-DOS/SCL-Dateien im Baum (zwei Parser, ein
+  Plugin, `src/samdisk/trd.cpp`, ein Korpusabbild `gw_trd.img`, ein Test);
+  `0x8E4` — die Dateizahl aus MF-1014 — steht in `uft_trd.c`,
+  `uft_scl_plugin.c` und drei Tests. Zulieferung: 3 Quellen, **1148**
+  Zeilen (306/387/455), **67** `CHECK`-Zusagen; der Bericht nimmt in §6
+  eine eigene Behauptung **zurück**.
+- **Stand:** —
+- **Beleg:** —
+
+### A-020 · Zulieferung `UFT-NN — Amiga.zip` — Dateisystem-Diskette oder Trackloader mit DOS-Kopf?
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
+  — Amiga.zip\" finde was ich vergessen habe und verbessere damit das"
+- **Kennzahl:** **keine der vier** (MF-640). Der Wert liegt in der
+  Missionszeile: eine Diskette, die nur einen DOS-Kopf trägt, darf nicht
+  als Dateisystem gemeldet werden — „unbekannt" ist nicht „widerspricht"
+  (MF-980/D6).
+- **Kanal:** **Port** — alle drei Quellen `GPL-2.0-or-later`; der Bericht
+  hat dazu ein eigenes §6 „Lizenzlage".
+- **Einfrier-Regel:** **ja** → Rotbeweis zuerst.
+- **OPEN_ITEMS:** Nachbarn **`P3-209`** (AmigaDOS-Prüfsumme mehrfach),
+  **`P3-210`** (FS-Treiber meldete für jedes ADF ein leeres Verzeichnis),
+  **`P0-16`** (HFE→ADF liefert leere ADF), **`P3-385`** (ADFlib-
+  unabhängige Zweitmeinung)
+- **Fertig heißt:** die vier Zustände unterscheidbar **und** an einem
+  Abbild belegt, das kein Dateisystem trägt; kein Zustand, der nur
+  behauptet statt gemessen ist; Produktivaufrufer im selben Commit (D2).
+- **Aufwand:** **nicht schätzbar.**
+- **Gemessene Lage:** die Entscheidung „ist das eine AmigaDOS-Diskette"
+  fällt heute an **12** Stellen — `git ls-files` findet 12 Dateien, die
+  die `DOS`-Kennung prüfen, darunter `src/analysis/uft_triage.c`,
+  `src/algorithms/advanced/uft_bayesian_detect.c`, drei ADF-Parser und
+  `src/formats/misc/polyglot_boot.c`. **4** `.c` unter `src/` nennen eine
+  AmigaDOS-Prüfsummenfunktion (`mfm_detect.c`, `uft_adf_parser_v3.c`,
+  `uft_adf.c`, `src/fs/uft_amigados.c`), während `P3-209` „DREIFACH"
+  führt — ob das eine Unterzählung ist oder drei verschiedene Funktionen
+  mit ähnlichem Namen, entscheidet der Lauf; hier steht es als **Frage an
+  `P3-209`**, nicht als Korrektur an ihm. FS-Stufen:
+  `uft_amigados` FS-T2, `uft_amigados_extended` und
+  `uft_bootblock_scanner` FS-T1 („alle Tests bauen ihre Eingabe selbst"),
+  `uft_fs_amigados_driver` **FS-T0 — kein Test nennt ein Symbol dieses
+  Lesers**. Zulieferung: 3 Quellen, **870** Zeilen (268/269/333), **37**
+  `CHECK`-Zusagen; §1 heißt „Der Anlass: ein gemessener Gegenbeweis", und
+  der wird nachgefahren, bevor er zitiert wird — bei A-006 fielen drei von
+  vier meiner eigenen Erwartungen.
 - **Stand:** —
 - **Beleg:** —
 

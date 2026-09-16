@@ -54,6 +54,99 @@
 extern "C" {
 #endif
 
+/** „keine solche Stelle" — `first/last_deviating_bit`, wenn nichts
+ *  abweicht. 0 waere als Sentinel falsch, weil Bit 0 eine gueltige
+ *  Stelle ist. */
+#define UFT_MFM_GAP_NO_BIT ((size_t)-1)
+
+/**
+ * @brief Was in einer Luecke zwischen zwei Marken wirklich steht
+ *        (P3-453, MF-1190).
+ *
+ * WOZU
+ * ----
+ * Eine Schreibnaht ist die Stelle, an der ein Laufwerk beim Nachschreiben
+ * EINES Sektors das Schreibtor ein- oder ausgeschaltet hat. Im Fluss
+ * sieht man sie als Zeitluecke (`uff_detect_splices()`), in den
+ * OTDR-Spuren als Sprung (`uft_deepread_detect_splice()`) — beide
+ * Erkenner haben gemessen **0** Produktivaufrufer, und fuer einen
+ * BITSTROM tragen sie ohnehin nicht. Im Bitstrom sieht man die Naht
+ * daran, dass die gleichmaessige Fuellung der Luecke an einer Stelle
+ * unterbrochen ist.
+ *
+ * WAS HIER STEHT, IST EINE MESSUNG — KEIN URTEIL
+ * ----------------------------------------------
+ * Es gibt in dieser Struktur **kein** Feld `splice` und **keine**
+ * Schwelle, und das ist die Entscheidung, nicht ihr Fehlen. Die
+ * Zulieferung `DiskImageTool-extrakt.zip` (GPL-2.0-or-later) liefert
+ * `UFT_SPLICE_WORDS 2`, `UFT_SPLICE_MIN_BAD 2`, `UFT_GAP_MAX_VALUES 8`
+ * und die Quoten 0 %/75 % — und sagt ueber die letzten beiden woertlich,
+ * sie seien „nicht an einem echten Traeger kalibriert". Fuenf Zahlen ohne
+ * Quelle sind fuenf Aussagen ohne Quelle (S1, `P3-451`), also kommt keine
+ * davon mit. Gemeldet wird, was dasteht; die Deutung braucht einen
+ * Beleg, den es noch nicht gibt.
+ *
+ * Der Aufbau ist deshalb schwellenfrei: `deviating` zaehlt, wie viele
+ * Woerter vom haeufigsten abweichen, und `first/last_deviating_bit`
+ * sagen WO. Ob zwei abweichende Woerter am Lueckenende eine Naht sind,
+ * entscheidet nicht diese Struktur.
+ *
+ * DIE GRENZEN UND DAS RASTER
+ * --------------------------
+ * Die Woerter werden **vom Ende her** auf einem 16-Bit-Raster gelesen,
+ * weil die Marke der physikalisch bedeutsame Anker ist: der Vorlauf aus
+ * Nullwoertern und die Sync-Marke sitzen am Lueckenende, nicht an ihrem
+ * Anfang.
+ *
+ * `sync_nulls` sind die Nullwoerter (MFM `0xAAAA`) unmittelbar vor
+ * `end_bit` — bei IBM System 34 sind das 12 (Encoder-Kopf). Sie gehoeren
+ * zum Vorlauf der Marke und **nicht** zum Fuellteil; wer sie mitzaehlt,
+ * sieht in jeder gesunden Luecke zwei verschiedene Woerter.
+ *
+ * `distinct == 0` heisst **nicht beurteilbar** (der Fuellteil traegt kein
+ * volles Wort) und ist nicht dasselbe wie `deviating == 0` („nichts
+ * weicht ab"). Dieselbe Unterscheidung wie MF-980 bei `0xE5` und die
+ * Spaltenregel D6.
+ *
+ * DAS ERSTE WORT EINER LUECKE IST EIN SONDERFALL, UND ZWAR EIN ERKLAERTER
+ * -----------------------------------------------------------------------
+ * MFM schreibt eine Taktzelle nur, wenn das vorige UND das aktuelle
+ * Datenbit 0 sind. Das erste Fuellwort einer Luecke haengt damit am
+ * letzten Datenbit DAVOR — dem letzten Bit der CRC — und kann sich vom
+ * Rest der Luecke unterscheiden, obwohl dasselbe Byte geschrieben wurde.
+ *
+ * Gemessen an einer vom hauseigenen Encoder geschriebenen Spur (MF-1190,
+ * 9 Sektoren): das Fuellbyte 0x4E ergibt `0x9254`, nach einem Datenbit 1
+ * dagegen `0x1254` — die Differenz ist `0x8000`, also GENAU die fuehrende
+ * Taktzelle. Es trat in **5 von 9** Luecken auf, und zwar in genau den
+ * fuenf, deren letztes Bit davor eine 1 war; in den anderen vier nicht.
+ *
+ * `leading_clock_only` sagt, dass dieser Fall vorliegt, und ein so
+ * erklaertes Wort zaehlt NICHT in `deviating` — sonst meldete jede zweite
+ * gesunde Luecke eine Naht. Es wird aber auch nicht verschwiegen:
+ * `distinct` zaehlt es weiter mit, denn es STEHT dort. Eine echte Naht am
+ * Lueckenanfang bleibt sichtbar, weil sie sich in mehr als dieser einen
+ * Taktzelle unterscheidet.
+ */
+typedef struct {
+    size_t   start_bit;      /**< erste Bitstelle der Luecke            */
+    size_t   end_bit;        /**< erste Bitstelle DAHINTER (die Marke)  */
+    uint32_t words;          /**< volle 16-Bit-Woerter im FUELLTEIL     */
+    uint32_t sync_nulls;     /**< Nullwoerter am Ende (Marken-Vorlauf)  */
+    uint32_t distinct;       /**< verschiedene Woerter im Fuellteil;
+                              *   **0 = nicht beurteilbar**. Zaehlt ein
+                              *   erklaertes erstes Wort MIT.           */
+    uint32_t deviating;      /**< Woerter != `dominant_word`, OHNE das
+                              *   durch die MFM-Taktregel erklaerte
+                              *   erste Wort (siehe oben)               */
+    uint16_t dominant_word;  /**< das haeufigste MFM-Wort im Fuellteil  */
+    uint8_t  leading_clock_only; /**< 1 = das erste Fuellwort weicht NUR
+                              *   in der fuehrenden Taktzelle ab (0x8000)
+                              *   und ist damit erklaert, nicht auffaellig */
+    size_t   first_deviating_bit; /**< `UFT_MFM_GAP_NO_BIT`, wenn keines */
+    size_t   last_deviating_bit;  /**< `UFT_MFM_GAP_NO_BIT`, wenn keines */
+} uft_mfm_gap_t;
+
 /**
  * @brief Decoded MFM sector record.
  *
@@ -71,6 +164,31 @@ typedef struct {
     bool     dam_present;  /**< false if no DAM was found within the gap window */
     size_t   data_offset;  /**< byte offset into caller's data pool */
     size_t   data_len;     /**< actual data length: 1 << (7 + size_code), or 0 */
+
+    /* ────────────────────────────────────────────────────────────────
+     * Bitpositionen und Lueckenmessung (P3-453, MF-1190).
+     *
+     * ANGEHAENGT, nicht eingefuegt: `uft_mfm_sector_t` ist oeffentlich,
+     * und ein Feld in der Mitte waere ein ABI-Bruch ohne Compiler-
+     * Warnung.
+     *
+     * Vorher trug dieser Satz KEINE einzige Bitposition (gemessen
+     * MF-1190) — ein Aufrufer wusste, WAS gelesen wurde, aber nicht WO.
+     * Damit war jede Aussage ueber die Luecken zwischen den Sektoren
+     * ausserhalb dieser Datei unmoeglich.
+     * ──────────────────────────────────────────────────────────────── */
+    size_t   id_sync_bit;    /**< Beginn der ersten A1-Marke des IDAM */
+    size_t   data_start_bit; /**< erstes Datenbit hinter der DAM-Marke */
+    /** Die Luecke zwischen IDAM und DAM — sie liegt VOLLSTAENDIG in
+     *  diesem Sektor. Encoder-Lage: 22x0x4E + 12x0x00. */
+    uft_mfm_gap_t gap2;
+    /** Die Luecke VOR der eigenen IDAM-Marke. Fuer die Sektoren ab dem
+     *  zweiten ist das Gap 3 des Vorgaengers plus dessen 12 Sync-Nullen.
+     *  **Fuer den ERSTEN Sektor ist es der Spurvorlauf** (Gap 4a, IAM,
+     *  Gap 1) — kein Sektorzwischenraum, und deshalb dort mit mehreren
+     *  verschiedenen Woertern. Das ist gemessen und benannt, nicht
+     *  weggerundet. */
+    uft_mfm_gap_t lead_gap;
 } uft_mfm_sector_t;
 
 /**

@@ -136,6 +136,146 @@ static size_t skip_consecutive_syncs(const uint8_t *bs, size_t bit_count, size_t
 }
 
 /* ────────────────────────────────────────────────────────────────────
+ * Lueckenmessung (P3-453, MF-1190)
+ *
+ * Die Zusage steht im Header von `uft_mfm_gap_t`; hier steht, was der
+ * Code tut. Drei Dinge gehoeren an diese Stelle und nicht in ein eigenes
+ * Modul:
+ *
+ *  1. Der Wortleser ist schon da. `read_mfm_word()` steht 12 Zeilen
+ *     hoeher; `src/flux/uft_flux_decoder.c` baut dieselbe Leseschleife
+ *     gemessen **fuenf** Mal inline nach. Eine dritte benannte Fassung
+ *     waere MF-1177 in Reinform („eine Groesse, eine Rechnung").
+ *  2. Die Lueckengrenzen kennt nur diese Datei. `uft_mfm_decode_track()`
+ *     laeuft den Strom ab und weiss, wo die Marken liegen; aussen war
+ *     das gemessen nicht herleitbar, weil `uft_mfm_sector_t` keine
+ *     Bitposition trug.
+ *  3. Damit ist der Produktivaufrufer kein Zusatz, sondern der Ort selbst
+ *     (D2) — und `uft_mfm_decode_track()` hat zwei Produktivaufrufer:
+ *     `src/formats/86box/uft_86f_plugin.c:305` und
+ *     `src/formats/uft_format_convert_flux.c:1293`.
+ * ──────────────────────────────────────────────────────────────────── */
+
+/* MFM-Wort eines Nullbytes. NACHGERECHNET, nicht uebernommen: MFM legt je
+ * Datenbit zwei Zellen, und fuer eine 0 hinter einer 0 ist die Taktzelle 1
+ * und die Datenzelle 0 — acht Paare `10` ergeben 0xAAAA. Genau diese
+ * Woerter bilden den 12-Byte-Vorlauf vor jeder Adressmarke. */
+#define MFM_NULL_WORD 0xAAAAu
+
+static void gap_leeren(uft_mfm_gap_t *g) {
+    memset(g, 0, sizeof(*g));
+    g->first_deviating_bit = UFT_MFM_GAP_NO_BIT;
+    g->last_deviating_bit  = UFT_MFM_GAP_NO_BIT;
+}
+
+/* Die Bitstelle des Fuellwortes mit aufsteigendem Index `idx`.
+ * Das Raster laeuft vom ENDE her (die Marke ist der Anker), aber die
+ * Indizes laufen aufsteigend, damit `first`/`last` das heissen, was sie
+ * sagen. */
+static size_t gap_wort_bit(size_t end_bit, size_t total, size_t idx) {
+    return end_bit - (total - idx) * 16u;
+}
+
+static void gap_messen(const uint8_t *bs, size_t bit_count,
+                       size_t start_bit, size_t end_bit,
+                       uft_mfm_gap_t *out) {
+    size_t total, nulls = 0, fill, i, j, best = 0;
+    uint32_t best_n = 0;
+
+    gap_leeren(out);
+    if (!bs || end_bit <= start_bit || end_bit > bit_count) return;
+    out->start_bit = start_bit;
+    out->end_bit   = end_bit;
+
+    total = (end_bit - start_bit) / 16u;
+    if (total == 0u) return;        /* distinct bleibt 0 = unbeurteilbar */
+
+    /* Vorlauf: Nullwoerter unmittelbar vor der Marke. Sie gehoeren NICHT
+     * zum Fuellteil — wer sie mitzaehlt, sieht in jeder gesunden Luecke
+     * zwei verschiedene Woerter und meldet eine Naht, wo keine ist. */
+    while (nulls < total) {
+        const int w = read_mfm_word(bs, bit_count,
+                                    end_bit - (nulls + 1u) * 16u);
+        if (w < 0 || (uint16_t)w != MFM_NULL_WORD) break;
+        nulls++;
+    }
+    out->sync_nulls = (uint32_t)nulls;
+
+    fill = total - nulls;
+    out->words = (uint32_t)fill;
+    if (fill == 0u) return;         /* nur Vorlauf: nicht beurteilbar */
+
+    /* Haeufigstes Wort und Zahl der verschiedenen, OHNE Kapazitaets-
+     * konstante: der Fuellteil ist wenige Dutzend Woerter lang, also darf
+     * es quadratisch sein. Eine Obergrenze fuer „zulaessige Fuellwoerter"
+     * waere eine Zahl ohne Quelle (S1) — und sie wuerde entscheiden, statt
+     * zu messen. Bei Gleichstand gewinnt das frueheste Wort; das ist
+     * bestimmt, und `distinct`/`deviating` zeigen die Mehrdeutigkeit an. */
+    for (i = 0; i < fill; i++) {
+        const int wi = read_mfm_word(bs, bit_count,
+                                     gap_wort_bit(end_bit, total, i));
+        uint32_t c = 0;
+        int erstes = 1;
+        if (wi < 0) continue;
+        for (j = 0; j < fill; j++) {
+            const int wj = read_mfm_word(bs, bit_count,
+                                         gap_wort_bit(end_bit, total, j));
+            if (wj == wi) { c++; if (j < i) erstes = 0; }
+        }
+        if (erstes) out->distinct++;
+        if (c > best_n) { best_n = c; best = i; }
+    }
+    if (out->distinct == 0u) return;        /* kein lesbares Wort */
+
+    {
+        const int dom = read_mfm_word(bs, bit_count,
+                                      gap_wort_bit(end_bit, total, best));
+        if (dom < 0) { gap_leeren(out); out->start_bit = start_bit;
+                       out->end_bit = end_bit; return; }
+        out->dominant_word = (uint16_t)dom;
+    }
+    out->deviating = (uint32_t)fill - best_n;
+
+    /* Das erste Fuellwort haengt am letzten Datenbit VOR der Luecke: MFM
+     * setzt eine Taktzelle nur, wenn voriges und aktuelles Datenbit 0
+     * sind. Weicht es NUR in dieser einen Zelle ab — Bit 15, also 0x8000
+     * —, dann ist das die Kodierregel und keine Auffaelligkeit.
+     *
+     * GEMESSEN, nicht angenommen (MF-1190, 9 Sektoren des hauseigenen
+     * Encoders): 0x4E ergibt 0x9254, nach einem Datenbit 1 dagegen
+     * 0x1254, und 0x9254 ^ 0x1254 == 0x8000. Es trat in 5 von 9 Luecken
+     * auf — in genau denen, deren letztes Bit davor eine 1 war. Ohne
+     * diese Unterscheidung meldete jede zweite gesunde Luecke eine Naht.
+     *
+     * Das Wort wird aus `deviating` herausgenommen, aber NICHT aus
+     * `distinct`: es steht dort, und eine Naht am Lueckenanfang bleibt
+     * sichtbar, weil sie mehr als diese Zelle veraendert. */
+    {
+        const int w0 = read_mfm_word(bs, bit_count,
+                                     gap_wort_bit(end_bit, total, 0));
+        if (w0 >= 0 && (uint16_t)w0 != out->dominant_word
+            && (((uint16_t)w0 ^ out->dominant_word) == 0x8000u)) {
+            out->leading_clock_only = 1u;
+            if (out->deviating > 0u) out->deviating--;
+        }
+    }
+
+    /* WO die Abweichungen liegen. Das ersetzt die Schwelle: eine Naht
+     * zeigt sich daran, dass sie am Rand der Luecke sitzt, und diese
+     * Beurteilung faellt der Leser — nicht eine Zahl ohne Quelle. Das
+     * erklaerte erste Wort wird hier uebersprungen, damit `first`/`last`
+     * dasselbe zaehlen wie `deviating`. */
+    for (i = (out->leading_clock_only ? 1u : 0u); i < fill; i++) {
+        const size_t bit = gap_wort_bit(end_bit, total, i);
+        const int w = read_mfm_word(bs, bit_count, bit);
+        if (w < 0 || (uint16_t)w == out->dominant_word) continue;
+        if (out->first_deviating_bit == UFT_MFM_GAP_NO_BIT)
+            out->first_deviating_bit = bit;
+        out->last_deviating_bit = bit;
+    }
+}
+
+/* ────────────────────────────────────────────────────────────────────
  * Public helpers
  * ──────────────────────────────────────────────────────────────────── */
 
@@ -207,6 +347,13 @@ size_t uft_mfm_decode_track(
     size_t bp = 0;
 
     while (found < max_sectors && bp + 64 < bit_count) {
+        /* MF-1190: `bp` ist hier die erste Bitstelle hinter dem Letzten,
+         * das verstanden wurde — bei 0 der Spurbeginn, nach einem fertigen
+         * Sektor der Beginn von Gap 3, nach einer verworfenen Marke die
+         * Stelle dahinter. Das ist genau der Anfang der Vorlaufluecke
+         * dieses Sektors, und es braucht keine eigene Buchfuehrung. */
+        const size_t lead_from = bp;
+
         /* Find next A1 sync. */
         size_t sync_at = find_sync(bitstream, bit_count, bp);
         if (sync_at == (size_t)-1) break;
@@ -259,8 +406,21 @@ size_t uft_mfm_decode_track(
             s->sector = chrn[2];   s->size_code = n;
             s->id_crc_ok = id_crc_ok;
             s->dam_present = false;
+            /* MF-1190: die Marke wurde gefunden, also ist ihre Stelle und
+             * ihre Vorlaufluecke gemessen — auch wenn der Sektor danach
+             * nicht gelesen wird. Gap 2 bleibt leer und sagt das ueber
+             * `distinct == 0`, statt eine 0 zu melden, die wie „keine
+             * Abweichung" aussieht (D6). */
+            s->id_sync_bit = sync_at;
+            gap_messen(bitstream, bit_count, lead_from, sync_at,
+                       &s->lead_gap);
+            gap_leeren(&s->gap2);
             continue;
         }
+
+        /* MF-1190: hinter der ID-CRC beginnt Gap 2. Die Stelle wird
+         * gemerkt, BEVOR die DAM-Suche `bp` verschiebt. */
+        const size_t gap2_from = bp;
 
         /* Search for matching DAM/DDAM within the gap window.
          * Convert byte window to bit window: each MFM byte = 16 raw bits. */
@@ -287,6 +447,14 @@ size_t uft_mfm_decode_track(
         s->id_crc_ok = id_crc_ok;
         s->dam_present = false;
 
+        /* MF-1190: Stelle der Marke und Vorlaufluecke. Gap 2 kann erst
+         * gemessen werden, wenn die DAM-Sync gefunden ist — ohne sie gibt
+         * es keine obere Grenze, und eine geschaetzte waere eine erfundene
+         * Zahl. */
+        s->id_sync_bit = sync_at;
+        gap_messen(bitstream, bit_count, lead_from, sync_at, &s->lead_gap);
+        gap_leeren(&s->gap2);
+
         if (dam_sync_at == (size_t)-1) {
             /* No DAM in window: missing DAM. Forensic recordkeeping
              * only — no fabricated data. */
@@ -299,6 +467,11 @@ size_t uft_mfm_decode_track(
         if (dam_mark < 0) { bp = after_dam_syncs; continue; }
         size_t data_start = after_dam_syncs + 16;
         bp = data_start;
+
+        /* MF-1190: jetzt stehen beide Grenzen von Gap 2 fest — hinter der
+         * ID-CRC bis zum Beginn der DAM-Sync. */
+        s->data_start_bit = data_start;
+        gap_messen(bitstream, bit_count, gap2_from, dam_sync_at, &s->gap2);
 
         if (dam_mark != 0xFB && dam_mark != 0xF8 &&
             dam_mark != 0xFA && dam_mark != 0xF9) {

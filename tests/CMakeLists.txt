@@ -2603,6 +2603,22 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_schreibnaht_mfm")
+        # MF-1190 / P3-453: die Lueckenmessung im IBM-MFM-Bitstrom.
+        # DIESELBEN zwei Quellen wie der Zweig darueber, und das ist der
+        # Punkt: die Spur kommt aus `uft_mfm_encode_track()`, gemessen wird
+        # in `uft_mfm_decode_track()` — zwei Haende, ein Objekt. Ein
+        # Bitstrom aus derselben Funktion, die ihn deutet, waere der
+        # geschlossene Kreis von MF-1009 (`apridisk`) und MF-1028 (`qrst`).
+        #
+        # Keine Format-Schicht: die Messung braucht sie nicht, und eine
+        # ungenutzte Abhaengigkeit verdeckt nur, was wirklich gebraucht
+        # wird.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_cbm_geometry")
         # MF-434: one CBM geometry against the 24 tables it replaces
         target_sources(${test_name} PRIVATE
