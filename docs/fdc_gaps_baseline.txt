@@ -62,5 +62,56 @@
 # Selbstkonsistenz, nicht Richtigkeit.
 #
 # Senken ist erwuenscht, Heben braucht eine Begruendung im Commit.
+#
+# MF-1177: 9 -> 3. Sechs Eintraege haben neue Lueckenwerte bekommen, jeder
+# mit einer benannten Quelle; drei bleiben widerspruechlich und sagen das
+# jetzt selbst.
+#
+# Die Quelle ist keirf/greaseweazle, Commit
+# 26690f89967d519e0106ab9566019a026b920bb4 (2026-03-18), **Unlicense** —
+# „released into the public domain", also woertlich uebernehmbar.
+# Gemessen in seinen 38 `diskdefs*.cfg`: 149 Definitionen, 86 mit `gap3`,
+# 22 mit `cskew`, 7 mit `hskew`. NUR GELESEN; greaseweazle wurde nicht
+# gebaut und nicht ausgefuehrt und ist deshalb nach der eigenen Regel von
+# `docs/ORACLES.md` KEIN Oracle, sondern der Kanal *Spec/Daten* (MF-695).
+#
+# Was sich geaendert hat, je Eintrag mit seiner gw-Definition:
+#   PC 360K   gap3 80 -> 84, gap4b 664 -> 182   `ibm.360`
+#   PC 720K   gap3 80 -> 84, gap4b 664 -> 182   `ibm.720`
+#   MSX 1DD   gap3 80 -> 84, gap4b 664 -> 182   `msx.1dd`
+#   MSX 2DD   gap3 80 -> 84, gap4b 664 -> 182   `msx.2dd`
+#   BBC ADFS  gap3 57 bleibt, gap4b 400 -> 104  `adfs.640`
+#   PC-98 2HD gap3 116 bleibt, gap4b 600 -> 654 `pc98.2hd`
+#
+# `gap4b` ist dabei kein neuer Messwert, sondern der REST: greaseweazle
+# hat gar kein solches Feld, weil der Vor-Index-Zwischenraum das ist, was
+# nach Spurkopf, Sektoren und gap3 uebrig bleibt (MF-1169). Nur `gap3`
+# kommt aus der Quelle.
+#
+# Die drei, die bleiben, und warum:
+#   AMSTRAD_DATA / AMSTRAD_SYS  greaseweazle hat KEINE Amstrad-Datei; seine
+#     ZX-Definitionen `3dos.ss40`/`3dos.ds80` tragen dieselbe Geometrie
+#     (9 x 512, 250k) und nennen kein `gap3`. Beide Zeilen sind ausserdem
+#     bis aufs Byte gleich, obwohl sich Data- und System-Format gerade im
+#     gap3 unterscheiden — das Muster eines kopierten Blocks.
+#   BBC_DFS  `gap3 = 21` UND `iam = no` sind belegt (`dfs.ss80`), aber
+#     `gap4a = 40` / `gap1 = 26` sind IBM-Werte. Selbst ohne
+#     Index-Adressmarke bleibt der Rest negativ (-41); zum Aufgehen
+#     braeuchte es einen Spurkopf von etwa 16 Byte, und dafuer gibt es
+#     hier keine Quelle.
+#
+# Seit MF-1177 traegt jedes Profil `gap_beleg` und `gap_quelle`, und
+# `tests/test_fdc_profil_verdrahtet.c` verlangt: BELEGT muss aufgehen,
+# UNBELEGT/TEILBELEGT darf NICHT aufgehen, und eine Angabe muss immer
+# dastehen. Ein Widerspruch ist damit erlaubt — ein Widerspruch ohne
+# Begruendung nicht.
+#
+# ZWEITE GRENZE, neu gemessen und wichtiger als die Zahl: dieses Tor
+# rechnet `gap4a + gap1 + sectors x (satz + gap3) + gap4b` und laesst die
+# Index-Adressmarke AUS. `uft_fdc_calc_gap3()` zaehlt sie MIT (fest 146
+# bzw. 73). Dass PC 1.44M hier „mit 16 Byte Luft passte", war kein
+# Spielraum, sondern genau die nicht gezaehlte IAM. Die eine Rechnung
+# steht seit MF-1177 in `uft_fdc_gap_space()`, das den PROFILEIGENEN
+# Spurkopf samt `iam`-Angabe nimmt.
 
-9
+3

@@ -337,6 +337,176 @@ TEST(jedes_profil_passt_in_seine_spur)
     ASSERT(geprueft == 17u);
 }
 
+/* ─────────────────── MF-1177: Beleg oder Begruendung ───────────────────
+ *
+ * Die Zusage, die der Auftrag verlangt: der Lauf faellt, sobald ein Profil
+ * nicht aufgeht, OHNE als solches markiert zu sein. Ein Widerspruch ist
+ * erlaubt — ein Widerspruch ohne Begruendung nicht.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+TEST(jedes_profil_schliesst_oder_nennt_seinen_grund)
+{
+    unsigned belegt = 0u, teil = 0u, unbelegt = 0u, geprueft = 0u;
+
+    for (int i = 0; UFT_FDC_FORMATS[i]; i++) {
+        const uft_fdc_format_t *f = UFT_FDC_FORMATS[i];
+        uint32_t space = 0u, used = 0u;
+        const bool zu = uft_fdc_gaps_schliessen(f, &space, &used);
+
+        /* Erste Zusage, und sie gilt fuer ALLE: eine Angabe muss dastehen.
+         * Ein Profil ohne `gap_quelle` ist ein Widerspruch ohne
+         * Begruendung — genau der Zustand, den MF-838 sichtbar gelassen
+         * und dieser Commit aufgeloest hat. */
+        if (!f->gap_quelle || f->gap_quelle[0] == '\0') {
+            printf("\n    %s: keine gap_quelle\n", f->name);
+        }
+        ASSERT(f->gap_quelle != NULL && f->gap_quelle[0] != '\0');
+
+        switch (f->gap_beleg) {
+        case UFT_FDC_GAP_BELEGT:
+            /* Zweite Zusage: wer BELEGT sagt, muss aufgehen. Hier faellt
+             * der Test, wenn jemand eine Zahl aendert, ohne die Quelle
+             * mitzuziehen. */
+            if (!zu) {
+                printf("\n    %s: BELEGT, aber %u frei gegen %u belegt "
+                       "(%+d)\n", f->name, (unsigned)space, (unsigned)used,
+                       (int)space - (int)used);
+            }
+            ASSERT(zu);
+            belegt++;
+            break;
+        case UFT_FDC_GAP_TEILBELEGT:
+        case UFT_FDC_GAP_UNBELEGT:
+            /* Dritte Zusage, und sie ist die unbequeme: wer NICHT belegt
+             * ist, darf auch nicht AUFGEHEN. Ginge die Rechnung auf,
+             * waere die Einordnung zu pessimistisch — und eine falsche
+             * Einordnung ist so schlecht wie eine falsche Zahl, weil sie
+             * Arbeit verdeckt, die schon getan ist. */
+            if (zu) {
+                printf("\n    %s: als %s gefuehrt, geht aber auf (%u)\n",
+                       f->name,
+                       f->gap_beleg == UFT_FDC_GAP_TEILBELEGT
+                           ? "TEILBELEGT" : "UNBELEGT",
+                       (unsigned)space);
+            }
+            ASSERT(!zu);
+            if (f->gap_beleg == UFT_FDC_GAP_TEILBELEGT) teil++;
+            else unbelegt++;
+            break;
+        default:
+            printf("\n    %s: unbekannter gap_beleg %d\n", f->name,
+                   (int)f->gap_beleg);
+            ASSERT(0);
+            break;
+        }
+        geprueft++;
+    }
+
+    ASSERT(geprueft == 17u);
+    /* Die Verteilung steht ABSICHTLICH zuletzt und als Summe UND als
+     * Einzelzahlen (MF-1026: eine Summe, die aufgeht, sagt nichts ueber
+     * die Verteilung darin). */
+    ASSERT(belegt == 11u);
+    ASSERT(teil == 1u);
+    ASSERT(unbelegt == 5u);
+    ASSERT(belegt + teil + unbelegt == 17u);
+}
+
+TEST(der_spurkopf_ist_nicht_fuer_alle_gleich)
+{
+    /* ROT-PROBE (D1) zum Kern dieses Commits. Vor MF-1177 rechnete der
+     * Baum den Spurhaushalt mit einem FESTEN Aufschlag — 146 bei MFM —
+     * und die beiden Atari-ST-Profile verfehlten die Identitaet damit um
+     * 86 Byte, obwohl ihre Zahlen exakt aufgehen.
+     *
+     * Hier steht die alte Rechnung nebenan, damit der Unterschied
+     * MESSBAR ist und nicht behauptet. */
+    const uft_fdc_format_t *st = &UFT_FDC_ATARI_SS;
+    ASSERT(st->sectors == 9 && st->sector_size == 512);
+    ASSERT(st->gaps.gap4a == 0 && st->gaps.gap1 == 60);
+    ASSERT(st->iam == false);          /* greaseweazle: `iam = no` */
+
+    const uint32_t satz = 512u + 60u + 2u;                     /* 574  */
+    const uint32_t alt  = st->track_bytes - 146u - 9u * satz;   /* 938  */
+    const uint32_t neu  = uft_fdc_gap_space(st);                /* 1024 */
+
+    ASSERT(satz == 574u);
+    ASSERT(alt == 938u);
+    ASSERT(neu == 1024u);
+    /* Der Unterschied ist genau der Spurkopf: 146 gegen 0 + 60 + 0. */
+    ASSERT(neu - alt == 146u - 60u);
+
+    /* Und die alte Rechnung verfehlt, die neue trifft. Ohne diese zwei
+     * Zeilen waere oben nur eine Zahlenspielerei. */
+    const uint32_t belegt_st = (uint32_t)st->gaps.gap3_fmt * st->sectors
+                             + st->gaps.gap4b;
+    ASSERT(belegt_st == 1024u);
+    if (alt == belegt_st) {
+        printf("\n    ROT-PROBE verfehlt: der feste Aufschlag liefert "
+               "ZUFAELLIG dasselbe wie die profileigene Rechnung — dann "
+               "ist dieser Test wertlos\n");
+    }
+    ASSERT(alt != belegt_st);
+    ASSERT(neu == belegt_st);
+
+    /* Gegenprobe an einem Profil MIT Index-Adressmarke: dort muessen alt
+     * und neu gleich sein, sonst haette die Aenderung alle getroffen. */
+    const uft_fdc_format_t *pc = &UFT_FDC_PC_1440K;
+    ASSERT(pc->iam == true);
+    ASSERT(pc->gaps.gap4a == 80 && pc->gaps.gap1 == 50);
+    ASSERT(uft_fdc_gap_space(pc)
+           == pc->track_bytes - 146u - 18u * satz);
+}
+
+TEST(die_sechs_alten_wertepaare_gingen_nicht_auf)
+{
+    /* Zweite Haelfte des Rotbeweises (D1). Sechs Profile haben in MF-1177
+     * neue Zahlen bekommen, jede mit benannter Quelle. Hier stehen die
+     * ALTEN Paare, und jedes muss die Identitaet VERFEHLEN — sonst waere
+     * die Korrektur keine gewesen.
+     *
+     * Der Test kann nicht gegen den Vorzustand gebaut werden (die Felder
+     * `iam`/`gap_beleg`/`gap_quelle` gab es dort nicht), also steht der
+     * Vorzustand hier als Zahl. Das ist der Preis dafuer, dass die
+     * Korrektur eine Strukturaenderung war. */
+    struct { const uft_fdc_format_t *f; uint8_t alt_g3; uint16_t alt_g4b;
+             const char *quelle; } alt[] = {
+        { &UFT_FDC_PC_360K,   80, 664, "ibm.360"     },
+        { &UFT_FDC_PC_720K,   80, 664, "ibm.720"     },
+        { &UFT_FDC_MSX_1DD,   80, 664, "msx.1dd"     },
+        { &UFT_FDC_MSX_2DD,   80, 664, "msx.2dd"     },
+        { &UFT_FDC_BBC_ADFS,  57, 400, "adfs.640"    },
+        { &UFT_FDC_PC98_2HD, 116, 600, "pc98.2hd"    },
+    };
+
+    unsigned geprueft = 0u;
+    for (unsigned i = 0; i < sizeof alt / sizeof alt[0]; i++) {
+        const uft_fdc_format_t *f = alt[i].f;
+        const uint32_t space = uft_fdc_gap_space(f);
+        const uint32_t frueher = (uint32_t)alt[i].alt_g3 * f->sectors
+                               + alt[i].alt_g4b;
+
+        /* Der alte Stand verfehlt. */
+        if (frueher == space) {
+            printf("\n    %s: das ALTE Paar (%u/%u) geht auf — dann war "
+                   "hier nichts zu korrigieren\n", f->name,
+                   (unsigned)alt[i].alt_g3, (unsigned)alt[i].alt_g4b);
+        }
+        ASSERT(frueher != space);
+
+        /* Der neue Stand trifft, und er ist BELEGT. */
+        ASSERT(f->gap_beleg == UFT_FDC_GAP_BELEGT);
+        ASSERT(uft_fdc_gaps_schliessen(f, NULL, NULL));
+
+        /* Und die Quelle steht wirklich in der Angabe — nicht nur
+         * irgendein Text (MF-636: eine Attribution ist eine Aussage). */
+        ASSERT(strstr(f->gap_quelle, alt[i].quelle) != NULL);
+        ASSERT(strstr(f->gap_quelle, "greaseweazle") != NULL);
+        geprueft++;
+    }
+    ASSERT(geprueft == 6u);
+}
+
 int main(void)
 {
     printf("=== FDC-Profiltafel: verdrahtet und nachgerechnet (MF-1168) ===\n");
@@ -352,6 +522,10 @@ int main(void)
     printf("--- FM Single Density (Befund 2) ---\n");
     RUN(fm_sd_passt_jetzt_in_ihre_spur);
     RUN(jedes_profil_passt_in_seine_spur);
+    printf("--- Beleg oder Begruendung (MF-1177) ---\n");
+    RUN(jedes_profil_schliesst_oder_nennt_seinen_grund);
+    RUN(der_spurkopf_ist_nicht_fuer_alle_gleich);
+    RUN(die_sechs_alten_wertepaare_gingen_nicht_auf);
     printf("\nErgebnis: %d bestanden, %d gefallen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

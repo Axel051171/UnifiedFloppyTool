@@ -219,8 +219,22 @@ uint8_t uft_fdc_calc_gaps(uint32_t track_capacity, uint8_t sectors,
         /* FM overhead */
         overhead_per_sector = 6 + 1 + 4 + 2 + 11 + 6 + 1;    /* 31 bytes */
     }
-    
-    /* Track header overhead */
+
+    /* Track header overhead
+     *
+     * MF-1177: diese Zeile nimmt die IBM-System-34-Spur an — GAP 4a 80 +
+     * Sync 12 + IAM 4 + GAP 1 50 = 146, und fuer FM 40 + 6 + 1 + 26 = 73.
+     * Das ist fuer eine Funktion, die KEIN Profil bekommt, die richtige
+     * Annahme; sie ist aber eine ANNAHME und gilt nicht fuer jedes Format.
+     *
+     * Gemessen: die Atari-ST-Profile tragen gap4a = 0, gap1 = 60 und
+     * schreiben nach greaseweazles `diskdefs` (alle sechs ST-Zeilen
+     * `iam = no`) GAR KEINE Index-Adressmarke — ihr Spurkopf ist 60 Byte,
+     * nicht 146. Acorn DFS ebenso (66 statt 73).
+     *
+     * Wer ein Profil zur Hand hat, nimmt deshalb `uft_fdc_gap_space()`;
+     * diese Funktion bleibt der Schaetzer fuer den Fall ohne Profil (der
+     * HFE-Wandler benutzt sie so). */
     uint32_t track_overhead = mfm ? (80 + 12 + 4 + 50) : (40 + 6 + 1 + 26);
     
     /* Calculate available space for gaps */
@@ -344,4 +358,73 @@ void uft_fdc_list_formats(void)
                fmt->name, fmt->tracks, fmt->sides, fmt->sectors,
                fmt->sector_size, rate_str);
     }
+}
+
+/*===========================================================================
+ * MF-1177 — der Spurhaushalt, an EINER Stelle
+ *
+ * Vorher wurde er an DREI Stellen gerechnet, und keine zwei behandelten
+ * die Index-Adressmarke gleich:
+ *
+ *   uft_fdc_calc_gap3()              fester Aufschlag 146/73, IAM DRIN
+ *   scripts/audit_fdc_gaps.py        gap4a + gap1, IAM DRAUSSEN
+ *   test_fdc_gaps_1440k.c::belegt()  gap4a + gap1, IAM DRAUSSEN
+ *
+ * Dass PC 1.44M in den letzten beiden „mit 16 Byte Luft passte", ist kein
+ * Spielraum, sondern genau die nicht gezaehlte IAM. Klasse MF-1015.
+ *===========================================================================*/
+
+/** Aufschlag je Sektor: Sync + Marke + ID + CRC + GAP 2 + Sync + Marke +
+ *  Nutzlast + CRC. Dieselben Zahlen wie in `uft_fdc_calc_gap3()`, und
+ *  bewusst aus DERSELBEN Datei — eine zweite Kopie waere der Fehler, den
+ *  dieser Abschnitt behebt. */
+static uint32_t fdc_satzlaenge(const uft_fdc_format_t *f)
+{
+    const uint32_t je_sektor = f->mfm
+        ? (12u + 4u + 4u + 2u + 22u + 12u + 4u)   /* 60 */
+        : (6u + 1u + 4u + 2u + 11u + 6u + 1u);    /* 31 */
+    /* die `+ 2` sind die Daten-CRC; in `uft_fdc_calc_gap3()` steht sie in
+     * `data_space` und nicht im Aufschlag. Hier zusammengezogen, damit die
+     * Summe an einer Stelle steht. */
+    return (uint32_t)f->sector_size + je_sektor + 2u;
+}
+
+/** Spurkopf: das PROFILEIGENE gap4a + gap1, plus die Index-Adressmarke,
+ *  falls das Format eine schreibt (MFM 12 Sync + 4 Marke, FM 6 + 1). */
+static uint32_t fdc_spurkopf(const uft_fdc_format_t *f)
+{
+    const uint32_t iam = f->iam ? (f->mfm ? 16u : 7u) : 0u;
+    return (uint32_t)f->gaps.gap4a + (uint32_t)f->gaps.gap1 + iam;
+}
+
+uint32_t uft_fdc_gap_space(const uft_fdc_format_t *f)
+{
+    if (!f || f->sectors == 0u || f->track_bytes == 0u) return 0u;
+
+    const uint32_t kopf = fdc_spurkopf(f);
+    const uint32_t daten = (uint32_t)f->sectors * fdc_satzlaenge(f);
+
+    /* MF-1167/MF-1177: NICHT klemmen. Passen die Sektoren allein nicht in
+     * die Spur, ist das Profil so nicht schreibbar — dann gibt es keinen
+     * freien Platz, und 0 heisst hier „kein Platz", nicht „geht genau
+     * auf". Der Aufrufer unterscheidet das ueber
+     * `uft_fdc_gaps_schliessen()`, das beide Zahlen herausgibt. */
+    if (kopf + daten >= f->track_bytes) return 0u;
+    return f->track_bytes - kopf - daten;
+}
+
+bool uft_fdc_gaps_schliessen(const uft_fdc_format_t *f,
+                             uint32_t *out_space, uint32_t *out_used)
+{
+    if (out_space) *out_space = 0u;
+    if (out_used)  *out_used  = 0u;
+    if (!f || f->sectors == 0u) return false;
+
+    const uint32_t space = uft_fdc_gap_space(f);
+    const uint32_t used  = (uint32_t)f->gaps.gap3_fmt * f->sectors
+                         + (uint32_t)f->gaps.gap4b;
+
+    if (out_space) *out_space = space;
+    if (out_used)  *out_used  = used;
+    return space != 0u && space == used;
 }

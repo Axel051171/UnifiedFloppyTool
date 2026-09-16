@@ -687,6 +687,49 @@ Grundlinie** (Bauform Tor 57): Stand **83** Sonden, die ihre Zahl noch
 selbst vergeben, 2 migriert. Die Zahl darf nur sinken — und der Zweck
 ist der Rand: **ein neues Format kann gar nicht mehr anders anfangen.**
 
+### Grundsatz: eine Größe, eine Rechnung — und wer sie zweimal rechnet, hat sie nicht gemessen (MF-1177)
+
+**Wird dieselbe physikalische Größe an mehr als einer Stelle gerechnet,
+driften die Stellen — und die Abweichung sieht aus wie ein Fehler in den
+DATEN.** Das ist die teuerste Verwechslung, die dieser Baum kennt, weil
+sie Arbeit an der falschen Stelle auslöst.
+
+Der Anlass ist gemessen. Der **Spurhaushalt** einer Diskette — wie viele
+Byte nach Spurkopf und Sektoren für die Zwischenräume übrig sind — wurde
+an **drei** Stellen gerechnet:
+
+| Stelle | Spurkopf | Index-Adressmarke |
+|---|---|---|
+| `uft_fdc_calc_gap3()` | fest 146 (MFM) / 73 (FM) | **mitgezählt** |
+| `scripts/audit_fdc_gaps.py` | `gap4a + gap1` | **nicht** gezählt |
+| `test_fdc_gaps_1440k.c::belegt()` | `gap4a + gap1` | **nicht** gezählt |
+
+Dass `PC 1.44M` in den letzten beiden „mit 16 Byte Luft passte", war kein
+Spielraum, sondern **genau die nicht gezählte IAM** (12 Sync + 4 Marke).
+Und die erste Rechnung ersetzte den profileigenen Spurkopf durch eine
+Konstante — womit die beiden **Atari-ST-Profile** die Identität um 86 Byte
+verfehlten, obwohl ihre Zahlen exakt aufgehen
+(`0 + 60 + 9 × 614 + 664 = 6250`).
+
+**Gemessen falsch war also nicht die Tafel, sondern die Messung.** Von
+„14 von 17 Profilen gehen nicht auf" blieben mit der profileigenen
+Rechnung **12**, und nach dem Einarbeiten einer benannten Quelle **6** —
+jedes davon mit `gap_beleg` und `gap_quelle` versehen, also mit Grund.
+
+Zwei Regeln daraus, beide billig im Einhalten:
+
+1. **Bevor eine Zahl als falsch gilt, wird die Rechnung geprüft, die sie
+   falsch nennt.** Eine Abweichung ist zunächst nur eine Abweichung.
+2. **Die Rechnung gehört an EINE Stelle, und Tor und Test rufen sie**
+   statt sie nachzubilden. Seit MF-1177 ist das `uft_fdc_gap_space()`,
+   das den profileigenen Spurkopf samt `iam`-Angabe nimmt.
+
+Die Bauform ist bekannt: MF-1015 (drei Prüfsummen, keine zwei gleich),
+MF-1026 (drei Victor-Geometrien), MF-1032/MF-1034 (die vier
+Anordnungsgesetze, zweimal einzeln wiederentdeckt). Neu ist hier nur, dass
+die zweite Kopie in einem **Tor** und einem **Test** saß — also genau in
+den Werkzeugen, denen man beim Widerspruch glaubt.
+
 ### Grundsatz: drei Sperren gegen die eigenen Wiederholungstäter (MF-1096)
 
 Diese drei Regeln stehen nicht hier, weil sie einleuchten, sondern weil

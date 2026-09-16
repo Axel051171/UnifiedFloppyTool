@@ -129,6 +129,34 @@ typedef struct {
 } uft_fdc_gaps_t;
 
 /**
+ * @brief Wie gut die Lueckenwerte eines Profils belegt sind (MF-1177)
+ *
+ * Der Anlass ist gemessen: von 17 Profilen ging die Identitaet
+ * `gap3_fmt * sectors + gap4b == gap_space` bei 3 auf und bei 14 nicht.
+ * MF-838 hat die uebrigen ausdruecklich SICHTBAR FALSCH stehen lassen,
+ * weil „sie mit abgeleiteten Werten stimmig zu machen wuerde sie
+ * konsistent machen, ohne sie richtig zu machen".
+ *
+ * Diese Aufzaehlung loest das, ohne die Regel zu brechen: sie sagt je
+ * Profil, WORAUF die Zahlen beruhen. Ein Profil darf die Identitaet
+ * verfehlen — aber nur, wenn es das SAGT und den Grund nennt. Die Zusage
+ * dazu steht in `tests/test_fdc_profil_verdrahtet.c`.
+ */
+typedef enum {
+    /** Keine benannte Quelle. Die Zahlen stehen unter Vorbehalt, und
+     *  `gap_quelle` sagt, was fehlt. Die Identitaet MUSS hier nicht
+     *  aufgehen. */
+    UFT_FDC_GAP_UNBELEGT = 0,
+    /** Quelle benannt UND die Identitaet geht auf. Beides zusammen —
+     *  eine Quelle ohne aufgehende Rechnung ist TEILBELEGT. */
+    UFT_FDC_GAP_BELEGT,
+    /** Ein Teil ist belegt (typisch `gap3_fmt`), ein anderer nicht
+     *  (typisch der Spurkopf). Die Identitaet geht deshalb NICHT auf,
+     *  und `gap_quelle` sagt, welche Haelfte fehlt. */
+    UFT_FDC_GAP_TEILBELEGT
+} uft_fdc_gap_beleg_t;
+
+/**
  * @brief Complete format specification
  */
 typedef struct {
@@ -152,6 +180,36 @@ typedef struct {
     /* Track capacity */
     uint32_t track_bytes;       /**< Total bytes per track */
     uint32_t raw_bits;          /**< Raw bits per track */
+
+    /**
+     * Schreibt dieses Format eine Index-Adressmarke? (MF-1177)
+     *
+     * Eine IBM-System-34-Spur beginnt mit GAP 4a, dann 12 Byte Sync, dann
+     * die IAM (3 x 0xC2 + 0xFC), dann GAP 1 — zusammen 16 Byte, die vor
+     * dem ersten Sektor liegen und NICHT in `gap4a`/`gap1` stecken. Bei
+     * FM sind es 6 + 1 = 7.
+     *
+     * **Nicht jedes Format schreibt sie.** Belegt aus greaseweazles
+     * `diskdefs` (Commit 26690f89, Unlicense, nur gelesen): `iam = no`
+     * steht bei ALLEN SECHS Atari-ST- und ALLEN VIER Acorn-DFS-
+     * Definitionen, dazu bei CoCo, Opus und den 1581-Verwandten.
+     *
+     * Vorher gab es dieses Feld nicht, und `uft_fdc_calc_gap3()` rechnete
+     * fuer JEDES MFM-Format mit einem festen Spuraufschlag von 146 —
+     * womit die beiden Atari-ST-Profile falsch aussahen, obwohl ihre
+     * Zahlen exakt aufgehen. Siehe `uft_fdc_gap_space()`.
+     */
+    bool iam;
+
+    /** Worauf die Lueckenwerte beruhen — siehe uft_fdc_gap_beleg_t. */
+    uft_fdc_gap_beleg_t gap_beleg;
+    /**
+     * Die benannte Quelle, oder — bei UNBELEGT/TEILBELEGT — was fehlt.
+     * NIE NULL: ein Profil ohne Angabe ist ein Widerspruch ohne
+     * Begruendung, und genau das verbietet die Zusage in
+     * `tests/test_fdc_profil_verdrahtet.c`.
+     */
+    const char *gap_quelle;
 } uft_fdc_format_t;
 
 /*===========================================================================
@@ -198,6 +256,67 @@ typedef struct {
  * wuerde sie konsistent machen, ohne sie richtig zu machen — und das
  * waere schlechter, weil der Widerspruch dann nicht mehr auffaellt.
  * `audit_fdc_gaps.py` haelt die Zahl bei 11 fest; sie darf nur sinken.
+ *
+ * ── NACHTRAG MF-1177 — die Quelle ist da, und die Lage sieht anders aus
+ *    als gedacht ─────────────────────────────────────────────────────────
+ *
+ * Der Satz oben bleibt richtig und war die richtige Entscheidung: ohne
+ * Quelle nichts anpassen. Jetzt gibt es eine, und sie ist die beste
+ * denkbare Gattung — **keirf/greaseweazle**, Commit
+ * 26690f89967d519e0106ab9566019a026b920bb4 (2026-03-18), **Unlicense**,
+ * also gemeinfrei und damit woertlich uebernehmbar. Gemessen in seinen 38
+ * `diskdefs*.cfg`: 149 Definitionen, 86 mit `gap3`, 22 mit `cskew`, 7 mit
+ * `hskew`. Nur GELESEN — greaseweazle wurde nicht gebaut und nicht
+ * ausgefuehrt, ist also nach der eigenen Regel von `docs/ORACLES.md`
+ * ausdruecklich KEIN Oracle, sondern der Kanal *Spec/Daten* (MF-695).
+ *
+ * **Und der erste Befund war ein Fehler in der MESSUNG, nicht in der
+ * Tafel.** Die Identitaet `gap3_fmt * sectors + gap4b == gap_space`
+ * verfehlten 14 von 17 Profilen — solange man `gap_space` mit einem
+ * FESTEN Spuraufschlag rechnet (146 bei MFM). Mit dem PROFILEIGENEN
+ * `gap4a + gap1` und der Angabe, ob das Format eine Index-Adressmarke
+ * schreibt, sind es **5 von 17**, und die beiden neu dazugekommenen sind
+ * `Atari ST SS` und `Atari ST DS`: sie gehen EXAKT auf
+ * (0 + 60 + 9 x 614 + 664 = 6250) und sahen nur falsch aus, weil die
+ * Rechnung ihren 60-Byte-Spurkopf durch 146 ersetzte. greaseweazle
+ * belegt dabei die fehlende Angabe — `iam = no` steht bei ALLEN SECHS
+ * ST-Definitionen und ALLEN VIER Acorn-DFS-Definitionen.
+ *
+ * Der Spurhaushalt wurde damit an DREI Stellen gerechnet, und keine zwei
+ * behandelten die Index-Adressmarke gleich:
+ *
+ *   uft_fdc_calc_gap3()              fest 146/73, IAM DRIN
+ *   scripts/audit_fdc_gaps.py        gap4a + gap1, IAM DRAUSSEN
+ *   test_fdc_gaps_1440k.c::belegt()  gap4a + gap1, IAM DRAUSSEN
+ *
+ * Dass PC 1.44M in den letzten beiden „mit 16 Byte Luft passte", war kein
+ * Spielraum, sondern genau die nicht gezaehlte IAM. Klasse MF-1015 (drei
+ * Pruefsummen, keine zwei gleich). Die eine Rechnung steht jetzt in
+ * `uft_fdc_gap_space()`.
+ *
+ * **Stand nach MF-1177, je Profil mit `gap_beleg` und `gap_quelle`:**
+ *
+ *   BELEGT (Quelle benannt UND Identitaet geht auf)          11
+ *     unveraendert: PC 1.2M, PC 1.44M, FM SD, Atari ST SS/DS
+ *     korrigiert:   PC 360K, PC 720K, MSX 1DD, MSX 2DD  (gap3 80 -> 84)
+ *                   BBC ADFS  (gap4b 400 -> 104)
+ *                   PC-98 2HD (gap4b 600 -> 654)
+ *   TEILBELEGT (ein Teil belegt, Identitaet geht NICHT auf)   1
+ *     BBC DFS — gap3 21 und `iam = no` belegt, gap4a/gap1 sind IBM-Werte
+ *   UNBELEGT (keine Quelle)                                   5
+ *     PC 2.88M, Atari ST HD, Amstrad CPC Data, Amstrad CPC System,
+ *     PC-98 2DD
+ *
+ * `gap4b` ist dabei kein neuer Messwert, sondern der REST — greaseweazle
+ * hat gar kein solches Feld, weil der Vor-Index-Zwischenraum das ist, was
+ * nach Spurkopf, Sektoren und gap3 uebrig bleibt (MF-1169). Nur `gap3`
+ * kommt aus der Quelle.
+ *
+ * `audit_fdc_gaps.py` steht damit bei **3** statt 11 (Amstrad zweimal und
+ * BBC DFS), und `tests/test_fdc_profil_verdrahtet.c` verlangt seither:
+ * BELEGT muss aufgehen, UNBELEGT/TEILBELEGT darf NICHT aufgehen, und eine
+ * `gap_quelle` muss immer dastehen. Ein Widerspruch ist damit erlaubt —
+ * ein Widerspruch ohne Begruendung nicht.
  *===========================================================================*/
 
 /* PC/DOS Formats */
@@ -205,16 +324,27 @@ static const uft_fdc_format_t UFT_FDC_PC_360K = {
     .name = "PC 360K (5.25\" DD)",
     .tracks = 40, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_300K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 80, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 84, .gap4b = 182 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_ibm.cfg `ibm.360`: "
+        "gap3 = 84. gap4b ist der REST und abgeleitet: 938 - 9*84 = "
+        "182. Vorher 80/664 — die 664 war der Atari-ST-Wert (MF-828)."
 };
 
 static const uft_fdc_format_t UFT_FDC_PC_720K = {
     .name = "PC 720K (3.5\" DD)",
     .tracks = 80, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 80, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 84, .gap4b = 182 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_ibm.cfg `ibm.720`: "
+        "gap3 = 84. gap4b abgeleitet: 938 - 756. Vorher 80/664."
 };
 
 static const uft_fdc_format_t UFT_FDC_PC_1200K = {
@@ -222,7 +352,13 @@ static const uft_fdc_format_t UFT_FDC_PC_1200K = {
     .tracks = 80, .sides = 2, .sectors = 15, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_500K, .rpm = 360, .mfm = true,
     .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 54, .gap3_fmt = 84, .gap4b = 400 },
-    .track_bytes = 10416, .raw_bits = 166666
+    .track_bytes = 10416, .raw_bits = 166666,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_ibm.cfg `ibm.1200`: "
+        "gap3 = 84, rpm = 360. Unveraendert; die Identitaet ging schon "
+        "vorher auf (1660)."
 };
 
 static const uft_fdc_format_t UFT_FDC_PC_1440K = {
@@ -250,7 +386,13 @@ static const uft_fdc_format_t UFT_FDC_PC_1440K = {
      * von 12500 Byte; 400 haetten nicht gepasst. Die 78 sind Rechnung,
      * keine Quelle — deshalb steht das hier. */
     .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 27, .gap3_fmt = 108, .gap4b = 78 },
-    .track_bytes = 12500, .raw_bits = 200000
+    .track_bytes = 12500, .raw_bits = 200000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_ibm.cfg `ibm.1440`: "
+        "gap3 = 108. Unveraendert; MF-838 hatte diesen Eintrag als "
+        "einzigen gegen eine benannte Quelle berichtigt."
 };
 
 static const uft_fdc_format_t UFT_FDC_PC_2880K = {
@@ -258,7 +400,17 @@ static const uft_fdc_format_t UFT_FDC_PC_2880K = {
     .tracks = 80, .sides = 2, .sectors = 36, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_1M, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 54, .gap3_fmt = 84, .gap4b = 400 },
-    .track_bytes = 25000, .raw_bits = 400000
+    .track_bytes = 25000, .raw_bits = 400000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_quelle =
+        "KEINE greaseweazle-Definition fuer 36 x 512 (dessen ibm.cfg "
+        "endet bei 1680/dmf). gap3 = 84 ist der aus PC 1.2M kopierte "
+        "Wert, gap4b = 400 ebenso — MF-838 hat genau dieses Muster "
+        "gemessen: 84 steht in vier Eintraegen mit drei verschiedenen "
+        "Sektorzahlen. Es fehlen 4190 - 3424 = 766 Byte, die Spur ist "
+        "also nicht ueberbelegt, sondern die Lueckenwerte sind zu "
+        "klein."
 };
 
 /* Atari ST Formats
@@ -295,7 +447,18 @@ static const uft_fdc_format_t UFT_FDC_ATARI_SS = {
     .tracks = 80, .sides = 1, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 0, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = false,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "Die eigenen Werte gehen EXAKT auf: gap4a = 0, gap1 = 60, gap3 "
+        "= 40 -> 9 * 614 + 60 = 5586, Rest 664 (MF-828, nach Louis "
+        "Guerins Sektorabstand 614). `iam` = false ist neu belegt: "
+        "greaseweazle 26690f89, Unlicense, diskdefs_atarist.cfg fuehrt "
+        "ALLE SECHS ST-Definitionen mit `iam = no`. ABWEICHUNG, nicht "
+        "aufgeloest: greaseweazle nennt fuer atarist.360 gap3 = 84, was "
+        "mit gap4b = 268 ebenfalls aufgeht. Zwei in sich stimmige "
+        "Lesarten derselben Geometrie — P3-430."
 };
 
 static const uft_fdc_format_t UFT_FDC_ATARI_DS = {
@@ -303,7 +466,12 @@ static const uft_fdc_format_t UFT_FDC_ATARI_DS = {
     .tracks = 80, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 0, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 40, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = false,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "Wie Atari ST SS; greaseweazle `atarist.720`, `iam = no`. "
+        "Dieselbe unaufgeloeste Abweichung beim gap3 (P3-430)."
 };
 
 static const uft_fdc_format_t UFT_FDC_ATARI_HD = {
@@ -311,7 +479,15 @@ static const uft_fdc_format_t UFT_FDC_ATARI_HD = {
     .tracks = 80, .sides = 2, .sectors = 18, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_500K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 60, .gap1 = 60, .gap2 = 22, .gap3_rw = 40, .gap3_fmt = 84, .gap4b = 400 },
-    .track_bytes = 12500, .raw_bits = 200000
+    .track_bytes = 12500, .raw_bits = 200000,
+    .iam = false,
+    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_quelle =
+        "KEINE greaseweazle-Definition fuer ST-HD (dessen atarist.cfg "
+        "endet bei 880). gap3 = 84 ist der aus PC 1.2M kopierte Wert. "
+        "`iam` = false ist aus der ST-Familie uebernommen und damit die "
+        "schwaechere Angabe dieses Eintrags. Es fehlen 2048 - 1912 = "
+        "136 Byte."
 };
 
 /* Amstrad CPC Formats */
@@ -320,7 +496,17 @@ static const uft_fdc_format_t UFT_FDC_AMSTRAD_DATA = {
     .tracks = 40, .sides = 1, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 82, .gap1 = 50, .gap2 = 22, .gap3_rw = 82, .gap3_fmt = 82, .gap4b = 400 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_quelle =
+        "greaseweazle hat KEINE Amstrad-/CPC-Datei; seine "
+        "ZX-Definitionen `3dos.ss40`/`3dos.ds80` tragen dieselbe "
+        "Geometrie (9 x 512, 250k) und nennen KEIN gap3. Der Eintrag "
+        "verletzt PASSEN um 186 Byte, ist also so nicht schreibbar "
+        "(audit_fdc_gaps.py). Und die zwei Amstrad-Zeilen sind bis aufs "
+        "Byte gleich, obwohl Data- und System-Format sich gerade im "
+        "gap3 unterscheiden — das Muster eines kopierten Blocks."
 };
 
 static const uft_fdc_format_t UFT_FDC_AMSTRAD_SYS = {
@@ -328,7 +514,11 @@ static const uft_fdc_format_t UFT_FDC_AMSTRAD_SYS = {
     .tracks = 40, .sides = 1, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 82, .gap1 = 50, .gap2 = 22, .gap3_rw = 82, .gap3_fmt = 82, .gap4b = 400 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_quelle =
+        "Wie Amstrad CPC Data, byteidentisch — siehe dort."
 };
 
 /* BBC Micro Formats */
@@ -337,15 +527,33 @@ static const uft_fdc_format_t UFT_FDC_BBC_DFS = {
     .tracks = 80, .sides = 1, .sectors = 10, .sector_size = 256, .size_code = 1,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = false,  /* FM! */
     .gaps = { .gap4a = 40, .gap1 = 26, .gap2 = 11, .gap3_rw = 21, .gap3_fmt = 21, .gap4b = 300 },
-    .track_bytes = 3125, .raw_bits = 50000
+    .track_bytes = 3125, .raw_bits = 50000,
+    .iam = false,
+    .gap_beleg = UFT_FDC_GAP_TEILBELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_acorn.cfg "
+        "`dfs.ss80`: gap3 = 21 UND `iam = no` (alle vier "
+        "DFS-Definitionen). Damit ist die Haelfte belegt. UNBELEGT "
+        "bleiben gap4a = 40 und gap1 = 26: das sind IBM-Werte, und "
+        "Acorn schreibt einen anderen Spurkopf. Selbst ohne "
+        "Index-Adressmarke bleibt der Rest NEGATIV (169 - 10*21 = -41), "
+        "der Eintrag ist also so nicht schreibbar. Zum Aufgehen "
+        "braeuchte es einen Spurkopf von etwa 16 Byte statt 66 — dafuer "
+        "gibt es hier keine Quelle."
 };
 
 static const uft_fdc_format_t UFT_FDC_BBC_ADFS = {
     .name = "BBC ADFS (640K)",
     .tracks = 80, .sides = 2, .sectors = 16, .sector_size = 256, .size_code = 1,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 57, .gap3_fmt = 57, .gap4b = 400 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 57, .gap3_fmt = 57, .gap4b = 104 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_acorn.cfg "
+        "`adfs.640`: gap3 = 57. gap4b abgeleitet: 1016 - 16*57 = 104. "
+        "Vorher 400, womit PASSEN um 280 Byte verletzt war."
 };
 
 /* FM Formats (single density) */
@@ -401,7 +609,16 @@ static const uft_fdc_format_t UFT_FDC_FM_SD = {
     .tracks = 77, .sides = 1, .sectors = 26, .sector_size = 128, .size_code = 0,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 360, .mfm = false,
     .gaps = { .gap4a = 40, .gap1 = 26, .gap2 = 11, .gap3_rw = 27, .gap3_fmt = 27, .gap4b = 247 },
-    .track_bytes = 5208, .raw_bits = 83333
+    .track_bytes = 5208, .raw_bits = 83333,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "MF-1168: track_bytes = 5208 und raw_bits = 83333 sind aus den "
+        "eigenen Lueckenwerten zurueckgerechnet und treffen die "
+        "dokumentierte IBM-3740-Kapazitaet; die Identitaet geht mit 949 "
+        "auf. Kein greaseweazle-Gegenstueck fuer 26 x 128 bei 360 U/min "
+        "(sein `n88basic.hd` nennt gap3 = 26 bei 26 x 128, aber 250k FM "
+        "auf Spur 0 einer PC-98-Diskette — andere Sache)."
 };
 
 /* NEC PC-98 Formats */
@@ -410,15 +627,32 @@ static const uft_fdc_format_t UFT_FDC_PC98_2DD = {
     .tracks = 80, .sides = 2, .sectors = 8, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 116, .gap3_fmt = 116, .gap4b = 600 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_quelle =
+        "DREI Angaben, keine zwei gleich: dieser Eintrag sagt 80 x 2 x "
+        "8 x 512 bei 300 U/min (= 640 K, passend zum Namen), "
+        "greaseweazle 26690f89, Unlicense, diskdefs_pc98.cfg `2dd` sagt "
+        "77 x 2 bei **360** U/min mit gap3 = 57, und `2d` sagt 40 x 2 "
+        "bei 300 U/min, ebenfalls gap3 = 57. Bei 360 U/min traegt die "
+        "Spur 5208 statt 6250 Byte — Drehzahl, Spurlaenge und gap3 "
+        "haengen zusammen und sind hier nicht einzeln entscheidbar. "
+        "P3-431. Die Identitaet verfehlt um 16 Byte."
 };
 
 static const uft_fdc_format_t UFT_FDC_PC98_2HD = {
     .name = "PC-98 2HD (1.23M)",
     .tracks = 77, .sides = 2, .sectors = 8, .sector_size = 1024, .size_code = 3,
     .data_rate = UFT_FDC_RATE_500K, .rpm = 360, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 116, .gap3_fmt = 116, .gap4b = 600 },
-    .track_bytes = 10416, .raw_bits = 166666
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 116, .gap3_fmt = 116, .gap4b = 654 },
+    .track_bytes = 10416, .raw_bits = 166666,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_pc98.cfg `pc98.2hd`: "
+        "gap3 = 116, rpm = 360, 8 x 1024 — deckt sich mit diesem "
+        "Eintrag. gap4b abgeleitet: 1582 - 8*116 = 654. Vorher 600."
 };
 
 /* MSX Formats */
@@ -426,16 +660,27 @@ static const uft_fdc_format_t UFT_FDC_MSX_1DD = {
     .name = "MSX 1DD (360K)",
     .tracks = 80, .sides = 1, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 80, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 84, .gap4b = 182 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_msx.cfg `msx.1dd`: gap3 "
+        "= 84. gap4b abgeleitet: 938 - 756 = 182. Vorher 80/664 — "
+        "dieselbe fehlgewanderte Atari-664 wie bei PC 360K."
 };
 
 static const uft_fdc_format_t UFT_FDC_MSX_2DD = {
     .name = "MSX 2DD (720K)",
     .tracks = 80, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 80, .gap4b = 664 },
-    .track_bytes = 6250, .raw_bits = 100000
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 84, .gap4b = 182 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = true,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "greaseweazle 26690f89, Unlicense, diskdefs_msx.cfg `msx.2dd`: gap3 "
+        "= 84. gap4b abgeleitet: 938 - 756. Vorher 80/664."
 };
 
 /*===========================================================================
@@ -565,6 +810,54 @@ int uft_fdc_calc_track_layout(const uft_fdc_format_t *fmt,
  */
 uint8_t uft_fdc_calc_gap3(uint32_t track_capacity, uint8_t sectors,
                           uint16_t sector_size, bool mfm);
+
+/**
+ * @brief Der freie Platz eines PROFILS, mit seinem EIGENEN Spurkopf
+ *        (MF-1177)
+ *
+ * `uft_fdc_calc_gap3()` kennt kein Profil und rechnet deshalb mit einem
+ * FESTEN Spuraufschlag — 146 Byte bei MFM, 73 bei FM. Das ist die
+ * IBM-System-34-Spur: GAP 4a 80 + Sync 12 + IAM 4 + GAP 1 50.
+ *
+ * **Jedes Profil traegt aber sein eigenes `gap4a` und `gap1`**, und bei
+ * zweien stimmt der feste Wert nicht:
+ *
+ *   Atari ST SS/DS   gap4a = 0,  gap1 = 60, KEINE IAM  ->  60 statt 146
+ *   BBC DFS          gap4a = 40, gap1 = 26, KEINE IAM  ->  66 statt  73
+ *
+ * Gemessen war das folgenreich: mit dem festen 146er verfehlten die
+ * beiden Atari-ST-Profile die Identitaet um 86 Byte und sahen falsch aus,
+ * obwohl ihre Zahlen EXAKT aufgehen (9 x 614 + 60 = 5586, Rest 664).
+ *
+ * Diese Funktion ist damit die EINE Stelle, an der der Spurhaushalt
+ * gerechnet wird. Vorher waren es drei, und keine zwei behandelten die
+ * Index-Adressmarke gleich: `uft_fdc_calc_gap3()` zaehlt sie mit,
+ * `scripts/audit_fdc_gaps.py` und `tests/test_fdc_gaps_1440k.c::belegt()`
+ * nicht — weshalb PC 1.44M dort mit genau 16 Byte Luft „passte",
+ * und 16 ist die IAM. Klasse MF-1015 (drei Pruefsummen, keine zwei
+ * gleich).
+ *
+ * @return Byte, die fuer `gap3_fmt * sectors + gap4b` zur Verfuegung
+ *         stehen. 0, wenn @p f NULL ist, `sectors` 0 ist oder die
+ *         Sektoren allein schon nicht in die Spur passen — in diesem
+ *         Fall ist das Profil so nicht schreibbar, und 0 heisst
+ *         „kein Platz", nicht „genau aufgegangen".
+ */
+uint32_t uft_fdc_gap_space(const uft_fdc_format_t *f);
+
+/**
+ * @brief Geht `gap3_fmt * sectors + gap4b == uft_fdc_gap_space()` auf?
+ *        (MF-1177)
+ *
+ * @param out_space  darf NULL sein; erhaelt den freien Platz.
+ * @param out_used   darf NULL sein; erhaelt `gap3_fmt * sectors + gap4b`.
+ *
+ * Beide Zahlen kommen auch bei Rueckgabe `false` heraus — ein Profil, das
+ * nicht aufgeht, soll SAGEN, um wie viel. Das ist der Unterschied zu
+ * einer Absage ohne Zahl (MF-1167).
+ */
+bool uft_fdc_gaps_schliessen(const uft_fdc_format_t *f,
+                             uint32_t *out_space, uint32_t *out_used);
 
 /**
  * @brief Wie @ref uft_fdc_calc_gap3, gibt zusaetzlich GAP 4b heraus
