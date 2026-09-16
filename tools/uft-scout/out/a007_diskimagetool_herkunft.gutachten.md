@@ -80,6 +80,66 @@ es trifft zu.
 
 **Verdikt: fehlt.** Nicht „liegt ungerufen da", nicht „zweite Kopie".
 
+### 2a. Nachtrag MF-1187 — die Quelle ist jetzt gelesen, nicht nur zitiert
+
+§12 hat `Modules/BootstrapDB.vb` als **nicht geprüft** benannt. Sie liegt
+geklont im Baum (`tools/uft-scout/work/DiskImageTool/DiskImageTool/Modules/`,
+213 Zeilen) und ist jetzt gelesen. **Drei Ergebnisse.**
+
+**(1) Die Belegkette trägt, wörtlich.** Das Original bestätigt beide Hälften:
+
+```vb
+Private _OEMNameDictionary As Dictionary(Of UInteger, BootstrapLookup)
+…
+Dim Checksum = CRC32.ComputeChecksum(BootstrapCode)
+If _OEMNameDictionary.ContainsKey(Checksum) Then …
+```
+
+**CRC32 über den Bootstrap-Code ist der SCHLÜSSEL** (`UInteger` = 32 Bit),
+der OEM-Name der **Prüfwert** (`CheckOEMName` vergleicht gegen
+`Response.Data.OEMNames`). Auch der Rückfall, den Test 3 der Zulieferung als
+Rot-Probe führt, steht im Original:
+`If Response.IsWin9x And KnownOEMName.Win9xId Then …`.
+
+**(2) Eine Normalisierung ist NICHT mitgekommen, und sie ist echt.**
+`FindXDFMatch()` greift, wenn der Bootstrap-Code genau `&H1AD` = **429 Byte**
+lang ist, **nullt die Bytes `0xE7`–`0xEE`** (231–238, **8 Byte**) und rechnet
+die CRC neu:
+
+```vb
+If BootstrapCode.Length = &H1AD Then Return FindXDFMatch(BootstrapCode)
+…
+For Counter = &HE7 To &HEE
+    BootstrapCode(Counter) = 0
+Next
+```
+
+Gemessen in der Zulieferung: **0 Treffer** für `0x1AD`, `429`, `0xE7`,
+`0xEE`, `xdf`, `XDF`. Ihr `uft_bs_extract_bootstrap()` schneidet nur
+nachlaufende Nullen ab. **Eine echte XDF-Diskette verfehlt damit ihren
+Eintrag** — acht Byte, die je Datenträger schwanken, gehen in die CRC ein.
+
+Das trifft im Baum eine wunde Stelle: **MF-1087** hat gemessen, dass
+`out.xdf` auf **nichts** auflöst, weil die Endung nur in `dim`s Liste stand,
+und `ARCH-18` führt `uft_xdf_api_impl.c` als zweite Formatschicht ohne
+Aufrufer. XDF ist hier kein Randfall.
+
+**(3) Ein Vorwurf von mir fällt.** Beim ersten Lesen hatte ich den
+`Verified`-Zustand als nicht übernommen notiert. **Er ist übernommen:**
+`uft_bs_verified_t`, `out->verified = (out->matched->verified ==
+UFT_BS_VERIFIED)`, und die Textausgabe unterscheidet „ (verifiziert)" von
+„ (NICHT verifiziert)". Der Header quantifiziert es sogar — „490 OEM-Namen,
+davon **223** als `verified="true"` markiert, 65 verschiedene JMP-Präambeln,
+10 Sprachvarianten".
+
+**Und bei den JMP-Präambeln gehen die zwei Wege auseinander, ohne dass einer
+falsch ist.** Das Original iteriert über eine **Menge** von JMP-Bytefolgen
+(`For Each JmpString In _JmpInst`) und probiert je Form eine CRC. Die
+Zulieferung leitet den Versatz aus dem **Opcode** ab (`0xEB` gegen `0xE9`,
+`uft_bootstrap_db.c:56/58`) — strukturell statt aufzählend, und damit näher
+an MF-930. **Ob beide Wege dieselbe Menge treffen, ist nicht gemessen** und
+braucht die Datenbank.
+
 ---
 
 ## 3. Fund 2 — Schreibnähte: die Fähigkeit fehlt, das Muster hat drei Vorgänger, und keiner wird gerufen
@@ -133,30 +193,65 @@ unterscheidet („die C64-Schutzerkennung rät Markennamen").
 
 ---
 
-## 5. Frage „welche Einstellungen fehlen" — das Lücken-Füllbyte, und es trifft den Baum
+## 5. Frage „welche Einstellungen fehlen" — **ZURÜCKGENOMMEN (MF-1187)**
 
-Die Rot-Probe von Test 4 lautet: ein Prüfer, der **fest auf `0x4E`**
-vergleicht, meldet 20 Nähte, wo keine sind. Das Füllbyte der Lücke ist also
-nicht immer `0x4E`.
+> ### Rücknahme, nachgemessen und nicht bestätigt
+>
+> Hier stand: „das Literal `0x4E` steht in 37 `.c`-Dateien … ein Füllbyte,
+> das 37 Mal als Literal dasteht, ist keine Einstellung." Die Zahl war
+> ausdrücklich als **Kandidatenzahl** gekennzeichnet und in §12 als nicht
+> geprüft benannt. **Sie ist jetzt geprüft, und der Befund fällt.**
+>
+> **Was die Stichprobe zeigt.** Von den Fundstellen sind
+> `{0x52,0x41,0x49,0x4E}` = „RAIN" (Rainbow Arts) und
+> `{0x42,0x4F,0x55,0x4E}` = „BOUN" **Kennungen**; `0x4EFx` und `0x4E75`
+> sind **68000-Opcodes** (`JMP`, `RTS`), ebenso
+> `hi == 0x4E && (lo == 0x75 …)`; `h[0x4E]` ist ein **Versatz**, kein
+> Wert; `0x4E554654u` ist der Same „NUFT"; `0x0E,0x8E,0x4E,0xCE,…` ist
+> eine **Tafelzeile**; `{ SETBITRATE, RAND, 0x4E }` und
+> `{ SKIPBITS, RAND, 0x4E }` sind **Greaseweazle-Befehlsbytes**; und
+> „haeufigstes Byte 0x55 (12498) 0x4E (6712)" ist ein **Messkommentar**.
+> **Kein Füllbyte.**
+>
+> **Und mein Versuch, die echte Teilmenge zu zählen, war selbst falsch.**
+> Er lieferte **43 von 36** — arithmetisch unmöglich für eine Teilmenge.
+> Ursache gefunden: die erste Messung lief mit `grep -l "0x4E"`
+> (Groß/Klein beachtet, **36** Dateien), die zweite still mit `grep -li`
+> (**43** = 36 + 7 Dateien mit `0x4e`). Zwei Methoden, eine Zahl.
+>
+> **Es gibt damit keine belastbare Zahl, und hier steht keine dritte.**
+> Der Befund wird zurückgenommen, nicht auf einen anderen Wert korrigiert
+> — das wäre die dritte unzuverlässige Messung in Folge. Klasse
+> `measurement_hit_wrong_class` („‚0 gefunden' ist keine Entwarnung,
+> sondern die Frage: was kann dieses Skript nicht sehen?") und
+> `zaehlung_ohne_normalisierung`.
 
-Gemessen im Baum:
+**Was von der Frage übrig bleibt, und es ist nicht nichts:**
+
+Die Rot-Probe von Test 4 der Zulieferung steht unverändert — „ein Pruefer,
+der fest auf 0x4E vergleicht, meldete hier **20 Naehte statt keiner**". Das
+ist eine Aussage über **ihren** Code, gemessen an **ihrem** Testfall, und sie
+trägt.
+
+Gemessen im Baum, mit einer Methode und ohne Ableitung:
 
 ```
 gap_fill    .c/.cpp  6    .h  2
 fill_byte   .c/.cpp  2    .h  5
-0x4E        .c/.cpp 37    .h 16
 ```
 
-**Ein Begriff dafür existiert (`gap_fill`, `fill_byte`), und das Literal
-`0x4E` steht in 37 `.c`-Dateien.** Die Methode ist eng — `0x4E` kann in
-C-Code auch ein `'N'` oder eine Maske sein —, deshalb ist 37 eine
-**Kandidatenzahl und kein Urteil**. Aber die Richtung ist dieselbe wie
-MF-1177 („eine Größe, eine Rechnung"): ein Füllbyte, das 37 Mal als Literal
-dasteht, ist keine Einstellung.
+**Ein Begriff für das Füllbyte existiert** — was fehlt, ist eine Messung, wie
+viele Stellen ihn *umgehen*. Die habe ich nicht, und ein `grep` auf `0x4E`
+liefert sie nicht: im Baum bedeutet das Byte überwiegend etwas anderes. **Eine
+grep-getriebene Aufräumung wäre hier gefährlich** — das ist die verwertbare
+Erkenntnis aus der gescheiterten Messung.
 
-**Die fehlende Einstellung ist damit benannt:** das Lücken-Füllbyte gehört zum
-**FDC-Profil**, wo seit MF-1177 auch `gap_beleg` und `gap_quelle` stehen —
-nicht in 37 Dateien.
+**Die Frage bleibt damit offen**, nicht beantwortet: gehört das
+Lücken-Füllbyte ins FDC-Profil neben `gap_beleg`/`gap_quelle`? Wahrscheinlich
+ja, nach MF-1177 — aber der Anlass dafür ist **nicht gemessen**, und nach
+MF-1077 darf eine Zahl nicht das Motiv sein. Der Weg zu einer belastbaren
+Messung: nicht das Literal zählen, sondern die Aufrufer von
+`uft_fdc_gap_space()` gegen die Stellen halten, die eine Lücke **schreiben**.
 
 ---
 
@@ -361,10 +456,21 @@ genau der Unterschied zwischen einem Befund und dem Ratefehler aus
   Wandler und sein Warnkommentar.
 * **`uft_pc_protect_sig.c` gegen echte geschützte PC-Disketten.** Im Korpus
   liegt keine; alle sechs Tests sind synthetisch.
-* **Ob `0x4E` in den 37 Dateien wirklich ein Füllbyte ist.** Die Zahl ist
-  eine Kandidatenzahl; ein `'N'` oder eine Maske zählt mit.
-* **Der Originalbestand `Modules/BootstrapDB.vb`** aus DiskImageTool — nur
-  über die Belegkette der Zulieferung zitiert, nicht selbst gelesen.
+* ~~**Ob `0x4E` in den 37 Dateien wirklich ein Füllbyte ist.**~~
+  **GEPRÜFT MF-1187 — und der Befund ist ZURÜCKGENOMMEN**, siehe §5. Die
+  Stichprobe zeigt Kennungen, 68000-Opcodes, einen Versatz, eine
+  Tafelzeile und Befehlsbytes; meine Nachzählung lieferte 43 von 36 und
+  war selbst falsch (`grep -l` gegen `grep -li`).
+* ~~**Der Originalbestand `Modules/BootstrapDB.vb`**~~ **GELESEN MF-1187**,
+  siehe §2a: die Belegkette trägt, die XDF-Normalisierung fehlt der
+  Zulieferung, und der `Verified`-Zustand ist — anders als ich zuerst
+  notierte — übernommen.
+* **Die 379 Datenbankeinträge** bleiben ungeprüft — sie sind nicht im
+  Paket, und der Originalbestand liegt als XML beim Upstream.
+* **`uft_pc_protect_sig.c` gegen echte geschützte PC-Disketten** bleibt
+  ungeprüft: im Korpus liegt keine, alle sechs Tests sind synthetisch.
+* **Ob die 65 JMP-Präambeln des Originals und die zwei Opcode-Zweige der
+  Zulieferung dieselbe Menge treffen** — braucht die Datenbank (§2a).
 
 ---
 
@@ -376,7 +482,8 @@ Fünf, keiner eingetragen — Eigentümer-Entscheidung.
 |---|---|---|
 | **V1** | **Der wichtigste:** `P3-385` urteilt „Apache-2.0, mit GPL-2 unverträglich, kein Port" — MF-698 hat die verteilbare Fassung aber an **GPL-3** gebunden, und Apache-2.0 ist GPLv3-verträglich. Betrifft `A-013` und `A-014` | keine der vier |
 | **V2** | Drei Schreibnaht-Stellen, zwei Erkenner mit **0** Produktivaufrufern, ein Etikett das niemand setzt (`G64_DIAG_SPLICE_DETECTED`) | keine der vier |
-| **V3** | Das Lücken-Füllbyte `0x4E` steht als Literal in 37 `.c`-Dateien (Kandidatenzahl); es gehört ins FDC-Profil mit Beleg und Quelle wie `gap_beleg`/`gap_quelle` seit MF-1177 | keine der vier |
+| ~~**V3**~~ | **ZURÜCKGENOMMEN MF-1187** (§5). Die 37 war eine Kandidatenzahl und hat die Prüfung nicht überstanden; meine Nachzählung war selbst falsch. Ein Vorschlag bleibt möglich, aber er braucht eine andere Messung: die Aufrufer von `uft_fdc_gap_space()` gegen die Stellen halten, die eine Lücke **schreiben** | keine der vier |
+| **V6** | **NEU MF-1187** (§2a). `Modules/BootstrapDB.vb` normalisiert XDF-Bootstraps — bei Länge `&H1AD` = 429 Byte werden `0xE7`–`0xEE` (8 Byte) genullt, dann CRC. Die Zulieferung hat das nicht (0 Treffer). Trifft die XDF-Lage aus MF-1087 und ARCH-18 | keine der vier |
 | **V4** | Provenienz gibt es für **Dateien** (`uft_provenance` 6 `.c`), nicht für den **Datenträger**; der OEM-Name wird 9× gelesen, der Bootstrap-Code 0× gehasht | keine der vier |
 | **V5** | Fehlerhafte Sektoren werden in 25 `.c` geführt, und **keine** Datei leitet aus dem Muster ein benanntes Verfahren ab — die Brücke zwischen MF-508 (Signale) und dem Katalog (Namen) | keine der vier |
 

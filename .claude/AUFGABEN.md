@@ -286,9 +286,27 @@ Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185 = `6dbb4ebf`),
   Apache-2.0 mit **GPL-3** verträglich ist — der Port-Kanal für `A-013`
   und `A-014` ist möglicherweise offen. **Eigentümer-Entscheidung, nicht
   meine.** Fünf Vorschläge stehen in §13 des Gutachtens.
+- **Nachtrag MF-1187 („mach weiter mit A-007"):** zwei der vier
+  Nicht-geprüft-Punkte aus §12 sind **geprüft**, und beide Ergebnisse
+  betreffen mich selbst. **(1) `Modules/BootstrapDB.vb` gelesen** — sie liegt
+  geklont im Baum (213 Zeilen). Die Belegkette **trägt wörtlich**: CRC32 über
+  den Bootstrap-Code ist der Schlüssel (`Dictionary(Of UInteger, …)`), der
+  OEM-Name der Prüfwert, und der Win9x-Rückfall steht im Original. **Neu
+  gefunden:** `FindXDFMatch()` nullt bei Bootstrap-Länge `&H1AD` = 429 Byte
+  die Bytes `0xE7`–`0xEE` (8 Byte) und rechnet die CRC neu — die Zulieferung
+  hat das **nicht** (0 Treffer), eine echte XDF-Diskette verfehlt damit ihren
+  Eintrag. Trifft MF-1087/ARCH-18. **Und ein Vorwurf von mir fällt:** der
+  `Verified`-Zustand **ist** übernommen (490 OEM-Namen, 223 verifiziert).
+  **(2) Die `0x4E`-Kandidatenzahl ist geprüft und ZURÜCKGENOMMEN.** Die
+  Fundstellen sind überwiegend Kennungen („RAIN", „BOUN"), 68000-Opcodes
+  (`0x4EFx`, `0x4E75`), ein Versatz `h[0x4E]`, eine Tafelzeile und
+  Greaseweazle-Befehlsbytes — kein Füllbyte. **Und meine Nachzählung war
+  selbst falsch:** 43 von 36, weil die zweite Messung still auf `grep -li`
+  schaltete (36 + 7 = 43). Es steht **keine dritte Zahl** an ihrer Stelle;
+  Vorschlag V3 ist zurückgenommen, V6 (XDF) ist neu.
 - **Beleg:** Gutachten
   `tools/uft-scout/out/a007_diskimagetool_herkunft.gutachten.md`,
-  **MF-1186** — Hash wird beim nächsten Commit nachgetragen.
+  **MF-1186 = `87abb0b3`**; Korrektur und Nachtrag **MF-1187** (Hash folgt).
 
 ### A-008 · Zulieferung `UFT_C64PP_Protection_Catalog.zip` begutachten
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
