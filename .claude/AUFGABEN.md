@@ -1521,7 +1521,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   `P3-63` fortgeschrieben (MF-1206).
 
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **angehalten am gemessenen Blocker** (das Orakel ist da, ein
+  echtes Abbild fehlt) · MF-1207 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple
   DOS.zip\" finde was ich vergessen habe und verbessere damit das tool"
 - **Kennzahl:** **keine der vier.** Die FS-Achse ist keine der vier
@@ -1560,11 +1561,47 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   112/278 BASIC, 452 Test), **71** `CHECK`-Zusagen; der Bericht hat §0
   „was ich nicht gebaut habe, und warum" und §6 „Belegkette", seine zwei
   Funde sind §2.3 gelöschte Einträge und §2.4 T/S-Listen mit Löchern.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **ANGEHALTEN, und der Halt ist das Ergebnis** — die eine
+  Vorbedingung ist **erfüllt**, die andere ist **gemessen unerfüllbar.**
+  · **Das Orakel ist da, und das ist neu.** `P3-384` verlangt „erst Orakel,
+    dann Port" und nennt `catseye/a2tools` (GPL-2, 837 Zeilen). Gemessen:
+    es **baut und läuft auf dieser Maschine** —
+    `gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c` unter MinGW 13.1.0, und
+    `a2tools_dos.exe dir <abbild>` antwortet mit seiner Hilfe. Die
+    Verteilung geht über `argv[1]` (DOS-Fassung) statt über `argv[0]`
+    (UNIX-Fassung, wo `a2ls.exe` ≠ `a2ls` scheitert). **Damit ist die
+    erste Hälfte von `P3-384` erfüllt** — und sie war offen.
+  · **ABER: es gibt nichts, was es lesen könnte.** Beide Korpusdateien mit
+    „dos33" im Namen werden abgewiesen („Not an Apple DOS 3.3 .dsk
+    image"), und der Grund ist gemessen: an der VTOC-Stelle (Spur 17,
+    Sektor 0, Versatz `0x11000`) stehen in **beiden** die Bytes
+    `55 46 54 2D 4B 20 54 31` = ASCII **„UFT-K T1"**. Es sind UFTs eigene
+    Selbstbenennungs-Marken; die Dateien sind **Sektorordnungs-Prüfmuster
+    ohne Dateisystem**. Das Manifest sagt es selbst: `"origin": "derived"`,
+    `"tool": "UFT-eigen (MF-1050) — kein Fremdwerkzeug, daher KEIN
+    Stufenkredit"`.
+  · **Baumweit nachgemessen:** über **alle** `.do`, `.dsk` und `.po` unter
+    `tests/` gibt es **0** Dateien mit einer gültigen DOS-3.3-VTOC
+    (Prüfung: DOS-Fassung 3, 35 Spuren, 16 Sektoren, 256 Byte/Sektor).
+  · **Folge für die Abschlussbedingung:** sie verlangt „die Stufe gegen
+    eine **fremde Hand** belegt (nicht gegen den eigenen Erzeuger)". Ein
+    DOS-3.3-Leser wäre baubar — **belegbar wäre er nicht**, und ein Leser
+    mit selbstgebautem Prüfstück ist genau der geschlossene Kreis von
+    `apridisk` (MF-1009) und `qrst` (MF-1028). Dazu die Lehre aus
+    **MF-1021**: ein erzeugtes Fixture ist erst dann ein Beleg, wenn sein
+    INHALT nachgewiesen ist.
+  · **Der nächste Griff ist damit benannt und klein:** ein **echtes**
+    DOS-3.3-Abbild beschaffen. `a2tools` kann **nicht formatieren** (es
+    hat `dir`/`out`/`in`/`del`, kein `format`), also muss das Abbild von
+    außen kommen — ein zeitgenössisches Objekt oder ein Emulator-Erzeugnis.
+    Erst danach ist dieser Posten arbeitsfähig.
+- **Beleg:** Halt gemessen MF-1207; Orakelbau
+  `tools/uft-scout/work/a2tools/a2tools_dos.exe` (gitignoriert).
 
 ### A-019 · Zulieferung `UFT-NN — TR-DOS.zip` — drei behauptete Feldadressen, SCL, Hobeta
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **angehalten mit Ergebnis** — alle drei Adressen stimmen
+  überein, der Defekt ist seit MF-970 behoben · MF-1207 ·
+  **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\UFT-NN
   — TR-DOS.zip\" finde was ich vergessen habe und verbessere damit das"
 - **Kennzahl:** **keine der vier.** `trd` steht auf **T1b**, `scl` auf
@@ -1601,8 +1638,37 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   `uft_scl_plugin.c` und drei Tests. Zulieferung: 3 Quellen, **1148**
   Zeilen (306/387/455), **67** `CHECK`-Zusagen; der Bericht nimmt in §6
   eine eigene Behauptung **zurück**.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **ANGEHALTEN — der gemeldete Defekt existiert nicht mehr, und
+  das ist gemessen.** Alle drei behaupteten Feldadressen einzeln gegen den
+  Baum abgezählt:
+  | Feld | Zulieferung | `src/formats/trd/uft_trd_parser_v2.c` | |
+  |---|---|---|---|
+  | Dateizahl | `0xE4` | `info->file_count = sys[0xE4];` (:310) | **stimmt** |
+  | freie Sektoren | `0xE5` | `sys[0xE5] \| (sys[0xE6] << 8)` (:311) | **stimmt** |
+  | gelöschte Dateien | `0xF4`, EIN Byte | `info->deleted_files = sys[0xF4];` (:343) | **stimmt** |
+  · **Und der Baum sagt es selbst:** Zeile 314 trägt den Vermerk
+    „**MF-970: hier stand `sys[0xE9] | (sys[0xEA] << 8)`.**" — genau der
+    Defekt, den die Zulieferung meldet, samt zitierter Rücknahme an Ort und
+    Stelle. Das ist der **zweite** Fall dieser Art nach A-008 (dort
+    MF-402): eine Zulieferung meldet richtig, was der Baum bereits behoben
+    hat.
+  · **Das registrierte Plugin liest die Felder gar nicht.**
+    `src/formats/trd/uft_trd.c` — die einzige Datei mit
+    Plugin-Registrierung — liest **nur** die Dateizahl bei `0x8E4`, und
+    zwar für die Sonde. Weder `0xF4` noch `0xE9`/`0xEA` kommen dort vor.
+    Die falsche Lesart konnte also seit MF-970 **nirgends** wirksam werden.
+  · **Ein zweiter Befund fiel nebenbei an, und er ist derselbe wie bei
+    A-018:** `tests/corpus_free/gw_trd.img` (655 360 B) hat **keinen
+    echten TR-DOS-Infosektor**. Die Bytes `0x8E0..0x8FF` sind eine lineare
+    Rampe mit Schrittweite `0x1F` (`58 77 96 B5 D4 F3 …`) — ein
+    erzeugtes Muster auf Behälterebene, kein Dateisystem. Gemessen ergäbe
+    es „212 Dateien", „4851 freie Sektoren" und „196 gelöschte" —
+    allesamt unmöglich. **Zweites Abbild in Folge, das seinen Namen trägt
+    und sein Dateisystem nicht** (MF-1021).
+  · **Der Widerspruch aus der Aufnahme (S5-Gebiet) löst sich damit auf:**
+    MF-729s Sondeneichung und die Feldlage können beide stimmen, weil die
+    Sonde nur `0x8E4` liest und die übrigen Felder nie anfasst.
+- **Beleg:** Halt gemessen MF-1207; keine Änderung am Baum nötig.
 
 ### A-020 · Zulieferung `UFT-NN — Amiga.zip` — Dateisystem-Diskette oder Trackloader mit DOS-Kopf?
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
