@@ -1177,7 +1177,8 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   `tools/uft-scout/out/a013_amigadiskkit.gutachten.md`.
 
 ### A-014 · `SecurityRonin/disk-forensic` auseinandernehmen — und die Vorfrage lautet: ist das Diskettenarbeit?
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; Urteil **Fundus** —
+  die Vorfrage ist mit Nein beantwortet) · MF-1204 · **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/SecurityRonin/disk-forensic.git nimm den
   code komplett auseinander , sehr genau / finde alles und alles raussuchen
   was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
@@ -1247,6 +1248,39 @@ ist bei jeder ein eigener, noch nicht aufgenommener Posten.
   MF-640 Fundus. Einbau **entfällt** unter dem heutigen Lizenzurteil; ein
   E01-Schreiber wäre ein **Nachbau** nach benannter Spezifikation und ein
   eigener Posten mit eigener Eigentümer-Entscheidung.
+- **Stand:** **Gutachten geschrieben**,
+  `tools/uft-scout/out/a014_disk_forensic.gutachten.md`, (a)…(e).
+  · **(b) DIE ANNAHME DIESER AUFNAHME FÄLLT — und das ist der Befund.**
+    Sie setzte darauf, dass das Repo den **E01-Aufbau zeigt**. Gemessen
+    über alle **2 146** Zeilen: **es implementiert E01 überhaupt nicht.**
+    Es vergleicht die Kennung (`ewf::EVF1_SIGNATURE`, `EVF2`, `LEF2`) und
+    ruft dann `::ewf::EwfReader::open(path)` — eine **externe Kiste**. Der
+    Quelltext sagt es selbst an `container.rs:123-124`: „the decoder is the
+    external `ewf` crate". **Keine Blockgröße, keine CRC-Stelle, kein
+    Fehlerbereichs-Satz, keine Fallmetadaten.** Als *Spec*-Quelle für E01
+    taugt es nicht; die kanonische Beschreibung liegt bei **libewf** bzw.
+    der ASR-Dokumentation — was die Aufnahme zur Hälfte selbst
+    vorweggenommen hatte.
+  · **(a) Die Vorfrage ist mit NEIN beantwortet.** Von zehn Gegenständen
+    ist keiner Diskettenarbeit: VMDK/VHDX/VHD sind VM-Behälter, DMG ist
+    macOS, ISO 9660 optisch, GPT/APM Festplatten-Partitionsschemata. **Eine
+    3,5-Zoll-Diskette hat keine Partitionstabelle** — und GPT (48), MBR
+    (40) und APM (25) sind mit 113 Nennungen der größte Einzelblock des
+    Repos. Einzige Berührung ist MBR, und dort ist der Baum punktuell
+    versorgt (`uft_fat32_mbr.h/.c`).
+  · **Eine weitere Zahl der Aufnahme fällt:** sie zählte acht Behälter
+    auf, darunter **QCOW2** — gemessen **0 Treffer** im Quelltext. Das Repo
+    behandelt die Behälter nicht, es **erkennt und delegiert**; einzige
+    eigene Umsetzung ist `vhd.rs` (244 Z.).
+  · **(c) Die Brücke zu `P3-387` ist begründet VERWORFEN**, nicht
+    hergestellt: sie führt richtig über E01 (CRC je Block,
+    Bereichsvermerk für fehlerhafte Sektoren) — nur nicht über dieses Repo.
+  · **(e) Orakel verschlossen** (kein `cargo`/`rustc`) und **es lohnt
+    nicht**: ein Orakel ohne gemeinsame Gegenstände vergleicht nichts.
+  · **Urteil: FUNDUS.** Kein Port (Apache-2.0), kein Orakel, kein
+    Spec-Gewinn.
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a014_disk_forensic.gutachten.md`.
 - **Stand:** —
 - **Beleg:** —
 
