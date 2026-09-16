@@ -3514,6 +3514,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_track_layout")
+        # MF-1173: das Spurmodell liegt in `src/core/`, nicht im Header —
+        # `uft_tl_*` sind echte Funktionen. Eigener Zweig aus demselben
+        # Grund wie bei `test_fdc_profil_verdrahtet` (MF-1168): der
+        # `IHR_FORMAT_SOURCES`-GLOB gilt nur fuer die drei Wandlungstests,
+        # und `src/core/` erfasst er ohnehin nicht.
+        #
+        # Das Modul hat KEINEN Produktionsaufrufer; dieser Test ist sein
+        # erster und bis auf weiteres einziger. Begruendung im Header.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_track_layout.c)
     elseif(${test_name} STREQUAL "test_fdc_gap3"
            OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet")
         # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —

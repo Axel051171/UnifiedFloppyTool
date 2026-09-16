@@ -883,9 +883,26 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 
     size_t expected_size = (size_t)cylinders * heads * sectors * sector_size;
     if (src_size < expected_size) {
+        /* MF-1173: hier stand „padding with zeros" — und gefuellt wird mit
+         * 0xE5 (`memset(pad, 0xE5, sector_size)` weiter unten). Das ist
+         * nicht nur die falsche Zahl in einer Meldung: wer 0x00-Bloecke
+         * sucht, findet keine, und 0xE5 ist ausgerechnet das Fuellbyte
+         * einer frisch formatierten Diskette — die erfundenen Daten sind
+         * also als plausibler Medieninhalt getarnt. Die Meldung sagt
+         * deshalb jetzt das Byte UND dass es erfunden ist.
+         *
+         * Was sie weiterhin NICHT kann: es in der Datenstruktur
+         * vermerken. Das Vokabular dafuer liegt seit MF-1173 in
+         * `include/uft/core/uft_track_layout.h` (`UFT_SEC_PADDING_SECTOR`)
+         * und hat hier noch keinen Aufrufer — P3-422. Woertlich die Lage
+         * von MF-1135: die Warnung erreicht den Bediener, die
+         * Datenstruktur nicht. */
         uftc_add_warning(result,
-                 "Source size %zu < expected %zu, padding with zeros",
-                 src_size, expected_size);
+                 "Source size %zu < expected %zu: %zu invented bytes are "
+                 "appended with the fill byte 0xE5 (not zeros, and not read "
+                 "from any medium) so the geometry stays complete. They are "
+                 "NOT marked as padding in the sector data (MF-1173/P3-422).",
+                 src_size, expected_size, expected_size - src_size);
     }
 
     /* MF-1170: ein ZUVIEL war bisher still — und bei einer 2,88-M-Diskette

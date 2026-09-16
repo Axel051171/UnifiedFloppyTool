@@ -781,6 +781,7 @@ SOURCES += \
     src/core/uft_decoder_plugin_stub.c \
     src/core/uft_sha256.c \
     src/core/uft_snapshot.c \
+    src/core/uft_track_layout.c \
     src/diag/uft_disc_diagnostics.c \
     src/display/uft_display_track.c \
     src/compat/uft_fnmatch.c \

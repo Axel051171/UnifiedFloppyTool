@@ -114,8 +114,29 @@ typedef struct uft_disk_geometry {
     uint8_t  step_rate;         /**< Step rate (if known) */
     uint16_t rpm;               /**< Nominal RPM (300 or 360) */
     
-    bool     variable_sectors;  /**< Sectors vary by track */
-    bool     variable_density;  /**< Density varies */
+    /* MF-1173: diese zwei Flags VERSPRECHEN ungleichfoermige Geometrie und
+     * tragen nichts. Gemessen hat jedes davon genau eine Nennung im ganzen
+     * Baum — seine eigene Deklaration hier; niemand setzt sie, niemand
+     * liest sie, und das Tote-Felder-Tor (MF-831/MF-1163) fuehrt beide.
+     *
+     * Sie bleiben ABSICHTLICH stehen (MF-1077: umschreiben, nicht
+     * entfernen) und sagen jetzt, wo die Struktur liegt, die sie meinen:
+     * `include/uft/core/uft_track_layout.h`. Dort traegt JEDER Sektor
+     * seine Groesse, seine gelesene Nutzlaenge und seine HERKUNFT, und die
+     * Spur ihre eigene Kodierung — `sectors` und `sector_size` hier oben
+     * sagen selbst „if uniform" und koennen es strukturell nicht.
+     *
+     * Was sie nicht koennen und `uft_tl_track_t` kann: unterscheiden, ob
+     * ein Sektor vom Medium kam oder von uns angehaengt wurde. An genau
+     * dieser Unterscheidung ist der Baum dreimal gescheitert (MF-1022,
+     * MF-1038, MF-1135).
+     *
+     * Ein Setzer fuer beide Flags waere erst sinnvoll, wenn ein
+     * Format-Plugin `uft_tl_track_t` wirklich erzeugt; heute tut das
+     * keines (P3-422). Bis dahin ist „null Nutzer" die ehrliche Lage und
+     * keine Nachlaessigkeit. */
+    bool     variable_sectors;  /**< Sectors vary by track — siehe uft_track_layout.h */
+    bool     variable_density;  /**< Density varies — siehe uft_track_layout.h */
 } uft_disk_geometry_t;
 
 /*===========================================================================
