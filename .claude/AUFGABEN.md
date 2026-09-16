@@ -26,14 +26,14 @@ laufen fort und werden nie wiederverwendet.
 
 *(höchstens einer — leer heißt: nichts läuft)*
 
-**Leer.** `A-005` war hochgezogen und ist **erledigt** (Gutachten, MF-1184);
-sein Eintrag steht unverändert an seinem Platz in der Warteschlange unten und
-trägt dort Status, Stand und Beleg. Der Eintrag wird hier **nicht**
-wiederholt — zwei Fassungen desselben Postens wären zwei Wahrheiten, und
-genau dagegen ist diese Liste gebaut (D3).
+**Leer.** `A-006` ist **erledigt** (Gutachten, MF-1185); sein Eintrag steht
+unverändert an seinem Platz in der Warteschlange unten und trägt dort Status,
+Stand und Beleg. Er wird hier **nicht** wiederholt — zwei Fassungen desselben
+Postens wären zwei Wahrheiten (D3).
 
-`/aufgabe weiter` zieht damit **`A-006`** hoch (Zulieferung
-`hacking floppy disk.zip`, Kopierschutz/Umdrehungen).
+Erledigt: `A-005` (MF-1184 = `2aa7bda6`), `A-006` (MF-1185).
+`/aufgabe weiter` zieht **`A-007`** hoch (Zulieferung
+`DiskImageTool-extrakt.zip`).
 
 ---
 
@@ -112,12 +112,13 @@ genau dagegen ist diese Liste gebaut (D3).
   Lizenzentscheidung — das ist ein eigener Posten, wenn der Eigentümer ihn
   will.
 - **Beleg:** Gutachten `tools/uft-scout/out/a005_floppy_reference_aard.gutachten.md`,
-  **MF-1184** — der Commit-Hash wird beim nächsten Commit nachgetragen, weil
-  diese Zeile mit im MF-1184-Commit liegt und ihren eigenen Hash nicht
-  kennen kann.
+  **MF-1184 = `2aa7bda6`** (2 Dateien, 1012 Zeilen, alle Vorhaken grün).
+  Nachgetragen wie angekündigt: die Zeile lag im MF-1184-Commit selbst und
+  konnte ihren eigenen Hash nicht kennen.
 
 ### A-006 · Zulieferung `hacking floppy disk.zip` (Kopierschutz/Umdrehungen) begutachten
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist offen) ·
+  **Aufgenommen:** 2026-09-16 · hochgezogen mit „weiter zieht A-006 hoch"
 - **Wortlaut:** „finde alles und alles raussuchen was ich übersehen habe /
   - wo können die formate verbessert werden / - ist es auf andere formate
   übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
@@ -172,8 +173,31 @@ genau dagegen ist diese Liste gebaut (D3).
 - **Aufwand:** Begutachtung eine Sitzung (521 Zeilen Analysedokument +
   4 Quelldateien + 1 Test). Einbau **nicht schätzbar** — er hängt an der
   Lizenzfrage und daran, ob ein geschütztes Abbild beschafft werden kann.
-- **Stand:** —
-- **Beleg:** —
+- **Stand:** **Begutachtung fertig.** Gutachten liegt als
+  `tools/uft-scout/out/a006_kopierschutz_umdrehungen.gutachten.md`
+  (399 Zeilen). Alle sechs Bedingungen der Zeile `Fertig heißt` erfüllt.
+  **Kernbefunde:** der Code ist gut — Bau mit `-Werror -pedantic` 0
+  Warnungen, 7 Tests grün **mit eigenen Rot-Proben**, und der Klassierer
+  sagt `UNDECIDED` statt zu raten (an 20 000 Bits gemessen: weak 0, fuzzy 0
+  bei 50,17 % Flackern). Die **Lagebeschreibung** ist zur Hälfte veraltet:
+  `P3-238` ✅ MF-951/954 (`uft_hal_read_flux_ex()` trägt die
+  Umdrehungsgrenzen, **SCP verdrahtet**), `P3-236` ✅ MF-949, `P3-237` ✅
+  MF-950. Drei Behauptungen berichtigt: Zeile **386** statt 355;
+  **Greaseweazle behält** die Indexzeiten (`uft_gw_decode_flux_index_times`);
+  vier Zählungen um 1-2 daneben. Echte Lücken: `uft_flux_revolution_t` 0
+  `.c`-Verwender **plus Phantom-API** (`uft_flux_revolution_alloc`, 1
+  Deklaration / 0 Definitionen), und Sektor-im-Sektor sowie verschobene
+  Spuren (je 0 Treffer). **`uft_rev_align()` ist im Vertrag genannt und
+  nicht geliefert** — MF-950 hat gemessen, dass ihr Fehlen 99,71 %
+  falsches Flackern kostet. **Und drei meiner eigenen vier Erwartungen
+  fielen**, weil die Feldbeschreibung von `flux_count` („gemittelt") ihrer
+  Umsetzung (`(hi-lo)*16`) widerspricht — das ist der Befund, nicht mein
+  Testergebnis. **Der Einbau ist NICHT gemacht** (S1 für zwei unbelegte
+  Schwellen, Lizenzfrage zu DrCoolZics „Copyleft" offen).
+- **Beleg:** Gutachten
+  `tools/uft-scout/out/a006_kopierschutz_umdrehungen.gutachten.md`,
+  **MF-1185** — Hash wird beim nächsten Commit nachgetragen, aus demselben
+  Grund wie bei `A-005`.
 
 ### A-007 · Zulieferung `DiskImageTool-extrakt.zip` (Herkunft · Schreibnähte · PC-Schutzmuster) begutachten
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
@@ -373,6 +397,213 @@ genau dagegen ist diese Liste gebaut (D3).
 - **Aufwand:** Begutachtung eine Sitzung (341 Zeilen Modul + Header + Test
   + 1413 Byte Doku + sechs Dateidiffs). Einbau **nicht schätzbar** — er
   hängt an der Quellenangabe und an sechs Diffs gegen lebenden Code.
+- **Stand:** —
+- **Beleg:** —
+
+### A-010 · Zulieferung `FloImg-extrakt.zip` (Ganzdurchläufe · Mediendiagnosen) auseinandernehmen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „nimm den code komplett auseinander , sehr genau / finde
+  alles und alles raussuchen was ich übersehen habe , stimme es mit mein
+  aktuellen tool ab / - wo können die formate verbessert werden / - ist es
+  auf andere formate übertragbar / - welche einstellungen fehlen noch / -
+  was habe wir noch nicht / - brauch es eine HAL-Erweiterungen plan
+  verstanden, was kannst du besser machen ??"
+- **Kennzahl:** **keine der vier für die Begutachtung.** Ganzdurchläufe und
+  Mediendiagnosen sind keine Tier-Stufe und kein Wandlungspfad. **Ein
+  Einbau könnte allerdings P3-284 abtragen** („`adaptive_passes` war ein
+  Schalter ohne Schaltung — und der forensische Bericht meldete ihn als
+  ‚yes'"), und das ist Rücknahme einer Falschaussage, also die Richtung von
+  MF-1077.
+- **Kanal:** **Spec.** Die Belegkette der Zulieferung nennt zwei Quellen:
+  **FloImg 1.02** (Petari, 8bitchip.info, Hilfe zu v1.02 vom 2011-08-08) für
+  „Ganzdurchläufe bringen mehr als sofortige Wiederholungen", und
+  `NFORMAT.DOC` (1992) plus cw2dmk `jv3.h` (GPL-2, nur gelesen) für die
+  Spurkapazität — **letzteres ist dieselbe Quelle, an der MF-1166 und
+  MF-1183 hängen**. Gemessen: **keine `LICENSE`-Datei** im Paket, aber
+  `SPDX` steht in `uft_os_volume.c`. Die Paketlizenz ist damit ungeklärt,
+  die Dateilizenz nicht.
+- **Einfrier-Regel:** **ja.** `src/hal/` und `src/analysis/` grenzen an den
+  Decoder-Layer, und `uft_os_volume.c` ist lebender Code aus MF-1176.
+  Rotbeweis zuerst.
+- **OPEN_ITEMS:** **viele Treffer, und sie sind der Maßstab.** `P3-284`
+  (`adaptive_passes` ohne Schaltung), `P3-113` (`distinct_contents` zählte
+  nicht, was sein Name sagt — behoben MF-860, `classify_passes()`),
+  `P3-88` (Multi-Read-Voting konnte einen Sektor erfinden — behoben
+  MF-845), `P3-291` (leere Sektoren werden gezählt, nicht gewählt),
+  `P3-429` (HAL-Merkmalstafel ohne Leser).
+- **Bei der Aufnahme gemessen — vier Dinge, zwei davon entscheiden schon:**
+  **(1)** Das Paket **erweitert**, statt zu ersetzen:
+  `include/uft/hal/uft_os_volume.h` Baum 8 145 / Paket 9 625 (**+1 480**),
+  `src/hal/uft_os_volume.c` Baum 10 557 / Paket 13 984 (**+3 427**). Das
+  ist das **Gegenteil** des A-008/A-009-Musters und gehört gelobt.
+  **(2)** Die Wiederholungsinfrastruktur ist **da**: `retries` in **46**
+  `.c` und **23** `.h`, `multiread_execute` 7 `.c`, `distinct_contents`
+  3 `.c`, `classify_passes` 2 `.c`, `adaptive_passes` 2 `.c`. Ein
+  „`--passes` neben `--retries`" trifft also auf einen bestellten Tisch.
+  **(3) Und hier liegt ein harter Konflikt: `--passes` ist ein
+  CLI-Schalter, und dieses Projekt hat kein CLI.** Gemessen: 0 Dateien
+  passen auf `cli\.c|main_cli|uft_cli`, und `CLAUDE.md` sagt „Dies ist ein
+  **GUI-only-Projekt**. Es gibt keinen CLI-Modus mehr." Der Vorschlag
+  gehört also an die Oberfläche oder an einen Optionssatz, nicht an eine
+  Kommandozeile — das ist bei der Begutachtung zu entscheiden, nicht zu
+  übernehmen. **(4)** Die Zulieferung stellt selbst eine Frage, die ich
+  beantworten kann: „hat das `FloppyDevice`-Subsystem überhaupt einen
+  Verteiler?" Sie zählt 79 Dateien, ich zähle **84** über
+  `git ls-files | xargs grep -l 'uft_floppy_device.h'` — und der
+  Gedächtnisstand `arch_formate_8bit` sagt, **alle** externen Aufrufer
+  seien Tests. Die Antwort lautet damit wahrscheinlich „nein", und sie
+  gehört gemessen statt zitiert.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** jede
+  öffentliche Funktion der vier Paketdateien einzeln gegen den Baum hält —
+  „gibt es / gibt es anders / gibt es nicht", je mit `git ls-files`-Messung,
+  weil der Auftrag ausdrücklich „komplett auseinander, sehr genau" und
+  „stimme es mit mein aktuellen tool ab" sagt; **(b)** für `uft_os_volume`
+  einen **Zeilendiff** gegen den lebenden Stand aus MF-1176 nennt, nicht
+  eine Dateiübernahme; **(c)** die fünf Fragen je mit Messung beantwortet;
+  **(d)** den CLI-Konflikt ausdrücklich entscheidet; **(e)** die
+  Paketlizenz als offene Frage stehen lässt; und **(f)** kein Byte des
+  Pakets nach `src/`, `include/` oder `tests/` schreibt.
+- **Aufwand:** Begutachtung eine Sitzung (279 Zeilen Bericht + 4
+  Quelldateien + 1 Test + 2 Dateidiffs gegen lebenden Code). Einbau
+  **nicht schätzbar** — er hängt am CLI-Konflikt und an P3-284.
+- **Stand:** —
+- **Beleg:** —
+
+### A-011 · Zulieferung `Metadaten.zip` (Herkunft · Datierung über die VSN) begutachten
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „arbeite alles sehr genau aus / finde alles und alles
+  raussuchen was ich übersehen habe / - wo können die formate verbessert
+  werden / - ist es auf andere formate übertragbar / - welche einstellungen
+  fehlen noch / - was habe wir noch nicht / - brauch es eine
+  HAL-Erweiterungen"
+- **Kennzahl:** **keine der vier.** Metadaten und Datierung sind keine
+  Tier-Stufe und kein Wandlungspfad. **Aber es berührt die fünfte Zahl, die
+  MF-640 offengelassen hat** („Dateien mit ungeklärter Herkunft") — und
+  zwar von der anderen Seite: hier geht es um die Herkunft des
+  **Datenträgers**, nicht der Quelldatei. Dieselbe Verschränkung wie
+  `A-007`; welche Zahl das ist, gehört zur Antwort.
+- **Kanal:** **Spec, und die Belegkette ist die beste dieser Reihe.** Für
+  die VSN-Formel `(Sek<<8|Hundertstel)+(Monat<<8|Tag)`,
+  `(Std<<8|Min)+Jahr`: Craig Wilson, *Volume Serial Numbers and Format
+  Date/Time Verification*, digital-detective.net, plus Ralf Brown. Dazu ein
+  **veröffentlichter Prüfvektor** (19.10.2003 22:33:27.01 → `2514-1DF4`),
+  den die Zulieferung nachgerechnet hat — „beide Wörter treffen". Weitere
+  Aussagen gegen MAME `imd_dsk.cpp`, a8rawconv `rawdiskscp.cpp:380-424`
+  und den **eigenen Baum** (`uft_2img.c:6-21`, `uft_scp_writer.c:292`).
+  Gemessen: `SPDX` steht in beiden Quelldateien, **keine `LICENSE`-Datei**
+  im Paket — wie bei `A-006`.
+- **Einfrier-Regel:** **ja, mittelbar.** `src/analysis/` grenzt an den
+  Decoder-Layer, und die VSN-Deutung ist eine Aussage über ein
+  Dateisystemfeld. Rotbeweis zuerst — und der Prüfvektor **ist** einer,
+  weil er von außen kommt.
+- **OPEN_ITEMS:** **`P3-387`** ist der nächste Nachbar: „Zwei forensische
+  Fähigkeiten, die der Baum nicht hat, und die seine eigene Mission
+  verlangt" — darunter „`uft_format_mark_last_missing()` kennzeichnet im
+  SPEICHER, und keine Datei trägt es hinaus — der Befund existiert im Lauf
+  und überlebt ihn nicht". Das ist dieselbe Klasse wie „gelesen und
+  weggeworfen". Dazu `P3-354` (WOZ-CRC stellt eine Beschädigung fest und
+  hat keinen Weg, sie zu melden).
+- **Bei der Aufnahme gemessen — vier Dinge:** **(1) Die saubersten
+  Zulieferungsform bisher:** alle fünf Dateien sind **neu**, keine
+  Überlappung mit dem Baum, **keine** mitgelieferten Baudateien. Kein
+  Diff gegen lebenden Code nötig. **(2) Die tragende Behauptung trifft
+  präzise zu:** „`metadata_count` in keiner `.c` außer MOOFs eigener
+  Struktur" — gemessen ist `metadata_count` in **genau einer** `.c`-Datei
+  genannt, `src/formats/apple/uft_moof_parser.c`. **(3) VSN als Begriff
+  fehlt im Baum vollständig:** der einzige Treffer auf `VSN` ist
+  `resload_VSNPrintF` in `src/whdload/`, also unverwandt. `volume_serial`
+  wird dagegen gelesen (3 `.c` / 8 `.h`) und über `fat_format_serial()`
+  nur **angezeigt** (`%04X-%04X`) — gelesen, nicht gedeutet. **(4) Die
+  Zahl „drei unvereinbare Metadatenmodelle" ist womöglich zu niedrig:**
+  gemessen nennen mindestens **acht** Header „metadata", darunter
+  `uft_disk.h`, `uft_format_registry.h`, `uft_snapshot.h` und
+  `uft_flux_meta.h`. Das gehört nachgezählt, nicht übernommen.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** jede der fünf
+  Fragen mit einer Messung gegen den Baum beantwortet; **(b)** den
+  veröffentlichten Prüfvektor **selbst nachrechnet** statt die Nachrechnung
+  zu zitieren — das ist der einzige Rotbeweis, der hier von außen kommt;
+  **(c)** die offene Bytefolge-Frage („die VSN-Bytefolge im Sektor ist aus
+  den Quellen nicht zweifelsfrei zu entnehmen") als offen stehen lässt und
+  messbar macht, statt sie zu entscheiden; **(d)** die Zahl der
+  Metadatenmodelle nachzählt; **(e)** die Paketlizenz als offene Frage
+  nennt; und **(f)** kein Byte des Pakets nach `src/`, `include/` oder
+  `tests/` schreibt.
+- **Aufwand:** Begutachtung eine Sitzung (487 Zeilen Bericht + 4
+  Quelldateien + 1 Test, alle neu). Einbau **nicht schätzbar** — er hängt
+  an der Bytefolge-Frage und daran, ob ein Träger mit bekanntem
+  Formatierungsdatum beschafft werden kann (die Zulieferung nennt das
+  ausdrücklich als „nicht verifiziert").
+- **Stand:** —
+- **Beleg:** —
+
+### A-012 · `yas-sim/xm7-related-tools` auseinandernehmen (FM-7: D77 · T77 · FM-Dateisystem · Boot-ROM)
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-16
+- **Wortlaut:** „https://github.com/yas-sim/xm7-related-tools.git nimm den
+  code komplett auseinander , sehr genau / finde alles und alles raussuchen
+  was ich übersehen habe , stimme es mit mein aktuellen tool ab / - wo
+  können die formate verbessert werden / - ist es auf andere formate
+  übertragbar / - welche einstellungen fehlen noch / - was habe wir noch
+  nicht / - brauch es eine HAL-Erweiterungen"
+- **Kennzahl:** **keine der vier für die Begutachtung** — aber dieser Fund
+  zielt auf die Achse, die `P3-389` als **die dünnste des Baums** benennt:
+  „Die DEKODIERKETTE ist die duennste Achse des Baums … und der FM-Weg hat
+  bis heute keinen ERZEUGER." Ein FM-Erzeuger wäre kein Kennzahlwert,
+  sondern das **Werkzeug**, mit dem FM-Formate überhaupt eine Prüfspur
+  bekommen (MF-864 musste dafür `fluxtoimd` von fremder Hand nehmen).
+- **Kanal:** **Port zulässig — und das ist die Ausnahme in dieser Reihe.**
+  Gemessen über `gh api`: `license.spdx_id` = **MIT**, 925 KB, C++,
+  7 Sterne, letzter Push **2022-09-21**, Standardzweig `main`. Damit ist
+  der stärkste Kanal aus MF-695 offen. **Zwei Vorbehalte gehören dazu:**
+  die 16 `.zip`-Dateien enthalten vorgebaute Windows-Binärdateien (Kanal
+  *Oracle*, nicht *Port*), und für **Prüfdaten** gilt weiter, was
+  `SCOUT-5` festgehalten hat — „das Repo ist MIT, der Disketten-INHALT
+  hat eigene Urheber".
+- **Einfrier-Regel:** **ja.** Jeder Einbau berührt den Format- oder
+  Decoder-Layer. Rotbeweis zuerst, benannte Referenz im Header.
+- **OPEN_ITEMS:** **drei Treffer, und der erste ist derselbe Autor.**
+  **`P3-389`** entstand auf genau diese Eigentümer-Frage („finde was ich
+  uebersehen habe") zu `yas-sim/fdc_bitstream` — Behälter und Dateisystem
+  wurden bewertet, die **Dekodierkette fehlte in der Bewertung**, und die
+  Messung MF-1121 ergab: kein FM-Erzeuger. **`SCOUT-5`** nennt ein
+  D77-Wahrheitspaar beim Upstream (`2019FM77AVDemo-4MHz.raw`, `-8MHz.raw`,
+  `2019FM77AVDemo.d77`), **blockiert bis Lizenzklärung**. Dazu `P3-218`
+  („kein FM-Encoder, deshalb die Fremdabnahme durch `fluxtoimd`").
+- **Bei der Aufnahme gemessen — fünf Dinge:** **(1) Es ist ein echtes
+  Quellrepo:** 183 Blobs, davon **70 Quelldateien** (42 `.cpp`, 25 `.h`,
+  3 `.c`), dazu `CMakeLists.txt`, 9 ROM-Listings (`.lst`), 7
+  Assemblerquellen (`.s`/`.src`) — und 16 `.zip` mit Binärdateien.
+  **22 Werkzeuge** auf oberster Ebene, darunter `d77enc_dec`, `d77uty`,
+  `fmtools` (mit `fmfslib/cfilesys.cpp`), `t77dec`, `t772wav`, `wav2t77`,
+  `fdump`, `BootROM`. **(2) `T77` fehlt im Baum vollständig:** 0 Dateien
+  für `t77`/`T77`. Gemessen über zitierte Endungen in `.c`-Dateien führt
+  der Baum an Bandformaten nur `"cas"` (2×) und `"tzx"` (1×) — die Methode
+  ist eng, aber der T77-Nullwert ist eindeutig. **(3) Kein
+  FM-7-Dateisystemeintrag** in `docs/VERIFICATION_TIERS_FS.md`.
+  **(4) `d77` steht heute auf T1b** mit `test_d77_gegen_hxcfe`,
+  `test_d88_header_variants` und `test_oeffentliche_api_am_korpus`, Quelle
+  pc98.org — **`SCOUT-5`s Messung „T3 ohne alles" ist damit veraltet**, die
+  Lizenzsperre bleibt. **(5) Und der eigentliche Grund, hinzusehen:** das
+  Repo enthält **Erzeuger** — `wav2t77` schreibt Bandaudio, `d77enc`
+  schreibt D77 —, und P3-389s Befund lautet, dass dem FM-Weg genau das
+  fehlt. Ob einer davon **der** fehlende FM-Erzeuger ist, ist die erste zu
+  klärende Frage, nicht ihre Antwort.
+- **Fertig heißt:** ein Gutachten als Dokument, das **(a)** die 70
+  Quelldateien nach Werkzeug gruppiert durchgeht und je Werkzeug „für UFT
+  brauchbar / Oracle-Kandidat / uninteressant" mit Grund vergibt — der
+  Auftrag sagt „komplett auseinander, sehr genau"; **(b)** die Frage von
+  P3-389 ausdrücklich beantwortet: liefert dieses Repo einen FM-**Erzeuger**,
+  und wenn ja, für welche Kodierung; **(c)** je Fund den Kanal nennt (Port
+  bei MIT-Quelle, Oracle bei Binärdatei, Spec bei ROM-Listing) und die
+  Lizenzfrage der **Prüfdaten** getrennt davon offen lässt (SCOUT-5);
+  **(d)** die fünf Fragen je mit Messung gegen den Baum beantwortet;
+  **(e)** `T77` und das FM-Dateisystem als gemessene Lücken belegt statt
+  behauptet; und **(f)** kein Byte nach `src/`, `include/` oder `tests/`
+  schreibt — geklont wird nach `tools/uft-scout/work/`, dem dafür
+  vorgesehenen Ort.
+- **Aufwand:** Begutachtung **mehr als eine Sitzung** — 70 Quelldateien in
+  22 Werkzeugen sind mehr als jede bisherige Zulieferung dieser Reihe
+  (A-010 hatte 4). Genauer nicht schätzbar. Einbau **nicht schätzbar** und
+  in jedem Fall ein eigener Posten.
 - **Stand:** —
 - **Beleg:** —
 
