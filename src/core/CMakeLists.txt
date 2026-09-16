@@ -59,6 +59,17 @@ set(CORE_SOURCES
     ../formats/cbm/uft_cbm_geometry.c  # MF-434: the CBM drive geometries,
                                        # used by every CBM plugin and the
                                        # GCR encoder
+    # MF-1195 / P3-445: die Referenztafel gehoert hierher, weil
+    # `uft_smart_open.c` — ein Mitglied DIESER Bibliothek — sie ruft.
+    # Gemessen fiel genau EIN Ziel ohne diese Zeile
+    # (`test_smart_open_quality`, drei undefinierte Bezuege); die anderen
+    # 57 bekommen die Datei ueber die `src/formats/*.c`-GLOBs der Tests.
+    # Sie hier einzutragen ist die eine Stelle statt der 58. Dasselbe
+    # Muster wie die CBM-Geometrie darueber.
+    #
+    # Die Datei zieht nur ihren eigenen Header und libc ein — kein
+    # Rueckgriff auf die Format-Schicht, also keine neue Kopplung.
+    ../formats/reference/uft_floppy_reference.c
     uft_write_precomp.c        # TA1 M2: Mac-800K peak-shift compensation
 )
 

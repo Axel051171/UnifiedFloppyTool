@@ -98,14 +98,35 @@ laufen fort und werden nie wiederverwendet.
     fallen an genau dieser Frage. Ein Plan, der D2 erst beim Bauen prüft,
     plant die Hälfte seiner Posten gegen eine Wand. **Für Phase 5 wird die
     Erreichbarkeit zuerst gemessen.**
-  · Als Nächstes **Phase 5** (`P3-445`, A-005: erst der Defekt im
-    Abgleicher — `tied`/`ambiguous`, `FELD_UNBEKANNT`/`TRIFFT`/
-    `WIDERSPRICHT` —, dann der Katalog). Erste Handlung: Aufrufer zählen,
-    Kommentare von Aufrufen getrennt.
+  · **Phase 5** (`P3-445`, A-005): **FERTIG MF-1195.** Und die
+    vorgezogene Erreichbarkeitsmessung hat getragen — sie fiel erstmals
+    seit Phase 2 positiv aus: `uft_probe_ranking_t` liegt in **3**
+    Produktivdateien, `analyze_quality()` in `uft_smart_open.c` hält
+    Zylinder/Köpfe/Sektoren/Sektorgröße zusammen. Deshalb wurde gebaut
+    statt angehalten.
+    Behoben und eingebaut: `uft_floppy_ranking_t` mit `tied`/`ambiguous`/
+    `kandidaten` und den drei Feldzählern; ein Feld wird nur verglichen,
+    wenn **beide** Seiten etwas sagen. 113 Referenzsätze als Tafel,
+    Namensnennung (CC BY-SA 4.0) im Header, `docs/ORACLES.md` um den
+    Nachtrag ergänzt, damit die dortige „nicht übernehmen"-Regel nicht
+    im Widerspruch steht. **12 Zusagen, Mutationsmatrix 14/14 im zweiten
+    Lauf** (der erste 8/14 — alle sechs Entkommenen waren echte Lücken
+    in meinen Gegenproben), D2-Probe am Aufrufer gemessen mit geprüfter
+    Rücknahme, Suite **497/497**.
+    **Drei Erwartungen von mir sind dabei gefallen** (1,44 M hat 5 statt
+    3 Gleichrangige und der PC ist jetzt dabei; Amiga DD 2 statt 1; die
+    beiden Victor/Commodore-Sätze sind GCR, nicht MFM) — und die beiden
+    Zahlen des Rotbeweises in `P3-445` waren beide falsch, weil sie an
+    der defekten Fassung gemessen waren.
+  · **Der Plan ist damit abgearbeitet:** Phasen 1, 2 und 5 gebaut,
+    Phasen 3 und 4 mit Ergebnis angehalten. Offen bleiben die Posten
+    `A-008`…`A-016` und `A-018`…`A-024` in der Warteschlange.
 - **Beleg:** Phase 1 = **MF-1189** = `a27fb2d0` (9 Dateien, 894 Einfügungen)
-  · Phase 2 = **MF-1190** = `e22e1b78` (6 Dateien, 856 Einfügungen). Beide
-  mit allen Pre-Commit-Toren grün und `mcp=0`. **Nicht gepusht** — C3;
-  gemessen liegen **9** Commits lokal.
+  · Phase 2 = **MF-1190** = `e22e1b78` (6 Dateien, 856 Einfügungen)
+  · Phase 3 = **MF-1192** = `32685609` (Halt, reine Doku)
+  · Phase 4 = **MF-1193** = `503522c0` (Halt, reine Doku)
+  · Phase 5 = **MF-1195**. Alle mit Pre-Commit-Toren grün und `mcp=0`.
+  **Nicht gepusht** — C3.
 
 ---
 

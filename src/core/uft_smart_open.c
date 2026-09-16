@@ -10,6 +10,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_track.h"
 #include "uft/uft_error.h"
+#include "uft/formats/uft_floppy_reference.h"   /* P3-445, MF-1195 */
 
 #include <stdlib.h>
 #include <string.h>
@@ -212,9 +213,22 @@ static void detect_protection(smart_internal_t* internal,
  * Quality Analysis
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* MF-1195: `warnings`/`warnings_size` kommen dazu, weil die Geometrie
+ * GENAU HIER lebt.
+ *
+ * Diese Funktion oeffnet die Diskette ueber das Plugin und liest
+ * `disk.geometry` — der einzige Ort im Oeffnungspfad, an dem Zylinder,
+ * Koepfe, Sektoren und Sektorgroesse zusammen vorliegen. Ein zweites
+ * `plugin->open()` an anderer Stelle waere derselbe Vorgang zweimal, also
+ * die Lage aus MF-1177. Die Warnungen liegen dagegen in `result`, das
+ * diese Funktion nicht kennt; deshalb werden sie uebergeben statt die
+ * oeffentliche Struktur umzubauen.
+ *
+ * Die Zeilen darunter (MF-443/MF-444) bleiben unveraendert. */
 static void analyze_quality(smart_internal_t* internal,
                            uft_quality_result_t* quality,
-                           const uft_smart_options_t* opts) {
+                           const uft_smart_options_t* opts,
+                           char* warnings, size_t warnings_size) {
     memset(quality, 0, sizeof(uft_quality_result_t));
 
     /* MF-443: nothing is claimed until something is measured.
@@ -252,6 +266,71 @@ static void analyze_quality(smart_internal_t* internal,
         if (internal->plugin->open(&disk, internal->path, true) == UFT_OK) {
             int cyls  = disk.geometry.cylinders;
             int heads = disk.geometry.heads > 0 ? disk.geometry.heads : 1;
+
+            /* MF-1195 / P3-445: sagt diese Geometrie, WELCHES historische
+             * Format vorliegt — oder sagt sie es nicht?
+             *
+             * Die Tafel kommt aus einer Sekundaerquelle (Wikipedia,
+             * CC BY-SA 4.0, siehe `uft_floppy_reference.h`) und hebt
+             * deshalb keine Tier-Stufe. Sie taugt fuer eine EINORDNUNG,
+             * und dafuer gilt dieselbe Regel wie fuer die Sonden drei
+             * Bloecke weiter unten: bei Gleichstand gewinnt keiner, und
+             * das gehoert in die Warnungen, wo es mit dem Ergebnis in
+             * jeden Bericht reist.
+             *
+             * `rpm` und `encoding` bleiben 0/UNKNOWN, weil
+             * `uft_geometry_t` sie nicht traegt — und genau das darf kein
+             * Widerspruch sein (D6). Der Rangierer zaehlt sie als
+             * `unbekannt`; ohne diese Trennung waere jede Einordnung aus
+             * dem Baum verfaelscht. */
+            if (warnings && warnings_size > 0u) {
+                uft_floppy_observation_t beob;
+                uft_floppy_ranking_t rang;
+                memset(&beob, 0, sizeof(beob));
+                beob.tracks            = (uint16_t)cyls;
+                beob.sides             = (uint8_t)heads;
+                beob.sectors_per_track = disk.geometry.sectors;
+                beob.bytes_per_sector  = disk.geometry.sector_size;
+
+                if (uft_floppy_reference_rank(&beob, &rang)) {
+                    char note[320];
+                    const size_t rest = warnings_size - strlen(warnings) - 1u;
+                    /* Alle drei Zweige beginnen mit demselben Wort, und das
+                     * ist Absicht: `tests/test_smart_open_quality.c`
+                     * prueft damit, dass dieser Aufruf ueberhaupt
+                     * stattfindet (D2), ohne sich festzulegen, WELCHER
+                     * Zweig bei einem gegebenen Abbild feuert. Ohne den
+                     * gemeinsamen Anfang haette die Zusage geraten. */
+                    if (rang.kandidaten == 0u) {
+                        snprintf(note, sizeof(note),
+                                 "  Referenztafel: kein historisches Format "
+                                 "passt zu %dx%dx%ux%u (%zu Saetze geprueft).\n",
+                                 cyls, heads, disk.geometry.sectors,
+                                 disk.geometry.sector_size,
+                                 uft_floppy_reference_count());
+                    } else if (rang.ambiguous) {
+                        snprintf(note, sizeof(note),
+                                 "  Referenztafel: Geometrie nicht eindeutig "
+                                 "zuzuordnen, %zu historische Formate passen "
+                                 "gleich gut (%u Felder verglichen, %u "
+                                 "unbekannt). KEINE Zuordnung genannt — die "
+                                 "Geometrie allein entscheidet es nicht.\n",
+                                 rang.tied, rang.best_compared,
+                                 rang.best_unbekannt);
+                    } else {
+                        const uft_floppy_reference_t *ref =
+                            uft_floppy_reference_get(rang.best_index);
+                        snprintf(note, sizeof(note),
+                                 "  Referenztafel: Geometrie passt eindeutig "
+                                 "zu '%s' (%s, %s) — Einordnung aus einer "
+                                 "Sekundaerquelle, kein Nachweis.\n",
+                                 ref ? ref->id : "?",
+                                 ref ? ref->platform : "?",
+                                 ref ? ref->capacity_label : "?");
+                    }
+                    if (rest > 0u) strncat(warnings, note, rest);
+                }
+            }
 
             if (cyls > 0) {
                 int total = 0, good = 0, bad = 0, weak = 0;
@@ -486,7 +565,8 @@ int uft_smart_open(const char* path, const uft_smart_options_t* opts,
     }
     
     /* Quality analysis */
-    analyze_quality(internal, &result->quality, opts);
+    analyze_quality(internal, &result->quality, opts,
+                    result->warnings, sizeof(result->warnings));
     
     if (result->quality.level < UFT_QUALITY_GOOD) {
         snprintf(result->warnings + strlen(result->warnings),
@@ -531,7 +611,8 @@ int uft_smart_reanalyze(uft_smart_result_t* result, const uft_smart_options_t* o
         detect_protection(internal, &result->protection);
     }
     
-    analyze_quality(internal, &result->quality, opts);
+    analyze_quality(internal, &result->quality, opts,
+                    result->warnings, sizeof(result->warnings));
     
     return 0;
 }

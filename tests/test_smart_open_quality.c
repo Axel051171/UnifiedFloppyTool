@@ -174,6 +174,40 @@ TEST(unmeasured_fields_say_so_instead_of_claiming_zero) {
     uft_smart_close(&res);
 }
 
+TEST(die_referenztafel_wird_im_oeffnungspfad_wirklich_befragt) {
+    /* MF-1195 / P3-445 — die D2-Probe.
+     *
+     * `uft_floppy_reference_rank()` waere ohne diese Zusage der fuenfte
+     * ungerufene Erkenner dieses Baums (P3-204/MF-767). Sie wird ROT,
+     * wenn der Aufruf in `analyze_quality()` verschwindet.
+     *
+     * Geprueft wird der gemeinsame Anfang aller drei Zweige und NICHT,
+     * welcher feuert: ob eine D64-Geometrie eindeutig, mehrdeutig oder
+     * gar nicht zuzuordnen ist, ist eine Aussage ueber die Tafel, nicht
+     * ueber die Verdrahtung. Wer hier einen bestimmten Zweig festnagelt,
+     * prueft das Falsche. */
+    uft_smart_options_t opts;
+    uft_smart_options_init(&opts);
+
+    uft_smart_result_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(uft_smart_open(img("vice_c1541_35trk.d64"), &opts, &res) == 0);
+
+    printf("\n    warnings: %.200s", res.warnings);
+    ASSERT(strstr(res.warnings, "Referenztafel") != NULL);
+
+    /* Und die Gegenrichtung, damit die Zusage nicht nur „irgendein Text"
+     * prueft: die Einordnung darf sich NICHT als Nachweis ausgeben. Egal
+     * welcher Zweig feuert, „kein Nachweis" oder „KEINE Zuordnung" oder
+     * „kein historisches Format" — ein blankes Urteil ohne Einschraenkung
+     * waere die Falschaussage, gegen die P3-445 geschrieben ist. */
+    ASSERT(strstr(res.warnings, "kein Nachweis") != NULL ||
+           strstr(res.warnings, "KEINE Zuordnung") != NULL ||
+           strstr(res.warnings, "kein historisches Format") != NULL);
+
+    uft_smart_close(&res);
+}
+
 TEST(the_report_prints_the_numbers_the_struct_holds) {
     /* The report is the part that reaches a human, so it gets its own check:
      * no formatting path may reintroduce a number the struct never had. */
@@ -224,6 +258,7 @@ int main(void)
     RUN(a_different_disk_gives_different_numbers);
     RUN(the_d81_is_counted_too_though_it_is_not_gcr);
     RUN(unmeasured_fields_say_so_instead_of_claiming_zero);
+    RUN(die_referenztafel_wird_im_oeffnungspfad_wirklich_befragt);
     RUN(the_report_prints_the_numbers_the_struct_holds);
     RUN(the_registry_recognises_more_than_the_local_table);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);

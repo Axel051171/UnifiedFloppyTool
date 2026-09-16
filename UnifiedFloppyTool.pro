@@ -1799,6 +1799,14 @@ HEADERS += include/uft/forensic/uft_provenance.h
 SOURCES += src/forensic/uft_bootstrap.c
 HEADERS += include/uft/forensic/uft_bootstrap.h
 
+# 113 historische Formate als Nachschlagetafel (P3-445, MF-1195).
+# Die beiden `.inc`-Tafeln werden von der `.c` eingezogen und stehen
+# deshalb NICHT hier — qmake soll sie nicht als Quelle uebersetzen.
+# Produktivaufrufer: `analyze_quality()` in src/core/uft_smart_open.c.
+# Quelle der Daten: Wikipedia, CC BY-SA 4.0, Namensnennung im Header.
+SOURCES += src/formats/reference/uft_floppy_reference.c
+HEADERS += include/uft/formats/uft_floppy_reference.h
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Recovery Wizard + Format Suggestion Engine
 # ═══════════════════════════════════════════════════════════════════════════════

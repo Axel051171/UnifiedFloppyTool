@@ -2603,6 +2603,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_referenz_rangierer")
+        # MF-1195 / P3-445: der Rangierer ueber 113 historische Formate.
+        # Nur die eine Quelle — die Tafeln liegen als `.inc` daneben und
+        # werden von ihr eingezogen; die Format-Schicht braucht es nicht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/reference/uft_floppy_reference.c)
     elseif(${test_name} STREQUAL "test_schreibnaht_mfm")
         # MF-1190 / P3-453: die Lueckenmessung im IBM-MFM-Bitstrom.
         # DIESELBEN zwei Quellen wie der Zweig darueber, und das ist der

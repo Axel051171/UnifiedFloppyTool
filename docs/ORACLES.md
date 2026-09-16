@@ -265,6 +265,37 @@ GPL-2-Option. Dieselbe Lage wie bei CRC RevEng (P3-370) und bei
 `hardsector_tool` (P3-368). Ausfuehren bindet nichts; deshalb wird
 ausgefuehrt und nicht uebernommen.
 
+> **NACHTRAG MF-1195 — einmal ist CC-BY-SA-Material doch uebernommen
+> worden, und das gehoert hier vermerkt, damit der Baum sich nicht selbst
+> widerspricht.**
+>
+> Seit MF-1195 liegen **113 Referenzsaetze** aus dem Wikipedia-Artikel
+> „List of floppy disk formats" (Schnappschuss 2026-09-16, CC BY-SA 4.0)
+> als Tafel im Baum: `src/formats/reference/uft_floppy_reference*.inc`,
+> Namensnennung als `UFT_FLOPPY_REFERENCE_SOURCE_URL` im Header. Das ist
+> **kein Widerspruch zur Regel darueber**, aber es ist eine Ausnahme mit
+> drei Gruenden, und alle drei sind benannt statt vorausgesetzt:
+>
+> 1. **Eine Eigentuemer-Entscheidung liegt vor** (2026-09-16, woertlich
+>    „mach A-005 ungestopt"); sie hebt die Sperre **S3** fuer genau diese
+>    Ernte auf. `P3-445` fuehrt sie samt dem, was sie NICHT aufhebt.
+> 2. **Die Kosten sind schon bezahlt.** Der Satz oben nennt als Preis, dem
+>    Projekt die GPL-2-Option zu nehmen — und genau das hat **MF-698**
+>    bereits entschieden: die drei AIR-Dateien sind `GPL-3.0-only`, und
+>    die verteilbare Fassung des Gesamtwerks ist seitdem an GPL-3
+>    gebunden. Der Preis faellt hier also nicht ein zweites Mal an.
+> 3. **Es sind Daten, kein Rumpf.** Uebernommen sind Zahlen und Namen,
+>    keine Zeile fremder Logik — der Kanal *Nachbau* nach MF-695.
+>
+> **Und was die Entscheidung ausdruecklich nicht aendert:** eine
+> Sekundaerquelle hebt **keine Tier-Stufe**. Die Tafel taugt zur
+> Einordnung, nicht zum Nachweis; `UFT_FLOPPY_REF_WRITE_SAFE` wird fuer
+> keinen ihrer Saetze gesetzt, und die Meldung im Oeffnungspfad nennt sich
+> selbst „Einordnung aus einer Sekundaerquelle, kein Nachweis". Wer den
+> naechsten CC-BY-SA-Fund einbauen will, braucht wieder eine
+> Entscheidung — die drei Gruende oben gelten fuer **diese** Ernte, nicht
+> als neue Hausregel.
+
 ### Baurezept `floptool` (MF-1083)
 
 Aufgeschrieben, weil es **nicht** der dokumentierte Weg ist — genau
