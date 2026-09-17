@@ -24,11 +24,28 @@
  *   4 = preflight ABORT (LOSSY without --accept-data-loss, etc.)
  *   5 = converter internal failure
  *
- * BUILD STATUS: scaffold only. The CMake/qmake wiring is NOT added
- * in this commit — see `cli/uft-decode/README.md` for the integration
- * checklist. Wiring is deferred to v4.1.6 because emulator.yml is
- * still a scaffold itself; adding the binary in advance would be
- * unused code (Master-Plan Regel 2).
+ * BUILD STATUS — BERICHTIGT MF-1216. Hier stand: „scaffold only. The
+ * CMake/qmake wiring is NOT added in this commit — see
+ * `cli/uft-decode/README.md` for the integration checklist. Wiring is
+ * deferred to v4.1.6 because emulator.yml is still a scaffold itself;
+ * adding the binary in advance would be unused code (Master-Plan
+ * Regel 2)." Der Satz bleibt zitiert stehen (Hausregel „nicht
+ * entfernen, weiter erweitern") und gilt nicht mehr:
+ *
+ * Seit MF-1216 ist das Ziel verdrahtet — `cli/uft-decode/CMakeLists.txt`
+ * plus `option(UFT_BUILD_CLI … ON)` in der Wurzel, auf ausdrueckliche
+ * EIGENTUEMERENTSCHEIDUNG („verdrahten", 2026-09-17), nachdem
+ * `A-024`/`MF-1215` diese Datei als einzigen Posten der Menge C mit
+ * Disposition `BLOCKED` vorgelegt hatte.
+ *
+ * **Zwei Angaben des alten Satzes sind dabei gemessen und stehen
+ * berichtigt:** `.github/workflows/emulator.yml` ist weiterhin ein
+ * Geruest (seine Zeile 4 sagt selbst „Status: SCAFFOLD ONLY") — der
+ * Verbraucher fehlt also noch, und das aendert die Entscheidung nicht,
+ * nur ihre Begruendung. Und die Link-Zeile der Pruefliste im README
+ * (`uft_core uft_crc`) kann nicht funktionieren: `uft_convert_file`
+ * steht in `src/formats/uft_format_convert_dispatch.c`, und
+ * `src/formats/` ist keine Bibliothek.
  */
 #include "uft/uft_format_convert.h"
 #include "uft/uft_format_plugin.h"
@@ -103,6 +120,41 @@ int main(int argc, char **argv)
     if (!src_path || !dst_path || !fmt_name) {
         usage(argv[0]);
         return 1;
+    }
+
+    /* MF-1216: die Format-Registry ist zur Laufzeit LEER, bis sie jemand
+     * fuellt. `src/main.cpp:43` tut das fuer die Oberflaeche; dieses
+     * Programm tat es nicht — und weil `uft_convert_file()` ueber die
+     * Registry erkennt, meldete es fuer JEDE Eingabedatei
+     * „Could not detect source format" (gemessen: err=-25, Ausgangskode 5,
+     * an einer gueltigen ATR aus dem Korpus). Das Binaerprogramm hat also
+     * gebunden, gestartet und die Hilfe gedruckt, ohne etwas zu koennen —
+     * genau die Lage, die MF-446/447 fuer den Qt-Pfad behoben hat.
+     *
+     * Die Regel fuer die Zahlen steht in `src/main.cpp`: „A short count is
+     * a real problem and is shown rather than logged." Hier heisst das:
+     * bei Fehler wird ABGESAGT (Kode 3 — ohne Registry ist jedes Format
+     * unbekannt, und das ist die Folge, nicht ein neuer Fehlerfall), bei
+     * unvollstaendiger Registrierung wird die Zahl GENANNT und
+     * weitergearbeitet, wie die Oberflaeche es auch tut. */
+    {
+        const uft_error_t reg = uft_register_all_formats();
+        const size_t registered = uft_registered_format_plugin_count();
+        const size_t available  = uft_get_format_count();
+        if (reg != UFT_OK) {
+            fprintf(stderr,
+                    "uft-decode: Format-Registry nicht aufgebaut "
+                    "(Fehlercode %d) — ohne sie ist jedes Format "
+                    "unbekannt.\n", (int)reg);
+            return 3;
+        }
+        if (registered != available) {
+            fprintf(stderr,
+                    "[uft-decode] nur %zu von %zu Format-Plugins "
+                    "registriert — Dateien der fehlenden Typen werden als "
+                    "unbekannt gemeldet, nicht geraten.\n",
+                    registered, available);
+        }
     }
 
     uft_format_t target = parse_format_name(fmt_name);

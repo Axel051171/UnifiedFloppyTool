@@ -475,3 +475,33 @@ if(UFT_BUILD_TESTS)
 
     add_subdirectory(tests)
 endif()
+
+# MF-1216: das headless Wandler-Binaerprogramm `uft-decode`.
+#
+# EIGENTUEMERENTSCHEIDUNG vom 2026-09-17 („verdrahten"). `A-024`/`MF-1215`
+# hatte `cli/uft-decode/main.c` als einzigen Posten der Menge C mit der
+# Disposition `BLOCKED` vorgelegt — vollstaendig, mit eigenem README, aber
+# gegen die GUI-only-Regel in `CLAUDE.md`. Die Entscheidung steht hier,
+# damit sie nachlesbar ist und nicht in einer Bauzeile verschwindet.
+#
+# VORGABE **ON**, und das ist der Punkt: `cli/uft-decode/README.md`
+# schlug `default OFF` vor. Ein Ziel, das niemand baut, ist genau der
+# Zustand, aus dem dieses Programm kommt — gebunden, lauffaehig, und
+# monatelang unbemerkt unbrauchbar (es meldete fuer jede Datei
+# „Could not detect source format"). OFF haette denselben Zustand mit
+# einer Zeile CMake dekoriert; die Klasse `P3-204`/MF-930.
+#
+# Kosten, benannt statt verschwiegen: das Ziel uebersetzt gemessen **467**
+# eigene Uebersetzungseinheiten (die Schliessung des Wandlers). Ein Teil
+# davon faellt fuer die Tests ohnehin an; die Bauzeit ist NICHT gemessen
+# und wird hier deshalb auch nicht beziffert.
+option(UFT_BUILD_CLI "Build the headless uft-decode binary (MF-1216)" ON)
+
+if(UFT_BUILD_CLI)
+    # `enable_testing()` steht oben im Test-Zweig. Wird nur der CLI
+    # gebaut, muss es hier stehen, sonst waere sein `add_test` still
+    # wirkungslos — und ein Test, der nicht laeuft, ist die Klasse
+    # MF-1000/Tor 64.
+    enable_testing()
+    add_subdirectory(cli/uft-decode)
+endif()
