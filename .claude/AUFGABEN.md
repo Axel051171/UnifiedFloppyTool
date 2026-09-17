@@ -2482,8 +2482,9 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   T2 11 → 7**; Strang B 5 offen.
 
 ### A-026 · xDMS 1.3.2 zerlegen, gegen `uft_dms.c` abgleichen, Lücken implementieren
-- **Status:** **in Arbeit** (seit 2026-09-17, hochgezogen als A-025
-  angehalten wurde) · **Aufgenommen:** 2026-09-17
+- **Status:** **angehalten nach dem ersten Durchgang** (2026-09-17,
+  MF-1227 `a697fa91`) — vier Befunde stehen als `P3-478`, und `A-027`
+  wurde vom Eigentümer vorgezogen · **Aufgenommen:** 2026-09-17
 - **Wortlaut:** „nimm den code komplett auseinander , sehr genau / finde
   alles und alles raussuchen was ich übersehen habe , stimme es mit mein
   aktuellen tool ab / - wo können die formate verbessert werden / - ist es
@@ -2580,6 +2581,110 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   zweite Quelle nennt CPU, Maschinentyp und Taktrate). Und die
   **Modus-Abdeckung bleibt 1 von 7** mit `flags = 0` durchgehend —
   `adf2dms` kann die übrigen gemessen nicht herstellen.
+- **Beleg:** erster Durchgang **MF-1227**, `a697fa91` — Spur-Callback
+  verdrahtet (Loch: 1760/0 → 1738/22), Sonde abgeleitet (98/98/98 →
+  100/50/50), `checksum_ok` nicht mehr mit 1 vorbesetzt; `P3-478` neu;
+  `docs/sondendoktrin_baseline.txt` 83 → 82; 26 Zusagen, zwei
+  Rotbeweise (3 rot bzw. 8 rot vorher). **Der Posten bleibt offen**,
+  weil `P3-478` (1)/(2)/(4) machbar sind und nicht gemacht sind.
+
+### A-027 · Teilstring-Fallen: Prüfer übernehmen und alle Fundstellen abtragen
+- **Status:** **in Arbeit** (seit 2026-09-17, vom Eigentümer vorgezogen:
+  „führe das Das Teilstring-Paket aus und finde alles und fixe es")
+  · **Aufgenommen:** 2026-09-17
+- **Wortlaut:** „gibt es viele Teilstring-Fallen in meinem tool , fixe
+  sie alle !!" — dazu das Paket `neue-ideen/UFT-NN — Teilstring-Fallen
+  Prüfer.zip`; und vorgezogen mit „führe das Das Teilstring-Paket aus
+  und finde alles und fixe es"
+- **Gegenstand, gemessen:** 56 175 Byte, 8 Einträge; `neue-ideen/` ist
+  gitignoriert (`.gitignore:85`). Inhalt: `substring_audit.py`
+  (18 344 B, **acht Regeln**), `c_lex.py` (6 917 B, C-Zerteiler),
+  `uft_match.h`/`uft_match.c`, `run_audit_selftest.py`, `test_match.c`,
+  `fixture_traps.c`, `Makefile`. **Keine Lizenzdatei im Paket**
+  (gemessen) — nach MF-636 gehört die Herkunft ausgesprochen, bevor
+  `uft_match.c` in den Baum geht.
+- **Kennzahl:** **keine der vier** — Verlässlichkeit des Prüfstands,
+  wie `P3-421`, `P3-426`, `P3-461`, `P3-477`. Der Eigentümer hat die
+  Umsetzung ausdrücklich angeordnet.
+- **Kanal:** entfällt für die Herkunft (Zulieferung für dieses Projekt,
+  das Dokument sagt selbst „Nummer bitte selbst zuweisen").
+- **Einfrier-Regel:** **ja → Rotbeweis zuerst.** Nicht wegen
+  `uft_match.c` (Hilfseinheit), sondern wegen der Fundstellen: C1/C2
+  betreffen `strstr` in **Erkennungspfaden**. Dazu D2 (Aufrufer + Test,
+  der rot wird, wenn der Aufruf verschwindet).
+- **OPEN_ITEMS:** wird angelegt, sobald die Zahl **geprüft** ist — ein
+  Eintrag mit „viele" wäre die unbelegte Zahl, gegen die das Paket
+  geschrieben ist.
+- **Fertig heißt:** `substring_audit.py` läuft im Torkanon und meldet
+  **0 Fundstellen der Einschätzung „sicher"**; jede übrige ist behoben
+  oder in ihrer Datei bzw. in `OPEN_ITEMS.md` als bewusst benannt; und
+  `run_audit_selftest.py` ist grün, damit der Prüfer selbst geprüft ist.
+- **Aufwand:** nicht schätzbar.
+- **Stand (2026-09-17, Lauf gemacht):** **Der Prüfer ist gelaufen, und
+  seine Zahl ist NICHT die Zahl der Fallen.**
+  · Selbsttest zuerst: **bestanden**, 9 Funde in der Köderdatei,
+    10 Zerteilerfälle + 3 Gegenproben, 0 Fehler.
+  · **Erster Lauf STÜRZTE AB** statt zu urteilen:
+    `UnicodeEncodeError` auf cp1252 beim Drucken eines Schnipsels mit
+    `∕` (U+2044) aus `src/formats/reference/uft_floppy_reference.c:168`
+    — und der Rückgabewert war **1**, sah also wie „hat gefunden" aus.
+    Das ist wörtlich die Klasse, die MF-1171 benennt („ein Absturz ist
+    kein Urteil"). Das Werkzeug wird **nicht** gepatcht, die Umgebung
+    liefert die Kodierung: `PYTHONIOENCODING=utf-8`.
+  · Danach gemessen über `src` und `include`: **325 Fundstellen**,
+    davon **70 „sicher"** und **255 „prüfen"** —
+    C1 84 (prüfen) · C2 43 sicher + 6 prüfen · C3 2 sicher ·
+    C4 4 sicher · C5 21 sicher · C6 165 (prüfen).
+  · **BEFUND AM PRÜFER, gemessen an seinem Quelltext:**
+    `NCMP_FNS = {'strncmp','strncasecmp','memcmp','strncpy','strncat'}`
+    wirft **Kopier- und Vergleichsfunktionen in einen Topf**, und
+    C4/C5 haben nur für Vergleiche Sinn. Alle **21** C5-Fundstellen
+    sind `strncpy`, und `strncpy(dst, "lit", n)` mit `n > strlen(lit)`
+    ist **korrekt**: der Standard füllt den Rest mit Nullbytes und
+    liest die Quelle nur bis zu ihrer Null. Der Befundtext sagt dabei
+    selbst „bei strncmp/memcmp ist das undefiniertes Verhalten" —
+    während er `strncpy` anschlägt. Das ist die eigene Klasse des
+    Prüfers, auf ihn selbst angewandt.
+    **Umgekehrt ist C4 bei `strncpy` schärfer als gedacht:** dort
+    bedeutet `n < strlen(lit)` Kürzung **und** fehlenden Nullabschluss.
+  · Damit ist die Zahl „viele" weder bestätigt noch widerlegt — sie
+    wird je Regel einzeln geprüft, und der Prüfer selbst braucht
+    zuerst die Trennung von Kopieren und Vergleichen.
+
+  **Zweiter Abschnitt: der Prüfer ist übernommen und berichtigt.**
+  · Übernommen in Hausform: `scripts/audit_teilstring.py`,
+    `scripts/c_lex.py` (Nachbar von `c_literal.py`),
+    `tests/formats/fixture_traps.c`, **Tor 66** in
+    `check_consistency.py`, fallende Grundlinie
+    `docs/teilstring_baseline.txt`.
+  · **Acht** gemessene Defekte behoben — die sechs oben plus zwei, die
+    erst die Übernahme fand: **(G)** `audit_selbsttest.py::lade()`
+    registrierte das Modul nicht in `sys.modules`, womit jedes Werkzeug
+    mit `@dataclass` **und** future-annotations **nicht ladbar** war
+    (latent; gemessen genau zwei Dateien mit beiden Zutaten, das neue
+    Tor als erstes, das ihn auslöst). **(H)** Mein eigener Fehler:
+    `walk()` baute den `repo_scope`-Filter aus dem Skriptort statt aus
+    dem untersuchten Baum → das Tor war im gepflanzten Prüfbaum
+    **blind**, drei gepflanzte Defekte nicht gemeldet. Gefunden hat es
+    `audit_selbsttest.py` — genau der Prüfstand, der dafür da ist.
+  · Zahlen: C-Seite **325 → 304** Funde, **70 → 49** „sicher";
+    Python-Seite **237 → 179** und **10 → 2**; Fremdklone
+    **mehrere → 0**; Absturz **ja → nein**. Zusammen
+    **562 → 483 Funde, 80 → 51 „sicher"**, Grundlinie **50** Schlüssel.
+  · Abnahme: eigener **Selbsttest 14/14** (je ein Fall pro Defekt),
+    Meta-Tor `audit_selbsttest.py` **68 grün / 0 rot** (vorher 64/4),
+    Torkanon „Teilstring-Fallen : 0". **Rotbeweis:** dieselben Zusagen
+    gegen die Originalfassung des Pakets ergeben **2 grün, 7 rot**.
+  · **Offen und benannt: `P3-479`** — die **51** echten Fundstellen.
+    Davon 28 im Erkennungspfad (der eigentliche Auftrag), 10
+    Selbstprüfungen über Berichtstext, 5 ein JSON-Parser aus `strstr`,
+    3 echte `strncpy`-Kürzungen in einer **Waise**, 2 Präfixvergleiche
+    einer vollen Kennung, 2 Python-Muster.
+  · **Der Auftrag „fixe sie alle" ist damit NICHT erfüllt**, und das
+    steht hier statt in einer Fußnote: behoben ist der Prüfer, messbar
+    gemacht sind die Fundstellen, und die Grundlinie verhindert ab
+    jetzt neue. Die 51 selbst brauchen je eine Beurteilung und einen
+    Rotbeweis.
 - **Beleg:** —
 
   **DREI DINGE, DIE SCHON BEI DER AUFNAHME FESTGEHALTEN GEHÖREN,

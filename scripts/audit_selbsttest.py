@@ -141,6 +141,53 @@ def _manifest(inhalt: str) -> str:
 FAELLE: dict[str, list[Fall]] = {
 
     # ---------------------------------------------------------------
+    "audit_teilstring": [
+        Fall(
+            name="Magic-Suche im Erkennungspfad",
+            dateien={"src/formats/x.c": _fn(
+                '    if (strstr((const char *)buf, "SINCLAIR")) return 1;\n'
+                "    return 0;",
+                "static int f(const unsigned char *buf)")},
+            erwartet="treffer", muster="strstr",
+            warum="C2: eine 8-Zeichen-Kennung im GANZEN Puffer gesucht. "
+                  "Ein Abbild, das so etwas ENTHAELT, wird dann dafuer "
+                  "gehalten — die Klasse MF-961/MF-1022/MF-1029."),
+        Fall(
+            name="strncpy kuerzt den Namen",
+            dateien={"src/formats/x.c": _fn(
+                '    strncpy(dst, "SpartaDOS", 8);\n'
+                "    return 0;",
+                "static int f(char *dst)")},
+            erwartet="treffer", muster="strncpy",
+            warum="C4 bei einer KOPIERfunktion: gespeichert wird "
+                  "\"SpartaDO\", und der Nullabschluss fehlt. Gemessen in "
+                  "`uft_xfd_parser_v2.c` dreimal."),
+        Fall(
+            name="strncpy polstert — das ist richtig",
+            dateien={"src/formats/x.c": _fn(
+                '    strncpy(dst, "D64", 31);\n'
+                "    return 0;",
+                "static int f(char *dst)")},
+            erwartet="sauber",
+            warum="A-027, Defekt D: eine Laenge GROESSER als das Literal "
+                  "ist bei `strncpy` korrekt — der Standard fuellt den "
+                  "Rest mit Nullbytes. Die uebernommene Fassung meldete "
+                  "hier 21-mal im Baum, und jeder Treffer war falsch. "
+                  "Dieser Fall ist die Gegenprobe: ein Pruefer, der "
+                  "richtigen Code anschlaegt, wird abgeschaltet."),
+        Fall(
+            name="Vergleich liest hinter das Literal",
+            dateien={"src/formats/x.c": _fn(
+                '    return strncmp(a, "abc", 16) == 0;',
+                "static int f(const char *a)")},
+            erwartet="treffer", muster="strncmp",
+            warum="C5 bei einer VERGLEICHSfunktion: dort ist eine zu "
+                  "grosse Laenge undefiniertes Verhalten. Zusammen mit "
+                  "dem Fall darueber haelt dieses Paar die Trennung von "
+                  "Kopieren und Vergleichen fest."),
+    ],
+
+    # ---------------------------------------------------------------
     "audit_negative_index": [
         Fall(
             name="obere Schranke allein",
@@ -922,7 +969,30 @@ def lade(name: str):
     if spec is None or spec.loader is None:
         raise ImportError(name)
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    # A-027: das Modul muss VOR `exec_module` in `sys.modules` stehen.
+    #
+    # Der Grund ist gemessen, nicht vorsorglich: `dataclasses._is_type`
+    # macht `sys.modules.get(cls.__module__).__dict__`, und ohne den
+    # Eintrag gibt `.get()` `None` zurueck. Ein Werkzeug mit `@dataclass`
+    # UND `from __future__ import annotations` war damit **nicht ladbar**,
+    # und dieser Pruefstand meldete es als „nicht ladbar: 'NoneType'
+    # object has no attribute '__dict__'" — vier rote Faelle, die alle
+    # nichts mit der Regel zu tun hatten.
+    #
+    # Der Defekt war LATENT: gemessen ueber `scripts/audit_*.py` und
+    # `scripts/*_gate.py` gibt es genau ZWEI Dateien mit beiden Zutaten —
+    # dieser Pruefstand selbst (der sich nicht laedt) und
+    # `audit_teilstring.py`, das erste Werkzeug, das ihn ausloest. Die
+    # importlib-Anleitung nennt den Eintrag ausdruecklich als Pflicht.
+    #
+    # Aufgeraeumt wird danach wieder, damit ein zweiter Lauf desselben
+    # Namens nicht die alte Fassung bekommt.
+    sys.modules[spec.name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except BaseException:
+        sys.modules.pop(spec.name, None)
+        raise
     return mod
 
 

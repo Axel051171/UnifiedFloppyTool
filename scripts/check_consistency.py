@@ -1262,6 +1262,37 @@ def main() -> int:
         import audit_encoding_caps as _ec
         all_errors.append(("Faehigkeitstabelle", _ec.check(repo)))
 
+        # Tor 66 (A-027): TEILSTRING-FALLEN, auf Token statt auf Zeichen.
+        #
+        # Der Anlass steht in diesem Baum und ist teuer bezahlt: MF-1171
+        # hat gemessen, dass ein Muster, das die Sprache nicht kennt,
+        # **1387 Literale fand, von denen 2 echt waren**. Dieses Tor
+        # zerteilt C-Quellen erst (`scripts/c_lex.py`, Nachbar von
+        # `c_literal.py` aus derselben MF) und urteilt dann.
+        #
+        # Was es faengt, ist genau die Klasse, an der fuenf Formate
+        # dieses Baums gescheitert sind: eine Kennung wird im GANZEN
+        # Puffer gesucht statt an ihrer Stelle verglichen (MF-961 `86f`,
+        # MF-1022 `sap`, MF-1029 `myz80`, MF-1030 `nanowasp`,
+        # MF-1032 `logical`). Ein Abbild, das ein Archiv ENTHAELT, wird
+        # dann zum Archiv.
+        #
+        # FALLENDE Grundlinie (Bauform Tor 57), Stand **50** bekannte
+        # Fallen bei 51 Fundstellen — `uft_genesis.c` traegt
+        # `strstr(system, "32X")` zweimal, und der Schluessel laesst die
+        # Zeilennummer bewusst weg, damit eine Umformatierung kein Befund
+        # ist. Die Zahl darf nur sinken; der Zweck ist der Rand, denn
+        # eine NEUE Datei kann damit gar nicht mehr mit einer
+        # Teilstring-Falle anfangen.
+        #
+        # Das Werkzeug kam als Zulieferung und ist bei der Uebernahme an
+        # SECHS gemessenen Stellen berichtigt worden — darunter eine
+        # Regel, die `strncpy` mit `strncmp` verwechselte und deshalb
+        # 21 richtige Aufrufe anschlug. Einzelheiten in seinem Kopf und
+        # in `docs/OPEN_ITEMS.md` `P3-479`.
+        import audit_teilstring as _ts
+        all_errors.append(("Teilstring-Fallen", _ts.check(repo)))
+
         # Tor 55 (MF-875): die FAT12/16-Grenze steht an sechs Stellen im
         # Baum, viermal fest verdrahtet als 4085, dazu eine benannte
         # Konstante 4084, die niemand benutzt. Das ist die Form aus
