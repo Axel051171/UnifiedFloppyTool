@@ -105,7 +105,22 @@ typedef struct dms_track_info {
     uint16_t  header_crc;   /* track header CRC */
     uint16_t  data_crc;     /* packed data CRC */
     int       crc_ok;       /* 1 if CRC verified OK */
-    int       checksum_ok;  /* 1 if checksum verified OK */
+    /* A-026: die beiden folgenden Felder sagen „GEPRUEFT UND GUT", nicht
+     * „vermutlich gut". 0 heisst deshalb sowohl „geprueft und schlecht"
+     * als auch „nicht geprueft" — dieselbe Lesart wie
+     * `uft_amigados.h`s `checksum_ok` („false = verification ran and
+     * failed").
+     *
+     * Vorzustand, gemessen: `checksum_ok` war mit 1 vorbesetzt und wurde
+     * NUR im Erfolgszweig ueberschrieben. Scheiterte das Entpacken unter
+     * `override_errors`, meldete der Callback also `checksum_ok = 1` fuer
+     * eine Spur, deren Pruefsumme nie gerechnet wurde — ein unbestaetigter
+     * Wert, der sich als Bestaetigung las (MF-980: „das Format sagt X" und
+     * „hier wurde X gelesen" sind zwei Aussagen). */
+    int       checksum_ok;  /* 1 nur wenn die Pruefsumme GERECHNET wurde
+                             * und stimmte */
+    int       decomp_ok;    /* 1 nur wenn das Entpacken fehlerfrei durchlief;
+                             * A-026, ANGEHAENGT statt eingefuegt (ABI) */
 } dms_track_info_t;
 
 /* ---- Opaque context ---- */

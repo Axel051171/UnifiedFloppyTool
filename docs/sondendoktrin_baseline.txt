@@ -32,7 +32,6 @@ src/formats/dc42/uft_dc42.c:dc42_probe
 src/formats/dcm/uft_dcm.c:uft_dcm_plugin_probe
 src/formats/dim/uft_dim.c:dim_probe
 src/formats/dim_atari/uft_dim_atari.c:dim_atari_probe
-src/formats/dms/uft_dms_plugin.c:dms_probe
 src/formats/do/uft_do.c:do_probe
 src/formats/dsk_cpc/uft_dsk_cpc.c:dsk_probe
 src/formats/dsk_msx/uft_dsk_msx.c:msx_probe

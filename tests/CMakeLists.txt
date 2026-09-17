@@ -4561,7 +4561,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${UFT_FORMAT_LAYER_INCLUDES})
-    elseif(${test_name} STREQUAL "test_dms_gegen_adf2dms")
+    elseif(${test_name} STREQUAL "test_dms_gegen_adf2dms"
+           OR ${test_name} STREQUAL "test_dms_loch_ist_kein_guter_sektor")
         # MF-1135: `dms` von T3 auf T1b. Der Beleg ist ein Erzeugnis von
         # `dlitz/adf2dms` (MIT) — P3-347/P3-373 hatten gemessen, dass es
         # KEINEN fremden DMS-Erzeuger gibt; hxcfe, xdms und amigadx lesen
@@ -4578,6 +4579,14 @@ foreach(test_source ${TEST_SOURCES})
             ${UFT_FORMAT_LAYER_INCLUDES})
         # Der Korpuspfad ist Teil der Abnahme — ohne ihn prueft der Test
         # nichts und sagt das (Rueckgabe 77, benannter Skip).
+        #
+        # A-026: `test_dms_loch_ist_kein_guter_sektor` haengt an DIESEM
+        # Zweig, weil es dieselben sechs Quellen und dasselbe
+        # Korpus-Define braucht — eine zweite Liste waere eine zweite
+        # Wahrheit (D3, Klasse MF-1015). Es baut seine verfaelschten
+        # Fassungen SELBST aus dem Korpusstueck (ein gekipptes Byte, eine
+        # Drittelung), traegt seine Verfaelschungsregel also im Test und
+        # nicht in einem Skript daneben.
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
         set(TEST_LIBS "")

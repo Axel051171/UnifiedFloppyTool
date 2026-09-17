@@ -925,7 +925,14 @@ dms_error_t dms_unpack(const uint8_t *dms_data, size_t dms_len,
             memset(ctx->b2, 0, unpklen);
             uint16_t r = unpack_track(ctx, ctx->b1, ctx->b2, pklen2, unpklen, cmode, flags);
 
-            int checksum_ok = 1;
+            /* A-026: „nicht bestaetigt" ist die Vorbesetzung, nicht „gut".
+             * Vorher stand hier `= 1`, und der Wert wurde nur im
+             * Erfolgszweig ueberschrieben — scheiterte das Entpacken unter
+             * `override_errors`, meldete der Callback `checksum_ok = 1`
+             * fuer eine Spur, deren Pruefsumme nie gerechnet wurde
+             * (MF-980). */
+            int checksum_ok = 0;
+            const int decomp_ok = (r == DMS_OK);
             if (r != DMS_OK) {
                 if (override_errors) { /* continue */ }
                 else if (encrypted) { ret = DMS_ERR_BAD_PASSWD; break; }
@@ -952,6 +959,7 @@ dms_error_t dms_unpack(const uint8_t *dms_data, size_t dms_len,
                 ti.data_crc    = dcrc;
                 ti.crc_ok      = crc_ok;
                 ti.checksum_ok = checksum_ok;
+                ti.decomp_ok   = decomp_ok;   /* A-026 */
                 track_cb(&ti, track_cb_user);
             }
 

@@ -2295,7 +2295,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 ---
 
 ### A-025 · Alle offenen Formate so hoch wie möglich (T1b, sonst T1) — zwei Stränge
-- **Status:** **in Arbeit** — Strang A **vorgelegt** (MF-1221), Strang B
+- **Status:** **angehalten an fünf Gegenständen und einer Entscheidung**
+  (2026-09-17, nach MF-1226) — Strang A **vorgelegt** (MF-1221), Strang B
   **4 von 9 gehoben** (`adf_ext`, `cas`, `fdi_pc98`, `fds`), **5 offen**
   · **Aufgenommen:** 2026-09-17
 - **Wortlaut:** „Alle, mach einen nach dem anderen, mach dir einen Plan,
@@ -2442,11 +2443,170 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 
   **Offen sind jetzt fünf:** `dim`, `nfd` (kein Schreiber gebaut), `pro`
   (Messung an Altirra), `udi` (Abstammung), `lisa_twiggy` (Abbild).
+- **Stand beim Anhalten (2026-09-17, nach MF-1226) — ANGEHALTEN, und der
+  Halt ist gemessen, nicht geschätzt.** Vier von neun sind gehoben, und
+  jede Hebung hatte dieselbe Ursache: `P3-474` sagte „kein Erzeuger", und
+  viermal war die Messung richtig und die befragte **Population** zu
+  klein. MF-1225 hat die restlichen fünf deshalb **einzeln** befragt —
+  nach Schreibern, nach Modulnamen statt Endungen, über den Baum
+  hinaus — und je Format bleibt ein **Gegenstand** übrig, keine
+  Anstrengung:
+  · `dim`, `nfd` — **kein Schreiber gebaut**. Fünf Werkzeugfamilien
+    gemessen (gw read-only am Quelltext, hxcfe `;R`, floptool `r-`,
+    libdsk kennt sie nicht); die gefundenen X68000-Werkzeuge lesen, und
+    `98imgtools` schreibt **NHD** (Festplatte), nicht NFD.
+  · `pro` — **die EINE noch offene Messung, und sie ist der nächste
+    konkrete Schritt dieses Postens:** schreibt **Altirra** (GPL-2)
+    `.pro`? Unbestätigt. Sein Bau ist eine Visual-Studio-Sache, also
+    gemessen teuer auf dieser Maschine. `atari800` ist **dieselbe Hand**
+    wie UFTs Referenz (`sio.c`, Quellstand `b6bdf05c`) und fällt aus.
+  · `udi` — **doppelt blockiert**, und der zweite Grund ist der
+    schwerere: `trx2x` schreibt UDI, hat aber keine Lizenz **und** stammt
+    von **Alex Makeev**, dessen Spezifikation UFTs Leser IST
+    (`uft_udi_plugin.c:8`, samt wörtlich übernommenem Prüfsummen-
+    Referenzcode). Eine Lizenzentscheidung allein hebt es NICHT.
+  · `lisa_twiggy` — **Lizenz sauber** (LisaEm GPL-2), aber `raw↔dc42`
+    modelliert die Zonierung nicht, die das Format ausmacht. Ein echtes
+    Twiggy-Abbild ist eine Quellen- und Lizenzfrage wie `P3-359`.
+  **Strang A ist vorgelegt und wartet auf den Eigentümer** (`P3-403`,
+  drei Wege). Dazu neu aus MF-1226: **`P3-477`** — 18 Formate auf T1/T1b
+  begründen wörtlich „T2 und nicht T1b", je Fall aus dem MF-Eintrag der
+  Hebung zu holen; das ist Arbeit an DIESEM Posten, aber keine Hebung.
+  **Nicht angefasst und ausdrücklich nicht verloren:** der
+  FDS-nach-QD-Umweg (`fdstool -c`), der ein stärkerer Beleg wäre.
 - **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
   (MF-1222, `0809351a`), `P3-475` neu; `cas` → **T1b** (MF-1223,
   `e0490dea`); `fdi_pc98` → **T1b** (MF-1224, `90a44445`), `P3-476` neu;
   die sechs restlichen einzeln befragt (MF-1225, `f38ec8f5`); `fds` →
-  **T1b** (MF-1226). Tafel **T1b 66 → 70, T2 11 → 7**; Strang B 5 offen.
+  **T1b** (MF-1226, `b8107fd0`), `P3-477` neu. Tafel **T1b 66 → 70,
+  T2 11 → 7**; Strang B 5 offen.
+
+### A-026 · xDMS 1.3.2 zerlegen, gegen `uft_dms.c` abgleichen, Lücken implementieren
+- **Status:** **in Arbeit** (seit 2026-09-17, hochgezogen als A-025
+  angehalten wurde) · **Aufgenommen:** 2026-09-17
+- **Wortlaut:** „nimm den code komplett auseinander , sehr genau / finde
+  alles und alles raussuchen was ich übersehen habe , stimme es mit mein
+  aktuellen tool ab / - wo können die formate verbessert werden / - ist es
+  auf andere formate übertragbar / - welche einstellungen fehlen noch /
+  - was habe wir noch nicht und implemtiere es in das tool"
+- **Gegenstand, gemessen bei der Aufnahme:** `xdms-1.3.2.tar.bz2`,
+  **43 010 Byte**, sha256 `367ec4f02dd6a3a2…`, liegt in `~/Downloads`
+  (nicht im Baum). Eigener Bestand: `src/formats/dms/uft_dms.c` **1035**
+  Zeilen, `uft_dms_plugin.c` **292**, `include/uft/formats/uft_dms.h`
+  **178**, drei Tests (`test_uft_dms.c` 722, `test_dms_gegen_adf2dms.c`
+  327, `test_dms_plugin_gegen_bibliothek.c` 339), ein Korpusstück
+  (`adf2dms_uftk_rle_880k.dms`).
+- **Kennzahl:** **keine der vier für den Abgleich selbst** — `dms` steht
+  seit MF-1135 auf **T1b**, und T3 besteht nur noch aus `syn`. Zwei Wege,
+  auf denen sie sich doch bewegt: **(a)** die Übertragbarkeitsfrage des
+  Auftrags — trägt xDMS' Maschinerie eines der **5** offenen
+  Beschaffungsformate (`dim`, `nfd`, `pro`, `udi`, `lisa_twiggy`) oder
+  `syn`, ist es *ungeprüfte Formate runter*; **(b)** MF-1135 hat die
+  **Betriebsarten quick/medium/deep/heavy ausdrücklich als NICHT BELEGT**
+  festgehalten — das zu schließen ist Verifikationsarbeit am vorhandenen
+  Beleg. Nach MF-640 wäre der Rest **Fundus**; der Eigentümer hat die
+  Umsetzung aber ausdrücklich angeordnet („implemtiere es in das tool"),
+  und die Priorität setzt er, nicht ich.
+- **Kanal:** **Port** — und es ist der seltene Fall, in dem der wirklich
+  offensteht: xDMS ist **Public Domain**, belegt gegen Debians
+  `copyright` (SCOUT-10, SPDX `LicenseRef-PublicDomain-xDMS`; eine
+  formlose PD-Erklärung wird dort **zitiert**, nicht in eine Lizenz
+  umgedeutet). Die Kanaltafel in `CLAUDE.md` §MF-695 führt bei *Port*
+  bis heute einen Gedankenstrich als Beispiel — `uft_dms.c` ist einer.
+- **Einfrier-Regel:** **ja, der Auftrag liegt mitten darin → Rotbeweis
+  zuerst.** Abgleich, Bugfix an Bestehendem und Korpusarbeit sind
+  ausdrücklich erlaubt; ein **neues Plugin** für eine gefundene Spielart
+  fällt unter das Moratorium, auch als Vorschlag (1:2 nach MF-363/498).
+- **OPEN_ITEMS:** `P3-71`, `P3-347`, `P3-373`, `P3-474`, `SCOUT-10`
+- **Fertig heißt:** für **jede** von xDMS unterstützte Kompressionsart
+  steht im Baum entweder ein grüner Testfall oder eine benannte Absage
+  mit Grund, jede Abweichung zwischen `uft_dms.c` und der xDMS-Quelle ist
+  als Befund mit `Datei:Zeile` festgehalten, und `ctest -R dms` ist grün.
+- **Aufwand:** nicht schätzbar — der Umfang hängt daran, was der Abgleich
+  findet; der Tarball ist bei der Aufnahme nicht entpackt worden.
+- **Stand (2026-09-17, erster Durchgang):** **Der Quellstand ist
+  vollständig gelesen** — 1890 Zeilen `.c` in 12 Dateien plus 178 Zeilen
+  Header, dazu Handbuchseite, `xdms.txt` und `ChangeLog.txt`.
+
+  **Drei Antworten stehen schon, und zwei davon fallen kleiner aus als
+  die Frage:**
+  · **„welche Einstellungen fehlen noch"** — gemessen **keine aus dem
+    Fassungsunterschied**. 1.3 → 1.3.2 ist laut `ChangeLog.txt` 1.3.1 =
+    reine Portierung (C99-`stdint.h`, `tmpnam()` → `mkstemp()`) und
+    1.3.2 = **genau eine** Neuerung, `-f` „override errors … for
+    desperate data salvation" — und die liegt als `override_errors`
+    schon in `dms_unpack()`. Von xDMS' Bedienseite (`u b d f t v x z`,
+    `-d -f -p -q -v`) sind `-p` (Kennwort) und die Befehle `b`/`d`
+    (Banner, FILEID.DIZ) die einzigen mit Substanz, und die hängen
+    nicht an einer fehlenden Einstellung, sondern an zwei `NULL`s im
+    Plugin → `P3-478` (1) und (2).
+  · **„ist es auf andere Formate übertragbar"** — **nein, und das ist
+    gemessen statt vermutet.** Die fünf Entpacker (RLE, QUICK, MEDIUM,
+    DEEP, HEAVY) sind an DMS-Eigenheiten gebunden: ein gemeinsames
+    `text[]`-Wörterbuch, dessen Zustand über Spurgrenzen läuft
+    (`flags & 1`), Huffman-Bäume, die aus dem Vorsatz übernommen werden
+    (`flags & 2`), und fensterabhängige Endkorrekturen
+    (`quick_text_loc + 5`, `medium_text_loc + 66`, `deep_text_loc + 60`).
+    Kein anderes Format dieses Baums hat diese Verschränkung. Was
+    übertragbar WÄRE, ist nicht der Code, sondern die **Bauform**: ein
+    Spur-Callback, der je Einheit sagt, ob sie bestätigt ist — genau der
+    Mechanismus, der hier ungerufen lag.
+  · **„wo können die Formate verbessert werden"** — der Port ist TREU
+    (acht Kopffelder, acht Versätze, gleiche 3-Byte-Lesart), also nicht
+    am Port. Die Lücken sind **Erreichbarkeit**: `P3-478`.
+
+  **Behoben und belegt in diesem Durchgang** (zwei Instanzen derselben
+  Klasse — die Bibliothek kann es, das Plugin ruft es nicht):
+  · **der ungerufene Spur-Callback.** Gemessen an einer DMS mit EINEM
+    gekippten Byte im Spursatz 40: vorher **1760 von 1760** Sektoren
+    `UFT_SECTOR_OK`, **0** gekennzeichnet, während die Selbstbenennung
+    nur 1759-mal traf. Jetzt 1738 OK / **22 gekennzeichnet**, und die
+    Warnung nennt „1 von 80 Spursätzen NICHT bestätigt" neben den
+    „901 120 von 901 120 Byte". Rotbeweis 16 grün / **3 rot** vorher.
+  · **die Sonde verglich vier Byte und meldete 98.** Jetzt nach
+    `docs/SONDEN_DOKTRIN.md` abgeleitet: **100** für das echte Archiv,
+    **50** für vier Byte, **50** für einen verfälschten Kopf-CRC — vorher
+    98/98/98, also **kein** Unterschied. `docs/sondendoktrin_baseline.txt`
+    fällt 83 → **82**.
+  · Nebenbefund in der Bibliothek: `checksum_ok` war mit **1**
+    vorbesetzt und wurde nur im Erfolgszweig überschrieben — bei
+    fehlgeschlagenem Entpacken meldete der Callback also „Prüfsumme gut"
+    für eine Spur, deren Prüfsumme nie gerechnet wurde (MF-980). Jetzt
+    ist „nicht bestätigt" die Vorbesetzung, und `decomp_ok` sagt warum.
+
+  **Offen und benannt: `P3-478`** (verschlüsseltes Archiv bekommt die
+  falsche Diagnose · Banner und FILEID.DIZ werden verworfen · HD-Archiv
+  zur Hälfte unerreichbar · xDMS liest 8 von 19 Kopffeldern, und eine
+  zweite Quelle nennt CPU, Maschinentyp und Taktrate). Und die
+  **Modus-Abdeckung bleibt 1 von 7** mit `flags = 0` durchgehend —
+  `adf2dms` kann die übrigen gemessen nicht herstellen.
+- **Beleg:** —
+
+  **DREI DINGE, DIE SCHON BEI DER AUFNAHME FESTGEHALTEN GEHÖREN,
+  weil sie später falsch gelesen würden:**
+
+  **1. Die Falle ist eingebaut, nicht vermeidbar.** xDMS ist die **Hand,
+  aus der UFTs Leser stammt** (MF-837, MF-1135). Ein Differenzlauf gegen
+  xDMS ist deshalb eine **Port-Treue-Prüfung**, kein Stufenbeleg — wer
+  diese Zeile später liest, darf „xDMS-Differenzlauf" nicht für
+  T1b-Beleg nehmen. Genau das hat MF-1135 gekostet, und der Ausweg war
+  `dlitz/adf2dms` als **unabhängige Schreiber-Linie** (MIT, Quellstand
+  `8adfe6acfdc9`). Wer hier etwas heben will, braucht wieder eine
+  dritte Hand.
+
+  **2. Die Fassungen sind nicht dieselben.** Unser Port zitiert **xDMS
+  1.3**, der Tarball ist **1.3.2**. Eine Abweichung kann deshalb
+  zweierlei sein: ein Portfehler ODER eine Änderung der Quelle zwischen
+  den Fassungen. Die Unterscheidung ist je Befund zu treffen und nicht
+  pauschal — sonst entsteht die Lage aus MF-1015, wo drei Prüfsummen
+  nebeneinander standen und keine zwei gleich waren.
+
+  **3. Eine Zahl im Baum stimmt nicht mit der Messung.** Der
+  Scout-Bericht in `docs/OPEN_ITEMS.md` nennt „`uft_dms.c` ist ein
+  **1940-Zeilen-Port** ohne Abgleich"; gemessen sind es heute **1035**.
+  Entweder ist die Datei geschrumpft oder die Zahl war falsch. Das ist
+  **nicht entschieden** (S5) und gehört in die Arbeit, nicht in die
+  Aufnahme — über `git log -p` auf die Datei zu klären.
 
 ## Fundus
 

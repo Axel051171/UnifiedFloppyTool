@@ -44,7 +44,54 @@
  * Amiga disk geometry: 80 cyl x 2 heads x 11 spt x 512 = 901120 bytes
  * HD (geninfo Bit 4): das Doppelte.
  *
- * Reference: xDMS 1.3 (Rocha 1999) ueber src/formats/dms/uft_dms.c
+ * ── A-026: drei Tueren ohne Leser, und zwei haetten Befunde gemeldet ─────
+ *
+ * Anlass war ein vollstaendiger Abgleich gegen den Quellstand von
+ * **xDMS 1.3.2** (Tarball 43 010 Byte, sha256 367ec4f02dd6a3a2...,
+ * 1890 Zeilen `.c` in 12 Dateien; `COPYING` woertlich: „xdms is licensed
+ * under PUBLIC DOMAIN"). Der Port selbst ist dabei TREU: `dms_read_info()`
+ * liest dieselben acht Kopffelder an denselben acht Versaetzen wie
+ * `pfile.c`, samt der 3-Byte-Lesart von `pkfsize` (Byte 21-23) und
+ * `unpkfsize` (25-27). Und der Fassungsunterschied 1.3 -> 1.3.2 ist
+ * gemessen klein: 1.3.1 war reine Portierung (C99-`stdint.h`,
+ * `tmpnam()` -> `mkstemp()`), 1.3.2 fuegte **genau eine** Sache hinzu —
+ * `-f`, „override errors … for desperate data salvation", und das ist
+ * in `dms_unpack()`s `override_errors` schon da.
+ *
+ * Gefunden wurden stattdessen drei Funktionen der Bibliothek, die in
+ * `src/` **je 0 Aufrufer ausserhalb ihrer eigenen Definition** hatten
+ * (`dms_is_dms`, `dms_disk_type_name`, `dms_comp_mode_name`) — und zwei
+ * Uebergaben, an denen dieses Plugin `NULL` stehen liess:
+ *
+ *   **(1) `track_cb` = NULL.** Damit wusste das Plugin nur, WIE WEIT der
+ *   Entpacker kam, nicht WELCHE Spursaetze faul waren. Siehe den Block
+ *   an `satz_faul` unten: gemessen meldeten 1760 von 1760 Sektoren
+ *   `UFT_SECTOR_OK`, waehrend einer verfaelschte Bytes trug. BEHOBEN.
+ *
+ *   **(2) Die Sonde verglich vier Byte und meldete 98.** Siehe den Block
+ *   an `dms_probe()`. BEHOBEN, und die Zahl ist jetzt abgeleitet
+ *   (MF-1153; `docs/sondendoktrin_baseline.txt` faellt um eins).
+ *
+ * `dms_is_dms()` bleibt ohne Aufrufer, und das ist ABSICHT statt
+ * Versaeumnis: es ist genau der Kennung-und-Kopf-CRC-Teil von
+ * `dms_read_info()`, das die Sonde jetzt ruft. Einen redundanten Aufruf
+ * einzufuegen, nur damit ein Symbol einen Aufrufer hat, waere die Zahl
+ * als Motiv (MF-1077). Die Doppelung ist als solche benannt (D3).
+ *
+ * **Was der Abgleich NICHT behoben hat, und es ist benannt statt
+ * verschwiegen** (Einzelheiten in `docs/OPEN_ITEMS.md` `P3-478`):
+ * ein verschluesseltes Archiv bekommt die falsche Diagnose, weil
+ * `password` fest `NULL` ist; Banner und FILEID.DIZ werden verworfen,
+ * weil `info` fest `NULL` ist; bei einem HD-Archiv ist die obere
+ * Haelfte ueber `read_track()` unerreichbar; und xDMS liest **8 von 19**
+ * Kopffeldern, waehrend eine zweite unabhaengige Beschreibung
+ * (Laurent Clevy, `DMS.txt`) CPU, Coprozessor, Maschinentyp,
+ * OS-Fassung und Taktrate darin benennt.
+ *
+ * Reference: xDMS **1.3.2** (Rocha 1998-1999, gepflegt von Heikki
+ * Orsila; Public Domain) ueber src/formats/dms/uft_dms.c — der
+ * Quellstand ist gelesen, nicht uebernommen; die Portierung selbst ist
+ * aelter und stammt aus 1.3.
  */
 #include "uft/uft_format_common.h"
 #include "uft/formats/uft_dms.h"
@@ -58,6 +105,11 @@
 #define AMIGA_HEADS      2
 #define AMIGA_SPT       11
 #define AMIGA_SS        512
+/* A-026: ein DMS-Spursatz umfasst BEIDE Koepfe eines Zylinders. Gemessen
+ * am Korpusstueck traegt jeder der 80 Saetze `unpklen = 11 264`, und
+ * 11 264 = 2 x 11 x 512; 80 x 11 264 = 901 120. Die Zahl steht deshalb
+ * nicht als Konstante da, sondern als dieser Faktor. */
+#define KOPF_JE_SATZ     2
 
 typedef struct {
     uint8_t *adf;       /* Decompressed raw ADF image */
@@ -87,20 +139,140 @@ typedef struct {
      * Verlust wurde als Datum ausgegeben". Die Warnung hat den Bediener
      * erreicht, die Datenstruktur nicht. */
     size_t   gelesen;
+
+    /* A-026: WELCHE Spursaetze faul waren — und das faengt den Fall, den
+     * `gelesen` nicht sehen kann.
+     *
+     * `gelesen` ist eine GRENZE und traegt damit nur die abgeschnittene
+     * Datei. Im toleranten Lauf laufen im Entpacker aber alle drei
+     * Pruefungen durch (Daten-CRC, Entpackfehler, Pruefsumme) und die
+     * Spur wird trotzdem geschrieben — `out_pos` waechst mit. Bei einem
+     * LOCH IN DER MITTE ist `gelesen == adf_size`, und die Grenze deckt
+     * das Loch mit ab.
+     *
+     * Gemessen am Vorzustand, an einer DMS mit EINEM gekippten Byte im
+     * Spursatz 40 (alle 80 Spurkoepfe unveraendert): 1760 Sektoren, davon
+     * **1760 mit UFT_SECTOR_OK und 0 gekennzeichnet**, waehrend die
+     * Selbstbenennung nur noch 1759-mal trifft — ein Sektor trug
+     * verfaelschte Bytes und meldete sich als guter Sektor mit gueltigen
+     * CRC-Flags. Siebter Fall der Klasse MF-1001/MF-1022/MF-1038/
+     * MF-980/MF-1040/MF-1135.
+     *
+     * Der Mechanismus dafuer lag die ganze Zeit im Baum und wurde nicht
+     * gerufen: `dms_unpack()` nimmt einen Spur-Callback, und
+     * `dms_track_info_t` traegt `crc_ok`, `checksum_ok` und (seit A-026)
+     * `decomp_ok` JE SPURSATZ. Dieses Plugin uebergab dort `NULL`.
+     * Klasse MF-930/P3-204.
+     *
+     * Ein DMS-Spursatz ist ein ZYLINDER, nicht eine Kopfspur: sein
+     * `unpklen` ist gemessen 11 264 = 2 x 11 x 512. Deshalb ist der
+     * Index hier der Zylinder, und eine faule Angabe kennzeichnet BEIDE
+     * Koepfe — feiner kann sie nicht sein, weil der Entpacker keine
+     * feinere Aussage macht. */
+    uint8_t *satz_faul;     /* je Zylinder: 1 = nicht bestaetigt */
+    size_t   saetze;        /* Laenge von satz_faul */
 } dms_pd_t;
+
+/* Sammelt je Spursatz, ob ALLE drei Integritaetsangaben bestaetigt sind.
+ * `checksum_ok` und `decomp_ok` heissen seit A-026 „geprueft und gut" —
+ * 0 deckt also auch „nicht geprueft" ab, und genau so soll es sein. */
+static void dms_satz_gesehen(const dms_track_info_t *ti, void *user)
+{
+    dms_pd_t *p = (dms_pd_t *)user;
+    if (!p || !p->satz_faul) return;
+    if ((size_t)ti->number >= p->saetze) return;   /* Sondernummern (80, 0xffff) */
+    if (!ti->crc_ok || !ti->decomp_ok || !ti->checksum_ok)
+        p->satz_faul[ti->number] = 1;
+}
 
 /* ========================================================================= */
 
+/**
+ * @brief Erkennt eine DMS — und sagt nicht mehr, als sie gelesen hat.
+ *
+ * A-026. Vorzustand, gemessen: die Sonde verglich **vier Byte** und
+ * meldete `98`. Eine Datei, die nur aus `DMS!` besteht, bekam damit
+ * dieselbe Zahl wie ein vollstaendiges, in sich stimmiges Archiv. Zwei
+ * Faellen des Baums auf einmal:
+ *
+ *   * `(void)file_size` — die Dateigroesse wurde verworfen, obwohl der
+ *     Kopf sie nachrechenbar macht. Das ist die MF-1029-Falle, die
+ *     dieser Baum sechsmal gemessen hat;
+ *   * `dms_is_dms()` prueft die Kennung UND den Kopf-CRC, lag im
+ *     Nachbarmodul und wurde nicht gerufen (MF-930/P3-204). Diese Sonde
+ *     ruft jetzt `dms_read_info()`, das dieselbe Pruefung macht und
+ *     zusaetzlich die Felder liefert — `dms_is_dms()` ist damit als
+ *     Doppelung erkennbar (D3).
+ *
+ * Die Zahl ist seit A-026 nach `docs/SONDEN_DOKTRIN.md` ABGELEITET
+ * (MF-1153), nicht vergeben, und jede Stufe haengt an einer am
+ * Korpusstueck gemessenen Beziehung:
+ *
+ *   KENNUNG (+50)          `"DMS!"` an Versatz 0, formatspezifisch
+ *   STRUKTUR (+15)         der Kopf-CRC bei Byte 54-55 ueber 4..53 —
+ *                          ein Wert an BERECHNETER Stelle, 0xF0DC am
+ *                          Korpusstueck
+ *   SELBSTKONSISTENZ (+25) `56 + pkfsize + 20 * Spursaetze` trifft die
+ *                          Dateigroesse. Gemessen:
+ *                          56 + 38 720 + 80 x 20 = **40 376**, und
+ *                          38 720 ist die Summe aller `pklen1`. Drei
+ *                          Kopffelder gegen die Datei, nicht die
+ *                          Groesse allein
+ *   GEOMETRIE (+10)        `unpkfsize == Spursaetze * Satzgroesse`;
+ *                          gemessen 80 x 11 264 = **901 120**
+ *
+ * **Die Selbstkonsistenz wird bei gesetztem `Appends`-Flag NICHT
+ * beansprucht**, und das ist keine Vorsicht, sondern steht in der
+ * Quelle: xDMS' `pfile.c` sagt zu `from`/`to` woertlich „May be
+ * incorrect if archive is appended". Eine Rechnung mit einem Feld, das
+ * die Quelle selbst als moeglicherweise falsch benennt, waere kein
+ * Beleg.
+ *
+ * Ein DMS-Spursatz ist ein ZYLINDER (gemessen `unpklen = 11 264 =
+ * 2 x 11 x 512`), und `geninfo` Bit 4 verdoppelt ihn — dieselbe
+ * Unterscheidung, die `open()` fuer `adf_size` schon trifft.
+ */
 static bool dms_probe(const uint8_t *data, size_t size, size_t file_size,
                        int *confidence)
 {
-    (void)file_size;
-    if (size < 4) return false;
-    if (memcmp(data, DMS_MAGIC, 4) == 0) {
-        *confidence = 98;
-        return true;
+    if (!data || size < 4) return false;
+    if (memcmp(data, DMS_MAGIC, 4) != 0) return false;
+
+    unsigned belege = UFT_BELEG_KENNUNG;
+
+    dms_info_t info;
+    if (size >= DMS_HEADER_SIZE &&
+        dms_read_info(data, size, &info) == DMS_OK) {
+
+        /* Der Kopf-CRC hat gestimmt — sonst waere `dms_read_info()` mit
+         * `DMS_ERR_HEADER_CRC` zurueckgekommen. */
+        belege |= UFT_BELEG_STRUKTUR;
+
+        const uint32_t saetze = (info.track_hi >= info.track_lo)
+            ? (uint32_t)(info.track_hi - info.track_lo + 1u) : 0u;
+
+        if (saetze != 0u && file_size != 0u &&
+            !(info.geninfo & DMS_INFO_APPENDS)) {
+            const uint64_t erwartet = (uint64_t)DMS_HEADER_SIZE
+                                    + (uint64_t)info.packed_size
+                                    + (uint64_t)DMS_TRACK_HDR * saetze;
+            if (erwartet == (uint64_t)file_size)
+                belege |= UFT_BELEG_SELBSTKONSISTENZ;
+        }
+
+        if (saetze != 0u) {
+            const uint64_t satz = (info.geninfo & DMS_INFO_HD)
+                ? 2u * (uint64_t)KOPF_JE_SATZ * AMIGA_TRACK_SIZE
+                :      (uint64_t)KOPF_JE_SATZ * AMIGA_TRACK_SIZE;
+            if ((uint64_t)info.unpacked_size == satz * (uint64_t)saetze)
+                belege |= UFT_BELEG_GEOMETRIE;
+        }
+
+        dms_info_free(&info);
     }
-    return false;
+
+    *confidence = uft_probe_konfidenz(belege);
+    return true;
 }
 
 static uft_error_t dms_open(uft_disk_t *disk, const char *path, bool ro)
@@ -131,6 +303,18 @@ static uft_error_t dms_open(uft_disk_t *disk, const char *path, bool ro)
     if (!adf) { dms_info_free(&info); free(raw); return UFT_ERROR_NO_MEMORY; }
     memset(adf, 0xE5, adf_size);
 
+    /* A-026: die Plugin-Daten stehen JETZT, nicht erst nach dem Entpacken
+     * — der Spur-Callback schreibt seine Befunde hinein, waehrend
+     * `dms_unpack()` laeuft. */
+    dms_pd_t *p = calloc(1, sizeof(dms_pd_t));
+    if (!p) { free(adf); dms_info_free(&info); free(raw); return UFT_ERROR_NO_MEMORY; }
+    p->saetze    = AMIGA_CYL;                  /* ein Spursatz = ein Zylinder */
+    p->satz_faul = calloc(p->saetze, 1);
+    if (!p->satz_faul) {
+        free(p); free(adf); dms_info_free(&info); free(raw);
+        return UFT_ERROR_NO_MEMORY;
+    }
+
     /* Erster Versuch STRENG: jede der vier Integritaetsangaben zaehlt.
      * Nur wenn das scheitert, wird mit `override_errors` erneut versucht
      * — dann sind die Daten da UND der Mangel ist benannt. Ein Befund
@@ -138,33 +322,42 @@ static uft_error_t dms_open(uft_disk_t *disk, const char *path, bool ro)
      * verschwiegen werden. */
     size_t written = 0;
     de = dms_unpack(raw, file_size, adf, adf_size, &written,
-                    NULL, 0, NULL, NULL, NULL);
+                    NULL, 0, NULL, dms_satz_gesehen, p);
 
     if (de != DMS_OK) {
         UFT_WARN("DMS: strenger Lauf abgebrochen (%s) — Wiederholung mit "
                  "Fehlertoleranz", dms_error_string(de));
         memset(adf, 0xE5, adf_size);
+        /* A-026: die Befundtafel wird MIT dem Puffer zurueckgesetzt. Sonst
+         * traege sie Angaben aus einem Lauf, dessen Daten verworfen sind. */
+        memset(p->satz_faul, 0, p->saetze);
         written = 0;
         dms_error_t de2 = dms_unpack(raw, file_size, adf, adf_size, &written,
-                                     NULL, 1, NULL, NULL, NULL);
+                                     NULL, 1, NULL, dms_satz_gesehen, p);
         if (de2 != DMS_OK || written == 0) {
             UFT_WARN("DMS: nichts wiederherstellbar (%s) — Datei wird NICHT "
                      "als leere Diskette ausgegeben",
                      dms_error_string(de2 != DMS_OK ? de2 : de));
+            free(p->satz_faul);
+            free(p);
             free(adf);
             dms_info_free(&info);
             free(raw);
             return UFT_ERROR_FORMAT_INVALID;
         }
-        UFT_WARN("DMS: %zu von %zu Byte wiederhergestellt, Integritaet NICHT "
-                 "bestaetigt — der Rest bleibt 0xE5", written, adf_size);
+        /* A-026: die Warnung nennt jetzt auch, WIE VIELE Spursaetze
+         * unbestaetigt sind — „901 120 von 901 120 Byte wiederhergestellt"
+         * allein liest sich wie ein Erfolg. */
+        size_t faul = 0;
+        for (size_t i = 0; i < p->saetze; i++) faul += p->satz_faul[i] ? 1u : 0u;
+        UFT_WARN("DMS: %zu von %zu Byte wiederhergestellt, %zu von %zu "
+                 "Spursaetzen NICHT bestaetigt — der Rest bleibt 0xE5",
+                 written, adf_size, faul, p->saetze);
     }
 
     dms_info_free(&info);
     free(raw);
 
-    dms_pd_t *p = calloc(1, sizeof(dms_pd_t));
-    if (!p) { free(adf); return UFT_ERROR_NO_MEMORY; }
     p->adf = adf;
     p->adf_size = adf_size;
     /* MF-1135: die Grenze zwischen GELESEN und GEFUELLT wird behalten.
@@ -189,6 +382,7 @@ static void dms_close(uft_disk_t *disk)
     dms_pd_t *p = disk->plugin_data;
     if (p) {
         free(p->adf);
+        free(p->satz_faul);     /* A-026 */
         free(p);
         disk->plugin_data = NULL;
     }
@@ -224,6 +418,25 @@ static uft_error_t dms_read_track(uft_disk_t *disk, int cyl, int head,
          * Die Daten bleiben stehen; ein Befund darf den Zugriff nicht
          * verstellen (MF-830). Er darf nur nicht verschwiegen werden. */
         if (soff + AMIGA_SS > p->gelesen && track->sector_count > 0) {
+            uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
+        }
+
+        /* A-026: und zusaetzlich — nicht stattdessen — die Angabe des
+         * Entpackers ueber DIESEN Spursatz. `p->gelesen` ist eine Grenze
+         * und sieht nur das Ende; ein Loch in der Mitte liegt davor und
+         * bliebe unbemerkt (gemessen: 1760 von 1760 Sektoren meldeten
+         * UFT_SECTOR_OK, waehrend ein Sektor verfaelschte Bytes trug).
+         *
+         * Beide Kennzeichnungen sind noetig und keine ersetzt die andere:
+         * die Grenze traegt die ABGESCHNITTENE Datei, fuer die es gar
+         * keinen Spursatz mehr gibt, ueber den der Callback etwas sagen
+         * koennte; die Tafel traegt das LOCH in einer vollstaendigen
+         * Datei.
+         *
+         * Die Daten bleiben stehen (MF-830) — gekennzeichnet wird, nicht
+         * verschwiegen und nicht verstellt. */
+        if (p->satz_faul && (size_t)cyl < p->saetze && p->satz_faul[cyl]
+            && track->sector_count > 0) {
             uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
         }
     }
@@ -264,6 +477,8 @@ static uft_error_t dms_write_track(uft_disk_t *disk, int cyl, int head,
      * `write_track` bleibt GESETZT statt NULL: ein Nullzeiger gaebe dem
      * Aufrufer keine Begruendung. */
     (void)track;
+    (void)cyl;      /* A-026: vorbestehende -Wextra-Warnungen, D7 */
+    (void)head;
     return UFT_ERROR_NOT_SUPPORTED;
 }
 
