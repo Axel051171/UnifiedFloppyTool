@@ -42,7 +42,35 @@
 #     Diese Datei macht die Liste SICHTBAR; sie macht sie nicht
 #     alleinherrschend.
 
-include_guard(GLOBAL)
+# KEIN `include_guard`. Das ist gemessen, nicht Geschmack.
+#
+# MF-1219: die erste Fassung hatte `include_guard(GLOBAL)`. Die Datei
+# setzt nur Variablen, und CMake-Variablen gelten je
+# VERZEICHNIS-Gueltigkeitsbereich. Eine globale Sperre laesst deshalb
+# genau EINEN Verbraucher gewinnen: das Wurzel-`CMakeLists.txt`
+# verarbeitet `add_subdirectory(tests)` zuerst, dort wurde die Datei
+# eingebunden und die Sperre gesetzt — und das `include()` in
+# `cli/uft-decode/CMakeLists.txt` war danach ein LEERLAUF. Dort stand
+# `UFT_FORMAT_LAYER_DEPS` leer, und der Link von `uft-decode` riss mit
+# `undefined reference to uft_protection_probe_scp` und der ganzen
+# `multiread_*`-Familie — genau die zwei Dateien, die NUR aus dieser
+# Liste kommen.
+#
+# Sichtbar wurde es erst in CI, und zwar spaet: der Sanitizer-Ablauf
+# baut mit `cmake --build build … || true`, der Baufehler galt also als
+# Erfolg, und erst `ctest --no-tests=error` meldete die fuenf
+# Sperr-Tests als „Not Run" (Ausgangskode 8) — weil ninja nach dem
+# Linkfehler angehalten hatte und ihre Programme nie entstanden.
+#
+# **Der eigentliche Fehler war die Pruefung, nicht die Zeile.** Beide
+# Seiten waren einzeln gruen gemessen (`TESTS=OFF CLI=ON` und
+# `TESTS=ON CLI=OFF`) — nie die VORGABE mit beiden `ON`, also die
+# Konfiguration, die ausgeliefert wird. Zwei gruene Haelften sind kein
+# gruenes Ganzes.
+#
+# Wiedereinbinden ist hier folgenlos (nur `set()`), und je Bereich
+# NOETIG. Wer eine Sperre will, nimmt `include_guard(DIRECTORY)`; gar
+# keine ist einfacher und sagt dasselbe.
 
 set(UFT_FORMAT_LAYER_DEPS
             # what the format layer calls out to
