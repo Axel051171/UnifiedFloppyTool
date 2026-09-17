@@ -168,7 +168,25 @@ def walk(roots, exts, wurzel=None):
                 yield root
             continue
         for dirpath, dirnames, files in os.walk(root):
-            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            # Die Verzeichnisse werden SORTIERT, nicht nur gefiltert.
+            #
+            # MF-1231, gemessen in CI: hier stand nur der Filter, und
+            # `os.walk` gibt Unterverzeichnisse in der Reihenfolge des
+            # DATEISYSTEMS. Auf Windows und auf Linux ist das eine
+            # andere. Fuer jede Regel, die eine Datei fuer sich
+            # beurteilt, ist das belanglos — fuer K4 in
+            # `audit_codefallen.py` nicht: sie ist die einzige Regel
+            # ueber MEHRERE Dateien und verankert ihren Fund an der
+            # ERSTEN Fundstelle. Deren Pfad steckt im Fingerabdruck.
+            #
+            # Die Folge war gemessen: lokal „20 in der Grundlinie, 0
+            # NEU", in CI **12 Funde** bei identischen Zahlen — nur mit
+            # einem anderen ersten Treffer (`368640` stand hier bei
+            # `uft_bayesian_detect.c:151`, dort bei
+            # `uft_file_ops_extended.c:655`). Dieselbe Klasse wie
+            # Defekt J aus MF-1229: lokal unsichtbar, weil beide
+            # Seiten dieselbe Reihenfolge benutzen.
+            dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
             for f in sorted(files):
                 if not f.endswith(exts):
                     continue

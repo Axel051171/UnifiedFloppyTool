@@ -356,16 +356,29 @@ def collect_constants(src, wanted):
 
 
 def rule_k4(per_file, wanted):
-    """Cross-file: eine Konstante in mehr als einer Nicht-Test-Datei."""
+    """Cross-file: eine Konstante in mehr als einer Nicht-Test-Datei.
+
+    MF-1231: der Fund wird an der KLEINSTEN Fundstelle verankert, nicht
+    an der erstgesehenen. K4 ist die einzige Regel ueber mehrere
+    Dateien, und ihr Fingerabdruck enthaelt den Pfad dieser Verankerung
+    — hing er an der Durchlaufreihenfolge, war er plattformabhaengig.
+    Gemessen: lokal 0 neue Funde, in CI **12**, bei identischen
+    Dateizahlen und nur anderem ersten Treffer. `walk()` sortiert seit
+    derselben MF auch die Verzeichnisse; diese Sortierung hier ist die
+    zweite, unabhaengige Schranke, damit ein spaeterer Umbau von
+    `walk()` die Grundlinie nicht wieder entwertet.
+    """
     where = defaultdict(list)          # konst -> [(pfad, zeile, spalte, text)]
     for path, hits in per_file.items():
         if _is_home(path):
             continue
         for key, line, col, text in hits:
-            where[key].append((path, line, col, text))
+            where[key].append((path.replace(os.sep, '/'), line, col, text))
 
     out = []
     for key, occ in sorted(where.items()):
+        # Nach Pfad und Zeile sortieren — nicht nach Sehreihenfolge.
+        occ = sorted(occ, key=lambda o: (o[0], o[1], o[2]))
         files = sorted({o[0] for o in occ})
         if len(files) < 2:
             continue
@@ -747,6 +760,29 @@ def selbsttest() -> int:
     zusage(collect_constants('static const int t[] = { 0x2200, 1, 2 };\n',
                              KONSTANTEN),
            'ein Lauf unter %d Literalen ist keine Tafel' % TAFEL_LAUF)
+
+    print('Defekt G — K4 haengt nicht an der Durchlaufreihenfolge')
+    treffer = [('737280', 1, 1, '737280')]
+    vorwaerts = {'src/a/x.c': treffer, 'src/b/y.c': treffer,
+                 'src/c/z.c': treffer}
+    rueckwaerts = {'src/c/z.c': treffer, 'src/b/y.c': treffer,
+                   'src/a/x.c': treffer}
+    fv = rule_k4(vorwaerts, KONSTANTEN)
+    fr = rule_k4(rueckwaerts, KONSTANTEN)
+    zusage(len(fv) == 1 and len(fr) == 1,
+           'beide Reihenfolgen ergeben genau einen Fund')
+    zusage(fv and fr and fv[0].fingerprint() == fr[0].fingerprint(),
+           'und DENSELBEN Fingerabdruck — vorher war er '
+           'plattformabhaengig, lokal 0 Funde gegen 12 in CI')
+    zusage(fv and fv[0].path == 'src/a/x.c',
+           'verankert an der kleinsten Fundstelle, nicht an der '
+           'erstgesehenen')
+    rueck_sep = {'src\\b\\y.c': treffer, 'src\\a\\x.c': treffer,
+                 'src\\c\\z.c': treffer}
+    fs = rule_k4(rueck_sep, KONSTANTEN)
+    zusage(fs and fs[0].fingerprint() == fv[0].fingerprint(),
+           'und Backslash-Pfade ergeben denselben Fingerabdruck wie '
+           'Schraegstriche (Windows gegen Linux)')
 
     print('Defekt E — kleine Konstanten schweigen ohne Schalter')
     for verboten in ('84', '108', '288', '360', '512', '16', '1024'):
