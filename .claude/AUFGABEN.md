@@ -1870,9 +1870,10 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Befund folgt als Fortschreibung an `P3-387`.
 
 ### A-023 · Zulieferung `Apple-Sektorordnung.zip` — der offene Punkt aus MF-714
-- **Status:** **vorgeprüft, baureif** — Behauptung nachgerechnet, Achse
-  bestätigt, Prüfstück vorhanden; der Bau ist ein eigener Commit ·
-  MF-1211 · **Aufgenommen:** 2026-09-16
+- **Status:** **angehalten mit Befund** — die Tafel ist dreifach belegt, und
+  dabei ist ein **Defekt an zwei anderen Stellen** gefunden worden
+  (`P3-469`); der Bau wartet auf den A-018-Blocker · MF-1211, MF-1213 ·
+  **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple-Sektorordnung.zip\"
   finde was ich vergessen habe und verbessere damit das"
 - **Kennzahl:** **keine der vier** direkt; die Anordnungsachse ist
@@ -1926,7 +1927,45 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Mutationsmatrix, Produktivaufrufer im selben Commit (D2, Kandidat
     `src/formats/apple/prodos_po_do.c`), Vollsuite. Das ist ein eigener
     Commit, kein Anhängsel an eine Begutachtungsreihe.
-- **Beleg:** Vorprüfung gemessen MF-1211; der Bau bleibt offen.
+- **Nachtrag MF-1213 — der Bau wurde begonnen und hat etwas anderes
+  gefunden. Die Reihenfolge dreht sich damit um.**
+  · **Die Tafel ist jetzt DREIFACH belegt, und die Rechnung ist geführt.**
+    `src/a8rawconv/diska2.cpp:3-9` — **im Baum**, und von UFTs eigenem
+    `include/uft/formats/apple/uft_apple_order.h` als Quelle zitiert —
+    nennt `kLogicalToPhysicalA2DOS` und `kLogicalToPhysicalA2ProDOS`.
+    MAME `ap2_dsk.cpp:449-459` (BSD-3-Clause) führt beide in der
+    **Gegenrichtung**, und gemessen ist jede die **exakte Inverse** der
+    a8rawconv-Tafel. Aus beiden Quellenpaaren unabhängig gerechnet ergibt
+    die DO↔PO-Abbildung **denselben** Wert
+    `{0,14,13,12,11,10,9,8,7,6,5,4,3,2,1,15}` — und der trifft die Tafel
+    der Zulieferung. **Gegenprobe an UFTs eigenen Zahlen:**
+    `uft_apple_order.h` sagt „ProDOS-logische Sektoren 4 und 5, physisch 8
+    und 10 … Versätze 0xB00 und 0xA00" — **alle vier treffen** aus MAMEs
+    Tafeln gerechnet.
+  · **DER BEFUND: der Baum führt die falsche Tafel unter dem richtigen
+    Namen.** `src/formats/apple/prodos_po_do.c:25` und
+    `src/formats/2img/uft_2img_parser_v2.c:137` tragen beide
+    `dos_to_prodos[16] = {0,13,11,9,7,5,3,1,14,12,10,8,6,4,2,15}` — **das
+    ist byteidentisch mit `kLogicalToPhysicalA2DOS`**, also logisch→
+    physisch, nicht DOS→ProDOS. `uft_2img_parser_v2.c:338` benutzt sie
+    unmittelbar als Ordnungswandlung. Steht als **`P3-469`**.
+  · **Und der grüne Selbsttest belegt nichts:** `uft_2img_parser_v2.c:
+    508-517` prüft den Rundlauf `prodos_to_dos[dos_to_prodos[i]] == i` —
+    der gilt **tautologisch**, weil `prodos_to_dos` als Inverse berechnet
+    wird. Er hält für jede Permutation.
+  · **Warum NICHT gebaut wurde, und das ist der Kern:** beide Fundstellen
+    sind **unerreichbar** (`uft_apl_prodos_po_do_open` ein Treffer — seine
+    Definition; `img2_dos_to_prodos` `static`, ein Treffer), werden aber
+    gebaut. Die Ordnung jetzt in `uft_sector_order.h` einzuführen hätte
+    **keinen erreichbaren Verbraucher** — das wäre `P3-422` ein zweites
+    Mal, wo `uft_track_layout` gemessen keinen Aufrufer hat. Der einzige
+    erreichbare Apple-Verbraucher ist `src/formats/do/uft_do.c` (T2), und
+    eine Verhaltensänderung dort ist ohne ein **echtes** DOS-3.3-Abbild
+    nicht gegen eine fremde Hand belegbar — **derselbe Blocker wie A-018**.
+  · **Reihenfolge damit umgedreht:** erst das Abbild (A-018), dann Ordnung
+    **und** Verbraucher in EINEM Commit. Vorher wäre es Vorrat ohne Tür.
+- **Beleg:** Vorprüfung gemessen MF-1211; Befund `P3-469` gemessen
+  MF-1213; der Bau bleibt offen und hängt an A-018.
 
 ### A-024 · AUFTRAG Audit-Umfang: komplettes Repository statt CMake-Liste (Mengen A/B/C)
 - **Status:** **in Arbeit** — Mengen abgeleitet, Menge C auf **acht**
