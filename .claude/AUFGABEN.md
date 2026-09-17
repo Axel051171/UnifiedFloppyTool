@@ -2390,10 +2390,25 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   CMake-Begründung „keines der hier verfügbaren Werkzeuge schreibt eine"
   war zum dritten Mal an einem Tag dieselbe Populationsfrage.
 
-  **Offen in Strang B (6):** `dim`, `fds`, `lisa_twiggy`, `nfd`, `pro`,
-  `udi` — und für alle sechs gilt der Vorbehalt, der heute dreimal zu
-  eng war: befragt sind Zulieferordner, gebaute Werkzeuge und ein
-  erster Streifzug — nicht die Welt.
+  **STRANG B, die restlichen SECHS sind einzeln befragt (MF-1225) — und
+  keines lässt sich heute heben.** Gesucht wurde nach **Schreibern** und
+  nach Modulnamen, nicht nach Endungen; fünfte Werkzeugfamilie neu
+  gemessen: `gw` führt `dim.py` **und** `nfd.py`, beide mit
+  `read_only = True` (am Quelltext, nicht über die Endungstafel).
+
+  | Format | Grund, gemessen |
+  |---|---|
+  | `dim` | **kein Schreiber** — gw read-only, hxcfe `;R`, floptool `r-`, libdsk kennt es nicht; `fathuman`/`dis68k`/`x68000-floppy-tools` **lesen** |
+  | `nfd` | **kein Schreiber** — `98imgtools` (Unlicense!) schreibt **NHD**, das Festplattenformat, nicht NFD; ein Buchstabe, anderes Format |
+  | `pro` | APE kommerziell; **Altirra GPL-2**, Schreiben unbestätigt (eine offene Messung); `atari800` ist **dieselbe Hand** wie UFTs Referenz |
+  | `fds` | **Schreiber da** (`fdstool`, `fdtc`, `qd2fds`) — **alle ohne Lizenz** → Eigentümerentscheidung, Abstammung wäre sauber |
+  | `udi` | **doppelt blockiert**: `trx2x` hat keine Lizenz **und** ist von Makeev, dessen Spezifikation UFTs Leser ist — dieselbe Hand |
+  | `lisa_twiggy` | LisaEm **GPL-2** (sauber), aber raw↔dc42 modelliert die Zonierung nicht; echtes Abbild = Quellenfrage |
+
+  **Eines von sechs** (`fds`) hängt an einer Entscheidung derselben Art,
+  die für `pc98-disk-tools` schon gefallen ist. **Eines** (`pro`) an
+  einer einzigen Messung. Die übrigen vier an Gegenständen, die es
+  womöglich nicht gibt.
 - **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
   (MF-1222, `6f065fd0` + Folgecommit), `P3-475` neu; Strang B 8 offen.
 
