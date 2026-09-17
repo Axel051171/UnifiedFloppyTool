@@ -27,6 +27,37 @@
  * encoding protection) is out of scope. Decoding raw-MFM tracks INTO sectors is
  * a follow-up (needs the Amiga MFM sector decoder); the raw bitstream is
  * preserved so nothing is lost meanwhile.
+ *
+ * BERICHTIGT MF-1222 — der letzte Halbsatz trug nur zur Haelfte. Die BYTES
+ * waren bewahrt, die LAENGE nicht: der Tafeleintrag wurde als `td[12]`
+ * eingelesen und ausgewertet wurden `td[3]` (Typ) und `be24(&td[4])`
+ * (Bytes); die Bitlaenge bei +8 stand in der Datei, wurde gelesen und
+ * verworfen, und `raw_bits` kam in dieser Datei 0 Mal vor. Gemessen an
+ * einem Extended ADF von `disk-analyse` (160 Spuren): die Datei sagt
+ * 100 150 Bit, `raw_size * 8` ergibt 100 152 — **zwei Bitstellen hinter
+ * dem Spurende je Spur, 320 ueber die Diskette**. Fuer ein Format, dessen
+ * Zweck Schutzspuren sind, ist das nicht nebensaechlich: eine lange Spur
+ * ist um BITS laenger, nicht um Bytes. Seit MF-1222 reicht `read_track()`
+ * die Angabe durch, die 0 inbegriffen (0 = die Datei nennt sie nicht), und
+ * sagt AB, wenn mehr Bits beansprucht als Bytes gespeichert sind.
+ *
+ * Der Beleg dafuer, dass der Leser das FREMDE Erzeugnis richtig zerlegt,
+ * ist `tests/test_adf_ext_gegen_disk_analyse.c`: 1760 von 1760 Sektoren an
+ * ihrer eigenen Ortsmarke, 0 abweichend — fremde MFM-Kodierung
+ * (`disk-analyse`, Unlicense), eigener Dekoder (`flux_decode_amiga_bits`).
+ * Damit steht `adf_ext` auf T1b; vorher T2, weil `test_adf_ext_plugin`
+ * seine Pruefdatei SELBST baut (Klasse MF-1009/MF-1028).
+ *
+ * NOCH OFFEN, benannt statt entschieden — `P3-475`: die DD/HD-Heuristik
+ * `if (p->tracks[i].len > 20000) hd = 2` entscheidet die Sektorzahl
+ * (11 oder 22) an der Spurlaenge. Fuer ROHE Spuren geht das auf (DD ~12,5
+ * KB, HD ~25 KB); fuer AmigaDOS-Spuren (Typ 0) ist eine HD-Spur
+ * 22 * 512 = 11 264 Byte und liegt damit UNTER der Schranke, also meldete
+ * `disk->geometry.sectors` 11, waehrend `read_track()` aus `td->len / 512`
+ * 22 Sektoren zurueckgibt. Das ist Arithmetik am Quelltext, KEINE Messung
+ * an einer Datei — ein HD-Extended-ADF liegt nicht vor, und ob WinUAE die
+ * Schranke nur auf rohe Spuren anwendet, ist nicht nachgelesen. Deshalb
+ * wird hier nichts geaendert (S5: unklar, welche Seite falsch ist).
  */
 #include "uft/uft_format_common.h"
 
@@ -36,6 +67,17 @@ typedef struct {
     uint8_t  type;    /* 0 = AmigaDOS, 1 = raw MFM */
     uint32_t offset;  /* absolute file offset of track data */
     uint32_t len;     /* track data length in bytes */
+    /* MF-1222: die Spurlaenge in BIT, Feld +8 des Tafeleintrags. Sie stand
+     * die ganze Zeit in der Datei und wurde gelesen und weggeworfen: der
+     * Eintrag wird als `td[12]` eingelesen, benutzt wurden nur `td[3]`
+     * (Typ) und `be24(&td[4])` (Bytes). Gemessen an einem Extended ADF von
+     * disk-analyse: die Datei sagt 100 150 Bit je Spur, `raw_size * 8`
+     * ergibt 100 152 — zwei Bitstellen HINTER dem Spurende, und wer die
+     * Bytezahl hochrechnet, liest sie mit. Bei einem Format, dessen Zweck
+     * Schutzspuren sind, ist die Bitlaenge das eigentliche Datum: eine
+     * lange Spur ist um BITS laenger, nicht um Bytes. `uft_track_t` fuehrt
+     * mit `raw_bits` seit immer das Feld dafuer. */
+    uint32_t bits;    /* track length in bits, 0 = von der Datei nicht genannt */
 } adfext_track_t;
 
 typedef struct {
@@ -84,6 +126,7 @@ static uft_error_t adfext_open(uft_disk_t *disk, const char *path, bool ro) {
         if (fread(td, 1, 12, f) != 12) { free(p); fclose(f); return UFT_ERROR_IO; }
         p->tracks[i].type   = td[3];
         p->tracks[i].len    = be24(&td[4]);
+        p->tracks[i].bits   = be24(&td[8]);   /* MF-1222 */
         p->tracks[i].offset = (uint32_t)offs;
         if (p->tracks[i].len > 20000) hd = 2;   /* WinUAE ddhd heuristic */
         offs += p->tracks[i].len;
@@ -143,6 +186,15 @@ static uft_error_t adfext_read_track(uft_disk_t *disk, int cyl, int head,
         /* Raw MFM (type 1): preserve the uninterpreted bitstream so the
          * protection track is not lost (decode to sectors is a follow-up). */
         if (td->len == 0 || td->len > (16u * 1024 * 1024)) return UFT_OK;
+        /* MF-1222: die Datei macht ZWEI Angaben zur Spur — Bytes (+4) und
+         * Bits (+8). Beansprucht sie mehr Bits, als sie Bytes speichert,
+         * widersprechen sich die beiden, und die Bits gewinnen liesse
+         * einen Verbraucher hinter den Puffer lesen. Hier wird deshalb
+         * ABGESAGT und nicht gekappt: ein gekappter Wert saehe wie eine
+         * Messung aus (D5, MF-1040). Fuer die gemessene Datei greift der
+         * Zweig nicht — 100 150 <= 12 519 * 8 = 100 152. */
+        if ((uint64_t)td->bits > (uint64_t)td->len * 8u)
+            return UFT_ERROR_FORMAT_INVALID;
         uint8_t *raw = malloc(td->len);
         if (!raw) return UFT_ERROR_NO_MEMORY;
         if (fread(raw, 1, td->len, p->file) != td->len) { free(raw); return UFT_ERROR_IO; }
@@ -155,6 +207,12 @@ static uft_error_t adfext_read_track(uft_disk_t *disk, int cyl, int head,
          * CI-Leckbericht ueber g64_read_slot(). */
         track->owns_data = true;
         track->raw_len  = td->len;
+        /* MF-1222: durchgereicht, wie die Datei es sagt — die 0 inbegriffen.
+         * Eine 0 heisst „die Datei nennt die Bitlaenge nicht"; sie hier auf
+         * `len * 8` zu setzen waere eine erfundene Zahl an der Stelle, an
+         * der eine fehlende steht (MF-980: „das Format sagt X" und „hier
+         * wurde X gelesen" sind zwei Aussagen). */
+        track->raw_bits = td->bits;
     }
     return UFT_OK;
 }

@@ -2494,9 +2494,20 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip"
            OR ${test_name} STREQUAL "test_convert_adf_hfe_roundtrip"
            OR ${test_name} STREQUAL "test_hfe_drehzahl"
-           OR ${test_name} STREQUAL "test_hfe_kappt_nicht_still")
+           OR ${test_name} STREQUAL "test_hfe_kappt_nicht_still"
+           OR ${test_name} STREQUAL "test_adf_ext_gegen_disk_analyse")
         # MF-539: braucht die ganze Format-Schicht wie die uebrigen
         # Wandlungstests, aber keine Korpusdatei.
+        # MF-1222: `test_adf_ext_gegen_disk_analyse` haengt sich an — es
+        # braucht genau diese Menge (Format-Schicht + `uft_flux_decoder.c`),
+        # weil es den Bitstrom aus `adf_ext` durch `flux_decode_amiga_bits()`
+        # schickt. Eine EIGENE Liste waere die neunte gewesen; der Kommentar
+        # unten nennt die acht schon als „eine Wahrheit" (Klasse MF-1015),
+        # und `P3-426` nennt eine dreizehnte Aufzaehlung „genau der Fehler,
+        # den dieser Baum viermal bezahlt hat". Es ist der EINZIGE
+        # Teilnehmer dieses Zweigs mit Korpusdatei — das Define steht
+        # deshalb unten in einem eigenen `if`, damit die anderen drei nicht
+        # still andere Uebersetzungsflaggen bekommen.
         # MF-1166: `test_hfe_drehzahl` haengt sich an denselben Zweig —
         # es ruft denselben Wandler, nur mit der 15-Sektor-Geometrie, die
         # der Rundlauf nie betreten hat.
@@ -2544,6 +2555,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+        if(${test_name} STREQUAL "test_adf_ext_gegen_disk_analyse")
+            # MF-1222: nur dieser Teilnehmer liest eine Korpusdatei.
+            target_compile_definitions(${test_name} PRIVATE
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        endif()
     elseif(${test_name} STREQUAL "test_mfm_encoder_decodes_back")
         # MF-539: der IBM-MFM-Encoder hatte keinen Test. Er braucht nur sich
         # selbst und den Dekoder, der ihn beweisen soll — nicht die ganze

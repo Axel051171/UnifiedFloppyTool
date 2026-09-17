@@ -1560,6 +1560,18 @@
       "oracle": "gw",
       "fremdcode": "nein - der Fluss ist aus einem UFT-eigenen Sektorabbild kodiert; kein Bootblock, kein Dateisystem, kein fremder Inhalt.",
       "content": "FM-Flussstrom (IBM System 34 / Acorn DFS), 3 Spuren einseitig, je ~28 870 Uebergaenge; gemessen liefert UFTs flux_decode_fm() daraus 30 von 30 selbstbenennenden Sektoren a 256 Byte. Die Sektoren beginnen je Spur an anderer Stelle (S00 / S07 / S04) - gws Rotationsversatz, und der Dekoder findet sie trotzdem alle."
+    },
+    {
+      "file": "tests/corpus_free/disk_analyse_extadf_raw160.adf",
+      "sha256": "6d6f73504c37bf822f0b1feff9d744796e2f5b618e02fcd2a2d0a8fe8065680c",
+      "format": "adf_ext",
+      "origin": "cross-tool",
+      "tool": "disk-analyse aus keirf/disk-utilities (Quellstand: neue-ideen/disk-utilities-master.zip; libdisk/container/eadf.c darin 5593 Byte, sha256 f56103d17290a3c5..., byteidentisch mit dem Ursprung). Lizenz Unlicense / public domain, COPYING IM PAKET gemessen (1211 Byte) statt nur am Ursprung nachgelesen. Gebaut mit `mingw32-make SHARED_LIB=n` (gcc 13.1.0, erster Versuch rc 0). Kanal *Oracle* nach MF-695 - ausgefuehrt, nicht eingebunden.",
+      "source": "python tests/corpus_manifest/gen_adf_ext_corpus.py <disk-analyse.exe> <disk-analyse/formats> <hxcfe.exe>. Das Rezept legt eine selbstbenennende 880K-ADF (80x2x11x512 = 901 120 Byte, je Sektor die Marke `UFT-K Ccc Hh Sss ` alle 17 Byte ab Versatz 0), wandelt sie mit disk-analyse nach Extended ADF und liefert sie NUR, wenn hxcfe (AMIGA_EXTADF) sie byteidentisch zur Eingabe zurueckliest - gemessen 0 von 901 120 Byte abweichend. Deterministisch: ein zweiter Lauf gibt dieselbe sha256. Zwei Werkzeugkonventionen sind dabei mechanisiert statt in eine Anleitung geschrieben: disk-analyse waehlt seinen SCHREIBER ueber die Endung und braucht `.eadf`, hxcfe waehlt seinen LADER ueber die Endung und sagt zu `.eadf` `No loader support the file` (rc 127) statt AMIGA_EXTADF (rc 0) - deshalb heisst die Datei `.adf`, was zugleich die von gen_verification_tiers.py fuer adf_ext gefuehrte Endung ist. Und `-c` bekommt den BLOSSEN Dateinamen bei Lauf im Deskriptorverzeichnis, weil config.c::open_file() mit `if (name[0] != '/')` ueber absolut entscheidet und `C:/...` deshalb fuer relativ haelt.",
+      "test": "test_adf_ext_gegen_disk_analyse",
+      "oracle": "disk-analyse",
+      "fremdcode": "nein - der INHALT ist eine UFT-eigene selbstbenennende ADF; fremd ist allein die MFM-KODIERUNG (Sync, Kopffelder, Pruefsummen), also Format und nicht Inhalt. Kein Bootblock und kein Dateisystem: Sektor 0 traegt die Marke `UFT-K C00 H0 S00 ` und keine `DOS`-Kennung.",
+      "content": "Extended ADF (UAE-1ADF), 166 Spurtafeleintraege (83 x 2), ALLE Typ 1 = rohe MFM-Spur, weil eadf_close() `thdr.type = htobe16(1)` einmal vor der Schleife setzt: 160 volle Spuren mit je 100 150 Bit / 12 519 Byte und 6 unformatierte (T80.0-82.1, len 0). Die Datei ist ihr eigener Pruefstein - Kopf + Tafel + Nutzlast = 2 005 044 = Dateigroesse, und len == (bitlen+7)/8 in allen 160 vollen Spuren. UFTs EIGENER Dekoder (flux_decode_amiga_bits) liefert daraus 1760 von 1760 Sektoren an ihrer eigenen Ortsmarke, 0 abweichend, 0 gefallene Datenpruefsummen."
     }
   ]
 }

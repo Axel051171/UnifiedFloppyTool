@@ -1307,6 +1307,86 @@ REGISTRY: tuple[Oracle, ...] = (
             "unabhaengig sein. "
         ),
     ),
+    Oracle(
+        name="disk-analyse",
+        env="DISK_ANALYSE",
+        exes=("disk-analyse", "disk-analyse.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Extended ADF (UAE-1ADF): der erste ERZEUGER fuer `adf_ext` "
+            "(MF-1222). `disk-analyse -c <formats> <ein.adf> <aus.eadf>` "
+            "kodiert jede AmigaDOS-Spur nach MFM und schreibt sie als "
+            "rohe Spur in einen Extended-ADF-Behaelter; die Kennung "
+            "steht woertlich in `libdisk/container/eadf.c`: "
+            "`memcpy(dhdr.sig, \"UAE-1ADF\", sizeof(dhdr.sig))`. "
+            "**Der Wert liegt im Umweg** (Klasse MF-1084): ein Werkzeug, "
+            "das ADF nach ADF wandelt, koennte die Bytes durchreichen — "
+            "ueber einen ZELLSTROM muss es Sync, Kopffeld, Pruefsummen "
+            "und Anordnung wirklich modellieren. Gemessen an dem so "
+            "gebauten Beleg liest UFTs eigener Dekoder 1760 von 1760 "
+            "Sektoren an ihrer eigenen Ortsmarke, 0 abweichend. "
+            "**Es schreibt AUSSCHLIESSLICH rohe MFM-Spuren:** "
+            "`eadf_close()` setzt `thdr.type = htobe16(1)` einmal vor "
+            "der Schleife — eine AmigaDOS-Spur (Typ 0) entsteht nie, der "
+            "Sektorzweig von `adf_ext` bleibt also unbelegt. "
+            "FALLSTRICK 1, gemessen: `-c` mit einem WINDOWS-Pfad endet "
+            "mit rc 1 und „could not open config file“, waehrend die "
+            "Datei existiert — `config.c::open_file()` entscheidet mit "
+            "`if (name[0] != '/')` ueber absolut und haengt `C:/...` "
+            "deshalb hinter `getcwd()`. Der blosse Dateiname bei Lauf im "
+            "Deskriptorverzeichnis geht. FALLSTRICK 2: Ein- UND "
+            "Ausgabeformat werden ueber die ENDUNG gewaehlt; ein "
+            "Extended ADF muss beim Schreiben `.eadf` heissen, waehrend "
+            "hxcfe dieselbe Datei nur als `.adf` laedt. NICHT geeignet "
+            "fuer AmigaDOS-Spuren im Behaelter und nicht fuer die "
+            "HD-Spielart (22 Sektoren): dafuer gibt es kein Abbild."),
+        origin="https://github.com/keirf/disk-utilities — hier aus der "
+               "Zulieferung `neue-ideen/disk-utilities-master.zip` "
+               "(sha256 821a09efc0c2772a234ecded739284648e5eaef3f3202912"
+               "0c92448acf262564), entpackt und gebaut unter "
+               "tools/uft-scout/work/disk-utilities-master. "
+               "KEINE Versionsabfrage — der argumentlose Aufruf druckt "
+               "nur die Gebrauchsanweisung ohne Versionszeile. Der Anker "
+               "ist deshalb dreiteilig wie bei `to_woz2`: Quellstand "
+               "(`libdisk/container/eadf.c` 5593 Byte, sha256 "
+               "f56103d17290a3c5..., byteidentisch mit dem Ursprung), "
+               "Baurezept (`mingw32-make SHARED_LIB=n`, gcc 13.1.0, "
+               "erster Versuch rc 0) und Ausgabe-SHA fuer eine benannte "
+               "Eingabe (sha256 6d6f73504c37bf82... aus der "
+               "selbstbenennenden 901 120-Byte-ADF von "
+               "tests/corpus_manifest/gen_adf_ext_corpus.py; ein zweiter "
+               "Lauf liefert dieselbe Summe). SHA-256 des hier gebauten "
+               "Binaers: ce1864de0c410ed922c6562edb59d702a38fcdcc6d7bcd7"
+               "45e49002a3c6a78dd",
+        licence="Unlicense / public domain. Gemessen am `COPYING` IM "
+                "PAKET (1211 Byte, „This is free and unencumbered "
+                "software released into the public domain“), nicht nur "
+                "am Ursprung nachgelesen — die Zulieferung koennte "
+                "abweichen. Damit die sauberste Lage im Baum: anders "
+                "als bei `hxcfe` (GPL-2), `cpmls`/`mkfs.cpm` (GPL-3) "
+                "oder `dtc`/`epstool` (Ausfuehrung ja, Weitergabe nein) "
+                "waere hier sogar ein PORT erlaubt. Gebraucht wird er "
+                "nicht: fuer ein Oracle wird die Ausgabe verglichen.",
+        abstammung=(
+            "Die entscheidende Frage nach MF-644 — dieselbe Hand? — ist "
+            "hier mit NEIN belegt und nicht angenommen. UFTs "
+            "`adf_ext`-Leser ist gegen **WinUAEs** `disk.cpp "
+            "read_header_ext2` abgenommen (steht so im Kopf von "
+            "`src/formats/adf_ext/uft_adf_ext.c`), der Erzeuger ist Keir "
+            "Frasers eigene Fassung in `libdisk/container/eadf.c`. Zwei "
+            "unabhaengige Umsetzungen derselben UAE-Formatdefinition. "
+            "Genau daran ist `dms` gescheitert (MF-1135): dort stammten "
+            "UFTs Leser UND hxcfes Leser aus xDMS, also war jeder "
+            "Abgleich derselbe Kreis mit zwei Namen. "
+            "Dritte Hand zusaetzlich gemessen: hxcfes `AMIGA_EXTADF` "
+            "liest das Erzeugnis byteidentisch zur Eingabe zurueck "
+            "(0 von 901 120 Byte abweichend), und der Erzeuger liefert "
+            "die Datei nur dann aus — eine von EINER Hand erzeugte Datei "
+            "belegt nichts (MF-1028)."
+        ),
+    ),
 )
 
 

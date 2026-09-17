@@ -2343,7 +2343,23 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   keine Bedingung „der Test muss diskriminieren" kennt — genau der von
   `MF-1077` verbotene Zug. **Berichtigt:** `syn` gehört in diese Klasse
   (in MF-1220 stand es als Beschaffungsfall), `lisa_twiggy` nicht.
-- **Beleg:** `P3-403` fortgeschrieben (MF-1221); Strang B offen.
+
+  **STRANG B, 1 von 9: `adf_ext` ist auf T1b (MF-1222).** Und die
+  Reihenfolge „nach Lizenz-Sauberkeit" hat sich sofort bezahlt: der
+  Erzeuger ist **Unlicense / public domain** — die sauberste Lage im
+  Baum, sauberer als jedes GPL-Oracle — und er lag die ganze Zeit
+  **im Baum, ungebaut** (`neue-ideen/disk-utilities-master.zip`).
+  Warum ihn `P3-474` vierfach als „kein Erzeuger" gemessen hatte, ist
+  jetzt selbst gemessen: der Zensus ordnet Werkzeuge über **Endungen**
+  zu, und `adf_ext` teilt `adf` mit dem längst gehobenen `adf`. Direkt
+  nach **Modulnamen** gefragt bleibt das Nein für die übrigen acht
+  bestehen (hxcfe: `AMIGA_EXTADF;R`, sonst kein Modul; floptool: keines;
+  libdsk: keiner seiner 27 Typen). Nebenbei fiel ein Defekt: die
+  Spurlänge in **Bit** stand in der Datei und wurde verworfen.
+  **Offen in Strang B (8):** `cas`, `dim`, `fdi_pc98`, `fds`,
+  `lisa_twiggy`, `nfd`, `pro`, `udi`.
+- **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
+  (MF-1222, `6f065fd0` + Folgecommit), `P3-475` neu; Strang B 8 offen.
 
 ## Fundus
 

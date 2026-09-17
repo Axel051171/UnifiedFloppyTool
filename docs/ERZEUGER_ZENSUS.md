@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 12 |
+| davon auf T2/T3 (offen) | 11 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -37,7 +37,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 
 | Format | Stufe | hxcfe (RW) | libdsk | floptool (w) | Kanal | Klasse |
 |---|---|---|---|---|---|---|
-| `adf_ext` | T2 | AMIGA_ADF (?) | — | adf (?), adfs_n (?), adfs_o (?) | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `cas` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -225,6 +224,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `86f` | T1b | — | — |
 | `adf` | T1b | AMIGA_ADF (?) | — |
 | `adf_arc` | T1b | AMIGA_ADF (?) | — |
+| `adf_ext` | T1b | AMIGA_ADF (?) | — |
 | `adl` | T1b | AMIGA_ADF (?) | — |
 | `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
