@@ -2030,8 +2030,12 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   sondern weil er keine Kennzahl bewegt (`P3-422`, MF-640).
 
 ### A-024 · AUFTRAG Audit-Umfang: komplettes Repository statt CMake-Liste (Mengen A/B/C)
-- **Status:** **in Arbeit** — Mengen abgeleitet, Menge C auf **acht**
-  Dateien eingegrenzt; Dispositionen und drei Commits offen · MF-1211 ·
+- **Status:** **erledigt** 2026-09-17 — Mengen **abgeleitet** statt
+  gepflegt (`scripts/audit_bauliste_umfang.py`, Selbsttest 12/12),
+  Menge C gemessen **fünf** Dateien (nicht acht — die Zahl fiel
+  dreimal, `P3-470`), jede mit einer der sechs Dispositionen, **kein
+  DELETE**, und die eine Eigentümerfrage ist entschieden und ausgeführt
+  („verdrahten" → MF-1216) · MF-1211, MF-1215, MF-1216 ·
   **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „Nur die Dateien aus den CMake-Listen reichen nicht. …
   Gerade die nicht in CMake stehenden Dateien sind beim UFT wichtig. Dort
@@ -2129,8 +2133,67 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   enthalten — gemessen liegen **9** Commits nur lokal (MF-1182 … MF-1190,
   C3). Ein Audit auf dem Klon liefe gegen einen Stand ohne Phase 1 und 2.
   Quelle ist deshalb der Arbeitsbaum, oder es wird vorher gepusht.
-- **Stand:** —
-- **Beleg:** —
+- **Stand (MF-1215/MF-1216): abgeschlossen — und die Zahl ist auf dem
+  Weg DREIMAL gefallen, jedes Mal aus demselben Grund.**
+  · **1107 → 8 → 12 → 6 → 5.** Jede dieser Zahlen scheiterte an einer
+    **Aufzählung von Bauliste-Arten**: `1107` an den CMake-GLOBs
+    (MF-1211), `8` an den **CI-Arbeitsablauf-GLOBs**
+    (`.github/workflows/audit.yml:67`), `12` an absoluten Pfaden in
+    meiner eigenen ersten Fassung des Ableiters, `6` daran, dass eine
+    Schale in CI von der **Wurzel** läuft, und `5` daran, dass ein
+    `conftest.py`, das selbst übersetzt, eine Bauliste ist.
+    Der Befund steht als **`P3-470`**: Erreichbarkeit kommt hier aus
+    mindestens **sechs** Arten von Ort.
+  · **Die Mengen sind jetzt ABGELEITET** (`scripts/audit_bauliste_umfang.py`,
+    Selbsttest **12/12**, Grundlinie Menge C = **5**, darf nur sinken).
+    Seine tragende Zusage ist eine Absage: ein GLOB-Muster, das es nicht
+    auflöst, lässt es **abbrechen** statt freizusprechen — und genau
+    daran hat es seinen eigenen Pfad-Fehler gemeldet.
+  · **Sieben Dateien haben Menge C verlassen, weil sie verdrahtet sind:**
+    die sechs `audit/*/test_*_vectors.c` (CI-GLOB; `gcc -fsyntax-only`
+    vollstreckt ihre `_Static_assert` — rotgeprüft: falsche Zusage rc 1)
+    und `tests/differential/uft_flux_decode.c` (`conftest.py` baut es).
+  · **Die fünf Dispositionen, je mit der Prüfung, die sie entschied:**
+    | Datei | Disposition | entschieden durch |
+    |---|---|---|
+    | `cli/uft-decode/main.c` | **REGISTER** | Eigentümerentscheidung „verdrahten" → MF-1216 |
+    | `src/gui/UftParameterIntegration_example.cpp` | REFERENCE | 0 Nennungen im Baum; zweites `class MainWindow` neben `src/mainwindow.h:27` |
+    | `tests/external_audits/gw/test_encode_match.c` | REFERENCE | ersetzt durch `tests/test_gw_encoder.c` (sagt es selbst, `audit.yml:15` bestätigt) |
+    | `tests/flux_gen/xcopy/gen_xcopy_fixtures.c` | REFERENCE | dokumentierter Handbau, `docs/nachbau/XCOPY_EMULATIONSSITZUNG.md:34,46` |
+    | `tests/kalibrierung/sanitizer_kann_rot.c` | REFERENCE | `scripts/kalibriere_sanitizer.sh:15` übersetzt es; das Skript ruft niemand automatisch |
+  · **KEIN DELETE** — alle sechs vom Auftrag verlangten Prüfungen
+    (CMake, Symbol, Registry, Test, Plattform, Laufzeit) sind je Datei
+    durchgeführt, und keine endet dort. Geliefert ist die **Auswahl**,
+    nicht die Tat (`MF-1077`).
+  · **Das Verdrahten hat zwei eigene Befunde gebracht**, beide hätte ein
+    reiner Link-Erfolg verdeckt: das Binärprogramm **band, lief und
+    konnte nichts** (`uft_register_all_formats()` fehlte → Exit 5 für
+    jede Datei; jetzt 92 160 Byte byteidentisch mit dem
+    atrcopy-Erzeugnis), und **`CMakeLists.txt:99` verlangt Qt
+    unbedingt** — das Programm ist Qt-frei, CMake nicht, womit der
+    Qt-freie Behälter als sein Existenzgrund versperrt bleibt
+    (**`P3-471`**). Nebenbei fiel **`P3-472`** ab:
+    `CONFIG+=kalman_pll` kann nicht bauen, weil
+    `uft/algorithms/uft_kalman_pll.h` 0 Mal existiert.
+  · **Was ausdrücklich NICHT getan ist:** das neue Tor hängt in keiner
+    Kette, und `tests/CMakeLists.txt` ist nicht angefasst — beide Wege
+    führen durch `scripts/check_consistency.py` bzw. jene Datei, und
+    beide tragen die unversionierte Arbeit einer anderen Sitzung. Die
+    Abhängigkeitsschließung der CLI ist deshalb **abgeleitet** (acht
+    Verzeichnisse, 467 Einheiten, `-lz`) statt als **14.** Handliste
+    abgeschrieben — `tests/CMakeLists.txt:205` nennt die 13. bereits
+    „genau der Fehler, den dieser Baum viermal bezahlt hat".
+  · **Eine Verfahrensbeobachtung, weil sie wiederkehrt:** der Auftrag
+    verlangt drei getrennte Commits, der Vor-Commit-Haken prüft aber den
+    **ganzen Arbeitsbaum** (`P3-463`). Zwei Versuche fielen —
+    `[STAND.md stale]`, dann `[Erzeugte Doku eingecheckt]` (MF-1043) —,
+    weil `docs/OPEN_ITEMS.md` und `docs/STAND.md` nicht in verschiedene
+    Commits können. Die Reihenfolge wurde daraufhin gedreht.
+- **Beleg:** `c2b9eddc` (MF-1215, 1/3 — Befund `P3-470`) ·
+  `4ba7d7ba` (MF-1215, 2/3 — `scripts/audit_bauliste_umfang.py`,
+  Selbsttest 12/12) · `aaf5c001` (MF-1216 — Verdrahtung,
+  ctest `uft_decode_cli_wandelt_atr_nach_xfd` grün, Mutante rot) ·
+  dieser Commit (MF-1215, 3/3 — Abschluss, `P3-471`, `P3-472`).
 
 ### A-004 · AUFTRAG „UFT offene Punkte, autonome Abarbeitung" — Punkt 7
 - **Status:** **angehalten am vereinbarten Schnitt** · **Aufgenommen:**
