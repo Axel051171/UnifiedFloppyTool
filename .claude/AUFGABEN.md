@@ -2294,6 +2294,57 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 
 ---
 
+### A-025 · Alle offenen Formate so hoch wie möglich (T1b, sonst T1) — zwei Stränge
+- **Status:** **in Arbeit** — Strang A **vorgelegt** (MF-1221), Strang B
+  offen · **Aufgenommen:** 2026-09-17
+- **Wortlaut:** „Alle, mach einen nach dem anderen, mach dir einen Plan,
+  der sinnvoll ist, und arbeite es ab" — vorausgehend „Mach was möglich
+  ist, Ziel ist T1b ,wenn es Probleme macht dann T1"
+- **Kennzahl:** **ungeprüfte Formate (T3) runter** — die erste der vier
+  aus MF-640. Stand T1=8, T1b=66, T2=11, T3=1.
+- **Kanal:** **Daten/Fixture** (Beschaffung). Für Strang A entfällt er:
+  das ist eine Entscheidung, kein Fund.
+- **Einfrier-Regel:** **nein** — Beschaffung und Tests sind ausdrücklich
+  erlaubte Verifikationsarbeit. **Ja**, sobald ein Leser geändert würde.
+- **OPEN_ITEMS:** `P3-474` (die vierfache Messung, warum heute nichts
+  hebt) · `P3-403` (Strang A) · `P3-359`, `P3-356` (Lizenzbestand)
+- **Fertig heißt:** je Format **entweder** eine Stufe mit
+  Manifest-Eintrag **und** Test, **oder** ein benannter Halt mit Grund
+  und nächstem Griff. Kein Format bleibt ohne Aussage.
+- **Aufwand:** **nicht schätzbar** — er hängt an Quellen und
+  Lizenzurteilen, nicht an Aufwand im Baum.
+- **DER PLAN, und warum er zwei Stränge hat statt einem:** die zwölf
+  offenen Formate haben **nicht** denselben Blocker. `P3-403` hat
+  gemessen, dass bei flachen Abbildern mit gleichförmiger Sektorgröße
+  **jedes** passende Tripel dieselben Bytes in derselben Reihenfolge
+  liest — dort kann **kein** Werkzeug und **kein** echtes Abbild die
+  Geometrie belegen. Für diese drei wäre jede Beschaffung vergeblich;
+  sie zuerst zu trennen verhindert, dass Arbeit in eine Sackgasse geht.
+
+  | Strang | Formate | Art |
+  |---|---|---|
+  | **A** — Geometrie prinzipiell unbelegbar (`P3-403`) | `akai_s900`, `korg_dss1`, `syn` | **Entscheidung** |
+  | **B** — Werkzeug/Abbild fehlt | `adf_ext`, `cas`, `dim`, `fdi_pc98`, `fds`, `lisa_twiggy`, `nfd`, `pro`, `udi` | **Beschaffung** je Format |
+
+  **Strang B wird Format für Format abgearbeitet, nach Lizenz-Sauberkeit
+  sortiert, nicht alphabetisch** — je Format: Quelle benennen,
+  Lizenzurteil, dann erst holen. Für jedes Ergebnis gilt die
+  Manifest-Pflicht (`origin`, `tool`, `source`, `sha256`) **plus ein
+  ctest, der das Abbild durch das UFT-Plugin öffnet** — ohne diesen Test
+  rechnet `gen_verification_tiers.py` keine Stufe, egal wie echt die
+  Datei ist.
+- **Stand:** **Strang A ist vorgelegt, nicht entschieden** — MF-1221
+  schreibt `P3-403` fort und liefert die Auswahl (a) auf T2 bleiben /
+  (b) eigene Stufe für „flach, gleichförmig, linear" / (c) T1 zulassen
+  und den Vorbehalt in die Tafel schreiben, je mit Kosten. **Zwei
+  Messungen sind dabei neu:** der Rückfall auf T1 löst die Frage
+  **nicht** (die Herkunft belegt Echtheit, nicht Geometrie), und die
+  Stufe würde **mechanisch trotzdem** steigen, weil `compute_tiers()`
+  keine Bedingung „der Test muss diskriminieren" kennt — genau der von
+  `MF-1077` verbotene Zug. **Berichtigt:** `syn` gehört in diese Klasse
+  (in MF-1220 stand es als Beschaffungsfall), `lisa_twiggy` nicht.
+- **Beleg:** `P3-403` fortgeschrieben (MF-1221); Strang B offen.
+
 ## Fundus
 
 *(aufgenommen, bewegt aber keine der vier Kennzahlen aus `CLAUDE.md`
