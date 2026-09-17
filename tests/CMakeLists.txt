@@ -185,6 +185,43 @@ function(uft_wire_traegerherkunft tgt)
     endif()
 endfunction()
 
+# MF-1232 (Posten `A-027`): dieselbe Lage wie MF-1189/P3-454, ein Modul
+# spaeter — und der Weg dorthin ist derselbe, weil er dort getragen hat.
+#
+# `src/formats/sega/uft_genesis.c` ruft seit der Begrenzung des
+# Konsolennamens `uft_magic_search()` aus `src/util/uft_match.c`. Die
+# Datei erreicht ihre Ziele aber ueber `file(GLOB_RECURSE …
+# src/formats/*.c)`, und `src/util/` liegt dort nicht.
+#
+# Gemessen fielen beim ersten Vollbau VIER Ziele beim LINKEN
+# (`undefined reference to uft_magic_search`) — **und das war keine
+# Messung des Blastradius**: `ninja` haelt nach den ersten Fehlschlaegen
+# an, und mit `-j4` waren genau vier Linklaeufe gleichzeitig unterwegs.
+# Die Zahl 4 ist also ein Artefakt der Parallelitaet, nicht die Menge
+# der betroffenen Ziele. Genau die Verwechslung, die MF-1175 „17
+# Einfuegungen in vier Baurunden" gekostet hat (54 undefinierte
+# Bezuege -> 27 -> 21 -> gruen).
+#
+# Eine Zeile in `UFT_FORMAT_LAYER_DEPS` deckt nur die Zweige, die sie
+# dazunehmen — bei MF-1189 waren das **33 von 58**; die zwoelf lokalen
+# `*_FORMAT_SOURCES`-GLOBs (`P3-426`) deckt sie nicht. Deshalb hier
+# dasselbe Mittel: **die Quellenliste des ZIELS entscheidet**, und ein
+# Zweig, den es heute noch nicht gibt, ist mitgedeckt.
+#
+# Die Bedingung nennt die Dateien, die `uft_match` heute rufen, und sie
+# WAECHST mit jeder umgestellten Fundstelle aus `A-027`. Das ist eine
+# Aufzaehlung, und sie ist hier bewusst die kleinere Wahl: die
+# Alternative waere, jedem der ueber 400 Ziele eine ungenutzte
+# Uebersetzungseinheit anzuhaengen.
+function(uft_wire_match tgt)
+    get_target_property(_uft_srcs ${tgt} SOURCES)
+    if(_uft_srcs MATCHES "uft_genesis"
+       AND NOT _uft_srcs MATCHES "uft_match")
+        target_sources(${tgt} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/util/uft_match.c)
+    endif()
+endfunction()
+
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     
@@ -255,7 +292,28 @@ foreach(test_source ${TEST_SOURCES})
         if(TARGET uft_c64_protection)
             list(APPEND TEST_LIBS uft_c64_protection)
         endif()
-        elseif(${test_name} STREQUAL "test_gcr_ops")
+        elseif(${test_name} STREQUAL "test_match")
+        # MF-1232 (Posten `A-027`): die Ersatzfunktionen fuer suchendes
+        # Pruefen. Der Prueferbericht von Tor 66 nennt `uft_suffix_eq()`,
+        # `uft_magic_at()` und `uft_id_eq()` als Ersatz — und `git grep`
+        # fand diese Namen bis hierher AUSSCHLIESSLICH in
+        # `scripts/audit_teilstring.py`. Ein Tor, das auf Funktionen
+        # verweist, die es nicht gibt, verschiebt Arbeit statt sie zu
+        # benennen.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/util/uft_match.c)
+    elseif(${test_name} STREQUAL "test_genesis_sucht_nicht_ueber_das_feld")
+        # MF-1232, Rotbeweis zuerst: `uft_genesis.c` holte den
+        # Konsolennamen als ZEIGER ins Rohabbild und suchte darin mit
+        # `strstr` — geprueft war nur `size >= 0x200`, also endet die
+        # Suche erst am ersten Nullbyte. Der Baum nennt das Feld selbst
+        # als 16 Byte (`uft_genesis.h:97 char system[16]`) ab
+        # `GENESIS_HEADER_OFFSET 0x100`.
+        # `uft_match.c` steht hier NICHT: das besorgt `uft_wire_match()`
+        # fuer jedes Ziel, das `uft_genesis` uebersetzt. Zwei
+        # Mechanismen fuer dieselbe Abhaengigkeit waeren D3.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/sega/uft_genesis.c)
+    elseif(${test_name} STREQUAL "test_gcr_ops")
         # Include GCR Operations source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
     elseif(${test_name} STREQUAL "test_d64_g64")
@@ -4267,6 +4325,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_freezer.c)
     elseif(${test_name} STREQUAL "test_genesis")
         # Include Genesis source directly
+        # MF-1232: `uft_genesis.c` ruft seit der Begrenzung des
+        # Konsolennamens `uft_magic_search()`. Ohne die Abhaengigkeit
+        # faellt das Ziel beim LINKEN, nicht beim Uebersetzen — gemessen
+        # `collect2.exe: ld returned 1 exit status`. Sie kommt von
+        # `uft_wire_match()`, nicht von hier: die Datei erreicht ueber
+        # zwoelf lokale GLOBs (`P3-426`) mehr Ziele als jede Liste hier
+        # aufzaehlen koennte.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/sega/uft_genesis.c)
     elseif(${test_name} STREQUAL "test_3ds")
         # Include 3DS source directly
@@ -5232,6 +5297,7 @@ foreach(test_source ${TEST_SOURCES})
     # MF-1189 / P3-454: Traegerherkunft verdrahten (Regel bei der
     # Funktionsdefinition oben, samt gemessenen Zahlen).
     uft_wire_traegerherkunft(${test_name})
+    uft_wire_match(${test_name})
 
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -5888,6 +5954,7 @@ if(TARGET Qt6::Test)
         # ihnen `uft_bs_identifiziere`. Genau deshalb ist die Regel eine
         # Funktion und kein Block (Regel oben, D3).
         uft_wire_traegerherkunft(${qt_test_name})
+        uft_wire_match(${qt_test_name})
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
         # MF-220 / MF-221: the HardwareTab-driving Qt tests construct

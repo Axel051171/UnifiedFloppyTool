@@ -188,7 +188,7 @@ beim ersten Lauf waren es **sechs** (`src/crc`, `src/whdload`,
 
 <!-- PHASEN-SCOPE -->
 ```
-1:  src/core src/crc
+1:  src/core src/crc src/util
 2:  src/flux src/detect src/parsers src/algorithms src/tracks
 3:  src/fs src/forensic src/policy src/fileops
 4:  src/formats
@@ -211,7 +211,7 @@ als Ganzem.
 | Phase | Stand |
 |---|---|
 | 0 | ✅ erledigt (§3) |
-| 1 | ◐ **Verträge vollständig, `src/core` teilweise** — zwei Artefakte liegen: `memory/arch_kernvertraege.md` (Header, ABI-Regeln) und `memory/arch_kern_src_core.md` (Registry, Öffnungspfad, Wandlungsmatrix, Preflight-Tor). Ungelesen bleiben 32 der 38 `.c`-Dateien, **namentlich in der Notiz aufgeführt** |
+| 1 | ◐ **Verträge vollständig, `src/core` teilweise** — zwei Artefakte liegen: `memory/arch_kernvertraege.md` (Header, ABI-Regeln) und `memory/arch_kern_src_core.md` (Registry, Öffnungspfad, Wandlungsmatrix, Preflight-Tor). Ungelesen bleiben 32 der 38 `.c`-Dateien, **namentlich in der Notiz aufgeführt**. **MF-1232: `src/util` ist neu im Umfang dieser Phase, und zwar in UMFANG, nicht in ABDECKUNG.** `src/util/uft_match.c` kam als Zulieferung des Eigentümers (`A-027`/`A-029`) und ist vom Durchgang nie gelesen worden; es steht hier, weil Tor 61 sonst eine Vollständigkeit behaupten würde, die es nicht gibt — und die Alternative wäre gewesen, die Zusage still falsch werden zu lassen. Geprüft ist die Datei anders: warnungsfrei unter `-Wall -Wextra -Wpedantic`, eigener Test (`tests/test_match.c`), 0 Teilstring-Fundstellen |
 | 2 | ◐ **Verträge vollständig gemessen, Umsetzungen teilweise** — Artefakt `memory/arch_flusspfad.md`. Zwei Phantome gefunden (P3-222, P3-223); was ungelesen blieb, steht namentlich in der Notiz |
 | 3 | ◐ **Verträge vollständig gemessen** — Artefakt `memory/arch_dateisysteme.md`. Vier Phantom-Header und 26 Header-Namenskollisionen gefunden (P3-228, P3-229) |
 | 4a | ◐ **CBM gemessen** (49 Dateien, 23 122 Z.) — Artefakt `memory/arch_formate_cbm.md`. Registry sauber: 88 Plugin-Tafeln, **kein `.name` doppelt**, also fällt keines still heraus. Zwei Befunde (P3-232 GCR-Tabelle sechsfach + getestete API ohne Produktionspfad, P3-233 zweite BAM-API ohne Umsetzung und ohne Einbinder). **Nicht** gemessen: ob die Leser richtig lesen — das hängt an `VERIFICATION_TIERS.md` |

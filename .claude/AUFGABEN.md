@@ -2699,6 +2699,50 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   am Prüfer behoben, Grundlinie 50, Selbsttest 14/14, Meta-Tor 68/0,
   Rotbeweis gegen die Urfassung 2 grün/7 rot, `P3-479` neu.
   **Der Posten bleibt offen**: die 51 Fundstellen sind nicht behoben.
+- **Stand (2026-09-18, MF-1232 — die ersten fünf sind weg):**
+  · Werkzeug übernommen: `include/uft/util/uft_match.h` +
+    `src/util/uft_match.c` + `tests/test_match.c`, byteidentisch aus dem
+    `A-029`-Paket. Baut warnungsfrei unter `-Wall -Wextra -Wpedantic`,
+    Test besteht, **0 eigene Fundstellen**, keine Basisnamen-Kollision
+    (`uft_match` kam im Baum 0-mal vor).
+  · **Ein Befund an Tor 66 selbst ist damit behoben:** es nannte
+    `uft_suffix_eq()`, `uft_magic_at()` und `uft_id_eq()` als Ersatz,
+    und `git grep` fand diese Namen **ausschließlich in
+    `audit_teilstring.py`**. Ein Tor, das auf Funktionen verweist, die
+    es nicht gibt, verschiebt Arbeit statt sie zu benennen.
+  · **5 Fundstellen behoben** in `src/formats/sega/uft_genesis.c`, und
+    es war ein Lesen über die Puffergrenze: `strstr` auf einem Zeiger
+    ins Rohabbild, geprüft war nur `size >= 0x200`. Versatz und
+    Feldlänge nennt der Baum selbst; die Länge ist **abgeleitet**
+    (`sizeof ((const genesis_header_t *)0)->system`), nicht wiederholt.
+  · Rotbeweis zuerst: `tests/test_genesis_sucht_nicht_ueber_das_feld.c`
+    fiel gegen den Vorzustand mit **5 von 14** Zusagen, genau den fünf
+    Fällen mit dem Köder AUSSERHALB des 16-Byte-Feldes; die neun
+    Positiv- und Randfälle blieben grün.
+  · **Nicht behauptet:** `genesis_detect_system`/`_format` haben
+    gemessen **keinen Produktivaufrufer** (nur `tests/test_genesis.c`).
+    Der Defekt war echt, hat aber heute keinen Benutzer geschützt.
+  · **Die Verdrahtung kostete drei Fehlmessungen, alle als Zahl
+    ausgegeben:** „zwei Testziele" (gegrept statt gemessen — die Datei
+    kommt über `GLOB_RECURSE`), „vier gefallene Ziele" (`ninja` hält
+    nach den ersten Fehlschlägen an, `-j4`), und „60/61 Fehlbetrag 0"
+    (auf `tests/CMakeFiles/` eingeschränkt, worauf `cli/uft-decode`
+    fiel — dessen eigene Liste der Kommentar in derselben Datei
+    genannt hatte). Über den ganzen Bau: **61 Ziele**, gedeckt über
+    einen Eintrag in `UFT_FORMAT_LAYER_DEPS` **und**
+    `uft_wire_match()`, die die Quellenliste des Ziels befragt — genau
+    das Doppel, das MF-1189/`P3-454` gemessen hat. Endstand
+    61 / 63 / **Fehlbetrag 0**.
+- **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
+  Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
+  „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die
+  Schnipsel statt aus den Deklarationen.** `uft_genesis.c` hat sie
+  widerlegt: `strstr(system, …)` sah nach „begrenztes Feld" aus und war
+  ein Zeiger ins Rohabbild. Belastbar ist nur: **46 offen** (44 in C,
+  2 in Python), 7 davon im Waisen `uft_xfd_parser_v2.c` — und die
+  Einteilung verlangt, **je Fundstelle die Deklaration zu lesen**. Das
+  ist der Grund, warum „fixe sie alle" mehrere Posten braucht und kein
+  Suchen-und-Ersetzen ist.
 
 ### A-028 · Teilstring-Prüfer in die GitHub-Prüfung einbauen
 - **Status:** **in Arbeit** (seit 2026-09-17; zusammen mit `A-029`, weil

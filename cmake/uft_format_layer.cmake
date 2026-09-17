@@ -74,6 +74,20 @@
 
 set(UFT_FORMAT_LAYER_DEPS
             # what the format layer calls out to
+            # MF-1232: `src/formats/sega/uft_genesis.c` ruft seit der
+            # Begrenzung des Konsolennamens `uft_magic_search()`. Der
+            # Eintrag steht HIER, weil das die gemeinsame Liste ist —
+            # `cli/uft-decode` nimmt sie ausdruecklich dazu
+            # (`CMakeLists.txt:89`) und globt `src/util` nicht.
+            #
+            # Er deckt damit aber nur die Zweige, die diese Liste
+            # verbrauchen: bei MF-1189 waren das 33 von 58 Zielen. Die
+            # uebrigen haengen an lokalen `*_FORMAT_SOURCES`-GLOBs
+            # (`P3-426`) und kommen ueber `uft_wire_match()` in
+            # `tests/CMakeLists.txt`. Gemessen aus `build.ninja`:
+            # 61 Ziele uebersetzen `uft_genesis.c`, 61 bekommen
+            # `uft_match.c`, Fehlbetrag 0.
+            ${CMAKE_SOURCE_DIR}/src/util/uft_match.c
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c

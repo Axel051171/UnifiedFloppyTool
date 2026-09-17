@@ -7,9 +7,40 @@
  */
 
 #include "uft/formats/sega/uft_genesis.h"
+#include "uft/util/uft_match.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+/* ── MF-1232 (Posten `A-027`): der Konsolenname hat eine Grenze ──────────
+ *
+ * Hier stand fuenfmal `strstr(system, …)`, wobei `system` ein ZEIGER ins
+ * Rohabbild ist (`data + GENESIS_HEADER_OFFSET`). Geprueft war nur
+ * `size >= 0x200`, also 0x100 Byte dahinter — `strstr` laeuft aber bis
+ * zum ersten Nullbyte. Enthaelt das ROM dort keines, liest es ueber die
+ * Puffergrenze; und schon INNERHALB des Abbilds ist die Aussage falsch,
+ * weil eine Zeichenfolge irgendwo im Programmkode fuer den
+ * Konsolennamen gehalten wird.
+ *
+ * Die Laenge wird NICHT ein zweites Mal hingeschrieben, sondern aus der
+ * Deklaration abgeleitet — `uft_genesis.h` fuehrt das Feld als
+ * `char system[16]`, und eine Groesse gehoert an EINE Stelle (MF-1177).
+ */
+#define GENESIS_SYSTEM_LEN (sizeof ((const genesis_header_t *)0)->system)
+
+/* Die Begruendung, die `uft_magic_search()` verlangt — einmal, nicht
+ * fuenfmal (sonst waere sie selbst die Doppelhaltung aus Regel K4). */
+static const char *const GENESIS_WARUM_IM_NAMEN =
+    "Die Lage des Kennworts im 16 Byte langen Konsolennamen ist nicht "
+    "festgelegt; gesucht wird ausschliesslich INNERHALB des Feldes.";
+
+/** Steht @p wort irgendwo im Konsolennamen bei 0x100? */
+static bool genesis_im_systemnamen(const char *system, const char *wort)
+{
+    return uft_magic_search((const uint8_t *)system, GENESIS_SYSTEM_LEN,
+                            wort, strlen(wort),
+                            GENESIS_WARUM_IM_NAMEN, NULL);
+}
 
 /* ============================================================================
  * Helper Functions
@@ -86,8 +117,8 @@ genesis_format_t genesis_detect_format(const uint8_t *data, size_t size)
         const char *system = (const char *)(data + 0x100);
         
         if (memcmp(system, "SEGA", 4) == 0) {
-            /* Check for 32X */
-            if (strstr(system, "32X") != NULL) {
+            /* Check for 32X — im FELD, nicht im ganzen Abbild */
+            if (genesis_im_systemnamen(system, "32X")) {
                 return GENESIS_FORMAT_32X;
             }
             return GENESIS_FORMAT_BIN;
@@ -109,13 +140,14 @@ genesis_system_t genesis_detect_system(const uint8_t *data, size_t size)
     if (strncmp(system, "SEGA GENESIS", 12) == 0) {
         return GENESIS_TYPE_GENESIS;
     }
-    if (strstr(system, "32X") != NULL) {
+    if (genesis_im_systemnamen(system, "32X")) {
         return GENESIS_TYPE_32X;
     }
-    if (strstr(system, "MEGA-CD") != NULL || strstr(system, "MEGA CD") != NULL) {
+    if (genesis_im_systemnamen(system, "MEGA-CD") ||
+        genesis_im_systemnamen(system, "MEGA CD")) {
         return GENESIS_TYPE_SCD;
     }
-    if (strstr(system, "PICO") != NULL) {
+    if (genesis_im_systemnamen(system, "PICO")) {
         return GENESIS_TYPE_PICO;
     }
     
