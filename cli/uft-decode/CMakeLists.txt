@@ -59,22 +59,50 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-# --- Quellen: abgeleitet ----------------------------------------------
-set(UFT_CLI_SRC_DIRS
-    formats core flux detect compat recovery analysis forensic)
+# --- Quellen: Globs PLUS die gemeinsame Liste (MF-1218) ---------------
+#
+# BERICHTIGT MF-1218. Hier stand eine EIGENE Achter-Liste
+# (`formats core flux detect compat recovery analysis forensic`) — also
+# eine 14. Zusammenstellung neben den dreizehn, die
+# `tests/CMakeLists.txt` fuehrt. Sie war nicht falsch, aber GROB: sie
+# globte `src/analysis` mit 39 Dateien, um an EINE zu kommen.
+#
+# Seit MF-1218 liegen `UFT_FORMAT_LAYER_DEPS` und
+# `UFT_FORMAT_LAYER_INCLUDES` in `cmake/uft_format_layer.cmake` und sind
+# damit ausserhalb von `tests/` sichtbar. Dieses Ziel ist ihr ZWEITER
+# Verbraucher — und es verbraucht sie wirklich: `src/recovery`,
+# `src/compat`, `src/analysis` und `src/detect/mfm` kommen NUR aus der
+# Liste, kein Glob hier sammelt sie ein. Wer dort etwas hinzufuegt,
+# erreicht damit Tests UND dieses Binaerprogramm.
+#
+# Die Liste allein genuegt nicht, und das ist gemessen (siehe Kopf der
+# gemeinsamen Datei): ohne `src/core` fehlen **422** Bezuege, ohne
+# `src/flux` fuenf `uft_scp_*`. Deshalb Globs PLUS Liste, dedupliziert.
+include(${CMAKE_SOURCE_DIR}/cmake/uft_format_layer.cmake)
+
+set(UFT_CLI_SRC_DIRS formats core crc flux forensic)
 set(UFT_CLI_SOURCES "")
 foreach(d ${UFT_CLI_SRC_DIRS})
     file(GLOB_RECURSE _found "${CMAKE_SOURCE_DIR}/src/${d}/*.c")
     list(APPEND UFT_CLI_SOURCES ${_found})
 endforeach()
+list(APPEND UFT_CLI_SOURCES ${UFT_FORMAT_LAYER_DEPS})
+list(REMOVE_DUPLICATES UFT_CLI_SOURCES)
 list(LENGTH UFT_CLI_SOURCES _n_src)
-message(STATUS "uft-decode: ${_n_src} Uebersetzungseinheiten (abgeleitet)")
+list(LENGTH UFT_FORMAT_LAYER_DEPS _n_deps)
+message(STATUS "uft-decode: ${_n_src} Uebersetzungseinheiten "
+               "(Globs + ${_n_deps} aus der gemeinsamen Liste)")
 
 # --- Include-Pfade: aus der Lage der Header abgeleitet ----------------
 file(GLOB_RECURSE _uft_cli_headers
      "${CMAKE_SOURCE_DIR}/include/*.h"
      "${CMAKE_SOURCE_DIR}/src/*.h")
-set(UFT_CLI_INCDIRS "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/src")
+# Die sechs Verzeichnisse, die `UFT_FORMAT_LAYER_INCLUDES` nennt, stehen
+# ZUERST — sie sind die deklarierte Antwort auf „die Plugins inkludieren
+# unqualifiziert", und bei einer Header-Namenskollision soll die
+# deklarierte Wahl gewinnen, nicht die zufaellige Glob-Reihenfolge.
+set(UFT_CLI_INCDIRS "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/src"
+    ${UFT_FORMAT_LAYER_INCLUDES})
 foreach(h ${_uft_cli_headers})
     get_filename_component(_d "${h}" DIRECTORY)
     list(APPEND UFT_CLI_INCDIRS "${_d}")

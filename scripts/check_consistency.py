@@ -135,6 +135,25 @@ _CMAKE_PATH_RE = re.compile(
     r'\$\{CMAKE_SOURCE_DIR\}/([A-Za-z0-9_./]+\.(?:cpp|c|h))'
     # Note: cpp before c to prevent .cpp being incorrectly matched as .c
     # (alternation is ordered; the longer alternative must come first).
+    #
+    # MF-1218: die geordnete Alternation genuegt NICHT, und der Kommentar
+    # darueber sagt nur die halbe Wahrheit. Sie hilft, wenn die
+    # Zeichenkette hinter der Endung ENDET — nicht, wenn sie weitergeht.
+    # Gemessen an `${CMAKE_SOURCE_DIR}/cmake/uft_format_layer.cmake`:
+    # der Ausdruck lieferte `cmake/uft_format_layer.c`, und das Tor
+    # meldete
+    #     [missing target_sources path]
+    #     tests/CMakeLists.txt:142: refs missing cmake/uft_format_layer.c
+    # — eine Datei, die niemand je genannt hat. Damit war JEDES
+    # `include(...)` einer `.cmake`-Datei aus `tests/CMakeLists.txt`
+    # blockiert, also genau der Weg zu einer gemeinsamen Quelle.
+    #
+    # Die Nachschau-Grenze behebt es. Rotgeprueft: mit ihr liefert der
+    # `.cmake`-Pfad KEINEN Treffer, waehrend `src/core/uft_log.c`,
+    # `src/toolstab.cpp` und `include/uft/uft_types.h` unveraendert
+    # treffen. Dieselbe Falle wie `main.c` in `main.cpp` — ein
+    # Teilstring-Vergleich auf einer Endung braucht beide Raender.
+    r'(?![A-Za-z0-9_])'
 )
 
 
