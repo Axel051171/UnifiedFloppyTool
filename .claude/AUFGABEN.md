@@ -1870,9 +1870,13 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Befund folgt als Fortschreibung an `P3-387`.
 
 ### A-023 · Zulieferung `Apple-Sektorordnung.zip` — der offene Punkt aus MF-714
-- **Status:** **angehalten mit Befund** — die Tafel ist dreifach belegt, und
-  dabei ist ein **Defekt an zwei anderen Stellen** gefunden worden
-  (`P3-469`); der Bau wartet auf den A-018-Blocker · MF-1211, MF-1213 ·
+- **Status:** **angehalten mit Befund** — die Tafel ist belegt, seit
+  MF-1214 von zwei **ausführenden** fremden Händen, und dabei ist ein
+  **Defekt an zwei anderen Stellen** gefunden worden (`P3-469`). Der Bau
+  bleibt aus, aber **mit berichtigtem Grund**: nicht der A-018-Blocker
+  (so stand es in MF-1213, gemessen zu weit gefasst), sondern `P3-422` —
+  eine Datenzeile ohne erreichbaren Verbraucher bewegt keine der vier
+  Kennzahlen · MF-1211, MF-1213, MF-1214 ·
   **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „\"C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen\Apple-Sektorordnung.zip\"
   finde was ich vergessen habe und verbessere damit das"
@@ -1964,8 +1968,66 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     nicht gegen eine fremde Hand belegbar — **derselbe Blocker wie A-018**.
   · **Reihenfolge damit umgedreht:** erst das Abbild (A-018), dann Ordnung
     **und** Verbraucher in EINEM Commit. Vorher wäre es Vorrat ohne Tür.
+- **Nachtrag MF-1214 — das Abbild ist da, und zwei Sätze darüber sind
+  falsch.** Der Halt oben sagte, der Bau hänge am A-018-Blocker. Gemessen
+  war das **zu weit gefasst**, und die Berichtigung ist der eigentliche
+  Ertrag dieses Durchgangs:
+  · **Die Tafel steht jetzt auf zwei AUSFÜHRENDEN fremden Händen**, nicht
+    nur auf drei Quelltext-Lesungen. MAMEs floptool — seit MF-1083 im Baum
+    gebaut — legt mit `flopcreate a2_16sect_prodos prodos_140k` ein
+    143 360-Byte-Abbild an und wandelt es mit
+    `flopconvert a2_16sect_prodos a2_16sect_dos` in die DOS-Anordnung;
+    der Rücklauf ist **byteidentisch**. Aus den Marken **je Spur einzeln**
+    abgeleitet: **34 Spuren, EINE Tafel, 0 Sektoren über Spurgrenzen**,
+    Wert `{0,14,13,12,11,10,9,8,7,6,5,4,3,2,1,15}`, selbstinvers. Die
+    Baum-Tafel trifft **nicht**.
+  · **Das leere Abbild hätte nichts belegt** — es trug gemessen nur **7
+    von 560** unterscheidbare Sektoren (MF-1021). Spur 0 bleibt deshalb
+    floptools ProDOS-Wurzelverzeichnis, die Spuren 1–34 tragen je Sektor
+    `UFT-A023 Tnn Snn` im Klartext. Den **Inhalt** liefert damit die
+    eigene Hand, die **Permutation allein** MAME — Bauform MF-1084, und
+    nötig, weil floptools `prodos` `fr-` ist: formatieren und lesen,
+    **kein** Schreiben. `flopwrite` sagt wörtlich ab.
+  · **hxcfe bestätigt es, ohne dafür laufen zu müssen.** MF-1067 hat
+    gemessen, **dass** `-conv:APPLE2_PO` in **119 420 von 143 360 Byte**
+    abweicht — nicht **wie**. Die obige Tafel auf
+    `tests/corpus_free/uftk_dos33_35trk.do` angewandt ergibt **genau
+    119 420**; die Baum-Tafel ergibt **102 340**. Die Zahl unterscheidet
+    die Kandidaten also.
+  · **Berichtigung 1:** oben steht „`src/formats/do/uft_do.c` (**T2**)".
+    Falsch — `docs/VERIFICATION_TIERS.md:96` führt `do` auf **T1b**
+    (MF-1067), Zeile 173 `po` ebenfalls auf **T1b**.
+  · **Berichtigung 2:** „**derselbe Blocker wie A-018**" trägt nicht.
+    A-018 braucht ein **Dateisystem** (DOS-3.3-VTOC), A-023 ein Abbild
+    mit belegbarer **Anordnung**. Das zweite liegt vor, das erste nicht.
+    **Dieser Teil ist aber NICHT mein Fund:** `P3-390` hält seit MF-1123
+    wörtlich fest, „floptools Dateisystemliste führt unter Apple nur
+    ProDOS", und nennt `flopcreate apple_gcr prodos_800k` schon als
+    arbeitsfähigen fremden Erzeuger. Meine Nachzählung der neun Familien
+    (`prodos coco_rsdos cbmdos unformatted pc_fat hplif isis oric_jasmin
+    vtech`) **bestätigt eine vorhandene Messung** — `D3`, kein Wissen
+    zweimal halten. Neu ist allein die **abgeleitete** Permutation und
+    die hxcfe-Gegenprobe.
+  · **Was sich NICHT ändert, und deshalb bleibt der Bau aus:** `P3-422`
+    hängt nicht am Abbild. Eine Datenzeile in `uft_sector_order.h` hat
+    weiterhin **keinen erreichbaren Verbraucher**, und weil `do` und `po`
+    beide schon auf T1b stehen, bewegt der Bau **keine** der vier
+    Kennzahlen — nach MF-640 also **Fundus, nicht Auftrag**. Der Halt
+    bleibt, aber mit dem richtigen Grund.
+  · **Eigener Messfehler, benannt:** zweimal stand `rc=$?` hinter einer
+    Pipe und meldete `head`s Status statt den des Prüfskripts; einmal sah
+    ein ROT damit nach rc 0 aus — die Klasse aus MF-1040. Ohne Pipe
+    nachgemessen: 1 / 0 / 0.
+  · **Zurückgezogene Vermutung:** ich hielt `po`s T1b für unbelegt, weil
+    **0** versionierte Dateien auf `.po` enden und die Referenzspalten
+    leer sind. Es hält — der Kredit hängt an `tests/corpus_free/gw_po.img`
+    (greaseweazle 1.23, `origin: cross-tool`, `test_corpus_gw_geometrie`);
+    die Endung ist `.img`, die leeren Spalten kommen aus
+    `docs/spec_verification.json`.
 - **Beleg:** Vorprüfung gemessen MF-1211; Befund `P3-469` gemessen
-  MF-1213; der Bau bleibt offen und hängt an A-018.
+  MF-1213; von zwei ausführenden fremden Händen bestätigt und zweifach
+  berichtigt MF-1214. Der Bau bleibt aus — nicht mehr wegen A-018,
+  sondern weil er keine Kennzahl bewegt (`P3-422`, MF-640).
 
 ### A-024 · AUFTRAG Audit-Umfang: komplettes Repository statt CMake-Liste (Mengen A/B/C)
 - **Status:** **in Arbeit** — Mengen abgeleitet, Menge C auf **acht**
