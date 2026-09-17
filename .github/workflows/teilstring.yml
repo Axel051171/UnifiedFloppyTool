@@ -1,0 +1,251 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Teilstring-Fallen prüfen — mit Anmerkungen AN DER ZEILE.
+#
+# ── WARUM ES DIESEN WORKFLOW GIBT, OBWOHL DAS TOR SCHON LÄUFT ───────────
+#
+# Tor 66 hängt seit MF-1228 in `scripts/check_consistency.py`, und
+# `ci.yml:47-48` ruft das im Pull Request auf. Der Prüfer IST damit in der
+# GitHub-Prüfung, und ein zweiter Weg dorthin wäre Doppelhaltung.
+#
+# Was der Torkanon aber NICHT kann, ist der Grund für diese Datei: er
+# liefert bestanden oder gefallen. Er kann nicht sagen, WELCHE Zeile im
+# Diff gemeint ist. Genau das leisten hier zwei Dinge, die es im Torkanon
+# nicht gibt:
+#
+#   `--format github`  schreibt `::warning file=…,line=…,col=…`, und
+#                      GitHub klebt das an die Zeile im Diff
+#   `--format sarif`   landet über `upload-sarif` im Sicherheitsreiter,
+#                      mit Verlauf über die Zeit statt in einem
+#                      Protokoll, das nach zwei Wochen niemand ansieht
+#
+# Gemessen ist die Voraussetzung dafür: das Repository ist **public**
+# (`gh repo view` → `visibility: PUBLIC`), und dort ist Code Scanning
+# verfügbar. `gh api …/code-scanning/analyses` antwortet heute mit
+# „no analysis found" — der erwartete Ausgangszustand.
+#
+# ── DER ENTWURFSGEDANKE (aus dem Zulieferpaket, und er trägt) ───────────
+#
+# Ein Prüfer, der am ersten Tag jede Zusammenführung blockiert, ist in
+# einer Woche abgeschaltet. Deshalb zwei Ebenen:
+#
+#   ALTBESTAND   steht in docs/teilstring_baseline.json und blockiert NICHT
+#   NEUE FUNDE   blockieren
+#
+# Stand der Grundlinie: **51 Fundstellen, 50 Fingerabdrücke** (die
+# Doppelstelle in `uft_genesis.c` fällt auf einen Fingerabdruck, siehe
+# `Finding.fingerprint()`). Die Grundlinie ist ausdrücklich eine
+# SCHULDENLISTE, keine Ausnahmeliste: wer einen Fund behebt, entfernt
+# seinen Eintrag. Die Aufschlüsselung der 51 steht in
+# `docs/OPEN_ITEMS.md` `P3-479`.
+#
+# ── WAS WANN LÄUFT ─────────────────────────────────────────────────────
+#
+#   Selbsttest      immer, zuerst. Ein Prüfer, dessen Prüfer kaputt ist,
+#                   ist schlimmer als keiner — und das ist hier nicht
+#                   theoretisch: die Zulieferung trug NEUN Defekte der
+#                   Klasse, die sie sucht (MF-1228, `P3-479`).
+#   Nur Geändertes  bei einem Pull Request, mit Anmerkungen am Diff
+#   Ganzer Baum     bei push auf main und einmal wöchentlich
+#   SARIF           bei push auf main
+#
+# ── WAS ER NICHT TUT ───────────────────────────────────────────────────
+#
+# Er löst keine Makros auf. `--list-macros` läuft mit und schreibt seine
+# Funde in die Zusammenfassung, blockiert aber nie: das ist eine bekannte
+# Lücke, und eine bekannte Lücke darf keine Zusammenführung aufhalten.
+#
+# Und er deckt keine Shell-Einzeiler ab. Dieselbe Fehlerklasse ist an
+# einem Tag dreimal an Messkommandos aufgetreten (`grep -ciE
+# "warning|error"` meldete 31 Treffer, alle Dateinamen) — das steht in
+# `P3-479` und ist hier ausdrücklich NICHT geprüft.
+
+name: Teilstring-Fallen
+
+on:
+  pull_request:
+    paths:
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.cc'
+      - '**.cxx'
+      - 'scripts/**.py'
+      - 'docs/teilstring_baseline.json'
+      - '.github/workflows/teilstring.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Montags 05:17 UTC. Die krumme Minute ist Absicht: zur runden Stunde
+    # sind die Läufer von GitHub am stärksten belegt.
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      write_baseline:
+        description: 'Grundlinie neu schreiben (friert den Bestand ein)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Wie die sechs übrigen Workflows dieses Baums: ein späterer Push
+# storniert den vorherigen Lauf. Gemessen an MF-1223 — dort sah ein
+# `completed/cancelled` wie ein grüner Lauf aus, und ich habe es als
+# grün gemeldet.
+concurrency:
+  group: teilstring-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ── Zuerst der Prüfer selbst ─────────────────────────────────────────
+  selbsttest:
+    name: Selbsttest des Prüfers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 16 Zusagen, je eine pro behobenem Defekt plus die Köderdatei.
+      # Dass sie rot werden KANN, ist an der Urfassung vorgeführt:
+      # 2 grün, 7 rot (MF-1228).
+      - name: Regeln gegen die Köderdatei
+        run: python3 scripts/audit_teilstring.py --selbsttest
+
+      # Die Köderdatei darf nicht still verschwinden: ohne sie prüft der
+      # Selbsttest die Regeln nicht, und er würde das melden — aber ein
+      # eigener Schritt sagt es lauter.
+      - name: Köderdatei vorhanden
+        run: test -f tests/formats/fixture_traps.c
+
+  # ── Pull Request: nur Geändertes, mit Anmerkungen am Diff ────────────
+  geaendert:
+    name: Geänderte Dateien
+    if: github.event_name == 'pull_request'
+    needs: selbsttest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Geänderte Quellen bestimmen
+        id: dateien
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          # Nur Dateien, die es noch GIBT: eine gelöschte Datei kann keine
+          # Falle mehr enthalten, und der Prüfer würde über sie stolpern.
+          git diff --name-only --diff-filter=ACMR "$base" "$head" \
+            | grep -E '\.(c|h|cpp|hpp|cc|cxx)$' > /tmp/c_dateien.txt || true
+          git diff --name-only --diff-filter=ACMR "$base" "$head" \
+            | grep -E '^scripts/.*\.py$' > /tmp/py_dateien.txt || true
+          echo "c_anzahl=$(wc -l < /tmp/c_dateien.txt)" >> "$GITHUB_OUTPUT"
+          echo "py_anzahl=$(wc -l < /tmp/py_dateien.txt)" >> "$GITHUB_OUTPUT"
+          echo "C-Dateien:      $(wc -l < /tmp/c_dateien.txt)"
+          echo "Python-Skripte: $(wc -l < /tmp/py_dateien.txt)"
+
+      # `--format github` schreibt die Arbeitsablaufbefehle, die GitHub an
+      # die Zeilen klebt. Das ist der Grund für diesen ganzen Workflow.
+      - name: C-Quellen prüfen
+        if: steps.dateien.outputs.c_anzahl != '0'
+        run: |
+          xargs -a /tmp/c_dateien.txt \
+            python3 scripts/audit_teilstring.py \
+              --baseline docs/teilstring_baseline.json \
+              --format github
+
+      - name: Python-Skripte prüfen
+        if: steps.dateien.outputs.py_anzahl != '0'
+        run: |
+          xargs -a /tmp/py_dateien.txt \
+            python3 scripts/audit_teilstring.py --python \
+              --baseline docs/teilstring_baseline.json \
+              --format github
+
+      # Blockiert NIE — eine bekannte Lücke darf keine Zusammenführung
+      # aufhalten, sie muss nur sichtbar sein.
+      - name: Makrolücke auflisten
+        if: always() && steps.dateien.outputs.c_anzahl != '0'
+        run: |
+          xargs -a /tmp/c_dateien.txt \
+            python3 scripts/audit_teilstring.py --list-macros \
+              --fail-on nichts || true
+
+  # ── Push auf main: ganzer Baum, SARIF in den Sicherheitsreiter ───────
+  ganzer_baum:
+    name: Ganzer Baum
+    if: github.event_name != 'pull_request'
+    needs: selbsttest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Auf Zuruf die Grundlinie neu schreiben. Das FRIERT den Bestand
+      # ein, deshalb nur von Hand und deshalb mit einem Hinweis im
+      # Protokoll. Der Schalter schreibt in den Läufer, nicht ins
+      # Repository — der Diff muss bewusst eingecheckt werden.
+      - name: Grundlinie neu schreiben
+        if: github.event.inputs.write_baseline == 'true'
+        run: |
+          python3 scripts/audit_teilstring.py --schreibe-grundlinie
+          echo '::warning::Grundlinie neu geschrieben. Der aktuelle Bestand ist damit eingefroren — bitte den Diff prüfen und bewusst einchecken.'
+          git --no-pager diff --stat docs/teilstring_baseline.json || true
+
+      - name: SARIF erzeugen
+        run: |
+          python3 scripts/audit_teilstring.py \
+            --baseline docs/teilstring_baseline.json \
+            --format sarif --out /tmp/teilstring.sarif \
+            --fail-on nichts \
+            src include
+          python3 -c "
+          import json
+          d = json.load(open('/tmp/teilstring.sarif'))
+          print('SARIF: %d neue Funde' % len(d['runs'][0]['results']))
+          "
+
+      - name: SARIF hochladen
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: /tmp/teilstring.sarif
+          category: teilstring-audit
+
+      # Erst hochladen, dann bewerten: ein rotes Kreuz soll die Funde
+      # nicht davon abhalten, im Sicherheitsreiter zu landen.
+      - name: Bewerten — C-Seite
+        run: |
+          python3 scripts/audit_teilstring.py \
+            --baseline docs/teilstring_baseline.json \
+            src include
+
+      - name: Bewerten — Python-Seite
+        run: |
+          python3 scripts/audit_teilstring.py --python \
+            --baseline docs/teilstring_baseline.json \
+            scripts tools
+
+      # Die Gegenprobe zum Tor: läuft der Prüfer auch so, wie ihn
+      # `check_consistency.py` ruft? Ein Tor, das nur über einen von zwei
+      # Wegen funktioniert, ist ein halbes Tor.
+      - name: Torzugang prüfen
+        run: python3 scripts/audit_teilstring.py --tor

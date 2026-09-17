@@ -2589,7 +2589,7 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   weil `P3-478` (1)/(2)/(4) machbar sind und nicht gemacht sind.
 
 ### A-027 · Teilstring-Fallen: Prüfer übernehmen und alle Fundstellen abtragen
-- **Status:** **in Arbeit** (seit 2026-09-17, vom Eigentümer vorgezogen:
+- **Status:** **angehalten nach dem ersten Durchgang** (2026-09-17, MF-1228 `bd1957ea`; A-028/A-029 vorgezogen, siehe Stand) · vorher in Arbeit:
   „führe das Das Teilstring-Paket aus und finde alles und fixe es")
   · **Aufgenommen:** 2026-09-17
 - **Wortlaut:** „gibt es viele Teilstring-Fallen in meinem tool , fixe
@@ -2685,6 +2685,165 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     gemacht sind die Fundstellen, und die Grundlinie verhindert ab
     jetzt neue. Die 51 selbst brauchen je eine Beurteilung und einen
     Rotbeweis.
+
+  **ANGEHALTEN (2026-09-17, nach MF-1228 `bd1957ea`)**, weil der
+  Eigentümer zwei weitere Pakete nachgeschickt hat, die **denselben
+  Prüfer in neuerer Gestalt** bringen (`A-028`, `A-029`). Die 51
+  Fundstellen abzutragen, während die Fassung des Prüfers sich noch
+  ändert, wäre Arbeit an einem wandernden Ziel — `A-029`s Paket zieht
+  die CI-Maschinerie nach `audit_common.py` aus, und dort liegt auch
+  `walk()`, also Defekt C. Der nächste konkrete Schritt an DIESEM
+  Posten sind die **28 C2-Fundstellen im Erkennungspfad**, beginnend
+  mit `uft_scp_writer.c:433` (`strstr(hint, "st")` in einem Schreiber).
+- **Beleg:** **MF-1228**, `bd1957ea` — Tor 66 verdrahtet, acht Defekte
+  am Prüfer behoben, Grundlinie 50, Selbsttest 14/14, Meta-Tor 68/0,
+  Rotbeweis gegen die Urfassung 2 grün/7 rot, `P3-479` neu.
+  **Der Posten bleibt offen**: die 51 Fundstellen sind nicht behoben.
+
+### A-028 · Teilstring-Prüfer in die GitHub-Prüfung einbauen
+- **Status:** **in Arbeit** (seit 2026-09-17; zusammen mit `A-029`, weil
+  dessen Paket dieses hier überholt — siehe Stand)
+  · **Aufgenommen:** 2026-09-17
+- **Wortlaut:** „das ist code von mir !! … Bau den Teilstring-Prüfer in
+  die GitHub-Prüfung ein !!"
+- **Gegenstand, gemessen:** `neue-ideen/Teilstring-Prüfer in die
+  GitHub-Prüfung.zip`, 58 261 Byte, 5 Einträge; inneres Archiv 12
+  Dateien. Neu gegenüber `A-027`:
+  `.github/workflows/substring-audit.yml` (11 729 B),
+  `substring_baseline.json` (202 B, **leer**: `count: 0`), und eine
+  neuere `substring_audit.py` mit **27 503** statt 18 344 Byte.
+  **BERICHTIGT:** hier stand zusätzlich „`c_lex.py` mit 8 908 statt
+  6 917". Das war ein Spalten-Fehlgriff in der Archivliste — die 6 917
+  gehören zu `uft_match.h`, das daneben stand. Gemessen sind **alle
+  vier** Kopien von `c_lex.py` byteidentisch (8 908 B, sha256
+  `d4806f34b…`): die im Baum und die aus allen drei Paketen. Der
+  Zerteiler braucht also keine Zusammenführung.
+- **Kennzahl:** keine der vier — Verlässlichkeit des Prüfstands, wie
+  `P3-421`, `P3-426`, `P3-461`, `P3-477`, `P3-479`.
+- **Kanal:** **entfällt, und das ist ausgesprochen statt vermutet.** Der
+  Eigentümer sagt wörtlich „das ist code von mir" — damit ist die Frage
+  aus MF-636 für dieses **und** das Paket aus `A-027` beantwortet; beide
+  tragen zusätzlich SPDX `GPL-2.0-or-later` je Datei.
+- **Einfrier-Regel:** nein — Werkzeug- und CI-Schicht. D2 gilt: kein
+  neuer Ausgabeweg ohne Aufrufer und ohne Fall, der rot wird.
+- **OPEN_ITEMS:** `P3-479`
+- **Fertig heißt:** eine Teilstring-Falle in einem Pull Request
+  erscheint **als Annotation an ihrer Zeile** in der GitHub-Oberfläche,
+  der Selbsttest ist grün, und es gibt **eine** Grundlinie im Baum,
+  nicht zwei.
+- **Aufwand:** nicht schätzbar.
+- **Stand (bei der Aufnahme gemessen):**
+  · **Der wörtliche Auftrag ist seit MF-1228 schon erfüllt — über einen
+    anderen Weg.** `.github/workflows/ci.yml:47-48` ruft
+    `python3 scripts/check_consistency.py`, und dort hängt Tor 66. Der
+    Prüfer IST in der GitHub-Prüfung. Was das Paket darüber hinaus
+    bietet, ist der eigentliche Wert und heißt anders: **`emit_sarif`**
+    (GitHub Code Scanning) und **`emit_github`**
+    (`::warning file=…,line=…`). Ein Torkanon liefert
+    bestanden/gefallen; SARIF liefert die Fundstelle **an ihrer Zeile im
+    Diff**. Das kann `check_consistency.py` nicht.
+  · **Keiner meiner acht Fixes ist in der 27 503-Fassung**, gemessen:
+    `NCMP_FNS` mischt weiter Kopieren und Vergleichen (Z. 68), Escape-
+    Klasse unverändert `\\[dDwWsSbBAZ]` (Z. 362), `repo_scope`/
+    `ls-files` **0 Treffer**, `fullmatch` nur im Muster der
+    Funktionsnamen (Z. 345), `errors='replace'` betrifft das **Lesen**
+    (Z. 604), nicht die Ausgabe. Eins zu eins übernehmen würde MF-1228
+    zurücknehmen.
+  · **Und `A-029`s Paket überholt dieses:** dort ist
+    `substring_audit.py` nur **17 649** Byte, weil die CI-Maschinerie
+    nach `audit_common.py` (10 406 B) ausgezogen ist. Deshalb stehen
+    beide Posten auf EINEM Arbeitsstrom, und gebaut wird auf der
+    ausgezogenen Gestalt.
+  · Zwei Entscheidungen, die ich vorlege statt still zu treffen: **ein**
+    Workflow oder zwei (es liegen schon sechs, alle mit
+    `cancel-in-progress`), und **eine** Grundlinie —
+    `docs/teilstring_baseline.txt` mit 50 Schlüsseln gegen den
+    JSON-Mechanismus aus `audit_common.py`.
+
+  **Beide Entscheidungen sind getroffen und begründet:**
+  · **Ein Workflow** (`.github/workflows/teilstring.yml`, der siebte),
+    weil seine `paths:`-Filter ihn nur laufen lassen, wenn C- oder
+    Python-Quellen wirklich geändert sind — `ci.yml` läuft dagegen bei
+    jedem Push. Und weil PR-Annotationen einen eigenen Auftrag mit
+    `fetch-depth: 0` brauchen. Die Spur für `code_audit.py` (`A-029`)
+    kommt in **dieselbe** Datei, nicht in eine achte.
+  · **Eine Grundlinie**, und zwar die des Eigentümers:
+    `docs/teilstring_baseline.json` über `audit_common`. Mein
+    `.txt`-Format ist entfernt — dieselbe Absicht, dieselben
+    Fundstellen, ein Mechanismus (D3). Der Kopf des Pakets macht dieses
+    Argument selbst.
+
+  **Umfang der Grundlinie berichtigt, gemessen:** erst trug sie nur die
+  51 `sicher`-Fälle, womit der SARIF-Lauf **255** Ergebnisse meldete —
+  den ganzen `prüfen`-Altbestand. 255 Warnungen am ersten Tag im
+  Sicherheitsreiter ertränken jedes neue Signal. Jetzt **486
+  Fundstellen / 404 Fingerabdrücke**, SARIF **0**; blockiert wird
+  weiter nur über `--fail-on sicher`.
+
+  **Zwei weitere Defekte, und einer hätte das Tor in CI wirkungslos
+  gemacht:** **(I)** die Auslagerung war unvollständig — der Prüfer
+  importierte `walk`/`C_EXT` aus `audit_common` und definierte beide
+  darunter neu; die zweite Kopie gewann, die gemeinsame `walk()` war
+  toter Code. **(J)** `Finding.fingerprint()` hasht den Pfad, wie er
+  hereinkommt: `src\…` und `src/…` ergeben **verschiedene**
+  Fingerabdrücke, und eine auf Windows geschriebene Grundlinie ist in
+  CI (Linux) damit wirkungslos — **alle** bekannten Fundstellen wären
+  als NEU gemeldet worden. `check()` konnte es nicht sehen, weil es mit
+  demselben `relpath` schreibt und liest; gefunden hat es erst der
+  Handlauf mit dem Pfad, den ein Mensch tippt.
+
+  **Rotbeweis über alle vier Wege** mit einer gepflanzten neuen Falle:
+  Annotation an `:15` rc 1 · SARIF 1 Ergebnis Regel C1 · `--tor`
+  „486 in der Grundlinie, 1 NEU" rc 1 · Torkanon FAIL. Danach
+  entfernt, alles zurück auf 0. Selbsttest **17/17**, je ein Fall pro
+  Defekt A bis J.
+- **Beleg:** —
+
+### A-029 · Vier Code-Fallen (K4, K6, P2, P3): prüfen, testen, abtragen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-17
+- **Wortlaut:** „das ist code von mir !! … teste alles und fixe alles"
+- **Gegenstand, gemessen:** `neue-ideen/Vier Code-Fallen.zip`,
+  80 883 Byte, 6 Einträge; inneres Archiv 19 Dateien. Neu:
+  `tools/code_audit.py` (15 448 B, vier Regeln),
+  `tools/audit_common.py` (10 406 B, **gemeinsames Gerüst**:
+  `load_baseline`, `write_baseline`, `apply_baseline`, `emit_text`,
+  `emit_github`, `emit_sarif`, `add_common_args`, `run_and_report`,
+  **und `walk()`**), `tests/run_code_selftest.py` (7 896 B), zwei
+  Köderdateien (`fixture_code_a.c` 4 149 B, `fixture_code_b.c`
+  2 090 B), `.github/workflows/code-audit.yml` (13 187 B).
+- **Die vier Regeln, aus dem Bericht:** **K4** eine physikalische
+  Konstante in mehr als einer Datei (`prüfen` ab 2, `sicher` ab 3) —
+  benannte Beispiele aus dem Baum: `uft_hfe.c:556` *errät* 12500,
+  `uft_fdc_gaps.h:181` *weiß* 10416. **K6** eine Warnung hinter einer
+  Schleife im begrenzten Puffer. **P2** verschachtelte
+  Kommentarklammer (`sicher`). **P3** `#undef` vor spätem Gebrauch
+  (`sicher`).
+- **Kennzahl:** keine der vier. **Aber K4 ist der Torbau zu einem
+  Grundsatz, der in `CLAUDE.md` steht und fünfmal bezahlt wurde:**
+  MF-1177 („eine Größe, eine Rechnung"), MF-1015 (drei Prüfsummen,
+  keine zwei gleich), MF-1026 (drei Victor-Geometrien),
+  MF-1032/MF-1034 (die vier Anordnungsgesetze, zweimal einzeln
+  wiederentdeckt).
+- **Kanal:** entfällt — „das ist code von mir".
+- **Einfrier-Regel:** nein für die Prüfer; **ja für jede Fundstelle in
+  der Format-/Decoder-Schicht** → Rotbeweis zuerst.
+- **OPEN_ITEMS:** `P3-479` (dieselbe Familie); eigene Nummer, sobald
+  die Zahl der Fundstellen **geprüft** ist.
+- **Fertig heißt:** `run_code_selftest.py` grün, alle vier Regeln mit je
+  einem Köderfall **und** je einer Gegenprobe, im Torkanon verdrahtet,
+  und jede Fundstelle der Einschätzung `sicher` entweder behoben oder
+  benannt.
+- **Aufwand:** nicht schätzbar.
+- **Stand (bei der Aufnahme gemessen):**
+  · Auch diese Fassung trägt **keinen** meiner acht Fixes: `NCMP_FNS`
+    unverändert, Escape-Klasse unverändert, `repo_scope` 0 Treffer,
+    keine `fullmatch`-Behandlung.
+  · **Der Umzug macht Defekt C dabei breiter, nicht schmaler:** `walk()`
+    liegt jetzt in `audit_common.py:65`, also im GEMEINSAMEN Modul — die
+    hartkodierte Ausschlussliste statt `git ls-files` (MF-633/MF-636)
+    würde damit **beide** Prüfer betreffen statt einen. Kein Vorwurf an
+    den Entwurf, sondern der Grund, die Fixes VOR der Übernahme
+    aufzusetzen.
 - **Beleg:** —
 
   **DREI DINGE, DIE SCHON BEI DER AUFNAHME FESTGEHALTEN GEHÖREN,

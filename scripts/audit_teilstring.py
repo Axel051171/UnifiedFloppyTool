@@ -53,10 +53,12 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass, asdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from c_lex import lex, Tok, KIND_ID, KIND_STR, KIND_NUM, KIND_PUNCT  # noqa
+from audit_common import (Finding, walk, add_common_args, run_and_report,  # noqa
+                          load_baseline, apply_baseline,
+                          C_EXT)
 
 # ── Konfiguration ────────────────────────────────────────────────────────
 
@@ -64,26 +66,24 @@ from c_lex import lex, Tok, KIND_ID, KIND_STR, KIND_NUM, KIND_PUNCT  # noqa
 SEARCH_FNS = {'strstr', 'strcasestr', 'memmem', 'strrstr'}
 
 #: Funktionen, die mit einer Laenge VERGLEICHEN.
-#
-#  BERICHTIGT bei der Uebernahme (A-027): hier stand
+#  BERICHTIGT A-027/A-028: hier stand
 #  `{'strncmp','strncasecmp','memcmp','strncpy','strncat'}` — Kopieren und
 #  Vergleichen in EINEM Satz. C4 und C5 haben aber je Familie
 #  ENTGEGENGESETZTE Bedeutung, und der Befundtext sagte es selbst
 #  („Bei strncmp/memcmp ist das undefiniertes Verhalten"), waehrend die
 #  Regel `strncpy` anschlug.
 #
-#  Gemessen am Baum: von 70 Fundstellen der Einschaetzung „sicher" waren
-#  **21** C5-Treffer, und ALLE 21 waren `strncpy`. `strncpy(dst, "lit", n)`
-#  mit `n > strlen(lit)` ist korrekt und idiomatisch — der Standard fuellt
-#  den Rest mit Nullbytes und liest die Quelle nur bis zu ihrer Null. Fuer
-#  ein Feld fester Breite ist das genau der richtige Aufruf.
+#  Gemessen am Baum: von 70 Fundstellen „sicher" waren **21** C5-Treffer,
+#  und ALLE 21 waren `strncpy`. `strncpy(dst, "lit", n)` mit
+#  `n > strlen(lit)` ist korrekt und idiomatisch — der Standard fuellt den
+#  Rest mit Nullbytes und liest die Quelle nur bis zu ihrer Null. Fuer ein
+#  Feld fester Breite ist das genau der richtige Aufruf.
 #
-#  Das ist die eigene Klasse dieses Pruefers, auf ihn selbst angewandt:
-#  eine Regel, die nicht unterscheidet, was sie ansieht.
+#  Das ist die eigene Klasse dieses Pruefers, auf ihn selbst angewandt.
 NCMP_FNS = {'strncmp', 'strncasecmp', 'memcmp', 'bcmp'}
 
-#: Funktionen, die mit einer Laenge KOPIEREN. Bei ihnen ist die
-#  Bedeutung von „Laenge gegen Literal" umgekehrt:
+#: Funktionen, die mit einer Laenge KOPIEREN. Dort ist die Bedeutung von
+#  „Laenge gegen Literal" umgekehrt:
 #
 #    n > len(lit)   korrekt — der Rest wird mit Nullbytes gefuellt
 #    n < len(lit)   KUERZUNG, und bei `strncpy` zusaetzlich kein
@@ -114,18 +114,9 @@ RISKY_EXTS = {
 }
 
 
-@dataclass
-class Finding:
-    rule: str
-    path: str
-    line: int
-    col: int
-    severity: str      # 'sicher' | 'pruefen'
-    what: str
-    why: str
-    snippet: str = ''
-
-
+# Finding, walk(), Grundlinie und alle Ausgabeformate kommen aus
+# audit_common — zwei Kopien waeren genau die Doppelhaltung, die Regel K4
+# meldet.
 # ── Hilfen auf der Tokenfolge ────────────────────────────────────────────
 
 def _args(toks, i):
@@ -305,19 +296,18 @@ def audit_c(path: str, src: str):
 
             if n < len(lit):
                 if kopiert:
-                    # A-027: bei einer KOPIERfunktion ist das der schaerfere
-                    # Fall. `strncpy(dst, "SpartaDOS", 8)` speichert
-                    # „SpartaDO" und schreibt KEIN Nullbyte — das Feld ist
-                    # danach nur nullabgeschlossen, wenn der Aufrufer es
-                    # selbst setzt. Gemessen an `uft_xfd_parser_v2.c` tut er
-                    # das dort (`dos_name[8] = 0`), die Kuerzung bleibt.
+                    # A-027/A-028: bei einer KOPIERfunktion ist das der
+                    # schaerfere Fall. `strncpy(dst, "SpartaDOS", 8)`
+                    # speichert „SpartaDO" und schreibt KEIN Nullbyte.
+                    # Gemessen dreimal in `uft_xfd_parser_v2.c`, bei einem
+                    # Feld von 32 Byte — die 8 ist die Laenge eines
+                    # ANDEREN Begriffs (Atari-Dateiname).
                     out.append(Finding(
                         'C4', path, t.line, t.col, 'sicher',
-                        f'{t.text}(..., "{lit}", {n}) — kopiert nur {n} von '
-                        f'{len(lit)} Zeichen',
-                        'Der Name wird still gekuerzt, und bei strncpy fehlt '
-                        'dann der Nullabschluss. Entweder ist die Zahl '
-                        'falsch oder das Literal zu lang — bei einem Feld '
+                        f'{t.text}(..., "{lit}", {n}) — kopiert nur {n} '
+                        f'von {len(lit)} Zeichen',
+                        'Der Name wird still gekuerzt, und bei strncpy '
+                        'fehlt dann der Nullabschluss. Bei einem Feld '
                         'fester Breite gehoert sizeof(feld) - 1 hin.',
                         f'{t.text}({_text_of(other)}, "{lit}", {n})'))
                 else:
@@ -325,16 +315,11 @@ def audit_c(path: str, src: str):
                         'C4', path, t.line, t.col, 'sicher',
                         f'{t.text}(..., "{lit}", {n}) — nur {n} von '
                         f'{len(lit)} Zeichen verglichen',
-                        'Der Rest des Literals wird nie geprueft. Entweder '
-                        'ist die Zahl falsch oder das Literal zu lang.',
+                        'Der Rest des Literals wird nie geprueft. '
+                        'Entweder ist die Zahl falsch oder das Literal '
+                        'zu lang.',
                         f'{t.text}({_text_of(other)}, "{lit}", {n})'))
             elif n > len(lit) and not kopiert:
-                # A-027: `not kopiert` ist der ganze Punkt. Bei `strncpy`
-                # und `strncat` ist eine Laenge GROESSER als das Literal
-                # korrekt und idiomatisch — der Standard fuellt den Rest mit
-                # Nullbytes und liest die Quelle nur bis zu ihrer Null.
-                # Vorher schlug die Regel dort 21-mal an, und jeder Treffer
-                # war falsch.
                 out.append(Finding(
                     'C5', path, t.line, t.col, 'sicher',
                     f'{t.text}(..., "{lit}", {n}) — {n} Zeichen bei einem '
@@ -352,7 +337,7 @@ def list_macros(path: str, src: str):
     Das ist die bekannte Luecke, ausdruecklich gemacht: hinter
     `#define FIND(a,b) strstr(a,b)` sieht keine Regel etwas."""
     out = []
-    watched = SEARCH_FNS | NCMP_FNS | NCPY_FNS
+    watched = SEARCH_FNS | NCMP_FNS
     for t in lex(src, keep_comments=False):
         if t.kind != 'pp' or not t.text.lstrip('#').lstrip().startswith('define'):
             continue
@@ -387,42 +372,40 @@ def audit_python(path: str, src: str):
         pat = m.group('pat')
         line = src.count('\n', 0, m.start()) + 1
 
+        # Ein Muster ohne Wortzeichen kann nicht in ein Wort geraten.
         fn = m.group(1)
 
-        # A-027, Defekt A: `re.fullmatch` ist BEIDSEITIG verankert. Es
+        # A-028, Defekt A: `re.fullmatch` ist BEIDSEITIG verankert und
         # kann per Definition nicht mitten in einen laengeren Namen
         # geraten — hier gibt es nichts zu melden.
         if fn == 'fullmatch':
             continue
 
-        # Ein Muster ohne Wortzeichen kann nicht in ein Wort geraten.
-        #
-        # A-027, Defekt B: hier stand `\\[dDwWsSbBAZ]` — eine Aufzaehlung
+        # A-028, Defekt B: hier stand `\\[dDwWsSbBAZ]` — eine Aufzaehlung
         # von Escapes, und sie war unvollstaendig. `\n`, `\t`, `\r`, `\f`,
-        # `\v` und der verdoppelte Backslash `\\` fehlten, also blieben
-        # deren Buchstaben als „Wortzeichen" stehen. Gemessen:
+        # `\v` und der verdoppelte Backslash fehlten, also blieben deren
+        # Buchstaben als „Wortzeichen" stehen. Gemessen:
         #
-        #   Muster `\t\n\r`        -> core `\t\n\r`  -> „Wortzeichen" tnr
-        #   Muster `\\\s*\n\s*`    -> core unveraendert -> „Wortzeichen" sns
+        #   Muster `\t\n\r`       -> „Wortzeichen" tnr
+        #   Muster `\\\s*\n\s*`   -> „Wortzeichen" sns
         #
-        # Das erste Muster enthaelt GAR KEIN Wortzeichen, und die Regel
-        # meldete drei. Zwei Tore des Baums (`check_consistency.py:46`,
-        # `verify_build_sources.py:203`) standen deshalb als Fundstelle
-        # da, obwohl ihr Muster nur Zwischenraum zusammenfasst.
+        # Das erste enthaelt GAR KEIN Wortzeichen, und die Regel meldete
+        # drei. Zwei TORE des Baums standen deshalb als Fundstelle da
+        # (`check_consistency.py:46`, `verify_build_sources.py:203`),
+        # obwohl ihr Muster nur Zwischenraum zusammenfasst.
         #
         # `\\.` deckt JEDES Escape ab, auch die, die noch keiner
-        # aufgeschrieben hat — das ist derselbe Grundsatz wie MF-636:
-        # keine gepflegte Liste, wo eine Regel genuegt. Reihenfolge:
-        # Escapes zuerst, sonst frisst die Zeichenklasse `[^\]]*` das
-        # `\]` eines Escapes.
+        # aufgeschrieben hat — dieselbe Lehre wie MF-636: eine Regel statt
+        # einer Aufzaehlung. Reihenfolge: Escapes zuerst, sonst frisst die
+        # Zeichenklasse `[^\]]*` das `\]` eines Escapes.
         core = re.sub(r'\\.', '', pat, flags=re.S)
         core = re.sub(r'\[[^\]]*\]|\(\?[^)]*\)', '', core)
-        # A-027, Defekt F (beim Nachmessen von B gefunden): eine
-        # WIEDERHOLUNGSANGABE ist kein Literal. `{4,}` lieferte die Ziffer
-        # 4 als „Wortzeichen", und `audit_attribution_licence.py:132` stand
-        # deshalb mit `\"[^\"]{4,}\"` als Fundstelle da — einem Muster, das
-        # nach dem Abziehen der Escapes und der Zeichenklasse aus NICHTS
-        # ausser `{4,}` besteht.
+        # A-028, Defekt F: eine WIEDERHOLUNGSANGABE ist kein Literal.
+        # `{4,}` lieferte die Ziffer 4 als „Wortzeichen", und
+        # `audit_attribution_licence.py:132` stand deshalb mit
+        # `\"[^\"]{4,}\"` als Fundstelle da — einem Muster, das nach Abzug
+        # der Escapes und der Zeichenklasse aus NICHTS ausser `{4,}`
+        # besteht.
         core = re.sub(r'\{\d*(?:,\d*)?\}', '', core)
         if not re.search(r'[A-Za-z0-9_]', core):
             continue
@@ -433,14 +416,15 @@ def audit_python(path: str, src: str):
 
         sev = 'sicher' if len(core) <= 6 else 'pruefen'
 
-        # A-027, Defekt A: `re.match` ist am ANFANG verankert — das ist
+        # A-028, Defekt A: `re.match` ist am ANFANG verankert — das ist
         # keine Auslegung, sondern die Definition (`re.match('README',
         # 'XREADME') is None`). Die Meldung „kein Anker" war dort
         # sachlich falsch, und die Einschaetzung `sicher` zu hoch: was
         # fehlen KANN, ist der Anker am ENDE, und ob der gebraucht wird,
         # kann diese Regel nicht wissen. Gemessene Fundstelle:
-        # `tools/uft-scout/scripts/vermessen.py:249` mit `re.match(
-        # r"README")` — fuer „faengt der Name mit README an" richtig.
+        # `tools/uft-scout/scripts/vermessen.py:249` mit
+        # `re.match(r"README")` — fuer „faengt der Name mit README an"
+        # richtig.
         if fn == 'match':
             out.append(Finding(
                 'P1', path, line, m.start() - src.rfind('\n', 0, m.start()),
@@ -466,118 +450,89 @@ def audit_python(path: str, src: str):
 
 # ── Ablauf ───────────────────────────────────────────────────────────────
 
-C_EXT = ('.c', '.h', '.cpp', '.hpp', '.cc', '.cxx')
+# A-028, Defekt I: hier standen `C_EXT` und `walk()` ein ZWEITES Mal —
+# Reste einer unvollstaendigen Auslagerung. Zeile 59 importiert beide aus
+# `audit_common`, und diese Kopie darunter hat sie ueberschattet: die
+# GEMEINSAME `walk()`, die die Dateimenge aus `git ls-files` holt, war
+# damit toter Code, und es galt wieder die hartkodierte Ausschlussliste.
+#
+# Das ist D3 in seiner unangenehmsten Form — das Wissen wird zweimal
+# gehalten, und die ZWEITE Kopie gewinnt. Entfernt; `walk` und `C_EXT`
+# kommen ausschliesslich aus `audit_common`.
 
 
-def walk(roots, exts, wurzel=None):
-    """Die Dateimenge kommt aus git, nicht aus einer gepflegten Liste.
+# ── Ablauf ───────────────────────────────────────────────────────────────
 
-    A-027, Defekt C: hier stand eine hartkodierte Ausschlussliste
-    (`.git`, `build`, `obj`, `bin`, `__pycache__`). Das ist genau die
-    Aufzaehlung bekannter Faelle, die `CLAUDE.md` §MF-636 verbietet, und
-    der Preis war messbar: von **10** Python-Fundstellen der
-    Einschaetzung „sicher" lagen **5** unter `tools/uft-scout/work/` —
-    geklonten FREMD-Repos (fluxfox, hardsector_tool, greaseweazle). CI
-    sieht diese Dateien nie; ein Befund darin ist richtig gesehen und
-    vollkommen belanglos.
+RULE_HELP = {
+    'C1': 'Endung wird gesucht statt am Ende geprueft',
+    'C2': 'Kennung wird im Puffer gesucht statt an festem Versatz geprueft',
+    'C3': 'Praefixvergleich statt Gleichheit',
+    'C4': 'Vergleich kuerzer als das Literal',
+    'C5': 'Vergleich laenger als das Literal',
+    'C6': 'sizeof als Laengenargument',
+    'M1': 'Makro versteckt einen geprueften Aufruf',
+    'P1': 'Regex ohne Wortgrenze oder Anker',
+}
 
-    `scripts/repo_scope.py` ist der Helfer dafuer, und seine eigene
-    Zusage beschreibt DENSELBEN Fall (MF-633, nach dem nibtools-Klon).
-    Ist git nicht befragbar, laesst er alles durch **und sagt es** — die
-    Warnung wird weitergegeben, nicht geschluckt (MF-1171: eine
-    grosszuegige Rueckfallebene ist eine Anforderung an den Parser
-    dahinter, keine Nachsicht).
-    """
-    hier = os.path.dirname(os.path.abspath(__file__))
-    from pathlib import Path
-    # A-027: der Filter wird aus dem UNTERSUCHTEN Baum gebaut, nicht aus
-    # dem Ort dieses Skripts.
-    #
-    # Der Unterschied ist kein Feinschliff, und `audit_selbsttest.py` hat
-    # ihn gefunden: mit `Path(hier).parent` — also dem echten Baum — sind
-    # die Dateien eines GEPFLANZTEN Prueflings dort nicht verzeichnet,
-    # und `walk()` filterte sie restlos weg. Das Tor meldete auf drei
-    # gepflanzten Defekten „blind — gepflanzter Defekt nicht gemeldet".
-    #
-    # Ein Tor, das im gepflanzten Baum nichts sieht, sieht auch sonst
-    # nichts, sobald es auf einer anderen Wurzel laeuft — die Klasse
-    # MF-1000/Tor 64: ein Pruefer, der nicht anschlagen KANN.
-    basis = Path(wurzel) if wurzel is not None else Path(hier).parent
-    try:
-        sys.path.insert(0, hier)
-        from repo_scope import make_filter          # noqa: PLC0415
-        im_baum, warnung = make_filter(basis)
-    except Exception as exc:                        # noqa: BLE001
-        im_baum, warnung = (lambda p: True), (
-            'repo_scope nicht ladbar (%s) — es wird der GANZE '
-            'Verzeichnisbaum geprueft' % exc)
-    if warnung:
-        print(warnung, file=sys.stderr)
+TOOL = 'substringAudit'
+ERROR_RULES = frozenset({'C1', 'C3', 'C4', 'C5'})
 
-    for root in roots:
-        if os.path.isfile(root):
-            if root.endswith(exts) and im_baum(Path(root)):
-                yield root
-            continue
-        for dirpath, dirnames, files in os.walk(root):
-            dirnames[:] = [d for d in dirnames
-                           if d not in ('.git', 'build', 'obj', 'bin',
-                                        '__pycache__')]
-            for f in sorted(files):
-                if not f.endswith(exts):
-                    continue
-                p = os.path.join(dirpath, f)
-                if im_baum(Path(p)):
-                    yield p
+EMPTY_NOTE = ('Keine Teilstring-Falle gefunden. Das heisst NICHT, dass '
+              'keine da ist —\nnur, dass keine der Regeln angeschlagen hat. '
+              'Makros sieht keine von\nihnen: --list-macros zeigt, wo von '
+              'Hand nachzusehen ist.')
 
 
-# ── Grundlinie und Torschnittstelle ─────────────────────────────────────
+# ── Torschnittstelle (A-027/A-028) ──────────────────────────────────────
 
-#: Wo die bekannten Fundstellen stehen. Bauform Tor 57: die Zahl darf nur
-#: SINKEN, und eine neue Fundstelle faellt sofort auf. Der Zweck ist der
-#: Rand — eine neue Datei kann gar nicht mehr mit einer Teilstring-Falle
-#: anfangen.
-GRUNDLINIE_REL = os.path.join('docs', 'teilstring_baseline.txt')
+#: Die EINE Grundlinie. Format und Mechanik kommen aus `audit_common`,
+#  damit nicht zwei Pruefer zwei Formate halten — das waere genau die
+#  Doppelhaltung, gegen die dieses Geruest und Regel K4 antreten (D3).
+#
+#  A-028: hier lag vorher `docs/teilstring_baseline.txt` mit einem
+#  eigenen Zeilenformat (`pfad:regel:schnipsel`). Es ist durch den
+#  gemeinsamen JSON-Mechanismus ersetzt — dieselbe Absicht, dieselben
+#  Fundstellen, EIN Mechanismus. Der Fingerabdruck ist jetzt
+#  `Finding.fingerprint()` (sha256 ueber Regel, Pfad und normierten
+#  Schnipsel, 16 Stellen), und er nennt seine zwei Preise im eigenen
+#  Docstring: zwei gleiche Stellen in einer Datei kollidieren (dafuer
+#  `--strict-baseline`), eine umbenannte Datei markiert alles neu.
+GRUNDLINIE_REL = os.path.join('docs', 'teilstring_baseline.json')
 
-#: Was `check()` ansieht. Bewusst dieselben Wurzeln wie die Vorgabe der
-#: Kommandozeile, damit Tor und Handlauf dasselbe messen (MF-1177: die
-#: Rechnung gehoert an EINE Stelle).
+#: Was `check()` ansieht — dieselben Wurzeln wie der Handlauf, damit Tor
+#  und Hand dasselbe messen (MF-1177: die Rechnung gehoert an EINE Stelle).
 C_WURZELN = ('src', 'include')
 PY_WURZELN = ('scripts', 'tools')
 
 
-def _schluessel(f: 'Finding') -> str:
-    """Die Kennung einer Fundstelle in der Grundlinie.
+def _sammeln(wurzel, nur_sicher: bool = True) -> list:
+    """Fundstellen ueber den ganzen Baum.
 
-    Ohne Spalte und ohne Zeilennummer: eine Zeile, die sich um zwei
-    Stellen verschiebt, ist nicht eine NEUE Falle. Sonst waere jede
-    Umformatierung ein Befund, und ein Tor, das bei Umformatierungen
-    anschlaegt, wird abgeschaltet.
+    @param nur_sicher  Vorgabe `True` — das TOR urteilt ausschliesslich
+                       ueber `sicher`, weil `pruefen` heisst „ein Mensch
+                       muss hinsehen" und kein Urteil ist.
+
+                       Fuer die GRUNDLINIE wird `False` gebraucht, und
+                       das ist gemessen begruendet: mit einer Grundlinie
+                       aus nur `sicher` meldete der SARIF-Lauf **255**
+                       Ergebnisse — den ganzen `pruefen`-Altbestand. 255
+                       Warnungen am ersten Tag im Sicherheitsreiter
+                       ertraenken jedes neue Signal, und die Grundlinie
+                       ist ausdruecklich eine SCHULDENLISTE des
+                       Altbestands, keine Liste der blockierenden Faelle.
+                       Blockiert wird weiter nur ueber `--fail-on
+                       sicher`; die Trennung liegt also dort, wo sie
+                       hingehoert, und nicht im Inhalt der Grundlinie.
     """
-    return '%s:%s:%s' % (f.path.replace(os.sep, '/'), f.rule, f.snippet[:60])
-
-
-def _grundlinie_lesen(wurzel) -> set:
-    p = os.path.join(str(wurzel), GRUNDLINIE_REL)
-    if not os.path.exists(p):
-        return set()
-    aus = set()
-    with open(p, encoding='utf-8') as fh:
-        for z in fh:
-            z = z.strip()
-            if z and not z.startswith('#'):
-                aus.add(z)
-    return aus
-
-
-def _sammeln(wurzel) -> list:
-    """Alle Fundstellen der Einschaetzung `sicher` ueber den ganzen Baum."""
     aus = []
     for wurzeln, py in ((C_WURZELN, False), (PY_WURZELN, True)):
         orte = [os.path.join(str(wurzel), w) for w in wurzeln]
         orte = [o for o in orte if os.path.exists(o)]
         if not orte:
             continue
+        # `wurzel` MUSS durchgereicht werden — ohne sie filtert
+        # `audit_common.walk()` gegen den echten Baum und ist in einem
+        # gepflanzten Pruefbaum blind (siehe dort).
         for p in walk(orte, ('.py',) if py else C_EXT, wurzel):
             try:
                 src = open(p, encoding='utf-8', errors='replace').read()
@@ -585,7 +540,8 @@ def _sammeln(wurzel) -> list:
                 continue
             rel = os.path.relpath(p, str(wurzel))
             found = audit_python(rel, src) if py else audit_c(rel, src)
-            aus += [f for f in found if f.severity == 'sicher']
+            aus += ([f for f in found if f.severity == 'sicher']
+                    if nur_sicher else found)
     return aus
 
 
@@ -595,28 +551,30 @@ def check(wurzel) -> list:
     Gemeldet wird, was NICHT in der Grundlinie steht — also jede neue
     Teilstring-Falle der Einschaetzung `sicher`.
     """
-    bekannt = _grundlinie_lesen(wurzel)
+    grundlinie = load_baseline(os.path.join(str(wurzel), GRUNDLINIE_REL))
+    neu, _bekannt = apply_baseline(_sammeln(wurzel), grundlinie)
     return ['%s:%s  %s' % (f.path.replace(os.sep, '/'), f.line, f.what)
-            for f in _sammeln(wurzel) if _schluessel(f) not in bekannt]
+            for f in neu]
 
 
 # ── Selbsttest ───────────────────────────────────────────────────────────
 
-def _regeln_von(quelle: str, pfad: str = 'src/formats/x.c') -> list:
+def _c(quelle: str, pfad: str = 'src/formats/x.c') -> list:
     return audit_c(pfad, quelle)
 
 
-def _py_regeln_von(quelle: str) -> list:
+def _py(quelle: str) -> list:
     return audit_python('scripts/x.py', quelle)
 
 
 def selbsttest() -> int:
     """Prueft den PRUEFER — je ein Fall pro behobenem Defekt.
 
-    Ohne diese Faelle waere keiner der sechs Fixes bewacht, und der
-    naechste Umbau koennte sie lautlos zurueckdrehen. Der Baum hat die
-    Lehre teuer bezahlt: `tuersucher.py` meldete einmal „Selbsttest 3/3"
-    und lieferte gemessen 0/3.
+    Ohne diese Faelle waere keiner der neun Fixes bewacht, und der
+    naechste Umbau koennte sie lautlos zurueckdrehen. Genau das ist bei
+    der Uebernahme zweimal passiert: das Paket aus `A-028` und das aus
+    `A-029` trugen **keinen** der Fixes aus MF-1228, obwohl beide
+    NEUER waren. Ein Fix ohne Fall ist eine Absichtserklaerung.
     """
     gut = schlecht = 0
 
@@ -630,23 +588,22 @@ def selbsttest() -> int:
             print('  [ROT] %s' % text)
 
     print('Defekt D — Kopieren ist nicht Vergleichen')
-    r = _regeln_von('void f(char*d){ strncpy(d, "abc", 16); }')
-    zusage(not [x for x in r if x.rule == 'C5'],
+    zusage(not [x for x in _c('void f(char*d){ strncpy(d, "abc", 16); }')
+                if x.rule == 'C5'],
            'strncpy(d, "abc", 16) ist KEIN C5 — der Standard fuellt den '
            'Rest mit Nullbytes (vorher: 21 Fehltreffer im Baum)')
-    r = _regeln_von('int f(const char*a){ return strncmp(a, "abc", 16); }')
-    zusage([x for x in r if x.rule == 'C5'],
-           'strncmp(a, "abc", 16) IST C5 — dort liest es hinter das '
-           'Literal')
-    r = _regeln_von('void f(char*d){ strncpy(d, "SpartaDOS", 8); }')
-    zusage([x for x in r if x.rule == 'C4'],
+    zusage([x for x in _c('int f(const char*a){ return strncmp(a,"abc",16); }')
+            if x.rule == 'C5'],
+           'strncmp(a, "abc", 16) IST C5 — dort liest es hinter das Literal')
+    zusage([x for x in _c('void f(char*d){ strncpy(d, "SpartaDOS", 8); }')
+            if x.rule == 'C4'],
            'strncpy(d, "SpartaDOS", 8) IST C4 — Kuerzung auf "SpartaDO"')
 
     print('Defekt A — re.match ist verankert, re.fullmatch beidseitig')
-    zusage(not _py_regeln_von('re.fullmatch(r"README", s)'),
+    zusage(not _py('re.fullmatch(r"README", s)'),
            're.fullmatch(r"README") ergibt KEINEN Fund — beidseitig '
            'verankert')
-    r = _py_regeln_von('re.match(r"README", s)')
+    r = _py('re.match(r"README", s)')
     zusage(len(r) == 1 and r[0].severity == 'pruefen',
            're.match(r"README") ergibt EINEN Fund der Einschaetzung '
            '`pruefen` — am Anfang verankert, aber nicht am Ende')
@@ -655,41 +612,57 @@ def selbsttest() -> int:
            'sachlich falsch')
 
     print('Defekt B — Escapes tragen keine Wortzeichen')
-    zusage(not _py_regeln_von(r'''re.search(r"\t\n\r", s)'''),
+    zusage(not _py(r'''re.search(r"\t\n\r", s)'''),
            r're.search(r"\t\n\r") ergibt KEINEN Fund — das Muster hat gar '
            'kein Wortzeichen (vorher meldete die Regel drei: t, n, r)')
-    zusage(not _py_regeln_von(r'''re.sub(r"\\\s*\n\s*", "", s)'''),
+    zusage(not _py(r'''re.sub(r"\\\s*\n\s*", "", s)'''),
            r're.sub(r"\\\s*\n\s*") ergibt KEINEN Fund — vorher standen '
            'zwei Tore des Baums deshalb als Fundstelle da')
 
     print('Defekt F — eine Wiederholungsangabe ist kein Literal')
-    zusage(not _py_regeln_von(r'''re.search(r"[^x]{4,}", s)'''),
+    zusage(not _py(r'''re.search(r"[^x]{4,}", s)'''),
            r're.search(r"[^x]{4,}") ergibt KEINEN Fund — die 4 ist eine '
            'Wiederholungszahl')
 
-    print('Defekt E — ein Absturz ist kein Urteil')
-    _ausgabe_haerten()
-    try:
-        print('  (Zeichenprobe: ⁄ — ü)')
-        zusage(True, 'ein Zeichen ausserhalb von cp1252 laesst die Ausgabe '
-                     'nicht sterben (vorher: UnicodeEncodeError mitten im '
-                     'Lauf, rc 1 wie „hat gefunden")')
-    except UnicodeEncodeError:
-        zusage(False, 'Ausgabe stirbt weiter an einem Zeichen')
+    print('Defekt I — walk() kommt AUSSCHLIESSLICH aus audit_common')
+    import audit_common as _ac
+    zusage(walk is _ac.walk,
+           'die lokale Doppelung ist weg: `walk` ist dasselbe Objekt wie '
+           '`audit_common.walk` — vorher ueberschattete eine zweite '
+           'Fassung den gemeinsamen Fix')
+    zusage(C_EXT is _ac.C_EXT,
+           'und `C_EXT` ebenso — dasselbe Objekt, nicht eine Kopie mit '
+           'gleichem Wert')
 
-    print('Defekt C — die Dateimenge kommt aus git (MF-636)')
+    print('Defekt J — der Fingerabdruck haengt nicht am Pfadtrenner')
+    f_bs = Finding('C2', r'src\formats\x.c', 1, 1, 'sicher', '', '', 'strstr(a,"b")')
+    f_fs = Finding('C2', 'src/formats/x.c', 1, 1, 'sicher', '', '', 'strstr(a,"b")')
+    zusage(f_bs.fingerprint() == f_fs.fingerprint(),
+           'derselbe Fund hat mit `\\` und mit `/` DENSELBEN '
+           'Fingerabdruck — vorher waren es zwei, und eine auf Windows '
+           'geschriebene Grundlinie war in CI (Linux) wirkungslos: alle '
+           '51 bekannten Fundstellen waeren als NEU gemeldet worden')
+
+    print('Defekt C/E — Dateimenge aus git, Ausgabe haelt ein Zeichen aus')
     wurzel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    fremd_ort = os.path.join(wurzel, 'tools', 'uft-scout', 'work')
-    if os.path.isdir(fremd_ort):
-        treffer = [p for p in walk([os.path.join(wurzel, 'tools')], ('.py',))
+    fremd = os.path.join(wurzel, 'tools', 'uft-scout', 'work')
+    if os.path.isdir(fremd):
+        treffer = [p for p in walk([os.path.join(wurzel, 'tools')],
+                                   ('.py',), wurzel)
                    if 'uft-scout' in p and 'work' in p]
         zusage(not treffer,
                'kein Fund aus tools/uft-scout/work/ — geklonte Fremd-Repos '
-               'sind gitignoriert, und CI sieht sie nie (%d Dateien '
-               'geprueft)' % len(treffer))
+               'sind gitignoriert, und CI sieht sie nie')
     else:
         print('  [--- ] tools/uft-scout/work/ fehlt — Fall nicht pruefbar, '
               'und das wird gesagt statt uebersprungen')
+    _ac._ausgabe_haerten()
+    try:
+        print('  (Zeichenprobe: ⁄ — ü)')
+        zusage(True, 'ein Zeichen ausserhalb von cp1252 laesst die Ausgabe '
+                     'nicht sterben')
+    except UnicodeEncodeError:
+        zusage(False, 'Ausgabe stirbt weiter an einem Zeichen')
 
     print('Koederdatei — die bekannte Antwort')
     koeder = os.path.join(wurzel, 'tests', 'formats', 'fixture_traps.c')
@@ -713,102 +686,63 @@ def selbsttest() -> int:
     return 0 if schlecht == 0 else 1
 
 
-def _ausgabe_haerten() -> None:
-    """A-027, Defekt E: ein Absturz ist kein Urteil.
-
-    Gemessen beim ersten Lauf ueber `src include`: das Werkzeug starb mit
-    `UnicodeEncodeError: 'charmap' codec can't encode character '\\u2044'`
-    beim Drucken eines Schnipsels aus
-    `src/formats/reference/uft_floppy_reference.c:168` — die
-    Vorgabekodierung der Windows-Konsole ist cp1252. Es hatte zu dem
-    Zeitpunkt **vier von 14 Dateien** mit Funden gedruckt und den Rest
-    des Baums nie gesehen; der Rueckgabewert war **1** und sah damit
-    genau wie „hat etwas gefunden" aus.
-
-    Das ist wortwoertlich die Klasse, die MF-1171 benennt: dort starb
-    `enum_macro_conflicts.py` an `int('0170000', 0)` und
-    `check_consistency.py` endete mit rc 1, **bevor die uebrigen 23
-    Kategorien liefen**. Ein Tor, das stirbt, hat nicht geurteilt.
-
-    Ein Pruefer fuer Quelltext MUSS mit Quelltext umgehen koennen, der
-    Zeichen enthaelt, die die Konsole nicht darstellen kann. Nicht
-    darstellbare Zeichen werden deshalb ersetzt — die FUNDSTELLE bleibt
-    vollstaendig (Pfad, Zeile, Spalte, Regel), und nur der Schnipsel
-    verliert ein Zeichen. Das ist die richtige Richtung: lieber ein
-    unleserliches Zeichen im Zitat als ein unvollstaendiges Urteil.
-    """
-    for strom in (sys.stdout, sys.stderr):
-        try:
-            strom.reconfigure(errors='replace')     # Python >= 3.7
-        except (AttributeError, OSError):
-            pass
-
-
 def main():
-    _ausgabe_haerten()
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('roots', nargs='*', help='Dateien oder Verzeichnisse')
+    add_common_args(ap)
+    ap.add_argument('--python', action='store_true',
+                    help='Python-Quellen pruefen statt C')
+    ap.add_argument('--list-macros', action='store_true',
+                    help='nur die Makroluecke auflisten')
     ap.add_argument('--selbsttest', action='store_true',
                     help='den PRUEFER pruefen (Hausform, MF-735)')
     ap.add_argument('--tor', action='store_true',
                     help='wie das Tor laufen: nur was NICHT in der '
                          'Grundlinie steht')
     ap.add_argument('--schreibe-grundlinie', action='store_true',
-                    help='die Grundlinie neu schreiben — sie darf nur '
-                         'SINKEN')
-    ap.add_argument('--python', action='store_true',
-                    help='Python-Quellen pruefen statt C')
-    ap.add_argument('--list-macros', action='store_true',
-                    help='nur die Makroluecke auflisten')
-    ap.add_argument('--json', action='store_true')
-    ap.add_argument('--only', metavar='REGEL',
-                    help='nur diese Regel, z. B. C3')
-    ap.add_argument('--fail-on', default='sicher',
-                    choices=('nichts', 'sicher', 'alles'),
-                    help='Rueckgabewert 1 ab dieser Einschaetzung '
-                         '(Vorgabe: sicher)')
+                    help='die EINE Grundlinie neu schreiben — sie deckt '
+                         'C- UND Python-Seite ab, was --write-baseline '
+                         'in einem Lauf nicht kann')
+    # `roots` ist in `add_common_args` Pflicht; fuer --selbsttest/--tor
+    # gibt es keine, also wird die Pflicht hier gelockert statt den
+    # gemeinsamen Teil zu verbiegen.
+    for a in ap._actions:
+        if a.dest == 'roots':
+            a.nargs = '*'
     args = ap.parse_args()
 
     if args.selbsttest:
         return selbsttest()
 
-    wurzel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if args.schreibe_grundlinie:
+        from audit_common import write_baseline          # noqa: PLC0415
+        wurzel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Die Grundlinie traegt den GANZEN Altbestand, nicht nur die
+        # blockierenden Faelle — siehe `_sammeln()`.
+        alle = _sammeln(wurzel, nur_sicher=False)
+        ziel = os.path.join(wurzel, GRUNDLINIE_REL)
+        alt = load_baseline(ziel) or {}
+        # A-028: die Grundlinie darf nur SINKEN. Waechst sie, ist das eine
+        # neue Falle und keine Buchhaltung — dann bricht das Schreiben ab
+        # und nennt die Zahl (Bauform Tor 57).
+        if alt and len(alle) > alt.get('count', 0):
+            print('ABBRUCH: %d Fundstellen gegen %d in der Grundlinie — '
+                  'sie darf nur sinken.' % (len(alle), alt.get('count', 0)),
+                  file=sys.stderr)
+            return 2
+        data = write_baseline(ziel, alle)
+        print('-> %s (%d Fundstellen, %d Fingerabdruecke; vorher %d)'
+              % (GRUNDLINIE_REL, data['count'], len(data['accepted']),
+                 alt.get('count', 0)))
+        return 0
 
-    if args.tor or args.schreibe_grundlinie:
-        alle = _sammeln(wurzel)
-        if args.schreibe_grundlinie:
-            alt = _grundlinie_lesen(wurzel)
-            neu = {_schluessel(f) for f in alle}
-            # A-027: die Grundlinie darf nur SINKEN. Waechst sie, ist das
-            # eine neue Falle und keine Buchhaltung — dann bricht das
-            # Schreiben ab und nennt die Zahl (Bauform Tor 57).
-            dazu = neu - alt
-            if alt and dazu:
-                print('ABBRUCH: %d NEUE Fundstellen — die Grundlinie darf '
-                      'nur sinken:' % len(dazu), file=sys.stderr)
-                for k in sorted(dazu):
-                    print('  + %s' % k, file=sys.stderr)
-                return 2
-            p = os.path.join(wurzel, GRUNDLINIE_REL)
-            with open(p, 'w', encoding='utf-8', newline='\n') as fh:
-                fh.write('# Bekannte Teilstring-Fallen der Einschaetzung '
-                         '`sicher` (A-027).\n')
-                fh.write('# Die Zahl darf nur SINKEN. Neu schreiben mit:\n')
-                fh.write('# scripts/audit_teilstring.py '
-                         '--schreibe-grundlinie\n')
-                fh.write('# Schluessel: pfad:regel:schnipsel — ohne '
-                         'Zeilennummer, damit eine\n')
-                fh.write('# Umformatierung kein Befund ist.\n')
-                for k in sorted(neu):
-                    fh.write(k + '\n')
-            print('-> %s (%d Fundstellen, vorher %d)'
-                  % (GRUNDLINIE_REL, len(neu), len(alt)))
-            return 0
+    if args.tor:
+        wurzel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         offen = check(wurzel)
+        gl = load_baseline(os.path.join(wurzel, GRUNDLINIE_REL)) or {}
         print('Teilstring-Fallen: %d in der Grundlinie, %d NEU'
-              % (len(_grundlinie_lesen(wurzel)), len(offen)))
+              % (gl.get('count', 0), len(offen)))
         for z in offen:
             print('  + %s' % z)
         return 1 if offen else 0
@@ -833,54 +767,8 @@ def main():
         else:
             findings += audit_c(p, src)
 
-    if args.only:
-        findings = [f for f in findings if f.rule == args.only]
-
-    if args.json:
-        # A-027: `ensure_ascii=True` (die Vorgabe von json), und zwar
-        # ABSICHTLICH. Hier stand `False`, und zusammen mit der
-        # Konsolen-Haertung aus `_ausgabe_haerten()` war die Folge
-        # gemessen: die JSON-Datei kam in cp1252 heraus und
-        # `json.load(..., encoding='utf-8')` starb mit
-        # `UnicodeDecodeError: invalid start byte` an Position 17774.
-        #
-        # Das war mein eigener Fehler beim Beheben von Defekt E — die
-        # Haertung der KONSOLE hatte die DATENausgabe mitgenommen. Gefangen
-        # hat es die naechste Messung, nicht das Nachdenken. JSON ist ein
-        # Austauschformat und muss unter jeder Konsolenkodierung lesbar
-        # sein; `ensure_ascii` loest jedes Nicht-ASCII-Zeichen in `\uXXXX`
-        # auf und macht die Ausgabe damit kodierungsunabhaengig.
-        print(json.dumps([asdict(f) for f in findings], indent=2,
-                         ensure_ascii=True))
-    else:
-        by_rule = {}
-        for f in findings:
-            by_rule.setdefault(f.rule, []).append(f)
-
-        for rule in sorted(by_rule):
-            group = by_rule[rule]
-            sure = sum(1 for f in group if f.severity == 'sicher')
-            print(f'\n=== {rule}: {len(group)} Funde '
-                  f'({sure} sicher, {len(group) - sure} zu pruefen) ===')
-            for f in group:
-                print(f'\n{f.path}:{f.line}:{f.col}  [{f.severity}]')
-                print(f'  {f.what}')
-                print(f'  {f.why}')
-                if f.snippet:
-                    print(f'  > {f.snippet}')
-
-        print(f'\n{files} Dateien geprueft, {len(findings)} Funde.')
-        if not findings:
-            print('Keine Teilstring-Falle gefunden. Das heisst NICHT, dass '
-                  'keine da ist —\nnur, dass keine der sieben Regeln '
-                  'angeschlagen hat. Makros sieht keine\nvon ihnen: '
-                  '--list-macros zeigt, wo von Hand nachzusehen ist.')
-
-    if args.fail_on == 'nichts':
-        return 0
-    if args.fail_on == 'alles':
-        return 1 if findings else 0
-    return 1 if any(f.severity == 'sicher' for f in findings) else 0
+    return run_and_report(args, findings, files, RULE_HELP, TOOL,
+                          ERROR_RULES, EMPTY_NOTE)
 
 
 if __name__ == '__main__':
