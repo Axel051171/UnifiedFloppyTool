@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 9 |
+| davon auf T2/T3 (offen) | 8 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -39,7 +39,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 |---|---|---|---|---|---|---|
 | `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `fds` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `nfd` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -251,6 +250,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `edsk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?), edsk |
 | `fdi` | T1 | — | — |
 | `fdi_pc98` | T1b | — | — |
+| `fds` | T1b | — | — |
 | `g64` | T1 | — | — |
 | `g71` | T1b | — | — |
 | `hardsector` | ? | RAW_LOADER (?) | — |

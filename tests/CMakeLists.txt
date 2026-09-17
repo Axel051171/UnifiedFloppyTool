@@ -1249,7 +1249,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_fds_gegen_die_beschreibung")
+    elseif(${test_name} STREQUAL "test_fds_gegen_die_beschreibung"
+           OR ${test_name} STREQUAL "test_fds_gegen_fdtc")
         # MF-1038: `fds` meldete je Seite 36 Byte, die es nicht gibt.
         # UFT legt eine 65-500-Byte-Seite als 128 virtuelle 512-Byte-
         # Sektoren ab (eigene Konvention, keine Formateigenschaft) —
@@ -1270,6 +1271,36 @@ foreach(test_source ${TEST_SOURCES})
         #
         # T2 und nicht T1b: im Baum gibt es kein Werkzeug, das FDS liest
         # oder schreibt (hxcfe kennt kein FDS, libdsk auch nicht).
+        #
+        # BERICHTIGT MF-1226 — der Satz darueber bleibt richtig UEBER
+        # DEN BAUM und war die falsche Schlussfolgerung ueber die
+        # WELT: `fds` steht jetzt auf T1b. Der Erzeuger ist `fdtc`
+        # (BSD-3-Clause, Matthew Gilmore) mit `bintofdf`, die zweite
+        # Hand ist `fdstool` (keine Lizenz, Eigentuemerentscheidung
+        # 2026-09-17 „fds auch, ja machen"). Keines von beiden lag im
+        # Baum — P3-339 hatte gemessen, was der BAUM kann, und daraus
+        # geschlossen, dass es nichts gibt; das ist die Klasse
+        # MF-1033/MF-1024 („der Leser war richtig, die Aussage ueber
+        # das Werkzeug war falsch").
+        #
+        # Und `fdstool` selbst bestaetigt die Seitengroesse von fremder
+        # Hand: `fdstool.c:19` definiert FDS_LENGTH 65500, und es weist
+        # jede andere Groesse mit „not in qd/fds format" ab. Die
+        # 476-Byte-Grenze des letzten virtuellen Sektors bleibt dagegen
+        # eine HAUSREGEL von UFT (128 x 512 = 65 536) und wird vom
+        # Orakel nicht entschieden — sie wird im Test aus 65 500 und
+        # 127 x 512 selbst nachgerechnet.
+        #
+        # BEFUND AM ORAKEL: `fdstool.c:641` laeuft `for (x = 0; x < 3;
+        # x++)` ueber das 8-Byte-Namensfeld — die Schranke 3 ist die des
+        # DISKETTEN-Namens. Aus `UFTK0` wird `UFT`. Die Strukturzahlen
+        # stimmen alle, die Namensanzeige nicht; ein Orakel ist eine
+        # Referenz, kein Beweis (MF-1015), und `test_fds_gegen_fdtc`
+        # prueft die Namen deshalb SELBST.
+        #
+        # `test_fds_gegen_fdtc` haengt an DIESEM Zweig, weil es dieselbe
+        # Quelle und dasselbe Korpus-Define braucht — eine zweite Liste
+        # waere eine zweite Wahrheit (D3, Klasse MF-1015).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fds/uft_fds_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)

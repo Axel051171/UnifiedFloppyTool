@@ -2296,7 +2296,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 
 ### A-025 · Alle offenen Formate so hoch wie möglich (T1b, sonst T1) — zwei Stränge
 - **Status:** **in Arbeit** — Strang A **vorgelegt** (MF-1221), Strang B
-  offen · **Aufgenommen:** 2026-09-17
+  **4 von 9 gehoben** (`adf_ext`, `cas`, `fdi_pc98`, `fds`), **5 offen**
+  · **Aufgenommen:** 2026-09-17
 - **Wortlaut:** „Alle, mach einen nach dem anderen, mach dir einen Plan,
   der sinnvoll ist, und arbeite es ab" — vorausgehend „Mach was möglich
   ist, Ziel ist T1b ,wenn es Probleme macht dann T1"
@@ -2409,8 +2410,43 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   die für `pc98-disk-tools` schon gefallen ist. **Eines** (`pro`) an
   einer einzigen Messung. Die übrigen vier an Gegenständen, die es
   womöglich nicht gibt.
+
+  **STRANG B, 4 von 9: `fds` ist auf T1b (MF-1226) — und die Zeile
+  darüber trug eine falsche Lizenzmessung, die hier zuerst berichtigt
+  wird.** Sie sagt „`fdstool`, `fdtc`, `qd2fds` — **alle ohne
+  Lizenz**". Gemessen war das **API-Feld** (GitHub/GitLab melden nur die
+  *Projekteinstellung*), nicht die **Datei**: `fdtc` trägt ein `COPYING`
+  mit **BSD-3-Clause**, „Copyright 2024 Matthew Gilmore", 1457 Byte.
+  Dieselbe Falle, die in derselben Tabelle bei `lisa_twiggy` **richtig**
+  aufgelöst wurde (LisaEms `NOASSERTION` ist GPL-2) — dort habe ich die
+  Datei gelesen, bei `fdtc` nicht. **Regel: wer eine Lizenz feststellt,
+  liest die Lizenzdatei.** Für `fdstool` bleibt „keine Lizenz" richtig
+  (README **10 Byte**, keine Lizenzdatei) — die Eigentümerentscheidung
+  vom 2026-09-17, wörtlich **„fds auch, ja machen"**, war also nur für
+  dieses eine Werkzeug nötig, und der **Behälter** des Belegs kommt
+  bewusst vom BSD-3-lizenzierten `fdtc`.
+
+  Kette, gemessen: zwei selbstbenennende 8192-Byte-Nutzlasten →
+  `bintofdf` (Typ-3-Kopf mit **8-Byte-Namen**, 2 × 8209 B) → `fdtc`
+  (Typ-1 56 B mit `*NINTENDO-HVC*` + Typ-2 2 B = **16 476**) →
+  Polsterung auf 65 500 → `fdstool -a` → **65 516 B**, sha256
+  `d58dc05a…`, Arbeitsbaum == Blob, `text: unset`. Von UFT kommen **nur
+  die Nutzdaten**. **22 Zusagen, 0 rot**, Hebung **ohne eine Zeile
+  Codeänderung**; Rotbeweis **durch den ctest-Pfad**: ein gekipptes
+  Nutzlastbyte senkt „32 von 32 Brocken" auf **31 von 32**, rc 1.
+  **Befund am Orakel:** `fdstool.c:641` läuft `x < 3` über ein **8
+  Byte** langes Namensfeld — der Test prüft die Namen deshalb selbst.
+  **Bestätigt von fremder Hand:** `fdstool.c:19` definiert
+  `FDS_LENGTH 65500`. **Hausregel bleibt Hausregel:** 128 × 512 = 65 536,
+  die 476 Byte des letzten Sektors rechnet der Test selbst nach.
+
+  **Offen sind jetzt fünf:** `dim`, `nfd` (kein Schreiber gebaut), `pro`
+  (Messung an Altirra), `udi` (Abstammung), `lisa_twiggy` (Abbild).
 - **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
-  (MF-1222, `6f065fd0` + Folgecommit), `P3-475` neu; Strang B 8 offen.
+  (MF-1222, `0809351a`), `P3-475` neu; `cas` → **T1b** (MF-1223,
+  `e0490dea`); `fdi_pc98` → **T1b** (MF-1224, `90a44445`), `P3-476` neu;
+  die sechs restlichen einzeln befragt (MF-1225, `f38ec8f5`); `fds` →
+  **T1b** (MF-1226). Tafel **T1b 66 → 70, T2 11 → 7**; Strang B 5 offen.
 
 ## Fundus
 

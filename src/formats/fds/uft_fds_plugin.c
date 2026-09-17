@@ -80,6 +80,81 @@
  * Spiele, nicht ueber das Format), und MAME kennt ueber die Groesse nur 1,
  * 2 und 4. Die Schranke ist harmlos, weil die Datei die angesagten Seiten
  * seit diesem Stand auch **tragen** muss.
+ *
+ * ── T2 -> T1b (MF-1226), ohne eine Zeile Codeaenderung ────────────
+ *
+ * MF-1038 hat oben begruendet, warum `fds` auf T2 blieb: **im Baum gibt
+ * es kein Werkzeug, das FDS liest oder schreibt** (hxcfe kennt kein FDS,
+ * libdsk auch nicht). Der Satz war richtig ueber den BAUM und die falsche
+ * Schlussfolgerung ueber die WELT — dieselbe Gestalt wie MF-1033 und
+ * MF-1024: *der Leser war richtig, die Aussage ueber das Werkzeug war
+ * falsch.* Gefunden wurden zwei Werkzeuge, keines davon lag hier:
+ *
+ *   **`fdtc` + `bintofdf`** (BSD-3-Clause, „Copyright 2024 Matthew
+ *   Gilmore", am `COPYING` im Paket gemessen) sind der **ERZEUGER**, und
+ *   sie bauen den GANZEN Behaelter: `bintofdf` setzt den Typ-3-Kopf
+ *   (16 Byte: Dateinummer, Code, 8-Byte-Name, Ladeadresse, Groesse, Art)
+ *   und haengt `0x04` plus Nutzlast an; `fdtc` setzt den Typ-1-Block
+ *   (56 Byte mit „*NINTENDO-HVC*", Titel, Showa-Datum, Region) und den
+ *   Typ-2-Block (Dateizahl) davor. Von UFT kommen nur die Nutzdaten. Die
+ *   Rechnung geht auf: 56 + 2 + 2 x (17 + 8192) = **16 476** Byte.
+ *   **`fdstool`** (keine Lizenz; Eigentuemerentscheidung vom 2026-09-17,
+ *   woertlich „fds auch, ja machen" — ausfuehren ja, weitergeben nein,
+ *   wie `dtc` und `epstool`) setzt mit `-a` den 16-Byte-fwNES-Kopf und
+ *   ist die **zweite, unabhaengige Hand**: es zerlegt die Datei und
+ *   bestaetigt „Found FDS header with 1 side", „File amount: 2",
+ *   „File address: $8000", „File size: 8192 bytes".
+ *
+ * **Die Abstammungsfrage (MF-644) ist mit NEIN belegt:** UFTs Leser steht
+ * gegen das nesdev-Wiki und MAMEs `nes_dsk.cpp` (siehe oben); `fdtc` und
+ * `fdstool` stammen aus keiner der beiden. Nicht die Falle aus MF-1135
+ * (`dms`), wo UFTs Leser und der fremde Leser beide aus xDMS kamen.
+ *
+ * **Und die Seitengroesse ist damit von fremder Hand bestaetigt:**
+ * `fdstool.c:19` definiert `FDS_LENGTH 65500`, und es weist jede andere
+ * Groesse mit „not in qd/fds format" ab. Dieselbe Zahl, die oben
+ * `FDS_SIDE_SIZE` heisst, aus einer unabhaengigen Umsetzung.
+ *
+ * **Was das Orakel ausdruecklich NICHT entscheidet, bleibt Hausregel:**
+ * die 128-mal-512-Aufteilung und die 476 Byte des letzten Sektors. `fdtc`
+ * und `fdstool` kennen keine virtuellen Sektoren; `test_fds_gegen_fdtc`
+ * rechnet die Grenze deshalb aus 65 500 und 127 x 512 selbst nach und
+ * prueft, dass die 128 Sektoren aneinandergelegt **byteweise** die
+ * 65 500-Byte-Seite ergeben — gemessen 65 500 von 65 500, 0 abweichend.
+ *
+ * **BEFUND AM ORAKEL, am Quelltext gemessen, und er gehoert hierher:**
+ * `fdstool.c:641` laeuft `for (x = 0; x < 3; x++)` ueber das Namensfeld
+ * des Typ-3-Kopfes, das **8 Byte** hat (Versatz 3..10) — die Schranke 3
+ * ist die des DISKETTEN-Namens. Aus `UFTK0` wird `UFT`. Alle
+ * Strukturzahlen stimmen, die Namensanzeige nicht; ein Orakel ist eine
+ * **Referenz, kein Beweis** (MF-1015), und der Test prueft die vollen
+ * 8-Byte-Namen deshalb SELBST. Zweiter Fallstrick: `fdstool -a` druckt
+ * „ERROR: cannot correct crcs for fds infile or outfile" und endet
+ * trotzdem mit **rc 0** und geschriebener Datei — eine Fehlermeldung ohne
+ * Fehler.
+ *
+ * **BERICHTIGT, und es war meine Messung, die daneben lag:** `P3-474`
+ * hat notiert, alle drei FDS-Werkzeuge haetten „keine Lizenz". Gemessen
+ * war das **API-Feld** von GitLab — das nur die Projekteinstellung
+ * meldet —, nicht die **DATEI**. `fdtc` traegt ein `COPYING` mit
+ * BSD-3-Clause (1457 Byte, alle drei Standardklauseln); die
+ * Eigentuemerentscheidung war fuer den Behaelter also gar nicht
+ * erforderlich und gilt allein fuer `fdstool`. Dieselbe Falle wie LisaEms
+ * `NOASSERTION`, das gemessen GPL-2 ist. Wer eine Lizenz feststellt,
+ * liest die Datei.
+ *
+ * **Und `bc` fehlt in dieser Umgebung** (`command -v bc` leer), das
+ * brauchen beide Skripte. Das Werkzeug wird deshalb **nicht gepatcht** —
+ * dann waere das Erzeugnis eine gemischte Hand; `gen_fds_corpus.py` legt
+ * einen `bc`-Ersatz an, der ausschliesslich `obase=16;N` und `ibase=16;X`
+ * kennt und alles andere mit rc 2 abweist. Er beruehrt damit nur die
+ * ZAHLENBASIS und sieht die FDS-Struktur nie.
+ *
+ * **Nicht belegt bleibt:** die mehrseitige Diskette (das Rezept baut eine
+ * Seite), die QD-Spielart mit Pruefsummen — `fdstool -c`/`-z` koennten
+ * sie, der Umweg ist NICHT gemacht — und die kopflose Fassung, die die
+ * Beschreibung ausdruecklich zulaesst („Some .FDS images may omit the
+ * header").
  */
 
 #include "uft/uft_format_common.h"

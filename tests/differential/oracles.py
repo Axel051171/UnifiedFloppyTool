@@ -1534,6 +1534,130 @@ REGISTRY: tuple[Oracle, ...] = (
             "abweichend, gemessen ohne UFT) — und UFT als vierter."
         ),
     ),
+    Oracle(
+        name="fdtc",
+        env="FDTC",
+        exes=("fdtc.sh", "fdtc"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Famicom Disk System: der ERZEUGER fuer `fds` (MF-1226), und "
+            "er baut den GANZEN Behaelter. `bintofdf(1) <blob>` setzt "
+            "einen **Typ-3-Dateikopf** (16 Byte: Dateinummer, Code, "
+            "8-Byte-Name, Ladeadresse, Groesse, Art) und haengt `0x04` "
+            "plus Nutzlast an; `fdtc(1) <fdf ...>` setzt den "
+            "**Typ-1-Block** (56 Byte mit `*NINTENDO-HVC*`, Titel, "
+            "Showa-Datum, Region) und den **Typ-2-Block** (Dateizahl) "
+            "davor und fuellt die Dateinummern ein. Von UFT kommen nur "
+            "die Nutzdaten. "
+            "Gemessen geht die Rechnung auf: 56 + 2 + 2 x (17 + 8192) = "
+            "**16 476** Byte Bloecke. "
+            "FALLSTRICK, gemessen: beide Skripte brauchen `bc`, und diese "
+            "Umgebung hat keines. Das Werkzeug wird deshalb NICHT "
+            "gepatcht — `gen_fds_corpus.py` legt einen `bc`-Ersatz an, "
+            "der nur `obase=16;N` und `ibase=16;X` kennt und alles andere "
+            "mit rc 2 abweist; die FDS-Struktur beruehrt er nie. "
+            "ZWEITER: `fdtc` POLSTERT NICHT auf die Seitengroesse — es "
+            "liefert nur die Bloecke, und eine ungepolsterte Datei "
+            "weisen sowohl `fdstool` als auch UFT ab. "
+            "NICHT geeignet fuer mehrseitige Disketten (das Rezept baut "
+            "eine Seite) und nicht fuer die QD-Spielart mit Pruefsummen."),
+        origin="https://gitlab.com/segaloco/fdtc — Shell-Skripte, kein "
+               "Bau. KEINE Versionsabfrage (die Skripte drucken bei "
+               "falschem Aufruf nur `Usage:`). Anker dreiteilig wie bei "
+               "`to_woz2`: Quellstand (`fdtc.sh` 3331 Byte, "
+               "`bintofdf.sh` 3093 Byte), Aufrufweg (`sh fdtc.sh` mit "
+               "der Kopfzeile auf stdin) und Ausgabe-SHA fuer eine "
+               "benannte Eingabe (sha256 d58dc05a094eacd2... nach dem "
+               "fwNES-Kopf von `fdstool`; ein zweiter Lauf liefert "
+               "dieselbe Summe)",
+        licence="BSD-3-Clause, „Copyright 2024 Matthew Gilmore\" — am "
+                "`COPYING` IM PAKET gemessen (1457 Byte, alle drei "
+                "Standardklauseln), nicht am API-Feld. **Das ist die "
+                "Lehre dieses Eintrags:** die GitLab-API meldete "
+                "`license: KEINE`, weil sie nur die Projekteinstellung "
+                "liest — `P3-474` hat das uebernommen und „ohne jede "
+                "Lizenz\" geschrieben. Dieselbe Falle wie LisaEms "
+                "`NOASSERTION`. Wer eine Lizenz feststellt, liest die "
+                "DATEI. Permissiv wie MAMEs BSD-3: hier waere sogar ein "
+                "Port erlaubt, gebraucht wird er nicht.",
+        abstammung=(
+            "Die Frage nach MF-644 ist mit NEIN belegt: UFTs `fds`-Leser "
+            "steht nach MF-1038 gegen **zwei Seiten des nesdev-Wiki** "
+            "(Kanal *Spec*) und **MAMEs `nes_dsk.cpp`** als zweite Hand. "
+            "`fdtc` stammt aus keiner der beiden — eine unabhaengige "
+            "Umsetzung eines Dritten. Nicht die Falle aus MF-1135 "
+            "(`dms`), wo UFTs Leser und hxcfes Leser beide aus xDMS "
+            "kamen. Die dritte Hand ist `fdstool`, das dieselbe Datei "
+            "unabhaengig zerlegt und jede Strukturzahl bestaetigt."
+        ),
+    ),
+    Oracle(
+        name="fdstool",
+        env="FDSTOOL",
+        exes=("fdstool", "fdstool.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Famicom Disk System: der unabhaengige LESER neben `fdtc` "
+            "(MF-1226), und der Setzer des 16-Byte-fwNES-Kopfes. "
+            "`fdstool -a -o <ein.fds> <aus.fds>` stellt "
+            "`FDS\\x1a` + Seitenzahl + 11 Nullbytes voran; "
+            "`fdstool <datei>` OHNE Ausgabedatei zerlegt das Abbild und "
+            "nennt Seitenzahl, Dateizahl, je Datei Ladeadresse, Groesse "
+            "und Art. Genau das macht es zur zweiten Hand: gemessen "
+            "bestaetigt es `Found FDS header with 1 side`, "
+            "`File amount: 2`, `File address: $8000`, "
+            "`File size: 8192 bytes`. "
+            "**Es kennt ausserdem die QD-Seite mit Pruefsummen** (`-c` "
+            "berechnet QD-CRCs neu, `-z` nullt die des Disk-Info-Blocks) "
+            "— ein FDS-nach-QD-Umweg waere der naechste, staerkere "
+            "Beleg und ist NICHT gemacht. "
+            "**BEFUND AM ORAKEL, am Quelltext gemessen:** es meldet jeden "
+            "Dateinamen nur dreistellig — `fdstool.c:641` laeuft "
+            "`for (x = 0; x < 3; x++)` ueber das Namensfeld, das **8 "
+            "Byte** hat (Versatz 3..10); die Schranke 3 ist die des "
+            "DISKETTEN-Namens. Aus `UFTK0` wird `UFT`. Alle "
+            "Strukturzahlen stimmen, die Namensanzeige nicht — ein "
+            "Orakel ist eine Referenz, kein Beweis (MF-1015), und "
+            "`test_fds_gegen_fdtc` prueft die Namen deshalb selbst. "
+            "ZWEITER FALLSTRICK: `-a` druckt „ERROR: cannot correct crcs "
+            "for fds infile or outfile\" und endet trotzdem mit rc 0 und "
+            "geschriebener Datei — eine Fehlermeldung ohne Fehler. "
+            "DRITTER, und er ist nuetzlich: es WEIST eine Datei ab, die "
+            "nicht 65 500 Byte je Seite hat („not in qd/fds format\"), "
+            "und `fdstool.c:19` definiert `FDS_LENGTH 65500` — damit ist "
+            "UFTs Seitengroesse von fremder Hand bestaetigt."),
+        origin="https://github.com/rhester72/fdstool — eine C-Datei "
+               "(`fdstool.c`), hier mit `gcc -O2 -Wall` gebaut: rc 0, "
+               "zwei Warnungen im FREMDEN Code (`-Wdangling-else` "
+               "und `-Wmaybe-uninitialized`). Es nennt seine Version "
+               "selbst im Kopf der Hilfe („fdstool 0.2 beta\"), aber "
+               "nur bei `-h` und nicht maschinenlesbar; der Anker ist "
+               "deshalb Quellstand (Tarball 6104 Byte) + Baurezept + "
+               "Ausgabe-SHA (d58dc05a094eacd2... fuer eine benannte "
+               "Eingabe)",
+        licence="KEINE. GitHub-API meldet `license: KEINE`, das README "
+                "hat **10 Byte**, und im Paket liegt keine Lizenzdatei "
+                "— gemessen, nicht vermutet. Ohne Rechteeinraeumung "
+                "gilt der Vorbehalt aller Rechte. "
+                "EIGENTUEMERENTSCHEIDUNG vom 2026-09-17, woertlich: "
+                "„fds auch, ja machen\". Gehandhabt wie `dtc` "
+                "(proprietaer) und `epstool`: AUSFUEHREN ja, "
+                "WEITERGEBEN nein — nichts aus dem Paket wandert in den "
+                "Baum. Der BEHAELTER des Belegs kommt bewusst vom "
+                "BSD-3-lizenzierten `fdtc`; `fdstool` setzt nur den "
+                "16-Byte-Kopf und liest.",
+        abstammung=(
+            "Wie bei `fdtc` mit NEIN belegt: UFTs Leser steht gegen das "
+            "nesdev-Wiki und MAMEs `nes_dsk.cpp`, `fdstool` ist eine "
+            "unabhaengige Umsetzung. Und es ist die dritte Hand in "
+            "dieser Kette — die Strukturzahlen von `fdtc`s Erzeugnis "
+            "bestaetigt es ohne Kenntnis von fdtc."
+        ),
+    ),
 )
 
 
