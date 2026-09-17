@@ -1452,6 +1452,88 @@ REGISTRY: tuple[Oracle, ...] = (
             "erraten: was im Erzeugnis steht, stand in der Wellenform."
         ),
     ),
+    Oracle(
+        name="hdm_to_fdi",
+        env="HDM_TO_FDI",
+        exes=("hdm_to_fdi.py",),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "PC-98: der erste ERZEUGER fuer `fdi_pc98` (MF-1224). "
+            "`python hdm_to_fdi.py <ein.hdm>` stellt einem rohen "
+            "PC-98-Sektorabzug einen 4096-Byte-FDI-Kopf voran. "
+            "**Die Grenze dieses Orakels steht hier und nicht in einer "
+            "Fussnote:** es MODELLIERT NICHTS. Sein ganzer Rumpf ist "
+            "`pack('<8L4064x', ...)` plus `fdi_header + hdm_blob`, und "
+            "die Geometriewerte sind FEST VERDRAHTET (1024/8/2/77), "
+            "nicht aus der Eingabe abgeleitet. Belegt ist damit die "
+            "BEHAELTER-ZERLEGUNG — dieselben acht Dwords an denselben "
+            "acht Versaetzen —, nicht die Geometrie-Herleitung. Mit nur "
+            "EINER fremden Hand waere das nahe an der „Gleichheit ohne "
+            "Aussage\", die MF-1039 bei `cpm` abgelehnt hat; das Rezept "
+            "`gen_fdi_pc98_corpus.py` verlangt deshalb `hxcfe` als "
+            "DRITTE Hand und liefert sonst nichts aus. "
+            "FALLSTRICK, gemessen: die Endung `.fdi` beanspruchen ZWEI "
+            "hxcfe-Module (`ZXSPECTRUM_FDI` und `NEC_FDI`) — das Rezept "
+            "bricht ab, wenn nicht `NEC_FDI` geladen wurde. ZWEITER: "
+            "das Werkzeug WARNT bei anderen Groessen als 1 261 568 Byte "
+            "(„Be careful, I was only tested with HDM (2HD) files\") und "
+            "bricht NICHT ab — es schreibt dann einen Kopf mit "
+            "Konstanten, die nicht zur Nutzlast passen. "
+            "NICHT geeignet fuer `nfd`: das Paket erwaehnt NFD in keiner "
+            "seiner 14 Dateien. Und nicht fuer die anderen "
+            "PC-98-Spielarten (HD5/HD4/DD6/DD9/HDB/DDB) — sein eigener "
+            "Kopfkommentar fuehrt sie auf, sein Code kann nur 2HD."),
+        origin="KEINE Projekt-URL belegt — Quellstand ist die "
+               "Zulieferung `neue-ideen/pc98-disk-tools-master.zip` "
+               "(sha256 90505a65d15ef707702be6ec2c8e99b1e4861079fe07650e"
+               "7db525e8cdf23a58, 14 Dateien), entpackt nach "
+               "tools/uft-scout/work/pc98-disk-tools-master. Das README "
+               "nennt als Anlass FlashFloppy und als Vorbild den "
+               "geschlossenen „Virtual Floppy Image Converter\"; eine "
+               "Urheber- oder Projekt-URL nennt es NICHT, und deshalb "
+               "steht hier keine — eine erfundene Adresse waere "
+               "schlimmer als keine. KEINE Versionsabfrage (reines "
+               "Python, kein Bau, keine Versionszeile). Anker dreiteilig "
+               "wie bei `to_woz2`: Quellarchiv-SHA (oben), Quellstand "
+               "(`hdm_to_fdi.py` 2558 Byte) und Ausgabe-SHA fuer eine "
+               "benannte Eingabe (sha256 880ce8ab84649d96... aus der "
+               "selbstbenennenden 1 261 568-Byte-HDM von "
+               "tests/corpus_manifest/gen_fdi_pc98_corpus.py; ein "
+               "zweiter Lauf liefert dieselbe Summe)",
+        licence="KEINE. Das Paket hat keine Lizenzdatei, und im ganzen "
+                "README (3549 Byte, VOLLSTAENDIG gelesen) steht kein "
+                "Lizenzwort — gemessen, nicht ueberflogen. Ohne "
+                "Rechteeinraeumung gilt der Vorbehalt aller Rechte; "
+                "gefuehrt als `P3-356`. "
+                "EIGENTUEMERENTSCHEIDUNG vom 2026-09-17, woertlich: "
+                "„Lizenzentscheidung (fdi_pc98, nfd) ja wir machen das\". "
+                "So gehandhabt: AUSFUEHREN ja — dieselbe Lage wie `dtc` "
+                "(proprietaer) und `epstool` (dessen „provided for "
+                "educational and archival purposes\" auch keine "
+                "Rechteeinraeumung ist); WEITERGEBEN nein, nichts aus "
+                "dem Paket wandert in den Baum. Das ERZEUGNIS liegt in "
+                "`tests/corpus_free/` und ist damit verteilt — zulaessig "
+                "nur, weil kein fremder Inhalt mitfaehrt, und genau das "
+                "ist gemessen: 4064 Kopfbytes alle Null, keine "
+                "ASCII-Kette im Kopf, Nutzlast UFT-eigen.",
+        abstammung=(
+            "Die Frage nach MF-644 — dieselbe Hand? — ist mit NEIN "
+            "belegt: UFTs `fdi_pc98`-Leser ist in MF-1026 gegen **MAMEs** "
+            "`identify()` abgenommen (gelesen, nicht uebernommen), "
+            "`hdm_to_fdi.py` ist eine unabhaengige Python-Umsetzung, die "
+            "ihr README ausdruecklich als Ruecktechnik des "
+            "geschlossenen VFIC beschreibt. "
+            "**Und weil dieses Orakel nichts modelliert, steht die "
+            "Zerlegung hier auf VIER Haenden statt zwei:** MAME als Spec "
+            "(MF-1026), pc98-disk-tools als Schreiber, `hxcfe` mit "
+            "`NEC_FDI` als unabhaengiger Leser — der aus derselben Datei "
+            "eine IMD schreibt, die je Sektor Zylinder, Kopf und Nummer "
+            "AUSDRUECKLICH nennt (1232 von 1232 an ihrer Stelle, 0 "
+            "abweichend, gemessen ohne UFT) — und UFT als vierter."
+        ),
+    ),
 )
 
 

@@ -1051,7 +1051,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/tan/uft_tan.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
-    elseif(${test_name} STREQUAL "test_fdi_pc98_gegen_mame")
+    elseif(${test_name} STREQUAL "test_fdi_pc98_gegen_mame"
+           OR ${test_name} STREQUAL "test_fdi_pc98_gegen_pc98tools")
         # MF-1026: Feldabgleich gegen MAME `formats/pc98fdi_dsk.cpp`
         # (BSD-3-Clause, Olivier Galibert) — und er fand KEINEN Fehler.
         # Kopffelder, beide Konsistenzbedingungen aus `identify()`
@@ -1067,9 +1068,31 @@ foreach(test_source ${TEST_SOURCES})
         # T2 und nicht T1b: die Pruefdatei ist hauseigen — es liegt
         # keine fremd erzeugte PC-98-FDI im Korpus, und keines der hier
         # verfuegbaren Werkzeuge schreibt eine.
+        #
+        # BERICHTIGT MF-1224 — der zweite Halbsatz war zu weit. „Keines
+        # der hier verfuegbaren Werkzeuge" galt fuer die drei GEBAUTEN
+        # Familien (hxcfe, floptool, libdsk); `pc98-disk-tools` lag als
+        # Zulieferung daneben und schreibt FDI mit `hdm_to_fdi.py`.
+        # Dieselbe Populationsfrage wie bei MF-1222/1223. `fdi_pc98`
+        # steht damit auf T1b, und die GRENZE gehoert dazu: das Werkzeug
+        # modelliert nichts (`pack('<8L4064x', ...)` + Nutzlast
+        # unveraendert, Geometrie fest verdrahtet) — belegt ist die
+        # Behaelter-Zerlegung, nicht die Geometrie-Herleitung, und die
+        # dritte Hand (`hxcfe` mit `NEC_FDI` -> IMD, 1232 von 1232 an
+        # ihrer Stelle) ist deshalb Pflicht statt Zugabe.
+        #
+        # `test_fdi_pc98_gegen_pc98tools` haengt an DIESEM Zweig, weil es
+        # dieselben zwei Quellen braucht (D3) — nur das Korpus-Define
+        # kommt hinzu, und zwar unten in einem eigenen `if`, damit der
+        # bestehende Test keine stille Flaggenaenderung bekommt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/fdi_pc98/uft_fdi_pc98.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+        if(${test_name} STREQUAL "test_fdi_pc98_gegen_pc98tools")
+            # MF-1224: nur dieser Teilnehmer liest eine Korpusdatei.
+            target_compile_definitions(${test_name} PRIVATE
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        endif()
     elseif(${test_name} STREQUAL "test_fm_gegen_gw")
         # MF-1143: der erste inhaltliche Fremdzeuge auf der ZELLEBENE.
         # P3-389 hat die Lage beziffert — Behaelterebene 72 von 88 mit

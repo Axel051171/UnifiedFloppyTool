@@ -2368,12 +2368,31 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   das wäre die `dms`-Falle. Drei Hände, 16 Zusagen, und dass der Test rot
   werden kann, ist vorgeführt (gekürztes Abbild → 5 Zusagen fallen).
 
-  **Offen in Strang B (7):** `dim`, `fdi_pc98`, `fds`, `lisa_twiggy`,
-  `nfd`, `pro`, `udi` — davon warten **zwei** (`fdi_pc98`, `nfd`) auf
-  eine **Lizenzentscheidung** statt auf eine Quelle: `pc98-disk-tools`
-  könnte schreiben, trägt aber im ganzen README kein Lizenzwort
-  (`P3-356`). Für die übrigen fünf gilt der Vorbehalt, der schon zweimal
-  zu eng war: befragt sind Zulieferordner, gebaute Werkzeuge und ein
+  **STRANG B, 3 von 9: `fdi_pc98` ist auf T1b (MF-1224) — durch eine
+  Eigentümerentscheidung, nicht durch eine Suche.** Wortlaut vom
+  2026-09-17: „Lizenzentscheidung (fdi_pc98, nfd) ja wir machen das".
+  `pc98-disk-tools` trägt **keine Lizenz** (kein Lizenzwort im ganzen
+  README, vollständig gelesen); gehandhabt wie `dtc`/`epstool` —
+  **ausführen ja, weitergeben nein**, und dass das Erzeugnis im Korpus
+  liegen darf, hängt an einer Messung: 4064 Kopfbytes alle Null, keine
+  ASCII-Kette, kein Werkzeugstempel. **Der schwächste der drei Belege**,
+  und das steht überall dabei: `hdm_to_fdi.py` modelliert nichts, es
+  stellt einen Kopf voran und hält die Geometrie fest verdrahtet —
+  belegt ist die Behälter-Zerlegung, nicht die Geometrie-Herleitung,
+  weshalb `hxcfe` (`NEC_FDI` → IMD, 1232/1232) als dritte Hand Pflicht
+  ist. **Der Rotbeweis fand dabei einen echten Defekt:** `open()` prüfte
+  keine der zwei Konsistenzen, die seine eigene Sonde prüft — ein Kopf,
+  der über die Geometrie log, wurde mit Erfolg geöffnet und **16
+  Sektoren = 16 384 Byte fielen still weg**. Behoben, 21 Zusagen.
+  **Zwei Berichtigungen, beide meine:** die Entscheidung deckt `nfd`
+  **nicht** ab (das Paket erwähnt NFD in keiner seiner 14 Dateien —
+  dort fehlt ein Schreiber, nicht eine Lizenz), und die alte
+  CMake-Begründung „keines der hier verfügbaren Werkzeuge schreibt eine"
+  war zum dritten Mal an einem Tag dieselbe Populationsfrage.
+
+  **Offen in Strang B (6):** `dim`, `fds`, `lisa_twiggy`, `nfd`, `pro`,
+  `udi` — und für alle sechs gilt der Vorbehalt, der heute dreimal zu
+  eng war: befragt sind Zulieferordner, gebaute Werkzeuge und ein
   erster Streifzug — nicht die Welt.
 - **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
   (MF-1222, `6f065fd0` + Folgecommit), `P3-475` neu; Strang B 8 offen.

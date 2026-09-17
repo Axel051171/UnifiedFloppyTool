@@ -23,6 +23,57 @@
  * does NOT have the "FDI" ASCII signature.
  *
  * Reference: Anex86 emulator documentation, Common Source Code Project
+ *
+ * ── T2 -> T1b, und ein stiller Verlust dabei gefunden (MF-1224) ──
+ *
+ * MF-1026 hat diesen Leser gegen MAMEs `pc98fdi_dsk.cpp` abgenommen und
+ * KEINEN Fehler gefunden: Kopffelder, beide Konsistenzbedingungen aus
+ * `identify()`, die zylinder-dure Versatzformel und die 1-basierten
+ * Sektornummern stimmten ueberein. Gefehlt hat ein Abbild von fremder
+ * Hand; das liegt seit MF-1224 vor (`hdm_to_fdi.py` aus
+ * `pc98-disk-tools`, Eigentuemerentscheidung zur fehlenden Lizenz vom
+ * 2026-09-17).
+ *
+ * **Der Beleg ist schwaecher als die von MF-1222/1223, und das gehoert
+ * hierher:** das Werkzeug modelliert nichts. Sein ganzer Rumpf ist
+ * `pack('<8L4064x', ...)` plus `fdi_header + hdm_blob`, und die
+ * Geometriewerte sind fest verdrahtet. Belegt ist die
+ * BEHAELTER-ZERLEGUNG — dieselben acht Dwords an denselben acht
+ * Versaetzen —, nicht die Geometrie-Herleitung. Deshalb steht sie auf
+ * VIER Haenden: MAME als Spec, `pc98-disk-tools` als Schreiber, `hxcfe`
+ * (`NEC_FDI`) als unabhaengiger Leser, der daraus eine IMD schreibt und
+ * darin 1232 von 1232 Sektoren an ihrer Stelle hat, und UFT als vierter.
+ *
+ * ** UND DER ROTBEWEIS HAT EINEN ECHTEN DEFEKT GEFANGEN. ** `probe()`
+ * prueft seit immer ZWEI Konsistenzen — `fddsize == cyl*heads*spt*ss`
+ * und `file_size == hdr_size + fddsize`. `open()` prueft**te** keine von
+ * beiden: es las `fddsize` (0x0C) gar nicht und die Dateigroesse
+ * ueberhaupt nicht. Gemessen an dem fremden Abbild, dessen Zylinderfeld
+ * von 77 auf 76 verfaelscht wurde:
+ *
+ *     probe()  ->  false                  (abgewiesen, richtig)
+ *     open()   ->  UFT_OK, 76x2x8, total 1216
+ *     lesbar   ->  1216 statt 1232 Sektoren
+ *     VERLUST  ->  16 Sektoren = 16 384 Byte, STILL, bei Erfolgsmeldung
+ *
+ * Der letzte Zylinder wurde unerreichbar. Das ist die Gestalt von
+ * MF-1038 (`fds`: „die Sonde war dabei ehrlich — das Oeffnen hat ihre
+ * Zurueckhaltung aufgehoben"), MF-1039 (`cpm`) und MF-1019 (`dim`, wo
+ * `open` die Dateigroesse seither wie die Sonde prueft). Seit MF-1224
+ * prueft `open()` beides und SAGT AB statt zu kappen (D5).
+ *
+ * ── Eine Sonde ueber ihrem Band, benannt statt geaendert ──
+ *
+ * `fdi_pc98_probe()` vergibt **90**, und PC-98-FDI hat **keine
+ * Kennung** — der Hinweis oben sagt das selbst. Die Sondendoktrin
+ * (MF-1153, Eigentuemer-Entscheidung) deckelt ohne Kennung bei **45**.
+ * 90 liegt im Band „Merkmal getroffen" (80-100, MF-729), und ein
+ * Merkmal gibt es nicht. Die Zahl wird hier NICHT gesenkt — eine Zahl
+ * zu aendern, damit eine Doktrin stimmt, ist derselbe Reflex, den
+ * MF-1077 verbietet. Gefuehrt als `P3-476`, und die offene Frage ist,
+ * ob der Leiter eine Sprosse fuer „fuenf Kopffelder sind untereinander
+ * und mit der Dateigroesse konsistent" fehlt: die Sonde diskriminiert
+ * nachweislich, sie weist Nullpuffer und Pseudozufall ab.
  */
 
 #include "uft/uft_format_common.h"
@@ -108,6 +159,7 @@ static uft_error_t fdi_pc98_open(uft_disk_t *disk, const char *path, bool ro)
     if (reserved != 0) { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
 
     uint32_t hdr_size    = uft_read_le32(hdr + 0x08);
+    uint32_t data_size   = uft_read_le32(hdr + 0x0C);   /* MF-1224 */
     uint32_t sector_size = uft_read_le32(hdr + 0x10);
     uint32_t spt         = uft_read_le32(hdr + 0x14);
     uint32_t heads       = uft_read_le32(hdr + 0x18);
@@ -126,6 +178,36 @@ static uft_error_t fdi_pc98_open(uft_disk_t *disk, const char *path, bool ro)
     /* Overflow check */
     if (!uft_geometry_sane((uint16_t)cylinders, (uint8_t)heads,
                            (uint8_t)spt, (uint16_t)sector_size)) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+
+    /* MF-1224: `open()` prueft jetzt DIESELBEN zwei Konsistenzen wie die
+     * Sonde. Vorher las es `fddsize` (0x0C) gar nicht und die
+     * Dateigroesse ueberhaupt nicht — ein Kopf, der ueber die Geometrie
+     * log, wurde also mit UFT_OK angenommen, waehrend `probe()` ihn
+     * abwies. Gemessen an einem Abbild von `pc98-disk-tools`, dessen
+     * Zylinderfeld von 77 auf 76 verfaelscht wurde:
+     *
+     *     probe()  ->  false          (abgewiesen, richtig)
+     *     open()   ->  UFT_OK, 76x2x8, total 1216
+     *     lesbar   ->  1216 statt 1232 Sektoren
+     *     VERLUST  ->  16 Sektoren = 16 384 Byte, STILL
+     *
+     * Der letzte Zylinder wurde unerreichbar, und gemeldet war Erfolg.
+     * Das ist die Gestalt von MF-1038 (`fds`: „die Sonde war dabei
+     * ehrlich — das Oeffnen hat ihre Zurueckhaltung aufgehoben"),
+     * MF-1039 (`cpm`) und MF-1019 (`dim`, wo `open` die Dateigroesse
+     * seither wie die Sonde prueft). Es wird ABGESAGT und nichts
+     * gekappt: ein gekappter Wert saehe wie eine Messung aus (D5). */
+    if (data_size != cylinders * heads * spt * sector_size) {
+        fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    long dateigroesse = ftell(f);
+    if (dateigroesse < 0) { fclose(f); return UFT_ERROR_IO; }
+    if ((uint64_t)dateigroesse != (uint64_t)hdr_size + (uint64_t)data_size) {
         fclose(f);
         return UFT_ERROR_FORMAT_INVALID;
     }
