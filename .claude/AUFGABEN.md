@@ -1420,8 +1420,12 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Befunde `P3-465` und `P3-466`.
 
 ### A-016 · `ChrisBertrandDotNet/ST-Recover` — **das ist `P3-63`**, und `P3-59` hat seine Vorbedingung umgekehrt
-- **Status:** **Gutachten erledigt** 2026-09-16, **Erweiterung benannt und
-  begründet zurückgestellt** · MF-1206 · **Aufgenommen:** 2026-09-16
+- **Status:** **erledigt** 2026-09-17 — Gutachten (2026-09-16) **plus**
+  Teil (d) entschieden: **nicht gebaut, aus drei Messungen**, und die
+  Begründung der Zurückstellung ist dabei gefallen (die Brücke existiert
+  — `P3-473`). Der öffnende Schritt ist benannt: ein **Leser**, und
+  `P3-453` bringt ihn mit · MF-1206, MF-1217 ·
+  **Aufgenommen:** 2026-09-16
 - **Wortlaut:** „https://github.com/ChrisBertrandDotNet/ST-Recover.git nimm
   den code komplett auseinander , sehr genau / finde alles und alles
   raussuchen was ich übersehen habe , stimme es mit mein aktuellen tool ab
@@ -1517,8 +1521,48 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     **jeder** Fassung, `P3-452` hilft hier ausdrücklich nicht. Das
     Gutachten zitiert keine Zeile Quelltext.
   · **(f)** kein Byte nach `src/`, `include/`, `tests/`.
+- **Nachtrag MF-1217 — (d) ist jetzt ENTSCHIEDEN statt verschoben, und
+  die Begründung der Zurückstellung ist dabei gefallen.**
+  · **Die Brücke existiert.** `include/uft/uft_types.h` stellte das Flag
+    mit dem Satz zurück, der Parser „erzeugt `uft_mfm_sector_t`, nicht
+    `uft_sector_t` — **ein Erzeuger dafür wäre die Brücke zwischen
+    beiden; die gibt es nicht**". Gemessen gibt es sie:
+    `src/formats/86box/uft_86f_plugin.c:309-323` läuft über
+    `uft_mfm_sector_t recs[]` und ruft
+    `uft_format_add_sector_with_id(…)`, der in
+    `include/uft/uft_format_common.h:82` ein **`uft_sector_t`** anlegt
+    und über `uft_track_add_sector()` kopiert. Sie **verwirft** nur
+    `id_sync_bit`, `data_start_bit`, `gap2`, `lead_gap`. Das ist
+    **`P3-473`**.
+  · **Gebaut wird trotzdem nicht — aber aus DREI Messungen, nicht aus
+    einer Verschiebung:**
+    **(1)** Die Hälfte von Größe 1 gibt es schon in UFT-Idiom:
+    `UFT_SECTOR_MISSING` (`uft_types.h:294`) samt Konvention
+    (`uft_format_common.h:186`) und Setzer (`:522`) — das ist `MF-980`.
+    Die andere Hälfte (controller-gemeldet vs. **rekonstruiert mit
+    Platzhalter**) hat **keinen Erzeuger**: UFT setzt keine Platzhalter,
+    das Feld sagte immer dasselbe.
+    **(2)** Größe 2 liegt nicht in ihrer Einheit vor: `uft_mfm_gap_t`
+    (`uft_mfm_sector_parser.h:131-148`) führt **nur** Bits und Wörter,
+    keine Mikrosekunden; die Umrechnung bräuchte eine Stelle, die es
+    nicht gibt (`MF-1177`).
+    **(3)** Der harte Grund: **kein Produktivleser** für sektorbezogene
+    Positionen im ganzen Baum — sogar `angular_position`, das EINZIGE
+    gefüllte Feld (`uft_atx.c:366`), hat außerhalb seines Erzeugers **2**
+    Treffer, **beide in einem Kommentar**. Der Sektor-Editor rechnet
+    seinen Versatz selbst (`uft_sector_editor.cpp:730`) und hat **0**
+    Treffer auf die Felder.
+  · **Was den Punkt öffnet, ist benannt und klein:** ein **Leser**.
+    `P3-453` (Schreibnaht auf IBM-MFM aus den Lückenwerten) braucht
+    Bitlagen ohnehin — wer ihn baut, bekommt Erzeuger, Brücke und Leser
+    in einem Zug, und Flag plus Füllung sind dann ein Anhängsel statt
+    eines Vorrats. Dann gilt (d) vollständig: Rotbeweis zuerst,
+    Aufrufer im selben Commit, ABI-Frage zu `uft_sector_t` benannt.
+  · **Kein Byte des Repos ist nach `src/`, `include/` oder `tests/`
+    geschrieben worden** — (f) gilt unverändert.
 - **Beleg:** Gutachten `tools/uft-scout/out/a016_st_recover.gutachten.md`;
-  `P3-63` fortgeschrieben (MF-1206).
+  `P3-63` fortgeschrieben (MF-1206), (d) entschieden und `P3-473` neu
+  (MF-1217).
 
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
 - **Status:** **angehalten am gemessenen Blocker** (das Orakel ist da, ein

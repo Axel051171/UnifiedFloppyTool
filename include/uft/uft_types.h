@@ -388,6 +388,35 @@ typedef struct uft_sector {
      * erzeugt `uft_mfm_sector_t`, nicht `uft_sector_t`. Ein Erzeuger
      * dafuer waere die Bruecke zwischen beiden; die gibt es nicht.
      *
+     * BERICHTIGT MF-1217 (A-016/P3-473). Der Satz davor — „Ein Erzeuger
+     * dafuer waere die Bruecke zwischen beiden; die gibt es nicht" —
+     * bleibt zitiert stehen (Hausregel „nicht entfernen, weiter
+     * erweitern") und trifft NICHT mehr zu:
+     *
+     *   `src/formats/86box/uft_86f_plugin.c:309-323` laeuft ueber
+     *   `uft_mfm_sector_t recs[]` und ruft
+     *   `uft_format_add_sector_with_id(...)`, der in
+     *   `uft_format_common.h:82` ein `uft_sector_t` anlegt und ueber
+     *   `uft_track_add_sector()` KOPIERT. Die Bruecke traegt also. Sie
+     *   verwirft nur `id_sync_bit`, `data_start_bit`, `gap2` und
+     *   `lead_gap` (der Erzeuger dafuer ist seit MF-1190 da,
+     *   `flux/uft_mfm_sector_parser.h:180-191`).
+     *
+     * DIE FOLGERUNG UNTEN BLEIBT TROTZDEM RICHTIG, aus einem anderen
+     * Grund als dem genannten: es gibt baumweit **keinen
+     * Produktivleser** fuer sektorbezogene Positionen. Gemessen hat
+     * sogar `angular_position` — das EINZIGE der sechs Felder, das je
+     * gefuellt wird (`formats/atari/uft_atx.c:366`) — ausserhalb seines
+     * Erzeugers nur **2** Treffer in `src/`, und **beide stehen in
+     * einem Kommentar** (`core/uft_unified_types.c:183-184`). Der
+     * Sektor-Editor rechnet seinen Versatz selbst
+     * (`gui/uft_sector_editor.cpp:730`) und liest die Felder **0**-mal.
+     *
+     * Fuellen wuerde also Bestand erzeugen, keine Faehigkeit — genau
+     * die Klasse, wegen der MF-831/MF-832 `P3-59` UMGEKEHRT haben.
+     * Zuerst der Leser, dann Flag und Fuellung: `P3-453` (Schreibnaht
+     * aus den Lueckenwerten) braucht die Bitlagen ohnehin.
+     *
      * WARUM das gefaehrlich ist: 0 ist eine GUELTIGE Bitposition. Wer
      * `sector.id_offset` liest, bekommt eine Zahl, die wie eine Messung
      * aussieht. Dasselbe Muster hat in MF-829 einen gruenen Test
