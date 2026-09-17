@@ -24,7 +24,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | | |
 |---|---|
 | Plugins gesamt | 88 |
-| davon auf T2/T3 (offen) | 11 |
+| davon auf T2/T3 (offen) | 10 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
 | hxcfe-Module mit `RW` | 38 |
@@ -38,7 +38,6 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | Format | Stufe | hxcfe (RW) | libdsk | floptool (w) | Kanal | Klasse |
 |---|---|---|---|---|---|---|
 | `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `cas` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fdi_pc98` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `fds` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -229,6 +228,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
 | `atr` | T1b | — | — |
 | `atx` | T1 | — | — |
+| `cas` | T1b | — | — |
 | `cfi` | T1b | — | cfi |
 | `cpm` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `cqm` | T1b | — | — |

@@ -2356,8 +2356,25 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   bestehen (hxcfe: `AMIGA_EXTADF;R`, sonst kein Modul; floptool: keines;
   libdsk: keiner seiner 27 Typen). Nebenbei fiel ein Defekt: die
   Spurlänge in **Bit** stand in der Datei und wurde verworfen.
-  **Offen in Strang B (8):** `cas`, `dim`, `fdi_pc98`, `fds`,
-  `lisa_twiggy`, `nfd`, `pro`, `udi`.
+  **STRANG B, 2 von 9: `cas` ist auf T1b (MF-1223) — ohne eine Zeile
+  Codeänderung.** Der Leser war seit MF-1040 richtig; gefehlt hat die
+  fremde Hand, und gefunden wurde sie, weil diesmal nach dem **Werkzeug**
+  gesucht wurde statt nach einem Abbild: `wav2cas` aus
+  `joyrex2001/castools` (GPL-2, `COPYING` im Paket gemessen). **Und der
+  Grund, mit dem MF-1040 T1b verneint hatte, ist hier der Beleg** — der
+  Umweg durch eine FSK-Wellenform (1584 B → 1 853 036 B WAV → 1584 B,
+  0 abweichend) schließt ein Durchreichen aus. MAMEs `imgtool` wurde
+  geprüft und **verworfen**: sein `fmsx_cas` ist die Referenz des Lesers,
+  das wäre die `dms`-Falle. Drei Hände, 16 Zusagen, und dass der Test rot
+  werden kann, ist vorgeführt (gekürztes Abbild → 5 Zusagen fallen).
+
+  **Offen in Strang B (7):** `dim`, `fdi_pc98`, `fds`, `lisa_twiggy`,
+  `nfd`, `pro`, `udi` — davon warten **zwei** (`fdi_pc98`, `nfd`) auf
+  eine **Lizenzentscheidung** statt auf eine Quelle: `pc98-disk-tools`
+  könnte schreiben, trägt aber im ganzen README kein Lizenzwort
+  (`P3-356`). Für die übrigen fünf gilt der Vorbehalt, der schon zweimal
+  zu eng war: befragt sind Zulieferordner, gebaute Werkzeuge und ein
+  erster Streifzug — nicht die Welt.
 - **Beleg:** `P3-403` fortgeschrieben (MF-1221); `adf_ext` T2 → **T1b**
   (MF-1222, `6f065fd0` + Folgecommit), `P3-475` neu; Strang B 8 offen.
 

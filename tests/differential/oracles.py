@@ -1387,6 +1387,71 @@ REGISTRY: tuple[Oracle, ...] = (
             "belegt nichts (MF-1028)."
         ),
     ),
+    Oracle(
+        name="wav2cas",
+        env="WAV2CAS",
+        exes=("wav2cas", "wav2cas.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "MSX-Kassette: der erste ERZEUGER fuer `cas` (MF-1223). "
+            "`wav2cas <ein.wav> <aus.cas>` liest eine Audio-Abtastung und "
+            "schreibt daraus ein `.cas`; das Gegenstueck `cas2wav "
+            "<ein.cas> <aus.wav>` erzeugt die Wellenform, `casdir "
+            "<datei.cas>` listet die Bloecke. "
+            "**Der Wert liegt im Umweg** (Klasse MF-1084): ein Werkzeug, "
+            "das cas nach cas schreibt, koennte die Bytes durchreichen — "
+            "wer durch eine FSK-WELLENFORM muss, modelliert 1200/2400 Hz, "
+            "die 11-Bit-Rahmung und die Blockkoepfe wirklich. Gemessen: "
+            "1584 Byte -> 1 853 036 Byte WAV (43 200 Hz, 8 Bit mono) -> "
+            "1584 Byte, **0 abweichend**, und `wav2cas` protokolliert "
+            "dabei vier Kopf/Daten-Paare. "
+            "**`casdir` ist die dritte Hand** und entscheidet, ob die "
+            "Eingabe ueberhaupt wohlgeformtes MSX-CAS ist: es muss den "
+            "Kopfblock als `UFTKOR  binary` erkennen, sonst liefert das "
+            "Rezept nichts aus (MF-1028). "
+            "FALLSTRICK, gemessen: `cas2wav` ohne Ausgabedatei druckt nur "
+            "seine Gebrauchsanweisung und endet mit rc 1 — es ist KEIN "
+            "Filter auf stdout. NICHT geeignet fuer Baender ohne "
+            "BIOS-Laderoutinen: das README nennt das ausdruecklich "
+            "(„a lot of Gremlin games used a entirely different format\"), "
+            "und fuer solche Baender gibt es hier kein Abbild."),
+        origin="https://github.com/joyrex2001/castools — hier als "
+               "master-Tarball von codeload (8 Eintraege, 15 289 Byte), "
+               "gebaut unter tools/uft-scout/work/castools-master. "
+               "KEINE Versionsabfrage — die Werkzeuge drucken bei falschem "
+               "Aufruf nur ihre Gebrauchsanweisung, ohne Versionszeile; "
+               "die `Version History` steht im README, nicht im Programm. "
+               "Der Anker ist deshalb dreiteilig wie bei `to_woz2`: "
+               "Quellstand (Tarball 15 289 Byte, `cas2wav.c` deklariert "
+               "die Kennung in Zeile 69), Baurezept (`mingw32-make`, "
+               "gcc 13.1.0, erster Versuch rc 0) und Ausgabe-SHA fuer eine "
+               "benannte Eingabe (sha256 878684b4902d68fa... aus der "
+               "selbstbenennenden 1584-Byte-Eingabe von "
+               "tests/corpus_manifest/gen_cas_corpus.py; ein zweiter Lauf "
+               "liefert dieselbe Summe)",
+        licence="GPL-2.0, am `COPYING` IM PAKET gemessen (18 009 Byte), "
+                "nicht nur am Ursprung nachgelesen. Dieselbe Lage wie bei "
+                "`hxcfe`: ausfuehren ja, uebernehmen nein — verglichen "
+                "wird die Ausgabe, kein Code wandert ein.",
+        abstammung=(
+            "Die Frage nach MF-644 — dieselbe Hand? — ist hier mit NEIN "
+            "belegt, und sie war der Grund, MAMEs `imgtool` zu VERWERFEN. "
+            "`imgtool` kennt ein `fmsx_cas`-Modul und koennte schreiben, "
+            "aber sein Code IST die Referenz, gegen die UFTs Leser in "
+            "MF-1040 abgenommen wurde — das waere die Falle aus MF-1135 "
+            "(`dms`), wo UFTs Leser UND hxcfes Leser aus xDMS stammten "
+            "und jeder Abgleich derselbe Kreis mit zwei Namen war. "
+            "castools ist unabhaengig, und das ist am Quelltext gemessen: "
+            "`cas2wav.c:69` deklariert `char HEADER[8] = "
+            "{0x1F,0xA6,0xDE,0xBA,0xCC,0x13,0x7D,0x74}` SELBST, und "
+            "`wav2cas.c` nennt die MSX-Blocktypen 0xD0/0xD3/0xEA **0 Mal** "
+            "— es ist ein reiner Signaldekoder und deutet keinen Inhalt. "
+            "Damit kann es die Blockstruktur der Eingabe auch nicht "
+            "erraten: was im Erzeugnis steht, stand in der Wellenform."
+        ),
+    ),
 )
 
 

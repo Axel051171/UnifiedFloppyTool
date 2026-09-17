@@ -1572,6 +1572,18 @@
       "oracle": "disk-analyse",
       "fremdcode": "nein - der INHALT ist eine UFT-eigene selbstbenennende ADF; fremd ist allein die MFM-KODIERUNG (Sync, Kopffelder, Pruefsummen), also Format und nicht Inhalt. Kein Bootblock und kein Dateisystem: Sektor 0 traegt die Marke `UFT-K C00 H0 S00 ` und keine `DOS`-Kennung.",
       "content": "Extended ADF (UAE-1ADF), 166 Spurtafeleintraege (83 x 2), ALLE Typ 1 = rohe MFM-Spur, weil eadf_close() `thdr.type = htobe16(1)` einmal vor der Schleife setzt: 160 volle Spuren mit je 100 150 Bit / 12 519 Byte und 6 unformatierte (T80.0-82.1, len 0). Die Datei ist ihr eigener Pruefstein - Kopf + Tafel + Nutzlast = 2 005 044 = Dateigroesse, und len == (bitlen+7)/8 in allen 160 vollen Spuren. UFTs EIGENER Dekoder (flux_decode_amiga_bits) liefert daraus 1760 von 1760 Sektoren an ihrer eigenen Ortsmarke, 0 abweichend, 0 gefallene Datenpruefsummen."
+    },
+    {
+      "file": "tests/corpus_free/castools_wav2cas_uftk.cas",
+      "sha256": "878684b4902d68fa3f3961ded27fe8af036ee6f21a8ee9c9e1cf65043933b259",
+      "format": "cas",
+      "origin": "cross-tool",
+      "tool": "wav2cas aus joyrex2001/castools (Quellstand: master-Tarball, 8 Eintraege, 15 289 Byte). Lizenz GPL-2, COPYING IM PAKET gemessen (18 009 Byte). Gebaut mit `mingw32-make` (gcc 13.1.0, erster Versuch rc 0): cas2wav.exe, wav2cas.exe, casdir.exe, cpu.exe. Kanal *Oracle* nach MF-695 - ausgefuehrt, nicht eingebunden.",
+      "source": "python tests/corpus_manifest/gen_cas_corpus.py <cas2wav.exe> <wav2cas.exe> <casdir.exe>. Das Rezept legt eine selbstbenennende Eingabe (1584 Byte: ein Binaerkopf 8-Byte-Sync + 10 x 0xD0 + `UFTKOR`, dann drei Datenbloecke mit je 512 Byte der Marke `UFT-K CAS Bnn ` alle 14 Byte), laesst cas2wav daraus eine FSK-Wellenform machen (1 853 036 Byte, 43 200 Hz, 8 Bit mono) und wav2cas daraus wieder ein CAS. DER UMWEG IST DER BELEG (Klasse MF-1084): ein Werkzeug, das cas nach cas schreibt, koennte die Bytes durchreichen - wer durch eine Wellenform muss, modelliert 1200/2400-Hz-FSK, die 11-Bit-Rahmung und die Blockkoepfe wirklich. Gemessen kommen 0 von 1584 Byte abweichend zurueck, und wav2cas protokolliert vier Kopf/Daten-Paare. Ausgeliefert wird die Datei NUR, wenn zusaetzlich casdir (dritter, eigener Leser desselben Pakets) den Kopfblock als `UFTKOR  binary` erkennt - sonst bricht das Rezept ab. Deterministisch: ein zweiter Lauf liefert dieselbe sha256.",
+      "test": "test_cas_gegen_castools",
+      "oracle": "wav2cas",
+      "fremdcode": "nein - der INHALT ist UFT-eigen und selbstbenennend; fremd ist allein die FSK-KODIERUNG, also Signalform und nicht Inhalt. Kein MSX-Programm, kein Ladecode: der Kopfblock traegt nur die Typmarke 10 x 0xD0 und den Namen `UFTKOR`, die Datenbloecke nur die Marke.",
+      "content": "MSX-Kassettenabbild, 4 Bloecke zu je einer 8-Byte-Sync-Marke: Block 0 der Binaerkopf (16 Byte), Bloecke 1-3 je 512 Byte selbstbenennend. UFT liest daraus 1 Zylinder / 1 Kopf / 4 Sektoren; Block 0 traegt 10 x 0xD0 + `UFTKOR`, die drei Datenbloecke stehen an ihrer eigenen Marke mit 108 Marken insgesamt (36 je Block, weil 512 = 36 x 14 + 8 - die Phase wandert absichtlich, damit ein Versatzfehler auffaellt). Die Sektornummern 1..4 sind UFTs eigene Zaehlung (`uft_format_add_sector()` addiert 1, MF-1016), nicht die des Bandes - ein Band hat keine Sektornummern."
     }
   ]
 }

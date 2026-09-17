@@ -1131,7 +1131,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/edk/uft_edk.c
             ${CMAKE_SOURCE_DIR}/src/formats/xdm86/uft_xdm86.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
-    elseif(${test_name} STREQUAL "test_cas_gegen_mame")
+    elseif(${test_name} STREQUAL "test_cas_gegen_mame"
+           OR ${test_name} STREQUAL "test_cas_gegen_castools")
         # MF-1040: `cas` verlor dreimal still. Gemessen am Vorzustand:
         # 300 Bloecke ergaben 256 Sektoren (44 Bloecke, 2112 Byte weg,
         # open = 0); ein Block mit 70 000 Byte wurde auf 65 535 gekuerzt
@@ -1147,6 +1148,22 @@ foreach(test_source ${TEST_SOURCES})
         # T2 und nicht T1b: MAMEs Lader wandelt CAS in WAV-Abtastwerte
         # und gibt keine Bloecke zurueck — er taugt nicht als
         # zerlegendes Orakel.
+        #
+        # BERICHTIGT MF-1223 — der Satz darueber bleibt richtig UEBER
+        # MAME und war die falsche Schlussfolgerung ueber das FORMAT:
+        # `cas` steht jetzt auf T1b, und der Erzeuger ist `wav2cas` aus
+        # `joyrex2001/castools` (GPL-2). Und ausgerechnet der Grund, der
+        # MAME disqualifiziert — es geht durch WAV-Abtastwerte —, ist
+        # hier der Beleg (Klasse MF-1084): der Umweg durch eine
+        # FSK-Wellenform verlangt, dass 1200/2400 Hz, die 11-Bit-Rahmung
+        # und die Blockkoepfe wirklich modelliert werden. Gemessen 1584
+        # Byte -> 1 853 036 Byte WAV -> 1584 Byte, 0 abweichend.
+        # MAMEs `imgtool` wurde dafuer geprueft und VERWORFEN: sein
+        # `fmsx_cas` IST die Referenz des Lesers, das waere die
+        # `dms`-Falle (MF-1135). `test_cas_gegen_castools` haengt an
+        # DIESEM Zweig, weil es dieselben zwei Quellen und dasselbe
+        # Korpus-Define braucht — eine zweite Liste waere eine zweite
+        # Wahrheit (D3, Klasse MF-1015).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/cas/uft_cas.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)

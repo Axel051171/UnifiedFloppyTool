@@ -93,6 +93,33 @@
  * keiner Quelle, und sie wird hier als Hausregel benannt statt als
  * Formateigenschaft. `geometry.sector_size` meldet 512, obwohl die
  * Bloecke beliebig lang sind; das ist derselbe Behelf.
+ *
+ * ── T2 -> T1b, ohne eine Zeile Codeaenderung (MF-1223) ───
+ *
+ * Der Leser war seit MF-1040 richtig; ihm fehlte ein Abbild von FREMDER
+ * Hand. Die Begruendung fuer T2 stand benannt da — „MAMEs Lader wandelt
+ * CAS in WAV-Abtastwerte und gibt keine Bloecke zurueck" — und sie war
+ * richtig ueber MAME und die falsche Schlussfolgerung ueber das FORMAT.
+ * Erzeuger ist jetzt `wav2cas` aus `joyrex2001/castools` (GPL-2), und
+ * **ausgerechnet der Grund, der MAME disqualifiziert, ist hier der
+ * Beleg**: der Weg fuehrt durch eine FSK-Wellenform, und wer die
+ * schreibt und wieder liest, modelliert 1200/2400 Hz, die 11-Bit-Rahmung
+ * und die Blockkoepfe wirklich (Klasse MF-1084). Gemessen 1584 Byte ->
+ * 1 853 036 Byte WAV -> 1584 Byte, 0 abweichend.
+ *
+ * **MAMEs `imgtool` wurde dafuer geprueft und VERWORFEN:** es kennt ein
+ * `fmsx_cas`-Modul und koennte schreiben, aber sein Code IST die
+ * Referenz dieses Lesers — das waere die Falle aus MF-1135 (`dms`), wo
+ * UFTs Leser UND hxcfes Leser aus xDMS stammten. `castools` ist
+ * unabhaengig, am Quelltext gemessen: `cas2wav.c:69` deklariert die
+ * Kennung selbst, und `wav2cas.c` nennt die Blocktypen 0xD0/0xD3/0xEA
+ * **0 Mal** — ein reiner Signaldekoder, der keinen Inhalt deutet.
+ *
+ * **Was die Stufe NICHT heisst:** die vier Betriebsarten des Formats
+ * sind damit nicht belegt, und Baender ohne BIOS-Laderoutinen liegen
+ * nicht vor — castools' README nennt sie ausdruecklich als Grenze. Der
+ * Beleg ist `tests/test_cas_gegen_castools.c` (16 Zusagen), das Rezept
+ * `tests/corpus_manifest/gen_cas_corpus.py`.
  */
 
 #include "uft/uft_format_common.h"
