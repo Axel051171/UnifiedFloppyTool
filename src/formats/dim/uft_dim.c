@@ -20,7 +20,7 @@
  *
  *   MAMEs `dim_format::identify()`  liest 16 Byte ab **0xAB** und
  *     vergleicht `strncmp(h, "DIFC HEADER", 11)`
- *   `src/formats/pc98/dim.c:37`    `/* 0xAB..0xB7 = "DIFC HEADER  "
+ *   `src/formats/pc98/dim.c:37`    `/\* 0xAB..0xB7 = "DIFC HEADER  "
  *     (13 bytes) *\/` und prueft es
  *   `src/formats/misc/dcp_dcu.c:51` nennt dieselbe Kennung
  *

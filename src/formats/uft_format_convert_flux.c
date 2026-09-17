@@ -2022,7 +2022,7 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
     /* Spurlaenge JE SEITE, aus der Zellrate gerechnet, mit der weiter unten
      * tatsaechlich dekodiert wird.
      *
-     * MF-528: hier stand `int mfm_track_bytes = 6400; /* ~100ms at 250Kbps *\/`
+     * MF-528: hier stand `int mfm_track_bytes = 6400; /\* ~100ms at 250Kbps *\/`
      * — eine feste Zahl, die den Fluss gar nicht ansah. Zwei Fehler darin,
      * die sich multiplizierten:
      *

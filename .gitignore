@@ -34,6 +34,11 @@ ui_*.h
 .vscode/
 .idea/
 .qtcreator/
+# Qt Creators clangd-Index. Gemessen 2155 Dateien, und sie waren NICHT
+# ignoriert — das Tor „ungetrackte Flut" schlug mit 2204 Dateien gegen
+# eine Schwelle von 200 an und wies den Versand ab. Ein Werkzeug-
+# Zwischenspeicher gehoert hierher, nicht in den Index (MF-1230).
+.qtc_clangd/
 *.swp
 *.swo
 *~

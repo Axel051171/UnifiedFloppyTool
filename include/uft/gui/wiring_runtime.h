@@ -10,7 +10,7 @@
  * ----
  * `wire_action<Cap>(btn, provider, factory, on_outcome_handlers...)` is the
  * runtime half of the codegen contract. The codegen at
- * `tools/wiring_codegen.py` consumes `forms/*.actions.yaml` + `forms/*.ui`
+ * `tools/wiring_codegen.py` consumes `*.actions.yaml` + `*.ui` from `forms/`
  * and emits one `wire_action<cap::X>(...)` call per declared GUI action.
  *
  * This header makes that contract real:

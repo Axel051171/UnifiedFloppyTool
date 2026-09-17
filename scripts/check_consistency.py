@@ -1293,6 +1293,28 @@ def main() -> int:
         import audit_teilstring as _ts
         all_errors.append(("Teilstring-Fallen", _ts.check(repo)))
 
+        # Tor 67 (MF-1230, Posten `A-029`): vier Code-Fallen aus einem
+        # zweiten Paket des Eigentuemers — K4 (physikalische Konstante in
+        # mehr als einer Datei), K6 (Warnung hinter der Schleife im
+        # begrenzten Puffer), P2 (verschachtelte Kommentarklammer) und
+        # P3 (`#undef` vor spaetem Gebrauch). Dieselbe Bauform wie Tor
+        # 66: fallende Grundlinie, blockierend nur bei `sicher`.
+        #
+        # K4 ist der Torbau zu einem Grundsatz, der in `CLAUDE.md` steht
+        # und fuenfmal bezahlt wurde: MF-1177 („eine Groesse, eine
+        # Rechnung"), MF-1015 (drei Pruefsummen), MF-1026 (drei
+        # Victor-Geometrien), MF-1032/1034 (die vier Anordnungsgesetze,
+        # zweimal einzeln wiederentdeckt).
+        #
+        # Auch dieses Werkzeug kam als Zulieferung und ist an SECHS
+        # gemessenen Stellen berichtigt worden — darunter eine Regel, die
+        # **alle 8** ihrer Funde im Baum falsch meldete und jeden als
+        # blockierend, und eine, die ihren eigenen Kopffall gar nicht
+        # sah. Vier der sechs hat `gcc` als fremde Hand entschieden.
+        # Einzelheiten in seinem Kopf und in `P3-480`.
+        import audit_codefallen as _cf
+        all_errors.append(("Code-Fallen", _cf.check(repo)))
+
         # Tor 55 (MF-875): die FAT12/16-Grenze steht an sechs Stellen im
         # Baum, viermal fest verdrahtet als 4085, dazu eine benannte
         # Konstante 4084, die niemand benutzt. Das ist die Form aus

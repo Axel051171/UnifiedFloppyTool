@@ -2800,7 +2800,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Beleg:** —
 
 ### A-029 · Vier Code-Fallen (K4, K6, P2, P3): prüfen, testen, abtragen
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-17
+- **Status:** **teilweise erledigt** (Prüfer + Tor 67 + CI-Spur, MF-1230)
+  · **Aufgenommen:** 2026-09-17
 - **Wortlaut:** „das ist code von mir !! … teste alles und fixe alles"
 - **Gegenstand, gemessen:** `neue-ideen/Vier Code-Fallen.zip`,
   80 883 Byte, 6 Einträge; inneres Archiv 19 Dateien. Neu:
@@ -2827,8 +2828,9 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Kanal:** entfällt — „das ist code von mir".
 - **Einfrier-Regel:** nein für die Prüfer; **ja für jede Fundstelle in
   der Format-/Decoder-Schicht** → Rotbeweis zuerst.
-- **OPEN_ITEMS:** `P3-479` (dieselbe Familie); eigene Nummer, sobald
-  die Zahl der Fundstellen **geprüft** ist.
+- **OPEN_ITEMS:** **`P3-480`** (eigene Nummer, die Zahl ist jetzt
+  geprüft: 20 K4-Fundstellen in der Grundlinie); `P3-479` ist die
+  Schwester-Familie.
 - **Fertig heißt:** `run_code_selftest.py` grün, alle vier Regeln mit je
   einem Köderfall **und** je einer Gegenprobe, im Torkanon verdrahtet,
   und jede Fundstelle der Einschätzung `sicher` entweder behoben oder
@@ -2844,7 +2846,51 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     würde damit **beide** Prüfer betreffen statt einen. Kein Vorwurf an
     den Entwurf, sondern der Grund, die Fixes VOR der Übernahme
     aufzusetzen.
-- **Beleg:** —
+- **Stand nach MF-1230 — was erledigt ist:**
+  · `scripts/audit_codefallen.py` auf dem berichtigten `audit_common`,
+    **sechs** Defekte behoben, je mit Selbsttestfall: **(A)** P2 meldete
+    eines je Kommentar statt jedes, **(B)** P3 war blind für seinen
+    eigenen Kopffall, **(C)** P3 meldete **alle 8** Funde im Baum falsch
+    und blockierend, **(D)** K4 kollidierte mit CRC-Tafeln, **(E)** die
+    Konstantenliste verletzte ihr eigenes Kriterium, **(F)**
+    `_norm_num()` streifte Hex-Ziffern als Suffixe ab (3110 Literale).
+    **Vier der sechs hat `gcc` entschieden**, nicht ich.
+  · Köder `tests/formats/fixture_code_a.c` + `_b.c` byteidentisch
+    übernommen; Tor 67 in `check_consistency.py`; Grundlinie
+    `docs/codefallen_baseline.json` (20/20); Spur in `teilstring.yml`
+    mit **zweiter** SARIF-Kategorie.
+  · **Drei echte `-Wall`-Warnungen im Baum behoben** —
+    `uft_format_convert_flux.c:2025`, `dim/uft_dim.c:23`,
+    `gui/wiring_runtime.h:13` (dort zwei). Damit hielt D7
+    („warnungsfrei unter `-Wall -Wextra -Wpedantic`") gemessen **nicht**.
+  · Selbsttest **38/38**, Meta-Tor **75 grün / 0 rot**, Rotbeweis über
+    alle vier CI-Wege, doppelt bezeugt von gcc.
+- **Stand — was AUSDRÜCKLICH offen bleibt:**
+  · **Das C-Modul `uft_match` ist NICHT übernommen.** Das Paket bringt
+    `include/uft/util/uft_match.h` (6 917 B), `src/util/uft_match.c`
+    (6 817 B) und `tests/test_match.c` (12 737 B) mit — zehn Funktionen,
+    je eine pro Fallenklasse C1…C6. **Und dafür gibt es einen gemessenen
+    Anlass, der über dieses Paket hinausgeht:** `audit_teilstring.py`
+    nennt in seinen Fundmeldungen `uft_suffix_eq()`, `uft_magic_at()`
+    und `uft_id_eq()` als Ersatz, und `git grep` findet diese Namen
+    **ausschließlich** in dieser einen Datei — **Tor 66 verweist auf
+    Funktionen, die es im Baum nicht gibt.** Das Modul ist damit das
+    Werkzeug für die 51 Fundstellen aus `A-027`/`P3-479` und gehört in
+    einen eigenen Posten (Scope-Regel: neues C-Modul + Test +
+    Verdrahtung von 51 Stellen).
+  · Die **20 K4-Fundstellen** sind sichtbar, nicht abgetragen —
+    darunter `0x1900`, wo `uft_track_analysis.c:261` dieselbe Spurlänge
+    dezimal führt, die DMK hex führt. Genau „eine Größe, eine Rechnung"
+    (MF-1177), und nicht umgesetzt.
+  · **K1, K2, K3, K5 fehlen** (Klemmen, Zähler beim Abbruch,
+    Vorzeichenbreite, Abbruch bei „frei").
+  · `tests/run_code_selftest.py` ist NICHT als eigene Datei übernommen:
+    seine Prüfungen liegen in `--selbsttest` (Regeln, Verbote,
+    Heimatfilter in beide Richtungen) und im Meta-Tor (Blindheit über
+    gepflanzte Bäume). Was dort NICHT nachgebaut ist: die Prüfung der
+    Rückgabewerte über einen Unterprozess — die deckt die CI-Spur ab,
+    und der Rotbeweis hat sie mit rc 1 vorgeführt.
+- **Beleg:** MF-1230 (Commit folgt in derselben Sitzung).
 
   **DREI DINGE, DIE SCHON BEI DER AUFNAHME FESTGEHALTEN GEHÖREN,
   weil sie später falsch gelesen würden:**

@@ -73,6 +73,7 @@ on:
       - '**.cxx'
       - 'scripts/**.py'
       - 'docs/teilstring_baseline.json'
+      - 'docs/codefallen_baseline.json'
       - '.github/workflows/teilstring.yml'
   push:
     branches: [main]
@@ -122,6 +123,17 @@ jobs:
       # eigener Schritt sagt es lauter.
       - name: Köderdatei vorhanden
         run: test -f tests/formats/fixture_traps.c
+
+      # A-029: der zweite Prüfer, dieselbe Spur. 36 Zusagen, je eine pro
+      # behobenem Defekt — sechs davon gemessen am Baum, vier von `gcc`
+      # als fremder Hand entschieden.
+      - name: Code-Fallen gegen die Köderdateien
+        run: python3 scripts/audit_codefallen.py --selbsttest
+
+      - name: Köderdateien vorhanden
+        run: |
+          test -f tests/formats/fixture_code_a.c
+          test -f tests/formats/fixture_code_b.c
 
   # ── Pull Request: nur Geändertes, mit Anmerkungen am Diff ────────────
   geaendert:
@@ -184,6 +196,26 @@ jobs:
             python3 scripts/audit_teilstring.py --list-macros \
               --fail-on nichts || true
 
+      # K4 braucht den GANZEN Baum, nicht nur die geänderten Dateien:
+      # eine Konstante in einer geänderten Datei ist erst dann
+      # Doppelhaltung, wenn sie auch woanders steht. Deshalb hier ohne
+      # Dateifilter — gemessen 1401 Dateien in wenigen Sekunden.
+      #
+      # Die Anmerkungen landen trotzdem am Diff, weil GitHub nur die
+      # Zeilen anzeigt, die der Pull Request berührt. Ein Fund außerhalb
+      # des Diffs ist im Protokoll, nicht am Rand — das ist gewollt.
+      # `--baseline` ist hier PFLICHT und nicht Bequemlichkeit: ohne sie
+      # meldet der Lauf die 20 bekannten K4-Altbestände als Anmerkung und
+      # färbt JEDEN Pull Request rot (gemessen: 20 Anmerkungen, rc 1).
+      # Genau die Klasse aus MF-1229 Defekt J — sichtbar erst, wenn man
+      # den CI-Aufruf von Hand fährt.
+      - name: Code-Fallen prüfen
+        if: always()
+        run: |
+          python3 scripts/audit_codefallen.py \
+            --baseline docs/codefallen_baseline.json \
+            --format github --fail-on sicher src include
+
   # ── Push auf main: ganzer Baum, SARIF in den Sicherheitsreiter ───────
   ganzer_baum:
     name: Ganzer Baum
@@ -230,6 +262,30 @@ jobs:
           sarif_file: /tmp/teilstring.sarif
           category: teilstring-audit
 
+      - name: Code-Fallen — SARIF erzeugen
+        run: |
+          python3 scripts/audit_codefallen.py \
+            --baseline docs/codefallen_baseline.json \
+            --format sarif --out /tmp/codefallen.sarif \
+            --fail-on nichts \
+            src include
+          python3 -c "
+          import json
+          d = json.load(open('/tmp/codefallen.sarif'))
+          print('SARIF: %d neue Funde' % len(d['runs'][0]['results']))
+          "
+
+      # ZWEITE Kategorie, nicht dieselbe: in GitHubs Code-Scanning
+      # bedeutet eine gemeinsame `category` „dieselbe Analyse", und was
+      # in einem Lauf FEHLT, gilt dort als behoben. Mit einer Kategorie
+      # würden die beiden Prüfer sich gegenseitig die Funde als erledigt
+      # melden — abwechselnd, bei jedem Lauf.
+      - name: Code-Fallen — SARIF hochladen
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: /tmp/codefallen.sarif
+          category: codefallen-audit
+
       # Erst hochladen, dann bewerten: ein rotes Kreuz soll die Funde
       # nicht davon abhalten, im Sicherheitsreiter zu landen.
       - name: Bewerten — C-Seite
@@ -244,8 +300,16 @@ jobs:
             --baseline docs/teilstring_baseline.json \
             scripts tools
 
+      - name: Bewerten — Code-Fallen
+        run: |
+          python3 scripts/audit_codefallen.py \
+            --baseline docs/codefallen_baseline.json \
+            src include
+
       # Die Gegenprobe zum Tor: läuft der Prüfer auch so, wie ihn
       # `check_consistency.py` ruft? Ein Tor, das nur über einen von zwei
       # Wegen funktioniert, ist ein halbes Tor.
       - name: Torzugang prüfen
-        run: python3 scripts/audit_teilstring.py --tor
+        run: |
+          python3 scripts/audit_teilstring.py --tor
+          python3 scripts/audit_codefallen.py --tor

@@ -188,6 +188,97 @@ FAELLE: dict[str, list[Fall]] = {
     ],
 
     # ---------------------------------------------------------------
+    # Tor 67 (MF-1230, Posten `A-029`). K6 fehlt hier absichtlich: seine
+    # Einschaetzung ist immer `pruefen`, und `check()` urteilt nur ueber
+    # `sicher` — ein K6-Fall koennte hier gar nicht anschlagen. Er steht
+    # stattdessen in `audit_codefallen.selbsttest()`, mit Gegenprobe.
+    "audit_codefallen": [
+        Fall(
+            name="das eigene Makro weggenommen",
+            dateien={"src/formats/x.c":
+                     "#define APP(x) ((x) + 1)\n"
+                     "static int f(int n)\n{\n"
+                     "#undef APP\n"
+                     "    return APP(n);\n}\n"},
+            erwartet="treffer", muster="#undef APP",
+            warum="P3: der Praeprozessor arbeitet textuell — nach dem "
+                  "#undef ist das Makro fuer den REST der Datei weg, "
+                  "nicht nur fuer den Zweig."),
+        Fall(
+            name="ein FREMDER Name freigegeben",
+            dateien={"src/formats/x.c":
+                     "#undef LoadImage\n"
+                     "struct s { int LoadImage; };\n"
+                     "static int f(struct s *p)\n{\n"
+                     "    p->LoadImage = 1;\n"
+                     "    return 0;\n}\n"},
+            erwartet="sauber",
+            warum="A-029, Defekt C: die uebernommene Fassung meldete "
+                  "genau das, und zwar ALLE 8 ihrer Funde im Baum — "
+                  "`#undef LoadImage` (Windows-Makro) und sechsmal "
+                  "`#undef UFT_IMD_MODE_*` vor einem enum, das die Namen "
+                  "definiert. Jeder als `sicher`, also blockierend."),
+        Fall(
+            name="Neudefinition VOR dem Gebrauch",
+            dateien={"src/formats/x.c":
+                     "#define H(x) ((x) * 1)\n"
+                     "static int f(int n)\n{\n"
+                     "#undef H\n"
+                     "#define H(x) ((x) * 2)\n"
+                     "    return H(n);\n}\n"},
+            erwartet="sauber",
+            warum="die Gegenprobe zu Defekt B: wird das Makro vor dem "
+                  "Gebrauch neu definiert, ist nichts kaputt. Ohne "
+                  "diesen Fall waere der Fix ein Falschalarm-Erzeuger."),
+        Fall(
+            name="Kommentaranfang im Kommentar",
+            dateien={"src/formats/x.c":
+                     "/* Beispiel: forms/*.ui wird gelesen */\n"
+                     "static int f(void)\n{\n    return 0;\n}\n"},
+            erwartet="treffer", muster="Kommentaranfang",
+            warum="P2: C kennt keine Verschachtelung, der aeussere Block "
+                  "endet am ERSTEN `*/`. Deckungsgleich mit "
+                  "`gcc -Wcomment`, das in `-Wall` steckt — im Baum "
+                  "trafen alle vier Funde gcc auf Zeile UND Spalte."),
+        Fall(
+            name="dieselbe Konstante in drei Dateien",
+            dateien={"src/formats/a.c": "static const long a = 737280;\n",
+                     "src/formats/b.c": "static const long b = 737280;\n",
+                     "src/formats/c.c": "static const long c = 737280;\n"},
+            erwartet="treffer", muster="737280",
+            warum="K4: eine Konstante in EINER Datei ist eine "
+                  "Definition, in drei ist sie Streuung. Der Torbau zu "
+                  "einem fuenfmal bezahlten Grundsatz (MF-1177, "
+                  "MF-1015, MF-1026, MF-1032/1034)."),
+        Fall(
+            name="dieselbe Konstante in EINER Datei",
+            dateien={"src/formats/a.c": "static const long a = 737280;\n"},
+            erwartet="sauber",
+            warum="eine Definition ist kein Befund — sonst waere jede "
+                  "Konstante im Baum einer."),
+        Fall(
+            name="eine CRC-Tafel ist keine Konstantenhaltung",
+            dateien={"src/formats/a.c":
+                     "static const unsigned t[] = {\n"
+                     "  0x2800,0xE8C1,0xE981,0x2940,0xEB01,0x2BC0,\n"
+                     "  0x2200,0xE2C1,0xE381,0x2340,0xE101,0x21C0 };\n",
+                     "src/formats/b.c":
+                     "static const unsigned u[] = {\n"
+                     "  0x2800,0xE8C1,0xE981,0x2940,0xEB01,0x2BC0,\n"
+                     "  0x2200,0xE2C1,0xE381,0x2340,0xE101,0x21C0 };\n",
+                     "src/formats/c.c":
+                     "static const unsigned v[] = {\n"
+                     "  0x2800,0xE8C1,0xE981,0x2940,0xEB01,0x2BC0,\n"
+                     "  0x2200,0xE2C1,0xE381,0x2340,0xE101,0x21C0 };\n"},
+            erwartet="sauber",
+            warum="A-029, Defekt D: eine 16-Bit-CRC-Tafel enthaelt am "
+                  "Ende jeden 2-Byte-Wert, also kollidiert JEDE "
+                  "zweibytige Konstante mit ihr. Gemessen meldete die "
+                  "uebernommene Fassung `0x2200 (JV3-Datenbeginn)` "
+                  "mitten in der CRC-Tafel von `uft_dms.c:203`."),
+    ],
+
+    # ---------------------------------------------------------------
     "audit_negative_index": [
         Fall(
             name="obere Schranke allein",
