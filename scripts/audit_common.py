@@ -330,6 +330,40 @@ def emit_sarif(findings, roots, rule_help, tool_name,
 # ── Kommandozeile ────────────────────────────────────────────────────────
 
 def add_common_args(ap):
+    # MF-1236: die Ausgabehaertung gehoert HIERHER, nicht nur in
+    # `run_and_report()`.
+    #
+    # Der Kommentar dort sagte „an EINER Stelle, weil beide Pruefer hier
+    # durchkommen" — und das gilt fuer den BERICHTSPFAD. Der
+    # `--selbsttest`-Pfad laeuft daran vorbei: beide Pruefer verzweigen
+    # gleich nach `parse_args()` (`audit_teilstring.py:715`,
+    # `audit_codefallen.py:925`) und erreichen `run_and_report()` nie.
+    #
+    # Gemessen: `audit_teilstring.py` hat das mit einem eigenen Aufruf in
+    # seinem `selbsttest()` (`:659`) geflickt — `audit_codefallen.py`
+    # enthaelt den Namen `haerten` **0 Mal**. Folge unter cp1252, der
+    # Windows-Vorgabe: `audit_codefallen.py --selbsttest` meldet 41/42,
+    # der fallende Fall heisst „Ausgabe haelt ein Zeichen ausserhalb von
+    # cp1252 aus", und er druckt genau das ⁄ aus dem
+    # MF-1171-Absturz. Mit `PYTHONIOENCODING=utf-8` sind es 42/42.
+    #
+    # **Und CI kann das nicht sehen.** `.github/workflows/teilstring.yml`
+    # faehrt diesen Selbsttest (`:131`, zwei Jobs haengen daran), aber auf
+    # `ubuntu-latest` und ohne `PYTHONIOENCODING`/`LANG` — dort ist die
+    # Kodierung UTF-8, der Fall kann nie feuern. Die einzige Umgebung mit
+    # der Bedingung ist der Entwicklerrechner, und den bewacht nichts:
+    # die Umkehrung der ueblichen Falle, CI gruen und lokal rot.
+    #
+    # `add_common_args()` ist der Engpass, den BEIDE Eingaenge passieren,
+    # vor jeder Verzweigung. Ein Aufruf beim IMPORT waere noch staerker —
+    # er koennte von keinem Eingang umgangen werden —, ist aber eine
+    # Nebenwirkung beim Einbinden und wuerde einen kuenftigen Importeur
+    # ueberraschen, der rohe Ausgabe will. Deshalb hier und ausdruecklich.
+    # Der Aufruf in `run_and_report()` bleibt stehen: er deckt einen
+    # Aufrufer, der `run_and_report()` ohne diese Argumentschicht nutzt,
+    # und `reconfigure()` ist mehrfach anwendbar.
+    _ausgabe_haerten()
+
     ap.add_argument('roots', nargs='+', help='Dateien oder Verzeichnisse')
     ap.add_argument('--format', default='text',
                     choices=('text', 'json', 'sarif', 'github'))
@@ -353,6 +387,17 @@ def run_and_report(args, findings, files, rule_help, tool_name,
     # A-028: an EINER Stelle, weil beide Prüfer hier durchkommen. Vorher
     # starb der Lauf mitten im Baum an einem Zeichen, das die Konsole
     # nicht darstellen kann — siehe `_ausgabe_haerten()`.
+    #
+    # BERICHTIGT MF-1236. „Beide Prüfer kommen hier durch" gilt für den
+    # BERICHTSPFAD und nicht für den `--selbsttest`-Pfad: beide
+    # verzweigen gleich nach `parse_args()` und erreichen diese Funktion
+    # nie. Gemessen kostete das `audit_codefallen.py --selbsttest` unter
+    # cp1252 eine rote Zusage (41/42) — in der Datei kam `haerten`
+    # **0 Mal** vor. Seit MF-1236 steht der Aufruf zusätzlich in
+    # `add_common_args()`, dem Engpass VOR jeder Verzweigung; dieser hier
+    # bleibt für einen Aufrufer, der `run_and_report()` ohne die
+    # Argumentschicht nutzt. Der Satz stand seit A-028 und war nie ganz
+    # falsch — nur nicht so allgemein, wie er klang.
     _ausgabe_haerten()
     if args.json:
         args.format = 'json'

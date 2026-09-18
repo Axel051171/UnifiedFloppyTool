@@ -3026,6 +3026,44 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     erweitern").
   · Eine Gedächtnisnotiz hält die Klasse:
     `test_gruen_weil_der_aufruf_scheiterte.md`.
+- **Stand nach MF-1236 — die Härtung war richtig, sie lief nur nicht,
+  und CI konnte es nicht sehen:**
+  · Beim Abnehmen von MF-1235 meldete `audit_codefallen.py
+    --selbsttest` **41/42**. Der fallende Fall heißt „Ausgabe hält ein
+    Zeichen ausserhalb von cp1252 aus" und druckt genau das `U+2044`
+    aus dem MF-1171-Absturz. Mit `PYTHONIOENCODING=utf-8`: **42/42**.
+  · **Nicht die Kodierung war die Ursache.** `_ausgabe_haerten()`
+    (`audit_common.py:85`) ist richtig — `reconfigure(errors='replace')`
+    lässt cp1252 stehen und ersetzt das Zeichen. Sie **lief nur
+    nicht**: der Aufruf stand an **einer** Stelle, in
+    `run_and_report()`, und der `--selbsttest`-Pfad läuft daran vorbei,
+    weil beide Prüfer gleich nach `parse_args()` verzweigen.
+  · **Die Lücke war schon einmal geschlossen worden — für einen von
+    zweien.** `audit_teilstring.py` hat einen eigenen Aufruf in seinem
+    `selbsttest()` (`:659`); `audit_codefallen.py` enthielt den Namen
+    `haerten` **0 Mal**. Das ist die Gestalt aus MF-519/MF-529: eine
+    Korrektur an einer Datei sagt nichts über ihre Nachbarn.
+  · Seit MF-1236 steht der Aufruf in **`add_common_args()`** — dem
+    Engpass, den **beide** Eingänge vor jeder Verzweigung passieren
+    (`:693` bzw. `:896`). Der Aufruf beim Import wäre stärker, ist aber
+    eine Nebenwirkung beim Einbinden; die Wahl steht begründet im
+    Kommentar. Der alte Aufruf bleibt für einen Nutzer von
+    `run_and_report()` ohne die Argumentschicht.
+  · **Rotbeweis in beide Richtungen**, dieselbe Kommandozeile und
+    dieselbe Umgebung (`stdout encoding = cp1252`): **41/42 → 42/42**.
+    `audit_teilstring --selbsttest` bleibt 17/17, Tor 66 474/0, Tor 67
+    20/0, Meta-Tor 75/0.
+  · **Und die unangenehme Hälfte:** `.github/workflows/teilstring.yml`
+    fährt diesen Selbsttest sehr wohl (`:131`), und **zwei Jobs hängen
+    daran** — aber auf `ubuntu-latest` **ohne** `PYTHONIOENCODING`,
+    `LANG` oder `LC_ALL` (gemessen, 0 Treffer). Dort ist die Kodierung
+    UTF-8, der Fall kann **nie** feuern. Die einzige Umgebung mit der
+    Bedingung ist der Windows-Rechner, und den bewacht nichts: die
+    **Umkehrung** der Lehre aus `ci_test_gating.md`.
+  · Ein Tor dafür ist ausdrücklich **nicht** gebaut — ein CI-Schritt
+    mit `PYTHONIOENCODING=cp1252` wäre billig und der offensichtliche
+    nächste Griff, aber das ist eine Entscheidung über die CI-Matrix
+    und kein Nebeneffekt dieses Fixes. Steht in `P3-484`.
 - **Stand — was AUSDRÜCKLICH offen bleibt:**
   · **Der qmake-Produktbau trägt die neue Fahne NICHT.** Sie sitzt im
     CMake-Testbau; CI baut alle drei Plattformen mit qmake, die 715
