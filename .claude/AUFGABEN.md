@@ -3720,6 +3720,27 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
       Der Zensus probierte `hxcfe`/`floptool`/`SAMdisk`, gehoben wurde
       mit anderen Werkzeugen. „Es gibt keinen" war eine Aussage über
       den probierten Aufruf. Benannt als `P3-502`.
+  · **Zwei abgewiesene Läufe an derselben Stelle, und erst der zweite
+    hat die richtige Frage gestellt (MF-1249, MF-1250).** CI fiel mit
+    `FORMAT_FAMILIEN.md stale`, weil die Tafel den **Arbeitsbaum**
+    zählte. MF-1249 stellte auf den **Index** um — und der nächste
+    Push fiel ebenfalls, weil die zweite Sitzung laufend Dateien
+    einlegt. Gemessen im selben Augenblick: **Arbeitsbaum 9, Index 9,
+    HEAD 1.**
+    · Der Fehler war nicht die Wahl der Sicht, sondern dass ein
+      **committetes Dokument** überhaupt an Quelltext hing, den ein
+      Dritter zwischen Erzeugen und Prüfen bewegt. Seit MF-1250 liest
+      das Dokument nur noch committete Dokumente (Zensus, Stufentafel);
+      der Kampagnen-Fortschritt ist eine **Abfrage**
+      (`gen_familien.py --fortschritt`, misst gegen HEAD und nennt den
+      SHA). Selbsttest **18/18**, vier davon halten mechanisch fest,
+      dass die Fortschrittsbegriffe nicht ins Dokument zurückkehren.
+    · **Am Verfahren geändert:** meine Commit-Skripte machten
+      `git reset -q` und warfen damit die **eingelegten** Dateien der
+      zweiten Sitzung aus dem Index (`A src/core/uft_copy_plan.c`,
+      `A tests/test_varianten_aus_dem_plugin.c`). Ab MF-1250 wird
+      `git commit -- <pfade>` benutzt: es committet genau die genannten
+      Pfade und lässt den Index unberührt.
   · **MF-1247** (Teilstring-Falle in zwei Fähigkeits-Toren) liegt
     fertig im Arbeitsbaum und wartet nach der Ordnungsregel auf den
     Tor-Commit der zweiten Sitzung.

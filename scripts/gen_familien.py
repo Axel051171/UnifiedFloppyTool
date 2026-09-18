@@ -98,23 +98,31 @@ def plugins_mit_variantentafel(wurzel: Path) -> dict:
     Die Dateimenge kommt aus git, nicht aus einer Verzeichnisliste
     (Grundsatz MF-636).
 
-    BERICHTIGT MF-1249, und zwar von CI: gelesen wird der **INDEX**
-    (`--cached`), nicht der Arbeitsbaum. Die erste Fassung fragte den
-    Arbeitsbaum und zaehlte **9** Variantentafeln — im Commit standen
-    **1**. Die uebrigen acht sind die uncommittete Arbeit einer zweiten
-    Sitzung; meine erzeugte Tafel beschrieb damit einen Zustand, den es
-    auf keiner Maschine ausser meiner gab. Lokal gruen, in CI rot.
+    Gelesen wird **HEAD** — nicht der Arbeitsbaum und nicht der Index.
+    ZWEI abgewiesene Laeufe haben dahin gefuehrt, und die Zahlen
+    stammen aus demselben Augenblick:
 
-    Der Index ist die richtige Quelle, weil er an beiden Orten dasselbe
-    sagt: beim Commit ist er genau das, was gleich im Commit steht, und
-    in CI ist er nach dem Auschecken mit HEAD identisch. Der
-    Arbeitsbaum ist an keinem der beiden Orte massgeblich — das ist die
-    Klasse `tor_misst_arbeitsbaum_nicht_commit`, und sie ist an diesem
-    Tag zum dritten Mal aufgetreten.
+        Arbeitsbaum  9      INDEX  9      HEAD  1
+
+    Die erste Fassung fragte den Arbeitsbaum: 9 Tafeln gemeldet, 1 im
+    Commit — acht davon uncommittete Arbeit einer zweiten Sitzung.
+    Lokal gruen, in CI rot (Klasse `tor_misst_arbeitsbaum_nicht_commit`,
+    an diesem Tag zum dritten Mal).
+
+    MF-1249 stellte daraufhin auf den INDEX um, weil der beim Commit
+    das ist, was gleich drinsteht. Der naechste Push fiel trotzdem: die
+    zweite Sitzung LEGT laufend Dateien EIN, also bewegt sich auch der
+    Index zwischen Erzeugen und Pruefen. HEAD ist die einzige Sicht,
+    die stillsteht — und genau das, was CI nach dem Auschecken sieht.
+
+    Seit MF-1250 speist diese Funktion nur noch die ABFRAGE
+    (`--fortschritt`), nicht mehr das erzeugte Dokument: ein
+    committetes Dokument darf ueberhaupt nicht an Quelltext haengen,
+    den ein Dritter bewegt.
     """
     try:
-        r = subprocess.run(["git", "grep", "--cached", "-l",
-                            r"\.variants *=", "--", "src/formats/"],
+        r = subprocess.run(["git", "grep", "-l", r"\.variants *=",
+                            "HEAD", "--", "src/formats/"],
                            cwd=str(wurzel), capture_output=True,
                            text=True, timeout=120)
     except (OSError, subprocess.SubprocessError):
@@ -123,11 +131,10 @@ def plugins_mit_variantentafel(wurzel: Path) -> dict:
         return {}
 
     aus = {}
-    for rel in r.stdout.split():
-        # Auch der INHALT muss aus dem Index kommen: eine Datei, die im
-        # Index eine Tafel traegt, kann im Arbeitsbaum eine andere
-        # Plugin-Kennung haben.
-        g = subprocess.run(["git", "show", ":" + rel],
+    for treffer in r.stdout.split():
+        # `git grep <rev>` stellt jedem Pfad `HEAD:` voran.
+        rel = treffer.split(":", 1)[1] if ":" in treffer else treffer
+        g = subprocess.run(["git", "show", "HEAD:" + rel],
                            cwd=str(wurzel), capture_output=True,
                            timeout=120)
         if g.returncode != 0:
@@ -176,6 +183,29 @@ def beinahe(ids: set, schluessel: set) -> list:
 
 
 def tafel_bauen(wurzel: Path) -> str:
+    """Das Dokument haengt AUSSCHLIESSLICH an committeten Dokumenten.
+
+    BERICHTIGT MF-1250, und wieder hat es ein abgewiesener Push gezeigt.
+    MF-1249 stellte die Variantenzaehlung vom Arbeitsbaum auf den INDEX
+    um — und der Index bewegt sich ebenfalls, weil eine zweite Sitzung
+    laufend Dateien einlegt. Gemessen im selben Augenblick:
+
+        Arbeitsbaum  9   INDEX  9   HEAD  1
+
+    Der Fehler war nicht die Wahl der Sicht, sondern dass der Inhalt
+    eines COMMITTETEN Dokuments ueberhaupt an Quelltext haengt, den ein
+    Dritter zwischen Erzeugen und Pruefen veraendern kann. Jede der drei
+    Sichten kann dazwischen kippen.
+
+    Deshalb liest diese Funktion nur noch `erzeuger_kanaele.json` und
+    die erzeugte Stufentafel — beides Dokumente, die sich nur in einem
+    Commit aendern, der diese Tafel mit erzeugt. Genauso arbeiten die
+    Frische-Tore fuer die Tier-Tabellen und STAND.md.
+
+    Der Kampagnen-Fortschritt haengt an `.variants` und ist damit keine
+    Eigenschaft des Dokuments, sondern eine ABFRAGE:
+    `python scripts/gen_familien.py --fortschritt`.
+    """
     zensus = zensus_lesen(ZENSUS)
     # ENTSCHEIDEND: `kanal: keiner` ist eine gemessene ABWESENHEIT. Das
     # Feld `werkzeug` traegt dort die Notiz zur Suche, keinen
@@ -187,15 +217,8 @@ def tafel_bauen(wurzel: Path) -> str:
     ohne = {k: v for k, v in zensus.items() if v.get("kanal") == "keiner"}
 
     fam = familien(mit)
-    var = plugins_mit_variantentafel(wurzel)
     gesamt = gesamtzahl_plugins(wurzel)
     stufen = stufen_lesen(WURZEL / "docs" / "VERIFICATION_TIERS.md")
-
-    getroffen = {i for i in var if i in mit}
-    quellen_beruehrt = {quelle_von(mit[i].get("werkzeug", ""))
-                        for i in getroffen}
-    formate_beruehrt = sum(len(fs) for q, fs in fam.items()
-                           if q in quellen_beruehrt)
 
     z = []
     z.append("# Format-Familien — wer erzeugt was")
@@ -213,25 +236,28 @@ def tafel_bauen(wurzel: Path) -> str:
     z.append("")
     z.append("## Die Familien")
     z.append("")
-    z.append("| Quelle | Formate | beruehrt | welche |")
-    z.append("|---|---:|---|---|")
+    z.append("| Quelle | Formate | welche |")
+    z.append("|---|---:|---|")
     for q, fs in sorted(fam.items(), key=lambda x: (-len(x[1]), x[0])):
-        mark = "**ja**" if q in quellen_beruehrt else "—"
-        z.append("| `%s` | %d | %s | %s |"
-                 % (q, len(fs), mark, " ".join("`%s`" % f for f in fs)))
+        z.append("| `%s` | %d | %s |"
+                 % (q, len(fs), " ".join("`%s`" % f for f in fs)))
+    z.append("")
+    z.append("> **Der Kampagnen-Fortschritt steht bewusst NICHT hier.** Er "
+             "haengt an den")
+    z.append("> `.variants`-Tafeln im Quelltext, und die aendern sich "
+             "zwischen Erzeugen und")
+    z.append("> Pruefen — ein committetes Dokument darf daran nicht "
+             "haengen (MF-1250).")
+    z.append("> Abfragen mit `python scripts/gen_familien.py "
+             "--fortschritt`.")
     z.append("")
 
-    z.append("## Der Fortschritt, nach Quellen gezaehlt")
+    z.append("## Umfang")
     z.append("")
     z.append("| | |")
     z.append("|---|---|")
-    z.append("| Plugins mit Variantentafel | **%d** |" % len(var))
-    z.append("| davon mit gemessenem Erzeuger | **%d** (%s) |"
-             % (len(getroffen), " ".join(sorted(getroffen)) or "—"))
-    z.append("| beruehrte Quellen | **%d von %d** |"
-             % (len(quellen_beruehrt), len(fam)))
-    z.append("| das entspricht Formaten | **%d von %d** mit Erzeuger |"
-             % (formate_beruehrt, len(mit)))
+    z.append("| Formate mit gemessenem Erzeuger | **%d** in **%d** Quellen |"
+             % (len(mit), len(fam)))
     z.append("| Zensus-Eintraege ohne Erzeuger | %d — gemessene "
              "Abwesenheit, siehe unten |" % len(ohne))
     if gesamt:
@@ -283,21 +309,52 @@ def tafel_bauen(wurzel: Path) -> str:
         z.append("Keiner.")
     z.append("")
 
-    bn = beinahe(set(var), set(zensus))
-    z.append("## Beinahe-Treffer — hier entscheidet ein Mensch")
-    z.append("")
-    if bn:
-        z.append("Diese Paare haette ein Abgleich ueber Namensanfaenge "
-                 "verwechselt. Sie sind **nicht** gezaehlt:")
-        z.append("")
-        for i, k in bn:
-            z.append("* Plugin `%s` gegen Zensus-Schluessel `%s` — "
-                     "verschiedene Formate (vgl. MF-1222: `dim` gegen "
-                     "`dim_atari`)." % (i, k))
-    else:
-        z.append("Keine.")
-    z.append("")
     return "\n".join(z) + "\n"
+
+
+def fortschritt(wurzel: Path) -> str:
+    """Die ABFRAGE: wie weit ist die Variantenkampagne, nach Quellen?
+
+    Steht bewusst nicht im erzeugten Dokument (MF-1250): sie haengt an
+    `.variants` im Quelltext, und das bewegt sich zwischen Erzeugen und
+    Pruefen. Gemessen wird gegen **HEAD** — das ist, was CI sieht.
+    """
+    zensus = zensus_lesen(ZENSUS)
+    mit = {k: v for k, v in zensus.items() if v.get("kanal") != "keiner"}
+    fam = familien(mit)
+    var = plugins_mit_variantentafel(wurzel)
+
+    getroffen = {i for i in var if i in mit}
+    beruehrt = {quelle_von(mit[i].get("werkzeug", "")) for i in getroffen}
+    formate = sum(len(fs) for q, fs in fam.items() if q in beruehrt)
+
+    sha = "?"
+    try:
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                           cwd=str(wurzel), capture_output=True,
+                           text=True, timeout=30)
+        if r.returncode == 0:
+            sha = r.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    z = ["Variantenkampagne, gemessen gegen HEAD (%s):" % sha,
+         "  Plugins mit Variantentafel : %d" % len(var),
+         "  davon mit Erzeuger         : %d (%s)"
+         % (len(getroffen), " ".join(sorted(getroffen)) or "—"),
+         "  beruehrte Quellen          : %d von %d" % (len(beruehrt), len(fam)),
+         "  das sind Formate           : %d von %d mit Erzeuger"
+         % (formate, len(mit))]
+
+    bn = beinahe(set(var), set(zensus))
+    if bn:
+        z.append("")
+        z.append("  Beinahe-Treffer (NICHT gezaehlt, hier entscheidet ein "
+                 "Mensch):")
+        for i, k in bn:
+            z.append("    Plugin `%s` gegen Zensus-Schluessel `%s` — "
+                     "verschiedene Formate (MF-1222)" % (i, k))
+    return "\n".join(z)
 
 
 def _selbsttest() -> int:
@@ -406,7 +463,21 @@ def _selbsttest() -> int:
                "ROT-PROBE: der Arbeitsbaum zeigt die Tafel — sie ist "
                "aber in keinem Commit")
         zusage(aus_index == {},
-               "der Index zeigt sie NICHT, und der Index ist massgeblich")
+               "HEAD zeigt sie NICHT — und HEAD ist massgeblich, weil es "
+               "als einziges zwischen Erzeugen und Pruefen stillsteht")
+
+    # 3e — ROT-PROBE aus dem ZWEITEN abgewiesenen Push: das erzeugte
+    #      Dokument darf ueberhaupt nicht an `.variants` haengen. Die
+    #      Probe haelt das mechanisch fest — steht einer der
+    #      Fortschrittsbegriffe wieder im Dokument, faellt sie.
+    text = tafel_bauen(WURZEL)
+    for wort in ("Variantentafel |", "beruehrte Quellen",
+                 "Beinahe-Treffer"):
+        zusage(wort not in text,
+               "das Dokument traegt `%s` NICHT mehr — sonst haengt es "
+               "an Quelltext, den ein Dritter bewegt" % wort)
+    zusage("--fortschritt" in text,
+           "und es sagt, wo der Fortschritt stattdessen steht")
 
     # 4 — `_`-Schluessel sind Fliesstext, keine Formate.
     import tempfile
@@ -428,6 +499,9 @@ def _selbsttest() -> int:
 if __name__ == "__main__":
     if "--selbsttest" in sys.argv:
         sys.exit(_selbsttest())
+    if "--fortschritt" in sys.argv:
+        print(fortschritt(WURZEL))
+        sys.exit(0)
     if _selbsttest() != 0:
         print("Selbsttest ROT — es wird nichts geschrieben.")
         sys.exit(1)

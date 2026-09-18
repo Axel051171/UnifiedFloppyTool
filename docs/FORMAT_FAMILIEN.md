@@ -9,22 +9,24 @@
 
 ## Die Familien
 
-| Quelle | Formate | beruehrt | welche |
-|---|---:|---|---|
-| `hxcfe` | 6 | — | `d77` `jv3` `trd` `v9t9` `vdk` `xdm86` |
-| `dsktrans` | 5 | — | `apridisk` `cfi` `cqm` `dc42` `td0` |
-| `dskform` | 1 | — | `cpm` |
-| `epstool` | 1 | — | `edk` |
-| `floptool` | 1 | — | `tan` |
+| Quelle | Formate | welche |
+|---|---:|---|
+| `hxcfe` | 6 | `d77` `jv3` `trd` `v9t9` `vdk` `xdm86` |
+| `dsktrans` | 5 | `apridisk` `cfi` `cqm` `dc42` `td0` |
+| `dskform` | 1 | `cpm` |
+| `epstool` | 1 | `edk` |
+| `floptool` | 1 | `tan` |
 
-## Der Fortschritt, nach Quellen gezaehlt
+> **Der Kampagnen-Fortschritt steht bewusst NICHT hier.** Er haengt an den
+> `.variants`-Tafeln im Quelltext, und die aendern sich zwischen Erzeugen und
+> Pruefen — ein committetes Dokument darf daran nicht haengen (MF-1250).
+> Abfragen mit `python scripts/gen_familien.py --fortschritt`.
+
+## Umfang
 
 | | |
 |---|---|
-| Plugins mit Variantentafel | **1** |
-| davon mit gemessenem Erzeuger | **0** (—) |
-| beruehrte Quellen | **0 von 5** |
-| das entspricht Formaten | **0 von 14** mit Erzeuger |
+| Formate mit gemessenem Erzeuger | **14** in **5** Quellen |
 | Zensus-Eintraege ohne Erzeuger | 16 — gemessene Abwesenheit, siehe unten |
 | Formate OHNE Zensus-Eintrag | 107 von 137 — **nicht gemessen**, nicht "keine Familie" |
 
@@ -68,8 +70,4 @@ Zensus kennt den Erzeuger noch nicht, mit dem die Hebung gelungen ist.
 | `po` | **T1b** | hxcfe -conv:APPLE2_PO |
 
 **8 von 16** Eintraegen ohne Erzeuger sind damit nachweislich veraltet.
-
-## Beinahe-Treffer — hier entscheidet ein Mensch
-
-Keine.
 
