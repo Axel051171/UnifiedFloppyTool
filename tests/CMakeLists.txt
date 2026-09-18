@@ -215,7 +215,13 @@ endfunction()
 # Uebersetzungseinheit anzuhaengen.
 function(uft_wire_match tgt)
     get_target_property(_uft_srcs ${tgt} SOURCES)
-    if(_uft_srcs MATCHES "uft_genesis|uft_scp_writer"
+    # MF-1237: `mfm_detect` kommt hinzu, weil `mfm_detect_atari_st()`
+    # jetzt `uft_wort_treffer()` ruft. Der Sprengradius ist VOR dem Bau
+    # gemessen, nicht danach: `mfm_detect.c` steht laut `build.ninja` in
+    # **63** Bauzielen, und genau **2** davon hatten `uft_match.c`
+    # nicht — `test_mfm_bridge` und `test_mfm_detect`. Ein Wort in
+    # diesem Ausdruck deckt beide und jedes kuenftige mit.
+    if(_uft_srcs MATCHES "uft_genesis|uft_scp_writer|mfm_detect"
        AND NOT _uft_srcs MATCHES "uft_match")
         target_sources(${tgt} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/util/uft_match.c)
@@ -2417,9 +2423,15 @@ foreach(test_source ${TEST_SOURCES})
 )
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/analysis)
-    elseif(${test_name} STREQUAL "test_mfm_detect")
+    elseif(${test_name} STREQUAL "test_mfm_detect"
+           OR ${test_name} STREQUAL "test_mfm_oem_trifft_ganze_woerter")
         # MF-411: re-enabled — the test now includes uft/detect/, not the
         # phantom uft/analysis/ twin.
+        #
+        # MF-1237: `test_mfm_oem_trifft_ganze_woerter` braucht genau
+        # dieselben zwei Zeilen. `uft_match.c` kommt nicht hierher,
+        # sondern aus `uft_wire_match()` weiter oben — dort steht die
+        # Messung, welche Ziele es brauchen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c)
         target_include_directories(${test_name} PRIVATE

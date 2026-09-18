@@ -182,3 +182,45 @@ bool uft_bytes_eq(const void *a, const void *b, size_t len,
     }
     return true;
 }
+
+/* ─────────────────────────── Wortgrenze ────────────────────────────────── */
+
+/* MF-1237: Wortzeichen sind `[0-9A-Za-z.]`. Eigene ASCII-Pruefung statt
+ * `isalnum()`, das bei einem Byte >= 0x80 in `char` undefiniert ist —
+ * dieselbe Vorsicht wie `lc()` weiter oben in dieser Datei. */
+static bool wortzeichen(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
+        || (c >= 'A' && c <= 'Z') || c == '.';
+}
+
+bool uft_wort_treffer(const char *text, const char *wort) {
+    if (!text || !wort) return false;
+
+    const size_t wl = strlen(wort);
+    if (wl == 0u) return false;
+
+    const char *p = text;
+    while (*p) {
+        /* bis zum naechsten Wortanfang */
+        while (*p && !wortzeichen(*p)) p++;
+        const char *a = p;
+        while (*p && wortzeichen(*p)) p++;
+        const char *e = p;
+
+        /* Der Punkt gehoert zum Wort (sonst zerfaellt „1.44"), aber
+         * fuehrende und anhaengende Punkte werden abgestreift, damit
+         * „pc hd." das Kennwort „hd" nicht verliert. */
+        while (a < e && *a == '.') a++;
+        while (e > a && e[-1] == '.') e--;
+
+        if ((size_t)(e - a) == wl && uft_bytes_eq(a, wort, wl, NULL))
+            return true;
+
+        /* Stand kein Wortzeichen mehr an und ist der Text zu Ende, ist
+         * die Schleife fertig — `*p` ist 0 und sie endet ohnehin. Die
+         * Zeile steht, damit das auch bei einem Text aus lauter
+         * Trennzeichen offensichtlich terminiert. */
+        if (a == e && !*p) break;
+    }
+    return false;
+}

@@ -444,36 +444,26 @@ void scp_writer_free(scp_writer_t *w) {
  * bleibt wie sie war (`strstr` war case-sensitiv).
  */
 
-/** Wortzeichen: alphanumerisch oder '.' — eigene ASCII-Pruefung statt
- *  `isalnum()`, das bei einem Byte >= 0x80 in `char` undefiniert ist. */
-static bool hint_wortzeichen(char c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
-        || (c >= 'A' && c <= 'Z') || c == '.';
-}
-
-/**
- * @brief Steht @p wort als GANZES Wort in @p hint?
+/* UMGEZOGEN MF-1237. Hier standen `hint_wortzeichen()` und
+ * `uft_wort_treffer()` — die Wortgrenzen-Regel, die MF-1233 hier
+ * eingefuehrt hat. Sie liegt jetzt als `uft_wort_treffer()` in
+ * `src/util/uft_match.c`, weil ein ZWEITER Bedarf gemessen wurde:
+ * `src/detect/mfm/mfm_detect.c:593` suchte `"TOS"` im OEM-Feld eines
+ * BPB und traf damit in `TOSHIBA`, bei einer Entscheidung, die
+ * `mfm_detect.c:607` mit `return true` faellt.
  *
- * Der Punkt gehoert zum Wort, sonst zerfiele „1.44" in „1" und „44";
- * ein fuehrender oder anhaengender Punkt wird dagegen abgestreift,
- * damit „pc hd." das Kennwort „hd" nicht verliert.
- */
-static bool hint_hat_wort(const char *hint, const char *wort) {
-    const size_t wl = strlen(wort);
-    const char *p = hint;
-
-    while (*p) {
-        while (*p && !hint_wortzeichen(*p)) p++;
-        const char *a = p;
-        while (*p && hint_wortzeichen(*p)) p++;
-        const char *e = p;
-        while (a < e && *a == '.') a++;
-        while (e > a && e[-1] == '.') e--;
-        if ((size_t)(e - a) == wl && uft_bytes_eq(a, wort, wl, NULL))
-            return true;
-    }
-    return false;
-}
+ * Zwei Kopien derselben Regel waeren „eine Groesse, zwei Rechnungen"
+ * (MF-1177) — und genau das steht seit MF-1235 als `P3-482` im
+ * Befundregister, dort fuer den JSON-Maskierer. Der Umzug ist
+ * verhaltensneutral; der Beweis dafuer ist
+ * `tests/test_scp_hinweis_trifft_ganze_woerter.c`, dessen 20 Zusagen
+ * unveraendert gruen bleiben muessen.
+ *
+ * Die Aufrufstellen unten rufen `uft_wort_treffer()` direkt. Ein
+ * Makro-Alias waere billiger zu schreiben gewesen und haette den
+ * Namen `hint_hat_wort` erhalten — aber dann stuende im Quelltext ein
+ * Name, den es nicht gibt, und die Suche nach dem Aufrufer einer
+ * geteilten Regel wuerde ihn nicht finden. */
 
 /**
  * @brief Get disk type from format hint
@@ -481,13 +471,13 @@ static bool hint_hat_wort(const char *hint, const char *wort) {
 uint8_t scp_disk_type_from_hint(const char *hint) {
     if (!hint) return SCP_TYPE_PC_DD;
 
-    if (hint_hat_wort(hint, "amiga") || hint_hat_wort(hint, "adf"))
+    if (uft_wort_treffer(hint, "amiga") || uft_wort_treffer(hint, "adf"))
         return SCP_TYPE_AMIGA;
-    if (hint_hat_wort(hint, "c64") || hint_hat_wort(hint, "d64"))
+    if (uft_wort_treffer(hint, "c64") || uft_wort_treffer(hint, "d64"))
         return SCP_TYPE_C64;
-    if (hint_hat_wort(hint, "atari") || hint_hat_wort(hint, "st"))
+    if (uft_wort_treffer(hint, "atari") || uft_wort_treffer(hint, "st"))
         return SCP_TYPE_ATARI_ST;
-    if (hint_hat_wort(hint, "hd") || hint_hat_wort(hint, "1.44"))
+    if (uft_wort_treffer(hint, "hd") || uft_wort_treffer(hint, "1.44"))
         return SCP_TYPE_PC_HD;
 
     return SCP_TYPE_PC_DD;

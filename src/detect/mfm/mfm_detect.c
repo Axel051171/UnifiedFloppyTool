@@ -5,6 +5,9 @@
  */
 
 #include "mfm_detect.h"
+/* MF-1237: `uft_wort_treffer()` fuer die OEM-Markenpruefung. Siehe die
+ * Begruendung in `mfm_detect_atari_st()`. */
+#include "uft/util/uft_match.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -586,12 +589,77 @@ bool mfm_detect_atari_st(const uint8_t *boot, uint16_t size) {
     bool has_x86_jump = (boot[0] == 0xEB || boot[0] == 0xE9);
     bool has_atari_checksum = (checksum == 0x1234);
 
-    /* OEM-String Analyse */
+    /* OEM-String Analyse
+     *
+     * MF-1237: hier stand
+     *
+     *   if (strstr(oem, "ATARI") || strstr(oem, "TOS") ||
+     *       strstr(oem, "atari") || strstr(oem, "GEM"))
+     *
+     * und das ist die `.st`-in-`fastest`-Falle an einer Stelle, die
+     * ENTSCHEIDET. Der Puffer ist sauber begrenzt (`char oem[9]`, acht
+     * Byte kopiert, Byte 8 bleibt 0) — es wird nichts ueberlesen. Der
+     * Fehler ist semantisch:
+     *
+     *     "TOSHIBA "  ->  "TOS" trifft
+     *     "PROTOS  "  ->  "TOS" trifft
+     *     "GEMINI  "  ->  "GEM" trifft
+     *
+     * Und die Folge steht zwanzig Zeilen weiter unten:
+     * `if (has_atari_oem && !has_x86_jump) return true;`. Ein
+     * PC-Datentraeger ohne x86-Sprungbyte — bei einer nicht
+     * bootfaehigen Diskette ist das Byte 0 beliebig — wird damit als
+     * Atari ST gemeldet. `mfm_detect.c:711` prueft Atari ST
+     * ausdruecklich VOR DOS („weil BPB kompatibel") und setzt bei
+     * einem Treffer Konfidenz 80.
+     *
+     * Seit MF-1237 muss die Marke als GANZES WORT im Feld stehen.
+     * `uft_wort_treffer()` liegt in `src/util/uft_match.c` — dieselbe
+     * Regel, die MF-1233 fuer `uft_scp_writer.c` gebraucht hat; sie ist
+     * mit diesem Commit dorthin gezogen, damit es EINE Kopie gibt
+     * (MF-1177).
+     *
+     * DER PREIS IST BENANNT UND NICHT WEGGEREDET: ein OEM-Feld, das die
+     * Marke mit anderen Buchstaben ZUSAMMENSCHREIBT — etwa
+     * "ATARITOS" —, trifft jetzt nicht mehr. Ob solche Felder
+     * vorkommen, ist NICHT gemessen; im Korpus liegt kein Beleg. Die
+     * Wahl faellt trotzdem so, und zwar aus einer Regel dieses Baums:
+     * ein falsches JA bei Konfidenz 80, das VOR DOS geprueft wird,
+     * verdraengt die richtige Antwort — ein falsches NEIN fuehrt in den
+     * FAT12-Zweig, also in die BPB-kompatible Lesart, und verliert
+     * nichts. MF-729: „die Erkennung war vorher nur zuversichtlicher,
+     * als sie durfte."
+     *
+     * Die uebrigen Fundorte dieser Datei sind DREI verschiedene Faelle,
+     * und sie bleiben absichtlich stehen — jeder aus einem eigenen
+     * Grund, nicht aus einem gemeinsamen:
+     *
+     *  (1) Die DOS-OEM-Marken weiter unten (`MSDOS`, `MSWIN`, `IBM`,
+     *      `DRDOS`, `FreeDOS`, je `conf += 5`). Dort waere eine
+     *      Wortgrenze FALSCH: "MSDOS5.0" ist ein Praefixstempel und
+     *      gilt — mit dem Punkt als Wortzeichen — als EIN Wort. Mit
+     *      Wortgrenze verlore es seine 5 Punkte. Die richtige Pruefung
+     *      ist dort ein Vergleich am FELDANFANG.
+     *
+     *  (2) `strstr(bpb.fs_type, "FAT12")`. Das ist ein DRITTER Fall und
+     *      nicht (1): das Feld IST der Typ, eine Wortgrenze waere hier
+     *      richtig und wuerde "XFAT12" abweisen. Es bleibt trotzdem
+     *      liegen, weil es nur `conf += 5` bewegt und die EINFRIER-REGEL
+     *      fuer die Erkennungsschicht einen Rotbeweis verlangt — und
+     *      der muesste die KONFIDENZ beobachten, nicht die
+     *      Ja/Nein-Antwort. Das ist eine andere Testgestalt als dieser
+     *      Commit hat, also eine eigene Aufgabe statt eine ungepruefte
+     *      Zeile.
+     *
+     *  (3) Die `oem_empty`-Regel zwei Absaetze weiter unten ist keine
+     *      Teilstring-Frage, sondern eine eigene, weitgefasste
+     *      Heuristik: ein leeres OEM-Feld gilt als Atari-typisch. Sie
+     *      ist unberuehrt. */
     bool has_atari_oem = false;
     char oem[9] = {0};
     memcpy(oem, boot + 3, 8);
-    if (strstr(oem, "ATARI") || strstr(oem, "TOS") ||
-        strstr(oem, "atari") || strstr(oem, "GEM"))
+    if (uft_wort_treffer(oem, "ATARI") || uft_wort_treffer(oem, "TOS") ||
+        uft_wort_treffer(oem, "atari") || uft_wort_treffer(oem, "GEM"))
         has_atari_oem = true;
 
     /* Leerer OEM-String (alle Nullen oder Spaces) ist auch Atari-typisch */

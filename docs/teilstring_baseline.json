@@ -14,7 +14,6 @@
     "0687f7fa7f9d6e37": 1,
     "073edcb9aa6e8d38": 1,
     "094080fa40bc8a4e": 2,
-    "09885fb205cb2c0d": 1,
     "0a0b7385d82bfcba": 1,
     "0a26d934afe59827": 1,
     "0c50cba0f0d3c72d": 2,
@@ -96,7 +95,6 @@
     "380ad4cfb8d6f10c": 1,
     "384a33758de5eb17": 2,
     "390c2c848fbbf5a5": 1,
-    "394dffa5d9d3d6fc": 1,
     "3aa9251776eb6beb": 1,
     "3cbf11d65aa4a5ee": 1,
     "3d082719882c8bc6": 1,
@@ -197,7 +195,6 @@
     "7e5034efe995b4ca": 1,
     "7ee310a3fd73bb2d": 1,
     "7f1148cf0098495a": 1,
-    "819f09855013156f": 1,
     "822367137dabe8d6": 1,
     "83d8723be8a953a2": 1,
     "83fe4e7aa8d81798": 1,
@@ -231,7 +228,6 @@
     "9a2aa6a43179d565": 1,
     "9a6265248c120a60": 7,
     "9bbcb586d2be51fc": 1,
-    "9c16b13a0986bf5d": 1,
     "9c357e3e7d15325f": 1,
     "9c4460fe70144d1a": 1,
     "9c7cbe62c9ea77b8": 1,
@@ -393,7 +389,7 @@
     "fe4ceb355ed1a4f8": 1,
     "ff52c40f44f253d5": 1
   },
-  "count": 474,
+  "count": 470,
   "note": "Altbestand, der nicht blockiert. NEUE Funde blockieren. Eintraege hier sind Schulden, keine Ausnahmen — wer einen behebt, entfernt ihn.",
   "version": 1
 }

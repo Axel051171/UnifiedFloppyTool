@@ -174,6 +174,37 @@ size_t uft_id_prefix_pairs(const char *const *table, size_t count,
 bool uft_bytes_eq(const void *a, const void *b, size_t len,
                   size_t *out_first_diff);
 
+/**
+ * Steht @p wort als GANZES WORT in @p text?
+ *
+ * MF-1237: hierher gezogen aus `src/formats/scp/uft_scp_writer.c`, wo
+ * es seit MF-1233 als dateilokales `hint_hat_wort()` lag. Der zweite
+ * Bedarf war gemessen und nicht vorhergesehen:
+ * `src/detect/mfm/mfm_detect.c:593` sucht `"TOS"` im OEM-Feld eines
+ * BPB, und das trifft in `TOSHIBA` — bei einer Entscheidung, die
+ * `mfm_detect.c:607` mit `return true` faellt. Eine zweite Kopie
+ * derselben Regel waere „eine Groesse, zwei Rechnungen" (MF-1177,
+ * fuenfmal in diesem Baum bezahlt), also steht sie jetzt an EINER
+ * Stelle — hier, wo die uebrigen Musterregeln wohnen.
+ *
+ * Wortzeichen sind `[0-9A-Za-z.]`. **Der Punkt gehoert zum Wort**,
+ * sonst zerfiele „1.44" in „1" und „44"; ein fuehrender oder
+ * anhaengender Punkt wird dagegen abgestreift, damit „pc hd." das
+ * Kennwort „hd" nicht verliert. Die Pruefung ist von Hand auf ASCII
+ * gestellt statt `isalnum()` zu rufen, das bei einem Byte >= 0x80 in
+ * `char` undefiniert ist — dieselbe Vorsicht wie `lc()` in
+ * `uft_match.c`.
+ *
+ * **Gross- und Kleinschreibung unterscheidet sie**, wie `strstr` es
+ * tat. Wer beide Schreibweisen will, fragt zweimal — das ist eine
+ * Entscheidung des Aufrufers und keine des Vergleichers.
+ *
+ * @param text  nullterminiert; NULL ergibt false
+ * @param wort  nullterminiert; NULL oder leer ergibt false
+ * @return true, wenn @p wort als ganzes Wort vorkommt
+ */
+bool uft_wort_treffer(const char *text, const char *wort);
+
 #ifdef __cplusplus
 }
 #endif

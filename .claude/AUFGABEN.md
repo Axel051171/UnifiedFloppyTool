@@ -2815,6 +2815,61 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     `-Wtype-limits`, Decke ~1,07 GB statt 1024), **`P3-484`** (der
     Selbsttest von Tor 67 fällt unter cp1252 — genau der Fall, für den
     seine Härtung geschrieben wurde). Hauptbefund: **`P3-485`**.
+- **Stand (2026-09-18, MF-1237 — die schärfste Fundstelle lag in der
+  ERKENNUNG, und ich hatte sie zwei Abträge lang nicht angesehen):**
+  · Nach MF-1235 blieben **32** `sicher`-Fundstellen. Zwei Dateien
+    darin hatte ich **nie gelesen** — `src/detect/mfm/mfm_detect.c` (5)
+    und `src/formats/snk/uft_neogeo.c` (5) —, und **beide liegen in
+    Erkennungspfaden**. Genau dort ist eine Teilstring-Falle die
+    FMT-2/3-Klasse: ein Format beansprucht eine Datei, die es nur
+    ENTHÄLT. Lehre für die Reihenfolge: nach Wirkung sortieren, nicht
+    nach Bequemlichkeit.
+  · **Der Befund:** `mfm_detect_atari_st()` suchte im OEM-Feld des
+    FAT-BPB nach `ATARI`, `TOS`, `atari`, `GEM` — und entschied
+    zwanzig Zeilen weiter mit `return true`. Der Puffer ist **sauber
+    begrenzt** (`char oem[9]`, terminiert), es wird nichts überlesen;
+    der Fehler ist semantisch. Gemessen am Produktionssymbol gegen die
+    HEAD-Fassung: `"TOSHIBA"`, `"PROTOS"`, `"GEMINI"` und `"ATARIX"`
+    gelten **alle vier** als Atari ST.
+  · **Und es wiegt schwer:** `mfm_detect.c:711` prüft Atari ST
+    ausdrücklich **vor** DOS („weil BPB kompatibel") und setzt bei
+    einem Treffer **Konfidenz 80**. Eine nicht bootfähige PC-Diskette
+    hat bei Byte 0 einen beliebigen Wert, also greift `!has_x86_jump`.
+  · **Rotbeweis** `tests/test_mfm_oem_trifft_ganze_woerter.c`:
+    **21 grün / 4 rot** vorher, **25 grün / 0 rot** nachher. Jeder Fall
+    trägt eine **Sperre** — die Kette ist `has_68k_jump` →
+    `has_atari_checksum` → OEM, also setzt jeder Fall Byte 0 auf `0x00`
+    und prüft, dass die Prüfsumme **nicht** 0x1234 ist. Ohne das könnte
+    eine Zusage grün sein, ohne die OEM-Zeile berührt zu haben
+    (Klasse MF-1014).
+  · **Der Fix hat eine Doppelhaltung AUFGELÖST, nicht geschaffen.** Die
+    Wortgrenzen-Regel lag seit MF-1233 dateilokal in
+    `uft_scp_writer.c`; eine zweite Kopie wäre „eine Größe, zwei
+    Rechnungen" (MF-1177) — und genau das hatte `P3-482` einen Commit
+    vorher benannt. Sie steht jetzt als **`uft_wort_treffer()`** in
+    `src/util/uft_match.c`. Verhaltensneutralität belegt:
+    `test_scp_hinweis_trifft_ganze_woerter` (20 Zusagen) und
+    `test_match` bleiben grün.
+  · Verdrahtung **vor** dem Bau gemessen (Lehre aus MF-1232):
+    `mfm_detect.c` in **63** Zielen, genau **2** ohne `uft_match.c`;
+    ein Wort in `uft_wire_match()` deckt beide und jedes künftige.
+  · Zahlen: Grundlinie **474 → 470**, nachgerechnet — 4 Fingerabdrücke
+    weg, 0 neu, 0 Vielfachheiten geändert. In `src/detect` bleibt
+    **eine** `sicher`-Fundstelle (`fs_type`/`FAT12`, nur `conf += 5`).
+  · **Der Preis ist benannt:** `"ATARITOS"` trifft nicht mehr; ob es
+    vorkommt, ist **nicht gemessen**. Die Wahl folgt MF-729 — ein
+    falsches JA bei Konfidenz 80 vor DOS verdrängt die richtige
+    Antwort, ein falsches NEIN fällt in die BPB-kompatible Lesart.
+  · **`uft_neogeo.c` ist NICHT in diesem Commit** und der Befund ist
+    größer als eine Teilstring-Falle: `upper[0] == 'P'` entscheidet
+    nach dem **ersten Buchstaben** (`PUZZLE.BIN` wäre ein P-ROM), der
+    Name wird bei **15 Zeichen still gekappt**, `toupper(name[i])` mit
+    blankem `char` ist für Bytes ≥ 0x80 **undefiniert**, und die
+    Vorgabe `NEO_ROM_P` **behauptet** einen Typ statt „unbekannt" zu
+    melden. Gemessen: **0 Produktionsaufrufer**, aber 5 Testzusagen
+    (`tests/test_neogeo.c:136-140`), die nur den Glücksfall decken.
+    Eigene Aufgabe.
+  · Hauptbefund: **`P3-486`**.
 - **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
   Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
   „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die
