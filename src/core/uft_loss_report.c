@@ -5,6 +5,8 @@
 
 #include "uft/core/uft_loss_report.h"
 
+#include "uft/util/uft_json.h"   /* MF-1241: die Maskiertafel, einmal */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,27 +34,38 @@ const char *uft_loss_category_string(uft_loss_category_t c) {
     }
 }
 
-/* Minimal JSON string-escape for ASCII + common control chars.
- * Writes escaped string (without surrounding quotes) to `out`. */
+/* Schreibt `s` als JSON-Zeichenkette MIT den umschliessenden
+ * Anfuehrungszeichen nach `out`; NULL wird zum Literal `null`.
+ *
+ * BERICHTIGT MF-1241. Hier stand: „Writes escaped string (without
+ * surrounding quotes) to `out`." Das war das Gegenteil des Codes — die
+ * Anfuehrungszeichen schreibt die Funktion selbst (erste und letzte
+ * Zeile des Rumpfs), und alle acht Aufrufstellen weiter unten
+ * verlassen sich darauf, denn keine setzt sie. Ein Kommentar, der
+ * seinen eigenen Code falsch angibt, ist die Klasse MF-930.
+ *
+ * DIE MASKIERTAFEL STAND BIS MF-1241 HIER und liegt seither in
+ * `src/util/uft_json.c`: `uft_json_escape_byte()` ist woertlich
+ * dieselbe Tafel, nur ein Byte statt eines Stroms. Der Grund der
+ * Verschiebung steht in `include/uft/util/uft_json.h` — sie war die
+ * EINZIGE Umsetzung im Baum und von `src/formats/xdf/` aus
+ * unerreichbar.
+ *
+ * Dieser Strom-Schreiber bleibt bestehen, statt auf
+ * `uft_json_escape()` umzustellen: er kennt die Laenge der
+ * Beschreibungen nicht, die er schreibt, und eine Puffergroesse zu
+ * erfinden waere die naechste stille Kappung (D5). Die Regel holt er
+ * sich, die Ausgabeform behaelt er. */
 static void write_json_string(FILE *out, const char *s) {
     if (!s) { fputs("null", out); return; }
     fputc('"', out);
+    char esc[UFT_JSON_ESC_MAX];
     for (const unsigned char *p = (const unsigned char *)s; *p; ++p) {
-        unsigned char c = *p;
-        switch (c) {
-            case '"':  fputs("\\\"", out); break;
-            case '\\': fputs("\\\\", out); break;
-            case '\b': fputs("\\b", out);  break;
-            case '\f': fputs("\\f", out);  break;
-            case '\n': fputs("\\n", out);  break;
-            case '\r': fputs("\\r", out);  break;
-            case '\t': fputs("\\t", out);  break;
-            default:
-                if (c < 0x20) {
-                    fprintf(out, "\\u%04x", c);
-                } else {
-                    fputc((int)c, out);
-                }
+        const char *e = uft_json_escape_byte(*p, esc);
+        if (e) {
+            fputs(e, out);
+        } else {
+            fputc((int)*p, out);
         }
     }
     fputc('"', out);

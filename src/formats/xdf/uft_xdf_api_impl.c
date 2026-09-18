@@ -37,6 +37,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include "uft/compat/uft_fnmatch.h"
+#include "uft/util/uft_json.h"   /* MF-1241: die Maskiertafel, einmal */
 
 /*===========================================================================
  * Batch Processing Implementation
@@ -948,6 +949,16 @@ static const char *const XDF_JSON_BEFEHLE[] = {
  * Hause — und sie wird GEMELDET statt angewandt (Dauerregel D5). */
 #define XDF_JSON_PFAD_MAX 255
 
+/* Platz fuer den maskierten Fehlertext des Kerns. Die Zahl ist
+ * GERECHNET, nicht gewaehlt: `XDF_ERROR_BUF_SIZE` ist 512
+ * (`uft_xdf_api_internal.h:28`), das laengste Ersatzstueck der Tafel
+ * ist `\u00xx` mit sechs Zeichen, dazu die zwei Anfuehrungszeichen und
+ * das Nullbyte — 512 * 6 + 3 = 3075. Damit kann der Maskierer im
+ * schlimmsten Fall nicht absagen; der Absage-Zweig unten bleibt
+ * trotzdem stehen, weil `XDF_ERROR_BUF_SIZE` sich aendern kann und
+ * eine Groesse, die man nachrechnen muss, nicht geraten wird. */
+#define XDF_JSON_FEHLER_MAX 3075
+
 char* xdf_api_process_json(xdf_api_t *api, const char *json_command) {
     if (!api || !json_command) return NULL;
 
@@ -1063,20 +1074,50 @@ char* xdf_api_process_json(xdf_api_t *api, const char *json_command) {
         path[laenge] = '\0';
 
         const int rc = xdf_api_open(api, path);
-        /* MF-1235: der Fehlertext des Kerns wird NICHT eingebettet.
-         * Er enthaelt den Pfad, und ein Windows-Pfad traegt `\` —
-         * damit waere das Erzeugnis kein gueltiges JSON. Gemessen hat
-         * dieser Baum GENAU EINEN JSON-Maskierer,
-         * `write_json_string()` in `src/core/uft_loss_report.c:37`, und
-         * der ist `static` und schreibt in einen `FILE*`, ist von hier
-         * also nicht erreichbar. Eine zweite Kopie waere „eine Groesse,
-         * zwei Rechnungen" (MF-1177) — deshalb steht hier der
-         * MASCHINENLESBARE Code, und der geteilte Maskierer ist als
-         * `P3-482` benannt statt hier halb gebaut. */
-        snprintf(result, 4096,
-                 "{\"success\": %s, \"error_code\": %d}",
-                 rc == 0 ? "true" : "false",
-                 xdf_api_get_error_code(api));
+
+        /* MF-1241 (`P3-482`): DER FEHLERTEXT IST ZURUECK, maskiert.
+         *
+         * Hier stand seit MF-1235: „der Fehlertext des Kerns wird
+         * NICHT eingebettet. Er enthaelt den Pfad, und ein
+         * Windows-Pfad traegt `\` — damit waere das Erzeugnis kein
+         * gueltiges JSON. Gemessen hat dieser Baum GENAU EINEN
+         * JSON-Maskierer, `write_json_string()` in
+         * `src/core/uft_loss_report.c:37`, und der ist `static` und
+         * schreibt in einen `FILE*`, ist von hier also nicht
+         * erreichbar." Die Messung war richtig, die Lage hat sich
+         * geaendert: seit MF-1241 liegt dieselbe Tafel in
+         * `src/util/uft_json.c` und ist von hier erreichbar. Es gibt
+         * weiterhin genau eine — `uft_loss_report.c` ruft sie
+         * ebenfalls (MF-1177).
+         *
+         * `uft_json_escape()` setzt die Anfuehrungszeichen SELBST;
+         * deshalb steht unten `%s` und nicht `\"%s\"`. Genau diese
+         * Zusage stand im Urheber im Kommentar FALSCH herum, und das
+         * ist bei MF-1241 mitberichtigt. */
+        char fehler[XDF_JSON_FEHLER_MAX];
+        size_t noetig = 0;
+        int geschrieben = -1;
+
+        if (uft_json_escape(xdf_api_get_error(api), fehler,
+                            sizeof fehler, &noetig)) {
+            geschrieben = snprintf(result, 4096,
+                     "{\"success\": %s, \"error_code\": %d,"
+                     " \"error\": %s}",
+                     rc == 0 ? "true" : "false",
+                     xdf_api_get_error_code(api), fehler);
+        }
+        if (geschrieben < 0 || geschrieben >= 4096) {
+            /* ABSAGE statt Kappung (D5). Ein gekappter Fehlertext
+             * waere ein JSON, das mitten in einer Zeichenkette endet —
+             * schlimmer als kein Text, weil es den Leser des Formats
+             * verwirrt statt ihn abzuweisen. Der Zweig NENNT die Zahl,
+             * damit ein Aufrufer sieht, was ihm fehlt. */
+            snprintf(result, 4096,
+                     "{\"success\": %s, \"error_code\": %d,"
+                     " \"error_omitted\": true, \"error_bytes\": %zu}",
+                     rc == 0 ? "true" : "false",
+                     xdf_api_get_error_code(api), noetig);
+        }
         break;
     }
     case 1: {   /* analyze */

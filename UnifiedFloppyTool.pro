@@ -1250,13 +1250,15 @@ SOURCES += \
     src/core/uft_ir_format.c \
     src/core/uft_interleave.c \
     src/core/uft_write_precomp.c \
-    src/util/uft_match.c
+    src/util/uft_match.c \
+    src/util/uft_json.c
 
 # Note: uft_hal.c and uft_hal_v3.c removed to avoid multiple definition errors
 # uft_hal_unified.c provides the complete unified implementation
 
 HEADERS += \
     include/uft/util/uft_match.h \
+    include/uft/util/uft_json.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \

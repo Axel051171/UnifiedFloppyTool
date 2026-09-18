@@ -611,9 +611,25 @@ char* xdf_api_repairs_json(xdf_api_t *api);
  * von sechs Zweigen nicht initialisierten Heap zurueck.
  *
  * Die Rueckgabe gehoert dem Aufrufer; sie wird mit
- * `xdf_api_free_json()` freigegeben. Der Fehlertext des Kerns wird
- * NICHT eingebettet — er enthaelt den Pfad, und ein Windows-Pfad
- * traegt `\`; stattdessen steht `"error_code"` darin (`P3-482`).
+ * `xdf_api_free_json()` freigegeben.
+ *
+ * BERICHTIGT MF-1241 (`P3-482` erledigt). Hier stand: „Der Fehlertext
+ * des Kerns wird NICHT eingebettet — er enthaelt den Pfad, und ein
+ * Windows-Pfad traegt `\`; stattdessen steht `"error_code"` darin
+ * (`P3-482`)." Das war richtig, solange der Baum keinen erreichbaren
+ * JSON-Maskierer hatte. Seit MF-1241 liegt die Tafel in
+ * `include/uft/util/uft_json.h` / `src/util/uft_json.c` — dieselbe,
+ * die `src/core/uft_loss_report.c` benutzt, es gibt weiterhin genau
+ * eine (MF-1177).
+ *
+ * Der `open`-Zweig traegt deshalb wieder ein Feld `"error"`, und der
+ * Pfad darin ist maskiert. Passt der maskierte Text nicht in den
+ * Puffer, wird ABGESAGT statt gekappt: dann stehen `"error_omitted":
+ * true` und `"error_bytes": <n>` darin (Dauerregel D5). `"error_code"`
+ * bleibt in jedem Fall.
+ *
+ * Festgenagelt von `tests/test_json_maskierung_eine_tafel.c`; der
+ * Vorzustand fiel dort mit 2 von 45 Zusagen.
  */
 char* xdf_api_process_json(xdf_api_t *api, const char *json_command);
 

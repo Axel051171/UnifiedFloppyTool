@@ -228,6 +228,37 @@ function(uft_wire_match tgt)
     endif()
 endfunction()
 
+# MF-1241 (Punkt `P3-482`): dieselbe Bauform, dritte Anwendung — und
+# der Grund, sie hier zu wiederholen statt `uft_wire_match` zu
+# erweitern, ist D3: zwei verschiedene Abhaengigkeiten, zwei
+# verschiedene Bedingungen. Ein gemeinsamer Ausdruck haette jedem Ziel
+# mit `mfm_detect` auch `uft_json.c` angehaengt.
+#
+# `src/util/uft_json.c` traegt seit MF-1241 die JSON-Maskiertafel, die
+# vorher `static` in `src/core/uft_loss_report.c:37` lag. Zwei Dateien
+# rufen sie: der Verlustbericht (Strom-Form) und
+# `src/formats/xdf/uft_xdf_api_impl.c` (Puffer-Form).
+#
+# SPRENGRADIUS VOR DEM BAU gemessen, aus `build.ninja` und
+# ungeschraenkt (nicht auf `tests/` beschraenkt — das hat MF-1175
+# dreimal falsch gezaehlt):
+#   src/core/uft_loss_report.c           64 Ziele
+#   src/formats/xdf/uft_xdf_api_impl.c   62 Ziele
+#   Vereinigung                          66 Ziele
+# Alle 66 brauchen die neue Uebersetzungseinheit; `uft_match.c` fehlt
+# heute genau **5** davon (`test_destructive_op_consent`,
+# `test_loss_report`, `test_preflight`, `test_xdf_api`,
+# `test_xdf_json_verteiler`) — womit belegt ist, dass die Bedingung von
+# `uft_wire_match` diese Menge NICHT deckt und eine eigene noetig ist.
+function(uft_wire_json tgt)
+    get_target_property(_uft_srcs ${tgt} SOURCES)
+    if(_uft_srcs MATCHES "uft_loss_report|uft_xdf_api_impl"
+       AND NOT _uft_srcs MATCHES "uft_json")
+        target_sources(${tgt} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c)
+    endif()
+endfunction()
+
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     
@@ -4474,13 +4505,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_xdf_api"
-           OR ${test_name} STREQUAL "test_xdf_json_verteiler")
+           OR ${test_name} STREQUAL "test_xdf_json_verteiler"
+           OR ${test_name} STREQUAL "test_json_maskierung_eine_tafel")
         # Include XDF API source directly.
         #
         # MF-1235: `test_xdf_json_verteiler` kommt mit denselben vier
         # Quellen aus. Die vierte ist gemessen noetig und nicht geraten:
         # ohne `src/compat/uft_fnmatch.c` bleibt `uft_fnmatch_impl`
         # beim Binden undefiniert (`uft_xdf_api_impl.c:102`).
+        #
+        # MF-1241: `test_json_maskierung_eine_tafel` ebenso — es prueft
+        # den XDF-Verteiler gegen die geteilte Maskiertafel.
+        # `src/util/uft_json.c` steht hier NICHT, sondern kommt aus
+        # `uft_wire_json()` weiter oben; dort liegt die Regel samt
+        # gemessenem Sprengradius (D3).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c
             ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_core.c
@@ -5367,6 +5405,7 @@ foreach(test_source ${TEST_SOURCES})
     # Funktionsdefinition oben, samt gemessenen Zahlen).
     uft_wire_traegerherkunft(${test_name})
     uft_wire_match(${test_name})
+    uft_wire_json(${test_name})
 
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -6024,6 +6063,7 @@ if(TARGET Qt6::Test)
         # Funktion und kein Block (Regel oben, D3).
         uft_wire_traegerherkunft(${qt_test_name})
         uft_wire_match(${qt_test_name})
+        uft_wire_json(${qt_test_name})
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
         # MF-220 / MF-221: the HardwareTab-driving Qt tests construct

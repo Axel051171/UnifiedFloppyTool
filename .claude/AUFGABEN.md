@@ -2810,7 +2810,8 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     `"grid"` nicht; sein Nutzungsbeispiel rief `xdf_api_export()`, das
     im ganzen Baum **nur in diesem Beispiel** vorkommt.
   · Drei Nebenbefunde benannt statt mitgefixt: **`P3-482`** (der Baum
-    hat genau einen JSON-Maskierer, `static` und `FILE*`-basiert),
+    hat genau einen JSON-Maskierer, `static` und `FILE*`-basiert)
+    — ✔ **ERLEDIGT MF-1241**, siehe den eigenen Stand unten —,
     **`P3-483`** (zwei Schranken aus MF-554 können nie zutreffen, vier
     `-Wtype-limits`, Decke ~1,07 GB statt 1024), **`P3-484`** (der
     Selbsttest von Tor 67 fällt unter cp1252 — genau der Fall, für den
@@ -2967,6 +2968,54 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · **1 — Fremdcode**: `src/samdisk/SpectrumPlus3.cpp`, und gemessen
     **nicht** in `UnifiedFloppyTool.pro` — es wird nicht ins Produkt
     gebaut.
+- **Stand (2026-09-18, MF-1241 — der Nebenbefund `P3-482` ist
+  abgetragen, und damit ist eine Auskunft ZURÜCK, die MF-1235 opfern
+  musste):**
+  · MF-1235 hatte aus `xdf_api_process_json()` den Fehlertext des Kerns
+    **entfernt**, weil er den Pfad trägt und ein unmaskiertes `}` oder
+    `\` das JSON zerbricht — gemessen war der Vorzustand
+    `{"success": false, "error": "Cannot open file: }"}`. Die Notlösung
+    war `"error_code"`: eine **stärkere** Zusage, aber weniger Auskunft.
+  · Der Grund für die Notlösung war gemessen: der Baum hatte **genau
+    einen** JSON-Maskierer, `write_json_string()` in
+    `src/core/uft_loss_report.c:37`, `static` und auf einen `FILE*`
+    schreibend. **0** exportierte Maskierfunktionen im ganzen Baum.
+  · Seit MF-1241 liegt die Tafel in `src/util/uft_json.c` mit
+    `include/uft/util/uft_json.h` — **verschoben, nicht neu
+    geschrieben**, und `uft_loss_report.c` ruft sie. Es bleibt bei
+    EINER Tafel (`CLAUDE.md` §MF-1177).
+  · **Abweichung von der eigenen Skizze, benannt statt still:**
+    `P3-482` sagte `src/core/`; gewählt ist `src/util/`, wo seit
+    MF-1232 `uft_match.c` als Präzedenzfall liegt. Die Skizze war eine
+    Absicht, kein Messergebnis — die Begründung steht in `P3-482`.
+  · **Zwei Funktionen, eine Regel:** `uft_json_escape_byte()` trägt die
+    Tafel, `uft_json_escape()` ist die Puffer-Form für Aufrufer mit
+    bekannter Größe. Der Verlustbericht kennt seine Längen nicht und
+    behält deshalb die Strom-Form — „erst puffern" bräuchte eine Größe,
+    die niemand kennt, und wäre die nächste stille Kappung (D5).
+  · **Rotbeweis** `tests/test_json_maskierung_eine_tafel.c`: vorher
+    **43 grün / 2 rot**, nachher **45 grün / 0 rot**. Die zwei roten
+    sind das Feld `"error"` und sein maskierter `\` — bei **vier
+    grünen Sperren**, die belegen, dass der Kerntext den Pfad mit rohem
+    `\` wirklich trägt. Ohne diese Sperren sagte „`error` ist da"
+    nichts (Klasse MF-1014).
+  · **Der Anker gegen den Leerlauf liegt in einem FREMDEN Test:**
+    `test_loss_report::json_escape_special_chars` bleibt grün — und nur
+    das belegt, dass die Verschiebung die `.loss.json` um kein Byte
+    geändert hat.
+  · **Ein zweiter Befund fiel dabei an, und er ist die teuerste Klasse
+    dieses Baums:** der Kopfkommentar von `write_json_string()` sagte
+    „Writes escaped string (**without** surrounding quotes)" — das
+    Gegenteil seines Codes, der die Anführungszeichen selbst setzt, und
+    alle acht Aufrufstellen verlassen sich darauf. Berichtigt, alter
+    Wortlaut zitiert. Klasse MF-930.
+  · **Sprengradius VOR dem Bau**, aus `build.ninja` und ungeschränkt:
+    64 Ziele für `uft_loss_report.c`, 62 für `uft_xdf_api_impl.c`,
+    Vereinigung **66** — davon **eines** außerhalb `tests/`
+    (`cli/uft-decode`). Deshalb beide Verdrahtungswege:
+    `UFT_FORMAT_LAYER_DEPS` **und** ein neues `uft_wire_json()`.
+  · Warnungsfrei unter `-Wall -Wextra -Wpedantic`; Tor 66 **464, 0
+    NEU**, Tor 67 **20, 0 NEU** — MF-1241 bringt keine neue Falle mit.
 - **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
   Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
   „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die

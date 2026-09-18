@@ -88,6 +88,20 @@ set(UFT_FORMAT_LAYER_DEPS
             # 61 Ziele uebersetzen `uft_genesis.c`, 61 bekommen
             # `uft_match.c`, Fehlbetrag 0.
             ${CMAKE_SOURCE_DIR}/src/util/uft_match.c
+            # MF-1241 (`P3-482`): die JSON-Maskiertafel, die vorher
+            # `static` in `src/core/uft_loss_report.c:37` lag. Gerufen
+            # von dort (Strom-Form) und von
+            # `src/formats/xdf/uft_xdf_api_impl.c` (Puffer-Form).
+            #
+            # Der Eintrag steht HIER und nicht nur in
+            # `uft_wire_json()`, und der Grund ist gemessen: von den
+            # **66** Zielen, die `uft_json.c` brauchen, liegt genau
+            # **eines** nicht unter `tests/` — `cli/uft-decode` —, und
+            # die Verdrahtungsfunktion laeuft nur in der Test-Schleife.
+            # Umgekehrt deckt diese Liste die zwoelf lokalen
+            # `*_FORMAT_SOURCES`-GLOBs nicht (`P3-426`); es braucht
+            # beides, wie bei MF-1189 und MF-1232.
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
