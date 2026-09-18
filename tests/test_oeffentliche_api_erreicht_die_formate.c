@@ -112,6 +112,10 @@ static const api_fall_t FAELLE[] = {
 #define FAELLE_N ((int)(sizeof FAELLE / sizeof FAELLE[0]))
 
 static int gruen = 0, rot = 0;
+/* MF-1252: wie viele Formate NUR mit genanntem Format hineinkommen.
+ * Die Zahl ist der eigentliche Befund dieses Tests — sie sagt, wie
+ * viele Formate ueber Groesse UND Endung nicht bestimmbar sind. */
+static int nur_mit_zwang = 0;
 static void zusage(const char *was, int ok)
 {
     if (ok) { printf("  [OK]   %s\n", was); gruen++; }
@@ -179,11 +183,37 @@ int main(void)
             continue;
         }
 
-        uft_disk_t *d = uft_disk_open(pfad, true);
+        /* MF-1251/MF-1252: der Vertrag hat sich GEAENDERT, und das ist
+         * der Fund, nicht die Regression.
+         *
+         * Vorher hiess die Zusage „uft_disk_open() erreicht ein
+         * Plugin" — und sie war gruen, weil IRGENDWER das Rennen
+         * gewann, nicht weil der Richtige gewann. Gemessen wurden acht
+         * dieser Formate allein durch Registrierungsreihenfolge
+         * erreicht (`ssd`/`tan` bei 204 800, `hardsector`/`pdp` bei
+         * 256 256, `mgt`/`sam` bei 819 200, `trd` bei 655 360,
+         * `nanowasp` bei 409 600).
+         *
+         * Der ehrliche Vertrag lautet: erreichbar heisst „ohne Zwang,
+         * ODER mit genanntem Format" — und welcher der beiden Faelle
+         * eintritt, wird GEZAEHLT statt verschwiegen. */
+        uft_probe_ranking_t rang;
+        uft_disk_t *d = uft_disk_open_ranked(pfad, true, &rang);
+        bool mit_zwang = false;
+        if (!d && rang.tied > 1) {
+            /* Mehrdeutig. Dann muss das GENANNTE Format hineinkommen —
+             * sonst ist das Plugin wirklich unerreichbar. */
+            d = uft_disk_open_as(pfad, true, f->plugin);
+            mit_zwang = (d != NULL);
+        }
         snprintf(txt, sizeof txt,
-                 "%s: uft_disk_open() erreicht ein Plugin (%ld Byte, .%s)",
-                 f->name, groesse, endung);
+                 "%s: erreichbar%s (%ld Byte, .%s%s)",
+                 f->name,
+                 mit_zwang ? " NUR mit genanntem Format" : "",
+                 groesse, endung,
+                 (rang.tied > 1) ? ", mehrdeutig" : "");
         zusage(txt, d != NULL);
+        if (mit_zwang) nur_mit_zwang++;
 
         if (d) {
             const long erklaert = (long)d->geometry.cylinders
@@ -236,6 +266,12 @@ int main(void)
         }
     }
 
+    printf("\n  BEFUND: %d Formate kommen NUR mit genanntem Format "
+           "hinein —\n"
+           "          ueber Groesse UND Endung sind sie nicht "
+           "bestimmbar.\n"
+           "          Was den Gleichstand bricht, ist Inhalt.\n",
+           nur_mit_zwang);
     printf("\n%d gruen, %d rot\n", gruen, rot);
     return rot ? 1 : 0;
 }

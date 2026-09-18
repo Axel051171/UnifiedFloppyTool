@@ -485,15 +485,94 @@ size_t uft_probe_file_ranked(const char *path, uft_probe_ranking_t *result) {
     return n;
 }
 
+/* MF-1251: bei Gleichstand gewinnt KEINER.
+ *
+ * `docs/SONDEN_DOKTRIN.md` (Eigentuemer-Entscheidung MF-1153) sagt:
+ * „bei Gleichstand gewinnt der ENGERE Anspruch; bleibt es gleich,
+ * gewinnt KEINER („mehrdeutig" mit beiden Namen)". Der Code gab
+ * trotzdem einen Sieger zurueck — den zuerst registrierten.
+ *
+ * GEMESSEN ueber die 20 Groessen der DSK-Geometrietafel: 10 von 20
+ * werden durch Registrierungsreihenfolge entschieden, und die
+ * Gleichstaende laufen quer durch die Systeme — 204 800 Byte gehen an
+ * `IMG`, waehrend `DSK_ACE`, `DSK_EIN` und `DSK_LYN` gleich
+ * berechtigt sind; 92 160 an `XFD`, waehrend TRS-80 `JVC` daneben
+ * steht. Wer die falsche Anordnung bekommt, liest JEDEN Sektor am
+ * falschen Versatz (Klasse MF-1026, MF-1039).
+ *
+ * Wer trotz Mehrdeutigkeit oeffnen will, nennt das Format —
+ * `uft_disk_open_as()`. Wer die Kandidaten braucht, fragt
+ * `uft_probe_buffer_ranked()`; die Rangliste bleibt unveraendert und
+ * fuehrt sie in `tied_with[]`.
+ */
 const uft_format_plugin_t* uft_probe_buffer_format(const uint8_t *data,
                                                      size_t size,
                                                      size_t file_size) {
     uft_probe_ranking_t r;
     uft_probe_buffer_ranked(data, size, file_size, &r);
-    return r.winner;
+    return (r.tied > 1) ? NULL : r.winner;
 }
 
-const uft_format_plugin_t* uft_probe_file_format(const char *path) {
+/* MF-1252: „bei Gleichstand gewinnt der ENGERE Anspruch" — Doktrin,
+ * Regel 2. Der engere Anspruch ist hier die ENDUNG des Pfades.
+ *
+ * Eigentuemer-Entscheidung vom 2026-09-19: „die Endung als engeren
+ * Anspruch nehmen". Sie ist noetig, weil die blosse Absage (MF-1251)
+ * gemessen 18 von 129 Korpus-Abbildern unerreichbar machte —
+ * darunter eine von VICE erzeugte `.d81`, die sich 819 200 Byte mit
+ * `SAD` und `MGT` teilt.
+ *
+ * Was hier NICHT passiert: die Endung wird nie zum Beleg. Sie
+ * VERENGT nur eine Menge, die die Sonden bereits gleichrangig
+ * beansprucht haben — und bleibt danach mehr als einer uebrig, gilt
+ * weiter „keiner gewinnt". Eine Endung allein oeffnet nichts.
+ *
+ * @return das EINE Plugin, das die Endung beansprucht und zugleich
+ *         auf der Spitzenkonfidenz liegt; NULL, wenn es keines oder
+ *         mehrere sind.
+ */
+static const uft_format_plugin_t *engerer_anspruch_durch_endung(
+        const char *path, const uint8_t *data, size_t size,
+        size_t file_size, int spitzenkonfidenz) {
+    if (!path || !data) return NULL;
+
+    const char *punkt = strrchr(path, '.');
+    if (!punkt) return NULL;
+    /* Ein Punkt im Verzeichnisnamen ist keine Endung. */
+    const char *s1 = strrchr(path, '/');
+    const char *s2 = strrchr(path, '\\');
+    const char *letzter = (s1 && s2) ? ((s1 > s2) ? s1 : s2)
+                                     : (s1 ? s1 : s2);
+    if (letzter && punkt < letzter) return NULL;
+    if (!punkt[1]) return NULL;
+
+    const uft_format_plugin_t *treffer = NULL;
+    size_t n = 0;
+    for (size_t i = 0; i < g_format_plugin_count; i++) {
+        const uft_format_plugin_t *p = g_format_plugins[i];
+        if (!p || !p->probe) continue;
+        if (!plugin_claims_extension(p, punkt + 1)) continue;
+        int conf = 0;
+        if (!p->probe(data, size, file_size, &conf)) continue;
+        if (conf != spitzenkonfidenz) continue;
+        treffer = p;
+        if (++n > 1) return NULL;   /* die Endung verengt nicht genug */
+    }
+    return (n == 1) ? treffer : NULL;
+}
+
+/**
+ * @brief Die Entscheidung UND die Rangfolge, aus EINEM Dateilauf.
+ *
+ * Die Leiter: hoechste Konfidenz -> bei Gleichstand die Endung ->
+ * sonst NULL. `result` traegt die Messung unveraendert, also auch
+ * dann `tied > 1`, wenn die Endung entschieden hat. Ein Aufrufer, der
+ * ein Plugin UND `tied > 1` sieht, weiss damit: hier hat die Endung
+ * verengt, nicht die Evidenz.
+ */
+const uft_format_plugin_t* uft_probe_file_entschieden(
+        const char *path, uft_probe_ranking_t *result) {
+    if (result) memset(result, 0, sizeof(*result));
     if (!path) return NULL;
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
@@ -507,7 +586,6 @@ const uft_format_plugin_t* uft_probe_file_format(const char *path) {
                             ? (size_t)fs : UFT_PROBE_BUFFER_SIZE;
     uint8_t *buf = malloc(probe_size);
     if (!buf) { fclose(f); return NULL; }
-
     if (fread(buf, 1, probe_size, f) != probe_size) {
         free(buf); fclose(f); return NULL;
     }
@@ -515,9 +593,25 @@ const uft_format_plugin_t* uft_probe_file_format(const char *path) {
 
     uft_probe_ranking_t r;
     uft_probe_buffer_ranked(buf, probe_size, (size_t)fs, &r);
+    if (result) *result = r;
+
+    const uft_format_plugin_t *gewaehlt = r.winner;
+    if (r.tied > 1)
+        gewaehlt = engerer_anspruch_durch_endung(path, buf, probe_size,
+                                                 (size_t)fs, r.confidence);
     free(buf);
-    return r.winner;
+    return gewaehlt;
 }
+
+const uft_format_plugin_t* uft_probe_file_format(const char *path) {
+    return uft_probe_file_entschieden(path, NULL);
+}
+
+/* Der frühere Rumpf von `uft_probe_file_format()` stand hier. Er ist
+ * nicht entfernt worden, sondern AUFGEGANGEN in
+ * `uft_probe_file_entschieden()` — dieselbe Datei, dieselbe Arbeit,
+ * plus die Endungsverengung. Eine zweite Fassung daneben waere genau
+ * die Doppelhaltung, gegen die K4 steht. */
 
 const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) {
     if (!ext || !*ext) return NULL;

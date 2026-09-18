@@ -33,6 +33,33 @@ extern "C" {
  */
 uft_disk_t* uft_disk_open(const char* path, bool read_only);
 
+/**
+ * @brief Oeffnen mit GENANNTEM Format — die Sonde wird nicht gefragt.
+ *
+ * Seit MF-1251 sagt `uft_disk_open()` bei Mehrdeutigkeit AB, statt
+ * einen Sieger durch Registrierungsreihenfolge zu bestimmen. Das ist
+ * die Doktrin (`docs/SONDEN_DOKTRIN.md`: „bleibt es gleich, gewinnt
+ * KEINER"), und dies ist der Ausweg: wer das Format kennt, nennt es.
+ *
+ * Gemessen betrifft das 10 von 20 Groessen der DSK-Geometrietafel und
+ * 18 von 129 Korpus-Abbildern — darunter eine von VICE erzeugte
+ * `.d81`, die sich 819 200 Byte mit `SAD` und `MGT` teilt.
+ */
+uft_disk_t* uft_disk_open_as(const char* path, bool read_only,
+                             const struct uft_format_plugin* plugin);
+
+/**
+ * @brief Oeffnen MIT Rangliste — bei Mehrdeutigkeit NULL und die
+ *        Kandidaten in @p ranking_out.
+ *
+ * Fuer jeden, der einem Menschen eine Auswahl zeigen muss. `tied`
+ * sagt, wie viele gleichauf liegen; `tied_with[]` nennt bis zu vier
+ * davon. Die Warnung darf nicht in einem Protokoll stehen, das
+ * niemand liest — sie IST die Auswahl.
+ */
+uft_disk_t* uft_disk_open_ranked(const char* path, bool read_only,
+                                 struct uft_probe_ranking* ranking_out);
+
 
 /* uft_disk_create(path, format, geometry) — REMOVED (MF-294): this
  * 3-arg prototype never had a matching implementation. The only

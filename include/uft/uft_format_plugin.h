@@ -1288,6 +1288,26 @@ size_t uft_probe_buffer_ranked(const uint8_t* data, size_t size,
 size_t uft_probe_file_ranked(const char* path, uft_probe_ranking_t* result);
 
 /**
+ * @brief Die Entscheidung UND die Rangfolge, aus EINEM Dateilauf
+ *        (MF-1252)
+ *
+ * Die Leiter der Doktrin, an einer Stelle: hoechste Konfidenz → bei
+ * Gleichstand die **Endung** des Pfades („der engere Anspruch") →
+ * sonst **NULL** („bleibt es gleich, gewinnt keiner").
+ *
+ * Die Endung wird dabei nie zum Beleg. Sie VERENGT nur eine Menge,
+ * die die Sonden bereits gleichrangig beansprucht haben; bleibt danach
+ * mehr als einer uebrig, gilt weiter „keiner".
+ *
+ * @p result traegt die MESSUNG unveraendert — also auch dann
+ * `tied > 1`, wenn die Endung entschieden hat. Wer ein Plugin UND
+ * `tied > 1` sieht, weiss damit: hier hat die Endung verengt, nicht
+ * die Evidenz.
+ */
+const uft_format_plugin_t* uft_probe_file_entschieden(
+        const char* path, uft_probe_ranking_t* result);
+
+/**
  * @brief Ziel-Plugin bestimmen, ohne zu raten (MF-445)
  *
  * Ladder: unique format id → extension of @p path_hint among the plugins

@@ -114,12 +114,12 @@ uft_disk_t* uft_disk_create(void) {
     return disk;
 }
 
-uft_disk_t* uft_disk_open(const char *path, bool read_only) {
-    if (!path) return NULL;
-
-    /* 1. Probe to find the right plugin */
-    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
-    if (!plugin || !plugin->open) return NULL;
+/* MF-1251: der gemeinsame Rumpf. `plugin` ist bereits entschieden —
+ * hier wird nicht mehr sondiert, damit es genau EINEN Weg vom Plugin
+ * zum offenen Handle gibt. */
+static uft_disk_t* disk_oeffnen_mit(const char *path, bool read_only,
+                                    const uft_format_plugin_t *plugin) {
+    if (!path || !plugin || !plugin->open) return NULL;
 
     /* 2. Allocate disk handle */
     uft_disk_t *disk = calloc(1, sizeof(uft_disk_t));
@@ -142,6 +142,48 @@ uft_disk_t* uft_disk_open(const char *path, bool read_only) {
 
     disk->is_open = true;
     return disk;
+}
+
+/**
+ * @brief Oeffnen mit GENANNTEM Format — die Sonde wird nicht gefragt.
+ *
+ * Der Ausweg aus einer Mehrdeutigkeit (MF-1251). Gemessen sind 10 der
+ * 20 DSK-Groessen und 18 von 129 Korpus-Abbildern nicht eindeutig; wer
+ * eines davon oeffnen will, nennt das Format, statt dass das Werkzeug
+ * raet.
+ */
+uft_disk_t* uft_disk_open_as(const char *path, bool read_only,
+                             const uft_format_plugin_t *plugin) {
+    return disk_oeffnen_mit(path, read_only, plugin);
+}
+
+/**
+ * @brief Oeffnen MIT Rangliste — bei Mehrdeutigkeit NULL und die
+ *        Kandidaten.
+ *
+ * Fuer jeden, der einem Menschen eine Auswahl zeigen muss: schlaegt
+ * das Oeffnen wegen Gleichstand fehl, traegt @p ranking_out die
+ * Kandidaten in `tied_with[]` und `tied` sagt, wie viele es insgesamt
+ * sind (die Liste fasst vier).
+ *
+ * Die Warnung darf nicht in einem Protokoll stehen, das niemand
+ * liest — sie IST die Auswahl.
+ */
+uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
+                                 uft_probe_ranking_t *ranking_out) {
+    if (!path) return NULL;
+    /* EINE Entscheidungsstelle: hoechste Konfidenz -> bei Gleichstand
+     * die Endung -> sonst NULL. `ranking_out` traegt die Messung
+     * unveraendert, also auch dann `tied > 1`, wenn die Endung
+     * entschieden hat (MF-1252). */
+    const uft_format_plugin_t *plugin =
+        uft_probe_file_entschieden(path, ranking_out);
+    if (!plugin) return NULL;
+    return disk_oeffnen_mit(path, read_only, plugin);
+}
+
+uft_disk_t* uft_disk_open(const char *path, bool read_only) {
+    return uft_disk_open_ranked(path, read_only, NULL);
 }
 
 /* Forward decl — uft_metadata.c */

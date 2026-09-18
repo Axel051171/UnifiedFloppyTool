@@ -3757,6 +3757,92 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
 
+### A-031 · Vier Dinge: Sondendoktrin, eine Größenrechnung, Bauabbruch, Körnung
+- **Status:** **in Arbeit** (Punkt 1 erledigt) · **Aufgenommen:** 2026-09-19
+- **Wortlaut:** „Vier Dinge, in dieser Reihenfolge — und das vierte
+  macht aus zwei offenen Aufgaben eine. **1.** Die Sonde muss ihrer
+  eigenen Doktrin gehorchen … bei Gleichstand gibt die Sonde keinen
+  Sieger zurück, sondern die Kandidatenliste, und der Öffnungspfad
+  verlangt dann `force_format` … Die Warnung darf nicht in einem
+  Protokoll stehen, das niemand liest. Sie ist die Auswahl. **2.** Eine
+  Zahl, eine Stelle … Welche der beiden Zahlen stimmt, ist S5 … Also
+  darf keine der beiden gewinnen … Raten war der Fehler; ihn zu
+  beheben heißt nicht, richtig zu raten. **3.** `pad[1024]` wird ein
+  Bauabbruch, kein Zufall … wobei `UFT_GEOM_TABLE_MAX_SECTOR` aus der
+  Tafel erzeugt wird, nicht daneben gepflegt. **4.** Die Körnung
+  entscheidet, was „Stufe" überhaupt bedeutet … Was nicht passieren
+  darf: den 38 eine Stufe geben, weil die Spalte leer aussieht. Die
+  leere Spalte war ehrlicher als jede Zahl, die dort stünde."
+  · Nachtrag desselben Tages: „die Endung als engeren Anspruch nehmen,
+  dann weiter mit 2 und 3"
+- **Kennzahl:** keine der vier unmittelbar; Punkt 4 berührt
+  **ungeprüfte Formate (T3)** und wird sie voraussichtlich **erhöhen**,
+  weil 49 Plugins heute gar nicht gemessen sind
+- **Kanal:** entfällt (eigener Baum)
+- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
+  Rotbeweis zuerst. Eingehalten: der Rotbeweis stand vor der Umsetzung
+  und fiel 7/9
+- **OPEN_ITEMS:** `P3-503`…`P3-505` (neu, siehe unten)
+- **Fertig heißt:** (1) die Sonde gibt bei Gleichstand keinen Sieger
+  und der Öffnungspfad hat einen benannten Ausweg; (2) beide Pfade
+  rufen EINE Größenfunktion, und `DSK_RC`/`DSK_HP` öffnen nur mit
+  Zwang; (3) der Bau bricht, wenn eine Geometriezeile den Puffer
+  übersteigt, und die Konstante ist erzeugt; (4) die Stufentafel führt
+  Parser, eindeutige Zeilen und Gleichstände getrennt
+- **Stand Punkt 1 — ERLEDIGT, und die Messung hat drei eigene
+  Fehlannahmen umgeworfen:**
+  · **Rotbeweis zuerst**, `tests/test_sonde_sagt_ab_bei_gleichstand.c`:
+    vor der Änderung **7/9**, danach **12/12**.
+  · **Fehlannahme 1:** ich wählte 327 680 Byte, weil die
+    Geometrietafel dort neun Zeilen führt. Gemessen gewinnt dort `TRD`
+    mit 45 gegen die DSK-Zeilen mit 40 — **kein** Gleichstand. Die
+    Tafel sagt, was mehrdeutig IST; die Registry sagt, was daraus
+    FOLGT.
+  · **Fehlannahme 2:** meine Gegenprobe suchte „nur EIN Beansprucher".
+    Das gibt es in dieser Registry nicht — selbst `Micropolis` mit 70
+    hat fünf Mitbewerber unter sich. Entscheidend ist `tied == 1`.
+  · **Fehlannahme 3:** „38 von 49 sind nicht unterscheidbar" war eine
+    Aussage über die **Tafel**. An der Registry gemessen sind **10 von
+    20** Größen durch Registrierungsreihenfolge entschieden, und die
+    Gleichstände laufen quer durch die Systeme: 204 800 an `IMG`,
+    während `DSK_ACE`/`DSK_EIN`/`DSK_LYN` gleich berechtigt sind;
+    92 160 an `XFD`, während TRS-80 `JVC` daneben steht.
+  · **Umgesetzt:** die Leiter liegt an EINER Stelle,
+    `uft_probe_file_entschieden()` — höchste Konfidenz → bei
+    Gleichstand die **Endung** → sonst NULL. Dazu `uft_disk_open_as()`
+    (Zwang) und `uft_disk_open_ranked()` (Absage **plus**
+    Kandidatenliste). `uft_disk_open()` behält Signatur, damit die 96
+    Aufrufstellen übersetzbar bleiben und ein Test, der ein
+    mehrdeutiges Abbild öffnet, **sichtbar** fällt.
+  · **Die Endung wird nie zum Beleg.** Sie verengt nur eine Menge, die
+    die Sonden bereits gleichrangig beansprucht haben; bleibt mehr als
+    einer übrig, gilt weiter „keiner". Die Messung weist `tied > 1`
+    weiterhin aus — wer ein Plugin UND `tied > 1` sieht, weiß, dass
+    der Name verengt hat und nicht die Evidenz. `uft_probe_ranking_t`
+    ist dabei unangetastet, kein Layout verschiebt sich.
+  · **Die Folge, gemessen:** die blosse Absage machte **18 von 129**
+    Korpus-Abbildern unerreichbar, darunter eine von VICE erzeugte
+    `.d81`. Mit der Endungsverengung bleiben **10**, und sie sind
+    ehrlich benannt: `gw_po.img`, `gw_sam.img`, `gw_ssd.img`,
+    `gw_trd.img` heißen alle `.img`, `hxcfe_pc160.dsk` und
+    `samdisk_edsk.dsk` beide `.dsk`. Was ihren Gleichstand bricht, ist
+    **Inhalt** — genau Punkt 4.
+  · **Acht Abbilder gehen nicht mehr an ein fremdes Plugin.** Die
+    Bilanz von `test_oeffentliche_api_am_korpus` bewegt sich von
+    72/52/20 auf **72/60/12**; die Zahl ist die FOLGE der Messung und
+    nicht ihr Ziel (MF-1077).
+  · **Fünf benannte Rennen sind überholt** (die Sonde sagt ab, statt
+    `edk` an D81, `edsk` an DSK **bei Konfidenz 95**, `jv1`/`tan` an
+    IMG, `po` an DO zu geben), **eines gewonnen** (`adl` durch `.adl`),
+    **eines neu besetzt**: `pdp` geht an `HardSector` statt
+    `DSK_X820`, weil die Korpusdatei `gw_pdp.img` heißt. Die alte
+    Fußnote „Geometrie identisch, folgenlos" ist dabei **nicht
+    übernommen, sondern am neuen Sieger nachgemessen** —
+    `uft_hardsector.c:543` führt `77 x 1 x 26 x 128 = 256 256`.
+  · **Volle Probe: 517/517**, Bau rc=0.
+- **Beleg:** —
+- **Stand Punkt 2/3/4:** offen, in dieser Reihenfolge.
+
 ---
 
 ## Zurückgenommen

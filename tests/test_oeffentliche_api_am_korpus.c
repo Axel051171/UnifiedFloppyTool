@@ -388,9 +388,23 @@ static const rennen_t RENNEN[] = {
       "NanoWasp 40x2x10x512 mit Skew. Hier standen bis MF-1182 vier "
       "Gleichauf-Liegende; `cpm` ist ausgeschieden, weil seine 40 von "
       "Hand vergeben waren und die Leiter 25 ergibt. P3-402" },
-    { "pdp", "DSK_X820", "gleich",
-      "256 256 Byte; DSK_X820 40, gleichauf 3. Die Geometrie ist "
-      "identisch (77x1x26x128), also folgenlos — gemessen MF-1147" },
+    /* BERICHTIGT MF-1252: der Sieger hat sich GEAENDERT, und das
+     * Rennen ist damit nicht gewonnen, sondern neu besetzt. Vorher
+     * stand hier `DSK_X820`. Seit die Endung bei Gleichstand verengt,
+     * gewinnt unter den drei Gleichauf-Liegenden derjenige, der `.img`
+     * beansprucht — und das ist `HardSector` (die Korpusdatei heisst
+     * `gw_pdp.img`).
+     *
+     * „Folgenlos" ist dabei NICHT uebernommen, sondern am neuen Sieger
+     * nachgemessen: `src/formats/hardsector/uft_hardsector.c:543`
+     * fuehrt `77 x 1 x 26 x 128 = 256 256` — dieselbe Geometrie wie
+     * die alte Ausnahme. Waere sie eine andere, stuende hier ein
+     * Befund und keine Fussnote. */
+    { "pdp", "HardSector", "gleich",
+      "256 256 Byte; drei gleichauf bei 40, und `.img` verengt auf "
+      "HardSector. Die Geometrie ist identisch (77x1x26x128, gemessen "
+      "an uft_hardsector.c:543), also folgenlos — vorher DSK_X820, "
+      "gemessen MF-1147/MF-1252" },
 };
 #define RENNEN_N ((int)(sizeof RENNEN / sizeof RENNEN[0]))
 
@@ -424,6 +438,12 @@ static long dateigroesse(const char *pfad)
 int main(void)
 {
     int erreicht = 0, eigenes = 0, fremdes = 0;
+    /* MF-1252: wie viele Abbilder NUR mit genanntem Format
+     * hineinkommen — der eigentliche Befund dieses Laufs. */
+    int nur_mit_zwang = 0;
+    /* Wie viele benannte Rennen die ENDUNG gewonnen hat — also
+     * Abbilder, die vorher an ein fremdes Plugin gingen. */
+    int eigenes_durch_endung = 0;
     int i;
 
     printf("\nA4 Runde 2: der Korpus durch uft_disk_open() (MF-1150)\n\n");
@@ -449,12 +469,30 @@ int main(void)
             continue;
         }
 
-        d = uft_disk_open(pfad, true);
+        /* MF-1251/MF-1252: erreichbar heisst jetzt „ohne Zwang, ODER
+         * mit genanntem Format". Vorher war die Zusage gruen, weil
+         * IRGENDWER das Rennen gewann — gemessen an 18 von 129
+         * Abbildern, darunter eine von VICE erzeugte `.d81`.
+         *
+         * Welcher der beiden Faelle eintritt, wird GEZAEHLT. Die Zahl
+         * ist der Befund: so viele Abbilder sind ueber Groesse UND
+         * Endung nicht bestimmbar, und was ihren Gleichstand bricht,
+         * ist Inhalt. */
+        uft_probe_ranking_t vorab;
+        d = uft_disk_open_ranked(pfad, true, &vorab);
+        int mit_zwang = 0;
+        if (!d && vorab.tied > 1) {
+            d = uft_disk_open_as(pfad, true, f->plugin);
+            mit_zwang = (d != NULL);
+        }
         snprintf(txt, sizeof txt,
-                 "%-13s uft_disk_open() erreicht ein Plugin (%s, %ld Byte)",
-                 f->sym, f->datei, groesse);
+                 "%-13s erreichbar%s (%s, %ld Byte%s)",
+                 f->sym, mit_zwang ? " NUR mit genanntem Format" : "",
+                 f->datei, groesse,
+                 (vorab.tied > 1) ? ", mehrdeutig" : "");
         zusage(txt, d != NULL);
         if (!d) continue;
+        if (mit_zwang) nur_mit_zwang++;
         erreicht++;
 
         {
@@ -482,6 +520,57 @@ int main(void)
                  * GENAU SO ausgeht. Wird es gewonnen, faellt die Zeile
                  * ebenso — dann ist die Ausnahme ueberholt und gehoert
                  * aus der Tafel, nicht stillschweigend weiter geduldet. */
+                /* MF-1252: ein benanntes Rennen beschreibt, was die
+                 * SONDE entscheidet — nicht, was nach einem Zwang im
+                 * Handle steht. Wurde mit genanntem Format geoeffnet,
+                 * gewinnt zwangslaeufig das eigene Plugin, und der
+                 * alte Vergleich waere eine Aussage ueber meinen
+                 * eigenen Aufruf.
+                 *
+                 * Gemessen sind ALLE gelisteten Rennen Gleichstaende
+                 * (`edsk` sogar bei Konfidenz 95 mit zwei Bewerbern).
+                 * Damit sind sie ueberholt: kein fremdes Plugin
+                 * gewinnt mehr, weil keines mehr gewinnt. Geprueft
+                 * wird deshalb, dass die Sonde fuer genau diese Faelle
+                 * wirklich ABSAGT — das ist eine Aussage ueber die
+                 * Doktrin und keine Tautologie. */
+                if (mit_zwang) {
+                    const int sagt_ab =
+                        (uft_probe_file_entschieden(pfad, NULL) == NULL);
+                    snprintf(txt, sizeof txt,
+                             "%-13s benanntes Rennen UEBERHOLT: die Sonde "
+                             "sagt ab, statt es an %s zu geben "
+                             "(gleichauf %zu bei %d%%)",
+                             f->sym, rn->sieger, r.tied, r.confidence);
+                    zusage(txt, sagt_ab);
+                    printf("         -> Grund der alten Ausnahme: %s\n",
+                           rn->grund);
+                    uft_disk_close(d);
+                    d = NULL;
+                    continue;
+                }
+                /* MF-1252, zweiter Fall: die ENDUNG hat verengt, und
+                 * zwar auf das eigene Plugin. Dann ist das Rennen
+                 * nicht nur ueberholt, es ist GEWONNEN — genau der
+                 * Ausgang, den der Kommentar oben fordert. Geprueft
+                 * wird, dass es ohne Zwang und mit dem eigenen Plugin
+                 * aufgeht UND dass die Messung den Gleichstand
+                 * weiterhin ausweist (sonst waere die Verengung als
+                 * Evidenz getarnt). */
+                if (selbst) {
+                    snprintf(txt, sizeof txt,
+                             "%-13s benanntes Rennen GEWONNEN: die Endung "
+                             "verengt auf das eigene Plugin, statt es an "
+                             "%s zu geben (gleichauf %zu bei %d%%)",
+                             f->sym, rn->sieger, r.tied, r.confidence);
+                    zusage(txt, r.tied > 1);
+                    printf("         -> Grund der alten Ausnahme: %s\n",
+                           rn->grund);
+                    eigenes_durch_endung++;
+                    uft_disk_close(d);
+                    d = NULL;
+                    continue;
+                }
                 const int wie_gemessen =
                     (!selbst && strcmp(sieger, rn->sieger) == 0);
                 snprintf(txt, sizeof txt,
@@ -521,14 +610,25 @@ int main(void)
      *            aber dieselbe Bilanz.
      *   MF-1152  `ssd` bekommt sein eigenes Abbild (60 gegen JV1s 35),
      *            weil das Sektorzahlfeld jetzt mit zehn Bit gelesen
-     *            wird: **52 eigenes, 20 fremdes**. */
+     *            wird: **52 eigenes, 20 fremdes**.
+     *   MF-1252  Die Sonde gehorcht ihrer Doktrin: bei Gleichstand
+     *            gewinnt niemand, und die ENDUNG verengt als „engerer
+     *            Anspruch". Gemessen gehen damit **acht** Abbilder
+     *            nicht mehr an ein fremdes Plugin — aus 52/20 wird
+     *            **60 eigenes, 12 fremdes**. Die Zahl ist die FOLGE
+     *            der Messung und nicht ihr Ziel (MF-1077): sie bewegt
+     *            sich, weil eine Regel jetzt gilt, die vorher nur
+     *            aufgeschrieben war. */
     {
         char txt[240];
         snprintf(txt, sizeof txt,
                  "die Bilanz ist unveraendert: %d erreicht, %d eigenes, "
-                 "%d fremdes (gemessen 72 / 52 / 20)",
-                 erreicht, eigenes, fremdes);
-        zusage(txt, erreicht == 72 && eigenes == 52 && fremdes == 20);
+                 "%d fremdes (gemessen 72 / 60 / 12), davon %d Rennen "
+                 "durch die Endung gewonnen und %d nur mit Zwang "
+                 "erreichbar",
+                 erreicht, eigenes, fremdes,
+                 eigenes_durch_endung, nur_mit_zwang);
+        zusage(txt, erreicht == 72 && eigenes == 60 && fremdes == 12);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

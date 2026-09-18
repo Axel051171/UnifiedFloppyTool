@@ -3461,7 +3461,13 @@ foreach(test_source ${TEST_SOURCES})
            # nur an ECHTEN Korpusabbildern statt an synthetischen. Also
            # auch dieselbe Quellenmenge: es geht durch den echten
            # `uft_disk_open()`, das heisst durch die ganze Registry.
-           OR ${test_name} STREQUAL "test_oeffentliche_api_am_korpus")
+           OR ${test_name} STREQUAL "test_oeffentliche_api_am_korpus"
+           # MF-1251: misst den Gleichstand der 49 DSK-Geometrien und
+           # schickt eine mehrdeutige Groesse durch den ECHTEN
+           # `uft_disk_open()`. Ohne die vollstaendige Tafel gibt es
+           # gar keinen Gleichstand zu messen — also dieselbe Menge
+           # und derselbe Grund wie die Zeilen darueber.
+           OR ${test_name} STREQUAL "test_sonde_sagt_ab_bei_gleichstand")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
