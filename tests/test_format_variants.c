@@ -138,12 +138,31 @@ int main(void)
      *    die ehrliche Voreinstellung: lieber keine Liste als eine
      *    geratene. */
     {
-        const uft_format_plugin_t *d64 = uft_get_format_plugin_by_name("D64");
-        if (d64) {
-            PRUEFE(uft_plugin_write_variants(d64, liste, 8) == 0,
-                   "D64 fuehrt keine Varianten — die Liste muss leer sein");
-            PRUEFE(uft_plugin_default_write_variant(d64) == NULL,
+        /* BERICHTIGT MF-1231: hier stand `D64` als Beispiel fuer ein
+         * Plugin ohne Tafel. Seit MF-1231 hat D64 eine (vier
+         * Spurzahlen, aus `d64_plugin_probe` uebernommen), und dieser
+         * Test fiel — zu Recht: er hat gemessen, was er gemessen hat.
+         *
+         * Ein NAME als Beispiel veraltet, sobald das Format eine Tafel
+         * bekommt; das ist die Aufzaehlung-statt-Messung aus MF-636 im
+         * Kleinen. Gefragt wird deshalb die REGISTRY: irgendein Plugin
+         * ohne Tafel, egal welches. Gibt es keines mehr, ist das keine
+         * Luecke, sondern eine Nachricht — dann steht die Zeile hier. */
+        const uft_format_plugin_t *tafellos = NULL;
+        const uft_format_plugin_t *alle[256];
+        size_t n = uft_list_format_plugins(alle, 256);
+        for (size_t i = 0; i < n && !tafellos; i++)
+            if (alle[i] && (!alle[i]->variants || alle[i]->variant_count == 0))
+                tafellos = alle[i];
+
+        if (tafellos) {
+            PRUEFE(uft_plugin_write_variants(tafellos, liste, 8) == 0,
+                   "%s fuehrt keine Varianten — die Liste muss leer sein",
+                   tafellos->name);
+            PRUEFE(uft_plugin_default_write_variant(tafellos) == NULL,
                    "ohne Tabelle darf es keine Voreinstellung geben");
+        } else {
+            printf("  (kein Plugin ohne Variantentafel mehr — %zu geprueft)\n", n);
         }
         PRUEFE(uft_plugin_write_variants(NULL, liste, 8) == 0,
                "NULL-Plugin muss 0 liefern, nicht abstuerzen");

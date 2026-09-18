@@ -4,6 +4,7 @@
  * @version 3.8.0
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"   /* MF-1231: uft_format_variant_t */
 
 #define D88_HEADER 0x2B0
 
@@ -271,9 +272,83 @@ static const uft_plugin_feature_t uft_format_plugin_d88_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── Die fuenf Medientypen, die dieses Plugin annimmt (MF-1231) ──────
+ *
+ * Neu ist hier kein Wert: `d88_probe` nimmt genau die Medienbytes 0x00,
+ * 0x10, 0x20, 0x30 und 0x40 an und weist alles andere ab. Neu sind nur
+ * ihre NAMEN, und die stehen nicht in dieser Datei, sondern in einer
+ * benannten Referenz, die dieser Baum schon fuehrt:
+ *
+ *   `src/samdisk/d88.cpp:8-12` (SAMdisk, MIT — dieselbe Quelle, an der
+ *   MF-905 `opus`, MF-1004 `cfi` und MF-1014 `scl` abgenommen sind):
+ *       D88_TYPE_2D  = 0x00,   // DSSD
+ *       D88_TYPE_2DD = 0x10,   // DSDD
+ *       D88_TYPE_2HD = 0x20,   // DSHD
+ *       D88_TYPE_1D  = 0x30,   // SSSD
+ *       D88_TYPE_1DD = 0x40    // SSDD
+ *   und `:94`, wo dieselbe Datei die Kopfzahl daraus ableitet:
+ *       heads = (typ == 1D || typ == 1DD) ? 1 : 2
+ *
+ * Die Oberflaeche nannte nur DREI ("2D", "2DD", "2HD") — die beiden
+ * einseitigen fehlten dort, obwohl das Plugin sie seit jeher oeffnet.
+ *
+ * Die Zylinderzahl kommt NICHT aus dieser Tafel: D88 traegt eine
+ * Spurtafel, und `d88_open` liest sie. `cylinders` bleibt deshalb 0 —
+ * „nicht festgelegt" — statt eine Zahl zu behaupten, die die Datei
+ * selbst sagt. Die KOPFzahl dagegen folgt aus dem Medientyp, und die
+ * Referenz sagt sie ausdruecklich.
+ *
+ * `can_write` ist fuer alle fuenf wahr: `d88_write_track` schreibt an
+ * den Versatz aus der Spurtafel und kennt keine Sonderbehandlung je
+ * Medientyp.
+ *
+ * Schreibvorgabe ist 2HD — das gewoehnliche PC-98-Medium und das
+ * einzige, fuer das SAMdisk (`:167`) die 500-kbit/s-Rate ansetzt. */
+static int d88_ist_medium(const uint8_t *d, size_t n, uint8_t typ)
+{
+    if (!d || n < D88_HEADER) return 0;
+    /* Das Medienbyte allein reicht nicht: ein Nullpuffer traegt 0x00 und
+     * waere damit „2D". Die Diskettengroesse bei 0x1C muss mindestens
+     * den eigenen Kopf umfassen — dieselbe untere Schranke, die
+     * `d88_probe` setzt (MF-625). */
+    if (uft_read_le32(d + 0x1C) < D88_HEADER_160) return 0;
+    return d[0x1B] == typ ? 1 : 0;
+}
+
+static int d88_ist_2d (const uint8_t *d, size_t n) { return d88_ist_medium(d, n, 0x00); }
+static int d88_ist_2dd(const uint8_t *d, size_t n) { return d88_ist_medium(d, n, 0x10); }
+static int d88_ist_2hd(const uint8_t *d, size_t n) { return d88_ist_medium(d, n, 0x20); }
+static int d88_ist_1d (const uint8_t *d, size_t n) { return d88_ist_medium(d, n, 0x30); }
+static int d88_ist_1dd(const uint8_t *d, size_t n) { return d88_ist_medium(d, n, 0x40); }
+
+static const uft_format_variant_t d88_variants[] = {
+    { .name = "2D",  .description = "doppelseitig, einfache Dichte (Medienbyte 0x00)",
+      .base_format = UFT_FORMAT_D88, .heads = 2, .validate = d88_ist_2d,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "2DD", .description = "doppelseitig, doppelte Dichte (0x10)",
+      .base_format = UFT_FORMAT_D88, .heads = 2, .validate = d88_ist_2dd,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "2HD", .description = "doppelseitig, hohe Dichte (0x20)",
+      .base_format = UFT_FORMAT_D88, .heads = 2, .validate = d88_ist_2hd,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = true },
+    { .name = "1D",  .description = "einseitig, einfache Dichte (0x30)",
+      .base_format = UFT_FORMAT_D88, .heads = 1, .validate = d88_ist_1d,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "1DD", .description = "einseitig, doppelte Dichte (0x40)",
+      .base_format = UFT_FORMAT_D88, .heads = 1, .validate = d88_ist_1dd,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_d88 = {
     .name = "D88", .description = "PC-88/PC-98", .extensions = "d88;88d;d98",
     .format = UFT_FORMAT_D88, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .variants = d88_variants,
+    .variant_count = sizeof(d88_variants) / sizeof(d88_variants[0]),
     .probe = d88_probe, .open = d88_open, .close = d88_close,
     .read_track = d88_read_track, .write_track = d88_write_track,
     .verify_track = uft_generic_verify_track,

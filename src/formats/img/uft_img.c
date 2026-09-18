@@ -12,6 +12,7 @@
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_format_probe.h"    /* MF-1231: uft_format_variant_t */
 #include "uft/uft_format_common.h"   /* UFT_MAX_SPT */
 #include "uft/uft_log.h"             /* honest padding warning (MF-465) */
 #include <stdio.h>
@@ -33,45 +34,98 @@ typedef struct {
     const char* name;
 } img_geometry_entry_t;
 
+/* ── Die Aufzaehlung steht EINMAL (MF-1231) ──────────────────────────
+ *
+ * Bis MF-1231 stand sie nur hier, als `known_geometries[]`, und die
+ * Oberflaeche hielt daneben eine zweite Liste: `m_formatInfo["IMG"]` in
+ * `src/formattab.cpp` nannte fuenf Groessen — 360K, 720K, 1.2M, 1.44M,
+ * 2.88M. Gemessen fuehrt diese Tafel **dreizehn**; 160K, 180K, 320K,
+ * die DMF-Groesse und die vier ED-Spezialformate fehlten dort, und
+ * `DMF` stand in der Oberflaeche sogar als eigenes „Format" ohne
+ * Plugin, obwohl es die Zeile mit 1 720 320 Byte hier ist.
+ *
+ * Zwei Listen derselben Sache driften — das ist in diesem Baum
+ * mehrfach belegt (MF-1015 drei Pruefsummen, MF-1026 drei
+ * Victor-Geometrien, MF-1177 der Spurhaushalt an drei Stellen). Die
+ * Zeilen stehen deshalb jetzt als X-Makro und werden in **beide**
+ * Gestalten ausgefaltet: in die Geometrietafel, die die Sonde befragt,
+ * und in die Variantentafel, die die Oberflaeche beim Speichern
+ * anzeigt. Eine neue Groesse einzutragen heisst weiterhin: EINE Zeile.
+ *
+ * Der Kurzname ist das, was im Auswahlfeld steht; der lange Text ist
+ * die Beschreibung, die es schon gab.
+ *
+ * MF-872: die ED-Spezialformate mit 41-44 Sektoren je Spur.
+ *
+ * Referenz, zwei unabhaengige Quellen:
+ *   FLOPFIX `version.txt:40` — „Sind die Spezialformate aktiviert,
+ *     so sind nun auch die ED-Formate mit 41, 42, 43 und 44
+ *     Sektoren zugaenglich."
+ *   FreeDOS FORMAT 0.92 (GPL-2-only, nur Zahlen entnommen) fuehrt
+ *     mit FD3360/FD3486 bis 42 SpT — deckt die untere Haelfte
+ *     unabhaengig ab.
+ *
+ * Die Groessen sind gerechnet, nicht abgeschrieben:
+ *   SpT x 2 Seiten x 80 Spuren x 512 Byte.
+ * Die Rechnung reproduziert die bestehende Zeile darueber
+ * (36 SpT -> 2949120) exakt; das ist die Begruendung fuer die neuen.
+ *
+ * Gemessen, bevor sie eingetragen wurden (MF-784: Groessengleichheit
+ * ist keine Geometriegleichheit): keine der vier Zahlen kommt sonst
+ * irgendwo im Baum vor, und der generische Rueckfall unten faengt
+ * sie nicht — `sectors_options[]` kennt 41-44 nicht, und bei 8 oder
+ * 10 SpT lieferte er Zylinderzahlen weit ueber 84.
+ *
+ * Was sie VORHER beanspruchte: bei einem echten PC-Bootsektor
+ * meldete allein `DMK` diese vier Groessen, mit Konfidenz 55 — ein
+ * TRS-80-Format fuer ein PC-Abbild. Nachher meldet `IMG` 90. */
+#define IMG_GEOMETRIEN(X)                                                   \
+    X(163840,   40, 1,  8, "160K",      "160KB 5.25\" SS/DD")               \
+    X(184320,   40, 1,  9, "180K",      "180KB 5.25\" SS/DD")               \
+    X(327680,   40, 2,  8, "320K",      "320KB 5.25\" DS/DD")               \
+    X(368640,   40, 2,  9, "360K",      "360KB 5.25\" DS/DD")               \
+    X(737280,   80, 2,  9, "720K",      "720KB 3.5\" DS/DD")                \
+    X(1228800,  80, 2, 15, "1.2M",      "1.2MB 5.25\" DS/HD")               \
+    X(1474560,  80, 2, 18, "1.44M",     "1.44MB 3.5\" DS/HD")               \
+    X(1720320,  80, 2, 21, "1.68M DMF", "1.68MB 3.5\" DMF")                 \
+    X(2949120,  80, 2, 36, "2.88M",     "2.88MB 3.5\" DS/ED")               \
+    X(3358720,  80, 2, 41, "ED 41",     "3.28MB 3.5\" ED (41 SpT)")         \
+    X(3440640,  80, 2, 42, "ED 42",     "3.36MB 3.5\" ED (42 SpT)")         \
+    X(3522560,  80, 2, 43, "ED 43",     "3.44MB 3.5\" ED (43 SpT)")         \
+    X(3604480,  80, 2, 44, "ED 44",     "3.52MB 3.5\" ED (44 SpT)")
+
 static const img_geometry_entry_t known_geometries[] = {
-    { 163840,   40, 1,  8, "160KB 5.25\" SS/DD" },
-    { 184320,   40, 1,  9, "180KB 5.25\" SS/DD" },
-    { 327680,   40, 2,  8, "320KB 5.25\" DS/DD" },
-    { 368640,   40, 2,  9, "360KB 5.25\" DS/DD" },
-    { 737280,   80, 2,  9, "720KB 3.5\" DS/DD" },
-    { 1228800,  80, 2, 15, "1.2MB 5.25\" DS/HD" },
-    { 1474560,  80, 2, 18, "1.44MB 3.5\" DS/HD" },
-    { 1720320,  80, 2, 21, "1.68MB 3.5\" DMF" },
-    { 2949120,  80, 2, 36, "2.88MB 3.5\" DS/ED" },
-    /* MF-872: die ED-Spezialformate mit 41-44 Sektoren je Spur.
-     *
-     * Referenz, zwei unabhaengige Quellen:
-     *   FLOPFIX `version.txt:40` — „Sind die Spezialformate aktiviert,
-     *     so sind nun auch die ED-Formate mit 41, 42, 43 und 44
-     *     Sektoren zugaenglich."
-     *   FreeDOS FORMAT 0.92 (GPL-2-only, nur Zahlen entnommen) fuehrt
-     *     mit FD3360/FD3486 bis 42 SpT — deckt die untere Haelfte
-     *     unabhaengig ab.
-     *
-     * Die Groessen sind gerechnet, nicht abgeschrieben:
-     *   SpT x 2 Seiten x 80 Spuren x 512 Byte.
-     * Die Rechnung reproduziert die bestehende Zeile darueber
-     * (36 SpT -> 2949120) exakt; das ist die Begruendung fuer die neuen.
-     *
-     * Gemessen, bevor sie eingetragen wurden (MF-784: Groessengleichheit
-     * ist keine Geometriegleichheit): keine der vier Zahlen kommt sonst
-     * irgendwo im Baum vor, und der generische Rueckfall unten faengt
-     * sie nicht — `sectors_options[]` kennt 41-44 nicht, und bei 8 oder
-     * 10 SpT lieferte er Zylinderzahlen weit ueber 84.
-     *
-     * Was sie VORHER beanspruchte: bei einem echten PC-Bootsektor
-     * meldete allein `DMK` diese vier Groessen, mit Konfidenz 55 — ein
-     * TRS-80-Format fuer ein PC-Abbild. Nachher meldet `IMG` 90. */
-    { 3358720,  80, 2, 41, "3.28MB 3.5\" ED (41 SpT)" },
-    { 3440640,  80, 2, 42, "3.36MB 3.5\" ED (42 SpT)" },
-    { 3522560,  80, 2, 43, "3.44MB 3.5\" ED (43 SpT)" },
-    { 3604480,  80, 2, 44, "3.52MB 3.5\" ED (44 SpT)" },
+#define IMG_X_GEO(sz, c, h, s, kurz, text) { sz, c, h, s, text },
+    IMG_GEOMETRIEN(IMG_X_GEO)
+#undef IMG_X_GEO
     { 0, 0, 0, 0, NULL }
+};
+
+/* Die Variantentafel aus denselben Zeilen.
+ *
+ * `can_write` ist fuer alle dreizehn wahr, und das ist gemessen, nicht
+ * angenommen: `img_write_track()` rechnet seinen Versatz aus der beim
+ * Oeffnen ermittelten Geometrie und kennt keine Sonderbehandlung je
+ * Groesse — was gelesen werden kann, kann auch geschrieben werden.
+ *
+ * Die Schreibvorgabe ist **1.44M**, weil sie die einzige Groesse ist,
+ * die jedes heutige 3,5-Zoll-Laufwerk schreiben kann; die vier
+ * ED-Spezialformate brauchen einen Controller, der 41-44 Sektoren je
+ * Spur formatiert. Genau eine Zeile traegt die Vorgabe, und
+ * `tests/test_varianten_aus_dem_plugin.c` haelt das fest. */
+static const uft_format_variant_t img_variants[] = {
+#define IMG_X_VAR(sz, c, h, s, kurz, text)                                  \
+    { .name = kurz, .description = text,                                    \
+      .base_format = UFT_FORMAT_IMG,                                        \
+      .min_size = (sz), .max_size = (sz), .exact_sizes = { (sz) },          \
+      .cylinders = (c), .heads = (h),                                       \
+      .sectors_min = (s), .sectors_max = (s),                               \
+      .sector_size = IMG_SECTOR_SIZE,                                       \
+      .validate = NULL,                                                     \
+      .can_read = true, .can_write = true, .write_note = NULL,              \
+      .is_write_default = ((sz) == 1474560) },
+    IMG_GEOMETRIEN(IMG_X_VAR)
+#undef IMG_X_VAR
 };
 
 // ============================================================================
@@ -615,6 +669,9 @@ const uft_format_plugin_t uft_format_plugin_img = {
     .read_track = img_read_track,
     .write_track = img_write_track,
     .detect_geometry = NULL,
+    /* MF-1231: dieselben Zeilen wie `known_geometries[]`, siehe oben. */
+    .variants = img_variants,
+    .variant_count = sizeof(img_variants) / sizeof(img_variants[0]),
     .read_metadata = img_read_metadata,
     .write_metadata = NULL,
     

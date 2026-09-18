@@ -7,6 +7,7 @@
  */
 #include "uft/uft_format_common.h"
 #include "uft/formats/apple/uft_woz.h"
+#include "uft/uft_format_probe.h"   /* MF-1231: uft_format_variant_t */
 /* MF-1066: der oracle-gepruefte Apple-GCR-Abtaster. Vorhandener Code,
  * hier nur verdrahtet — siehe die Begruendung an woz_plugin_read_track(). */
 #include "uft/formats/apple/uft_apple_gcr.h"
@@ -154,9 +155,59 @@ static const uft_plugin_feature_t woz_features[] = {
     { "Write / encode",            UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── Die zwei Kennungen, die dieses Plugin unterscheidet (MF-1231) ───
+ *
+ * Neu ist hier keine Zahl: `WOZ_SIGNATURE_V1` ('WOZ1') und
+ * `WOZ_SIGNATURE_V2` ('WOZ2') stehen in
+ * `include/uft/formats/apple/uft_woz.h:47-48`, und `woz_plugin_probe`
+ * entscheidet an ihnen. Die Oberflaeche nannte dieselben zwei als
+ * "WOZ 1.0" und "WOZ 2.0".
+ *
+ * **v2.1 bekommt bewusst KEINEN eigenen Eintrag.** Der Name des
+ * Plugins sagt "v1/v2/v2.1", und die Merkmalstafel fuehrt alle drei —
+ * aber v2.1 traegt dieselbe Kennung 'WOZ2' wie v2, sie unterscheiden
+ * sich erst im INFO-Chunk. Ein dritter Eintrag mit demselben
+ * `validate` waere nicht unterscheidbar; das faellt im Test als V3.
+ * Solange `woz_load()` die Unterfassung nicht herausgibt, ist v2.1
+ * hier nicht benennbar.
+ *
+ * Und die Richtung ist auch hier der Gewinn: WOZ fuehrt **kein**
+ * `UFT_FORMAT_CAP_WRITE` und hat kein `write_track`. */
+static int woz_variante_ist_v1(const uint8_t *d, size_t n)
+{
+    return (d && n >= 4 && uft_read_le32(d) == WOZ_SIGNATURE_V1) ? 1 : 0;
+}
+
+static int woz_variante_ist_v2(const uint8_t *d, size_t n)
+{
+    return (d && n >= 4 && uft_read_le32(d) == WOZ_SIGNATURE_V2) ? 1 : 0;
+}
+
+static const char WOZ_KEIN_SCHREIBER[] =
+    "UFT liest WOZ, schreibt es aber nicht: das Plugin hat kein "
+    "write_track und beansprucht kein UFT_FORMAT_CAP_WRITE.";
+
+static const uft_format_variant_t woz_variants[] = {
+    { .name = "WOZ 1.0", .description = "Applesauce WOZ v1, Kennung 'WOZ1'",
+      .base_format = UFT_FORMAT_WOZ,
+      .validate = woz_variante_ist_v1,
+      .can_read = true, .can_write = false,
+      .write_note = WOZ_KEIN_SCHREIBER,
+      .is_write_default = false },
+    { .name = "WOZ 2.0", .description =
+          "Applesauce WOZ v2 (auch v2.1), Kennung 'WOZ2'",
+      .base_format = UFT_FORMAT_WOZ,
+      .validate = woz_variante_ist_v2,
+      .can_read = true, .can_write = false,
+      .write_note = WOZ_KEIN_SCHREIBER,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_woz = {
     .name = "WOZ", .description = "Apple II WOZ (v1/v2/v2.1)",
     .extensions = "woz", .format = UFT_FORMAT_WOZ,
+    .variants = woz_variants,
+    .variant_count = sizeof(woz_variants) / sizeof(woz_variants[0]),
     /* Capabilities reflect what read_track() actually surfaces — flux/weak
      * are parsed in woz.c but not yet returned via the plugin API, so we do
      * NOT advertise CAP_FLUX / CAP_WEAK_BITS here. Re-enable after the

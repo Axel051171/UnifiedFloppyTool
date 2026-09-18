@@ -3431,6 +3431,11 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_plugin_capability_api"
            OR ${test_name} STREQUAL "test_disk_metadata_variant"
            OR ${test_name} STREQUAL "test_format_variants"
+           # MF-1231: fragt die REGISTRY nach der Variantentafel je Plugin
+           # und schickt jede genannte Groesse durch die eigene Sonde --
+           # das geht nur mit der vollstaendigen Tafel, aus demselben
+           # Grund wie die Zeile darueber.
+           OR ${test_name} STREQUAL "test_varianten_aus_dem_plugin"
            OR ${test_name} STREQUAL "test_decode_options_reach"
            OR ${test_name} STREQUAL "test_convert_roundtrip_measured"
            # MF-991: erzeugt ueber die Registry und oeffnet das Ergebnis
@@ -6037,7 +6042,12 @@ if(TARGET Qt6::Test)
             target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
         endif()
 
-        if(${qt_test_name} STREQUAL "test_format_tab_capability_gating")
+        # MF-1233: der Kopierplan-Test treibt DENSELBEN Reiter an und
+        # braucht deshalb dieselbe Quellenmenge. Ein eigener Zweig mit
+        # eigener Liste waere eine zweite Wahrheit ueber dieselbe Sache
+        # (MF-636) — also teilt er sich die Bedingung.
+        if(${qt_test_name} STREQUAL "test_format_tab_capability_gating"
+           OR ${qt_test_name} STREQUAL "test_format_tab_copy_plan")
             file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
             # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.

@@ -4,6 +4,7 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"   /* MF-1231: uft_format_variant_t */
 
 #define DSK_HEADER_SIZE     256
 #define DSK_TRACK_INFO_SIZE 256
@@ -345,6 +346,45 @@ static const uft_plugin_feature_t uft_format_plugin_dsk_cpc_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── Die zwei Kopfkennungen, die dieses Plugin unterscheidet (MF-1231) ─
+ *
+ * Neu ist hier keine Zeichenkette: `dsk_probe` vergleicht die ersten
+ * acht Byte gegen "EXTENDED" und "MV - CPC", und `dsk_open` entscheidet
+ * an derselben Stelle, wie die Spurlaengen zu lesen sind. Die
+ * Oberflaeche nannte dieselben zwei als "Standard" und
+ * "Extended (EDSK)".
+ *
+ * `can_write` ist fuer beide wahr: `dsk_write_track` schreibt in die
+ * beim Oeffnen ermittelten Spurbereiche und behandelt beide Fassungen.
+ *
+ * Schreibvorgabe ist das gewoehnliche "MV - CPC" — die Fassung, die
+ * jedes CPC-Werkzeug liest; die erweiterte braucht man erst, wenn
+ * Spuren unterschiedlich lang sind. */
+static int dsk_variante_ist_standard(const uint8_t *d, size_t n)
+{
+    return (d && n >= 8 && memcmp(d, "MV - CPC", 8) == 0) ? 1 : 0;
+}
+
+static int dsk_variante_ist_extended(const uint8_t *d, size_t n)
+{
+    return (d && n >= 8 && memcmp(d, "EXTENDED", 8) == 0) ? 1 : 0;
+}
+
+static const uft_format_variant_t dsk_variants[] = {
+    { .name = "Standard", .description =
+          "CPCEMU DSK, Kopfkennung \"MV - CPC\", feste Spurlaenge",
+      .base_format = UFT_FORMAT_DSK,
+      .validate = dsk_variante_ist_standard,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = true },
+    { .name = "Extended (EDSK)", .description =
+          "Erweiterte DSK, Kopfkennung \"EXTENDED\", Spurlaenge je Spur",
+      .base_format = UFT_FORMAT_DSK,
+      .validate = dsk_variante_ist_extended,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_dsk_cpc = {
     .name = "DSK",
     .description = "Amstrad CPC/Spectrum DSK",
@@ -352,6 +392,8 @@ const uft_format_plugin_t uft_format_plugin_dsk_cpc = {
     .version = 0x00010000,
     .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .variants = dsk_variants,
+    .variant_count = sizeof(dsk_variants) / sizeof(dsk_variants[0]),
     .probe = dsk_probe,
     .open = dsk_open,
     .close = dsk_close,

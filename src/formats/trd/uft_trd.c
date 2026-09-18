@@ -3,6 +3,7 @@
  * @brief ZX Spectrum TRD format (TR-DOS) — read + write
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"    /* MF-1231: uft_format_variant_t */
 
 #define TRD_SEC_SIZE 256
 #define TRD_SPT 16
@@ -144,12 +145,61 @@ static const uft_plugin_feature_t uft_format_plugin_trd_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── Die drei Groessen, die dieses Plugin kennt (MF-1231) ────────────
+ *
+ * Sie stehen nicht neu hier, sondern an zwei Stellen in dieser Datei:
+ * `trd_probe` weist alles ab, was nicht 655 360, 327 680 oder 163 840
+ * Byte hat (Z. 14), und `trd_open` leitet daraus Spur- und Seitenzahl
+ * ab (Z. 46-48). Diese Tafel faltet dieselben Zahlen in die Gestalt,
+ * die die Oberflaeche beim Speichern braucht.
+ *
+ * Die Oberflaeche nannte bis MF-1231 nur ZWEI davon
+ * (`m_formatInfo["TRD"]`: "DS/DD 640K", "SS/DD 320K") — die
+ * 40-Spur-Diskette mit 163 840 Byte fehlte dort, obwohl das Plugin sie
+ * seit jeher oeffnet.
+ *
+ * `can_write` ist fuer alle drei wahr: `trd_write_track` rechnet seinen
+ * Versatz aus `p->sides`, das beim Oeffnen aus der Dateigroesse kommt,
+ * und kennt keine Sonderbehandlung je Groesse.
+ *
+ * Schreibvorgabe ist die doppelseitige 640K-Diskette — die gewoehnliche
+ * TR-DOS-Diskette und die einzige der drei, die `trd_open` mit zwei
+ * Seiten fuehrt. */
+static const uft_format_variant_t trd_variants[] = {
+    { .name = "DS/DD 640K", .description = "TR-DOS 80 Spuren, 2 Seiten",
+      .base_format = UFT_FORMAT_TRD,
+      .min_size = 655360, .max_size = 655360, .exact_sizes = { 655360 },
+      .cylinders = 80, .heads = 2,
+      .sectors_min = TRD_SPT, .sectors_max = TRD_SPT,
+      .sector_size = TRD_SEC_SIZE, .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = true },
+    { .name = "SS/DD 320K", .description = "TR-DOS 80 Spuren, 1 Seite",
+      .base_format = UFT_FORMAT_TRD,
+      .min_size = 327680, .max_size = 327680, .exact_sizes = { 327680 },
+      .cylinders = 80, .heads = 1,
+      .sectors_min = TRD_SPT, .sectors_max = TRD_SPT,
+      .sector_size = TRD_SEC_SIZE, .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "SS/DD 160K", .description = "TR-DOS 40 Spuren, 1 Seite",
+      .base_format = UFT_FORMAT_TRD,
+      .min_size = 163840, .max_size = 163840, .exact_sizes = { 163840 },
+      .cylinders = 40, .heads = 1,
+      .sectors_min = TRD_SPT, .sectors_max = TRD_SPT,
+      .sector_size = TRD_SEC_SIZE, .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_trd = {
     .name = "TRD", .description = "TR-DOS Spectrum", .extensions = "trd",
     .format = UFT_FORMAT_TRD,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = trd_probe, .open = trd_open, .close = trd_close,
     .read_track = trd_read_track, .write_track = trd_write_track,
+    .variants = trd_variants,
+    .variant_count = sizeof(trd_variants) / sizeof(trd_variants[0]),
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_trd_features,  /* V415-PLAN PLUGIN.features (MF-263) */

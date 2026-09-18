@@ -1,0 +1,717 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/**
+ * @file test_copy_plan.c
+ * @brief Vier Dimensionen, und ein Konflikt gilt nur innerhalb einer
+ *        Stufe (MF-1232)
+ *
+ * ── Was hier bewiesen wird ───────────────────────────────────────────────
+ *
+ * K1  Die vier Achsen sind unabhaengig: alle 6 x 5 x 4 x 3 = 360
+ *     Kombinationen sind konstruierbar. Mit einer einzigen Achse waeren
+ *     es 11 — das ist der ganze Anlass.
+ * K2  **`read.passes` x `write.enabled` ist KEIN Konflikt.** Die zentrale
+ *     Zusage: das gelieferte Parametermodell fuehrt ihn als HART
+ *     (`k_cfl_passes[]`), und fuer einen Kopiervorgang ist das falsch —
+ *     fuenfmal lesen, einmal schreiben ist der Normalfall.
+ * K3  Zwei Parameter DERSELBEN Stufe sind sehr wohl konfliktfaehig. Ohne
+ *     diese Gegenprobe waere K2 auch dann gruen, wenn die Funktion
+ *     schlicht immer `false` gaebe (Klasse `erkenner_der_nie_nein_sagt`).
+ * K4  Die Erhaltung PROTECTED verlangt mindestens die Bitstromebene.
+ * K5  PROTECTED ohne TIMING **und** WEAK_BITS ist ein harter Befund —
+ *     gemessen (MF-1231) sagt KEIN Plugin beide zugleich zu.
+ * K6  EVIDENCE und FAST widersprechen sich.
+ * K7  EVIDENCE erzwingt: Quelle nicht beschreibbar, kein Verlust, Hash
+ *     und Herkunft.
+ * K8  DEEP erzwingt 5 Durchlaeufe, 5 Umdrehungen und eine Statusdatei.
+ * K9  Reihenfolge: die Sicherheit gewinnt ueber die Strategie. Auf der
+ *     Bitstromebene ist `allow_loss` sonst einstellbar; unter EVIDENCE
+ *     ist es auf false festgelegt.
+ * K10 Ebenenverteilung: `layout.gap3` ist auf der Dateiebene ausdruecklich
+ *     verboten und auf der Spurebene aktiv.
+ * K11 Auf der Flussebene sind die gemessenen Quellwerte nur lesbar.
+ * K12 Namen: gueltige Werte ergeben einen Namen, ungueltige NULL.
+ * K13 `check()` zaehlt auch ohne Puffer richtig.
+ * K14 Bitgenau ist nicht Fluss-bitgenau: `flux-timing-exact` auf der
+ *     Bitstromebene ist ein Befund.
+ *
+ * K15-K23 sind spaeter dazugekommen und stehen bei ihrem Code; dass sie
+ * hier fehlen, ist eine Luecke dieser Aufzaehlung und keine Aussage
+ * ueber ihren Wert.
+ * K24 Die LAENGENABFRAGE des JSON-Schreibers (Nullzeiger, Groesse 0).
+ *     K22 misst den zu kleinen Puffer; den Weg, den die Oberflaeche
+ *     geht, misst erst K24 — und ohne ihn haengt die ganze Anzeige an
+ *     einem ungeprueften Zweig (MF-1238).
+ * K25 Die acht Faehigkeitsflaggen haben je einen eigenen Namen, und
+ *     „keine", „mehrere" und „unbekannt" ergeben NULL statt einer
+ *     erfundenen Zeichenkette. Gefahren ueber `uft_copy_cap_count()`,
+ *     nicht ueber eine abgeschriebene Liste (MF-636/MF-1238).
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>   /* MF-1238: K24 misst mit eigenem Puffer */
+
+#include "uft/core/uft_copy_plan.h"
+
+static int fehler = 0;
+
+#define PRUEFE(bed, ...)                                                   \
+    do {                                                                   \
+        if (!(bed)) {                                                      \
+            printf("  [ROT] ");                                            \
+            printf(__VA_ARGS__);                                           \
+            printf("\n");                                                  \
+            fehler++;                                                      \
+        }                                                                  \
+    } while (0)
+
+static bool hat_befund(const uft_copy_plan_t *p, uint32_t caps,
+                       const char *id, bool *hart)
+{
+    uft_copy_finding_t f[16];
+    size_t n = uft_copy_plan_check(p, caps, f, 16);
+    if (n > 16) n = 16;
+    for (size_t i = 0; i < n; i++) {
+        if (f[i].id && strcmp(f[i].id, id) == 0) {
+            if (hart) *hart = f[i].hard;
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *erzwungen(const uft_copy_plan_t *p, const char *param)
+{
+    uft_copy_enforced_t e[64];
+    size_t n = uft_copy_plan_enforced(p, e, 64);
+    if (n > 64) n = 64;
+    const char *letzter = NULL;
+    for (size_t i = 0; i < n; i++)
+        if (e[i].param && strcmp(e[i].param, param) == 0)
+            letzter = e[i].value;    /* spaetere Dimension gewinnt */
+    return letzter;
+}
+
+int main(void)
+{
+    printf("== Kopierplan in vier Dimensionen (MF-1232) ==\n");
+
+    /* K1 — die Achsen sind unabhaengig */
+    {
+        size_t echt = 0, mit_auto = 0;
+        for (int l = 0; l < UFT_COPY_LEVEL_N; l++)
+        for (int s = 0; s < UFT_READ_STRATEGY_N; s++)
+        for (int e = 0; e < UFT_PRESERVE_N; e++)
+        for (int p = 0; p < UFT_POLICY_N; p++) {
+            uft_copy_plan_t pl = uft_copy_plan_default();
+            pl.level        = (uft_copy_level_t)l;
+            pl.strategy     = (uft_read_strategy_t)s;
+            pl.preservation = (uft_preservation_t)e;
+            pl.policy       = (uft_copy_policy_t)p;
+            (void)uft_copy_plan_check(&pl, 0xFFFFFFFFu, NULL, 0);
+            mit_auto++;
+            if (l < UFT_COPY_LEVEL_ECHT) echt++;
+        }
+        /* 6 echte Ebenen x 5 x 4 x 3 = 360 Plaene, die wirklich
+         * gerechnet werden — und mit der Zeile „Automatisch" sind es
+         * 420 Zeilen in der Auswahl. Beide Zahlen stehen hier, damit
+         * niemand die eine fuer die andere haelt. */
+        PRUEFE(echt == 360, "K1: %zu echte Kombinationen, 360 erwartet", echt);
+        PRUEFE(mit_auto == 420,
+               "K1: %zu Kombinationen mit Automatik, 420 erwartet", mit_auto);
+    }
+
+    /* K2 — der eigentliche Punkt */
+    PRUEFE(!uft_copy_conflict_applies("read.passes", "write.enabled"),
+           "K2: read.passes x write.enabled gilt als Konflikt — genau der "
+           "Fehler, den die Stufen beheben sollen");
+    PRUEFE(uft_copy_param_stage("read.passes") == UFT_STAGE_READ,
+           "K2: read.passes liegt nicht in der Lesestufe");
+    PRUEFE(uft_copy_param_stage("write.enabled") == UFT_STAGE_WRITE,
+           "K2: write.enabled liegt nicht in der Schreibstufe");
+
+    /* K3 — und die Funktion sagt nicht immer nein */
+    PRUEFE(uft_copy_conflict_applies("read.passes", "read.retries"),
+           "K3: zwei Parameter DERSELBEN Stufe gelten nicht als "
+           "konfliktfaehig — dann sagt die Funktion nie ja");
+    PRUEFE(uft_copy_param_stage("gibtesnicht.foo") == UFT_STAGE_N,
+           "K3: ein unbekannter Namensraum wird eingeordnet statt "
+           "als unbekannt gemeldet");
+    PRUEFE(!uft_copy_conflict_applies("gibtesnicht.a", "gibtesnicht.b"),
+           "K3: zwei unbekannte Parameter gelten als konfliktfaehig");
+
+    /* K4 — Erhaltung verlangt eine Mindestebene */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.preservation = UFT_PRESERVE_PROTECTED;
+        p.level = UFT_COPY_SECTOR;
+        bool hart = false;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "ebene_zu_hoch", &hart) && hart,
+               "K4: PROTECTED auf der Sektorebene ergibt keinen harten "
+               "Befund");
+        p.level = UFT_COPY_FLUX;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "ebene_zu_hoch", NULL),
+               "K4: PROTECTED auf der Flussebene meldet faelschlich "
+               "eine zu niedrige Ebene");
+    }
+
+    /* K5 — und das Format muss es tragen */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.preservation = UFT_PRESERVE_PROTECTED;
+        p.level = UFT_COPY_FLUX;
+        bool hart = false;
+        const uint32_t nur_timing = UFT_CAP_FLUX_IO | UFT_CAP_TIMING;
+        PRUEFE(hat_befund(&p, nur_timing, "schutz_nicht_tragbar", &hart) && hart,
+               "K5: TIMING allein reicht fuer PROTECTED — gemessen braucht "
+               "es auch WEAK_BITS");
+        const uint32_t beide = nur_timing | UFT_CAP_WEAK_BITS;
+        PRUEFE(!hat_befund(&p, beide, "schutz_nicht_tragbar", NULL),
+               "K5: mit beiden Flaggen wird PROTECTED trotzdem abgelehnt");
+    }
+
+    /* K6 — Beweis und Eile vertragen sich nicht */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.policy = UFT_POLICY_EVIDENCE;
+        p.strategy = UFT_READ_FAST;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "beweis_und_eile", NULL),
+               "K6: EVIDENCE mit FAST wird nicht beanstandet");
+        p.strategy = UFT_READ_DEEP;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "beweis_und_eile", NULL),
+               "K6: EVIDENCE mit DEEP wird faelschlich beanstandet");
+    }
+
+    /* K7 — was EVIDENCE erzwingt */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.policy = UFT_POLICY_EVIDENCE;
+        const char *v;
+        v = erzwungen(&p, "source.write_enabled");
+        PRUEFE(v && strcmp(v, "false") == 0,
+               "K7: EVIDENCE sperrt die Quelle nicht (%s)", v ? v : "nichts");
+        v = erzwungen(&p, "allow_loss");
+        PRUEFE(v && strcmp(v, "false") == 0,
+               "K7: EVIDENCE erlaubt Verlust (%s)", v ? v : "nichts");
+        PRUEFE(erzwungen(&p, "hash.enabled") != NULL,
+               "K7: EVIDENCE verlangt keinen Hash");
+        PRUEFE(erzwungen(&p, "provenance.enabled") != NULL,
+               "K7: EVIDENCE verlangt keine Herkunft");
+    }
+
+    /* K8 — was DEEP erzwingt */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.strategy = UFT_READ_DEEP;
+        const char *v = erzwungen(&p, "read.passes");
+        PRUEFE(v && strcmp(v, "5") == 0,
+               "K8: DEEP setzt read.passes nicht auf 5 (%s)", v ? v : "nichts");
+        v = erzwungen(&p, "read.revolutions");
+        PRUEFE(v && strcmp(v, "5") == 0,
+               "K8: DEEP setzt read.revolutions nicht auf 5 (%s)",
+               v ? v : "nichts");
+        PRUEFE(erzwungen(&p, "status_file") != NULL,
+               "K8: DEEP verlangt keine Statusdatei");
+    }
+
+    /* K9 — die Sicherheit gewinnt ueber die Strategie */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_BITSTREAM;
+        p.policy = UFT_POLICY_NORMAL;
+        const char *frei = erzwungen(&p, "allow_loss");
+        PRUEFE(frei == NULL,
+               "K9: allow_loss ist ohne Richtlinie schon festgelegt (%s)",
+               frei ? frei : "");
+        p.policy = UFT_POLICY_EVIDENCE;
+        const char *fest = erzwungen(&p, "allow_loss");
+        PRUEFE(fest && strcmp(fest, "false") == 0,
+               "K9: unter EVIDENCE ist allow_loss nicht auf false");
+    }
+
+    /* K10 — Ebenenverteilung */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FILE;
+        PRUEFE(uft_copy_param_state(&p, "layout.gap3", NULL)
+                   == UFT_PSTATE_FORBIDDEN,
+               "K10: layout.gap3 ist auf der Dateiebene nicht verboten");
+        p.level = UFT_COPY_TRACK;
+        PRUEFE(uft_copy_param_state(&p, "layout.gap3", NULL)
+                   == UFT_PSTATE_ACTIVE,
+               "K10: layout.gap3 ist auf der Spurebene nicht aktiv");
+    }
+
+    /* K11 — gemessene Quellwerte sind nur lesbar */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FLUX;
+        PRUEFE(uft_copy_param_state(&p, "measured_rpm", NULL)
+                   == UFT_PSTATE_READONLY,
+               "K11: measured_rpm ist auf der Flussebene einstellbar");
+    }
+
+    /* K12 — Namen */
+    PRUEFE(uft_copy_level_name(UFT_COPY_FLUX) != NULL, "K12: Ebene ohne Namen");
+    PRUEFE(uft_copy_level_name(UFT_COPY_LEVEL_N) == NULL,
+           "K12: ungueltige Ebene bekommt einen Namen");
+    PRUEFE(uft_copy_strategy_name(UFT_READ_SALVAGE) != NULL,
+           "K12: Strategie ohne Namen");
+    PRUEFE(uft_copy_policy_name(UFT_POLICY_N) == NULL,
+           "K12: ungueltige Richtlinie bekommt einen Namen");
+
+    /* K13 — zaehlen ohne Puffer */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.preservation = UFT_PRESERVE_PROTECTED;
+        p.level = UFT_COPY_SECTOR;
+        size_t ohne = uft_copy_plan_check(&p, 0, NULL, 0);
+        uft_copy_finding_t f[16];
+        size_t mit = uft_copy_plan_check(&p, 0, f, 16);
+        PRUEFE(ohne == mit && ohne > 0,
+               "K13: Zaehlung ohne Puffer (%zu) weicht ab von der mit (%zu)",
+               ohne, mit);
+        PRUEFE(!uft_copy_plan_is_executable(&p, 0),
+               "K13: ein Plan mit hartem Befund gilt als ausfuehrbar");
+    }
+
+    /* K14 — bitgenau ist nicht flussgleich */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.preservation = UFT_PRESERVE_BIT_EXACT;
+        p.level = UFT_COPY_BITSTREAM;
+        p.exact_kind = UFT_EXACT_FLUX_TIMING;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "genauigkeit_zu_hoch", NULL),
+               "K14: flux-timing-exact ohne Flussebene wird nicht "
+               "beanstandet");
+        p.exact_kind = UFT_EXACT_TRACK_BIT;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "genauigkeit_zu_hoch", NULL),
+               "K14: track-bit-exact auf der Bitstromebene wird "
+               "faelschlich beanstandet");
+    }
+
+    /* ── MF-1234: die elf Punkte, die in der ersten Fassung fehlten ── */
+
+    /* K15 — „Automatisch" ist eine Zeile der Auswahl, aber keine Ebene,
+     *       auf der gerechnet wird. Sie muss aufgeloest werden, und die
+     *       Aufloesung folgt NUR den Faehigkeiten. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_AUTO;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "ebene_offen", NULL),
+               "K15: ein unaufgeloestes AUTO wird nicht gemeldet");
+
+        uft_copy_plan_t f = uft_copy_plan_resolve(&p, UFT_CAP_FLUX_IO);
+        PRUEFE(f.level == UFT_COPY_FLUX,
+               "K15: mit Fluss muss AUTO auf die Flussebene gehen");
+        uft_copy_plan_t s = uft_copy_plan_resolve(&p, 0);
+        PRUEFE(s.level == UFT_COPY_SECTOR,
+               "K15: ohne jede Zusage bleibt die Sektorebene");
+        uft_copy_plan_t d = uft_copy_plan_resolve(&p, UFT_CAP_FILESYSTEM);
+        PRUEFE(d.level == UFT_COPY_FILE,
+               "K15: mit erkanntem Dateisystem die Dateiebene");
+
+        uft_copy_plan_t k = uft_copy_plan_default();
+        k.level = UFT_COPY_TRACK;
+        PRUEFE(uft_copy_plan_resolve(&k, UFT_CAP_FLUX_IO).level
+                   == UFT_COPY_TRACK,
+               "K15: resolve() aendert eine getroffene Wahl");
+    }
+
+    /* K16 — TrackCopy hat zwei Spielarten, und „raw" gilt nur dort. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_TRACK;
+        p.track_mode = UFT_TRACK_RAW;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "spurart_ohne_spurebene", NULL),
+               "K16: raw auf der Spurebene wird beanstandet");
+        p.level = UFT_COPY_SECTOR;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "spurart_ohne_spurebene", NULL),
+               "K16: raw ausserhalb der Spurebene wird durchgelassen");
+        PRUEFE(uft_copy_track_mode_name(UFT_TRACK_RAW) != NULL &&
+               uft_copy_track_mode_name(UFT_TRACK_MODE_N) == NULL,
+               "K16: die Spurart hat keine sauberen Namen");
+    }
+
+    /* K17 — vier GCR-Verfahren, nicht ein Schalter. */
+    {
+        PRUEFE(UFT_GCR_N == 4, "K17: es sind nicht vier GCR-Verfahren");
+        for (int i = 0; i < UFT_GCR_N; i++)
+            PRUEFE(uft_copy_gcr_name((uft_gcr_variant_t)i) != NULL,
+                   "K17: GCR-Verfahren %d ohne Namen", i);
+        PRUEFE(uft_copy_gcr_name(UFT_GCR_N) == NULL,
+               "K17: ungueltiges GCR-Verfahren bekommt einen Namen");
+    }
+
+    /* K18 — sieben Abstimmungsverfahren, und nur bei Consensus. */
+    {
+        PRUEFE(UFT_VOTE_N == 7, "K18: es sind nicht sieben Verfahren");
+        for (int i = 0; i < UFT_VOTE_N; i++)
+            PRUEFE(uft_copy_vote_name((uft_vote_method_t)i) != NULL,
+                   "K18: Verfahren %d ohne Namen", i);
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.vote = UFT_VOTE_PER_BIT;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "abstimmung_ohne_consensus", NULL),
+               "K18: ein Verfahren ohne Consensus wird durchgelassen");
+        p.strategy = UFT_READ_CONSENSUS;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "abstimmung_ohne_consensus", NULL),
+               "K18: mit Consensus wird das Verfahren beanstandet");
+    }
+
+    /* K19 — requiresCapabilities je PARAMETER, nicht nur je Plan. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FLUX;
+
+        PRUEFE(uft_copy_param_requires("flux.dewarp")
+                   == (uint32_t)UFT_CAP_FLUX_IO,
+               "K19: flux.dewarp verlangt keine Flussfaehigkeit");
+        PRUEFE(uft_copy_param_requires("source") == 0u,
+               "K19: ein allgemeiner Parameter verlangt etwas");
+
+        PRUEFE(uft_copy_param_state_caps(&p, 0, "flux.dewarp", NULL)
+                   == UFT_PSTATE_HIDDEN,
+               "K19: ohne Flusszusage bleibt flux.dewarp sichtbar");
+        PRUEFE(uft_copy_param_state_caps(&p, UFT_CAP_FLUX_IO,
+                                         "flux.dewarp", NULL)
+                   == UFT_PSTATE_ACTIVE,
+               "K19: mit Flusszusage ist flux.dewarp nicht aktiv");
+    }
+
+    /* K20 — BAMCopy nur bei Commodore-BAM UND erkanntem Dateisystem. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FILE;
+        p.file_special = UFT_FILE_BAM;
+        bool hart = false;
+        PRUEFE(hat_befund(&p, UFT_CAP_FILESYSTEM, "bam_ohne_bam", &hart) && hart,
+               "K20: BAM ohne Commodore-BAM wird durchgelassen");
+        const uint32_t beides = (uint32_t)UFT_CAP_FILESYSTEM |
+                                (uint32_t)UFT_CAP_CBM_BAM;
+        PRUEFE(!hat_befund(&p, beides, "bam_ohne_bam", NULL),
+               "K20: mit BAM und Dateisystem wird trotzdem abgelehnt");
+        PRUEFE(uft_copy_param_state_caps(&p, UFT_CAP_FILESYSTEM,
+                                         "bam.validate", NULL)
+                   == UFT_PSTATE_HIDDEN,
+               "K20: bam.validate erscheint ohne Commodore-BAM");
+    }
+
+    /* K21 — Hash: SHA-256 Pflicht, CRC32 nie allein. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.policy = UFT_POLICY_EVIDENCE;
+        p.strategy = UFT_READ_STANDARD;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "hash_ohne_sha256", NULL),
+               "K21: die Vorgabe traegt kein SHA-256");
+        p.hashes = (uint32_t)UFT_HASH_CRC32;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "hash_ohne_sha256", NULL),
+               "K21: fehlendes SHA-256 wird nicht beanstandet");
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "hash_nur_crc32", NULL),
+               "K21: CRC32 allein wird durchgelassen");
+    }
+
+    /* K22 — der Plan als JSON, in der vorgegebenen Gestalt. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FLUX;
+        p.strategy = UFT_READ_CONSENSUS;
+        p.preservation = UFT_PRESERVE_PROTECTED;
+        p.policy = UFT_POLICY_EVIDENCE;
+        p.vote = UFT_VOTE_WEIGHTED_CONFIDENCE;
+
+        char j[4096];
+        size_t len = uft_copy_plan_to_json(&p, j, sizeof(j));
+        PRUEFE(len > 0 && len < sizeof(j),
+               "K22: JSON leer oder zu gross (%zu)", len);
+        PRUEFE(strstr(j, "\"copyPlan\"") != NULL,
+               "K22: kein copyPlan-Abschnitt");
+        PRUEFE(strstr(j, "\"level\": \"flux\"") != NULL,
+               "K22: die Ebene steht nicht als flux darin");
+        PRUEFE(strstr(j, "\"strategy\": \"consensus\"") != NULL,
+               "K22: die Strategie fehlt");
+        PRUEFE(strstr(j, "\"preservation\": \"protected\"") != NULL,
+               "K22: die Erhaltung fehlt");
+        PRUEFE(strstr(j, "\"policy\": \"evidence\"") != NULL,
+               "K22: die Richtlinie fehlt");
+        PRUEFE(strstr(j, "\"preserve\"") != NULL,
+               "K22: kein preserve-Abschnitt");
+        PRUEFE(strstr(j, "\"weakBits\": true") != NULL,
+               "K22: preserve.weakBits fehlt oder ist nicht camelCase");
+        PRUEFE(strstr(j, "\"evidence\"") != NULL,
+               "K22: kein evidence-Abschnitt");
+        PRUEFE(strstr(j, "\"hash\": [\"sha256\"]") != NULL,
+               "K22: der Hashsatz fehlt");
+
+        /* Ein zu kleiner Puffer muss ERKENNBAR abschneiden, nicht
+         * still. Dieselbe Zusage wie bei snprintf. */
+        char klein[16];
+        size_t voll = uft_copy_plan_to_json(&p, klein, sizeof(klein));
+        PRUEFE(voll >= sizeof(klein),
+               "K22: ein zu kleiner Puffer meldet keine Kuerzung");
+        PRUEFE(klein[sizeof(klein) - 1] == '\0',
+               "K22: der gekuerzte Puffer ist nicht nullterminiert");
+    }
+
+    /* K23 — bitgenau haengt am ZIEL, nicht nur an der Ebene. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.preservation = UFT_PRESERVE_BIT_EXACT;
+        p.exact_kind = UFT_EXACT_FLUX_TIMING;
+        p.level = UFT_COPY_BITSTREAM;
+        PRUEFE(hat_befund(&p, 0xFFFFFFFFu, "genauigkeit_zu_hoch", NULL),
+               "K23: Flusszeiten auf der Bitstromebene durchgelassen");
+        p.level = UFT_COPY_FLUX;
+        PRUEFE(!hat_befund(&p, 0xFFFFFFFFu, "genauigkeit_zu_hoch", NULL),
+               "K23: Flusszeiten auf der Flussebene beanstandet");
+        PRUEFE(uft_copy_exact_name(UFT_EXACT_TRACK_BIT) != NULL,
+               "K23: die Spielart hat keinen Namen");
+    }
+
+    /* K24 — die Laengenabfrage (MF-1238).
+     *
+     * K22 misst den zu KLEINEN Puffer. Der Weg, den die Oberflaeche
+     * geht, ist ein anderer: erst die Laenge mit einem Nullzeiger holen,
+     * dann genau so viel bereitstellen. Ohne diese Zusage haengt die
+     * ganze Anzeige an einem ungeprueften Zweig — genau die Lage, die
+     * MF-1029 als toten Groessenrueckfall gefunden hat. */
+    {
+        uft_copy_plan_t p = uft_copy_plan_default();
+        p.level = UFT_COPY_FLUX;
+        p.strategy = UFT_READ_CONSENSUS;
+        p.policy = UFT_POLICY_EVIDENCE;
+
+        const size_t laenge = uft_copy_plan_to_json(&p, NULL, 0);
+        PRUEFE(laenge > 0, "K24: die Laengenabfrage meldet 0");
+
+        char *b = (char *)malloc(laenge + 1);
+        PRUEFE(b != NULL, "K24: kein Speicher");
+        if (b) {
+            const size_t voll = uft_copy_plan_to_json(&p, b, laenge + 1);
+            PRUEFE(voll == laenge,
+                   "K24: zwei verschiedene Laengen (%zu gegen %zu)",
+                   laenge, voll);
+            PRUEFE(strlen(b) == laenge,
+                   "K24: geschrieben wurden %zu statt %zu Byte",
+                   strlen(b), laenge);
+            /* Und der Inhalt ist wirklich der Plan — sonst waere die
+             * Laenge die Laenge von irgendetwas. */
+            PRUEFE(strstr(b, "\"level\": \"flux\"") != NULL,
+                   "K24: der Text ist nicht dieser Plan");
+            free(b);
+        }
+        /* Ein Nullplan bleibt ein Nullplan, kein Absturz. */
+        PRUEFE(uft_copy_plan_to_json(NULL, NULL, 0) == 0,
+               "K24: ein Nullplan meldet eine Laenge");
+    }
+
+    /* K25 — die acht Faehigkeitsflaggen haben Namen (MF-1238).
+     *
+     * Gefahren wird ueber `uft_copy_cap_count()`, nicht ueber eine
+     * abgeschriebene Liste: eine gepflegte Aufzaehlung veraltet still
+     * (MF-636). Und die Gegenprobe gehoert dazu, weil eine Funktion,
+     * die nie NULL sagt, keine Auskunft gibt (erkenner_der_nie_nein). */
+    {
+        const size_t n = uft_copy_cap_count();
+        PRUEFE(n == 8, "K25: %zu Flaggen statt 8", n);
+
+        uint32_t gesehen = 0;
+        for (size_t i = 0; i < n; i++) {
+            const uft_copy_caps_t c = uft_copy_cap_at(i);
+            const char *nm = uft_copy_cap_name(c);
+            PRUEFE(c != UFT_CAP_NONE, "K25: Flagge %zu ist NONE", i);
+            PRUEFE(nm != NULL && nm[0] != '\0',
+                   "K25: Flagge %zu ohne Namen", i);
+            PRUEFE((gesehen & (uint32_t)c) == 0,
+                   "K25: Flagge %zu kommt zweimal", i);
+            gesehen |= (uint32_t)c;
+            /* Keine zwei tragen denselben Namen. */
+            for (size_t j = 0; j < i; j++)
+                PRUEFE(strcmp(nm, uft_copy_cap_name(uft_copy_cap_at(j))) != 0,
+                       "K25: Flagge %zu und %zu heissen gleich", i, j);
+        }
+
+        PRUEFE(uft_copy_cap_name(UFT_CAP_NONE) == NULL,
+               "K25: „keine Flagge\" hat einen Namen");
+        PRUEFE(uft_copy_cap_name((uft_copy_caps_t)
+                   ((uint32_t)UFT_CAP_FLUX_IO | (uint32_t)UFT_CAP_GCR)) == NULL,
+               "K25: eine Kombination hat einen Namen bekommen");
+        PRUEFE(uft_copy_cap_name((uft_copy_caps_t)(1u << 20)) == NULL,
+               "K25: eine unbekannte Flagge hat einen Namen bekommen");
+        PRUEFE(uft_copy_cap_at(n) == UFT_CAP_NONE,
+               "K25: hinter der letzten Flagge steht noch etwas");
+    }
+
+    /* ── MF-1236: die Profile ────────────────────────────────────────
+     *
+     * Ein Profil ist ein Name fuer einen Plan. Die beiden Fehler, die
+     * die Messung im Entwurf gefunden hat, stehen hier als Zusage —
+     * damit sie nicht zurueckkommen. */
+
+    /* P1 — jedes Profil ist vollstaendig und auffindbar. */
+    {
+        const size_t n = uft_copy_profile_count();
+        PRUEFE(n > 0, "P1: keine Profile");
+        for (size_t i = 0; i < n; i++) {
+            const uft_copy_profile_t *p = uft_copy_profile(i);
+            PRUEFE(p != NULL, "P1: Profil %zu ist NULL", i);
+            if (!p) continue;
+            PRUEFE(p->id && p->id[0], "P1: Profil %zu ohne Kennung", i);
+            PRUEFE(p->name && p->name[0], "P1: %s ohne Namen", p->id);
+            PRUEFE(p->text && p->text[0], "P1: %s ohne Beschreibung", p->id);
+            PRUEFE(uft_copy_profile_by_id(p->id) == p,
+                   "P1: %s ist ueber seine Kennung nicht auffindbar", p->id);
+        }
+        PRUEFE(uft_copy_profile(n) == NULL,
+               "P1: der Index hinter der Tafel liefert etwas");
+        PRUEFE(uft_copy_profile_by_id("gibtesnicht") == NULL,
+               "P1: eine unbekannte Kennung liefert ein Profil");
+        PRUEFE(uft_copy_profile_by_id(NULL) == NULL,
+               "P1: NULL liefert ein Profil");
+        printf("  %zu Profile geprueft\n", n);
+    }
+
+    /* P2 — KEIN Profil traegt einen strukturellen harten Befund.
+     *
+     * Das ist der Fund an BAMCopy: es stand auf `layout`, und die
+     * Erhaltung „Spurlayout" verlangt mindestens die Spurebene. Mit
+     * vollen Faehigkeiten darf kein Profil mehr an der EIGENEN
+     * Zusammenstellung scheitern — was am FORMAT scheitert, ist eine
+     * andere Frage und steht in P6. */
+    {
+        for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+            const uft_copy_profile_t *p = uft_copy_profile(i);
+            if (!p) continue;
+            uft_copy_plan_t plan = p->plan;
+            uft_copy_finding_t f[16];
+            size_t n = uft_copy_plan_check(&plan, 0xFFFFFFFFu, f, 16);
+            if (n > 16) n = 16;
+            for (size_t k = 0; k < n; k++) {
+                if (!f[k].hard) continue;
+                PRUEFE(false, "P2: %s traegt den harten Befund '%s' — ein "
+                       "Profil, das immer abgelehnt wird, gehoert nicht "
+                       "ins Auswahlfeld", p->name, f[k].id);
+            }
+        }
+    }
+
+    /* P3 — kein Profil doppelt: weder Kennung noch Plan.
+     *
+     * Das ist der Fund an Cyclone und ProtectedCopy: gleiches Viertupel,
+     * zwei Namen. Fuer den Bediener sind zwei Eintraege, die dasselbe
+     * tun, nicht unterscheidbar. */
+    {
+        const size_t n = uft_copy_profile_count();
+        for (size_t i = 0; i < n; i++) {
+            const uft_copy_profile_t *a = uft_copy_profile(i);
+            for (size_t j = i + 1; j < n; j++) {
+                const uft_copy_profile_t *b = uft_copy_profile(j);
+                if (!a || !b) continue;
+                PRUEFE(strcmp(a->id, b->id) != 0,
+                       "P3: Kennung '%s' kommt doppelt vor", a->id);
+                /* Verglichen wird der GANZE Plan, nicht nur die vier
+                 * Hauptachsen. DOSCopy und BAMCopy unterscheiden sich
+                 * allein in `file_special`, Cyclone und NibbleCopy in
+                 * Strategie und Erhaltung — wer nur das Viertupel
+                 * vergleicht, prueft an genau diesen Stellen vorbei. */
+                const bool gleich =
+                    a->plan.level == b->plan.level &&
+                    a->plan.strategy == b->plan.strategy &&
+                    a->plan.preservation == b->plan.preservation &&
+                    a->plan.policy == b->plan.policy &&
+                    a->plan.file_special == b->plan.file_special &&
+                    a->plan.track_mode == b->plan.track_mode &&
+                    a->plan.gcr == b->plan.gcr &&
+                    a->plan.vote == b->plan.vote &&
+                    a->plan.exact_kind == b->plan.exact_kind;
+                PRUEFE(!gleich,
+                       "P3: %s und %s ergeben denselben Plan — zwei Namen, "
+                       "eine Sache", a->name, b->name);
+            }
+        }
+    }
+
+    /* P4 — Verfuegbarkeit: wer ablehnt, nennt den Grund. */
+    {
+        const uft_copy_profile_t *bam = uft_copy_profile_by_id("bamcopy");
+        PRUEFE(bam != NULL, "P4: BAMCopy fehlt");
+        if (bam) {
+            const char *grund = NULL;
+            PRUEFE(!uft_copy_profile_available(bam, 0, "ADF", &grund),
+                   "P4: BAMCopy ist fuer ADF verfuegbar");
+            PRUEFE(grund && grund[0],
+                   "P4: die Ablehnung nennt keinen Grund");
+            /* Der Behelf traegt, solange die Flagge leer ist ... */
+            PRUEFE(uft_copy_profile_available(bam, 0, "D64", NULL),
+                   "P4: BAMCopy ist fuer D64 nicht verfuegbar");
+            /* ... und die FLAGGE traegt ohne ihn. */
+            const uint32_t beides = (uint32_t)UFT_CAP_CBM_BAM |
+                                    (uint32_t)UFT_CAP_FILESYSTEM;
+            PRUEFE(uft_copy_profile_available(bam, beides, "WOZ", NULL),
+                   "P4: mit gesetzten Flaggen zaehlt der Formatname noch");
+        }
+        const uft_copy_profile_t *sc = uft_copy_profile_by_id("sectorcopy");
+        PRUEFE(sc && uft_copy_profile_available(sc, 0, NULL, NULL),
+               "P4: SectorCopy verlangt etwas");
+        PRUEFE(!uft_copy_profile_available(NULL, 0, NULL, NULL),
+               "P4: ein NULL-Profil gilt als verfuegbar");
+    }
+
+    /* P5 — der Behelf vergleicht GLIEDWEISE, nicht als Teilzeichenkette.
+     *
+     * „DO" steckt in „DOS"; wer mit strstr vergliche, haette NibbleCopy
+     * fuer jedes DOS-Format freigegeben. Die Falle ist belegt. */
+    {
+        const uft_copy_profile_t *nib = uft_copy_profile_by_id("nibblecopy");
+        PRUEFE(nib != NULL, "P5: NibbleCopy fehlt");
+        if (nib) {
+            PRUEFE(uft_copy_profile_available(nib, 0, "DO", NULL),
+                   "P5: DO steht in der Liste und wird abgelehnt");
+            PRUEFE(!uft_copy_profile_available(nib, 0, "DOS", NULL),
+                   "P5: DOS wird angenommen, weil DO darin steckt");
+            PRUEFE(uft_copy_profile_available(nib, 0, "d64", NULL),
+                   "P5: die Schreibweise entscheidet");
+        }
+    }
+
+    /* P6 — und die gemessene Wahrheit bleibt sichtbar: die
+     * Kopierschutz-Profile scheitern am FORMAT, nicht an sich selbst. */
+    {
+        const uft_copy_profile_t *pc = uft_copy_profile_by_id("protectedcopy");
+        PRUEFE(pc != NULL, "P6: ProtectedCopy fehlt");
+        if (pc) {
+            uft_copy_plan_t plan = uft_copy_plan_resolve(&pc->plan, 0);
+            PRUEFE(hat_befund(&plan, 0, "schutz_nicht_tragbar", NULL),
+                   "P6: ProtectedCopy meldet ohne Timing/Weak-Bits nichts");
+            const uint32_t voll = 0xFFFFFFFFu;
+            uft_copy_plan_t p2 = uft_copy_plan_resolve(&pc->plan, voll);
+            PRUEFE(!hat_befund(&p2, voll, "schutz_nicht_tragbar", NULL),
+                   "P6: mit beiden Flaggen wird es trotzdem abgelehnt");
+        }
+    }
+
+    /* Ein Lauf ueber die ganze Tafel — er darf nicht abstuerzen, und
+     * jeder Bezeichner muss eine Stufe haben. */
+    {
+        size_t n = uft_copy_param_count();
+        PRUEFE(n > 0, "die Parametertafel ist leer");
+        uft_copy_plan_t p = uft_copy_plan_default();
+        size_t ohne_stufe = 0;
+        for (size_t i = 0; i < n; i++) {
+            const char *id = uft_copy_param_id(i);
+            PRUEFE(id != NULL, "Parameter %zu ohne Namen", i);
+            if (!id) continue;
+            if (uft_copy_param_stage(id) == UFT_STAGE_N) ohne_stufe++;
+            (void)uft_copy_param_state(&p, id, NULL);
+        }
+        PRUEFE(ohne_stufe == 0,
+               "%zu Parameter der Tafel haben keine Stufe", ohne_stufe);
+        printf("  %zu Parameter in der Tafel, alle mit Stufe\n", n);
+    }
+
+    if (fehler) {
+        printf("ROT: %d Befund(e)\n", fehler);
+        return 1;
+    }
+    printf("GRUEN\n");
+    return 0;
+}

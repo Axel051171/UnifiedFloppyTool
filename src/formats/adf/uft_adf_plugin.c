@@ -7,6 +7,7 @@
  * HD: 80 cyl × 2 heads × 22 spt × 512 = 1,802,240 bytes
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"    /* MF-1231: uft_format_variant_t */
 #include "uft/uft_log.h"
 
 #define ADF_DD_SIZE     901120
@@ -387,6 +388,48 @@ static const uft_plugin_compat_entry_t adf_compat[] = {
       "no Amiga drive available; see UFT-008 (HIL bench delegated)", NULL, false },
 };
 
+/* ── Die zwei Dichten, die dieses Plugin kennt (MF-1231) ─────────────
+ *
+ * Neu ist hier keine Zahl: `ADF_DD_SIZE` und `ADF_HD_SIZE` stehen oben
+ * in dieser Datei, und die Groessenerkennung entscheidet an ihnen.
+ * Diese Tafel faltet sie in die Gestalt, die die Oberflaeche beim
+ * Speichern braucht.
+ *
+ * Die Namen kommen aus der Oberflaeche, weil sie dort richtig waren:
+ * `m_formatInfo["ADF"]` nannte "DD (880K)" und "HD (1.76M)". Was dort
+ * NICHT richtig war, ist die Voreinstellung — `amigaOCS.version` sagt
+ * "OFS", und OFS ist ein DATEISYSTEM, keine Behaeltervariante. Eine
+ * OFS- und eine FFS-Diskette sind beide 901 120 Byte gross; der
+ * Unterschied steht im Wurzelblock, nicht in der Dateigroesse, und
+ * dieses Plugin liest ihn nicht. Er gehoert deshalb NICHT in diese
+ * Tafel.
+ *
+ * `can_write` ist fuer beide wahr: `adf_write_track` rechnet seinen
+ * Versatz aus der beim Oeffnen ermittelten Spurlaenge.
+ *
+ * Schreibvorgabe ist DD — die gewoehnliche Amiga-Diskette; HD braucht
+ * ein HD-Laufwerk, das nur die spaeteren Modelle hatten. */
+static const uft_format_variant_t adf_variants[] = {
+    { .name = "DD (880K)", .description = "AmigaDOS DD, 80 Zylinder x 2 x 11",
+      .base_format = UFT_FORMAT_ADF,
+      .min_size = ADF_DD_SIZE, .max_size = ADF_DD_SIZE,
+      .exact_sizes = { ADF_DD_SIZE },
+      .cylinders = 80, .heads = 2,
+      .sectors_min = ADF_SPT_DD, .sectors_max = ADF_SPT_DD,
+      .sector_size = ADF_SECTOR_SIZE, .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = true },
+    { .name = "HD (1.76M)", .description = "AmigaDOS HD, 80 Zylinder x 2 x 22",
+      .base_format = UFT_FORMAT_ADF,
+      .min_size = ADF_HD_SIZE, .max_size = ADF_HD_SIZE,
+      .exact_sizes = { ADF_HD_SIZE },
+      .cylinders = 80, .heads = 2,
+      .sectors_min = ADF_SPT_HD, .sectors_max = ADF_SPT_HD,
+      .sector_size = ADF_SECTOR_SIZE, .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_adf = {
     .name = "ADF", .description = "Amiga Disk File",
     .extensions = "adf", .format = UFT_FORMAT_ADF,
@@ -394,6 +437,8 @@ const uft_format_plugin_t uft_format_plugin_adf = {
     .probe = adf_plugin_probe, .open = adf_open,
     .close = adf_close, .read_track = adf_read_track,
     .write_track = adf_write_track,
+    .variants = adf_variants,
+    .variant_count = sizeof(adf_variants) / sizeof(adf_variants[0]),
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* AmigaDOS Rom Kernel Manual covers layout; not every variant */
     .features = adf_features,

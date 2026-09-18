@@ -12,6 +12,7 @@
 #include "ui_tab_format.h"
 #include "uft_gw2dmk_panel.h"
 #include <uft/uft_format_plugin.h>  /* MF-661: Faehigkeits-Manifest */
+#include <uft/uft_format_probe.h>   /* MF-1231: uft_format_variant_t */
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -23,6 +24,12 @@
 #include <QSettings>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QPushButton>          /* MF-1237 */
+#include <QStandardItemModel>    /* MF-1237: Eintraege sperren */
+#include <QPlainTextEdit>        /* MF-1238: JSON-Ansicht */
+#include <QClipboard>            /* MF-1238 */
+#include <QGuiApplication>       /* MF-1238 */
+#include <QMessageBox>           /* MF-1238 */
 
 // ============================================================================
 // Construction / Destruction
@@ -49,6 +56,16 @@ FormatTab::FormatTab(QWidget *parent)
     onSystemChanged(0);
     setupInitialState();
     loadSettings();
+    /* MF-1237: der Reiter oeffnet in einem BENANNTEN Modus, nicht in
+     * einer beliebigen Achsenstellung. StandardCopy ist der Modus ohne
+     * Anspruch — er verlangt keine Faehigkeit und gilt fuer jedes
+     * Format (gemessen: `braucht == 0`, `behelf_formate == NULL`). */
+    wendeProfilAn(QStringLiteral("standardcopy"));
+    /* MF-1233: der Plan gilt ab dem ersten Bild, nicht erst nach der
+     * ersten Aenderung. Ein Reiter, der die Regeln erst beim Anfassen
+     * anwendet, zeigt beim Oeffnen einen Zustand, den der Plan nicht
+     * erlaubt. */
+    applyCopyPlan();
 }
 
 FormatTab::~FormatTab() {
@@ -399,7 +416,107 @@ void FormatTab::populateSystemCombo() {
 // Connection Setup - ALL Dependencies
 // ============================================================================
 
+/* ── Der Kopierplan in der Oberflaeche (MF-1233) ─────────────────────
+ *
+ * Die vier Auswahlfelder werden NICHT im `.ui` gefuellt, sondern hier
+ * aus `uft_copy_level_name()` und seinen drei Geschwistern. Damit gibt
+ * es die Wertelisten genau einmal — im Kern.
+ *
+ * Genau daran scheitert der alte Weg, und das ist gemessen:
+ * `comboXCopyMode` (dieses .ui) fuehrt Sector/Track/„Index",
+ * `comboCopyMode` (tab_xcopy.ui) fuehrt Sector/Track/„Flux/Nibble".
+ * Zwei Listen, zwei Wahrheiten — und die erste hat ueber den ganzen
+ * Baum gemessen **0 Leser**.
+ */
+static void fuelleAus(QComboBox *box, int anzahl,
+                      const char *(*name)(int), int vorgabe)
+{
+    if (!box) return;
+    box->blockSignals(true);
+    box->clear();
+    for (int i = 0; i < anzahl; i++) {
+        const char *n = name(i);
+        if (n) box->addItem(QString::fromUtf8(n), i);
+    }
+    const int idx = box->findData(vorgabe);
+    if (idx >= 0) box->setCurrentIndex(idx);
+    box->blockSignals(false);
+}
+
+/* Die Namensfunktionen nehmen ihre eigenen Aufzaehlungstypen; fuer die
+ * gemeinsame Fuellfunktion braucht es je eine Bruecke. Sie sind
+ * absichtlich winzig — eine Umwandlung, keine zweite Tafel. */
+static const char *nameLevel(int v)
+{ return uft_copy_level_name(static_cast<uft_copy_level_t>(v)); }
+static const char *nameStrategy(int v)
+{ return uft_copy_strategy_name(static_cast<uft_read_strategy_t>(v)); }
+static const char *namePreserve(int v)
+{ return uft_copy_preservation_name(static_cast<uft_preservation_t>(v)); }
+static const char *namePolicy(int v)
+{ return uft_copy_policy_name(static_cast<uft_copy_policy_t>(v)); }
+static const char *nameTrackMode(int v)
+{ return uft_copy_track_mode_name(static_cast<uft_track_mode_t>(v)); }
+static const char *nameFileSpecial(int v)
+{ return uft_copy_file_special_name(static_cast<uft_file_special_t>(v)); }
+static const char *nameGcr(int v)
+{ return uft_copy_gcr_name(static_cast<uft_gcr_variant_t>(v)); }
+static const char *nameVote(int v)
+{ return uft_copy_vote_name(static_cast<uft_vote_method_t>(v)); }
+static const char *nameExact(int v)
+{ return uft_copy_exact_name(static_cast<uft_bitexact_kind_t>(v)); }
+
 void FormatTab::setupConnections() {
+    // Kopierplan (MF-1233) — vier Achsen, aus dem Kern gefuellt
+    fuelleAus(ui->comboPlanLevel,    UFT_COPY_LEVEL_N,    nameLevel,
+              UFT_COPY_SECTOR);
+    fuelleAus(ui->comboPlanStrategy, UFT_READ_STRATEGY_N, nameStrategy,
+              UFT_READ_STANDARD);
+    fuelleAus(ui->comboPlanPreserve, UFT_PRESERVE_N,      namePreserve,
+              UFT_PRESERVE_LOGICAL);
+    fuelleAus(ui->comboPlanPolicy,   UFT_POLICY_N,        namePolicy,
+              UFT_POLICY_NORMAL);
+    connect(ui->comboPlanLevel, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &FormatTab::onCopyPlanChanged);
+    connect(ui->comboPlanStrategy, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &FormatTab::onCopyPlanChanged);
+    connect(ui->comboPlanPreserve, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &FormatTab::onCopyPlanChanged);
+    connect(ui->comboPlanPolicy, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &FormatTab::onCopyPlanChanged);
+
+    // MF-1235: die Feinheiten — Spurart, Dateiart, GCR, Abstimmung,
+    // Genauigkeit. Auch sie aus dem Kern, nicht aus dem .ui.
+    fuelleAus(ui->comboPlanTrackMode,   UFT_TRACK_MODE_N,   nameTrackMode,
+              UFT_TRACK_DECODED);
+    fuelleAus(ui->comboPlanFileSpecial, UFT_FILE_SPECIAL_N, nameFileSpecial,
+              UFT_FILE_GENERIC);
+    fuelleAus(ui->comboPlanGcr,         UFT_GCR_N,          nameGcr,
+              UFT_GCR_COMMODORE);
+    fuelleAus(ui->comboPlanVote,        UFT_VOTE_N,         nameVote,
+              UFT_VOTE_STRICT_MAJORITY);
+    fuelleAus(ui->comboPlanExact,       UFT_EXACT_N,        nameExact,
+              UFT_EXACT_SECTOR);
+    for (QComboBox *b : { ui->comboPlanTrackMode, ui->comboPlanFileSpecial,
+                          ui->comboPlanGcr, ui->comboPlanVote,
+                          ui->comboPlanExact })
+        connect(b, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, &FormatTab::onCopyPlanChanged);
+    for (QCheckBox *c : { ui->checkHashSha512, ui->checkHashCrc32 })
+        connect(c, &QCheckBox::toggled, this, &FormatTab::onCopyPlanToggled);
+
+    // MF-1237: der benannte Kopiermodus. Die Liste kommt aus dem Kern.
+    connect(ui->comboCopyProfile, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &FormatTab::onCopyProfileChanged);
+    connect(ui->btnPlanAnpassen, &QPushButton::clicked,
+            this, &FormatTab::onPlanAnpassen);
+    /* MF-1238: die JSON-Ansicht */
+    connect(ui->btnPlanJson, &QPushButton::toggled,
+            this, &FormatTab::onPlanJsonToggled);
+    connect(ui->btnPlanJsonKopieren, &QPushButton::clicked,
+            this, &FormatTab::onPlanJsonKopieren);
+    connect(ui->btnPlanJsonSichern, &QPushButton::clicked,
+            this, &FormatTab::onPlanJsonSichern);
+
     // System/Format cascade
     connect(ui->comboSystem, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &FormatTab::onSystemChanged);
@@ -519,6 +636,9 @@ void FormatTab::onFormatChanged(int index) {
     QString format = ui->comboFormat->itemText(index);
     populateVersionsForFormat(format);
     updateFormatSpecificOptions(format);
+    /* MF-1233: die Faehigkeiten haengen am FORMAT - ein Planbefund wie
+     * "Consensus braucht CAP_MULTI_REV" gilt je Format verschieden. */
+    applyCopyPlan();
     emit formatChanged(format);
     emit formatSettingsChanged();
 }
@@ -552,13 +672,57 @@ void FormatTab::populateFormatsForSystem(const QString& system) {
 void FormatTab::populateVersionsForFormat(const QString& format) {
     ui->comboVersion->blockSignals(true);
     ui->comboVersion->clear();
-    
-    if (m_formatInfo.contains(format)) {
-        ui->comboVersion->addItems(m_formatInfo[format].versions);
+
+    /* ── MF-1231: der KERN hat Vorrang, wo er etwas weiss ────────────
+     *
+     * `m_formatInfo` fuehrt eine von Hand gepflegte Variantenliste —
+     * 25 Formate, 50 Namen. Gemessen war sie an drei Stellen schwaecher
+     * als das Plugin selbst:
+     *
+     *   IMG  Oberflaeche 5 Groessen, `known_geometries[]` **13**
+     *        (160K, 180K, 320K und die vier ED-Spezialformate fehlten,
+     *        und die DMF-Groesse stand als eigenes „Format" ohne Plugin)
+     *   D64  „Standard" und „35 Track" sind dieselbe Diskette; die
+     *        41-Spur-Fassung fehlte
+     *   TRD  die 40-Spur-Diskette mit 163 840 Byte fehlte
+     *
+     * Zwei Listen derselben Sache driften (MF-1177). Seit MF-1231
+     * fuehren die Plugins ihre Varianten selbst, mit `can_write` und
+     * einer Begruendung, wo nur gelesen werden kann — und diese Anzeige
+     * liest von dort. `m_formatInfo` bleibt der Rueckfall fuer die
+     * Formate, deren Plugin noch keine Tafel traegt; er verschwindet,
+     * sobald sie eine hat.
+     *
+     * Was eine nicht schreibbare Variante angeht: sie steht sichtbar in
+     * der Liste, aber mit ihrem Grund dahinter. Sie zu verschweigen
+     * waere eine stille Auslassung; sie ohne Grund anzubieten die
+     * Zusage, die MF-665 an HFEv3 verhindert hat. */
+    const uft_format_plugin_t *plugin =
+        uft_get_format_plugin_by_name(format.toUtf8().constData());
+
+    if (plugin && plugin->variants && plugin->variant_count > 0) {
+        for (size_t i = 0; i < plugin->variant_count; i++) {
+            const uft_format_variant_t &v = plugin->variants[i];
+            QString text = QString::fromUtf8(v.name);
+            if (!v.can_write) {
+                text += (v.write_note && v.write_note[0])
+                            ? tr(" — nur lesen: %1").arg(QString::fromUtf8(v.write_note))
+                            : tr(" — nur lesen");
+            }
+            ui->comboVersion->addItem(text, QString::fromUtf8(v.name));
+            if (v.is_write_default)
+                ui->comboVersion->setCurrentIndex(ui->comboVersion->count() - 1);
+        }
+    } else if (m_formatInfo.contains(format)) {
+        for (const QString &v : m_formatInfo[format].versions)
+            ui->comboVersion->addItem(v, v);
     } else {
-        ui->comboVersion->addItem("Standard");
+        /* Kein Plugin-Wissen und kein Eintrag: dann steht hier nichts.
+         * Bis MF-1231 stand „Standard" — ein Name, den weder das Format
+         * noch der Kern je gesagt hat. */
+        ui->comboVersion->addItem(tr("— keine Variante benannt —"), QString());
     }
-    
+
     ui->comboVersion->blockSignals(false);
 }
 
@@ -686,6 +850,498 @@ void FormatTab::updateFormatSpecificOptions(const QString& format) {
 // ============================================================================
 // XCOPY Dependencies
 // ============================================================================
+
+// ============================================================================
+// Kopierplan (MF-1233) und der benannte Modus (MF-1237)
+// ============================================================================
+
+/* Das Auswahlfeld fuellen — aus dem Kern, und mit dem GRUND, warum ein
+ * Profil nicht geht.
+ *
+ * Nicht verfuegbare Profile werden SICHTBAR und unanwaehlbar, nicht
+ * entfernt: wer „BAMCopy" sucht und nicht findet, weiss nicht, ob es das
+ * nicht gibt oder ob es hier nur nicht passt. Dieselbe Regel wie beim
+ * Varianten-Waehler (MF-666). */
+void FormatTab::fuelleProfile() {
+    if (!ui->comboCopyProfile) return;
+    const QString fmt = getSelectedFormat();
+    const uint32_t caps = copyPlanCaps();
+    const QByteArray f = fmt.toUtf8();
+
+    ui->comboCopyProfile->blockSignals(true);
+    ui->comboCopyProfile->clear();
+
+    for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+        const uft_copy_profile_t *p = uft_copy_profile(i);
+        if (!p) continue;
+        const char *grund = nullptr;
+        const bool ok = uft_copy_profile_available(
+            p, caps, fmt.isEmpty() ? nullptr : f.constData(), &grund);
+
+        QString text = QString::fromUtf8(p->name);
+        if (!ok)
+            text += tr(" — nicht verfügbar: %1")
+                        .arg(QString::fromUtf8(grund ? grund : ""));
+        ui->comboCopyProfile->addItem(text, QString::fromUtf8(p->id));
+        const int idx = ui->comboCopyProfile->count() - 1;
+        if (!ok) {
+            if (auto *m = qobject_cast<QStandardItemModel *>(
+                    ui->comboCopyProfile->model()))
+                if (QStandardItem *it = m->item(idx)) it->setEnabled(false);
+        } else if (p->text) {
+            ui->comboCopyProfile->setItemData(idx, QString::fromUtf8(p->text),
+                                              Qt::ToolTipRole);
+        }
+    }
+    /* „Benutzerdefiniert" steht NICHT im Kern — es ist die Abwesenheit
+     * eines Profils und damit ein Zustand dieser Oberflaeche. */
+    ui->comboCopyProfile->addItem(tr("Benutzerdefiniert"), QString());
+
+    const int wahl = ui->comboCopyProfile->findData(
+        m_profil.isEmpty() ? QVariant(QString()) : QVariant(m_profil));
+    if (wahl >= 0) ui->comboCopyProfile->setCurrentIndex(wahl);
+    ui->comboCopyProfile->blockSignals(false);
+}
+
+/* Die vier Achsen sperren oder freigeben. */
+void FormatTab::setPlanFrei(bool frei) {
+    m_planFrei = frei;
+    for (QComboBox *b : { ui->comboPlanLevel, ui->comboPlanStrategy,
+                          ui->comboPlanPreserve, ui->comboPlanPolicy })
+        if (b) b->setEnabled(frei);
+    if (ui->btnPlanAnpassen)
+        ui->btnPlanAnpassen->setText(frei ? tr("Modus verwenden")
+                                          : tr("Plan anpassen"));
+}
+
+/* Ein Profil anwenden: es SETZT die vier Achsen und sperrt sie. */
+void FormatTab::wendeProfilAn(const QString &id) {
+    if (id.isEmpty()) {          /* Benutzerdefiniert */
+        m_profil.clear();
+        setPlanFrei(true);
+        return;
+    }
+    const uft_copy_profile_t *p =
+        uft_copy_profile_by_id(id.toUtf8().constData());
+    if (!p) return;
+
+    m_profil = id;
+    m_basisProfil = id;
+
+    auto setze = [](QComboBox *b, int wert) {
+        if (!b) return;
+        const int i = b->findData(wert);
+        if (i >= 0) { b->blockSignals(true); b->setCurrentIndex(i);
+                      b->blockSignals(false); }
+    };
+    setze(ui->comboPlanLevel,    p->plan.level);
+    setze(ui->comboPlanStrategy, p->plan.strategy);
+    setze(ui->comboPlanPreserve, p->plan.preservation);
+    setze(ui->comboPlanPolicy,   p->plan.policy);
+    setze(ui->comboPlanTrackMode,   p->plan.track_mode);
+    setze(ui->comboPlanFileSpecial, p->plan.file_special);
+    setze(ui->comboPlanGcr,         p->plan.gcr);
+    setze(ui->comboPlanVote,        p->plan.vote);
+    setze(ui->comboPlanExact,       p->plan.exact_kind);
+    setPlanFrei(false);
+}
+
+/* ── MF-1238: was das Format traegt ──────────────────────────────────
+ *
+ * Die vier Flaggen unten kann DIESER Reiter nicht messen: er kennt kein
+ * geoeffnetes Abbild, also weiss er nichts ueber Dateisystem, BAM, GCR
+ * oder einen Bitstromzugang. `copyPlanCaps()` setzt sie deshalb nie.
+ *
+ * Sie als „traegt nicht" anzuzeigen waere eine Messung behauptet, die
+ * es nicht gibt — derselbe Fehler, den MF-980 benannt hat: „das Format
+ * sagt 0xE5" und „hier wurde 0xE5 gelesen" sind zwei Aussagen. */
+static uint32_t nicht_messbar()
+{
+    return (uint32_t)UFT_CAP_BITSTREAM_IO | (uint32_t)UFT_CAP_FILESYSTEM
+         | (uint32_t)UFT_CAP_CBM_BAM      | (uint32_t)UFT_CAP_GCR;
+}
+
+void FormatTab::zeigeCaps() {
+    if (!ui->labelPlanCaps) return;
+
+    if (getSelectedFormat().isEmpty()) {
+        ui->labelPlanCaps->setText(tr("Kein Format gewählt."));
+        return;
+    }
+
+    const uint32_t caps = copyPlanCaps();
+    const uint32_t offen = nicht_messbar();
+    QStringList traegt, traegtNicht, unbekannt;
+
+    /* Ueber die Aufzaehlung des KERNS laufen, nicht ueber eine Liste
+     * hier — eine gepflegte Aufzaehlung veraltet still (MF-636). */
+    for (size_t i = 0; i < uft_copy_cap_count(); i++) {
+        const uft_copy_caps_t c = uft_copy_cap_at(i);
+        const char *n = uft_copy_cap_name(c);
+        if (!n) continue;
+        const QString name = QString::fromUtf8(n);
+        if (offen & (uint32_t)c)        unbekannt   << name;
+        else if (caps & (uint32_t)c)    traegt      << name;
+        else                            traegtNicht << name;
+    }
+
+    QStringList zeilen;
+    zeilen << (traegt.isEmpty()
+                   ? tr("Das Format trägt: —")
+                   : tr("Das Format trägt: %1").arg(traegt.join(", ")));
+    if (!traegtNicht.isEmpty())
+        zeilen << tr("trägt nicht: %1").arg(traegtNicht.join(", "));
+    if (!unbekannt.isEmpty())
+        zeilen << tr("nicht feststellbar (dieser Reiter öffnet kein "
+                     "Abbild): %1").arg(unbekannt.join(", "));
+    ui->labelPlanCaps->setText(zeilen.join(QStringLiteral(" · ")));
+}
+
+/* ── MF-1238: der Plan als JSON ──────────────────────────────────────
+ *
+ * Gezeigt wird der AUFGELOESTE Plan — der, der laufen wuerde —, nicht
+ * die rohe Achsenstellung. Sonst stuende bei „Automatisch" eine Ebene
+ * im Text, die niemand ausfuehrt.
+ *
+ * Die Laenge kommt vom Kern (Nullzeiger-Abfrage, Zusage K24). Ein
+ * fester Puffer waere eine stille Kuerzung, sobald ein Plan mehr
+ * erzwingt als hineinpasst — und still gekuerzte Ausgaben sind in
+ * diesem Baum eine eigene Fehlerklasse. */
+QString FormatTab::planJson() const {
+    const uft_copy_plan_t roh = copyPlan();
+    const uft_copy_plan_t p   = uft_copy_plan_resolve(&roh, copyPlanCaps());
+
+    const size_t n = uft_copy_plan_to_json(&p, nullptr, 0);
+    if (n == 0) return QString();
+
+    QByteArray b(int(n) + 1, '\0');
+    (void)uft_copy_plan_to_json(&p, b.data(), (size_t)b.size());
+    return QString::fromUtf8(b.constData());
+}
+
+void FormatTab::onPlanJsonToggled(bool checked) {
+    if (ui->textPlanJson) {
+        ui->textPlanJson->setVisible(checked);
+        if (checked) ui->textPlanJson->setPlainText(planJson());
+    }
+    if (ui->btnPlanJson)
+        ui->btnPlanJson->setText(checked ? tr("JSON verbergen")
+                                         : tr("Plan als JSON zeigen"));
+}
+
+void FormatTab::onPlanJsonKopieren() {
+    if (QClipboard *c = QGuiApplication::clipboard())
+        c->setText(planJson());
+}
+
+void FormatTab::onPlanJsonSichern() {
+    /* Ohne Dialog wird nichts geschrieben. Ein Werkzeug, das
+     * ungefragt Dateien anlegt, ist in diesem Baum ein Befund. */
+    const QString pfad = QFileDialog::getSaveFileName(
+        this, tr("Kopierplan sichern"), QStringLiteral("kopierplan.json"),
+        tr("JSON (*.json);;Alle Dateien (*)"));
+    if (pfad.isEmpty()) return;
+
+    QFile f(pfad);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(this, tr("Kopierplan sichern"),
+                             tr("Die Datei ließ sich nicht schreiben:\n%1")
+                                 .arg(f.errorString()));
+        return;
+    }
+    const QByteArray roh = planJson().toUtf8();
+    if (f.write(roh) != roh.size())
+        QMessageBox::warning(this, tr("Kopierplan sichern"),
+                             tr("Es wurden nicht alle Daten geschrieben:\n%1")
+                                 .arg(f.errorString()));
+    f.close();
+}
+
+void FormatTab::onCopyProfileChanged(int index) {
+    if (index < 0 || !ui->comboCopyProfile) return;
+    wendeProfilAn(ui->comboCopyProfile->itemData(index).toString());
+    applyCopyPlan();
+    emit formatSettingsChanged();
+}
+
+void FormatTab::onPlanAnpassen() {
+    if (m_planFrei) {
+        /* Zurueck zum Profil, von dem ausgegangen wurde. */
+        wendeProfilAn(m_basisProfil);
+    } else {
+        /* Ab jetzt ohne Profil — aber mit den Werten, die es gesetzt
+         * hat. Der Bediener faengt nicht bei Null an. */
+        m_profil.clear();
+        setPlanFrei(true);
+    }
+    applyCopyPlan();
+    emit formatSettingsChanged();
+}
+
+uft_copy_plan_t FormatTab::copyPlan() const {
+    uft_copy_plan_t p = uft_copy_plan_default();
+    auto lies = [](QComboBox *b, int vorgabe) {
+        if (!b || b->currentIndex() < 0) return vorgabe;
+        const QVariant v = b->currentData();
+        return v.isValid() ? v.toInt() : vorgabe;
+    };
+    p.level = static_cast<uft_copy_level_t>(
+        lies(ui->comboPlanLevel, UFT_COPY_SECTOR));
+    p.strategy = static_cast<uft_read_strategy_t>(
+        lies(ui->comboPlanStrategy, UFT_READ_STANDARD));
+    p.preservation = static_cast<uft_preservation_t>(
+        lies(ui->comboPlanPreserve, UFT_PRESERVE_LOGICAL));
+    p.policy = static_cast<uft_copy_policy_t>(
+        lies(ui->comboPlanPolicy, UFT_POLICY_NORMAL));
+
+    /* MF-1235: die Feinheiten kommen jetzt aus Bedienelementen.
+     *
+     * Bis hierher leitete ich `exact_kind` aus der Ebene ab — eine
+     * Rateregel, die genau die drei Faelle der Vorgabe nicht
+     * unterscheidet (SCP->SCP fluxnah, SCP->HFE Bitstrom ohne
+     * Flusszeiten, SCP->IMG nur Sektoren). Sie ist ersetzt. */
+    p.track_mode = static_cast<uft_track_mode_t>(
+        lies(ui->comboPlanTrackMode, UFT_TRACK_DECODED));
+    p.file_special = static_cast<uft_file_special_t>(
+        lies(ui->comboPlanFileSpecial, UFT_FILE_GENERIC));
+    p.gcr = static_cast<uft_gcr_variant_t>(
+        lies(ui->comboPlanGcr, UFT_GCR_COMMODORE));
+    p.vote = static_cast<uft_vote_method_t>(
+        lies(ui->comboPlanVote, UFT_VOTE_STRICT_MAJORITY));
+    p.exact_kind = static_cast<uft_bitexact_kind_t>(
+        lies(ui->comboPlanExact, UFT_EXACT_SECTOR));
+
+    /* SHA-256 steht fest — das Ankreuzfeld ist gesperrt, und der Wert
+     * wird hier nicht aus ihm gelesen, sondern gesetzt. Ein gesperrtes
+     * Feld auszulesen hiesse, sich auf einen Zustand zu verlassen, den
+     * niemand mehr aendern kann; steht er einmal falsch, faellt es nie
+     * auf. */
+    p.hashes = (uint32_t)UFT_HASH_SHA256;
+    if (ui->checkHashSha512 && ui->checkHashSha512->isChecked())
+        p.hashes |= (uint32_t)UFT_HASH_SHA512;
+    if (ui->checkHashCrc32 && ui->checkHashCrc32->isChecked())
+        p.hashes |= (uint32_t)UFT_HASH_CRC32;
+    return p;
+}
+
+uint32_t FormatTab::copyPlanCaps() const {
+    /* Was das gewaehlte Format zusagt — und NUR das.
+     *
+     * Dateisystem, GCR und CBM-BAM bleiben ungesetzt, weil dieser Reiter
+     * sie nicht messen kann: er kennt kein geoeffnetes Abbild. Das
+     * fuehrt dazu, dass die Dateiebene einen Befund meldet, und der ist
+     * wahr — `FormatTab` hat keine Dateisystemerkennung. Sie
+     * hilfsweise als „vorhanden" anzunehmen waere genau die stille
+     * Zusage, gegen die der ganze Plan gebaut ist. */
+    uint32_t caps = 0;
+    const QString fmt = getSelectedFormat();
+    if (fmt.isEmpty()) return caps;
+
+    const uft_format_plugin_t *pl =
+        uft_get_format_plugin_by_name(fmt.toUtf8().constData());
+    if (!pl) return caps;
+
+    if (pl->capabilities & UFT_FORMAT_CAP_FLUX)      caps |= UFT_CAP_FLUX_IO;
+    if (pl->capabilities & UFT_FORMAT_CAP_TIMING)    caps |= UFT_CAP_TIMING;
+    if (pl->capabilities & UFT_FORMAT_CAP_WEAK_BITS) caps |= UFT_CAP_WEAK_BITS;
+    if (pl->capabilities & UFT_FORMAT_CAP_MULTI_REV) caps |= UFT_CAP_MULTI_REV;
+    return caps;
+}
+
+void FormatTab::applyCopyPlan() {
+    const uint32_t caps = copyPlanCaps();
+    /* MF-1237: die Verfuegbarkeit haengt am FORMAT - also neu fuellen,
+     * bevor irgendetwas angezeigt wird. */
+    fuelleProfile();
+    if (ui->labelProfileText) {
+        const uft_copy_profile_t *pr = m_profil.isEmpty()
+            ? nullptr
+            : uft_copy_profile_by_id(m_profil.toUtf8().constData());
+        const uft_copy_profile_t *basis =
+            uft_copy_profile_by_id(m_basisProfil.toUtf8().constData());
+        if (pr && pr->text)
+            ui->labelProfileText->setText(QString::fromUtf8(pr->text));
+        else if (basis)
+            ui->labelProfileText->setText(
+                tr("Benutzerdefiniert — ausgehend von %1. Die vier Achsen "
+                   "sind entsperrt.").arg(QString::fromUtf8(basis->name)));
+        else
+            ui->labelProfileText->setText(tr("Benutzerdefiniert."));
+    }
+    /* MF-1234: „Automatisch" wird VOR jeder Regel aufgeloest - sonst
+     * greift keine ebenenabhaengige Regel, und die Oberflaeche zeigte
+     * einen Zustand, den der Plan gar nicht beurteilt hat. */
+    const uft_copy_plan_t gewaehlt = copyPlan();
+    const uft_copy_plan_t plan = uft_copy_plan_resolve(&gewaehlt, caps);
+
+    /* 1. Die Befunde — harte zuerst, weil sie den Auftrag sperren. */
+    uft_copy_finding_t f[16];
+    size_t n = uft_copy_plan_check(&plan, caps, f, 16);
+    const size_t gezeigt = (n > 16) ? 16 : n;
+    QStringList hart, weich;
+    for (size_t i = 0; i < gezeigt; i++) {
+        const QString t = QString::fromUtf8(f[i].text ? f[i].text : "");
+        (f[i].hard ? hart : weich) << t;
+    }
+    QString befunde;
+    if (!hart.isEmpty())
+        befunde = tr("So nicht ausführbar: ") + hart.join(QStringLiteral("  "));
+    if (!weich.isEmpty()) {
+        if (!befunde.isEmpty()) befunde += QStringLiteral("\n");
+        befunde += tr("Hinweis: ") + weich.join(QStringLiteral("  "));
+    }
+    if (n > gezeigt)
+        befunde += tr("\n(%1 weitere Befunde)").arg(n - gezeigt);
+    if (gewaehlt.level == UFT_COPY_AUTO) {
+        const char *abgeleitet = uft_copy_level_name(plan.level);
+        const QString zeile = tr("Automatisch aufgelöst zu: %1")
+                                  .arg(QString::fromUtf8(abgeleitet ? abgeleitet : "?"));
+        befunde = befunde.isEmpty()
+                      ? zeile
+                      : (zeile + QChar('\n') + befunde);
+    }
+    if (ui->labelPlanFindings) ui->labelPlanFindings->setText(befunde);
+
+    /* 2. Was der Plan erzwingt. Sichtbar, nicht versteckt — sonst
+     *    wundert sich der Bediener, warum ein Feld nicht reagiert. */
+    uft_copy_enforced_t e[96];
+    size_t m = uft_copy_plan_enforced(&plan, e, 96);
+    const size_t emax = (m > 96) ? 96 : m;
+    QStringList zeilen;
+    for (size_t i = 0; i < emax; i++)
+        zeilen << QStringLiteral("%1 = %2")
+                      .arg(QString::fromUtf8(e[i].param))
+                      .arg(QString::fromUtf8(e[i].value));
+    if (ui->labelPlanForced)
+        ui->labelPlanForced->setText(
+            zeilen.isEmpty() ? tr("Der Plan erzwingt nichts.")
+                             : tr("Der Plan setzt fest: ")
+                                   + zeilen.join(QStringLiteral(", ")));
+
+    /* 2b. Die Feinheiten: sichtbar nur, wo sie etwas bedeuten (MF-1235).
+     *
+     * Ausgeblendet, nicht ausgegraut — dieselbe Regel wie bei den
+     * Parametern. Ein gesperrtes „Commodore GCR" auf der Sektorebene
+     * sagt „spaeter vielleicht"; dort bedeutet es aber gar nichts.
+     *
+     * Massgeblich ist die AUFGELOESTE Ebene: wer „Automatisch" waehlt
+     * und auf einem Flussformat landet, soll die Flussfelder sehen. */
+    struct { QWidget *w; bool zeigen; } planZeilen[] = {
+        { ui->rowPlanTrackMode,   plan.level == UFT_COPY_TRACK },
+        { ui->rowPlanFileSpecial, plan.level == UFT_COPY_FILE },
+        { ui->rowPlanGcr,         plan.level == UFT_COPY_NIBBLE },
+        { ui->rowPlanVote,        plan.strategy == UFT_READ_CONSENSUS },
+        { ui->rowPlanExact,       plan.preservation == UFT_PRESERVE_BIT_EXACT },
+        { ui->rowPlanHash,        plan.policy == UFT_POLICY_EVIDENCE },
+    };
+    for (const auto &z : planZeilen)
+        if (z.w) z.w->setVisible(z.zeigen);
+
+    /* Und „Commodore BAM" verschwindet als EINTRAG, wenn das Format
+     * keine BAM zusagt. Sonst koennte man etwas waehlen, das der Kern
+     * im selben Atemzug als harten Befund zurueckweist — eine Auswahl,
+     * die nur dazu da ist, abgelehnt zu werden. */
+    if (ui->comboPlanFileSpecial) {
+        const bool bam = (caps & (uint32_t)UFT_CAP_CBM_BAM) &&
+                         (caps & (uint32_t)UFT_CAP_FILESYSTEM);
+        const int idx = ui->comboPlanFileSpecial->findData(UFT_FILE_BAM);
+        if (idx >= 0 && !bam) {
+            if (ui->comboPlanFileSpecial->currentIndex() == idx)
+                ui->comboPlanFileSpecial->setCurrentIndex(
+                    ui->comboPlanFileSpecial->findData(UFT_FILE_GENERIC));
+            ui->comboPlanFileSpecial->removeItem(idx);
+        } else if (idx < 0 && bam) {
+            const char *n = uft_copy_file_special_name(UFT_FILE_BAM);
+            ui->comboPlanFileSpecial->insertItem(
+                UFT_FILE_BAM, QString::fromUtf8(n ? n : "BAM"), UFT_FILE_BAM);
+        }
+    }
+
+    /* 3. Und jetzt die Bedienelemente.
+     *
+     * Die Zuordnung Widget -> Parameter steht HIER, an einer Stelle.
+     * Sie fuehrt nur, was sich belegen laesst: gemessen (MF-1232) haben
+     * von 155 Planparametern 26 ueberhaupt ein Bedienelement, und von
+     * denen sind diese eindeutig. Ein Widget zu erfinden, das es nicht
+     * gibt, waere die Klasse MF-767.
+     *
+     * Was der Plan macht:
+     *   FORBIDDEN -> ausblenden   (die Ebene zeigt es ausdruecklich nicht)
+     *   HIDDEN    -> ausblenden   (fuer diese Ebene nicht vorgesehen)
+     *   FORCED    -> sperren      (der Plan bestimmt den Wert)
+     *   READONLY  -> sperren      (gemessener Quellwert)
+     *   sonst     -> frei
+     */
+    struct { const char *param; QWidget *w; } bindung[] = {
+        { "read.revolutions",   ui->spinRevolutions },
+        { "read.require_index", ui->checkUseIndex },
+        { "write.precomp",      ui->checkWritePrecomp },
+        { "write.verify",       ui->checkXCopyVerify },
+        { "rpm",                ui->comboRPM },
+        { "encoding",           ui->comboEncoding },
+        { "layout.half_tracks", ui->checkHalfTracks },
+        { "layout.half_tracks", ui->checkDetectHalfTracks },
+        { "hash.enabled",       ui->checkGenerateHash },
+        { "geometry.cylinders", ui->spinTracks },
+        { "geometry.heads",     ui->spinSides },
+        { "gcr.variant",        ui->comboGCRType },
+    };
+
+    for (const auto &b : bindung) {
+        if (!b.w) continue;
+        const char *wert = nullptr;
+        /* MF-1234: mit den Faehigkeiten des Formats. Was es nicht
+         * kann, verschwindet - ein Regler ohne Bedeutung ist keine
+         * Einstellung, sondern eine Irrefuehrung. */
+        const uft_copy_pstate_t z =
+            uft_copy_param_state_caps(&plan, caps, b.param, &wert);
+        switch (z) {
+            case UFT_PSTATE_FORBIDDEN:
+            case UFT_PSTATE_HIDDEN:
+                b.w->setVisible(false);
+                break;
+            case UFT_PSTATE_FORCED:
+                b.w->setVisible(true);
+                b.w->setEnabled(false);
+                b.w->setToolTip(tr("Vom Kopierplan festgelegt: %1")
+                                    .arg(QString::fromUtf8(wert ? wert : "")));
+                break;
+            case UFT_PSTATE_READONLY:
+                b.w->setVisible(true);
+                b.w->setEnabled(false);
+                b.w->setToolTip(tr("Gemessener Quellwert, nicht einstellbar."));
+                break;
+            default:
+                b.w->setVisible(true);
+                b.w->setEnabled(true);
+                b.w->setToolTip(QString());
+                break;
+        }
+    }
+
+    /* MF-1238: die beiden neuen Anzeigen haengen am selben Plan wie
+     * alles andere — also werden sie hier nachgezogen und nicht an
+     * jedem einzelnen Aenderungsweg einzeln. */
+    zeigeCaps();
+    /* `isHidden()` und nicht `isVisible()`: ein Widget in einem nie
+     * gezeigten Fenster ist NICHT sichtbar, auch wenn es niemand
+     * versteckt hat — mit `isVisible()` haenge die Zusage am
+     * Fensterzustand statt am Aufklappen (gemessen im Offscreen-Lauf). */
+    if (ui->textPlanJson && !ui->textPlanJson->isHidden())
+        ui->textPlanJson->setPlainText(planJson());
+}
+
+void FormatTab::onCopyPlanChanged(int index) {
+    Q_UNUSED(index);
+    applyCopyPlan();
+    emit formatSettingsChanged();
+}
+
+void FormatTab::onCopyPlanToggled(bool checked) {
+    Q_UNUSED(checked);
+    applyCopyPlan();
+    emit formatSettingsChanged();
+}
 
 void FormatTab::onCopyModeChanged(int index) {
     Q_UNUSED(index);

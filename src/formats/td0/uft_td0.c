@@ -4,6 +4,7 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"   /* MF-1231: uft_format_variant_t */
 
 /* Teledisk signature, read with uft_read_le16() (p[0] | p[1] << 8):
  *   normal / RLE      on-disk bytes 'T','D'  ->  0x4454
@@ -377,6 +378,47 @@ static const uft_plugin_feature_t uft_format_plugin_td0_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── Die zwei Packarten, die dieses Plugin unterscheidet (MF-1231) ───
+ *
+ * Neu ist hier keine Zahl: `TD0_MAGIC_NORMAL` und `TD0_MAGIC_ADVANCED`
+ * stehen oben in dieser Datei, und `td0_probe` entscheidet an ihnen.
+ * Die Oberflaeche nannte dieselben zwei als "Normal" und "Advanced"
+ * (`m_formatInfo["TD0"]`) — die Namen stimmen, nur wusste sie nichts
+ * von der Richtung.
+ *
+ * Und die ist hier der eigentliche Gewinn: TD0 fuehrt **kein**
+ * `UFT_FORMAT_CAP_WRITE` und hat kein `write_track`. Beide Varianten
+ * sind also nur lesbar, und `write_note` sagt es statt einer stummen
+ * Absage im Speichern-Dialog. */
+static int td0_variante_ist_normal(const uint8_t *d, size_t n)
+{
+    return (d && n >= 2 && uft_read_le16(d) == TD0_MAGIC_NORMAL) ? 1 : 0;
+}
+
+static int td0_variante_ist_advanced(const uint8_t *d, size_t n)
+{
+    return (d && n >= 2 && uft_read_le16(d) == TD0_MAGIC_ADVANCED) ? 1 : 0;
+}
+
+static const char TD0_KEIN_SCHREIBER[] =
+    "UFT liest TD0, schreibt es aber nicht: das Plugin hat kein "
+    "write_track und beansprucht kein UFT_FORMAT_CAP_WRITE.";
+
+static const uft_format_variant_t td0_variants[] = {
+    { .name = "Normal", .description = "Teledisk, RLE-gepackt ('TD')",
+      .base_format = UFT_FORMAT_TD0,
+      .validate = td0_variante_ist_normal,
+      .can_read = true, .can_write = false,
+      .write_note = TD0_KEIN_SCHREIBER,
+      .is_write_default = false },
+    { .name = "Advanced", .description = "Teledisk, Huffman-gepackt ('td')",
+      .base_format = UFT_FORMAT_TD0,
+      .validate = td0_variante_ist_advanced,
+      .can_read = true, .can_write = false,
+      .write_note = TD0_KEIN_SCHREIBER,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_td0 = {
     .name = "TD0",
     .description = "Teledisk Archive",
@@ -384,6 +426,8 @@ const uft_format_plugin_t uft_format_plugin_td0 = {
     .version = 0x00010000,
     .format = UFT_FORMAT_TD0,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
+    .variants = td0_variants,
+    .variant_count = sizeof(td0_variants) / sizeof(td0_variants[0]),
     .probe = td0_probe,
     .open = td0_open,
     .close = td0_close,

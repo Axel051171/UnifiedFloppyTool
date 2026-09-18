@@ -46,6 +46,7 @@ find_package(ZLIB REQUIRED)
 
 set(CORE_SOURCES
     uft_advanced_mode.c
+    uft_copy_plan.c            # MF-1232: der Kopierplan in vier Dimensionen
     uft_core_stubs.c           # glue: real plugin-delegation for disk API
     uft_disk_create_image.c    # MF-991: die Tuer zu plugin->create
     ../flux/uft_scp_parser.c   # MF-418: uft_core_stubs' SCP adapters call into it

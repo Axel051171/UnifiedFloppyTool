@@ -76,6 +76,232 @@
        </widget>
       </item>
       
+      <!-- KOPIERPLAN (MF-1233) -->
+      <!--
+        Vier Achsen statt eines Modus. Die Wertelisten stehen hier
+        ABSICHTLICH nicht: sie kommen aus uft_copy_level_name() und
+        seinen drei Geschwistern, also aus derselben Quelle, die der
+        Kern benutzt. Eine zweite Liste im .ui waere genau der Fehler,
+        den comboXCopyMode gegen comboCopyMode vorfuehrt - zwei Listen,
+        zwei Wahrheiten.
+      -->
+      <item>
+       <widget class="QGroupBox" name="groupCopyPlan">
+        <property name="title"><string>Kopierplan</string></property>
+        <layout class="QVBoxLayout">
+         <!--
+           Der Einstieg (MF-1237): ein benannter Kopiermodus statt vier
+           Achsen. Vier Achsen ergeben 360 Plaene - vollstaendig, aber
+           kein Einstieg. Ein Bediener denkt in „RawCopy", nicht in
+           „bitstream/standard/layout/verify".
+
+           Das Profil SETZT die vier Achsen darunter und sperrt sie.
+           Wer eine anfasst, arbeitet danach ohne Profil weiter; die
+           Achsen bleiben dabei sichtbar, damit man sieht, WAS das
+           Profil eingestellt hat.
+
+           Die Liste kommt aus uft_copy_profile() - eine Tafel fuer
+           Kern und Oberflaeche.
+         -->
+         <item>
+          <layout class="QHBoxLayout">
+           <item><widget class="QLabel"><property name="text"><string>Kopiermodus:</string></property></widget></item>
+           <item><widget class="QComboBox" name="comboCopyProfile"/></item>
+           <item><widget class="QPushButton" name="btnPlanAnpassen">
+            <property name="text"><string>Plan anpassen</string></property>
+           </widget></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelProfileText">
+           <property name="wordWrap"><bool>true</bool></property>
+           <property name="text"><string/></property>
+          </widget>
+         </item>
+         <!--
+           MF-1238: was das Format TRAEGT.
+
+           Bis hierher sagte die Oberflaeche nur, was NICHT geht
+           (labelPlanFindings). Diese Zeile ist die andere Haelfte - und
+           sie unterscheidet drei Zustaende, nicht zwei: traegt,
+           traegt nicht, und „nicht feststellbar". Das Dritte ist der
+           ehrliche Fall fuer VIER Flaggen - Bitstrom, Dateisystem,
+           Commodore-BAM und GCR (gemessen: copyPlanCaps() setzt genau
+           diese vier nie, die Bauabsicht nannte irrtuemlich drei): dieser
+           Reiter kennt kein geoeffnetes Abbild und kann sie nicht
+           messen. Sie als „traegt nicht" zu fuehren waere eine Messung
+           behaupten, die es nicht gibt.
+
+           Die Namen kommen aus uft_copy_cap_name() - eine Tafel.
+         -->
+         <item>
+          <widget class="QLabel" name="labelPlanCaps">
+           <property name="wordWrap"><bool>true</bool></property>
+           <property name="text"><string/></property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout">
+           <item><widget class="QLabel"><property name="text"><string>Ebene:</string></property></widget></item>
+           <item><widget class="QComboBox" name="comboPlanLevel"/></item>
+           <item><widget class="QLabel"><property name="text"><string>Strategie:</string></property></widget></item>
+           <item><widget class="QComboBox" name="comboPlanStrategy"/></item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout">
+           <item><widget class="QLabel"><property name="text"><string>Erhaltung:</string></property></widget></item>
+           <item><widget class="QComboBox" name="comboPlanPreserve"/></item>
+           <item><widget class="QLabel"><property name="text"><string>Sicherheit:</string></property></widget></item>
+           <item><widget class="QComboBox" name="comboPlanPolicy"/></item>
+          </layout>
+         </item>
+         <!--
+           Die Feinheiten (MF-1235). Jede steht in einem eigenen
+           Zeilen-Widget, damit Beschriftung UND Auswahlfeld zusammen
+           verschwinden, sobald sie unter der aktuellen Wahl nichts
+           bedeuten. Ausgegraut waere hier falsch: ein gesperrtes
+           „Commodore GCR" auf der Sektorebene sagt „spaeter
+           vielleicht" — es bedeutet dort aber gar nichts.
+
+           Die Wertelisten stehen auch hier ABSICHTLICH nicht im .ui:
+           sie kommen aus uft_copy_track_mode_name() und seinen vier
+           Geschwistern.
+         -->
+         <item>
+          <layout class="QHBoxLayout">
+           <item>
+            <widget class="QWidget" name="rowPlanTrackMode">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>Spurart:</string></property></widget></item>
+              <item><widget class="QComboBox" name="comboPlanTrackMode"/></item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="rowPlanFileSpecial">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>Dateiart:</string></property></widget></item>
+              <item><widget class="QComboBox" name="comboPlanFileSpecial"/></item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="rowPlanGcr">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>GCR-Verfahren:</string></property></widget></item>
+              <item><widget class="QComboBox" name="comboPlanGcr"/></item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout">
+           <item>
+            <widget class="QWidget" name="rowPlanVote">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>Abstimmung:</string></property></widget></item>
+              <item><widget class="QComboBox" name="comboPlanVote"/></item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="rowPlanExact">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>Genauigkeit:</string></property></widget></item>
+              <item><widget class="QComboBox" name="comboPlanExact"/></item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="rowPlanHash">
+             <layout class="QHBoxLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <item><widget class="QLabel"><property name="text"><string>Hash:</string></property></widget></item>
+              <!-- SHA-256 ist Pflicht: gesetzt und gesperrt. Sichtbar
+                   bleibt es trotzdem, damit der Bediener sieht, WAS
+                   gerechnet wird. -->
+              <item><widget class="QCheckBox" name="checkHashSha256">
+               <property name="text"><string>SHA-256</string></property>
+               <property name="checked"><bool>true</bool></property>
+               <property name="enabled"><bool>false</bool></property>
+              </widget></item>
+              <item><widget class="QCheckBox" name="checkHashSha512">
+               <property name="text"><string>SHA-512</string></property>
+              </widget></item>
+              <item><widget class="QCheckBox" name="checkHashCrc32">
+               <property name="text"><string>CRC32</string></property>
+              </widget></item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelPlanFindings">
+           <property name="wordWrap"><bool>true</bool></property>
+           <property name="text"><string/></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelPlanForced">
+           <property name="wordWrap"><bool>true</bool></property>
+           <property name="text"><string/></property>
+          </widget>
+         </item>
+         <!--
+           MF-1238: der Plan als JSON.
+
+           uft_copy_plan_to_json() gibt es seit MF-1234 und es hatte
+           null Aufrufer - eine fertige Tuer ohne Weg dorthin, die
+           Klasse MF-930. Die Ansicht ist versteckt, bis jemand sie
+           aufklappt: sie ist die Kontrollform, nicht die Bedienform.
+
+           Der Text wird NICHT hier erzeugt. Er kommt Zeichen fuer
+           Zeichen aus dem Kern, und die Laenge wird beim Kern erfragt,
+           statt einen festen Puffer zu waehlen.
+         -->
+         <item>
+          <layout class="QHBoxLayout">
+           <item><widget class="QPushButton" name="btnPlanJson">
+            <property name="checkable"><bool>true</bool></property>
+            <property name="text"><string>Plan als JSON zeigen</string></property>
+           </widget></item>
+           <item><widget class="QPushButton" name="btnPlanJsonKopieren">
+            <property name="text"><string>In die Zwischenablage</string></property>
+           </widget></item>
+           <item><widget class="QPushButton" name="btnPlanJsonSichern">
+            <property name="text"><string>Sichern …</string></property>
+           </widget></item>
+           <item><spacer name="spacerPlanJson">
+            <property name="orientation"><enum>Qt::Horizontal</enum></property>
+            <property name="sizeHint"><size><width>40</width><height>20</height></size></property>
+           </spacer></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QPlainTextEdit" name="textPlanJson">
+           <property name="visible"><bool>false</bool></property>
+           <property name="readOnly"><bool>true</bool></property>
+           <property name="minimumSize"><size><width>0</width><height>160</height></size></property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
       <!-- XCOPY -->
       <item>
        <widget class="QGroupBox" name="groupXCopy">

@@ -18,6 +18,7 @@
 
 extern "C" {
     #include "uft/uft_protection.h"
+    #include "uft/core/uft_copy_plan.h"   /* MF-1233: der Kopierplan */
 }
 
 namespace Ui { class TabFormat; }
@@ -114,6 +115,42 @@ public:
     QString getSelectedSystem() const;
     QString getSelectedFormat() const;
     QString getSelectedVersion() const;
+
+    // ========================================================================
+    // Kopierplan (MF-1233)
+    // ========================================================================
+
+    /** Der Plan, wie ihn die vier Auswahlfelder gerade beschreiben. */
+    uft_copy_plan_t copyPlan() const;
+
+    /** Die Faehigkeiten des gewaehlten Formats als Bitmaske fuer
+     *  `uft_copy_plan_check()`. Was nicht gemessen werden kann, bleibt
+     *  ungesetzt — dann meldet die Pruefung es, statt es anzunehmen. */
+    uint32_t copyPlanCaps() const;
+
+    /** Plan auf die Oberflaeche anwenden: Befunde und erzwungene Werte
+     *  anzeigen, betroffene Bedienelemente sperren oder ausblenden. */
+    void applyCopyPlan();
+
+    /** MF-1237: das Profilfeld aus dem Kern fuellen, mit Grund bei den
+     *  Profilen, die fuer dieses Format nicht taugen. */
+    void fuelleProfile();
+
+    /** Ein Profil anwenden; leere Kennung heisst „Benutzerdefiniert". */
+    void wendeProfilAn(const QString &id);
+
+    /** Die vier Achsen sperren (false) oder freigeben (true). */
+    void setPlanFrei(bool frei);
+
+    /** MF-1238: der Plan als JSON, wie ihn der KERN schreibt.
+     *
+     *  Zweistufig: erst die Laenge beim Kern erfragen, dann genau so
+     *  viel bereitstellen. Ein fester Puffer waere eine stille Kuerzung,
+     *  sobald ein Plan mehr erzwingt als hineinpasst. */
+    QString planJson() const;
+
+    /** MF-1238: die Zeile „was das Format traegt" nachziehen. */
+    void zeigeCaps();
     
     // ========================================================================
     // Preset API
@@ -159,6 +196,15 @@ private slots:
     // XCopy dependencies
     void onCopyModeChanged(int index);
     void onAllTracksToggled(bool checked);
+
+    // Kopierplan (MF-1233)
+    void onCopyPlanChanged(int index);
+    void onCopyPlanToggled(bool checked);   // MF-1235: Hashsatz
+    void onCopyProfileChanged(int index);   // MF-1237: benannter Modus
+    void onPlanAnpassen();                  // MF-1237: Achsen entsperren
+    void onPlanJsonToggled(bool checked);   // MF-1238: JSON-Ansicht
+    void onPlanJsonKopieren();              // MF-1238
+    void onPlanJsonSichern();               // MF-1238
     
     // Nibble dependencies
     void onGCRTypeChanged(int index);
@@ -198,7 +244,16 @@ private slots:
 
 private:
     Ui::TabFormat *ui;
-    
+
+    /* MF-1237: der benannte Kopiermodus.
+     *
+     * `m_profil` ist leer, solange die vier Achsen frei bearbeitet
+     * werden („Benutzerdefiniert"); `m_basisProfil` merkt sich, WOVON
+     * ausgegangen wurde, damit der Knopf zurueckfuehren kann. */
+    QString m_profil;
+    QString m_basisProfil;
+    bool    m_planFrei = false;
+
     // Advanced dialog parameters
     FluxAdvancedDialog::FluxAdvancedParams m_fluxAdvParams;
     PLLAdvancedDialog::PLLAdvancedParams m_pllAdvParams;

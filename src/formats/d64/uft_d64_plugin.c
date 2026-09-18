@@ -8,6 +8,7 @@
  * Optional 683-byte error info block at end.
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_format_probe.h"    /* MF-1231: uft_format_variant_t */
 #include "uft/formats/cbm/uft_cbm_geometry.h"
 #include "uft/formats/c64/uft_bam_editor.h"  /* MF-994: bam_create_d64 */
 
@@ -353,6 +354,64 @@ static uft_error_t d64_plugin_create(uft_disk_t *disk, const char *path,
     return d64_plugin_open(disk, path, false);
 }
 
+/* ── Die vier Spurzahlen, die dieses Plugin kennt (MF-1231) ──────────
+ *
+ * Neu ist hier keine Zahl: `d64_plugin_probe` nimmt genau acht
+ * Dateigroessen an, und `d64_plugin_open` leitet daraus die Spurzahl
+ * ab. Vier Spurzahlen, jede mit und ohne den angehaengten Fehlerblock
+ * — der ist keine eigene Variante, sondern ein Anhang an dieselbe
+ * Diskette, deshalb stehen beide Groessen in EINEM Eintrag.
+ *
+ * Die Oberflaeche nannte bis MF-1231 "Standard", "35 Track",
+ * "40 Track", "42 Track" — vier Namen fuer drei Sachen, denn "Standard"
+ * und "35 Track" sind dieselbe Diskette; die 41-Spur-Fassung fehlte,
+ * und der Fehlerblock kam dort ueberhaupt nicht vor.
+ *
+ * `can_write` ist fuer alle vier wahr: `d64_plugin_write_track` prueft
+ * die Spur gegen `p->max_track`, das beim Oeffnen aus der Dateigroesse
+ * kommt, und kennt keine Sonderbehandlung je Spurzahl.
+ *
+ * Schreibvorgabe sind die 35 Spuren — die Diskette, die ein 1541
+ * formatiert; 40 und 42 Spuren brauchen ein veraendertes DOS. */
+static const uft_format_variant_t d64_variants[] = {
+    { .name = "35 Track", .description = "1541 Standard, 683 Bloecke",
+      .base_format = UFT_FORMAT_D64,
+      .min_size = 174848, .max_size = 175531,
+      .exact_sizes = { 174848, 175531 },
+      .cylinders = 35, .heads = 1,
+      .sectors_min = 17, .sectors_max = 21, .sector_size = 256,
+      .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = true },
+    { .name = "40 Track", .description = "SpeedDOS/DolphinDOS, 768 Bloecke",
+      .base_format = UFT_FORMAT_D64,
+      .min_size = 196608, .max_size = 197376,
+      .exact_sizes = { 196608, 197376 },
+      .cylinders = 40, .heads = 1,
+      .sectors_min = 17, .sectors_max = 21, .sector_size = 256,
+      .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "41 Track", .description = "erweitert, 785 Bloecke",
+      .base_format = UFT_FORMAT_D64,
+      .min_size = 200960, .max_size = 201745,
+      .exact_sizes = { 200960, 201745 },
+      .cylinders = 41, .heads = 1,
+      .sectors_min = 17, .sectors_max = 21, .sector_size = 256,
+      .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+    { .name = "42 Track", .description = "erweitert, 802 Bloecke",
+      .base_format = UFT_FORMAT_D64,
+      .min_size = 205312, .max_size = 206114,
+      .exact_sizes = { 205312, 206114 },
+      .cylinders = 42, .heads = 1,
+      .sectors_min = 17, .sectors_max = 21, .sector_size = 256,
+      .validate = NULL,
+      .can_read = true, .can_write = true, .write_note = NULL,
+      .is_write_default = false },
+};
+
 const uft_format_plugin_t uft_format_plugin_d64 = {
     .name = "D64", .description = "Commodore 1541 D64",
     .extensions = "d64", .format = UFT_FORMAT_D64,
@@ -361,6 +420,8 @@ const uft_format_plugin_t uft_format_plugin_d64 = {
     .create = d64_plugin_create,   /* MF-994 */
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
     .write_track = d64_plugin_write_track,
+    .variants = d64_variants,
+    .variant_count = sizeof(d64_variants) / sizeof(d64_variants[0]),
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* 1541 DOS well-known but never formally specced; de-facto via VICE */
     .features = uft_format_plugin_d64_features,  /* V415-PLAN PLUGIN.features (MF-263) */
