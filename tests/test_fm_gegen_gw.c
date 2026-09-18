@@ -87,6 +87,13 @@
 #include <stdint.h>
 
 #include "uft/uft_format_plugin.h"
+/* MF-1234: `uft_track_release()` war hier implizit deklariert. Der Aufruf
+ * unten ist richtig — `uft_track_release(uft_track_t*)` nimmt genau eine
+ * Adresse, und die Funktion gibt die Struktur ausdruecklich NICHT frei
+ * („Callers that own it on the stack rely on that",
+ * `uft_unified_types.c:360`). Es fehlte allein die Deklaration, und ohne
+ * sie ist jede Aussage ueber Argumente und Rueckgabe ungeprueft. */
+#include "uft/uft_track.h"
 #include "uft/flux/uft_flux_decoder.h"
 
 extern const uft_format_plugin_t uft_format_plugin_scp;

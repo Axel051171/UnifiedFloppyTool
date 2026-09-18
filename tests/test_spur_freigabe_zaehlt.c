@@ -53,6 +53,12 @@
 #include <string.h>
 
 #include "uft/uft_format_plugin.h"
+/* MF-1234: ohne diesen Include waren `uft_track_alloc()` und
+ * `uft_track_release()` in dieser Datei IMPLIZIT deklariert — gemessen mit
+ * `gcc -E`: in 4517 vorverarbeiteten Zeilen kam `uft_track_alloc` nur an
+ * den drei Aufrufstellen vor, nirgends als Deklaration. Die Folge steht
+ * unten bei `bilanz_release()`. */
+#include "uft/uft_track.h"
 
 /* ══════════════════════════════════════════════════════════════════════
  * Die Waage
@@ -152,9 +158,40 @@ static void bilanz_release(void) {
 
     waage_start();
 
-    uft_error_t rc = uft_track_alloc(&t, (size_t)N);
-    ZUSAGE(rc == UFT_OK, "uft_track_alloc() gelingt");
+    /* ZURUECKGENOMMEN MF-1234. Hier stand:
+     *
+     *     uft_error_t rc = uft_track_alloc(&t, (size_t)N);
+     *     ZUSAGE(rc == UFT_OK, "uft_track_alloc() gelingt");
+     *
+     * Diese Zusage war GRUEN, WEIL DER AUFRUF FEHLSCHLUG — und ihr Text
+     * sagte das Gegenteil. Gemessen mit einer Wegwerf-Sonde:
+     *
+     *   `uft_track_alloc()` ist `uft_track_t*(size_t max_sectors,
+     *   size_t max_raw_bits)`; sie legt eine NEUE Halden-Spur an und
+     *   beschreibt keine vom Aufrufer gelieferte. `&t` landete also in
+     *   `max_sectors` — als Zahl 86 467 659 344 —, und
+     *   `calloc(86467659344, 192)` braucht ~16,6 TB. Rueckgabe: NULL.
+     *
+     *   Weil die Deklaration hier FEHLTE (siehe Include oben), nahm C
+     *   `int uft_track_alloc()` an; der Zeiger wurde auf `int` verkuerzt,
+     *   NULL wurde 0, und 0 ist `UFT_OK`. `t` blieb dabei unberuehrt —
+     *   byteweise gegen eine genullte Spur geprueft: kein Unterschied.
+     *
+     * Das ist schaerfer als die Tor-64-Klasse: der Test wurde nicht
+     * bloss nie rot, er war gruen DURCH den Misserfolg. Mit sichtbarer
+     * Deklaration uebersetzt die Zeile nicht mehr — gcc 13.1.0:
+     * „incompatible types when initializing type 'uft_error_t'
+     * {aka 'uft_rc_t'} using type 'uft_track_t *'".
+     *
+     * Was hier wirklich gilt und jetzt zugesagt wird: eine genullte
+     * STAPEL-Spur braucht keine Vorbelegung. `uft_track_add_sector()`
+     * legt das Sektorfeld selbst an — es ist der zweite der beiden
+     * Schreiber, die der MF-1132-Kommentar in
+     * `uft_unified_types.c:275` ausdruecklich nennt. */
+    ZUSAGE(t.sectors == NULL && t.sector_capacity == 0,
+           "die Stapelspur ist leer — es gibt hier keine Vorbelegung");
 
+    uft_error_t rc = UFT_OK;
     for (int i = 0; i < N; i++) {
         uft_sector_t s;
         sektor_fuellen(&s, i);
@@ -164,6 +201,15 @@ static void bilanz_release(void) {
     }
     ZUSAGE(rc == UFT_OK, "alle 21 Sektoren angenommen");
     ZUSAGE(t.sector_count == (size_t)N, "sector_count stimmt");
+
+    /* MF-1234: der ERSATZ fuer die zurueckgenommene Zusage, und er ist
+     * schaerfer als sie. 32 ist die Erstwachstum-Konstante aus
+     * `uft_track_add_sector()` (`uft_format_plugin.c:480`:
+     * `sector_capacity ? sector_capacity * 2 : 32`) — gemessen, nicht
+     * gerundet. Wer die Wachstumsregel aendert, macht diese Zeile rot,
+     * und wer die Vorbelegung zurueckholt, ebenso. */
+    ZUSAGE(t.sector_capacity == 32,
+           "add_sector hat das Sektorfeld selbst angelegt (0 -> 32)");
 
     /* Der gemessene Kern des Befunds: die Fahne wird nicht gesetzt. Das
      * ist KEIN Fehler mehr — seit MF-1132 haengt die Freigabe des
@@ -195,7 +241,13 @@ static void doppelt_freigeben(void) {
     memset(&t, 0, sizeof(t));
 
     waage_start();
-    uft_track_alloc(&t, 4);
+    /* ZURUECKGENOMMEN MF-1234: hier stand `uft_track_alloc(&t, 4);`. Der
+     * Aufruf war eine Nulloperation — er legte eine Halden-Spur an,
+     * scheiterte am 16-TB-`calloc` (die Adresse `&t` als `max_sectors`),
+     * gab die Spur wieder frei und liess `t` unberuehrt. Fuer die Waage
+     * war er ausgeglichen (+1 aeusseres `calloc`, -1 `free`, das innere
+     * NULL wird nicht gezaehlt), sein Entfernen verschiebt die Bilanz
+     * also nicht — nachgerechnet an den Wickeln oben. */
     for (int i = 0; i < 4; i++) {
         uft_sector_t s;
         sektor_fuellen(&s, i);
@@ -227,7 +279,8 @@ static void geliehenes_bleibt(void) {
     memset(&t, 0, sizeof(t));
 
     waage_start();
-    uft_track_alloc(&t, 2);
+    /* ZURUECKGENOMMEN MF-1234: hier stand `uft_track_alloc(&t, 2);` —
+     * dieselbe Nulloperation wie in `doppelt_freigeben()`. */
     for (int i = 0; i < 2; i++) {
         uft_sector_t s;
         sektor_fuellen(&s, i);

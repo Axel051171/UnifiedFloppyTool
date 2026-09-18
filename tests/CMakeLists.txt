@@ -250,8 +250,51 @@ foreach(test_source ${TEST_SOURCES})
     # `-U` steht in der Kommandozeile hinter dem `-D` aus den
     # CONFIG-Flags und gewinnt deshalb. Sanitizer- und Coverage-Lauf
     # bauen Debug und waren nie betroffen — der gatende Lauf schon.
+    # MF-1234: eine implizite Deklaration ist in einem TEST keine
+    # Warnung, sondern ein Messfehler — und dieser Baum hat dafuer eine
+    # eigene Falle, weil `UFT_OK == UFT_SUCCESS == 0` ist
+    # (`uft_error.h:38/:143/:148`).
+    #
+    # Ohne sichtbare Deklaration nimmt C `int f()` an. Gibt die Funktion
+    # wirklich einen ZEIGER zurueck, wird er auf `int` verkuerzt, `NULL`
+    # wird `0` — und `0` ist `UFT_OK`. Eine gescheiterte Anforderung
+    # liest sich damit als Erfolg.
+    #
+    # Gemessen an `test_spur_freigabe_zaehlt.c:155` (Vorzustand):
+    # `uft_track_alloc()` ist `uft_track_t*(size_t, size_t)`, der Test
+    # uebergab `&t` als `max_sectors` (als Zahl 86 467 659 344),
+    # `calloc(86467659344, 192)` braucht ~16,6 TB, Rueckgabe NULL — und
+    # `ZUSAGE(rc == UFT_OK, "uft_track_alloc() gelingt")` war GRUEN,
+    # WEIL der Aufruf fehlschlug. Schaerfer als Tor 64: nicht „wird nie
+    # rot", sondern „gruen durch den Misserfolg".
+    #
+    # Sprengradius VOR dem Scharfstellen gemessen, nicht danach: von 478
+    # uebersetzbaren C-Dateien unter `tests` fielen 3 (die drei aus
+    # MF-1234), 473 waren sauber, 26 liessen sich mit flachem
+    # Include-Pfad nicht messen und sind hier benannt statt verschwiegen.
+    # Zwei weitere Treffer sind absichtliche Pruef-Eingaben unter
+    # `tests/formats` mit dem Namensanfang `fixture_` und kein Bauziel
+    # (GLOB ist `test_*`; `build.ninja` nennt sie 0 Mal) — deshalb
+    # braucht dieses Tor KEINE Ausnahmeliste, und das ist der Punkt: eine
+    # gepflegte Liste ist in diesem Baum 14 Mal veraltet.
+    #
+    # Tautologie-Sperre: `test_mgt_verzeichnis_vollstaendig.c` ruft
+    # dieselben Funktionen, nur richtig, und uebersetzt mit der Fahne
+    # weiter (gemessen).
+    #
+    # Und die Fahne braucht die Sprachklammer, sonst verletzt das Tor
+    # SELBST die Regel, die es haelt: ohne
+    # `$<COMPILE_LANGUAGE:C>` meldet der Vollbau
+    #   cc1plus.exe: warning: '-Werror=' argument
+    #   '-Werror=implicit-function-declaration' is not valid for C++
+    # neun Mal — die Schleife baut auch die kopfnahen C++-Tests aus
+    # `_HEADER_ONLY_CPP_TESTS`. Gemessen im ersten Lauf, behoben vor dem
+    # Commit; es gibt in C++ keine implizite Deklaration, die Fahne ist
+    # dort also nicht nur ungueltig, sondern auch unnoetig.
     if(NOT MSVC)
-        target_compile_options(${test_name} PRIVATE -UNDEBUG)
+        target_compile_options(${test_name} PRIVATE
+            -UNDEBUG
+            $<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>)
     else()
         target_compile_options(${test_name} PRIVATE /U NDEBUG)
     endif()

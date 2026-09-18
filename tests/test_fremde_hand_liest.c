@@ -112,6 +112,13 @@
 #include <string.h>
 
 #include "uft/uft_format_plugin.h"
+/* MF-1234: `uft_track_release()` war hier implizit deklariert — der
+ * Aufruf selbst ist richtig, es fehlte die Deklaration. Dritte von drei
+ * Dateien dieser Art im Testbaum (gemessen ueber alle 478 uebersetzbaren
+ * C-Dateien unter `tests`: 5 Treffer, davon 2 absichtliche Pruef-Eingaben
+ * unter `tests/formats` mit dem Namensanfang `fixture_`, die kein
+ * Bauziel sind — `build.ninja` nennt sie 0 Mal). */
+#include "uft/uft_track.h"
 #include "uft/uft_types.h"
 #include "uft/formats/kryoflux_checker.h"
 

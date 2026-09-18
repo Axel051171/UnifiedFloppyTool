@@ -2934,7 +2934,50 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     („warnungsfrei unter `-Wall -Wextra -Wpedantic`") gemessen **nicht**.
   · Selbsttest **38/38**, Meta-Tor **75 grün / 0 rot**, Rotbeweis über
     alle vier CI-Wege, doppelt bezeugt von gcc.
+- **Stand nach MF-1234 — die D7-Lücke aus MF-1230 hat ein Tor, und der
+  Weg dorthin fand einen schwereren Defekt als die Warnung:**
+  · MF-1230 hatte gemessen, dass D7 („warnungsfrei unter `-Wall -Wextra
+    -Wpedantic`") **kein Tor** hat — acht Verletzungen an einem Tag,
+    vier behoben, vier benannt. Die vier benannten waren
+    `uft_track_release`/`uft_track_alloc`-Aufrufe **ohne Deklaration**.
+  · **Beim Nachmessen war eine davon keine Warnung, sondern eine
+    Falschaussage mit umgekehrtem Vorzeichen.**
+    `tests/test_spur_freigabe_zaehlt.c:155` behauptete
+    `ZUSAGE(rc == UFT_OK, "uft_track_alloc() gelingt")` — und war grün,
+    **WEIL der Aufruf fehlschlug**: `uft_track_alloc()` ist ein
+    `uft_track_t*(size_t, size_t)`, die Adresse `&t` landete in
+    `max_sectors` (**86 467 659 344**), `calloc()` hätte **16,6 TB**
+    gebraucht, Rückgabe `NULL`, ohne Deklaration auf `int` verkürzt zu
+    **0** — und `0` ist `UFT_OK`. `t` wurde dabei **nie** beschrieben.
+    Schärfer als Tor 64: nicht „wird nie rot", sondern „grün durch den
+    Misserfolg". Einzelheiten und Belege: **`P3-481`**.
+  · **Der Rotbeweis ist der Übersetzer**, wie schon bei vier der sechs
+    Defekte in MF-1230: mit sichtbarer Deklaration bricht gcc 13.1.0 mit
+    `incompatible types when initializing type 'uft_error_t'` ab.
+  · **Das Tor ist eine Zeile** — `tests/CMakeLists.txt:254` gibt jedem
+    Testziel `-Werror=implicit-function-declaration` neben dem `-UNDEBUG`
+    aus MF-830. **Sprengradius vor dem Scharfstellen gemessen:** 478
+    übersetzbare C-Dateien unter `tests`, **3** fielen, **473** sauber,
+    **26** mit flachem Include-Pfad nicht messbar (benannt; der Vollbau
+    deckt sie). Zwei weitere Treffer sind Prüf-Eingaben (`fixture_*` in
+    `tests/formats`) und **kein Bauziel** — `build.ninja` nennt sie
+    0 Mal —, also **keine Ausnahmeliste**, und das ist der Punkt.
+  · Ersatz für die zurückgenommene Zusage, **schärfer** als sie:
+    `t.sector_capacity == 32`, die Erstwachstum-Konstante aus
+    `uft_track_add_sector()` (`uft_format_plugin.c:480`). Die falsche
+    Zusage bleibt **zitiert stehen** („nicht entfernen weiter
+    erweitern").
+  · Eine Gedächtnisnotiz hält die Klasse:
+    `test_gruen_weil_der_aufruf_scheiterte.md`.
 - **Stand — was AUSDRÜCKLICH offen bleibt:**
+  · **Der qmake-Produktbau trägt die neue Fahne NICHT.** Sie sitzt im
+    CMake-Testbau; CI baut alle drei Plattformen mit qmake, die 715
+    Produktivdateien sind damit unbewacht (`P3-481` Punkt 2).
+  · **`uft_error_t` hat zwei Zweige** (`uft_error.h:129` gegen `:137`,
+    `#ifdef UFT_ERROR_ENUM_DEFINED`). Wo der `int`-Zweig gilt, ist
+    derselbe Fehler nur eine `-Wint-conversion`-**Warnung** — der harte
+    Fehler ist also nicht allgemein, und nur das Tor an der **Ursache**
+    deckt beide Zweige.
   · **Das C-Modul `uft_match` ist NICHT übernommen.** Das Paket bringt
     `include/uft/util/uft_match.h` (6 917 B), `src/util/uft_match.c`
     (6 817 B) und `tests/test_match.c` (12 737 B) mit — zehn Funktionen,
