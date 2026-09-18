@@ -42,6 +42,7 @@
 #include <QPushButton>
 #include <QFile>
 #include <QFont>
+#include "uft_format_filter_qt.h"   /* MF-1245: Filter aus der Registry */
 
 // ============================================================================
 // Construction / Destruction
@@ -322,10 +323,7 @@ void WorkflowTab::onSourceFileClicked()
 {
     QString filename = QFileDialog::getOpenFileName(
         this, tr("Select Source Image"), QString(),
-        tr("All Supported (*.scp *.hfe *.img *.d64 *.adf *.g64 *.nib *.woz *.a2r *.trd *.dsk);;"
-           "Flux Files (*.scp *.hfe *.raw *.kf *.woz *.a2r);;"
-           "Disk Images (*.d64 *.g64 *.adf *.img *.st *.trd *.dsk);;"
-           "All Files (*.*)")
+        uftAbbildDateifilter(tr("All Supported"))
     );
     if (!filename.isEmpty()) {
         m_sourceFile = filename;
@@ -934,7 +932,7 @@ void WorkflowTab::onAnalyzeClicked()
     
     if (path.isEmpty()) {
         path = QFileDialog::getOpenFileName(this, tr("Select Disk Image to Analyze"),
-            QString(), tr("Disk Images (*.d64 *.g64 *.adf *.scp *.hfe *.dmk *.img *.dsk);;All Files (*)"));
+            QString(), uftAbbildDateifilter(tr("Disk Images")));
         if (path.isEmpty()) return;
     }
     

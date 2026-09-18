@@ -36,6 +36,7 @@
 #include <QDebug>
 #include <QStringList>
 #include <QDateTime>
+#include "uft_format_filter_qt.h"   /* MF-1245: Filter aus der Registry */
 
 // ============================================================================
 // Construction / Destruction
@@ -200,7 +201,7 @@ void ForensicTab::onBrowseImage()
 {
     QString path = QFileDialog::getOpenFileName(
         this, tr("Select Disk Image"), QString(),
-        tr("All Supported (*.d64 *.g64 *.adf *.scp *.hfe *.img);;All Files (*.*)")
+        uftAbbildDateifilter(tr("All Supported"))
     );
     
     if (!path.isEmpty()) {
@@ -223,14 +224,14 @@ void ForensicTab::onCompare()
 {
     QString path1 = QFileDialog::getOpenFileName(
         this, tr("Select First Image"), QString(),
-        tr("All Supported (*.d64 *.g64 *.adf *.scp *.hfe *.img);;All Files (*.*)")
+        uftAbbildDateifilter(tr("All Supported"))
     );
     
     if (path1.isEmpty()) return;
     
     QString path2 = QFileDialog::getOpenFileName(
         this, tr("Select Second Image"), QString(),
-        tr("All Supported (*.d64 *.g64 *.adf *.scp *.hfe *.img);;All Files (*.*)")
+        uftAbbildDateifilter(tr("All Supported"))
     );
     
     if (path2.isEmpty()) return;

@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <algorithm>
+#include "../uft_format_filter_qt.h"   /* MF-1245: Filter aus der Registry */
 
 /* ============================================================================
  * Strategy name helper
@@ -624,8 +625,7 @@ void UftRecExportPage::onExport()
         selectedFormat = current->text(0);
     }
 
-    QString filter = tr("All Disk Images (*.d64 *.adf *.img *.scp *.hfe *.g64 *.dmk);;"
-                        "All Files (*)");
+    QString filter = uftAbbildDateifilter(tr("All Disk Images"));
 
     QString savePath = QFileDialog::getSaveFileName(
         this, tr("Export Recovered Image"), QString(), filter);

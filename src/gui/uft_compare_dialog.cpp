@@ -20,6 +20,7 @@
 #include <QFont>
 
 #include <cstring>
+#include "../uft_format_filter_qt.h"   /* MF-1245: Filter aus der Registry */
 
 /* ============================================================================
  * Construction
@@ -136,6 +137,21 @@ void UftCompareDialog::setupUi()
  * Slots
  * ============================================================================ */
 
+/* MF-1245: ABGELOEST, aber nicht entfernt.
+ *
+ * Diese Liste war eine von SIEBEN handgeschriebenen Endungslisten der
+ * Oberflaeche — mit 16 Eintraegen die laengste, und trotzdem 89 kuerzer
+ * als die Registry (105 beanspruchte Endungen). Ihre beiden
+ * Benutzungsstellen in `onBrowseA()`/`onBrowseB()` rufen seit MF-1245
+ * `uftAbbildDateifilter()`.
+ *
+ * Sie steht hier weiter, weil `CLAUDE.md` §MF-1077 das Entfernen von
+ * Code ausdruecklich an eine Eigentuemerentscheidung bindet: „Loeschen
+ * ist keine Behebung." Als Beleg dafuer, WAS vorher galt, ist sie
+ * ausserdem der Vergleichsmassstab dieses Commits.
+ *
+ * Sie wird NICHT mehr gelesen — wer sie wieder benutzt, holt die
+ * Drift zurueck. */
 static const QString kFileFilter =
     QT_TRANSLATE_NOOP("UftCompareDialog",
         "Disk Images (*.d64 *.d71 *.d81 *.adf *.img *.ima *.imd *.st *.msa "
@@ -144,7 +160,8 @@ static const QString kFileFilter =
 void UftCompareDialog::onBrowseA()
 {
     QString path = QFileDialog::getOpenFileName(
-        this, tr("Select Image A"), QString(), kFileFilter);
+        this, tr("Select Image A"), QString(),
+        uftAbbildDateifilter(tr("Disk Images")));
     if (!path.isEmpty())
         m_pathA->setText(path);
 }
@@ -152,7 +169,8 @@ void UftCompareDialog::onBrowseA()
 void UftCompareDialog::onBrowseB()
 {
     QString path = QFileDialog::getOpenFileName(
-        this, tr("Select Image B"), QString(), kFileFilter);
+        this, tr("Select Image B"), QString(),
+        uftAbbildDateifilter(tr("Disk Images")));
     if (!path.isEmpty())
         m_pathB->setText(path);
 }

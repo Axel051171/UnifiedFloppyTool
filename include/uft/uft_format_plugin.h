@@ -858,6 +858,59 @@ size_t uft_registered_format_plugin_count(void);
  */
 const uft_format_plugin_t* uft_registered_format_plugin_at(size_t index);
 
+/**
+ * @brief Der naechste Eintrag einer `extensions`-Liste (MF-1245).
+ *
+ * @param cursor  zeigt auf die Leseposition; wird weitergerueckt
+ * @param laenge  optional: Laenge des gefundenen Eintrags
+ * @return Zeiger auf den Anfang des Eintrags (NICHT nullterminiert,
+ *         `laenge` gilt), oder **NULL** am Ende der Liste
+ *
+ * DIE TRENNREGEL STEHT NUR HIER. Trenner sind `;`, `,`, Leerzeichen
+ * und Tabulator; ein fuehrender Punkt wird geschluckt. Das ist noetig
+ * und nicht gefaellig: der Header sagte `";"-getrennt`, aber gemessen
+ * trennen **14** der Eintraege im Baum mit KOMMA und 29 mit Semikolon
+ * (`adf,adz`, `d64,d71,d81`, `cpm,dsk`). Ein Verbraucher, der nur `;`
+ * kennt, saehe eine Endung namens `adf,adz` und traefe keine von
+ * beiden.
+ *
+ * Bis MF-1245 stand diese Regel ausschliesslich in der dateilokalen
+ * `plugin_claims_extension()`, die FRAGT statt AUFZUZAEHLEN. Ein
+ * zweiter Laeufer fuer den Dateidialog waere „eine Groesse, zwei
+ * Rechnungen" gewesen (`CLAUDE.md` §MF-1177).
+ */
+const char *uft_ext_naechste(const char **cursor, size_t *laenge);
+
+/**
+ * @brief Alle Endungen aller registrierten Plugins, als
+ *        `*.a *.b *.c` (MF-1245).
+ *
+ * @param out       Ziel
+ * @param out_size  dessen Groesse
+ * @param needed    optional: noetige Groesse **einschliesslich**
+ *                  Nullbyte; wird auch bei Erfolg gesetzt
+ * @return true, wenn alles passte
+ *
+ * ANLASS, GEMESSEN: sieben Dateidialoge der Oberflaeche hielten je
+ * eine eigene, von Hand gepflegte Endungsliste — 16, 14, 13, 8, 8, 7
+ * und 6 Eintraege, alle verschieden. Die Registry beansprucht 105
+ * eindeutige Endungen, und 85 davon kamen in KEINEM Dialog des Baums
+ * vor. Ein geprueftes Format, das im Filter fehlt, ist fuer den
+ * Bediener nicht da.
+ *
+ * REIHENFOLGE: die der Registrierung, Dubletten entfernt. Sie traegt
+ * **keine** Bedeutung — genau wie bei `uft_registered_format_plugin_at`,
+ * und wer sie als Rangfolge liest, macht den Fehler aus MF-729. Es gibt
+ * bewusst KEINE innere Obergrenze fuer die Zahl der Endungen: eine
+ * verborgene Schranke ist die Fehlerklasse, gegen die dieser Baum
+ * gebaut ist.
+ *
+ * **KAPPT NICHT.** Passt es nicht, bleibt @p out leer, der Rueckgabe-
+ * wert ist false, und @p needed nennt die Zahl (Dauerregel D5).
+ */
+bool uft_format_endungen_sammeln(char *out, size_t out_size,
+                                 size_t *needed);
+
 /* ==========================================================================
  * Faehigkeits-Manifest abfragen (MF-660)
  *

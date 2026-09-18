@@ -169,6 +169,35 @@ const uft_format_plugin_t* uft_get_format_plugin(uft_format_t format) {
  * extension list longer than 255 characters. This walks the string in place:
  * no copy, no truncation, no shared cursor. Separators are ';', ',' and
  * whitespace; a leading dot on either side is tolerated. */
+/* MF-1245: die Trennregel steht seit hier an EINER Stelle.
+ *
+ * Sie stand bis dahin ausschliesslich im Rumpf von
+ * `plugin_claims_extension()` darunter — und die FRAGT („beansprucht
+ * dieses Plugin die Endung X?") statt AUFZUZAEHLEN. Der Dateidialog
+ * braucht das Gegenteil: alle Endungen aller Plugins. Ein zweiter
+ * Laeufer dafuer waere „eine Groesse, zwei Rechnungen" gewesen
+ * (`CLAUDE.md` §MF-1177).
+ *
+ * Die Regel ist unveraendert uebernommen, samt der Toleranz gegen das
+ * KOMMA: gemessen trennen 14 Eintraege im Baum damit, obwohl der
+ * Header `";"-getrennt` sagt. Das Tabulator-Zeichen steht jetzt als
+ * `'\t'` statt als rohes Tabulatorbyte — derselbe Wert, lesbar. */
+const char *uft_ext_naechste(const char **cursor, size_t *laenge)
+{
+    if (!cursor || !*cursor) return NULL;
+
+    const char *s = *cursor;
+    while (*s == ';' || *s == ',' || *s == ' ' || *s == '\t' || *s == '.') s++;
+    if (!*s) { *cursor = s; return NULL; }
+
+    const char *start = s;
+    while (*s && *s != ';' && *s != ',' && *s != ' ' && *s != '\t') s++;
+
+    *cursor = s;
+    if (laenge) *laenge = (size_t)(s - start);
+    return start;
+}
+
 static bool plugin_claims_extension(const uft_format_plugin_t* plugin,
                                     const char* ext) {
     if (!plugin || !plugin->extensions || !ext || !*ext) return false;
@@ -176,21 +205,101 @@ static bool plugin_claims_extension(const uft_format_plugin_t* plugin,
     size_t want = strlen(ext);
     if (want == 0) return false;
 
-    for (const char* s = plugin->extensions; *s; ) {
-        while (*s == ';' || *s == ',' || *s == ' ' || *s == '	' || *s == '.') s++;
-        if (!*s) break;
-        const char* start = s;
-        while (*s && *s != ';' && *s != ',' && *s != ' ' && *s != '	') s++;
-        size_t len = (size_t)(s - start);
-        if (len == want) {
-            size_t i = 0;
-            while (i < len &&
-                   tolower((unsigned char)start[i]) == tolower((unsigned char)ext[i]))
-                i++;
-            if (i == len) return true;
+    const char *s = plugin->extensions;
+    size_t len = 0;
+    for (const char *e = uft_ext_naechste(&s, &len); e;
+         e = uft_ext_naechste(&s, &len)) {
+        if (len != want) continue;
+        size_t i = 0;
+        while (i < len &&
+               tolower((unsigned char)e[i]) == tolower((unsigned char)ext[i]))
+            i++;
+        if (i == len) return true;
+    }
+    return false;
+}
+
+/* MF-1245: war diese Endung schon VOR (`bis_plugin`, `bis_ext`) zu
+ * sehen?
+ *
+ * Die Dublettenpruefung laeuft ueber die Registry selbst statt ueber
+ * einen Zwischenspeicher. Das kostet O(n^2) bei gemessen rund 150
+ * beanspruchten Endungen — also nichts — und erspart eine innere
+ * Obergrenze. Eine verborgene Schranke waere genau die Fehlerklasse,
+ * gegen die dieser Baum gebaut ist (D5). */
+static bool endung_schon_gesehen(size_t bis_plugin, const char *bis_ext,
+                                 size_t bis_len)
+{
+    const size_t anzahl = uft_registered_format_plugin_count();
+    for (size_t i = 0; i < anzahl && i <= bis_plugin; i++) {
+        const uft_format_plugin_t *p = uft_registered_format_plugin_at(i);
+        if (!p || !p->extensions) continue;
+
+        const char *s = p->extensions;
+        size_t len = 0;
+        for (const char *e = uft_ext_naechste(&s, &len); e;
+             e = uft_ext_naechste(&s, &len)) {
+            /* Im Plugin des Bezugspunkts nur das, was DAVOR steht. */
+            if (i == bis_plugin && e >= bis_ext) return false;
+            if (len != bis_len) continue;
+            size_t k = 0;
+            while (k < len && tolower((unsigned char)e[k])
+                            == tolower((unsigned char)bis_ext[k]))
+                k++;
+            if (k == len) return true;
         }
     }
     return false;
+}
+
+bool uft_format_endungen_sammeln(char *out, size_t out_size, size_t *needed)
+{
+    /* Erst rechnen, dann schreiben — nur so kann die Funktion ABSAGEN
+     * statt zu kappen. Eine halb geschriebene Filterkette waere
+     * schlimmer als keine, weil sie vollstaendig aussieht (D5). */
+    const size_t anzahl = uft_registered_format_plugin_count();
+    size_t braucht = 1;          /* Nullbyte */
+    size_t geschrieben = 0;
+    bool erstes = true;
+
+    for (int durchlauf = 0; durchlauf < 2; durchlauf++) {
+        if (durchlauf == 1) {
+            if (needed) *needed = braucht;
+            if (!out || out_size == 0u) return false;
+            if (braucht > out_size) { out[0] = '\0'; return false; }
+        }
+
+        erstes = true;
+        for (size_t i = 0; i < anzahl; i++) {
+            const uft_format_plugin_t *p = uft_registered_format_plugin_at(i);
+            if (!p || !p->extensions) continue;
+
+            const char *s = p->extensions;
+            size_t len = 0;
+            for (const char *e = uft_ext_naechste(&s, &len); e;
+                 e = uft_ext_naechste(&s, &len)) {
+                if (len == 0) continue;
+                if (endung_schon_gesehen(i, e, len)) continue;
+
+                if (durchlauf == 0) {
+                    /* "*." + Endung, davor ein Trennzeichen ausser
+                     * beim allerersten Eintrag. */
+                    braucht += len + 2u + (erstes ? 0u : 1u);
+                } else {
+                    if (!erstes) out[geschrieben++] = ' ';
+                    out[geschrieben++] = '*';
+                    out[geschrieben++] = '.';
+                    for (size_t k = 0; k < len; k++)
+                        out[geschrieben++] =
+                            (char)tolower((unsigned char)e[k]);
+                }
+                erstes = false;
+            }
+        }
+    }
+
+    out[geschrieben] = '\0';
+    return true;
 }
 
 /* MF-445: resolve a target plugin without guessing.

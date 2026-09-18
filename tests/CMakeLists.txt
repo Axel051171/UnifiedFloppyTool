@@ -289,6 +289,30 @@ function(uft_wire_fdc_gaps tgt)
     endif()
 endfunction()
 
+# MF-1245: fuenfte Anwendung derselben Bauform. Die Oberflaechendateien
+# holen ihren Dateifilter seit MF-1245 aus der Plugin-Registry statt
+# aus sieben handgepflegten Listen — damit brauchen die Qt-Tests, die
+# sie uebersetzen, `src/core/uft_format_plugin.c`.
+#
+# SPRENGRADIUS VOR DEM BAU gemessen, aus `build.ninja`:
+#   src/explorertab.cpp   -> 1 Testziel  (test_explorer_tab_no_fiction)
+#   src/workflowtab.cpp   -> 1 Testziel  (test_honest_stubs_stay_honest)
+#   src/forensictab.cpp, src/gui/uft_compare_dialog.cpp,
+#   src/gui/uft_recovery_dialog.cpp -> 0 Testziele
+# Beide Ziele haben `uft_format_plugin.c` heute NICHT.
+#
+# Im PRODUKTBAU ist nichts zu tun, und das ist gemessen: alle fuenf
+# Oberflaechendateien UND `src/core/uft_format_plugin.c` stehen bereits
+# in `UnifiedFloppyTool.pro`.
+function(uft_wire_registry tgt)
+    get_target_property(_uft_srcs ${tgt} SOURCES)
+    if(_uft_srcs MATCHES "explorertab|workflowtab|forensictab|uft_compare_dialog|uft_recovery_dialog"
+       AND NOT _uft_srcs MATCHES "uft_format_plugin")
+        target_sources(${tgt} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c)
+    endif()
+endfunction()
+
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     
@@ -3377,6 +3401,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_register_all_formats"
+           # MF-1245: derselbe Anspruch wie die drei Eichungen weiter
+           # unten — der Test fragt JEDES registrierte Plugin nach
+           # seinen Endungen, nicht eine gepflegte Auswahl. Genau das
+           # ist der Befund: die Oberflaeche hielt sieben gepflegte
+           # Auswahlen, alle verschieden (MF-636/MF-729).
+           OR ${test_name} STREQUAL "test_formatfilter_kommt_aus_der_registry"
            OR ${test_name} STREQUAL "test_apple_moof_a2r_no_door"
            OR ${test_name} STREQUAL "test_kfx_probe_overclaims"
            OR ${test_name} STREQUAL "test_kfx_sonde_sagt_nein"
@@ -5448,6 +5478,7 @@ foreach(test_source ${TEST_SOURCES})
     uft_wire_match(${test_name})
     uft_wire_json(${test_name})
     uft_wire_fdc_gaps(${test_name})
+    uft_wire_registry(${test_name})
 
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -6107,6 +6138,7 @@ if(TARGET Qt6::Test)
         uft_wire_match(${qt_test_name})
         uft_wire_json(${qt_test_name})
         uft_wire_fdc_gaps(${qt_test_name})
+        uft_wire_registry(${qt_test_name})
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
         # MF-220 / MF-221: the HardwareTab-driving Qt tests construct

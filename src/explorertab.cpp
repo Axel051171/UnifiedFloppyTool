@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
+#include "uft_format_filter_qt.h"   /* MF-1245: Filter aus der Registry */
 
 ExplorerTab::ExplorerTab(QWidget *parent)
     : QWidget(parent)
@@ -483,7 +484,7 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
 void ExplorerTab::onBrowseImage()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Select Disk Image"),
-        QString(), tr("Disk Images (*.adf *.d64 *.g64 *.nib *.woz *.img *.st *.msa);;All Files (*)"));
+        QString(), uftAbbildDateifilter(tr("Disk Images")));
     if (!path.isEmpty()) {
         loadImage(path);
     }
