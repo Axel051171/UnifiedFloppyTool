@@ -641,15 +641,16 @@ bool mfm_detect_atari_st(const uint8_t *boot, uint16_t size) {
      *      Wortgrenze verlore es seine 5 Punkte. Die richtige Pruefung
      *      ist dort ein Vergleich am FELDANFANG.
      *
-     *  (2) `strstr(bpb.fs_type, "FAT12")`. Das ist ein DRITTER Fall und
-     *      nicht (1): das Feld IST der Typ, eine Wortgrenze waere hier
-     *      richtig und wuerde "XFAT12" abweisen. Es bleibt trotzdem
-     *      liegen, weil es nur `conf += 5` bewegt und die EINFRIER-REGEL
-     *      fuer die Erkennungsschicht einen Rotbeweis verlangt — und
-     *      der muesste die KONFIDENZ beobachten, nicht die
-     *      Ja/Nein-Antwort. Das ist eine andere Testgestalt als dieser
-     *      Commit hat, also eine eigene Aufgabe statt eine ungepruefte
-     *      Zeile.
+     *  (2) `strstr(bpb.fs_type, "FAT12")` — ERLEDIGT seit MF-1240.
+     *      MF-1237 hat es hier liegen gelassen, weil es nur
+     *      `conf += 5` bewegt und die EINFRIER-REGEL fuer die
+     *      Erkennungsschicht einen Rotbeweis verlangt, der die
+     *      KONFIDENZ beobachtet statt der Ja/Nein-Antwort — eine andere
+     *      Testgestalt. Den Beweis gibt es jetzt
+     *      (`tests/test_mfm_fs_type_ist_ein_wort.c`), und die Stelle
+     *      traegt die Wortgrenze. Warum sie dort richtig und bei (1)
+     *      falsch ist, steht an der Zeile selbst: das Feld IST der Typ,
+     *      es ist kein Praefixstempel.
      *
      *  (3) Die `oem_empty`-Regel zwei Absaetze weiter unten ist keine
      *      Teilstring-Frage, sondern eine eigene, weitgefasste
@@ -821,7 +822,22 @@ mfm_error_t mfm_detect_analyze_boot_data(mfm_detect_result_t *result,
                 conf += 5;
 
             /* Extended BPB mit "FAT12" */
-            if (bpb.has_ebpb && strstr(bpb.fs_type, "FAT12")) conf += 5;
+            /* MF-1240: hier stand `strstr(bpb.fs_type, "FAT12")`, und
+             * MF-1237 hat diese Stelle ausdruecklich LIEGEN GELASSEN —
+             * mit der Begruendung, sie bewege nur `conf += 5` und
+             * brauche einen Rotbeweis, der die KONFIDENZ beobachtet
+             * statt der Ja/Nein-Antwort. Der steht jetzt als
+             * `tests/test_mfm_fs_type_ist_ein_wort.c`.
+             *
+             * Warum die Wortgrenze hier RICHTIG ist und bei den
+             * DOS-OEM-Marken zwanzig Zeilen weiter unten falsch waere:
+             * das Feld IST der Typ. Die Beschreibung fuellt es mit
+             * `"FAT12   "`, `"FAT16   "` oder `"FAT     "` — es ist
+             * kein Praefixstempel wie `"MSDOS5.0"`, bei dem der Punkt
+             * als Wortzeichen alles zu EINEM Wort macht. `"XFAT12  "`
+             * bekommt damit seine fuenf Punkte nicht mehr. */
+            if (bpb.has_ebpb && uft_wort_treffer(bpb.fs_type, "FAT12"))
+                conf += 5;
 
             /* FAT-Typ bestimmen */
             uint32_t total = bpb.total_sectors_16 ? bpb.total_sectors_16 :

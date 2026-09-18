@@ -2424,7 +2424,8 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/analysis)
     elseif(${test_name} STREQUAL "test_mfm_detect"
-           OR ${test_name} STREQUAL "test_mfm_oem_trifft_ganze_woerter")
+           OR ${test_name} STREQUAL "test_mfm_oem_trifft_ganze_woerter"
+           OR ${test_name} STREQUAL "test_mfm_fs_type_ist_ein_wort")
         # MF-411: re-enabled — the test now includes uft/detect/, not the
         # phantom uft/analysis/ twin.
         #

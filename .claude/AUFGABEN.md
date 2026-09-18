@@ -2894,7 +2894,37 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     wäre additiv möglich, ist aber eine Änderung an einem öffentlichen
     Header. Siehe `P3-487`.
   · Grundlinie **470 → 465**; `src/formats/snk`: **0** Fundstellen.
-- **Stand — DIE EINTEILUNG DER 28 RESTLICHEN, VOLLSTÄNDIG GEMESSEN:**
+- **Stand (2026-09-18, MF-1240 — die ERKENNUNGSSCHICHT steht auf 0):**
+  · MF-1237 hatte `strstr(bpb.fs_type, "FAT12")` ausdrücklich liegen
+    gelassen, mit einem Grund statt einer Ausrede: die Stelle bewegt
+    keine Ja/Nein-Antwort, sondern nur `conf += 5`, und ein Rotbeweis
+    muss deshalb die **Konfidenz** beobachten — eine andere
+    Testgestalt. Der Beweis existiert jetzt.
+  · **Gemessen, zwei Bootsektoren, die sich in NICHTS unterscheiden
+    außer im achtstelligen `fs_type`-Feld:**
+    vorher `"FAT12   "` → **100**, `"XFAT12  "` → **100**,
+    `"FAT16   "` → 95; nachher `"XFAT12  "` → **95**.
+    Ein Feld, das `FAT12` nur ENTHÄLT, bekam also dieselbe Konfidenz
+    wie ein echtes.
+  · Rotbeweis `tests/test_mfm_fs_type_ist_ein_wort.c`: **5 grün /
+    3 rot** vorher, **8 grün / 0 rot** nachher. **Vier Sperren
+    zuerst** — dass überhaupt ein Kandidat entsteht und seine
+    Konfidenz nicht 0 ist; ohne sie sagt ein Abstand nichts. Dazu die
+    Gegenprobe mit `"FAT16"`, damit die Hauptzusage nicht auch mit
+    einer kaputten Regel grün wäre.
+  · **Warum die Wortgrenze hier richtig und bei den DOS-OEM-Marken
+    falsch ist**, steht an der Zeile: das Feld **ist** der Typ, es ist
+    kein Präfixstempel wie `"MSDOS5.0"`, bei dem der Punkt als
+    Wortzeichen alles zu einem Wort macht.
+  · Der MF-1237-Kommentar, der die Stelle als liegengelassen führte,
+    ist **mitgezogen**. Ein Quelltext, der seinen eigenen Stand falsch
+    angibt, ist die Klasse, die dieser Baum am teuersten bezahlt.
+  · Zahlen: Grundlinie **465 → 464**, 1 Fingerabdruck weg, 0 neu;
+    `sicher` gesamt **23 → 22**; **`src/detect` steht auf 0**.
+    Einzelheiten: **`P3-489`**.
+- **Stand — DIE EINTEILUNG DER RESTLICHEN, VOLLSTÄNDIG GEMESSEN
+  (23 bei MF-1238, **22 nach MF-1240** — die eine `fs_type`-Zeile ist
+  unten als erledigt gekennzeichnet, nicht entfernt):**
   Nach MF-1238 sind **23** `sicher`-Fundstellen übrig, und **keine
   davon ist ein erreichbarer, entscheidender Defekt.** Jede ist genau
   einer dieser Klassen:
@@ -2924,10 +2954,14 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     letzte ist fast tautologisch — „17" steckt in jeder Zahl, die 17
     enthält. Das ist **Testqualität**, keine Teilstring-Falle: der
     Ersatz ist eine schärfere Zusage, kein Vergleicher.
-  · **1 — `mfm_detect.c` `fs_type`/`FAT12`**: dort wäre die Wortgrenze
-    richtig, sie bewegt aber nur `conf += 5`, und die EINFRIER-REGEL
-    verlangt einen Rotbeweis, der die **Konfidenz** beobachtet statt
-    der Ja/Nein-Antwort. Andere Testgestalt (`P3-486`).
+  · **1 — `mfm_detect.c` `fs_type`/`FAT12`** — ✔ **ERLEDIGT MF-1240.**
+    Hier stand: „dort wäre die Wortgrenze richtig, sie bewegt aber nur
+    `conf += 5`, und die EINFRIER-REGEL verlangt einen Rotbeweis, der
+    die **Konfidenz** beobachtet statt der Ja/Nein-Antwort. Andere
+    Testgestalt (`P3-486`)." Der Beweis existiert jetzt: `"XFAT12  "`
+    bekam Konfidenz **100** wie ein echtes FAT12, jetzt **95**.
+    Damit steht `src/detect` auf **0** und die Restzahl auf **22**.
+    Siehe `P3-489`.
   · **1 — `uft_xdf_api_impl.c`**: bewusst, begründet, dokumentiert
     (`"path":`, S5 — das Befehlsschema ist unbestimmt, `P3-485`).
   · **1 — Fremdcode**: `src/samdisk/SpectrumPlus3.cpp`, und gemessen
