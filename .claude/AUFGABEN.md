@@ -3192,6 +3192,31 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     („warnungsfrei unter `-Wall -Wextra -Wpedantic`") gemessen **nicht**.
   · Selbsttest **38/38**, Meta-Tor **75 grün / 0 rot**, Rotbeweis über
     alle vier CI-Wege, doppelt bezeugt von gcc.
+- **Stand nach MF-1243 — die zweite K4-Fundstelle ist eingeordnet, und
+  sie ist ein FEHLALARM; die Behauptung stand im Kopf des Tores:**
+  · Der Docstring von `audit_codefallen.py` führte `0x1900` unter
+    „WAS AUSDRUECKLICH KEIN DEFEKT IST" als „einen der wertvollsten
+    Funde" — `uft_track_analysis.c:261` trage `.track_length_max =
+    6400` dezimal, DMK dieselbe Größe hex.
+  · **Gemessen tragen die vier Fundstellen VIER verschiedene Größen**
+    mit demselben Zahlenwert: eine BBC-ADFS-Erkennungstoleranz (mit
+    min 6200 / nominal 6250 / Langspur 6350 daneben), eine
+    C64-GCR-Zonengrenze, ein UDI-Datenraten-Schwellwert in Fremdcode —
+    und als einzige echte DMK-Länge eine Stelle in einem
+    `#ifdef DMK_PARSER_TEST`, das **nirgends** definiert wird und schon
+    in `docs/selbsttest_baseline.txt:21` steht.
+  · **DMK hält seine Konstante sauber** (`:37`, `#define
+    DMK_DD_TRACK_SIZE 0x1900`, Dezimalzahl im Kommentar). Es gibt dort
+    nichts zu vereinheitlichen.
+  · Berichtigt, alter Wortlaut zitiert; `P3-493`. **Kein Code
+    geändert** — die zwei wörtlichen `0x1900` im toten Selbsttest
+    bleiben, Politur ohne Anlass ist MF-1077.
+  · **Die Lehre für den Rest von A-029:** K4 vergleicht Zahlen, nicht
+    Bedeutungen. Jede ihrer 20 Fundstellen ist ein **Verdacht**, und
+    die Unterscheidung „dieselbe Größe" gegen „derselbe Wert" verlangt,
+    je Fundstelle die Deklaration zu lesen. Genau deshalb ist die Liste
+    nicht als Stapel abzuarbeiten — dieselbe Einsicht wie bei A-027,
+    wo „fixe sie alle" mehrere Posten brauchte.
 - **Stand nach MF-1242 — die erste der 20 K4-Fundstellen ist
   abgetragen, und sie war der Fall, den der Eigentümer selbst benannt
   hat:**

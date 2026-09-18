@@ -137,13 +137,54 @@ Defekte, vier davon von `gcc` als fremder Hand entschieden.
     `uUlLzZ` abgestreift.
 
 
-WAS AUSDRUECKLICH KEIN DEFEKT IST
----------------------------------
-`0x1900 (DMK-Spurlaenge 5,25 Zoll DD)` sieht wie ein Fehlalarm aus und
-ist einer der wertvollsten Funde: `src/analysis/uft_track_analysis.c:261`
-fuehrt `.track_length_max = 6400` DEZIMAL, DMK dieselbe Groesse hex —
-dieselbe physikalische Groesse in zwei Schreibweisen an zwei Stellen.
-Genau K4s Zweck.
+DER 0x1900-FUND — BERICHTIGT MF-1243, ER IST EIN FEHLALARM
+----------------------------------------------------------
+Hier stand unter der Ueberschrift „WAS AUSDRUECKLICH KEIN DEFEKT IST":
+
+    `0x1900 (DMK-Spurlaenge 5,25 Zoll DD)` sieht wie ein Fehlalarm aus
+    und ist einer der wertvollsten Funde:
+    `src/analysis/uft_track_analysis.c:261` fuehrt
+    `.track_length_max = 6400` DEZIMAL, DMK dieselbe Groesse hex —
+    dieselbe physikalische Groesse in zwei Schreibweisen an zwei
+    Stellen. Genau K4s Zweck.
+
+Nachgemessen tragen die vier Fundstellen VIER VERSCHIEDENE
+physikalische Groessen, die nur denselben Zahlenwert haben:
+
+  src/analysis/uft_track_analysis.c:261
+      `.track_length_max` im Profil `UFT_PROFILE_BBC_ADFS` — die obere
+      Toleranz eines ERKENNUNGSBANDS, zusammen mit
+      `.track_length_min = 6200`, `.track_length_nominal = 6250` und
+      `.long_track_threshold = 6350`, bei 250 kbit/s und 16 x 256.
+      Keine Behaelterlaenge.
+  src/formats/c64/uft_gcr_ops.c:933
+      `if (size < 6400) return 0;` in `gcr_detect_density()` — eine
+      C64-GCR-ZONENGRENZE.
+  src/samdisk/udi.cpp:110
+      `(tlen > 6400) ? DataRate::_500K : DataRate::_250K` — ein
+      UDI-Datenraten-SCHWELLWERT, dazu Fremdcode.
+  src/formats/dmk/uft_dmk_parser_v2.c:470
+      die einzige echte DMK-Spurlaenge in der Liste — und sie liegt in
+      einem `#ifdef DMK_PARSER_TEST`, das im ganzen Baum NIRGENDS
+      definiert wird und bereits in `docs/selbsttest_baseline.txt:21`
+      gefuehrt ist.
+
+Und DMK haelt seine Konstante sauber: `uft_dmk_parser_v2.c:37` hat
+`#define DMK_DD_TRACK_SIZE 0x1900  /* Double density track (6400) */` —
+die Dezimalzahl steht im Kommentar daneben. Die beiden woertlichen
+`0x1900` bei `:464`/`:470` gehen zwar an diesem `#define` vorbei, aber
+sie stehen in nie uebersetztem Code; sie dort zu ersetzen waere
+Politur an totem Text und nach MF-1077 ohne gemessenen Anlass.
+
+Warum das hier stehen bleibt statt gestrichen zu werden: die Zeile hat
+gesteuert, wo gesucht wird — sie nannte den Fund „einen der
+wertvollsten" und stand im Kopf eines TORES. Das ist die Klasse MF-930,
+und der Baum hat sie teuer bezahlt. Die Einordnung steht als `P3-493`.
+
+Was K4 damit NICHT verliert: die Regel ist richtig. Sie kann nur Zahlen
+vergleichen, keine Bedeutungen — deshalb ist jede ihrer Fundstellen ein
+VERDACHT, und die Einordnung („dieselbe Groesse" gegen „derselbe Wert")
+gehoert je Fundstelle von Hand gemacht.
 """
 
 from __future__ import annotations
