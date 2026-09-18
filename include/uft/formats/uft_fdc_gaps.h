@@ -9,6 +9,8 @@
 #ifndef UFT_FDC_GAPS_H
 #define UFT_FDC_GAPS_H
 
+#include "uft/uft_compiler.h"   /* MF-1242: UFT_MAYBE_UNUSED */
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -687,6 +689,23 @@ static const uft_fdc_format_t UFT_FDC_MSX_2DD = {
  * Format Table
  *===========================================================================*/
 
+/* MF-1242 (D7): `UFT_MAYBE_UNUSED`, weil diese Tafel im HEADER steht
+ * und deshalb in JEDER Uebersetzungseinheit angelegt wird, die ihn
+ * einbindet — auch in denen, die nur `uft_fdc_detect_format()` rufen.
+ * Ohne das Attribut meldet `gcc -Wall -Wextra` dort
+ * „'UFT_FDC_FORMATS' defined but not used".
+ *
+ * GEMESSEN, dass das kein Nebeneffekt des neuen Includes in
+ * `uft_hfe.c` ist: der vorbestehende Einbinder
+ * `src/formats/uft_format_convert_bitstream.c` traegt dieselbe
+ * Warnung. Einbinder heute: 7.
+ *
+ * Die Tafel bleibt ausdruecklich HIER und wandert nicht in die `.c`:
+ * `tests/test_1050_firmware_als_quelle.c:611` und
+ * `tests/test_fdc_profil_verdrahtet.c:245` laufen sie direkt durch, ein
+ * Verschieben braeuchte also erst einen exportierten Zugang. Das ist
+ * ein eigener Posten (`P3-491`), kein Beifang. */
+UFT_MAYBE_UNUSED
 static const uft_fdc_format_t *UFT_FDC_FORMATS[] = {
     &UFT_FDC_PC_360K,
     &UFT_FDC_PC_720K,

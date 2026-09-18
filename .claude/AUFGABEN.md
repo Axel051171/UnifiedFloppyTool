@@ -3192,6 +3192,60 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     („warnungsfrei unter `-Wall -Wextra -Wpedantic`") gemessen **nicht**.
   · Selbsttest **38/38**, Meta-Tor **75 grün / 0 rot**, Rotbeweis über
     alle vier CI-Wege, doppelt bezeugt von gcc.
+- **Stand nach MF-1242 — die erste der 20 K4-Fundstellen ist
+  abgetragen, und sie war der Fall, den der Eigentümer selbst benannt
+  hat:**
+  · Sein Werkzeugkopf und seine Köderdatei
+    `tests/formats/fixture_code_a.c:19-22` nennen `uft_hfe.c` mit
+    `(bitrate >= 500u) ? 12500u : 6250u` wörtlich als den belegten
+    K4-Fall. **Die Begründung stimmte, der Fehler war größer als
+    notiert.**
+  · **Zwei Fehler in einer Zeile.** (1) EINHEIT: HFE speichert den
+    ZELLSTROM, die Rechnung lieferte DEKODIERTE Bytes — die
+    Profiltafel führt beides getrennt (`track_bytes` gegen `raw_bits`,
+    Faktor 16), und `hfe_create()` nahm das falsche. Jede erzeugte HFE
+    erklärte eine **halbe Umdrehung**. (2) DREHZAHL: die Länge hing an
+    `bitrate` allein, und der Kopf schrieb unbedingt `rpm = 300` — für
+    eine 1,2-M-Diskette eine falsche Aussage IN der Datei.
+  · **Das Orakel, das `P3-309` vermisst hat, gibt es** — und es zu
+    finden war eine Frage des AUFRUFS, nicht des Werkzeugs (Gestalt
+    von MF-1033): `hxcfe -uselayout:X -conv:HXC_HFE -foutput:Y` legt
+    eine leere Diskette an, ganz ohne Eingabedatei. Gemessen je Seite:
+    `DOS_DD_720KB` **12504**, `DOS_HD_1M44` **25016**,
+    `X68000_2HD_1232KB` **20840** — gegen UFTs Tafel 12500 / 25000 /
+    20833, also 4 bis 7 Byte Luft. `hfe_create` schrieb 6250 / 12500 /
+    12500.
+  · **Wo ich dem Orakel begründet NICHT folge:** alle drei HxC-Dateien
+    tragen `floppyRPM = 0`, auch die mit 360 U/min. UFT schreibt die
+    bekannte Drehzahl, weil HxCs eigene X68000-Datei sich damit selbst
+    widerspricht — aus `bitRate 500` und `rpm 0` (= 300) rechnet ein
+    Leser 25000, ihre Spurtafel sagt 20840. Ein Orakel ist eine
+    Referenz, kein Beweis (MF-1015). Erfunden wird nichts: **ohne**
+    Profil steht dort `0` (unbestimmt) statt der früheren falschen 300.
+  · **Rotbeweis** `tests/test_hfe_create_zellen_statt_bytes.c`: vorher
+    **16 grün / 8 rot**, nachher **24 grün / 0 rot** — und eine der
+    acht roten war MEINE falsche Annahme (ich hielt 77x1x26x128 für
+    profillos; die Tafel führt es als `UFT_FDC_FM_SD`). Der Test hat
+    den eigenen Irrtum gefangen, nicht den des Prüflings; berichtigt
+    auf die im Baum belegte Nicht-Treffer-Geometrie 42x2x18x512.
+  · **Was ausdrücklich NICHT angefasst wurde:** `bitrate` trifft
+    gemessen alle drei HxC-Werte (250/500/500) — kein Befund, also
+    keine Änderung. Der Schnittstellenmodus ist ein Befund, aber nur zu
+    zwei von 17 Profilen belegt und steht deshalb als `P3-490`.
+  · Sprengradius vor dem Bau: 70 Ziele mit `uft_hfe.c`, 63 mit
+    `uft_fdc_gaps.c`, **10 fehlende** — neue Verdrahtung
+    `uft_wire_fdc_gaps()`; im Produktbau nichts zu tun
+    (`UnifiedFloppyTool.pro:1181` führt die Datei schon).
+  · Drei Punkte neu benannt statt mitgefixt: **`P3-490`** (Rest von
+    `hfe_create` plus zwei vorbestehende tote Stellen), **`P3-491`**
+    (die Profiltafel liegt im Header), **`P3-492`** (K4 nennt 6
+    Dateien, gemessen sind es 9 — und die fehlende war die mit dem
+    Defekt; Ursache **nicht** gemessen, S5).
+  · **Rest von A-029:** 19 der 20 K4-Fundstellen offen. Sichtbar
+    zerfallen sie in zwei Klassen — Größentafeln, in denen dieselbe
+    Zahl legitim viele Zeilen füllt (`supercopy_formats.h` allein 15
+    bis 29 Mal), und echte Doppelrechnungen wie diese. Die
+    Unterscheidung ist je Fundstelle zu treffen.
 - **Stand nach MF-1234 — die D7-Lücke aus MF-1230 hat ein Tor, und der
   Weg dorthin fand einen schwereren Defekt als die Warnung:**
   · MF-1230 hatte gemessen, dass D7 („warnungsfrei unter `-Wall -Wextra

@@ -30,6 +30,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_format_probe.h"   /* MF-665: Varianten */
+#include "uft/formats/uft_fdc_gaps.h"  /* MF-1242: rpm + raw_bits, einmal */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -725,19 +726,95 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     int tracks = geometry->cylinders > 0 ? geometry->cylinders : 80;
     int sides = geometry->heads > 0 ? geometry->heads : 2;
     int sectors = geometry->sectors > 0 ? geometry->sectors : 9;
-    
+    uint16_t sektorgroesse =
+        geometry->sector_size > 0 ? geometry->sector_size : 512;
+
     if (tracks > HFE_MAX_TRACKS) tracks = HFE_MAX_TRACKS;
     if (sides > 2) sides = 2;
-    
+
     // Bitrate basierend auf Sektorzahl
     uint16_t bitrate = (sectors > 10) ? 500 : 250;  // HD vs DD
-    
-    // Track-Länge berechnen (Bytes pro Track-Seite)
-    // ~200ms pro Umdrehung bei 300 RPM
-    // Bei 250 kbit/s = 250000 bits/s = 50000 bits/200ms = 6250 Bytes
-    // Bei 500 kbit/s = 500000 bits/s = 100000 bits/200ms = 12500 Bytes
-    uint16_t track_len = (bitrate >= 500) ? 12500 : 6250;
-    
+
+    /* MF-1242 (Posten `A-029`, Regel K4) — ZWEI Fehler in einer Zeile.
+     *
+     * Hier stand:
+     *
+     *     // Track-Laenge berechnen (Bytes pro Track-Seite)
+     *     // ~200ms pro Umdrehung bei 300 RPM
+     *     // Bei 250 kbit/s = 250000 bits/s = 50000 bits/200ms = 6250 Bytes
+     *     // Bei 500 kbit/s = 500000 bits/s = 100000 bits/200ms = 12500 Bytes
+     *     uint16_t track_len = (bitrate >= 500) ? 12500 : 6250;
+     *
+     * (1) FALSCHE EINHEIT. Die Rechnung ergibt DEKODIERTE Bytes; HFE
+     *     speichert den ZELLSTROM, ein Bit je Zelle. MFM legt ZWEI
+     *     Zellen auf ein Datenbit, also ist die Spur doppelt so lang.
+     *     Die Profiltafel fuehrt beides getrennt — `track_bytes` und
+     *     `raw_bits` —, und hier stand `track_bytes`. Jede von UFT
+     *     erzeugte HFE erklaerte damit eine HALBE Umdrehung.
+     *
+     * (2) DIE DREHZAHL KAM NICHT VOR. Die Laenge haengt an `bitrate`
+     *     allein; die 360-U/min-Formate haben aber eine Umdrehung von
+     *     166,7 ms statt 200 ms. Und `uft_floppy_rpm` wurde unbedingt
+     *     auf 300 gesetzt — fuer eine 1,2-M-Diskette eine FALSCHE
+     *     Aussage in der Datei.
+     *
+     * GEMESSEN an drei LEER erzeugten HFE-Dateien von `hxcfe` 2.16.15.2
+     * (`-uselayout:X -conv:HXC_HFE -foutput:Y`, ganz ohne Eingabe) —
+     * genau das Orakel, das `docs/OPEN_ITEMS.md` `P3-309` vermisst hat.
+     * Je Seite, in Byte:
+     *
+     *     Layout                HxC     raw_bits/8    vorher hier
+     *     DOS_DD_720KB         12504       12500          6250
+     *     DOS_HD_1M44          25016       25000         12500
+     *     X68000_2HD_1232KB    20840       20833         12500
+     *
+     * HxC liegt 4 bis 7 Byte ueber der Tafel — dieselbe Groesse mit
+     * etwas Luft. Seine Zahlen sind genau `bitRate * 2 * (60/rpm) / 8`.
+     *
+     * WO UFT DEM ORAKEL NICHT FOLGT, UND WARUM: alle drei HxC-Dateien
+     * tragen `floppyRPM = 0`, auch die mit 360 U/min; greaseweazle
+     * ebenso. UFT schreibt trotzdem die BEKANNTE Drehzahl, weil HxCs
+     * eigene X68000-Datei sich damit selbst widerspricht — aus
+     * `bitRate = 500` und `rpm = 0` (was „300" heisst) rechnet ein
+     * Leser 25000 Byte je Seite, waehrend ihre Spurtafel 20840 sagt.
+     * Ein Orakel ist eine Referenz, kein Beweis (MF-1015). Erfunden
+     * wird dabei nichts: OHNE Profil steht dort `0` (unbestimmt)
+     * statt der frueheren falschen 300.
+     *
+     * `bitrate` bleibt ausdruecklich unveraendert: gemessen trifft die
+     * Herleitung aus der Sektorzahl alle drei HxC-Werte (250/500/500),
+     * dort gibt es also keinen Befund — und was nicht gemessen falsch
+     * ist, wird nicht nebenbei umgeschrieben. */
+    const uft_fdc_format_t *profil =
+        (tracks <= 255 && sides <= 255 && sectors <= 255)
+        ? uft_fdc_detect_format((uint8_t)tracks, (uint8_t)sides,
+                                (uint8_t)sectors, sektorgroesse)
+        : NULL;
+
+    uint32_t track_len;   /* Zellbytes JE SEITE */
+    uint16_t rpm;
+    if (profil) {
+        track_len = profil->raw_bits / 8u;
+        rpm       = profil->rpm;
+    } else {
+        /* Ohne Profil bleibt die alte Herleitung, nur in der richtigen
+         * Einheit: `bitrate` kbit/s * 2 Zellen je Datenbit * 0,2 s / 8
+         * = `bitrate` * 50. Die 0,2 s unterstellen 300 U/min — deshalb
+         * steht im Kopf `0` (unbestimmt) und nicht die Zahl 300, die
+         * dieser Zweig gerade NICHT weiss. */
+        track_len = (uint32_t)bitrate * 50u;
+        rpm       = 0;
+    }
+
+    /* D5: melden, nicht klemmen. Das Laengenfeld der Spurtafel ist ein
+     * u16. Bei 2,88 M (ED) sind es 400000 Zellen je Seite, also 50000
+     * Byte und 100000 fuer beide — gekappt ergaebe das 34464, eine
+     * Spur, die kuerzer waere als ihre eigenen Daten. */
+    if (track_len * 2u > 0xFFFFu) {
+        fclose(f);
+        return UFT_ERROR_NOT_SUPPORTED;
+    }
+
     // Header erstellen
     hfe_header_t header = {0};
     memcpy(header.signature, HFE_SIGNATURE, 8);
@@ -746,7 +823,7 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     header.number_of_sides = (uint8_t)sides;
     header.track_encoding = HFE_ENC_ISOIBM_MFM;
     write_le16((uint8_t*)&header.bitrate, bitrate);
-    write_le16((uint8_t*)&header.uft_floppy_rpm, 300);
+    write_le16((uint8_t*)&header.uft_floppy_rpm, rpm);   /* MF-1242 */
     header.uft_floppy_interface_mode = HFE_IF_IBMPC_DD;
     header.reserved = 0x01;
     header.track_list_offset = 1;  // LUT beginnt bei Block 1

@@ -259,6 +259,36 @@ function(uft_wire_json tgt)
     endif()
 endfunction()
 
+# MF-1242 (Posten `A-029`): vierte Anwendung derselben Bauform, und
+# diesmal ist die Abhaengigkeit KEINE neue Datei — `uft_fdc_gaps.c`
+# liegt in `src/formats/` und kommt bei den meisten Zielen ueber das
+# Format-GLOB mit. Neu ist nur, dass `src/formats/hfe/uft_hfe.c` sie
+# seit MF-1242 RUFT: `hfe_create()` holt Spurlaenge und Drehzahl aus
+# `uft_fdc_detect_format()`, statt sie aus der Sektorzahl zu erraten.
+#
+# SPRENGRADIUS VOR DEM BAU gemessen, aus `build.ninja` und
+# ungeschraenkt:
+#   Ziele mit uft_hfe.c            70
+#   Ziele mit uft_fdc_gaps.c       63
+#   davon FEHLT uft_fdc_gaps.c     10
+# Die zehn sind Zweige mit eigener Quellenliste oder eigenem GLOB
+# (`P3-426`): test_convert_hfe_adf, test_corpus_hfe,
+# test_format_probe_fuzz, test_hfe_interface_modes, test_hfe_spurende,
+# test_hfe_track0_encoding, test_hfe_v3_weak, test_hfe_write_allowed,
+# test_imd_hfe_echte_aufnahme, test_plugin_probe_real.
+#
+# Im PRODUKTBAU ist nichts zu tun, und das ist gemessen:
+# `UnifiedFloppyTool.pro:1181` fuehrt `src/formats/uft_fdc_gaps.c`
+# bereits.
+function(uft_wire_fdc_gaps tgt)
+    get_target_property(_uft_srcs ${tgt} SOURCES)
+    if(_uft_srcs MATCHES "uft_hfe"
+       AND NOT _uft_srcs MATCHES "uft_fdc_gaps")
+        target_sources(${tgt} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_fdc_gaps.c)
+    endif()
+endfunction()
+
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     
@@ -2399,6 +2429,17 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_hfe_create_zellen_statt_bytes")
+        # MF-1242 (Posten `A-029`, Regel K4): `hfe_create()` nahm die
+        # DEKODIERTEN Bytes der Profiltafel (`track_bytes`) fuer die
+        # Spurlaenge, wo HFE den ZELLSTROM erwartet (`raw_bits`) — jede
+        # erzeugte Datei erklaerte eine halbe Umdrehung. Der Test
+        # braucht beide Seiten der Rechnung: das Plugin und die Tafel.
+        # `uft_fdc_gaps.c` steht hier NICHT, sondern kommt aus
+        # `uft_wire_fdc_gaps()` weiter oben — dort liegt die Regel samt
+        # gemessenem Sprengradius (D3).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
     elseif(${test_name} STREQUAL "test_hfe_track0_encoding")
         # MF-897: die vier Spur-0-Kodierungsfelder des HFE-Kopfes wurden in
         # DREI Strukturen eingelesen und in KEINER Verzweigung ausgewertet.
@@ -5406,6 +5447,7 @@ foreach(test_source ${TEST_SOURCES})
     uft_wire_traegerherkunft(${test_name})
     uft_wire_match(${test_name})
     uft_wire_json(${test_name})
+    uft_wire_fdc_gaps(${test_name})
 
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -6064,6 +6106,7 @@ if(TARGET Qt6::Test)
         uft_wire_traegerherkunft(${qt_test_name})
         uft_wire_match(${qt_test_name})
         uft_wire_json(${qt_test_name})
+        uft_wire_fdc_gaps(${qt_test_name})
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
         # MF-220 / MF-221: the HardwareTab-driving Qt tests construct
