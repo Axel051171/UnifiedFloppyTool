@@ -2870,6 +2870,69 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     (`tests/test_neogeo.c:136-140`), die nur den Glücksfall decken.
     Eigene Aufgabe.
   · Hauptbefund: **`P3-486`**.
+- **Stand (2026-09-18, MF-1238 — und die Einteilung der RESTLICHEN ist
+  damit VOLLSTÄNDIG, zum ersten Mal):**
+  · `neogeo_detect_chip_type()` trug **fünf** Defekte auf
+    zweiundzwanzig Zeilen, und nur **einer** davon war eine
+    Teilstring-Falle: der erste Buchstabe entschied (`PUZZLE.BIN` war
+    ein Programm-ROM), `-P` traf überall (`MVS-PACK.ROM`), der Name
+    wurde bei **15 Zeichen still gekappt**, `toupper()` mit blankem
+    `char` ist für Bytes ≥ 0x80 **undefiniert**, und die
+    Prüfreihenfolge entschied bei zwei Marken. Dazu wurde der
+    Backslash nur geprüft, **wenn** der Schrägstrich fehlte.
+  · **Die fünf vorhandenen Zusagen konnten nichts davon sehen** — ihre
+    Namen beginnen mit `0` und sind kürzer als 15 Zeichen. Rotbeweis
+    fällt gegen HEAD an der ersten neuen Zusage; nachher 10/10.
+  · Gesucht wird jetzt `-<buchstabe><ziffer>` im **vollen** Namen, und
+    es gilt die **letzte** Marke. Die Ziffer ist die einzige neue
+    Bedingung und der Kern. **Als HAUSREGEL benannt** — belegt an den
+    fünf Zusagen und `uft_neogeo.h:44-50`, eine fremde Beschreibung
+    liegt nicht vor (Lehre aus MF-1038).
+  · **GESTOPPT (S5):** die Vorgabe `NEO_ROM_P` **behauptet** einen Typ,
+    wo keiner erkannt wurde — weil der TYP es nicht anders kann.
+    `neogeo_rom_type_t` hat keinen UNKNOWN-Wert. Ein `NEO_ROM_UNKNOWN`
+    wäre additiv möglich, ist aber eine Änderung an einem öffentlichen
+    Header. Siehe `P3-487`.
+  · Grundlinie **470 → 465**; `src/formats/snk`: **0** Fundstellen.
+- **Stand — DIE EINTEILUNG DER 28 RESTLICHEN, VOLLSTÄNDIG GEMESSEN:**
+  Nach MF-1238 sind **23** `sicher`-Fundstellen übrig, und **keine
+  davon ist ein erreichbarer, entscheidender Defekt.** Jede ist genau
+  einer dieser Klassen:
+  · **7 — Modul-Waise mit 0 Aufrufern**
+    (`src/formats/atari/uft_xfd_parser_v2.c`). Gemessen haben
+    `xfd_probe`, `xfd_open` und `xfd_read_sector` **0 Aufrufer**
+    außerhalb ihrer Datei; die Kette ist
+    `xfd_open()` → `xfd_detect_dos()` (static) → die Fundstellen.
+    **Und die Datei steht NICHT auf `docs/orphan_baseline.txt`** —
+    eine 0-Aufrufer-Einheit im Produktbau, die das Waisenregister nicht
+    kennt. Sie trägt zwei echte Klassen: unbegrenzte `strstr` auf
+    einem Zeiger ins Rohabbild (`(char*)bs + 16`, die Genesis-Klasse)
+    und `strncpy(…, "SpartaDOS", 8)` bzw. `"Atari DOS 2.x compatible"`
+    in 8 Byte — also **ohne Nullterminierung**. Nach MF-699
+    beschriften statt reparieren; das Fehlen im Waisenregister ist der
+    eigentliche nächste Griff. Nebenbei: `src/formats/xfd/uft_xfd.c:163`
+    hat ein zweites, `static`es `xfd_open` mit anderer Signatur — das
+    ist das registrierte Plugin.
+  · **10 — Dateien der Waisenliste**: `uft_dsk_cpc_parser_v2.c` (4),
+    `uft_fdi_parser_v2.c` (3), `uft_supercopy_detect.c` (1),
+    `uft_stx_parser_v2.c` (1), `uft_zxbasic.c` (1). Alle in
+    `docs/orphan_baseline.txt`.
+  · **3 — schwache Selbsttest-Zusagen**, nicht Produktionscode:
+    `uft_d64_parser_v3.c:1930` `assert(strstr(report, "Track 17"))`,
+    `uft_g64_parser_v3.c:2103` `"Track"`, `uft_scp_parser_v3.c:1981`
+    `"17"`. Alle drei prüfen einen **erzeugten Textbericht**. Die
+    letzte ist fast tautologisch — „17" steckt in jeder Zahl, die 17
+    enthält. Das ist **Testqualität**, keine Teilstring-Falle: der
+    Ersatz ist eine schärfere Zusage, kein Vergleicher.
+  · **1 — `mfm_detect.c` `fs_type`/`FAT12`**: dort wäre die Wortgrenze
+    richtig, sie bewegt aber nur `conf += 5`, und die EINFRIER-REGEL
+    verlangt einen Rotbeweis, der die **Konfidenz** beobachtet statt
+    der Ja/Nein-Antwort. Andere Testgestalt (`P3-486`).
+  · **1 — `uft_xdf_api_impl.c`**: bewusst, begründet, dokumentiert
+    (`"path":`, S5 — das Befehlsschema ist unbestimmt, `P3-485`).
+  · **1 — Fremdcode**: `src/samdisk/SpectrumPlus3.cpp`, und gemessen
+    **nicht** in `UnifiedFloppyTool.pro` — es wird nicht ins Produkt
+    gebaut.
 - **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
   Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
   „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die

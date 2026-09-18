@@ -30,28 +30,103 @@ bool neogeo_is_neo_format(const uint8_t *data, size_t size)
     return memcmp(data, NEO_MAGIC, NEO_MAGIC_SIZE) == 0;
 }
 
+/* MF-1238: Gross-/Kleinwandlung von Hand auf ASCII, statt `toupper()`
+ * zu rufen. Der Grund ist nicht Stil: `toupper(name[i])` mit einem
+ * blanken `char` ist fuer jedes Byte >= 0x80 UNDEFINIERT, weil `char`
+ * hier vorzeichenbehaftet ist und der negative Wert kein gueltiges
+ * Argument ist. Ein Dateiname mit Umlaut reichte. Dieselbe Vorsicht
+ * uebt `lc()` in `src/util/uft_match.c`. */
+static char neo_gross(char c)
+{
+    return (c >= 'a' && c <= 'z') ? (char)(c - 'a' + 'A') : c;
+}
+
+/* MF-1238: Traegt der Name an der Stelle @p p die Chipmarke
+ * `-<buchstabe><ziffer>`?
+ *
+ * DAS IST EINE HAUSREGEL, und sie wird als solche benannt (Lehre aus
+ * MF-1038, wo eine Hausregel als Formateigenschaft gelesen wurde).
+ * Belegt ist sie an den fuenf vorhandenen Testzusagen dieses Baums
+ * (`tests/test_neogeo.c:136-140`: `001-p1.bin` bis `001-c1.bin`) und an
+ * den Kommentaren der Aufzaehlung (`uft_neogeo.h:44-50`). Eine FREMDE
+ * Beschreibung der Namenskonvention liegt NICHT vor. */
+static bool neo_marke_hier(const char *p, char buchstabe)
+{
+    if (p[0] != '-') return false;
+    if (neo_gross(p[1]) != buchstabe) return false;
+    /* Die Ziffer ist das Entscheidende: sie trennt `001-p1.bin` von
+     * `MVS-PACK.ROM`. Ohne sie traf `-P` in jedem Namen, der einen
+     * Bindestrich und ein P hintereinander hatte. */
+    return p[2] >= '0' && p[2] <= '9';
+}
+
 neogeo_rom_type_t neogeo_detect_chip_type(const char *filename)
 {
+    /* MF-1238: hier stand eine Kette
+     *
+     *   if (upper[0] == 'P' || strstr(upper, "-P")) return NEO_ROM_P;
+     *
+     * ueber einen auf 15 Zeichen gekappten, mit `toupper()`
+     * grossgeschriebenen Namen — und das trug FUENF Defekte auf
+     * zweiundzwanzig Zeilen:
+     *
+     *  1. `upper[0] == 'P'` entschied nach dem ERSTEN BUCHSTABEN —
+     *     `PUZZLE.BIN` war damit ein Programm-ROM, `CHAR.BIN` ein
+     *     Character-ROM. Die Regel ist weg; die fuenf vorhandenen
+     *     Testzusagen bemerkten sie nie, weil ihre Namen mit `0`
+     *     beginnen.
+     *  2. `strstr(upper, "-P")` traf UEBERALL: `MVS-PACK.ROM` war ein
+     *     Programm-ROM. Zwei Zeichen, irgendwo im Namen gesucht.
+     *  3. Der Name wurde bei 15 Zeichen STILL gekappt. Ein laengerer
+     *     Name verlor seine Marke und fiel auf die Vorgabe.
+     *  4. `toupper(name[i])` mit blankem `char` ist fuer Bytes >= 0x80
+     *     undefiniert; siehe `neo_gross()` oben.
+     *  5. Die Pruefreihenfolge entschied: ein Name mit zwei Marken
+     *     bekam die, die zuerst geprueft wurde.
+     *
+     * Gesucht wird jetzt die Marke `-<buchstabe><ziffer>` an JEDER
+     * Stelle des VOLLEN Namens, und es wird die LETZTE genommen — bei
+     * `001-c1-p1.bin` entscheidet damit die Lage im Namen und nicht
+     * die Reihenfolge im Quelltext. */
     if (!filename) return NEO_ROM_P;
-    
-    /* Find last component */
-    const char *name = strrchr(filename, '/');
-    if (!name) name = strrchr(filename, '\\');
+
+    /* Letzte Pfadkomponente. Vorher wurde `strrchr(…, '\\')` nur
+     * geprueft, WENN `'/'` fehlte — ein Pfad wie `C:/spiele\001-p1.bin`
+     * war damit falsch zerlegt. Jetzt gewinnt der spaetere der beiden
+     * Trenner. */
+    const char *s1 = strrchr(filename, '/');
+    const char *s2 = strrchr(filename, '\\');
+    const char *name = (s1 > s2) ? s1 : s2;
     name = name ? name + 1 : filename;
-    
-    /* Check prefix */
-    char upper[16] = {0};
-    for (int i = 0; i < 15 && name[i]; i++) {
-        upper[i] = toupper(name[i]);
+
+    static const struct { char b; neogeo_rom_type_t t; } MARKEN[] = {
+        { 'P', NEO_ROM_P }, { 'S', NEO_ROM_S }, { 'M', NEO_ROM_M },
+        { 'V', NEO_ROM_V }, { 'C', NEO_ROM_C }
+    };
+
+    bool gefunden = false;
+    neogeo_rom_type_t typ = NEO_ROM_P;
+    for (const char *p = name; p[0] && p[1] && p[2]; p++) {
+        for (size_t i = 0; i < sizeof MARKEN / sizeof MARKEN[0]; i++) {
+            if (neo_marke_hier(p, MARKEN[i].b)) {
+                typ = MARKEN[i].t;
+                gefunden = true;
+            }
+        }
     }
-    
-    if (upper[0] == 'P' || strstr(upper, "-P")) return NEO_ROM_P;
-    if (upper[0] == 'S' || strstr(upper, "-S")) return NEO_ROM_S;
-    if (upper[0] == 'M' || strstr(upper, "-M")) return NEO_ROM_M;
-    if (upper[0] == 'V' || strstr(upper, "-V")) return NEO_ROM_V;
-    if (upper[0] == 'C' || strstr(upper, "-C")) return NEO_ROM_C;
-    
-    return NEO_ROM_P;  /* Default to P-ROM */
+    if (gefunden) return typ;
+
+    /* MF-1238, GESTOPPT (S5): hier stand die Vorgabe mit dem Kommentar
+     * „Default to P-ROM" — und sie BEHAUPTET einen Typ, wo keiner
+     * erkannt wurde. Sie bleibt trotzdem stehen, weil der TYP es nicht
+     * anders kann: `neogeo_rom_type_t` hat keinen UNKNOWN-Wert, und
+     * `NEO_ROM_P = 0` ist der erste (`uft_neogeo.h:44-50`). Ein
+     * `NEO_ROM_UNKNOWN` waere additiv moeglich (Wert 5, bestehende
+     * Werte unveraendert), ist aber eine Aenderung an einem
+     * oeffentlichen Header und eine Entscheidung ueber den Vertrag —
+     * kein Nebeneffekt einer Teilstring-Korrektur. Benannt statt
+     * stillschweigend gelassen. */
+    return NEO_ROM_P;
 }
 
 const char *neogeo_system_name(neogeo_system_t system)

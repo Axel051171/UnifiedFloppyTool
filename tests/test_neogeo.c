@@ -140,6 +140,63 @@ TEST(detect_chip_type)
     ASSERT_EQ(neogeo_detect_chip_type("001-c1.bin"), NEO_ROM_C);
 }
 
+/*
+ * Rotbeweis zu MF-1238. Der Vorzustand entschied den Chiptyp mit
+ * `upper[0] == 'P' || strstr(upper, "-P")` ueber einen auf 15 Zeichen
+ * gekappten Namen. Gemessen gegen die HEAD-Fassung fallen die Faelle
+ * unten; die fuenf Zusagen in `detect_chip_type` darueber sind die
+ * TAUTOLOGIE-SPERRE — sie muessen unveraendert halten, sonst hat die
+ * Korrektur die Regel entkernt statt sie zu schaerfen.
+ *
+ * Die Namenskonvention `NNN-<buchstabe><ziffer>.bin` ist eine
+ * HAUSREGEL dieses Baums, belegt an eben diesen fuenf Zusagen und den
+ * Kommentaren in `uft_neogeo.h:44-50`. Eine fremde Beschreibung liegt
+ * nicht vor, und dieser Test behauptet auch keine.
+ */
+TEST(detect_chip_type_braucht_die_marke)
+{
+    /* (1) Der erste Buchstabe darf NICHT entscheiden. Vorzustand:
+     *     `upper[0] == 'P'` machte daraus ein Programm-ROM. */
+    ASSERT_EQ(neogeo_detect_chip_type("SOMEGAME-c1.bin"), NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("PUZZLE-c1.bin"),   NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("CHARSET-m1.bin"),  NEO_ROM_M);
+
+    /* (2) Eine Marke braucht die ZIFFER. `-PACK` ist keine; im
+     *     Vorzustand traf `-P` darin und machte ein Programm-ROM
+     *     daraus. Hier steht daneben eine echte Marke, damit der Test
+     *     den Unterschied SIEHT und nicht bloss die Vorgabe trifft. */
+    ASSERT_EQ(neogeo_detect_chip_type("MVS-PACK-c1.bin"), NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("KOF-SPECIAL-v1.bin"), NEO_ROM_V);
+
+    /* (3) Der Name darf nicht bei 15 Zeichen gekappt werden. Der
+     *     Vorzustand sah von `SOMEGAME-LONGNAME-c1.bin` nur die ersten
+     *     15 Zeichen und fiel auf die Vorgabe. */
+    ASSERT_EQ(neogeo_detect_chip_type("SOMEGAME-LONGNAME-c1.bin"),
+              NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("A-VERY-LONG-GAME-TITLE-m1.bin"),
+              NEO_ROM_M);
+
+    /* (4) Kleinschreibung wie Grossschreibung. */
+    ASSERT_EQ(neogeo_detect_chip_type("001-C1.BIN"), NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("001-c1.bin"), NEO_ROM_C);
+
+    /* (5) Bei zwei Marken entscheidet die LAGE, nicht die
+     *     Pruefreihenfolge im Quelltext. Der Vorzustand gab hier
+     *     NEO_ROM_P, weil `-P` zuerst geprueft wurde. */
+    ASSERT_EQ(neogeo_detect_chip_type("001-p1-c1.bin"), NEO_ROM_C);
+
+    /* (6) Pfadtrenner: der Vorzustand sah den Backslash nur, WENN der
+     *     Schraegstrich fehlte — ein gemischter Pfad war damit falsch
+     *     zerlegt. */
+    ASSERT_EQ(neogeo_detect_chip_type("C:/spiele\\001-c1.bin"), NEO_ROM_C);
+    ASSERT_EQ(neogeo_detect_chip_type("C:\\spiele/001-m1.bin"), NEO_ROM_M);
+
+    /* (7) Gegenprobe, damit die Marke nicht ueberall trifft: eine
+     *     Marke im VERZEICHNIS darf den Dateinamen nicht
+     *     ueberstimmen. */
+    ASSERT_EQ(neogeo_detect_chip_type("rom-c1/001-p1.bin"), NEO_ROM_P);
+}
+
 TEST(system_name)
 {
     ASSERT(strcmp(neogeo_system_name(NEO_SYSTEM_MVS), "MVS (Arcade)") == 0);
@@ -231,6 +288,7 @@ int main(int argc, char *argv[])
     RUN_TEST(is_neo_format);
     RUN_TEST(is_not_neo_format);
     RUN_TEST(detect_chip_type);
+    RUN_TEST(detect_chip_type_braucht_die_marke);   /* MF-1238 */
     RUN_TEST(system_name);
     RUN_TEST(rom_type_name);
     
