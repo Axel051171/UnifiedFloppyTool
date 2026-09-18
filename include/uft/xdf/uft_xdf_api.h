@@ -16,8 +16,16 @@
  *   xdf_api_t *api = xdf_api_create();
  *   xdf_api_open(api, "game.adf");           // Auto-detect
  *   xdf_api_analyze(api);                     // Full pipeline
- *   xdf_api_export(api, "game.axdf", NULL);  // Save with metadata
+ *   xdf_api_export_xdf(api, "game.axdf");    // Save with metadata
  *   xdf_api_destroy(api);
+ *
+ * BERICHTIGT MF-1235: die vierte Zeile lautete
+ * `xdf_api_export(api, "game.axdf", NULL);` — eine Funktion dieses
+ * Namens gibt es im ganzen Baum NICHT. Gemessen ist `xdf_api_export`
+ * genau EINMAL genannt, naemlich hier in diesem Beispiel; wirklich
+ * heissen sie `xdf_api_export_xdf()` (Z. 400), `_classic()` (405),
+ * `_as()` (410) und `_memory()` (415), und keine davon nimmt drei
+ * Argumente. Wer das Beispiel abschreibt, bekommt einen Linkfehler.
  * 
  * @version 1.0.0
  * @date 2025-01-08
@@ -585,8 +593,27 @@ char* xdf_api_repairs_json(xdf_api_t *api);
 
 /**
  * @brief Process JSON command
- * 
- * Commands: "open", "analyze", "export", "compare", etc.
+ *
+ * BERICHTIGT MF-1235. Hier stand: `Commands: "open", "analyze",
+ * "export", "compare", etc.` — und **"export" und "compare" gibt es in
+ * der Umsetzung nicht**. Gemessen kennt `xdf_api_process_json()` genau
+ * fuenf Woerter: `"open"`, `"analyze"`, `"info"`, `"grid"`, `"close"`;
+ * `"info"` und `"grid"` nannte diese Zeile nicht, `"export"` und
+ * `"compare"` fallen in den Zweig `{"error": "Unknown command"}`. Das
+ * „etc." war die Luecke, in der beides unbemerkt blieb.
+ *
+ * Die Funktion sucht die Befehlswoerter als Teilketten in der GANZEN
+ * Zeichenkette — welcher SCHLUESSEL den Befehl traegt, ist nicht
+ * festgelegt, und sie hat im ganzen Baum **0 Aufrufer**. Seit MF-1235
+ * gilt deshalb: kommt mehr als ein Befehlswort vor, wird ABGESAGT statt
+ * geraten (`{"error": "ambiguous command: …", "words": [...]}`), und
+ * **jeder** Zweig liefert ein gueltiges JSON-Objekt. Vorher gaben drei
+ * von sechs Zweigen nicht initialisierten Heap zurueck.
+ *
+ * Die Rueckgabe gehoert dem Aufrufer; sie wird mit
+ * `xdf_api_free_json()` freigegeben. Der Fehlertext des Kerns wird
+ * NICHT eingebettet — er enthaelt den Pfad, und ein Windows-Pfad
+ * traegt `\`; stattdessen steht `"error_code"` darin (`P3-482`).
  */
 char* xdf_api_process_json(xdf_api_t *api, const char *json_command);
 

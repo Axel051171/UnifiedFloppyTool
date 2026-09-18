@@ -4460,8 +4460,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
-    elseif(${test_name} STREQUAL "test_xdf_api")
-        # Include XDF API source directly
+    elseif(${test_name} STREQUAL "test_xdf_api"
+           OR ${test_name} STREQUAL "test_xdf_json_verteiler")
+        # Include XDF API source directly.
+        #
+        # MF-1235: `test_xdf_json_verteiler` kommt mit denselben vier
+        # Quellen aus. Die vierte ist gemessen noetig und nicht geraten:
+        # ohne `src/compat/uft_fnmatch.c` bleibt `uft_fnmatch_impl`
+        # beim Binden undefiniert (`uft_xdf_api_impl.c:102`).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c
             ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_core.c

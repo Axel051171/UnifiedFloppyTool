@@ -933,60 +933,209 @@ char* xdf_api_repairs_json(xdf_api_t *api) {
     return json;
 }
 
+/* MF-1235: Die Befehlswoerter dieses Verteilers, MIT beiden
+ * Anfuehrungszeichen — genau die Form, in der sie in einem JSON-Wert
+ * stehen. Die Reihenfolge ist hier NICHT mehr bedeutungstragend, und
+ * das ist der Punkt: vorher entschied sie. */
+static const char *const XDF_JSON_BEFEHLE[] = {
+    "\"open\"", "\"analyze\"", "\"info\"", "\"grid\"", "\"close\""
+};
+#define XDF_JSON_BEFEHL_N \
+    (sizeof XDF_JSON_BEFEHLE / sizeof XDF_JSON_BEFEHLE[0])
+
+/* Die Hausgrenze fuer einen Pfad aus dem JSON. Der Header nennt keine
+ * (`xdf_api_open(xdf_api_t*, const char*)`), also ist sie hier zu
+ * Hause — und sie wird GEMELDET statt angewandt (Dauerregel D5). */
+#define XDF_JSON_PFAD_MAX 255
+
 char* xdf_api_process_json(xdf_api_t *api, const char *json_command) {
     if (!api || !json_command) return NULL;
-    
-    /* Simple command parser */
-    char *result = malloc(4096);
+
+    /* MF-1235: `calloc` statt `malloc`. Vorher kam der Puffer aus einem
+     * blanken `malloc(4096)`, und DREI der sechs Zweige hatten kein
+     * `else` — `"open"` ohne `"path":` sowie `"info"` und `"grid"`,
+     * wenn ihr Erzeuger NULL gibt. Gemessen am Vorzustand lieferten
+     * alle drei dieselben SECHS Byte Heap-Rest, erstes Byte 0x50, als
+     * JSON-Zeichenkette an den Aufrufer. `calloc` ist dabei nur der
+     * Gurt; jeder Zweig unten schreibt ausdruecklich. */
+    char *result = calloc(1, 4096);
     if (!result) return NULL;
-    
-    if (strstr(json_command, "\"open\"")) {
-        /* Extract path from JSON */
-        const char *path_start = strstr(json_command, "\"path\":");
-        if (path_start) {
-            path_start = strchr(path_start, ':') + 1;
-            while (*path_start == ' ' || *path_start == '"') path_start++;
-            
-            char path[256];
-            int i = 0;
-            while (*path_start && *path_start != '"' && i < 255) {
-                path[i++] = *path_start++;
-            }
-            path[i] = '\0';
-            
-            int rc = xdf_api_open(api, path);
-            snprintf(result, 4096, 
-                     "{\"success\": %s, \"error\": \"%s\"}",
-                     rc == 0 ? "true" : "false",
-                     rc == 0 ? "" : xdf_api_get_error(api));
+
+    /* MF-1235: ZAEHLEN statt die erste Fundstelle nehmen.
+     *
+     * Vorher war das eine Kette `if (strstr(…"open"…)) … else if
+     * (strstr(…"analyze"…)) …` ueber die GANZE Zeichenkette. Damit
+     * entschied die Pruefreihenfolge, in welchem FELD das Wort stand.
+     * Gemessen:
+     *   {"command":"close"}                     -> {"success": false}
+     *   {"command":"close","label":"analyze"}   -> ANALYZE lief
+     *                       ({"success": false, "confidence": 0.00})
+     *   {"command":"close","note":"open"}       -> 6 Byte Heap-Rest
+     *
+     * Welcher SCHLUESSEL den Befehl traegt, ist unbestimmt — die
+     * Funktion hat im ganzen Baum 0 Aufrufer, und ein Schema zu
+     * erfinden waere eine Aussage ohne Quelle. Was unter JEDER Lesart
+     * gilt: bei Mehrdeutigkeit wird ABGESAGT statt geraten. Dieselbe
+     * Doktrin wie `logical` seit MF-1032 und `cpm` seit MF-1039. */
+    size_t treffer = 0;
+    size_t welcher = 0;
+    for (size_t i = 0; i < XDF_JSON_BEFEHL_N; i++) {
+        if (strstr(json_command, XDF_JSON_BEFEHLE[i])) {
+            treffer++;
+            welcher = i;
         }
-    } else if (strstr(json_command, "\"analyze\"")) {
-        int rc = xdf_api_analyze(api);
+    }
+
+    if (treffer == 0) {
+        snprintf(result, 4096, "{\"error\": \"Unknown command\"}");
+        return result;
+    }
+    if (treffer > 1) {
+        /* Die gefundenen Woerter NENNEN, nicht nur zaehlen — sonst muss
+         * der Aufrufer raten, was ihn getroffen hat. Alle Bestandteile
+         * sind Literale aus der Tafel oben, also kann hier kein
+         * fremdes Zeichen das JSON zerbrechen. */
+        size_t p = (size_t)snprintf(result, 4096,
+            "{\"error\": \"ambiguous command: %zu command words present\","
+            " \"words\": [", treffer);
+        int erstes = 1;
+        for (size_t i = 0; i < XDF_JSON_BEFEHL_N && p < 4000; i++) {
+            if (!strstr(json_command, XDF_JSON_BEFEHLE[i])) continue;
+            p += (size_t)snprintf(result + p, 4096 - p, "%s%s",
+                                  erstes ? "" : ",", XDF_JSON_BEFEHLE[i]);
+            erstes = 0;
+        }
+        snprintf(result + p, 4096 - p, "]}");
+        return result;
+    }
+
+    /* Genau ein Befehlswort. */
+    switch (welcher) {
+    case 0: {   /* open */
+        const char *p = strstr(json_command, "\"path\":");
+        if (!p) {
+            snprintf(result, 4096,
+                     "{\"error\": \"command open needs a path field\"}");
+            break;
+        }
+        p = strchr(p, ':');
+        if (!p) {   /* kann nach dem Treffer oben nicht vorkommen, aber
+                     * ein Zeiger, der es koennte, wird nicht geraten. */
+            snprintf(result, 4096,
+                     "{\"error\": \"malformed path field\"}");
+            break;
+        }
+        p++;
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p != '"') {
+            snprintf(result, 4096,
+                     "{\"error\": \"path is not a JSON string\"}");
+            break;
+        }
+        p++;   /* MF-1235: GENAU EIN Anfuehrungszeichen.
+                * Vorher lief hier `while (*p == ' ' || *p == '"') p++;`
+                * und verschlang damit ALLE — aus `"path":""` wurde der
+                * Pfad `}`, gemessen als
+                * `{"success": false, "error": "Cannot open file: }"}`,
+                * dessen unmaskiertes `}` das JSON zerbricht, in dem es
+                * steht. */
+        const char *ende = strchr(p, '"');
+        if (!ende) {
+            snprintf(result, 4096,
+                     "{\"error\": \"unterminated path string\"}");
+            break;
+        }
+        const size_t laenge = (size_t)(ende - p);
+        if (laenge == 0) {
+            snprintf(result, 4096, "{\"error\": \"path is empty\"}");
+            break;
+        }
+        if (laenge > XDF_JSON_PFAD_MAX) {
+            /* D5: melden, nicht klemmen. Vorher lief die Schleife
+             * `while (… && i < 255)` und OEFFNETE den gekappten Pfad. */
+            snprintf(result, 4096,
+                     "{\"error\": \"path too long: %zu > %d\"}",
+                     laenge, XDF_JSON_PFAD_MAX);
+            break;
+        }
+        char path[XDF_JSON_PFAD_MAX + 1];
+        memcpy(path, p, laenge);
+        path[laenge] = '\0';
+
+        const int rc = xdf_api_open(api, path);
+        /* MF-1235: der Fehlertext des Kerns wird NICHT eingebettet.
+         * Er enthaelt den Pfad, und ein Windows-Pfad traegt `\` —
+         * damit waere das Erzeugnis kein gueltiges JSON. Gemessen hat
+         * dieser Baum GENAU EINEN JSON-Maskierer,
+         * `write_json_string()` in `src/core/uft_loss_report.c:37`, und
+         * der ist `static` und schreibt in einen `FILE*`, ist von hier
+         * also nicht erreichbar. Eine zweite Kopie waere „eine Groesse,
+         * zwei Rechnungen" (MF-1177) — deshalb steht hier der
+         * MASCHINENLESBARE Code, und der geteilte Maskierer ist als
+         * `P3-482` benannt statt hier halb gebaut. */
+        snprintf(result, 4096,
+                 "{\"success\": %s, \"error_code\": %d}",
+                 rc == 0 ? "true" : "false",
+                 xdf_api_get_error_code(api));
+        break;
+    }
+    case 1: {   /* analyze */
+        const int rc = xdf_api_analyze(api);
         snprintf(result, 4096,
                  "{\"success\": %s, \"confidence\": %.2f}",
                  rc == 0 ? "true" : "false",
                  xdf_api_get_confidence(api) / 100.0);
-    } else if (strstr(json_command, "\"info\"")) {
+        break;
+    }
+    case 2: {   /* info */
         char *info_json = xdf_api_to_json(api);
         if (info_json) {
             strncpy(result, info_json, 4095);
             result[4095] = '\0';
             free(info_json);
+        } else {
+            /* MF-1235: dieser Zweig hatte kein `else` und gab damit
+             * Heap-Rest aus. `xdf_api_to_json()` gibt NULL, wenn
+             * `api->context` fehlt oder die Abfrage scheitert
+             * (`uft_xdf_api.c:898`). */
+            snprintf(result, 4096,
+                     "{\"error\": \"no disk info available\","
+                     " \"error_code\": %d}",
+                     xdf_api_get_error_code(api));
         }
-    } else if (strstr(json_command, "\"grid\"")) {
+        break;
+    }
+    case 3: {   /* grid */
         char *grid_json = xdf_api_track_grid_json(api);
         if (grid_json) {
             strncpy(result, grid_json, 4095);
             result[4095] = '\0';
             free(grid_json);
+        } else {
+            /* MF-1235: ebenso ohne `else`.
+             * `xdf_api_track_grid_json()` gibt NULL ohne `api->context`
+             * oder ohne Kopf (`uft_xdf_api_impl.c:855`). */
+            snprintf(result, 4096,
+                     "{\"error\": \"no track grid available\","
+                     " \"error_code\": %d}",
+                     xdf_api_get_error_code(api));
         }
-    } else if (strstr(json_command, "\"close\"")) {
-        int rc = xdf_api_close(api);
-        snprintf(result, 4096, "{\"success\": %s}", rc == 0 ? "true" : "false");
-    } else {
-        snprintf(result, 4096, "{\"error\": \"Unknown command\"}");
+        break;
     }
-    
+    case 4: {   /* close */
+        const int rc = xdf_api_close(api);
+        snprintf(result, 4096, "{\"success\": %s}",
+                 rc == 0 ? "true" : "false");
+        break;
+    }
+    default:
+        /* Unerreichbar, solange `welcher` aus der Tafel stammt — und
+         * genau deshalb eine ABSAGE und kein Durchfallen. */
+        snprintf(result, 4096,
+                 "{\"error\": \"internal: unmapped command index\"}");
+        break;
+    }
+
     return result;
 }
 

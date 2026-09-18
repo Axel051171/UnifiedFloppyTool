@@ -2758,6 +2758,63 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     auf `uft_genesis|uft_scp_writer` erweitert, danach Fehlbetrag **0**
     (`uft_match` in 78 Zielen).
   · **Offen: 38** (36 in C, 2 in Python).
+- **Stand (2026-09-18, MF-1235 — der JSON-Verteiler von XDF, und der
+  Teilstring war die kleinste der Sünden):**
+  · `xdf_api_process_json()` wählte den Befehl mit **sechs** `strstr()`
+    über die ganze Zeichenkette. Gemessen mit einer Wegwerf-Sonde am
+    echten Symbol, **vor** der Korrektur: `{"command":"close"}` gibt
+    `{"success": false}`; dasselbe mit einem harmlosen
+    `,"label":"analyze"` gibt `{"success": false, "confidence": 0.00}`
+    — es lief **analyze**. Mit `,"note":"open"` kommen **6 Byte**
+    zurück, erstes Byte `0x50`, kein JSON.
+  · **Drei von sechs Zweigen gaben nicht initialisierten Heap aus.**
+    `result` kam aus einem blanken `malloc(4096)`, und `"open"` ohne
+    `"path":` sowie `"info"` und `"grid"` hatten **kein `else`** —
+    gemessen alle drei dieselben 6 Byte.
+  · Der leere Pfad `""` wurde zu `}`, weil die Skip-Schleife **alle**
+    Anführungszeichen verschlang; das unmaskierte `}` zerbricht dabei
+    das JSON, in dem es steht. Und der Pfad wurde bei 255 Zeichen
+    **still** gekappt und dann geöffnet (D5).
+  · **Rotbeweis zuerst**, wie die EINFRIER-REGEL es verlangt — und es
+    gibt hier keine fremde Beschreibung, also ist die Grundlage eine
+    Messung am Produktionspfad: `tests/test_xdf_json_verteiler.c`,
+    **34 grün / 13 rot** gegen den Vorzustand, **47 grün / 0 rot**
+    danach.
+  · **Der Test hat eine meiner eigenen Behauptungen widerlegt.** Der
+    Abschnitt „Pfad über 255 Zeichen" war im Vorzustand **vollständig
+    grün**: der gekappte Pfad lässt sich ebenso wenig öffnen wie der
+    ganze, also kam ohnehin ein `"error"` — grün aus dem falschen
+    Grund (Klasse MF-1014). „Öffnet die FALSCHE Datei" ist damit
+    **nicht belegt** und im Testkopf zurückgenommen; belegt ist, dass
+    die Länge nicht genannt und mit dem gekappten Pfad geöffnet wurde.
+    Die beiden Zusagen stehen als **Sperre** weiter da, und zwei
+    schärfere entscheiden jetzt.
+  · **Und eine zweite eigene Zahl ist zurückgenommen:** ich hatte
+    gesagt, Regel C2 melde „5 der 6" Aufrufe und `"analyze"` entkomme
+    mit 9 Zeichen der Längenschwelle. Falsch. Die Regel hat einen
+    **Rückfallzweig**: ist der Inhalt länger als 8 Zeichen, kommt der
+    Fund trotzdem — nur als `pruefen` statt `sicher`
+    (`audit_teilstring.py:235-253`). Der Prüfer meldet **alle sechs**;
+    ich hatte „Fundstellen" mit „`sicher`-Fundstellen" verwechselt. Es
+    gibt dort **keine Blindstelle**, sondern eine gewollte Schwelle.
+  · Zahlen, nachgerechnet statt behauptet: in der Datei **6 → 3**
+    Fundstellen, davon `sicher` **5 → 1**; Grundlinie **477 → 474** —
+    5 Fingerabdrücke weg (die fünf Befehlswörter), 1 neuer mit
+    Vielfachheit 2 (die Tafel), `"path":` unverändert. 477 − 5 + 2 =
+    474, und das Werkzeug druckt die Zahl selbst.
+  · Die drei übrigen Fundstellen bleiben **mit Grund** in der
+    Grundlinie: die Suche ist bewusst, weil das Schema unbekannt ist
+    (S5) — geändert ist, dass sie nicht mehr **entscheidet**.
+  · Am Rand berichtigt: der Header versprach `"export"` und
+    `"compare"` (**0 Treffer** in den Quellen) und nannte `"info"` und
+    `"grid"` nicht; sein Nutzungsbeispiel rief `xdf_api_export()`, das
+    im ganzen Baum **nur in diesem Beispiel** vorkommt.
+  · Drei Nebenbefunde benannt statt mitgefixt: **`P3-482`** (der Baum
+    hat genau einen JSON-Maskierer, `static` und `FILE*`-basiert),
+    **`P3-483`** (zwei Schranken aus MF-554 können nie zutreffen, vier
+    `-Wtype-limits`, Decke ~1,07 GB statt 1024), **`P3-484`** (der
+    Selbsttest von Tor 67 fällt unter cp1252 — genau der Fall, für den
+    seine Härtung geschrieben wurde). Hauptbefund: **`P3-485`**.
 - **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
   Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
   „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die
