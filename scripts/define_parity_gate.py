@@ -47,6 +47,7 @@ import json
 import re
 import sys
 from pathlib import Path
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 BASELINE = "scripts/define_parity_baseline.json"
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug"}
@@ -130,7 +131,7 @@ def cmake_defines(repo: Path) -> dict[str, list[str]]:
     """Define -> Fundstellen, aus allen CMakeLists AUSSER tests/."""
     found: dict[str, list[str]] = {}
     for p in sorted(repo.rglob("CMakeLists.txt")):
-        if any(s in p.parts for s in SKIP_DIRS):
+        if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
             continue
         rel = str(p.relative_to(repo)).replace("\\", "/")
         if rel.startswith("tests/"):
@@ -161,7 +162,7 @@ def scan_sources(repo: Path) -> tuple[dict[str, list[str]], set[str]]:
         for p in sorted(root.rglob("*")):
             if p.suffix.lower() not in {".c", ".cpp", ".h", ".hpp"}:
                 continue
-            if any(s in p.parts for s in SKIP_DIRS):
+            if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
                 continue
             rel = str(p.relative_to(repo)).replace("\\", "/")
             if rel.startswith("src/samdisk/") or rel.startswith("src/a8rawconv/"):

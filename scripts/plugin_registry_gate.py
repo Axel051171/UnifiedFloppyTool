@@ -46,6 +46,7 @@ import json
 import re
 import sys
 from pathlib import Path
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 BASELINE = "scripts/plugin_lookup_baseline.json"
 HEADROOM = 16          # plugins that may be added before the gate fires
@@ -89,7 +90,7 @@ def sources(repo: Path):
     for p in sorted(repo.rglob("*")):
         if not p.is_file() or p.suffix.lower() not in {".c", ".cpp"}:
             continue
-        if any(s in p.parts for s in SKIP_DIRS):
+        if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
             continue
         yield p
 

@@ -85,8 +85,106 @@ def make_filter(repo: Path):
     return (lambda p: p.resolve() in files), None
 
 
+def uebersprungen(repo: Path, pfad: Path, skip) -> bool:
+    """Liegt `pfad` unterhalb eines zu ueberspringenden Verzeichnisses?
+
+    Gemessen wird **relativ zur Repo-Wurzel** — und genau darin liegt
+    der Zweck. Acht Tore trugen bis MF-1246 die Zeile
+
+        if any(s in p.parts for s in SKIP_DIRS): continue
+
+    und `p.parts` sind ALLE Pfadstuecke, auch die oberhalb des
+    Repositoriums. Liegt ein Auscheck unter einem Verzeichnis, das
+    `.claude`, `build`, `release`, `debug`, `proto` oder `.git` heisst,
+    uebersprang das Tor damit JEDE Datei — und meldete danach
+    Massenbefunde gegen den Baum, weil seine Grundlinien „ist keine
+    Kollision mehr" sagten.
+
+    GEMESSEN an demselben Commit `422ca4aa`, gleiche Pruefer, nur ein
+    anderer Pfad:
+
+        Auscheck unter .../.claude/jobs/...    191 Befunde
+        Auscheck unter .../AppData/Local/Temp    0 Befunde
+        echter `git clone` dorthin           rc=0, 0 in JEDER Kategorie
+
+    Das ist der Spiegel von Tor 64: dort ein Test, der nicht rot werden
+    KANN — hier ein Tor, das nicht gruen werden kann.
+
+    Die MENGE der zu ueberspringenden Namen bleibt bei jedem Tor, denn
+    sie unterscheidet sich begruendet (`enum_macro_conflicts` hat
+    eigene Eintraege). Geteilt ist nur die REGEL, wie sie angewandt
+    wird.
+
+    @return `True` auch fuer Pfade AUSSERHALB von `repo` — was nicht im
+            Baum liegt, ist nicht Sache eines Tores ueber diesen Baum.
+    """
+    try:
+        teile = pfad.resolve().relative_to(repo.resolve()).parts
+    except (ValueError, OSError):
+        return True
+    return any(s in teile for s in skip)
+
+
+def _selbsttest() -> int:
+    """Beweist, dass die Verankerung wirkt — und dass die alte Regel
+    an derselben Stelle FALSCH liegt."""
+    import tempfile
+
+    gruen = 0
+    rot = 0
+
+    def zusage(bedingung: bool, text: str) -> None:
+        nonlocal gruen, rot
+        if bedingung:
+            gruen += 1
+            print("   [ok ] %s" % text)
+        else:
+            rot += 1
+            print("   [ROT] %s" % text)
+
+    skip = {".git", "build", "proto", ".claude", "release", "debug"}
+
+    with tempfile.TemporaryDirectory() as td:
+        # Der Auscheck liegt unter einem Verzeichnis, das eine Sperre
+        # traegt — genau die Lage des Auftragsverzeichnisses
+        # (`~/.claude/jobs/...`).
+        wurzel = Path(td) / ".claude" / "auscheck"
+        (wurzel / "src").mkdir(parents=True)
+        (wurzel / "build").mkdir(parents=True)
+        drin = wurzel / "src" / "x.c"
+        drin.write_text("int x;\n", encoding="utf-8")
+        gebaut = wurzel / "build" / "y.c"
+        gebaut.write_text("int y;\n", encoding="utf-8")
+
+        # DIE ALTE REGEL, woertlich — sie muss hier FALSCH liegen.
+        alt_drin = any(s in drin.parts for s in skip)
+        zusage(alt_drin,
+               "ROT-PROBE: die alte Regel uebersprang `src/x.c`, "
+               "weil `.claude` im Pfad oberhalb steht")
+
+        # DIE NEUE REGEL.
+        zusage(not uebersprungen(wurzel, drin, skip),
+               "verankert: `src/x.c` wird GEPRUEFT")
+        zusage(uebersprungen(wurzel, gebaut, skip),
+               "verankert: `build/y.c` wird weiterhin uebersprungen")
+
+        # GEGENPROBE: sie sagt nicht einfach immer nein.
+        zusage(uebersprungen(wurzel, wurzel / "release" / "z.c", skip),
+               "GEGENPROBE: `release/z.c` uebersprungen")
+        zusage(uebersprungen(wurzel, Path(td) / "daneben.c", skip),
+               "GEGENPROBE: was ausserhalb der Wurzel liegt, "
+               "ist nicht Sache dieses Tores")
+        zusage(not uebersprungen(wurzel, wurzel / "include" / "a.h", skip),
+               "GEGENPROBE: `include/a.h` wird geprueft")
+
+    print("\nSELBSTTEST %d/%d" % (gruen, gruen + rot))
+    return 1 if rot else 0
+
+
 if __name__ == "__main__":
     import sys
+    if "--selbsttest" in sys.argv:
+        sys.exit(_selbsttest())
     root = Path(__file__).resolve().parents[1]
     f = repo_files(root)
     if f is None:

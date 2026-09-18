@@ -2695,6 +2695,43 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   `walk()`, also Defekt C. Der nächste konkrete Schritt an DIESEM
   Posten sind die **28 C2-Fundstellen im Erkennungspfad**, beginnend
   mit `uft_scp_writer.c:433` (`strstr(hint, "st")` in einem Schreiber).
+- **Stand, NACHTRAG 2026-09-18 — eine Teilstring-Falle hat drei
+  fertige Commits aufgehalten, und gefunden hat sie nicht der Prüfer,
+  sondern der Riegel (MF-1247):**
+  · Zwei Tore der zweiten Sitzung (`audit_faehigkeitsaussage`,
+    `audit_faehigkeitsmatrix`) meldeten vier Befunde gegen
+    `uft_woz_plugin.c` und `uft_td0.c`. Beide streiften Kommentare ab
+    — mit dem richtigen Satz „Ein Flaggenname in einem Kommentar ist
+    keine Flagge (MF-767)". Die Regel war **ein Wort** zu kurz: ein
+    Flaggenname in einer **Zeichenkette** ist ebenfalls keine Flagge.
+  · Gemessen mit dem Code der Tore selbst, einzige Änderung die
+    Maskierung des Bezeichners INNERHALB der Zeichenkette: Befund →
+    **kein Befund**, und die Gegenprobe mit einer wirklich gesetzten
+    Flagge meldet weiter. In beiden Dateien steht der Name genau
+    zweimal — im Kommentar und in dem Satz, der ihn **verneint**
+    („beansprucht kein `UFT_FORMAT_CAP_WRITE`"), während daneben
+    `.capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY` steht.
+  · **Behoben nicht mit einem neuen Werkzeug, sondern mit dem
+    vorhandenen.** Mein erster Griff war ein eigener Zerteiler
+    `scripts/c_text.py`; `scripts/c_lex.py` liegt seit diesem Posten
+    (MF-1228) verfolgt im Baum, wird von drei Toren benutzt und kann
+    mehr. `c_text.py` ist weggeworfen, bevor es je in den Baum kam.
+    Neu und **additiv**: `c_lex.lex_mit_makros()`, weil
+    `uft_dsk_generic.c` seine 49 Plugins über EIN `#define` erzeugt und
+    ein reiner Token-Umstieg dort drei echte Flaggen VERLOREN hätte —
+    derselbe Fehler in die andere Richtung, gemessen.
+  · `c_lex` hatte **keinen** Selbsttest; jetzt **10/10**, zwei davon
+    Rot-Proben. Tor 69 **7/7**, Tor 70 **10/10**, beide **0 Befunde**,
+    Grundlinien unberührt. Die drei bisherigen Nutzer unverändert
+    (Teilstring 464/0 neu, Code-Fallen 20/0 neu).
+  · **Vier eigene Fehlgriffe unterwegs**, jeder von einer Messung
+    umgeworfen — festgehalten in `P3-501`, weil der Vorgang mehr sagt
+    als das Ergebnis.
+  · **Noch nicht committet:** die zwei Tore und `src/formattab.cpp`
+    gehören der zweiten Sitzung. Nach der Ordnungsregel des
+    Eigentümers („ein Tor wird allein und zuerst committet, bevor es
+    urteilen darf") landet die Reparatur mit deren Tor-Commit; im
+    Arbeitsbaum liegt sie und der Haken ist frei.
 - **Beleg:** **MF-1228**, `bd1957ea` — Tor 66 verdrahtet, acht Defekte
   am Prüfer behoben, Grundlinie 50, Selbsttest 14/14, Meta-Tor 68/0,
   Rotbeweis gegen die Urfassung 2 grün/7 rot, `P3-479` neu.
@@ -3192,6 +3229,36 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     („warnungsfrei unter `-Wall -Wextra -Wpedantic`") gemessen **nicht**.
   · Selbsttest **38/38**, Meta-Tor **75 grün / 0 rot**, Rotbeweis über
     alle vier CI-Wege, doppelt bezeugt von gcc.
+- **Stand nach MF-1244 — alle 20 K4-Primärstellen sind eingeordnet, und
+  das Ergebnis dreht den Wert der Regel um:**
+  · **4 Fehlalarme durch Wertkollision** — `0x1900` (`P3-493`), `0x4E`
+    trifft die Dezimalzahl **78** in einem Kommentar (eine
+    Lückenlänge), `0xAA` trifft `UFT_PROT_UBI_SOFT = 170`, `0xF6`
+    trifft `SNES_CHIP_ST018`.
+  · **15 legitime Datenhaltungen** — sechs Zeilen EINER Tafel
+    (`supercopy_formats[]`, 313 Einträge), drei Namenskonstanten
+    (`dc_disk_size_t`), drei Profilzeilen, zwei Erkennungstafeln, ein
+    Verteiler-`switch`.
+  · **1 richtig benutztes Füllbyte** (`.format_fill = 0xE5`).
+    Summe 4 + 15 + 1 = 20.
+  · **Der einzige echte Defekt der Runde stand an KEINER der 20
+    Primärstellen.** `hfe_create()` (MF-1242) liegt in
+    `src/formats/hfe/uft_hfe.c`, das K4 in seiner Dateiliste gar nicht
+    führt — gefunden habe ich ihn, indem ich der KONSTANTEN gefolgt
+    bin, nicht der gemeldeten Stelle. Das ist der eigentliche Nutzen
+    der Regel und zugleich `P3-492`.
+  · **Der Umfang ist begrenzt und das steht dabei:** eingeordnet sind
+    die **20 Primärstellen**, NICHT die Nebenstellen der `also`-Listen
+    — allein `0xE5` nennt 94 Dateien, ungelesen. „K4 findet nichts"
+    wäre zu weit gelesen.
+  · Vorschlag als **Hypothese mit ihrem Test** (S5): eine Bedingung
+    „Füllbytes zählen nur in HEX-Schreibweise" stellt alle vier
+    Fehlalarme still — ob sie einen echten Treffer mitnimmt, ist
+    **nicht gemessen**. `P3-494`.
+  · **Damit ist A-029s „Fertig heißt" für K4 erfüllt:** jede
+    `sicher`-Fundstelle ist behoben (1) oder benannt (19). Offen
+    bleiben die anderen drei Regeln K6, P2, P3 und die Frage aus
+    `P3-492`.
 - **Stand nach MF-1243 — die zweite K4-Fundstelle ist eingeordnet, und
   sie ist ein FEHLALARM; die Behauptung stand im Kopf des Tores:**
   · Der Docstring von `audit_codefallen.py` führte `0x1900` unter
@@ -3271,6 +3338,10 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Zahl legitim viele Zeilen füllt (`supercopy_formats.h` allein 15
     bis 29 Mal), und echte Doppelrechnungen wie diese. Die
     Unterscheidung ist je Fundstelle zu treffen.
+    **ÜBERHOLT durch den Stand nach MF-1244 weiter oben:** die
+    Zweiteilung war zu grob — gemessen sind es drei Klassen, weil
+    **vier** der Funde Fehlalarme durch Wertkollision sind. Die Zahl
+    „19 offen" gilt seit MF-1244 nicht mehr.
 - **Stand nach MF-1234 — die D7-Lücke aus MF-1230 hat ein Tor, und der
   Weg dorthin fand einen schwereren Defekt als die Warnung:**
   · MF-1230 hatte gemessen, dass D7 („warnungsfrei unter `-Wall -Wextra
@@ -3453,6 +3524,153 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Entweder ist die Datei geschrumpft oder die Zahl war falsch. Das ist
   **nicht entschieden** (S5) und gehört in die Arbeit, nicht in die
   Aufnahme — über `git log -p` auf die Datei zu klären.
+
+### A-030 · Formatfilter aus der Registry, Familienachse, Versand
+- **Status:** **in Arbeit** — Punkt 1 fertig und abgenommen, Punkt 2
+  gemessen mit widerlegter Annahme, Punkt 3 **blockiert**
+  · **Aufgenommen:** 2026-09-18
+- **Wortlaut:** „ja, sehr gut, mach 1. 2. & 3." — auf meinen Vorschlag
+  „1. Formatfilter aus `plugin.extensions` erzeugen — 93 Formate
+  erreichbar machen. 2. Familienachse als Feld, danach die
+  Variantenkampagne neu zählen. 3. MF-1244 und MF-1243 gehen raus,
+  sobald der Baum wieder committierbar ist." Ergänzt vom Eigentümer:
+  „‚aus plugin.extensions erzeugen statt pflegen' ist K4 in Reinform:
+  eine Quelle, ein abgeleiteter Verbraucher, kein Drift möglich."
+- **Kennzahl:** keine der vier — **und das ist begründet**, nicht
+  übergangen: der Eigentümer nennt es „Fähigkeit, nicht Buchhaltung".
+  85 geprüfte Formate sind für den Bediener erst jetzt erreichbar. Eine
+  fünfte Zahl („Formate, die die Oberfläche anbietet") wäre begründbar
+  und wird nur benannt.
+- **Kanal:** entfällt — eigener Baum.
+- **Einfrier-Regel:** berührt die Formatschicht (`uft_format_plugin.c`)
+  → **Rotbeweis zuerst**. Eingehalten mit einer Einschränkung, die
+  unten steht.
+- **OPEN_ITEMS:** `P3-495` (behoben), `P3-496`, `P3-497`, `P3-498`
+  (neu benannt).
+- **Fertig heißt:** kein Dateidialog des Baums hält mehr eine
+  handgepflegte Endungsliste, und ein Test fällt, wenn eine Endung der
+  Registry im Filter fehlt.
+- **Aufwand:** nicht schätzbar für Punkt 2 und 3.
+- **Stand Punkt 1 — FERTIG, MF-1245:**
+  · **7 Listen → 1 abgeleitete.** Gemessen hielten sieben Dialoge je
+    eine eigene Liste: 16, 14, 13, 8, 8, 7 und 6 Endungen, alle
+    verschieden. Die Registry beansprucht **105**; **85** standen in
+    KEINEM Dialog.
+  · Neu: `uft_ext_naechste()` (die Trennregel an EINER Stelle — nötig,
+    weil 14 Einträge mit Komma und 29 mit Semikolon trennen, obwohl der
+    Header nur `;` zusagt) und `uft_format_endungen_sammeln()`, beide
+    in `src/core/uft_format_plugin.c`. Die Qt-Umhüllung einmal in
+    `src/uft_format_filter_qt.h`.
+  · Rotbeweis **25 grün / 0 rot** über die GANZE Registry (137 Plugins,
+    193 beanspruchte Endungen, 0 fehlen, 0 Dubletten);
+    **Mutationsmatrix 4 von 4**. Vollbau 18021/18021 mit **0
+    Compiler-Warnungen**, Vollprobe **515/515**.
+  · **ZWEI eigene Fehler, beide sofort bezahlt:** (a) ich habe die
+    Umsetzung VOR dem ersten Testlauf geschrieben — „bindet nicht" ist
+    ein schwächerer Rotbeweis als „Zusage fällt", die Matrix holt das
+    nach, ersetzt es aber nicht; (b) ich habe ein **Heredoc** benutzt,
+    um ein Skript zu ändern, und es hat meine Escapes in echte
+    Umbrüche verwandelt — die Falle aus §MF-1096, zwanzigmal bezahlt
+    und von mir zum einundzwanzigsten Mal.
+  · Die Gegenprobe fand zwei Nacharbeiten: `forensictab.cpp` hielt
+    dieselbe Kette **dreimal** (ersetzt war nur die erste), und
+    `kFileFilter` in `uft_compare_dialog.cpp` ist jetzt verwaist —
+    bleibt nach MF-1077 stehen, mit Kommentar.
+  · Unberührt: `src/mainwindow.cpp` (13 Endungen), Fremdarbeit.
+- **Stand Punkt 2 — GEMESSEN, und die Annahme ist widerlegt:**
+  · Der Eigentümer korrigierte die Körnung: „137 Einzeluntersuchungen
+    sind die falsche Körnung. Varianten bündeln sich in Familien … Bei
+    2 von 137 ist die Zahl also nicht der Fortschritt; die Frage ist,
+    wie viele Familien die zwei schon abdecken."
+  · **Die Achse gibt es nicht als Daten.** `UFT_FCLASS_*` ist eine
+    TRÄGERklasse mit 5 Werten und deckt 19 von 137 Formaten (in einer
+    Tafel, die `ATR` und `XFD` doppelt führt, `P3-498`). `PLATFORM_*`
+    hat 67 Begriffe mit mindestens 8 Dublettenpaaren und steht in **8**
+    von 137 Plugins. Verzeichnisse unter `src/formats/` sind **164**,
+    also feiner als 137 — keine Familienachse.
+  · Als Prosa gibt es sie: 8 Familien in `CLAUDE.md` — dieselbe Liste,
+    die MF-1064 schon einmal berichtigen musste.
+  · **Und die zwei Übergaben decken je EIN Format, keine Familie:**
+    `hfe.uebergabe.md` (341 Zeilen) nennt `hfe` 28-mal und
+    `scp`/`a2r`/`kryoflux`/`woz`/`nib`/`g64` **0**-mal;
+    `dim_atari.uebergabe.md` nennt `dim` 31-mal und hat einen Abschnitt
+    „**Abgrenzung** X68000" — sie grenzt ab, statt mitzunehmen. Der
+    Agent arbeitet laut eigener Beschreibung „ein Format je Zyklus".
+  · **Folgerung:** die Familienzählung verkürzt die Kampagne nicht,
+    solange nicht die QUELLE mehrere Formate trägt. Das ist die
+    messbare Frage, nicht die Zähleinheit — und der erste Schritt wäre
+    die Achse als Feld, nicht ein drittes Format.
+- **Stand Punkt 3 — BLOCKIERT, beide Wege gemessen zu:**
+  · **Aus dem Arbeitsbaum:** die zwei neuen Fähigkeits-Tore melden 4
+    Befunde an der laufenden WOZ/TD0-Arbeit der zweiten Sitzung. Nicht
+    umgangen, kein `--warn-only`.
+  · **Aus einem sauberen Auscheck:** `check_consistency.py` meldet dort
+    **214** Befunde bei identischen 2942 verfolgten Dateien — `P3-496`.
+  · **UND DAS WAR SCHON GEMESSEN. Der Umweg war vermeidbar.** Die
+    Gedächtnisnotiz `stand_md_zuletzt_erzeugen.md` hält seit MF-1230
+    (einem Tag vorher) BEIDES fest: dass der Vor-Versand-Haken stirbt,
+    solange ein zweiter Arbeitsbaum registriert ist („also: vor jedem
+    Push `git worktree list` prüfen"), und dass ein frischer Auscheck
+    **214 Befunde** ergibt, weil `build-tests-ci` und die Scout-Klone
+    fehlen. Ich habe die Notiz nicht gelesen, den Weg trotzdem genommen
+    und danach in `P3-496` geschrieben, die Ursache sei ungemessen.
+    Beides berichtigt. **Die Lehre ist nicht der Worktree, sondern die
+    Reihenfolge: erst das eigene Gedächtnis befragen, dann messen.**
+  · **Und dieser Weg hat Schaden angerichtet, der gehört gesagt:**
+    meine `git worktree add`/`remove`-Kette hat `core.bare = true` in
+    die Konfiguration des Hauptrepositoriums geschrieben. Danach
+    verweigerte git jede Arbeitsbaum-Operation. Repariert mit
+    `git config core.bare false`; alle 29 geänderten Dateien
+    unversehrt, HEAD unverändert. **Der Worktree-Weg ist
+    zurückgenommen und wird nicht wieder benutzt.**
+  · Gefangen hat den Schaden nicht das Skript, sondern dass ich nach
+    dem Versand `git status` und `git ls-remote` befragt habe statt dem
+    Rückgabewert zu glauben.
+- **Stand Punkt 3, FORTSETZUNG — `P3-496` zu Ende gemessen, und es ist
+  eine Rücknahme (MF-1246):**
+  · Auftrag: „P3-496 zu Ende messen", dann „erst den Fix, dann P3-496
+    und die Notiz berichtigen".
+  · **Die Ursache war der PFAD, nicht der Commit.** Acht Tore prüften
+    `any(s in p.parts for s in SKIP_DIRS)`, und `p.parts` sind ALLE
+    Pfadstücke — auch die oberhalb des Repositoriums. Mein
+    Auftragsverzeichnis liegt unter `~/.claude/jobs/…`, und `.claude`
+    steht in der Sperrliste. Jedes Tor übersprang jede Datei und
+    meldete danach Massenbefunde gegen den Baum.
+  · **Messkette**, derselbe Commit `422ca4aa`, dieselben Prüfer:
+    worktree unter `.claude` **214** · `git archive` unter `.claude`
+    **191** · dasselbe Archiv unter `AppData/Local/Temp` **0** ·
+    **echter `git clone` dorthin: rc=0, null Befunde in JEDER
+    Kategorie**.
+  · **Zwei eigene Erklärungen sind damit widerlegt:** „die 20259
+    gitignorierten Fremdklone" (geprüft, die Symbole stehen nicht
+    darin) und „die Ursache ist nicht gemessen" (sie war es, nur
+    falsch). Und die Zahl 214 stand seit MF-1230 in meiner
+    Gedächtnisnotiz **mit der falschen Ursache** — eine Zahl ohne
+    geprüfte Ursache ist eine halbe Messung, und sie hat einen ganzen
+    Tag in die falsche Richtung gelenkt.
+  · **Fix MF-1246:** die Regel liegt einmal in
+    `scripts/repo_scope.py::uebersprungen(repo, pfad, skip)` und
+    rechnet relativ zur Repo-Wurzel; acht Tore, neun Aufrufstellen
+    umgestellt; die unverankerte Fassung steht in keiner Codezeile
+    mehr (gemessen). Die MENGE der Sperrnamen bleibt bei jedem Tor,
+    weil sie sich begründet unterscheidet.
+  · **Rotbeweis** `python scripts/repo_scope.py --selbsttest` **6/6** —
+    seine erste Zusage führt die ALTE Regel wörtlich vor und verlangt,
+    dass sie an derselben Stelle falsch liegt; drei Gegenproben halten
+    fest, dass „nicht übersprungen" nicht einfach immer gilt.
+    **Nachweis am Objekt:** derselbe Klon unter `.claude` geht von 191
+    auf **0**, der Arbeitsbaum bleibt bei 0.
+  · **Mein Heuristik-Fehler im Umstellskript** ist erwähnenswert, weil
+    er richtig ausgegangen ist: die Einfügestelle des Imports war an
+    „kein `def ` davor" geknüpft, und drei Tore haben `def ` im
+    Kopfkommentar. Sie fielen durch — und wurden dabei **nicht
+    geschrieben**, blieben also unversehrt. Berichtigt auf „die erste
+    Zeile, die eine Definition oder Konstante beginnt".
+  · Neu benannt: **`P3-499`** — `SKIP_DIRS` enthält `build`, trifft
+    aber nur ein Verzeichnis dieses Namens; sieben weitere
+    Bauverzeichnisse mit über 128 000 erzeugten Dateien werden
+    mitgelesen, und die Grundlinien hängen daran.
+- **Beleg:** — (MF-1245 und MF-1246 liegen fertig im Baum, uncommittet)
 
 ## Fundus
 

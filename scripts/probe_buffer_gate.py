@@ -31,6 +31,7 @@ from pathlib import Path
 
 # MF-1171: die Lesart eines C-Ganzzahlliterals liegt an EINER Stelle.
 from c_literal import als_int  # noqa: E402
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug"}
 
@@ -69,7 +70,7 @@ def scan(repo: Path):
 
     needs: list[tuple[str, str, int]] = []      # file, probe, bytes
     for p in sorted((repo / "src").rglob("*.c")):
-        if any(s in p.parts for s in SKIP_DIRS):
+        if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
             continue
         raw = p.read_text(encoding="utf-8", errors="replace")
         clean = strip_comments(raw)

@@ -52,6 +52,7 @@ from pathlib import Path
 # `scripts/` ist beim direkten Aufruf sys.path[0] und beim Import durch
 # `check_consistency.py` ebenfalls auf dem Pfad, weil jenes daneben liegt.
 from c_literal import als_int
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug",
              "graphify-out"}
@@ -135,7 +136,7 @@ def _walk(repo: Path):
     im_baum = _scope(repo)
     for p in repo.rglob("*"):
         if p.is_file() and p.suffix.lower() in ALL_EXT \
-                and not any(d in p.parts for d in SKIP_DIRS) \
+                and not repo_scope.uebersprungen(repo, p, SKIP_DIRS) \
                 and im_baum(p):
             yield p
 

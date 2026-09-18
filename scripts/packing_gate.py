@@ -35,6 +35,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug"}
 OWNER = "include/uft/uft_packed.h"
@@ -59,7 +60,7 @@ def sources(repo: Path):
     for p in sorted(repo.rglob("*")):
         if not p.is_file() or p.suffix.lower() not in {".c", ".cpp", ".h", ".hpp"}:
             continue
-        if any(s in p.parts for s in SKIP_DIRS):
+        if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
             continue
         yield p
 

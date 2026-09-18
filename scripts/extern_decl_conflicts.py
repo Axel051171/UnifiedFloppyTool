@@ -61,6 +61,7 @@ import json
 import re
 import sys
 from pathlib import Path
+import repo_scope   # MF-1246: Sperrregel verankert, nicht je Pfadstueck
 
 SKIP_DIRS = {".git", "build", "proto", ".claude", "release", "debug"}
 BASELINE = "scripts/extern_decl_baseline.json"
@@ -129,7 +130,7 @@ def scan(repo: Path):
     for p in repo.rglob("*"):
         if not p.is_file() or p.suffix.lower() not in {".c", ".cpp", ".h", ".hpp"}:
             continue
-        if any(s in p.parts for s in SKIP_DIRS):
+        if repo_scope.uebersprungen(repo, p, SKIP_DIRS):
             continue
         if not _im_baum(p):        # MF-633: nur was CI auch sieht
             continue
