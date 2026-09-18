@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "uft/util/uft_match.h"
+
 /*===========================================================================
  * SCP FORMAT DEFINITIONS
  *===========================================================================*/
@@ -422,17 +424,72 @@ void scp_writer_free(scp_writer_t *w) {
  * CONVENIENCE FUNCTIONS
  *===========================================================================*/
 
+/* ── MF-1233 (Posten `A-027`): ein Kennwort trifft als ganzes WORT ───────
+ *
+ * Hier stand achtmal `strstr(hint, …)`, und die Reihenfolge machte das
+ * kuerzeste Kennwort zur Falle: die `st`-Pruefung steht VOR der
+ * `hd`-Pruefung, und „st" steckt in „fastest". Gemessen am Vorzustand:
+ *
+ *     "pc-hd-fastest"   ->  0x08 (Atari ST)  statt 0x30 (PC HD)
+ *     "Bestand", "test" ->  0x08             statt 0x20 (PC DD)
+ *     "shd"             ->  0x30             statt 0x20
+ *     "xadfx"           ->  0x04 (Amiga)     statt 0x20
+ *     "ad64"            ->  0x00 (C64)       statt 0x20
+ *
+ * WAS HIER NICHT ENTSCHIEDEN WIRD: die Funktion hat keinen Aufrufer
+ * (`git grep` findet ausser `uft_scp_writer.h:94` nichts), ihr Vertrag
+ * ist also unbestimmt — ist `hint` eine Format-Kennung oder Fliesstext?
+ * Das bleibt offen (Stoppregel S5). Geaendert ist nur, was unter BEIDEN
+ * Lesarten falsch war: die Wortgrenze. Die Gross-/Kleinschreibung
+ * bleibt wie sie war (`strstr` war case-sensitiv).
+ */
+
+/** Wortzeichen: alphanumerisch oder '.' — eigene ASCII-Pruefung statt
+ *  `isalnum()`, das bei einem Byte >= 0x80 in `char` undefiniert ist. */
+static bool hint_wortzeichen(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
+        || (c >= 'A' && c <= 'Z') || c == '.';
+}
+
+/**
+ * @brief Steht @p wort als GANZES Wort in @p hint?
+ *
+ * Der Punkt gehoert zum Wort, sonst zerfiele „1.44" in „1" und „44";
+ * ein fuehrender oder anhaengender Punkt wird dagegen abgestreift,
+ * damit „pc hd." das Kennwort „hd" nicht verliert.
+ */
+static bool hint_hat_wort(const char *hint, const char *wort) {
+    const size_t wl = strlen(wort);
+    const char *p = hint;
+
+    while (*p) {
+        while (*p && !hint_wortzeichen(*p)) p++;
+        const char *a = p;
+        while (*p && hint_wortzeichen(*p)) p++;
+        const char *e = p;
+        while (a < e && *a == '.') a++;
+        while (e > a && e[-1] == '.') e--;
+        if ((size_t)(e - a) == wl && uft_bytes_eq(a, wort, wl, NULL))
+            return true;
+    }
+    return false;
+}
+
 /**
  * @brief Get disk type from format hint
  */
 uint8_t scp_disk_type_from_hint(const char *hint) {
     if (!hint) return SCP_TYPE_PC_DD;
-    
-    if (strstr(hint, "amiga") || strstr(hint, "adf")) return SCP_TYPE_AMIGA;
-    if (strstr(hint, "c64") || strstr(hint, "d64")) return SCP_TYPE_C64;
-    if (strstr(hint, "atari") || strstr(hint, "st")) return SCP_TYPE_ATARI_ST;
-    if (strstr(hint, "hd") || strstr(hint, "1.44")) return SCP_TYPE_PC_HD;
-    
+
+    if (hint_hat_wort(hint, "amiga") || hint_hat_wort(hint, "adf"))
+        return SCP_TYPE_AMIGA;
+    if (hint_hat_wort(hint, "c64") || hint_hat_wort(hint, "d64"))
+        return SCP_TYPE_C64;
+    if (hint_hat_wort(hint, "atari") || hint_hat_wort(hint, "st"))
+        return SCP_TYPE_ATARI_ST;
+    if (hint_hat_wort(hint, "hd") || hint_hat_wort(hint, "1.44"))
+        return SCP_TYPE_PC_HD;
+
     return SCP_TYPE_PC_DD;
 }
 

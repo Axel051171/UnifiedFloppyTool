@@ -215,7 +215,7 @@ endfunction()
 # Uebersetzungseinheit anzuhaengen.
 function(uft_wire_match tgt)
     get_target_property(_uft_srcs ${tgt} SOURCES)
-    if(_uft_srcs MATCHES "uft_genesis"
+    if(_uft_srcs MATCHES "uft_genesis|uft_scp_writer"
        AND NOT _uft_srcs MATCHES "uft_match")
         target_sources(${tgt} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/util/uft_match.c)
@@ -292,7 +292,14 @@ foreach(test_source ${TEST_SOURCES})
         if(TARGET uft_c64_protection)
             list(APPEND TEST_LIBS uft_c64_protection)
         endif()
-        elseif(${test_name} STREQUAL "test_match")
+        elseif(${test_name} STREQUAL "test_scp_hinweis_trifft_ganze_woerter")
+        # MF-1233, Rotbeweis zuerst: `scp_disk_type_from_hint()` waehlte
+        # den Diskettentyp mit `strstr`, und „st" steckt in „fastest" —
+        # `"pc-hd-fastest"` ergab 0x08 (Atari ST) statt 0x30 (PC HD),
+        # weil die st-Pruefung VOR der hd-Pruefung steht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c)
+    elseif(${test_name} STREQUAL "test_match")
         # MF-1232 (Posten `A-027`): die Ersatzfunktionen fuer suchendes
         # Pruefen. Der Prueferbericht von Tor 66 nennt `uft_suffix_eq()`,
         # `uft_magic_at()` und `uft_id_eq()` als Ersatz — und `git grep`

@@ -2733,6 +2733,31 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     `uft_wire_match()`, die die Quellenliste des Ziels befragt — genau
     das Doppel, das MF-1189/`P3-454` gemessen hat. Endstand
     61 / 63 / **Fehlbetrag 0**.
+- **Stand (2026-09-18, MF-1233 — acht weitere weg, und die Einteilung
+  ist jetzt gemessen):**
+  · **Die Einteilung kommt jetzt aus den DEKLARATIONEN**, je Fundstelle,
+    nicht aus den Schnipseln: **11** durchsuchen ein begrenztes lokales
+    Feld (Gefahr tritt nicht ein), **13** eine vom Aufrufer gelieferte
+    Zeichenkette, **9** Prosa (`*_description()`, `report`), **7** liegen
+    im Waisen `uft_xfd_parser_v2.c`, **1** ist die echte Falle in
+    fremdem Code (`src/samdisk/SpectrumPlus3.cpp` `&data[653]`), **3**
+    bleiben zu lesen. Beide früheren Zahlen bleiben zurückgenommen.
+  · **8 Fundstellen behoben** in `uft_scp_writer.c`:
+    `scp_disk_type_from_hint()` wählte den Diskettentyp mit `strstr`,
+    und weil `st` VOR `hd` geprüft wird, ergab `"pc-hd-fastest"`
+    **0x08 (Atari ST) statt 0x30 (PC HD)** — „st" steckt in „fastest".
+  · Rotbeweis `tests/test_scp_hinweis_trifft_ganze_woerter.c`:
+    **6 von 20 rot** gegen den Vorzustand, 20/20 danach; die 14
+    Positiv- und Randfälle (inkl. `"1.44"` und `"pc hd."`) immer grün.
+  · **Nicht entschieden (S5):** die Funktion hat keinen Aufrufer, ihr
+    Vertrag ist unbestimmt (Kennung oder Fließtext?). Geändert ist nur
+    die **Wortgrenze**, die unter beiden Lesarten falsch war; die
+    Groß-/Kleinschreibung bleibt wie `strstr` sie hatte.
+  · Deckung **vor** dem Bau gemessen: `uft_scp_writer.c` in **74**
+    Zielen, 14 davon ohne `uft_match.c` → `uft_wire_match()`-Ausdruck
+    auf `uft_genesis|uft_scp_writer` erweitert, danach Fehlbetrag **0**
+    (`uft_match` in 78 Zielen).
+  · **Offen: 38** (36 in C, 2 in Python).
 - **Stand — was der Rest kostet, und meine Zahl ist ZURÜCKGENOMMEN:**
   Ich hatte „33 Versatz / 9 Prosa / 7 Waise" gemessen, dann
   „29 begrenztes Feld / 9 / 7 / 4" — **beide aus einem Muster über die
