@@ -3670,7 +3670,53 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     aber nur ein Verzeichnis dieses Namens; sieben weitere
     Bauverzeichnisse mit über 128 000 erzeugten Dateien werden
     mitgelesen, und die Grundlinien hängen daran.
-- **Beleg:** — (MF-1245 und MF-1246 liegen fertig im Baum, uncommittet)
+- **Beleg:** **Punkt 1 und Punkt 3 erledigt, 2026-09-18.**
+  · `422ca4aa` **MF-1243** — K4-Vorzeigefund als Fehlalarm zurückgenommen
+  · `117808c7` **MF-1246** — verankerte Sperrregel, 8 Tore / 9 Aufrufstellen,
+    Selbsttest 6/6, Klon unter `.claude` von 191 auf 0
+  · `0bafecfa` **MF-1245** — Dateifilter aus der Registry, 10 Dateien,
+    +553/−25, Mutationsmatrix 4/4, ctest 516/516
+  · **Versand belegt, nicht behauptet:** `6d3a62f3..0bafecfa main -> main`,
+    und alle drei Quellen nennen denselben Wert — `git rev-parse HEAD`,
+    `git rev-parse origin/main` und `git ls-remote` gegen den Server.
+  · **Der erste Versuch wurde dabei ABGEWIESEN, und nur die zweite
+    Aufzeichnung hat es gezeigt:** `git push` meldete 1, die äußere
+    Hülle meldete `exited with code 0` (Pipe durch `tail`), und die
+    drei Werte wichen ab. Ursache war meine: das Beiseitelegen der
+    Bauartefakte stand in den Commit-Skripten und fehlte im
+    Versandskript — der `pre-push`-Haken urteilt über den ARBEITSBAUM
+    (Klasse `tor_misst_arbeitsbaum_nicht_commit`), und `ctest` erzeugt
+    die 17 `ui_*.h` über AUTOUIC neu, also gehört die Probe VOR das
+    Wegräumen.
+  · **Punkt 2 erledigt — MF-1248, und die Achse hat beim ersten Lauf
+    zwei Fehler gefunden, davon einen von mir.** Bauabsicht vorgelegt,
+    freigegeben mit „ja, bau es". `scripts/gen_familien.py` leitet die
+    Familien aus `docs/erzeuger_kanaele.json` ab statt sie zu pflegen;
+    Selbsttest **12/12** mit drei Rot-Proben, Frische-Tor in
+    `check_consistency.py` (feuert auf eine gekippte Ziffer, schweigt
+    bei Gleichstand).
+    · **Die Antwort auf deine Korrektur:** 14 Formate mit gemessenem
+      Erzeuger verteilen sich auf **5** Quellen — `hxcfe` 6,
+      `dsktrans` 5, dazu je eine. Die Variantenkampagne berührt **2
+      von 5** Quellen und damit **11 von 14** Formaten. Nach Plugins
+      gezählt sind es 9 von 137; nach Quellen gezählt sind vier
+      Fünftel der belegten Fläche angefasst. Du hattest recht: so
+      gezählt ist die Kampagne kürzer.
+    · **Mein Fehler, von der Messung gefangen:** der erste Abgleich
+      lief über Namensanfänge und zählte `adf` gegen `adf_ext` — zwei
+      verschiedene Plugins (MF-1222 nennt genau diese Verwechslung).
+      Aus 3 Treffern wurden richtig **2**. Die Zuordnung ist jetzt
+      zeichengleich, Beinahe-Treffer werden AUSGEGEBEN statt
+      verschwiegen.
+    · **Der zweite Fehler war im Zensus, und er ist ableitbar:**
+      `kanal: "keiner"` steht 16 von 30 Mal, und **8** dieser Formate
+      stehen auf T1/T1b — einer Stufe, die eine fremde Hand VERLANGT.
+      Der Zensus probierte `hxcfe`/`floptool`/`SAMdisk`, gehoben wurde
+      mit anderen Werkzeugen. „Es gibt keinen" war eine Aussage über
+      den probierten Aufruf. Benannt als `P3-502`.
+  · **MF-1247** (Teilstring-Falle in zwei Fähigkeits-Toren) liegt
+    fertig im Arbeitsbaum und wartet nach der Ordnungsregel auf den
+    Tor-Commit der zweiten Sitzung.
 
 ## Fundus
 

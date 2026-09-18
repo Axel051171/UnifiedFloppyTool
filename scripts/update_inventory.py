@@ -838,6 +838,32 @@ def check_tiers_fresh(repo: Path) -> list[str]:
     return []
 
 
+def check_familien_fresh(repo: Path) -> list[str]:
+    """Ist docs/FORMAT_FAMILIEN.md aktuell? (MF-1248)
+
+    Dieselbe Begruendung wie bei STAND.md: eine abgeleitete Tafel, die
+    driftet, ist schlimmer als keine — sie sieht nach Wahrheit aus.
+
+    Die Achse haengt an DREI Eingaben, und jede aendert sich ohne ihr
+    Zutun: `docs/erzeuger_kanaele.json` (neue Erzeuger-Messung), die
+    Stufentafel (eine Hebung macht aus „kein Erzeuger" einen
+    Widerspruch) und der Baum selbst (ein neues `.variants` verschiebt
+    den Fortschritt). Ohne dieses Tor waere die Tafel nach dem ersten
+    fremden Commit still falsch.
+    """
+    try:
+        from gen_familien import tafel_bauen, ZIEL
+    except ImportError as e:                       # pragma: no cover
+        return [f"cannot import gen_familien: {e}"]
+    erwartet = tafel_bauen(repo)
+    jetzt = ZIEL.read_text(encoding="utf-8") if ZIEL.exists() else ""
+    if jetzt != erwartet:
+        return ["docs/FORMAT_FAMILIEN.md ist veraltet gegen Zensus, "
+                "Stufentafel oder Variantentafeln — "
+                "run: python scripts/gen_familien.py"]
+    return []
+
+
 def check_stand_fresh(repo: Path) -> list[str]:
     """Ist docs/STAND.md aktuell? (MF-704)
 
