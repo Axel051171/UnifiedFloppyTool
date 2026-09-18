@@ -3697,11 +3697,17 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     bei Gleichstand).
     · **Die Antwort auf deine Korrektur:** 14 Formate mit gemessenem
       Erzeuger verteilen sich auf **5** Quellen — `hxcfe` 6,
-      `dsktrans` 5, dazu je eine. Die Variantenkampagne berührt **2
-      von 5** Quellen und damit **11 von 14** Formaten. Nach Plugins
-      gezählt sind es 9 von 137; nach Quellen gezählt sind vier
-      Fünftel der belegten Fläche angefasst. Du hattest recht: so
-      gezählt ist die Kampagne kürzer.
+      `dsktrans` 5, dazu je eine.
+    · **BERICHTIGT MF-1249, und die Berichtigung kam von CI.** Hier
+      stand: „Die Variantenkampagne berührt **2 von 5** Quellen und
+      damit **11 von 14** Formaten. Nach Plugins gezählt sind es 9 von
+      137; nach Quellen gezählt sind vier Fünftel der belegten Fläche
+      angefasst." Das beschrieb meinen **Arbeitsbaum**. Gemessen im
+      Commit: **1** Variantentafel, **0** mit gemessenem Erzeuger,
+      **0 von 5** Quellen. Acht der neun Tafeln sind die uncommittete
+      Arbeit der zweiten Sitzung — die Zahl wird mit deren Commit zu
+      2 von 5, heute ist sie null. Die Aussage „so gezählt ist die
+      Kampagne kürzer" bleibt richtig; nur steht sie noch am Anfang.
     · **Mein Fehler, von der Messung gefangen:** der erste Abgleich
       lief über Namensanfänge und zählte `adf` gegen `adf_ext` — zwei
       verschiedene Plugins (MF-1222 nennt genau diese Verwechslung).

@@ -97,10 +97,24 @@ def plugins_mit_variantentafel(wurzel: Path) -> dict:
 
     Die Dateimenge kommt aus git, nicht aus einer Verzeichnisliste
     (Grundsatz MF-636).
+
+    BERICHTIGT MF-1249, und zwar von CI: gelesen wird der **INDEX**
+    (`--cached`), nicht der Arbeitsbaum. Die erste Fassung fragte den
+    Arbeitsbaum und zaehlte **9** Variantentafeln — im Commit standen
+    **1**. Die uebrigen acht sind die uncommittete Arbeit einer zweiten
+    Sitzung; meine erzeugte Tafel beschrieb damit einen Zustand, den es
+    auf keiner Maschine ausser meiner gab. Lokal gruen, in CI rot.
+
+    Der Index ist die richtige Quelle, weil er an beiden Orten dasselbe
+    sagt: beim Commit ist er genau das, was gleich im Commit steht, und
+    in CI ist er nach dem Auschecken mit HEAD identisch. Der
+    Arbeitsbaum ist an keinem der beiden Orte massgeblich — das ist die
+    Klasse `tor_misst_arbeitsbaum_nicht_commit`, und sie ist an diesem
+    Tag zum dritten Mal aufgetreten.
     """
     try:
-        r = subprocess.run(["git", "grep", "-l", r"\.variants *=",
-                            "--", "src/formats/"],
+        r = subprocess.run(["git", "grep", "--cached", "-l",
+                            r"\.variants *=", "--", "src/formats/"],
                            cwd=str(wurzel), capture_output=True,
                            text=True, timeout=120)
     except (OSError, subprocess.SubprocessError):
@@ -110,11 +124,15 @@ def plugins_mit_variantentafel(wurzel: Path) -> dict:
 
     aus = {}
     for rel in r.stdout.split():
-        p = wurzel / rel
-        try:
-            t = p.read_text(encoding="utf-8", errors="replace")
-        except OSError:
+        # Auch der INHALT muss aus dem Index kommen: eine Datei, die im
+        # Index eine Tafel traegt, kann im Arbeitsbaum eine andere
+        # Plugin-Kennung haben.
+        g = subprocess.run(["git", "show", ":" + rel],
+                           cwd=str(wurzel), capture_output=True,
+                           timeout=120)
+        if g.returncode != 0:
             continue
+        t = g.stdout.decode("utf-8", errors="replace")
         for m in re.finditer(
                 r"uft_format_plugin_t\s+uft_format_plugin_([a-z0-9_]+)", t):
             aus[m.group(1)] = rel
@@ -357,6 +375,38 @@ def _selbsttest() -> int:
     zusage(wid == ["leer"],
            "„kein Erzeuger\" gegen T1b ist ein Widerspruch, gegen T2 "
            "nicht")
+
+    # 3d — ROT-PROBE aus CI: der ARBEITSBAUM ist nicht der Commit.
+    #      Die erste Fassung fragte ihn und zaehlte 9 Variantentafeln,
+    #      waehrend im Commit 1 stand — acht gehoerten einer zweiten,
+    #      uncommitteten Sitzung. Lokal gruen, in CI rot.
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as td:
+        rp = Path(td)
+        (rp / "src" / "formats" / "x").mkdir(parents=True)
+        f = rp / "src" / "formats" / "x" / "p.c"
+        f.write_text("const uft_format_plugin_t uft_format_plugin_alt = {\n"
+                     "    .name = \"alt\",\n};\n", encoding="utf-8")
+        umg = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+        import os
+        u = dict(os.environ, **umg)
+        for befehl in (["git", "init", "-q"], ["git", "add", "-A"],
+                       ["git", "commit", "-qm", "erst"]):
+            subprocess.run(befehl, cwd=td, env=u, capture_output=True)
+        # Jetzt NUR im Arbeitsbaum eine Variantentafel nachtragen.
+        f.write_text("static const uft_format_variant_t v[] = {};\n"
+                     "const uft_format_plugin_t uft_format_plugin_neu = {\n"
+                     "    .variants = v,\n};\n", encoding="utf-8")
+        aus_index = plugins_mit_variantentafel(rp)
+        roh = subprocess.run(["git", "grep", "-l", r"\.variants *=",
+                              "--", "src/formats/"],
+                             cwd=td, capture_output=True, text=True)
+        zusage(bool(roh.stdout.strip()),
+               "ROT-PROBE: der Arbeitsbaum zeigt die Tafel — sie ist "
+               "aber in keinem Commit")
+        zusage(aus_index == {},
+               "der Index zeigt sie NICHT, und der Index ist massgeblich")
 
     # 4 — `_`-Schluessel sind Fliesstext, keine Formate.
     import tempfile

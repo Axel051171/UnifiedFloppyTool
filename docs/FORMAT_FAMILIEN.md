@@ -11,8 +11,8 @@
 
 | Quelle | Formate | beruehrt | welche |
 |---|---:|---|---|
-| `hxcfe` | 6 | **ja** | `d77` `jv3` `trd` `v9t9` `vdk` `xdm86` |
-| `dsktrans` | 5 | **ja** | `apridisk` `cfi` `cqm` `dc42` `td0` |
+| `hxcfe` | 6 | — | `d77` `jv3` `trd` `v9t9` `vdk` `xdm86` |
+| `dsktrans` | 5 | — | `apridisk` `cfi` `cqm` `dc42` `td0` |
 | `dskform` | 1 | — | `cpm` |
 | `epstool` | 1 | — | `edk` |
 | `floptool` | 1 | — | `tan` |
@@ -21,10 +21,10 @@
 
 | | |
 |---|---|
-| Plugins mit Variantentafel | **9** |
-| davon mit gemessenem Erzeuger | **2** (td0 trd) |
-| beruehrte Quellen | **2 von 5** |
-| das entspricht Formaten | **11 von 14** mit Erzeuger |
+| Plugins mit Variantentafel | **1** |
+| davon mit gemessenem Erzeuger | **0** (—) |
+| beruehrte Quellen | **0 von 5** |
+| das entspricht Formaten | **0 von 14** mit Erzeuger |
 | Zensus-Eintraege ohne Erzeuger | 16 — gemessene Abwesenheit, siehe unten |
 | Formate OHNE Zensus-Eintrag | 107 von 137 — **nicht gemessen**, nicht "keine Familie" |
 
@@ -71,7 +71,5 @@ Zensus kennt den Erzeuger noch nicht, mit dem die Hebung gelungen ist.
 
 ## Beinahe-Treffer — hier entscheidet ein Mensch
 
-Diese Paare haette ein Abgleich ueber Namensanfaenge verwechselt. Sie sind **nicht** gezaehlt:
-
-* Plugin `adf` gegen Zensus-Schluessel `adf_ext` — verschiedene Formate (vgl. MF-1222: `dim` gegen `dim_atari`).
+Keine.
 
