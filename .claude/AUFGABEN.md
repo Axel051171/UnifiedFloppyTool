@@ -3182,6 +3182,55 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     mit `PYTHONIOENCODING=cp1252` wäre billig und der offensichtliche
     nächste Griff, aber das ist eine Entscheidung über die CI-Matrix
     und kein Nebeneffekt dieses Fixes. Steht in `P3-484`.
+- **Stand (2026-09-18, MF-1239 — das Waisenregister ist namensblind,
+  und ich habe den Befund mit einem eigenen Fehlgriff bezahlt):**
+  · Anlass war ein Nebenbefund aus MF-1238: `uft_xfd_parser_v2.c` hat
+    acht exportierte Funktionen, **0 echte Aufrufer** und steht
+    **nicht** auf `docs/orphan_baseline.txt`. Gemessen liegt es an
+    `scripts/audit_orphan_modules.py:229` — die Erreichbarkeitsprüfung
+    ist **namensbasiert**, ein **ODER** über alle Namen einer Datei,
+    und **blind für `static` und Signaturen**.
+  · `src/formats/xfd/uft_xfd.c:163` definiert ein **eigenes**
+    `static uft_error_t xfd_open(uft_disk_t*, const char*, bool)`,
+    `:238` ein `static void xfd_close(uft_disk_t*)`, und `:361`
+    verdrahtet `.open = xfd_open, .close = xfd_close` auf eben diese
+    Statics. Für den Index sind das zwei Treffer.
+  · **Und die Grundlinie sieht vollständig aus:** 204 Einträge gegen
+    204 in der Spalte „keiner". Eine Summe, die aufgeht, sagt nichts
+    über die Verteilung darin (MF-1026, MF-1079) — hier auf ein
+    **Register** angewandt.
+  · Suchraum begrenzt statt geschätzt: **84** Kollisions-Kandidaten in
+    **40** Namen über 747 Quelldateien. **Ein Kandidat ist kein
+    Befund** — `serial_open` hat drei externe Definitionen, aber das
+    sind Plattformvarianten (`serial_linux/null/win32.cpp`), von denen
+    nur eine übersetzt. Wer aus 84 Paaren 84 Befunde macht, hat nicht
+    gemessen.
+  · **Mein Messwerkzeug trug ZWEIMAL dieselbe Klasse, die es sucht:**
+    der Regex verlangte Leerraum zwischen Typ und Namen und verpasste
+    `Type* name(` — ausgerechnet `xfd_context_t* xfd_open(` fiel
+    heraus; und die Auszählung lief über `[a-z_]+` und kannte keine
+    Ziffern, also fehlten `crc16`, `crc16_ccitt`,
+    `d64_sectors_on_track`. Erste Zahlen 76/32 waren eine untere
+    Schranke **meines Werkzeugs**, richtig sind 84/40.
+  · Nebenbefund, belastbar: `crc16_ccitt` steht 1× extern und **5×
+    `static`** in fünf Dateien, `d81_sector_offset` 1× extern und 3×
+    `static` — MF-1177 im Maßstab. Ob die sechs `crc16_ccitt`
+    **übereinstimmen**, ist **nicht** gemessen; das ist die
+    MF-1015-Frage.
+  · Einzelheiten und der Weg: **`P3-488`**. Kein Fix in diesem
+    Commit — `used_elsewhere()` zu ändern bewegt die Grundlinie und
+    braucht einen Rotbeweis am bekannten Fall **plus** eine
+    Gegenprobe für die Plattformvarianten.
+  · **MEIN FEHLGRIFF, und er gehört hierher:** ich habe diesen
+    Befund in `OPEN_ITEMS.md` eingetragen, **während der Versand von
+    MF-1238 lief**. `docs/STAND.md` führt die Zeilenzahl von
+    `OPEN_ITEMS.md`, also wies der pre-push-Haken mit
+    `[STAND.md stale]` ab — ein Zustand, den **meine eigene
+    gleichzeitige Änderung** erzeugt hat. `CLAUDE.md` §MF-1096 Regel 2
+    nennt den **Commit**; der pre-push-Haken fährt aber dieselbe
+    Prüfung. Die Regel gilt dort genauso, und das steht jetzt in der
+    Gedächtnisnotiz. Nichts war kaputt, die Artefakte kamen zurück,
+    der Commit blieb intakt — es hat einen Versandlauf gekostet.
 - **Stand — was AUSDRÜCKLICH offen bleibt:**
   · **Der qmake-Produktbau trägt die neue Fahne NICHT.** Sie sitzt im
     CMake-Testbau; CI baut alle drei Plattformen mit qmake, die 715
