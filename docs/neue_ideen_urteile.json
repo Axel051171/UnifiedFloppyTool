@@ -24,6 +24,69 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen."
     },
+    "disk-utilities-master.zip": {
+      "lizenz": "Unlicense / public domain",
+      "lizenz_beleg": "COPYING IM PAKET gemessen, 1211 Byte (MF-1222) — nicht am API-Feld eines Hosters",
+      "kanal": "Oracle",
+      "kennzahl": "T3 runter",
+      "naechster_griff": "Erledigt und belegt: sein `disk-analyse` hat `adf_ext` von T2 auf T1b gehoben (MF-1222). Bleibt als Oracle eingetragen; kein weiterer Griff noetig."
+    },
+    "nibtools-extra.zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "229-Byte-LICENSE im Paket (MF-1008) — berichtigt eine frueher angenommene GPL-3.0; am Ergebnis aendert das nichts, Apache-2.0 ist mit GPL-2 ebenso unvereinbar",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Zone GELB in docs/QUARANTINE.md. Ausfuehren ja, uebernehmen nein. Dort steht das Urteil; hier nur der Verweis."
+    },
+    "IPF-Format.zip": {
+      "lizenz": "ungemessen — das Format ist BEWUSST undokumentiert, die SPS behaelt sich seine Erzeugung vor",
+      "lizenz_beleg": "docs/QUARANTINE.md, Eigentuemer-Entscheidung",
+      "kanal": "Helfer-Prozess",
+      "naechster_griff": "Weg 3 nach QUARANTINE_PROCESS.md — Helfer ueber Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt. Dort steht das Urteil; hier nur der Verweis.",
+      "kennzahl": "Fundus"
+    },
+    "code-schnipsel": {
+      "lizenz": "eigenes Material des Eigentuemers",
+      "lizenz_beleg": "docs/QUARANTINE.md — 18 von 18 Dateien byteidentisch mit den git-Objekten, mitgelieferte SHA256SUMS bezeugt SOURCE_MAP.md",
+      "kanal": "Daten/Fixture",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts offen: der Fund war, dass die vollstaendige Fassung hier unversioniert liegt. Steht in QUARANTINE.md."
+    },
+    "code-schnipsel.zip": {
+      "lizenz": "eigenes Material des Eigentuemers",
+      "lizenz_beleg": "dasselbe Paket wie das entpackte `code-schnipsel/`, docs/QUARANTINE.md",
+      "kanal": "Daten/Fixture",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts offen — das Archiv zum bereits entpackten Verzeichnis."
+    },
+    "hdlen.tar.gz": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md fuehrt es als gebautes MESSWERKZEUG (MF-1089), nicht als Abbild-Oracle; eine Lizenzdatei ist dort nicht zitiert",
+      "kanal": "Helfer-Prozess",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz an der Datei im Paket messen, falls es je weitergegeben werden soll. Zum blossen Ausfuehren ist die Frage offen und benannt."
+    },
+    "ChecksumCRC_BookCode.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle.",
+      "kanal": "Helfer-Prozess",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md."
+    },
+    "FLOFOR.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md nennt es als **geprueften und ABGELEHNTEN** Kandidaten fuer die Percom-RFD-Firmware",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Keiner: geprueft und abgelehnt. Der Eintrag steht hier, damit die Ablehnung nicht als Luecke erscheint und jemand sie wiederholt."
+    },
+    "FORMATS.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "MF-1078: 47 Textdateien mit CBM-Formatbeschreibungen, **gelesen, nicht uebernommen**. NICHT zu verwechseln mit `formats1.zip` (MAMEs Formatklassen, SPDX BSD-3-Clause) — genau diese Verwechslung stand in CLAUDE.md und ist dort berichtigt.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Keiner offen: der Inhalt ist gelesen, die Verwechslung mit `formats1.zip` ist berichtigt."
+    },
     "UFT-50-Korg-TSeries.md": {
       "lizenz": "eigene Ausarbeitung; die BESCHRIEBENE Quelle (korgutils 0.9.1, Klaus Michael Indlekofer) traegt laut Bericht GPLv2 — am COPYING im Paket UNGEMESSEN",
       "lizenz_beleg": "Angabe aus dem Bericht selbst, keine Lizenzdatei gesehen. Das API-Feld eines Hosters waere ohnehin kein Beleg (measurement_hit_wrong_class).",

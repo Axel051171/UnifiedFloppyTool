@@ -15,8 +15,8 @@ es muss niemand zaehlen.
 | | Zahl |
 |---|---|
 | Eintraege auf der obersten Ebene | 217 |
-| davon mit Urteil | 3 |
-| **ohne Urteil** | **214** |
+| davon mit Urteil | 12 |
+| **ohne Urteil** | **205** |
 | Urteile ohne Eintrag (verwaist) | 0 |
 | Urteile mit fehlendem Feld | 0 |
 
@@ -24,13 +24,22 @@ es muss niemand zaehlen.
 
 | Eintrag | Lizenz | Beleg | Kanal | Kennzahl | naechster Griff |
 |---|---|---|---|---|---|
+| `ChecksumCRC_BookCode.zip` | ungemessen | docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle. | Helfer-Prozess | Fundus | Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md. |
+| `code-schnipsel` | eigenes Material des Eigentuemers | docs/QUARANTINE.md — 18 von 18 Dateien byteidentisch mit den git-Objekten, mitgelieferte SHA256SUMS bezeugt SOURCE_MAP.md | Daten/Fixture | Fundus | Nichts offen: der Fund war, dass die vollstaendige Fassung hier unversioniert liegt. Steht in QUARANTINE.md. |
+| `code-schnipsel.zip` | eigenes Material des Eigentuemers | dasselbe Paket wie das entpackte `code-schnipsel/`, docs/QUARANTINE.md | Daten/Fixture | Fundus | Nichts offen — das Archiv zum bereits entpackten Verzeichnis. |
+| `disk-utilities-master.zip` | Unlicense / public domain | COPYING IM PAKET gemessen, 1211 Byte (MF-1222) — nicht am API-Feld eines Hosters | Oracle | T3 runter | Erledigt und belegt: sein `disk-analyse` hat `adf_ext` von T2 auf T1b gehoben (MF-1222). Bleibt als Oracle eingetragen; kein weiterer Griff noetig. |
+| `FLOFOR.ZIP` | ungemessen | docs/ORACLES.md nennt es als **geprueften und ABGELEHNTEN** Kandidaten fuer die Percom-RFD-Firmware | Fundus | Fundus | Keiner: geprueft und abgelehnt. Der Eintrag steht hier, damit die Ablehnung nicht als Luecke erscheint und jemand sie wiederholt. |
+| `FORMATS.ZIP` | ungemessen | MF-1078: 47 Textdateien mit CBM-Formatbeschreibungen, **gelesen, nicht uebernommen**. NICHT zu verwechseln mit `formats1.zip` (MAMEs Formatklassen, SPDX BSD-3-Clause) — genau diese Verwechslung stand in CLAUDE.md und ist dort berichtigt. | Spec | Fundus | Keiner offen: der Inhalt ist gelesen, die Verwechslung mit `formats1.zip` ist berichtigt. |
+| `hdlen.tar.gz` | ungemessen | docs/ORACLES.md fuehrt es als gebautes MESSWERKZEUG (MF-1089), nicht als Abbild-Oracle; eine Lizenzdatei ist dort nicht zitiert | Helfer-Prozess | Fundus | Lizenz an der Datei im Paket messen, falls es je weitergegeben werden soll. Zum blossen Ausfuehren ist die Frage offen und benannt. |
+| `IPF-Format.zip` | ungemessen — das Format ist BEWUSST undokumentiert, die SPS behaelt sich seine Erzeugung vor | docs/QUARANTINE.md, Eigentuemer-Entscheidung | Helfer-Prozess | Fundus | Weg 3 nach QUARANTINE_PROCESS.md — Helfer ueber Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt. Dort steht das Urteil; hier nur der Verweis. |
+| `nibtools-extra.zip` | Apache-2.0 | 229-Byte-LICENSE im Paket (MF-1008) — berichtigt eine frueher angenommene GPL-3.0; am Ergebnis aendert das nichts, Apache-2.0 ist mit GPL-2 ebenso unvereinbar | Oracle | Fundus | Zone GELB in docs/QUARANTINE.md. Ausfuehren ja, uebernehmen nein. Dort steht das Urteil; hier nur der Verweis. |
 | `OmniFlop_3.2d_Format_Harvest_C.zip` | ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen | neue-ideen/UFT-NN_OmniFlop_Analyse.md | Fundus | Fundus | Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen. |
 | `UFT-50-Korg-TSeries.md` | eigene Ausarbeitung; die BESCHRIEBENE Quelle (korgutils 0.9.1, Klaus Michael Indlekofer) traegt laut Bericht GPLv2 — am COPYING im Paket UNGEMESSEN | Angabe aus dem Bericht selbst, keine Lizenzdatei gesehen. Das API-Feld eines Hosters waere ohnehin kein Beleg (measurement_hit_wrong_class). | Spec | Fundus | Nicht bauen: ein neues Format-Plugin ist unter der EINFRIER-REGEL auch als Vorschlag gesperrt. Als P3-513 notiert. Wenn das Moratorium es zulaesst: Lizenz an der Datei messen, korgutils bauen, Abbild von fremder Hand beschaffen. |
 | `x50conv.exe` | Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT | mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat | Spec | Fundus | Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen. |
 
 ## Noch ohne Urteil
 
-214 Eintraege. Sie stehen hier vollstaendig, weil eine
+205 Eintraege. Sie stehen hier vollstaendig, weil eine
 gekuerzte Liste genau die Aufzaehlung waere, gegen die
 dieses Register gebaut ist.
 
@@ -59,9 +68,6 @@ dieses Register gebaut ist.
 - `capsimage-`
 - `capsimage-.zip`
 - `casutil_extract_c.zip`
-- `ChecksumCRC_BookCode.zip`
-- `code-schnipsel`
-- `code-schnipsel.zip`
 - `copy`
 - `Copy_Wizard`
 - `CopyC21.lha`
@@ -75,7 +81,6 @@ dieses Register gebaut ist.
 - `DFS_Explorer_2_2_0.zip`
 - `DFSXFER.BAS`
 - `disk`
-- `disk-utilities-master.zip`
 - `disk_algorithms.zip`
 - `disk_encoder-master.zip`
 - `DISKIMAG.ZIP`
@@ -99,19 +104,16 @@ dieses Register gebaut ist.
 - `fdc.vhd.txt`
 - `fertige`
 - `FilecopyVerifyRetry-1.1.lha`
-- `FLOFOR.ZIP`
 - `FloImg-extrakt.zip`
 - `floppy1`
 - `FloppyImageRectifier-main.zip`
 - `fluxdoctor.asm`
-- `FORMATS.ZIP`
 - `formats1.zip`
 - `GCDFS.ZIP`
 - `geocopy.zip`
 - `hacking floppy disk.zip`
 - `hardsector_tool-main.zip`
 - `hatari_1.7.0-1.debian.tar.gz`
-- `hdlen.tar.gz`
 - `idad400_v2r3.pdf`
 - `IMG2DISK.LST`
 - `IMG2DISK.PRG`
@@ -119,7 +121,6 @@ dieses Register gebaut ist.
 - `IMGRSRC.ZIP`
 - `InterchangeFormatExtracter.zip`
 - `ipf-flux-main.zip`
-- `IPF-Format.zip`
 - `ipfdec5_binary_win.zip`
 - `KCemu-0.5.1.tar.gz`
 - `Kracker Jax Elite V4.0.zip`
@@ -134,7 +135,6 @@ dieses Register gebaut ist.
 - `MFSLives-master.zip`
 - `mnib_cvs.zip`
 - `MSH-1.58.zip`
-- `nibtools-extra.zip`
 - `Oberflächenplanung.zip`
 - `OpenCBM-master.zip`
 - `PastiImgKit.zip`

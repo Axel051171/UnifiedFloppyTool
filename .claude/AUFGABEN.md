@@ -4004,10 +4004,37 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · **Zwei Zahlen des eigenen Aufnahmeeintrags hielten nicht** (197
     Archive, 20 Verzeichnisse) — berichtigt oben, durchgestrichen
     stehen gelassen.
-  · **Festgehalten als `P3-512`.** Noch **nicht** getan: das
-    abgeleitete Register, das je Eintrag ein Urteil aus vier Feldern
-    verlangt — das ist der nächste Griff, und ohne es ist „alles
-    gesichtet" weiterhin eine Behauptung.
+  · **Festgehalten als `P3-512`** (berichtigt) und **`P3-513`** (der
+    Korg-Fund).
+- **Stand 2026-09-19, zweiter Durchgang — das Register steht, und die
+  ersten Urteile sind GEERNTET statt neu erfunden:**
+  · `scripts/gen_neue_ideen_register.py` + `docs/neue_ideen_urteile.json`
+    → `docs/NEUE_IDEEN_REGISTER.md`. Es meldet die Differenz in **beide**
+    Richtungen (Eintrag ohne Urteil **und** Urteil ohne Eintrag) und
+    sagt bei fehlendem Verzeichnis „Umfang nicht feststellbar" statt
+    „alles beurteilt". Selbsttest 9/9, zwei Mutationen gefangen.
+    **Kein Tor** — ein Tor, das seinen Gegenstand in CI gar nicht
+    sehen kann, wäre eines, das nicht anschlagen KANN.
+  · **Geerntet, nicht erfunden:** von 217 Einträgen tragen **9** ihr
+    Lizenzurteil längst in `docs/ORACLES.md` bzw.
+    `docs/QUARANTINE.md`; sie sind mit Verweis eingetragen, nicht
+    abgeschrieben (K4: keine Doppelhaltung). Dazu `x50conv.exe`,
+    `OmniFlop…zip` und `UFT-50`. **Stand: 12 von 217 beurteilt, 205
+    offen.**
+  · **Zwei Einträge stehen bewusst OHNE Urteil**, obwohl die Suche sie
+    zunächst als „beurteilt" meldete: `atari.zip` und `Skript.pdf`
+    trafen nur über einen **Wortstamm** (`atari`, `Skript`), nicht
+    über ihren Namen. Zu keinem von beiden habe ich eine Aussage
+    gefunden — also keine eingetragen.
+  · **Und die Zahl 12 ist selbst das Ergebnis einer Korrektur:** die
+    Stammsuche meldete **12 mit Lizenzurteil**, die wörtliche Suche
+    nur **6**. Beide Richtungen sind falsch — `FLOFOR` und
+    `IPF-Format` stehen im Baum ohne ihre Endung. Eingetragen ist
+    nur, wozu ich eine Aussage **gelesen** habe: neun.
+  · **137 von 217 stehen in KEINER der vier Quellen** (`ORACLES.md`,
+    `QUARANTINE.md`, `erzeuger_kanaele.json`, `OPEN_ITEMS.md`) — das
+    ist der eigentliche Rückstand, und er ist jetzt beziffert statt
+    geschätzt.
 - **Beleg:** —
 
 ---
