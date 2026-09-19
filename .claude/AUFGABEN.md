@@ -3758,7 +3758,7 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 *(mit Beleg: Commit-Hash und MF-Nummer)*
 
 ### A-031 · Vier Dinge: Sondendoktrin, eine Größenrechnung, Bauabbruch, Körnung
-- **Status:** **in Arbeit** (Punkt 1 erledigt) · **Aufgenommen:** 2026-09-19
+- **Status:** **in Arbeit** (Punkte 1-4 erledigt, Beleg ausstehend) · **Aufgenommen:** 2026-09-19
 - **Wortlaut:** „Vier Dinge, in dieser Reihenfolge — und das vierte
   macht aus zwei offenen Aufgaben eine. **1.** Die Sonde muss ihrer
   eigenen Doktrin gehorchen … bei Gleichstand gibt die Sonde keinen
@@ -3879,7 +3879,134 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
     eine gekippte Zahl und schweigt bei Gleichstand. Ohne das wäre die
     Konstante eine Zahl, die beim Erzeugen einmal gestimmt hat.
 - **Beleg:** —
-- **Stand Punkt 4:** offen.
+- **Stand Punkt 4 — ERLEDIGT (MF-1256), und die Messung hat eine
+  vierte eigene Fehlannahme umgeworfen — diesmal meine Zeile, nicht
+  die leere Spalte:**
+  · **Die Körnung steht jetzt im erzeugten Dokument**, in der
+    Gliederung des Auftrags: der Parser `dsk_generic` **1** · Zeilen
+    mit eigener Größe in der Tafel **11** · Zeilen im Gleichstand
+    **38 — „T3 — Größe allein, mehrdeutig"**. Die Zahlen sind
+    abgeleitet (`dsk_koernung()` über `gen_dsk_geom_max.tafel()`),
+    nicht getippt; die Summe geht auf und wird im Selbsttest geprüft
+    (11 + 38 = 49).
+  · **Die Summe „88" trägt einen Hinweis**, dass sie Plugins mit
+    eigener Beweislage zählt und nicht alle 137 — vorher las sie sich
+    wie die Gesamtzahl.
+  · **Fehlannahme 4, und sie war der Spiegelfehler zum verbotenen:**
+    die Zeile der 11 stand zuerst mit „je Zeile möglich" da — also
+    einer Zusage. An der laufenden Registry gemessen
+    (`tests/test_sonde_sagt_ab_bei_gleichstand.c`, neu 16/16 statt
+    12/12) stehen von den 11 nur **3** oben (`DSK_VIC`, `DSK_CRO`,
+    `DSK_RLD`); **5** liegen im Gleichstand mit einem Plugin außerhalb
+    der Tafel, und **3 werden überboten** — `DSK_NS` gegen
+    `NorthStar` (65 : 40), `DSK_NAS` gegen `Micropolis` (70),
+    `DSK_MZ` gegen `TRD`/`ADL` (45). „In der Tafel eindeutig" ist
+    **nicht** „erreichbar", und die Zelle sagt das jetzt.
+  · **Rot-Probe (Mutation):** „Tafel = Registry" lässt genau die drei
+    neuen Messzusagen fallen (13/16, rc 1); die Invarianten-Zusage
+    „die drei Klassen sind erschöpfend" bleibt richtig grün — der Test
+    zeigt damit, welche Zusage welche Behauptung trägt.
+  · **Rot-Probe (Frische-Tor):** 38 auf 37 gekippt → Tor feuert und
+    `--check` endet 1; zurückerzeugt → Tor schweigt, Datei byteweise
+    wie vorher.
+  · **Anti-Tautologie, gemessen statt behauptet:** hätte ich einen der
+    beiden `render_md(`-Aufrufer beim alten einstelligen Aufruf
+    gelassen, verglichen 377 Zeilen gegen 436 geschriebene — das Tor
+    hätte **dauerhaft** gefeuert. Beide Aufrufer sind umgestellt.
+  · **Der Generator hatte keinen Selbsttest und hat jetzt einen
+    (9/9).** Das Frische-Tor kann ihn nicht ersetzen: es prüft
+    Gleichschritt zwischen Generator und Dokument, nicht Richtigkeit —
+    ein falscher Generator schriebe seinen Fehler beim nächsten
+    `--write` ins Dokument, und das Tor schwiege weiter.
+  · **Die S5-Frage aus Punkt 2 leckt nicht in die Stufenaussage.**
+    Gruppiert man nach der Geometrie statt nach der Tafelzahl, kommen
+    **dieselben** Mengen heraus — 11 allein, 38 im Gleichstand,
+    namensgleich. Das steht als abgeleitete Fahne `s5_robust` im
+    Dokument, mit einer Gegenprobe im Selbsttest, dass sie falsch
+    werden **kann**.
+  · **Keine Zahl im erzeugten Dokument, die es nicht ableiten kann:**
+    die registryweite Dreiteilung steht ausdrücklich **nicht** dort,
+    sondern im Test — eine von Hand nachgezogene Zahl in einem
+    erzeugten Dokument wäre genau die Drift aus MF-541.
+  · `docs/OPEN_ITEMS.md` `P3-503` um den Befund erweitert.
+
+### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
+- **Status:** **aufgenommen** (wartet; `A-031` ist in Arbeit)
+  · **Aufgenommen:** 2026-09-19
+- **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
+  gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
+  code noch verbessern kann, nimm alles aus einander , meine
+  einwilligung hst du für alles"
+- **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
+  davon **197 Archive** auf der obersten Ebene und **20** bereits
+  entpackte Verzeichnisse. `neue-ideen/` ist gitignoriert
+  (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
+  zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
+  `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
+- **Kennzahl:** gemischt, und das gehört ausgesprochen. Der einzelne
+  Fund bewegt meist **keine** der vier und ist damit nach MF-640
+  *Fundus, nicht Auftrag*. Bewegen kann er **ungeprüfte Formate (T3)**
+  — nämlich dann, wenn sich darin ein **Erzeuger** oder ein **Oracle**
+  findet, das eine Stufe hebt; und **angebotene Wandlungspfade**, wenn
+  eine Richtung dadurch belegbar wird. Die Sichtung selbst ist Fundus;
+  ihr Ertrag ist es nicht zwangsläufig.
+- **Kanal:** **je Fund einer**, nach MF-695 — Port | Nachbau |
+  Helfer-Prozess | Oracle | Spec | Daten/Fixture | Fundus. „Lizenz vor
+  Fähigkeit" heißt nicht „Fund verwerfen", sondern *auf welchem Weg*,
+  und der Weg wird bei der Aufnahme des Funds benannt, nicht wenn der
+  Code schon dasteht.
+- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
+  **Rotbeweis zuerst**. Dazu das Moratorium: ein **neues
+  Format-Plugin** ist auch als *Vorschlag* gesperrt; erlaubt sind
+  Bugfixes an Bestehendem, Verifikations-/Korpusarbeit und
+  Spec-Korrekturen gegen autoritative Quellen. Ein Fund, der ein neues
+  Format nahelegt, wird als Fund notiert und **nicht** gebaut.
+- **OPEN_ITEMS:** verwandt und **nicht abzuschreiben** — `P3-8`
+  (drei Aminet-Pakete, Lizenzurteil offen), `P3-11` (Lizenz-Klasse
+  statt Einzelurteil, Eigentümer-Vorlage), `P3-19` (`COPY130.M65`,
+  Fundus), `P3-30` (`pyRT11`, Fundus), `P3-99` (`dskx` widerlegt).
+  Neue Befunde bekommen dort eine Nummer; dieser Posten verweist nur.
+- **Zwei Sperren, die im Gegenstand liegen und NICHT übergangen werden
+  dürfen** — beide gemessen vorhanden:
+  · `neue-ideen/x50conv.exe` — seine Lizenz **untersagt
+    Disassemblierung ausdrücklich**. Aus ihm stammt nichts als die
+    mitgelieferte Dokumentation. „Nimm alles auseinander" gilt hier
+    **nicht**; das ist keine Auslegungsfrage, sondern die Lizenz.
+  · `neue-ideen/OmniFlop_3.2d_Format_Harvest_C.zip` (239 Formate) —
+    **nicht in den Baum**, solange die Eigentümerentscheidung zum
+    EU-Datenbankherstellerrecht (§§87a ff. UrhG) aussteht. Dazu
+    `neue-ideen/UFT-NN_OmniFlop_Analyse.md`.
+  · **Die Einwilligung „für alles" deckt Arbeitsschritte, nicht
+    Lizenzen.** Eine Lizenzverletzung baut einen Defekt ein, den kein
+    Rotbeweis fangen kann (MF-695).
+- **Fertig heißt:** **jeder** Eintrag der obersten Ebene von
+  `neue-ideen/` trägt ein festgehaltenes Urteil aus vier Feldern —
+  *Lizenz (an der Datei gemessen, nicht am API-Feld)* · *Kanal nach
+  MF-695* · *Kennzahl oder „Fundus"* · *nächster Griff* —, und dieses
+  Register ist **abgeleitet, nicht gepflegt**: ein Skript liest die
+  Verzeichnisebene und meldet, was noch ohne Urteil ist. Solange auch
+  nur ein Eintrag ohne Urteil dasteht, ist der Posten offen.
+- **Aufwand:** **nicht schätzbar** für das Ganze — 2408 Dateien in 197
+  Archiven, und die Lizenzfrage ist je Paket eine eigene Messung.
+  Schätzbar ist erst die erste Scheibe, und die wird beim Beginn
+  benannt, nicht hier.
+- **Vorgehen, das beim Beginn gilt** (damit es nicht später als
+  Einschränkung erscheint):
+  · **Das Register zuerst, dann die Inhalte.** Ohne abgeleitetes
+    Register ist „alles gesichtet" eine Behauptung — 197 Archive kann
+    niemand im Kopf halten, und eine gepflegte Liste veraltet still
+    (dieser Baum hat das fünfmal gemessen).
+  · **Lizenz an der DATEI messen.** `measurement_hit_wrong_class`: das
+    API-Feld von GitHub/GitLab meldet die Projekteinstellung, nicht
+    die Lizenzdatei — `fdtc` galt als „ohne Lizenz" und trägt BSD-3.
+  · **Vor jedem Eintrag „steht das schon irgendwo?"** — der Baum
+    zitiert `neue-ideen/` bereits 108 Mal; ein zweiter Eintrag
+    derselben Sache wäre die Doppelhaltung, gegen die K4 steht.
+  · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
+    bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
+    allem, was auffällt.
+- **Stand:** —
+- **Beleg:** —
 
 ---
 

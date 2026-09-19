@@ -141,6 +141,61 @@ int main(void)
            "MESSUNG: mindestens ACHT dieser Groessen werden durch "
            "Registrierungsreihenfolge entschieden");
 
+    /* 0b. „Eigene Groesse in der Tafel" ist NICHT „erreichbar" (MF-1256).
+     *
+     *     `docs/VERIFICATION_TIERS.md` teilt die 49 Makrozeilen in
+     *     11 mit eigener Groesse IN DER TAFEL und 38 im Gleichstand.
+     *     Die 11 koennten wie eine hebbare Menge aussehen — und genau
+     *     das waere der Spiegelfehler zu dem, was der Auftrag
+     *     verbietet ("den 38 eine Stufe geben, weil die Spalte leer
+     *     aussieht"). Hier steht die Gegenmessung, und sie faellt
+     *     anders aus als die Tafel vermuten laesst.
+     *
+     *     Die Liste steht ABSICHTLICH ein zweites Mal hier und wird
+     *     nicht aus dem Generator geholt — sonst befragte der Test
+     *     dieselbe Quelle wie der Prueflings-Text (Klasse MF-1000). */
+    static const struct { size_t groesse; const char *name; } tafel_allein[] = {
+        { 152320u,  "DSK_VIC"  }, { 177408u,  "DSK_CRO" },
+        { 179200u,  "DSK_NS"   }, { 256256u,  "DSK_X820" },
+        { 286720u,  "DSK_OLI"  }, { 315392u,  "DSK_NAS" },
+        { 512512u,  "DSK_WNG"  }, { 573440u,  "DSK_SMC" },
+        { 655360u,  "DSK_MZ"   }, { 696320u,  "DSK_ORC" },
+        { 1261568u, "DSK_RLD"  }
+    };
+    const size_t N_TAFEL = sizeof(tafel_allein) / sizeof(tafel_allein[0]);
+    size_t r_allein = 0, r_gleich = 0, r_geschlagen = 0;
+    printf("   -- die 11 mit eigener Groesse in der TAFEL, an der "
+           "REGISTRY gemessen --\n");
+    for (size_t i = 0; i < N_TAFEL; i++) {
+        uft_probe_ranking_t e;
+        ranked_fuer(tafel_allein[i].groesse, &e);
+        int dabei = (e.winner && strcmp(e.winner->name,
+                                        tafel_allein[i].name) == 0);
+        for (size_t k = 0; !dabei && k < e.tied_listed; k++)
+            dabei = (e.tied_with[k] && strcmp(e.tied_with[k]->name,
+                                              tafel_allein[i].name) == 0);
+        const char *klasse;
+        if (!dabei)          { klasse = "GESCHLAGEN";   r_geschlagen++; }
+        else if (e.tied > 1) { klasse = "GLEICHSTAND";  r_gleich++;     }
+        else                 { klasse = "allein";       r_allein++;     }
+        printf("   %-9zu %-9s %-12s Sieger %s (%d%%)\n",
+               tafel_allein[i].groesse, tafel_allein[i].name, klasse,
+               e.winner ? e.winner->name : "-", e.confidence);
+    }
+    printf("   -> allein %zu · Gleichstand %zu · geschlagen %zu (von %zu)\n",
+           r_allein, r_gleich, r_geschlagen, N_TAFEL);
+
+    ZUSAGE(r_allein + r_gleich + r_geschlagen == N_TAFEL,
+           "SPERRE: die drei Klassen sind erschoepfend");
+    ZUSAGE(r_allein < N_TAFEL,
+           "BEFUND: „eigene Groesse in der Tafel\" heisst NICHT "
+           "„in der Registry erreichbar\"");
+    ZUSAGE(r_allein == 3,
+           "MESSUNG: genau DREI der elf stehen registryweit allein oben");
+    ZUSAGE(r_geschlagen == 3,
+           "MESSUNG: DREI werden ueberboten — ein Plugin mit mehr Beleg "
+           "gewinnt (NorthStar 65, Micropolis 70, TRD/ADL 45)");
+
     /* 1. Der Gleichstand ist eine Tatsache, keine Vermutung.
      *
      *    GEWAEHLT: 204 800 Byte — fuenf Plugins gleichauf bei 40, und

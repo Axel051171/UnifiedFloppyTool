@@ -15,6 +15,84 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | n/a | 2 |  <!-- MF-1077: kein Behaelterformat -->
 | **gesamt** | **88** |
 
+> **Diese Summe zaehlt PLUGINS mit eigener Beweislage, und das sind nicht
+> alle Formate des Baums.** `gen_format_list.py` sagt es selbst: die 49
+> `DSK_PLUGIN()`-Makro-Ausweitungen sind hier nicht enthalten, die volle
+> Plugin-Zahl ist **137**. Sie haben eine andere Koernung — ein Parser,
+> 49 Geometriezeilen — und stehen deshalb in einem eigenen Abschnitt
+> unten, statt diese Summe zu verwaessern (MF-1256).
+
+## Die 49 DSK-Makrozeilen — nach Koernung, nicht nach Zahl
+
+`src/formats/dsk_generic/uft_dsk_generic.c` erzeugt ueber EIN Makro 49
+Plugins. Sie sind **kein** Parser je Zeile: alle rufen dieselbe Sonde und
+dasselbe `open`, und was sich unterscheidet, ist ein Index in eine
+Geometrietafel. Eine Stufe je Zeile waere eine Zahl ohne Aussage, solange
+die Zeilen nicht auseinanderzuhalten sind.
+
+| Einheit | Anzahl | Stufe |
+|---|---:|---|
+| der Parser `dsk_generic` selbst | 1 | einmal, nach seinen eigenen Tests |
+| Zeilen mit eigener Groesse **in der Tafel** | 11 | **offen — in der Tafel eindeutig ist nicht erreichbar** |
+| Zeilen im Gleichstand | 38 | **T3 — Groesse allein, mehrdeutig** |
+
+> **Die dritte Zeile ist ein WAHRER Eintrag**, nicht eine leere Spalte und
+> nicht eine erfundene Zahl. Und sie sagt, was fehlt, um hoeher zu kommen:
+> eine **Inhaltsprobe**, die den Gleichstand bricht — bei 204 800 Byte
+> unterscheiden sich `40x2x16x256` und `40x2x8x512` in der Sektorgroesse,
+> und die steht im ersten Sektor.
+
+### Die 11 mit eigener Groesse in der Tafel
+
+| Zeile | Geometrie | Groesse |
+|---|---|---:|
+| `DSK_VIC` | 35x1x17x256 | 152320 |
+| `DSK_CRO` | 77x1x18x128 | 177408 |
+| `DSK_NS` | 35x1x10x512 | 179200 |
+| `DSK_X820` | 77x1x26x128 | 256256 |
+| `DSK_OLI` | 35x2x16x256 | 286720 |
+| `DSK_NAS` | 77x1x16x256 | 315392 |
+| `DSK_WNG` | 77x2x26x128 | 512512 |
+| `DSK_SMC` | 70x2x16x256 | 573440 |
+| `DSK_MZ` | 80x2x16x256 | 655360 |
+| `DSK_ORC` | 80x2x17x256 | 696320 |
+| `DSK_RLD` | 77x2x8x1024 | 1261568 |
+
+**„Eigene Groesse" heisst hier: in DIESER Tafel — und das ist NICHT dasselbe
+wie „in der Registry erreichbar".** Diese Zahl hier kann das nicht sagen: sie
+kommt aus einer Textdatei, die Rangfolge entsteht erst zur Laufzeit aus
+allen registrierten Sonden. Gemessen wird sie deshalb dort, wo sie entsteht —
+`tests/test_sonde_sagt_ab_bei_gleichstand.c` haelt die Dreiteilung fest
+(allein · Gleichstand · von einem Plugin mit mehr Beleg ueberboten), und der
+Test faellt, wenn sie sich verschiebt. **Hier steht sie absichtlich NICHT
+als Zahl**, weil eine von Hand nachgezogene Zahl in einem erzeugten Dokument
+genau die Drift ist, gegen die dieses Dokument existiert (MF-541). Die offene
+Frage dahinter ist `P3-503`.
+
+### Die 38 im Gleichstand — T3, Groesse allein
+
+| Groesse | mehrdeutig mit | Anordnungen |
+|---:|---|---|
+| 92160 | `DSK_SV` `DSK_VEC` | 40x1x18x128 |
+| 163840 | `DSK_SC3` `DSK_AQ` `DSK_PX` `DSK_M5` `DSK_AK` | 40x1x8x512 · 40x1x16x256 |
+| 184320 | `DSK_BW` `DSK_P3` | 40x1x9x512 |
+| 204800 | `DSK_LYN` `DSK_EIN` `DSK_VT` `DSK_ACE` | 40x1x10x512 |
+| 327680 | `DSK_FM7` `DSK_CG` `DSK_MTX` `DSK_ALN` `DSK_FP` `DSK_NEC` `DSK_SAN` `DSK_XM` `DSK_HK` | 40x2x8x512 · 40x2x16x256 |
+| 368640 | `DSK_PCW` `DSK_NB` `DSK_KRG` `DSK_TOK` `DSK_AGT` | 40x2x9x512 · 80x1x9x512 |
+| 634880 | `DSK_RC` `DSK_HP` | 77x2x16x256 |
+| 737280 | `DSK_MSX` `DSK_UNI` `DSK_EMU` `DSK_FLEX` `DSK_OS9` `DSK_DC42` | 80x1x36x256 · 80x2x9x512 · 80x2x18x256 |
+| 819200 | `DSK_BK` `DSK_KC` `DSK_EQX` | 80x2x5x1024 · 80x2x10x512 |
+
+**2 dieser Zeilen sind zusaetzlich mit sich SELBST uneins** (`DSK_RC`, `DSK_HP`):
+ihre `expected_size` und ihre Geometrie nennen verschiedene Groessen. Seit
+MF-1254 beanspruchen sie nichts mehr und sind nur mit genanntem Format
+erreichbar; welche der beiden Zahlen stimmt, ist NICHT belegt (`P3-506`).
+
+> **Und diese offene Frage traegt die Einteilung oben NICHT mit.** Gemessen
+> ergibt die Gruppierung nach der Geometrie dieselben Mengen wie die nach
+> der Tafelzahl — dieselben Zeilen allein, dieselben im Gleichstand. Waere
+> es anders, stuende hier der Widerspruch statt dieser Zeile.
+
 ## Pro Format
 
 | Plugin | Stufe | Tests | Spec-Quelle | Evidenz | Korpus-Images |

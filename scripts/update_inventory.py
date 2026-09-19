@@ -826,11 +826,13 @@ def check_corpus_manifest(repo: Path) -> list[str]:
 
 def check_tiers_fresh(repo: Path) -> list[str]:
     try:
-        from gen_verification_tiers import compute_tiers, render_md, GENERATED_DOC
+        from gen_verification_tiers import (compute_tiers, render_md,
+                                            dsk_makrozeilen,
+                                            GENERATED_DOC)
     except ImportError as e:                       # pragma: no cover
         return [f"cannot import gen_verification_tiers: {e}"]
     doc = repo / GENERATED_DOC
-    expected = render_md(compute_tiers(repo))
+    expected = render_md(compute_tiers(repo), dsk_makrozeilen(repo))
     current = doc.read_text(encoding="utf-8") if doc.exists() else ""
     if current != expected:
         return [f"{GENERATED_DOC} is stale vs. registry/tests/spec inputs — "

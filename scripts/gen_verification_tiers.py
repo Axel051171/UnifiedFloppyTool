@@ -201,7 +201,219 @@ def compute_tiers(repo: Path) -> list[dict]:
     return rows
 
 
-def render_md(rows: list[dict]) -> str:
+def dsk_makrozeilen(repo: Path) -> dict:
+    """Die 49 DSK-Makrozeilen, nach ihrer KOERNUNG geordnet (MF-1256).
+
+    ── Warum sie bis heute gar nicht vorkamen ───────────────────────────
+
+    `scan()` liefert 88 Plugins; `gen_format_list.py` sagt selbst, dass
+    es „die 49 DSK_PLUGIN()-Makro-Ausweitungen ausschliesst; die volle
+    Plugin-Zahl ist 137". Die Kennzahl „ungeprüfte Formate (T3)" rechnet
+    also ueber 88 von 137 — sie sieht ein Drittel des Gegenstands nicht.
+
+    ── Warum sie trotzdem nicht 49 Stufen bekommen ──────────────────────
+
+    Eigentuemer-Entscheidung vom 2026-09-19, woertlich:
+
+        „eine Stufe für einen Parser mit 49 Geometriezeilen ist eine
+         Zahl ohne Aussage, solange 38 der Zeilen nicht auseinander-
+         zuhalten sind. Also wird nicht 49-mal gestuft, sondern so:
+         der Parser selbst 1 · Zeilen mit eindeutiger Größe 11 ·
+         Zeilen im Gleichstand 38, „T3 — Größe allein, mehrdeutig mit
+         n" als Klasse. … Was nicht passieren darf: den 38 eine Stufe
+         geben, weil die Spalte leer aussieht. Die leere Spalte war
+         ehrlicher als jede Zahl, die dort stünde."
+
+    Gemessen: 49 Zeilen, 20 verschiedene Groessen, 11 mit eigener
+    Groesse, 38 im Gleichstand, 2 davon zusaetzlich mit sich SELBST
+    uneins (`DSK_RC`, `DSK_HP` — `P3-506`).
+
+    ── Was diese Einteilung NICHT behauptet ─────────────────────────────
+
+    „Eigene Groesse" ist eine Aussage ueber die TAFEL, nicht ueber die
+    Registry — und der Unterschied ist gemessen, nicht befuerchtet.
+    `tests/test_sonde_sagt_ab_bei_gleichstand.c` faehrt die elf gegen
+    die laufende Registry und teilt sie dreifach: allein, im
+    Gleichstand, oder von einem Plugin mit MEHR Beleg ueberboten (etwa
+    179 200, wo `NorthStar` mit 65 gegen `DSK_NS` mit 40 gewinnt).
+
+    Diese Funktion kann das nicht sehen und behauptet es deshalb auch
+    nicht: sie liest eine Textdatei, die Rangfolge entsteht erst zur
+    Laufzeit. Die Zahl steht dort, wo sie entsteht, und ist dort
+    festgenagelt; die offene Frage dahinter ist `P3-503`.
+    """
+    sys.path.insert(0, str(repo / "scripts" / "generators"))
+    try:
+        from gen_dsk_geom_max import tafel
+    except ImportError:                                # pragma: no cover
+        return dsk_koernung([])
+
+    return dsk_koernung(tafel(repo / "src" / "formats" / "dsk_generic"
+                              / "uft_dsk_generic.c"))
+
+
+def dsk_koernung(zeilen: list) -> dict:
+    """Die Einteilung selbst — getrennt vom Lesen der Datei.
+
+    `zeilen` ist die Tafel als `(cyl, heads, spt, ss, erwartet, name)`,
+    also genau das, was `gen_dsk_geom_max.tafel()` liefert. Die Trennung
+    ist Absicht: so laesst sich die Einteilung an Zeilen pruefen, deren
+    Antwort man von Hand kennt — das Frische-Tor kann das NICHT, es
+    prueft Gleichschritt zwischen Generator und Dokument, nicht
+    Richtigkeit.
+
+    ── Der Gruppierungsschluessel, und warum er nichts entscheidet ──────
+
+    Gruppiert wird nach der Tafelzahl, wo es eine gibt, sonst nach der
+    Geometrie. Bei Zeilen, die BEIDES nennen und sich dabei
+    widersprechen (`DSK_RC`, `DSK_HP` — `P3-506`), waere diese Wahl eine
+    Entscheidung in einer offenen Frage. Sie wird deshalb nicht
+    getroffen, sondern gemessen: `s5_robust` sagt, ob die ANDERE Wahl
+    dieselbe Einteilung ergibt. Solange sie es tut, traegt die
+    Stufenaussage die offene Frage nicht mit.
+    """
+    def teile(schluessel):
+        nach: dict = {}
+        for c, h, s, ss, sz, name in zeilen:
+            nach.setdefault(schluessel(c, h, s, ss, sz), []).append(
+                {"name": name, "geom": (c, h, s, ss),
+                 "aus_tafel": sz, "aus_geometrie": c * h * s * ss})
+        return nach
+
+    nach_groesse = teile(lambda c, h, s, ss, sz: sz or (c * h * s * ss))
+    nur_geom = teile(lambda c, h, s, ss, sz: c * h * s * ss)
+
+    def namen(nach):
+        return ({e["name"] for v in nach.values() if len(v) == 1
+                 for e in v},
+                {e["name"] for v in nach.values() if len(v) > 1 for e in v})
+
+    allein = [(g, v[0]) for g, v in sorted(nach_groesse.items())
+              if len(v) == 1]
+    gleich = {g: v for g, v in sorted(nach_groesse.items()) if len(v) > 1}
+    unent = [z["name"] for v in nach_groesse.values() for z in v
+             if z["aus_tafel"] and z["aus_tafel"] != z["aus_geometrie"]]
+    return {"zeilen": zeilen, "allein": allein, "gleich": gleich,
+            "unentschieden": unent,
+            "s5_robust": namen(nach_groesse) == namen(nur_geom)}
+
+
+def render_dsk_abschnitt(d: dict) -> list:
+    """Der Abschnitt zu den 49 Makrozeilen."""
+    z = []
+    z.append("## Die 49 DSK-Makrozeilen — nach Koernung, nicht nach Zahl")
+    z.append("")
+    if not d["zeilen"]:
+        z.append("Die Geometrietafel war nicht lesbar — **nicht "
+                 "gemessen**, nicht „keine Zeilen\".")
+        z.append("")
+        return z
+
+    n = len(d["zeilen"])
+    n_allein = len(d["allein"])
+    n_gleich = sum(len(v) for v in d["gleich"].values())
+    z.append("`src/formats/dsk_generic/uft_dsk_generic.c` erzeugt ueber "
+             "EIN Makro %d" % n)
+    z.append("Plugins. Sie sind **kein** Parser je Zeile: alle rufen "
+             "dieselbe Sonde und")
+    z.append("dasselbe `open`, und was sich unterscheidet, ist ein Index "
+             "in eine")
+    z.append("Geometrietafel. Eine Stufe je Zeile waere eine Zahl ohne "
+             "Aussage, solange")
+    z.append("die Zeilen nicht auseinanderzuhalten sind.")
+    z.append("")
+    z.append("| Einheit | Anzahl | Stufe |")
+    z.append("|---|---:|---|")
+    z.append("| der Parser `dsk_generic` selbst | 1 | einmal, nach "
+             "seinen eigenen Tests |")
+    z.append("| Zeilen mit eigener Groesse **in der Tafel** | %d | "
+             "**offen — in der Tafel eindeutig ist nicht erreichbar** |"
+             % n_allein)
+    z.append("| Zeilen im Gleichstand | %d | **T3 — Groesse allein, "
+             "mehrdeutig** |" % n_gleich)
+    z.append("")
+    z.append("> **Die dritte Zeile ist ein WAHRER Eintrag**, nicht eine "
+             "leere Spalte und")
+    z.append("> nicht eine erfundene Zahl. Und sie sagt, was fehlt, um "
+             "hoeher zu kommen:")
+    z.append("> eine **Inhaltsprobe**, die den Gleichstand bricht — bei "
+             "204 800 Byte")
+    z.append("> unterscheiden sich `40x2x16x256` und `40x2x8x512` in der "
+             "Sektorgroesse,")
+    z.append("> und die steht im ersten Sektor.")
+    z.append("")
+    z.append("### Die %d mit eigener Groesse in der Tafel" % n_allein)
+    z.append("")
+    z.append("| Zeile | Geometrie | Groesse |")
+    z.append("|---|---|---:|")
+    for g, e in d["allein"]:
+        z.append("| `%s` | %dx%dx%dx%d | %d |"
+                 % (e["name"], e["geom"][0], e["geom"][1],
+                    e["geom"][2], e["geom"][3], g))
+    z.append("")
+    z.append("**„Eigene Groesse\" heisst hier: in DIESER Tafel — und das "
+             "ist NICHT dasselbe")
+    z.append("wie „in der Registry erreichbar\".** Diese Zahl hier kann "
+             "das nicht sagen: sie")
+    z.append("kommt aus einer Textdatei, die Rangfolge entsteht erst zur "
+             "Laufzeit aus")
+    z.append("allen registrierten Sonden. Gemessen wird sie deshalb "
+             "dort, wo sie entsteht —")
+    z.append("`tests/test_sonde_sagt_ab_bei_gleichstand.c` haelt die "
+             "Dreiteilung fest")
+    z.append("(allein · Gleichstand · von einem Plugin mit mehr Beleg "
+             "ueberboten), und der")
+    z.append("Test faellt, wenn sie sich verschiebt. **Hier steht sie "
+             "absichtlich NICHT")
+    z.append("als Zahl**, weil eine von Hand nachgezogene Zahl in einem "
+             "erzeugten Dokument")
+    z.append("genau die Drift ist, gegen die dieses Dokument existiert "
+             "(MF-541). Die offene")
+    z.append("Frage dahinter ist `P3-503`.")
+    z.append("")
+    z.append("### Die %d im Gleichstand — T3, Groesse allein" % n_gleich)
+    z.append("")
+    z.append("| Groesse | mehrdeutig mit | Anordnungen |")
+    z.append("|---:|---|---|")
+    for g, v in d["gleich"].items():
+        formen = sorted({e["geom"] for e in v})
+        z.append("| %d | %s | %s |"
+                 % (g, " ".join("`%s`" % e["name"] for e in v),
+                    " · ".join("%dx%dx%dx%d" % f for f in formen)))
+    z.append("")
+    if d["unentschieden"]:
+        z.append("**%d dieser Zeilen sind zusaetzlich mit sich SELBST "
+                 "uneins** (`%s`):"
+                 % (len(d["unentschieden"]),
+                    "`, `".join(d["unentschieden"])))
+        z.append("ihre `expected_size` und ihre Geometrie nennen "
+                 "verschiedene Groessen. Seit")
+        z.append("MF-1254 beanspruchen sie nichts mehr und sind nur mit "
+                 "genanntem Format")
+        z.append("erreichbar; welche der beiden Zahlen stimmt, ist NICHT "
+                 "belegt (`P3-506`).")
+        z.append("")
+        if d.get("s5_robust"):
+            z.append("> **Und diese offene Frage traegt die Einteilung "
+                     "oben NICHT mit.** Gemessen")
+            z.append("> ergibt die Gruppierung nach der Geometrie "
+                     "dieselben Mengen wie die nach")
+            z.append("> der Tafelzahl — dieselben Zeilen allein, "
+                     "dieselben im Gleichstand. Waere")
+            z.append("> es anders, stuende hier der Widerspruch statt "
+                     "dieser Zeile.")
+        else:
+            z.append("> **ACHTUNG: die Einteilung oben HAENGT an dieser "
+                     "offenen Frage.** Nach der")
+            z.append("> Geometrie gruppiert ergaeben sich andere Mengen "
+                     "als nach der Tafelzahl —")
+            z.append("> die Stufenaussage waere damit eine verkleidete "
+                     "Entscheidung (`P3-506`).")
+        z.append("")
+    return z
+
+
+def render_md(rows: list[dict], dsk: dict | None = None) -> str:
     counts = {}
     for r in rows:
         counts[r["tier"]] = counts.get(r["tier"], 0) + 1
@@ -217,6 +429,20 @@ def render_md(rows: list[dict]) -> str:
             % counts["n/a"])
     lines.append(f"| **gesamt** | **{len(rows)}** |")
     lines.append("")
+    lines.append("> **Diese Summe zaehlt PLUGINS mit eigener Beweislage, "
+                 "und das sind nicht")
+    lines.append("> alle Formate des Baums.** `gen_format_list.py` sagt "
+                 "es selbst: die 49")
+    lines.append("> `DSK_PLUGIN()`-Makro-Ausweitungen sind hier nicht "
+                 "enthalten, die volle")
+    lines.append("> Plugin-Zahl ist **137**. Sie haben eine andere "
+                 "Koernung — ein Parser,")
+    lines.append("> 49 Geometriezeilen — und stehen deshalb in einem "
+                 "eigenen Abschnitt")
+    lines.append("> unten, statt diese Summe zu verwaessern (MF-1256).")
+    lines.append("")
+    if dsk is not None:
+        lines.extend(render_dsk_abschnitt(dsk))
     lines.append("## Pro Format\n")
     lines.append("| Plugin | Stufe | Tests | Spec-Quelle | Evidenz | Korpus-Images |")
     lines.append("|---|---|---|---|---|---|")
@@ -230,6 +456,77 @@ def render_md(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _selbsttest(repo: Path) -> int:
+    """Abnahme der Koernung an Zeilen, deren Antwort von Hand feststeht.
+
+    Das Frische-Tor kann das nicht leisten: es vergleicht das Dokument
+    mit dem, was der Generator HEUTE ausgibt. Aendert sich der Generator
+    falsch, wandert der Fehler beim naechsten `--write` ins Dokument und
+    das Tor schweigt weiter.
+    """
+    def zeile(c, h, s, ss, erwartet, name):
+        return (c, h, s, ss, erwartet, name)
+
+    faelle = []
+
+    d = dsk_koernung([])
+    faelle.append(("leere Tafel gibt keine erfundene Einteilung",
+                   d["allein"] == [] and d["gleich"] == {}
+                   and d["unentschieden"] == []))
+
+    d = dsk_koernung([zeile(40, 1, 8, 512, 0, "A"),
+                      zeile(40, 2, 4, 512, 0, "B")])
+    faelle.append(("gleiche Groesse aus verschiedenen Geometrien = "
+                   "Gleichstand",
+                   d["allein"] == [] and sum(len(v) for v in
+                                             d["gleich"].values()) == 2))
+
+    d = dsk_koernung([zeile(40, 1, 8, 512, 0, "A"),
+                      zeile(40, 1, 9, 512, 0, "B")])
+    faelle.append(("verschiedene Groessen = beide allein",
+                   len(d["allein"]) == 2 and d["gleich"] == {}))
+
+    d = dsk_koernung([zeile(77, 2, 16, 256, 634880, "RC")])
+    faelle.append(("Tafelzahl gegen Geometrie wird als unentschieden "
+                   "gemeldet", d["unentschieden"] == ["RC"]))
+
+    d = dsk_koernung([zeile(77, 2, 8, 1024, 1261568, "RLD")])
+    faelle.append(("stimmige Zeile steht NICHT unter unentschieden",
+                   d["unentschieden"] == []))
+
+    d = dsk_koernung([zeile(10, 1, 1, 50, 0, "A")])
+    faelle.append(("`erwartet == 0` heisst „nicht genannt\", nicht "
+                   "„Groesse 0\"",
+                   d["allein"] and d["allein"][0][0] == 500))
+
+    # Gegenprobe zu `s5_robust`: die Fahne muss falsch werden KOENNEN,
+    # sonst ist ihr „heute robust" eine Tautologie (D1).
+    d = dsk_koernung([zeile(10, 1, 1, 100, 2000, "A"),
+                      zeile(20, 1, 1, 100, 0, "B")])
+    faelle.append(("s5_robust wird falsch, wenn die Wahl die Einteilung "
+                   "kippt", d["s5_robust"] is False))
+
+    d = dsk_koernung([zeile(40, 1, 8, 512, 0, "A"),
+                      zeile(40, 2, 4, 512, 0, "B")])
+    faelle.append(("s5_robust ist wahr, wo es keinen Widerspruch gibt",
+                   d["s5_robust"] is True))
+
+    echt = dsk_makrozeilen(repo)
+    n_gleich = sum(len(v) for v in echt["gleich"].values())
+    faelle.append(("echte Tafel: allein + Gleichstand = alle Zeilen "
+                   "(%d + %d = %d)"
+                   % (len(echt["allein"]), n_gleich, len(echt["zeilen"])),
+                   len(echt["allein"]) + n_gleich == len(echt["zeilen"])
+                   and len(echt["zeilen"]) > 0))
+
+    gut = 0
+    for name, ok in faelle:
+        print("  [%s] %s" % ("OK " if ok else "ROT", name))
+        gut += bool(ok)
+    print("Selbsttest %d/%d" % (gut, len(faelle)))
+    return 0 if gut == len(faelle) else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", default=Path(__file__).resolve().parent.parent,
@@ -238,11 +535,17 @@ def main() -> int:
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--check", action="store_true",
                     help="exit 1 if the generated doc is stale vs. reality")
+    ap.add_argument("--selbsttest", action="store_true",
+                    help="Abnahme der DSK-Koernung an Zeilen mit bekannter "
+                         "Antwort")
     args = ap.parse_args()
     repo = args.root.resolve()
 
+    if args.selbsttest:
+        return _selbsttest(repo)
+
     rows = compute_tiers(repo)
-    md = render_md(rows)
+    md = render_md(rows, dsk_makrozeilen(repo))
     doc = repo / GENERATED_DOC
 
     if args.md:
