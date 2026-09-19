@@ -9,41 +9,98 @@
     "naechster_griff": "Ein Satz. Was als Naechstes zu tun waere — nicht was der Fund ist."
   },
   "_kanaele": [
-    "Port", "Nachbau", "Helfer-Prozess", "Oracle", "Spec",
-    "Daten/Fixture", "Fundus"
+    "Port",
+    "Nachbau",
+    "Helfer-Prozess",
+    "Oracle",
+    "Spec",
+    "Daten/Fixture",
+    "Fundus"
   ],
   "_kennzahlen": [
-    "T3 runter", "Wandlungspfade rauf", "leckende Tests null",
-    "Bench-Alter runter", "Fundus"
+    "T3 runter",
+    "Wandlungspfade rauf",
+    "leckende Tests null",
+    "Bench-Alter runter",
+    "Fundus"
   ],
   "eintraege": {
-    "x50conv.exe": {
-      "lizenz": "Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT",
-      "lizenz_beleg": "mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat",
-      "kanal": "Spec",
+    "a8cas-tools-1.3.1.tar.gz": {
+      "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
+      "lizenz_beleg": "`a8cas-tools-1.3.1/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen."
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
-    "disk-utilities-master.zip": {
-      "lizenz": "Unlicense / public domain",
-      "lizenz_beleg": "COPYING IM PAKET gemessen, 1211 Byte (MF-1222) — nicht am API-Feld eines Hosters",
-      "kanal": "Oracle",
-      "kennzahl": "T3 runter",
-      "naechster_griff": "Erledigt und belegt: sein `disk-analyse` hat `adf_ext` von T2 auf T1b gehoben (MF-1222). Bleibt als Oracle eingetragen; kein weiterer Griff noetig."
-    },
-    "nibtools-extra.zip": {
-      "lizenz": "Apache-2.0",
-      "lizenz_beleg": "229-Byte-LICENSE im Paket (MF-1008) — berichtigt eine frueher angenommene GPL-3.0; am Ergebnis aendert das nichts, Apache-2.0 ist mit GPL-2 ebenso unvereinbar",
-      "kanal": "Oracle",
+    "amiga-stuff-master.zip": {
+      "lizenz": "Unlicense",
+      "lizenz_beleg": "`amiga-stuff-master/COPYING` IM PAKET gelesen (1211 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Zone GELB in docs/QUARANTINE.md. Ausfuehren ja, uebernehmen nein. Dort steht das Urteil; hier nur der Verweis."
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
-    "IPF-Format.zip": {
-      "lizenz": "ungemessen — das Format ist BEWUSST undokumentiert, die SPS behaelt sich seine Erzeugung vor",
-      "lizenz_beleg": "docs/QUARANTINE.md, Eigentuemer-Entscheidung",
+    "AmigaDiskKit-main": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`LICENSE` IM PAKET gelesen (1067 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "AmigaDiskKit.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`AmigaDiskKit-main/LICENSE` IM PAKET gelesen (1067 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "casutil_extract_c.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — GPL-2.0 gilt gemessen nur fuer das MITGELIEFERTE Fremdteil",
+      "lizenz_beleg": "Die einzige Lizenzdatei im Paket liegt unter `casutil_extract_c/third_party/casutil_src/COPYING` (6000 Byte gelesen) — also im Verzeichnis eines DRITTEN. Eine Lizenzdatei unter `third_party/` sagt nichts ueber die Huelle darum herum. Gefunden beim Nachmessen der eigenen Saat: von 30 geseeten Pfaden war dies der einzige verdaechtige.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Lizenz des Pakets SELBST suchen (README, Kopfkommentare der eigenen Quellen). Solange sie fehlt, gilt das Paket als ohne gemessene Lizenz — nicht als GPL-2."
+    },
+    "ChecksumCRC_BookCode.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle.",
       "kanal": "Helfer-Prozess",
-      "naechster_griff": "Weg 3 nach QUARANTINE_PROCESS.md — Helfer ueber Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt. Dort steht das Urteil; hier nur der Verweis.",
-      "kennzahl": "Fundus"
+      "kennzahl": "Fundus",
+      "naechster_griff": "Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md."
+    },
+    "capsimage-": {
+      "lizenz": "NICHT freie Software — und der Volltext liegt nicht einmal hier",
+      "lizenz_beleg": "`src/CAPSImg/LICENSE` IM PAKET gelesen: der ganze Inhalt lautet „THIS IS NOT FREE SOFTWARE. PLEASE SEE LICENCE.TXT IN PARENT ARCHIVE.\" — die Lizenz verweist auf ein uebergeordnetes Archiv, das hier fehlt.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nicht anfassen, solange der Volltext fehlt. Die IPF-/CAPS-Lage steht in docs/QUARANTINE.md; dieser Eintrag verweist nur darauf und haelt fest, dass die Lizenzdatei SELBST unvollstaendig ist."
+    },
+    "capsimage-.zip": {
+      "lizenz": "NICHT freie Software — und der Volltext liegt nicht einmal hier",
+      "lizenz_beleg": "`capsimage-/src/CAPSImg/LICENSE` IM PAKET gelesen, identischer Wortlaut wie im entpackten `capsimage-/`.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Wie beim entpackten `capsimage-/`: nicht anfassen, solange der Volltext fehlt."
+    },
+    "samdisk_plus.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — die EINZIGE Lizenzdatei darin gehoert einem mitgelieferten Fremdteil und traegt eine NICHT-KOMMERZIELLE Klausel",
+      "lizenz_beleg": "`samdisk_plus/capsimage/LICENCE.txt` IM PAKET gelesen: „This licence is based on the MAME licence and is intended for use in all non-commercial projects and environments. Other licensing options are available… licensing@kryoflux.com\" — das ist die SPS-/CAPSImg-Lizenz, nicht die von SAMdisk. Eine nicht-kommerzielle Klausel ist KEINE freie Lizenz.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "EIGENTUEMER-VORLAGE. Zwei Fragen, beide ungemessen: (1) Welche Lizenz hat `samdisk_plus` SELBST? (2) Verhaelt sich das zu dem, was `docs/ORACLES.md` und CLAUDE.md ueber „SAMdisk MIT im Baum\" sagen — ist das dasselbe Paket oder ein anderes? Bis dahin nichts daraus uebernehmen."
+    },
+    "ST-Recover.zip": {
+      "lizenz": "Ms-RL (Microsoft Reciprocal License)",
+      "lizenz_beleg": "`ST-Recover/Source/License.txt` IM PAKET gelesen: „copyrighted by Christophe Bertrand. Programming source code files are licenced under the Microsoft Reciprocal License (Ms-RL)\" — Volltext liegt als `Ms-RL License.htm` daneben.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Ms-RL ist eine Copyleft-Lizenz je DATEI. Wer etwas daraus will, klaert zuerst die Vereinbarkeit mit GPL-2 — ausfuehren waere davon nicht betroffen."
+    },
+    "OpenCBM-master.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — die gefundene Lizenzdatei gehoert einem mitgelieferten Windows-GUI-Teil und liegt als RTF vor",
+      "lizenz_beleg": "Die einzige Treffer-Datei ist `OpenCBM-master/cbm4wingui/CBM4WINGUI/bin/License.rtf` — ein Binaerverzeichnis eines Unterprojekts, kein Paket-COPYING. Der RTF-Rumpf wurde gelesen und enthaelt keinen erkennbaren Lizenznamen im gelesenen Abschnitt.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Lizenz von OpenCBM SELBST suchen (Paketwurzel, README). Bis dahin gilt sie als ungemessen — nicht als das, was das GUI-Unterprojekt sagt."
     },
     "code-schnipsel": {
       "lizenz": "eigenes Material des Eigentuemers",
@@ -59,19 +116,54 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Nichts offen — das Archiv zum bereits entpackten Verzeichnis."
     },
-    "hdlen.tar.gz": {
-      "lizenz": "ungemessen",
-      "lizenz_beleg": "docs/ORACLES.md fuehrt es als gebautes MESSWERKZEUG (MF-1089), nicht als Abbild-Oracle; eine Lizenzdatei ist dort nicht zitiert",
-      "kanal": "Helfer-Prozess",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Lizenz an der Datei im Paket messen, falls es je weitergegeben werden soll. Zum blossen Ausfuehren ist die Frage offen und benannt."
+    "disk-utilities-master.zip": {
+      "lizenz": "Unlicense / public domain",
+      "lizenz_beleg": "COPYING IM PAKET gemessen, 1211 Byte (MF-1222) — nicht am API-Feld eines Hosters",
+      "kanal": "Oracle",
+      "kennzahl": "T3 runter",
+      "naechster_griff": "Erledigt und belegt: sein `disk-analyse` hat `adf_ext` von T2 auf T1b gehoben (MF-1222). Bleibt als Oracle eingetragen; kein weiterer Griff noetig."
     },
-    "ChecksumCRC_BookCode.zip": {
-      "lizenz": "ungemessen",
-      "lizenz_beleg": "docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle.",
-      "kanal": "Helfer-Prozess",
+    "diskstack-main.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`diskstack-main/LICENSE` IM PAKET gelesen (1072 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md."
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "disktype-master.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`disktype-master/LICENSE` IM PAKET gelesen (1130 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "dmklib-0.2.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`dmklib-0.2/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "drimg-0.86.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`drimg-0.86/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "dsktools-master.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`dsktools-master/src/LICENSE` IM PAKET gelesen (1082 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "dtc_souce.zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`dtc_souce/LICENCE.txt` IM PAKET gelesen (244 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
     "FLOFOR.ZIP": {
       "lizenz": "ungemessen",
@@ -80,12 +172,159 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Keiner: geprueft und abgelehnt. Der Eintrag steht hier, damit die Ablehnung nicht als Luecke erscheint und jemand sie wiederholt."
     },
+    "FloppyImageRectifier-main.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`FloppyImageRectifier-main/LICENSE` IM PAKET gelesen (1067 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
     "FORMATS.ZIP": {
       "lizenz": "ungemessen",
       "lizenz_beleg": "MF-1078: 47 Textdateien mit CBM-Formatbeschreibungen, **gelesen, nicht uebernommen**. NICHT zu verwechseln mit `formats1.zip` (MAMEs Formatklassen, SPDX BSD-3-Clause) — genau diese Verwechslung stand in CLAUDE.md und ist dort berichtigt.",
       "kanal": "Spec",
       "kennzahl": "Fundus",
       "naechster_griff": "Keiner offen: der Inhalt ist gelesen, die Verwechslung mit `formats1.zip` ist berichtigt."
+    },
+    "hardsector_tool-main.zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`hardsector_tool-main/LICENSE` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "hatari_1.7.0-1.debian.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`debian/copyright` IM PAKET gelesen (4465 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "hdlen.tar.gz": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md fuehrt es als gebautes MESSWERKZEUG (MF-1089), nicht als Abbild-Oracle; eine Lizenzdatei ist dort nicht zitiert",
+      "kanal": "Helfer-Prozess",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz an der Datei im Paket messen, falls es je weitergegeben werden soll. Zum blossen Ausfuehren ist die Frage offen und benannt."
+    },
+    "ipf-flux-main.zip": {
+      "lizenz": "BSD-3-Clause",
+      "lizenz_beleg": "`ipf-flux-main/LICENSE` IM PAKET gelesen (1600 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "IPF-Format.zip": {
+      "lizenz": "ungemessen — das Format ist BEWUSST undokumentiert, die SPS behaelt sich seine Erzeugung vor",
+      "lizenz_beleg": "docs/QUARANTINE.md, Eigentuemer-Entscheidung",
+      "kanal": "Helfer-Prozess",
+      "naechster_griff": "Weg 3 nach QUARANTINE_PROCESS.md — Helfer ueber Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt. Dort steht das Urteil; hier nur der Verweis.",
+      "kennzahl": "Fundus"
+    },
+    "KCemu-0.5.1.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`KCemu-0.5.1/debian/copyright` IM PAKET gelesen (1224 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "libcbmimage-main.zip": {
+      "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
+      "lizenz_beleg": "`libcbmimage-main/LICENSE` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "libdiscferret-1.5": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`libdiscferret-1.5/LICENSE` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "libdiscferret-1.5.tar.gz": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`libdiscferret-1.5/LICENSE` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "libdiscferret-1.5.zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`libdiscferret-1.5/LICENSE` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "libmodi.zip": {
+      "lizenz": "GPL-3.0",
+      "lizenz_beleg": "`libmodi/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "mfmdisk-master.zip": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`mfmdisk-master/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "MSH-1.58.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`MSH-1.58/LICENSE` IM PAKET gelesen (1139 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "nibtools-extra.zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "229-Byte-LICENSE im Paket (MF-1008) — berichtigt eine frueher angenommene GPL-3.0; am Ergebnis aendert das nichts, Apache-2.0 ist mit GPL-2 ebenso unvereinbar",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Zone GELB in docs/QUARANTINE.md. Ausfuehren ja, uebernehmen nein. Dort steht das Urteil; hier nur der Verweis."
+    },
+    "OmniFlop_3.2d_Format_Harvest_C.zip": {
+      "lizenz": "ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen",
+      "lizenz_beleg": "neue-ideen/UFT-NN_OmniFlop_Analyse.md",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen."
+    },
+    "picturedsk-main.zip": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "`picturedsk-main/LICENSE` IM PAKET gelesen (1144 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "reveng-3.0.6.zip": {
+      "lizenz": "GPL-3.0",
+      "lizenz_beleg": "`reveng-3.0.6/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "SPStudio_Dev": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`LICENCE.txt` IM PAKET gelesen (240 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "SPStudio_Dev .zip": {
+      "lizenz": "Apache-2.0",
+      "lizenz_beleg": "`SPStudio_Dev/LICENCE.txt` IM PAKET gelesen (240 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "trdetz-0.3b3.tar.gz": {
+      "lizenz": "zlib",
+      "lizenz_beleg": "`./trdetz-0.3b3/LICENSE` IM PAKET gelesen (861 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
     "UFT-50-Korg-TSeries.md": {
       "lizenz": "eigene Ausarbeitung; die BESCHRIEBENE Quelle (korgutils 0.9.1, Klaus Michael Indlekofer) traegt laut Bericht GPLv2 — am COPYING im Paket UNGEMESSEN",
@@ -94,12 +333,26 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Nicht bauen: ein neues Format-Plugin ist unter der EINFRIER-REGEL auch als Vorschlag gesperrt. Als P3-513 notiert. Wenn das Moratorium es zulaesst: Lizenz an der Datei messen, korgutils bauen, Abbild von fremder Hand beschaffen."
     },
-    "OmniFlop_3.2d_Format_Harvest_C.zip": {
-      "lizenz": "ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen",
-      "lizenz_beleg": "neue-ideen/UFT-NN_OmniFlop_Analyse.md",
+    "UFT_Floppy_Reference_AARD_Paket.zip": {
+      "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
+      "lizenz_beleg": "`UFT_Floppy_Reference_AARD_Paket/LICENSE` IM PAKET gelesen (1783 Byte), nicht das API-Feld eines Hosters",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen."
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "UFT_Media_Analysis_GUI_Integration.zip": {
+      "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
+      "lizenz_beleg": "`deliverables/UFT_Media_Analysis_GUI_Integration/LICENSE` IM PAKET gelesen (1783 Byte), nicht das API-Feld eines Hosters",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "x50conv.exe": {
+      "lizenz": "Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT",
+      "lizenz_beleg": "mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen."
     }
   }
 }

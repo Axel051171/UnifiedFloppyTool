@@ -4035,6 +4035,39 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     `QUARANTINE.md`, `erzeuger_kanaele.json`, `OPEN_ITEMS.md`) — das
     ist der eigentliche Rückstand, und er ist jetzt beziffert statt
     geschätzt.
+- **Stand 2026-09-19, dritter Durchgang — die Lizenzen sind GELESEN,
+  nicht geraten: 47 von 217 beurteilt, 170 offen:**
+  · **Erst sortiert, dann gelesen.** Von den 205 unbeurteilten tragen
+    **35** eine Lizenzdatei im Paket, **75** keine, **7** sind `.lha`
+    und mit der Standardbibliothek **nicht lesbar** — die werden als
+    „keine Aussage" geführt, nicht still als „ohne Lizenz" —, und
+    **88** sind gar keine Archive (die UFT-NN-Ausarbeitungen und
+    lose Quellen). Gelistet, nicht ausgepackt.
+  · **Die 35 Lizenzdateien gelesen: 30 bestimmt, 5 nicht.** Die
+    Zuordnung läuft über einen Wortschatz, und was er nicht erkennt,
+    heißt **„unbestimmt"** und bekommt seinen Anfang mitgedruckt —
+    er rät nie. Verteilung **der 30**: 7× Apache-2.0, 8× MIT, 6×
+    GPL-2.0, 2× GPL-3.0, 4× LGPL, 1× BSD-3-Clause, 1× Unlicense, 1×
+    zlib. (Über alle 47 Urteile gezählt sieht es anders aus — 8×
+    Apache und 5× GPL-2.0 —, weil `nibtools-extra` von Hand
+    dazukam und `casutil_extract_c` nachträglich auf „ungemessen"
+    zurückgestuft wurde. Zwei Zahlen zu derselben Sache sind genau
+    die Drift, gegen die dieser Baum steht; deshalb steht hier,
+    welche Menge gemeint ist.)
+  · **Und genau die fünf Absagen waren die interessanten.**
+    `capsimage`: „THIS IS NOT FREE SOFTWARE" — und der Volltext liegt
+    laut eigener Datei in einem übergeordneten Archiv, das fehlt.
+    `samdisk_plus`: eine **nicht-kommerzielle** Klausel, festgehalten
+    als **`P3-514`** (Eigentümer-Vorlage). `ST-Recover`: Ms-RL.
+    `OpenCBM`: die Treffer-Datei ist die eines mitgelieferten
+    GUI-Teils, nicht die des Pakets.
+  · **Ein Mangel der eigenen Saat, gemessen und behoben:** die erste
+    gefundene Lizenzdatei ist nicht immer die des Pakets. Nachgezählt
+    war von 30 Pfaden genau **einer** verdächtig
+    (`casutil_extract_c.zip` → `third_party/…/COPYING`); er steht
+    jetzt als „ungemessen für das Paket selbst". Die beiden anderen
+    Fälle dieser Art (`samdisk_plus`, `OpenCBM`) hatte die
+    „nie raten"-Regel ohnehin abgefangen.
 - **Beleg:** —
 
 ---
