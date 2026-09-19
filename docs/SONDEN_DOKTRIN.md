@@ -113,6 +113,55 @@ Zahl höher war.
 die eine Gesamtgröße verlangt, erklärt die ganze Datei; eine, die 256
 Byte am Anfang prüft und den Rest offen lässt, erklärt 256 Byte.
 
+### 2b. Wo der Pfad einen Namen hat, verengt die Endung — und sonst nichts
+
+Eigentümer-Entscheidung vom 2026-09-19, wörtlich: **„die Endung als
+engeren Anspruch nehmen, dann weiter mit 2 und 3"**. Umgesetzt in
+MF-1252 als `engerer_anspruch_durch_endung()`
+(`src/core/uft_format_plugin.c`), gehalten von
+`tests/test_sonde_sagt_ab_bei_gleichstand.c`.
+
+**Diese Regel steht hier, weil sie bis MF-1258 NUR im Code stand.** Das
+ist die Bauform aus `CLAUDE.md` §MF-1177 — eine Regel, zwei Stellen —
+und sie war umso teurer, weil die verbindliche Fassung „enger" bereits
+belegt hatte: als **Erklärungsumfang** (Regel 2). Die Endung ist kein
+Erklärungsumfang. Sie ist ein zweiter, andersartiger Schritt, und ihn
+unter denselben Namen zu stellen wäre genau die stille Doppelbedeutung,
+gegen die dieses Dokument existiert.
+
+**Was der Schritt tut:** unter den Plugins, die **bereits auf der
+Spitzenkonfidenz gleichauf** liegen, wählt er das eine, dessen
+`extensions` die Endung des Pfades beansprucht. Bleiben null oder
+mehrere übrig, gilt weiter Regel 3.
+
+**Was er nie tut, und das ist am Code festgenagelt:**
+
+* **Er hebt nichts an.** `if (conf != spitzenkonfidenz) continue;` —
+  ein schwächer belegtes Plugin kann über die Endung niemals ein
+  stärker belegtes überholen.
+* **Er wird nie zum Beleg.** Die Endung erhöht keine Konfidenz und
+  erzeugt keinen Anspruch. Eine Endung allein öffnet nichts.
+* **Er versteckt sich nicht.** `result` trägt die Messung unverändert,
+  also weiterhin `tied > 1`, auch wenn die Endung entschieden hat. Wer
+  ein Plugin **und** `tied > 1` sieht, weiß: hier hat der Name verengt,
+  nicht die Evidenz.
+
+**Der Vorbehalt gegen MF-444 bleibt gültig.** Dort steht „the name is
+not evidence about the bytes" (`src/core/uft_probe_format_impl.c`), und
+das gilt unverändert: die Endung ist hier kein Beleg **über die Bytes**,
+sondern eine Auswahl unter Ansprüchen, die die Bytes schon gleichrangig
+gemacht haben. Wer nur den Puffer hat und keinen Pfad, bekommt diesen
+Schritt nicht — `uft_probe_buffer_format()` sagt bei Gleichstand ab.
+
+**Und er ersetzt Regel 2 NICHT — gemessen, nicht angenommen.** Der
+Prüffall aus `P3-439` ist `tests/corpus_free/cpmtools_cf2dd_720k.cpm`:
+MYZ80 und `cpm` stehen dort seit MF-1182 gleichauf bei **25**, und die
+Endung `.cpm` beansprucht nur `cpm` (`extensions = "cpm,dsk"` gegen
+`"myz80,myz"`). Trotzdem rührt 2b den Fall nicht an, denn **Sieger ist
+`MSX` mit 45 bei `tied` = 1** — der Gleichstand liegt gar nicht an der
+Spitze. Das Maß für „wie viel der Datei erklärt der Anspruch" fehlt dem
+Sondenvertrag weiterhin; **`P3-439` bleibt offen.**
+
 ### 3. Bleibt es gleich, gewinnt KEINER
 
 Rückgabe **„mehrdeutig"** mit beiden Namen, nicht eine stille Wahl.

@@ -676,16 +676,35 @@ Die Leiter (`uft_probe_konfidenz()` in `uft_format_plugin.h`):
 | Geometrie plausibel | +10 |
 | **Größe allein** | **0 — nie hinreichend** |
 
-Fünf Regeln: **ohne Kennung ist die Obergrenze 45** (Klemme hinter der
-Summe, weil 25+15+10 = 50 wäre); bei Gleichstand gewinnt der **engere**
-Anspruch; bleibt es gleich, gewinnt **keiner** („mehrdeutig" mit beiden
-Namen); eine Sonde sieht **nur ihren Puffer**; ein Format ohne
-belegbares Merkmal bekommt **keine Sonde, sondern eine Absage**.
+Fünf Regeln und ein Zwischenschritt: **ohne Kennung ist die Obergrenze
+45** (Klemme hinter der Summe, weil 25+15+10 = 50 wäre); bei
+Gleichstand gewinnt der **engere** Anspruch; **wo der Pfad einen Namen
+hat, verengt die Endung** — nur unter den bereits Gleichauf-Liegenden,
+nie als Beleg, und `tied` bleibt sichtbar (Regel **2b**, MF-1252,
+nachgetragen MF-1260); bleibt es gleich, gewinnt **keiner**
+(„mehrdeutig" mit beiden Namen); eine Sonde sieht **nur ihren Puffer**;
+ein Format ohne belegbares Merkmal bekommt **keine Sonde, sondern eine
+Absage**.
+
+> **BERICHTIGT MF-1260.** Hier stand „Fünf Regeln" und die Aufzählung
+> ohne 2b — die Endungsregel lag seit MF-1252 ausschließlich im Code.
+> Eine Regel an zwei Stellen mit zwei Bedeutungen ist die Bauform aus
+> §MF-1177, und „enger" war in der verbindlichen Fassung bereits als
+> **Erklärungsumfang** belegt. Die Endung ist keiner; sie steht deshalb
+> als eigener Schritt da und nicht unter demselben Namen.
 
 Gehalten von `scripts/audit_sondendoktrin.py` mit **fallender
-Grundlinie** (Bauform Tor 57): Stand **83** Sonden, die ihre Zahl noch
-selbst vergeben, 2 migriert. Die Zahl darf nur sinken — und der Zweck
+Grundlinie** (Bauform Tor 57). Die Zahl darf nur sinken — und der Zweck
 ist der Rand: **ein neues Format kann gar nicht mehr anders anfangen.**
+
+> **BERICHTIGT MF-1260, zweite Zahl derselben Zeile.** Hier stand
+> „Stand **83** Sonden, die ihre Zahl noch selbst vergeben, 2
+> migriert". Gemessen meldet das Tor heute **Grundlinie 81**, „seit der
+> Grundlinie migriert: 0" — die 83 war der Stand am Tag des Eintrags.
+> **Die Zahl steht deshalb nicht mehr hier:** das Tor druckt sie bei
+> jedem Lauf, und eine gepflegte Zahl neben einer gemessenen driftet
+> (MF-541, D3). Dieselbe Behebung wie bei den drei Zahlen im Kopf von
+> `teilstring.yml` (MF-1258/1259, `P3-507`).
 
 ### Grundsatz: eine Größe, eine Rechnung — und wer sie zweimal rechnet, hat sie nicht gemessen (MF-1177)
 

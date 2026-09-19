@@ -3604,6 +3604,73 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   **nicht entschieden** (S5) und gehört in die Arbeit, nicht in die
   Aufnahme — über `git log -p` auf die Datei zu klären.
 
+### A-033 · Code-Review `b8d2419a…HEAD` abtragen (18 Befunde, zwei Arbeitsströme)
+- **Status:** **aufgenommen** (die drei eigenen sind abgetragen, der Rest
+  wartet) · **Aufgenommen:** 2026-09-19
+- **Wortlaut:** „Code-Review b8d2419a…HEAD (8 Commits, 42 Dateien,
+  +7054/−127) … Summe: Standards 10 (4 hart, 6 Ermessen) — schwerster:
+  #3, dieselbe Fähigkeitsflagge wird im selben Dialog als ‚nicht
+  feststellbar' und als ‚kein GCR-Format erkannt' ausgegeben (erfundene
+  Negativmessung). Spec 8 (6 fehlend/teilweise, 1 Scope-Creep, 1
+  falsch) — schwerster: #1, der Kopierplan wird von keinem Vorgang
+  gelesen."
+- **Kennzahl:** keine der vier — Verlässlichkeit des Prüfstands und
+  Prinzip 7, wie `P3-421`, `P3-479`, `P3-484`, `P3-507`
+- **Kanal:** entfällt — eigener Baum
+- **Einfrier-Regel:** teils **ja** (Spec #7 nennt eine Varianten-API mit
+  +831 Zeilen im Format-Layer), für die abgetragenen drei **nein**
+- **OPEN_ITEMS:** `P3-505` (geschlossen), `P3-508`, `P3-509`, `P3-510`
+  (neu); berührt `P3-439`, `P3-507`
+- **Fertig heißt:** jeder der 18 Befunde ist entweder behoben, als
+  `P?-NNN` eingetragen, oder mit Messung widerlegt — keiner bleibt
+  unbeantwortet stehen
+- **Aufwand:** nicht schätzbar
+- **Stand 2026-09-19 — nachgemessen statt übernommen:**
+  · **Bestätigt und ABGETRAGEN (meine):** St-2 (die Doktrin kannte die
+    Endungsregel nicht → Regel **2b** in `docs/SONDEN_DOKTRIN.md`,
+    MF-1260) · St-1 (`P3-505` stand „offen", obwohl MF-1255 die
+    geforderte Form gebaut hatte → geschlossen mit Beleg).
+  · **Bestätigt und EINGETRAGEN statt angefasst** (liegen in
+    `d7536e14`, dem Strom der zweiten Sitzung): St-3 → **`P3-508`**
+    (der schwerste des Reviews) · Sp-1 → **`P3-509`** · Sp-8 →
+    **`P3-510`**. Sp-8 ist dabei am eigenen Baum belegt:
+    `src/formats/d81/uft_d81_parser_v2.c:9` sagt „MFM encoding (not
+    GCR!)".
+  · **WIDERLEGT: Sp-5.** Der Review nennt
+    `include/uft/uft_format_plugin.h:1277` als Ort des Satzes „bei
+    Gleichstand der zuerst registrierte" — dort steht er nicht.
+    Gefunden habe ich ihn nur in `src/core/uft_format_plugin.c:493`,
+    und dort ist er die **Vergangenheitsform im Kommentar der
+    Behebung**: „Der Code gab trotzdem einen Sieger zurueck — den
+    zuerst registrierten." Das beschreibt den Defekt, den MF-1251
+    beseitigt hat.
+  · **HALB widerlegt: Sp-4.** `uft_smart_open.c:161` gibt wirklich
+    unbedingt `ranked->winner` zurück — bestätigt.
+    `uft_probe_format_impl.c` dagegen gibt bei `!r.winner`
+    `UFT_FORMAT_UNKNOWN` zurück **und füllt `tied_with[]`**; es meldet
+    den Gleichstand, statt ihn zu verschlucken.
+  · **Eine eigene Annahme fiel beim Messen**, und das gehört
+    hierher: ich hielt den MYZ80-gegen-`cpm`-Gleichstand aus `P3-439`
+    für einen Fall, den Regel 2b inzwischen entscheidet. Gemessen
+    gewinnt auf `cpmtools_cf2dd_720k.cpm` **`MSX` mit 45 bei `tied`
+    = 1** — der Gleichstand bei 25 liegt gar nicht an der Spitze, und
+    2b rührt ihn nicht an. `P3-439` bleibt unberührt offen.
+  · **Ermessensfrage St-10 angenommen, aber nicht abgetragen:** mein
+    Heredoc in `teilstring.yml` ist nach MF-1096 kein harter Verstoß
+    (die Sperre begründet sich mit Escape-Verlust in Agenten-Shells,
+    mein Block trägt keinen Backslash) — als Datei in `scripts/` wäre
+    er aber selbsttestbar. Offen.
+  · **NICHT nachgemessen und deshalb NICHT als bestätigt geführt:**
+    St-4 bis St-9, Sp-2, Sp-3, Sp-7.
+  · **Nebenbei gemessen, als Signal notiert statt als Fund:** 556
+    Tabellenzeilen in `docs/OPEN_ITEMS.md` weichen in ihrer naiven
+    `|`-Zahl von ihrer eigenen Kopfzeile ab. Das ist **kein** belegter
+    Rendering-Fehler — mein Zähler splittet naiv, ein Renderer tut das
+    womöglich anders. Wer es verfolgt, misst zuerst am gerenderten
+    Ergebnis. (Dabei aufgefallen, weil ich mir mit `P3-508` selbst eine
+    Zeile zerrissen hatte: drei `|` aus einem Flaggen-Ausdruck.)
+- **Beleg:** —
+
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
 - **Status:** **aufgenommen** (wartet; oberster der Warteschlange,
   seit `A-031` mit MF-1256 abgeschlossen ist)
