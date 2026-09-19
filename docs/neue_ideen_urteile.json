@@ -25,6 +25,69 @@
     "Fundus"
   ],
   "eintraege": {
+    "UFT-NN_OmniFlop_Analyse.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe (586 Zeilen); die beschriebene Quelle OmniFlop 3.2d ist proprietaer — die offene Frage ist das DATENBANKHERSTELLERRECHT an den 239 Formatzeilen, nicht das Urheberrecht am Programm",
+      "lizenz_beleg": "Kopf des Dokuments: „drei Architekturbefunde, ein bestaetigter Fehler im Baum mit Rot-Probe, eine unabhaengige Bestaetigung der Lueckenrechnung“; Abschnitt 0 nennt ausdruecklich, was zerlegt wurde und was NICHT",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Eigentuemerentscheidung zum EU-Datenbankherstellerrecht (§§87a ff. UrhG) vorlegen — solange sie aussteht, bleibt `OmniFlop_3.2d_Format_Harvest_C.zip` draussen. Das Dokument selbst ist der Beleg dieser Entscheidungsvorlage, kein zweiter Fund."
+    },
+    "UFT-NN_TRS80_JV13_Analyse.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe (523 Zeilen) ueber Tim Manns TRS-80-Seiten (Kanal Spec: Formatbeschreibung des Urhebers, gelesen)",
+      "lizenz_beleg": "Kopf des Dokuments: „fuenf Abweichungen in src/formats/jv3/uft_jv3.c, davon eine mit Datenverlust in JEDEM JV3-Abbild“ — der Hauptfund ist `JV3_HEADER_SIZE 0x2300` (Datenbeginn 256 Byte zu weit)",
+      "kanal": "Spec",
+      "kennzahl": "T3 runter",
+      "naechster_griff": "EINGELOEST: genau dieser Fund ist MF-1017 (`jv3` von T3 auf T2, 0x2300 -> 0x2200, plus vier weitere Befunde) — der Baum nennt das Dokument nur nicht beim Namen. Offen bleibt hoechstens der zweite Teil, „ein Beleg fuer hfe“: pruefen, ob er in MF-1017 oder anderswo mitgenommen wurde."
+    },
+    "apcopy.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden ist `APCopy/APCopy.doc`, NICHT gelesen. Eine erste Messung meldete einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c) 1999-2026 Igor Pavlov“), keine Datei.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "`APCopy.doc` lesen: Amiga-Kopierprogramme dieser Zeit nennen ihre Bedingungen meist dort. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "CopyC21.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 16 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `Copy-C.doc` und `CopyC21.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme und .doc lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "CopyLockDecode.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 4 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `CopyLockDecoder.guide`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Den Guide lesen — CopyLock ist im Baum ein Thema (`src/protection/`, P0-2-Klasse), ein Dekoder von fremder Hand waere als ORACLE interessant, falls die Bedingungen es hergeben."
+    },
+    "FilecopyVerifyRetry-1.1.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `FilecopyVerifyRetry-1.1.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "pdi2iso.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `pdi2iso/pdi2iso.readme` und `pdi2iso/ReadMe.txt`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen; PDI ist Gegenstand von `UFT-104-PDI-MSX.md` — dort nachsehen, ob dieses Werkzeug schon beurteilt wurde, bevor es hier ein zweites Mal geschieht (K4)."
+    },
+    "tsnafc44.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 50 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `AFCopy_V4.4/AFCopy.Guide` und ein `SourceCode/`-Verzeichnis, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Den Guide lesen — das Paket bringt QUELLTEXT mit (`SourceCode/`), also entscheidet die dort genannte Bedingung, ob je ein Kanal ueber Fundus hinaus offensteht."
+    },
+    "XPRCopy1_0.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `XPRCopy1.0/XPRCopy1_0.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
     "a8cas-tools-1.3.1.tar.gz": {
       "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
       "lizenz_beleg": "`a8cas-tools-1.3.1/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
@@ -53,20 +116,6 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
-    "casutil_extract_c.zip": {
-      "lizenz": "UNGEMESSEN fuer das Paket selbst — GPL-2.0 gilt gemessen nur fuer das MITGELIEFERTE Fremdteil",
-      "lizenz_beleg": "Die einzige Lizenzdatei im Paket liegt unter `casutil_extract_c/third_party/casutil_src/COPYING` (6000 Byte gelesen) — also im Verzeichnis eines DRITTEN. Eine Lizenzdatei unter `third_party/` sagt nichts ueber die Huelle darum herum. Gefunden beim Nachmessen der eigenen Saat: von 30 geseeten Pfaden war dies der einzige verdaechtige.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Die Lizenz des Pakets SELBST suchen (README, Kopfkommentare der eigenen Quellen). Solange sie fehlt, gilt das Paket als ohne gemessene Lizenz — nicht als GPL-2."
-    },
-    "ChecksumCRC_BookCode.zip": {
-      "lizenz": "ungemessen",
-      "lizenz_beleg": "docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle.",
-      "kanal": "Helfer-Prozess",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md."
-    },
     "capsimage-": {
       "lizenz": "NICHT freie Software — und der Volltext liegt nicht einmal hier",
       "lizenz_beleg": "`src/CAPSImg/LICENSE` IM PAKET gelesen: der ganze Inhalt lautet „THIS IS NOT FREE SOFTWARE. PLEASE SEE LICENCE.TXT IN PARENT ARCHIVE.\" — die Lizenz verweist auf ein uebergeordnetes Archiv, das hier fehlt.",
@@ -81,26 +130,19 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Wie beim entpackten `capsimage-/`: nicht anfassen, solange der Volltext fehlt."
     },
-    "samdisk_plus.zip": {
-      "lizenz": "UNGEMESSEN fuer das Paket selbst — die EINZIGE Lizenzdatei darin gehoert einem mitgelieferten Fremdteil und traegt eine NICHT-KOMMERZIELLE Klausel",
-      "lizenz_beleg": "`samdisk_plus/capsimage/LICENCE.txt` IM PAKET gelesen: „This licence is based on the MAME licence and is intended for use in all non-commercial projects and environments. Other licensing options are available… licensing@kryoflux.com\" — das ist die SPS-/CAPSImg-Lizenz, nicht die von SAMdisk. Eine nicht-kommerzielle Klausel ist KEINE freie Lizenz.",
+    "casutil_extract_c.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — GPL-2.0 gilt gemessen nur fuer das MITGELIEFERTE Fremdteil",
+      "lizenz_beleg": "Die einzige Lizenzdatei im Paket liegt unter `casutil_extract_c/third_party/casutil_src/COPYING` (6000 Byte gelesen) — also im Verzeichnis eines DRITTEN. Eine Lizenzdatei unter `third_party/` sagt nichts ueber die Huelle darum herum. Gefunden beim Nachmessen der eigenen Saat: von 30 geseeten Pfaden war dies der einzige verdaechtige.",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "EIGENTUEMER-VORLAGE. Zwei Fragen, beide ungemessen: (1) Welche Lizenz hat `samdisk_plus` SELBST? (2) Verhaelt sich das zu dem, was `docs/ORACLES.md` und CLAUDE.md ueber „SAMdisk MIT im Baum\" sagen — ist das dasselbe Paket oder ein anderes? Bis dahin nichts daraus uebernehmen."
+      "naechster_griff": "Die Lizenz des Pakets SELBST suchen (README, Kopfkommentare der eigenen Quellen). Solange sie fehlt, gilt das Paket als ohne gemessene Lizenz — nicht als GPL-2."
     },
-    "ST-Recover.zip": {
-      "lizenz": "Ms-RL (Microsoft Reciprocal License)",
-      "lizenz_beleg": "`ST-Recover/Source/License.txt` IM PAKET gelesen: „copyrighted by Christophe Bertrand. Programming source code files are licenced under the Microsoft Reciprocal License (Ms-RL)\" — Volltext liegt als `Ms-RL License.htm` daneben.",
-      "kanal": "Fundus",
+    "ChecksumCRC_BookCode.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "docs/ORACLES.md: mit `hdlen.tar.gz` **gemessen identisch** — 60 Dateien, 0 Unterschiede. Damit ist es dasselbe Paket unter zweitem Namen, nicht eine zweite Quelle.",
+      "kanal": "Helfer-Prozess",
       "kennzahl": "Fundus",
-      "naechster_griff": "Ms-RL ist eine Copyleft-Lizenz je DATEI. Wer etwas daraus will, klaert zuerst die Vereinbarkeit mit GPL-2 — ausfuehren waere davon nicht betroffen."
-    },
-    "OpenCBM-master.zip": {
-      "lizenz": "UNGEMESSEN fuer das Paket selbst — die gefundene Lizenzdatei gehoert einem mitgelieferten Windows-GUI-Teil und liegt als RTF vor",
-      "lizenz_beleg": "Die einzige Treffer-Datei ist `OpenCBM-master/cbm4wingui/CBM4WINGUI/bin/License.rtf` — ein Binaerverzeichnis eines Unterprojekts, kein Paket-COPYING. Der RTF-Rumpf wurde gelesen und enthaelt keinen erkennbaren Lizenznamen im gelesenen Abschnitt.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Die Lizenz von OpenCBM SELBST suchen (Paketwurzel, README). Bis dahin gilt sie als ungemessen — nicht als das, was das GUI-Unterprojekt sagt."
+      "naechster_griff": "Keiner eigener — es teilt sein Urteil mit `hdlen.tar.gz`. Die Dublette ist gemessen und steht in ORACLES.md."
     },
     "code-schnipsel": {
       "lizenz": "eigenes Material des Eigentuemers",
@@ -291,6 +333,13 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen."
     },
+    "OpenCBM-master.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — die gefundene Lizenzdatei gehoert einem mitgelieferten Windows-GUI-Teil und liegt als RTF vor",
+      "lizenz_beleg": "Die einzige Treffer-Datei ist `OpenCBM-master/cbm4wingui/CBM4WINGUI/bin/License.rtf` — ein Binaerverzeichnis eines Unterprojekts, kein Paket-COPYING. Der RTF-Rumpf wurde gelesen und enthaelt keinen erkennbaren Lizenznamen im gelesenen Abschnitt.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Lizenz von OpenCBM SELBST suchen (Paketwurzel, README). Bis dahin gilt sie als ungemessen — nicht als das, was das GUI-Unterprojekt sagt."
+    },
     "picturedsk-main.zip": {
       "lizenz": "MIT",
       "lizenz_beleg": "`picturedsk-main/LICENSE` IM PAKET gelesen (1144 Byte), nicht das API-Feld eines Hosters",
@@ -304,6 +353,13 @@
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "samdisk_plus.zip": {
+      "lizenz": "UNGEMESSEN fuer das Paket selbst — die EINZIGE Lizenzdatei darin gehoert einem mitgelieferten Fremdteil und traegt eine NICHT-KOMMERZIELLE Klausel",
+      "lizenz_beleg": "`samdisk_plus/capsimage/LICENCE.txt` IM PAKET gelesen: „This licence is based on the MAME licence and is intended for use in all non-commercial projects and environments. Other licensing options are available… licensing@kryoflux.com\" — das ist die SPS-/CAPSImg-Lizenz, nicht die von SAMdisk. Eine nicht-kommerzielle Klausel ist KEINE freie Lizenz.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "EIGENTUEMER-VORLAGE. Zwei Fragen, beide ungemessen: (1) Welche Lizenz hat `samdisk_plus` SELBST? (2) Verhaelt sich das zu dem, was `docs/ORACLES.md` und CLAUDE.md ueber „SAMdisk MIT im Baum\" sagen — ist das dasselbe Paket oder ein anderes? Bis dahin nichts daraus uebernehmen."
     },
     "SPStudio_Dev": {
       "lizenz": "Apache-2.0",
@@ -319,6 +375,13 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "ST-Recover.zip": {
+      "lizenz": "Ms-RL (Microsoft Reciprocal License)",
+      "lizenz_beleg": "`ST-Recover/Source/License.txt` IM PAKET gelesen: „copyrighted by Christophe Bertrand. Programming source code files are licenced under the Microsoft Reciprocal License (Ms-RL)\" — Volltext liegt als `Ms-RL License.htm` daneben.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Ms-RL ist eine Copyleft-Lizenz je DATEI. Wer etwas daraus will, klaert zuerst die Vereinbarkeit mit GPL-2 — ausfuehren waere davon nicht betroffen."
+    },
     "trdetz-0.3b3.tar.gz": {
       "lizenz": "zlib",
       "lizenz_beleg": "`./trdetz-0.3b3/LICENSE` IM PAKET gelesen (861 Byte), nicht das API-Feld eines Hosters",
@@ -326,12 +389,460 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "UFT-100-nibwrite-GuildOfThieves.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Reales `nibwrite`-Betriebsprotokoll (NIBtools, Peter Rittwage),",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Echte Messwerte statt Theorie — ergänzt `UFT-57/75/78/83/98`s Weak-Bit-Thematik um konkrete, empirische Zahlen aus einem realen geschützten Spiel.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-101-OhioScientific-ACIA.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Kein herkömmlicher FDC — Ohio Scientific nutzt einen 6850-ACIA- Baustein für den Datenstrom, mit Start-/Stopp-Bits und Parität als Teil der eigentlichen Diskettenkodierung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-102-BigMessoWires-EA4Track.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: bigmessowires.com, „Apple II Copy Protection\" (Steve",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „John Field, der tatsächliche Erbauer von Electronic Arts' 4-Spur-Schreibkopf-System, beantwortet in den Kommentaren direkt die Frage, die 4am in `UFT-87` offen ließ („How the hell did they write out these disks in the first place?\"): ein spezialisierter, 4-Spuren-breiter Schreibkopf von Verbatim, der beim Schreiben von innen nach außen vier Spuren gleichzeitig synchron beschreibt.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-103-86F-HoleWeakBit.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: 86Box-Entwicklerdokumentation, „86F\", Version 2.12",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „86F ist genau die Lösung, die `UFT-78`s MartyPC-Quelle für das HFE-Index-Wrap-Padding-Problem empfahl — absolute Bitzellenzählung statt Byte-Rundung, mit explizitem „Bit cell where index hole is\"- Feld.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-104-PDI-MSX.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Magic-Bytes sicher belegt, vollständige Track-/Sektorstruktur nicht.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-105-prodosfs-AppleWorks-Filename.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: github.com/nexvium/prodosfs (vollständiger C++-Quellcode,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein cleverer Mechanismus, den ProDOS selbst gar nicht vorsieht: AppleWorks kodiert Groß-/Kleinschreibung und Leerzeichen in seinen Dateinamen, indem es das aux_type-Feld (eigentlich für Ladeadressen gedacht) als 16-Bit-Bitmaske über den eigentlich nur großgeschriebenen ProDOS-Dateinamen legt.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-29-superdiskindex-Diskmap.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-05 · Quelle: `github.com/shamada-code/superdiskindex`, MIT, HEAD `52463ced6d`",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Kein neuer Fund, sondern die Tiefenprüfung eines bereits wartenden Gutachten-Entwurfs — mit einem Ergebnis, das schärfer ist als erwartet: UFT hat bereits eine Diskettenkarten-Ansicht (`src/visualdisk.cpp`), aber sie zeigt erfundene Werte.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-30-Amiga-Szene-Disassemblierung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-05 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Kein Quellcode — kompilierte 68k-Binärdateien.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-30-Amiga-Szenedisketten.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-06 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Zwei tragfähige Befunde, sauber getrennt nach Vertrauensgrad — und eine ehrliche Grenze, wo ich aufgehört habe zu raten.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-31-Atari-ST-Quellcode.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-06 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der seltene Glücksfall dieser ganzen Berichtsreihe: zwei Dateien lagen als lesbarer Quellcode vor, nicht als Binärcode.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-32-Weak-Bit-Erkennung-rev.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-06, überarbeitet 2026-09-07 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die Information existiert im Baum und wird an der HAL-Schnittstelle verworfen — das ist der kleinere der beiden Fehler.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-32-Weak-Bit-Erkennung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-06 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die Information existiert bereits im Baum — sie wird an einer einzigen, genau lokalisierten Stelle verworfen, bevor sie den Verbraucher erreicht, der sie bräuchte.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-33-HAL-Erweiterungen.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine HAL-Funktion ohne Verbraucher ist Bestand.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-43-SCP-Spec-Verifikation.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-06 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Diesmal überwiegend eine Bestätigung, nicht eine Fehlerliste — und das ist selbst der bemerkenswerte Befund.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-46-CopyMode-Synthese.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „22 einzelne Copy-Mode-Merkmale aus 13 Werkzeugen katalogisiert und geprüft.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-49-CapsLib-API.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `ipfdec5_binary_win.zip` — offizielle Windows-Binärdistribution,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Das ist keine neue Quelle, sondern das fehlende Werkzeug für einen bereits beschlossenen Weg.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
     "UFT-50-Korg-TSeries.md": {
       "lizenz": "eigene Ausarbeitung; die BESCHRIEBENE Quelle (korgutils 0.9.1, Klaus Michael Indlekofer) traegt laut Bericht GPLv2 — am COPYING im Paket UNGEMESSEN",
       "lizenz_beleg": "Angabe aus dem Bericht selbst, keine Lizenzdatei gesehen. Das API-Feld eines Hosters waere ohnehin kein Beleg (measurement_hit_wrong_class).",
       "kanal": "Spec",
       "kennzahl": "Fundus",
       "naechster_griff": "Nicht bauen: ein neues Format-Plugin ist unter der EINFRIER-REGEL auch als Vorschlag gesperrt. Als P3-513 notiert. Wenn das Moratorium es zulaesst: Lizenz an der Datei messen, korgutils bauen, Abbild von fremder Hand beschaffen."
+    },
+    "UFT-51-KCemu-TD0-Kommentarflag.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `KCemu-0.5.1.tar.gz` — Emulator für die DDR-Kleincomputer-Serie",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine unabhängige, fünfte TeleDisk-Implementierung (nach den drei aus `UFT-08` und `capsimg`-Umfeld) bestätigt den Kommentarflag ein weiteres Mal — und deckt dabei einen echten Unterschied zu UFTs tatsächlichem Code auf, nicht nur eine weitere Zitatquelle.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-52-trdetz-TRD-Offsetfehler.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `trdetz-0.3b3.tar.gz` — TRD-Diskettenabbild-Werkzeug für",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Genau die zweite Quelle, die für TRD im Vorfilter (`UFT-21`-Umfeld, „T3 runter\") als fehlend vermerkt war — und sie deckt einen echten, präzise lokalisierten Fehler auf.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-53-GCDFS.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `GCDFS.ZIP` — „The German Coder Floppy Disk File System\",",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Auf ausdrücklichen Wunsch aufgenommen, mit derselben Sorgfalt wie jede historische Quelle dieser Reihe — aber mit einer anderen Herkunftskennzeichnung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-54-dmklib-RX02.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `dmklib-0.2.tar.gz` — Eric Smith (brouhaha.com), 2002, GPLv2",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein präzise lokalisierbarer, kompletter Formatzweig fehlt in UFTs DMK-Unterstützung — und dieses Werkzeug liefert die vollständige Byte-Spezifikation dafür.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-55-akaiutil.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `akaiutil-4.6.8.tar.gz` + `akaiutildisk2tar-4.6.6.tar.gz` — Klaus",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „UFT kann Akai-S900-Disketten erkennen, aber nicht ihren Inhalt lesen — und für S1000/S3000 gibt es noch nicht einmal Erkennung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-56-CapsFDCEmulator.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `CapsFDCEmulator.cpp`, 2521 Zeilen — die tatsächliche",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein vollständiger, zyklengenauer WD1772-kompatibler FDC-Emulator-Kern — jede Befehlsphase (Spin-up, Step, Delay, Verify, Read, Index-Wait) als eigene Zustandsfunktion.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-57-DrCoolZic-Phasenverschiebung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine empirische Beobachtung aus einem Forum, durch ein Patent physikalisch erklärt — und das verändert, wie „Weak Bit\" in UFTs gesamter Berichtskette (`UFT-32`, `UFT-40`, `UFT-43`, `UFT-47`, `UFT-49`, `UFT-56`) bisher verstanden wurde.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-58-capsimage-Vollquelle.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `capsimage-.zip` — vollständiger Quellbaum (63 Dateien),",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der komplette Kreis über acht Berichte schließt sich hier.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-59-samdisk_plus-RetryPolicy.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `samdisk_plus.zip`, vollständiger Quellbaum — `include/RetryPolicy.h`,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine ausgereifte, produktionserprobte Alternative zu UFT-40s fester `min_passes`/`max_passes`-Zählung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-60-STRecover-Desync.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `ST-Recover.zip` — Christophe Bertrand, vollständiger Quellcode",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein präzise erklärtes Phänomen, das bisher in dieser Reihe nicht sauber von Schutzschemata oder Beschädigung unterschieden wurde: „desynchronisierte\" ST-Disketten sind weder beschädigt noch geschützt — sie wurden auf einem Laufwerk formatiert, dessen Index-Timing leicht fehlkalibriert war, sodass der erste Sektor jeder Spur die Index-Markierung „überlappt\".“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-61-samdisk_plus-Formate-Jitter.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: `samdisk_plus.zip`, vollständiger Quellbaum, `src/types/` (59",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Zwei eigenständige, beide substanzielle Funde.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-62-FuzzySet-Entropie.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-07 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Keine etymologische Verbindung, aber eine echte, bisher ungenutzte mathematische.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-63-CAPSLib-Dokumentation.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `SPStudio_Dev.zip` → `CAPSLib520a.pdf` — „SPS Decoder Library and",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Das fehlende, zusammenhängende Dokument zu einer über sieben Berichte gewachsenen Untersuchungslinie.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-64-CAPSLib-FDC-MFM-Details.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `CAPSLib520a.pdf`, Abschnitte „FDC Emulator Usage\" und",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Zwei konkret nutzbare Ergänzungen, kein neuer Befund.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-65-KryoFlux-Stream-Doku.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: „KryoFlux Stream File Documentation\", Jean Louis-Guérin, Rev.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „UFTs KryoFlux-Backend erfasst Index-/Umdrehungszeiten bereits korrekt — anders als der Greaseweazle-Fall aus `UFT-32`.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-66-Linux-floppy-c.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `linux/drivers/block/floppy.c` (codebrowser.dev, Linux v6.19-r) —",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine der am längsten gepflegten, authoritativsten FDC-Treiberquellen überhaupt — mit einer präzisen Erklärung für ein Phänomen, das diese Reihe bereits mehrfach gestreift, aber nie vollständig erklärt hatte.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-67-Linux-amiflop-c.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `linux/drivers/block/amiflop.c` (codebrowser.dev, Linux v6.19-r) —",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „`MFM_SYNC 0x4489` bereits korrekt in UFT — aber die Präkompensationswerte fehlen komplett, obwohl sie direkt an den Schreibpräzisions-Themenstrang dieser Reihe anschließen.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-68-Linux-ataflop-c.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `linux/drivers/block/ataflop.c` (codebrowser.dev, Linux v6.19-r) —",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die dritte Linux-Kernel-Treiberquelle in Folge — und diesmal mit einer direkten, autoritativen Bestätigung dessen, was `UFT-34` nur aus Disassemblierung erschließen konnte.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-69-Linux-swim3-c.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: `linux/drivers/block/swim3.c` (vollständiger Quelltext, Linux",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Vierte und reichhaltigste Linux-Kernel-Quelle dieser Unterreihe.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-70-MFM-RLL-Randbedingung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: Wikipedia, „Modified frequency modulation\"",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein günstiger, universeller Sanity-Check fehlt in UFTs MFM-Decoder.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-71-HP9845A-hpi.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „HPI ist kein generisches „LIF\" — es ist das ältere, eigene 9845- Dateisystem, aus dem LIF erst später hervorging.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-72-Commodore900-GCR.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-08 · Quelle: „Commodore 900 Floppy Specification\", Benny Purden & Frank",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine vollständige, byte-genaue Originalspezifikation für ein Format, das in UFT komplett fehlt.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-73-DSKF-Format.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: libdsk 1.5.22, `lib/drvdskf.c`/`drvdskf.h` (John Elliott,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die einzige von 15 geprüften libdsk-Formaten, die in UFT komplett fehlt — und selbst libdsk gibt in seinem eigenen Quellcode offen zwei Einschränkungen zu, die UFT bei einer eigenen Implementierung von Anfang an besser lösen könnte, statt sie zu übernehmen.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-74-BBCMaster512-Atari1234.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Wikipedia, „Design of the FAT file system\" — mit Primärverweisen",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Zwei unabhängige Funde aus derselben Quelle.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-75-4am-E7-Bitstream.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: „Confessions of a Disk Cracker: The Secrets of 4am\",",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „E7-Bitstream ist das Apple-II-Pendant zu dem Mechanismus, den `UFT-57` über ein US-Patent erschloss — dasselbe physikalische Prinzip (Bit-Phasenausrichtung gezielt ausnutzen), aber benannt, dokumentiert und mit einer konkreten Titelliste belegt, die bis „Prince of Persia\" (1989) reicht.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-76-ADFS-Checksum.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: „Acorn 8-Bit ADFS Filesystem Structure\", mdfs.net/Docs/Comp/Disk/Format/ADFS",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine seltene Doppelung: vollständige Kreuzbestätigung UND ein vollständig fehlender Baustein aus derselben Quelle.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-77-PFDC-Format.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: PCE-Quellcode, Hampa Hug, `src/drivers/psi/psi-img-pfdc4.c` (GPLv2)",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Vollständig spezifiziert, bereit zur Umsetzung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-78-MartyPC-CopyProtection-Serie.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: martypc.blogspot.com, „Adventures in PC Emulation\" von",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine der technisch dichtesten Quellenreihen dieser gesamten Untersuchung — mit einem bestätigten, konkreten UFT-Fund.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-79-IBM-System34-Interchange.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein komplettes, funktionierendes IBM-Interchange-Dateisystem — mit EBCDIC-Kodierung, nicht ASCII — das UFT komplett fehlt, obwohl UFT den Begriff „System-34\" bereits kennt, nur in einer anderen Bedeutung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-80-Int1Eh-Gaptabelle.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: „INT 1E - Disk Initialization Parameter Table Vector\", Ralf",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Kein neuer Fehler — aber eine echte Diskrepanz zwischen zwei Quellen, die UFTs eigener, bereits korrigierter Eintrag (`MF-838`) beide zitiert.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-81-seasip-CPM-Formate.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: seasip.info/Cpm/, John Elliott (derselbe Autor wie libdsk/",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Zwei komplett fehlende, präzise dokumentierte Mechanismen gefunden: CP/M 3.1s Passwortverschlüsselung und CP/M-86s Bad-Block- Substitutionsliste.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-82-HDCopy-Format.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Wikipedia „HDCopy\" (verlinkt von „2M (DOS)\" über dbpedia)",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein komplett fehlendes, eigenständiges Format — aber diese Quelle allein reicht nicht für eine byte-genaue Spezifikation.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-83-DugeonMaster-DougBell-Korrektur.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Jimmy Maher, „A Pirate's Life for Me, Part 3: Case Studies in",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die wichtigste Einzelquelle für den Fuzzy-Bit-Mechanismus in dieser ganzen Reihe — weil sie vom Schöpfer selbst stammt, nicht aus einem Patent oder einer Drittbeschreibung.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-84-Algernon-4am-Protokoll.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: „Algernon (4am crack)\", archive.org, 4am-Crack Nr. 263,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein vollständiges, unbearbeitetes Original-Protokoll einer echten 4am-Deprotektierungssitzung — und es bestätigt live, in der Praxis, genau die Versionsunterscheidung, die UFTs eigenes `uft_edd.c` bereits kodiert.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-85-Passport-ZeroPage-Magic.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: github.com/a2-4am/passport (Original-6502-Assemblerquelltext,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der automatisierte Nachfolger dessen, was `UFT-84` manuell zeigte — mit zwei präzisen, aus jahrelanger Praxis gegen hunderte Disketten gewonnenen Konventionen, die keine einzelne Formatspezifikation dokumentiert.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-86-4am-RWTS-Speicherkarte.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: archive.org, sechs 4am/Passport-Crack-Protokolle (MatchMaker",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine vollständige Speicheradressen-Karte für Standard-DOS-3.3-RWTS plus die automatisierte, softwareseitige Bestätigung von `UFT-84`s manuellem Timing-Bit-Fund.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-87-PinballConstructionSet-Quartertracks.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: „Pinball Construction Set (4am and san inc crack)\", archive.org,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der aufwendigste Einzelmechanismus dieser gesamten Reihe.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-88-AMSDOS-Header.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: ohne Quellenzeile",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „UFT hat umfangreiche Amstrad-DSK/EDSK-Container-Unterstützung, aber keinerlei AMSDOS-Dateikopf-Modul.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-89-RWTS18-PrinceOfPersia.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Fabien Sanglard, „Prince Of Persia Code Review: Part 2",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die vermutlich bedeutsamste Präservierungslücke dieser gesamten Reihe — belegt durch ein Interview mit dem Originalautor selbst.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-90-SSI-RDOS.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: GS WorldView Ezine, „RDOSstuff\" von Rubywand, mit",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Derselbe Autor wie `UFT-89`s RWTS18 — Roland Gustafson/Gustafsson — schrieb auch RDOS, das eigene Dateisystem von Strategic Simulations Inc.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-91-GEOS-Kopierschutz.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: c64-wiki.de, „GEOS-Kopierschutz\" — vollständige Disassemblierung",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „UFT hat die Struktur bereits — nur nicht die Daten, die sie braucht.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-92-Geohacker-GEOS-Serial.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Kracker Jax Elite V4.0, `geohacker v1.6.prg` (C64-",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein echtes, funktionierendes Werkzeug bestätigt direkt, was `UFT-91`s Quelle nur beiläufig erwähnte: das „GEOS-Seriennummern- system\" als eigenständigen, vom Lücken-Kopierschutz komplett getrennten Mechanismus.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-93-GeoCopy-Schreibseite.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: GeoCopy-Dokumentation (deutsch), `GeoCopy.txt` und",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Ein Werkzeug mit einer komplett anderen Philosophie als geohacker (`UFT-92`).“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-94-Vogons-COPYLOCK-TD0-Grenze.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: vogons.org, „IPF support\" (DOSBox-Entwicklungsforum), Beiträge",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Eine komplette, byte-genaue Analyse mit echtem KryoFlux-Spurauszug — und sie bestätigt direkt eine Formatgrenze, die UFTs eigener TD0-Parser bereits exakt zeigt.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-95-GEOS-AntiTamper-Fallen.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Michael Steil, „Copy Protection Traps in GEOS for C64\",",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Direkte Erweiterung von `UFT-91`/`92`: nicht die Seriennummer- Validierung selbst, sondern wie GEOS den Prüfmechanismus vor Manipulation schützt.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-96-GEOS-Track21-Disassemblierung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Reale 6502-Disassemblierung (VICE-Format) des GEOS-Boot-",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Die tatsächliche Implementierung von `UFT-91`s theoretisch beschriebenem $55/$67-Mechanismus — bestätigt exakt, plus zwei Anti-Analyse-Techniken, die c64-wiki.de nicht erwähnte.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-97-geoWrite-Kreuzentschluesselung.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: Michael Steil, „Inside geoWrite – 5: Copy Protection\",",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der Artikel, der `UFT-91` bis `UFT-96` explizit selbst zusammenführt — und eine Technik liefert, die in keinem der bisherigen fünf GEOS-Berichte vorkam: Record 1 (der Schutzcode) berechnet eine Prüfsumme über sich selbst und nutzt diese Prüfsumme als Entschlüsselungsschlüssel für eine völlig andere, legitime Funktion in Record 0.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT-99-NIBtools-RapidLok-Fehler.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
+      "lizenz_beleg": "Kopfzeilen des Dokuments — Datum: 2026-09-09 · Quelle: NIBtools-extra (vollständiger C-Quellcode), `prot.c`, `ihs.c`,",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eigenes Kurzurteil: „Der wichtigste Fund: UFTs bestehende RapidLok-Erkennung hat eine bestätigte, dokumentierte Lücke.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
     },
     "UFT_Floppy_Reference_AARD_Paket.zip": {
       "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",

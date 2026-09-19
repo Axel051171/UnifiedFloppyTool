@@ -4068,6 +4068,54 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     jetzt als „ungemessen für das Paket selbst". Die beiden anderen
     Fälle dieser Art (`samdisk_plus`, `OpenCBM`) hatte die
     „nie raten"-Regel ohnehin abgefangen.
+- **Stand 2026-09-19, vierter Durchgang — die eigenen Ausarbeitungen
+  sind beurteilt, die `.lha` gemessen, und zwei der fünf unberührten
+  Analysen machten prüfbare Aussagen: 120 von 217 beurteilt, 97
+  offen:**
+  · **Die vier bis fünf Ausarbeitungen, die niemand zitiert, sind
+    gelesen.** `UFT-103` (86F Loch/Weak): die Testlücke stimmt (453
+    Zeilen, 0 Treffer), die Aussage „nicht als fehlend dokumentiert"
+    nicht — `uft_86f_plugin.c:373` führt es seit MF-961 als
+    `UNSUPPORTED` mit Grund; **die Ausarbeitung hat den Test
+    gemessen, nicht das Plugin.** Festgehalten als **`P3-515`**, mit
+    dem gemessenen Blocker: das Korpus-86F hat **keine**
+    Oberflächenbeschreibung (Disk-Flags `0x1088`, Bit 0 = 0), ein Test
+    dagegen könnte nicht rot werden; und `uft_track_t.weak_mask`
+    kann ein LOCH nicht von einem Weak Bit unterscheiden. `UFT-105`
+    (ProDOS aux_type): Prämisse zu weit — `prodos_po_do.c` liest kein
+    Dateisystem (MF-710), kein eigener Befund. `UFT-101/102/97`:
+    Fundus der Klasse P0-2.
+  · **`UFT-NN_TRS80_JV13_Analyse.md` war nie vergessen, nur namenlos
+    eingelöst:** ihr Hauptfund (`JV3_HEADER_SIZE 0x2300`, 256 Byte zu
+    weit, Verlust in jedem JV3-Abbild) ist genau **MF-1017**.
+  · **Die 66 Ausarbeitungen der obersten Ebene tragen jetzt ein
+    Urteil aus ihrem eigenen Kurzurteil** — der erste Satz, wörtlich;
+    Beleg sind ihre Kopfzeilen (Datum, Quelle); Kanal `Spec`
+    (Sekundärliteratur, gelesen, nichts übernommen); die Lizenz der
+    beschriebenen Quelle ausdrücklich „ungemessen". Nur die oberste
+    Ebene: die fünf verschachtelten gehören zum Urteil ihres
+    Materialordners (K4). Die zwei ohne Kurzurteil (`UFT-NN_*`) von
+    Hand.
+  · **Die sieben `.lha` sind keine „keine Aussage" mehr:** 7-Zip liegt
+    unter `C:\Program Files\7-Zip\7z.exe`, alle sieben gelistet (rc
+    0), **keines** trägt eine Datei namens LICENSE/COPYING/COPYRIGHT,
+    jedes ein Readme/Guide (nicht gelesen). Eine erste Messung meldete
+    einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c)
+    1999-2026 Igor Pavlov"), keine Datei; gemessen, bevor es
+    eingetragen wurde.
+  · **Eigener Fehler beim Eintragen, gefangen vom JSON-Parser:** in
+    vier handgeschriebenen Werten stand das ASCII-`"` als schließendes
+    Anführungszeichen mitten im String. Behoben mit dem typografischen
+    `“`, danach ein Zensus über alle Zeilen (jede trägt 0, 2 oder 4
+    unmaskierte Anführungszeichen). Die Messung dazu scheiterte
+    zuerst selbst — an Bash-Escapes im `-c`-String, die
+    Heredoc-Klasse aus MF-1096.
+  · **Verteilung der 120 Urteile:** Kanal Spec 69 · Fundus 44 ·
+    Helfer-Prozess 3 · Daten/Fixture 2 · Oracle 2; Kennzahl Fundus
+    118 · T3 runter 2. **Die 97 Offenen** sind: 75 Archive ohne
+    Lizenzdatei, dazu lose Quell- und Dokumentdateien und die
+    entpackten Verzeichnisse — jedes davon braucht ein Lesen, kein
+    Listen mehr.
 - **Beleg:** —
 
 ---
