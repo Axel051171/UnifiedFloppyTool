@@ -1,0 +1,5 @@
+# Laufartefakte des Eval-Runners: je Lauf ein Verzeichnis mit
+# aggregate-result.json und report.html. Sie sind Messergebnisse,
+# kein Quellmaterial — und sie wachsen mit jedem Lauf (1,9 MB nach
+# fuenf Laeufen). Die Suite selbst sind die Fallverzeichnisse daneben.
+results/
