@@ -14,8 +14,8 @@ es muss niemand zaehlen.
 
 | | Zahl |
 |---|---|
-| Eintraege auf der obersten Ebene | 216 |
-| davon mit Urteil | 2 |
+| Eintraege auf der obersten Ebene | 217 |
+| davon mit Urteil | 3 |
 | **ohne Urteil** | **214** |
 | Urteile ohne Eintrag (verwaist) | 0 |
 | Urteile mit fehlendem Feld | 0 |
@@ -25,6 +25,7 @@ es muss niemand zaehlen.
 | Eintrag | Lizenz | Beleg | Kanal | Kennzahl | naechster Griff |
 |---|---|---|---|---|---|
 | `OmniFlop_3.2d_Format_Harvest_C.zip` | ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen | neue-ideen/UFT-NN_OmniFlop_Analyse.md | Fundus | Fundus | Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen. |
+| `UFT-50-Korg-TSeries.md` | eigene Ausarbeitung; die BESCHRIEBENE Quelle (korgutils 0.9.1, Klaus Michael Indlekofer) traegt laut Bericht GPLv2 — am COPYING im Paket UNGEMESSEN | Angabe aus dem Bericht selbst, keine Lizenzdatei gesehen. Das API-Feld eines Hosters waere ohnehin kein Beleg (measurement_hit_wrong_class). | Spec | Fundus | Nicht bauen: ein neues Format-Plugin ist unter der EINFRIER-REGEL auch als Vorschlag gesperrt. Als P3-513 notiert. Wenn das Moratorium es zulaesst: Lizenz an der Datei messen, korgutils bauen, Abbild von fremder Hand beschaffen. |
 | `x50conv.exe` | Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT | mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat | Spec | Fundus | Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen. |
 
 ## Noch ohne Urteil

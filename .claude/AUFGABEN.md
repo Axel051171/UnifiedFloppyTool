@@ -3949,15 +3949,45 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     UFT-105, 64 Dokumente auf 62 Nummern (UFT-30 und UFT-32 doppelt
     vergeben), mit **15 Lücken**. Damit bekommt „was vergessen wurde"
     eine prüfbare Form statt einer Willenserklärung.
-  · **Fünf Lücken liegen in `~/Downloads`, nicht in `neue-ideen/`:**
-    UFT-34 (Synchro-Express-Atari), UFT-35 (FastCopy3-Atari), UFT-41
-    (CopyWizard-Atari8bit), UFT-42 (XCopyPro-BBBF), UFT-50
-    (Korg-TSeries). **Drei der zugehörigen Materialordner stehen
-    längst in `neue-ideen/`** (`FastCopy3`, `Copy_Wizard`,
-    `X-Copy_Professional_`) — die Sichtung hat stattgefunden, ihr
-    Ergebnis ist nur nie mitgewandert. Das ist buchstäblich „was
-    vergessen wurde". Zehn Nummern fehlen ganz: 36–40, 44, 45, 47,
-    48, 98.
+  · ~~**Fünf Lücken liegen in `~/Downloads`, nicht in `neue-ideen/`:**
+    UFT-34, UFT-35, UFT-41, UFT-42, UFT-50. Das ist buchstäblich „was
+    vergessen wurde".~~ **BERICHTIGT noch vor dem Push (MF-1267) —
+    die Aussage war in ihrem schärfsten Teil falsch, und der Fehler
+    war meiner.** Meine Reihen-Messung las `glob("UFT-*.md")`, also
+    **nur die oberste Ebene**. Rekursiv liegen **vier der fünf längst
+    in `neue-ideen/`**, verschachtelt in ihren eigenen
+    Materialordnern; die Downloads-Fassungen sind **byteidentisch**
+    (SHA-256 je Paar gleich) — Dubletten, keine Funde. **Wirklich
+    vergessen war genau EINE:** `UFT-50-Korg-TSeries.md`, jetzt
+    kopiert; `~/Downloads` blieb unangetastet, und die vier
+    Dubletten, die ich dabei selbst angelegt hatte, sind wieder
+    entfernt. Klasse MF-1024/MF-1033: **der Leser war richtig, die
+    Aussage über den Gegenstand war zu weit** — „nicht auf der
+    obersten Ebene" ist keine Aussage über „nicht vorhanden".
+  · **Rekursiv stimmen auch die übrigen Zahlen anders:** 70 Dokumente
+    auf **67** Nummern (nicht 62), **drei** doppelt vergebene Nummern
+    statt zwei — neu ist **UFT-33**, das als
+    `dcopy/UFT-33-DCopy-Bootblock-Identifikation.md` neben dem
+    `UFT-33-HAL-Erweiterungen.md` der obersten Ebene liegt. Lücken
+    sind **zehn**, nicht fünfzehn: 36–40, 44, 45, 47, 48, 98 — für
+    diese zehn wurde in `neue-ideen/` (rekursiv), `~/Downloads`,
+    `docs/` und `tools/` gesucht und nichts gefunden.
+  · **Ein Ertrag bleibt, und er ist vorbeugend:** `UFT-42` berichtigt
+    `UFT-33` ausdrücklich, dessen `uft_bb_entry_t` dort „eine
+    plausible Rekonstruktion ohne Beleg" heißt. Gemessen gibt es
+    `uft_bb_entry_t` im ganzen Baum **nicht**, und
+    `docs/nachbau/XCOPY_VERHALTEN_HAND-A.md` nennt Bootblock nur als
+    Abgrenzung — die Berichtigung verhindert etwas, sie repariert
+    nichts.
+  · **Gelesen, mit Urteil:** `UFT-50` beschreibt ein **eigenständiges**
+    Korg-T-Serien-Format (80×2×10×1024 = 1 638 400 Byte) neben dem
+    vorhandenen DSS-1 (80×2×5×1024 = 819 200) — Quelle `korgutils
+    0.9.1`, GPLv2. Ein **neues Format-Plugin** fällt unter das
+    Moratorium der EINFRIER-REGEL, auch als Vorschlag; also notiert,
+    nicht gebaut. `UFT-41` sagt ausdrücklich „kein Bug gefunden,
+    UFTs ATR-Modul hält stand" — ein **negatives** Ergebnis, das
+    festzuhalten sich lohnt, damit es niemand ein zweites Mal
+    erarbeitet.
   · **Die Gegenprobe hat den zweiten Befund halbiert, und das gehört
     dazu:** 9 Ausarbeitungen zitiert der Baum unter ihrer **Nummer**
     nirgends — nach **Inhalt** gesucht kennt er UFT-94 (COPYLOCK 80),
@@ -3968,7 +3998,9 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · **Eine Zahl ist ausdrücklich eine GRENZE, keine Zahl:** von 216
     Einträgen nennt der Baum 71 — davon 9 nur über einen Namen, der
     als Suchwort nichts taugt (`1`, `disk`, `copy`, `.claude`).
-    Unerwähnt sind also **mindestens 145**, höchstens 154.
+    Unerwähnt sind also **mindestens 145**, höchstens 154. (Seit der
+    Kopie von `UFT-50` sind es **217** Einträge; das Register führt
+    entsprechend 215 ohne Urteil statt 214.)
   · **Zwei Zahlen des eigenen Aufnahmeeintrags hielten nicht** (197
     Archive, 20 Verzeichnisse) — berichtigt oben, durchgestrichen
     stehen gelassen.
