@@ -52,6 +52,15 @@ void DecodeJob::setDestination(const QString& path, const QString& format)
     m_destFormat = format;
 }
 
+/* MF-1265: eine Kopie, gesetzt VOR `moveToThread()`/`run()`. Danach
+ * gehoert der Auftrag einem anderen Faden, und niemand fasst ihn mehr
+ * an. */
+void DecodeJob::setCopyPlan(const uft_copy_plan_t& plan)
+{
+    m_plan = plan;
+    m_planGesetzt = true;
+}
+
 void DecodeJob::requestCancel()
 {
     m_cancel.store(true, std::memory_order_relaxed);
@@ -378,10 +387,25 @@ bool DecodeJob::convertImage()
      * `accept_data_loss` bleibt ausdruecklich aus — die Vorgabe laesst es
      * absichtlich ungesetzt (UFT-A05), und das gilt hier weiter. */
     uft_convert_options_t opts = uft_convert_default_options();
+
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): der Kopierplan gilt auch
+     * fuer den Hintergrundauftrag. Bis dahin erreichte er nur den
+     * Speicherpfad (MF-1263) — „EIN Vorgang" war damit erst zur
+     * Haelfte wahr.
+     *
+     * Der Plan steht als KOPIE bereit (`setCopyPlan()`); hier wird
+     * nichts an der Oberflaeche gefragt, weil dieser Faden sie nicht
+     * anfassen darf. */
+    if (m_planGesetzt)
+        uft_copy_plan_to_convert_options(&m_plan, &opts);
+
     /* Ein Hintergrundauftrag hat niemanden zu fragen. Verlustbehaftete
      * Wandlungen weist das Tor hier also ab, statt sie stillschweigend
      * zu erlauben -- die Zustimmung gehoert an die Oberflaeche, wo
-     * jemand sie geben kann (ToolsTab). */
+     * jemand sie geben kann (ToolsTab).
+     *
+     * MF-1265: steht NACH dem Plan. Kein Plan erteilt sich selbst eine
+     * Zustimmung (UFT-A05) — und im Hintergrund erst recht nicht. */
     opts.accept_data_loss = false;
 
     uft_convert_result_t res;

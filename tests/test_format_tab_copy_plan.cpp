@@ -105,6 +105,58 @@ private slots:
     }
 
     /* G8 — schon beim Oeffnen angewandt */
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): der Plan ist von aussen
+     * erreichbar — und zwar OHNE dass ihn jemand weiterreicht.
+     *
+     * `ToolsTab`, `WorkflowTab` und `DecodeJob` kennen den Formatreiter
+     * nicht. Drei Verbraucher einzeln zu verkabeln waere viel Klempnerei
+     * fuer eine Einstellung, die es nur EINMAL gibt; deshalb gibt der
+     * Besitzer sie heraus.
+     *
+     * Gefragt wird der KERN (`uft_copy_plan_current()`), nicht der
+     * Formatreiter. Eine erste Fassung legte die Auskunft als
+     * `FormatTab::aktuellerPlan()` in die Oberflaeche; der BINDER hat
+     * daran einen Entwurfsfehler gefunden, weil `toolstab.cpp` damit
+     * an `formattab.cpp` hing und zwei Qt-Tests das eine ohne das
+     * andere binden.
+     *
+     * DAS RISIKO DIESER BAUFORM IST DER HAENGENDE ZEIGER, und genau
+     * darauf zielt die letzte Zusage: nach dem Schliessen des Reiters
+     * darf die Auskunft nicht in freigegebenen Speicher greifen,
+     * sondern muss auf die VORGABEN zurueckfallen. */
+    void plan_ist_ohne_verkabelung_erreichbar()
+    {
+        const uft_copy_plan_t vorgabe = uft_copy_plan_default();
+
+        {
+            FormatTab tab;
+            /* Eine Wahl, die NICHT die Vorgabe ist — sonst bewiese ein
+             * Treffer nichts. */
+            QVERIFY2((int)UFT_READ_DEEP != (int)vorgabe.strategy,
+                     "DEEP ist zufaellig die Vorgabe — die Probe bewiese "
+                     "nichts");
+            auto *combo = tab.findChild<QComboBox *>("comboPlanStrategy");
+            QVERIFY(combo);
+            const int i = combo->findData((int)UFT_READ_DEEP);
+            QVERIFY(i >= 0);
+            combo->setCurrentIndex(i);
+
+            const uft_copy_plan_t gelesen = uft_copy_plan_current();
+            QCOMPARE((int)gelesen.strategy, (int)UFT_READ_DEEP);
+            /* Und es ist WIRKLICH der Plan dieses Reiters, nicht eine
+             * zweite Quelle. */
+            QCOMPARE((int)gelesen.strategy, (int)tab.copyPlan().strategy);
+        }
+
+        /* Reiter weg: die Auskunft faellt auf die Vorgaben zurueck,
+         * nicht auf einen genullten Zufall. */
+        const uft_copy_plan_t danach = uft_copy_plan_current();
+        QCOMPARE((int)danach.strategy,     (int)vorgabe.strategy);
+        QCOMPARE((int)danach.level,        (int)vorgabe.level);
+        QCOMPARE((int)danach.preservation, (int)vorgabe.preservation);
+        QCOMPARE((int)danach.policy,       (int)vorgabe.policy);
+    }
+
     void plan_gilt_ab_dem_ersten_bild()
     {
         FormatTab tab;

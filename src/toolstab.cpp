@@ -6,6 +6,7 @@
  */
 
 #include "toolstab.h"
+#include "uft/core/uft_copy_plan.h"   /* MF-1265: uft_copy_plan_current() */
 
 #include <uft/uft_core.h>
 #include <uft/uft_format_plugin.h>
@@ -270,6 +271,22 @@ void ToolsTab::onConvert()
      * `accept_data_loss` bleibt ausdruecklich aus — die Vorgabe laesst es
      * absichtlich ungesetzt (UFT-A05), und das gilt hier weiter. */
     uft_convert_options_t opts = uft_convert_default_options();
+
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): der Kopierplan gilt auch
+     * hier. Dieser Reiter laeuft im GUI-Faden, darf die Auskunft des
+     * Kerns also direkt nehmen — anders als `DecodeJob`, der nach
+     * `moveToThread()` eine KOPIE mitbekommt. Der Unterschied ist
+     * nicht Geschmack, sondern der Faden.
+     *
+     * Gefragt wird der KERN, nicht der Formatreiter: eine erste
+     * Fassung rief `FormatTab::aktuellerPlan()`, und der Binder hat
+     * daran gezeigt, dass zwei Qt-Tests `toolstab.cpp` ohne
+     * `formattab.cpp` binden. */
+    const uft_copy_plan_t plan = uft_copy_plan_current();
+    uft_copy_plan_to_convert_options(&plan, &opts);
+
+    /* NACH dem Plan: kein Plan erteilt sich selbst eine Zustimmung
+     * (UFT-A05). */
     opts.accept_data_loss = false;
 
     uft_convert_result_t res;

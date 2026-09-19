@@ -428,6 +428,41 @@ uft_copy_plan_t uft_copy_plan_default(void)
     return p;
 }
 
+/* ── Die geltende Quelle (MF-1265) ──────────────────────────────────
+ *
+ * `P3-509`, zweiter Halbsatz. Der Kern haelt KEINEN Plan, sondern die
+ * Auskunft, wo einer zu holen ist — eine hinterlegte Kopie koennte
+ * veralten, sobald der Bediener etwas umstellt.
+ *
+ * Die erste Fassung legte diese Auskunft in `FormatTab`. Der Binder
+ * hat daran einen Entwurfsfehler gefunden: `toolstab.cpp` haette
+ * damit an `formattab.cpp` gehangen, und zwei Qt-Tests binden das
+ * eine ohne das andere. Eine GUI-Klasse von einer anderen abhaengig zu
+ * machen ist die falsche Richtung — die Auskunft wohnt dort, wo der
+ * Plan ohnehin wohnt.
+ *
+ * Kein Schutz gegen Faeden: die Quelle wird im GUI-Faden gesetzt und
+ * im GUI-Faden gelesen. Wer woanders laeuft, nimmt eine Kopie mit
+ * (`DecodeJob::setCopyPlan`) — das steht im Kopf und ist der Grund,
+ * warum es hier kein Schloss braucht. */
+static uft_copy_plan_quelle_fn s_quelle       = NULL;
+static void                   *s_zusammenhang = NULL;
+
+void uft_copy_plan_set_quelle(uft_copy_plan_quelle_fn fn, void *zusammenhang)
+{
+    s_quelle       = fn;
+    s_zusammenhang = zusammenhang;
+}
+
+uft_copy_plan_t uft_copy_plan_current(void)
+{
+    /* Ohne Quelle die VORGABEN, nicht ein genullter Zufall: ein
+     * genullter Plan waere ein GUELTIGER Plan (FILE/FAST/LOGICAL/
+     * NORMAL) und damit eine Aussage, die niemand getroffen hat. */
+    if (!s_quelle) return uft_copy_plan_default();
+    return s_quelle(s_zusammenhang);
+}
+
 /* ── Die Profile (MF-1236) ──────────────────────────────────────────
  *
  * Herkunft: Entwurf des Eigentuemers, `test-gui/06_kopierplan-meine

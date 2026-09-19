@@ -123,6 +123,15 @@ public:
     /** Der Plan, wie ihn die vier Auswahlfelder gerade beschreiben. */
     uft_copy_plan_t copyPlan() const;
 
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): hier stand eine statische
+     * Auskunft `aktuellerPlan()`. Sie ist in den KERN gewandert —
+     * `uft_copy_plan_current()` in `uft_copy_plan.h`. Der Grund kam
+     * vom BINDER, nicht von mir: `toolstab.cpp` haette damit an
+     * `formattab.cpp` gehangen, und zwei Qt-Tests binden das eine ohne
+     * das andere. Der Reiter MELDET seinen Plan jetzt an
+     * (`uft_copy_plan_set_quelle` im Konstruktor, NULL im Destruktor),
+     * statt dass andere Reiter ihn befragen. */
+
     /** Die Faehigkeiten des gewaehlten Formats als Bitmaske fuer
      *  `uft_copy_plan_check()`. Was nicht gemessen werden kann, bleibt
      *  ungesetzt — dann meldet die Pruefung es, statt es anzunehmen. */

@@ -27,6 +27,7 @@
 #include "workflowtab.h"
 #include "ui_tab_workflow.h"
 #include "decodejob.h"
+#include "uft/core/uft_copy_plan.h"   /* MF-1265: uft_copy_plan_current() */
 #include "fluxcapturejob.h"
 #include "fluxwritejob.h"
 #include "uft_flux_histogram_widget.h"
@@ -670,6 +671,11 @@ void WorkflowTab::onStartAbortClicked()
 
         // Source = File, Dest = File or USB: legacy DecodeJob path.
         m_decodeJob = new DecodeJob();
+        /* MF-1265 (`P3-509`, zweiter Halbsatz): der Kopierplan gilt auch
+         * hier. Gesetzt wird eine KOPIE, und zwar JETZT — vor
+         * `moveToThread()`. Danach gehoert der Auftrag einem anderen
+         * Faden, und der darf die Oberflaeche nicht mehr fragen. */
+        m_decodeJob->setCopyPlan(uft_copy_plan_current());
         m_decodeJob->setSourcePath(m_sourceFile);
         if (m_destMode == File) {
             m_decodeJob->setDestination(m_destFile);

@@ -296,6 +296,46 @@ typedef struct {
  *  logische Erhaltung, normale Sicherheit. */
 uft_copy_plan_t uft_copy_plan_default(void);
 
+/**
+ * Wer den geltenden Plan liefert — und wie man ihn erfragt (MF-1265).
+ *
+ * `P3-509`, zweiter Halbsatz: „FluxCopy + DeepCopy + Protected +
+ * Evidence ist EIN Vorgang". Gemessen fuellen DREI Stellen die
+ * Wandlungsoptionen, und keine davon kennt den Reiter, der den Plan
+ * baut. Drei Wege einzeln zu verkabeln waere viel Klempnerei fuer eine
+ * Einstellung, die es nur EINMAL gibt.
+ *
+ * **Eine FUNKTION, kein hinterlegter Wert** — und das ist der Punkt:
+ * eine Kopie im Kern koennte veralten, sobald der Bediener etwas
+ * umstellt. Die Auskunft fragt bei jedem Aufruf die Quelle.
+ *
+ * **Der Kern kennt dabei keine Oberflaeche.** Er haelt einen Zeiger auf
+ * eine Funktion und einen undurchsichtigen Zusammenhang; wer ihn setzt,
+ * ist seine Sache. Genau daran ist die erste Fassung gescheitert: sie
+ * legte die Auskunft in `FormatTab`, womit `ToolsTab` an einem anderen
+ * Reiter hing — **gemeldet hat es der BINDER**, nicht ich
+ * (`undefined reference to FormatTab::aktuellerPlan()` in zwei
+ * Qt-Tests, die `toolstab.cpp` ohne `formattab.cpp` binden).
+ *
+ * **NUR aus dem Faden rufen, in dem die Quelle lebt.** Ein
+ * Hintergrundauftrag nimmt stattdessen eine KOPIE mit, die vor dem
+ * Start gesetzt wird (`DecodeJob::setCopyPlan`).
+ */
+typedef uft_copy_plan_t (*uft_copy_plan_quelle_fn)(void *zusammenhang);
+
+/** Die Quelle setzen. `fn = NULL` loescht sie — danach liefert
+ *  `uft_copy_plan_current()` wieder die Vorgaben. Wer sich abmeldet,
+ *  muss das im eigenen Destruktor tun; ein Zeiger auf einen
+ *  freigegebenen Zusammenhang ist die einzige Gefahr dieser Bauform,
+ *  und genau darauf zielt der Rotbeweis. */
+void uft_copy_plan_set_quelle(uft_copy_plan_quelle_fn fn, void *zusammenhang);
+
+/** Der geltende Plan. **Ohne Quelle die VORGABEN**, nicht ein genullter
+ *  Zufall: ein genullter Plan waere ein GUELTIGER Plan
+ *  (FILE/FAST/LOGICAL/NORMAL) und damit eine Aussage, die niemand
+ *  getroffen hat. */
+uft_copy_plan_t uft_copy_plan_current(void);
+
 /** Namen fuer die Anzeige. Geben NULL fuer unbekannte Werte — nie eine
  *  erfundene Zeichenkette. */
 const char *uft_copy_level_name(uft_copy_level_t v);

@@ -3805,6 +3805,47 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     MF-1077 in Reinform. Der Review nannte „10 von 48"; das misst
     dieselbe Lage an den **erzwungenen** Parametern. Beide Zahlen
     stimmen.
+- **Stand 2026-09-19, sechster Durchgang — der zweite Halbsatz
+  (MF-1265): „EIN Vorgang" ist eingelöst:**
+  · **Gemessen füllen genau DREI Stellen** `uft_convert_options_t`:
+    `uft_save_image.cpp` (seit MF-1263), `decodejob.cpp`,
+    `toolstab.cpp` — dazu eine **zweite** `DecodeJob`-Erzeugung in
+    `workflowtab.cpp`, die MF-1263 gar nicht kannte. Vorher trug
+    einer von dreien den Plan.
+  · **Die Bauform ist gemessen, nicht gewählt:** die drei
+    Verbraucher kennen den Formatreiter nicht, und `git grep "new
+    FormatTab"` gibt genau **einen** Treffer. Also gibt der
+    Besitzer den Plan heraus statt dass drei Wege ihn durchreichen.
+  · **BERICHTIGT NOCH IM SELBEN DURCHGANG — hier stand
+    „(`FormatTab::aktuellerPlan()`)", und der BINDER hat daran
+    einen Entwurfsfehler gefunden, nicht ich.** Eine statische
+    Auskunft in `FormatTab` hängt `ToolsTab` an einen anderen
+    Reiter; gemessen binden `test_tools_tab_convert` und
+    `test_tools_tab_track_view` genau `toolstab.cpp` **ohne**
+    `formattab.cpp`, und der volle Bau endete mit `undefined
+    reference to FormatTab::aktuellerPlan()`. Die Auskunft wohnt
+    jetzt im **Kern**: `uft_copy_plan_current()`, gespeist von
+    `uft_copy_plan_set_quelle()`. Eine **Funktion**, kein
+    hinterlegter Wert — eine Kopie könnte veralten, sobald der
+    Bediener etwas umstellt. Und die Anmeldung steht **zuletzt**
+    im Konstruktor, weil `copyPlan()` die Auswahlfelder liest.
+  · **Zwei Wege, und der Unterschied ist der FADEN:** `ToolsTab`
+    fragt direkt (GUI-Faden), `DecodeJob` bekommt eine **Kopie**
+    vor `moveToThread()`. Ein Reiterzugriff aus dem Arbeitsfaden
+    wäre ein Fehler, den kein Test zuverlässig fängt.
+  · **Rot-Probe auf das eigentliche Risiko, und sie fällt schärfer
+    aus als erwartet:** die Abmeldung im Destruktor weglassen →
+    `ctest` meldet **`Exception: SegFault`**, nicht einen falschen
+    Wert. Der hängende Zeiger ist nicht theoretisch. Isoliert
+    gegen die Nachbarn: von den drei Zusagen derselben Datei
+    stürzt genau diese ab (rc 139), die beiden anderen bleiben
+    rc 0.
+  · **`accept_data_loss` steht in allen drei Pfaden NACH dem Plan**
+    und bleibt false (UFT-A05).
+  · **Ehrlich offen:** für die drei neuen Aufrufstellen gibt es
+    keine je eigene Verhaltensprobe — belegt sind sie durch
+    Übersetzung und die Speicherpfad-Zusage aus MF-1263. Und
+    `uft_batch_run()` hat weiterhin 0 Aufrufer.
   · **Zwei Rot-Proben:** der `strtoul`-Rückfall („" wird Zahl") und die
     Vorsilbe gegen die Tafel — beide rc 1. Bei der zweiten feuert eine
     **fremde** Zusage mit („40 Parameter der Tafel haben keine Stufe")

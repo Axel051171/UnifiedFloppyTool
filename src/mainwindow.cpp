@@ -621,6 +621,11 @@ void MainWindow::startDecode(const QString& path)
     // Create new thread and job
     m_decodeThread = new QThread(this);
     m_decodeJob = new DecodeJob();
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): der Kopierplan gilt auch
+     * fuer den Dekodier-Auftrag. Eine KOPIE, gesetzt VOR
+     * `moveToThread()` — danach gehoert der Auftrag einem anderen
+     * Faden und darf die Oberflaeche nicht mehr fragen. */
+    m_decodeJob->setCopyPlan(uft_copy_plan_current());
     m_decodeJob->setSourcePath(path);
     m_decodeJob->moveToThread(m_decodeThread);
     

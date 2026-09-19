@@ -66,9 +66,31 @@ FormatTab::FormatTab(QWidget *parent)
      * anwendet, zeigt beim Oeffnen einen Zustand, den der Plan nicht
      * erlaubt. */
     applyCopyPlan();
+
+    /* MF-1265 (`P3-509`, zweiter Halbsatz): der Reiter MELDET seinen
+     * Plan beim Kern an, statt dass andere Reiter ihn befragen — eine
+     * FUNKTION und kein hinterlegter Wert, damit die Auskunft nicht
+     * veralten kann, sobald der Bediener etwas umstellt.
+     *
+     * ZULETZT, nicht als erstes: `copyPlan()` liest die vier
+     * Auswahlfelder, und vor `setupUi()` gibt es die nicht. Eine
+     * Anmeldung am Anfang des Konstruktors waere eine Auskunft ueber
+     * einen halb gebauten Reiter.
+     *
+     * Gemessen gibt es genau EINE Instanz: `git grep "new FormatTab"`
+     * hat einen Treffer. */
+    uft_copy_plan_set_quelle(
+        [](void *ctx) -> uft_copy_plan_t {
+            return static_cast<FormatTab *>(ctx)->copyPlan();
+        },
+        this);
 }
 
 FormatTab::~FormatTab() {
+    /* MF-1265: abmelden, BEVOR irgendetwas freigegeben wird. Ein
+     * Zeiger auf einen halb abgebauten Reiter ist die einzige Gefahr
+     * dieser Bauform — der Rotbeweis zielt genau darauf. */
+    uft_copy_plan_set_quelle(nullptr, nullptr);
     saveSettings();
     delete ui;
 }

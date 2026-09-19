@@ -31,6 +31,10 @@
 #include <QObject>
 #include <QString>
 #include <atomic>
+/* MF-1265: der Kopierplan gilt auch hier (`P3-509`, zweiter Halbsatz
+ * der Vorgabe: „FluxCopy + DeepCopy + Protected + Evidence ist EIN
+ * Vorgang"). */
+#include "uft/core/uft_copy_plan.h"
 
 /**
  * @brief Image information returned after decode
@@ -77,7 +81,24 @@ public:
      * @param format Output format (e.g., "ADF", "D64")
      */
     void setDestination(const QString& path, const QString& format = QString());
-    
+
+    /**
+     * @brief Den Kopierplan fuer diesen Auftrag setzen (MF-1265).
+     *
+     * Gespeichert wird eine **Kopie**, und das ist kein Zufall: dieser
+     * Auftrag laeuft nach `moveToThread()` in einem eigenen Faden. Ein
+     * Zeiger auf einen Reiter waere ein Zugriff auf die Oberflaeche aus
+     * einem fremden Faden; eine Rueckruffunktion ebenso. `uft_copy_plan_t`
+     * ist ein reiner Wertetyp, also ist die Kopie billig und sicher.
+     *
+     * Wer ihn nicht setzt, bekommt die Vorgaben wie bisher — `run()`
+     * fragt `m_planGesetzt`, nicht den Inhalt. Ein genullter Plan ist
+     * naemlich ein GUELTIGER Plan (FILE/FAST/LOGICAL/NORMAL), und ihn von
+     * „kein Plan" zu unterscheiden ist genau der Punkt.
+     */
+    void setCopyPlan(const uft_copy_plan_t& plan);
+
+
     /**
      * @brief Get decode results after completion
      */
@@ -138,6 +159,9 @@ private:
     QString m_sourcePath;
     QString m_destPath;
     QString m_destFormat;
+    /* MF-1265: eine KOPIE des Plans, kein Zeiger — siehe setCopyPlan(). */
+    uft_copy_plan_t m_plan{};
+    bool m_planGesetzt = false;
     DecodeResult m_result;
     
     /**
