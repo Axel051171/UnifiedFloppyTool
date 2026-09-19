@@ -18,6 +18,10 @@ public:
     // Load image for analysis
     void loadImage(const QString &filename);
 
+    /** MF-1273: der Bericht des Zentrums (`uft_disk2`) ueber das
+     *  geoeffnete Abbild — was der Traeger traegt, gemessen. */
+    QString traegerBericht(struct uft_disk *disk);
+
     /**
      * @brief Kodierung und Variante, wie das PLUGIN sie meldet (MF-662).
      *

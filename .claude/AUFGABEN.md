@@ -4158,12 +4158,41 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Und die alten Schicht-Zeiger `flux_layer`/`bitstream_layer`/
     `sector_layer` in `uft_track_t` haben 0/0/1 Nutzer — dieselbe
     Idee wie die vier Schichten, nie gefüllt.
-  · **Noch kein Produktivleser** — der ist der nächste Commit:
-    `DiskAnalyzerWindow::loadImage()` bekommt den `uft_d2_report()`
-    des geöffneten Abbilds (das Fenster ist im Qt-Testbau und hat
-    schon `test_disk_analyzer_no_fiction`). Der Einbauort ist meine
-    Wahl, nicht die des Entwurfs (dessen Punkt 2 war `img` + FAT12,
-    und `uft_fat_robust` liegt noch in den Zips) — verschiebbar.
+  · ~~**Noch kein Produktivleser** — der ist der nächste Commit.~~
+    **Eingelöst mit MF-1273 (siebter Durchgang, unten).**
+- **Stand 2026-09-19, siebter Durchgang — der erste Produktivleser
+  (MF-1273): der Disk-Analyzer zeigt, was der Träger trägt:**
+  · `DiskAnalyzerWindow::loadImage()` speist das geöffnete Abbild
+    über sein Plugin in das Zentrum ein (`uft_d2_from_disk`) und
+    zeigt `uft_d2_report()` in einem neuen Kasten `textDiskReport`
+    unter dem Sektorbericht; der HTML- und Text-Export nimmt ihn mit.
+    Ohne Plugin steht dort „Kein Bericht: kein Plugin konnte dieses
+    Abbild oeffnen" — kein leerer Kasten, der wie „nichts gefunden"
+    aussieht.
+  · **Gemessen an der 35-Spur-D64 des vorhandenen `no_fiction`-Tests:**
+    „Traeger: 35 Spuren, hoechste Lage C34 H0 (gemessen)", „Sektoren:
+    683 — mit CRC-Angabe: 0 (davon falsch: 0), ohne CRC-Angabe: 683",
+    „Schichten: Sektoren". 683 und 35 sind Formateigenschaften
+    (17×21 + 7×19 + 6×18 + 5×17), keine Ablesung aus unserem Code —
+    und das D64-Plugin liefert `crc_stored = crc_calculated = 0`, also
+    darf der Bericht kein CRC-Urteil fällen; er sagt „ohne Angabe".
+  · **Rotbeweis:** Brückenaufruf in `traegerBericht()` entfernt →
+    genau die neue Zusage `theCarrierReportIsMeasuredNotAssumed()`
+    fällt (5 bestanden, 1 gefallen), die drei alten `no_fiction`-
+    Zusagen bleiben grün; wiederhergestellt 6/6. Damit hat die Brücke
+    aus MF-1272 ihren Produktivaufrufer und einen Test, der rot wird,
+    wenn der Aufruf verschwindet (D2).
+  · **Der Einbauort ist meine Wahl** (der Entwurf nannte als Punkt 2
+    „img + FAT12"; `uft_fat_robust` liegt noch in den Zips) — die
+    Brücke und der Bericht sind ortsunabhängig, ein Umzug in einen
+    anderen Reiter ist Minuten. **Die eine Verhaltensänderung:** das
+    Laden liest jetzt jede Spur; bei Sektorabbildern Millisekunden,
+    bei Flussabbildern dekodiert das Plugin je Spur — das steht im
+    Kopf von `traegerBericht()`.
+  · **Kein Klick-Smoke-Test** — es gibt hier keine Anzeige; belegt ist
+    der Weg durch den Qt-Test offscreen (`loadImage` → Kasten
+    gefüllt → fünf Zusagen). Was der Kasten im Fenster tatsächlich
+    zeigt, hat der Eigentümer noch nicht gesehen.
 - **Warteschlange „einbauen", aus dem Register abgeleitet** (die
   eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
   `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,

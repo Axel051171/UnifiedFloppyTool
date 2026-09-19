@@ -183,6 +183,15 @@ Head CRC: -
 Data CRC: -</string></property>
            </widget>
           </item>
+          <item>
+           <widget class="QTextEdit" name="textDiskReport">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="minimumHeight"><number>120</number></property>
+            <property name="styleSheet"><string>font-family: monospace; font-size: 9pt;</string></property>
+            <property name="toolTip"><string>Was der Traeger TRAEGT — Schichten, Merkmale, Befunde (uft_disk2, MF-1273). Gemessen beim Laden, nicht angenommen.</string></property>
+            <property name="plainText"><string>Kein Abbild geladen.</string></property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

@@ -163,6 +163,50 @@ private slots:
                  qPrintable("Ein CRC-Wert wird genannt, den das Plugin nicht "
                             "geliefert hat:\n" + text));
     }
+
+    /* ── MF-1273: der Traeger-Bericht ist gemessen, nicht angenommen ─────
+     *
+     * Der erste Produktivleser des Zentrums (`uft_disk2`, MF-1272). Das
+     * Fenster speist das Abbild ueber sein Plugin in das Zentrum ein und
+     * zeigt `uft_d2_report()`. Belegt wird an einer 35-Spur-D64:
+     *
+     *   683 Sektoren   Formateigenschaft (17 x 21 + 7 x 19 + 6 x 18 +
+     *                  5 x 17), keine Ablesung aus unserem Code
+     *   35 Spuren      ebenso; die hoechste Lage ist C34 H0
+     *   OHNE CRC       das D64-Plugin liefert crc_stored = crc_calculated
+     *                  = 0 (siehe die Zusage darueber) — der Bericht darf
+     *                  weder „falsch" noch „richtig" sagen, nur „ohne
+     *                  CRC-Angabe: 683"
+     *
+     * Rotbeweis: `uft_d2_from_disk()` in `traegerBericht()` nicht rufen
+     * -> der Kasten sagt „Kein Inhalt eingespeist", die Zusagen unten
+     * fallen. */
+    void theCarrierReportIsMeasuredNotAssumed()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+        DiskAnalyzerWindow w;
+        w.loadImage(img);
+        auto *t = w.findChild<QTextEdit *>("textDiskReport");
+        QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+        const QString text = t->toPlainText();
+        QVERIFY2(text.contains("Traeger: 35 Spuren, hoechste Lage C34 H0 (gemessen)"),
+                 qPrintable("Die Ausdehnung einer 35-Spur-D64 fehlt oder ist "
+                            "nicht als gemessen ausgewiesen:\n" + text));
+        QVERIFY2(text.contains("Sektoren: 683"),
+                 qPrintable("683 Sektoren hat eine 35-Spur-D64; der Bericht "
+                            "nennt sie nicht:\n" + text));
+        QVERIFY2(text.contains("mit CRC-Angabe: 0 (davon falsch: 0), "
+                               "ohne CRC-Angabe: 683"),
+                 qPrintable("Ein D64 traegt keine Pruefsumme — der Bericht "
+                            "muss das als 'ohne CRC-Angabe' sagen, nicht "
+                            "als Urteil:\n" + text));
+        QVERIFY2(text.contains("Schichten: Sektoren"),
+                 qPrintable("Ein D64 hat genau die Sektorschicht:\n" + text));
+        QVERIFY2(!text.contains("Kein Inhalt eingespeist"),
+                 qPrintable("Das Zentrum blieb leer:\n" + text));
+    }
 };
 
 QTEST_MAIN(TestDiskAnalyzerNoFiction)

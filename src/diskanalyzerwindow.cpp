@@ -14,7 +14,10 @@ extern "C" {
 #include <uft/uft_core.h>   /* canonical disk API: open/close/get_geometry */
 #include <uft/uft_format_plugin.h>  /* struct uft_disk field access */
 #include <uft/uft_types.h>
+#include <uft/core/uft_disk2_bridge.h>   /* MF-1273: das Zentrum, aus dem Plugin gespeist */
 }
+
+#include <vector>
 
 #include "uft_sector_editor.h"
 
@@ -173,6 +176,12 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
 
         ui->labelCRC->setText(QString("CRC32: 0x%1").arg(crc, 8, 16, QChar('0')).toUpper());
 
+        /* MF-1273: ohne Plugin gibt es nichts, was das Zentrum einspeisen
+         * koennte — und das steht dann dort, statt eines leeren Kastens,
+         * der wie „nichts gefunden" aussieht. */
+        ui->textDiskReport->setPlainText(
+            tr("Kein Bericht: kein Plugin konnte dieses Abbild oeffnen. "
+               "Was oben steht, ist aus der Dateigroesse geschaetzt."));
         /* Configure slider/spin ranges */
         ui->spinTrackNumber->setMaximum(totalTracks > 0 ? totalTracks - 1 : 0);
         ui->sliderTrack->setMaximum(totalTracks > 0 ? totalTracks - 1 : 0);
@@ -224,9 +233,55 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
     ui->spinSideNumber->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
     ui->sliderSide->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
 
+    ui->textDiskReport->setPlainText(traegerBericht(disk));
+
     uft_disk_close(disk);   /* also frees the handle — see uft_core_stubs.c */
 
     updateDiskView();
+}
+
+/* MF-1273: der erste Produktivleser des Zentrums (`uft_disk2`, MF-1272).
+ *
+ * Das Abbild wird ueber sein Plugin Spur fuer Spur in das Zentrum
+ * eingespeist, und der Bericht sagt, was der Traeger TRAEGT — Schichten,
+ * Merkmale, Zahl der Sektoren MIT und OHNE Pruefsummenangabe, Befunde.
+ * Nichts davon ist angenommen: die Bruecke uebersetzt nur, was das
+ * Plugin ausspricht (siehe `uft_disk2_bridge.h`), und ein D64 bekommt
+ * deshalb „ohne CRC-Angabe: 683", nicht „falsche CRC: 0".
+ *
+ * Das kostet ein vollstaendiges Lesen beim Laden — fuer Sektorabbilder
+ * Millisekunden; fuer ein Flussabbild dekodiert das Plugin jede Spur,
+ * und das dauert so lange, wie es dauert. Das steht hier, weil es die
+ * eine Verhaltensaenderung dieses Einbaus ist. */
+QString DiskAnalyzerWindow::traegerBericht(struct uft_disk *disk)
+{
+    uft_disk2_t *d2 = uft_d2_create();
+    if (!d2)
+        return tr("Kein Bericht: kein Speicher fuer das Zentrum.");
+
+    uft_d2_bridge_stats_t st;
+    const bool ok = uft_d2_from_disk(d2, disk, uft_disk_plugin(disk), &st);
+
+    /* `uft_d2_report()` gibt die BENOETIGTE Laenge zurueck; ein zu
+     * kleiner Puffer wird nicht still gekuerzt, sondern vergroessert. */
+    std::vector<char> buf(8192);
+    size_t need = uft_d2_report(d2, buf.data(), buf.size());
+    if (need >= buf.size()) {
+        buf.assign(need + 1, '\0');
+        uft_d2_report(d2, buf.data(), buf.size());
+    }
+    QString text = QString::fromUtf8(buf.data());
+
+    if (!ok) {
+        /* Nichts eingespeist — der Grund steht als Befund im Bericht;
+         * davor eine Zeile, die sagt, dass das Ergebnis LEER ist und
+         * nicht „leer gemessen". */
+        text.prepend(tr("Kein Inhalt eingespeist (%1 Spuren gefragt, %2 "
+                        "nicht lesbar). Der Bericht darunter nennt den Grund.\n")
+                         .arg(st.tracks_asked).arg(st.tracks_failed));
+    }
+    uft_d2_destroy(d2);
+    return text;
 }
 
 void DiskAnalyzerWindow::onTrackChanged(int track)
@@ -283,6 +338,9 @@ void DiskAnalyzerWindow::onExportClicked()
                     out << "<p>Format: " << ui->labelSide1Format->text().replace("\n", ", ") << "</p>\n";
                     out << "<h3>Current Sector</h3>\n<pre>" << ui->textSectorInfo->toPlainText() << "</pre>\n";
                     out << "<h3>Hex Dump</h3>\n<pre>" << ui->textHexDump->toPlainText() << "</pre>\n";
+                    /* MF-1273: was der Traeger traegt, gehoert in den Bericht. */
+                    out << "<h3>Traeger (uft_disk2)</h3>\n<pre>"
+                        << ui->textDiskReport->toPlainText().toHtmlEscaped() << "</pre>\n";
                     out << "</body></html>\n";
                 } else {
                     /* Plain text */
@@ -295,7 +353,9 @@ void DiskAnalyzerWindow::onExportClicked()
                     out << "Side 1: " << ui->labelSide1Info->text() << "\n";
                     out << "Format: " << ui->labelSide1Format->text().replace("\n", ", ") << "\n\n";
                     out << "--- Sector Info ---\n" << ui->textSectorInfo->toPlainText() << "\n\n";
-                    out << "--- Hex Dump ---\n" << ui->textHexDump->toPlainText() << "\n";
+                    out << "--- Hex Dump ---\n" << ui->textHexDump->toPlainText() << "\n\n";
+                    /* MF-1273 */
+                    out << "--- Traeger (uft_disk2) ---\n" << ui->textDiskReport->toPlainText() << "\n";
                 }
                 file.close();
             }
