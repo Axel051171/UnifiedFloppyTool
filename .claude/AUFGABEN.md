@@ -26,15 +26,29 @@ laufen fort und werden nie wiederverwendet.
 
 *(höchstens einer — leer heißt: nichts läuft)*
 
-> **GEMESSEN 2026-09-19, und NICHT von mir entschieden:** die Regel ist
-> verletzt. Zwei Posten tragen `in Arbeit` — **`A-028`** (Teilstring-Prüfer
-> in die GitHub-Prüfung, seit 2026-09-17, mit dem Vermerk, dass `A-029`
-> ihn überholt) und **`A-030`** (Punkt 1 fertig, Punkt 2 mit widerlegter
-> Annahme, Punkt 3 blockiert). Beide sind wirklich unfertig; welcher von
-> beiden *der* laufende ist, kann ich nicht aus der Liste ableiten —
-> das ist eine Eigentümerentscheidung, also steht sie hier statt einer
-> stillen Umstellung. `A-031` ist seit MF-1256 abgeschlossen und steht
-> unter **Erledigt**; oberster der Warteschlange ist `A-032`.
+> **Stand 2026-09-19 (MF-1258): die Regel hält wieder, und sie brauchte
+> keine Entscheidung — nur eine Messung.** Laufender Posten ist **`A-028`**
+> allein (Teilstring-Prüfer in der GitHub-Prüfung); er hängt an **einer**
+> Zeile seiner Fertig-Bedingung, die ein öffentliches Artefakt braucht und
+> deshalb beim Eigentümer liegt: ein Wegwerf-Pull-Request mit gepflanzter
+> Falle, damit die Zeilen-Anmerkung einmal wirklich erscheint. Alles übrige
+> daran ist belegt. `A-031` ist mit MF-1256 abgeschlossen, `A-030` mit
+> MF-1258 nachgetragen; oberster der Warteschlange ist **`A-032`**.
+>
+> **ZURÜCKGENOMMEN, und der Satz bleibt stehen, weil er zeigt, wie knapp
+> ich an einer unnötigen Rückfrage vorbeigelaufen bin.** Hier stand am
+> selben Tag: *„die Regel ist verletzt. Zwei Posten tragen `in Arbeit` —
+> `A-028` … und `A-030` (Punkt 1 fertig, Punkt 2 mit widerlegter Annahme,
+> Punkt 3 blockiert). Beide sind wirklich unfertig; welcher von beiden der
+> laufende ist, kann ich nicht aus der Liste ableiten — das ist eine
+> Eigentümerentscheidung."* **Falsch war die Prämisse, nicht der Schluss.**
+> `A-030`s Statuszeile war veraltet: seine eigene Beleg-Zeile nennt **alle
+> drei** Punkte mit Commit, und alle sechs Hashes stehen gemessen auf
+> `origin/main`. Ich habe die Statuszeile gelesen und nicht den Beleg
+> darunter — dieselbe Klasse wie `tor_kann_nicht_falsch_anschlagen`:
+> **nennt eine Zeile Namen, lies sie nach.** Was wie eine
+> Eigentümerentscheidung aussah, war eine ungemessene Behauptung in der
+> Liste selbst.
 
 ### A-017 · Die Befunde der Zulieferungen EINBAUEN (Plan, Phasen 1–5)
 - **Status:** **erledigt** 2026-09-16 · **Aufgenommen:** 2026-09-16
@@ -3171,7 +3185,62 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   „486 in der Grundlinie, 1 NEU" rc 1 · Torkanon FAIL. Danach
   entfernt, alles zurück auf 0. Selbsttest **17/17**, je ein Fall pro
   Defekt A bis J.
-- **Beleg:** —
+
+- **Stand 2026-09-19 (MF-1258) — die Erzeugnisse liegen verfolgt im
+  Baum, und die Abnahme hat drei veraltete Zahlen in genau dieser
+  Datei gefunden:**
+  · **Gelandet ist das alles längst:** `d46d2a77` (MF-1229) brachte
+    `.github/workflows/teilstring.yml`, `docs/teilstring_baseline.json`
+    und `scripts/audit_common.py`; `af693c8e` (MF-1230) legte die
+    `code_audit.py`-Spur in **dieselbe** Datei, wie die Entscheidung
+    oben es angekündigt hat. Dem Posten fehlte nur der Beleg.
+  · **Die drei „Fertig heißt"-Bedingungen, je gemessen:** Selbsttest
+    **17/17** · genau **eine** Grundlinie im Baum
+    (`docs/teilstring_baseline.json`; das `.txt` ist weg) · Tor-Lauf
+    **„464 in der Grundlinie, 0 NEU", rc 0**.
+  · **Die SARIF-Hälfte ist an GitHub selbst belegt, nicht nur lokal:**
+    `gh api …/code-scanning/analyses` nennt **30 Analysen**, beide
+    Kategorien getrennt (`teilstring-audit`/`substringAudit`,
+    `codefallen-audit`/`codeFallen`), je **0 Ergebnisse** — die
+    Grundlinie unterdrückt den Altbestand wie entworfen, und die
+    Zwei-Kategorien-Begründung im Workflow-Kopf hält am API.
+  · **DREI ZAHLEN IM KOPF DIESES WORKFLOWS WAREN VERALTET**, und das
+    ist der Ort, der dabei zählt: der Kopf des Prüfers, der gegen
+    genau diese Klasse antritt. „Stand der Grundlinie: 51 Fundstellen,
+    50 Fingerabdrücke" (heute `count: 464`, 382 Fingerabdrücke), „16
+    Zusagen" (heute 17), „36 Zusagen" (heute 42, unter cp1252 41 —
+    `P3-484`). Behoben **durch Herausnehmen, nicht durch Nachziehen**:
+    der Kopf nennt keine Zahl mehr, ein Schritt „Grundlinien nennen
+    ihre eigene Zahl" druckt sie bei jedem Lauf, die zurückgenommenen
+    Sätze bleiben zitiert stehen. Klasse als `P3-507` benannt, samt
+    der Messung, die vor einem Tor dafür zu machen wäre.
+  · **Und eine eigene Fehlmessung, gefangen vor dem Commit:** ich
+    hatte „um Faktor neun abgedriftet" notiert (51 gegen 464). Das
+    vergleicht zwei verschiedene Größen — die 51 zählten die
+    Einschätzung `sicher`, die 464 tragen **beide**, weil dieser
+    Posten den Umfang der Grundlinie bewusst erweitert hat. Gemessen
+    über `src include scripts`: **278 Fundstellen, 256 `prüfen`, 22
+    `sicher`**.
+
+- **Was NOCH OFFEN ist, und es ist genau eine Zeile der
+  Fertig-Bedingung:** „eine Teilstring-Falle erscheint in einem **Pull
+  Request** als Annotation an ihrer Zeile". Gemessen ist jeder der 25
+  Läufe von `teilstring.yml` ein `push`, und der letzte Pull Request
+  des Baums ist **#39 vom 2026-09-14** — drei Tage **vor** dem
+  Workflow (`d46d2a77`, 2026-09-17 21:24). Der Auftrag `geaendert` mit
+  `if: github.event_name == 'pull_request'` **ist nie gelaufen**;
+  ungeprüft sind damit sein `if`, das `fetch-depth: 0` und GitHubs
+  Darstellung der `::warning`-Zeilen. Die Ausgabe selbst ist lokal
+  belegt (Annotation an `:15`).
+  **Der Weg dorthin ist klein und liegt beim Eigentümer**, weil er ein
+  öffentliches Artefakt erzeugt: ein Wegwerf-Pull-Request mit einer
+  gepflanzten Falle, Anmerkung ansehen, schließen. Das mache ich nicht
+  unaufgefordert. Bis dahin bleibt der Posten `in Arbeit` — die
+  Mechanik ist gebaut, ein Ausgabeweg ist **unbelegt**, und „fast" ist
+  kein Zustand.
+- **Beleg (der geleistete Teil):** `d46d2a77` (MF-1229) ·
+  `af693c8e` (MF-1230) · `MF-1258` (die drei Zahlen aus der Hand
+  genommen). Der Posten schließt erst mit der PR-Abnahme.
 
 ### A-029 · Vier Code-Fallen (K4, K6, P2, P3): prüfen, testen, abtragen
 - **Status:** **teilweise erledigt** (Prüfer + Tor 67 + CI-Spur, MF-1230)
@@ -3535,10 +3604,119 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   **nicht entschieden** (S5) und gehört in die Arbeit, nicht in die
   Aufnahme — über `git log -p` auf die Datei zu klären.
 
+### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
+- **Status:** **aufgenommen** (wartet; oberster der Warteschlange,
+  seit `A-031` mit MF-1256 abgeschlossen ist)
+  · **Aufgenommen:** 2026-09-19
+- **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
+  gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
+  code noch verbessern kann, nimm alles aus einander , meine
+  einwilligung hst du für alles"
+- **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
+  davon **197 Archive** auf der obersten Ebene und **20** bereits
+  entpackte Verzeichnisse. `neue-ideen/` ist gitignoriert
+  (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
+  zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
+  `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
+- **Kennzahl:** gemischt, und das gehört ausgesprochen. Der einzelne
+  Fund bewegt meist **keine** der vier und ist damit nach MF-640
+  *Fundus, nicht Auftrag*. Bewegen kann er **ungeprüfte Formate (T3)**
+  — nämlich dann, wenn sich darin ein **Erzeuger** oder ein **Oracle**
+  findet, das eine Stufe hebt; und **angebotene Wandlungspfade**, wenn
+  eine Richtung dadurch belegbar wird. Die Sichtung selbst ist Fundus;
+  ihr Ertrag ist es nicht zwangsläufig.
+- **Kanal:** **je Fund einer**, nach MF-695 — Port | Nachbau |
+  Helfer-Prozess | Oracle | Spec | Daten/Fixture | Fundus. „Lizenz vor
+  Fähigkeit" heißt nicht „Fund verwerfen", sondern *auf welchem Weg*,
+  und der Weg wird bei der Aufnahme des Funds benannt, nicht wenn der
+  Code schon dasteht.
+- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
+  **Rotbeweis zuerst**. Dazu das Moratorium: ein **neues
+  Format-Plugin** ist auch als *Vorschlag* gesperrt; erlaubt sind
+  Bugfixes an Bestehendem, Verifikations-/Korpusarbeit und
+  Spec-Korrekturen gegen autoritative Quellen. Ein Fund, der ein neues
+  Format nahelegt, wird als Fund notiert und **nicht** gebaut.
+- **OPEN_ITEMS:** verwandt und **nicht abzuschreiben** — `P3-8`
+  (drei Aminet-Pakete, Lizenzurteil offen), `P3-11` (Lizenz-Klasse
+  statt Einzelurteil, Eigentümer-Vorlage), `P3-19` (`COPY130.M65`,
+  Fundus), `P3-30` (`pyRT11`, Fundus), `P3-99` (`dskx` widerlegt).
+  Neue Befunde bekommen dort eine Nummer; dieser Posten verweist nur.
+- **Zwei Sperren, die im Gegenstand liegen und NICHT übergangen werden
+  dürfen** — beide gemessen vorhanden:
+  · `neue-ideen/x50conv.exe` — seine Lizenz **untersagt
+    Disassemblierung ausdrücklich**. Aus ihm stammt nichts als die
+    mitgelieferte Dokumentation. „Nimm alles auseinander" gilt hier
+    **nicht**; das ist keine Auslegungsfrage, sondern die Lizenz.
+  · `neue-ideen/OmniFlop_3.2d_Format_Harvest_C.zip` (239 Formate) —
+    **nicht in den Baum**, solange die Eigentümerentscheidung zum
+    EU-Datenbankherstellerrecht (§§87a ff. UrhG) aussteht. Dazu
+    `neue-ideen/UFT-NN_OmniFlop_Analyse.md`.
+  · **Die Einwilligung „für alles" deckt Arbeitsschritte, nicht
+    Lizenzen.** Eine Lizenzverletzung baut einen Defekt ein, den kein
+    Rotbeweis fangen kann (MF-695).
+- **Fertig heißt:** **jeder** Eintrag der obersten Ebene von
+  `neue-ideen/` trägt ein festgehaltenes Urteil aus vier Feldern —
+  *Lizenz (an der Datei gemessen, nicht am API-Feld)* · *Kanal nach
+  MF-695* · *Kennzahl oder „Fundus"* · *nächster Griff* —, und dieses
+  Register ist **abgeleitet, nicht gepflegt**: ein Skript liest die
+  Verzeichnisebene und meldet, was noch ohne Urteil ist. Solange auch
+  nur ein Eintrag ohne Urteil dasteht, ist der Posten offen.
+- **Aufwand:** **nicht schätzbar** für das Ganze — 2408 Dateien in 197
+  Archiven, und die Lizenzfrage ist je Paket eine eigene Messung.
+  Schätzbar ist erst die erste Scheibe, und die wird beim Beginn
+  benannt, nicht hier.
+- **Vorgehen, das beim Beginn gilt** (damit es nicht später als
+  Einschränkung erscheint):
+  · **Das Register zuerst, dann die Inhalte.** Ohne abgeleitetes
+    Register ist „alles gesichtet" eine Behauptung — 197 Archive kann
+    niemand im Kopf halten, und eine gepflegte Liste veraltet still
+    (dieser Baum hat das fünfmal gemessen).
+  · **Lizenz an der DATEI messen.** `measurement_hit_wrong_class`: das
+    API-Feld von GitHub/GitLab meldet die Projekteinstellung, nicht
+    die Lizenzdatei — `fdtc` galt als „ohne Lizenz" und trägt BSD-3.
+  · **Vor jedem Eintrag „steht das schon irgendwo?"** — der Baum
+    zitiert `neue-ideen/` bereits 108 Mal; ein zweiter Eintrag
+    derselben Sache wäre die Doppelhaltung, gegen die K4 steht.
+  · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
+    bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
+    allem, was auffällt.
+- **Stand:** —
+- **Beleg:** —
+
+---
+
+## Fundus
+
+*(aufgenommen, bewegt aber keine der vier Kennzahlen aus `CLAUDE.md`
+§„jeder Baustein benennt seine Kennzahl" — nach MF-640 ist das Fundus,
+nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
+
+---
+
+## Erledigt
+
+*(mit Beleg: Commit-Hash und MF-Nummer)*
+
 ### A-030 · Formatfilter aus der Registry, Familienachse, Versand
-- **Status:** **in Arbeit** — Punkt 1 fertig und abgenommen, Punkt 2
-  gemessen mit widerlegter Annahme, Punkt 3 **blockiert**
-  · **Aufgenommen:** 2026-09-18
+- **Status:** **erledigt** — alle drei Punkte belegt
+  · **Aufgenommen:** 2026-09-18 · **Abgeschlossen:** 2026-09-18
+
+> **BERICHTIGT MF-1258 — die Statuszeile war veraltet, und sie hat
+> die Ein-Schloss-Regel verletzt.** Hier stand bis heute: „**in
+> Arbeit** — Punkt 1 fertig und abgenommen, Punkt 2 gemessen mit
+> widerlegter Annahme, Punkt 3 **blockiert**". Gemessen nennt die
+> Beleg-Zeile weiter unten **alle drei** Punkte mit Commit, und
+> alle sechs genannten Hashes sind vorhanden und stehen auf
+> `origin/main` (`git merge-base --is-ancestor`): `422ca4aa`
+> (Punkt 3), `117808c7` + `0bafecfa` (Punkt 1), `61cb0d01` +
+> `0da4b0a1` + `b8d2419a` (Punkt 2). Die Familienachse laeuft mit
+> Selbsttest **18/18**, ihr Frische-Tor ist gruen.
+>
+> Das ist dieselbe Gestalt wie bei `A-031`, nur andersherum: dort
+> stand ein wartender Posten unter „Erledigt", hier ein erledigter
+> unter „in Arbeit". Eine Statuszeile ist eine Behauptung wie jede
+> andere — sie gehoert gegen den Beleg gehalten, nicht
+> fortgeschrieben.
 - **Wortlaut:** „ja, sehr gut, mach 1. 2. & 3." — auf meinen Vorschlag
   „1. Formatfilter aus `plugin.extensions` erzeugen — 93 Formate
   erreichbar machen. 2. Familienachse als Feld, danach die
@@ -3754,99 +3932,6 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · **MF-1247** (Teilstring-Falle in zwei Fähigkeits-Toren) liegt
     fertig im Arbeitsbaum und wartet nach der Ordnungsregel auf den
     Tor-Commit der zweiten Sitzung.
-
-### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
-- **Status:** **aufgenommen** (wartet; oberster der Warteschlange,
-  seit `A-031` mit MF-1256 abgeschlossen ist)
-  · **Aufgenommen:** 2026-09-19
-- **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
-  gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
-  code noch verbessern kann, nimm alles aus einander , meine
-  einwilligung hst du für alles"
-- **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
-  davon **197 Archive** auf der obersten Ebene und **20** bereits
-  entpackte Verzeichnisse. `neue-ideen/` ist gitignoriert
-  (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
-  zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
-  `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
-- **Kennzahl:** gemischt, und das gehört ausgesprochen. Der einzelne
-  Fund bewegt meist **keine** der vier und ist damit nach MF-640
-  *Fundus, nicht Auftrag*. Bewegen kann er **ungeprüfte Formate (T3)**
-  — nämlich dann, wenn sich darin ein **Erzeuger** oder ein **Oracle**
-  findet, das eine Stufe hebt; und **angebotene Wandlungspfade**, wenn
-  eine Richtung dadurch belegbar wird. Die Sichtung selbst ist Fundus;
-  ihr Ertrag ist es nicht zwangsläufig.
-- **Kanal:** **je Fund einer**, nach MF-695 — Port | Nachbau |
-  Helfer-Prozess | Oracle | Spec | Daten/Fixture | Fundus. „Lizenz vor
-  Fähigkeit" heißt nicht „Fund verwerfen", sondern *auf welchem Weg*,
-  und der Weg wird bei der Aufnahme des Funds benannt, nicht wenn der
-  Code schon dasteht.
-- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
-  **Rotbeweis zuerst**. Dazu das Moratorium: ein **neues
-  Format-Plugin** ist auch als *Vorschlag* gesperrt; erlaubt sind
-  Bugfixes an Bestehendem, Verifikations-/Korpusarbeit und
-  Spec-Korrekturen gegen autoritative Quellen. Ein Fund, der ein neues
-  Format nahelegt, wird als Fund notiert und **nicht** gebaut.
-- **OPEN_ITEMS:** verwandt und **nicht abzuschreiben** — `P3-8`
-  (drei Aminet-Pakete, Lizenzurteil offen), `P3-11` (Lizenz-Klasse
-  statt Einzelurteil, Eigentümer-Vorlage), `P3-19` (`COPY130.M65`,
-  Fundus), `P3-30` (`pyRT11`, Fundus), `P3-99` (`dskx` widerlegt).
-  Neue Befunde bekommen dort eine Nummer; dieser Posten verweist nur.
-- **Zwei Sperren, die im Gegenstand liegen und NICHT übergangen werden
-  dürfen** — beide gemessen vorhanden:
-  · `neue-ideen/x50conv.exe` — seine Lizenz **untersagt
-    Disassemblierung ausdrücklich**. Aus ihm stammt nichts als die
-    mitgelieferte Dokumentation. „Nimm alles auseinander" gilt hier
-    **nicht**; das ist keine Auslegungsfrage, sondern die Lizenz.
-  · `neue-ideen/OmniFlop_3.2d_Format_Harvest_C.zip` (239 Formate) —
-    **nicht in den Baum**, solange die Eigentümerentscheidung zum
-    EU-Datenbankherstellerrecht (§§87a ff. UrhG) aussteht. Dazu
-    `neue-ideen/UFT-NN_OmniFlop_Analyse.md`.
-  · **Die Einwilligung „für alles" deckt Arbeitsschritte, nicht
-    Lizenzen.** Eine Lizenzverletzung baut einen Defekt ein, den kein
-    Rotbeweis fangen kann (MF-695).
-- **Fertig heißt:** **jeder** Eintrag der obersten Ebene von
-  `neue-ideen/` trägt ein festgehaltenes Urteil aus vier Feldern —
-  *Lizenz (an der Datei gemessen, nicht am API-Feld)* · *Kanal nach
-  MF-695* · *Kennzahl oder „Fundus"* · *nächster Griff* —, und dieses
-  Register ist **abgeleitet, nicht gepflegt**: ein Skript liest die
-  Verzeichnisebene und meldet, was noch ohne Urteil ist. Solange auch
-  nur ein Eintrag ohne Urteil dasteht, ist der Posten offen.
-- **Aufwand:** **nicht schätzbar** für das Ganze — 2408 Dateien in 197
-  Archiven, und die Lizenzfrage ist je Paket eine eigene Messung.
-  Schätzbar ist erst die erste Scheibe, und die wird beim Beginn
-  benannt, nicht hier.
-- **Vorgehen, das beim Beginn gilt** (damit es nicht später als
-  Einschränkung erscheint):
-  · **Das Register zuerst, dann die Inhalte.** Ohne abgeleitetes
-    Register ist „alles gesichtet" eine Behauptung — 197 Archive kann
-    niemand im Kopf halten, und eine gepflegte Liste veraltet still
-    (dieser Baum hat das fünfmal gemessen).
-  · **Lizenz an der DATEI messen.** `measurement_hit_wrong_class`: das
-    API-Feld von GitHub/GitLab meldet die Projekteinstellung, nicht
-    die Lizenzdatei — `fdtc` galt als „ohne Lizenz" und trägt BSD-3.
-  · **Vor jedem Eintrag „steht das schon irgendwo?"** — der Baum
-    zitiert `neue-ideen/` bereits 108 Mal; ein zweiter Eintrag
-    derselben Sache wäre die Doppelhaltung, gegen die K4 steht.
-  · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
-    bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
-    allem, was auffällt.
-- **Stand:** —
-- **Beleg:** —
-
----
-
-## Fundus
-
-*(aufgenommen, bewegt aber keine der vier Kennzahlen aus `CLAUDE.md`
-§„jeder Baustein benennt seine Kennzahl" — nach MF-640 ist das Fundus,
-nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
-
----
-
-## Erledigt
-
-*(mit Beleg: Commit-Hash und MF-Nummer)*
 
 ### A-031 · Vier Dinge: Sondendoktrin, eine Größenrechnung, Bauabbruch, Körnung
 - **Status:** **erledigt** (alle vier Punkte, CI grün) · **Aufgenommen:** 2026-09-19 · **Abgeschlossen:** 2026-09-19

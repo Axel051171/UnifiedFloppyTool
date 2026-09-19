@@ -32,12 +32,31 @@
 #   ALTBESTAND   steht in docs/teilstring_baseline.json und blockiert NICHT
 #   NEUE FUNDE   blockieren
 #
-# Stand der Grundlinie: **51 Fundstellen, 50 Fingerabdrücke** (die
-# Doppelstelle in `uft_genesis.c` fällt auf einen Fingerabdruck, siehe
-# `Finding.fingerprint()`). Die Grundlinie ist ausdrücklich eine
-# SCHULDENLISTE, keine Ausnahmeliste: wer einen Fund behebt, entfernt
-# seinen Eintrag. Die Aufschlüsselung der 51 steht in
-# `docs/OPEN_ITEMS.md` `P3-479`.
+# Die Grundlinie ist ausdrücklich eine SCHULDENLISTE, keine
+# Ausnahmeliste: wer einen Fund behebt, entfernt seinen Eintrag. Die
+# Aufschlüsselung steht in `docs/OPEN_ITEMS.md` `P3-479`.
+#
+# BERICHTIGT MF-1258 — hier stand: „Stand der Grundlinie: **51
+# Fundstellen, 50 Fingerabdrücke** (die Doppelstelle in `uft_genesis.c`
+# fällt auf einen Fingerabdruck, siehe `Finding.fingerprint()`)".
+#
+# Der Satz war am Tag des Eintrags richtig und ist es nicht mehr:
+# gemessen trägt `docs/teilstring_baseline.json` heute `count: 464` bei
+# **382** Fingerabdrücken. **Und der Grund ist NICHT, dass 413 neue
+# Fallen dazugekommen sind** — das wäre der falsche Schluss, und ich
+# hatte ihn beim Berichtigen zuerst gezogen. Der Umfang der Grundlinie
+# wurde in `A-028` bewusst erweitert: erst trug sie nur die `sicher`-
+# Fälle, womit der SARIF-Lauf den ganzen `prüfen`-Altbestand als NEU
+# meldete; seither trägt sie beide Einschätzungen. Gemessen über
+# `src include scripts` sind es heute **278 Fundstellen: 256 `prüfen`,
+# 22 `sicher`** — zwei verschiedene Größen, und wer sie verwechselt,
+# liest Fortschritt oder Verfall, wo eine Umfangsänderung steht.
+#
+# **Die Zahl steht deshalb nicht mehr hier.** Sie steht im Feld `count`
+# der Datei selbst, und der Schritt „Grundlinien nennen ihre eigene
+# Zahl" unten druckt sie bei jedem Lauf. Eine von Hand nachgezogene
+# Zahl neben einer erzeugten Datei ist die Drift aus MF-541 — und sie
+# stand im Kopf des Prüfers, der gegen diese Klasse antritt.
 #
 # ── WAS WANN LÄUFT ─────────────────────────────────────────────────────
 #
@@ -112,9 +131,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 16 Zusagen, je eine pro behobenem Defekt plus die Köderdatei.
-      # Dass sie rot werden KANN, ist an der Urfassung vorgeführt:
-      # 2 grün, 7 rot (MF-1228).
+      # Je eine Zusage pro behobenem Defekt plus die Köderdatei. Dass
+      # sie rot werden KANN, ist an der Urfassung vorgeführt: 2 grün,
+      # 7 rot (MF-1228).
+      #
+      # BERICHTIGT MF-1258 — hier stand „16 Zusagen"; gemessen sind es
+      # **17**. Die Zahl steht nicht mehr hier, weil der Selbsttest sie
+      # selbst als `SELBSTTEST N/N` druckt (MF-541: eine gepflegte Zahl
+      # neben einer, die das Werkzeug ausgibt, driftet).
       - name: Regeln gegen die Köderdatei
         run: python3 scripts/audit_teilstring.py --selbsttest
 
@@ -124,9 +148,15 @@ jobs:
       - name: Köderdatei vorhanden
         run: test -f tests/formats/fixture_traps.c
 
-      # A-029: der zweite Prüfer, dieselbe Spur. 36 Zusagen, je eine pro
+      # A-029: der zweite Prüfer, dieselbe Spur. Je eine Zusage pro
       # behobenem Defekt — sechs davon gemessen am Baum, vier von `gcc`
       # als fremder Hand entschieden.
+      #
+      # BERICHTIGT MF-1258 — hier stand „36 Zusagen"; gemessen sind es
+      # **42**. Auch diese Zahl druckt der Selbsttest selbst. Und sie
+      # hängt an der Umgebung: unter cp1252 fällt einer und es sind
+      # 41/42 (`P3-484`) — ein weiterer Grund, sie nicht hier zu
+      # behaupten, sondern im Protokoll zu lesen.
       - name: Code-Fallen gegen die Köderdateien
         run: python3 scripts/audit_codefallen.py --selbsttest
 
@@ -134,6 +164,27 @@ jobs:
         run: |
           test -f tests/formats/fixture_code_a.c
           test -f tests/formats/fixture_code_b.c
+
+      # MF-1258: der Stand der Grundlinien steht NICHT mehr im Kopf
+      # dieser Datei, sondern wird hier gedruckt. Drei Zahlen standen
+      # dort von Hand und waren alle veraltet — die Schuldenliste um
+      # Faktor neun. Wer den Stand wissen will, liest ihn im Protokoll
+      # oder im Feld `count` der Datei; er steht nirgends zweimal (D3).
+      #
+      # Der Schritt prueft NICHTS und blockiert nie: `count` gegen
+      # `len(accepted)` waere eine Zusage ueber den Schreiber der Datei,
+      # und die gehoert in den Selbsttest des Pruefers, nicht hierher.
+      - name: Grundlinien nennen ihre eigene Zahl
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          for p in ("docs/teilstring_baseline.json",
+                    "docs/codefallen_baseline.json"):
+              d = json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
+              print("%-34s count=%-6s Fingerabdruecke=%d  Fassung=%s"
+                    % (p, d.get("count", "?"), len(d.get("accepted", [])),
+                       d.get("version", "?")))
+          PY
 
   # ── Pull Request: nur Geändertes, mit Anmerkungen am Diff ────────────
   geaendert:
