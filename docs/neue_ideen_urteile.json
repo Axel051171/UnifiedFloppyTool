@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "_zweck": "A-032: je Eintrag der obersten Ebene von neue-ideen/ ein Urteil aus vier Feldern. Gepflegt von Hand, GEPRUEFT von scripts/gen_neue_ideen_register.py — das Skript liest die Verzeichnisebene und meldet, was noch ohne Urteil ist. Eine gepflegte Liste allein veraltet still; dieser Baum hat das fuenfmal gemessen (MF-636).",
+  "_felder": {
+    "lizenz": "An der DATEI gemessen, nicht am API-Feld von GitHub/GitLab. Das API-Feld meldet die Projekteinstellung; fdtc galt danach als 'ohne Lizenz' und traegt BSD-3. 'ungemessen' ist ein erlaubter und ehrlicher Wert.",
+    "lizenz_beleg": "Wo die Aussage herkommt: Dateiname im Paket plus Groesse, oder 'keine Lizenzdatei im Paket, README vollstaendig gelesen'. Ohne Beleg ist die Lizenz 'ungemessen'.",
+    "kanal": "Einer der sieben nach MF-695.",
+    "kennzahl": "Eine der vier aus CLAUDE.md, oder 'Fundus' wenn keine bewegt wird (MF-640).",
+    "naechster_griff": "Ein Satz. Was als Naechstes zu tun waere — nicht was der Fund ist."
+  },
+  "_kanaele": [
+    "Port", "Nachbau", "Helfer-Prozess", "Oracle", "Spec",
+    "Daten/Fixture", "Fundus"
+  ],
+  "_kennzahlen": [
+    "T3 runter", "Wandlungspfade rauf", "leckende Tests null",
+    "Bench-Alter runter", "Fundus"
+  ],
+  "eintraege": {
+    "x50conv.exe": {
+      "lizenz": "Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT",
+      "lizenz_beleg": "mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen."
+    },
+    "OmniFlop_3.2d_Format_Harvest_C.zip": {
+      "lizenz": "ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen",
+      "lizenz_beleg": "neue-ideen/UFT-NN_OmniFlop_Analyse.md",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nicht in den Baum, solange die Eigentuemerentscheidung aussteht. Die Entscheidung vorlegen, nicht vorwegnehmen."
+    }
+  }
+}

@@ -3853,16 +3853,30 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 - **Beleg:** —
 
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
-- **Status:** **aufgenommen** (wartet; oberster der Warteschlange,
-  seit `A-031` mit MF-1256 abgeschlossen ist)
+- **Status:** **in Arbeit** (seit 2026-09-19, auf ausdrückliche
+  Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
+  oberster der Warteschlange, anfangen !!"). `A-028` steht ebenfalls
+  auf `in Arbeit`, wartet aber seit 2026-09-17 auf eine
+  **Eigentümerentscheidung** (öffentlicher Wegwerf-PR) und blockiert
+  nichts — das ist hier vermerkt statt verschwiegen, weil zwei Posten
+  auf `in Arbeit` gegen die Ein-Schloss-Regel verstoßen.
   · **Aufgenommen:** 2026-09-19
 - **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
   gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
   code noch verbessern kann, nimm alles aus einander , meine
   einwilligung hst du für alles"
 - **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
-  davon **197 Archive** auf der obersten Ebene und **20** bereits
-  entpackte Verzeichnisse. `neue-ideen/` ist gitignoriert
+  davon ~~**197 Archive** auf der obersten Ebene und **20** bereits
+  entpackte Verzeichnisse~~. **BERICHTIGT beim Beginn, gemessen:** die
+  oberste Ebene trägt **216** Einträge — **108** Archive, **19**
+  Verzeichnisse, **70** eigene `.md`-Ausarbeitungen, dazu 19 einzelne
+  Quell-/Dokumentdateien. Die „197" trifft weder die oberste Ebene
+  noch das Ganze: im **gesamten** Baum von `neue-ideen/` sind es
+  **424** Archive. Die Zahl stand ungemessen in meinem eigenen
+  Aufnahmeeintrag; sie bleibt oben durchgestrichen stehen, weil
+  Entfernen keine Behebung ist. **2408 Dateien und 636 MB halten**
+  (nachgezählt: 2408 Dateien, 661,7 MB inklusive der obersten
+  Dokumente). `neue-ideen/` ist gitignoriert
   (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
   zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
   `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
@@ -3928,7 +3942,40 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
     bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
     allem, was auffällt.
-- **Stand:** —
+- **Stand 2026-09-19, erster Durchgang — die Gestalt ist gemessen, und
+  sie ist NICHT „216 Archive aufmachen":**
+  · **Die 70 `.md` sind kein Material, sondern die Spur der
+    bisherigen Sichtung** — eine durchnummerierte Reihe UFT-29 bis
+    UFT-105, 64 Dokumente auf 62 Nummern (UFT-30 und UFT-32 doppelt
+    vergeben), mit **15 Lücken**. Damit bekommt „was vergessen wurde"
+    eine prüfbare Form statt einer Willenserklärung.
+  · **Fünf Lücken liegen in `~/Downloads`, nicht in `neue-ideen/`:**
+    UFT-34 (Synchro-Express-Atari), UFT-35 (FastCopy3-Atari), UFT-41
+    (CopyWizard-Atari8bit), UFT-42 (XCopyPro-BBBF), UFT-50
+    (Korg-TSeries). **Drei der zugehörigen Materialordner stehen
+    längst in `neue-ideen/`** (`FastCopy3`, `Copy_Wizard`,
+    `X-Copy_Professional_`) — die Sichtung hat stattgefunden, ihr
+    Ergebnis ist nur nie mitgewandert. Das ist buchstäblich „was
+    vergessen wurde". Zehn Nummern fehlen ganz: 36–40, 44, 45, 47,
+    48, 98.
+  · **Die Gegenprobe hat den zweiten Befund halbiert, und das gehört
+    dazu:** 9 Ausarbeitungen zitiert der Baum unter ihrer **Nummer**
+    nirgends — nach **Inhalt** gesucht kennt er UFT-94 (COPYLOCK 80),
+    UFT-99 (NIBtools 64 / RapidLok 65) und UFT-95/96 (GEOS 43) sehr
+    wohl. Wirklich unberührt sind **vier bis fünf**: UFT-102, UFT-103,
+    UFT-101, UFT-105, am Rand UFT-97. „0 gefunden" ist keine
+    Entwarnung, sondern die Frage, was die Messung nicht sieht.
+  · **Eine Zahl ist ausdrücklich eine GRENZE, keine Zahl:** von 216
+    Einträgen nennt der Baum 71 — davon 9 nur über einen Namen, der
+    als Suchwort nichts taugt (`1`, `disk`, `copy`, `.claude`).
+    Unerwähnt sind also **mindestens 145**, höchstens 154.
+  · **Zwei Zahlen des eigenen Aufnahmeeintrags hielten nicht** (197
+    Archive, 20 Verzeichnisse) — berichtigt oben, durchgestrichen
+    stehen gelassen.
+  · **Festgehalten als `P3-512`.** Noch **nicht** getan: das
+    abgeleitete Register, das je Eintrag ein Urteil aus vier Feldern
+    verlangt — das ist der nächste Griff, und ohne es ist „alles
+    gesichtet" weiterhin eine Behauptung.
 - **Beleg:** —
 
 ---
