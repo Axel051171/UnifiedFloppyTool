@@ -1079,6 +1079,7 @@ SOURCES += \
     src/core/uft_core_stubs.c \
     src/core/uft_disk2.c \
     src/core/uft_disk2_bridge.c \
+    src/core/uft_disk2_io.c \
     src/core/uft_disk_create_image.c \
     src/core/uft_pll.c
 

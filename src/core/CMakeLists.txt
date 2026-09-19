@@ -52,6 +52,9 @@ set(CORE_SOURCES
                                # Herkunft und Zuversicht (Entwurf des
                                # Eigentuemers, UFT-NN)
     uft_disk2_bridge.c         # MF-1272: die Bruecke uft_disk_t -> uft_disk2_t
+    uft_disk2_io.c             # MF-1275: UFTD — der Behaelter, der ALLES
+                               # traegt; das erste Format, in das ein Abzug
+                               # ohne Verlust geschrieben werden kann
     uft_disk_create_image.c    # MF-991: die Tuer zu plugin->create
     ../flux/uft_scp_parser.c   # MF-418: uft_core_stubs' SCP adapters call into it
     uft_decode_pipeline.c

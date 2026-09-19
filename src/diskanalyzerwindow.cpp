@@ -15,6 +15,7 @@ extern "C" {
 #include <uft/uft_format_plugin.h>  /* struct uft_disk field access */
 #include <uft/uft_types.h>
 #include <uft/core/uft_disk2_bridge.h>   /* MF-1273: das Zentrum, aus dem Plugin gespeist */
+#include <uft/core/uft_disk2_io.h>       /* MF-1275: UFTD — der Behaelter */
 }
 
 #include <vector>
@@ -62,6 +63,9 @@ DiskAnalyzerWindow::DiskAnalyzerWindow(QWidget *parent) :
 
 DiskAnalyzerWindow::~DiskAnalyzerWindow()
 {
+    /* MF-1275: das Modell gehoert diesem Fenster. */
+    uft_d2_destroy(m_traeger);
+    m_traeger = nullptr;
     delete ui;
 }
 
@@ -255,9 +259,15 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
  * eine Verhaltensaenderung dieses Einbaus ist. */
 QString DiskAnalyzerWindow::traegerBericht(struct uft_disk *disk)
 {
+    /* MF-1275: das Modell des vorigen Abbilds geht, bevor das neue
+     * kommt — sonst haelt das Fenster zwei Disketten zugleich. */
+    uft_d2_destroy(m_traeger);
+    m_traeger = nullptr;
+
     uft_disk2_t *d2 = uft_d2_create();
     if (!d2)
         return tr("Kein Bericht: kein Speicher fuer das Zentrum.");
+    m_traeger = d2;
 
     uft_d2_bridge_stats_t st;
     const bool ok = uft_d2_from_disk(d2, disk, uft_disk_plugin(disk), &st);
@@ -280,8 +290,40 @@ QString DiskAnalyzerWindow::traegerBericht(struct uft_disk *disk)
                         "nicht lesbar). Der Bericht darunter nennt den Grund.\n")
                          .arg(st.tracks_asked).arg(st.tracks_failed));
     }
-    uft_d2_destroy(d2);
+    /* Das Modell bleibt in `m_traeger` — `traegerSichern()` schreibt
+     * genau DIESE Messung, nicht eine zweite. */
     return text;
+}
+
+/* MF-1275: der erste Weg, auf dem ein Abzug diesen Baum OHNE Verlust
+ * verlaesst.
+ *
+ * Jede bisherige Wandlung ist verlustbehaftet, und `uft_d2_check_loss()`
+ * sagt fuer jedes Zielformat, WAS verloren geht — fuer das eigene gab es
+ * keine Antwort, weil es keines gab. UFTD traegt alle vier Schichten samt
+ * Herkunft, Zuversicht je Bit, Stimmen je Bit, Befunden und Metadaten.
+ *
+ * Geschrieben wird das Modell, das beim Laden entstanden ist. Ein zweites
+ * Lesen waere eine zweite MESSUNG, und zwei Messungen koennen
+ * auseinandergehen — der Bericht im Kasten und die Datei muessen von
+ * derselben stammen. */
+bool DiskAnalyzerWindow::traegerSichern(const QString &pfad, QString *fehler)
+{
+    if (!m_traeger) {
+        if (fehler)
+            *fehler = tr("Kein Abbild geladen — es gibt nichts zu sichern.");
+        return false;
+    }
+    const QByteArray p = QFile::encodeName(pfad);
+    const uftd_result_t r = uftd_save_file(m_traeger, p.constData());
+    if (r.code != UFTD_OK) {
+        if (fehler)
+            *fehler = tr("UFTD nicht geschrieben: %1 (%2)")
+                          .arg(QString::fromUtf8(uftd_err_name(r.code)),
+                               QString::fromUtf8(r.what ? r.what : "ohne Grund"));
+        return false;
+    }
+    return true;
 }
 
 void DiskAnalyzerWindow::onTrackChanged(int track)
@@ -360,8 +402,27 @@ void DiskAnalyzerWindow::onExportClicked()
                 file.close();
             }
         }
+
+        /* MF-1275: neben den Bericht der vollstaendige Abzug. Der Bericht
+         * ist eine Zusammenfassung — die UFTD ist die Messung selbst, mit
+         * Herkunft je Objekt und Zuversicht je Bit. Sie wird nur
+         * geschrieben, wenn ein Modell da ist, und ein Scheitern wird
+         * GESAGT statt verschluckt. */
+        QString uftd = filename;
+        const int punkt = uftd.lastIndexOf(QLatin1Char('.'));
+        const int strich = qMax(uftd.lastIndexOf(QLatin1Char('/')),
+                                uftd.lastIndexOf(QLatin1Char('\\')));
+        if (punkt > strich) uftd.truncate(punkt);
+        uftd += QStringLiteral(".uftd");
+
+        QString grund;
+        const bool abzug = traegerSichern(uftd, &grund);
+
         QMessageBox::information(this, tr("Export"),
-            tr("Export to %1 completed.").arg(filename));
+            abzug ? tr("Export to %1 completed.\nComplete carrier image: %2")
+                        .arg(filename, uftd)
+                  : tr("Export to %1 completed.\nNo carrier image: %2")
+                        .arg(filename, grund));
     }
 }
 

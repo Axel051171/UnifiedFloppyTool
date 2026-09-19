@@ -54,10 +54,15 @@
 #include <QtTest/QtTest>
 #include <QTextEdit>
 #include <QSpinBox>
+#include <QTemporaryDir>
+
+#include <vector>
 
 #include "diskanalyzerwindow.h"
 
 #include <uft/uft_format_plugin.h>
+#include <uft/core/uft_disk2.h>
+#include <uft/core/uft_disk2_io.h>
 
 class TestDiskAnalyzerNoFiction : public QObject
 {
@@ -206,6 +211,71 @@ private slots:
                  qPrintable("Ein D64 hat genau die Sektorschicht:\n" + text));
         QVERIFY2(!text.contains("Kein Inhalt eingespeist"),
                  qPrintable("Das Zentrum blieb leer:\n" + text));
+    }
+
+    /* ── MF-1275: der Abzug verlaesst den Baum OHNE Verlust ──────────────
+     *
+     * `traegerSichern()` schreibt das Modell, das beim Laden entstanden
+     * ist, als UFTD. Geprueft wird nicht, DASS eine Datei entsteht —
+     * geprueft wird, dass sie dasselbe traegt: dieselben 683 Sektoren auf
+     * denselben 35 Spuren, und derselbe Bericht Zeichen fuer Zeichen.
+     *
+     * Rotbeweis: `uftd_save_file()` in `traegerSichern()` nicht rufen
+     * -> die Datei fehlt und diese Zusage faellt; die fuenf darueber
+     * nicht. */
+    void theCarrierLeavesTheTreeWithoutLoss()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        QTemporaryDir dir;
+        QVERIFY2(dir.isValid(), "kein Platz fuer die Pruefdatei");
+        const QString ziel = dir.filePath("traeger.uftd");
+
+        DiskAnalyzerWindow w;
+        w.loadImage(img);
+        auto *t = w.findChild<QTextEdit *>("textDiskReport");
+        QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+        const QString bericht = t->toPlainText();
+
+        QString grund;
+        QVERIFY2(w.traegerSichern(ziel, &grund),
+                 qPrintable("Der Abzug wurde nicht geschrieben: " + grund));
+        QVERIFY2(QFile::exists(ziel), "Die UFTD-Datei fehlt.");
+        QVERIFY2(QFileInfo(ziel).size() > 1000,
+                 qPrintable(QString("Eine 35-Spur-Diskette mit 683 Sektoren "
+                                    "kann nicht in %1 Byte passen.")
+                                .arg(QFileInfo(ziel).size())));
+
+        /* Zurueckgelesen — und zwar mit dem FREMDEN Weg, nicht ueber das
+         * Fenster: `uftd_load_file()` baut ein neues Modell aus der Datei. */
+        uft_disk2_t *zurueck = nullptr;
+        const uftd_result_t r =
+            uftd_load_file(QFile::encodeName(ziel).constData(), &zurueck);
+        QVERIFY2(r.code == UFTD_OK,
+                 qPrintable(QString("Laden scheiterte: %1")
+                                .arg(uftd_err_name(r.code))));
+        QVERIFY(zurueck != nullptr);
+
+        QCOMPARE(uft_d2_track_count(zurueck), size_t(35));
+        size_t sektoren = 0;
+        for (size_t i = 0; i < uft_d2_track_count(zurueck); ++i)
+            sektoren += uft_d2_track_at(zurueck, i)->sectors.count;
+        QCOMPARE(sektoren, size_t(683));
+
+        /* Der Bericht aus der geladenen Datei muss Zeichen fuer Zeichen
+         * derselbe sein wie der im Kasten. Waere er es nicht, haette die
+         * Sicherung etwas veraendert — und genau das darf sie nie. */
+        std::vector<char> buf(16384);
+        size_t need = uft_d2_report(zurueck, buf.data(), buf.size());
+        if (need >= buf.size()) {
+            buf.assign(need + 1, '\0');
+            uft_d2_report(zurueck, buf.data(), buf.size());
+        }
+        QCOMPARE(QString::fromUtf8(buf.data()), bericht);
+
+        uft_d2_destroy(zurueck);
     }
 };
 

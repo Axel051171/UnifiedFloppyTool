@@ -4239,11 +4239,62 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     dasselbe Ergebnis liefert. Erst der Fall „Adressfeld bei 10,
     Datenfeld ab 70, Index 64" trennt die beiden. Nachgetragen, dann
     fällt Mutation D.
-  · **GESTOPPT:** der **Behälter UFTD** (`uft_disk2_io.{h,c}`,
-    Rundlauf und Ladefehler) ist Teil desselben eingereichten Pakets
-    und kommt als eigener Commit — ein Tor wird allein und zuerst
-    committet. Er braucht einen Produktivaufrufer (D2), und der ist
-    noch nicht gewählt.
+  · ~~**GESTOPPT:** der Behälter UFTD kommt als eigener Commit.~~
+    **Eingelöst mit MF-1275 (neunter Durchgang, unten).**
+- **Stand 2026-09-20, neunter Durchgang — UFTD: der erste Weg, auf dem
+  ein Abzug diesen Baum OHNE Verlust verlässt (MF-1275):**
+  · **Der Behälter.** Kopf `"UFTD"` + Version + Flags + Gesamtlänge;
+    danach Blöcke aus Kennung, Länge, Inhalt und **eigener CRC32**:
+    DERV (Ableitungsregister), META, TRAK mit FLUX/BITS/SECT, FSYS,
+    DIAG, END mit der Gesamt-CRC. Drei Eigenschaften, die nicht
+    verhandelbar sind: unbekannte Blöcke werden **übersprungen und
+    gemeldet** (vorwärtsverträglich); jeder Block trägt seine CRC, also
+    wird ein gekipptes Bit **an seiner Stelle** gefunden und alles
+    davor ist trotzdem geladen; und **Laden ist nie stiller als
+    Speichern** — was fehlt oder nicht stimmt, steht danach als Befund
+    im Modell.
+  · **Der Produktivaufrufer, und er ist nicht nachgereicht:** das
+    Analyzer-Fenster **behält** seit MF-1275 das Modell (`m_traeger`),
+    statt es nach dem Bericht wegzuwerfen; `traegerSichern()` schreibt
+    genau **diese** Messung als UFTD, und der Export legt sie neben den
+    HTML-/Text-Bericht. Ein zweites Lesen wäre eine zweite Messung, und
+    zwei Messungen können auseinandergehen.
+  · **Gemessen am D64 des vorhandenen Tests:** gesichert, mit
+    `uftd_load_file()` **von fremder Hand** zurückgelesen — 35 Spuren,
+    683 Sektoren, und der Bericht aus der Datei ist **Zeichen für
+    Zeichen** derselbe wie der im Kasten. Am vollen Modell (Fluss mit
+    zwei Umdrehungen, Bitstrom mit allen vier Nebenreihen, zwei
+    Dateisysteme, Metadaten, Ableitungen, Befunde): **3845 Byte,
+    Doppelrundlauf vollständig byteidentisch.**
+  · **Drei Abweichungen vom Entwurf, jede mit Grund:** (a) seine
+    Versionsprüfung `(ver >> 8) > (UFTD_VERSION >> 8) && …` konnte für
+    **keine** Fassung unter 256 zuschlagen — eine Datei der Fassung 2
+    hätte ein Leser der Fassung 1 klaglos geöffnet; (b) `meta_hidden`
+    wurde nicht mitgesichert, womit ein Modell mit Überlauf nach einem
+    Rundlauf einen **anderen Bericht** gehabt hätte; (c) Befunde gehen
+    beim Laden **direkt** in die Liste statt durch `uft_d2_diag()` —
+    sonst zählt eine volle Liste ihren eigenen Überlauf-Eintrag noch
+    einmal als Überlauf.
+  · **Rotbeweis: sechs Mutationen, sechs gefallen.** A `uftd_save_file`
+    im Analyzer nicht gerufen → genau die neue Zusage fällt (6/1), die
+    sechs alten nicht. B `meta_hidden` nicht gesichert (2). C verdeckte
+    Befundzähler verloren (2). D die Versionsprüfung des Entwurfs
+    eingesetzt (3 — „Fassung 2 abgewiesen, war ok"). E Gesamtlänge nach
+    der Gesamt-CRC eingetragen (6 — **4068 statt 3845 Byte** und ein
+    `TOTAL_CRC`-Befund, den es nicht geben dürfte). F Zuversichtsregel
+    beim Laden umgangen (5). Wiederhergestellt byteidentisch, volle
+    Suite **521/521**, Bau 0 Warnungen.
+  · **Was der Entwurf selbst als offen nennt und offen bleibt:** keine
+    Kompression (ein `FLXZ`-Block ginge ohne Änderung an Lesern, die
+    ihn nicht kennen), kein Streaming, keine `SECTOR_OVERLAP`-Prüfung,
+    und die Versionsregel „Nebenversion darf höher sein" — sie kommt,
+    wenn es eine zweite Version gibt; vorher wäre sie eine Regel ohne
+    Fall.
+  · **Nicht belegt:** ein Flussabzug in Originalgröße. Das volle
+    Testmodell hat 3845 Byte; wie sich `uftd_save()` bei fünf
+    Umdrehungen über 160 Spuren verhält, ist **nicht gemessen** — der
+    Entwurf nennt „mehrere Megabyte", und der Aufbau ohne Streaming
+    hält alles im Speicher.
 - **Warteschlange „einbauen", aus dem Register abgeleitet** (die
   eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
   `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,
