@@ -684,6 +684,27 @@ bool uft_copy_profile_available(const uft_copy_profile_t *p,
  * `"hoch"` eine 0 machen und damit eine Forderung in eine Zahl
  * verwandeln — genau das Raten, das dieser Baum verbietet. Deshalb
  * wird streng geprueft: nur Ziffern, mindestens eine, sonst `false`. */
+/* MF-1264: die Art eines Tafelwerts — an EINER Stelle entschieden.
+ *
+ * Vorher entschied jede Stelle fuer sich: `haenge_wert()` schnuefferte
+ * beim JSON-Schreiben, `nur_zahl()` beim Abbilden, und der Kommentar
+ * am Struct zaehlte die Faelle auf („5", „true", „false", „Pflicht").
+ * Drei Lesarten derselben Frage.
+ *
+ * Die Reihenfolge ist Absicht: erst Wahrheitswert (exakt), dann Zahl
+ * (nur Ziffern), sonst Forderung. Eine leere Zeichenkette ist KEINE
+ * Zahl — `nur_zahl("")` waere sonst 0, und das ist die Falle, gegen
+ * die diese Funktion steht. */
+uft_wert_art_t uft_copy_wert_art(const char *v)
+{
+    if (!v || !*v) return UFT_WERT_FORDERUNG;
+    if (strcmp(v, "true") == 0 || strcmp(v, "false") == 0)
+        return UFT_WERT_WAHRHEIT;
+    for (const char *p = v; *p; p++)
+        if (*p < '0' || *p > '9') return UFT_WERT_FORDERUNG;
+    return UFT_WERT_ZAHL;
+}
+
 static bool nur_zahl(const char *s, unsigned long *aus)
 {
     if (!s || !*s) return false;
@@ -810,6 +831,7 @@ static size_t schiebe(uft_copy_enforced_t *out, size_t max, size_t n,
             out[n].param  = s->param;
             out[n].value  = s->value;
             out[n].stage  = uft_copy_param_stage(s->param);
+            out[n].art    = uft_copy_wert_art(s->value);   /* MF-1264 */
             out[n].reason = grund;
         }
         n++;
@@ -952,9 +974,12 @@ static size_t haenge_zahl(char *buf, size_t n, size_t pos, unsigned v)
 static size_t haenge_wert(char *buf, size_t n, size_t pos, const char *v)
 {
     if (!v) return haenge(buf, n, pos, "null");
-    int zahl = (v[0] != '\0');
-    for (const char *c = v; *c; c++) if (*c < '0' || *c > '9') { zahl = 0; break; }
-    if (zahl || strcmp(v, "true") == 0 || strcmp(v, "false") == 0)
+    /* MF-1264: EINE Einteilung, nicht drei Lesarten. Zahl und
+     * Wahrheitswert stehen nackt im JSON; eine FORDERUNG kommt in
+     * Anfuehrungszeichen — und der Leser erfaehrt ueber
+     * `uft_copy_enforced_t::art`, dass es eine ist, statt sie fuer
+     * einen Zeichenkettenwert zu halten. */
+    if (uft_copy_wert_art(v) != UFT_WERT_FORDERUNG)
         return haenge(buf, n, pos, v);
     pos = haenge(buf, n, pos, "\"");
     pos = haenge(buf, n, pos, v);

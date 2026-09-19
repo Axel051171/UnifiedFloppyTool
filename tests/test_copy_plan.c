@@ -930,6 +930,121 @@ int main(void)
                n_erw, sizeof(pol) / sizeof(pol[0]));
     }
 
+    /* P8 — EINE FORDERUNG IST KEIN WERT (MF-1264, Review-Befund #5).
+     *
+     * `uft_copy_enforced_t::value` ist eine Zeichenkette und trug DREI
+     * Dinge, die ein Verbraucher nicht auseinanderhalten konnte.
+     * Gemessen ueber alle Wertetafeln: 46 Wahrheitswerte, 13
+     * Forderungen, 9 Zahlen — und **kein** echter Zeichenkettenwert.
+     *
+     * „hoch" sagt, dass jemand eine Zahl waehlen MUSS, nicht dass die
+     * Zahl „hoch" ist. Genau daran waere MF-1263 beinahe gescheitert:
+     * `strtoul("hoch")` ergibt 0, also eine erfundene Zahl.
+     *
+     * BERICHTIGT gegen den Befund: der Review nannte „vier Wertarten".
+     * Gemessen sind es DREI; die vier waren die vier Forderungswoerter.
+     *
+     * Diese Zusage prueft die Einteilung an Faellen, deren Antwort
+     * feststeht, UND dass in den echten Tafeln nichts vorkommt, was
+     * keiner der drei Arten angehoert. */
+    {
+        const struct { const char *v; uft_wert_art_t art; } faelle[] = {
+            { "0",        UFT_WERT_ZAHL      },
+            { "10",       UFT_WERT_ZAHL      },
+            { "true",     UFT_WERT_WAHRHEIT  },
+            { "false",    UFT_WERT_WAHRHEIT  },
+            { "hoch",     UFT_WERT_FORDERUNG },
+            { "noetig",   UFT_WERT_FORDERUNG },
+            { "Pflicht",  UFT_WERT_FORDERUNG },
+            { "gewaehlt", UFT_WERT_FORDERUNG },
+            /* Die Fallen: eine leere Zeichenkette ist KEINE Zahl, und
+             * „3x" auch nicht — sonst waere `strtoul` zurueck. */
+            { "",         UFT_WERT_FORDERUNG },
+            { "3x",       UFT_WERT_FORDERUNG },
+            { "TRUE",     UFT_WERT_FORDERUNG },   /* Schreibweise zaehlt */
+        };
+        for (size_t i = 0; i < sizeof(faelle)/sizeof(faelle[0]); i++)
+            PRUEFE(uft_copy_wert_art(faelle[i].v) == faelle[i].art,
+                   "P8: \"%s\" wird als %d eingeteilt statt als %d",
+                   faelle[i].v, (int)uft_copy_wert_art(faelle[i].v),
+                   (int)faelle[i].art);
+        PRUEFE(uft_copy_wert_art(NULL) == UFT_WERT_FORDERUNG,
+               "P8: NULL ist keine Forderung");
+
+        /* Und am ECHTEN Bestand: jeder erzwungene Wert traegt seine Art,
+         * und keiner ist eine unerkannte Zeichenkette. Wer der Tafel
+         * einen echten Textwert hinzufuegt, faellt hier auf — dann ist
+         * eine vierte Art faellig, keine stille Umdeutung. */
+        size_t gezaehlt[3] = {0,0,0}, fremd = 0;
+        for (int s = 0; s < UFT_READ_STRATEGY_N; s++) {
+            for (int e = 0; e < UFT_PRESERVE_N; e++) {
+                for (int po = 0; po < UFT_POLICY_N; po++) {
+                    uft_copy_plan_t pl; memset(&pl, 0, sizeof(pl));
+                    pl.strategy = (uft_read_strategy_t)s;
+                    pl.preservation = (uft_preservation_t)e;
+                    pl.policy = (uft_copy_policy_t)po;
+                    uft_copy_enforced_t ez[96];
+                    const size_t m = uft_copy_plan_enforced(&pl, ez, 96);
+                    for (size_t i = 0; i < m && i < 96; i++) {
+                        if (!ez[i].value) { fremd++; continue; }
+                        if (ez[i].art > UFT_WERT_FORDERUNG) { fremd++; continue; }
+                        gezaehlt[ez[i].art]++;
+                        /* Die Art muss zum Wert passen — nicht bloss
+                         * gesetzt sein. */
+                        if (ez[i].art != uft_copy_wert_art(ez[i].value))
+                            fremd++;
+                    }
+                }
+            }
+        }
+        PRUEFE(fremd == 0,
+               "P8: %zu erzwungene Werte tragen eine Art, die nicht zu "
+               "ihrem Wert passt", fremd);
+        PRUEFE(gezaehlt[UFT_WERT_FORDERUNG] > 0,
+               "P8: keine einzige Forderung im Bestand — die Probe misst "
+               "nichts");
+        printf("  erzwungene Werte: %zu Zahlen, %zu Wahrheitswerte, "
+               "%zu Forderungen\n", gezaehlt[UFT_WERT_ZAHL],
+               gezaehlt[UFT_WERT_WAHRHEIT], gezaehlt[UFT_WERT_FORDERUNG]);
+    }
+
+    /* P9 — STUFE UND ABSCHNITT SIND ZWEI FRAGEN (Review-Befund #6,
+     *      Praemisse BERICHTIGT — MF-1264).
+     *
+     * Der Review las die beiden als „dieselbe Zuordnung zweimal
+     * gerechnet". Gemessen sind es zwei verschiedene Fragen:
+     *
+     *   `uft_copy_param_stage()` beantwortet WANN ein Parameter gilt —
+     *   und dient dazu, Konflikte einzugrenzen („ein Konflikt gilt nur
+     *   innerhalb einer Stufe", Kopf von `uft_copy_plan.h`).
+     *   `abschnitt()` beantwortet, WO er im JSON erscheint.
+     *
+     * `write.verify` ist deshalb in BEIDEM richtig: Abschnitt „write",
+     * Stufe VERIFY. Kein Widerspruch, sondern zwei Achsen.
+     *
+     * Was WIRKLICH eine zweite Aufzaehlung ist: die Rueckfall-Liste der
+     * Namensvorsilben IN `uft_copy_param_stage()`. Sie greift nur fuer
+     * Parameter, die NICHT in der Tafel stehen — und wenn sie der Tafel
+     * widerspricht, bekommt ein neu hinzugefuegtes Geschwister die
+     * falsche Stufe. Gemessen ist `write.verify` die einzige Stelle, an
+     * der Vorsilbe (WRITE) und Tafel (VERIFY) auseinandergehen.
+     *
+     * Diese Zusage haelt fest, dass die Tafel gewinnt. */
+    {
+        PRUEFE(uft_copy_param_stage("write.verify") == UFT_STAGE_VERIFY,
+               "P9: die Tafel verliert gegen die Vorsilbe — `write.verify` "
+               "ist VERIFY, nicht WRITE");
+        /* Ein Geschwister, das NICHT in der Tafel steht, bekommt die
+         * Vorsilbe. Das ist die bekannte Grenze, und sie ist hier
+         * festgehalten statt entdeckt zu werden. */
+        PRUEFE(uft_copy_param_stage("write.verify_zweimal") == UFT_STAGE_WRITE,
+               "P9: unbekanntes `write.*` bekommt nicht die Vorsilbe");
+        /* Und eine unbekannte Vorsilbe ergibt „nicht eingeordnet" —
+         * nicht stillschweigend READ. */
+        PRUEFE(uft_copy_param_stage("voellig.unbekannt") == UFT_STAGE_N,
+               "P9: unbekannte Vorsilbe faellt still auf eine Stufe zurueck");
+    }
+
     /* P6 — und die gemessene Wahrheit bleibt sichtbar: die
      * Kopierschutz-Profile scheitern am FORMAT, nicht an sich selbst. */
     {

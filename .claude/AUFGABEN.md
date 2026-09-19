@@ -3781,6 +3781,34 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Forderungen; `nur_zahl()` umgeht es, behebt es aber nicht), #6
     (Stufenzuordnung zweimal gerechnet) und Spec #2 (der Auffangzweig
     `return "plan"`).
+- **Stand 2026-09-19, fünfter Durchgang — die drei Optimierungen
+  (MF-1264), und zwei davon sahen anders aus als gemessen:**
+  · **#5 behoben.** `uft_wert_art_t` + `uft_copy_wert_art()`: die
+    Einteilung steht an **einer** Stelle, `uft_copy_enforced_t` trägt
+    sie mit (additiv). Vorher entschied jede Stelle für sich —
+    `haenge_wert()` schnüffelte beim JSON-Schreiben, `nur_zahl()` beim
+    Abbilden, der Struct-Kommentar zählte auf. **Berichtigt:** es sind
+    **drei** Wertarten (46 Wahrheit · 13 Forderung · 9 Zahl), nicht
+    vier — die vier waren die Forderungswörter.
+  · **#6 in der Prämisse berichtigt, nicht „behoben".** `stage` grenzt
+    **Konflikte** ein („ein Konflikt gilt nur innerhalb einer Stufe"),
+    `abschnitt()` gruppiert **JSON**. Zwei Fragen; `write.verify` ist
+    in beidem richtig. Eine Änderung an `abschnitt()` wäre eine
+    Behebung ohne Befund gewesen. **Der echte Rest:** die
+    Rückfall-Vorsilbenliste *in* `uft_copy_param_stage()` widerspricht
+    der Tafel bei genau `write.verify` (155 Parameter, 1 Abweichung, 40
+    ohne passende Vorsilbe) — P9 hält fest, dass die Tafel gewinnt.
+  · **Spec #2 eingetragen, nicht entschieden** (`P3-511`): **98 von
+    155** Parametern fallen in den Auffangzweig, weil ihre Stufen
+    (DECODE, LAYOUT, FS, VERIFY) gar keinen Abschnitt haben. Die
+    JSON-Gestalt ist deine Vorgabe — vier Abschnitte zu erfinden wäre
+    MF-1077 in Reinform. Der Review nannte „10 von 48"; das misst
+    dieselbe Lage an den **erzwungenen** Parametern. Beide Zahlen
+    stimmen.
+  · **Zwei Rot-Proben:** der `strtoul`-Rückfall („" wird Zahl") und die
+    Vorsilbe gegen die Tafel — beide rc 1. Bei der zweiten feuert eine
+    **fremde** Zusage mit („40 Parameter der Tafel haben keine Stufe")
+    und bestätigt die Messung unabhängig.
 - **Beleg:** —
 
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert

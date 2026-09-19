@@ -249,12 +249,45 @@ typedef struct {
     const char *text;      /**< Begruendung, fuer den Bediener          */
 } uft_copy_finding_t;
 
+/**
+ * Was fuer eine Art Wert steht in `uft_copy_enforced_t::value`?
+ *
+ * MF-1264: `value` ist eine Zeichenkette und trug DREI Dinge, die ein
+ * Verbraucher nicht auseinanderhalten konnte. Gemessen ueber alle
+ * Wertetafeln des Plans:
+ *
+ *     Wahrheitswert  46   "true" 36, "false" 10
+ *     Forderung      13   "noetig" 7, "Pflicht" 3, "hoch" 2,
+ *                         "gewaehlt" 1
+ *     Zahl            9   "1" 3, "5" 2, "3", "2", "10", "0"
+ *
+ * Eine **Forderung ist kein Wert**: „hoch" sagt, dass jemand eine Zahl
+ * waehlen MUSS, nicht dass die Zahl „hoch" ist. Wer beides als
+ * Zeichenkette liest, kann „setze das auf hoch" nicht von „hier fehlt
+ * noch eine Entscheidung" unterscheiden — und genau daran ist die
+ * Abbildung auf die Wandlungsoptionen (MF-1263) beinahe gescheitert:
+ * `strtoul("hoch")` ergibt 0, also eine erfundene Zahl.
+ *
+ * Gemessen gibt es in den Tafeln **keinen** echten Zeichenkettenwert.
+ * Sollte einer dazukommen, faellt `tests/test_copy_plan.c` — die
+ * Einteilung ist bewacht, nicht angenommen.
+ */
+typedef enum {
+    UFT_WERT_ZAHL = 0,      /**< nur Ziffern: "0", "3", "10"            */
+    UFT_WERT_WAHRHEIT,      /**< genau "true" oder "false"              */
+    UFT_WERT_FORDERUNG      /**< „hoch", „noetig", „Pflicht", „gewaehlt" */
+} uft_wert_art_t;
+
 /** Ein vom Plan erzwungener Wert. */
 typedef struct {
     const char       *param;   /**< z. B. "read.revolutions"            */
     const char       *value;   /**< "5", "true", "false", "Pflicht"     */
     uft_copy_stage_t  stage;
     const char       *reason;  /**< welche Dimension ihn erzwingt       */
+    /** MF-1264: welche Art `value` ist — damit eine FORDERUNG nicht
+     *  wie ein Wert gelesen wird. Additiv; wer sie nicht liest, sieht
+     *  dasselbe wie vorher. */
+    uft_wert_art_t    art;
 } uft_copy_enforced_t;
 
 /* ── API ────────────────────────────────────────────────────────────── */
@@ -289,6 +322,10 @@ const char *uft_copy_cap_name(uft_copy_caps_t v);
  *  ueber die Aufzaehlung laufen kann, statt sie abzuschreiben (MF-636). */
 size_t          uft_copy_cap_count(void);
 uft_copy_caps_t uft_copy_cap_at(size_t i);
+
+/** Die Art eines Tafelwerts (MF-1264). An EINER Stelle entschieden,
+ *  damit „hoch" nicht irgendwo als Zahl und anderswo als Text gilt. */
+uft_wert_art_t uft_copy_wert_art(const char *v);
 
 /** Die Stufe eines Parameters, ueber seinen Namensraum.
  *  Unbekannte Praefixe ergeben UFT_STAGE_N — „nicht eingeordnet", nicht
