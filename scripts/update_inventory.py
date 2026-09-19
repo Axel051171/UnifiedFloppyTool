@@ -838,6 +838,29 @@ def check_tiers_fresh(repo: Path) -> list[str]:
     return []
 
 
+def check_dsk_geom_max_fresh(repo: Path) -> list[str]:
+    """Ist die erzeugte Konstante noch die der Tafel? (MF-1255)
+
+    Ohne dieses Tor waere `UFT_GEOM_TABLE_MAX_SECTOR` eine Zahl, die
+    beim Erzeugen gestimmt hat — und der `_Static_assert`, der den Bau
+    schuetzen soll, pruefte gegen einen veralteten Wert. Genau die
+    Doppelhaltung, die der Generator vermeiden soll.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent
+                               / "generators"))
+        from gen_dsk_geom_max import erzeuge, QUELLE, ZIEL
+    except ImportError as e:                       # pragma: no cover
+        return [f"cannot import gen_dsk_geom_max: {e}"]
+    erwartet = erzeuge(QUELLE)
+    jetzt = ZIEL.read_text(encoding="utf-8") if ZIEL.exists() else ""
+    if jetzt != erwartet:
+        return ["include/uft/formats/uft_dsk_geom_max_gen.h ist veraltet "
+                "gegen die Geometrietafel — run: python "
+                "scripts/generators/gen_dsk_geom_max.py"]
+    return []
+
+
 def check_familien_fresh(repo: Path) -> list[str]:
     """Ist docs/FORMAT_FAMILIEN.md aktuell? (MF-1248)
 

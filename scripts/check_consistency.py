@@ -609,6 +609,8 @@ def main() -> int:
                            _inv.check_fs_tiers_fresh(repo)))
         all_errors.append(("FORMAT_FAMILIEN.md stale",   # MF-1248
                            _inv.check_familien_fresh(repo)))
+        all_errors.append(("DSK-Geometriekonstante stale",   # MF-1255
+                           _inv.check_dsk_geom_max_fresh(repo)))
         all_errors.append(("STAND.md stale",
                            _inv.check_stand_fresh(repo)))
         all_errors.append(("include guard collisions",

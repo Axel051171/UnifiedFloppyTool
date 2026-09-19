@@ -11,6 +11,8 @@
  */
 
 #include "uft/uft_format_common.h"
+/* MF-1255: `UFT_GEOM_TABLE_MAX_SECTOR`, ERZEUGT aus der Tafel unten. */
+#include "uft/formats/uft_dsk_geom_max_gen.h"
 
 /* ============================================================================
  * Geometry table — one entry per computer/variant
@@ -99,14 +101,58 @@ typedef struct {
  * Shared implementation
  * ============================================================================ */
 
+/* ── Die EINE Groessenrechnung (MF-1254) ─────────────────────────────
+ *
+ * Eine Tafelzeile nennt die Groesse ZWEIMAL: einmal ausgeschrieben in
+ * `expected_size`, einmal als Produkt ihrer Geometrie. Bis MF-1254 las
+ * die Sonde das eine Feld und `open` rechnete mit dem anderen — zwei
+ * Pfade derselben Datei, die sich ueber dieselbe Zahl uneinig waren.
+ *
+ * GEMESSEN: zwei der 49 Zeilen widersprechen sich selbst.
+ *
+ *     {77, 2, 16, 256, 634880}   // DSK_RC   77*2*16*256 = 630 784
+ *     {77, 2, 16, 256, 634880}   // DSK_HP   dito
+ *
+ * Differenz 4 096 Byte — genau eine Spur. Die Folge ging in beide
+ * Richtungen: eine echte 630 784-Byte-Datei wurde von der Sonde
+ * ABGEWIESEN (Klasse MF-1039, das Format war ueber die Erkennung
+ * unerreichbar), und eine 634 880-Byte-Datei wurde angenommen, wobei
+ * die letzten 4 096 Byte ausserhalb der Geometrie lagen (Klasse
+ * MF-1224, stiller Verlust).
+ *
+ * WELCHE ZAHL STIMMT, IST NICHT ENTSCHIEDEN. Es gibt im Baum keine
+ * Quelle fuer RC702/Piccoline oder HP LIF, die eine der beiden belegt
+ * — Stoppbedingung S5, also wird notiert und nicht gewaehlt. Beide
+ * Werte kommen zurueck, und das Kennzeichen sagt, dass sie sich
+ * widersprechen.
+ */
+typedef struct {
+    uint32_t aus_tafel;      /* `expected_size`; 0 = nicht angegeben   */
+    uint32_t aus_geometrie;  /* cylinders * heads * spt * sector_size  */
+    bool     unentschieden;  /* beide gesetzt und VERSCHIEDEN          */
+} dsk_groesse_t;
+
+static dsk_groesse_t dsk_gen_groesse(int idx)
+{
+    const dsk_geometry_t *g = &dsk_geometries[idx];
+    dsk_groesse_t gr;
+    gr.aus_tafel = g->expected_size;
+    gr.aus_geometrie = (uint32_t)g->cylinders * g->heads
+                     * g->spt * g->sector_size;
+    gr.unentschieden = (gr.aus_tafel != 0u
+                        && gr.aus_tafel != gr.aus_geometrie);
+    return gr;
+}
+
 static bool dsk_gen_probe_idx(int idx, const uint8_t *data, size_t size,
                                size_t file_size, int *confidence)
 {
     (void)data; (void)size;
     const dsk_geometry_t *g = &dsk_geometries[idx];
-    uint32_t expected = g->expected_size;
-    if (expected == 0)
-        expected = (uint32_t)g->cylinders * g->heads * g->spt * g->sector_size;
+    const dsk_groesse_t gr = dsk_gen_groesse(idx);
+    /* MF-1254: eine unentschiedene Zeile beansprucht NICHTS. */
+    if (gr.unentschieden) return false;
+    uint32_t expected = gr.aus_tafel ? gr.aus_tafel : gr.aus_geometrie;
 
     if (file_size == expected) {
         *confidence = 40;  /* Size-only match, weak */
@@ -119,6 +165,48 @@ static uft_error_t dsk_gen_open_idx(int idx, uft_disk_t *disk,
                                      const char *path, bool read_only)
 {
     const dsk_geometry_t *g = &dsk_geometries[idx];
+
+    /* MF-1254: DERSELBE Rechner wie in der Sonde. Ist die Zeile
+     * unentschieden, wird hier nicht geraten — es wird GESAGT.
+     *
+     * Hierher kommt nur, wer das Format ausdruecklich genannt hat
+     * (`uft_disk_open_as()`), denn die Sonde beansprucht solche Zeilen
+     * seit MF-1254 nicht mehr. Geoeffnet wird mit der GEOMETRIE, also
+     * dem kleineren Wert: lieber 4 096 Byte unerreichbar als 4 096
+     * erfunden.
+     *
+     * Der Hinweis geht ueber den vorhandenen `[UFT] note:`-Kanal, je
+     * Zeile einmal. Dass ein forensischer Befund eigentlich den
+     * BEDIENER erreichen muesste und es dafuer keinen Weg gibt, ist
+     * eigens benannt (`P3-504`) — er hier zu verschweigen waere die
+     * schlechtere Antwort. */
+    {
+        const dsk_groesse_t gr = dsk_gen_groesse(idx);
+        if (gr.unentschieden) {
+            static bool gemeldet[sizeof(dsk_geometries)
+                                 / sizeof(dsk_geometries[0])];
+            if (!gemeldet[idx]) {
+                gemeldet[idx] = true;
+                fprintf(stderr,
+                        "[UFT] note: DSK-Geometriezeile %d — die Tafel "
+                        "nennt %u Byte, ihre Geometrie (%ux%ux%ux%u) "
+                        "ergibt %u. Welche Zahl stimmt, ist NICHT belegt "
+                        "(keine Quelle fuer dieses Format im Baum). "
+                        "Geoeffnet wird mit der Geometrie; die %u Byte "
+                        "Differenz sind damit unerreichbar statt "
+                        "erfunden. Siehe P3-506.\n",
+                        idx,
+                        (unsigned)gr.aus_tafel,
+                        (unsigned)g->cylinders, (unsigned)g->heads,
+                        (unsigned)g->spt, (unsigned)g->sector_size,
+                        (unsigned)gr.aus_geometrie,
+                        (unsigned)(gr.aus_tafel > gr.aus_geometrie
+                                   ? gr.aus_tafel - gr.aus_geometrie
+                                   : gr.aus_geometrie - gr.aus_tafel));
+            }
+        }
+    }
+
     FILE *f = fopen(path, read_only ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
 
@@ -181,6 +269,19 @@ static uft_error_t dsk_gen_write_track(uft_disk_t *disk, int cyl, int head,
             return UFT_ERROR_IO;
         const uint8_t *data = track->sectors[s].data;
         uint8_t pad[1024];
+        /* MF-1255: der Bau bricht an dem Tag, an dem jemand eine Zeile
+         * mit groesseren Sektoren eintraegt — nicht die Diskette, die
+         * sie spaeter liest. Die Konstante ist ERZEUGT (siehe den Kopf
+         * `uft_dsk_geom_max_gen.h`), nicht daneben gepflegt: eine
+         * gepflegte Zahl wuerde beim Eintragen vergessen, und der
+         * Ueberlauf waere zurueck.
+         *
+         * Heute traegt die Tafel hoechstens 1024 (2 Zeilen: DSK_KC,
+         * DSK_RLD). Die Sampler-Klasse benutzt 2048 — `P3-427`. */
+        _Static_assert(sizeof(pad) >= UFT_GEOM_TABLE_MAX_SECTOR,
+                       "Geometrietafel traegt Sektoren, die pad nicht "
+                       "fasst — pad vergroessern ODER die Zeile "
+                       "pruefen (scripts/generators/gen_dsk_geom_max.py)");
         if (!data || track->sectors[s].data_len == 0) {
             memset(pad, 0xE5, g->sector_size); data = pad;
         }

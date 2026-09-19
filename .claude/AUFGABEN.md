@@ -3840,8 +3840,46 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
     übernommen, sondern am neuen Sieger nachgemessen** —
     `uft_hardsector.c:543` führt `77 x 1 x 26 x 128 = 256 256`.
   · **Volle Probe: 517/517**, Bau rc=0.
+- **Stand Punkt 2 — ERLEDIGT (MF-1254), und die Behebung hat einen
+  Nebenbefund erzeugt, den ich festhalte statt ihn zu übergehen:**
+  · **Rotbeweis zuerst**, `tests/test_dsk_groesse_eine_rechnung.c`:
+    **12/14** vor der Änderung, **14/14** danach.
+  · Der Widerspruch, durch die öffentliche API gemessen: „DSK_RC
+    oeffnet 634880 Byte und erklaert davon 630784 (Differenz 4096)".
+    `DSK_RC` und `DSK_HP` tragen beide `{77, 2, 16, 256, 634880}` —
+    gerechnet 630 784, angegeben 634 880, genau eine Spur Unterschied.
+  · **Eine Rechnung, beide Pfade:** `dsk_gen_groesse(idx)` gibt beide
+    Werte **und** das Kennzeichen `unentschieden` zurück. Die Sonde
+    beansprucht eine unentschiedene Zeile **nicht**; `open` — dann nur
+    über `uft_disk_open_as()` erreichbar — nimmt die **kleinere**
+    Geometrie und nennt den Befund über den vorhandenen
+    `[UFT] note:`-Kanal, mit beiden Zahlen und dem Satz, dass keine
+    belegt ist.
+  · **Keine der beiden Zahlen wurde geändert.** Es gibt keine Quelle
+    für RC702/Piccoline oder HP LIF im Baum — `S5`. Benannt als
+    `P3-506`.
+  · **Nebenbefund:** als die zwei ihren Anspruch aufgaben, verlor
+    634 880 Byte seinen Gleichstand (vorher 3 Bewerber), und `IMG`
+    gewinnt dort jetzt **allein**. Eine Zusage, die vorher grün war,
+    kippte dadurch — und die Lehre steht im Test: **wenn Bewerber
+    wegfallen, kann aus einem gemeldeten Gleichstand ein stiller
+    Alleingewinner werden.**
+  · Volle Probe **518/518**, Bau rc=0.
+- **Stand Punkt 3 — ERLEDIGT (MF-1255):**
+  · `scripts/generators/gen_dsk_geom_max.py` erzeugt
+    `UFT_GEOM_TABLE_MAX_SECTOR` **aus** der Tafel (heute `1024u`,
+    getragen von `DSK_KC` und `DSK_RLD`); Selbsttest **4/4** mit einer
+    Rot-Probe, die eine 2048er-Zeile einträgt und verlangt, dass die
+    Konstante steigt, und einer Gegenprobe, dass eine Tafel **daneben**
+    nicht mitgelesen wird.
+  · `_Static_assert(sizeof(pad) >= UFT_GEOM_TABLE_MAX_SECTOR, …)` in
+    `dsk_gen_write_track()`. **Rot-Probe am Objekt:** mit `2048u`
+    **bricht der Bau**, danach wiederhergestellt.
+  · Frische-Tor `check_dsk_geom_max_fresh()`; gemessen feuert es auf
+    eine gekippte Zahl und schweigt bei Gleichstand. Ohne das wäre die
+    Konstante eine Zahl, die beim Erzeugen einmal gestimmt hat.
 - **Beleg:** —
-- **Stand Punkt 2/3/4:** offen, in dieser Reihenfolge.
+- **Stand Punkt 4:** offen.
 
 ---
 

@@ -3467,7 +3467,11 @@ foreach(test_source ${TEST_SOURCES})
            # `uft_disk_open()`. Ohne die vollstaendige Tafel gibt es
            # gar keinen Gleichstand zu messen — also dieselbe Menge
            # und derselbe Grund wie die Zeilen darueber.
-           OR ${test_name} STREQUAL "test_sonde_sagt_ab_bei_gleichstand")
+           OR ${test_name} STREQUAL "test_sonde_sagt_ab_bei_gleichstand"
+           # MF-1254: sucht DSK_RC/DSK_HP/DSK_RLD in der REGISTRY und
+           # schickt Pruefdateien durch `uft_disk_open_as()`. Ohne die
+           # vollstaendige Tafel gibt es die drei gar nicht.
+           OR ${test_name} STREQUAL "test_dsk_groesse_eine_rechnung")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
