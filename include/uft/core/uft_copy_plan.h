@@ -461,6 +461,55 @@ bool uft_copy_profile_available(const uft_copy_profile_t *p,
                                 uint32_t caps, const char *format,
                                 const char **grund);
 
+/* ── Der Plan wirkt: Abbildung auf die Wandlungsoptionen (MF-1263) ──── */
+
+/* Vorwaerts deklariert statt eingebunden. Dieser Kopf kommt mit
+ * `stdbool/stddef/stdint` aus, und das soll er behalten —
+ * `uft/uft_types.h` waere ein grosser Nachbar fuer ein Feld. */
+struct uft_convert_options;
+
+/**
+ * Traegt den Plan in die Optionen einer Wandlung.
+ *
+ * ── WARUM ES DIESE FUNKTION GIBT ─────────────────────────────────────
+ *
+ * `P3-509`: der Plan hatte ausser seinem Reiter keinen Leser. Vier
+ * Achsen, eine Anzeige — und kein Vorgang, der danach handelt. Das ist
+ * die Klasse P0-2/MF-930: **Bestand, nicht Faehigkeit.**
+ *
+ * ── WAS SIE ABBILDET, UND WORAUS ─────────────────────────────────────
+ *
+ * Die Zahlen stehen NICHT in dieser Funktion. Sie stehen in der
+ * Wertetafel des Plans (`k_strategie[]` in `uft_copy_plan.c`), die die
+ * Vorgabe je Lesestrategie fuehrt — `read.retries` und
+ * `read.revolutions`. Die Abbildung liest sie dort und traegt sie
+ * weiter; eine zweite Zahlenreihe hier waere die Drift aus MF-541.
+ *
+ * ── WAS SIE AUSDRUECKLICH NICHT TUT ──────────────────────────────────
+ *
+ * 1. **Sie erfindet keine Zahl.** `UFT_READ_SALVAGE` traegt
+ *    `read.retries = "hoch"` — ein Forderungswort, keine Zahl. Wo die
+ *    Tafel keine Zahl nennt, bleibt die Option, wie sie war.
+ * 2. **Sie bildet nicht auf tote Optionen ab.** Gemessen (MF-1263)
+ *    haben `preserve_timing`, `normalize` und `interpolate_errors`
+ *    **null** Leser, die danach handeln. Eine Achse darauf abzubilden
+ *    haette „der Plan wirkt" behauptet, ohne dass sich etwas aendert —
+ *    also `P3-509` noch einmal, eine Ebene hoeher.
+ * 3. **Sie schwaecht nichts ab.** `preserve_errors` und
+ *    `preserve_weak_bits` bleiben unberuehrt; eine Erhaltungsachse, die
+ *    Fehlermarken abschaltet, waere ein stiller Verlust.
+ *
+ * Damit erreichen heute **zwei** der vier Achsen die Wandlung:
+ * Lesestrategie und Richtlinie. Ebene und Erhaltung erreichen sie
+ * nicht, weil es dort keinen lebenden Verbraucher gibt — das steht so
+ * in `P3-509` und ist kein Versehen.
+ *
+ * @param plan  der Plan; NULL laesst `opts` unveraendert
+ * @param opts  bereits mit `uft_convert_default_options()` gefuellt
+ */
+void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
+                                      struct uft_convert_options *opts);
+
 /* ── Namen der Feinheiten ───────────────────────────────────────────── */
 const char *uft_copy_track_mode_name(uft_track_mode_t v);
 const char *uft_copy_file_special_name(uft_file_special_t v);

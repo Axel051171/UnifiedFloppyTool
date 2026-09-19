@@ -3738,6 +3738,49 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     `uft_batch_run()` hat **0** Aufrufer außerhalb seiner Datei — eine
     zweite Tür ohne Leser, und vielleicht der natürliche Verbraucher
     eines Plans.
+- **Stand 2026-09-19, vierter Durchgang — `P3-509` abgetragen
+  (MF-1263), nach „Fixe den Kopierplan das P3-509 läuft":**
+  · **Die Kette läuft:** `FormatTab::copyPlan()` →
+    `MainWindow::m_formatTab` → `speichereNach()` → `uftSaveImageAs()` →
+    `uft_copy_plan_to_convert_options()` → `uft_convert_file()`.
+    `FormatTab` war bei `mainwindow.cpp:157` eine **lokale** Variable —
+    der Plan existierte, und niemand kam an ihn heran.
+  · **Zwei der vier Achsen erreichen die Wandlung, und welche nicht,
+    steht dabei.** Lesestrategie (`decode_retries`,
+    `use_multiple_revs`) und Richtlinie (`verify_after`) kommen an;
+    Ebene und Erhaltung nicht, weil `preserve_timing`, `normalize` und
+    `interpolate_errors` gemessen **null** Leser haben, die danach
+    handeln. Auf sie abzubilden hätte „der Plan wirkt" behauptet, ohne
+    dass sich etwas ändert — `P3-509` eine Ebene höher.
+  · **Die Zahlen sind abgeleitet, nicht erfunden:** sie stehen in
+    `k_strategie[]` (FAST 0/1, STANDARD 3/2, DEEP 10/5, CONSENSUS über
+    `consensus.enabled`). Und wo die Tafel keine Zahl nennt, mache ich
+    keine: `SALVAGE` trägt `read.retries = "hoch"` — ein
+    Forderungswort. **Rot-Probe:** die `strtoul`-Falle (aus „hoch" wird
+    0) fällt sofort.
+  · **D2 ist erfüllt, nicht behauptet.** `planAngewandt` liest die
+    **fertigen** Optionen ab statt den Plan zu wiederholen, und
+    `kopierplan_erreicht_die_wandlung` fällt gemessen (rc 1), wenn man
+    den Abbildungsaufruf entfernt.
+  · **Ein eigener Denkfehler, gefangen vom Test:** die erste Fassung
+    speicherte `d64 → d64` — das ist die **Identität**, die nur kopiert
+    und den Optionsblock nie erreicht. Der Plan kann nur wirken, wo
+    gewandelt wird; das Ziel ist jetzt `.g64`.
+  · **Und eine Messfalle in eigener Sache:** ein `rc=0` hinter einer
+    Pipe meldete `tail`, nicht das Testprogramm — erst die Umleitung in
+    eine Datei zeigte `rc=1`. Dieselbe Klasse wie
+    `grep_exitkode_bricht_die_kette`.
+  · **`src/mainwindow.cpp` trägt Fremdänderungen** (MF-1194, vier
+    verdrahtete Reiter). Vorgemerkt wurden nur meine Hunks; im Index
+    stehen **0** Zeilen MF-1194.
+  · **Offen bleibt der zweite Halbsatz der Vorgabe** („… ist EIN
+    Vorgang"): erreicht ist der **Speicherpfad**, nicht jeder Vorgang.
+    `uft_batch_run()` hat weiterhin 0 Aufrufer.
+  · **Noch nicht angefasst, aus dem Review benannt:** Standards #5
+    (`setzt_t.value` trägt vier Wertarten — Zahlen, `true`/`false`,
+    Forderungen; `nur_zahl()` umgeht es, behebt es aber nicht), #6
+    (Stufenzuordnung zweimal gerechnet) und Spec #2 (der Auffangzweig
+    `return "plan"`).
 - **Beleg:** —
 
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert

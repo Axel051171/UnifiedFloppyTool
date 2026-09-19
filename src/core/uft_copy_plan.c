@@ -13,6 +13,10 @@
  */
 
 #include "uft/core/uft_copy_plan.h"
+/* MF-1263: fuer `uft_convert_options_t`. Der KOPF bleibt bewusst
+ * abhaengigkeitsfrei und deklariert den Struct nur vorwaerts; die
+ * Umsetzung braucht die Felder und bindet ihn deshalb hier ein. */
+#include "uft/uft_types.h"
 
 #include <string.h>
 
@@ -669,6 +673,66 @@ bool uft_copy_profile_available(const uft_copy_profile_t *p,
         }
     }
     return false;
+}
+
+/* ── Der Plan wirkt (MF-1263, `P3-509`) ─────────────────────────────── */
+
+/* Eine Zeichenkette IST eine Zahl — oder sie ist es nicht.
+ *
+ * Die Wertetafel des Plans fuehrt beides nebeneinander: `"3"` ist eine
+ * Zahl, `"hoch"` und `"noetig"` sind Forderungen. `strtoul` wuerde aus
+ * `"hoch"` eine 0 machen und damit eine Forderung in eine Zahl
+ * verwandeln — genau das Raten, das dieser Baum verbietet. Deshalb
+ * wird streng geprueft: nur Ziffern, mindestens eine, sonst `false`. */
+static bool nur_zahl(const char *s, unsigned long *aus)
+{
+    if (!s || !*s) return false;
+    unsigned long n = 0;
+    for (const char *p = s; *p; p++) {
+        if (*p < '0' || *p > '9') return false;
+        n = n * 10u + (unsigned long)(*p - '0');
+        if (n > 1000000u) return false;          /* nichts Sinnloses */
+    }
+    *aus = n;
+    return true;
+}
+
+void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
+                                      struct uft_convert_options *opts)
+{
+    if (!plan || !opts) return;
+    uft_convert_options_t *o = (uft_convert_options_t *)opts;
+
+    /* 1. Lesestrategie. Die Werte kommen aus der Tafel des Plans, nicht
+     *    von hier — eine zweite Zahlenreihe waere MF-541. */
+    if (plan->strategy < UFT_READ_STRATEGY_N) {
+        const setzt_t *s = k_strategie[plan->strategy];
+        for (; s && s->param; s++) {
+            unsigned long n = 0;
+            if (strcmp(s->param, "read.retries") == 0) {
+                /* „hoch" ist keine Zahl. Dann bleibt die Vorgabe. */
+                if (nur_zahl(s->value, &n)) o->decode_retries = (uint32_t)n;
+            } else if (strcmp(s->param, "read.revolutions") == 0) {
+                if (nur_zahl(s->value, &n)) o->use_multiple_revs = (n > 1u);
+            } else if (strcmp(s->param, "consensus.enabled") == 0) {
+                /* CONSENSUS nennt keine Umdrehungszahl, verlangt aber
+                 * mehrere Durchgaenge — die Flagge sagt es direkt. */
+                if (strcmp(s->value, "true") == 0) o->use_multiple_revs = true;
+            }
+        }
+    }
+
+    /* 2. Richtlinie. `NORMAL` heisst ausdruecklich „ohne Nachpruefung";
+     *    VERIFY und EVIDENCE verlangen sie. Mehr ist aus dieser Achse
+     *    heute nicht zu holen: der Hashsatz (`plan->hashes`) hat in
+     *    `uft_convert_options_t` kein Feld. */
+    o->verify_after = (plan->policy != UFT_POLICY_NORMAL);
+
+    /* 3. Ebene und Erhaltung erreichen die Wandlung NICHT, und das ist
+     *    gemessen statt vergessen: die Felder, auf die sie abbilden
+     *    wuerden (`preserve_timing`, `normalize`), haben null Leser, die
+     *    danach handeln. Eine Abbildung dorthin waere Schein. `P3-509`
+     *    fuehrt die Frage weiter. */
 }
 
 uft_copy_plan_t uft_copy_plan_resolve(const uft_copy_plan_t *plan,

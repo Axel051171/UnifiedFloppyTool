@@ -85,7 +85,8 @@ UftSaveOutcome kopiere(const QString &source, const QString &target)
 } // namespace
 
 UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
-                              const QString &variante)
+                              const QString &variante,
+                              const uft_copy_plan_t *plan)
 {
     UftSaveOutcome r;
 
@@ -245,6 +246,36 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
      * absichtlich ungesetzt (UFT-A05), und das gilt hier weiter. */
     uft_convert_options_t opts = uft_convert_default_options();
     opts.accept_data_loss = false;
+
+    /* MF-1263 (`P3-509`): HIER wirkt der Kopierplan — und nur hier.
+     *
+     * Bis dahin hatte er ausser seinem Reiter keinen Leser: vier
+     * Achsen, eine Anzeige, kein Vorgang. Die Abbildung steht im Kern
+     * (`uft_copy_plan_to_convert_options`), damit sie geprueft werden
+     * kann, ohne eine Oberflaeche zu starten.
+     *
+     * `accept_data_loss` wird ABSICHTLICH nach dem Plan gesetzt und
+     * bleibt false: die Zustimmung gehoert an eine Stelle, an der
+     * jemand sie geben kann, und ein Plan ist keine Zustimmung
+     * (UFT-A05). Kein Plan darf sie sich selbst erteilen. */
+    if (plan) {
+        /* `uft_convert_options_t` IST `struct uft_convert_options` —
+         * der Kopf des Plans deklariert ihn nur vorwaerts, damit er
+         * abhaengigkeitsfrei bleibt. Eine Umdeutung braucht es nicht. */
+        uft_copy_plan_to_convert_options(plan, &opts);
+        opts.accept_data_loss = false;   /* nach dem Plan, nicht davor */
+
+        /* Was WIRKLICH gesetzt ist, aus den fertigen Optionen
+         * abgelesen — nicht aus dem Plan wiederholt. Wer den Aufruf
+         * oben entfernt, sieht es hier sofort (D2). */
+        r.planAngewandt =
+            QObject::tr("Wiederholungen %1 · Mehrfachlesung %2 · Nachprüfung %3")
+                .arg(opts.decode_retries)
+                .arg(opts.use_multiple_revs ? QObject::tr("ja")
+                                            : QObject::tr("nein"))
+                .arg(opts.verify_after ? QObject::tr("ja")
+                                       : QObject::tr("nein"));
+    }
 
     uft_convert_result_t res;
     std::memset(&res, 0, sizeof(res));

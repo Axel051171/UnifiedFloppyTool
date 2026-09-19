@@ -23,6 +23,7 @@ class StatusTab;
 class DecodeJob;
 class UftOtdrPanel;
 class FluxVisualizerWidget;   /* MF-632: zweite Sicht im Signal-Reiter */
+class FormatTab;              /* MF-1263: traegt den Kopierplan (P3-509) */
 
 class MainWindow : public QMainWindow
 {
@@ -113,6 +114,12 @@ private:
     
     // Tab references for signal connections
     StatusTab* m_statusTab = nullptr;
+    /* MF-1263 (`P3-509`): der Formatreiter baut den Kopierplan, und
+     * `speichereNach()` muss ihn erreichen koennen. Bis dahin war
+     * `FormatTab` eine LOKALE Variable — der Plan existierte, und
+     * niemand kam an ihn heran. Gehalten wie `m_statusTab`, nach dem
+     * vorhandenen Muster statt nach einem neuen. */
+    FormatTab* m_formatTab = nullptr;
     UftOtdrPanel* m_otdrPanel = nullptr;
     /* MF-632: die Fluss-Visualisierung im selben Reiter. Lag seit
      * jeher im Baum und wurde von niemandem instanziiert (MF-630). */

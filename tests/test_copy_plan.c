@@ -52,6 +52,9 @@
 #include <stdlib.h>   /* MF-1238: K24 misst mit eigenem Puffer */
 
 #include "uft/core/uft_copy_plan.h"
+/* MF-1263: fuer `uft_convert_options_t` — P7 prueft, was der Plan in
+ * den Optionen einer echten Wandlung setzt. */
+#include "uft/uft_types.h"
 
 static int fehler = 0;
 
@@ -825,6 +828,106 @@ int main(void)
                "P5b: BAMCopy lehnt D81 ab — eine BAM ist Dateisystemebene");
         printf("  %zu GCR-Profile geprueft, %zu mit D81\n",
                gcr_profile, mit_d81);
+    }
+
+    /* P7 — DER PLAN WIRKT: die Abbildung auf die Wandlungsoptionen
+     *      (MF-1263, `P3-509`).
+     *
+     * Bis dahin hatte der Plan ausser seinem Reiter keinen Leser. Seit
+     * MF-1263 traegt `uft_copy_plan_to_convert_options()` ihn in die
+     * Optionen, die `uft_convert_file()` wirklich liest.
+     *
+     * DIE ERWARTUNG STEHT HIER EIN ZWEITES MAL, und das ist Absicht
+     * (Klasse MF-1000): wer die Tafel `k_strategie[]` befragt, um zu
+     * pruefen, was aus `k_strategie[]` wird, prueft nichts. Die Zahlen
+     * unten stammen aus der Vorgabe je Lesestrategie:
+     *
+     *   FAST       read.retries 0   read.revolutions 1
+     *   STANDARD   read.retries 3   read.revolutions 2
+     *   DEEP       read.retries 10  read.revolutions 5
+     *   CONSENSUS  — keine Zahlen, aber consensus.enabled = true
+     *   SALVAGE    read.retries „hoch" — ein FORDERUNGSWORT
+     *
+     * Die Startwerte sind absichtlich NICHT die Vorgaben der Wandlung:
+     * `99` und `false` setzt keine Strategie, also ist „unveraendert"
+     * beobachtbar statt geraten. */
+    {
+        struct { uft_read_strategy_t s; const char *name;
+                 uint32_t retries; int revs; } erw[] = {
+            { UFT_READ_FAST,      "FAST",       0u, 0 },
+            { UFT_READ_STANDARD,  "STANDARD",   3u, 1 },
+            { UFT_READ_DEEP,      "DEEP",      10u, 1 },
+            /* keine Zahl -> 99 bleibt; consensus.enabled -> revs an */
+            { UFT_READ_CONSENSUS, "CONSENSUS", 99u, 1 },
+            /* „hoch" ist keine Zahl, und es gibt keine Umdrehungszahl */
+            { UFT_READ_SALVAGE,   "SALVAGE",   99u, 0 },
+        };
+        const size_t n_erw = sizeof(erw) / sizeof(erw[0]);
+        PRUEFE(n_erw == (size_t)UFT_READ_STRATEGY_N,
+               "P7: %zu Erwartungen fuer %d Strategien — eine fehlt",
+               n_erw, (int)UFT_READ_STRATEGY_N);
+
+        for (size_t i = 0; i < n_erw; i++) {
+            uft_copy_plan_t pl;
+            memset(&pl, 0, sizeof(pl));
+            pl.strategy = erw[i].s;
+            pl.policy   = UFT_POLICY_NORMAL;
+
+            uft_convert_options_t o;
+            memset(&o, 0, sizeof(o));
+            o.decode_retries    = 99u;
+            o.use_multiple_revs = false;
+            o.verify_after      = true;      /* muss NORMAL abschalten */
+
+            uft_copy_plan_to_convert_options(&pl, &o);
+
+            PRUEFE(o.decode_retries == erw[i].retries,
+                   "P7: %s setzt decode_retries auf %u statt %u",
+                   erw[i].name, o.decode_retries, erw[i].retries);
+            PRUEFE((int)o.use_multiple_revs == erw[i].revs,
+                   "P7: %s setzt use_multiple_revs auf %d statt %d",
+                   erw[i].name, (int)o.use_multiple_revs, erw[i].revs);
+            PRUEFE(o.verify_after == false,
+                   "P7: %s mit NORMAL laesst verify_after an", erw[i].name);
+        }
+
+        /* Die Richtlinie ist die zweite Achse, die ankommt. */
+        const struct { uft_copy_policy_t p; const char *name; bool v; } pol[] = {
+            { UFT_POLICY_NORMAL,   "NORMAL",   false },
+            { UFT_POLICY_VERIFY,   "VERIFY",   true  },
+            { UFT_POLICY_EVIDENCE, "EVIDENCE", true  },
+        };
+        PRUEFE(sizeof(pol) / sizeof(pol[0]) == (size_t)UFT_POLICY_N,
+               "P7: nicht jede Richtlinie ist geprueft");
+        for (size_t i = 0; i < sizeof(pol) / sizeof(pol[0]); i++) {
+            uft_copy_plan_t pl;
+            memset(&pl, 0, sizeof(pl));
+            pl.strategy = UFT_READ_STANDARD;
+            pl.policy   = pol[i].p;
+            uft_convert_options_t o;
+            memset(&o, 0, sizeof(o));
+            o.verify_after = !pol[i].v;      /* absichtlich verkehrt */
+            uft_copy_plan_to_convert_options(&pl, &o);
+            PRUEFE(o.verify_after == pol[i].v,
+                   "P7: %s setzt verify_after auf %d statt %d",
+                   pol[i].name, (int)o.verify_after, (int)pol[i].v);
+        }
+
+        /* NULL darf nichts anfassen — sonst waere „kein Plan" eine
+         * stille Aenderung. */
+        {
+            uft_convert_options_t o;
+            memset(&o, 0, sizeof(o));
+            o.decode_retries = 77u;
+            uft_copy_plan_to_convert_options(NULL, &o);
+            PRUEFE(o.decode_retries == 77u,
+                   "P7: ein NULL-Plan veraendert die Optionen");
+            uft_copy_plan_t pl;
+            memset(&pl, 0, sizeof(pl));
+            uft_copy_plan_to_convert_options(&pl, NULL);  /* darf nicht stuerzen */
+        }
+        printf("  %zu Strategien und %zu Richtlinien erreichen die Wandlung\n",
+               n_erw, sizeof(pol) / sizeof(pol[0]));
     }
 
     /* P6 — und die gemessene Wahrheit bleibt sichtbar: die

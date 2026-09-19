@@ -186,6 +186,63 @@ private slots:
         QVERIFY(QFileInfo::exists(dst));
     }
 
+    /* 3b. DER KOPIERPLAN ERREICHT DEN VORGANG (MF-1263, `P3-509`).
+     *
+     * Der Plan hatte ausser seinem Reiter keinen Leser: vier Achsen,
+     * eine Anzeige, kein Vorgang. Seit MF-1263 traegt ihn
+     * `uftSaveImageAs()` ueber `uft_copy_plan_to_convert_options()` in
+     * die Optionen, die `uft_convert_file()` wirklich liest.
+     *
+     * DIESE ZUSAGE IST DIE D2-PROBE: `planAngewandt` wird aus den
+     * FERTIGEN Optionen abgelesen, nicht aus dem Plan wiederholt. Wer
+     * den Abbildungsaufruf entfernt, bekommt hier die Vorgaben zu
+     * sehen (5 / ja / ja) statt der Planwerte — und die Zusage faellt.
+     *
+     * Gewaehlt ist `FAST` mit `NORMAL`, weil beide Achsen dort vom
+     * Standard ABWEICHEN: 0 statt 5 Wiederholungen, keine
+     * Mehrfachlesung, keine Nachpruefung. Eine Strategie, die zufaellig
+     * wie die Vorgabe aussieht, wuerde nichts beweisen.
+     *
+     * UND DAS ZIEL IST BEWUSST `.g64`, NICHT `.d64`: ein Ziel im
+     * Quellformat ist die IDENTITAET, und die kopiert nur — sie
+     * wandelt nicht, also erreicht sie den Optionsblock gar nicht.
+     * (Erst gemessen, nachdem die Zusage mit `.d64` fiel: der Plan
+     * kann nur wirken, wo ueberhaupt gewandelt wird.) `D64 -> G64`
+     * ist einer der belegten verlustfreien Pfade. */
+    void kopierplan_erreicht_die_wandlung()
+    {
+        const QString src = korpus("vice_c1541_35trk.d64");
+        const QString dst = m_dir.filePath("mit_plan.g64");
+
+        uft_copy_plan_t plan = uft_copy_plan_default();
+        plan.strategy = UFT_READ_FAST;
+        plan.policy   = UFT_POLICY_NORMAL;
+
+        const UftSaveOutcome r = uftSaveImageAs(src, dst, QString(), &plan);
+        QVERIFY2(r.ok, qPrintable("Speichern mit Plan abgelehnt: "
+                                  + r.message));
+        QVERIFY2(!r.planAngewandt.isEmpty(),
+                 "der Plan wurde uebergeben und nicht berichtet");
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("Wiederholungen 0")),
+                 qPrintable("FAST setzt 0 Wiederholungen, berichtet ist: "
+                            + r.planAngewandt));
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("Mehrfachlesung nein")),
+                 qPrintable("FAST liest einmal, berichtet ist: "
+                            + r.planAngewandt));
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("Nachprüfung nein")),
+                 qPrintable("NORMAL prueft nicht nach, berichtet ist: "
+                            + r.planAngewandt));
+
+        /* Gegenprobe: ohne Plan wird nichts behauptet. Sonst waere
+         * „kein Plan" von „Plan angewandt" nicht zu unterscheiden. */
+        const QString dst2 = m_dir.filePath("ohne_plan.g64");
+        const UftSaveOutcome r2 = uftSaveImageAs(src, dst2);
+        QVERIFY2(r2.ok, qPrintable("Speichern ohne Plan abgelehnt: "
+                                   + r2.message));
+        QVERIFY2(r2.planAngewandt.isEmpty(),
+                 "ohne Plan wird ein Plan berichtet");
+    }
+
     /* 4. Unbekannte Endung: ablehnen, nichts schreiben. */
     void unbekannte_endung_schreibt_nichts()
     {

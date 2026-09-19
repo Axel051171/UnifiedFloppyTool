@@ -147,7 +147,10 @@ void MainWindow::loadTabWidgets()
             });
     
     // Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)
+    /* MF-1263 (`P3-509`): im Mitglied halten, nicht nur lokal — sonst
+     * baut der Reiter einen Kopierplan, an den niemand herankommt. */
     FormatTab* formatTab = new FormatTab();
+    m_formatTab = formatTab;
     QVBoxLayout* layout3 = new QVBoxLayout(ui->tab_format);
     layout3->setContentsMargins(0, 0, 0, 0);
     layout3->addWidget(formatTab);
@@ -373,7 +376,13 @@ void MainWindow::onSaveAs()
 
 void MainWindow::speichereNach(const QString &ziel, const QString &variante)
 {
-    const UftSaveOutcome r = uftSaveImageAs(m_currentFile, ziel, variante);
+    /* MF-1263 (`P3-509`): der Kopierplan des Formatreiters wirkt hier.
+     * Ohne Reiter kein Plan — dann gelten die Vorgaben wie bisher, und
+     * nichts wird erfunden. */
+    const uft_copy_plan_t plan =
+        m_formatTab ? m_formatTab->copyPlan() : uft_copy_plan_default();
+    const UftSaveOutcome r = uftSaveImageAs(m_currentFile, ziel, variante,
+                                            m_formatTab ? &plan : nullptr);
 
     if (!r.ok) {
         QMessageBox::warning(this, tr("Speichern"), r.message);

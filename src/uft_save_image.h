@@ -50,12 +50,20 @@
 #define UFT_SAVE_IMAGE_H
 
 #include <QString>
+/* MF-1263: der Kopierplan wirkt hier (`P3-509`). */
+#include "uft/core/uft_copy_plan.h"
 
 /** Was beim Speichern herauskam — genug, um es dem Benutzer zu sagen. */
 struct UftSaveOutcome {
     bool    ok = false;        ///< Datei liegt vollständig am Ziel
     bool    converted = false; ///< es wurde gewandelt (sonst Identität)
     QString message;           ///< immer gefüllt: Erfolg wie Ablehnung
+    /** MF-1263: was der Plan WIRKLICH gesetzt hat, aus den fertigen
+     *  Optionen abgelesen — nicht aus dem Plan wiederholt. Leer, wenn
+     *  kein Plan uebergeben wurde. Der Unterschied ist der Punkt: nur
+     *  so sieht ein Bediener (und ein Test), ob der Plan den Vorgang
+     *  erreicht hat, statt es zu glauben. */
+    QString planAngewandt;
 };
 
 /**
@@ -81,7 +89,14 @@ struct UftSaveOutcome {
  * Varianten-Parameter — bis dahin lehnt diese Funktion jede Wahl ab, die
  * nicht die schreibbare ist.
  */
+/* MF-1263 (`P3-509`): der Kopierplan wirkt hier.
+ *
+ * `plan` darf NULL sein — dann gelten die Vorgaben wie bisher, und
+ * jeder bestehende Aufruf uebersetzt unveraendert. Ist er gesetzt,
+ * traegt `uft_copy_plan_to_convert_options()` ihn in die
+ * Wandlungsoptionen. */
 UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
-                              const QString &variante = QString());
+                              const QString &variante = QString(),
+                              const uft_copy_plan_t *plan = nullptr);
 
 #endif /* UFT_SAVE_IMAGE_H */
