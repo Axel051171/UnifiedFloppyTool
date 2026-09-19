@@ -4054,6 +4054,59 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     zurückgestuft wurde. Zwei Zahlen zu derselben Sache sind genau
     die Drift, gegen die dieser Baum steht; deshalb steht hier,
     welche Menge gemeint ist.)
+- **Stand 2026-09-19, fünfter Durchgang — die Readmes gelesen, das
+  Dekompilat gefunden, und der Eigentümer hat über den Quarantäne-
+  Nachtrag entschieden: 170 von 217 beurteilt, 47 offen:**
+  · **Readme-Messung** über die Einträge ohne Lizenzdatei: **12** mit
+    einer Bedingung (Trefferzeile zitiert, nicht klassifiziert), **19**
+    durchsucht ohne Treffer, **44** ohne Readme, 0 Fehler. Sie hat den
+    vierten Durchgang berichtigt: „75 ohne Lizenzdatei" war eine
+    **Obergrenze** — `akaiutil` trägt `gpl-2.0.txt`, der Protection-
+    Catalog `LICENSE_UFT_PROJECT.txt`, beides von meinem Dateinamen-
+    Muster (LICENSE/COPYING) nicht erkannt. Und ein „nicht
+    kommerziell"-Treffer stammte aus **GPL-2 §3 selbst** („allowed
+    only for noncommercial distribution"), nicht aus einer
+    Zusatzklausel. Eine Copyright-Zeile allein zählt nicht als
+    Bedingung.
+  · **`dtc_code/` ist die rohe Dekompilation des proprietären
+    KryoFlux-`dtc`** (`dtc_decompiled.c` mit 116 Routinen,
+    `dtc_text_arm64.asm` 24,7 MB, `dtc_text_section.bin`). Der Baum
+    kannte es: `QUARANTINE.md` führt dtc als **Verdacht, Zone ROT**,
+    `src/dtc_components/` kam mit MF-1099 als **Eigentümerentscheidung,
+    nicht als Lizenzprüfung**, und `src/dtc_components/LICENSE:24`
+    schließt „decompiler output" aus. Neu ist die **Lesung der
+    SPS-Lizenz** selbst (`Linux_Release3.50/LICENCE.txt` aus
+    `fertige/kryoflux_3.50_linux_r4.tar.gz`, 14 442 Byte): Z. 61 „only
+    for **private & non-profit purposes**", Z. 150 „All rights
+    reserved"; im gegrepten Text **keine** reverse/decompile-Klausel —
+    eine Grenze des grep, keine Erlaubnis. Für ein öffentliches
+    GPL-2-Projekt ist das ohnehin nicht weitergabefähig.
+  · **Der Nachtrag dazu in `QUARANTINE.md` ist auf Anweisung des
+    Eigentümers zurückgenommen** („lösche docs/QUARANTINE.md",
+    präzisiert per Rückfrage zu „nur meinen Nachtrag verwerfen"; die
+    Datei bleibt — 7 Skripte lesen sie, darunter `gen_stand.py` und
+    die Kennzahl-Ableitung in `update_inventory.py`). Die Messung
+    lebt im Register-Urteil zu `dtc_code`, Patch gesichert im
+    Job-Verzeichnis.
+  · **50 Urteile gesät**, jedes mit benannter Quelle: 12 aus der
+    Readme-Bedingung, 19 aus „durchsucht, kein Treffer" (ehrlich als
+    Zustand), 19 aus Baum-Zitaten (SDISK MIT/MF-1176, formats1
+    BSD-3/MF-1078, pc98-disk-tools/MF-1224, 1050-Turbo/MF-1179 …),
+    eigenem Material (UFT-NN-Zips, UFT_Paket, `.claude`) und den
+    vier verschachtelten Analysen (Kurzurteil wörtlich). Verteilung
+    der 170: Kanal Spec 81 · Fundus 71 · Port 6 · Oracle 5 ·
+    Helfer-Prozess 3 · Daten/Fixture 2 · Nachbau 2; Kennzahl T3 runter
+    3, sonst Fundus.
+  · **Entwurfsfrage, nicht entschieden:** fünf Einträge sind selbst
+    Sammelordner — `1` (143 Dateien), `copy` (176), `floppy1` (92),
+    `fertige` (1354), `exsource` (24) — zusammen **1789 der 2408
+    Dateien**. Das Register sieht sie als je einen Eintrag; ob eine
+    zweite Ebene hinein gehört, ist die Frage, an der „vollständig
+    gesichtet" hängt. Offen für den Eigentümer.
+  · **Die 47 Offenen** haben weder Readme noch Baum-Zitat noch
+    Analyse; sie sind nicht geöffnet, und ein Urteil „nicht geöffnet"
+    wäre eines über den Zustand, nicht über den Inhalt — deshalb
+    stehen sie ohne.
   · **Und genau die fünf Absagen waren die interessanten.**
     `capsimage`: „THIS IS NOT FREE SOFTWARE" — und der Volltext liegt
     laut eigener Datei in einem übergeordneten Archiv, das fehlt.

@@ -25,68 +25,26 @@
     "Fundus"
   ],
   "eintraege": {
-    "UFT-NN_OmniFlop_Analyse.md": {
-      "lizenz": "eigene Ausarbeitung dieser Reihe (586 Zeilen); die beschriebene Quelle OmniFlop 3.2d ist proprietaer — die offene Frage ist das DATENBANKHERSTELLERRECHT an den 239 Formatzeilen, nicht das Urheberrecht am Programm",
-      "lizenz_beleg": "Kopf des Dokuments: „drei Architekturbefunde, ein bestaetigter Fehler im Baum mit Rot-Probe, eine unabhaengige Bestaetigung der Lueckenrechnung“; Abschnitt 0 nennt ausdruecklich, was zerlegt wurde und was NICHT",
-      "kanal": "Spec",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Die Eigentuemerentscheidung zum EU-Datenbankherstellerrecht (§§87a ff. UrhG) vorlegen — solange sie aussteht, bleibt `OmniFlop_3.2d_Format_Harvest_C.zip` draussen. Das Dokument selbst ist der Beleg dieser Entscheidungsvorlage, kein zweiter Fund."
-    },
-    "UFT-NN_TRS80_JV13_Analyse.md": {
-      "lizenz": "eigene Ausarbeitung dieser Reihe (523 Zeilen) ueber Tim Manns TRS-80-Seiten (Kanal Spec: Formatbeschreibung des Urhebers, gelesen)",
-      "lizenz_beleg": "Kopf des Dokuments: „fuenf Abweichungen in src/formats/jv3/uft_jv3.c, davon eine mit Datenverlust in JEDEM JV3-Abbild“ — der Hauptfund ist `JV3_HEADER_SIZE 0x2300` (Datenbeginn 256 Byte zu weit)",
-      "kanal": "Spec",
-      "kennzahl": "T3 runter",
-      "naechster_griff": "EINGELOEST: genau dieser Fund ist MF-1017 (`jv3` von T3 auf T2, 0x2300 -> 0x2200, plus vier weitere Befunde) — der Baum nennt das Dokument nur nicht beim Namen. Offen bleibt hoechstens der zweite Teil, „ein Beleg fuer hfe“: pruefen, ob er in MF-1017 oder anderswo mitgenommen wurde."
-    },
-    "apcopy.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden ist `APCopy/APCopy.doc`, NICHT gelesen. Eine erste Messung meldete einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c) 1999-2026 Igor Pavlov“), keine Datei.",
+    ".claude": {
+      "lizenz": "eigenes Material (Werkzeug-Einstellungen)",
+      "lizenz_beleg": "1 Datei: `settings.local.json`.",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "`APCopy.doc` lesen: Amiga-Kopierprogramme dieser Zeit nennen ihre Bedingungen meist dort. Bis dahin: nicht uebernehmen, nicht weitergeben."
+      "naechster_griff": "Kein Fund. Steht hier, damit der Eintrag nicht als Luecke erscheint."
     },
-    "CopyC21.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 16 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `Copy-C.doc` und `CopyC21.readme`, NICHT gelesen.",
+    "1": {
+      "lizenz": "ungemessen — Sammelordner, Lizenz je Unterpaket",
+      "lizenz_beleg": "143 Dateien, 218 MB, Unterarchive (1571.zip, 1581.zip, 4040.zip, ADF-Workshop-master.zip, BLITZ.zip, C64Studio-master.zip, floppybridge-1-4-src.7z …). Der Readme-Treffer war ein Buchzitat in fdc1.txt (Messmer, Addison-Wesley 1997) — keine Lizenzaussage.",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Readme und .doc lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+      "naechster_griff": "Sammelordner — das Register beurteilt nur die oberste Ebene. Fuenf solche Ordner (1, copy, floppy1, fertige, exsource) tragen zusammen 1789 der 2408 Dateien; ob eine zweite Ebene ins Register gehoert, ist eine Entwurfsfrage und steht in AUFGABEN A-032, nicht hier entschieden."
     },
-    "CopyLockDecode.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 4 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `CopyLockDecoder.guide`, NICHT gelesen.",
+    "8FORMAT-master.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `8FORMAT-master/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). Dublette: `floppy1/8FORMAT-master.zip`.",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
-      "naechster_griff": "Den Guide lesen — CopyLock ist im Baum ein Thema (`src/protection/`, P0-2-Klasse), ein Dekoder von fremder Hand waere als ORACLE interessant, falls die Bedingungen es hergeben."
-    },
-    "FilecopyVerifyRetry-1.1.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `FilecopyVerifyRetry-1.1.readme`, NICHT gelesen.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
-    },
-    "pdi2iso.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `pdi2iso/pdi2iso.readme` und `pdi2iso/ReadMe.txt`, NICHT gelesen.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Readme lesen; PDI ist Gegenstand von `UFT-104-PDI-MSX.md` — dort nachsehen, ob dieses Werkzeug schon beurteilt wurde, bevor es hier ein zweites Mal geschieht (K4)."
-    },
-    "tsnafc44.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 50 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `AFCopy_V4.4/AFCopy.Guide` und ein `SourceCode/`-Verzeichnis, NICHT gelesen.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Den Guide lesen — das Paket bringt QUELLTEXT mit (`SourceCode/`), also entscheidet die dort genannte Bedingung, ob je ein Kanal ueber Fundus hinaus offensteht."
-    },
-    "XPRCopy1_0.lha": {
-      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
-      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `XPRCopy1.0/XPRCopy1_0.readme`, NICHT gelesen.",
-      "kanal": "Fundus",
-      "kennzahl": "Fundus",
-      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
     },
     "a8cas-tools-1.3.1.tar.gz": {
       "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
@@ -94,6 +52,20 @@
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "akaiutil-4.6.8.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`akaiutil-4.6.8/gpl-2.0.txt` IM PAKET (FSF-Kopfzeile 1989/1991). Der Dateiname passte nicht auf mein erstes Lizenz-Muster (LICENSE/COPYING) — deshalb stand es faelschlich unter „ohne Lizenzdatei“. Ein Treffer „noncommercial“ stammt aus GPL-2 §3 selbst, nicht aus einer Zusatzklausel.",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oracle-Kandidat fuer `akai_s900`: P3-403 misst die Klasse als ueber den Zellstrom unbelegbar; ein Werkzeug, das das DATEISYSTEM anlegt, waere der andere Weg (wie cpmtools bei `cpm`, MF-1149). Analyse liegt in `UFT-55-akaiutil.md`. Nicht gebaut, nicht gelaufen — ein Kandidat, kein Eintrag (ORACLES.md-Regel)."
+    },
+    "akaiutildisk2tar-4.6.6.tar.gz": {
+      "lizenz": "GPL-2.0",
+      "lizenz_beleg": "`akaiutildisk2tar-4.6.6/gpl-2.0.txt` IM PAKET (FSF-Kopfzeile). Wie akaiutil: Dateiname vom ersten Muster nicht erkannt.",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Zusammen mit `akaiutil-4.6.8.tar.gz` beurteilen — dasselbe Projekt, aeltere Nebenversion."
     },
     "amiga-stuff-master.zip": {
       "lizenz": "Unlicense",
@@ -115,6 +87,20 @@
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "apcopy.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden ist `APCopy/APCopy.doc`, NICHT gelesen. Eine erste Messung meldete einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c) 1999-2026 Igor Pavlov“), keine Datei.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "`APCopy.doc` lesen: Amiga-Kopierprogramme dieser Zeit nennen ihre Bedingungen meist dort. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "caps.zip": {
+      "lizenz": "ungemessen — SPS/CAPS-Familie, mutmasslich dieselbe Bedingung wie capsimage (NICHT freie Software)",
+      "lizenz_beleg": "kein Readme, keine Lizenzdatei im Listing; die Zuordnung zur SPS-Familie folgt aus dem NAMEN und ist damit eine Vermutung, keine Messung.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen und mit `capsimage-/src/CAPSImg/LICENSE` vergleichen; bis dahin wie Zone ROT behandeln."
     },
     "capsimage-": {
       "lizenz": "NICHT freie Software — und der Volltext liegt nicht einmal hier",
@@ -158,12 +144,75 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Nichts offen — das Archiv zum bereits entpackten Verzeichnis."
     },
+    "copy": {
+      "lizenz": "ungemessen — Sammelordner, Lizenz je Unterpaket",
+      "lizenz_beleg": "176 Dateien, 50 MB: Archive (BootProg, CreateXDF, DiskFlashback, DiskFormatID …), Servicehandbuecher (.rar), `22disk_def_kc85.txt`. Readme `22disk_def_kc85.txt` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Sammelordner — das Register beurteilt nur die oberste Ebene. Fuenf solche Ordner (1, copy, floppy1, fertige, exsource) tragen zusammen 1789 der 2408 Dateien; ob eine zweite Ebene ins Register gehoert, ist eine Entwurfsfrage und steht in AUFGABEN A-032, nicht hier entschieden."
+    },
+    "Copy_Wizard": {
+      "lizenz": "Material zu `Copy_Wizard/UFT-41-CopyWizard-Atari8bit.md`",
+      "lizenz_beleg": "Verschachtelte Analyse, eigener Kurzurteil-Satz: „Ein echtes, vollstaendiges Stueck Software-Geschichte, sauber selbst-bootend, mit RAM-adaptivem Ladecode — und, anders als bei den letzten Atari-ST-Funden: UFTs eigenes ATR-Modul haelt dem stand.“ Lizenz des ATR-Abbilds (Borghese 1982) ungemessen.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Kein Bug gefunden — ein NEGATIVES Ergebnis, festgehalten, damit es niemand ein zweites Mal erarbeitet."
+    },
+    "CopyC21.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 16 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `Copy-C.doc` und `CopyC21.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme und .doc lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "CopyLockDecode.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 4 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `CopyLockDecoder.guide`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Den Guide lesen — CopyLock ist im Baum ein Thema (`src/protection/`, P0-2-Klasse), ein Dekoder von fremder Hand waere als ORACLE interessant, falls die Bedingungen es hergeben."
+    },
+    "csrc": {
+      "lizenz": "ungemessen — vermutlich eigenes Arbeitsmaterial",
+      "lizenz_beleg": "76 Dateien, 430 KB: C++-Quellen mit CMakeLists (address_marks.cc, copy_flux.cc, check_sectors/). Readme `check_sectors/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Klaeren, ob eigener Code (dann Kanal Port, trivial) oder extrahiert; `csrc.zip` ist das Archiv dazu."
+    },
+    "csrc.zip": {
+      "lizenz": "ungemessen — Archiv zu `csrc/`",
+      "lizenz_beleg": "Erste passende Datei war `csrc/CMakeLists.txt`; Readme sie maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Mit `csrc/` zusammen beurteilen."
+    },
+    "D_Mob-DCopy31.zip": {
+      "lizenz": "ungemessen — nur eine Copyright-Zeile gefunden",
+      "lizenz_beleg": "`BBBF095_10/BBBF.doc`: „Copyright © Safe Hex International 1992“ — eine Copyright-Zeile ist keine Bedingung. Enthaelt das Bootblock-Brainfile (BBBF), Gegenstand von `dcopy/UFT-33-…` und `X-Copy_Professional_/UFT-42-…`.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Lizenz des Brainfiles (SHI 1992) eigens messen; die beiden Analysen nennen die Struktur, nicht die Bedingungen."
+    },
+    "dcopy": {
+      "lizenz": "Material zu `dcopy/UFT-33-DCopy-Bootblock-Identifikation.md`",
+      "lizenz_beleg": "Verschachtelte Analyse, eigener Kurzurteil-Satz: „D-Copy selbst liess sich nicht vollstaendig oeffnen — der Weg dorthin war trotzdem wertvoll.“ Beachte: die Nummer UFT-33 ist doppelt vergeben (`UFT-33-HAL-Erweiterungen.md` auf der obersten Ebene).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "`UFT-42` berichtigt die Bootblock-Struktur aus dieser Linie; `uft_bb_entry_t` gibt es im Baum nicht (0 Treffer) — vorbeugend erledigt."
+    },
     "disk-utilities-master.zip": {
       "lizenz": "Unlicense / public domain",
       "lizenz_beleg": "COPYING IM PAKET gemessen, 1211 Byte (MF-1222) — nicht am API-Feld eines Hosters",
       "kanal": "Oracle",
       "kennzahl": "T3 runter",
       "naechster_griff": "Erledigt und belegt: sein `disk-analyse` hat `adf_ext` von T2 auf T1b gehoben (MF-1222). Bleibt als Oracle eingetragen; kein weiterer Griff noetig."
+    },
+    "disk_algorithms.zip": {
+      "lizenz": "MIT laut README.md — eigenes Paket",
+      "lizenz_beleg": "`disk_algorithms/README.md`: „MIT License“, „Copyright (c) 2026 EMUUAC“. EMUUAC ist die Autorenbezeichnung der eigenen Pakete (dieselbe steht in `src/dtc_components/LICENSE`). Keine LICENSE-Datei, nur die README-Aussage.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Pruefen, ob der Inhalt im Baum schon angekommen ist (Name `disk_algorithms`); wenn ja, ist dies ein Archiv des Baums, kein Fund."
     },
     "diskstack-main.zip": {
       "lizenz": "MIT",
@@ -200,6 +249,20 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "dtc_code": {
+      "lizenz": "Zone ROT — rohe Dekompilation des proprietaeren KryoFlux-dtc (private & non-profit)",
+      "lizenz_beleg": "3 Dateien: `dtc_decompiled.c` (116 Routinen), `dtc_text_arm64.asm`, `dtc_text_section.bin`. QUARANTINE.md fuehrt dtc als Verdacht/ROT; `src/dtc_components/` wurde MF-1099 als EIGENTUEMER-ENTSCHEIDUNG uebernommen, nicht nach Lizenzpruefung. SPS-LICENCE.txt (aus `fertige/kryoflux_3.50_linux_r4.tar.gz`, 14 442 Byte) erteilt Z. 61 „only for private & non-profit purposes“; im gegrepten Text keine reverse/decompile-Klausel — eine Grenze des grep, keine Erlaubnis.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts daraus in den Baum ueber MF-1099 hinaus. Der offene Punkt steht in QUARANTINE.md (Verdacht); dieser Eintrag ist das MATERIAL dazu, kein zweiter Befund."
+    },
+    "dtc_code.zip": {
+      "lizenz": "Zone ROT — Archiv zu `dtc_code/`",
+      "lizenz_beleg": "dasselbe Material gepackt (3,7 MB).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Mit `dtc_code/` zusammen: nichts uebernehmen."
+    },
     "dtc_souce.zip": {
       "lizenz": "Apache-2.0",
       "lizenz_beleg": "`dtc_souce/LICENCE.txt` IM PAKET gelesen (244 Byte), nicht das API-Feld eines Hosters",
@@ -207,12 +270,61 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "exsource": {
+      "lizenz": "ungemessen — Sammelordner; mame-master.zip darin ist in ORACLES.md mit SHA-256 gefuehrt",
+      "lizenz_beleg": "24 Dateien, 16 MB: `mame-master.zip` (ORACLES.md:316), `fdformat-ng-master_improved.zip`, dazu eigene Extrakte (`uft_*_v*.zip`, `*_extract_c.zip`).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Sammelordner — das Register beurteilt nur die oberste Ebene. Fuenf solche Ordner (1, copy, floppy1, fertige, exsource) tragen zusammen 1789 der 2408 Dateien; ob eine zweite Ebene ins Register gehoert, ist eine Entwurfsfrage und steht in AUFGABEN A-032, nicht hier entschieden."
+    },
+    "FastCopy3": {
+      "lizenz": "Material zu `FastCopy3/UFT-35-FastCopy3-Atari.md`",
+      "lizenz_beleg": "Verschachtelte Analyse, eigener Kurzurteil-Satz: „Drei Funde — einer korrigiert einen Fehler, den ich selbst beim Entpacken gemacht habe.“ Freeware laut FCOPY.DOC (siehe die zwei `FastCopy_3_src_*.zip`).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "81-Spuren-Geometrie ist bestaetigt; MSA-Entpackfehler gegen UFTs Code geprueft, der ihn vermeidet. Kein offener Griff."
+    },
+    "FastCopy_3_src_13_1_1990.zip": {
+      "lizenz": "Freeware laut Urheber (Backschat, 1990) — Kopieren erlaubt, Ableiten nicht erteilt",
+      "lizenz_beleg": "`FCOPY.DOC`: „A) FastCopy ist Freeware. Das heisst jeder darf es kostenlos kopieren“. Quellen liegen bei („src“), eine Quelloffenheitserklaerung steht im gelesenen Abschnitt nicht.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Analyse in `FastCopy3/UFT-35-FastCopy3-Atari.md` (81-Spuren-Geometrie, Turbo C). Freeware deckt Kopieren; der Kanal bleibt Spec."
+    },
+    "FastCopy_3_src_5_2_1990.zip": {
+      "lizenz": "Freeware laut Urheber (Backschat, 1990) — Kopieren erlaubt, Ableiten nicht erteilt",
+      "lizenz_beleg": "`FCOPY.DOC`, gleicher Wortlaut wie im 13.1.1990-Stand.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Wie `FastCopy_3_src_13_1_1990.zip`; zwei Staende desselben Programms."
+    },
+    "fertige": {
+      "lizenz": "ungemessen — Sammelordner („fertige“), Lizenz je Unterpaket",
+      "lizenz_beleg": "1354 Dateien, 40 MB: eigene Extrakte (`*_extract_c*.zip`), `kryoflux_3.50_linux_r4.tar.gz` (SPS-Paket mit LICENCE.txt, Quelle des dtc-Urteils), `dtc` (2,6 MB, mutmasslich die Linux-Binaerdatei — nicht geprueft).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Sammelordner — das Register beurteilt nur die oberste Ebene. Fuenf solche Ordner (1, copy, floppy1, fertige, exsource) tragen zusammen 1789 der 2408 Dateien; ob eine zweite Ebene ins Register gehoert, ist eine Entwurfsfrage und steht in AUFGABEN A-032, nicht hier entschieden."
+    },
+    "FilecopyVerifyRetry-1.1.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `FilecopyVerifyRetry-1.1.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
     "FLOFOR.ZIP": {
       "lizenz": "ungemessen",
       "lizenz_beleg": "docs/ORACLES.md nennt es als **geprueften und ABGELEHNTEN** Kandidaten fuer die Percom-RFD-Firmware",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Keiner: geprueft und abgelehnt. Der Eintrag steht hier, damit die Ablehnung nicht als Luecke erscheint und jemand sie wiederholt."
+    },
+    "floppy1": {
+      "lizenz": "ungemessen — Sammelordner, Lizenz je Unterpaket",
+      "lizenz_beleg": "92 Dateien, 192 MB: ROM-Quellen (1541/2031, 1571 DOS, 1581, 2031), 4489_byteloader, 800xldj.lzh, 8FORMAT … Readme `boot sector however the floppy disk.txt` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Sammelordner — das Register beurteilt nur die oberste Ebene. Fuenf solche Ordner (1, copy, floppy1, fertige, exsource) tragen zusammen 1789 der 2408 Dateien; ob eine zweite Ebene ins Register gehoert, ist eine Entwurfsfrage und steht in AUFGABEN A-032, nicht hier entschieden."
     },
     "FloppyImageRectifier-main.zip": {
       "lizenz": "MIT",
@@ -227,6 +339,27 @@
       "kanal": "Spec",
       "kennzahl": "Fundus",
       "naechster_griff": "Keiner offen: der Inhalt ist gelesen, die Verwechslung mit `formats1.zip` ist berichtigt."
+    },
+    "formats1.zip": {
+      "lizenz": "BSD-3-Clause (SPDX in allen 456 Dateien) — gemessen MF-1078",
+      "lizenz_beleg": "CLAUDE.md/MF-1078: 228 .cpp + 228 .h, MAMEs Formatklassen; NICHT zu verwechseln mit `FORMATS.ZIP` (CBM-Textbeschreibungen).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Erledigt: Referenz fuer MF-1026 u. a. (gelesen, nicht uebernommen)."
+    },
+    "GCDFS.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `GCDFSen.txt` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Analyse liegt in `UFT-53-GCDFS.md` („auf ausdruecklichen Wunsch aufgenommen“); Bedingungen dort nicht gemessen."
+    },
+    "geocopy.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "`geocopy/gEOcOPY.TXT`: der Treffer war die Dateikopfzeile „GeoCopy.txt X PRG formatted GEOS file V1.0“ — keine Bedingung.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Gegenstand von `UFT-93-GeoCopy-Schreibseite.md`; Bedingungen dort nicht gemessen — die Datei ist ein GEOS-Behaelter, das Readme steckt darin."
     },
     "hardsector_tool-main.zip": {
       "lizenz": "Apache-2.0",
@@ -249,6 +382,20 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz an der Datei im Paket messen, falls es je weitergegeben werden soll. Zum blossen Ausfuehren ist die Frage offen und benannt."
     },
+    "IMGRF2X.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `IMGRF2X.TXT` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "InterchangeFormatExtracter.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `InterchangeFormatExtracter/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben. Der Name klingt nach eigenem Werkzeug — pruefen."
+    },
     "ipf-flux-main.zip": {
       "lizenz": "BSD-3-Clause",
       "lizenz_beleg": "`ipf-flux-main/LICENSE` IM PAKET gelesen (1600 Byte), nicht das API-Feld eines Hosters",
@@ -262,6 +409,13 @@
       "kanal": "Helfer-Prozess",
       "naechster_griff": "Weg 3 nach QUARANTINE_PROCESS.md — Helfer ueber Prozessgrenze. Weg 2 (Clean-Room aus Spec) ist versperrt. Dort steht das Urteil; hier nur der Verweis.",
       "kennzahl": "Fundus"
+    },
+    "ipfdec5_binary_win.zip": {
+      "lizenz": "SPS-Bedingung: „free for private, non-commercial use“ — keine freie Lizenz; NUR Binaerdateien",
+      "lizenz_beleg": "`DONATIONS.txt`: „KryoFlux is free for private, non-commercial use.“ Dieselbe Familie wie capsimage und dtc (QUARANTINE Zone ROT).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts uebernehmen. Als Oracle hoechstens mit SHA-Pin nach der ORACLES.md-Regel — und nur, wenn Ausfuehrung ueberhaupt gebraucht wird; IPF liegt seit MF-1079 auf T1 ohne dieses Werkzeug."
     },
     "KCemu-0.5.1.tar.gz": {
       "lizenz": "GPL-2.0",
@@ -305,12 +459,33 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "Metadaten.zip": {
+      "lizenz": "eigenes Material (Benennung)",
+      "lizenz_beleg": "kein Readme; der Name ist eine Arbeitsbezeichnung dieser Reihe, kein Fremdpaket — Inhalt nicht geoeffnet.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen, um es einem Posten zuzuordnen."
+    },
     "mfmdisk-master.zip": {
       "lizenz": "GPL-2.0",
       "lizenz_beleg": "`mfmdisk-master/COPYING` IM PAKET gelesen (6000 Byte), nicht das API-Feld eines Hosters",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "MFSLives-master.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `MFSLives-master/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben. (Apple-MFS-Dateisystem, GitHub-Paket.)"
+    },
+    "mnib_cvs.zip": {
+      "lizenz": "ungemessen — Readme sagt „copyrighted“, die Bedingung steht nicht im gelesenen Abschnitt",
+      "lizenz_beleg": "`mnib/readme.txt,v` (RCS-Datei): „mnib, n2d, n2g and g2d are copyrighted“. mnib ist der Vorlaeufer der nibtools-Familie; QUARANTINE.md fuehrt nibtools als Zone GELB (Apache-2.0 fuer nibtools-extra, MF-1008) — das ist NICHT die Lizenz von mnib.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Vor jeder Verwendung die nibtools-Zeilen in QUARANTINE.md lesen und die mnib-Lizenz eigens messen (Readme vollstaendig, nicht 8000 Byte)."
     },
     "MSH-1.58.zip": {
       "lizenz": "MIT",
@@ -326,6 +501,13 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Zone GELB in docs/QUARANTINE.md. Ausfuehren ja, uebernehmen nein. Dort steht das Urteil; hier nur der Verweis."
     },
+    "Oberflächenplanung.zip": {
+      "lizenz": "eigenes Material (Benennung)",
+      "lizenz_beleg": "kein Readme; Arbeitsbezeichnung dieser Reihe (GUI-Planung) — Inhalt nicht geoeffnet.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen, um es einem Posten zuzuordnen (P3-496/501, Klick-Sitzung?)."
+    },
     "OmniFlop_3.2d_Format_Harvest_C.zip": {
       "lizenz": "ungemessen — offen ist nicht die Urheber-, sondern die DATENBANKHERSTELLER-Frage (EU, §§87a ff. UrhG) fuer die 239 Formatzeilen",
       "lizenz_beleg": "neue-ideen/UFT-NN_OmniFlop_Analyse.md",
@@ -340,12 +522,47 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Die Lizenz von OpenCBM SELBST suchen (Paketwurzel, README). Bis dahin gilt sie als ungemessen — nicht als das, was das GUI-Unterprojekt sagt."
     },
+    "PastiImgKit.zip": {
+      "lizenz": "Alle Rechte vorbehalten (Jorge Cwik, 2004/2005)",
+      "lizenz_beleg": "`PastiST.txt`: „All rights reserved. Copyright c 2004, 2005 by Jorge Cwik“. Pasti ist der Urheber des STX-Formats (`stx`, T1b seit MF-1020).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nur lesen: die Formatbeschreibung des Urhebers ist Kanal Spec (wie 86Box bei MF-961). Kein Code, kein Binaerlauf ohne Pruefung der Bedingungen."
+    },
+    "pc98-disk-tools-master.zip": {
+      "lizenz": "KEINE Lizenz — gemessen MF-1224: keine Lizenzdatei, im ganzen README kein Lizenzwort (vollstaendig gelesen)",
+      "lizenz_beleg": "CLAUDE.md/MF-1224; Eigentuemer-Entscheidung 2026-09-17 woertlich „Lizenzentscheidung (fdi_pc98, nfd) ja wir machen das“ — gehandhabt wie dtc/epstool: ausfuehren ja, weitergeben nein.",
+      "kanal": "Oracle",
+      "kennzahl": "T3 runter",
+      "naechster_griff": "Erledigt und belegt: `hdm_to_fdi.py` hat `fdi_pc98` auf T1b gehoben (MF-1224). Die Entscheidung deckt `nfd` NICHT (dort fehlt ein Schreiber)."
+    },
+    "pce-.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `pce-/README` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "PCE (Hampa Hug) ist der Urheber des PRI-Formats; seine Beschreibung ist die Referenz von MF-1036 (Kanal Spec, gelesen). Lizenz des Pakets eigens messen, bevor mehr als Lesen geschieht."
+    },
+    "pdi2iso.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 6 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `pdi2iso/pdi2iso.readme` und `pdi2iso/ReadMe.txt`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen; PDI ist Gegenstand von `UFT-104-PDI-MSX.md` — dort nachsehen, ob dieses Werkzeug schon beurteilt wurde, bevor es hier ein zweites Mal geschieht (K4)."
+    },
     "picturedsk-main.zip": {
       "lizenz": "MIT",
       "lizenz_beleg": "`picturedsk-main/LICENSE` IM PAKET gelesen (1144 Byte), nicht das API-Feld eines Hosters",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "RDOSstuff.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `RDOSstuff_Info.txt` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Analyse in `UFT-90-SSI-RDOS.md`; Bedingungen dort nicht gemessen."
     },
     "reveng-3.0.6.zip": {
       "lizenz": "GPL-3.0",
@@ -354,12 +571,40 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "Roland_S_UFT_Paket.zip": {
+      "lizenz": "eigenes Paket (UFT_Paket)",
+      "lizenz_beleg": "Benennung `…_UFT_Paket`; Readme `Roland_S_UFT_Paket/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). Gegenstand von MF-1176 (Roland S-Serie, `uft_roland_identify()`).",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Pruefen, ob alles daraus im Baum ist — MF-1176 hat die Erkennung uebernommen, das Plugin bleibt unter dem Moratorium (P3-427)."
+    },
     "samdisk_plus.zip": {
       "lizenz": "UNGEMESSEN fuer das Paket selbst — die EINZIGE Lizenzdatei darin gehoert einem mitgelieferten Fremdteil und traegt eine NICHT-KOMMERZIELLE Klausel",
       "lizenz_beleg": "`samdisk_plus/capsimage/LICENCE.txt` IM PAKET gelesen: „This licence is based on the MAME licence and is intended for use in all non-commercial projects and environments. Other licensing options are available… licensing@kryoflux.com\" — das ist die SPS-/CAPSImg-Lizenz, nicht die von SAMdisk. Eine nicht-kommerzielle Klausel ist KEINE freie Lizenz.",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "EIGENTUEMER-VORLAGE. Zwei Fragen, beide ungemessen: (1) Welche Lizenz hat `samdisk_plus` SELBST? (2) Verhaelt sich das zu dem, was `docs/ORACLES.md` und CLAUDE.md ueber „SAMdisk MIT im Baum\" sagen — ist das dasselbe Paket oder ein anderes? Bis dahin nichts daraus uebernehmen."
+    },
+    "SDISK.zip": {
+      "lizenz": "MIT, © 2011 Miroslav Svetlik — gemessen MF-1176",
+      "lizenz_beleg": "CLAUDE.md/MF-1176: SDISK for Windows v1.7, „statisch zerlegt, nicht ausgefuehrt“, Kanal Nachbau (Zahlen uebernommen, keine Zeilen).",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Erledigt: Vorlage fuer `UFT_CAPS_OS_VOLUME` (MF-1176). Kein weiterer Griff."
+    },
+    "software_1050_turbo.zip": {
+      "lizenz": "ungemessen — Firmware-Quelltext, Anker md5-identisch mit dem 1988er ROM",
+      "lizenz_beleg": "Readme `DATEIEN.TXT` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). Der Baum fuehrt es seit MF-1179 als Spec-Quelle der staerksten Stufe (Laufwerks-Firmware, ORACLES.md §Laufwerks-Firmware, md5 35be2c58f1e0b04ab5a1f2459e5515bd).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Kanal steht (Spec). Offen ist die Lizenz des Atasm-Quelltexts — gelesen wird er ohnehin nur (P3-434 haelt die Interleave-Abweichung fest)."
+    },
+    "spf-main.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `spf-main/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
     },
     "SPStudio_Dev": {
       "lizenz": "Apache-2.0",
@@ -382,12 +627,33 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Ms-RL ist eine Copyleft-Lizenz je DATEI. Wer etwas daraus will, klaert zuerst die Vereinbarkeit mit GPL-2 — ausfuehren waere davon nicht betroffen."
     },
+    "Synchro-Express": {
+      "lizenz": "Material zu `Synchro-Express/UFT-34-Synchro-Express-Atari.md`",
+      "lizenz_beleg": "Verschachtelte Analyse, eigener Kurzurteil-Satz: „Zwei Funde: einer bestaetigt `UFT-31` empirisch, einer ist neu.“ (Little-Endian-BPB am echten Bootsektor; PSG/MFP-Direktzugriff.) Lizenz des Datel-Abbilds ungemessen.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der PSG/MFP-Fund ist Kopierschutzwissen (Klasse P0-2), kein Auftrag."
+    },
+    "Teilstring-Prüfer in die GitHub-Prüfung.zip": {
+      "lizenz": "eigenes Material — Eigentuemer woertlich: „das ist code von mir !!“",
+      "lizenz_beleg": "Gegenstand von `A-028` (58 261 Byte, 5 Eintraege, gemessen dort).",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "A-028 haelt den Stand: wartet auf eine Eigentuemerentscheidung (oeffentlicher Wegwerf-PR). Kein zweiter Posten."
+    },
     "trdetz-0.3b3.tar.gz": {
       "lizenz": "zlib",
       "lizenz_beleg": "`./trdetz-0.3b3/LICENSE` IM PAKET gelesen (861 Byte), nicht das API-Feld eines Hosters",
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
+    },
+    "tsnafc44.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 50 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `AFCopy_V4.4/AFCopy.Guide` und ein `SourceCode/`-Verzeichnis, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Den Guide lesen — das Paket bringt QUELLTEXT mit (`SourceCode/`), also entscheidet die dort genannte Bedingung, ob je ein Kanal ueber Fundus hinaus offensteht."
     },
     "UFT-100-nibwrite-GuildOfThieves.md": {
       "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
@@ -844,6 +1110,55 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Eigenes Kurzurteil: „Der wichtigste Fund: UFTs bestehende RapidLok-Erkennung hat eine bestätigte, dokumentierte Lücke.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
     },
+    "uft-layout-code.zip": {
+      "lizenz": "eigenes Material (Benennung `uft-…`)",
+      "lizenz_beleg": "kein Readme; Inhalt nicht geoeffnet.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Pruefen, ob im Baum (Spurmodell `uft_track_layout.h`, MF-1173, P3-422)."
+    },
+    "UFT-NN — Amiga.zip": {
+      "lizenz": "eigenes Material (Benennung UFT-NN)",
+      "lizenz_beleg": "kein Readme; Inhalt nicht geoeffnet.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen: vermutlich Ausarbeitung(en) der Reihe in gepackter Form — dann gegen die 70 vorhandenen halten (Dublette oder Luecke 36-40?)."
+    },
+    "UFT-NN — FAT12 lesen.zip": {
+      "lizenz": "eigenes Material (Benennung UFT-NN)",
+      "lizenz_beleg": "kein Readme; Inhalt nicht geoeffnet.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen und gegen die Luecken der Reihe halten (36-40, 44, 45, 47, 48, 98)."
+    },
+    "UFT-NN — Teilstring-Fallen Prüfer.zip": {
+      "lizenz": "eigenes Material (Benennung UFT-NN)",
+      "lizenz_beleg": "kein Readme; Inhalt nicht geoeffnet; Thema von A-028 und `.github/workflows/teilstring.yml`.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Oeffnen; vermutlich Dublette zu `Teilstring-Prüfer in die GitHub-Prüfung.zip`."
+    },
+    "UFT-NN_OmniFlop_Analyse.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe (586 Zeilen); die beschriebene Quelle OmniFlop 3.2d ist proprietaer — die offene Frage ist das DATENBANKHERSTELLERRECHT an den 239 Formatzeilen, nicht das Urheberrecht am Programm",
+      "lizenz_beleg": "Kopf des Dokuments: „drei Architekturbefunde, ein bestaetigter Fehler im Baum mit Rot-Probe, eine unabhaengige Bestaetigung der Lueckenrechnung“; Abschnitt 0 nennt ausdruecklich, was zerlegt wurde und was NICHT",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Eigentuemerentscheidung zum EU-Datenbankherstellerrecht (§§87a ff. UrhG) vorlegen — solange sie aussteht, bleibt `OmniFlop_3.2d_Format_Harvest_C.zip` draussen. Das Dokument selbst ist der Beleg dieser Entscheidungsvorlage, kein zweiter Fund."
+    },
+    "UFT-NN_TRS80_JV13_Analyse.md": {
+      "lizenz": "eigene Ausarbeitung dieser Reihe (523 Zeilen) ueber Tim Manns TRS-80-Seiten (Kanal Spec: Formatbeschreibung des Urhebers, gelesen)",
+      "lizenz_beleg": "Kopf des Dokuments: „fuenf Abweichungen in src/formats/jv3/uft_jv3.c, davon eine mit Datenverlust in JEDEM JV3-Abbild“ — der Hauptfund ist `JV3_HEADER_SIZE 0x2300` (Datenbeginn 256 Byte zu weit)",
+      "kanal": "Spec",
+      "kennzahl": "T3 runter",
+      "naechster_griff": "EINGELOEST: genau dieser Fund ist MF-1017 (`jv3` von T3 auf T2, 0x2300 -> 0x2200, plus vier weitere Befunde) — der Baum nennt das Dokument nur nicht beim Namen. Offen bleibt hoechstens der zweite Teil, „ein Beleg fuer hfe“: pruefen, ob er in MF-1017 oder anderswo mitgenommen wurde."
+    },
+    "UFT_C64PP_Protection_Catalog.zip": {
+      "lizenz": "GPL-2.0 — eigenes Paket",
+      "lizenz_beleg": "`LICENSE_UFT_PROJECT.txt` IM PAKET (GPL-2-Volltext, FSF-Kopfzeile). Der Dateiname passte nicht auf mein erstes Lizenz-Muster.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Pruefen, ob der Katalog im Baum ist (`src/protection/`, P0-2: Katalog ohne Aufrufer) — dann ist dies ein Archiv, kein Fund."
+    },
     "UFT_Floppy_Reference_AARD_Paket.zip": {
       "lizenz": "LGPL (Version im Volltext nicht bestimmbar)",
       "lizenz_beleg": "`UFT_Floppy_Reference_AARD_Paket/LICENSE` IM PAKET gelesen (1783 Byte), nicht das API-Feld eines Hosters",
@@ -858,12 +1173,47 @@
       "kennzahl": "Fundus",
       "naechster_griff": "Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal."
     },
+    "UTIL-DISK-Fast_False_Floppy_Format-master.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `…/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "victor9k-flux-tools-main.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Readme `victor9k-flux-tools-main/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben. Victor 9000 ist im Baum T1b (MF-1026/1085) — ein Werkzeug von fremder Hand waere als Oracle interessant, wenn die Lizenz es hergibt."
+    },
+    "Win98_FDB_UFT_Paket.zip": {
+      "lizenz": "eigenes Paket (UFT_Paket)",
+      "lizenz_beleg": "Benennung `…_UFT_Paket`; Readme `Win98_FDB_UFT_Paket/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). CLAUDE.md/MF-1174 nennt die Win98-FDB-Zulieferung (oeffnet mit blankem fopen, weil `uft_path_safe` nicht existiert).",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Pruefen, ob im Baum angekommen; MF-1174 kennt sie."
+    },
     "x50conv.exe": {
       "lizenz": "Weitergabe und Ausfuehrung erlaubt, DISASSEMBLIERUNG AUSDRUECKLICH UNTERSAGT",
       "lizenz_beleg": "mitgelieferte Dokumentation des Pakets; keine Lizenzdatei separat",
       "kanal": "Spec",
       "kennzahl": "Fundus",
       "naechster_griff": "Nichts als die mitgelieferte Dokumentation verwenden. 'Nimm alles auseinander' gilt hier NICHT — das ist keine Auslegungsfrage, sondern die Lizenz, und die Einwilligung des Eigentuemers deckt Arbeitsschritte, nicht Lizenzen."
+    },
+    "xcopypro_xmas93_2008.zip": {
+      "lizenz": "ungemessen — X-Copy Pro, Binaerpaket",
+      "lizenz_beleg": "Readme `Devs/help.guide` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). X-Copy ist Gegenstand des Clean-Room-Nachbaus (`docs/nachbau/XCOPY_VERHALTEN_HAND-A.md`, QUARANTINE_PROCESS Weg 2).",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "HAND-A-Material. Hand B (der MF-Workflow) darf es nicht sehen; Bedingungen im help.guide von Hand A messen."
+    },
+    "XPRCopy1_0.lha": {
+      "lizenz": "ungemessen — KEINE Lizenzdatei im Paket",
+      "lizenz_beleg": "mit 7-Zip GELISTET (nicht ausgepackt): 5 Dateien, keine namens LICENSE/COPYING/COPYRIGHT; vorhanden `XPRCopy1.0/XPRCopy1_0.readme`, NICHT gelesen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
     }
   }
 }
