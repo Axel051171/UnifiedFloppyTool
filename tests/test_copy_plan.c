@@ -673,6 +673,95 @@ int main(void)
         }
     }
 
+    /* P4b — DER KERN BEHAUPTET KEINE MESSUNG, DIE ER NICHT HAT (P3-508).
+     *
+     * `uft_copy_profile_available()` bekommt eine Merkmalsmaske und sonst
+     * nichts. Es kann daraus NICHT unterscheiden, ob eine Flagge
+     *
+     *   (a) gemessen wurde und fehlt, oder
+     *   (b) gar nicht gemessen werden KONNTE.
+     *
+     * Trotzdem sagte es „kein GCR-Format erkannt", „keine Commodore-BAM
+     * erkannt", „kein Dateisystem erkannt" — eine Aussage UEBER die
+     * Diskette. Der einzige Produktivaufrufer ist der Formatreiter, und
+     * der zeigt zehn Zeilen weiter „nicht feststellbar (dieser Reiter
+     * oeffnet kein Abbild)" fuer dieselben vier Flaggen: zwei Saetze
+     * ueber dieselbe Flagge, in einem Dialog.
+     *
+     * Das ist MF-980 in neuer Gestalt („das Format sagt 0xE5" gegen
+     * „hier wurde 0xE5 gelesen") und die Missionszeile „Keine erfundenen
+     * Daten".
+     *
+     * ZWEITER BEFUND IN DERSELBEN FUNKTION: die Begruendung kam aus
+     * einer `if`-Kette, die 6 der 8 Flaggen der Tafel aufzaehlte —
+     * `Timing` und `schwache Bits` fielen in den Sammelzweig. Eine
+     * Aufzaehlung neben einer Tafel (MF-636/D3).
+     *
+     * Die Zusage prueft deshalb ZWEI Dinge, und beide fallen am
+     * Vorzustand: keine Begruendung behauptet einen Befund, und jede
+     * nennt die fehlende Faehigkeit beim Namen der Tafel. */
+    {
+        size_t geprueft = 0, behauptet = 0, ohne_namen = 0;
+        for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+            const uft_copy_profile_t *p = uft_copy_profile(i);
+            if (!p || !p->braucht) continue;
+            const char *grund = NULL;
+            /* Ein Formatname, den KEIN Behelf fuehrt — sonst traegt der
+             * Behelf und es gibt gar keine Ablehnung. */
+            if (uft_copy_profile_available(p, 0u, "KEIN-FORMAT", &grund))
+                continue;
+            geprueft++;
+            if (!grund) { ohne_namen++; continue; }
+
+            /* (1) Kein Befund ueber das Medium.
+             *
+             * Zwei Pruefungen, und die zweite ist die wichtigere: das
+             * Wort „erkannt" faengt genau die vier gemessenen
+             * Falschaussagen, aber nur sie — „kein GCR gefunden" kaeme
+             * durch. Deshalb wird zusaetzlich die GESTALT festgenagelt:
+             * eine Begruendung aus der Tafel sagt, was das Profil
+             * VERLANGT, und endet auf „nicht zugesagt". Wer wieder Prosa
+             * ueber die Diskette einsetzt, faellt hier auf — egal mit
+             * welchem Wort. */
+            const size_t lg = strlen(grund);
+            const char *schwanz = "nicht zugesagt";
+            const size_t ls = strlen(schwanz);
+            const int gestalt = (strncmp(grund, "setzt ", 6) == 0)
+                             && (lg >= ls)
+                             && (strcmp(grund + lg - ls, schwanz) == 0);
+            if (strstr(grund, "erkannt") || !gestalt) {
+                behauptet++;
+                printf("  P4b: `%s` behauptet einen Befund: \"%s\"\n",
+                       p->id, grund);
+            }
+
+            /* (2) Die fehlende Faehigkeit wird benannt — mit dem Namen,
+             *     den die Tafel des Kerns fuehrt. */
+            int genannt = 0;
+            for (size_t k = 0; k < uft_copy_cap_count(); k++) {
+                const uft_copy_caps_t c = uft_copy_cap_at(k);
+                if (!(p->braucht & (uint32_t)c)) continue;
+                const char *n = uft_copy_cap_name(c);
+                if (n && strstr(grund, n)) { genannt = 1; break; }
+            }
+            if (!genannt) {
+                ohne_namen++;
+                printf("  P4b: `%s` nennt keine Faehigkeit: \"%s\"\n",
+                       p->id, grund);
+            }
+        }
+        PRUEFE(geprueft > 0,
+               "P4b: kein Profil lehnte ab — die Probe misst nichts");
+        PRUEFE(behauptet == 0,
+               "P4b: %zu Begruendung(en) behaupten einen Befund ueber die "
+               "Diskette, den der Kern nicht hat", behauptet);
+        PRUEFE(ohne_namen == 0,
+               "P4b: %zu Begruendung(en) nennen die fehlende Faehigkeit "
+               "nicht beim Namen der Tafel", ohne_namen);
+        printf("  %zu Ablehnungen geprueft, %zu behauptet, %zu ohne Namen\n",
+               geprueft, behauptet, ohne_namen);
+    }
+
     /* P6 — und die gemessene Wahrheit bleibt sichtbar: die
      * Kopierschutz-Profile scheitern am FORMAT, nicht an sich selbst. */
     {

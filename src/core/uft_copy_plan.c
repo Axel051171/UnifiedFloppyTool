@@ -326,17 +326,43 @@ const char *uft_copy_stage_name(uft_copy_stage_t v)
 
 /* Eine Zeile je Flagge. Die Tafel ist die EINZIGE Stelle, an der diese
  * acht Namen stehen — eine zweite Kopie in der Oberflaeche waere die
- * Lage aus MF-1177. */
-static const struct { uft_copy_caps_t flagge; const char *name; }
-k_cap_name[] = {
-    { UFT_CAP_FLUX_IO,      "Fluss"        },
-    { UFT_CAP_BITSTREAM_IO, "Bitstrom"     },
-    { UFT_CAP_MULTI_REV,    "Mehrfachlesung" },
-    { UFT_CAP_TIMING,       "Timing"       },
-    { UFT_CAP_WEAK_BITS,    "schwache Bits" },
-    { UFT_CAP_FILESYSTEM,   "Dateisystem"  },
-    { UFT_CAP_CBM_BAM,      "Commodore-BAM" },
-    { UFT_CAP_GCR,          "GCR"          },
+ * Lage aus MF-1177.
+ *
+ * MF-1261: die Zusage stimmte nicht. Zehn Zeilen tiefer, IN DIESER
+ * DATEI, stand eine `if`-Kette, die sechs der acht Flaggen ein zweites
+ * Mal aufzaehlte — und dabei etwas behauptete, das der Kern nicht weiss
+ * (`P3-508`). Deshalb traegt die Tafel jetzt auch die Begruendung:
+ * wer eine Flagge hinzufuegt, bekommt sie mit, statt sie zu vergessen.
+ *
+ * WARUM DIE BEGRUENDUNG SO KLINGT, WIE SIE KLINGT: `uft_copy_profile_
+ * available()` sieht eine Merkmalsmaske und sonst nichts. Ob eine
+ * fehlende Flagge GEMESSEN fehlt oder gar nicht messbar war, steht dort
+ * nicht — also darf keine Begruendung „nicht erkannt" sagen. „Nicht
+ * zugesagt" ist die Aussage, die der Kern wirklich treffen kann, und
+ * sie war in einer der sechs alten Zeichenketten schon richtig
+ * getroffen („keine Mehrfachlesung zugesagt"). */
+static const struct {
+    uft_copy_caps_t flagge;
+    const char     *name;
+    const char     *fehlt;   /* Begruendung, wenn ein Profil sie verlangt
+                              * und die Maske sie nicht fuehrt. */
+} k_cap_name[] = {
+    { UFT_CAP_FLUX_IO,      "Fluss",
+      "setzt Fluss voraus — nicht zugesagt" },
+    { UFT_CAP_BITSTREAM_IO, "Bitstrom",
+      "setzt Bitstrom voraus — nicht zugesagt" },
+    { UFT_CAP_MULTI_REV,    "Mehrfachlesung",
+      "setzt Mehrfachlesung voraus — nicht zugesagt" },
+    { UFT_CAP_TIMING,       "Timing",
+      "setzt Timing voraus — nicht zugesagt" },
+    { UFT_CAP_WEAK_BITS,    "schwache Bits",
+      "setzt schwache Bits voraus — nicht zugesagt" },
+    { UFT_CAP_FILESYSTEM,   "Dateisystem",
+      "setzt Dateisystem voraus — nicht zugesagt" },
+    { UFT_CAP_CBM_BAM,      "Commodore-BAM",
+      "setzt Commodore-BAM voraus — nicht zugesagt" },
+    { UFT_CAP_GCR,          "GCR",
+      "setzt GCR voraus — nicht zugesagt" },
 };
 #define K_CAP_N (sizeof(k_cap_name) / sizeof(k_cap_name[0]))
 
@@ -588,21 +614,45 @@ bool uft_copy_profile_available(const uft_copy_profile_t *p,
     if (p->behelf_formate && in_behelf(p->behelf_formate, format))
         return true;
 
+    /* MF-1261 (`P3-508`): die Begruendung kommt aus der Tafel, und sie
+     * behauptet KEINE Messung.
+     *
+     * Hier stand eine `if`-Kette mit sechs Zweigen, von denen drei einen
+     * Befund ueber die DISKETTE aussprachen — „kein GCR-Format erkannt",
+     * „keine Commodore-BAM erkannt", „kein Dateisystem erkannt". Diese
+     * Funktion sieht aber nur `caps`; ob eine fehlende Flagge gemessen
+     * fehlt oder gar nicht messbar war, weiss sie nicht. Gemessen hat
+     * der Rotbeweis VIER solche Zeilen (`doscopy`, `bamcopy`,
+     * `nibblecopy`, `cyclone`) — eine mehr, als der Befund nannte.
+     *
+     * Und der einzige Produktivaufrufer stellt die Falschaussage direkt
+     * neben ihre Berichtigung: `src/formattab.cpp` zeigt fuer dieselben
+     * vier Flaggen „nicht feststellbar (dieser Reiter oeffnet kein
+     * Abbild)". Zwei Saetze ueber dieselbe Flagge, in einem Dialog.
+     *
+     * Die Schleife laeuft ueber die Tafel statt ueber eine Aufzaehlung:
+     * die alte Kette kannte sechs der acht Flaggen, `Timing` und
+     * `schwache Bits` fielen in einen Sammelzweig. Heute verlangt kein
+     * Profil die zwei — die Luecke war also latent, nicht wirksam, und
+     * sie ist trotzdem zu (MF-636/D3). Die Reihenfolge ist die der
+     * Tafel und damit nachlesbar, nicht die einer gewachsenen Kette.
+     *
+     * GEMESSENE FOLGE DER REIHENFOLGE, damit sie niemanden ueberrascht:
+     * verlangt ein Profil MEHRERE Flaggen und fehlen sie alle, nennt die
+     * Schleife die erste der Tafel. `bamcopy` (Dateisystem + Commodore-
+     * BAM) sagt bei leerer Maske deshalb „setzt Dateisystem voraus", wo
+     * die alte Kette „Commodore-BAM" sagte. Beides ist wahr; und sobald
+     * eine der beiden zugesagt ist, nennt die Schleife genau die, die
+     * WIRKLICH fehlt — sie prueft `!(caps & f)`, nicht nur `braucht`. */
     if (grund) {
-        if (p->braucht & (uint32_t)UFT_CAP_CBM_BAM)
-            *grund = "keine Commodore-BAM erkannt";
-        else if (p->braucht & (uint32_t)UFT_CAP_GCR)
-            *grund = "kein GCR-Format erkannt";
-        else if (p->braucht & (uint32_t)UFT_CAP_FILESYSTEM)
-            *grund = "kein Dateisystem erkannt";
-        else if (p->braucht & (uint32_t)UFT_CAP_FLUX_IO)
-            *grund = "keine Flussquelle und kein Flussziel";
-        else if (p->braucht & (uint32_t)UFT_CAP_MULTI_REV)
-            *grund = "keine Mehrfachlesung zugesagt";
-        else if (p->braucht & (uint32_t)UFT_CAP_BITSTREAM_IO)
-            *grund = "kein Bitstromzugriff";
-        else
-            *grund = "eine benoetigte Faehigkeit fehlt";
+        *grund = "eine benoetigte Faehigkeit ist nicht zugesagt";
+        for (size_t i = 0; i < K_CAP_N; i++) {
+            const uint32_t f = (uint32_t)k_cap_name[i].flagge;
+            if ((p->braucht & f) && !(caps & f)) {
+                *grund = k_cap_name[i].fehlt;
+                break;
+            }
+        }
     }
     return false;
 }

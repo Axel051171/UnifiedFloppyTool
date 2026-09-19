@@ -3669,6 +3669,40 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     womöglich anders. Wer es verfolgt, misst zuerst am gerenderten
     Ergebnis. (Dabei aufgefallen, weil ich mir mit `P3-508` selbst eine
     Zeile zerrissen hatte: drei `|` aus einem Flaggen-Ausdruck.)
+- **Stand 2026-09-19, zweiter Durchgang — `P3-508` abgetragen
+  (MF-1261), nach Eigentümerentscheidung „Fixe den Kern":**
+  · **Die Kollisionsfrage war gegenstandslos, und das ist gemessen:**
+    `src/formattab.cpp` und `src/core/uft_copy_plan.c` tragen **keine**
+    offenen Fremdänderungen; letzte Berührung `d7536e14`, committet und
+    draußen. Ich hatte sie vorgelegt statt sie anzunehmen — richtig
+    gefragt, und die Antwort war „geh rein".
+  · **Rotbeweis zuerst**, `tests/test_copy_plan.c` P4b: er fährt jedes
+    Profil mit leerer Merkmalsmaske und einem Formatnamen, den kein
+    Behelf führt. Gefunden: **VIER** behauptende Begründungen
+    (`doscopy`, `bamcopy`, `nibblecopy`, `cyclone`) — **eine mehr, als
+    der Review nannte**. Danach: 8 Ablehnungen, **0 behauptet, 0 ohne
+    Namen**.
+  · **Behoben wurde die Ursache, nicht der Wortlaut.** Die `if`-Kette
+    zählte sechs der acht Flaggen ein zweites Mal auf — in der Datei,
+    deren Tafelkopf sich selbst „die EINZIGE Stelle" nennt. Jetzt
+    trägt `k_cap_name[]` eine dritte Spalte `fehlt`, die Funktion läuft
+    über die Tafel, und die latente Lücke (`Timing`, `schwache Bits`)
+    ist zu.
+  · **Die richtige Sprache lag schon vor:** von den sechs alten
+    Zeichenketten war „keine Mehrfachlesung **zugesagt**" die einzige
+    ehrliche. Sie ist jetzt die Form für alle acht.
+  · **Der Wächter prüft die Gestalt, nicht ein Wort** — „setzt …" …
+    „nicht zugesagt". Rot-Probe vorgeführt: die Mutation „kein
+    GCR-Format **gefunden**", die das Wort „erkannt" vermeidet, fällt
+    trotzdem (2 Ablehnungen, rc 1). Ohne diese Verschärfung wäre die
+    Zusage ein Wortfilter gewesen.
+  · **Nebenfolge benannt:** bei mehreren fehlenden Flaggen nennt die
+    Schleife die erste der Tafel — `bamcopy` sagt bei leerer Maske
+    „setzt Dateisystem voraus" statt „Commodore-BAM". Beides wahr;
+    sobald eine zugesagt ist, nennt sie die wirklich fehlende.
+  · **Die Oberfläche blieb unberührt**, wie beauftragt. Der Qt-Test
+    `test_format_tab_copy_plan.cpp:450` trägt weiter, weil er auf den
+    **Fähigkeitsnamen** prüft und nicht auf die Prosa.
 - **Beleg:** —
 
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
