@@ -48,6 +48,10 @@ set(CORE_SOURCES
     uft_advanced_mode.c
     uft_copy_plan.c            # MF-1232: der Kopierplan in vier Dimensionen
     uft_core_stubs.c           # glue: real plugin-delegation for disk API
+    uft_disk2.c                # MF-1272: das Zentrum — vier Schichten mit
+                               # Herkunft und Zuversicht (Entwurf des
+                               # Eigentuemers, UFT-NN)
+    uft_disk2_bridge.c         # MF-1272: die Bruecke uft_disk_t -> uft_disk2_t
     uft_disk_create_image.c    # MF-991: die Tuer zu plugin->create
     ../flux/uft_scp_parser.c   # MF-418: uft_core_stubs' SCP adapters call into it
     uft_decode_pipeline.c

@@ -4107,6 +4107,73 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Analyse; sie sind nicht geöffnet, und ein Urteil „nicht geöffnet"
     wäre eines über den Zustand, nicht über den Inhalt — deshalb
     stehen sie ohne.
+- **Richtungswechsel 2026-09-19, Wortlaut des Eigentümers:** „ich
+  möchte das du A-032 nimmst und damit mein tool verbessert und
+  leistungsstärker mach | allen externen code nehmen, verbessern, und
+  in unser tool implementiern" — mit dem Paket **`uft_disk2`** (Kopf,
+  Umsetzung, Test, Entwurfsdokument „UFT-NN — Das Zentrum") im selben
+  Auftrag. Der Posten heißt damit nicht mehr „sichten", sondern
+  **„einbauen"**; das Register aus den Durchgängen eins bis fünf bleibt
+  die Landkarte dafür (170 von 217 beurteilt).
+- **Stand 2026-09-19, sechster Durchgang — `uft_disk2` ist im Baum
+  (MF-1272), mit Brücke und zwei Tests:**
+  · **Fünf Namen des Entwurfs gab es hier schon**, mit anderer
+    Bedeutung: `uft_encoding_t` (21 Dateien), `uft_layer_t` (zweimal!
+    — `uft_unified_image.h` und `uft_track.h`), `uft_diag_t` (8),
+    `UFT_CONF_CERTAIN`, `UFT_FS_FAT12`. Alle öffentlichen Namen tragen
+    deshalb `uft_d2_`/`UFT_D2_`; die Kodierung nimmt den vorhandenen
+    `uft_encoding_t` (D3), keinen zweiten Enum.
+  · **Neun Verbesserungen gegenüber dem Entwurf**, jede im Kopf von
+    `uft_disk2.h` benannt — darunter: der Bericht sagt „CRC nicht
+    getragen" statt „falsche CRC: 0" (die Einbahn-Aussage, die
+    MF-662 erfunden nennt); der letzte Befundplatz ist von Anfang an
+    reserviert (der Entwurf nahm den 512. an und überschrieb ihn
+    still); `uft_d2_report()` gibt die BENÖTIGTE Länge zurück, eine
+    Kürzung ist erkennbar; `UFT_D2_CONF_UNVERIFIED` (128) hat einen
+    Namen statt ein Literal zu sein.
+  · **Die Brücke `uft_d2_from_disk()`** liest jede Spur über
+    `plugin->read_track()` und übersetzt ehrlich: CRC „bekannt" nur
+    bei Fehlerflagge oder Prüfwert ≠ 0/0 (`add_sector` setzt OK
+    unbedingt — kein Beleg); Zuversicht 255 nur mit stimmender CRC,
+    sonst 128, bei falscher CRC 64 (als **Richtlinie** benannt),
+    Füllmaterial 0; Lage im Bitstrom SIZE_MAX (drei Versatzfelder im
+    alten Modell ohne Aussage, welches gilt); `raw_data` ohne
+    `raw_bits` wird gezählt, nicht erfunden. Was sie nicht trägt
+    (Fluss, per-Bit-Weak-Maske), meldet sie als je EINEN Befund.
+  · **Gemessen am Korpus-86F** (im Git, also in CI): 160 Spuren, 1440
+    Sektoren — dieselbe Zahl wie das Plugin direkt, byteidentisch als
+    Kopie, 0 mit 255, 0 mit CRC-Angabe; zweite Quelle das `.img`
+    derselben Diskette (720 = 1440/2, das 86F legt jeden Zylinder
+    doppelt ab). Dazu ein gestelltes Plugin für die Fälle, die der
+    Korpus nicht hat: 255 / 64 / 0 / 128, jede Zahl aus ihrer Regel.
+  · **Vier Rotbeweise, jeder an genau seiner Zusage:** Brücke ohne
+    Einspeisung (0 statt 1440), Zuversichtsregel entfernt, Entwurfs-
+    Größenvergleich, Entwurfs-Überlauf. Alle sechs Dateien 0 Warnungen
+    unter `-Wall -Wextra -Wpedantic`.
+  · **Nebenbefund, gemessen:** der Baum hat **zwei halbe Aufräumer**
+    für `uft_track_t` (MF-599 kannte es): `uft_track_cleanup()` gibt
+    Sektoren/`flux`/`raw_data` frei, `uft_track_free()` zusätzlich
+    `confidence`/`weak_mask`/`flux_times`/`revisions`, `raw_data`
+    aber nur mit `owns_data`. Die Brücke räumt deshalb beides selbst.
+    Und die alten Schicht-Zeiger `flux_layer`/`bitstream_layer`/
+    `sector_layer` in `uft_track_t` haben 0/0/1 Nutzer — dieselbe
+    Idee wie die vier Schichten, nie gefüllt.
+  · **Noch kein Produktivleser** — der ist der nächste Commit:
+    `DiskAnalyzerWindow::loadImage()` bekommt den `uft_d2_report()`
+    des geöffneten Abbilds (das Fenster ist im Qt-Testbau und hat
+    schon `test_disk_analyzer_no_fiction`). Der Einbauort ist meine
+    Wahl, nicht die des Entwurfs (dessen Punkt 2 war `img` + FAT12,
+    und `uft_fat_robust` liegt noch in den Zips) — verschiebbar.
+- **Warteschlange „einbauen", aus dem Register abgeleitet** (die
+  eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
+  `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,
+  `track_layout_gen_c_v5.zip`, `micropolis_gcr_extract_c.zip`,
+  `mpi_gcr_extract_c.zip`; die sechs Module der Reihe
+  `uft_revolution`, `uft_protection_scan`, `uft_splice`,
+  `uft_fat_robust`, `uft_a2_order`, `uft_amiga_media`, sobald ihr
+  Paket gefunden ist): je Modul EIN Commit, Rotbeweis zuerst, Lizenz
+  an der Datei, Kanal nach MF-695, und unter der EINFRIER-REGEL kein
+  neues Format-Plugin — Bugfixes und Verifikation ja.
   · **Und genau die fünf Absagen waren die interessanten.**
     `capsimage`: „THIS IS NOT FREE SOFTWARE" — und der Volltext liegt
     laut eigener Datei in einem übergeordneten Archiv, das fehlt.

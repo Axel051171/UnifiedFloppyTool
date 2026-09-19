@@ -4311,6 +4311,19 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_disk2_bridge")
+        # MF-1272: die Bruecke vom alten Modell in das Zentrum, belegt an
+        # der ECHTEN Korpus-86F ueber dasselbe Plugin wie der
+        # Konformitaetstest darueber — deshalb dieselben drei Quellen.
+        # Der Korpuspfad ist der FREIE (im Git, also in CI): gemessen ist
+        # `tests/corpus_free/fluxfox_sector_test_360k.86f` byteidentisch
+        # mit der gesperrten Fassung (SHA-256 180d8984…, 2 153 628 Byte).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/86box/uft_86f_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_86f.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_2img_nib_stride")
         # MF-725: NIB-Inhalt in einem 2IMG — falsche Schrittweite und
         # erfundene Sektorstruktur. Rotbeweis vor der Abweisung.
