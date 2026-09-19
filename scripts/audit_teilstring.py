@@ -640,8 +640,8 @@ def selbsttest() -> int:
     zusage(f_bs.fingerprint() == f_fs.fingerprint(),
            'derselbe Fund hat mit `\\` und mit `/` DENSELBEN '
            'Fingerabdruck — vorher waren es zwei, und eine auf Windows '
-           'geschriebene Grundlinie war in CI (Linux) wirkungslos: alle '
-           '51 bekannten Fundstellen waeren als NEU gemeldet worden')
+           'geschriebene Grundlinie war in CI (Linux) wirkungslos: JEDE '
+           'bekannte Fundstelle waere als NEU gemeldet worden')
 
     print('Defekt C/E — Dateimenge aus git, Ausgabe haelt ein Zeichen aus')
     wurzel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -67,7 +67,7 @@ class Finding:
         # Eine auf Windows geschriebene Grundlinie (`os.path.relpath`
         # liefert dort Backslashes) enthaelt nur die erste Fassung. In CI
         # laeuft der Pruefer auf Linux mit Schraegstrichen und haette
-        # **alle 51** bekannten Fundstellen als NEU gemeldet — das Tor
+        # **jede** bekannte Fundstelle als NEU gemeldet — das Tor
         # haette ab dem ersten Tag jeden Pull Request blockiert, also
         # genau der Fehlschlag, vor dem der Workflow-Kopf warnt („Ein
         # Pruefer, der am ersten Tag jede Zusammenfuehrung blockiert, ist
