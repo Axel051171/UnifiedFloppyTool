@@ -762,6 +762,71 @@ int main(void)
                geprueft, behauptet, ohne_namen);
     }
 
+    /* P5b — EIN GCR-BEHELF DARF KEIN MFM-FORMAT FUEHREN (P3-510).
+     *
+     * `nibblecopy` verlangt `UFT_CAP_GCR` und fuehrte `D81` in seinem
+     * Behelf. Das 1581 schreibt MFM. Damit bot der Reiter ein
+     * GCR-Verfahren auf einem Format an, das keines ist — und zwar
+     * genau dann, wenn die Flagge NICHT zugesagt ist, also wenn niemand
+     * widersprechen kann.
+     *
+     * VIER ZEUGEN IM EIGENEN BAUM, keiner von aussen:
+     *   src/formats/d81/uft_d81_parser_v2.c:9  „MFM encoding (not GCR!)"
+     *   src/detect/mfm/mfm_detect.c:87/115     MFM_GEOM_CBM_1581,
+     *                                          MFM_FS_CBM_1581 — die 1581
+     *                                          ist eine Geometrie des
+     *                                          MFM-Erkenners
+     *   src/formats/commodore/d81.c:100        „Analyzer(D81): no GCR
+     *                                          timing ... preserved"
+     *   uft_copy_plan.c `cyclone`              verlangt ebenfalls GCR und
+     *                                          fuehrt D81 NICHT
+     *
+     * Der vierte ist der staerkste: der Baum widersprach sich selbst,
+     * und die richtige Seite lag bereits darin.
+     *
+     * `bamcopy` fuehrt D81 WEITERHIN und zu Recht — es verlangt
+     * `CBM_BAM | FILESYSTEM`, und eine BAM ist Dateisystemebene,
+     * unabhaengig von der Kodierung des Mediums.
+     *
+     * GRENZE DIESER ZUSAGE, damit sie nicht mehr verspricht als sie
+     * haelt: sie ist ein REGRESSIONSNAGEL, keine Ableitung. Der Baum
+     * traegt **kein** maschinenlesbares Kodierungsfeld je Format —
+     * `uft_format_plugin_t` hat keines, und `uft_encoding_t` sitzt an
+     * Spur- und Geometriestrukturen. Ein falscher NEUER Eintrag faellt
+     * hier also nicht auf; nur die Rueckkehr dieses einen. Was es
+     * braeuchte, steht als Frage in `P3-510`. */
+    {
+        size_t gcr_profile = 0, mit_d81 = 0;
+        for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+            const uft_copy_profile_t *p = uft_copy_profile(i);
+            if (!p || !(p->braucht & (uint32_t)UFT_CAP_GCR)) continue;
+            gcr_profile++;
+            /* Ueber die oeffentliche API, nicht ueber die Zeichenkette:
+             * geprueft wird das VERHALTEN, das der Bediener sieht. */
+            if (uft_copy_profile_available(p, 0u, "D81", NULL)) {
+                mit_d81++;
+                printf("  P5b: `%s` verlangt GCR und nimmt D81 (MFM)\n",
+                       p->id);
+            }
+        }
+        PRUEFE(gcr_profile >= 2,
+               "P5b: weniger als zwei GCR-Profile — die Probe misst nichts");
+        PRUEFE(mit_d81 == 0,
+               "P5b: %zu GCR-Profil(e) bieten sich fuer D81 an, obwohl das "
+               "1581 MFM schreibt", mit_d81);
+
+        /* Gegenprobe: der Behelf traegt weiterhin, wo er hingehoert —
+         * sonst waere die Behebung eine pauschale Verweigerung. */
+        const uft_copy_profile_t *nib = uft_copy_profile_by_id("nibblecopy");
+        PRUEFE(nib && uft_copy_profile_available(nib, 0u, "G64", NULL),
+               "P5b: NibbleCopy lehnt G64 ab — zu viel entfernt");
+        const uft_copy_profile_t *bam = uft_copy_profile_by_id("bamcopy");
+        PRUEFE(bam && uft_copy_profile_available(bam, 0u, "D81", NULL),
+               "P5b: BAMCopy lehnt D81 ab — eine BAM ist Dateisystemebene");
+        printf("  %zu GCR-Profile geprueft, %zu mit D81\n",
+               gcr_profile, mit_d81);
+    }
+
     /* P6 — und die gemessene Wahrheit bleibt sichtbar: die
      * Kopierschutz-Profile scheitern am FORMAT, nicht an sich selbst. */
     {

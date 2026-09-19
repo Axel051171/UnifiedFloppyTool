@@ -506,7 +506,21 @@ static const uft_copy_profile_t k_profil[] = {
    "GCR-/Nibble-Kopie fuer Commodore- und Apple-Verfahren.",
    PL(UFT_COPY_NIBBLE, UFT_READ_STANDARD, UFT_PRESERVE_LAYOUT, UFT_POLICY_VERIFY),
    (uint32_t)UFT_CAP_GCR,
-   "D64;D71;D81;G64;G71;NIB;WOZ;DO;PO" },
+   /* MF-1262 (`P3-510`): `D81` ist hier RAUS. Das 1581 schreibt MFM,
+    * und ein GCR-Behelf, der ein MFM-Format fuehrt, bietet ein
+    * Verfahren auf einem Medium an, das es nicht traegt — ausgerechnet
+    * dann, wenn die Flagge nicht zugesagt ist und niemand widerspricht.
+    *
+    * Vier Zeugen, alle im eigenen Baum: `uft_d81_parser_v2.c:9` („MFM
+    * encoding (not GCR!)"), `mfm_detect.c:87/115` (die 1581 ist eine
+    * Geometrie des MFM-Erkenners), `commodore/d81.c:100` („no GCR
+    * timing ... preserved") — und `cyclone` weiter unten, das ebenfalls
+    * GCR verlangt und D81 nie gefuehrt hat. Der Baum widersprach sich
+    * selbst; die richtige Seite lag schon darin.
+    *
+    * `bamcopy` behaelt D81 zu Recht: es verlangt `CBM_BAM |
+    * FILESYSTEM`, und eine BAM ist Dateisystemebene. */
+   "D64;D71;G64;G71;NIB;WOZ;DO;PO" },
 
  { "fluxcopy", "FluxCopy",
    "Flussuebergaenge, Indexposition und Zeiten erhalten.",

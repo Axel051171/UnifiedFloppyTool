@@ -3703,6 +3703,41 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   · **Die Oberfläche blieb unberührt**, wie beauftragt. Der Qt-Test
     `test_format_tab_copy_plan.cpp:450` trägt weiter, weil er auf den
     **Fähigkeitsnamen** prüft und nicht auf die Prosa.
+- **Stand 2026-09-19, dritter Durchgang — Auftrag „weiter mit p3-509 &
+  p3-510": EINER ist abgetragen, der andere vermessen:**
+  · **`P3-510` behoben (MF-1262).** `D81` raus aus der Behelfsliste von
+    `nibblecopy`; `bamcopy` behält es, weil es `CBM_BAM | FILESYSTEM`
+    verlangt und eine BAM Dateisystemebene ist. Rotbeweis über die
+    öffentliche API: von 2 GCR-Profilen bot sich **1** für D81 an,
+    danach **0**; zwei Gegenproben halten es davon ab, eine pauschale
+    Verweigerung zu werden.
+  · **Vier Zeugen, alle im eigenen Baum** — und der vierte ist der
+    stärkste: `cyclone` verlangt ebenfalls GCR und hat D81 **nie**
+    geführt. Der Baum widersprach sich selbst, die richtige Seite lag
+    schon darin. Dazu `uft_d81_parser_v2.c:9`, `mfm_detect.c:87/115`
+    (die 1581 ist eine Geometrie des MFM-**Erkenners**) und
+    `commodore/d81.c:100`.
+  · **Grenze ausgesprochen:** der Baum hat **kein** maschinenlesbares
+    Kodierungsfeld je Format. Die Zusage ist ein Regressionsnagel,
+    keine Ableitung — ein falscher NEUER Eintrag fällt nicht auf.
+  · **`P3-509` NICHT abgetragen, und der Grund ist gemessen, nicht
+    geschätzt.** (1) `src/formattab.cpp` führt **nichts** aus — `git
+    grep` nach `DecodeJob`, `uft_convert`, `QThread`, `start(` gibt 0
+    Treffer; der Plan entsteht an einer Stelle ohne Vorgang. (2) Eine
+    bloße Abbildungsfunktion `uft_copy_plan_to_convert_options()` wäre
+    **D2-widrig** — ein Algorithmus ohne Aufrufer, also dieselbe Tür
+    ohne Leser eine Ebene höher. (3) Von den Verdrahtungspunkten sind
+    `toolstab.cpp`, `mainwindow.cpp` und `statustab.cpp` **fremd
+    geändert**; der einzige saubere (`decodejob.cpp`) hat wegen (1)
+    keinen Weg zum Plan.
+  · **Was zu entscheiden ist, bevor jemand Code schreibt:** welcher
+    Vorgang liest den Plan — bekommt der Formatreiter einen eigenen,
+    oder holt `MainWindow` ihn beim Start eines `DecodeJob` ab? Davon
+    hängt auch ab, ob die EINFRIER-REGEL greift.
+  · **Nebenbefund derselben Klasse, notiert statt vergessen:**
+    `uft_batch_run()` hat **0** Aufrufer außerhalb seiner Datei — eine
+    zweite Tür ohne Leser, und vielleicht der natürliche Verbraucher
+    eines Plans.
 - **Beleg:** —
 
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
