@@ -38,7 +38,7 @@ static uft_d2_conf_t deckel(uft_d2_conf_t c, float plugin_conf) {
 }
 
 static void sektor_uebersetzen(uft_d2_sector_t *out, const uft_sector_t *in,
-                               const char *plugin_name) {
+                               uft_d2_deriv_id_t dv) {
     memset(out, 0, sizeof(*out));
     out->id_cyl       = in->id.cylinder;
     out->id_head      = in->id.head;
@@ -94,10 +94,11 @@ static void sektor_uebersetzen(uft_d2_sector_t *out, const uft_sector_t *in,
     else                                                c = UFT_D2_CONF_UNVERIFIED;
     out->conf = deckel(c, in->confidence);
 
-    out->deriv.from_layer = UFT_D2_LAYER_SECTORS;
-    out->deriv.origin     = out->origin;
-    out->deriv.by         = "uft_d2_bridge";
-    out->deriv.params     = plugin_name;
+    /* MF-1274: die Herkunft ist jetzt eine Kennung ins Register des
+     * Modells, nicht ein Struct je Sektor. 1440 Sektoren tragen damit
+     * EINEN Eintrag statt 1440 Kopien derselben zwei Zeichenketten — und
+     * der Eintrag ist serialisierbar, ein Zeiger waere es nicht. */
+    out->deriv = dv;
 }
 
 bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
@@ -127,6 +128,18 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
 
     uft_d2_add_meta(d, "Plugin", name, UFT_D2_META_SELF);
 
+    /* Zwei Ableitungen, EINMAL registriert: eine je Schicht, die die
+     * Bruecke fuellt. `source_gen` ist 0, weil die Bruecke aus einem
+     * BEHAELTER speist und nicht aus einer tieferen Schicht dieses
+     * Modells — es gibt keine Quelle, deren Generation veralten koennte. */
+    const uft_d2_deriv_id_t dv_sect =
+        uft_d2_register_deriv(d, UFT_D2_LAYER_SECTORS, UFT_D2_ORIGIN_CONTAINER,
+                              "uft_d2_bridge", name, 0u);
+    const uft_d2_deriv_id_t dv_bits =
+        uft_d2_register_deriv(d, UFT_D2_LAYER_BITSTREAM,
+                              UFT_D2_ORIGIN_CONTAINER, "uft_d2_bridge",
+                              name, 0u);
+
     for (unsigned c = 0; c < g->cylinders; c++) {
         for (unsigned h = 0; h < g->heads; h++) {
             uft_track_t t;
@@ -151,23 +164,20 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
                 dt->encoding = t.encoding;
 
             if (hat_bits) {
-                uft_d2_derivation_t dv;
-                memset(&dv, 0, sizeof(dv));
-                dv.from_layer = UFT_D2_LAYER_BITSTREAM;
-                dv.origin     = UFT_D2_ORIGIN_CONTAINER;
-                dv.by         = "uft_d2_bridge";
-                dv.params     = name;
                 const uint32_t cell = t.bitrate ? (uint32_t)(1000000000u / t.bitrate) : 0u;
+                /* Stimmen je Bit gibt es hier nicht: das alte Modell fuehrt
+                 * keine Fusion je Bit, und eine erfundene Zahl waere genau
+                 * das, was `agree` verhindern soll. Also NULL und 0. */
                 if (uft_d2_set_bitstream(d, dt, t.raw_data, t.raw_bits,
-                                         t.confidence, NULL, NULL, SIZE_MAX,
-                                         t.encoding, cell, &dv))
+                                         t.confidence, NULL, 0u, NULL, NULL,
+                                         SIZE_MAX, t.encoding, cell, dv_bits))
                     st.bitstreams++;
             }
 
             if (t.sector_count) st.tracks_with_sectors++;
             for (size_t i = 0; i < t.sector_count; i++) {
                 uft_d2_sector_t s;
-                sektor_uebersetzen(&s, &t.sectors[i], name);
+                sektor_uebersetzen(&s, &t.sectors[i], dv_sect);
                 if (uft_d2_add_sector(d, dt, &s)) st.sectors++;
                 else st.sectors_rejected++;
             }

@@ -39,83 +39,89 @@
  *
  * ── DIE DREI GRUNDSAETZE ────────────────────────────────────────────────
  *
- *   1. JEDES abgeleitete Objekt weiss, woraus und wodurch es entstand.
- *      Ein Sektor aus einem Bitstrom traegt die Spur, den Sucher und den
- *      Bitbereich. Ein Bitstrom aus Fluss traegt die Umdrehung(en) und die
- *      PLL. Das ist "Herkunft je Wert", strukturell.
- *
- *   2. Zuversicht ist eine Zahl mit Bedeutung. 255 heisst: direkt vom
- *      Traeger, CRC stimmt. Alles darunter ist rekonstruiert, fusioniert
- *      oder geraten — und die Zahl sagt, wie sehr. Zuversicht steigt beim
- *      Aufsteigen der Schichten NIE ohne Beleg.
- *
- *   3. Keine stille Normalisierung. Die Spurlaenge ist, was gemessen wurde.
- *      Sektorgroessen sind je Sektor. Doppelte Sektornummern sind erlaubt.
- *      Ein Wert, der nicht passt, sieht nicht aus wie einer, der passt.
+ *   1. JEDES abgeleitete Objekt weiss, woraus und wodurch es entstand —
+ *      und ob diese Quelle seither ERSETZT wurde (Generationen, unten).
+ *   2. Zuversicht steigt beim Aufsteigen der Schichten NIE ohne Beleg.
+ *      Die Regel wird beim Einspeisen geprueft, an JEDER Schicht.
+ *   3. Keine stille Normalisierung. Was gemessen wurde, bleibt; was
+ *      fehlt, fehlt und wird gesagt.
  *
  * ── WAS ES NICHT IST ────────────────────────────────────────────────────
  *
  * Kein Leser, kein Schreiber, keine PLL, kein Sektorsucher. Es ist die
- * Struktur, in die diese Dinge einspeisen und aus der sie lesen. Die
- * Algorithmen aus dieser Reihe — uft_revolution, uft_protection_scan,
- * uft_splice, uft_fat_robust, uft_a2_order, uft_amiga_media — sind die
- * ersten, die darauf arbeiten koennen. Bisher konnten sie es nicht, weil
- * es die Struktur nicht gab.
+ * Struktur, in die diese Dinge einspeisen und aus der sie lesen.
  *
- * ── BERICHTIGT GEGENUEBER DEM ENTWURF (MF-1272) ─────────────────────────
+ * ── NEBENLAEUFIGKEIT ────────────────────────────────────────────────────
  *
- * Der Entwurf kam als eigenstaendiges Paket (Kopf, Umsetzung, Test — neun
- * Gruppen gruen unter ASan/UBSan). Beim Einbau in DIESEN Baum wurde
- * gemessen, nicht angenommen:
+ * Das Modell ist NICHT nebenlaeufig sicher. Ein Objekt gehoert einem
+ * Faden. Wer es teilt, sperrt es aussen. Das steht hier, weil es sonst
+ * niemand liest. Im Baum heisst das konkret: `uft_d2_from_disk()` und
+ * `DiskAnalyzerWindow::traegerBericht()` (MF-1273) laufen auf dem
+ * GUI-Faden, jeder mit seinem eigenen Modell.
  *
- *   * FUENF Namen des Entwurfs gibt es hier schon, mit anderer Bedeutung:
- *     `uft_encoding_t` (21 Dateien), `uft_layer_t` (Bitmaske in
- *     `uft_unified_image.h` — und ein ZWEITES Mal in `uft_track.h`),
- *     `uft_diag_t` (8 Dateien, ein 256-Byte-Textpuffer), `UFT_CONF_CERTAIN`
- *     (`uft_protection.h`), `UFT_FS_FAT12` (`uft_integration.h`).
+ * ── ZWEITE FASSUNG (MF-1274) ────────────────────────────────────────────
+ *
+ * Was gegenueber MF-1272 dazukam, und warum:
+ *
+ *   Generationen + validate()   abgeleitete Objekte wissen, ob ihre Quelle
+ *                               noch die ist, aus der sie entstanden
+ *   Ableitungsregister          Herkunft maschinenlesbar und KOPIERT statt
+ *                               als statischer Zeiger — sonst ist sie nicht
+ *                               serialisierbar
+ *   Stimmen je Bit              „3 von 5 Umdrehungen" ist nachpruefbar,
+ *                               „Konfidenz 153" nicht
+ *   Mehrere Dateisysteme        Doppelformat, Partitionen, Trackloader UND
+ *                               Dateisystem auf verschiedenen Spuren
+ *   Kodierung je Sektor         Schutzverfahren mischen INNERHALB der Spur
+ *   crosses_index GERECHNET     nicht mehr vom Aufrufer gesetzt
+ *   Zuversichtsregel ueberall   auch Eintraege und Umdrehungen
+ *   Spurindex                   [cyl][head] statt linearer Suche
+ *   Merkmalcache                Schmutzflag statt Neuberechnung
+ *   Metadaten dynamisch         mit Ueberlaufmeldung wie die Befunde
+ *   Bericht mit Fehlerzahl      auch fuer die, die nicht gezeigt werden
+ *
+ * ── BERICHTIGT GEGENUEBER DEM ENTWURF (MF-1272, gilt weiter) ────────────
+ *
+ * Der Entwurf kam als eigenstaendiges Paket. Beim Einbau in DIESEN Baum
+ * wurde gemessen, nicht angenommen — und die Messung gilt fuer die zweite
+ * Fassung unveraendert, weil der Entwurf dieselben Namen wieder benutzt:
+ *
+ *   * SIEBEN Namen des Entwurfs gibt es hier schon, mit anderer Bedeutung
+ *     (gemessen ueber `git grep` je Bezeichner, ohne die eigenen Dateien):
+ *     `uft_encoding_t` (19 Dateien), `UFT_ENC_MFM` (19), `uft_diag_t` (6),
+ *     `UFT_LAYER_FLUX` (2 — `uft_unified_image.h` UND `uft_track.h`),
+ *     `uft_layer_t` (1), `UFT_CONF_CERTAIN` (1, `uft_protection.h`),
+ *     `UFT_FS_FAT12` (1, `uft_integration.h`).
  *     Deshalb tragen ALLE oeffentlichen Namen dieses Moduls das Praefix
- *     `uft_d2_` / `UFT_D2_` — die Funktionen hatten es schon.
+ *     `uft_d2_` / `UFT_D2_`.
  *
  *   * Die Kodierung ist NICHT neu definiert: `uft_encoding_t` aus
- *     `uft/uft_types.h` traegt bereits UNKNOWN/FM/MFM/GCR-Varianten und
- *     ist der Typ von `uft_track_t.encoding`. Eine zweite Aufzaehlung
- *     daneben waere die Doppelhaltung, gegen die dieser Baum steht (D3).
+ *     `uft/uft_types.h` ist der Typ von `uft_track_t.encoding`. Eine zweite
+ *     Aufzaehlung daneben waere die Doppelhaltung, gegen die dieser Baum
+ *     steht (D3) — und sie waere AERMER: der Entwurf kennt vier Werte
+ *     (UNKNOWN/FM/MFM/GCR), der Baum fuehrt gemessen 20, darunter
+ *     `UFT_ENC_AMIGA_MFM`, `UFT_ENC_GCR_CBM`, `UFT_ENC_GCR_APPLE_525`,
+ *     `UFT_ENC_GCR_APPLE_35`, `UFT_ENC_GCR_VICTOR` und `UFT_ENC_M2FM`.
+ *     Ein `UFT_ENC_GCR` gibt es hier NICHT: welches GCR gemeint ist, ist
+ *     bei Kopierschutz die entscheidende Frage, und ein Sammelwert haette
+ *     sie verschluckt.
  *
- *   * `UFT_D2_CONF_UNVERIFIED` (128) hat einen Namen: der Entwurf setzte
- *     die Zahl fuer unvollstaendige Umdrehungen als Literal. Sie heisst
- *     „vorhanden, aber ohne Beleg fuer Vollstaendigkeit oder Richtigkeit"
- *     und ist der Wert, den auch die Bruecke fuer Sektoren ohne
- *     Pruefsummenangabe vergibt (`uft_disk2_bridge.h`).
+ *   * `UFT_D2_CONF_UNVERIFIED` (128) hat einen Namen statt eines Literals.
  *
- *   * `uft_d2_report()` gibt die BENOETIGTE Laenge zurueck, nicht die
- *     geschriebene (Bauform `snprintf`). Ein Rueckgabewert >= buflen heisst:
- *     der Bericht wurde gekuerzt. Vorher war eine Kuerzung nicht erkennbar.
+ *   * `uft_d2_report()` gibt die BENOETIGTE Laenge zurueck (Bauform
+ *     `snprintf`). Ein Rueckgabewert >= buflen heisst: gekuerzt.
  *
  *   * Die Sektorzeile des Berichts unterscheidet „CRC falsch" von „CRC nicht
- *     getragen". Der Entwurf schrieb „davon mit falscher CRC: 0" auch fuer
- *     ein Abbild, das gar keine Pruefsumme kennt — und genau dieses Urteil
- *     in EINE Richtung nennt `tests/test_disk_analyzer_no_fiction.cpp`
- *     seit MF-662 erfunden.
+ *     getragen" — ein D64 traegt keine Pruefsumme, und ein Urteil in EINE
+ *     Richtung nennt `tests/test_disk_analyzer_no_fiction.cpp` seit MF-662
+ *     erfunden.
  *
- *   * Die Befundliste reserviert ihren letzten Platz von Anfang an: 511
- *     Befunde werden angenommen, der 512. wird abgewiesen UND zur
- *     Ueberlaufmeldung. Im Entwurf wurde der 512. angenommen (true) und
- *     danach still von der Ueberlaufmeldung ueberschrieben.
+ *   * Die Befundliste reserviert ihren letzten Platz von Anfang an.
  *
- *   * `UFT_D2_FEAT_COUNT` ersetzt das Literal 13, das an zwei Stellen stand.
+ *   * Sektorgroessen werden nur unter Sektoren MIT Datenfeld verglichen.
  *
- *   * Sektorgroessen werden nur unter Sektoren MIT Datenfeld verglichen;
- *     ein Adressfeld ohne Daten (SND) hat keine Groesse, die abweichen
- *     koennte.
- *
- *   * Fehlt der Speicher fuer eine der optionalen Bitstrom-Beilagen
- *     (Konfidenz, Phase, Flusszahl), scheitert `uft_d2_set_bitstream()`
- *     als Ganzes. Im Entwurf blieb die Beilage still NULL — und ein
- *     Bitstrom OHNE Konfidenz ist eine andere Aussage als einer mit.
- *
- *   * Name und Etikett des Dateisystems werden beim Einspeisen
- *     NUL-terminiert, damit ein 64 Zeichen langer Name den Bericht nicht
- *     ueber das Feldende hinaus lesen laesst.
+ *   * Fehlt der Speicher fuer eine der optionalen Bitstrom-Beilagen,
+ *     scheitert `uft_d2_set_bitstream()` als Ganzes.
  */
 
 #ifndef UFT_DISK2_H
@@ -163,21 +169,35 @@ typedef uint8_t uft_d2_conf_t;
 #define UFT_D2_CONF_UNVERIFIED  128u
 #define UFT_D2_CONF_NONE          0u
 
+/* ═══════════════════════ Ableitungsregister ═════════════════════════════ */
+
 /**
- * Wodurch ein Objekt entstand. JEDES abgeleitete Objekt traegt eines.
+ * Eine Ableitung wird EINMAL registriert und bekommt eine Kennung. Objekte
+ * verweisen auf die Kennung. Damit ist „welche Sektoren stammen aus
+ * PLL-Lauf 2?" eine Abfrage, und ein Behaelter traegt die Herkunft einmal
+ * statt in jedem Sektor.
  *
- * `by` ist ein Name, kein Zeiger — "kalman_pll", "ibm_mfm_scanner",
- * "fat12_robust". Er steht im Bericht, damit man weiss, welcher Algorithmus
- * mit welchen Parametern am Werk war. Beide Zeichenketten muessen STATISCH
- * sein: das Modell kopiert sie nicht.
+ * ZWEITE FASSUNG, und der Unterschied ist nicht kosmetisch: in MF-1272 war
+ * `by`/`params` ein `const char *` mit der Auflage „muss STATISCH sein".
+ * Ein Zeiger ist nicht serialisierbar, und die Auflage war eine Bitte an
+ * den Aufrufer statt einer Eigenschaft des Modells. Jetzt wird kopiert, in
+ * feste Feldbreite — was laenger ist, wird gekuerzt und NUL-terminiert.
  */
+typedef uint16_t uft_d2_deriv_id_t;
+#define UFT_D2_DERIV_NONE   ((uft_d2_deriv_id_t)0)
+#define UFT_D2_DERIV_BY     32u
+#define UFT_D2_DERIV_PARAMS 96u
+/** Obergrenze des Registers. Eine Diskette mit mehr als 4096 verschiedenen
+ *  Ableitungen ist kein Anwendungsfall, sondern ein Fehler im Aufrufer —
+ *  und der bekommt einen Befund statt eines stillen Verlusts. */
+#define UFT_D2_MAX_DERIV    4096u
+
 typedef struct {
     uft_d2_layer_t  from_layer;
     uft_d2_origin_t origin;
-    const char     *by;          /**< Algorithmus, statisch                  */
-    const char     *params;      /**< dessen Parameter als Text, statisch    */
-    uint32_t        source_a;    /**< z. B. Umdrehungsindex, Bitversatz      */
-    uint32_t        source_b;    /**< z. B. Endversatz                       */
+    char            by[UFT_D2_DERIV_BY];          /**< „kalman_pll"        */
+    char            params[UFT_D2_DERIV_PARAMS];  /**< „cell=2000ns"       */
+    uint32_t        source_gen;   /**< Generation der Quelle beim Ableiten */
 } uft_d2_derivation_t;
 
 /* ═══════════════════════ Befunde ════════════════════════════════════════ */
@@ -189,99 +209,86 @@ typedef enum {
     UFT_D2_DIAG_ERROR      /**< etwas ist falsch                            */
 } uft_d2_diag_sev_t;
 
+#define UFT_D2_DIAG_CODE 24u
+#define UFT_D2_DIAG_TEXT 192u
+
 typedef struct {
     uft_d2_diag_sev_t sev;
     uft_d2_layer_t    layer;
-    int16_t           cyl;       /**< -1 = ganze Diskette                    */
+    int16_t           cyl;       /**< -1 = ganze Diskette                   */
     int8_t            head;
-    int16_t           sector;    /**< -1 = ganze Spur                        */
-    const char       *code;      /**< kurz, maschinenlesbar, STATISCH:
-                                      "TIE", "NO_ROOT"                        */
-    char              text[192]; /**< Klartext                               */
+    int16_t           sector;    /**< -1 = ganze Spur                       */
+    char              code[UFT_D2_DIAG_CODE]; /**< kurz, maschinenlesbar   */
+    char              text[UFT_D2_DIAG_TEXT]; /**< Klartext                */
 } uft_d2_diag_t;
 
-/** Die Befundliste ist endlich. Der letzte Platz ist von Anfang an fuer die
- *  Ueberlaufmeldung reserviert: UFT_D2_MAX_DIAG - 1 Befunde werden
- *  angenommen, jeder weitere wird abgewiesen und macht die Meldung. */
-#define UFT_D2_MAX_DIAG  512u
-#define UFT_D2_MAX_META   64u
+/** Der LETZTE Platz ist fuer die Ueberlaufmeldung reserviert: 511 Befunde
+ *  werden angenommen, der 512. wird abgewiesen UND zur Meldung. */
+#define UFT_D2_MAX_DIAG 512u
 
 /* ═══════════════════════ Schicht 1: Fluss ═══════════════════════════════ */
 
 typedef struct {
-    uint32_t *intervals;      /**< Flusszwischenzeiten in ns              */
-    size_t    count;
-    uint32_t  index_time_ns;  /**< 0 = nicht gemessen — ein BEFUND        */
-    bool      complete;
-    uft_d2_conf_t conf;
+    uint32_t      *intervals;    /**< Zellzeiten in ns, GEMESSEN            */
+    size_t         count;
+    uint32_t       index_time_ns;/**< 0 = nicht gemessen — ein BEFUND       */
+    bool           complete;     /**< Index bis Index                       */
+    uft_d2_conf_t  conf;
 } uft_d2_rev_t;
 
 typedef struct {
-    uft_d2_rev_t *revs;       /**< GETRENNT. Nie verflacht.               */
-    size_t        count;
-    uft_d2_derivation_t deriv;   /**< Geraet, Transport, Parameter        */
+    uft_d2_rev_t     *revs;      /**< GETRENNT. Nie verflacht.              */
+    size_t            count;
+    uft_d2_deriv_id_t deriv;
+    uint32_t          gen;       /**< steigt bei jeder Aenderung            */
 } uft_d2_flux_t;
 
 /* ═══════════════════════ Schicht 2: Bitstrom ════════════════════════════ */
 
 typedef struct {
-    uint8_t   *bits;          /**< gepackt, MSB zuerst                    */
-    size_t     nbits;         /**< GEMESSEN. Nie auf 0x1900 geklemmt.     */
-    uft_d2_conf_t *bit_conf;  /**< je Bit, NULL wenn nicht bekannt.
-                                   Kommt aus dem Umdrehungsvergleich —
-                                   ohne den ist es NULL, und das ist
-                                   richtig, nicht ein Mangel.             */
-    int16_t   *phase_q8;      /**< je Bit, NULL wenn die PLL es nicht
-                                   liefert. Der Fuzzy-Nachweis.           */
-    uint16_t  *flux_count;    /**< je Bit, NULL. Der Weak-Nachweis.       */
-    size_t     index_bit;     /**< Bitlage des Indexpulses, oder SIZE_MAX */
+    uint8_t       *bits;
+    size_t         nbits;        /**< GEMESSEN, nie geklemmt                */
+    uft_d2_conf_t *bit_conf;     /**< je Bit, NULL wenn nicht bekannt       */
+    uint8_t       *agree;        /**< je Bit: wie viele Umdrehungen stimmten
+                                      zu — NULL ohne Fusion. „3 von 5" ist
+                                      nachpruefbar, „Konfidenz 153" nicht.  */
+    uint8_t        nrevs_fused;  /**< 0 = keine Fusion                      */
+    int16_t       *phase_q8;     /**< PLL-Phasenlage je Bit, NULL erlaubt   */
+    uint16_t      *flux_count;   /**< Flusswechsel je Bit, NULL erlaubt     */
+    size_t         index_bit;    /**< SIZE_MAX = unbekannt                  */
     uft_encoding_t encoding;
-    uint32_t   cell_ns;       /**< gemessene Zellbreite; 0 = nicht gemessen */
-    uft_d2_derivation_t deriv;
+    uint32_t       cell_ns;
+    uft_d2_deriv_id_t deriv;
+    uint32_t          gen;
 } uft_d2_bitstream_t;
 
 /* ═══════════════════════ Schicht 3: Sektoren ════════════════════════════ */
 
-/**
- * Alles, was IRGENDEIN Format je Sektor traegt — die Vereinigung aus IMD,
- * TD0, PSI, JV3, DMK, STX, IPF. Was ein Format nicht traegt, bleibt auf
- * seinem "unbekannt"-Wert; es wird nicht erfunden.
- */
 typedef struct {
-    /* Adressfeld */
     uint8_t  id_cyl, id_head, id_sec, id_size_code;
     bool     id_crc_ok;
-    bool     id_crc_known;    /**< false = das Format traegt es nicht     */
-
-    /* Datenfeld */
-    uint8_t *data;
-    uint32_t data_len;        /**< TATSAECHLICH, kann von size_code
-                                   abweichen (Ensoniq SQ80, Slogger)      */
-    uint8_t  dam;             /**< 0xFB, 0xF8, 0xFA, 0xF9; 0 = unbekannt  */
+    bool     id_crc_known;     /**< false = das Format traegt keine Angabe  */
+    uint8_t *data;             /**< NULL bei SND                            */
+    uint32_t data_len;
+    uint8_t  dam;              /**< 0xFB normal, 0xF8 geloescht             */
     bool     data_crc_ok;
     bool     data_crc_known;
-    bool     has_data;        /**< false = ID ohne Datenfeld (SND)        */
-
-    /* Lage — nur wenn aus einem Bitstrom */
-    size_t   idam_bit, dam_bit, data_end_bit;   /**< SIZE_MAX = unbekannt */
-    bool     crosses_index;
-
-    /* Herkunft */
-    uft_d2_origin_t origin;
-    uft_d2_conf_t   conf;
-    uft_d2_derivation_t deriv;
-
-    /* Flackern, nur mit Umdrehungen */
-    uint32_t weak_bits;       /**< Zahl flackernder Bits im Datenfeld     */
-    uint32_t fuzzy_bits;
+    bool     has_data;
+    size_t   idam_bit, dam_bit, data_end_bit;  /**< SIZE_MAX = unbekannt    */
+    /** Kodierung DIESES Sektors, wenn sie von der Spur abweicht.
+     *  UFT_ENC_UNKNOWN = wie die Spur. */
+    uft_encoding_t    encoding;
+    uft_d2_origin_t   origin;
+    uft_d2_conf_t     conf;
+    uft_d2_deriv_id_t deriv;
+    uint32_t          source_gen; /**< Generation des Bitstroms beim Ableiten */
+    uint32_t weak_bits, fuzzy_bits;
 } uft_d2_sector_t;
 
 typedef struct {
-    uft_d2_sector_t *items;   /**< DOPPELTE Nummern erlaubt. Ueberlappung
-                                   erlaubt. Reihenfolge = Reihenfolge auf
-                                   der Spur, wenn bekannt.                */
-    size_t count;
-    size_t capacity;
+    uft_d2_sector_t *items;
+    size_t           count, capacity;
+    uint32_t         gen;
 } uft_d2_sectors_t;
 
 /* ═══════════════════════ Spur ═══════════════════════════════════════════ */
@@ -293,53 +300,83 @@ typedef struct {
     uft_d2_flux_t      flux;
     uft_d2_bitstream_t bitstream;
     uft_d2_sectors_t   sectors;
-    uft_encoding_t     encoding;   /**< JE SPUR — Slogger, FLEX mischen  */
+    uft_encoding_t     encoding;
     bool               unformatted;
 } uft_d2_track_t;
 
-/* ═══════════════════════ Schicht 4: Dateisystem ═════════════════════════ */
+/**
+ * GERECHNET aus idam_bit, dam_bit, data_end_bit und index_bit — nicht
+ * gespeichert, also nicht falsch zu setzen.
+ *
+ * Geprueft werden BEIDE Felder: ein Adressfeld ueber dem Index (IOI) und
+ * ein Datenfeld ueber dem Index (DOI) sind verschiedene Schutzmuster.
+ */
+bool uft_d2_sector_crosses_index(const uft_d2_track_t *t,
+                                 const uft_d2_sector_t *s);
+/** Eigene Kodierung des Sektors, sonst die der Spur. */
+uft_encoding_t uft_d2_sector_encoding(const uft_d2_track_t *t,
+                                      const uft_d2_sector_t *s);
+
+/* ═══════════════════════ Schicht 4: Dateisysteme ════════════════════════ */
 
 typedef enum {
     UFT_D2_FS_UNKNOWN = 0, UFT_D2_FS_FAT12, UFT_D2_FS_AMIGADOS,
     UFT_D2_FS_CBMDOS, UFT_D2_FS_APPLEDOS33, UFT_D2_FS_PRODOS,
     UFT_D2_FS_PASCAL, UFT_D2_FS_TRDOS,
-    UFT_D2_FS_NONE_TRACKLOADER   /**< Kopf sagt Dateisystem, Inhalt nicht  */
+    UFT_D2_FS_NONE_TRACKLOADER    /**< kein Dateisystem — eine TATSACHE     */
 } uft_d2_fs_kind_t;
 
-typedef struct {
-    char     name[64];
-    uint32_t size;
-    uint8_t  type;
-    bool     deleted;
-    bool     recoverable;     /**< bei geloeschten: Daten noch erreichbar */
-    bool     chain_broken;    /**< FAT: fortlaufend gelesen — ein VERSUCH */
-    bool     cross_linked;
-    uint32_t start_unit;      /**< Cluster / Block / Spur-Sektor          */
-    uft_d2_conf_t conf;
-    uft_d2_derivation_t deriv;
-} uft_d2_entry_t;
+#define UFT_D2_ENTRY_NAME 64u
+#define UFT_D2_FS_LABEL   32u
 
 typedef struct {
+    char     name[UFT_D2_ENTRY_NAME];
+    uint32_t size;
+    uint8_t  type;
+    bool     deleted, recoverable, chain_broken, cross_linked;
+    uint32_t start_unit;
+    uft_d2_conf_t     conf;
+    uft_d2_deriv_id_t deriv;
+} uft_d2_entry_t;
+
+/**
+ * EIN Dateisystem. Eine Diskette kann MEHRERE tragen — Doppelformat,
+ * Partitionen, Trackloader UND Dateisystem auf verschiedenen Spuren.
+ * In MF-1272 gab es genau eines; die Grenze war eine Annahme, keine
+ * Eigenschaft von Disketten.
+ */
+typedef struct {
     uft_d2_fs_kind_t kind;
-    uft_d2_conf_t    kind_conf;  /**< wie sicher die Erkennung ist       */
-    char             label[32];
+    uft_d2_conf_t    kind_conf;
+    char             label[UFT_D2_FS_LABEL];
+    uint16_t         cyl_from, cyl_to;  /**< 0..0xFFFF = ganze Diskette     */
+    uint8_t          head_mask;         /**< 0 = alle Koepfe                */
     uft_d2_entry_t  *entries;
     size_t           count, capacity;
     size_t           deleted_count;
-    bool             counters_consistent; /**< Kopf gegen Katalog        */
-    bool             counters_checked;
+    bool             counters_consistent, counters_checked;
+    uft_d2_deriv_id_t deriv;
+    uint32_t          source_gen;
 } uft_d2_fs_t;
 
 /* ═══════════════════════ Metadaten ══════════════════════════════════════ */
 
 typedef enum {
-    UFT_D2_META_FORMAT_FIELD = 0, UFT_D2_META_FREE_TEXT,
-    UFT_D2_META_FILESYSTEM, UFT_D2_META_SELF
+    UFT_D2_META_FORMAT_FIELD = 0, /**< stand als Feld im Behaelter          */
+    UFT_D2_META_FREE_TEXT,        /**< Freitext aus dem Behaelter           */
+    UFT_D2_META_FILESYSTEM,       /**< aus dem Dateisystem gelesen          */
+    UFT_D2_META_SELF              /**< von UFT selbst erzeugt               */
 } uft_d2_meta_src_t;
 
+#define UFT_D2_META_KEY   32u
+#define UFT_D2_META_VALUE 192u
+/** Dynamisch bis hierher, dann ein Befund META_OVERFLOW — in MF-1272 waren
+ *  es 64 feste Plaetze und der 65. fiel STILL heraus. */
+#define UFT_D2_MAX_META   256u
+
 typedef struct {
-    char key[32];
-    char value[192];
+    char key[UFT_D2_META_KEY];
+    char value[UFT_D2_META_VALUE];
     uft_d2_meta_src_t src;
 } uft_d2_meta_t;
 
@@ -350,71 +387,60 @@ typedef struct uft_disk2 uft_disk2_t;
 uft_disk2_t *uft_d2_create(void);
 void         uft_d2_destroy(uft_disk2_t *d);
 
-/* ── Spuren ──────────────────────────────────────────────────────────── */
+/**
+ * Registriert eine Ableitung und gibt ihre Kennung zurueck.
+ * @return 0 (UFT_D2_DERIV_NONE) nur bei Speichermangel oder vollem Register.
+ */
+uft_d2_deriv_id_t uft_d2_register_deriv(uft_disk2_t *d, uft_d2_layer_t from,
+                                        uft_d2_origin_t origin,
+                                        const char *by, const char *params,
+                                        uint32_t source_gen);
+const uft_d2_derivation_t *uft_d2_deriv(const uft_disk2_t *d,
+                                        uft_d2_deriv_id_t id);
+size_t uft_d2_deriv_count(const uft_disk2_t *d);
 
-/** Holt oder legt an. Spuren werden bei Bedarf angelegt, nie vorab. */
+/**
+ * Die Spur, und wenn es sie nicht gibt, eine neue.
+ *
+ * ACHTUNG, und das steht hier, weil es sonst niemand merkt: der
+ * Rueckgabewert gilt nur, bis die NAECHSTE Spur angelegt wird. Die Spuren
+ * liegen in einem Feld, das beim Wachsen umzieht; ein ueber ein weiteres
+ * `uft_d2_track()` hinweg gehaltener Zeiger sieht danach ins Leere. Wer
+ * eine Spur laenger braucht, holt sie sich neu oder merkt sich cyl/head.
+ * Der Spurindex im Inneren haelt deshalb NUMMERN, keine Zeiger.
+ */
 uft_d2_track_t *uft_d2_track(uft_disk2_t *d, uint16_t cyl, uint8_t head);
 const uft_d2_track_t *uft_d2_track_get(const uft_disk2_t *d, uint16_t cyl,
                                        uint8_t head);
 size_t uft_d2_track_count(const uft_disk2_t *d);
-/** Hoechste vorhandene Lage — GEMESSEN, keine Annahme. */
+const uft_d2_track_t *uft_d2_track_at(const uft_disk2_t *d, size_t i);
+/** Die groesste vorhandene Lage — GEMESSEN, nicht aus einer Geometrie. */
 bool uft_d2_extent(const uft_disk2_t *d, uint16_t *out_max_cyl,
                    uint8_t *out_max_head);
 
-/* ── Schicht 1 einspeisen ────────────────────────────────────────────── */
-
-/**
- * Eine Umdrehung anhaengen. Die Daten werden KOPIERT; der Aufrufer behaelt
- * seine.
- *
- * @param index_time_ns 0 heisst "nicht gemessen". Das wird als BEFUND
- *                      vermerkt, nicht stillschweigend durchgereicht —
- *                      ohne Indexzeit keine Drehzahl, kein Fuzzy-Nachweis.
- */
 bool uft_d2_add_revolution(uft_disk2_t *d, uft_d2_track_t *t,
                            const uint32_t *intervals, size_t count,
                            uint32_t index_time_ns, bool complete,
-                           const uft_d2_derivation_t *deriv);
+                           uft_d2_conf_t conf, uft_d2_deriv_id_t deriv);
 
-/* ── Schicht 2 einspeisen ────────────────────────────────────────────── */
-
-/**
- * Bitstrom setzen. `nbits` ist die gemessene Laenge. Konfidenz, Phase und
- * Flusszahl sind optional (NULL) — und wenn sie fehlen, fehlen sie. Sie
- * werden nicht mit 255 aufgefuellt. Wird eine Beilage uebergeben und der
- * Speicher dafuer fehlt, scheitert der ganze Aufruf (false, Bitstrom der
- * Spur geleert) — ein Bitstrom OHNE Konfidenz waere eine andere Aussage.
- */
 bool uft_d2_set_bitstream(uft_disk2_t *d, uft_d2_track_t *t,
                           const uint8_t *bits, size_t nbits,
                           const uft_d2_conf_t *bit_conf,
+                          const uint8_t *agree, uint8_t nrevs_fused,
                           const int16_t *phase_q8, const uint16_t *flux_count,
                           size_t index_bit, uft_encoding_t enc,
-                          uint32_t cell_ns, const uft_d2_derivation_t *deriv);
+                          uint32_t cell_ns, uft_d2_deriv_id_t deriv);
 
-/* ── Schicht 3 einspeisen ────────────────────────────────────────────── */
-
-/**
- * Sektor anhaengen. Daten werden kopiert. Doppelte Nummern und
- * Ueberlappungen sind ERLAUBT — sie sind Tatsachen, keine Fehler.
- *
- * Die Zuversicht wird GEPRUEFT: ein Sektor mit `data_crc_ok == false`
- * darf nicht 255 tragen, und einer mit origin RECONSTRUCTED auch nicht.
- * Wer das versucht, bekommt false und einen Befund — Zuversicht steigt nie
- * ohne Beleg.
- */
 bool uft_d2_add_sector(uft_disk2_t *d, uft_d2_track_t *t,
                        const uft_d2_sector_t *s);
 
-/* ── Schicht 4 einspeisen ────────────────────────────────────────────── */
+uft_d2_fs_t *uft_d2_add_fs(uft_disk2_t *d, uft_d2_fs_kind_t kind,
+                           uft_d2_conf_t kind_conf, uft_d2_deriv_id_t deriv);
+size_t uft_d2_fs_count(const uft_disk2_t *d);
+uft_d2_fs_t *uft_d2_fs_at(uft_disk2_t *d, size_t i);
+bool uft_d2_add_entry(uft_disk2_t *d, uft_d2_fs_t *fs,
+                      const uft_d2_entry_t *e);
 
-uft_d2_fs_t *uft_d2_fs(uft_disk2_t *d);
-bool uft_d2_add_entry(uft_disk2_t *d, const uft_d2_entry_t *e);
-
-/* ── Metadaten und Befunde ───────────────────────────────────────────── */
-
-/** Gleiche Schluessel werden NICHT zusammengelegt — zwei Kommentarfelder
- *  sind zwei Werte. `uft_d2_meta()` liefert den ersten. */
 bool uft_d2_add_meta(uft_disk2_t *d, const char *key, const char *value,
                      uft_d2_meta_src_t src);
 const char *uft_d2_meta(const uft_disk2_t *d, const char *key);
@@ -428,49 +454,48 @@ size_t uft_d2_diag_count(const uft_disk2_t *d);
 const uft_d2_diag_t *uft_d2_diag_at(const uft_disk2_t *d, size_t i);
 size_t uft_d2_diag_count_sev(const uft_disk2_t *d, uft_d2_diag_sev_t at_least);
 
-/* ═══════════════════════ Was der Traeger TRAEGT ═════════════════════════ */
-
 /**
- * Welche Schichten vorhanden sind — auf mindestens einer Spur.
- *
- * Das ist die Grundlage der Verlustpruefung: ein Zielformat braucht
- * bestimmte Schichten, und was die Diskette nicht hat, kann es nicht
- * bekommen.
+ * Prueft die innere Stimmigkeit und schreibt Befunde.
+ *   STALE_DERIV     Objekt stammt aus einer Generation, die ersetzt wurde
+ *   POS_BEYOND      Sektor nennt Bitpositionen jenseits des Bitstroms
+ *   ENC_MISMATCH    Spur- und Bitstromkodierung widersprechen sich
+ *   REV_EMPTY_INDEX Umdrehung mit Indexzeit, aber ohne Flusswechsel
+ *   FS_RANGE        Dateisystem nennt Spuren, die es nicht gibt
+ * @return Zahl der NEUEN Befunde. 0 heisst stimmig.
  */
-uint32_t uft_d2_layers(const uft_disk2_t *d);   /**< Bitmaske 1<<layer   */
+size_t uft_d2_validate(uft_disk2_t *d);
 
-/** Merkmale jenseits der Schichten, die ein Zielformat tragen muss. */
+/** Bitmaske 1<<layer ueber alle Spuren. */
+uint32_t uft_d2_layers(const uft_disk2_t *d);
+
 typedef enum {
-    UFT_D2_FEAT_REVOLUTIONS   = 1u << 0,  /**< mehrere, getrennt              */
+    UFT_D2_FEAT_REVOLUTIONS   = 1u << 0,
     UFT_D2_FEAT_INDEX_TIME    = 1u << 1,
-    UFT_D2_FEAT_WEAK_BITS     = 1u << 2,  /**< Konfidenz je Bit vorhanden     */
-    UFT_D2_FEAT_GAPS          = 1u << 3,  /**< Bitstrom, also Luecken         */
-    UFT_D2_FEAT_VAR_SECTOR_SZ = 1u << 4,  /**< ungleiche Groessen auf 1 Spur  */
+    UFT_D2_FEAT_WEAK_BITS     = 1u << 2,
+    UFT_D2_FEAT_GAPS          = 1u << 3,
+    UFT_D2_FEAT_VAR_SECTOR_SZ = 1u << 4,
     UFT_D2_FEAT_DUP_SECTORS   = 1u << 5,
-    UFT_D2_FEAT_BAD_CRC       = 1u << 6,  /**< Sektoren mit falscher CRC      */
+    UFT_D2_FEAT_BAD_CRC       = 1u << 6,
     UFT_D2_FEAT_DELETED_DAM   = 1u << 7,
-    UFT_D2_FEAT_MIXED_ENC     = 1u << 8,  /**< FM und MFM gemischt            */
-    UFT_D2_FEAT_NO_DATA_SEC   = 1u << 9,  /**< ID ohne Datenfeld              */
+    UFT_D2_FEAT_MIXED_ENC     = 1u << 8,
+    UFT_D2_FEAT_NO_DATA_SEC   = 1u << 9,
     UFT_D2_FEAT_UNFORMATTED   = 1u << 10,
     UFT_D2_FEAT_DELETED_FILES = 1u << 11,
-    UFT_D2_FEAT_METADATA      = 1u << 12
+    UFT_D2_FEAT_METADATA      = 1u << 12,
+    UFT_D2_FEAT_MULTI_FS      = 1u << 13,
+    UFT_D2_FEAT_VOTES         = 1u << 14
 } uft_d2_feature_t;
-/** Zahl der Merkmalsbits — EINE Stelle, nicht ein Literal an zweien. */
-#define UFT_D2_FEAT_COUNT 13u
+/** Zahl der Merkmale — ersetzt das Literal, das in MF-1272 an zwei
+ *  Stellen stand und beim Erweitern an einer vergessen wuerde. */
+#define UFT_D2_FEAT_COUNT 15u
 
-/** GEMESSEN ueber alle Spuren. Nicht behauptet. */
+/** Aus dem Cache; beim Einspeisen als schmutzig markiert. */
 uint32_t uft_d2_features(const uft_disk2_t *d);
 
 /**
- * Verlustpruefung: was ginge verloren, wenn dieser Traeger in ein Format
- * geschrieben wuerde, das nur `target_layers` und `target_features`
- * tragen kann?
- *
- * @param out_lost_layers   Bitmaske der Schichten, die verloren gingen
- * @param out_lost_features Bitmaske der Merkmale
- * @return true, wenn NICHTS verloren geht. Bei false muss der Aufrufer
- *         entweder abbrechen oder `allow_loss` verlangen — und das
- *         Verlorene BENENNEN.
+ * Was bei einer Wandlung verloren ginge. Die Frage, die jedes Zielformat
+ * beantwortet bekommen muss, BEVOR geschrieben wird.
+ * @return true, wenn nichts verloren geht.
  */
 bool uft_d2_check_loss(const uft_disk2_t *d, uint32_t target_layers,
                        uint32_t target_features,
@@ -480,18 +505,14 @@ const char *uft_d2_layer_name(uft_d2_layer_t l);
 const char *uft_d2_feature_name(uft_d2_feature_t f);
 const char *uft_d2_origin_name(uft_d2_origin_t o);
 
-/* ═══════════════════════ Bericht ════════════════════════════════════════ */
-
 /**
- * Schreibt den Bericht nach `buf` und gibt die Laenge zurueck, die der
- * VOLLE Bericht braucht (ohne NUL) — Bauform `snprintf`. Ist der
- * Rueckgabewert >= buflen, wurde gekuerzt; die Warnungen stehen deshalb
- * ZUERST, damit eine Kuerzung nie sie trifft.
+ * Bericht in einen Puffer.
+ * @return die BENOETIGTE Laenge ohne die abschliessende Null. Ein Wert
+ *         >= @p buflen heisst: gekuerzt (Bauform `snprintf`).
  */
 size_t uft_d2_report(const uft_disk2_t *d, char *buf, size_t buflen);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* UFT_DISK2_H */

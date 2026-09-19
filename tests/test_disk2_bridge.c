@@ -141,9 +141,16 @@ static void a_korpus_86f(void) {
                 if (s->data_crc_known) mit_crc++;
                 if (s->conf == UFT_D2_CONF_CERTAIN) mit_255++;
                 if (!s->has_data) ohne_daten++;
+                /* MF-1274: die Herkunft steht im Register des Modells, der
+                 * Sektor traegt nur ihre Kennung. Verglichen wird deshalb
+                 * der INHALT des Eintrags — und weil das Register kopiert
+                 * statt zu zeigen, mit strcmp und nicht ueber Zeiger. */
+                const uft_d2_derivation_t *dv = uft_d2_deriv(d, s->deriv);
                 if (s->origin != UFT_D2_ORIGIN_CONTAINER
-                    || strcmp(s->deriv.by, "uft_d2_bridge") != 0
-                    || s->deriv.params != uft_format_plugin_86f.name
+                    || !dv
+                    || strcmp(dv->by, "uft_d2_bridge") != 0
+                    || strcmp(dv->params, uft_format_plugin_86f.name) != 0
+                    || dv->from_layer != UFT_D2_LAYER_SECTORS
                     || s->idam_bit != SIZE_MAX || s->weak_bits != 0u) {
                     CHECK(0, "Sektor C%u H%u R%u: Herkunft/Ableitung/Lage falsch",
                           c, h, (unsigned)s->id_sec);

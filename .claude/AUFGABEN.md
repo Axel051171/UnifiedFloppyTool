@@ -4193,14 +4193,81 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     der Weg durch den Qt-Test offscreen (`loadImage` → Kasten
     gefüllt → fünf Zusagen). Was der Kasten im Fenster tatsächlich
     zeigt, hat der Eigentümer noch nicht gesehen.
+- **Stand 2026-09-20, achter Durchgang — die ZWEITE FASSUNG des
+  Zentrums (MF-1274), vom Eigentümer eingereicht, mit derselben
+  Namensmessung wie beim ersten Mal:**
+  · **Was dazukam:** Generationen je Schicht samt `uft_d2_validate()`
+    (fünf Widersprüche: STALE_DERIV, POS_BEYOND, ENC_MISMATCH,
+    REV_EMPTY_INDEX, FS_RANGE); ein **Ableitungsregister** mit
+    Kennungen statt eines Herkunfts-Structs je Objekt; **Stimmen je
+    Bit** (`agree[]` + `nrevs_fused` — „3 von 5" ist nachprüfbar,
+    „Konfidenz 153" nicht); **mehrere Dateisysteme** je Diskette;
+    Kodierung je **Sektor**; `crosses_index` **gerechnet** statt
+    gesetzt, und zwar über BEIDE Felder (IOI ≠ DOI); die
+    Zuversichtsregel an **allen** Schichten; Spurindex `[cyl][head]`;
+    Merkmalcache; dynamische Metadaten mit Überlaufmeldung; die
+    Fehlerzahl im Bericht — oben UND in der Kürzungszeile.
+  · **Zwei Messungen am Baum, beide gegen den Entwurf:** die sieben
+    Namenskollisionen aus MF-1272 gelten unverändert (der Entwurf
+    benutzt dieselben Namen wieder) → alles bleibt `uft_d2_`/`UFT_D2_`;
+    und **`UFT_ENC_GCR` gibt es hier nicht** — der Baum führt gemessen
+    **20** Kodierungen statt vier, GCR nach Familie getrennt (CBM,
+    Apple 5.25", Apple 3.5", Victor), dazu `UFT_ENC_AMIGA_MFM` und
+    `UFT_ENC_M2FM`. Ein Sammelwert hätte bei Kopierschutz genau die
+    Frage verschluckt, auf die es ankommt.
+  · **Eine Schemaänderung mit Grund:** `by`/`params` waren ein
+    `const char *` mit der Auflage „muss statisch sein". Ein Zeiger ist
+    nicht serialisierbar, und die Auflage war eine Bitte an den
+    Aufrufer statt einer Eigenschaft des Modells — jetzt wird in feste
+    Feldbreite KOPIERT. Der Test führt das vor: ein Name wird nach dem
+    Registrieren überschrieben und steht danach noch richtig da.
+  · **Eine Falle, die ich in den Kopf geschrieben habe, weil sie sonst
+    niemand sieht:** `uft_d2_track()` gibt einen Zeiger in ein Feld
+    zurück, das beim Anlegen der NÄCHSTEN Spur umzieht. Der Index hält
+    deshalb Nummern, keine Zeiger — und wer eine Spur über ein
+    weiteres `uft_d2_track()` hinweg hält, hält ins Leere.
+  · **Rotbeweis: sieben Mutationen, sieben gefallen** — Generation
+    steigt nicht (6 Zusagen), Zuversichtsregel lässt alles durch (8),
+    Stimmen ohne Basis angenommen (4), `crosses_index` nur auf
+    `dam_bit` (2), Kürzungszeile zählt verdeckte Fehler nicht (2),
+    Metadaten-Überlauf bleibt still (2), Brücke trägt eine andere
+    Herkunft ein (1441). Wiederhergestellt byteidentisch, beide Tests
+    grün, volle Suite 520/520, Bau 0 Warnungen.
+  · **Und eine Lücke in meinem EIGENEN Test hat der Rotbeweis
+    gefunden:** die IOI/DOI-Unterscheidung war nicht bewacht — meine
+    Fälle waren so gewählt, dass eine Prüfung nur auf `dam_bit`
+    dasselbe Ergebnis liefert. Erst der Fall „Adressfeld bei 10,
+    Datenfeld ab 70, Index 64" trennt die beiden. Nachgetragen, dann
+    fällt Mutation D.
+  · **GESTOPPT:** der **Behälter UFTD** (`uft_disk2_io.{h,c}`,
+    Rundlauf und Ladefehler) ist Teil desselben eingereichten Pakets
+    und kommt als eigener Commit — ein Tor wird allein und zuerst
+    committet. Er braucht einen Produktivaufrufer (D2), und der ist
+    noch nicht gewählt.
 - **Warteschlange „einbauen", aus dem Register abgeleitet** (die
   eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
   `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,
   `track_layout_gen_c_v5.zip`, `micropolis_gcr_extract_c.zip`,
   `mpi_gcr_extract_c.zip`; die sechs Module der Reihe
   `uft_revolution`, `uft_protection_scan`, `uft_splice`,
-  `uft_fat_robust`, `uft_a2_order`, `uft_amiga_media`, sobald ihr
-  Paket gefunden ist): je Modul EIN Commit, Rotbeweis zuerst, Lizenz
+  `uft_fat_robust`, `uft_a2_order`, `uft_amiga_media` — ~~sobald ihr
+  Paket gefunden ist~~ **berichtigt MF-1274: DREI davon liegen im
+  Baum, und die erste Suche hat sie nur nicht gesehen.** Gesucht wurde
+  nach Dateinamen (`find -iname '*fat_robust*'`) und in `.md`-Dateien;
+  die Pakete heissen aber auf DEUTSCH und die Modulnamen stehen INNEN:
+  `neue-ideen/UFT-NN — FAT12 lesen.zip` -> `uft_fat_robust.{h,c}` +
+  `test_fat_robust.c` + `UFT-NN_FAT12_Robustheit.md`;
+  `neue-ideen/Apple-Sektorordnung.zip` -> `uft_a2_order.{h,c}` +
+  Test + Ausarbeitung; `neue-ideen/UFT-NN — Amiga.zip` ->
+  `uft_amiga_media.{h,c}` + Test + Ausarbeitung. Gefunden hat sie ein
+  `grep -rl` ueber den GANZEN Baum je Modulname — dieselbe Lehre wie
+  bei `adf_ext` (MF-1222): eine Suche ueber Dateinamen ist eine Aussage
+  ueber Dateinamen, nicht ueber Inhalte. Fuer `uft_revolution`,
+  `uft_protection_scan` und `uft_splice` gibt es weiterhin KEIN Paket
+  (0 Treffer ausserhalb dieser Liste und der Bauartefakte).
+  **`uft_fat_robust` ist damit der naechste Griff** — es ist zugleich
+  Punkt 2 des Zentrums-Entwurfs („ein Adapter, der beweist, dass es
+  traegt: img + FAT12"): je Modul EIN Commit, Rotbeweis zuerst, Lizenz
   an der Datei, Kanal nach MF-695, und unter der EINFRIER-REGEL kein
   neues Format-Plugin — Bugfixes und Verifikation ja.
   · **Und genau die fünf Absagen waren die interessanten.**
