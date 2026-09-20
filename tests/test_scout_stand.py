@@ -62,12 +62,19 @@ def baue_baum(tmp: Path, klone: dict[str, str]) -> Path:
     """
     work = tmp / "work"
     work.mkdir(parents=True)
+    # MF-1279: OHNE die bereinigte Umgebung richtet `git init` hier nicht
+    # dieses Pruefverzeichnis ein, sondern das Depot, auf das ein geerbtes
+    # GIT_DIR zeigt — in einem Nebenbaum setzt es dabei `core.bare = true`
+    # und macht den Hauptbaum fuer git unsichtbar. Nachgestellt im
+    # Sandkasten, Begruendung im Kopf von `scout_stand.git_umgebung()`.
+    umg = st.git_umgebung()
     for name, url in klone.items():
         d = work / name
         d.mkdir()
         for cmd in (["git", "init", "-q"],
                     ["git", "remote", "add", "origin", url]):
-            subprocess.run(cmd, cwd=str(d), capture_output=True, timeout=30)
+            subprocess.run(cmd, cwd=str(d), capture_output=True,
+                           env=umg, timeout=30)
     return work
 
 
@@ -221,12 +228,66 @@ def test_auftragsliste_ist_lesbar():
            "kein Urteil tragen: %s" % ", ".join(map(str, ohne)))
 
 
+def test_geerbtes_git_dir_taeuscht_nicht():
+    """Ein geerbtes GIT_DIR darf die Herkunftsfrage nicht uebersteuern.
+
+    In JEDEM git-Haken ist `GIT_DIR` gesetzt — git exportiert es. Ein
+    `git -C <pfad>` wird davon UEBERSTIMMT: `-C` wechselt nur das
+    Arbeitsverzeichnis, das Depot bestimmt `GIT_DIR`. Ohne bereinigte
+    Umgebung antwortet also JEDES Verzeichnis mit dem `origin` des
+    umgebenden Depots, und die Namensgleichheit — der Fehler, gegen den
+    dieser Zaehler gebaut wurde — kehrt zurueck.
+
+    Im Hauptbaum faellt das NICHT auf, weil git dort `GIT_DIR=.git`
+    relativ exportiert und das im Pruefverzeichnis zufaellig auf dessen
+    eigenes `.git` zeigt. Der Selbsttest war gruen aus dem falschen
+    Grund; erst in einem Nebenbaum, wo `GIT_DIR` absolut ist, fiel er.
+
+    Der Koeder ist ein eigenes Wegwerf-Depot im Pruefverzeichnis, nie
+    das echte — sonst wuerde der Test genau den Schaden anrichten, den
+    er verhindert.
+    """
+    import os
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        koeder = tmp / "koeder"
+        koeder.mkdir()
+        umg = st.git_umgebung()
+        for cmd in (["git", "init", "-q"],
+                    ["git", "remote", "add", "origin",
+                     "https://github.com/koeder/koeder.git"]):
+            subprocess.run(cmd, cwd=str(koeder), capture_output=True,
+                           env=umg, timeout=30)
+
+        work = baue_baum(tmp, {
+            "FloppyTools": "https://github.com/Datamuseum-DK/FloppyTools.git",
+        })
+
+        alt = os.environ.get("GIT_DIR")
+        os.environ["GIT_DIR"] = str(koeder / ".git")
+        try:
+            klone = st.klon_slugs(work)
+        finally:
+            if alt is None:
+                os.environ.pop("GIT_DIR", None)
+            else:
+                os.environ["GIT_DIR"] = alt
+
+        pruefe("datamuseum-dk/floppytools" in klone,
+               "die Herkunft muss aus dem PRUEFVERZEICHNIS kommen, auch "
+               "wenn GIT_DIR gesetzt ist — gemessen %r" % (sorted(klone),))
+        pruefe("koeder/koeder" not in klone,
+               "das Depot aus GIT_DIR darf NICHT als Klon gelten — "
+               "gemessen %r" % (sorted(klone),))
+
+
 def main() -> int:
     print("Scout-Zaehlwerk gegen seine eigenen drei Fehler (MF-681)\n")
     for f in (test_bremse_sieht_die_uebernahme_marke,
               test_bremse_sieht_die_entwurfs_marke,
               test_bremse_zaehlt_das_unmarkierte,
               test_namensgleichheit,
+              test_geerbtes_git_dir_taeuscht_nicht,
               test_erwaehnung_ist_keine_begutachtung,
               test_alteintrag_ohne_bezeichner,
               test_negativliste_zaehlt,

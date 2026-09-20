@@ -63,6 +63,73 @@ def norm(x):
     return re.sub(r"[^a-z0-9]", "", x.lower())
 
 
+#: Umgebungsvariablen, mit denen git ein Depot festlegt. Git EXPORTIERT
+#: sie in jeden Haken — `pre-commit`, `pre-push`, `commit-msg`. Ein
+#: Unterprozess, der danach `git -C <anderes Verzeichnis>` ruft, wird
+#: davon UEBERSTIMMT: `-C` wechselt das Arbeitsverzeichnis, `GIT_DIR`
+#: aber bestimmt das Depot, und GIT_DIR gewinnt.
+GIT_DEPOT_VARIABLEN = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_PREFIX",
+    "GIT_NAMESPACE",
+)
+
+
+def git_umgebung():
+    """Eine Umgebung, in der `git -C <pfad>` wirklich <pfad> meint.
+
+    ── WARUM DAS NOETIG IST (MF-1279) ───────────────────────────────────
+
+    `klon_slugs()` fragt jedes Verzeichnis nach seiner HERKUNFT, weil der
+    Verzeichnisname luegt: `joncampbell123/floppytools` galt einmal als
+    geklont, weil `Datamuseum-DK/FloppyTools` unter dem Namen
+    `FloppyTools` liegt. Genau diese Unterscheidung faellt aus, sobald
+    ein geerbtes `GIT_DIR` da ist — dann antwortet JEDES Verzeichnis mit
+    dem `origin` des UMGEBENDEN Depots, und die Zuordnung ist wieder die
+    falsche Entwarnung, gegen die sie gebaut wurde.
+
+    Gemessen: `tests/test_scout_stand.py` ist gruen ohne `GIT_DIR` und
+    faellt mit absolutem `GIT_DIR` in genau den zwei Zusagen, die die
+    Namensgleichheit pruefen. Im Hauptbaum faellt es NICHT auf, weil git
+    dort `GIT_DIR=.git` RELATIV exportiert und das im Pruefverzeichnis
+    zufaellig auf dessen eigenes `.git` zeigt. Der Selbsttest war also
+    gruen aus dem falschen Grund — die Klasse MF-1014/MF-1026.
+
+    ── UND ER HAT DAS DEPOT BESCHAEDIGT ─────────────────────────────────
+
+    `baue_baum()` im Selbsttest ruft `git init`. Mit geerbtem `GIT_DIR`
+    richtet das nicht das Pruefverzeichnis ein, sondern das Depot, auf
+    das `GIT_DIR` zeigt. Zeigt es auf einen NEBENBAUM
+    (`…/.git/worktrees/<name>`, also nicht auf ein Verzeichnis namens
+    `.git`), setzt git dabei `core.bare = true` in die GEMEINSAME
+    Konfiguration — und der Hauptbaum antwortet danach auf jeden Befehl
+    mit „fatal: this operation must be run in a work tree".
+
+    In einem Sandkasten nachgestellt, Schritt fuer Schritt:
+
+        vorher  core.bare = false
+        (cd fremd && GIT_DIR=<depot>/.git/worktrees/neben git init -q)
+        nachher core.bare = true
+        git rev-parse --show-toplevel
+        -> fatal: this operation must be run in a work tree
+
+    Damit ist ein Schaden erklaert, den dieser Baum ZWEIMAL als
+    „Ursache nicht gefunden" abgelegt hat: `docs/OPEN_ITEMS.md` P3-463
+    („ein Nebenbaum hat in diesem Depot core.bare = true hinterlassen …
+    Ursache nicht gefunden, Nebenbaum entfernt") und
+    `.claude/AUFGABEN.md:173`. Es war kein Nebenbaum — es war dieser
+    Selbsttest, der in einem Nebenbaum lief.
+    """
+    import os
+    return {k: v for k, v in os.environ.items()
+            if k not in GIT_DEPOT_VARIABLEN}
+
+
 def klon_slugs(work):
     """Welche Repos liegen wirklich als Klon da — nach ihrer HERKUNFT.
 
@@ -84,7 +151,7 @@ def klon_slugs(work):
         try:
             u = subprocess.run(["git", "-C", str(d), "remote", "get-url",
                                 "origin"], capture_output=True, text=True,
-                               timeout=10).stdout.strip()
+                               env=git_umgebung(), timeout=10).stdout.strip()
         except (OSError, subprocess.SubprocessError):
             u = ""
         if u:
