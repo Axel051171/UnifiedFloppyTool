@@ -70,6 +70,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_error.h"
+#include "uft/formats/uft_td0.h"   /* MF-1285: uft_td0_strom_t */
 
 #ifndef UFT_CORPUS_DIR
 #error "UFT_CORPUS_DIR fehlt — tests/CMakeLists.txt muss es fuer diesen Test setzen"
@@ -90,6 +91,11 @@ extern const uft_format_plugin_t uft_format_plugin_td0;
 #define OFFEN   UFT_CORPUS_DIR            "/libdsk_uftk_pc720.td0"
 #define GEPACKT UFT_CORPUS_RESTRICTED_DIR "/fluxfox_sector_test_360k.td0"
 #define SCHUTZ  UFT_CORPUS_RESTRICTED_DIR "/fluxfox_transylvania.td0"
+
+/* Der Kommentar der unkomprimierten Korpusdatei, aus der Datei GEMESSEN
+ * (56 Byte, ohne Abschluss-NUL — TD0 laengt ihn, es ist keine Zeichenkette). */
+#define KOM_TEXT "UFT-K Traegerabbild, selbstbenennende Sektoren (MF-1020)"
+#define KOM_LEN  56u
 
 static int fehler = 0;
 #define PRUEFE(bed, text) do { \
@@ -339,6 +345,64 @@ static void gruppe_4_gekuerzt(void)
     remove(ziel);
 }
 
+/* ═══ 5. Der Kommentarblock — bis MF-1285 weggeworfen ══════════════
+ *
+ * `td0_open()` rechnete die Kommentarlaenge aus, sprang darueber und
+ * behielt NICHTS. `uft_td0_read_mem()` las den Block, und
+ * `uft_td0_to_imd()` holt daraus Zeitstempel und Kommentartext — wer
+ * `read_mem` loescht, ohne das hier zu haben, verliert still genau das
+ * METADATA-Merkmal, das `uft_format_traegt()` fuer TD0 UND IMD als
+ * getragen fuehrt (MF-1283).
+ *
+ * **Es gibt hierfuer keinen Rotbeweis „vorher", und das ist kein
+ * Versaeumnis:** vor MF-1285 gab es das Feld nicht, ein Test dagegen
+ * haette nicht gefehlt, sondern nicht uebersetzt — ein fehlendes Symbol
+ * ist kein roter Test (Bauform MF-991). Belegt wird deshalb wie dort:
+ * jede Zusage hat ihre eigene Mutation, und die Matrix steht in der
+ * Commitnachricht.
+ *
+ * **Das Monatsfeld wird ROH geprueft, nicht gedeutet.** Ob Teledisk den
+ * Monat 0- oder 1-basiert zaehlt, ist im Baum nicht gemessen; der Wandler
+ * rechnet `+1`, der Header sagt „Month (1-12)". Beide koennen nicht recht
+ * haben. Bis das entschieden ist, steht hier die Zahl aus der Datei und
+ * keine Auslegung — siehe `docs/OPEN_ITEMS.md` P3-522.              */
+static void gruppe_5_kommentar(void)
+{
+    printf("  [5] Kommentarblock (MF-1285)\n");
+
+    uft_disk_t *d = uft_disk_open(OFFEN, true);
+    PRUEFE(d != NULL, "Korpusdatei liess sich nicht oeffnen");
+    if (!d) return;
+
+    const uft_td0_strom_t *s = (const uft_td0_strom_t *)d->plugin_data;
+    PRUEFE(s != NULL, "kein Strom hinter dem Griff");
+    if (!s) { uft_disk_close(d); return; }
+
+    const uft_td0_anmerkung_t *a = &s->anmerkung;
+    PRUEFE(a->vorhanden, "Kommentarblock nicht erkannt — Kopfbyte 7 Bit 7");
+    PRUEFE(a->text != NULL, "kein Kommentartext");
+    PRUEFE(a->text_len == KOM_LEN, "Kommentarlaenge nicht 56");
+    if (a->text && a->text_len == KOM_LEN)
+        PRUEFE(memcmp(a->text, KOM_TEXT, KOM_LEN) == 0,
+               "Kommentartext weicht ab");
+
+    /* Rohwerte aus der Datei, ungedeutet. */
+    PRUEFE(a->jahr    == 126u, "Jahr-Rohwert nicht 126");
+    PRUEFE(a->monat   ==   8u, "Monat-Rohwert nicht 8");
+    PRUEFE(a->tag     ==  12u, "Tag nicht 12");
+    PRUEFE(a->stunde  ==  19u, "Stunde nicht 19");
+    PRUEFE(a->minute  ==  58u, "Minute nicht 58");
+    PRUEFE(a->sekunde ==   6u, "Sekunde nicht 6");
+
+    printf("      \"%.*s\" (%zu Byte), roh %u-%02u-%02u %02u:%02u:%02u\n",
+           (int)(a->text_len > 40 ? 40 : a->text_len), a->text ? a->text : "",
+           a->text_len, (unsigned)a->jahr, (unsigned)a->monat,
+           (unsigned)a->tag, (unsigned)a->stunde, (unsigned)a->minute,
+           (unsigned)a->sekunde);
+
+    uft_disk_close(d);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -353,6 +417,7 @@ int main(void)
     gruppe_2_gepackt();
     gruppe_3_schutzspur();
     gruppe_4_gekuerzt();
+    gruppe_5_kommentar();
 
     if (fehler) { printf("\n%d Zusage(n) gefallen\n", fehler); return 1; }
     printf("\nalle Zusagen gehalten\n");

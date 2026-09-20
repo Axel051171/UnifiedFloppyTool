@@ -4495,6 +4495,30 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   1a hängt ihn deshalb ins Plugin, bevor 1b löscht. Belegt gegen hxcfe:
   80×2/1440, 40×2/720, 41×2/738. Mutationsmatrix 5 von 5.
   **Offen bleibt 1b** — löschen und die beiden Wandler umhängen.
+- **Stand 2026-09-20, MF-1285 (1b, erster Teil):** 1b ist gemessen **kein
+  Commit, sondern zwei**, und der Grund ist wieder eine Messung, nicht
+  eine Vorliebe:
+  · **Der Speicherweg hat keinen Pfad.** `uftc_td0_to_img_mem()` bekommt
+    Bytes, `uft_disk_open()` will einen Dateinamen, und
+    `uft_format_plugin_t` hat kein Öffnen-aus-dem-Speicher — der
+    Verteiler sagt das selbst und führt es als `KNOWN_ISSUES ARCH-6`.
+    „Wandler auf den Plugin-Leser" war für diesen Weg also gar nicht
+    machbar.
+  · **Das Plugin warf den Kommentarblock weg.** `uft_td0_read_mem()` las
+    ihn, `uft_td0_to_imd()` holt daraus Zeitstempel und Text. Löschen
+    ohne Ersatz hätte still das METADATA-Merkmal verloren, das
+    `uft_format_traegt()` seit MF-1283 für TD0 **und** IMD als getragen
+    führt.
+  MF-1285 baut deshalb den **Strom-Kern**: `uft_td0_strom_t` plus
+  `_aus_bytes`/`_frei`/`_spur`, an Bytes hängend statt an einem Griff,
+  mit behaltenem Kommentarblock. Das Plugin ist nur noch ein Aufsatz
+  darüber. **Nebenbei ist Schritt 5 des Umbauplans belegt:** das
+  Monatsfeld ist 0-basiert — libdsks Schreiber setzt `ptm->tm_mon`,
+  SAMdisk liest `bMon + 1`, und die Korpusdatei vom 2026-09-12 trägt
+  eine 8. Der Header-Kommentar „Month (1-12)" ist berichtigt; für das
+  **Jahr** bleibt eine Abweichung offen (`P3-522`).
+  **Offen bleibt 1b-ii** — die drei Wandler auf den Kern umhängen,
+  `uft_td0_read_mem` samt `uft_td0_image_t`-Lauf löschen.
 - **Beleg:** —
 
 ---

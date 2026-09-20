@@ -175,7 +175,13 @@ typedef struct {
     uint16_t crc;           /**< Comment CRC-16 */
     uint16_t length;        /**< Comment data length */
     uint8_t  year;          /**< Year - 1900 */
-    uint8_t  month;         /**< Month (1-12) */
+    /* BERICHTIGT MF-1285: hier stand „Month (1-12)". Gemessen ist das
+     * Feld 0-BASIERT — libdsk schreibt `ptm->tm_mon` (`lib/drvtele.c:1031`,
+     * 0..11), SAMdisk liest `tc.bMon + 1` (`src/samdisk/td0.cpp:216`), und
+     * die Korpusdatei vom 2026-09-12 traegt eine 8. Ein Kommentar, der
+     * eine Zahl um eins verschiebt, ist keine Kleinigkeit: an ihm haengt,
+     * ob ein Datum stimmt. */
+    uint8_t  month;         /**< Month, 0-basiert (0 = Januar) */
     uint8_t  day;           /**< Day (1-31) */
     uint8_t  hour;          /**< Hour (0-23) */
     uint8_t  minute;        /**< Minute (0-59) */
@@ -384,6 +390,118 @@ int uft_td0_to_imd(const uft_td0_image_t* td0, struct uft_imd_image_t* imd);
  */
 int uft_td0_to_raw(const uft_td0_image_t* img, uint8_t** data,
                    size_t* size, uint8_t fill);
+
+/*============================================================================
+ * Der Strom-Kern (MF-1285)
+ *
+ * `uft_td0_read_mem()` und der Plugin-Leser in `src/formats/td0/uft_td0.c`
+ * waren ZWEI Leser fuer EIN Format, und jeder konnte etwas, das dem
+ * anderen fehlte: `read_mem` entpackte und las den Kommentarblock,
+ * erfand aber am Dateiende bis zu 255 Spuren; das Plugin las richtig und
+ * warf den Kommentarblock weg. Zwei Leser sind der Fehler, nicht der
+ * Muell — wer beide repariert, hat danach zwei, die nachgezogen werden
+ * muessen, sobald der naechste TD0-Dialekt kommt.
+ *
+ * Hier steht EINMAL, was beide brauchen: der entpackte Strom, seine
+ * gemessene Geometrie, sein Kommentarblock, und der Spurlauf darueber.
+ *
+ * **Warum das kein `uft_disk_t` nimmt:** der Speicher-Wandler
+ * `uftc_td0_to_img_mem()` bekommt Bytes ohne Pfad, und
+ * `uft_format_plugin_t` hat kein Oeffnen-aus-dem-Speicher — der
+ * Verteiler sagt das in `uft_format_convert_dispatch.c` selbst und
+ * fuehrt es als `KNOWN_ISSUES ARCH-6`. Ueber `uft_disk_open()` waere er
+ * also nicht erreichbar. Der Kern haengt deshalb an Bytes, nicht an
+ * einem Griff.
+ *============================================================================*/
+
+#ifndef UFT_TRACK_T_DEFINED
+struct uft_track;
+typedef struct uft_track uft_track_t;
+#endif
+
+/**
+ * @brief Kommentarblock einer TD0 — vorhanden, wenn Kopfbyte 7 Bit 7 traegt.
+ *
+ * `text` zeigt IN den Strom und wird mit ihm frei; nicht selbst freigeben,
+ * und nicht als NUL-terminiert behandeln — `text_len` gilt.
+ */
+typedef struct {
+    bool        vorhanden;
+    uint16_t    crc;      /**< CRC-16 wie in der Datei. NICHT nachgerechnet. */
+    /* Beide Felder stehen ROH da, wie die Datei sie traegt. Die Deutung
+     * macht der Verbraucher — und sie ist GEMESSEN, an zwei
+     * voneinander unabhaengigen Haenden:
+     *
+     *   libdsk `lib/drvtele.c:1030-1031` (LGPL-2+, John Elliott; nur
+     *   gelesen, Kanal *Spec*) SCHREIBT
+     *       stamp[0] = ptm->tm_year;   // Jahre seit 1900
+     *       stamp[1] = ptm->tm_mon;    // 0..11, NICHT 1..12
+     *   SAMdisk `src/samdisk/td0.cpp:216` (MIT, im Baum) LIEST
+     *       tc.bYear + ((tc.bYear < 70) ? 2000 : 1900), tc.bMon + 1
+     *
+     * Und das Objekt bestaetigt es: `libdsk_uftk_pc720.td0` kam am
+     * 2026-09-12 in den Baum und traegt Monat **8** — 0-basiert ist das
+     * September.
+     *
+     * Damit ist `uft_td0_to_imd()`s `month + 1` RICHTIG, und der
+     * Kommentar „Month (1-12)" an `uft_td0_comment_header_t` war es
+     * nicht; er ist unten berichtigt.
+     *
+     * **Beim Jahr weichen die beiden ab, und das ist nicht entschieden:**
+     * SAMdisk kippt bei 70 auf 2000, UFT rechnet unbedingt +1900. Siehe
+     * `docs/OPEN_ITEMS.md` P3-522. */
+    uint8_t     jahr;     /**< roh; Jahre seit 1900 (libdsk schreibt tm_year) */
+    uint8_t     monat;    /**< roh; 0-basiert (libdsk schreibt tm_mon) */
+    uint8_t     tag;
+    uint8_t     stunde;
+    uint8_t     minute;
+    uint8_t     sekunde;
+    const char *text;
+    size_t      text_len;
+} uft_td0_anmerkung_t;
+
+/**
+ * @brief Eine TD0 als Strom: entpackt, vermessen, mit Kommentarblock.
+ */
+typedef struct {
+    uint8_t    *strom;       /**< hinter dem 12-Byte-Kopf, bei `td` ENTPACKT */
+    size_t      strom_len;
+    size_t      daten_start; /**< Versatz der ersten Spur IM Strom */
+    uint8_t     version;
+    uint8_t     data_rate;
+    uint8_t     sides;       /**< Kopfangabe, NICHT gemessen */
+    bool        gepackt;
+    uft_td0_anmerkung_t anmerkung;
+    /* Aus dem Satzlauf GEMESSEN, nicht aus dem Kopf uebernommen. */
+    unsigned    zylinder;
+    unsigned    sektoren;    /**< groesste Sektorzahl einer Spur */
+} uft_td0_strom_t;
+
+/**
+ * @brief Baut den Strom aus den rohen Dateibytes.
+ *
+ * Sagt AB statt zu kappen: eine Kommentarlaenge oder ein Datensatz, der
+ * ueber das Stromende reicht, ist ein Formatfehler, kein Anlass zum
+ * Kuerzen (Dauerregel D5).
+ *
+ * @return `UFT_OK` oder ein `uft_error_t`-Kode. Der Rueckgabetyp ist
+ *         `int`, weil dieser Header `uft_error.h` nicht einbindet — die
+ *         WERTE sind dieselben, nicht eine eigene Zaehlung.
+ */
+int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
+                            uft_td0_strom_t *aus);
+
+/** @brief Gibt den Strom frei und nullt die Struktur. */
+void uft_td0_strom_frei(uft_td0_strom_t *s);
+
+/**
+ * @brief Laeuft den Strom ab und fuellt die angeforderte Spur.
+ *
+ * `track` wird mit `uft_track_init()` vorbereitet; der Aufrufer raeumt
+ * mit `uft_track_cleanup()` ab.
+ */
+int uft_td0_strom_spur(const uft_td0_strom_t *s, int cyl, int head,
+                       uft_track_t *track);
 
 /*============================================================================
  * LZSS Decompression Functions

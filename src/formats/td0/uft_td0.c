@@ -38,15 +38,14 @@
  * keit, sondern notwendig: ein LZH-Strom ist ZUSTANDSBEHAFTET, ein
  * `fseek` zurueck an den Datenanfang gibt es darin nicht — und genau
  * das tat `td0_read_track()` bei jedem Aufruf. */
-typedef struct {
-    uint8_t*    strom;       /**< Datei hinter dem 12-Byte-Kopf, bei `td` ENTPACKT */
-    size_t      strom_len;
-    size_t      daten_start; /**< Versatz der ersten Spur IM STROM */
-    uint8_t     version;
-    uint8_t     data_rate;
-    uint8_t     sides;
-    bool        compressed;
-} td0_data_t;
+/* MF-1285: hier stand `td0_data_t`. Was es trug — Strom, Laenge,
+ * Datenanfang, Kopffelder — heisst jetzt `uft_td0_strom_t` und steht im
+ * Header, weil der Speicher-Wandler DIESELBE Sache braucht und kein
+ * `uft_disk_t` hat (ARCH-6). `disk->plugin_data` zeigt auf einen.
+ *
+ * Der Grund fuer den Umzug ist nicht Ordnung, sondern eine Messung:
+ * `uft_td0_read_mem()` und dieses Plugin waren zwei Leser fuer ein
+ * Format, und jeder konnte etwas, das dem anderen fehlte. */
 
 /* Obergrenze des entpackten Stroms. Die groesste Geometrie der eigenen
  * Formattafel ist `myz80` mit 64 x 1 x 128 x 1024 = 8,4 MB; 64 MB ist
@@ -104,29 +103,22 @@ bool td0_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     return false;
 }
 
-static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) {
-    FILE* f = fopen(path, "rb");
-    if (!f) return UFT_ERR_FILE_OPEN;
-    
-    uint8_t header[TD0_HEADER_SIZE];
-    if (fread(header, 1, TD0_HEADER_SIZE, f) != TD0_HEADER_SIZE) {
-        fclose(f);
-        return UFT_ERR_FORMAT_INVALID;
-    }
-    
-    uint16_t magic = uft_read_le16(header);
-    if (magic != TD0_MAGIC_NORMAL && magic != TD0_MAGIC_ADVANCED) {
-        fclose(f);
-        return UFT_ERR_FORMAT_INVALID;
-    }
-    
-    td0_data_t* pdata = calloc(1, sizeof(td0_data_t));
-    if (!pdata) { fclose(f); return UFT_ERR_MEMORY; }
+int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
+                            uft_td0_strom_t *aus)
+{
+    if (!daten || !aus) return UFT_ERR_NULL_POINTER;
+    memset(aus, 0, sizeof(*aus));
+    if (len < TD0_HEADER_SIZE) return UFT_ERR_FORMAT_INVALID;
 
-    pdata->version = header[4];
-    pdata->data_rate = header[5];
-    pdata->sides = header[9];
-    pdata->compressed = (magic == TD0_MAGIC_ADVANCED);
+    const uint8_t *header = daten;
+    uint16_t magic = uft_read_le16(header);
+    if (magic != TD0_MAGIC_NORMAL && magic != TD0_MAGIC_ADVANCED)
+        return UFT_ERR_FORMAT_INVALID;
+
+    aus->version   = header[4];
+    aus->data_rate = header[5];
+    aus->sides     = header[9];
+    aus->gepackt   = (magic == TD0_MAGIC_ADVANCED);
 
     /* MF-1284: den Rest der Datei holen und — bei `td` — entpacken.
      * Danach gibt es kein `FILE*` mehr; alles Weitere laeuft ueber den
@@ -135,30 +127,21 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
      * Ueberspring-Regeln: `open` sprang `fseek(f, len, ...)`,
      * `read_track` nur `if (data_len > 1)` — bei einem Datensatz von
      * genau einem Byte drifteten die beiden auseinander (§MF-1177). */
-    if (fseek(f, 0, SEEK_END) != 0) { free(pdata); fclose(f); return UFT_ERR_IO; }
-    long dateigroesse = ftell(f);
-    if (dateigroesse < (long)TD0_HEADER_SIZE) {
-        free(pdata); fclose(f); return UFT_ERR_FORMAT_INVALID;
-    }
-    size_t rest_len = (size_t)dateigroesse - TD0_HEADER_SIZE;
-    if (rest_len == 0) { free(pdata); fclose(f); return UFT_ERR_FORMAT_INVALID; }
+    size_t rest_len = len - TD0_HEADER_SIZE;
+    if (rest_len == 0) return UFT_ERR_FORMAT_INVALID;
 
-    uint8_t *rest = malloc(rest_len);
-    if (!rest) { free(pdata); fclose(f); return UFT_ERR_MEMORY; }
-    if (fseek(f, TD0_HEADER_SIZE, SEEK_SET) != 0
-        || fread(rest, 1, rest_len, f) != rest_len) {
-        free(rest); free(pdata); fclose(f); return UFT_ERR_IO;
-    }
-    fclose(f);
-
-    if (pdata->compressed) {
-        uft_error_t e = td0_strom_entpacken(rest, rest_len,
-                                            &pdata->strom, &pdata->strom_len);
-        free(rest);
-        if (e != UFT_OK) { free(pdata); return e; }
+    if (aus->gepackt) {
+        uft_error_t e = td0_strom_entpacken(daten + TD0_HEADER_SIZE, rest_len,
+                                            &aus->strom, &aus->strom_len);
+        if (e != UFT_OK) return (int)e;
     } else {
-        pdata->strom = rest;
-        pdata->strom_len = rest_len;
+        /* Auch der unkomprimierte Fall bekommt eine eigene Kopie: der
+         * Aufrufer darf `daten` nach der Rueckkehr freigeben, und
+         * `anmerkung.text` zeigt in den Strom. */
+        aus->strom = malloc(rest_len);
+        if (!aus->strom) return UFT_ERR_MEMORY;
+        memcpy(aus->strom, daten + TD0_HEADER_SIZE, rest_len);
+        aus->strom_len = rest_len;
     }
 
     /* MF-971: hier stand `if (pdata->version >= 0x10)`.
@@ -192,24 +175,40 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
      * Kommentartext. `header[7]` wurde bis hierher gar nicht gelesen. */
     size_t pos = 0;
     if (header[7] & 0x80) {
-        if (pdata->strom_len < 10) {
-            free(pdata->strom); free(pdata); return UFT_ERR_FORMAT_INVALID;
+        if (aus->strom_len < 10) {
+            uft_td0_strom_frei(aus); return UFT_ERR_FORMAT_INVALID;
         }
-        uint16_t com_len = uft_read_le16(pdata->strom + 2);
-        if ((size_t)10u + com_len > pdata->strom_len) {
+        uint16_t com_len = uft_read_le16(aus->strom + 2);
+        if ((size_t)10u + com_len > aus->strom_len) {
             /* Der Kommentar reicht ueber das Stromende — die Laenge ist
              * gelogen oder die Datei ist abgeschnitten. Absagen, nicht
              * kappen (D5). */
-            free(pdata->strom); free(pdata); return UFT_ERR_FORMAT_INVALID;
+            uft_td0_strom_frei(aus); return UFT_ERR_FORMAT_INVALID;
         }
+        /* MF-1285: hier wurde der Block bisher nur UEBERSPRUNGEN.
+         * `uft_td0_read_mem()` las ihn, und `uft_td0_to_imd()` holt
+         * daraus Zeitstempel und Kommentartext — wer `read_mem` loescht,
+         * ohne das hier zu behalten, verliert still das METADATA-Merkmal,
+         * das `uft_format_traegt()` fuer TD0 UND IMD als getragen fuehrt
+         * (MF-1283). */
+        aus->anmerkung.vorhanden = true;
+        aus->anmerkung.crc      = uft_read_le16(aus->strom + 0);
+        aus->anmerkung.jahr     = aus->strom[4];
+        aus->anmerkung.monat    = aus->strom[5];
+        aus->anmerkung.tag      = aus->strom[6];
+        aus->anmerkung.stunde   = aus->strom[7];
+        aus->anmerkung.minute   = aus->strom[8];
+        aus->anmerkung.sekunde  = aus->strom[9];
+        aus->anmerkung.text     = (const char *)(aus->strom + 10);
+        aus->anmerkung.text_len = com_len;
         pos = (size_t)10u + com_len;
     }
-    pdata->daten_start = pos;
+    aus->daten_start = pos;
 
     // Scan for geometry
     uint8_t max_cyl = 0, max_sec = 0;
-    while (pos + 4u <= pdata->strom_len) {
-        const uint8_t *trk_hdr = pdata->strom + pos;
+    while (pos + 4u <= aus->strom_len) {
+        const uint8_t *trk_hdr = aus->strom + pos;
         if (trk_hdr[0] == 0xFF) break;
 
         uint8_t num_sec = trk_hdr[0], cyl = trk_hdr[1];
@@ -218,45 +217,82 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
         if (num_sec > max_sec) max_sec = num_sec;
 
         for (int s = 0; s < num_sec; s++) {
-            if (pos + 6u > pdata->strom_len) { pos = pdata->strom_len; break; }
-            uint8_t sec_flags = pdata->strom[pos + 4];
+            if (pos + 6u > aus->strom_len) { pos = aus->strom_len; break; }
+            uint8_t sec_flags = aus->strom[pos + 4];
             pos += 6u;
             if (!(sec_flags & 0x30)) {
-                if (pos + 2u > pdata->strom_len) { pos = pdata->strom_len; break; }
-                uint16_t len = uft_read_le16(pdata->strom + pos);
+                if (pos + 2u > aus->strom_len) { pos = aus->strom_len; break; }
+                uint16_t len = uft_read_le16(aus->strom + pos);
                 pos += 2u;
                 /* The data record after the length word is exactly `len` bytes
                  * (byte 0 = encoding method, rest = encoded data) — read_track
                  * consumes `len` bytes here, so the geometry scan must skip the
                  * same `len`. The previous `len - 1` drifted one byte per data
                  * sector and mis-scanned the geometry of any multi-sector TD0. */
-                if (pos + len > pdata->strom_len) { pos = pdata->strom_len; break; }
+                if (pos + len > aus->strom_len) { pos = aus->strom_len; break; }
                 pos += len;
             }
         }
     }
 
-    disk->plugin_data = pdata;
-    disk->geometry.cylinders = max_cyl + 1;
-    disk->geometry.heads = pdata->sides;
-    disk->geometry.sectors = max_sec;
+    aus->zylinder = (unsigned)max_cyl + 1u;
+    aus->sektoren = max_sec;
+    return UFT_OK;
+}
+
+void uft_td0_strom_frei(uft_td0_strom_t *s)
+{
+    if (!s) return;
+    free(s->strom);
+    memset(s, 0, sizeof(*s));
+}
+
+static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) {
+    (void)read_only;
+
+    FILE* f = fopen(path, "rb");
+    if (!f) return UFT_ERR_FILE_OPEN;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERR_IO; }
+    long groesse = ftell(f);
+    if (groesse < (long)TD0_HEADER_SIZE) { fclose(f); return UFT_ERR_FORMAT_INVALID; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_IO; }
+
+    uint8_t *roh = malloc((size_t)groesse);
+    if (!roh) { fclose(f); return UFT_ERR_MEMORY; }
+    if (fread(roh, 1, (size_t)groesse, f) != (size_t)groesse) {
+        free(roh); fclose(f); return UFT_ERR_IO;
+    }
+    fclose(f);
+
+    uft_td0_strom_t *s = calloc(1, sizeof(*s));
+    if (!s) { free(roh); return UFT_ERR_MEMORY; }
+
+    int rc = uft_td0_strom_aus_bytes(roh, (size_t)groesse, s);
+    free(roh);                      /* der Strom hat seine eigene Kopie */
+    if (rc != UFT_OK) { free(s); return (uft_error_t)rc; }
+
+    disk->plugin_data = s;
+    disk->geometry.cylinders = s->zylinder;
+    disk->geometry.heads = s->sides;
+    disk->geometry.sectors = s->sektoren;
     disk->geometry.sector_size = 512;
-    disk->geometry.total_sectors = (uint32_t)(max_cyl + 1) * pdata->sides * max_sec;
+    disk->geometry.total_sectors =
+        (uint32_t)s->zylinder * s->sides * s->sektoren;
 
     return UFT_OK;
 }
 
 static void td0_close(uft_disk_t* disk) {
-    td0_data_t* pdata = disk->plugin_data;
-    if (pdata) {
-        free(pdata->strom);   /* MF-1284: vorher `fclose(pdata->file)` */
-        free(pdata);
+    uft_td0_strom_t* s = disk->plugin_data;
+    if (s) {
+        uft_td0_strom_frei(s);   /* MF-1284: vorher `fclose(pdata->file)` */
+        free(s);
         disk->plugin_data = NULL;
     }
 }
 
-static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
-                                   uft_track_t *track) {
+int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
+                       uft_track_t *track) {
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
      * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
      * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
@@ -264,8 +300,7 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
      * opus_read_track() von tests/test_disk_open_fuzz.c. */
     if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
-    td0_data_t *p = disk->plugin_data;
-    if (!p || !p->strom) return UFT_ERR_INVALID_ARG;
+    if (!p || !p->strom || !track) return UFT_ERR_INVALID_ARG;
 
     uft_track_init(track, cyl, head);
 
@@ -459,6 +494,17 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
     }
 done:
     return UFT_OK;
+}
+
+/* MF-1285: Der Plugin-Eintrag ist nur noch ein Aufsatz. Die Arbeit macht
+ * `uft_td0_strom_spur()`, und sie macht sie fuer den Speicher-Wandler
+ * genauso — der hat keinen Pfad und koennte `uft_disk_open()` gar nicht
+ * rufen (ARCH-6). Ein Format, ein Leser. */
+static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
+                                  uft_track_t *track) {
+    if (!disk) return UFT_ERR_INVALID_ARG;
+    return (uft_error_t)uft_td0_strom_spur(
+        (const uft_td0_strom_t *)disk->plugin_data, cyl, head, track);
 }
 
 /* NOTE: write_track omitted by design — TD0 uses LZSS (Teledisk's own
