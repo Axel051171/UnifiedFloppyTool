@@ -6,6 +6,7 @@
  */
 
 #include "uft/core/uft_preflight.h"
+#include "uft/core/uft_format_traegt.h"   /* MF-1283: was traegt das Ziel */
 
 #include <stdlib.h>
 #include <string.h>
@@ -18,8 +19,46 @@ const char *uft_preflight_decision_string(uft_preflight_decision_t d) {
         case UFT_PREFLIGHT_ABORT_IMPOSSIBLE:   return "ABORT_IMPOSSIBLE";
         case UFT_PREFLIGHT_ABORT_NEED_CONSENT: return "ABORT_NEED_CONSENT";
         case UFT_PREFLIGHT_ABORT_INVALID_ARG:  return "ABORT_INVALID_ARG";
+        case UFT_PREFLIGHT_ABORT_WIDERSPRUCH:  return "ABORT_WIDERSPRUCH";
         default:                               return "ABORT_UNKNOWN";
     }
+}
+
+const char *uft_preflight_widerspruch(uft_format_id_t von,
+                                      uft_format_id_t nach,
+                                      uft_roundtrip_status_t art)
+{
+    uint32_t verloren = 0u;
+
+    /* Ohne zwei gemessene Zeilen wird hier NICHT geurteilt. „Unbekannt"
+     * ist nicht „traegt nichts" — die andere Lesart machte aus jedem
+     * ungetafelten Format einen erfundenen Totalverlust und aus dieser
+     * Probe eine Mauer. */
+    if (!uft_format_verlust(von, nach, &verloren))
+        return NULL;
+
+    if (verloren != 0u && art == UFT_RT_LOSSLESS) {
+        return "matrix entry claims LOSSLESS, but the target format "
+               "cannot carry features the source can — the entry "
+               "promises more than the format delivers (MF-1283)";
+    }
+
+    if (art == UFT_RT_LOSSY_DOCUMENTED &&
+        (uft_roundtrip_lost_features(von, nach) & verloren) != verloren) {
+        return "matrix entry is LOSSY-DOCUMENTED but its lost_features "
+               "mask does not cover the measured difference — the loss "
+               "list is incomplete (MF-1283)";
+    }
+
+    if ((uft_format_traegt(nach).layers & (1u << UFT_D2_LAYER_SECTORS)) == 0u
+        && art != UFT_RT_NO_ROUNDTRIP
+        && art != UFT_RT_IMPOSSIBLE
+        && art != UFT_RT_UNTESTED) {
+        return "target carries no sector layer — for such a pair only "
+               "NO-ROUNDTRIP is a truthful entry (MF-1283)";
+    }
+
+    return NULL;
 }
 
 static const uft_preflight_opts_t k_default_opts = {
@@ -98,6 +137,34 @@ uft_error_t uft_preflight_check(uft_format_id_t from,
     plan_out->roundtrip_note   = uft_roundtrip_note(from, to);
     if (!plan_out->roundtrip_note) plan_out->roundtrip_note = "";
 
+    /* ── Die Eintragsart muss zur gemessenen Merkmalsdifferenz passen ──
+     *
+     * MF-1283. Bis hierher konnte die Matrix behaupten, was sie wollte:
+     * `note` ist Fliesstext, und ein Satz ist nicht pruefbar. Jetzt wird
+     * die Differenz GERECHNET — aus `uft_format_traegt()` — und gegen
+     * die Eintragsart gehalten.
+     *
+     * Geprueft wird nur das ZUVIEL-Versprechen. Ein Eintrag, der mehr
+     * Verlust benennt als gerechnet, ist erlaubt und nur pessimistisch;
+     * ein Eintrag, der weniger verspricht, als das Ziel tragen kann,
+     * faellt. Die Richtung ist Absicht: so kann die Tafel nur schaerfer
+     * werden, nie falsch.
+     *
+     * Und wenn eines der beiden Formate KEINE gemessene Zeile hat,
+     * urteilt diese Stelle gar nicht. „Unbekannt" ist nicht „traegt
+     * nichts" — sonst erfaende die Pruefung fuer jedes ungetafelte
+     * Format einen Totalverlust und wuerde zur Mauer aus Unwissen. */
+    {
+        const char *widerspruch =
+            uft_preflight_widerspruch(from, to, plan_out->roundtrip_status);
+        if (widerspruch) {
+            plan_out->decision       = UFT_PREFLIGHT_ABORT_WIDERSPRUCH;
+            plan_out->abort_reason   = widerspruch;
+            plan_out->writes_sidecar = false;
+            return UFT_OK;
+        }
+    }
+
     switch (plan_out->roundtrip_status) {
         case UFT_RT_LOSSLESS:
             plan_out->decision       = UFT_PREFLIGHT_OK;
@@ -117,6 +184,29 @@ uft_error_t uft_preflight_check(uft_format_id_t from,
                 plan_out->abort_reason = NULL;
                 /* Ohne Ziel keine Nebendatei — das ist der EINZIGE Teil,
                  * der wirklich einen Pfad braucht (MF-567). */
+                plan_out->writes_sidecar = opts->emit_sidecar &&
+                                           !opts->dry_run &&
+                                           target_path != NULL;
+            }
+            break;
+
+        case UFT_RT_NO_ROUNDTRIP:
+            /* MF-1283. Das Ziel traegt keine Sektoren — ein Archiv, eine
+             * Einzeldatei. Der Rundlauf ist dort kein Pruefmittel, die
+             * Wandlung aber sehr wohl moeglich. Sie verliert reichlich,
+             * also verlangt sie Zustimmung wie eine benannte Verlustliste;
+             * was sie NICHT verlangt, ist eine Byteidentitaet, die es
+             * nicht geben kann. */
+            if (!opts->accept_data_loss) {
+                plan_out->decision     = UFT_PREFLIGHT_ABORT_NEED_CONSENT;
+                plan_out->abort_reason =
+                    "target carries no sector layer — conversion is "
+                    "forward-only and cannot be verified by round-trip; "
+                    "requires accept_data_loss=true";
+                plan_out->writes_sidecar = false;
+            } else {
+                plan_out->decision     = UFT_PREFLIGHT_OK;
+                plan_out->abort_reason = NULL;
                 plan_out->writes_sidecar = opts->emit_sidecar &&
                                            !opts->dry_run &&
                                            target_path != NULL;

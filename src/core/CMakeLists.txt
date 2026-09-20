@@ -59,6 +59,9 @@ set(CORE_SOURCES
     ../flux/uft_scp_parser.c   # MF-418: uft_core_stubs' SCP adapters call into it
     uft_decode_pipeline.c
     uft_format_plugin.c        # plugin registry + probe helpers
+    uft_format_traegt.c        # MF-1283: was traegt welches Format — die
+                               # Tafel, ohne die „Verluste benannt" ein
+                               # Satz bleibt statt ein pruefbarer Wert
     uft_format_verify.c        # generic/weak/flux verify
     uft_interleave.c           # TA2 M2: Atari sector interleave calculator
     uft_ir_format.c

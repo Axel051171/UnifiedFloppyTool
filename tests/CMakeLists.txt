@@ -2386,6 +2386,16 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/uft_d64_fehlerbytes.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_schutzbefund.c)
+    elseif(${test_name} STREQUAL "test_matrix_form")
+        # MF-1283: absichtlich SCHLANK. Der Test fragt die Matrix, die
+        # Faehigkeitstafel und die Widerspruchsprobe — er wandelt nichts,
+        # also braucht er die Format-Schicht nicht. `uft_format_traegt.c`
+        # kommt aus `uft_core`; `uft_roundtrip.c` und `uft_preflight.c`
+        # liegen dort NICHT und werden hier gezogen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
     elseif(${test_name} STREQUAL "test_pll_kappt_nicht_still")
         # MF-1281: `uft_pipeline_run_pll()` und `uft_flux_to_bits_pll()`
         # hatten VOR diesem Test null Aufrufer in tests/ — gemessen mit
@@ -5280,11 +5290,18 @@ foreach(test_source ${TEST_SOURCES})
         # MF-216 / P3.3 #110: lossy/destructive-op consent gate
         # improvement test. uft_preflight.c drives uft_roundtrip.c (the
         # round-trip matrix) and uft_loss_report.c (the sidecar writer);
-        # all three are self-contained C TUs.
+        # all three are self-contained C TUs; seit MF-1283 kommt
+        # uft_format_traegt.c dazu — die Faehigkeitstafel, gegen die das
+        # Preflight die Eintragsart prueft. Sie muss hier AUSDRUECKLICH
+        # stehen, obwohl sie in `uft_core` liegt: dieses Ziel setzt
+        # `TEST_LIBS` leer und linkt keine Bibliothek. Gemessen sind es
+        # genau ZWEI solche Ziele von dreizehn, die uft_preflight.c
+        # direkt uebersetzen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_flux_mfm_sync")
         # MF-218 / #109 sub-task: regression test for the IBM-MFM
@@ -5416,12 +5433,14 @@ foreach(test_source ${TEST_SOURCES})
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_preflight")
         # v4.1.5-hardening: preflight combines loss-report writer +
-        # round-trip status (KNOWN_ISSUES §1.2). All three core TUs are
+        # round-trip status (KNOWN_ISSUES §1.2). Seit MF-1283 kommt die
+        # Faehigkeitstafel dazu; alle vier Kern-Einheiten sind
         # self-contained. Mirrors test_destructive_op_consent above.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_xum1541_hal")
         # MF-255 (v4.1.5-hardening): XUM1541 HAL test now exercises the

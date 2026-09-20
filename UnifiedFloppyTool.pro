@@ -1027,7 +1027,8 @@ SOURCES += \
     src/core/uft_format_plugin.c \
     src/core/uft_preflight.c \
     src/core/uft_loss_report.c \
-    src/core/uft_roundtrip.c
+    src/core/uft_roundtrip.c \
+    src/core/uft_format_traegt.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Track Analysis

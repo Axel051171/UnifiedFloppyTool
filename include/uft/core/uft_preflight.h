@@ -60,6 +60,20 @@ typedef enum uft_preflight_decision {
     UFT_PREFLIGHT_ABORT_IMPOSSIBLE  = 2,  ///< Ziel kann Quelle nicht repräsentieren
     UFT_PREFLIGHT_ABORT_NEED_CONSENT= 3,  ///< LD ohne accept_data_loss
     UFT_PREFLIGHT_ABORT_INVALID_ARG = 4,  ///< NULL-Pointer etc.
+
+    /* MF-1283 — ANGEHAENGT, nie dazwischen.
+     *
+     * Der Matrixeintrag widerspricht der gemessenen Merkmalsdifferenz:
+     * er verspricht MEHR, als das Zielformat tragen kann. Beispiele:
+     * `LOSSLESS` bei einem aermeren Ziel, oder eine Verlustliste, die
+     * die gerechnete Differenz nicht abdeckt.
+     *
+     * Das ist kein Befund ueber die DATEI, sondern ueber die MATRIX —
+     * deshalb ein eigenes Urteil und nicht `ABORT_IMPOSSIBLE`. Wer die
+     * beiden zusammenlegt, schickt einen Bediener auf die Suche nach
+     * einem Fehler in seiner Diskette, den es nicht gibt. */
+    UFT_PREFLIGHT_ABORT_WIDERSPRUCH = 5,  ///< Eintrag verspricht zu viel
+
 } uft_preflight_decision_t;
 
 /**
@@ -132,6 +146,44 @@ uft_error_t uft_preflight_emit_sidecar(const uft_preflight_plan_t *plan,
  * @brief Entscheidungs-String (stabil, für Logs/UI)
  */
 const char *uft_preflight_decision_string(uft_preflight_decision_t d);
+
+/**
+ * @brief Widerspricht die Eintragsart der GEMESSENEN Merkmalsdifferenz?
+ *
+ * Die Rundlauf-Matrix konnte bis MF-1283 behaupten, was sie wollte: ihr
+ * Feld `note` ist Fließtext, und ein Satz ist nicht prüfbar. Diese Probe
+ * rechnet die Differenz aus `uft_format_traegt()` und hält sie gegen die
+ * Eintragsart.
+ *
+ * Geprüft wird ausschließlich das **Zuviel**-Versprechen:
+ *
+ *   - `LOSSLESS` bei einem Ziel, das weniger tragen kann → Widerspruch.
+ *   - `LOSSY_DOCUMENTED`, dessen `lost_features` die gerechnete Differenz
+ *     nicht abdeckt → die Verlustliste ist unvollständig.
+ *   - jede Art außer `NO_ROUNDTRIP`/`IMPOSSIBLE`/`UNTESTED` bei einem
+ *     Ziel ohne Sektorschicht → Widerspruch.
+ *
+ * Mehr Verlust zu benennen als gerechnet ist erlaubt und nur
+ * pessimistisch. Die Richtung ist Absicht: so kann die Tafel nur
+ * schärfer werden, nie falsch.
+ *
+ * Hat eines der beiden Formate **keine gemessene Zeile**, urteilt diese
+ * Probe nicht und gibt NULL zurück. „Unbekannt" ist nicht „trägt
+ * nichts"; die andere Lesart machte aus jedem ungetafelten Format einen
+ * erfundenen Totalverlust.
+ *
+ * Eigene Funktion und nicht nur ein Block in `uft_preflight_check()`,
+ * damit jeder dieser Zweige direkt prüfbar ist: in der Matrix gibt es
+ * keinen widersprüchlichen Eintrag, über sie wären die Zweige also nur
+ * per Mutation erreichbar — und die Regel im Test nachzubauen wäre die
+ * zweite Kopie aus §MF-1177.
+ *
+ * @return NULL, wenn kein Widerspruch vorliegt; sonst der Grund als
+ *         statischer Text, nie NULL-terminiert leer.
+ */
+const char *uft_preflight_widerspruch(uft_format_id_t von,
+                                      uft_format_id_t nach,
+                                      uft_roundtrip_status_t art);
 
 #ifdef __cplusplus
 }

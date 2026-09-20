@@ -9,6 +9,7 @@
 
 #include "uft/core/uft_roundtrip.h"
 #include "uft/uft_types.h"   /* provides UFT_FORMAT_* enum values */
+#include "uft/core/uft_disk2.h"   /* MF-1283: UFT_D2_FEAT_* fuer lost_features */
 
 #include <stddef.h>
 
@@ -23,6 +24,22 @@
  *   UT   → don't add; UT is the default for anything absent.
  *
  * Ordering by source format then target format for readability.
+ *
+ * ── DAS FUENFTE FELD (MF-1283) ───────────────────────────────────────────
+ *
+ * `lost_features` ist die MASKE dessen, was die Wandlung verliert —
+ * dieselbe Aussage wie die Notiz, nur pruefbar. Bis MF-1283 stand der
+ * Verlust ausschliesslich als Fliesstext da, und kein Tor kann einen Satz
+ * pruefen; „LD" war damit eine Zusage ohne Pruefmittel, genau wie eine
+ * Merkmalstafel, die „Read: SUPPORTED" sagt, waehrend der Leser jede
+ * Datei abweist (MF-961, MF-1015).
+ *
+ * `0u` heisst „nichts benannt" und ist KEINE Aussage ueber Verlustfreiheit.
+ * Fuer die meisten Eintraege steht es hier, weil ihre Formate noch keine
+ * Zeile in `uft_format_traegt()` haben — dort gilt „unbekannt", und
+ * `uft_preflight_widerspruch()` urteilt bewusst nicht. Sobald ein Format
+ * seine gemessene Zeile bekommt, wird jede Null, die dann zu wenig sagt,
+ * zum Befund. Die Ratsche laeuft also in die richtige Richtung.
  * ───────────────────────────────────────────────────────────────────────── */
 static const uft_roundtrip_entry_t g_matrix[] = {
     /* Identitaet: Wandlung in dasselbe Format.
@@ -48,10 +65,10 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      * Beweis. */
     { UFT_FORMAT_D64, UFT_FORMAT_D64, UFT_RT_LOSSLESS,
       "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
-      "vice_c1541_35trk.d64 (174848 B)" },
+      "vice_c1541_35trk.d64 (174848 B)", 0u },
     { UFT_FORMAT_ADF, UFT_FORMAT_ADF, UFT_RT_LOSSLESS,
       "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
-      "xdftool_dd_ofs.adf (901120 B)" },
+      "xdftool_dd_ofs.adf (901120 B)", 0u },
 
     /* Sektor -> Bitstream und zurueck: IMG -> HFE -> IMG.
      *
@@ -103,7 +120,7 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      * einstufen will, muss G64 -> D64 -> G64 messen. */
     { UFT_FORMAT_D64, UFT_FORMAT_G64, UFT_RT_LOSSLESS,
       "MF-533: Rundlauf D64->G64->D64 bitgleich gemessen an "
-      "vice_c1541_35trk.d64 (174848 B)" },
+      "vice_c1541_35trk.d64 (174848 B)", 0u },
 
     /* Flux ↔ Flux.
      *
@@ -138,10 +155,10 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_SCP, UFT_FORMAT_HFE, UFT_RT_LOSSY_DOCUMENTED,
       "MF-527: Bit-Identitaet gemessen NICHT gegeben; Bitstromlaenge "
       "schrumpft im Rundlauf (25336 -> 6400 Byte je Spur). Verlustumfang "
-      "nicht vollstaendig vermessen" },
+      "nicht vollstaendig vermessen", 0u },
     { UFT_FORMAT_HFE, UFT_FORMAT_SCP, UFT_RT_LOSSY_DOCUMENTED,
       "MF-527: Bit-Identitaet gemessen NICHT gegeben; siehe SCP->HFE. "
-      "Verlustumfang nicht vollstaendig vermessen" },
+      "Verlustumfang nicht vollstaendig vermessen", 0u },
 
     /* Bitstream -> Sektor: G64 -> D64, gegen eine FREMDE Referenz geprueft.
      *
@@ -232,7 +249,16 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "Sektorgroessen (ssize); stype (gepackt/geloescht/defekt/fehlend) "
       "samt Zaehlern. Und: FEHLENDE Sektoren werden mit 0xE5 gefuellt "
       "und sind danach von echten 0xE5-Sektoren nicht unterscheidbar — "
-      "der Wandler zaehlt sie, die Zieldatei kann es nicht tragen" },
+      "der Wandler zaehlt sie, die Zieldatei kann es nicht tragen",
+      /* MF-1283: dieselbe Aussage als MASKE, damit sie pruefbar ist.
+       * Gerechnet aus `uft_format_traegt()`: IMD traegt fuenf Merkmale,
+       * IMG keines — die Differenz ist genau diese Liste. Der Satz oben
+       * bleibt daneben stehen; er nennt, was die Maske nicht ausdrueckt
+       * (Erzeugerstempel, Interleave, cmap/hmap, und dass die 0xE5
+       * danach von echten 0xE5 nicht mehr zu trennen sind). */
+      UFT_D2_FEAT_BAD_CRC       | UFT_D2_FEAT_DELETED_DAM |
+      UFT_D2_FEAT_VAR_SECTOR_SZ | UFT_D2_FEAT_NO_DATA_SEC |
+      UFT_D2_FEAT_METADATA },
 
     { UFT_FORMAT_G64, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
       "MF-536: gegen VICE-Referenz geprueft — 680 von 683 Sektoren "
@@ -241,13 +267,13 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "MF-908: dazu die SPURABSCHNEIDUNG — die Wandlung sondiert die "
       "Spuren 36..40 und legt Inhalt auf Spur 41/42 NICHT ab, obwohl D64 "
       "beide Ausdehnungen kennt (785 bzw. 802 Bloecke). Eine G64 mit 42 "
-      "Spuren verliert zwei" },
+      "Spuren verliert zwei", 0u },
 
     /* Flux → Sector: timing/weak-bits/index-pulses dropped */
     { UFT_FORMAT_SCP, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
-      "weak-bits, flux-timing, index-pulses discarded" },
+      "weak-bits, flux-timing, index-pulses discarded", 0u },
     { UFT_FORMAT_SCP, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
-      "flux-timing discarded (ADF sector model)" },
+      "flux-timing discarded (ADF sector model)", 0u },
     /* MF-565: bis zu diesem Commit war dieser Eintrag eine Zusage ohne
      * Deckung — der Pfad sass auf einem Stub-Parser und lieferte auf einer
      * fehlerfreien Aufnahme 0 von 683 Sektoren bei `success = true`.
@@ -257,7 +283,7 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_SCP, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
       "flux-timing, weak-bits, index-pulses discarded; only side 0 and "
       "tracks 1-35 are read (36-42 dropped); per-sector status survives "
-      "only as the D64 error map" },
+      "only as the D64 error map", 0u },
     /* MF-567: SCP->IMD stand hier als LOSSY_DOCUMENTED und ist ENTFERNT.
      *
      * Es gibt keinen Wandler dafuer — kein Zweig im Verteiler, keine
@@ -284,9 +310,9 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_HFE, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
       "bitstream decoded to sectors; weak-bits lost (MF-539: die gemessene "
       "Bit-Identitaet der Gegenrichtung belegt das NICHT — ihre Quelle war "
-      "ein IMG und hat keine schwachen Bits)" },
+      "ein IMG und hat keine schwachen Bits)", 0u },
     { UFT_FORMAT_HFE, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
-      "bitstream decoded to AmigaDOS sectors" },
+      "bitstream decoded to AmigaDOS sectors", 0u },
 
     /* ADF -> HFE stand hier bis MF-538 als LOSSY_DOCUMENTED mit einer
      * bezifferten Verlustliste. Der Eintrag ist ZURUECKGENOMMEN, und der
@@ -338,14 +364,14 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "(0 von 901120 Byte abweichend, Quelle mit Inhalt). Der "
       "AmigaDOS-Encoder ist an einer ECHTEN Aufnahme abgenommen: "
       "11 von 11 Sektoren byteidentisch in gw_amigados.hfe. Die HFE "
-      "ist eine Rekonstruktion, keine Aufnahme." },
+      "ist eine Rekonstruktion, keine Aufnahme.", 0u },
 
 
     /* Sector → Flux: target cannot be reproduced from sectors alone */
     { UFT_FORMAT_IMG, UFT_FORMAT_SCP, UFT_RT_IMPOSSIBLE,
-      "IMG has no timing; synthesising flux would be fabrication" },
+      "IMG has no timing; synthesising flux would be fabrication", 0u },
     { UFT_FORMAT_ADF, UFT_FORMAT_SCP, UFT_RT_IMPOSSIBLE,
-      "ADF has no timing; synthesising flux would be fabrication" },
+      "ADF has no timing; synthesising flux would be fabrication", 0u },
     /* IMG -> HFE stand hier als UNMOEGLICH, "no timing data available in
      * IMG source". Die Begruendung verwechselt zwei Dinge, und MF-539 hat
      * das gemessen widerlegt.
@@ -380,7 +406,7 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "MF-539: Rundlauf IMG->HFE->IMG bitgleich, 1474560 B, 2880 Sektoren; "
       "HFE ist Bitstream, kein Flux — der synthetische Zellenstrom erfindet "
       "kein Timing, ist aber auch keine Aufnahme "
-      "(tests/test_convert_img_hfe_roundtrip.c)" },
+      "(tests/test_convert_img_hfe_roundtrip.c)", 0u },
 
     /* MF-567: hier standen IPF->ADF und STX->ST als LOSSY_DOCUMENTED.
      *
@@ -432,11 +458,11 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_ATR, UFT_FORMAT_XFD, UFT_RT_LOSSLESS,
       "MF-655: Kopf entfernt; bitgleich zum Korpus-XFD gemessen "
       "(atrcopy_dos2sd, 92160 B), ohne accept_data_loss. Sektorgroesse "
-      "!= 128 wird ohne Zustimmung abgelehnt." },
+      "!= 128 wird ohne Zustimmung abgelehnt.", 0u },
     { UFT_FORMAT_XFD, UFT_FORMAT_ATR, UFT_RT_LOSSLESS,
       "MF-655: Kopf erzeugt; bitgleich zum Korpus-ATR gemessen "
       "(atrcopy_dos2sd, 92176 B), ohne accept_data_loss. Die erzeugte "
-      "Sektorgroesse 128 wird als Warnung ausgegeben, nicht verschwiegen." },
+      "Sektorgroesse 128 wird als Warnung ausgegeben, nicht verschwiegen.", 0u },
 
     /* Sector ↔ Sector note (UFT-A08):
      * No sector-sector pair is currently LOSSLESS in the public
@@ -476,11 +502,21 @@ const char *uft_roundtrip_note(uft_format_id_t from, uft_format_id_t to) {
     return "";
 }
 
+uint32_t uft_roundtrip_lost_features(uft_format_id_t from,
+                                     uft_format_id_t to) {
+    for (size_t i = 0; i < UFT_MATRIX_COUNT; ++i) {
+        if (g_matrix[i].from == from && g_matrix[i].to == to)
+            return g_matrix[i].lost_features;
+    }
+    return 0u;
+}
+
 const char *uft_roundtrip_status_string(uft_roundtrip_status_t s) {
     switch (s) {
         case UFT_RT_LOSSLESS:         return "LOSSLESS";
         case UFT_RT_LOSSY_DOCUMENTED: return "LOSSY-DOCUMENTED";
         case UFT_RT_IMPOSSIBLE:       return "IMPOSSIBLE";
+        case UFT_RT_NO_ROUNDTRIP:     return "NO-ROUNDTRIP";
         case UFT_RT_UNTESTED:         /* fallthrough */
         default:                      return "UNTESTED";
     }
@@ -491,6 +527,7 @@ const char *uft_roundtrip_status_short(uft_roundtrip_status_t s) {
         case UFT_RT_LOSSLESS:         return "LL";
         case UFT_RT_LOSSY_DOCUMENTED: return "LD";
         case UFT_RT_IMPOSSIBLE:       return "IM";
+        case UFT_RT_NO_ROUNDTRIP:     return "NR";
         case UFT_RT_UNTESTED:         /* fallthrough */
         default:                      return "UT";
     }
