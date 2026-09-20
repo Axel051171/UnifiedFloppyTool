@@ -281,127 +281,9 @@ size_t uft_td0_lzss_read(uft_td0_lzss_state_t* state,
  * TD0 Detection and Initialization
  *============================================================================*/
 
-bool uft_td0_detect(const uint8_t* data, size_t size)
-{
-    if (!data || size < 2) return false;
-    
-    uint16_t sig = data[0] | (data[1] << 8);
-    return (sig == UFT_TD0_SIG_NORMAL || sig == UFT_TD0_SIG_ADVANCED);
-}
-
-bool uft_td0_is_compressed(const uft_td0_header_t* header)
-{
-    if (!header) return false;
-    return header->signature == UFT_TD0_SIG_ADVANCED;
-}
-
-int uft_td0_init(uft_td0_image_t* img)
-{
-    if (!img) return -1;
-    memset(img, 0, sizeof(*img));
-    return 0;
-}
-
-void uft_td0_free(uft_td0_image_t* img)
-{
-    if (!img) return;
-    
-    if (img->comment) {
-        free(img->comment);
-        img->comment = NULL;
-    }
-    
-    if (img->tracks) {
-        for (uint16_t t = 0; t < img->num_tracks; t++) {
-            if (img->tracks[t].sectors) {
-                for (uint8_t s = 0; s < img->tracks[t].nsectors; s++) {
-                    if (img->tracks[t].sectors[s].data) {
-                        free(img->tracks[t].sectors[s].data);
-                    }
-                }
-                free(img->tracks[t].sectors);
-            }
-        }
-        free(img->tracks);
-        img->tracks = NULL;
-    }
-    
-    img->num_tracks = 0;
-}
-
 /*============================================================================
  * Sector Data Decoding
  *============================================================================*/
-
-int uft_td0_decode_sector(const uint8_t* src, size_t src_size,
-                          uint8_t* dst, size_t dst_size,
-                          uint8_t method)
-{
-    if (!src || !dst || dst_size == 0) return -1;
-    
-    size_t src_pos = 0;
-    size_t dst_pos = 0;
-    
-    switch (method) {
-        case UFT_TD0_ENC_RAW:
-            /* Raw data - just copy */
-            if (src_size < dst_size) return -1;
-            memcpy(dst, src, dst_size);
-            return dst_size;
-            
-        case UFT_TD0_ENC_REP2:
-            /* 2-byte pattern repetition */
-            while (dst_pos < dst_size && src_pos + 3 < src_size) {
-                uint16_t count = src[src_pos] | (src[src_pos + 1] << 8);
-                uint8_t b1 = src[src_pos + 2];
-                uint8_t b2 = src[src_pos + 3];
-                src_pos += 4;
-                
-                count *= 2;
-                while (count-- && dst_pos < dst_size) {
-                    dst[dst_pos++] = b1;
-                    if (dst_pos < dst_size && count--) {
-                        dst[dst_pos++] = b2;
-                    }
-                }
-            }
-            break;
-            
-        case UFT_TD0_ENC_RLE:
-            /* Run-length encoding */
-            while (dst_pos < dst_size && src_pos < src_size) {
-                uint8_t type = src[src_pos++];
-                
-                if (type == 0) {
-                    /* Literal run */
-                    if (src_pos >= src_size) break;
-                    uint8_t len = src[src_pos++];
-                    while (len-- && dst_pos < dst_size && src_pos < src_size) {
-                        dst[dst_pos++] = src[src_pos++];
-                    }
-                } else {
-                    /* Repeated pattern */
-                    if (src_pos + 1 >= src_size) break;
-                    uint8_t len = src[src_pos++];
-                    uint8_t val = src[src_pos++];
-                    while (len-- && dst_pos < dst_size) {
-                        dst[dst_pos++] = val;
-                    }
-                }
-            }
-            break;
-            
-        default:
-            return -1;
-    }
-    
-    /* Fill remaining with zeros */
-    while (dst_pos < dst_size) {
-        dst[dst_pos++] = 0;
-    }
-    
-    return dst_pos;
-}
 
 /*============================================================================
  * Drive Type Names
@@ -424,212 +306,35 @@ const char* uft_td0_drive_name(uft_td0_drive_t type)
  * TD0 Reading
  *============================================================================*/
 
-int uft_td0_read_mem(const uint8_t* data, size_t size, uft_td0_image_t* img)
-{
-    if (!data || !img || size < sizeof(uft_td0_header_t)) return -1;
-    
-    uft_td0_init(img);
-    
-    /* Read header */
-    memcpy(&img->header, data, sizeof(uft_td0_header_t));
-    
-    if (!uft_td0_detect(data, size)) return -1;
-    
-    img->advanced_compression = uft_td0_is_compressed(&img->header);
-    
-    /* Set up decompression if needed */
-    uft_td0_lzss_state_t lzss;
-    const uint8_t* src;
-    size_t src_pos;
-    
-    if (img->advanced_compression) {
-        uft_td0_lzss_init(&lzss, data + sizeof(uft_td0_header_t),
-                          size - sizeof(uft_td0_header_t));
-        src = NULL;
-        src_pos = 0;
-    } else {
-        src = data;
-        src_pos = sizeof(uft_td0_header_t);
-    }
-    
-    /* Helper to read bytes */
-    #define READ_BYTE() (img->advanced_compression ? \
-        uft_td0_lzss_getbyte(&lzss) : \
-        (src_pos < size ? src[src_pos++] : -1))
-    
-    #define READ_BLOCK(buf, len) do { \
-        for (size_t _i = 0; _i < (len); _i++) { \
-            int _c = READ_BYTE(); \
-            if (_c < 0) break; \
-            (buf)[_i] = _c; \
-        } \
-    } while(0)
-    
-    /* Check for comment block */
-    if (img->header.stepping & 0x80) {
-        /* Comment present */
-        READ_BLOCK((uint8_t*)&img->comment_header, sizeof(img->comment_header));
-        
-        if (img->comment_header.length > 0 && img->comment_header.length < 65536) {
-            img->comment = malloc(img->comment_header.length + 1);
-            if (img->comment) {
-                READ_BLOCK((uint8_t*)img->comment, img->comment_header.length);
-                img->comment[img->comment_header.length] = '\0';
-                img->has_comment = true;
-            }
-        }
-    }
-    
-    /* Count and allocate tracks */
-    /* First pass - count tracks */
-    size_t track_count = 0;
-    size_t max_tracks = 256;
-    
-    img->tracks = calloc(max_tracks, sizeof(uft_td0_track_t));
-    if (!img->tracks) return -1;
-    
-    uint8_t max_cyl = 0, max_head = 0;
-    
-    /* Read tracks */
-    while (track_count < max_tracks) {
-        uft_td0_track_header_t thdr;
-        READ_BLOCK((uint8_t*)&thdr, sizeof(thdr));
-        
-        if (thdr.nsectors == UFT_TD0_END_OF_IMAGE) break;
-        
-        uft_td0_track_t* track = &img->tracks[track_count];
-        memcpy(&track->header, &thdr, sizeof(thdr));
-        track->nsectors = thdr.nsectors;
-        
-        if (thdr.cylinder > max_cyl) max_cyl = thdr.cylinder;
-        if (thdr.side > max_head) max_head = thdr.side;
-        
-        /* Allocate sectors */
-        track->sectors = calloc(thdr.nsectors, sizeof(uft_td0_sector_t));
-        if (!track->sectors) break;
-        
-        /* Read sectors */
-        for (uint8_t s = 0; s < thdr.nsectors; s++) {
-            uft_td0_sector_t* sector = &track->sectors[s];
-            
-            READ_BLOCK((uint8_t*)&sector->header, sizeof(uft_td0_sector_header_t));
-            
-            /* Check if sector has data */
-            if (!(sector->header.flags & UFT_TD0_SEC_NODAT)) {
-                uft_td0_data_header_t dhdr;
-                READ_BLOCK((uint8_t*)&dhdr, sizeof(dhdr));
-                
-                uint16_t sector_size = 128 << sector->header.size;
-                sector->data_size = sector_size;
-                sector->data = malloc(sector_size);
-                
-                if (sector->data) {
-                    if (dhdr.offset > 0) {
-                        uint8_t* temp = malloc(dhdr.offset);
-                        if (temp) {
-                            READ_BLOCK(temp, dhdr.offset);
-                            uft_td0_decode_sector(temp, dhdr.offset,
-                                                  sector->data, sector_size,
-                                                  dhdr.method);
-                            free(temp);
-                        }
-                    }
-                }
-            }
-        }
-        
-        track_count++;
-    }
-    
-    img->num_tracks = track_count;
-    img->cylinders = max_cyl + 1;
-    img->heads = max_head + 1;
-    
-    #undef READ_BYTE
-    #undef READ_BLOCK
-    
-    return 0;
-}
-
-int uft_td0_read(const char* filename, uft_td0_image_t* img)
-{
-    FILE* fp = fopen(filename, "rb");
-    if (!fp) return -1;
-    
-    if (fseek(fp, 0, SEEK_END) != 0) {
-        fclose(fp);
-        return -1;
-    }
-    long size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) {
-        fclose(fp);
-        return -1;
-    }
-    if (size <= 0 || size > 64*1024*1024) {
-        fclose(fp);
-        return -1;
-    }
-    
-    uint8_t* data = malloc(size);
-    if (!data) {
-        fclose(fp);
-        return -1;
-    }
-    
-    if (fread(data, 1, size, fp) != (size_t)size) {
-        free(data);
-        fclose(fp);
-        return -1;
-    }
-    fclose(fp);
-    
-    int result = uft_td0_read_mem(data, size, img);
-    free(data);
-    
-    return result;
-}
-
 /*============================================================================
  * Information Display
  *============================================================================*/
 
-void uft_td0_print_info(const uft_td0_image_t* img, bool verbose)
-{
-    if (!img) return;
-    
-    printf("Teledisk (TD0) Image Information:\n");
-    printf("  Signature: %s\n", 
-           img->advanced_compression ? "td (compressed)" : "TD (normal)");
-    printf("  Version: %d.%d\n", 
-           img->header.version >> 4, img->header.version & 0x0F);
-    printf("  Drive type: %s\n", uft_td0_drive_name(img->header.drive_type));
-    printf("  Data rate: %s\n", 
-           img->header.data_rate == 0 ? "250K" :
-           img->header.data_rate == 1 ? "300K" : "500K");
-    printf("  Sides: %d\n", img->header.sides);
-    
-    if (img->has_comment && img->comment) {
-        printf("  Comment date: %02d/%02d/%04d %02d:%02d:%02d\n",
-               img->comment_header.month,
-               img->comment_header.day,
-               img->comment_header.year + 1900,
-               img->comment_header.hour,
-               img->comment_header.minute,
-               img->comment_header.second);
-        printf("  Comment: %s\n", img->comment);
-    }
-    
-    printf("  Geometry: %d cylinders, %d heads, %d tracks\n",
-           img->cylinders, img->heads, img->num_tracks);
-    
-    if (verbose && img->tracks) {
-        printf("\n  Track Details:\n");
-        for (uint16_t t = 0; t < img->num_tracks; t++) {
-            const uft_td0_track_t* track = &img->tracks[t];
-            printf("    C%02d/H%d: %d sectors\n",
-                   track->header.cylinder,
-                   track->header.side,
-                   track->nsectors);
-        }
-    }
-}
+/* MF-1287: hier standen acht Funktionen — `uft_td0_read_mem()` und was
+ * an ihm hing (`_init`, `_free`, `_decode_sector`, `_read`,
+ * `_print_info`, `_detect`, `_is_compressed`).
+ *
+ * Sie waren der ZWEITE Leser fuer TD0. Er konnte etwas, das dem Plugin
+ * fehlte — entpacken und den Kommentarblock lesen —, und er machte
+ * dabei einen Fehler, den das Plugin nicht hatte: sein `READ_BLOCK`
+ * brach am Dateiende nur die INNERE Schleife ab, liess den Spurkopf
+ * unberuehrt und las ihn uninitialisiert weiter. Die 0xFF-Endmarke
+ * wurde deshalb nie erreicht; an einer 1440-Sektoren-Diskette kamen
+ * 51 830 Sektoren auf 256 Spuren heraus.
+ *
+ * Repariert wurde er nicht — er wurde geloescht. Was er KONNTE, ist seit
+ * MF-1285 im Strom-Kern (`uft_td0_strom_*`), und der ist von BEIDEN
+ * Seiten erreichbar: vom Plugin ueber `uft_disk_open()` und von den
+ * Wandlern ueber die blossen Bytes. Zwei Leser fuer ein Format waren
+ * der Fehler, nicht der Muell.
+ *
+ * Was hier BLEIBT, ist der LZH-Entpacker — `uft_td0_lzss_init()`,
+ * `uft_td0_lzss_getbyte()` und ihre Helfer. Der
+ * Vollstaendigkeit halber: `uft_td0_lzss_read()` steht noch da und hat
+ * NULL Aufrufer — schon vor diesem Commit, denn `read_mem` nahm
+ * `getbyte`. Eine vorbestehende Waise; sie wird hier BENANNT und nicht
+ * mitgeloescht, weil Loeschen eine Eigentuemerentscheidung ist
+ * (§MF-1077). Der
+ * war richtig, gemessen gegen hxcfe an zwei gepackten Dateien, und er
+ * haette den Schnitt nicht ueberlebt: ausserhalb dieser Datei hatte er
+ * VOR MF-1285 null Aufrufer. */

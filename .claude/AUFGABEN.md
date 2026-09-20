@@ -4541,6 +4541,30 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   Nebenbefund `P3-523`: `TD0_FLAG_NO_DATA` im Wandler ist `0x08`, ein
   Bit, das TD0 nicht benutzt — der `UNAVAILABLE`-Zweig ist damit
   unerreichbar. Nicht mitrepariert, weil die Funktion in 1b-ii fällt.
+- **Stand 2026-09-20, MF-1287 — 1b ist ABGETRAGEN:** `uft_td0_read_mem()`
+  ist gelöscht, mit ihm sieben weitere Funktionen und die drei
+  Aggregattypen; alle drei Wandler gehen über den Strom-Kern. Jedes
+  Symbol war vor dem Schnitt gezählt und hatte außerhalb der sterbenden
+  Datei null Aufrufer.
+  · **`uft_td0_to_imd()` liest jetzt die kanonischen Sektorfelder** statt
+    der TD0-Flaggen — damit fällt `td0_flags_to_imd_stype()`, und
+    `P3-523` ist im neuen Pfad erledigt.
+  · **Der Wandler hatte nie einen Test.** `test_convert_imd_img_belegt.c`
+    prüft, dass das Preflight TD0→IMD SPERRT — dabei läuft er nie.
+    Gruppe 7 ist sein erster, und sie belegt die Kernzusage: ein
+    CRC-Flag in der TD0 kommt als `UFT_IMD_SEC_ERROR` an.
+  · **Neun Zahlen, zwei Namen, zwei Orte:** die privaten
+    `IMD_STYPE_*`-Konstanten im Wandler waren eine zweite Kopie von
+    `uft_imd_sectype_t` aus dem Formatheader — mit dem Kommentar „Not
+    symbolically named in the header", der nicht stimmte. Zusammengeführt
+    (§MF-1177).
+  Offen und benannt: `P3-524` (Sektorgrößen werden auf die des ersten
+  geebnet, im Widerspruch zur eigenen Merkmalstafel) — das entscheidet
+  mit, ob der künftige Matrixeintrag „identisch" oder „projiziert
+  identisch" heißt.
+  **Als Nächstes aus dem Umbauplan:** Schritt 3 (`UFT_CONV_LOSSLESS` für
+  TD0→IMD auf UNVERIFIED) und Schritt 4 (Vorwärtsprüfung gegen hxcfe,
+  Korpus ≥ 3).
 - **Beleg:** —
 
 ---

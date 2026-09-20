@@ -71,6 +71,7 @@
 #include "uft/uft_types.h"
 #include "uft/uft_error.h"
 #include "uft/formats/uft_td0.h"   /* MF-1285: uft_td0_strom_t */
+#include "uft/formats/uft_imd.h"   /* MF-1287: der Wandler */
 
 #ifndef UFT_CORPUS_DIR
 #error "UFT_CORPUS_DIR fehlt — tests/CMakeLists.txt muss es fuer diesen Test setzen"
@@ -521,6 +522,133 @@ static void gruppe_6_sektorflaggen(void)
     }
 }
 
+/* ═══ 7. Der Wandler — erster Test ueberhaupt (MF-1287) ═══════════
+ *
+ * `uft_td0_to_imd()` gibt es seit Jahren und **kein Test hat ihn je
+ * ausgefuehrt**. Der einzige, der TD0->IMD anfasst
+ * (`test_convert_imd_img_belegt.c`, MF-1277), prueft, dass das
+ * PREFLIGHT das Paar SPERRT — der Wandler laeuft dabei nie.
+ *
+ * Das ist die Lage, in der MF-1287 ihn umgeschrieben hat: vom toten
+ * `uft_td0_image_t` auf den Strom-Kern, und von den TD0-Flaggen auf die
+ * kanonischen Sektorfelder. Ein Umbau ohne Zusage waere eine Wette.
+ *
+ * Geprueft wird das, was die Wandlung TRAGEN soll — und der
+ * Kommentarblock ist dabei der eigentliche Punkt: vor MF-1285 warf das
+ * Plugin ihn weg, und eine Loeschung des zweiten Lesers haette
+ * Zeitstempel und Text still verloren.                               */
+static void gruppe_7_wandler(void)
+{
+    printf("  [7] TD0 -> IMD ueber den Strom-Kern (MF-1287)\n");
+
+    FILE *q = fopen(OFFEN, "rb");
+    PRUEFE(q != NULL, "Korpusdatei nicht lesbar");
+    if (!q) return;
+    fseek(q, 0, SEEK_END);
+    long n = ftell(q);
+    fseek(q, 0, SEEK_SET);
+    uint8_t *roh = (uint8_t *)malloc((size_t)n);
+    if (!roh || fread(roh, 1, (size_t)n, q) != (size_t)n) {
+        free(roh); fclose(q); PRUEFE(0, "Korpusdatei nicht vollstaendig lesbar"); return;
+    }
+    fclose(q);
+
+    uft_td0_strom_t strom;
+    memset(&strom, 0, sizeof(strom));
+    int rc = uft_td0_strom_aus_bytes(roh, (size_t)n, &strom);
+    free(roh);
+    PRUEFE(rc == UFT_OK, "uft_td0_strom_aus_bytes scheiterte");
+    if (rc != UFT_OK) return;
+
+    uft_imd_image_t imd;
+    memset(&imd, 0, sizeof(imd));
+    rc = uft_td0_to_imd(&strom, &imd);
+    PRUEFE(rc == UFT_OK, "uft_td0_to_imd scheiterte");
+    if (rc != UFT_OK) { uft_td0_strom_frei(&strom); return; }
+
+    PRUEFE(imd.num_tracks == 160, "nicht 160 IMD-Spuren");
+    PRUEFE(imd.total_sectors == 1440, "nicht 1440 IMD-Sektoren");
+    PRUEFE(imd.num_cylinders == 80, "nicht 80 Zylinder");
+    PRUEFE(imd.num_heads == 2, "nicht 2 Koepfe");
+
+    /* Der Kommentarblock — der Grund, warum MF-1285 vor der Loeschung
+     * kam. Das Monatsfeld ist 0-basiert, der Wandler rechnet `+1`:
+     * roh 8 wird zu 9 = September (gemessen MF-1285). */
+    PRUEFE(imd.comment != NULL, "Kommentar ging bei der Wandlung verloren");
+    PRUEFE(imd.comment_len == KOM_LEN, "Kommentarlaenge nicht 56");
+    if (imd.comment && imd.comment_len == KOM_LEN)
+        PRUEFE(memcmp(imd.comment, KOM_TEXT, KOM_LEN) == 0,
+               "Kommentartext weicht ab");
+    PRUEFE(imd.header.year  == 2026, "Jahr nicht 2026 (126 + 1900)");
+    PRUEFE(imd.header.month == 9,    "Monat nicht 9 (roh 8, 0-basiert)");
+    PRUEFE(imd.header.day   == 12,   "Tag nicht 12");
+
+    printf("      %zu Spuren, %u Sektoren, %u-%02u-%02u, Kommentar %zu Byte\n",
+           (size_t)imd.num_tracks, (unsigned)imd.total_sectors,
+           (unsigned)imd.header.year, (unsigned)imd.header.month,
+           (unsigned)imd.header.day, (size_t)imd.comment_len);
+
+
+    /* MF-1287: die eigentliche Zusage dieses Commits — der Wandler liest
+     * die KANONISCHEN Sektorfelder, nicht noch einmal die TD0-Flaggen.
+     *
+     * Belegt an derselben Datei mit gekipptem Flaggenbyte wie Gruppe 6:
+     * setzt man dort den CRC-Fehler, muss er als IMD-Sektortyp BAD
+     * ankommen; setzt man die geloeschte Marke, als DELETED. Kaeme die
+     * Deutung aus einer zweiten Flaggentafel im Wandler, waere das hier
+     * gruen, auch wenn der Leser etwas anderes gesehen hat. */
+    {
+        char kopie[512];
+        static const struct { uint8_t flagge; uint8_t erwartet; const char *was; }
+        faelle[] = {
+            { 0x02, UFT_IMD_SEC_ERROR,     "CRC-Fehler -> UFT_IMD_SEC_ERROR" },
+            { 0x04, UFT_IMD_SEC_DELETED, "geloeschte Marke -> UFT_IMD_SEC_DELETED" },
+        };
+        for (size_t f = 0; f < sizeof(faelle) / sizeof(faelle[0]); f++) {
+            eigener_name(kopie, sizeof(kopie), "wandler_flagge");
+            if (!kippe_byte(OFFEN, kopie, FLAGGE_VERSATZ, 0x00, faelle[f].flagge)) {
+                PRUEFE(0, "Pruefdatei fuer den Wandler nicht anlegbar");
+                continue;
+            }
+            FILE *kf = fopen(kopie, "rb");
+            if (!kf) { PRUEFE(0, "Pruefkopie nicht lesbar"); continue; }
+            fseek(kf, 0, SEEK_END);
+            long kn = ftell(kf);
+            fseek(kf, 0, SEEK_SET);
+            uint8_t *kb = (uint8_t *)malloc((size_t)kn);
+            if (!kb || fread(kb, 1, (size_t)kn, kf) != (size_t)kn) {
+                free(kb); fclose(kf); PRUEFE(0, "Pruefkopie unvollstaendig"); continue;
+            }
+            fclose(kf);
+
+            uft_td0_strom_t ks;
+            memset(&ks, 0, sizeof(ks));
+            int krc = uft_td0_strom_aus_bytes(kb, (size_t)kn, &ks);
+            free(kb);
+            if (krc != UFT_OK) { PRUEFE(0, "Strom aus Pruefkopie scheiterte"); continue; }
+
+            uft_imd_image_t kimd;
+            memset(&kimd, 0, sizeof(kimd));
+            krc = uft_td0_to_imd(&ks, &kimd);
+            if (krc == UFT_OK && kimd.num_tracks > 0) {
+                PRUEFE(kimd.tracks[0].stype[0] == faelle[f].erwartet,
+                       faelle[f].was);
+                printf("      %s: stype=%u (erwartet %u)\n", faelle[f].was,
+                       (unsigned)kimd.tracks[0].stype[0],
+                       (unsigned)faelle[f].erwartet);
+            } else {
+                PRUEFE(0, "Wandlung der Pruefkopie scheiterte");
+            }
+            uft_imd_free(&kimd);
+            uft_td0_strom_frei(&ks);
+            remove(kopie);
+        }
+    }
+
+    uft_imd_free(&imd);
+    uft_td0_strom_frei(&strom);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -537,6 +665,7 @@ int main(void)
     gruppe_4_gekuerzt();
     gruppe_5_kommentar();
     gruppe_6_sektorflaggen();
+    gruppe_7_wandler();
 
     if (fehler) { printf("\n%d Zusage(n) gefallen\n", fehler); return 1; }
     printf("\nalle Zusagen gehalten\n");

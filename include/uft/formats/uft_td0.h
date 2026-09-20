@@ -261,53 +261,17 @@ typedef struct {
  * TD0 Expanded Structures
  *============================================================================*/
 
-/**
- * @brief TD0 sector data (expanded)
- */
-#ifndef UFT_TD0_SECTOR_T_DEFINED
-#define UFT_TD0_SECTOR_T_DEFINED
-typedef struct {
-    uft_td0_sector_header_t header;
-    uint8_t* data;          /**< Sector data (NULL if no data) */
-    uint16_t data_size;     /**< Actual data size */
-} uft_td0_sector_t;
-#endif /* UFT_TD0_SECTOR_T_DEFINED */
+/* MF-1287: `uft_td0_sector_t` ist weg — er existierte nur fuer den
+ * geloeschten zweiten Leser. Die PACKED-Strukturen des Dateiformats
+ * bleiben: sie beschreiben die Datei, nicht den Leser. */
 
-/**
- * @brief TD0 track data (expanded)
- */
-#ifndef UFT_TD0_TRACK_T_DEFINED
-#define UFT_TD0_TRACK_T_DEFINED
-typedef struct {
-    uft_td0_track_header_t header;
-    uint8_t  nsectors;      /**< Number of sectors */
-    uft_td0_sector_t* sectors;
-} uft_td0_track_t;
-#endif /* UFT_TD0_TRACK_T_DEFINED */
+/* MF-1287: `uft_td0_track_t` ist weg — er existierte nur fuer den
+ * geloeschten zweiten Leser. Die PACKED-Strukturen des Dateiformats
+ * bleiben: sie beschreiben die Datei, nicht den Leser. */
 
-/**
- * @brief TD0 image (expanded)
- */
-#ifndef UFT_TD0_IMAGE_T_DEFINED
-#define UFT_TD0_IMAGE_T_DEFINED
-typedef struct {
-    uft_td0_header_t header;
-
-    /* Comment */
-    uft_td0_comment_header_t comment_header;
-    char*    comment;
-    bool     has_comment;
-
-    /* Tracks */
-    uint16_t num_tracks;
-    uft_td0_track_t* tracks;
-
-    /* Metadata */
-    uint16_t cylinders;
-    uint8_t  heads;
-    bool     advanced_compression;
-} uft_td0_image_t;
-#endif /* UFT_TD0_IMAGE_T_DEFINED */
+/* MF-1287: `uft_td0_image_t` ist weg — er existierte nur fuer den
+ * geloeschten zweiten Leser. Die PACKED-Strukturen des Dateiformats
+ * bleiben: sie beschreiben die Datei, nicht den Leser. */
 
 /*============================================================================
  * Huffman Decode Tables (from Teledisk reverse-engineering)
@@ -326,39 +290,6 @@ extern const uint8_t uft_td0_d_len[16];
 /*============================================================================
  * TD0 API Functions
  *============================================================================*/
-
-/**
- * @brief Initialize TD0 image structure
- */
-int uft_td0_init(uft_td0_image_t* img);
-
-/**
- * @brief Free TD0 image resources
- */
-void uft_td0_free(uft_td0_image_t* img);
-
-/**
- * @brief Check if data appears to be TD0 format
- * @param data Data buffer
- * @param size Data size (need at least 2 bytes)
- * @return true if TD0 signature found
- */
-bool uft_td0_detect(const uint8_t* data, size_t size);
-
-/**
- * @brief Check if TD0 uses advanced compression
- */
-bool uft_td0_is_compressed(const uft_td0_header_t* header);
-
-/**
- * @brief Read TD0 image from file
- */
-int uft_td0_read(const char* filename, uft_td0_image_t* img);
-
-/**
- * @brief Read TD0 image from memory
- */
-int uft_td0_read_mem(const uint8_t* data, size_t size, uft_td0_image_t* img);
 
 /* Vorwaertsdeklaration auf DATEI-Ebene (MF-507).
  *
@@ -380,16 +311,10 @@ int uft_td0_read_mem(const uint8_t* data, size_t size, uft_td0_image_t* img);
  * IMD-Header in jede Datei, die nur TD0 lesen will. */
 struct uft_imd_image_t;
 
-/**
- * @brief Convert TD0 to IMD format
- */
-int uft_td0_to_imd(const uft_td0_image_t* td0, struct uft_imd_image_t* imd);
-
-/**
- * @brief Convert TD0 to raw binary
- */
-int uft_td0_to_raw(const uft_td0_image_t* img, uint8_t** data,
-                   size_t* size, uint8_t fill);
+/* MF-1287: `uft_td0_to_imd()` ist ans Ende dieses Headers gewandert —
+ * sie nimmt jetzt `uft_td0_strom_t`, und der ist weiter unten definiert.
+ * `uft_td0_to_raw()` ist ganz weg: sie tat nichts als `to_imd` +
+ * `uft_imd_to_raw`, und ihr einziger Aufrufer macht beides selbst. */
 
 /*============================================================================
  * Der Strom-Kern (MF-1285)
@@ -503,6 +428,15 @@ void uft_td0_strom_frei(uft_td0_strom_t *s);
 int uft_td0_strom_spur(const uft_td0_strom_t *s, int cyl, int head,
                        uft_track_t *track);
 
+/**
+ * @brief Baut aus dem Strom ein IMD-Abbild.
+ *
+ * Liest die KANONISCHEN Sektorfelder, die `uft_td0_strom_spur()` setzt —
+ * `status`, `crc_ok`, `deleted` —, nicht noch einmal die TD0-Flaggen.
+ * Eine Regel, eine Stelle (§MF-1177).
+ */
+int uft_td0_to_imd(const uft_td0_strom_t* s, struct uft_imd_image_t* imd);
+
 /*============================================================================
  * LZSS Decompression Functions
  *============================================================================*/
@@ -538,27 +472,9 @@ size_t uft_td0_lzss_read(uft_td0_lzss_state_t* state,
  *============================================================================*/
 
 /**
- * @brief Decode RLE-compressed sector data
- * @param src Source data (after data header)
- * @param src_size Source data size
- * @param dst Destination buffer
- * @param dst_size Expected output size
- * @param method Encoding method
- * @return Bytes decoded or negative error
- */
-int uft_td0_decode_sector(const uint8_t* src, size_t src_size,
-                          uint8_t* dst, size_t dst_size,
-                          uint8_t method);
-
-/**
  * @brief Get drive type name
  */
 const char* uft_td0_drive_name(uft_td0_drive_t type);
-
-/**
- * @brief Print TD0 image information
- */
-void uft_td0_print_info(const uft_td0_image_t* img, bool verbose);
 
 #ifdef __cplusplus
 }

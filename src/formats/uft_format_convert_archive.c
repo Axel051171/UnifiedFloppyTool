@@ -18,8 +18,10 @@
 /**
  * @brief TD0 -> IMG: Decompress Teledisk to raw sector image
  *
- * Uses uft_td0_read_mem() to parse/decompress, then uft_td0_to_raw()
- * to extract the raw sector data.
+ * MF-1287: nutzt den Strom-Kern (`uft_td0_strom_aus_bytes`) und
+ * `uft_td0_to_imd()`. Vorher stand hier `uft_td0_read_mem()` — der
+ * zweite TD0-Leser des Baums, der am Dateiende bis zu 255 Spuren
+ * erfand.
  */
 /* MF-701: Speicher-Kern, letzte der sechs Doppelungen aus MF-695.
  *
@@ -33,14 +35,19 @@ uft_error_t uftc_td0_to_img_mem(const uint8_t* src_data, size_t src_size,
     if (!out_data || !out_size) return UFT_ERR_NULL_POINTER;
     *out_data = NULL;
     *out_size = 0;
-    uft_td0_image_t td0_img;
-    uft_td0_init(&td0_img);
+    /* MF-1287: hier stand `uft_td0_read_mem()` — der ZWEITE TD0-Leser.
+     * Er ist weg; gelesen wird mit dem Strom-Kern, den auch das Plugin
+     * benutzt. Dass dieser Wandler keinen PFAD bekommt, sondern nur
+     * Bytes, ist genau der Grund, warum der Kern an Bytes haengt und
+     * nicht an einem `uft_disk_t` (ARCH-6). */
+    uft_td0_strom_t strom;
+    memset(&strom, 0, sizeof(strom));
 
     uftc_report_progress(opts, 10, "Parsing TD0 image");
 
-    int rc = uft_td0_read_mem(src_data, src_size, &td0_img);
-    if (rc != 0) {
-        uft_td0_free(&td0_img);
+    int rc = uft_td0_strom_aus_bytes(src_data, src_size, &strom);
+    if (rc != UFT_OK) {
+        uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
         uftc_add_warning(result,
                  "TD0 parse failed (error %d)", rc);
@@ -49,29 +56,42 @@ uft_error_t uftc_td0_to_img_mem(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 50, "Extracting raw sectors");
 
-    /* Convert to raw sector data */
+    /* Convert to raw sector data.
+     *
+     * MF-1287: der Umweg ueber IMD stand vorher in `uft_td0_to_raw()`
+     * und tat dasselbe. Er steht jetzt HIER, weil dann die Spurzahl eine
+     * GEZAEHLTE ist statt einer angesagten — `num_tracks` zaehlt nur
+     * Spuren, die wirklich Sektoren geliefert haben. `uft_td0_to_raw()`
+     * haette danach keinen Aufrufer mehr und ist mit dem alten Leser
+     * gefallen. */
+    uft_imd_image_t imd_zwischen;
+    uft_imd_init(&imd_zwischen);
     uint8_t* raw_data = NULL;
     size_t raw_size = 0;
-    rc = uft_td0_to_raw(&td0_img, &raw_data, &raw_size, 0xF6);
+    rc = uft_td0_to_imd(&strom, &imd_zwischen);
+    if (rc == UFT_OK)
+        rc = uft_imd_to_raw(&imd_zwischen, &raw_data, &raw_size, 0xF6);
+    const size_t spuren = imd_zwischen.num_tracks;
+    uft_imd_free(&imd_zwischen);
     if (rc != 0 || !raw_data) {
-        uft_td0_free(&td0_img);
+        uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
         uftc_add_warning(result,
                  "TD0 sector extraction failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
 
-    result->tracks_converted = td0_img.num_tracks;
+    result->tracks_converted = (int)spuren;
 
     /* Der Bericht gehoert in den KERN (MF-701) — sonst bekommt ihn
      * nur, wer ueber die Datei-API kommt. */
     uftc_add_warning(result,
-             "Decompressed %d tracks (%s compression), %zu bytes output",
-             td0_img.num_tracks,
-             td0_img.advanced_compression ? "LZSS" : "none",
+             "Decompressed %zu tracks (%s compression), %zu bytes output",
+             spuren,
+             strom.gepackt ? "LZSS" : "none",
              raw_size);
 
-    uft_td0_free(&td0_img);
+    uft_td0_strom_frei(&strom);
     *out_data = raw_data;
     *out_size = raw_size;
     return UFT_OK;
@@ -108,14 +128,15 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,
                                       uft_convert_result_t* result) {
-    uft_td0_image_t td0_img;
-    uft_td0_init(&td0_img);
+    /* MF-1287: derselbe Strom-Kern wie im Plugin. Siehe to_img_mem. */
+    uft_td0_strom_t strom;
+    memset(&strom, 0, sizeof(strom));
 
     uftc_report_progress(opts, 10, "Parsing TD0 image");
 
-    int rc = uft_td0_read_mem(src_data, src_size, &td0_img);
-    if (rc != 0) {
-        uft_td0_free(&td0_img);
+    int rc = uft_td0_strom_aus_bytes(src_data, src_size, &strom);
+    if (rc != UFT_OK) {
+        uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
         uftc_add_warning(result,
                  "TD0 parse failed (error %d)", rc);
@@ -133,10 +154,10 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
     uft_imd_image_t imd_img;
     uft_imd_init(&imd_img);
 
-    rc = uft_td0_to_imd(&td0_img, &imd_img);
+    rc = uft_td0_to_imd(&strom, &imd_img);
     if (rc != 0) {
         uft_imd_free(&imd_img);
-        uft_td0_free(&td0_img);
+        uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
         uftc_add_warning(result,
                  "TD0->IMD conversion failed (error %d)", rc);
@@ -148,15 +169,16 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
     rc = uft_imd_write(dst_path, &imd_img);
     if (rc != 0) {
         uft_imd_free(&imd_img);
-        uft_td0_free(&td0_img);
+        uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_IO;
         uftc_add_warning(result,
                  "IMD write failed (error %d)", rc);
         return UFT_ERR_IO;
     }
 
-    /* Track-count book-keeping for progress reporting (best-effort). */
-    result->tracks_converted = td0_img.num_tracks;
+    /* MF-1287: die Zahl kommt aus der gerade gebauten IMD — gezaehlte
+     * Spuren mit Sektoren, nicht die angesagte Geometrie. */
+    result->tracks_converted = (int)imd_img.num_tracks;
 
     /* uft_imd_write() does not report bytes_written; query the output file
      * to populate result->bytes_written so callers see the actual size. */
@@ -172,7 +194,7 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
     result->success = true;
 
     uft_imd_free(&imd_img);
-    uft_td0_free(&td0_img);
+    uft_td0_strom_frei(&strom);
 
     uftc_report_progress(opts, 100, "TD0->IMD complete");
     return UFT_OK;
