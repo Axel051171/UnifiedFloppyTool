@@ -4341,7 +4341,55 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     **29** gegen Grundlinie 31. **Ein NOTICE gibt es in diesem Baum
     nicht** — die Ausarbeitung verlangt einen Eintrag dort, der
     Mechanismus hier ist die Attribution im Dateikopf (MF-636).
-  · **GESTOPPT, mit Grund:** die **Querverweiserkennung** (zwei Dateien
+- **Stand 2026-09-20, elfter Durchgang — der erste der 29 gesperrten
+  Wandlungspfade ist frei (MF-1277), und der Plan dazu steht:**
+  · **`docs/PLAN_MODERNISIERUNG.md`** hält den Fahrplan in sechs Phasen,
+    jede in einer frischen Sitzung ausführbar. Eigentümerauftrag
+    wörtlich: „nimm alle den fremd code aus neue-ideen und verbessere
+    ihn, gehe den gesamt code durch suche nach schwachstellen … fange
+    dann zuerst mit IMD→IMG an."
+  · **Die Lage vorher, mit einem Wegwerf-Prüfstand gegen die ECHTE
+    `uft_convert_file()` gemessen:** 46 Wandlungspfade, 17
+    Matrix-Einträge, **29 gesperrt** — und zwar aus **drei**
+    verschiedenen Gründen: 18 am Preflight („UNTESTED"), 5 an
+    mehrdeutiger Quelle, 4 weil die Tabelle eine Format-ID nennt, die
+    **kein Plugin trägt** (`KRYOFLUX`), 2 ohne Quelldatei (`NBZ`).
+  · **Der teuerste Nebenbefund:** von **17** `.img`-Korpusdateien
+    werden nur **zwei** als `plugin='IMG'` erkannt; die übrigen holen
+    sich MSX, Victor9K, Micropolis, NorthStar oder HardSector — und
+    die deklarieren **alle** `UFT_FORMAT_DSK`. Die Wandlungstabelle ist
+    auf Format-IDs verschlüsselt, der ID-Raum ist aber eingeschmolzen
+    (MF-1087: 101 Plugins tragen `UFT_FORMAT_DSK`).
+  · **`IMD→IMG` ist eingelöst.** Beleg: `hxcfe_pc160.imd` (164 785 B,
+    **fremde Hand**) → 163 840 B, **0 von 163 840 abweichend** gegen
+    `uft_pc160.img`. Keine Gleichheit ohne Aussage (MF-1039):
+    163 840 = 40 × 1 × 8 × 512 ist der Sektorinhalt selbst.
+  · **Stufe `LOSSY_DOCUMENTED`, nicht `LOSSLESS`** — die Prüfdiskette
+    hat 0 defekte Sektoren, die IMD-Metadatenschicht geht trotzdem
+    verloren: neun Posten, aus den **Feldern** belegt. Der neunte ist
+    der forensisch teure: fehlende Sektoren werden mit **`0xE5`**
+    gefüllt und sind danach von echten `0xE5`-Sektoren nicht mehr zu
+    unterscheiden; der Wandler zählt und meldet sie, die Zieldatei kann
+    es nicht tragen.
+  · **Gemessen und festgehalten:** `accept_data_loss` hilft bei einem
+    UNGEPRÜFTEN Paar **nicht** (der Preflight sperrt zu jedem Preis) —
+    **nach** dem Eintrag greift es und wird verlangt. Die Absage
+    wechselt von „conversion pair is UNTESTED" auf „requires
+    accept_data_loss=true". Genau so ist es gebaut.
+  · **Rotbeweis: vier Mutationen, vier gefallen** — Matrix-Eintrag auf
+    ein anderes Ziel (14 Zusagen), zwei Stichworte aus der Notiz (4),
+    Füllbyte `0xE5`→`0x00` (2), Zustimmung verweigert (6).
+    **Mutation C fiel beim ERSTEN Lauf nicht**, weil die Prüfdiskette 0
+    fehlende Sektoren hat — Gruppe 5 baut deshalb eine IMD **mit**
+    Lücke (Sektortyp `UFT_IMD_SEC_UNAVAIL`). Dieselbe Klasse wie
+    MF-1274-D und MF-1276-C: ein grüner Test aus dem falschen Grund.
+  · **Kennzahl:** angebotene Wandlungspfade **15 → 16**, Matrix 17 → 18.
+  · **Nebenbefund, als `P3-517` festgehalten:** ein **Kalman-PLL** ist
+    in diesem Baum nie gebaut worden — drei Funktionen ohne Aufrufer,
+    eine Flagge, ein README-Eintrag für eine Datei, die es nicht gibt,
+    und zwei entschuldigende Kommentare.
+- **Stand 2026-09-20, zehnter Durchgang, Nachtrag — GESTOPPT bei
+  `uft_fat_robust`:** die **Querverweiserkennung** (zwei Dateien
     auf demselben Cluster) und die **Geometrie ohne BPB** sind nicht
     gebaut. Beide brauchen eine eigene Datenstruktur und einen eigenen
     Produktivaufrufer; drei halbe Stücke sind schlechter als eines,

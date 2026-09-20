@@ -195,6 +195,45 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      * der Sonde: das Ziel kann 41/42 tragen, die Sonde findet sie noch
      * nicht. Der Rest der Strecke ist als P3-184 benannt, nicht
      * stillschweigend gelassen. */
+    /* IMD -> IMG: der erste der 29 gebauten Pfade, die der Preflight
+     * bisher abgewiesen hat (MF-1277).
+     *
+     * Gemessen war die Lage vorher: `g_conversion_paths[]` fuehrt 46
+     * Pfade, `g_matrix[]` 17 Eintraege — 29 Wandler waren gebaut und
+     * wurden mit „conversion pair is UNTESTED" gesperrt. Das ist die
+     * Bauart aus MF-263/UFT-A01 und richtig; auch `accept_data_loss`
+     * hilft dort nicht (gemessen). Der einzige Weg ist ein Eintrag MIT
+     * Beleg.
+     *
+     * DER BELEG. `tests/corpus_free/hxcfe_pc160.imd` (164 785 Byte, von
+     * HxC erzeugt — FREMDE Hand) traegt 40 Spuren, 40 Zylinder, 1 Kopf,
+     * 0 defekte und 0 fehlende Sektoren. Der Wandler liefert daraus
+     * 163 840 Byte, und gegen `uft_pc160.img` gehalten sind davon
+     * 0 abweichend. Das ist keine Gleichheit ohne Aussage (MF-1039):
+     * 163 840 = 40 x 1 x 8 x 512 ist der Sektorinhalt selbst, er hat
+     * keine Wahlfreiheit — dass HxCs IMD-Kodierung ueber unseren Leser
+     * byteweise dasselbe ergibt, ist eine Aussage ueber den Leser.
+     *
+     * WARUM TROTZDEM LOSSY. Die Pruefdiskette hat 0 defekte Sektoren;
+     * die Metadatenschicht der IMD geht dennoch verloren. Neun Posten,
+     * ablesbar an `uft_imd_image_t` / `uft_imd_track_t`. Der neunte ist
+     * der forensisch teure: fehlende Sektoren werden mit 0xE5 gefuellt
+     * (`uft_imd_to_raw(..., 0xE5)`) und sind danach von echten
+     * 0xE5-Sektoren NICHT mehr zu unterscheiden. Der Wandler zaehlt und
+     * meldet sie ueber `bad_sectors`/`unavail_sectors`; die Zieldatei
+     * kann den Unterschied nicht tragen. Genau das steht in der Notiz,
+     * damit der Bediener es sieht und nicht nur der Quelltext. */
+    { UFT_FORMAT_IMD, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-1277: Sektorinhalt bitgleich gemessen — hxcfe_pc160.imd "
+      "(fremde Hand) -> 163840 B, 0 von 163840 abweichend gegen "
+      "uft_pc160.img. VERLOREN geht die IMD-Metadatenschicht: "
+      "Erzeugerstempel und Kommentar; mode (Datenrate/Dichte) je Spur; "
+      "smap (Sektornummern/Interleave); cmap/hmap; variable "
+      "Sektorgroessen (ssize); stype (gepackt/geloescht/defekt/fehlend) "
+      "samt Zaehlern. Und: FEHLENDE Sektoren werden mit 0xE5 gefuellt "
+      "und sind danach von echten 0xE5-Sektoren nicht unterscheidbar — "
+      "der Wandler zaehlt sie, die Zieldatei kann es nicht tragen" },
+
     { UFT_FORMAT_G64, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
       "MF-536: gegen VICE-Referenz geprueft — 680 von 683 Sektoren "
       "bitgleich; ab: Spur 17/0, Spur 18/0 (BAM), Spur 18/1 (Verzeichnis). "
