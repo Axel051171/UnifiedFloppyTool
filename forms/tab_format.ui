@@ -418,7 +418,6 @@
           <layout class="QHBoxLayout">
            <item><widget class="QCheckBox" name="checkWeakBits"><property name="text"><string>Weak bits</string></property><property name="checked"><bool>true</bool></property></widget></item>
            <item><widget class="QCheckBox" name="checkNoFluxAreas"><property name="text"><string>No-flux areas</string></property><property name="checked"><bool>true</bool></property></widget></item>
-           <item><widget class="QPushButton" name="btnFluxAdvanced"><property name="text"><string>Advanced...</string></property></widget></item>
           </layout>
          </item>
         </layout>

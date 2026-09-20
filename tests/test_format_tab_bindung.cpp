@@ -222,21 +222,32 @@ private slots:
      *
      * `checkWeakBits` haengt an `preserve_weak_bits` (verlangt
      * `UFT_CAP_WEAK_BITS`) und steht als ERSTES Element in seinem
-     * waagerechten Kasten; dahinter folgen `checkNoFluxAreas` und
-     * `btnFluxAdvanced`, beide gemessen in forms/tab_format.ui.
+     * waagerechten Kasten; dahinter folgt `checkNoFluxAreas`, gemessen
+     * in forms/tab_format.ui.
      *
      * Zwei Zusagen in einer: der Helfer darf an Stelle 0 nichts finden
-     * (kein Zugriff auf Element -1), und er darf die beiden Nachbarn
-     * nicht mitnehmen. Ein Helfer, der blind das vorherige oder das
-     * naechste Element greift, faellt hier. */
+     * (kein Zugriff auf Element -1), und er darf den Nachbarn nicht
+     * mitnehmen. Ein Helfer, der blind das vorherige oder das naechste
+     * Element greift, faellt hier.
+     *
+     * WAS DIESE ZUSAGE MIT DER RUECKNAHME DES FLUX-DIALOGS VERLOREN HAT,
+     * und das gehoert dazugesagt statt weggelassen: der Kasten trug bis
+     * dahin ein DRITTES Element, `btnFluxAdvanced`. Es war der zweite
+     * Zeuge dafuer, dass der Helfer nicht blind irgendeinen Nachbarn
+     * greift. Mit dem Dialog ist es gefallen, und im Kasten stehen jetzt
+     * nur noch zwei Elemente — einen zweiten Zeugen gibt es dort nicht
+     * mehr. Die Zusage „Element -1 wird nicht angefasst" traegt
+     * unveraendert, weil `checkWeakBits` weiterhin an Stelle 0 steht;
+     * die Zusage „beide Nachbarn bleiben stehen" ist auf einen
+     * geschrumpft. Wer den Kasten wieder erweitert, nimmt den zweiten
+     * Zeugen hier wieder auf. */
     void nachbar_bleibt_stehen()
     {
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *weak = tab.findChild<QWidget *>("checkWeakBits");
         auto *nachbar = tab.findChild<QWidget *>("checkNoFluxAreas");
-        auto *knopf = tab.findChild<QWidget *>("btnFluxAdvanced");
-        QVERIFY(lvl && weak && nachbar && knopf);
+        QVERIFY(lvl && weak && nachbar);
 
         waehle(lvl, UFT_COPY_SECTOR);
         QVERIFY2(weak->isHidden(),
@@ -244,9 +255,6 @@ private slots:
                  "Feld weg");
         QVERIFY2(!nachbar->isHidden(),
                  "checkNoFluxAreas ist der Nachbar, nicht die Beschriftung");
-        QVERIFY2(!knopf->isHidden(),
-                 "btnFluxAdvanced steht im selben Kasten und haengt an "
-                 "keinem Parameter");
     }
 
     /* B6 — ein freies Feld bleibt sichtbar und bedienbar.

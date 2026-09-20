@@ -643,8 +643,6 @@ void FormatTab::setupConnections() {
             this, [this](int) { emit formatSettingsChanged(); });
     
     // Advanced dialog buttons
-    connect(ui->btnFluxAdvanced, &QPushButton::clicked,
-            this, &FormatTab::onFluxAdvanced);
     connect(ui->btnPLLAdvanced, &QPushButton::clicked,
             this, &FormatTab::onPLLAdvanced);
     connect(ui->btnNibbleAdvanced, &QPushButton::clicked,
@@ -2322,16 +2320,6 @@ void FormatTab::onBrowseLogPath() {
 // ============================================================================
 // ADVANCED DIALOG HANDLERS
 // ============================================================================
-
-void FormatTab::onFluxAdvanced() {
-    FluxAdvancedDialog dlg(this);
-    dlg.setParams(m_fluxAdvParams);
-    
-    if (dlg.exec() == QDialog::Accepted) {
-        m_fluxAdvParams = dlg.getParams();
-        emit formatSettingsChanged();
-    }
-}
 
 void FormatTab::onPLLAdvanced() {
     PLLAdvancedDialog dlg(this);

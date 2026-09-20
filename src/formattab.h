@@ -183,7 +183,6 @@ public slots:
 
 private slots:
     // Advanced dialog handlers
-    void onFluxAdvanced();
     void onPLLAdvanced();
     void onNibbleAdvanced();
     
@@ -264,7 +263,6 @@ private:
     bool    m_planFrei = false;
 
     // Advanced dialog parameters
-    FluxAdvancedDialog::FluxAdvancedParams m_fluxAdvParams;
     PLLAdvancedDialog::PLLAdvancedParams m_pllAdvParams;
     NibbleAdvancedDialog::NibbleAdvancedParams m_nibbleAdvParams;
     
