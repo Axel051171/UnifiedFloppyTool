@@ -183,7 +183,6 @@ public slots:
 
 private slots:
     // Advanced dialog handlers
-    void onPLLAdvanced();
     void onNibbleAdvanced();
     
     // System/Format cascade
@@ -263,7 +262,6 @@ private:
     bool    m_planFrei = false;
 
     // Advanced dialog parameters
-    PLLAdvancedDialog::PLLAdvancedParams m_pllAdvParams;
     NibbleAdvancedDialog::NibbleAdvancedParams m_nibbleAdvParams;
     
     // Format database

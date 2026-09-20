@@ -445,7 +445,6 @@
           <layout class="QHBoxLayout">
            <item><widget class="QCheckBox" name="checkAdaptivePLL"><property name="text"><string>Adaptive PLL</string></property><property name="checked"><bool>true</bool></property></widget></item>
            <item><widget class="QCheckBox" name="checkUseIndex"><property name="text"><string>Use index</string></property><property name="checked"><bool>true</bool></property></widget></item>
-           <item><widget class="QPushButton" name="btnPLLAdvanced"><property name="text"><string>Advanced...</string></property></widget></item>
           </layout>
          </item>
         </layout>

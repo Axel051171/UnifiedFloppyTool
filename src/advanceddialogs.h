@@ -16,55 +16,6 @@
 #include <QDialogButtonBox>
 
 // ============================================================================
-// PLL ADVANCED DIALOG
-// ============================================================================
-class PLLAdvancedDialog : public QDialog {
-    Q_OBJECT
-public:
-    explicit PLLAdvancedDialog(QWidget *parent = nullptr);
-    
-    struct PLLAdvancedParams {
-        // Clock
-        double clockRate;         // MHz
-        double bitCell;           // µs
-        
-        // Filter
-        int filterType;           // 0=Simple, 1=PID, 2=Adaptive
-        int historyDepth;
-        
-        // Gain
-        bool adaptiveGain;
-        int tolerance;            // %
-        
-        // Lock Detection
-        int lockThreshold;        // %
-        int unlockThreshold;      // %
-        
-        // Weak Bits
-        bool weakBitDetection;
-        int weakBitWindow;        // bits
-    };
-    
-    PLLAdvancedParams getParams() const;
-    void setParams(const PLLAdvancedParams &params);
-
-private:
-    void setupUi();
-    
-    QDoubleSpinBox *m_clockRate;
-    QDoubleSpinBox *m_bitCell;
-    QComboBox *m_filterType;
-    QSpinBox *m_historyDepth;
-    QCheckBox *m_adaptiveGain;
-    QSlider *m_tolerance;
-    QLabel *m_toleranceLabel;
-    QSpinBox *m_lockThreshold;
-    QSpinBox *m_unlockThreshold;
-    QCheckBox *m_weakBitDetection;
-    QSpinBox *m_weakBitWindow;
-};
-
-// ============================================================================
 // NIBBLE ADVANCED DIALOG
 // ============================================================================
 class NibbleAdvancedDialog : public QDialog {
