@@ -65,6 +65,11 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 
 #define SS  128u
 
+/* Die Bits, die einen FEHLER bedeuten — im Unterschied zu
+ * `UFT_SECTOR_CRC_CHECKED`, das nur sagt, dass nachgerechnet wurde. */
+#define FEHLERBITS (UFT_SECTOR_CRC_ERROR | UFT_SECTOR_ID_CRC_ERROR \
+                  | UFT_SECTOR_MISSING)
+
 static void sektoren_frei(uft_track_t *tr) {
     for (size_t i = 0; i < tr->sector_count; i++) free(tr->sectors[i].data);
     free(tr->sectors);
@@ -97,8 +102,13 @@ static int baue_td0(const char *pfad)
     uint8_t sk[4] = {3, 0, 0, 0};
     fwrite(sk, 1, sizeof(sk), f);
 
-    /* Sektor 1: echte Daten, Verfahren 0 (roh) */
-    uint8_t s1[6] = {0, 0, 1, 0, 0x00, 0};
+    /* Sektor 1: echte Daten, Verfahren 0 (roh).
+     *
+     * MF-1296: das sechste Byte ist die Pruefsumme ueber die Daten und
+     * stand auf 0. Fuer 128 Byte 0xAA ist sie 0x92FE, unteres Byte
+     * **0xFE** — unabhaengig mit einer Python-Umsetzung gerechnet, nicht
+     * mit der des Pruefdatei-Erzeugers. */
+    uint8_t s1[6] = {0, 0, 1, 0, 0x00, 0xFE};
     fwrite(s1, 1, sizeof(s1), f);
     uint8_t len[2] = {(uint8_t)((SS + 1) & 0xFF), (uint8_t)((SS + 1) >> 8)};
     fwrite(len, 1, 2, f);
@@ -148,11 +158,18 @@ TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
     /* Sektor 1 stand wirklich in der Datei. */
     ASSERT(t.sectors[0].data != NULL);
     ASSERT(t.sectors[0].data[0] == 0xAA);
-    ASSERT(t.sectors[0].status == UFT_SECTOR_OK);
+    /* MF-1296: NICHT `status == UFT_SECTOR_OK`. `status` ist ein
+     * FLAGGENFELD, und seit MF-1296 traegt es mit
+     * `UFT_SECTOR_CRC_CHECKED` eine Flagge, die KEIN Fehler ist — sie
+     * sagt nur, dass nachgerechnet wurde. Gleichheit mit 0 faellt
+     * deshalb bei jeder additiven Flagge, ohne dass etwas kaputt waere.
+     * Gefragt ist `kein FEHLERbit`. */
+    ASSERT((t.sectors[0].status & FEHLERBITS) == 0);
+    ASSERT((t.sectors[0].status & UFT_SECTOR_CRC_CHECKED) != 0);
     ASSERT(t.sectors[0].crc_ok == true);
 
     /* DIE ZEILE (1): Flag 0x10 heisst „keine Daten fuer diesen Sektor". */
-    if (t.sectors[1].status == UFT_SECTOR_OK && t.sectors[1].crc_ok) {
+    if ((t.sectors[1].status & FEHLERBITS) == 0 && t.sectors[1].crc_ok) {
         printf("FEHLER: Sektor 2 traegt Flag 0x10 (keine Daten), gilt aber "
                "als gelesen (status=0x%02X, crc_ok=%d, data[0]=0x%02X)\n",
                (unsigned)t.sectors[1].status, (int)t.sectors[1].crc_ok,
@@ -167,7 +184,7 @@ TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
 
     /* DIE ZEILE (2): unbekanntes Verfahren -> der Dekoder erzeugte nichts,
      * der Puffer ist der genullte calloc. */
-    if (t.sectors[2].status == UFT_SECTOR_OK && t.sectors[2].crc_ok) {
+    if ((t.sectors[2].status & FEHLERBITS) == 0 && t.sectors[2].crc_ok) {
         printf("FEHLER: Sektor 3 hat ein unbekanntes Verfahrensbyte, der "
                "Inhalt ist genullter calloc — gilt aber als gelesen "
                "(status=0x%02X, crc_ok=%d)\n",

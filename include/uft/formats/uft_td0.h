@@ -197,7 +197,17 @@ typedef struct {
     uint8_t  nsectors;      /**< Number of sectors (0xFF = end) */
     uint8_t  cylinder;      /**< Physical cylinder */
     uint8_t  side;          /**< Physical side/head */
-    uint8_t  crc;           /**< Header CRC-8 */
+    /** Untere 8 Bit der CRC-16 ueber die DREI Byte davor.
+     *
+     * SAMdisk `src/samdisk/td0.cpp:240` (MIT, im Baum):
+     *     uint8_t crc = CrcTd0Block(&tt, sizeof(tt) - sizeof(tt.crc)) & 0xff;
+     *     if (tt.crc && crc != tt.crc) throw ...
+     *
+     * **Eine gespeicherte NULL heisst `keine Angabe`, nicht
+     * `die CRC ist 0`** — das sagt SAMdisks `tt.crc &&`
+     * ausdruecklich, und UFT haelt es genauso.
+     */
+    uint8_t  crc;
 } uft_td0_track_header_t;
 UFT_PACK_END
 
@@ -211,7 +221,34 @@ typedef struct {
     uint8_t  sector;        /**< Sector number in ID field */
     uint8_t  size;          /**< Sector size code (128 << size) */
     uint8_t  flags;         /**< Sector flags */
-    uint8_t  crc;           /**< Sector header CRC-8 */
+    /** Untere 8 Bit der CRC-16 ueber die ENTPACKTEN SEKTORDATEN.
+     *
+     * **BERICHTIGT MF-1296. Hier stand `Sector header CRC-8`.**
+     * Das Feld deckt den Sektorkopf NICHT ab. Zwei unabhaengige
+     * Haende sagen dasselbe:
+     *
+     *   SAMdisk `td0.cpp:53`   `uint8_t data_crc;`
+     *                          `// Low 8-bits of sector data CRC`
+     *   SAMdisk `td0.cpp:277`  CrcTd0Block(data.data(), data.size())
+     *                          & 0xff  gegen  ts.data_crc
+     *   libdsk  `drvtele.c:133` `buf[5] is the CRC, ignored on load`
+     *   libdsk  `drvtele.c:138` Formatflag 0x02 -> ST2 0x20,
+     *                          `Data Error in Data Field`
+     *
+     * **Und es ist am Objekt gemessen, nicht nur nachgelesen
+     * (MF-1296):** an `tests/corpus_free/libdsk_uftk_pc720.td0`
+     * gehen alle 1440 Sektorpruefsummen auf. Kippt man ein Byte
+     * im SEKTORKOPF, faellt **keine** Pruefsumme der Datei —
+     * kippt man eines in den DATEN, faellt genau diese.
+     *
+     * **Folge fuer das Zentrum: TD0 traegt KEINE ID-Feld-CRC.**
+     * `uft_d2_sector_t.id_crc_known` bleibt deshalb false — das
+     * Feld bedeutet laut eigener Beschreibung `false = das Format
+     * traegt keine Angabe`, und etwas anderes einzutragen waere
+     * eine erfundene Zusage. Zylinder, Kopf, Nummer und Groesse
+     * eines TD0-Sektors sind durch nichts geschuetzt.
+     */
+    uint8_t  crc;
 } uft_td0_sector_header_t;
 UFT_PACK_END
 
@@ -413,6 +450,30 @@ typedef struct {
  *         `int`, weil dieser Header `uft_error.h` nicht einbindet — die
  *         WERTE sind dieselben, nicht eine eigene Zaehlung.
  */
+/**
+ * @brief Teledisks CRC-16 ueber einen Block.
+ *
+ * Polynom **0xA097**, Anfangswert 0, MSB zuerst, NICHT gespiegelt.
+ * Zwei unabhaengige Umsetzungen im Baum stimmen ueberein:
+ *
+ *   SAMdisk `src/samdisk/td0.cpp:71-85` — bitweise, nennt das
+ *   Polynom ausdruecklich (`the CCITT polynomial 0xa097`).
+ *   libdsk  `lib/comptlzh.c:711` — tabellengetrieben, ebenfalls
+ *   Anfangswert 0.
+ *
+ * Beide sind **gelesen, nicht uebernommen** (Kanal *Spec* nach
+ * MF-695); die Umsetzung hier ist aus der Parameterangabe neu
+ * geschrieben und an 1602 Pruefsummen einer libdsk-Datei geeicht
+ * (Dateikopf, Kommentar, 160 Spurkoepfe, 1440 Sektoren).
+ *
+ * @param daten Block.
+ * @param len   Laenge in Byte.
+ * @param start Anfangswert; 0 fuer einen eigenstaendigen Block.
+ * @return Die volle CRC-16. Spur- und Sektorpruefsumme benutzen
+ *         davon nur die unteren 8 Bit.
+ */
+uint16_t uft_td0_crc(const uint8_t *daten, size_t len, uint16_t start);
+
 int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
                             uft_td0_strom_t *aus);
 

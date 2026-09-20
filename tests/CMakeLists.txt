@@ -2987,7 +2987,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/uft_format_convert_tables.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
-    elseif(${test_name} STREQUAL "test_td0_gepackt")
+    elseif(${test_name} STREQUAL "test_td0_gepackt"
+            OR ${test_name} STREQUAL "test_td0_pruefsummen")
+        # MF-1296: `test_td0_pruefsummen` haengt am SELBEN Zweig statt an
+        # einer eigenen Kopie dieser vierzig Zeilen. Er braucht genau
+        # denselben Unterbau, und zwei Listen fuer eine Wahrheit sind die
+        # Bauform aus MF-1177 — diese Datei haelt davon bereits acht.
+        #
         # MF-1284: das TD0-Plugin setzte `compressed` und las trotzdem mit
         # blankem `fread`. Derselbe Unterbau wie test_convert_imd_img_belegt —
         # der Test faehrt ueber `uft_disk_open()` und braucht die ganze

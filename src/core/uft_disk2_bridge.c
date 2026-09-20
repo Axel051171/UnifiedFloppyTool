@@ -53,7 +53,15 @@ static void sektor_uebersetzen(uft_d2_sector_t *out, const uft_sector_t *in,
     out->id_crc_ok    = out->id_crc_known && !id_err && in->id.crc_ok;
 
     const bool data_err = (in->status & UFT_SECTOR_CRC_ERROR) != 0;
-    out->data_crc_known = data_err
+    /* MF-1296: `UFT_SECTOR_CRC_CHECKED` zuerst — es ist die EINZIGE
+     * Quelle, die `es wurde nachgerechnet` AUSSPRICHT. Die drei
+     * Bedingungen dahinter sind Rueckfaelle fuer Leser, die die
+     * Flagge (noch) nicht setzen, und sie haben eine gemessene
+     * Luecke: eine Pruefsumme, die 0 ist und stimmt, sieht darin
+     * aus wie `nie gelesen` — 2 von 1440 Sektoren in
+     * `tests/corpus_free/libdsk_uftk_pc720.td0`. */
+    out->data_crc_known = (in->status & UFT_SECTOR_CRC_CHECKED) != 0
+                       || data_err
                        || in->crc_stored != 0 || in->crc_calculated != 0;
     out->data_crc_ok = out->data_crc_known && !data_err
                     && in->crc_stored == in->crc_calculated;

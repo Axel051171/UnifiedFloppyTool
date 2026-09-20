@@ -296,6 +296,24 @@ typedef enum uft_sector_status {
     UFT_SECTOR_WEAK         = (1 << 4),  ///< Schwache/variable Bits
     UFT_SECTOR_DUPLICATE    = (1 << 5),  ///< Mehrfach vorhanden
     UFT_SECTOR_EXTRA        = (1 << 6),  ///< Über Normal hinaus
+    /** Ein Leser hat die Daten-Pruefsumme WIRKLICH NACHGERECHNET.
+     *
+     * Das ist nicht dasselbe wie @ref UFT_SECTOR_CRC_ERROR: dort
+     * steht das Ergebnis, hier steht, dass ueberhaupt jemand
+     * nachgesehen hat. Ohne diese Unterscheidung ist `crc_ok`
+     * zweideutig zwischen `geprueft und gut` und `niemand hat
+     * nachgesehen` — und `uft_format_add_sector()` setzt
+     * unbedingt `UFT_SECTOR_OK`, also sieht ungeprueft immer gut
+     * aus (MF-980, add_sector_setzt_immer_ok).
+     *
+     * **Der Anlass ist gemessen, nicht ausgedacht (MF-1296):** die
+     * Bruecke ins Zentrum leitete `data_crc_known` aus
+     * `crc_stored != 0 || crc_calculated != 0` ab. Ein Sektor,
+     * dessen Pruefsumme 0x00 ist und stimmt, haette damit `nicht
+     * gemessen` gemeldet. In `libdsk_uftk_pc720.td0` trifft das
+     * **2 von 1440** Sektoren.
+     */
+    UFT_SECTOR_CRC_CHECKED  = (1 << 7),
 } uft_sector_status_t;
 #endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
@@ -569,6 +587,21 @@ typedef enum uft_track_status {
     UFT_TRACK_PROTECTED     = (1 << 3),  ///< Copy protection detected
     UFT_TRACK_WEAK_BITS     = (1 << 4),
     UFT_TRACK_FUZZY         = (1 << 5),
+    /** Der Spurkopf hat seine eigene Pruefsumme NICHT gehalten.
+     *
+     * Gesetzt von einem Leser, der die Spurkopf-Pruefsumme
+     * NACHRECHNET — nicht von einem, der eine Fehlerflagge des
+     * Formats weiterreicht. Die Spur wird dann BEENDET statt
+     * gelesen: hinter einem Kopf, dessen Zahlen nicht stimmen,
+     * steht keine verlaessliche Sektorzahl, und wer trotzdem
+     * weiterliest, erfindet Sektoren aus Fuellwerk (MF-1284:
+     * 188 Zylinder und null Sektoren aus einem falsch gelesenen
+     * Strom).
+     *
+     * Ausdruecklicher Zahlenwert wie alle Werte darueber: eine
+     * Aufzaehlung ohne sie ist eine ABI-Bombe.
+     */
+    UFT_TRACK_HDR_CRC       = (1 << 6),
 } uft_track_status_t;
 
 /**

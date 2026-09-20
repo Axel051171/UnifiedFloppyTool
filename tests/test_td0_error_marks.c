@@ -38,6 +38,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
+#include "uft/formats/uft_td0.h"   /* MF-1296: uft_td0_crc() */
 
 #include <stdio.h>
 #include <stdint.h>
@@ -71,15 +72,66 @@ static void free_track_sectors(uft_track_t *tr) {
 
 /* One raw 256-byte data sector: 6-byte header + [len LE16] + method(0) + data.
    data record length = 1 (method) + 256 = 257. First data byte is a tag. */
+/* Der ZWEITE Anker fuer `uft_td0_crc()` (MF-1296).
+ *
+ * Der erste liegt in `test_td0_pruefsummen.c` Gruppe 1 und misst gegen
+ * eine von libdsk geschriebene Datei. Dieser hier nagelt die vier Werte
+ * fest, die DIESE Pruefdatei braucht — gerechnet mit einer unabhaengigen
+ * Python-Umsetzung, nicht mit der C-Fassung, die hier geprueft wird.
+ *
+ * Ohne ihn waere `put_sector()` zirkulaer: es schriebe, was der Leser
+ * ohnehin erwartet, und beide koennten gemeinsam falsch liegen — die
+ * Gestalt von MF-1009 (`apridisk`), wo Packer und Entpacker
+ * Spiegelbilder derselben Erfindung waren. */
+static int crc_anker_haelt(void) {
+    static const struct { uint8_t tag, erwartet; } anker[] = {
+        { 0xA1, 0x2D }, { 0xB2, 0x27 }, { 0xC3, 0x8E }, { 0xD4, 0x00 },
+    };
+    int gut = 1;
+    for (unsigned k = 0; k < sizeof(anker)/sizeof(anker[0]); k++) {
+        uint8_t daten[SS];
+        daten[0] = anker[k].tag;
+        for (unsigned i = 1; i < SS; i++) daten[i] = 0x10;
+        const uint8_t ist = (uint8_t)(uft_td0_crc(daten, SS, 0u) & 0xFFu);
+        if (ist != anker[k].erwartet) {
+            printf("    CRC-Anker verfehlt: tag 0x%02X -> 0x%02X, "
+                   "erwartet 0x%02X\n",
+                   anker[k].tag, ist, anker[k].erwartet);
+            gut = 0;
+        }
+    }
+    return gut;
+}
+
 static void put_sector(FILE *f, uint8_t sec_num, uint8_t flags, uint8_t tag) {
-    uint8_t hdr[6] = { 0, 0, sec_num, 1 /*size code 1 = 256*/, flags, 0 };
+    /* MF-1296: das sechste Byte des Sektorkopfs ist die Pruefsumme UEBER
+     * DIE DATEN, und sie stand hier auf 0 — ein Wert, den keine der vier
+     * Nutzlasten hat. Solange niemand nachrechnete, fiel das nicht auf;
+     * seit MF-1296 rechnet der Leser nach, und die Pruefdatei muss sagen
+     * koennen, was sie behauptet.
+     *
+     * Die Rechnung ist NICHT zirkulaer, obwohl Pruefdatei und Pruefling
+     * dieselbe Funktion rufen: `uft_td0_crc()` ist in
+     * `test_td0_pruefsummen.c` Gruppe 1 an einer von LIBDSK geschriebenen
+     * Datei geeicht (Dateikopf 0x6EDD, Kommentar 0xFEF2, 1440 Sektoren).
+     * Die Verankerung liegt also ausserhalb dieses Baums — anders als bei
+     * `apridisk` (MF-1009), wo Packer und Entpacker Spiegelbilder
+     * derselben Erfindung waren.
+     *
+     * Zweiter Anker unten: die vier erwarteten Bytes sind mit einer
+     * UNABHAENGIGEN Python-Umsetzung gerechnet und stehen als Zahlen da. */
+    uint8_t daten[SS];
+    daten[0] = tag;
+    for (unsigned i = 1; i < SS; i++) daten[i] = 0x10;
+    const uint8_t crc = (uint8_t)(uft_td0_crc(daten, SS, 0u) & 0xFFu);
+
+    uint8_t hdr[6] = { 0, 0, sec_num, 1 /*size code 1 = 256*/, flags, crc };
     fwrite(hdr, 1, 6, f);
     uint16_t len = 1 + SS;
     uint8_t lb[2] = { (uint8_t)(len & 0xFF), (uint8_t)(len >> 8) };
     fwrite(lb, 1, 2, f);
     fputc(0, f);                                   /* encoding method 0 = raw */
-    fputc(tag, f);
-    for (unsigned i = 1; i < SS; i++) fputc(0x10, f);
+    fwrite(daten, 1, SS, f);
 }
 
 static int build_td0(const char *path) {
@@ -131,6 +183,9 @@ TEST(open_geometry_scan_aligned) {
 }
 
 TEST(read_surfaces_error_marks) {
+    /* MF-1296: erst der Anker, dann die Pruefdatei. Haelt er nicht,
+     * ist alles Weitere eine Rechnung, die sich selbst bestaetigt. */
+    ASSERT(crc_anker_haelt());
     char path[300];
     get_temp_path(path, sizeof(path));
     ASSERT(build_td0(path));

@@ -103,6 +103,34 @@ bool td0_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     return false;
 }
 
+/* Teledisks CRC-16 — Polynom 0xA097, Anfangswert 0, MSB zuerst, nicht
+ * gespiegelt. Aus der Parameterangabe neu geschrieben, nicht
+ * uebernommen (Kanal *Spec*, MF-695). Zwei unabhaengige Umsetzungen
+ * im Baum stimmen darin ueberein:
+ *
+ *   SAMdisk `src/samdisk/td0.cpp:71-85`  bitweise, nennt das Polynom
+ *   libdsk  `lib/comptlzh.c:711`         tabellengetrieben, Start 0
+ *
+ * Geeicht an 1602 Pruefsummen einer von libdsk GESCHRIEBENEN Datei
+ * (`tests/corpus_free/libdsk_uftk_pc720.td0`): Dateikopf 0x6EDD,
+ * Kommentar 0xFEF2, 160 Spurkoepfe, 1440 Sektoren — 0 abweichend.
+ * Das ist ein Beleg am OBJEKT, nicht an einer zweiten Beschreibung.
+ */
+uint16_t uft_td0_crc(const uint8_t *daten, size_t len, uint16_t start)
+{
+    uint16_t crc = start;
+    if (!daten) return crc;
+    for (size_t i = 0; i < len; i++) {
+        crc = (uint16_t)(crc ^ ((uint16_t)daten[i] << 8));
+        for (int bit = 0; bit < 8; bit++) {
+            const bool hoch = (crc & 0x8000u) != 0u;
+            crc = (uint16_t)(crc << 1);
+            if (hoch) crc = (uint16_t)(crc ^ 0xA097u);
+        }
+    }
+    return crc;
+}
+
 int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
                             uft_td0_strom_t *aus)
 {
@@ -317,7 +345,37 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
         uint8_t num_sec = trk_hdr[0];
         uint8_t trk_cyl = trk_hdr[1];
         uint8_t trk_head = trk_hdr[2];
-        /* trk_hdr[3] = CRC */
+
+        /* MF-1296: `trk_hdr[3]` wurde gelesen und WEGGEWORFEN — hier
+         * stand nur der Kommentar `trk_hdr[3] = CRC`.
+         *
+         * Die Rechnung steht in SAMdisk `td0.cpp:240`:
+         *     uint8_t crc = CrcTd0Block(&tt, sizeof(tt) - sizeof(tt.crc)) & 0xff;
+         *     if (tt.crc && crc != tt.crc) throw ...
+         * Die untere Haelfte der CRC-16 ueber die DREI Byte davor.
+         *
+         * **Eine gespeicherte NULL heisst `keine Angabe`**, nicht `die
+         * CRC ist 0` — das sagt SAMdisks `tt.crc &&` ausdruecklich.
+         * Ohne diese Ausnahme wuerde jeder Spurkopf abgewiesen, dessen
+         * Erzeuger das Feld nicht fuellt.
+         *
+         * **Warum die GANZE Spurwanderung endet und nicht nur diese
+         * Spur uebersprungen wird:** hinter einem Kopf, dessen Zahlen
+         * nicht stimmen, ist `num_sec` unbrauchbar, und `pos` laeuft
+         * ueber diese Zahl weiter. Wer trotzdem weitersucht, liest
+         * Sektorkoepfe aus Fuellwerk — genau die Gestalt von MF-1284,
+         * wo 188 Zylinder und null Sektoren herauskamen. Eine
+         * Spurkopf-Pruefsumme haette das beim ERSTEN falschen Byte
+         * gesagt statt beim 255. Muellzylinder.
+         */
+        const uint8_t trk_crc_datei = trk_hdr[3];
+        const uint8_t trk_crc_gerechnet =
+            (uint8_t)(uft_td0_crc(trk_hdr, 3u, 0u) & 0xFFu);
+        if (trk_crc_datei != 0u && trk_crc_datei != trk_crc_gerechnet) {
+            track->status |= UFT_TRACK_HDR_CRC;
+            goto done;
+        }
+
         pos += 4u;
 
         bool is_target = (trk_cyl == cyl && trk_head == head);
@@ -498,10 +556,62 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * „Syndromes 0x10 and 0x20 omit sector data". */
                     /* Propagate TD0 sector flags */
                     if (track->sector_count > 0) {
-                        if (sec_flags & UFT_TD0_SEC_CRC)
-                            uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+                        uft_sector_t *sek =
+                            &track->sectors[track->sector_count - 1];
+
+                        /* MF-1296: ZWEI Aussagen ueber dieselbe Sache — und
+                         * sie sind nicht dieselbe Aussage.
+                         *
+                         *   `sec_flags & UFT_TD0_SEC_CRC` ist, was das
+                         *   FORMAT BEHAUPTET: eine Flagge, die der
+                         *   Erzeuger gesetzt hat.
+                         *   `sec_hdr[5]` gegen die nachgerechnete Summe
+                         *   ist, was hier GEMESSEN wird.
+                         *
+                         * Bis MF-1296 gab es nur die erste. `crc_ok` kam
+                         * aus dem Formatflag, und `uft_format_add_sector()`
+                         * setzt `UFT_SECTOR_OK` unbedingt — ungeprueft sah
+                         * also aus wie geprueft UND gut (MF-980).
+                         *
+                         * Gerechnet wird ueber die volle `sec_size`, nicht
+                         * ueber `decoded_len`: die Pruefsumme der Datei
+                         * deckt den ganzen Sektor ab. Bleibt der eigene
+                         * Entpacker kurz, faellt sie — das ist kein
+                         * Nachteil, sondern eine unabhaengige Probe auf den
+                         * EIGENEN Dekoder.
+                         *
+                         * `crc_ok` ist nur gut, wenn BEIDE Aussagen gut
+                         * sind. Eine Flagge, die einen Fehler behauptet,
+                         * wird von einer stimmenden Pruefsumme nicht
+                         * ueberstimmt — und umgekehrt.
+                         */
+                        const uint8_t sek_crc_datei = sec_hdr[5];
+                        const uint8_t sek_crc_gerechnet =
+                            (uint8_t)(uft_td0_crc(decoded, sec_size, 0u) & 0xFFu);
+                        sek->crc_stored     = sek_crc_datei;
+                        sek->crc_calculated = sek_crc_gerechnet;
+                        sek->status |= UFT_SECTOR_CRC_CHECKED;
+
+                        const bool crc_haelt =
+                            (sek_crc_datei == sek_crc_gerechnet);
+                        const bool flagge_sagt_fehler =
+                            (sec_flags & UFT_TD0_SEC_CRC) != 0;
+                        uft_sector_set_crc(sek, crc_haelt && !flagge_sagt_fehler);
+                        if (!crc_haelt || flagge_sagt_fehler)
+                            sek->status |= UFT_SECTOR_CRC_ERROR;
+
+                        /* TD0 traegt KEINE ID-Feld-CRC. Gemessen, nicht
+                         * vermutet: ein gekipptes Byte im SEKTORKOPF laesst
+                         * jede Pruefsumme der Datei unberuehrt (MF-1296).
+                         * `id.crc` bleibt deshalb 0, und die Bruecke ins
+                         * Zentrum leitet daraus `id_crc_known = false` ab —
+                         * das Feld bedeutet dort woertlich `false = das
+                         * Format traegt keine Angabe`. Zylinder, Kopf,
+                         * Nummer und Groesse sind durch nichts geschuetzt. */
+                        sek->id.crc = 0u;
+
                         if (sec_flags & UFT_TD0_SEC_DAM)
-                            track->sectors[track->sector_count - 1].deleted = true;
+                            sek->deleted = true;
                     }
                     free(decoded);
                 }
