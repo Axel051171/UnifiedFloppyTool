@@ -6230,8 +6230,11 @@ if(TARGET Qt6::Test)
         # braucht deshalb dieselbe Quellenmenge. Ein eigener Zweig mit
         # eigener Liste waere eine zweite Wahrheit ueber dieselbe Sache
         # (MF-636) — also teilt er sich die Bedingung.
+        # MF-1282: der Bindungstest treibt denselben Reiter an — dieselbe
+        # Bedingung aus demselben Grund wie MF-1233 darueber.
         if(${qt_test_name} STREQUAL "test_format_tab_capability_gating"
-           OR ${qt_test_name} STREQUAL "test_format_tab_copy_plan")
+           OR ${qt_test_name} STREQUAL "test_format_tab_copy_plan"
+           OR ${qt_test_name} STREQUAL "test_format_tab_bindung")
             file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
             # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.

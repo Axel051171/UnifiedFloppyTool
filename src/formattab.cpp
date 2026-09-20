@@ -30,6 +30,10 @@
 #include <QClipboard>            /* MF-1238 */
 #include <QGuiApplication>       /* MF-1238 */
 #include <QMessageBox>           /* MF-1238 */
+#include <QGridLayout>           /* MF-1282: Beschriftung links im Gitter */
+#include <QFormLayout>           /* MF-1282: Beschriftung in der LabelRole */
+#include <QBoxLayout>            /* MF-1282: Beschriftung davor im Kasten */
+#include <QLabel>                /* MF-1282 */
 
 // ============================================================================
 // Construction / Destruction
@@ -486,6 +490,71 @@ static const char *nameVote(int v)
 { return uft_copy_vote_name(static_cast<uft_vote_method_t>(v)); }
 static const char *nameExact(int v)
 { return uft_copy_exact_name(static_cast<uft_bitexact_kind_t>(v)); }
+
+/* MF-1282: die Anordnung finden, die dieses Element WIRKLICH enthaelt.
+ *
+ * `w->parentWidget()->layout()` liefert nur die oberste Anordnung des
+ * Elternwidgets; liegt das Element in einer geschachtelten Anordnung
+ * darin, meldet `indexOf()` dort -1. Deshalb wird abgestiegen. */
+static QLayout *layoutVon(QLayout *lay, QWidget *w, int *index)
+{
+    if (!lay) return nullptr;
+    const int i = lay->indexOf(w);
+    if (i >= 0) { *index = i; return lay; }
+    for (int k = 0; k < lay->count(); ++k)
+        if (QLayout *sub = lay->itemAt(k)->layout())
+            if (QLayout *f = layoutVon(sub, w, index)) return f;
+    return nullptr;
+}
+
+/* MF-1282: die Beschriftung eines Bedienelements.
+ *
+ * Der Kopierplan versteckt Felder, die auf dieser Ebene nichts bedeuten
+ * (MF-1234). Bisher verschwand nur das FELD — das „Sectors:" davor blieb
+ * stehen und zeigte auf nichts. Eine Beschriftung ohne ihr Feld ist eine
+ * Aussage ueber eine Einstellung, die es hier nicht gibt.
+ *
+ * DREI Lagen kommen in `forms/tab_format.ui` vor, alle gemessen:
+ *   im QGridLayout steht die Beschriftung in der Zelle LINKS daneben
+ *     (spinSectors Zelle(1,1), links QLabel „Sectors:"),
+ *   im QFormLayout in der LabelRole derselben Zeile
+ *     (comboFormat Zeile 1, links QLabel „Format:"),
+ *   im QBoxLayout als VORHERIGES Element
+ *     (comboFluxMerge, comboSampleRate, comboXCopySides).
+ * Steht dort kein QLabel, gibt es keine Beschriftung und nichts passiert —
+ * gemessen ist das der Fall bei `checkDecodeGCR` (davor steht das Haekchen
+ * `checkNibbleMode`) und `checkHashSha512` (davor `checkHashSha256`). Ein
+ * Nachbar ist keine Beschriftung, und ihn mit zu verstecken waere schlimmer
+ * als die haengende Beschriftung, die behoben werden soll.
+ * Dieselbe Regel wendet die Vorschau des Entwurfs an (test-gui). */
+static QWidget *beschriftungVon(QWidget *w)
+{
+    if (!w || !w->parentWidget()) return nullptr;
+    int i = -1;
+    QLayout *lay = layoutVon(w->parentWidget()->layout(), w, &i);
+    if (!lay || i < 0) return nullptr;
+    if (auto *f = qobject_cast<QFormLayout *>(lay)) {
+        int r = -1;
+        QFormLayout::ItemRole rolle = QFormLayout::FieldRole;
+        f->getWidgetPosition(w, &r, &rolle);
+        if (r < 0 || rolle != QFormLayout::FieldRole) return nullptr;
+        QLayoutItem *it = f->itemAt(r, QFormLayout::LabelRole);
+        return it ? qobject_cast<QLabel *>(it->widget()) : nullptr;
+    }
+    if (auto *g = qobject_cast<QGridLayout *>(lay)) {
+        int r = 0, c = 0, rs = 0, cs = 0;
+        g->getItemPosition(i, &r, &c, &rs, &cs);
+        if (c <= 0) return nullptr;
+        QLayoutItem *it = g->itemAtPosition(r, c - 1);
+        return it ? qobject_cast<QLabel *>(it->widget()) : nullptr;
+    }
+    if (qobject_cast<QBoxLayout *>(lay)) {
+        if (i == 0) return nullptr;
+        QLayoutItem *it = lay->itemAt(i - 1);
+        return it ? qobject_cast<QLabel *>(it->widget()) : nullptr;
+    }
+    return nullptr;
+}
 
 void FormatTab::setupConnections() {
     // Kopierplan (MF-1233) — vier Achsen, aus dem Kern gefuellt
@@ -1307,6 +1376,36 @@ void FormatTab::applyCopyPlan() {
         { "geometry.cylinders", ui->spinTracks },
         { "geometry.heads",     ui->spinSides },
         { "gcr.variant",        ui->comboGCRType },
+        /* MF-1282: neun weitere, die der Kern seit MF-1232 kennt und die in
+         * diesem Formular schon ein Bedienelement haben. Die Zuordnung kommt
+         * aus der Karte des GUI-Umbaus (test-gui/gui-gerüst/zuordnung), nicht
+         * aus dem Gefuehl; aufgenommen wurde nur, was BEIDES hat — einen
+         * Eintrag in `k_param[]` und ein vorhandenes Element. Was der Kern
+         * nicht fuehrt (die acht `plan.*`-Achsen, die zehn `a8.*`), steht
+         * ausdruecklich NICHT hier: eine Bindung an einen Parameter, den es
+         * nicht gibt, waere eine Zusage ohne Gegenstueck (MF-767). */
+        { "geometry.sectors",         ui->spinSectors },
+        { "geometry.sector_size",     ui->comboSectorSize },
+        { "layout.active_head",       ui->comboXCopySides },
+        { "source.format",            ui->comboFormat },
+        { "flux.revolution_policy",   ui->comboFluxMerge },
+        { "flux.sample_clock",        ui->comboSampleRate },
+        { "preserve_weak_bits",       ui->checkWeakBits },
+        { "evidence.hash_algorithms", ui->checkHashSha512 },
+        /* NICHT gebunden, und der Grund ist gemessen:
+         * `gcr.preserve_raw_nibbles` verlangt `UFT_CAP_GCR`, und
+         * `copyPlanCaps()` setzt diese Flagge NIE — der Reiter kann sie
+         * nicht messen, das steht dort ausdruecklich. Eine Bindung wuerde
+         * `checkDecodeGCR` dauerhaft unsichtbar machen: ein Bedienelement,
+         * das der Bediener nie wiedersieht. Dasselbe gilt fuer alles, was
+         * `UFT_CAP_FILESYSTEM` oder `UFT_CAP_CBM_BAM` verlangt.
+         *
+         * BEFUND, aelter als diese Aenderung: `gcr.variant` -> `comboGCRType`
+         * oben in dieser Tafel ist genau dieser Fall und steht seit MF-1234
+         * darin — die GCR-Verfahrenswahl ist damit unerreichbar. Der Test
+         * `test_format_tab_bindung` nagelt das fest, statt es zu beheben:
+         * behoben waere es erst, wenn der Reiter GCR messen kann, und das
+         * ist eine Entwurfsfrage (welche Quelle sagt es?), keine Zeile hier. */
     };
 
     for (const auto &b : bindung) {
@@ -1317,6 +1416,13 @@ void FormatTab::applyCopyPlan() {
          * Einstellung, sondern eine Irrefuehrung. */
         const uft_copy_pstate_t z =
             uft_copy_param_state_caps(&plan, caps, b.param, &wert);
+        /* MF-1282: und die Beschriftung geht mit. Vorher blieb sie stehen
+         * und zeigte auf nichts — gemessen bei DOSCopy, wo die ganze
+         * Geometrie verschwindet und „Tracks:", „Sides:", „Sectors:" und
+         * „Size:" uebrig blieben. */
+        QWidget *besch = beschriftungVon(b.w);
+        const bool sichtbar = !(z == UFT_PSTATE_FORBIDDEN || z == UFT_PSTATE_HIDDEN);
+        if (besch) besch->setVisible(sichtbar);
         switch (z) {
             case UFT_PSTATE_FORBIDDEN:
             case UFT_PSTATE_HIDDEN:
