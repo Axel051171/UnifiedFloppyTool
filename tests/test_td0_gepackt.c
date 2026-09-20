@@ -111,6 +111,8 @@ typedef struct {
     size_t spuren_mit_sek; /**< Spuren, die ueberhaupt Sektoren lieferten */
     int    nummern_1_bis_9;/**< jede Spur mit Sektoren traegt genau 1..9 */
     uint8_t erste[3];      /**< Spur 0/0, Sektor 1, erste drei Byte */
+    int    erste_crc_ok;   /**< Spur 0/0, Sektor 1: crc_ok */
+    int    erste_deleted;  /**< Spur 0/0, Sektor 1: deleted */
 } befund_t;
 
 static befund_t lies(const char *pfad)
@@ -145,9 +147,12 @@ static befund_t lies(const char *pfad)
                 b.nummern_1_bis_9 = 0;
             }
 
-            if (c == 0 && h == 0 && t.sector_count > 0
-                && t.sectors[0].data && t.sectors[0].data_len >= 3)
-                memcpy(b.erste, t.sectors[0].data, 3);
+            if (c == 0 && h == 0 && t.sector_count > 0) {
+                if (t.sectors[0].data && t.sectors[0].data_len >= 3)
+                    memcpy(b.erste, t.sectors[0].data, 3);
+                b.erste_crc_ok  = t.sectors[0].crc_ok ? 1 : 0;
+                b.erste_deleted = t.sectors[0].deleted ? 1 : 0;
+            }
 
             uft_track_cleanup(&t);
         }
@@ -403,6 +408,119 @@ static void gruppe_5_kommentar(void)
     uft_disk_close(d);
 }
 
+/** Kopiert `quelle` nach `ziel` und setzt EIN Byte.
+ *
+ * Prueft vorher, dass dort der erwartete Altwert steht. Ohne diese
+ * Pruefung veraendert der Test irgendwann etwas anderes, als er glaubt —
+ * und meldet dann gruen ueber eine Stelle, die es nicht mehr gibt.
+ * 0 = misslungen.
+ */
+static int kippe_byte(const char *quelle, const char *ziel,
+                      size_t versatz, uint8_t alt, uint8_t neu)
+{
+    FILE *q = fopen(quelle, "rb");
+    if (!q) return 0;
+    fseek(q, 0, SEEK_END);
+    long n = ftell(q);
+    fseek(q, 0, SEEK_SET);
+    if (n <= (long)versatz) { fclose(q); return 0; }
+    uint8_t *p = (uint8_t *)malloc((size_t)n);
+    if (!p) { fclose(q); return 0; }
+    size_t gelesen = fread(p, 1, (size_t)n, q);
+    fclose(q);
+    if (gelesen != (size_t)n) { free(p); return 0; }
+    if (p[versatz] != alt) { free(p); return 0; }   /* Lage stimmt nicht */
+    p[versatz] = neu;
+
+    FILE *z = fopen(ziel, "wb");
+    if (!z) { free(p); return 0; }
+    size_t geschrieben = fwrite(p, 1, (size_t)n, z);
+    fclose(z);
+    free(p);
+    return geschrieben == (size_t)n;
+}
+
+/* ═══ 6. Die Sektorflaggen — das Plugin las das falsche Bit ════════
+ *
+ * `td0_read_track()` setzte „CRC falsch" bei `sec_flags & 0x01`.
+ * **0x01 ist DUP — die doppelte Sektor-ID, nicht der CRC-Fehler.**
+ * Vier Quellen sagen 0x02, zwei davon ausserhalb dieses Baums:
+ *
+ *   include/uft/formats/uft_td0.h:101   UFT_TD0_SEC_CRC  0x02
+ *   src/formats/uft_format_converters.c:46  TD0_FLAG_CRC_ERROR 0x02
+ *   src/samdisk/td0.cpp:257   bad_data = (ts.flags & 0x02) != 0
+ *   libdsk lib/drvtele.c:138 (lesend) und :732 (SCHREIBEND)
+ *           if (syndrome & 2) ...  und  secdata[4] |= 2;  (CRC error)
+ *
+ * Die Wirkung ging in BEIDE Richtungen: ein Sektor mit echtem
+ * CRC-Fehler kam als GUT heraus, und ein Sektor mit doppelter ID als
+ * CRC-kaputt. Beides ist eine stille Falschaussage ueber forensische
+ * Daten.
+ *
+ * **Der Versatz 86 ist gerechnet, nicht geraten:** 12 Byte Dateikopf
+ * + 10 Byte Kommentarkopf + 56 Byte Kommentar = 78 (Spurkopf, 4 Byte)
+ * -> 82 (Sektorkopf) -> Flaggenbyte bei 82+4. Gemessen steht dort
+ * 0x00, und der Sektorkopf lautet `00 00 01 02 00 2F` — Zylinder 0,
+ * Kopf 0, Sektor 1, Groessencode 2. `kippe_byte()` prueft den Altwert,
+ * damit der Test nicht stillschweigend woanders hinlangt.
+ *
+ * Dass die Datei danach ihre eigenen Kopf-Pruefsummen verletzt, stoert
+ * hier nicht — und DAS ist ein eigener Befund: dieser Leser rechnet
+ * keine davon nach.                                                   */
+#define FLAGGE_VERSATZ 86u
+
+static void gruppe_6_sektorflaggen(void)
+{
+    printf("  [6] Sektorflaggen: 0x02 ist CRC, 0x01 ist DUP\n");
+    char ziel[512];
+
+    /* 0x02 = CRC-Fehler -> der Sektor MUSS als CRC-kaputt herauskommen. */
+    eigener_name(ziel, sizeof(ziel), "flagge_crc");
+    if (!kippe_byte(OFFEN, ziel, FLAGGE_VERSATZ, 0x00, 0x02)) {
+        PRUEFE(0, "Pruefdatei mit Flagge 0x02 nicht anlegbar "
+                  "(steht bei Versatz 86 nicht mehr 0x00?)");
+    } else {
+        befund_t b = lies(ziel);
+        PRUEFE(b.offen, "Datei mit Flagge 0x02 liess sich nicht oeffnen");
+        PRUEFE(b.erste_crc_ok == 0,
+               "Flagge 0x02 (CRC-Fehler) kam als GUTER Sektor heraus");
+        PRUEFE(b.erste_deleted == 0, "0x02 darf nicht `deleted` setzen");
+        printf("      0x02 -> crc_ok=%d deleted=%d (erwartet 0/0)\n",
+               b.erste_crc_ok, b.erste_deleted);
+        remove(ziel);
+    }
+
+    /* 0x01 = doppelte ID -> das ist KEIN CRC-Fehler. */
+    eigener_name(ziel, sizeof(ziel), "flagge_dup");
+    if (!kippe_byte(OFFEN, ziel, FLAGGE_VERSATZ, 0x00, 0x01)) {
+        PRUEFE(0, "Pruefdatei mit Flagge 0x01 nicht anlegbar");
+    } else {
+        befund_t b = lies(ziel);
+        PRUEFE(b.offen, "Datei mit Flagge 0x01 liess sich nicht oeffnen");
+        PRUEFE(b.erste_crc_ok == 1,
+               "Flagge 0x01 (doppelte ID) wurde als CRC-Fehler gemeldet");
+        printf("      0x01 -> crc_ok=%d (erwartet 1)\n", b.erste_crc_ok);
+        remove(ziel);
+    }
+
+    /* 0x04 = geloeschte Datenmarke. War schon richtig; steht hier als
+     * Regressionsprobe, damit die Berichtigung nicht das Nachbarbit
+     * mitnimmt (Klasse MF-519/MF-529: eine Korrektur an einer Stelle
+     * sagt nichts ueber ihre Nachbarn). */
+    eigener_name(ziel, sizeof(ziel), "flagge_dam");
+    if (!kippe_byte(OFFEN, ziel, FLAGGE_VERSATZ, 0x00, 0x04)) {
+        PRUEFE(0, "Pruefdatei mit Flagge 0x04 nicht anlegbar");
+    } else {
+        befund_t b = lies(ziel);
+        PRUEFE(b.erste_deleted == 1,
+               "Flagge 0x04 (geloeschte Datenmarke) ging verloren");
+        PRUEFE(b.erste_crc_ok == 1, "0x04 darf nicht `crc_ok` loeschen");
+        printf("      0x04 -> deleted=%d crc_ok=%d (erwartet 1/1)\n",
+               b.erste_deleted, b.erste_crc_ok);
+        remove(ziel);
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -418,6 +536,7 @@ int main(void)
     gruppe_3_schutzspur();
     gruppe_4_gekuerzt();
     gruppe_5_kommentar();
+    gruppe_6_sektorflaggen();
 
     if (fehler) { printf("\n%d Zusage(n) gefallen\n", fehler); return 1; }
     printf("\nalle Zusagen gehalten\n");

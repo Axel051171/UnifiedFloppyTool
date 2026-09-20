@@ -3,10 +3,25 @@
  * @brief TD0 disk-error marking (read + represent) and the open-scan off-by-one.
  *
  * Links the real Teledisk TD0 plugin (src/formats/td0/uft_td0.c). TD0 encodes
- * per-sector status in the sector-header flag byte: bit0 (0x01) = data CRC
- * error, bit2 (0x04) = deleted-address-mark. TD0 is read-only (writing needs
- * re-compression), so this covers the read + represent half of the disk-error
- * work package.
+ * per-sector status in the sector-header flag byte.
+ *
+ * BERICHTIGT MF-1286: hier stand „bit0 (0x01) = data CRC error". Falsch —
+ * 0x01 ist DUP, die doppelte Sektor-ID. Der CRC-Fehler ist **bit1 (0x02)**,
+ * und 0x04 ist die geloeschte Datenmarke. Vier Quellen sagen 0x02, zwei
+ * davon ausserhalb dieses Baums und eine davon ein SCHREIBER:
+ * `uft_td0.h:101`, `uft_format_converters.c:46`, `samdisk/td0.cpp:257`,
+ * libdsk `drvtele.c:138` (lesend) und `:732` (schreibend).
+ *
+ * **Und das ist in DIESER Datei das zweite Mal.** Ein paar Zeilen
+ * weiter unten steht ueber die Kennung: „the test was green because both
+ * sides shared the same mistake" (MF-389). Genau das ist wieder
+ * passiert: die Pruefdatei schrieb 0x01 fuer „CRC err", weil das Plugin
+ * 0x01 las. Ein Test, der sich seine Pruefdatei selbst baut, prueft die
+ * Erfindung gegen sich selbst (Klasse MF-1009/MF-1028) — er kann diesen
+ * Fehler nicht finden, er kann ihn nur festhalten.
+ *
+ * TD0 is read-only (writing needs re-compression), so this covers the
+ * read + represent half of the disk-error work package.
  *
  * The existing test_td0_plugin.c only exercises the probe (magic bytes) and a
  * data-less header — it never walks a data-bearing track. This test builds a
@@ -77,11 +92,14 @@ static int build_td0(const char *path) {
     uint8_t header[12] = { 0x54, 0x44, 0, 0, 0x00 /*version<0x10 => no comment*/,
                            0, 0, 0, 0, 1 /*sides*/, 0, 0 };
     fwrite(header, 1, 12, f);
-    uint8_t trk_hdr[4] = { 3 /*num_sec*/, 0 /*cyl*/, 0 /*head*/, 0 /*crc*/ };
+    uint8_t trk_hdr[4] = { 4 /*num_sec*/, 0 /*cyl*/, 0 /*head*/, 0 /*crc*/ };
     fwrite(trk_hdr, 1, 4, f);
-    put_sector(f, 1, 0x00, 0xA1);                  /* normal  */
-    put_sector(f, 2, 0x04, 0xB2);                  /* deleted */
-    put_sector(f, 3, 0x01, 0xC3);                  /* CRC err */
+    put_sector(f, 1, 0x00, 0xA1);                  /* normal        */
+    put_sector(f, 2, 0x04, 0xB2);                  /* deleted DAM   */
+    put_sector(f, 3, 0x02, 0xC3);                  /* CRC err (war 0x01) */
+    /* MF-1286: der vierte ist neu und sichert die Richtung, die vorher
+     * still falsch war — eine doppelte Sektor-ID ist KEIN CRC-Fehler. */
+    put_sector(f, 4, 0x01, 0xD4);                  /* doppelte ID   */
     uint8_t end[4] = { 0xFF, 0, 0, 0 };            /* end-of-tracks marker */
     fwrite(end, 1, 4, f);
     fclose(f);
@@ -125,18 +143,23 @@ TEST(read_surfaces_error_marks) {
     uft_track_t t;
     memset(&t, 0, sizeof(t));
     ASSERT(uft_format_plugin_td0.read_track(&disk, 0, 0, &t) == UFT_OK);
-    ASSERT(t.sector_count == 3);
+    ASSERT(t.sector_count == 4);
 
     const uft_sector_t *n = find_by_tag(&t, 0xA1);
     const uft_sector_t *d = find_by_tag(&t, 0xB2);
     const uft_sector_t *e = find_by_tag(&t, 0xC3);
-    ASSERT(n && d && e);
+    const uft_sector_t *u = find_by_tag(&t, 0xD4);
+    ASSERT(n && d && e && u);
     ASSERT(n->crc_ok == true);
     ASSERT(n->deleted == false);
     ASSERT(d->deleted == true);
     ASSERT(e->crc_ok == false);
     ASSERT(e->crc_valid == false);
     ASSERT(e->data_crc_ok == false);
+    /* MF-1286: 0x01 ist DUP. Der Sektor ist unauffaellig, seine Daten
+     * sind gut — wer ihn als CRC-kaputt meldet, erfindet einen Fehler. */
+    ASSERT(u->crc_ok == true);
+    ASSERT(u->deleted == false);
 
     free_track_sectors(&t);
     if (uft_format_plugin_td0.close) uft_format_plugin_td0.close(&disk);

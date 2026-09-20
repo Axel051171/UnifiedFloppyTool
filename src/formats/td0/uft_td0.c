@@ -220,7 +220,7 @@ int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
             if (pos + 6u > aus->strom_len) { pos = aus->strom_len; break; }
             uint8_t sec_flags = aus->strom[pos + 4];
             pos += 6u;
-            if (!(sec_flags & 0x30)) {
+            if (!(sec_flags & (UFT_TD0_SEC_DOS | UFT_TD0_SEC_NODAT))) {
                 if (pos + 2u > aus->strom_len) { pos = aus->strom_len; break; }
                 uint16_t len = uft_read_le16(aus->strom + pos);
                 pos += 2u;
@@ -335,7 +335,7 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
 
             uint16_t sec_size = (sec_size_code < 7) ? (128 << sec_size_code) : 512;
 
-            if (sec_flags & 0x30) {
+            if (sec_flags & (UFT_TD0_SEC_DOS | UFT_TD0_SEC_NODAT)) {
                 /* No data for this sector */
                 if (is_target) {
                     uft_format_add_empty_sector(track, sec_num > 0 ? sec_num - 1 : 0,
@@ -350,9 +350,9 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * Tor 62 sieht diesen Weg nicht. */
                     uft_format_mark_last_missing(track);
                     if (track->sector_count > 0) {
-                        if (sec_flags & 0x01)
+                        if (sec_flags & UFT_TD0_SEC_CRC)
                             uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
-                        if (sec_flags & 0x04)
+                        if (sec_flags & UFT_TD0_SEC_DAM)
                             track->sectors[track->sector_count - 1].deleted = true;
                     }
                 }
@@ -478,11 +478,29 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * null und der ganze Sektor erfunden. */
                     if (decoded_len < sec_size)
                         uft_format_mark_last_missing(track);
+                    /* MF-1286: hier stand `sec_flags & 0x01` — und
+                     * 0x01 ist DUP, die doppelte Sektor-ID, NICHT der
+                     * CRC-Fehler. Die Wirkung ging in beide Richtungen:
+                     * ein Sektor mit echtem CRC-Fehler kam als GUT
+                     * heraus, ein Sektor mit doppelter ID als kaputt.
+                     *
+                     * Vier Quellen sagen 0x02, zwei davon ausserhalb
+                     * dieses Baums, und eine davon ist ein SCHREIBER:
+                     *   uft_td0.h:101            UFT_TD0_SEC_CRC 0x02
+                     *   uft_format_converters.c  TD0_FLAG_CRC_ERROR 0x02
+                     *   samdisk/td0.cpp:257      ts.flags & 0x02
+                     *   libdsk drvtele.c:138/:732  syndrome & 2  bzw.
+                     *                            secdata[4] |= 2
+                     *
+                     * Die Zahlen stehen seither nicht mehr hier, sondern
+                     * kommen aus dem eigenen Header (D3) — und dass
+                     * `0x30` beide Bits meint, sagt libdsk woertlich:
+                     * „Syndromes 0x10 and 0x20 omit sector data". */
                     /* Propagate TD0 sector flags */
                     if (track->sector_count > 0) {
-                        if (sec_flags & 0x01)
+                        if (sec_flags & UFT_TD0_SEC_CRC)
                             uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
-                        if (sec_flags & 0x04)
+                        if (sec_flags & UFT_TD0_SEC_DAM)
                             track->sectors[track->sector_count - 1].deleted = true;
                     }
                     free(decoded);

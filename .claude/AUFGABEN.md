@@ -4519,6 +4519,28 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   **Jahr** bleibt eine Abweichung offen (`P3-522`).
   **Offen bleibt 1b-ii** — die drei Wandler auf den Kern umhängen,
   `uft_td0_read_mem` samt `uft_td0_image_t`-Lauf löschen.
+- **Stand 2026-09-20, MF-1286 (Sperre vor 1b-ii):** beim Umhängen der
+  IMD-Wandlung auf die kanonischen Sektorfelder fiel auf, dass **das
+  Plugin das falsche Bit als CRC-Fehler las** — `0x01` ist DUP, die
+  doppelte Sektor-ID; der CRC-Fehler ist `0x02`. Vier Quellen sagen
+  `0x02`, eine davon ein **Schreiber** (libdsk `drvtele.c:732`). Die
+  Wirkung ging in beide Richtungen: echte CRC-Fehler kamen als gute
+  Sektoren heraus, doppelte IDs als kaputte.
+  **Das musste vor 1b-ii kommen**, weil 1b-ii die IMD-Wandlung genau
+  auf dieses `crc_ok` umstellt — sonst hätte der Umbau den Fehler in den
+  neuen Pfad getragen und der alte wäre für den CRC-Fall der genauere
+  gewesen.
+  **Und ein grüner Test hat den Defekt bewacht:**
+  `tests/test_td0_error_marks.c` behauptete „bit0 (0x01) = data CRC
+  error" und baute sich die Prüfdatei dazu selbst — neunzehn Zeilen über
+  derselben Stelle, an der er die Klasse schon einmal beschrieben hatte
+  („both sides shared the same mistake", MF-389). Berichtigt, plus ein
+  vierter Sektor, der die bisher falsche Richtung absichert.
+  Matrix 4 von 4 über die **vier** TD0-Testziele; der erste Lauf meldete
+  3 von 4 und das war das Messwerkzeug, nicht die Abdeckung.
+  Nebenbefund `P3-523`: `TD0_FLAG_NO_DATA` im Wandler ist `0x08`, ein
+  Bit, das TD0 nicht benutzt — der `UNAVAILABLE`-Zweig ist damit
+  unerreichbar. Nicht mitrepariert, weil die Funktion in 1b-ii fällt.
 - **Beleg:** —
 
 ---
