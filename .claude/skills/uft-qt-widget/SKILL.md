@@ -35,9 +35,11 @@ The canonical style reference is `src/gui/uft_otdr_panel.cpp`.
 |-------------|--------------------|----------|
 | Main-window tab | `src/xcopytab.cpp` | `src/` |
 | Analysis panel | `src/gui/uft_otdr_panel.cpp` | `src/gui/` |
-| Modal dialog | `src/advanceddialogs.cpp` | `src/` |
+| Modal dialog | `src/rawformatdialog.cpp` | `src/` |
 | Dock widget | `src/widgets/fluxvisualizerwidget.cpp` | `src/widgets/` |
 | Reusable sub-widget | `src/widgets/trackgridwidget.cpp` | `src/widgets/` |
+
+> **Die Zeile „Modal dialog" zeigte bis MF-1331 auf `src/advanceddialogs.cpp`.** Die Datei ist mit MF-1330 gefallen, eine Vorlage darf aber nicht ins Leere zeigen. Der Ersatz ist gemessen und nicht geraten: von den **neun** `QDialog`-Ableitungen unter `src/` werden nur **drei** irgendwo konstruiert — `DiskAnalyzerWindow`, `RawFormatDialog` und `VisualDiskDialog`. Die uebrigen sechs sind die Klasse `P3-459` (uebersetzt, nie gebaut) und taugen als Vorlage nicht, weil an ihnen niemand sehen kann, wie ein Dialog erreicht wird.
 
 ## Workflow
 

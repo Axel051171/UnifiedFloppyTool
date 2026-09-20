@@ -3620,7 +3620,7 @@ Urteil.
 
 ---
 
-## GUI-6 — 38 Bedienelemente in einer geschlossenen Schleife (MF-668)
+## GUI-6 — 39 Bedienelemente in einer geschlossenen Schleife (MF-668)
 
 **Kennzahl:** keine der vier. Das ist ein Ehrlichkeits-Befund, kein
 Rückstand — nach Regel 9 (MF-640) also **Fundus mit Entscheidungsbedarf**,
@@ -3629,8 +3629,24 @@ sie sichtbare Oberfläche entfernt.
 
 ### Gemessen
 
-Die drei „Advanced…"-Dialoge (`src/advanceddialogs.{h,cpp}`, 530 Zeilen)
-bieten zusammen **38 Bedienelemente** an: Flux 15, PLL 9, Nibble 14.
+Die drei „Advanced…"-Dialoge (`src/advanceddialogs.{h,cpp}`)
+bieten zusammen **39 Bedienelemente** an: Flux 15, PLL 10, Nibble 14.
+
+> **BERICHTIGT MF-1331, beide Zahlen dieser Zeile, und die Ueberschrift
+> mit ihnen.** Hier stand „530 Zeilen" und „**38** Bedienelemente
+> … PLL 9". Gemessen am Commit dieses Eintrags selbst (`8d701d84`,
+> MF-668) war das Dateipaar **190 + 535 = 725** Zeilen. Und PLL trug
+> **11** Elementzeiger, von denen einer ein `QLabel` ist, das nur den
+> Wert des Schiebereglers anzeigt — also **10** Eingabeelemente und
+> **10** Strukturfelder, nicht 9. Beide Zahlen waren die ganze Zeit
+> nachpruefbar; nachgesehen hat sie erst die Ruecknahme.
+
+> **ERLEDIGT MF-1328 / MF-1329 / MF-1330.** Die drei Dialoge sind
+> zurueckgenommen, jeder im selben Commit wie sein Knopf (Regel `E-2`).
+> Von den 39 Feldern leben **16** unter anderem Namen weiter, **23**
+> fielen ersatzlos, **0** blieben — genau die Vorhersage der Karte.
+> Die geschlossene Schleife, die dieser Eintrag beschreibt, gibt es
+> nicht mehr; die Zahlen darin sind ab hier Versionsgeschichte.
 
 Ihr vollständiger Weg:
 

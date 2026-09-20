@@ -25,7 +25,8 @@ Beim Messen von Hand ergab er dreimal ein Ergebnis, das nicht stimmte:
 
   * `tolerance` schien Lesestellen zu haben. Zwei davon lagen in
     `otdr_event_core_v12.c` (`g->tolerance`) und in `advanceddialogs.cpp`
-    (`p.tolerance`) — **andere Strukturen**, gleicher Feldname.
+    (`p.tolerance`; die Datei ist mit MF-1330 gefallen, das Beispiel ist
+    also Versionsgeschichte) — **andere Strukturen**, gleicher Feldname.
   * `revolution` schien lebendig. Die Treffer waren `d->revolution` aus
     einer SCP-Diagnosestruktur.
 
