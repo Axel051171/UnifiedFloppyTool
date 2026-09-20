@@ -5,6 +5,10 @@
 
 #include "uft/uft_format_common.h"
 #include "uft/uft_format_probe.h"   /* MF-1231: uft_format_variant_t */
+/* MF-1284: `uft_td0_lzss_init()` / `uft_td0_lzss_getbyte()` und ihr
+ * Zustandstyp. Den Typ hier nachzubilden waere die zweite Kopie aus
+ * §MF-1177 — er ist 4 KB Schiebefenster plus Huffman-Baeume. */
+#include "uft/formats/uft_td0.h"
 
 /* Teledisk signature, read with uft_read_le16() (p[0] | p[1] << 8):
  *   normal / RLE      on-disk bytes 'T','D'  ->  0x4454
@@ -21,14 +25,72 @@
 #define TD0_MAGIC_ADVANCED  0x6474
 #define TD0_HEADER_SIZE     12
 
+/* MF-1284: hier standen `FILE* file` und `long data_start`, und gelesen
+ * wurde mit blankem `fread`.
+ *
+ * `compressed` wurde gesetzt und NIRGENDS benutzt. Bei Magie `td` hat
+ * das Plugin damit den Huffman-Strom selbst als Spur- und Sektorkoepfe
+ * gedeutet. Gemessen am Vorzustand meldete `Transylvania.td0`
+ * **188 Zylinder x 192 Sektoren** und lieferte ueber alle 376
+ * „gelesenen" Spuren **null** Sektoren — mit `UFT_OK`.
+ *
+ * Der Strom liegt jetzt entpackt im Speicher. Das ist keine Bequemlich-
+ * keit, sondern notwendig: ein LZH-Strom ist ZUSTANDSBEHAFTET, ein
+ * `fseek` zurueck an den Datenanfang gibt es darin nicht — und genau
+ * das tat `td0_read_track()` bei jedem Aufruf. */
 typedef struct {
-    FILE*       file;
+    uint8_t*    strom;       /**< Datei hinter dem 12-Byte-Kopf, bei `td` ENTPACKT */
+    size_t      strom_len;
+    size_t      daten_start; /**< Versatz der ersten Spur IM STROM */
     uint8_t     version;
     uint8_t     data_rate;
     uint8_t     sides;
     bool        compressed;
-    long        data_start;
 } td0_data_t;
+
+/* Obergrenze des entpackten Stroms. Die groesste Geometrie der eigenen
+ * Formattafel ist `myz80` mit 64 x 1 x 128 x 1024 = 8,4 MB; 64 MB ist
+ * also reichlich. Die Grenze KAPPT nicht — sie sagt ab (Dauerregel D5,
+ * und die Klasse MF-1040, wo ein Block auf 65 535 gekuerzt und als
+ * guter Sektor gemeldet wurde). */
+#define TD0_STROM_MAX (64u * 1024u * 1024u)
+
+/**
+ * @brief Entpackt den LZH-Strom einer `td`-Datei vollstaendig.
+ *
+ * Eigene Funktion, damit jeder ihrer Zweige pruefbar ist, ohne den
+ * Leser zu mutieren (Bauform MF-1283).
+ */
+static uft_error_t td0_strom_entpacken(const uint8_t *quelle, size_t quell_len,
+                                       uint8_t **out, size_t *out_len)
+{
+    uft_td0_lzss_state_t lzss;
+    uft_td0_lzss_init(&lzss, quelle, quell_len);
+
+    size_t kap = quell_len * 4u + 4096u;
+    if (kap > TD0_STROM_MAX) kap = TD0_STROM_MAX;
+    uint8_t *buf = malloc(kap);
+    if (!buf) return UFT_ERR_MEMORY;
+
+    size_t n = 0;
+    int c;
+    while ((c = uft_td0_lzss_getbyte(&lzss)) >= 0) {
+        if (n == kap) {
+            if (kap >= TD0_STROM_MAX) { free(buf); return UFT_ERR_FORMAT_INVALID; }
+            size_t neu = (kap > TD0_STROM_MAX / 2u) ? TD0_STROM_MAX : kap * 2u;
+            uint8_t *groesser = realloc(buf, neu);
+            if (!groesser) { free(buf); return UFT_ERR_MEMORY; }
+            buf = groesser;
+            kap = neu;
+        }
+        buf[n++] = (uint8_t)c;
+    }
+    if (n == 0) { free(buf); return UFT_ERR_FORMAT_INVALID; }
+
+    *out = buf;
+    *out_len = n;
+    return UFT_OK;
+}
 
 static const uint16_t td0_sector_sizes[8] = { 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
 
@@ -60,13 +122,45 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
     
     td0_data_t* pdata = calloc(1, sizeof(td0_data_t));
     if (!pdata) { fclose(f); return UFT_ERR_MEMORY; }
-    
-    pdata->file = f;
+
     pdata->version = header[4];
     pdata->data_rate = header[5];
     pdata->sides = header[9];
     pdata->compressed = (magic == TD0_MAGIC_ADVANCED);
-    
+
+    /* MF-1284: den Rest der Datei holen und — bei `td` — entpacken.
+     * Danach gibt es kein `FILE*` mehr; alles Weitere laeuft ueber den
+     * Puffer, und `open` und `read_track` benutzen damit ZWINGEND
+     * dieselbe Quelle. Vorher waren es zwei Laeufe mit zwei
+     * Ueberspring-Regeln: `open` sprang `fseek(f, len, ...)`,
+     * `read_track` nur `if (data_len > 1)` — bei einem Datensatz von
+     * genau einem Byte drifteten die beiden auseinander (§MF-1177). */
+    if (fseek(f, 0, SEEK_END) != 0) { free(pdata); fclose(f); return UFT_ERR_IO; }
+    long dateigroesse = ftell(f);
+    if (dateigroesse < (long)TD0_HEADER_SIZE) {
+        free(pdata); fclose(f); return UFT_ERR_FORMAT_INVALID;
+    }
+    size_t rest_len = (size_t)dateigroesse - TD0_HEADER_SIZE;
+    if (rest_len == 0) { free(pdata); fclose(f); return UFT_ERR_FORMAT_INVALID; }
+
+    uint8_t *rest = malloc(rest_len);
+    if (!rest) { free(pdata); fclose(f); return UFT_ERR_MEMORY; }
+    if (fseek(f, TD0_HEADER_SIZE, SEEK_SET) != 0
+        || fread(rest, 1, rest_len, f) != rest_len) {
+        free(rest); free(pdata); fclose(f); return UFT_ERR_IO;
+    }
+    fclose(f);
+
+    if (pdata->compressed) {
+        uft_error_t e = td0_strom_entpacken(rest, rest_len,
+                                            &pdata->strom, &pdata->strom_len);
+        free(rest);
+        if (e != UFT_OK) { free(pdata); return e; }
+    } else {
+        pdata->strom = rest;
+        pdata->strom_len = rest_len;
+    }
+
     /* MF-971: hier stand `if (pdata->version >= 0x10)`.
      *
      * Der Kommentarblock haengt am FLAG, nicht an der Version. Byte 7
@@ -96,50 +190,52 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
      * als Kommentarkopf gelesen und danach eine Laenge uebersprungen,
      * die aus Spurdaten stammte; im zweiten begann die Spursuche im
      * Kommentartext. `header[7]` wurde bis hierher gar nicht gelesen. */
+    size_t pos = 0;
     if (header[7] & 0x80) {
-        uint8_t com_hdr[10];
-        if (fread(com_hdr, 1, 10, f) != 10) { free(pdata); fclose(f); return UFT_ERR_IO; }
-        uint16_t com_len = uft_read_le16(com_hdr + 2);
-        if (fseek(f, com_len, SEEK_CUR) != 0) {
-            free(pdata);
-            fclose(f);
-            return UFT_ERR_FILE_READ;
+        if (pdata->strom_len < 10) {
+            free(pdata->strom); free(pdata); return UFT_ERR_FORMAT_INVALID;
         }
+        uint16_t com_len = uft_read_le16(pdata->strom + 2);
+        if ((size_t)10u + com_len > pdata->strom_len) {
+            /* Der Kommentar reicht ueber das Stromende — die Laenge ist
+             * gelogen oder die Datei ist abgeschnitten. Absagen, nicht
+             * kappen (D5). */
+            free(pdata->strom); free(pdata); return UFT_ERR_FORMAT_INVALID;
+        }
+        pos = (size_t)10u + com_len;
     }
-    pdata->data_start = ftell(f);
-    
+    pdata->daten_start = pos;
+
     // Scan for geometry
     uint8_t max_cyl = 0, max_sec = 0;
-    while (!feof(f)) {
-        uint8_t trk_hdr[4];
-        if (fread(trk_hdr, 1, 4, f) != 4) break;
+    while (pos + 4u <= pdata->strom_len) {
+        const uint8_t *trk_hdr = pdata->strom + pos;
         if (trk_hdr[0] == 0xFF) break;
-        
+
         uint8_t num_sec = trk_hdr[0], cyl = trk_hdr[1];
+        pos += 4u;
         if (cyl > max_cyl) max_cyl = cyl;
         if (num_sec > max_sec) max_sec = num_sec;
-        
+
         for (int s = 0; s < num_sec; s++) {
-            uint8_t sec_hdr[6];
-            if (fread(sec_hdr, 1, 6, f) != 6) { break; }
-            if (!(sec_hdr[4] & 0x30)) {
-                uint8_t len_buf[2];
-                if (fread(len_buf, 1, 2, f) != 2) { break; }
-                uint16_t len = uft_read_le16(len_buf);
+            if (pos + 6u > pdata->strom_len) { pos = pdata->strom_len; break; }
+            uint8_t sec_flags = pdata->strom[pos + 4];
+            pos += 6u;
+            if (!(sec_flags & 0x30)) {
+                if (pos + 2u > pdata->strom_len) { pos = pdata->strom_len; break; }
+                uint16_t len = uft_read_le16(pdata->strom + pos);
+                pos += 2u;
                 /* The data record after the length word is exactly `len` bytes
                  * (byte 0 = encoding method, rest = encoded data) — read_track
                  * consumes `len` bytes here, so the geometry scan must skip the
                  * same `len`. The previous `len - 1` drifted one byte per data
                  * sector and mis-scanned the geometry of any multi-sector TD0. */
-                if (fseek(f, len, SEEK_CUR) != 0) {
-                    free(pdata);
-                    fclose(f);
-                    return UFT_ERR_FILE_READ;
-                }
+                if (pos + len > pdata->strom_len) { pos = pdata->strom_len; break; }
+                pos += len;
             }
         }
     }
-    
+
     disk->plugin_data = pdata;
     disk->geometry.cylinders = max_cyl + 1;
     disk->geometry.heads = pdata->sides;
@@ -153,7 +249,7 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
 static void td0_close(uft_disk_t* disk) {
     td0_data_t* pdata = disk->plugin_data;
     if (pdata) {
-        if (pdata->file) fclose(pdata->file);
+        free(pdata->strom);   /* MF-1284: vorher `fclose(pdata->file)` */
         free(pdata);
         disk->plugin_data = NULL;
     }
@@ -169,29 +265,32 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
     if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
     td0_data_t *p = disk->plugin_data;
-    if (!p || !p->file) return UFT_ERR_INVALID_ARG;
+    if (!p || !p->strom) return UFT_ERR_INVALID_ARG;
 
     uft_track_init(track, cyl, head);
 
-    /* Seek to data start and scan forward to the requested track */
-    if (fseek(p->file, p->data_start, SEEK_SET) != 0)
-        return UFT_ERR_IO;
+    /* MF-1284: hier stand `fseek(p->file, p->data_start, SEEK_SET)`.
+     * In einem LZH-Strom gibt es kein Zurueckspringen — der Entpacker
+     * ist zustandsbehaftet. Der Strom liegt deshalb seit MF-1284
+     * entpackt im Speicher, und der Anfang ist ein Index. */
+    size_t pos = p->daten_start;
 
-    while (!feof(p->file)) {
-        uint8_t trk_hdr[4];
-        if (fread(trk_hdr, 1, 4, p->file) != 4) break;
+    while (pos + 4u <= p->strom_len) {
+        const uint8_t *trk_hdr = p->strom + pos;
         if (trk_hdr[0] == 0xFF) break;  /* End marker */
 
         uint8_t num_sec = trk_hdr[0];
         uint8_t trk_cyl = trk_hdr[1];
         uint8_t trk_head = trk_hdr[2];
         /* trk_hdr[3] = CRC */
+        pos += 4u;
 
         bool is_target = (trk_cyl == cyl && trk_head == head);
 
         for (int s = 0; s < num_sec; s++) {
-            uint8_t sec_hdr[6];
-            if (fread(sec_hdr, 1, 6, p->file) != 6) goto done;
+            if (pos + 6u > p->strom_len) goto done;
+            const uint8_t *sec_hdr = p->strom + pos;
+            pos += 6u;
 
             uint8_t sec_cyl = sec_hdr[0];
             uint8_t sec_head = sec_hdr[1];
@@ -226,18 +325,23 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
             }
 
             /* Read data length */
-            uint8_t len_buf[2];
-            if (fread(len_buf, 1, 2, p->file) != 2) goto done;
-            uint16_t data_len = uft_read_le16(len_buf);
+            if (pos + 2u > p->strom_len) goto done;
+            uint16_t data_len = uft_read_le16(p->strom + pos);
+            pos += 2u;
+
+            /* MF-1284: EIN Ueberspringen fuer beide Zweige.
+             *
+             * Vorher sprang der Nicht-Ziel-Zweig `if (data_len > 1)` —
+             * ein Datensatz von genau einem Byte (nur das Verfahrens-
+             * byte, keine Nutzlast) wurde also NICHT uebersprungen, und
+             * der Lauf verschob sich um ein Byte. `td0_open()` sprang an
+             * derselben Stelle unbedingt `len`. Zwei Kopien einer Regel,
+             * zwei Bedeutungen — die Bauform aus §MF-1177. */
+            if (pos + data_len > p->strom_len) goto done;
+            const uint8_t *raw = p->strom + pos;
+            pos += data_len;
 
             if (is_target && data_len > 0) {
-                /* Read and decode sector data */
-                uint8_t *raw = malloc(data_len);
-                if (!raw) goto done;
-                if (fread(raw, 1, data_len, p->file) != data_len) {
-                    free(raw); goto done;
-                }
-
                 /* TD0 encoding: byte 0 = method (0=raw, 1=repeat, 2=pattern) */
                 uint8_t *decoded = calloc(1, sec_size);
                 /* MF-981: WIE VIELE Bytes der Dekoder wirklich erzeugt hat.
@@ -347,12 +451,6 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                             track->sectors[track->sector_count - 1].deleted = true;
                     }
                     free(decoded);
-                }
-                free(raw);
-            } else {
-                /* Skip data */
-                if (data_len > 1) {
-                    if (fseek(p->file, data_len, SEEK_CUR) != 0) goto done;
                 }
             }
         }

@@ -1,0 +1,360 @@
+/**
+ * @file test_td0_gepackt.c
+ * @brief TD0 mit Advanced Compression — das Plugin las sie als Muell (MF-1284).
+ *
+ * ── Der Befund ───────────────────────────────────────────────────────
+ *
+ * `src/formats/td0/uft_td0.c` setzte in `td0_open()`
+ *
+ *     pdata->compressed = (magic == TD0_MAGIC_ADVANCED);
+ *
+ * und benutzte das Feld danach **nirgends**. Gelesen wurde mit blankem
+ * `fread` — bei Magie `td` also der Huffman-Strom selbst, Byte fuer Byte
+ * als Spur- und Sektorkoepfe gedeutet.
+ *
+ * Gemessen am Vorzustand, beide Dateien mit Magie `td`:
+ *
+ *   Transylvania.td0      angesagt **188 Zylinder x 192 Sektoren**,
+ *                         376 Spuren „gelesen", **0 Sektoren**, UFT_OK
+ *   sector_test_360k.td0  angesagt 1 Zylinder x 0 Sektoren,
+ *                         2 Spuren „gelesen", **0 Sektoren**, UFT_OK
+ *
+ * Kein Fehlerkode, keine Warnung. Das ist „Erfolg ohne Tat" — die Klasse
+ * aus MF-883/MF-930/MF-1009 —, verschaerft dadurch, dass die angesagte
+ * Geometrie (188 Zylinder fuer eine 41-Spur-Diskette) frei erfunden ist.
+ *
+ * ── Die benannte Referenz ────────────────────────────────────────────
+ *
+ * Orakel ist **hxcfe 2.16.15.2** (Klon 05b53aa,
+ * `tools/uft-scout/work/HxCFloppyEmulator/build/hxcfe.exe`, AUSGEFUEHRT,
+ * keine Zeile uebernommen — Kanal *Oracle* nach MF-695). Es liest
+ * dieselben Dateien:
+ *
+ *   Transylvania.td0      41 tracks, 2 side(s), je Spur „sectors: 1..9"
+ *   sector_test_360k.td0  40 tracks, 2 side(s)
+ *   libdsk_uftk_pc720.td0 80 tracks, 2 side(s), je Spur „sectors: 1..9"
+ *
+ * **Eine zweite fremde Hand widerspricht, und das gehoert hierher statt
+ * in eine Behauptung von Einstimmigkeit:** libdsks `dsktrans` (LGPL-2+)
+ * entpackt Transylvania ebenfalls, meldet dabei aber **40** Zylinder und
+ * 720 Sektoren — es klemmt auf seine Standardgeometrie und verliert die
+ * 41. Spur. Transylvania ist ein Spiel von 1982; eine Spur jenseits der
+ * Standardgeometrie ist die gelaeufige Schutzform. hxcfe und UFT sagen
+ * 41, libdsk sagt 40 — festgehalten, nicht aufgeloest.
+ *
+ * ── Was hier NICHT belegt ist ────────────────────────────────────────
+ *
+ * Die Gruppen 2, 3 und 4a **ueberspringen sich benannt**, weil im Baum
+ * keine weitergabefaehige gepackte TD0 liegt. Der Grund ist gemessen und
+ * kein Versaeumnis: **es gibt keine fremde Hand, die gepackte TD0
+ * SCHREIBT.** libdsks `lib/drvtele.c:39` sagt es woertlich — „Advanced
+ * compression is read-only" —, und hxcfes Modulliste fuehrt ueberhaupt
+ * kein TD0-Schreibmodul. Siehe `docs/OPEN_ITEMS.md` P3-520.
+ *
+ * **Was IMMER laeuft — auch in CI —, ist mehr als nur Gruppe 1:**
+ * 1  die unkomprimierte Korpusdatei, 1440 Sektoren (Regressionsprobe),
+ * 4b dieselbe Datei auf 52 Byte gekuerzt, wo ihr Kommentarkopf 56
+ *    ansagt — der Leser muss absagen,
+ * 4c dieselbe Datei auf 20 000 Byte, mitten in einem Datensatz — 39
+ *    Sektoren, nicht 40.
+ * 4b und 4c sind nachtraeglich entstanden, weil die Mutationsmatrix
+ * gezeigt hat, dass die beiden Schranken sonst NICHT ausloesbar waren.
+ * Eine Pruefung, die nicht feuern kann, ist keine (MF-1000/Tor 64).
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "uft/uft_format_plugin.h"
+#include "uft/uft_types.h"
+#include "uft/uft_error.h"
+
+#ifndef UFT_CORPUS_DIR
+#error "UFT_CORPUS_DIR fehlt — tests/CMakeLists.txt muss es fuer diesen Test setzen"
+#endif
+#ifndef UFT_CORPUS_RESTRICTED_DIR
+#error "UFT_CORPUS_RESTRICTED_DIR fehlt — tests/CMakeLists.txt muss es setzen"
+#endif
+
+extern uft_disk_t  *uft_disk_open(const char *path, bool read_only);
+extern void         uft_disk_close(void *disk);
+extern uft_error_t  uft_register_all_formats(void);
+extern const uft_format_plugin_t uft_format_plugin_td0;
+
+/* Kein SKIP_RETURN_CODE: Gruppe 1 laeuft IMMER und leistet echte
+ * Arbeit. Ein Test, der sich als Ganzes ueberspringt, weil zwei von
+ * vier Gruppen ihre Datei nicht finden, verschweigt die Regression,
+ * die er bewacht. */
+#define OFFEN   UFT_CORPUS_DIR            "/libdsk_uftk_pc720.td0"
+#define GEPACKT UFT_CORPUS_RESTRICTED_DIR "/fluxfox_sector_test_360k.td0"
+#define SCHUTZ  UFT_CORPUS_RESTRICTED_DIR "/fluxfox_transylvania.td0"
+
+static int fehler = 0;
+#define PRUEFE(bed, text) do { \
+    if (!(bed)) { printf("    [ROT] %s (Zeile %d)\n", (text), __LINE__); fehler++; } \
+} while (0)
+
+/** Was eine TD0 ueber den Produktionspfad hergibt. */
+typedef struct {
+    int    offen;          /**< uft_disk_open lieferte einen Griff */
+    unsigned zylinder;
+    unsigned koepfe;
+    size_t sektoren;       /**< ueber alle Spuren aufsummiert */
+    size_t spuren_mit_sek; /**< Spuren, die ueberhaupt Sektoren lieferten */
+    int    nummern_1_bis_9;/**< jede Spur mit Sektoren traegt genau 1..9 */
+    uint8_t erste[3];      /**< Spur 0/0, Sektor 1, erste drei Byte */
+} befund_t;
+
+static befund_t lies(const char *pfad)
+{
+    befund_t b;
+    memset(&b, 0, sizeof(b));
+    b.nummern_1_bis_9 = 1;
+
+    uft_disk_t *d = uft_disk_open(pfad, true);
+    if (!d) return b;
+    b.offen = 1;
+    b.zylinder = (unsigned)d->geometry.cylinders;
+    b.koepfe   = (unsigned)d->geometry.heads;
+
+    for (unsigned c = 0; c < b.zylinder; c++) {
+        for (unsigned h = 0; h < b.koepfe; h++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_format_plugin_td0.read_track(d, (int)c, (int)h, &t) != UFT_OK)
+                continue;
+            if (t.sector_count > 0) b.spuren_mit_sek++;
+            b.sektoren += t.sector_count;
+
+            /* `uft_format_add_sector()` nimmt einen 0-basierten Index und
+             * addiert 1 — die TD0-Nummern 1..9 kommen also als 1..9
+             * zurueck, wenn die Spur vollstaendig ist. */
+            if (t.sector_count == 9) {
+                for (size_t s = 0; s < 9; s++)
+                    if (t.sectors[s].id.sector != (int)(s + 1))
+                        b.nummern_1_bis_9 = 0;
+            } else if (t.sector_count > 0) {
+                b.nummern_1_bis_9 = 0;
+            }
+
+            if (c == 0 && h == 0 && t.sector_count > 0
+                && t.sectors[0].data && t.sectors[0].data_len >= 3)
+                memcpy(b.erste, t.sectors[0].data, 3);
+
+            uft_track_cleanup(&t);
+        }
+    }
+    uft_disk_close(d);
+    return b;
+}
+
+static int vorhanden(const char *pfad)
+{
+    FILE *f = fopen(pfad, "rb");
+    if (!f) return 0;
+    fclose(f);
+    return 1;
+}
+
+/* ═══ 1. Die unkomprimierte Korpusdatei — Regressionsprobe ══════════
+ *
+ * Sie lief vor MF-1284 richtig und muss es danach tun. Ohne diese
+ * Gruppe waere der Umbau eine Wette: der Strompuffer ersetzt NEUN
+ * `fread`/`fseek`-Stellen auf einmal.                                 */
+static void gruppe_1_unkomprimiert(void)
+{
+    printf("  [1] unkomprimiert (Magie \"TD\"), Orakel hxcfe: 80 Spuren, 2 Seiten\n");
+    befund_t b = lies(OFFEN);
+    PRUEFE(b.offen, "uft_disk_open lieferte keinen Griff");
+    PRUEFE(b.zylinder == 80, "nicht 80 Zylinder");
+    PRUEFE(b.koepfe == 2, "nicht 2 Koepfe");
+    PRUEFE(b.sektoren == 1440, "nicht 1440 Sektoren");
+    PRUEFE(b.spuren_mit_sek == 160, "nicht 160 Spuren mit Sektoren");
+    PRUEFE(b.nummern_1_bis_9, "Sektornummern nicht durchgehend 1..9");
+    printf("      %u x %u, %zu Sektoren auf %zu Spuren\n",
+           b.zylinder, b.koepfe, b.sektoren, b.spuren_mit_sek);
+}
+
+/* ═══ 2. Gepackt, ohne Schutzspur ═══════════════════════════════════ */
+static void gruppe_2_gepackt(void)
+{
+    printf("  [2] gepackt (Magie \"td\"), Orakel hxcfe: 40 Spuren, 2 Seiten\n");
+    if (!vorhanden(GEPACKT)) { printf("      uebersprungen — Korpusdatei fehlt\n"); return; }
+    befund_t b = lies(GEPACKT);
+    PRUEFE(b.offen, "uft_disk_open lieferte keinen Griff");
+    PRUEFE(b.zylinder == 40, "nicht 40 Zylinder");
+    PRUEFE(b.koepfe == 2, "nicht 2 Koepfe");
+    PRUEFE(b.sektoren == 720, "nicht 720 Sektoren");
+    PRUEFE(b.spuren_mit_sek == 80, "nicht 80 Spuren mit Sektoren");
+    PRUEFE(b.nummern_1_bis_9, "Sektornummern nicht durchgehend 1..9");
+    printf("      %u x %u, %zu Sektoren auf %zu Spuren\n",
+           b.zylinder, b.koepfe, b.sektoren, b.spuren_mit_sek);
+}
+
+/* ═══ 3. Gepackt, MIT der 41. Spur ══════════════════════════════════
+ *
+ * Die Spur, die libdsk wegklemmt. Und eine Inhaltsprobe: der erste
+ * Sektor traegt `EB 34 90` — den Sprungbefehl eines PC-Bootsektors.
+ * Eine Zaehlung allein sagt nicht, ob die Bytes stimmen (MF-1026).    */
+static void gruppe_3_schutzspur(void)
+{
+    printf("  [3] gepackt mit 41. Spur, Orakel hxcfe: 41 Spuren, 2 Seiten\n");
+    if (!vorhanden(SCHUTZ)) { printf("      uebersprungen — Korpusdatei fehlt\n"); return; }
+    befund_t b = lies(SCHUTZ);
+    PRUEFE(b.offen, "uft_disk_open lieferte keinen Griff");
+    PRUEFE(b.zylinder == 41, "nicht 41 Zylinder — die Schutzspur fehlt");
+    PRUEFE(b.koepfe == 2, "nicht 2 Koepfe");
+    PRUEFE(b.sektoren == 738, "nicht 738 Sektoren");
+    PRUEFE(b.spuren_mit_sek == 82, "nicht 82 Spuren mit Sektoren");
+    PRUEFE(b.nummern_1_bis_9, "Sektornummern nicht durchgehend 1..9");
+    PRUEFE(b.erste[0] == 0xEB && b.erste[1] == 0x34 && b.erste[2] == 0x90,
+           "Spur 0/0 Sektor 1 beginnt nicht mit EB 34 90");
+    printf("      %u x %u, %zu Sektoren auf %zu Spuren, erste Byte %02X %02X %02X\n",
+           b.zylinder, b.koepfe, b.sektoren, b.spuren_mit_sek,
+           b.erste[0], b.erste[1], b.erste[2]);
+}
+
+/* P3-516: feste Namen im Bauverzeichnis plus `remove()` bedeuten, dass
+ * zwei `ctest`-Laeufe im selben Verzeichnis einander abraeumen —
+ * gemessen MF-1274 an `test_convert_leaves_no_ghost`. Die drei
+ * Pruefdateien hier tragen deshalb die Prozessnummer im Namen und
+ * liegen im Arbeitsverzeichnis, nicht im Korpus. */
+#ifdef _WIN32
+#  include <process.h>
+#  define UFT_PID() ((unsigned long)_getpid())
+#else
+#  include <unistd.h>
+#  define UFT_PID() ((unsigned long)getpid())
+#endif
+
+static void eigener_name(char *aus, size_t n, const char *stamm)
+{
+    snprintf(aus, n, "td0_%s_%lu.td0", stamm, UFT_PID());
+}
+
+/** Legt `ziel` als die ersten `n` Byte von `quelle` an. 0 = misslungen. */
+static int kuerze(const char *quelle, const char *ziel, size_t n)
+{
+    FILE *q = fopen(quelle, "rb");
+    if (!q) return 0;
+    uint8_t *puffer = (uint8_t *)malloc(n);
+    if (!puffer) { fclose(q); return 0; }
+    size_t gelesen = fread(puffer, 1, n, q);
+    fclose(q);
+    if (gelesen != n) { free(puffer); return 0; }
+
+    FILE *z = fopen(ziel, "wb");
+    if (!z) { free(puffer); return 0; }
+    size_t geschrieben = fwrite(puffer, 1, n, z);
+    fclose(z);
+    free(puffer);
+    return geschrieben == n;
+}
+
+/* ═══ 4. Anti-Tautologie: ein halber Strom darf nicht aufgehen ══════
+ *
+ * Die Gruppen 2 und 3 pruefen Zahlen. Eine Zusage, die nur Zahlen
+ * prueft, ist gruen, sobald irgendetwas die Zahlen liefert — deshalb
+ * hier die Gegenrichtung.
+ *
+ * ZWEI Faelle, und der zweite ist der wichtigere:
+ *
+ *   4a  gepackte Datei auf ein Drittel gekuerzt — darf NICHT dieselbe
+ *       Geometrie melden. Ueberspringt sich mit der Korpusdatei.
+ *   4b  UNKOMPRIMIERTE Korpusdatei auf 52 Byte gekuerzt. Ihr
+ *       Kommentarkopf sagt 56 Byte Text an, der Strom hat aber nur 40 —
+ *       `10 + 56 > 40`, und der Leser muss ABSAGEN statt auf gut Glueck
+ *       hinter dem Puffer weiterzulesen. Dieser Fall laeuft IMMER, denn
+ *       er braucht nur `corpus_free`. Ohne ihn waere die Schranke im
+ *       Kommentarblock toter Code — die Mutationsmatrix hat genau das
+ *       gezeigt (Mutation B rutschte durch), und eine Pruefung, die
+ *       nicht feuern kann, ist keine (MF-1000/Tor 64).                 */
+static void gruppe_4_gekuerzt(void)
+{
+    printf("  [4] Gegenprobe: gekuerzte Dateien duerfen nicht aufgehen\n");
+    char ziel[512];
+
+    /* 4a — gepackt, ein Drittel. */
+    if (vorhanden(SCHUTZ)) {
+        FILE *q = fopen(SCHUTZ, "rb");
+        long n = 0;
+        if (q) { fseek(q, 0, SEEK_END); n = ftell(q); fclose(q); }
+        eigener_name(ziel, sizeof(ziel), "gedrittelt");
+        if (n > 0 && kuerze(SCHUTZ, ziel, (size_t)(n / 3))) {
+            befund_t b = lies(ziel);
+            PRUEFE(!(b.zylinder == 41 && b.sektoren == 738),
+                   "eine gedrittelte Datei meldet dieselbe Geometrie — der Leser raet");
+            /* Die Zahl ist gemessen und festgenagelt, nicht nur „weniger":
+             * ohne die Datensatz-Schranke im Spurleser kommt GENAU EINER
+             * mehr heraus — der Sektor, dessen Datensatz hinter den Puffer
+             * reicht. 248 gegen 249 (Mutation E). */
+            PRUEFE(b.sektoren == 248,
+                   "gedrittelt nicht 248 Sektoren — ein Datensatz reicht hinter den Puffer");
+            printf("      4a gedrittelt: %u x %u, %zu Sektoren (erwartet 248)\n",
+                   b.zylinder, b.koepfe, b.sektoren);
+            remove(ziel);
+        } else {
+            PRUEFE(0, "gedrittelte Pruefdatei nicht anlegbar");
+        }
+    } else {
+        printf("      4a uebersprungen — Korpusdatei fehlt\n");
+    }
+
+    /* 4b — unkomprimiert, mitten im Kommentar abgeschnitten. Laeuft immer. */
+    eigener_name(ziel, sizeof(ziel), "kurzkommentar");
+    if (!kuerze(OFFEN, ziel, 52u)) {
+        PRUEFE(0, "gekuerzte Pruefdatei nicht anlegbar");
+        return;
+    }
+    befund_t b = lies(ziel);
+    PRUEFE(!b.offen,
+           "52 Byte mit angesagten 56 Byte Kommentar wurden GEOEFFNET — "
+           "der Leser laeuft hinter seinen Puffer");
+    PRUEFE(b.sektoren == 0, "aus 52 Byte kamen Sektoren");
+    printf("      4b 52 Byte, Kommentar sagt 56: %s\n",
+           b.offen ? "GEOEFFNET (falsch)" : "abgesagt");
+    remove(ziel);
+
+    /* 4c — unkomprimiert, MITTEN IN EINEM DATENSATZ abgeschnitten.
+     *
+     * Derselbe Zweck wie 4a, aber mit `corpus_free`, laeuft also IMMER.
+     * 20 000 Byte enden innerhalb eines Sektor-Datensatzes; die Schranke
+     * `pos + data_len > strom_len` muss dort abbrechen. Gemessen: 39
+     * Sektoren mit der Schranke, 40 ohne. Die Zahl ist absichtlich kein
+     * Vielfaches von 9 — eine angebrochene Spur ist genau der Fall. */
+    eigener_name(ziel, sizeof(ziel), "halberdatensatz");
+    if (!kuerze(OFFEN, ziel, 20000u)) {
+        PRUEFE(0, "gekuerzte Pruefdatei (20 000) nicht anlegbar");
+        return;
+    }
+    befund_t c = lies(ziel);
+    PRUEFE(c.offen, "20 000 Byte wurden gar nicht geoeffnet");
+    PRUEFE(c.zylinder == 3, "nicht 3 Zylinder");
+    PRUEFE(c.sektoren == 39,
+           "nicht 39 Sektoren — ein Datensatz reicht hinter den Puffer");
+    printf("      4c 20 000 Byte: %u x %u, %zu Sektoren (erwartet 39)\n",
+           c.zylinder, c.koepfe, c.sektoren);
+    remove(ziel);
+}
+
+int main(void)
+{
+    setvbuf(stdout, NULL, _IONBF, 0);
+    printf("=== TD0 Advanced Compression (MF-1284) ===\n");
+
+    if (uft_register_all_formats() != UFT_OK) {
+        printf("uft_register_all_formats scheiterte\n");
+        return 1;
+    }
+
+    gruppe_1_unkomprimiert();
+    gruppe_2_gepackt();
+    gruppe_3_schutzspur();
+    gruppe_4_gekuerzt();
+
+    if (fehler) { printf("\n%d Zusage(n) gefallen\n", fehler); return 1; }
+    printf("\nalle Zusagen gehalten\n");
+    return 0;
+}

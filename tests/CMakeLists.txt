@@ -579,7 +579,8 @@ foreach(test_source ${TEST_SOURCES})
         # kommt aus einem Format-Flag (sec_flags & 0x30) statt aus einem
         # kurzen fread, und der Dekodierpuffer ist calloc.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
     elseif(${test_name} STREQUAL "test_kurze_datei_erfindet_keine_sektoren")
         # MF-980: was nicht in der Datei stand, darf nicht als gelesener,
         # CRC-gueltiger Sektor durchgehen. Gefahren an TRD, weil trd_open()
@@ -1852,7 +1853,8 @@ foreach(test_source ${TEST_SOURCES})
         # Bit 7 von Byte 7 — vier Quellen sagen das Flag, darunter die
         # eigene T2-Referenz src/samdisk/td0.cpp.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
     elseif(${test_name} STREQUAL "test_otdr_kein_nullintervall")
         # MF-967: der SCP-Ueberlauf-Platzhalter (0) lief als echter
         # Uebergang in Histogramm und PLL. Zwei von drei Verbrauchern
@@ -2001,6 +2003,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/apridisk/uft_apridisk.c
             ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c
             ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
             # MF-1140: `dc42` holt die Apple-3,5"-Zonentafel und die
             # zonierte Versatzrechnung aus dem `2img`-Modul, wo sie seit
@@ -2974,6 +2977,55 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_td0_gepackt")
+        # MF-1284: das TD0-Plugin setzte `compressed` und las trotzdem mit
+        # blankem `fread`. Derselbe Unterbau wie test_convert_imd_img_belegt —
+        # der Test faehrt ueber `uft_disk_open()` und braucht die ganze
+        # Format-Schicht, weil `uft_register_all_formats()` sie registriert.
+        file(GLOB_RECURSE TD0GEP_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        target_sources(${test_name} PRIVATE ${TD0GEP_FORMAT_SOURCES}
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
+        # Zwei Korpusorte: corpus_free traegt die unkomprimierte Datei
+        # (Gruppe 1, laeuft immer), corpus/ die gepackten (Gruppen 2-4,
+        # ungetrackt, ueberspringen sich benannt — P3-520).
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_convert_file_detection")
         # MF-450: uft_convert_file() had no test at all. Needs the whole format
         # layer, same recipe as test_register_all_formats.
@@ -4264,6 +4316,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
             ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
@@ -4314,6 +4367,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
             ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c
             # img read_metadata pulls uft_meta_free (uft_metadata.c) via core stubs
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
@@ -4445,7 +4499,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/lisa/uft_lisa_twiggy.c)
     elseif(${test_name} STREQUAL "test_td0_error_marks")
         # TD0 per-sector CRC/deleted flags + open-scan off-by-one (Phase-4 WP5, MF-334)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+        ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
     elseif(${test_name} STREQUAL "test_stx_error_marks")
         # STX (Pasti) FDC-status disk-error marking + descriptor offset fix (Phase-4 WP5, MF-335)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c

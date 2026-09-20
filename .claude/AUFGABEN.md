@@ -4484,6 +4484,17 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Lizenzdatei, dazu lose Quell- und Dokumentdateien und die
     entpackten Verzeichnisse — jedes davon braucht ein Lesen, kein
     Listen mehr.
+- **Stand 2026-09-20, MF-1284 (Schritt 1a des TD0-Umbaus):** das
+  TD0-Plugin ist der eine richtige Leser geworden. Der Anlass war eine
+  Messung, die den Plan verändert hat: `uft_td0_read_mem()` sollte
+  gelöscht und die Wandler auf den Plugin-Leser gezeigt werden — gemessen
+  konnte der Plugin-Leser **gepackte TD0 gar nicht lesen** (`compressed`
+  gesetzt und nie benutzt; `Transylvania.td0` meldete 188 Zylinder und
+  null Sektoren mit `UFT_OK`), und der LZSS-Entpacker hatte **0 Aufrufer
+  ausserhalb `uft_td0_lzss.c`**, wäre mit `read_mem` also mitgestorben.
+  1a hängt ihn deshalb ins Plugin, bevor 1b löscht. Belegt gegen hxcfe:
+  80×2/1440, 40×2/720, 41×2/738. Mutationsmatrix 5 von 5.
+  **Offen bleibt 1b** — löschen und die beiden Wandler umhängen.
 - **Beleg:** —
 
 ---
@@ -4493,6 +4504,88 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
 *(aufgenommen, bewegt aber keine der vier Kennzahlen aus `CLAUDE.md`
 §„jeder Baustein benennt seine Kennzahl" — nach MF-640 ist das Fundus,
 nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
+
+### A-034 · `src/dtc_components/` — Einbaustand und Verbesserung
+- **Status:** **aufgenommen** · **Aufgenommen:** 2026-09-20
+- **Wortlaut:** „https://github.com/Axel051171/UnifiedFloppyTool/tree/main/src/dtc_components
+  in wie weit sind die teile schon in das tool implemtiert , gibt es was zu
+  verbessern"
+- **Bei der Aufnahme gemessen (2026-09-20), die Frage nach dem Einbaustand
+  ist damit beantwortet:** das Paket liegt versioniert im Baum (10 `.c`,
+  1 Header, 1 Testdatei, **13 928 Byte** Quelltext — eine Zeile je
+  Funktion, deshalb sind es nur 160 Zeilen). Der Header exportiert
+  **30 Funktionen**. Je Bezeichner über `git ls-files` gezählt, Kommentar-
+  gegen Aufrufzeilen getrennt:
+  · **0 Produktivaufrufer.** Kein einziger.
+  · **16 nur aus Tests** (`test_dtc_nenner.c`, `test_dtc_ungeprueft.c`,
+    `test_crc_gegen_norm.c`, `test_zellregel.c`).
+  · **14 ohne jeden Aufrufer** (`dtc_fm_decode`, `dtc_mfm_decode`,
+    `dtc_gcr_decode`, `dtc_flux_to_bits`, `dtc_scan_amiga_sync`,
+    `dtc_ctraw_read`, `dtc_format_name`, …).
+  **Eine eigene Fehlmessung dabei berichtigt:** `dtc_find_run_violation`
+  sah zunächst wie der eine Produktivaufrufer aus, weil `grep` es in
+  `src/core/uft_zellregel.c:10` und `include/uft/core/uft_zellregel.h:59,94`
+  findet. Alle drei Fundstellen sind **Kommentarzeilen**; die einzigen
+  echten Aufrufe stehen in `tests/test_zellregel.c:306,308` als
+  Differenzlauf. Das ist wörtlich die Klasse
+  [[aufrufer-gegen-kommentar]] — ein Bezeichner im Kommentar ist kein
+  Aufruf.
+  **Im Bau ist es ausdrücklich OPT-IN** (`UnifiedFloppyTool.pro:485-517`,
+  `CONFIG+=uft_dtc_components`, MF-1100); voreingestellt wird nichts davon
+  übersetzt. Die Abnahme liegt auf der CMake-Seite
+  (`tests/CMakeLists.txt:4878 ff.`).
+  **Damit ist der Stand: Bestand, nicht Fähigkeit** — dieselbe Lage wie
+  beim Kopierschutz-Katalog (P0-2), den DeepRead-Modulen (MF-627/MF-767)
+  und der Merkmalstafel (MF-1176).
+- **Kennzahl:** **keine der vier** — deshalb steht der Posten hier und
+  nicht in der Warteschlange. P3-377 sagt denselben Satz mit derselben
+  Begründung: „Vier neue Messungen, kein Format gehoben, keine Fähigkeit
+  dazu (MF-1077)."
+- **Kanal:** das Paket selbst ist **MIT** (© 2026 EMUUAC) und nach eigener
+  Aussage ein unabhängiger Nachbau aus beobachtetem ARM64-Verhalten, kein
+  DTC-Quelltext (`README.md`, `SOURCE_MAP.md`, `RECONSTRUCTION_STATUS.md`).
+  Für UFT gilt heute: **Oracle/Vergleich** — ausgeführt, nichts
+  übernommen; `tests/CMakeLists.txt` sagt wörtlich, die Dateien werden
+  nicht angefasst, „wer sie ändert, macht aus einem Beleg eine Ableitung".
+- **Einfrier-Regel:** **ja** — jede der drei Verbesserungs-Routen berührt
+  den Format-/Decoder-Layer. Rotbeweis zuerst, benannte Referenz im
+  Header.
+- **OPEN_ITEMS:** **`P3-377`** (der Befund steht dort, nicht hier) ·
+  fachlich berührt `P3-356`, `P3-374`.
+- **Fertig heißt:** der Eigentümer hat zwischen den drei in `P3-377`
+  bezifferten Wegen entschieden — **(a)** die vier ungeprüften Module
+  reparieren (verboten ohne seine Entscheidung, weil es den Beleg in eine
+  Ableitung verwandelt), **(b)** die Fähigkeiten in UFTs **eigenem** Code
+  bauen und dort den GUI-Schalter setzen, **(c)** lassen und den Bestand
+  als Beleg führen — und der gewählte Weg ist mit Commit belegt
+  abgetragen.
+- **Aufwand:** **nicht schätzbar**, weil er ganz an der Wegwahl hängt.
+  Gemessen ist bisher nur eine Zahl: die `track.c`-Korrektur unter Weg (a)
+  wäre ein **Einzeiler** (`b+i+3,7` → `b+i,10`, P3-377).
+- **Nachtrag 2026-09-20, Eigentümer, wörtlich:** „bei gelegenheit A-034
+  weiterverfolgen bis fertig und vertratet und im tool nutzbar und
+  verbessert ist !!"
+  **Das ist die Entscheidung, auf die „Fertig heißt" gewartet hat** — und
+  sie schließt Weg (c) aus: der Bestand soll nicht Bestand bleiben.
+  **Zwei Dinge sind damit aber NICHT entschieden, und sie müssen es vor
+  der ersten Zeile sein:**
+  · **(a) gegen (b).** „Verbessert" kann heißen, die vier ungeprüften
+    Module zu reparieren — das ist Weg (a), und er ist nach der eigenen
+    Kanal-Zeile oben **gesperrt**: die Dateien sind heute ein *Beleg*
+    (Oracle/Vergleich, ausgeführt, nichts übernommen); wer sie ändert,
+    macht daraus eine **Ableitung**, und der Satz steht wörtlich in
+    `tests/CMakeLists.txt`. Weg (b) — die Fähigkeiten in UFTs eigenem
+    Code bauen und dort verdrahten — hat diese Folge nicht.
+  · **„im Tool nutzbar"** heißt Produktivpfad plus Bedienelement; heute
+    sind es 0 Produktivaufrufer und ein Opt-in-Bauschalter
+    (`CONFIG+=uft_dtc_components`). Der Schalter allein macht nichts
+    nutzbar (Klasse MF-635: eine Fähigkeit ohne Tür).
+  Beim Aufgreifen wird zuerst die (a)/(b)-Frage vorgelegt, nicht
+  entschieden.
+- **Stand:** aufgenommen, nicht begonnen — „bei Gelegenheit", also nach
+  dem laufenden Posten. Laufender Posten bleibt `A-032` (dort MF-1284,
+  TD0: Schritt 1a, das Plugin wird der eine richtige TD0-Leser).
+- **Beleg:** —
 
 ---
 
