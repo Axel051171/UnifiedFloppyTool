@@ -43,7 +43,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_d64_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d71_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d81_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
-| `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
+| `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fat_kette_robust`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
 | `uft_fat32_mbr` | **FS-T1** | `test_fat_extensions`, `test_mega65_fat32` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_fdi` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_file_ops_extended` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |

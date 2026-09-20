@@ -389,6 +389,22 @@ typedef struct {
 /**
  * @brief Cluster chain
  */
+/**
+ * @brief Wie verlaesslich die gesammelten Cluster sind (MF-1276).
+ *
+ * Eine Kette, die abreisst, und eine, die durchlaeuft, sind zwei
+ * verschiedene Aussagen — und die zweite darf nicht wie die erste
+ * aussehen. Quelle: `UFT-NN_FAT12_Robustheit.md` §4, Verfahren aus
+ * disk-peek (MIT, Joost Yervante Damad), Code neu geschrieben.
+ */
+typedef enum {
+    UFT_FAT_CHAIN_OK = 0,   /**< Die Kette traegt bis zum Dateiende       */
+    UFT_FAT_CHAIN_CONTIG,   /**< Sie riss ab; fortlaufend weitergelesen —
+                                 ein VERSUCH, kein Befund                 */
+    UFT_FAT_CHAIN_SHORT,    /**< Sie riss ab, und es gab keinen Rueckfall */
+    UFT_FAT_CHAIN_EMPTY     /**< Der Startcluster liegt ausserhalb        */
+} uft_fat_chain_status_t;
+
 typedef struct {
     uint32_t *clusters;             /**< Array of cluster numbers */
     size_t    count;                /**< Number of clusters */
@@ -396,6 +412,22 @@ typedef struct {
     bool      complete;             /**< Chain ends with EOF */
     bool      has_bad;              /**< Chain contains bad clusters */
     bool      has_loops;            /**< Chain contains loops */
+
+    /* ── MF-1276, ANGEHAENGT (nie dazwischen — ABI) ──────────────────────
+     *
+     * Ohne diese vier Felder kann ein Aufrufer nicht unterscheiden, ob er
+     * eine vollstaendige Kette hat oder die Haelfte einer. `count` allein
+     * sagt es nicht: eine Datei ueber drei Cluster, deren Kette nach
+     * zweien abreisst, liefert `count == 2` und sieht aus wie eine Datei
+     * ueber zwei Cluster. */
+    uft_fat_chain_status_t status;  /**< OK / CONTIG / SHORT / EMPTY      */
+    size_t   needed;                /**< wie viele Cluster die GROESSE
+                                         verlangt; 0 = nicht gefragt      */
+    size_t   from_chain;            /**< wie weit die Kette SELBST trug.
+                                         `from_chain < count` heisst: der
+                                         Rest ist fortlaufend geraten     */
+    uint32_t loop_at;               /**< Cluster, an dem sich die Schleife
+                                         schloss; 0 = keine               */
 } uft_fat_chain_t;
 
 /*===========================================================================
@@ -683,6 +715,36 @@ int uft_fat_free_chain(uft_fat_ctx_t *ctx, uint32_t start);
  * @return 0 on success
  */
 int uft_fat_get_chain(const uft_fat_ctx_t *ctx, uint32_t start, uft_fat_chain_t *chain);
+
+/**
+ * @brief Die Kette einer Datei BEKANNTER Groesse sammeln (MF-1276).
+ *
+ * Der Unterschied zu `uft_fat_get_chain()` ist die Groesse — und mit ihr
+ * die Frage, die ohne sie niemand stellen kann: reicht die Kette
+ * ueberhaupt bis zum Dateiende?
+ *
+ *   - `needed` wird aus @p size_bytes gerechnet und festgehalten.
+ *   - Reicht die Kette nicht, wird ab dem letzten erreichten Cluster
+ *     FORTLAUFEND weitergezaehlt, bis `needed` voll ist oder die
+ *     Diskette endet; der Zustand wird `UFT_FAT_CHAIN_CONTIG`.
+ *     **Das ist ein Versuch, kein Befund**, und `from_chain` sagt, ab
+ *     wo geraten wurde.
+ *   - Gibt es keinen fortlaufenden Platz mehr, bleibt es bei
+ *     `UFT_FAT_CHAIN_SHORT` — gekuerzt, aber gesagt.
+ *
+ * Nie werden mehr Cluster geliefert, als die Groesse verlangt, auch wenn
+ * die Kette weiterlaeuft: eine Groessenangabe von 0xFFFFFFFF in einem
+ * ueberschriebenen Verzeichniseintrag ist kein Sonderfall.
+ *
+ * @param size_bytes Dateigroesse aus dem Verzeichniseintrag. 0 verhaelt
+ *                   sich wie `uft_fat_get_chain()`.
+ * @return 0 on success
+ */
+int uft_fat_get_chain_sized(const uft_fat_ctx_t *ctx, uint32_t start,
+                            uint32_t size_bytes, uft_fat_chain_t *chain);
+
+/** @brief Klartext fuer den Kettenzustand. Nie NULL. */
+const char *uft_fat_chain_status_name(uft_fat_chain_status_t s);
 
 /**
  * @brief Initialize chain structure

@@ -4295,6 +4295,59 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
     Umdrehungen über 160 Spuren verhält, ist **nicht gemessen** — der
     Entwurf nennt „mehrere Megabyte", und der Aufbau ohne Streaming
     hält alles im Speicher.
+- **Stand 2026-09-20, zehnter Durchgang — `uft_fat_robust` eingebaut
+  (MF-1276), und zwar IN den vorhandenen Leser statt daneben:**
+  · **Die Entscheidung aus §10.1 der Ausarbeitung ist gefallen, und sie
+    ist gemessen begründet.** Das eingereichte Modul deklariert drei
+    Namen, die es hier schon gibt — `uft_fat_geometry_t`,
+    `uft_fat_chain_t` und `uft_fat_chain_free`, alle drei **dieselben
+    Begriffe mit anderen Feldern**. Ein zweites Modul daneben wäre der
+    dritte FAT12-Kettenläufer im Baum gewesen (der zweite steht in
+    `src/formats/msx/uft_msx.c:463-491`) — genau die Krankheit, die der
+    Zentrum-Entwurf als „FAT-Kettenläufer x2" benennt. Also integriert.
+  · **Der Defekt, den die Messung gefunden hat, stand schon da:**
+    `uft_fat_get_chain()` hielt den nächsten Cluster nur gegen die
+    **ersten sechzehn** Glieder (`for (i = 0; i < count && i < 16; i++)`).
+    Eine Schleife, die sich später schließt — 2..40, dann 40 → 20 —
+    war unsichtbar: `has_loops` blieb **false**, die Kette lief bis zur
+    65536er-Bremse, und der Aufrufer bekam zehntausende Cluster ohne
+    jede Warnung. Seit MF-1276 eine volle Bitmenge (360 Byte bei 1,44
+    MB), und `loop_at` sagt, **wo** sie sich schließt.
+  · **Und der Kettenläufer hatte NULL Tests** — gemessen
+    `git grep -l uft_fat_get_chain -- tests/`: kein Treffer. Die
+    Funktion, an der jede FAT12-Extraktion hängt, war unbewacht.
+  · **Neu:** `uft_fat_get_chain_sized()` fragt MIT der Dateigröße und
+    kann deshalb sagen, ob die Kette reicht: `needed`, `from_chain`,
+    `status`. Reißt sie ab, wird fortlaufend weitergelesen — und der
+    Zustand heißt `CONTIG`, „fortlaufend geraten (Versuch)", nicht
+    „ok". Produktivaufrufer ist `uft_fat_extract()`, das die Größe
+    bisher nur zum Abschneiden benutzte statt zum Fragen.
+  · **Vier Aussagen der Ausarbeitung über UNSEREN Baum nachgemessen:**
+    drei treffen zu (null Treffer für contig/cross/fallback, der zweite
+    Kettenläufer in `uft_msx.c`, keine Querverweiserkennung), eine ist
+    gedriftet — sie sagt 854 Zeilen, gemessen sind es **884**.
+  · **Rotbeweis: vier Mutationen, vier gefallen** — alte 16er-Bremse
+    (4 Zusagen), kein Rückfall (5), keine Deckelung auf den Bedarf (2),
+    `uft_fat_extract` fragt wieder ohne Größe (2). **Mutation C fiel
+    beim ERSTEN Lauf nicht**: meine Gruppe 4 deckte sie nicht ab, weil
+    dort die Diskette bremst und nicht der Bedarf. Gruppe 5
+    nachgetragen (Kette 10 Glieder, Datei 2 Cluster), dann fällt sie.
+    Dieselbe Klasse wie MF-1014 und MF-1274-D: ein grüner Test, der aus
+    dem falschen Grund grün war.
+  · **Herkunft:** disk-peek (Joost Yervante Damad, MIT,
+    `js/fat12.js:137-159`), Verfahren übernommen, Code neu geschrieben
+    — Kanal *Nachbau* nach MF-695. Die Vermerke stehen in allen drei
+    berührten Dateien; `audit_attribution_licence.py` meldet Rückstand
+    **29** gegen Grundlinie 31. **Ein NOTICE gibt es in diesem Baum
+    nicht** — die Ausarbeitung verlangt einen Eintrag dort, der
+    Mechanismus hier ist die Attribution im Dateikopf (MF-636).
+  · **GESTOPPT, mit Grund:** die **Querverweiserkennung** (zwei Dateien
+    auf demselben Cluster) und die **Geometrie ohne BPB** sind nicht
+    gebaut. Beide brauchen eine eigene Datenstruktur und einen eigenen
+    Produktivaufrufer; drei halbe Stücke sind schlechter als eines,
+    das trägt (Scope-Regel). Die Ausarbeitung nennt Querverweise
+    ausdrücklich als das, was in **jedem** Dateisystem des Baums fehlt
+    — das wäre ein Modul über allen, nicht eines in FAT12.
 - **Warteschlange „einbauen", aus dem Register abgeleitet** (die
   eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
   `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,

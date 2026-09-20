@@ -678,6 +678,21 @@ int uft_fat_get_chain(const uft_fat_ctx_t *ctx, uint32_t start,
     if (!chain->clusters) return UFT_FAT_ERR_NOMEM;
     chain->capacity = cap;
 
+    /* MF-1276: eine Menge ALLER besuchten Cluster statt eines Fensters.
+     *
+     * Hier stand `for (i = 0; i < chain->count && i < 16; i++)` — der
+     * naechste Cluster wurde nur gegen die ERSTEN SECHZEHN Eintraege
+     * gehalten. Eine Schleife, die sich spaeter schliesst (2..40, dann
+     * 40 -> 20 -> 40), war damit unsichtbar: `has_loops` blieb FALSE, die
+     * Kette lief bis zur 65536er-Bremse, und der Aufrufer bekam
+     * zehntausende Cluster und keine Warnung. Genau die Gestalt, die
+     * dieser Baum „still" nennt.
+     *
+     * Ein Bit je Cluster kostet bei einer 1,44-MB-Diskette 360 Byte. */
+    const size_t nbits = (size_t)ctx->vol.last_cluster + 1u;
+    uint8_t *seen = (uint8_t *)calloc((nbits + 7u) / 8u, 1u);
+    if (!seen) { uft_fat_chain_free(chain); return UFT_FAT_ERR_NOMEM; }
+
     uint32_t c = start;
     int guard = 65536;
     while (guard-- > 0) {
@@ -686,20 +701,79 @@ int uft_fat_get_chain(const uft_fat_ctx_t *ctx, uint32_t start,
             size_t n = chain->capacity * 2;
             uint32_t *tmp = (uint32_t *)realloc(chain->clusters,
                                                  n * sizeof(uint32_t));
-            if (!tmp) { uft_fat_chain_free(chain); return UFT_FAT_ERR_NOMEM; }
+            if (!tmp) { free(seen); uft_fat_chain_free(chain); return UFT_FAT_ERR_NOMEM; }
             chain->clusters = tmp; chain->capacity = n;
         }
         chain->clusters[chain->count++] = c;
+        seen[c >> 3] = (uint8_t)(seen[c >> 3] | (1u << (c & 7u)));
         if (uft_fat_cluster_is_eof(ctx, c)) { chain->complete = true; break; }
         int32_t n = uft_fat_get_entry(ctx, c);
         if (n < 0) break;
         if ((uint32_t)n < UFT_FAT_FIRST_CLUSTER || (uint32_t)n > ctx->vol.last_cluster)
             break;
-        /* detect simple loops: cluster reused within first few entries */
-        for (size_t i = 0; i < chain->count && i < 16; i++) {
-            if (chain->clusters[i] == (uint32_t)n) { chain->has_loops = true; guard = 0; break; }
+        if (seen[(uint32_t)n >> 3] & (1u << ((uint32_t)n & 7u))) {
+            chain->has_loops = true;
+            chain->loop_at   = (uint32_t)n;   /* WO sie sich schliesst */
+            break;
         }
         c = (uint32_t)n;
+    }
+    free(seen);
+    chain->from_chain = chain->count;
+    chain->status = chain->count ? UFT_FAT_CHAIN_OK : UFT_FAT_CHAIN_EMPTY;
+    return UFT_FAT_OK;
+}
+
+const char *uft_fat_chain_status_name(uft_fat_chain_status_t s) {
+    switch (s) {
+    case UFT_FAT_CHAIN_OK:     return "Kette vollstaendig";
+    case UFT_FAT_CHAIN_CONTIG: return "fortlaufend geraten (Versuch)";
+    case UFT_FAT_CHAIN_SHORT:  return "gekuerzt";
+    case UFT_FAT_CHAIN_EMPTY:  return "leer";
+    default:                   return "unbekannt";
+    }
+}
+
+int uft_fat_get_chain_sized(const uft_fat_ctx_t *ctx, uint32_t start,
+                            uint32_t size_bytes, uft_fat_chain_t *chain) {
+    int rc = uft_fat_get_chain(ctx, start, chain);
+    if (rc != UFT_FAT_OK) return rc;
+    if (!size_bytes) return UFT_FAT_OK;      /* keine Groesse, keine Frage */
+
+    const size_t csize = uft_fat_cluster_size(ctx);
+    if (!csize) return UFT_FAT_OK;
+    chain->needed = ((size_t)size_bytes + csize - 1u) / csize;
+
+    /* Nie mehr liefern, als die Groesse verlangt — auch wenn die Kette
+     * weiterlaeuft. Eine Groesse von 0xFFFFFFFF in einem ueberschriebenen
+     * Eintrag ist kein Sonderfall, sondern das, was ein gekipptes Byte
+     * hinterlaesst. */
+    if (chain->count > chain->needed) {
+        chain->count      = chain->needed;
+        chain->from_chain = chain->needed;
+        return UFT_FAT_OK;
+    }
+    if (chain->count >= chain->needed) return UFT_FAT_OK;
+
+    /* Die Kette traegt nicht bis zum Dateiende. Ab dem letzten erreichten
+     * Cluster fortlaufend weiterzaehlen — das ist der Rueckfall aus
+     * disk-peek (Joost Yervante Damad, MIT, js/fat12.js:155-158) —
+     * Verfahren uebernommen, Code neu geschrieben. Er ist ein VERSUCH: auf einer
+     * fragmentierten Diskette liegen dort fremde Daten. Deshalb steht er
+     * im Zustand und nicht nur im Protokoll. */
+    chain->status = UFT_FAT_CHAIN_SHORT;
+    uint32_t next = chain->count ? chain->clusters[chain->count - 1u] + 1u
+                                 : start;
+    while (chain->count < chain->needed && next <= ctx->vol.last_cluster) {
+        if (chain->count >= chain->capacity) {
+            size_t n = chain->capacity ? chain->capacity * 2 : 64;
+            uint32_t *tmp = (uint32_t *)realloc(chain->clusters,
+                                                 n * sizeof(uint32_t));
+            if (!tmp) { uft_fat_chain_free(chain); return UFT_FAT_ERR_NOMEM; }
+            chain->clusters = tmp; chain->capacity = n;
+        }
+        chain->clusters[chain->count++] = next++;
+        chain->status = UFT_FAT_CHAIN_CONTIG;
     }
     return UFT_FAT_OK;
 }
@@ -712,8 +786,15 @@ uint8_t *uft_fat_extract(const uft_fat_ctx_t *ctx, const uft_fat_entry_t *e,
                           uint8_t *buffer, size_t *size) {
     if (!ctx || !e || !size) return NULL;
 
+    /* MF-1276: mit der GROESSE fragen, nicht ohne.
+     *
+     * `uft_fat_get_chain()` weiss nicht, wie lang die Datei sein soll, und
+     * kann deshalb nicht sagen, ob die Kette reicht. Die Groesse steht im
+     * Verzeichniseintrag und war hier die ganze Zeit zur Hand — sie wurde
+     * nur zwei Zeilen spaeter zum Abschneiden benutzt statt zum Fragen. */
     uft_fat_chain_t chain;
-    if (uft_fat_get_chain(ctx, e->cluster, &chain) != UFT_FAT_OK) return NULL;
+    if (uft_fat_get_chain_sized(ctx, e->cluster, e->size, &chain) != UFT_FAT_OK)
+        return NULL;
 
     size_t need = e->size;
     uint8_t *out = buffer;

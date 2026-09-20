@@ -2386,6 +2386,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/uft_d64_fehlerbytes.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_schutzbefund.c)
+    elseif(${test_name} STREQUAL "test_fat_kette_robust")
+        # MF-1276: der Kettenlaeufer `uft_fat_get_chain()` hatte VOR diesem
+        # Test null Aufrufer in tests/ — gemessen mit
+        # `git grep -l uft_fat_get_chain -- tests/`. Seine Schleifenbremse
+        # verglich nur gegen die ersten 16 Glieder.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_fat12.c)
     elseif(${test_name} STREQUAL "test_fat_kopien_kette")
         # MF-874: der einzige FAT-Leser, der die Kopien vergleicht
         # (src/fs/uft_fat12.c, MF-829), hat keinen Produktionsaufrufer.
