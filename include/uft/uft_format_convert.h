@@ -83,11 +83,24 @@ typedef enum uft_format_class {
 // Conversion Quality
 // ============================================================================
 
+/* MF-1288: die Werte tragen jetzt ausdrueckliche Zahlen, und ein
+ * fuenfter ist ANGEHAENGT.
+ *
+ * Die Zahlen, weil eine Aufzaehlung ohne sie eine ABI-Bombe ist: wer
+ * einen Wert in die Mitte einfuegt, verschiebt alle folgenden, und kein
+ * Uebersetzer warnt. Angehaengt wird deshalb, nicht eingefuegt — dieselbe
+ * Regel wie bei `UFT_RT_NO_ROUNDTRIP` (MF-1283).
+ *
+ * `UNVERIFIED` fuellt eine Luecke, die der Tafel wehgetan hat: bisher
+ * MUSSTE jeder Pfad eine Behauptung aufstellen. „Nicht gemessen" war
+ * nicht sagbar, also stand dort im Zweifel LOSSLESS — gemessen bei
+ * ACHT von dreizehn LOSSLESS-Pfaden ohne jeden Matrixeintrag. */
 typedef enum uft_conv_quality {
-    UFT_CONV_LOSSLESS,      // No data loss
-    UFT_CONV_LOSSY,         // Some data/timing lost
-    UFT_CONV_SYNTHETIC,     // Data synthesized/estimated
-    UFT_CONV_IMPOSSIBLE,    // Cannot convert
+    UFT_CONV_LOSSLESS   = 0,  // No data loss — braucht einen Matrixeintrag
+    UFT_CONV_LOSSY      = 1,  // Some data/timing lost
+    UFT_CONV_SYNTHETIC  = 2,  // Data synthesized/estimated
+    UFT_CONV_IMPOSSIBLE = 3,  // Cannot convert
+    UFT_CONV_UNVERIFIED = 4,  // Nicht gemessen — KEINE Aussage ueber Verlust
 } uft_conv_quality_t;
 
 // ============================================================================

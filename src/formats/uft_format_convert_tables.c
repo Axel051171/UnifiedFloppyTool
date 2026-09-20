@@ -376,10 +376,20 @@ const uft_conversion_path_t g_conversion_paths[] = {
         .description = "Decompress TD0 to IMG"
     },
     {
+        /* MF-1288: hier stand `UFT_CONV_LOSSLESS` — „No data loss" —, und
+         * dafuer gab es keine Messung. Inzwischen gibt es eine GEGEN die
+         * Behauptung: `uft_td0_to_imd()` ebnet die Sektorgroessen einer
+         * Spur auf die des ersten (P3-524, gemessen MF-1287).
+         *
+         * UNVERIFIED und nicht LOSSY, weil genau EIN Verlust gemessen ist
+         * und nicht die Bilanz. Die Bilanz kommt aus Schritt 4 des
+         * Umbauplans: Vorwaertspruefung gegen hxcfe, Korpus >= 3. */
         .source = UFT_FORMAT_TD0, .target = UFT_FORMAT_IMD,
-        .quality = UFT_CONV_LOSSLESS,
+        .quality = UFT_CONV_UNVERIFIED,
         .requires_decode = true,
-        .description = "TD0 to IMD (preserves metadata)"
+        .warning = "TD0 -> IMD ist nicht gemessen; Sektorgroessen je Spur "
+                   "werden auf die des ersten Sektors geebnet (P3-524)",
+        .description = "TD0 to IMD (metadata preserved; loss not measured)"
     },
     {
         .source = UFT_FORMAT_NBZ, .target = UFT_FORMAT_D64,

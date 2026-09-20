@@ -4565,6 +4565,26 @@ Nächstes **`A-018`** hoch (Apple DOS 3.3).
   **Als Nächstes aus dem Umbauplan:** Schritt 3 (`UFT_CONV_LOSSLESS` für
   TD0→IMD auf UNVERIFIED) und Schritt 4 (Vorwärtsprüfung gegen hxcfe,
   Korpus ≥ 3).
+- **Stand 2026-09-20, MF-1288 — Schritt 3 ist abgetragen, und er war
+  größer als eine Zeile:** `TD0→IMD` steht auf `UFT_CONV_UNVERIFIED`.
+  Den Wert gab es vorher nicht — die Aufzählung kannte nur LOSSLESS,
+  LOSSY, SYNTHETIC, IMPOSSIBLE, **„nicht gemessen" war also gar nicht
+  sagbar**, und im Zweifel stand dort die freundlichste Behauptung.
+  · **Es war ein Fall von acht.** Gemessen zur Laufzeit: 13 Pfade
+    behaupteten LOSSLESS, **acht ohne jeden Matrixeintrag** — darunter
+    `SCP→G64`, Fluss nach Bitstrom, wo `CLAUDE.md` selbst sagt
+    „Flux→Sektor verliert Timing+WeakBits".
+  · **Die Güte-Spalte hatte keinen Leser.** `uft_convert_can()` null
+    Aufrufer, `uft_convert_print_matrix()` null Aufrufer und nicht
+    einmal eine Header-Deklaration. Deshalb konnte die falsche Zeile
+    stehen bleiben; der neue Test ist ihr erster Leser (`P3-525`).
+  · **Ratsche statt Einzelkorrektur:** `test_wandlungstafel_luegt_nicht.c`
+    hält seit MF-1288 die Regel „kein LOSSLESS ohne Matrixeintrag",
+    Grundlinie **7**, sie darf nur fallen (`P3-526` führt die sieben
+    namentlich).
+  **Offen bleibt Schritt 4** — Vorwärtsprüfung gegen hxcfe, Korpus ≥ 3,
+  danach der Matrixeintrag. Erst er entscheidet, ob aus UNVERIFIED
+  „identisch" oder „projiziert identisch" wird (`P3-524`).
 - **Beleg:** —
 
 ---

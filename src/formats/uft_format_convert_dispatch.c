@@ -1143,10 +1143,14 @@ void uft_convert_print_matrix(void) {
 
         const char* quality_str;
         switch (p->quality) {
-            case UFT_CONV_LOSSLESS:  quality_str = "LOSSLESS"; break;
-            case UFT_CONV_LOSSY:     quality_str = "LOSSY"; break;
-            case UFT_CONV_SYNTHETIC: quality_str = "SYNTHETIC"; break;
-            default:                 quality_str = "???"; break;
+            case UFT_CONV_LOSSLESS:   quality_str = "LOSSLESS"; break;
+            case UFT_CONV_LOSSY:      quality_str = "LOSSY"; break;
+            case UFT_CONV_SYNTHETIC:  quality_str = "SYNTHETIC"; break;
+            /* MF-1288: „nicht gemessen" ist eine eigene Aussage und darf
+             * nicht als `???` neben einem Programmierfehler landen. */
+            case UFT_CONV_UNVERIFIED: quality_str = "UNVERIFIED"; break;
+            case UFT_CONV_IMPOSSIBLE: quality_str = "IMPOSSIBLE"; break;
+            default:                  quality_str = "???"; break;
         }
 
         printf("%-10s %-10s %-12s %s\n",

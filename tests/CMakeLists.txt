@@ -2977,6 +2977,16 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_wandlungstafel_luegt_nicht")
+        # MF-1288: haelt die Wandlungstafel gegen die Rundlauf-Matrix —
+        # kein Pfad darf LOSSLESS behaupten, ohne dass die Matrix etwas
+        # ueber ihn sagt. Bewusst KLEIN gebunden: nur die beiden Tafeln,
+        # kein Verteiler und keine Formatschicht. Der Test sucht seine
+        # Pfade selbst, statt `uft_convert_get_path()` zu rufen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_format_convert_tables.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
     elseif(${test_name} STREQUAL "test_td0_gepackt")
         # MF-1284: das TD0-Plugin setzte `compressed` und las trotzdem mit
         # blankem `fread`. Derselbe Unterbau wie test_convert_imd_img_belegt —
