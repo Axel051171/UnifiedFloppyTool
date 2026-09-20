@@ -279,8 +279,66 @@ Zeile Code entsteht.**
 | `exsource/*.zip` (24 Stück) | diverse | offen, Lizenzen je Paket messen |
 | `uft_revolution`, `uft_protection_scan`, `uft_splice` | — | **Paket nicht gefunden**, beim Eigentümer nachfragen |
 
-> Der vollständige Inventarbericht (2408 Dateien nach Art, Lizenz und
-> Kennzahl) wird nachgetragen, sobald der Aufklärungslauf berichtet.
+### Der Zensus, gemessen (2026-09-20)
+
+Volldokument:
+`tools/uft-innendienst/out/inventar_neue-ideen_2026-09-20.md`.
+
+**Bestand: 2409 Dateien** (`find neue-ideen -type f | wc -l`) — das
+Register nennt 2408, die Abweichung von 1 ist ungeklärt und steht so da.
+Davon: 70 eigene `UFT*`-Ausarbeitungen oberster Ebene, 10 eigene
+Code-Zips, 19 Fremdklone oberster Ebene + 112 in Sammelordnern, 10
+`.tar.gz`, 7 `.lha`, 33 Binärabbilder. Die fünf Sammelordner tragen
+**exakt 1789** Dateien (143 + 176 + 92 + 1354 + 24) — deckungsgleich mit
+dem Register; die 1002 HTML liegen **alle** in `fertige/`.
+
+**Schon im Baum** (je Symbol mit `git grep -l … | wc -l`): `uft_scp_integrity`
+(6 Dateien), `uft_sector_order` (6), `uft_track_layout` (5),
+`uft_disk_compare` (6), `uft_floppy_reference` (7). **Damit ist
+`P3-422`/MF-1173 beantwortet: 2 von 3 Layout-Modulen sind drin**, es
+fehlt `uft_gap_drive`.
+
+**Fehlt (0 Treffer):** `uft_gap_drive`, `uft_media_analysis`,
+`uft_aard_artifact`, `uft_c64pp_catalog`, `uft_roland_s`, `uft_jv13`,
+`uft_image_meta`, `disk_algorithms`, die `csrc`-Bezeichner. **Zwei
+Nullen heißen dabei NICHT „fehlt":** TRS-80 ist über `jv3_jvc.h`
+eingelöst (MF-1017), Roland über `uft_roland_ident.h` (MF-1176). Und ein
+Treffer war ein Fehltreffer: `uft_vsn` traf das Makro `uft_vsnprintf`.
+
+**Rangliste der nächsten Griffe** (Lizenz klar, Kennzahl benannt, kein
+neues Format-Plugin; Aufwand in MF-Zyklen als Spanne):
+
+| # | Paket | Lizenz | Kanal | Kennzahl | Aufwand |
+|---|---|---|---|---|---|
+| 1 | `akaiutil-4.6.8` | GPL-2 | Oracle | **T3 runter** (`akai_s900`, P3-403) | 0,5–1,5 |
+| 2 | `uft_gap_drive`-Rest | eigen | Port | Wandlungspfade rauf | 1–2 |
+| 3 | `AmigaDiskKit` | MIT | Daten/Fixture | Korpus | 0,5–1 |
+| 4 | `KCemu` | GPL-2 | Oracle `td0` | T3 runter | 0,5–1,5 |
+| 5 | `dmklib` | GPL-2 | Oracle `dmk`/RX02 | T3 runter | 0,5–1,5 |
+
+Nachrücker nach je **einem** Lizenzschritt: `UFT_Media_Analysis` und
+`UFT_Floppy_Reference_AARD` (beide „LGPL, Version unbestimmt", beide
+HALB im Baum — Volltext lesen), `OpenCBM` nach Wurzellizenz-Messung.
+`Roland_S` und `uft-trs80` scheiden unter der EINFRIER-REGEL aus.
+
+### **Eigentümervorlage: zwei Urteile über dieselbe Codefamilie**
+
+`neue-ideen/SPStudio_Dev` trägt eine **240-Byte-`LICENCE.txt` von
+KryoFlux selbst (2002–2026) mit Apache-2.0** und dem Verweis „See the
+LICENSE file" — **der Volltext fehlt im Paket**. Der Inhalt IST die
+CAPS-Bibliothek (`CAPSImg/`, `LibIPF/`), die das Register unter
+`capsimage-` als **nicht frei** führt. Zwei unverbundene Urteile über
+denselben Code. **Falls die Erklärung echt ist, wäre die IPF-Quarantäne
+neu zu bewerten** — bis dahin gilt *Lizenz vor Fähigkeit* und es wird
+nichts übernommen.
+
+**Weiterhin gesperrt:** `dtc_code/` (Zone ROT), `x50conv.exe`
+(Disassemblierverbot), `PastiImgKit`, `FastCopy_3`, `ipfdec5` (SPS
+non-commercial), `capsimage-`/`caps.zip`, `IPF-Format.zip`,
+`xcopypro_xmas93` (HAND-A-Sperre). **Offen:** OmniFlop-Harvest
+(§§ 87a ff. UrhG), `samdisk_plus` (P3-514), `OpenCBM`, `ST-Recover`
+(Ms-RL — GPL-2-Vereinbarkeit VOR Übernahme klären), `pc98-disk-tools`
+(keine Lizenz), 7 `.lha` ohne Lizenzdatei.
 
 ---
 
@@ -309,9 +367,69 @@ Muster dabei:
   Lücken, die MF-1276 in `uft_fat12.c` geschlossen hat. Er gehört
   zusammengeführt, **bevor** eine dritte Umsetzung entsteht.
 
-> Der vollständige Schwachstellenbericht (höchstens 12 Funde, nach
-> Schwere, je mit Pfad, Zeile und Kennzahl) wird nachgetragen, sobald
-> der Messlauf berichtet.
+### Die zwölf Funde, gemessen (2026-09-20)
+
+Volldokument: `tools/uft-innendienst/out/innendienst_2026-09-20.bericht.md`,
+Rohdaten in `out/_k1_*.json` und `out/_k4_ohne_waechter.json`. Alles
+statisch gemessen — **kein Bau, kein Testlauf**.
+
+**Die drei schwersten, in dieser Reihenfolge abzuarbeiten:**
+
+**F1 — Der PLL-Kernpfad kappt still und meldet Erfolg.**
+`src/core/uft_decode_pipeline.c:68-69,118` klemmt den Bitstrom auf
+`UFT_SESSION_MAX_BITS = 524288` (`uft_decode_session.h:42`),
+`uft_pll.c:58-72` wirft den Rest weg, die Rückgabe ist **bedingungslos
+`UFT_OK`**, und `pll.quality` misst nur PLL-Aussetzer, nicht die
+Kappung. Ein Mehrfach-Umdrehungs-HD-Fluss (> 131 072 Flanken) verliert
+**still die hintere Spur**. **Und kein Test ruft die Funktion.**
+Exakt die Klasse MF-1001/1022/1038/1040/1135/1224 — die teuerste dieses
+Baums — an der zentralsten Stelle.
+
+**F2 — Ein Vertrag, zwei Fassungen, und nur die Include-Reihenfolge
+entscheidet.** `uft_track_set_flux` ist **zweimal öffentlich deklariert**:
+`include/uft/uft_track.h:271` als `int(…, double sample_rate_mhz)`,
+`include/uft/uft_format_plugin.h:1378` als
+`uft_error_t(…, uint32_t tick_ns)`. Die Definition
+(`uft_format_plugin.c:753`) ist die **ns-Fassung**. Verschiedene
+Rückgabetypen **und ein physikalisch anderer vierter Parameter** —
+MHz gegen Nanosekunden. Heutige Rufer sind zufällig sicher; **jede neue
+Übersetzungseinheit, die `uft_track.h` zuerst zieht, ruft mit
+double-ABI eine uint32-Funktion — ohne Compiler- oder Linkerfehler.**
+Der Kommentar `track.h:269` nennt `format_plugin` kanonisch, und die
+Zeile darunter widerspricht ihm.
+
+**F3 — Die Träger von vier Produktivpfaden haben null Tests.**
+`uft_disk_stream_tracks` (`src/core/uft_disk_stream.c:95`) trägt
+`uft_disk_convert.c:81`, `uft_disk_stats.c:107`, `uft_disk_verify.c:229`;
+`uft_disk_stream_pair` (`:227`) trägt `uft_disk_compare.c:166` und
+`uft_disk_verify.c:134`. **0 Testaufrufer.** Exakt die Lage, in der
+`uft_fat_get_chain` vor MF-1276 war — und *verify* und *compare* sind
+die **Prüfwege**.
+
+**Die übrigen neun:**
+
+| # | Fund | Klasse |
+|---|---|---|
+| F4 | `uft_crc16_ccitt`: **1 Definition, 4 Deklarationen** — eine davon (`uft_decoder_plugin.h:372`) mit **drei** Parametern statt zwei — plus **18 bitweise 0x1021-Nachbauten** und 2 Tabellen. Neuer MF-1177-Fall, **größer als die GCR-Tafel** | Wissen doppelt |
+| F5 | **Schreibpfade erfinden `0xE5`-Füllsektoren ohne Meldung** (`uft_d64_plugin.c:232,234`, `uft_d81.c:175`, `uft_dc42.c:499`, `uft_2img.c:445`, `uft_adf_arc.c:107`; 12+ Dateien ohne Kennzeichen). Die MF-980-Kur erreichte **nur die Leseseite** | stille Erfindung |
+| F6 | `uft_hxcstream.c:172-198`: vier stille `continue`-Löcher, Flusszahl auf 2 000 000 geklemmt, am Ende `is_open = true`. **Aber 0 Aufrufer** — wird bei Anschluss zur Bedingung | stille Kürzung, geparkt |
+| F7 | `uft_format_convert_flux.c:1661-1663`: HFE→ADF klemmt wortlos auf 80/2, während drei Zeilen höher für einen anderen Fehler eine Warnung gesetzt wird. Eine 82-Zylinder-HFE verliert Zyl. 80/81 spurlos | stille Kürzung im **angebotenen** Pfad |
+| F8 | `uft_hw_register_backend`: 5 Backends registrieren darüber, **0 Tests** | ohne Wächter |
+| F9 | `uft_copy_plan_set_quelle` (MF-1265): GUI-Lebenszeitkopplung, **0 Tests** | ohne Wächter |
+| F10 | **Der Soft-Flux-Decoder** (`flux_decode_track` + MFM/FM/GCR-C64/GCR-Apple, 17 Exporte) ist **komplett NUR-TESTS** — gebaut, getestet, **nicht angeboten**. Produktiv hängt nur `flux_decode_amiga_bits` | **Wandlungspfade rauf, unmittelbar** |
+| F11 | **AmigaDOS-Dateisystem** (`uft_amigados.c:262` ff., samt `salvage`/`repair_bitmap`) **komplett NUR-TESTS**, 0 produktive Rufer. Spiegelbild von `uft_fat_get_chain` | **Wandlungspfade rauf** |
+| F12 | **168 im Build stehende Dateien, deren SÄMTLICHE Exporte Waisen sind** (Spitze: `tzx_wav` 36, `recovery_meta` 36, `trs80` 26, `msx` 21). Symbol-Frage, nicht Modul-Frage — `audit_orphan_modules.py` kann diese 168 nicht sehen | Entscheidungsgrundlage |
+
+**Reihenfolge, aus den Kennzahlen abgeleitet:** F1 und F2 zuerst (beide
+können still falsche Daten erzeugen), dann F3 und F5, dann F10/F11 als
+**Tor-Entscheid** — anschließen oder ausdrücklich parken; beides ist
+eine Antwort, Schweigen ist keine.
+
+**Was die Messung NICHT gesehen hat** (steht so im Bericht): nichts
+gebaut, nichts gelaufen; Fremdbäume ausgenommen; präprozessor-gebaute
+Namen und Zeichenkettentafeln unsichtbar; die 23 frischen
+`uft_disk2`-NUR-TESTS-Symbole aus MF-1272…1275 sind bewusst **nicht**
+als Krankheit gemeldet.
 
 ---
 
