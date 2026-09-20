@@ -2386,6 +2386,25 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/uft_d64_fehlerbytes.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_schutzbefund.c)
+    elseif(${test_name} STREQUAL "test_pll_kappt_nicht_still")
+        # MF-1281: `uft_pipeline_run_pll()` und `uft_flux_to_bits_pll()`
+        # hatten VOR diesem Test null Aufrufer in tests/ — gemessen mit
+        # `git grep -l <name> -- tests/`, je 0 Treffer.
+        #
+        # Und es war schaerfer als „ungetestet": `src/core/uft_pll.c` stand
+        # in KEINER CMakeLists, nur in `UnifiedFloppyTool.pro`. Unter
+        # CMake wurde die Funktion also nicht einmal UEBERSETZT. Dass das
+        # nie auffiel, liegt daran, dass `uft_decode_pipeline.c` zwar in
+        # `uft_core` liegt, aber kein Ziel sein Objekt anzog — ein
+        # unaufgeloester Bezug in einer statischen Bibliothek schweigt, bis
+        # ihn jemand braucht.
+        #
+        # `uft_decode_pipeline.c` kommt aus `uft_core` und wird hier
+        # ABSICHTLICH nicht noch einmal eingetragen (doppelte Symbole).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_pll.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core)
     elseif(${test_name} STREQUAL "test_fat_kette_robust")
         # MF-1276: der Kettenlaeufer `uft_fat_get_chain()` hatte VOR diesem
         # Test null Aufrufer in tests/ — gemessen mit

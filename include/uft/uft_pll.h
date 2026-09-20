@@ -41,6 +41,27 @@ uft_pll_cfg_t uft_pll_cfg_default_mfm_hd(void);
  * Input is an array of monotonically increasing timestamps (ns).
  * Output is packed bits (MSB-first per byte). The function returns the number
  * of bits written.
+ *
+ * VORBEDINGUNG: `out_bits` muss GENULLT sein. Die Nullbits eines Laufs
+ * werden nicht geschrieben, sondern uebersprungen — das war seit jeher so
+ * (der Aufrufer benutzt `calloc`), stand aber nirgends.
+ *
+ * @param out_dropped_transitions  Wechsel, die der PLL VERWORFEN hat:
+ *        Null-Abstaende und Laeufe, die auf `max_run_cells` gekappt wurden.
+ *        Das ist eine Aussage ueber das SIGNAL.
+ * @param out_consumed_transitions Wie viele der `count` Zeitstempel
+ *        ueberhaupt angesehen wurden. Das ist eine Aussage ueber den
+ *        PUFFER — und sie ist NEU (MF-1281).
+ *
+ * Warum sie neu ist: die Schleife hoerte auf, sobald der Puffer voll war,
+ * und sagte es niemandem. `dropped` deckt diesen Fall NICHT ab, also
+ * konnte der einzige Aufrufer aus einem halb gelesenen Fluss ein
+ * `UFT_OK` mit `quality == 1.0` machen — gemessen 275708 fehlende Bit bei
+ * gemeldetem vollen Erfolg. Wer weniger liest, als er bekommen hat, sagt
+ * es jetzt: `*out_consumed_transitions < count` ist die Meldung.
+ *
+ * Alle drei Ausgabezeiger duerfen NULL sein und werden vor jeder
+ * Fruehabsage gesetzt, damit der Aufrufer nie Uninitialisiertes liest.
  */
 size_t uft_flux_to_bits_pll(
     const uint64_t *timestamps_ns,
@@ -49,7 +70,8 @@ size_t uft_flux_to_bits_pll(
     uint8_t *out_bits,
     size_t out_bits_capacity_bits,
     uint32_t *out_final_cell_ns,
-    size_t *out_dropped_transitions
+    size_t *out_dropped_transitions,
+    size_t *out_consumed_transitions
 );
 
 /* ============================================================================

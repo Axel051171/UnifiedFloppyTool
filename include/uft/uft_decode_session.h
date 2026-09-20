@@ -39,6 +39,34 @@ typedef struct uft_track uft_track_t;
 
 #define UFT_SESSION_MAX_RETRIES     3
 #define UFT_SESSION_MAX_FLUX        65536
+
+/* UFT_SESSION_MAX_BITS — KEINE Klemme mehr (MF-1281).
+ *
+ * Diese Zahl hatte im ganzen Baum genau EINEN Nutzer, und der war die
+ * Klemme selbst:
+ *
+ *     size_t max_bits = s->flux_count * 4;
+ *     if (max_bits > UFT_SESSION_MAX_BITS) max_bits = UFT_SESSION_MAX_BITS;
+ *
+ * Sie hat damit keine Sicherheit gegeben, sondern Daten gekostet. Gemessen
+ * an 200000 Flusswechseln: 524288 statt 799996 Bit, Rueckgabe `UFT_OK`,
+ * `pll.quality` 1.000000 — 68927 Wechsel nie angesehen, ein Drittel der
+ * Spur, bei gemeldetem vollen Erfolg.
+ *
+ * Und sie hat auch nichts BEWACHT. Der Bitstrompuffer ist
+ * `flux_count * max_run_cells / 8` Byte gross; zwei Zeilen weiter belegt
+ * derselbe Weg `flux_count * sizeof(uint64_t)` Byte fuer die Zeitstempel,
+ * also das SECHZEHNFACHE — ungeklemmt und bedingungslos. Eine Obergrenze
+ * auf der kleineren von zwei Anforderungen schuetzt vor nichts.
+ *
+ * Die Schranke kommt seit MF-1281 aus der PLL-Konfiguration selbst
+ * (`cfg.max_run_cells`, die exakte obere Grenze je Wechsel) und wird nicht
+ * mehr geraten. Die Zahl hier bleibt stehen, weil sie eine oeffentliche
+ * Zusage ist und Entfernen keine Behebung ist (MF-1077); sie beschreibt,
+ * was einmal galt. Wer sie zu einer ABSAGE-Schwelle machen will — „ueber
+ * N Bit wird gar nicht erst gelesen" —, braucht dafuer eine Messung an
+ * einer echten Mehrfach-Umdrehungs-Aufnahme. Die gibt es noch nicht.
+ */
 #define UFT_SESSION_MAX_BITS        524288
 
 /* PLL quality thresholds for retry decision */
@@ -118,6 +146,20 @@ typedef struct uft_decode_session {
 
     int                 attempt_count;
     uft_error_t         last_error;
+
+    /* -- ANGEHAENGT, nie dazwischen (ABI) ------------------------------ */
+
+    /* Wie viele der `flux_count` Wechsel der PLL-Schritt wirklich
+     * angesehen hat. `flux_consumed < flux_count` heisst: der Bitstrom ist
+     * unvollstaendig, und `uft_pipeline_run_pll()` gibt dann
+     * `UFT_ERR_BUFFER_TOO_SMALL` zurueck statt `UFT_OK` (MF-1281).
+     *
+     * Das ist NICHT dasselbe wie `pll.quality`. Die Qualitaet rechnet sich
+     * aus verworfenen Wechseln — eine Aussage ueber das SIGNAL — und war
+     * gemessen 1.000000, waehrend ein Drittel der Spur fehlte. Dieses Feld
+     * ist die Aussage ueber die VOLLSTAENDIGKEIT, und die beiden koennen
+     * einander nicht vertreten (D3). */
+    size_t              flux_consumed;
 
 } uft_decode_session_t;
 

@@ -11,6 +11,7 @@
 #include "uft/uft_error.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>   /* SIZE_MAX — Ueberlaufprobe der Puffergroesse */
 
 /* ============================================================================
  * Session lifecycle
@@ -64,15 +65,17 @@ uft_error_t uft_pipeline_run_pll(uft_decode_session_t *s)
     if (!s || !s->flux_ns || s->flux_count == 0)
         return UFT_ERR_INVALID_ARG;
 
-    /* Allocate bitstream buffer */
-    size_t max_bits = s->flux_count * 4;
-    if (max_bits > UFT_SESSION_MAX_BITS) max_bits = UFT_SESSION_MAX_BITS;
+    /* Ein zweiter Aufruf ohne `uft_session_reset_for_retry()` hat den
+     * alten Puffer bisher verloren — `s->bitstream` wurde ueberschrieben,
+     * ohne ihn freizugeben. Der Rueckfallweg ruft brav zurueck; darauf
+     * angewiesen zu sein ist keine Eigenschaft, sondern Glueck. */
+    free(s->bitstream);
+    s->bitstream     = NULL;
+    s->bit_count     = 0;
+    s->flux_consumed = 0;
 
-    s->bitstream = calloc(1, (max_bits + 7) / 8);
-    if (!s->bitstream) return UFT_ERR_MEMORY;
-    s->bit_count = 0;
-
-    /* Use the simple PLL from uft_pll.h (uft_flux_to_bits_pll) */
+    /* Die Konfiguration steht jetzt VOR der Belegung, weil die Groesse aus
+     * ihr folgt. */
     uft_pll_cfg_t cfg;
     switch (s->pll_preset) {
         case UFT_PLL_PRESET_IBM_HD:
@@ -82,6 +85,23 @@ uft_error_t uft_pipeline_run_pll(uft_decode_session_t *s)
             cfg = uft_pll_cfg_default_mfm_dd();
             break;
     }
+
+    /* Die obere Schranke ist EXAKT und wird gelesen, nicht geraten: ein
+     * Flusswechsel erzeugt hoechstens `max_run_cells` Bit (die Schleife in
+     * `uft_flux_to_bits_pll` kappt jeden laengeren Lauf auf diesen Wert).
+     * Vorher stand hier die Ziffer 4 und dahinter eine Klemme auf
+     * `UFT_SESSION_MAX_BITS` — zwei Zahlen fuer dieselbe Groesse, und die
+     * zweite hat still Daten gekostet (MF-1281, siehe Kopf des Makros). */
+    const size_t maxrun = cfg.max_run_cells ? (size_t)cfg.max_run_cells : 1u;
+    if (s->flux_count > SIZE_MAX / maxrun) {
+        /* Nicht darstellbar — absagen, nicht kuerzen (D5). */
+        s->last_error = UFT_ERR_BUFFER_TOO_SMALL;
+        return UFT_ERR_BUFFER_TOO_SMALL;
+    }
+    const size_t max_bits = s->flux_count * maxrun;
+
+    s->bitstream = calloc(1, (max_bits + 7) / 8);
+    if (!s->bitstream) return UFT_ERR_MEMORY;
 
     /* Convert uint32_t flux intervals to uint64_t timestamps */
     uint64_t *timestamps = malloc(s->flux_count * sizeof(uint64_t));
@@ -99,13 +119,16 @@ uft_error_t uft_pipeline_run_pll(uft_decode_session_t *s)
 
     uint32_t final_cell = 0;
     size_t dropped = 0;
+    size_t consumed = 0;
     s->bit_count = uft_flux_to_bits_pll(
         timestamps, s->flux_count, &cfg,
         s->bitstream, max_bits,
-        &final_cell, &dropped
+        &final_cell, &dropped, &consumed
     );
 
     free(timestamps);
+
+    s->flux_consumed = consumed;
 
     /* Fill PLL stats */
     s->pll.final_cell_size_ns = (double)final_cell;
@@ -114,6 +137,19 @@ uft_error_t uft_pipeline_run_pll(uft_decode_session_t *s)
         ? 1.0f - (float)dropped / (float)s->flux_count
         : 0.0f;
     if (s->pll.quality < 0.0f) s->pll.quality = 0.0f;
+
+    /* Die Probe, die vorher fehlte. Mit der Schranke oben kann sie nicht
+     * mehr anschlagen — genau deshalb steht sie hier: sie macht die
+     * Richtigkeit der Schranke PRUEFBAR statt angenommen. Schlaegt sie
+     * doch an, ist die Zusage „ein Wechsel erzeugt hoechstens
+     * `max_run_cells` Bit" verletzt, und dann ist eine Absage die einzig
+     * ehrliche Antwort. `pll.quality` kann das nicht sagen: sie zaehlt
+     * verworfene Wechsel und stand gemessen auf 1.000000, waehrend ein
+     * Drittel der Spur fehlte. */
+    if (consumed != s->flux_count) {
+        s->last_error = UFT_ERR_BUFFER_TOO_SMALL;
+        return UFT_ERR_BUFFER_TOO_SMALL;
+    }
 
     return UFT_OK;
 }

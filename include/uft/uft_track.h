@@ -266,10 +266,44 @@ const uft_sector_t* uft_track_get_sector(const uft_track_t *track, int record);
  * Flux Operations
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* uft_track_set_flux: canonical in uft_format_plugin.h (returns uft_error_t) */
+/* `uft_track_set_flux` ist KANONISCH in `uft/uft_format_plugin.h`, das
+ * dieser Kopf oben unbedingt einbindet:
+ *
+ *     uft_error_t uft_track_set_flux(uft_track_t *, const uint32_t *,
+ *                                    size_t count, uint32_t tick_ns);
+ *
+ * ── WAS HIER BIS MF-1281 STAND, UND WARUM ES WEG IST ──────────────────
+ *
+ * Eine ZWEITE oeffentliche Deklaration derselben Funktion:
+ *
+ *     int uft_track_set_flux(uft_track_t *, const uint32_t *,
+ *                            size_t count, double sample_rate_mhz);
+ *
+ * Anderer Rueckgabetyp — und ein physikalisch ANDERER vierter Parameter:
+ * Megahertz gegen Nanosekunden. Die Definition — `uft_track_set_flux()`
+ * in `src/core/uft_format_plugin.c` — ist die ns-Fassung; die Zeile
+ * darueber nannte `uft_format_plugin.h` selbst kanonisch und widersprach
+ * sich damit im selben Atemzug.
+ *
+ * GEMESSEN (MF-1281): die falsche Fassung war in JEDER erreichbaren
+ * Einbindungsreihenfolge TOT. Eine Uebersetzungseinheit, die nur diesen
+ * Kopf zieht, sieht ueber `_Generic` die ns-Fassung, weil die Einbindung
+ * von `uft/uft_format_plugin.h` weiter oben vorher greift und dabei
+ * `UFT_TRACK_SET_FLUX_DECLARED` setzt. Auch `uft_format_plugin.h`
+ * zuerst, `uft_common.h` zuerst und `uft_types.h` zuerst uebersetzen
+ * sauber; und nimmt man jene Einbindung heraus, scheitert der Kopf LAUT
+ * an `uft_track_t` und `uft_error_t`, statt still die falsche Fassung zu
+ * nehmen.
+ *
+ * Es war also keine ABI-Bombe, sondern eine FALSCHAUSSAGE in einem
+ * oeffentlichen Kopf: sie beschrieb einen Vertrag, den es nicht gibt.
+ * Entfernt wird damit keine Faehigkeit, sondern ein Widerspruch (D3).
+ *
+ * Die Pruefung unten haelt fest, dass der kanonische Kopf wirklich da
+ * ist — wer die Einbindung anfasst, bekommt eine Ansage statt einer
+ * Ueberraschung. */
 #ifndef UFT_TRACK_SET_FLUX_DECLARED
-int uft_track_set_flux(uft_track_t *track, const uint32_t *samples,
-                       size_t count, double sample_rate_mhz);
+#error "uft_track.h: uft/uft_format_plugin.h fehlt - dort steht die kanonische Deklaration von uft_track_set_flux (uft_error_t, uint32_t tick_ns). Siehe MF-1281."
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════

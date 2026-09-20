@@ -48,7 +48,6 @@ src/analysis/profiles/uft_profiles_all.c
 src/analysis/uft_track_analysis.c
 src/compat/uft_fnmatch.c
 src/core/uft_capture.c
-src/core/uft_decode_pipeline.c
 src/core/uft_disk_compare.c
 src/core/uft_disk_transaction.c
 src/core/uft_error_strings.c
