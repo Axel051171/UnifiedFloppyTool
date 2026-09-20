@@ -642,10 +642,6 @@ void FormatTab::setupConnections() {
     connect(ui->comboPlatform, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int) { emit formatSettingsChanged(); });
     
-    // Advanced dialog buttons
-    connect(ui->btnNibbleAdvanced, &QPushButton::clicked,
-            this, &FormatTab::onNibbleAdvanced);
-    
     // Presets
     connect(ui->btnLoadPreset, &QPushButton::clicked,
             this, &FormatTab::onLoadPreset);
@@ -2311,20 +2307,6 @@ void FormatTab::onBrowseLogPath() {
     
     if (!path.isEmpty()) {
         ui->editLogPath->setText(path);
-        emit formatSettingsChanged();
-    }
-}
-
-// ============================================================================
-// ADVANCED DIALOG HANDLERS
-// ============================================================================
-
-void FormatTab::onNibbleAdvanced() {
-    NibbleAdvancedDialog dlg(this);
-    dlg.setParams(m_nibbleAdvParams);
-    
-    if (dlg.exec() == QDialog::Accepted) {
-        m_nibbleAdvParams = dlg.getParams();
         emit formatSettingsChanged();
     }
 }

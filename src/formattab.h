@@ -11,7 +11,6 @@
 #define FORMATTAB_H
 
 #include <QWidget>
-#include "advanceddialogs.h"
 #include <QSettings>
 #include <QMap>
 #include <QStringList>
@@ -182,9 +181,6 @@ public slots:
     void saveSettings();
 
 private slots:
-    // Advanced dialog handlers
-    void onNibbleAdvanced();
-    
     // System/Format cascade
     void onSystemChanged(int index);
     void onFormatChanged(int index);
@@ -261,9 +257,6 @@ private:
     QString m_basisProfil;
     bool    m_planFrei = false;
 
-    // Advanced dialog parameters
-    NibbleAdvancedDialog::NibbleAdvancedParams m_nibbleAdvParams;
-    
     // Format database
     QMap<QString, QStringList> m_systemFormats;
     QMap<QString, FormatInfo> m_formatInfo;

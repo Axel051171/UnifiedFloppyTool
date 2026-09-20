@@ -308,7 +308,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/advanceddialogs.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
     src/uft_gui_write_gate.cpp \
@@ -389,7 +388,6 @@ HEADERS += \
     include/uft/detect/cpm_fs.h \
     include/uft/detect/uft_mfm_detect_bridge.h \
     include/uft/analysis/uft_triage.h \
-    src/advanceddialogs.h \
     src/mainwindow.h \
     src/uft_gui_write_gate.h \
     src/diskanalyzerwindow.h \

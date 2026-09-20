@@ -2986,7 +2986,7 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_wandlungstafel_luegt_nicht")
-        # MF-1288: haelt die Wandlungstafel gegen die Rundlauf-Matrix —
+        # MF-1328: haelt die Wandlungstafel gegen die Rundlauf-Matrix —
         # kein Pfad darf LOSSLESS behaupten, ohne dass die Matrix etwas
         # ueber ihn sagt. Bewusst KLEIN gebunden: nur die beiden Tafeln,
         # kein Verteiler und keine Formatschicht. Der Test sucht seine
@@ -6250,7 +6250,6 @@ if(TARGET Qt6::Test)
                  ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/formattab.cpp
-                ${CMAKE_SOURCE_DIR}/src/advanceddialogs.cpp
                 ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
                 ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c

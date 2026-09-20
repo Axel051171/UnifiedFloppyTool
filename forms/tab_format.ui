@@ -476,7 +476,6 @@
          <item>
           <layout class="QHBoxLayout">
            <item><widget class="QCheckBox" name="checkHalfTracks"><property name="text"><string>Half-tracks</string></property></widget></item>
-           <item><widget class="QPushButton" name="btnNibbleAdvanced"><property name="text"><string>Advanced...</string></property></widget></item>
           </layout>
          </item>
         </layout>
