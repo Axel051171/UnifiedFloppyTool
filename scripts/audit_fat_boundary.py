@@ -63,6 +63,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from repo_scope import repo_files  # noqa: E402
+from git_env import git_umgebung
 
 # Die erlaubten Werte und was sie bedeuten.
 ERLAUBT = {
@@ -215,7 +216,7 @@ def _selbsttest(repo: Path) -> int:
     for i, (inhalt, soll) in enumerate(faelle, 1):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d,
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d,
                            capture_output=True)
             (p / "f.c").write_text(inhalt, encoding="utf-8")
             errs = check(p)

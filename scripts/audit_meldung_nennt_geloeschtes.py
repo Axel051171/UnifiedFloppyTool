@@ -87,6 +87,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from git_env import git_umgebung
 
 GRUNDLINIE = 0
 
@@ -262,7 +263,7 @@ def _selbsttest(_repo: Path) -> int:
     for name, quelle, soll in faelle:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "src").mkdir()
             (p / "src" / "hal").mkdir()
             (p / "src" / "hal" / "probe.c").write_text(quelle,

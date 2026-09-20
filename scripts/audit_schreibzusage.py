@@ -95,6 +95,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from git_env import git_umgebung
 
 GRUNDLINIE = 0   # Plugins mit Schreibzusage ohne jede Schreiboperation
 GRUNDLINIE_WEG = 0   # ... mit Schreiber im Haus, aber ohne Weg dorthin
@@ -401,7 +402,7 @@ def _selbsttest(repo: Path) -> int:
     for i, (rumpf, zeiger, caps, soll) in enumerate(faelle, 1):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "plug.c").write_text(PLUGIN_GERUEST % (rumpf, zeiger, caps),
                                       encoding="utf-8")
             errs = check(p)
@@ -415,7 +416,7 @@ def _selbsttest(repo: Path) -> int:
     for j, (cl, wt, soll) in enumerate(faelle_weg, 1):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "plug.c").write_text(PLUGIN_GERUEST_WEG % (cl, wt),
                                       encoding="utf-8")
             errs = check(p)

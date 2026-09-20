@@ -106,6 +106,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from git_env import git_umgebung
 
 GRUNDLINIE = 0
 
@@ -386,7 +387,7 @@ const uft_format_plugin_t uft_format_plugin_x = {
     for name, rumpf_text, soll in faelle:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "src" / "formats" / "x").mkdir(parents=True, exist_ok=True)
             (p / "src" / "formats" / "x" / "x.c").write_text(
                 GERUEST % rumpf_text, encoding="utf-8")
@@ -446,7 +447,7 @@ static void x_fuellt(uft_track_t *track, const uint8_t *data,
     for name, rumpf_text, soll in faelle_c:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "src" / "formats" / "x").mkdir(parents=True, exist_ok=True)
             (p / "src" / "formats" / "x" / "x.c").write_text(
                 GERUEST_C % rumpf_text, encoding="utf-8")

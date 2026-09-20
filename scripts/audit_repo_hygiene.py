@@ -108,6 +108,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from git_env import git_umgebung
 
 WURZEL = Path(__file__).resolve().parent.parent
 
@@ -548,7 +549,7 @@ def _selbsttest() -> int:
                 json.dumps({"images": ([{"file": eintrag}] if eintrag else [])}),
                 encoding="utf-8")
             _bauen(baum, extra)
-            subprocess.run(["git", "init", "-q"], cwd=baum,
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=baum,
                            capture_output=True)
             # Ohne diese Zeile haengt das Ergebnis an der GLOBALEN
             # `core.autocrlf` des Rechners, auf dem der Selbsttest
@@ -587,7 +588,7 @@ def _selbsttest() -> int:
             (baum / "tests" / "corpus_manifest" / "manifest.json").write_text(
                 json.dumps({"images": []}), encoding="utf-8")
             _bauen(baum, extra)
-            subprocess.run(["git", "init", "-q"], cwd=baum,
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=baum,
                            capture_output=True)
             subprocess.run(["git", "config", "core.autocrlf", "false"],
                            cwd=baum, capture_output=True)

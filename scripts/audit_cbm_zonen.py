@@ -69,6 +69,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from git_env import git_umgebung
 
 GRUNDLINIE_STELLEN = 23
 GRUNDLINIE_WEISEN = 9
@@ -183,7 +184,7 @@ def _selbsttest() -> int:
     def baum(inhalt: str) -> int:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d, capture_output=True)
             (p / "x.c").write_text(inhalt, encoding="utf-8")
             return len(messe(p)[0])
 

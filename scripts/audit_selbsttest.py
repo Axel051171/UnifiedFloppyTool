@@ -60,6 +60,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from git_env import git_umgebung
 
 WURZEL = Path(__file__).resolve().parents[1]
 SKRIPTE = WURZEL / "scripts"
@@ -1122,7 +1123,7 @@ def _mach_repo(ziel: Path) -> None:
     nicht hinzugefuegte Dateien, also braucht es kein `git add`.
     """
     try:
-        subprocess.run(["git", "init", "-q"], cwd=str(ziel),
+        subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=str(ziel),
                        capture_output=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
         pass    # ohne git bleibt es wie bisher — mit Warnung, nicht still

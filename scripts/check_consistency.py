@@ -1564,6 +1564,27 @@ def main() -> int:
         import audit_einheiten as _eh
         all_errors.append(("Einheit im Namen", _eh.check(repo)))
 
+    # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
+    #
+    # Git EXPORTIERT `GIT_DIR` in jeden Haken. Ein `git init` gegen ein
+    # Pruefverzeichnis richtet damit nicht dieses Verzeichnis ein,
+    # sondern das Depot, auf das `GIT_DIR` zeigt — und zeigt es auf einen
+    # NEBENBAUM, setzt git dabei `core.bare = true` in die gemeinsame
+    # Konfiguration. Der Hauptbaum ist danach fuer git nicht vorhanden.
+    #
+    # Dieser Schaden lag zweimal als „Ursache nicht gefunden" im Baum
+    # (`docs/OPEN_ITEMS.md` P3-463, `.claude/AUFGABEN.md`). Begruendung
+    # und Sandkasten-Nachstellung stehen im Kopf von `scripts/git_env.py`.
+    if True:
+        try:
+            import audit_git_umgebung as _gu
+            all_errors.append(("git-Umgebung",
+                               ["%s:%d  %s" % t for t in _gu.sammle(repo)]))
+        except Exception as _e:
+            # Ein Tor, das nicht laeuft, ist ein Befund und kein Schweigen.
+            all_errors.append(("git-Umgebung",
+                               ["Tor nicht lauffaehig: %s" % _e]))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
