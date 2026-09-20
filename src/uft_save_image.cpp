@@ -268,13 +268,35 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
         /* Was WIRKLICH gesetzt ist, aus den fertigen Optionen
          * abgelesen — nicht aus dem Plan wiederholt. Wer den Aufruf
          * oben entfernt, sieht es hier sofort (D2). */
+        /* MF-1325 (`P3-509`): die dritte Angabe sagte „ja", und niemand
+         * prueft nach.
+         *
+         * Gemessen ueber `git grep verify_after -- src include`: das Feld
+         * `uft_convert_options_t::verify_after` hat genau VIER Fundstellen
+         * — gesetzt in `uft_copy_plan.c:785`, als Vorgabe im Verteiler
+         * (`uft_format_convert_dispatch.c:113`), von dort in die innere
+         * Struktur kopiert (`:771`) und hier angezeigt. KEIN Wandler liest
+         * es danach. Nicht zu verwechseln mit `verify_after_write` aus
+         * `uft_snapshot.h` — anderes Feld, und das wird sehr wohl gelesen
+         * (`uft_snapshot.c:115`).
+         *
+         * Die beiden anderen Angaben wirken wirklich: `decode_retries` in
+         * `uft_format_convert_flux.c:237`, `use_multiple_revs` in `:1002`.
+         *
+         * Also sagt die Anzeige jetzt, was der Fall ist. „ja" waere eine
+         * erfundene Tat — die Sorte Aussage, gegen die dieses Programm
+         * gebaut ist. Der fehlende Leser ist eigene Arbeit und steht als
+         * `P3-509`; bis er da ist, bleibt dieser Text. */
+        const QString nachpruefung =
+            opts.verify_after
+                ? QObject::tr("verlangt, aber vom Wandler nicht ausgeführt")
+                : QObject::tr("nein");
         r.planAngewandt =
             QObject::tr("Wiederholungen %1 · Mehrfachlesung %2 · Nachprüfung %3")
                 .arg(opts.decode_retries)
                 .arg(opts.use_multiple_revs ? QObject::tr("ja")
                                             : QObject::tr("nein"))
-                .arg(opts.verify_after ? QObject::tr("ja")
-                                       : QObject::tr("nein"));
+                .arg(nachpruefung);
     }
 
     uft_convert_result_t res;

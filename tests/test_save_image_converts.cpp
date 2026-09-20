@@ -243,6 +243,56 @@ private slots:
                  "ohne Plan wird ein Plan berichtet");
     }
 
+    /* 3b. MF-1325 (`P3-509`) — die Anzeige darf keine Nachpruefung
+     * behaupten, die niemand ausfuehrt.
+     *
+     * `VERIFY` und `EVIDENCE` setzen `verify_after = true`. Gemessen hat
+     * dieses Feld im ganzen Baum VIER Fundstellen — gesetzt in
+     * `uft_copy_plan.c:785`, Vorgabe im Verteiler
+     * (`uft_format_convert_dispatch.c:113`), von dort in die innere
+     * Optionsstruktur kopiert (`:771`), und angezeigt in
+     * `uft_save_image.cpp`. Einen HANDELNDEN Leser gibt es nicht.
+     * (Nicht zu verwechseln mit `verify_after_write` aus
+     * `uft_snapshot.h`; das ist ein anderes Feld und wird gelesen.)
+     *
+     * ROTBEWEIS: vor MF-1325 stand dort „Nachprüfung ja", und beide
+     * Zusagen unten fielen. Der fehlende Leser ist eigene Arbeit und
+     * steht als `P3-509` — dieser Test ersetzt ihn nicht, er verhindert
+     * nur die Falschaussage bis dahin. */
+    void nachpruefung_wird_nicht_als_getan_gemeldet()
+    {
+        const QString src = korpus("vice_c1541_35trk.d64");
+        const QString dst = m_dir.filePath("mit_pruefung.g64");
+
+        uft_copy_plan_t plan = uft_copy_plan_default();
+        plan.strategy = UFT_READ_FAST;
+        plan.policy   = UFT_POLICY_VERIFY;
+
+        const UftSaveOutcome r = uftSaveImageAs(src, dst, QString(), &plan);
+        QVERIFY2(r.ok, qPrintable("Speichern mit Plan abgelehnt: " + r.message));
+        QVERIFY2(!r.planAngewandt.isEmpty(),
+                 "der Plan wurde uebergeben und nicht berichtet");
+        QVERIFY2(!r.planAngewandt.contains(QStringLiteral("Nachprüfung ja")),
+                 qPrintable("behauptet eine Nachpruefung, die niemand "
+                            "ausfuehrt: " + r.planAngewandt));
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("nicht ausgeführt")),
+                 qPrintable("die Anzeige muss sagen, dass sie ausbleibt: "
+                            + r.planAngewandt));
+
+        /* Gegenprobe, sonst waere „sage immer nicht ausgefuehrt" gruen:
+         * NORMAL verlangt gar keine Nachpruefung, und dann ist „nein"
+         * die wahre Auskunft. */
+        uft_copy_plan_t ohne = uft_copy_plan_default();
+        ohne.strategy = UFT_READ_FAST;
+        ohne.policy   = UFT_POLICY_NORMAL;
+        const QString dst2 = m_dir.filePath("ohne_pruefung.g64");
+        const UftSaveOutcome r2 = uftSaveImageAs(src, dst2, QString(), &ohne);
+        QVERIFY2(r2.ok, qPrintable("Speichern abgelehnt: " + r2.message));
+        QVERIFY2(r2.planAngewandt.contains(QStringLiteral("Nachprüfung nein")),
+                 qPrintable("NORMAL verlangt keine Nachpruefung: "
+                            + r2.planAngewandt));
+    }
+
     /* 4. Unbekannte Endung: ablehnen, nichts schreiben. */
     void unbekannte_endung_schreibt_nichts()
     {
