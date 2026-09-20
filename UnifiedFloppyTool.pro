@@ -1155,6 +1155,7 @@ SOURCES += \
     src/formats/ssd/uft_ssd_parser_v2.c \
     src/formats/tap/uft_tap_parser_v2.c \
     src/formats/td0/uft_td0_lzss.c \
+    src/formats/td0/uft_td0_schreiber.c \
     src/formats/td0/uft_td0_parser_v2.c \
     src/formats/trd/uft_trd_parser_v2.c \
     src/formats/uft_d64_writer.c \

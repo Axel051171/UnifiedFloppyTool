@@ -1608,6 +1608,40 @@
       "oracle": "fdtc",
       "fremdcode": "nein - die Nutzdaten sind UFT-eigen und selbstbenennend; fremd sind allein die BLOCKSTRUKTUR (Typ 1/2/3/4, `*NINTENDO-HVC*`, Showa-Datum, Dateizahl, Kopffelder) und der fwNES-Kopf, also Format und nicht Inhalt. Kein Famicom-Programm, kein Ladecode: die Dateien heissen UFTK0/UFTK1, Art `Program`, und ihr Inhalt ist ausschliesslich die Marke.",
       "content": "Famicom-Disketten-Abbild, 65 516 Byte = 16 Byte fwNES-Kopf (`FDS\\x1A` + 1 Seite + 11 Nullbytes) + eine Seite zu 65 500. Die Seite: Typ-1-Block 56 Byte (`0x01` + `*NINTENDO-HVC*` + Titel `UFT` + Showa-Datum + Region Japan), Typ-2-Block 2 Byte (`0x02` + Dateizahl 2), dann je Datei ein Typ-3-Kopf (16 Byte: Nummer 0 bzw. 1, Name UFTK0/UFTK1 auf 8 Byte genullt, Ladeadresse $8000, Groesse 8192, Art 0 = PRG) plus `0x04` und 8192 Byte Nutzdaten; ab 16 476 Nullpolsterung. UFT bildet die Seite auf 128 virtuelle 512-Byte-Sektoren ab (Hausregel, kein Formatmerkmal), der letzte traegt 476 Byte - und genau das ist MF-1038s Befund, hier erstmals an einem FREMD gebauten Abbild geprueft: die 128 Sektoren aneinandergelegt sind BYTEWEISE die 65 500 Byte der Seite, 0 abweichend, und alle 32 selbstbenennenden Brocken stehen an ihrer eigenen Stelle. Eine Abweichung liegt beim ORAKEL: fdstool meldet beide Dateinamen als `UFT`, weil fdstool.c:641 nur ueber 3 der 8 Namensbytes laeuft - der Test prueft die Namen deshalb selbst."
+    },
+    {
+      "file": "tests/corpus_free/fluxfox_sector_test_360k.td0",
+      "sha256": "49b5547ca52f9d24a322716b5e4f3e403de8bbcfc68ccf3a4d5f196001a88d05",
+      "format": "td0",
+      "origin": "cross-tool",
+      "tool": "fluxfox (Daniel Balsom, 2024, MIT), Quellstand 1d72ff1b329cc072cec00fe42ae51bededf5374f (2026-08-11), im Baum geklont unter tools/uft-scout/work/fluxfox. **Nicht ausgefuehrt** — die Datei liegt als Testabbild in seinem eigenen Repositorium; Kanal *Daten* nach MF-695, nicht *Oracle*.",
+      "source": "Aus fluxfox' `tests/images/sector_test/` — dieselbe 360K-Diskette, die dort in vierzehn Formaten liegt und von der `.img`, `.86f` und `.pri` seit MF-1071 im Korpus sind. **Diese ist die EINZIGE GEPACKTE TD0 von fremder Hand im Baum** (Kennung `td` klein, Advanced Compression). Lizenz MIT, an der Datei `tools/uft-scout/work/fluxfox/LICENSE` gemessen (`Copyright (c) 2024 Daniel Balsom`); die zweite Sammlung desselben Klons (`tests/images/transylvania/`) ist NICHT benutzbar, ihre eigene LICENSE.txt erlaubt das Kopieren nur `as long as you do not charge any money`.",
+      "test": "test_td0_schreiber",
+      "oracle": "fluxfox",
+      "fremdcode": "nein, und das ist GEMESSEN statt angenommen. `CREDITS.md` nennt `Original bootsector code by Christoph H. Hochstaetter, (C)1991` — im Abbild steckt er nicht: der Bootsektor ist **0 von 512 Byte ungleich null**. fluxfox' `--sector_test` laesst ihn ausdruecklich aus (`create/mod.rs:88`, `chsn_iter().skip(1)`).",
+      "content": "Synthetische Pruefdiskette, 40 x 2 x 9 = 720 Sektoren zu 512 Byte: **Block n durchgehend mit dem Byte n & 0xFF gefuellt**, Block 0 (Bootsektor) leer. Damit sagt ein Leseergebnis, ob die RICHTIGE Stelle getroffen wurde. Gemessen ueber UFTs Produktionspfad: 720 Sektoren gelesen, 719 richtig, 0 falsch."
+    },
+    {
+      "file": "tests/corpus_free/uft_gepackt_pc720.td0",
+      "sha256": "32f52a6b834e9e5007068288dd557e795f361118e21342eb10406cdaf9e3e1e9",
+      "format": "td0",
+      "origin": "derived",
+      "tool": "UFT `uft_td0_schreibe_gepackt()` (MF-1297), gebaut mit gcc 13.1.0. **Eigenerzeugnis mit FREMDER Bestaetigung** — Regel E-14: fehlt ein fremder Schreiber, schreibt UFT es selbst und laesst zwei fremde Leser urteilen. Dass keiner existiert, ist gemessen: fluxfox `src/file_parsers/td0.rs:228` gibt `UnsupportedFormat` zurueck, libdsk schreibt TD0 nur unkomprimiert.",
+      "source": "**Reproduzierbar ueber den Test selbst.** `tests/test_td0_schreiber.c` baut dasselbe Sektorabbild (selbstbenennende Marken alle 17 Byte, FAT-BPB in Sektor 1 von Spur 0/0), ruft `uft_td0_schreibe_gepackt()` und vergleicht das Ergebnis BYTEWEISE mit dieser Datei. Der Schreiber ist deterministisch; weicht die Datei ab, faellt der Test. **Warum ein BPB darin steht:** libdsk hat fuer TD0 kein eigenes `tele_getgeom` und nimmt die Geometrie aus dem Bootsektor — ohne BPB faellt es auf 40 x 1 x 8 zurueck (gemessen an fluxfox' `sector_test_360k.td0`: 163 840 statt 368 640 Byte). Ohne BPB koennte das erste der beiden Orakel gar nicht urteilen. **Beide Orakel urteilen, und beide sind AUSGEFUEHRT worden (MF-1297).** libdsk 1.5 `dskid` meldet `TeleDisk advanced compression` und die richtige Geometrie; `dsktrans -itype tele -otype raw` gibt die volle Diskette heraus. hxcfe 2.x `-conv:IMD_IMG` liefert eine IMD, die je Sektor Zylinder, Kopf und Nummer NENNT. Gegen die selbstbenennenden Marken gehalten: libdsk gibt **737 280 Byte** heraus (exakt 80 x 2 x 9 x 512) mit **1439 von 1439** Marken richtig, 0 falsch; hxcfes IMD traegt **1440 Sektoren, 1439 Marken richtig**, 0 falsch. Der jeweils fehlende ist Sektor 1 von Spur 0/0 — er traegt den BPB statt einer Marke.",
+      "test": "test_td0_schreiber",
+      "fremdcode": "nein. Die Datei entsteht aus UFT-eigenen Sektordaten; der Packer ist aus der Parameterangabe neu geschrieben (Polynom 0xA097, Anfangswert 0), nicht uebernommen. Gelesen wurden SAMdisk `td0.cpp` und libdsk `drvtele.c`/`comptlzh.c` — Kanal *Spec* nach MF-695.",
+      "content": "PC 720K, 80 x 2 x 9 x 512 = 737 280 Byte Nutzdaten, gepackt auf **367 290 Byte** (49,8 %). Jeder Sektor traegt alle 17 Byte `UFT-K Ccc Hh Sss `; Sektor 1 von Spur 0/0 traegt stattdessen einen gueltigen FAT12-BPB (1440 Sektoren, 2 je Cluster, 112 Wurzeleintraege, FAT 3 Sektoren, 9 Sektoren je Spur, 2 Koepfe)."
+    },
+    {
+      "file": "tests/corpus_free/uft_gepackt_pc1200.td0",
+      "sha256": "f26b659bc2a45ea423c534fe333f76ac98fb24da5fdfbe72b304b67267d6b52b",
+      "format": "td0",
+      "origin": "derived",
+      "tool": "UFT `uft_td0_schreibe_gepackt()` (MF-1297), gebaut mit gcc 13.1.0. Zweite Geometrie neben der 720K — eine einzige Groesse belegt nicht, dass der Schreiber die Geometrie wirklich modelliert.",
+      "source": "**Reproduzierbar ueber den Test selbst.** `tests/test_td0_schreiber.c` baut dasselbe Sektorabbild (selbstbenennende Marken alle 17 Byte, FAT-BPB in Sektor 1 von Spur 0/0), ruft `uft_td0_schreibe_gepackt()` und vergleicht das Ergebnis BYTEWEISE mit dieser Datei. Der Schreiber ist deterministisch; weicht die Datei ab, faellt der Test. **Warum ein BPB darin steht:** libdsk hat fuer TD0 kein eigenes `tele_getgeom` und nimmt die Geometrie aus dem Bootsektor — ohne BPB faellt es auf 40 x 1 x 8 zurueck (gemessen an fluxfox' `sector_test_360k.td0`: 163 840 statt 368 640 Byte). Ohne BPB koennte das erste der beiden Orakel gar nicht urteilen. **Beide Orakel urteilen, und beide sind AUSGEFUEHRT worden (MF-1297).** libdsk 1.5 `dskid` meldet `TeleDisk advanced compression` und die richtige Geometrie; `dsktrans -itype tele -otype raw` gibt die volle Diskette heraus. hxcfe 2.x `-conv:IMD_IMG` liefert eine IMD, die je Sektor Zylinder, Kopf und Nummer NENNT. Gegen die selbstbenennenden Marken gehalten: libdsk gibt **1 228 800 Byte** heraus (exakt 80 x 2 x 15 x 512) mit **2399 von 2399** Marken richtig, 0 falsch; hxcfes IMD traegt **2400 Sektoren, 2399 Marken richtig**, 0 falsch, und meldet dabei 500 000 bit/s gegen 250 000 bei der 720K — die Datenrate kommt also wirklich aus der Datei.",
+      "test": "test_td0_schreiber",
+      "fremdcode": "nein, siehe uft_gepackt_pc720.td0.",
+      "content": "PC 1.2M, 80 x 2 x 15 x 512 = 1 228 800 Byte Nutzdaten, gepackt auf **608 535 Byte** (49,5 %). Marken und BPB wie bei der 720K, BPB-Zahlen entsprechend: 2400 Sektoren, 1 je Cluster, 224 Wurzeleintraege, FAT 7 Sektoren, 15 Sektoren je Spur."
     }
   ]
 }

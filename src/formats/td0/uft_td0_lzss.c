@@ -8,6 +8,7 @@
  */
 
 #include "uft_td0.h"
+#include "uft/uft_error.h"   /* MF-1297: UFT_OK, UFT_ERR_* fuer den Packer */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -338,3 +339,134 @@ const char* uft_td0_drive_name(uft_td0_drive_t type)
  * war richtig, gemessen gegen hxcfe an zwei gepackten Dateien, und er
  * haette den Schnitt nicht ueberlebt: ausserhalb dieser Datei hatte er
  * VOR MF-1285 null Aufrufer. */
+
+/*============================================================================
+ * LZSS-Huffman KOMPRESSION (MF-1297)
+ *
+ * Das Gegenstueck zum Entpacker darueber, in DERSELBEN Datei: eine
+ * Wahrheit ueber das Format, eine Stelle (MF-1177). Der Baumaufbau
+ * (`uft_td0_lzss_init`) und der Baumumbau (`lzss_update`) werden GETEILT,
+ * nicht nachgebaut — waeren es zwei Fassungen, drifteten sie, und der
+ * Bruch faende erst ein fremder Leser.
+ *
+ * ── Was dieser Packer TUT, und was er NICHT tut ─────────────────────
+ *
+ * Er gibt **nur Literale** aus (Symbole 0..255) und nie einen
+ * LZ-Treffer. Das ist ein GUELTIGER Strom: der adaptive Huffman-Baum
+ * waechst auf Schreib- und Leseseite identisch, solange dieselbe
+ * Symbolfolge laeuft, und ein Leser, der Treffer beherrscht, bekommt
+ * hier eben keine.
+ *
+ * Der Preis ist die Packrate, und er ist klein, weil TD0 seine
+ * Wiederholungen ohnehin VOR dieser Schicht abfaengt: je Sektor gibt es
+ * ein Verfahrensbyte (0 = roh, 1 = 2-Byte-Muster N-mal, 2 = RLE), und
+ * ein gleichfoermiger Sektor schrumpft dort von 512 auf 5 Byte.
+ *
+ * Was hier NICHT steht, steht hier bewusst nicht: eine Trefferssuche
+ * ueber den 4096-Byte-Ringpuffer waere mehr Code, den kein fremder
+ * Leser unterscheiden kann — er sieht nur, ob der Strom aufgeht.
+ *
+ * ── Die Bitrichtung, gegen den EIGENEN Entpacker gelesen ────────────
+ *
+ * `lzss_getbit()` legt das eingehende Byte auf die Bits 15..8 eines
+ * 16-Bit-Puffers und nimmt Bit 15 zuerst. Der Packer schreibt deshalb
+ * MSB zuerst, und `pack_putcode()` ist dazu spiegelbildlich.
+ *
+ * Referenz fuer die Bauform: Haruyasu Yoshizakis LZHUF (1988,
+ * gemeinfrei). Gelesen, nicht uebernommen — die Gestalt des Baums steht
+ * ohnehin schon im Entpacker daruber, und genau der ist hier die
+ * Vorlage.
+ *============================================================================*/
+
+typedef struct {
+    uft_td0_lzss_state_t *baum;   /**< Baum + Ringpuffer, geteilt mit dem Entpacker */
+    uint8_t              *aus;
+    size_t                aus_kap;
+    size_t                aus_len;
+    uint16_t              bitpuf;
+    uint8_t               bitzahl;
+    bool                  voll;   /**< Ausgabepuffer erschoepft — ABSAGE, nicht kappen */
+} td0_packer_t;
+
+static void pack_byte(td0_packer_t *p, uint8_t b)
+{
+    if (p->aus_len >= p->aus_kap) { p->voll = true; return; }
+    p->aus[p->aus_len++] = b;
+}
+
+/* Schreibt die oberen <laenge> Bits von <kode>, MSB zuerst. */
+static void pack_putcode(td0_packer_t *p, int laenge, unsigned kode)
+{
+    p->bitpuf = (uint16_t)(p->bitpuf | (kode >> p->bitzahl));
+    p->bitzahl = (uint8_t)(p->bitzahl + laenge);
+    if (p->bitzahl >= 8) {
+        pack_byte(p, (uint8_t)(p->bitpuf >> 8));
+        p->bitzahl = (uint8_t)(p->bitzahl - 8);
+        if (p->bitzahl >= 8) {
+            pack_byte(p, (uint8_t)p->bitpuf);
+            p->bitzahl = (uint8_t)(p->bitzahl - 8);
+            p->bitpuf = (uint16_t)(kode << (laenge - p->bitzahl));
+        } else {
+            p->bitpuf = (uint16_t)(p->bitpuf << 8);
+        }
+    }
+}
+
+/* Ein Symbol in den Baum schreiben — Spiegelbild von lzss_decode_char().
+ *
+ * Der Entpacker laeuft von der Wurzel abwaerts und nimmt je Ebene ein
+ * Bit; der Packer laeuft vom Blatt aufwaerts und SAMMELT die Bits, die
+ * diesen Weg beschreiben. `k & 1` unterscheidet dabei das zweite Kind
+ * vom ersten: die Kinder eines Knotens stehen an `son[p]` und
+ * `son[p] + 1`, und `son[]` ist fuer innere Knoten immer GERADE (der
+ * Baumumbau vergibt sie in Zweierschritten, `j += 2` bzw. `i += 2`). */
+static void pack_encode_char(td0_packer_t *p, unsigned c)
+{
+    unsigned i = 0;
+    int      j = 0;
+    unsigned k = p->baum->parent[c + UFT_TD0_LZSS_TSIZE];
+
+    do {
+        i >>= 1;
+        if (k & 1u) i += 0x8000u;
+        j++;
+    } while ((k = p->baum->parent[k]) != UFT_TD0_LZSS_ROOT);
+
+    pack_putcode(p, j, i);
+    lzss_update(p->baum, (int)c);
+}
+
+int uft_td0_lzhuf_packen(const uint8_t *daten, size_t len,
+                         uint8_t *aus, size_t aus_kap, size_t *aus_len)
+{
+    if (!daten || !aus || !aus_len) return UFT_ERR_INVALID_ARG;
+    *aus_len = 0;
+
+    uft_td0_lzss_state_t *baum =
+        (uft_td0_lzss_state_t *)calloc(1, sizeof(*baum));
+    if (!baum) return UFT_ERR_MEMORY;
+
+    /* GETEILTER Aufbau: derselbe Ruf, den der Entpacker macht. Das ist
+     * der Grund, warum beide Seiten denselben Baum sehen. */
+    uft_td0_lzss_init(baum, NULL, 0);
+
+    td0_packer_t p;
+    memset(&p, 0, sizeof(p));
+    p.baum    = baum;
+    p.aus     = aus;
+    p.aus_kap = aus_kap;
+
+    for (size_t n = 0; n < len && !p.voll; n++)
+        pack_encode_char(&p, daten[n]);
+
+    /* Angebrochenes Byte hinausschreiben — sonst fehlen dem Leser die
+     * letzten Bits, und er bricht mitten im letzten Symbol ab. */
+    if (!p.voll && p.bitzahl > 0)
+        pack_byte(&p, (uint8_t)(p.bitpuf >> 8));
+
+    free(baum);
+
+    if (p.voll) return UFT_ERR_BUFFER_TOO_SMALL;
+    *aus_len = p.aus_len;
+    return UFT_OK;
+}

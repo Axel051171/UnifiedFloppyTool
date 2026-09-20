@@ -2988,7 +2988,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
     elseif(${test_name} STREQUAL "test_td0_gepackt"
-            OR ${test_name} STREQUAL "test_td0_pruefsummen")
+            OR ${test_name} STREQUAL "test_td0_pruefsummen"
+            OR ${test_name} STREQUAL "test_td0_schreiber")
         # MF-1296: `test_td0_pruefsummen` haengt am SELBEN Zweig statt an
         # einer eigenen Kopie dieser vierzig Zeilen. Er braucht genau
         # denselben Unterbau, und zwei Listen fuer eine Wahrheit sind die

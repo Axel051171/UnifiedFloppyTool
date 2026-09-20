@@ -474,6 +474,66 @@ typedef struct {
  */
 uint16_t uft_td0_crc(const uint8_t *daten, size_t len, uint16_t start);
 
+/**
+ * @brief Packt einen Bytestrom in Teledisks Advanced Compression (LZHUF).
+ *
+ * Das Gegenstueck zu `uft_td0_lzss_getbyte()`, in derselben Datei
+ * umgesetzt und mit ihm denselben Baumaufbau teilend (MF-1297).
+ *
+ * **Was er nicht tut:** er gibt nur Literale aus, nie einen LZ-Treffer.
+ * Der Strom ist damit gueltig, aber schlechter gepackt als Teledisks
+ * eigener. TD0 faengt seine Wiederholungen ohnehin eine Schicht frueher
+ * ab (Verfahren 1 je Sektor: 512 Byte werden 5).
+ *
+ * @param aus_kap Platz im Ausgabepuffer. Reicht er nicht, kommt
+ *                `UFT_ERR_BUFFER_TOO_SMALL` — es wird NICHT gekappt (D5).
+ * @return UFT_OK, sonst ein Fehlercode.
+ */
+int uft_td0_lzhuf_packen(const uint8_t *daten, size_t len,
+                         uint8_t *aus, size_t aus_kap, size_t *aus_len);
+
+/**
+ * @brief Was eine zu schreibende TD0 braucht.
+ *
+ * `daten` ist ein FLACHES Sektorabbild in der Reihenfolge
+ * Zylinder -> Kopf -> Sektor, also `zylinder * koepfe *
+ * sektoren_je_spur * sektorgroesse` Byte.
+ *
+ * Datum und Uhrzeit werden ROH uebernommen, so wie TD0 sie ablegt:
+ * `jahr` sind Jahre seit 1900, `monat` ist 0-BASIERT (0 = Januar).
+ * Belegt MF-1285 an libdsks Schreiber `lib/drvtele.c` (`stamp[0] =
+ * ptm->tm_year; stamp[1] = ptm->tm_mon;`) und an SAMdisks Leser
+ * `td0.cpp` (`tc.bMon + 1`).
+ */
+typedef struct {
+    const uint8_t *daten;
+    unsigned       zylinder;
+    unsigned       koepfe;
+    unsigned       sektoren_je_spur;
+    unsigned       sektorgroesse;
+    uint8_t        data_rate;      /**< TD0-Kopfbyte 5 */
+    uint8_t        drive_type;     /**< TD0-Kopfbyte 6 */
+    const char    *kommentar;      /**< NULL oder leer = kein Kommentarblock */
+    uint8_t        jahr, monat, tag, stunde, minute, sekunde;
+} uft_td0_schreibsatz_t;
+
+/**
+ * @brief Schreibt eine gepackte TD0 (Advanced Compression) nach @p pfad.
+ *
+ * Alle drei Pruefsummen werden gesetzt — Dateikopf, Spurkopf, Sektor.
+ *
+ * **Wer will, dass libdsk die Datei beurteilt, legt einen gueltigen
+ * FAT-BPB in Sektor 1 von Spur 0.** libdsk hat fuer TD0 kein eigenes
+ * `tele_getgeom` und nimmt die Geometrie aus dem Bootsektor; ohne BPB
+ * faellt es auf 40 x 1 x 8 zurueck (gemessen MF-1297 an fluxfox'
+ * `sector_test_360k.td0`: 163 840 statt 368 640 Byte). Dieser Schreiber
+ * prueft das NICHT — er sagt es nur.
+ *
+ * @return UFT_OK, sonst ein Fehlercode.
+ */
+int uft_td0_schreibe_gepackt(const uft_td0_schreibsatz_t *satz,
+                             const char *pfad);
+
 int uft_td0_strom_aus_bytes(const uint8_t *daten, size_t len,
                             uft_td0_strom_t *aus);
 
