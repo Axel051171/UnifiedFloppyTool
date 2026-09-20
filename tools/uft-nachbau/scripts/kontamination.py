@@ -255,10 +255,15 @@ NICHT_GESEHEN = (
 
 
 def bericht(befunde, nachricht, beinah, wl_n, baum) -> None:
+    # PEP 701 (Python 3.12) erlaubt Zeilenumbrueche und gleiche
+    # Anfuehrungszeichen IM f-String-Ausdruck. CI faehrt ubuntu-22.04
+    # mit python3 = 3.10 und zerlegt das nicht; der Ausdruck steht
+    # deshalb vor dem f-String statt darin.
+    hintergrund = ('Hintergrund aus ' + baum if baum
+                   else 'OHNE Hintergrundbaum — jeder geteilte Name '
+                        'gilt als beweiskraeftig')
     print(f"{len(befunde)} Kontaminations-Befunde "
-          f"(Weissliste: {wl_n} Fakten; "
-          f"{'Hintergrund aus ' + baum if baum else 'OHNE Hintergrundbaum '
-             '— jeder geteilte Name gilt als beweiskraeftig'})")
+          f"(Weissliste: {wl_n} Fakten; {hintergrund})")
     for art, was, detail in befunde[:25]:
         print(f"- [{art}] {was}" + (f" ({detail})" if detail else ""))
     if len(befunde) > 25:
@@ -297,10 +302,12 @@ def selbsttest() -> int:
              (soll_min is None or ist >= soll_min)
         if not ok:
             fehler += 1
+        # siehe bericht(): kein PEP-701-Ausdruck im f-String
+        soll = ('genau ' + str(soll_genau) if soll_genau is not None
+                else '>=' + str(soll_min))
         print(f"  {'ok  ' if ok else 'FAIL'} {fall['datei']:22s} "
               f"{ist} Befund(e), Soll "
-              f"{'genau ' + str(soll_genau) if soll_genau is not None
-                 else '>=' + str(soll_min)}  — {fall['warum']}")
+              f"{soll}  — {fall['warum']}")
         if not ok:
             for x in b[:4]:
                 print(f"        {x[0]}: {x[1]}")
