@@ -260,6 +260,84 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       UFT_D2_FEAT_VAR_SECTOR_SZ | UFT_D2_FEAT_NO_DATA_SEC |
       UFT_D2_FEAT_METADATA },
 
+    /* ── TD0 -> IMD (MF-1307) ─────────────────────────────────────────
+     *
+     * DER BELEG IST EINE VORWAERTSPRUEFUNG GEGEN ZWEI FREMDE ORAKEL,
+     * kein Rundlauf. Korpus: drei gepackte TD0 in `tests/corpus_free/` —
+     * `fluxfox_sector_test_360k.td0` (FREMDE Hand, MIT) sowie
+     * `uft_gepackt_pc720.td0` und `uft_gepackt_pc1200.td0` (MF-1297,
+     * eigene Hand). Die beiden eigenen sind von libdsk 1.5 UND hxcfe 2.x
+     * gelesen worden, je mit 1439 von 1439 bzw. 2399 von 2399
+     * selbstbenennenden Marken an ihrer eigenen Stelle, 0 abweichend.
+     *
+     * WARUM LOSSY UND NICHT VERLUSTFREI. Die Merkmalstafel fuehrt fuer
+     * TD0 und IMD DIESELBEN fuenf Merkmale (`uft_format_traegt.c`,
+     * `F_TD0 == F_IMD`) — gerechnet ist die Differenz also NULL. Der
+     * WANDLER verliert trotzdem: `uft_td0_to_imd()` nimmt
+     * `t.sectors[0].data_len`, rechnet daraus EINEN Groessencode und
+     * fuellt jeden weiteren Sektor darauf auf. Traegt eine Spur
+     * gemischte Groessen, gehen die abweichenden still verloren — das
+     * ist **P3-524**, gemessen MF-1287.
+     *
+     * Die Maske nennt deshalb `VAR_SECTOR_SZ`, obwohl die gerechnete
+     * Differenz sie nicht verlangt. Das ist erlaubt und ausdruecklich so
+     * gemeint: `uft_roundtrip.h` sagt, zu wenig zu erklaeren falle auf,
+     * mehr zu erklaeren sei pessimistisch. Hier ist es nicht
+     * Pessimismus, sondern eine gemessene Tatsache ueber den Wandler.
+     *
+     * WAS DIE MASKE NICHT AUSDRUECKEN KANN, und deshalb hier steht:
+     * TD0s Kommentarkopf traegt eine CRC-16 ueber den Text und einen
+     * Zeitstempel aus sechs Feldern; IMDs Kommentar ist reiner Text und
+     * hat fuer beides keinen Platz. `METADATA` steht trotzdem NICHT in
+     * der Maske — die Tafel fuehrt das Merkmal fuer beide Formate als
+     * getragen, und eine Maske ist grobkoerniger als die Wirklichkeit.
+     *
+     * Der Weg zu `LOSSLESS` ist benannt und nicht kurz: P3-524 schliessen
+     * (IMDs `has_varsizes`/`ssize[]` nutzen) UND ein Fixture mit
+     * gemischten Sektorgroessen bauen — der Korpus hat keines, alle 1440
+     * Sektoren der Referenzdatei tragen 512 Byte. */
+    { UFT_FORMAT_TD0, UFT_FORMAT_IMD, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-1307: vorwaerts gegen zwei Orakel — libdsk 1.5 und hxcfe 2.x, "
+      "Korpus 3 gepackte TD0 (eine fremde Hand, zwei eigene mit fremder "
+      "Bestaetigung). VERLOREN gehen die variablen Sektorgroessen: "
+      "uft_td0_to_imd() ebnet die ganze Spur auf die Groesse des ERSTEN "
+      "Sektors (P3-524) — IMD koennte sie tragen (has_varsizes/ssize[]), "
+      "der Wandler nutzt es nicht. Dazu, ohne dass die Maske es sagen "
+      "kann: TD0s Kommentarkopf traegt eine CRC-16 und einen Zeitstempel "
+      "aus sechs Feldern, IMDs Kommentar ist reiner Text",
+      UFT_D2_FEAT_VAR_SECTOR_SZ },
+
+    /* ── TD0 -> IMG (MF-1307) ─────────────────────────────────────────
+     *
+     * Derselbe Korpus, dieselben zwei Orakel. Hier ist die Maske die
+     * volle GERECHNETE Differenz: `uft_format_traegt()` fuehrt fuer TD0
+     * fuenf Merkmale und fuer IMG **keines** — IMG ist die blosse
+     * Aneinanderreihung der Sektorbytes, ohne Kopf, ohne Spurangabe,
+     * ohne Sektorkennzeichnung.
+     *
+     * Und es ist schaerfer als `traegt nicht`: IMGs Leser setzt beim
+     * Aufbauen jedes Sektors `id.crc_ok = true` BEDINGUNGSLOS. Aus einem
+     * TD0-Sektor mit gefallener CRC wird auf dem Weg durch IMG also kein
+     * Sektor OHNE Angabe, sondern ein GUTER. Seit MF-1296 rechnet der
+     * TD0-Leser diese CRC wirklich nach — der Verlust ist damit nicht
+     * mehr nur eine Flagge, die verschwindet, sondern eine MESSUNG, die
+     * verschwindet.
+     *
+     * Die Anweisung zu diesem Eintrag nannte vier Merkmale (BAD_CRC,
+     * DELETED_DAM, VAR_SECTOR_SZ, METADATA). Gerechnet sind es FUENF:
+     * `NO_DATA_SEC` fehlte in der Liste, steht aber in beiden Tafeln. */
+    { UFT_FORMAT_TD0, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-1307: vorwaerts gegen zwei Orakel — libdsk 1.5 und hxcfe 2.x, "
+      "Korpus 3 gepackte TD0. VERLOREN geht ALLES, was TD0 ueber die "
+      "blossen Sektorbytes hinaus traegt: CRC-Zustand, geloeschte "
+      "Datenmarken, variable Sektorgroessen, datenlose Sektoren und der "
+      "Kommentarkopf samt CRC-16 und Zeitstempel. Und schaerfer: IMGs "
+      "Leser setzt id.crc_ok bedingungslos auf true — ein Sektor mit "
+      "gefallener CRC kommt als GUTER heraus, nicht als unbekannter",
+      UFT_D2_FEAT_BAD_CRC       | UFT_D2_FEAT_DELETED_DAM |
+      UFT_D2_FEAT_VAR_SECTOR_SZ | UFT_D2_FEAT_NO_DATA_SEC |
+      UFT_D2_FEAT_METADATA },
+
     { UFT_FORMAT_G64, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
       "MF-536: gegen VICE-Referenz geprueft — 680 von 683 Sektoren "
       "bitgleich; ab: Spur 17/0, Spur 18/0 (BAM), Spur 18/1 (Verzeichnis). "

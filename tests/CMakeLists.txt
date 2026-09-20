@@ -2933,7 +2933,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_convert_imd_img_belegt")
+    elseif(${test_name} STREQUAL "test_convert_imd_img_belegt"
+            OR ${test_name} STREQUAL "test_verify_after_ist_verdrahtet")
+        # MF-1307: `test_verify_after_ist_verdrahtet` haengt am SELBEN
+        # Zweig statt an einer zweiten Kopie dieser vierzig Zeilen — zwei
+        # Listen fuer eine Wahrheit sind die Bauform aus MF-1177.
         # MF-1277: derselbe Unterbau wie test_convert_file_detection — der
         # Test faehrt ueber `uft_convert_file()` und braucht die ganze
         # Format-Schicht. Gemessen vor diesem Commit: 46 Wandlungspfade,
@@ -2941,6 +2945,10 @@ foreach(test_source ${TEST_SOURCES})
         file(GLOB_RECURSE IMDIMG_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${IMDIMG_FORMAT_SOURCES}
+            # MF-1307: der Verteiler ruft seit dieser Fassung
+            # uft_generic_verify_track() aus der Nachpruefung heraus —
+            # ohne diese Quelle bindet AUCH der aeltere Test nicht mehr.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c

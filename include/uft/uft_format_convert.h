@@ -218,6 +218,89 @@ int uft_convert_list_targets(uft_format_t src,
 /**
  * @brief Convert file
  */
+
+struct uft_format_plugin;   /* MF-1307: nur als Zeiger gebraucht — dieser
+                             * Kopf kennt `uft_format_plugin_t` nicht, und
+                             * ihn einzubinden waere eine Abhaengigkeit fuer
+                             * einen Parameter. */
+
+/* ── Nachpruefung nach der Wandlung (E-7, MF-1307) ──────────────
+ *
+ * Sie stand zuerst in `uft_format_plugin.h` neben
+ * `uft_generic_verify_track()`. Das war falsch einsortiert, und es
+ * hatte Folgen im BINDER: `src/core/uft_format_verify.c` wird von
+ * **47** Testzielen gebunden, die nur den Spurvergleich brauchen —
+ * und jedes davon zog ueber die neue Funktion die ganze
+ * Disk-Oeffnungs-Maschinerie nach (`undefined reference to
+ * uft_meta_free`, gemessen an elf Zielen). Eine Funktion gehoert in
+ * die Schicht, die sie braucht. */
+/**
+ * @brief Bilanz einer Wandlungs-Nachpruefung (MF-1307).
+ *
+ * ZAHLEN statt eines Urteils: der Aufrufer soll sagen koennen, WAS
+ * nicht stimmte. `uft_convert_verify_after()` gibt zwar einen
+ * Fehlerkode zurueck, aber ein Kode allein laesst den Bediener raten.
+ */
+typedef struct {
+    bool     quelle_offen;        /**< liess sich die Quelle oeffnen */
+    bool     ziel_offen;          /**< liess sich das GESCHRIEBENE oeffnen */
+    unsigned quell_zylinder, quell_koepfe;
+    unsigned ziel_zylinder,  ziel_koepfe;
+    size_t   spuren_geprueft;
+    size_t   spuren_abweichend;
+    size_t   spuren_unlesbar;     /**< in der QUELLE nicht lesbar */
+    /** Spuren, die die Quelle OHNE einen einzigen Sektor liefert.
+     *
+     * Sie werden NICHT verglichen, und das ist keine Nachsicht: eine
+     * Spur ohne Sektoren traegt nichts, dessen Verlust man feststellen
+     * koennte. Sie zaehlen dennoch eigens, weil eine leere Spalte und
+     * eine bestandene Spalte zwei verschiedene Aussagen sind (Regel D6).
+     *
+     * Gemessen MF-1307 an `hxcfe_pc160.imd`: die Quelle sagt **42**
+     * Zylinder an und traegt auf **40** Sektoren (320 = 40 x 8). Ohne
+     * diese Unterscheidung faellt jede byteweise richtige Wandlung, deren
+     * QUELLE ihre Zylinderzahl zu hoch angibt. */
+    size_t   spuren_leer;
+    size_t   sektoren_geprueft;
+} uft_verify_bilanz_t;
+
+/**
+ * @brief Prueft NACH einer Wandlung, ob das Geschriebene die Quelle traegt.
+ *
+ * Oeffnet @p ziel_pfad erneut und haelt ihn Spur fuer Spur gegen
+ * @p quell_pfad. Der Vergleich ist `uft_generic_verify_track()` — Sektorzahl
+ * und jedes Datenbyte.
+ *
+ * **Vergleicht DATEN, nicht Merkmale.** Bei einer verlustbehafteten
+ * Wandlung ist es richtig, dass Flaggen und Metadaten fehlen; dafuer gibt
+ * es `lost_features` in der Rundlauf-Matrix. Weichen die DATEN ab, ist das
+ * immer ein Befund.
+ *
+ * @return `UFT_OK` nur, wenn beide Dateien offen sind, mindestens eine
+ *         Spur geprueft wurde und KEINE abweicht. Sonst ein Fehlerkode;
+ *         die Zahlen stehen in @p bilanz, auch im Fehlerfall.
+ *
+ * **Die angesagten Geometrien entscheiden NICHT.** Gelaufen wird ueber
+ * die Spuren der Quelle; kann das Ziel eine davon nicht liefern, faellt
+ * sie als `spuren_abweichend` auf. Eine Kuerzung wird damit weiterhin
+ * gefangen — am Inhalt statt an einer Zahl, die zwei Leser gemessen
+ * verschieden bilden (MF-1307: 42 gegen 40 an derselben richtigen Datei).
+ */
+/**
+ * @param ziel_plugin Das Plugin, mit dem @p ziel_pfad geschrieben wurde,
+ *        oder `NULL`. **Mit `NULL` wird die Sonde gefragt, und das ist
+ *        bei einem KOPFLOSEN Ziel eine Rate-Aufgabe** — gemessen
+ *        MF-1307 an `IMD -> IMG`: die byteweise richtige 163 840-Byte-
+ *        Ausgabe teilt ihre Groesse mit TR-DOS (40x1x16x256), und die
+ *        Nachpruefung meldete einen Verlust, den es nicht gab. Ein
+ *        FALSCHER Alarm ist in diesem Baum so teuer wie ein stiller
+ *        Verlust. Wer das Zielformat kennt, nennt es.
+ */
+uft_error_t uft_convert_verify_after(const char *quell_pfad,
+                                     const char *ziel_pfad,
+                                     const struct uft_format_plugin *ziel_plugin,
+                                     uft_verify_bilanz_t *bilanz);
+
 uft_error_t uft_convert_file(const char* src_path,
                               const char* dst_path,
                               uft_format_t dst_format,

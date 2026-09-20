@@ -383,13 +383,32 @@ const uft_conversion_path_t g_conversion_paths[] = {
          *
          * UNVERIFIED und nicht LOSSY, weil genau EIN Verlust gemessen ist
          * und nicht die Bilanz. Die Bilanz kommt aus Schritt 4 des
-         * Umbauplans: Vorwaertspruefung gegen hxcfe, Korpus >= 3. */
+         * Umbauplans: Vorwaertspruefung gegen hxcfe, Korpus >= 3.
+         *
+         * ── NACHGEZOGEN MF-1307 ─────────────────────────────────────────
+         *
+         * Die Bilanz IST da, und zwar genau auf dem oben benannten Weg:
+         * `uft_gepackt_pc720.td0` und `uft_gepackt_pc1200.td0` (MF-1297)
+         * sind von libdsk 1.5 UND hxcfe 2.x gelesen worden, 1439 von 1439
+         * bzw. 2399 von 2399 Marken an ihrer eigenen Stelle; der Korpus
+         * zaehlt mit der fremden `fluxfox_sector_test_360k.td0` drei.
+         * `src/core/uft_roundtrip.c` fuehrt das Paar seither als
+         * LOSSY_DOCUMENTED mit der Maske `VAR_SECTOR_SZ`.
+         *
+         * Der alte Wortlaut bleibt zitiert, weil er stimmte, als er
+         * geschrieben wurde: „TD0 -> IMD ist nicht gemessen". Heute ist er
+         * es — und die Ebnung ebenfalls: `test_verify_after_ist_
+         * verdrahtet.c` Gruppe 4 baut eine Spur mit 512/256/512 Byte, und
+         * die Nachpruefung meldet 1 von 1 Spur abweichend. Damit ist
+         * P3-524 nicht mehr nur am Quelltext abgelesen, sondern am Objekt
+         * belegt. */
         .source = UFT_FORMAT_TD0, .target = UFT_FORMAT_IMD,
-        .quality = UFT_CONV_UNVERIFIED,
+        .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
-        .warning = "TD0 -> IMD ist nicht gemessen; Sektorgroessen je Spur "
-                   "werden auf die des ersten Sektors geebnet (P3-524)",
-        .description = "TD0 to IMD (metadata preserved; loss not measured)"
+        .warning = "TD0 -> IMD verliert variable Sektorgroessen: die Spur "
+                   "wird auf die Groesse des ERSTEN Sektors geebnet "
+                   "(P3-524, am Objekt belegt MF-1307)",
+        .description = "TD0 to IMD (metadata preserved; sector sizes flattened)"
     },
     {
         .source = UFT_FORMAT_NBZ, .target = UFT_FORMAT_D64,

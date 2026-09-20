@@ -10,7 +10,8 @@
 #include "uft_format_convert_internal.h"
 #include "uft/core/uft_preflight.h"    /* V415-PLAN LOSS.preflight (MF-263) */
 #include "uft/core/uft_loss_report.h"
-#include "uft/analysis/uft_protection_probe.h"  /* content-based loss (MF-328) */
+#include "uft/analysis/uft_protection_probe.h"
+#include "uft/uft_track.h"   /* MF-1307: uft_track_release() fuer die Nachpruefung */  /* content-based loss (MF-328) */
 
 #ifdef _WIN32
 /* MF-507: `GetTempPathA()` wurde weiter unten benutzt, ohne dass dieser
@@ -585,6 +586,174 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
  * `bytes_written > 0` heisst, ein Ergebnis ist entstanden, und das gehoert
  * dem Aufrufer — auch wenn danach noch etwas schiefging.
  */
+/* NICHT `#include "uft/uft_core.h"` — zusammen mit `uft/uft_track.h`
+ * oben meldet gcc 13.1.0
+ *     error: conflicting types for 'uft_track_get_sector';
+ *     have 'const uft_sector_t *(const uft_track_t *, size_t)'
+ *     previous declaration ... 'const uft_sector_t *(..., int)'
+ * Die beiden Header deklarieren dieselbe Funktion verschieden; der Fall
+ * steht als **P3-530** und ist einer der 35 in der Grundlinie von
+ * `scripts/audit_decl_conflicts.py`.
+ *
+ * Dass er hier auftaucht, ist die DRITTE Stelle und die erste in
+ * PRODUKTIVCODE — vorher nur in `test_td0_pruefsummen.c` und
+ * `test_td0_schreiber.c`. Die zwei Funktionen, die hier gebraucht werden,
+ * stehen deshalb als Deklaration da. Das ist eine dritte Stelle fuer
+ * dieselbe Wahrheit (MF-1177) und ausdruecklich ein Notbehelf, kein
+ * Entwurf: er verschwindet, sobald P3-530 entschieden ist. */
+struct uft_disk;
+extern struct uft_disk *uft_disk_open(const char *path, bool read_only);
+extern void             uft_disk_close(struct uft_disk *disk);
+extern struct uft_disk *uft_disk_open_as(const char *path, bool read_only,
+                                         const struct uft_format_plugin *p);
+/* ============================================================================
+ * NACHPRUEFUNG EINER WANDLUNG (MF-1307)
+ *
+ * ── Der Anlass ──────────────────────────────────────────────────────
+ *
+ * `uft_convert_options_t.verify_after` hatte KEINEN Leser. Gemessen ueber
+ * den ganzen Baum wurde das Feld
+ *   GESETZT    `uft_copy_plan.c:785`, `uft_format_convert_dispatch.c:113`
+ *   KOPIERT    `uft_format_convert_dispatch.c:771`
+ *   ANGEZEIGT  `uft_save_image.cpp:276` — der Bediener liest dort `ja`
+ * und an keiner Stelle ABGEFRAGT. Eine Zusage ohne Tat, und zwar eine,
+ * die in der Oberflaeche steht: genau die Klasse aus MF-883
+ * (`schreibzusage_ohne_tat`) und Regel E-7.
+ *
+ * ── Was diese Pruefung TUT ──────────────────────────────────────────
+ *
+ * Sie oeffnet die GESCHRIEBENE Datei erneut und haelt sie Spur fuer Spur
+ * gegen die Quelle. Der Vergleich selbst ist NICHT neu geschrieben: er
+ * ist `uft_generic_verify_track()` darueber — Sektorzahl und jedes
+ * Datenbyte. Eine zweite Fassung waere die Bauform aus MF-1177.
+ *
+ * ── Was sie NICHT tut, und warum das hier steht ─────────────────────
+ *
+ * Sie vergleicht **Daten**, nicht Merkmale. Bei einer verlustbehafteten
+ * Wandlung ist es richtig, dass Flaggen und Metadaten fehlen — dafuer
+ * gibt es die Maske `lost_features` der Rundlauf-Matrix. Weichen die
+ * DATEN ab, ist das immer ein Befund.
+ *
+ * ── BERICHTIGT NOCH IN MF-1307: die Geometrie urteilt NICHT ─────────
+ *
+ * Die erste Fassung brach ab, sobald die ANGESAGTEN Geometrien von Quelle
+ * und Ziel auseinandergingen. Das hat beim ersten Lauf einen FALSCHEN
+ * ALARM erzeugt, und er ist gemessen:
+ *
+ *     IMD -> IMG, `hxcfe_pc160.imd` (MF-1277)
+ *     Ausgabe gegen `uft_pc160.img`      0 von 163 840 Byte abweichend
+ *     Quelle sagt 42x1, Ziel sagt 40x1   ->  VERIFY_FAILED, 0 Spuren geprueft
+ *
+ * Eine Datei ohne einen einzigen falschen Byte wurde also als Verlust
+ * gemeldet, weil zwei Leser ihre Zylinder verschieden ZAEHLEN. Das ist
+ * die Bauform aus MF-1177 — dieselbe Groesse an zwei Stellen gerechnet —,
+ * und ein falscher Alarm ist hier so teuer wie ein stiller Verlust: er
+ * schickt jemanden zur falschen Stelle.
+ *
+ * **Seit dieser Fassung entscheiden die DATEN.** Gelaufen wird ueber die
+ * Spuren der QUELLE; kann das Ziel eine davon nicht liefern, faellt sie
+ * als `spuren_abweichend` auf — eine echte Kuerzung wird damit weiterhin
+ * gefangen, nur eben am Inhalt statt an einer Zahl. Die beiden Geometrien
+ * stehen in der Bilanz, weil ein Mensch sie sehen will; sie sind dort
+ * AUSKUNFT und kein Urteil.
+ * ============================================================================ */
+
+uft_error_t uft_convert_verify_after(const char *quell_pfad,
+                                     const char *ziel_pfad,
+                                     const uft_format_plugin_t *ziel_plugin,
+                                     uft_verify_bilanz_t *bilanz)
+{
+    if (!quell_pfad || !ziel_pfad || !bilanz) return UFT_ERROR_INVALID_STATE;
+    memset(bilanz, 0, sizeof(*bilanz));
+
+    uft_disk_t *q = uft_disk_open(quell_pfad, true);
+    if (!q) { bilanz->quelle_offen = false; return UFT_ERR_IO; }
+    bilanz->quelle_offen = true;
+
+    /* MF-1307: das Ziel wird mit dem Plugin geoeffnet, das es
+     * GESCHRIEBEN hat — nicht mit dem, das die Sonde dafuer haelt. Der
+     * Unterschied ist gemessen: eine byteweise richtige 163 840-Byte-IMG
+     * teilt ihre Groesse mit TR-DOS, und die Sonde nahm TR-DOS. Die
+     * Nachpruefung meldete daraufhin 40 von 40 abweichenden Spuren an
+     * einer Datei ohne einen einzigen falschen Byte. */
+    uft_disk_t *z = ziel_plugin
+                  ? uft_disk_open_as(ziel_pfad, true, ziel_plugin)
+                  : uft_disk_open(ziel_pfad, true);
+    if (!z) {
+        /* Der staerkste Befund ueberhaupt: geschrieben, und niemand kann
+         * es lesen. Genau die Lage der neun Formate aus MF-883. */
+        uft_disk_close(q);
+        bilanz->ziel_offen = false;
+        return UFT_ERR_IO;
+    }
+    bilanz->ziel_offen = true;
+
+    bilanz->quell_zylinder = (unsigned)q->geometry.cylinders;
+    bilanz->quell_koepfe   = (unsigned)q->geometry.heads;
+    bilanz->ziel_zylinder  = (unsigned)z->geometry.cylinders;
+    bilanz->ziel_koepfe    = (unsigned)z->geometry.heads;
+
+    const uft_format_plugin_t *qp = uft_disk_plugin(q);
+    if (!qp || !qp->read_track) {
+        uft_disk_close(z); uft_disk_close(q);
+        return UFT_ERROR_NOT_SUPPORTED;
+    }
+
+    /* KEIN Abbruch bei ungleicher Geometrie — siehe den Kopf dieser Datei.
+     * Gelaufen wird ueber die Spuren der QUELLE. Traegt das Ziel eine davon
+     * nicht, faellt sie unten als `spuren_abweichend` auf; damit wird eine
+     * echte Kuerzung am INHALT gefangen statt an einer angesagten Zahl. */
+    for (unsigned c = 0; c < bilanz->quell_zylinder; c++) {
+        for (unsigned h = 0; h < bilanz->quell_koepfe; h++) {
+            uft_track_t ref;
+            memset(&ref, 0, sizeof(ref));
+            if (qp->read_track(q, (int)c, (int)h, &ref) != UFT_OK) {
+                uft_track_release(&ref);
+                bilanz->spuren_unlesbar++;
+                continue;
+            }
+            /* Eine Spur ohne Sektoren traegt nichts, dessen Verlust sich
+             * feststellen liesse — sie wird gezaehlt, nicht verglichen
+             * (Regel D6, Begruendung im Kopf von `uft_verify_bilanz_t`). */
+            if (ref.sector_count == 0) {
+                bilanz->spuren_leer++;
+                uft_track_release(&ref);
+                continue;
+            }
+            bilanz->spuren_geprueft++;
+            bilanz->sektoren_geprueft += ref.sector_count;
+            if (uft_generic_verify_track(z, (int)c, (int)h, &ref) != UFT_OK)
+                bilanz->spuren_abweichend++;
+            uft_track_release(&ref);
+        }
+    }
+
+    uft_disk_close(z);
+    uft_disk_close(q);
+
+    /* NICHTS VERGLEICHBAR IST KEIN VERLUST — gemessen, und es hat beim
+     * ersten Lauf VIER gruene Tests umgeworfen (test_convert_cell_adjust,
+     * _flippy_reverse, _output_verify, _scp_adf_multirev).
+     *
+     * Ursache: eine SCP-Quelle ist FLUSS. Ihr `read_track` liefert keine
+     * Sektoren, also kommt `spuren_geprueft` auf 0 — und die erste
+     * Fassung machte daraus `VERIFY_FAILED`. Damit haette jede
+     * Fluss-nach-Sektor-Wandlung im Baum als Verlust gegolten, obwohl
+     * gar nichts gemessen wurde. Zum zweiten Mal in diesem Commit
+     * dieselbe Klasse: ein FALSCHER Alarm ist so teuer wie ein stiller
+     * Verlust.
+     *
+     * `NOT_SUPPORTED` heisst hier ausdruecklich „nicht beurteilbar" und
+     * ist vom Befund `VERIFY_FAILED` unterschieden — der Verteiler sagt
+     * es dem Bediener, nimmt aber den Erfolg NICHT zurueck. Konnte die
+     * Quelle dagegen nicht gelesen werden (`spuren_unlesbar > 0`), ist
+     * das sehr wohl ein Befund. */
+    if (bilanz->spuren_geprueft == 0u)
+        return (bilanz->spuren_unlesbar > 0u) ? UFT_ERROR_VERIFY_FAILED
+                                              : UFT_ERROR_NOT_SUPPORTED;
+    return (bilanz->spuren_abweichend == 0u) ? UFT_OK : UFT_ERROR_VERIFY_FAILED;
+}
+
 uft_error_t uft_convert_file(const char* src_path,
                               const char* dst_path,
                               uft_format_t dst_format,
@@ -789,6 +958,73 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,
                                    src_path, dst_path, &ext_opts, result);
     }
+
+    /* MF-1307: `verify_after` hatte KEINEN Leser — Regel E-7.
+     *
+     * Gemessen wurde das Feld GESETZT (`uft_copy_plan.c:785` und oben in
+     * diesem Verteiler), KOPIERT (`ext_opts.verify_after =
+     * options->verify_after`) und in `uft_save_image.cpp:276` dem
+     * Bediener als `ja` ANGEZEIGT — und an keiner Stelle abgefragt. Die
+     * Oberflaeche sagte eine Nachpruefung zu, die es nicht gab (Klasse
+     * MF-883, `schreibzusage_ohne_tat`).
+     *
+     * Hier wird sie zur Tat: die GESCHRIEBENE Datei wird erneut
+     * geoeffnet und Spur fuer Spur gegen die Quelle gehalten.
+     *
+     * **Eine gescheiterte Nachpruefung nimmt den Erfolg zurueck.** Ein
+     * `success == true` neben einer gefallenen Pruefung waere genau die
+     * stille Falschaussage, gegen die die Pruefung gebaut ist. Die Zahlen
+     * gehen in die Warnung, damit der Bediener nicht raten muss.
+     *
+     * Ein BESTANDENER Lauf meldet sich nicht eigens: `success` traegt ihn.
+     * `uft_convert_result_t` hat nur einen Warnungskanal mit acht
+     * Plaetzen, und eine Warnung, die Erfolg meldet, entwertet die
+     * anderen sieben. */
+    if (result->success && options && options->verify_after &&
+        src_path && dst_path) {
+        uft_verify_bilanz_t bilanz;
+        /* Das Ziel kennt der Verteiler — er hat es gerade geschrieben.
+         * Es blind neu zu sondieren hiesse, ein kopfloses Abbild raten zu
+         * lassen; siehe den Kopf von uft_convert_verify_after(). */
+        const uft_format_plugin_t *zp =
+            uft_resolve_format_plugin(dst_format, dst_path, NULL);
+        uft_error_t verr = uft_convert_verify_after(src_path, dst_path,
+                                                    zp, &bilanz);
+        if (verr == UFT_ERROR_NOT_SUPPORTED) {
+            /* Nicht beurteilbar — gesagt, aber nicht geahndet. */
+            uftc_add_warning(result,
+                "verify_after: nicht beurteilbar — die Quelle liefert "
+                "keine Sektoren (%u Spuren ohne Sektor). Fuer einen "
+                "Flusspfad ist das der Normalfall, keine Aussage ueber "
+                "Verlust", (unsigned)bilanz.spuren_leer);
+        } else if (verr != UFT_OK) {
+            result->success = false;
+            result->error   = UFT_ERROR_VERIFY_FAILED;
+            result->tracks_failed += (int)bilanz.spuren_abweichend;
+            if (!bilanz.ziel_offen) {
+                uftc_add_warning(result,
+                    "verify_after: die geschriebene Datei laesst sich NICHT "
+                    "oeffnen (%s)", dst_path);
+            } else {
+                /* Die beiden Geometrien stehen MIT in der Meldung, aber
+                 * sie sind Auskunft und kein eigener Fehlschlagsgrund —
+                 * gemessen MF-1307 zaehlen zwei Leser derselben richtigen
+                 * Datei 42 gegen 40 Zylinder. Was faellt, faellt an den
+                 * Daten. */
+                uftc_add_warning(result,
+                    "verify_after: %u von %u geprueften Spuren weichen ab "
+                    "(%u Sektoren verglichen, %u Quellspuren unlesbar; "
+                    "Quelle %ux%u, Ziel %ux%u)",
+                    (unsigned)bilanz.spuren_abweichend,
+                    (unsigned)bilanz.spuren_geprueft,
+                    (unsigned)bilanz.sektoren_geprueft,
+                    (unsigned)bilanz.spuren_unlesbar,
+                    bilanz.quell_zylinder, bilanz.quell_koepfe,
+                    bilanz.ziel_zylinder,  bilanz.ziel_koepfe);
+            }
+        }
+    }
+
 
     /* V415-PLAN LOSS.preflight Phase 2 (MF-268): on a successful
      * LOSSY_DOCUMENTED conversion, write the .loss.json sidecar.

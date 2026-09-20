@@ -239,7 +239,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 > Rückfrage. **Die Erkennung ist nicht schlechter geworden — sie war
 > vorher nur zuversichtlicher, als sie durfte.**
 
-### 3. Format-Konvertierung (44 Pfade registriert, **16 angeboten**)
+### 3. Format-Konvertierung (44 Pfade registriert, **18 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die
 > Wandlungstabelle fuehrt **44** Paare. Die Rundlauf-Matrix hat **16**
@@ -262,7 +262,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 >   gemessen), und die Grenze steht dabei — ein ATR mit Sektorgroesse
 >   256 wird ohne `accept_data_loss` abgelehnt, weil XFD die Angabe
 >   nicht speichern kann und die Dateigroesse sie nicht verraet.
-> * **9 nur mit ausdruecklichem `accept_data_loss`** (MF-1277: `IMD→IMG`
+> * **11 nur mit ausdruecklichem `accept_data_loss`** (MF-1277: `IMD→IMG`
 >   ist der neunte — und der erste der 29 gebauten, aber gesperrten
 >   Pfade, der seinen Beleg bekommen hat).
 >
@@ -987,8 +987,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
-  **16 angeboten**, davon **7 verlustfrei (je mit Messung)**
-  (MF-541/567/655/1081), 18 Roundtrip-Matrix-Einträge (SSOT in
+  **18 angeboten**, davon **7 verlustfrei (je mit Messung)**
+  (MF-541/567/655/1081), 20 Roundtrip-Matrix-Einträge (SSOT in
   `src/core/uft_roundtrip.c`;
   die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt; MF-567 hat drei
   Urteile ohne Wandler entfernt)

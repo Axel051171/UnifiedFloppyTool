@@ -102,16 +102,30 @@ static void gruppe_1_td0_imd(void)
     PRUEFE(p->quality != UFT_CONV_LOSSLESS,
            "TD0 -> IMD behauptet weiterhin LOSSLESS — ohne Matrixeintrag "
            "und gegen den gemessenen Verlust aus P3-524");
-    PRUEFE(p->quality == UFT_CONV_UNVERIFIED,
-           "TD0 -> IMD steht nicht auf UNVERIFIED");
-
-    /* Und die Matrix sagt weiterhin nichts ueber das Paar — genau
-     * deshalb ist UNVERIFIED die richtige Angabe und nicht LOSSY:
-     * gemessen ist EIN Verlust, nicht die ganze Bilanz. */
-    PRUEFE(uft_roundtrip_status(UFT_FORMAT_TD0, UFT_FORMAT_IMD)
-               == UFT_RT_UNTESTED,
-           "die Matrix hat inzwischen einen Eintrag — dann gehoert die "
-           "Guete-Angabe nachgezogen");
+    /* ── NACHGEZOGEN MF-1307 ─────────────────────────────────────────
+     *
+     * Hier stand `p->quality == UFT_CONV_UNVERIFIED` mit der Begruendung:
+     *
+     *     „Und die Matrix sagt weiterhin nichts ueber das Paar — genau
+     *      deshalb ist UNVERIFIED die richtige Angabe und nicht LOSSY:
+     *      gemessen ist EIN Verlust, nicht die ganze Bilanz."
+     *
+     * Die Bedingung dieser Begruendung ist WEGGEFALLEN, und der Test hat
+     * genau darauf gewartet — seine zweite Zusage hiess woertlich „die
+     * Matrix hat inzwischen einen Eintrag — dann gehoert die Guete-Angabe
+     * nachgezogen". Seit MF-1307 fuehrt `uft_roundtrip.c` das Paar als
+     * LOSSY_DOCUMENTED; die Bilanz kommt aus der Vorwaertspruefung gegen
+     * libdsk 1.5 und hxcfe 2.x an drei gepackten TD0 (MF-1297).
+     *
+     * Die Zusage dreht sich damit um: sie haelt jetzt fest, dass Tafel und
+     * Matrix ZUSAMMEN wandern. Eine Guete-Angabe, die hinter der Matrix
+     * herhinkt, ist dieselbe Drift, gegen die dieser Test gebaut ist. */
+    const uft_roundtrip_status_t st =
+        uft_roundtrip_status(UFT_FORMAT_TD0, UFT_FORMAT_IMD);
+    PRUEFE(st != UFT_RT_UNTESTED,
+           "TD0 -> IMD hat seit MF-1307 einen Matrixeintrag");
+    PRUEFE(p->quality == UFT_CONV_LOSSY,
+           "und die Tafel muss mitgezogen sein: LOSSY, nicht UNVERIFIED");
 
     printf("      quality=%d, Matrixstatus=%d (beides erwartet)\n",
            (int)p->quality,

@@ -202,24 +202,42 @@ static void t4_preflight_sperrt_weiter(void)
     printf("Test 4: ein UNGEPRUEFTES Paar bleibt gesperrt\n");
     /* Anti-Tautologie: Gruppe 3 waere auch gruen, wenn der Preflight GAR
      * NICHT mehr sperrte. Diese Gruppe zeigt, dass er es weiterhin tut —
-     * an einem Paar, das absichtlich noch ohne Eintrag ist. */
+     * an einem Paar, das absichtlich noch ohne Eintrag ist.
+     *
+     * NACHGEZOGEN MF-1307 — und die BEGRUENDUNG gehoert mitgezogen, nicht
+     * nur die Zeile. Hier stand woertlich:
+     *
+     *     "TD0->IMD ist noch ohne Eintrag (Phase 2 des Plans)"
+     *
+     * Phase 2 ist gelaufen: seit MF-1307 fuehrt die Matrix TD0->IMD UND
+     * TD0->IMG als LOSSY_DOCUMENTED. Das Paar taugt damit nicht mehr als
+     * Gegenprobe — es WUERDE jetzt laufen, und diese Gruppe waere gruen
+     * aus dem falschen Grund.
+     *
+     * An seine Stelle tritt **IMG -> IMD**: dieselben zwei Formate wie in
+     * Gruppe 3, nur umgedreht. Das ist die schaerfste verfuegbare Wahl,
+     * weil niemand sagen kann, die Absage haenge an den FORMATEN — sie
+     * haengt allein am fehlenden Eintrag. Gemessen mit MF-1307: von 47
+     * Wandlungspfaden haben 27 keinen Matrix-Eintrag, IMG->IMD ist einer
+     * davon. */
     const uft_roundtrip_status_t s =
-        uft_roundtrip_status((uft_format_id_t)UFT_FORMAT_TD0,
+        uft_roundtrip_status((uft_format_id_t)UFT_FORMAT_IMG,
                              (uft_format_id_t)UFT_FORMAT_IMD);
     CHECK(s == UFT_RT_UNTESTED,
-          "TD0->IMD ist noch ohne Eintrag (Phase 2 des Plans); gemessen %s",
-          uft_roundtrip_status_string(s));
+          "IMG->IMD ist ohne Eintrag — die Rueckrichtung von Gruppe 3; "
+          "gemessen %s", uft_roundtrip_status_string(s));
 
-    const char *ziel = "uft_imd_img_belegt_td0.imd";
+    const char *ziel = "uft_imd_img_belegt_rueck.imd";
     remove(ziel);
     uft_convert_options_t opt = uft_convert_default_options();
+    opt.accept_data_loss = true;   /* selbst MIT Zustimmung bleibt es zu */
     uft_convert_result_t res;
     memset(&res, 0, sizeof(res));
-    const uft_error_t rc = uft_convert_file(UFT_CORPUS_DIR "/libdsk_uftk_pc720.td0",
-                                            ziel, UFT_FORMAT_IMD, &opt, &res);
+    const uft_error_t rc = uft_convert_file(VERGLEICH, ziel,
+                                            UFT_FORMAT_IMD, &opt, &res);
     CHECK(rc != UFT_OK,
           "das Tor muss weiterhin sperren — sonst belegt Gruppe 3 nichts");
-    printf("    TD0->IMD bleibt gesperrt (rc=%d)\n", (int)rc);
+    printf("    IMG->IMD bleibt gesperrt (rc=%d)\n", (int)rc);
     remove(ziel);
 }
 

@@ -129,12 +129,40 @@ static void t3_zuviel_faellt(void)
                                     UFT_RT_LOSSLESS) == NULL,
           "bei gleich reichem Ziel ist „identisch\" erlaubt");
 
-    /* Unvollstaendige Verlustliste: fuer TD0->IMG gibt es (noch) keinen
-     * Eintrag, die Maske ist also 0 — und 0 deckt fuenf Merkmale nicht. */
+    /* ── NACHGEZOGEN MF-1307: diese Gegenprobe IST WEGGEFALLEN ────────
+     *
+     * Hier stand, mit dieser Begruendung:
+     *
+     *     „Unvollstaendige Verlustliste: fuer TD0->IMG gibt es (noch)
+     *      keinen Eintrag, die Maske ist also 0 — und 0 deckt fuenf
+     *      Merkmale nicht."
+     *     CHECK(uft_preflight_widerspruch(TD0, IMG, LOSSY_DOCUMENTED)
+     *           != NULL, ...)
+     *
+     * Das Wort „noch" war der ganze Halt. Seit MF-1307 traegt TD0->IMG
+     * einen Eintrag MIT vollstaendiger Maske, der Widerspruch bleibt also
+     * zu Recht aus.
+     *
+     * **Und es gibt keinen Ersatz im Baum**, gemessen: die Merkmalstafel
+     * fuehrt DREI Formate (TD0, IMD, IMG); nichtleer ist die gerechnete
+     * Differenz nur bei TD0->IMG und IMD->IMG, und beide haben jetzt
+     * einen Eintrag. Ein Paar mit „Maske kleiner als Differenz" laesst
+     * sich damit nicht mehr herstellen, ohne die Tafel oder die Matrix zu
+     * veraendern — und das waere die Zahl als Motiv (MF-1077).
+     *
+     * Die Lehre steht als **P3-534**: die Gegenprobe dieses Tors war ein
+     * Paar, das bloss NOCH NICHT erledigt war. Ein Tor, dessen Rotbeweis
+     * am Rueckstand haengt, verliert ihn, sobald jemand den Rueckstand
+     * abarbeitet.
+     *
+     * Was bleibt und weiterhin traegt: die Zusage DARUEBER zeigt, dass
+     * `uft_preflight_widerspruch()` ueberhaupt NEIN sagen kann — „identisch"
+     * bei einem aermeren Ziel faellt. Nur die Spielart „zu kurze Maske"
+     * ist unbeaufsichtigt. */
     CHECK(uft_preflight_widerspruch(UFT_FORMAT_TD0, UFT_FORMAT_IMG,
-                                    UFT_RT_LOSSY_DOCUMENTED) != NULL,
-          "eine Verlustliste, die die gerechnete Differenz nicht abdeckt, "
-          "faellt");
+                                    UFT_RT_LOSSY_DOCUMENTED) == NULL,
+          "TD0->IMG traegt seit MF-1307 die volle Maske — der Widerspruch "
+          "muss ausbleiben");
 
     /* IMD->IMG hat seit MF-1283 die vollstaendige Maske. */
     CHECK(uft_preflight_widerspruch(UFT_FORMAT_IMD, UFT_FORMAT_IMG,

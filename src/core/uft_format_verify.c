@@ -13,6 +13,7 @@
 #include "uft/uft_format_common.h"
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_track.h"   /* uft_track_release (MF-433) */
+
 #include <string.h>
 
 uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
@@ -195,3 +196,4 @@ uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
     uft_track_release(&actual);
     return UFT_OK;
 }
+

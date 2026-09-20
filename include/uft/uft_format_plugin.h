@@ -732,6 +732,7 @@ typedef struct uft_format_plugin {
  * Sektor-für-Sektor mit der Referenz. Für Standard-Sector-Formate geeignet.
  * Formate mit Weak-Bits/Timing brauchen eigene verify_track-Funktion.
  */
+
 uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference);
 
