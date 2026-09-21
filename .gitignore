@@ -177,6 +177,14 @@ build-*/
 .claude/skills/*
 !.claude/skills/uft-*
 !.claude/skills/team-onboarding
+# MF-1334: `aufgabe` ist UFT-EIGEN und fiel trotzdem durch, weil das
+# Negat oben ein NAMENSMUSTER ist und kein Eigentumsnachweis. Gemessen
+# beim Nachziehen der sechs unverfolgten Faehigkeiten: fuenf trugen
+# `uft-` und kamen durch, `aufgabe` nicht — sie war als einzige der
+# 31 Verzeichnisse unter `.claude/skills/` weder verfolgt noch
+# sichtbar. `!.claude/skills/team-onboarding` eine Zeile hoeher ist der
+# Praezedenzfall fuer genau diese Lage.
+!.claude/skills/aufgabe
 .claude/settings.json.graphify-bak
 
 # Lose Arbeitsreste an der Wurzel — Notizen und Zwischenergebnisse,
