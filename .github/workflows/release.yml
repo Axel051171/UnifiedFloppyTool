@@ -135,7 +135,7 @@ jobs:
           dpkg-deb --build "${PKG}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-release
           path: |
@@ -199,7 +199,7 @@ jobs:
           tar czf "${DIST}.tar.gz" "${DIST}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release
           path: |
@@ -288,7 +288,7 @@ jobs:
           tar czf "${DIST}.tar.gz" "${DIST}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release
           path: UnifiedFloppyTool-*-windows-x64.tar.gz
@@ -311,7 +311,7 @@ jobs:
         run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
           merge-multiple: true
@@ -327,7 +327,7 @@ jobs:
           cat ../SHA256SUMS.txt
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # Name + prerelease flag derive from the git tag, not VERSION.txt:
           # VERSION.txt is numeric-only (4.1.4) and cannot carry an -rc/-beta

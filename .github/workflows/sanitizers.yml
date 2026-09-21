@@ -178,7 +178,7 @@ jobs:
 
       - name: Upload ASan findings
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: asan-findings-${{ github.sha }}
           path: |
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload UBSan findings
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ubsan-findings-${{ github.sha }}
           path: |

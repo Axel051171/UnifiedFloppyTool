@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload parity log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gw-parity-log-${{ github.sha }}
           path: parity.log
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload build logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-build-logs-${{ matrix.qt_version }}-${{ github.sha }}
           path: |
@@ -338,7 +338,7 @@ jobs:
 
       - name: Upload build logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-build-logs-${{ github.sha }}
           path: build/*.log
@@ -447,7 +447,7 @@ jobs:
 
       - name: Upload build logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-build-logs-${{ github.sha }}
           path: build/*.log
