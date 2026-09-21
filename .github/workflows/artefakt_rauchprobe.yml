@@ -1,0 +1,142 @@
+# Artefakt-Rauchprobe — der Beleg, den kein normaler Lauf liefern kann
+#
+# WARUM ES DIESE DATEI GIBT (MF-1333)
+#
+# MF-1332 hat drei Action-Hauptversionen gehoben: `upload-artifact`
+# v4 -> v7, `download-artifact` v4 -> v8, `action-gh-release` v2 -> v3.
+# Elf Stellen in drei Ablaeufen. Gemessen wird davon in einem normalen
+# Lauf **keine einzige** ausgefuehrt:
+#
+#     ci.yml         4 Stellen   `if: failure()`
+#     sanitizers.yml 2 Stellen   `if: failure()`
+#     release.yml    5 Stellen   nur auf Tag `v*`
+#
+# Der gruene CI-Lauf zu `5b10b8f8` hat das vorgefuehrt: beide Hochlade-
+# Schritte im Sanitizer-Auftrag standen auf **`skipped`**. Ein gruener
+# Lauf, der ueber den Pruefling schweigt.
+#
+# Das Risiko daran ist nicht theoretisch, sondern zeitlich: waere
+# `upload-artifact@v7` kaputt, fiele es **genau dann** auf, wenn ein Bau
+# ohnehin schon gescheitert ist — und die Protokolle, die man dann
+# braucht, kaemen nicht mehr an.
+#
+# WAS DIESE PROBE PRUEFT, UND WAS NICHT
+#
+# Geprueft: `upload-artifact@v7` und `download-artifact@v8` **samt**
+# `merge-multiple: true` — also genau der Pfad, den `release.yml`
+# benutzt, wo in den Bau-Auftraegen hochgeladen und im Freigabe-Auftrag
+# alles in EIN Verzeichnis heruntergeladen wird. Auf allen drei Laeufern,
+# auf denen die echten Schritte stehen.
+#
+# NICHT geprueft: `softprops/action-gh-release@v3`. Dafuer muesste eine
+# Freigabe angelegt werden; das ist kein Rauchtest, sondern ein Release.
+# Es bleibt offen und steht so in `docs/OPEN_ITEMS.md`.
+#
+# Sie laeuft NUR von Hand (`workflow_dispatch`). Sie gehoert nicht in den
+# Weg jedes Commits — sie gehoert an den Tag, an dem jemand die
+# Artefakt-Actions anfasst.
+
+name: Artefakt-Rauchprobe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rauchprobe:
+    name: Artefakt-Rundlauf (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Genau die drei Laeufer, auf denen die `if: failure()`-Uploads in
+        # ci.yml stehen. Ein Beleg auf nur einem davon waere ein Drittel
+        # Beleg: `upload-artifact@v6` verlangt eine Laufzeitumgebung
+        # >= 2.327.1, und die kann je Abbild verschieden sein.
+        os: [ubuntu-22.04, macos-14, windows-2022]
+
+    steps:
+      - name: Zwei Wegwerfdateien anlegen
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p teil_a teil_b
+          echo "UFT-RAUCHPROBE-A ${{ github.sha }}" > teil_a/eins.txt
+          echo "UFT-RAUCHPROBE-B ${{ github.sha }}" > teil_b/zwei.txt
+          echo "angelegt:"; ls -l teil_a teil_b
+
+      # Zwei GETRENNTE Artefakte, damit `merge-multiple` unten ueberhaupt
+      # etwas zu vereinen hat. Mit nur einem waere der Schalter wirkungslos
+      # und die Probe gruen, ohne ihn geprueft zu haben.
+      - name: Hochladen A (upload-artifact@v7)
+        uses: actions/upload-artifact@v7
+        with:
+          name: rauchprobe-a-${{ matrix.os }}
+          path: teil_a/eins.txt
+          retention-days: 1
+
+      - name: Hochladen B (upload-artifact@v7)
+        uses: actions/upload-artifact@v7
+        with:
+          name: rauchprobe-b-${{ matrix.os }}
+          path: teil_b/zwei.txt
+          retention-days: 1
+
+      - name: Die Quellen wegraeumen
+        shell: bash
+        run: rm -rf teil_a teil_b
+
+      # Ohne `name` und mit `merge-multiple: true` — das ist woertlich,
+      # was `release.yml` im Freigabe-Auftrag tut.
+      - name: Herunterladen mit merge-multiple (download-artifact@v8)
+        uses: actions/download-artifact@v8
+        with:
+          path: zurueck
+          merge-multiple: true
+
+      - name: Abnahme
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "was zurueckkam:"
+          find zurueck -type f | sort
+          fehler=0
+          pruefe() {
+            datei="$1"
+            erwartet="$2"
+            if [ ! -f "$datei" ]; then
+              echo "  [ROT] $datei fehlt"
+              fehler=$((fehler + 1))
+              return
+            fi
+            ist="$(cat "$datei")"
+            if [ "$ist" != "$erwartet" ]; then
+              echo "  [ROT] $datei: erwartet '$erwartet', gelesen '$ist'"
+              fehler=$((fehler + 1))
+              return
+            fi
+            echo "  [ok ] $datei"
+          }
+          pruefe "zurueck/eins.txt" "UFT-RAUCHPROBE-A ${{ github.sha }}"
+          pruefe "zurueck/zwei.txt" "UFT-RAUCHPROBE-B ${{ github.sha }}"
+
+          # DASS DIESE PROBE FALLEN KANN, IST HIER VORGEFUEHRT statt
+          # behauptet: dieselbe Pruefung gegen einen Namen, den es nicht
+          # gibt, MUSS anschlagen. Taete sie es nicht, waere `pruefe`
+          # wirkungslos und die beiden Zusagen darueber wertlos
+          # (Klasse MF-1000 / Tor 64).
+          if [ -f "zurueck/gibt_es_nicht.txt" ]; then
+            echo "  [ROT] die Gegenprobe hat eine Datei gefunden, die es nicht geben darf"
+            fehler=$((fehler + 1))
+          else
+            echo "  [ok ] Gegenprobe: eine fehlende Datei wird als fehlend erkannt"
+          fi
+
+          if [ "$fehler" -ne 0 ]; then
+            echo "Artefakt-Rundlauf GESCHEITERT ($fehler Befunde) auf ${{ matrix.os }}"
+            exit 1
+          fi
+          echo "Artefakt-Rundlauf bestanden auf ${{ matrix.os }}:"
+          echo "  upload-artifact@v7 + download-artifact@v8 mit merge-multiple"
