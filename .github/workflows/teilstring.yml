@@ -308,7 +308,7 @@ jobs:
           "
 
       - name: SARIF hochladen
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: /tmp/teilstring.sarif
           category: teilstring-audit
@@ -332,7 +332,7 @@ jobs:
       # würden die beiden Prüfer sich gegenseitig die Funde als erledigt
       # melden — abwechselnd, bei jedem Lauf.
       - name: Code-Fallen — SARIF hochladen
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: /tmp/codefallen.sarif
           category: codefallen-audit
