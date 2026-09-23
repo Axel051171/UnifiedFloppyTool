@@ -17,6 +17,8 @@
  */
 
 #include "uft_disk2_priv.h"
+#include "uft/core/uft_source_facts.h"  /* MF-1318 */
+#include "uft/uft_format_plugin.h"          /* MF-1317: probe_* an der Scheibe */
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -886,6 +888,137 @@ static void rep_app(rep_t *r, const char *fmt, ...) {
     }
 }
 
+/* ── MF-1318: dieselben Zahlen, aber lesbar statt nur druckbar ────────
+ *
+ * `uft_d2_report()` rechnet unten sechs Zahlen — Umdrehungen, davon ohne
+ * Indexzeit, Sektoren, mit CRC-Angabe, davon falsch, ohne CRC-Angabe —
+ * und schreibt sie in einen Text. Es gibt im ganzen Baum KEINE Funktion,
+ * die sie zurueckgibt (gemessen). Wer sie braucht, muesste den Bericht
+ * zerlegen; das waere ein Parser fuer die eigene Ausgabe.
+ *
+ * Diese Projektion liefert genau dieselben Zahlen aus derselben
+ * Schleifenform. Sie ist bewusst KEINE zweite Rechnung mit eigener
+ * Logik — zwei Rechnungen derselben Groesse driften (MF-1177). Wenn hier
+ * einmal etwas anderes herauskommt als im Bericht, ist das ein Fehler
+ * und kein Spielraum; der Test nagelt beide gegeneinander fest. */
+const char *uft_fakt_zustand_name(uft_fakt_zustand_t z) {
+    switch (z) {
+    case UFT_FAKT_UNGEMESSEN:     return "ungemessen";
+    case UFT_FAKT_GEMESSEN:       return "gemessen";
+    case UFT_FAKT_KEIN_ERZEUGER:  return "kein Erzeuger";
+    default:                      return NULL;
+    }
+}
+
+bool uft_d2_facts(const uft_disk2_t *d, uft_source_facts_t *aus) {
+    if (!aus) return false;
+
+    /* Alles auf UNGEMESSEN — das ist der Wert 0, und genau deshalb ist er
+     * der Vorgabewert: eine genullte Struktur behauptet damit nichts. */
+    memset(aus, 0, sizeof(*aus));
+
+    /* Ohne Modell bleibt es dabei. Ein `false` waere hier falsch: die
+     * Frage "gibt es Tatsachen?" ist beantwortet — mit "keine gemessen",
+     * und das steht in der Struktur. */
+    if (!d) return true;
+
+    aus->ebenen   = UFT_FAKT_GEMESSEN;
+    aus->layers   = uft_d2_layers(d);
+    aus->merkmale = UFT_FAKT_GEMESSEN;
+    aus->features = uft_d2_features(d);
+
+    /* EIN Durchlauf ueber das Modell. Die Weak-Zaehlung stand zuerst als
+     * zweite Schleife daneben — dasselbe Muster, das diese Funktion einen
+     * Schritt vorher aus `uft_d2_report()` entfernt hat (MF-1177). Zwei
+     * Schleifen ueber dieselbe Menge driften auseinander, sobald jemand
+     * eine Abbruchbedingung nur in einer aendert. */
+    size_t revs_total = 0u, no_index = 0u, sectors_total = 0u;
+    size_t crc_checked = 0u, crc_bad = 0u, crc_unknown = 0u;
+    size_t weak_sekt = 0u, weak_bits = 0u;
+    for (size_t i = 0; i < d->ntracks; ++i) {
+        const uft_d2_track_t *t = &d->tracks[i];
+        revs_total += t->flux.count;
+        for (size_t k = 0; k < t->flux.count; ++k)
+            if (!t->flux.revs[k].index_time_ns) no_index++;
+        sectors_total += t->sectors.count;
+        for (size_t k = 0; k < t->sectors.count; ++k) {
+            const uft_d2_sector_t *x = &t->sectors.items[k];
+
+            /* Flackern zuerst: die CRC-Zweige unten springen mit
+             * `continue` weiter, und ein Sektor OHNE CRC-Angabe kann sehr
+             * wohl Weak-Bits tragen — in der ersten Fassung stand die
+             * Zaehlung in einer eigenen Schleife und war davon nicht
+             * betroffen; hier waere sie es. */
+            if (x->weak_bits || x->fuzzy_bits) {
+                weak_sekt++;
+                weak_bits += (size_t)x->weak_bits + (size_t)x->fuzzy_bits;
+            }
+
+            if (!x->data_crc_known) { crc_unknown++; continue; }
+            crc_checked++;
+            if (!x->data_crc_ok) crc_bad++;
+        }
+    }
+
+    aus->sektoren      = UFT_FAKT_GEMESSEN;
+    aus->sectors_total = sectors_total;
+    aus->crc_checked   = crc_checked;
+    aus->crc_bad       = crc_bad;
+    aus->crc_unknown   = crc_unknown;
+
+    aus->umdrehungen     = UFT_FAKT_GEMESSEN;
+    aus->revs_total      = revs_total;
+    aus->revs_ohne_index = no_index;
+
+    /* Fluss — der Zustand FOLGT dem Modell, er wird nicht behauptet.
+     *
+     * Die erste Fassung setzte hier unbedingt KEIN_ERZEUGER, begruendet
+     * mit `FLUX_NOT_BRIDGED`. Das ist eine Aussage ueber EINEN Fuellweg
+     * (`uft_d2_from_disk()`), und sie stimmt fuer den; als Aussage ueber
+     * das MODELL war sie falsch, denn der UFTD-Leser
+     * (`uft_disk2_io.c:370`) ruft `uft_d2_add_revolution()`. Die Struktur
+     * haette sonst `revs_total > 0` neben „kein Erzeuger fuer Fluss"
+     * getragen — ein Widerspruch in sich selbst, Gestalt von MF-1038. */
+    aus->fluss = revs_total ? UFT_FAKT_GEMESSEN : UFT_FAKT_KEIN_ERZEUGER;
+
+    /* PLL — hier haelt die Luecke, und zwar gemessen: `uft_d2_track_t`
+     * hat kein Feld dafuer, und `flux_pll_t` rechnet `locked` und
+     * `residual_rms` (MF-1136), ist aber an allen fuenf Stellen in
+     * `uft_flux_decoder.c` eine Stapelvariable und wird nie herausgegeben.
+     * Es gibt also nichts, was diese Werte je gefuellt haette. */
+    aus->pll = UFT_FAKT_KEIN_ERZEUGER;
+
+    /* Weak — ebenfalls berichtigt. `WEAK_MASK_NOT_BRIDGED` meldet, dass
+     * die per-BIT-Maske nicht uebersetzt wird; die Angabe JE SEKTOR wird
+     * es sehr wohl (`uft_disk2_bridge.c:88-94`). Zwei Dinge unter einem
+     * Wort — aufgeloest durch eine Unterscheidung, nicht durch eine
+     * Entscheidung (Gestalt von MF-1037).
+     *
+     * `weak_bits_min` heisst so, weil es eine Untergrenze IST: die
+     * Bruecke traegt fuer eine blosse Flagge ohne Maske den Wert 1 ein
+     * („mindestens eines") und zaehlt mit Maske markierte BYTES. Eine
+     * Zahl, die kleiner sein kann als die Wahrheit, darf nicht klingen
+     * wie eine Zaehlung (MF-980). */
+    aus->weak          = UFT_FAKT_GEMESSEN;
+    aus->weak_sektoren = weak_sekt;
+    aus->weak_bits_min = weak_bits;
+
+    return true;
+}
+
+bool uft_facts_erkennung(const struct uft_disk *disk, uft_source_facts_t *aus) {
+    if (!aus) return false;
+    if (!disk) return true;   /* bleibt UNGEMESSEN */
+
+    const uft_disk_t *d = (const uft_disk_t *)disk;
+    if (!d->probe_gemessen) return true;   /* vor MF-1317 geoeffnet */
+
+    aus->erkennung  = UFT_FAKT_GEMESSEN;
+    aus->confidence = d->probe_confidence;
+    aus->tied       = d->probe_tied;
+    return true;
+}
+
 size_t uft_d2_report(const uft_disk2_t *d, char *buf, size_t buflen) {
     rep_t r = { buf, buflen, 0u, 0u };
     if (buf && buflen) buf[0] = '\0';
@@ -923,33 +1056,31 @@ size_t uft_d2_report(const uft_disk2_t *d, char *buf, size_t buflen) {
     if (!nf) APP(" keine");
     APP("\n");
 
-    size_t revs_total = 0u, no_index = 0u, sectors_total = 0u;
-    size_t crc_checked = 0u, crc_bad = 0u, crc_unknown = 0u;
-    for (size_t i = 0; i < d->ntracks; ++i) {
-        const uft_d2_track_t *t = &d->tracks[i];
-        revs_total += t->flux.count;
-        for (size_t k = 0; k < t->flux.count; ++k)
-            if (!t->flux.revs[k].index_time_ns) no_index++;
-        sectors_total += t->sectors.count;
-        for (size_t k = 0; k < t->sectors.count; ++k) {
-            const uft_d2_sector_t *x = &t->sectors.items[k];
-            if (!x->data_crc_known) { crc_unknown++; continue; }
-            crc_checked++;
-            if (!x->data_crc_ok) crc_bad++;
-        }
-    }
-    if (revs_total && no_index)
+    /* MF-1318: der Bericht RECHNET diese Zahlen nicht mehr selbst.
+     *
+     * Bis hierher stand die Zaehlschleife zweimal woertlich im Baum — einmal
+     * hier und einmal in `uft_d2_facts()`. Gefunden hat das die eigene
+     * Mutationsmatrix: drei Mutationen liessen sich nicht isolieren, weil ihr
+     * Anker zweimal vorkam. Das ist der Fall aus MF-1177 („eine Groesse, eine
+     * Rechnung"), und er waegt hier doppelt, weil der Test die beiden
+     * gegeneinander haelt: zwei Kopien, die sich einig sind, belegen nur ihre
+     * Einigkeit. Seit MF-1318 gibt es EINE Rechnung, und der Bericht ist ihr
+     * Leser. */
+    uft_source_facts_t f;
+    (void)uft_d2_facts(d, &f);
+
+    if (f.revs_total && f.revs_ohne_index)
         APP("Fluss: %zu Umdrehungen — davon ohne Indexzeit: %zu\n",
-            revs_total, no_index);
-    else if (revs_total)
-        APP("Fluss: %zu Umdrehungen\n", revs_total);
+            f.revs_total, f.revs_ohne_index);
+    else if (f.revs_total)
+        APP("Fluss: %zu Umdrehungen\n", f.revs_total);
     /* MF-1272: „falsche CRC: 0" ist bei einem Abbild ohne Pruefsumme kein
      * Befund, sondern ein Urteil in eine Richtung, das niemand gefaellt
      * hat. Deshalb drei Zahlen statt einer. */
-    if (sectors_total)
+    if (f.sectors_total)
         APP("Sektoren: %zu — mit CRC-Angabe: %zu (davon falsch: %zu), "
             "ohne CRC-Angabe: %zu\n",
-            sectors_total, crc_checked, crc_bad, crc_unknown);
+            f.sectors_total, f.crc_checked, f.crc_bad, f.crc_unknown);
 
     for (size_t i = 0; i < d->nfs; ++i) {
         const uft_d2_fs_t *f = &d->fs[i];

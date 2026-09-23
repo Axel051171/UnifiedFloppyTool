@@ -47,6 +47,18 @@ find_package(ZLIB REQUIRED)
 set(CORE_SOURCES
     uft_advanced_mode.c
     uft_copy_plan.c            # MF-1232: der Kopierplan in vier Dimensionen
+    uft_copy_caps.c            # MF-1311: die Faehigkeiten AUS DEN PLUGINS,
+                               # statt aus einer gepflegten Liste. Steht
+                               # hier und nicht bei einem einzelnen Ziel,
+                               # weil `toolstab.cpp` sie ruft und zwei
+                               # Qt-Ziele diese Datei linken — gemessen
+                               # fielen genau die beiden mit „undefined
+                               # reference to uft_copy_caps_von_plugins"
+                               # (MF-1318). Dieselbe Lehre wie MF-1197:
+                               # wer eine Quelldatei erweitert, erweitert
+                               # jedes Ziel, das sie linkt. Sie zieht nur
+                               # `uft_copy_plan.h` und die Plugin-Tafel —
+                               # keine neue Kopplung.
     uft_core_stubs.c           # glue: real plugin-delegation for disk API
     uft_disk2.c                # MF-1272: das Zentrum — vier Schichten mit
                                # Herkunft und Zuversicht (Entwurf des
@@ -62,6 +74,18 @@ set(CORE_SOURCES
     uft_format_traegt.c        # MF-1283: was traegt welches Format — die
                                # Tafel, ohne die „Verluste benannt" ein
                                # Satz bleibt statt ein pruefbarer Wert
+    uft_copy_job.c             # MF-1333: Plan + Schutzabsicht; leitet aus
+                               # der Tafel ab, statt sie zu wiederholen
+    uft_imaging_recipe.c       # Rezept-Maschine: Spurregeln je
+                               # Bereich, Variantenwahl ueber
+                               # Fingerabdruecke, bitgenaue Syncsuche
+                               # mit Umlauf ueber das Spurende
+    uft_recipe_copyplan.c      # Bruecke Rezept -> uft_copy_plan_t. Die
+                               # drei Stufen des Rezepts bilden auf die
+                               # sechs Ebenen des Baums ab, statt eine
+                               # zweite Leiter zu fuehren (MF-1177)
+    uft_amiga_recipe_profiles.c  # acht Profile, alle mit
+                               # verified_with_real_media = false
     uft_format_verify.c        # generic/weak/flux verify
     uft_interleave.c           # TA2 M2: Atari sector interleave calculator
     uft_ir_format.c

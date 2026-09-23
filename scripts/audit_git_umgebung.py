@@ -124,16 +124,74 @@ def pruefe_datei(pfad):
     return befunde
 
 
+# MF-1324: wie viele Dateien der letzte `sammle()`-Lauf wirklich
+# angesehen hat. -1 heisst „noch nicht gelaufen".
+LETZTE_MENGE = -1
+
+
 def sammle(wurzel):
+    """MF-1324: die Dateimenge kommt aus GIT, nicht aus `rglob`.
+
+    Hier stand `basis.rglob("*.py")` — ein roher Dateisystembaum. Der
+    nimmt alles mit, was auf der Platte liegt, auch die gitignorierten
+    Fremdklone unter `tools/uft-scout/work/`. Gemessen meldete dieses Tor
+    dadurch ACHT Befunde, die samt und sonders fremde Python-2-Dateien
+    betreffen:
+
+        tools/uft-scout/work/atrcopy/test_data/create_binary.py:69
+        tools/uft-scout/work/OpenCBM/xu1541/bootloader/check.py:38
+        ... (sechs weitere)
+
+    „Missing parentheses in call to 'print'" ist Python 2. Diese Dateien
+    gehoeren nicht zu diesem Baum, niemand baut sie, und ihr Inhalt sagt
+    ueber die git-Umgebung UNSERER Haken nichts. Acht Befunde, die jeden
+    Commit blockieren und die niemand beheben kann, ohne fremden Code
+    anzufassen.
+
+    Das ist woertlich der Grundsatz aus `CLAUDE.md` §MF-636: „Wer in
+    einem Skript entscheidet, WELCHE Dateien geprueft werden, fragt
+    `git ls-files` — nie eine hartkodierte Verzeichnisliste." Der Helfer
+    dafuer liegt seit damals bereit; dieses Tor hat ihn nicht benutzt.
+
+    Gemessen nach der Umstellung: `repo_scope.repo_files()` liefert 3478
+    Dateien, davon 0 unter `tools/uft-scout/work/`.
+
+    Faellt git aus, laesst `repo_scope` alles durch UND sagt es (P3-421).
+    Dann meldet dieses Tor wieder die Fremdklone — lautstark und mit
+    Hinweis, was diesem Baum lieber ist als ein stilles Loch.
+    """
+    import repo_scope
+
+    # `repo_files()` liefert ABSOLUTE Pfade — gemessen
+    # `WindowsPath('C:/.../src/...')`. Ein Vergleich gegen relative wuerde
+    # ALLES wegwerfen und das Tor blind machen; die erste Fassung dieser
+    # Aenderung tat genau das und meldete „0 Befunde", was wie Erfolg
+    # aussah. Gefangen hat es die Gegenprobe im Selbsttest (MF-1324).
+    erlaubt = {Path(x).resolve() for x in repo_scope.repo_files(wurzel)}
+
     alle = []
+    gesehen = 0
     for ort in ORTE:
         basis = wurzel / ort
         if not basis.is_dir():
             continue
         for p in sorted(basis.rglob("*.py")):
             rel = p.relative_to(wurzel).as_posix()
+            if p.resolve() not in erlaubt:
+                continue
+            gesehen += 1
             for zeile, befehl in pruefe_datei(p):
                 alle.append((rel, zeile, befehl))
+
+    # MF-1324: das Tor sagt, WIE VIEL es angesehen hat.
+    #
+    # „0 Befunde" heisst zweierlei: geprueft und nichts gefunden, oder gar
+    # nicht geprueft. Ohne diese Zahl sind die beiden nicht zu
+    # unterscheiden — und die erste Fassung des Filters war gemessen der
+    # zweite Fall: sie verglich relative gegen absolute Pfade, warf alles
+    # weg und meldete Erfolg. Der Selbsttest prueft die Zahl.
+    global LETZTE_MENGE
+    LETZTE_MENGE = gesehen
     return alle
 
 
@@ -185,6 +243,49 @@ def selbsttest():
             n = len(pruefe_datei(p))
             pruefe(n == erwartet,
                    "%s — erwartet %d, gemessen %d" % (text, erwartet, n))
+
+    # ── MF-1324: die Dateiauswahl von `sammle()` ──────────────────────
+    #
+    # Der Selbsttest darueber ruft `pruefe_datei()` DIREKT und sagt damit
+    # nichts ueber die Auswahl. Genau dort lag der Fehler: `rglob` nahm
+    # gitignorierte Fremdklone mit. Ein Tor, dessen Auswahl niemand
+    # prueft, kann still das Falsche messen — und hat es acht Befunde
+    # lang getan.
+    #
+    # Die Probe stellt beide Richtungen: eine Datei, die git NICHT kennt,
+    # muss uebersprungen werden; eine, die es kennt, muss ankommen. Nur
+    # die erste Haelfte zu pruefen waere die Falle aus MF-1019 („eine
+    # Sicherung, die eine Klaerung vertritt, gehoert in beide Richtungen
+    # gemessen").
+    try:
+        import repo_scope
+        bekannt = {Path(x).resolve() for x in repo_scope.repo_files(WURZEL)}
+        als_text = {x.as_posix() for x in bekannt}
+        pruefe(len(bekannt) > 0,
+               "repo_scope liefert keine Datei — dann misst sammle() nichts")
+        fremd = [r for r in als_text if "uft-scout/work/" in r]
+        pruefe(not fremd,
+               "repo_scope fuehrt %d Datei(en) unter tools/uft-scout/work/ — "
+               "dann greift der Ausschluss nicht" % len(fremd))
+
+        # Die Gegenrichtung: das Tor selbst steht in git und muss in der
+        # geprueften Menge auftauchen. Ohne sie waere „0 Befunde" auch
+        # dann gruen, wenn der Filter ALLES wegwirft — und genau das ist
+        # in der ersten Fassung passiert.
+        selbst = (WURZEL / "scripts" / "audit_git_umgebung.py").resolve()
+        pruefe(selbst in bekannt,
+               "%s steht nicht in der geprueften Menge — dann wirft der "
+               "Filter zu viel weg" % selbst.as_posix())
+        # Und jetzt `sammle()` SELBST, nicht nur seine Zutaten.
+        # Ohne diesen Lauf bleibt ein blindes Tor gruen: ein Filter,
+        # der alles wegwirft, findet 0 Befunde und sieht aus wie
+        # Erfolg. Gemessen ist das genau einmal passiert.
+        sammle(WURZEL)
+        pruefe(LETZTE_MENGE > 0,
+               "sammle() hat %d Dateien angesehen — ein Tor, das"
+               " nichts prueft, meldet immer 0 Befunde" % LETZTE_MENGE)
+    except Exception as e:                      # pragma: no cover
+        pruefe(False, "Auswahlprobe nicht durchfuehrbar: %s" % e)
 
     import git_env
     pruefe(git_env._selbsttest() == 0, "git_env.py Selbsttest")

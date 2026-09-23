@@ -73,6 +73,19 @@
 # keine ist einfacher und sagt dasselbe.
 
 set(UFT_FORMAT_LAYER_DEPS
+            # MF-1322: das A2R-PLUGIN liegt in `src/formats/a2r/` und wird
+            # von jedem `src/formats/*.c`-Glob erfasst; sein LESER liegt in
+            # `src/parsers/a2r/` und von keinem. Ohne diese Zeile faellt
+            # `cli/uft-decode` mit „undefined reference to a2r_open" —
+            # gemessen, nicht vermutet.
+            #
+            # Der Eintrag steht HIER aus demselben Grund wie die
+            # `uft_magic_search`-Zeile darunter: es ist die gemeinsame
+            # Liste, und `cli/uft-decode` globt `src/parsers` nicht.
+            # Die zwoelf lokalen `*_FORMAT_SOURCES`-GLOBs in `tests/`
+            # deckt sie NICHT (das ist `P3-426`); die haben denselben
+            # Eintrag je eigen bekommen.
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c
             # what the format layer calls out to
             # MF-1232: `src/formats/sega/uft_genesis.c` ruft seit der
             # Begrenzung des Konsolennamens `uft_magic_search()`. Der

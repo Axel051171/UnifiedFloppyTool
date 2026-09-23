@@ -8,6 +8,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QDialog>
 #include <QStringList>
 #include "disk_image_validator.h"
 
@@ -71,6 +72,9 @@ private slots:
     void onAnalyze();
 
 private:
+    /* MF-1293: der Werkzeug-Reiter ist aufgeloest; die Klasse haengt
+     * jetzt am Menue und wird beim ersten Oeffnen einmal gebaut. */
+    QDialog *m_toolsDialog = nullptr;
     /**
      * @brief Speichert das geladene Abbild nach @p ziel (MF-664).
      *

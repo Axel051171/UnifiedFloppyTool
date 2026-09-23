@@ -1564,6 +1564,80 @@ def main() -> int:
         import audit_einheiten as _eh
         all_errors.append(("Einheit im Namen", _eh.check(repo)))
 
+        # Tor 68 (MF-1194): eine Widget-Klasse, die niemand konstruiert.
+        #
+        # Vier Reiter lagen als fertige, uebersetzte Klassen im Binary und
+        # waren unerreichbar — forensictab 740 Z., xcopytab 577,
+        # nibbletab 542, protectiontab 522, zusammen 2381 Zeilen, alle mit
+        # SOURCES UND FORMS im .pro. `ProtectionTab` hat 30 ausimplemen-
+        # tierte Methoden. Gefehlt hat je eine Zeile `new ProtectionTab`.
+        # Gemessen waren 155 der 318 Eingabefelder so unerreichbar — 49 %.
+        #
+        # Die drei vorhandenen Anzeige-Tore konnten es nicht sehen: Tor 34
+        # sucht Platzhalter-TEXTE, Tor 35 Urteile ohne Gegenzweig,
+        # `audit_orphan_modules.py` arbeitet auf MODULEBENE. Eine Klasse
+        # mit sauberem Inhalt und Eintrag im .pro ist fuer alle drei
+        # unauffaellig — und trotzdem tuerlos. Klasse P3-204 / MF-930.
+        #
+        # Grundlinie 12, darf nur fallen; jeder Eintrag ist im Torkopf
+        # benannt. Naechster Kandidat ist `TrackGridWidget` (882 Z.),
+        # dessen Knopf heute "not yet implemented" sagt.
+        #
+        # Benannte Luecke: das Tor prueft, ob irgendwo konstruiert wird —
+        # nicht, ob der Reiter im Hauptfenster SICHTBAR ist. Ein `new` in
+        # einem Test genuegt ihm.
+        import audit_reiter_ohne_tuer as _rt
+        all_errors.append(("Reiter ohne Tuer", _rt.check(repo)))
+
+        # Tor 69 (MF-1196): zwei Aussagen ueber dieselbe Faehigkeit, im
+        # selben Plugin.
+        #
+        # `uft_format_plugin_t` fuehrt sie doppelt — `capabilities`
+        # (Bitflaggen, 89 Plugins) und `features[]` (Merkmalstafel, 88
+        # Plugins). Gemessen ueber 503 Paare: 5 Widersprueche, 15 Faelle,
+        # in denen nur die Flagge spricht. Das ist MF-1177 in der
+        # Formatschicht.
+        #
+        # Der echte Fall: `uft_pro_plugin.c:312` setzt
+        # UFT_FORMAT_CAP_WEAK_BITS, waehrend die eigene Tafel sagt "PRO
+        # speichert keine schwachen Bits ... (MF-1054)". Die Tafel hat
+        # eine Messung, die Flagge hat nichts.
+        #
+        # Vier der fuenf sind STRUKTURELL: CAP_READ gesetzt, Tafel sagt
+        # PARTIAL — eine Bitflagge kann "teilweise" nicht ausdruecken.
+        # Sie stehen in der Grundlinie, weil der Widerspruch echt ist;
+        # der Weg heraus ist eine Entwurfsentscheidung, keine Korrektur.
+        #
+        # Die drei vorhandenen Faehigkeits-Tore sehen das nicht: MF-985
+        # prueft Zusagen ohne Vorbehalt, Tor 67 Absagen gegen
+        # docs/CAPABILITIES.md, MF-491 die Signaturtabelle des
+        # Schreib-Tors. Keines fragt, ob die zwei Felder DESSELBEN
+        # Plugins dasselbe sagen.
+        #
+        # Benannte Luecke: gemessen wird dateiweit, nicht je Struktur-
+        # Initialisierer; `dsk_generic` mit 49 Makro-Ausweitungen steht
+        # deshalb in der Grundlinie.
+        import audit_faehigkeitsaussage as _fa
+        all_errors.append(("Faehigkeitsaussage doppelt", _fa.check(repo)))
+
+        # Tor 70 (MF-1200): eine Zusage, zu der kein Weg fuehrt.
+        #
+        # Tor 69 fragt, ob die ZWEI Quellen desselben Plugins dasselbe
+        # sagen. Tor 70 fragt die naechste Frage: ist das Gesagte
+        # gedeckt? Gemessen ueber den Weg, nicht ueber die Zuweisung —
+        # ein gesetzter Rueckruf beweist nichts, weil sein Rumpf
+        # bedingungslos absagen darf (`uft_cqm.c:328` nennt das
+        # ausdruecklich als Absicht: "bleibt GESETZT statt NULL: ein
+        # Nullzeiger gaebe dem Aufrufer keinen Grund").
+        #
+        # Benannte Luecken: ueber Dateigrenzen wird nicht verfolgt, und
+        # VERIFY ist deshalb in 84 von 89 Faellen `unentscheidbar` statt
+        # als Befund gemeldet. FLUX/TIMING/WEAK_BITS/MULTI_REV haben
+        # keinen eigenen Rueckruf und sind grundsaetzlich nicht ueber
+        # diesen Weg entscheidbar.
+        import audit_faehigkeitsmatrix as _fm
+        all_errors.append(("Zusage ohne Weg", _fm.check(repo)))
+
     # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
     #
     # Git EXPORTIERT `GIT_DIR` in jeden Haken. Ein `git init` gegen ein

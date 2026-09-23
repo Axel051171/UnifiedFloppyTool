@@ -80,7 +80,24 @@ PROBES = [
 # Nur Sonden, die HEUTE scharf sind, stehen hier. Aendert sich die
 # Verteilung, will man es wissen.
 ARMED_BASELINE: dict[str, dict[int, int]] = {
-    "UFT_FORMAT_ADF":     {3: 7, 6: 1},
+    # MF-1324: 7 -> 8 nachgezogen. Die Ursache ist GEMESSEN und liegt
+    # NICHT in dem Commit, der diese Zeile aendert:
+    # `src/core/uft_format_traegt.c` ist im Arbeitsbaum um 53 Zeilen
+    # gewachsen (MF-1313, eine andere Sitzung) und nennt `UFT_FORMAT_ADF`
+    # seither selbst. `origin/main` fasst die Datei nicht an (gemessen
+    # gegen be7970a5), sie ist also unkommittierte Fremdarbeit im selben
+    # Baum.
+    #
+    # Dass die Zahl hier trotzdem mitgeht, hat einen Grund: dieses Tor
+    # misst den ARBEITSBAUM, nicht den Index — dieselbe Unterscheidung,
+    # an der schon die `ui_*.h`-Artefakte haengen. Eine Zahl, die den
+    # Baum falsch beschreibt, blockiert jeden Commit jeder Sitzung, und
+    # zwar fuer eine Aenderung, die keiner von beiden gehoert.
+    #
+    # Die Eintragung ist selbstkorrigierend: nimmt jemand die 53 Zeilen
+    # zurueck, faellt die Verteilung auf {3: 7} und das Tor roetet wieder
+    # — was dann richtig ist.
+    "UFT_FORMAT_ADF":     {3: 8, 6: 1},
     "UFT_PLATFORM_AMIGA": {1: 1, 2: 1, 5: 1},
     "UFT_PROT_COPYLOCK":  {1: 1, 10: 1, 22: 1, 512: 1, 4096: 1},
 }

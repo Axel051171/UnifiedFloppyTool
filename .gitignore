@@ -243,3 +243,16 @@ build-*/
 # genannt. Die Muster der Aufraeum-Anweisung kennen `build/` und
 # `CMakeFiles/`, aber nicht dieses Verzeichnis.
 Testing/
+
+# Local agent runtime, notes and generated test outputs
+/.claude-flow/
+/.swarm/
+/.unlazy/
+/claude-mem.txt
+/UnifiedFloppyTool-tod --*.txt
+/test_d64_42_quelle.d64
+/test_d64_42_zwischen.g64
+/uft_hfe_160_absage.hfe
+/uft_rt_mid.scp
+/uft_rt_out.hfe
+/tools/uft-retrace/graft/

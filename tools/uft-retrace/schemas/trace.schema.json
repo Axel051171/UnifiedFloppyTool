@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/uft-retrace/trace.schema.json",
+  "title": "UFT ReTrace JSONL event",
+  "type": "object",
+  "required": ["pc", "type"],
+  "properties": {
+    "seq": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "cycle": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "pc": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "type": {
+      "enum": ["instruction", "call", "return", "jump", "memory_read",
+               "memory_write", "mmio_read", "mmio_write", "interrupt",
+               "snapshot", "note"]
+    },
+    "address": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "target": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "size": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "value": {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+    "data": {"type": "string"},
+    "note": {"type": "string"}
+  },
+  "additionalProperties": true
+}

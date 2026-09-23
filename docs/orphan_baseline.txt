@@ -224,7 +224,6 @@ src/protection/uft_atari8_protection.c
 src/protection/uft_atarist_macrodos.c
 src/protection/uft_atarist_missing_schemes.c
 src/protection/uft_c64_missing_schemes.c
-src/protection/uft_geos_protection.c
 src/protection/uft_magnetic_state.c
 src/protection/uft_pc_cdrom_protection.c
 src/protection/uft_pc_protection.c

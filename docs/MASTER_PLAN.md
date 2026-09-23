@@ -573,7 +573,7 @@ Findings für die folgenden Sessions / Tag-Gates:
 | UFT-005 | ✓ CLOSED MF-260 | `test_transitions_ns_contract` extended via `transitions_ns_kryoflux_contract_probe()` + `transitions_ns_fluxengine_contract_probe()` in FFI. Beide injizieren einen "binary not found" Runner und assertieren dass beide Provider mit honest non-Captured outcome antworten (kein fabriziertes FluxCaptured mit Container-Bytes). ARCH-2-Regression-Shield aktiv. | — | tests/unit/transitions_ns_ffi.cpp, tests/unit/test_transitions_ns_contract.c |
 | UFT-007 | ✓ CLOSED MF-212 | ARCH-7 sub-B Status verifiziert: VID/PID jetzt SSOT in `uft_scp_direct.h:40-41` (`0x16D0:0x0F8C`), `hardwaretab.cpp:548` liest exakt das Macro. Orchestrator-Finding war stale. | — | include/uft/hal/uft_scp_direct.h:40-41 |
 | UFT-008 | P1 · **COMMUNITY-DELEGATED** | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig — **kein projekt-eigenes Gerät, nicht in-house durchführbar** (siehe M3-Banner). Bench an Fremd-Tester mit Hardware delegiert; Protokoll steht bereit. Nicht als offene In-house-Aufgabe geführt. | S pro Controller (1-2h Bench-Time, extern) | tests/hil/run_hil.py, tests/HARDWARE_TRUTH_TESTS.md, audit/rc1_field_notes.md |
-| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Stand 2026-08-18 (MF-409): noch 2 Exclusions**, nicht 38 — `test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge` (alle drei dieselbe Header-Twin-Entwirrung), `test_libdsk_formats`, `test_fat_extensions`. Suite steht bei 193 laufenden Tests (nicht 151). | S (5 verbleibend) | tests/CMakeLists.txt:53-110 |
+| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Stand 2026-08-18 (MF-409): noch 2 Exclusions**, nicht 38 — `test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge` (alle drei dieselbe Header-Twin-Entwirrung), `test_libdsk_formats`, `test_fat_extensions`. Suite steht bei 193 laufenden Tests (nicht 151). **BERICHTIGT MF-1332 — diese Zelle trug DREI Zahlen fuer dieselbe Sache, und zwei davon widersprachen der dritten:** sie sagt „noch **2** Exclusions", zaehlt dann **fuenf** Namen auf, und die Aufwandsspalte sagte „5 verbleibend". Gemessen am 2026-09-21 stimmt die **2** — `tests/CMakeLists.txt:77-91` fuehrt genau `test_libdsk_formats` (fehlender libdsk-Klebstoff) und `test_fat_extensions` (11 von 11 zugesagten Funktionen ohne Umsetzung, P3-219). Die drei Header-Zwillinge laufen seit **MF-411** wieder, und der Kommentarblock unmittelbar unter der Liste sagt es selbst („Previously excluded, now running again"). Die Aufzaehlung hat die eigene Zahl derselben Zeile also seit MF-411 widerlegt. Suite steht bei **534** Tests (nicht 193), davon 4 rot aus dem vorbestehenden Windows-`tmpnam()`-Befund und 1 benannter Skip. | S (2 verbleibend, MF-1332) | tests/CMakeLists.txt:77-91 |
 | UFT-T05 | ✓ CLOSED v4.1.5 pre-tag | Datei `src/analysis/events/CMakeLists.txt:13` nutzt bereits `CMAKE_CURRENT_SOURCE_DIR` für Include-Pfad — `add_subdirectory()`-sicher. Subdir noch nicht ins Root-CMake verkabelt (separate Entscheidung, Out-of-Scope für T05). | — | src/analysis/events/CMakeLists.txt:13 |
 
 ### Was diese Session NICHT geprüft hat
@@ -872,6 +872,12 @@ MF-103, MF-105, MF-107, MF-108 — Kandidaten für die Auffüllung nach S3-1.
 **Backlog-Detail (Stand eingefroren, Items noch offen):**
 - `docs/XCOPY_INTEGRATION_TODO.md` — M2 Amiga-Block (T1-T8, Status oben in §M2)
 - `docs/A8RAWCONV_INTEGRATION_TODO.md` — M2 Atari-Block (TA1-TA3)
+- `docs/FORMAT_INTEGRATION_PLAN.md` — die dreizehn Formate der
+  SAMdisk-Zulieferung (MF-1332). **Ergebnis ist eine Absage mit Grund:**
+  das Moratorium der EINFRIER-REGEL hält, weil `nfd` auf T2 steht
+  (`atr`/`d64`/`adf` T1b, `fdi` T1) — neun der dreizehn wären neue
+  Plugins. Bearbeitbar sind drei Punkte ohne Formatschicht-Neubau;
+  der Schlüssel zum Rest ist `nfd` auf T1/T1b
 
 **Auto-generiert (nicht von Hand editieren):**
 - `docs/SKELETON_HEADERS_AUDIT.md` — via `scripts/audit_skeleton_headers.py`

@@ -2291,7 +2291,17 @@ uft_error_t uftc_convert_scp_to_g64(const uint8_t* src_data, size_t src_size,
 
         /* Determine speed zone for this track */
         d64_speed_zone_t zone = d64_track_zone(track);
-        int halftrack = track * 2;
+        /* MF-1332: hier stand `track * 2`. Das ist die Rechnung von VOR
+         * MF-928, die auf „Dateieintrag i IST Platz i" umgestellt hat.
+         * Damit waere Spur 1 auf Platz 2 gelandet — dem Platz von Spur 2
+         * — und Platz 0 leer geblieben: dieselbe Verschiebung, die die
+         * Leseseite in `uft_format_convert_bitstream.c` hatte.
+         *
+         * Der Kommentar unten nennt ausserdem den Bereich
+         * `[2, G64_MAX_TRACKS)`; gemessen prueft `g64_set_track()`
+         * `halftrack < 0 || halftrack >= G64_MAX_TRACKS`, nimmt also ab
+         * 0 an. Auch das ist ein Rest der alten Konvention. */
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);
 
         /* MF-534: der Rueckgabewert wurde verworfen und `tracks_converted++`
          * lief unabhaengig davon. `g64_set_track()` weist Halbspuren

@@ -489,10 +489,32 @@ uft_copy_plan_t uft_copy_plan_current(void)
  * und BAMCopy nach der Berichtigung oben DERSELBE Plan, und genau das
  * hat die Zusage P3 im ersten Lauf gemeldet. Die Spezialisierung ist
  * kein Beiwerk: sie IST der Unterschied zwischen den beiden. */
-#define PLF(l, s, e, p, fs) { (l), (s), (e), (p), UFT_EXACT_SECTOR,      \
+/* MF-1312 — die Bit-Genauigkeit ist ein PARAMETER geworden.
+ *
+ * Gemessen trugen ALLE 17 Profile `UFT_EXACT_SECTOR`: 15 ueber `PL`,
+ * 2 ueber `PLF`, und beide reichten die Konstante fest durch. Fuer
+ * `FluxCopy` ist das ein Widerspruch zur eigenen Beschreibung —
+ * "Flussuebergaenge, Indexposition und Zeiten erhalten" gegen eine
+ * Genauigkeit, die auf Sektoren endet. Dasselbe bei "Bittreu"
+ * ("Hoechstmoegliche Bit- oder Flussgenauigkeit").
+ *
+ * Und der Widerspruch blieb nicht in der Anzeige: die Angabe erreicht
+ * gemessen DREI Ausgaenge, einer davon bleibend — `textPlanJson`
+ * (Anzeige), `onPlanJsonKopieren` (Zwischenablage) und
+ * `onPlanJsonSichern`, das den Plan in eine DATEI schreibt. Eine falsche
+ * Zusage, die auf Platte landet, ist keine Anzeigefrage mehr.
+ *
+ * `PLX` nimmt die Genauigkeit entgegen, `PLF` und `PL` bleiben als
+ * Abkuerzung mit `UFT_EXACT_SECTOR` — damit aendert sich nur, was sich
+ * aendern soll. Die beiden neuen Felder aus MF-1311 stehen hier
+ * ausdruecklich: ein Profil ist eine Vorlage ohne gemessene
+ * Faehigkeiten, also `caps = 0` und `caps_bekannt = false`. Ohne sie
+ * meldete der Bau 17-mal "missing initializer for field 'caps'". */
+#define PLX(l, s, e, p, ek, fs) { (l), (s), (e), (p), (ek),              \
                          UFT_TRACK_DECODED, (fs),                       \
                          UFT_GCR_COMMODORE, UFT_VOTE_STRICT_MAJORITY,   \
-                         (uint32_t)UFT_HASH_SHA256 }
+                         (uint32_t)UFT_HASH_SHA256, 0u, false }
+#define PLF(l, s, e, p, fs) PLX(l, s, e, p, UFT_EXACT_SECTOR, fs)
 #define PL(l, s, e, p) PLF(l, s, e, p, UFT_FILE_GENERIC)
 
 static const uft_copy_profile_t k_profil[] = {
@@ -561,9 +583,16 @@ static const uft_copy_profile_t k_profil[] = {
     * FILESYSTEM`, und eine BAM ist Dateisystemebene. */
    "D64;D71;G64;G71;NIB;WOZ;DO;PO" },
 
+ /* MF-1312: die Genauigkeit sagt jetzt dasselbe wie die Beschreibung.
+  *
+  * Bis hierher stand `UFT_EXACT_SECTOR` — ein Profil, das Flusszeiten
+  * verspricht und Sektorgleichheit zusagt. Der Widerspruch war nicht
+  * folgenlos: er ging in die Anzeige, in die Zwischenablage UND ueber
+  * `onPlanJsonSichern` in eine Datei. */
  { "fluxcopy", "FluxCopy",
    "Flussuebergaenge, Indexposition und Zeiten erhalten.",
-   PL(UFT_COPY_FLUX, UFT_READ_STANDARD, UFT_PRESERVE_BIT_EXACT, UFT_POLICY_VERIFY),
+   PLX(UFT_COPY_FLUX, UFT_READ_STANDARD, UFT_PRESERVE_BIT_EXACT,
+       UFT_POLICY_VERIFY, UFT_EXACT_FLUX_TIMING, UFT_FILE_GENERIC),
    (uint32_t)UFT_CAP_FLUX_IO, NULL },
 
  { "deepcopy", "DeepCopy",
@@ -589,9 +618,16 @@ static const uft_copy_profile_t k_profil[] = {
    PL(UFT_COPY_AUTO, UFT_READ_DEEP, UFT_PRESERVE_PROTECTED, UFT_POLICY_VERIFY),
    0u, NULL },
 
+ /* MF-1312: "Hoechstmoegliche" heisst jetzt hoechstmoegliche.
+  *
+  * Die Aspiration steht hier, die Deckelung in `uft_copy_plan_resolve()`
+  * — auf einem Sektorpaar wird daraus SECTOR, auf einem Flusspaar
+  * FLUX_TIMING. Fest eingetragen waere sie auf jedem Sektorformat ein
+  * harter Befund gewesen. */
  { "bitexact", "Bittreu",
    "Hoechstmoegliche Bit- oder Flussgenauigkeit.",
-   PL(UFT_COPY_AUTO, UFT_READ_CONSENSUS, UFT_PRESERVE_BIT_EXACT, UFT_POLICY_VERIFY),
+   PLX(UFT_COPY_AUTO, UFT_READ_CONSENSUS, UFT_PRESERVE_BIT_EXACT,
+       UFT_POLICY_VERIFY, UFT_EXACT_FLUX_TIMING, UFT_FILE_GENERIC),
    (uint32_t)UFT_CAP_MULTI_REV, NULL },
 
  { "salvage", "Datenrettung",
@@ -759,6 +795,18 @@ void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
     if (!plan || !opts) return;
     uft_convert_options_t *o = (uft_convert_options_t *)opts;
 
+    /* MF-1316 — den Plan mitreichen, damit der gemeinsame Verteiler ihn
+     * pruefen kann.
+     *
+     * Hier und nicht in den Aufrufstellen: wer den Plan uebersetzt, hat
+     * ihn per Definition in der Hand. Jede der drei Stellen einzeln zu
+     * verdrahten hiesse, die vierte zu vergessen — genau so ist die
+     * Ausgangslage entstanden.
+     *
+     * Der Zeiger wird nicht besessen; die Lebensdauer-Zusage steht am
+     * Feld in `uft_types.h`. */
+    o->copy_plan = plan;
+
     /* 1. Lesestrategie. Die Werte kommen aus der Tafel des Plans, nicht
      *    von hier — eine zweite Zahlenreihe waere MF-541. */
     if (plan->strategy < UFT_READ_STRATEGY_N) {
@@ -795,15 +843,50 @@ uft_copy_plan_t uft_copy_plan_resolve(const uft_copy_plan_t *plan,
                                       uint32_t caps)
 {
     uft_copy_plan_t p = plan ? *plan : uft_copy_plan_default();
-    if (p.level != UFT_COPY_AUTO) return p;
 
-    /* Von unten nach oben, und NUR aus den Faehigkeiten. Was nicht
-     * zugesagt ist, wird nicht gewaehlt — die Automatik raet nicht. */
-    if (caps & (uint32_t)UFT_CAP_FLUX_IO)          p.level = UFT_COPY_FLUX;
-    else if (caps & (uint32_t)UFT_CAP_GCR)         p.level = UFT_COPY_NIBBLE;
-    else if (caps & (uint32_t)UFT_CAP_BITSTREAM_IO) p.level = UFT_COPY_BITSTREAM;
-    else if (caps & (uint32_t)UFT_CAP_FILESYSTEM)  p.level = UFT_COPY_FILE;
-    else                                           p.level = UFT_COPY_SECTOR;
+    if (p.level == UFT_COPY_AUTO) {
+        /* Von unten nach oben, und NUR aus den Faehigkeiten. Was nicht
+         * zugesagt ist, wird nicht gewaehlt — die Automatik raet nicht. */
+        if (caps & (uint32_t)UFT_CAP_FLUX_IO)          p.level = UFT_COPY_FLUX;
+        else if (caps & (uint32_t)UFT_CAP_GCR)         p.level = UFT_COPY_NIBBLE;
+        else if (caps & (uint32_t)UFT_CAP_BITSTREAM_IO) p.level = UFT_COPY_BITSTREAM;
+        else if (caps & (uint32_t)UFT_CAP_FILESYSTEM)  p.level = UFT_COPY_FILE;
+        else                                           p.level = UFT_COPY_SECTOR;
+    }
+
+    /* MF-1312 — die Bit-Genauigkeit wird auf die Ebene GEDECKELT.
+     *
+     * Anlass: das Profil "Bittreu" verspricht "Hoechstmoegliche Bit-
+     * oder Flussgenauigkeit" und trug gemessen `UFT_EXACT_SECTOR`.
+     * Traegt man dort stattdessen fest `UFT_EXACT_FLUX_TIMING` ein,
+     * waere es auf jedem Sektorformat unbrauchbar — `check()` meldete
+     * `genauigkeit_zu_hoch` und das Tor saegte es ab.
+     *
+     * Beides ist falsch. Richtig ist, was das Profil selbst sagt:
+     * HOECHSTMOEGLICH. Die Aspiration steht in der Tafel, die Ebene
+     * begrenzt sie hier — nach oben nie, nach unten nur so weit, wie
+     * die aufgeloeste Ebene es hergibt.
+     *
+     * Die Deckelung folgt derselben Rangfolge, die `check()` fuer
+     * `genauigkeit_zu_hoch` benutzt; sie wird nicht neu erfunden,
+     * sondern nur vorgezogen. Deshalb kann `resolve()` danach keinen
+     * Befund mehr ausloesen, den es selbst erzeugt hat.
+     *
+     * Nur bei BIT_EXACT: auf allen anderen Erhaltungsstufen ist
+     * `exact_kind` laut Kopf "nur bei BIT_EXACT bedeutsam", und ein
+     * bedeutungsloses Feld anzufassen waere eine stille Aenderung. */
+    if (p.preservation == UFT_PRESERVE_BIT_EXACT) {
+        uft_bitexact_kind_t hoechstens;
+        switch (p.level) {
+        case UFT_COPY_FLUX:      hoechstens = UFT_EXACT_FLUX_TIMING; break;
+        case UFT_COPY_BITSTREAM:
+        case UFT_COPY_NIBBLE:
+        case UFT_COPY_TRACK:     hoechstens = UFT_EXACT_TRACK_BIT;   break;
+        default:                 hoechstens = UFT_EXACT_SECTOR;      break;
+        }
+        if ((int)p.exact_kind > (int)hoechstens) p.exact_kind = hoechstens;
+    }
+
     return p;
 }
 
@@ -1186,15 +1269,65 @@ size_t uft_copy_plan_to_json(const uft_copy_plan_t *plan, char *buf, size_t n)
 }
 
 /* ── Pruefung ───────────────────────────────────────────────────────── */
+/* MF-1332: der volle Erzeuger. `befund()` darunter ist der Kurzweg fuer
+ * alles, was keine Messung hinter sich hat.
+ *
+ * Das `memset` ist nicht Kosmetik: alle acht Aufrufer im Baum legen ihr
+ * `uft_copy_finding_t f[16]` UNINITIALISIERT an (gemessen —
+ * `uft_copy_plan.c` 3x, `formattab.cpp:2043`, `test_copy_plan.c` 4x).
+ * Bis MF-1332 schrieb diese Funktion drei Felder; jedes weitere waere
+ * beim Aufrufer Stapelmuell gewesen und haette eine Messung behauptet,
+ * die nie stattfand. Genau das soll die Dreiteilung verhindern. */
+static size_t befund_voll(uft_copy_finding_t *out, size_t max, size_t n,
+                          bool hart, const char *id, const char *text,
+                          uint32_t caps_noetig, bool caps_bekannt,
+                          int8_t ebene, const char *verlust,
+                          const char *quelle,
+                          uint8_t konfidenz, bool konfidenz_gemessen)
+{
+    if (out && n < max) {
+        memset(&out[n], 0, sizeof out[n]);
+        out[n].hard                   = hart;
+        out[n].id                     = id;
+        out[n].text                   = text;
+        out[n].caps_benoetigt         = caps_noetig;
+        out[n].caps_benoetigt_bekannt = caps_bekannt;
+        out[n].ebene_empfohlen        = ebene;
+        out[n].verlust                = verlust;
+        out[n].messquelle             = quelle;
+        out[n].konfidenz              = konfidenz;
+        out[n].konfidenz_gemessen     = konfidenz_gemessen;
+    }
+    return n + 1;
+}
+
+/* Kurzweg ohne Messung: die fuenf Felder bleiben ausdruecklich
+ * UNBEKANNT. Kein `caps_benoetigt_bekannt`, keine Konfidenz, keine
+ * Ebene — wer nichts gemessen hat, behauptet hier nichts. */
 static size_t befund(uft_copy_finding_t *out, size_t max, size_t n,
                      bool hart, const char *id, const char *text)
 {
-    if (out && n < max) {
-        out[n].hard = hart;
-        out[n].id   = id;
-        out[n].text = text;
-    }
-    return n + 1;
+    return befund_voll(out, max, n, hart, id, text,
+                       0u, false, UFT_COPY_EBENE_KEINE,
+                       NULL, NULL, 0u, false);
+}
+
+/* Ein Befund, der WEISS, welche Faehigkeit fehlt. Genau dafuer sind die
+ * neuen Felder da: die Fahne steht im `if` daneben, und bis MF-1332
+ * blieb sie dort stehen, statt den Aufrufer zu erreichen.
+ *
+ * `konfidenz = 100`, weil diese Befunde nicht geschaetzt sind: die
+ * Bedingung im `if` IST die Messung. Die Schranke aus
+ * `tools/uft-retrace/docs/COPYPLAN_MAPPING.md` — „Ein Raw-Byte-Treffer
+ * darf nie `available=true` setzen" — gilt fuer Befunde AUS EINEM
+ * TRACE, nicht fuer die hier gerechneten. */
+static size_t befund_caps(uft_copy_finding_t *out, size_t max, size_t n,
+                          bool hart, const char *id, const char *text,
+                          uint32_t caps_noetig, const char *verlust)
+{
+    return befund_voll(out, max, n, hart, id, text,
+                       caps_noetig, true, UFT_COPY_EBENE_KEINE,
+                       verlust, "uft_copy_plan_check", 100u, true);
 }
 
 size_t uft_copy_plan_check(const uft_copy_plan_t *plan, uint32_t caps,
@@ -1266,18 +1399,24 @@ size_t uft_copy_plan_check(const uft_copy_plan_t *plan, uint32_t caps,
     /* 4. Die Flussebene braucht Fluss auf beiden Seiten. */
     if (plan->level == UFT_COPY_FLUX &&
         !(caps & (uint32_t)UFT_CAP_FLUX_IO))
-        n = befund(out, max, n, true, "kein_fluss",
+        n = befund_caps(out, max, n, true, "kein_fluss",
                    "Die Flussebene verlangt eine Flussquelle UND ein "
-                   "Flussziel.");
+                   "Flussziel.",
+                   (uint32_t)UFT_CAP_FLUX_IO,
+                   "Ohne Fluss gehen Zellzeiten, Weak Bits und "
+                   "Mehrfachumdrehungen verloren.");
 
     /* 5. Uebereinstimmung braucht mehrere Umdrehungen.
      *
      * Gemessen (MF-1231): CAP_MULTI_REV sagt genau EIN Plugin zu — SCP. */
     if (plan->strategy == UFT_READ_CONSENSUS &&
         !(caps & (uint32_t)UFT_CAP_MULTI_REV))
-        n = befund(out, max, n, true, "keine_mehrfachlesung",
+        n = befund_caps(out, max, n, true, "keine_mehrfachlesung",
                    "Uebereinstimmung braucht mehrere Lesungen oder "
-                   "Umdrehungen. Ohne sie gibt es nichts abzugleichen.");
+                   "Umdrehungen. Ohne sie gibt es nichts abzugleichen.",
+                   (uint32_t)UFT_CAP_MULTI_REV,
+                   "Ohne Mehrfachlesung faellt die Abstimmung weg; ein "
+                   "einmal falsch gelesener Sektor bleibt unbemerkt.");
 
     /* 6. Beweis und Eile vertragen sich nicht. */
     if (plan->policy == UFT_POLICY_EVIDENCE &&
@@ -1290,17 +1429,23 @@ size_t uft_copy_plan_check(const uft_copy_plan_t *plan, uint32_t caps,
     /* 7. Die Dateiebene braucht ein gelesenes Dateisystem. */
     if (plan->level == UFT_COPY_FILE &&
         !(caps & (uint32_t)UFT_CAP_FILESYSTEM))
-        n = befund(out, max, n, true, "kein_dateisystem",
+        n = befund_caps(out, max, n, true, "kein_dateisystem",
                    "Auf der Dateiebene muss das Quell-Dateisystem erkannt "
-                   "sein. Ohne Verzeichnis gibt es keine Dateien.");
+                   "sein. Ohne Verzeichnis gibt es keine Dateien.",
+                   (uint32_t)UFT_CAP_FILESYSTEM,
+                   "Ohne Dateisystem gibt es keine Dateiauswahl; es "
+                   "bliebe nur ein Abzug der ganzen Diskette.");
 
     /* 8. Nibble ohne GCR ist sinnlos — weich, weil die Flagge heute
      *    nicht je Format gefuehrt wird. */
     if (plan->level == UFT_COPY_NIBBLE && !(caps & (uint32_t)UFT_CAP_GCR))
-        n = befund(out, max, n, false, "gcr_nicht_zugesagt",
+        n = befund_caps(out, max, n, false, "gcr_nicht_zugesagt",
                    "Die Nibble-Ebene ist fuer GCR gedacht. Ein allgemeiner "
                    "Schalter GCR reicht nicht: Commodore, Apple, Macintosh "
-                   "und Victor 9000 sind verschiedene Verfahren.");
+                   "und Victor 9000 sind verschiedene Verfahren.",
+                   (uint32_t)UFT_CAP_GCR,
+                   "Weich: die Ebene laeuft, aber ohne Zusage, dass die "
+                   "Kodierung wirklich GCR ist.");
 
     /* 9. BAMCopy nur, wenn es wirklich eine Commodore-BAM gibt.
      *
@@ -1352,6 +1497,72 @@ size_t uft_copy_plan_check(const uft_copy_plan_t *plan, uint32_t caps,
                    "„Consensus“ hat nichts abzustimmen.");
 
     return n;
+}
+
+/* MF-1309 - das Tor. Siehe Kopf fuer die Begruendung der Zwei-Werte-Form
+ * und dafuer, warum die Faehigkeitsfrage hier ausgeklammert bleibt.
+ *
+ * Anlass ist gemessen: `uft_copy_plan_is_executable()` war fertig gebaut
+ * und hatte im ganzen Baum NULL Aufrufer, waehrend drei Ausfuehrungspfade
+ * (`decodejob.cpp`, `toolstab.cpp`, `uft_save_image.cpp`) ungeprueft
+ * `uft_copy_plan_to_convert_options()` riefen. Ein Tor, das niemand
+ * oeffnet - dieselbe Klasse wie `plugin->flush` (MF-930).
+ *
+ * Was hier NICHT behauptet wird: dass der Wandlungspfad vorher ungesichert
+ * war. `uft_preflight_check()` steht seit laengerem in
+ * `uft_format_convert_dispatch.c:512` und sperrt UNTESTED und IMPOSSIBLE.
+ * Ungeprueft blieben die Befunde des PLANS, nicht das Formatpaar. */
+uft_copy_verdict_t uft_copy_plan_gate(const uft_copy_plan_t *plan,
+                                      const char **grund)
+{
+    if (grund) *grund = NULL;
+    if (!plan) {
+        if (grund) *grund = "kein_plan";
+        return UFT_COPY_DENY;
+    }
+
+    uft_copy_finding_t f[16];
+    size_t n = uft_copy_plan_check(plan, 0xFFFFFFFFu, f, 16);
+    if (n > 16) n = 16;
+    for (size_t i = 0; i < n; i++)
+        if (f[i].hard) {
+            if (grund) *grund = f[i].id;
+            return UFT_COPY_DENY;
+        }
+    return UFT_COPY_ALLOW;
+}
+
+/* MF-1311 — das Tor mit Faehigkeitsfrage. Siehe Kopf fuer die Bedeutung
+ * der drei Ausgaenge.
+ *
+ * Dreistufig, weil die drei Fragen verschieden sicher zu beantworten
+ * sind:
+ *
+ *   1. Widerspricht sich der Plan in sich? Das gilt immer und braucht
+ *      keine Maske — dafuer ist `uft_copy_plan_gate()` da.
+ *   2. Ist die Maske NICHT gemessen? Dann wird mit LEERER Maske
+ *      gefragt. Meldet check() dabei einen harten Befund, haengt er an
+ *      einer Faehigkeit — und genau dann ist die ehrliche Antwort
+ *      "erst messen", nicht "nein".
+ *   3. Ist sie gemessen, urteilt das Tor vollstaendig. */
+uft_copy_verdict_t uft_copy_plan_gate_caps(const uft_copy_plan_t *plan,
+                                           const char **grund)
+{
+    const uft_copy_verdict_t frei = uft_copy_plan_gate(plan, grund);
+    if (frei != UFT_COPY_ALLOW) return frei;
+
+    uft_copy_finding_t f[16];
+    const uint32_t maske = plan->caps_bekannt ? plan->caps : 0u;
+
+    size_t n = uft_copy_plan_check(plan, maske, f, 16);
+    if (n > 16) n = 16;
+    for (size_t i = 0; i < n; i++)
+        if (f[i].hard) {
+            if (grund) *grund = f[i].id;
+            return plan->caps_bekannt ? UFT_COPY_DENY
+                                      : UFT_COPY_NEEDS_MEASUREMENT;
+        }
+    return UFT_COPY_ALLOW;
 }
 
 bool uft_copy_plan_is_executable(const uft_copy_plan_t *plan, uint32_t caps)

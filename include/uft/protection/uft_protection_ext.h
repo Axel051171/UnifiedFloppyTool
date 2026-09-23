@@ -454,7 +454,7 @@ uint32_t uft_check_pattern_sequence(
 /**
  * @brief Calculate CRC16-CCITT
  */
-uint16_t uft_crc16_ccitt(const uint8_t *data, size_t len);
+uint16_t uft_crc16_ccitt(const uint8_t *data, size_t len, uint16_t init);
 
 /**
  * @brief Print extended longtrack result

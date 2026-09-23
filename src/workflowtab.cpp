@@ -542,7 +542,7 @@ void WorkflowTab::onStartAbortClicked()
              * soll wissen, was sie aufgibt, BEVOR das Laufwerk anlaeuft:
              * ein zweiter Versuch an einer zerfallenden Diskette ist nicht
              * sicher. */
-            if (ui->spinRevolutions->value() < 2) {
+            if (m_umdrehungen < 2) {
                 const auto answer = QMessageBox::warning(
                     this, tr("Nur eine Umdrehung"),
                     tr("Mit einer einzigen Umdrehung je Spur koennen Sektoren "
@@ -583,7 +583,7 @@ void WorkflowTab::onStartAbortClicked()
              * Genau das war der Fehler an der fest verdrahteten 2: bei einer
              * zerfallenden Diskette gibt es keinen zweiten Durchgang, und
              * drei verworfene Umdrehungen sind drei verlorene Chancen. */
-            m_captureJob->setRevolutions(ui->spinRevolutions->value());
+            m_captureJob->setRevolutions(m_umdrehungen);
             m_captureJob->moveToThread(m_workerThread);
 
             connect(m_workerThread, &QThread::started, m_captureJob, &FluxCaptureJob::run);

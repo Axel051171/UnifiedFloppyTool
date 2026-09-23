@@ -1,0 +1,8 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+
+This workflow is licensed under the GNU General Public License version 2 or,
+at your option, any later version.
+
+This license covers only the files in this package. It does not grant rights
+to any third-party binary, disk image, disassembly, or other input processed
+with the workflow.

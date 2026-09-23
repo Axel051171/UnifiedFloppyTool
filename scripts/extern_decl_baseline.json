@@ -1,8 +1,6 @@
 {
   "_doc": "Declarations whose parameter count disagrees with the single definition of that name. Rule A: hand-written externs in .c files (MF-442). Rule B: header prototypes (MF-464) — 21 of these were already in the tree when the rule was added; none has a caller yet, which is the only reason they have not bitten. Comparison is on arity only — type spelling varies legitimately across files. An entry here is a KNOWN mismatch, not an acceptable one; the fix is to include the header.",
   "accepted": [
-    "include/uft/formats/c64/uft_c64_bam.h:bam_sector_offset",
-    "include/uft/formats/c64/uft_c64_bam.h:bam_validate",
     "include/uft/formats/cpm.h:cpm_open",
     "include/uft/formats/uft_format_params.h:uft_format_detect",
     "include/uft/formats/uft_imd_adapter.h:uft_imd_get_track",
@@ -13,7 +11,6 @@
     "include/uft/uft_core.h:uft_chs_to_lba",
     "include/uft/uft_core.h:uft_detect_format",
     "include/uft/uft_core.h:uft_lba_to_chs",
-    "include/uft/uft_decoder_plugin.h:uft_crc16_ccitt",
     "src/algorithms/format/uft_format_detect.h:uft_format_detect",
     "src/algorithms/format/uft_format_detect.h:uft_format_registry_init"
   ],
@@ -62,15 +59,6 @@
       "decl_arity": 2,
       "def_file": "src/core/uft_detect_format_impl.c",
       "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_crc16_ccitt",
-      "decl_file": "include/uft/uft_decoder_plugin.h",
-      "decl_line": 361,
-      "decl_arity": 3,
-      "def_file": "src/protection/uft_protection_ext.c",
-      "def_arity": 2
     },
     {
       "rule": "B",
@@ -170,24 +158,6 @@
       "decl_arity": 3,
       "def_file": "src/protection/uft_copylock.c",
       "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "bam_validate",
-      "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
-      "decl_line": 394,
-      "decl_arity": 2,
-      "def_file": "src/formats/c64/uft_bam_editor.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "bam_sector_offset",
-      "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
-      "decl_line": 422,
-      "decl_arity": 3,
-      "def_file": "src/formats/c64/uft_bam_editor.c",
-      "def_arity": 2
     }
   ],
   "_resolved": {
@@ -195,6 +165,11 @@
       "include/uft/uft_format_registry.h:uft_format_can_convert",
       "include/uft/uft_format_registry.h:uft_format_detect",
       "_note: aufgeloest durch das Loeschen von include/uft/uft_format_registry.h — ein Header ohne jeden Einbinder (Verwaisten-Regel, MF-621). Die abweichende Deklaration sass dort."
+    ],
+    "MF-1272": [
+      "include/uft/formats/c64/uft_c64_bam.h:bam_sector_offset",
+      "include/uft/formats/c64/uft_c64_bam.h:bam_validate",
+      "_note: aufgeloest durch das Entfernen von include/uft/formats/c64/uft_c64_bam.h — ein Header ohne jeden #include und ohne Aufrufer (gemessen 2026-09-20, Eimer-4-Zensus). Dieselbe Gestalt wie MF-622."
     ]
   }
 }

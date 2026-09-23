@@ -574,13 +574,90 @@ foreach(test_source ${TEST_SOURCES})
         # dir_tracks * MGT_SECTORS * 2 Eintraege; UFTs eigene Konstante
         # MGT_DIR_ENTRIES = 80 trifft sich damit bei dir_tracks = 4.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/mgt/uft_mgt.c)
+    elseif(${test_name} STREQUAL "test_imaging_recipe")
+        # Die Rezept-Maschine (Kanal Port aus UFT_ImagingRecipe_Kit
+        # v1.0.0, MIT, (c) 2026 Axel Kramer) und ihre Bruecke zum
+        # Kopierplan. `uft_copy_plan.c` kommt mit, weil die Bruecke
+        # einen `uft_copy_plan_t` ERZEUGT statt eine zweite Leiter
+        # zu fuehren (MF-1177).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_imaging_recipe.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_recipe_copyplan.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_recipe_profiles.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_copy_plan.c)
+    elseif(${test_name} STREQUAL "test_geos_ziel_urteil")
+        # MF-1333 Stufe 5: das Urteil wird aus uft_format_traegt()
+        # ABGELEITET, nicht getafelt (MF-1177).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_copy_job.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
+    elseif(${test_name} STREQUAL "test_geos_rebuild_transaktion")
+        # MF-1333 Stufe 4: der Rekonstruktor. `uft_cbm_geometry.c`
+        # kommt mit, weil er die Zonentafel RUFT statt sie zum
+        # vierten Mal nachzubauen (MF-1177).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_geos_rebuild.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
+    elseif(${test_name} STREQUAL "test_d64_gap_fuellbyte_erreicht_die_luecken")
+        # MF-1333 Stufe 3: der Test haelt STUFE 2 GEGEN STUFE 3 — der
+        # Zerleger misst nach, was der Schreiber schreibt. Deshalb
+        # braucht er beide Seiten: den D64/G64-Erzeuger samt dem
+        # reicheren `uft_d64_writer.c` (dorthin geht der vollstaendige
+        # Spurfall, MF-862) und den Segmentierer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_track_segment.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            # `uft_d64_g64.c` protokolliert an zwei Stellen (:1235, :1391).
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_cbm_track_segment_bilanz")
+        # MF-1333 Stufe 2: der erste Zerleger im Baum, der eine rohe
+        # CBM-GCR-Spur in Sync/Kopf/Luecke/Daten gliedert. Die vier
+        # vorhandenen GCR-Dekoder springen ueber die Luecke hinweg
+        # (gemessen: `while (… != 0xFF) pos++` in uft_d64_g64.c:936/:1408,
+        # uft_g64.c:597, uft_flux_decoder.c:1503).
+        #
+        # `uft_gcr_ops.c` kommt mit, weil der Zerleger `gcr_decode()`
+        # ruft statt eine fuenfte GCR-Tafel anzulegen (MF-1177).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_track_segment.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
+    elseif(${test_name} STREQUAL "test_geos_erfindet_keinen_schutz")
+        # MF-1333: `src/protection/uft_geos_protection.c` stand bis heute
+        # NUR in der qmake-Bauliste (UnifiedFloppyTool.pro:1915) — kein
+        # CMake-Ziel hat es je uebersetzt, und `tests/test_geos.c` prueft
+        # trotz des Namens ein ANDERES Modul
+        # (`src/formats/c64/uft_geos.c`, gemessen an dessen `#include`).
+        # Das Modul war damit weder erreichbar noch bewacht.
+        #
+        # `uft_cbm_geometry.c` kommt mit, weil der Detektor seit MF-1333
+        # die Sektorzahl einer Spur NICHT selbst rechnet, sondern
+        # `uft_cbm_sectors_per_track()` ruft — eine Groesse, eine
+        # Rechnung (MF-1177). Der Baum hatte davon schon drei Kopien
+        # (u. a. `include/uft/formats/c64/uft_bam_editor.h:78`).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_geos_protection.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
     elseif(${test_name} STREQUAL "test_td0_erfindet_keine_sektoren")
         # MF-981: TD0 entzieht sich Tor 62 auf zwei Wegen — die Fuellung
         # kommt aus einem Format-Flag (sec_flags & 0x30) statt aus einem
         # kurzen fread, und der Dekodierpuffer ist calloc.
+        #
+        # MF-1332: dazu der Wandler, weil die zweite Zusage dieselbe
+        # Ehrlichkeit EINE SCHICHT WEITER prueft — ein fehlender Sektor
+        # muss in der IMD `UFT_IMD_SEC_UNAVAIL` werden und nicht zu
+        # Daten. P3-523 verlangt genau diese Zusage; gemessen gab es sie
+        # in keinem der sieben `tests/test_td0*.c`.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
-            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_format_converters.c
+            # ... und dessen eigene Abhaengigkeit: `uft_imd_init()` und
+            # `uft_imd_free()` liegen in `legacy/uft_imd.c`, nicht im
+            # Plugin. Ohne sie faellt das Ziel mit `undefined reference`.
+            ${CMAKE_SOURCE_DIR}/src/formats/legacy/uft_imd.c)
     elseif(${test_name} STREQUAL "test_kurze_datei_erfindet_keine_sektoren")
         # MF-980: was nicht in der Datei stand, darf nicht als gelesener,
         # CRC-gueltiger Sektor durchgehen. Gefahren an TRD, weil trd_open()
@@ -2780,6 +2857,13 @@ foreach(test_source ${TEST_SOURCES})
         # Format-Schicht — dieselbe Rezeptur wie test_disk_open_fuzz.
         file(GLOB_RECURSE GEO_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND GEO_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -2846,6 +2930,13 @@ foreach(test_source ${TEST_SOURCES})
         # dort noetig (dreizehn undefinierte Verweise auf drei Symbole).
         file(GLOB_RECURSE IHR_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND IHR_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${IHR_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -2934,7 +3025,9 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_imd_img_belegt"
-            OR ${test_name} STREQUAL "test_verify_after_ist_verdrahtet")
+            OR ${test_name} STREQUAL "test_verify_after_ist_verdrahtet"
+            OR ${test_name} STREQUAL "test_convert_img_imd_erfindet_nicht"
+            OR ${test_name} STREQUAL "test_convert_g64_buchfuehrung")
         # MF-1307: `test_verify_after_ist_verdrahtet` haengt am SELBEN
         # Zweig statt an einer zweiten Kopie dieser vierzig Zeilen — zwei
         # Listen fuer eine Wahrheit sind die Bauform aus MF-1177.
@@ -2944,10 +3037,17 @@ foreach(test_source ${TEST_SOURCES})
         # 17 Matrix-Eintraege, 29 Pfade vom Preflight abgewiesen.
         file(GLOB_RECURSE IMDIMG_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND IMDIMG_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${IMDIMG_FORMAT_SOURCES}
             # MF-1307: der Verteiler ruft seit dieser Fassung
-            # uft_generic_verify_track() aus der Nachpruefung heraus —
-            # ohne diese Quelle bindet AUCH der aeltere Test nicht mehr.
+            # uft_convert_verify_after() — ohne diese Quelle bindet AUCH
+            # der aeltere Test nicht mehr.
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
@@ -3007,8 +3107,20 @@ foreach(test_source ${TEST_SOURCES})
         # blankem `fread`. Derselbe Unterbau wie test_convert_imd_img_belegt —
         # der Test faehrt ueber `uft_disk_open()` und braucht die ganze
         # Format-Schicht, weil `uft_register_all_formats()` sie registriert.
+        #
+        # MF-1296: `test_td0_pruefsummen` haengt am SELBEN Zweig statt an
+        # einer eigenen Kopie dieser vierzig Zeilen. Er braucht genau
+        # denselben Unterbau, und zwei Listen fuer eine Wahrheit sind die
+        # Bauform aus §MF-1177 — diese Datei haelt davon bereits acht.
         file(GLOB_RECURSE TD0GEP_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND TD0GEP_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${TD0GEP_FORMAT_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
@@ -3056,6 +3168,13 @@ foreach(test_source ${TEST_SOURCES})
         # layer, same recipe as test_register_all_formats.
         file(GLOB_RECURSE CFD_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND CFD_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${CFD_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3110,6 +3229,13 @@ foreach(test_source ${TEST_SOURCES})
         # Abstimmungs-Pipeline und den SCP-Parser fuer die Umdrehungen.
         file(GLOB_RECURSE MREV_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND MREV_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${MREV_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3385,6 +3511,13 @@ foreach(test_source ${TEST_SOURCES})
         # MF-489: der Wandler sieht sein eigenes Ergebnis nach
         file(GLOB_RECURSE OUTV_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND OUTV_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${OUTV_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3429,6 +3562,13 @@ foreach(test_source ${TEST_SOURCES})
         # MF-484: Flippy-Rueckseite, Zeitachse gespiegelt
         file(GLOB_RECURSE FLIP_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND FLIP_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${FLIP_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3473,6 +3613,13 @@ foreach(test_source ${TEST_SOURCES})
         # MF-482: Geometrie-Vorgabe und Ueberhang beim SCP->ADF-Wandeln
         file(GLOB_RECURSE GEO_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND GEO_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3517,6 +3664,13 @@ foreach(test_source ${TEST_SOURCES})
         # die Format-Registry) plus den AmigaDOS-Fluxgenerator.
         file(GLOB_RECURSE CADJ_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND CADJ_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${CADJ_FORMAT_SOURCES}
             # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
             # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
@@ -3640,6 +3794,24 @@ foreach(test_source ${TEST_SOURCES})
         # Sache; sie wuerde driften. Deshalb ein gemeinsamer Zweig.
         file(GLOB_RECURSE ALL_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+        # Leser faellt das Ziel mit "undefined reference to a2r_open".
+        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+        list(APPEND ALL_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+        # MF-1322: der A2R-LESER liegt in `src/parsers/`, das Plugin in
+        # `src/formats/`. Der GLOB darueber erfasst nur das Plugin, und
+        # ohne den Leser faellt JEDES Ziel dieses Blocks beim Linken mit
+        # „undefined reference to a2r_open" — gemessen an
+        # `test_register_all_formats`.
+        #
+        # Angehaengt an die Liste und nicht an einen einzelnen Verbraucher,
+        # aus demselben Grund wie `uft_sector_order.c` in MF-1175: dieser
+        # Block speist ueber vierzig Ziele.
+        list(APPEND ALL_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
         target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
             ${UFT_FORMAT_LAYER_DEPS})
         # the plugins include their headers unqualified ("uft_dms.h")
@@ -4156,6 +4328,23 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/roland/uft_roland_ident.c
             ${CMAKE_SOURCE_DIR}/src/hal/uft_os_volume.c
             ${CMAKE_SOURCE_DIR}/src/hal/uft_hal_profiles.c)
+    elseif(${test_name} STREQUAL "test_roland_s_metadata")
+        # MF-1321: die semantische Roland-Auswertung. Zwei Module, und die
+        # Reihenfolge ist die Aussage: `uft_roland_s_metadata.c` hat KEINE
+        # eigene Erkennung, es ruft `uft_roland_identify()`. Zwei Erkenner
+        # nebeneinander waeren die Bauform aus MF-1015/MF-1026.
+        #
+        # Auch hier wird KEIN Format-Plugin registriert: Roland-S liegt
+        # physisch als gewoehnliches MFM, es gibt keinen neuen Behaelter.
+        # Das Moratorium der EINFRIER-REGEL bleibt unberuehrt.
+        #
+        # Der Test ist der EINZIGE Aufrufer des Moduls, und sein Kopf sagt
+        # ausdruecklich, was er NICHT belegt: die Pruefdatei wird selbst
+        # gebaut, die Feldversaetze sind gegen keine aeussere Quelle
+        # geprueft (geschlossener Kreis, Klasse MF-1009/MF-1028).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/roland/uft_roland_s_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/formats/roland/uft_roland_ident.c)
     elseif(${test_name} STREQUAL "test_xfd_qd_serpentine")
         # MF-1175: die Anordnungsachse liegt in `src/core/`, also ausserhalb
         # des `IHR_FORMAT_SOURCES`-GLOBs — eigener Zweig aus demselben Grund
@@ -4524,8 +4713,9 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/lisa/uft_lisa_twiggy.c)
     elseif(${test_name} STREQUAL "test_td0_error_marks")
         # TD0 per-sector CRC/deleted flags + open-scan off-by-one (Phase-4 WP5, MF-334)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
-        ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
     elseif(${test_name} STREQUAL "test_stx_error_marks")
         # STX (Pasti) FDC-status disk-error marking + descriptor offset fix (Phase-4 WP5, MF-335)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
@@ -5369,14 +5559,17 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_destructive_op_consent")
         # MF-216 / P3.3 #110: lossy/destructive-op consent gate
         # improvement test. uft_preflight.c drives uft_roundtrip.c (the
-        # round-trip matrix) and uft_loss_report.c (the sidecar writer);
-        # all three are self-contained C TUs; seit MF-1283 kommt
-        # uft_format_traegt.c dazu — die Faehigkeitstafel, gegen die das
-        # Preflight die Eintragsart prueft. Sie muss hier AUSDRUECKLICH
-        # stehen, obwohl sie in `uft_core` liegt: dieses Ziel setzt
-        # `TEST_LIBS` leer und linkt keine Bibliothek. Gemessen sind es
-        # genau ZWEI solche Ziele von dreizehn, die uft_preflight.c
-        # direkt uebersetzen.
+        # round-trip matrix), uft_loss_report.c (the sidecar writer) und
+        # seit MF-1283 uft_format_traegt.c (die Faehigkeitstafel, gegen
+        # die das Preflight die Eintragsart prueft); alle vier sind
+        # eigenstaendige C-Einheiten.
+        #
+        # Die Tafel muss hier AUSDRUECKLICH stehen, obwohl sie in
+        # `uft_core` liegt: dieses Ziel setzt `TEST_LIBS` bewusst leer
+        # und linkt gar keine Bibliothek. Gemessen sind es genau ZWEI
+        # solche Ziele von dreizehn, die `uft_preflight.c` direkt
+        # uebersetzen — die uebrigen elf bekommen die Tafel aus
+        # `uft_core`.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
@@ -5515,7 +5708,9 @@ foreach(test_source ${TEST_SOURCES})
         # v4.1.5-hardening: preflight combines loss-report writer +
         # round-trip status (KNOWN_ISSUES §1.2). Seit MF-1283 kommt die
         # Faehigkeitstafel dazu; alle vier Kern-Einheiten sind
-        # self-contained. Mirrors test_destructive_op_consent above.
+        # eigenstaendig. Spiegelt test_destructive_op_consent oben —
+        # beide setzen `TEST_LIBS` leer und linken keine Bibliothek,
+        # koennen die Tafel also nicht aus `uft_core` beziehen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
@@ -6032,25 +6227,47 @@ if(TARGET Qt6::Test)
         # Formular (AUTOUIC), den Validator und die ganze Wandlungs-
         # Maschine dahinter.
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
+           ${qt_test_name} STREQUAL "test_tools_tab_track_view" OR
            ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_disk_analyzer_no_fiction" OR
            ${qt_test_name} STREQUAL "test_gw2dmk_no_simulation" OR
            ${qt_test_name} STREQUAL "test_visual_disk_no_fiction" OR
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
+           ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+            # Leser faellt das Ziel mit "undefined reference to a2r_open".
+            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+            list(APPEND _TOOLSTAB_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
             # MF-1175: `uft_xfd.c` ruft die Anordnungsachse, die in
             # `src/core/` liegt und vom GLOB darueber nicht erfasst wird.
             # Angehaengt an die VARIABLE statt an jeden Verbraucher, weil
             # dieser GLOB drei Qt-Ziele speist.
             list(APPEND _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
-            if(${qt_test_name} STREQUAL "test_tools_tab_convert")
+            if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
+               ${qt_test_name} STREQUAL "test_tools_tab_track_view")
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui)
+                # MF-1197: der Spuransicht-Knopf haengt jetzt am
+                # TrackGridWidget (882 Z., bis dahin null Aufrufer).
+                #
+                # Das Widget gehoert BEIDEN Zielen, nicht nur dem neuen:
+                # `toolstab.cpp` referenziert es seit MF-1197, und
+                # `test_tools_tab_convert` linkt dieselbe Datei. Die
+                # Erstfassung haengte es nur an `test_tools_tab_track_view`
+                # — der Bau scheiterte prompt beim Linken des Nachbarn.
+                # Wer eine Quelldatei erweitert, erweitert jedes Ziel, das
+                # sie linkt.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/widgets/trackgridwidget.cpp)
                 # MF-893: onRepair() sprach jede Datei frei, ohne eine zu
                 # oeffnen. Der Rotbeweis braucht das Korpus-Abbild.
                 target_compile_definitions(${qt_test_name} PRIVATE
@@ -6105,10 +6322,17 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/core/uft_disk_metadata.c)
                 target_compile_definitions(${qt_test_name} PRIVATE
                     UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-            elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
+            elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
+                   ${qt_test_name} STREQUAL "test_status_tab_no_fiction")
                 # MF-576: der Status-Reiter mit der Belegungskarte. Er
                 # bettet ProtectionAnalysisWidget ein, und DecodeJob
                 # liefert die Geometrie.
+                #
+                # test_status_tab_no_fiction linkt dieselbe Menge: es treibt
+                # denselben Reiter, nur andere Knoepfe (Bootblock, Schutz)
+                # und das Protokoll-Widget (P3-265). Zusammengelegt statt
+                # kopiert, damit die beiden Listen nicht auseinanderlaufen —
+                # die Bauform der _HARDWARETAB_TEST_SOURCES darueber.
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/statustab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_status.ui
@@ -6218,6 +6442,13 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_save_image_converts")
             file(GLOB_RECURSE SAVEIMG_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+            # Leser faellt das Ziel mit "undefined reference to a2r_open".
+            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+            list(APPEND SAVEIMG_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
             # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
             list(APPEND SAVEIMG_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
@@ -6245,11 +6476,23 @@ if(TARGET Qt6::Test)
            OR ${qt_test_name} STREQUAL "test_format_tab_bindung")
             file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
+            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
+            # Leser faellt das Ziel mit "undefined reference to a2r_open".
+            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
+            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
+            list(APPEND CAPGATE_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
             # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
             list(APPEND CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/formattab.cpp
+                # MF-1299: seit MF-1293 ruft formattab.cpp das Spalten-
+                # Fliesslayout. Ohne diese Zeile brechen genau diese drei
+                # Ziele beim Binden ab ("undefined reference to
+                # UftFlowLayout::UftFlowLayout") — gemessen im Vollbau.
+                ${CMAKE_SOURCE_DIR}/src/uft_flow_layout.cpp
                 ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
                 ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c

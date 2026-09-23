@@ -287,7 +287,17 @@ void d64_write_sync(uint8_t *output, int count)
 
 void d64_write_gap(uint8_t *output, int count)
 {
-    memset(output, 0x55, count);  /* Gap fill pattern */
+    /* Unveraendert: 0x55, kein Fuellbyte-Argument. Beide Aufrufer in
+     * dieser Datei sind seit MF-1333 auf `d64_write_gap_fill()`
+     * umgestellt; diese Fassung bleibt fuer fremde Aufrufer stehen
+     * (MF-1077) und ist das Gegenstueck zu `sector_to_gcr()`. */
+    d64_write_gap_fill(output, 0x55, count);
+}
+
+void d64_write_gap_fill(uint8_t *output, uint8_t fill, int count)
+{
+    if (!output || count <= 0) return;
+    memset(output, fill, (size_t)count);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -353,6 +363,14 @@ int d64_write_track_gcr(
     int gap2 = (writer->config.gap2_length >= 0) ? 
                writer->config.gap2_length : D64_GAP2_LENGTH;
     int sync_len = writer->config.sync_length;
+
+    /* MF-1333: das Fuellbyte beider Luecken. 0 heisst "nicht
+     * gesetzt" — wer die Konfiguration selbst nullt, bekaeme
+     * sonst ein Lueckenbyte 0x00, das auf einer GCR-Diskette
+     * gar nicht darstellbar ist (mehr als zwei Null-Bits in
+     * Folge gibt es dort nicht). */
+    uint8_t fuell = writer->config.gap_fill
+                        ? writer->config.gap_fill : (uint8_t)0x55;
     
     uint8_t *ptr = gcr_output;
     
@@ -389,7 +407,7 @@ int d64_write_track_gcr(
         ptr += 10;  /* Header is 10 GCR bytes */
         
         /* Gap 1 */
-        d64_write_gap(ptr, gap1);
+        d64_write_gap_fill(ptr, fuell, gap1);
         ptr += gap1;
         
         /* Sync before data */
@@ -406,7 +424,7 @@ int d64_write_track_gcr(
         ptr += 325;  /* Data is 325 GCR bytes */
         
         /* Gap 2 */
-        d64_write_gap(ptr, gap2);
+        d64_write_gap_fill(ptr, fuell, gap2);
         ptr += gap2;
     }
     

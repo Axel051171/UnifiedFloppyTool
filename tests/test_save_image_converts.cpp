@@ -38,6 +38,12 @@
 #include <QtTest/QtTest>
 #include <QTemporaryDir>
 #include <QFile>
+#ifdef Q_OS_UNIX
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <signal.h>
+#endif
 
 #include "uft_save_image.h"
 
@@ -70,6 +76,69 @@ private:
     }
 
 private slots:
+
+    void vorhandenes_ziel_wird_vollstaendig_ersetzt()
+    {
+        const QString dst = m_dir.filePath("ersetzen.d64");
+        QFile vorher(dst);
+        QVERIFY(vorher.open(QIODevice::WriteOnly));
+        QCOMPARE(vorher.write(QByteArray(200000, 'X')), qint64(200000));
+        vorher.close();
+        const QString src = korpus("vice_c1541_35trk.d64");
+        const auto r = uftSaveImageAs(src, dst);
+        QVERIFY2(r.ok, qPrintable(r.message));
+        QFile a(src), b(dst);
+        QVERIFY(a.open(QIODevice::ReadOnly));
+        QVERIFY(b.open(QIODevice::ReadOnly));
+        QCOMPARE(b.readAll(), a.readAll());
+    }
+
+    void abgelehnte_wandlung_erhaelt_vorhandenes_ziel()
+    {
+        const QString dst = m_dir.filePath("bestehend.img");
+        const QByteArray original("Unersetzliche vorhandene Daten");
+        QFile f(dst);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        QCOMPARE(f.write(original), qint64(original.size()));
+        f.close();
+        const auto r = uftSaveImageAs(korpus("vice_c1541_35trk.d64"), dst);
+        QVERIFY(!r.ok);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QCOMPARE(f.readAll(), original);
+    }
+
+    void schreibfehler_erhaelt_vorhandenes_ziel()
+    {
+#ifdef Q_OS_UNIX
+        const QString dst = m_dir.filePath("kurzschreibung.d64");
+        const QByteArray original("Vorhandene Daten bleiben erhalten");
+        QFile f(dst);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        QCOMPARE(f.write(original), qint64(original.size()));
+        f.close();
+        const QString src = korpus("vice_c1541_35trk.d64");
+        // Limit only the child: force a real short write, without filling a disk.
+        const pid_t child = fork();
+        QVERIFY(child >= 0);
+        if (child == 0) {
+            signal(SIGXFSZ, SIG_IGN);
+            struct rlimit limit;
+            if (getrlimit(RLIMIT_FSIZE, &limit) != 0) _exit(2);
+            limit.rlim_cur = 1024;
+            if (setrlimit(RLIMIT_FSIZE, &limit) != 0) _exit(3);
+            const auto r = uftSaveImageAs(src, dst);
+            _exit(r.ok ? 1 : 0);
+        }
+        int status = 0;
+        QCOMPARE(waitpid(child, &status, 0), child);
+        QVERIFY(WIFEXITED(status));
+        QCOMPARE(WEXITSTATUS(status), 0);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QCOMPARE(f.readAll(), original);
+#else
+        QSKIP("RLIMIT_FSIZE fault injection requires POSIX");
+#endif
+    }
 
     void initTestCase()
     {

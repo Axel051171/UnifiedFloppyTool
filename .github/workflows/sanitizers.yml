@@ -15,6 +15,26 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # MF-1332: bis hierher gab es KEINEN Weg, die ASan-Grundlinie zu saeen.
+  # Der Kommentar am Tor schreibt vor, sie „aus einem ECHTEN Lauf dieses
+  # Auftrags" zu erzeugen, und verbietet Handarbeit ausdruecklich (auf der
+  # Entwicklermaschine dieses Baums gibt es kein ASan, MinGW — eine
+  # getippte Zahl waere eine Behauptung, P3-411 b). Gemessen war der
+  # vorgeschriebene Befehl damit von KEINER Hand ausfuehrbar:
+  #   * der Vollauf traegt `|| true`, der Auftrag wird nie rot,
+  #   * der einzige `upload-artifact` trug `if: failure()`,
+  #   * also verliess `build/asan-full.log` den Laeufer nie.
+  # `docs/asan_baseline.txt` existiert dementsprechend nicht, und die
+  # Release-Kennzahl „leckende Tests null halten" ist heute nicht nur
+  # unbelegt, sondern mit den vorhandenen Mitteln unbelegbar.
+  # Der Schalter unten schliesst genau diese Luecke; Muster und Wortlaut
+  # sind aus `.github/workflows/teilstring.yml:103-108` uebernommen.
+  workflow_dispatch:
+    inputs:
+      write_baseline:
+        description: 'ASan-Grundlinie saeen (friert den Rueckstand ein)'
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -61,8 +81,7 @@ jobs:
             -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
             -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
-          cmake --build build --parallel $(nproc) 2>&1 || true
-          # GUI may fail (missing headers) — tests are what matters
+          cmake --build build --parallel $(nproc)
 
       # ─────────────────────────────────────────────────────────────────
       # SCHARF (MF-517). Dieser Schritt hat KEIN `|| true`.
@@ -83,8 +102,7 @@ jobs:
       # MF-1110 — VOR dem Tor zaehlen, wie viele Prueflinge es ueberhaupt
       # hat. `--no-tests=error` unten feuert NUR, wenn die Regex GAR
       # KEINEN Test trifft. Faellt einer von neun weg — umbenannt, in
-      # EXCLUDED_TESTS gewandert, oder schlicht nicht uebersetzt, weil
-      # der Bauschritt darueber `|| true` traegt —, dann laeuft das Tor
+      # EXCLUDED_TESTS gewandert, oder aus der Testkonfiguration entfernt —, dann laeuft das Tor
       # mit ACHT und meldet GRUEN. Niemand zaehlt.
       #
       # Die Sollzahl wird aus der Regex ABGELEITET (Zahl der
@@ -119,20 +137,10 @@ jobs:
           # ASan setzt den Exit-Code trotzdem, das Tor bleibt scharf.
           ASAN_OPTIONS: detect_leaks=0:halt_on_error=0:exitcode=1:print_stacktrace=1
 
-      # ─────────────────────────────────────────────────────────────────
-      # BERICHTEND, nicht scharf.
-      #
-      # Bis MF-517 lief hier eine Liste von NEUN Testnamen, und das mit
-      # `|| true`. Damit sah der Baum 232 seiner 241 Tests nie unter ASan,
-      # und die neun, die er sah, konnten nichts roeten. Als "ASan-
-      # Workflow" gefuehrt zu werden und beides zu sein, ist genau die
-      # Sorte Zusage, gegen die DESIGN_PRINCIPLES geschrieben ist.
-      #
-      # Jetzt laeuft die ganze Suite, damit der Rueckstand GEMESSEN im Log
-      # steht statt geschaetzt zu werden. `|| true` bleibt hier bewusst:
-      # den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen, waere
-      # derselbe Fehler in die andere Richtung.
-      - name: Full suite under ASan (reporting only, incl. leaks)
+      # Record every failure; the following step validates completeness and
+      # compares failed test names with the baseline. Without a baseline,
+      # every failure is an error. Build failures already fail the job.
+      - name: Full suite under ASan (evaluated below, incl. leaks)
         # MF-530: `if: always()`, weil GitHub den Auftrag sonst
         # abbricht, sobald das scharfe Tor darueber rot wird — und
         # dann faellt genau die Messung aus, die den Rueckstand
@@ -146,44 +154,48 @@ jobs:
           # MF-1160: das Protokoll wird zusaetzlich in eine Datei geschrieben,
           # weil der Schritt darunter es LIEST. Bis hierher war der Rueckstand
           # gemessen und unbeachtet — eine Zahl im Protokoll ist kein Ergebnis.
-          ctest --output-on-failure --timeout 300 2>&1 | tee asan-full.log || true
+          # The next step validates the complete log and applies the baseline.
+          ctest --output-on-failure --timeout 300 --no-tests=error 2>&1 | tee asan-full.log || true
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
 
-      # ─────────────────────────────────────────────────────────────────
-      # SCHARF, sobald die Grundlinie gesaet ist (MF-1160).
-      #
-      # Der Vollauf darueber traegt `|| true` mit einer guten Begruendung:
-      # „den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen,
-      # waere derselbe Fehler in die andere Richtung." Das bleibt richtig.
-      # Der Ausweg ist nicht „scharf", sondern FALLEND: der Rueckstand wird
-      # aufgeschrieben, und ab dann darf er nur sinken.
-      #
-      #     bekannte ASan-Fehler: N     neue Fehler: 0   <- sonst rot
-      #     behobene Fehler: M          <- rot, bis sie aus der Grundlinie raus
-      #
-      # Solange `docs/asan_baseline.txt` FEHLT, berichtet das Tor und sagt
-      # ausdruecklich, dass es nicht roeten kann — kein stilles Gruen.
-      # Gesaet wird sie aus einem ECHTEN Lauf dieses Auftrags:
-      #
-      #     python3 scripts/audit_asan_grundlinie.py \
-      #         --log build/asan-full.log --schreibe-grundlinie
-      #
-      # Von Hand darf sie niemand schreiben: auf der Entwicklermaschine
-      # dieses Baums gibt es kein ASan (MinGW), eine getippte Zahl waere
-      # eine Behauptung (P3-411 b).
+      # Only explicitly baselined failures are allowed. Missing/partial logs
+      # and zero tests always fail. A baseline may be generated from this
+      # actual run using the manual write_baseline input below.
       - name: ASan-Rueckstand gegen fallende Grundlinie (MF-1160)
         if: always()
         run: python3 scripts/audit_asan_grundlinie.py --log build/asan-full.log
 
+      # MF-1332: der Saatbefehl, den der Kommentar oben vorschreibt — und
+      # den es bis hierher nicht gab. Nur auf Zuruf, weil er den
+      # Rueckstand EINFRIERT. Wie beim Praezedenzfall `teilstring.yml`
+      # schreibt er in den LAEUFER, nicht ins Repository: die erzeugte
+      # Datei kommt als Artefakt heraus und muss bewusst eingecheckt
+      # werden.
+      - name: ASan-Grundlinie saeen (nur auf Zuruf)
+        if: always() && github.event.inputs.write_baseline == 'true'
+        run: |
+          python3 scripts/audit_asan_grundlinie.py \
+            --log build/asan-full.log --schreibe-grundlinie
+          echo '::warning::ASan-Grundlinie gesaet. Der aktuelle Rueckstand ist damit eingefroren — Artefakt herunterladen, Zahl pruefen und bewusst einchecken.'
+          cat docs/asan_baseline.txt || true
+
+      # MF-1332: hier stand `if: failure()`. Weil der Vollauf `|| true`
+      # traegt, wird dieser Auftrag nie rot — das Artefakt lief also nie,
+      # und `build/asan-full.log` blieb im Laeufer. Genau daran scheiterte
+      # das Saeen. Mit `if: always()` kommt das Protokoll heraus, auch
+      # wenn alles gruen ist; `docs/asan_baseline.txt` kommt mit, damit
+      # der Saatlauf ein Ergebnis abliefert, das man einchecken kann.
       - name: Upload ASan findings
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: asan-findings-${{ github.sha }}
           path: |
             build/Testing/Temporary/
             build/**/*.log
+            docs/asan_baseline.txt
+          if-no-files-found: ignore
           retention-days: 7
 
   ubsan:
@@ -218,8 +230,7 @@ jobs:
             -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
             -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
-          cmake --build build --parallel $(nproc) 2>&1 || true
-          # GUI may fail (missing headers) — tests are what matters
+          cmake --build build --parallel $(nproc)
 
       # MF-1110 — dieselbe Zaehlung wie im ASan-Auftrag; die Begruendung
       # steht dort. Sie gehoert in BEIDE Auftraege, weil jeder seinen

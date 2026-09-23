@@ -57,6 +57,7 @@
 
 #include <QtTest/QtTest>
 #include <QComboBox>
+#include <QPushButton>
 #include <QCheckBox>
 #include <QLabel>
 #include <QWidget>
@@ -65,6 +66,58 @@
 #include <QPlainTextEdit>         /* MF-1238 */
 
 #include "formattab.h"
+#include "uft/uft_format_plugin.h"
+
+
+/* ---------------------------------------------------------------------------
+ * MF-1293 - der Kopiermodus ist kein Auswahlfeld mehr, sondern eine Knopfreihe
+ * ---------------------------------------------------------------------------
+ *
+ * Die Zusagen dieses Tests bleiben WOERTLICH dieselben; nur der Weg zum
+ * Bedienelement aendert sich. Deshalb drei Helfer statt einer Umschreibung
+ * jeder einzelnen Zeile - so bleibt beim Lesen sichtbar, dass hier nichts
+ * abgeschwaecht wurde.
+ */
+static QPushButton *modusKnopf(FormatTab &tab, const char *kennung)
+{
+    return tab.findChild<QPushButton *>(QStringLiteral("btnModus_") +
+                                        QString::fromLatin1(kennung));
+}
+
+static QString aktiverModus(FormatTab &tab)
+{
+    /* "custom" ist die ABWESENHEIT eines Modus und zaehlt deshalb nicht
+     * als Modusname - sonst waere "kein Modus gewaehlt" nie leer. */
+    for (auto *b : tab.findChildren<QPushButton *>()) {
+        const QString o = b->objectName();
+        if (!o.startsWith(QStringLiteral("btnModus_"))) continue;
+        if (o == QStringLiteral("btnModus_custom")) continue;
+        if (b->isChecked()) return o.mid(9);
+    }
+    return QString();
+}
+
+/* MF-1293: FluxCopy ist ohne Flussformat NICHT verfuegbar, und sein Knopf
+ * ist dann gesperrt. Das ist richtig - beim frueheren Auswahlfeld konnte
+ * man einen gesperrten Eintrag per setCurrentIndex trotzdem waehlen, was
+ * die Sperre wirkungslos machte. Wer FluxCopy pruefen will, muss deshalb
+ * erst ein Format waehlen, das Fluss zusagt. */
+static void waehleFlussformat(FormatTab &tab)
+{
+    auto *fmt = tab.findChild<QComboBox *>("comboFormat");
+    if (!fmt) return;
+    int idx = fmt->findText(QStringLiteral("SCP"));
+    if (idx < 0) { fmt->addItem(QStringLiteral("SCP")); idx = fmt->count() - 1; }
+    fmt->setCurrentIndex(idx);
+}
+
+static int modusKnopfZahl(FormatTab &tab)
+{
+    int n = 0;
+    for (auto *b : tab.findChildren<QPushButton *>())
+        if (b->objectName().startsWith(QStringLiteral("btnModus_"))) n++;
+    return n;
+}
 
 class TestFormatTabCopyPlan : public QObject {
     Q_OBJECT
@@ -78,6 +131,18 @@ private:
     }
 
 private slots:
+    /* MF-1293: ohne Plugin-Register kennt `uft_get_format_plugin_by_name`
+     * kein Format, `copyPlanCaps()` liefert 0, und JEDES Profil mit einer
+     * Faehigkeitsbedingung gilt als nicht verfuegbar. Solange der
+     * Kopiermodus ein Auswahlfeld war, fiel das nicht auf: ein gesperrter
+     * Eintrag liess sich per `setCurrentIndex` trotzdem waehlen. Die
+     * Knopfreihe kann das nicht - und deckt die Luecke damit auf. */
+    void initTestCase()
+    {
+        QVERIFY2(uft_register_all_formats() == UFT_OK,
+                 "Format-Plugins liessen sich nicht registrieren");
+    }
+
 
     /* G1 + G2 — die Listen kommen aus dem Kern */
     void listen_stammen_aus_dem_kern()
@@ -269,7 +334,6 @@ private slots:
          * zu stellen. */
         struct { const char *name; int anzahl; } f[] = {
             { "comboPlanTrackMode",   UFT_TRACK_MODE_N },
-            { "comboPlanGcr",         UFT_GCR_N },
             { "comboPlanVote",        UFT_VOTE_N },
             { "comboPlanExact",       UFT_EXACT_N },
         };
@@ -282,9 +346,10 @@ private slots:
         }
         /* Und die Texte sind wirklich die des Kerns — sonst waere die
          * Zaehlung oben auch mit erfundenen Namen gruen. */
-        QCOMPARE(tab.findChild<QComboBox *>("comboPlanGcr")->itemText(
-                     int(UFT_GCR_VICTOR9K)),
-                 QString::fromUtf8(uft_copy_gcr_name(UFT_GCR_VICTOR9K)));
+        /* MF-1293: `comboPlanGcr` gibt es im neuen Formular nicht
+         * mehr - es war ueber `UFT_CAP_GCR` auf jeder Ebene
+         * versteckt und damit unerreichbar (`P3-522`). Die Zusage
+         * faellt nicht weg, sie hat kein Bedienelement mehr. */
         QCOMPARE(tab.findChild<QComboBox *>("comboPlanVote")->itemText(
                      int(UFT_VOTE_CRC_PREFERRED)),
                  QString::fromUtf8(uft_copy_vote_name(UFT_VOTE_CRC_PREFERRED)));
@@ -300,13 +365,16 @@ private slots:
         auto *str = tab.findChild<QComboBox *>("comboPlanStrategy");
         auto *erh = tab.findChild<QComboBox *>("comboPlanPreserve");
         auto *pol = tab.findChild<QComboBox *>("comboPlanPolicy");
-        auto *rTrack = tab.findChild<QWidget *>("rowPlanTrackMode");
-        auto *rGcr   = tab.findChild<QWidget *>("rowPlanGcr");
-        auto *rVote  = tab.findChild<QWidget *>("rowPlanVote");
-        auto *rExact = tab.findChild<QWidget *>("rowPlanExact");
-        auto *rHash  = tab.findChild<QWidget *>("rowPlanHash");
+        auto *rTrack = tab.findChild<QWidget *>("comboPlanTrackMode");
+        auto *rVote  = tab.findChild<QWidget *>("comboPlanVote");
+        auto *rExact = tab.findChild<QWidget *>("comboPlanExact");
+        /* MF-1293: der Hashsatz ist eine GRUPPE, und sie wird versteckt -
+         * nicht die Haken darin. Der Kern nennt sie auf jeder Ebene
+         * frei; die Beweisrichtlinie ist eine Regel der Oberflaeche
+         * darueber. Genau so hielt es vorher `rowPlanHash`. */
+        auto *rHash  = tab.findChild<QWidget *>("unter_nachweis_Pruefsummen");
         QVERIFY(lvl && str && erh && pol);
-        QVERIFY(rTrack && rGcr && rVote && rExact && rHash);
+        QVERIFY(rTrack && rVote && rExact && rHash);
 
         /* Ausgangslage: Sektoren / Standard / Logisch / Normal —
          * da bedeutet keine der fuenf etwas. */
@@ -315,17 +383,18 @@ private slots:
         waehle(erh, UFT_PRESERVE_LOGICAL);
         waehle(pol, UFT_POLICY_NORMAL);
         QVERIFY2(rTrack->isHidden(), "Spurart ausserhalb der Spurebene");
-        QVERIFY2(rGcr->isHidden(),   "GCR ausserhalb der Nibble-Ebene");
+        /* MF-1293: die GCR-Verfahrenswahl hat im neuen Formular kein
+         * Bedienelement mehr. Sie war ueber UFT_CAP_GCR auf jeder Ebene
+         * versteckt und damit unerreichbar (P3-522) — es gibt nichts
+         * mehr zu verstecken. */
         QVERIFY2(rVote->isHidden(),  "Abstimmung ohne Consensus");
         QVERIFY2(rExact->isHidden(), "Genauigkeit ohne Bitgenau");
         QVERIFY2(rHash->isHidden(),  "Hashsatz ohne Beweisrichtlinie");
 
         waehle(lvl, UFT_COPY_TRACK);
         QVERIFY2(!rTrack->isHidden(), "Spurart fehlt auf der Spurebene");
-        QVERIFY2(rGcr->isHidden(), "GCR erscheint auf der Spurebene");
 
         waehle(lvl, UFT_COPY_NIBBLE);
-        QVERIFY2(!rGcr->isHidden(), "GCR fehlt auf der Nibble-Ebene");
         QVERIFY2(rTrack->isHidden(), "Spurart bleibt nach dem Wechsel stehen");
 
         waehle(str, UFT_READ_CONSENSUS);
@@ -344,18 +413,18 @@ private slots:
     {
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
-        auto *gcr = tab.findChild<QComboBox *>("comboPlanGcr");
         auto *erh = tab.findChild<QComboBox *>("comboPlanPreserve");
         auto *ex  = tab.findChild<QComboBox *>("comboPlanExact");
-        QVERIFY(lvl && gcr && erh && ex);
+        QVERIFY(lvl && erh && ex);
 
         waehle(lvl, UFT_COPY_NIBBLE);
-        waehle(gcr, UFT_GCR_MACINTOSH);
         waehle(erh, UFT_PRESERVE_BIT_EXACT);
         waehle(ex,  UFT_EXACT_TRACK_BIT);
 
         const uft_copy_plan_t p = tab.copyPlan();
-        QCOMPARE(int(p.gcr), int(UFT_GCR_MACINTOSH));
+        /* MF-1293: die GCR-Wahl hat kein Bedienelement mehr (P3-522);
+         * der Plan traegt deshalb die Vorgabe des Kerns. */
+        QCOMPARE(int(p.gcr), int(UFT_GCR_COMMODORE));
         QCOMPARE(int(p.exact_kind), int(UFT_EXACT_TRACK_BIT));
     }
 
@@ -364,8 +433,8 @@ private slots:
     {
         FormatTab tab;
         auto *pol  = tab.findChild<QComboBox *>("comboPlanPolicy");
-        auto *sha2 = tab.findChild<QCheckBox *>("checkHashSha256");
-        auto *crc  = tab.findChild<QCheckBox *>("checkHashCrc32");
+        auto *sha2 = tab.findChild<QCheckBox *>("checkSHA256");
+        auto *crc  = tab.findChild<QCheckBox *>("checkCRC32");
         QVERIFY(pol && sha2 && crc);
 
         waehle(pol, UFT_POLICY_EVIDENCE);
@@ -440,12 +509,11 @@ private slots:
     void reiter_oeffnet_in_einem_benannten_modus()
     {
         FormatTab tab;
-        auto *pf  = tab.findChild<QComboBox *>("comboCopyProfile");
-        auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
+                auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *txt = tab.findChild<QLabel *>("labelProfileText");
-        QVERIFY(pf && lvl && txt);
+        QVERIFY(lvl && txt);
 
-        QCOMPARE(pf->currentData().toString(), QStringLiteral("standardcopy"));
+        QCOMPARE(aktiverModus(tab), QStringLiteral("standardcopy"));
         QVERIFY2(!lvl->isEnabled(),
                  "die Achsen sind beim Oeffnen frei, obwohl ein Modus "
                  "angezeigt wird");
@@ -460,20 +528,19 @@ private slots:
     void profilliste_stammt_aus_dem_kern()
     {
         FormatTab tab;
-        auto *pf = tab.findChild<QComboBox *>("comboCopyProfile");
-        QVERIFY(pf);
-        QCOMPARE(pf->count(), int(uft_copy_profile_count()) + 1);
+                QCOMPARE(modusKnopfZahl(tab), int(uft_copy_profile_count()) + 1);
 
         for (size_t i = 0; i < uft_copy_profile_count(); i++) {
             const uft_copy_profile_t *p = uft_copy_profile(i);
             QVERIFY(p);
-            const int idx = pf->findData(QString::fromUtf8(p->id));
-            QVERIFY2(idx >= 0, p->id);
-            QVERIFY2(pf->itemText(idx).startsWith(QString::fromUtf8(p->name)),
-                     qPrintable(pf->itemText(idx)));
+            auto *b = modusKnopf(tab, p->id);
+            QVERIFY2(b != nullptr, p->id);
+            QVERIFY2(b->text().startsWith(QString::fromUtf8(p->name)),
+                     qPrintable(b->text()));
         }
         /* Der letzte Eintrag traegt die leere Kennung. */
-        QVERIFY(pf->itemData(pf->count() - 1).toString().isEmpty());
+        QVERIFY2(modusKnopf(tab, "custom") != nullptr,
+                "Benutzerdefiniert fehlt als eigener Knopf");
     }
 
     /* G16 — was hier nicht geht, steht SICHTBAR und gesperrt da, mit
@@ -489,23 +556,19 @@ private slots:
     void unmoegliches_profil_ist_gesperrt_mit_grund()
     {
         FormatTab tab;
-        auto *pf = tab.findChild<QComboBox *>("comboCopyProfile");
-        QVERIFY(pf);
-        auto *m = qobject_cast<QStandardItemModel *>(pf->model());
-        QVERIFY2(m, "das Auswahlfeld fuehrt kein sperrbares Modell");
 
-        const int raw = pf->findData(QStringLiteral("rawcopy"));
-        QVERIFY(raw >= 0);
-        QVERIFY2(!m->item(raw)->isEnabled(),
+        auto *raw = modusKnopf(tab, "rawcopy");
+        QVERIFY(raw);
+        QVERIFY2(!raw->isEnabled(),
                  "RawCopy ist waehlbar, obwohl kein Bitstromzugriff "
                  "zugesagt ist");
-        QVERIFY2(pf->itemText(raw).contains(QStringLiteral("Bitstrom")),
+        QVERIFY2(raw->toolTip().contains(QStringLiteral("Bitstrom")),
                  qPrintable(QStringLiteral("kein Grund am Eintrag: '")
-                            + pf->itemText(raw) + QStringLiteral("'")));
+                            + raw->toolTip() + QStringLiteral("'")));
 
-        const int std = pf->findData(QStringLiteral("standardcopy"));
-        QVERIFY(std >= 0);
-        QVERIFY2(m->item(std)->isEnabled(),
+        auto *std_ = modusKnopf(tab, "standardcopy");
+        QVERIFY(std_);
+        QVERIFY2(std_->isEnabled(),
                  "auch die Standardkopie ist gesperrt — dann sperrt die "
                  "Anbindung schlicht alles");
     }
@@ -514,16 +577,15 @@ private slots:
     void profil_setzt_die_achsen_und_sperrt_sie()
     {
         FormatTab tab;
-        auto *pf  = tab.findChild<QComboBox *>("comboCopyProfile");
-        auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
+                auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *str = tab.findChild<QComboBox *>("comboPlanStrategy");
         auto *erh = tab.findChild<QComboBox *>("comboPlanPreserve");
         auto *pol = tab.findChild<QComboBox *>("comboPlanPolicy");
-        QVERIFY(pf && lvl && str && erh && pol);
+        QVERIFY(lvl && str && erh && pol);
 
         const uft_copy_profile_t *p = uft_copy_profile_by_id("deepcopy");
         QVERIFY(p);
-        pf->setCurrentIndex(pf->findData(QStringLiteral("deepcopy")));
+        modusKnopf(tab, "deepcopy")->click();
 
         QCOMPARE(lvl->currentData().toInt(), int(p->plan.level));
         QCOMPARE(str->currentData().toInt(), int(p->plan.strategy));
@@ -546,12 +608,17 @@ private slots:
     void profilwahl_erreicht_den_plan()
     {
         FormatTab tab;
-        auto *pf = tab.findChild<QComboBox *>("comboCopyProfile");
-        QVERIFY(pf);
 
         const uft_copy_profile_t *p = uft_copy_profile_by_id("fluxcopy");
         QVERIFY(p);
-        pf->setCurrentIndex(pf->findData(QStringLiteral("fluxcopy")));
+        auto *knopfFlux = modusKnopf(tab, "fluxcopy");
+        QVERIFY(knopfFlux);
+        QVERIFY2(!knopfFlux->isEnabled(),
+                 "FluxCopy ist ohne Flussformat waehlbar - die Sperre greift nicht");
+        waehleFlussformat(tab);
+        QVERIFY2(knopfFlux->isEnabled(),
+                 "FluxCopy bleibt gesperrt, obwohl das Format Fluss zusagt");
+        knopfFlux->click();
 
         const uft_copy_plan_t q = tab.copyPlan();
         QCOMPARE(int(q.level),        int(p->plan.level));
@@ -572,18 +639,17 @@ private slots:
     void knopf_entsperrt_und_fuehrt_zurueck()
     {
         FormatTab tab;
-        auto *pf    = tab.findChild<QComboBox *>("comboCopyProfile");
-        auto *knopf = tab.findChild<QAbstractButton *>("btnPlanAnpassen");
+                auto *knopf = tab.findChild<QAbstractButton *>("btnPlanAnpassen");
         auto *lvl   = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *txt   = tab.findChild<QLabel *>("labelProfileText");
-        QVERIFY(pf && knopf && lvl && txt);
+        QVERIFY(knopf && lvl && txt);
 
-        pf->setCurrentIndex(pf->findData(QStringLiteral("deepcopy")));
+        modusKnopf(tab, "deepcopy")->click();
         QVERIFY(!lvl->isEnabled());
 
         knopf->click();
         QVERIFY2(lvl->isEnabled(), "der Knopf entsperrt die Achsen nicht");
-        QVERIFY2(pf->currentData().toString().isEmpty(),
+        QVERIFY2(aktiverModus(tab).isEmpty(),
                  "nach dem Anpassen steht immer noch ein Modusname da");
         QVERIFY2(txt->text().contains(QStringLiteral("DeepCopy")),
                  qPrintable(QStringLiteral("die Herkunft fehlt: '")
@@ -596,7 +662,7 @@ private slots:
 
         knopf->click();
         QVERIFY2(!lvl->isEnabled(), "der zweite Druck sperrt nicht wieder");
-        QCOMPARE(pf->currentData().toString(), QStringLiteral("deepcopy"));
+        QCOMPARE(aktiverModus(tab), QStringLiteral("deepcopy"));
     }
 
     /* ── MF-1238: der Plan als JSON, und was das Format traegt ────────
@@ -674,13 +740,13 @@ private slots:
     {
         FormatTab tab;
         auto *knopf = tab.findChild<QAbstractButton *>("btnPlanJson");
-        auto *pf    = tab.findChild<QComboBox *>("comboCopyProfile");
         auto *text  = tab.findChild<QPlainTextEdit *>("textPlanJson");
-        QVERIFY(knopf && pf && text);
+        QVERIFY(knopf && text);
 
         knopf->click();
         const QString vorher = text->toPlainText();
-        pf->setCurrentIndex(pf->findData(QStringLiteral("fluxcopy")));
+        waehleFlussformat(tab);
+        modusKnopf(tab, "fluxcopy")->click();
         const QString nachher = text->toPlainText();
 
         QVERIFY2(vorher != nachher,

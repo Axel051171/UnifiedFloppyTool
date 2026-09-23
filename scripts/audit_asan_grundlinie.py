@@ -1,64 +1,14 @@
 #!/usr/bin/env python3
-"""Der ASan-Vollauf misst — jetzt wird die Messung auch gelesen (MF-1160).
+"""Validate a complete ASan CTest log against a falling failure baseline.
 
-## Die Klemme, die dieses Tor aufloest
+The workflow records the full suite even when tests fail, then this script
+checks its result. A missing baseline permits no failures. Empty, truncated
+and zero-test logs are errors, including when generating a new baseline.
 
-`.github/workflows/sanitizers.yml` fuehrt zwei Laeufe: ein SCHARFES Tor
-ueber eine benannte Teilmenge (seit MF-517, ohne `|| true`) und einen
-BERICHTENDEN Vollauf ueber die ganze Suite. Der Kopf des Vollaufs sagt
-seinen Grund selbst:
-
-    „Jetzt laeuft die ganze Suite, damit der Rueckstand GEMESSEN im Log
-     steht statt geschaetzt zu werden. `|| true` bleibt hier bewusst:
-     den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen, waere
-     derselbe Fehler in die andere Richtung."
-
-Das ist richtig — und unvollstaendig. Eine Messung, die niemand gegen
-etwas haelt, ist eine Zahl im Protokoll. Der Ausweg ist nicht „scharf",
-sondern **fallend**: der Rueckstand wird aufgeschrieben, und ab dann darf
-er nur sinken.
-
-    bekannte ASan-Fehler: 26
-    neue Fehler:           0     <- rot
-    behobene Fehler:       2     <- rot, bis sie aus der Grundlinie raus sind
-    verbleibend:          24
-
-Dieselbe Bauform wie Tor 57 (`audit_schreibzusage.py`, MF-883/930),
-`audit_typkollision.py` (MF-1155) und `audit_sondendoktrin.py` (MF-1153).
-
-## Warum dieses Tor NICHT in check_consistency.py steht
-
-Es braucht ein ASan-Protokoll. Das entsteht nur in CI (Linux + clang);
-auf der Entwicklermaschine dieses Baums steht MinGW, und ASan mit
-Leckerkennung gibt es dort nicht. Ein Eintrag in `check_consistency.py`
-waere ein Tor, das bei jedem lokalen Lauf nichts findet, weil es seinen
-Gegenstand nicht sehen kann — genau die Klasse MF-1000, gegen die dieser
-Baum seine Tore schreibt. Es laeuft deshalb dort, wo sein Gegenstand
-entsteht: im Sanitizer-Auftrag.
-
-## Was gezaehlt wird, und was ausdruecklich nicht
-
-Gezaehlt werden **Testnamen**, die ctest als fehlgeschlagen meldet. Nicht
-gezaehlt werden Byte- und Allokationssummen der Leckberichte: die
-schwanken zwischen Laeufen (Reihenfolge, Zeitpunkt, Allokator), und eine
-Grundlinie auf schwankenden Zahlen ist entweder immer rot oder nie. Die
-Summen werden BERICHTET, damit die Groessenordnung sichtbar bleibt.
-
-## Was dieses Tor nicht sehen kann (MF-1000)
-
-  - **Ein Test, der gar nicht gebaut wurde**, faellt hier nicht auf. Der
-    Bauschritt des Auftrags traegt `|| true`, und das ist eine eigene
-    Luecke — sie steht als P3-411 (b), nicht hier.
-  - **Ein Leck ohne fehlgeschlagenen Test.** Mit
-    `ASAN_OPTIONS=detect_leaks=1:abort_on_error=1` faerbt ein Leck den
-    Test, also faellt er in die Namensliste. Ohne `abort_on_error` waere
-    ein Leck nur Text im Protokoll, und dieses Tor saehe es nicht. Der
-    Auftrag setzt es; wer es entfernt, entwertet dieses Tor still.
-  - **Die Unterscheidung Test-Harness-Leck gegen Produkt-Leck.** Die
-    verlangt eine Eigentuemer-Entscheidung und steht in P3-411 (b). Bis
-    dahin zaehlt dieses Tor beide, und es sagt das.
-  - **Ein umbenannter Test** sieht aus wie ein neuer plus ein behobener.
-    Das ist gewollt: eine Umbenennung soll die Grundlinie anfassen.
+Baseline entries are CTest names, not byte counts: new failures and resolved
+entries both require action. Leak totals are informational. Renaming a test
+therefore looks like one new and one resolved entry. The workflow must fail
+on build errors; this script cannot prove which tests should be registered.
 """
 from __future__ import annotations
 
@@ -129,6 +79,22 @@ def lies_grundlinie(pfad: Path) -> set[str] | None:
     return namen
 
 
+def pruefe_protokoll(text: str) -> str | None:
+    """Only a completed, nonempty CTest run can establish a baseline."""
+    summaries = re.findall(
+        r"^\s*\d+% tests passed, (\d+) tests failed out of (\d+)\s*$",
+        text, re.MULTILINE)
+    if len(summaries) != 1:
+        return "Genau eine abgeschlossene CTest-Zusammenfassung wird erwartet."
+    failed, total = map(int, summaries[0])
+    if total == 0 or failed > total:
+        return "Keine gueltige, nichtleere Testsuite im Protokoll."
+    names, _, _, _ = lies_protokoll(text)
+    if len(names) != failed:
+        return "Fehlerzahl und Fehlerliste stimmen nicht ueberein (abgeschnittenes Protokoll)."
+    return None
+
+
 def pruefe(gefunden: list[str], bekannt: set[str]) -> list[str]:
     fehler = []
     neu = sorted(set(gefunden) - bekannt)
@@ -188,6 +154,18 @@ The following tests FAILED:
 """
 
 FAELLE = [
+    ("leeres Protokoll ist kein erfolgreicher Lauf",
+     lambda: pruefe_protokoll("") is not None),
+    ("abgebrochener Lauf ist kein erfolgreicher Lauf",
+     lambda: pruefe_protokoll("Start 1: test_a\n") is not None),
+    ("null Tests sind keine Messung",
+     lambda: pruefe_protokoll("100% tests passed, 0 tests failed out of 0\n") is not None),
+    ("abgeschnittene Fehlerliste wird abgelehnt",
+     lambda: pruefe_protokoll("0% tests passed, 1 tests failed out of 1\n") is not None),
+    ("vollstaendiger gruener Lauf ist gueltig",
+     lambda: pruefe_protokoll(LOG_OHNE_FEHLER) is None),
+    ("vollstaendiger roter Lauf ist gueltig",
+     lambda: pruefe_protokoll(LOG_ZWEI_FEHLER) is None),
     ("zwei Fehler werden erkannt",
      lambda: lies_protokoll(LOG_ZWEI_FEHLER)[0] == ["test_b", "test_freezer"]),
     ("Leck-Summe wird gelesen, nicht gezaehlt",
@@ -263,6 +241,10 @@ def main() -> int:
         return 1
 
     text = pfad.read_text(encoding="utf-8", errors="replace")
+    problem = pruefe_protokoll(text)
+    if problem:
+        print(f"FEHLER: {problem}", file=sys.stderr)
+        return 1
     gefunden, bytes_ges, allok, berichte = lies_protokoll(text)
 
     bekannt = lies_grundlinie(WURZEL / GRUNDLINIE)
@@ -295,14 +277,8 @@ def main() -> int:
         return 0
 
     if bekannt is None:
-        print(f"\n  Grundlinie                  : es gibt noch keine")
-        print(f"  {GRUNDLINIE} fehlt. Damit ist dieser Lauf ein BERICHT und")
-        print(f"  kein Tor — und das ist ein Zustand, nicht ein Ergebnis.")
-        print(f"  Saeen aus DIESEM Lauf:")
-        print(f"      python3 scripts/audit_asan_grundlinie.py \\")
-        print(f"          --log {args.log} --schreibe-grundlinie")
-        print(f"  Solange sie fehlt, kann ein neuer ASan-Fehler nicht roeten.")
-        return 0
+        print(f"\n  {GRUNDLINIE} fehlt: kein Fehler ist freigegeben.")
+        bekannt = set()
 
     print(f"  Grundlinie                  : {len(bekannt)}")
     fehler = pruefe(gefunden, bekannt)

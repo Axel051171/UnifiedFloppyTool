@@ -147,9 +147,58 @@ def repo_dateien() -> list[str]:
                 if z.strip()]
 
 
+def _cmake_variablen(text: str) -> dict[str, list[str]]:
+    """Schleifenvariablen einer CMakeLists, die auf LITERALE Listen zeigen.
+
+    MF-1332. Das Skript loeste bisher nur `CMAKE_SOURCE_DIR` und
+    `CMAKE_CURRENT_SOURCE_DIR` auf und brach bei allem anderen ab — zu
+    Recht, denn ein Freispruch waere eine Falschaussage (MF-1163). Nur
+    war die Schranke zu eng: gemessen liess sich der EINZIGE Abbruch
+    dieses Baums in derselben Datei nachlesen.
+
+        cli/uft-decode/CMakeLists.txt:83
+            set(UFT_CLI_SRC_DIRS formats core crc flux forensic)
+        :85 foreach(d ${UFT_CLI_SRC_DIRS})
+        :86     file(GLOB_RECURSE _found "${CMAKE_SOURCE_DIR}/src/${d}/*.c")
+
+    Erkannt wird deshalb GENAU dieser Fall: ein `set()` mit ausschliesslich
+    literalen Werten, und ein `foreach`, das seine Variable daran bindet.
+    Alles andere — eine Liste, die selbst `${...}` enthaelt, ein `set()`
+    mit `CACHE`/`PARENT_SCOPE`, ein `foreach` ueber etwas Unbekanntes —
+    bleibt NICHT VERSTANDEN und fuehrt weiterhin zum Abbruch. Die
+    Zusicherung des Skripts wird also nicht aufgeweicht, sondern nur dort
+    erfuellt, wo die Antwort danebensteht.
+    """
+    werte: dict[str, list[str]] = {}
+    for m in re.finditer(r"\bset\s*\(\s*([A-Za-z0-9_]+)\s+([^)]*)\)", text):
+        name, rest = m.group(1), m.group(2)
+        stuecke = [s.strip().strip('"').strip("'") for s in rest.split()]
+        stuecke = [s for s in stuecke if s]
+        if not stuecke:
+            continue
+        # Ein einziges nicht-literales Stueck macht die ganze Liste
+        # unbrauchbar — lieber keine Bindung als eine halbe.
+        if any("$" in s or s.upper() in ("CACHE", "PARENT_SCOPE",
+                                         "FORCE", "INTERNAL")
+               for s in stuecke):
+            continue
+        werte[name] = stuecke
+
+    gebunden: dict[str, list[str]] = {}
+    for m in re.finditer(
+            r"\bforeach\s*\(\s*([A-Za-z0-9_]+)\s+\$\{([A-Za-z0-9_]+)\}\s*\)",
+            text):
+        schleifenvar, listenname = m.group(1), m.group(2)
+        if listenname in werte:
+            gebunden[schleifenvar] = werte[listenname]
+    return gebunden
+
+
 def _muster_aufloesen(rohmuster: str, quelle: str,
                       unverstanden: list[str],
-                      basis_ist_wurzel: bool = False) -> list[str]:
+                      basis_ist_wurzel: bool = False,
+                      variablen: dict[str, list[str]] | None = None
+                      ) -> list[str]:
     """Ein GLOB-Argument in repo-relative Muster zerlegen. Laut bei Unklarheit.
 
     `basis_ist_wurzel` unterscheidet die zwei Formen, und die Unterscheidung
@@ -164,10 +213,48 @@ def _muster_aufloesen(rohmuster: str, quelle: str,
     if quell_dir == ".":
         quell_dir = ""
     ergebnis = []
-    for stueck in rohmuster.replace("\n", " ").split():
+    stuecke = rohmuster.replace("\n", " ").split()
+
+    # MF-1332: eine Schleifenvariable ergibt MEHRERE Muster, also wird sie
+    # VOR der Einzelersetzung aufgeweitet. Nur literale Bindungen aus
+    # derselben Datei (siehe `_cmake_variablen`); alles Uebrige laeuft
+    # unveraendert in die Marke „nicht verstanden" unten.
+    if variablen:
+        aufgeweitet: list[str] = []
+        for stueck in stuecke:
+            kandidaten = [stueck]
+            for name, werte in variablen.items():
+                marke = "${" + name + "}"
+                if not any(marke in k for k in kandidaten):
+                    continue
+                kandidaten = [k.replace(marke, w)
+                              for k in kandidaten for w in werte]
+            aufgeweitet += kandidaten
+        stuecke = aufgeweitet
+
+    for stueck in stuecke:
         m = stueck.strip().strip('"').strip("'")
         if not m or m.startswith("$(") or m == "\\":
             continue
+
+        # MF-1332: ob das Stueck an der WURZEL haengt, entscheidet unten,
+        # ob das Quellverzeichnis davorgehoert. Gefunden hat es ein
+        # Selbsttestfall, der die Schleifenvariable pruefen sollte:
+        # `"${CMAKE_SOURCE_DIR}/src/${d}/*.c"` in
+        # `cli/uft-decode/CMakeLists.txt` ergab
+        # `cli/uft-decode/src/core/*.c`. `${CMAKE_SOURCE_DIR}` ist die
+        # Repo-WURZEL, nicht das Verzeichnis der Bauliste.
+        #
+        # Das ist ein VORBESTEHENDER Defekt, kein Nebeneffekt der
+        # Aufweitung: er trifft jede wurzelverankerte GLOB in einer
+        # Unterverzeichnis-Bauliste. In `tests/CMakeLists.txt` wurde
+        # `${CMAKE_SOURCE_DIR}/src/formats/*.c` damit zu
+        # `tests/src/formats/*.c` und traf NICHTS — das Tor hielt
+        # verdrahtete Dateien fuer unverdrahtet und meldete Menge C zu
+        # hoch.
+        wurzel_verankert = bool(
+            re.search(r"\$\{(?:CMAKE_SOURCE_DIR|PROJECT_SOURCE_DIR)\}",
+                      stueck))
 
         def ers(t: re.Match) -> str:
             name = t.group(1)
@@ -184,7 +271,7 @@ def _muster_aufloesen(rohmuster: str, quelle: str,
         m = m.lstrip("./")
         if "*" not in m and "?" not in m:
             continue               # kein GLOB, sondern ein Name
-        if quell_dir and not m.startswith(quell_dir):
+        if quell_dir and not wurzel_verankert and not m.startswith(quell_dir):
             m = f"{quell_dir}/{m}"
         ergebnis.append(m)
     return ergebnis
@@ -243,8 +330,12 @@ def messen() -> dict:
         except OSError:
             continue
         rein = _zeilen_ohne_kommentar(text)
+        # MF-1332: die Bindungen stammen aus DERSELBEN Datei — eine
+        # Variable aus einer anderen CMakeLists waere geraten.
+        vars_hier = _cmake_variablen(rein)
         for treffer in CMAKE_GLOB.findall(rein):
-            muster += _muster_aufloesen(treffer, q, unverstanden)
+            muster += _muster_aufloesen(treffer, q, unverstanden,
+                                        variablen=vars_hier)
     for q in ablaeufe:
         try:
             text = (WURZEL / q).read_text(encoding="utf-8", errors="replace")
@@ -269,8 +360,26 @@ def messen() -> dict:
     # beide Zahlen ausgewiesen, und die Grundlinie haengt an der
     # versionierten, weil nur die im Repository steht.
     versioniert = set(_git_versioniert())
-    menge_c = [f for f in alle_c if f in versioniert]
+    menge_c_roh = [f for f in alle_c if f in versioniert]
     menge_c_unversioniert = [f for f in alle_c if f not in versioniert]
+
+    # MF-1332: DRITTE Menge — versioniert, aber auf der Platte NICHT DA.
+    # `git ls-files` nennt sie, weil sie im Index stehen; uebersetzt
+    # werden kann eine geloeschte Datei nicht, also ist sie kein
+    # „unverdrahteter Code". Gemessen in einem GETEILTEN Arbeitsbaum:
+    # drei Dateien standen so in Menge C (`uft_kalman_pll.c`,
+    # `uft_kalman_pll_v2.c`, `UftParameterIntegration_example.cpp`) —
+    # allesamt Loeschungen einer Nachbarsitzung, noch nicht eingecheckt.
+    # Das Tor meldete deshalb 6 gegen Grundlinie 5 und waere rot
+    # geblieben, bis jemand fremde Arbeit committet.
+    #
+    # Das ist die Gestalt aus `tor_misst_arbeitsbaum_nicht_commit`, nur
+    # andersherum: dort urteilte ein Tor ueber den Arbeitsbaum statt ueber
+    # den Commit, hier ueber den Index statt ueber den Arbeitsbaum. Beide
+    # Zahlen werden ausgewiesen; die Grundlinie haengt an der, die dem
+    # Bau entspricht — was wirklich da ist.
+    menge_c = [f for f in menge_c_roh if (WURZEL / f).exists()]
+    menge_c_geloescht = [f for f in menge_c_roh if not (WURZEL / f).exists()]
 
     # WER NENNT SIE SONST? — das Tor urteilt nicht, es legt den Beleg vor.
     # Eine Nennung in einem Helfer-Skript wird ABSICHTLICH nicht als
@@ -324,6 +433,7 @@ def messen() -> dict:
         "genannt": len(genannt), "geglobt": len(geglobt),
         "fremd": len(fremd), "menge_c": menge_c,
         "menge_c_unversioniert": menge_c_unversioniert,
+        "menge_c_geloescht": menge_c_geloescht,          # MF-1332
         "nennungen": nennungen,
     }
 
@@ -375,6 +485,44 @@ def selbsttest() -> int:
     u3: list[str] = []
     faelle.append(("Name ist kein GLOB",
                    _muster_aufloesen('"src/a.c"', "CMakeLists.txt", u3) == []))
+
+    # 6a-6e (MF-1332). Die Schleifenvariable — und vor allem die GRENZE,
+    # denn eine zu weite Aufloesung waere schlimmer als der Abbruch.
+    faelle.append(("foreach ueber literale Liste wird gebunden",
+                   _cmake_variablen(
+                       "set(DIRS formats core)\nforeach(d ${DIRS})\n")
+                   == {"d": ["formats", "core"]}))
+    faelle.append(("Liste mit ${...} bindet NICHT",
+                   _cmake_variablen(
+                       "set(DIRS ${A} core)\nforeach(d ${DIRS})\n") == {}))
+    faelle.append(("set mit CACHE bindet NICHT",
+                   _cmake_variablen(
+                       "set(DIRS core CACHE STRING x)\n"
+                       "foreach(d ${DIRS})\n") == {}))
+    faelle.append(("foreach ueber Unbekanntes bindet NICHT",
+                   _cmake_variablen("foreach(d ${NIE_GESETZT})\n") == {}))
+
+    # Und die Wirkung am gemessenen Fall: EIN Muster wird zu FUENF,
+    # und nichts bleibt „nicht verstanden".
+    u4: list[str] = []
+    v4 = _cmake_variablen(
+        "set(UFT_CLI_SRC_DIRS formats core crc flux forensic)\n"
+        "foreach(d ${UFT_CLI_SRC_DIRS})\n")
+    erg4 = _muster_aufloesen('"${CMAKE_SOURCE_DIR}/src/${d}/*.c"',
+                             "cli/uft-decode/CMakeLists.txt", u4,
+                             variablen=v4)
+    faelle.append(("Schleifenvariable weitet ein Muster auf fuenf auf",
+                   sorted(erg4) == ["src/core/*.c", "src/crc/*.c",
+                                    "src/flux/*.c", "src/forensic/*.c",
+                                    "src/formats/*.c"] and not u4))
+
+    # OHNE Bindung bleibt derselbe Ausdruck laut — die Zusicherung aus
+    # MF-1163 gilt unveraendert weiter.
+    u5: list[str] = []
+    faelle.append(("ohne Bindung bleibt dasselbe Muster laut",
+                   _muster_aufloesen('"${CMAKE_SOURCE_DIR}/src/${d}/*.c"',
+                                     "cli/uft-decode/CMakeLists.txt", u5)
+                   == [] and len(u5) == 1))
 
     # 8. fnmatch trifft die gemessene CI-Form
     faelle.append(("CI-Muster trifft die Vektordateien",
@@ -460,6 +608,14 @@ def main(argv: list[str]) -> int:
     if cu:
         print(f"  dazu UNVERSIONIERT, zaehlt nicht zur Grundlinie: {len(cu)}")
         for f in cu:
+            print(f"    ? {f}")
+    cg = m.get("menge_c_geloescht") or []          # MF-1332
+    if cg:
+        print(f"  dazu VERSIONIERT ABER GELOESCHT, zaehlt nicht zur "
+              f"Grundlinie: {len(cg)}")
+        print("    (im Index, nicht auf der Platte — eine geloeschte "
+              "Datei wird nicht uebersetzt)")
+        for f in cg:
             print(f"    ? {f}")
 
     if len(c) > GRUNDLINIE:

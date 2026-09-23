@@ -121,6 +121,9 @@ public:
 
     /** Der Plan, wie ihn die vier Auswahlfelder gerade beschreiben. */
     uft_copy_plan_t copyPlan() const;
+    /* MF-1293: der Arbeitsablauf braucht die Umdrehungen, fuehrt sie
+     * aber nicht mehr selbst. Ein Leser statt eines zweiten Feldes. */
+    int leseUmdrehungen() const;
 
     /* MF-1265 (`P3-509`, zweiter Halbsatz): hier stand eine statische
      * Auskunft `aktuellerPlan()`. Sie ist in den KERN gewandert —
@@ -143,6 +146,37 @@ public:
     /** MF-1237: das Profilfeld aus dem Kern fuellen, mit Grund bei den
      *  Profilen, die fuer dieses Format nicht taugen. */
     void fuelleProfile();
+    /* MF-1293: die Felder, die mit dem neuen Formular dazugekommen
+     * sind — Abkuerzungen, gesperrte Haken ohne Kernparameter und
+     * der Rest, der wenigstens eine Aenderung melden soll. */
+    void verdrahteNeueFelder();
+    /* MF-1293: ersetzt das gestapelte Layout jedes Traegers mit
+     * `uft_flow = topdown` durch ein Spalten-Fliesslayout. */
+    void fliessbereicheEinrichten();
+    /* MF-1293: Zahlenfelder auf eine ablesbare Breite bringen. */
+    void zahlenfelderLesbarMachen();
+    /* MF-1293: den Erklaerungsblock auf die eine Zeile kuerzen,
+     * die nirgends sonst steht. */
+    void erklaerungKuerzen();
+    /* MF-1299: Modus-Kasten in den Fliessbereich, engere
+     * Raender - damit mehr Spalten nebeneinander passen. */
+    void platzSparen();
+    /* MF-1302: Zeilen sparen - Umdrehungen/Index auf eine
+     * Zeile, Schutzsignale auf drei Spalten, Nachweis hinter
+     * den Kopiermodus. */
+    void zeilenSparen();
+    /* MF-1306: ist dieses Feld - oder einer seiner Vorfahren -
+     * ausdruecklich verborgen? Dann zaehlt sein Wert nicht. */
+    bool istVerborgen(const QWidget *w) const;
+    /* MF-1308: die gewaehlte Variante in die Geometriefelder
+     * uebertragen - nur, was sie wirklich nennt. */
+    void varianteAnwenden();
+    /* MF-1298: die vier verborgenen Erklaerungsfelder als
+     * Kurzhinweis am Kasten zusammenfassen. */
+    void planHinweisNachziehen();
+    /* MF-1293: die vier Sektorknoepfe neben dem Zahlenfeld,
+     * das dasselbe kann. */
+    void sektorknoepfeVerbergen();
 
     /** Ein Profil anwenden; leere Kennung heisst „Benutzerdefiniert". */
     void wendeProfilAn(const QString &id);
@@ -181,6 +215,8 @@ public slots:
     void saveSettings();
 
 private slots:
+    /* MF-1293: gemeinsamer Slot fuer jede Feldaenderung. */
+    void onFeldGeaendert();
     // System/Format cascade
     void onSystemChanged(int index);
     void onFormatChanged(int index);
@@ -289,6 +325,45 @@ private:
      * eines Nachschlagefehlers von uns.
      */
     void applyPluginCapabilities(const QString& format);
+
+public:
+    /* MF-1320 (E-15): „Ein Tor, das bei fehlendem Anker durchlaeuft, ist
+     * keines."
+     *
+     * Beide Tore dieses Reiters haben bis hierher `if (!w) continue;`
+     * gesagt und damit still alles durchgelassen, sobald ihre Anker
+     * fehlten. Gemessen war das kein Randfall: der GUI-Umbau hat ALLE
+     * VIER Gruppen entfernt, die `applyPluginCapabilities()` kennt
+     * (`groupFlux`, `groupPLL`, `groupWrite`, `groupProtection` — je 1
+     * Treffer in der HEAD-Fassung von `forms/tab_format.ui`, je 0 in der
+     * neuen). Das Tor lief seither fuer JEDES Format durch und blendete
+     * nichts aus, ohne ein Wort.
+     *
+     * Ein fehlender Anker ist damit ein FUND. Er wird gezaehlt und ist
+     * abfragbar, damit ein Test darauf zeigen kann. 0 heisst „alle Anker
+     * da"; -1 heisst „das Tor lief noch nicht". */
+    int gruppenTorFehlendeAnker() const { return m_gruppenTorFehlendeAnker; }
+    int parameterTorFehlendeAnker() const { return m_parameterTorFehlendeAnker; }
+
+    /* MF-1320: sind die Faehigkeiten des gewaehlten Formats UEBERHAUPT
+     * bekannt?
+     *
+     * `copyPlanCaps()` liefert `0` in zwei voellig verschiedenen Faellen:
+     * „das Format kann nichts davon" und „das Format ist nicht
+     * nachschlagbar". Wer die beiden zusammenwirft, blendet einem
+     * Benutzer wegen eines NACHSCHLAGEFEHLERS Bedienelemente aus.
+     *
+     * Das alte Gruppentor kannte die Regel und schrieb sie hin: „Kein
+     * Plugin gefunden: NICHTS ausblenden." Beim Umbau auf das
+     * Parameter-Tor ist sie verlorengegangen. Dieselbe Dreiteilung wie
+     * `caps_bekannt` im Kopierplan (MF-1311) und `probe_gemessen` an der
+     * Scheibe (MF-1317). */
+    bool copyPlanCapsBekannt() const;
+
+private:
+    int m_gruppenTorFehlendeAnker = -1;   /**< -1 = Tor lief noch nicht */
+    int m_parameterTorFehlendeAnker = -1;
+
     void syncProtectionWidgets(bool detectAll);
     void updatePLLOptions(bool enabled);
     void updateFluxOptions(bool isFluxFormat);

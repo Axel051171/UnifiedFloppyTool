@@ -316,10 +316,29 @@ void g64_free(g64_image_t *image);
  */
 g64_image_t *g64_create(int num_tracks, bool include_halftracks);
 
+/* ── MF-1332: die Halbspur-Abbildung steht ab hier an EINER Stelle ──
+ *
+ * MF-928 hat die Konvention umgestellt: „Dateieintrag i IST der
+ * Speicherplatz i", und Spur t liegt damit auf Platz 2*(t-1). Das
+ * Makro dazu lag in `src/formats/c64/uft_d64_g64.c` und war fuer jeden
+ * anderen Uebersetzungsabschnitt unsichtbar.
+ *
+ * Die Folge ist gemessen: `src/formats/uft_format_convert_bitstream.c`
+ * rechnete an drei Stellen weiter `halftrack = track * 2` und las damit
+ * die Spuren 2..35 unter den Namen 1..34 — Spur 1 liegt auf Platz 0 und
+ * wurde nie gefragt. Bauform MF-1177 (eine Groesse, zwei Rechnungen),
+ * verschraenkt mit MF-519/MF-529 (eine Stelle geholt, den Nachbarn
+ * uebersehen).
+ *
+ * Wer eine Spurnummer in einen Platz umrechnet, ruft dieses Makro. */
+#define G64_TRACK_TO_HALFTRACK(t)  (((t) - 1) * 2)   /* 1..42 -> 0..82 */
+
 /**
  * @brief Get track from G64 image
  * @param image G64 image
- * @param halftrack Halftrack number (2-84)
+ * @param halftrack Halftrack slot (0-82 since MF-928; derive it with
+ *                  G64_TRACK_TO_HALFTRACK(). The range 2-84 that stood
+ *                  here was the pre-MF-928 convention and is wrong.)
  * @param data Output data pointer
  * @param length Output length
  * @param speed Output speed zone
@@ -331,7 +350,11 @@ int g64_get_track(const g64_image_t *image, int halftrack,
 /**
  * @brief Set track in G64 image
  * @param image G64 image
- * @param halftrack Halftrack number (2-84)
+ * @param halftrack Halftrack slot (0-82 since MF-928; derive it with
+ *                  G64_TRACK_TO_HALFTRACK(). The range 2-84 that stood
+ *                  here was the pre-MF-928 convention and is wrong —
+ *                  the bound actually checked is
+ *                  `halftrack < 0 || halftrack >= G64_MAX_TRACKS`.)
  * @param data Track data
  * @param length Track length
  * @param speed Speed zone
@@ -389,6 +412,31 @@ void convert_get_defaults(convert_options_t *options);
 size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
                      int track, int sector, const uint8_t *disk_id,
                      d64_error_t error);
+
+/**
+ * @brief Wie @ref sector_to_gcr, aber mit waehlbarem Lueckenbyte
+ *        (MF-1333, Stufe 3).
+ *
+ * @param gap_fill Byte fuer BEIDE Luecken des Sektors — die 9 Byte
+ *        hinter dem Kopf und die Zwischensektorluecke. `sector_to_gcr()`
+ *        ruft diese Funktion mit `0x55` und ist damit unveraendert.
+ *
+ * Bis MF-1333 waren die beiden Luecken fest auf `0x55` verdrahtet,
+ * waehrend `convert_options_t.gap_fill` existierte und nur die
+ * AUFFUELLUNG am Spurende faerbte — die Option war zur Haelfte
+ * wirkungslos (gemessen).
+ *
+ * Gebraucht wird das fuer den GEOS-Bootschutz, dessen Merkmal genau
+ * der Inhalt dieser Luecken auf Spur 21 ist: `$55 $55 $67 …` im
+ * Original, durchgehend `$67` beim GeoCopy-Nachbau. Referenz ist die
+ * Beschreibung des Urhebers (`neue-ideen/geocopy.zip ->
+ * geocopy/READ.ME.cvt`, Kanal *Spec* nach MF-695 — NC-Klausel, kein
+ * Port). Nachmessen laesst sich das Ergebnis mit
+ * `uft_cbm_track_segmentieren()`.
+ */
+size_t sector_to_gcr_gap(const uint8_t *sector_data, uint8_t *gcr_output,
+                         int track, int sector, const uint8_t *disk_id,
+                         d64_error_t error, uint8_t gap_fill);
 
 /**
  * @brief Convert GCR to raw sector

@@ -228,7 +228,17 @@ typedef enum {
 /** Der Plan selbst: vier Wahlen, dazu die Feinheiten, die die Vorgabe
  *  ausdruecklich verlangt — Spurart, Dateispezialisierung, GCR-Verfahren,
  *  Abstimmungsverfahren, Hashsatz und die Spielart der Bitgenauigkeit. */
-typedef struct {
+/* MF-1316: der Strukturname ist neu, die Struktur nicht.
+ *
+ * Ohne Namen laesst sich der Plan nirgends vorwaerts deklarieren, und
+ * genau das braucht `uft_convert_options_t` in `uft_types.h`, um ihn bis
+ * in den gemeinsamen Wandlungs-Verteiler zu tragen. Ein `void *` waere
+ * der uebliche Ausweg — und eine verlorene Typpruefung an genau der
+ * Stelle, an der das Tor entscheidet.
+ *
+ * Fuer das ABI aendert ein Tag nichts: gleiche Felder, gleiche Groesse,
+ * gleiche Reihenfolge. */
+typedef struct uft_copy_plan {
     uft_copy_level_t     level;
     uft_read_strategy_t  strategy;
     uft_preservation_t   preservation;
@@ -240,6 +250,24 @@ typedef struct {
     uft_gcr_variant_t    gcr;          /**< nur auf der Nibble-Ebene      */
     uft_vote_method_t    vote;         /**< nur bei CONSENSUS             */
     uint32_t             hashes;       /**< uft_hash_set_t, nur EVIDENCE  */
+
+    /* MF-1311: was das PAAR aus Quelle und Ziel traegt.
+     *
+     * Bis hierher konnte keine Faehigkeitsmaske die Oberflaeche
+     * verlassen. `FormatTab::copyPlanCaps()` rechnete eine, und sie
+     * starb in `formattab.cpp` — `uft_copy_plan_t` hatte kein Feld
+     * dafuer, also erreichte sie weder `decodejob.cpp` noch
+     * `toolstab.cpp` noch `uft_save_image.cpp`. Das Tor musste deshalb
+     * mit voller Maske fragen und ueber Faehigkeiten schweigen.
+     *
+     * Zwei Felder, nicht eines: eine Null in `caps` ist mehrdeutig —
+     * sie kann "gemessen, traegt nichts" heissen oder "nicht gemessen".
+     * Das auseinanderzuhalten ist der ganze Punkt, denn unbekannt darf
+     * weder still ja noch still nein bedeuten.
+     *
+     * Angehaengt, nicht eingefuegt: die Felder davor bleiben unberuehrt. */
+    uint32_t             caps;         /**< uft_copy_caps_t, Schnittmenge */
+    bool                 caps_bekannt; /**< false = nicht gemessen        */
 } uft_copy_plan_t;
 
 /** Ein Befund aus der Pruefung. `hard` heisst: so nicht ausfuehrbar. */
@@ -247,7 +275,53 @@ typedef struct {
     bool        hard;
     const char *id;        /**< kurzer, stabiler Bezeichner des Befunds */
     const char *text;      /**< Begruendung, fuer den Bediener          */
+
+    /* ── MF-1332: fuenf Felder, damit ein Befund maschinenlesbar ist ──
+     *
+     * Bis hierher trug ein Befund DREI Felder, und die Faehigkeit, um
+     * die es ging, stand nur im deutschen Fliesstext. Gemessen ist das
+     * kein Schoenheitsfehler: `uft_copy_plan_check()` WEISS, welche
+     * Fahne fehlt — bei `"kein_fluss"` steht `UFT_CAP_FLUX_IO` zwei
+     * Zeilen ueber dem `befund()`-Aufruf im `if` — und gab sie nicht
+     * weiter. Ein Verbraucher wie `src/formattab.cpp:2043` musste auf
+     * `id` string-matchen, um zu erfahren, was das Geraet koennen
+     * muesste.
+     *
+     * Die Vorlage ist benannt und liegt im Baum:
+     * `tools/uft-retrace/docs/UFT_INTEGRATION.md` verlangt, dass eine
+     * Empfehlung „empfohlene Ebene, benoetigte Faehigkeiten,
+     * Verlustmeldung, Messquelle, Konfidenz" liefert, und
+     * `tools/uft-retrace/docs/COPYPLAN_MAPPING.md` setzt die Schranke
+     * dazu: „Ein Raw-Byte-Treffer darf nie `available=true` setzen."
+     *
+     * ZWEI FLAGGEN STATT NUR FUENF FELDERN, und das ist die Lehre aus
+     * MF-1311 weiter oben: eine Null ist mehrdeutig. Eine
+     * `caps_benoetigt` von 0 kann „gemessen, braucht nichts" heissen
+     * oder „nicht gemessen"; eine `konfidenz` von 0 ebenso. Unbekannt
+     * darf weder still ja noch still nein bedeuten.
+     *
+     * ANGEHAENGT, NICHT EINGEFUEGT: `hard`, `id` und `text` behalten
+     * ihre Lage. Alle acht Aufrufer legen ihr `uft_copy_finding_t f[16]`
+     * UNINITIALISIERT an (gemessen), deshalb nullt der Erzeuger
+     * `befund()` seit MF-1332 den ganzen Eintrag, bevor er schreibt —
+     * sonst waeren diese Felder Stapelmuell und wuerden eine Messung
+     * behaupten, die nie stattfand. */
+    uint32_t    caps_benoetigt;         /**< uft_copy_caps_t-Bitmaske   */
+    bool        caps_benoetigt_bekannt; /**< false = nicht gemessen     */
+    int8_t      ebene_empfohlen;        /**< uft_copy_level_t; <0=keine */
+    const char *verlust;                /**< was verloren geht;
+                                         *   NULL = nichts genannt      */
+    const char *messquelle;             /**< woher der Befund stammt;
+                                         *   NULL = keine Messung       */
+    uint8_t     konfidenz;              /**< 0..100                     */
+    bool        konfidenz_gemessen;     /**< false = nicht gemessen     */
 } uft_copy_finding_t;
+
+/** „Keine Ebene empfohlen" fuer `uft_copy_finding_t::ebene_empfohlen`.
+ *  Negativ, weil `uft_copy_plan_check()` eine Ebene ohnehin mit
+ *  `level < 0 || level >= UFT_COPY_LEVEL_N` verwirft — dieselbe
+ *  Konvention, nicht eine zweite (MF-1177). */
+#define UFT_COPY_EBENE_KEINE ((int8_t)-1)
 
 /**
  * Was fuer eine Art Wert steht in `uft_copy_enforced_t::value`?
@@ -398,6 +472,88 @@ size_t uft_copy_plan_check(const uft_copy_plan_t *plan,
 
 /** Traegt der Plan einen harten Befund? Bequemlichkeit ueber check(). */
 bool uft_copy_plan_is_executable(const uft_copy_plan_t *plan, uint32_t caps);
+
+/* MF-1316: Urteil und Tor stehen in `uft_copy_gate.h`.
+ *
+ * Getrennt, weil `uft_format_convert_dispatch.c` das Tor braucht, aber
+ * nicht dieses Modell — und der `UFT_CAP_*`-Block hier gemessen mit zwei
+ * anderen Koepfen kollidiert. Die Begruendung samt Zahlen steht dort. */
+#include "uft/core/uft_copy_gate.h"
+
+
+/**
+ * @brief Darf dieser Plan ueberhaupt in eine Wandlung gehen?
+ *
+ * Beantwortet NUR die Frage, die ohne Kenntnis von Format- und
+ * Geraetefaehigkeiten sicher zu beantworten ist: widerspricht sich der
+ * Plan in sich selbst? Vier harte Befunde sind so gebaut -
+ * `ebene_ungueltig`, `ebene_zu_hoch`, `genauigkeit_zu_hoch` und
+ * `beweis_und_eile`. Sie gelten unabhaengig davon, welches Format oder
+ * welcher Controller beteiligt ist.
+ *
+ * Die uebrigen harten Befunde (`kein_fluss`, `schutz_nicht_tragbar`,
+ * `kein_dateisystem`, `bam_ohne_bam`, `keine_mehrfachlesung`) haengen an
+ * der Faehigkeitsmaske. Sie werden hier ABSICHTLICH ausgeklammert,
+ * indem mit allen Bits gefragt wird: mit der heutigen, gemessen zu
+ * groben Maske wuerde das Tor falsch absagen. Die Trennung von Quell-
+ * und Zielfaehigkeiten ist die Voraussetzung dafuer und ein eigener
+ * Schritt.
+ *
+ * Wichtig: die Regeln stehen NICHT ein zweites Mal hier. Gefragt wird
+ * `uft_copy_plan_check()` mit voller Maske - zwei Kopien derselben
+ * Rechnung driften (MF-1177).
+ *
+ * @param plan   der Plan; NULL gilt als Absage
+ * @param grund  optional: Bezeichner des ersten harten Befunds, sonst NULL
+ */
+
+
+/**
+ * @brief Das Tor MIT Faehigkeitsfrage (MF-1311).
+ *
+ * Drei Ausgaenge, jeder mit eigener Bedeutung:
+ *
+ *   DENY               Der Plan widerspricht sich selbst — das gilt
+ *                      unabhaengig von jedem Format. Oder: die Maske ist
+ *                      gemessen und traegt den Plan nicht.
+ *   NEEDS_MEASUREMENT  Der Plan verlangt etwas Faehigkeitsabhaengiges,
+ *                      und `caps_bekannt` ist false. Hier wird NICHT
+ *                      geraten: weder durchgelassen noch gesperrt.
+ *   ALLOW              Keine harten Befunde — entweder weil der Plan
+ *                      nichts Faehigkeitsabhaengiges verlangt, oder weil
+ *                      die gemessene Maske ihn traegt.
+ *
+ * Die Regeln stehen NICHT ein zweites Mal hier: gefragt wird
+ * `uft_copy_plan_check()`, mit leerer oder gemessener Maske (MF-1177).
+ */
+
+
+/**
+ * @brief Faehigkeitsmaske aus einem Format-PAAR (MF-1311).
+ *
+ * Umgesetzt in `src/core/uft_copy_caps.c` — getrennt von diesem Modell,
+ * weil `uft_copy_plan.c` bewusst ohne Plugin-Registrierung uebersetzt
+ * (und `tests/test_copy_plan.c` es genau so baut).
+ *
+ * @return false, wenn die Maske NICHT ermittelbar ist (ein Zeiger fehlt).
+ *         true mit leerer Maske heisst dagegen "gemessen, traegt nichts".
+ */
+/* MF-1311: vorwaerts deklariert, NICHT eingebunden.
+ *
+ * Ohne diese Zeile wuerde `struct uft_format_plugin` erst in der
+ * Parameterliste bekannt — gcc meldet dann woertlich "declared inside
+ * parameter list will not be visible outside of this definition", und
+ * der Typ waere ein anderer als der echte. Gemessen zweimal beim ersten
+ * Bau.
+ *
+ * Eingebunden wird der Plugin-Kopf hier absichtlich nicht: dieses Modell
+ * uebersetzt ohne die Registrierung, und `tests/test_copy_plan.c` baut
+ * es genau so. */
+struct uft_format_plugin;
+
+bool uft_copy_caps_von_plugins(const struct uft_format_plugin *quelle,
+                               const struct uft_format_plugin *ziel,
+                               uint32_t *aus);
 
 /**
  * Was erzwingt dieser Plan?

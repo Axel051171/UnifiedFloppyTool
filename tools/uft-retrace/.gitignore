@@ -1,0 +1,14 @@
+# MF-1332. Muster wie tools/uft-nachbau/.gitignore.
+#
+# Laufergebnisse bleiben AUS DEM BAUM, und das ist hier nicht nur
+# Ordnungsliebe: `work/` traegt die Inventare, Hunks und Traces einer
+# Sitzung — also genau die Ableitungen aus historischen Programmen, die
+# `LICENSE` und `docs/LEGAL_CLEANROOM.md` ausdruecklich NICHT abdecken.
+# Was das Werkzeug erzeugt, gehoert in den Arbeitsbereich, nicht ins
+# Repositorium.
+work/
+out/
+output/
+
+__pycache__/
+*.pyc

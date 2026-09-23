@@ -3,6 +3,7 @@
   "symbols": [
     "2img",
     "86f",
+    "a2r",
     "adf",
     "adf_arc",
     "adf_ext",
@@ -90,5 +91,10 @@
     "xdm86",
     "xfd"
   ],
-  "whitelist": []
+  "whitelist": [
+    "a2r"
+  ],
+  "whitelist_begruendung": {
+    "a2r": "MF-1322, Eigentuemer-Entscheidung 2026-09-21 (Auftrag: \"A2R Schritt 5 (Plugin) fertig bauen\"). Das Moratorium galt zu diesem Zeitpunkt noch: gemessen standen atr=T1b, d64=T1b, adf=T1b, fdi=T1, aber nfd=T2 - vier von fuenf. Die Sperre war benannt und vorgelegt, die Entscheidung wurde danach getroffen. KEIN NEUER PARSER: src/parsers/a2r/uft_a2r_parser.c lag seit Langem im Baum und hatte 13 Aufrufstellen, ALLE in Tests (Klasse P3-204, 'Leser ohne Tuer'; der Baum fuehrt dazu tests/test_apple_moof_a2r_no_door.c). Registriert ist eine NUR-LESE-Tuer: src/formats/a2r/uft_a2r_plugin.c hat kein write_track, kein create, kein flush und fuehrt kein UFT_FORMAT_CAP_WRITE. Die drei Substanzbedingungen aus MF-498 sind eingehalten: benannte Referenz ('A2R 3.x Disk Image Reference', applesaucefdc.com/a2r/), jede Zahl gemessen, Referenz im Header. NICHT erfuellt ist T1: die Abnahme des Produktpfads an tests/corpus/kor_a ueber uft_disk_open() statt ueber a2r_open() steht aus."
+  }
 }

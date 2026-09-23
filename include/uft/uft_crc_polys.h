@@ -427,7 +427,7 @@ const uft_crc_config_t *uft_crc_get_config_by_name(const char *name)
 
 
 /** CRC-16 CCITT */
-uint16_t uft_crc16_ccitt(const uint8_t *data, size_t length);
+uint16_t uft_crc16_ccitt(const uint8_t *data, size_t length, uint16_t init);
 
 
 

@@ -9,6 +9,9 @@
  */
 
 #include "formattab.h"
+#include "uft_flow_layout.h"
+#include <QFontMetrics>
+#include <QAbstractSpinBox>
 #include "ui_tab_format.h"
 #include "uft_gw2dmk_panel.h"
 #include <uft/uft_format_plugin.h>  /* MF-661: Faehigkeits-Manifest */
@@ -33,7 +36,18 @@
 #include <QGridLayout>           /* MF-1282: Beschriftung links im Gitter */
 #include <QFormLayout>           /* MF-1282: Beschriftung in der LabelRole */
 #include <QBoxLayout>            /* MF-1282: Beschriftung davor im Kasten */
-#include <QLabel>                /* MF-1282 */
+#include <QLabel>
+#include <QCheckBox>
+#include <QSpinBox>                /* MF-1282 */
+
+/* MF-1302 - EINE Probebreite fuer alle Messungen.
+ *
+ * Bei der Einrichtung ist die Flaeche erst 592 px breit; eine Messung
+ * dagegen vergliche 1 Spalte mit 1 Spalte und saehe nichts. Gemessen wird
+ * deshalb gegen eine typische Fensterbreite. Sie steht genau hier - zwei
+ * Kopien derselben Zahl waeren die Bauform aus MF-1177. */
+static const int kProbeBreite = 1450;
+
 
 // ============================================================================
 // Construction / Destruction
@@ -523,7 +537,7 @@ static QLayout *layoutVon(QLayout *lay, QWidget *w, int *index)
  *     (comboFluxMerge, comboSampleRate, comboXCopySides).
  * Steht dort kein QLabel, gibt es keine Beschriftung und nichts passiert —
  * gemessen ist das der Fall bei `checkDecodeGCR` (davor steht das Haekchen
- * `checkNibbleMode`) und `checkHashSha512` (davor `checkHashSha256`). Ein
+ * `checkNibbleMode`) und `checkHashSha512` (davor `checkSHA256`). Ein
  * Nachbar ist keine Beschriftung, und ihn mit zu verstecken waere schlimmer
  * als die haengende Beschriftung, die behoben werden soll.
  * Dieselbe Regel wendet die Vorschau des Entwurfs an (test-gui). */
@@ -581,23 +595,46 @@ void FormatTab::setupConnections() {
               UFT_TRACK_DECODED);
     fuelleAus(ui->comboPlanFileSpecial, UFT_FILE_SPECIAL_N, nameFileSpecial,
               UFT_FILE_GENERIC);
-    fuelleAus(ui->comboPlanGcr,         UFT_GCR_N,          nameGcr,
-              UFT_GCR_COMMODORE);
+    /* MF-1293: `comboPlanGcr` gibt es im neuen Formular nicht mehr.
+     * Der Grund steht als `P3-522`: das Feld haengt an `gcr.variant`,
+     * das `UFT_CAP_GCR` verlangt, und `copyPlanCaps()` setzt die Flagge
+     * nie — es war auf jeder Ebene versteckt. */
     fuelleAus(ui->comboPlanVote,        UFT_VOTE_N,         nameVote,
               UFT_VOTE_STRICT_MAJORITY);
     fuelleAus(ui->comboPlanExact,       UFT_EXACT_N,        nameExact,
               UFT_EXACT_SECTOR);
     for (QComboBox *b : { ui->comboPlanTrackMode, ui->comboPlanFileSpecial,
-                          ui->comboPlanGcr, ui->comboPlanVote,
+                          ui->comboPlanVote,
                           ui->comboPlanExact })
         connect(b, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, &FormatTab::onCopyPlanChanged);
-    for (QCheckBox *c : { ui->checkHashSha512, ui->checkHashCrc32 })
+    for (QCheckBox *c : { ui->checkHashSha512, ui->checkCRC32 })
         connect(c, &QCheckBox::toggled, this, &FormatTab::onCopyPlanToggled);
 
-    // MF-1237: der benannte Kopiermodus. Die Liste kommt aus dem Kern.
-    connect(ui->comboCopyProfile, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &FormatTab::onCopyProfileChanged);
+    // MF-1237/MF-1293: der benannte Kopiermodus. Die Liste kommt aus dem
+    // Kern; im neuen Formular ist jeder Modus ein eigener Knopf statt eines
+    // Eintrags in einem Auswahlfeld. Verdrahtet wird ueber den Namen
+    // `btnModus_<Kennung>`, damit Formular und Kern sich nicht ueber eine
+    // Reihenfolge einig sein muessen.
+    for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+        const uft_copy_profile_t *p = uft_copy_profile(i);
+        if (!p || !p->id) continue;
+        const QString kennung = QString::fromUtf8(p->id);
+        auto *b = findChild<QPushButton *>(QStringLiteral("btnModus_") + kennung);
+        if (!b) continue;
+        connect(b, &QPushButton::clicked, this, [this, kennung]() {
+            wendeProfilAn(kennung);
+            applyCopyPlan();
+            emit formatSettingsChanged();
+        });
+    }
+    if (auto *b = findChild<QPushButton *>(QStringLiteral("btnModus_custom")))
+        connect(b, &QPushButton::clicked, this, [this]() {
+            m_profil.clear();
+            setPlanFrei(true);
+            applyCopyPlan();
+            emit formatSettingsChanged();
+        });
     connect(ui->btnPlanAnpassen, &QPushButton::clicked,
             this, &FormatTab::onPlanAnpassen);
     /* MF-1238: die JSON-Ansicht */
@@ -642,13 +679,13 @@ void FormatTab::setupConnections() {
     connect(ui->comboPlatform, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int) { emit formatSettingsChanged(); });
     
-    // Presets
-    connect(ui->btnLoadPreset, &QPushButton::clicked,
+    // Presets — MF-1293: das neue Formular hat kein Auswahlfeld mehr,
+    // sondern Laden/Speichern/Loeschen. Welche Voreinstellung gemeint ist,
+    // fragt der jeweilige Knopf beim Bediener ab.
+    connect(ui->btnModusLaden, &QPushButton::clicked,
             this, &FormatTab::onLoadPreset);
-    connect(ui->btnSavePreset, &QPushButton::clicked,
+    connect(ui->btnModusSpeichern, &QPushButton::clicked,
             this, &FormatTab::onSavePreset);
-    connect(ui->comboPreset, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int) { emit formatSettingsChanged(); });
     
     // Format parameters
     connect(ui->spinTracks, QOverload<int>::of(&QSpinBox::valueChanged),
@@ -673,7 +710,7 @@ void FormatTab::setupConnections() {
             this, [this](int) { emit formatSettingsChanged(); });
     connect(ui->checkWeakBits, &QCheckBox::toggled,
             this, [this](bool) { emit formatSettingsChanged(); });
-    connect(ui->checkNoFluxAreas, &QCheckBox::toggled,
+    connect(ui->checkDetectNoFlux, &QCheckBox::toggled,
             this, [this](bool) { emit formatSettingsChanged(); });
     
     // PLL parameters
@@ -684,9 +721,571 @@ void FormatTab::setupConnections() {
     connect(ui->checkUseIndex, &QCheckBox::toggled,
             this, [this](bool) { emit formatSettingsChanged(); });
     
-    // GW→DMK Direct
-    connect(ui->btnGw2DmkOpen, &QPushButton::clicked,
-            this, &FormatTab::onGw2DmkOpenClicked);
+    /* MF-1293: GW→DMK steht im neuen Entwurf im Arbeitsablauf-Reiter,
+     * nicht mehr hier. Der Slot bleibt, weil ihn andere aufrufen koennen. */
+
+    verdrahteNeueFelder();
+}
+
+/* ===========================================================================
+ * MF-1293 — die Felder, die mit dem neuen Formular dazugekommen sind
+ * ===========================================================================
+ *
+ * Drei Gruppen, und sie werden AUSDRUECKLICH verschieden behandelt:
+ *
+ *   a) Felder mit einem Parameter im Kern  -> stehen in `bindung[]` und
+ *      werden vom Plan gefuehrt wie jedes andere.
+ *   b) Abkuerzungen ohne eigenen Zustand   -> setzen ein vorhandenes Feld.
+ *   c) Felder ohne Gegenstueck im Kern     -> werden GESPERRT und sagen im
+ *      Kurzhinweis, warum. Ein Haken, der nichts tut, aber bedienbar
+ *      aussieht, ist die Sorte Aussage, gegen die dieses Programm gebaut
+ *      ist (MF-508, MF-767).
+ *
+ * Und zum Schluss: alles, was einen Wert traegt und noch kein Signal
+ * abgibt, meldet wenigstens eine Aenderung. Ein Feld, dessen Aenderung
+ * niemand erfaehrt, ist genauso stumm wie eines ohne Leser.
+ */
+/* MF-1293: ein gemeinsamer Slot fuer "irgendein Feld hat sich geaendert".
+ * Er ist benannt, damit `Qt::UniqueConnection` greifen kann - mit einem
+ * Lambda ginge das nicht, und dann haetten Felder doppelt gemeldet. */
+void FormatTab::onFeldGeaendert() {
+    emit formatSettingsChanged();
+}
+
+/* MF-1293 - die Eigenschaft `uft_flow` bekommt ihren Leser.
+ *
+ * Der Generator markiert den Traeger der Einstellungsgruppen mit
+ * `uft_flow = topdown`; `uic` erzeugt daraus eine dynamische Eigenschaft
+ * und laesst das `QVBoxLayout` stehen, weil Qt kein Fliesslayout kennt.
+ * Folge: EINE lange Spalte statt drei nebeneinander - genau der
+ * Unterschied zwischen Programm und Vorschau, ueber den der Eigentuemer
+ * dreimal gestolpert ist.
+ *
+ * Gesucht wird ueber die EIGENSCHAFT, nicht ueber den Namen `flaeche`:
+ * ein Name ist eine Verabredung, die Eigenschaft ist die Aussage. Traegt
+ * der Entwurf morgen zwei Fliessbereiche, greift dieselbe Schleife. */
+void FormatTab::fliessbereicheEinrichten() {
+    int umgebaut = 0;
+    for (QWidget *w : findChildren<QWidget *>()) {
+        if (w->property("uft_flow").toString() != QLatin1String("topdown"))
+            continue;
+        QLayout *alt = w->layout();
+        if (!alt || dynamic_cast<UftFlowLayout *>(alt)) continue;
+
+        QList<QLayoutItem *> posten;
+        while (QLayoutItem *p = alt->takeAt(0)) posten.append(p);
+        const QMargins r = alt->contentsMargins();
+        delete alt;
+
+        auto *fluss = new UftFlowLayout(w, 0, 6, 4);
+        fluss->setContentsMargins(r);
+        for (QLayoutItem *p : posten) fluss->addItem(p);
+        w->setLayout(fluss);
+        umgebaut++;
+        qInfo("[FormatTab] MF-1293: Fliessbereich '%s' mit %d Gruppen.",
+              qPrintable(w->objectName()), int(posten.size()));
+    }
+    if (umgebaut == 0)
+        qWarning("[FormatTab] MF-1293: KEIN Traeger mit uft_flow gefunden - "
+                 "die Gruppen bleiben gestapelt.");
+}
+
+/* MF-1293 - die Zahlenfelder waren nicht ablesbar.
+ *
+ * Der Entwurf gibt ihnen eine Hoechstbreite von 58 Pixeln, gemessen an
+ * der WinForms-Vorschau. Qt braucht fuer die beiden Pfeile allein rund 22
+ * - es blieben 36 fuer die Ziffern, und schon "80" passte nicht mehr
+ * hinein. Zu sehen war ein leeres Feld mit zwei Pfeilen.
+ *
+ * Berichtigt wird zur LAUFZEIT und nicht in der Formulardatei: die wird
+ * erzeugt, eine Aenderung darin waere beim naechsten Lauf des Generators
+ * wieder weg. Die Breite kommt aus der Schriftmetrik, nicht aus einer
+ * geratenen Zahl. */
+void FormatTab::zahlenfelderLesbarMachen() {
+    const QFontMetrics fm(font());
+    const int ziffern = fm.horizontalAdvance(QStringLiteral("88888"));
+    const int noetig = ziffern + 34;
+    int gerichtet = 0;
+    for (QAbstractSpinBox *s : findChildren<QAbstractSpinBox *>()) {
+        if (s->maximumWidth() < noetig) {
+            s->setMaximumWidth(QWIDGETSIZE_MAX);
+            gerichtet++;
+        }
+        if (s->minimumWidth() < noetig) s->setMinimumWidth(noetig);
+    }
+    if (gerichtet)
+        qInfo("[FormatTab] MF-1293: %d Zahlenfelder waren schmaler als %d "
+              "Pixel und damit unlesbar.", gerichtet, noetig);
+}
+
+/* MF-1293 - der Erklaerungsblock des Plans schrumpft auf eine Zeile.
+ *
+ * Er trug vier Felder. Gemessen sagen drei davon etwas, das anderswo
+ * schon steht:
+ *
+ *   Profil     -> der gedrueckte Modusknopf traegt denselben Namen und
+ *                 denselben Text als Kurzhinweis.
+ *   traegt     -> steht wortgleich als Kurzhinweis an jedem GRAUEN
+ *                 Modusknopf, dort naeher an der Frage, die es
+ *                 beantwortet.
+ *   setzt fest -> steht vollstaendig hinter "Plan als JSON zeigen".
+ *
+ * Nur "Befunde" steht nirgends sonst: welche Ebene aus "Automatisch"
+ * wirklich wurde. Diese eine Zeile bleibt. Der Wortlaut von "traegt"
+ * geht nicht verloren, er wandert an ihren Kurzhinweis - verborgen ist
+ * nicht dasselbe wie geloescht. */
+
+/* MF-1298 - sammelt die vier verborgenen Erklaerungsfelder in EINEN
+ * Kurzhinweis am Kasten "Kopierplan".
+ *
+ * Liest die Felder statt den Text neu zu bauen: eine zweite Rechnung waere
+ * die Bauform aus MF-1177, und sie driftet. */
+void FormatTab::planHinweisNachziehen() {
+    QWidget *kasten = findChild<QWidget *>(QStringLiteral("groupCopyPlan"));
+    if (!kasten) return;
+
+    struct { const char *feld; const char *titel; } teile[] = {
+        { "labelProfileText",  QT_TR_NOOP("Profil")     },
+        { "labelPlanCaps",     QT_TR_NOOP("Traegt")     },
+        { "labelPlanFindings", QT_TR_NOOP("Befunde")    },
+        { "labelPlanForced",   QT_TR_NOOP("Setzt fest") },
+    };
+
+    QStringList text;
+    for (const auto &t : teile) {
+        QLabel *l = findChild<QLabel *>(QString::fromLatin1(t.feld));
+        if (!l || l->text().trimmed().isEmpty()) continue;
+        text << (tr(t.titel) + QStringLiteral(":\n") + l->text());
+    }
+    kasten->setToolTip(text.join(QStringLiteral("\n\n")));
+}
+
+
+/* MF-1299 - Platz sparen, ohne etwas wegzunehmen.
+ *
+ * Gemessener Anlass: im Bildschirmfoto des Eigentuemers stehen unter den
+ * 18 Modusknoepfen rund 540 Pixel leer. `groupModus` liegt als eigene
+ * Spalte NEBEN dem Rollbereich; seine Resthoehe kann niemand nutzen, und
+ * seine Breite fehlt den Einstellungen.
+ *
+ * Zwei Griffe, beide ohne Verlust:
+ *
+ *   1. Der Kasten wandert in den Fliessbereich und wird dort wie jede
+ *      andere Gruppe verteilt - als ERSTER, denn er ist die Auswahl, von
+ *      der alles uebrige abhaengt. Die Luecke faellt weg, und die Flaeche
+ *      bekommt die ganze Fensterbreite.
+ *
+ *   2. Die Gruppen bekommen engere Raender. Das ist nicht Kosmetik: die
+ *      Spaltenbreite des Fliesslayouts ist die BREITESTE Wunschbreite,
+ *      also entscheidet sie darueber, ob zwei oder drei Spalten
+ *      nebeneinander passen. Jeder gesparte Pixel zaehlt doppelt.
+ *
+ * Wie viele Spalten dabei herauskommen, sagt das Layout selbst (MF-1299
+ * in uft_flow_layout.cpp) - hier wird nichts behauptet. */
+void FormatTab::platzSparen() {
+    QWidget *flaeche = findChild<QWidget *>(QStringLiteral("flaeche"));
+    auto *fluss = flaeche ? dynamic_cast<UftFlowLayout *>(flaeche->layout())
+                          : nullptr;
+
+    /* 1. Enge Raender - erst, damit die Wunschbreiten schon schmal sind,
+     *    wenn der Modus-Kasten dazukommt. */
+    int enger = 0;
+    QList<QWidget *> kaesten;
+    if (flaeche) kaesten = flaeche->findChildren<QWidget *>();
+    if (QWidget *plan = findChild<QWidget *>(QStringLiteral("groupCopyPlan")))
+        kaesten << plan << plan->findChildren<QWidget *>();
+    for (QWidget *k : kaesten) {
+        QLayout *l = k->layout();
+        if (!l) continue;
+        const QMargins m = l->contentsMargins();
+        if (m.left() > 6 || m.top() > 4 || m.right() > 6 || m.bottom() > 4) {
+            l->setContentsMargins(qMin(m.left(), 6), qMin(m.top(), 4),
+                                  qMin(m.right(), 6), qMin(m.bottom(), 4));
+            enger++;
+        }
+        if (l->spacing() > 3) l->setSpacing(3);
+    }
+
+    /* 1b. Die eingetragene Mindestbreite BLEIBT (MF-1304, zurueckgenommen)
+     *
+     * Versucht und gemessen widerlegt: alle Stufengruppen tragen
+     * `minimumSize` 520 px aus dem WinForms-Rundlauf, und ich hielt das
+     * fuer eine willkuerliche Zahl, die drei Spalten verhindert
+     * (3 x 520 + 12 = 1572 > 1442).
+     *
+     * Auf 0 gesetzt rechnet Qt das Mindestmass aus dem Inhalt - und das
+     * ist 988 px, also der volle Wunsch. Ergebnis: EINE Spalte, 1646 px
+     * hoch. Die 520 sind nicht das Hindernis, sondern die Erlaubnis zu
+     * stauchen. Ohne sie gaebe es gar nichts zu verteilen.
+     *
+     * Wer drei Spalten will, muss den INHALT schmaler machen - nicht die
+     * Klemme loesen. */
+
+    /* 2. Den Modus-Kasten umhaengen. */
+    bool umgehaengt = false;
+    QWidget *modus = findChild<QWidget *>(QStringLiteral("groupModus"));
+    if (modus && fluss) {
+        if (QLayout *alt = modus->parentWidget()
+                               ? modus->parentWidget()->layout() : nullptr)
+            alt->removeWidget(modus);
+        modus->setParent(flaeche);
+        fluss->vornAnstellen(modus);
+        modus->show();
+        umgehaengt = true;
+    }
+
+    qInfo("[FormatTab] MF-1299: %d Kaesten enger gesetzt; Modus-Kasten "
+          "umgehaengt: %s.", enger, umgehaengt ? "ja" : "NEIN");
+
+    /* MF-1300 - eine Probe gegen eine typische Fensterbreite.
+     *
+     * Beim Einrichten steht die echte Breite noch nicht fest, und ein
+     * nicht sichtbarer Reiter wird von Qt gar nicht vermessen. Ohne diese
+     * Zeile laesst sich die Aufteilung nur am Bildschirm beobachten.
+     * `heightForWidth` rechnet, ohne etwas zu setzen - die Probe aendert
+     * also nichts, sie misst nur. */
+    zeilenSparen();
+    if (fluss) fluss->heightForWidth(kProbeBreite);
+}
+
+
+/* MF-1302 - Zeilen sparen, wo die Anordnung welche verschenkt.
+ *
+ * Drei Griffe, alle zur LAUFZEIT. Die `.ui` wird erzeugt (WinForms-
+ * Rundlauf); eine Handaenderung darin waere beim naechsten Generatorlauf
+ * weg.
+ *
+ * 1. "Umdrehungen - Index" belegte zwei Zeilen: oben `Revs:` und
+ *    `Merge:`, darunter die beiden Haken. Bei einem Sektorformat ist
+ *    `Merge:` ausgeblendet, die halbe obere Zeile liegt also leer,
+ *    waehrend darunter eine ganze Zeile verbraucht wird. Die Haken
+ *    wandern nach oben rechts, `Merge:` nach unten links. Ist `Merge:`
+ *    unsichtbar, faellt die zweite Zeile zusammen - ist es sichtbar,
+ *    bleiben es zwei Zeilen wie bisher. Schlechter wird es also nie.
+ *
+ * 2. "Schutzsignale" stand in 6 Zeilen zu 2 Spalten. Drei Spalten
+ *    ergeben 4 Zeilen - zwei gespart. Das Raster hat vier Spalten und
+ *    benutzt je zwei (colspan 2); das bleibt so, nur mit drei Paaren.
+ *
+ * 3. Der Nachweis-Kasten wandert in der Reihenfolge direkt hinter den
+ *    Kopiermodus, damit er unter ihm steht. */
+void FormatTab::zeilenSparen() {
+    /* --- 1. Umdrehungen - Index: ZURUECKGENOMMEN ---------------------
+     *
+     * Der Wunsch war, die Haken auf die Hoehe der oberen Zeile zu ziehen.
+     * Gemessen geht das nicht ohne Verlust, und der Versuch hat einen
+     * echten Fehler erzeugt (zwei Widgets uebereinander, "Use index" unter
+     * "Merge:").
+     *
+     * Das Raster hat SECHS Spalten und ist voll:
+     *
+     *   r0: Revs(c0,c1)      Merge(c2,c3)             Sample(c4,c5)
+     *   r1: Use index(c0+)   Read between index(c2+)  Include raw flux(c4+)
+     *
+     * Revs braucht zwei Spalten, jeder der DREI Haken ebenfalls zwei -
+     * zusammen acht. In sechs Spalten passt das nicht. Es waere nur zu
+     * haben, wenn die Gruppe breiter wird, und breiter kostet gemessen
+     * eine ganze Fliessspalte (MF-1301: 3 Spalten/888 px gegen
+     * 2 Spalten/1121 px). Die gesparte Zeile ist rund 25 px wert, die
+     * verlorene Spalte 233 - also bleibt es, wie es ist.
+     *
+     * Der urspruengliche Eindruck "da liegt eine halbe Zeile leer" war
+     * richtig: bei einem Sektorformat sind Merge und Sample ausgeblendet.
+     * Nur ist der Platz nicht nutzbar, ohne die Gruppe zu verbreitern. */
+
+    /* --- 2. Schutzsignale auf drei Spalten ----------------------------- */
+    if (auto *g = findChild<QGridLayout *>(QStringLiteral("gitter_lesen2"))) {
+        QList<QWidget *> posten;
+        while (QLayoutItem *p = g->takeAt(0)) {
+            if (QWidget *w = p->widget()) posten << w;
+            delete p;
+        }
+        for (int i = 0; i < posten.size(); i++)
+            g->addWidget(posten.at(i), i / 3, (i % 3) * 2, 1, 2);
+        if (!posten.isEmpty())
+            qInfo("[FormatTab] MF-1302: Schutzsignale auf 3 Spalten - "
+                  "%d Posten in %d Zeilen statt %d.",
+                  int(posten.size()), (int(posten.size()) + 2) / 3,
+                  (int(posten.size()) + 1) / 2);
+    }
+
+    /* --- 2b. Der Bericht passt sich dem Kopiermodus an ----------------
+     *
+     * Berichtigung eines Missverstaendnisses. "Nachweis unter den
+     * Kopiermodus" hiess: der Kasten soll sich der BREITE des
+     * Kopiermodus anpassen, der dort schon stand. Ich hatte stattdessen
+     * nur die Reihenfolge geaendert - und damit die ganze Spalte auf das
+     * Mindestmass des Berichts aufgezogen (520 statt 340 px), was
+     * gemessen eine komplette Fliessspalte gekostet hat.
+     *
+     * Richtig ist, den Bericht schmaler zu machen: sein Raster laeuft in
+     * ZWEI Spalten, der Kopiermodus braucht nur 340 px. Auf eine Spalte
+     * umgestellt wird der Bericht hoeher und schmaler - und die erste
+     * Fliessspalte bleibt schmal, statt alle anderen zu verdraengen. */
+    if (auto *g = findChild<QGridLayout *>(
+            QStringLiteral("gitter_nachweis_Bericht"))) {
+        QList<QWidget *> posten;
+        while (QLayoutItem *q = g->takeAt(0)) {
+            if (QWidget *w = q->widget()) posten << w;
+            delete q;
+        }
+        for (int i = 0; i < posten.size(); i++)
+            g->addWidget(posten.at(i), i, 0, 1, 2);
+        if (!posten.isEmpty())
+            qInfo("[FormatTab] MF-1305: Bericht auf EINE Spalte - %d Posten "
+                  "untereinander, damit er unter den Kopiermodus passt.",
+                  int(posten.size()));
+
+        /* Und die Klemme genau HIER loesen - nicht ueberall.
+         *
+         * MF-1304 hatte gemessen: loest man die eingetragenen 520 px bei
+         * ALLEN Gruppen, rechnet Qt deren echtes Mindestmass mit 988 px
+         * und es bleibt EINE Spalte. Fuer diese eine Gruppe gilt das
+         * nicht mehr, weil ihr Inhalt gerade schmal gemacht wurde. */
+        if (QWidget *n = findChild<QWidget *>(
+                QStringLiteral("groupStufe_nachweis"))) {
+            /* Auf die Breite des Kopiermodus klemmen, nicht loesen.
+             *
+             * Gemessen: mit 0 rechnet Qt 589 px aus dem Inhalt - mehr als
+             * die eingetragenen 520. Loesen hilft also nicht. Die `.ui`
+             * klemmt ohnehin jede Stufengruppe auf 520, obwohl ihr Inhalt
+             * 988 wuenscht; das Stauchen ist hier die uebliche Bauform.
+             * Der Bericht ist jetzt einspaltig, also traegt er dieselbe
+             * Klemme wie der Kopiermodus nebenan. */
+            QWidget *modus = findChild<QWidget *>(
+                QStringLiteral("groupModus"));
+            /* `minimumWidth()` ist 0, solange niemand eine Klemme
+             * gesetzt hat - die 340 px des Kopiermodus kommen aus seinem
+             * INHALT. Also wird der Inhalt gefragt, nicht die Klemme. */
+            const int wie = modus
+                ? std::max(200, modus->minimumSizeHint().width()) : 340;
+            n->setMinimumWidth(wie);
+            n->adjustSize();
+        }
+    }
+
+    /* --- 3. Nachweis direkt hinter den Kopiermodus --------------------- */
+    QWidget *flaeche = findChild<QWidget *>(QStringLiteral("flaeche"));
+    auto *fluss = flaeche ? dynamic_cast<UftFlowLayout *>(flaeche->layout())
+                          : nullptr;
+    QWidget *nachweis = findChild<QWidget *>(
+        QStringLiteral("groupStufe_nachweis"));
+    if (fluss && nachweis) {
+        /* Der Wunsch war: Nachweis unter den Kopiermodus. Gemessen kostet
+         * das eine ganze Spalte - der Kasten landet in der schmalen ersten
+         * Spalte (340 px), sein Mindestmass passt dort nicht, die Spalte
+         * wird breiter und die dritte faellt weg:
+         *
+         *   ohne Umzug   3 Spalten, 888 px hoch
+         *   mit Umzug    2 Spalten, 1121 px hoch   (+233 px)
+         *
+         * Also wird der Umzug versucht und nur behalten, wenn er keine
+         * Spalte kostet. Bei einem breiteren Fenster geht beides. */
+        /* EIGENTUEMER-ENTSCHEIDUNG: der Umzug bleibt, auch wenn er
+         * kostet.
+         *
+         * MF-1302 hatte ihn automatisch zurueckgenommen, weil er gemessen
+         * eine Spalte kostet: der Kasten landet in der schmalen ersten
+         * Spalte (340 px), sein Mindestmass passt dort nicht, die Spalte
+         * wird breiter und die dritte faellt weg -
+         * 3 Spalten/888 px gegen 2 Spalten/1121 px, also +233 px.
+         *
+         * Nach Vorlage dieser Zahlen hat der Eigentuemer den Umzug
+         * ausdruecklich verlangt ("den Nachweis (bericht) unter dem
+         * kopiermodus machen"). Die Ruecknahme ist damit weg; die Zahl
+         * bleibt hier stehen, damit niemand sie neu messen muss. */
+        fluss->verschiebeAn(nachweis, 1);
+        fluss->heightForWidth(kProbeBreite);
+        qInfo("[FormatTab] MF-1303: Nachweis steht unter dem Kopiermodus "
+              "(Eigentuemer-Entscheidung; kostet gemessen eine Spalte, "
+              "jetzt %d).", fluss->spalten());
+    }
+}
+
+void FormatTab::erklaerungKuerzen() {
+    /* MF-1298 - jetzt alle VIER. "Befunde" stand bis hierher noch da,
+     * weil es als einziges nirgends sonst steht. Der Eigentuemer hat
+     * entschieden, dass auch das nicht in die Flaeche gehoert; es ist
+     * seit MF-1298 im Kurzhinweis des Kastens vollstaendig lesbar. */
+    const char *weg[] = { "labelProfileText", "labelPlanCaps",
+                          "labelPlanForced", "labelPlanFindings" };
+    for (const char *n : weg) {
+        QWidget *w = findChild<QWidget *>(QString::fromLatin1(n));
+        if (!w) continue;
+        w->hide();
+        if (QWidget *lab = beschriftungVon(w)) lab->hide();
+    }
+
+    /* Verstecken allein gibt den Platz nicht zurueck, und das ist der
+     * Unterschied zwischen "der Text ist weg" und "der Text ist weg UND
+     * die Luecke auch".
+     *
+     * Zwei Dinge halten sie offen. Erstens der Wortumbruch: ein Etikett
+     * mit wordWrap verlangt Hoehe fuer mehrere Zeilen, auch wenn nur
+     * eine kommt. Zweitens zwei senkrechte Abstandhalter im Kasten, die
+     * den frueheren Textblock ausgeglichen haben und jetzt nur noch Luft
+     * ausgleichen.
+     *
+     * Beides wird hier genommen. Der Kasten bekommt ausserdem die
+     * Groessenrichtlinie Maximum: er nimmt, was er braucht, und nicht,
+     * was da ist. */
+    if (auto *befund = findChild<QLabel *>(QStringLiteral("labelPlanFindings")))
+        befund->setWordWrap(false);
+
+    QWidget *plan = findChild<QWidget *>(QStringLiteral("groupCopyPlan"));
+    if (!plan) return;
+
+    int geschlossen = 0;
+    QList<QLayout *> offen;
+    if (plan->layout()) offen.append(plan->layout());
+    while (!offen.isEmpty()) {
+        QLayout *l = offen.takeFirst();
+        for (int i = 0; i < l->count(); i++) {
+            QLayoutItem *p = l->itemAt(i);
+            if (QLayout *unter = p->layout()) { offen.append(unter); continue; }
+            if (p->spacerItem() &&
+                (p->expandingDirections() & Qt::Vertical)) {
+                p->spacerItem()->changeSize(0, 0, QSizePolicy::Minimum,
+                                            QSizePolicy::Fixed);
+                geschlossen++;
+            }
+        }
+        l->invalidate();
+    }
+    plan->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    plan->adjustSize();
+
+    qInfo("[FormatTab] MF-1293: %d senkrechte Abstandhalter im Kopierplan "
+          "geschlossen; der Kasten nimmt jetzt nur noch seine eigene Hoehe.",
+          geschlossen);
+}
+
+/* MF-1293 - die vier Sektorknoepfe fallen, weil das Zahlenfeld daneben
+ * dasselbe kann.
+ *
+ * Der Entwurf setzt "9 10 11 18 ?" als Abkuerzung neben spinSectors.
+ * Solange das Zahlenfeld unlesbar schmal war, sah das nach einer Hilfe
+ * aus; lesbar daneben sind es fuenf Knoepfe fuer eine Eingabe, die das
+ * Feld schon annimmt. Zwei Wege zu einer Einstellung sind dieselbe
+ * Doppelung, die die Eigentuemerregel "keine doppelten Einstellungen"
+ * meint - sie steht dort fuer Reiter, sie gilt hier genauso.
+ *
+ * Verborgen, nicht geloescht: ein Wort holt sie zurueck. */
+void FormatTab::sektorknoepfeVerbergen() {
+    const char *knoepfe[] = { "btnSpt9", "btnSpt10", "btnSpt11", "btnSpt18",
+                              "btnSptAuto" };
+    int versteckt = 0;
+    for (const char *n : knoepfe)
+        if (QWidget *b = findChild<QWidget *>(QString::fromLatin1(n))) {
+            b->hide();
+            versteckt++;
+        }
+    if (versteckt)
+        qInfo("[FormatTab] MF-1293: %d Sektorknoepfe verborgen - das "
+              "Zahlenfeld daneben kann dasselbe.", versteckt);
+}
+
+void FormatTab::verdrahteNeueFelder() {
+    fliessbereicheEinrichten();
+    zahlenfelderLesbarMachen();
+    erklaerungKuerzen();
+    sektorknoepfeVerbergen();
+    platzSparen();
+
+    /* (b) Sektoren je Spur, die vier haeufigen Werte als Abkuerzung.
+     *     Sie tragen keinen eigenen Zustand - sie setzen `spinSectors`,
+     *     und von dort laeuft alles weiter wie bisher. */
+    const struct { const char *knopf; int wert; } spt[] = {
+        { "btnSpt9",  9 }, { "btnSpt10", 10 },
+        { "btnSpt11", 11 }, { "btnSpt18", 18 },
+    };
+    for (const auto &s : spt)
+        if (auto *b = findChild<QPushButton *>(QString::fromLatin1(s.knopf))) {
+            const int w = s.wert;
+            b->setToolTip(tr("Sektoren je Spur auf %1 setzen").arg(w));
+            connect(b, &QPushButton::clicked, this, [this, w]() {
+                if (ui->spinSectors) ui->spinSectors->setValue(w);
+            });
+        }
+    if (auto *b = findChild<QPushButton *>(QStringLiteral("btnSptAuto"))) {
+        b->setToolTip(tr("Sektoren je Spur aus dem gewaehlten Format uebernehmen"));
+        connect(b, &QPushButton::clicked, this, [this]() {
+            onFormatChanged(ui->comboFormat ? ui->comboFormat->currentIndex()
+                                            : -1);
+        });
+    }
+
+    /* (b) Voreinstellung loeschen - der dritte Knopf der Verwaltung. */
+    if (ui->btnModusLoeschen)
+        connect(ui->btnModusLoeschen, &QPushButton::clicked, this, [this]() {
+            QStringList namen = m_presets.keys();
+            namen.sort(Qt::CaseInsensitive);
+            if (namen.isEmpty()) {
+                QMessageBox::information(
+                    this, tr("Voreinstellung loeschen"),
+                    tr("Es ist keine Voreinstellung gespeichert."));
+                return;
+            }
+            bool ok = false;
+            const QString name = QInputDialog::getItem(
+                this, tr("Voreinstellung loeschen"), tr("Welche?"), namen, 0,
+                false, &ok);
+            if (!ok || name.isEmpty() || !m_presets.contains(name)) return;
+            if (QMessageBox::question(this, tr("Voreinstellung loeschen"),
+                                      tr("Wirklich loeschen?")) !=
+                QMessageBox::Yes)
+                return;
+            m_presets.remove(name);
+            savePresetsToFile();
+            updatePresetCombo();
+        });
+
+    /* (a/c) Die Pruefsummen. Der Kern kennt CRC32, SHA-256 und SHA-512 -
+     *       gemessen an den `UFT_HASH_*`-Werten. MD5 und SHA-1 stehen im
+     *       Formular und haben KEIN Gegenstueck; sie werden deshalb
+     *       gesperrt und sagen es. */
+    if (ui->checkSHA256) {
+        ui->checkSHA256->setChecked(true);
+        ui->checkSHA256->setEnabled(false);
+        ui->checkSHA256->setToolTip(
+            tr("SHA-256 steht fest und wird immer gebildet."));
+    }
+    for (auto *c : { ui->checkMD5, ui->checkSHA1 })
+        if (c) {
+            c->setChecked(false);
+            c->setEnabled(false);
+            c->setToolTip(tr("Der Kern bildet diese Pruefsumme nicht: er "
+                             "kennt CRC-32, SHA-256 und SHA-512. Gesperrt "
+                             "statt wirkungslos."));
+        }
+
+    /* Zum Schluss: jedes Wertfeld dieses Reiters, das noch kein Signal
+     * abgibt, meldet wenigstens seine Aenderung. Gezaehlt wird, wie viele
+     * es waren - die Zahl steht im Protokoll, nicht in einem Kommentar. */
+    /* `QObject::receivers()` ist geschuetzt und von aussen nicht lesbar.
+     * Statt zu fragen, ob schon jemand horcht, wird UNBEDINGT verbunden -
+     * aber auf einen BENANNTEN Slot und mit `Qt::UniqueConnection`. Damit
+     * faellt eine zweite Verbindung derselben Paarung von selbst weg, und
+     * die Zaehlung sagt, wie viele Paarungen wirklich neu sind. */
+    int neuVerbunden = 0;
+    for (auto *c : findChildren<QCheckBox *>())
+        if (connect(c, &QCheckBox::toggled, this, &FormatTab::onFeldGeaendert,
+                    Qt::UniqueConnection))
+            neuVerbunden++;
+    for (auto *s : findChildren<QSpinBox *>())
+        if (connect(s, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                    &FormatTab::onFeldGeaendert, Qt::UniqueConnection))
+            neuVerbunden++;
+    for (auto *s : findChildren<QDoubleSpinBox *>())
+        if (connect(s, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                    this, &FormatTab::onFeldGeaendert, Qt::UniqueConnection))
+            neuVerbunden++;
+    for (auto *b : findChildren<QComboBox *>())
+        if (connect(b, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                    this, &FormatTab::onFeldGeaendert, Qt::UniqueConnection))
+            neuVerbunden++;
+    qInfo("[FormatTab] MF-1293: %d Felder melden ihre Aenderung jetzt "
+          "ueber einen gemeinsamen Slot.", neuVerbunden);
 }
 
 
@@ -726,7 +1325,96 @@ void FormatTab::onFormatChanged(int index) {
     emit formatSettingsChanged();
 }
 
+
+/* MF-1308 - die Variante wird wirksam.
+ *
+ * Gemessen tat `onVersionChanged()` genau eines: ein Signal senden, das
+ * NULL Empfaenger hat. Die Auswahl "40 Track" gegen "35 Track" aenderte
+ * also nichts - weder Zylinderzahl noch Sektoren noch Sektorgroesse.
+ *
+ * Dabei traegt `uft_format_variant_t` die Geometrie laengst mit:
+ * `cylinders`, `heads`, `sectors_min/max`, `sector_size`. Sie stand nur
+ * nie in den Feldern.
+ *
+ * Zwei Regeln dabei:
+ *
+ *   - Uebernommen wird NUR, was die Variante wirklich sagt. Eine 0
+ *     heisst "nicht genannt", nicht "null" - dann bleibt der bisherige
+ *     Wert stehen, statt ihn durch eine erfundene Zahl zu ersetzen.
+ *   - Bei den Sektoren gibt es eine Spanne. Genannt ist der Wert nur,
+ *     wenn Min und Max gleich sind; sonst waere die Wahl zwischen ihnen
+ *     eine Erfindung. */
+void FormatTab::varianteAnwenden() {
+    const QString fmt = getSelectedFormat();
+    if (fmt.isEmpty()) return;
+    const uft_format_plugin_t *plugin =
+        uft_get_format_plugin_by_name(fmt.toUtf8().constData());
+    if (!plugin || !plugin->variants || plugin->variant_count == 0) return;
+
+    const QString name = ui->comboVersion->currentData().toString();
+    if (name.isEmpty()) return;
+
+    const uft_format_variant_t *v = nullptr;
+    for (size_t i = 0; i < plugin->variant_count; i++)
+        if (name == QString::fromUtf8(plugin->variants[i].name)) {
+            v = &plugin->variants[i];
+            break;
+        }
+    if (!v) return;
+
+    QStringList gesetzt;
+    QStringList offen;
+
+    auto zahl = [&](QSpinBox *s, int wert, const char *was) {
+        if (!s) return;
+        if (wert > 0) {
+            s->blockSignals(true);
+            s->setValue(wert);
+            s->blockSignals(false);
+            gesetzt << QStringLiteral("%1=%2").arg(QLatin1String(was)).arg(wert);
+        } else {
+            offen << QLatin1String(was);
+        }
+    };
+
+    zahl(ui->spinTracks, v->cylinders, "Zylinder");
+    zahl(ui->spinSides, v->heads, "Seiten");
+    if (v->sectors_min > 0 && v->sectors_min == v->sectors_max)
+        zahl(ui->spinSectors, v->sectors_min, "Sektoren");
+    else
+        offen << QStringLiteral("Sektoren(Spanne %1..%2)")
+                     .arg(v->sectors_min).arg(v->sectors_max);
+
+    if (ui->comboSectorSize && v->sector_size > 0) {
+        const int idx =
+            ui->comboSectorSize->findText(QString::number(v->sector_size));
+        if (idx >= 0) {
+            ui->comboSectorSize->blockSignals(true);
+            ui->comboSectorSize->setCurrentIndex(idx);
+            ui->comboSectorSize->blockSignals(false);
+            gesetzt << QStringLiteral("Sektorgroesse=%1").arg(v->sector_size);
+        } else {
+            offen << QStringLiteral("Sektorgroesse(%1 nicht in der Liste)")
+                         .arg(v->sector_size);
+        }
+    } else if (v->sector_size <= 0) {
+        offen << QStringLiteral("Sektorgroesse");
+    }
+
+    qInfo("[FormatTab] MF-1308: Variante '%s' angewandt - gesetzt: %s | "
+          "von der Variante nicht genannt: %s",
+          qPrintable(name),
+          gesetzt.isEmpty() ? "nichts"
+                            : qPrintable(gesetzt.join(QStringLiteral(", "))),
+          offen.isEmpty() ? "nichts"
+                          : qPrintable(offen.join(QStringLiteral(", "))));
+}
+
 void FormatTab::onVersionChanged(int /*index*/) {
+    /* MF-1308: erst die Geometrie nachziehen, DANN melden - sonst saehe
+     * ein Empfaenger die alten Werte. */
+    varianteAnwenden();
+    applyCopyPlan();
     emit formatSettingsChanged();
 }
 
@@ -807,6 +1495,23 @@ void FormatTab::populateVersionsForFormat(const QString& format) {
     }
 
     ui->comboVersion->blockSignals(false);
+
+    /* MF-1308 - ohne benannte Variante verschwindet die Auswahl.
+     *
+     * Bis hierher stand dort "— keine Variante benannt —": ein Eintrag,
+     * der nichts zur Auswahl stellt und trotzdem Platz und Aufmerksamkeit
+     * kostet. Wo es nichts zu waehlen gibt, wird nichts angeboten.
+     *
+     * Die Beschriftung geht mit, sonst zeigte "Variante:" ins Leere -
+     * derselbe Fehler, den MF-1282 an der Geometrie behoben hat. */
+    const bool gibtWelche =
+        ui->comboVersion->count() > 0
+        && !ui->comboVersion->itemData(0).toString().isEmpty();
+    ui->comboVersion->setVisible(gibtWelche);
+    if (QWidget *lab = beschriftungVon(ui->comboVersion))
+        lab->setVisible(gibtWelche);
+
+    if (gibtWelche) varianteAnwenden();
 }
 
 // ============================================================================
@@ -854,9 +1559,22 @@ void FormatTab::applyPluginCapabilities(const QString& format)
     const uft_format_plugin_t *plugin =
         uft_get_format_plugin_by_name(format.toUtf8().constData());
 
+    /* MF-1320 (E-15): fehlende Anker werden GEZAEHLT, nicht uebersprungen.
+     * Bis hierher stand hier `if (!w) continue;` — und weil der GUI-Umbau
+     * alle vier Gruppen entfernt hat, lief das Tor fuer jedes Format
+     * durch und blendete nichts aus, lautlos. Ein Tor, das bei fehlendem
+     * Anker durchlaeuft, ist keines. */
+    m_gruppenTorFehlendeAnker = 0;
+
     for (const GruppenMerkmal &z : kZuordnung) {
         QWidget *w = findChild<QWidget *>(QString::fromLatin1(z.gruppe));
-        if (!w) continue;
+        if (!w) {
+            m_gruppenTorFehlendeAnker++;
+            qWarning("[FormatTab] MF-1320: Faehigkeits-Tor findet seinen Anker "
+                     "'%s' nicht (Merkmal \"%s\") — fuer dieses Merkmal wird "
+                     "NICHTS ausgeblendet.", z.gruppe, z.merkmal);
+            continue;
+        }
 
         // Kein Plugin gefunden: NICHTS ausblenden. Auf Unwissen zu
         // verstecken naehme dem Benutzer Funktion wegen eines
@@ -946,44 +1664,50 @@ void FormatTab::updateFormatSpecificOptions(const QString& format) {
  * nicht gibt oder ob es hier nur nicht passt. Dieselbe Regel wie beim
  * Varianten-Waehler (MF-666). */
 void FormatTab::fuelleProfile() {
-    if (!ui->comboCopyProfile) return;
     const QString fmt = getSelectedFormat();
     const uint32_t caps = copyPlanCaps();
     const QByteArray f = fmt.toUtf8();
 
-    ui->comboCopyProfile->blockSignals(true);
-    ui->comboCopyProfile->clear();
-
+    /* MF-1293: ein Knopf je Modus. Die Regel von MF-666 bleibt, nur die
+     * Bauform aendert sich: nicht verfuegbare Modi werden SICHTBAR und
+     * unanwaehlbar, nicht entfernt. Wer "BAMCopy" sucht und nicht findet,
+     * weiss nicht, ob es das nicht gibt oder ob es hier nur nicht passt -
+     * und der Grund steht im Kurzhinweis. */
     for (size_t i = 0; i < uft_copy_profile_count(); i++) {
         const uft_copy_profile_t *p = uft_copy_profile(i);
-        if (!p) continue;
+        if (!p || !p->id) continue;
+        auto *b = findChild<QPushButton *>(QStringLiteral("btnModus_") +
+                                           QString::fromUtf8(p->id));
+        if (!b) continue;
+
         const char *grund = nullptr;
         const bool ok = uft_copy_profile_available(
             p, caps, fmt.isEmpty() ? nullptr : f.constData(), &grund);
 
-        QString text = QString::fromUtf8(p->name);
+        b->setCheckable(true);
+        b->setEnabled(ok);
         if (!ok)
-            text += tr(" — nicht verfügbar: %1")
-                        .arg(QString::fromUtf8(grund ? grund : ""));
-        ui->comboCopyProfile->addItem(text, QString::fromUtf8(p->id));
-        const int idx = ui->comboCopyProfile->count() - 1;
-        if (!ok) {
-            if (auto *m = qobject_cast<QStandardItemModel *>(
-                    ui->comboCopyProfile->model()))
-                if (QStandardItem *it = m->item(idx)) it->setEnabled(false);
-        } else if (p->text) {
-            ui->comboCopyProfile->setItemData(idx, QString::fromUtf8(p->text),
-                                              Qt::ToolTipRole);
-        }
-    }
-    /* „Benutzerdefiniert" steht NICHT im Kern — es ist die Abwesenheit
-     * eines Profils und damit ein Zustand dieser Oberflaeche. */
-    ui->comboCopyProfile->addItem(tr("Benutzerdefiniert"), QString());
+            b->setToolTip(tr("nicht verfuegbar: %1")
+                              .arg(QString::fromUtf8(grund ? grund : "")));
+        else
+            b->setToolTip(QString::fromUtf8(p->text ? p->text : p->name));
 
-    const int wahl = ui->comboCopyProfile->findData(
-        m_profil.isEmpty() ? QVariant(QString()) : QVariant(m_profil));
-    if (wahl >= 0) ui->comboCopyProfile->setCurrentIndex(wahl);
-    ui->comboCopyProfile->blockSignals(false);
+        /* setChecked prallt an autoExclusive ab, solange ein anderer noch
+         * gedrueckt ist - deshalb erst freigeben, dann setzen. */
+        b->setAutoExclusive(false);
+        b->setChecked(ok && !m_profil.isEmpty() &&
+                      m_profil == QString::fromUtf8(p->id));
+        b->setAutoExclusive(true);
+    }
+
+    /* "Benutzerdefiniert" steht NICHT im Kern - es ist die Abwesenheit
+     * eines Profils und damit ein Zustand dieser Oberflaeche. */
+    if (auto *b = findChild<QPushButton *>(QStringLiteral("btnModus_custom"))) {
+        b->setCheckable(true);
+        b->setAutoExclusive(false);
+        b->setChecked(m_profil.isEmpty());
+        b->setAutoExclusive(true);
+    }
 }
 
 /* Die vier Achsen sperren oder freigeben. */
@@ -1023,7 +1747,6 @@ void FormatTab::wendeProfilAn(const QString &id) {
     setze(ui->comboPlanPolicy,   p->plan.policy);
     setze(ui->comboPlanTrackMode,   p->plan.track_mode);
     setze(ui->comboPlanFileSpecial, p->plan.file_special);
-    setze(ui->comboPlanGcr,         p->plan.gcr);
     setze(ui->comboPlanVote,        p->plan.vote);
     setze(ui->comboPlanExact,       p->plan.exact_kind);
     setPlanFrei(false);
@@ -1078,6 +1801,11 @@ void FormatTab::zeigeCaps() {
         zeilen << tr("nicht feststellbar (dieser Reiter öffnet kein "
                      "Abbild): %1").arg(unbekannt.join(", "));
     ui->labelPlanCaps->setText(zeilen.join(QStringLiteral(" · ")));
+    /* MF-1293: das Feld ist verborgen, der Wortlaut bleibt am
+     * Befund erreichbar. */
+    if (ui->labelPlanFindings)
+        ui->labelPlanFindings->setToolTip(
+            zeilen.join(QStringLiteral("\n")));
 }
 
 /* ── MF-1238: der Plan als JSON ──────────────────────────────────────
@@ -1140,9 +1868,14 @@ void FormatTab::onPlanJsonSichern() {
     f.close();
 }
 
+/* MF-1293: die Knoepfe rufen `wendeProfilAn()` unmittelbar. Dieser Slot
+ * bleibt als Weg ueber den INDEX des Kerns erhalten - er ist der einzige,
+ * den ein Aufrufer benutzen kann, der die Kennungen nicht kennt. */
 void FormatTab::onCopyProfileChanged(int index) {
-    if (index < 0 || !ui->comboCopyProfile) return;
-    wendeProfilAn(ui->comboCopyProfile->itemData(index).toString());
+    if (index < 0 || (size_t)index >= uft_copy_profile_count()) return;
+    const uft_copy_profile_t *p = uft_copy_profile((size_t)index);
+    if (!p || !p->id) return;
+    wendeProfilAn(QString::fromUtf8(p->id));
     applyCopyPlan();
     emit formatSettingsChanged();
 }
@@ -1157,16 +1890,51 @@ void FormatTab::onPlanAnpassen() {
         m_profil.clear();
         setPlanFrei(true);
     }
+    /* MF-1293: die Modusknoepfe tragen den gewaehlten Modus als gedrueckten
+     * Zustand. Ohne dieses Nachziehen bliebe der alte Knopf gedrueckt,
+     * waehrend m_profil schon leer ist — die Oberflaeche wuerde einen
+     * Modus behaupten, den der Plan nicht mehr hat. Beim Auswahlfeld
+     * vorher fiel das nicht auf, weil es seinen Eintrag selbst wechselte. */
+    fuelleProfile();
     applyCopyPlan();
     emit formatSettingsChanged();
 }
 
+int FormatTab::leseUmdrehungen() const {
+    return ui->spinRevolutions ? ui->spinRevolutions->value() : 2;
+}
+
+
+/* MF-1306 - ein ausgeblendetes Feld steuert keinen Wert mehr bei.
+ *
+ * Gemessen hatten `copyPlan()` und `getProtectionFlags()` zusammen NULL
+ * Sichtbarkeitspruefungen: ein Feld, das der Plan als `FORBIDDEN` oder
+ * `HIDDEN` fuehrt, verschwand zwar vom Bildschirm, sein Wert floss aber
+ * weiter in das Ergebnis. Der Bediener konnte ihn weder sehen noch
+ * aendern - und er wirkte trotzdem.
+ *
+ * `isHidden()` und nicht `isVisible()`: ein Widget in einem Reiter, der
+ * nie gezeigt wurde, ist nicht sichtbar, ohne dass es jemand versteckt
+ * haette. Gefragt wird also nach der ausdruecklichen Verbergung - und
+ * zwar auch bei den Vorfahren, denn wer eine ganze Gruppe versteckt,
+ * setzt die Flagge NUR an der Gruppe, nicht an jedem Kind. */
+bool FormatTab::istVerborgen(const QWidget *w) const {
+    for (const QWidget *p = w; p && p != this; p = p->parentWidget())
+        if (p->isHidden()) return true;
+    return false;
+}
+
 uft_copy_plan_t FormatTab::copyPlan() const {
     uft_copy_plan_t p = uft_copy_plan_default();
-    auto lies = [](QComboBox *b, int vorgabe) {
-        if (!b || b->currentIndex() < 0) return vorgabe;
+    /* MF-1306: ein verborgenes Feld faellt auf die Vorgabe zurueck,
+     * statt einen Wert beizusteuern, den niemand sehen kann. */
+    auto lies = [this](QComboBox *b, int vorgabe) {
+        if (!b || b->currentIndex() < 0 || istVerborgen(b)) return vorgabe;
         const QVariant v = b->currentData();
         return v.isValid() ? v.toInt() : vorgabe;
+    };
+    auto gesetzt = [this](QCheckBox *c) {
+        return c && !istVerborgen(c) && c->isChecked();
     };
     p.level = static_cast<uft_copy_level_t>(
         lies(ui->comboPlanLevel, UFT_COPY_SECTOR));
@@ -1187,8 +1955,9 @@ uft_copy_plan_t FormatTab::copyPlan() const {
         lies(ui->comboPlanTrackMode, UFT_TRACK_DECODED));
     p.file_special = static_cast<uft_file_special_t>(
         lies(ui->comboPlanFileSpecial, UFT_FILE_GENERIC));
-    p.gcr = static_cast<uft_gcr_variant_t>(
-        lies(ui->comboPlanGcr, UFT_GCR_COMMODORE));
+    /* MF-1293: ohne Bedienelement bleibt die Vorgabe des Kerns stehen,
+     * statt einen Wert aus einem Feld zu lesen, das es nicht gibt. */
+    p.gcr = UFT_GCR_COMMODORE;
     p.vote = static_cast<uft_vote_method_t>(
         lies(ui->comboPlanVote, UFT_VOTE_STRICT_MAJORITY));
     p.exact_kind = static_cast<uft_bitexact_kind_t>(
@@ -1200,11 +1969,20 @@ uft_copy_plan_t FormatTab::copyPlan() const {
      * niemand mehr aendern kann; steht er einmal falsch, faellt es nie
      * auf. */
     p.hashes = (uint32_t)UFT_HASH_SHA256;
-    if (ui->checkHashSha512 && ui->checkHashSha512->isChecked())
+    if (gesetzt(ui->checkHashSha512))
         p.hashes |= (uint32_t)UFT_HASH_SHA512;
-    if (ui->checkHashCrc32 && ui->checkHashCrc32->isChecked())
+    if (gesetzt(ui->checkCRC32))
         p.hashes |= (uint32_t)UFT_HASH_CRC32;
     return p;
+}
+
+/* MF-1320: siehe den Kopf im Header. `copyPlanCaps()` liefert 0 sowohl
+ * fuer „kann nichts davon" als auch fuer „nicht nachschlagbar"; diese
+ * Frage trennt die beiden. */
+bool FormatTab::copyPlanCapsBekannt() const {
+    const QString fmt = getSelectedFormat();
+    if (fmt.isEmpty()) return false;
+    return uft_get_format_plugin_by_name(fmt.toUtf8().constData()) != nullptr;
 }
 
 uint32_t FormatTab::copyPlanCaps() const {
@@ -1233,6 +2011,10 @@ uint32_t FormatTab::copyPlanCaps() const {
 
 void FormatTab::applyCopyPlan() {
     const uint32_t caps = copyPlanCaps();
+    /* MF-1320: EINMAL nachschlagen, nicht je Parameter. Der Wert trennt
+     * „das Format kann es nicht" von „wir wissen es nicht" — siehe den
+     * Kopf von `copyPlanCapsBekannt()`. */
+    const bool capsBekannt = copyPlanCapsBekannt();
     /* MF-1237: die Verfuegbarkeit haengt am FORMAT - also neu fuellen,
      * bevor irgendetwas angezeigt wird. */
     fuelleProfile();
@@ -1301,6 +2083,14 @@ void FormatTab::applyCopyPlan() {
                              : tr("Der Plan setzt fest: ")
                                    + zeilen.join(QStringLiteral(", ")));
 
+    /* MF-1298 - der ganze Wortlaut wandert an den Kasten.
+     *
+     * Die vier Felder sind verborgen, nicht geleert. Sie werden weiterhin
+     * gefuellt, und ihr Text wird hier eingesammelt. Damit bleibt jede
+     * Aussage erreichbar, ohne Flaeche zu kosten - dieselbe Regel wie bei
+     * den grauen Modusknoepfen, deren Grund im Kurzhinweis steht. */
+    planHinweisNachziehen();
+
     /* 2b. Die Feinheiten: sichtbar nur, wo sie etwas bedeuten (MF-1235).
      *
      * Ausgeblendet, nicht ausgegraut — dieselbe Regel wie bei den
@@ -1309,16 +2099,22 @@ void FormatTab::applyCopyPlan() {
      *
      * Massgeblich ist die AUFGELOESTE Ebene: wer „Automatisch" waehlt
      * und auf einem Flussformat landet, soll die Flussfelder sehen. */
+    /* MF-1293: das neue Formular hat keine `rowPlan*`-Container mehr —
+     * die Feinheiten stehen als Paare in EINEM Raster. Versteckt wird
+     * deshalb das Feld UND seine Beschriftung, ueber denselben Helfer,
+     * den MF-1292 gebaut hat. Ohne ihn bliebe „Spurart:" ueber leerer
+     * Flaeche stehen. */
     struct { QWidget *w; bool zeigen; } planZeilen[] = {
-        { ui->rowPlanTrackMode,   plan.level == UFT_COPY_TRACK },
-        { ui->rowPlanFileSpecial, plan.level == UFT_COPY_FILE },
-        { ui->rowPlanGcr,         plan.level == UFT_COPY_NIBBLE },
-        { ui->rowPlanVote,        plan.strategy == UFT_READ_CONSENSUS },
-        { ui->rowPlanExact,       plan.preservation == UFT_PRESERVE_BIT_EXACT },
-        { ui->rowPlanHash,        plan.policy == UFT_POLICY_EVIDENCE },
+        { ui->comboPlanTrackMode,   plan.level == UFT_COPY_TRACK },
+        { ui->comboPlanFileSpecial, plan.level == UFT_COPY_FILE },
+        { ui->comboPlanVote,        plan.strategy == UFT_READ_CONSENSUS },
+        { ui->comboPlanExact,       plan.preservation == UFT_PRESERVE_BIT_EXACT },
     };
-    for (const auto &z : planZeilen)
-        if (z.w) z.w->setVisible(z.zeigen);
+    for (const auto &z : planZeilen) {
+        if (!z.w) continue;
+        z.w->setVisible(z.zeigen);
+        if (QWidget *lab = beschriftungVon(z.w)) lab->setVisible(z.zeigen);
+    }
 
     /* Und „Commodore BAM" verschwindet als EINTRAG, wenn das Format
      * keine BAM zusagt. Sonst koennte man etwas waehlen, das der Kern
@@ -1358,12 +2154,46 @@ void FormatTab::applyCopyPlan() {
     struct { const char *param; QWidget *w; } bindung[] = {
         { "read.revolutions",   ui->spinRevolutions },
         { "read.require_index", ui->checkUseIndex },
-        { "write.precomp",      ui->checkWritePrecomp },
         { "write.verify",       ui->checkXCopyVerify },
         { "rpm",                ui->comboRPM },
         { "encoding",           ui->comboEncoding },
         { "layout.half_tracks", ui->checkHalfTracks },
-        { "layout.half_tracks", ui->checkDetectHalfTracks },
+        /* MF-1293: fuenf Felder des neuen Formulars, die im Kern einen
+         * Parameter HABEN und ihn bisher nicht erreicht haben. Die
+         * Zuordnung ist an `k_param[]` gemessen, nicht geraten. */
+        { "read.retries",         ui->spinMaxRetries },
+        { "verify.retries",       ui->spinVerifyRetries },
+        /* MF-1310 — DREI BINDUNGEN ZURUECKGENOMMEN, und zwar meine
+         * eigenen aus MF-1293.
+         *
+         * Gebunden waren:
+         *     { "layout.fill_byte",     ui->spinFillByte }
+         *     { "layout.preserve_sync", ui->checkPreserveSync }
+         *     { "gcr.sync_min_length",  ui->spinSyncLength }
+         *
+         * Gemessen ueber ALLE 5760 erreichbaren Kombinationen liefert
+         * `uft_copy_param_state_caps()` fuer jede dieser drei Zeilen
+         * 5760-mal HIDDEN. Die Bedienelemente waren also dauerhaft
+         * unsichtbar — verdrahtet und unerreichbar zugleich.
+         *
+         * Die Ursache ist NICHT die Namensdoppelung der `layout.*`-
+         * Familie, sondern das Faehigkeitstor: `layout.fill_byte` und
+         * `layout.preserve_sync` verlangen `UFT_CAP_BITSTREAM_IO`,
+         * `gcr.sync_min_length` verlangt `UFT_CAP_GCR` — und
+         * `copyPlanCaps()` setzt gemessen nur FLUX_IO, TIMING,
+         * WEAK_BITS und MULTI_REV. Schwerer noch: das Plugin-Manifest
+         * `uft_format_caps_t` hat ueberhaupt kein Bit fuer GCR,
+         * Bitstrom, BAM oder Dateisystem; ueber diesen Weg sind die
+         * Flaggen nicht bloss ungesetzt, sondern unerreichbar.
+         *
+         * Das ist genau die Klasse, die `nicht_messbar()` benennt und
+         * die der Kommentar weiter unten fuer `gcr.preserve_raw_nibbles`
+         * ausdruecklich VERBIETET. Die Regel stand in derselben Tafel,
+         * gegen die ich verstossen habe.
+         *
+         * Wiederaufnehmen, sobald das Faehigkeitsmodell Bitstrom und GCR
+         * ueberhaupt ausdruecken kann — das gehoert zur Trennung von
+         * Quell- und Zielfaehigkeiten und ist kein Nebenbei. */
         { "hash.enabled",       ui->checkGenerateHash },
         { "geometry.cylinders", ui->spinTracks },
         { "geometry.heads",     ui->spinSides },
@@ -1400,14 +2230,40 @@ void FormatTab::applyCopyPlan() {
          * ist eine Entwurfsfrage (welche Quelle sagt es?), keine Zeile hier. */
     };
 
+    /* MF-1320 (E-15): dasselbe hier. Ein `bindung[]`-Eintrag, dessen
+     * Widget es nicht gibt, ist ein Fund — nicht ein Grund, still
+     * weiterzumachen. */
+    m_parameterTorFehlendeAnker = 0;
+
     for (const auto &b : bindung) {
-        if (!b.w) continue;
+        if (!b.w) {
+            m_parameterTorFehlendeAnker++;
+            qWarning("[FormatTab] MF-1320: Parameter-Tor findet kein Widget "
+                     "fuer '%s' — der Parameter wird weder gezeigt noch "
+                     "gesperrt.", b.param);
+            continue;
+        }
         const char *wert = nullptr;
         /* MF-1234: mit den Faehigkeiten des Formats. Was es nicht
          * kann, verschwindet - ein Regler ohne Bedeutung ist keine
          * Einstellung, sondern eine Irrefuehrung. */
-        const uft_copy_pstate_t z =
+        uft_copy_pstate_t z =
             uft_copy_param_state_caps(&plan, caps, b.param, &wert);
+
+        /* MF-1320: auf UNWISSEN wird nichts ausgeblendet.
+         *
+         * `caps` ist 0, wenn das Format nichts kann — und ebenso, wenn es
+         * gar nicht nachschlagbar war. Im zweiten Fall waere jedes
+         * Ausblenden die Folge eines Nachschlagefehlers VON UNS und
+         * kostete den Benutzer Funktion. Das alte Gruppentor kannte die
+         * Regel und schrieb sie hin; beim Umbau ist sie verlorengegangen.
+         *
+         * Gesperrte und erzwungene Zustaende bleiben unberuehrt: die
+         * folgen dem PLAN, nicht den Format-Faehigkeiten. */
+        if (!capsBekannt &&
+            (z == UFT_PSTATE_HIDDEN || z == UFT_PSTATE_FORBIDDEN)) {
+            z = UFT_PSTATE_ACTIVE;
+        }
         /* MF-1282: und die Beschriftung geht mit. Vorher blieb sie stehen
          * und zeigte auf nichts — gemessen bei DOSCopy, wo die ganze
          * Geometrie verschwindet und „Tracks:", „Sides:", „Sectors:" und
@@ -1438,6 +2294,25 @@ void FormatTab::applyCopyPlan() {
                 break;
         }
     }
+
+    /* MF-1293: der Hashsatz gehoert zur Beweisrichtlinie und wird ERST
+     * HIER versteckt - nach der Schleife oben, nicht vor ihr.
+     * `evidence.hash_algorithms` steht selbst in `bindung[]`, und die
+     * Schleife setzt die Sichtbarkeit zuletzt; eine Zuweisung davor
+     * wurde von ihr ueberschrieben. Gemessen am Rotbeweis: der Hashsatz
+     * blieb ohne Beweisrichtlinie stehen.
+     *
+     * Versteckt wird die GRUPPE, nicht die einzelnen Haken - und das ist
+     * kein Schoenheitsgriff. Der Kern sagt ueber
+     * `evidence.hash_algorithms`, dass es auf JEDER Ebene frei ist
+     * (gemessen ueber 17 Profile, Zusage B6). Die Beweisrichtlinie ist
+     * eine Regel der OBERFLAECHE darueber. Wuerde man die Haken selbst
+     * verstecken, widerspraechen sich die beiden Aussagen; die Gruppe zu
+     * verstecken laesst die Haken unangetastet und nimmt ihnen nur den
+     * Platz. Genau das tat vorher der Container `rowPlanHash`. */
+    if (auto *satz = findChild<QWidget *>(
+            QStringLiteral("unter_nachweis_Pruefsummen")))
+        satz->setVisible(plan.policy == UFT_POLICY_EVIDENCE);
 
     /* MF-1238: die beiden neuen Anzeigen haengen am selben Plan wie
      * alles andere — also werden sie hier nachgezogen und nicht an
@@ -1539,7 +2414,6 @@ void FormatTab::updateLogFileOptions(bool enabled) {
     ui->editLogPath->setEnabled(enabled);
     ui->btnBrowseLog->setEnabled(enabled);
     ui->checkLogTimestamps->setEnabled(enabled);
-    ui->checkVerboseLog->setEnabled(enabled);
 }
 
 // ============================================================================
@@ -1613,11 +2487,40 @@ void FormatTab::onProtectionCheckChanged() {
 }
 
 void FormatTab::syncProtectionWidgets(bool detectAll) {
-    bool enableIndividual = !detectAll;
+    /* MF-1307 - solange "Detect all protections" an ist, verschwinden die
+     * fuenf einzelnen Haken ganz.
+     *
+     * Der Eigentuemer hat dreimal gefragt, ob sie aktiv sind und ob die
+     * Haken raus koennen. Beides hatte bis hierher eine unbequeme
+     * Antwort: sie SIND an (deshalb der Haken, er ist wahr), und
+     * entfernen darf man ihn nicht, weil ein leeres Kaestchen "wird nicht
+     * erkannt" behaupten wuerde.
+     *
+     * Dass die Frage dreimal kam, ist der eigentliche Befund: fuenf graue
+     * Kaestchen mit Haken sind keine Information, sondern eine Zumutung.
+     * "Alle" schliesst sie ein - sie sagen nichts Eigenes.
+     *
+     * Also werden sie verborgen statt gesperrt. Nimmt der Bediener den
+     * Haken oben weg, erscheinen sie und sind bedienbar. Es geht dabei
+     * nichts verloren: `getProtectionFlags()` liefert bei "Detect all"
+     * ohnehin UFT_PROT_ANAL_ALL, und seit MF-1306 zaehlen verborgene
+     * Felder nicht mit - die fuenf koennen also gar nichts mehr still
+     * beisteuern. */
+    const bool enableIndividual = !detectAll;
+    for (QWidget *w : { (QWidget *)ui->checkDetectWeakBitsProt,
+                        (QWidget *)ui->checkDetectLongTracks,
+                        (QWidget *)ui->checkHalfTracks,
+                        (QWidget *)ui->checkDetectTiming,
+                        (QWidget *)ui->checkDetectNoFlux,
+                        (QWidget *)ui->checkDetectCustomSync }) {
+        if (!w) continue;
+        w->setVisible(enableIndividual);
+        if (QWidget *lab = beschriftungVon(w)) lab->setVisible(enableIndividual);
+    }
     
     ui->checkDetectWeakBitsProt->setEnabled(enableIndividual);
     ui->checkDetectLongTracks->setEnabled(enableIndividual);
-    ui->checkDetectHalfTracks->setEnabled(enableIndividual);
+    ui->checkHalfTracks->setEnabled(enableIndividual);
     ui->checkDetectTiming->setEnabled(enableIndividual);
     ui->checkDetectNoFlux->setEnabled(enableIndividual);
     ui->checkDetectCustomSync->setEnabled(enableIndividual);
@@ -1625,11 +2528,32 @@ void FormatTab::syncProtectionWidgets(bool detectAll) {
     if (detectAll) {
         ui->checkDetectWeakBitsProt->setChecked(true);
         ui->checkDetectLongTracks->setChecked(true);
-        ui->checkDetectHalfTracks->setChecked(true);
+        ui->checkHalfTracks->setChecked(true);
         ui->checkDetectTiming->setChecked(true);
         ui->checkDetectNoFlux->setChecked(true);
         ui->checkDetectCustomSync->setChecked(true);
     }
+
+    /* MF-1302 - die Sperre bekommt ihren Grund.
+     *
+     * Gefragt war, ob die Haken bei gesperrten Feldern nicht verschwinden
+     * sollten. Sie duerfen es NICHT: gesperrt heisst hier "von `Detect all
+     * protections` eingeschaltet", der Haken ist also wahr. Ihn zu
+     * entfernen hiesse behaupten, weak bits wuerden nicht erkannt,
+     * waehrend sie erkannt werden.
+     *
+     * Was gefehlt hat, ist die Begruendung. Bei den plan-gesperrten
+     * Feldern steht sie laengst im Kurzhinweis ("Vom Kopierplan
+     * festgelegt"), hier stand nichts. */
+    const QString grund =
+        detectAll ? tr("Von 'Detect all protections' eingeschaltet - "
+                       "einzeln abschaltbar, sobald der Haken oben weg ist.")
+                  : QString();
+    for (QCheckBox *c : { ui->checkDetectWeakBitsProt,
+                          ui->checkDetectLongTracks, ui->checkHalfTracks,
+                          ui->checkDetectTiming, ui->checkDetectNoFlux,
+                          ui->checkDetectCustomSync })
+        if (c) c->setToolTip(grund);
 }
 
 // ============================================================================
@@ -1639,15 +2563,23 @@ void FormatTab::syncProtectionWidgets(bool detectAll) {
 uint32_t FormatTab::getProtectionFlags() const {
     uint32_t flags = 0;
     
-    if (ui->checkDetectAll->isChecked()) {
+    /* MF-1306: verborgene Haken zaehlen nicht mit. Wird die ganze
+     * Gruppe wegen fehlender Formatfaehigkeit ausgeblendet, darf sie
+     * auch keine Erkennung anfordern - sonst verspraeche der Befund
+     * etwas, das der Bediener gar nicht waehlen konnte. */
+    auto an = [this](QCheckBox *c) {
+        return c && !istVerborgen(c) && c->isChecked();
+    };
+
+    if (an(ui->checkDetectAll)) {
         flags = UFT_PROT_ANAL_ALL;
     } else {
-        if (ui->checkDetectWeakBitsProt->isChecked()) flags |= UFT_PROT_ANAL_WEAK_BITS;
-        if (ui->checkDetectLongTracks->isChecked())   flags |= UFT_PROT_ANAL_TIMING;
-        if (ui->checkDetectHalfTracks->isChecked())   flags |= UFT_PROT_ANAL_HALF_TRACKS;
-        if (ui->checkDetectTiming->isChecked())       flags |= UFT_PROT_ANAL_TIMING;
-        if (ui->checkDetectNoFlux->isChecked())       flags |= UFT_PROT_ANAL_WEAK_BITS;
-        if (ui->checkDetectCustomSync->isChecked())   flags |= UFT_PROT_ANAL_SIGNATURES;
+        if (an(ui->checkDetectWeakBitsProt)) flags |= UFT_PROT_ANAL_WEAK_BITS;
+        if (an(ui->checkDetectLongTracks))   flags |= UFT_PROT_ANAL_TIMING;
+        if (an(ui->checkHalfTracks))         flags |= UFT_PROT_ANAL_HALF_TRACKS;
+        if (an(ui->checkDetectTiming))       flags |= UFT_PROT_ANAL_TIMING;
+        if (an(ui->checkDetectNoFlux))       flags |= UFT_PROT_ANAL_WEAK_BITS;
+        if (an(ui->checkDetectCustomSync))   flags |= UFT_PROT_ANAL_SIGNATURES;
     }
     
     if (flags == 0) flags = UFT_PROT_ANAL_QUICK;
@@ -1939,30 +2871,20 @@ void FormatTab::setupBuiltinPresets() {
     updatePresetCombo();
 }
 
+/* MF-1293: das neue Formular hat kein Auswahlfeld fuer Voreinstellungen.
+ * Die Liste wird deshalb nicht mehr in ein Feld gefuellt, sondern beim
+ * Druecken abgefragt. Damit der Bediener trotzdem SIEHT, was es gibt,
+ * traegt der Laden-Knopf sie als Kurzhinweis. */
 void FormatTab::updatePresetCombo() {
-    ui->comboPreset->blockSignals(true);
-    ui->comboPreset->clear();
-    
-    // Add builtin presets first
-    QStringList builtins = {"(Default)", "C64 Preservation", "Amiga OCS/ECS", 
-                           "Amiga Preservation", "Atari ST", "PC DOS 1.44MB",
-                           "PC DOS 720K", "Apple II DOS 3.3", "ZX Spectrum +3",
-                           "Flux Analysis"};
-    
-    for (const QString& name : builtins) {
-        if (m_presets.contains(name)) {
-            ui->comboPreset->addItem(name);
-        }
-    }
-    
-    // Add user presets (those not in builtins)
-    for (auto it = m_presets.begin(); it != m_presets.end(); ++it) {
-        if (!builtins.contains(it.key())) {
-            ui->comboPreset->addItem("📁 " + it.key());
-        }
-    }
-    
-    ui->comboPreset->blockSignals(false);
+    if (!ui->btnModusLaden) return;
+    QStringList namen = m_presets.keys();
+    namen.sort(Qt::CaseInsensitive);
+    ui->btnModusLaden->setEnabled(!namen.isEmpty());
+    ui->btnModusLaden->setToolTip(
+        namen.isEmpty()
+            ? tr("keine Voreinstellung gespeichert")
+            : tr("Voreinstellung laden:") + QStringLiteral("\n") +
+                  namen.join(QStringLiteral("\n")));
 }
 
 void FormatTab::onPresetChanged(int index) {
@@ -1971,58 +2893,56 @@ void FormatTab::onPresetChanged(int index) {
 }
 
 void FormatTab::onLoadPreset() {
-    QString name = ui->comboPreset->currentText();
-    // Remove user prefix if present
-    if (name.startsWith("📁 ")) {
-        name = name.mid(3);
-    }
-    
-    if (!m_presets.contains(name)) {
+    QStringList namen = m_presets.keys();
+    namen.sort(Qt::CaseInsensitive);
+    if (namen.isEmpty()) {
+        QMessageBox::information(this, tr("Voreinstellung laden"),
+                                 tr("Es ist keine Voreinstellung gespeichert."));
         return;
     }
-    
+    bool ok = false;
+    const QString name = QInputDialog::getItem(
+        this, tr("Voreinstellung laden"), tr("Welche?"), namen, 0, false, &ok);
+    if (!ok || name.isEmpty() || !m_presets.contains(name)) return;
     applyPreset(m_presets[name]);
+    emit formatSettingsChanged();
 }
 
 void FormatTab::onSavePreset() {
-    QString name = ui->comboPreset->currentText();
-    // Remove user prefix if present
-    if (name.startsWith("📁 ")) {
-        name = name.mid(3);
-    }
-    
-    // Don't overwrite builtins - create new
-    QStringList builtins = {"(Default)", "C64 Preservation", "Amiga OCS/ECS", 
-                           "Amiga Preservation", "Atari ST", "PC DOS 1.44MB",
-                           "PC DOS 720K", "Apple II DOS 3.3", "ZX Spectrum +3",
-                           "Flux Analysis"};
-    
+    /* MF-1293: ohne Auswahlfeld gibt es keinen "aktuellen" Namen mehr, den
+     * man stillschweigend ueberschreiben koennte. Der Name wird gefragt,
+     * und das Ueberschreiben einer mitgelieferten Voreinstellung wird
+     * ABGELEHNT statt heimlich umbenannt. */
+    static const QStringList builtins = {
+        "(Default)", "C64 Preservation", "Amiga OCS/ECS",
+        "Amiga Preservation", "Atari ST", "PC DOS 1.44MB",
+        "PC DOS 720K", "Apple II DOS 3.3", "ZX Spectrum +3",
+        "Flux Analysis"};
+
+    bool ok = false;
+    const QString name = QInputDialog::getText(
+        this, tr("Voreinstellung speichern"), tr("Name:"), QLineEdit::Normal,
+        tr("Meine Voreinstellung"), &ok);
+    if (!ok || name.isEmpty()) return;
+
     if (builtins.contains(name)) {
-        // Ask for new name
-        bool ok;
-        QString newName = QInputDialog::getText(this, tr("Save Preset"),
-            tr("Enter preset name:"), QLineEdit::Normal,
-            tr("My Preset"), &ok);
-        
-        if (!ok || newName.isEmpty()) {
-            return;
-        }
-        name = newName;
+        QMessageBox::warning(
+            this, tr("Voreinstellung speichern"),
+            tr("Diese Voreinstellung ist mitgeliefert und wird nicht "
+               "ueberschrieben. Bitte einen anderen Namen waehlen."));
+        return;
     }
-    
-    // Get current settings
+    if (m_presets.contains(name) &&
+        QMessageBox::question(this, tr("Voreinstellung speichern"),
+                              tr("Diesen Namen gibt es schon. "
+                                 "Ueberschreiben?")) != QMessageBox::Yes)
+        return;
+
     Preset preset = getCurrentSettings();
     preset.name = name;
-    
     m_presets[name] = preset;
     savePresetsToFile();
     updatePresetCombo();
-    
-    // Select the saved preset
-    int idx = ui->comboPreset->findText("📁 " + name);
-    if (idx >= 0) {
-        ui->comboPreset->setCurrentIndex(idx);
-    }
 }
 
 FormatTab::Preset FormatTab::getCurrentSettings() const {
@@ -2325,15 +3245,11 @@ void FormatTab::onGw2DmkOpenClicked()
     UftGw2DmkPanel *panel = new UftGw2DmkPanel(dlg);
     layout->addWidget(panel);
     
-    // Apply preset from combo if available
-    QString preset = ui->comboGw2DmkPreset->currentText();
-    if (preset.contains("SSSD")) {
-        panel->setPreset(0);  // Model I/III SSSD
-    } else if (preset.contains("SSDD")) {
-        panel->setPreset(1);  // Model I/III SSDD
-    } else if (preset.contains("Model 4")) {
-        panel->setPreset(2);  // Model 4 DSDD
-    }
+    /* MF-1293: die Vorwahl stand in einem Auswahlfeld dieses Reiters, das
+     * in den Arbeitsablauf gewandert ist. Bis es dort verdrahtet ist,
+     * beginnt das Fenster mit seiner eigenen Vorgabe statt mit einer
+     * erfundenen. */
+    panel->setPreset(0);
     
     dlg->show();
 }

@@ -1,0 +1,4 @@
+{"seq":0,"cycle":100,"pc":"0x00001000","type":"instruction"}
+{"seq":1,"cycle":104,"pc":"0x00001004","type":"mmio_write","address":"0x00dff096","size":2,"value":"0x0080"}
+{"seq":2,"cycle":108,"pc":"0x00001008","type":"mmio_write","address":"0x00dff024","size":2,"value":"0x8000"}
+{"seq":3,"cycle":112,"pc":"0x00070000","type":"jump","target":"0x00070000","note":"example loader handoff"}

@@ -1,0 +1,14 @@
+{
+  "schema": "uft-retrace-register-map-1",
+  "registers": [
+    {"address": "0x00dff01a", "name": "DSKBYTR", "role": "disk status/data byte"},
+    {"address": "0x00dff020", "name": "DSKPTH", "role": "disk DMA pointer high"},
+    {"address": "0x00dff022", "name": "DSKPTL", "role": "disk DMA pointer low"},
+    {"address": "0x00dff024", "name": "DSKLEN", "role": "disk DMA length/start"},
+    {"address": "0x00dff026", "name": "DSKDAT", "role": "disk data"},
+    {"address": "0x00dff096", "name": "DMACON", "role": "DMA control"},
+    {"address": "0x00dff09c", "name": "INTREQ", "role": "interrupt request"},
+    {"address": "0x00bfd100", "name": "CIAB_PRB", "role": "drive select/motor/side/step/direction"}
+  ],
+  "warning": "A raw address hit is a search hint. Runtime execution is required for evidence."
+}

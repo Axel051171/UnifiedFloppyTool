@@ -8,7 +8,8 @@
  */
 
 #include "uft_format_convert_internal.h"
-#include "uft/core/uft_preflight.h"    /* V415-PLAN LOSS.preflight (MF-263) */
+#include "uft/core/uft_preflight.h"
+#include "uft/core/uft_copy_gate.h"  /* MF-1316: nur das Urteil */    /* V415-PLAN LOSS.preflight (MF-263) */
 #include "uft/core/uft_loss_report.h"
 #include "uft/analysis/uft_protection_probe.h"
 #include "uft/uft_track.h"   /* MF-1307: uft_track_release() fuer die Nachpruefung */  /* content-based loss (MF-328) */
@@ -493,6 +494,58 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
  * The caller decides whether to call uft_preflight_emit_sidecar() based
  * on (result->success && out_plan->writes_sidecar && dst_path != NULL).
  */
+/* MF-1316 — das KOPIERPLAN-Tor, im gemeinsamen Verteiler.
+ *
+ * Bis hierher lief die harte Planpruefung nur in der Oberflaeche.
+ * Gemessen: `uft_copy_plan_is_executable()` hatte im ganzen Baum null
+ * Aufrufer, waehrend drei Ausfuehrungspfade — `decodejob.cpp`,
+ * `toolstab.cpp`, `uft_save_image.cpp` — ungeprueft
+ * `uft_copy_plan_to_convert_options()` riefen. Ein Plan, der sich selbst
+ * widerspricht, erreichte damit die Wandlung.
+ *
+ * Hier und nicht an den drei Stellen: der Verteiler ist der eine
+ * Engpass, den MF-263/UFT-A01 ohnehin vorsieht. Jede Aufrufstelle
+ * einzeln zu verdrahten hiesse, die vierte zu vergessen — genau so ist
+ * die Ausgangslage entstanden.
+ *
+ * Was hier NICHT behauptet wird: dass der Pfad vorher ungesichert war.
+ * `uftc_preflight_gate()` sperrt seit laengerem UNTESTED und
+ * IMPOSSIBLE. Ungeprueft blieben die Befunde des PLANS, nicht das
+ * Formatpaar — zwei verschiedene Fragen, zwei Tore.
+ *
+ * NEEDS_MEASUREMENT sperrt hier ABSICHTLICH noch nicht, sondern warnt.
+ * Der Grund ist gemessen: ohne Pfade (Speicher-Modus) sind die
+ * Faehigkeiten nicht ermittelbar, und ein Sperren wuerde jede
+ * Speicherwandlung treffen. Die schaerfere Regel — "unbekannt sperrt
+ * beim Schreiben, bei ProtectedCopy, Bittreu und EvidenceCopy" —
+ * verlangt die Quell-Inventarisierung und ist ein eigener Schritt. Die
+ * Warnung steht im Ergebnis, damit die Luecke sichtbar bleibt statt
+ * still zu sein. */
+static uft_error_t uftc_plan_gate(const uft_convert_options_t *options,
+                                  uft_convert_result_t *result) {
+    if (!options || !options->copy_plan) return UFT_OK;  /* ohne Plan */
+
+    const char *grund = NULL;
+    const uft_copy_verdict_t urteil =
+        uft_copy_plan_gate_caps(options->copy_plan, &grund);
+
+    if (urteil == UFT_COPY_DENY) {
+        if (result) {
+            result->error = UFT_ERR_NOT_SUPPORTED;
+            uftc_add_warning(result, "Kopierplan ABBRUCH: %s",
+                             grund ? grund : "unbekannt");
+        }
+        return UFT_ERR_NOT_SUPPORTED;
+    }
+    if (urteil == UFT_COPY_NEEDS_MEASUREMENT && result) {
+        uftc_add_warning(result,
+                         "Kopierplan UNGEMESSEN: %s — Quell-/Zielfaehigkeiten "
+                         "nicht ermittelt",
+                         grund ? grund : "unbekannt");
+    }
+    return UFT_OK;
+}
+
 static uft_error_t uftc_preflight_gate(uft_format_t src_format,
                                        uft_format_t dst_format,
                                        const char *src_path,
@@ -554,38 +607,8 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
                               const uft_convert_options_t* options,
                               uft_convert_result_t* result);
 
-/**
- * @brief Wandelt eine Datei — und laesst bei Misserfolg NICHTS zurueck.
- *
- * MF-545. Die eigentliche Arbeit macht `uft_convert_file_inner()`; dieser
- * Mantel existiert wegen einer einzigen Eigenschaft, die sich sonst nicht
- * durchhalten laesst:
- *
- *     Scheitert die Wandlung, darf am Zielpfad keine Datei liegen.
- *
- * Der innere Teil hat DREIZEHN vorzeitige Ausgaenge — fehlende Datei,
- * Lesefehler, unerkanntes Format, Preflight-Tor, kein Wandlungspfad,
- * NOT_IMPLEMENTED, und weitere. Dreizehn Stellen einzeln aufzuraeumen
- * heisst, dass der vierzehnte Ausgang es vergisst.
- *
- * Warum das ueberhaupt noetig wurde: bis MF-545 ueberschrieben die Wandler
- * die Zieldatei IMMER, ein Fehlschlag hinterliess also eine leere oder
- * halbe Datei. Das war falsch, aber wenigstens sichtbar. Seit MF-545
- * schreiben sie bei Misserfolg gar nicht mehr — und dadurch bleibt die
- * Datei eines FRUEHEREN Laufs liegen, mit passendem Namen und plausibler
- * Groesse. Das ist schlimmer: eine leere Datei ist erkennbar leer, eine
- * alte sieht aus wie das Ergebnis.
- *
- * Gefunden von `tests/test_convert_leaves_no_ghost.c`, der genau diesen
- * Fall stellt — erst eine Datei hinlegen, dann eine Wandlung scheitern
- * lassen. Der erste Anlauf des Tests rief den internen Wandler direkt und
- * sah deshalb nur EINEN der Ausgaenge; erst ueber den Engpass wurde
- * sichtbar, dass es dreizehn sind.
- *
- * Geloescht wird nur, wenn wirklich nichts geschrieben wurde:
- * `bytes_written > 0` heisst, ein Ergebnis ist entstanden, und das gehoert
- * dem Aufrufer — auch wenn danach noch etwas schiefging.
- */
+/* Fehler duerfen vorhandene Zieldateien nicht loeschen.
+ * Die Ablehnung wird ueber Rueckgabewert und Ergebnis gemeldet. */
 /* NICHT `#include "uft/uft_core.h"` — zusammen mit `uft/uft_track.h`
  * oben meldet gcc 13.1.0
  *     error: conflicting types for 'uft_track_get_sector';
@@ -759,12 +782,11 @@ uft_error_t uft_convert_file(const char* src_path,
                               uft_format_t dst_format,
                               const uft_convert_options_t* options,
                               uft_convert_result_t* result) {
-    uft_error_t rc = uft_convert_file_inner(src_path, dst_path, dst_format,
-                                            options, result);
-    if (rc != UFT_OK && dst_path && result && result->bytes_written == 0) {
-        remove(dst_path);
-    }
-    return rc;
+    /* Eine Ablehnung besitzt keine vorhandene Zieldatei. Insbesondere
+     * darf eine fehlende Quelle niemals das Ziel (oder die Quelle selbst
+     * bei identischen Pfaden) loeschen. */
+    return uft_convert_file_inner(src_path, dst_path, dst_format,
+                                 options, result);
 }
 
 static uft_error_t uft_convert_file_inner(const char* src_path,
@@ -873,6 +895,14 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
      * field default (zero-initialized struct) is false → LOSSY paths
      * require explicit caller consent. */
     bool accept_data_loss = (options && options->accept_data_loss) ? true : false;
+    /* MF-1316: erst der PLAN, dann das Formatpaar. Ein Plan, der sich
+     * selbst widerspricht, braucht gar nicht erst gegen eine Matrix
+     * gehalten zu werden. */
+    if (uftc_plan_gate(options, result) != UFT_OK) {
+        free(src_data);
+        return UFT_ERR_NOT_SUPPORTED;
+    }
+
     if (uftc_preflight_gate(src_format, dst_format,
                             src_path, dst_path, accept_data_loss,
                             result, &plan) != UFT_OK) {
@@ -1146,6 +1176,24 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     uft_preflight_plan_t plan = {0};
     /* UFT-A05: same field separation as in uft_convert_file. */
     bool accept_data_loss = (options && options->accept_data_loss) ? true : false;
+    /* MF-1316 — HIER wird NICHT nach dem Plan gefragt, und das ist
+     * gemessen begruendet.
+     *
+     * `uft_convert_memory()` nimmt `uft_convert_options_ext_t`, eine
+     * EIGENE Struktur — nicht `uft_convert_options_t`. Sie traegt kein
+     * `copy_plan`, und kein Aufrufer im Baum fuellt eines. Ein Tor hier
+     * haette also nichts zu pruefen; es waere eine Zeile, die aussieht
+     * wie eine Sicherung und keine ist.
+     *
+     * Das Feld hier trotzdem anzuhaengen waere "Bestand, nicht
+     * Faehigkeit" — ein Traeger ohne Fueller. Wer den Speicher-Weg
+     * bewachen will, muss zuerst einen Aufrufer haben, der dort einen
+     * Plan uebergibt; erst dann bekommt die Struktur das Feld.
+     *
+     * Der DATEI-Weg (`uft_convert_file`) ist bewacht — dort kommt der
+     * Plan ueber `uft_copy_plan_to_convert_options()` an. Und das
+     * Formatpaar prueft auch hier `uftc_preflight_gate()`, seit MF-567
+     * auch im Speicher-Modus. */
     if (uftc_preflight_gate(src_format, dst_format,
                             NULL, NULL, accept_data_loss,
                             result, &plan) != UFT_OK) {

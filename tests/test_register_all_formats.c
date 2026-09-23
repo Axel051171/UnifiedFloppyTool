@@ -51,8 +51,21 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
 /* Every plugin the tree defines, per scripts/plugin_registry_gate.py. If this
- * number moves, the gate moved with it — and the gate reads the source. */
-#define EXPECTED_PLUGINS 137
+ * number moves, the gate moved with it — and the gate reads the source.
+ *
+ * MF-1322: 137 -> 138. Dazugekommen ist `a2r`, die Tuer zum vorhandenen
+ * A2R-Leser (`src/parsers/a2r/uft_a2r_parser.c`, bis dahin 13 Aufrufer,
+ * alle in Tests). Registriert auf ausdrueckliche Eigentuemer-Entscheidung
+ * vom 2026-09-21; die Begruendung steht in
+ * `scripts/format_freeze_baseline.json` unter `whitelist_begruendung`.
+ *
+ * Bemerkenswert daran ist, WIE diese eine Zahl sich gemeldet hat: `ASSERT`
+ * kehrt bei Fehlschlag aus dem Test zurueck, also lief
+ * `uft_register_all_formats()` nicht mehr — und die drei folgenden Tests
+ * fielen mit „SCP nicht gefunden" und „DSK_FM7 nicht gefunden". Vier rote
+ * Zusagen aus einer verschobenen Zahl. Wer hier eine Registry-Kapazitaet
+ * vermutet, sucht an der falschen Stelle (sie ist 192, belegt 138). */
+#define EXPECTED_PLUGINS 138
 
 static const char *img(const char *name)
 {

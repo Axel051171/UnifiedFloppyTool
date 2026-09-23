@@ -506,19 +506,8 @@ uft_error_t uftc_finish_or_refuse(uft_convert_result_t* result,
         result->success = false;
         result->error = UFT_ERR_FORMAT;
 
-        /* Eine AELTERE Datei am selben Pfad muss weg.
-         *
-         * Das ist die Falle, die dieser Baustein selbst aufgestellt hat:
-         * vorher ueberschrieb der Wandler die Zieldatei immer, jetzt
-         * schreibt er bei Ablehnung nicht mehr. Damit bliebe ein Ergebnis
-         * eines FRUEHEREN Laufs liegen — mit passendem Namen, plausibler
-         * Groesse und frischem Zeitstempel des Ordners. Ein Benutzer, der
-         * nach dem Lauf ins Verzeichnis schaut, sieht seine Datei.
-         *
-         * Eine stehengebliebene Datei ist schlimmer als die
-         * Null-Byte-Datei, die es vorher gab: die war wenigstens
-         * erkennbar leer. */
-        if (dst_path) remove(dst_path);
+        /* Ohne Ergebnis gibt es nichts zu schreiben oder aufzuraeumen.
+         * Eine bereits vorhandene Datei gehoert weiterhin dem Aufrufer. */
 
         uftc_add_warning(result,
                  "%s: keine einzige Spur gewandelt (%d gescheitert) — es "

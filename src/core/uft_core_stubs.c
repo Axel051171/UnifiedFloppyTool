@@ -176,13 +176,50 @@ uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
      * die Endung -> sonst NULL. `ranking_out` traegt die Messung
      * unveraendert, also auch dann `tied > 1`, wenn die Endung
      * entschieden hat (MF-1252). */
+    /* MF-1317: die Messung wird IMMER aufgehoben, auch wenn der Aufrufer
+     * sie nicht haben will.
+     *
+     * Vorher entschied `ranking_out`, ob ueberhaupt etwas aufgehoben
+     * wurde — und `uft_disk_open()` reichte dort NULL durch. Damit
+     * verlor JEDER Aufrufer von `uft_disk_open()` Konfidenz und
+     * Gleichstand, obwohl beide bereits gerechnet waren. Genau derselbe
+     * Fehler wie beim Plugin-Zeiger, den der Kopf von `struct uft_disk`
+     * beschreibt: "already held the right pointer and discarded it".
+     *
+     * Jetzt laeuft die Messung immer in eine lokale Fassung und wird an
+     * die Scheibe geheftet; `ranking_out` wird daneben unveraendert
+     * bedient. */
+    uft_probe_ranking_t lokal;
+    memset(&lokal, 0, sizeof(lokal));
+
     const uft_format_plugin_t *plugin =
-        uft_probe_file_entschieden(path, ranking_out);
+        uft_probe_file_entschieden(path, &lokal);
+    if (ranking_out) *ranking_out = lokal;
     if (!plugin) return NULL;
-    return disk_oeffnen_mit(path, read_only, plugin);
+
+    uft_disk_t *disk = disk_oeffnen_mit(path, read_only, plugin);
+    if (disk) {
+        /* Geklemmt statt gekuerzt: die Felder sind 8 Bit breit, die
+         * Messung ist es nicht. Ein stiller Ueberlauf waere eine
+         * erfundene Zahl. `tied` ist mindestens 1 — die gewaehlte
+         * Fassung zaehlt sich selbst mit. */
+        int konf = (int)lokal.confidence;
+        if (konf < 0)   konf = 0;
+        if (konf > 100) konf = 100;
+        int gleich = (int)lokal.tied;
+        if (gleich < 1)   gleich = 1;
+        if (gleich > 255) gleich = 255;
+
+        disk->probe_confidence = (uint8_t)konf;
+        disk->probe_tied       = (uint8_t)gleich;
+        disk->probe_gemessen   = true;
+    }
+    return disk;
 }
 
 uft_disk_t* uft_disk_open(const char *path, bool read_only) {
+    /* MF-1317: NULL heisst weiterhin "ich will die Messung nicht sehen",
+     * nicht mehr "sie wird verworfen" — sie steht jetzt an der Scheibe. */
     return uft_disk_open_ranked(path, read_only, NULL);
 }
 

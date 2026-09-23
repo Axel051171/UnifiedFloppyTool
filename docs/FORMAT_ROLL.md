@@ -28,6 +28,7 @@ Dateiaufbau).
 | ID | Art | Status | Beleg |
 |---|---|---|---|
 | 2img | behaelterformat | aktiv |  |
+| a2r | behaelterformat | aktiv | MF-1322 — Tuer zum vorhandenen Leser (`src/parsers/a2r/uft_a2r_parser.c`, vorher 13 Aufrufer, alle in Tests). Registrierung auf Eigentuemer-Entscheidung 2026-09-21; Begruendung in `scripts/format_freeze_baseline.json`, Feld `whitelist_begruendung`. Nur lesend: kein `write_track`, kein `create`, kein `flush`. |
 | 86f | behaelterformat | aktiv |  |
 | adf | behaelterformat | aktiv |  |
 | adf_arc | behaelterformat | aktiv |  |
@@ -115,3 +116,11 @@ Dateiaufbau).
 | woz | behaelterformat | aktiv |  |
 | xdm86 | behaelterformat | aktiv |  |
 | xfd | behaelterformat | aktiv |  |
+
+## Zurueckgenommene Schnittstellen
+
+- P3-233: `include/uft/formats/c64/uft_c64_bam.h` ist zurueckgenommen.
+  Der unbenutzte zweite BAM-Entwurf hatte keine einbindende Quelldatei
+  und sagte 17 Funktionen ohne Umsetzung zu. Die aktive BAM-API bleibt
+  `include/uft/formats/c64/uft_bam_editor.h` mit ihrer Umsetzung und
+  `tests/test_bam_editor.c`; die CBM-Formatunterstuetzung bleibt aktiv.

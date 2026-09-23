@@ -85,6 +85,35 @@ def _tests_by_symbol_ref(repo: Path) -> dict[str, set[str]]:
     return out
 
 
+def _alle_testnamen(repo: Path) -> set[str]:
+    """Alle Testnamen des Baums.
+
+    MF-636 verlangt `git ls-files` statt einer Verzeichnisliste; dieses
+    Skript zaehlt seit jeher mit `glob` (siehe `_tests_by_symbol_ref`).
+    Hier wird bewusst DIESELBE Aufzaehlung benutzt statt einer zweiten,
+    damit die beiden Antworten nicht auseinanderlaufen koennen
+    (MF-1177). Die glob-Frage selbst bleibt offen und ist nicht Teil
+    von MF-1332.
+    """
+    tdir = repo / "tests"
+    return {f.stem for f in
+            list(tdir.glob("test_*.c")) + list(tdir.glob("test_*.cpp"))}
+
+
+def _testnamen_im_feld(wert: str) -> set[str]:
+    """Testnamen, die im `test`-Feld eines Korpus-Eintrags STECKEN.
+
+    Das Feld traegt gemessen dreierlei: einen blanken Testnamen, ein
+    ehrliches „noch keiner …“ bzw. „-“, oder einen ganzen Absatz, in dem
+    ein Testname vorkommt. Die Stufenrechnung vergleicht auf exakte
+    Zeichengleichheit; der dritte Fall faellt damit stillschweigend
+    heraus. Diese Funktion findet die Namen, damit die Meldung unten
+    zwischen „kein Test“ und „Test da, aber nicht getroffen“ trennen
+    kann.
+    """
+    return set(re.findall(r"\btest_[A-Za-z0-9_]+", wert or ""))
+
+
 def _excluded_tests(repo: Path) -> set[str]:
     cml = repo / "tests" / "CMakeLists.txt"
     if not cml.exists():
@@ -112,6 +141,7 @@ def compute_tiers(repo: Path) -> list[dict]:
     cmake_map = _tests_from_cmake(repo)
     symref_map = _tests_by_symbol_ref(repo)
     excluded = _excluded_tests(repo)
+    alle_tests = _alle_testnamen(repo)          # MF-1332
     spec = _load_json(repo / "docs" / "spec_verification.json")
     known_syms = {p["symbol"] for p in plugins}
     for key, entry in spec.items():
@@ -165,6 +195,56 @@ def compute_tiers(repo: Path) -> list[dict]:
                 if c.get("origin") == "real" and c.get("test") in tests]
         xtool = [c for c in corpus
                  if c.get("origin") == "cross-tool" and c.get("test") in tests]
+
+        # MF-1332: die beiden Zeilen darueber vergleichen auf EXAKTE
+        # Zeichengleichheit. Ein `test`-Feld, das danebenliegt, fiel
+        # stillschweigend heraus — der Eintrag hob keine Stufe, und
+        # niemand erfuhr davon. Gemessen am Manifest: 9 von 143 Feldern
+        # nennen keinen existierenden Test, davon 5 ehrliche „noch
+        # keiner …“ und 4 ein „-“ (beides korrekt, keine Meldung wert),
+        # und EINES traegt einen ganzen Absatz, in dem ein wirklich
+        # vorhandener Test genannt wird.
+        #
+        # Gemeldet wird deshalb nur der Fall, der etwas bedeutet: das
+        # Feld nennt einen Test, den es GIBT, aber die Stufenrechnung
+        # sieht ihn nicht. Zwei Gruende, und sie sind verschieden —
+        # deshalb zwei Meldungen.
+        for c in corpus:
+            feld = (c.get("test") or "").strip()
+            if feld in tests:
+                continue
+            genannt = _testnamen_im_feld(feld) & alle_tests
+            if not genannt:
+                continue          # „noch keiner“ / „-“ — ehrlich, still
+            datei = c.get("file", "?").split("/")[-1]
+            if genannt & tests:
+                print(f"WARN: corpus entry '{datei}' ({sym}): field names "
+                      f"{sorted(genannt & tests)} but not verbatim — exact "
+                      f"match failed, no tier credit", file=sys.stderr)
+            else:
+                # Gemessen MF-1332 an allen vier Treffern: das ist in
+                # der Regel KEIN Defekt, sondern die zweite Bedeutung des
+                # Feldes. Es traegt naemlich zweierlei — „der Test, der
+                # dieses Format ueber sein PLUGIN belegt" (stufenrelevant)
+                # und „der Test, der diese DATEI benutzt" (nicht
+                # stufenrelevant). Belegt an:
+                #   uft_pc160.img            Saatdatei fuer hxcfe
+                #   fluxfox_..._360k.img     flacher Massstab fuer 86f/pri
+                #   uftk_dos33_35trk.do      Eingabe fuer a2nibblize
+                #   CPM ... (1979).a2r       IST Pruefling, aber ueber
+                #                            a2r_open() statt ueber das
+                #                            Plugin geprueft
+                # Ein Feld, zwei Bedeutungen — Bauform MF-1177. Die
+                # Meldung sagt deshalb, WAS zu pruefen ist, statt einen
+                # Fehler zu behaupten.
+                print(f"WARN: corpus entry '{datei}' ({sym}): names "
+                      f"{sorted(genannt)}, which exist but are not "
+                      f"attributed to this plugin — no tier credit. "
+                      f"Check which of the two the field means: a test "
+                      f"that VERIFIES this format through its plugin, or "
+                      f"one that merely USES this file (seed/yardstick) "
+                      f"or goes through a parser instead",
+                      file=sys.stderr)
 
         if real:
             tier = "T1"
@@ -518,6 +598,33 @@ def _selbsttest(repo: Path) -> int:
                    % (len(echt["allein"]), n_gleich, len(echt["zeilen"])),
                    len(echt["allein"]) + n_gleich == len(echt["zeilen"])
                    and len(echt["zeilen"]) > 0))
+
+    # MF-1332: die Meldung ueber stillschweigend verworfene `test`-Felder
+    # haengt an _testnamen_im_feld(). Die drei Gestalten stehen gemessen
+    # im Manifest; ohne diese Faelle koennte die Funktion still
+    # verstummen und die Meldung waere wieder weg.
+    faelle.append(("leeres test-Feld nennt keinen Test",
+                   _testnamen_im_feld("") == set()
+                   and _testnamen_im_feld(None) == set()))
+    faelle.append(("„-“ nennt keinen Test",
+                   _testnamen_im_feld("-") == set()))
+    faelle.append(("„noch keiner …“ nennt keinen Test",
+                   _testnamen_im_feld(
+                       "noch keiner — Messkette in tools/uft-scout/"
+                       "out/floppyarchaeology_korpus.gutachten.md §6")
+                   == set()))
+    faelle.append(("blanker Name wird erkannt",
+                   _testnamen_im_feld("test_corpus_d64")
+                   == {"test_corpus_d64"}))
+    faelle.append(("Name IN einem Absatz wird erkannt",
+                   _testnamen_im_feld(
+                       "test_fm_echte_aufnahme — berichtigt MF-1066: "
+                       "`tests/test_fm_echte_aufnahme.c:77` oeffnet genau "
+                       "diese Datei")
+                   == {"test_fm_echte_aufnahme"}))
+    faelle.append(("Praefix allein ist kein Name",
+                   _testnamen_im_feld("test_") == set()
+                   and _testnamen_im_feld("kein test hier") == set()))
 
     gut = 0
     for name, ok in faelle:

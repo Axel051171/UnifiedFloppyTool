@@ -118,7 +118,28 @@
         </item>
        </layout>
       </item>
-      
+
+      <!-- Log (P3-265, MF-1191)
+           appendLog() wird an 13 Stellen gerufen und schrieb bis MF-1191
+           ausschliesslich nach qDebug(). Dieses Formular hatte kein
+           Log-Widget, also war jede dieser 13 Meldungen fuer den Benutzer
+           unsichtbar - ein Protokoll, das seinen Namen nicht haelt.
+           Bewacht von tests/test_status_tab_no_fiction.cpp. -->
+      <item>
+       <widget class="QLabel" name="labelLog">
+        <property name="text"><string>Log</string></property>
+        <property name="styleSheet"><string>font-weight: bold;</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="textLog">
+        <property name="readOnly"><bool>true</bool></property>
+        <property name="styleSheet"><string>font-family: monospace; font-size: 9pt; background-color: #f8f8f8;</string></property>
+        <property name="minimumHeight"><number>90</number></property>
+        <property name="plainText"><string></string></property>
+       </widget>
+      </item>
+
      </layout>
     </widget>
    </item>

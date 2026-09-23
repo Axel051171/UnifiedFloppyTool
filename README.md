@@ -9,13 +9,13 @@ Open-source forensic floppy disk preservation tool. Qt6 C/C++ desktop
 application targeted at archives, museums, retrocomputing enthusiasts,
 digital forensics, and copy-protection research.
 
-138 disk-image format IDs, 88 registered plugin parsers. **Verification
+138 disk-image format IDs, 89 registered plugin parsers. **Verification
 honesty:** most parsers are currently validated only against synthetic
 round-trip tests and/or specs verified against authoritative reference
 implementations — **not yet against a real-disk reference corpus**. The
 per-format verification-tier table now exists and is kept current:
-[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **1 of 88
-formats is T3 (unverified)**; proven: T1=8, T1b=70, T2=7. 9 hardware controllers
+[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **1 of 89
+formats are T3 (unverified)**; proven: T1=8, T1b=70, T2=8. 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
 pending** — still open in 4.1.6, and it needs a machine we do not have
 (see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
@@ -131,8 +131,8 @@ not made green. The reference image is on the procurement list.
 **What this release still cannot do** — this list is part of the release,
 not a footnote:
 
-- **1 of 88 tier-tracked formats is unverified (T3).** Proven: T1=8,
-  T1b=70, T2=7, and 2 carry `n/a` because they are not container
+- **1 of 89 tier-tracked formats are unverified (T3).** Proven: T1=8,
+  T1b=70, T2=8, and 2 carry `n/a` because they are not container
   formats at all (MF-1077). (`T1=2` stood here while two lines above
   said `T1=7` — corrected in the same pass.) (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
   each after a real parser bug was fixed against a named reference:
@@ -174,7 +174,7 @@ not a footnote:
 
 This project has a specific, unusual gap: **there is no physical hardware
 behind it.** Every Tier-3 bench result has to come from someone else's
-desk. And 56 of 88 formats have never met a real disk — only synthetic
+desk. And 57 of 89 formats have never met a real disk — only synthetic
 round-trips.
 
 That makes your report worth more than any test we can write ourselves.
@@ -319,7 +319,7 @@ hardware (v4.1.6 scope). `impl_complete` flag stays `false` in
 
 ### Disk-image format coverage
 
-138 format IDs registered, 88 of them backed by a Plugin-B parser
+138 format IDs registered, 89 of them backed by a Plugin-B parser
 (read + probe). Every plugin has populated `spec_status` and `features`
 metadata (Prinzip 7 — metadata completeness, not functional
 verification).
@@ -327,7 +327,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=8, T1b=70, T2=7, T3=1, n/a=2** of 88.
+for the tier definitions): **T1=8, T1b=70, T2=8, T3=1, n/a=2** of 89.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for

@@ -78,6 +78,13 @@ signals:
 
 public slots:
     void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);
+    /* MF-1293: die Umdrehungen stehen im neuen Entwurf NUR noch im
+     * Settings-Reiter - Eigentuemerentscheidung "keine doppelten
+     * Einstellungen". Der Arbeitsablauf bekommt den Wert gereicht, statt
+     * ein zweites Feld zu fuehren, das mit dem ersten auseinanderlaufen
+     * kann. Die Vorgabe 2 ist die des alten Feldes. */
+    void setUmdrehungen(int n) { m_umdrehungen = n > 0 ? n : 1; }
+    int  umdrehungen() const { return m_umdrehungen; }
 
     // MF-110 / MF-200 / MF-201 — MainWindow forwards HardwareTab's
     // non-owning GreaseweazleProviderV2* every time the connection state
@@ -99,6 +106,7 @@ private slots:
     void onAnalyzeClicked();
 
 private:
+    int m_umdrehungen = 2;
     Ui::TabWorkflow *ui;
     
     QButtonGroup* m_sourceGroup;

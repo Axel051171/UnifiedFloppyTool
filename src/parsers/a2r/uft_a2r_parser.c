@@ -108,6 +108,38 @@ static const char *disk_type_strings[] = {
     "3\" DS 40trk"
 };
 
+/**
+ * @brief Eine Location in Zylinder und Kopf zerlegen (MF-1319).
+ *
+ * Die Regel steht woertlich in der „A2R 3.x Disk Image Reference"
+ * (applesaucefdc.com/a2r/, Feld „Location" im RWCP-Aufnahmeeintrag +2 und
+ * im SLVD-Spureintrag +1):
+ *
+ *   „For Drive Type 1 (SS 5.25 @ 0.25 step) disks, this value is in
+ *    halfphases or quarter tracks. […] For all other Drive Types, this
+ *    value indicates track number as well as side. The formula
+ *    ((track << 1) + side) can be used […] Single sided drives should
+ *    still use this formula, but only use a side value of 0."
+ *
+ * Drive Type 1 ist damit der EINZIGE Fall, in dem die Location eine
+ * Viertelspur ist. Alle anderen — auch die einseitigen — tragen Kopf und
+ * Zylinder in derselben Zahl.
+ *
+ * Fuer einen unbekannten Laufwerkstyp (0 oder > 8) wird NICHT geraten:
+ * dann bleibt die Location unzerlegt stehen und der Kopf 0. Eine falsche
+ * Zerlegung waere schlimmer als keine — sie saehe aus wie eine Auskunft.
+ */
+static void a2r_location_deuten(uint16_t location, uint8_t drive_type,
+                                uint8_t *track_out, uint8_t *side_out) {
+    if (drive_type == 1u || drive_type == 0u || drive_type > 8u) {
+        if (track_out) *track_out = (uint8_t)(location & 0xFFu);
+        if (side_out)  *side_out  = 0u;
+        return;
+    }
+    if (track_out) *track_out = (uint8_t)((location >> 1) & 0xFFu);
+    if (side_out)  *side_out  = (uint8_t)(location & 1u);
+}
+
 /*============================================================================
  * Utility Functions
  *============================================================================*/
@@ -207,10 +239,22 @@ static a2r_error_t parse_info_chunk(const uint8_t *data, size_t size,
         info->disk_type       = data[33];
         info->write_protected = data[34] != 0;
         info->synchronized    = data[35] != 0;
-        /* data[36] ist die Zahl der Hartsektoren. Der Baum hat dafuer
-         * kein Feld; sie wird bewusst nicht in `cleaned` o. ae.
-         * einsortiert — ein falsch benanntes Feld ist schlimmer als ein
-         * fehlendes. */
+        /* MF-1319: data[36] ist die Zahl der Hartsektoren, und sie hat
+         * jetzt ein EIGENES, richtig benanntes Feld.
+         *
+         * MF-868 hatte sie weggelassen mit der Begruendung, sie „zu lesen
+         * und in eines der alten einzusortieren waere derselbe Fehler
+         * noch einmal" — das Verbot galt den neun WOZ-Erbfeldern, nicht
+         * dem Wert. Die Referenz fuehrt ihn als sechstes Feld des
+         * 37-Byte-Chunks: „+36 uint8 Hard Sector Count, 0 = Soft
+         * sectored, 1+ = Number of hard sectors on disk".
+         *
+         * Gemessen an den drei Aufnahmen in `tests/corpus/`: alle drei
+         * melden 0, sind also weich sektoriert. Ein hart sektoriertes
+         * Abbild liegt im Korpus NICHT — der Wert wird gelesen und
+         * durchgereicht, seine Wirkung auf die Indexdeutung ist damit
+         * noch nicht belegt. */
+        info->hard_sector_count = data[36];
         return A2R_OK;
     }
 
@@ -354,8 +398,16 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
             continue;
         }
         current_track = &ctx->tracks[stelle];
-        current_track->track_number = location;
-        current_track->side = 0;  /* v2 is always side 0 */
+        current_track->location = location;
+        /* MF-1319 fasst den v2-Pfad NICHT an. Die Zerlegung
+         * ((track << 1) + side) steht in der A2R-3-Referenz; ob sie fuer
+         * A2R 2 ebenso gilt, steht in der separaten „A2R 2.x"-Referenz
+         * (applesaucefdc.com/a2r2-reference/), und die ist hier NICHT
+         * gelesen worden. Die Zeile darunter bleibt deshalb, wie sie war
+         * — samt ihrer Behauptung. Sie ist nicht belegt, und das steht
+         * jetzt hier, statt wie eine Messung auszusehen. */
+        current_track->track_number = (uint8_t)(location & 0xFFu);
+        current_track->side = 0;  /* v2 is always side 0 — NICHT belegt */
 
         /* Add capture.
          *
@@ -515,8 +567,10 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
      * zweite Durchlauf sie wiederfindet. */
     for (int k = 0, n = 0; k < A2R_MAX_TRACKS; k++) {
         if (!gesehen[k]) continue;
-        ctx->tracks[n].track_number = (uint8_t)k;
-        ctx->tracks[n].side = 0;
+        ctx->tracks[n].location = (uint16_t)k;
+        a2r_location_deuten((uint16_t)k, ctx->info.disk_type,
+                            &ctx->tracks[n].track_number,
+                            &ctx->tracks[n].side);
         n++;
     }
 
@@ -546,7 +600,12 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
 
         a2r_track_t *ziel = NULL;
         for (uint8_t n = 0; n < ctx->track_count; n++) {
-            if (ctx->tracks[n].track_number == location) {
+            /* MF-1319: verglichen wird die ROHE Location, nicht der
+             * gedeutete Zylinder. Seit der Zerlegung tragen Kopf 0 und
+             * Kopf 1 desselben Zylinders dieselbe `track_number` — ein
+             * Vergleich darauf wuerde die Aufnahmen der zweiten Seite in
+             * die Spur der ersten einsortieren. */
+            if (ctx->tracks[n].location == location) {
                 ziel = &ctx->tracks[n];
                 break;
             }
@@ -846,6 +905,11 @@ a2r_error_t a2r_read_track(a2r_context_t *ctx,
             /* Copy track info */
             track->track_number = ctx->tracks[i].track_number;
             track->side = ctx->tracks[i].side;
+            /* MF-1319: das neue Feld muss hier MIT. Eine Struktur zu
+             * erweitern und die Kopierstelle zu vergessen ergibt ein
+             * Feld, das an der Quelle stimmt und beim Aufrufer 0 ist —
+             * und 0 ist hier eine gueltige Location. */
+            track->location = ctx->tracks[i].location;
             track->capture_count = ctx->tracks[i].capture_count;
             track->has_solved = ctx->tracks[i].has_solved;
             

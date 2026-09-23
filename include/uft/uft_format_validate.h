@@ -123,7 +123,7 @@ uft_error_t uft_validate_g64(const uint8_t* data, size_t size,
 // Checksum Functions
 // ============================================================================
 
-uint16_t uft_crc16_ccitt(const uint8_t* data, size_t size);
+uint16_t uft_crc16_ccitt(const uint8_t* data, size_t size, uint16_t init);
 uint8_t uft_checksum_xor(const uint8_t* data, size_t size);
 
 #ifdef __cplusplus

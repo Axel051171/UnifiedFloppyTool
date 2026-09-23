@@ -14,14 +14,12 @@
    <property name="spacing">
     <number>8</number>
    </property>
-   
    <!-- SOURCE + DESTINATION (Equal Size!) -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_sourceDestination">
      <property name="spacing">
       <number>8</number>
      </property>
-     
      <!-- SOURCE (Read From) -->
      <item>
       <widget class="QGroupBox" name="groupSource">
@@ -41,7 +39,42 @@
         </size>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_source">
-        
+        <item>
+         <layout class="QHBoxLayout" name="rowQuellePfad">
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <property name="spacing">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel">
+            <property name="text">
+             <string>Pfad:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="editConvertSource">
+            <property name="placeholderText">
+             <string>Input file...</string>
+            </property>
+            <property name="maximumWidth">
+             <number>260</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <!-- Source Type Buttons -->
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_sourceButtons">
@@ -64,7 +97,6 @@
             </property>
            </widget>
           </item>
-          
           <item>
            <widget class="QPushButton" name="btnSourceUSB">
             <property name="text">
@@ -81,7 +113,6 @@
             </property>
            </widget>
           </item>
-          
           <item>
            <widget class="QPushButton" name="btnSourceFile">
             <property name="text">
@@ -100,7 +131,6 @@
           </item>
          </layout>
         </item>
-        
         <!-- Source Status -->
         <item>
          <widget class="QGroupBox" name="groupSourceStatus">
@@ -129,11 +159,55 @@ Drive: Drive 0 (3.5")</string>
           </layout>
          </widget>
         </item>
-        
+        <item>
+         <layout class="QHBoxLayout" name="rowStapel">
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <property name="spacing">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel">
+            <property name="text">
+             <string>Stapel-Ordner:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="editBatchFolder">
+            <property name="placeholderText">
+             <string>Input folder...</string>
+            </property>
+            <property name="maximumWidth">
+             <number>200</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnBrowseBatch">
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="maximumWidth">
+             <number>30</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
      </item>
-     
      <!-- DESTINATION (Write To) -->
      <item>
       <widget class="QGroupBox" name="groupDestination">
@@ -153,7 +227,42 @@ Drive: Drive 0 (3.5")</string>
         </size>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_destination">
-        
+        <item>
+         <layout class="QHBoxLayout" name="rowZielPfad">
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <property name="spacing">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel">
+            <property name="text">
+             <string>Pfad:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="editConvertTarget">
+            <property name="placeholderText">
+             <string>Output file...</string>
+            </property>
+            <property name="maximumWidth">
+             <number>260</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <!-- Destination Type Buttons -->
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_destButtons">
@@ -173,7 +282,6 @@ Drive: Drive 0 (3.5")</string>
             </property>
            </widget>
           </item>
-          
           <item>
            <widget class="QPushButton" name="btnDestUSB">
             <property name="text">
@@ -190,7 +298,6 @@ Drive: Drive 0 (3.5")</string>
             </property>
            </widget>
           </item>
-          
           <item>
            <widget class="QPushButton" name="btnDestFile">
             <property name="text">
@@ -212,7 +319,6 @@ Drive: Drive 0 (3.5")</string>
           </item>
          </layout>
         </item>
-        
         <!-- Destination Status -->
         <item>
          <widget class="QGroupBox" name="groupDestStatus">
@@ -241,13 +347,82 @@ Auto-increment: Enabled</string>
           </layout>
          </widget>
         </item>
-        
+        <item>
+         <layout class="QHBoxLayout" name="rowZielFormat">
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <property name="spacing">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel">
+            <property name="text">
+             <string>Zielformat:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboConvertTo">
+            <item>
+             <property name="text">
+              <string>ADF</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>D64</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>G64</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>SCP</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>HFE</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>IMG</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>IMD</string>
+             </property>
+            </item>
+            <property name="toolTip">
+             <string>Parameter: target.format</string>
+            </property>
+            <property name="maximumWidth">
+             <number>100</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
      </item>
     </layout>
    </item>
-   
    <!-- OPERATION MODE -->
    <item>
     <widget class="QGroupBox" name="groupOperation">
@@ -300,38 +475,6 @@ Auto-increment: Enabled</string>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="labelRevolutions">
-        <property name="text">
-         <string>Umdrehungen:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QSpinBox" name="spinRevolutions">
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>5</number>
-        </property>
-        <property name="value">
-         <number>5</number>
-        </property>
-        <property name="toolTip">
-         <string>Wie viele Umdrehungen je Spur aufgezeichnet werden (1-5).
-
-5 ist die Empfehlung fuer Bestandssicherung: mehrfach gelesene Spuren
-lassen sich gegeneinander pruefen, und wenn die Diskette zerfaellt, hat
-man nur diesen einen Durchgang.
-
-Mindestens 2 sind noetig, sobald das Format nicht indexsynchron ist -
-bei Atari 8-bit koennen Sektoren die Indexmarke ueberlappen, ein
-Ein-Umdrehungs-Abbild schneidet sie dann mitten durch. Der Wert 1 bleibt
-waehlbar, warnt aber.</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -351,7 +494,317 @@ waehlbar, warnt aber.</string>
      </layout>
     </widget>
    </item>
-   
+   <item>
+    <widget class="QGroupBox" name="groupModusAnzeige">
+     <property name="title">
+      <string>Kopiermodus (aus Settings)</string>
+     </property>
+     <layout class="QHBoxLayout" name="rowModus">
+      <property name="leftMargin">
+       <number>4</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>4</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="labelModus">
+        <property name="text">
+         <string>Modus: — (in Settings waehlen)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel">
+        <property name="text">
+         <string>Verfahren:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboVerfahren">
+        <item>
+         <property name="text">
+          <string>UFT</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>a8rawconv</string>
+         </property>
+        </item>
+        <property name="toolTip">
+         <string>Verfahren beim Wandeln — a8rawconv nur, wenn Quelle/Ziel in seiner Domaene liegen</string>
+        </property>
+        <property name="maximumWidth">
+         <number>100</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupWeitereVorgaenge">
+     <property name="title">
+      <string>Weitere Vorgaenge</string>
+     </property>
+     <layout class="QGridLayout" name="gitterVorgaenge">
+      <property name="leftMargin">
+       <number>4</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>4</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel">
+        <property name="text">
+         <string>Reparieren:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="btnRepair">
+        <property name="text">
+         <string>🔧 Repair</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" colspan="2">
+       <widget class="QCheckBox" name="checkBackup">
+        <property name="text">
+         <string>Create backup</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel">
+        <property name="text">
+         <string>Vergleichen:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="btnCompare">
+        <property name="text">
+         <string>🔍 Compare</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel">
+        <property name="text">
+         <string>Leerdiskette:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="btnCreateBlank">
+        <property name="text">
+         <string>💾 Create Blank</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel">
+        <property name="text">
+         <string>Stapel:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="comboBatchAction">
+        <item>
+         <property name="text">
+          <string>Convert</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Analyze</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Validate</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Repair</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Calculate hashes</string>
+         </property>
+        </item>
+        <property name="maximumWidth">
+         <number>100</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2" colspan="2">
+       <widget class="QCheckBox" name="checkBatchSubfolders">
+        <property name="text">
+         <string>Include subfolders</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel">
+        <property name="text">
+         <string>Mehrfachkopie:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QSpinBox" name="spinNumCopies">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+        <property name="maximumWidth">
+         <number>58</number>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2" colspan="2">
+       <widget class="QCheckBox" name="checkAutoEject">
+        <property name="text">
+         <string>Auto-eject after copy</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="2">
+       <widget class="QCheckBox" name="checkWaitForDisk">
+        <property name="text">
+         <string>Wait for next disk</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QLabel">
+        <property name="text">
+         <string>GW→DMK direkt:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QComboBox" name="comboGw2DmkPreset">
+        <item>
+         <property name="text">
+          <string>TRS-80 Model I/III SSSD</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>TRS-80 Model I/III SSDD</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>TRS-80 Model 4 DSDD</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Custom</string>
+         </property>
+        </item>
+        <property name="maximumWidth">
+         <number>100</number>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QPushButton" name="btnGw2DmkOpen">
+        <property name="text">
+         <string>🔧 Open GW→DMK Panel...</string>
+        </property>
+        <property name="toolTip">
+         <string>Direct Greaseweazle to DMK imaging</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupVorschau">
+     <property name="title">
+      <string>Aufruf-Vorschau (a8rawconv)</string>
+     </property>
+     <layout class="QVBoxLayout" name="vorschauLayout">
+      <property name="leftMargin">
+       <number>4</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>4</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item>
+       <widget class="QPlainTextEdit" name="a8Command">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="toolTip">
+         <string>a8rawconv — Leser: Adapter (Phase 7)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <!-- TRACK STATUS (QUADRATISCH!) -->
    <item>
     <widget class="QGroupBox" name="groupTracks">
@@ -423,7 +876,6 @@ waehlbar, warnt aber.</string>
         </layout>
        </widget>
       </item>
-      
       <item>
        <widget class="QFrame" name="frameSide1">
         <property name="minimumSize">
@@ -488,7 +940,6 @@ waehlbar, warnt aber.</string>
         </layout>
        </widget>
       </item>
-      
       <item>
        <layout class="QVBoxLayout">
         <item>
@@ -534,7 +985,6 @@ Errors: 0</string>
      </layout>
     </widget>
    </item>
-   
    <!-- PROGRESS -->
    <item>
     <widget class="QGroupBox" name="groupProgress">
@@ -583,7 +1033,6 @@ Errors: 0</string>
      </layout>
     </widget>
    </item>
-   
    <!-- ACTION BUTTONS (START → ABBRECHEN!) -->
    <item>
     <layout class="QHBoxLayout">
@@ -648,9 +1097,8 @@ Errors: 0</string>
      </item>
     </layout>
    </item>
-   
   </layout>
  </widget>
- <resources/>
- <connections/>
+ <resources />
+ <connections />
 </ui>

@@ -369,7 +369,27 @@ void ProtectionAnalysisWidget::updateDetailView(int track)
      * slots differently (g64_get_track: index 2 = track 1; the plugin and
      * ufm_c64_metrics_from_gcr: index 0 = track 1), so comparing against a
      * locally recomputed `track * 2` silently depended on which reader had
-     * filled the list. `track` and `is_half_track` say it unambiguously. */
+     * filled the list. `track` and `is_half_track` say it unambiguously.
+     *
+     * BERICHTIGT MF-1332 — die in Klammern genannte Abweichung gibt es
+     * nicht mehr, und der Satz stand nach ihrem Ende noch da. MF-928 hat
+     * `g64_get_track()` auf „Dateieintrag i IST Platz i" umgestellt: seit
+     * dem gilt auch dort Index 0 = Spur 1, und die Umrechnung heisst
+     * `G64_TRACK_TO_HALFTRACK(t) = ((t)-1)*2` (seit MF-1332 im Header,
+     * nicht mehr in der .c). BEIDE Leser zaehlen also gleich.
+     *
+     * Die ENTSCHEIDUNG von MF-405 bleibt trotzdem richtig, nur aus einem
+     * anderen Grund: auf `track` zu vergleichen haengt an gar keiner
+     * Slot-Konvention und ueberlebt damit auch die naechste Umstellung.
+     * Diese Schleife war ohnehin nie betroffen — sie laeuft alle Plaetze
+     * von 0 an ab.
+     *
+     * Wer betroffen WAR: `src/formats/uft_format_convert_bitstream.c`
+     * rechnete an drei Stellen weiter `track * 2` und las damit die
+     * echten Spuren 2..35 unter den Namen 1..34, Spur 1 gar nicht. Der
+     * Satz hier hat die alte Rechnung als geltende Regel weitergetragen
+     * — die Fehlerart aus MF-930: eine Aufzaehlung, die nach ihrer
+     * Messung stehen blieb. */
     for (const auto &metrics : m_trackMetrics) {
         if ((int)metrics.track == track) {
             details += QString("Track position: %1%2\n")
@@ -614,7 +634,23 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
          * 30->31), where the nominal capacity changes. Measured: that produced
          * three spurious "long track" hits on BOTH clean reference disks. With
          * the conversion, the clean disks report zero hits through this reader,
-         * matching the plugin reader exactly. */
+         * matching the plugin reader exactly.
+         *
+         * BERICHTIGT MF-1332 — dieser Absatz widerspricht der Zeile
+         * unter ihm. Er verlangt „must be converted, not passed
+         * through"; der Aufruf reicht `halftrack` seit MF-928
+         * ausdruecklich DURCH. Beides kann nicht stimmen, und richtig
+         * ist der Code: MF-928 hat `g64_get_track()` auf „Dateieintrag i
+         * IST Platz i" umgestellt, seither zaehlen beide APIs gleich
+         * (Index 0 = Spur 1.0) und eine Umrechnung waere jetzt der
+         * Fehler.
+         *
+         * Die MESSUNG des Absatzes bleibt gueltig und gehoert deshalb
+         * zitiert stehen: drei falsche „long track"-Treffer auf beiden
+         * sauberen Referenzdisketten, genau auf den Zonengrenzen
+         * 17->18, 24->25, 30->31. Nur ihre Ursache ist behoben, nicht
+         * durch eine Umrechnung hier, sondern durch die gemeinsame
+         * Zaehlung. */
         ufm_c64_track_metrics_t metrics = {};
         if (!ufm_c64_metrics_from_gcr(trackData, trackLen, halftrack,   /* MF-928 */
                                       UFM_C64_SPEED_ZONE_AUTO, &metrics)) {

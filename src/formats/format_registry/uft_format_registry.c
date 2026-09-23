@@ -34,6 +34,7 @@
  * container the whole DeepRead path reads) and IMG. Nothing caught it because
  * the function had no caller (ARCH-9). */
 extern const uft_format_plugin_t uft_format_plugin_scp;
+extern const uft_format_plugin_t uft_format_plugin_a2r;   /* MF-1322 */
 extern const uft_format_plugin_t uft_format_plugin_img;
 extern const uft_format_plugin_t uft_format_plugin_adf_ext;
 extern const uft_format_plugin_t uft_format_plugin_korg_dss1;
@@ -304,6 +305,16 @@ static const uft_format_plugin_t* g_flux_plugins[] = {
     &uft_format_plugin_hfe, &uft_format_plugin_kfx,
     &uft_format_plugin_mfi, &uft_format_plugin_pri,
     &uft_format_plugin_scp,                                /* MF-446 */
+    /* MF-1322: die Tuer zum A2R-Leser. Er lag seit Langem im Baum und
+     * hatte gemessen 13 Aufrufstellen, alle in Tests — die Klasse
+     * P3-204, „Leser ohne Tuer".
+     *
+     * Die Registrierung steht unter einer ausdruecklichen Eigentuemer-
+     * Entscheidung: das Moratorium der EINFRIER-REGEL galt noch (nfd
+     * stand auf T2, vier von fuenf Formaten waren auf T1/T1b). Der
+     * Eintrag in `scripts/format_freeze_baseline.json` unter
+     * `whitelist` traegt dieselbe Begruendung. */
+    &uft_format_plugin_a2r,
 };
 
 static const uft_format_plugin_t* g_tape_plugins[] = {

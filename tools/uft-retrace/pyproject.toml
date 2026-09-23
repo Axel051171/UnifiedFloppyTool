@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uft-retrace"
+version = "0.1.0"
+description = "Reproducible Amiga unpacking and tracing evidence workflow"
+requires-python = ">=3.10"
+license = {text = "GPL-2.0-or-later"}
+
+[project.scripts]
+uft-retrace = "uft_retrace.cli:main"
+
+[tool.setuptools]
+packages = ["uft_retrace"]

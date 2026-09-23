@@ -761,6 +761,28 @@ typedef struct uft_convert_options {
      *
      * Wirkt nur auf Flux-Pfaden — ein Sektorabbild hat keine Zeitachse. */
     bool            reverse_decode;
+
+    /* MF-1316 (angehaengt, nicht eingefuegt — ABI, wie oben).
+     *
+     * Der Kopierplan, damit das Tor im GEMEINSAMEN Verteiler laufen kann
+     * statt nur in der Oberflaeche.
+     *
+     * Gemessener Anlass: `uft_copy_plan_is_executable()` hatte im ganzen
+     * Baum null Aufrufer, waehrend drei Ausfuehrungspfade ungeprueft
+     * `uft_copy_plan_to_convert_options()` riefen — `decodejob.cpp`,
+     * `toolstab.cpp`, `uft_save_image.cpp`. Jede einzeln zu verdrahten
+     * hiesse, die naechste Stelle wieder zu vergessen; der Verteiler ist
+     * der eine Engpass, den MF-263/UFT-A01 ohnehin vorsieht.
+     *
+     * Gesetzt wird das Feld von `uft_copy_plan_to_convert_options()`
+     * selbst — wer den Plan uebersetzt, reicht ihn damit automatisch
+     * weiter, und keine Aufrufstelle muss daran denken.
+     *
+     * LEBENSDAUER: der Zeiger wird nicht besessen. Der Plan muss den
+     * Wandlungsaufruf ueberleben. Alle drei heutigen Aufrufer erfuellen
+     * das (lokale Variable bzw. Mitglied, das den Aufruf umschliesst).
+     * NULL heisst schlicht "ohne Plan gewandelt" und ist zulaessig. */
+    const struct uft_copy_plan *copy_plan;
 } uft_convert_options_t;
 
 // ============================================================================

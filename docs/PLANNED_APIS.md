@@ -37,7 +37,7 @@ ist so schädlich wie ein fehlender — deshalb entfernt, nicht aktualisiert.
 | `uft_hardware.h` | 43 decls, 36 fehlend | 7 decls, 0 fehlend |
 | `uft_integration.h` | 22 decls, 18 fehlend | 4 decls, 0 fehlend |
 | `uft_simd.h` | 13 decls, 12 fehlend | 1 decl, 0 fehlend |
-| `uft_unified_image.h` | 18 decls, 18 fehlend | **0 decls** |
+| ~~`uft_unified_image.h`~~ | ~~18 decls, 18 fehlend~~ | ~~**0 decls**~~ — **ENTFERNT MF-1272**: 18 von 18 Deklarationen ohne Umsetzung, 0 `#include` im ganzen Baum, keine Implementierung in `src/`. Eigentuemerentscheidung 2026-09-20. Die Zeile bleibt als Beleg stehen, was zugesagt war. |
 
 Geprüft mit dem Klammer-Walker aus `audit_skeleton_headers.py` (ein bloßes
 `name(` trifft auch **Aufrufe**; die Fehlerrichtung wäre gewesen, einen
@@ -187,7 +187,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 19 | 19 | 2 | `include/uft/uft_flux_statistics.h` |
 | 18 | 18 | 1 | `include/uft/uft_bitstream_preserve.h` |
 | 18 | 18 | 1 | `include/uft/uft_mmap.h` |
-| 18 | 18 | 19 | `include/uft/uft_unified_image.h` |
+| 18 | 18 | 19 | ~~`include/uft/uft_unified_image.h`~~ — entfernt MF-1272 |
 | 18 | 18 | 2 | `include/uft/uft_writer_backend.h` |
 | 17 | 17 | 3 | `include/uft/uft_gui_bridge.h` |
 | 17 | 17 | 3 | `include/uft/uft_settings.h` |

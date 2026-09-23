@@ -132,6 +132,30 @@ typedef struct {
     uint8_t     disk_type;          /**< Drive Type, siehe die Referenz */
     bool        write_protected;    /**< Disk write protected */
     bool        synchronized;       /**< Cross track sync/index used */
+
+    /* MF-1319: der SECHSTE Wert des INFO-Chunks, angehaengt ans Ende.
+     *
+     * MF-868 hat ihn bewusst weggelassen, und der Grund steht dort
+     * woertlich: „sie zu lesen UND IN EINES DER ALTEN EINZUSORTIEREN
+     * waere derselbe Fehler noch einmal." Das Verbot galt dem
+     * Einsortieren in eines der neun WOZ-Erbfelder, nicht dem Wert.
+     * Die Referenz fuehrt ihn als eigenes Feld:
+     *
+     *   „+36  uint8  Hard Sector Count
+     *         0 = Soft sectored
+     *         1+ = Number of hard sectors on disk"
+     *   („A2R 3.x Disk Image Reference", applesaucefdc.com/a2r/)
+     *
+     * Er wird gebraucht, weil die Referenz die Indexsignale daran
+     * bindet: „Hard sectored disks will have multiple signals per disk
+     * rotation." Ohne diese Zahl ist nicht entscheidbar, welche der
+     * Indexmarken eine Umdrehung begrenzt.
+     *
+     * Nur A2R 3 traegt ihn; bei Version 2 bleibt er 0, und 0 heisst dort
+     * „nicht in der Datei", nicht „weich sektoriert". */
+    uint8_t     hard_sector_count;  /**< INFO +36; 0 = soft-sektoriert
+                                     *   (A2R 3) bzw. nicht vorhanden
+                                     *   (A2R 2)                        */
 } a2r_info_t;
 
 /**
@@ -151,16 +175,49 @@ typedef struct {
 /**
  * @brief Track data with multiple captures
  */
+/* MF-1319: `track_number` und `side` bedeuten seit dieser Aenderung, was
+ * ihre Namen sagen. Vorher trugen beide die rohe Location, und `side` war
+ * fest 0 — bei einem doppelseitigen Abzug landete damit JEDE Spur auf
+ * Kopf 0, und jede Zylindernummer war doppelt so gross.
+ *
+ * Die Regel steht woertlich in der „A2R 3.x Disk Image Reference"
+ * (applesaucefdc.com/a2r/, RWCP-Aufnahmeeintrag +2 und SLVD-Spureintrag
+ * +1, Feld „Location"):
+ *
+ *   „For Drive Type 1 (SS 5.25 @ 0.25 step) disks, this value is in
+ *    halfphases or quarter tracks. […] For all other Drive Types, this
+ *    value indicates track number as well as side. The formula
+ *    ((track << 1) + side) can be used (0 = Track 0 Side 0, 1 = Track 0
+ *    Side 1, 2 = Track 1 Side 0). Single sided drives should still use
+ *    this formula, but only use a side value of 0."
+ *
+ * Gemessen am belegten Pfad VOR der Aenderung, an drei echten
+ * Applesauce-Aufnahmen in `tests/corpus/`:
+ *
+ *   kor_c  Drive Type 4 (5.25" DS 40trk)  80 Locations, davon 40 ungerade
+ *          -> 40 Spuren gehoerten auf Kopf 1 und lagen auf Kopf 0
+ *   kor_a  Drive Type 6 (8" DS)           78 Locations, 1 ungerade
+ *   kor_b  Drive Type 4                   40 Locations, 0 ungerade
+ *
+ * `location` traegt die rohe Angabe weiter — sie ist der Schluessel, unter
+ * dem die Datei ihre Aufnahmen fuehrt, und sie ist `uint16`: oberhalb von
+ * 255 kann `track_number` sie gar nicht halten. Angehaengt ans ENDE der
+ * Struktur; ein Einschub mittendrin waere eine binaere Aenderung ohne
+ * Compiler-Warnung (dieselbe Regel wie bei `resolution_ps`). */
 typedef struct {
-    uint8_t         track_number;       /**< Quarter track (0-159 for 5.25") */
-    uint8_t         side;               /**< Side (0 or 1) */
+    uint8_t         track_number;       /**< Zylinder; bei Drive Type 1
+                                         *   die Viertelspur (0-159)     */
+    uint8_t         side;               /**< Kopf (0 oder 1)             */
     uint8_t         capture_count;      /**< Number of captures */
     a2r_capture_t   captures[A2R_MAX_CAPTURES];
-    
+
     /* Solved data (v3 SLVD chunk) */
     bool            has_solved;         /**< Has solved nibble data */
     uint8_t        *nibbles;            /**< Decoded nibbles */
     uint32_t        nibble_count;       /**< Number of nibbles */
+
+    uint16_t        location;           /**< MF-1319: die rohe Location
+                                         *   aus der Datei, ungedeutet   */
 } a2r_track_t;
 
 /**

@@ -355,11 +355,11 @@
       "naechster_griff": "Analyse liegt in `UFT-53-GCDFS.md` („auf ausdruecklichen Wunsch aufgenommen“); Bedingungen dort nicht gemessen."
     },
     "geocopy.zip": {
-      "lizenz": "ungemessen",
-      "lizenz_beleg": "`geocopy/gEOcOPY.TXT`: der Treffer war die Dateikopfzeile „GeoCopy.txt X PRG formatted GEOS file V1.0“ — keine Bedingung.",
-      "kanal": "Fundus",
+      "lizenz": "Freeware mit NC-Klausel — NICHT GPL-vereinbar",
+      "lizenz_beleg": "BERICHTIGT MF-1333 (stand auf 'ungemessen'). Die Bedingungen stehen in `geocopy/READ.ME.cvt`, nicht in `gEOcOPY.TXT`; beide sind GEOS-CVT-Behaelter, die druckbaren Zeichen holt `unzip -p … | tr -c '[:print:]\\n' '\\n'`. Keine Datei namens LICENSE/COPYING im Paket — daraus 'keine Lizenz' zu schliessen waere die Falle aus MF-1226 (das API-Feld ist nicht die Lizenzdatei). Woertlich: \"Diese Diskette darf und soll von allen Usern an andere GEOS-Besitzer vollstaendig weitergegeben werden\" UND \"Diese Programme sind somit Public Domain und duerfen nicht kommerziell ohne Einwilligung des Autors vertrieben werden!\" — eine Gewaehrung und eine Einschraenkung. Trotz des Wortes 'Public Domain' ist die NC-Klausel mit dem GPL-2-Baum unvereinbar, ein Port also ausgeschlossen. Autor: Christian Meilinger, A-2540 Bad Voeslau. Paket gemessen: 48118 Byte, 24 Eintraege, sha256 00b396f7254be8205f5eb35214d7dd062661ce482f652b6aa9ef1a05ef764ee6; nicht versioniert (.gitignore:90).",
+      "kanal": "Spec",
       "kennzahl": "Fundus",
-      "naechster_griff": "Gegenstand von `UFT-93-GeoCopy-Schreibseite.md`; Bedingungen dort nicht gemessen — die Datei ist ein GEOS-Behaelter, das Readme steckt darin."
+      "naechster_griff": "Ausgewertet, nichts mehr zu beschaffen. Die Beschreibung des Urhebers ist als benannte Referenz in `src/protection/uft_geos_protection.c` zitiert (Schutzspur 21 dezimal; Luecken original $55 $55 $67, GeoCopy durchgehend $67; GEOS prueft nur auf VORHANDENSEIN von $55 oder $67; alle fuenf Programme koennen nur einseitig). Der 6502-Quelltext auf der Diskette bleibt gesperrt und wird nicht gelesen. Offen bleibt die Abnahme an einer echten GEOS-Bootdiskette — dafuer fehlt Hardware (MF-310)."
     },
     "hardsector_tool-main.zip": {
       "lizenz": "Apache-2.0",
@@ -654,6 +654,20 @@
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Den Guide lesen — das Paket bringt QUELLTEXT mit (`SourceCode/`), also entscheidet die dort genannte Bedingung, ob je ein Kanal ueber Fundus hinaus offensteht."
+    },
+    "UFT_ReTrace_Entpack_Tracing_Workflow.zip": {
+      "lizenz": "GPL-2.0-or-later — an der DATEI gemessen, nicht am API-Feld",
+      "lizenz_beleg": "`LICENSE` IM PAKET, 330 Byte, SPDX-Zeile `GPL-2.0-or-later`; vollstaendig gelesen. Vereinbar mit dem GPL-2-Baum. Die Datei trennt ausdruecklich, was sie NICHT abdeckt: „This license covers only the files in this package. It does not grant rights to any third-party binary, disk image, disassembly, or other input processed with the workflow.“ `docs/LEGAL_CLEANROOM.md` fuehrt das aus (historische Kopierprogramme, Kickstart-ROMs, Diskettenimages, erzeugte Disassemblies, nahezu woertliche Rekonstruktionen) und nennt sogar die Falle, die dieser Baum bei LisaEm und `fdtc` selbst hatte: „Eine MIT-Datei neben einer Sammlung beweist nicht automatisch, dass der Sammler die enthaltenen historischen Programme unter MIT stellen durfte.“ Historische Programme sind NICHT mitgeliefert.",
+      "kanal": "Helfer-Prozess",
+      "kennzahl": "Fundus",
+      "naechster_griff": "GEBAUT UND AUSGEFUEHRT, nicht auf Zusicherung (MF-1178): eigene Tests 10/10, und die Kette `inventory -> analyze -> report` laeuft an einer echten Eingabe durch — erzeugt Quell-SHA-256, je Datei einen SHA-256, Hunk-Kennzeichen und einen schema-getaggten Bericht (`uft-retrace-inventory-1`). Die ZIP-Entpackung wurde mit EIGENER Pfadpruefung vorgenommen statt der Zusage des Pakets zu glauben; kein Ausbruch. VIER UFT-seitige Behauptungen aus `docs/UFT_INTEGRATION.md` nachgemessen, DREI halten: `src/recovery/uft_multiread_pipeline.c`, `include/uft/formats/uft_amiga_syncs.h` (+ `.c`) und `uft_copy_finding_t` (`uft_copy_plan.h:278`) existieren. Die VIERTE haelt NICHT: die vorgeschlagene Empfehlung soll „empfohlene Ebene, benoetigte Faehigkeiten, Verlustmeldung, Messquelle, Konfidenz“ liefern — `uft_copy_finding_t` hat gemessen GENAU DREI Felder (`hard`, `id`, `text`) und traegt nichts davon. Der Anknuepfungspunkt ist also echt, seine Gestalt nicht. Kanal *Helfer-Prozess* nach MF-695: ausfuehrbar, nicht einlinkbar — es ist ein Python-Werkzeug neben dem Produkt, kein Code fuer den Baum. Kennzahl `Fundus`, weil keine der vier Release-Zahlen sich bewegt: es ist eine METHODE (Clean-Room-Uebergabe mit Provenienz), kein Formatbeleg und kein Wandlungspfad. Naechster Griff waere eine Eigentuemer-Entscheidung, ob `uft_copy_finding_t` um die fuenf Felder erweitert wird; das ist neuer Code an einer Kernstruktur und gehoert vorgelegt, nicht gebaut."
+    },
+    "UFT_missing_formats_integration_plan.zip": {
+      "lizenz": "GPL-2.0-or-later fuer die C-Beispiele, laut README; Eigentuemer-Zulieferung, kein fremder Quelltext",
+      "lizenz_beleg": "mit zipfile GELISTET: 21 Eintraege (22 220 Byte), KEINE Datei namens LICENSE/COPYING/COPYRIGHT. README vollstaendig gelesen: „Es enthaelt keine blind aus SAMdisk kopierten Quelltexte. Die C-Beispiele sind eigenstaendige, sicherheitsorientierte Geruste unter GPL-2.0-or-later.“ Vereinbar mit dem GPL-2-Baum.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Analyse liegt als `docs/FORMAT_INTEGRATION_PLAN.md` (MF-1332). Gemessen ist der Zugang GESPERRT: das Moratorium der EINFRIER-REGEL haelt, weil `nfd` auf T2 steht (atr/d64/adf T1b, fdi T1) — neun der dreizehn Formate waeren neue Plugins. Sofort machbar sind nur drei Punkte ohne Formatschicht-Neubau; der Schluessel zu allem uebrigen ist `nfd` auf T1/T1b, und dafuer ist die Abstammungs-Absage aus P3-1 gemessen nur zur Haelfte haltbar: FIVEC steht NICHT im Kopf von `src/formats/nfd/uft_nfd_plugin.c`. Kennzahl `Fundus`, weil keine der vier Release-Zahlen sich bewegt — neue Formate HEBEN T3 (Beleg: `a2r`), und `nfd` von T2 auf T1b bewegt T3 nicht."
     },
     "UFT-100-nibwrite-GuildOfThieves.md": {
       "lizenz": "eigene Ausarbeitung dieser Reihe; die Lizenz der BESCHRIEBENEN Quelle ist an keiner Datei gemessen — ungemessen",
@@ -1109,6 +1123,20 @@
       "kanal": "Spec",
       "kennzahl": "Fundus",
       "naechster_griff": "Eigenes Kurzurteil: „Der wichtigste Fund: UFTs bestehende RapidLok-Erkennung hat eine bestätigte, dokumentierte Lücke.“ — Naechster Griff: das genannte Material gegen das Register halten (liegt es als eigener Eintrag vor, und ist der Fund im Baum angekommen?)"
+    },
+    "UFT_ImagingRecipe_Kit_v1.0.0.zip": {
+      "lizenz": "MIT, (c) 2026 Axel Kramer",
+      "lizenz_beleg": "`LICENSE` im Paket GELESEN (MIT-Wortlaut vollstaendig). Eigentuemer-Code, damit GPL-2-vereinbar.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "UEBERNOMMEN als src/core/uft_imaging_recipe.c, uft_recipe_copyplan.c und uft_amiga_recipe_profiles.c, nach Behebung von sechs gemessenen Befunden (Mutationsmatrix 10/10). Offen: 0 Produktivaufrufer, siehe P3-542."
+    },
+    "WHDLoad_dev (neue-ideen/fertige/2/)": {
+      "lizenz": "proprietaer, non-commercial. (c) 1995-2025 Bert Jahn, 'All rights reserved'. Quelldateien duerfen fuer Wiederverwendung geaendert werden; Disassemblierung NICHT untersagt. Fuenf der acht benutzten Vorlagen tragen selbst 'Public Domain', zwei keine Lizenzzeile, eine ein fremdes '(c) 1993 Vision'.",
+      "lizenz_beleg": "`Docs/en/copy.html` GELESEN (Paketlizenz, woertlich zitiert im Kopf von src/core/uft_amiga_recipe_profiles.c); die acht Vorlagen unter `Src/imager-examples/` je auf ihre erste Lizenzzeile geprueft.",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Uebernommen sind ZAHLEN (Spurbereiche, Syncworte, Laengen, DFLG_SWAPSIDES), keine Zeilen. Eigentuemer-Entscheidung 2026-09-21. NICHT gedeckt: Quelltext-Uebernahme und Weitergabe der Vorlagen — 'non-commercial only' ist GPL-unvertraeglich."
     },
     "uft-layout-code.zip": {
       "lizenz": "eigenes Material (Benennung `uft-…`)",

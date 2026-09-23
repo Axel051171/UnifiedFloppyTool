@@ -48,6 +48,9 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
+/* MF-1332: fuer die IMD-Zusage unten — Stromleser und Sektortypen. */
+#include "uft/formats/uft_td0.h"
+#include "uft/formats/uft_imd.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -202,10 +205,87 @@ TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
     remove(pfad);
 }
 
+/* MF-1332: dieselbe Aussage EINE SCHICHT WEITER — die Ehrlichkeit des
+ * fehlenden Sektors muss die Wandlung nach IMD ueberleben.
+ *
+ * MF-1287 hat `imd_stype_aus_sektor()` so gefasst, dass
+ * `UFT_SECTOR_MISSING` zu `UFT_IMD_SEC_UNAVAIL` (0x00) wird — die
+ * vorsichtige Richtung, „lieber sagen nicht gelesen als Fuellbytes als
+ * Daten ausgeben". `docs/OPEN_ITEMS.md` P3-523 verlangt dafuer
+ * ausdruecklich eine Zusage, und gemessen gab es sie nicht: `UNAVAIL`
+ * kam in KEINEM der sieben `tests/test_td0*.c` vor. Der einzige Nenner
+ * im Baum war `test_convert_imd_img_belegt.c`, also die GEGENrichtung.
+ *
+ * Die Zusage haengt hier und nicht in einer eigenen Datei, weil das
+ * Abbild schon hier steht: eine zweite `baue_td0()` waere die Bauform
+ * aus MF-1177.
+ *
+ * Erwartet, aus dem Abbild abgeleitet und nicht geraten:
+ *   Sektor 1  Flags 0x00, echte Daten          -> NICHT unavail
+ *   Sektor 2  Flags 0x10 („keine Daten")       -> UNAVAIL
+ *   Sektor 3  unbekanntes Verfahrensbyte       -> UNAVAIL (MF-981)
+ */
+TEST(fehlender_sektor_wird_in_imd_nicht_zu_daten)
+{
+    char pfad[512];
+    temp_pfad(pfad, sizeof pfad);
+    ASSERT(baue_td0(pfad));
+
+    /* Die Datei als Bytes einlesen — `uft_td0_strom_aus_bytes()` ist der
+     * Weg, den `uft_td0_to_imd()` erwartet. */
+    FILE *f = fopen(pfad, "rb");
+    ASSERT(f != NULL);
+    ASSERT(fseek(f, 0, SEEK_END) == 0);
+    long groesse = ftell(f);
+    ASSERT(groesse > 0);
+    ASSERT(fseek(f, 0, SEEK_SET) == 0);
+    uint8_t *roh = (uint8_t *)malloc((size_t)groesse);
+    ASSERT(roh != NULL);
+    size_t gelesen = fread(roh, 1, (size_t)groesse, f);
+    fclose(f);
+    if (gelesen != (size_t)groesse) { free(roh); remove(pfad); ASSERT(0); }
+
+    uft_td0_strom_t strom;
+    memset(&strom, 0, sizeof strom);
+    if (uft_td0_strom_aus_bytes(roh, (size_t)groesse, &strom) != UFT_OK) {
+        free(roh); remove(pfad); ASSERT(0);
+    }
+
+    struct uft_imd_image_t imd;
+    memset(&imd, 0, sizeof imd);
+    int rc = uft_td0_to_imd(&strom, &imd);
+
+    if (rc != UFT_OK || imd.num_tracks < 1 || imd.tracks == NULL) {
+        uft_td0_strom_frei(&strom); free(roh); remove(pfad);
+        printf("FEHLER: uft_td0_to_imd rc=%d, Spuren=%u\n",
+               rc, (unsigned)imd.num_tracks);
+        ASSERT(0);
+    }
+
+    /* DIE ZEILE: ein Sektor, den die Datei nicht traegt, darf in der IMD
+     * kein Datensatz sein. */
+    ASSERT(imd.tracks[0].header.nsectors == 3);
+    ASSERT(imd.tracks[0].stype[1] == UFT_IMD_SEC_UNAVAIL);
+    ASSERT(imd.tracks[0].stype[2] == UFT_IMD_SEC_UNAVAIL);
+
+    /* Gegenprobe im selben Lauf: der ECHTE Sektor darf nicht
+     * mitverschwinden. Ohne sie waere ein Wandler gruen, der alles auf
+     * UNAVAIL setzt. */
+    ASSERT(imd.tracks[0].stype[0] != UFT_IMD_SEC_UNAVAIL);
+
+    /* Und die Zaehlung muss dasselbe sagen wie die Typen. */
+    ASSERT(imd.unavail_sectors == 2);
+
+    uft_td0_strom_frei(&strom);
+    free(roh);
+    remove(pfad);
+}
+
 int main(void)
 {
     printf("=== TD0 erfindet keine Sektoren (MF-981) ===\n");
     RUN(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen);
+    RUN(fehlender_sektor_wird_in_imd_nicht_zu_daten);
     printf("\n%d passed, %d failed\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

@@ -219,13 +219,44 @@ TEST(die_aufnahmen_werden_gefunden)
     }
     a2r_free_track(&tr);
 
+    /* MF-1319: hier stand `a2r_read_track(ctx, 4, 0, ...)` — die rohe
+     * Location als erstes Argument. Das war richtig, solange der Leser
+     * `track_number` mit der Location gleichsetzte und `side` immer auf 0
+     * liess.
+     *
+     * Die Referenz sagt etwas anderes (applesaucefdc.com/a2r/, Feld
+     * „Location"): ausser bei Drive Type 1 traegt die Location Zylinder
+     * UND Kopf, `((track << 1) + side)`. Diese Pruefdatei hat
+     * DRIVE_TYPE 6, also ist Location 4 der Zylinder 2 auf Kopf 0 — und
+     * Location 5 waere derselbe Zylinder auf Kopf 1.
+     *
+     * Die Zeile ist damit selbst der Rotbeweis: vor MF-1319 fand
+     * `(2, 0)` nichts, weil die Spur unter der Nummer 4 abgelegt war. */
     memset(&tr, 0, sizeof tr);
-    rc = a2r_read_track(ctx, 4, 0, &tr);
+    rc = a2r_read_track(ctx, 2, 0, &tr);
     if (rc != A2R_OK || tr.capture_count != 1 ||
         tr.captures[0].data_length != 16) {
-        printf("\n      Location 4: rc=%d, %u Aufnahmen a %u Byte, "
-               "erwartet 1 a 16\n      ", rc, tr.capture_count,
+        printf("\n      Location 4 = Zylinder 2 Kopf 0: rc=%d, %u Aufnahmen "
+               "a %u Byte, erwartet 1 a 16\n      ", rc, tr.capture_count,
                tr.capture_count ? tr.captures[0].data_length : 0u);
+        _fail++;
+    }
+    if (tr.side != 0u || tr.location != 4u) {
+        printf("\n      Zerlegung falsch: side=%u location=%u, "
+               "erwartet side=0 location=4\n      ",
+               (unsigned)tr.side, (unsigned)tr.location);
+        _fail++;
+    }
+    a2r_free_track(&tr);
+
+    /* Die Gegenprobe: die ALTE Lesart darf nicht mehr treffen. Ohne sie
+     * waere nicht belegt, dass sich etwas geaendert hat — nur, dass die
+     * neue Lesart auch geht. */
+    memset(&tr, 0, sizeof tr);
+    rc = a2r_read_track(ctx, 4, 0, &tr);
+    if (rc == A2R_OK && tr.capture_count > 0u) {
+        printf("\n      die rohe Location 4 trifft immer noch: %u Aufnahmen"
+               "\n      ", tr.capture_count);
         _fail++;
     }
     a2r_free_track(&tr);

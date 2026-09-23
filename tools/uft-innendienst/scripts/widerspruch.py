@@ -76,7 +76,12 @@ sys.path.insert(0, HIER)
 
 import baum  # noqa: E402
 
-GEN_RX = re.compile(r"[Gg]ener(?:iert aus|ated from)\s+`?([\w./-]+)`?")
+# Die Quelle muss wie eine Datei aussehen (mindestens ein Punkt oder
+# Schraegstrich). Anlass: docs/OPEN_ITEMS.md zitiert eine uic-Kopfzeile
+# "generated from reading ui file", und der Lauf vom 2026-09-20 meldete
+# daraus die "Quelle" `reading` als fehlend — ein Wort, keine Datei.
+# Gepflanzt als data/widerspruch_fixtures/docs/C.md (darf nicht feuern).
+GEN_RX = re.compile(r"[Gg]ener(?:iert aus|ated from)\s+`?([\w-]*[./][\w./-]*)`?")
 # Pruefung 4 (MF-702): eine Pfadangabe, die ins Leere zeigt.
 #
 # Gemessen an den 26 Agenten-Dateien: 109 Pfadangaben, **28** ohne

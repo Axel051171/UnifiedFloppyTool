@@ -396,8 +396,17 @@ bool DecodeJob::convertImage()
      * Der Plan steht als KOPIE bereit (`setCopyPlan()`); hier wird
      * nichts an der Oberflaeche gefragt, weil dieser Faden sie nicht
      * anfassen darf. */
-    if (m_planGesetzt)
+    /* MF-1309: erst das Tor, dann die Uebersetzung. Ein Plan, der sich
+     * selbst widerspricht, darf keinen Hintergrundauftrag starten. */
+    if (m_planGesetzt) {
+        const char *grund = nullptr;
+        if (uft_copy_plan_gate(&m_plan, &grund) == UFT_COPY_DENY) {
+            emit error(QStringLiteral("Kopierplan nicht ausfuehrbar: %1")
+                           .arg(QString::fromUtf8(grund ? grund : "unbekannt")));
+            return false;
+        }
         uft_copy_plan_to_convert_options(&m_plan, &opts);
+    }
 
     /* Ein Hintergrundauftrag hat niemanden zu fragen. Verlustbehaftete
      * Wandlungen weist das Tor hier also ab, statt sie stillschweigend

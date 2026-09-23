@@ -5,16 +5,3 @@
 # Eine Zeile verschwindet, wenn die Kollision aufgeloest ist —
 # welche der beiden Fassungen die kanonische ist, entscheidet der
 # Eigentuemer (P3-410), nicht dieses Tor.
-bam_allocate_block
-bam_ascii_to_petscii
-bam_delete_file
-bam_find_file
-bam_free_block
-bam_is_block_free
-bam_petscii_to_ascii
-bam_print_directory
-bam_read_sector
-bam_repair
-bam_set_disk_id
-bam_set_disk_name
-bam_write_sector

@@ -316,13 +316,45 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
     for (int track = 1; track <= (int)g64->num_tracks && track <= 42; track++) {
         if (uftc_is_cancelled(opts)) break;
 
-        int halftrack = track * 2;
+        /* MF-1332: hier stand `track * 2`. MF-928 hat die Konvention auf
+         * „Dateieintrag i IST Platz i" umgestellt und dafuer
+         * `G64_TRACK_TO_HALFTRACK()` eingefuehrt — in der eigenen Datei
+         * an drei Stellen nachgezogen, die drei Stellen hier uebersehen
+         * (MF-519/MF-529). Gemessen las diese Schleife damit die echten
+         * Spuren 2..35 unter den Namen 1..34; Spur 1 liegt auf Platz 0
+         * und wurde nie gefragt. */
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);
         const uint8_t* track_data = NULL;
         size_t track_len = 0;
         uint8_t speed = 0;
 
         rc = g64_get_track(g64, halftrack, &track_data, &track_len, &speed);
-        if (rc != 0 || !track_data || track_len == 0) continue;
+        if (rc != 0 || !track_data || track_len == 0) {
+            /* MF-1332: hier stand ein nacktes `continue;`. Was der
+             * Wandler nicht wandelt, muss er als gescheitert melden —
+             * sonst steht die Spur weder in `tracks_converted` noch in
+             * `tracks_failed` und ist still verschwunden.
+             *
+             * Gemessen am Vorzustand, Quelle
+             * `tests/corpus_free/vice_c1541_35trk.g64`, BEIDE Wandler
+             * ueber dieselbe Datei und dieselbe Schleifengrenze
+             * (`track <= 42`):
+             *
+             *   G64->HFE   34 gewandelt,  8 gescheitert  = 42
+             *   G64->SCP   34 gewandelt,  0 gescheitert  = 34
+             *
+             * Acht Spuren fielen hier stumm heraus, und der Bericht
+             * meldete Erfolg.
+             *
+             * Das Gegenbeispiel stand die ganze Zeit in DIESER Datei,
+             * gut zweihundert Zeilen weiter unten (`:548`): derselbe
+             * Test, mit `result->tracks_failed++`. Bauform MF-1177
+             * (eine Groesse, zwei Rechnungen), verschraenkt mit
+             * MF-519/MF-529 (eine Stelle geholt, den Nachbarn
+             * uebersehen). */
+            result->tracks_failed++;
+            continue;
+        }
 
         /* Get bit time for this track's speed zone */
         d64_speed_zone_t zone = d64_track_zone(track);
@@ -539,7 +571,9 @@ uft_error_t uftc_convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
     for (int track = 1; track <= num_tracks; track++) {
         if (uftc_is_cancelled(opts)) break;
 
-        int halftrack = track * 2;
+        /* MF-1332: siehe die Leseschleife von `g64_to_scp` — dieselbe
+         * uebersehene Umstellung aus MF-928. */
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);
         const uint8_t* track_data = NULL;
         size_t track_len = 0;
         uint8_t speed = 0;
@@ -709,12 +743,28 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
         int track_num = cyl + 1;
         uint8_t speed = (uint8_t)d64_speed_zone(track_num);
 
-        /* Store in G64 (halftrack = track * 2) */
-        int halftrack = track_num * 2;
-        /* MF-555: `g64_set_track()` weist Halbspuren und zu lange
-         * Spuren ab (MF-534). Die Antwort wurde verworfen — eine
-         * abgewiesene Spur fehlte im Abbild und galt trotzdem als
-         * geschrieben. */
+        /* Store in G64. MF-1332: hier stand `track_num * 2` samt einem
+         * Kommentar, der die alte Rechnung als Regel wiederholte. Die
+         * Schreibseite traegt denselben Versatz wie die Leseseite —
+         * Spur 1 waere auf Platz 2 gelandet und Platz 0 leer geblieben,
+         * also genau das Muster, das MF-928 abgestellt hat. */
+        int halftrack = G64_TRACK_TO_HALFTRACK(track_num);
+        /* MF-555: die Antwort von `g64_set_track()` wurde verworfen —
+         * eine abgewiesene Spur fehlte im Abbild und galt trotzdem als
+         * geschrieben. Dass sie jetzt gelesen wird, ist richtig.
+         *
+         * BERICHTIGT MF-1333. Hier stand: "`g64_set_track()` weist
+         * Halbspuren und zu lange Spuren ab (MF-534)". Gemessen an ihrem
+         * Rumpf prueft sie ausschliesslich
+         * `halftrack < 0 || halftrack >= G64_MAX_TRACKS` — eine
+         * Bereichspruefung des INDEX. Eine LAENGENpruefung gibt es dort
+         * nicht; `effective_len` geht unbesehen nach `malloc`/`memcpy`.
+         *
+         * Diese Stelle ist damit gegen eine zu lange Spur NICHT
+         * gesichert, und das ist hier benannt statt verschwiegen (P3-535). Wer
+         * aus Sektoren baut, bekommt die Absage seit MF-1333 von
+         * `build_gcr_track()`; dieser Pfad nimmt einen fertigen
+         * Bitstrom entgegen und hat sie nicht. */
         if (g64_set_track(g64, halftrack, track_bits, effective_len,
                           speed) != 0) {
             uftc_add_warning(result,

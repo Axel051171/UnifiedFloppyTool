@@ -51,6 +51,7 @@
 
 #include <QtTest>
 #include <QComboBox>
+#include <QPushButton>
 #include <QCheckBox>
 #include <QLabel>
 #include <QWidget>
@@ -128,7 +129,7 @@ private slots:
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *sek = tab.findChild<QWidget *>("spinSectors");
         QVERIFY(lvl && sek);
-        QLabel *lab = beschriftung(tab, QStringLiteral("Sectors:"));
+        QLabel *lab = beschriftung(tab, QStringLiteral("Sektoren/Spur:"));
         QVERIFY2(lab, "genau eine Beschriftung Sectors: erwartet");
 
         waehle(lvl, UFT_COPY_SECTOR);
@@ -222,7 +223,7 @@ private slots:
      *
      * `checkWeakBits` haengt an `preserve_weak_bits` (verlangt
      * `UFT_CAP_WEAK_BITS`) und steht als ERSTES Element in seinem
-     * waagerechten Kasten; dahinter folgt `checkNoFluxAreas`, gemessen
+     * waagerechten Kasten; dahinter folgt `checkDetectNoFlux`, gemessen
      * in forms/tab_format.ui.
      *
      * Zwei Zusagen in einer: der Helfer darf an Stelle 0 nichts finden
@@ -246,7 +247,34 @@ private slots:
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *weak = tab.findChild<QWidget *>("checkWeakBits");
-        auto *nachbar = tab.findChild<QWidget *>("checkNoFluxAreas");
+        /* MF-1307 — der Zeuge ist gewechselt, und der Grund gehoert
+         * hierher statt in eine Commit-Zeile.
+         *
+         * Hier stand `checkDetectNoFlux`. Der taugt seit MF-1307 nicht
+         * mehr: solange „Detect all protections" gesetzt ist — und das
+         * ist die Vorgabe —, werden die fuenf einzelnen Schutzhaken
+         * ABSICHTLICH verborgen, weil „alle" sie einschliesst und fuenf
+         * graue Kaestchen mit Haken keine Information sind.
+         *
+         * Der Test war damit rot, ohne dass an der geprueften Zusage
+         * etwas falsch war: er hat einen Zeugen benutzt, der aus einem
+         * ANDEREN Grund verschwindet.
+         *
+         * Der naechstliegende Ersatz traegt ebenfalls nicht, und das ist
+         * gemessen: `checkWeakBits` sitzt in `unter_anordnung_Erhaltung`,
+         * und dieser Kasten enthaelt GENAU ZWEI Elemente — `checkWeakBits`
+         * und `checkPreserveSync`. Beide sind an den Plan gebunden, beide
+         * verschwinden auf der Sektorebene. Der Kasten hat also keinen
+         * freien Zeugen mehr; das steht oben schon seit MF-1293, nur war
+         * die Folge daraus nicht zu Ende gedacht.
+         *
+         * Zeuge ist deshalb eine ACHSE des Kopierplans. Die vier Achsen
+         * — Ebene, Strategie, Erhaltung, Sicherheit — sind nie verborgen:
+         * sie werden gesperrt, wenn ein Modus sie festlegt, aber nicht
+         * ausgeblendet. Damit ist die Zusage „der Helfer greift nicht
+         * daneben" weiter pruefbar, und sie haengt an keinem Feld, das
+         * aus einem zweiten Grund verschwinden koennte. */
+        auto *nachbar = tab.findChild<QWidget *>("comboPlanStrategy");
         QVERIFY(lvl && weak && nachbar);
 
         waehle(lvl, UFT_COPY_SECTOR);
@@ -254,7 +282,7 @@ private slots:
                  "Vorbedingung: ohne zugesagte Weak Bits ist das gebundene "
                  "Feld weg");
         QVERIFY2(!nachbar->isHidden(),
-                 "checkNoFluxAreas ist der Nachbar, nicht die Beschriftung");
+                 "eine Plan-Achse wird gesperrt, nie verborgen");
     }
 
     /* B6 — ein freies Feld bleibt sichtbar und bedienbar.
@@ -270,9 +298,9 @@ private slots:
         QVERIFY(lvl && sha);
 
         /* `checkHashSha512` steht an Stelle 2 des Hash-Kastens, davor das
-         * Haekchen `checkHashSha256` (gemessen). Auch dort darf der Helfer
+         * Haekchen `checkSHA256` (gemessen). Auch dort darf der Helfer
          * keine Beschriftung sehen — ein Haekchen ist keine. */
-        auto *sha256 = tab.findChild<QWidget *>("checkHashSha256");
+        auto *sha256 = tab.findChild<QWidget *>("checkSHA256");
         QVERIFY(sha256);
 
         for (int ebene : { int(UFT_COPY_SECTOR), int(UFT_COPY_FLUX),
@@ -300,13 +328,13 @@ private slots:
      * Also wird er hier VON HAND versteckt. Ohne Mutation bleibt er
      * versteckt (der Helfer findet nichts); mit Mutation blendet der Plan
      * ihn ein. `checkHashSha512` steht an Stelle 2 des Hash-Kastens,
-     * davor `checkHashSha256` — ein Haekchen, kein Etikett. */
+     * davor `checkSHA256` — ein Haekchen, kein Etikett. */
     void nachbar_wird_nicht_eingeblendet()
     {
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *sha = tab.findChild<QWidget *>("checkHashSha512");
-        auto *sha256 = tab.findChild<QWidget *>("checkHashSha256");
+        auto *sha256 = tab.findChild<QWidget *>("checkSHA256");
         QVERIFY(lvl && sha && sha256);
 
         sha256->setVisible(false);
@@ -316,7 +344,7 @@ private slots:
         QVERIFY2(!sha->isHidden(),
                  "Vorbedingung: das gebundene Feld ist frei und sichtbar");
         QVERIFY2(sha256->isHidden(),
-                 "checkHashSha256 ist der Nachbar, keine Beschriftung — der "
+                 "checkSHA256 ist der Nachbar, keine Beschriftung — der "
                  "Plan darf ihn nicht einblenden");
     }
 
@@ -330,7 +358,7 @@ private slots:
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         QVERIFY(lvl);
-        QLabel *lab = beschriftung(tab, QStringLiteral("Sectors:"));
+        QLabel *lab = beschriftung(tab, QStringLiteral("Sektoren/Spur:"));
         QVERIFY(lab);
 
         waehle(lvl, UFT_COPY_FLUX);

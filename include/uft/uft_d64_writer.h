@@ -169,6 +169,30 @@ typedef struct {
     bool include_error_info;   /* Include error byte per sector */
     bool generate_g64;         /* Output G64 instead of D64 */
     bool flux_output;          /* Generate flux timing data */
+
+    /* MF-1333, angehaengt — bestehende Feld-Offsets bleiben. */
+
+    /** Fuellbyte beider Luecken je Sektor (Gap1 und Gap2).
+     *
+     *  Bis MF-1333 schrieb `d64_write_gap()` fest `0x55`, und zwar auf
+     *  dem VOLLSTAENDIGEN Spurpfad — dem, den `build_gcr_track()`
+     *  normalerweise nimmt. Die oeffentliche Option
+     *  `convert_options_t.gap_fill` erreichte damit die Sektorluecken
+     *  nie; sie faerbte nur die Auffuellung am Spurende.
+     *
+     *  Gebraucht wird es fuer den GEOS-Bootschutz: sein Merkmal ist der
+     *  Inhalt genau dieser Luecken auf Spur 21 (`$55 $55 $67 …` im
+     *  Original, durchgehend `$67` beim GeoCopy-Nachbau). Referenz:
+     *  Beschreibung des Urhebers, `neue-ideen/geocopy.zip ->
+     *  geocopy/READ.ME.cvt`, Kanal *Spec* nach MF-695.
+     *
+     *  Vorgabe `0x55` — `D64_WRITER_CONFIG_DEFAULT` setzt sie. Wer die
+     *  Struktur selbst nullt, bekaeme `0x00`; deshalb behandelt
+     *  `d64_write_track_gcr()` eine 0 hier als "nicht gesetzt" und
+     *  nimmt `0x55`. Ein Lueckenbyte 0x00 ergibt auf einer
+     *  GCR-Diskette ohnehin keinen Sinn: mehr als zwei Null-Bits in
+     *  Folge sind dort nicht darstellbar. */
+    uint8_t gap_fill;
 } d64_writer_config_t;
 
 /**
@@ -188,7 +212,8 @@ typedef struct {
     .track_count = 35, \
     .include_error_info = false, \
     .generate_g64 = false, \
-    .flux_output = false \
+    .flux_output = false, \
+    .gap_fill = 0x55 \
 }
 
 /**
@@ -379,6 +404,27 @@ void d64_write_sync(uint8_t *output, int count);
  * @brief Write gap bytes
  */
 void d64_write_gap(uint8_t *output, int count);
+
+/**
+ * @brief Wie @ref d64_write_gap, aber mit waehlbarem Fuellbyte
+ *        (MF-1333, Stufe 3).
+ *
+ * @param output Ziel. NULL wird abgewiesen statt zu stuerzen.
+ * @param fill   Lueckenbyte. `0x55` ist die Standardformatierung,
+ *               `0x67` der GeoCopy-Nachbau des GEOS-Bootschutzes.
+ * @param count  Byte. `<= 0` schreibt nichts.
+ *
+ * `d64_write_gap()` ruft diese Funktion mit `0x55` und ist damit
+ * unveraendert.
+ *
+ * **Was diese Funktion NICHT kann:** sie kennt die Kapazitaet des
+ * Zielpuffers nicht. Der Aufrufer muss sie pruefen. Fuer den Spurpfad
+ * tut das seit MF-1333 `build_gcr_track()`, das eine Spur ueber
+ * Zonenkapazitaet mit Rueckgabe 0 ABSAGT statt sie durchzulassen; der
+ * Bitstrompfad in `uft_format_convert_bitstream.c` hat diese Sicherung
+ * nicht (dort benannt, P3-479).
+ */
+void d64_write_gap_fill(uint8_t *output, uint8_t fill, int count);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Flux Output (for SCP/G64)

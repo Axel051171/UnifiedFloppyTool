@@ -27,6 +27,13 @@ extern "C" {
 #include <QInputDialog>
 #include "rawformatdialog.h"
 #include "visualdiskdialog.h"
+/* MF-1197: die Spuransicht haengt am fertigen Spurraster. */
+#include <QDialog>
+#include <QLabel>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QVector>
+#include "widgets/trackgridwidget.h"
 
 ToolsTab::ToolsTab(QWidget *parent)
     : QWidget(parent)
@@ -163,11 +170,211 @@ void ToolsTab::onHexView()
     appendOutput(QString());
 }
 
+namespace {
+
+/** Was EIN Lesedurchgang ueber EINE Spur weiss. */
+struct SpurBefund {
+    int  cyl = 0, head = 0;
+    bool lesbar = false;
+    long sektoren = 0, crc_fehler = 0, schwach = 0, ohne_daten = 0;
+};
+
+/** Was er ueber die ganze Diskette weiss. */
+struct DiskBefund {
+    bool        offen = false;
+    QString     fehler;        ///< Warum nicht - in Bedienersprache.
+    QString     pluginName;
+    int         zylinder = 0, koepfe = 0;
+    QVector<SpurBefund> spuren;
+    long        sektoren = 0, crc_fehler = 0, schwach = 0, ohne_daten = 0;
+    long        gelesen = 0, stumm = 0;
+    QStringList auffaellig;
+};
+
+/**
+ * @brief Liest eine Diskette EINMAL und gibt je Spur einen Befund zurueck.
+ *
+ * MF-1197: Diese Schleife stand bis hierher im Rumpf von `onRepair()`.
+ * `onTrackView()` braucht dieselben Zahlen - sie ein zweites Mal zu
+ * schreiben waere MF-1177 gewesen ("eine Groesse, eine Rechnung; wer sie
+ * zweimal rechnet, hat sie nicht gemessen"). Seither ruft **jeder** der
+ * beiden Knoepfe diese eine Funktion.
+ *
+ * Sie urteilt nicht und meldet nichts an die Oberflaeche; sie zaehlt.
+ */
+DiskBefund scanne_spuren(const QString &path)
+{
+    DiskBefund b;
+
+    uft_disk_t *disk = uft_disk_open(path.toUtf8().constData(), true);
+    if (!disk) {
+        b.fehler = QObject::tr(
+            "Nicht lesbar: kein Plugin konnte diese Datei oeffnen. Ueber "
+            "Fehler auf der Diskette ist damit NICHTS bekannt - das ist "
+            "kein Freispruch.");
+        return b;
+    }
+
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
+    if (!plugin || !plugin->read_track) {
+        b.fehler = QObject::tr(
+            "Das Plugin \"%1\" liest keine ganzen Spuren. Ueber einzelne "
+            "Sektoren ist damit nichts bekannt - das ist kein Freispruch.")
+                .arg(plugin && plugin->name ? QString::fromUtf8(plugin->name)
+                                            : QObject::tr("(unbenannt)"));
+        uft_disk_close(disk);
+        return b;
+    }
+
+    uft_geometry_t geom;
+    memset(&geom, 0, sizeof(geom));
+    uft_disk_get_geometry(disk, &geom);
+
+    b.offen      = true;
+    b.pluginName = plugin->name ? QString::fromUtf8(plugin->name)
+                                : QObject::tr("(unbenannt)");
+    b.zylinder   = geom.cylinders > 0 ? geom.cylinders : 0;
+    b.koepfe     = geom.heads > 0 ? geom.heads : 1;
+
+    for (int c = 0; c < b.zylinder; c++) {
+        for (int h = 0; h < b.koepfe; h++) {
+            SpurBefund s;
+            s.cyl = c;
+            s.head = h;
+
+            uft_track_t spur;
+            memset(&spur, 0, sizeof(spur));
+            if (plugin->read_track(disk, c, h, &spur) != UFT_OK) {
+                b.stumm++;
+                if (b.auffaellig.size() < 20)
+                    b.auffaellig << QObject::tr("  Spur %1/%2: nicht lesbar")
+                                        .arg(c).arg(h);
+                b.spuren.push_back(s);   /* lesbar bleibt false */
+                continue;
+            }
+            s.lesbar = true;
+            b.gelesen++;
+
+            for (size_t i = 0; i < spur.sector_count; i++) {
+                const uft_sector_t *sek = &spur.sectors[i];
+                s.sektoren++;
+                if (!sek->crc_ok) {
+                    s.crc_fehler++;
+                    if (b.auffaellig.size() < 20)
+                        b.auffaellig << QObject::tr(
+                            "  Spur %1/%2 Sektor %3: CRC falsch")
+                                .arg(c).arg(h).arg(sek->id.sector);
+                }
+                if (sek->weak) {
+                    s.schwach++;
+                    if (b.auffaellig.size() < 20)
+                        b.auffaellig << QObject::tr(
+                            "  Spur %1/%2 Sektor %3: schwache Bits")
+                                .arg(c).arg(h).arg(sek->id.sector);
+                }
+                if (!sek->data || sek->data_len == 0) s.ohne_daten++;
+                free(sek->data);
+            }
+            free(spur.sectors);
+
+            b.sektoren   += s.sektoren;
+            b.crc_fehler += s.crc_fehler;
+            b.schwach    += s.schwach;
+            b.ohne_daten += s.ohne_daten;
+            b.spuren.push_back(s);
+        }
+    }
+
+    uft_disk_close(disk);
+    return b;
+}
+
+}  // namespace
+
 void ToolsTab::onTrackView()
 {
-    appendOutput(tr("Track View: Feature not yet implemented"));
-    appendOutput(tr("This will show track-level analysis with sector headers."));
+    /* MF-1197: hier standen drei Platzhalterzeilen, die dem Benutzer
+     * sagten, es gebe die Faehigkeit noch nicht. Gemessen war das eine
+     * UNTERTREIBUNG - `TrackGridWidget` (882 Z.) lag fertig im Binary und
+     * hatte null Aufrufer (Klasse P3-204/MF-930, gehalten von Tor 68).
+     * Bewacht von tests/test_tools_tab_track_view.cpp.
+     *
+     * Die alte Zeichenkette wird hier ABSICHTLICH nicht zitiert: Tor 34
+     * sucht genau sie im Quelltext und haelt ein Zitat fuer eine Zusage.
+     * Das ist kein Fehler des Tores - es soll Kommentare lesen, das ist
+     * seine Messung (MF-569/735). Ein Zitat einer ENTFERNTEN Zusage kann
+     * es nicht von der Zusage selbst unterscheiden, also gehoert das
+     * Zitat weg und nicht die Messung. */
+    const QString path = ui->editAnalyzeFile->text();
+    if (path.isEmpty()) {
+        QMessageBox::information(this, tr("Track View"),
+            tr("Please select a disk image first."));
+        return;
+    }
+
+    appendOutput(QString("======================================="));
+    appendOutput(tr("Spuransicht: %1").arg(QFileInfo(path).fileName()));
+
+    const DiskBefund b = scanne_spuren(path);
+    if (!b.offen) {
+        appendOutput(b.fehler);
+        appendOutput(QString());
+        return;
+    }
+
+    appendOutput(tr("Plugin: %1, %2 Zylinder x %3 Kopf/Koepfe")
+                     .arg(b.pluginName).arg(b.zylinder).arg(b.koepfe));
+    appendOutput(tr("%1 Spuren gelesen, %2 stumm, %3 Sektoren.")
+                     .arg(b.gelesen).arg(b.stumm).arg(b.sektoren));
     appendOutput(QString());
+
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Spuransicht - %1").arg(QFileInfo(path).fileName()));
+    dlg->setMinimumSize(760, 520);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+
+    QLabel *kopf = new QLabel(
+        tr("<b>%1</b> &mdash; %2 Zylinder &times; %3 Kopf/Koepfe, "
+           "%4 Sektoren gelesen")
+            .arg(b.pluginName).arg(b.zylinder).arg(b.koepfe).arg(b.sektoren),
+        dlg);
+    kopf->setWordWrap(true);
+    layout->addWidget(kopf);
+
+    /* Der Vorbehalt gehoert dorthin, wo jemand ihn liest (MF-569): das
+     * Raster zeigt EINE Lesung dieser Datei, keine Aussage ueber die
+     * Diskette, von der sie stammt. */
+    QLabel *vorbehalt = new QLabel(
+        tr("<i>Gezeigt wird diese eine Lesung des Abbilds. Spuren, die das "
+           "Plugin nicht liefert, bleiben grau &mdash; sie sind damit nicht "
+           "als fehlerfrei erwiesen, sondern ungelesen.</i>"), dlg);
+    vorbehalt->setWordWrap(true);
+    layout->addWidget(vorbehalt);
+
+    TrackGridWidget *grid = new TrackGridWidget(dlg);
+    grid->setDiskGeometry(b.zylinder, b.koepfe);
+    grid->reset();
+    for (const SpurBefund &s : b.spuren) {
+        TrackStatus st;
+        if (!s.lesbar)                      st = TrackStatus::ERROR;
+        else if (s.crc_fehler || s.schwach) st = TrackStatus::WARNING;
+        else if (s.sektoren == 0)           st = TrackStatus::WARNING;
+        else                                st = TrackStatus::GOOD;
+
+        const int gut = static_cast<int>(s.sektoren - s.crc_fehler - s.ohne_daten);
+        grid->updateTrackStatus(s.cyl, s.head, st,
+                                gut > 0 ? gut : 0,
+                                static_cast<int>(s.sektoren));
+    }
+    layout->addWidget(grid, 1);
+
+    QPushButton *closeBtn = new QPushButton(tr("Close"), dlg);
+    connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::close);
+    layout->addWidget(closeBtn, 0, Qt::AlignRight);
+
+    dlg->show();
 }
 
 void ToolsTab::onFluxView()
@@ -282,7 +489,64 @@ void ToolsTab::onConvert()
      * Fassung rief `FormatTab::aktuellerPlan()`, und der Binder hat
      * daran gezeigt, dass zwei Qt-Tests `toolstab.cpp` ohne
      * `formattab.cpp` binden. */
-    const uft_copy_plan_t plan = uft_copy_plan_current();
+    uft_copy_plan_t plan = uft_copy_plan_current();
+
+    /* MF-1311 — hier, und nur hier, kennt der Baum BEIDE Formate.
+     *
+     * Das war der eigentliche Fund der Messung: `dstFmt` steht weiter
+     * oben und ist hier noch im Gueltigkeitsbereich, und die Quelle
+     * laesst sich aus der Datei selbst bestimmen. Die Faehigkeitsmaske
+     * ist an dieser Stelle also MESSBAR — waehrend
+     * `FormatTab::copyPlanCaps()` sie nur aus dem QUELLformat rechnet
+     * und sie dort ohnehin stirbt, weil sie den Plan nie verlaesst.
+     *
+     * `uft_probe_file_format()` gibt fuer die Quelle direkt ein Plugin
+     * zurueck — keine Mehrdeutigkeit. Fuer das Ziel ist sie moeglich
+     * (gemessen teilen sich 82 von 88 Plugins ihre Container-ID),
+     * deshalb `uft_resolve_format_plugin()` mit Pfadhinweis und
+     * Kandidatenzahl: bleibt mehr als einer uebrig, ist die Maske NICHT
+     * ermittelt, und der Plan sagt das mit `caps_bekannt = false`. */
+    {
+        const uft_format_plugin_t *qpl =
+            uft_probe_file_format(source.toUtf8().constData());
+
+        size_t kandidaten = 0;
+        const uft_format_plugin_t *zpl = uft_resolve_format_plugin(
+            dstFmt, target.toUtf8().constData(), &kandidaten);
+        if (kandidaten != 1) zpl = nullptr;
+
+        uint32_t maske = 0u;
+        plan.caps_bekannt = uft_copy_caps_von_plugins(qpl, zpl, &maske);
+        plan.caps = maske;
+    }
+
+    /* MF-1309/MF-1311: erst das Tor. Hier steht ein Bediener davor, also
+     * bekommt er den Grund zu sehen statt einer stillen Ablehnung — und
+     * bei "nicht gemessen" wird weder gesperrt noch stillschweigend
+     * durchgelassen, sondern gefragt. */
+    {
+        const char *grund = nullptr;
+        const uft_copy_verdict_t urteil =
+            uft_copy_plan_gate_caps(&plan, &grund);
+        const QString g = QString::fromUtf8(grund ? grund : "unbekannt");
+
+        if (urteil == UFT_COPY_DENY) {
+            QMessageBox::warning(
+                this, tr("Convert"),
+                tr("Der Kopierplan ist nicht ausfuehrbar: %1").arg(g));
+            return;
+        }
+        if (urteil == UFT_COPY_NEEDS_MEASUREMENT) {
+            const auto antwort = QMessageBox::question(
+                this, tr("Convert"),
+                tr("Der Plan verlangt '%1', und ob Quell- und Zielformat das "
+                   "tragen, konnte nicht gemessen werden.\n\n"
+                   "Ungemessen heisst weder ja noch nein. Trotzdem "
+                   "fortfahren?").arg(g),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (antwort != QMessageBox::Yes) return;
+        }
+    }
     uft_copy_plan_to_convert_options(&plan, &opts);
 
     /* NACH dem Plan: kein Plan erteilt sich selbst eine Zustimmung
@@ -405,76 +669,27 @@ void ToolsTab::onRepair()
         }
     }
 
-    uft_disk_t *disk = uft_disk_open(path.toUtf8().constData(), true);
-    if (!disk) {
-        appendOutput(tr("Nicht lesbar: kein Plugin konnte diese Datei "
-                        "oeffnen. Ueber Fehler auf der Diskette ist damit "
-                        "NICHTS bekannt - das ist kein Freispruch."));
+    /* MF-1197: der Lesedurchgang liegt seit hier in `scanne_spuren()` und
+     * wird von `onTrackView()` mitbenutzt. Zwei Kopien derselben Schleife
+     * waeren MF-1177 gewesen. Die Ausgabe darunter ist unveraendert. */
+    const DiskBefund befund = scanne_spuren(path);
+    if (!befund.offen) {
+        appendOutput(befund.fehler);
         appendOutput(QString());
         return;
     }
-
-    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
-    if (!plugin || !plugin->read_track) {
-        appendOutput(tr("Das Plugin \"%1\" liest keine ganzen Spuren. Ueber "
-                        "einzelne Sektoren ist damit nichts bekannt - das "
-                        "ist kein Freispruch.")
-                         .arg(plugin && plugin->name
-                                  ? QString::fromUtf8(plugin->name)
-                                  : tr("(unbenannt)")));
-        uft_disk_close(disk);
-        appendOutput(QString());
-        return;
-    }
-
-    uft_geometry_t geom;
-    memset(&geom, 0, sizeof(geom));
-    uft_disk_get_geometry(disk, &geom);
-    const int zylinder = geom.cylinders > 0 ? geom.cylinders : 0;
-    const int koepfe   = geom.heads > 0 ? geom.heads : 1;
 
     appendOutput(tr("Plugin: %1, %2 Zylinder x %3 Kopf/Koepfe")
-                     .arg(plugin->name ? QString::fromUtf8(plugin->name)
-                                       : tr("(unbenannt)"))
-                     .arg(zylinder).arg(koepfe));
+                     .arg(befund.pluginName)
+                     .arg(befund.zylinder).arg(befund.koepfe));
 
-    long sektoren = 0, crc_fehler = 0, schwach = 0, ohne_daten = 0;
-    long spuren_gelesen = 0, spuren_stumm = 0;
-    QStringList auffaellig;
-
-    for (int c = 0; c < zylinder; c++) {
-        for (int h = 0; h < koepfe; h++) {
-            uft_track_t spur;
-            memset(&spur, 0, sizeof(spur));
-            if (plugin->read_track(disk, c, h, &spur) != UFT_OK) {
-                spuren_stumm++;
-                if (auffaellig.size() < 20)
-                    auffaellig << tr("  Spur %1/%2: nicht lesbar").arg(c).arg(h);
-                continue;
-            }
-            spuren_gelesen++;
-            for (size_t i = 0; i < spur.sector_count; i++) {
-                const uft_sector_t *s = &spur.sectors[i];
-                sektoren++;
-                if (!s->crc_ok) {
-                    crc_fehler++;
-                    if (auffaellig.size() < 20)
-                        auffaellig << tr("  Spur %1/%2 Sektor %3: CRC falsch")
-                                          .arg(c).arg(h).arg(s->id.sector);
-                }
-                if (s->weak) {
-                    schwach++;
-                    if (auffaellig.size() < 20)
-                        auffaellig << tr("  Spur %1/%2 Sektor %3: schwache Bits")
-                                          .arg(c).arg(h).arg(s->id.sector);
-                }
-                if (!s->data || s->data_len == 0) ohne_daten++;
-                free(s->data);
-            }
-            free(spur.sectors);
-        }
-    }
-    uft_disk_close(disk);
+    const long sektoren       = befund.sektoren;
+    const long crc_fehler     = befund.crc_fehler;
+    const long schwach        = befund.schwach;
+    const long ohne_daten     = befund.ohne_daten;
+    const long spuren_gelesen = befund.gelesen;
+    const long spuren_stumm   = befund.stumm;
+    const QStringList auffaellig = befund.auffaellig;
 
     appendOutput(tr("Untersucht: %1 Spuren gelesen, %2 stumm, %3 Sektoren.")
                      .arg(spuren_gelesen).arg(spuren_stumm).arg(sektoren));

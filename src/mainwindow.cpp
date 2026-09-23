@@ -17,11 +17,20 @@
 #include "formattab.h"
 #include "explorertab.h"
 #include "toolstab.h"
+/* MF-1194: diese vier standen mit SOURCES und FORMS im .pro, wurden uebersetzt
+ * und ins Programm gelinkt — und niemand rief je `new` darauf. 2381 Zeilen
+ * fertige Oberflaeche ohne Tuer, Klasse P3-204/MF-930. */
+#include "protectiontab.h"
+#include "forensictab.h"
+#include "nibbletab.h"
+#include "xcopytab.h"
 #include "uft_otdr_panel.h"
 #include "widgets/fluxvisualizerwidget.h"   /* MF-632 */
 #include <QSplitter>
 
 #include <QVBoxLayout>
+#include <QAction>
+#include <QDialog>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
@@ -161,12 +170,69 @@ void MainWindow::loadTabWidgets()
     layout4->setContentsMargins(0, 0, 0, 0);
     layout4->addWidget(catalogTab);
     
-    // Tab 6: Tools
+    // Tab 6: Tools -> MF-1297: jetzt ein Fenster aus dem Menue, kein Reiter
     ToolsTab* toolsTab = new ToolsTab();
-    QVBoxLayout* layout5 = new QVBoxLayout(ui->tab_tools);
-    layout5->setContentsMargins(0, 0, 0, 0);
-    layout5->addWidget(toolsTab);
-    
+
+    /* Tabs 8-11 (MF-1194) — vier Reiter, die es die ganze Zeit gab.
+     *
+     * Gemessen vor dem Verdrahten, weil MF-568..570 beim letzten Mal sechs
+     * Klasse-A-Befunde ergaben und `.claude/CLAUDE.md` deshalb verlangt, eine
+     * erfundene Anzeige NICHT an einen ungeprueften Leser zu haengen:
+     *
+     *   forensictab   11 Urteilstexte, alle echte Ternaere gegen wirklich
+     *                 verglichene Bytes ("✓ MATCH" : "✗ MISMATCH"); die drei
+     *                 Bescheinigungen ohne Pruefung hat MF-570 dort entfernt
+     *   protectiontab 0 Urteilstexte
+     *   nibbletab     0 Urteilstexte
+     *   xcopytab      ehrlicher Stummel nach MF-012 — der Start-Knopf ist
+     *                 abgeschaltet und sein Tooltip nennt den Grund
+     *
+     * Tor 34 und Tor 35 melden ueber den ganzen Baum 0. Das ist keine
+     * Entwarnung (Tor 34 sieht nur selbstbeschriftete Platzhalter), deshalb
+     * die Handprobe oben. */
+    ProtectionTab* protectionTab = new ProtectionTab();
+    ForensicTab* forensicTab = new ForensicTab();
+    NibbleTab* nibbleTab = new NibbleTab();
+    XCopyTab* xcopyTab = new XCopyTab();
+
+    /* MF-1297 - der Entwurf hat SECHS Reiter, der Baum hatte elf.
+     *
+     * Die fuenf, die wegfallen, werden NICHT geloescht. Genau das waere die
+     * Ruecknahme von MF-1194 gewesen, das sie ueberhaupt erst erreichbar
+     * gemacht hat ("Bestand, nicht Faehigkeit"). Jede der fuenf Klassen wird
+     * weiterhin erzeugt; sie haengen jetzt an einem Menueeintrag statt an
+     * einem Reiter.
+     *
+     * Das Fenster wird einmal gebaut und wiederverwendet, damit ein zweiter
+     * Aufruf den Zustand nicht verliert - bei ForensicTab waere das ein
+     * verworfener Vergleich. */
+    auto alsFenster = [this](QAction *aktion, QWidget *inhalt,
+                             const QString &titel) {
+        if (!aktion || !inhalt) return;
+        QDialog *fenster = new QDialog(this);
+        fenster->setWindowTitle(titel);
+        QVBoxLayout *l = new QVBoxLayout(fenster);
+        l->setContentsMargins(0, 0, 0, 0);
+        l->addWidget(inhalt);
+        fenster->resize(1100, 760);
+        connect(aktion, &QAction::triggered, this, [fenster]() {
+            fenster->show();
+            fenster->raise();
+            fenster->activateWindow();
+        });
+    };
+
+    alsFenster(ui->actionOpenTools,      toolsTab,      tr("Tools"));
+    alsFenster(ui->actionOpenProtection, protectionTab, tr("Protection Analyzer"));
+    alsFenster(ui->actionOpenForensic,   forensicTab,   tr("Forensic Compare"));
+    alsFenster(ui->actionOpenNibble,     nibbleTab,     tr("Nibble Editor"));
+    alsFenster(ui->actionOpenXCopy,      xcopyTab,      tr("XCopy"));
+
+    qInfo("[MainWindow] MF-1297: 5 Reiter sind Menuefenster geworden; "
+          "die Reiterleiste hat jetzt %d statt 11 Eintraege.",
+          ui->tabWidget ? ui->tabWidget->count() : -1);
+
+
     // Tab 7: Signal Analysis — OTDR-style flux quality visualization
     //
     // MF-632 (SCOUT-F2 Stufe 2): darunter haengt jetzt die

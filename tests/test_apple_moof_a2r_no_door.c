@@ -1,6 +1,7 @@
 /**
  * @file test_apple_moof_a2r_no_door.c
- * @brief MOOF und A2R stehen in der Liste, aber nicht in der Registry (MF-726)
+ * @brief MOOF steht in der Liste, aber nicht in der Registry (MF-726).
+ *        A2R stand es auch - bis MF-1322 ihm eine Tuer gebaut hat.
  *
  * ── Die Behauptung ──────────────────────────────────────────────────────
  *
@@ -10,13 +11,16 @@
  *
  * ── Die Messung ─────────────────────────────────────────────────────────
  *
- * Sechs der acht tragen ein Plugin und stehen in der Registry, ueber die
- * `uft_disk_open()` geht. **Zwei nicht:**
+ * BERICHTIGT MF-1322. Hier stand „Zwei nicht" — das galt bis zu dem
+ * Tag, an dem A2R seine Tuer bekam. Heute ist es EINS: `moof`.
+ *
+ * Sieben der acht tragen ein Plugin und stehen in der Registry, ueber die
+ * `uft_disk_open()` geht. **Einer nicht:**
  *
  * | Format | Plugin-Struct | Registry | Aufrufer |
  * |---|---|---|---|
  * | do, po, woz, 2img, nib, dc42 | ja | ja | — |
- * | **a2r** | **keins** | **0** | `uft_a2r_probe`: 0 ausserhalb der eigenen Datei; `uft_a2r_parser.c` (1111 Zeilen): **0 ueberhaupt** |
+ * | **a2r** | **seit MF-1322 `uft_format_plugin_a2r`** | **ja** | vorher: `uft_a2r_parser.c` 13 Aufrufer, ALLE in Tests |
  * | **moof** | **keins** | **0** | `uft_moof_parser.c` (597 Zeilen): **1**, und das ist ein Test |
  *
  * Beide Dateien werden **gebaut** (`.pro`). Beide sind ueber die
@@ -104,7 +108,7 @@ static size_t wer_beansprucht(const uint8_t *b, size_t n, const char *was)
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("MOOF und A2R: in der Liste, nicht in der Registry (MF-726)\n\n");
+    printf("MOOF ohne Tuer, A2R mit (MF-726, halb erledigt MF-1322)\n\n");
 
     uft_error_t rc = uft_register_all_formats();
     printf("  uft_register_all_formats() -> rc=%d, %zu Plugins\n\n",
@@ -128,8 +132,25 @@ int main(void)
      *
      * Die Erwartung war „niemand beansprucht sie". Gemessen ist es
      * schlimmer: **das falsche Plugin gewinnt.** */
-    const char *fremd[] = { "MOOF", "A2R2", "A2R3" };
-    for (size_t i = 0; i < 3; i++) {
+    /* ── MF-1322: DIE HAELFTE DIESES BEFUNDS IST ERLEDIGT ─────────────
+     *
+     * Hier standen drei Koepfe in EINER Liste: MOOF, A2R2, A2R3. Seit
+     * MF-1322 hat A2R ein eigenes Plugin — die Tuer zum Leser, der seit
+     * Langem im Baum lag und gemessen 13 Aufrufer hatte, alle in Tests.
+     *
+     * Damit stimmt die Zusage unten fuer A2R nicht mehr, und sie SOLL
+     * nicht mehr stimmen: `A2R` beansprucht den Kopf jetzt mit 50, weil
+     * es eine acht Byte lange, formatspezifische Kennung an fester
+     * Position liest — genau der Fall, fuer den
+     * `docs/SONDEN_DOKTRIN.md` +50 vorsieht.
+     *
+     * Die Liste ist deshalb GETEILT statt aufgeweicht. MOOF traegt den
+     * Befund unveraendert weiter; A2R bekommt die Gegenzusage weiter
+     * unten, und die ist schaerfer als die alte: sie verlangt einen
+     * NAMEN. Waere dort nur „Konfidenz >= 50" geprueft, koennte auch
+     * wieder ein fremdes Plugin gewinnen und der Test bliebe gruen. */
+    const char *fremd[] = { "MOOF" };
+    for (size_t i = 0; i < sizeof(fremd) / sizeof(fremd[0]); i++) {
         kopf(buf, sizeof(buf), fremd[i]);
         uft_probe_ranking_t r;
         memset(&r, 0, sizeof(r));
@@ -170,6 +191,36 @@ int main(void)
         }
     }
 
+    /* ── Die andere Haelfte: A2R HAT jetzt eine Tuer (MF-1322) ────────
+     *
+     * Die Zusage verlangt den NAMEN, nicht nur eine Zahl. Eine Zusage
+     * „Konfidenz >= 50" waere von jedem beliebigen Plugin zu erfuellen,
+     * und genau das ist der Befund dieses Tests: dass das FALSCHE
+     * gewinnt. Wer hier eine Zahl prueft statt eines Namens, prueft die
+     * Krankheit als Heilung. */
+    const char *eigen[] = { "A2R2", "A2R3" };
+    for (size_t i = 0; i < sizeof(eigen) / sizeof(eigen[0]); i++) {
+        kopf(buf, sizeof(buf), eigen[i]);
+        uft_probe_ranking_t r;
+        memset(&r, 0, sizeof(r));
+        (void)uft_probe_buffer_ranked(buf, sizeof(buf), sizeof(buf), &r);
+
+        PRUEFE(r.winner != NULL, "%s: niemand beansprucht den Kopf", eigen[i]);
+        if (r.winner) {
+            PRUEFE(strcmp(r.winner->name, "A2R") == 0,
+                   "%s: Sieger ist '%s' statt 'A2R' — die Tuer aus MF-1322 "
+                   "traegt nicht, oder ein fremdes Plugin ueberbietet sie",
+                   eigen[i], r.winner->name);
+            PRUEFE(r.confidence >= 50,
+                   "%s: Konfidenz %d — eine acht Byte lange Kennung an "
+                   "fester Position ist nach docs/SONDEN_DOKTRIN.md +50 wert",
+                   eigen[i], r.confidence);
+            PRUEFE(r.verdict != UFT_PROBE_VERDICT_MEHRDEUTIG,
+                   "%s: das Urteil ist MEHRDEUTIG, obwohl ein Plugin die "
+                   "Kennung wirklich gelesen hat", eigen[i]);
+        }
+    }
+
     /* ── Die Ursache, und sie ist breiter als Apple ───────────────────
      *
      * `kfx_probe()` (`src/formats/kfx/uft_kfx.c:57`) zaehlt Vorkommen
@@ -203,7 +254,7 @@ int main(void)
 
     printf("\n  Was die gruene Ampel heisst — und es ist schlimmer als "
            "'keine Tuer':\n"
-           "  MOOF und A2R haben kein eigenes Plugin, aber sie werden "
+           "  MOOF hat kein eigenes Plugin, wird aber trotzdem "
            "trotzdem\n"
            "  beansprucht: KFX gewinnt mit 40. `uft_disk_open()` uebergibt "
            "eine\n"

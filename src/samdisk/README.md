@@ -63,6 +63,16 @@ Zeile, so wie es die Zitate oben tun.
 **T3** (unverifiziert), beide mit benanntem Blocker: `dms` fehlt ein
 ERZEUGER (P3-347), `syn` eine nachpruefbare Referenz (P3-340).
 
+> **NACHTRAG MF-1332 — die Aussage oben traegt ihr Datum und bleibt
+> deshalb stehen, aber einer der zwei Namen stimmt nicht mehr.** `dms`
+> ist seit **MF-1135** auf **T1b**: der fehlende Erzeuger aus P3-347 ist
+> gefunden (`dlitz/adf2dms`, MIT, ein ADF-nach-DMS-Packer in reinem
+> Python, dessen Schreiber-Linie unabhaengig von xDMS ist — und aus xDMS
+> stammen sowohl UFTs Leser als auch der von hxcfe). Offen von den
+> beiden ist allein `syn`. Gemessen am selben Tag steht die Tafel bei
+> T1=8, T1b=70, T2=8, T3=**1**, n/a=2 von 89; die aktuelle Zahl steht
+> immer in `docs/VERIFICATION_TIERS.md`, nicht hier.
+
 Hier stand zuerst „62“ und dann „37 am 2026-09-05“ — beides von Hand
 gepflegte Zahlen, und beide sind gedriftet (MF-899, jetzt MF-1085). Die
 Lehre ist dieselbe wie in MF-636: **diese Zahl gehört nicht in eine

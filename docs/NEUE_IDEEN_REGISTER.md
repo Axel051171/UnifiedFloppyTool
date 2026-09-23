@@ -14,9 +14,9 @@ es muss niemand zaehlen.
 
 | | Zahl |
 |---|---|
-| Eintraege auf der obersten Ebene | 217 |
-| davon mit Urteil | 170 |
-| **ohne Urteil** | **47** |
+| Eintraege auf der obersten Ebene | 222 |
+| davon mit Urteil | 172 |
+| **ohne Urteil** | **50** |
 | Urteile ohne Eintrag (verwaist) | 0 |
 | Urteile mit fehlendem Feld | 0 |
 
@@ -188,6 +188,8 @@ es muss niemand zaehlen.
 | `UFT_C64PP_Protection_Catalog.zip` | GPL-2.0 — eigenes Paket | `LICENSE_UFT_PROJECT.txt` IM PAKET (GPL-2-Volltext, FSF-Kopfzeile). Der Dateiname passte nicht auf mein erstes Lizenz-Muster. | Port | Fundus | Pruefen, ob der Katalog im Baum ist (`src/protection/`, P0-2: Katalog ohne Aufrufer) — dann ist dies ein Archiv, kein Fund. |
 | `UFT_Floppy_Reference_AARD_Paket.zip` | LGPL (Version im Volltext nicht bestimmbar) | `UFT_Floppy_Reference_AARD_Paket/LICENSE` IM PAKET gelesen (1783 Byte), nicht das API-Feld eines Hosters | Fundus | Fundus | Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal. |
 | `UFT_Media_Analysis_GUI_Integration.zip` | LGPL (Version im Volltext nicht bestimmbar) | `deliverables/UFT_Media_Analysis_GUI_Integration/LICENSE` IM PAKET gelesen (1783 Byte), nicht das API-Feld eines Hosters | Fundus | Fundus | Lizenz ist gemessen; der KANAL ist offen, weil heute nicht gesagt ist, was aus diesem Paket gebraucht wird (MF-695: Fundus heisst benannt wartend, nicht verfallen). Naechster Griff: benennen, WOFUER — dann folgt der Kanal. |
+| `UFT_missing_formats_integration_plan.zip` | GPL-2.0-or-later fuer die C-Beispiele, laut README; Eigentuemer-Zulieferung, kein fremder Quelltext | mit zipfile GELISTET: 21 Eintraege (22 220 Byte), KEINE Datei namens LICENSE/COPYING/COPYRIGHT. README vollstaendig gelesen: „Es enthaelt keine blind aus SAMdisk kopierten Quelltexte. Die C-Beispiele sind eigenstaendige, sicherheitsorientierte Geruste unter GPL-2.0-or-later.“ Vereinbar mit dem GPL-2-Baum. | Spec | Fundus | Analyse liegt als `docs/FORMAT_INTEGRATION_PLAN.md` (MF-1332). Gemessen ist der Zugang GESPERRT: das Moratorium der EINFRIER-REGEL haelt, weil `nfd` auf T2 steht (atr/d64/adf T1b, fdi T1) — neun der dreizehn Formate waeren neue Plugins. Sofort machbar sind nur drei Punkte ohne Formatschicht-Neubau; der Schluessel zu allem uebrigen ist `nfd` auf T1/T1b, und dafuer ist die Abstammungs-Absage aus P3-1 gemessen nur zur Haelfte haltbar: FIVEC steht NICHT im Kopf von `src/formats/nfd/uft_nfd_plugin.c`. Kennzahl `Fundus`, weil keine der vier Release-Zahlen sich bewegt — neue Formate HEBEN T3 (Beleg: `a2r`), und `nfd` von T2 auf T1b bewegt T3 nicht. |
+| `UFT_ReTrace_Entpack_Tracing_Workflow.zip` | GPL-2.0-or-later — an der DATEI gemessen, nicht am API-Feld | `LICENSE` IM PAKET, 330 Byte, SPDX-Zeile `GPL-2.0-or-later`; vollstaendig gelesen. Vereinbar mit dem GPL-2-Baum. Die Datei trennt ausdruecklich, was sie NICHT abdeckt: „This license covers only the files in this package. It does not grant rights to any third-party binary, disk image, disassembly, or other input processed with the workflow.“ `docs/LEGAL_CLEANROOM.md` fuehrt das aus (historische Kopierprogramme, Kickstart-ROMs, Diskettenimages, erzeugte Disassemblies, nahezu woertliche Rekonstruktionen) und nennt sogar die Falle, die dieser Baum bei LisaEm und `fdtc` selbst hatte: „Eine MIT-Datei neben einer Sammlung beweist nicht automatisch, dass der Sammler die enthaltenen historischen Programme unter MIT stellen durfte.“ Historische Programme sind NICHT mitgeliefert. | Helfer-Prozess | Fundus | GEBAUT UND AUSGEFUEHRT, nicht auf Zusicherung (MF-1178): eigene Tests 10/10, und die Kette `inventory -> analyze -> report` laeuft an einer echten Eingabe durch — erzeugt Quell-SHA-256, je Datei einen SHA-256, Hunk-Kennzeichen und einen schema-getaggten Bericht (`uft-retrace-inventory-1`). Die ZIP-Entpackung wurde mit EIGENER Pfadpruefung vorgenommen statt der Zusage des Pakets zu glauben; kein Ausbruch. VIER UFT-seitige Behauptungen aus `docs/UFT_INTEGRATION.md` nachgemessen, DREI halten: `src/recovery/uft_multiread_pipeline.c`, `include/uft/formats/uft_amiga_syncs.h` (+ `.c`) und `uft_copy_finding_t` (`uft_copy_plan.h:278`) existieren. Die VIERTE haelt NICHT: die vorgeschlagene Empfehlung soll „empfohlene Ebene, benoetigte Faehigkeiten, Verlustmeldung, Messquelle, Konfidenz“ liefern — `uft_copy_finding_t` hat gemessen GENAU DREI Felder (`hard`, `id`, `text`) und traegt nichts davon. Der Anknuepfungspunkt ist also echt, seine Gestalt nicht. Kanal *Helfer-Prozess* nach MF-695: ausfuehrbar, nicht einlinkbar — es ist ein Python-Werkzeug neben dem Produkt, kein Code fuer den Baum. Kennzahl `Fundus`, weil keine der vier Release-Zahlen sich bewegt: es ist eine METHODE (Clean-Room-Uebergabe mit Provenienz), kein Formatbeleg und kein Wandlungspfad. Naechster Griff waere eine Eigentuemer-Entscheidung, ob `uft_copy_finding_t` um die fuenf Felder erweitert wird; das ist neuer Code an einer Kernstruktur und gehoert vorgelegt, nicht gebaut. |
 | `UTIL-DISK-Fast_False_Floppy_Format-master.zip` | ungemessen | Readme `…/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). | Fundus | Fundus | Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben. |
 | `victor9k-flux-tools-main.zip` | ungemessen | Readme `victor9k-flux-tools-main/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). | Fundus | Fundus | Readme von Hand lesen. Bis dahin: nicht uebernehmen, nicht weitergeben. Victor 9000 ist im Baum T1b (MF-1026/1085) — ein Werkzeug von fremder Hand waere als Oracle interessant, wenn die Lizenz es hergibt. |
 | `Win98_FDB_UFT_Paket.zip` | eigenes Paket (UFT_Paket) | Benennung `…_UFT_Paket`; Readme `Win98_FDB_UFT_Paket/README.md` maschinell nach 9 Bedingungsmustern durchsucht (erste 8000 Byte): kein Treffer; keine Datei mit Lizenznamen im Paket (Listing). CLAUDE.md/MF-1174 nennt die Win98-FDB-Zulieferung (oeffnet mit blankem fopen, weil `uft_path_safe` nicht existiert). | Port | Fundus | Pruefen, ob im Baum angekommen; MF-1174 kennt sie. |
@@ -197,7 +199,7 @@ es muss niemand zaehlen.
 
 ## Noch ohne Urteil
 
-47 Eintraege. Sie stehen hier vollstaendig, weil eine
+50 Eintraege. Sie stehen hier vollstaendig, weil eine
 gekuerzte Liste genau die Aufzaehlung waere, gegen die
 dieses Register gebaut ist.
 
@@ -240,7 +242,10 @@ dieses Register gebaut ist.
 - `Skript.pdf`
 - `UFT-NN — TR-DOS.zip`
 - `uft-trs80-code.zip`
+- `uft_a2r_parser.zip`
 - `UFT_Atari_ST_Cartridge_Detection.zip`
+- `uft_copy_plan.zip`
+- `uft_flux_decoder.zip`
 - `uft_scp_parser.zip`
 - `UFT_VORBEREITUNG_A8RAWCONV_GUI_KOMPONENTEN.md`
 - `UFT_VORBEREITUNG_MEDIENLAYOUT_ALLE_FORMATE.md`

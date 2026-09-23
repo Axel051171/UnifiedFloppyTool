@@ -361,7 +361,13 @@ TEST(g64_save_load_roundtrip)
     /* Add some tracks */
     uint8_t track_data[7000];
     for (int track = 1; track <= 35; track++) {
-        int halftrack = track * 2;
+        /* MF-1332: hier stand `track * 2` — die Rechnung von VOR MF-928.
+         * Der Test schrieb damit Spur 1 auf Platz 2 und liess Platz 0
+         * leer, und weil er mit derselben Formel zurueckliest, blieb er
+         * gruen. Genau davor warnt MF-928 im eigenen Kopf: „Leser und
+         * Schreiber machten denselben Fehler, also schwieg der
+         * Rundlauf." */
+        int halftrack = G64_TRACK_TO_HALFTRACK(track);
         memset(track_data, track, sizeof(track_data));
         memset(track_data, 0xFF, 10);
         g64_set_track(img, halftrack, track_data, sizeof(track_data), d64_speed_zone(track));

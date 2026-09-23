@@ -16,6 +16,23 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+
+    /* MF-1298 - Fusion als Zeichnung, ausdruecklich gewuenscht.
+     *
+     * Ohne diese Zeile waehlt Qt6 auf Windows die Systemzeichnung. Deren
+     * Zahlenfelder haben die klobigen Pfeile; Fusion zeichnet die schmalen
+     * uebereinander und sieht auf allen Plattformen gleich aus.
+     *
+     * Eine Vorgabe des Bedieners gewinnt: `-style <name>` und
+     * QT_STYLE_OVERRIDE wertet Qt beim Bau von QApplication aus, ein
+     * setStyle() danach wuerde sie ueberschreiben. Deshalb wird hier
+     * vorher gefragt. */
+    {
+        bool vorgegeben = !qEnvironmentVariableIsEmpty("QT_STYLE_OVERRIDE");
+        for (int i = 1; !vorgegeben && i < argc; i++)
+            if (qstrcmp(argv[i], "-style") == 0) vorgegeben = true;
+        if (!vorgegeben) QApplication::setStyle(QStringLiteral("Fusion"));
+    }
     
     // Application metadata
     app.setApplicationName("UnifiedFloppyTool");

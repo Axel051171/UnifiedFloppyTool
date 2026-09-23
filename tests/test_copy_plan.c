@@ -544,6 +544,259 @@ int main(void)
                "K25: hinter der letzten Flagge steht noch etwas");
     }
 
+    /* K26 — das Kopier-Tor (MF-1309).
+     *
+     * Gemessen VOR dem Code: `uft_copy_plan_is_executable()` war fertig
+     * gebaut und hatte im ganzen Baum NULL Aufrufer, waehrend drei
+     * Ausfuehrungspfade — `decodejob.cpp:400`, `toolstab.cpp:493`,
+     * `uft_save_image.cpp:265` — ungeprueft
+     * `uft_copy_plan_to_convert_options()` riefen. Ein Plan mit hartem
+     * Befund erreichte damit die Wandlung.
+     *
+     * Was hier NICHT behauptet wird: dass der Wandlungspfad offen war.
+     * `uft_preflight_check()` steht in `uft_format_convert_dispatch.c`
+     * und sperrt UNTESTED und IMPOSSIBLE. Ungeprueft blieben die Befunde
+     * des PLANS, nicht das Formatpaar.
+     *
+     * Geprueft werden genau die harten Befunde, die OHNE
+     * Faehigkeitsmaske gelten. Die capsabhaengigen bleiben ausdruecklich
+     * draussen — mit der heutigen, gemessen zu groben Maske wuerde das
+     * Tor falsch absagen. */
+    {
+        const char *grund = "vorbelegt";
+
+        /* Der Vorgabeplan geht durch. Stuende hier eine Absage, wuerde
+         * das Tor jede Wandlung sperren und waere unbrauchbar. */
+        uft_copy_plan_t ok26 = uft_copy_plan_default();
+        PRUEFE(uft_copy_plan_gate(&ok26, &grund) == UFT_COPY_ALLOW,
+               "K26: der Vorgabeplan wird abgewiesen");
+        PRUEFE(grund == NULL, "K26: bei ALLOW bleibt ein Grund stehen");
+
+        /* Eine ungueltige Ebene ist hart und capsfrei. */
+        uft_copy_plan_t ung26 = uft_copy_plan_default();
+        ung26.level = (uft_copy_level_t)999;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate(&ung26, &grund) == UFT_COPY_DENY,
+               "K26: ungueltige Ebene wird durchgelassen");
+        PRUEFE(grund != NULL && strcmp(grund, "ebene_ungueltig") == 0,
+               "K26: Grund ist '%s' statt 'ebene_ungueltig'",
+               grund ? grund : "(NULL)");
+
+        /* Beweis und Eile — der Befund, an dem der forensische Anspruch
+         * haengt. Ein EvidenceCopy mit Schnelllesung ist kein Beweis. */
+        uft_copy_plan_t eil26 = uft_copy_plan_default();
+        eil26.policy   = UFT_POLICY_EVIDENCE;
+        eil26.strategy = UFT_READ_FAST;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate(&eil26, &grund) == UFT_COPY_DENY,
+               "K26: Beweis mit Schnelllesung wird durchgelassen");
+        PRUEFE(grund != NULL && strcmp(grund, "beweis_und_eile") == 0,
+               "K26: Grund ist '%s' statt 'beweis_und_eile'",
+               grund ? grund : "(NULL)");
+
+        /* Kein Plan ist keine Erlaubnis. */
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate(NULL, &grund) == UFT_COPY_DENY,
+               "K26: NULL-Plan wird durchgelassen");
+        PRUEFE(grund != NULL && strcmp(grund, "kein_plan") == 0,
+               "K26: Grund ist '%s' statt 'kein_plan'",
+               grund ? grund : "(NULL)");
+
+        /* Die Faehigkeitsfrage bleibt ausgeklammert — festgenagelt,
+         * damit niemand sie stillschweigend hineinzieht. Ein Plan auf
+         * der Flussebene ist FUER DAS TOR stimmig; ob ein Format ihn
+         * traegt, entscheidet `uft_copy_plan_check()` mit der echten
+         * Maske an anderer Stelle. Die Gegenprobe zeigt, dass dort sehr
+         * wohl harte Befunde stehen — sonst waere die Ausklammerung
+         * folgenlos und dieser Fall aussagelos. */
+        uft_copy_plan_t fl26 = uft_copy_plan_default();
+        fl26.level = UFT_COPY_FLUX;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate(&fl26, &grund) == UFT_COPY_ALLOW,
+               "K26: die Flussebene allein fuehrt zur Absage");
+
+        uft_copy_finding_t f26[16];
+        size_t n26 = uft_copy_plan_check(&fl26, 0u, f26, 16);
+        if (n26 > 16) n26 = 16;
+        size_t hart26 = 0;
+        for (size_t i = 0; i < n26; i++)
+            if (f26[i].hard) hart26++;
+        PRUEFE(hart26 > 0,
+               "K26: mit leerer Maske meldet check() keinen harten Befund "
+               "— dann klammert das Tor nichts aus");
+    }
+
+    /* K27 — das Tor mit Faehigkeitsfrage, drei Ausgaenge (MF-1311).
+     *
+     * Der dritte Wert `UFT_COPY_NEEDS_MEASUREMENT` wurde in MF-1309
+     * ausdruecklich NICHT eingefuehrt, weil ihn niemand erzeugen konnte.
+     * Hier wird belegt, dass er jetzt einen Erzeuger hat — und dass die
+     * drei Ausgaenge wirklich drei verschiedene Lagen beschreiben. */
+    {
+        const char *grund = NULL;
+
+        /* Ein Plan ohne Faehigkeitsforderung: unbekannte Maske aendert
+         * nichts, er geht durch. Sonst waere NEEDS_MEASUREMENT nur ein
+         * zweites Wort fuer "keine Maske gesetzt". */
+        uft_copy_plan_t schlicht = uft_copy_plan_default();
+        schlicht.level = UFT_COPY_SECTOR;
+        schlicht.caps_bekannt = false;
+        PRUEFE(uft_copy_plan_gate_caps(&schlicht, &grund) == UFT_COPY_ALLOW,
+               "K27: ein Plan ohne Faehigkeitsforderung verlangt Messung");
+
+        /* Die Flussebene verlangt FLUX_IO. Ohne gemessene Maske ist die
+         * Antwort weder ja noch nein. */
+        uft_copy_plan_t fluss = uft_copy_plan_default();
+        fluss.level = UFT_COPY_FLUX;
+        fluss.caps_bekannt = false;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate_caps(&fluss, &grund)
+                   == UFT_COPY_NEEDS_MEASUREMENT,
+               "K27: ungemessene Maske ergibt kein NEEDS_MEASUREMENT");
+        PRUEFE(grund != NULL && strcmp(grund, "kein_fluss") == 0,
+               "K27: Grund ist '%s' statt 'kein_fluss'",
+               grund ? grund : "(NULL)");
+
+        /* Dieselbe Lage, aber GEMESSEN und leer: jetzt ist es ein Nein. */
+        fluss.caps_bekannt = true;
+        fluss.caps = 0u;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate_caps(&fluss, &grund) == UFT_COPY_DENY,
+               "K27: gemessene leere Maske ergibt kein DENY");
+
+        /* Und gemessen MIT der Flagge: ja. Ohne diesen Fall waere das
+         * Tor nur eine aufwendige Absage. */
+        fluss.caps = (uint32_t)UFT_CAP_FLUX_IO;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate_caps(&fluss, &grund) == UFT_COPY_ALLOW,
+               "K27: gemessene passende Maske ergibt kein ALLOW");
+
+        /* Ein harter capsfreier Befund schlaegt jede Maske: er ist DENY,
+         * nicht NEEDS_MEASUREMENT. Sonst koennte ein widerspruechlicher
+         * Plan sich durch eine fehlende Messung retten. */
+        uft_copy_plan_t eil = uft_copy_plan_default();
+        eil.policy   = UFT_POLICY_EVIDENCE;
+        eil.strategy = UFT_READ_FAST;
+        eil.caps_bekannt = false;
+        grund = NULL;
+        PRUEFE(uft_copy_plan_gate_caps(&eil, &grund) == UFT_COPY_DENY,
+               "K27: ein Widerspruch rettet sich durch fehlende Messung");
+    }
+
+    /* K28 — die Bit-Genauigkeit sagt dasselbe wie die Beschreibung
+     *       (MF-1312).
+     *
+     * Gemessen trugen VOR dieser Aenderung alle 17 Profile
+     * `UFT_EXACT_SECTOR`. Zwei davon versprechen in ihrem eigenen Text
+     * mehr. Der Widerspruch erreichte drei Ausgaenge, einer davon eine
+     * Datei — deshalb ist das kein Anzeigefehler. */
+    {
+        const uft_copy_profile_t *flux = NULL, *bit = NULL;
+        for (size_t i = 0; i < uft_copy_profile_count(); i++) {
+            const uft_copy_profile_t *pr = uft_copy_profile(i);
+            if (!pr) continue;
+            if (strcmp(pr->id, "fluxcopy") == 0) flux = pr;
+            if (strcmp(pr->id, "bitexact") == 0) bit  = pr;
+        }
+        PRUEFE(flux != NULL && bit != NULL,
+               "K28: fluxcopy oder bitexact nicht gefunden");
+
+        if (flux)
+            PRUEFE(flux->plan.exact_kind == UFT_EXACT_FLUX_TIMING,
+                   "K28: FluxCopy verspricht Flusszeiten und traegt %d",
+                   (int)flux->plan.exact_kind);
+
+        /* Bittreu traegt die ASPIRATION; die Deckelung macht daraus auf
+         * einem Sektorpaar wieder SECTOR. Beide Seiten werden geprueft,
+         * sonst waere die Deckelung nicht belegt. */
+        if (bit) {
+            PRUEFE(bit->plan.exact_kind == UFT_EXACT_FLUX_TIMING,
+                   "K28: Bittreu traegt nicht die hoechste Genauigkeit");
+
+            const uft_copy_plan_t auf_sektor =
+                uft_copy_plan_resolve(&bit->plan, 0u);
+            PRUEFE(auf_sektor.level == UFT_COPY_SECTOR,
+                   "K28: leere Maske fuehrt nicht auf die Sektorebene");
+            PRUEFE(auf_sektor.exact_kind == UFT_EXACT_SECTOR,
+                   "K28: die Genauigkeit wurde auf der Sektorebene nicht "
+                   "gedeckelt — dann meldet check() 'genauigkeit_zu_hoch' "
+                   "und das Profil waere unbrauchbar");
+
+            const uft_copy_plan_t auf_fluss =
+                uft_copy_plan_resolve(&bit->plan, (uint32_t)UFT_CAP_FLUX_IO);
+            PRUEFE(auf_fluss.exact_kind == UFT_EXACT_FLUX_TIMING,
+                   "K28: auf der Flussebene wurde faelschlich gedeckelt");
+        }
+
+        /* Die Deckelung fasst NUR BIT_EXACT an. Ein bedeutungsloses Feld
+         * still zu aendern waere genau die Sorte Nebenwirkung, die hier
+         * nicht vorkommen darf. */
+        uft_copy_plan_t logisch = uft_copy_plan_default();
+        logisch.preservation = UFT_PRESERVE_LOGICAL;
+        logisch.level        = UFT_COPY_SECTOR;
+        logisch.exact_kind   = UFT_EXACT_FLUX_TIMING;
+        const uft_copy_plan_t unberuehrt =
+            uft_copy_plan_resolve(&logisch, 0u);
+        PRUEFE(unberuehrt.exact_kind == UFT_EXACT_FLUX_TIMING,
+               "K28: exact_kind wurde ausserhalb von BIT_EXACT angefasst");
+    }
+
+    /* K29 — die Kennungspaare, und die Unterscheidung, die dabei
+     *       zweimal uebersehen wurde (MF-1314).
+     *
+     * Gemessen: 155 Parameter, 0 exakte Dubletten, 8 Paare der Form
+     * `<praefix>.<rest>` neben einem eigenstaendigen `<rest>`.
+     *
+     * Zwei Gutachten haben daraus "doppelte Parameterfamilien, Gefahr
+     * widerspruechlicher Zustaende" gemacht. Das trifft auf die HAELFTE
+     * nicht zu, und der Unterschied ist wichtig genug fuer eine Zusage:
+     *
+     *   vier GEOMETRIE-Paare — `source.geometry.*` und
+     *   `target.geometry.*` neben `geometry.*` — sind kein Defekt,
+     *   sondern genau die Quell-/Ziel-Trennung, die dieselben Gutachten
+     *   an anderer Stelle FORDERN. Wer sie zusammenlegte, machte das
+     *   Modell schlechter.
+     *
+     *   vier LAYOUT-Paare — `layout.preserve_{gaps,sync,track_length,
+     *   crc_errors}` neben den praefixlosen — sind die offene Frage.
+     *   Gemessen erreicht die Divergenz heute keinen Bediener:
+     *   `uft_copy_param_state()` hat 0 produktive Aufrufer, und das
+     *   einzige Glied, das ein Faehigkeitstor ueberlebt
+     *   (`layout.preserve_crc_errors`), ist an kein Bedienelement
+     *   gebunden. Latent, nicht am Produktionspfad.
+     *
+     * Diese Zusage ist ein TOR mit fallender Grundlinie: die Zahl darf
+     * sinken, nie steigen. Damit kann ein neues Paar nicht unbemerkt
+     * entstehen — und das ist der Punkt, denn genau so sind die acht
+     * entstanden. */
+    {
+        const size_t n = uft_copy_param_count();
+        PRUEFE(n == 155, "K29: %zu Parameter statt 155", n);
+
+        size_t paare = 0, geo = 0, lay = 0;
+        for (size_t i = 0; i < n; i++) {
+            const char *a = uft_copy_param_id(i);
+            if (!a) continue;
+            const char *punkt = strchr(a, '.');
+            if (!punkt || !punkt[1]) continue;
+
+            for (size_t j = 0; j < n; j++) {
+                const char *b = (i == j) ? NULL : uft_copy_param_id(j);
+                if (!b || strcmp(b, punkt + 1) != 0) continue;
+                paare++;
+                if (strstr(a, "geometry") != NULL) geo++;
+                else if (strncmp(a, "layout.", 7) == 0) lay++;
+                break;
+            }
+        }
+        PRUEFE(paare <= 8, "K29: %zu Kennungspaare — die Grundlinie ist 8 "
+                           "und darf nur sinken", paare);
+        PRUEFE(geo == 4, "K29: %zu Geometriepaare statt 4 — das ist die "
+                         "gewollte Quell-/Ziel-Trennung", geo);
+        PRUEFE(lay == 4, "K29: %zu layout-Paare statt 4 — das ist die "
+                         "offene Frage", lay);
+    }
+
     /* ── MF-1236: die Profile ────────────────────────────────────────
      *
      * Ein Profil ist ein Name fuer einen Plan. Die beiden Fehler, die

@@ -168,10 +168,40 @@ uint32_t uft_check_pattern_sequence(const uint8_t *data, size_t bits,
     return (actual >= count) ? actual : 0;
 }
 
-uint16_t uft_crc16_ccitt(const uint8_t *data, size_t len)
+/* P3-76: der Startwert war fest verdrahtet, und ein Header versprach
+ * ihn als Parameter.
+ *
+ * Gemessen vorher: VIER Deklarationen im Baum, drei mit zwei Parametern
+ * (`uft_protection_ext.h:457`, `uft_crc_polys.h:430`,
+ * `uft_format_validate.h:126`) und EINE mit drei
+ * (`uft_decoder_plugin.h:372`, samt Doc-Kommentar "@param init
+ * Initial-Wert (0xFFFF fuer Standard)"). Definiert war nur die
+ * zweiparametrige Fassung, hier, mit `crc = 0xFFFF` in der ersten Zeile.
+ * Wer den Dekoder-Header einband und einen Startwert uebergab, bekam
+ * eine CRC, die ihn IGNORIERT — der dritte Wert landete in einem
+ * Register, das die Funktion nie las.
+ *
+ * Dass es nie aufgefallen ist, hat einen gemessenen Grund: die
+ * Einbindungsmengen der vier Header sind disjunkt, also sah kein
+ * Uebersetzungsvorgang je zwei widersprechende Deklarationen. Und es
+ * gab im ganzen Baum genau EINEN Produktivaufrufer — die
+ * Seven-Cities-Erkennung weiter unten in dieser Datei. (Ein Test
+ * schattet den Namen per Makro ab und bindet keinen der vier Header
+ * ein; er ist davon unberuehrt.) Kein Zeilenverweis hier, weil ein
+ * Kommentar seine eigene Zeilennummer verschiebt.
+ *
+ * Der Abnehmer des Parameters ist ebenfalls gemessen:
+ * `src/formats/pc/uft_86f.c:409` rechnet sich `0xCDB4` von Hand aus,
+ * mit dem Kommentar "CRC-CCITT: init 0xCDB4 (after 3x A1)" — und
+ * nachgerechnet ist das genau CRC(0xA1,0xA1,0xA1) mit Start 0xFFFF.
+ *
+ * Parametersatz unveraendert: Polynom 0x1021 normal, MSB zuerst, kein
+ * XorOut. `uft_crc16_ccitt(d, n, 0xFFFF)` liefert fuer "123456789" den
+ * Normwert 0x29B1 (CRC-16/IBM-3740). */
+uint16_t uft_crc16_ccitt(const uint8_t *data, size_t len, uint16_t init)
 {
-    uint16_t crc = 0xFFFF;
-    
+    uint16_t crc = init;
+
     for (size_t i = 0; i < len; i++) {
         crc ^= (uint16_t)data[i] << 8;
         for (int j = 0; j < 8; j++) {
@@ -597,7 +627,7 @@ bool uft_detect_longtrack_sevencities(const uint8_t *track_data, size_t track_bi
     }
     
     /* Check CRC */
-    uint16_t crc = uft_crc16_ccitt(prot_data, SEVENCITIES_DATA_LEN);
+    uint16_t crc = uft_crc16_ccitt(prot_data, SEVENCITIES_DATA_LEN, 0xFFFFu);
     if (crc != SEVENCITIES_CRC) {
         return false;
     }

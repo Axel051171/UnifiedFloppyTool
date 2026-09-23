@@ -14,6 +14,7 @@
  */
 
 #include "uft/core/uft_disk2.h"
+#include "uft/core/uft_source_facts.h"  /* MF-1318 */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -449,6 +450,194 @@ static void t8_alte_garantien(void) {
     uft_d2_destroy(d);
 }
 
+/* t9 — die Projektion sagt dieselben Zahlen wie der Bericht (MF-1318).
+ *
+ * `uft_d2_report()` rechnet sechs Zahlen und schreibt sie in einen Text;
+ * bis MF-1318 gab es keine Funktion, die sie zurueckgibt. Die neue
+ * Projektion rechnet sie ein zweites Mal — und genau das ist die Gefahr:
+ * zwei Rechnungen derselben Groesse driften (MF-1177, MF-1015).
+ *
+ * Deshalb wird hier nicht die Projektion gegen erwartete Konstanten
+ * geprueft, sondern gegen den BERICHT. Laeuft einer von beiden weg,
+ * faellt der Test — und das ist der Zweck. */
+static void t9_projektion(void) {
+    printf("t9: Projektion gegen Bericht\n");
+
+    uft_source_facts_t f;
+
+    /* Ohne Modell ist ALLES ungemessen — ausdruecklich, nicht durch
+     * Nullen, die etwas behaupten. */
+    CHECK(uft_d2_facts(NULL, &f), "NULL-Modell ist kein Fehler");
+    CHECK(f.ebenen == UFT_FAKT_UNGEMESSEN, "Ebenen ohne Modell nicht ungemessen");
+    CHECK(f.sektoren == UFT_FAKT_UNGEMESSEN, "Sektoren ohne Modell nicht ungemessen");
+    CHECK(f.sectors_total == 0u, "Sektorzahl ohne Modell nicht 0");
+    CHECK(!uft_d2_facts(NULL, NULL), "fehlendes Ziel wird nicht abgewiesen");
+
+    /* Die Vorgabe ist UNGEMESSEN, und das haengt daran, dass sie 0 ist.
+     * Wer die Aufzaehlung umsortiert, bricht jede genullte Struktur. */
+    CHECK((int)UFT_FAKT_UNGEMESSEN == 0,
+          "UNGEMESSEN ist nicht 0 — dann behauptet jede genullte Struktur etwas");
+
+    uft_disk2_t *d = uft_d2_create();
+    CHECK(d != NULL, "kein Modell");
+    if (!d) return;
+
+    const uft_d2_deriv_id_t dv = uft_d2_register_deriv(
+        d, UFT_D2_LAYER_SECTORS, UFT_D2_ORIGIN_CONTAINER, "t9", "", 0u);
+    uft_d2_track_t *tr = uft_d2_track(d, 0u, 0u);
+    CHECK(tr != NULL, "keine Spur");
+    if (!tr) { uft_d2_destroy(d); return; }
+
+    /* Drei Sektoren mit drei verschiedenen CRC-Lagen — genau die
+     * Dreiteilung aus MF-1272: gut, falsch, unbekannt. Ohne alle drei
+     * bliebe die Zusage "drei Zahlen statt einer" unbelegt.
+     *
+     * Der Helfer `guter_sektor()` steht oben; ihn zu benutzen statt die
+     * Felder erneut zu setzen ist derselbe Grundsatz wie in der
+     * Projektion selbst: EINE Stelle, nicht zwei. */
+    uft_d2_sector_t s1 = guter_sektor(0u, 1u, 8u, dv);
+    CHECK(uft_d2_add_sector(d, tr, &s1), "guter Sektor abgewiesen");
+
+    uft_d2_sector_t s2 = guter_sektor(0u, 2u, 8u, dv);
+    s2.data_crc_ok = false;          /* getragen, aber falsch */
+    s2.conf = UFT_D2_CONF_UNVERIFIED;    /* CERTAIN braucht einen Beleg */
+    CHECK(uft_d2_add_sector(d, tr, &s2), "falscher Sektor abgewiesen");
+
+    uft_d2_sector_t s3 = guter_sektor(0u, 3u, 8u, dv);
+    s3.data_crc_known = false;       /* gar keine Aussage */
+    s3.conf = UFT_D2_CONF_UNVERIFIED;
+    CHECK(uft_d2_add_sector(d, tr, &s3), "Sektor ohne CRC-Angabe abgewiesen");
+
+    CHECK(uft_d2_facts(d, &f), "Projektion scheitert");
+    CHECK(f.sektoren == UFT_FAKT_GEMESSEN, "Sektoren nicht als gemessen gemeldet");
+    CHECK(f.sectors_total == 3u, "Sektorzahl %zu statt 3", f.sectors_total);
+    CHECK(f.crc_checked == 2u, "mit CRC-Angabe %zu statt 2", f.crc_checked);
+    CHECK(f.crc_bad == 1u, "davon falsch %zu statt 1", f.crc_bad);
+    CHECK(f.crc_unknown == 1u, "ohne CRC-Angabe %zu statt 1", f.crc_unknown);
+
+    /* Die beiden Bitmasken-Gruppen am ECHTEN Modell, nicht nur am NULL-Fall.
+     * Die Luecke hat die eigene Mutationsmatrix gefunden: eine Mutation, die
+     * `ebenen` auf UNGEMESSEN setzte, blieb gruen — geprueft war bis dahin
+     * nur, dass sie OHNE Modell ungemessen bleibt. */
+    CHECK(f.ebenen == UFT_FAKT_GEMESSEN, "Ebenen nicht als gemessen gemeldet");
+    /* Die Maske ist `1u << UFT_D2_LAYER_*`, nicht der Aufzaehlungswert
+     * selbst: SECTORS ist 2, das gesetzte Bit ist 4. Die erste Fassung
+     * dieser Zusage nagelte die Zahl fest, ohne zu lesen, wie sie
+     * gebaut wird. */
+    CHECK((f.layers & (1u << UFT_D2_LAYER_SECTORS)) != 0u,
+          "Sektorebene fehlt in der Ebenenmaske (0x%X)", (unsigned)f.layers);
+    CHECK(f.merkmale == UFT_FAKT_GEMESSEN, "Merkmale nicht als gemessen gemeldet");
+    CHECK(f.umdrehungen == UFT_FAKT_GEMESSEN,
+          "Umdrehungen nicht als gemessen gemeldet");
+    CHECK(f.revs_total == 0u, "Umdrehungen %zu statt 0", f.revs_total);
+
+    /* Der eigentliche Punkt: dieselben Zahlen stehen im Bericht. Steht
+     * dort etwas anderes, sind die beiden Rechnungen auseinandergelaufen. */
+    char text[4096];
+    (void)uft_d2_report(d, text, sizeof(text));
+    char erwartet[256];
+    snprintf(erwartet, sizeof(erwartet),
+             "Sektoren: %zu \xE2\x80\x94 mit CRC-Angabe: %zu (davon falsch: %zu), "
+             "ohne CRC-Angabe: %zu",
+             f.sectors_total, f.crc_checked, f.crc_bad, f.crc_unknown);
+    CHECK(strstr(text, erwartet) != NULL,
+          "Bericht und Projektion sind auseinandergelaufen — gesucht: %s",
+          erwartet);
+
+    /* PLL ist die EINZIGE Gruppe, die unbedingt eine Luecke ist: das
+     * Modell hat kein Feld dafuer. Ein UNGEMESSEN waere hier zu schwach —
+     * ein zweiter Anlauf liefert nichts anderes. */
+    CHECK(f.pll == UFT_FAKT_KEIN_ERZEUGER, "PLL nicht als Luecke benannt");
+
+    /* Fluss FOLGT dem Modell. Dieses hier traegt keine Umdrehungen, also
+     * Luecke — und die Gegenprobe steht gleich darunter, denn eine Zusage,
+     * die nur eine Richtung prueft, ist eine halbe Zusage (MF-1037). */
+    CHECK(f.fluss == UFT_FAKT_KEIN_ERZEUGER,
+          "ohne Umdrehungen ist Fluss keine Luecke");
+
+    /* Weak ist MESSBAR — die per-Sektor-Angabe traegt die Bruecke, nur die
+     * per-Bit-Maske nicht. Ohne markierte Sektoren ist das eine gemessene
+     * Null, kein Schweigen. */
+    CHECK(f.weak == UFT_FAKT_GEMESSEN, "Weak nicht als gemessen gemeldet");
+    CHECK(f.weak_sektoren == 0u, "Weak-Sektoren %zu statt 0", f.weak_sektoren);
+    CHECK(f.weak_bits_min == 0u, "Weak-Bits %zu statt 0", f.weak_bits_min);
+
+    /* Gegenprobe Weak: ein Sektor mit Flackern muss beide Zahlen bewegen,
+     * und `weak_bits_min` summiert Weak UND Fuzzy. */
+    uft_d2_sector_t s4 = guter_sektor(0u, 4u, 8u, dv);
+    s4.weak_bits = 3u; s4.fuzzy_bits = 2u;
+    s4.conf = UFT_D2_CONF_UNVERIFIED;
+    CHECK(uft_d2_add_sector(d, tr, &s4), "flackernder Sektor abgewiesen");
+    CHECK(uft_d2_facts(d, &f), "Projektion scheitert nach dem vierten Sektor");
+    CHECK(f.weak_sektoren == 1u, "Weak-Sektoren %zu statt 1", f.weak_sektoren);
+    CHECK(f.weak_bits_min == 5u, "Weak-Bits %zu statt 5 (3+2)", f.weak_bits_min);
+
+    /* Und einer mit NUR Fuzzy-Bits. Ohne ihn war die Zusage blind gegen
+     * ein `&&` statt `||` — gemessen: die Mutation blieb gruen, weil der
+     * Zeuge oben beide Sorten traegt. Eine Oder-Bedingung braucht einen
+     * Zeugen je Seite. */
+    uft_d2_sector_t s5 = guter_sektor(0u, 5u, 8u, dv);
+    s5.fuzzy_bits = 7u;
+    s5.conf = UFT_D2_CONF_UNVERIFIED;
+    CHECK(uft_d2_add_sector(d, tr, &s5), "nur-Fuzzy-Sektor abgewiesen");
+    CHECK(uft_d2_facts(d, &f), "Projektion scheitert nach dem fuenften Sektor");
+    CHECK(f.weak_sektoren == 2u, "Weak-Sektoren %zu statt 2", f.weak_sektoren);
+    CHECK(f.weak_bits_min == 12u, "Weak-Bits %zu statt 12 (3+2+7)",
+          f.weak_bits_min);
+
+    /* Und einer OHNE CRC-Angabe, der trotzdem flackert. Die Zaehlung laeuft
+     * in derselben Schleife wie die CRC-Klassen, und die springen mit
+     * `continue` weiter — steht die Weak-Zeile hinter dem Sprung, faellt
+     * genau dieser Sektor unter den Tisch. Die beiden Eigenschaften sind
+     * unabhaengig: „niemand hat die Pruefsumme geprueft" sagt nichts
+     * darueber, ob die Bits flackern. */
+    uft_d2_sector_t s6 = guter_sektor(0u, 6u, 8u, dv);
+    s6.data_crc_known = false;
+    s6.weak_bits = 4u;
+    s6.conf = UFT_D2_CONF_UNVERIFIED;
+    CHECK(uft_d2_add_sector(d, tr, &s6), "Sektor ohne CRC mit Flackern abgewiesen");
+    CHECK(uft_d2_facts(d, &f), "Projektion scheitert nach dem sechsten Sektor");
+    CHECK(f.weak_sektoren == 3u,
+          "Weak-Sektoren %zu statt 3 — ein Sektor ohne CRC-Angabe faellt "
+          "aus der Weak-Zaehlung", f.weak_sektoren);
+    CHECK(f.weak_bits_min == 16u, "Weak-Bits %zu statt 16 (3+2+7+4)",
+          f.weak_bits_min);
+    CHECK(f.crc_unknown == 2u, "ohne CRC-Angabe %zu statt 2", f.crc_unknown);
+
+    /* Gegenprobe Fluss: sobald das Modell eine Umdrehung traegt, ist Fluss
+     * GEMESSEN. Ohne diese Haelfte haette die Struktur `revs_total > 0`
+     * neben „kein Erzeuger fuer Fluss" tragen koennen — ein Widerspruch
+     * in sich selbst. */
+    const uint32_t ticks[4] = { 2000u, 2000u, 2000u, 2000u };
+    CHECK(uft_d2_add_revolution(d, tr, ticks, 4u, 200000u, true,
+                                UFT_D2_CONF_UNVERIFIED, dv),
+          "Umdrehung abgewiesen");
+    CHECK(uft_d2_facts(d, &f), "Projektion scheitert nach der Umdrehung");
+    CHECK(f.revs_total == 1u, "Umdrehungen %zu statt 1", f.revs_total);
+    CHECK(f.fluss == UFT_FAKT_GEMESSEN,
+          "mit einer Umdrehung im Modell ist Fluss immer noch eine Luecke");
+
+    /* Die Erkennung kommt NICHT aus dem Modell — ohne Scheibe bleibt sie
+     * ungemessen, und die Projektion darf sie nicht erfinden. */
+    CHECK(f.erkennung == UFT_FAKT_UNGEMESSEN,
+          "die Projektion hat eine Erkennung erfunden");
+    CHECK(uft_facts_erkennung(NULL, &f), "NULL-Scheibe ist kein Fehler");
+    CHECK(f.erkennung == UFT_FAKT_UNGEMESSEN,
+          "NULL-Scheibe hat eine Erkennung gesetzt");
+    CHECK(!uft_facts_erkennung(NULL, NULL), "fehlendes Ziel wird nicht abgewiesen");
+
+    /* Jeder Zustand hat einen Namen, ein unbekannter keinen — sonst
+     * koennte ein Bericht einen Wert benennen, den es nicht gibt. */
+    CHECK(uft_fakt_zustand_name(UFT_FAKT_UNGEMESSEN) != NULL, "UNGEMESSEN ohne Namen");
+    CHECK(uft_fakt_zustand_name(UFT_FAKT_GEMESSEN) != NULL, "GEMESSEN ohne Namen");
+    CHECK(uft_fakt_zustand_name(UFT_FAKT_KEIN_ERZEUGER) != NULL, "KEIN_ERZEUGER ohne Namen");
+    CHECK(uft_fakt_zustand_name((uft_fakt_zustand_t)99) == NULL,
+          "ein unbekannter Zustand hat einen Namen bekommen");
+
+    printf("    Projektion, Dreiteilung, Gleichlauf mit dem Bericht: halten\n");
+    uft_d2_destroy(d);
+}
+
 int main(void) {
     printf("=== test_disk2 (zweite Fassung, MF-1274) ===\n\n");
     t1_generationen();
@@ -459,6 +648,7 @@ int main(void) {
     t6_zuversicht();
     t7_bericht();
     t8_alte_garantien();
+    t9_projektion();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }

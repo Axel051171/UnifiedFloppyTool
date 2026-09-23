@@ -101,7 +101,6 @@ DOCUMENT,19,19,1,include/uft/flux/uft_fluxstat.h
 DOCUMENT,19,19,1,include/uft/hal/internal/uft_linux_fdc.h
 DOCUMENT,18,18,1,include/uft/uft_bitstream_preserve.h
 DOCUMENT,18,18,1,include/uft/uft_mmap.h
-DOCUMENT,18,18,19,include/uft/uft_unified_image.h
 DOCUMENT,18,18,2,include/uft/uft_writer_backend.h
 DOCUMENT,18,18,3,include/uft/fs/uft_fat_atari.h
 DOCUMENT,18,18,1,include/uft/hal/internal/uft_zoomtape.h

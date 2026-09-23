@@ -318,6 +318,7 @@ SOURCES += \
     src/explorertab.cpp \
     src/forensictab.cpp \
     src/formattab.cpp \
+    src/uft_flow_layout.cpp \
     src/hardwaretab.cpp \
     src/nibbletab.cpp \
     src/protectiontab.cpp \
@@ -397,6 +398,7 @@ HEADERS += \
     src/explorertab.h \
     src/forensictab.h \
     src/formattab.h \
+    src/uft_flow_layout.h \
     src/hardwaretab.h \
     src/nibbletab.h \
     src/protectiontab.h \
@@ -430,14 +432,13 @@ HEADERS += \
 
 # vfo_fixed.cpp removed: 7 LOC trivial stub, never selected by VFO_TYPE_DEFAULT
 
-# Optional: Kalman filter PLL (research, not battle-tested)
-kalman_pll {
-    SOURCES += \
-        src/algorithms/advanced/uft_kalman_pll_v2.c \
-        src/algorithms/uft_kalman_pll.c
-    DEFINES += UFT_HAS_KALMAN_PLL
-    message("Kalman PLL enabled (experimental)")
-}
+# MF-1272: der Opt-in-Block `kalman_pll` ist entfernt, samt seinen zwei
+# Quellen. Er war eine Tuer ohne Raum dahinter: `uft_kalman_pll.c:32` band
+# "uft/algorithms/uft_kalman_pll.h" ein, und dieser Header lag im ganzen
+# Dateisystem 0 Mal (gemessen MF-1216, P3-472) — `CONFIG+=kalman_pll`
+# brach also beim Uebersetzen ab, statt ein Merkmal zu liefern. Dazu: 0
+# Aufrufer der Symbole, nicht einmal ein Test. Eigentuemerentscheidung
+# vom 2026-09-20; P3-472 nannte diesen Weg als einen von dreien.
 
 # ALL Hardware Provider Sources
 SOURCES += \
@@ -835,6 +836,8 @@ SOURCES += \
     src/formats/86box/uft_86f_plugin.c \
     src/core/uft_decode_pipeline.c \
     src/parsers/a2r/uft_a2r_parser.c \
+    src/formats/a2r/uft_a2r_plugin.c \
+    src/formats/roland/uft_roland_s_metadata.c \
     src/formats/jvc/uft_jvc_plugin.c \
     src/formats/dms/uft_dms_plugin.c \
     src/formats/d67/uft_d67.c \
@@ -854,7 +857,6 @@ SOURCES += \
 
 SOURCES += \
     src/algorithms/advanced/uft_god_mode_api.c \
-    # src/algorithms/advanced/uft_kalman_pll_v2.c \ # optional: CONFIG+=kalman_pll
     src/algorithms/advanced/uft_gcr_viterbi.c \
     src/algorithms/advanced/uft_gcr_viterbi_v2.c \
     src/algorithms/advanced/uft_bayesian_detect.c \
@@ -1026,7 +1028,11 @@ SOURCES += \
     src/core/uft_preflight.c \
     src/core/uft_loss_report.c \
     src/core/uft_roundtrip.c \
-    src/core/uft_format_traegt.c
+    src/core/uft_format_traegt.c \
+    src/core/uft_copy_job.c \
+    src/core/uft_imaging_recipe.c \
+    src/core/uft_recipe_copyplan.c \
+    src/core/uft_amiga_recipe_profiles.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Track Analysis
@@ -1075,6 +1081,7 @@ HEADERS += \
 
 SOURCES += \
     src/core/uft_copy_plan.c \
+    src/core/uft_copy_caps.c \
     src/core/uft_core_stubs.c \
     src/core/uft_disk2.c \
     src/core/uft_disk2_bridge.c \
@@ -1263,6 +1270,7 @@ SOURCES += \
 HEADERS += \
     include/uft/util/uft_match.h \
     include/uft/util/uft_json.h \
+    src/uft_format_filter_qt.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -1510,6 +1518,7 @@ SOURCES += \
 # CBM (1 files)
 SOURCES += \
     src/formats/cbm/uft_cbm_geometry.c \
+    src/formats/cbm/uft_cbm_track_segment.c \
     src/formats/cbm/uft_cbm_formats.c
 
 # CFI (1 files)
@@ -1908,7 +1917,8 @@ SOURCES += \
 # C64 Protection — Top-level (2 files)
 SOURCES += \
     src/protection/uft_c64_protection_enhanced.c \
-    src/protection/uft_geos_protection.c
+    src/protection/uft_geos_protection.c \
+    src/protection/uft_geos_rebuild.c
 
 # Apple II Protection (1 file)
 SOURCES += \
@@ -1953,6 +1963,8 @@ HEADERS += \
     include/uft/protection/uft_copylock.h \
     include/uft/protection/uft_fuzzy_bits.h \
     include/uft/protection/uft_geos_protection.h \
+    include/uft/protection/uft_geos_rebuild.h \
+    include/uft/formats/cbm/uft_cbm_track_segment.h \
     include/uft/protection/uft_longtrack.h \
     include/uft/protection/uft_magnetic_state.h \
     include/uft/protection/uft_pc_cdrom_protection.h \

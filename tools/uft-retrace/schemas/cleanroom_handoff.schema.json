@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/uft-retrace/cleanroom_handoff.schema.json",
+  "title": "UFT clean-room behavior handoff",
+  "type": "object",
+  "required": ["id", "source_sha256", "behavior", "inputs", "outputs",
+               "counterexample", "confidence"],
+  "properties": {
+    "id": {"type": "string"},
+    "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "program_version": {"type": "string"},
+    "pc_ranges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start", "end"],
+        "properties": {
+          "start": {"type": "string"},
+          "end": {"type": "string"}
+        }
+      }
+    },
+    "behavior": {"type": "string"},
+    "inputs": {"type": "array", "items": {"type": "string"}},
+    "outputs": {"type": "array", "items": {"type": "string"}},
+    "counterexample": {"type": "string"},
+    "confidence": {"enum": ["measured", "inferred", "unknown"]},
+    "uft_target": {"type": "string"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

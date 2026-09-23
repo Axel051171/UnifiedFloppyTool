@@ -57,7 +57,14 @@ StatusTab::StatusTab(QWidget *parent) :
     monoFont.setStyleHint(QFont::Monospace);
     ui->textHexDump->setFont(monoFont);
     ui->textSectorInfo->setFont(monoFont);
-    
+
+    /* P3-265 / MF-1191: das Protokoll laeuft ueber die ganze Sitzung mit —
+     * ein Dekodierlauf ruft `appendLog()` je Stufe. Ohne Obergrenze waechst
+     * das Dokument unbegrenzt; 2000 Zeilen sind mehr, als ein Lauf erzeugt,
+     * und beschraenken den Speicher trotzdem. */
+    ui->textLog->setFont(monoFont);
+    ui->textLog->document()->setMaximumBlockCount(2000);
+
     clear();
 }
 
@@ -317,30 +324,56 @@ void StatusTab::onBootblockClicked()
     QString fmt = m_currentImage.formatName.toUpper();
     QString platform = m_currentImage.platformName.toUpper();
 
-    info += QString("Format:          %1\n").arg(m_currentImage.formatName);
-    info += QString("Platform:        %1\n").arg(m_currentImage.platformName);
-    info += QString("Sector Size:     %1 bytes\n").arg(m_currentImage.sectorSize);
+    /* Diese drei kommen aus dem Dekodierlauf (DecodeResult), sind also
+     * gemessen — anders als alles, was unten folgt. */
+    info += QString("From the decode result:\n");
+    info += QString("  Format         %1\n").arg(m_currentImage.formatName);
+    info += QString("  Platform       %1\n").arg(m_currentImage.platformName);
+    info += QString("  Sector Size    %1 bytes\n").arg(m_currentImage.sectorSize);
+
+    /* MF-1191: dieser Dialog hat KEINE Sektordaten. `m_currentImage` ist ein
+     * DecodeResult mit Geometrie und Namen; die Bytes der Spur 0 liegen
+     * nirgends in diesem Reiter. Bis hierher standen trotzdem Werte da:
+     * "Root Block: 880" unabhaengig vom Abbild — bei der 80-Spur-ADF, mit
+     * der `test_status_tab_no_fiction` prueft, ist es 1760 —, und
+     * "Checksum: (parsed from bytes 4-7)" war eine Beschriftung, die sich
+     * als Wert las.
+     *
+     * Was jetzt hier steht, ist die LAGE der Felder, ausdruecklich als
+     * ungelesen gekennzeichnet. Das ist dieselbe Loesung wie beim Hexdump
+     * darunter, der es die ganze Zeit richtig gemacht hat: er schreibt IN
+     * DIE ANZEIGE, dass er nichts zeigt. Die Feldkarte bleibt stehen, weil
+     * sie das Format beschreibt — sie behauptet nur keine Werte mehr. */
+    const QString notRead = tr("not read from this image");
 
     if (platform.contains("AMIGA") || fmt.contains("ADF")) {
-        info += QString("\n--- Amiga Bootblock (T0 S0-1) ---\n");
-        info += QString("Type:            DOS\\x00 (OFS) or DOS\\x01 (FFS)\n");
-        info += QString("Checksum:        (parsed from bytes 4-7)\n");
-        info += QString("Root Block:      880\n");
+        info += QString("\n--- Amiga Bootblock (T0 S0-1) --- %1 ---\n").arg(notRead);
+        info += QString("  Type           bytes 0-3     %1\n").arg(notRead);
+        info += QString("  Checksum       bytes 4-7     %1\n").arg(notRead);
+        info += QString("  Root Block     bytes 8-11    %1\n").arg(notRead);
     } else if (fmt.contains("D64") || platform.contains("C64")) {
-        info += QString("\n--- CBM DOS Boot (T18 S0 - BAM) ---\n");
-        info += QString("Track/Sector:    18/0\n");
-        info += QString("DOS Version:     (byte $02)\n");
-        info += QString("Disk Name:       %1\n").arg(m_currentImage.volumeName);
+        info += QString("\n--- CBM DOS BAM (T18 S0) --- %1 ---\n").arg(notRead);
+        info += QString("  DOS Version    byte $02      %1\n").arg(notRead);
+        info += QString("  Disk Name      bytes $90-$9F %1\n").arg(notRead);
+        if (!m_currentImage.volumeName.isEmpty()) {
+            info += QString("  (a volume name came from the decode result: %1)\n")
+                        .arg(m_currentImage.volumeName);
+        }
     } else if (platform.contains("PC") || fmt.contains("IMG") || fmt.contains("IMA")) {
-        info += QString("\n--- PC BIOS Parameter Block ---\n");
-        info += QString("Jump Inst:       EB xx 90 (or E9 xx xx)\n");
-        info += QString("OEM ID:          (bytes 3-10)\n");
-        info += QString("Bytes/Sector:    %1\n").arg(m_currentImage.sectorSize);
-        info += QString("Sectors/Track:   %1\n").arg(m_currentImage.sectorsPerTrack);
-        info += QString("Heads:           %1\n").arg(m_currentImage.heads);
+        info += QString("\n--- PC BIOS Parameter Block --- %1 ---\n").arg(notRead);
+        info += QString("  Jump Inst      bytes 0-2     %1\n").arg(notRead);
+        info += QString("  OEM ID         bytes 3-10    %1\n").arg(notRead);
+        info += QString("  BPB geometry   bytes 11-23   %1\n").arg(notRead);
+        /* Die Geometrie unten stammt aus dem Dekodierlauf, NICHT aus dem
+         * BPB. Sie stand frueher unter derselben Ueberschrift und las sich
+         * damit, als waere sie dort ausgelesen worden. */
+        info += QString("  (geometry from the decode result, not from the BPB: "
+                        "%1 sectors/track, %2 heads)\n")
+                    .arg(m_currentImage.sectorsPerTrack)
+                    .arg(m_currentImage.heads);
     } else {
-        info += QString("\n--- Boot Sector (Track 0, Sector 0) ---\n");
-        info += QString("(Platform-specific parsing not available)\n");
+        info += QString("\n--- Boot Sector (Track 0, Sector 0) --- %1 ---\n").arg(notRead);
+        info += QString("  (no platform-specific field map for this format)\n");
     }
 
     parsedInfo->setPlainText(info);
@@ -401,9 +434,23 @@ void StatusTab::onProtectionClicked()
                        .arg(m_statusCounts["WEAK"]));
         header->setStyleSheet("color: #e65c00; font-size: 12px;");
     } else {
-        header->setText(tr("<b>No obvious copy protection detected</b> &mdash; "
-                          "Run full analysis for detailed results"));
-        header->setStyleSheet("color: #4a9e4a; font-size: 12px;");
+        /* MF-1191: hier stand gruen "No obvious copy protection detected".
+         * Gemessen hatte der Dialog dafuer genau ZWEI Zaehler angesehen —
+         * `badSectors` und die WEAK-Zaehlung des Reiters. Das ist
+         * Abwesenheit von Beweis als Beweis von Abwesenheit, dieselbe
+         * Klasse, die MF-570 im Forensik-Reiter und MF-893 in
+         * `ToolsTab::onRepair()` beseitigt hat ("das ist kein Freispruch").
+         *
+         * Die Farbe ist bewusst neutral statt gruen: gruen ist im Rest
+         * dieser Oberflaeche die Farbe eines bestandenen Urteils. */
+        header->setText(tr("<b>Nothing in the two counters this tab keeps</b> &mdash; "
+                          "bad sectors: 0, weak bits: 0. This is <b>not a clearance</b>: "
+                          "two counters are not a protection analysis. Fuzzy bits, "
+                          "long and short tracks, no-flux areas, desync, track overlap "
+                          "and illegal GCR are not among them. Run the full analysis "
+                          "below for an actual examination."));
+        header->setWordWrap(true);
+        header->setStyleSheet("color: #555; font-size: 12px;");
     }
     layout->addWidget(header);
 
@@ -713,7 +760,15 @@ void StatusTab::clear()
     ui->progressTotal->setStyleSheet("");
     ui->textSectorInfo->clear();
     ui->textHexDump->clear();
-    
+
+    /* MF-1191: `textLog` wird hier ABSICHTLICH nicht geleert. Die anderen
+     * Felder zeigen den Zustand EINES Abbilds und gehoeren zurueckgesetzt;
+     * das Protokoll ist die Aufzeichnung der Sitzung. Eine Aufzeichnung
+     * beim Laden der naechsten Diskette stillschweigend wegzuwerfen waere
+     * das Gegenteil dessen, was dieses Werkzeug herstellt. Die Grenze
+     * bleibt sichtbar, weil jede Zeile einen Zeitstempel traegt und
+     * `onImageInfo()` mit "Image loaded: ..." beginnt. */
+
     m_currentTrack = 0;
     m_currentSide = 0;
     m_totalTracks = 0;
@@ -809,8 +864,20 @@ void StatusTab::appendLog(const QString& message, const QString& level)
     else if (level == "DONE") prefix = "✓";
     else if (level == "STAGE") prefix = "▶";
     else prefix = "•";
-    
-    qDebug() << QString("[%1] %2 %3").arg(timestamp, prefix, message);
+
+    const QString line = QString("[%1] %2 %3").arg(timestamp, prefix, message);
+    qDebug() << line;
+
+    /* P3-265 / MF-1191: bis hierher endete jede Meldung in `qDebug()`, und
+     * `forms/tab_status.ui` hatte kein Log-Widget — alle 13 Aufrufstellen
+     * waren fuer den Benutzer unsichtbar. `insertPlainText` statt `append`,
+     * weil `append` den Text als Rich Text deutet und eine Meldung mit
+     * '<' oder '&' sonst still anders aussieht, als sie lautet. */
+    if (ui && ui->textLog) {
+        ui->textLog->moveCursor(QTextCursor::End);
+        ui->textLog->insertPlainText(line + QLatin1Char('\n'));
+        ui->textLog->moveCursor(QTextCursor::End);
+    }
 }
 
 QString StatusTab::statusToIcon(const QString& status)

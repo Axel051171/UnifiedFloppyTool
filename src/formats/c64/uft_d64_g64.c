@@ -753,7 +753,10 @@ void g64_free(g64_image_t *image)
  * Also: Dateieintrag i IST der Speicherplatz i, und Spur t liegt auf
  * Platz 2*(t-1). Damit passen alle 42 Spuren, kein Platz liegt brach,
  * und die geschriebene Datei entspricht der, die VICE schreibt. */
-#define G64_TRACK_TO_HALFTRACK(t)  (((t) - 1) * 2)   /* 1..42 -> 0..82 */
+/* MF-1332: die Definition steht jetzt in
+ * `include/uft/formats/c64/uft_d64_g64.h`, damit die Nachbardateien sie
+ * sehen. Sie hier ein zweites Mal zu fuehren waere genau die Bauform,
+ * die der Umzug behebt (MF-1177). */
 
 g64_image_t *g64_create(int num_tracks, bool include_halftracks)
 {
@@ -812,9 +815,27 @@ int g64_set_track(g64_image_t *image, int halftrack,
 /**
  * @brief Convert sector to GCR
  */
-size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
-                     int track, int sector, const uint8_t *disk_id,
-                     d64_error_t error)
+/* MF-1333 Stufe 3: dieselbe Arbeit, aber mit einem FUELLBYTE.
+ *
+ * Bis MF-1333 stand in dieser Funktion zweimal `memset(out, 0x55, …)`
+ * fest verdrahtet (Z. 848 und 877 des Vorzustands), waehrend
+ * `convert_options_t.gap_fill` existierte und bis hierher durchgereicht
+ * wurde — es faerbte aber nur die AUFFUELLUNG am Spurende
+ * (`build_gcr_track`), nicht die Luecken zwischen den Sektoren. Die
+ * oeffentliche Option war damit zur Haelfte wirkungslos.
+ *
+ * Gebraucht wird das fuer den GEOS-Bootschutz: sein Merkmal ist der
+ * Inhalt genau dieser Luecken auf Spur 21 (`$55 $55 $67 …` im Original,
+ * durchgehend `$67` beim GeoCopy-Nachbau) — Beschreibung des Urhebers,
+ * `neue-ideen/geocopy.zip -> geocopy/READ.ME.cvt`, Kanal *Spec*.
+ *
+ * `sector_to_gcr()` darunter behaelt Signatur UND Verhalten (0x55) —
+ * es hat drei Aufrufer, und eine stille Verhaltensaenderung waere
+ * genau das, was dieser Baum nicht tut.
+ */
+size_t sector_to_gcr_gap(const uint8_t *sector_data, uint8_t *gcr_output,
+                         int track, int sector, const uint8_t *disk_id,
+                         d64_error_t error, uint8_t gap_fill)
 {
     cbm_tables_init();
     if (!sector_data || !gcr_output || !disk_id) return 0;
@@ -842,7 +863,7 @@ size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
     out += 10;
     
     /* Header gap */
-    memset(out, 0x55, 9);
+    memset(out, gap_fill, 9);
     out += 9;
     
     /* Sync mark before data */
@@ -871,10 +892,20 @@ size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
     
     /* Inter-sector gap */
     int gap_len = gap_map[track];
-    memset(out, 0x55, gap_len);
+    memset(out, gap_fill, gap_len);
     out += gap_len;
-    
+
     return (size_t)(out - gcr_output);
+}
+
+/* Der alte Einstieg — unveraendert im Verhalten, damit die drei
+ * vorhandenen Aufrufer nichts merken (MF-1077). */
+size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
+                     int track, int sector, const uint8_t *disk_id,
+                     d64_error_t error)
+{
+    return sector_to_gcr_gap(sector_data, gcr_output, track, sector,
+                             disk_id, error, 0x55);
 }
 
 /**
@@ -1016,6 +1047,13 @@ size_t build_gcr_track(const uint8_t **sectors, int num_sectors,
             d64_writer_config_t cfg = (d64_writer_config_t)D64_WRITER_CONFIG_DEFAULT;
             cfg.disk_id[0] = disk_id[0];
             cfg.disk_id[1] = disk_id[1];
+            /* MF-1333: das Fuellbyte muss HIER durch, sonst erreicht es
+             * die Sektorluecken nie. Dieser Zweig ist der NORMALFALL —
+             * eine vollstaendige Spur geht ueber `d64_write_track_gcr()`,
+             * nicht ueber die Schleife weiter unten. Bis MF-1333 fiel
+             * `gap_fill` genau hier unter den Tisch, und die Option
+             * faerbte nur die Auffuellung am Spurende. */
+            cfg.gap_fill = gap_fill;
 
             d64_writer_t *w = d64_writer_create(&cfg);
             if (w) {
@@ -1044,20 +1082,63 @@ size_t build_gcr_track(const uint8_t **sectors, int num_sectors,
         out = gcr_output;
         for (int s = 0; s < num_sectors; s++) {
             if (sectors[s]) {
-                size_t sector_len = sector_to_gcr(sectors[s], out, track, s,
-                                                  disk_id, D64_ERR_OK);
+                size_t sector_len = sector_to_gcr_gap(sectors[s], out, track,
+                                                      s, disk_id,
+                                                      D64_ERR_OK, gap_fill);
                 out += sector_len;
             }
         }
-    }    /* Fill remaining with gap */
+    }
+
+    /* Fill remaining with gap */
     size_t used = (size_t)(out - gcr_output);
     size_t capacity = capacity_map[speed_map[track]];
-    
+
+    if (used > capacity) {
+        /* MF-1333: hier fehlte JEDE Reaktion. `if (used < capacity)`
+         * hatte kein `else`, eine Spur ueber Zonenkapazitaet lief also
+         * STILL durch — und die Rueckgabe sagte, es sei gutgegangen.
+         *
+         * BERICHTIGT NOCH IN MF-1333: der erste Versuch sagte hier mit
+         * Rueckgabe 0 AB. Das war zu breit, und eine Messung hat es
+         * widerlegt — `test_convert_via_plugin` wurde rot. Der Grund:
+         * `capacity_map` ist die Tafel der **1541**, dieser Erzeuger
+         * bedient aber auch **D67** (CBM DOS 1), wo die Spuren 18-24
+         * ZWANZIG Sektoren tragen statt 19. Gemessen 20 x 363 = 7260
+         * gegen eine 1541-Zonenkapazitaet von 7142 — die Absage haette
+         * genau diese sieben Spuren verworfen und eine seit MF-433
+         * zugesagte Faehigkeit gebrochen.
+         *
+         * Die richtige Zahl fuer die 2040/4040-Familie gibt es nicht:
+         * `src/formats/cbm/uft_cbm_geometry.c` sagt dazu ausdruecklich
+         * "no authoritative source for the 2040 value was found. The
+         * accessor returns 0 there rather than a plausible-looking
+         * guess." Eine erfundene Schranke waere genau das Verbot aus
+         * MF-1077.
+         *
+         * Also: die Beobachtung wird GESAGT, statt ein Urteil zu
+         * faellen, das auf der falschen Tafel beruht. Nicht gepolstert
+         * wird ohnehin — es gibt nichts aufzufuellen —, und die
+         * zurueckgegebene Laenge ist die WIRKLICHE.
+         *
+         * Was hier NICHT geprueft werden kann: ob `gcr_output` gross
+         * genug war. Die Signatur fuehrt keine Zielkapazitaet, und beide
+         * Produktionsaufrufer reichen einen festen `uint8_t[8192]`
+         * herein. Benannt statt verschwiegen: P3-538. */
+        UFT_WARN("D64->G64: Spur %d ist %zu GCR-Byte gross und damit ueber "
+                 "der 1541-Zonenkapazitaet %zu. Auf einer echten "
+                 "1541-Diskette passt das nicht; bei D67 (20 Sektoren in "
+                 "Zone 2) ist die Schranke die falsche Tafel. Die Spur "
+                 "wird unveraendert weitergereicht (MF-1333).",
+                 track, used, capacity);
+        return used;
+    }
+
     if (used < capacity) {
         memset(out, gap_fill, capacity - used);
         out += (capacity - used);
     }
-    
+
     return (size_t)(out - gcr_output);
 }
 
@@ -1135,9 +1216,23 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
             /* MF-555: die Antwort des Schreibers wird gelesen.
              *
              * Sie wurde verworfen, und `tracks_converted++` stand direkt
-             * daneben. `g64_set_track()` weist unter anderem Halbspuren
-             * und zu lange Spuren ab (MF-534) — eine abgewiesene Spur
-             * fehlte im Abbild und wurde trotzdem gezaehlt.
+             * daneben. Eine abgewiesene Spur fehlte im Abbild und wurde
+             * trotzdem gezaehlt.
+             *
+             * BERICHTIGT MF-1333. Hier stand: "`g64_set_track()` weist
+             * unter anderem Halbspuren und zu lange Spuren ab (MF-534)".
+             * Gemessen am Rumpf (`uft_d64_g64.c`, Funktion
+             * `g64_set_track`) prueft sie GENAU EINE Sache:
+             * `halftrack < 0 || halftrack >= G64_MAX_TRACKS`. Das ist
+             * eine Bereichspruefung des INDEX, keine Abweisung von
+             * Halbspuren — und eine Laengenpruefung gibt es dort
+             * ueberhaupt nicht; `length` wird unbesehen nach `malloc`
+             * und `memcpy` gereicht.
+             *
+             * Der Schutz, auf den sich dieser Kommentar berief, war also
+             * keiner. Seit MF-1333 sagt `build_gcr_track()` selbst ab
+             * (Rueckgabe 0), wenn eine Spur ihre Zonenkapazitaet
+             * ueberschreitet — und genau das prueft das `if` unten.
              *
              * Gefunden von scripts/audit_discarded_result.py: von vier
              * Aufrufen dieses Schreibers pruefte genau einer, und das war

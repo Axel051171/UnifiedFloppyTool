@@ -1,0 +1,15 @@
+{
+  "id": "example-retry-policy-001",
+  "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "program_version": "replace after measurement",
+  "pc_ranges": [
+    {"start": "0x00000000", "end": "0x00000000"}
+  ],
+  "behavior": "Example only: repeat a track after a checksum failure.",
+  "inputs": ["track result", "retry counter"],
+  "outputs": ["retry decision"],
+  "counterexample": "A clean track must not be retried.",
+  "confidence": "unknown",
+  "uft_target": "src/recovery/uft_multiread_pipeline.c",
+  "notes": ["Replace every placeholder with measured values."]
+}

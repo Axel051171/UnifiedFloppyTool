@@ -7,8 +7,18 @@
  * waere eine Behauptung ueber ein fremdes Format — genau die Klasse, an
  * der dieser Baum fuenf fabrizierte Parser hatte (FMT-2/3/10/11/12).
  *
- * Die Tafel ist ABSICHTLICH kurz. Drei Formate, weil drei gemessen sind.
- * Wer eine Zeile ergaenzt, misst sie am Format, nicht an der Erwartung.
+ * Die Tafel ist ABSICHTLICH kurz: sie fuehrt, was gemessen ist, und
+ * nicht, was plausibel waere. Wer eine Zeile ergaenzt, misst sie am
+ * Format, nicht an der Erwartung — und schreibt die Fundstelle in
+ * `quelle`.
+ *
+ * BERICHTIGT MF-1333: hier stand "Drei Formate, weil drei gemessen
+ * sind". Gemessen sind es sieben (TD0, IMD, IMG, XFD, ADF seit
+ * MF-1283, D64 und G64 seit MF-1333). Die Zahl war schon vor MF-1333
+ * gedriftet — und eine gepflegte Zahl neben einer gemessenen driftet
+ * immer (MF-541). Sie steht deshalb nicht mehr hier: `TAFEL_ANZAHL`
+ * unten rechnet sie aus `sizeof`, und das ist die einzige Stelle, die
+ * sie kennen muss.
  */
 #include "uft/core/uft_format_traegt.h"
 #include "uft/uft_types.h"   /* UFT_FORMAT_* */
@@ -16,6 +26,9 @@
 #include <stddef.h>
 
 #define L_SEKTOREN   (1u << UFT_D2_LAYER_SECTORS)
+/* MF-1333: erst ab dieser Ebene sind die Luecken ZWISCHEN den Sektoren
+ * ueberhaupt darstellbar — und genau dort liegt der GEOS-Bootschutz. */
+#define L_BITSTROM   (1u << UFT_D2_LAYER_BITSTREAM)
 
 /* Die fuenf Merkmale, die ein Sektorformat ueber die blossen Nutzbytes
  * hinaus tragen KANN — mehr behauptet hier niemand. */
@@ -100,6 +113,99 @@ static const zeile_t g_tafel[] = {
       "uft_img.c: flache Sektorfolge ohne Kopf; der Leser setzt "
       "crc_ok unbedingt auf true; read_metadata liest den FAT-Namen, "
       "nicht den Behaelter" },
+
+    /* MF-1313 — zwei weitere Zeilen, und beide sagen NICHTS zu.
+     *
+     * Warum gerade diese: gemessen ist ein Ausbau dieser Tafel additiv —
+     * ausser fuer SCP. Von den naheliegenden Kandidaten aktivieren ATR,
+     * XFD und G64 NULL zusaetzliche Eintraege der Rundlauf-Matrix, ADF
+     * und D64 je genau ihr Selbstpaar, das wegen `X & ~X == 0` nicht
+     * feuern kann. SCP dagegen aktiviert einen roten Eintrag und bleibt
+     * deshalb draussen, bis seine Merkmale einzeln belegt sind.
+     *
+     * Warum "nichts" eine Aussage ist: eine FEHLENDE Zeile heisst laut
+     * Kopf dieser Datei "unbekannt", und unbekannt sperrt. Eine Zeile
+     * mit `0u` heisst dagegen "gemessen, traegt ausser Sektoren nichts"
+     * — erst damit kann `uft_preflight_check()` eine Verlustdifferenz
+     * ueberhaupt RECHNEN statt abzusagen. Der Unterschied ist derselbe
+     * wie zwischen `caps_bekannt = false` und einer leeren Maske
+     * (MF-1311).
+     *
+     * XFD — Atari, kopflos.
+     *
+     * Gemessen an `src/formats/xfd/uft_xfd.c`:
+     *   Kopfkommentar Z. 5: "XFD is a headerless raw sector dump for
+     *                        Atari 8-bit computers" — also kein
+     *                        Behaelterfeld, das Metadaten tragen koennte
+     *   Z. 209            : `disk->geometry.sector_size = p->ss` — EINE
+     *                        Groesse fuer die ganze Diskette, also kein
+     *                        VAR_SECTOR_SZ
+     *   Z. 276            : `uft_format_add_sector(...)`, und der setzt
+     *                        den Status UNBEDINGT (`uft_track_layout.h`
+     *                        Z. 72 sagt es woertlich, unter Verweis auf
+     *                        MF-1022 und MF-1038). Ein CRC-Fehler, ein
+     *                        geloeschtes Datenfeld oder ein Sektor ohne
+     *                        Datenfeld sind darueber nicht ausdrueckbar.
+     *
+     * ADF — Amiga, kopflos. Dieselbe Lage, dieselben drei Belege:
+     *   `src/formats/adf/uft_adf_plugin.c` Z. 5 ("headerless raw sector
+     *   dump of Amiga floppy disks"), Z. 214 (feste `ADF_SECTOR_SIZE`),
+     *   Z. 290 (`uft_format_add_sector_with_id`).
+     *
+     * ADF_EXT ist ausdruecklich NICHT gemeint: das erweiterte Format
+     * traegt eine Spurtafel mit Bitlaengen (MF-1222) und gehoert damit
+     * in eine eigene Zeile mit eigenen Belegen. Eine gemeinsame Zeile
+     * waere genau die Ungenauigkeit, die eine Differenzrechnung
+     * wertlos macht. */
+    { UFT_FORMAT_XFD, L_SEKTOREN, 0u,
+      "uft_xfd.c:5 'headerless raw sector dump'; :209 eine Sektorgroesse "
+      "fuer die ganze Diskette; :276 uft_format_add_sector, dessen Status "
+      "unbedingt gesetzt wird (uft_track_layout.h:72)" },
+
+    { UFT_FORMAT_ADF, L_SEKTOREN, 0u,
+      "uft_adf_plugin.c:5 'headerless raw sector dump'; :214 feste "
+      "ADF_SECTOR_SIZE; :290 uft_format_add_sector_with_id, dessen Status "
+      "unbedingt gesetzt wird (uft_track_layout.h:72)" },
+
+    /* ── MF-1333: die beiden Commodore-Zeilen ───────────────────────
+     *
+     * Gebraucht fuer den GEOS-Bootschutz, der AUSSCHLIESSLICH in den
+     * Luecken zwischen den Sektoren liegt. Ob ein Ziel ihn tragen kann,
+     * ist damit dieselbe Frage wie "traegt es die Bitstromebene" — und
+     * die beantwortet diese Tafel. Ohne diese zwei Zeilen muesste die
+     * Oberflaeche eine ZWEITE Tafel fuehren, und das ist die Bauform
+     * aus MF-1177.
+     *
+     * Beide Zeilen sind an der Beschreibung des Formats gemessen, nicht
+     * an der Erwartung. */
+
+    { UFT_FORMAT_D64, L_SEKTOREN, 0u,
+      "docs/format_specs/commodore/D64.TXT:18 'The standard D64 is a "
+      "174848 byte file comprised of 256 byte sectors' — reine "
+      "Sektorablage. Luecken zwischen den Sektoren sind darin "
+      "prinzipiell nicht darstellbar; die Fehlerkarte (:321) traegt "
+      "einen Kode je Sektor, keine Rohbytes" },
+
+    /* BEIDE Ebenen, und das ist keine Grosszuegigkeit: ein Bitstrom ist
+     * eine OBERMENGE der Sektorablage, keine Alternative dazu. G64.TXT
+     * :399-401 fuehrt Kopfblock, Luecke und Datenblock einzeln auf —
+     * die Sektoren stehen im Strom, sie sind nur nicht ausgepackt.
+     *
+     * BERICHTIGT NOCH IN MF-1333: hier stand zuerst `L_BITSTROM`
+     * allein. Eine Messung hat es widerlegt, nicht eine Ueberlegung —
+     * `test_convert_options_reach_encoder` wurde rot, weil
+     * `uft_preflight.c:52` bei einem Ziel OHNE Sektorebene nur noch
+     * NO-ROUNDTRIP fuer wahrhaftig haelt und den seit MF-532/533 als
+     * verlustfrei GEMESSENEN Pfad D64->G64 damit abwies. Die Tafel
+     * hatte eine richtige Aussage ueber Luecken mit einer falschen
+     * ueber Sektoren erkauft. */
+    { UFT_FORMAT_G64, L_SEKTOREN | L_BITSTROM, 0u,
+      "docs/format_specs/commodore/G64.TXT:47 'Each track data area is "
+      "simply the raw stream of GCR data' — und :399-401 fuehrt Kopf, "
+      "Luecke und Daten einzeln auf: 'Header info … (10 GCR bytes)', "
+      "'Header gap 55 55 55 55 55 55 55 55 55 (9 bytes, never read)'. "
+      "Damit traegt G64 die Sektoren UND die Luecken dazwischen; "
+      "letzteres kann eine D64 nicht" },
 };
 
 #define TAFEL_ANZAHL (sizeof(g_tafel) / sizeof(g_tafel[0]))

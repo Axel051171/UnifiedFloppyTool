@@ -261,6 +261,32 @@ struct uft_disk {
      * Read it through uft_disk_plugin(), which handles disks built before this
      * field existed. */
     const struct uft_format_plugin* plugin;
+
+    /* MF-1317: die Erkennungsmessung — DERSELBE Fehler, ein zweites Mal.
+     *
+     * Drei Absaetze weiter oben steht ueber `plugin`: "uft_disk_open()
+     * already held the right pointer and discarded it." Gemessen gilt
+     * derselbe Satz fuer die MESSUNG, die dabei anfaellt:
+     * `uft_probe_file_entschieden()` rechnet Konfidenz, Gleichstand und
+     * Band bei JEDEM Oeffnen, `uft_disk_open_ranked()` gibt sie in
+     * `ranking_out` heraus — und `uft_disk_open()` reicht dort `NULL`
+     * durch (`src/core/uft_core_stubs.c:186`). Jeder Aufrufer von
+     * `uft_disk_open()` verliert sie.
+     *
+     * Das ist teuer, weil genau diese zwei Werte die Frage beantworten,
+     * mit der ein Kopier-Tor anfangen muss: "ist die Quelle eindeutig?"
+     * Ohne sie kann es nur raten.
+     *
+     * DREI Felder, nicht zwei — dieselbe Regel wie bei `caps_bekannt`
+     * im Kopierplan (MF-1311): eine 0 in `probe_confidence` ist
+     * mehrdeutig. Sie kann "gemessen, Konfidenz null" heissen oder
+     * "nicht gemessen". Wer das nicht trennt, baut die naechste stille
+     * Aussage.
+     *
+     * Angehaengt, nie eingefuegt. */
+    uint8_t             probe_confidence;   /**< 0..100, nur wenn gemessen */
+    uint8_t             probe_tied;         /**< Gleichauf-Liegende, 1 = eindeutig */
+    bool                probe_gemessen;     /**< false = nicht gemessen    */
 };
 
 /* Forward declarations for layer types (full defs in uft_track.h) */
@@ -1404,6 +1430,7 @@ void uft_sector_cleanup(uft_sector_t* sector);
 // ============================================================================
 
 /// RAW Format Plugin (einfacher Sector-Dump)
+/// MF-1332: PHANTOM — keine Definition im Baum. Siehe Block weiter unten.
 extern const uft_format_plugin_t uft_format_plugin_raw;
 
 /// IMG/IMA Format Plugin (PC-kompatibel)
@@ -1440,9 +1467,11 @@ extern const uft_format_plugin_t uft_format_plugin_qrst;
 extern const uft_format_plugin_t uft_format_plugin_cfi;
 
 /// YDSK Format Plugin (YAZE CP/M)
+/// MF-1332: PHANTOM — keine Definition im Baum. Siehe Block weiter unten.
 extern const uft_format_plugin_t uft_format_plugin_ydsk;
 
 /// SIMH Format Plugin (SIMH Simulator)
+/// MF-1332: PHANTOM — keine Definition im Baum. Siehe Block weiter unten.
 extern const uft_format_plugin_t uft_format_plugin_simh;
 
 /// Logical Format Plugin
@@ -1452,6 +1481,10 @@ extern const uft_format_plugin_t uft_format_plugin_logical;
 extern const uft_format_plugin_t uft_format_plugin_cpm;
 
 /// X68000 Format Plugin (XDF/DIM)
+/// MF-1332: PHANTOM — keine Definition im Baum. Bemerkenswert hier: die
+/// Endung `.xdf` beansprucht seit MF-1087 NICHTS mehr, und `dim` ist ein
+/// eigenes, registriertes Plugin. Dieser Name gehoert zu keinem von
+/// beiden. Siehe Block weiter unten.
 extern const uft_format_plugin_t uft_format_plugin_x68k;
 
 /// Hard-Sector Format Plugin (8"/5.25")
@@ -1466,13 +1499,52 @@ extern const uft_format_plugin_t uft_format_plugin_opus;
 /// MGT Format Plugin (ZX Spectrum +D/DISCiPLE)
 extern const uft_format_plugin_t uft_format_plugin_mgt;
 
+/* ── MF-1332: SECHS dieser Zeilen versprechen ein Plugin, das es im
+ *            ganzen Baum NICHT gibt ─────────────────────────────────
+ *
+ * Gemessen je Bezeichner ueber `git grep` in `src/`:
+ *
+ *     uft_format_plugin_dfi     0 Quelldateien
+ *     uft_format_plugin_ldbs    0
+ *     uft_format_plugin_raw     0
+ *     uft_format_plugin_simh    0
+ *     uft_format_plugin_x68k    0
+ *     uft_format_plugin_ydsk    0
+ *
+ * Keine Definition, kein Registry-Eintrag. Eine Tuer mit Namensschild
+ * ohne Raum dahinter — die Klasse Phantom-API aus MF-366, wo die
+ * Audit-Trail-C-API zu 100 % unimplementiert war.
+ *
+ * WAS DAS KOSTET, ist nicht theoretisch: wer `dfi` verdrahten will,
+ * findet ein Symbol vor, das aussieht, als gaebe es das Plugin schon.
+ * Bei DFI liegt tatsaechlich Code im Baum — aber in der verwaisten
+ * `FloppyDevice`-Schicht (`src/formats/flux/dfi.c`, Funktionen
+ * `uft_flx_dfi_*`), nicht als Plugin. Zwei Dinge, ein Name.
+ *
+ * WARUM SIE STEHEN BLEIBEN: sie zu entfernen ist eine Loeschung in der
+ * Formatschicht und verlangt eine Eigentuemerentscheidung samt
+ * `Ruecknahme:`-Zeile (MF-1077). Beschriftet statt repariert ist die
+ * Hauspraxis (MF-699) — die Aussage ist damit wahr, bevor sie
+ * entschieden ist.
+ *
+ * NICHT betroffen und ausdruecklich geprueft: die 49 `dsk_*`-Namen. Sie
+ * sehen in einer naiven Messung genauso aus, weil das Makro
+ * `DSK_PLUGIN()` in `src/formats/dsk_generic/uft_dsk_generic.c` ihre
+ * Definitionen ERZEUGT. Meine erste Zaehlung meldete deshalb 56 statt 6
+ * — der Messfehler steht hier, damit ihn niemand wiederholt.
+ */
+
 /// LDBS Format Plugin (LibDsk Block Store)
+/// MF-1332: PHANTOM — keine Definition im Baum (siehe Block oben).
 extern const uft_format_plugin_t uft_format_plugin_ldbs;
 
 /// RCPMFS Format Plugin (Remote CP/M File System)
 extern const uft_format_plugin_t uft_format_plugin_rcpmfs;
 
 /// DFI Format Plugin (DiscFerret Flux Image)
+/// MF-1332: PHANTOM — keine Definition im Baum. Der DFI-Code liegt in
+/// der verwaisten FloppyDevice-Schicht (`src/formats/flux/dfi.c`,
+/// `uft_flx_dfi_*`) und ist kein Plugin. Siehe Block oben.
 extern const uft_format_plugin_t uft_format_plugin_dfi;
 
 /// MYZ80 Format Plugin (MYZ80 CP/M Emulator)

@@ -6,6 +6,7 @@
 #include "uft_save_image.h"
 
 #include <QFile>
+#include <QSaveFile>
 #include <QFileInfo>
 #include <QObject>
 
@@ -41,9 +42,8 @@ uft_format_t formatVonInhalt(const QString &pfad)
     return p ? static_cast<uft_format_t>(p->format) : UFT_FORMAT_UNKNOWN;
 }
 
-/* Byte-Kopie mit Pruefung. Die kurze Schreibung war in diesem Baum schon
- * einmal eine halbe Datei mit Erfolgsmeldung (MF-571) — hier wird sie
- * gemeldet und die Teildatei entfernt. */
+/* Erst vollstaendig lesen, dann temporaer schreiben und atomar ersetzen.
+ * Bei Lese-, Schreib- und Commitfehlern bleibt ein vorhandenes Ziel erhalten. */
 UftSaveOutcome kopiere(const QString &source, const QString &target)
 {
     UftSaveOutcome r;
@@ -54,10 +54,17 @@ UftSaveOutcome kopiere(const QString &source, const QString &target)
                         .arg(source);
         return r;
     }
+    const qint64 quellGroesse = in.size();
     const QByteArray daten = in.readAll();
+    if (in.error() != QFileDevice::NoError || daten.size() != quellGroesse) {
+        r.message = QObject::tr("Die Quelldatei konnte nicht vollständig gelesen werden:\n%1")
+                        .arg(source);
+        return r;
+    }
     in.close();
 
-    QFile out(target);
+    QSaveFile out(target);
+    out.setDirectWriteFallback(false);
     if (!out.open(QIODevice::WriteOnly)) {
         r.message = QObject::tr("Das Ziel ist nicht beschreibbar:\n%1")
                         .arg(target);
@@ -65,13 +72,17 @@ UftSaveOutcome kopiere(const QString &source, const QString &target)
     }
     const qint64 soll = daten.size();
     const qint64 ist  = out.write(daten);
-    out.close();
 
     if (ist != soll) {
-        QFile::remove(target);
+        out.cancelWriting();
         r.message = QObject::tr("Nur %1 von %2 Byte geschrieben — die "
-                                "unvollständige Datei wurde entfernt.")
+                                "Zieldatei wurde nicht ersetzt.")
                         .arg(ist < 0 ? 0 : ist).arg(soll);
+        return r;
+    }
+    if (!out.commit()) {
+        r.message = QObject::tr("Die Zieldatei konnte nicht ersetzt werden:\n%1\n%2")
+                        .arg(target, out.errorString());
         return r;
     }
 
@@ -108,36 +119,9 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
         return r;
     }
 
-    /* MF-879: Ziel IST die Quelle — dann gibt es nichts zu schreiben.
-     *
-     * `MainWindow::onSave()` (Strg+S) ruft genau so auf:
-     * `speichereNach(m_currentFile)` mit `m_currentFile` als Quelle UND
-     * Ziel. Ohne diesen Zweig lief das in `kopiere()`, und dort ist die
-     * Reihenfolge fuer diesen Fall gefaehrlich:
-     *
-     *     in.open(ReadOnly); daten = in.readAll(); in.close();
-     *     out.open(WriteOnly);      <- KUERZT die Datei ... die Quelle
-     *     ist = out.write(daten);
-     *     if (ist != soll) QFile::remove(target);   <- LOESCHT die Quelle
-     *
-     * Im Normalfall entsteht dabei dieselbe Datei. Im Fehlerfall — volle
-     * Platte, entzogenes Medium, Abbruch zwischen Kuerzen und Schreiben —
-     * ist das geladene Abbild weg oder abgeschnitten, und die
-     * Aufraeumzeile entfernt genau das Original, das sie schuetzen soll.
-     * `kopiere()` ist fuer Quelle != Ziel geschrieben; dort ist das
-     * Entfernen einer halben Zieldatei richtig (MF-571).
-     *
-     * Fuer ein Werkzeug mit dem Grundsatz „Kein Bit verloren" ist ein
-     * Bedienweg, der beim Speichern das Original kuerzen KANN, nicht
-     * hinnehmbar — auch wenn er es meistens nicht tut.
-     *
-     * Aenderungen an einem geoeffneten Abbild schreibt der Explorer-Reiter
-     * unmittelbar und hinter dem Schreibtor (`gateBeforeModify()`,
-     * `explorertab.cpp:442,540,661,746,846`). Die Datei auf der Platte ist
-     * also bereits aktuell; „Speichern" hat nichts nachzutragen.
-     *
-     * Verglichen werden aufgeloeste Pfade, nicht Zeichenketten: „./x.d64"
-     * und „x.d64" sind dieselbe Datei. */
+    /* MF-879: Explorer-Aenderungen sind bereits gespeichert. Bei
+     * identischen aufgeloesten Pfaden ist deshalb nichts zu schreiben.
+     * Kopien auf andere Ziele werden in kopiere() atomar ersetzt. */
     {
         const QString qKanon = QFileInfo(source).canonicalFilePath();
         const QString zKanon = QFileInfo(target).canonicalFilePath();
@@ -262,6 +246,13 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
         /* `uft_convert_options_t` IST `struct uft_convert_options` —
          * der Kopf des Plans deklariert ihn nur vorwaerts, damit er
          * abhaengigkeitsfrei bleibt. Eine Umdeutung braucht es nicht. */
+        /* MF-1309: erst das Tor, dann die Uebersetzung. */
+        const char *grund = nullptr;
+        if (uft_copy_plan_gate(plan, &grund) == UFT_COPY_DENY) {
+            r.message = QStringLiteral("Kopierplan nicht ausfuehrbar: %1")
+                            .arg(QString::fromUtf8(grund ? grund : "unbekannt"));
+            return r;
+        }
         uft_copy_plan_to_convert_options(plan, &opts);
         opts.accept_data_loss = false;   /* nach dem Plan, nicht davor */
 
