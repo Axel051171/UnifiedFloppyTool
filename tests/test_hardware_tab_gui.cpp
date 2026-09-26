@@ -163,6 +163,82 @@ private slots:
     void applesauce_capability_gating(){ check_gating<uft::hal::ApplesauceProviderV2>("applesauce"); }
     void adfcopy_capability_gating()   { check_gating<uft::hal::ADFCopyProviderV2>("adfcopy"); }
     void usbfloppy_capability_gating() { check_gating<uft::hal::USBFloppyProviderV2>("usb_floppy"); }
+
+    /* ── #43 D1 (MF-XXXX): the drive selection ─────────────────────────
+     *
+     * Before #43 nothing read comboDriveSelect and the Greaseweazle always
+     * ran unit 0. The connect path now reads the combo's ITEM DATA, so
+     * the data must be there: the .ui items carry none, and
+     * `QVariant().toInt()` is 0 — the old defect in a new shape.
+     *
+     * NOT exercised here, and by no other test either: connecting a
+     * Greaseweazle and changing the combo while it is connected — i.e.
+     * the unit passed to open(port, unit), the combo's connect() to
+     * onDriveSelectChanged(), the motor-off before set_drive_unit(), and
+     * the refusal while m_fluxJobRunning is set. Test targets are built
+     * without UFT_HAS_HAL (HardwareTab's GW connect takes the simulated
+     * branch, so no Greaseweazle provider is ever held), and a failed
+     * open() raises a modal QMessageBox. Covered elsewhere: the mapping
+     * (test_gw_drive_unit_select) and the provider half — unit 1 really
+     * selected on the IBM-PC bus (test_gw_rpm_indexzeiten, W1/W2). */
+
+    /* Guard: onControllerChanged() runs during construction (measured
+     * here, not assumed) and replaces the data-less .ui items.
+     * (The name must not end in "_data": QtTest treats such a slot as the
+     * data function of another test and never runs it — measured.) */
+    void gw_drive_combo_carries_unit_numbers() {
+        HardwareTab tab;
+        auto *drive = tab.findChild<QComboBox *>("comboDriveSelect");
+        QVERIFY2(drive, "comboDriveSelect not found");
+        auto *ctrl = tab.findChild<QComboBox *>("comboController");
+        QVERIFY2(ctrl, "comboController not found");
+        QCOMPARE(ctrl->currentData().toString(), QStringLiteral("greaseweazle"));
+        QCOMPARE(drive->count(), 2);
+        bool ok0 = false, ok1 = false;
+        QCOMPARE(drive->itemData(0).toInt(&ok0), 0);
+        QCOMPARE(drive->itemData(1).toInt(&ok1), 1);
+        QVERIFY2(ok0 && ok1, "drive combo items carry no integer unit data");
+    }
+
+    /* The labels follow forms/tab_hardware.ui and gw's `--drive=A/B`
+     * (IBM-PC bus), not a bare "Drive 0/1" that reads like `--drive=0/1`
+     * (Shugart numbering). */
+    void gw_drive_combo_uses_ibm_pc_labels() {
+        HardwareTab tab;
+        auto *drive = tab.findChild<QComboBox *>("comboDriveSelect");
+        QVERIFY2(drive, "comboDriveSelect not found");
+        QCOMPARE(drive->itemText(0), QStringLiteral("A: (Drive 0)"));
+        QCOMPARE(drive->itemText(1), QStringLiteral("B: (Drive 1)"));
+    }
+
+    /* Guard: the same combo carries Commodore device numbers for the
+     * XUM1541 — which is why the GW path must check the controller. */
+    void commodore_drive_combo_keeps_device_numbers() {
+        HardwareTab tab;
+        auto *ctrl = tab.findChild<QComboBox *>("comboController");
+        auto *drive = tab.findChild<QComboBox *>("comboDriveSelect");
+        QVERIFY(ctrl && drive);
+        ctrl->setCurrentIndex(ctrl->findData(QStringLiteral("xum1541")));
+        QCOMPARE(drive->count(), 4);
+        QCOMPARE(drive->itemData(0).toInt(), 8);
+        QCOMPARE(drive->itemData(3).toInt(), 11);
+    }
+
+    /* A flux capture or write job drives the same provider from a worker
+     * thread; switching units underneath it would re-select between two
+     * tracks. The combo is locked while such a job runs. */
+    void drive_combo_locked_while_flux_job_runs() {
+        HardwareTab tab;
+        auto *drive = tab.findChild<QComboBox *>("comboDriveSelect");
+        QVERIFY2(drive, "comboDriveSelect not found");
+        QVERIFY(drive->isEnabled());
+        const bool gibt_es = QMetaObject::invokeMethod(
+            &tab, "setFluxJobRunning", Q_ARG(bool, true));
+        QVERIFY2(gibt_es, "HardwareTab has no slot setFluxJobRunning(bool)");
+        QVERIFY2(!drive->isEnabled(), "drive combo still enabled during a flux job");
+        QMetaObject::invokeMethod(&tab, "setFluxJobRunning", Q_ARG(bool, false));
+        QVERIFY2(drive->isEnabled(), "drive combo stays locked after the job");
+    }
 };
 
 QTEST_MAIN(TestHardwareTabGui)

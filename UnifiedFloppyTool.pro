@@ -552,7 +552,8 @@ HEADERS += \
     src/hardware_providers/xum1541_usb.h \
     src/hardware_providers/teensy_probe.h \
     src/hardware_providers/qprocess_subprocess_runner.h \
-    src/hardware_providers/ufi_runners.h
+    src/hardware_providers/ufi_runners.h \
+    src/hardware_providers/gw_drive_unit_select.h
 
 # Widget Sources
 SOURCES += \

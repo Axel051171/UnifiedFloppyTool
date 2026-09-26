@@ -77,6 +77,11 @@ signals:
     void operationFinished(bool success);
     void progressChanged(int percentage);
     void hardwareModeChanged(bool sourceIsHardware, bool destIsHardware);
+    /* #43 (MF-XXXX): true while at least one flux capture / write WORKER
+     * THREAD runs against the connected provider — it follows the thread,
+     * not the job, because an aborted job keeps running until it notices
+     * the cancel. HardwareTab locks its drive selection on it. */
+    void fluxJobRunningChanged(bool running);
 
 public slots:
     void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);
@@ -144,6 +149,10 @@ private:
     DecodeJob* m_decodeJob;
     FluxCaptureJob* m_captureJob;
     FluxWriteJob* m_writeJob;
+    int m_fluxThreadsRunning = 0;   /* #43: see fluxJobRunningChanged() */
+
+    /* #43: count one flux worker thread in and — when it FINISHES — out. */
+    void trackFluxThread(QThread *thread);
 
     // MF-110 / MF-200 — cached GreaseweazleProviderV2 from HardwareTab.
     // Non-owning: HardwareTab's m_gwProviderV2 owns the instance + handle.

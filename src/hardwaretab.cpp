@@ -47,6 +47,9 @@
 /* MF-213 (audit ARCH-7-C): ADF-Copy / Applesauce disambiguation probe. */
 #include "hardware_providers/teensy_probe.h"
 
+/* #43 (MF-XXXX): drive combo -> Greaseweazle bus unit, one mapping. */
+#include "hardware_providers/gw_drive_unit_select.h"
+
 /* MF-250 (v4.1.5-hardening): QSerialPort-backed Applesauce production
  * transport. Guarded via UFT_HAS_QSERIALPORT (defined by CMake when
  * Qt6::SerialPort is found) so a build without it still compiles. */
@@ -231,7 +234,11 @@ void HardwareTab::setupConnections()
      * directly and was unwired since P1.4. */
     connect(ui->comboController, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &HardwareTab::onControllerChanged);
-    
+    /* #43 (MF-XXXX): until now nothing read the drive combo — the
+     * Greaseweazle ran unit 0 whatever was chosen. */
+    connect(ui->comboDriveSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onDriveSelectChanged);
+
     // Role selection (Source/Destination)
     connect(m_roleGroup, QOverload<int>::of(&QButtonGroup::idClicked),
             this, &HardwareTab::onRoleChanged);
@@ -1087,6 +1094,23 @@ void HardwareTab::onConnect()
         #ifdef UFT_HAS_HAL
         qDebug() << "HardwareTab: Attempting GW V2 connection to" << port;
 
+        /* #43 (MF-XXXX): the unit the operator chose, bound at open() via
+         * the existing overload (MF-199). Before #43 this read nothing and
+         * the provider ran unit 0. A combo that names no Greaseweazle unit
+         * is refused here — silently taking 0 would be the old defect. */
+        const std::optional<int> unit = selectedGwDriveUnit();
+        if (!unit) {
+            const QString qerr = tr("The drive selection \"%1\" names no "
+                                    "Greaseweazle drive (A: or B:).")
+                                     .arg(ui->comboDriveSelect->currentText());
+            updateStatus(tr("Connection refused: %1").arg(qerr), /*isError=*/true);
+            QMessageBox::warning(this, tr("Connection Error"),
+                tr("Failed to connect to %1 on %2.\n\nError: %3")
+                    .arg(m_controllerType, m_portName, qerr));
+            return;
+        }
+        qDebug() << "HardwareTab: GW drive unit" << *unit;
+
         /* MF-205 (P1.23): construct the GW provider in a local
          * unique_ptr, open() it, and only move it into m_providerV2 on
          * success. `gwp` is a stable raw view — a unique_ptr move
@@ -1095,7 +1119,7 @@ void HardwareTab::onConnect()
         auto gwOwned = std::make_unique<::uft::hal::GreaseweazleProviderV2>();
         ::uft::hal::GreaseweazleProviderV2 *gwp = gwOwned.get();
         std::string err;
-        if (gwp->open(port.toLocal8Bit().constData(), &err)) {
+        if (gwp->open(port.toLocal8Bit().constData(), *unit, &err)) {
             /* Success: the variant takes ownership. */
             m_providerV2 = std::move(gwOwned);
 
@@ -1422,10 +1446,109 @@ void HardwareTab::onControllerChanged(int index)
         ui->comboDriveSelect->addItem(tr("Device 10"), 10);
         ui->comboDriveSelect->addItem(tr("Device 11"), 11);
     } else {
+        /* #43 (MF-XXXX): IBM-PC wording as in forms/tab_hardware.ui.
+         * uft_gw_select_drive() configures the IBM-PC bus when none is set,
+         * so unit 0/1 is drive A/B — gw's `--drive=A/B`. "Drive 0/1" read
+         * like gw's Shugart `--drive=0/1`, a different bus. The item data
+         * is the unit; onConnect() and onDriveSelectChanged() read it. */
         ui->comboDriveSelect->clear();
-        ui->comboDriveSelect->addItem(tr("Drive 0"), 0);
-        ui->comboDriveSelect->addItem(tr("Drive 1"), 1);
+        ui->comboDriveSelect->addItem(tr("A: (Drive 0)"), 0);
+        ui->comboDriveSelect->addItem(tr("B: (Drive 1)"), 1);
     }
+}
+
+std::optional<int> HardwareTab::selectedGwDriveUnit() const
+{
+    const QVariant d = ui->comboDriveSelect->currentData();
+    bool isInt = false;
+    const int value = d.toInt(&isInt);
+    const QByteArray key = ui->comboController->currentData().toString().toUtf8();
+    return ::uft::hal::gw_drive_unit_from_combo(
+        std::string_view(key.constData(), static_cast<size_t>(key.size())),
+        d.isValid() && isInt, value);
+}
+
+void HardwareTab::onDriveSelectChanged(int index)
+{
+    Q_UNUSED(index);
+
+    /* Only a CONNECTED Greaseweazle acts on a change; an unconnected one
+     * reads the combo at connect time. No other controller reads it at
+     * all — outside #43 by owner decision; what each of them does instead
+     * is listed in hardware_providers/gw_drive_unit_select.h. */
+    auto *held = std::get_if<std::unique_ptr<::uft::hal::GreaseweazleProviderV2>>(
+        &m_providerV2);
+    if (!m_connected || !held || !*held) {
+        return;
+    }
+    ::uft::hal::GreaseweazleProviderV2 *gwp = held->get();
+
+    /* Put the combo back on the unit the provider is bound to — the combo
+     * must never show a drive that is not the one being addressed. */
+    auto zurueck = [this, gwp]() {
+        const QSignalBlocker sperre(ui->comboDriveSelect);
+        const int idx = ui->comboDriveSelect->findData(gwp->drive_unit());
+        if (idx >= 0) {
+            ui->comboDriveSelect->setCurrentIndex(idx);
+        }
+    };
+
+    if (m_fluxJobRunning) {
+        zurueck();
+        updateStatus(tr("Drive selection is locked while a flux job runs."),
+                     /*isError=*/true);
+        return;
+    }
+
+    const std::optional<int> unit = selectedGwDriveUnit();
+    if (!unit) {
+        zurueck();
+        updateStatus(tr("Drive selection names no Greaseweazle drive; "
+                        "the drive stays unchanged."), /*isError=*/true);
+        return;
+    }
+    if (*unit == gwp->drive_unit()) {
+        return;
+    }
+
+    /* Motor off on the PREVIOUS unit first. On the IBM-PC bus every unit
+     * has its own motor line, but the C HAL keeps ONE motor flag per
+     * device (uft_gw_set_motor) and uft_gw_read_track() only switches the
+     * motor on when that flag is clear — so without this, drive B would be
+     * read with its motor standing while drive A keeps spinning.
+     *
+     * The design named issueMotorOffIfRunning() for this step. It alone is
+     * not enough: it acts only when the Motor button started the motor
+     * (m_motorRunning), while uft_gw_read_track() switches the motor on by
+     * itself — after a Read Test the flag is set and m_motorRunning is not.
+     * So the off command goes out unconditionally, and its outcome decides
+     * whether the switch happens. */
+    const ::uft::hal::MotorOutcome aus = gwp->set_motor(false);
+    if (!std::holds_alternative<::uft::hal::MotorStopped>(aus)) {
+        zurueck();
+        std::visit(::uft::hal::overloaded{
+            [this](const ::uft::hal::HardwareDisconnected &v) { showHardwareDisconnected(v); },
+            [this](const ::uft::hal::ProviderError &e)        { showProviderError(e); },
+            [this](const auto &) {
+                updateStatus(tr("Drive switch aborted: the motor of the "
+                                "previous drive did not report stopped."),
+                             /*isError=*/true);
+            },
+        }, aus);
+        return;
+    }
+    m_motorRunning = false;
+    updateMotorControlsEnabled();
+
+    gwp->set_drive_unit(*unit);
+    updateStatus(tr("Greaseweazle: drive %1 selected")
+                     .arg(ui->comboDriveSelect->currentText()));
+}
+
+void HardwareTab::setFluxJobRunning(bool running)
+{
+    m_fluxJobRunning = running;
+    ui->comboDriveSelect->setEnabled(!running);
 }
 
 // ============================================================================

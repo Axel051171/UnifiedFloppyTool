@@ -69,6 +69,9 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp"    # MF-252
     "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp"         # MF-1046
     "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_befehl.cpp"           # MF-1047
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_port_kurzname.cpp"            # #42 MF-XXXX
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_rpm_indexzeiten.cpp"          # #43 MF-XXXX
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_drive_unit_select.cpp"        # #43 MF-XXXX
     "${CMAKE_CURRENT_SOURCE_DIR}/test_provider_temppfad.cpp")          # MF-1108
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
@@ -4831,6 +4834,29 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_gw_port_kurzname" OR
+           ${test_name} STREQUAL "test_gw_rpm_indexzeiten")
+        # #42 / #43 (MF-XXXX): the GW V2 provider against the firmware
+        # automaton over the wire bridge (MF-848). test_gw_port_kurzname
+        # also pumps bytes between a pty and the bridge in a thread (Linux).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/gw_wire_bridge.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+        if(UNIX)
+            find_package(Threads REQUIRED)
+            set(TEST_LIBS Threads::Threads)
+        endif()
+    elseif(${test_name} STREQUAL "test_gw_drive_unit_select")
+        # #43 D1 (MF-XXXX): the header-only drive-combo -> bus-unit mapping.
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         set(TEST_LIBS "")

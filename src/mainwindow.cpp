@@ -124,6 +124,11 @@ void MainWindow::loadTabWidgets()
     // Connect HardwareTab device info to WorkflowTab status display
     connect(hardwareTab, &HardwareTab::deviceInfoChanged,
             workflowTab, &WorkflowTab::onDeviceInfoChanged);
+
+    // #43 (MF-XXXX): a flux capture/write thread drives the provider the
+    // Hardware tab holds — its drive selection is locked meanwhile.
+    connect(workflowTab, &WorkflowTab::fluxJobRunningChanged,
+            hardwareTab, &HardwareTab::setFluxJobRunning);
     
     // Connect HardwareTab connection state to MainWindow LED status
     // Use Qt::QueuedConnection to ensure UI updates happen in main thread
