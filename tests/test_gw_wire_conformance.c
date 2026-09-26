@@ -268,6 +268,91 @@ TEST(ohne_angaben_keine_zusage)
     ASSERT(!uft_gw_firmware_supported(NULL));
 }
 
+/* ------------------------------------------------------------------ */
+/* P3-551 (MF-1356): EIN Handschlag fuer beide Transporte.
+ *
+ * `uft_gw_open()` fragt GET_INFO und weist Bootloader und zu alte
+ * Firmware ab. `uft_gw_open_stream()` tat nichts davon: jede Erfassung
+ * ueber die Naht meldete `sample_freq = 0`, und `uft_gw_read_flux()`
+ * schickte ReadFlux mit 0 Ticks. Und `uft_gw_get_info()` setzte bei
+ * gemeldeten 0 Hz still 72 MHz ein — auf einem F7 Plus mit 84 MHz eine
+ * erfundene Zahl. Eigentuemerentscheidung vom 2026-09-26: GET_INFO beim
+ * Oeffnen, Absage bei 0 Hz. */
+
+static int oeffne_mit(stand_t *s, uint32_t hz, bool bootloader,
+                      uint8_t fw_major, uint8_t fw_minor)
+{
+    memset(s, 0, sizeof *s);
+    gw_fw_reset(&s->fw);
+    gw_fw_power_on_defaults(&s->fw);
+    gw_fw_set_firmware_version(&s->fw, fw_major, fw_minor);
+    gw_fw_set_sample_freq(&s->fw, hz);
+    gw_fw_set_bootloader_mode(&s->fw, bootloader);
+    gw_wire_init(&s->draht, &s->fw);
+    return uft_gw_open_stream(&s->draht.ops, &s->dev);
+}
+
+TEST(naht_kennt_den_takt_nach_dem_oeffnen)
+{
+    /* Ein F7 Plus meldet 84 MHz. Nach dem Oeffnen muss der Treiber es
+     * wissen, ohne dass jemand get_info von Hand ruft — vorher: 0. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 84000000u, false, 1, 23) == UFT_GW_OK && s.dev);
+    ASSERT(uft_gw_get_sample_freq(s.dev) == 84000000u);
+    stand_ab(&s);
+}
+
+TEST(naht_sagt_bei_null_hertz_ab)
+{
+    /* 0 Hz ist kein Wert, sondern ein nicht gelesenes Feld. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 0u, false, 1, 23) == UFT_GW_ERR_NO_CLOCK);
+    ASSERT(s.dev == NULL);
+}
+
+TEST(get_info_erfindet_keine_72_mhz)
+{
+    /* Geoeffnet mit 72 MHz, danach meldet das Geraet 0 Hz: get_info sagt
+     * ab, und der Datensatz traegt den ROHEN Wert — vorher kamen 72 MHz
+     * heraus. Die Firmware-Angaben bleiben lesbar, damit ein Aufrufer die
+     * Ursache nennen kann. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 72000000u, false, 1, 23) == UFT_GW_OK && s.dev);
+    gw_fw_set_sample_freq(&s.fw, 0u);
+    uft_gw_info_t info;
+    memset(&info, 0xAB, sizeof info);
+    int rc = uft_gw_get_info(s.dev, &info);
+    stand_ab(&s);
+    ASSERT(rc == UFT_GW_ERR_NO_CLOCK);
+    ASSERT(info.sample_freq == 0u);
+    ASSERT(info.fw_major == 1 && info.fw_minor == 23);
+}
+
+TEST(naht_weist_den_bootloader_ab)
+{
+    /* Dieselbe Absage wie `uft_gw_open()` seit MF-129. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 72000000u, true, 1, 23) == UFT_GW_ERR_BOOTLOADER);
+    ASSERT(s.dev == NULL);
+}
+
+TEST(naht_weist_zu_alte_firmware_ab)
+{
+    /* Dieselbe Absage wie `uft_gw_open()` seit MF-849. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 72000000u, false, 0, 30) == UFT_GW_ERR_FW_TOO_OLD);
+    ASSERT(s.dev == NULL);
+}
+
+TEST(zu_alt_geht_vor_null_hertz)
+{
+    /* Eine zu alte Firmware, die 0 Hz meldet, heisst "zu alt": die
+     * Ursache, die der Bediener beheben kann, nicht ihr Symptom. */
+    stand_t s;
+    ASSERT(oeffne_mit(&s, 0u, false, 0, 30) == UFT_GW_ERR_FW_TOO_OLD);
+    ASSERT(s.dev == NULL);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -281,6 +366,12 @@ int main(void)
     RUN(die_grenze_selbst_geht_durch);
     RUN(neuere_firmware_geht_durch);
     RUN(ohne_angaben_keine_zusage);
+    RUN(naht_kennt_den_takt_nach_dem_oeffnen);
+    RUN(naht_sagt_bei_null_hertz_ab);
+    RUN(get_info_erfindet_keine_72_mhz);
+    RUN(naht_weist_den_bootloader_ab);
+    RUN(naht_weist_zu_alte_firmware_ab);
+    RUN(zu_alt_geht_vor_null_hertz);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

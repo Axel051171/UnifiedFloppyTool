@@ -118,6 +118,26 @@ int main(void)
     uft_gw_stream_ops_t ops = OPS;
     ops.user = &l;
 
+    /* P3-551 (MF-1356): das Oeffnen faehrt seither auch ueber die Naht
+     * den Handschlag (GET_INFO). Die Leitung beantwortet ihn wie ein
+     * echtes Geraet: Firmware 1.23, Hauptfirmware, 72 MHz, Modell F7.
+     * Aufbau nach usb.py `struct.unpack("<4BI4B3H14x")`, der Treiber
+     * liest davon die ersten elf Byte. */
+    uint8_t info_antwort[2 + 32];
+    memset(info_antwort, 0, sizeof info_antwort);
+    info_antwort[0] = UFT_GW_CMD_GET_INFO;
+    info_antwort[1] = UFT_GW_ACK_OK;
+    info_antwort[2] = 1;                     /* fw_major   */
+    info_antwort[3] = 23;                    /* fw_minor   */
+    info_antwort[4] = 1;                     /* is_main_fw */
+    const uint32_t takt = 72000000u;         /* sample_freq, LE32 */
+    info_antwort[6] = (uint8_t)(takt);
+    info_antwort[7] = (uint8_t)(takt >> 8);
+    info_antwort[8] = (uint8_t)(takt >> 16);
+    info_antwort[9] = (uint8_t)(takt >> 24);
+    info_antwort[10] = 1;                    /* hw_model: F7 */
+    leitung_sendet(&l, info_antwort, sizeof info_antwort);
+
     uft_gw_device_t *dev = NULL;
     if (uft_gw_open_stream(&ops, &dev) != UFT_GW_OK || !dev) {
         printf("  FAIL Geraet mit eingespeister Leitung nicht zu oeffnen\n");

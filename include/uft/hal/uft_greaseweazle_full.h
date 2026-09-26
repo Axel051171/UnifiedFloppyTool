@@ -812,6 +812,12 @@ size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
 #define UFT_GW_ERR_FW_TOO_OLD       -16     /**< Main firmware runs, but is older
                                                  than UFT_GW_MIN_FW_MAJOR.MINOR —
                                                  reflash with `gw update`. */
+#define UFT_GW_ERR_NO_CLOCK         -17     /**< GET_INFO reported a sample rate
+                                                 of 0 Hz. That is not a value but
+                                                 an unread field: every flux time
+                                                 would be divided by zero, and a
+                                                 substituted 72 MHz is wrong on an
+                                                 F7 Plus (84 MHz). P3-551. */
 
 /* Aelteste Firmware, mit der dieser Treiber arbeitet.
  *

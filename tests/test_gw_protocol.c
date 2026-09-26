@@ -145,6 +145,9 @@ static void test_strerror_coverage(void) {
         /* MF-129 — the new bootloader error must mention "bootloader"
          * or "update" so the UI can route it to the recovery dialog. */
         { UFT_GW_ERR_BOOTLOADER,     "bootloader"    },
+        /* P3-551 (MF-1356) — 0 Hz is an unread field, and the message
+         * must say which number was missing, not "Unknown error". */
+        { UFT_GW_ERR_NO_CLOCK,       "0 Hz"          },
     };
     for (size_t i = 0; i < sizeof(codes) / sizeof(codes[0]); i++) {
         const char *msg = uft_gw_strerror(codes[i].code);

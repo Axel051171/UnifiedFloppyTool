@@ -645,18 +645,90 @@ int uft_gw_list_ports(char** ports, int max_ports) {
     return count;
 }
 
+/* Der Handschlag nach dem Oeffnen — EINE Stelle fuer beide Transporte
+ * (P3-551, MF-1356; Bauform MF-1177: eine Groesse, eine Rechnung).
+ *
+ * Die Reihenfolge hat einen Grund: erst der Bootloader (MF-129), dann die
+ * Firmware-Version (MF-849), erst zuletzt der Takt. Eine zu alte Firmware,
+ * die 0 Hz meldet, heisst deshalb „zu alt" — die Ursache, die der Bediener
+ * beheben kann, nicht ihr Symptom.
+ *
+ * Ohne Antwort auf GET_INFO: UFT_GW_ERR_NOT_FOUND, wie `uft_gw_open()` es
+ * immer gemeldet hat. */
+static int gw_handschlag(uft_gw_device_t* dev) {
+    int ret = uft_gw_get_info(dev, &dev->info);
+    if (ret != UFT_GW_OK && ret != UFT_GW_ERR_NO_CLOCK)
+        return UFT_GW_ERR_NOT_FOUND;
+
+    /* Reject bootloader / update-mode firmware. The Facebook bug report
+     * (https://github.com/Axel051171/UnifiedFloppyTool/issues, "GW won't
+     * access drive on Win10") was caused by a Greaseweazle that had
+     * entered bootloader mode after a failed firmware update. The
+     * bootloader answers GET_INFO but cannot drive the floppy: every
+     * subsequent SEEK / READ_FLUX returned UFT_GW_ERR_PROTOCOL with no
+     * indication of *why*. is_main_fw == 0 means "currently in update
+     * firmware"; the user must reflash with `gw update` (gw-tools) or
+     * power-cycle while holding ID 0 to drop back to the main firmware. */
+    if (dev->info.is_main_fw == 0)
+        return UFT_GW_ERR_BOOTLOADER;
+
+    /* Die Hauptfirmware laeuft — ist sie neu genug? (MF-849)
+     *
+     * Referenz: usb.py, EARLIEST_SUPPORTED_FIRMWARE = (0, 31). Bisher
+     * wurden fw_major/fw_minor gelesen, protokolliert und gegen NICHTS
+     * geprueft; eine zu alte Firmware fiel erst beim ersten nicht
+     * unterstuetzten Befehl auf — als UFT_GW_ERR_UNSUPPORTED ohne
+     * Hinweis auf die Ursache.
+     *
+     * BEWUSSTE ABWEICHUNG VON DER VORLAGE: `usb.py` weist nicht ab,
+     * sondern setzt `update_needed` und laesst das Geraet fuer `GetInfo`
+     * offen. Das setzt einen Begriff voraus, den UFT nicht hat — ein
+     * eingeschraenkt nutzbares Geraet. In einem forensischen Werkzeug
+     * ist ein halb brauchbares Geraet schlechter als eine benannte
+     * Absage: die Absage nennt Ist- und Sollversion und sagt, was zu tun
+     * ist. Wer die Version trotzdem sehen will, bekommt sie in der
+     * Meldung. */
+    if (!uft_gw_firmware_supported(&dev->info)) {
+        fprintf(stderr,
+                "[GW] ERROR: Firmware v%d.%d ist zu alt (noetig >= %d.%d) — "
+                "zuerst mit `gw update` neu einspielen\n",
+                dev->info.fw_major, dev->info.fw_minor,
+                UFT_GW_MIN_FW_MAJOR, UFT_GW_MIN_FW_MINOR);
+        return UFT_GW_ERR_FW_TOO_OLD;
+    }
+
+    if (ret == UFT_GW_ERR_NO_CLOCK)
+        return UFT_GW_ERR_NO_CLOCK;
+
+    snprintf(dev->version_str, sizeof(dev->version_str), "%d.%d",
+             dev->info.fw_major, dev->info.fw_minor);
+    return UFT_GW_OK;
+}
+
 /* Ein Geraet, dessen Leitung eingespeist ist — fuer den Pruefstand
  * (MF-686).
  *
- * Es wird KEIN Port geoeffnet und KEIN Handschlag gefahren: das Geraet
- * gilt als verbunden, und jeder Byte geht durch die uebergebenen Ops.
- * Damit sind Protokoll-Fehlerklassen pruefbar, die der Emulator
+ * Es wird KEIN Port geoeffnet: jeder Byte geht durch die uebergebenen
+ * Ops. Damit sind Protokoll-Fehlerklassen pruefbar, die der Emulator
  * bauartbedingt nicht sehen kann (DIVERGENCES.md §D-2).
  *
- * Bewusst NICHT: eine Attrappe des Handschlags. Wer `uft_gw_get_info()`
- * pruefen will, speist die Antwort ein — dann prueft er den echten
- * Pfad. Ein eingebauter Schein-Handschlag waere genau die Sorte
- * Bequemlichkeit, die spaeter als "getestet" gelesen wird.
+ * BERICHTIGT P3-551 (MF-1356). Hier stand: „Es wird KEIN Port geoeffnet
+ * und KEIN Handschlag gefahren: das Geraet gilt als verbunden". Die Folge
+ * war gemessen: `dev->info` blieb leer, jede Erfassung ueber die Naht
+ * meldete `sample_freq = 0`, `uft_gw_read_flux()` schickte ReadFlux mit
+ * 0 Ticks, und Bootloader wie zu alte Firmware kamen durch, die
+ * `uft_gw_open()` abweist. Seitdem faehrt die Naht DENSELBEN Handschlag
+ * (`gw_handschlag()`) — ueber die Ops, also gegen die eingespeiste
+ * Antwort.
+ *
+ * Das haelt den Satz, der hier weiter gilt: „Bewusst NICHT: eine Attrappe
+ * des Handschlags. Wer `uft_gw_get_info()` pruefen will, speist die
+ * Antwort ein — dann prueft er den echten Pfad." Wer die Antwort nicht
+ * einspeist, bekommt keine Verbindung, genau wie am echten Geraet.
+ *
+ * Die Wartezeiten (`delays`) setzt nur der serielle Weg: es sind
+ * Wirt-Pausen fuer ein echtes Laufwerk (Motoranlauf 500 ms, Einschwingen
+ * 15 ms je Seek), und der Pruefstand hat keines.
  *
  * `serial_close()` auf so einem Geraet ist wirkungslos, weil weder
  * Deskriptor noch Handle gesetzt sind; `uft_gw_close()` gibt es normal
@@ -674,6 +746,8 @@ int uft_gw_open_stream(const uft_gw_stream_ops_t* ops,
 #endif
     dev->stream_ops = ops;
     dev->current_cyl = -1;
+    int ret = gw_handschlag(dev);
+    if (ret != UFT_GW_OK) { free(dev); return ret; }
     *device = dev;
     return UFT_GW_OK;
 }
@@ -699,53 +773,11 @@ int uft_gw_open(const char* port, uft_gw_device_t** device) {
 
     serial_reset_comms(dev);
 
-    ret = uft_gw_get_info(dev, &dev->info);
-    if (ret != UFT_GW_OK) { serial_close(dev); free(dev); return UFT_GW_ERR_NOT_FOUND; }
+    /* Bootloader, Firmware-Version und Takt prueft `gw_handschlag()` —
+     * dieselbe Stelle wie fuer die eingespeiste Leitung (P3-551). */
+    ret = gw_handschlag(dev);
+    if (ret != UFT_GW_OK) { serial_close(dev); free(dev); return ret; }
 
-    /* Reject bootloader / update-mode firmware. The Facebook bug report
-     * (https://github.com/Axel051171/UnifiedFloppyTool/issues, "GW won't
-     * access drive on Win10") was caused by a Greaseweazle that had
-     * entered bootloader mode after a failed firmware update. The
-     * bootloader answers GET_INFO but cannot drive the floppy: every
-     * subsequent SEEK / READ_FLUX returned UFT_GW_ERR_PROTOCOL with no
-     * indication of *why*. is_main_fw == 0 means "currently in update
-     * firmware"; the user must reflash with `gw update` (gw-tools) or
-     * power-cycle while holding ID 0 to drop back to the main firmware. */
-    if (dev->info.is_main_fw == 0) {
-        serial_close(dev);
-        free(dev);
-        return UFT_GW_ERR_BOOTLOADER;
-    }
-
-    /* Die Hauptfirmware laeuft — ist sie neu genug? (MF-849)
-     *
-     * Referenz: usb.py, EARLIEST_SUPPORTED_FIRMWARE = (0, 31). Bisher
-     * wurden fw_major/fw_minor gelesen, protokolliert und gegen NICHTS
-     * geprueft; eine zu alte Firmware fiel erst beim ersten nicht
-     * unterstuetzten Befehl auf — als UFT_GW_ERR_UNSUPPORTED ohne
-     * Hinweis auf die Ursache.
-     *
-     * BEWUSSTE ABWEICHUNG VON DER VORLAGE: `usb.py` weist nicht ab,
-     * sondern setzt `update_needed` und laesst das Geraet fuer `GetInfo`
-     * offen. Das setzt einen Begriff voraus, den UFT nicht hat — ein
-     * eingeschraenkt nutzbares Geraet. In einem forensischen Werkzeug
-     * ist ein halb brauchbares Geraet schlechter als eine benannte
-     * Absage: die Absage nennt Ist- und Sollversion und sagt, was zu tun
-     * ist. Wer die Version trotzdem sehen will, bekommt sie in der
-     * Meldung. */
-    if (!uft_gw_firmware_supported(&dev->info)) {
-        fprintf(stderr,
-                "[GW] ERROR: Firmware v%d.%d ist zu alt (noetig >= %d.%d) — "
-                "zuerst mit `gw update` neu einspielen\n",
-                dev->info.fw_major, dev->info.fw_minor,
-                UFT_GW_MIN_FW_MAJOR, UFT_GW_MIN_FW_MINOR);
-        serial_close(dev);
-        free(dev);
-        return UFT_GW_ERR_FW_TOO_OLD;
-    }
-
-    snprintf(dev->version_str, sizeof(dev->version_str), "%d.%d",
-             dev->info.fw_major, dev->info.fw_minor);
     dev->delays.select_delay_us = 10;
     dev->delays.step_delay_us = 3000;
     dev->delays.settle_delay_ms = UFT_GW_SEEK_SETTLE_MS;
@@ -827,10 +859,24 @@ int uft_gw_get_info(uft_gw_device_t* device, uft_gw_info_t* info) {
         info->hw_submodel = resp[9];
         info->usb_speed   = resp[10];
         if (info->hw_model == 0) info->hw_model = 1;
-        if (info->sample_freq == 0) info->sample_freq = UFT_GW_SAMPLE_FREQ_HZ;
 
         fprintf(stderr, "[GW] FW v%d.%d model=%d.%d freq=%u\n",
                 info->fw_major, info->fw_minor, info->hw_model, info->hw_submodel, info->sample_freq);
+
+        /* BERICHTIGT P3-551 (MF-1356). Hier stand
+         * `if (info->sample_freq == 0) info->sample_freq = UFT_GW_SAMPLE_FREQ_HZ;`:
+         * ein gemeldetes 0 Hz wurde still zu 72 MHz — auf einem F7 Plus
+         * mit 84 MHz eine erfundene Zahl, die jede Flusszeit falsch
+         * skaliert. 0 Hz ist kein Wert, sondern ein nicht gelesenes Feld:
+         * der Datensatz traegt den ROHEN Wert (auch Firmware-Angaben
+         * bleiben lesbar, damit ein Aufrufer die Ursache nennen kann), und
+         * die Antwort sagt ab. */
+        if (info->sample_freq == 0) {
+            fprintf(stderr, "[GW] ERROR: Abtastrate 0 Hz gemeldet — das Feld "
+                            "ist nicht gelesen, keine Flusszeit ist damit "
+                            "rechenbar\n");
+            return UFT_GW_ERR_NO_CLOCK;
+        }
         return UFT_GW_OK;
     }
     return UFT_GW_ERR_PROTOCOL;
@@ -1470,6 +1516,10 @@ const char* uft_gw_strerror(int err) {
         case UFT_GW_ERR_FW_TOO_OLD:    return "Greaseweazle main firmware is "
                                               "older than the earliest supported "
                                               "version — reflash with `gw update`";
+        case UFT_GW_ERR_NO_CLOCK:      return "Greaseweazle reported a sample "
+                                              "rate of 0 Hz — the field was not "
+                                              "read, no flux timing is possible; "
+                                              "reflash with `gw update`";
         default:                       return "Unknown error";
     }
 }

@@ -225,6 +225,12 @@ ProviderError GreaseweazleProviderV2::gw_err_to_provider_error(
         fix = "Device is in bootloader mode. Disconnect, hold the drive-ID button, "
               "re-plug, and allow the main firmware to start.";
         break;
+    case UFT_GW_ERR_NO_CLOCK:
+        /* P3-551 (MF-1356): 0 Hz is an unread field, never replaced by a
+         * guessed 72 MHz — without the real clock no flux time is valid. */
+        fix = "Device reported a sample rate of 0 Hz, so no flux timing is "
+              "possible. Reflash the firmware with `gw update` and re-plug.";
+        break;
     case UFT_GW_ERR_TIMEOUT:
         fix = "Operation timed out. Check USB connection and that the drive "
               "is powered and spinning.";

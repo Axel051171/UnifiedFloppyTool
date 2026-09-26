@@ -93,8 +93,9 @@ typedef struct {
 /**
  * Prepares @p a for @p dev. @p encoding must be FLUX_ENC_MFM or
  * FLUX_ENC_FM (the caller knows the disk; AUTO would let a read decide),
- * @p revolutions >= 1. Sends one GET_INFO to learn the sample clock (a
- * device opened via uft_gw_open_stream() never has it otherwise).
+ * @p revolutions >= 1. Sends one GET_INFO to learn the sample clock — it
+ * asks the device itself rather than trusting the handle (until P3-551,
+ * MF-1356, a device opened via uft_gw_open_stream() never had it).
  * Returns 0, or -1 on invalid arguments, a failed GET_INFO, or no memory.
  */
 int  uft_diag_gw_init(uft_diag_gw_t *a, struct uft_gw_device *dev,

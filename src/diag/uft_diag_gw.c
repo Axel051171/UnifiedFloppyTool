@@ -27,11 +27,15 @@ int uft_diag_gw_init(uft_diag_gw_t *a, struct uft_gw_device *dev,
 
     /* The sample clock, asked from the device itself (GET_INFO, read-only).
      *
-     * Measured against the emulator: a device opened through
-     * uft_gw_open_stream() never has its info filled (only uft_gw_open()
-     * calls GET_INFO), so every capture on it reports sample_freq = 0.
-     * Without a clock the flux cannot be timed, and a fixed 72 MHz would
-     * be an invented number on an F7-Plus (84 MHz). */
+     * Measured against the emulator (MF-1346): a device opened through
+     * uft_gw_open_stream() never had its info filled (only uft_gw_open()
+     * called GET_INFO), so every capture on it reported sample_freq = 0.
+     * Since P3-551 (MF-1356) both open paths run the same handshake and
+     * uft_gw_get_info() refuses 0 Hz instead of substituting 72 MHz; the
+     * question stays here anyway, because this adapter takes any device
+     * and a clock it did not see is a clock it cannot vouch for. Without
+     * a clock the flux cannot be timed, and a fixed 72 MHz would be an
+     * invented number on an F7-Plus (84 MHz). */
     uft_gw_info_t info;
     memset(&info, 0, sizeof info);
     if (uft_gw_get_info((uft_gw_device_t *)dev, &info) != UFT_GW_OK ||
