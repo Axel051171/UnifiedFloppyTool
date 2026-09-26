@@ -39,12 +39,17 @@
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **7985** Zeilen in **82** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **8266** Zeilen in **87** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)
 
-**offen** (10):
+**offen** (15):
+- Historische Copier — Gesamtabgleich aller zwölf Verzeichnisse (2026-09-24)
+- Von historischen Kopierprogrammen lernen — C64, Amiga, Atari und weitere Systeme (2026-09-23)
+- UFT Benchmark v1 ausbauen — ZIP-Prüfung 2026-09-23
+- Code modernisieren und Leistung verbessern — Ergänzung 2026-09-23
+- Verbesserungsbedarf — Sichtung vom 2026-09-23
 - FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
 - Scout-Block 4 — neun Gutachten, zwei Aufträge, ein Fundus (MF-694)
 - LIZ-4 — „allen Code mit Lizenzproblem nachbauen": was die Messung daraus macht (MF-697)

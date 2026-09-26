@@ -14,8 +14,11 @@ entscheiden kann, ist nur das, wofür eine Regel geschrieben steht.
 
 Die Regeln unten sind in Gesprächen gefallen und standen nirgends im Baum.
 Das war der Fehler: **eine Regel, die nur in einem Gespräch steht, ist für
-die nächste Sitzung keine.** Jede der zwölf hat mindestens eine Nachfrage
-erzeugt, die sie jetzt beantwortet, bevor sie gestellt wird.
+die nächste Sitzung keine.** Jede der ersten zwölf hat mindestens eine
+Nachfrage erzeugt, die sie jetzt beantwortet, bevor sie gestellt wird.
+E-13 bis E-15 kamen am 2026-09-26 aus drei Eigentümerentscheidungen dazu
+(dort als „E-16 bis E-18" vorgeschlagen; vergeben sind die nächsten
+freien Nummern, damit keine Lücke entsteht).
 
 Der Mechanismus hat drei Teile:
 
@@ -85,6 +88,28 @@ widerlegt.** Das ist Pflege, keine Fähigkeitslöschung.
 **E-12  Zwei Aufzeichnungen derselben Tatsache**; dem Werkzeug wird nicht
 geglaubt. Nach Commit `git log -1`, nach Push `ls-remote`, nach Bau
 Zeitstempel der Ausgabe.
+
+**E-13  Ein großer Diff, den niemand absichtlich gemacht hat, geht zurück.**
+Auf HEAD setzen, ohne ihn Zeile für Zeile zu begutachten — vorher den
+Arbeitsstand AUSSERHALB des Baums sichern (`git diff` in eine Datei), weil
+Zurücksetzen nicht umkehrbar ist. Was davon gewollt war, kommt als eigener,
+kleiner, begründeter Commit zurück. Anlass: `.gitignore` −258 und
+`README.md` −674 Zeilen ohne Urheber, zurückgesetzt am 2026-09-26.
+
+**E-14  Ein Worktree liegt neben dem Repository, nie darin.** Verschachtelt
+sieht `git status` ihn als unversionierten Ordner, und der Repo-Zensus
+zählt ihn als Waisen. E-8 verlangt eigene Arbeitsbäume; diese Regel sagt,
+wo. Einzige Ausnahme: die Werkzeug-Worktrees unter `.claude/worktrees/` —
+sie stehen in `.claude/.gitignore` und werden nach dem Lauf entfernt.
+Anlass: `build-github-sync`, entfernt am 2026-09-26 (gemessen: keine
+Änderung und kein Commit, der nicht in `origin/main` stand).
+
+**E-15  Sitzungsprotokolle gehören nicht in den Quellbaum.** Recherche- und
+Sitzungsnotizen werden nicht committet; sie wandern nach `docs/archiv/` oder
+in ein Notizen-Repo. Was heute committet wird, müsste morgen aufgeräumt
+werden. Arbeitsstand dagegen — offene Punkte, Befunde, Entscheidungen —
+gehört nach `docs/OPEN_ITEMS.md`. Anlass: `docs/research/*.md` (fünf
+Dateien, 2026-09-26) bleibt ungetrackt.
 
 ## Was die Beispiele heute schon nennen, und was noch nicht
 
