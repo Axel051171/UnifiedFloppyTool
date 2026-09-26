@@ -41,6 +41,19 @@
 #     Ziel und gehoert nicht in denselben Commit wie ein Ortswechsel.
 #     Diese Datei macht die Liste SICHTBAR; sie macht sie nicht
 #     alleinherrschend.
+#
+#     BERICHTIGT P3-10: das ist seither geschehen, der Absatz oben ist
+#     Geschichte. Die lokalen GLOBs (zuletzt VIERZEHN) sind in
+#     `tests/CMakeLists.txt` durch EINE OBJECT-Bibliothek
+#     `uft_test_formatschicht` ersetzt: ein GLOB ueber `src/formats/*.c`
+#     plus diese Liste, ohne die zwei Eintraege, die nicht alle 74
+#     schweren Testziele hatten (`uft_plugin_capability.c`,
+#     `uft_disk_metadata.c`). Die verlangte Messung je Ziel steht in
+#     P3-10: jedes der 74 bindet dieselbe Quellenmenge wie vorher. Die
+#     74 bekommen diese Liste seither ueber die Bibliothek;
+#     `cli/uft-decode` verbraucht sie weiter selbst, und von den
+#     schlanken Testzielen nimmt sie nur, wessen Zweig sie ausdruecklich
+#     nennt (gemessen: einer, `test_flux_pll_profile`).
 
 # KEIN `include_guard`. Das ist gemessen, nicht Geschmack.
 #
@@ -85,6 +98,10 @@ set(UFT_FORMAT_LAYER_DEPS
             # Die zwoelf lokalen `*_FORMAT_SOURCES`-GLOBs in `tests/`
             # deckt sie NICHT (das ist `P3-426`); die haben denselben
             # Eintrag je eigen bekommen.
+            # BERICHTIGT P3-10: diese GLOBs samt ihrer eigenen
+            # A2R-Eintraege gibt es nicht mehr. Die Bibliothek
+            # `uft_test_formatschicht` enthaelt diese Liste; der Eintrag
+            # erreicht die 74 schweren Testziele also von HIER.
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c
             # what the format layer calls out to
             # MF-1232: `src/formats/sega/uft_genesis.c` ruft seit der
@@ -100,6 +117,14 @@ set(UFT_FORMAT_LAYER_DEPS
             # `tests/CMakeLists.txt`. Gemessen aus `build.ninja`:
             # 61 Ziele uebersetzen `uft_genesis.c`, 61 bekommen
             # `uft_match.c`, Fehlbetrag 0.
+            # BERICHTIGT P3-10: „Die uebrigen haengen an lokalen
+            # `*_FORMAT_SOURCES`-GLOBs" gilt nicht mehr; die Zahlen
+            # 33/58/61 sind die Messungen von MF-1189/MF-1232. Seither
+            # uebersetzt die Bibliothek `uft_test_formatschicht`
+            # `uft_genesis.c` und `uft_match.c` je EINMAL fuer alle 74
+            # schweren Testziele. `uft_wire_match()` bleibt fuer die
+            # schlanken Ziele, die `uft_genesis.c` selbst uebersetzen
+            # (`test_genesis`, `test_genesis_sucht_nicht_ueber_das_feld`).
             ${CMAKE_SOURCE_DIR}/src/util/uft_match.c
             # MF-1241 (`P3-482`): die JSON-Maskiertafel, die vorher
             # `static` in `src/core/uft_loss_report.c:37` lag. Gerufen
@@ -114,6 +139,11 @@ set(UFT_FORMAT_LAYER_DEPS
             # Umgekehrt deckt diese Liste die zwoelf lokalen
             # `*_FORMAT_SOURCES`-GLOBs nicht (`P3-426`); es braucht
             # beides, wie bei MF-1189 und MF-1232.
+            # BERICHTIGT P3-10: die lokalen GLOBs gibt es nicht mehr; ueber
+            # die Bibliothek `uft_test_formatschicht` erreicht diese Zeile
+            # die 74 schweren Testziele. „Es braucht beides" gilt weiter,
+            # aus einem anderen Grund: 8 schlanke Testziele uebersetzen
+            # `uft_json.c` selbst.
             ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
@@ -151,6 +181,9 @@ set(UFT_FORMAT_LAYER_DEPS
             # P3-426 haengen. Die Abhaengigkeit wird deshalb aus der
             # Quellenliste des Ziels ABGELEITET —
             # `uft_wire_traegerherkunft()` vor dieser Schleife.
+            # (BERICHTIGT P3-10: „haengen" gilt nicht mehr, diese GLOBs
+            # gibt es nicht mehr. Die Bibliothek `uft_test_formatschicht`
+            # bekommt `uft_bootstrap.c` ueber dieselbe Funktion.)
             # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
             # gemeinsame Liste, nicht in einen Sonderzweig.
             ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c

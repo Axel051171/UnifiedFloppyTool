@@ -38,6 +38,15 @@
 #     selbst ist in diesem Zielverzeichnis nicht sichtbar (Variablen aus
 #     `tests/` gelten nur dort und darunter).
 #
+#     BERICHTIGT P3-10: „dass es dort bereits ZWOELF lokale
+#     `*_FORMAT_SOURCES`-GLOBs gibt" gilt nicht mehr. Die (zuletzt
+#     VIERZEHN) GLOBs sind in `tests/CMakeLists.txt` durch EINE
+#     OBJECT-Bibliothek `uft_test_formatschicht` ersetzt, die
+#     `UFT_FORMAT_LAYER_DEPS` enthaelt. Dieses Ziel beruehrt das nicht:
+#     es globt weiter selbst und nimmt die gemeinsame Liste dazu, und
+#     seine Quellenmenge ist vor und nach P3-10 dieselbe (gemessen aus
+#     `build.ninja`).
+#
 #     Darum wird beides GEGLOBT. Gemessen (2026-09-17, MinGW gcc 13.1.0):
 #       * acht Verzeichnisse, **467** Uebersetzungseinheiten, 0 doppelte
 #         Symbole, 0 undefinierte Bezuege ausser `uncompress` -> `-lz`
@@ -66,6 +75,10 @@ cmake_minimum_required(VERSION 3.16)
 # eine 14. Zusammenstellung neben den dreizehn, die
 # `tests/CMakeLists.txt` fuehrt. Sie war nicht falsch, aber GROB: sie
 # globte `src/analysis` mit 39 Dateien, um an EINE zu kommen.
+# (P3-10: die dreizehn fuehrt `tests/CMakeLists.txt` nicht mehr; fuer
+# die ganze Format-Schicht steht dort seither EINE Zusammenstellung, die
+# Bibliothek `uft_test_formatschicht` — ein GLOB plus die gemeinsame
+# Liste.)
 #
 # Seit MF-1218 liegen `UFT_FORMAT_LAYER_DEPS` und
 # `UFT_FORMAT_LAYER_INCLUDES` in `cmake/uft_format_layer.cmake` und sind

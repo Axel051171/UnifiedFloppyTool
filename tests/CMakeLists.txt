@@ -176,6 +176,18 @@ include(${CMAKE_SOURCE_DIR}/cmake/uft_format_layer.cmake)
 # Die zwoelf GLOBs sind damit NICHT behoben, nur umgangen — der Befund
 # steht als **P3-426** in `docs/OPEN_ITEMS.md`, und diese Funktion ist
 # kein Ersatz dafuer, sondern der Beleg, dass der Weg dorthin traegt.
+#
+# BERICHTIGT P3-10: zwei Saetze dieses Blocks stehen im Praesens und
+# gelten nicht mehr — „Die 25 haengen an lokalen `*_FORMAT_SOURCES`-
+# GLOBs" und „Die zwoelf GLOBs sind damit NICHT behoben, nur umgangen".
+# Die lokalen GLOBs (zuletzt VIERZEHN) gibt es in dieser Datei nicht
+# mehr; an ihrer Stelle steht EIN GLOB in der OBJECT-Bibliothek
+# `uft_test_formatschicht` (Block „P3-10" unten), die alle 74 schweren
+# Ziele binden und die `UFT_FORMAT_LAYER_DEPS` selbst enthaelt. Die
+# Zahlen 58/33/25/9 bleiben als Messung von MF-1189 stehen. Die Funktion
+# bleibt: die Bibliothek durchlaeuft sie selbst (daher steht
+# `uft_bootstrap.c` in ihr), und gemessen bekommen `test_fat_bootsector`
+# und `test_win98_fdb` `uft_bootstrap.c` weiterhin NUR ueber sie.
 function(uft_wire_traegerherkunft tgt)
     get_target_property(_uft_srcs ${tgt} SOURCES)
     if(_uft_srcs MATCHES "uft_fat_bootsector"
@@ -207,6 +219,13 @@ endfunction()
 # `*_FORMAT_SOURCES`-GLOBs (`P3-426`) deckt sie nicht. Deshalb hier
 # dasselbe Mittel: **die Quellenliste des ZIELS entscheidet**, und ein
 # Zweig, den es heute noch nicht gibt, ist mitgedeckt.
+#
+# BERICHTIGT P3-10: „die zwoelf lokalen `*_FORMAT_SOURCES`-GLOBs
+# (`P3-426`) deckt sie nicht" gilt nicht mehr — diese GLOBs gibt es
+# nicht mehr, und die Bibliothek `uft_test_formatschicht` enthaelt
+# `UFT_FORMAT_LAYER_DEPS` und damit `uft_match.c` fuer alle 74 schweren
+# Ziele. Die Funktion bleibt fuer die Ziele mit eigener Quellenliste:
+# `test_genesis` etwa bekommt `uft_match.c` gemessen nur ueber sie.
 #
 # Die Bedingung nennt die Dateien, die `uft_match` heute rufen, und sie
 # WAECHST mit jeder umgestellten Fundstelle aus `A-027`. Das ist eine
@@ -312,6 +331,109 @@ function(uft_wire_registry tgt)
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c)
     endif()
 endfunction()
+
+# ==========================================================================
+# P3-10: die Formatschicht EINMAL uebersetzen, nicht 74 Mal.
+#
+# Eigentuemer-Entscheidung vom 2026-09-26: „Eine Bibliothek fuer alle 74".
+#
+# GEMESSEN VOR DIESEM BLOCK (aus `build.ninja`, Vollbau am Stand 1fd1a579):
+# 550 Testziele, 31 461 Objekte. 476 Ziele haben unter 50 Objekte, die
+# uebrigen **74** (59 C, 15 Qt) je 390..404 — und diese 74 uebersetzen
+# alle dieselben **388** Quellen, jedes fuer sich. Das waren 28 712 der
+# 31 461 Objekte; der Windows-Lauf brauchte fuer „Build tests" allein
+# 51 min und wurde bei 19408cef am 60-min-Limit beendet (MF-1352).
+#
+# WAS HIER STEHT, IST GENAU DIE SCHNITTMENGE — abgeleitet, nicht
+# aufgezaehlt (MF-636). Nachgerechnet gegen `build.ninja`:
+#   `src/formats/*.c` (GLOB)                        359 Quellen
+#   + `UFT_FORMAT_LAYER_DEPS`                        31 Eintraege
+#     (`uft_amiga_syncs.c` steht in beiden)          -1
+#   - die zwei Eintraege unten, die NICHT alle 74 haben -2
+#   + `uft_bootstrap.c` ueber `uft_wire_traegerherkunft()`  +1
+#   = 388, und keine Quelle mehr oder weniger als die Schnittmenge.
+# Nach dem Umbau gemessen: 3 137 Objekte statt 31 461; jedes der 74 Ziele
+# bindet seine 2..16 eigenen Objekte plus dieselben 388 wie vorher.
+#
+# Die zwei Ausnahmen sind gemessen, nicht gewaehlt: `uft_plugin_capability.c`
+# uebersetzen 39 der 74, `uft_disk_metadata.c` 41 der 74. In der Bibliothek
+# bekaemen 35 bzw. 33 Ziele ein Objekt, das sie heute nicht haben — sie
+# bleiben deshalb, wie jede andere Zusatzquelle, im Zweig ihrer Ziele
+# (`UFT_FORMAT_LAYER_DEPS_REST` unten ist genau dieser Rest, abgeleitet).
+#
+# OBJECT und nicht STATIC, und das ist der Kern: heute bindet jedes der 74
+# Ziele ALLE 388 Objekte. Eine OBJECT-Bibliothek tut dasselbe — jedes
+# Objekt kommt in jede Bindung, eine doppelte Definition bleibt ein
+# Bindefehler. Eine STATIC-Bibliothek zoege nur die gebrauchten Glieder
+# und liesse eine test-eigene Definition STILL gewinnen; das waere eine
+# Aenderung dessen, was ein Test prueft, versteckt in einer Bauzeile.
+#
+# Die Schalter sind die der 59 C-Ziele (C-Schleife unten): gnu11,
+# `-UNDEBUG`, die Sprachklammer um `-Werror=implicit-function-declaration`,
+# `UFT_HAS_ZLIB` samt zlib ueber `uft_core`, und dieselbe Include-Folge
+# (`include`, `include/uft`, dann `UFT_FORMAT_LAYER_INCLUDES`, dann was
+# `uft_core`/`uft_crc` exportieren). Die 15 Qt-Ziele uebersetzten die
+# Schicht bisher mit IHREN Schaltern (gnu17, kein `-UNDEBUG`, UNICODE,
+# WIN32, eigene Include-Folge) — mit der Bibliothek bekommen sie die der
+# C-Ziele. Das ist entschieden; jeder Unterschied ist in P3-10 gemessen
+# und benannt.
+#
+# Globale Schalter (`CMAKE_C_FLAGS`, `add_compile_options` aus der Wurzel,
+# also auch `UFT_SANITIZE`) erreichen die Bibliothek wie jedes andere Ziel.
+# AUTOMOC & Co. sind aus: die Bibliothek ist reines C, und ein
+# `mocs_compilation.cpp` darin gaebe jedem der 74 ein Objekt dazu.
+#
+# Damit entfallen die VIERZEHN lokalen `*_FORMAT_SOURCES`-GLOBs samt ihrer
+# Kopien der Zusatzliste (P3-426 zaehlte zwoelf; IMDIMG und TD0GEP kamen
+# danach). Die Begruendung je Eintrag — MF-1322 (A2R-Leser), MF-1175
+# (Anordnungsachse), MF-473/MF-489 (Abstimmung, Nachsicht) — steht an
+# EINER Stelle, in `cmake/uft_format_layer.cmake`. Die `uft_wire_*`-Regeln
+# oben bleiben: die schlanken Ziele brauchen sie weiter, und die
+# Bibliothek selbst durchlaeuft sie unten.
+# ==========================================================================
+file(GLOB_RECURSE UFT_TEST_FORMATSCHICHT_SOURCES
+     ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+list(APPEND UFT_TEST_FORMATSCHICHT_SOURCES ${UFT_FORMAT_LAYER_DEPS})
+list(REMOVE_ITEM UFT_TEST_FORMATSCHICHT_SOURCES
+     ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
+     ${CMAKE_SOURCE_DIR}/src/core/uft_disk_metadata.c)
+list(REMOVE_DUPLICATES UFT_TEST_FORMATSCHICHT_SOURCES)
+
+# Was `UFT_FORMAT_LAYER_DEPS` ueber die Bibliothek hinaus traegt — heute
+# genau die zwei Ausnahmen oben. Abgeleitet, damit ein neuer Eintrag in
+# der gemeinsamen Liste nicht still aus den Zweigen faellt, die sie ganz
+# verbrauchen.
+set(UFT_FORMAT_LAYER_DEPS_REST ${UFT_FORMAT_LAYER_DEPS})
+list(REMOVE_ITEM UFT_FORMAT_LAYER_DEPS_REST ${UFT_TEST_FORMATSCHICHT_SOURCES})
+
+add_library(uft_test_formatschicht OBJECT ${UFT_TEST_FORMATSCHICHT_SOURCES})
+set_target_properties(uft_test_formatschicht PROPERTIES
+    C_STANDARD 11
+    AUTOMOC OFF
+    AUTOUIC OFF
+    AUTORCC OFF)
+if(NOT MSVC)
+    target_compile_options(uft_test_formatschicht PRIVATE
+        -UNDEBUG
+        $<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>)
+else()
+    target_compile_options(uft_test_formatschicht PRIVATE /U NDEBUG)
+endif()
+target_include_directories(uft_test_formatschicht PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${UFT_FORMAT_LAYER_INCLUDES})
+target_link_libraries(uft_test_formatschicht PRIVATE uft_core uft_crc)
+# Dieselben Regeln wie fuer jedes Testziel, angewandt auf die Quellenliste
+# der BIBLIOTHEK: `uft_fat_bootsector.c` steht darin, also kommt
+# `uft_bootstrap.c` dazu. Die uebrigen vier sind heute Leerlaeufe (ihre
+# Ziele stehen schon in der Liste) und bleiben, damit eine kuenftige
+# Abhaengigkeit ueber denselben Weg kommt wie bei den Testzielen.
+uft_wire_traegerherkunft(uft_test_formatschicht)
+uft_wire_match(uft_test_formatschicht)
+uft_wire_json(uft_test_formatschicht)
+uft_wire_fdc_gaps(uft_test_formatschicht)
+uft_wire_registry(uft_test_formatschicht)
 
 foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
@@ -2879,45 +3001,12 @@ foreach(test_source ${TEST_SOURCES})
         # ueber die ganze Format-Schicht.
         # MF-543: faehrt ueber uft_disk_open(), braucht also die ganze
         # Format-Schicht — dieselbe Rezeptur wie test_disk_open_fuzz.
-        file(GLOB_RECURSE GEO_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND GEO_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: die Format-Schicht kommt aus der EINEN
+        # Bibliothek vor dieser Schleife (vorher: eigener GLOB samt
+        # eigener Liste an dieser Stelle); dieser Zweig hat keine
+        # Zusatzquelle. Die Include-Pfade darunter gelten seither nur
+        # noch fuer die Testdatei selbst.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
@@ -2952,45 +3041,15 @@ foreach(test_source ${TEST_SOURCES})
         # `src/formats/*.c` vollstaendig — MF-1168 hat gemessen, dass er
         # eben NICHT fuer jedes Testziel gilt, und ein eigener Zweig war
         # dort noetig (dreizehn undefinierte Verweise auf drei Symbole).
-        file(GLOB_RECURSE IHR_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND IHR_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${IHR_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: den `IHR_FORMAT_SOURCES`-GLOB gibt es nicht mehr — die
+        # Format-Schicht (samt `uft_flux_decoder.c`) kommt aus der EINEN
+        # Bibliothek vor dieser Schleife, derselben Menge, die der GLOB
+        # samt Liste hier lieferte. Keine Zusatzquelle.
+        # BERICHTIGT P3-10: „der Kommentar unten nennt die acht schon als
+        # ‚eine Wahrheit'" (oben) verweist auf einen Kommentar, den es
+        # nicht mehr gibt: er stand in jeder der acht Listen und ist mit
+        # ihnen entfallen (gemessen: vorher 8 Vorkommen, jetzt 0).
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
@@ -3059,46 +3118,16 @@ foreach(test_source ${TEST_SOURCES})
         # Test faehrt ueber `uft_convert_file()` und braucht die ganze
         # Format-Schicht. Gemessen vor diesem Commit: 46 Wandlungspfade,
         # 17 Matrix-Eintraege, 29 Pfade vom Preflight abgewiesen.
-        file(GLOB_RECURSE IMDIMG_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND IMDIMG_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${IMDIMG_FORMAT_SOURCES}
+        # P3-10: die Format-Schicht kommt aus der EINEN Bibliothek vor
+        # dieser Schleife; hier bleibt nur, was ueber sie hinausgeht. Die
+        # „vierzig Zeilen" oben sind die Liste, die hier stand und
+        # seither entfallen ist.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
             # MF-1307: der Verteiler ruft seit dieser Fassung
             # uft_convert_verify_after() — ohne diese Quelle bindet AUCH
             # der aeltere Test nicht mehr.
-            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats          # uft_format_convert_internal.h
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3136,43 +3165,18 @@ foreach(test_source ${TEST_SOURCES})
         # einer eigenen Kopie dieser vierzig Zeilen. Er braucht genau
         # denselben Unterbau, und zwei Listen fuer eine Wahrheit sind die
         # Bauform aus §MF-1177 — diese Datei haelt davon bereits acht.
-        file(GLOB_RECURSE TD0GEP_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND TD0GEP_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${TD0GEP_FORMAT_SOURCES}
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        #
+        # BERICHTIGT P3-10: „diese Datei haelt davon bereits acht" (oben,
+        # zweimal) gilt nicht mehr. Die Listen samt ihrer GLOBs sind in
+        # der Bibliothek `uft_test_formatschicht` aufgegangen; gemessen
+        # steht `uft_multiread_pipeline.c` in dieser Datei statt 17 noch
+        # 6 Mal, alle 6 in schlanken Zweigen mit eigener Quellenliste, und
+        # die gemeinsame Liste steht nur in `cmake/uft_format_layer.cmake`.
+        # P3-10: die Format-Schicht kommt aus der EINEN Bibliothek vor
+        # dieser Schleife; hier bleibt nur, was ueber sie hinausgeht.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_traegt.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3190,47 +3194,10 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_convert_file_detection")
         # MF-450: uft_convert_file() had no test at all. Needs the whole format
         # layer, same recipe as test_register_all_formats.
-        file(GLOB_RECURSE CFD_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND CFD_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${CFD_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: die Format-Schicht kommt aus der EINEN
+        # Bibliothek vor dieser Schleife; dieser Zweig hat keine
+        # Zusatzquelle.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
@@ -3251,48 +3218,13 @@ foreach(test_source ${TEST_SOURCES})
         # Braucht denselben Unterbau wie test_convert_file_detection (der
         # Wandler laeuft ueber die Format-Registry), zusaetzlich die
         # Abstimmungs-Pipeline und den SCP-Parser fuer die Umdrehungen.
-        file(GLOB_RECURSE MREV_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND MREV_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${MREV_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
+        # P3-10: die Format-Schicht kommt aus der EINEN
+        # Bibliothek vor dieser Schleife; hier bleibt nur, was ueber sie
+        # hinausgeht.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
             # uft_scp_parser.c kommt ueber uft_core (siehe src/core/CMakeLists.txt)
-            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3533,47 +3465,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_convert_output_verify")
         # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-        file(GLOB_RECURSE OUTV_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND OUTV_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${OUTV_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: die Format-Schicht kommt aus der EINEN
+        # Bibliothek vor dieser Schleife; hier bleibt nur, was ueber sie
+        # hinausgeht.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3584,47 +3481,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_convert_flippy_reverse")
         # MF-484: Flippy-Rueckseite, Zeitachse gespiegelt
-        file(GLOB_RECURSE FLIP_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND FLIP_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${FLIP_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: Format-Schicht aus der EINEN Bibliothek.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3635,46 +3495,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_convert_geometry_override")
         # MF-482: Geometrie-Vorgabe und Ueberhang beim SCP->ADF-Wandeln
-        file(GLOB_RECURSE GEO_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND GEO_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: Format-Schicht aus der EINEN Bibliothek; keine
+        # Zusatzquelle.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
@@ -3686,47 +3509,10 @@ foreach(test_source ${TEST_SOURCES})
         # MF-480: Prozent-Feineinsteller fuer die Zellendauer. Braucht denselben
         # Unterbau wie test_convert_scp_adf_multirev (der Wandler laeuft ueber
         # die Format-Registry) plus den AmigaDOS-Fluxgenerator.
-        file(GLOB_RECURSE CADJ_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND CADJ_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${CADJ_FORMAT_SOURCES}
-            # MF-1175: die Anordnungsachse, die `uft_xfd.c` ruft. Steht hier,
-            # weil dieser Zweig eine EIGENE Liste neben `UFT_FORMAT_LAYER_DEPS`
-            # haelt — acht solcher Listen, eine Wahrheit (Klasse MF-1015).
-            ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
-            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
-            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        # P3-10: Format-Schicht aus der EINEN Bibliothek.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -3821,28 +3607,14 @@ foreach(test_source ${TEST_SOURCES})
         # uft_disk_open(), und das heisst: durch die ganze Registry. Eine
         # zweite, eigene Liste waere eine zweite Wahrheit ueber dieselbe
         # Sache; sie wuerde driften. Deshalb ein gemeinsamer Zweig.
-        file(GLOB_RECURSE ALL_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-        # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-        # Leser faellt das Ziel mit "undefined reference to a2r_open".
-        # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-        # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-        list(APPEND ALL_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        # MF-1322: der A2R-LESER liegt in `src/parsers/`, das Plugin in
-        # `src/formats/`. Der GLOB darueber erfasst nur das Plugin, und
-        # ohne den Leser faellt JEDES Ziel dieses Blocks beim Linken mit
-        # „undefined reference to a2r_open" — gemessen an
-        # `test_register_all_formats`.
         #
-        # Angehaengt an die Liste und nicht an einen einzelnen Verbraucher,
-        # aus demselben Grund wie `uft_sector_order.c` in MF-1175: dieser
-        # Block speist ueber vierzig Ziele.
-        list(APPEND ALL_FORMAT_SOURCES
-             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-        target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
-            ${UFT_FORMAT_LAYER_DEPS})
+        # P3-10: die Format-Schicht (vorher der
+        # `ALL_FORMAT_SOURCES`-GLOB samt `UFT_FORMAT_LAYER_DEPS`) kommt aus
+        # der EINEN Bibliothek vor dieser Schleife. Hier bleibt, was die
+        # gemeinsame Liste ueber die Bibliothek hinaus traegt — abgeleitet,
+        # heute `uft_plugin_capability.c` und `uft_disk_metadata.c`.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE ${UFT_FORMAT_LAYER_DEPS_REST})
         # the plugins include their headers unqualified ("uft_dms.h")
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect
@@ -4281,6 +4053,12 @@ foreach(test_source ${TEST_SOURCES})
         # `IHR_FORMAT_SOURCES`-GLOB gilt nur fuer die drei Wandlungstests,
         # und `src/core/` erfasst er ohnehin nicht.
         #
+        # BERICHTIGT P3-10: den `IHR_FORMAT_SOURCES`-GLOB gibt es nicht
+        # mehr; die Format-Schicht binden die 74 schweren Ziele seither aus
+        # der Bibliothek `uft_test_formatschicht`. Der eigene Zweig bleibt
+        # richtig: `uft_track_layout.c` steht gemessen NICHT in der
+        # Bibliothek.
+        #
         # Das Modul hat KEINEN Produktionsaufrufer; dieser Test ist sein
         # erster und bis auf weiteres einziger. Begruendung im Header.
         target_sources(${test_name} PRIVATE
@@ -4380,6 +4158,13 @@ foreach(test_source ${TEST_SOURCES})
         # wie `test_track_layout` (MF-1173) und `test_fdc_profil_verdrahtet`
         # (MF-1168).
         #
+        # BERICHTIGT P3-10: den `IHR_FORMAT_SOURCES`-GLOB gibt es nicht
+        # mehr. `uft_sector_order.c` und `uft_xfd.c` stehen seither beide in
+        # der Bibliothek `uft_test_formatschicht` (die Achse ueber
+        # `UFT_FORMAT_LAYER_DEPS`); dieses schlanke Ziel bindet sie nicht,
+        # sondern weiter nur die zwei Quellen unten — die Bibliothek
+        # braechte 388 Objekte statt zwei.
+        #
         # Anders als bei jenen beiden hat dieses Modul einen
         # PRODUKTIONSAUFRUFER: `src/formats/xfd/uft_xfd.c` rechnet seit
         # MF-1175 jede Dateiposition damit — deshalb liegt das Plugin hier
@@ -4400,6 +4185,13 @@ foreach(test_source ${TEST_SOURCES})
         # ruft `uft_fdc_detect_format()`. Jene Datei liegt in `src/formats/`
         # und kommt bei den drei Wandlungstests ueber den
         # `IHR_FORMAT_SOURCES`-GLOB mit; hier wird sie einzeln gebraucht.
+        #
+        # BERICHTIGT P3-10: den `IHR_FORMAT_SOURCES`-GLOB gibt es nicht
+        # mehr; `uft_fdc_gaps.c` und `uft_format_convert_bitstream.c`
+        # (dort steht `uftc_convert_sectors_to_hfe()`) kommen seither bei
+        # allen 74 schweren Zielen aus der Bibliothek
+        # `uft_test_formatschicht`. Fuer diesen schlanken Zweig gilt der
+        # Halbsatz „hier wird sie einzeln gebraucht" weiter.
         #
         # `test_fdc_profil_verdrahtet` haengt sich an denselben Zweig: es
         # braucht dieselbe eine Uebersetzungseinheit, weil sowohl
@@ -4913,6 +4705,11 @@ foreach(test_source ${TEST_SOURCES})
         # `uft_wire_match()`, nicht von hier: die Datei erreicht ueber
         # zwoelf lokale GLOBs (`P3-426`) mehr Ziele als jede Liste hier
         # aufzaehlen koennte.
+        # BERICHTIGT P3-10: die lokalen GLOBs gibt es nicht mehr;
+        # `uft_genesis.c` erreicht die 74 schweren Ziele seither ueber die
+        # Bibliothek `uft_test_formatschicht`, die `uft_match.c` aus
+        # `UFT_FORMAT_LAYER_DEPS` selbst mitbringt. Fuer DIESES Ziel gilt
+        # der Satz davor weiter: `uft_match.c` kommt von `uft_wire_match()`.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/sega/uft_genesis.c)
     elseif(${test_name} STREQUAL "test_3ds")
         # Include 3DS source directly
@@ -6335,21 +6132,13 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
            ${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
-            file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-            # Leser faellt das Ziel mit "undefined reference to a2r_open".
-            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-            list(APPEND _TOOLSTAB_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-            # MF-1175: `uft_xfd.c` ruft die Anordnungsachse, die in
-            # `src/core/` liegt und vom GLOB darueber nicht erfasst wird.
-            # Angehaengt an die VARIABLE statt an jeden Verbraucher, weil
-            # dieser GLOB drei Qt-Ziele speist.
-            list(APPEND _TOOLSTAB_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
+            # P3-10: die Format-Schicht samt Wandlungs-Maschine
+            # (vorher der `_TOOLSTAB_FORMAT_SOURCES`-GLOB und die Liste
+            # weiter unten) kommt aus der EINEN Bibliothek vor der
+            # C-Schleife — uebersetzt mit den Schaltern der C-Ziele, nicht
+            # mehr mit denen dieses Qt-Ziels (Eigentuemer-Entscheidung;
+            # jeder Unterschied ist in P3-10 gemessen).
+            target_link_libraries(${qt_test_name} PRIVATE uft_test_formatschicht)
             if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
                ${qt_test_name} STREQUAL "test_tools_tab_track_view")
                 target_sources(${qt_test_name} PRIVATE
@@ -6420,11 +6209,14 @@ if(TARGET Qt6::Test)
                 # einer festen Zeichenkette - inklusive zweier erfundener
                 # CRC-Fehler, die `onExportClicked()` woertlich in den
                 # HTML- und Textbericht schrieb.
+                # P3-10: `src/core/uft_metadata.c` stand hier
+                # auch und steht seither NUR in der Bibliothek — zweimal
+                # gebunden waere es eine doppelte Definition (OBJECT, nicht
+                # STATIC: kein Objekt faellt still weg).
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/diskanalyzerwindow.cpp
                     ${CMAKE_SOURCE_DIR}/forms/diskanalyzer_window.ui
                     ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp
-                    ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
                     ${CMAKE_SOURCE_DIR}/src/core/uft_disk_metadata.c)
                 target_compile_definitions(${qt_test_name} PRIVATE
                     UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -6483,41 +6275,22 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/forms/rawformatdialog.ui
                 ${CMAKE_SOURCE_DIR}/src/visualdiskdialog.cpp
                 ${CMAKE_SOURCE_DIR}/forms/visualdiskdialog.ui
-                ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp
-                ${_TOOLSTAB_FORMAT_SOURCES}
-                # Dieselbe Zusatzliste wie der MREV-Zweig weiter oben:
-                # die Wandlungs-Maschine braucht Dekoder, Abstimmung,
-                # Preflight und die Melde-Bausteine.
-                ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
-                ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
-                ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
-                ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
-                ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-                ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
-                ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
-                ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+                ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp)
+            # P3-10: hier standen der `_TOOLSTAB_FORMAT_SOURCES`-
+            # GLOB und „dieselbe Zusatzliste wie der MREV-Zweig" (Dekoder,
+            # Abstimmung, Preflight, Melde-Bausteine). Beides ist die
+            # Bibliothek oben; die Include-Pfade unten gelten seither nur
+            # noch fuer die Oberflaechen-Quellen dieses Ziels.
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/forms
                 ${CMAKE_SOURCE_DIR}/src/gui
                 # MF-666: der formats-Pfad muss VOR include/uft/fs stehen, und die
                 # Format-Quellen aus dem GLOB darueber brauchen ihn.
+                # (P3-10: die Format-Quellen uebersetzt seither
+                # die Bibliothek, mit derselben Reihenfolge formats-vor-fs
+                # aus `UFT_FORMAT_LAYER_INCLUDES`, aber mit `include/uft`
+                # DAVOR — `uft_bbc_dfs.h` loest dort nach `include/uft/`
+                # auf, nicht nach `include/uft/formats/`; gemessen in P3-10.)
                 # `src/formats/bbc/uft_bbc_dfs.c` inkludiert
                 # "uft_bbc_dfs.h" UNQUALIFIZIERT — und den Namen gibt
                 # es DREIMAL: include/uft/, include/uft/formats/ und
@@ -6538,6 +6311,9 @@ if(TARGET Qt6::Test)
                 ${UFT_FORMAT_LAYER_INCLUDES})
             # Die Format-Quellen erwarten die Pfade, die uft_core PUBLIC
             # exportiert (include/uft, include/uft/core, .../compat).
+            # (P3-10: die Format-Quellen uebersetzt seither die Bibliothek
+            # `uft_test_formatschicht`, die `uft_core`/`uft_crc` selbst
+            # bindet; diese Zeile ist unveraendert geblieben.)
             target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
         endif()
 
@@ -6554,23 +6330,14 @@ if(TARGET Qt6::Test)
         # Wandler, weil der Test durch uft_convert_file und sein
         # Preflight-Tor laeuft.
         if(${qt_test_name} STREQUAL "test_save_image_converts")
-            file(GLOB_RECURSE SAVEIMG_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-            # Leser faellt das Ziel mit "undefined reference to a2r_open".
-            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-            list(APPEND SAVEIMG_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-            # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
-            list(APPEND SAVEIMG_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
+            # P3-10: Format-Schicht aus der EINEN Bibliothek
+            # (vorher `SAVEIMG_FORMAT_SOURCES`-GLOB + `UFT_FORMAT_LAYER_DEPS`);
+            # hier bleibt der abgeleitete Rest der gemeinsamen Liste.
+            target_link_libraries(${qt_test_name} PRIVATE uft_test_formatschicht)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/uft_save_image.cpp
-                ${SAVEIMG_FORMAT_SOURCES}
                 ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
-                ${UFT_FORMAT_LAYER_DEPS})
+                ${UFT_FORMAT_LAYER_DEPS_REST})
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
                 ${UFT_FORMAT_LAYER_INCLUDES})
@@ -6588,18 +6355,10 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_format_tab_capability_gating"
            OR ${qt_test_name} STREQUAL "test_format_tab_copy_plan"
            OR ${qt_test_name} STREQUAL "test_format_tab_bindung")
-            file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
-            # MF-1322: der A2R-LESER liegt in `src/parsers/`, sein PLUGIN in
-            # `src/formats/`. Der GLOB darueber holt nur das Plugin; ohne den
-            # Leser faellt das Ziel mit "undefined reference to a2r_open".
-            # Angehaengt an JEDE dieser Stellen und nicht an eine Liste von
-            # Testnamen: eine Aufzaehlung veraltet still, eine Regel nicht.
-            list(APPEND CAPGATE_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
-            # MF-1175: siehe oben — die Anordnungsachse aus `src/core/`.
-            list(APPEND CAPGATE_FORMAT_SOURCES
-                 ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c)
+            # P3-10: Format-Schicht aus der EINEN Bibliothek
+            # (vorher `CAPGATE_FORMAT_SOURCES`-GLOB + `UFT_FORMAT_LAYER_DEPS`);
+            # hier bleibt der abgeleitete Rest der gemeinsamen Liste.
+            target_link_libraries(${qt_test_name} PRIVATE uft_test_formatschicht)
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/formattab.cpp
                 # MF-1299: seit MF-1293 ruft formattab.cpp das Spalten-
@@ -6610,8 +6369,7 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
                 ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c
-                ${CAPGATE_FORMAT_SOURCES}
-                ${UFT_FORMAT_LAYER_DEPS})
+                ${UFT_FORMAT_LAYER_DEPS_REST})
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
                 ${CMAKE_SOURCE_DIR}/include/uft/detect
