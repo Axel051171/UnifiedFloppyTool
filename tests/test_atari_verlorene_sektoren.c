@@ -185,6 +185,7 @@ TEST(reparatur_gibt_versteckte_datei_nicht_frei)
     check_result_t r;
     memset(&r, 0, sizeof r);
     ASSERT(check_lost_sectors(d, &r, true /* fix */) == ATARI_OK);
+    free(r.issues);
 
     if (dos2_is_sector_free(d, SEK_VERSTECKT)) {
         printf("\n      Sektor %u ist nach dem Reparaturlauf FREI\n"
@@ -217,6 +218,7 @@ TEST(echte_waisen_werden_weiter_gefunden)
     check_result_t r;
     memset(&r, 0, sizeof r);
     ASSERT(check_lost_sectors(d, &r, true) == ATARI_OK);
+    free(r.issues);
 
     if (!dos2_is_sector_free(d, 500u)) {
         printf("\n      echte Waise 500 wurde NICHT freigegeben\n      ");
@@ -235,6 +237,7 @@ TEST(sichtbare_datei_bleibt_unangetastet)
     check_result_t r;
     memset(&r, 0, sizeof r);
     ASSERT(check_lost_sectors(d, &r, true) == ATARI_OK);
+    free(r.issues);
 
     ASSERT(!dos2_is_sector_free(d, SEK_SICHTBAR));
     frei(d);
@@ -255,6 +258,7 @@ TEST(ohne_fix_wird_nichts_geschrieben)
     check_result_t r;
     memset(&r, 0, sizeof r);
     ASSERT(check_lost_sectors(d, &r, false) == ATARI_OK);
+    free(r.issues);
 
     ASSERT(memcmp(vorher, vtoc, SD_SIZE) == 0);
     frei(d);
@@ -287,6 +291,7 @@ TEST(versteckte_kette_zaehlt_auch_bei_den_querverweisen)
     for (uint32_t i = 0; i < r.issue_count; i++) {
         if (r.issues[i].sector == SEK_SICHTBAR) { gefunden = true; break; }
     }
+    free(r.issues);
     if (!gefunden) {
         printf("\n      Querverkettung auf Sektor %u nicht gemeldet\n"
                "      -> der Durchgang bricht an der Endmarke ab\n      ",
@@ -326,6 +331,7 @@ TEST(versteckte_kette_wird_auch_geprueft)
     for (uint32_t i = 0; i < r.issue_count; i++) {
         if (r.issues[i].file_index == 2) { gefunden = true; break; }
     }
+    free(r.issues);
     if (!gefunden) {
         printf("\n      Widerspruch in der versteckten Kette nicht gemeldet\n"
                "      -> der Durchgang bricht an der Endmarke ab\n      ");

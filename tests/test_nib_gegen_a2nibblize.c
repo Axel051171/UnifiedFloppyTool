@@ -216,7 +216,7 @@ int main(void)
         if (pl->read_track(&disk, c, 0, &t) != UFT_OK) {
             if (!erster[0])
                 snprintf(erster, sizeof erster, "Spur %d nicht lesbar", c);
-            continue;
+            uft_track_cleanup(&t); continue;
         }
         spuren++;
         sektoren += (int)t.sector_count;
@@ -244,6 +244,7 @@ int main(void)
                          c, phys, PHYS2LOG[phys], erw, kam);
             }
         }
+        uft_track_cleanup(&t);
     }
 
     if (erster[0]) printf("  erster Fehler: %s\n", erster);

@@ -212,8 +212,7 @@ static void bilanzieren(uft_disk_t *disk, bilanz_t *b)
         for (int h = 0; h < KOPF; h++) {
             uft_track_t t;
             memset(&t, 0, sizeof t);
-            if (uft_format_plugin_dms.read_track(disk, c, h, &t) != UFT_OK)
-                continue;
+            if (uft_format_plugin_dms.read_track(disk, c, h, &t) != UFT_OK) { uft_track_cleanup(&t); continue; }
             for (unsigned s = 0; s < t.sector_count; s++) {
                 char erw[32];
                 int ln = snprintf(erw, sizeof erw, "UFT-K C%02d H%d S%02d ",
@@ -227,6 +226,7 @@ static void bilanzieren(uft_disk_t *disk, bilanz_t *b)
                                       else    b->mark_im_faulen_zyl++; }
                 b->sektoren++;
             }
+            uft_track_cleanup(&t);
         }
     }
 }

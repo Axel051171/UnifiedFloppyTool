@@ -323,8 +323,7 @@ int main(void)
                     if (p->read_track(&disk, t, h, &tr) != UFT_OK
                         || tr.sector_count != 9) {
                         falsche_zahl++;
-                        free(tr.sectors);
-                        free(tr.raw_data);
+                        uft_track_cleanup(&tr);
                         continue;
                     }
                     for (s = 0; s < 9; s++) {
@@ -350,8 +349,7 @@ int main(void)
                                          (unsigned)dd[1], (unsigned)dd[2]);
                         }
                     }
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                 }
             }
             {
@@ -387,8 +385,7 @@ int main(void)
                          mame_offset(1, 0, 40, 9), (0 * 2 + 1) * 9 * SS);
                 pruefe("Kopf 1 Spur 0 kommt vom DATEIENDE (Versatz 182016), "
                        "nicht von Position 2304", ok, d);
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
             }
 
             /* Grenzen */
@@ -398,10 +395,10 @@ int main(void)
                 char d[160];
                 memset(&tr, 0, sizeof(tr));
                 a = p->read_track(&disk, 40, 0, &tr);
-                free(tr.sectors); free(tr.raw_data);
+                uft_track_cleanup(&tr);
                 memset(&tr, 0, sizeof(tr));
                 c2 = p->read_track(&disk, 0, 2, &tr);
-                free(tr.sectors); free(tr.raw_data);
+                uft_track_cleanup(&tr);
                 snprintf(d, sizeof(d), "Spur 40 -> rc=%d, Kopf 2 -> rc=%d",
                          (int)a, (int)c2);
                 pruefe("Spur 40 und Kopf 2 werden ABGEWIESEN — die "

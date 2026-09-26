@@ -101,9 +101,13 @@ static int baue_jv1(const char *pfad, int spuren)
 
 static void frei(uft_track_t *t)
 {
-    if (!t) return;
-    free(t->sectors);
-    memset(t, 0, sizeof(*t));
+    /* Hier stand ein Nachbau von uft_track_cleanup(), der nur das
+     * Sektor-Array freigab und die Sektordaten darin liegen liess —
+     * unter ASan ein Leck je gelesener Spur, und derselbe Nachbau
+     * stand wortgleich in fuenf Tests. Eine Rechnung, eine Stelle
+     * (MF-1177): der kanonische Aufraeumer gibt Daten, Array, Fluss
+     * und Rohdaten frei und nullt die Spur. NULL ist erlaubt. */
+    uft_track_cleanup(t);
 }
 
 int main(void)

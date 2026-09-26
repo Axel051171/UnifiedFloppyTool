@@ -132,7 +132,7 @@ int main(void)
         memset(&trk, 0, sizeof(trk));
         if (uft_format_plugin_do.read_track(&disk, t, 0, &trk) != UFT_OK) {
             PRUEFE(false, "read_track scheitert auf Spur %d", t);
-            continue;
+            uft_track_cleanup(&trk); continue;
         }
         if (trk.sector_count != SPT)
             PRUEFE(false, "Spur %d liefert %zu Sektoren statt %d",
@@ -152,6 +152,7 @@ int main(void)
                 PRUEFE(false, "Spur %d Sektor %d: Inhalt stimmt nicht mit "
                        "Versatz (%d*16+%d)*256 ueberein", t, s, t, s);
         }
+        uft_track_cleanup(&trk);
     }
     uft_format_plugin_do.close(&disk);
     remove(pfad);

@@ -163,7 +163,7 @@ static void durchlauf(const char *pfad, unsigned cyl_count, unsigned heads,
             uft_track_t t;
             unsigned lg = logische_spur(c, h, cyl_count);
             memset(&t, 0, sizeof t);
-            if (p->read_track(&disk, (int)c, (int)h, &t) != UFT_OK) continue;
+            if (p->read_track(&disk, (int)c, (int)h, &t) != UFT_OK) { uft_track_cleanup(&t); continue; }
             for (s = 0; s < t.sector_count; s++) {
                 const uft_sector_t *sec = &t.sectors[s];
                 gesehen++;
@@ -190,6 +190,7 @@ static void durchlauf(const char *pfad, unsigned cyl_count, unsigned heads,
                                  c, h, (unsigned)sec->id.sector, s);
                 }
             }
+            uft_track_cleanup(&t);
         }
     }
 
@@ -288,6 +289,7 @@ int main(void)
             pruefe("Kopf 1 / Zylinder 0 ist die logische Spur 79", 0,
                    "nicht lesbar");
         }
+        uft_track_cleanup(&t);
         remove(p2);
     }
 

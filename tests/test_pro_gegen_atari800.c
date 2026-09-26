@@ -257,7 +257,7 @@ int main(void)
             uft_track_t t;
             unsigned s, idx = 0;
             memset(&t, 0, sizeof t);
-            if (p->read_track(&disk, (int)c, 0, &t) != UFT_OK) continue;
+            if (p->read_track(&disk, (int)c, 0, &t) != UFT_OK) { uft_track_cleanup(&t); continue; }
             for (s = 0; s < t.sector_count; s++) {
                 const uft_sector_t *sec = &t.sectors[s];
                 unsigned nr;
@@ -289,6 +289,7 @@ int main(void)
                                  nr);
                 }
             }
+            uft_track_cleanup(&t);
         }
         snprintf(d, sizeof d, "%u gesehen, %u gleich, %u falsch%s%s",
                  nominal_gesehen, gleich, falsch,
@@ -332,6 +333,7 @@ int main(void)
                    t.sector_count == SPT + 2u && dupl == 2
                    && dupl_richtig == 2, d);
         }
+        uft_track_cleanup(&t);
     }
 
     /* 9 — eine Spur ohne Phantome traegt genau 18 Sektoren. */
@@ -342,6 +344,7 @@ int main(void)
         snprintf(d, sizeof d, "%u Sektoren", ok ? (unsigned)t.sector_count : 0u);
         pruefe("eine Spur ohne Phantome traegt genau 18 Sektoren",
                ok && t.sector_count == SPT, d);
+        uft_track_cleanup(&t);
     }
 
     p->close(&disk);

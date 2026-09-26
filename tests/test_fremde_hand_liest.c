@@ -309,8 +309,7 @@ int main(void)
                              "Spur %d: 0 Sektoren, %zu Rohbyte",
                              proben[k], (size_t)t.raw_size);
             }
-            free(t.sectors);
-            free(t.raw_data);
+            uft_track_cleanup(&t);
         }
         snprintf(h, sizeof(h), "%u Zyl, %u Koepfe; %d von 2 Spuren "
                  "getroffen%s%s", d.geometry.cylinders, d.geometry.heads,
@@ -436,8 +435,7 @@ int main(void)
                        "und als Zellzeiten geliefert, nicht als Sektor",
                        r == UFT_OK && t.sector_count == 0
                        && t.raw_size == 0 && t.flux_count > 1000, h3);
-                free(t.sectors);
-                free(t.raw_data);
+                uft_track_cleanup(&t);
                 uft_track_release(&t);
                 uft_format_plugin_mfi.close(&d);
             }
@@ -500,8 +498,7 @@ int main(void)
                 memset(&t, 0, sizeof(t));
                 if (uft_format_plugin_kfx.read_track(&d, 0, 0, &t) == UFT_OK)
                     roh = t.raw_size;
-                free(t.sectors);
-                free(t.raw_data);
+                uft_track_cleanup(&t);
                 uft_format_plugin_kfx.close(&d);
             }
             if (gueltig && oob == 10 && idx == 3 && p && conf >= 50

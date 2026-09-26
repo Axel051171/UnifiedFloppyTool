@@ -125,7 +125,7 @@ int main(void)
         uft_track_t spur;
         memset(&spur, 0, sizeof spur);
         if (uft_format_plugin_tan.read_track(&disk, (int)cyl, 0, &spur)
-            != UFT_OK) { daneben += 10; continue; }
+            != UFT_OK) { daneben += 10; uft_track_cleanup(&spur); continue; }
         for (size_t s = 0; s < spur.sector_count; s++) {
             size_t nummer = cyl * 10 + s;
             char marke[24];
@@ -136,6 +136,7 @@ int main(void)
             if (memcmp(ist, marke, strlen(marke)) == 0) treffer++; else daneben++;
             if (spur.sectors[s].id.sector == (uint8_t)s) id_ab_null++;
         }
+        uft_track_cleanup(&spur);
     }
     printf("  Marken an ihrer Stelle: %zu  abweichend: %zu  ohne Daten: %zu\n",
            treffer, daneben, ohne_daten);
@@ -161,6 +162,7 @@ int main(void)
                 falsch_gleich++;
         }
     }
+    uft_track_cleanup(&s1);
     printf("  Gegenprobe (Spur 1 gegen Spur-0-Marken): %zu gleich\n",
            falsch_gleich);
     pruefe("Spur 1 traegt NICHT die Marken von Spur 0", falsch_gleich == 0);

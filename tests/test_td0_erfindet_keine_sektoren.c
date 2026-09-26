@@ -256,6 +256,7 @@ TEST(fehlender_sektor_wird_in_imd_nicht_zu_daten)
     int rc = uft_td0_to_imd(&strom, &imd);
 
     if (rc != UFT_OK || imd.num_tracks < 1 || imd.tracks == NULL) {
+        uft_imd_free(&imd);
         uft_td0_strom_frei(&strom); free(roh); remove(pfad);
         printf("FEHLER: uft_td0_to_imd rc=%d, Spuren=%u\n",
                rc, (unsigned)imd.num_tracks);
@@ -276,6 +277,11 @@ TEST(fehlender_sektor_wird_in_imd_nicht_zu_daten)
     /* Und die Zaehlung muss dasselbe sagen wie die Typen. */
     ASSERT(imd.unavail_sectors == 2);
 
+    /* Die IMD, die uft_td0_to_imd() angelegt hat, blieb hier
+     * liegen. uft_imd_free() ist die passende Freigabe: der
+     * Wandler ruft sie auf seinem eigenen Fehlerweg, und sie gibt
+     * die Struktur selbst nicht frei (sie liegt auf dem Stapel). */
+    uft_imd_free(&imd);
     uft_td0_strom_frei(&strom);
     free(roh);
     remove(pfad);

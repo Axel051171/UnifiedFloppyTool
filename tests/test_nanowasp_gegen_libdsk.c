@@ -233,8 +233,7 @@ int main(void)
                     if (p->read_track(&disk, c, h, &tr) != UFT_OK
                         || (int)tr.sector_count != SPT) {
                         unlesbar++;
-                        free(tr.sectors);
-                        free(tr.raw_data);
+                        uft_track_cleanup(&tr);
                         continue;
                     }
                     for (s = 0; s < SPT; s++) {
@@ -262,8 +261,7 @@ int main(void)
                                          (unsigned)dd[2]);
                         }
                     }
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                 }
             }
             {
@@ -297,8 +295,7 @@ int main(void)
                      "liegen (skew[0] == %d), nicht bei 0", SS, SKEW[0]);
             pruefe("der logische Sektor 1 kommt von Versatz 512 — "
                    "\"sector 1 doesn't map to sector 1\"", ok, d);
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── 8. Grenzen ────────────────────────────────────────────── */
@@ -308,10 +305,10 @@ int main(void)
             char d[160];
             memset(&tr, 0, sizeof(tr));
             a = p->read_track(&disk, ZYL, 0, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             memset(&tr, 0, sizeof(tr));
             c2 = p->read_track(&disk, 0, KOPF, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             snprintf(d, sizeof(d), "Zylinder 40 -> rc=%d, Kopf 2 -> rc=%d",
                      (int)a, (int)c2);
             pruefe("Zylinder 40 und Kopf 2 werden ABGEWIESEN",
@@ -360,8 +357,7 @@ int main(void)
                             ? tr.sectors[3].data[2] : 0,
                          tr.sectors && tr.sectors[3].data
                             ? tr.sectors[3].data[3] : 0);
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
                 p->close(&disk);
             } else {
                 snprintf(d, sizeof(d), "open schlug fehl");

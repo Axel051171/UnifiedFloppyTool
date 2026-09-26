@@ -158,7 +158,7 @@ int main(void)
             if (uft_format_plugin_edk.read_track(&disk, (int)cyl, (int)h,
                                                  &spur) != UFT_OK) {
                 daneben += 10;
-                continue;
+                uft_track_cleanup(&spur); continue;
             }
             for (size_t s = 0; s < spur.sector_count; s++) {
                 size_t block = (cyl * disk.geometry.heads + h) * 10 + s;
@@ -184,6 +184,7 @@ int main(void)
                     daneben++;
                 }
             }
+            uft_track_cleanup(&spur);
         }
     }
 
@@ -220,6 +221,7 @@ int main(void)
                 memcmp(spur0.sectors[s].data, soll, 512) == 0) falsch_gleich++;
         }
     }
+    uft_track_cleanup(&spur0);
     printf("  Gegenprobe (ein Block versetzt): %zu von %zu gleich\n",
            falsch_gleich, verglichen);
     pruefe("die Gegenprobe hat ueberhaupt verglichen", verglichen >= 9);

@@ -287,8 +287,7 @@ int main(void)
                            falsche_id == 0 && fremd == 0, d);
                 }
             }
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── 7. Die Kurzdatei-Regel ────────────────────────────────── */
@@ -323,8 +322,7 @@ int main(void)
                        "gekennzeichnet (MF-980)",
                        alle_e5 && alle_gekennzeichnet, d);
             }
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── 8. Grenzen ────────────────────────────────────────────── */
@@ -334,10 +332,10 @@ int main(void)
             char d[160];
             memset(&tr, 0, sizeof(tr));
             a = p->read_track(&disk, ZYL, 0, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             memset(&tr, 0, sizeof(tr));
             c2 = p->read_track(&disk, 0, 1, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             snprintf(d, sizeof(d), "Zylinder 64 -> rc=%d, Kopf 1 -> rc=%d",
                      (int)a, (int)c2);
             pruefe("Zylinder 64 und Kopf 1 werden ABGEWIESEN (64 Zyl, "

@@ -175,7 +175,7 @@ static void durchlauf(const char *pfad, unsigned spt, const char *was)
         for (h = 0; h < (int)KOEPFE; h++) {
             uft_track_t t;
             memset(&t, 0, sizeof t);
-            if (p->read_track(&disk, (int)c, h, &t) != UFT_OK) continue;
+            if (p->read_track(&disk, (int)c, h, &t) != UFT_OK) { uft_track_cleanup(&t); continue; }
             for (s = 0; s < t.sector_count; s++) {
                 const uft_sector_t *sec = &t.sectors[s];
                 /* Block = ((Track x 2) + Head) x spt + Sector */
@@ -199,6 +199,7 @@ static void durchlauf(const char *pfad, unsigned spt, const char *was)
                                  c, h, (unsigned)sec->id.sector, s);
                 }
             }
+            uft_track_cleanup(&t);
         }
     }
 

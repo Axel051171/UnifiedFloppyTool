@@ -257,8 +257,7 @@ int main(void)
                                          (unsigned)dd[1], (unsigned)dd[2]);
                         }
                     }
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                 }
             }
             {
@@ -296,8 +295,7 @@ int main(void)
                                  eck[k].h, eck[k].t,
                                  (unsigned)tr.sector_count, eck[k].soll);
                 }
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
             }
             pruefe("die vier Eckspuren: K0/48=14, K0/70=13, K1/0=18, "
                    "K1/79=11", fehler == 0, d[0] ? d : "-");
@@ -314,8 +312,7 @@ int main(void)
                      (unsigned)tr.sector_count);
             pruefe("Zylinder 200 wird ABGEWIESEN, nicht als leerer Erfolg "
                    "gemeldet", rc2 != UFT_OK, d);
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── 6. Kopf 1 einer EINSEITIGEN Datei ist kein Erfolg ─────── */
@@ -343,8 +340,7 @@ int main(void)
                          (unsigned)tr.sector_count);
                 pruefe("Kopf 1 einer einseitigen Datei wird ABGEWIESEN",
                        rc2 != UFT_OK, d);
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
                 p->close(&d1);
             } else {
                 pruefe("Kopf 1 einer einseitigen Datei wird ABGEWIESEN", 0,

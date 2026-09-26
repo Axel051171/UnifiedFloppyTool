@@ -229,8 +229,7 @@ int main(void)
                     if (p->read_track(&disk, (int)t, (int)h, &tr) != UFT_OK
                         || tr.sector_count != SC) {
                         falsche_zahl++;
-                        free(tr.sectors);
-                        free(tr.raw_data);
+                        uft_track_cleanup(&tr);
                         continue;
                     }
                     for (s = 0; s < (int)SC; s++) {
@@ -255,8 +254,7 @@ int main(void)
                                          (unsigned)dd[1], (unsigned)dd[2]);
                         }
                     }
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                 }
             }
             {
@@ -280,10 +278,10 @@ int main(void)
             char d[160];
             memset(&tr, 0, sizeof(tr));
             a = p->read_track(&disk, 77, 0, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             memset(&tr, 0, sizeof(tr));
             c = p->read_track(&disk, 0, 2, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             snprintf(d, sizeof(d), "Spur 77 -> rc=%d, Kopf 2 -> rc=%d",
                      (int)a, (int)c);
             pruefe("Spur 77 und Kopf 2 werden ABGEWIESEN (0..76 / 0..1)",

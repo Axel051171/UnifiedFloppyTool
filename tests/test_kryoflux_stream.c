@@ -403,6 +403,7 @@ static void test_streaminfo_position_stimmt(void)
           "richtige Position wurde als falsch gemeldet");
     CHECK(s.flux_count == 4, "flux_count != 4");
     CHECK(s.data_count == 3, "data_count != gemeldete Position");
+    uft_kf_free(&s);
     printf("  ok: streaminfo_position_stimmt\n");
 }
 
@@ -427,6 +428,7 @@ static void test_streaminfo_position_weicht_ab(void)
     /* NICHT korrigiert: der gemeldete Wert wird gar nicht erst
      * uebernommen. */
     CHECK(s.data_count != 7, "die falsche Position wurde uebernommen");
+    uft_kf_free(&s);
     printf("  ok: streaminfo_position_weicht_ab\n");
 }
 
@@ -446,6 +448,7 @@ static void test_hardwarefehler_schlaegt_positionsfehler(void)
     if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
 
     uft_kf_status_t st = uft_kf_decode(&s, data, sizeof(data));
+    uft_kf_free(&s);
     CHECK(st == UFT_UFT_KF_STATUS_DEV_BUFFER,
           "der Hardwarebefund wurde von der Position ueberschrieben");
     printf("  ok: hardwarefehler_schlaegt_positionsfehler\n");

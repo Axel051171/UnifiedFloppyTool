@@ -220,7 +220,7 @@ static int durchlauf(const char *pfad, unsigned erw_ss, unsigned erw_total,
     for (c = 0; c < (unsigned)disk.geometry.cylinders; c++) {
         uft_track_t t;
         memset(&t, 0, sizeof t);
-        if (p->read_track(&disk, (int)c, 0, &t) != UFT_OK) continue;
+        if (p->read_track(&disk, (int)c, 0, &t) != UFT_OK) { uft_track_cleanup(&t); continue; }
         for (s = 0; s < t.sector_count; s++) {
             const uft_sector_t *sec = &t.sectors[s];
             unsigned nr = c * 18u + s + 1u;
@@ -243,6 +243,7 @@ static int durchlauf(const char *pfad, unsigned erw_ss, unsigned erw_total,
                          nr, kam, sec->data_len, sll);
             }
         }
+        uft_track_cleanup(&t);
     }
     if (gesehen != erw_total && !erster[0])
         snprintf(erster, erster_n, "%u Sektoren geliefert, %u erwartet",
@@ -369,6 +370,7 @@ int main(void)
             }
             p->close(&disk);
         }
+        uft_track_cleanup(&t);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

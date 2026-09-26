@@ -153,8 +153,7 @@ int main(void)
                 if (p->read_track(&disk, t, 0, &tr) != UFT_OK
                     || (int)tr.sector_count != TAN_SPT) {
                     unlesbar++;
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                     continue;
                 }
                 for (s = 0; s < TAN_SPT; s++) {
@@ -176,8 +175,7 @@ int main(void)
                                      (unsigned)dd[0], (unsigned)dd[1]);
                     }
                 }
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
             }
             {
                 char d[260];
@@ -201,8 +199,7 @@ int main(void)
                      (unsigned)tr.sector_count);
             pruefe("Kopf 1 wird ABGEWIESEN — TAN hat nur eine Seite",
                    rc2 != UFT_OK, d);
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── Spur 80 gibt es nicht ──────────────────────────────────── */
@@ -216,8 +213,7 @@ int main(void)
                      (unsigned)tr.sector_count);
             pruefe("Spur 80 wird ABGEWIESEN (0..79 ist alles)",
                    rc2 != UFT_OK, d);
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         p->close(&disk);

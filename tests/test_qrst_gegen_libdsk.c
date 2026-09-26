@@ -262,8 +262,7 @@ int main(void)
                         snprintf(erstes, sizeof(erstes),
                                  "Spur %d: %u Sektoren statt %d", c,
                                  (unsigned)tr.sector_count, SPT);
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                     continue;
                 }
                 for (s = 0; s < SPT; s++) {
@@ -296,8 +295,7 @@ int main(void)
                                      (unsigned)dd[2]);
                     }
                 }
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
             }
             {
                 char d[320];
@@ -343,8 +341,7 @@ int main(void)
                         ? (unsigned)tr.sectors[SPT - 1].data[2] : 255u);
             pruefe("die GEPACKTE Spur 2 wird richtig entpackt — erster "
                    "und letzter Sektor nennen sich selbst", ok, d);
-            free(tr.sectors);
-            free(tr.raw_data);
+            uft_track_cleanup(&tr);
         }
 
         /* ── 8. Grenzen ────────────────────────────────────────────── */
@@ -354,10 +351,10 @@ int main(void)
             char d[160];
             memset(&tr, 0, sizeof(tr));
             a = p->read_track(&disk, ZYL, 0, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             memset(&tr, 0, sizeof(tr));
             c2 = p->read_track(&disk, 0, 1, &tr);
-            free(tr.sectors); free(tr.raw_data);
+            uft_track_cleanup(&tr);
             snprintf(d, sizeof(d), "Spur 40 -> rc=%d, Kopf 1 -> rc=%d",
                      (int)a, (int)c2);
             pruefe("Spur 40 und Kopf 1 werden ABGEWIESEN (40 Zyl, "
@@ -390,8 +387,7 @@ int main(void)
                 if (p->read_track(&disk, c, 0, &tr) != UFT_OK
                     || (int)tr.sector_count != SPT) {
                     vollstaendig = 0;
-                    free(tr.sectors);
-                    free(tr.raw_data);
+                    uft_track_cleanup(&tr);
                     break;
                 }
                 for (s = 0; s < SPT; s++) {
@@ -402,8 +398,7 @@ int main(void)
                         ist += (uint32_t)dd[k] * (uint32_t)versatz;
                     }
                 }
-                free(tr.sectors);
-                free(tr.raw_data);
+                uft_track_cleanup(&tr);
             }
             p->close(&disk);
         } else {

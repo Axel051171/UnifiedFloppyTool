@@ -271,6 +271,12 @@ static void t_tuer_via_plugin(void)
     }
     pruefe_spuren(zurueck, 42, "via_plugin ueber die Datei");
 
+    /* Hier blieben beide Abbilder auf dem Erfolgsweg liegen — nur
+     * der Fehlerzweig oben gab sie frei. Unter ASan: 48 Byte
+     * direkt und 205 312 Byte indirekt je Abbild. */
+    d64_free(zurueck);
+    d64_free(orig);
+
     ok("Datei-Weg: alle 42 Spuren byteidentisch (P3-195 behoben)");
 }
 
