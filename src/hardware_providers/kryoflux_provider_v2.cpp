@@ -257,7 +257,9 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *    fest verdrahtetes "/tmp/uft_kf_r_{cyl}_{head}" samt der Angabe, der
  *    QProcess-Laeufer benutze in Produktion ein echtes Temp-Verzeichnis.
  *    Gemessen tut er das nicht: `make_kryoflux_qprocess_runner()` reicht
- *    `argv` unveraendert an QProcess weiter (P3-342 Nachtrag). In Tests
+ *    `argv` unveraendert an QProcess weiter (P3-342 Nachtrag) — bis auf
+ *    den Programmnamen an Stelle 0, den er seit MF-1359 abschneidet,
+ *    weil setProgram() ihn schon traegt (P3-562). In Tests
  *    schreibt der SubprocessMock ohnehin keine Datei, die Bytes kommen
  *    ueber `stdout_text` (siehe test_kryoflux_provider_v2.cpp).
  *

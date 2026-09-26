@@ -138,7 +138,15 @@ vorher rot gemessen wurde.
 2. **Solver (E4):** Wird er Fundus, oder bekommt er den Differenzlauf
    aus DTC-5?
 
-### DTC-1 — ein `argv`-Vertrag für beide Läufer *(B1, ~40 Zeilen)*
+### DTC-1 — ein `argv`-Vertrag für beide Läufer *(B1, ~40 Zeilen)* — ✅ MF-1359
+
+> **Erledigt MF-1359.** `tests/test_laeufer_argv.cpp` startet einen echten
+> Prozess (`tests/argv_echo/uft_argv_echo.c`) über die echten Läufer:
+> gegen den Vorzustand **7 von 10** Zusagen rot (DTC sah `dtc -c2 -d0 -i0`,
+> FluxEngine `fluxengine version`), danach **10 von 10**. Mutationsmatrix
+> **4 von 4**, darunter „nur KryoFlux behoben" (die Paketfassung, fällt an
+> 2b/3b/4c) und „pauschal in `run_subprocess()`" (fällt an FC5025, Zusage 5).
+> Der Rückgabewert der Absage ist `-4`; es läuft dann kein Prozess.
 
 * **Kennzahl:** Bench-Alter je Controller / Fähigkeitszusage. Heute
   kann kein echter DTC- oder FluxEngine-Aufruf gelingen.

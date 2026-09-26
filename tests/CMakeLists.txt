@@ -6286,6 +6286,15 @@ if(TARGET Qt6::Test)
         # unconditionally.
         ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c)
 
+    # MF-1359 / P3-562: das Werkzeug, das test_laeufer_argv an die Stelle
+    # von `dtc`, `fluxengine` und `fcimage` setzt. Es schreibt auf, welche
+    # Argumente ein ECHTER Prozess von den QProcess-Laeufern bekommt — der
+    # SubprocessMock startet nichts und konnte das nie sehen.
+    add_executable(uft_argv_echo
+        ${CMAKE_CURRENT_SOURCE_DIR}/argv_echo/uft_argv_echo.c)
+    set_target_properties(uft_argv_echo PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+
     # Discover Qt C++ test sources, excluding the header-only set already
     # handled by the main C-loop (MF-150).
     set(QT_TEST_SOURCES ${TEST_SOURCES_CPP})
@@ -6647,6 +6656,24 @@ if(TARGET Qt6::Test)
                 UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
         endif()
 
+        # MF-1359 / P3-562: die drei QProcess-Laeufer gegen einen echten
+        # Prozess. Braucht den Laeufer, die drei Provider, die er baut, und
+        # deren Dekoder — dieselben wie test_provider_temppfad, plus FC5025.
+        if(${qt_test_name} STREQUAL "test_laeufer_argv")
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/qprocess_subprocess_runner.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+                ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
+            add_dependencies(${qt_test_name} uft_argv_echo)
+            target_compile_definitions(${qt_test_name} PRIVATE
+                UFT_ARGV_ECHO="$<TARGET_FILE:uft_argv_echo>")
+        endif()
+
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was
         # deleted with the V1 provider hierarchy. Qt-side tests now
         # link only against Qt6::Core+Test+Widgets+SerialPort. The V2
@@ -6676,6 +6703,7 @@ if(TARGET Qt6::Test)
         if(${qt_test_name} STREQUAL "test_wiring_runtime" OR
            ${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
+           ${qt_test_name} STREQUAL "test_laeufer_argv" OR
            ${qt_test_name} STREQUAL "test_provider_switch")
             set_target_properties(${qt_test_name} PROPERTIES
                 CXX_STANDARD 20
