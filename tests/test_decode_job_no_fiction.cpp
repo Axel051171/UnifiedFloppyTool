@@ -55,6 +55,7 @@
 #include <QLabel>
 #include <QProgressBar>
 #include <QRegularExpression>
+#include <QTemporaryDir>
 #include <cstring>
 #include <memory>
 
@@ -806,6 +807,84 @@ private slots:
         const QString leer = DecodeJob::resultMessage(r);
         QVERIFY2(leer.startsWith(QString::fromUtf8("Lesen abgebrochen — keine Sektoraussage")),
                  qPrintable(leer));
+    }
+
+    /* ── d1a) Keine Plattform: keine leere Klammer (P2-2, MF-1351) ───────
+     *
+     * Seit das Pruefetor die Registry fragt, kommt fuer jedes Format
+     * ausserhalb seiner festen Liste KEINE Plattform — die Registry nennt
+     * keine, und das Pruefetor erfindet keine. Der Fertigtext lautete
+     * dann gemessen „Decode complete! ImageDisk (IMD) (): 320 Sektoren". */
+    void emptyPlatformNotShown()
+    {
+        DecodeResult r;
+        r.formatName = "ImageDisk (IMD)";
+        r.totalSectors = 3;
+        r.uncheckedSectors = 3;
+        r.tracksAsked = 1;
+        QString msg = DecodeJob::resultMessage(r);
+        QVERIFY2(!msg.contains("()"), qPrintable(msg));
+        QVERIFY2(msg.contains("ImageDisk (IMD):"), qPrintable(msg));
+        r.totalSectors = r.uncheckedSectors = 0;
+        msg = DecodeJob::resultMessage(r);
+        QVERIFY2(!msg.contains("()"), qPrintable(msg));
+        r.platformName = "Atari";
+        msg = DecodeJob::resultMessage(r);
+        QVERIFY2(msg.contains("ImageDisk (IMD) (Atari)"), qPrintable(msg));
+    }
+
+    /* ── d1b) Der Pfad, nicht die Datei (P2-2 Nachbesserung, MF-1351) ────
+     *
+     * Der Auftrag oeffnete mit `m_sourcePath.toUtf8()`; die C-Schicht
+     * oeffnet mit einem schmalen fopen() in der Codepage des Systems
+     * (Windows: ANSI). Zwei Namen fuer bekannte Inhalte:
+     *   „Übung_ä.imd"  (hxcfe_pc160.imd) — darstellbar, muss ein Plugin
+     *                  finden wie unter jedem anderen Namen
+     *   „Ωα.st"        (hxcfe_720k.st)   — die feste Liste des Validators
+     *                  nimmt sie an (sie liest ueber QFile, nicht fopen);
+     *                  ist der Name nicht darstellbar, endet der Auftrag
+     *                  mit einer Absage, die den PFAD nennt — nicht mit
+     *                  „kein Plugin hat die Datei geoeffnet", das waere
+     *                  ein Urteil ueber die Datei. */
+    void pathInSystemCodePage_data()
+    {
+        QTest::addColumn<QString>("quelle");
+        QTest::addColumn<QString>("name");
+        QTest::newRow("umlaut") << "hxcfe_pc160.imd"
+                                << QString::fromUtf8("\xC3\x9C" "bung_\xC3\xA4.imd");
+        QTest::newRow("griechisch") << "hxcfe_720k.st"
+                                    << QString::fromUtf8("\xCE\xA9\xCE\xB1.st");
+    }
+
+    void pathInSystemCodePage()
+    {
+        QFETCH(QString, quelle);
+        QFETCH(QString, name);
+        if (!QFile::exists(corpus(quelle)))
+            QSKIP(qPrintable("Korpus fehlt: " + quelle));
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString pfad = dir.filePath(name);
+        QVERIFY(QFile::copy(corpus(quelle), pfad));
+        const bool darstellbar =
+            QFile::decodeName(QFile::encodeName(pfad)) == pfad;
+
+        const JobRun r = runJob(pfad);
+        qInfo().noquote() << QString("PFAD %1 darstellbar=%2 leser=\"%3\" "
+                                     "fertig=\"%4\" fehler=\"%5\"")
+                                 .arg(name).arg(darstellbar)
+                                 .arg(r.result.readerName, r.finished, r.error);
+        if (darstellbar) {
+            QVERIFY2(!r.result.readerName.isEmpty(),
+                     qPrintable("kein Plugin fuer einen darstellbaren Pfad: "
+                                + r.finished + r.error));
+            QVERIFY2(r.error.isEmpty(), qPrintable(r.error));
+        } else {
+            QVERIFY2(r.finished.isEmpty(), qPrintable(r.finished));
+            QVERIFY2(r.error.contains("Systemcodepage"), qPrintable(r.error));
+            QVERIFY(r.em.isEmpty());
+        }
     }
 
     /* ── d2) Nur Abgewiesenes: kein Haken im Reiter (Gegenpruefung X2) ── */

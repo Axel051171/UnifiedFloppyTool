@@ -210,6 +210,53 @@ geklickt. Die Liste ist eine gepflegte Aufzählung neben der Registry —
 die Klasse aus MF-636. Kennzahl: keine der vier; Ehrlichkeitsachse (die
 beworbene Formatliste gegen das, was die Oberfläche öffnet).
 
+**Behoben MF-1351.** `DiskImageValidator::validate()` fragt jetzt, wo
+Liste UND Kennungen ablehnen, die Registry (`uft_disk_open_ranked()`,
+read-only — die EINE Entscheidungsstelle aus MF-1251/1252). Die Liste
+bleibt für ihre eigenen Endungen ZUERST: gemessen sind alle 19 vorher
+gültigen Korpusdateien danach zeichengleich, und `hxcfe_720k.st` bleibt
+„Atari ST Image" (Registry zuerst ergäbe MSX). Öffnet ein Plugin die
+Datei, ist sie gültig — Name „Beschreibung (Plugin)", Geometrie aus der
+geöffneten Scheibe (0 → -1, nichts aus der Dateigröße geraten), Fluss aus
+`UFT_FORMAT_CAP_FLUX`, **keine** Plattform; ein Endungsentscheid (Regel
+2b) und ein reiner Größentreffer (Band 30..49, MF-729) stehen im Namen
+dabei. Gleichstand ohne Entscheid heißt „mehrdeutig" mit Namen, eine leere
+Registry sagt sich selbst. `fileDialogFilter()`, `isSupportedExtension()`
+und `supportedExtensions()` nehmen die Registry-Endungen aus
+`uft_format_endungen_sammeln()` (MF-1245) dazu. Gemessen an
+`tests/corpus_free` (110 Dateien): **vorher 19 gültig, nachher 92**; 18
+bleiben abgewiesen (14 mehrdeutig mit Namen, 4 ohne öffnendes Plugin).
+
+**Die Gegenprüfung hat nachbessern lassen, und der Rotbeweis dazu war
+schärfer als ihr Befund.** Sie maß, dass „Ωα.imd" (Inhalt einer gültigen
+IMD) als „kein Plugin öffnet die Datei" abgewiesen wurde — die C-Schicht
+öffnet mit schmalem `fopen()`, und der Name ist in der ANSI-Codepage nicht
+darstellbar. Gemessen im Rotbeweis der Nachbesserung: Windows kodiert „Ωα"
+nicht zu `?`, sondern per **Ersatzabbildung zu „Oa"** — liegt eine
+`Oa.imd` daneben, gab das Prüftor **4099 Zufallsbytes als „ImageDisk
+(IMD)" aus**, weil es eine ANDERE Datei geöffnet hatte. Seit MF-1351 fragt
+`DiskImageValidator::nativePath()` (eine Stelle, MF-1177), ob der Pfad
+darstellbar ist; wenn nicht, sagt das Prüftor, dass es am Pfad liegt, und
+öffnet nichts. `DecodeJob` hatte dieselbe Lücke in der anderen Richtung:
+er öffnete mit `toUtf8()`, womit gemessen „Übung_ä.imd" KEIN Plugin fand
+(„kein Plugin hat die Datei geöffnet"); er nimmt jetzt denselben Pfad und
+sagt bei nicht darstellbarem Namen ab, bevor ein Byte gelesen ist. Eine
+leere Datei heißt „Datei leer", und `DecodeJob` zeigt eine fehlende
+Plattform nicht mehr als „()" an. Gehalten von
+`tests/test_validator_fragt_die_registry.cpp` (25 Fälle, Rotbeweis 17 von
+21 gegen HEAD, dann 3 von 25 gegen die erste Fassung) und
+`tests/test_decode_job_no_fiction.cpp` (+3 Fälle, 3 rot gegen die erste
+Fassung); Mutationsmatrix der ersten Fassung 14 von 14 (Umsetzer), der
+Nachbesserung 7 von 7; ctest 555 von 555 (1 benannter Skip). **Nicht geklickt:** `MainWindow::openFile()` ist im Testbau
+nicht übersetzt (`UFT_BUILD_APP=OFF`); belegt ist das Prüftor, das es
+fragt. **Am Rand, gemessen und benannt:** die XFD-Sonde vergibt 82 auf
+eine Zwei-Byte-Heuristik, wodurch ein TI-99-Abbild ohne Größenzusatz als
+XFD aufgeht — sie steht bereits in der Grundlinie des Sondendoktrin-Tors
+(`docs/sondendoktrin_baseline.txt:88`); der Filter bietet auch Endungen
+von Plugins an, die grundsätzlich absagen (`*.rcpmfs`, MF-1035) — die
+Endungen kommen unverändert aus `uft_format_endungen_sammeln()`. Weiter
+offen: P3-557, P3-558, P3-559.
+
 ---
 
 ## P3 — unbelegte Zusagen
@@ -691,6 +738,9 @@ beworbene Formatliste gegen das, was die Oberfläche öffnet).
 | P3-551 | **Zwei Befunde in der GESCHUETZTEN Greaseweazle-Datei.** `uft_gw_open_stream()` fuellt `dev->info` nie (nur `uft_gw_open()` ruft GET_INFO), also meldet jede Erfassung ueber die Stream-Naht (MF-686) `sample_freq = 0`, und `uft_gw_read_flux()` schickt ReadFlux mit 0 Ticks. Und `uft_gw_get_info()` setzt bei gemeldeten 0 Hz still 72 MHz ein — eine erfundene Zahl bei einem F7 Plus mit 84 MHz. | **gelesen MF-1344** vom Umsetzer der Tuer-Stufe 4; `src/hal/uft_greaseweazle_full.c` ist geschuetzt und wurde nicht angefasst. Der neue Adapter fragt den Takt deshalb selbst und sagt ohne Takt ab. | ⬜ **Eigentuemerentscheidung** (geschuetzte Datei): soll `uft_gw_open_stream()` GET_INFO rufen, und soll `uft_gw_get_info()` bei 0 Hz absagen statt 72 MHz einzusetzen? **Kennzahl:** Bench-Alter (mittelbar). |
 | P3-552 | **Die Summe `TRACKS_FAILED` der Bruecke behauptet „nicht lesbar", wo der Rueckgabewert es nicht belegt.** `src/core/uft_disk2_bridge.c` schreibt ein WARN „%zu von %zu Spuren nicht lesbar." Seit MF-1347 sagen die Einzelbefunde `TRACK_UNREADABLE` ausdruecklich, dass ein `read_track`-Fehler NICHT zwischen „unlesbar" und „im Behaelter fehlend/unformatiert" unterscheidet — die Summe darueber behauptet es weiter, dieselbe Ueberbehauptung eine Ebene hoeher. | **gemessen MF-1347** vom Gegenpruefer der Tuer-Stufe 1: an der sauberen `tests/corpus_free/hxcfe_pc160.d88` stehen im selben Bericht „[WARN] TRACKS_FAILED: 120 von 160 Spuren nicht lesbar." und die zwei neuen NOTEs, die genau das verneinen. Vorbestehend seit MF-1272, nicht Teil des Auftrags. `tests/test_disk2_bridge.c` verlangt genau EINEN Befund mit dem Code `TRACKS_FAILED` — den Code, nicht den Wortlaut (nachgelesen). | ⬜ offen. Wortlaut neutral fassen („%zu von %zu Spuren: read_track scheiterte") und Schwere pruefen, mit Rotbeweis; der Code kann bleiben. **Kennzahl:** keine der vier. |
 | P3-553 | **Nach einem Fehler von `DecodeJob` laeuft der Worker-Thread weiter, und der Auftrag wird nie freigegeben.** `src/mainwindow.cpp` und `src/workflowtab.cpp` verbinden `QThread::quit` und `deleteLater` nur mit `DecodeJob::finished`, nicht mit `DecodeJob::error`; die Fehlerbehandlung (`MainWindow::onDecodeError`, `WorkflowTab::resetUI`) setzt nur die Zeiger auf `nullptr`. Ein Abbruch endet in `error()` (MF-118) — also bleibt genau dann ein Faden mit laufender Ereignisschleife und ein verwaister Auftrag zurueck. | **gelesen MF-1349** (vom Umsetzer der Tuer-Stufe 2 gemeldet, beide Verdrahtungen und beide Fehlerpfade nachgelesen); NICHT gemessen, ob es beim Beenden zu „QThread: Destroyed while thread is still running" kommt. | ⬜ offen. Abhilfe: `error` ebenfalls an `quit`/`deleteLater` binden, mit einem Qt-Test, der nach `error()` den Faden beendet sehen will. **Kennzahl:** keine der vier. |
+| P3-557 | **Die Oberflaeche gibt Wirtspfade als UTF-8 an eine C-Schicht, die sie in der Systemcodepage oeffnet.** `QString::toUtf8()` vor einem schmalen `fopen()` scheitert unter Windows an jedem Nicht-ASCII-Pfad (`C:/Users/Jürgen/...`); fuer einen in der Codepage NICHT darstellbaren Namen ist auch `QFile::encodeName()` falsch, weil seine Ersatzabbildung eine andere Datei treffen kann („Ωα" -> „Oa"). Seit MF-1351 fragen Pruefetor und `DecodeJob` `DiskImageValidator::nativePath()`. Die uebrigen Stellen tun es nicht: per `git grep` gemessen tragen 28 Aufrufe das Muster `uft_*(… <pfad>.toUtf8() …)`, darunter Wirtspfade in `diskanalyzerwindow.cpp:129/618`, `toolstab.cpp:209`, `visualdiskdialog.cpp:424`, `decodejob.cpp:649` (Wandlung, Quelle und Ziel), `explorertab.cpp` (9 x `m_imagePath`, dazu die Quelldatei von `uft_adf_add_file`/`uft_inject_file`), `gui/uft_otdr_panel.cpp:376/1098` und `gui/uft_smart_export_dialog.cpp:119`; die uebrigen Treffer sind Pfade INNERHALB eines Abbilds (ADF/FAT12), keine Wirtspfade. | **gemessen MF-1351** an `DecodeJob` („Übung_ä.imd": vorher kein Plugin, nachher IMD mit 320 Sektoren) und am Pruefetor (Ersatzname „Oa.imd" geoeffnet); die uebrigen Stellen sind nach Aufrufform gezaehlt, NICHT einzeln an der Oberflaeche gemessen. | ⬜ offen. Jede Stelle auf `nativePath()` umstellen, je mit einer Zusage fuer einen Umlaut- und einen nicht darstellbaren Pfad; die dauerhafte Loesung waere eine breite Oeffnung in der C-Schicht (`_wfopen` unter Windows) — das ist eine Entwurfsfrage fuer die Format-Schicht, keine GUI-Aenderung. **Kennzahl:** keine der vier. |
+| P3-558 | **Dieselbe 160K-Diskette meldet in sechs Behaeltern sechs Geometrien, und eine abgeschnittene IMD geht als gueltig auf.** Gemessen vom Umsetzer von P2-2 ueber `uft_disk_open_ranked()` + `uft_disk_get_geometry()`: `hxcfe_pc160.imd` 42/1/8/128, `.d88` 80/2/8/512, `.dmk` 42/1/18/256, `.jv3` 40/1/19/256, `.stx` 42/2/9/512, `.mfi` 42/1/1/0. Und von der Gegenpruefung: die ersten 300 Byte von `hxcfe_pc160.imd` oeffnen als 1/1/8/512, die halbe Datei als 20/1/8/512, die volle als 42/1/8/128 — das IMD-Plugin nimmt eine abgeschnittene Datei ohne Absage an, und die gemeldete Sektorgroesse springt mit der Schnittstelle. Seit P2-2 kommt beides am Pruefetor als „gueltig" an. | **gemessen** von Umsetzer und Gegenpruefung (MF-1351), von mir nicht nachgemessen; welche der sechs Geometrien stimmt, ist NICHT gemessen — ob die Fixtures (hxcfe-Rohlader) oder die Plugins abweichen, ist offen. | ⬜ offen. Erst je Behaelter die Sektorkoepfe (C/H/R/N) auslesen und gegen die Quelle der Fixture halten; fuer IMD: eine abgeschnittene Datei als abgeschnitten melden (MF-980, `uft_format_mark_last_missing`) statt als kleinere Diskette. Rotbeweis zuerst (EINFRIER-REGEL). **Kennzahl:** keine der vier. |
+| P3-559 | **Die GUI-Verbraucher des Pruefetors nehmen jetzt Registry-Formate an, fuer die sie nicht gebaut sind.** Seit P2-2 kommt eine `.imd`/`.d88`/`.td0` am Pruefetor durch; `MainWindow::openFile()` zeigt dann „Datei - Name ()" bei leerer Plattform (`src/mainwindow.cpp:492-495`), und sein Oeffnen-Dialog (`src/mainwindow.cpp:360`) ist eine eigene Handliste, die weder `fileDialogFilter()` noch `uftAbbildDateifilter()` nutzt. `NibbleTab` (`src/nibbletab.cpp:199-205`) liest Rohbytes an einem flachen Versatz aus der gemeldeten Geometrie — bei Behaelterformaten falsch (vorher griff dort der 8192/16384-Rueckfall, dieselbe Klasse mit anderen Zahlen), und `nibbletab.cpp:174` verzweigt ueber `formatName.contains("D64")`. | **gelesen** vom Umsetzer und der Gegenpruefung von P2-2 (MF-1351); nicht geklickt — `mainwindow.cpp` wird im Testbau nicht uebersetzt. | ⬜ offen. Mit dem App-Bau zusammen: `openFile()` auf `fileDialogFilter()` und eine Anzeige ohne leere Klammer; `NibbleTab` ueber `uft_disk_open()` statt flacher Versaetze. Je eine Klick-Sitzung dokumentieren. **Kennzahl:** keine der vier. |
 | P3-556 | **Ein Abbruch waehrend `uft_d2_from_disk()` wirkt erst, wenn der Aufruf zurueckkehrt.** Die Bruecke liest jede Spur der Plugin-Geometrie in EINEM Aufruf; `DecodeJob` prueft `isCancelled()` davor, danach und vor jedem `sectorUpdate`, aber nicht dazwischen. | **gemessen MF-1350**: der ganze Auftrag ueber alle 110 Dateien von `tests/corpus_free` zusammen 404 ms. **Nicht gemessen:** eine grosse Flussdatei, die ein Plugin wirklich dekodiert — dort ist die Dauer des nicht abbrechbaren Schritts unbekannt. | ⬜ offen. Erst messen (groesste Flussdatei im Korpus, Zeit von `uft_d2_from_disk()`); nur wenn sie spuerbar ist, der Bruecke einen Abbruchrueckruf je Spur geben. **Kennzahl:** keine der vier. |
 | P3-555 | **Der Workflow-Reiter zeigt das Ergebnis von `DecodeJob` unter der Ueberschrift „Success".** `src/workflowtab.cpp` legt den `finished()`-Text in `QMessageBox::information(this, tr("Success"), result)` und sendet `operationFinished(true)` — seit MF-1350 auch dann, wenn der Text „Lauf beendet — keine Sektoraussage" lautet (Fluss ohne Sektorzerlegung). Dieselbe Klasse wie P0-17, eine Ebene hoeher: eine Erfolgsmeldung, die der Inhalt nicht traegt. | **gelesen MF-1350** (vom Gegenpruefer der Tuer-Stufe 2 gemeldet, Verdrahtung nachgelesen); nicht an der Oberflaeche geklickt. | ⬜ offen. Ueberschrift und `operationFinished` am Inhalt ausrichten (dekodierte Sektoren > 0), mit einem Qt-Test. **Kennzahl:** keine der vier. |
 | P3-554 | **Die GCR-Pruefsumme von G64 und NIB erreicht das Modell nicht.** Ueber `uft_d2_from_disk()` liefern `vice_c1541_35trk.g64` 683 und die NIB-Korpusdatei 560 Sektoren, alle mit `data_crc_known = false` — der Status-Reiter kann sie deshalb nur als „ungeprueft" zeigen, obwohl die GCR-Datenbloecke eine Pruefsumme tragen. | **gemessen vom Umsetzer der Tuer-Stufe 2 (MF-1349), NICHT selbst nachgemessen** — die Zahlen stehen hier, wie sie gemeldet wurden. | ⬜ offen. Erst selbst messen, dann entscheiden, ob die Plugins die Pruefsumme durchreichen koennen (Decoder-Schicht: EINFRIER-REGEL). **Kennzahl:** keine der vier. |

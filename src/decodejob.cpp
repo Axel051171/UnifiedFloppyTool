@@ -195,14 +195,19 @@ void DecodeJob::run()
  * nothing is complete; the run is over, and that is all the text says. */
 QString DecodeJob::resultMessage(const DecodeResult& r)
 {
+    /* P2-2 (MF-1351): formats the validator knows only through the plugin
+     * registry carry no platform — none is invented, and none is shown as
+     * an empty "()". */
+    const QString was = r.platformName.isEmpty()
+        ? r.formatName
+        : QString("%1 (%2)").arg(r.formatName, r.platformName);
     QString msg;
     if (r.totalSectors == 0) {
-        msg = QString("%1 — keine Sektoraussage: %2 (%3) nicht "
+        msg = QString("%1 — keine Sektoraussage: %2 nicht "
                       "dekodiert")
             .arg(r.readAborted ? QStringLiteral("Lesen abgebrochen")
                                : QStringLiteral("Lauf beendet"))
-            .arg(r.formatName)
-            .arg(r.platformName);
+            .arg(was);
         if (r.readerName.isEmpty() && r.rejectedSectors == 0) {
             msg += QString(" (kein Plugin hat die Datei geoeffnet — "
                            "unbekannt oder mehrdeutig)");
@@ -219,14 +224,13 @@ QString DecodeJob::resultMessage(const DecodeResult& r)
         }
     } else {
         /* A partial model is not a finished decode: say so up front. */
-        msg = QString("%1 %2 (%3): %4 Sektoren gelesen — "
-                      "%5 Pruefsumme stimmt, %6 Pruefsumme falsch, "
-                      "%7 ohne Pruefsummenangabe")
+        msg = QString("%1 %2: %3 Sektoren gelesen — "
+                      "%4 Pruefsumme stimmt, %5 Pruefsumme falsch, "
+                      "%6 ohne Pruefsummenangabe")
             .arg(r.readAborted
                      ? QStringLiteral("Lesen abgebrochen — Teilergebnis:")
                      : QStringLiteral("Decode complete!"))
-            .arg(r.formatName)
-            .arg(r.platformName)
+            .arg(was)
             .arg(r.totalSectors)
             .arg(r.goodSectors)
             .arg(r.badSectors)
@@ -295,7 +299,23 @@ bool DecodeJob::loadImage()
      * registry — no second reader), and without a plugin the geometry
      * stays 0 = "nicht ermittelt" instead of a default. */
     closeDisk();
-    m_disk = uft_disk_open(m_sourcePath.toUtf8().constData(), /*read_only=*/true);
+    /* P2-2 (MF-1351): the path in the form the C layer's narrow fopen()
+     * takes — the same one the validator uses (DiskImageValidator::
+     * nativePath). Here stood `m_sourcePath.toUtf8()`: measured under
+     * Windows, "Übung_ä.imd" opened NO plugin and the run ended with
+     * "kein Plugin hat die Datei geoeffnet" — about a file that opens
+     * under any ASCII name. A path the code page cannot represent is
+     * refused before a byte is read: its best-fit form ("Ωα" -> "Oa") can
+     * name a DIFFERENT file, and the validator's fixed list reads through
+     * QFile and never notices. */
+    QByteArray nativ;
+    if (!DiskImageValidator::nativePath(m_sourcePath, &nativ)) {
+        emit error(QString("Pfad in der Systemcodepage nicht darstellbar — "
+                           "die Format-Schicht kann \"%1\" nicht oeffnen; "
+                           "nichts gelesen.").arg(m_sourcePath));
+        return false;
+    }
+    m_disk = uft_disk_open(nativ.constData(), /*read_only=*/true);
     uft_geometry_t g;
     memset(&g, 0, sizeof(g));
     if (m_disk && uft_disk_get_geometry(m_disk, &g) == UFT_OK) {

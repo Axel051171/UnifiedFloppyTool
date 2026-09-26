@@ -6332,7 +6332,8 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
            ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_decode_job_no_fiction" OR
-           ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
+           ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
+           ${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
@@ -6391,6 +6392,13 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
                 target_include_directories(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/hardware_providers)
+            elseif(${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
+                # P2-2 (MF-1351): das Pruefetor vor openFile()/Explorer/
+                # Forensik/DecodeJob fragt die Registry, wo seine Liste
+                # ablehnt. Kein Reiter — nur der Validator (unten, fuer
+                # alle Ziele dieser Bedingung) samt Format-Schicht.
+                target_compile_definitions(${qt_test_name} PRIVATE
+                    UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_visual_disk_no_fiction")
                 # MF-892: die Belegungskarte kam aus generateSampleData()
                 # und war auch im Erfolgspfad gruen, ohne je eine Spur

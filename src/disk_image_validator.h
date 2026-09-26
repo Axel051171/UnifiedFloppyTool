@@ -17,11 +17,19 @@
  * - .nib (Apple II)
  * - .dsk (Various)
  * - .st (Atari ST)
+ *
+ * P2-2 (MF-1351): die Liste oben ist nicht mehr die Grenze. Lehnen Liste
+ * und Magic-Bytes ab, fragt validate() die Plugin-Registry
+ * (uft_register_all_formats(), src/main.cpp) — die Liste bleibt fuer
+ * ihre eigenen Endungen ZUERST, ihr Ergebnis dort ist unveraendert.
+ * isSupportedExtension(), supportedExtensions() und fileDialogFilter()
+ * nehmen die Endungen der Registry dazu. Leere Registry: Liste allein.
  */
 
 #ifndef DISK_IMAGE_VALIDATOR_H
 #define DISK_IMAGE_VALIDATOR_H
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 #include <QMap>
@@ -77,11 +85,42 @@ public:
      */
     static QString fileDialogFilter();
 
+    /**
+     * @brief Der Pfad in der Form, die die Format-Schicht oeffnen kann
+     *        (P2-2, MF-1351).
+     *
+     * Die C-Schicht oeffnet mit einem schmalen fopen(), also in der Form
+     * von QFile::encodeName() — unter Windows die ANSI-Codepage, sonst
+     * UTF-8. Gibt false zurueck, wenn der Pfad darin NICHT darstellbar ist
+     * (der Rueckweg ergibt nicht denselben Pfad). Dann darf ihn niemand an
+     * die C-Schicht geben: fopen scheitert, oder eine Ersatzabbildung
+     * trifft eine ANDERE Datei. Wer false bekommt, sagt, dass es am Pfad
+     * liegt — nicht „kein Plugin", das waere ein Urteil ueber die Datei.
+     *
+     * @param out  bei true die Bytes fuer die C-Schicht; darf nullptr sein
+     */
+    static bool nativePath(const QString& path, QByteArray* out);
+
 private:
     /**
      * @brief Erkennt Format anhand von Magic Bytes
      */
     static QString detectByMagic(const QString& filePath);
+
+    /**
+     * @brief Letzte Stufe (P2-2): fragt die Plugin-Registry, wenn Liste
+     *        und Magic-Bytes ablehnen.
+     *
+     * Oeffnet die Datei read-only ueber uft_disk_open_ranked(); gueltig
+     * nur, wenn ein Plugin sie oeffnet. Name aus dem Plugin, Geometrie
+     * aus der geoeffneten Scheibe (0 -> -1, nichts dazugerechnet),
+     * Fluss aus UFT_FORMAT_CAP_FLUX, keine Plattform. Hat die Endung
+     * einen Gleichstand entschieden oder traegt nur die Dateigroesse
+     * (Band 30..49, MF-729), sagt der Name es dazu. Bei Gleichstand
+     * ohne Entscheidung: ungueltig, Meldung "mehrdeutig" mit Namen.
+     * Leere Registry: ungueltig, Meldung sagt es.
+     */
+    static bool validateByRegistry(DiskImageInfo& info);
     
     /**
      * @brief Berechnet erwartete Geometrie für bekannte Formate
