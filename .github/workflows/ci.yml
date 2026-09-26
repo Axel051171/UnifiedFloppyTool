@@ -351,7 +351,15 @@ jobs:
     # MF-432: without this GitHub's default is 360 min. On 2026-08-19
     # five Linux jobs hung in the Qt/apt download and would have burned
     # six hours each. A hang now dies here instead.
-    timeout-minutes: 60
+    #
+    # MF-1352: 60 -> 90. Not a hang: "Build tests (CMake)" alone took
+    # 51 min on 631b3d81 and was killed at 60 on 19408cef, and the job
+    # still counted as "cancelled" instead of failed. Cause measured in
+    # build.ninja: 74 test targets compile the format layer each on their
+    # own, 29 055 of 31 461 objects (92 %). The limit keeps its purpose
+    # (a hang still dies); the real fix is P3-10 in docs/OPEN_ITEMS.md
+    # (one object library instead of 74 compilations).
+    timeout-minutes: 90
     needs: consistency
     runs-on: windows-2022
     steps:
