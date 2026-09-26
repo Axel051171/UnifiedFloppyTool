@@ -6331,6 +6331,7 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_visual_disk_no_fiction" OR
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
            ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
+           ${qt_test_name} STREQUAL "test_decode_job_no_fiction" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
@@ -6420,7 +6421,8 @@ if(TARGET Qt6::Test)
                 target_compile_definitions(${qt_test_name} PRIVATE
                     UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
-                   ${qt_test_name} STREQUAL "test_status_tab_no_fiction")
+                   ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
+                   ${qt_test_name} STREQUAL "test_decode_job_no_fiction")
                 # MF-576: der Status-Reiter mit der Belegungskarte. Er
                 # bettet ProtectionAnalysisWidget ein, und DecodeJob
                 # liefert die Geometrie.
@@ -6438,6 +6440,13 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
                     ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
                     ${CMAKE_SOURCE_DIR}/src/protection/uft_c64_protection_enhanced.c)
+                # P0-17 (Tuer Stufe 2): der Oberflaechen-Scan laeuft gegen
+                # Korpus-Abbilder. Ohne diese Definition uebersprang sich
+                # der Test — die Falle aus MF-598 —, also bricht er dann ab.
+                if(${qt_test_name} STREQUAL "test_decode_job_no_fiction")
+                    target_compile_definitions(${qt_test_name} PRIVATE
+                        UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+                endif()
             else()
                 # MF-575: der Explorer, plus das Schreib-Tor aus MF-573
                 # und die FS-Schicht, die er anfasst.

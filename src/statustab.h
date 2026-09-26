@@ -56,11 +56,18 @@ public:
     void connectToDecodeJob(DecodeJob* job);
     void disconnectFromDecodeJob();
 
+    /** One mark per status DecodeJob sends (P0-17): the checksum classes
+     *  (BAD, CRC_BAD, ID_CRC_BAD) share the error mark; UNCHECKED,
+     *  NO_SECTORS, DELETED and REJECTED each have their own, none of them
+     *  the OK mark. Anything else gets the neutral "·". */
+    static QString statusToIcon(const QString& status);
+
 public slots:
     // DecodeJob Signals
     void onProgress(int percentage);
     void onStageChanged(const QString& stage);
-    void onSectorUpdate(int track, int sector, const QString& status);
+    /** P0-17: carries the head; side 0 and side 1 are counted apart. */
+    void onSectorUpdate(int track, int head, int sector, const QString& status);
     void onImageInfo(const DecodeResult& info);
     void onDecodeFinished(const QString& message);
     void onDecodeError(const QString& error);
@@ -96,11 +103,17 @@ private:
     // Sector status tracking
     struct SectorStatus {
         int track;
-        int sector;
+        int head;
+        int sector;       ///< -1 = whole track ("NO_SECTORS")
         QString status;
     };
     QVector<SectorStatus> m_sectorHistory;
     QMap<QString, int> m_statusCounts;
+    /** P0-17: the same counts, per head. Every update is COUNTED, none is
+     *  keyed away — a sector ID that appears twice on a track (duplicate
+     *  sectors, a protection feature) is two entries, not one. */
+    QMap<int, QMap<QString, int>> m_sideCounts;
+    int badCount() const;
     
     // Connected job
     DecodeJob* m_connectedJob = nullptr;
@@ -111,7 +124,10 @@ private:
     void updateSectorGrid();
     void updateStatusCounts();
     void appendLog(const QString& message, const QString& level = "INFO");
-    QString statusToIcon(const QString& status);
+    /** P0-17: the ONE formula for the track bar, used by onSectorUpdate()
+     *  and onProgress() alike — before, the two disagreed (cylinder x 100 /
+     *  (cylinders x heads) against (cylinder x heads + head) x 100 / ...). */
+    int trackPercent(int track, int head) const;
     
     // Enable/disable tool buttons based on loaded format
     void updateToolButtons();

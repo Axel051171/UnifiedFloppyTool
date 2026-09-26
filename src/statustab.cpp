@@ -33,6 +33,8 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QFont>
+#include <QSet>
+#include <QStringList>
 
 // ============================================================================
 // Construction / Destruction
@@ -592,11 +594,21 @@ void StatusTab::disconnectFromDecodeJob()
 void StatusTab::onProgress(int percentage)
 {
     ui->progressTotal->setValue(percentage);
-    
+
     if (m_totalTracks > 0) {
-        int trackPercent = (m_currentTrack * 100) / m_totalTracks;
-        ui->progressTrack->setValue(trackPercent);
+        ui->progressTrack->setValue(trackPercent(m_currentTrack, m_currentSide));
     }
+}
+
+int StatusTab::trackPercent(int track, int head) const
+{
+    /* Progress by track position (cylinder x heads + head). An older
+     * formula used the sector number, which is an ID as read (often
+     * 1-based, -1 for a whole track) and ignored the head. */
+    if (m_totalTracks <= 0) return 0;
+    const int h = m_currentImage.heads > 0 ? m_currentImage.heads : 1;
+    const int pos = track * h + (head >= 0 ? head : 0);
+    return qBound(0, (pos * 100) / m_totalTracks, 100);
 }
 
 void StatusTab::onStageChanged(const QString& stage)
@@ -616,32 +628,35 @@ void StatusTab::onStageChanged(const QString& stage)
     }
 }
 
-void StatusTab::onSectorUpdate(int track, int sector, const QString& status)
+void StatusTab::onSectorUpdate(int track, int head, int sector, const QString& status)
 {
-    m_currentTrack = track;
-    setTrackSide(track, m_currentSide);
-    
+    /* P0-17: here stood `setTrackSide(track, m_currentSide)` — and
+     * m_currentSide was never set from the job, because the signal had no
+     * head. Every update showed "Side: 0". */
+    setTrackSide(track, head);
+
     SectorStatus ss;
     ss.track = track;
+    ss.head = head;
     ss.sector = sector;
     ss.status = status;
     m_sectorHistory.append(ss);
-    
-    if (m_statusCounts.contains(status)) {
-        m_statusCounts[status]++;
-    } else {
-        m_statusCounts[status] = 1;
-    }
-    
+
+    m_statusCounts[status]++;
+    m_sideCounts[head][status]++;
+
     updateStatusCounts();
     updateSectorGrid();
-    
-    if (m_totalTracks > 0 && m_sectorsPerTrack > 0) {
-        int totalProcessed = (track * m_sectorsPerTrack) + sector;
-        int totalSectors = m_totalTracks * m_sectorsPerTrack;
-        int percent = (totalProcessed * 100) / totalSectors;
-        ui->progressTrack->setValue(percent);
+
+    if (m_totalTracks > 0) {
+        ui->progressTrack->setValue(trackPercent(track, head));
     }
+}
+
+int StatusTab::badCount() const
+{
+    return m_statusCounts.value("BAD") + m_statusCounts.value("CRC_BAD")
+         + m_statusCounts.value("ID_CRC_BAD");
 }
 
 void StatusTab::onImageInfo(const DecodeResult& info)
@@ -662,9 +677,18 @@ void StatusTab::onImageInfo(const DecodeResult& info)
     if (!info.volumeName.isEmpty()) {
         infoText += QString("Volume:      %1\n").arg(info.volumeName);
     }
-    infoText += QString("Geometry:    %1 tracks × %2 heads × %3 sectors\n")
-                .arg(info.tracks).arg(info.heads).arg(info.sectorsPerTrack);
-    infoText += QString("Sector Size: %1 bytes\n").arg(info.sectorSize);
+    /* P0-17: 0 means "nicht ermittelt" (no plugin opened the file). The
+     * job used to fill 80 x 2 x 9 x 512 in; that default is gone. */
+    if (info.tracks > 0 && info.heads > 0) {
+        infoText += QString("Geometry:    %1 tracks × %2 heads × %3 sectors\n")
+                    .arg(info.tracks).arg(info.heads).arg(info.sectorsPerTrack);
+        infoText += QString("Sector Size: %1 bytes\n").arg(info.sectorSize);
+    } else {
+        infoText += QString("Geometry:    nicht ermittelt\n");
+    }
+    if (!info.readerName.isEmpty()) {
+        infoText += QString("Plugin:      %1\n").arg(info.readerName);
+    }
     infoText += QString("Total Size:  %1 bytes\n").arg(info.totalSize);
     infoText += QString("═══════════════════════════════════════\n");
     
@@ -675,18 +699,76 @@ void StatusTab::onImageInfo(const DecodeResult& info)
 
 void StatusTab::onDecodeFinished(const QString& message)
 {
-    appendLog(message, "DONE");
-    
+    /* P0-17: a check mark and "Decode Complete" only when a sector was
+     * actually decoded into the model. A run over flux the plugin does not
+     * split into sectors (KFX, HFE, SCP here) ends — it does not complete a
+     * decode. REJECTED sectors were refused by the model and do not count
+     * as decoded either. */
+    int decoded = 0;
+    for (auto it = m_statusCounts.cbegin(); it != m_statusCounts.cend(); ++it)
+        if (it.key() != "NO_SECTORS" && it.key() != "REJECTED") decoded += it.value();
+    const bool dekodiert = decoded > 0;
+
+    appendLog(message, dekodiert ? "DONE" : "INFO");
+
     // Update result in current image
-    m_currentImage.goodSectors = m_statusCounts["OK"];
-    m_currentImage.badSectors = m_statusCounts["BAD"];
-    
+    /* P0-17: "Bad" counted the string "BAD", which DecodeJob never sent
+     * (it sent "READ_ERROR") — the bad count here was always 0. */
+    m_currentImage.goodSectors = m_statusCounts.value("OK");
+    m_currentImage.badSectors = badCount();
+
     QString summary = QString("\n═══════════════════════════════════════\n");
-    summary += QString("✓ Decode Complete\n");
-    summary += QString("  Good:    %1 sectors\n").arg(m_statusCounts["OK"]);
-    summary += QString("  Bad:     %1 sectors\n").arg(m_statusCounts["BAD"]);
-    summary += QString("  Missing: %1 sectors\n").arg(m_statusCounts["MISSING"]);
-    summary += QString("  Weak:    %1 sectors\n").arg(m_statusCounts["WEAK"]);
+    summary += dekodiert ? QString("✓ Decode Complete\n")
+                         : QString("Lauf beendet — keine Sektoraussage "
+                                   "(kein Sektor dekodiert)\n");
+    summary += QString("  Good:    %1 sectors (checksum right)\n").arg(m_statusCounts.value("OK"));
+    summary += QString("  Bad:     %1 sectors (checksum wrong)\n").arg(badCount());
+    summary += QString("  Missing: %1 sectors\n").arg(m_statusCounts.value("MISSING"));
+    summary += QString("  Weak:    %1 sectors\n").arg(m_statusCounts.value("WEAK"));
+    summary += QString("  Deleted: %1 sectors\n").arg(m_statusCounts.value("DELETED"));
+    summary += QString("  Ohne Pruefsummenangabe: %1 sectors\n")
+                   .arg(m_statusCounts.value("UNCHECKED"));
+    summary += QString("  Spuren ohne Sektoraussage: %1\n")
+                   .arg(m_statusCounts.value("NO_SECTORS"));
+    if (m_statusCounts.value("REJECTED") > 0)
+        summary += QString("  Vom Modell abgewiesen: %1 sectors (weder gut noch schlecht)\n")
+                       .arg(m_statusCounts.value("REJECTED"));
+    /* One line per side — side 1 is counted on its own, never on top of
+     * side 0. "Sektoren" counts sector updates; NO_SECTORS is a track.
+     * Every class is named, and whatever status is not in the list goes
+     * to "sonstige" — the classes add up to the sector count, so nothing
+     * the job sent drops out of the line unseen. */
+    struct Klasse { QStringList status; const char *name; };
+    QList<Klasse> klassen;
+    klassen << Klasse{{"OK"}, "OK"};
+    klassen << Klasse{{"BAD", "CRC_BAD", "ID_CRC_BAD"}, "Pruefsumme falsch"};
+    klassen << Klasse{{"WEAK"}, "Flackerbits"};
+    klassen << Klasse{{"DELETED"}, "geloescht"};
+    klassen << Klasse{{"UNCHECKED"}, "ohne Pruefsummenangabe"};
+    klassen << Klasse{{"MISSING"}, "fehlend"};
+    klassen << Klasse{{"REJECTED"}, "abgewiesen"};
+    for (auto it = m_sideCounts.cbegin(); it != m_sideCounts.cend(); ++it) {
+        const QMap<QString, int> &c = it.value();
+        int sektoren = 0;
+        for (auto s = c.cbegin(); s != c.cend(); ++s)
+            if (s.key() != "NO_SECTORS") sektoren += s.value();
+        QStringList teile;
+        QSet<QString> genannt;
+        for (const Klasse &k : klassen) {
+            int n = 0;
+            for (const QString &s : k.status) { n += c.value(s); genannt.insert(s); }
+            teile << QString("%1 %2").arg(QString::fromUtf8(k.name)).arg(n);
+        }
+        int sonstige = 0;
+        for (auto s = c.cbegin(); s != c.cend(); ++s)
+            if (s.key() != "NO_SECTORS" && !genannt.contains(s.key())) sonstige += s.value();
+        if (sonstige > 0) teile << QString("sonstige %1").arg(sonstige);
+        summary += QString("  Seite %1: %2 Sektoren — %3; Spuren ohne Sektoraussage %4\n")
+                       .arg(it.key())
+                       .arg(sektoren)
+                       .arg(teile.join(", "))
+                       .arg(c.value("NO_SECTORS"));
+    }
     summary += QString("═══════════════════════════════════════\n");
     
     ui->textSectorInfo->append(summary);
@@ -776,7 +858,12 @@ void StatusTab::clear()
     m_sectorHistory.clear();
     m_hasImage = false;
     m_currentImage = DecodeResult();
-    
+
+    /* P0-17: statuses the job sends besides these four (UNCHECKED,
+     * CRC_BAD, NO_SECTORS, ...) are counted in the same map — clear it
+     * whole, or they survive into the next disk. */
+    m_statusCounts.clear();
+    m_sideCounts.clear();
     m_statusCounts["OK"] = 0;
     m_statusCounts["BAD"] = 0;
     m_statusCounts["MISSING"] = 0;
@@ -827,8 +914,9 @@ void StatusTab::updateSectorGrid()
     for (int i = start; i < m_sectorHistory.size(); ++i) {
         const SectorStatus& ss = m_sectorHistory[i];
         QString icon = statusToIcon(ss.status);
-        grid += QString("T%1S%2:%3 ")
+        grid += QString("T%1H%2S%3:%4 ")
                 .arg(ss.track, 2, 10, QChar('0'))
+                .arg(ss.head)
                 .arg(ss.sector, 2, 10, QChar('0'))
                 .arg(icon);
         
@@ -842,11 +930,12 @@ void StatusTab::updateSectorGrid()
 
 void StatusTab::updateStatusCounts()
 {
-    QString counts = QString("Good: %1  Bad: %2  Missing: %3  Weak: %4")
-                     .arg(m_statusCounts["OK"])
-                     .arg(m_statusCounts["BAD"])
-                     .arg(m_statusCounts["MISSING"])
-                     .arg(m_statusCounts["WEAK"]);
+    QString counts = QString("Good: %1  Bad: %2  Missing: %3  Weak: %4  Unchecked: %5")
+                     .arg(m_statusCounts.value("OK"))
+                     .arg(badCount())
+                     .arg(m_statusCounts.value("MISSING"))
+                     .arg(m_statusCounts.value("WEAK"))
+                     .arg(m_statusCounts.value("UNCHECKED"));
     
     QString trackInfo = QString("Track: %1  Side: %2  |  %3")
                         .arg(m_currentTrack)
@@ -882,9 +971,16 @@ void StatusTab::appendLog(const QString& message, const QString& level)
 
 QString StatusTab::statusToIcon(const QString& status)
 {
+    /* P0-17: ID_CRC_BAD, UNCHECKED, NO_SECTORS, DELETED and REJECTED fell
+     * to the neutral "·" — a wrong ID checksum looked like "nothing to
+     * say". Each status DecodeJob sends has its own mark now. */
     if (status == "OK") return "✓";
-    if (status == "BAD" || status == "CRC_BAD") return "✗";
+    if (status == "BAD" || status == "CRC_BAD" || status == "ID_CRC_BAD") return "✗";
     if (status == "MISSING") return "?";
     if (status == "WEAK") return "~";
+    if (status == "DELETED") return "D";
+    if (status == "UNCHECKED") return "○";
+    if (status == "NO_SECTORS") return "—";
+    if (status == "REJECTED") return "!";
     return "·";
 }
