@@ -62,8 +62,52 @@ laufen fort und werden nie wiederverwendet.
 > Eigentümerentscheidung aussah, war eine ungemessene Behauptung in der
 > Liste selbst.
 
+### A-035 · DTC-Upgrade-Paket umsetzen — nach `docs/plans/DTC_UPGRADE.md` (DTC-0 bis DTC-7)
+- **Status:** **in Arbeit** (seit 2026-09-26, auf „weiter mit den Nächsten"; `A-032` ist an der Umgebung angehalten, die Posten davor hängen an Eigentümerentscheidungen oder an ungemessenen Befunden) · **Aufgenommen:** 2026-09-26
+- **Wortlaut:** „mach einen plan wie wir das perfekt umsetzten können"
+  (zu `UFT_DTC_Upgrade_v1.zip`) · „ja , aufnehmen und die Liste aufräumen"
+- **Kennzahl:** **Bench-Alter runter** (Fähigkeitszusage KryoFlux/FluxEngine:
+  heute kann kein echter DTC- oder FluxEngine-Aufruf gelingen, `P3-562`).
+  DTC-4 und DTC-5 bewegen keine der vier → dort **Fundus**, bis ihre
+  Bedingung erfüllt ist.
+- **Kanal:** **Nachbau** für DTC-1 bis DTC-3 — die drei Befunde sind im
+  Baum gemessen und brauchen keine Zeile aus dem Paket; **Port** einzelner
+  Teile nur nach Klärung der Herkunft (DTC-0, Präzedenz MF-1099).
+- **Einfrier-Regel:** DTC-1 bis DTC-3 **nein** (Prozess-Läufer und Provider,
+  keine Format-/Decoder-Schicht). DTC-5 (Umdrehungs-Solver) **ja →
+  Rotbeweis und benannte Referenz zuerst**.
+- **OPEN_ITEMS:** `P3-562` (neu), `P3-342`, `P3-341`
+- **Fertig heißt:** DTC-1, DTC-2 und DTC-3 je mit eigenem Commit und MF,
+  jeder mit Rotbeweis gegen den Vorzustand und grünem Test danach;
+  `test_kryoflux_*` kann an stdout-als-Fluss und an doppeltem `argv[0]`
+  rot werden; DTC-4/DTC-5 stehen mit ihrer Öffnungsbedingung im Fundus;
+  `docs/CAPABILITIES.md` führt KryoFlux Read weiter als 🟡, bis DTC-7
+  (Bench) gelaufen ist.
+- **Aufwand:** DTC-1 ~40, DTC-2 ~120, DTC-3 ~60 Zeilen (Schätzung aus dem
+  Plan, nicht gemessen); DTC-7 nicht schätzbar (Gerät, MF-310).
+- **Stand:** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
+  (1) wer hat das Paket verfasst, unter welcher Erteilung; (2) Solver in
+  den Fundus oder Differenzlauf gegen `uft_multi_rev_fusion`.
+- **Stand 2026-09-26 — DTC-1 fertig (MF-1362):** ein Helfer im Läufer
+  schneidet für KryoFlux und FluxEngine den Programmnamen ab und sagt
+  ohne ihn ab (rc -4, kein Prozess); FC5025 unberührt. Abgenommen an
+  einem echten Prozess (`tests/test_laeufer_argv.cpp` +
+  `tests/argv_echo/uft_argv_echo.c`): Vorzustand 7 von 10 rot, danach
+  10 von 10, Mutationsmatrix 4 von 4. Regression: die Provider- und
+  Befehlstests bleiben grün; `test_hardware_tab_gui` und
+  `test_provider_switch` fallen in dieser Umgebung VOR und NACH der
+  Änderung gleich (Qt 6.4.2 ohne `Qt6::SerialPort`) — nicht diese
+  Änderung, aber auch nicht in CI gegengeprüft. **Nächster Griff:**
+  DTC-2 (Artefakt-Kanal), Rotbeweis zuerst: Mock-Adapter trennen
+  stdout und Artefakt.
+- **Beleg:** DTC-1 = MF-1362 (dieser Commit).
+
+## Warteschlange
+
+*(Reihenfolge = Bearbeitungsreihenfolge; oben ist als Nächstes dran)*
+
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
-- **Status:** **in Arbeit** (seit 2026-09-19, auf ausdrückliche
+- **Status:** **angehalten an der Umgebung** (2026-09-26: `neue-ideen/` ist gitignored und liegt nur auf dem Eigentümerrechner, im Cloud-Container fehlt es — gemessen `ls neue-ideen`: nicht vorhanden; weiter, sobald die Sitzung dort läuft) · vorher **in Arbeit** (seit 2026-09-19, auf ausdrückliche
   Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
   oberster der Warteschlange, anfangen !!"). `A-028` steht ebenfalls
   auf `in Arbeit`, wartet aber seit 2026-09-17 auf eine
@@ -798,10 +842,6 @@ laufen fort und werden nie wiederverwendet.
 - **Beleg:** —
 
 ---
-
-## Warteschlange
-
-*(Reihenfolge = Bearbeitungsreihenfolge; oben ist als Nächstes dran)*
 
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
 - **Status:** **angehalten am gemessenen Blocker** (das Orakel ist da, ein
@@ -2829,34 +2869,6 @@ laufen fort und werden nie wiederverwendet.
     Vorsilbe gegen die Tafel — beide rc 1. Bei der zweiten feuert eine
     **fremde** Zusage mit („40 Parameter der Tafel haben keine Stufe")
     und bestätigt die Messung unabhängig.
-- **Beleg:** —
-
-### A-035 · DTC-Upgrade-Paket umsetzen — nach `docs/plans/DTC_UPGRADE.md` (DTC-0 bis DTC-7)
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-26
-- **Wortlaut:** „mach einen plan wie wir das perfekt umsetzten können"
-  (zu `UFT_DTC_Upgrade_v1.zip`) · „ja , aufnehmen und die Liste aufräumen"
-- **Kennzahl:** **Bench-Alter runter** (Fähigkeitszusage KryoFlux/FluxEngine:
-  heute kann kein echter DTC- oder FluxEngine-Aufruf gelingen, `P3-562`).
-  DTC-4 und DTC-5 bewegen keine der vier → dort **Fundus**, bis ihre
-  Bedingung erfüllt ist.
-- **Kanal:** **Nachbau** für DTC-1 bis DTC-3 — die drei Befunde sind im
-  Baum gemessen und brauchen keine Zeile aus dem Paket; **Port** einzelner
-  Teile nur nach Klärung der Herkunft (DTC-0, Präzedenz MF-1099).
-- **Einfrier-Regel:** DTC-1 bis DTC-3 **nein** (Prozess-Läufer und Provider,
-  keine Format-/Decoder-Schicht). DTC-5 (Umdrehungs-Solver) **ja →
-  Rotbeweis und benannte Referenz zuerst**.
-- **OPEN_ITEMS:** `P3-562` (neu), `P3-342`, `P3-341`
-- **Fertig heißt:** DTC-1, DTC-2 und DTC-3 je mit eigenem Commit und MF,
-  jeder mit Rotbeweis gegen den Vorzustand und grünem Test danach;
-  `test_kryoflux_*` kann an stdout-als-Fluss und an doppeltem `argv[0]`
-  rot werden; DTC-4/DTC-5 stehen mit ihrer Öffnungsbedingung im Fundus;
-  `docs/CAPABILITIES.md` führt KryoFlux Read weiter als 🟡, bis DTC-7
-  (Bench) gelaufen ist.
-- **Aufwand:** DTC-1 ~40, DTC-2 ~120, DTC-3 ~60 Zeilen (Schätzung aus dem
-  Plan, nicht gemessen); DTC-7 nicht schätzbar (Gerät, MF-310).
-- **Stand:** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
-  (1) wer hat das Paket verfasst, unter welcher Erteilung; (2) Solver in
-  den Fundus oder Differenzlauf gegen `uft_multi_rev_fusion`.
 - **Beleg:** —
 
 ## Fundus

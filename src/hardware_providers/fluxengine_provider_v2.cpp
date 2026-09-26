@@ -580,7 +580,8 @@ FluxOutcome FluxEngineProviderV2::do_read_raw_flux(const ReadFluxParams& p)
      * MF-1108: hier stand „in production the runner must use a real temp
      * file". Gemessen tut der Produktions-Laeufer das NICHT:
      * `make_fluxengine_qprocess_runner()` reicht `argv` unveraendert an
-     * QProcess weiter und gibt die stdout-Bytes des Prozesses zurueck —
+     * QProcess weiter (bis auf den Programmnamen an Stelle 0, seit
+     * MF-1362, P3-562) und gibt die stdout-Bytes des Prozesses zurueck —
      * es legt keine Datei an und liest keine zurueck (P3-342 Nachtrag).
      * Der Pfad ist also kein „synthetic token", sondern ein Argument, das
      * wirklich bei `fluxengine` ankommt; er muss deshalb auf DIESEM

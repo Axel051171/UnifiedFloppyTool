@@ -17,6 +17,12 @@
  *     flux output is binary, dtc's .raw stream is binary).
  *   - Timeout is enforced; on timeout we kill the child and return
  *     a captured-so-far result with exit_code = -2.
+ *   - FluxEngine and KryoFlux hand over execve-style argv (program name
+ *     at index 0); their runners drop it before QProcess, because
+ *     setProgram() already carries it (MF-1362). An argv that does not
+ *     follow the convention is refused with exit_code = -4 before any
+ *     process starts. The FC5025 runner builds its own argv without a
+ *     program name and is not affected.
  */
 #include "qprocess_subprocess_runner.h"
 
@@ -104,6 +110,47 @@ QString resolve_binary(const QString& binary, const char* default_name)
     return binary;
 }
 
+/* MF-1362 / P3-562: FluxEngine- und KryoFlux-Provider bauen `argv` nach
+ * der execve-Konvention, mit dem Programmnamen an Stelle 0. QProcess
+ * bekommt das Programm aber schon ueber setProgram(); ging `argv`
+ * unveraendert an setArguments(), sah das Werkzeug `dtc dtc -i0` bzw.
+ * `fluxengine fluxengine version` (gemessen an einem echten Prozess,
+ * tests/test_laeufer_argv.cpp: 7 von 10 Zusagen rot).
+ *
+ * Das Abschneiden sitzt bewusst HIER und nicht in run_subprocess(): der
+ * FC5025-Laeufer legt seine Argumente selbst an, ohne Programmnamen, und
+ * dort wuerde ein pauschales Abschneiden `-f` verschlucken.
+ *
+ * Abgesagt wird, statt blind zu schneiden, wenn `argv` leer ist oder an
+ * Stelle 0 eine Option steht — dann hat der Aufrufer den Programmnamen
+ * vergessen, und das Abschneiden wuerde still sein erstes Argument
+ * verwerfen. Die Absage kommt, bevor ein Prozess laeuft. */
+bool werkzeug_argumente(const std::vector<std::string>& argv,
+                        std::vector<std::string>& args,
+                        RunResult& absage)
+{
+    if (argv.empty() || argv.front().empty() || argv.front()[0] == '-') {
+        absage.exit_code = -4;
+        absage.stderr_text =
+            "[runner: argv folgt nicht der execve-Konvention — an Stelle 0 "
+            "muss der Programmname stehen; nichts gestartet]";
+        return false;
+    }
+    args.assign(argv.begin() + 1, argv.end());
+    return true;
+}
+
+RunResult run_exec_argv(const QString& binary,
+                        const std::vector<std::string>& argv,
+                        const std::string& stdin_data,
+                        int timeout_ms)
+{
+    RunResult absage;
+    std::vector<std::string> args;
+    if (!werkzeug_argumente(argv, args, absage)) return absage;
+    return run_subprocess(binary, args, stdin_data, timeout_ms);
+}
+
 } // namespace
 
 /* ─── FluxEngine ──────────────────────────────────────────────────── */
@@ -116,7 +163,7 @@ make_fluxengine_qprocess_runner(SubprocessRunnerConfig cfg)
     return [bin, timeout](const std::vector<std::string>& argv,
                           const std::string& stdin_data)
                   -> FluxEngineRunResult {
-        const RunResult rr = run_subprocess(bin, argv, stdin_data, timeout);
+        const RunResult rr = run_exec_argv(bin, argv, stdin_data, timeout);
         return FluxEngineRunResult{
             rr.stdout_text, rr.stderr_text, rr.exit_code
         };
@@ -133,7 +180,7 @@ make_kryoflux_qprocess_runner(SubprocessRunnerConfig cfg)
     return [bin, timeout](const std::vector<std::string>& argv,
                           const std::string& stdin_data)
                   -> DtcRunResult {
-        const RunResult rr = run_subprocess(bin, argv, stdin_data, timeout);
+        const RunResult rr = run_exec_argv(bin, argv, stdin_data, timeout);
         return DtcRunResult{
             rr.stdout_text, rr.stderr_text, rr.exit_code
         };
