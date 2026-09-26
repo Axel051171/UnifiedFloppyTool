@@ -4860,6 +4860,10 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_geos")
         # Include GEOS source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_geos.c)
+    elseif(${test_name} STREQUAL "test_geos_vlir_gegen_kernal")
+        # H-12/MF-1338: VLIR-Record-Block gegen GEOS.TXT, CVT.TXT und den
+        # GEOS-2.0-Kernal (mist64/geos files10.s, nur gelesen).
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_geos.c)
     elseif(${test_name} STREQUAL "test_p00")
         # Include P00 source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_p00.c)

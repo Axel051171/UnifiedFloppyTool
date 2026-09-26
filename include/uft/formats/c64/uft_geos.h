@@ -120,8 +120,8 @@ typedef struct {
  * @brief VLIR record entry
  */
 typedef struct {
-    uint8_t     track;              /**< Track (0 = empty, 0xFF = deleted) */
-    uint8_t     sector;             /**< Sector or size indicator */
+    uint8_t     track;              /**< First track of the record chain; 0 = empty record (00/FF) */
+    uint8_t     sector;             /**< First sector of the record chain (0xFF for an empty record) */
     size_t      size;               /**< Record size in bytes */
     uint8_t     *data;              /**< Record data (optional) */
 } geos_vlir_record_t;
@@ -197,10 +197,19 @@ void geos_format_timestamp(const geos_timestamp_t *ts, char *buffer);
 
 /**
  * @brief Parse VLIR index
- * @param data VLIR index sector (254 bytes of t/s pairs)
- * @param records Output records array (127 max)
- * @param num_records Output: number of records
- * @return 0 on success
+ *
+ * Semantics per GEOS.TXT:170-182, CVT.TXT and the GEOS 2.0 kernal
+ * (_OpenRecordFile): the first 00/00 ends the table; every slot before it
+ * counts, including empty records (track 0, written as 00/FF), so record
+ * numbers stay stable. Entries after the end are not interpreted and are
+ * left zeroed in @p records. (H-12, MF-1338)
+ *
+ * @param data VLIR record block WITHOUT its own link bytes: sector + 2,
+ *             254 bytes = 127 t/s pairs
+ * @param records Output records array (GEOS_MAX_VLIR_RECORDS entries)
+ * @param num_records Output: number of slots up to the end marker
+ * @return 0 on success, 1 if non-zero bytes follow the end marker
+ *         (records still valid), -1 on NULL argument
  */
 int geos_parse_vlir_index(const uint8_t *data, geos_vlir_record_t *records,
                           int *num_records);
@@ -224,8 +233,13 @@ bool geos_vlir_record_empty(const geos_vlir_record_t *record);
 
 /**
  * @brief Check if VLIR record is deleted
+ *
+ * GEOS has no deleted marker: the kernal's _DeleteRecord shifts the table.
+ * Track 0xFF used to be read as "deleted", which was invented; this now
+ * always returns false (H-12, MF-1338). Kept for API stability.
+ *
  * @param record VLIR record
- * @return true if deleted
+ * @return false
  */
 bool geos_vlir_record_deleted(const geos_vlir_record_t *record);
 

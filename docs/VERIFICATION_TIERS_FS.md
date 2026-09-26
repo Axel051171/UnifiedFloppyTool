@@ -103,7 +103,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/d81/uft_d81_parser_v2.c` | 7 | 440 |
 | `src/formats/msx/uft_msx.c` | 7 | 987 |
 | `src/formats/scl/uft_scl_parser_v2.c` | 7 | 513 |
-| `src/formats/c64/uft_geos.c` | 6 | 581 |
+| `src/formats/c64/uft_geos.c` | 6 | 585 |
 | `src/formats/commodore/uft_m2i.c` | 6 | 433 |
 | `src/formats/flex/uft_flex.c` | 6 | 276 |
 | `src/fileops/uft_file_ops_extended.c` | 5 | 663 |

@@ -230,33 +230,33 @@ void geos_format_timestamp(const geos_timestamp_t *ts, char *buffer)
  * VLIR Handling
  * ============================================================================ */
 
+/*
+ * Record-block semantics (H-12, MF-1338), from GEOS.TXT:170-182, CVT.TXT
+ * and the GEOS 2.0 kernal (mist64/geos kernal/files/files10.s, read only):
+ * slots are counted up to the first 00/00, which ends the table; a slot
+ * with track 0 (written as 00/FF by _WriteRecord) is an empty record that
+ * keeps its number. There is no "deleted" marker.
+ */
 int geos_parse_vlir_index(const uint8_t *data, geos_vlir_record_t *records,
                           int *num_records)
 {
     if (!data || !records || !num_records) return -1;
-    
-    int count = 0;
-    
-    for (int i = 0; i < GEOS_MAX_VLIR_RECORDS; i++) {
-        records[i].track = data[i * 2];
-        records[i].sector = data[i * 2 + 1];
-        records[i].size = 0;
-        records[i].data = NULL;
-        
-        if (records[i].track == 0x00 && records[i].sector == 0x00) {
-            /* Empty record */
-        } else if (records[i].track == 0x00 && records[i].sector != 0x00) {
-            /* Last sector, sector byte is size */
-            records[i].size = records[i].sector;
-        } else if (records[i].track == 0xFF) {
-            /* Deleted record */
-        } else {
-            /* Valid record */
-            count++;
-        }
+
+    memset(records, 0, sizeof(*records) * GEOS_MAX_VLIR_RECORDS);
+
+    int slots = 0;
+    while (slots < GEOS_MAX_VLIR_RECORDS &&
+           (data[slots * 2] != 0x00 || data[slots * 2 + 1] != 0x00)) {
+        records[slots].track = data[slots * 2];
+        records[slots].sector = data[slots * 2 + 1];
+        slots++;
     }
-    
-    *num_records = count;
+    *num_records = slots;
+
+    /* Bytes after the end marker are not records; report them instead of
+     * dropping them silently. */
+    for (int i = slots * 2; i < GEOS_MAX_VLIR_RECORDS * 2; i++)
+        if (data[i] != 0x00) return 1;
     return 0;
 }
 
@@ -278,13 +278,17 @@ int geos_write_vlir_index(const geos_vlir_record_t *records, int num_records,
 bool geos_vlir_record_empty(const geos_vlir_record_t *record)
 {
     if (!record) return true;
-    return (record->track == 0x00 && record->sector == 0x00);
+    /* _ReadRecord reads nothing when the chain starts on track 0 */
+    return record->track == 0x00;
 }
 
 bool geos_vlir_record_deleted(const geos_vlir_record_t *record)
 {
-    if (!record) return false;
-    return (record->track == 0xFF);
+    /* GEOS has no deleted marker: _DeleteRecord shifts the table
+     * (MoveBackVLIRTab). Track 0xFF used to be read as "deleted"; that was
+     * invented (H-12, MF-1338). */
+    (void)record;
+    return false;
 }
 
 /* ============================================================================

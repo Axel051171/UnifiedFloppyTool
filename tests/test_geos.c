@@ -183,37 +183,45 @@ TEST(parse_vlir_index)
     index[0] = 5; index[1] = 10;
     /* Record 1: Track 5, Sector 11 */
     index[2] = 5; index[3] = 11;
-    /* Record 2: Empty */
-    index[4] = 0; index[5] = 0;
-    /* Record 3: Deleted */
-    index[6] = 0xFF; index[7] = 0x00;
-    
+    /* Record 2: empty record (00/FF, kernal _WriteRecord with length 0).
+     * BERICHTIGT H-12/MF-1338: here stood "Record 2: Empty" as 00/00 and
+     * "Record 3: Deleted" as FF/00 -- but 00/00 ENDS the table (GEOS.TXT,
+     * kernal _OpenRecordFile), and GEOS has no deleted marker. */
+    index[4] = 0; index[5] = 0xFF;
+    /* Record 3: Track 6, Sector 2 -- still counted after the gap */
+    index[6] = 6; index[7] = 2;
+
     geos_vlir_record_t records[127];
     int num_records;
     int ret = geos_parse_vlir_index(index, records, &num_records);
-    
+
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(num_records, 4);
     ASSERT_EQ(records[0].track, 5);
     ASSERT_EQ(records[0].sector, 10);
     ASSERT_TRUE(geos_vlir_record_empty(&records[2]));
-    ASSERT_TRUE(geos_vlir_record_deleted(&records[3]));
+    ASSERT_FALSE(geos_vlir_record_empty(&records[3]));
 }
 
 TEST(vlir_record_empty)
 {
-    geos_vlir_record_t empty = {0, 0, 0, NULL};
+    /* Empty record in a table is 00/FF (track 0); see H-12/MF-1338 */
+    geos_vlir_record_t empty = {0, 0xFF, 0, NULL};
     geos_vlir_record_t valid = {5, 10, 256, NULL};
-    
+
     ASSERT_TRUE(geos_vlir_record_empty(&empty));
     ASSERT_FALSE(geos_vlir_record_empty(&valid));
 }
 
 TEST(vlir_record_deleted)
 {
-    geos_vlir_record_t deleted = {0xFF, 0, 0, NULL};
+    /* BERICHTIGT H-12/MF-1338: here stood ASSERT_TRUE for track 0xFF as
+     * "deleted". GEOS has no such marker (_DeleteRecord shifts the table),
+     * so nothing is reported as deleted. */
+    geos_vlir_record_t ff = {0xFF, 0, 0, NULL};
     geos_vlir_record_t valid = {5, 10, 256, NULL};
-    
-    ASSERT_TRUE(geos_vlir_record_deleted(&deleted));
+
+    ASSERT_FALSE(geos_vlir_record_deleted(&ff));
     ASSERT_FALSE(geos_vlir_record_deleted(&valid));
 }
 
