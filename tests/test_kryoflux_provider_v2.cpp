@@ -58,7 +58,7 @@
 /* SubprocessMock — in tests/mock_hardware/. CMake adds ${CMAKE_SOURCE_DIR}/tests
  * to the include path for this test. */
 #include "mock_hardware/subprocess_mock.h"
-/* MF-1360: stdout und Stromdatei getrennt, wie bei einem echten DTC. */
+/* MF-1363: stdout und Stromdatei getrennt, wie bei einem echten DTC. */
 #include "mock_hardware/dtc_strom_datei.h"
 
 #include <filesystem>
@@ -265,7 +265,7 @@ static void smoke_read_raw_flux_decodes_stream() {
     const std::string raw_stream(
         reinterpret_cast<const char*>(stream_bytes), sizeof(stream_bytes));
 
-    /* MF-1360: hier stand der Strom in `stdout_reply`, und der Provider
+    /* MF-1363: hier stand der Strom in `stdout_reply`, und der Provider
      * deutete stdout als Fluss. Ein echtes DTC schreibt den Strom in eine
      * DATEI und druckt auf stdout ein Protokoll — und genau so kommt es
      * jetzt an. Gegen den Vorzustand dekodierte der Provider den
@@ -387,7 +387,7 @@ static void smoke_dtc_empty_stream() {
     SubprocessMock mock;
     DtcStromAttrappe dtc(mock);
 
-    /* MF-1360: DTC meldet Erfolg und legt eine LEERE Stromdatei an. Vorher
+    /* MF-1363: DTC meldet Erfolg und legt eine LEERE Stromdatei an. Vorher
      * stand hier ein leeres stdout — der Test mass also den Protokoll-
      * kanal statt der Datei. */
     mock.queue_run("");  /* exit_code=0, stdout="" */
@@ -416,7 +416,7 @@ static void smoke_dtc_empty_stream() {
     mock.assert_consumed();
 }
 
-/* MF-1360 / P3-562 Teil 2: stdout ist das PROTOKOLL. Liefert DTC einen
+/* MF-1363 / P3-562 Teil 2: stdout ist das PROTOKOLL. Liefert DTC einen
  * gueltigen Strom nur auf stdout und schreibt keine Datei, darf daraus
  * kein Fluss werden. Gegen den Vorzustand kam hier FluxCaptured heraus. */
 static void smoke_stdout_ist_kein_fluss() {
@@ -456,7 +456,7 @@ static void smoke_stdout_ist_kein_fluss() {
     mock.assert_consumed();
 }
 
-/* MF-1360: eine Stromdatei aus einem FRUEHEREN Lauf darf nicht als Ergebnis
+/* MF-1363: eine Stromdatei aus einem FRUEHEREN Lauf darf nicht als Ergebnis
  * dieses Laufs gelesen werden. Der Provider entfernt sie vor dem Aufruf. */
 static void smoke_alte_datei_wird_nicht_gelesen() {
     SubprocessMock mock;

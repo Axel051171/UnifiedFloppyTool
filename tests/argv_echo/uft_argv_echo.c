@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_argv_echo.c
- * @brief Test-Werkzeug fuer test_laeufer_argv (MF-1359, P3-562).
+ * @brief Test-Werkzeug fuer test_laeufer_argv (MF-1362, P3-562).
  *
  * Steht an der Stelle von `dtc`, `fluxengine` und `fcimage`, wenn die
  * echten QProcess-Laeufer im Test einen echten Prozess starten. Es
@@ -14,7 +14,7 @@
  * ein Test, der dann nichts vorfindet, soll das als Fehler sehen und
  * nicht als leere Argumentliste.
  *
- * DTC-Modus (MF-1360, P3-562 Teil 2): nennt UFT_ARGV_ECHO_DTC_STROM eine
+ * DTC-Modus (MF-1363, P3-562 Teil 2): nennt UFT_ARGV_ECHO_DTC_STROM eine
  * Datei, kopiert das Werkzeug sie dorthin, wo DTC seinen Strom ablegt —
  * `<praefix>NN.S.raw` aus `-f`, `-s` und `-g` —, und druckt auf stdout
  * NUR Protokolltext. Den Dateinamen rechnet es hier SELBST nach der Regel

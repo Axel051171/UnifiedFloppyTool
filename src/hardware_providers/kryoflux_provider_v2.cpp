@@ -88,7 +88,7 @@ KryoFluxProviderV2::KryoFluxProviderV2(DtcRunner runner, std::string dtc_binary)
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- *  Wo DTC den Strom ablegt (MF-1360, P3-562 Teil 2)
+ *  Wo DTC den Strom ablegt (MF-1363, P3-562 Teil 2)
  * ──────────────────────────────────────────────────────────────────────── */
 
 std::string KryoFluxProviderV2::stream_prefix(int cylinder, int head)
@@ -280,9 +280,9 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *    QProcess-Laeufer benutze in Produktion ein echtes Temp-Verzeichnis.
  *    Gemessen tut er das nicht: `make_kryoflux_qprocess_runner()` reicht
  *    `argv` unveraendert an QProcess weiter (P3-342 Nachtrag) — bis auf
- *    den Programmnamen an Stelle 0, den er seit MF-1359 abschneidet,
+ *    den Programmnamen an Stelle 0, den er seit MF-1362 abschneidet,
  *    weil setProgram() ihn schon traegt (P3-562). In Tests
- *    schreibt seit MF-1360 die DtcStromAttrappe die Stromdatei
+ *    schreibt seit MF-1363 die DtcStromAttrappe die Stromdatei
  *    (tests/mock_hardware/dtc_strom_datei.h); stdout bleibt Text.
  *
  *  Rule F-3: the stream FILE is decoded by uft_kf_decode() into flux
@@ -295,11 +295,11 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *  a ProviderError is returned with a clear what/why/fix. This is the
  *  correct behavior for "DTC not installed" or "no device".
  *
- *  Temp-dir protocol (MF-1360, P3-562 Teil 2):
+ *  Temp-dir protocol (MF-1363, P3-562 Teil 2):
  *  Hier stand, der Laeufer MUESSTE die Rohstrom-Bytes aus der Datei
  *  liefern, gebe aber stdout zurueck, und der Provider deute stdout „im
  *  Testmodus" als Rohstrom — in Produktion war das DTCs Protokoll. Seit
- *  MF-1360 liest der PROVIDER die Datei `stream_file_path(prefix, zyl,
+ *  MF-1363 liest der PROVIDER die Datei `stream_file_path(prefix, zyl,
  *  kopf)` selbst; stdout wird nie als Fluss gedeutet. Abgenommen ueber
  *  einen echten Prozess: tests/test_laeufer_argv.cpp, Fall 6.
  * ──────────────────────────────────────────────────────────────────────── */
@@ -368,7 +368,7 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
 
     std::vector<std::string> argv = build_read_argv(cylinder, head, prefix);
 
-    /* MF-1360 / P3-562 Teil 2: DTC schreibt den Strom in eine DATEI,
+    /* MF-1363 / P3-562 Teil 2: DTC schreibt den Strom in eine DATEI,
      * `<praefix>NN.S.raw`; stdout ist sein Protokoll. Bis hierher stand an
      * dieser Stelle `raw_bytes = result.stdout_text` — der „test-mode
      * shortcut", den der Kommentar selbst so nannte, und in Produktion

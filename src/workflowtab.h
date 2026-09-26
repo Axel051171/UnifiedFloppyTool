@@ -87,7 +87,7 @@ public slots:
      * kann. Die Vorgabe 2 ist die des alten Feldes. */
     void setUmdrehungen(int n) { m_umdrehungen = n > 0 ? n : 1; }
 
-    /* MF-1361 (A-035 DTC-4): die beiden Haelften aus MF-1293 waren nie
+    /* MF-1364 (A-035 DTC-4): die beiden Haelften aus MF-1293 waren nie
      * verbunden — `setUmdrehungen()` und `FormatTab::leseUmdrehungen()`
      * hatten gemessen je NULL Aufrufer, und die Aufnahme lief immer mit
      * der Vorgabe 2, was immer im Settings-Reiter stand (und was der
@@ -124,7 +124,7 @@ private slots:
 
 private:
     int m_umdrehungen = 2;
-    std::function<int()> m_umdrehungsQuelle;   /* MF-1361 */
+    std::function<int()> m_umdrehungsQuelle;   /* MF-1364 */
     Ui::TabWorkflow *ui;
     
     QButtonGroup* m_sourceGroup;

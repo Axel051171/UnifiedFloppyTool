@@ -115,7 +115,7 @@ private slots:
                  "Pause ist bedienbar, obwohl nichts laeuft.");
     }
 
-    /* ── MF-1361: die Umdrehungen kommen aus dem Settings-Reiter ─────────
+    /* ── MF-1364: die Umdrehungen kommen aus dem Settings-Reiter ─────────
      * MF-1293 legte die Umdrehungen in den Settings-Reiter; verbunden war
      * nichts, und die Aufnahme lief immer mit 2. Der Reiter fragt jetzt
      * eine Lesefunktion — und zwar JEDES Mal, nicht einmal beim Setzen. */

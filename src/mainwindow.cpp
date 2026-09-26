@@ -161,7 +161,7 @@ void MainWindow::loadTabWidgets()
     FormatTab* formatTab = new FormatTab();
     m_formatTab = formatTab;
 
-    /* MF-1361 (A-035 DTC-4): MF-1293 hat die Umdrehungen in den
+    /* MF-1364 (A-035 DTC-4): MF-1293 hat die Umdrehungen in den
      * Settings-Reiter gelegt und dem Arbeitsablauf `setUmdrehungen()`
      * gegeben — verbunden hat die beiden niemand (gemessen: je 0
      * Aufrufer). Die Aufnahme lief deshalb immer mit 2. Beide Reiter

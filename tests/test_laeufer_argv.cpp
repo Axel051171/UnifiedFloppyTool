@@ -2,7 +2,7 @@
 /**
  * @file test_laeufer_argv.cpp
  * @brief Was die QProcess-Laeufer dem gerufenen Werkzeug wirklich
- *        uebergeben — gemessen an einem echten Prozess (MF-1359, P3-562).
+ *        uebergeben — gemessen an einem echten Prozess (MF-1362, P3-562).
  *
  * Die Provider bauen `argv` nach der execve-Konvention: an Stelle 0 steht
  * der Programmname (`kryoflux_provider_v2.cpp`, `{ m_dtc_binary, "-i0" }`;
@@ -185,7 +185,7 @@ int main(int argc, char** argv)
                "bleibt unberuehrt");
     }
 
-    /* 6 — MF-1360 / P3-562 Teil 2: der ganze Lesepfad ohne Geraet.
+    /* 6 — MF-1363 / P3-562 Teil 2: der ganze Lesepfad ohne Geraet.
      *     Provider -> echter Laeufer -> echter Prozess -> Stromdatei ->
      *     Dekoder. Das Werkzeug schreibt im DTC-Modus einen ECHTEN
      *     KryoFlux-Strom aus dem Korpus (hxcfe, MF-1024) nach

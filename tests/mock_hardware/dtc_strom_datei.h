@@ -2,9 +2,9 @@
 /**
  * @file dtc_strom_datei.h
  * @brief Die Test-Attrappe tut, was DTC tut: sie schreibt den Strom in eine
- *        DATEI, und stdout bleibt das Protokoll (MF-1360, P3-562 Teil 2).
+ *        DATEI, und stdout bleibt das Protokoll (MF-1363, P3-562 Teil 2).
  *
- * Bis MF-1360 kam der KryoFlux-Rohstrom in den Tests ueber `stdout_reply`
+ * Bis MF-1363 kam der KryoFlux-Rohstrom in den Tests ueber `stdout_reply`
  * an, und der Provider deutete stdout als Fluss. Ein echtes DTC schreibt
  * den Strom aber nach `<praefix>NN.S.raw` (KryoFlux-Handbuch: „test_23.1.raw
  * will be stream test_") und druckt auf stdout ein Protokoll. Der Test

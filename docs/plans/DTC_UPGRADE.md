@@ -138,9 +138,9 @@ vorher rot gemessen wurde.
 2. **Solver (E4):** Wird er Fundus, oder bekommt er den Differenzlauf
    aus DTC-5?
 
-### DTC-1 — ein `argv`-Vertrag für beide Läufer *(B1, ~40 Zeilen)* — ✅ MF-1359
+### DTC-1 — ein `argv`-Vertrag für beide Läufer *(B1, ~40 Zeilen)* — ✅ MF-1362
 
-> **Erledigt MF-1359.** `tests/test_laeufer_argv.cpp` startet einen echten
+> **Erledigt MF-1362.** `tests/test_laeufer_argv.cpp` startet einen echten
 > Prozess (`tests/argv_echo/uft_argv_echo.c`) über die echten Läufer:
 > gegen den Vorzustand **7 von 10** Zusagen rot (DTC sah `dtc -c2 -d0 -i0`,
 > FluxEngine `fluxengine version`), danach **10 von 10**. Mutationsmatrix
@@ -166,9 +166,9 @@ vorher rot gemessen wurde.
   mit den Mutationen „Abschneiden weg“, „nur KryoFlux behoben“ und
   „in `run_subprocess()` abgeschnitten“.
 
-### DTC-2 — der Artefakt-Kanal *(B2 + E1, ~120 Zeilen)* — ✅ MF-1360
+### DTC-2 — der Artefakt-Kanal *(B2 + E1, ~120 Zeilen)* — ✅ MF-1363
 
-> **Erledigt MF-1360 — mit einer Abweichung vom Plan, und die ist gewollt.**
+> **Erledigt MF-1363 — mit einer Abweichung vom Plan, und die ist gewollt.**
 > Geplant war: der Läufer liest die Datei und bekommt ihren Pfad vom
 > Provider. Gebaut ist: der **Provider** liest die Datei selbst
 > (`std::ifstream`), der Läufer bleibt ein reiner Prozess-Starter und
@@ -246,7 +246,7 @@ vorher rot gemessen wurde.
   vorerst bestehen, wie es das Paket auch vorschlägt. Er wird ein
   eigener Punkt, denn zwei Bauer sind MF-1177.
 
-### DTC-4 — CopyPlan → Aufnahme *(E3, nur mit Aufrufer)* — ✅ MF-1361, anders als geplant
+### DTC-4 — CopyPlan → Aufnahme *(E3, nur mit Aufrufer)* — ✅ MF-1364, anders als geplant
 
 > **Gemessen statt gebaut.** Die Tafel „Lesestrategie → Umdrehungen"
 > gibt es im Baum schon (`k_strategie[]`, `read.revolutions` in
@@ -257,7 +257,7 @@ vorher rot gemessen wurde.
 > Settings-Reiter gelegt und dem Arbeitsablauf `setUmdrehungen()`
 > gegeben, aber `setUmdrehungen()` und `FormatTab::leseUmdrehungen()`
 > hatten je **0 Aufrufer** — die Aufnahme lief immer mit 2.
-> Seit MF-1361 fragt `WorkflowTab` beim Start eine Lesefunktion
+> Seit MF-1364 fragt `WorkflowTab` beim Start eine Lesefunktion
 > (Bauform `uft_copy_plan_current()`, MF-1265), `MainWindow` verbindet
 > sie mit dem Settings-Reiter. Abnahme: `test_honest_stubs_stay_honest`
 > (Quelle wird gefragt, nicht eingefroren, Untergrenze 1),

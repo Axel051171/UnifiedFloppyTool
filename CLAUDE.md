@@ -857,6 +857,36 @@ Die zweite Hälfte ist die wichtigere: H3 vergleicht Zahlen, H6 sorgt
 dafür, dass es überhaupt **eine** Zahl gibt. Ohne `-text` hat derselbe
 Beleg auf zwei Rechnern zwei Summen.
 
+### Kontextdisziplin (MF-1359)
+
+Eigentümerentscheidung vom 2026-09-26. Jede Zeile, die ein Werkzeug
+zurückgibt, bleibt bis zum Sitzungsende im Gedächtnis — ein Agent, der
+530 Testzeilen liest, um „5 rot" zu erfahren, hat 525 Zeilen zu viel.
+
+- Dateien nie ganz lesen; grep/sed auf den Bereich, der gebraucht wird.
+- Testläufe: nur Zusammenfassung (Failed/Passed) in den Kontext, Details
+  in eine Datei.
+- Nach jedem abgeschlossenen Punkt: `/compact`.
+- Fan-out (viele Dateien durchsuchen) an einen Unteragenten; nur die
+  Tabelle zurück.
+
+Die stärkste Form ist ein Prüfskript, das **zählt**, statt einer Liste,
+die der Agent liest (`check_consistency.py` ist das Vorbild).
+
+**Zwei gemessene Fallen dabei:**
+
+- `/doctor` erreicht in diesem Projekt nicht die eingebaute Prüfung,
+  solange ein Skill gleichen Namens unter `.claude/skills/doctor/` liegt
+  (gemessen 2026-09-26: ein lokaler, gitignorierter Mathe-Modellierungs-
+  Skill). Die Stop-Hooks dann direkt zählen: Benutzer-`settings.json`,
+  Projekt-`settings.json` und die `hooks/hooks.json` der aktivierten
+  Plugins.
+- Gezählt waren es **12** Stop-Hooks, davon lief der graft-Hook doppelt
+  (Benutzer- UND Projekt-Einstellungen) und ecc brachte sieben. Plugin-Hooks
+  schaltet man über die Mechanik des Plugins ab (ecc: `ECC_DISABLED_HOOKS`
+  im `env` der Benutzereinstellungen), nicht durch Ändern im
+  Plugin-Cache — den überschreibt die nächste Aktualisierung.
+
 ### Konfliktordnung: was gewinnt, wenn Teile sich widersprechen (MF-640)
 
 1. **Messung vor Plan.** Ein Plan, den eine Messung widerlegt, wird

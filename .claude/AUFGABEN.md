@@ -85,10 +85,10 @@ laufen fort und werden nie wiederverwendet.
   (Bench) gelaufen ist.
 - **Aufwand:** DTC-1 ~40, DTC-2 ~120, DTC-3 ~60 Zeilen (Schätzung aus dem
   Plan, nicht gemessen); DTC-7 nicht schätzbar (Gerät, MF-310).
-- **Stand:** Plan steht (`8b39700d`, MF-1357). **Wartet auf DTC-0:**
+- **Stand:** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
   (1) wer hat das Paket verfasst, unter welcher Erteilung; (2) Solver in
   den Fundus oder Differenzlauf gegen `uft_multi_rev_fusion`.
-- **Stand 2026-09-26 — DTC-1 fertig (MF-1359):** ein Helfer im Läufer
+- **Stand 2026-09-26 — DTC-1 fertig (MF-1362):** ein Helfer im Läufer
   schneidet für KryoFlux und FluxEngine den Programmnamen ab und sagt
   ohne ihn ab (rc -4, kein Prozess); FC5025 unberührt. Abgenommen an
   einem echten Prozess (`tests/test_laeufer_argv.cpp` +
@@ -100,7 +100,7 @@ laufen fort und werden nie wiederverwendet.
   Änderung, aber auch nicht in CI gegengeprüft. **Nächster Griff:**
   DTC-2 (Artefakt-Kanal), Rotbeweis zuerst: Mock-Adapter trennen
   stdout und Artefakt.
-- **Stand 2026-09-26 — DTC-2 fertig (MF-1360):** der Provider liest
+- **Stand 2026-09-26 — DTC-2 fertig (MF-1363):** der Provider liest
   die Stromdatei selbst (Abweichung vom Plan, begründet in
   `docs/plans/DTC_UPGRADE.md`); Rotbeweis, echter Prozess am
   Korpus-Strom, Mutationsmatrix 4 von 4. Neu offen: die Rohdatei
@@ -110,13 +110,13 @@ laufen fort und werden nie wiederverwendet.
   DTC-3 (`-r`) **angehalten am Beleg** — im Baum nicht belegt, Handbuch
   und `dtc -h` vom Netzfilter gesperrt; öffnet sich mit dem Wortlaut der
   Handbuchzeile vom Eigentümer. DTC-4 **fertig, anders als geplant**
-  (MF-1361): keine zweite Zahlentafel, sondern die fehlende Tür aus
+  (MF-1364): keine zweite Zahlentafel, sondern die fehlende Tür aus
   MF-1293 (Settings-Reiter → Aufnahme), `P3-563` Teil 2. DTC-5 bleibt
   Fundus (Herkunft + keine echten Mehrfachumdrehungen im Korpus). DTC-7
   braucht ein Gerät. **Neu gemessen:** der KryoFlux-Lesepfad hat keinen
   Produktivaufrufer (`P3-563` Teil 1, Eigentümerfrage).
-- **Beleg:** DTC-1 = MF-1359 = `fadd832e`; DTC-2 = MF-1360 = `19a8f646`;
-  DTC-4 = MF-1361 (dieser Commit).
+- **Beleg:** DTC-1 = MF-1362 = `fadd832e`; DTC-2 = MF-1363 = `19a8f646`;
+  DTC-4 = MF-1364 (dieser Commit).
 
 ## Warteschlange
 

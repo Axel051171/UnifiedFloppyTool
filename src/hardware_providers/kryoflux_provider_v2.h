@@ -117,10 +117,10 @@
  *   returns raw KryoFlux stream bytes verbatim. KryoFlux stream files
  *   (`<prefix>NN.S.raw`, see stream_file_path()) contain the flux
  *   transitions in KryoFlux stream format, including all timing
- *   information. BERICHTIGT MF-1360: here stood that do_read_raw_flux()
+ *   information. BERICHTIGT MF-1363: here stood that do_read_raw_flux()
  *   "preserves the raw stream bytes exactly as returned by DTC" and stores
  *   them "byte-for-byte in a wrapper" — it has decoded them with
- *   uft_kf_decode() since MF-208, and until MF-1360 it read them from
+ *   uft_kf_decode() since MF-208, and until MF-1363 it read them from
  *   stdout, which is DTC's log. Now it reads the stream FILE, decodes it
  *   into FluxCaptured::transitions_ns (ns, ~41.67 ns sample resolution)
  *   without resampling or inventing transitions, and sets the revolution
@@ -241,7 +241,7 @@ public:
     FluxOutcome   do_read_raw_flux (const ReadFluxParams& p);
     DetectOutcome do_detect_drive  ();
 
-    /* ── Wo DTC den Strom ablegt (MF-1360, P3-562 Teil 2) ────────────── */
+    /* ── Wo DTC den Strom ablegt (MF-1363, P3-562 Teil 2) ────────────── */
 
     /**
      * @brief Der `-f`-Praefix, den do_read_raw_flux() fuer (Zylinder, Kopf)

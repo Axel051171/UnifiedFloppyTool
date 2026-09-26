@@ -19,7 +19,7 @@
  *     a captured-so-far result with exit_code = -2.
  *   - FluxEngine and KryoFlux hand over execve-style argv (program name
  *     at index 0); their runners drop it before QProcess, because
- *     setProgram() already carries it (MF-1359). An argv that does not
+ *     setProgram() already carries it (MF-1362). An argv that does not
  *     follow the convention is refused with exit_code = -4 before any
  *     process starts. The FC5025 runner builds its own argv without a
  *     program name and is not affected.
@@ -110,7 +110,7 @@ QString resolve_binary(const QString& binary, const char* default_name)
     return binary;
 }
 
-/* MF-1359 / P3-562: FluxEngine- und KryoFlux-Provider bauen `argv` nach
+/* MF-1362 / P3-562: FluxEngine- und KryoFlux-Provider bauen `argv` nach
  * der execve-Konvention, mit dem Programmnamen an Stelle 0. QProcess
  * bekommt das Programm aber schon ueber setProgram(); ging `argv`
  * unveraendert an setArguments(), sah das Werkzeug `dtc dtc -i0` bzw.

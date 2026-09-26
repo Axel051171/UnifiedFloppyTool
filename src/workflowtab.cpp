@@ -528,7 +528,7 @@ void WorkflowTab::onStartAbortClicked()
         // as MF-114 (destination wireup) and stay explicitly unsupported
         // here rather than silently doing the wrong thing.
         if (m_sourceMode == Flux && m_destMode == File) {
-            /* MF-1361: EINMAL gefragt, beim Start — Warnung und Auftrag
+            /* MF-1364: EINMAL gefragt, beim Start — Warnung und Auftrag
              * sehen dieselbe Zahl, auch wenn jemand waehrend der Rueckfrage
              * den Settings-Reiter umstellt. */
             const int revs = umdrehungen();
@@ -999,7 +999,7 @@ void WorkflowTab::onAnalyzeClicked()
     dlg->show();
 }
 
-/* MF-1361: siehe den Kopf im Header. Die Quelle ist der Settings-Reiter
+/* MF-1364: siehe den Kopf im Header. Die Quelle ist der Settings-Reiter
  * (`FormatTab::leseUmdrehungen()`); eine Antwort unter 1 wird zu 1, wie in
  * `setUmdrehungen()` — keine Umdrehung aufzuzeichnen ist keine Aufnahme. */
 int WorkflowTab::umdrehungen() const
