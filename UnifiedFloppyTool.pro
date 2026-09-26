@@ -337,6 +337,7 @@ SOURCES += \
     src/gw_output_parser.cpp \
     # src/qmake_stubs/uft_protection_stubs.cpp \ # DISABLED: conflicts with real impls
     src/gui/uft_otdr_panel.cpp \
+    src/gui/uft_signal_page.cpp \
     src/gui/ProtectionAnalysisWidget.cpp \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_flux_histogram.c \
@@ -416,6 +417,7 @@ HEADERS += \
     src/gw_device_detector.h \
     src/gw_output_parser.h \
     src/gui/uft_otdr_panel.h \
+    src/gui/uft_signal_page.h \
     src/gui/ProtectionAnalysisWidget.h \
     src/gui/uft_sector_editor.h \
     include/uft/flux/uft_scp_parser.h \
