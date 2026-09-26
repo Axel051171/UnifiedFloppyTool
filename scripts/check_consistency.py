@@ -1582,6 +1582,10 @@ def main() -> int:
         # Grundlinie 12, darf nur fallen; jeder Eintrag ist im Torkopf
         # benannt. Naechster Kandidat ist `TrackGridWidget` (882 Z.),
         # dessen Knopf heute "not yet implemented" sagt.
+        # Nachtrag MF-1342: `TrackGridWidget` wird seit e60d3e7d gebaut
+        # (src/toolstab.cpp), und das Tor sah es nicht, weil es
+        # Grundlinien-Eintraege vor der Konstruktionspruefung uebersprang.
+        # Seither meldet es solche Eintraege (E-11); Grundlinie jetzt 8.
         #
         # Benannte Luecke: das Tor prueft, ob irgendwo konstruiert wird —
         # nicht, ob der Reiter im Hauptfenster SICHTBAR ist. Ein `new` in

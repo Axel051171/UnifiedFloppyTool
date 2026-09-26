@@ -75,10 +75,16 @@ from repo_scope import repo_files  # noqa: E402
 # Keiner dieser zwoelf ist hier "in Ordnung". Sie sind der Rueckstand, aus
 # dem die naechsten Verdrahtungen kommen. Bewusst NICHT geloescht
 # (Hausregel "nicht entfernen, weiter erweitern").
+#
+# ERLEDIGT, zitiert statt geloescht (MF-1342, E-11): hier stand
+#     "TrackGridWidget": "882 Z. Spurraster; ToolsTab::onTrackView() sagt
+#     'not yet implemented', obwohl das Widget fertig ist. Naechster
+#     Kandidat."
+# Seit e60d3e7d (2026-09-23) baut src/toolstab.cpp das Widget
+# (`new TrackGridWidget(dlg)`). Das Tor sah es nicht, weil es
+# Grundlinien-Eintraege VOR der Konstruktionspruefung uebersprang; seit
+# MF-1342 meldet es sie, und der Eintrag verlaesst die Grundlinie: 9 -> 8.
 BASELINE: dict[str, str] = {
-    "TrackGridWidget":
-        "882 Z. Spurraster; ToolsTab::onTrackView() sagt 'not yet "
-        "implemented', obwohl das Widget fertig ist. Naechster Kandidat.",
     "DiskVisualizationWindow": "Fenster in src/widgets/, kein Aufrufer.",
     "VisualDiskWindow":
         "src/visualdisk.h; mainwindow.h fuehrt ein Mitglied "
@@ -155,7 +161,11 @@ def _quelldateien(repo: Path) -> list[Path]:
     return out
 
 
-def check(repo: Path) -> list[str]:
+def check(repo: Path, grundlinie: dict[str, str] | None = None) -> list[str]:
+    # `grundlinie` exists so the self test can plant a baseline of its
+    # own; everyone else gets the real one.
+    if grundlinie is None:
+        grundlinie = BASELINE
     dateien = _quelldateien(repo)
 
     deklariert: dict[str, Path] = {}
@@ -180,8 +190,6 @@ def check(repo: Path) -> list[str]:
 
     befunde: list[str] = []
     for name, herkunft in sorted(deklariert.items()):
-        if name in BASELINE:
-            continue
         esc = re.escape(name)
         # `X *p = new X(...)`, `X v;`, `X v(parent);`, `X v{...}`, `X v = ...`
         #
@@ -207,6 +215,18 @@ def check(repo: Path) -> list[str]:
         # geprueft wird jetzt auf "kein Bezeichnerzeichen danach".
         gebaut = (re.search(r"\bnew\s+" + esc + r"(?![A-Za-z0-9_])", alles)
                   or re.search(r"\b" + esc + r"\s+\w+\s*[;({=]", alles))
+        if name in grundlinie:
+            # MF-1342: a baseline entry used to be skipped here BEFORE the
+            # construction test, so a class that got its door stayed in the
+            # baseline forever (TrackGridWidget, built since e60d3e7d). Now
+            # it is reported, and the entry leaves with the commit that
+            # refutes it (E-11).
+            if gebaut:
+                befunde.append(
+                    f"{name}: steht in der Grundlinie, wird aber inzwischen "
+                    f"konstruiert — erledigt, bitte aus BASELINE entfernen "
+                    f"(E-11).")
+            continue
         if not gebaut:
             try:
                 rel = herkunft.relative_to(repo)
@@ -214,7 +234,7 @@ def check(repo: Path) -> list[str]:
                 rel = herkunft
             befunde.append(f"{name}: deklariert in {rel}, nirgends konstruiert")
 
-    for name in BASELINE:
+    for name in grundlinie:
         if name not in deklariert:
             befunde.append(
                 f"{name}: begruendete Ausnahme ohne Fundstelle — erledigt, "
@@ -293,8 +313,36 @@ def selbsttest() -> bool:
                 print(f"  SELBSTTEST FEHLER: {name} erwartet "
                       f"{'Befund' if erwartet else 'sauber'}, "
                       f"bekam das Gegenteil")
-        print(f"  Selbsttest: {ok}/{len(faelle)}")
-        return ok == len(faelle)
+
+        # MF-1342: a baseline entry that IS constructed by now must be
+        # reported, not skipped — otherwise the baseline cannot shrink with
+        # the finding (E-11). Measured on the real tree: TrackGridWidget
+        # was built in src/toolstab.cpp since e60d3e7d and the gate kept
+        # reporting "9 begruendete Ausnahmen, 0 Befunde".
+        grund_faelle = [
+            ("GrundlinieGebaut", "    auto *g = new GrundlinieGebaut(this);\n",
+             True),
+            ("GrundlinieTuerlos", "", False),
+        ]
+        (repo / "src" / "grund.h").write_text(
+            "".join(f"class {n} : public QWidget {{\n}};\n"
+                    for n, _k, _e in grund_faelle), encoding="utf-8")
+        (repo / "src" / "grund.cpp").write_text(
+            "void grund() {\n" + "".join(k for _n, k, _e in grund_faelle)
+            + "}\n", encoding="utf-8")
+        gepflanzt = {n: "gepflanzte Grundlinie" for n, _k, _e in grund_faelle}
+        gefunden = {b.split(":")[0] for b in check(repo, gepflanzt)}
+        for name, _k, erwartet in grund_faelle:
+            if (name in gefunden) == erwartet:
+                ok += 1
+            else:
+                print(f"  SELBSTTEST FEHLER: {name} erwartet "
+                      f"{'Befund' if erwartet else 'sauber'}, "
+                      f"bekam das Gegenteil")
+
+        gesamt = len(faelle) + len(grund_faelle)
+        print(f"  Selbsttest: {ok}/{gesamt}")
+        return ok == gesamt
 
 
 def main() -> int:
