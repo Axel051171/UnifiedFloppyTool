@@ -38,10 +38,14 @@ STOP; report 1-of-2 done. Never bundle two providers in one commit.
    - inherits one `*Vias<DerivedType>` per real capability ONLY
    - implements `do_*` methods that call the existing backend layer
      (do not rewrite backend logic — wrap it).
-6. Add the new V2 type to the `tests/conformance/` harness.
-   **Berichtigt MF-702:** hier stand `tests/hal_conformance.cpp`; die
-   Datei gibt es nicht, real ist ein pytest-Harness mit
-   `divergence_registry.yaml`.
+6. Add the new V2 type to `tests/test_hal_conformance.cpp`: one
+   `run_conformance<P>("...")` line in `main()` plus a
+   `factory<P>::make()` specialization.
+   **Berichtigt MF-702:** hier stand `tests/hal_conformance.cpp`; MF-702
+   schloss, die Datei gebe es nicht, und verwies auf den pytest-Harness
+   `tests/conformance/`. Das war falsch — die Datei heisst
+   `tests/test_hal_conformance.cpp` und existiert seit MF-158;
+   `tests/conformance/` ist der gw-Differenzial-Harness.
 7. Run `cmake --build`, then the conformance suite — must be green.
 
 ## Hard rules

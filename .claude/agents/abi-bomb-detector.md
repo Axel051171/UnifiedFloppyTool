@@ -51,7 +51,7 @@ TUs rechnen mit dem anderen → stille Fehlinterpretation.
 
 **Detektion:** `grep -rn 'typedef\s*struct.*\b<name>_t\s*;'` in `include/`; hashe
 Body-Inhalt. Wenn >1 Hash pro Typ-Name: Bombe.
-**Fix:** `header-consolidator` — eine kanonische Definition, Rest wird Forward/Include.
+**Fix:** `single-source-enforcer` — eine kanonische Definition, Rest wird Forward/Include.
 
 ### 2. Enum-Werte ohne explizite Zahl
 
@@ -237,7 +237,7 @@ Immer:
 
 | Kategorie | Delegation |
 |---|---|
-| 1 (Duplikate) | `header-consolidator` |
+| 1 (Duplikate) | `single-source-enforcer` |
 | 2 (Enums) | mechanischer Fix, `quick-fix` |
 | 3–5 (Layout) | `single-source-enforcer` für Design-Review |
 | 6 (Signaturen) | Deprecation-Plan, `single-source-enforcer` |
@@ -267,8 +267,7 @@ er gibt CONSULT-Blöcke aus und das Routing übernimmt die aufrufende Session.
 
 Typische Konsultationen pro Kategorie:
 
-- `TO: header-consolidator` — Kategorie 1 (Typ-Duplikate)
-- `TO: single-source-enforcer` — Kategorien 3–5, 10 (Layout-Änderungen,
+- `TO: single-source-enforcer` — Kategorie 1 (Typ-Duplikate) und Kategorien 3–5, 10 (Layout-Änderungen,
   Unions) wenn die Design-Entscheidung über eine kanonische Quelle gelöst
   werden könnte
 - `TO: quick-fix` — Kategorien 2, 7 (mechanische Fixes: Enums nummerieren,

@@ -1,6 +1,6 @@
 ---
 name: conformance-test-writer
-description: Writes and extends the conformance harness under tests/conformance/ — the suite that exercises every V2 provider against every concept it implements. Pattern-replication work, low creativity needed. Use when adding a provider to the conformance loop, when adding a new SECTION for a new capability, or when a forensic invariant needs a new assertion (e.g. "marginal reads must be preserved, never collapsed").
+description: Writes and extends the C++ HAL conformance harness tests/test_hal_conformance.cpp — the suite that exercises every V2 provider against every concept it implements. Pattern-replication work, low creativity needed. Use when adding a provider to the conformance loop, when adding a new SECTION for a new capability, or when a forensic invariant needs a new assertion (e.g. "marginal reads must be preserved, never collapsed").
 model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
@@ -30,13 +30,21 @@ scenario. Live in `tests/mock_hardware/`.
 
 ## Hard rules
 
-- One suite: `tests/conformance/` (pytest harness with
-  `divergence_registry.yaml`). **Berichtigt MF-702:** hier stand
-  `tests/hal_conformance.cpp` — eine Datei, die es im Baum nie gab.
-  Ein Agent, der eine nicht existierende Datei pflegt, erzeugt beim
-  naechsten Lauf die Parallelwelt.
+- One suite: `tests/test_hal_conformance.cpp` (seit MF-158, ctest-Ziel
+  `test_hal_conformance`). `main()` ruft `run_conformance<P>("...")`
+  einmal je V2-Provider; ein neuer Provider ist eine Zeile dort plus
+  eine `factory<P>::make()`-Spezialisierung, eine neue Faehigkeit ein
+  `if constexpr (Concept<P>) { … }`-Block.
+  **Berichtigt MF-702:** hier stand `tests/hal_conformance.cpp`, und
+  MF-702 hat daraus geschlossen, die Datei habe es „im Baum nie
+  gegeben", und auf `tests/conformance/` umgelenkt. **Diese
+  Berichtigung war selbst falsch:** gesucht wurde nur der Pfad ohne
+  `test_`-Praefix (der Dateikopf nennt sich `@file hal_conformance.cpp`).
+  `tests/conformance/` ist der **gw-Differenzial-Harness** (pytest,
+  `divergence_registry.yaml`) und gehoert `differential-test-author` —
+  dort haben V2-Provider nichts zu suchen.
 - Do not split into per-provider
-  test files. The TEMPLATE_TEST_CASE iteration over the provider list
+  test files. The `run_conformance<P>` iteration over the provider list
   is the whole point.
 - One mock per provider in `tests/mock_hardware/`, named consistently
   (`mock_<provider>.h`).
