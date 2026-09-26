@@ -23,9 +23,9 @@
  * Constants
  *===========================================================================*/
 
-#define MAX_TRACKS          84
-#define MAX_SIDES           2
-#define MAX_SECTORS         36
+/* MAX_TRACKS / MAX_SIDES / MAX_SECTORS stood here as 84 / 2 / 36 and were
+ * never used. Since door stage 4 they are public (UFT_DIAG_MAX_*) and
+ * checked by diag_config_ok(). */
 #define MAX_RETRIES         5
 #define PATTERN_COUNT       4
 
@@ -38,15 +38,55 @@ static const uint8_t TEST_PATTERNS[PATTERN_COUNT] = {
 };
 
 /*===========================================================================
+ * Configuration limits (door stage 4)
+ *===========================================================================*/
+
+/* One check for init, scan and bad-sector list. Before door stage 4 none
+ * of the three checked anything: sectors > 36 wrote past sector_status[]
+ * (ASan: heap-buffer-overflow in uft_diag_surface_scan), sectors == 0
+ * divided by zero (UBSan), retries == 0 reported every sector BAD without
+ * one read attempt. */
+static int diag_config_ok(const uft_diag_config_t *c)
+{
+    if (c->tracks  < 1 || c->tracks  > UFT_DIAG_MAX_TRACKS)            return 0;
+    if (c->sides   < 1 || c->sides   > UFT_DIAG_MAX_SIDES)             return 0;
+    if (c->sectors < 1 || c->sectors > UFT_DIAG_MAX_SECTORS_PER_TRACK) return 0;
+    if (c->sector_size < 1) return 0;
+    if (c->retries < 1)     return 0;
+
+    if (c->sector_id_count == 0) return 1;              /* 1..sectors */
+    if (c->sector_id_count != c->sectors) return 0;
+    for (int i = 0; i < c->sector_id_count; i++)        /* one sector, one slot */
+        for (int j = i + 1; j < c->sector_id_count; j++)
+            if (c->sector_ids[i] == c->sector_ids[j]) return 0;
+    return 1;
+}
+
+/* The context as the scan finds it: valid config AND no more tracks x sides
+ * than init allocated (config is public and may have changed since). */
+static int diag_ctx_ok(const uft_diag_ctx_t *ctx)
+{
+    if (!ctx->track_results || !diag_config_ok(&ctx->config)) return 0;
+    size_t need = (size_t)ctx->config.tracks * (size_t)ctx->config.sides;
+    return need <= ctx->track_results_count;
+}
+
+/* The sector NUMBER at scan position @p pos. */
+static int diag_sector_id(const uft_diag_config_t *c, int pos)
+{
+    return c->sector_id_count ? (int)c->sector_ids[pos] : pos + 1;
+}
+
+/*===========================================================================
  * Diagnostic Context
  *===========================================================================*/
 
 int uft_diag_init(uft_diag_ctx_t *ctx, uft_diag_config_t *config)
 {
     if (!ctx) return -1;
-    
+
     memset(ctx, 0, sizeof(*ctx));
-    
+
     if (config) {
         ctx->config = *config;
     } else {
@@ -58,14 +98,20 @@ int uft_diag_init(uft_diag_ctx_t *ctx, uft_diag_config_t *config)
         ctx->config.retries = 3;
         ctx->config.verbose = true;
     }
-    
+
+    if (!diag_config_ok(&ctx->config)) {
+        memset(ctx, 0, sizeof(*ctx));      /* uft_diag_free() stays safe */
+        return -1;
+    }
+
     /* Allocate results */
-    size_t total = ctx->config.tracks * ctx->config.sides;
+    size_t total = (size_t)ctx->config.tracks * (size_t)ctx->config.sides;
     ctx->track_results = calloc(total, sizeof(uft_diag_track_result_t));
     if (!ctx->track_results) return -1;
-    
+    ctx->track_results_count = total;
+
     ctx->start_time = time(NULL);
-    
+
     return 0;
 }
 
@@ -85,7 +131,8 @@ int uft_diag_surface_scan(uft_diag_ctx_t *ctx, uft_diag_read_fn read_fn,
                           void *user_data)
 {
     if (!ctx || !read_fn) return -1;
-    
+    if (!diag_ctx_ok(ctx)) return -1;      /* before the first read */
+
     ctx->test_type = UFT_DIAG_SURFACE_SCAN;
     ctx->total_sectors = 0;
     ctx->good_sectors = 0;
@@ -111,13 +158,14 @@ int uft_diag_surface_scan(uft_diag_ctx_t *ctx, uft_diag_read_fn read_fn,
             
             for (int sec = 0; sec < ctx->config.sectors; sec++) {
                 ctx->total_sectors++;
-                
+
                 int success = 0;
                 int retries = 0;
+                const int id = diag_sector_id(&ctx->config, sec);
                 clock_t start = clock();
-                
+
                 while (!success && retries < ctx->config.retries) {
-                    if (read_fn(t, s, sec + 1, buffer, 
+                    if (read_fn(t, s, id, buffer,
                                ctx->config.sector_size, user_data) == 0) {
                         success = 1;
                     } else {
@@ -176,21 +224,23 @@ int uft_diag_get_bad_sectors(const uft_diag_ctx_t *ctx,
                              uft_bad_sector_t *bad_list, size_t *count)
 {
     if (!ctx || !bad_list || !count) return -1;
-    
+    if (!diag_ctx_ok(ctx)) return -1;      /* same reads as the scan wrote */
+
     size_t max_count = *count;
     *count = 0;
-    
+
     for (int t = 0; t < ctx->config.tracks; t++) {
         for (int s = 0; s < ctx->config.sides; s++) {
             const uft_diag_track_result_t *result =
                 &ctx->track_results[t * ctx->config.sides + s];
-            
+
             for (int sec = 0; sec < ctx->config.sectors; sec++) {
                 if (result->sector_status[sec] == UFT_DIAG_SECTOR_BAD) {
                     if (*count < max_count) {
                         bad_list[*count].track = t;
                         bad_list[*count].side = s;
-                        bad_list[*count].sector = sec + 1;
+                        bad_list[*count].sector =
+                            diag_sector_id(&ctx->config, sec);
                         bad_list[*count].type = UFT_BAD_READ_ERROR;
                     }
                     (*count)++;
@@ -292,6 +342,10 @@ int uft_diag_head_alignment(uft_diag_ctx_t *ctx, uft_diag_read_fn read_fn,
 
 /*===========================================================================
  * Write/Verify Test
+ *
+ * DESTRUCTIVE: overwrites every sector of the test track with patterns.
+ * Nothing in the surface scan or its Greaseweazle adapter reaches it; see
+ * the header. Unchanged in door stage 4 except for this comment.
  *===========================================================================*/
 
 int uft_diag_write_verify(uft_diag_ctx_t *ctx,

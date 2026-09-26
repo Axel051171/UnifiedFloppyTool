@@ -47,13 +47,56 @@ typedef void (*uft_diag_progress_fn)(int progress,
  * Configuration + per-track results
  *===========================================================================*/
 
+/* Limits of a scan configuration. uft_diag_init() and
+ * uft_diag_surface_scan() return -1 for anything outside them instead of
+ * reading (door stage 4): before, sectors > 36 wrote past sector_status[],
+ * sectors == 0 divided by zero, and retries == 0 marked every sector BAD
+ * without a single read attempt. */
+#define UFT_DIAG_MAX_SECTORS_PER_TRACK 36
+#define UFT_DIAG_MAX_TRACKS            84   /**< cylinders 0..83 */
+#define UFT_DIAG_MAX_SIDES             2
+
 typedef struct {
-    int  tracks;        /**< Default 80 */
-    int  sides;         /**< Default 2 */
-    int  sectors;       /**< Default 18 (per track) */
-    int  sector_size;   /**< Default 512 */
-    int  retries;       /**< Default 3 */
+    int  tracks;        /**< Default 80; 1..UFT_DIAG_MAX_TRACKS */
+    int  sides;         /**< Default 2; 1..UFT_DIAG_MAX_SIDES */
+    int  sectors;       /**< Default 18 (per track); 1..UFT_DIAG_MAX_SECTORS_PER_TRACK */
+    int  sector_size;   /**< Default 512; >= 1 */
+    int  retries;       /**< Default 3; read ATTEMPTS per sector, >= 1 */
     bool verbose;
+
+    /* Appended (door stage 4) — the fields above keep their offsets.
+     *
+     * ABI, stated: this is append-only for uft_diag_config_t itself, NOT
+     * for uft_diag_ctx_t, which embeds the config BY VALUE as its first
+     * member. The config grows by 40 bytes (24 -> 64), so every ctx field
+     * behind it moves by 40 (sizeof(uft_diag_ctx_t) 88 -> 136: the 40
+     * from the config plus the newly appended 8-byte track_results_count,
+     * total_sectors 24 -> 64, track_results 40 -> 80; measured with
+     * offsetof against the header of 0095b756). Code compiled against the
+     * old header must be rebuilt. Translated users outside src/diag,
+     * include/uft/diag and tests: 0 (git grep for the header and both
+     * type names; the only other hit is the HEADERS list of
+     * UnifiedFloppyTool.pro).
+     *
+     * The sector numbers the scan asks read_fn for, in scan order.
+     * sector_id_count == 0 keeps the old behaviour: 1..sectors. Otherwise
+     * it must equal `sectors`, and the numbers must be distinct (one
+     * sector, one result slot) — else init/scan return -1.
+     *
+     * Needed for every format whose numbers do not start at 1: Amstrad CPC
+     * data 0xC1..0xC9, JV1 0..9 (MF-1016), MYZ80 0..127 (MF-1029). Asked
+     * for 1..n, such a disk scans as all BAD.
+     *
+     * A fixed array, not a pointer: the config is COPIED into the context,
+     * and a borrowed pointer would have to outlive it.
+     *
+     * Limits, stated: one list for all tracks (zoned formats with a
+     * different count per track cannot be described); and
+     * uft_diag_head_alignment / uft_diag_performance / uft_diag_write_verify
+     * still ask for 1..sectors — only the surface scan and
+     * uft_diag_get_bad_sectors use this list. */
+    uint8_t sector_ids[UFT_DIAG_MAX_SECTORS_PER_TRACK];
+    int     sector_id_count;
 } uft_diag_config_t;
 
 /*
@@ -71,8 +114,6 @@ typedef enum {
     UFT_DIAG_SECTOR_BAD     = 3
 } uft_diag_sector_status_t;
 
-#define UFT_DIAG_MAX_SECTORS_PER_TRACK 36
-
 typedef struct uft_diag_track_result {
     int    track;
     int    side;
@@ -81,6 +122,8 @@ typedef struct uft_diag_track_result {
     int    read_errors;
     double avg_read_time_us;
     double quality;                  /**< percent 0..100 */
+    /** Indexed by POSITION in the scan order, not by sector number: with
+     *  config.sector_ids set, sector_status[i] belongs to sector_ids[i]. */
     uint8_t sector_status[UFT_DIAG_MAX_SECTORS_PER_TRACK];
 } uft_diag_track_result_t;
 
@@ -144,6 +187,12 @@ typedef struct {
 
     uft_diag_progress_fn        progress_fn;
     void                       *progress_data;
+
+    /* Appended (door stage 4): how many entries uft_diag_init() allocated
+     * in track_results. `config` is public and can be changed after init;
+     * the scan checks tracks x sides against THIS number instead of
+     * writing past the allocation. */
+    size_t                      track_results_count;
 } uft_diag_ctx_t;
 
 typedef struct {
@@ -156,12 +205,36 @@ typedef struct {
  * Functions
  *===========================================================================*/
 
+/**
+ * Copies @p config (or installs the defaults 80/2/18/512/3 when NULL) and
+ * allocates tracks x sides results. Returns -1 — with @p ctx zeroed, so
+ * uft_diag_free() stays safe — when the configuration is outside the limits
+ * above or its sector_ids list is malformed.
+ */
 int  uft_diag_init(uft_diag_ctx_t *ctx, uft_diag_config_t *config);
 void uft_diag_free(uft_diag_ctx_t *ctx);
 
+/**
+ * Reads every sector of every track and side with up to config.retries
+ * attempts each; GOOD = first attempt, WEAK = a later attempt, BAD = none.
+ * Read-only: the scan has no write path.
+ *
+ * Checks the configuration again (ctx->config is public) and returns -1
+ * WITHOUT a single read when it is outside the limits or tracks x sides
+ * exceeds what uft_diag_init() allocated.
+ *
+ * A retry only means something when read_fn measures anew each time
+ * (hardware). Over an image file every attempt returns the same bytes.
+ */
 int uft_diag_surface_scan(uft_diag_ctx_t *ctx,
                            uft_diag_read_fn read_fn, void *user_data);
 
+/**
+ * Lists the BAD sectors of the last scan. `sector` is the sector NUMBER
+ * that was asked for (config.sector_ids when set, else position + 1),
+ * `side` the side it was read on. Returns -1 under the same conditions as
+ * uft_diag_surface_scan().
+ */
 int uft_diag_get_bad_sectors(const uft_diag_ctx_t *ctx,
                               uft_bad_sector_t *bad_list, size_t *count);
 
@@ -169,6 +242,16 @@ int uft_diag_head_alignment(uft_diag_ctx_t *ctx,
                              uft_diag_read_fn read_fn, void *user_data,
                              uft_alignment_info_t *info);
 
+/**
+ * DESTRUCTIVE. Overwrites every sector 1..config.sectors of
+ * @p test_track / @p test_side with the patterns 0x00, 0xFF, 0xAA, 0x55
+ * via @p write_fn and reads them back. Whatever the disk held there is
+ * gone afterwards. Never call it on a disk that is being preserved.
+ *
+ * No surface-scan path reaches this function: uft_diag_surface_scan()
+ * takes no write_fn, and the Greaseweazle adapter (uft_diag_gw.h) has no
+ * write parameter at all.
+ */
 int uft_diag_write_verify(uft_diag_ctx_t *ctx,
                            uft_diag_read_fn read_fn,
                            uft_diag_write_fn write_fn,

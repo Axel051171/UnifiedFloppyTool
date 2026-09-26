@@ -785,6 +785,7 @@ SOURCES += \
     src/core/uft_snapshot.c \
     src/core/uft_track_layout.c \
     src/diag/uft_disc_diagnostics.c \
+    src/diag/uft_diag_gw.c \
     src/display/uft_display_track.c \
     src/compat/uft_fnmatch.c \
     src/formats/imd/uft_imd_adapter.c \
@@ -1288,6 +1289,7 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     include/uft/hal/uft_greaseweazle_full.h \
+    include/uft/diag/uft_diag_gw.h \
     include/uft/hal/uft_hal.h \
     include/uft/hal/uft_drive.h \
     include/uft/hal/uft_kryoflux.h \

@@ -5864,6 +5864,48 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_diag_grenzen")
+        # Tuerstufe 4, Teil A: sectors/tracks/sides/retries ausserhalb der
+        # Grenzen werden abgesagt (vorher: Schreiben hinter sector_status[36],
+        # Teilen durch null, alles BAD ohne Leseversuch).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_diag_sektor_ids")
+        # Tuerstufe 4, Teil A: Sektornummern aus einer Liste statt fest
+        # sec + 1 (CPC 0xC1..0xC9, 0-basierte Formate).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_diag_gw_emulator")
+        # Tuerstufe 4, Teil B: Oberflaechen-Scan ueber den Greaseweazle-
+        # Leseweg (uft_diag_gw.c), gegen den Firmware-Automaten ueber die
+        # Drahtbruecke aus MF-848. Keine Hardware (MF-310). Der Fluss
+        # kommt aus UFTs IBM-MFM-Encoder; dekodiert wird mit dem
+        # Produktionsdekoder.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/diag/uft_diag_gw.c
+            ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/gw_wire_bridge.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
+        target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
     elseif(${test_name} STREQUAL "test_display_track")
         # v4.1.5-hardening: track display utility.
         target_sources(${test_name} PRIVATE

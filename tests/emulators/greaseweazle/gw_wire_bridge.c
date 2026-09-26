@@ -19,6 +19,14 @@
 
 static void sendet(gw_wire_t *w, const uint8_t *d, size_t n)
 {
+    /* Schon Gelesenes freigeben (Tuerstufe 4): vorher wuchs aus_len ueber
+     * die ganze Sitzung, und nach einem gestroemten ReadFlux waere die
+     * naechste Antwort still verworfen worden. */
+    if (w->aus_pos > 0) {
+        memmove(w->aus, w->aus + w->aus_pos, w->aus_len - w->aus_pos);
+        w->aus_len -= w->aus_pos;
+        w->aus_pos = 0;
+    }
     if (w->aus_len + n > GW_WIRE_PUFFER) return;   /* Ueberlauf: Stille,
                                                     * der Treiber laeuft
                                                     * dann in seinen
@@ -71,7 +79,34 @@ static void verteile(gw_wire_t *w, const uint8_t *f, size_t len)
     case UFT_GW_CMD_SEEK:
         /* Der Treiber schickt den Zylinder VORZEICHENBEHAFTET
          * (`int8_t cyl8`), der Automat nimmt `int8_t`. */
+        if (w->trk0_folgt_zylinder)
+            gw_fw_set_trk0_present(w->fw, (int8_t)P(0) == 0);
         ack = gw_fw_cmd_seek(w->fw, (int8_t)P(0));
+        break;
+
+    case UFT_GW_CMD_READ_FLUX: {
+        /* pack("<2BIH", ReadFlux, 8, ticks, revs) — so baut es
+         * uft_gw_read_flux(). */
+        uint32_t ticks = (uint32_t)P(0) | ((uint32_t)P(1) << 8) |
+                         ((uint32_t)P(2) << 16) | ((uint32_t)P(3) << 24);
+        uint16_t revs  = (uint16_t)(P(4) | (P(5) << 8));
+        if (w->vor_lesen) w->vor_lesen(w->vor_lesen_ud, w->lesebefehle);
+        w->lesebefehle++;
+        ack = gw_fw_cmd_read_flux(w->fw, ticks, revs);
+        antwort(w, befehl, ack);
+        w->stroemt = (ack == GW_FW_ACK_OK);
+        return;
+    }
+
+    case UFT_GW_CMD_WRITE_FLUX:
+    case UFT_GW_CMD_ERASE_FLUX:
+        /* Gezaehlt, damit ein Lesetest belegen kann, dass KEIN
+         * Schreibbefehl die Leitung erreicht hat. Der Automat weist beide
+         * ohnehin ab (ACK_WRPROT, siehe README „Non-scope"). */
+        w->schreibbefehle++;
+        ack = (befehl == UFT_GW_CMD_WRITE_FLUX)
+                ? gw_fw_cmd_write_flux(w->fw, P(0), P(1))
+                : gw_fw_cmd_erase_flux(w->fw, 0);
         break;
 
     case UFT_GW_CMD_HEAD:
@@ -155,11 +190,35 @@ static int op_write(void *user, const uint8_t *data, size_t len)
     return UFT_GW_OK;
 }
 
+/* Fliesst ein ReadFlux-Strom, fuellt das den Ausgangspuffer aus dem
+ * Automaten nach -- hoechstens bis er voll ist, und nie ueber das 0x00
+ * hinaus, mit dem der Automat den Strom beendet (danach steht er in
+ * FLUX_STATUS_READY und gibt nichts mehr heraus). */
+static void nachfuellen(gw_wire_t *w)
+{
+    if (!w->stroemt) return;
+    if (w->aus_pos > 0) {              /* Gelesenes nach vorn verdraengen */
+        memmove(w->aus, w->aus + w->aus_pos, w->aus_len - w->aus_pos);
+        w->aus_len -= w->aus_pos;
+        w->aus_pos = 0;
+    }
+    while (w->stroemt && w->aus_len < GW_WIRE_PUFFER) {
+        uint8_t b = 0;
+        if (gw_fw_pop_read_byte(w->fw, &b) != GW_FW_ACK_OK) {
+            w->stroemt = false;        /* Automat liefert nicht: Stille */
+            break;
+        }
+        w->aus[w->aus_len++] = b;
+        if (b == 0x00) w->stroemt = false;
+    }
+}
+
 static int op_read_exact(void *user, uint8_t *data, size_t len, int timeout_ms)
 {
     (void)timeout_ms;
     gw_wire_t *w = (gw_wire_t *)user;
     if (!w || !data) return UFT_GW_ERR_INVALID;
+    if (w->aus_pos + len > w->aus_len) nachfuellen(w);
     if (w->aus_pos + len > w->aus_len) return UFT_GW_ERR_TIMEOUT;
     memcpy(data, w->aus + w->aus_pos, len);
     w->aus_pos += len;
@@ -172,6 +231,7 @@ static int op_read_available(void *user, uint8_t *data, size_t max_len,
     (void)timeout_ms;
     gw_wire_t *w = (gw_wire_t *)user;
     if (!w || !data) return UFT_GW_ERR_INVALID;
+    if (w->aus_pos == w->aus_len) nachfuellen(w);
     size_t da = w->aus_len - w->aus_pos;
     if (da > max_len) da = max_len;
     memcpy(data, w->aus + w->aus_pos, da);

@@ -86,6 +86,34 @@ typedef struct {
     unsigned rahmen;                /**< vollstaendig verarbeitete Rahmen */
     unsigned unbekannt;             /**< Befehle, die die Bruecke nicht kennt */
     uint8_t  letzter_befehl;
+
+    /* ── Angehaengt, Tuerstufe 4: der LESEweg ─────────────────────────
+     *
+     * Bis hierher kannte die Bruecke ReadFlux nicht (Antwort
+     * BAD_COMMAND, `unbekannt`++). Damit war kein Leseweg des Treibers
+     * gegen den Automaten pruefbar, nur Kopfbewegung und Pins.
+     *
+     * Nach einem ReadFlux mit ACK OK stroemt die Bruecke die Bytes aus
+     * `gw_fw_pop_read_byte()` nach, bis der Automat das Ende (0x00)
+     * geliefert hat. Der Automat haelt den Strom nicht selbst — der Test
+     * laedt ihn mit `gw_fw_load_read_stream()`, auf Wunsch JE LESUNG
+     * neu ueber `vor_lesen`. */
+    bool     stroemt;               /**< ReadFlux laeuft, Strom nicht zu Ende */
+    unsigned lesebefehle;           /**< ReadFlux-Rahmen */
+    unsigned schreibbefehle;        /**< WriteFlux- und EraseFlux-Rahmen */
+
+    /** Aufgerufen VOR jedem ReadFlux, mit dem Zaehlerstand der Lesungen
+     *  (0 = erste). Der Test laedt hier den Strom fuer die Stelle, auf der
+     *  der Automat gerade steht (`fw->current_cyl` / `current_head`). */
+    void   (*vor_lesen)(void *ud, unsigned lesung);
+    void    *vor_lesen_ud;
+
+    /** Der Automat fuehrt /TRK0 als festen Schalter. Mit diesem Feld
+     *  setzt die Bruecke ihn vor jedem Seek auf (zylinder == 0) — wie ein
+     *  echtes Laufwerk, dessen Sensor nur ueber Spur 0 anliegt. AUS per
+     *  Vorgabe, weil der Pruefstand aus MF-848 genau den festen Schalter
+     *  braucht (dekalibrierter Kopf: /TRK0 liegt auf Spur 40 an). */
+    bool     trk0_folgt_zylinder;
 } gw_wire_t;
 
 /**
