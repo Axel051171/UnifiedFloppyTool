@@ -19,8 +19,9 @@
  *
  * Die Haelfte 1 (Oberflaechen-Scan) steht in
  * tests/test_diag_seitenfehler_und_sektor10.c: uft_disc_diagnostics.h
- * definiert ein eigenes uft_sector_status_t, das mit uft_types.h
- * kollidiert -- beide Header gehen nicht in eine Uebersetzungseinheit.
+ * definierte ein eigenes uft_sector_status_t, das mit uft_types.h
+ * kollidierte -- beide Header gingen nicht in eine Uebersetzungseinheit
+ * (behoben MF-1341, tests/test_diag_kopf_neben_uft_types.c).
  *
  * Produktive Aufrufer beider Funktionen: 0 (nur Tests).
  */

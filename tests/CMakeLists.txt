@@ -5847,11 +5847,15 @@ foreach(test_source ${TEST_SOURCES})
         # Sektorfolge ist keine kleinere Geometrie (ST-Reihenfolge).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st_order.c)
+    elseif(${test_name} STREQUAL "test_diag_kopf_neben_uft_types")
+        # MF-1341: der Diagnose-Kopf und uft_types.h in EINER
+        # Uebersetzungseinheit — vorher "redeclaration of enumerator".
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_diag_seitenfehler_und_sektor10")
         # H-18/MF-1339: Oberflaechen-Scan mit zwei Seiten und einem zeitweise
         # unlesbaren Sektor 10. Eigene Datei, weil uft_disc_diagnostics.h
-        # ein eigenes uft_sector_status_t fuehrt, das mit uft_types.h
-        # kollidiert.
+        # ein eigenes uft_sector_status_t fuehrte, das mit uft_types.h
+        # kollidierte (behoben MF-1341: seither uft_diag_sector_status_t).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c)
         set(TEST_LIBS "")

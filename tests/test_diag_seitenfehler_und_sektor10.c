@@ -100,7 +100,7 @@ static void t_zeitweiser_sektor10_schrumpft_nichts(void)
     snprintf(h, sizeof h, "weak=%d", ctx.weak_sectors);
     pruefe("acht schwache Sektoren, je Spur und Seite Sektor 10", ctx.weak_sectors == 8, h);
     pruefe("Sektor 10 auf Spur 3 Seite 1 ist WEAK",
-           ctx.track_results[3 * 2 + 1].sector_status[9] == UFT_SECTOR_WEAK, NULL);
+           ctx.track_results[3 * 2 + 1].sector_status[9] == UFT_DIAG_SECTOR_WEAK, NULL);
     free(z);
     uft_diag_free(&ctx);
 }

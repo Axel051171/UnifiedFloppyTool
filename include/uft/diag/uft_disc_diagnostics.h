@@ -56,12 +56,20 @@ typedef struct {
     bool verbose;
 } uft_diag_config_t;
 
+/*
+ * Result of one sector in a surface scan. Own name since MF-1341: this
+ * enum used to be called `uft_sector_status_t` with enumerators
+ * `UFT_SECTOR_*`, which uft_types.h also defines with a different meaning
+ * (a bit mask, WEAK = 16), so the two headers could not be compiled in
+ * one translation unit. Values are unchanged; `sector_status[]` below
+ * stores them as uint8_t.
+ */
 typedef enum {
-    UFT_SECTOR_UNKNOWN = 0,
-    UFT_SECTOR_GOOD    = 1,
-    UFT_SECTOR_WEAK    = 2,
-    UFT_SECTOR_BAD     = 3
-} uft_sector_status_t;
+    UFT_DIAG_SECTOR_UNKNOWN = 0,
+    UFT_DIAG_SECTOR_GOOD    = 1,
+    UFT_DIAG_SECTOR_WEAK    = 2,   /**< read, but only after a retry */
+    UFT_DIAG_SECTOR_BAD     = 3
+} uft_diag_sector_status_t;
 
 #define UFT_DIAG_MAX_SECTORS_PER_TRACK 36
 

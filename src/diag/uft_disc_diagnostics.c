@@ -132,16 +132,16 @@ int uft_diag_surface_scan(uft_diag_ctx_t *ctx, uft_diag_read_fn read_fn,
                     if (retries > 0) {
                         result->weak_sectors++;
                         ctx->weak_sectors++;
-                        result->sector_status[sec] = UFT_SECTOR_WEAK;
+                        result->sector_status[sec] = UFT_DIAG_SECTOR_WEAK;
                     } else {
                         ctx->good_sectors++;
-                        result->sector_status[sec] = UFT_SECTOR_GOOD;
+                        result->sector_status[sec] = UFT_DIAG_SECTOR_GOOD;
                     }
                 } else {
                     result->bad_sectors++;
                     result->read_errors++;
                     ctx->bad_sectors++;
-                    result->sector_status[sec] = UFT_SECTOR_BAD;
+                    result->sector_status[sec] = UFT_DIAG_SECTOR_BAD;
                 }
             }
             
@@ -186,7 +186,7 @@ int uft_diag_get_bad_sectors(const uft_diag_ctx_t *ctx,
                 &ctx->track_results[t * ctx->config.sides + s];
             
             for (int sec = 0; sec < ctx->config.sectors; sec++) {
-                if (result->sector_status[sec] == UFT_SECTOR_BAD) {
+                if (result->sector_status[sec] == UFT_DIAG_SECTOR_BAD) {
                     if (*count < max_count) {
                         bad_list[*count].track = t;
                         bad_list[*count].side = s;
