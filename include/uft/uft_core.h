@@ -11,6 +11,7 @@
 
 #include "uft_types.h"
 #include "uft_error.h"
+#include "uft_probe_guard.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -59,6 +60,20 @@ uft_disk_t* uft_disk_open_as(const char* path, bool read_only,
  */
 uft_disk_t* uft_disk_open_ranked(const char* path, bool read_only,
                                  struct uft_probe_ranking* ranking_out);
+
+/**
+ * @brief Open with an explicit recognition policy.
+ *
+ * The ordinary ranked path (uft_disk_open_ranked, uft_disk_open) uses
+ * UFT_PROBE_POLICY_COMPATIBLE — today's behaviour; making INTERACTIVE the
+ * default would stop 30 of 110 corpus files from opening (MF-1368).  Batch,
+ * preservation and evidence workflows should use UFT_PROBE_POLICY_FORENSIC:
+ * an extension is then reported as a hint, never used as authority.
+ */
+uft_disk_t* uft_disk_open_with_policy(const char* path, bool read_only,
+                                      uft_probe_policy_t policy,
+                                      struct uft_probe_ranking* ranking_out,
+                                      uft_probe_guard_result_t* decision_out);
 
 
 /* uft_disk_create(path, format, geometry) — REMOVED (MF-294): this

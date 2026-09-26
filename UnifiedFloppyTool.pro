@@ -1029,6 +1029,7 @@ SOURCES += \
     src/formats/uft_format_registry.c \
     src/formats/uft_v3_bridge.c \
     src/core/uft_format_plugin.c \
+    src/core/uft_probe_guard.c \
     src/core/uft_preflight.c \
     src/core/uft_loss_report.c \
     src/core/uft_roundtrip.c \
@@ -1037,6 +1038,8 @@ SOURCES += \
     src/core/uft_imaging_recipe.c \
     src/core/uft_recipe_copyplan.c \
     src/core/uft_amiga_recipe_profiles.c
+
+HEADERS += include/uft/uft_probe_guard.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Track Analysis

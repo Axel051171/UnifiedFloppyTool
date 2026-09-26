@@ -13,6 +13,7 @@
 
 #include <uft/uft_core.h>           /* uft_disk_open_ranked / close / get_geometry */
 #include <uft/uft_format_plugin.h>  /* registry, uft_disk_plugin, capabilities */
+#include <uft/uft_probe_guard.h>    /* MF-1368: content-backed or not */
 #include <uft/uft_types.h>
 
 namespace {
@@ -356,15 +357,43 @@ bool DiskImageValidator::validateByRegistry(DiskImageInfo& info)
                                    "%2 hat entschieden")
                                .arg(rang.tied - 1).arg(ext);
     }
-    if (rang.band == UFT_PROBE_BAND_SIZE) {
-        /* MF-729: 30..49 means "only the size fits". A PC-360K image
-         * opens as MSX, a TI-99 image as XFD — the registry's decision,
-         * but not an identification. Say what it rests on. */
-        info.formatName += QString(" — erkannt nur an der Dateigroesse "
-                                   "(Konfidenz %1, %2 Bewerber in diesem "
-                                   "Band)")
-                               .arg(rang.confidence)
-                               .arg(rang.band_claimants);
+    /* MF-1368: WHETHER this opening is backed by content is decided in ONE
+     * place, the probe guard under the forensic policy (MF-1177: one
+     * quantity, one calculation). The file is still opened as before
+     * (compatible policy); the guard's verdict is shown, not enforced. */
+    uft_probe_guard_result_t urteil;
+    if (uft_probe_guard_decide(&rang, plugin, UFT_PROBE_POLICY_FORENSIC,
+                               &urteil) && !urteil.auto_open) {
+        if (urteil.disposition == UFT_PROBE_DISPOSITION_WEAK_CLAIM &&
+            rang.band == UFT_PROBE_BAND_NONE) {
+            /* New with the guard: below even the size band (0..29, "no
+             * claim" by MF-729) and still opened — measured on
+             * tests/corpus_free: both .myz80 files, confidence 25. The old
+             * check only knew the size band and said nothing here. */
+            info.formatName += QString(" — ohne belastbare Erkennung "
+                                       "geoeffnet (Konfidenz %1, unter der "
+                                       "Groessenschwelle)")
+                                   .arg(rang.confidence);
+        } else if (urteil.disposition == UFT_PROBE_DISPOSITION_WEAK_CLAIM) {
+            /* MF-729: 30..49 means "only the size fits". A PC-360K image
+             * opens as MSX, a TI-99 image as XFD — the registry's decision,
+             * but not an identification. Say what it rests on. */
+            info.formatName += QString(" — erkannt nur an der Dateigroesse "
+                                       "(Konfidenz %1, %2 Bewerber in diesem "
+                                       "Band)")
+                                   .arg(rang.confidence)
+                                   .arg(rang.band_claimants);
+        } else if (urteil.disposition == UFT_PROBE_DISPOSITION_AMBIGUOUS &&
+                   rang.tied <= 1) {
+            /* New with the guard: no exact tie, but more than one plugin in
+             * the winning evidence band — the ranking chose, the content
+             * did not decide (measured: gw_msx_2dd.img, mtools_fat12). */
+            info.formatName += QString(" — nicht eindeutig: %1 Bewerber im "
+                                       "selben Beweisband (Konfidenz %2); "
+                                       "die Rangfolge hat gewaehlt")
+                                   .arg(rang.band_claimants)
+                                   .arg(rang.confidence);
+        }
     }
     /* The registry names no platform; none is invented. */
     info.platform.clear();
