@@ -326,11 +326,30 @@ def protokolle(ordner: Path, seit: str | None) -> int:
     abweisungen_seit = 0
     gruende: dict[str, int] = {}
     ids: set[str] = set()
+    # A blocked call is still recorded as a tool_use. Only its RESULT says
+    # whether the gate stopped it: pair every objectionable call since
+    # `seit` with its tool_result (MF-1343 — counting attempts would make
+    # "0 after installation" impossible and would hide real slips).
+    seit_ids: set[str] = set()
+    gestoppt: set[str] = set()
     dateien = sorted(ordner.rglob("*.jsonl"))
     for p in dateien:
         try:
             with open(p, "rb") as f:
                 for roh in f:
+                    if b"Heredoc-Tor (Tor 71" in roh and b"tool_result" in roh:
+                        try:
+                            rec = json.loads(roh)
+                        except ValueError:
+                            rec = {}
+                        msg = rec.get("message") or {}
+                        inhalt = msg.get("content") if isinstance(msg, dict) else None
+                        for block in inhalt if isinstance(inhalt, list) else []:
+                            if (isinstance(block, dict)
+                                    and block.get("type") == "tool_result"
+                                    and "Heredoc-Tor (Tor 71" in json.dumps(
+                                        block.get("content"), ensure_ascii=False)):
+                                gestoppt.add(block.get("tool_use_id") or "")
                     if b'"Bash"' not in roh:
                         continue
                     try:
@@ -362,6 +381,7 @@ def protokolle(ordner: Path, seit: str | None) -> int:
                             abweisungen += 1
                             if seit and str(rec.get("timestamp", "")) >= seit:
                                 abweisungen_seit += 1
+                                seit_ids.add(bid)
                             for _u, g in urteile:
                                 # group by the rule, not by its numbers:
                                 # "(python, 116 Zeilen)" made every case a
@@ -376,8 +396,11 @@ def protokolle(ordner: Path, seit: str | None) -> int:
     print("  davon mit <<              : %d" % mit_heredoc)
     print("  haetten abgewiesen werden : %d" % abweisungen)
     if seit:
-        print("  davon seit %s : %d  (nach dem Einbau muss das 0 sein)" %
-              (seit, abweisungen_seit))
+        durch = seit_ids - gestoppt
+        print("  davon seit %s : %d versucht" % (seit, abweisungen_seit))
+        print("    vom Tor gestoppt        : %d" % len(seit_ids & gestoppt))
+        print("    AUSGEFUEHRT (Luecke)    : %d  (nach dem Einbau muss das 0 sein)"
+              % len(durch))
     for g, n in sorted(gruende.items(), key=lambda kv: -kv[1]):
         print("    %6d  %s" % (n, g))
     if gesehen == 0:
