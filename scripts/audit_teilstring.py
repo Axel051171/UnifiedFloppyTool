@@ -183,6 +183,57 @@ def _text_of(arg):
     return ' '.join(t.text for t in arg)
 
 
+def _sizeof_operanden(arg):
+    """Je `sizeof` im Argument ein Paar (geklammert, Token des Operanden).
+
+    `sizeof(x)` liefert (True, [x...]) bis zur passenden Klammer;
+    `sizeof x` liefert (False, [x]) — ohne Klammer ist der Operand ein
+    Ausdruck, nie ein Typname. Leer, wenn kein sizeof vorkommt."""
+    out = []
+    for k, tk in enumerate(arg):
+        if not (tk.kind == KIND_ID and tk.text == 'sizeof'):
+            continue
+        if k + 1 < len(arg) and arg[k + 1].kind == KIND_PUNCT \
+                and arg[k + 1].text == '(':
+            tiefe, inhalt = 0, []
+            for t2 in arg[k + 1:]:
+                if t2.kind == KIND_PUNCT and t2.text == '(':
+                    tiefe += 1
+                    if tiefe == 1:
+                        continue
+                elif t2.kind == KIND_PUNCT and t2.text == ')':
+                    tiefe -= 1
+                    if tiefe == 0:
+                        break
+                inhalt.append(t2)
+            out.append((True, inhalt))
+        else:
+            out.append((False, arg[k + 1:k + 2]))
+    return out
+
+
+#: Schluesselwoerter, aus denen ein Grundtyp besteht.
+_TYPWORTE = {'void', 'char', 'short', 'int', 'long', 'float', 'double',
+             'signed', 'unsigned', '_Bool', 'bool', 'const', 'volatile'}
+#: Die `_t`-Namenskonvention fuer Typen (uint8_t, size_t, uft_disk_t).
+_TYP_NAME = re.compile(r'[A-Za-z_][A-Za-z0-9_]*_t\Z')
+
+
+def _ist_typname(toks):
+    """True, wenn die Token einen Typnamen OHNE Zeiger bilden: Grundtypen,
+    `struct|union|enum X` oder ein Bezeichner nach der `_t`-Konvention.
+
+    Ein anderer Name (CamelCase-Typedef, Variable, `a->b`) ist ohne
+    Typwissen nicht vom Ausdruck zu unterscheiden und gilt NICHT als Typ —
+    dann bleibt es ein Fund `pruefen`, lieber einmal zu oft nachsehen."""
+    if not toks or any(t.kind != KIND_ID for t in toks):
+        return False
+    texte = [t.text for t in toks]
+    if texte[0] in ('struct', 'union', 'enum'):
+        return len(texte) == 2
+    return all(x in _TYPWORTE or _TYP_NAME.match(x) for x in texte)
+
+
 # ── C-Regeln ─────────────────────────────────────────────────────────────
 
 def audit_c(path: str, src: str):
@@ -277,9 +328,25 @@ def audit_c(path: str, src: str):
                 continue
 
             # C6: sizeof auf etwas, das ein Zeiger sein koennte
-            if any(tk.kind == KIND_ID and tk.text == 'sizeof' for tk in a[2]):
+            #
+            # BERICHTIGT MF-1353 — hier stand `'*' in arg_txt or not ('['
+            # in arg_txt or ']' in arg_txt)`: JEDES Sternzeichen im
+            # Laengenargument machte einen Fund, auch das Malzeichen in
+            # `n * sizeof(int)` (Code-Scanning-Alarm #16). Gesucht ist ein
+            # Zeiger IM Operanden von sizeof (`sizeof(char *)`,
+            # `sizeof(*p)`), und die Groesse eines TYPS ohne Stern kann
+            # nie die Zeigergroesse einer Zeichenkette sein. Was die Regel
+            # nicht entscheiden kann (ein Ausdruck wie `sizeof(a->b)`),
+            # bleibt ein Fund der Einschaetzung `pruefen`.
+            operanden = _sizeof_operanden(a[2])
+            if operanden:
                 arg_txt = _text_of(a[2])
-                if '*' in arg_txt or not ('[' in arg_txt or ']' in arg_txt):
+                stern_innen = any(tk.kind == KIND_PUNCT and tk.text == '*'
+                                  for _, ops in operanden for tk in ops)
+                alle_typen = all(klammer and _ist_typname(ops)
+                                 for klammer, ops in operanden)
+                feld = '[' in arg_txt or ']' in arg_txt
+                if stern_innen or not (alle_typen or feld):
                     out.append(Finding(
                         'C6', path, t.line, t.col, 'pruefen',
                         f'{t.text}(..., {arg_txt}) — sizeof als Laenge',
@@ -663,6 +730,40 @@ def selbsttest() -> int:
                      'nicht sterben')
     except UnicodeEncodeError:
         zusage(False, 'Ausgabe stirbt weiter an einem Zeichen')
+
+    print('Defekt K — ein Malzeichen ist kein Zeiger, ein Typ keine Zeichenkette')
+    # MF-1353: Code-Scanning-Alarm #16 zeigte auf
+    # `memcmp(l->rc_vor, l->rc_jetzt, l->koepfe * sizeof(int))` — beide
+    # Puffer sind `calloc(koepfe, sizeof(int))`, die Laenge ist genau
+    # richtig. Die Regel sah das `*` der MULTIPLIKATION und hielt es fuer
+    # einen Zeiger. Gemessen ueber src/ und include/: 1 von 165 C6-Funden.
+    def c6(quelle):
+        return [x for x in _c(quelle) if x.rule == 'C6']
+    zusage(not c6('int f(int*a,int*b,unsigned n){ return memcmp(a,b,n * sizeof(int)); }'),
+           'memcmp(a, b, n * sizeof(int)) ist KEIN C6 — das `*` ist eine '
+           'Multiplikation ausserhalb von sizeof, und sizeof(int) ist ein Typ')
+    zusage(not c6('int f(const void*a,const void*b){ return memcmp(a,b,sizeof(uint8_t)); }'),
+           'memcmp(a, b, sizeof(uint8_t)) ist KEIN C6 — die Groesse eines '
+           'Typs kann nie die Zeigergroesse einer Zeichenkette sein')
+    zusage(not c6('int f(const void*a,const void*b){ return memcmp(a,b,sizeof(struct kopf)); }'),
+           'memcmp(a, b, sizeof(struct kopf)) ist KEIN C6')
+    zusage(c6('int f(const char*a,const char*b){ return memcmp(a,b,sizeof(char *)); }'),
+           'memcmp(a, b, sizeof(char *)) BLEIBT C6 — ein Zeigertyp ist genau '
+           'der gesuchte Fehler')
+    zusage(c6('int f(const char*a,const char*p){ return memcmp(a,p,sizeof(*p)); }'),
+           'memcmp(a, p, sizeof(*p)) BLEIBT C6 — die Groesse EINES Zeichens')
+    zusage(c6('int f(const char*a,const char*p,unsigned n){ return memcmp(a,p,n * sizeof(p)); }'),
+           'memcmp(a, p, n * sizeof(p)) BLEIBT C6 — der Ausdruck p kann ein '
+           'Zeiger sein, das Malzeichen davor aendert daran nichts')
+    zusage(c6('int f(const char*a,const char*p){ return strncmp(a,p,sizeof p); }'),
+           'strncmp(a, p, sizeof p) BLEIBT C6 — sizeof ohne Klammer auf einem '
+           'Ausdruck')
+    zusage(c6('int f(const char*a,const char*name_t){ return strncmp(a,name_t,sizeof name_t); }'),
+           'strncmp(a, name_t, sizeof name_t) BLEIBT C6 — ohne Klammer ist der '
+           'Operand immer ein Ausdruck, auch wenn der Name wie ein Typ aussieht')
+    zusage(c6('int f(const char*a,const char*p,int*v){ return memcmp(a,p,sizeof(*p) * v[0]); }'),
+           'memcmp(a, p, sizeof(*p) * v[0]) BLEIBT C6 — der Stern IM Operanden '
+           'zaehlt auch dann, wenn daneben eine eckige Klammer steht')
 
     print('Koederdatei — die bekannte Antwort')
     koeder = os.path.join(wurzel, 'tests', 'formats', 'fixture_traps.c')
