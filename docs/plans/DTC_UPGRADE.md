@@ -166,7 +166,30 @@ vorher rot gemessen wurde.
   mit den Mutationen „Abschneiden weg“, „nur KryoFlux behoben“ und
   „in `run_subprocess()` abgeschnitten“.
 
-### DTC-2 — der Artefakt-Kanal *(B2 + E1, ~120 Zeilen)*
+### DTC-2 — der Artefakt-Kanal *(B2 + E1, ~120 Zeilen)* — ✅ MF-1360
+
+> **Erledigt MF-1360 — mit einer Abweichung vom Plan, und die ist gewollt.**
+> Geplant war: der Läufer liest die Datei und bekommt ihren Pfad vom
+> Provider. Gebaut ist: der **Provider** liest die Datei selbst
+> (`std::ifstream`), der Läufer bleibt ein reiner Prozess-Starter und
+> `DtcRunResult` unverändert. Das hält dieselben Zusagen mit weniger
+> Fläche — keine Schnittstellenänderung, keine Mock-Adapter, die ein
+> Feld füllen müssen — und die Rechnung liegt in EINER Funktion,
+> `KryoFluxProviderV2::stream_file_path()` (dazu `stream_prefix()`).
+> Vor dem Lauf wird eine alte Datei entfernt; nach dem Lesen bleibt sie
+> liegen, weil `FluxCaptured` sie nicht mittragen kann (P3-562, offen).
+>
+> Abnahme: die Test-Attrappe `tests/mock_hardware/dtc_strom_datei.h`
+> trennt stdout und Stromdatei; zwei neue Fälle (Strom nur auf stdout →
+> ProviderError; alte Datei → wird entfernt, nicht gelesen); und über
+> einen echten Prozess liest `test_laeufer_argv` Fall 6 den Korpus-Strom
+> `hxcfe_kfx_t00.0.raw`: 115 342 Übergänge, **3 Indexmarken** wie im
+> Korpusbefund MF-1024. Rotbeweis: gegen den Vorzustand dekodierte der
+> Provider den Protokolltext (`FluxMarginal` statt Fluss).
+> Mutationsmatrix **4 von 4** — und M3 (Dateiname ohne
+> Nullauffüllung) fängt **nur** der Prozesstest, weil das Test-Werkzeug
+> den Namen unabhängig nach dem Handbuch rechnet, während die Attrappe
+> dieselbe Funktion benutzt wie der Provider.
 
 * **Kennzahl:** Bench-Alter / Fähigkeitszusage. Damit ist der
   KryoFlux-Teil von P3-342 erledigt.

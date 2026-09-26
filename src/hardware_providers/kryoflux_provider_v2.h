@@ -115,15 +115,17 @@
  * Rule F-3 (multi-revolution preservation):
  *   The V1 readRawFlux() captures one revolution per DTC invocation and
  *   returns raw KryoFlux stream bytes verbatim. KryoFlux stream files
- *   (track{NN}.{S}.raw) contain a full revolution of flux transitions in
- *   KryoFlux stream format, including all timing information. The V2
- *   do_read_raw_flux() preserves the raw stream bytes exactly as returned
- *   by DTC — no resampling, no averaging, no collapsing. The KryoFlux
- *   stream format encodes transitions at ~24 MHz (41.67 ns per sample).
- *   FluxCaptured::transitions_ns is populated from the stream; for the
- *   KryoFlux stream opcode format this means the raw bytes are stored
- *   byte-for-byte in a wrapper that preserves the original sample density.
- *   The revolutions field is set to the number of revolutions requested.
+ *   (`<prefix>NN.S.raw`, see stream_file_path()) contain the flux
+ *   transitions in KryoFlux stream format, including all timing
+ *   information. BERICHTIGT MF-1360: here stood that do_read_raw_flux()
+ *   "preserves the raw stream bytes exactly as returned by DTC" and stores
+ *   them "byte-for-byte in a wrapper" — it has decoded them with
+ *   uft_kf_decode() since MF-208, and until MF-1360 it read them from
+ *   stdout, which is DTC's log. Now it reads the stream FILE, decodes it
+ *   into FluxCaptured::transitions_ns (ns, ~41.67 ns sample resolution)
+ *   without resampling or inventing transitions, and sets the revolution
+ *   count from the measured index pulses. The raw file itself stays in the
+ *   temp directory; carrying it in FluxCaptured is open (P3-562).
  *
  * Rule F-4: every ProviderError carries non-empty what/why/fix strings.
  *   The ProviderError constructor throws std::logic_error on empty strings.
@@ -238,6 +240,26 @@ public:
 
     FluxOutcome   do_read_raw_flux (const ReadFluxParams& p);
     DetectOutcome do_detect_drive  ();
+
+    /* ── Wo DTC den Strom ablegt (MF-1360, P3-562 Teil 2) ────────────── */
+
+    /**
+     * @brief Der `-f`-Praefix, den do_read_raw_flux() fuer (Zylinder, Kopf)
+     *        an DTC gibt: `<temp_directory_path()>/uft_kf_<zyl>_<kopf>`.
+     */
+    static std::string stream_prefix(int cylinder, int head);
+
+    /**
+     * @brief Die Stromdatei, die DTC zu diesem Praefix schreibt:
+     *        `<praefix>NN.S.raw`, NN zweistellig, S die Seite.
+     *
+     * Regel aus dem KryoFlux-Handbuch (Kanal *Spec*, MF-1046): „test_23.1.raw
+     * will be stream test_" — der Praefix wird unveraendert vorangestellt.
+     * EINE Rechnung: der Provider liest damit, die Test-Attrappe schreibt
+     * damit (tests/mock_hardware/dtc_strom_datei.h).
+     */
+    static std::string stream_file_path(const std::string& prefix,
+                                        int track, int side);
 
 private:
     DtcRunner    m_runner;      /**< DTC subprocess runner (injected). */
