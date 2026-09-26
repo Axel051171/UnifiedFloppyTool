@@ -27,6 +27,8 @@
 #include <QWidget>
 #include <QButtonGroup>
 
+#include <functional>
+
 namespace Ui {
 class TabWorkflow;
 }
@@ -84,7 +86,22 @@ public slots:
      * ein zweites Feld zu fuehren, das mit dem ersten auseinanderlaufen
      * kann. Die Vorgabe 2 ist die des alten Feldes. */
     void setUmdrehungen(int n) { m_umdrehungen = n > 0 ? n : 1; }
-    int  umdrehungen() const { return m_umdrehungen; }
+
+    /* MF-1361 (A-035 DTC-4): die beiden Haelften aus MF-1293 waren nie
+     * verbunden — `setUmdrehungen()` und `FormatTab::leseUmdrehungen()`
+     * hatten gemessen je NULL Aufrufer, und die Aufnahme lief immer mit
+     * der Vorgabe 2, was immer im Settings-Reiter stand (und was der
+     * Kopierplan dort ueber `read.revolutions` erzwingt).
+     *
+     * Verbunden wird ueber eine LESEFUNKTION, nicht ueber einen
+     * hinterlegten Wert — dieselbe Bauform wie `uft_copy_plan_current()`
+     * (MF-1265): gefragt wird beim Start, also kann die Zahl nicht
+     * veralten, wenn der Bediener danach etwas umstellt. Ohne Quelle
+     * gilt `setUmdrehungen()`/die Vorgabe 2. */
+    void setUmdrehungsQuelle(std::function<int()> quelle) {
+        m_umdrehungsQuelle = std::move(quelle);
+    }
+    int  umdrehungen() const;
 
     // MF-110 / MF-200 / MF-201 — MainWindow forwards HardwareTab's
     // non-owning GreaseweazleProviderV2* every time the connection state
@@ -107,6 +124,7 @@ private slots:
 
 private:
     int m_umdrehungen = 2;
+    std::function<int()> m_umdrehungsQuelle;   /* MF-1361 */
     Ui::TabWorkflow *ui;
     
     QButtonGroup* m_sourceGroup;

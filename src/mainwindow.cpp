@@ -160,6 +160,15 @@ void MainWindow::loadTabWidgets()
      * baut der Reiter einen Kopierplan, an den niemand herankommt. */
     FormatTab* formatTab = new FormatTab();
     m_formatTab = formatTab;
+
+    /* MF-1361 (A-035 DTC-4): MF-1293 hat die Umdrehungen in den
+     * Settings-Reiter gelegt und dem Arbeitsablauf `setUmdrehungen()`
+     * gegeben — verbunden hat die beiden niemand (gemessen: je 0
+     * Aufrufer). Die Aufnahme lief deshalb immer mit 2. Beide Reiter
+     * leben so lange wie dieses Fenster. */
+    workflowTab->setUmdrehungsQuelle([formatTab] {
+        return formatTab->leseUmdrehungen();
+    });
     QVBoxLayout* layout3 = new QVBoxLayout(ui->tab_format);
     layout3->setContentsMargins(0, 0, 0, 0);
     layout3->addWidget(formatTab);
