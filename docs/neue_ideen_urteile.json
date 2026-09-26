@@ -1129,7 +1129,7 @@
       "lizenz_beleg": "`LICENSE` im Paket GELESEN (MIT-Wortlaut vollstaendig). Eigentuemer-Code, damit GPL-2-vereinbar.",
       "kanal": "Port",
       "kennzahl": "Fundus",
-      "naechster_griff": "UEBERNOMMEN als src/core/uft_imaging_recipe.c, uft_recipe_copyplan.c und uft_amiga_recipe_profiles.c, nach Behebung von sechs gemessenen Befunden (Mutationsmatrix 10/10). Offen: 0 Produktivaufrufer, siehe P3-542."
+      "naechster_griff": "UEBERNOMMEN als src/core/uft_imaging_recipe.c, uft_recipe_copyplan.c und uft_amiga_recipe_profiles.c, nach Behebung von sechs gemessenen Befunden (Mutationsmatrix 10/10). Offen: 0 Produktivaufrufer, siehe P3-544."
     },
     "WHDLoad_dev (neue-ideen/fertige/2/)": {
       "lizenz": "proprietaer, non-commercial. (c) 1995-2025 Bert Jahn, 'All rights reserved'. Quelldateien duerfen fuer Wiederverwendung geaendert werden; Disassemblierung NICHT untersagt. Fuenf der acht benutzten Vorlagen tragen selbst 'Public Domain', zwei keine Lizenzzeile, eine ein fremdes '(c) 1993 Vision'.",
