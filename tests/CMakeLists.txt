@@ -6428,8 +6428,11 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
                 ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c)
             add_dependencies(${qt_test_name} uft_argv_echo)
+            # MF-1363: Fall 6 liest einen echten KryoFlux-Strom aus dem
+            # Korpus (hxcfe_kfx_t00.0.raw) ueber den ganzen Lesepfad.
             target_compile_definitions(${qt_test_name} PRIVATE
-                UFT_ARGV_ECHO="$<TARGET_FILE:uft_argv_echo>")
+                UFT_ARGV_ECHO="$<TARGET_FILE:uft_argv_echo>"
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
         endif()
 
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was

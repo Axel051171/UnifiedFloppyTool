@@ -100,7 +100,14 @@ laufen fort und werden nie wiederverwendet.
   Änderung, aber auch nicht in CI gegengeprüft. **Nächster Griff:**
   DTC-2 (Artefakt-Kanal), Rotbeweis zuerst: Mock-Adapter trennen
   stdout und Artefakt.
-- **Beleg:** DTC-1 = MF-1362 (dieser Commit).
+- **Stand 2026-09-26 — DTC-2 fertig (MF-1363):** der Provider liest
+  die Stromdatei selbst (Abweichung vom Plan, begründet in
+  `docs/plans/DTC_UPGRADE.md`); Rotbeweis, echter Prozess am
+  Korpus-Strom, Mutationsmatrix 4 von 4. Neu offen: die Rohdatei
+  reist nicht mit (`outcomes.h` geschützt). **Nächster Griff:** DTC-3
+  (`-r`), Rotbeweis zuerst in `test_kryoflux_dtc_befehl`.
+- **Beleg:** DTC-1 = MF-1362 = `fadd832e`; DTC-2 = MF-1363 (dieser
+  Commit).
 
 ## Warteschlange
 

@@ -63,6 +63,8 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <iomanip>
 #include <regex>
 #include <sstream>
@@ -83,6 +85,26 @@ KryoFluxProviderV2::KryoFluxProviderV2(DtcRunner runner, std::string dtc_binary)
     if (m_dtc_binary.empty()) {
         m_dtc_binary = "dtc";
     }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ *  Wo DTC den Strom ablegt (MF-1363, P3-562 Teil 2)
+ * ──────────────────────────────────────────────────────────────────────── */
+
+std::string KryoFluxProviderV2::stream_prefix(int cylinder, int head)
+{
+    return (std::filesystem::temp_directory_path()
+            / ("uft_kf_" + std::to_string(cylinder)
+               + "_" + std::to_string(head))).string();
+}
+
+std::string KryoFluxProviderV2::stream_file_path(const std::string& prefix,
+                                                 int track, int side)
+{
+    std::ostringstream name;
+    name << prefix << std::setw(2) << std::setfill('0') << track
+         << '.' << side << ".raw";
+    return name.str();
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -260,29 +282,26 @@ std::string KryoFluxProviderV2::parse_firmware_from_dtc_output(
  *    `argv` unveraendert an QProcess weiter (P3-342 Nachtrag) — bis auf
  *    den Programmnamen an Stelle 0, den er seit MF-1362 abschneidet,
  *    weil setProgram() ihn schon traegt (P3-562). In Tests
- *    schreibt der SubprocessMock ohnehin keine Datei, die Bytes kommen
- *    ueber `stdout_text` (siehe test_kryoflux_provider_v2.cpp).
+ *    schreibt seit MF-1363 die DtcStromAttrappe die Stromdatei
+ *    (tests/mock_hardware/dtc_strom_datei.h); stdout bleibt Text.
  *
- *  Rule F-3: The raw KryoFlux stream bytes are stored verbatim in
- *  FluxCaptured::transitions_ns (re-interpreted as uint32_t words,
- *  little-endian, with zero-padding to align). The sample_ns is set to
- *  the KryoFlux 24 MHz clock period (41.67 ns). No transformation.
+ *  Rule F-3: the stream FILE is decoded by uft_kf_decode() into flux
+ *  intervals (FluxCaptured::transitions_ns, ns) with the measured index
+ *  pulses; nothing is resampled or invented. The stream file itself stays
+ *  in the temp directory — FluxCaptured cannot carry the raw bytes
+ *  (P3-562, protected include/uft/hal/outcomes.h).
  *
  *  Backend honesty: If the DtcRunner is null or returns exit_code != 0,
  *  a ProviderError is returned with a clear what/why/fix. This is the
  *  correct behavior for "DTC not installed" or "no device".
  *
- *  Temp-dir protocol:
- *  Der DTC-Laeufer MUESSTE in Produktion die Rohstrom-Bytes aus der Datei
- *  liefern, die DTC schreibt — gemessen (MF-1108) tut er es nicht; er gibt
- *  den stdout des Prozesses zurueck. Das ist der offene Teil von P3-342,
- *  und der naechste Satz benennt die Folge selbst.
- *  In test/mock mode,
- *  the mock's stdout_text carries the raw bytes as a hex-encoded string
- *  (see test_kryoflux_provider_v2.cpp for the encoding convention). The
- *  V2 provider interprets stdout_text as raw-bytes if the exit_code is 0
- *  (this is a test-mode shortcut — in production, stdout_text from DTC
- *  is a human-readable log, not binary data).
+ *  Temp-dir protocol (MF-1363, P3-562 Teil 2):
+ *  Hier stand, der Laeufer MUESSTE die Rohstrom-Bytes aus der Datei
+ *  liefern, gebe aber stdout zurueck, und der Provider deute stdout „im
+ *  Testmodus" als Rohstrom — in Produktion war das DTCs Protokoll. Seit
+ *  MF-1363 liest der PROVIDER die Datei `stream_file_path(prefix, zyl,
+ *  kopf)` selbst; stdout wird nie als Fluss gedeutet. Abgenommen ueber
+ *  einen echten Prozess: tests/test_laeufer_argv.cpp, Fall 6.
  * ──────────────────────────────────────────────────────────────────────── */
 
 FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
@@ -345,12 +364,46 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
      * blieb stehen — dieselbe Klasse wie MF-519/MF-529: eine Korrektur
      * an einer Stelle sagt nichts ueber ihre Geschwister.
      */
-    const std::string prefix =
-        (std::filesystem::temp_directory_path()
-         / ("uft_kf_" + std::to_string(cylinder)
-            + "_" + std::to_string(head))).string();
+    const std::string prefix = stream_prefix(cylinder, head);
 
     std::vector<std::string> argv = build_read_argv(cylinder, head, prefix);
+
+    /* MF-1363 / P3-562 Teil 2: DTC schreibt den Strom in eine DATEI,
+     * `<praefix>NN.S.raw`; stdout ist sein Protokoll. Bis hierher stand an
+     * dieser Stelle `raw_bytes = result.stdout_text` — der „test-mode
+     * shortcut", den der Kommentar selbst so nannte, und in Produktion
+     * dekodierte der Provider damit das Protokoll von DTC als Fluss.
+     *
+     * Die Datei liest der Provider selbst (std::ifstream, keine Qt-
+     * Abhaengigkeit); der Laeufer bleibt ein reiner Prozess-Starter. Den
+     * Namen rechnet stream_file_path(), dieselbe Funktion, mit der die
+     * Test-Attrappe schreibt.
+     *
+     * VOR dem Aufruf wird eine Datei desselben Namens entfernt: laeuft DTC
+     * mit Erfolg, schreibt aber nichts, darf nicht der Strom eines
+     * FRUEHEREN Laufs als dieser gelesen werden. Laesst sie sich nicht
+     * entfernen, wird abgesagt, bevor DTC laeuft.
+     *
+     * NACH dem Lesen bleibt die Datei liegen, wie bisher. Sie ist das
+     * eigentliche Beweisstueck (OOB-Bloecke, KFInfo); FluxCaptured kann sie
+     * nicht mittragen, und das Ergebnis-DTO liegt in der geschuetzten
+     * include/uft/hal/outcomes.h — offen als Teil von P3-562. */
+    const std::string stream_path = stream_file_path(prefix, cylinder, head);
+    {
+        std::error_code ec;
+        std::filesystem::remove(stream_path, ec);
+        if (ec && std::filesystem::exists(stream_path)) {
+            return ProviderError{
+                UFT_E_GENERIC,
+                "KryoFlux flux read: stale stream file cannot be removed",
+                "Before running DTC the provider removes " + stream_path +
+                    " so that a file from an earlier run is never read as "
+                    "this one; removing it failed: " + ec.message(),
+                "Check the permissions of the temporary directory, or remove "
+                "the file by hand, and retry."
+            };
+        }
+    }
 
     DtcRunResult result = m_runner(argv, "");
 
@@ -358,19 +411,30 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
         return dtc_read_error(cylinder, head, result.stderr_text);
     }
 
-    /* In mock/test mode, stdout_text carries the raw stream bytes as raw
-     * binary data (passed by the test's queue_run() call). In production,
-     * DTC writes the file to disk and stdout is a log — we'd read the file
-     * at `prefix + "/" + trackNN.S.raw`.
-     *
-     * The V2 provider uses stdout_text as the raw stream payload when it
-     * is non-empty (test mode shortcut). If stdout_text is empty and
-     * exit_code == 0 (real DTC success path), the file was written to disk
-     * but we cannot read it from here (no Qt filesystem in this C++ layer).
-     * That limitation is documented: the production DtcRunner wraps a QProcess
-     * AND reads the output file, returning the bytes as stdout_text. See
-     * the DtcRunner design note in kryoflux_provider_v2.h. */
-    const std::string& raw_bytes = result.stdout_text;
+    std::ifstream stream_file(stream_path, std::ios::binary);
+    if (!stream_file) {
+        return ProviderError{
+            UFT_E_GENERIC,
+            "KryoFlux flux read: DTC wrote no stream file",
+            "DTC exited with 0 for cylinder " + std::to_string(cylinder) +
+                ", head " + std::to_string(head) + ", but the stream file " +
+                stream_path + " does not exist. DTC's console output is a "
+                "log and is deliberately not read as flux.",
+            "Run the same DTC command by hand and check where it writes its "
+            "stream files; the file name follows `<prefix>NN.S.raw`."
+        };
+    }
+    const std::string raw_bytes((std::istreambuf_iterator<char>(stream_file)),
+                                std::istreambuf_iterator<char>());
+    if (stream_file.bad()) {
+        return ProviderError{
+            UFT_E_GENERIC,
+            "KryoFlux flux read: stream file could not be read completely",
+            "Reading " + stream_path + " failed after " +
+                std::to_string(raw_bytes.size()) + " bytes.",
+            "Check the temporary directory for I/O errors and retry."
+        };
+    }
 
     if (raw_bytes.empty()) {
         /* DTC ran but produced no stream data. This can happen when the
@@ -378,7 +442,8 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
         return FluxMarginal{
             CHS{cylinder, head},
             {},
-            "DTC reported success but produced no raw stream data. "
+            "DTC reported success but its stream file is empty (" +
+                stream_path + "). "
             "The drive may be empty, or the floppy disk is not spinning. "
             "Check that a disk is inserted and the drive motor is active."
         };

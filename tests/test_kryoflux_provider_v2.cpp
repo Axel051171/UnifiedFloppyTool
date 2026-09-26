@@ -58,9 +58,15 @@
 /* SubprocessMock — in tests/mock_hardware/. CMake adds ${CMAKE_SOURCE_DIR}/tests
  * to the include path for this test. */
 #include "mock_hardware/subprocess_mock.h"
+/* MF-1363: stdout und Stromdatei getrennt, wie bei einem echten DTC. */
+#include "mock_hardware/dtc_strom_datei.h"
+
+#include <filesystem>
+#include <fstream>
 
 using namespace uft::hal;
 using uft::tests::mocks::SubprocessMock;
+using uft::tests::mocks::DtcStromAttrappe;
 
 /* ────────────────────────────────────────────────────────────────────────
  *  1. Static concept assertions (compile-time)
@@ -259,14 +265,21 @@ static void smoke_read_raw_flux_decodes_stream() {
     const std::string raw_stream(
         reinterpret_cast<const char*>(stream_bytes), sizeof(stream_bytes));
 
+    /* MF-1363: hier stand der Strom in `stdout_reply`, und der Provider
+     * deutete stdout als Fluss. Ein echtes DTC schreibt den Strom in eine
+     * DATEI und druckt auf stdout ein Protokoll — und genau so kommt es
+     * jetzt an. Gegen den Vorzustand dekodierte der Provider den
+     * Protokolltext. */
+    DtcStromAttrappe dtc(mock);
     mock.queue_run(SubprocessMock::ScriptedRun{
         { "dtc", "-c2", "-i0" },     /* require_argv_subseq: look for -c2 and -i0 */
-        raw_stream,                  /* stdout_reply = raw stream bytes */
+        "KryoFlux DiskTool Console\n00.0    : frmt=mfm, trk=0, sd=0\n",
         "",                          /* stderr_reply */
         0                            /* exit_code */
     });
+    dtc.naechste_datei(raw_stream);  /* das schreibt DTC nach <praefix>00.0.raw */
 
-    KryoFluxProviderV2 p(make_runner(mock), "dtc");
+    KryoFluxProviderV2 p(dtc.laeufer(), "dtc");
     auto outcome = p.read_raw_flux(ReadFluxParams{0, 0, 2, 0});
 
     bool got_captured = false;
@@ -372,29 +385,117 @@ static void smoke_read_raw_flux_dtc_failure() {
 
 static void smoke_dtc_empty_stream() {
     SubprocessMock mock;
+    DtcStromAttrappe dtc(mock);
 
-    /* Queue a DTC read success but with empty stdout (no stream data). */
+    /* MF-1363: DTC meldet Erfolg und legt eine LEERE Stromdatei an. Vorher
+     * stand hier ein leeres stdout — der Test mass also den Protokoll-
+     * kanal statt der Datei. */
     mock.queue_run("");  /* exit_code=0, stdout="" */
+    dtc.naechste_datei(std::string());
 
-    KryoFluxProviderV2 p(make_runner(mock), "dtc");
+    KryoFluxProviderV2 p(dtc.laeufer(), "dtc");
     auto outcome = p.read_raw_flux(ReadFluxParams{0, 0, 2, 0});
 
-    /* Empty stream should return FluxMarginal (not a crash or ProviderError). */
-    bool valid_variant = false;
+    /* Eine leere Datei ist ein Befund ueber die Aufnahme (FluxMarginal),
+     * kein Programmfehler und erst recht kein Fluss. */
+    bool marginal = false;
     std::visit(overloaded{
-        [&](const FluxCaptured&)             { valid_variant = true; },
+        [&](const FluxCaptured&)             {},
         [&](const FluxMarginal& m)           {
-            valid_variant = true;
+            marginal = true;
             assert(!m.anomaly_note.empty()
                    && "FluxMarginal::anomaly_note must not be empty");
         },
-        [&](const FluxUnreadable&)           { valid_variant = true; },
-        [&](const CapabilityRequiresPolicy&) { valid_variant = true; },
-        [&](const HardwareDisconnected&)     { valid_variant = true; },
-        [&](const ProviderError&)            { valid_variant = true; },
+        [&](const FluxUnreadable&)           {},
+        [&](const CapabilityRequiresPolicy&) {},
+        [&](const HardwareDisconnected&)     {},
+        [&](const ProviderError&)            {},
     }, outcome);
 
-    assert(valid_variant && "read_raw_flux with empty stream must return a valid variant");
+    assert(marginal && "an empty DTC stream file must yield FluxMarginal");
+    mock.assert_consumed();
+}
+
+/* MF-1363 / P3-562 Teil 2: stdout ist das PROTOKOLL. Liefert DTC einen
+ * gueltigen Strom nur auf stdout und schreibt keine Datei, darf daraus
+ * kein Fluss werden. Gegen den Vorzustand kam hier FluxCaptured heraus. */
+static void smoke_stdout_ist_kein_fluss() {
+    SubprocessMock mock;
+    DtcStromAttrappe dtc(mock);
+
+    static const unsigned char strom[] = {
+        0x40, 0x50, 0x60, 0x70,
+        0x0D, 0x03, 0x08, 0x00, 0x04, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00 };
+    mock.queue_run(std::string(reinterpret_cast<const char*>(strom), sizeof(strom)));
+    dtc.naechste_datei(std::nullopt);   /* DTC schreibt KEINE Datei */
+
+    KryoFluxProviderV2 p(dtc.laeufer(), "dtc");
+    auto outcome = p.read_raw_flux(ReadFluxParams{3, 1, 2, 0});
+
+    bool fehler = false;
+    std::visit(overloaded{
+        [&](const FluxCaptured&) {
+            assert(false && "stdout darf nie als Fluss gedeutet werden");
+        },
+        [&](const FluxMarginal&) {
+            assert(false && "fehlt die Stromdatei, ist das kein 'marginaler' "
+                            "Lesevorgang, sondern ein Fehler mit Grund");
+        },
+        [&](const FluxUnreadable&)           {},
+        [&](const CapabilityRequiresPolicy&) {},
+        [&](const HardwareDisconnected&)     {},
+        [&](const ProviderError& e) {
+            fehler = true;
+            assert(!e.what.empty() && !e.why.empty() && !e.fix.empty());
+            assert(e.why.find(".raw") != std::string::npos &&
+                   "die Absage nennt die erwartete Stromdatei");
+        },
+    }, outcome);
+    assert(fehler && "fehlende Stromdatei muss ProviderError ergeben");
+    mock.assert_consumed();
+}
+
+/* MF-1363: eine Stromdatei aus einem FRUEHEREN Lauf darf nicht als Ergebnis
+ * dieses Laufs gelesen werden. Der Provider entfernt sie vor dem Aufruf. */
+static void smoke_alte_datei_wird_nicht_gelesen() {
+    SubprocessMock mock;
+    DtcStromAttrappe dtc(mock);
+    mock.queue_run("");
+    dtc.naechste_datei(std::nullopt);   /* dieser Lauf schreibt nichts */
+
+    KryoFluxProviderV2 p(dtc.laeufer(), "dtc");
+
+    /* Die alte Datei liegt dort, wo dieser Lauf seine hinschreiben wuerde.
+     * Den Pfad liefert derselbe Weg, den die Attrappe benutzt. */
+    const std::string praefix = KryoFluxProviderV2::stream_prefix(7, 0);
+    const std::string alt = KryoFluxProviderV2::stream_file_path(praefix, 7, 0);
+    {
+        static const unsigned char strom[] = {
+            0x40, 0x50, 0x60, 0x70,
+            0x0D, 0x03, 0x08, 0x00, 0x04, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00 };
+        std::ofstream f(alt, std::ios::binary | std::ios::trunc);
+        f.write(reinterpret_cast<const char*>(strom), sizeof(strom));
+    }
+    assert(std::filesystem::exists(alt));
+
+    auto outcome = p.read_raw_flux(ReadFluxParams{7, 0, 2, 0});
+
+    bool fehler = false;
+    std::visit(overloaded{
+        [&](const FluxCaptured&) {
+            assert(false && "eine alte Stromdatei wurde als neuer Lauf gelesen");
+        },
+        [&](const FluxMarginal&)             {},
+        [&](const FluxUnreadable&)           {},
+        [&](const CapabilityRequiresPolicy&) {},
+        [&](const HardwareDisconnected&)     {},
+        [&](const ProviderError&)            { fehler = true; },
+    }, outcome);
+    assert(fehler && "ohne neue Stromdatei: ProviderError, nicht die alte Datei");
+    assert(!std::filesystem::exists(alt) &&
+           "die alte Stromdatei wird vor dem Aufruf entfernt");
     mock.assert_consumed();
 }
 
@@ -573,6 +674,8 @@ int main() {
     smoke_detect_drive_dtc_failure();
     smoke_read_raw_flux_dtc_failure();
     smoke_dtc_empty_stream();
+    smoke_stdout_ist_kein_fluss();
+    smoke_alte_datei_wird_nicht_gelesen();
     smoke_out_of_range_cylinder();
     smoke_out_of_range_head();
     smoke_provider_error_3part_contract();

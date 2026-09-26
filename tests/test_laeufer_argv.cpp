@@ -185,6 +185,45 @@ int main(int argc, char** argv)
                "bleibt unberuehrt");
     }
 
+    /* 6 — MF-1363 / P3-562 Teil 2: der ganze Lesepfad ohne Geraet.
+     *     Provider -> echter Laeufer -> echter Prozess -> Stromdatei ->
+     *     Dekoder. Das Werkzeug schreibt im DTC-Modus einen ECHTEN
+     *     KryoFlux-Strom aus dem Korpus (hxcfe, MF-1024) nach
+     *     `<praefix>00.0.raw` und druckt auf stdout nur Protokolltext.
+     *     Gegen den Vorzustand dekodierte der Provider diesen Text. */
+    {
+        const QString strom = QString::fromUtf8(UFT_CORPUS_DIR) +
+                              QStringLiteral("/hxcfe_kfx_t00.0.raw");
+        if (!QFile::exists(strom)) {
+            std::printf("[ROT] Korpus-Strom fehlt: %s\n", strom.toUtf8().constData());
+            ++g_fehler; ++g_zusagen;
+        } else {
+            qputenv("UFT_ARGV_ECHO_DTC_STROM", strom.toLocal8Bit());
+            vergessen();
+            KryoFluxProviderV2 kf(make_kryoflux_qprocess_runner(werkzeug()));
+            const FluxOutcome o = kf.read_raw_flux(ReadFluxParams{ 0, 0, 2, 0 });
+            qunsetenv("UFT_ARGV_ECHO_DTC_STROM");
+
+            const FluxCaptured* fc = std::get_if<FluxCaptured>(&o);
+            if (const ProviderError* e = std::get_if<ProviderError>(&o))
+                std::printf("      ProviderError: %s | %s\n", e->what.c_str(), e->why.c_str());
+            PRUEFE(fc != nullptr,
+                   "6a der Strom aus der DATEI wird zu FluxCaptured — nicht "
+                   "das Protokoll auf stdout");
+            if (fc) {
+                std::printf("      %zu Uebergaenge, %zu Indexmarken\n",
+                            fc->transitions_ns.size(), fc->index_times_ns.size());
+                /* MF-1024: „gemessen je Strom 10 OOB-Bloecke und 3
+                 * Indexmarken" — ein Wert aus dem Korpusbefund, nicht aus
+                 * diesem Lauf. */
+                PRUEFE(fc->index_times_ns.size() == 3,
+                       "6b die drei Indexmarken des Korpus-Stroms kommen an");
+                PRUEFE(fc->transitions_ns.size() > 1000,
+                       "6c es kommen Flusswechsel an, nicht ein paar Bytes Text");
+            }
+        }
+    }
+
     std::printf("test_laeufer_argv: %d von %d Zusagen gehalten\n",
                 g_zusagen - g_fehler, g_zusagen);
     return g_fehler == 0 ? 0 : 1;
