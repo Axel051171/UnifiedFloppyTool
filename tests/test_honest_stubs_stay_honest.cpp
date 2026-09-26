@@ -114,6 +114,29 @@ private slots:
         QVERIFY2(!pause->isEnabled(),
                  "Pause ist bedienbar, obwohl nichts laeuft.");
     }
+
+    /* ── MF-1364: die Umdrehungen kommen aus dem Settings-Reiter ─────────
+     * MF-1293 legte die Umdrehungen in den Settings-Reiter; verbunden war
+     * nichts, und die Aufnahme lief immer mit 2. Der Reiter fragt jetzt
+     * eine Lesefunktion — und zwar JEDES Mal, nicht einmal beim Setzen. */
+    void workflowUmdrehungenKommenAusDerQuelle()
+    {
+        WorkflowTab tab;
+        QCOMPARE(tab.umdrehungen(), 2);   /* ohne Quelle: die Vorgabe */
+
+        int wert = 5;
+        tab.setUmdrehungsQuelle([&wert] { return wert; });
+        QCOMPARE(tab.umdrehungen(), 5);
+
+        wert = 3;                          /* Bediener stellt um */
+        QVERIFY2(tab.umdrehungen() == 3,
+                 "Die Umdrehungen sind beim Setzen der Quelle eingefroren "
+                 "worden — eine hinterlegte Zahl veraltet, sobald jemand "
+                 "den Settings-Reiter umstellt.");
+
+        wert = 0;                          /* keine Umdrehung ist keine Aufnahme */
+        QCOMPARE(tab.umdrehungen(), 1);
+    }
 };
 
 QTEST_MAIN(TestHonestStubsStayHonest)

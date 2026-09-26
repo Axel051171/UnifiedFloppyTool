@@ -212,7 +212,21 @@ vorher rot gemessen wurde.
   `tests/corpus_free/hxcfe_kfx_t00.0.raw`. So ist der Weg
   Prozess → Datei → Läufer → Dekoder ohne Gerät abgenommen.
 
-### DTC-3 — `-r` durchreichen, sonst nichts Neues im Befehl *(B3 + E2, ~60 Zeilen)*
+### DTC-3 — `-r` durchreichen, sonst nichts Neues im Befehl *(B3 + E2, ~60 Zeilen)* — ⏸ wartet auf eine Quelle
+
+> **Angehalten 2026-09-26, und zwar am Beleg, nicht an der Arbeit.**
+> `-r` ist im Baum NIRGENDS belegt: MF-1046 hat die Schalter gegen das
+> Handbuch geprüft (`-p -d -t -f -s -e -g -k -i -a/-b -c -w`), `-r` war
+> nicht darunter — und der C-HAL führt `cfg->revolutions` (Vorgabe 5),
+> gibt es aber ebenfalls nie an DTC. Draußen gesucht: das Handbuch
+> (`kryoflux.com`), eine abgelegte `dtc -h`-Ausgabe und das Webarchiv
+> sind vom Netzfilter dieser Umgebung gesperrt; das „Archivist's Guide
+> to KryoFlux" (CC-BY, Stand `e97e94e`) führt `-r` in seiner Auswahl
+> „useful options" NICHT. Eine Suchmaschine fasst `-r<rev>` als „set
+> number of revolutions to sample" zusammen — das ist nach MF-1107 kein
+> Lesen. **Was ihn öffnet:** der Wortlaut der `-r`-Zeile aus dem
+> Handbuch, gegen das MF-1046 geprüft hat (liegt beim Eigentümer), oder
+> `dtc -h` eines installierten DTC — dazu, ob `-r` bildlokal ist.
 
 * **Kennzahl:** Fähigkeitszusage (`FluxCaptureJob` fordert 2
   Umdrehungen an, DTC erfährt davon nichts).
@@ -232,7 +246,32 @@ vorher rot gemessen wurde.
   vorerst bestehen, wie es das Paket auch vorschlägt. Er wird ein
   eigener Punkt, denn zwei Bauer sind MF-1177.
 
-### DTC-4 — CopyPlan → Aufnahme *(E3, nur mit Aufrufer)*
+### DTC-4 — CopyPlan → Aufnahme *(E3, nur mit Aufrufer)* — ✅ MF-1364, anders als geplant
+
+> **Gemessen statt gebaut.** Die Tafel „Lesestrategie → Umdrehungen"
+> gibt es im Baum schon (`k_strategie[]`, `read.revolutions` in
+> `src/core/uft_copy_plan.c`), und der Settings-Reiter bindet sein
+> Umdrehungsfeld daran. Die Aufnahme-Policy des Pakets hätte eine
+> ZWEITE Zahlenreihe gebracht (FAST 1, DEEP 5, SALVAGE 8) — MF-541.
+> Was fehlte, war die Tür: MF-1293 hat die Umdrehungen in den
+> Settings-Reiter gelegt und dem Arbeitsablauf `setUmdrehungen()`
+> gegeben, aber `setUmdrehungen()` und `FormatTab::leseUmdrehungen()`
+> hatten je **0 Aufrufer** — die Aufnahme lief immer mit 2.
+> Seit MF-1364 fragt `WorkflowTab` beim Start eine Lesefunktion
+> (Bauform `uft_copy_plan_current()`, MF-1265), `MainWindow` verbindet
+> sie mit dem Settings-Reiter. Abnahme: `test_honest_stubs_stay_honest`
+> (Quelle wird gefragt, nicht eingefroren, Untergrenze 1),
+> Mutationsmatrix **3 von 4** — die vierte (Startpfad nimmt wieder die
+> alte Zahl) ist ohne angeschlossenen Greaseweazle nicht erreichbar und
+> steht deshalb als Lücke da; `mainwindow.cpp` ist übersetzt, aber
+> nicht ausgeführt.
+>
+> **Und der Befund, der den ganzen Plan relativiert (`P3-563`):**
+> `FluxCaptureJob` ist der EINZIGE Aufrufer von `read_raw_flux()`, und
+> er ist nur für den Greaseweazle verdrahtet. Der KryoFlux-Lesepfad hat
+> damit **keinen Produktivaufrufer** — DTC-1 und DTC-2 wirken in der
+> Anwendung heute nur auf die Geräteerkennung. DTC-4 hilft dem
+> Greaseweazle; für KryoFlux wirkt es, sobald `P3-563` verdrahtet ist.
 
 * **Kennzahl:** keine der vier direkt, daher **Fundus**, bis ein
   Aufrufer existiert.
@@ -245,7 +284,13 @@ vorher rot gemessen wurde.
   und gilt dann auch für Greaseweazle und FluxEngine, nicht nur für
   DTC.
 
-### DTC-5 — Umdrehungs-Ausrichtung *(E4, Fundus bis Beleg)*
+### DTC-5 — Umdrehungs-Ausrichtung *(E4, Fundus bis Beleg)* — ⏸ Fundus
+
+> Stand 2026-09-26 unverändert Fundus, aus zwei Gründen: die Herkunft
+> des Pakets ist nicht geklärt (DTC-0), also darf sein Code nicht in
+> den Baum; und der Differenzlauf braucht ECHTE Mehrfachumdrehungen mit
+> Drift — der einzige KryoFlux-Strom im Korpus stammt von hxcfe aus
+> einem Sektorabbild (MF-1024), seine Umdrehungen sind Kopien.
 
 * **Was ihn öffnet:** ein Differenzlauf gegen `uft_multi_rev_fusion` an
   **echten** Mehrfachumdrehungen aus dem Korpus (SCP/KryoFlux mit ≥ 2

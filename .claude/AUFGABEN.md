@@ -106,8 +106,17 @@ laufen fort und werden nie wiederverwendet.
   Korpus-Strom, Mutationsmatrix 4 von 4. Neu offen: die Rohdatei
   reist nicht mit (`outcomes.h` geschützt). **Nächster Griff:** DTC-3
   (`-r`), Rotbeweis zuerst in `test_kryoflux_dtc_befehl`.
-- **Beleg:** DTC-1 = MF-1362 = `fadd832e`; DTC-2 = MF-1363 (dieser
-  Commit).
+- **Stand 2026-09-26 — „setze DTC komplett um": was ging, was nicht.**
+  DTC-3 (`-r`) **angehalten am Beleg** — im Baum nicht belegt, Handbuch
+  und `dtc -h` vom Netzfilter gesperrt; öffnet sich mit dem Wortlaut der
+  Handbuchzeile vom Eigentümer. DTC-4 **fertig, anders als geplant**
+  (MF-1364): keine zweite Zahlentafel, sondern die fehlende Tür aus
+  MF-1293 (Settings-Reiter → Aufnahme), `P3-563` Teil 2. DTC-5 bleibt
+  Fundus (Herkunft + keine echten Mehrfachumdrehungen im Korpus). DTC-7
+  braucht ein Gerät. **Neu gemessen:** der KryoFlux-Lesepfad hat keinen
+  Produktivaufrufer (`P3-563` Teil 1, Eigentümerfrage).
+- **Beleg:** DTC-1 = MF-1362 = `fadd832e`; DTC-2 = MF-1363 = `19a8f646`;
+  DTC-4 = MF-1364 (dieser Commit).
 
 ## Warteschlange
 

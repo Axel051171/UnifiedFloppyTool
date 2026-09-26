@@ -528,6 +528,10 @@ void WorkflowTab::onStartAbortClicked()
         // as MF-114 (destination wireup) and stay explicitly unsupported
         // here rather than silently doing the wrong thing.
         if (m_sourceMode == Flux && m_destMode == File) {
+            /* MF-1364: EINMAL gefragt, beim Start — Warnung und Auftrag
+             * sehen dieselbe Zahl, auch wenn jemand waehrend der Rueckfrage
+             * den Settings-Reiter umstellt. */
+            const int revs = umdrehungen();
             /* MF-472: eine einzelne Umdrehung ist fuer nicht indexsynchrone
              * Formate zu wenig, und das ist keine Meinung —
              * a8rawconv-Handbuch, Abschnitt "Imaging physical floppy disks":
@@ -542,7 +546,7 @@ void WorkflowTab::onStartAbortClicked()
              * soll wissen, was sie aufgibt, BEVOR das Laufwerk anlaeuft:
              * ein zweiter Versuch an einer zerfallenden Diskette ist nicht
              * sicher. */
-            if (m_umdrehungen < 2) {
+            if (revs < 2) {
                 const auto answer = QMessageBox::warning(
                     this, tr("Nur eine Umdrehung"),
                     tr("Mit einer einzigen Umdrehung je Spur koennen Sektoren "
@@ -583,7 +587,7 @@ void WorkflowTab::onStartAbortClicked()
              * Genau das war der Fehler an der fest verdrahteten 2: bei einer
              * zerfallenden Diskette gibt es keinen zweiten Durchgang, und
              * drei verworfene Umdrehungen sind drei verlorene Chancen. */
-            m_captureJob->setRevolutions(m_umdrehungen);
+            m_captureJob->setRevolutions(revs);
             m_captureJob->moveToThread(m_workerThread);
 
             connect(m_workerThread, &QThread::started, m_captureJob, &FluxCaptureJob::run);
@@ -993,6 +997,18 @@ void WorkflowTab::onAnalyzeClicked()
     }
     
     dlg->show();
+}
+
+/* MF-1364: siehe den Kopf im Header. Die Quelle ist der Settings-Reiter
+ * (`FormatTab::leseUmdrehungen()`); eine Antwort unter 1 wird zu 1, wie in
+ * `setUmdrehungen()` — keine Umdrehung aufzuzeichnen ist keine Aufnahme. */
+int WorkflowTab::umdrehungen() const
+{
+    if (m_umdrehungsQuelle) {
+        const int n = m_umdrehungsQuelle();
+        return n > 0 ? n : 1;
+    }
+    return m_umdrehungen;
 }
 
 void WorkflowTab::onDeviceInfoChanged(const QString& deviceName, const QString& firmware)
