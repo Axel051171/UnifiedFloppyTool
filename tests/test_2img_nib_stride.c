@@ -88,6 +88,21 @@ static int fehler = 0;
                   printf("\n"); fehler++; }                              \
 } while (0)
 
+/* Throw-away path from TMPDIR/TMP/TEMP, falling back to ".", like the
+ * other file tests in this tree. Not tmpnam(): MinGW's tmpnam() names a
+ * file in the ROOT of the current drive (measured "\spcc."), which an
+ * ordinary user cannot create, so the test never ran on a local Windows
+ * build (MF-1340). */
+static void wegwerf_pfad(char *buf, size_t n, const char *name)
+{
+    static unsigned lauf = 0;
+    const char *d = getenv("TMPDIR");
+    if (!d || !d[0]) d = getenv("TMP");
+    if (!d || !d[0]) d = getenv("TEMP");
+    if (!d || !d[0]) d = ".";
+    snprintf(buf, n, "%s/uft_%s_%u.tmp", d, name, lauf++);
+}
+
 static void le32(uint8_t *p, uint32_t v)
 {
     p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
@@ -121,8 +136,8 @@ int main(void)
         sp[1] = 0xD5; sp[2] = 0xAA; sp[3] = 0x96;
     }
 
-    char pfad[L_tmpnam + 8];
-    if (!tmpnam(pfad)) { printf("kein Wegwerf-Name\n"); free(img); return 2; }
+    char pfad[1024];
+    wegwerf_pfad(pfad, sizeof pfad, "2img_nib");
     FILE *f = fopen(pfad, "wb");
     if (!f) { printf("Wegwerf-Datei nicht anlegbar\n"); free(img); return 2; }
     size_t w = fwrite(img, 1, n, f);
@@ -170,12 +185,17 @@ int main(void)
         le32(img2 + 0x1C, (uint32_t)(n2 - HDR));
         for (size_t i = HDR; i < n2; i++) img2[i] = (uint8_t)(i & 0xFF);
 
-        char pfad2[L_tmpnam + 8];
-        if (tmpnam(pfad2)) {
+        char pfad2[1024];
+        wegwerf_pfad(pfad2, sizeof pfad2, "2img_nib");
+        {
             FILE *g = fopen(pfad2, "wb");
+            /* A second throw-away file that cannot be created used to skip
+             * this check silently; it is a failure (MF-1340). */
+            PRUEFE(g != NULL, "zweite Wegwerf-Datei nicht anlegbar: %s", pfad2);
             if (g) {
                 size_t w2 = fwrite(img2, 1, n2, g);
                 fclose(g);
+                PRUEFE(w2 == n2, "zweite Wegwerf-Datei unvollstaendig");
                 if (w2 == n2) {
                     memset(&disk, 0, sizeof(disk));
                     uft_error_t rc2 =

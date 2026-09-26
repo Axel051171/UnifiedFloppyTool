@@ -74,10 +74,25 @@ static int fehler = 0;
 } while (0)
 
 /* Eine .d13 anlegen, in der jeder Sektor seine Kennung traegt. */
+/* Throw-away path from TMPDIR/TMP/TEMP, falling back to ".", like the
+ * other file tests in this tree. Not tmpnam(): MinGW's tmpnam() names a
+ * file in the ROOT of the current drive (measured "\spcc."), which an
+ * ordinary user cannot create, so the test never ran on a local Windows
+ * build (MF-1340). */
+static void wegwerf_pfad(char *buf, size_t n, const char *name)
+{
+    static unsigned lauf = 0;
+    const char *d = getenv("TMPDIR");
+    if (!d || !d[0]) d = getenv("TMP");
+    if (!d || !d[0]) d = getenv("TEMP");
+    if (!d || !d[0]) d = ".";
+    snprintf(buf, n, "%s/uft_%s_%u.tmp", d, name, lauf++);
+}
+
 static char *schreibe(size_t bytes, uint8_t *img)
 {
-    static char pfad[L_tmpnam + 8];
-    if (!tmpnam(pfad)) return NULL;
+    static char pfad[1024];
+    wegwerf_pfad(pfad, sizeof pfad, "d13");
     FILE *f = fopen(pfad, "wb");
     if (!f) return NULL;
     size_t n = fwrite(img, 1, bytes, f);

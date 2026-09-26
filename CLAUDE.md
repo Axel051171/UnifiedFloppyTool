@@ -544,6 +544,16 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
   > (`test_2img_nib_stride`, `test_d13_layout_verified`,
   > `test_dms_loch_ist_kein_guter_sektor`, `test_do_layout_verified`) —
   > sie melden woertlich „Wegwerf-Datei fehlgeschlagen".
+  >
+  > **Behoben MF-1340.** Gemessen liefert MinGW-`tmpnam()` den Namen
+  > `\spcc.` — eine Datei im WURZELverzeichnis des Laufwerks, die ein
+  > gewoehnlicher Benutzer nicht anlegen darf. Im CI fiel das nicht auf
+  > (Linux schreibt nach `/tmp`; warum der Windows-Lauf dort gruen ist,
+  > ist NICHT gemessen). Die vier
+  > Tests nehmen jetzt `TMPDIR`/`TMP`/`TEMP` wie die uebrigen Dateitests;
+  > vorher 4 von 4 rot, danach 4 von 4 gruen. Und `test_2img_nib_stride`
+  > uebersprang seine zweite Pruefung STILL, wenn die zweite Wegwerfdatei
+  > nicht anzulegen war — das ist jetzt ein Fehlschlag.
 - **CI:** GitHub Actions — Linux (GCC), macOS (Clang), Windows (MinGW)
 - **Sanitizer:** ASan + UBSan Workflows
 - **Coverage:** lcov + Codecov
