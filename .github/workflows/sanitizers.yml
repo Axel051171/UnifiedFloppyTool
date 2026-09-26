@@ -221,15 +221,26 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
 
+      # P3-550 (MF-1358): `bounds-strict` dazu. `-fsanitize=undefined` allein
+      # und ASan sind blind fuer einen Ueberlauf in ein ABSCHLIESSENDES
+      # Strukturfeld — er landet in der Polsterung. So lag `sector_status[36]`
+      # in `uft_diag_track_result_t` (MF-1346), gesehen hat es erst
+      # bounds-strict. Gegenprobe gemessen (gcc 15.2, WSL): derselbe
+      # Ueberlauf laeuft mit `undefined` durch (rc 0) und wird mit
+      # `undefined,bounds-strict` gemeldet ("index 36 out of bounds", rc 1);
+      # die zehn benannten Prueflinge unten liefen damit sauber (0 Meldungen).
+      # bounds-strict ist ein GCC-Schalter; dieser Auftrag baut mit gcc.
+      # Eigentuemerentscheidung 2026-09-26: "Was danach rot wird, war vorher
+      # falsch."
       - name: Build with UBSan (CMake)
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DUFT_BUILD_TESTS=ON \
             -DUFT_WITH_DTC_COMPONENTS=ON \
-            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
-            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+            -DCMAKE_C_FLAGS="-fsanitize=undefined,bounds-strict -fno-sanitize-recover=all -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined,bounds-strict -fno-sanitize-recover=all -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined,bounds-strict"
           cmake --build build --parallel $(nproc)
 
       # MF-1110 — dieselbe Zaehlung wie im ASan-Auftrag; die Begruendung
