@@ -215,7 +215,10 @@ typedef enum {
 typedef struct {
     uft_d2_diag_sev_t sev;
     uft_d2_layer_t    layer;
-    int16_t           cyl;       /**< -1 = ganze Diskette                   */
+    int16_t           cyl;       /**< -1 = keine EINZELNE Spur: ganze
+                                  *   Diskette, oder ein Spurbereich, den
+                                  *   der Text vorn als „Ca..Cb Hx:" nennt
+                                  *   (Querpruefung, Bruecke)            */
     int8_t            head;
     int16_t           sector;    /**< -1 = ganze Spur                       */
     char              code[UFT_D2_DIAG_CODE]; /**< kurz, maschinenlesbar   */
@@ -464,6 +467,72 @@ size_t uft_d2_diag_count_sev(const uft_disk2_t *d, uft_d2_diag_sev_t at_least);
  * @return Zahl der NEUEN Befunde. 0 heisst stimmig.
  */
 size_t uft_d2_validate(uft_disk2_t *d);
+
+/**
+ * Vergleicht die Sektornummern-Mengen der Spuren EINES Kopfes miteinander
+ * und schreibt Befunde. Liest nur; Spuren, Sektoren, Schichten, Merkmale
+ * und Geometrie bleiben unberuehrt. Ein zweiter Aufruf fuegt keinen
+ * Befund doppelt hinzu.
+ *
+ * Wozu: `uft_st_order_messen()` kennt die Sektorzahl EINER Spur (H-18,
+ * MF-1339). Fehlt der LETZTE Sektor ganz, sieht man es der Spur nicht an —
+ * wohl aber im Vergleich mit dem Rest. Das ist diese Ebene.
+ *
+ * Die KLAMMERREGEL (nicht die Nachbarregel des Entwurfs, die bei zwei
+ * benachbarten beschaedigten Spuren schwieg):
+ *
+ *   Auf demselben Kopf liegt ein Lauf aufeinanderfolgender Spuren, deren
+ *   Menge von S abweicht, zwischen zwei Klammerspuren, die BEIDE die Menge
+ *   S tragen. Je GRUPPE aufeinanderfolgender Laufspuren mit derselben
+ *   Menge EIN Befund (nicht je Spur — 60 Spuren mit derselben Luecke
+ *   ergaben sonst 60 WARN):
+ *     echte Teilmenge von S   WARN  SEC_GAP_VS_BRACKET   („fehlt: …")
+ *     echte Obermenge von S   NOTE  SEC_EXTRA_VS_BRACKET (moeglicher
+ *                                   Schutz, kein Fehler)
+ *     weder noch              kein Befund
+ *   Eine Gruppe aus EINER Spur steht in cyl/head („traegt 9, Klammer 10
+ *   (C39/C41); fehlt: 10"); eine groessere hat cyl = head = -1 und nennt
+ *   den Bereich im Text („C10..C69 H0: tragen 9, Klammer 10 (C9/C70);
+ *   fehlt: 10"), weil das Befundfeld EINEN Zylinder fasst.
+ *
+ *   Am RAND (Zylinder 0 oder hoechster Zylinder) gibt es nur eine
+ *   Klammer; zweiter Zeuge ist dann der andere Kopf auf demselben
+ *   Zylinder, und der Lauf ist genau diese eine Randspur. Ohne zweiten
+ *   Zeugen: kein Befund. Eine echte Teilmenge am Rand ist ein NOTE, kein
+ *   WARN, und ihr Text nennt die zweite Lesart: eine BOOTSPUR, die nur
+ *   auf einer Seite eine andere Sektorzahl traegt, sieht genauso aus.
+ *   Der gemessene Fall ist TRS-80 Model I DD zweiseitig mit einer
+ *   Spur 0 in einfacher Dichte auf Seite 0 (0..9, alles andere 0..17):
+ *   als WARN war das „fehlt: 10, …, 17" an einer richtigen Diskette.
+ *
+ * Zonenformate (C64, Apple 3,5", Victor 9000) bleiben stumm, weil ihre
+ * Mengen auf einem Kopf nie zu einer frueheren zurueckkehren — es gibt
+ * keine zweite Klammer. Geprueft in `tests/test_d2_querpruefung.c`.
+ *
+ * GRENZEN, ausdruecklich:
+ *   - Eine FEHLENDE Spur ist kein Beleg und unterbricht jede Klammer. Das
+ *     Modell unterscheidet nicht zwischen „nicht gelesen", „read_track
+ *     lieferte einen Fehler" (die Bruecke meldet das je Lauf als NOTE
+ *     TRACK_UNREADABLE — ob unlesbar oder im Behaelter nicht vorhanden
+ *     bzw. unformatiert, sagt der Rueckgabewert nicht: D88/D77 melden
+ *     eine unformatierte Spur als Fehler) und „gelesen und leer" (die
+ *     Bruecke legt solche Spuren nicht an). Deshalb meldet diese Pruefung
+ *     NIE eine Spurluecke.
+ *   - Eine Bootspur mit anderer Sektorzahl auf BEIDEN Seiten ist vom Rand
+ *     aus nicht zu sehen (kein zweiter Zeuge) — und nur auf EINER Seite
+ *     nicht von einer beschaedigten Randspur zu unterscheiden. Daher NOTE,
+ *     siehe oben.
+ *   - Eine Spur ohne Sektoren (nur Bitstrom/Fluss) nimmt nicht teil.
+ *   - Zwei beschaedigte Randspuren nebeneinander bleiben stumm: fuer die
+ *     innere gibt es keine Klammer, fuer die aeussere keinen zweiten
+ *     Zeugen in Klammerlage.
+ *   - Sektorabbilder ohne eigene Sektorliste (IMG, D64, ADF, ST) tragen
+ *     immer die volle Menge; dort sagt die Pruefung konstruktionsbedingt
+ *     nichts.
+ *
+ * @return Zahl der NEUEN Befunde.
+ */
+size_t uft_d2_querpruefung(uft_disk2_t *d);
 
 /** Bitmaske 1<<layer ueber alle Spuren. */
 uint32_t uft_d2_layers(const uft_disk2_t *d);

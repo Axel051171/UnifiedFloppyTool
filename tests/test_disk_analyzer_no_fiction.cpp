@@ -277,6 +277,123 @@ private slots:
 
         uft_d2_destroy(zurueck);
     }
+
+    /* ── Tuer Stufe 1: der Spurvergleich erreicht den Bericht ───────────
+     *
+     * `uft_d2_querpruefung()` (und `uft_d2_validate()`) hatten bis hierher
+     * null produktive Aufrufer. Belegt wird am ECHTEN Weg — Datei, Plugin,
+     * Bruecke, Fenster —, nicht am Modell: eine IMD mit fuenf Spuren, deren
+     * mittlere einen Sektor weniger traegt als ihre beiden Klammern.
+     *
+     * Die Zusage nennt die ZAHLEN (8 gegen 9) und nicht die fehlende
+     * Nummer: welche Nummer im Modell steht, entscheidet das IMD-Plugin,
+     * nicht diese Pruefung.
+     *
+     * Rotbeweis: `uft_d2_querpruefung()` in `traegerBericht()` nicht rufen
+     * -> der Befund fehlt im Kasten. */
+    void theCrossTrackCheckReachesTheReport()
+    {
+        QTemporaryDir dir;
+        QVERIFY2(dir.isValid(), "kein Platz fuer die Pruefdatei");
+        const QString pfad = dir.filePath("klammer.imd");
+
+        QByteArray imd("IMD 1.18: 26/09/2026 00:00:00\r\nUFT Klammerprobe\r\n");
+        imd.append(static_cast<char>(0x1A));
+        for (int c = 0; c < 5; ++c) {
+            const int n = (c == 2) ? 8 : 9;
+            imd.append(static_cast<char>(5));      /* 250 kbps MFM */
+            imd.append(static_cast<char>(c));
+            imd.append(static_cast<char>(0));      /* Kopf 0, keine Karten */
+            imd.append(static_cast<char>(n));
+            imd.append(static_cast<char>(2));      /* 512 Byte */
+            for (int s = 1; s <= n; ++s) imd.append(static_cast<char>(s));
+            for (int s = 1; s <= n; ++s) {
+                imd.append(static_cast<char>(2));  /* gepackt: ein Fuellbyte */
+                imd.append(static_cast<char>(0xE5));
+            }
+        }
+        QFile f(pfad);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        QCOMPARE(f.write(imd), qint64(imd.size()));
+        f.close();
+
+        DiskAnalyzerWindow w;
+        w.loadImage(pfad);
+        auto *t = w.findChild<QTextEdit *>("textDiskReport");
+        QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+        const QString text = t->toPlainText();
+        QVERIFY2(text.contains("Sektoren: 44"),
+                 qPrintable("4 x 9 + 8 = 44 Sektoren muessen eingespeist "
+                            "sein, sonst prueft der Test nichts:\n" + text));
+        /* Mit dem Doppelpunkt: ein Befund fuer die GANZE Spur (sector -1)
+         * stand als „C2 H00" im Bericht — die Null der fehlenden
+         * Sektornummer wurde an den Kopf gehaengt, Kopf 1 las sich „H10". */
+        QVERIFY2(text.contains("[WARN] SEC_GAP_VS_BRACKET C2 H0: "),
+                 qPrintable("Der Spurvergleich erreicht den Bericht nicht, "
+                            "oder die Lage ist falsch gedruckt:\n" + text));
+        QVERIFY2(text.contains("traegt 8, Klammer 9 (C1/C3)"),
+                 qPrintable("Der Befund nennt nicht 8 gegen 9 mit beiden "
+                            "Klammern:\n" + text));
+    }
+
+    /* ── Und an einem echten Zonenformat schweigt er ─────────────────────
+     *
+     * Die 35-Spur-D64 hat vier Zonen (21/19/18/17). Eine Pruefung, die
+     * dort anschlaegt, waere an jeder C64-Diskette falsch. Waechter, kein
+     * Rotbeweis: gegen den alten Stand ist das trivial gruen. */
+    void theCrossTrackCheckIsSilentOnAZonedD64()
+    {
+        const QString img = korpusD64();
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+        DiskAnalyzerWindow w;
+        w.loadImage(img);
+        auto *t = w.findChild<QTextEdit *>("textDiskReport");
+        QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+        const QString text = t->toPlainText();
+        QVERIFY2(!text.contains("VS_BRACKET"),
+                 qPrintable("Zonengrenzen einer D64 als Befund gemeldet:\n"
+                            + text));
+        QVERIFY2(!text.contains("ST_REIHENFOLGE"),
+                 qPrintable("Eine D64 ist kein Atari ST:\n" + text));
+    }
+
+    /* ── Ein Fehlercode ist keine Aussage ueber die Spur ─────────────────
+     *
+     * `hxcfe_pc160.d88` ist eine saubere, einseitige PC-160K-Diskette mit
+     * 40 Zylindern; ihr D88-Kopf nennt 80 x 2, und `d88_read_track()`
+     * liefert fuer die 120 nicht belegten Spuren einen Fehler — dieselbe
+     * Datei nennt den Fall „unformatted". Gemessen an der Fassung davor
+     * stand im Kasten 120 x „[WARN] TRACK_UNREADABLE … nicht gelesen,
+     * nicht leer". Verlangt: kein WARN, und die Laeufe als NOTE mit dem
+     * Bereich (Kern: tests/test_d2_bruecke_am_korpus.c). */
+    void aFailedReadTrackIsANoteNotAClaimAboutTheTrack()
+    {
+#ifdef UFT_CORPUS_DIR
+        const QString img = QString(UFT_CORPUS_DIR) + "/hxcfe_pc160.d88";
+#else
+        const QString img;
+#endif
+        if (img.isEmpty() || !QFile::exists(img))
+            QSKIP("Korpus-Abbild hxcfe_pc160.d88 fehlt");
+        DiskAnalyzerWindow w;
+        w.loadImage(img);
+        auto *t = w.findChild<QTextEdit *>("textDiskReport");
+        QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+        const QString text = t->toPlainText();
+        QVERIFY2(!text.contains("[WARN] TRACK_UNREADABLE"),
+                 qPrintable("Ein Rueckgabewert als WARN ueber die Spur:\n"
+                            + text));
+        QVERIFY2(!text.contains("nicht leer"),
+                 qPrintable("„nicht leer\" traegt der Rueckgabewert nicht:\n"
+                            + text));
+        QCOMPARE(text.count("TRACK_UNREADABLE"), 2);
+        QVERIFY2(text.contains("[note] TRACK_UNREADABLE: C40..C79 H0/H1: "),
+                 qPrintable("Der Lauf C40..C79 auf beiden Koepfen fehlt:\n"
+                            + text));
+        QVERIFY2(text.contains("[note] TRACK_UNREADABLE: C0..C39 H1: "),
+                 qPrintable("Der Lauf C0..C39 auf Kopf 1 fehlt:\n" + text));
+    }
 };
 
 QTEST_MAIN(TestDiskAnalyzerNoFiction)

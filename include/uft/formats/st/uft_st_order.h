@@ -224,6 +224,49 @@ uft_tos_herkunft_t uft_st_tos_herkunft(int16_t spiral_s0, int16_t spiral_s1,
 /** Klartext zu einer Herkunft. Nie NULL. */
 const char *uft_st_tos_herkunft_text(uft_tos_herkunft_t h);
 
+/* ─── Tuer in den Traegerbericht ─────────────────────────────────── */
+
+/**
+ * Misst je Kopf Interleave und Spiralfaktor aus dem Modell und schreibt
+ * sie als INFO-Befund (`ST_REIHENFOLGE`) hinein, dazu die TOS-Herkunft
+ * (`ST_TOS_HERKUNFT`). Liest nur; Spuren und Sektoren bleiben unberuehrt,
+ * ein zweiter Aufruf doppelt nichts. Gerufen von
+ * `DiskAnalyzerWindow::traegerBericht()` vor `uft_d2_report()`.
+ *
+ * Gemessen wird NUR, wenn beides belegt ist:
+ *
+ *  1. Die Reihenfolge ist PHYSISCH: die Spur traegt einen Bitstrom mit
+ *     bekannter Indexlage, und jeder Sektor nennt seine Bitlage
+ *     (`idam_bit`). Die Reihenfolge wird aus den Lagen gerechnet, nicht
+ *     aus der Feldreihenfolge genommen — das Modell sagt nirgends, dass
+ *     die Feldreihenfolge die Spur wiedergibt. Ohne Indexlage gibt es
+ *     keinen Spuranfang und damit keinen Spiralfaktor.
+ *  2. Die Diskette ist ein Atari ST: die Modell-Angabe „Plugin" nennt
+ *     einen reinen Atari-Behaelter (ST, MSA, STX). Die Geometrie belegt es
+ *     NICHT — 80x2x9x512 ist ebenso die PC-720K-Diskette, und deren
+ *     Spiralfaktor 0 hiesse hier „TOS 1.0". Die Bootsektor-Pruefsumme
+ *     0x1234 wuerde es fuer bootfaehige Disketten belegen, steht im Baum
+ *     aber schon mehrfach (`uft_st.c`, `polyglot_boot.h`, `uft_fat_atari.h`)
+ *     — eine weitere Kopie waere die Lage aus MF-1177; nicht genutzt.
+ *
+ * Je Kopf wird der Spiralfaktor zur VORSPUR DESSELBEN KOPFES gemessen
+ * (die Lesart, die `uft_st_tos_herkunft()` mit einem Wert je Seite
+ * vorgibt; an einer Diskette nicht nachgemessen). Eine Spur mit Luecke,
+ * Doppel oder Nummer 0 misst nicht (H-18), und ein Paar zaehlt nur, wenn
+ * BEIDE Spuren messen. Stimmen die Paare eines Kopfes nicht ueberein,
+ * sagt der Befund das und es gibt keine Herkunft.
+ *
+ * STAND DER TUER, ausdruecklich: ueber `uft_d2_from_disk()` kommt heute
+ * KEIN Modell mit Bitlagen zustande — die Bruecke setzt `idam_bit` und
+ * `index_bit` auf SIZE_MAX, und das STX-Plugin reicht die Lagen der
+ * Pasti-Deskriptoren nicht durch. Die Tuer ist verdrahtet, im Produkt
+ * bleibt sie bis dahin stumm.
+ *
+ * @return Zahl der NEUEN Befunde.
+ */
+struct uft_disk2;
+size_t uft_st_order_befunde(struct uft_disk2 *d);
+
 #ifdef __cplusplus
 }
 #endif

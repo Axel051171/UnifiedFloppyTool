@@ -3800,7 +3800,12 @@ foreach(test_source ${TEST_SOURCES})
            # MF-1254: sucht DSK_RC/DSK_HP/DSK_RLD in der REGISTRY und
            # schickt Pruefdateien durch `uft_disk_open_as()`. Ohne die
            # vollstaendige Tafel gibt es die drei gar nicht.
-           OR ${test_name} STREQUAL "test_dsk_groesse_eine_rechnung")
+           OR ${test_name} STREQUAL "test_dsk_groesse_eine_rechnung"
+           # Tuer Stufe 1, Nachbesserung: oeffnet zwei Korpusabbilder
+           # (D88, D77) ueber den ECHTEN `uft_disk_open()` und fuehrt sie
+           # durch die Bruecke — derselbe Weg wie der Analysator, also
+           # dieselbe Menge wie die Zeilen darueber.
+           OR ${test_name} STREQUAL "test_d2_bruecke_am_korpus")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
@@ -4777,6 +4782,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_spiralfaktor")
         # MF-858: Stessuns Formel (ST-Computer 12/1989) gegen ihre eigene
         # Messreihe. Der ST-Pfad kannte Interleave und Spiralfaktor nicht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st_order.c)
+    elseif(${test_name} STREQUAL "test_st_reihenfolge_bericht")
+        # Stufe 3 der Tuer: die ST-Reihenfolge (H-18) im Traegerbericht.
+        # Das Modell kommt aus uft_core, die Messung aus uft_st_order.c.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st_order.c)
     elseif(${test_name} STREQUAL "test_fluxengine_wire")

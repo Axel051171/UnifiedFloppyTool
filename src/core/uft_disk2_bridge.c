@@ -28,6 +28,102 @@ static void spur_freigeben(uft_track_t *t) {
     uft_track_cleanup(t);
 }
 
+/* Ein LAUF gescheiterter `read_track()`-Aufrufe: aufeinanderfolgende
+ * Zylinder mit derselben Signatur (je Kopf der Rueckgabewert, 0 = gelesen).
+ *
+ * Warum der Befund so vorsichtig ist, gemessen am Korpus: ein
+ * Plugin-Fehlercode unterscheidet NICHT zwischen „Lesen scheiterte" und
+ * „Spur im Behaelter nicht vorhanden oder unformatiert".
+ * `d88_read_track()` gibt `UFT_ERROR_INVALID_ARG` zurueck, wenn der
+ * Spurversatz 0 ist, und dieselbe Datei nennt diesen Fall „0 =
+ * unformatted". An `tests/corpus_free/hxcfe_pc160.d88` (sauber, einseitig,
+ * 40 Zylinder; der Kopf nennt 80 x 2) waren das 120 Spuren, und die
+ * Fassung davor schrieb je Spur ein WARN „nicht gelesen, nicht leer" —
+ * eine Aussage, die der Rueckgabewert nicht traegt. Deshalb: NOTE, der
+ * Rueckgabewert woertlich, und EIN Befund je Lauf (die Regel am Ende von
+ * `uft_d2_from_disk()`: einmal je Klasse, nicht je Spur). */
+typedef struct {
+    int     *rc_vor;      /* Signatur des Laufs, je Kopf               */
+    int     *rc_jetzt;    /* Signatur des laufenden Zylinders           */
+    unsigned koepfe;
+    unsigned anfang;      /* erster Zylinder des Laufs                  */
+    bool     offen;       /* ein Lauf ist begonnen                       */
+} lauf_t;
+
+static bool signatur_hat_fehler(const int *rc, unsigned koepfe) {
+    for (unsigned h = 0; h < koepfe; ++h) if (rc[h] != 0) return true;
+    return false;
+}
+
+static void lauf_melden_bruecke(uft_disk2_t *d, const lauf_t *l,
+                                unsigned ende, const char *name) {
+    unsigned n_koepfe = 0u, einziger = 0u;
+    int rc_erst = 0;
+    bool rc_gleich = true;
+    char koepfe[64], rcs[64];
+    size_t wk = 0u, wr = 0u;
+    koepfe[0] = rcs[0] = '\0';
+    for (unsigned h = 0; h < l->koepfe; ++h) {
+        const int rc = l->rc_vor[h];
+        if (rc == 0) continue;
+        if (n_koepfe == 0u) { rc_erst = rc; einziger = h; }
+        else if (rc != rc_erst) rc_gleich = false;
+        n_koepfe++;
+        if (wk < sizeof(koepfe)) {
+            const int k = snprintf(koepfe + wk, sizeof(koepfe) - wk, "%sH%u",
+                                   wk ? "/" : "", h);
+            if (k > 0) wk += (size_t)k;
+        }
+        if (wr < sizeof(rcs)) {
+            const int k = snprintf(rcs + wr, sizeof(rcs) - wr, "%s%d",
+                                   wr ? "/" : "", rc);
+            if (k > 0) wr += (size_t)k;
+        }
+    }
+    if (n_koepfe == 0u) return;
+    char rc_text[64];
+    if (rc_gleich) snprintf(rc_text, sizeof(rc_text), "%d", rc_erst);
+    else           snprintf(rc_text, sizeof(rc_text), "%s", rcs);
+
+    if (l->anfang == ende && n_koepfe == 1u) {
+        /* Genau eine Spur: die Lage steht in den Feldern. */
+        uft_d2_diag(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS,
+                    (int)l->anfang, (int)einziger, -1, "TRACK_UNREADABLE",
+                    "read_track von \"%s\" lieferte rc=%s — ob unlesbar, im "
+                    "Behaelter fehlend oder unformatiert, sagt der "
+                    "Rueckgabewert nicht.", name, rc_text);
+    } else {
+        /* Ein Bereich: das Befundfeld fasst EINEN Zylinder, also steht
+         * die Lage im Text (cyl -1, siehe uft_d2_diag_t). */
+        char lage[48];
+        if (l->anfang == ende) snprintf(lage, sizeof(lage), "C%u", l->anfang);
+        else snprintf(lage, sizeof(lage), "C%u..C%u", l->anfang, ende);
+        uft_d2_diag(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS, -1, -1, -1,
+                    "TRACK_UNREADABLE",
+                    "%s %s: read_track von \"%s\" lieferte rc=%s — ob unlesbar, "
+                    "im Behaelter fehlend oder unformatiert, sagt der "
+                    "Rueckgabewert nicht.", lage, koepfe, name, rc_text);
+    }
+}
+
+/* Am Ende eines Zylinders: Lauf fortsetzen, abschliessen oder beginnen. */
+static void lauf_zylinder_ende(uft_disk2_t *d, lauf_t *l, unsigned c,
+                               const char *name) {
+    const bool jetzt = signatur_hat_fehler(l->rc_jetzt, l->koepfe);
+    if (l->offen && jetzt
+        && memcmp(l->rc_vor, l->rc_jetzt, l->koepfe * sizeof(int)) == 0)
+        return;                                   /* derselbe Lauf */
+    if (l->offen) {
+        lauf_melden_bruecke(d, l, c - 1u, name);
+        l->offen = false;
+    }
+    if (jetzt) {
+        memcpy(l->rc_vor, l->rc_jetzt, l->koepfe * sizeof(int));
+        l->anfang = c;
+        l->offen = true;
+    }
+}
+
 static uft_d2_conf_t deckel(uft_d2_conf_t c, float plugin_conf) {
     /* Ein Plugin-Wert 0.0 ist die Vorgabe des Nullens, keine Messung. */
     if (plugin_conf <= 0.0f) return c;
@@ -148,7 +244,25 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
                               UFT_D2_ORIGIN_CONTAINER, "uft_d2_bridge",
                               name, 0u);
 
+    /* Welche Spuren fehlen, sagt je LAUF ein Befund (siehe `lauf_t`): im
+     * Modell fehlt eine solche Spur danach, und `uft_d2_querpruefung()`
+     * meldet deshalb nie eine Spurluecke — dieser Befund nennt die Lage
+     * und den Rueckgabewert, und nichts darueber hinaus. */
+    lauf_t lauf;
+    memset(&lauf, 0, sizeof(lauf));
+    lauf.koepfe = g->heads;
+    lauf.rc_vor = calloc(g->heads, sizeof(int));
+    lauf.rc_jetzt = calloc(g->heads, sizeof(int));
+    if (!lauf.rc_vor || !lauf.rc_jetzt) {
+        free(lauf.rc_vor); free(lauf.rc_jetzt);
+        uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_SECTORS, -1, -1, -1,
+                    "NO_MEMORY", "Kein Speicher fuer die Spurbuchfuehrung — "
+                    "nichts eingespeist.");
+        return false;
+    }
+
     for (unsigned c = 0; c < g->cylinders; c++) {
+        memset(lauf.rc_jetzt, 0, g->heads * sizeof(int));
         for (unsigned h = 0; h < g->heads; h++) {
             uft_track_t t;
             memset(&t, 0, sizeof(t));
@@ -156,6 +270,7 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
             const uft_error_t rc = plugin->read_track(disk, (int)c, (int)h, &t);
             if (rc != UFT_OK) {
                 st.tracks_failed++;
+                lauf.rc_jetzt[h] = (int)rc;
                 spur_freigeben(&t);
                 continue;
             }
@@ -167,7 +282,11 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
             if (t.sector_count == 0u && !hat_bits) { spur_freigeben(&t); continue; }
 
             uft_d2_track_t *dt = uft_d2_track(d, (uint16_t)c, (uint8_t)h);
-            if (!dt) { spur_freigeben(&t); return false; }
+            if (!dt) {
+                spur_freigeben(&t);
+                free(lauf.rc_vor); free(lauf.rc_jetzt);
+                return false;
+            }
             if (t.encoding != UFT_ENC_UNKNOWN && dt->encoding == UFT_ENC_UNKNOWN)
                 dt->encoding = t.encoding;
 
@@ -191,7 +310,10 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
             }
             spur_freigeben(&t);
         }
+        lauf_zylinder_ende(d, &lauf, c, name);
     }
+    if (lauf.offen) lauf_melden_bruecke(d, &lauf, g->cylinders - 1u, name);
+    free(lauf.rc_vor); free(lauf.rc_jetzt);
 
     /* Was die Bruecke NICHT traegt, sagt sie — einmal je Klasse, nicht je
      * Spur, damit die Befundliste nicht ueberlaeuft. */

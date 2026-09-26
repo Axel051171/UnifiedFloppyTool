@@ -16,6 +16,7 @@ extern "C" {
 #include <uft/uft_types.h>
 #include <uft/core/uft_disk2_bridge.h>   /* MF-1273: das Zentrum, aus dem Plugin gespeist */
 #include <uft/core/uft_disk2_io.h>       /* MF-1275: UFTD — der Behaelter */
+#include <uft/formats/st/uft_st_order.h> /* H-18: ST-Reihenfolge im Bericht */
 }
 
 #include <vector>
@@ -271,6 +272,23 @@ QString DiskAnalyzerWindow::traegerBericht(struct uft_disk *disk)
 
     uft_d2_bridge_stats_t st;
     const bool ok = uft_d2_from_disk(d2, disk, uft_disk_plugin(disk), &st);
+
+    /* Die Pruefungen des Modells VOR dem Bericht, damit ihre Befunde darin
+     * stehen und mit `traegerSichern()` in den DIAG-Block gehen. Alle drei
+     * lesen nur und schreiben nur Befunde; Spuren, Sektoren und Merkmale
+     * bleiben unberuehrt (belegt in tests/test_d2_querpruefung.c).
+     *
+     *   uft_d2_validate()       innere Stimmigkeit — bis hierher ohne
+     *                           produktiven Aufrufer
+     *   uft_d2_querpruefung()   Sektormengen der Spuren gegeneinander:
+     *                           was EINE Spur nicht zeigen kann (H-18)
+     *   uft_st_order_befunde()  Interleave/Spiralfaktor/TOS-Herkunft —
+     *                           NUR bei physischer Reihenfolge eines Atari-
+     *                           Behaelters; ueber die Bruecke heute stumm,
+     *                           der Grund steht in uft_st_order.h */
+    uft_d2_validate(d2);
+    uft_d2_querpruefung(d2);
+    uft_st_order_befunde(d2);
 
     /* `uft_d2_report()` gibt die BENOETIGTE Laenge zurueck; ein zu
      * kleiner Puffer wird nicht still gekuerzt, sondern vergroessert. */

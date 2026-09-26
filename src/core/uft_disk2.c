@@ -720,6 +720,216 @@ size_t uft_d2_validate(uft_disk2_t *d) {
     return d->ndiag - vorher;
 }
 
+/* ═══════════════════════ Querpruefung ueber Spuren ══════════════════════ */
+
+/* Die Sektornummern einer Spur als Bitmenge — dieselbe Form wie
+ * `gesehen[32]` in merkmale_rechnen(): die ID ist ein Byte, 256 Nummern
+ * passen in 32 Byte. */
+typedef struct { uint8_t b[32]; } idmenge_t;
+
+static bool idmenge_von(const uft_d2_track_t *t, idmenge_t *m) {
+    memset(m, 0, sizeof(*m));
+    if (!t || !t->sectors.count) return false;
+    for (size_t s = 0; s < t->sectors.count; ++s) {
+        const uint8_t id = t->sectors.items[s].id_sec;
+        m->b[id >> 3] |= (uint8_t)(1u << (id & 7u));
+    }
+    return true;
+}
+
+static bool idmenge_gleich(const idmenge_t *a, const idmenge_t *b) {
+    return memcmp(a->b, b->b, sizeof(a->b)) == 0;
+}
+
+/** a ist Teilmenge von b (auch gleich). */
+static bool idmenge_teil(const idmenge_t *a, const idmenge_t *b) {
+    for (size_t i = 0; i < sizeof(a->b); ++i)
+        if (a->b[i] & (uint8_t)~b->b[i]) return false;
+    return true;
+}
+
+static unsigned idmenge_zahl(const idmenge_t *m) {
+    unsigned n = 0u;
+    for (size_t i = 0; i < sizeof(m->b); ++i)
+        for (uint8_t x = m->b[i]; x; x &= (uint8_t)(x - 1u)) n++;
+    return n;
+}
+
+/** Die Nummern in a, die b nicht hat, als „3, 7, 10". Was nicht passt,
+ *  wird als „(+k)" gezaehlt statt still abgeschnitten. */
+static void idmenge_rest(const idmenge_t *a, const idmenge_t *b,
+                         char *buf, size_t n) {
+    size_t w = 0u;
+    unsigned weg = 0u;
+    buf[0] = '\0';
+    for (unsigned id = 0; id < 256u; ++id) {
+        const uint8_t bit = (uint8_t)(1u << (id & 7u));
+        if (!(a->b[id >> 3] & bit) || (b->b[id >> 3] & bit)) continue;
+        char tmp[8];
+        const int k = snprintf(tmp, sizeof(tmp), "%s%u", w ? ", " : "", id);
+        if (k > 0 && w + (size_t)k + 8u < n) {
+            memcpy(buf + w, tmp, (size_t)k + 1u);
+            w += (size_t)k;
+        } else {
+            weg++;
+        }
+    }
+    if (weg) snprintf(buf + w, n - w, " (+%u)", weg);
+}
+
+static bool befund_schon_da(const uft_disk2_t *d, const char *code,
+                            int cyl, int head, const char *text) {
+    for (size_t i = 0; i < d->ndiag; ++i)
+        if (d->diag[i].cyl == cyl && d->diag[i].head == head
+            && strcmp(d->diag[i].code, code) == 0
+            && strcmp(d->diag[i].text, text) == 0)
+            return true;
+    return false;
+}
+
+/* Der Hinweis am Randbefund. Kurz, weil er zusammen mit der Nummernliste
+ * in UFT_D2_DIAG_TEXT passen muss; die Liste weicht, nicht der Hinweis. */
+#define RAND_HINWEIS " — Randspur mit einer Klammer: auch eine Bootspur mit " \
+                     "anderer Sektorzahl sieht so aus"
+#define SCHUTZ_HINWEIS " — moeglicher Schutz, kein Fehler"
+
+/** Eine GRUPPE gleicher Laufspuren c0..c1 (alle mit der Menge t) gegen die
+ *  Klammermenge S melden — EIN Befund je Gruppe, nicht je Spur. `zeugen`
+ *  nennt die Spuren, auf die sich der Befund stuetzt. `rand`: nur eine
+ *  Klammer und der Gegenkopf als zweiter Zeuge (siehe Header).
+ *
+ *  Der Text wird VOR dem Eintrag vollstaendig gebaut und passt immer in
+ *  UFT_D2_DIAG_TEXT: `uft_d2_diag()` kuerzt sonst still hinten, und dort
+ *  steht der Hinweis. Die Nummernliste bekommt, was uebrig ist, und zaehlt
+ *  den Rest als „(+k)". */
+static void gruppe_melden(uft_disk2_t *d, unsigned c0, unsigned c1,
+                          unsigned h, const idmenge_t *t, const idmenge_t *s,
+                          const char *zeugen, bool rand) {
+    const bool teil = idmenge_teil(t, s);
+    const bool ober = idmenge_teil(s, t);
+    if (teil == ober) return;   /* gleich (kann hier nicht sein) oder
+                                 * unvergleichbar: kein Befund ohne Beleg */
+    const char *code = teil ? "SEC_GAP_VS_BRACKET" : "SEC_EXTRA_VS_BRACKET";
+    /* Echte Teilmenge innen: WARN. Am Rand NOTE — dort ist ein
+     * Mengenunterschied auch das Bild einer Bootspur, die nur auf EINER
+     * Seite eine andere Sektorzahl traegt (TRS-80 Model I DD zweiseitig:
+     * C0 H0 in einfacher Dichte 0..9, alles andere 0..17). Obermenge
+     * immer NOTE: moeglicher Schutz. */
+    const uft_d2_diag_sev_t sev = (teil && !rand) ? UFT_D2_DIAG_WARN
+                                                  : UFT_D2_DIAG_NOTE;
+    const char *hinweis = teil ? (rand ? RAND_HINWEIS : "") : SCHUTZ_HINWEIS;
+
+    char text[UFT_D2_DIAG_TEXT];
+    int w;
+    if (c0 == c1)
+        w = snprintf(text, sizeof(text), "traegt %u, Klammer %u (%s); %s: ",
+                     idmenge_zahl(t), idmenge_zahl(s), zeugen,
+                     teil ? "fehlt" : "zusaetzlich");
+    else
+        w = snprintf(text, sizeof(text),
+                     "C%u..C%u H%u: tragen %u, Klammer %u (%s); %s: ",
+                     c0, c1, h, idmenge_zahl(t), idmenge_zahl(s), zeugen,
+                     teil ? "fehlt" : "zusaetzlich");
+    const size_t hl = strlen(hinweis);
+    if (w < 0 || (size_t)w + hl + 16u >= sizeof(text)) return;
+    idmenge_rest(teil ? s : t, teil ? t : s, text + w,
+                 sizeof(text) - (size_t)w - hl);
+    strcat(text, hinweis);
+
+    /* Eine Gruppe aus einer Spur steht in den Feldern; ein Bereich nicht
+     * — das Befundfeld fasst EINEN Zylinder, also steht er im Text
+     * (cyl -1, siehe uft_d2_diag_t). */
+    const int cyl = c0 == c1 ? (int)c0 : -1;
+    const int head = c0 == c1 ? (int)h : -1;
+    if (befund_schon_da(d, code, cyl, head, text)) return;
+    uft_d2_diag(d, sev, UFT_D2_LAYER_SECTORS, cyl, head, -1, code, "%s", text);
+}
+
+size_t uft_d2_querpruefung(uft_disk2_t *d) {
+    if (!d) return 0u;
+    uint16_t mc; uint8_t mh;
+    if (!uft_d2_extent(d, &mc, &mh) || mc == 0u) return 0u;
+    const size_t vorher = d->ndiag;
+    const size_t n = (size_t)mc + 1u;
+
+    /* Je Kopf die Mengen aller Zylinder; `da` = Spur vorhanden UND mit
+     * Sektoren. Eine fehlende Spur ist kein Beleg (siehe Header). */
+    idmenge_t *m = calloc(2u * n, sizeof(*m));
+    bool *da = calloc(2u * n, sizeof(*da));
+    if (!m || !da) {
+        free(m); free(da);
+        uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_SECTORS, -1, -1, -1,
+                    "NO_MEMORY", "Kein Speicher fuer die Querpruefung.");
+        return d->ndiag - vorher;
+    }
+
+    for (unsigned h = 0; h <= mh; ++h) {
+        /* Zwei Zeilen fuer diesen und den Gegenkopf. Mehr als zwei Koepfe
+         * hat keine Diskette; der „Gegenkopf" ist h^1, wenn es ihn gibt. */
+        const unsigned g = h ^ 1u;
+        const bool hat_gegen = g <= mh;
+        for (unsigned c = 0; c < n; ++c) {
+            da[c] = idmenge_von(track_suchen(d, c, h), &m[c]);
+            da[n + c] = hat_gegen
+                      && idmenge_von(track_suchen(d, c, g), &m[n + c]);
+        }
+
+        /* Innen: Klammer links bei c, Lauf c+1..k-1, Klammer rechts bei k. */
+        for (unsigned c = 0; c + 1u < n;) {
+            if (!da[c] || !da[c + 1u] || idmenge_gleich(&m[c], &m[c + 1u])) {
+                c++;
+                continue;
+            }
+            const idmenge_t *s = &m[c];
+            unsigned k = c + 1u;
+            while (k < n && da[k] && !idmenge_gleich(&m[k], s)) k++;
+            if (k < n && da[k]) {
+                char zeugen[48];
+                snprintf(zeugen, sizeof(zeugen), "C%u/C%u", c, k);
+                /* Innerhalb des Laufs: je Gruppe GLEICHER Mengen ein
+                 * Befund. 60 beschaedigte Spuren mit derselben Luecke sind
+                 * EIN Sachverhalt, nicht 60 (gemessen: C10..C69 mit 9
+                 * zwischen Klammern mit 10 ergab 60 WARN). */
+                for (unsigned j = c + 1u; j < k;) {
+                    unsigned e = j;
+                    while (e + 1u < k && idmenge_gleich(&m[e + 1u], &m[j])) e++;
+                    gruppe_melden(d, j, e, h, &m[j], s, zeugen, false);
+                    j = e + 1u;
+                }
+                c = k;
+            } else {
+                /* Keine rechte Klammer: kein Lauf. Weiter ab der naechsten
+                 * Spur — innerhalb des gescheiterten Versuchs kann eine
+                 * eigene Klammer liegen. */
+                c++;
+            }
+        }
+
+        /* Rand: GENAU die Randspur, eine Klammer innen, der Gegenkopf auf
+         * demselben Zylinder als zweiter Zeuge. Ein laengerer Randlauf ist
+         * von einer Zonengrenze nicht zu unterscheiden — gemessen an Victor
+         * 9000, dessen Kopf 1 auf den Zylindern 75..79 elf Sektoren traegt,
+         * waehrend Kopf 0 dort und Kopf 1 auf 74 zwoelf tragen. */
+        const unsigned raender[2][2] = {
+            { 0u, 1u }, { (unsigned)(n - 1u), (unsigned)(n - 2u) } };
+        for (unsigned r = 0; r < 2u; ++r) {
+            const unsigned c = raender[r][0], innen = raender[r][1];
+            /* `!da[n + c]` ist durch die Gleichheit zwei Zeilen tiefer
+             * mitgeprueft (eine fehlende Spur hat die leere Menge, die
+             * Klammer nicht) — gemessen: die Mutation, die es streicht,
+             * ist gleichwertig. Es steht fuer den Leser da. */
+            if (!da[c] || !da[innen] || !da[n + c]) continue;
+            if (idmenge_gleich(&m[c], &m[innen])) continue;
+            if (!idmenge_gleich(&m[n + c], &m[innen])) continue;
+            char zeugen[48];
+            snprintf(zeugen, sizeof(zeugen), "C%u und Gegenkopf H%u", innen, g);
+            gruppe_melden(d, c, c, h, &m[c], &m[innen], zeugen, true);
+        }
+    }
+    free(m); free(da);
+    return d->ndiag - vorher;
+}
+
 /* ═══════════════════════ Schichten und Merkmale ═════════════════════════ */
 
 uint32_t uft_d2_layers(const uft_disk2_t *d) {
@@ -1115,10 +1325,16 @@ size_t uft_d2_report(const uft_disk2_t *d, char *buf, size_t buflen) {
             const char *sv = g->sev == UFT_D2_DIAG_ERROR ? "FEHLER"
                            : g->sev == UFT_D2_DIAG_WARN  ? "WARN"
                            : g->sev == UFT_D2_DIAG_NOTE  ? "note" : "info";
-            if (g->cyl >= 0)
-                APP("  [%s] %s C%d H%d%s%d: %s\n", sv, g->code,
-                    (int)g->cyl, (int)g->head, g->sector >= 0 ? " S" : "",
-                    g->sector >= 0 ? (int)g->sector : 0, g->text);
+            /* Zwei Zweige statt eines bedingten Leerstrings: die Fassung
+             * davor druckte fuer sector -1 die Ersatz-0 trotzdem und
+             * haengte sie an den Kopf — „C2 H00", und Kopf 1 las sich
+             * „H10". */
+            if (g->cyl >= 0 && g->sector >= 0)
+                APP("  [%s] %s C%d H%d S%d: %s\n", sv, g->code,
+                    (int)g->cyl, (int)g->head, (int)g->sector, g->text);
+            else if (g->cyl >= 0)
+                APP("  [%s] %s C%d H%d: %s\n", sv, g->code,
+                    (int)g->cyl, (int)g->head, g->text);
             else
                 APP("  [%s] %s: %s\n", sv, g->code, g->text);
         }
