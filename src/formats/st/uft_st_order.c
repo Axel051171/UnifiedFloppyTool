@@ -112,6 +112,23 @@ void uft_st_order_messen(const uft_track_t *vorspur, const uft_track_t *spur,
 
     if (!spur || spur->sector_count == 0) return;
 
+    /* The positions below are array indices, and they are physical slots
+     * only if the track carries every number 1..n exactly once. A gap
+     * (1..8,10) or a duplicate means a sector is missing or phantom; then
+     * sector_count is not the sectors per track, and interleave/spiral
+     * would be computed over the wrong ring. Report nothing rather than a
+     * smaller geometry -- CERTIFY 1.0 let one failed read of sector 10
+     * decide 9 vs 10 (H-18, MF-1339). A missing LAST sector leaves no
+     * trace on the track and cannot be detected here; spt is what this
+     * track carries, not the geometry of the disk. */
+    if (spur->sector_count > UINT8_MAX) return;
+    bool gesehen[UINT8_MAX + 1] = { false };
+    for (size_t i = 0; i < spur->sector_count; i++) {
+        const uint8_t nr = spur->sectors[i].id.sector;
+        if (nr == 0 || nr > spur->sector_count || gesehen[nr]) return;
+        gesehen[nr] = true;
+    }
+
     aus->spt        = (uint8_t)spur->sector_count;
     aus->interleave = uft_st_interleave_messen(spur);
     aus->spiral     = uft_st_spiral_messen(vorspur, spur);

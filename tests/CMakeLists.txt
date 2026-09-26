@@ -5842,6 +5842,19 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_disk_quickscan.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_ein_sektor_entscheidet_keine_geometrie")
+        # H-18/MF-1339: negative Referenz CERTIFY 1.0 — eine Luecke in der
+        # Sektorfolge ist keine kleinere Geometrie (ST-Reihenfolge).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st_order.c)
+    elseif(${test_name} STREQUAL "test_diag_seitenfehler_und_sektor10")
+        # H-18/MF-1339: Oberflaechen-Scan mit zwei Seiten und einem zeitweise
+        # unlesbaren Sektor 10. Eigene Datei, weil uft_disc_diagnostics.h
+        # ein eigenes uft_sector_status_t fuehrt, das mit uft_types.h
+        # kollidiert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/diag/uft_disc_diagnostics.c)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_disc_diagnostics")
         # v4.1.5-hardening: disc diagnostics (TDFC).
         target_sources(${test_name} PRIVATE

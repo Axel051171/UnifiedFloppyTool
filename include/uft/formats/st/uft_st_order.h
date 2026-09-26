@@ -168,7 +168,16 @@ uint8_t uft_st_interleave_messen(const uft_track_t *spur);
 int16_t uft_st_spiral_messen(const uft_track_t *vorspur,
                              const uft_track_t *spur);
 
-/** Fuellt @p aus fuer eine Spur. `gemessen` bleibt false bei NULL-Spur. */
+/**
+ * Fuellt @p aus fuer eine Spur. `gemessen` bleibt false bei NULL-Spur
+ * und bei einer Spur, die nicht jede Sektornummer 1..n genau einmal
+ * traegt (Luecke, Doppel, Nummer 0): dort sind Feldpositionen keine
+ * physischen Plaetze, und `sector_count` waere eine zu kleine Geometrie
+ * (H-18, MF-1339; negative Referenz CERTIFY 1.0).
+ *
+ * `spt` ist, was DIESE Spur traegt — nicht die Geometrie der Diskette.
+ * Fehlt der LETZTE Sektor ganz, zeigt die Spur das nicht.
+ */
 void uft_st_order_messen(const uft_track_t *vorspur, const uft_track_t *spur,
                          uft_st_order_t *aus);
 
