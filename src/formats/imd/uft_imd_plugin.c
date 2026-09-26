@@ -8,6 +8,21 @@
  *
  * Sector data types: 0=unavail, 1=normal, 2=compressed(fill byte),
  *                    3=deleted, 4=del+comp, 5=error, 6=err+comp, 7=del+err, 8=del+err+comp
+ *
+ * Sector IDs (P0-18, MF-1348). Reference: MAME src/lib/formats/imd_dsk.cpp
+ * (BSD-3-Clause, read only), imd_format::load():
+ *     sects[i].track  = tnum.size() ? tnum[i] : track;   cylinder map, 0x80
+ *     sects[i].head   = hnum.size() ? hnum[i] : head;    head map, 0x40
+ *     sects[i].sector = snum[i];                         numbering map
+ *     stype 0 -> no data
+ * Until MF-1348 this plugin passed snum[i] to uft_format_add_sector(),
+ * which takes a 0-based index and adds 1: every ID of every IMD file came
+ * out one too high (the foreign hxcfe_pc160.imd, map 1..8, read as 2..9),
+ * the cylinder/head maps were skipped, and "data unavailable" came out as
+ * a good sector. Guarded by tests/test_imd_sektor_ids.c.
+ *
+ * NOT covered here (named): a truncated file loses its trailing sectors
+ * without a marker, and a size code > 6 is read as 512 (MAME: 8192).
  */
 #include "uft/uft_format_common.h"
 
@@ -139,24 +154,42 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 
         pos += 5;
 
+        /* P0-18 (MF-1348): the three maps carry the sector HEADER fields,
+         * exactly as MAME imd_format::load() reads them (see file head).
+         * They are read only if the whole record head fits in the file. */
+        const size_t karten = (size_t)nsec * (1u + ((head_raw & 0x80) ? 1u : 0u)
+                                               + ((head_raw & 0x40) ? 1u : 0u));
+        if (pos + karten > p->size) break;      /* truncated record head */
         /* sector numbering map */
         const uint8_t *sec_map = p->data + pos;
         pos += nsec;
         /* optional cylinder map */
-        if (head_raw & 0x80) pos += nsec;
+        const uint8_t *cyl_map = NULL;
+        if (head_raw & 0x80) { cyl_map = p->data + pos; pos += nsec; }
         /* optional head map */
-        if (head_raw & 0x40) pos += nsec;
+        const uint8_t *head_map = NULL;
+        if (head_raw & 0x40) { head_map = p->data + pos; pos += nsec; }
 
         /* sector data */
         for (int s = 0; s < nsec && pos < p->size; s++) {
             uint8_t dtype = p->data[pos++];
+            /* The ID is what the sector header says: numbering map as is
+             * (uft_format_add_sector() would add 1 — it takes an INDEX),
+             * cylinder/head from their maps when present. */
+            const uint8_t id_sec = sec_map[s];
+            const uint8_t id_cyl = cyl_map ? cyl_map[s] : (uint8_t)cyl;
+            const uint8_t id_head = head_map ? head_map[s] : (uint8_t)head;
             if (dtype == 0) {
-                /* unavailable */
+                /* "Sector data unavailable - could not be read": the sector
+                 * header exists, its data does not. The fill stays (no bit
+                 * lost) but is marked as NOT read (MF-980) — before P0-18
+                 * it came out as a good sector full of 0xE5. */
                 if (is_target) {
                     uint8_t fill[8192];
                     memset(fill, 0xE5, ss);
-                    uft_format_add_sector(track, sec_map[s], fill, ss,
-                                          (uint8_t)cyl, (uint8_t)head);
+                    uft_format_add_sector_with_id(track, id_sec, fill, ss,
+                                                  id_cyl, id_head);
+                    uft_format_mark_last_missing(track);
                 }
                 continue;
             }
@@ -169,15 +202,15 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                 if (is_target && pos < p->size) {
                     uint8_t fill_buf[8192];
                     memset(fill_buf, p->data[pos], ss);
-                    uft_format_add_sector(track, sec_map[s], fill_buf, ss,
-                                          (uint8_t)cyl, (uint8_t)head);
+                    uft_format_add_sector_with_id(track, id_sec, fill_buf, ss,
+                                                  id_cyl, id_head);
                 }
                 pos += 1;
             } else {
                 if (is_target && pos + ss <= p->size) {
-                    uft_format_add_sector(track, sec_map[s],
-                                          p->data + pos, ss,
-                                          (uint8_t)cyl, (uint8_t)head);
+                    uft_format_add_sector_with_id(track, id_sec,
+                                                  p->data + pos, ss,
+                                                  id_cyl, id_head);
                 }
                 pos += ss;
             }

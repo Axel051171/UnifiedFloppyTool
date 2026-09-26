@@ -2294,6 +2294,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_imd_error_marks")
         # IMD disk-error marking read/represent/preserve (Phase-4 WP5, MF-329)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
+    elseif(${test_name} STREQUAL "test_imd_sektor_ids")
+        # P0-18/MF-1348: die gemeldete ID ist die ID der Datei — gegen die
+        # fremd erzeugte hxcfe_pc160.imd und MAME imd_dsk.cpp.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_edsk_error_marks")
         # EDSK uPD765 ST1/ST2 disk-error marking read/represent/preserve (Phase-4 WP5, MF-332)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c)
