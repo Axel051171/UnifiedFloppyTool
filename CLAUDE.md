@@ -803,6 +803,29 @@ das Heredoc **den Helfer, der das Problem umgehen sollte** (MF-1019).
 Die Regel ist deshalb ausnahmslos, auch für „nur drei Zeilen“ — die
 kaputten Fälle waren alle kurz.
 
+> **Nachtrag MF-1343 — die Regel hatte kein Werkzeug, und der Mechanismus
+> war ein anderer.** Fuer die Sperren 2 und 3 gab es seit MF-1096 Werkzeuge,
+> fuer Sperre 1 nur diesen Text. Gemessen ueber alle 624 Protokolldateien
+> dieses Projekts (Hauptsitzungen, Unteragenten, Workflows): 43 670
+> Bash-Aufrufe, 4 157 davon verstossen gegen die Regel, **919 seit
+> MF-1096**. Und die Ursache sitzt nicht im Heredoc, sondern im
+> **Transport**: das Bash-Werkzeug halbiert jedes `\\`, bevor bash es
+> sieht — auch in einfachen Anfuehrungszeichen, auch ohne Heredoc
+> (`printf '%s' 'x\\y' | wc -c` ergibt 3, dieselbe Zeichenkette in
+> PowerShell hat Laenge 4; ein einzelnes `\n` bleibt erhalten).
+>
+> Seither haelt **Tor 71** (`scripts/audit_heredoc.py`) die Regel: ein
+> PreToolUse-Haken auf User-Ebene (`~/.claude/settings.json`,
+> Eigentuemerentscheidung 2026-09-26, strenge Fassung) weist VOR der
+> Ausfuehrung ab — jedes `\\` im Bash-Befehl, jedes Heredoc, das eine
+> Datei fuellt, und jedes mehrzeilige Skript per Heredoc; Commit- und
+> PR-Nachrichten bleiben erlaubt. Einspeiseprobe gemessen: der Haken
+> sieht den Befehl VOR der Halbierung. Das CI prueft den Klassifizierer
+> (29 Faelle, Mutationsmatrix 11/11); ob der Haken wirkt, misst
+> `python scripts/audit_heredoc.py --protokolle --seit <Einbauzeit>`
+> (Einbau 2026-09-26T09:05:19Z) — und meldet immer auch, wie viele
+> Aufrufe es gesehen hat.
+
 **2. Während ein Commit läuft, schreibt niemand in den Baum.**
 
 Der Pre-Commit-Haken legt `.git/uft-commit.lock` an; jeder Generator

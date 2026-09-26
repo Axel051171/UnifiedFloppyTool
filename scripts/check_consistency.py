@@ -1642,6 +1642,20 @@ def main() -> int:
         import audit_faehigkeitsmatrix as _fm
         all_errors.append(("Zusage ohne Weg", _fm.check(repo)))
 
+        # Tor 71 (MF-1343): Heredocs, die Dateien schreiben, und `\\` im
+        # Bash-Befehl — Sperre 1 aus MF-1096 hatte bis dahin kein
+        # Werkzeug, nur Text. Durchgesetzt wird sie VOR der Ausfuehrung
+        # durch einen PreToolUse-Haken auf User-Ebene
+        # (`audit_heredoc.py --haken`, Eigentuemerentscheidung
+        # 2026-09-26); hier im Tor steht nur, was das CI sehen kann: der
+        # Klassifizierer haelt seine Faelle (29, Mutationsmatrix 11/11).
+        #
+        # Benannte Luecke: Sitzungsprotokolle sieht das CI nicht. Ob der
+        # Haken wirkt, misst `audit_heredoc.py --protokolle` lokal, und es
+        # meldet immer auch, wie viele Aufrufe es GESEHEN hat.
+        import audit_heredoc as _hd
+        all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
+
     # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
     #
     # Git EXPORTIERT `GIT_DIR` in jeden Haken. Ein `git init` gegen ein
