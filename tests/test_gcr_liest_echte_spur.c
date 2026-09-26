@@ -82,7 +82,17 @@ static void pruefe(const char *name, int bedingung, const char *hinweis)
     }
 }
 
+/* MF-1337: hier stand nur der relative Pfad. ctest startet diesen Test in
+ * build-Verzeichnis/tests, dort gibt es "tests/corpus_free/..." nicht, und der Test
+ * meldete "0 gruen, 0 rot (uebersprungen)" — also BESTANDEN. Die
+ * versionierte Aufnahme wurde in ctest nie geprueft. Der absolute Pfad
+ * kommt jetzt aus CMake; der relative bleibt nur fuer den Handaufruf aus
+ * der Repo-Wurzel. */
+#ifdef UFT_CORPUS_FREE_DIR
+#define PFAD        UFT_CORPUS_FREE_DIR "/vice_c1541_35trk.g64"
+#else
 #define PFAD        "tests/corpus_free/vice_c1541_35trk.g64"
+#endif
 #define SPUR        18
 /* G64 fuehrt 84 Halbspur-Eintraege, Index 0 = Spur 1.0. Spur t liegt
  * damit bei (t-1)*2 — Spur 18 also bei 34.
@@ -102,7 +112,13 @@ int main(void)
 
     FILE *f = fopen(PFAD, "rb");
     if (!f) {
-        /* Ohne Korpus benannt ueberspringen — nicht schweigend gruen. */
+        /* Die Datei liegt in tests/corpus_free/ und ist VERSIONIERT.
+         * Fehlt sie, ist das ein Fehler: ein Ueberspringen haette hier
+         * genau die Luecke verdeckt, die MF-1337 gefunden hat. */
+#ifdef UFT_CORPUS_FREE_DIR
+        printf("  [ROT] %s fehlt — die Datei ist versioniert\n", PFAD);
+        return 1;
+#endif
         printf("  [SKIP] %s fehlt (Korpus nicht vorhanden)\n", PFAD);
         printf("\n%d gruen, %d rot (uebersprungen)\n", gruen, rot);
         return 0;

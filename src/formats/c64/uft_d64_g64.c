@@ -515,13 +515,24 @@ int d64_block_offset(int track, int sector)
  */
 int g64_load_buffer(const uint8_t *data, size_t size, g64_image_t **image)
 {
-    if (!data || !image || size < G64_HEADER_SIZE) return -1;
-    
+    /* Nur den festen Kopf (12 Byte) vorab verlangen. Wie gross der Rest
+     * ist, sagt die Eintragszahl in Byte 9 — nicht die Konstante
+     * G64_HEADER_SIZE, die 84 Eintraege voraussetzt (P3-545, MF-1337). */
+    if (!data || !image || size < 12u) return -1;
+
     /* Check signature */
     if (memcmp(data, G64_SIGNATURE, G64_SIGNATURE_LEN) != 0) {
         return -2;
     }
-    
+
+    /* G64.TXT: hinter dem 12-Byte-Kopf liegen die Spurtafel und direkt
+     * dahinter die Geschwindigkeitstafel, je Eintrag 4 Byte LO/HI. Bei
+     * 84 Eintraegen beginnt die zweite bei $015C; allgemein bei
+     * 12 + 4 * n. Beide Tafeln muessen in den Puffer passen. */
+    const size_t eintraege = data[9];
+    if (size < 12u + 8u * eintraege) return -1;
+    const size_t tempo_basis = 12u + 4u * eintraege;
+
     /* Allocate image */
     g64_image_t *img = calloc(1, sizeof(g64_image_t));
     if (!img) return -3;
@@ -547,11 +558,35 @@ int g64_load_buffer(const uint8_t *data, size_t size, g64_image_t **image)
                                         ((uint32_t)data[offset_pos + 2] << 16) |
                                         ((uint32_t)data[offset_pos + 3] << 24);
         
-        /* Speed zone */
-        img->tracks[halftrack].speed = data[G64_SPEED_OFFSET + i];
-        
-        /* Load track data if present */
-        if (img->tracks[halftrack].offset > 0 && img->tracks[halftrack].offset < size) {
+        /* Speed zone — P3-545 / MF-1337.
+         *
+         * Hier stand `data[G64_SPEED_OFFSET + i]`: Schrittweite 1 statt 4
+         * und fester Versatz statt `12 + 4 * n`. Fuer Eintrag 0 traf das
+         * zufaellig das niedrigste Byte, ab Eintrag 1 las es die hohen
+         * Bytes des VORIGEN Eintrags. Gemessen an der VICE-Aufnahme
+         * tests/corpus_free/vice_c1541_35trk.g64: 28 von 84 Eintraegen
+         * falsch, 26 von 35 Vollspuren in der falschen Zone. Der Schreiber
+         * unten trug denselben Fehler, deshalb war jeder Rundlauf gruen.
+         *
+         * Ein Wert ueber 3 ist laut G64.TXT keine Zone, sondern der
+         * Versatz einer Zonentafel je Byte. `speed` ist ein uint8_t und
+         * kann ihn nicht tragen; ihn zu kuerzen hiesse, eine Zone zu
+         * erfinden. Dieser Pfad sagt deshalb ab — das Plugin
+         * src/formats/g64/uft_g64.c liest solche Dateien mit uint32_t. */
+        const uint8_t *tempo = data + tempo_basis + 4u * (size_t)i;
+        const uint32_t zone = (uint32_t)tempo[0] | ((uint32_t)tempo[1] << 8) |
+                              ((uint32_t)tempo[2] << 16) | ((uint32_t)tempo[3] << 24);
+        if (zone > 3u) {
+            g64_free(img);
+            return -4;
+        }
+        img->tracks[halftrack].speed = (uint8_t)zone;
+
+        /* Load track data if present. Die zwei Laengenbytes muessen noch
+         * im Puffer liegen — `offset < size` allein liess bei
+         * offset == size - 1 einen Lesezugriff hinter das Ende zu. */
+        if (img->tracks[halftrack].offset > 0 &&
+            (size_t)img->tracks[halftrack].offset + 2u <= size) {
             uint32_t track_offset = img->tracks[halftrack].offset;
             
             /* Read track length */
@@ -657,8 +692,16 @@ int g64_save_buffer(const g64_image_t *image, uint8_t **data, size_t *size)
             buf[offset_pos + 2] = (current_offset >> 16) & 0xFF;
             buf[offset_pos + 3] = (current_offset >> 24) & 0xFF;
             
-            /* Write speed zone */
-            buf[G64_SPEED_OFFSET + i] = image->tracks[halftrack].speed;
+            /* Write speed zone — P3-545 / MF-1337: ein 4-Byte-Eintrag
+             * (LO/HI) je Halbspur, wie G64.TXT ihn beschreibt. Hier stand
+             * `buf[G64_SPEED_OFFSET + i]`, das Spiegelbild des alten
+             * Leserfehlers. Die Datei traegt 84 Eintraege (buf[9] oben),
+             * also beginnt die Tafel bei 12 + 4 * 84 = G64_SPEED_OFFSET. */
+            uint8_t *tempo = buf + G64_SPEED_OFFSET + 4u * (size_t)i;
+            tempo[0] = image->tracks[halftrack].speed;
+            tempo[1] = 0;
+            tempo[2] = 0;
+            tempo[3] = 0;
             
             /* Write track length */
             buf[current_offset] = image->tracks[halftrack].length & 0xFF;

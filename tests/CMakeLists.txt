@@ -457,6 +457,17 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_gcr_ops")
         # Include GCR Operations source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
+    elseif(${test_name} STREQUAL "test_g64_geschwindigkeitstafel")
+        # P3-545 / MF-1337: die G64-Geschwindigkeitstafel im
+        # Wandlungspfad, gegen G64.TXT und die echte VICE-Aufnahme.
+        # Der Korpuspfad ist ABSOLUT: ctest startet in build*/tests, und
+        # ein relativer Pfad "tests/corpus_free/..." zeigt dort ins Leere.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d64_g64")
         # Include D64/G64 conversion source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
@@ -1760,6 +1771,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # MF-1337: bis hierher suchte der Test die Aufnahme ueber den
+        # relativen Pfad "tests/corpus_free/...". ctest startet ihn in
+        # build*/tests, dort gibt es den Pfad nicht, und der Test meldete
+        # "0 gruen, 0 rot (uebersprungen)" — also BESTANDEN. Die
+        # versionierte VICE-Aufnahme wurde in ctest nie geprueft.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_durchschreibprobe")
         # MF-1010: SPF („Stress ProDOS Filesystem", ADTPro, GPL-2+) auf
         # Blockebene — jeder Sektor beschrieben und zurueckgelesen, quer

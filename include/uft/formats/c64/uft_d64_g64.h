@@ -281,7 +281,12 @@ int g64_load(const char *filename, g64_image_t **image);
  * @param data G64 data
  * @param size Data size
  * @param image Output image structure
- * @return 0 on success, error code otherwise
+ * @return 0 on success; -1 bad arguments or a buffer shorter than its own
+ *         track and speed tables (12 + 8 * entries, G64.TXT); -2 bad
+ *         signature; -3 out of memory; -4 a speed entry above 3 — that is
+ *         the offset of a per-byte speed map, which the 8-bit `speed` field
+ *         cannot carry. Refused rather than truncated (P3-545, MF-1337);
+ *         src/formats/g64/uft_g64.c reads such files.
  */
 int g64_load_buffer(const uint8_t *data, size_t size, g64_image_t **image);
 
