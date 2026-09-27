@@ -150,745 +150,6 @@ laufen fort und werden nie wiederverwendet.
 - **Stand:** —
 - **Beleg:** —
 
-### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
-- **Stand 2026-09-27 — Bedingung „Fertig heißt" erfüllt (MF-1405):** die letzten **51** Einträge ohne Urteil sind beurteilt (vier Sichter, je Paket Lizenz an der Datei gelesen; drei Handproben am Baum bestätigt: Tor 67/MF-1230, SCP-Integrität/MF-1162, TRD-Sonde). Register: **224 von 224** mit Urteil, **0** verwaist — das eine verwaiste Urteil (`WHDLoad_dev`) galt einem Eintrag der **zweiten** Ebene, den das Skript nicht lesen konnte; `gen_neue_ideen_register.py` liest seither Schlüssel der Form `Name (neue-ideen/<pfad>/)` und prüft den Pfad (Selbsttest 12/12). **Ertrag der Runde:** (1) `trd_probe()` im **erreichbaren** Leser suchte die TR-DOS-Kennung bei 0x227 (Katalog) statt 0x8E7 — gemessen an zwei echten Abbildern, behoben mit Rotbeweis; (2) `PLAN_MODERNISIERUNG.md` nannte `uft_revolution`/`uft_protection_scan` „kein Paket" — es ist `hacking floppy disk.zip`. **Offen und benannt, nicht Teil dieser Bedingung:** zwei Pakete in `nächste runde/t2` (`UFT_AnalysisBooster`, `UFT_SurfaceIntegrity`) sind nur als Ordnerinhalt beurteilt, nicht gelesen; die Lizenz von `victor9k-flux-tools-main.zip` ist mit `victor9k-flux-tools.txt` (MIT) vermutlich gefunden, aber nicht am Paket belegt. Wandert mit dem Commit-Hash nach „Erledigt".
-- **Status:** **angehalten an der Umgebung** (2026-09-26: `neue-ideen/` ist gitignored und liegt nur auf dem Eigentümerrechner, im Cloud-Container fehlt es — gemessen `ls neue-ideen`: nicht vorhanden; weiter, sobald die Sitzung dort läuft) · vorher **in Arbeit** (seit 2026-09-19, auf ausdrückliche
-  Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
-  oberster der Warteschlange, anfangen !!"). `A-028` steht ebenfalls
-  auf `in Arbeit`, wartet aber seit 2026-09-17 auf eine
-  **Eigentümerentscheidung** (öffentlicher Wegwerf-PR) und blockiert
-  nichts — das ist hier vermerkt statt verschwiegen, weil zwei Posten
-  auf `in Arbeit` gegen die Ein-Schloss-Regel verstoßen.
-  · **Aufgenommen:** 2026-09-19
-- **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
-  gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
-  code noch verbessern kann, nimm alles aus einander , meine
-  einwilligung hst du für alles"
-- **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
-  davon ~~**197 Archive** auf der obersten Ebene und **20** bereits
-  entpackte Verzeichnisse~~. **BERICHTIGT beim Beginn, gemessen:** die
-  oberste Ebene trägt **216** Einträge — **108** Archive, **19**
-  Verzeichnisse, **70** eigene `.md`-Ausarbeitungen, dazu 19 einzelne
-  Quell-/Dokumentdateien. Die „197" trifft weder die oberste Ebene
-  noch das Ganze: im **gesamten** Baum von `neue-ideen/` sind es
-  **424** Archive. Die Zahl stand ungemessen in meinem eigenen
-  Aufnahmeeintrag; sie bleibt oben durchgestrichen stehen, weil
-  Entfernen keine Behebung ist. **2408 Dateien und 636 MB halten**
-  (nachgezählt: 2408 Dateien, 661,7 MB inklusive der obersten
-  Dokumente). `neue-ideen/` ist gitignoriert
-  (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
-  zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
-  `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
-- **Kennzahl:** gemischt, und das gehört ausgesprochen. Der einzelne
-  Fund bewegt meist **keine** der vier und ist damit nach MF-640
-  *Fundus, nicht Auftrag*. Bewegen kann er **ungeprüfte Formate (T3)**
-  — nämlich dann, wenn sich darin ein **Erzeuger** oder ein **Oracle**
-  findet, das eine Stufe hebt; und **angebotene Wandlungspfade**, wenn
-  eine Richtung dadurch belegbar wird. Die Sichtung selbst ist Fundus;
-  ihr Ertrag ist es nicht zwangsläufig.
-- **Kanal:** **je Fund einer**, nach MF-695 — Port | Nachbau |
-  Helfer-Prozess | Oracle | Spec | Daten/Fixture | Fundus. „Lizenz vor
-  Fähigkeit" heißt nicht „Fund verwerfen", sondern *auf welchem Weg*,
-  und der Weg wird bei der Aufnahme des Funds benannt, nicht wenn der
-  Code schon dasteht.
-- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
-  **Rotbeweis zuerst**. Dazu das Moratorium: ein **neues
-  Format-Plugin** ist auch als *Vorschlag* gesperrt; erlaubt sind
-  Bugfixes an Bestehendem, Verifikations-/Korpusarbeit und
-  Spec-Korrekturen gegen autoritative Quellen. Ein Fund, der ein neues
-  Format nahelegt, wird als Fund notiert und **nicht** gebaut.
-- **OPEN_ITEMS:** verwandt und **nicht abzuschreiben** — `P3-8`
-  (drei Aminet-Pakete, Lizenzurteil offen), `P3-11` (Lizenz-Klasse
-  statt Einzelurteil, Eigentümer-Vorlage), `P3-19` (`COPY130.M65`,
-  Fundus), `P3-30` (`pyRT11`, Fundus), `P3-99` (`dskx` widerlegt).
-  Neue Befunde bekommen dort eine Nummer; dieser Posten verweist nur.
-- **Zwei Sperren, die im Gegenstand liegen und NICHT übergangen werden
-  dürfen** — beide gemessen vorhanden:
-  · `neue-ideen/x50conv.exe` — seine Lizenz **untersagt
-    Disassemblierung ausdrücklich**. Aus ihm stammt nichts als die
-    mitgelieferte Dokumentation. „Nimm alles auseinander" gilt hier
-    **nicht**; das ist keine Auslegungsfrage, sondern die Lizenz.
-  · `neue-ideen/OmniFlop_3.2d_Format_Harvest_C.zip` (239 Formate) —
-    **nicht in den Baum**, solange die Eigentümerentscheidung zum
-    EU-Datenbankherstellerrecht (§§87a ff. UrhG) aussteht. Dazu
-    `neue-ideen/UFT-NN_OmniFlop_Analyse.md`.
-  · **Die Einwilligung „für alles" deckt Arbeitsschritte, nicht
-    Lizenzen.** Eine Lizenzverletzung baut einen Defekt ein, den kein
-    Rotbeweis fangen kann (MF-695).
-- **Fertig heißt:** **jeder** Eintrag der obersten Ebene von
-  `neue-ideen/` trägt ein festgehaltenes Urteil aus vier Feldern —
-  *Lizenz (an der Datei gemessen, nicht am API-Feld)* · *Kanal nach
-  MF-695* · *Kennzahl oder „Fundus"* · *nächster Griff* —, und dieses
-  Register ist **abgeleitet, nicht gepflegt**: ein Skript liest die
-  Verzeichnisebene und meldet, was noch ohne Urteil ist. Solange auch
-  nur ein Eintrag ohne Urteil dasteht, ist der Posten offen.
-- **Aufwand:** **nicht schätzbar** für das Ganze — 2408 Dateien in 197
-  Archiven, und die Lizenzfrage ist je Paket eine eigene Messung.
-  Schätzbar ist erst die erste Scheibe, und die wird beim Beginn
-  benannt, nicht hier.
-- **Vorgehen, das beim Beginn gilt** (damit es nicht später als
-  Einschränkung erscheint):
-  · **Das Register zuerst, dann die Inhalte.** Ohne abgeleitetes
-    Register ist „alles gesichtet" eine Behauptung — 197 Archive kann
-    niemand im Kopf halten, und eine gepflegte Liste veraltet still
-    (dieser Baum hat das fünfmal gemessen).
-  · **Lizenz an der DATEI messen.** `measurement_hit_wrong_class`: das
-    API-Feld von GitHub/GitLab meldet die Projekteinstellung, nicht
-    die Lizenzdatei — `fdtc` galt als „ohne Lizenz" und trägt BSD-3.
-  · **Vor jedem Eintrag „steht das schon irgendwo?"** — der Baum
-    zitiert `neue-ideen/` bereits 108 Mal; ein zweiter Eintrag
-    derselben Sache wäre die Doppelhaltung, gegen die K4 steht.
-  · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
-    bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
-    allem, was auffällt.
-- **Stand 2026-09-19, erster Durchgang — die Gestalt ist gemessen, und
-  sie ist NICHT „216 Archive aufmachen":**
-  · **Die 70 `.md` sind kein Material, sondern die Spur der
-    bisherigen Sichtung** — eine durchnummerierte Reihe UFT-29 bis
-    UFT-105, 64 Dokumente auf 62 Nummern (UFT-30 und UFT-32 doppelt
-    vergeben), mit **15 Lücken**. Damit bekommt „was vergessen wurde"
-    eine prüfbare Form statt einer Willenserklärung.
-  · ~~**Fünf Lücken liegen in `~/Downloads`, nicht in `neue-ideen/`:**
-    UFT-34, UFT-35, UFT-41, UFT-42, UFT-50. Das ist buchstäblich „was
-    vergessen wurde".~~ **BERICHTIGT noch vor dem Push (MF-1267) —
-    die Aussage war in ihrem schärfsten Teil falsch, und der Fehler
-    war meiner.** Meine Reihen-Messung las `glob("UFT-*.md")`, also
-    **nur die oberste Ebene**. Rekursiv liegen **vier der fünf längst
-    in `neue-ideen/`**, verschachtelt in ihren eigenen
-    Materialordnern; die Downloads-Fassungen sind **byteidentisch**
-    (SHA-256 je Paar gleich) — Dubletten, keine Funde. **Wirklich
-    vergessen war genau EINE:** `UFT-50-Korg-TSeries.md`, jetzt
-    kopiert; `~/Downloads` blieb unangetastet, und die vier
-    Dubletten, die ich dabei selbst angelegt hatte, sind wieder
-    entfernt. Klasse MF-1024/MF-1033: **der Leser war richtig, die
-    Aussage über den Gegenstand war zu weit** — „nicht auf der
-    obersten Ebene" ist keine Aussage über „nicht vorhanden".
-  · **Rekursiv stimmen auch die übrigen Zahlen anders:** 70 Dokumente
-    auf **67** Nummern (nicht 62), **drei** doppelt vergebene Nummern
-    statt zwei — neu ist **UFT-33**, das als
-    `dcopy/UFT-33-DCopy-Bootblock-Identifikation.md` neben dem
-    `UFT-33-HAL-Erweiterungen.md` der obersten Ebene liegt. Lücken
-    sind **zehn**, nicht fünfzehn: 36–40, 44, 45, 47, 48, 98 — für
-    diese zehn wurde in `neue-ideen/` (rekursiv), `~/Downloads`,
-    `docs/` und `tools/` gesucht und nichts gefunden.
-  · **Ein Ertrag bleibt, und er ist vorbeugend:** `UFT-42` berichtigt
-    `UFT-33` ausdrücklich, dessen `uft_bb_entry_t` dort „eine
-    plausible Rekonstruktion ohne Beleg" heißt. Gemessen gibt es
-    `uft_bb_entry_t` im ganzen Baum **nicht**, und
-    `docs/nachbau/XCOPY_VERHALTEN_HAND-A.md` nennt Bootblock nur als
-    Abgrenzung — die Berichtigung verhindert etwas, sie repariert
-    nichts.
-  · **Gelesen, mit Urteil:** `UFT-50` beschreibt ein **eigenständiges**
-    Korg-T-Serien-Format (80×2×10×1024 = 1 638 400 Byte) neben dem
-    vorhandenen DSS-1 (80×2×5×1024 = 819 200) — Quelle `korgutils
-    0.9.1`, GPLv2. Ein **neues Format-Plugin** fällt unter das
-    Moratorium der EINFRIER-REGEL, auch als Vorschlag; also notiert,
-    nicht gebaut. `UFT-41` sagt ausdrücklich „kein Bug gefunden,
-    UFTs ATR-Modul hält stand" — ein **negatives** Ergebnis, das
-    festzuhalten sich lohnt, damit es niemand ein zweites Mal
-    erarbeitet.
-  · **Die Gegenprobe hat den zweiten Befund halbiert, und das gehört
-    dazu:** 9 Ausarbeitungen zitiert der Baum unter ihrer **Nummer**
-    nirgends — nach **Inhalt** gesucht kennt er UFT-94 (COPYLOCK 80),
-    UFT-99 (NIBtools 64 / RapidLok 65) und UFT-95/96 (GEOS 43) sehr
-    wohl. Wirklich unberührt sind **vier bis fünf**: UFT-102, UFT-103,
-    UFT-101, UFT-105, am Rand UFT-97. „0 gefunden" ist keine
-    Entwarnung, sondern die Frage, was die Messung nicht sieht.
-  · **Eine Zahl ist ausdrücklich eine GRENZE, keine Zahl:** von 216
-    Einträgen nennt der Baum 71 — davon 9 nur über einen Namen, der
-    als Suchwort nichts taugt (`1`, `disk`, `copy`, `.claude`).
-    Unerwähnt sind also **mindestens 145**, höchstens 154. (Seit der
-    Kopie von `UFT-50` sind es **217** Einträge; das Register führt
-    entsprechend 215 ohne Urteil statt 214.)
-  · **Zwei Zahlen des eigenen Aufnahmeeintrags hielten nicht** (197
-    Archive, 20 Verzeichnisse) — berichtigt oben, durchgestrichen
-    stehen gelassen.
-  · **Festgehalten als `P3-512`** (berichtigt) und **`P3-513`** (der
-    Korg-Fund).
-- **Stand 2026-09-19, zweiter Durchgang — das Register steht, und die
-  ersten Urteile sind GEERNTET statt neu erfunden:**
-  · `scripts/gen_neue_ideen_register.py` + `docs/neue_ideen_urteile.json`
-    → `docs/NEUE_IDEEN_REGISTER.md`. Es meldet die Differenz in **beide**
-    Richtungen (Eintrag ohne Urteil **und** Urteil ohne Eintrag) und
-    sagt bei fehlendem Verzeichnis „Umfang nicht feststellbar" statt
-    „alles beurteilt". Selbsttest 9/9, zwei Mutationen gefangen.
-    **Kein Tor** — ein Tor, das seinen Gegenstand in CI gar nicht
-    sehen kann, wäre eines, das nicht anschlagen KANN.
-  · **Geerntet, nicht erfunden:** von 217 Einträgen tragen **9** ihr
-    Lizenzurteil längst in `docs/ORACLES.md` bzw.
-    `docs/QUARANTINE.md`; sie sind mit Verweis eingetragen, nicht
-    abgeschrieben (K4: keine Doppelhaltung). Dazu `x50conv.exe`,
-    `OmniFlop…zip` und `UFT-50`. **Stand: 12 von 217 beurteilt, 205
-    offen.**
-  · **Zwei Einträge stehen bewusst OHNE Urteil**, obwohl die Suche sie
-    zunächst als „beurteilt" meldete: `atari.zip` und `Skript.pdf`
-    trafen nur über einen **Wortstamm** (`atari`, `Skript`), nicht
-    über ihren Namen. Zu keinem von beiden habe ich eine Aussage
-    gefunden — also keine eingetragen.
-  · **Und die Zahl 12 ist selbst das Ergebnis einer Korrektur:** die
-    Stammsuche meldete **12 mit Lizenzurteil**, die wörtliche Suche
-    nur **6**. Beide Richtungen sind falsch — `FLOFOR` und
-    `IPF-Format` stehen im Baum ohne ihre Endung. Eingetragen ist
-    nur, wozu ich eine Aussage **gelesen** habe: neun.
-  · **137 von 217 stehen in KEINER der vier Quellen** (`ORACLES.md`,
-    `QUARANTINE.md`, `erzeuger_kanaele.json`, `OPEN_ITEMS.md`) — das
-    ist der eigentliche Rückstand, und er ist jetzt beziffert statt
-    geschätzt.
-- **Stand 2026-09-19, dritter Durchgang — die Lizenzen sind GELESEN,
-  nicht geraten: 47 von 217 beurteilt, 170 offen:**
-  · **Erst sortiert, dann gelesen.** Von den 205 unbeurteilten tragen
-    **35** eine Lizenzdatei im Paket, **75** keine, **7** sind `.lha`
-    und mit der Standardbibliothek **nicht lesbar** — die werden als
-    „keine Aussage" geführt, nicht still als „ohne Lizenz" —, und
-    **88** sind gar keine Archive (die UFT-NN-Ausarbeitungen und
-    lose Quellen). Gelistet, nicht ausgepackt.
-  · **Die 35 Lizenzdateien gelesen: 30 bestimmt, 5 nicht.** Die
-    Zuordnung läuft über einen Wortschatz, und was er nicht erkennt,
-    heißt **„unbestimmt"** und bekommt seinen Anfang mitgedruckt —
-    er rät nie. Verteilung **der 30**: 7× Apache-2.0, 8× MIT, 6×
-    GPL-2.0, 2× GPL-3.0, 4× LGPL, 1× BSD-3-Clause, 1× Unlicense, 1×
-    zlib. (Über alle 47 Urteile gezählt sieht es anders aus — 8×
-    Apache und 5× GPL-2.0 —, weil `nibtools-extra` von Hand
-    dazukam und `casutil_extract_c` nachträglich auf „ungemessen"
-    zurückgestuft wurde. Zwei Zahlen zu derselben Sache sind genau
-    die Drift, gegen die dieser Baum steht; deshalb steht hier,
-    welche Menge gemeint ist.)
-- **Stand 2026-09-19, fünfter Durchgang — die Readmes gelesen, das
-  Dekompilat gefunden, und der Eigentümer hat über den Quarantäne-
-  Nachtrag entschieden: 170 von 217 beurteilt, 47 offen:**
-  · **Readme-Messung** über die Einträge ohne Lizenzdatei: **12** mit
-    einer Bedingung (Trefferzeile zitiert, nicht klassifiziert), **19**
-    durchsucht ohne Treffer, **44** ohne Readme, 0 Fehler. Sie hat den
-    vierten Durchgang berichtigt: „75 ohne Lizenzdatei" war eine
-    **Obergrenze** — `akaiutil` trägt `gpl-2.0.txt`, der Protection-
-    Catalog `LICENSE_UFT_PROJECT.txt`, beides von meinem Dateinamen-
-    Muster (LICENSE/COPYING) nicht erkannt. Und ein „nicht
-    kommerziell"-Treffer stammte aus **GPL-2 §3 selbst** („allowed
-    only for noncommercial distribution"), nicht aus einer
-    Zusatzklausel. Eine Copyright-Zeile allein zählt nicht als
-    Bedingung.
-  · **`dtc_code/` ist die rohe Dekompilation des proprietären
-    KryoFlux-`dtc`** (`dtc_decompiled.c` mit 116 Routinen,
-    `dtc_text_arm64.asm` 24,7 MB, `dtc_text_section.bin`). Der Baum
-    kannte es: `QUARANTINE.md` führt dtc als **Verdacht, Zone ROT**,
-    `src/dtc_components/` kam mit MF-1099 als **Eigentümerentscheidung,
-    nicht als Lizenzprüfung**, und `src/dtc_components/LICENSE:24`
-    schließt „decompiler output" aus. Neu ist die **Lesung der
-    SPS-Lizenz** selbst (`Linux_Release3.50/LICENCE.txt` aus
-    `fertige/kryoflux_3.50_linux_r4.tar.gz`, 14 442 Byte): Z. 61 „only
-    for **private & non-profit purposes**", Z. 150 „All rights
-    reserved"; im gegrepten Text **keine** reverse/decompile-Klausel —
-    eine Grenze des grep, keine Erlaubnis. Für ein öffentliches
-    GPL-2-Projekt ist das ohnehin nicht weitergabefähig.
-  · **Der Nachtrag dazu in `QUARANTINE.md` ist auf Anweisung des
-    Eigentümers zurückgenommen** („lösche docs/QUARANTINE.md",
-    präzisiert per Rückfrage zu „nur meinen Nachtrag verwerfen"; die
-    Datei bleibt — 7 Skripte lesen sie, darunter `gen_stand.py` und
-    die Kennzahl-Ableitung in `update_inventory.py`). Die Messung
-    lebt im Register-Urteil zu `dtc_code`, Patch gesichert im
-    Job-Verzeichnis.
-  · **50 Urteile gesät**, jedes mit benannter Quelle: 12 aus der
-    Readme-Bedingung, 19 aus „durchsucht, kein Treffer" (ehrlich als
-    Zustand), 19 aus Baum-Zitaten (SDISK MIT/MF-1176, formats1
-    BSD-3/MF-1078, pc98-disk-tools/MF-1224, 1050-Turbo/MF-1179 …),
-    eigenem Material (UFT-NN-Zips, UFT_Paket, `.claude`) und den
-    vier verschachtelten Analysen (Kurzurteil wörtlich). Verteilung
-    der 170: Kanal Spec 81 · Fundus 71 · Port 6 · Oracle 5 ·
-    Helfer-Prozess 3 · Daten/Fixture 2 · Nachbau 2; Kennzahl T3 runter
-    3, sonst Fundus.
-  · **Entwurfsfrage, nicht entschieden:** fünf Einträge sind selbst
-    Sammelordner — `1` (143 Dateien), `copy` (176), `floppy1` (92),
-    `fertige` (1354), `exsource` (24) — zusammen **1789 der 2408
-    Dateien**. Das Register sieht sie als je einen Eintrag; ob eine
-    zweite Ebene hinein gehört, ist die Frage, an der „vollständig
-    gesichtet" hängt. Offen für den Eigentümer.
-  · **Die 47 Offenen** haben weder Readme noch Baum-Zitat noch
-    Analyse; sie sind nicht geöffnet, und ein Urteil „nicht geöffnet"
-    wäre eines über den Zustand, nicht über den Inhalt — deshalb
-    stehen sie ohne.
-- **Richtungswechsel 2026-09-19, Wortlaut des Eigentümers:** „ich
-  möchte das du A-032 nimmst und damit mein tool verbessert und
-  leistungsstärker mach | allen externen code nehmen, verbessern, und
-  in unser tool implementiern" — mit dem Paket **`uft_disk2`** (Kopf,
-  Umsetzung, Test, Entwurfsdokument „UFT-NN — Das Zentrum") im selben
-  Auftrag. Der Posten heißt damit nicht mehr „sichten", sondern
-  **„einbauen"**; das Register aus den Durchgängen eins bis fünf bleibt
-  die Landkarte dafür (170 von 217 beurteilt).
-- **Stand 2026-09-19, sechster Durchgang — `uft_disk2` ist im Baum
-  (MF-1272), mit Brücke und zwei Tests:**
-  · **Fünf Namen des Entwurfs gab es hier schon**, mit anderer
-    Bedeutung: `uft_encoding_t` (21 Dateien), `uft_layer_t` (zweimal!
-    — `uft_unified_image.h` und `uft_track.h`), `uft_diag_t` (8),
-    `UFT_CONF_CERTAIN`, `UFT_FS_FAT12`. Alle öffentlichen Namen tragen
-    deshalb `uft_d2_`/`UFT_D2_`; die Kodierung nimmt den vorhandenen
-    `uft_encoding_t` (D3), keinen zweiten Enum.
-  · **Neun Verbesserungen gegenüber dem Entwurf**, jede im Kopf von
-    `uft_disk2.h` benannt — darunter: der Bericht sagt „CRC nicht
-    getragen" statt „falsche CRC: 0" (die Einbahn-Aussage, die
-    MF-662 erfunden nennt); der letzte Befundplatz ist von Anfang an
-    reserviert (der Entwurf nahm den 512. an und überschrieb ihn
-    still); `uft_d2_report()` gibt die BENÖTIGTE Länge zurück, eine
-    Kürzung ist erkennbar; `UFT_D2_CONF_UNVERIFIED` (128) hat einen
-    Namen statt ein Literal zu sein.
-  · **Die Brücke `uft_d2_from_disk()`** liest jede Spur über
-    `plugin->read_track()` und übersetzt ehrlich: CRC „bekannt" nur
-    bei Fehlerflagge oder Prüfwert ≠ 0/0 (`add_sector` setzt OK
-    unbedingt — kein Beleg); Zuversicht 255 nur mit stimmender CRC,
-    sonst 128, bei falscher CRC 64 (als **Richtlinie** benannt),
-    Füllmaterial 0; Lage im Bitstrom SIZE_MAX (drei Versatzfelder im
-    alten Modell ohne Aussage, welches gilt); `raw_data` ohne
-    `raw_bits` wird gezählt, nicht erfunden. Was sie nicht trägt
-    (Fluss, per-Bit-Weak-Maske), meldet sie als je EINEN Befund.
-  · **Gemessen am Korpus-86F** (im Git, also in CI): 160 Spuren, 1440
-    Sektoren — dieselbe Zahl wie das Plugin direkt, byteidentisch als
-    Kopie, 0 mit 255, 0 mit CRC-Angabe; zweite Quelle das `.img`
-    derselben Diskette (720 = 1440/2, das 86F legt jeden Zylinder
-    doppelt ab). Dazu ein gestelltes Plugin für die Fälle, die der
-    Korpus nicht hat: 255 / 64 / 0 / 128, jede Zahl aus ihrer Regel.
-  · **Vier Rotbeweise, jeder an genau seiner Zusage:** Brücke ohne
-    Einspeisung (0 statt 1440), Zuversichtsregel entfernt, Entwurfs-
-    Größenvergleich, Entwurfs-Überlauf. Alle sechs Dateien 0 Warnungen
-    unter `-Wall -Wextra -Wpedantic`.
-  · **Nebenbefund, gemessen:** der Baum hat **zwei halbe Aufräumer**
-    für `uft_track_t` (MF-599 kannte es): `uft_track_cleanup()` gibt
-    Sektoren/`flux`/`raw_data` frei, `uft_track_free()` zusätzlich
-    `confidence`/`weak_mask`/`flux_times`/`revisions`, `raw_data`
-    aber nur mit `owns_data`. Die Brücke räumt deshalb beides selbst.
-    Und die alten Schicht-Zeiger `flux_layer`/`bitstream_layer`/
-    `sector_layer` in `uft_track_t` haben 0/0/1 Nutzer — dieselbe
-    Idee wie die vier Schichten, nie gefüllt.
-  · ~~**Noch kein Produktivleser** — der ist der nächste Commit.~~
-    **Eingelöst mit MF-1273 (siebter Durchgang, unten).**
-- **Stand 2026-09-19, siebter Durchgang — der erste Produktivleser
-  (MF-1273): der Disk-Analyzer zeigt, was der Träger trägt:**
-  · `DiskAnalyzerWindow::loadImage()` speist das geöffnete Abbild
-    über sein Plugin in das Zentrum ein (`uft_d2_from_disk`) und
-    zeigt `uft_d2_report()` in einem neuen Kasten `textDiskReport`
-    unter dem Sektorbericht; der HTML- und Text-Export nimmt ihn mit.
-    Ohne Plugin steht dort „Kein Bericht: kein Plugin konnte dieses
-    Abbild oeffnen" — kein leerer Kasten, der wie „nichts gefunden"
-    aussieht.
-  · **Gemessen an der 35-Spur-D64 des vorhandenen `no_fiction`-Tests:**
-    „Traeger: 35 Spuren, hoechste Lage C34 H0 (gemessen)", „Sektoren:
-    683 — mit CRC-Angabe: 0 (davon falsch: 0), ohne CRC-Angabe: 683",
-    „Schichten: Sektoren". 683 und 35 sind Formateigenschaften
-    (17×21 + 7×19 + 6×18 + 5×17), keine Ablesung aus unserem Code —
-    und das D64-Plugin liefert `crc_stored = crc_calculated = 0`, also
-    darf der Bericht kein CRC-Urteil fällen; er sagt „ohne Angabe".
-  · **Rotbeweis:** Brückenaufruf in `traegerBericht()` entfernt →
-    genau die neue Zusage `theCarrierReportIsMeasuredNotAssumed()`
-    fällt (5 bestanden, 1 gefallen), die drei alten `no_fiction`-
-    Zusagen bleiben grün; wiederhergestellt 6/6. Damit hat die Brücke
-    aus MF-1272 ihren Produktivaufrufer und einen Test, der rot wird,
-    wenn der Aufruf verschwindet (D2).
-  · **Der Einbauort ist meine Wahl** (der Entwurf nannte als Punkt 2
-    „img + FAT12"; `uft_fat_robust` liegt noch in den Zips) — die
-    Brücke und der Bericht sind ortsunabhängig, ein Umzug in einen
-    anderen Reiter ist Minuten. **Die eine Verhaltensänderung:** das
-    Laden liest jetzt jede Spur; bei Sektorabbildern Millisekunden,
-    bei Flussabbildern dekodiert das Plugin je Spur — das steht im
-    Kopf von `traegerBericht()`.
-  · **Kein Klick-Smoke-Test** — es gibt hier keine Anzeige; belegt ist
-    der Weg durch den Qt-Test offscreen (`loadImage` → Kasten
-    gefüllt → fünf Zusagen). Was der Kasten im Fenster tatsächlich
-    zeigt, hat der Eigentümer noch nicht gesehen.
-- **Stand 2026-09-20, achter Durchgang — die ZWEITE FASSUNG des
-  Zentrums (MF-1274), vom Eigentümer eingereicht, mit derselben
-  Namensmessung wie beim ersten Mal:**
-  · **Was dazukam:** Generationen je Schicht samt `uft_d2_validate()`
-    (fünf Widersprüche: STALE_DERIV, POS_BEYOND, ENC_MISMATCH,
-    REV_EMPTY_INDEX, FS_RANGE); ein **Ableitungsregister** mit
-    Kennungen statt eines Herkunfts-Structs je Objekt; **Stimmen je
-    Bit** (`agree[]` + `nrevs_fused` — „3 von 5" ist nachprüfbar,
-    „Konfidenz 153" nicht); **mehrere Dateisysteme** je Diskette;
-    Kodierung je **Sektor**; `crosses_index` **gerechnet** statt
-    gesetzt, und zwar über BEIDE Felder (IOI ≠ DOI); die
-    Zuversichtsregel an **allen** Schichten; Spurindex `[cyl][head]`;
-    Merkmalcache; dynamische Metadaten mit Überlaufmeldung; die
-    Fehlerzahl im Bericht — oben UND in der Kürzungszeile.
-  · **Zwei Messungen am Baum, beide gegen den Entwurf:** die sieben
-    Namenskollisionen aus MF-1272 gelten unverändert (der Entwurf
-    benutzt dieselben Namen wieder) → alles bleibt `uft_d2_`/`UFT_D2_`;
-    und **`UFT_ENC_GCR` gibt es hier nicht** — der Baum führt gemessen
-    **20** Kodierungen statt vier, GCR nach Familie getrennt (CBM,
-    Apple 5.25", Apple 3.5", Victor), dazu `UFT_ENC_AMIGA_MFM` und
-    `UFT_ENC_M2FM`. Ein Sammelwert hätte bei Kopierschutz genau die
-    Frage verschluckt, auf die es ankommt.
-  · **Eine Schemaänderung mit Grund:** `by`/`params` waren ein
-    `const char *` mit der Auflage „muss statisch sein". Ein Zeiger ist
-    nicht serialisierbar, und die Auflage war eine Bitte an den
-    Aufrufer statt einer Eigenschaft des Modells — jetzt wird in feste
-    Feldbreite KOPIERT. Der Test führt das vor: ein Name wird nach dem
-    Registrieren überschrieben und steht danach noch richtig da.
-  · **Eine Falle, die ich in den Kopf geschrieben habe, weil sie sonst
-    niemand sieht:** `uft_d2_track()` gibt einen Zeiger in ein Feld
-    zurück, das beim Anlegen der NÄCHSTEN Spur umzieht. Der Index hält
-    deshalb Nummern, keine Zeiger — und wer eine Spur über ein
-    weiteres `uft_d2_track()` hinweg hält, hält ins Leere.
-  · **Rotbeweis: sieben Mutationen, sieben gefallen** — Generation
-    steigt nicht (6 Zusagen), Zuversichtsregel lässt alles durch (8),
-    Stimmen ohne Basis angenommen (4), `crosses_index` nur auf
-    `dam_bit` (2), Kürzungszeile zählt verdeckte Fehler nicht (2),
-    Metadaten-Überlauf bleibt still (2), Brücke trägt eine andere
-    Herkunft ein (1441). Wiederhergestellt byteidentisch, beide Tests
-    grün, volle Suite 520/520, Bau 0 Warnungen.
-  · **Und eine Lücke in meinem EIGENEN Test hat der Rotbeweis
-    gefunden:** die IOI/DOI-Unterscheidung war nicht bewacht — meine
-    Fälle waren so gewählt, dass eine Prüfung nur auf `dam_bit`
-    dasselbe Ergebnis liefert. Erst der Fall „Adressfeld bei 10,
-    Datenfeld ab 70, Index 64" trennt die beiden. Nachgetragen, dann
-    fällt Mutation D.
-  · ~~**GESTOPPT:** der Behälter UFTD kommt als eigener Commit.~~
-    **Eingelöst mit MF-1275 (neunter Durchgang, unten).**
-- **Stand 2026-09-20, neunter Durchgang — UFTD: der erste Weg, auf dem
-  ein Abzug diesen Baum OHNE Verlust verlässt (MF-1275):**
-  · **Der Behälter.** Kopf `"UFTD"` + Version + Flags + Gesamtlänge;
-    danach Blöcke aus Kennung, Länge, Inhalt und **eigener CRC32**:
-    DERV (Ableitungsregister), META, TRAK mit FLUX/BITS/SECT, FSYS,
-    DIAG, END mit der Gesamt-CRC. Drei Eigenschaften, die nicht
-    verhandelbar sind: unbekannte Blöcke werden **übersprungen und
-    gemeldet** (vorwärtsverträglich); jeder Block trägt seine CRC, also
-    wird ein gekipptes Bit **an seiner Stelle** gefunden und alles
-    davor ist trotzdem geladen; und **Laden ist nie stiller als
-    Speichern** — was fehlt oder nicht stimmt, steht danach als Befund
-    im Modell.
-  · **Der Produktivaufrufer, und er ist nicht nachgereicht:** das
-    Analyzer-Fenster **behält** seit MF-1275 das Modell (`m_traeger`),
-    statt es nach dem Bericht wegzuwerfen; `traegerSichern()` schreibt
-    genau **diese** Messung als UFTD, und der Export legt sie neben den
-    HTML-/Text-Bericht. Ein zweites Lesen wäre eine zweite Messung, und
-    zwei Messungen können auseinandergehen.
-  · **Gemessen am D64 des vorhandenen Tests:** gesichert, mit
-    `uftd_load_file()` **von fremder Hand** zurückgelesen — 35 Spuren,
-    683 Sektoren, und der Bericht aus der Datei ist **Zeichen für
-    Zeichen** derselbe wie der im Kasten. Am vollen Modell (Fluss mit
-    zwei Umdrehungen, Bitstrom mit allen vier Nebenreihen, zwei
-    Dateisysteme, Metadaten, Ableitungen, Befunde): **3845 Byte,
-    Doppelrundlauf vollständig byteidentisch.**
-  · **Drei Abweichungen vom Entwurf, jede mit Grund:** (a) seine
-    Versionsprüfung `(ver >> 8) > (UFTD_VERSION >> 8) && …` konnte für
-    **keine** Fassung unter 256 zuschlagen — eine Datei der Fassung 2
-    hätte ein Leser der Fassung 1 klaglos geöffnet; (b) `meta_hidden`
-    wurde nicht mitgesichert, womit ein Modell mit Überlauf nach einem
-    Rundlauf einen **anderen Bericht** gehabt hätte; (c) Befunde gehen
-    beim Laden **direkt** in die Liste statt durch `uft_d2_diag()` —
-    sonst zählt eine volle Liste ihren eigenen Überlauf-Eintrag noch
-    einmal als Überlauf.
-  · **Rotbeweis: sechs Mutationen, sechs gefallen.** A `uftd_save_file`
-    im Analyzer nicht gerufen → genau die neue Zusage fällt (6/1), die
-    sechs alten nicht. B `meta_hidden` nicht gesichert (2). C verdeckte
-    Befundzähler verloren (2). D die Versionsprüfung des Entwurfs
-    eingesetzt (3 — „Fassung 2 abgewiesen, war ok"). E Gesamtlänge nach
-    der Gesamt-CRC eingetragen (6 — **4068 statt 3845 Byte** und ein
-    `TOTAL_CRC`-Befund, den es nicht geben dürfte). F Zuversichtsregel
-    beim Laden umgangen (5). Wiederhergestellt byteidentisch, volle
-    Suite **521/521**, Bau 0 Warnungen.
-  · **Was der Entwurf selbst als offen nennt und offen bleibt:** keine
-    Kompression (ein `FLXZ`-Block ginge ohne Änderung an Lesern, die
-    ihn nicht kennen), kein Streaming, keine `SECTOR_OVERLAP`-Prüfung,
-    und die Versionsregel „Nebenversion darf höher sein" — sie kommt,
-    wenn es eine zweite Version gibt; vorher wäre sie eine Regel ohne
-    Fall.
-  · **Nicht belegt:** ein Flussabzug in Originalgröße. Das volle
-    Testmodell hat 3845 Byte; wie sich `uftd_save()` bei fünf
-    Umdrehungen über 160 Spuren verhält, ist **nicht gemessen** — der
-    Entwurf nennt „mehrere Megabyte", und der Aufbau ohne Streaming
-    hält alles im Speicher.
-- **Stand 2026-09-20, zehnter Durchgang — `uft_fat_robust` eingebaut
-  (MF-1276), und zwar IN den vorhandenen Leser statt daneben:**
-  · **Die Entscheidung aus §10.1 der Ausarbeitung ist gefallen, und sie
-    ist gemessen begründet.** Das eingereichte Modul deklariert drei
-    Namen, die es hier schon gibt — `uft_fat_geometry_t`,
-    `uft_fat_chain_t` und `uft_fat_chain_free`, alle drei **dieselben
-    Begriffe mit anderen Feldern**. Ein zweites Modul daneben wäre der
-    dritte FAT12-Kettenläufer im Baum gewesen (der zweite steht in
-    `src/formats/msx/uft_msx.c:463-491`) — genau die Krankheit, die der
-    Zentrum-Entwurf als „FAT-Kettenläufer x2" benennt. Also integriert.
-  · **Der Defekt, den die Messung gefunden hat, stand schon da:**
-    `uft_fat_get_chain()` hielt den nächsten Cluster nur gegen die
-    **ersten sechzehn** Glieder (`for (i = 0; i < count && i < 16; i++)`).
-    Eine Schleife, die sich später schließt — 2..40, dann 40 → 20 —
-    war unsichtbar: `has_loops` blieb **false**, die Kette lief bis zur
-    65536er-Bremse, und der Aufrufer bekam zehntausende Cluster ohne
-    jede Warnung. Seit MF-1276 eine volle Bitmenge (360 Byte bei 1,44
-    MB), und `loop_at` sagt, **wo** sie sich schließt.
-  · **Und der Kettenläufer hatte NULL Tests** — gemessen
-    `git grep -l uft_fat_get_chain -- tests/`: kein Treffer. Die
-    Funktion, an der jede FAT12-Extraktion hängt, war unbewacht.
-  · **Neu:** `uft_fat_get_chain_sized()` fragt MIT der Dateigröße und
-    kann deshalb sagen, ob die Kette reicht: `needed`, `from_chain`,
-    `status`. Reißt sie ab, wird fortlaufend weitergelesen — und der
-    Zustand heißt `CONTIG`, „fortlaufend geraten (Versuch)", nicht
-    „ok". Produktivaufrufer ist `uft_fat_extract()`, das die Größe
-    bisher nur zum Abschneiden benutzte statt zum Fragen.
-  · **Vier Aussagen der Ausarbeitung über UNSEREN Baum nachgemessen:**
-    drei treffen zu (null Treffer für contig/cross/fallback, der zweite
-    Kettenläufer in `uft_msx.c`, keine Querverweiserkennung), eine ist
-    gedriftet — sie sagt 854 Zeilen, gemessen sind es **884**.
-  · **Rotbeweis: vier Mutationen, vier gefallen** — alte 16er-Bremse
-    (4 Zusagen), kein Rückfall (5), keine Deckelung auf den Bedarf (2),
-    `uft_fat_extract` fragt wieder ohne Größe (2). **Mutation C fiel
-    beim ERSTEN Lauf nicht**: meine Gruppe 4 deckte sie nicht ab, weil
-    dort die Diskette bremst und nicht der Bedarf. Gruppe 5
-    nachgetragen (Kette 10 Glieder, Datei 2 Cluster), dann fällt sie.
-    Dieselbe Klasse wie MF-1014 und MF-1274-D: ein grüner Test, der aus
-    dem falschen Grund grün war.
-  · **Herkunft:** disk-peek (Joost Yervante Damad, MIT,
-    `js/fat12.js:137-159`), Verfahren übernommen, Code neu geschrieben
-    — Kanal *Nachbau* nach MF-695. Die Vermerke stehen in allen drei
-    berührten Dateien; `audit_attribution_licence.py` meldet Rückstand
-    **29** gegen Grundlinie 31. **Ein NOTICE gibt es in diesem Baum
-    nicht** — die Ausarbeitung verlangt einen Eintrag dort, der
-    Mechanismus hier ist die Attribution im Dateikopf (MF-636).
-- **Stand 2026-09-20, elfter Durchgang — der erste der 29 gesperrten
-  Wandlungspfade ist frei (MF-1277), und der Plan dazu steht:**
-  · **`docs/PLAN_MODERNISIERUNG.md`** hält den Fahrplan in sechs Phasen,
-    jede in einer frischen Sitzung ausführbar. Eigentümerauftrag
-    wörtlich: „nimm alle den fremd code aus neue-ideen und verbessere
-    ihn, gehe den gesamt code durch suche nach schwachstellen … fange
-    dann zuerst mit IMD→IMG an."
-  · **Die Lage vorher, mit einem Wegwerf-Prüfstand gegen die ECHTE
-    `uft_convert_file()` gemessen:** 46 Wandlungspfade, 17
-    Matrix-Einträge, **29 gesperrt** — und zwar aus **drei**
-    verschiedenen Gründen: 18 am Preflight („UNTESTED"), 5 an
-    mehrdeutiger Quelle, 4 weil die Tabelle eine Format-ID nennt, die
-    **kein Plugin trägt** (`KRYOFLUX`), 2 ohne Quelldatei (`NBZ`).
-  · **Der teuerste Nebenbefund:** von **17** `.img`-Korpusdateien
-    werden nur **zwei** als `plugin='IMG'` erkannt; die übrigen holen
-    sich MSX, Victor9K, Micropolis, NorthStar oder HardSector — und
-    die deklarieren **alle** `UFT_FORMAT_DSK`. Die Wandlungstabelle ist
-    auf Format-IDs verschlüsselt, der ID-Raum ist aber eingeschmolzen
-    (MF-1087: 101 Plugins tragen `UFT_FORMAT_DSK`).
-  · **`IMD→IMG` ist eingelöst.** Beleg: `hxcfe_pc160.imd` (164 785 B,
-    **fremde Hand**) → 163 840 B, **0 von 163 840 abweichend** gegen
-    `uft_pc160.img`. Keine Gleichheit ohne Aussage (MF-1039):
-    163 840 = 40 × 1 × 8 × 512 ist der Sektorinhalt selbst.
-  · **Stufe `LOSSY_DOCUMENTED`, nicht `LOSSLESS`** — die Prüfdiskette
-    hat 0 defekte Sektoren, die IMD-Metadatenschicht geht trotzdem
-    verloren: neun Posten, aus den **Feldern** belegt. Der neunte ist
-    der forensisch teure: fehlende Sektoren werden mit **`0xE5`**
-    gefüllt und sind danach von echten `0xE5`-Sektoren nicht mehr zu
-    unterscheiden; der Wandler zählt und meldet sie, die Zieldatei kann
-    es nicht tragen.
-  · **Gemessen und festgehalten:** `accept_data_loss` hilft bei einem
-    UNGEPRÜFTEN Paar **nicht** (der Preflight sperrt zu jedem Preis) —
-    **nach** dem Eintrag greift es und wird verlangt. Die Absage
-    wechselt von „conversion pair is UNTESTED" auf „requires
-    accept_data_loss=true". Genau so ist es gebaut.
-  · **Rotbeweis: vier Mutationen, vier gefallen** — Matrix-Eintrag auf
-    ein anderes Ziel (14 Zusagen), zwei Stichworte aus der Notiz (4),
-    Füllbyte `0xE5`→`0x00` (2), Zustimmung verweigert (6).
-    **Mutation C fiel beim ERSTEN Lauf nicht**, weil die Prüfdiskette 0
-    fehlende Sektoren hat — Gruppe 5 baut deshalb eine IMD **mit**
-    Lücke (Sektortyp `UFT_IMD_SEC_UNAVAIL`). Dieselbe Klasse wie
-    MF-1274-D und MF-1276-C: ein grüner Test aus dem falschen Grund.
-  · **Kennzahl:** angebotene Wandlungspfade **15 → 16**, Matrix 17 → 18.
-  · **Nebenbefund, als `P3-517` festgehalten:** ein **Kalman-PLL** ist
-    in diesem Baum nie gebaut worden — drei Funktionen ohne Aufrufer,
-    eine Flagge, ein README-Eintrag für eine Datei, die es nicht gibt,
-    und zwei entschuldigende Kommentare.
-- **Stand 2026-09-20, zehnter Durchgang, Nachtrag — GESTOPPT bei
-  `uft_fat_robust`:** die **Querverweiserkennung** (zwei Dateien
-    auf demselben Cluster) und die **Geometrie ohne BPB** sind nicht
-    gebaut. Beide brauchen eine eigene Datenstruktur und einen eigenen
-    Produktivaufrufer; drei halbe Stücke sind schlechter als eines,
-    das trägt (Scope-Regel). Die Ausarbeitung nennt Querverweise
-    ausdrücklich als das, was in **jedem** Dateisystem des Baums fehlt
-    — das wäre ein Modul über allen, nicht eines in FAT12.
-- **Warteschlange „einbauen", aus dem Register abgeleitet** (die
-  eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
-  `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,
-  `track_layout_gen_c_v5.zip`, `micropolis_gcr_extract_c.zip`,
-  `mpi_gcr_extract_c.zip`; die sechs Module der Reihe
-  `uft_revolution`, `uft_protection_scan`, `uft_splice`,
-  `uft_fat_robust`, `uft_a2_order`, `uft_amiga_media` — ~~sobald ihr
-  Paket gefunden ist~~ **berichtigt MF-1274: DREI davon liegen im
-  Baum, und die erste Suche hat sie nur nicht gesehen.** Gesucht wurde
-  nach Dateinamen (`find -iname '*fat_robust*'`) und in `.md`-Dateien;
-  die Pakete heissen aber auf DEUTSCH und die Modulnamen stehen INNEN:
-  `neue-ideen/UFT-NN — FAT12 lesen.zip` -> `uft_fat_robust.{h,c}` +
-  `test_fat_robust.c` + `UFT-NN_FAT12_Robustheit.md`;
-  `neue-ideen/Apple-Sektorordnung.zip` -> `uft_a2_order.{h,c}` +
-  Test + Ausarbeitung; `neue-ideen/UFT-NN — Amiga.zip` ->
-  `uft_amiga_media.{h,c}` + Test + Ausarbeitung. Gefunden hat sie ein
-  `grep -rl` ueber den GANZEN Baum je Modulname — dieselbe Lehre wie
-  bei `adf_ext` (MF-1222): eine Suche ueber Dateinamen ist eine Aussage
-  ueber Dateinamen, nicht ueber Inhalte. Fuer `uft_revolution`,
-  `uft_protection_scan` und `uft_splice` gibt es weiterhin KEIN Paket
-  (0 Treffer ausserhalb dieser Liste und der Bauartefakte).
-  **`uft_fat_robust` ist damit der naechste Griff** — es ist zugleich
-  Punkt 2 des Zentrums-Entwurfs („ein Adapter, der beweist, dass es
-  traegt: img + FAT12"): je Modul EIN Commit, Rotbeweis zuerst, Lizenz
-  an der Datei, Kanal nach MF-695, und unter der EINFRIER-REGEL kein
-  neues Format-Plugin — Bugfixes und Verifikation ja.
-  · **Und genau die fünf Absagen waren die interessanten.**
-    `capsimage`: „THIS IS NOT FREE SOFTWARE" — und der Volltext liegt
-    laut eigener Datei in einem übergeordneten Archiv, das fehlt.
-    `samdisk_plus`: eine **nicht-kommerzielle** Klausel, festgehalten
-    als **`P3-514`** (Eigentümer-Vorlage). `ST-Recover`: Ms-RL.
-    `OpenCBM`: die Treffer-Datei ist die eines mitgelieferten
-    GUI-Teils, nicht die des Pakets.
-  · **Ein Mangel der eigenen Saat, gemessen und behoben:** die erste
-    gefundene Lizenzdatei ist nicht immer die des Pakets. Nachgezählt
-    war von 30 Pfaden genau **einer** verdächtig
-    (`casutil_extract_c.zip` → `third_party/…/COPYING`); er steht
-    jetzt als „ungemessen für das Paket selbst". Die beiden anderen
-    Fälle dieser Art (`samdisk_plus`, `OpenCBM`) hatte die
-    „nie raten"-Regel ohnehin abgefangen.
-- **Stand 2026-09-19, vierter Durchgang — die eigenen Ausarbeitungen
-  sind beurteilt, die `.lha` gemessen, und zwei der fünf unberührten
-  Analysen machten prüfbare Aussagen: 120 von 217 beurteilt, 97
-  offen:**
-  · **Die vier bis fünf Ausarbeitungen, die niemand zitiert, sind
-    gelesen.** `UFT-103` (86F Loch/Weak): die Testlücke stimmt (453
-    Zeilen, 0 Treffer), die Aussage „nicht als fehlend dokumentiert"
-    nicht — `uft_86f_plugin.c:373` führt es seit MF-961 als
-    `UNSUPPORTED` mit Grund; **die Ausarbeitung hat den Test
-    gemessen, nicht das Plugin.** Festgehalten als **`P3-515`**, mit
-    dem gemessenen Blocker: das Korpus-86F hat **keine**
-    Oberflächenbeschreibung (Disk-Flags `0x1088`, Bit 0 = 0), ein Test
-    dagegen könnte nicht rot werden; und `uft_track_t.weak_mask`
-    kann ein LOCH nicht von einem Weak Bit unterscheiden. `UFT-105`
-    (ProDOS aux_type): Prämisse zu weit — `prodos_po_do.c` liest kein
-    Dateisystem (MF-710), kein eigener Befund. `UFT-101/102/97`:
-    Fundus der Klasse P0-2.
-  · **`UFT-NN_TRS80_JV13_Analyse.md` war nie vergessen, nur namenlos
-    eingelöst:** ihr Hauptfund (`JV3_HEADER_SIZE 0x2300`, 256 Byte zu
-    weit, Verlust in jedem JV3-Abbild) ist genau **MF-1017**.
-  · **Die 66 Ausarbeitungen der obersten Ebene tragen jetzt ein
-    Urteil aus ihrem eigenen Kurzurteil** — der erste Satz, wörtlich;
-    Beleg sind ihre Kopfzeilen (Datum, Quelle); Kanal `Spec`
-    (Sekundärliteratur, gelesen, nichts übernommen); die Lizenz der
-    beschriebenen Quelle ausdrücklich „ungemessen". Nur die oberste
-    Ebene: die fünf verschachtelten gehören zum Urteil ihres
-    Materialordners (K4). Die zwei ohne Kurzurteil (`UFT-NN_*`) von
-    Hand.
-  · **Die sieben `.lha` sind keine „keine Aussage" mehr:** 7-Zip liegt
-    unter `C:\Program Files\7-Zip\7z.exe`, alle sieben gelistet (rc
-    0), **keines** trägt eine Datei namens LICENSE/COPYING/COPYRIGHT,
-    jedes ein Readme/Guide (nicht gelesen). Eine erste Messung meldete
-    einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c)
-    1999-2026 Igor Pavlov"), keine Datei; gemessen, bevor es
-    eingetragen wurde.
-  · **Eigener Fehler beim Eintragen, gefangen vom JSON-Parser:** in
-    vier handgeschriebenen Werten stand das ASCII-`"` als schließendes
-    Anführungszeichen mitten im String. Behoben mit dem typografischen
-    `“`, danach ein Zensus über alle Zeilen (jede trägt 0, 2 oder 4
-    unmaskierte Anführungszeichen). Die Messung dazu scheiterte
-    zuerst selbst — an Bash-Escapes im `-c`-String, die
-    Heredoc-Klasse aus MF-1096.
-  · **Verteilung der 120 Urteile:** Kanal Spec 69 · Fundus 44 ·
-    Helfer-Prozess 3 · Daten/Fixture 2 · Oracle 2; Kennzahl Fundus
-    118 · T3 runter 2. **Die 97 Offenen** sind: 75 Archive ohne
-    Lizenzdatei, dazu lose Quell- und Dokumentdateien und die
-    entpackten Verzeichnisse — jedes davon braucht ein Lesen, kein
-    Listen mehr.
-- **Stand 2026-09-20, MF-1284 (Schritt 1a des TD0-Umbaus):** das
-  TD0-Plugin ist der eine richtige Leser geworden. Der Anlass war eine
-  Messung, die den Plan verändert hat: `uft_td0_read_mem()` sollte
-  gelöscht und die Wandler auf den Plugin-Leser gezeigt werden — gemessen
-  konnte der Plugin-Leser **gepackte TD0 gar nicht lesen** (`compressed`
-  gesetzt und nie benutzt; `Transylvania.td0` meldete 188 Zylinder und
-  null Sektoren mit `UFT_OK`), und der LZSS-Entpacker hatte **0 Aufrufer
-  ausserhalb `uft_td0_lzss.c`**, wäre mit `read_mem` also mitgestorben.
-  1a hängt ihn deshalb ins Plugin, bevor 1b löscht. Belegt gegen hxcfe:
-  80×2/1440, 40×2/720, 41×2/738. Mutationsmatrix 5 von 5.
-  **Offen bleibt 1b** — löschen und die beiden Wandler umhängen.
-- **Stand 2026-09-20, MF-1285 (1b, erster Teil):** 1b ist gemessen **kein
-  Commit, sondern zwei**, und der Grund ist wieder eine Messung, nicht
-  eine Vorliebe:
-  · **Der Speicherweg hat keinen Pfad.** `uftc_td0_to_img_mem()` bekommt
-    Bytes, `uft_disk_open()` will einen Dateinamen, und
-    `uft_format_plugin_t` hat kein Öffnen-aus-dem-Speicher — der
-    Verteiler sagt das selbst und führt es als `KNOWN_ISSUES ARCH-6`.
-    „Wandler auf den Plugin-Leser" war für diesen Weg also gar nicht
-    machbar.
-  · **Das Plugin warf den Kommentarblock weg.** `uft_td0_read_mem()` las
-    ihn, `uft_td0_to_imd()` holt daraus Zeitstempel und Text. Löschen
-    ohne Ersatz hätte still das METADATA-Merkmal verloren, das
-    `uft_format_traegt()` seit MF-1283 für TD0 **und** IMD als getragen
-    führt.
-  MF-1285 baut deshalb den **Strom-Kern**: `uft_td0_strom_t` plus
-  `_aus_bytes`/`_frei`/`_spur`, an Bytes hängend statt an einem Griff,
-  mit behaltenem Kommentarblock. Das Plugin ist nur noch ein Aufsatz
-  darüber. **Nebenbei ist Schritt 5 des Umbauplans belegt:** das
-  Monatsfeld ist 0-basiert — libdsks Schreiber setzt `ptm->tm_mon`,
-  SAMdisk liest `bMon + 1`, und die Korpusdatei vom 2026-09-12 trägt
-  eine 8. Der Header-Kommentar „Month (1-12)" ist berichtigt; für das
-  **Jahr** bleibt eine Abweichung offen (`P3-522`).
-  **Offen bleibt 1b-ii** — die drei Wandler auf den Kern umhängen,
-  `uft_td0_read_mem` samt `uft_td0_image_t`-Lauf löschen.
-- **Stand 2026-09-20, MF-1286 (Sperre vor 1b-ii):** beim Umhängen der
-  IMD-Wandlung auf die kanonischen Sektorfelder fiel auf, dass **das
-  Plugin das falsche Bit als CRC-Fehler las** — `0x01` ist DUP, die
-  doppelte Sektor-ID; der CRC-Fehler ist `0x02`. Vier Quellen sagen
-  `0x02`, eine davon ein **Schreiber** (libdsk `drvtele.c:732`). Die
-  Wirkung ging in beide Richtungen: echte CRC-Fehler kamen als gute
-  Sektoren heraus, doppelte IDs als kaputte.
-  **Das musste vor 1b-ii kommen**, weil 1b-ii die IMD-Wandlung genau
-  auf dieses `crc_ok` umstellt — sonst hätte der Umbau den Fehler in den
-  neuen Pfad getragen und der alte wäre für den CRC-Fall der genauere
-  gewesen.
-  **Und ein grüner Test hat den Defekt bewacht:**
-  `tests/test_td0_error_marks.c` behauptete „bit0 (0x01) = data CRC
-  error" und baute sich die Prüfdatei dazu selbst — neunzehn Zeilen über
-  derselben Stelle, an der er die Klasse schon einmal beschrieben hatte
-  („both sides shared the same mistake", MF-389). Berichtigt, plus ein
-  vierter Sektor, der die bisher falsche Richtung absichert.
-  Matrix 4 von 4 über die **vier** TD0-Testziele; der erste Lauf meldete
-  3 von 4 und das war das Messwerkzeug, nicht die Abdeckung.
-  Nebenbefund `P3-523`: `TD0_FLAG_NO_DATA` im Wandler ist `0x08`, ein
-  Bit, das TD0 nicht benutzt — der `UNAVAILABLE`-Zweig ist damit
-  unerreichbar. Nicht mitrepariert, weil die Funktion in 1b-ii fällt.
-- **Stand 2026-09-20, MF-1287 — 1b ist ABGETRAGEN:** `uft_td0_read_mem()`
-  ist gelöscht, mit ihm sieben weitere Funktionen und die drei
-  Aggregattypen; alle drei Wandler gehen über den Strom-Kern. Jedes
-  Symbol war vor dem Schnitt gezählt und hatte außerhalb der sterbenden
-  Datei null Aufrufer.
-  · **`uft_td0_to_imd()` liest jetzt die kanonischen Sektorfelder** statt
-    der TD0-Flaggen — damit fällt `td0_flags_to_imd_stype()`, und
-    `P3-523` ist im neuen Pfad erledigt.
-  · **Der Wandler hatte nie einen Test.** `test_convert_imd_img_belegt.c`
-    prüft, dass das Preflight TD0→IMD SPERRT — dabei läuft er nie.
-    Gruppe 7 ist sein erster, und sie belegt die Kernzusage: ein
-    CRC-Flag in der TD0 kommt als `UFT_IMD_SEC_ERROR` an.
-  · **Neun Zahlen, zwei Namen, zwei Orte:** die privaten
-    `IMD_STYPE_*`-Konstanten im Wandler waren eine zweite Kopie von
-    `uft_imd_sectype_t` aus dem Formatheader — mit dem Kommentar „Not
-    symbolically named in the header", der nicht stimmte. Zusammengeführt
-    (§MF-1177).
-  Offen und benannt: `P3-524` (Sektorgrößen werden auf die des ersten
-  geebnet, im Widerspruch zur eigenen Merkmalstafel) — das entscheidet
-  mit, ob der künftige Matrixeintrag „identisch" oder „projiziert
-  identisch" heißt.
-  **Als Nächstes aus dem Umbauplan:** Schritt 3 (`UFT_CONV_LOSSLESS` für
-  TD0→IMD auf UNVERIFIED) und Schritt 4 (Vorwärtsprüfung gegen hxcfe,
-  Korpus ≥ 3).
-- **Stand 2026-09-20, MF-1288 — Schritt 3 ist abgetragen, und er war
-  größer als eine Zeile:** `TD0→IMD` steht auf `UFT_CONV_UNVERIFIED`.
-  Den Wert gab es vorher nicht — die Aufzählung kannte nur LOSSLESS,
-  LOSSY, SYNTHETIC, IMPOSSIBLE, **„nicht gemessen" war also gar nicht
-  sagbar**, und im Zweifel stand dort die freundlichste Behauptung.
-  · **Es war ein Fall von acht.** Gemessen zur Laufzeit: 13 Pfade
-    behaupteten LOSSLESS, **acht ohne jeden Matrixeintrag** — darunter
-    `SCP→G64`, Fluss nach Bitstrom, wo `CLAUDE.md` selbst sagt
-    „Flux→Sektor verliert Timing+WeakBits".
-  · **Die Güte-Spalte hatte keinen Leser.** `uft_convert_can()` null
-    Aufrufer, `uft_convert_print_matrix()` null Aufrufer und nicht
-    einmal eine Header-Deklaration. Deshalb konnte die falsche Zeile
-    stehen bleiben; der neue Test ist ihr erster Leser (`P3-525`).
-  · **Ratsche statt Einzelkorrektur:** `test_wandlungstafel_luegt_nicht.c`
-    hält seit MF-1288 die Regel „kein LOSSLESS ohne Matrixeintrag",
-    Grundlinie **7**, sie darf nur fallen (`P3-526` führt die sieben
-    namentlich).
-  **Offen bleibt Schritt 4** — Vorwärtsprüfung gegen hxcfe, Korpus ≥ 3,
-  danach der Matrixeintrag. Erst er entscheidet, ob aus UNVERIFIED
-  „identisch" oder „projiziert identisch" wird (`P3-524`).
-- **Stand 2026-09-27, auf dem Eigentuemerrechner fortgesetzt — Schritt 4 war seit MF-1307 erledigt, und der offene Kern von P3-524 ist GEKLAERT, anders als geplant (MF-1384):** die in `neue-ideen/1/imd120sc.zip` liegende ImageDisk-Quelle des Urhebers sagt eine gemischte Spur ab (`TD02IMD.C:907-908`); die Tafel behauptete, IMD trage sie. Tafel berichtigt, Wandler sagt ab statt zu ebnen, P3-524 geloest, P3-600 benannt. Der Posten selbst (Sichtung von 2408 Dateien) bleibt offen; naechster Griff: das Register `docs/NEUE_IDEEN_REGISTER.md` gegen den Ordner halten.
-- **Beleg:** —
-
----
-
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer
 - **Status:** **angehalten am gemessenen Blocker** (das Orakel ist da, ein
   echtes Abbild fehlt) · MF-1207 · **Aufgenommen:** 2026-09-16
@@ -3010,6 +2271,745 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
+- **Stand 2026-09-27 — Bedingung „Fertig heißt" erfüllt (MF-1405):** die letzten **51** Einträge ohne Urteil sind beurteilt (vier Sichter, je Paket Lizenz an der Datei gelesen; drei Handproben am Baum bestätigt: Tor 67/MF-1230, SCP-Integrität/MF-1162, TRD-Sonde). Register: **224 von 224** mit Urteil, **0** verwaist — das eine verwaiste Urteil (`WHDLoad_dev`) galt einem Eintrag der **zweiten** Ebene, den das Skript nicht lesen konnte; `gen_neue_ideen_register.py` liest seither Schlüssel der Form `Name (neue-ideen/<pfad>/)` und prüft den Pfad (Selbsttest 12/12). **Ertrag der Runde:** (1) `trd_probe()` im **erreichbaren** Leser suchte die TR-DOS-Kennung bei 0x227 (Katalog) statt 0x8E7 — gemessen an zwei echten Abbildern, behoben mit Rotbeweis; (2) `PLAN_MODERNISIERUNG.md` nannte `uft_revolution`/`uft_protection_scan` „kein Paket" — es ist `hacking floppy disk.zip`. **Offen und benannt, nicht Teil dieser Bedingung:** zwei Pakete in `nächste runde/t2` (`UFT_AnalysisBooster`, `UFT_SurfaceIntegrity`) sind nur als Ordnerinhalt beurteilt, nicht gelesen; die Lizenz von `victor9k-flux-tools-main.zip` ist mit `victor9k-flux-tools.txt` (MIT) vermutlich gefunden, aber nicht am Paket belegt. Wandert mit dem Commit-Hash nach „Erledigt".
+- **Status:** **angehalten an der Umgebung** (2026-09-26: `neue-ideen/` ist gitignored und liegt nur auf dem Eigentümerrechner, im Cloud-Container fehlt es — gemessen `ls neue-ideen`: nicht vorhanden; weiter, sobald die Sitzung dort läuft) · vorher **in Arbeit** (seit 2026-09-19, auf ausdrückliche
+  Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
+  oberster der Warteschlange, anfangen !!"). `A-028` steht ebenfalls
+  auf `in Arbeit`, wartet aber seit 2026-09-17 auf eine
+  **Eigentümerentscheidung** (öffentlicher Wegwerf-PR) und blockiert
+  nichts — das ist hier vermerkt statt verschwiegen, weil zwei Posten
+  auf `in Arbeit` gegen die Ein-Schloss-Regel verstoßen.
+  · **Aufgenommen:** 2026-09-19
+- **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
+  gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
+  code noch verbessern kann, nimm alles aus einander , meine
+  einwilligung hst du für alles"
+- **Gegenstand, gemessen (2026-09-19):** **2408 Dateien**, **636 MB**,
+  davon ~~**197 Archive** auf der obersten Ebene und **20** bereits
+  entpackte Verzeichnisse~~. **BERICHTIGT beim Beginn, gemessen:** die
+  oberste Ebene trägt **216** Einträge — **108** Archive, **19**
+  Verzeichnisse, **70** eigene `.md`-Ausarbeitungen, dazu 19 einzelne
+  Quell-/Dokumentdateien. Die „197" trifft weder die oberste Ebene
+  noch das Ganze: im **gesamten** Baum von `neue-ideen/` sind es
+  **424** Archive. Die Zahl stand ungemessen in meinem eigenen
+  Aufnahmeeintrag; sie bleibt oben durchgestrichen stehen, weil
+  Entfernen keine Behebung ist. **2408 Dateien und 636 MB halten**
+  (nachgezählt: 2408 Dateien, 661,7 MB inklusive der obersten
+  Dokumente). `neue-ideen/` ist gitignoriert
+  (`.gitignore:90`) und wird aus dem Baum **108 Mal in 37 Dateien**
+  zitiert — es ist also Arbeitsmaterial mit Belegfunktion, kein Rest.
+  `docs/OPEN_ITEMS.md` nennt es **23 Mal**.
+- **Kennzahl:** gemischt, und das gehört ausgesprochen. Der einzelne
+  Fund bewegt meist **keine** der vier und ist damit nach MF-640
+  *Fundus, nicht Auftrag*. Bewegen kann er **ungeprüfte Formate (T3)**
+  — nämlich dann, wenn sich darin ein **Erzeuger** oder ein **Oracle**
+  findet, das eine Stufe hebt; und **angebotene Wandlungspfade**, wenn
+  eine Richtung dadurch belegbar wird. Die Sichtung selbst ist Fundus;
+  ihr Ertrag ist es nicht zwangsläufig.
+- **Kanal:** **je Fund einer**, nach MF-695 — Port | Nachbau |
+  Helfer-Prozess | Oracle | Spec | Daten/Fixture | Fundus. „Lizenz vor
+  Fähigkeit" heißt nicht „Fund verwerfen", sondern *auf welchem Weg*,
+  und der Weg wird bei der Aufnahme des Funds benannt, nicht wenn der
+  Code schon dasteht.
+- **Einfrier-Regel:** berührt den Format-/Decoder-Layer — **ja**, also
+  **Rotbeweis zuerst**. Dazu das Moratorium: ein **neues
+  Format-Plugin** ist auch als *Vorschlag* gesperrt; erlaubt sind
+  Bugfixes an Bestehendem, Verifikations-/Korpusarbeit und
+  Spec-Korrekturen gegen autoritative Quellen. Ein Fund, der ein neues
+  Format nahelegt, wird als Fund notiert und **nicht** gebaut.
+- **OPEN_ITEMS:** verwandt und **nicht abzuschreiben** — `P3-8`
+  (drei Aminet-Pakete, Lizenzurteil offen), `P3-11` (Lizenz-Klasse
+  statt Einzelurteil, Eigentümer-Vorlage), `P3-19` (`COPY130.M65`,
+  Fundus), `P3-30` (`pyRT11`, Fundus), `P3-99` (`dskx` widerlegt).
+  Neue Befunde bekommen dort eine Nummer; dieser Posten verweist nur.
+- **Zwei Sperren, die im Gegenstand liegen und NICHT übergangen werden
+  dürfen** — beide gemessen vorhanden:
+  · `neue-ideen/x50conv.exe` — seine Lizenz **untersagt
+    Disassemblierung ausdrücklich**. Aus ihm stammt nichts als die
+    mitgelieferte Dokumentation. „Nimm alles auseinander" gilt hier
+    **nicht**; das ist keine Auslegungsfrage, sondern die Lizenz.
+  · `neue-ideen/OmniFlop_3.2d_Format_Harvest_C.zip` (239 Formate) —
+    **nicht in den Baum**, solange die Eigentümerentscheidung zum
+    EU-Datenbankherstellerrecht (§§87a ff. UrhG) aussteht. Dazu
+    `neue-ideen/UFT-NN_OmniFlop_Analyse.md`.
+  · **Die Einwilligung „für alles" deckt Arbeitsschritte, nicht
+    Lizenzen.** Eine Lizenzverletzung baut einen Defekt ein, den kein
+    Rotbeweis fangen kann (MF-695).
+- **Fertig heißt:** **jeder** Eintrag der obersten Ebene von
+  `neue-ideen/` trägt ein festgehaltenes Urteil aus vier Feldern —
+  *Lizenz (an der Datei gemessen, nicht am API-Feld)* · *Kanal nach
+  MF-695* · *Kennzahl oder „Fundus"* · *nächster Griff* —, und dieses
+  Register ist **abgeleitet, nicht gepflegt**: ein Skript liest die
+  Verzeichnisebene und meldet, was noch ohne Urteil ist. Solange auch
+  nur ein Eintrag ohne Urteil dasteht, ist der Posten offen.
+- **Aufwand:** **nicht schätzbar** für das Ganze — 2408 Dateien in 197
+  Archiven, und die Lizenzfrage ist je Paket eine eigene Messung.
+  Schätzbar ist erst die erste Scheibe, und die wird beim Beginn
+  benannt, nicht hier.
+- **Vorgehen, das beim Beginn gilt** (damit es nicht später als
+  Einschränkung erscheint):
+  · **Das Register zuerst, dann die Inhalte.** Ohne abgeleitetes
+    Register ist „alles gesichtet" eine Behauptung — 197 Archive kann
+    niemand im Kopf halten, und eine gepflegte Liste veraltet still
+    (dieser Baum hat das fünfmal gemessen).
+  · **Lizenz an der DATEI messen.** `measurement_hit_wrong_class`: das
+    API-Feld von GitHub/GitLab meldet die Projekteinstellung, nicht
+    die Lizenzdatei — `fdtc` galt als „ohne Lizenz" und trägt BSD-3.
+  · **Vor jedem Eintrag „steht das schon irgendwo?"** — der Baum
+    zitiert `neue-ideen/` bereits 108 Mal; ein zweiter Eintrag
+    derselben Sache wäre die Doppelhaltung, gegen die K4 steht.
+  · Höchstens **fünf** neue `OPEN_ITEMS`-Vorschläge je Durchgang, wie
+    bei den Aufklärungs-Agenten — sonst füllt sich das Register mit
+    allem, was auffällt.
+- **Stand 2026-09-19, erster Durchgang — die Gestalt ist gemessen, und
+  sie ist NICHT „216 Archive aufmachen":**
+  · **Die 70 `.md` sind kein Material, sondern die Spur der
+    bisherigen Sichtung** — eine durchnummerierte Reihe UFT-29 bis
+    UFT-105, 64 Dokumente auf 62 Nummern (UFT-30 und UFT-32 doppelt
+    vergeben), mit **15 Lücken**. Damit bekommt „was vergessen wurde"
+    eine prüfbare Form statt einer Willenserklärung.
+  · ~~**Fünf Lücken liegen in `~/Downloads`, nicht in `neue-ideen/`:**
+    UFT-34, UFT-35, UFT-41, UFT-42, UFT-50. Das ist buchstäblich „was
+    vergessen wurde".~~ **BERICHTIGT noch vor dem Push (MF-1267) —
+    die Aussage war in ihrem schärfsten Teil falsch, und der Fehler
+    war meiner.** Meine Reihen-Messung las `glob("UFT-*.md")`, also
+    **nur die oberste Ebene**. Rekursiv liegen **vier der fünf längst
+    in `neue-ideen/`**, verschachtelt in ihren eigenen
+    Materialordnern; die Downloads-Fassungen sind **byteidentisch**
+    (SHA-256 je Paar gleich) — Dubletten, keine Funde. **Wirklich
+    vergessen war genau EINE:** `UFT-50-Korg-TSeries.md`, jetzt
+    kopiert; `~/Downloads` blieb unangetastet, und die vier
+    Dubletten, die ich dabei selbst angelegt hatte, sind wieder
+    entfernt. Klasse MF-1024/MF-1033: **der Leser war richtig, die
+    Aussage über den Gegenstand war zu weit** — „nicht auf der
+    obersten Ebene" ist keine Aussage über „nicht vorhanden".
+  · **Rekursiv stimmen auch die übrigen Zahlen anders:** 70 Dokumente
+    auf **67** Nummern (nicht 62), **drei** doppelt vergebene Nummern
+    statt zwei — neu ist **UFT-33**, das als
+    `dcopy/UFT-33-DCopy-Bootblock-Identifikation.md` neben dem
+    `UFT-33-HAL-Erweiterungen.md` der obersten Ebene liegt. Lücken
+    sind **zehn**, nicht fünfzehn: 36–40, 44, 45, 47, 48, 98 — für
+    diese zehn wurde in `neue-ideen/` (rekursiv), `~/Downloads`,
+    `docs/` und `tools/` gesucht und nichts gefunden.
+  · **Ein Ertrag bleibt, und er ist vorbeugend:** `UFT-42` berichtigt
+    `UFT-33` ausdrücklich, dessen `uft_bb_entry_t` dort „eine
+    plausible Rekonstruktion ohne Beleg" heißt. Gemessen gibt es
+    `uft_bb_entry_t` im ganzen Baum **nicht**, und
+    `docs/nachbau/XCOPY_VERHALTEN_HAND-A.md` nennt Bootblock nur als
+    Abgrenzung — die Berichtigung verhindert etwas, sie repariert
+    nichts.
+  · **Gelesen, mit Urteil:** `UFT-50` beschreibt ein **eigenständiges**
+    Korg-T-Serien-Format (80×2×10×1024 = 1 638 400 Byte) neben dem
+    vorhandenen DSS-1 (80×2×5×1024 = 819 200) — Quelle `korgutils
+    0.9.1`, GPLv2. Ein **neues Format-Plugin** fällt unter das
+    Moratorium der EINFRIER-REGEL, auch als Vorschlag; also notiert,
+    nicht gebaut. `UFT-41` sagt ausdrücklich „kein Bug gefunden,
+    UFTs ATR-Modul hält stand" — ein **negatives** Ergebnis, das
+    festzuhalten sich lohnt, damit es niemand ein zweites Mal
+    erarbeitet.
+  · **Die Gegenprobe hat den zweiten Befund halbiert, und das gehört
+    dazu:** 9 Ausarbeitungen zitiert der Baum unter ihrer **Nummer**
+    nirgends — nach **Inhalt** gesucht kennt er UFT-94 (COPYLOCK 80),
+    UFT-99 (NIBtools 64 / RapidLok 65) und UFT-95/96 (GEOS 43) sehr
+    wohl. Wirklich unberührt sind **vier bis fünf**: UFT-102, UFT-103,
+    UFT-101, UFT-105, am Rand UFT-97. „0 gefunden" ist keine
+    Entwarnung, sondern die Frage, was die Messung nicht sieht.
+  · **Eine Zahl ist ausdrücklich eine GRENZE, keine Zahl:** von 216
+    Einträgen nennt der Baum 71 — davon 9 nur über einen Namen, der
+    als Suchwort nichts taugt (`1`, `disk`, `copy`, `.claude`).
+    Unerwähnt sind also **mindestens 145**, höchstens 154. (Seit der
+    Kopie von `UFT-50` sind es **217** Einträge; das Register führt
+    entsprechend 215 ohne Urteil statt 214.)
+  · **Zwei Zahlen des eigenen Aufnahmeeintrags hielten nicht** (197
+    Archive, 20 Verzeichnisse) — berichtigt oben, durchgestrichen
+    stehen gelassen.
+  · **Festgehalten als `P3-512`** (berichtigt) und **`P3-513`** (der
+    Korg-Fund).
+- **Stand 2026-09-19, zweiter Durchgang — das Register steht, und die
+  ersten Urteile sind GEERNTET statt neu erfunden:**
+  · `scripts/gen_neue_ideen_register.py` + `docs/neue_ideen_urteile.json`
+    → `docs/NEUE_IDEEN_REGISTER.md`. Es meldet die Differenz in **beide**
+    Richtungen (Eintrag ohne Urteil **und** Urteil ohne Eintrag) und
+    sagt bei fehlendem Verzeichnis „Umfang nicht feststellbar" statt
+    „alles beurteilt". Selbsttest 9/9, zwei Mutationen gefangen.
+    **Kein Tor** — ein Tor, das seinen Gegenstand in CI gar nicht
+    sehen kann, wäre eines, das nicht anschlagen KANN.
+  · **Geerntet, nicht erfunden:** von 217 Einträgen tragen **9** ihr
+    Lizenzurteil längst in `docs/ORACLES.md` bzw.
+    `docs/QUARANTINE.md`; sie sind mit Verweis eingetragen, nicht
+    abgeschrieben (K4: keine Doppelhaltung). Dazu `x50conv.exe`,
+    `OmniFlop…zip` und `UFT-50`. **Stand: 12 von 217 beurteilt, 205
+    offen.**
+  · **Zwei Einträge stehen bewusst OHNE Urteil**, obwohl die Suche sie
+    zunächst als „beurteilt" meldete: `atari.zip` und `Skript.pdf`
+    trafen nur über einen **Wortstamm** (`atari`, `Skript`), nicht
+    über ihren Namen. Zu keinem von beiden habe ich eine Aussage
+    gefunden — also keine eingetragen.
+  · **Und die Zahl 12 ist selbst das Ergebnis einer Korrektur:** die
+    Stammsuche meldete **12 mit Lizenzurteil**, die wörtliche Suche
+    nur **6**. Beide Richtungen sind falsch — `FLOFOR` und
+    `IPF-Format` stehen im Baum ohne ihre Endung. Eingetragen ist
+    nur, wozu ich eine Aussage **gelesen** habe: neun.
+  · **137 von 217 stehen in KEINER der vier Quellen** (`ORACLES.md`,
+    `QUARANTINE.md`, `erzeuger_kanaele.json`, `OPEN_ITEMS.md`) — das
+    ist der eigentliche Rückstand, und er ist jetzt beziffert statt
+    geschätzt.
+- **Stand 2026-09-19, dritter Durchgang — die Lizenzen sind GELESEN,
+  nicht geraten: 47 von 217 beurteilt, 170 offen:**
+  · **Erst sortiert, dann gelesen.** Von den 205 unbeurteilten tragen
+    **35** eine Lizenzdatei im Paket, **75** keine, **7** sind `.lha`
+    und mit der Standardbibliothek **nicht lesbar** — die werden als
+    „keine Aussage" geführt, nicht still als „ohne Lizenz" —, und
+    **88** sind gar keine Archive (die UFT-NN-Ausarbeitungen und
+    lose Quellen). Gelistet, nicht ausgepackt.
+  · **Die 35 Lizenzdateien gelesen: 30 bestimmt, 5 nicht.** Die
+    Zuordnung läuft über einen Wortschatz, und was er nicht erkennt,
+    heißt **„unbestimmt"** und bekommt seinen Anfang mitgedruckt —
+    er rät nie. Verteilung **der 30**: 7× Apache-2.0, 8× MIT, 6×
+    GPL-2.0, 2× GPL-3.0, 4× LGPL, 1× BSD-3-Clause, 1× Unlicense, 1×
+    zlib. (Über alle 47 Urteile gezählt sieht es anders aus — 8×
+    Apache und 5× GPL-2.0 —, weil `nibtools-extra` von Hand
+    dazukam und `casutil_extract_c` nachträglich auf „ungemessen"
+    zurückgestuft wurde. Zwei Zahlen zu derselben Sache sind genau
+    die Drift, gegen die dieser Baum steht; deshalb steht hier,
+    welche Menge gemeint ist.)
+- **Stand 2026-09-19, fünfter Durchgang — die Readmes gelesen, das
+  Dekompilat gefunden, und der Eigentümer hat über den Quarantäne-
+  Nachtrag entschieden: 170 von 217 beurteilt, 47 offen:**
+  · **Readme-Messung** über die Einträge ohne Lizenzdatei: **12** mit
+    einer Bedingung (Trefferzeile zitiert, nicht klassifiziert), **19**
+    durchsucht ohne Treffer, **44** ohne Readme, 0 Fehler. Sie hat den
+    vierten Durchgang berichtigt: „75 ohne Lizenzdatei" war eine
+    **Obergrenze** — `akaiutil` trägt `gpl-2.0.txt`, der Protection-
+    Catalog `LICENSE_UFT_PROJECT.txt`, beides von meinem Dateinamen-
+    Muster (LICENSE/COPYING) nicht erkannt. Und ein „nicht
+    kommerziell"-Treffer stammte aus **GPL-2 §3 selbst** („allowed
+    only for noncommercial distribution"), nicht aus einer
+    Zusatzklausel. Eine Copyright-Zeile allein zählt nicht als
+    Bedingung.
+  · **`dtc_code/` ist die rohe Dekompilation des proprietären
+    KryoFlux-`dtc`** (`dtc_decompiled.c` mit 116 Routinen,
+    `dtc_text_arm64.asm` 24,7 MB, `dtc_text_section.bin`). Der Baum
+    kannte es: `QUARANTINE.md` führt dtc als **Verdacht, Zone ROT**,
+    `src/dtc_components/` kam mit MF-1099 als **Eigentümerentscheidung,
+    nicht als Lizenzprüfung**, und `src/dtc_components/LICENSE:24`
+    schließt „decompiler output" aus. Neu ist die **Lesung der
+    SPS-Lizenz** selbst (`Linux_Release3.50/LICENCE.txt` aus
+    `fertige/kryoflux_3.50_linux_r4.tar.gz`, 14 442 Byte): Z. 61 „only
+    for **private & non-profit purposes**", Z. 150 „All rights
+    reserved"; im gegrepten Text **keine** reverse/decompile-Klausel —
+    eine Grenze des grep, keine Erlaubnis. Für ein öffentliches
+    GPL-2-Projekt ist das ohnehin nicht weitergabefähig.
+  · **Der Nachtrag dazu in `QUARANTINE.md` ist auf Anweisung des
+    Eigentümers zurückgenommen** („lösche docs/QUARANTINE.md",
+    präzisiert per Rückfrage zu „nur meinen Nachtrag verwerfen"; die
+    Datei bleibt — 7 Skripte lesen sie, darunter `gen_stand.py` und
+    die Kennzahl-Ableitung in `update_inventory.py`). Die Messung
+    lebt im Register-Urteil zu `dtc_code`, Patch gesichert im
+    Job-Verzeichnis.
+  · **50 Urteile gesät**, jedes mit benannter Quelle: 12 aus der
+    Readme-Bedingung, 19 aus „durchsucht, kein Treffer" (ehrlich als
+    Zustand), 19 aus Baum-Zitaten (SDISK MIT/MF-1176, formats1
+    BSD-3/MF-1078, pc98-disk-tools/MF-1224, 1050-Turbo/MF-1179 …),
+    eigenem Material (UFT-NN-Zips, UFT_Paket, `.claude`) und den
+    vier verschachtelten Analysen (Kurzurteil wörtlich). Verteilung
+    der 170: Kanal Spec 81 · Fundus 71 · Port 6 · Oracle 5 ·
+    Helfer-Prozess 3 · Daten/Fixture 2 · Nachbau 2; Kennzahl T3 runter
+    3, sonst Fundus.
+  · **Entwurfsfrage, nicht entschieden:** fünf Einträge sind selbst
+    Sammelordner — `1` (143 Dateien), `copy` (176), `floppy1` (92),
+    `fertige` (1354), `exsource` (24) — zusammen **1789 der 2408
+    Dateien**. Das Register sieht sie als je einen Eintrag; ob eine
+    zweite Ebene hinein gehört, ist die Frage, an der „vollständig
+    gesichtet" hängt. Offen für den Eigentümer.
+  · **Die 47 Offenen** haben weder Readme noch Baum-Zitat noch
+    Analyse; sie sind nicht geöffnet, und ein Urteil „nicht geöffnet"
+    wäre eines über den Zustand, nicht über den Inhalt — deshalb
+    stehen sie ohne.
+- **Richtungswechsel 2026-09-19, Wortlaut des Eigentümers:** „ich
+  möchte das du A-032 nimmst und damit mein tool verbessert und
+  leistungsstärker mach | allen externen code nehmen, verbessern, und
+  in unser tool implementiern" — mit dem Paket **`uft_disk2`** (Kopf,
+  Umsetzung, Test, Entwurfsdokument „UFT-NN — Das Zentrum") im selben
+  Auftrag. Der Posten heißt damit nicht mehr „sichten", sondern
+  **„einbauen"**; das Register aus den Durchgängen eins bis fünf bleibt
+  die Landkarte dafür (170 von 217 beurteilt).
+- **Stand 2026-09-19, sechster Durchgang — `uft_disk2` ist im Baum
+  (MF-1272), mit Brücke und zwei Tests:**
+  · **Fünf Namen des Entwurfs gab es hier schon**, mit anderer
+    Bedeutung: `uft_encoding_t` (21 Dateien), `uft_layer_t` (zweimal!
+    — `uft_unified_image.h` und `uft_track.h`), `uft_diag_t` (8),
+    `UFT_CONF_CERTAIN`, `UFT_FS_FAT12`. Alle öffentlichen Namen tragen
+    deshalb `uft_d2_`/`UFT_D2_`; die Kodierung nimmt den vorhandenen
+    `uft_encoding_t` (D3), keinen zweiten Enum.
+  · **Neun Verbesserungen gegenüber dem Entwurf**, jede im Kopf von
+    `uft_disk2.h` benannt — darunter: der Bericht sagt „CRC nicht
+    getragen" statt „falsche CRC: 0" (die Einbahn-Aussage, die
+    MF-662 erfunden nennt); der letzte Befundplatz ist von Anfang an
+    reserviert (der Entwurf nahm den 512. an und überschrieb ihn
+    still); `uft_d2_report()` gibt die BENÖTIGTE Länge zurück, eine
+    Kürzung ist erkennbar; `UFT_D2_CONF_UNVERIFIED` (128) hat einen
+    Namen statt ein Literal zu sein.
+  · **Die Brücke `uft_d2_from_disk()`** liest jede Spur über
+    `plugin->read_track()` und übersetzt ehrlich: CRC „bekannt" nur
+    bei Fehlerflagge oder Prüfwert ≠ 0/0 (`add_sector` setzt OK
+    unbedingt — kein Beleg); Zuversicht 255 nur mit stimmender CRC,
+    sonst 128, bei falscher CRC 64 (als **Richtlinie** benannt),
+    Füllmaterial 0; Lage im Bitstrom SIZE_MAX (drei Versatzfelder im
+    alten Modell ohne Aussage, welches gilt); `raw_data` ohne
+    `raw_bits` wird gezählt, nicht erfunden. Was sie nicht trägt
+    (Fluss, per-Bit-Weak-Maske), meldet sie als je EINEN Befund.
+  · **Gemessen am Korpus-86F** (im Git, also in CI): 160 Spuren, 1440
+    Sektoren — dieselbe Zahl wie das Plugin direkt, byteidentisch als
+    Kopie, 0 mit 255, 0 mit CRC-Angabe; zweite Quelle das `.img`
+    derselben Diskette (720 = 1440/2, das 86F legt jeden Zylinder
+    doppelt ab). Dazu ein gestelltes Plugin für die Fälle, die der
+    Korpus nicht hat: 255 / 64 / 0 / 128, jede Zahl aus ihrer Regel.
+  · **Vier Rotbeweise, jeder an genau seiner Zusage:** Brücke ohne
+    Einspeisung (0 statt 1440), Zuversichtsregel entfernt, Entwurfs-
+    Größenvergleich, Entwurfs-Überlauf. Alle sechs Dateien 0 Warnungen
+    unter `-Wall -Wextra -Wpedantic`.
+  · **Nebenbefund, gemessen:** der Baum hat **zwei halbe Aufräumer**
+    für `uft_track_t` (MF-599 kannte es): `uft_track_cleanup()` gibt
+    Sektoren/`flux`/`raw_data` frei, `uft_track_free()` zusätzlich
+    `confidence`/`weak_mask`/`flux_times`/`revisions`, `raw_data`
+    aber nur mit `owns_data`. Die Brücke räumt deshalb beides selbst.
+    Und die alten Schicht-Zeiger `flux_layer`/`bitstream_layer`/
+    `sector_layer` in `uft_track_t` haben 0/0/1 Nutzer — dieselbe
+    Idee wie die vier Schichten, nie gefüllt.
+  · ~~**Noch kein Produktivleser** — der ist der nächste Commit.~~
+    **Eingelöst mit MF-1273 (siebter Durchgang, unten).**
+- **Stand 2026-09-19, siebter Durchgang — der erste Produktivleser
+  (MF-1273): der Disk-Analyzer zeigt, was der Träger trägt:**
+  · `DiskAnalyzerWindow::loadImage()` speist das geöffnete Abbild
+    über sein Plugin in das Zentrum ein (`uft_d2_from_disk`) und
+    zeigt `uft_d2_report()` in einem neuen Kasten `textDiskReport`
+    unter dem Sektorbericht; der HTML- und Text-Export nimmt ihn mit.
+    Ohne Plugin steht dort „Kein Bericht: kein Plugin konnte dieses
+    Abbild oeffnen" — kein leerer Kasten, der wie „nichts gefunden"
+    aussieht.
+  · **Gemessen an der 35-Spur-D64 des vorhandenen `no_fiction`-Tests:**
+    „Traeger: 35 Spuren, hoechste Lage C34 H0 (gemessen)", „Sektoren:
+    683 — mit CRC-Angabe: 0 (davon falsch: 0), ohne CRC-Angabe: 683",
+    „Schichten: Sektoren". 683 und 35 sind Formateigenschaften
+    (17×21 + 7×19 + 6×18 + 5×17), keine Ablesung aus unserem Code —
+    und das D64-Plugin liefert `crc_stored = crc_calculated = 0`, also
+    darf der Bericht kein CRC-Urteil fällen; er sagt „ohne Angabe".
+  · **Rotbeweis:** Brückenaufruf in `traegerBericht()` entfernt →
+    genau die neue Zusage `theCarrierReportIsMeasuredNotAssumed()`
+    fällt (5 bestanden, 1 gefallen), die drei alten `no_fiction`-
+    Zusagen bleiben grün; wiederhergestellt 6/6. Damit hat die Brücke
+    aus MF-1272 ihren Produktivaufrufer und einen Test, der rot wird,
+    wenn der Aufruf verschwindet (D2).
+  · **Der Einbauort ist meine Wahl** (der Entwurf nannte als Punkt 2
+    „img + FAT12"; `uft_fat_robust` liegt noch in den Zips) — die
+    Brücke und der Bericht sind ortsunabhängig, ein Umzug in einen
+    anderen Reiter ist Minuten. **Die eine Verhaltensänderung:** das
+    Laden liest jetzt jede Spur; bei Sektorabbildern Millisekunden,
+    bei Flussabbildern dekodiert das Plugin je Spur — das steht im
+    Kopf von `traegerBericht()`.
+  · **Kein Klick-Smoke-Test** — es gibt hier keine Anzeige; belegt ist
+    der Weg durch den Qt-Test offscreen (`loadImage` → Kasten
+    gefüllt → fünf Zusagen). Was der Kasten im Fenster tatsächlich
+    zeigt, hat der Eigentümer noch nicht gesehen.
+- **Stand 2026-09-20, achter Durchgang — die ZWEITE FASSUNG des
+  Zentrums (MF-1274), vom Eigentümer eingereicht, mit derselben
+  Namensmessung wie beim ersten Mal:**
+  · **Was dazukam:** Generationen je Schicht samt `uft_d2_validate()`
+    (fünf Widersprüche: STALE_DERIV, POS_BEYOND, ENC_MISMATCH,
+    REV_EMPTY_INDEX, FS_RANGE); ein **Ableitungsregister** mit
+    Kennungen statt eines Herkunfts-Structs je Objekt; **Stimmen je
+    Bit** (`agree[]` + `nrevs_fused` — „3 von 5" ist nachprüfbar,
+    „Konfidenz 153" nicht); **mehrere Dateisysteme** je Diskette;
+    Kodierung je **Sektor**; `crosses_index` **gerechnet** statt
+    gesetzt, und zwar über BEIDE Felder (IOI ≠ DOI); die
+    Zuversichtsregel an **allen** Schichten; Spurindex `[cyl][head]`;
+    Merkmalcache; dynamische Metadaten mit Überlaufmeldung; die
+    Fehlerzahl im Bericht — oben UND in der Kürzungszeile.
+  · **Zwei Messungen am Baum, beide gegen den Entwurf:** die sieben
+    Namenskollisionen aus MF-1272 gelten unverändert (der Entwurf
+    benutzt dieselben Namen wieder) → alles bleibt `uft_d2_`/`UFT_D2_`;
+    und **`UFT_ENC_GCR` gibt es hier nicht** — der Baum führt gemessen
+    **20** Kodierungen statt vier, GCR nach Familie getrennt (CBM,
+    Apple 5.25", Apple 3.5", Victor), dazu `UFT_ENC_AMIGA_MFM` und
+    `UFT_ENC_M2FM`. Ein Sammelwert hätte bei Kopierschutz genau die
+    Frage verschluckt, auf die es ankommt.
+  · **Eine Schemaänderung mit Grund:** `by`/`params` waren ein
+    `const char *` mit der Auflage „muss statisch sein". Ein Zeiger ist
+    nicht serialisierbar, und die Auflage war eine Bitte an den
+    Aufrufer statt einer Eigenschaft des Modells — jetzt wird in feste
+    Feldbreite KOPIERT. Der Test führt das vor: ein Name wird nach dem
+    Registrieren überschrieben und steht danach noch richtig da.
+  · **Eine Falle, die ich in den Kopf geschrieben habe, weil sie sonst
+    niemand sieht:** `uft_d2_track()` gibt einen Zeiger in ein Feld
+    zurück, das beim Anlegen der NÄCHSTEN Spur umzieht. Der Index hält
+    deshalb Nummern, keine Zeiger — und wer eine Spur über ein
+    weiteres `uft_d2_track()` hinweg hält, hält ins Leere.
+  · **Rotbeweis: sieben Mutationen, sieben gefallen** — Generation
+    steigt nicht (6 Zusagen), Zuversichtsregel lässt alles durch (8),
+    Stimmen ohne Basis angenommen (4), `crosses_index` nur auf
+    `dam_bit` (2), Kürzungszeile zählt verdeckte Fehler nicht (2),
+    Metadaten-Überlauf bleibt still (2), Brücke trägt eine andere
+    Herkunft ein (1441). Wiederhergestellt byteidentisch, beide Tests
+    grün, volle Suite 520/520, Bau 0 Warnungen.
+  · **Und eine Lücke in meinem EIGENEN Test hat der Rotbeweis
+    gefunden:** die IOI/DOI-Unterscheidung war nicht bewacht — meine
+    Fälle waren so gewählt, dass eine Prüfung nur auf `dam_bit`
+    dasselbe Ergebnis liefert. Erst der Fall „Adressfeld bei 10,
+    Datenfeld ab 70, Index 64" trennt die beiden. Nachgetragen, dann
+    fällt Mutation D.
+  · ~~**GESTOPPT:** der Behälter UFTD kommt als eigener Commit.~~
+    **Eingelöst mit MF-1275 (neunter Durchgang, unten).**
+- **Stand 2026-09-20, neunter Durchgang — UFTD: der erste Weg, auf dem
+  ein Abzug diesen Baum OHNE Verlust verlässt (MF-1275):**
+  · **Der Behälter.** Kopf `"UFTD"` + Version + Flags + Gesamtlänge;
+    danach Blöcke aus Kennung, Länge, Inhalt und **eigener CRC32**:
+    DERV (Ableitungsregister), META, TRAK mit FLUX/BITS/SECT, FSYS,
+    DIAG, END mit der Gesamt-CRC. Drei Eigenschaften, die nicht
+    verhandelbar sind: unbekannte Blöcke werden **übersprungen und
+    gemeldet** (vorwärtsverträglich); jeder Block trägt seine CRC, also
+    wird ein gekipptes Bit **an seiner Stelle** gefunden und alles
+    davor ist trotzdem geladen; und **Laden ist nie stiller als
+    Speichern** — was fehlt oder nicht stimmt, steht danach als Befund
+    im Modell.
+  · **Der Produktivaufrufer, und er ist nicht nachgereicht:** das
+    Analyzer-Fenster **behält** seit MF-1275 das Modell (`m_traeger`),
+    statt es nach dem Bericht wegzuwerfen; `traegerSichern()` schreibt
+    genau **diese** Messung als UFTD, und der Export legt sie neben den
+    HTML-/Text-Bericht. Ein zweites Lesen wäre eine zweite Messung, und
+    zwei Messungen können auseinandergehen.
+  · **Gemessen am D64 des vorhandenen Tests:** gesichert, mit
+    `uftd_load_file()` **von fremder Hand** zurückgelesen — 35 Spuren,
+    683 Sektoren, und der Bericht aus der Datei ist **Zeichen für
+    Zeichen** derselbe wie der im Kasten. Am vollen Modell (Fluss mit
+    zwei Umdrehungen, Bitstrom mit allen vier Nebenreihen, zwei
+    Dateisysteme, Metadaten, Ableitungen, Befunde): **3845 Byte,
+    Doppelrundlauf vollständig byteidentisch.**
+  · **Drei Abweichungen vom Entwurf, jede mit Grund:** (a) seine
+    Versionsprüfung `(ver >> 8) > (UFTD_VERSION >> 8) && …` konnte für
+    **keine** Fassung unter 256 zuschlagen — eine Datei der Fassung 2
+    hätte ein Leser der Fassung 1 klaglos geöffnet; (b) `meta_hidden`
+    wurde nicht mitgesichert, womit ein Modell mit Überlauf nach einem
+    Rundlauf einen **anderen Bericht** gehabt hätte; (c) Befunde gehen
+    beim Laden **direkt** in die Liste statt durch `uft_d2_diag()` —
+    sonst zählt eine volle Liste ihren eigenen Überlauf-Eintrag noch
+    einmal als Überlauf.
+  · **Rotbeweis: sechs Mutationen, sechs gefallen.** A `uftd_save_file`
+    im Analyzer nicht gerufen → genau die neue Zusage fällt (6/1), die
+    sechs alten nicht. B `meta_hidden` nicht gesichert (2). C verdeckte
+    Befundzähler verloren (2). D die Versionsprüfung des Entwurfs
+    eingesetzt (3 — „Fassung 2 abgewiesen, war ok"). E Gesamtlänge nach
+    der Gesamt-CRC eingetragen (6 — **4068 statt 3845 Byte** und ein
+    `TOTAL_CRC`-Befund, den es nicht geben dürfte). F Zuversichtsregel
+    beim Laden umgangen (5). Wiederhergestellt byteidentisch, volle
+    Suite **521/521**, Bau 0 Warnungen.
+  · **Was der Entwurf selbst als offen nennt und offen bleibt:** keine
+    Kompression (ein `FLXZ`-Block ginge ohne Änderung an Lesern, die
+    ihn nicht kennen), kein Streaming, keine `SECTOR_OVERLAP`-Prüfung,
+    und die Versionsregel „Nebenversion darf höher sein" — sie kommt,
+    wenn es eine zweite Version gibt; vorher wäre sie eine Regel ohne
+    Fall.
+  · **Nicht belegt:** ein Flussabzug in Originalgröße. Das volle
+    Testmodell hat 3845 Byte; wie sich `uftd_save()` bei fünf
+    Umdrehungen über 160 Spuren verhält, ist **nicht gemessen** — der
+    Entwurf nennt „mehrere Megabyte", und der Aufbau ohne Streaming
+    hält alles im Speicher.
+- **Stand 2026-09-20, zehnter Durchgang — `uft_fat_robust` eingebaut
+  (MF-1276), und zwar IN den vorhandenen Leser statt daneben:**
+  · **Die Entscheidung aus §10.1 der Ausarbeitung ist gefallen, und sie
+    ist gemessen begründet.** Das eingereichte Modul deklariert drei
+    Namen, die es hier schon gibt — `uft_fat_geometry_t`,
+    `uft_fat_chain_t` und `uft_fat_chain_free`, alle drei **dieselben
+    Begriffe mit anderen Feldern**. Ein zweites Modul daneben wäre der
+    dritte FAT12-Kettenläufer im Baum gewesen (der zweite steht in
+    `src/formats/msx/uft_msx.c:463-491`) — genau die Krankheit, die der
+    Zentrum-Entwurf als „FAT-Kettenläufer x2" benennt. Also integriert.
+  · **Der Defekt, den die Messung gefunden hat, stand schon da:**
+    `uft_fat_get_chain()` hielt den nächsten Cluster nur gegen die
+    **ersten sechzehn** Glieder (`for (i = 0; i < count && i < 16; i++)`).
+    Eine Schleife, die sich später schließt — 2..40, dann 40 → 20 —
+    war unsichtbar: `has_loops` blieb **false**, die Kette lief bis zur
+    65536er-Bremse, und der Aufrufer bekam zehntausende Cluster ohne
+    jede Warnung. Seit MF-1276 eine volle Bitmenge (360 Byte bei 1,44
+    MB), und `loop_at` sagt, **wo** sie sich schließt.
+  · **Und der Kettenläufer hatte NULL Tests** — gemessen
+    `git grep -l uft_fat_get_chain -- tests/`: kein Treffer. Die
+    Funktion, an der jede FAT12-Extraktion hängt, war unbewacht.
+  · **Neu:** `uft_fat_get_chain_sized()` fragt MIT der Dateigröße und
+    kann deshalb sagen, ob die Kette reicht: `needed`, `from_chain`,
+    `status`. Reißt sie ab, wird fortlaufend weitergelesen — und der
+    Zustand heißt `CONTIG`, „fortlaufend geraten (Versuch)", nicht
+    „ok". Produktivaufrufer ist `uft_fat_extract()`, das die Größe
+    bisher nur zum Abschneiden benutzte statt zum Fragen.
+  · **Vier Aussagen der Ausarbeitung über UNSEREN Baum nachgemessen:**
+    drei treffen zu (null Treffer für contig/cross/fallback, der zweite
+    Kettenläufer in `uft_msx.c`, keine Querverweiserkennung), eine ist
+    gedriftet — sie sagt 854 Zeilen, gemessen sind es **884**.
+  · **Rotbeweis: vier Mutationen, vier gefallen** — alte 16er-Bremse
+    (4 Zusagen), kein Rückfall (5), keine Deckelung auf den Bedarf (2),
+    `uft_fat_extract` fragt wieder ohne Größe (2). **Mutation C fiel
+    beim ERSTEN Lauf nicht**: meine Gruppe 4 deckte sie nicht ab, weil
+    dort die Diskette bremst und nicht der Bedarf. Gruppe 5
+    nachgetragen (Kette 10 Glieder, Datei 2 Cluster), dann fällt sie.
+    Dieselbe Klasse wie MF-1014 und MF-1274-D: ein grüner Test, der aus
+    dem falschen Grund grün war.
+  · **Herkunft:** disk-peek (Joost Yervante Damad, MIT,
+    `js/fat12.js:137-159`), Verfahren übernommen, Code neu geschrieben
+    — Kanal *Nachbau* nach MF-695. Die Vermerke stehen in allen drei
+    berührten Dateien; `audit_attribution_licence.py` meldet Rückstand
+    **29** gegen Grundlinie 31. **Ein NOTICE gibt es in diesem Baum
+    nicht** — die Ausarbeitung verlangt einen Eintrag dort, der
+    Mechanismus hier ist die Attribution im Dateikopf (MF-636).
+- **Stand 2026-09-20, elfter Durchgang — der erste der 29 gesperrten
+  Wandlungspfade ist frei (MF-1277), und der Plan dazu steht:**
+  · **`docs/PLAN_MODERNISIERUNG.md`** hält den Fahrplan in sechs Phasen,
+    jede in einer frischen Sitzung ausführbar. Eigentümerauftrag
+    wörtlich: „nimm alle den fremd code aus neue-ideen und verbessere
+    ihn, gehe den gesamt code durch suche nach schwachstellen … fange
+    dann zuerst mit IMD→IMG an."
+  · **Die Lage vorher, mit einem Wegwerf-Prüfstand gegen die ECHTE
+    `uft_convert_file()` gemessen:** 46 Wandlungspfade, 17
+    Matrix-Einträge, **29 gesperrt** — und zwar aus **drei**
+    verschiedenen Gründen: 18 am Preflight („UNTESTED"), 5 an
+    mehrdeutiger Quelle, 4 weil die Tabelle eine Format-ID nennt, die
+    **kein Plugin trägt** (`KRYOFLUX`), 2 ohne Quelldatei (`NBZ`).
+  · **Der teuerste Nebenbefund:** von **17** `.img`-Korpusdateien
+    werden nur **zwei** als `plugin='IMG'` erkannt; die übrigen holen
+    sich MSX, Victor9K, Micropolis, NorthStar oder HardSector — und
+    die deklarieren **alle** `UFT_FORMAT_DSK`. Die Wandlungstabelle ist
+    auf Format-IDs verschlüsselt, der ID-Raum ist aber eingeschmolzen
+    (MF-1087: 101 Plugins tragen `UFT_FORMAT_DSK`).
+  · **`IMD→IMG` ist eingelöst.** Beleg: `hxcfe_pc160.imd` (164 785 B,
+    **fremde Hand**) → 163 840 B, **0 von 163 840 abweichend** gegen
+    `uft_pc160.img`. Keine Gleichheit ohne Aussage (MF-1039):
+    163 840 = 40 × 1 × 8 × 512 ist der Sektorinhalt selbst.
+  · **Stufe `LOSSY_DOCUMENTED`, nicht `LOSSLESS`** — die Prüfdiskette
+    hat 0 defekte Sektoren, die IMD-Metadatenschicht geht trotzdem
+    verloren: neun Posten, aus den **Feldern** belegt. Der neunte ist
+    der forensisch teure: fehlende Sektoren werden mit **`0xE5`**
+    gefüllt und sind danach von echten `0xE5`-Sektoren nicht mehr zu
+    unterscheiden; der Wandler zählt und meldet sie, die Zieldatei kann
+    es nicht tragen.
+  · **Gemessen und festgehalten:** `accept_data_loss` hilft bei einem
+    UNGEPRÜFTEN Paar **nicht** (der Preflight sperrt zu jedem Preis) —
+    **nach** dem Eintrag greift es und wird verlangt. Die Absage
+    wechselt von „conversion pair is UNTESTED" auf „requires
+    accept_data_loss=true". Genau so ist es gebaut.
+  · **Rotbeweis: vier Mutationen, vier gefallen** — Matrix-Eintrag auf
+    ein anderes Ziel (14 Zusagen), zwei Stichworte aus der Notiz (4),
+    Füllbyte `0xE5`→`0x00` (2), Zustimmung verweigert (6).
+    **Mutation C fiel beim ERSTEN Lauf nicht**, weil die Prüfdiskette 0
+    fehlende Sektoren hat — Gruppe 5 baut deshalb eine IMD **mit**
+    Lücke (Sektortyp `UFT_IMD_SEC_UNAVAIL`). Dieselbe Klasse wie
+    MF-1274-D und MF-1276-C: ein grüner Test aus dem falschen Grund.
+  · **Kennzahl:** angebotene Wandlungspfade **15 → 16**, Matrix 17 → 18.
+  · **Nebenbefund, als `P3-517` festgehalten:** ein **Kalman-PLL** ist
+    in diesem Baum nie gebaut worden — drei Funktionen ohne Aufrufer,
+    eine Flagge, ein README-Eintrag für eine Datei, die es nicht gibt,
+    und zwei entschuldigende Kommentare.
+- **Stand 2026-09-20, zehnter Durchgang, Nachtrag — GESTOPPT bei
+  `uft_fat_robust`:** die **Querverweiserkennung** (zwei Dateien
+    auf demselben Cluster) und die **Geometrie ohne BPB** sind nicht
+    gebaut. Beide brauchen eine eigene Datenstruktur und einen eigenen
+    Produktivaufrufer; drei halbe Stücke sind schlechter als eines,
+    das trägt (Scope-Regel). Die Ausarbeitung nennt Querverweise
+    ausdrücklich als das, was in **jedem** Dateisystem des Baums fehlt
+    — das wäre ein Modul über allen, nicht eines in FAT12.
+- **Warteschlange „einbauen", aus dem Register abgeleitet** (die
+  eigenen Extrakte in `exsource/`: `uft_advanced_flux_v8.zip`,
+  `uft_copy_protection_v7.zip`, `uft_cbm_code_extraction_v4.zip`,
+  `track_layout_gen_c_v5.zip`, `micropolis_gcr_extract_c.zip`,
+  `mpi_gcr_extract_c.zip`; die sechs Module der Reihe
+  `uft_revolution`, `uft_protection_scan`, `uft_splice`,
+  `uft_fat_robust`, `uft_a2_order`, `uft_amiga_media` — ~~sobald ihr
+  Paket gefunden ist~~ **berichtigt MF-1274: DREI davon liegen im
+  Baum, und die erste Suche hat sie nur nicht gesehen.** Gesucht wurde
+  nach Dateinamen (`find -iname '*fat_robust*'`) und in `.md`-Dateien;
+  die Pakete heissen aber auf DEUTSCH und die Modulnamen stehen INNEN:
+  `neue-ideen/UFT-NN — FAT12 lesen.zip` -> `uft_fat_robust.{h,c}` +
+  `test_fat_robust.c` + `UFT-NN_FAT12_Robustheit.md`;
+  `neue-ideen/Apple-Sektorordnung.zip` -> `uft_a2_order.{h,c}` +
+  Test + Ausarbeitung; `neue-ideen/UFT-NN — Amiga.zip` ->
+  `uft_amiga_media.{h,c}` + Test + Ausarbeitung. Gefunden hat sie ein
+  `grep -rl` ueber den GANZEN Baum je Modulname — dieselbe Lehre wie
+  bei `adf_ext` (MF-1222): eine Suche ueber Dateinamen ist eine Aussage
+  ueber Dateinamen, nicht ueber Inhalte. Fuer `uft_revolution`,
+  `uft_protection_scan` und `uft_splice` gibt es weiterhin KEIN Paket
+  (0 Treffer ausserhalb dieser Liste und der Bauartefakte).
+  **`uft_fat_robust` ist damit der naechste Griff** — es ist zugleich
+  Punkt 2 des Zentrums-Entwurfs („ein Adapter, der beweist, dass es
+  traegt: img + FAT12"): je Modul EIN Commit, Rotbeweis zuerst, Lizenz
+  an der Datei, Kanal nach MF-695, und unter der EINFRIER-REGEL kein
+  neues Format-Plugin — Bugfixes und Verifikation ja.
+  · **Und genau die fünf Absagen waren die interessanten.**
+    `capsimage`: „THIS IS NOT FREE SOFTWARE" — und der Volltext liegt
+    laut eigener Datei in einem übergeordneten Archiv, das fehlt.
+    `samdisk_plus`: eine **nicht-kommerzielle** Klausel, festgehalten
+    als **`P3-514`** (Eigentümer-Vorlage). `ST-Recover`: Ms-RL.
+    `OpenCBM`: die Treffer-Datei ist die eines mitgelieferten
+    GUI-Teils, nicht die des Pakets.
+  · **Ein Mangel der eigenen Saat, gemessen und behoben:** die erste
+    gefundene Lizenzdatei ist nicht immer die des Pakets. Nachgezählt
+    war von 30 Pfaden genau **einer** verdächtig
+    (`casutil_extract_c.zip` → `third_party/…/COPYING`); er steht
+    jetzt als „ungemessen für das Paket selbst". Die beiden anderen
+    Fälle dieser Art (`samdisk_plus`, `OpenCBM`) hatte die
+    „nie raten"-Regel ohnehin abgefangen.
+- **Stand 2026-09-19, vierter Durchgang — die eigenen Ausarbeitungen
+  sind beurteilt, die `.lha` gemessen, und zwei der fünf unberührten
+  Analysen machten prüfbare Aussagen: 120 von 217 beurteilt, 97
+  offen:**
+  · **Die vier bis fünf Ausarbeitungen, die niemand zitiert, sind
+    gelesen.** `UFT-103` (86F Loch/Weak): die Testlücke stimmt (453
+    Zeilen, 0 Treffer), die Aussage „nicht als fehlend dokumentiert"
+    nicht — `uft_86f_plugin.c:373` führt es seit MF-961 als
+    `UNSUPPORTED` mit Grund; **die Ausarbeitung hat den Test
+    gemessen, nicht das Plugin.** Festgehalten als **`P3-515`**, mit
+    dem gemessenen Blocker: das Korpus-86F hat **keine**
+    Oberflächenbeschreibung (Disk-Flags `0x1088`, Bit 0 = 0), ein Test
+    dagegen könnte nicht rot werden; und `uft_track_t.weak_mask`
+    kann ein LOCH nicht von einem Weak Bit unterscheiden. `UFT-105`
+    (ProDOS aux_type): Prämisse zu weit — `prodos_po_do.c` liest kein
+    Dateisystem (MF-710), kein eigener Befund. `UFT-101/102/97`:
+    Fundus der Klasse P0-2.
+  · **`UFT-NN_TRS80_JV13_Analyse.md` war nie vergessen, nur namenlos
+    eingelöst:** ihr Hauptfund (`JV3_HEADER_SIZE 0x2300`, 256 Byte zu
+    weit, Verlust in jedem JV3-Abbild) ist genau **MF-1017**.
+  · **Die 66 Ausarbeitungen der obersten Ebene tragen jetzt ein
+    Urteil aus ihrem eigenen Kurzurteil** — der erste Satz, wörtlich;
+    Beleg sind ihre Kopfzeilen (Datum, Quelle); Kanal `Spec`
+    (Sekundärliteratur, gelesen, nichts übernommen); die Lizenz der
+    beschriebenen Quelle ausdrücklich „ungemessen". Nur die oberste
+    Ebene: die fünf verschachtelten gehören zum Urteil ihres
+    Materialordners (K4). Die zwei ohne Kurzurteil (`UFT-NN_*`) von
+    Hand.
+  · **Die sieben `.lha` sind keine „keine Aussage" mehr:** 7-Zip liegt
+    unter `C:\Program Files\7-Zip\7z.exe`, alle sieben gelistet (rc
+    0), **keines** trägt eine Datei namens LICENSE/COPYING/COPYRIGHT,
+    jedes ein Readme/Guide (nicht gelesen). Eine erste Messung meldete
+    einen Lizenztreffer — das war die 7-Zip-Kopfzeile („Copyright (c)
+    1999-2026 Igor Pavlov"), keine Datei; gemessen, bevor es
+    eingetragen wurde.
+  · **Eigener Fehler beim Eintragen, gefangen vom JSON-Parser:** in
+    vier handgeschriebenen Werten stand das ASCII-`"` als schließendes
+    Anführungszeichen mitten im String. Behoben mit dem typografischen
+    `“`, danach ein Zensus über alle Zeilen (jede trägt 0, 2 oder 4
+    unmaskierte Anführungszeichen). Die Messung dazu scheiterte
+    zuerst selbst — an Bash-Escapes im `-c`-String, die
+    Heredoc-Klasse aus MF-1096.
+  · **Verteilung der 120 Urteile:** Kanal Spec 69 · Fundus 44 ·
+    Helfer-Prozess 3 · Daten/Fixture 2 · Oracle 2; Kennzahl Fundus
+    118 · T3 runter 2. **Die 97 Offenen** sind: 75 Archive ohne
+    Lizenzdatei, dazu lose Quell- und Dokumentdateien und die
+    entpackten Verzeichnisse — jedes davon braucht ein Lesen, kein
+    Listen mehr.
+- **Stand 2026-09-20, MF-1284 (Schritt 1a des TD0-Umbaus):** das
+  TD0-Plugin ist der eine richtige Leser geworden. Der Anlass war eine
+  Messung, die den Plan verändert hat: `uft_td0_read_mem()` sollte
+  gelöscht und die Wandler auf den Plugin-Leser gezeigt werden — gemessen
+  konnte der Plugin-Leser **gepackte TD0 gar nicht lesen** (`compressed`
+  gesetzt und nie benutzt; `Transylvania.td0` meldete 188 Zylinder und
+  null Sektoren mit `UFT_OK`), und der LZSS-Entpacker hatte **0 Aufrufer
+  ausserhalb `uft_td0_lzss.c`**, wäre mit `read_mem` also mitgestorben.
+  1a hängt ihn deshalb ins Plugin, bevor 1b löscht. Belegt gegen hxcfe:
+  80×2/1440, 40×2/720, 41×2/738. Mutationsmatrix 5 von 5.
+  **Offen bleibt 1b** — löschen und die beiden Wandler umhängen.
+- **Stand 2026-09-20, MF-1285 (1b, erster Teil):** 1b ist gemessen **kein
+  Commit, sondern zwei**, und der Grund ist wieder eine Messung, nicht
+  eine Vorliebe:
+  · **Der Speicherweg hat keinen Pfad.** `uftc_td0_to_img_mem()` bekommt
+    Bytes, `uft_disk_open()` will einen Dateinamen, und
+    `uft_format_plugin_t` hat kein Öffnen-aus-dem-Speicher — der
+    Verteiler sagt das selbst und führt es als `KNOWN_ISSUES ARCH-6`.
+    „Wandler auf den Plugin-Leser" war für diesen Weg also gar nicht
+    machbar.
+  · **Das Plugin warf den Kommentarblock weg.** `uft_td0_read_mem()` las
+    ihn, `uft_td0_to_imd()` holt daraus Zeitstempel und Text. Löschen
+    ohne Ersatz hätte still das METADATA-Merkmal verloren, das
+    `uft_format_traegt()` seit MF-1283 für TD0 **und** IMD als getragen
+    führt.
+  MF-1285 baut deshalb den **Strom-Kern**: `uft_td0_strom_t` plus
+  `_aus_bytes`/`_frei`/`_spur`, an Bytes hängend statt an einem Griff,
+  mit behaltenem Kommentarblock. Das Plugin ist nur noch ein Aufsatz
+  darüber. **Nebenbei ist Schritt 5 des Umbauplans belegt:** das
+  Monatsfeld ist 0-basiert — libdsks Schreiber setzt `ptm->tm_mon`,
+  SAMdisk liest `bMon + 1`, und die Korpusdatei vom 2026-09-12 trägt
+  eine 8. Der Header-Kommentar „Month (1-12)" ist berichtigt; für das
+  **Jahr** bleibt eine Abweichung offen (`P3-522`).
+  **Offen bleibt 1b-ii** — die drei Wandler auf den Kern umhängen,
+  `uft_td0_read_mem` samt `uft_td0_image_t`-Lauf löschen.
+- **Stand 2026-09-20, MF-1286 (Sperre vor 1b-ii):** beim Umhängen der
+  IMD-Wandlung auf die kanonischen Sektorfelder fiel auf, dass **das
+  Plugin das falsche Bit als CRC-Fehler las** — `0x01` ist DUP, die
+  doppelte Sektor-ID; der CRC-Fehler ist `0x02`. Vier Quellen sagen
+  `0x02`, eine davon ein **Schreiber** (libdsk `drvtele.c:732`). Die
+  Wirkung ging in beide Richtungen: echte CRC-Fehler kamen als gute
+  Sektoren heraus, doppelte IDs als kaputte.
+  **Das musste vor 1b-ii kommen**, weil 1b-ii die IMD-Wandlung genau
+  auf dieses `crc_ok` umstellt — sonst hätte der Umbau den Fehler in den
+  neuen Pfad getragen und der alte wäre für den CRC-Fall der genauere
+  gewesen.
+  **Und ein grüner Test hat den Defekt bewacht:**
+  `tests/test_td0_error_marks.c` behauptete „bit0 (0x01) = data CRC
+  error" und baute sich die Prüfdatei dazu selbst — neunzehn Zeilen über
+  derselben Stelle, an der er die Klasse schon einmal beschrieben hatte
+  („both sides shared the same mistake", MF-389). Berichtigt, plus ein
+  vierter Sektor, der die bisher falsche Richtung absichert.
+  Matrix 4 von 4 über die **vier** TD0-Testziele; der erste Lauf meldete
+  3 von 4 und das war das Messwerkzeug, nicht die Abdeckung.
+  Nebenbefund `P3-523`: `TD0_FLAG_NO_DATA` im Wandler ist `0x08`, ein
+  Bit, das TD0 nicht benutzt — der `UNAVAILABLE`-Zweig ist damit
+  unerreichbar. Nicht mitrepariert, weil die Funktion in 1b-ii fällt.
+- **Stand 2026-09-20, MF-1287 — 1b ist ABGETRAGEN:** `uft_td0_read_mem()`
+  ist gelöscht, mit ihm sieben weitere Funktionen und die drei
+  Aggregattypen; alle drei Wandler gehen über den Strom-Kern. Jedes
+  Symbol war vor dem Schnitt gezählt und hatte außerhalb der sterbenden
+  Datei null Aufrufer.
+  · **`uft_td0_to_imd()` liest jetzt die kanonischen Sektorfelder** statt
+    der TD0-Flaggen — damit fällt `td0_flags_to_imd_stype()`, und
+    `P3-523` ist im neuen Pfad erledigt.
+  · **Der Wandler hatte nie einen Test.** `test_convert_imd_img_belegt.c`
+    prüft, dass das Preflight TD0→IMD SPERRT — dabei läuft er nie.
+    Gruppe 7 ist sein erster, und sie belegt die Kernzusage: ein
+    CRC-Flag in der TD0 kommt als `UFT_IMD_SEC_ERROR` an.
+  · **Neun Zahlen, zwei Namen, zwei Orte:** die privaten
+    `IMD_STYPE_*`-Konstanten im Wandler waren eine zweite Kopie von
+    `uft_imd_sectype_t` aus dem Formatheader — mit dem Kommentar „Not
+    symbolically named in the header", der nicht stimmte. Zusammengeführt
+    (§MF-1177).
+  Offen und benannt: `P3-524` (Sektorgrößen werden auf die des ersten
+  geebnet, im Widerspruch zur eigenen Merkmalstafel) — das entscheidet
+  mit, ob der künftige Matrixeintrag „identisch" oder „projiziert
+  identisch" heißt.
+  **Als Nächstes aus dem Umbauplan:** Schritt 3 (`UFT_CONV_LOSSLESS` für
+  TD0→IMD auf UNVERIFIED) und Schritt 4 (Vorwärtsprüfung gegen hxcfe,
+  Korpus ≥ 3).
+- **Stand 2026-09-20, MF-1288 — Schritt 3 ist abgetragen, und er war
+  größer als eine Zeile:** `TD0→IMD` steht auf `UFT_CONV_UNVERIFIED`.
+  Den Wert gab es vorher nicht — die Aufzählung kannte nur LOSSLESS,
+  LOSSY, SYNTHETIC, IMPOSSIBLE, **„nicht gemessen" war also gar nicht
+  sagbar**, und im Zweifel stand dort die freundlichste Behauptung.
+  · **Es war ein Fall von acht.** Gemessen zur Laufzeit: 13 Pfade
+    behaupteten LOSSLESS, **acht ohne jeden Matrixeintrag** — darunter
+    `SCP→G64`, Fluss nach Bitstrom, wo `CLAUDE.md` selbst sagt
+    „Flux→Sektor verliert Timing+WeakBits".
+  · **Die Güte-Spalte hatte keinen Leser.** `uft_convert_can()` null
+    Aufrufer, `uft_convert_print_matrix()` null Aufrufer und nicht
+    einmal eine Header-Deklaration. Deshalb konnte die falsche Zeile
+    stehen bleiben; der neue Test ist ihr erster Leser (`P3-525`).
+  · **Ratsche statt Einzelkorrektur:** `test_wandlungstafel_luegt_nicht.c`
+    hält seit MF-1288 die Regel „kein LOSSLESS ohne Matrixeintrag",
+    Grundlinie **7**, sie darf nur fallen (`P3-526` führt die sieben
+    namentlich).
+  **Offen bleibt Schritt 4** — Vorwärtsprüfung gegen hxcfe, Korpus ≥ 3,
+  danach der Matrixeintrag. Erst er entscheidet, ob aus UNVERIFIED
+  „identisch" oder „projiziert identisch" wird (`P3-524`).
+- **Stand 2026-09-27, auf dem Eigentuemerrechner fortgesetzt — Schritt 4 war seit MF-1307 erledigt, und der offene Kern von P3-524 ist GEKLAERT, anders als geplant (MF-1384):** die in `neue-ideen/1/imd120sc.zip` liegende ImageDisk-Quelle des Urhebers sagt eine gemischte Spur ab (`TD02IMD.C:907-908`); die Tafel behauptete, IMD trage sie. Tafel berichtigt, Wandler sagt ab statt zu ebnen, P3-524 geloest, P3-600 benannt. Der Posten selbst (Sichtung von 2408 Dateien) bleibt offen; naechster Griff: das Register `docs/NEUE_IDEEN_REGISTER.md` gegen den Ordner halten.
+- **Beleg:** `56969214` (MF-1405: 51 Urteile, Register 224/224, zweite Ebene im Skript, TRD-Sonde) und MF-1427 (victor9k-Lizenz im Paket belegt, AnalysisBooster und SurfaceIntegrity gesichtet, MSA-Plugin oeffnet Kaputtes nicht mehr mit UFT_OK). **Erledigt 2026-09-27.** Offen und als eigener Posten weitergereicht: zwei Luecken in `uft_d2_validate` aus dem AnalysisBooster-Befund.
+
+---
 
 ### A-041 · Zulieferung `uft-limits-code.zip` pruefen und uebernehmen, was UFT weiterbringt
 - **Status:** erledigt · **Aufgenommen:** 2026-09-27
