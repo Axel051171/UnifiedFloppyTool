@@ -22,28 +22,16 @@
 #define IPF_SEK_POOL      ((size_t)IPF_SEK_MAX_IBM * 1024u)
 
 /** Kennzeichnet den zuletzt angelegten Sektor mit dem, was der Dekoder
- *  gemessen hat. `uft_format_add_sector_with_id()` setzt unbedingt „gut". */
+ *  gemessen hat, und zaehlt es fuer den Bericht. Die Regel selbst steht
+ *  seit MF-1381 an EINER Stelle, `uft_format_mark_last_crc()`, die auch
+ *  der 86F-Leser ruft (P3-595). */
 static void letzten_kennzeichnen(uft_track_t *track, bool kopf_ok,
                                  bool daten_ok, bool geloescht,
                                  uft_ipf_sektor_bericht_t *b)
 {
-    uft_sector_t *s = &track->sectors[track->sector_count - 1u];
-    s->status |= (uint32_t)UFT_SECTOR_CRC_CHECKED;
-    if (!kopf_ok) {
-        uft_sector_set_id_crc(s, false);
-        s->id.crc_ok = false;
-        s->status |= (uint32_t)UFT_SECTOR_ID_CRC_ERROR;
-        b->kopf_crc_falsch++;
-    }
-    if (!daten_ok) {
-        uft_sector_set_crc(s, false);
-        s->status |= (uint32_t)UFT_SECTOR_CRC_ERROR;
-        b->daten_crc_falsch++;
-    }
-    if (geloescht) {
-        s->deleted = true;
-        s->status |= (uint32_t)UFT_SECTOR_DELETED;
-    }
+    uft_format_mark_last_crc(track, kopf_ok, daten_ok, geloescht);
+    if (!kopf_ok) b->kopf_crc_falsch++;
+    if (!daten_ok) b->daten_crc_falsch++;
 }
 
 int uft_ipf_sektoren(const uint8_t *zellen, uint32_t bits,

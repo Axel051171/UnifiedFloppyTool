@@ -389,8 +389,6 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/formats/atari/uft_atari_xdf_legacy.c
     classification: UNMARKED — triage
-  - file: src/formats/flux/ipf.c
-    classification: UNMARKED — triage
   - file: src/formats/misc/edd.c
     classification: UNMARKED — triage
   - file: src/formats/misc/fds.c

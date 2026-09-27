@@ -33,8 +33,11 @@
  * uft_ipf_air.c). Local copy because the constant is TU-private there. */
 #define IPF_PLUGIN_TF_FUZZY  0x01u
 
-/* Platform IDs — only AMIGA is needed for encoding selection. Matches
- * caps_platform_t::CAPS_PLATFORM_AMIGA in include/uft/formats/ipf/uft_ipf_caps.h. */
+/* Platform IDs — only AMIGA is needed for encoding selection. INFO
+ * "Platforms", 1 = Amiga (Louis-Guerin, IPF Documentation V0.0, Kap. 2.3).
+ * Hier stand ein Verweis auf uft_ipf_caps.h; der Header ist seit MF-1380
+ * fort. Seit MF-1373 entscheidet ueber die Kodierung ohnehin der INHALT
+ * (uft_ipf_sektoren.c) — dieses Feld ist nur der Vorgabewert. */
 #define IPF_PLUGIN_PLATFORM_AMIGA  1u
 
 static bool ipf_plugin_probe(const uint8_t *data, size_t size,
