@@ -159,7 +159,7 @@ typedef struct {
     uint32_t data_length;
     uint32_t img_format;
     const img2_tafel_t *g;
-    uint8_t  kopf[IMG2_HDR_SIZE];   /* MF-1439: fuer read_metadata */
+    uint8_t  kopf[IMG2_HDR_SIZE];   /* MF-1463: fuer read_metadata */
 } img2_data_t;
 
 /* MAME ap_dsk35.cpp:560 — `int ns = 12 - (track/16);` */
@@ -266,7 +266,7 @@ bool img2_probe(const uint8_t *data, size_t size, size_t file_size,
     return true;
 }
 
-/* ── MF-1439 (P3-620 Fall 3): Sperre, Volumennummer, Kommentar, Erzeuger ──
+/* ── MF-1463 (P3-620 Fall 3): Sperre, Volumennummer, Kommentar, Erzeuger ──
  *
  * Referenz: CiderPress2 `DiskArc/Disk/TwoIMG-notes.md` (Andy McFadden,
  * Apache-2.0, Stand 7a055a2), dort nach der Originalbeschreibung
@@ -555,7 +555,7 @@ const uft_format_plugin_t uft_format_plugin_2img = {
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
-    .read_metadata = img2_read_metadata,   /* MF-1439 */
+    .read_metadata = img2_read_metadata,   /* MF-1463 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */
     .features = uft_format_plugin_2img_features,  /* V415-PLAN PLUGIN.features (MF-263) */

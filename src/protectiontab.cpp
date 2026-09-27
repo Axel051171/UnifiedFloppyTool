@@ -31,7 +31,7 @@ ProtectionTab::ProtectionTab(QWidget *parent)
     setupConnections();
     verbindeAuswahl();
     loadSettings();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 ProtectionTab::~ProtectionTab() {
@@ -85,7 +85,7 @@ void ProtectionTab::setConfig(const uft_prot_config_t* config) {
     
     blockSignals(false);
     emit configChanged();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 uint32_t ProtectionTab::getAnalysisFlags() const {
@@ -193,7 +193,7 @@ void ProtectionTab::applyProfile(const QString& profileName) {
         ui->checkC64Expert->setChecked(true);
         ui->checkC64WeakBits->setChecked(true);
         ui->checkC64VarTiming->setChecked(true);
-        /* MF-1436: checkC64Alignment bleibt aus - kein Erkenner (P3-602) */
+        /* MF-1460: checkC64Alignment bleibt aus - kein Erkenner (P3-602) */
         ui->checkHalfTrack->setChecked(true);
         syncC64Widgets(true);
     }
@@ -213,7 +213,7 @@ void ProtectionTab::applyProfile(const QString& profileName) {
     
     blockSignals(false);
     emit configChanged();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::onSaveProfile() {
@@ -249,7 +249,7 @@ void ProtectionTab::onAutoDetectToggled(bool checked) {
         ui->checkDDEnable->setEnabled(true);
     }
     emit configChanged();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::onPreserveToggled(bool /*checked*/) {
@@ -267,7 +267,7 @@ void ProtectionTab::onC64EnableToggled(bool checked) {
 void ProtectionTab::onC64ExpertToggled(bool checked) {
     ui->groupC64ExpertParams->setEnabled(checked);
     emit configChanged();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::onDDEnableToggled(bool checked) {
@@ -278,7 +278,7 @@ void ProtectionTab::onDDEnableToggled(bool checked) {
 void ProtectionTab::onDDExpertToggled(bool checked) {
     ui->groupDDExpert->setEnabled(checked);
     emit configChanged();
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::onXCopyEnableToggled(bool checked) {
@@ -320,7 +320,7 @@ void ProtectionTab::loadSettings() {
     
     // Generic flags
     ui->checkWeakBits->setChecked(settings.value("weakBits", true).toBool());
-    /* MF-1437: Filter der laufenden Analyse, eigener Schluessel, voreingestellt
+    /* MF-1461: Filter der laufenden Analyse, eigener Schluessel, voreingestellt
      * "zeigen" (uft_schutz_auswahl.h) — nicht der alte "halfTrack" (false). */
     ui->checkHalfTrack->setChecked(settings.value("zeigeHalbspur", true).toBool());
     ui->checkLongTrack->setChecked(settings.value("longTrack", false).toBool());
@@ -333,7 +333,7 @@ void ProtectionTab::loadSettings() {
     ui->checkC64Expert->setChecked(settings.value("c64Expert", false).toBool());
     ui->checkC64WeakBits->setChecked(settings.value("c64WeakBits", true).toBool());
     ui->checkC64VarTiming->setChecked(settings.value("c64VarTiming", true).toBool());
-    uftSperreSpurausrichtung(ui->checkC64Alignment);  /* MF-1436: kein Erkenner, ein gespeicherter Haken gilt nicht */
+    uftSperreSpurausrichtung(ui->checkC64Alignment);  /* MF-1460: kein Erkenner, ein gespeicherter Haken gilt nicht */
     ui->checkC64SectorCount->setChecked(settings.value("c64SectorCount", true).toBool());
     
     settings.endGroup();
@@ -359,7 +359,7 @@ void ProtectionTab::saveSettings() {
     
     // Generic flags
     settings.setValue("weakBits", ui->checkWeakBits->isChecked());
-    settings.setValue("zeigeHalbspur", ui->checkHalfTrack->isChecked());  /* MF-1437 */
+    settings.setValue("zeigeHalbspur", ui->checkHalfTrack->isChecked());  /* MF-1461 */
     settings.setValue("longTrack", ui->checkLongTrack->isChecked());
     settings.setValue("shortTrack", ui->checkShortTrack->isChecked());
     settings.setValue("badCRC", ui->checkBadCRC->isChecked());
@@ -384,7 +384,7 @@ void ProtectionTab::resetDefaults() {
     ui->checkLogDetails->setChecked(false);
     
     ui->checkWeakBits->setChecked(true);
-    ui->checkHalfTrack->setChecked(true);   /* MF-1437: Filter, voreingestellt "zeigen" */
+    ui->checkHalfTrack->setChecked(true);   /* MF-1461: Filter, voreingestellt "zeigen" */
     ui->checkLongTrack->setChecked(false);
     ui->checkShortTrack->setChecked(false);
     ui->checkBadCRC->setChecked(true);
@@ -441,7 +441,7 @@ void ProtectionTab::setupConnections() {
     connect(ui->checkC64SectorCount, &QCheckBox::toggled, this, &ProtectionTab::onAnyCheckboxChanged);
 }
 
-/* P3-635 Weg A (MF-1437).
+/* P3-650 Weg A (MF-1461).
  *
  * Gemessen: 54 Bedienelemente, keines erreichte eine Analyse. Die EINZIGE
  * Eingabe mit einem Merkmal in der laufenden Analyse ist "Enable Half-Track
@@ -472,10 +472,10 @@ void ProtectionTab::wendeSperrenAn() {
     /* 2. Jede andere Eingabe ausschalten */
     const QString anzeige = tr(
         "Ergebnisanzeige ohne Quelle: dieser Reiter fuehrt keine Analyse aus. "
-        "Die Schutzanalyse laeuft im Status-Reiter (P3-635).");
+        "Die Schutzanalyse laeuft im Status-Reiter (P3-650).");
     const QString ohneLeser = tr(
         "Ohne Wirkung: keine Analyse im Baum liest diese Einstellung. "
-        "Wirksam ist hier nur \"Enable Half-Track Detection\" (P3-635).");
+        "Wirksam ist hier nur \"Enable Half-Track Detection\" (P3-650).");
     for (QWidget *e : findChildren<QWidget *>()) {
         if (!qobject_cast<QAbstractButton *>(e) && !qobject_cast<QComboBox *>(e) &&
             !qobject_cast<QAbstractSpinBox *>(e) && !qobject_cast<QAbstractSlider *>(e))
@@ -524,7 +524,7 @@ void ProtectionTab::syncC64Widgets(bool enabled) {
     ui->groupC64Output->setEnabled(enabled);
     ui->checkC64Expert->setEnabled(enabled);
     ui->groupC64ExpertParams->setEnabled(enabled && ui->checkC64Expert->isChecked());
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::syncDDWidgets(bool enabled) {
@@ -535,7 +535,7 @@ void ProtectionTab::syncDDWidgets(bool enabled) {
     ui->checkDD5->setEnabled(enabled);
     ui->checkDDExpertMode->setEnabled(enabled);
     ui->groupDDExpert->setEnabled(enabled && ui->checkDDExpertMode->isChecked());
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 void ProtectionTab::syncXCopyWidgets(bool enabled) {
@@ -547,7 +547,7 @@ void ProtectionTab::syncXCopyWidgets(bool enabled) {
     ui->checkErr6->setEnabled(enabled);
     ui->checkErr7->setEnabled(enabled);
     ui->checkErr8->setEnabled(enabled);
-    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
+    wendeSperrenAn();   /* P3-650 Weg A, MF-1461 */
 }
 
 uint32_t ProtectionTab::mapC64Flags() const {

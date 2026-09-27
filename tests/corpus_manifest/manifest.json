@@ -1327,7 +1327,7 @@
       "test": "test_acorn_gegen_dim",
       "oracle": "DiscImageManager",
       "fremdcode": "nein - ein leer formatiertes ADFS S: Freiraumkarte (Sektor 0/1), Wurzelverzeichnis mit \"Hugo\" bei $201 und $6FB, der Rest ist Freiraum (Fuellbyte 0x5A oder null). Kein Programm, keine Zeile DIM-Quelltext uebernommen.",
-      "content": "ADFS S, 40 x 1 x 16 x 256, altes Kartenformat, alte Verzeichnisse. Freiraum ab Sektor 7, 633 Sektoren lang (Karte), also bis zum Ende. Gemessen durch adf_arc: 40 Spuren, 640 Sektoren, alle byteidentisch mit der Datei, Sonde 90 aus Kennung + Karte + Verzeichnisende (MF-1441)."
+      "content": "ADFS S, 40 x 1 x 16 x 256, altes Kartenformat, alte Verzeichnisse. Freiraum ab Sektor 7, 633 Sektoren lang (Karte), also bis zum Ende. Gemessen durch adf_arc: 40 Spuren, 640 Sektoren, alle byteidentisch mit der Datei, Sonde 90 aus Kennung + Karte + Verzeichnisende (MF-1465)."
     },
     {
       "file": "tests/corpus_free/dim_adfs_d.adf",

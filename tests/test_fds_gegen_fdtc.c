@@ -312,7 +312,7 @@ int main(void)
     }
     spur_freigeben(&t);
 
-    /* 8. MF-1440 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ueber
+    /* 8. MF-1464 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ueber
      *    `read_metadata`. Erwartet sind die Werte, die das REZEPT den
      *    fremden Werkzeugen gab ("UFT", UFTK0/UFTK1, $8000) und die
      *    fdstool bestaetigt hat (2 Dateien, $8000, 8192 Byte) — die Namen

@@ -1,6 +1,6 @@
 /**
  * @file uft_spurausrichtung.h
- * @brief "Track Alignment Issues" hat keinen Erkenner (P3-602, MF-1436)
+ * @brief "Track Alignment Issues" hat keinen Erkenner (P3-602, MF-1460)
  *
  * Gemessen: die einzige C64-Schutzanalyse, die laeuft
  * (`ufm_c64_prot_analyze()`), kennt sieben Merkmale — schwache Bits,

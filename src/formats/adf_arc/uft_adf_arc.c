@@ -25,7 +25,7 @@
 
 typedef struct { FILE* file; uint8_t cyl; uint8_t heads; uint8_t spt; uint16_t ss; } adf_arc_data_t;
 
-/* ── MF-1441 (P3-620 Fall 5): ADFS S, 163 840 Byte = 40 x 1 x 16 x 256 ──
+/* ── MF-1465 (P3-620 Fall 5): ADFS S, 163 840 Byte = 40 x 1 x 16 x 256 ──
  *
  * Referenz DiscImageManager (geraldholdsworth, GPL-3.0, als Spec gelesen,
  * Stand ffba5738): `DiscImage_ADFS.pas:73` fuehrt 163840 als ADFS S; die
@@ -36,7 +36,7 @@ typedef struct { FILE* file; uint8_t cyl; uint8_t heads; uint8_t spt; uint16_t s
  * verlaesst die Umrechnung fuer jedes ADFS ausser L.
  *
  * Bis hierher nahm kein Plugin diese Groesse an (das verwaiste Doppel
- * bbc/adf_adl.c tat es, entfernt MF-1441). Und sie darf NICHT an der
+ * bbc/adf_adl.c tat es, entfernt MF-1465). Und sie darf NICHT an der
  * Groesse haengen: 163 840
  * Byte ist auch ein PC-160K-Abbild (40 x 1 x 8 x 512). Beansprucht wird
  * deshalb nur mit Belegen nach der Sonden-Doktrin (docs/SONDEN_DOKTRIN.md):
@@ -77,7 +77,7 @@ static uft_error_t adf_arc_open(uft_disk_t *disk, const char *path, bool ro) {
     long fs = ftell(f); if (fs < 0) { fclose(f); return UFT_ERROR_IO; }
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
 
-    /* MF-1441: ADFS S nur mit Kennung — dieselbe Pruefung wie die Sonde,
+    /* MF-1465: ADFS S nur mit Kennung — dieselbe Pruefung wie die Sonde,
      * damit ein ausdruecklich gewaehltes Plugin kein PC-160K-Abbild als
      * ADFS zerlegt. */
     if ((unsigned long)fs == ADFS_S_SIZE) {
@@ -94,7 +94,7 @@ static uft_error_t adf_arc_open(uft_disk_t *disk, const char *path, bool ro) {
     p->file = f;
     switch (fs) {
         case 819200:  p->cyl=80; p->heads=2; p->spt=5;  p->ss=1024; break;
-        case 163840:  p->cyl=40; p->heads=1; p->spt=16; p->ss=256;  break;  /* ADFS S, MF-1441 */
+        case 163840:  p->cyl=40; p->heads=1; p->spt=16; p->ss=256;  break;  /* ADFS S, MF-1465 */
         case 327680:  p->cyl=80; p->heads=1; p->spt=16; p->ss=256;  break;
         case 1638400: p->cyl=80; p->heads=2; p->spt=10; p->ss=1024; break;
         default: free(p); fclose(f); return UFT_ERROR_FORMAT_INVALID;
@@ -172,7 +172,7 @@ static const uft_plugin_feature_t uft_format_plugin_adf_arc_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_adf_arc = {
     .name = "ADF_ARC", .description = "Acorn Archimedes ADFS",
-    .extensions = "adf;adl;adm;ads", .format = UFT_FORMAT_DSK,  /* ads: ADFS S, DIM DiscImage_Private.pas:188 (MF-1441) */
+    .extensions = "adf;adl;adm;ads", .format = UFT_FORMAT_DSK,  /* ads: ADFS S, DIM DiscImage_Private.pas:188 (MF-1465) */
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = adf_arc_probe, .open = adf_arc_open, .close = adf_arc_close,
     .read_track = adf_arc_read_track, .write_track = adf_arc_write_track,

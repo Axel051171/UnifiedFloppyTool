@@ -104,7 +104,7 @@ private:
     QGroupBox *m_schemeGroup;
     QTableWidget *m_schemeTable;
     QComboBox *m_schemeFilter;
-    QLabel *m_lblSchutzAuswahl = nullptr;   /**< MF-1437: was die Auswahl ausblendet */
+    QLabel *m_lblSchutzAuswahl = nullptr;   /**< MF-1461: was die Auswahl ausblendet */
     QLabel *m_confidenceLabel;
     QProgressBar *m_confidenceBar;
     

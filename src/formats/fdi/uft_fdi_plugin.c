@@ -262,7 +262,7 @@ static const uft_plugin_feature_t uft_format_plugin_fdi_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
-/* ── MF-1442 (P3-620 Fall 7): Beschreibung und Schreibschutz ────────────
+/* ── MF-1466 (P3-620 Fall 7): Beschreibung und Schreibschutz ────────────
  *
  * Referenz SAMdisk `src/samdisk/fdi.cpp` (im Baum):
  *     :11  uint8_t bWriteProtect;   // Non-zero if write-protected
@@ -273,7 +273,7 @@ static const uft_plugin_feature_t uft_format_plugin_fdi_features[] = {
  * verschluckt. Der Schreibschutz wird GEMELDET, nicht durchgesetzt.
  *
  * Bis hierher nannte das Plugin beide Felder nur im Kommentar; das
- * verwaiste Doppel `uft_fdi_parser_v2.c:331-335` las sie (entfernt MF-1442:
+ * verwaiste Doppel `uft_fdi_parser_v2.c:331-335` las sie (entfernt MF-1466:
  * seine Sektorflaggen widersprachen SAMdisk, UDI erkannte es nur an der
  * Kennung und zerlegte es dann als FDI; UDI hat ein eigenes Plugin). */
 static uft_error_t fdi_plugin_read_metadata(uft_disk_t *disk, const char *key,
@@ -318,7 +318,7 @@ const uft_format_plugin_t uft_format_plugin_fdi = {
     .probe = fdi_plugin_probe, .open = fdi_plugin_open,
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,
     .write_track = fdi_plugin_write_track,
-    .read_metadata = fdi_plugin_read_metadata,   /* MF-1442 */
+    .read_metadata = fdi_plugin_read_metadata,   /* MF-1466 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_fdi_features,  /* V415-PLAN PLUGIN.features (MF-263) */

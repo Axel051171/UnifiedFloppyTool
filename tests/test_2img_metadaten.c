@@ -1,6 +1,6 @@
 /**
  * @file test_2img_metadaten.c
- * @brief 2IMG: Sperre, Volumennummer, Kommentar, Erzeuger (P3-620 Fall 3, MF-1439)
+ * @brief 2IMG: Sperre, Volumennummer, Kommentar, Erzeuger (P3-620 Fall 3, MF-1463)
  *
  * Benannte Referenz: CiderPress2 `DiskArc/Disk/TwoIMG-notes.md` (Andy
  * McFadden, Apache-2.0, Stand 7a055a2), nach der Originalbeschreibung
@@ -146,7 +146,7 @@ static void t_ohne_angaben_wird_nichts_erfunden(void)
 
 int main(void)
 {
-    printf("2IMG-Metadaten (P3-620 Fall 3, MF-1439)\n");
+    printf("2IMG-Metadaten (P3-620 Fall 3, MF-1463)\n");
     t_gesperrt_volume_200_mit_kommentar();
     t_ohne_angaben_wird_nichts_erfunden();
     printf("%d Pruefungen, %d Fehler\n", geprueft, fehler);

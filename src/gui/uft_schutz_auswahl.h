@@ -1,9 +1,9 @@
 /**
  * @file uft_schutz_auswahl.h
  * @brief Was der Protection Analyzer an der laufenden Schutzanalyse steuert
- *        (P3-635 Weg A, MF-1437)
+ *        (P3-650 Weg A, MF-1461)
  *
- * Gemessen (MF-1436): der Reiter "Protection Analyzer" hatte 54
+ * Gemessen (MF-1460): der Reiter "Protection Analyzer" hatte 54
  * Bedienelemente, und keines erreichte eine Analyse. Die einzige
  * Schutzanalyse, die laeuft, ist `ufm_c64_prot_analyze()` im
  * ProtectionAnalysisWidget. Sie meldet fuenf Merkmale:
@@ -17,7 +17,7 @@
  * AUSGESCHALTET anlegt: eine Ergebnisanzeige, keine Eingabe. Eine Anzeige
  * zur Eingabe umzudeuten waere eine Bedeutungsaenderung des Formulars.
  * Unter den EINGABEN hat genau eine ein Merkmal: "Enable Half-Track
- * Detection" ↔ UFM_PROT_HALF_TRACK. Sie waehlt seit MF-1437, ob die
+ * Detection" ↔ UFM_PROT_HALF_TRACK. Sie waehlt seit MF-1461, ob die
  * Analyse Halbspur-Treffer ZEIGT — sie aendert nicht, was gemessen
  * wird. Die anderen vier Merkmale werden immer gezeigt.
  *

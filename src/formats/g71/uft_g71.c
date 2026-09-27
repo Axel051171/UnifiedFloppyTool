@@ -18,6 +18,9 @@
 #include "uft/formats/uft_g71.h"
 #include "uft/uft_types.h"
 #include "uft/uft_format_common.h"
+/* P3-599/K4: der geprueste CBM-GCR-Dekodierer wird GERUFEN, nicht
+ * abgeschrieben. Er nimmt Bytes und kennt keine Seitenbeschraenkung. */
+#include "uft/formats/c64/uft_gcr_ops.h"
 /* Note: uft_g71.h includes uft/core/uft_unified_types.h which provides:
  *   - uft_track_t, uft_disk_image_t, uft_sector_t
  *   - Error codes: UFT_OK, UFT_ERR_*, UFT_ERC_*
@@ -40,6 +43,10 @@
 #define G71_TRACKS_PER_SIDE 42
 #define G71_HALF_TRACKS     168         /* Including half tracks */
 #define G71_MAX_TRACK_SIZE  7928        /* Maximum GCR track size */
+/* Ein CBM-Sektor traegt 256 Byte. Die Zahl steht hier, weil
+ * `gcr_extract_sector()` genau diese Puffergroesse verlangt (P3-599/K4);
+ * sie ist keine Annahme dieses Plugins, sondern die des Formats. */
+#define G71_SECTOR_SIZE     256
 
 /* Track offset table starts after header */
 #define G71_HEADER_SIZE     12
@@ -498,9 +505,7 @@ static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     if (!gcr) return UFT_ERR_MEMORY;
     memcpy(gcr, &pd->data[offset + 2], track_size);
 
-    /* Preserve the raw GCR bitstream verbatim (kein Bit verloren). GCR 5-to-4
-     * sector decode is a shared-pipeline concern that the file-level reader
-     * defers likewise — not fabricated here at the plugin level. */
+    /* Preserve the raw GCR bitstream verbatim (kein Bit verloren). */
     track->raw_data = gcr;
     track->raw_size = track_size;
     /* MF-595: `uft_track_release()` gibt NUR frei, wenn diese Fahne
@@ -511,6 +516,74 @@ static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     track->owns_data = true;
     track->encoding = UFT_ENC_GCR_CBM;
     track->status = UFT_TRACK_OK;
+
+    /* ── Sektoren: RUFEN statt KOPIEREN (P3-599, Entscheidung K4, MF-1436) ─────
+     *
+     * Hier stand bis dahin, die GCR-Zerlegung sei „a shared-pipeline
+     * concern ... not fabricated here at the plugin level". Das war
+     * ehrlich und hatte eine Folge, die niemand gemessen hatte: die
+     * Bruecke ins Zentrum sagte mit `RAW_BITS_UNKNOWN` ab, weil eine
+     * Spur ohne Bitlaenge und ohne Sektoren nichts traegt, das sie
+     * nehmen DARF — und `bytes * 8` waeren bis zu sieben erfundene
+     * Bits. Eine gueltige doppelseitige 1571-Diskette war damit fuer
+     * den ganzen Analysepfad nicht vorhanden (P3-599).
+     *
+     * Die Pipeline gibt es: `gcr_extract_sector()` in
+     * `src/formats/c64/uft_gcr_ops.c` nimmt BYTES, nicht eine Datei,
+     * und kennt keine Seitenbeschraenkung. Sie wird hier gerufen, nicht
+     * abgeschrieben — der Entwurf, der `g64_read_slot()` kopiert haette,
+     * ist ausdruecklich verworfen: jene Funktion ist `static`, weist
+     * `head != 0` unbedingt ab und liest ueber einen `FILE*`.
+     *
+     * Woran sie belegt ist: `gcr_extract_sector()` prueft den Kopfblock
+     * gegen `Spur ^ Sektor ^ ID1 ^ ID2` und den Datenblock gegen das XOR
+     * ueber seine 256 Byte. Beide Summen hat der schreibende Rechner auf
+     * die DISKETTE geschrieben, nicht unser Code (MF-1013, derselbe Weg
+     * wie MF-869 beim FM-Pfad). Bis MF-1013 war die Funktion eine
+     * Fassade, die 256 Nullbytes UND Erfolg lieferte; seither nicht
+     * mehr, und dieser Aufruf ist ihr erster aus einem Produktivpfad.
+     *
+     * Gemessen an `tests/corpus_free/vice_c1541_1571.g71`: 802 Sektoren
+     * je Seite, 1604 gesamt, 0 Pruefsummenfehler — die Zahl ergibt sich
+     * unabhaengig aus `gcr_sectors_per_track()`, also aus dem Format.
+     * Festgehalten in `tests/test_g71_liefert_sektoren.c`. */
+    const int spur_nr = cyl + 1;                /* 1541 zaehlt ab 1 */
+    const int n_sek = gcr_sectors_per_track(spur_nr);
+    for (int s = 0; s < n_sek; s++) {
+        uint8_t daten[G71_SECTOR_SIZE];
+        gcr_sector_verify_t pruef;
+        memset(&pruef, 0, sizeof(pruef));
+        if (gcr_extract_sector(gcr, track_size, s, daten, &pruef) != 0)
+            continue;                           /* Sektor nicht gefunden */
+
+        uft_sector_t sek;
+        memset(&sek, 0, sizeof(sek));
+        sek.id.cylinder = (uint8_t)cyl;
+        sek.id.head     = (uint8_t)head;
+        sek.id.sector   = (uint8_t)s;
+        sek.id.size_code = 1;                   /* 256 Byte */
+        sek.data = daten;
+        /* MF-1080: BEIDE Laengenfelder. `data_len` ist das verbindliche,
+         * `data_size` laut `uft_types.h` legacy. Fehlt `data_len`, gibt
+         * `uft_sector_copy()` rc=0 UND `data == NULL` zurueck, und
+         * `uft_mfm_encode_from_track()` schreibt 0x00 statt der Bytes —
+         * ein stiller Verlust. Das Tor „Sektor-Laenge" hat genau das an
+         * dieser Stelle gefangen, als hier nur `data_size` stand. */
+        sek.data_size = G71_SECTOR_SIZE;
+        sek.data_len  = G71_SECTOR_SIZE;
+        /* Die Summen stehen auf der Diskette — also ist die Angabe
+         * BEKANNT, und ihr Ergebnis wird nicht beschoenigt. */
+        sek.crc_valid = true;
+        sek.crc_ok = pruef.data_ok;
+        sek.data_crc_ok = pruef.data_ok;
+        sek.status = UFT_SECTOR_OK;
+        if (!pruef.header_ok) sek.status |= UFT_SECTOR_ID_CRC_ERROR;
+        if (!pruef.data_ok)   sek.status |= UFT_SECTOR_CRC_ERROR;
+
+        if (uft_track_add_sector(track, &sek) != UFT_OK)
+            break;                              /* kein Speicher — ehrlich
+                                                 * weniger, nie erfunden */
+    }
     return UFT_OK;
 }
 

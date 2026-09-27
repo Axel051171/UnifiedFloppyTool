@@ -343,7 +343,7 @@ static uft_error_t fds_open(uft_disk_t *disk, const char *path,
  * close
  * ============================================================================ */
 
-/* ── MF-1440 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ─────────
+/* ── MF-1464 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ─────────
  *
  * Die Blockkette je Seite (nesdev `FDS_disk_format`, im Dateikopf zitiert):
  * Block 1 (56 Byte in .FDS), Block 2 (2), dann je Datei Block 3 (16) und
@@ -543,7 +543,7 @@ const uft_format_plugin_t uft_format_plugin_fds = {
     .close        = fds_close,
     .read_track   = fds_read_track,
     .write_track  = fds_write_track,
-    .read_metadata = fds_read_metadata,   /* MF-1440 */
+    .read_metadata = fds_read_metadata,   /* MF-1464 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_fds_features,  /* V415-PLAN PLUGIN.features (MF-263) */

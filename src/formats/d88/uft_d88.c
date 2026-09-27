@@ -177,7 +177,7 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uft_track_init(track, cyl, head);
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { return UFT_ERROR_INVALID_ARG; }
     uint8_t sec_hdr[16];
-    /* P3-620 Fall 2 / MF-1438: die Sektorzahl gilt JE SPUR. pc98.org
+    /* P3-620 Fall 2 / MF-1462: die Sektorzahl gilt JE SPUR. pc98.org
      * d88.html: der Sektorkopf traegt bei +04 (WORD) die Zahl der
      * Sektoren DIESER Spur; MAME d88_dsk.cpp und uft_d77.c lesen sie so.
      * Hier lief die Schleife bis `disk->geometry.sectors` — der Zahl der
@@ -185,7 +185,7 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
      * still, eine kuerzere gab Koepfe der NAECHSTEN Spur als eigene aus
      * (tests/test_d88_spur_sektorzahl.c: 8 statt 16, 8 statt 5). */
     int spur_sektoren = -1;
-    /* MF-1438: Dichte-Flagge +06 je Sektor. Belegt sind zwei Werte, und
+    /* MF-1462: Dichte-Flagge +06 je Sektor. Belegt sind zwei Werte, und
      * nur diese werden gedeutet — 0x00 = doppelte Dichte (MFM), 0x40 =
      * einfache (FM): pc98.org d88.html, wie im Baum schon uft_d77.c:22
      * und das verwaiste Doppel pc98/d88.c:26 fuehren. uft_d88_parser_v2.c
@@ -261,7 +261,7 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) return UFT_ERROR_IO;
 
     uint8_t sec_hdr[16];
-    /* MF-1438: dieselbe Zahl je Spur wie beim Lesen. Mit der Zahl der
+    /* MF-1462: dieselbe Zahl je Spur wie beim Lesen. Mit der Zahl der
      * ersten Spur schrieb eine laengere Spur nur ihre ersten Sektoren
      * und meldete UFT_OK; eine kuerzere schrieb in die naechste Spur. */
     int spur_sektoren = -1;

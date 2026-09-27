@@ -60,7 +60,7 @@ FormatTab::FormatTab(QWidget *parent)
 
 {
     ui->setupUi(this);
-    /* P3-602 / MF-1436: dasselbe Kaestchen wie im Protection Analyzer,
+    /* P3-602 / MF-1460: dasselbe Kaestchen wie im Protection Analyzer,
      * hier ebenfalls ohne Leser — und ohne Erkenner im Baum. */
     uftSperreSpurausrichtung(ui->checkC64Alignment);
 

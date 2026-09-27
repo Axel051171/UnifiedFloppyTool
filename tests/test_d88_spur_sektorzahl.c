@@ -1,6 +1,6 @@
 /**
  * @file test_d88_spur_sektorzahl.c
- * @brief D88: jede Spur hat ihre eigene Sektorzahl (P3-620 Fall 2, MF-1438)
+ * @brief D88: jede Spur hat ihre eigene Sektorzahl (P3-620 Fall 2, MF-1462)
  *
  * Benannte Referenz — dieselbe, die `uft_d88.c` schon zitiert:
  *   - <https://www.pc98.org/project/doc/d88.html>: der Sektorkopf traegt bei
@@ -201,7 +201,7 @@ TEST(kuerzere_spur_schreibt_nicht_in_die_naechste)
     for (int i = 0; i < 5; i++) ASSERT(m[i] == (uint8_t)(0xA0 + i));
 }
 
-/* ── Dichte +06 -> Kodierung der Spur (MF-1438) ────────────────────── */
+/* ── Dichte +06 -> Kodierung der Spur (MF-1462) ────────────────────── */
 
 static uft_encoding_t kodierung(int cyl, int head)
 {
@@ -237,7 +237,7 @@ TEST(dichte_0x40_ist_fm_gemischt_ist_mixed_sonst_unbekannt)
 
 int main(void)
 {
-    printf("D88: Sektorzahl je Spur (P3-620 Fall 2, MF-1438)\n");
+    printf("D88: Sektorzahl je Spur (P3-620 Fall 2, MF-1462)\n");
     if (!bauen()) { printf("Abbild nicht herstellbar\n"); return 1; }
     RUN(erste_spur_8_sektoren);
     RUN(laengere_spur_verliert_nichts);

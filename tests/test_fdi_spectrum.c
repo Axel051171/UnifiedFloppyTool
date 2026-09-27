@@ -57,7 +57,7 @@ static void put_sec(uint8_t *f, size_t off, uint8_t c, uint8_t h, uint8_t r,
     wle16(f+off+5, soff);
 }
 
-/* MF-1442: `wp` und `desc` setzen die zwei Kopffelder, die SAMdisk
+/* MF-1466: `wp` und `desc` setzen die zwei Kopffelder, die SAMdisk
  * (src/samdisk/fdi.cpp:11,14) fuehrt; die Beschreibung liegt zwischen den
  * Spurkoepfen und dem Datenblock, der dafuer nach hinten rueckt. */
 static size_t build_fdi_mit(const char *path, uint8_t wp, const char *desc) {
@@ -167,7 +167,7 @@ TEST(probe_valid) {
     ASSERT(conf > 0);
 }
 
-/* ── MF-1442 (P3-620 Fall 7): Beschreibung und Schreibschutz ──────────
+/* ── MF-1466 (P3-620 Fall 7): Beschreibung und Schreibschutz ──────────
  * SAMdisk src/samdisk/fdi.cpp:11 `bWriteProtect // Non-zero if
  * write-protected`, :14 `bDescOffset // Offset of disk description`,
  * :18 `Description data here (if description offset is non-zero)`. */

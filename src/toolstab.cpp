@@ -368,7 +368,7 @@ void ToolsTab::onTrackView()
                                 gut > 0 ? gut : 0,
                                 static_cast<int>(s.sektoren));
 
-        /* P3-602 / MF-1436: die drei Signale dieser Messung als Schutz-
+        /* P3-602 / MF-1460: die drei Signale dieser Messung als Schutz-
          * SIGNAL an die Spur. Das Raster urteilt damit nicht auf
          * Kopierschutz (updateTrackProtection() setzt seither keinen
          * Zustand PROTECTED) — es zeigt, WAS gemessen wurde. Eine Spur

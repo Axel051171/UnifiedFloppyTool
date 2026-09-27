@@ -25,13 +25,13 @@ namespace Ui { class TabProtection; }
 /**
  * @brief Protection settings tab
  *
- * BERICHTIGT MF-1436: hier stand "with full backend integration".
+ * BERICHTIGT MF-1460: hier stand "with full backend integration".
  * Gemessen hat der Reiter 54 Bedienelemente, und KEINES erreicht eine
  * Analyse: getConfig(), getAnalysisFlags() und die is*Enabled()-Abfragen
  * haben im ganzen Baum 0 Aufrufer; 21 Elemente werden nicht einmal
- * gespeichert. Siehe P3-635.
+ * gespeichert. Siehe P3-650.
  *
- * Seit MF-1437 (P3-635 Weg A): "Enable Half-Track Detection" waehlt, ob
+ * Seit MF-1461 (P3-650 Weg A): "Enable Half-Track Detection" waehlt, ob
  * die laufende C64-Analyse Halbspur-Treffer zeigt (sofort gespeichert,
  * src/gui/uft_schutz_auswahl.h); die Profilsteuerung bleibt, weil sie
  * dieses Kaestchen setzt. Alle anderen Eingaben sind abgeschaltet und
@@ -170,8 +170,8 @@ private:
     void setupConnections();
     void setupDefaults();
     void updateDependentWidgets();
-    void wendeSperrenAn();     /* P3-635 Weg A, MF-1437 */
-    void verbindeAuswahl();    /* sofort speichern, MF-1437 */
+    void wendeSperrenAn();     /* P3-650 Weg A, MF-1461 */
+    void verbindeAuswahl();    /* sofort speichern, MF-1461 */
     void syncC64Widgets(bool enabled);
     void syncDDWidgets(bool enabled);
     void syncXCopyWidgets(bool enabled);

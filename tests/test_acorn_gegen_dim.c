@@ -217,7 +217,7 @@ static void lies(const char *name, const uft_format_plugin_t *p,
              disk.geometry.sectors, disk.geometry.sector_size,
              spuren, sektoren, kennung_gefunden, verglichen, abweichend);
     pruefe(name,
-           ok && konf >= konf_min && konf <= konf_max  /* MF-729 / MF-1441 */
+           ok && konf >= konf_min && konf <= konf_max  /* MF-729 / MF-1465 */
            && (unsigned)disk.geometry.cylinders == zyl
            && (unsigned)disk.geometry.heads == koepfe
            && (unsigned)disk.geometry.sectors == sekt
@@ -306,10 +306,10 @@ int main(void)
                angenommen == 0, det);
     }
 
-    /* ── MF-1441 (P3-620 Fall 5): ADFS S, 163 840 Byte = 40 x 1 x 16 x 256 ──
+    /* ── MF-1465 (P3-620 Fall 5): ADFS S, 163 840 Byte = 40 x 1 x 16 x 256 ──
      *
      * Kein Plugin nahm diese Groesse an; das verwaiste Doppel bbc/adf_adl.c
-     * tat es (entfernt MF-1441). Referenz DiscImageManager (GPL-3, als Spec gelesen):
+     * tat es (entfernt MF-1465). Referenz DiscImageManager (GPL-3, als Spec gelesen):
      * DiscImage_ADFS.pas:73 `163840: ... // ADFS S`; die Groesse steht im
      * Abbild selbst (:52 TotalSize = Read24b($0FC)*$100); Wurzel bei $200
      * mit "Hugo" (:399, :87 `ReadString($6FB,-4)='Hugo'`); lineare Ablage,

@@ -30,7 +30,7 @@ ProtectionAnalysisWidget::ProtectionAnalysisWidget(QWidget *parent)
         tr("Illegal GCR"),
         tr("Long Sync"),
         tr("Sector Anomaly"),
-        /* MF-1436: UFM_PROT_CUSTOM_SYNC = Syncs ohne 1541-Kopfblock
+        /* MF-1460: UFM_PROT_CUSTOM_SYNC = Syncs ohne 1541-Kopfblock
          * (ufm_c64_metrics.c, nach nibtools "non-standard headers").
          * Das ist kein "Long Sync" und bekommt deshalb eine eigene
          * Spalte statt einer falschen. */
@@ -153,7 +153,7 @@ void ProtectionAnalysisWidget::createSchemePanel()
     // Filter
     QHBoxLayout *filterLayout = new QHBoxLayout();
     filterLayout->addWidget(new QLabel(tr("Filter:")));
-    /* P3-602 / MF-1436: der Filter verwarf seinen Index (Q_UNUSED) —
+    /* P3-602 / MF-1460: der Filter verwarf seinen Index (Q_UNUSED) —
      * jede Auswahl zeigte dieselbe Liste. Und "High Confidence Only"
      * versprach eine Konfidenz, die MF-508 als erfunden entfernt hat.
      * Gefiltert wird jetzt nach dem, was die Zeilen WIRKLICH tragen:
@@ -181,7 +181,7 @@ void ProtectionAnalysisWidget::createSchemePanel()
     layout->addLayout(filterLayout);
     
     // Scheme table
-    /* MF-1437: was die Auswahl im Protection Analyzer ausblendet */
+    /* MF-1461: was die Auswahl im Protection Analyzer ausblendet */
     m_lblSchutzAuswahl = new QLabel();
     m_lblSchutzAuswahl->setObjectName(QStringLiteral("lblSchutzAuswahl"));
     m_lblSchutzAuswahl->setWordWrap(true);
@@ -257,7 +257,7 @@ void ProtectionAnalysisWidget::runAnalysis()
         m_summary = QString::fromUtf8(report.summary);
         m_hits.resize(report.hits_written);
 
-        /* P3-635 Weg A (MF-1437): die Auswahl aus dem Protection
+        /* P3-650 Weg A (MF-1461): die Auswahl aus dem Protection
          * Analyzer. Sie blendet AUS, was dort abgewaehlt ist — und sagt
          * es, samt Zahl. Gemessen wird unveraendert alles; Balken und
          * Zusammenfassung sprechen weiter ueber ALLE Treffer. */
@@ -316,7 +316,7 @@ void ProtectionAnalysisWidget::updateHeatmap()
             case UFM_C64_PROT_ILLEGAL_GCR:    col = 4; break;
             case UFM_C64_PROT_LONG_SYNC:      col = 5; break;
             case UFM_C64_PROT_SECTOR_ANOMALY: col = 6; break;
-            /* MF-1436: ufm_c64_prot_analyze() setzt DIESE Werte. Bis
+            /* MF-1460: ufm_c64_prot_analyze() setzt DIESE Werte. Bis
              * hierher fragte die Karte nur die UFM_C64_PROT_*-Aliase ab,
              * die laut MF-842 kein Erkenner setzt — jeder Treffer fiel
              * in `default` und die Karte blieb leer. */
@@ -389,7 +389,7 @@ void ProtectionAnalysisWidget::updateSchemeList()
         if (hit.type == UFM_C64_PROT_WEAK_BITS) weakBitTracks++;
     }
 
-    /* MF-1436: je gemessenem Merkmal eine Zeile mit Basis "Signal" —
+    /* MF-1460: je gemessenem Merkmal eine Zeile mit Basis "Signal" —
      * das, was die Analyse wirklich gefunden hat, samt Spuren. Vorher
      * erreichte kein Treffer diese Liste (siehe updateHeatmap()). */
     {
@@ -423,7 +423,7 @@ void ProtectionAnalysisWidget::updateSchemeList()
     int longTrackCount = 0;
     for (const auto &hit : m_hits) {
         if (hit.type == UFM_C64_PROT_LONG_TRACK ||
-            hit.type == UFM_PROT_LONG_TRACK) longTrackCount++;  /* MF-1436 */
+            hit.type == UFM_PROT_LONG_TRACK) longTrackCount++;  /* MF-1460 */
     }
     if (longTrackCount > 0) {
         schemes.append({"FAT Track / Long Track", tr("Heuristik"),
@@ -431,7 +431,7 @@ void ProtectionAnalysisWidget::updateSchemeList()
                            "(gefunden: %1)").arg(longTrackCount), false, false});
     }
 
-    /* P3-602 / MF-1436: der Filter wirkt. */
+    /* P3-602 / MF-1460: der Filter wirkt. */
     const int filter = m_schemeFilter ? m_schemeFilter->currentIndex() : 0;
     if (filter == 1 || filter == 2) {
         QVector<SchemeGuess> behalten;
@@ -545,7 +545,7 @@ void ProtectionAnalysisWidget::updateDetailView(int track)
 
 void ProtectionAnalysisWidget::onSchemeFilterChanged(int /*index*/)
 {
-    /* updateSchemeList() liest den Filter selbst (MF-1436) — so gilt er
+    /* updateSchemeList() liest den Filter selbst (MF-1460) — so gilt er
      * auch nach einer neuen Analyse, nicht nur beim Umschalten. */
     updateSchemeList();
 }

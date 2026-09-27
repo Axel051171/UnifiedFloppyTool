@@ -369,7 +369,7 @@ private slots:
                  "da sein");
     }
 
-    /* P3-602 / MF-1436: "Track Alignment Issues" hat im Baum keinen
+    /* P3-602 / MF-1460: "Track Alignment Issues" hat im Baum keinen
      * Erkenner und wurde in diesem Reiter nie gelesen. Es ist abgeschaltet,
      * ungesetzt und nennt den Grund — auch nach jedem Moduswechsel, denn
      * die Modi schalten Elemente an und aus. */

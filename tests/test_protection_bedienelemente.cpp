@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 /**
  * @file test_protection_bedienelemente.cpp
- * @brief P3-602: zwei der drei toten Bedienelemente der Schutzanalyse (MF-1436)
+ * @brief P3-602: zwei der drei toten Bedienelemente der Schutzanalyse (MF-1460)
  *
  * (1) Der Filter in `ProtectionAnalysisWidget` verwarf seinen Index
  *     (`Q_UNUSED(index)`) — jede Auswahl zeigte dieselbe Liste. Und
  *     "High Confidence Only" versprach eine Konfidenz, die MF-508 als
- *     erfunden entfernt hat. Seit MF-1436 filtert er nach dem, was die
+ *     erfunden entfernt hat. Seit MF-1460 filtert er nach dem, was die
  *     Zeilen tragen: Basis "Signal" oder "auf schwachen Bits".
  *
  * (2) `checkC64Alignment` hat keinen Erkenner im Baum — die laufende
@@ -173,7 +173,7 @@ private slots:
         QVERIFY2(k->toolTip().contains(QStringLiteral("P3-602")), qPrintable(k->toolTip()));
     }
 
-    /* ── P3-635 Weg A (MF-1437) ──────────────────────────────────────────
+    /* ── P3-650 Weg A (MF-1461) ──────────────────────────────────────────
      *
      * Der Protection Analyzer hatte 54 Bedienelemente ohne Leser. Gemessen
      * beim Anbinden: die Gruppe "Detected Protection Features" (Long Track,

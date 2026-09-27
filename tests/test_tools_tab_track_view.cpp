@@ -160,11 +160,11 @@ private slots:
                  "keiner Messung.");
     }
 
-    /* ── P3-602 / MF-1436: Signal an der Spur, kein Schutzurteil ────────
+    /* ── P3-602 / MF-1460: Signal an der Spur, kein Schutzurteil ────────
      *
      * `updateTrackProtection()` hatte ausserhalb seiner Datei keinen
      * Aufrufer — und setzte fuer JEDEN Typ den Zustand PROTECTED ("copy
-     * protection detected"). Seit MF-1436 gibt onTrackView() die drei
+     * protection detected"). Seit MF-1460 gibt onTrackView() die drei
      * gemessenen Signale der Spur weiter, und das Raster urteilt nicht.
      *
      * Eingabe: das VICE-D64 plus 683-Byte-Fehlerblock (1541-Codes je

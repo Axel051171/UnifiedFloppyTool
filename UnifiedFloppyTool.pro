@@ -1357,7 +1357,7 @@ SOURCES += \
     src/formats/atari/uft_stx_parser.c \
     src/formats/atari/uft_xfd_parser_v2.c
 
-# BBC formats (3 files; adf_adl.c entfernt MF-1441)
+# BBC formats (3 files; adf_adl.c entfernt MF-1465)
 SOURCES += \
     src/formats/bbc/ssd_dsd.c \
     src/formats/bbc/uft_bbc_dfs.c
