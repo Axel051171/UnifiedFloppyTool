@@ -23,7 +23,7 @@
 
 /** Kennzeichnet den zuletzt angelegten Sektor mit dem, was der Dekoder
  *  gemessen hat, und zaehlt es fuer den Bericht. Die Regel selbst steht
- *  seit MF-1375 an EINER Stelle, `uft_format_mark_last_crc()`, die auch
+ *  seit MF-1377 an EINER Stelle, `uft_format_mark_last_crc()`, die auch
  *  der 86F-Leser ruft (P3-595). */
 static void letzten_kennzeichnen(uft_track_t *track, bool kopf_ok,
                                  bool daten_ok, bool geloescht,

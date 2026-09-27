@@ -122,6 +122,54 @@ laufen fort und werden nie wiederverwendet.
 
 *(Reihenfolge = Bearbeitungsreihenfolge; oben ist als Nächstes dran)*
 
+### A-036 · #43 Nachtrag: Shugart-Bus 0–3 und IBM-PC A/B sind zwei Busse, nicht zwei Namen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „https://github.com/Axel051171/UnifiedFloppyTool/issues/43#issuecomment-5851458619 hatten wir das schon" (petrkr: „Drive 0/1/2 is NOT same as Drive A/B … you can not interchange them")
+- **Kennzahl:** keine der vier — gemeldeter Fehler eines Anwenders (Issue #43)
+- **Kanal:** Spec — `gw` selbst, `src/greaseweazle/tools/util.py:127-141` (Unlicense, Stand `26690f8`): A/B → IBM-PC-Bus Einheit 0/1, 0–3 → Shugart-Bus Einheit 0–3
+- **Einfrier-Regel:** nein (Provider/GUI; `src/hal/uft_greaseweazle_full.c` bleibt unberuehrt, `uft_gw_set_bus_type()` ist oeffentlich)
+- **OPEN_ITEMS:** P3-564, P3-565
+- **Fertig heißt:** die Auswahl traegt Bus UND Einheit, der Provider setzt den Bus vor jeder Auswahl; ein Test am Firmware-Automaten zeigt Shugart 2 und IBM B wirklich angekommen (vorher rot); Antwort an petrkr als Entwurf beim Eigentuemer
+- **Aufwand:** 120–200 Zeilen
+- **Stand:** —
+- **Beleg:** —
+
+### A-037 · UFT_AdaptiveCopyCore: Gegenrechnung, 1581-Datenzeile, Verify-Stufen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „weiter mit H-30 Schritt 2 | und neuer code von mir …\UFT_AdaptiveCopyCore_v1.0.0.zip" · Freigabe „los" (2026-09-27)
+- **Kennzahl:** keine der vier (Verify-Stufen: H-14)
+- **Kanal:** Nachbau/Spec — Gap-Rechner des Pakets nur als Gegenrechnung im Test (keine fremde Hand, Konstanten aus benannter Quelle); 1581-Zahlen aus 1581-Copy 0.50 (GPL-2+) und 1581-ROM
+- **Einfrier-Regel:** nein fuer Test und Plan; die 1581-Datenzeile nur mit Referenz im Header
+- **OPEN_ITEMS:** P3-593, P3-561
+- **Fertig heißt:** (1) Paritaetstest Gegenrechnung ↔ `uft_fdc_gap_space()` an allen 17 Profilen, Rotbeweis zuerst; (2) 1581 als Datenzeile mit Anker; (3) `verify_kind` im bestehenden `uft_copy_plan_t` mit eigenem Rueckvergleich, gueltige CRC bei falschem Inhalt faellt; (4) Transfer-Kern bleibt Fundus unter P3-593
+- **Aufwand:** 300–500 Zeilen ueber drei Commits
+- **Stand:** —
+- **Beleg:** —
+
+### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „ja mach das so weiter, arbeite die OPEN_ITEMS liste ab"
+- **Kennzahl:** keine der vier
+- **Kanal:** entfällt
+- **Einfrier-Regel:** nein
+- **OPEN_ITEMS:** P3-555
+- **Fertig heißt:** `DecodeJob` meldet das Ergebnis als Signal vor `finished()`; Ueberschrift und `operationFinished` richten sich nach dekodierten Sektoren; Qt-Test an einer Fluss- und einer Behaelterdatei
+- **Aufwand:** 40–90 Zeilen
+- **Stand:** —
+- **Beleg:** —
+
+### A-039 · AUFGABEN-Warteschlange und OPEN_ITEMS weiter abtragen, GitHub regelmaessig abgleichen
+- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „AUFGABEN.md sind auch noch viele aufgaben offen nimm sie mit auf" · „kontroliere ab und zu ob über github neue einträge in OPEN_ITEMS sind und arbeite sie mit ab"
+- **Kennzahl:** je Posten
+- **Kanal:** je Posten
+- **Einfrier-Regel:** je Posten
+- **OPEN_ITEMS:** —
+- **Fertig heißt:** Dauerauftrag — nach A-036..A-038 die Warteschlange von oben (A-032 …), je Posten mit Beleg
+- **Aufwand:** nicht schätzbar
+- **Stand:** —
+- **Beleg:** —
+
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
 - **Status:** **angehalten an der Umgebung** (2026-09-26: `neue-ideen/` ist gitignored und liegt nur auf dem Eigentümerrechner, im Cloud-Container fehlt es — gemessen `ls neue-ideen`: nicht vorhanden; weiter, sobald die Sitzung dort läuft) · vorher **in Arbeit** (seit 2026-09-19, auf ausdrückliche
   Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
@@ -2980,6 +3028,15 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-040 · Zulieferung `sed_568.zip` (SED 5.68) untersuchen und übernehmen, was UFT weiterbringt
+- **Status:** erledigt · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „"C:\Users\Axel\Downloads\sed_568.zip" untersuche das genau und übernehme alles was unse tool weiter bringt"
+- **Kennzahl:** keine der vier
+- **Kanal:** Spec (kommerziell lizenziert, nichts im Baum)
+- **Fertig heißt:** Pruefbericht; was belegt ist, eingebaut; was nicht, benannt
+- **Stand:** Atari-DD SPF 3 → 5 (SED + Hatari, Eigentuemerentscheidung „DD berichtigen"), Attribution 4086 berichtigt, SED in `docs/ORACLES.md`, P3-597
+- **Beleg:** MF-1374
 
 ### A-005 · Zulieferung `UFT_Floppy_Reference_AARD_Paket.zip` begutachten
 - **Status:** **erledigt** 2026-09-16 (Begutachtung; der EINBAU ist offen und

@@ -2155,7 +2155,7 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_86f_crc_flaggen")
-        # MF-1375 (P3-595): der 86F-Leser nahm die CRC-Flaggen des
+        # MF-1377 (P3-595): der 86F-Leser nahm die CRC-Flaggen des
         # Dekoders nicht mit — ein Sektor mit falscher Pruefsumme kam als
         # guter heraus. Echte Diskette aus dem freien Korpus, zwei gekippte
         # Zellen.

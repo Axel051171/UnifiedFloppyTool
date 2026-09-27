@@ -75,7 +75,11 @@ ERLAUBT = {
 BEKANNT_FREMD = {
     4078: "TOS 2.06+ (FLOP_FIX.TXT 1992) — andere Plattform, andere Grenze",
     4079: "TOS 2.06+ erster FAT16-Clusterzaehler",
-    4086: "SED 5.68 HLP, ohne Herleitung",
+    # BERICHTIGT MF-1374: hier stand "SED 5.68 HLP, ohne Herleitung". In
+    # sed_568.zip (SED_568.HLP, SED.DOC, SED_DIFF.TXT, HISTORY.TXT und den
+    # Zeichenketten der GFA-Quelle) kommen weder 4086 noch 4085 vor —
+    # gemessen. Als Konstante im tokenisierten GFA-Code nicht ausgeschlossen.
+    4086: "Herkunft unbelegt — in SED 5.68 (HLP/DOC/Diff) NICHT gefunden",
 }
 
 # Gezaehlt werden ENTSCHEIDUNGSSTELLEN. Ein Test, der die Schwelle

@@ -255,7 +255,7 @@ typedef struct {
  * ASCII-Vierer „CAPS", der wirklich am Anfang jeder IPF-Datei steht.
  */
 
-/* MF-1374: hier standen `uft_caps_parse_header/_info/_imge`,
+/* MF-1376: hier standen `uft_caps_parse_header/_info/_imge`,
  * `uft_caps_analyze_ipf`, `uft_caps_has_ctraw`, `uft_caps_analyze_ctraw`
  * und `uft_caps_crc32` — ein ZWEITER IPF-Satzleser neben
  * `uft_ipf_air.c`, ohne Aufrufer, der INFO und IMGE vier Byte versetzt

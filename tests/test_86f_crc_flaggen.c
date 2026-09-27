@@ -1,7 +1,7 @@
 /**
  * @file test_86f_crc_flaggen.c
  * @brief 86F: ein Sektor mit falscher Pruefsumme ist kein guter Sektor
- *        (P3-595, MF-1375)
+ *        (P3-595, MF-1377)
  *
  * ── Der Befund ──────────────────────────────────────────────────────────
  *
