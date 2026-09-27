@@ -8,9 +8,7 @@ description: |
   threshold", "classifier features hinzufügen". This is the ONE complete
   ML module in UFT — pure C, no external libs. DO NOT use for: heuristic
   protection detection (→ uft-protection-scheme — different layer),
-  CNN/neural decoders (→ uft-ml-implement-skeleton), training data
-  generation (→ uft-ml-training-data), uft_ml_decoder.h (skeleton, not
-  classifier).
+  CNN/neural decoders (none exist in the tree).
 ---
 
 # UFT ML Protection Classifier
@@ -32,10 +30,8 @@ reference vectors. Pure C, no external ML libraries, runs on STM32H723.
   tests) — that's a **different layer** in `src/protection/`, use
   `uft-protection-scheme`. The classifier and the heuristic detectors
   COEXIST and complement each other.
-- CNN-based decoders for damaged flux — use `uft-ml-implement-skeleton`
-  (`uft_ml_decoder.h`)
-- Generating labeled training data for the classifier — use
-  `uft-ml-training-data`
+- CNN-based decoders for damaged flux — none exist; `uft_ml_decoder.h`
+  was a skeleton and is not in the tree
 - Anything in `uft_ml_decoder.h` — those are skeleton functions
 
 ## Architecture in one paragraph
@@ -242,8 +238,6 @@ hard-to-pattern protection → use this skill.
 ## Related
 
 - `.claude/skills/uft-protection-scheme/` — heuristic detectors (different layer)
-- `.claude/skills/uft-ml-training-data/` — generates labeled samples
-- `.claude/skills/uft-ml-implement-skeleton/` — different ML module (decoder, not classifier)
 - `.claude/skills/uft-stm32-portability/` — required check (this is dual-target)
 - `src/analysis/uft_ml_protection.c` — the implementation (~400 LOC)
 - `include/uft/analysis/uft_ml_protection.h` — public API

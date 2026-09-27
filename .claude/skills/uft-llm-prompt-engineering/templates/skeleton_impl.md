@@ -123,7 +123,7 @@ gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only -I include/ \
 cd tests && make test_[module] && ./test_[module]
 
 # Audit
-python3 .claude/skills/uft-ml-implement-skeleton/scripts/audit_skeleton.py
+python3 scripts/audit_skeleton_headers.py
 ```
 
 ## Not implemented in this change
@@ -148,4 +148,3 @@ python3 .claude/skills/uft-ml-implement-skeleton/scripts/audit_skeleton.py
 - `docs/AI_COLLABORATION.md` §1 (Arbeits-Reihenfolge)
 - `docs/MASTER_PLAN.md` M1/MF-011 (DOCUMENT-Welle scope)
 - `src/analysis/uft_ml_protection.c` — example of complete pure-C ML impl
-- `.claude/skills/uft-ml-implement-skeleton/SKILL.md` — full workflow

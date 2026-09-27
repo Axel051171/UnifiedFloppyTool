@@ -11,8 +11,7 @@ description: |
   the de-dup invariant that was violated in v4.1.5 (9 stale duplicates
   shadowed canonical entries). DO NOT use for: protection-detection
   *algorithm* (→ `uft-protection-scheme`), generic database refactor
-  (this skill is data-curation only), ML classifier training data (→
-  `uft-ml-training-data`).
+  (this skill is data-curation only).
 ---
 
 # UFT Protection Database
@@ -41,7 +40,6 @@ table silently shadows the correct, canonical entry far below.
   flux-pattern analysis) — use `uft-protection-scheme`
 - Replacing the lookup function — that's a public-ABI change, requires
   `abi-bomb-detector` first
-- ML-classifier training-data assembly — use `uft-ml-training-data`
 - Filesystem-level "is this a copy-protected file?" — different layer
 
 ## The lookup contract (read before editing)
@@ -280,9 +278,6 @@ unrelated PRs.
   declaration
 - `.claude/skills/uft-protection-scheme/` — when implementing a
   *detector* (not a DB entry). This skill is data; that one is code.
-- `.claude/skills/uft-ml-training-data/` — when assembling labeled
-  training data for the classifier. The DB is a *trusted source* for
-  labels, so D1–D5 here propagate into ML data quality.
 - `.claude/agents/stub-eliminator.md` — old `PROT_UNKNOWN, 0, "", ""`
   stub entries qualify as D4 violations and are deletion candidates
 - `git show c0ea296` — the v4.1.5 commit that removed 9 shadow duplicates

@@ -148,10 +148,8 @@ SKILLS (21 = 20 UFT + 1 HTB in .claude/skills/):
   Build/Test/Perf:     uft-cross-platform-build, uft-debug-session, uft-benchmark,
                        uft-flux-fixtures, uft-stm32-portability, uft-release
   UI/HAL:              uft-qt-widget, uft-hal-backend
-  Machine Learning:    uft-ml-implement-skeleton, uft-ml-protection-classifier,
-                       uft-ml-training-data
+  Machine Learning:    uft-ml-protection-classifier
   Meta:                uft-llm-prompt-engineering
-  Nicht-UFT:           htb-mentor
 
 PROTOKOLLE:
   CONSULT_PROTOCOL.md  → Cross-Agent-Konsultation (Block-Format, Richtungsregel)

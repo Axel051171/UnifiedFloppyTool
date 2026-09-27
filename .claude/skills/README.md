@@ -20,7 +20,6 @@ Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 | `uft-filesystem` | Filesystem-Layer (FAT, ProDOS, AmigaDOS, …) |
 | `uft-protection-scheme` | Kopierschutz-Detektor (Algorithmus) |
 | `uft-protection-db` | Kopierschutz-Titel-DB (Daten-Kuration, c64/amiga/atari) |
-| `uft-audit-trail` | Audit-Trail-Events + forensische Reports (JSON/HTML/PDF/MD/XML/Text), Hash-Chain |
 | `uft-coding-standards-compliance` | Master-Coding-Standards-Lücken schließen (H-1/H-2/H-9, F-2/F-4, D-2, SPEC_STATUS, capability manifest) |
 
 ### Build / Test / Performance
@@ -45,9 +44,7 @@ Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 
 | Skill | Wann |
 |-------|------|
-| `uft-ml-implement-skeleton` | Skeleton-Header → echte Implementierung |
 | `uft-ml-protection-classifier` | Cosine-Similarity-Classifier erweitern |
-| `uft-ml-training-data` | Labeled training data generieren |
 
 ### Meta
 
@@ -59,7 +56,6 @@ Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 
 | Skill | Wann |
 |-------|------|
-| `htb-mentor` | HackTheBox/CTF-Tutoring — sokratisches Lernen statt Lösungen, getrennter Kontext, nicht für UFT-Tasks |
 
 ## Welcher Skill für welche Aufgabe?
 
@@ -68,7 +64,6 @@ Mehr als ein Skill kann zutreffen. Faustregel:
 - **Bytes erzeugen, die der User später vertraut** → `uft-recovery-integrity`
 - **Neue Datei lesen können** → `uft-format-plugin`
 - **Bestehende Datei woandershin schreiben** → `uft-format-converter`
-- **Forensische Evidenz exportieren (Hash-Chain, Report)** → `uft-audit-trail`
 - **Kopierschutz-Algorithmus implementieren** → `uft-protection-scheme`
 - **Kopierschutz-Titel-Daten kuratieren** → `uft-protection-db`
 - **Build kaputt auf irgendeiner Platform** → `uft-cross-platform-build`

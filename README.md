@@ -297,7 +297,8 @@ Vollständigkeit" overriding all other rules: no new stubs in
 newly-written code (sole exception: `honest-stub` for unwired hardware
 providers with explicit milestone). Definition-of-Done per code-type.
 Scope-rule (>150 LOC ballooning → STOP, deliver biggest complete
-chunk). 21 agents, 21 skills (20 UFT + 1 HTB).
+chunk). 27 agents, 26 skills (counted 2026-09-27 via
+`git ls-files '.claude/agents/*.md' '.claude/skills/*/SKILL.md'`).
 
 ### Hardware verification status
 
