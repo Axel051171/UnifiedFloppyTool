@@ -269,6 +269,12 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
         long hdr_pos = ftell(p->file);
         if (hdr_pos < 0) return UFT_ERROR_IO;
         if (fread(sec_hdr, 1, 16, p->file) != 16) break;
+        /* MF-1470: ISO C 7.21.5.3 — auf einem Update-Strom darf auf
+         * Lesen kein Schreiben folgen (und umgekehrt) ohne Positionieren
+         * dazwischen. glibc duldet es, die MinGW-Laufzeit nicht:
+         * gemessen fiel test_d88_spur_sektorzahl nur im Windows-Lauf,
+         * 2 von 7 Zusagen, beide auf dem Schreibpfad. */
+        if (fseek(p->file, hdr_pos + 16, SEEK_SET) != 0) return UFT_ERROR_IO;
         if (spur_sektoren < 0) spur_sektoren = uft_read_le16(&sec_hdr[4]);
         if (spur_sektoren == 0) break;
         uint16_t dsize = uft_read_le16(&sec_hdr[14]);
@@ -286,6 +292,9 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
             }
             if (fwrite(data, 1, dsize, p->file) != dsize) { free(pad); return UFT_ERROR_IO; }
             free(pad);
+            /* dieselbe Regel in der Gegenrichtung: der naechste
+             * Durchlauf liest wieder einen Sektorkopf */
+            if (fseek(p->file, 0, SEEK_CUR) != 0) return UFT_ERROR_IO;
         } else {
             /* Skip past this sector's data */
             if (fseek(p->file, (long)dsize, SEEK_CUR) != 0) return UFT_ERROR_IO;
