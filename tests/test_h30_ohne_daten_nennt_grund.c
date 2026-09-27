@@ -235,6 +235,21 @@ static void t_korpus(void)
                "%3zu OHNE GRUND\n",
                e->d_name, ok ? "ok " : "rot", sektoren, ohne_daten,
                ohne_grund);
+
+        /* MESSUNG (P3-599, MF-1431): sagt die Bruecke ab, nennt das Modell den
+         * Grund in seinen Befunden. Sie auszugeben ist der Schritt, den
+         * der Registereintrag vor jeder Aenderung verlangt. */
+        if (!ok) {
+            printf("        Bruecke sagt ab — %zu Befund(e), %zu Spuren:\n",
+                   uft_d2_diag_count(d), uft_d2_track_count(d));
+            for (size_t q = 0; q < uft_d2_diag_count(d) && q < 12u; q++) {
+                const uft_d2_diag_t *g = uft_d2_diag_at(d, q);
+                if (!g) continue;
+                printf("        [%s] C%d H%d S%d: %s\n",
+                       g->code ? g->code : "?", g->cyl, g->head, g->sector,
+                       g->text ? g->text : "");
+            }
+        }
         summe_ohne_grund += ohne_grund;
 
         uft_d2_destroy(d);
