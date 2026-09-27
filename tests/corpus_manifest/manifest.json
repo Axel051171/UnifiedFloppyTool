@@ -1688,6 +1688,456 @@
       "test": "test_woz_echte_aufnahme",
       "fremdcode": "ja - Programmcode. LOCAL-ONLY, nur als Fixture.",
       "content": "35 Spuren mit Daten, 33 verschiedene Bitlaengen, Spanne 161 (51050..51211) - gemessen am TRKS-Block. 4ams Beschreibung nennt KEIN Schutzverfahren."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/track00.0.raw",
+      "sha256": "0744ccc49881bf331ef04d27a00b8ffae2afe0750f800ab23c9496d529aba70e",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 211818 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2014.07.17, host_time=21:53:44\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/track38.0.raw",
+      "sha256": "de4786e4175ad609746029ab59b36103f401c1f56714dc5b41ccf6752b8e97e0",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 218918 Byte, Spur 38 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2014.07.17, host_time=21:56:41\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,140,80 | 38-38:80,50,80 | 39-39:0,140,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/frogger/track00.0.raw",
+      "sha256": "45f3f0d7a8e086944bcb80c232dffe120a96886c0804663476001199189a519a",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Frogger (Booter) (1983) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip ZIP-SHA-256 6aa29ec5f7102cbad6f45319c9b055ad78b53a1ad4101983ac863e988a0eac76 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 8\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 214966 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Jan  8 2015, time=13:49:26, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2018.05.23, host_time=20:12:31\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 8\" — also 8 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/frogger/track01.0.raw",
+      "sha256": "dcc2660afbc695d996fd7cd05dd96bc50edd2fec5fecd76b546d264925e4a837",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Frogger (Booter) (1983) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip ZIP-SHA-256 6aa29ec5f7102cbad6f45319c9b055ad78b53a1ad4101983ac863e988a0eac76 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track01.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 210180 Byte, Spur 1 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Jan  8 2015, time=13:49:26, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2018.05.23, host_time=20:12:36\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/track00.0.raw",
+      "sha256": "41563564d3df76267b9c391dee9395c81d2037fae5e3fa6792384de9ae9b87e0",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 87035 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2017.05.05, host_time=16:32:07\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/track00.1.raw",
+      "sha256": "26ec479926a15053d6e52531429f034e4cb3d39d97d96811b1291b4ac290a652",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.1.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 119275 Byte, Spur 0 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2017.05.05, host_time=16:32:07\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/track38.0.raw",
+      "sha256": "ac5ae6a43bc9d52b0eb5f115ea4aa87a5ba793b9f27cdf004146c29bdfaab5ea",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 104108 Byte, Spur 38 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2017.05.05, host_time=16:32:57\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/track38.1.raw",
+      "sha256": "5639a66e928e73bafdcb01502eeeb0ce3520833cfa15c7e472a3cd2e2bdfeeec",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.1.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <error>, trk: 038, sec: 9, bad: 3\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 1924185 Byte, Spur 38 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2017.05.05, host_time=16:48:39\". dtc urteilt fuer genau diese Spur: \"MFM: <error>, trk: 038, sec: 9, bad: 3\" — also 9 Sektoren. Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/track00.0.raw",
+      "sha256": "cfd58fcd45ca003aa011c0480fefb369a9a27b58ead99f313670dcfdcbb0a8ca",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 242223 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2019.05.18, host_time=12:01:05\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/track00.1.raw",
+      "sha256": "30a18063d15870fde7ff5d884c4c835c6b787b3b6c921ee6fbeb594d53d34f2d",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.1.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 245599 Byte, Spur 0 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2019.05.18, host_time=12:01:06\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/track38.0.raw",
+      "sha256": "f003c285ff67932334803f0685a0e929fde370847e9790a31e701228ce972cf3",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 227460 Byte, Spur 38 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2019.05.18, host_time=12:02:46\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/track38.1.raw",
+      "sha256": "edd9f4118a0d5775867992ce5e07a1fb70eb7ada2d5ef8878dceaaceafbde06f",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.1.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 038, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 192997 Byte, Spur 38 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2019.05.18, host_time=12:02:47\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 038, sec: 9\" — also 9 Sektoren. Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/ulysses_1/track00.0.raw",
+      "sha256": "71306bbff9d9c4cbf5c5e14fdf97e51aa030ae8ee9a5ddd3fe9bb2d594d992c9",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip ZIP-SHA-256 360d06a6e6667512c366b71758b4639a5458cebbbb367bd5498616c0a7af139e (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) (Disk 1) [cp] [!]/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 8\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 78665 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2023.03.11, host_time=20:21:39\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 8\" — also 8 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/ulysses_1/track01.0.raw",
+      "sha256": "080c739649c3ff1fab3440956898a082940a5feefb5f0f222420a8b12172d3e5",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip ZIP-SHA-256 360d06a6e6667512c366b71758b4639a5458cebbbb367bd5498616c0a7af139e (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) (Disk 1) [cp] [!]/track01.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 94595 Byte, Spur 1 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2023.03.11, host_time=20:21:41\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/track00.0.raw",
+      "sha256": "99bf3c0852ebf8fbff214a8f7cbb77e05baf62553fc1b2fa70849df4274a2cda",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 230495 Byte, Spur 0 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2024.03.10, host_time=14:18:47\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/track00.1.raw",
+      "sha256": "7325437f64b37af6ac721d689f6be1f9b84e17e3bc129702bb9a3f71f08a4bea",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.1.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 227304 Byte, Spur 0 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2024.03.10, host_time=14:18:48\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/track38.0.raw",
+      "sha256": "2c4e74d1659cf0ef198481c100e286e94ba94eaee18587ff449cc6e4cade3664",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.0.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: <mismatch>, *N\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 218143 Byte, Spur 38 Seite 0. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2024.03.10, host_time=14:21:44\". dtc urteilt fuer genau diese Spur: \"MFM: <mismatch>, *N\". Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/track38.1.raw",
+      "sha256": "1a7a9be2f736c501a6ce55e6f803b1e23cd80a440cf8aaf209e6e4714434e781",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track38.1.raw entnehmen) Rolle: die im tracklayout.txt ABWEICHENDE Spur — hier sitzt der Schutz. Spurplan des Erhalters: 0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 038, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 219299 Byte, Spur 38 Seite 1. Die Datei fuehrt ihre eigene Herkunft im OOB-Block, woertlich: \"name=KryoFlux DiskSystem, version=2.20s, date=Dec 30 2012, time=02:33:19, hwid=1, hwrv=1, sck=24027428.5714285, ick=3003428.5714285625\". Aufgenommen: \"host_date=2024.03.10, host_time=14:21:46\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 038, sec: 9\" — also 9 Sektoren. Diese Spur ist die im tracklayout.txt ABWEICHENDE (0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80) und damit die geschuetzte. Erwartung an UFT: hier darf KEIN sauberer Sektorsatz gemeldet werden, denn das Referenzwerkzeug selbst scheitert an MFM."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/track00.0.raw",
+      "sha256": "4024cc51fbb93bdb2c3d83e09b0f15ae4fdeff5076af341aa44c26bfd2b4f6b0",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\" Der Satz traegt das Kennzeichen [w] (schwache Sektoren) nach NamingScheme.txt. WELCHE Sektoren schwach sind, sagen die Berichte NICHT — das ist offen, nicht gemessen.",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 132310 Byte, Spur 0 Seite 0. Aufgenommen: \"host_date=2024.01.23, host_time=16:31:47, sck=24027428.5714286, ick=30\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/track00.1.raw",
+      "sha256": "544474fc017f61f338861762792f9888f48c5d5924a257bc45d245be2557cdd0",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.1.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: 0-39:0,140,80 Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\" Der Satz traegt das Kennzeichen [w] (schwache Sektoren) nach NamingScheme.txt. WELCHE Sektoren schwach sind, sagen die Berichte NICHT — das ist offen, nicht gemessen.",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 127080 Byte, Spur 0 Seite 1. Aufgenommen: \"host_date=2024.01.23, host_time=16:31:48, sck=24027428.5714286, ick=30\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/coming_attractions/track00.0.raw",
+      "sha256": "ce14a693d3e8754102b32168f0a7fc8ee25aecd8e4010aed7826a31698fe577f",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.50_Win64, uiv.1, Mar 13 2024, 12:04:40 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Sierra - Dynamix 1991 Coming Attractions Demo Disk (1991) (Int. 9.11.91) (Sierra On-Line, Inc.) (360K) [Flux] [!].zip ZIP-SHA-256 007e97a44af190545e4ebc46ba96ae78dd2b79858c9fbb9ea98d9d0c2b1d2011 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.0.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: (kein tracklayout.txt) Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 132531 Byte, Spur 0 Seite 0. Aufgenommen: \"host_date=2025.06.14, host_time=23:28:57, sck=24027428.5714286, ick=30\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/coming_attractions/track00.1.raw",
+      "sha256": "88f35a7167fadccd91cb23b31602d5c487351722c0953a72f693475d90a61df9",
+      "format": "kfx",
+      "origin": "real",
+      "tool": "KryoFlux DiskTool Console, v3.50_Win64, uiv.1, Mar 13 2024, 12:04:40 (dazu ein gw_log.txt im selben Satz: die Diskette wurde auch mit Greaseweazle abgezogen)",
+      "source": "archive.org-Eintrag 20220303_20220303_0527 (Sammlungen digitoxin / softwarecapsules, Titel \"Sierra On-Line PC Floppy Disk Image Collection\", Hochlader digitoxin.archivist@gmail.com). Das Element fuehrt KEIN Lizenzfeld; der Inhalt ist urheberrechtlich belegte Sierra-/Tandy-Software. Deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Datei im Element: Sierra - Dynamix 1991 Coming Attractions Demo Disk (1991) (Int. 9.11.91) (Sierra On-Line, Inc.) (360K) [Flux] [!].zip ZIP-SHA-256 007e97a44af190545e4ebc46ba96ae78dd2b79858c9fbb9ea98d9d0c2b1d2011 (Wiederbeschaffung: Element herunterladen, diesen Hash pruefen, dann (Wurzel)/track00.1.raw entnehmen) Rolle: gewoehnliche Spur, satzinterne Gegenprobe. Spurplan des Erhalters: (kein tracklayout.txt) Urteil von dtc fuer genau diese Spur, woertlich aus dtc_log.txt: \"MFM: OK, trk: 000, sec: 9\"",
+      "test": "",
+      "content": "KryoFlux-Rohstrom, 125290 Byte, Spur 0 Seite 1. Aufgenommen: \"host_date=2025.06.14, host_time=23:28:58, sck=24027428.5714286, ick=30\". dtc urteilt fuer genau diese Spur: \"MFM: OK, trk: 000, sec: 9\" — also 9 Sektoren. Gewoehnliche Spur, satzinterne Gegenprobe zur geschuetzten."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/dtc_log.txt",
+      "sha256": "ecbcb0106374c0b904048b4fc8ff9c3fd3899b3958f8b9eecb2b9c5b5dd79eaa",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 42 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/modifications.txt",
+      "sha256": "1272767f3515584e1473173b42272e13e2f38a9193cae4e060f3df2066810cd0",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8.",
+      "test": "",
+      "content": "Veraenderungsbericht des Erhalters: 1 Sektorzeile(n) mit Spur/Seite/Sektor-ID/Region. Volltext in der Datei."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/notes.txt",
+      "sha256": "7308ed85f39f3fccdb4ef56d8fb36935d6621ce82dd1aa034ba102c55f03074b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8.",
+      "test": "",
+      "content": "Notiz des Erhalters, woertlich: \"Dumped on a 1.2M floppy drive (360 RPM)\"."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/bc_quest_tires/tracklayout.txt",
+      "sha256": "2e48aaea687f7bb3c03a9f0c695d6ce2e17cf613d60afe0657e1e4f71dfb34a5",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus BC's Quest for Tires (Booter) (1984) (v01.00.00) (Tandy Corporation) (180K) [cp] [Flux] [M].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 69c4e62d7326d8e69e89d1d47b1b260567f076aa8dff412f5a5cc8dc12e4e7e8.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-37:0,140,80 | 38-38:80,50,80 | 39-39:0,140,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [38]."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/dtc_log.txt",
+      "sha256": "7d0a7b474dc80540d81be9d79dae88b796d758b72a5e7c58fd9ba030a8cf1f21",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 84 Spurzeilen, davon 0 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/gw_log.txt",
+      "sha256": "cf096eee0e4886a0a1193103f385f5490a25eefb49408f29d22b8e46b2258b66",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e.",
+      "test": "",
+      "content": "Protokoll eines ZWEITEN Abzugs derselben Diskette mit Greaseweazle, 6629 Byte. Damit liegen fuer diesen Satz zwei unabhaengige Werkzeuge vor."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/modifications.txt",
+      "sha256": "476e28b54325540ff8a1df1c795b5fe772c0630dd77c8903a480d48615e85e3b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e.",
+      "test": "",
+      "content": "Veraenderungsbericht des Erhalters: 5 Sektorzeile(n) mit Spur/Seite/Sektor-ID/Region. Volltext in der Datei."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/champ_boxing/tracklayout.txt",
+      "sha256": "0316110f5b3de14fa09a281120a2bd7f34f033083471c07ba627038f87ce3b2f",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra Championship Boxing (Booter) (1984) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [M] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 ebf2d4e4e6d09310d7f7929686cfbe64f881fc4fdb72b3daadeb04ac93cf904e.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-39:0,140,80. Die von der Mehrheitszeile abweichende(n) Spur(en): keine."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/coming_attractions/dtc_log.txt",
+      "sha256": "b5fc2d1ce86f4119f69df29aae3d40f7d6a41c96a94580e07209d2804f529417",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra - Dynamix 1991 Coming Attractions Demo Disk (1991) (Int. 9.11.91) (Sierra On-Line, Inc.) (360K) [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 007e97a44af190545e4ebc46ba96ae78dd2b79858c9fbb9ea98d9d0c2b1d2011.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.50_Win64, uiv.1, Mar 13 2024, 12:04:40. 84 Spurzeilen, davon 0 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/coming_attractions/gw_log.txt",
+      "sha256": "a1dcb4075e47ce3b46ced097608d7518e8437b0ca0fbc0cdbfa1de8f046acd90",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Sierra - Dynamix 1991 Coming Attractions Demo Disk (1991) (Int. 9.11.91) (Sierra On-Line, Inc.) (360K) [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 007e97a44af190545e4ebc46ba96ae78dd2b79858c9fbb9ea98d9d0c2b1d2011.",
+      "test": "",
+      "content": "Protokoll eines ZWEITEN Abzugs derselben Diskette mit Greaseweazle, 6630 Byte. Damit liegen fuer diesen Satz zwei unabhaengige Werkzeuge vor."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/frogger/dtc_log.txt",
+      "sha256": "77cc6e06870bb524c4ba32495479b1cd087d60a2f9da93ea3f92f6d78fb94dff",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Frogger (Booter) (1983) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 6aa29ec5f7102cbad6f45319c9b055ad78b53a1ad4101983ac863e988a0eac76.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 42 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/frogger/notes.txt",
+      "sha256": "fabbd57b0fc8c9c60c8f455a54f49c74e274d50926617b61fa0b6441cfa14307",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Frogger (Booter) (1983) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 6aa29ec5f7102cbad6f45319c9b055ad78b53a1ad4101983ac863e988a0eac76.",
+      "test": "",
+      "content": "Notiz des Erhalters, woertlich: \"Dumped on a 1.2M floppy drive (360 RPM)\"."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/frogger/tracklayout.txt",
+      "sha256": "f77fd2c5e086184820f11073d694f46e042eb9aa50a4d55f431d3d5b0229c62b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Frogger (Booter) (1983) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 6aa29ec5f7102cbad6f45319c9b055ad78b53a1ad4101983ac863e988a0eac76.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [1]."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/dtc_log.txt",
+      "sha256": "917560710033be0110d2a71496cd4dec53829a089f6bab6c9e4c97792abc13b1",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 84 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/gw_log.txt",
+      "sha256": "a7ae8e80380603e32beedb0b17e1a40c7ba234b139463b5c1814e2cac931eab2",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715.",
+      "test": "",
+      "content": "Protokoll eines ZWEITEN Abzugs derselben Diskette mit Greaseweazle, 6763 Byte. Damit liegen fuer diesen Satz zwei unabhaengige Werkzeuge vor."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/notes.txt",
+      "sha256": "7308ed85f39f3fccdb4ef56d8fb36935d6621ce82dd1aa034ba102c55f03074b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715.",
+      "test": "",
+      "content": "Notiz des Erhalters, woertlich: \"Dumped on a 1.2M floppy drive (360 RPM)\"."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy/tracklayout.txt",
+      "sha256": "84e30e7b2b7b58fd12dd74ed5442d426c23717abc2d93bd4ad61333fc4025df5",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy) (Booter) (1985) (v01.01.00) (Tandy Corporation) (360K) [cp] [Flux] [!] [w].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 cc1624a39d496fd22c6182e3aa9dad89702b65170e593e6c0e50dd5c65d65715.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [38]."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/dtc_log.txt",
+      "sha256": "1d74394266eb1b86b90999e537b46a064872fd86e6678dc0a9d7adb2ad172dd8",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 84 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/kq_tandy_pcjr/tracklayout.txt",
+      "sha256": "84e30e7b2b7b58fd12dd74ed5442d426c23717abc2d93bd4ad61333fc4025df5",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus King's Quest (Tandy+PCjr) (Booter) (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 bd6bdaf630e79f2b90f87c5d172eec4fbb8d8813a6b843eee78e7340f00d5c56.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-37:0,150,80 | 38-38:80,50,80.0,150,80 | 39-39:0,150,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [38]."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/dtc_log.txt",
+      "sha256": "b76d5fc31cbfd8ed1a44682e96b5928c046f0a548dae5e664d9ad823d02b0d24",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 84 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/story_maker/tracklayout.txt",
+      "sha256": "ecbab983c441972af2dcfbbbbb0cf30d22b1b83a071a048c5e6d112c32c1fde0",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Story Maker (1985) (Sierra On-Line, Inc.) (360K) [cp] [Flux] [!].zip, Ordner (Wurzel). Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 960ae44ceddb92d09812dac37bc14c9de31bc64f1515b2df9329f68b1fd2681a.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-37:0,140,80 | 38-38:80,50,80.0,140,80 | 39-39:0,140,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [38]."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/ulysses_1/dtc_log.txt",
+      "sha256": "f634430ee15f3aef53634122a84e8742d247d84d584ef59d7e06af64fc82e93b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) (Disk 1) [cp] [!]. Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 360d06a6e6667512c366b71758b4639a5458cebbbb367bd5498616c0a7af139e.",
+      "test": "",
+      "content": "Protokoll des Referenzwerkzeugs, KryoFlux DiskTool Console, v3.00_Win64, uiv.1, Apr 15 2018, 23:44:54. 42 Spurzeilen, davon 1 mit <mismatch>. Es nennt die Sektorzahl je Spur und ist damit eine Referenz PRO SPUR, ohne dtc selbst ausfuehren zu muessen."
+    },
+    {
+      "file": "tests/corpus/sierra_digitoxin/ulysses_1/tracklayout.txt",
+      "sha256": "f77fd2c5e086184820f11073d694f46e042eb9aa50a4d55f431d3d5b0229c62b",
+      "format": "n/a",
+      "origin": "real",
+      "tool": "Bericht des Erhalters bzw. Protokoll des Aufnahmewerkzeugs; kein Abbild",
+      "source": "archive.org-Eintrag 20220303_20220303_0527, aus Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) (Disk 1) [cp] [!]. Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 360d06a6e6667512c366b71758b4639a5458cebbbb367bd5498616c0a7af139e.",
+      "test": "",
+      "content": "Spurplan des Erhalters, woertlich: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [1]."
     }
   ]
 }
