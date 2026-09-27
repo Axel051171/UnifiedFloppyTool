@@ -38,9 +38,18 @@
                  UFT_D2_FEAT_NO_DATA_SEC   | \
                  UFT_D2_FEAT_METADATA)
 
+/* BERICHTIGT MF-1384: hier stand zusaetzlich UFT_D2_FEAT_VAR_SECTOR_SZ.
+ * Das Merkmal meint ungleiche Sektorgroessen INNERHALB einer Spur
+ * (uft_disk2.c, Bezug je Spur); IMD traegt EINE Groesse je Spurkopf. Belegt
+ * beim Urheber des Formats — Dave Dunfield, ImageDisk 1.20 TD02IMD.C:907-908
+ * „Cannot do mixed sector size within track", Kommentar „765 cannot do
+ * mixed sector sizes" (Quelle gelesen, nicht uebernommen: nicht
+ * weitergebbar, „ideas and algorithms" frei) — und bei MAME
+ * imd_dsk.cpp:554-556, das die Groessenangabe 0xFF als „Unsupported
+ * variable sector size" abweist. `has_varsizes`/`ssize[]` in uft_imd.h
+ * beschreiben also keine Faehigkeit des Formats. */
 #define F_IMD   (UFT_D2_FEAT_BAD_CRC       | \
                  UFT_D2_FEAT_DELETED_DAM   | \
-                 UFT_D2_FEAT_VAR_SECTOR_SZ | \
                  UFT_D2_FEAT_NO_DATA_SEC   | \
                  UFT_D2_FEAT_METADATA)
 
@@ -80,11 +89,15 @@ static const zeile_t g_tafel[] = {
      *   BAD_CRC       `stype` 0x05..0x08 (die ERROR-Spielarten)
      *   DELETED_DAM   `stype` 0x03/0x04/0x07/0x08 (die DELETED-Spielarten)
      *   NO_DATA_SEC   `stype` 0x00 `UFT_IMD_SEC_UNAVAIL`
-     *   VAR_SECTOR_SZ Groessenangabe im Spurkopf
      *   METADATA      Kommentarblock, beendet durch `0x1A`
      *
-     * Dieselben fuenf wie TD0 — deshalb ist `TD0 -> IMD` eine Wandlung
-     * OHNE Merkmalsverlust. Was die Maske NICHT ausdruecken kann, gehoert
+     * BERICHTIGT MF-1384: hier stand „VAR_SECTOR_SZ — Groessenangabe im
+     * Spurkopf" und „Dieselben fuenf wie TD0 — deshalb ist `TD0 -> IMD`
+     * eine Wandlung OHNE Merkmalsverlust". Die Groessenangabe im Spurkopf
+     * gilt fuer die GANZE Spur (siehe F_IMD oben); TD0 traegt sie je
+     * Sektor. `TD0 -> IMD` verliert also genau VAR_SECTOR_SZ, und der
+     * Wandler sagt eine gemischte Spur seither ab, wie Dunfields eigener
+     * TD02IMD. Was die Maske NICHT ausdruecken kann, gehoert
      * in die Notiz des Matrixeintrags: IMDs Kommentar ist reiner Text und
      * hat weder Platz fuer TD0s Zeitstempel noch fuer dessen CRC-16, und
      * er darf kein `0x1A` enthalten. Eine Maske ist grobkoerniger als die
@@ -92,7 +105,8 @@ static const zeile_t g_tafel[] = {
      * vollstaendig. */
     { UFT_FORMAT_IMD, L_SEKTOREN, F_IMD,
       "uft_imd.h: stype 0x00..0x08 deckt Lesefehler, geloeschte Marken und "
-      "fehlende Daten; Groesse im Spurkopf; Kommentarblock bis 0x1A" },
+      "fehlende Daten; Kommentarblock bis 0x1A. Eine Sektorgroesse je "
+      "Spurkopf — keine gemischten (Dunfield TD02IMD.C:907, MF-1384)" },
 
     /* IMG — flaches Sektorabbild.
      *

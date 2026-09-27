@@ -558,6 +558,21 @@ int uft_td0_strom_spur(const uft_td0_strom_t *s, int cyl, int head,
  */
 int uft_td0_to_imd(const uft_td0_strom_t* s, struct uft_imd_image_t* imd);
 
+/**
+ * @brief Findet die erste Spur mit UNGLEICHEN Sektorgroessen (MF-1384).
+ *
+ * Verglichen werden die Sektoren MIT Daten, wie `uft_disk2.c` es fuer
+ * `UFT_D2_FEAT_VAR_SECTOR_SZ` tut. IMD traegt eine Groesse je Spurkopf
+ * (Dunfield, ImageDisk TD02IMD.C:907-908: „Cannot do mixed sector size
+ * within track"); `uft_td0_to_imd()` sagt eine solche Spur deshalb ab,
+ * statt sie auf den ersten Sektor zu ebnen und kleinere mit Nullen
+ * aufzufuellen.
+ *
+ * @return true und @p cyl / @p head gesetzt, wenn es eine gibt.
+ */
+bool uft_td0_erste_gemischte_spur(const uft_td0_strom_t *s,
+                                  unsigned *cyl, unsigned *head);
+
 /*============================================================================
  * LZSS Decompression Functions
  *============================================================================*/
