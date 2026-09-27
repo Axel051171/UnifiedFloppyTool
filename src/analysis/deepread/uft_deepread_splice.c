@@ -142,7 +142,7 @@ int uft_deepread_detect_splice(const otdr_track_t *track,
     /*     Std-dev (bitcells) of the peak position over revolutions, each
      *     revolution measured exactly like the track. A write splice sits
      *     on the medium and recurs every revolution; a noise peak does not.
-     *     Before MF-1431 this took the largest jump between consecutive RAW
+     *     Before MF-1435 this took the largest jump between consecutive RAW
      *     intervals (the first 2T->4T change, not the splice) and reported
      *     a spread of FLUX indices: the same splice on two revolutions gave
      *     4414.5 (tests/test_deepread_naht.c W2). */

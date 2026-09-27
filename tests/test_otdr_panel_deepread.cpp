@@ -59,7 +59,7 @@ void TestOtdrPanelDeepRead::anzeigeNachAnalyzeAll()
     QVERIFY2(t.startsWith(QString::fromUtf8("DeepRead \xe2\x80\x94 ")),
              qPrintable(t));
 
-    /* MF-1431: die Schreibnaht der gewaehlten Spur. Die gw-Aufnahme hat
+    /* MF-1435: die Schreibnaht der gewaehlten Spur. Die gw-Aufnahme hat
      * zwei bitgleiche Umdrehungen — die Wiederkehr ist also 0 Zellen. */
     auto *naht = panel.findChild<QLabel *>(QStringLiteral("lblSplice"));
     QVERIFY2(naht, "Anzeige lblSplice fehlt");

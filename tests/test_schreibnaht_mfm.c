@@ -10,7 +10,7 @@
  * keine davon traegt fuer einen IBM-MFM-Bitstrom.
  *   · `uff_detect_splices()`            — Zeitluecke im FLUSS, 0 Aufrufer
  *   · `uft_deepread_detect_splice()`    — OTDR-Spuren, 0 Aufrufer
- *                                         (seit MF-1431 im OTDR-Panel und
+ *                                         (seit MF-1435 im OTDR-Panel und
  *                                         in test_deepread_naht.c)
  *   · `G64_DIAG_SPLICE_DETECTED`        — ein ETIKETT, nichts setzt es
  * Beide echten Erkenner brauchen Fluss bzw. OTDR. Fuer den Bitstrom gibt

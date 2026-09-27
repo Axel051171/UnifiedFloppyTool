@@ -446,7 +446,7 @@ The catalogue covers (as source, not as a reachable feature):
   magnetic aging and cross-track correlation after "Analyze All"
   (MF-1430; measured values, classes shown as an unsourced
   heuristic), and the write-splice candidate per track with its
-  recurrence across revolutions (MF-1431). Adaptive decode,
+  recurrence across revolutions (MF-1435). Adaptive decode,
   weighted voting, revolution fingerprint and
   soft-decision LLR exist as C code with no caller — the last two
   on purpose, because measurement contradicts what they promise

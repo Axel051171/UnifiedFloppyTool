@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 /**
  * @file test_deepread_naht.c
- * @brief Was der DeepRead-Schreibnaht-Erkenner misst (MF-1431)
+ * @brief Was der DeepRead-Schreibnaht-Erkenner misst (MF-1435)
  *
  * ── DAS MODELL, UND WOHER ES KOMMT ───────────────────────────────────
  *
@@ -30,7 +30,7 @@
  *   W2  `splice_stability` war unbrauchbar: dieselbe Naht auf zwei
  *       Umdrehungen ergab bei 20 ns Jitter **5942,5** — gerechnet als
  *       Streuung von FLUSS-Indizes des groessten Rohintervall-Sprungs,
- *       also des ersten 2T->4T-Wechsels, nicht der Naht. Seit MF-1431
+ *       also des ersten 2T->4T-Wechsels, nicht der Naht. Seit MF-1435
  *       laeuft jede Umdrehung durch DIESELBE Messung wie die Spur, und
  *       die Streuung ist in Zellen. Das ist die eigentliche
  *       Unterscheidung: eine Naht sitzt auf dem Traeger und kehrt jede
@@ -191,7 +191,7 @@ static void t_detected_ist_kein_befund(void)
 
 int main(void)
 {
-    printf("DeepRead-Schreibnaht (MF-1431)\n");
+    printf("DeepRead-Schreibnaht (MF-1435)\n");
     spur_bauen();
     PRUEFE(g_nbits > NAHT + 1000u, "Spur zu kurz: %u Zellen", g_nbits);
     t_lage_im_fenster();

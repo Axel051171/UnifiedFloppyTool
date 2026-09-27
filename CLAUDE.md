@@ -313,7 +313,7 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 > Intervall ueber eine Bingrenze. Der freie Korpus hat **keine** echte
 > Flussaufnahme mit Jitter; geeicht ist also keine Schwelle (P3-630).
 >
-> **Stand MF-1431: 4 erreichbar, 4 ohne Aufrufer.** Dazu kam die
+> **Stand MF-1435: 4 erreichbar, 4 ohne Aufrufer.** Dazu kam die
 > Schreibnaht (Feld „Naht:“ je Spur). Gemessen an einer MFM-Spur aus dem
 > Encoder mit bekannter Naht: Lage bis 60 ns Jitter auf ±4 Zellen; die
 > Wiederkehr ueber die Umdrehungen trennt Naht (0–2,8 Zellen) von
@@ -994,8 +994,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
   erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
 - 8 DeepRead-Module, davon **4 erreichbar** und **4 ohne Aufrufer**
-  seit MF-1431 (Magnetic Aging + Cross-Track seit MF-1430,
-  Write-Splice seit MF-1431, alle im OTDR-Panel, siehe
+  seit MF-1435 (Magnetic Aging + Cross-Track seit MF-1430,
+  Write-Splice seit MF-1435, alle im OTDR-Panel, siehe
   §DeepRead). Bis dahin (MF-767, gemessen je Bezeichner über
   `git ls-files`) galt 1 zu 7: erreichbar war
   allein der **Encoding Boost** (`uft_otdr_detect_encoding`, gerufen in

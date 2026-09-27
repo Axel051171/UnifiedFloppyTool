@@ -747,6 +747,20 @@ size_t uft_d2_validate(uft_disk2_t *d) {
                         "Die Spur sagt Kodierung %d, ihr Bitstrom %d.",
                         (int)t->encoding, (int)t->bitstream.encoding);
 
+        /* MF-1432: POS_BEYOND unten prueft die Bitlagen der SEKTOREN, der
+         * Index hatte keine solche Pruefung. Er kommt aus einer .uftd-Datei
+         * als eigenes Feld (uft_disk2_io.c) und wird ungeprueft uebernommen;
+         * liegt er jenseits des Stroms, sagt uft_d2_sector_crosses_index()
+         * fuer jeden Sektor still „nein". */
+        if (t->has_bitstream && t->bitstream.index_bit != SIZE_MAX
+            && t->bitstream.index_bit >= t->bitstream.nbits)
+            uft_d2_diag(d, UFT_D2_DIAG_WARN, UFT_D2_LAYER_BITSTREAM, t->cyl,
+                        t->head, -1, "INDEX_BEYOND",
+                        "Der Index liegt bei Bit %zu, der Bitstrom hat nur "
+                        "%zu Bit — Sektoren ueber dem Index sind so nicht "
+                        "erkennbar.", t->bitstream.index_bit,
+                        t->bitstream.nbits);
+
         for (size_t s = 0; s < t->sectors.count; ++s) {
             const uft_d2_sector_t *x = &t->sectors.items[s];
 

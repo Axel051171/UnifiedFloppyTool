@@ -8,7 +8,7 @@
  * write -- it manifests as an abrupt phase/jitter discontinuity that is
  * consistent across all tracks written in one session.
  *
- * GEMESSEN MF-1431 (tests/test_deepread_naht.c; Spur aus
+ * GEMESSEN MF-1435 (tests/test_deepread_naht.c; Spur aus
  * uft_mfm_encode_track(), Naht als Phasensprung, Jitter gewobbelt):
  *   - die LAGE stimmt bis 60 ns Jitter auf +-4 Zellen, ab 100 ns nicht;
  *   - `splice_stability` trennt Naht und Rauschen: dieselbe Naht auf zwei
@@ -45,12 +45,12 @@ typedef struct {
     float    splice_magnitude;    /**< Jitter jump in dB */
     float    splice_stability;    /**< Std-dev of the peak position across
                                        revolutions, in BITCELLS; each revolution
-                                       measured like the track (MF-1431).
+                                       measured like the track (MF-1435).
                                        0 with a single revolution. */
     int32_t  index_offset_ns;     /**< splice_ns - revolution_ns: the NEGATIVE
                                        distance to the NEXT index pulse */
     bool     detected;            /**< magnitude > 3 dB. Unsourced threshold,
-                                       fires on jitter alone (MF-1431 W3) */
+                                       fires on jitter alone (MF-1435 W3) */
 } uft_splice_result_t;
 
 /* -----------------------------------------------------------------------

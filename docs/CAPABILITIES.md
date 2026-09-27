@@ -185,7 +185,7 @@ fields). Vollständige Liste über `audit_plugin_compliance.py --list`.
 | Encoding Boost (OTDR-Histogramm) | **wired** — `uft_otdr_detect_encoding`, gerufen in `src/gui/uft_otdr_panel.cpp` | mitgebaut in `test_main_window_fits_fullhd`, **kein Test ruft die Funktion** |
 | Adaptive Decode (CRC-Fehler → OTDR → Re-Decode → Fusion) | **ohne Aufrufer** — `uft_otdr_adaptive_decode` außerhalb der eigenen Datei nur in Kommentaren | kein Test |
 | Weighted Voting (Float-gewichtete Multi-Rev) | **ohne Aufrufer** — `uft_otdr_fuse_sector` nur in der eigenen Datei | kein Test |
-| Write-Splice Detection | **wired seit MF-1431** — Feld „Naht:“ je Spur: Lage nach dem Index, Sprung in dB und Wiederkehr ueber die Umdrehungen (Streuung in Zellen); `detected` wird **nicht** gezeigt (W3) | `test_deepread_naht` (Spur aus dem IBM-MFM-Encoder, Naht als Phasensprung; Rotbeweis W2) + `test_otdr_panel_deepread` |
+| Write-Splice Detection | **wired seit MF-1435** — Feld „Naht:“ je Spur: Lage nach dem Index, Sprung in dB und Wiederkehr ueber die Umdrehungen (Streuung in Zellen); `detected` wird **nicht** gezeigt (W3) | `test_deepread_naht` (Spur aus dem IBM-MFM-Encoder, Naht als Phasensprung; Rotbeweis W2) + `test_otdr_panel_deepread` |
 | Magnetic Aging Profile | **wired seit MF-1430** — `UftOtdrPanel::analyzeFullDisk()` zeigt Steigung, R², groessten Rest, mittleren SNR und Gradient; die Klasse nur als „Heuristik (Schwellen ohne Quelle)“ | `test_deepread_messung` (Regressionsgerade geschlossen; Rotbeweis A1) + `test_otdr_panel_deepread` (Anzeige nach „Analyze All“) |
 | Cross-Track Correlation | **wired seit MF-1430** — Korrelation radial benachbarter Spuren derselben Oberflaeche samt Paarzahl; Klasse nur als Heuristik, `may_be_protection` **nicht** gezeigt | `test_deepread_messung` (Rotbeweis C1) + `test_otdr_panel_deepread` |
 | Revolution Fingerprint | **ohne Aufrufer** (`docs/orphan_baseline.txt`) — der Hash ist gemessen **keine** Kennung (F1) | `test_deepread_messung` haelt F1 fest |
@@ -199,7 +199,7 @@ in `src/` und `tests/` (ohne die eigene Datei) sowie über
 Der Hinweis darunter (MF-983) hatte das schon richtig gemessen — die
 Tabelle darüber war nur nicht nachgezogen worden.
 
-**Stand MF-1431: 4 wired, 4 ohne Aufrufer, 5 mit eigenem Test.** Dazu kam
+**Stand MF-1435: 4 wired, 4 ohne Aufrufer, 5 mit eigenem Test.** Dazu kam
 die Schreibnaht: gemessen an einer MFM-Spur aus dem Encoder mit bekannter
 Naht (Phasensprung) stimmt die Lage bis 60 ns Jitter auf ±4 Zellen, und
 die Wiederkehr ueber die Umdrehungen trennt Naht (0–2,8 Zellen) von
@@ -223,7 +223,7 @@ C-Modul implementiert und in der GUI über `UftOtdrPanel` zugänglich." Der
 erste Halbsatz stimmt, der zweite nicht.
 
 Gemessen (MF-767, nachgemessen MF-983 je Bezeichner über `git ls-files`):
-**1 von 8 ist erreichbar** (Stand MF-983; seit MF-1431 4 von 8, siehe
+**1 von 8 ist erreichbar** (Stand MF-983; seit MF-1435 4 von 8, siehe
 oben). Zugänglich war allein der *Encoding Boost*
 (`uft_otdr_detect_encoding`, gerufen in `src/gui/uft_otdr_panel.cpp`). Die
 fünf Forensik-Module in `src/analysis/deepread/` trugen **13 Funktionen mit

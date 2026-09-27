@@ -948,7 +948,7 @@ void UftOtdrPanel::updateStatsDisplay()
     else
         m_lblProtection->setText("None");
 
-    /* Schreibnaht (MF-1431): Lage, Sprung, Wiederkehr — kein `detected`,
+    /* Schreibnaht (MF-1435): Lage, Sprung, Wiederkehr — kein `detected`,
      * dessen 3-dB-Schwelle auf blossem Jitter anschlaegt. */
     if (m_lblSplice) {
         uft_splice_result_t sp;

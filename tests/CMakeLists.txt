@@ -2113,7 +2113,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
     elseif(${test_name} STREQUAL "test_deepread_naht")
-        # MF-1431: der Schreibnaht-Erkenner an einer bekannten Naht. Die Spur
+        # MF-1435: der Schreibnaht-Erkenner an einer bekannten Naht. Die Spur
         # kommt aus dem IBM-MFM-Encoder (zweite Hand, wie test_schreibnaht_mfm),
         # gemessen wird im OTDR-Pfad.
         target_sources(${test_name} PRIVATE
