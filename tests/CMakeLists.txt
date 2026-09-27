@@ -4729,6 +4729,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_d88_spur_sektorzahl")
+        # P3-620 Fall 2 / MF-1438: jede Spur hat ihre eigene Sektorzahl (+04).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
     elseif(${test_name} STREQUAL "test_d88_header_variants")
         # 672-Byte-Kopf (160 Spureintraege) wurde vom Erkenner abgewiesen (MF-625);
         # beide Geschwister, weil die feste Schranke 0x2B0 in beiden stand

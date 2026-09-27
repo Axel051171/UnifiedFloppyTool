@@ -177,10 +177,30 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uft_track_init(track, cyl, head);
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { return UFT_ERROR_INVALID_ARG; }
     uint8_t sec_hdr[16];
-    for (int s = 0; s < disk->geometry.sectors; s++) {
+    /* P3-620 Fall 2 / MF-1438: die Sektorzahl gilt JE SPUR. pc98.org
+     * d88.html: der Sektorkopf traegt bei +04 (WORD) die Zahl der
+     * Sektoren DIESER Spur; MAME d88_dsk.cpp und uft_d77.c lesen sie so.
+     * Hier lief die Schleife bis `disk->geometry.sectors` — der Zahl der
+     * ERSTEN Spur: eine laengere Spur verlor ihre hinteren Sektoren
+     * still, eine kuerzere gab Koepfe der NAECHSTEN Spur als eigene aus
+     * (tests/test_d88_spur_sektorzahl.c: 8 statt 16, 8 statt 5). */
+    int spur_sektoren = -1;
+    /* MF-1438: Dichte-Flagge +06 je Sektor. Belegt sind zwei Werte, und
+     * nur diese werden gedeutet — 0x00 = doppelte Dichte (MFM), 0x40 =
+     * einfache (FM): pc98.org d88.html, wie im Baum schon uft_d77.c:22
+     * und das verwaiste Doppel pc98/d88.c:26 fuehren. uft_d88_parser_v2.c
+     * nennt zusaetzlich 0x01 = "High density" ohne Quelle — ein solcher
+     * Wert laesst die Kodierung UNBEKANNT, statt geraten zu werden. */
+    int dichte_mfm = 0, dichte_fm = 0, dichte_sonst = 0;
+    for (int s = 0; spur_sektoren < 0 || s < spur_sektoren; s++) {
         if (fread(sec_hdr, 1, 16, p->file) != 16) break;
+        if (spur_sektoren < 0) spur_sektoren = uft_read_le16(&sec_hdr[4]);
+        if (spur_sektoren == 0) break;
         uint16_t dsize = uft_read_le16(&sec_hdr[14]);
         if (dsize == 0 || dsize > 8192) break;
+        if (sec_hdr[6] == 0x00) dichte_mfm++;
+        else if (sec_hdr[6] == 0x40) dichte_fm++;
+        else dichte_sonst++;
         
         uint8_t* buf = malloc(dsize);
         if (!buf) break;
@@ -208,6 +228,12 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         }
         free(buf);
     }
+    if (dichte_sonst > 0 || (dichte_mfm == 0 && dichte_fm == 0))
+        track->encoding = UFT_ENC_UNKNOWN;
+    else if (dichte_mfm > 0 && dichte_fm > 0)
+        track->encoding = UFT_ENC_MIXED;
+    else
+        track->encoding = dichte_fm ? UFT_ENC_FM : UFT_ENC_MFM;
     return UFT_OK;
 }
 
@@ -235,10 +261,16 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) return UFT_ERROR_IO;
 
     uint8_t sec_hdr[16];
-    for (int s = 0; s < disk->geometry.sectors; s++) {
+    /* MF-1438: dieselbe Zahl je Spur wie beim Lesen. Mit der Zahl der
+     * ersten Spur schrieb eine laengere Spur nur ihre ersten Sektoren
+     * und meldete UFT_OK; eine kuerzere schrieb in die naechste Spur. */
+    int spur_sektoren = -1;
+    for (int s = 0; spur_sektoren < 0 || s < spur_sektoren; s++) {
         long hdr_pos = ftell(p->file);
         if (hdr_pos < 0) return UFT_ERROR_IO;
         if (fread(sec_hdr, 1, 16, p->file) != 16) break;
+        if (spur_sektoren < 0) spur_sektoren = uft_read_le16(&sec_hdr[4]);
+        if (spur_sektoren == 0) break;
         uint16_t dsize = uft_read_le16(&sec_hdr[14]);
         if (dsize == 0 || dsize > 8192) break;
 
