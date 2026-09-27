@@ -268,12 +268,15 @@ private:
     /**
      * @brief Build the DTC read command argv for a single-track raw-flux capture.
      *
-     * Produces: [dtc_binary, -c2, -d0, -s{head}, -b{cylinder}, -e{cylinder},
-     *            -f{prefix}, -i0]
-     * where prefix is a caller-supplied path prefix for DTC output files.
+     * Produces: [dtc_binary, -c2, -d0, [-r{revolutions}], -f{prefix},
+     *            -s{cylinder}, -e{cylinder}, -g{head}, -i0]
+     * (BERICHTIGT: here stood the pre-MF-1046 order with -s{head} and
+     * -b{cylinder}.) -r is added only when @p revolutions > 0 (A-035
+     * DTC-3, MF-1386); 0 leaves DTC's default by image type.
      */
     std::vector<std::string> build_read_argv(int cylinder, int head,
-                                              const std::string& prefix) const;
+                                              const std::string& prefix,
+                                              int revolutions = 0) const;
 
     /**
      * @brief Return a ProviderError indicating the DTC binary was not found
