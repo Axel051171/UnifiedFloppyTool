@@ -160,11 +160,11 @@ static void a_korpus_86f(void) {
     CHECK(geprueft == st.sectors, "alle %zu erreichbar, %zu", st.sectors, geprueft);
     printf("  86F: %zu von %zu Sektoren mit bekannter CRC, %zu mit Zuversicht 255\n",
            mit_crc, geprueft, mit_255);
-    /* BERICHTIGT MF-1377 (P3-595). Hier stand „das 86F-Plugin reicht
+    /* BERICHTIGT MF-1381 (P3-595). Hier stand „das 86F-Plugin reicht
      * keine Pruefsumme durch", erwartet 0 — und das war der DEFEKT, nicht
      * eine Eigenschaft: der Leser dekodiert mit `uft_mfm_decode_track()`,
      * das beide CRCs nachrechnet, warf das Ergebnis aber weg, und ein
-     * Sektor mit falscher Pruefsumme kam als guter heraus. Seit MF-1377
+     * Sektor mit falscher Pruefsumme kam als guter heraus. Seit MF-1381
      * traegt jeder Sektor `UFT_SECTOR_CRC_CHECKED` samt Ergebnis; an
      * dieser echten Diskette gehen gemessen alle 1440 auf, also gilt nach
      * der Regel der Bruecke (255 nur mit gemessener, stimmender

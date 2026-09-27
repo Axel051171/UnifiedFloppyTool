@@ -175,20 +175,61 @@ typedef struct uft_convert_options_ext {
 // Conversion Result
 // ============================================================================
 
+/**
+ * @brief Which check was asked for / carried out after a conversion (H-14).
+ *
+ * Only what exists is named: the read-back comparison of
+ * uft_convert_verify_after() (MF-1307) re-opens the written file and
+ * compares every data byte against the source — a valid CRC over wrong
+ * content fails it. A controller-CRC-only stage has no path in this tree
+ * (no hardware write path verifies), so it is not offered here.
+ */
+typedef enum {
+    UFT_VERIFY_STAGE_NONE             = 0,
+    UFT_VERIFY_STAGE_READBACK_COMPARE = 1,
+} uft_verify_stage_t;
+
+/**
+ * @brief What came out of the requested check (H-14, MF-1378).
+ *
+ * Kept apart from `success` on purpose: before MF-1378 a PASSED check left
+ * no trace in the result, so "verified" and "never asked" looked the same
+ * to every caller — and the save dialog said "not carried out" for a check
+ * that ran. 0 is NOT_REQUESTED so a zeroed result says nothing it did not
+ * do.
+ */
+typedef enum {
+    UFT_VERIFY_NOT_REQUESTED  = 0,  /**< no check was asked for          */
+    UFT_VERIFY_PASSED         = 1,  /**< ran, every compared track equal  */
+    UFT_VERIFY_FAILED         = 2,  /**< ran, data differ / target unreadable */
+    UFT_VERIFY_NOT_ASSESSABLE = 3,  /**< ran, source carries no sectors  */
+    UFT_VERIFY_NOT_RUN        = 4,  /**< asked for, never reached (conversion
+                                         failed first, or no files to reopen) */
+} uft_verify_outcome_t;
+
 typedef struct uft_convert_result {
     bool                success;
     uft_error_t         error;
-    
+
     // Statistics
     int                 tracks_converted;
     int                 tracks_failed;
     int                 sectors_converted;
     int                 sectors_failed;
     int                 bytes_written;
-    
+
     // Warnings
     int                 warning_count;
     char                warnings[8][256];
+
+    /* H-14 (MF-1378): requested stage, performed stage and outcome, kept
+     * apart — "verified" must never come from a switch or from write
+     * success. Appended, not inserted: the fields above keep their offsets. */
+    uft_verify_stage_t   verify_requested;
+    uft_verify_stage_t   verify_performed;
+    uft_verify_outcome_t verify_outcome;
+    size_t               verify_tracks_compared;   /**< tracks compared      */
+    size_t               verify_sectors_compared;  /**< sectors compared     */
 } uft_convert_result_t;
 
 // ============================================================================

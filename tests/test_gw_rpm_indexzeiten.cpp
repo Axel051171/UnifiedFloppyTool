@@ -269,6 +269,25 @@ int main()
         (void)p.set_motor(true);
         ZUSAGE("W2", s.fw.selected_unit == 0,
                "set_drive_unit(0) after an operation re-selects on the next one");
+
+        /* #43 follow-up (petrkr, MF-1376): Shugart drives 0-3 and IBM-PC
+         * A/B are two BUSES. Reference: gw tools/util.py:127-141 —
+         * 'A'/'B' -> (IBMPC, 0/1), '0'..'3' -> (Shugart, 0..3). Before the
+         * fix the provider never set a bus: the HAL chose IBM-PC, and
+         * Shugart unit 2 was unreachable. */
+        p.set_drive(GwBus::Shugart, 2);
+        (void)p.set_motor(true);
+        ZUSAGE("B1", s.fw.bus_type == GW_FW_BUS_SHUGART && s.fw.selected_unit == 2,
+               "Shugart drive 2 -> firmware on the Shugart bus, unit 2");
+        p.set_drive(GwBus::IbmPc, 1);
+        (void)p.set_motor(true);
+        ZUSAGE("B2", s.fw.bus_type == GW_FW_BUS_IBM_PC && s.fw.selected_unit == 1,
+               "back to B: -> the bus is switched back to IBM-PC, unit 1");
+        p.set_drive(GwBus::IbmPc, 2);
+        const MotorOutcome m = p.set_motor(true);
+        ZUSAGE("B3", std::holds_alternative<ProviderError>(m) &&
+                     s.fw.bus_type == GW_FW_BUS_IBM_PC && s.fw.selected_unit == 1,
+               "IBM-PC unit 2 does not exist: refused visibly, firmware untouched");
     }
 
     /* ── D2: the speed itself. */

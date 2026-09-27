@@ -122,20 +122,9 @@ laufen fort und werden nie wiederverwendet.
 
 *(Reihenfolge = Bearbeitungsreihenfolge; oben ist als Nächstes dran)*
 
-### A-036 · #43 Nachtrag: Shugart-Bus 0–3 und IBM-PC A/B sind zwei Busse, nicht zwei Namen
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
-- **Wortlaut:** „https://github.com/Axel051171/UnifiedFloppyTool/issues/43#issuecomment-5851458619 hatten wir das schon" (petrkr: „Drive 0/1/2 is NOT same as Drive A/B … you can not interchange them")
-- **Kennzahl:** keine der vier — gemeldeter Fehler eines Anwenders (Issue #43)
-- **Kanal:** Spec — `gw` selbst, `src/greaseweazle/tools/util.py:127-141` (Unlicense, Stand `26690f8`): A/B → IBM-PC-Bus Einheit 0/1, 0–3 → Shugart-Bus Einheit 0–3
-- **Einfrier-Regel:** nein (Provider/GUI; `src/hal/uft_greaseweazle_full.c` bleibt unberuehrt, `uft_gw_set_bus_type()` ist oeffentlich)
-- **OPEN_ITEMS:** P3-564, P3-565
-- **Fertig heißt:** die Auswahl traegt Bus UND Einheit, der Provider setzt den Bus vor jeder Auswahl; ein Test am Firmware-Automaten zeigt Shugart 2 und IBM B wirklich angekommen (vorher rot); Antwort an petrkr als Entwurf beim Eigentuemer
-- **Aufwand:** 120–200 Zeilen
-- **Stand:** —
-- **Beleg:** —
 
 ### A-037 · UFT_AdaptiveCopyCore: Gegenrechnung, 1581-Datenzeile, Verify-Stufen
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
+- **Status:** wartet (Eigentuemerentscheidung zu Schritt 2; 1 und 3 erledigt) · **Aufgenommen:** 2026-09-27
 - **Wortlaut:** „weiter mit H-30 Schritt 2 | und neuer code von mir …\UFT_AdaptiveCopyCore_v1.0.0.zip" · Freigabe „los" (2026-09-27)
 - **Kennzahl:** keine der vier (Verify-Stufen: H-14)
 - **Kanal:** Nachbau/Spec — Gap-Rechner des Pakets nur als Gegenrechnung im Test (keine fremde Hand, Konstanten aus benannter Quelle); 1581-Zahlen aus 1581-Copy 0.50 (GPL-2+) und 1581-ROM
@@ -143,7 +132,7 @@ laufen fort und werden nie wiederverwendet.
 - **OPEN_ITEMS:** P3-593, P3-561
 - **Fertig heißt:** (1) Paritaetstest Gegenrechnung ↔ `uft_fdc_gap_space()` an allen 17 Profilen, Rotbeweis zuerst; (2) 1581 als Datenzeile mit Anker; (3) `verify_kind` im bestehenden `uft_copy_plan_t` mit eigenem Rueckvergleich, gueltige CRC bei falschem Inhalt faellt; (4) Transfer-Kern bleibt Fundus unter P3-593
 - **Aufwand:** 300–500 Zeilen ueber drei Commits
-- **Stand:** —
+- **Stand:** (1) Gegenrechnung erledigt `fbf86dee` MF-1377 — 67/67, Mutationen 7/7, Konstanten aus gw ibm.py; (3) Verify-Ausgang erledigt `780d051d` MF-1378 — angefordert/ausgefuehrt/Ausgang im Ergebnis, der Speichern-Dialog bestritt eine laufende Pruefung (berichtigt), Mutationen 6/6; (2) 1581-Datenzeile **gemessen und nicht gebaut**: eine 18. Profilzeile 80×2×10×512 wuerde `uft_fdc_detect_format()` fuer JEDE 10-Sektor-DD-Datei (auch Atari ST) auf das 1581-Profil stellen, und `hfe_create()`/`uft_format_convert_bitstream.c:1257` schrieben dann 300 U/min statt 0 (unbestimmt) in den HFE-Kopf — geaenderte Ausgabe bestehender Wandlungen fuer Gap-Werte ohne Leser. Wartet auf Eigentuemerentscheidung; bis dahin Fundus unter P3-593.
 - **Beleg:** —
 
 ### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
@@ -3028,6 +3017,18 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-036 · #43 Nachtrag: Shugart-Bus 0–3 und IBM-PC A/B sind zwei Busse, nicht zwei Namen
+- **Status:** erledigt · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „https://github.com/Axel051171/UnifiedFloppyTool/issues/43#issuecomment-5851458619 hatten wir das schon" (petrkr: „Drive 0/1/2 is NOT same as Drive A/B … you can not interchange them")
+- **Kennzahl:** keine der vier — gemeldeter Fehler eines Anwenders (Issue #43)
+- **Kanal:** Spec — `gw` selbst, `src/greaseweazle/tools/util.py:127-141` (Unlicense, Stand `26690f8`): A/B → IBM-PC-Bus Einheit 0/1, 0–3 → Shugart-Bus Einheit 0–3
+- **Einfrier-Regel:** nein (Provider/GUI; `src/hal/uft_greaseweazle_full.c` bleibt unberuehrt, `uft_gw_set_bus_type()` ist oeffentlich)
+- **OPEN_ITEMS:** P3-564, P3-565
+- **Fertig heißt:** die Auswahl traegt Bus UND Einheit, der Provider setzt den Bus vor jeder Auswahl; ein Test am Firmware-Automaten zeigt Shugart 2 und IBM B wirklich angekommen (vorher rot); Antwort an petrkr als Entwurf beim Eigentuemer
+- **Aufwand:** 120–200 Zeilen
+- **Stand:** Auswahl traegt Bus UND Einheit (A:/B: IBM-PC, Drive 0–3 Shugart, gw tools/util.py:127-141); der Provider sendet `uft_gw_set_bus_type()` vor jeder Auswahl. Rotbeweis am Firmware-Automaten B1 rot → B1–B3 gruen; 564/564. Antwort an petrkr liegt als Entwurf beim Eigentuemer (nicht gepostet).
+- **Beleg:** `8d863824`, MF-1376
 
 ### A-040 · Zulieferung `sed_568.zip` (SED 5.68) untersuchen und übernehmen, was UFT weiterbringt
 - **Status:** erledigt · **Aufgenommen:** 2026-09-27

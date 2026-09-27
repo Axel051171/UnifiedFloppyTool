@@ -321,7 +321,7 @@ static uft_error_t f86_read_track(uft_disk_t *disk, int cyl, int head,
                                           (uint16_t)r->data_len,
                                           r->cylinder, r->head) != UFT_OK)
             continue;
-        /* MF-1377 (P3-595): was der Dekoder gemessen hat. Vorher kam ein
+        /* MF-1381 (P3-595): was der Dekoder gemessen hat. Vorher kam ein
          * Sektor mit falscher Kopf- oder Datenpruefsumme als GUTER Sektor
          * heraus, weil `add_sector_with_id()` unbedingt „gut" setzt —
          * gemessen an fluxfox_sector_test_360k.86f mit zwei gekippten

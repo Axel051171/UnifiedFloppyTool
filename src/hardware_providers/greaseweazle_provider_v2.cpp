@@ -163,6 +163,14 @@ void GreaseweazleProviderV2::set_drive_unit(int unit) noexcept
      * operation re-asserts it. Range is NOT clamped here — it is
      * validated visibly in ensure_drive_selected() on the next do_*
      * call (a typed ProviderError), per the forensic-visibility rule. */
+    set_drive(GwBus::IbmPc, unit);
+}
+
+void GreaseweazleProviderV2::set_drive(GwBus bus, int unit) noexcept
+{
+    /* MF-1376: the bus is configuration like the unit; both are
+     * (re)asserted on the next bus operation. */
+    m_drive_bus = bus;
     m_drive_unit = unit;
     m_drive_selected = false;
 }
@@ -186,18 +194,31 @@ std::optional<ProviderError> GreaseweazleProviderV2::ensure_drive_selected()
     if (m_drive_selected) {
         return std::nullopt;
     }
-    if (m_drive_unit != 0 && m_drive_unit != 1) {
+    const bool ibm = (m_drive_bus == GwBus::IbmPc);
+    if (m_drive_unit < 0 || m_drive_unit > gw_bus_max_unit(m_drive_bus)) {
         return ProviderError{
             UFT_ERR_INVALID_ARG,
             "Greaseweazle drive unit out of range",
-            "Drive unit " + std::to_string(m_drive_unit) +
-                " is invalid; the Greaseweazle bus addresses unit 0 or 1 only.",
-            "Pass drive_unit 0 or 1 when constructing GreaseweazleProviderV2 "
-            "or via set_drive_unit()."
+            "Drive unit " + std::to_string(m_drive_unit) + " is invalid on the " +
+                (ibm ? "IBM-PC bus, which addresses A: and B: (unit 0 or 1)."
+                     : "Shugart bus, which addresses drives 0 to 3."),
+            "Choose A:/B: (IBM-PC bus) or drive 0-3 (Shugart bus), as gw's "
+            "--drive does."
         };
     }
-    int rc = uft_gw_select_drive(m_handle,
-                                 static_cast<uint8_t>(m_drive_unit));
+    /* MF-1376: set the bus FIRST, every time. uft_gw_select_drive() only
+     * configures a bus when none is set, and then always IBM-PC — which
+     * made a Shugart drive unreachable (#43 follow-up). gw does the same:
+     * usb.set_bus_type(drive.bus) before selecting. */
+    int rc = uft_gw_set_bus_type(m_handle,
+                                 static_cast<uft_gw_bus_type_t>(m_drive_bus));
+    if (rc != UFT_GW_OK) {
+        return gw_err_to_provider_error(
+            rc,
+            "Greaseweazle bus selection failed",
+            "uft_gw_set_bus_type returned error");
+    }
+    rc = uft_gw_select_drive(m_handle, static_cast<uint8_t>(m_drive_unit));
     if (rc != UFT_GW_OK) {
         return gw_err_to_provider_error(
             rc,

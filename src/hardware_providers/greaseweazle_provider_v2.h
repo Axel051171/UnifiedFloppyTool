@@ -38,6 +38,7 @@
 #include "uft/hal/outcomes.h"
 #include "uft/hal/concepts.h"
 #include "uft/hal/uft_greaseweazle_full.h"
+#include "gw_drive_unit_select.h"   /* same directory: GwBus (MF-1376) */
 
 #include <optional>
 #include <string>
@@ -153,8 +154,19 @@ public:
      */
     void set_drive_unit(int unit) noexcept;
 
-    /** Currently-configured bus unit (0 or 1). Default 0. */
+    /**
+     * @brief Set bus AND unit — #43 follow-up (MF-1376): IBM-PC A/B and
+     *        Shugart 0..3 are two buses (gw tools/util.py:127-141). The
+     *        bus is sent before every (re)select; set_drive_unit(u) is
+     *        set_drive(GwBus::IbmPc, u).
+     */
+    void set_drive(GwBus bus, int unit) noexcept;
+
+    /** Currently-configured bus unit. Default 0. */
     int drive_unit() const noexcept { return m_drive_unit; }
+
+    /** Currently-configured bus. Default IBM-PC. */
+    GwBus drive_bus() const noexcept { return m_drive_bus; }
 
     /** Close the device if open. No-op if not. Idempotent. */
     void close() noexcept;
@@ -215,7 +227,8 @@ private:
     uft_gw_device_t *m_handle = nullptr;     /**< Opaque GW device handle, OWNED. */
     std::string      m_firmware_version;     /**< Populated by open(). */
     int              m_hw_model = 0;         /**< Populated by open(). */
-    int              m_drive_unit = 0;       /**< Bus unit 0/1 (MF-199), ctor/setter. */
+    int              m_drive_unit = 0;       /**< Bus unit (MF-199), ctor/setter. */
+    GwBus            m_drive_bus = GwBus::IbmPc; /**< Bus (MF-1376). */
     bool             m_drive_selected = false; /**< Lazy uft_gw_select_drive latch. */
 
     /** Translate a uft_gw_* error code to a ProviderError. */

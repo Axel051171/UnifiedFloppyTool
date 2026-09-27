@@ -1098,10 +1098,10 @@ void HardwareTab::onConnect()
          * the existing overload (MF-199). Before #43 this read nothing and
          * the provider ran unit 0. A combo that names no Greaseweazle unit
          * is refused here — silently taking 0 would be the old defect. */
-        const std::optional<int> unit = selectedGwDriveUnit();
+        const std::optional<::uft::hal::GwDrive> unit = selectedGwDrive();
         if (!unit) {
             const QString qerr = tr("The drive selection \"%1\" names no "
-                                    "Greaseweazle drive (A: or B:).")
+                                    "Greaseweazle drive (A:/B: or Shugart 0-3).")
                                      .arg(ui->comboDriveSelect->currentText());
             updateStatus(tr("Connection refused: %1").arg(qerr), /*isError=*/true);
             QMessageBox::warning(this, tr("Connection Error"),
@@ -1109,7 +1109,8 @@ void HardwareTab::onConnect()
                     .arg(m_controllerType, m_portName, qerr));
             return;
         }
-        qDebug() << "HardwareTab: GW drive unit" << *unit;
+        qDebug() << "HardwareTab: GW drive bus" << static_cast<int>(unit->bus)
+                 << "unit" << unit->unit;
 
         /* MF-205 (P1.23): construct the GW provider in a local
          * unique_ptr, open() it, and only move it into m_providerV2 on
@@ -1119,7 +1120,8 @@ void HardwareTab::onConnect()
         auto gwOwned = std::make_unique<::uft::hal::GreaseweazleProviderV2>();
         ::uft::hal::GreaseweazleProviderV2 *gwp = gwOwned.get();
         std::string err;
-        if (gwp->open(port.toLocal8Bit().constData(), *unit, &err)) {
+        gwp->set_drive(unit->bus, unit->unit);   /* MF-1376: bus AND unit */
+        if (gwp->open(port.toLocal8Bit().constData(), &err)) {
             /* Success: the variant takes ownership. */
             m_providerV2 = std::move(gwOwned);
 
@@ -1446,24 +1448,33 @@ void HardwareTab::onControllerChanged(int index)
         ui->comboDriveSelect->addItem(tr("Device 10"), 10);
         ui->comboDriveSelect->addItem(tr("Device 11"), 11);
     } else {
-        /* #43 (MF-XXXX): IBM-PC wording as in forms/tab_hardware.ui.
-         * uft_gw_select_drive() configures the IBM-PC bus when none is set,
-         * so unit 0/1 is drive A/B — gw's `--drive=A/B`. "Drive 0/1" read
-         * like gw's Shugart `--drive=0/1`, a different bus. The item data
-         * is the unit; onConnect() and onDriveSelectChanged() read it. */
+        /* #43 (MF-1365) and its follow-up (MF-1376): the entries are gw's
+         * own --drive values (tools/util.py:127-141). A:/B: are units 0/1 on
+         * the IBM-PC bus, 0..3 are units on the SHUGART bus — two buses, not
+         * two names for the same drives (petrkr: "Drive 0/1/2 is NOT same as
+         * Drive A/B"). The first version offered "A: (Drive 0)" and set no
+         * bus. Item data: gw_drive_combo_code(); onConnect() and
+         * onDriveSelectChanged() read it through selectedGwDrive(). */
+        using ::uft::hal::GwBus;
+        using ::uft::hal::gw_drive_combo_code;
         ui->comboDriveSelect->clear();
-        ui->comboDriveSelect->addItem(tr("A: (Drive 0)"), 0);
-        ui->comboDriveSelect->addItem(tr("B: (Drive 1)"), 1);
+        ui->comboDriveSelect->addItem(tr("A: (IBM-PC bus)"),
+                                      gw_drive_combo_code({GwBus::IbmPc, 0}));
+        ui->comboDriveSelect->addItem(tr("B: (IBM-PC bus)"),
+                                      gw_drive_combo_code({GwBus::IbmPc, 1}));
+        for (int u = 0; u <= ::uft::hal::gw_bus_max_unit(GwBus::Shugart); ++u)
+            ui->comboDriveSelect->addItem(tr("Drive %1 (Shugart bus)").arg(u),
+                                          gw_drive_combo_code({GwBus::Shugart, u}));
     }
 }
 
-std::optional<int> HardwareTab::selectedGwDriveUnit() const
+std::optional<::uft::hal::GwDrive> HardwareTab::selectedGwDrive() const
 {
     const QVariant d = ui->comboDriveSelect->currentData();
     bool isInt = false;
     const int value = d.toInt(&isInt);
     const QByteArray key = ui->comboController->currentData().toString().toUtf8();
-    return ::uft::hal::gw_drive_unit_from_combo(
+    return ::uft::hal::gw_drive_from_combo(
         std::string_view(key.constData(), static_cast<size_t>(key.size())),
         d.isValid() && isInt, value);
 }
@@ -1487,7 +1498,8 @@ void HardwareTab::onDriveSelectChanged(int index)
      * must never show a drive that is not the one being addressed. */
     auto zurueck = [this, gwp]() {
         const QSignalBlocker sperre(ui->comboDriveSelect);
-        const int idx = ui->comboDriveSelect->findData(gwp->drive_unit());
+        const int idx = ui->comboDriveSelect->findData(
+            ::uft::hal::gw_drive_combo_code({gwp->drive_bus(), gwp->drive_unit()}));
         if (idx >= 0) {
             ui->comboDriveSelect->setCurrentIndex(idx);
         }
@@ -1500,14 +1512,14 @@ void HardwareTab::onDriveSelectChanged(int index)
         return;
     }
 
-    const std::optional<int> unit = selectedGwDriveUnit();
+    const std::optional<::uft::hal::GwDrive> unit = selectedGwDrive();
     if (!unit) {
         zurueck();
         updateStatus(tr("Drive selection names no Greaseweazle drive; "
                         "the drive stays unchanged."), /*isError=*/true);
         return;
     }
-    if (*unit == gwp->drive_unit()) {
+    if (*unit == ::uft::hal::GwDrive{gwp->drive_bus(), gwp->drive_unit()}) {
         return;
     }
 
@@ -1540,7 +1552,7 @@ void HardwareTab::onDriveSelectChanged(int index)
     m_motorRunning = false;
     updateMotorControlsEnabled();
 
-    gwp->set_drive_unit(*unit);
+    gwp->set_drive(unit->bus, unit->unit);
     updateStatus(tr("Greaseweazle: drive %1 selected")
                      .arg(ui->comboDriveSelect->currentText()));
 }

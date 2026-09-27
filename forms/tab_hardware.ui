@@ -148,12 +148,12 @@
              <widget class="QComboBox" name="comboDriveSelect">
               <item>
                <property name="text">
-                <string>A: (Drive 0)</string>
+                <string>A: (IBM-PC bus)</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>B: (Drive 1)</string>
+                <string>B: (IBM-PC bus)</string>
                </property>
               </item>
              </widget>

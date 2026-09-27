@@ -203,7 +203,7 @@ static inline void uft_format_mark_last_missing(uft_track_t* track)
 
 /**
  * @brief Traegt in den zuletzt angelegten Sektor ein, was ein Dekoder an
- *        den Pruefsummen GEMESSEN hat (MF-1377, P3-595)
+ *        den Pruefsummen GEMESSEN hat (MF-1381, P3-595)
  *
  * `uft_format_add_sector_with_id()` setzt unbedingt `UFT_SECTOR_OK` und
  * beide CRC-Flaggen auf gut. Ein Leser, der die Sektoren aus einem
