@@ -182,9 +182,27 @@ int main(void)
               ECHT[i], spuren);
     }
 
-    CHECK(geoeffnet > 0,
-          "keine der echten Aufnahmen geoeffnet — dieser Abschnitt hat "
-          "NICHTS geprueft");
+    /* BERICHTIGT (MF-1472; MF-1468 war hier rot in CI): hier stand ein CHECK, das
+     * fiel, wenn keine Aufnahme aufging. Das war falsch.
+     *
+     * `tests/corpus/` ist GITIGNORED (.gitignore:153) — in CI existiert
+     * das Verzeichnis nicht. Der Wächter oben prueft nur, ob das MAKRO
+     * leer ist; CMake setzt es aber immer, auch auf einen Pfad, den es
+     * dort nicht gibt. Folge: der Test fiel in CI in 0,02 s, und das
+     * ASan-Tor meldete ihn als „NEU unter ASan fehlgeschlagen" — ein
+     * Befund, der nach einem Speicherfehler aussah und keiner war.
+     *
+     * Ein fehlender LOCAL-ONLY-Korpus ist ein SKIP, kein Fehlschlag.
+     * Sichtbar bleibt er trotzdem: Rueckgabe 77 (MF-598), nie 0. Die
+     * Kontrolle oben hat vorher gemessen und gilt weiter — dieser Test
+     * meldet also nicht „bestanden", wenn er nur die Haelfte lief. */
+    if (geoeffnet == 0) {
+        printf("\nSKIP: keine der echten Aufnahmen geoeffnet — sie sind "
+               "LOCAL-ONLY und liegen in %s\n", UFT_CORPUS_RESTRICTED_DIR);
+        printf("Die Kontrolle ist gelaufen: %d bestanden, %d "
+               "fehlgeschlagen\n", g_pass, g_fail);
+        return g_fail ? 1 : 77;      /* SKIP_RETURN_CODE, MF-598 */
+    }
 
     /* ── FESTNAGELUNG des Verlusts (P3-634, MF-1468) ─────────────────────────────
      *
