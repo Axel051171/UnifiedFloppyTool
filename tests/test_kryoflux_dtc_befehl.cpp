@@ -149,15 +149,60 @@ static std::string pruefstrom() {
  * Der Lesebefehl des Produktionspfades
  * ──────────────────────────────────────────────────────────────────── */
 
-static std::vector<std::string> lese_argv(int zylinder, int kopf) {
+static std::vector<std::string> lese_argv_rev(int zylinder, int kopf,
+                                              int umdrehungen) {
     SubprocessMock mock;
     mock.queue_run(SubprocessMock::ScriptedRun{
         { "dtc" }, pruefstrom(), "", 0
     });
     KryoFluxProviderV2 p(make_runner(mock), "dtc");
-    (void)p.read_raw_flux(ReadFluxParams{ zylinder, kopf, 2, 0 });
+    (void)p.read_raw_flux(ReadFluxParams{ zylinder, kopf, umdrehungen, 0 });
     assert(!mock.recorded_runs().empty());
     return mock.recorded_runs().front().argv;
+}
+
+static std::vector<std::string> lese_argv(int zylinder, int kopf) {
+    return lese_argv_rev(zylinder, kopf, 2);
+}
+
+static int zaehle_praefix(const std::vector<std::string>& argv,
+                          const std::string& p) {
+    int n = 0;
+    for (const auto& a : argv)
+        if (a.compare(0, p.size(), p) == 0) n++;
+    return n;
+}
+
+static void die_umdrehungen_erreichen_dtc()
+{
+    /* A-035 DTC-3 (MF-1386). Handbuch des Urhebers, KryoFlux Release
+     * 3.50 (neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz,
+     * docs/KryoFlux Manual.pdf, S. 13): „-r<rev> : set number of
+     * revolutions to sample (default by image type)". Die
+     * Reihenfolge-Regel (S. 14) fuehrt „Revolutions (-r)" unter den
+     * GLOBALEN Einstellungen, die „can be anywhere in the command line".
+     *
+     * Vorher: FluxCaptureJob forderte 2 Umdrehungen an, und DTC erfuhr
+     * davon nichts — es nahm die Vorgabe des Bildtyps. */
+    const auto argv2 = lese_argv_rev(3, 0, 2);
+    PRUEFE(hat(argv2, "-r2") && zaehle_praefix(argv2, "-r") == 1,
+           "2 angeforderte Umdrehungen erreichen DTC als -r2, genau einmal");
+
+    const auto argv5 = lese_argv_rev(3, 0, 5);
+    PRUEFE(hat(argv5, "-r5"), "5 angeforderte Umdrehungen -> -r5");
+
+    /* 0 = nicht angegeben: dann gilt DTCs Vorgabe, und es wird nichts
+     * behauptet, was niemand angefordert hat. */
+    const auto argv0 = lese_argv_rev(3, 0, 0);
+    PRUEFE(zaehle_praefix(argv0, "-r") == 0,
+           "ohne Angabe kein -r — DTCs Vorgabe gilt");
+
+    /* Der Rest der Befehlszeile bleibt die aus MF-1046, Wort fuer Wort:
+     * nur -r kommt dazu. */
+    PRUEFE(argv2.size() == argv0.size() + 1,
+           "-r ist der EINZIGE Zusatz zur Befehlszeile aus MF-1046");
+
+    if (g_fail) std::printf("    argv war: %s\n", zeige(argv2).c_str());
 }
 
 static void die_spurwahl_nennt_die_spur()
@@ -409,6 +454,7 @@ int main()
     die_seitenwahl_nennt_die_seite();
     die_kopfjustage_bleibt_unberuehrt();
     was_schon_richtig_war_bleibt();
+    die_umdrehungen_erreichen_dtc();
 
     std::printf("--- der zweite Bauer: die C-Huelle ---\n");
     die_c_huelle_nennt_dieselben_optionen();
