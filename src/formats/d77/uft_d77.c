@@ -318,6 +318,13 @@ static uft_error_t d77_write_track(uft_disk_t *disk, int cyl, int head,
         if (fread(sec_hdr, 1, D77_SEC_HDR_SIZE, pdata->file) !=
             D77_SEC_HDR_SIZE)
             break;
+        /* MF-1439: ISO C 7.21.5.3 — on an update stream, input must not be
+         * followed by output without a positioning call in between. glibc
+         * tolerates it, the MinGW runtime does not: measured, write_track
+         * returned UFT_OK and 0 of 4 data fields reached the file
+         * (tests/test_d77_schreiben_positioniert.c). Same pattern as
+         * d88_write_track (MF-1470 on the cloud branch). */
+        if (fseek(pdata->file, 0, SEEK_CUR) != 0) return UFT_ERROR_IO;
 
         uint16_t data_size = uft_read_le16(sec_hdr + 14);
         uint16_t num_sectors = uft_read_le16(sec_hdr + 4);
@@ -341,6 +348,9 @@ static uft_error_t d77_write_track(uft_disk_t *disk, int cyl, int head,
                 return UFT_ERROR_IO;
             }
             free(pad);
+            /* the same rule the other way round: the next pass reads a
+             * sector header again */
+            if (fseek(pdata->file, 0, SEEK_CUR) != 0) return UFT_ERROR_IO;
         } else {
             /* Skip past this sector's data */
             if (fseek(pdata->file, (long)data_size, SEEK_CUR) != 0)

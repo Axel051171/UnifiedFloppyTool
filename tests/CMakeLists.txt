@@ -2305,6 +2305,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_d77_schreiben_positioniert")
+        # MF-1439: fread -> fwrite on the "r+b" stream without fseek in
+        # d77_write_track (ISO C 7.21.5.3); MinGW shows it, glibc does not.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d77/uft_d77.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_vdk_gegen_hxcfe")
         # MF-1061: `vdk` war seit MF-1018 gegen MAMEs `vdk_dsk.cpp`
         # berichtigt, hatte aber kein Abbild von fremder Hand. Derselbe
