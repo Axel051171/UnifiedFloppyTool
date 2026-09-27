@@ -401,14 +401,20 @@ const uft_conversion_path_t g_conversion_paths[] = {
          * verdrahtet.c` Gruppe 4 baut eine Spur mit 512/256/512 Byte, und
          * die Nachpruefung meldet 1 von 1 Spur abweichend. Damit ist
          * P3-524 nicht mehr nur am Quelltext abgelesen, sondern am Objekt
-         * belegt. */
+         * belegt.
+         *
+         * BERICHTIGT MF-1384: die Ebnung ist abgeschafft. IMD fuehrt EINE
+         * Sektorgroesse je Spurkopf (Dunfield, ImageDisk TD02IMD.C:907-908;
+         * MAME imd_dsk.cpp:554-556); eine gemischte Spur wird jetzt
+         * abgesagt, wie ImageDisks eigener TD02IMD es tut. Hier stand:
+         * „die Spur wird auf die Groesse des ERSTEN Sektors geebnet". */
         .source = UFT_FORMAT_TD0, .target = UFT_FORMAT_IMD,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
-        .warning = "TD0 -> IMD verliert variable Sektorgroessen: die Spur "
-                   "wird auf die Groesse des ERSTEN Sektors geebnet "
-                   "(P3-524, am Objekt belegt MF-1307)",
-        .description = "TD0 to IMD (metadata preserved; sector sizes flattened)"
+        .warning = "TD0 -> IMD: IMD fuehrt EINE Sektorgroesse je Spur; eine "
+                   "Spur mit gemischten Groessen wird abgesagt statt "
+                   "geebnet (wie ImageDisks TD02IMD, MF-1384)",
+        .description = "TD0 to IMD (metadata preserved; mixed-size tracks refused)"
     },
     {
         .source = UFT_FORMAT_NBZ, .target = UFT_FORMAT_D64,

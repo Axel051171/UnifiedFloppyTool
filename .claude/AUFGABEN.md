@@ -135,17 +135,6 @@ laufen fort und werden nie wiederverwendet.
 - **Stand:** (1) Gegenrechnung erledigt `fbf86dee` MF-1377 — 67/67, Mutationen 7/7, Konstanten aus gw ibm.py; (3) Verify-Ausgang erledigt `780d051d` MF-1378 — angefordert/ausgefuehrt/Ausgang im Ergebnis, der Speichern-Dialog bestritt eine laufende Pruefung (berichtigt), Mutationen 6/6; (2) 1581-Datenzeile **gemessen und nicht gebaut**: eine 18. Profilzeile 80×2×10×512 wuerde `uft_fdc_detect_format()` fuer JEDE 10-Sektor-DD-Datei (auch Atari ST) auf das 1581-Profil stellen, und `hfe_create()`/`uft_format_convert_bitstream.c:1257` schrieben dann 300 U/min statt 0 (unbestimmt) in den HFE-Kopf — geaenderte Ausgabe bestehender Wandlungen fuer Gap-Werte ohne Leser. Wartet auf Eigentuemerentscheidung; bis dahin Fundus unter P3-593.
 - **Beleg:** —
 
-### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
-- **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
-- **Wortlaut:** „ja mach das so weiter, arbeite die OPEN_ITEMS liste ab"
-- **Kennzahl:** keine der vier
-- **Kanal:** entfällt
-- **Einfrier-Regel:** nein
-- **OPEN_ITEMS:** P3-555
-- **Fertig heißt:** `DecodeJob` meldet das Ergebnis als Signal vor `finished()`; Ueberschrift und `operationFinished` richten sich nach dekodierten Sektoren; Qt-Test an einer Fluss- und einer Behaelterdatei
-- **Aufwand:** 40–90 Zeilen
-- **Stand:** —
-- **Beleg:** —
 
 ### A-039 · AUFGABEN-Warteschlange und OPEN_ITEMS weiter abtragen, GitHub regelmaessig abgleichen
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
@@ -892,6 +881,7 @@ laufen fort und werden nie wiederverwendet.
   **Offen bleibt Schritt 4** — Vorwärtsprüfung gegen hxcfe, Korpus ≥ 3,
   danach der Matrixeintrag. Erst er entscheidet, ob aus UNVERIFIED
   „identisch" oder „projiziert identisch" wird (`P3-524`).
+- **Stand 2026-09-27, auf dem Eigentuemerrechner fortgesetzt — Schritt 4 war seit MF-1307 erledigt, und der offene Kern von P3-524 ist GEKLAERT, anders als geplant (MF-1384):** die in `neue-ideen/1/imd120sc.zip` liegende ImageDisk-Quelle des Urhebers sagt eine gemischte Spur ab (`TD02IMD.C:907-908`); die Tafel behauptete, IMD trage sie. Tafel berichtigt, Wandler sagt ab statt zu ebnen, P3-524 geloest, P3-600 benannt. Der Posten selbst (Sichtung von 2408 Dateien) bleibt offen; naechster Griff: das Register `docs/NEUE_IDEEN_REGISTER.md` gegen den Ordner halten.
 - **Beleg:** —
 
 ---
@@ -3017,6 +3007,18 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
+- **Status:** erledigt · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „ja mach das so weiter, arbeite die OPEN_ITEMS liste ab"
+- **Kennzahl:** keine der vier
+- **Kanal:** entfällt
+- **Einfrier-Regel:** nein
+- **OPEN_ITEMS:** P3-555
+- **Fertig heißt:** `DecodeJob` meldet das Ergebnis als Signal vor `finished()`; Ueberschrift und `operationFinished` richten sich nach dekodierten Sektoren; Qt-Test an einer Fluss- und einer Behaelterdatei
+- **Aufwand:** 40–90 Zeilen
+- **Stand:** `resultReady()` + `DecodeJob::decodedAnything()`; der Reiter sagt „Success“ nur mit Sektoren im Modell; Qt-Test, Mutationen 3/3; 566/566.
+- **Beleg:** `42123a24`, MF-1382
 
 ### A-036 · #43 Nachtrag: Shugart-Bus 0–3 und IBM-PC A/B sind zwei Busse, nicht zwei Namen
 - **Status:** erledigt · **Aufgenommen:** 2026-09-27

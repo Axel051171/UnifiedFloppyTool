@@ -48,6 +48,16 @@ static int _fail = 0;
      UFT_D2_FEAT_VAR_SECTOR_SZ | UFT_D2_FEAT_NO_DATA_SEC |         \
      UFT_D2_FEAT_METADATA)
 
+/* MF-1384: IMD traegt KEINE gemischten Sektorgroessen innerhalb einer
+ * Spur — eine Groesse je Spurkopf. Belegt beim Urheber des Formats
+ * (Dave Dunfield, TD02IMD.C:907-908: „Cannot do mixed sector size within
+ * track", Kommentar „765 cannot do mixed sector sizes") und bei MAME
+ * (imd_dsk.cpp:554-556, „Unsupported variable sector size"). Die Tafel
+ * fuehrte es als getragen; dieser Test hielt das fest. */
+#define ERWARTET_VERLUST_IMD_NACH_IMG                              \
+    (UFT_D2_FEAT_BAD_CRC       | UFT_D2_FEAT_DELETED_DAM |         \
+     UFT_D2_FEAT_NO_DATA_SEC   | UFT_D2_FEAT_METADATA)
+
 /* ═══════ 1. Die Tafel sagt, was sie weiss — und was sie NICHT weiss ═══ */
 
 static void t1_bekannt_und_unbekannt(void)
@@ -97,9 +107,12 @@ static void t2_differenz_ist_gerechnet(void)
 
     CHECK(uft_format_verlust(UFT_FORMAT_TD0, UFT_FORMAT_IMD, &v),
           "TD0 und IMD sind beide getafelt");
-    CHECK(v == 0u,
-          "IMD traegt dieselben Merkmale wie TD0 — kein Merkmalsverlust, "
-          "gemessen 0x%08x", v);
+    /* BERICHTIGT MF-1384: hier stand „IMD traegt dieselben Merkmale wie
+     * TD0 — kein Merkmalsverlust" (v == 0). Gegen den Urheber des
+     * Formats gehalten traegt IMD eine Groesse je SPUR; TD0 je Sektor. */
+    CHECK(v == UFT_D2_FEAT_VAR_SECTOR_SZ,
+          "TD0->IMD verliert genau die gemischten Sektorgroessen einer Spur "
+          "(Dunfield TD02IMD, MAME imd_dsk) — gemessen 0x%08x", v);
 
     CHECK(uft_format_verlust(UFT_FORMAT_TD0, UFT_FORMAT_IMG, &v),
           "TD0 und IMG sind beide getafelt");
@@ -109,10 +122,11 @@ static void t2_differenz_ist_gerechnet(void)
 
     CHECK(uft_format_verlust(UFT_FORMAT_IMD, UFT_FORMAT_IMG, &v),
           "IMD und IMG sind beide getafelt");
-    CHECK(v == ERWARTET_VERLUST_NACH_IMG,
-          "und aus IMD heraus dieselben fuenf — gemessen 0x%08x", v);
+    CHECK(v == ERWARTET_VERLUST_IMD_NACH_IMG,
+          "aus IMD heraus vier — die gemischten Groessen hatte IMD nie "
+          "(MF-1384) — gemessen 0x%08x", v);
 
-    printf("    TD0->IMD: 0 · TD0->IMG und IMD->IMG: je 5 Merkmale\n");
+    printf("    TD0->IMD: 1 · TD0->IMG: 5 · IMD->IMG: 4 Merkmale\n");
 }
 
 /* ═══════ 3. Das ZUVIEL-Versprechen faellt ════════════════════════════ */
@@ -125,9 +139,12 @@ static void t3_zuviel_faellt(void)
                                     UFT_RT_LOSSLESS) != NULL,
           "„identisch\" bei einem aermeren Ziel ist ein Widerspruch");
 
+    /* BERICHTIGT MF-1384: hier stand „bei gleich reichem Ziel ist
+     * identisch erlaubt" fuer TD0->IMD. IMD ist nicht gleich reich. */
     CHECK(uft_preflight_widerspruch(UFT_FORMAT_TD0, UFT_FORMAT_IMD,
-                                    UFT_RT_LOSSLESS) == NULL,
-          "bei gleich reichem Ziel ist „identisch\" erlaubt");
+                                    UFT_RT_LOSSLESS) != NULL,
+          "„identisch\" fuer TD0->IMD ist ein Widerspruch — IMD traegt "
+          "keine gemischten Groessen je Spur");
 
     /* ── NACHGEZOGEN MF-1307: diese Gegenprobe IST WEGGEFALLEN ────────
      *
@@ -169,11 +186,14 @@ static void t3_zuviel_faellt(void)
                                     UFT_RT_LOSSY_DOCUMENTED) == NULL,
           "eine vollstaendige Verlustliste geht durch");
 
-    /* Pessimismus ist erlaubt: mehr zu benennen als gerechnet faellt NICHT. */
+    /* BERICHTIGT MF-1384: hier stand der Pessimismus-Fall „ohne
+     * gerechneten Verlust deckt auch eine leere Liste alles ab" — fuer
+     * TD0->IMD gibt es jetzt einen gerechneten Verlust, und der Eintrag
+     * nennt ihn: seine Maske ist VAR_SECTOR_SZ, also kein Widerspruch. */
     CHECK(uft_preflight_widerspruch(UFT_FORMAT_TD0, UFT_FORMAT_IMD,
                                     UFT_RT_LOSSY_DOCUMENTED) == NULL,
-          "ohne gerechneten Verlust deckt auch eine leere Liste alles ab "
-          "— Pessimismus ist erlaubt, nur Zuviel-Versprechen nicht");
+          "TD0->IMD nennt den gerechneten Verlust in seiner Maske — der "
+          "Widerspruch muss ausbleiben");
 
     /* Und ohne zwei gemessene Zeilen wird gar nicht geurteilt. */
     CHECK(uft_preflight_widerspruch(UFT_FORMAT_TD0, UFT_FORMAT_SCP,
