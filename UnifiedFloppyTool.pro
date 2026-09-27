@@ -1395,11 +1395,7 @@ SOURCES += \
 
 # TRS80 formats (5 files)
 SOURCES += \
-    src/formats/trs80/dmk.c \
-    src/formats/trs80/jv3_jvc.c \
-    src/formats/trs80/jvc.c \
     src/formats/trs80/uft_trs80.c \
-    src/formats/trs80/vdk.c
 
 # PC98 formats (7 files)
 SOURCES += \
@@ -1420,8 +1416,6 @@ SOURCES += \
     src/formats/misc/dmf_msx.c \
     src/formats/misc/edd.c \
     src/formats/misc/fdi.c \
-    src/formats/misc/fds.c \
-    src/formats/misc/imd.c \
     src/formats/misc/imz.c \
     src/formats/misc/lnx.c \
     src/formats/misc/ms_dmf.c \
@@ -1430,7 +1424,6 @@ SOURCES += \
     src/formats/misc/pc_img.c \
     src/formats/misc/sf7.c \
     src/formats/misc/tap.c \
-    src/formats/misc/td0.c \
     src/formats/misc/udi.c
 
 # Flux formats (12 files)
@@ -1441,7 +1434,6 @@ SOURCES += \
     src/formats/flux/kfraw.c \
     src/formats/flux/mfi.c \
     src/formats/flux/pfi.c \
-    src/formats/flux/pri.c \
     src/formats/flux/psi.c \
     src/formats/flux/scp.c
 
@@ -1699,7 +1691,6 @@ SOURCES += \
 
 # Northstar (1 files)
 SOURCES += \
-    src/formats/northstar/northstar.c
 
 # Obscure (5 files)
 SOURCES += \
@@ -1759,7 +1750,6 @@ SOURCES +=
 SOURCES += \
     src/formats/ti99/uft_fiad.c \
     src/formats/ti99/uft_tifiles.c \
-    src/formats/ti99/v9t9_pc99.c
 
 # Thomson (1 files)
 SOURCES += \
@@ -1767,7 +1757,6 @@ SOURCES += \
 
 # Victor (1 files)
 SOURCES += \
-    src/formats/victor/victor9k.c
 
 # X68K (1 files)
 SOURCES +=

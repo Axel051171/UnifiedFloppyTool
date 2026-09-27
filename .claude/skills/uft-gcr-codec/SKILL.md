@@ -40,7 +40,8 @@ Check this first, because the tree has duplicates and they do not agree:
 - The Apple GCR table exists **sevenfold**, and the copy that is tested is the
   one only tests call.
 - Three Victor geometries were found; the third
-  (`src/formats/victor/victor9k.c`, orphaned) claims 1285 sectors - a number
+  (`src/formats/victor/victor9k.c`, orphaned, removed
+  MF-1402) claimed 1285 sectors - a number
   no Victor disk has (MF-1026).
 
 **Rule:** measure which copy the production path actually uses before trusting

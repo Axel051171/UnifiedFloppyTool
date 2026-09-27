@@ -389,8 +389,6 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/formats/misc/edd.c
     classification: UNMARKED — triage
-  - file: src/formats/misc/fds.c
-    classification: UNMARKED — triage
   - file: src/formats/misc/sf7.c
     classification: UNMARKED — triage
   - file: src/formats/pc98/fdd.c

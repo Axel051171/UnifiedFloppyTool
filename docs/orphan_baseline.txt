@@ -104,7 +104,6 @@ src/formats/flux/f86.c
 src/formats/flux/gwraw.c
 src/formats/flux/kfraw.c
 src/formats/flux/pfi.c
-src/formats/flux/pri.c
 src/formats/flux/psi.c
 src/formats/flux/scp.c
 src/formats/flux/uft_hxcstream.c
@@ -132,8 +131,6 @@ src/formats/misc/dhd.c
 src/formats/misc/dmf_msx.c
 src/formats/misc/edd.c
 src/formats/misc/fdi.c
-src/formats/misc/fds.c
-src/formats/misc/imd.c
 src/formats/misc/imz.c
 src/formats/misc/lnx.c
 src/formats/misc/ms_dmf.c
@@ -143,14 +140,12 @@ src/formats/misc/pc_img.c
 src/formats/misc/polyglot_boot.c
 src/formats/misc/sf7.c
 src/formats/misc/tap.c
-src/formats/misc/td0.c
 src/formats/modern/uft_aaru.c
 src/formats/motorola/uft_versados.c
 src/formats/msx/uft_msx.c
 src/formats/nib/uft_nib_parser_v2.c
 src/formats/nintendo/uft_fds.c
 src/formats/nordic/uft_abc800.c
-src/formats/northstar/northstar.c
 src/formats/obscure/uft_applix.c
 src/formats/obscure/uft_calcomp.c
 src/formats/obscure/uft_pmc_micromate.c
@@ -177,13 +172,8 @@ src/formats/ssd/uft_ssd_parser_v2.c
 src/formats/stx/uft_stx_parser_v2.c
 src/formats/tap/uft_tap_parser_v2.c
 src/formats/thomson/sap.c
-src/formats/ti99/v9t9_pc99.c
 src/formats/trd/uft_trd_parser_v2.c
-src/formats/trs80/dmk.c
-src/formats/trs80/jv3_jvc.c
-src/formats/trs80/jvc.c
 src/formats/trs80/uft_trs80.c
-src/formats/trs80/vdk.c
 src/formats/tzx/uft_tzx_wav.c
 src/formats/tzx/uft_zxtap.c
 src/formats/udi/uft_udi.c
@@ -193,7 +183,6 @@ src/formats/uft_cw_raw.c
 src/formats/uft_format_extensions.c
 src/formats/uft_format_names_extended.c
 src/formats/uft_format_versions.c
-src/formats/victor/victor9k.c
 src/formats/zilog/zilogmcz.c
 src/formats/zx/uft_zxbasic.c
 src/formats/zx/uft_zxscreen.c
