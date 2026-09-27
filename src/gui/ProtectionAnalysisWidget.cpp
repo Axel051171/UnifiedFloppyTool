@@ -4,6 +4,7 @@
  */
 
 #include "ProtectionAnalysisWidget.h"
+#include "uft_schutz_auswahl.h"
 #include <QFile>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -180,6 +181,14 @@ void ProtectionAnalysisWidget::createSchemePanel()
     layout->addLayout(filterLayout);
     
     // Scheme table
+    /* MF-1437: was die Auswahl im Protection Analyzer ausblendet */
+    m_lblSchutzAuswahl = new QLabel();
+    m_lblSchutzAuswahl->setObjectName(QStringLiteral("lblSchutzAuswahl"));
+    m_lblSchutzAuswahl->setWordWrap(true);
+    m_lblSchutzAuswahl->setStyleSheet(QStringLiteral("color: #b36b00;"));
+    m_lblSchutzAuswahl->setVisible(false);
+    layout->addWidget(m_lblSchutzAuswahl);
+
     m_schemeTable = new QTableWidget();
     m_schemeTable->setColumnCount(3);
     /* MF-508: Spalte hiess "Confidence" und trug erfundene Zahlen.
@@ -247,6 +256,28 @@ void ProtectionAnalysisWidget::runAnalysis()
         m_confidence = report.confidence_0_100;
         m_summary = QString::fromUtf8(report.summary);
         m_hits.resize(report.hits_written);
+
+        /* P3-635 Weg A (MF-1437): die Auswahl aus dem Protection
+         * Analyzer. Sie blendet AUS, was dort abgewaehlt ist — und sagt
+         * es, samt Zahl. Gemessen wird unveraendert alles; Balken und
+         * Zusammenfassung sprechen weiter ueber ALLE Treffer. */
+        QMap<int, int> ausgeblendet;
+        QVector<ufm_c64_prot_hit_t> gezeigt;
+        for (const auto &hit : m_hits) {
+            if (uftSchutzAuswahlZeigt((int)hit.type)) gezeigt.append(hit);
+            else ausgeblendet[(int)hit.type]++;
+        }
+        m_hits = gezeigt;
+        QStringList teile;
+        for (auto it = ausgeblendet.constBegin(); it != ausgeblendet.constEnd(); ++it) {
+            const char *n = ufm_c64_prot_type_name((ufm_c64_prot_type_t)it.key());
+            teile << tr("%1 (%2 Treffer)").arg(QString::fromUtf8(n ? n : "?")).arg(it.value());
+        }
+        m_lblSchutzAuswahl->setText(teile.isEmpty()
+            ? QString()
+            : tr("Ausgeblendet nach Auswahl im Protection Analyzer: %1")
+                  .arg(teile.join(QStringLiteral(", "))));
+        m_lblSchutzAuswahl->setVisible(!teile.isEmpty());
         
         updateHeatmap();
         updateSchemeList();

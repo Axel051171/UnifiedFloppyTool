@@ -10,6 +10,11 @@
 
 #include "protectiontab.h"
 #include "gui/uft_spurausrichtung.h"
+#include "gui/uft_schutz_auswahl.h"
+#include <QAbstractButton>
+#include <QAbstractSlider>
+#include <QAbstractSpinBox>
+#include <QComboBox>
 #include "ui_tab_protection.h"
 #include <QMessageBox>
 
@@ -24,7 +29,9 @@ ProtectionTab::ProtectionTab(QWidget *parent)
     ui->setupUi(this);
     setupDefaults();
     setupConnections();
+    verbindeAuswahl();
     loadSettings();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 ProtectionTab::~ProtectionTab() {
@@ -78,6 +85,7 @@ void ProtectionTab::setConfig(const uft_prot_config_t* config) {
     
     blockSignals(false);
     emit configChanged();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 uint32_t ProtectionTab::getAnalysisFlags() const {
@@ -205,6 +213,7 @@ void ProtectionTab::applyProfile(const QString& profileName) {
     
     blockSignals(false);
     emit configChanged();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::onSaveProfile() {
@@ -240,6 +249,7 @@ void ProtectionTab::onAutoDetectToggled(bool checked) {
         ui->checkDDEnable->setEnabled(true);
     }
     emit configChanged();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::onPreserveToggled(bool /*checked*/) {
@@ -257,6 +267,7 @@ void ProtectionTab::onC64EnableToggled(bool checked) {
 void ProtectionTab::onC64ExpertToggled(bool checked) {
     ui->groupC64ExpertParams->setEnabled(checked);
     emit configChanged();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::onDDEnableToggled(bool checked) {
@@ -267,6 +278,7 @@ void ProtectionTab::onDDEnableToggled(bool checked) {
 void ProtectionTab::onDDExpertToggled(bool checked) {
     ui->groupDDExpert->setEnabled(checked);
     emit configChanged();
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::onXCopyEnableToggled(bool checked) {
@@ -308,7 +320,9 @@ void ProtectionTab::loadSettings() {
     
     // Generic flags
     ui->checkWeakBits->setChecked(settings.value("weakBits", true).toBool());
-    ui->checkHalfTrack->setChecked(settings.value("halfTrack", false).toBool());
+    /* MF-1437: Filter der laufenden Analyse, eigener Schluessel, voreingestellt
+     * "zeigen" (uft_schutz_auswahl.h) — nicht der alte "halfTrack" (false). */
+    ui->checkHalfTrack->setChecked(settings.value("zeigeHalbspur", true).toBool());
     ui->checkLongTrack->setChecked(settings.value("longTrack", false).toBool());
     ui->checkShortTrack->setChecked(settings.value("shortTrack", false).toBool());
     ui->checkBadCRC->setChecked(settings.value("badCRC", true).toBool());
@@ -345,7 +359,7 @@ void ProtectionTab::saveSettings() {
     
     // Generic flags
     settings.setValue("weakBits", ui->checkWeakBits->isChecked());
-    settings.setValue("halfTrack", ui->checkHalfTrack->isChecked());
+    settings.setValue("zeigeHalbspur", ui->checkHalfTrack->isChecked());  /* MF-1437 */
     settings.setValue("longTrack", ui->checkLongTrack->isChecked());
     settings.setValue("shortTrack", ui->checkShortTrack->isChecked());
     settings.setValue("badCRC", ui->checkBadCRC->isChecked());
@@ -370,7 +384,7 @@ void ProtectionTab::resetDefaults() {
     ui->checkLogDetails->setChecked(false);
     
     ui->checkWeakBits->setChecked(true);
-    ui->checkHalfTrack->setChecked(false);
+    ui->checkHalfTrack->setChecked(true);   /* MF-1437: Filter, voreingestellt "zeigen" */
     ui->checkLongTrack->setChecked(false);
     ui->checkShortTrack->setChecked(false);
     ui->checkBadCRC->setChecked(true);
@@ -427,6 +441,75 @@ void ProtectionTab::setupConnections() {
     connect(ui->checkC64SectorCount, &QCheckBox::toggled, this, &ProtectionTab::onAnyCheckboxChanged);
 }
 
+/* P3-635 Weg A (MF-1437).
+ *
+ * Gemessen: 54 Bedienelemente, keines erreichte eine Analyse. Die EINZIGE
+ * Eingabe mit einem Merkmal in der laufenden Analyse ist "Enable Half-Track
+ * Detection" (Tafel in uft_schutz_auswahl.h). Sie und die Profilsteuerung
+ * (die sie setzt, speichert und laedt) bleiben bedienbar; alles andere
+ * wird abgeschaltet und sagt warum.
+ *
+ * Die Menge "alles andere" kommt aus dem Formular (findChildren), nicht
+ * aus einer gepflegten Liste — ein neues Kaestchen ohne Leser ist damit
+ * von selbst gesperrt (Grundsatz MF-636). Gerufen am Ende jeder Funktion,
+ * die Elemente an- oder abschaltet, weil die alten sync*-Funktionen
+ * einzelne Elemente direkt wieder einschalten. */
+void ProtectionTab::wendeSperrenAn() {
+    QStringList verdrahtet = { QStringLiteral("comboProfile"),
+                               QStringLiteral("btnSaveProfile"),
+                               QStringLiteral("btnLoadProfile"),
+                               QStringLiteral("btnDeleteProfile") };
+    for (int i = 0; i < UFT_SCHUTZ_AUSWAHL_ANZAHL; i++)
+        verdrahtet << QString::fromLatin1(UFT_SCHUTZ_AUSWAHL[i].kaestchen);
+
+    /* 1. Verdrahtete samt ihren Behaeltern einschalten */
+    for (const QString &n : verdrahtet) {
+        QWidget *w = findChild<QWidget *>(n);
+        for (QWidget *p = w; p && p != this; p = p->parentWidget())
+            p->setEnabled(true);
+    }
+
+    /* 2. Jede andere Eingabe ausschalten */
+    const QString anzeige = tr(
+        "Ergebnisanzeige ohne Quelle: dieser Reiter fuehrt keine Analyse aus. "
+        "Die Schutzanalyse laeuft im Status-Reiter (P3-635).");
+    const QString ohneLeser = tr(
+        "Ohne Wirkung: keine Analyse im Baum liest diese Einstellung. "
+        "Wirksam ist hier nur \"Enable Half-Track Detection\" (P3-635).");
+    for (QWidget *e : findChildren<QWidget *>()) {
+        if (!qobject_cast<QAbstractButton *>(e) && !qobject_cast<QComboBox *>(e) &&
+            !qobject_cast<QAbstractSpinBox *>(e) && !qobject_cast<QAbstractSlider *>(e))
+            continue;
+        const QString n = e->objectName();
+        if (n.isEmpty() || n.startsWith(QLatin1String("qt_")) || verdrahtet.contains(n))
+            continue;
+        e->setEnabled(false);
+        if (e == ui->checkC64Alignment)
+            continue;                          /* behaelt seinen Grund (P3-602) */
+        bool inAnzeige = false;
+        for (QWidget *p = e->parentWidget(); p && p != this; p = p->parentWidget())
+            if (p == ui->groupFlags) inAnzeige = true;
+        e->setToolTip(inAnzeige ? anzeige : ohneLeser);
+    }
+}
+
+/* Die Wahl muss die laufende Analyse SOFORT erreichen — gespeichert wurde
+ * bisher nur im Destruktor, und das Fenster lebt bis zum Programmende. */
+void ProtectionTab::verbindeAuswahl() {
+    for (int i = 0; i < UFT_SCHUTZ_AUSWAHL_ANZAHL; i++) {
+        auto *k = findChild<QCheckBox *>(QString::fromLatin1(UFT_SCHUTZ_AUSWAHL[i].kaestchen));
+        if (!k) continue;
+        const QString schluessel = QString::fromLatin1(UFT_SCHUTZ_AUSWAHL[i].schluessel);
+        connect(k, &QCheckBox::toggled, this, [schluessel](bool an) {
+            QSettings s;
+            s.beginGroup(QStringLiteral(UFT_SCHUTZ_AUSWAHL_GRUPPE));
+            s.setValue(schluessel, an);
+            s.endGroup();
+            s.sync();
+        });
+    }
+}
+
 void ProtectionTab::setupDefaults() {
     // Ensure expert groups are initially disabled
     ui->groupC64ExpertParams->setEnabled(false);
@@ -441,6 +524,7 @@ void ProtectionTab::syncC64Widgets(bool enabled) {
     ui->groupC64Output->setEnabled(enabled);
     ui->checkC64Expert->setEnabled(enabled);
     ui->groupC64ExpertParams->setEnabled(enabled && ui->checkC64Expert->isChecked());
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::syncDDWidgets(bool enabled) {
@@ -451,6 +535,7 @@ void ProtectionTab::syncDDWidgets(bool enabled) {
     ui->checkDD5->setEnabled(enabled);
     ui->checkDDExpertMode->setEnabled(enabled);
     ui->groupDDExpert->setEnabled(enabled && ui->checkDDExpertMode->isChecked());
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 void ProtectionTab::syncXCopyWidgets(bool enabled) {
@@ -462,6 +547,7 @@ void ProtectionTab::syncXCopyWidgets(bool enabled) {
     ui->checkErr6->setEnabled(enabled);
     ui->checkErr7->setEnabled(enabled);
     ui->checkErr8->setEnabled(enabled);
+    wendeSperrenAn();   /* P3-635 Weg A, MF-1437 */
 }
 
 uint32_t ProtectionTab::mapC64Flags() const {

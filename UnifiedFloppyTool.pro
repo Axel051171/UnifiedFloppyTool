@@ -419,6 +419,7 @@ HEADERS += \
     src/gui/uft_otdr_panel.h \
     src/gui/uft_signal_page.h \
     src/gui/uft_spurausrichtung.h \
+    src/gui/uft_schutz_auswahl.h \
     src/gui/ProtectionAnalysisWidget.h \
     src/gui/uft_sector_editor.h \
     include/uft/flux/uft_scp_parser.h \

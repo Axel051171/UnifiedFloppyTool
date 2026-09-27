@@ -31,6 +31,13 @@ namespace Ui { class TabProtection; }
  * haben im ganzen Baum 0 Aufrufer; 21 Elemente werden nicht einmal
  * gespeichert. Siehe P3-635.
  *
+ * Seit MF-1437 (P3-635 Weg A): "Enable Half-Track Detection" waehlt, ob
+ * die laufende C64-Analyse Halbspur-Treffer zeigt (sofort gespeichert,
+ * src/gui/uft_schutz_auswahl.h); die Profilsteuerung bleibt, weil sie
+ * dieses Kaestchen setzt. Alle anderen Eingaben sind abgeschaltet und
+ * nennen den Grund (wendeSperrenAn()). getConfig()/getAnalysisFlags()
+ * haben weiterhin keinen Aufrufer.
+ *
  * Maps 40+ UI widgets to uft_prot_config_t parameters.
  * Supports profile save/load and real-time validation.
  */
@@ -163,6 +170,8 @@ private:
     void setupConnections();
     void setupDefaults();
     void updateDependentWidgets();
+    void wendeSperrenAn();     /* P3-635 Weg A, MF-1437 */
+    void verbindeAuswahl();    /* sofort speichern, MF-1437 */
     void syncC64Widgets(bool enabled);
     void syncDDWidgets(bool enabled);
     void syncXCopyWidgets(bool enabled);

@@ -32,7 +32,11 @@
  */
 
 #include <QtTest/QtTest>
+#include <QAbstractSlider>
+#include <QAbstractSpinBox>
 #include <QCheckBox>
+#include <QGroupBox>
+#include <QLabel>
 #include <QComboBox>
 #include <QSettings>
 #include <QStandardItemModel>
@@ -167,6 +171,130 @@ private slots:
         QVERIFY2(!k->isEnabled(), "Spurausrichtung ist bedienbar, hat aber keinen Erkenner");
         QVERIFY2(!k->isChecked(), "ein Haken ohne Wirkung");
         QVERIFY2(k->toolTip().contains(QStringLiteral("P3-602")), qPrintable(k->toolTip()));
+    }
+
+    /* ── P3-635 Weg A (MF-1437) ──────────────────────────────────────────
+     *
+     * Der Protection Analyzer hatte 54 Bedienelemente ohne Leser. Gemessen
+     * beim Anbinden: die Gruppe "Detected Protection Features" (Long Track,
+     * Duplicate IDs, Sync Anomaly …) ist im Formular AUSGESCHALTET — eine
+     * Ergebnisanzeige, keine Eingabe. Unter den Eingaben hat genau EINE ein
+     * Merkmal in der laufenden Analyse: "Enable Half-Track Detection" ↔
+     * UFM_PROT_HALF_TRACK. Sie waehlt, ob die Analyse Halbspur-Treffer
+     * ZEIGT; alles andere ist abgeschaltet und nennt den Grund. */
+
+    /* VICE-G64, dazu die Daten von Spur 1 auch auf Halbspur 1.5 (Platz 1
+     * der Versatztafel; Geschwindigkeitszone von Platz 0 uebernommen). */
+    static QString halbspur(QTemporaryFile &f)
+    {
+        QFile q(QStringLiteral(UFT_CORPUS_DIR "/vice_c1541_35trk.g64"));
+        if (!q.open(QIODevice::ReadOnly)) return {};
+        QByteArray d = q.readAll();
+        if (d.size() < 700 || !d.startsWith("GCR-1541") || (uchar)d[9] != 84) return {};
+        auto u32 = [&d](int o) {
+            return (uint32_t)(uchar)d[o] | ((uint32_t)(uchar)d[o + 1] << 8) |
+                   ((uint32_t)(uchar)d[o + 2] << 16) | ((uint32_t)(uchar)d[o + 3] << 24); };
+        auto setze32 = [&d](int o, uint32_t v) {
+            for (int i = 0; i < 4; i++) d[o + i] = char((v >> (8 * i)) & 0xFF); };
+        const int platz = (uchar)d[10] | ((uchar)d[11] << 8);
+        const uint32_t off0 = u32(12);
+        if (u32(12 + 4) != 0 || off0 == 0) return {};          /* 1.5 war leer */
+        const uint32_t neu = (uint32_t)d.size();
+        d += d.mid((int)off0, 2 + platz);                       /* Laenge + Daten */
+        setze32(12 + 4, neu);
+        setze32(12 + 4 * 84 + 4, u32(12 + 4 * 84));             /* Zone wie Spur 1 */
+        if (!f.open()) return {};
+        f.write(d);
+        f.flush();
+        return f.fileName();
+    }
+
+    void halbspurKaestchenSteuertDieAnzeige()
+    {
+        QTemporaryFile f(QDir::tempPath() + QStringLiteral("/uft_mf1437_XXXXXX.g64"));
+        const QString pfad = halbspur(f);
+        QVERIFY2(!pfad.isEmpty(), "Eingabe nicht herstellbar");
+
+        auto liste = [](ProtectionAnalysisWidget &w) -> QTableWidget * {
+            for (auto *t : w.findChildren<QTableWidget *>())
+                if (t->columnCount() == 3) return t;
+            return nullptr;
+        };
+        const QString name = QString::fromUtf8(ufm_c64_prot_type_name(UFM_PROT_HALF_TRACK));
+
+        {   /* an: der Treffer ist zu sehen */
+            ProtectionTab tab;
+            auto *k = tab.findChild<QCheckBox *>(QStringLiteral("checkHalfTrack"));
+            QVERIFY(k);
+            QVERIFY2(k->isEnabled(), "checkHalfTrack ist verdrahtet und muss bedienbar sein");
+            k->setChecked(false);
+            k->setChecked(true);
+        }
+        ProtectionAnalysisWidget w;
+        w.loadG64(pfad.toUtf8().constData());
+        w.runAnalysis();
+        QVERIFY(liste(w));
+        qInfo("an: %s", qPrintable(zeilen(liste(w), 0).join(", ")));
+        QVERIFY2(zeilen(liste(w), 0).contains(name),
+                 "die Eingabe erzeugt keinen Halbspur-Treffer");
+
+        {   /* aus — und der Reiter wird VOR dem Analysieren zerstoert: die
+               Wahl muss sofort gespeichert sein, nicht erst beim Beenden */
+            ProtectionTab tab;
+            tab.findChild<QCheckBox *>(QStringLiteral("checkHalfTrack"))->setChecked(false);
+        }
+        w.runAnalysis();
+        qInfo("aus: %s", qPrintable(zeilen(liste(w), 0).join(", ")));
+        QVERIFY2(!zeilen(liste(w), 0).contains(name), "abgewaehlt, aber gezeigt");
+        auto *hinweis = w.findChild<QLabel *>(QStringLiteral("lblSchutzAuswahl"));
+        QVERIFY2(hinweis, "kein Hinweis, dass ausgeblendet wurde");
+        qInfo("Hinweis: %s", qPrintable(hinweis->text()));
+        QVERIFY2(hinweis->text().contains(name), qPrintable(hinweis->text()));
+
+        {   ProtectionTab tab;
+            tab.findChild<QCheckBox *>(QStringLiteral("checkHalfTrack"))->setChecked(true);
+        }
+        w.runAnalysis();
+        QVERIFY(zeilen(liste(w), 0).contains(name));
+        QVERIFY2(!hinweis->text().contains(name), qPrintable(hinweis->text()));
+    }
+
+    void derRestSagtDassNichtsIhnLiest()
+    {
+        ProtectionTab tab;
+        const QStringList verdrahtet = {
+            QStringLiteral("checkHalfTrack"),
+            QStringLiteral("comboProfile"), QStringLiteral("btnSaveProfile"),
+            QStringLiteral("btnLoadProfile"), QStringLiteral("btnDeleteProfile")};
+        int gesperrt = 0;
+        for (QWidget *e : tab.findChildren<QWidget *>()) {
+            if (!qobject_cast<QAbstractButton *>(e) && !qobject_cast<QComboBox *>(e) &&
+                !qobject_cast<QAbstractSpinBox *>(e) && !qobject_cast<QAbstractSlider *>(e))
+                continue;
+            if (e->objectName().isEmpty() || e->objectName().startsWith(QLatin1String("qt_")))
+                continue;
+            if (verdrahtet.contains(e->objectName())) {
+                QVERIFY2(e->isEnabled(), qPrintable(e->objectName() + " ist verdrahtet, aber gesperrt"));
+                continue;
+            }
+            QVERIFY2(!e->isEnabled(), qPrintable(e->objectName() + " bedienbar, aber ohne Leser"));
+            QVERIFY2(e->toolTip().contains(QStringLiteral("P3-6")),
+                     qPrintable(e->objectName() + ": " + e->toolTip()));
+            gesperrt++;
+        }
+        qInfo("gesperrt: %d, verdrahtet: %d", gesperrt, int(verdrahtet.size()));
+        QVERIFY(gesperrt > 40);
+
+        /* Ein Moduswechsel darf die Sperren nicht aufheben */
+        QMetaObject::invokeMethod(&tab, "applyProfile",
+                                  Q_ARG(QString, QStringLiteral("C64 Advanced")));
+        for (const char *n : {"checkC64Enable", "checkErr1", "checkDD1", "groupGCR"}) {
+            auto *e = tab.findChild<QWidget *>(QString::fromLatin1(n));
+            QVERIFY(e);
+            if (qobject_cast<QGroupBox *>(e)) continue;
+            QVERIFY2(!e->isEnabled(), n);
+        }
+        QVERIFY(tab.findChild<QCheckBox *>(QStringLiteral("checkHalfTrack"))->isEnabled());
     }
 };
 
