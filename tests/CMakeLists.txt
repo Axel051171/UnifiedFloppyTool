@@ -4885,6 +4885,16 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_gap_gegenrechnung")
+        # A-037 step 1 (MF-1377): the track budget computed a SECOND time,
+        # only here, to guard the one calculation in src (MF-1177). The
+        # cross-calculation is the owner's uft_gap_policy.c, unchanged,
+        # under tests/gegenrechnung/ — NEVER linked from src/.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_fdc_gaps.c
+            ${CMAKE_SOURCE_DIR}/tests/gegenrechnung/uft_gap_policy.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/gegenrechnung)
     elseif(${test_name} STREQUAL "test_gw_port_kurzname" OR
            ${test_name} STREQUAL "test_gw_rpm_indexzeiten")
         # #42 / #43 (MF-1366): the GW V2 provider against the firmware
