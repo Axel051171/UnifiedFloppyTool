@@ -638,6 +638,83 @@ static void t9_projektion(void) {
     uft_d2_destroy(d);
 }
 
+/* ═══════════ 10. Abwesenheit traegt keine Daten (H-30) ════════════════
+ *
+ * Drei Herkunftswerte sagen „hier ist nichts, und zwar aus diesem Grund":
+ * SKIPPED (nie gelesen, ausserhalb der Anforderung), UNAVAILABLE (gelesen
+ * versucht, kein Ergebnis — IMD „data unavailable"), TRUNCATED (die Quelle
+ * endet vor dieser Stelle). Eigentuemerentscheidung 2026-09-26: drei Werte,
+ * ohne EMPTY, und KEINER darf zu einem Sektor mit Daten werden.
+ *
+ * Die Werte stehen hier als ZAHLEN, nicht als Namen: `uft_disk2_io.c`
+ * schreibt die Herkunft als rohes Byte in jede .uftd-Datei. Die Zahl ist
+ * der Dateivertrag; ein Name, der auf eine andere Zahl zeigt, liest jede
+ * gespeicherte Datei anders. Deshalb auch die Probe, dass UNKNOWN 6 bleibt. */
+static void t10_abwesenheit(void) {
+    printf("Test 10: Abwesenheit traegt keine Daten (H-30)\n");
+    static const struct { unsigned zahl; const char *code; } ab[] = {
+        { 7u, "SKIPPED" }, { 8u, "UNAVAILABLE" }, { 9u, "TRUNCATED" },
+    };
+    CHECK((unsigned)UFT_D2_ORIGIN_UNKNOWN == 6u,
+          "UNKNOWN bleibt 6 — gespeicherte Dateien tragen diese Zahl, hat %u",
+          (unsigned)UFT_D2_ORIGIN_UNKNOWN);
+
+    uft_disk2_t *d = uft_d2_create();
+    uft_d2_track_t *t = uft_d2_track(d, 0u, 0u);
+    uint8_t fuell[8];
+    memset(fuell, 0xE5, sizeof fuell);
+
+    for (size_t k = 0; k < sizeof ab / sizeof ab[0]; ++k) {
+        const uft_d2_origin_t o = (uft_d2_origin_t)ab[k].zahl;
+        const char *name = uft_d2_origin_name(o);
+        CHECK(strcmp(name, "unbekannt") != 0,
+              "Herkunft %u hat einen eigenen Namen, heisst aber '%s'",
+              ab[k].zahl, name);
+
+        /* Mit Daten: abgewiesen, auch bei Zuversicht 0. */
+        uft_d2_sector_t mit = guter_sektor(0u, (uint8_t)(10u + k), 8u, 0u);
+        mit.origin = o; mit.conf = UFT_D2_CONF_NONE;
+        mit.data_crc_known = false; mit.data_crc_ok = false;
+        mit.data = fuell;
+        CHECK(!uft_d2_add_sector(d, t, &mit),
+              "Herkunft %u mit 8 Datenbytes angenommen — Abwesenheit darf "
+              "keine Daten tragen", ab[k].zahl);
+
+        /* Ohne Daten, aber mit Zuversicht: abgewiesen. */
+        uft_d2_sector_t zuv = mit;
+        zuv.has_data = false; zuv.data = NULL; zuv.data_len = 0u;
+        zuv.conf = UFT_D2_CONF_UNVERIFIED;
+        CHECK(!uft_d2_add_sector(d, t, &zuv),
+              "Herkunft %u mit Zuversicht %u angenommen — ueber etwas, das "
+              "nicht da ist, gibt es keine Zuversicht", ab[k].zahl,
+              (unsigned)UFT_D2_CONF_UNVERIFIED);
+
+        /* Ohne Daten, ohne Laenge, Zuversicht 0: angenommen, mit Befund. */
+        uft_d2_sector_t leer = zuv;
+        leer.conf = UFT_D2_CONF_NONE;
+        CHECK(uft_d2_add_sector(d, t, &leer),
+              "Herkunft %u ohne Daten abgewiesen — die Aussage „hier ist "
+              "nichts“ muss ins Modell", ab[k].zahl);
+        size_t n = 0u;
+        for (size_t i = 0; i < uft_d2_diag_count(d); ++i)
+            if (strcmp(uft_d2_diag_at(d, i)->code, ab[k].code) == 0) n++;
+        CHECK(n == 1u, "Herkunft %u: genau ein Befund '%s', gezaehlt %zu",
+              ab[k].zahl, ab[k].code, n);
+    }
+    CHECK(t->sectors.count == 3u,
+          "genau die drei datenlosen Sektoren im Modell, gezaehlt %zu",
+          t->sectors.count);
+    size_t abweisungen = 0u;
+    for (size_t i = 0; i < uft_d2_diag_count(d); ++i)
+        if (strcmp(uft_d2_diag_at(d, i)->code, "ABSENCE_WITH_DATA") == 0)
+            abweisungen++;
+    CHECK(abweisungen == 6u,
+          "sechs Abweisungen als ABSENCE_WITH_DATA, gezaehlt %zu", abweisungen);
+    printf("    drei Werte, je: mit Daten abgewiesen, mit Zuversicht "
+           "abgewiesen, leer angenommen\n");
+    uft_d2_destroy(d);
+}
+
 int main(void) {
     printf("=== test_disk2 (zweite Fassung, MF-1274) ===\n\n");
     t1_generationen();
@@ -649,6 +726,7 @@ int main(void) {
     t7_bericht();
     t8_alte_garantien();
     t9_projektion();
+    t10_abwesenheit();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }

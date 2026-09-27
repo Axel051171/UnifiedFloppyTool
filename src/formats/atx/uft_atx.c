@@ -374,7 +374,9 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
         sec->status = UFT_SECTOR_OK;
         if (data_crc_bad) sec->status |= UFT_SECTOR_CRC_ERROR;
         if (addr_crc_bad) sec->status |= UFT_SECTOR_ID_CRC_ERROR;
-        if (missing)      sec->status |= UFT_SECTOR_MISSING;
+        /* H-30: mit Grund — der FDC meldete „Datenfeld nicht gefunden":
+         * nicht lesbar, nicht abgeschnitten. */
+        if (missing)      sec->status |= UFT_SECTOR_MISSING | UFT_SECTOR_UNAVAILABLE;
         if (sec->deleted) sec->status |= UFT_SECTOR_DELETED;
         if (fdc & ATX_FDC_WEAK) sec->status |= UFT_SECTOR_WEAK;
 

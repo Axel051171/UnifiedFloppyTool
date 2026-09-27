@@ -26,6 +26,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
+#include "uft/core/uft_disk2_bridge.h"   /* H-30: dieselbe Datei im Zentrum */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -198,8 +199,37 @@ static void t_nicht_verfuegbar_und_fremde_nummern(void)
     }
     uft_track_t t;
     const int ok = lesen(pfad, 0, 0, &t);
+
+    /* H-30: dieselbe Datei durch die Bruecke ins Zentrum. „data
+     * unavailable" heisst: dort STAND etwas, es war nicht lesbar — Herkunft
+     * 8 (UNAVAILABLE), nicht Fuellmaterial. Als Zahl, damit die Rotprobe
+     * gegen den alten Stand uebersetzt. */
+    unsigned herkunft = 99u, mit_daten = 99u;
+    {
+        uft_disk_t disk;
+        memset(&disk, 0, sizeof disk);
+        if (uft_format_plugin_imd.open(&disk, pfad, true) == UFT_OK) {
+            uft_disk2_t *d = uft_d2_create();
+            uft_d2_bridge_stats_t st;
+            if (d && uft_d2_from_disk(d, &disk, &uft_format_plugin_imd, &st)) {
+                const uft_d2_track_t *dt = uft_d2_track_get(d, 0u, 0u);
+                if (dt && dt->sectors.count == 4u) {
+                    herkunft  = (unsigned)dt->sectors.items[3].origin;
+                    mit_daten = dt->sectors.items[3].has_data ? 1u : 0u;
+                }
+            }
+            uft_d2_destroy(d);
+            uft_format_plugin_imd.close(&disk);
+        }
+    }
     remove(pfad);
     pruefe("gelesen, vier Sektoren", ok && t.sector_count == 4, NULL);
+    {
+        char hh[64];
+        snprintf(hh, sizeof hh, "Herkunft %u, Daten %u", herkunft, mit_daten);
+        pruefe("im Zentrum: 'data unavailable' ist Herkunft 8 (nicht lesbar), "
+               "ohne Daten", herkunft == 8u && mit_daten == 0u, hh);
+    }
     if (!ok || t.sector_count != 4) { spur_frei(&t); return; }
 
     char h[96];
@@ -214,6 +244,8 @@ static void t_nicht_verfuegbar_und_fremde_nummern(void)
     pruefe("'data unavailable' ist als fehlend gekennzeichnet",
            (weg->status & UFT_SECTOR_MISSING) != 0, h);
     pruefe("'data unavailable' traegt keine gute Pruefsumme", !weg->crc_ok, h);
+    pruefe("'data unavailable' nennt den Grund: nicht lesbar (Bit 8, H-30)",
+           (weg->status & (1u << 8)) != 0 && (weg->status & (1u << 9)) == 0, h);
     pruefe("die gelesenen Sektoren bleiben gut",
            t.sectors[0].crc_ok && (t.sectors[0].status & UFT_SECTOR_MISSING) == 0, NULL);
     pruefe("der geloeschte Sektor bleibt geloescht", t.sectors[2].deleted, NULL);

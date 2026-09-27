@@ -314,6 +314,25 @@ typedef enum uft_sector_status {
      * **2 von 1440** Sektoren.
      */
     UFT_SECTOR_CRC_CHECKED  = (1 << 7),
+    /** GRUND fuer @ref UFT_SECTOR_MISSING: die Quelle hatte fuer diesen
+     *  Sektor keine lesbaren Daten — IMD „data unavailable", TD0-Flagge
+     *  „keine Daten", ATX „Datenfeld nicht gefunden", ein Lesefehler.
+     *  Dort STAND etwas; es ist nur nicht zu haben. (H-30)
+     *
+     *  Steht nie allein, immer zusammen mit `MISSING` — gesetzt ueber
+     *  `uft_sector_mark_unavailable()`. Jeder Verbraucher, der nur
+     *  `MISSING` kennt, sieht weiter „fehlt"; die Bruecke ins Zentrum
+     *  macht daraus die Herkunft `UFT_D2_ORIGIN_UNAVAILABLE`.
+     *
+     *  Bit 8 und nicht darunter, weil 0..7 belegt sind. `status` ist hier
+     *  `uint32_t`; `uft_sector_id_t` fuehrt in einer seiner Fassungen ein
+     *  `uint8_t status` — das ist der Status der KENNUNG, nicht dieser. */
+    UFT_SECTOR_UNAVAILABLE  = (1 << 8),
+    /** GRUND fuer @ref UFT_SECTOR_MISSING: die Quelle ENDET vor diesem
+     *  Sektor oder in ihm — eine zu kurze Datei, ein abgeschnittener
+     *  Satz, ein Strom, der vorher aufhoert. Ueber den Traeger sagt das
+     *  nichts. (H-30) Gesetzt ueber `uft_sector_mark_truncated()`. */
+    UFT_SECTOR_TRUNCATED    = (1 << 9),
 } uft_sector_status_t;
 #endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
@@ -569,6 +588,31 @@ static inline void uft_sector_mark_missing(uft_sector_t *s) {
     s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_MISSING);
     uft_sector_set_crc(s, false);
     uft_sector_set_id_crc(s, false);
+}
+
+/**
+ * @brief Wie uft_sector_mark_missing(), und nennt den GRUND: nicht lesbar
+ *        (H-30). Fuer „die Quelle hat hier keine Daten" — nicht fuer eine
+ *        zu kurze Datei, das ist uft_sector_mark_truncated().
+ *
+ * Ein fehlender Sektor OHNE Grund ist nicht falsch, aber die Bruecke ins
+ * Zentrum muss dann die vorsichtigste Deutung waehlen und meldet, dass der
+ * Grund fehlt (`MISSING_NO_REASON`).
+ */
+static inline void uft_sector_mark_unavailable(uft_sector_t *s) {
+    if (!s) return;
+    uft_sector_mark_missing(s);
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_UNAVAILABLE);
+}
+
+/**
+ * @brief Wie uft_sector_mark_missing(), mit dem GRUND: die Quelle endet vor
+ *        oder in diesem Sektor (H-30).
+ */
+static inline void uft_sector_mark_truncated(uft_sector_t *s) {
+    if (!s) return;
+    uft_sector_mark_missing(s);
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_TRUNCATED);
 }
 #endif /* UFT_SECTOR_T_DEFINED */
 

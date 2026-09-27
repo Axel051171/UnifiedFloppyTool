@@ -158,8 +158,32 @@ typedef enum {
     UFT_D2_ORIGIN_FUSED,          /**< aus mehreren Lesungen zusammengefuehrt   */
     UFT_D2_ORIGIN_PADDING,        /**< Fuellmaterial, das das Format verlangt   */
     UFT_D2_ORIGIN_RECONSTRUCTED,  /**< erraten oder ergaenzt — ein VERSUCH      */
-    UFT_D2_ORIGIN_UNKNOWN
+    UFT_D2_ORIGIN_UNKNOWN,        /**< = 6                                      */
+    /* ── Abwesenheit (H-30): „hier ist nichts, und zwar aus diesem Grund" ──
+     *
+     * HINTER `UNKNOWN` und mit ausgeschriebener Zahl, weil `uft_disk2_io.c`
+     * die Herkunft als ROHES BYTE in jede .uftd-Datei schreibt. Davor
+     * eingefuegt haette jedes gespeicherte `UNKNOWN` (6) seine Bedeutung
+     * gewechselt. Die Zahl ist der Dateivertrag, `test_disk2.c` Test 10
+     * haelt sie fest.
+     *
+     * Regel, erzwungen in `uft_d2_add_sector()`: ein Sektor mit einer
+     * dieser Herkuenfte traegt KEINE Daten, keine Laenge und Zuversicht 0.
+     * Eigentuemerentscheidung 2026-09-26: drei Werte, ohne EMPTY — ein
+     * gleichfoermig GELESENER Sektor bleibt ein Sektor mit Daten. */
+    UFT_D2_ORIGIN_SKIPPED     = 7, /**< nie gelesen — ausserhalb der Anforderung */
+    UFT_D2_ORIGIN_UNAVAILABLE = 8, /**< gelesen versucht, kein Ergebnis        */
+    UFT_D2_ORIGIN_TRUNCATED   = 9  /**< die Quelle endet vor dieser Stelle      */
 } uft_d2_origin_t;
+
+/** Groesster bekannter Herkunftswert — der Lader prueft dagegen. */
+#define UFT_D2_ORIGIN_MAX UFT_D2_ORIGIN_TRUNCATED
+
+/** true fuer die drei Abwesenheitswerte (H-30). */
+static inline bool uft_d2_origin_is_absence(uft_d2_origin_t o) {
+    return o == UFT_D2_ORIGIN_SKIPPED || o == UFT_D2_ORIGIN_UNAVAILABLE
+        || o == UFT_D2_ORIGIN_TRUNCATED;
+}
 
 /** 0..255. 255 = direkt vom Traeger, CRC stimmt. 0 = keine Aussage. */
 typedef uint8_t uft_d2_conf_t;

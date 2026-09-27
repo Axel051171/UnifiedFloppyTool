@@ -227,9 +227,9 @@ static uft_error_t fake_read_track(uft_disk_t *disk, int cyl, int head,
     memset(t, 0, sizeof *t);
     t->cylinder = cyl; t->head = head;
     if (cyl == 0 && head == 0) {
-        t->sectors = calloc(4, sizeof(uft_sector_t));
-        t->sector_count = 4;
-        for (int i = 0; i < 4; i++) {
+        t->sectors = calloc(6, sizeof(uft_sector_t));
+        t->sector_count = 6;
+        for (int i = 0; i < 6; i++) {
             uft_sector_t *s = &t->sectors[i];
             s->id.cylinder = 0; s->id.head = 0; s->id.sector = (uint8_t)(i + 1);
             s->id.size_code = 2;
@@ -242,11 +242,19 @@ static uft_error_t fake_read_track(uft_disk_t *disk, int cyl, int head,
         /* 2: CRC gemessen und falsch, per Flagge */
         t->sectors[1].status = UFT_SECTOR_CRC_ERROR;
         t->sectors[1].crc_stored = 0x1234; t->sectors[1].crc_calculated = 0x5678;
-        /* 3: fehlt — Fuellmaterial des Formats */
+        /* 3: fehlt, OHNE Grund (BERICHTIGT H-30: hier stand „fehlt —
+         * Fuellmaterial des Formats". Das Plugin sagt nur „fehlt"; ob die
+         * Datei zu kurz war oder die Quelle „nicht lesbar" meldete, sagt es
+         * nicht — Fuellmaterial „des Formats" war eine Deutung.) */
         t->sectors[2].status = UFT_SECTOR_MISSING;
         /* 4: schwach, nur die Flagge */
         t->sectors[3].weak = true;
         t->sectors[3].confidence = 0.5f;   /* Plugin sagt: halbe Zuversicht */
+        /* 5: fehlt, Grund „nicht lesbar" (Bit 8 = UFT_SECTOR_UNAVAILABLE).
+         * 6: fehlt, Grund „Quelle endet vorher" (Bit 9 = UFT_SECTOR_TRUNCATED).
+         * Als Zahlen, damit die Rotprobe gegen den alten Stand uebersetzt. */
+        t->sectors[4].status = (uint32_t)UFT_SECTOR_MISSING | (1u << 8);
+        t->sectors[5].status = (uint32_t)UFT_SECTOR_MISSING | (1u << 9);
         return UFT_OK;
     }
     if (cyl == 1 && head == 0) {
@@ -284,17 +292,17 @@ static void b_gestelltes_plugin(void) {
     CHECK(uft_d2_from_disk(d, &disk, &fake, &st), "Bruecke");
     CHECK(st.tracks_asked == 4u && st.tracks_failed == 1u,
           "4 gefragt, 1 gescheitert: %zu/%zu", st.tracks_asked, st.tracks_failed);
-    CHECK(st.sectors == 4u && st.sectors_rejected == 0u,
-          "alle vier Sektoren angenommen — die Regel wies keinen ab, weil die "
-          "Bruecke keine 255 ohne Beleg vergibt: %zu/%zu",
-          st.sectors, st.sectors_rejected);
+    CHECK(st.sectors == 6u && st.sectors_rejected == 0u,
+          "alle sechs Sektoren angenommen — die Regel wies keinen ab, weil die "
+          "Bruecke keine 255 ohne Beleg vergibt und Abwesendem keine Daten "
+          "mitgibt: %zu/%zu", st.sectors, st.sectors_rejected);
     CHECK(st.raw_without_bits == 1u && st.bitstreams == 1u,
           "eine Spur Rohdaten ohne Bitlaenge (gezaehlt), eine mit (Bitstrom): "
           "%zu/%zu", st.raw_without_bits, st.bitstreams);
 
     const uft_d2_track_t *t = uft_d2_track_get(d, 0u, 0u);
-    CHECK(t && t->sectors.count == 4u, "Spur 0/0 mit 4 Sektoren");
-    if (t && t->sectors.count == 4u) {
+    CHECK(t && t->sectors.count == 6u, "Spur 0/0 mit 6 Sektoren");
+    if (t && t->sectors.count == 6u) {
         const uft_d2_sector_t *s = t->sectors.items;
         CHECK(s[0].data_crc_known && s[0].data_crc_ok && s[0].conf == UFT_D2_CONF_CERTAIN,
               "Sektor 1: CRC bekannt+ok -> 255, hat known=%d ok=%d conf=%u",
@@ -303,9 +311,24 @@ static void b_gestelltes_plugin(void) {
               && s[1].conf == UFT_D2_BRIDGE_CONF_BAD_CRC,
               "Sektor 2: CRC bekannt+falsch -> BAD_CRC (%u), hat %u",
               UFT_D2_BRIDGE_CONF_BAD_CRC, (unsigned)s[1].conf);
-        CHECK(s[2].origin == UFT_D2_ORIGIN_PADDING && !s[2].has_data
-              && s[2].conf == UFT_D2_CONF_NONE,
-              "Sektor 3: fehlend -> Fuellmaterial, keine Daten, Zuversicht 0");
+        /* BERICHTIGT H-30. Hier stand: `origin == UFT_D2_ORIGIN_PADDING` —
+         * „fehlend -> Fuellmaterial". Das Zentrum schrieb dazu den Befund
+         * „auf dem Traeger stand hier nichts", und das weiss niemand: eine
+         * zu kurze Datei sagt nichts ueber den Traeger, und IMD „data
+         * unavailable" heisst, dort STAND etwas, es war nur nicht lesbar.
+         * Ohne genannten Grund ist die vorsichtigste wahre Aussage „nicht
+         * lesbar" (8), und dass der Grund fehlt, wird ein eigener Befund. */
+        CHECK((unsigned)s[2].origin == 8u && !s[2].has_data
+              && s[2].data_len == 0u && s[2].conf == UFT_D2_CONF_NONE,
+              "Sektor 3: fehlend ohne Grund -> Herkunft 8 (nicht lesbar), "
+              "keine Daten, Laenge 0, Zuversicht 0 — hat Herkunft %u, Laenge %u",
+              (unsigned)s[2].origin, (unsigned)s[2].data_len);
+        CHECK((unsigned)s[4].origin == 8u && !s[4].has_data && s[4].data_len == 0u,
+              "Sektor 5: fehlend + Grund Bit 8 -> Herkunft 8, hat %u",
+              (unsigned)s[4].origin);
+        CHECK((unsigned)s[5].origin == 9u && !s[5].has_data && s[5].data_len == 0u,
+              "Sektor 6: fehlend + Grund Bit 9 -> Herkunft 9 (abgeschnitten), "
+              "hat %u", (unsigned)s[5].origin);
         CHECK(s[3].weak_bits == 1u && s[3].conf == 128u,
               "Sektor 4: Weak-Flagge -> Untergrenze 1, Zuversicht min(UNVERIFIED, "
               "0.5*255=128) = 128, hat weak=%u conf=%u",
@@ -317,6 +340,12 @@ static void b_gestelltes_plugin(void) {
           && (f & UFT_D2_FEAT_NO_DATA_SEC) && (f & UFT_D2_FEAT_GAPS),
           "Merkmale gemessen: BAD_CRC, WEAK, NO_DATA, GAPS — Maske 0x%x", f);
     CHECK(diag_mit_code(d, "DATA_CRC") == 1u, "ein DATA_CRC-Befund");
+    CHECK(diag_mit_code(d, "MISSING_NO_REASON") == 1u,
+          "genau EIN Sektor fehlt ohne genannten Grund — und das ist ein "
+          "Befund, gezaehlt %zu", diag_mit_code(d, "MISSING_NO_REASON"));
+    CHECK(diag_mit_code(d, "PADDING") == 0u,
+          "kein Fehlender wird mehr als Fuellmaterial gefuehrt, gezaehlt %zu",
+          diag_mit_code(d, "PADDING"));
     CHECK(diag_mit_code(d, "RAW_BITS_UNKNOWN") == 1u, "RAW_BITS_UNKNOWN gemeldet");
     CHECK(diag_mit_code(d, "TRACKS_FAILED") == 1u, "TRACKS_FAILED gemeldet");
 
@@ -329,9 +358,10 @@ static void b_gestelltes_plugin(void) {
 
     char buf[4096];
     uft_d2_report(d, buf, sizeof buf);
-    CHECK(strstr(buf, "mit CRC-Angabe: 2 (davon falsch: 1), ohne CRC-Angabe: 2") != NULL,
+    CHECK(strstr(buf, "mit CRC-Angabe: 2 (davon falsch: 1), ohne CRC-Angabe: 4") != NULL,
           "Sektorzeile:\n%s", buf);
-    printf("    4 Sektoren: 255 / 64 / 0 / 128 — jede Zahl aus ihrer Regel\n");
+    printf("    6 Sektoren: 255 / 64 / 0 / 128 / 0 / 0 — jede Zahl aus ihrer "
+           "Regel, die Fehlenden mit ihrem Grund\n");
 
     uft_d2_destroy(d);
 }
