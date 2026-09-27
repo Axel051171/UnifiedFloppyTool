@@ -252,7 +252,6 @@ build matrix entries it's a code smell.
   live in there
 - `UnifiedFloppyTool.pro` — primary build system (qmake)
 - `CMakeLists.txt` — secondary, for tests + packaging only
-- `win64-toolchain.cmake` — MinGW cross-compile from Linux, when needed
 - `reference/fix_class_history.md` — narrative log of how each FIX-NNN
   was discovered (read this before adding a new one — you may
   rediscover an older fix)
