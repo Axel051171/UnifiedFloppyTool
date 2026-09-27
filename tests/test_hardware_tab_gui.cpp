@@ -193,7 +193,14 @@ private slots:
         auto *ctrl = tab.findChild<QComboBox *>("comboController");
         QVERIFY2(ctrl, "comboController not found");
         QCOMPARE(ctrl->currentData().toString(), QStringLiteral("greaseweazle"));
-        QCOMPARE(drive->count(), 2);
+        /* MF-1376: A:/B: (IBM-PC bus) plus Shugart 0..3 — gw's six --drive
+         * values. */
+        QCOMPARE(drive->count(), 6);
+        for (int i = 2; i < 6; ++i) {
+            bool ok = false;
+            QCOMPARE(drive->itemData(i).toInt(&ok), 16 + (i - 2));
+            QVERIFY2(ok, "Shugart item carries no integer data");
+        }
         bool ok0 = false, ok1 = false;
         QCOMPARE(drive->itemData(0).toInt(&ok0), 0);
         QCOMPARE(drive->itemData(1).toInt(&ok1), 1);
@@ -207,8 +214,12 @@ private slots:
         HardwareTab tab;
         auto *drive = tab.findChild<QComboBox *>("comboDriveSelect");
         QVERIFY2(drive, "comboDriveSelect not found");
-        QCOMPARE(drive->itemText(0), QStringLiteral("A: (Drive 0)"));
-        QCOMPARE(drive->itemText(1), QStringLiteral("B: (Drive 1)"));
+        /* MF-1376 (petrkr, #43): "A: (Drive 0)" named ONE drive by two
+         * different buses. */
+        QCOMPARE(drive->itemText(0), QStringLiteral("A: (IBM-PC bus)"));
+        QCOMPARE(drive->itemText(1), QStringLiteral("B: (IBM-PC bus)"));
+        QCOMPARE(drive->itemText(2), QStringLiteral("Drive 0 (Shugart bus)"));
+        QCOMPARE(drive->itemText(5), QStringLiteral("Drive 3 (Shugart bus)"));
     }
 
     /* Guard: the same combo carries Commodore device numbers for the

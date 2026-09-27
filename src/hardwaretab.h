@@ -25,6 +25,7 @@
 
 #include "uft/hal/outcomes.h"   /* forensic Sum-Types — handlers take refs */
 #include "uft/hal/uft_scp_direct.h"  /* uft_scp_direct_ctx_t (MF-469) */
+#include "hardware_providers/gw_drive_unit_select.h"  /* GwDrive (MF-1376) */
 
 namespace Ui { class TabHardware; }
 
@@ -291,11 +292,11 @@ private:
      * handler set the codegen-wired btnDetect uses. No-op if disconnected. */
     void runDetectProbe();
 
-    /* #43 (MF-XXXX): the Greaseweazle bus unit comboDriveSelect names, or
-     * std::nullopt when it names none (other controller, no user data,
-     * Commodore device number). One mapping for connect AND change:
-     * uft::hal::gw_drive_unit_from_combo(). */
-    std::optional<int> selectedGwDriveUnit() const;
+    /* #43 (MF-1365, MF-1376): the Greaseweazle drive — bus AND unit —
+     * comboDriveSelect names, or std::nullopt when it names none (other
+     * controller, no user data, Commodore device number). One mapping for
+     * connect AND change: uft::hal::gw_drive_from_combo(). */
+    std::optional<::uft::hal::GwDrive> selectedGwDrive() const;
 
     // Status updates
     void updateStatus(const QString& status, bool isError = false);
