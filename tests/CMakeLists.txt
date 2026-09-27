@@ -850,6 +850,18 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_ipf_satzlauf_schranken")
+        # MF-1371: der Satzlauf von `ipf_air_parse()` hatte keine
+        # Schranke (Laenge 0 -> Endlosschleife, DATA-Laenge nahe 2^32
+        # -> Lesen hinter den Puffer), die CRC erreichte niemanden, und
+        # Spurkoepfe ausserhalb 84 x 2 oder jenseits des 512. fielen
+        # still weg. Prueft an selbst gebauten Puffern, keine Korpus-Datei.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_ipf_erfindet_keine_geometrie")
         # MF-1073: `ipf_plugin_open()` setzte sectors=11 und
         # sector_size=512 unbedingt - "Amiga DD typical" - und fiel

@@ -244,6 +244,18 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
         disk->plugin_data = NULL;
         return UFT_ERR_FORMAT_INVALID;
     }
+    /* MF-1371: beides wurde gerechnet bzw. verworfen, und niemand
+     * erfuhr es. Die Datei bleibt lesbar; die Spuren tragen ihre
+     * eigene Flagge (read_track), hier steht die Summe. */
+    if (!ipf_air_crc_ok(p->air))
+        UFT_WARN("IPF '%s': mindestens ein Satz haelt seine CRC32 nicht "
+                 "- betroffene Spuren tragen UFT_TRACK_HDR_CRC bzw. "
+                 "UFT_TRACK_DATA_CRC", path);
+    if (ipf_air_get_dropped_images(p->air) > 0)
+        UFT_WARN("IPF '%s': %u Spurkoepfe ausserhalb Zylinder 0..83 / "
+                 "Kopf 0..1 nicht gelesen", path,
+                 (unsigned)ipf_air_get_dropped_images(p->air));
+
     disk->geometry.cylinders = cyls;
     disk->geometry.heads     = sides;
     disk->geometry.sectors       = 0;  /* Bitstrom-Behaelter: die   */
@@ -361,6 +373,27 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     track->nominal_rpm           = 300.0;
     track->avg_bit_cell_ns       = 2000.0;
     track->raw_bits = track_bits;
+
+    /* MF-1371: die CRC der Saetze erreicht die Spur.
+     *
+     * Spurkopf gebrochen: dieselbe Regel wie bei TD0 (UFT_TRACK_HDR_CRC)
+     * — hinter einem Kopf, dessen Zahlen nicht stimmen, steht keine
+     * verlaessliche Zellzahl, also wird die Spur beendet statt gelesen.
+     * Nutzlast gebrochen: die Spur wird geliefert und benannt. */
+    bool imge_ok = true, data_ok = true;
+    (void)ipf_air_get_track_crc(p->air, cyl, head, &imge_ok, &data_ok);
+    if (!imge_ok) {
+        track->status |= (uint32_t)UFT_TRACK_HDR_CRC;
+        track->raw_bits = 0;
+        UFT_WARN("IPF Spur %d/%d: IMGE-Satz haelt seine CRC32 nicht - "
+                 "Spur nicht gelesen", cyl, head);
+        return UFT_OK;
+    }
+    if (!data_ok) {
+        track->status |= (uint32_t)UFT_TRACK_DATA_CRC;
+        UFT_WARN("IPF Spur %d/%d: DATA-Satz haelt seine CRC32 nicht - "
+                 "Inhalt geliefert, aber nicht bestaetigt", cyl, head);
+    }
 
     /* Status flags from IPF descriptor */
     if ((track_flags & IPF_PLUGIN_TF_FUZZY) || has_fuzzy) {

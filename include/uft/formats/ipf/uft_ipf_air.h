@@ -126,6 +126,41 @@ int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
                             bool     *out_truncated);
 
 /**
+ * @brief MF-1371: hat JEDER gelesene Satz seine Pruefsumme gehalten?
+ *
+ * Bis MF-1371 wurde die CRC gerechnet und nur von einem `printf` gelesen;
+ * das Plugin meldete trotzdem `UFT_FORMAT_CAP_VERIFY`. Eine Datei mit
+ * gebrochener CRC bleibt LESBAR — eine beschaedigte Sicherung ist mehr
+ * wert als keine —, aber sie wird benannt.
+ *
+ * Satzaufbau und CRC nach Louis-Guerin, „IPF Documentation“ V0.0 (2012),
+ * Kap. 2.1: CRC32 ueber Kopf und Satzdaten, CRC-Feld dabei 0; die
+ * DATA-Nutzlast hat ihre eigene CRC32 im DATA-Block (Kap. 2.5).
+ */
+bool ipf_air_crc_ok(const ipf_air_disk_t *disk);
+
+/**
+ * @brief MF-1371: Pruefsummen EINER Spur.
+ *
+ * `*out_imge_ok` — der IMGE-Satz (Spurkopf) hielt seine CRC.
+ * `*out_data_ok` — der zugehoerige DATA-Satz hielt Kopf- UND
+ *                  Nutzlast-CRC (true, solange kein DATA-Satz kam).
+ *
+ * @return 0 wenn die Spur existiert, -1 sonst. Out-Zeiger duerfen NULL sein.
+ */
+int ipf_air_get_track_crc(const ipf_air_disk_t *disk, int cyl, int head,
+                          bool *out_imge_ok, bool *out_data_ok);
+
+/**
+ * @brief MF-1371: Zahl der IMGE-Saetze, die der Leser NICHT halten kann.
+ *
+ * Der Leser fasst Zylinder 0..83 und Kopf 0..1. Ein Spurkopf ausserhalb
+ * fiel bis MF-1371 ohne Zaehler weg (Klasse MF-1040); jetzt wird er
+ * gezaehlt, und das Plugin nennt die Zahl.
+ */
+uint32_t ipf_air_get_dropped_images(const ipf_air_disk_t *disk);
+
+/**
  * @brief Concatenate decoded data-element payload bytes from every block of
  *        a track into a single contiguous buffer.
  *
