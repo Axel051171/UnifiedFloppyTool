@@ -2789,7 +2789,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
     elseif(${test_name} STREQUAL "test_g71_read")
         # G71 1571 GCR per-track raw read (MF-355)
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
+        # P3-599/K4: `uft_g71.c` RUFT seit dieser Arbeit den geprueften
+        # CBM-GCR-Dekodierer statt ihn zu kopieren — also braucht jedes
+        # Ziel, das G71 bindet, auch `uft_gcr_ops.c`. Das ist der Preis
+        # des Rufens und wird hier bezahlt, nicht durch eine zweite Kopie
+        # umgangen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
     elseif(${test_name} STREQUAL "test_mega65_fat32")
         # Re-enabled in MF-372: was excluded with the WRONG reason ("uft_mega65
         # stub-only") — it actually tests the real 589-line uft_fat32_mbr.c.
@@ -3657,7 +3664,11 @@ foreach(test_source ${TEST_SOURCES})
            # Abschnitt fuehrt JEDES Abbild aus `corpus_free` durch dieselbe
            # Bruecke, also dieselbe Menge (und braucht UFT_CORPUS_DIR,
            # das dieser Block unten setzt).
-           OR ${test_name} STREQUAL "test_h30_ohne_daten_nennt_grund")
+           OR ${test_name} STREQUAL "test_h30_ohne_daten_nennt_grund"
+           # P3-599 / K4: oeffnet vice_c1541_1571.g71 ueber den ECHTEN
+           # `uft_disk_open()` und liest beide Seiten — derselbe Weg wie
+           # der Analysator, also dieselbe Menge.
+           OR ${test_name} STREQUAL "test_g71_liefert_sektoren")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
@@ -4103,7 +4114,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d80/uft_d80.c
             ${CMAKE_SOURCE_DIR}/src/formats/d82/uft_d82.c
-            ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c
+            # P3-599/K4: G71 ruft den geprueften CBM-GCR-Dekodierer.
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_track_layout")
