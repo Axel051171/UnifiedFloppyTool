@@ -75,7 +75,7 @@ laufen fort und werden nie wiederverwendet.
 - **OPEN_ITEMS:** —
 - **Fertig heißt:** Dauerauftrag — nach A-036..A-038 die Warteschlange von oben (A-032 …), je Posten mit Beleg
 - **Aufwand:** nicht schätzbar
-- **Stand:** —
+- **Stand 2026-09-27:** GitHub-Abgleich (a) OPEN_ITEMS aller Zweige gegen `main`: fehlend nur P3-602/620/621/630/650, alle vom aktiven Cloud-Zweig `umsetzungsplan` und dort in Arbeit — nicht uebernommen, um nichts doppelt zu tun; (b) offene Issues: #42 und #44 sind auf `main` behoben (MF-1365/1366), #43 ist beantwortet (Bus-Wahl `8d863824`), **#34 (FC5025 meldet ohne Geraet „verbunden") behoben MF-1438** = P3-589 (b); P3-589 (a) bleibt offen. Weiter: Warteschlange von oben (A-018 …).
 - **Beleg:** —
 
 ### A-018 · Zulieferung `Apple DOS.zip` — DOS-3.3-Dateisystem + BASIC-Detokenisierer

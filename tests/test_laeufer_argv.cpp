@@ -26,6 +26,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 
 #include <cstdio>
@@ -222,6 +223,54 @@ int main(int argc, char** argv)
                        "6c es kommen Flusswechsel an, nicht ein paar Bytes Text");
             }
         }
+    }
+
+    /* 7 — MF-1438 / P3-589 (b), issue #34: die FC5025-Erkennung meldete
+     *     ein Laufwerk, sobald das WERKZEUG da war. Sie fragt jetzt
+     *     `fcdrives` (FC5025-Treiberpaket v1309, `cmd/fcdrives.c`: eine
+     *     Zeile „<id>\t<Beschreibung>" je Laufwerk, Exit 0; ohne Geraet
+     *     Exit 1 ohne Ausgabe). Das Echo-Werkzeug steht als `fcimage` UND
+     *     `fcdrives` im selben Ordner; gesucht wird `fcdrives` neben dem
+     *     konfigurierten `fcimage`. */
+    {
+        const QString suffix = QFileInfo(QString::fromUtf8(UFT_ARGV_ECHO)).suffix();
+        const QString ext = suffix.isEmpty() ? QString() : QStringLiteral(".") + suffix;
+        const QString fcimage = tmp.filePath(QStringLiteral("fcimage") + ext);
+        const QString fcdrives = tmp.filePath(QStringLiteral("fcdrives") + ext);
+        const bool kopiert =
+            QFile::copy(QString::fromUtf8(UFT_ARGV_ECHO), fcimage) &&
+            QFile::copy(QString::fromUtf8(UFT_ARGV_ECHO), fcdrives);
+        PRUEFE(kopiert, "7 Vorbereitung: Echo-Werkzeug als fcimage und fcdrives");
+        SubprocessRunnerConfig cfg = werkzeug();
+        cfg.binary = fcimage;
+
+        /* 7a — genau #34: kein Geraet, aber das Werkzeug gibt seinen
+         *      Nutzungstext aus (Exit 1). */
+        qputenv("UFT_ARGV_ECHO_STDOUT",
+                "Usage: fcimage [-d device] -f format outfile\n");
+        qputenv("UFT_ARGV_ECHO_RC", "1");
+        const Fc5025DetectResult a = make_fc5025_detect_qprocess_runner(cfg)();
+        std::printf("      ohne Geraet: found=%d drive=\"%s\" error=\"%s\"\n",
+                    (int)a.found, a.drive_kind.c_str(), a.error_message.c_str());
+        PRUEFE(!a.found && a.error_message.empty(),
+               "7a kein FC5025 angeschlossen: NICHT gefunden (DriveAbsent), "
+               "auch wenn das Werkzeug antwortet — issue #34");
+
+        /* 7b — ein Laufwerk: seine Beschreibung ist die des Treibers. */
+        qputenv("UFT_ARGV_ECHO_STDOUT", "001/002\tFC5025 test drive\n");
+        qputenv("UFT_ARGV_ECHO_RC", "0");
+        const Fc5025DetectResult b = make_fc5025_detect_qprocess_runner(cfg)();
+        PRUEFE(b.found && b.drive_kind == "FC5025 test drive",
+               "7b angeschlossen: gefunden, Laufwerksart aus fcdrives, nicht "
+               "erfunden");
+
+        /* 7c — fcdrives fehlt: kein Laufwerk, und der Grund steht da. */
+        QFile::remove(fcdrives);
+        const Fc5025DetectResult c = make_fc5025_detect_qprocess_runner(cfg)();
+        PRUEFE(!c.found && c.error_message.find("fcdrives") != std::string::npos,
+               "7c ohne fcdrives: nicht gefunden, und die Meldung nennt fcdrives");
+        qunsetenv("UFT_ARGV_ECHO_STDOUT");
+        qunsetenv("UFT_ARGV_ECHO_RC");
     }
 
     std::printf("test_laeufer_argv: %d von %d Zusagen gehalten\n",

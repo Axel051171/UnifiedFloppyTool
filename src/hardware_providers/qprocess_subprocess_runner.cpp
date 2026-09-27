@@ -33,6 +33,7 @@
 #include <QFile>
 #include <QTemporaryFile>
 #include <QDir>
+#include <QFileInfo>
 
 namespace uft::hal {
 
@@ -213,38 +214,77 @@ const char* fc5025_format_string(uint8_t code)
 
 } // namespace
 
+/* P3-589 (b), issue #34 (MF-1438): which program answers "is an FC5025
+ * attached?".
+ *
+ * Here stood a probe that ran `fcimage` without arguments and took its
+ * usage text as a detected drive, with an invented drive kind
+ * "5.25\" (auto-detect)". The usage text only proves the TOOL exists —
+ * a user on issue #34 saw "connected" with no FC5025 plugged in.
+ *
+ * The driver package (FC5025 Driver Source Code v1309, neue-ideen/1, read
+ * for behaviour only — channel Spec, no line taken; the package carries no
+ * licence file) ships `fcdrives` for exactly this question: `cmd/fcdrives.c`
+ * prints one line "<id>\t<description>" per attached drive and exits 0;
+ * with no device `get_drive_list()` returns NULL and it exits 1 without
+ * output (backend `drives.c`). `fcimage` itself says "No devices found."
+ * only after a full argument list (`cmd/fcimage.c`).
+ *
+ * `fcdrives` is looked up where `fcimage` is: next to it when a path was
+ * configured, otherwise on PATH. */
+static QString fcdrives_neben(const QString& fcimage_binary)
+{
+    if (fcimage_binary.isEmpty())
+        return QStringLiteral("fcdrives");
+    const QFileInfo fi(fcimage_binary);
+    const QString suffix = fi.suffix().isEmpty()
+                           ? QString() : QStringLiteral(".") + fi.suffix();
+    return fi.dir().filePath(QStringLiteral("fcdrives") + suffix);
+}
+
 FC5025ProviderV2::Fc5025DetectRunner
 make_fc5025_detect_qprocess_runner(SubprocessRunnerConfig cfg)
 {
-    QString bin = resolve_binary(cfg.binary, "fcimage");
+    const QString bin = fcdrives_neben(cfg.binary);
     int timeout = cfg.timeout_ms > 0 ? std::min(cfg.timeout_ms, 10000) : 10000;
     return [bin, timeout]() -> Fc5025DetectResult {
         Fc5025DetectResult r;
-        /* Probe: just run `fcimage` with no args — it prints a usage
-         * banner mentioning "fcimage" and the supported formats. The
-         * exit code is typically non-zero on the usage message, so we
-         * key off the banner text rather than the exit code. */
         const RunResult rr = run_subprocess(bin, {}, "", timeout);
         if (rr.exit_code == -1) {
             r.found = false;
-            r.error_message = rr.stderr_text;
+            r.error_message =
+                "fcdrives could not be started (" + rr.stderr_text + "). It "
+                "comes with fcimage in the FC5025 driver package and is the "
+                "only way to check that a device is attached — fcimage alone "
+                "proves the tool exists, not the drive.";
             return r;
         }
-        /* fcimage banner usually contains "fcimage" or "Device Side". */
-        const bool banner_ok =
-            rr.stderr_text.find("fcimage") != std::string::npos ||
-            rr.stderr_text.find("Device Side") != std::string::npos ||
-            rr.stdout_text.find("fcimage") != std::string::npos;
-        if (banner_ok) {
-            r.found = true;
-            r.firmware = "fcimage CLI (Device Side Data)";
-            r.drive_kind = "5.25\" (auto-detect)";
-        } else {
+        if (rr.exit_code < 0) {           /* timeout / crash (-2, -3) */
             r.found = false;
-            r.error_message =
-                "fcimage executable launched but did not emit the "
-                "expected banner — version may be unknown / incompatible";
+            r.error_message = "fcdrives did not finish normally: " + rr.stderr_text;
+            return r;
         }
+        /* First non-empty line "<id>\t<description>". Exit 1, or exit 0
+         * without a line, is "no usable device" — a clean absence. */
+        std::string zeile;
+        for (size_t a = 0; a < rr.stdout_text.size();) {
+            size_t e = rr.stdout_text.find('\n', a);
+            if (e == std::string::npos) e = rr.stdout_text.size();
+            std::string z = rr.stdout_text.substr(a, e - a);
+            while (!z.empty() && (z.back() == '\r' || z.back() == ' '))
+                z.pop_back();
+            if (!z.empty()) { zeile = z; break; }
+            a = e + 1;
+        }
+        if (rr.exit_code != 0 || zeile.empty()) {
+            r.found = false;               /* DriveAbsent, not an error */
+            return r;
+        }
+        const size_t tab = zeile.find('\t');
+        r.found = true;
+        /* The description is what the driver reports for the attached
+         * drive — measured, not a default. */
+        r.drive_kind = (tab == std::string::npos) ? zeile : zeile.substr(tab + 1);
         return r;
     };
 }

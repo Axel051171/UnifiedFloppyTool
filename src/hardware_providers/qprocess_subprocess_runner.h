@@ -61,11 +61,16 @@ make_kryoflux_qprocess_runner(SubprocessRunnerConfig cfg = {});
 
 /* ─── FC5025 runners ──────────────────────────────────────────────── */
 
-/** Build an Fc5025DetectRunner that probes the system for the
- *  `fcimage` CLI tool (FC5025 doesn't have a libusb path in UFT;
- *  the canonical access is through Device Side Data's fcimage).
- *  Success when `fcimage --version` (or just `fcimage`) exits 0
- *  and emits a recognisable banner. */
+/** Build an Fc5025DetectRunner that asks the driver package's
+ *  `fcdrives` whether an FC5025 is attached (FC5025 doesn't have a
+ *  libusb path in UFT). `fcdrives` is looked up next to a configured
+ *  `fcimage`, else on PATH. One line "<id>\t<description>" -> found, with
+ *  that description as drive kind; exit 1 / no line -> not found (clean
+ *  absence); `fcdrives` missing -> not found with a reason.
+ *  CORRECTED MF-1438 (P3-589 b, issue #34): this said "success when
+ *  `fcimage` ... emits a recognisable banner" — the banner proved the
+ *  tool, not the device, and the runner reported a drive with none
+ *  attached. */
 FC5025ProviderV2::Fc5025DetectRunner
 make_fc5025_detect_qprocess_runner(SubprocessRunnerConfig cfg = {});
 

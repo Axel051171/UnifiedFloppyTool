@@ -21,6 +21,12 @@
  * des KryoFlux-Handbuchs („test_23.1.raw will be stream test_") und
  * bewusst nicht mit der Funktion des Providers: so prueft der Test
  * `KryoFluxProviderV2::stream_file_path()` von aussen.
+ *
+ * fcdrives-Modus (MF-1438, P3-589): nennt UFT_ARGV_ECHO_STDOUT einen Text,
+ * druckt das Werkzeug GENAU diesen Text auf stdout (statt „uft_argv_echo")
+ * und endet mit dem Code aus UFT_ARGV_ECHO_RC (Vorgabe 0). So steht es an
+ * der Stelle von `fcdrives`, das je angeschlossenem Laufwerk eine Zeile
+ * „<id>\t<Beschreibung>" druckt und ohne Geraet mit 1 endet.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,6 +82,12 @@ int main(int argc, char **argv)
         if (rc != 0) return rc;
         puts("KryoFlux DiskTool Console (uft_argv_echo, DTC-Modus)");
         return 0;
+    }
+    const char *text = getenv("UFT_ARGV_ECHO_STDOUT");
+    if (text) {
+        fputs(text, stdout);
+        const char *rc = getenv("UFT_ARGV_ECHO_RC");
+        return (rc && rc[0]) ? atoi(rc) : 0;
     }
     puts("uft_argv_echo");
     return 0;

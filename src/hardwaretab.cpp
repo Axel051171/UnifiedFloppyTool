@@ -859,8 +859,11 @@ void HardwareTab::onConnect()
              * Data `fcimage` CLI. Read-runner builds an fcimage argv
              * (`-f <format> -t/-T <cyl> [-s 1] [-r retries] <tmp>`),
              * reads the resulting image back, returns bytes. Detect-
-             * runner probes for fcimage on PATH. The user must have
-             * fcimage installed and the FC5025 USB driver active. */
+             * runner asks `fcdrives` (same driver package) whether a
+             * device is attached — since MF-1438; before, a found
+             * `fcimage` counted as a detected drive (issue #34). The
+             * user must have fcimage/fcdrives installed and the FC5025
+             * USB driver active. */
             m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
                 ::uft::hal::make_fc5025_read_qprocess_runner(),
                 ::uft::hal::make_fc5025_detect_qprocess_runner());
