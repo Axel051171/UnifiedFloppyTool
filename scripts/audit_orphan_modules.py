@@ -32,6 +32,15 @@ Genauigkeitsgrenzen, ausdruecklich:
 Das heisst: das Skript kann ein Modul faelschlich als BENUTZT melden, aber
 kaum faelschlich als verwaist. Der Fehler zeigt in die vorsichtige Richtung.
 
+BERICHTIGT MF-1400 — „kaum" war zweimal gemessen falsch. `src/main.cpp`
+stand als verwaist in der Grundlinie (ein Programmeinstieg hat keinen
+Aufrufer im Quelltext), und `ufi_runners.cpp` ebenso, weil seine Fabriken
+im GNU-Stil definiert sind (Typ auf der Vorzeile) und nicht erkannt
+wurden. Beides ist jetzt Regel mit Selbsttest (`--selbsttest`, 6 Faelle,
+Mutationsmatrix 4/4). Bleibende Grenze: ein Einstieg, den nur ein
+Build-System setzt (etwa ein Qt-Makro statt `main`), ist hier unsichtbar.
+Wer nach dieser Liste loescht, baut danach und laesst jedes Tor laufen.
+
 Aufruf:
     python scripts/audit_orphan_modules.py               # Uebersicht
     python scripts/audit_orphan_modules.py --detail      # jede Datei
@@ -63,6 +72,53 @@ DEFINITION = re.compile(
 STATIC_DEF = re.compile(
     r"^static\s+(?:[A-Za-z_][\w \t*]*?[ \t*])([a-z_][a-z0-9_]{3,})[ \t]*\(", re.M
 )
+
+# Definition im GNU-Stil: Rueckgabetyp auf der Zeile DAVOR (MF-1400).
+#
+#     UfiDetectRunner
+#     make_usbfloppy_detect_runner(std::string device_path)
+#
+# DEFINITION verlangt Typ und Namen auf einer Zeile und sah diese Form
+# nicht. Folge: `src/hardware_providers/ufi_runners.cpp`, dessen drei
+# Fabriken `hardwaretab.cpp` taeglich ruft, stand als verwaist in der
+# Grundlinie — seine einzige ERKANNTE Funktion war eine ohne Aufrufer.
+# Die Vorzeile darf nur aus Typwoertern bestehen (keine Klammer, kein
+# Semikolon), und sie darf nicht mit `static` beginnen; ein Aufruf in
+# Spalte 0 nach einer Anweisung trifft damit nicht.
+SPLIT_DEFINITION = re.compile(
+    r"^(?!static\b|return\b|else\b|#)[A-Za-z_][\w:<>,&* \t]*\n"
+    r"([a-z_][a-z0-9_]{3,})[ \t]*\(",
+    re.M,
+)
+
+# Einstiegspunkte (MF-1400). Ein Programmeinstieg hat per Definition keinen
+# Aufrufer im Quelltext — den ruft die Laufzeitumgebung. Ohne diese Regel
+# stand `src/main.cpp` in `docs/orphan_baseline.txt`, und wer die
+# Verwaisten-Regel (MF-621) mechanisch anwendet, loescht die Anwendung.
+#
+# Aber NUR ausserhalb jeder Praeprozessor-Bedingung. Die erste Fassung
+# dieser Regel nahm jedes `main` und strich damit 30 Module aus der Liste,
+# die ein Selbsttest-`main` hinter `#ifdef FDI_TEST`, `#ifdef UFT_TEST`
+# o.ae. tragen — im Programm nie gebaut. Gemessen, bevor es eingecheckt
+# wurde; ein Waechter, der Waisen versteckt, ist schlimmer als einer, der
+# einen Fehlalarm meldet.
+ENTRY_POINTS = {"main", "wmain", "qMain", "WinMain"}
+ENTRY_DEF = re.compile(r"^(?:int|auto)\s+(main|wmain|qMain|WinMain)\s*\(")
+PP_OPEN = re.compile(r"^\s*#\s*if")
+PP_CLOSE = re.compile(r"^\s*#\s*endif\b")
+
+
+def unconditional_entry(raw: str) -> bool:
+    """Definiert die Datei einen Programmeinstieg AUSSERHALB jedes #if?"""
+    tiefe = 0
+    for zeile in raw.splitlines():
+        if PP_OPEN.match(zeile):
+            tiefe += 1
+        elif PP_CLOSE.match(zeile):
+            tiefe = max(0, tiefe - 1)
+        elif tiefe == 0 and ENTRY_DEF.match(zeile):
+            return True
+    return False
 
 # Nicht-statische OBJEKTE, nicht nur Funktionen.
 #
@@ -168,6 +224,7 @@ def exported_names(body: str) -> set[str]:
     """
     body = strip_anon_namespace(body)
     names = set(DEFINITION.findall(body)) - set(STATIC_DEF.findall(body))
+    names |= set(SPLIT_DEFINITION.findall(body))
     names |= set(OBJECT_DEF.findall(body))
     return {n for n in names if n not in C_KEYWORDS}
 
@@ -326,14 +383,42 @@ def print_closed(gefunden: list[dict]) -> None:
           % (len(gefunden), sum(r["lines"] for r in gefunden)))
 
 
+def selbsttest() -> int:
+    """Die drei Faelle aus MF-1400, je ein Paar gut/schlecht."""
+    faelle = [
+        ("GNU-Stil wird als Export erkannt",
+         "make_runner" in exported_names(
+             "UfiDetectRunner\nmake_runner(std::string p)\n{\n}\n")),
+        ("static im GNU-Stil bleibt intern",
+         "hilfs_fn" not in exported_names("static int\nhilfs_fn(void)\n{\n}\n")),
+        ("Aufruf in Spalte 0 nach Anweisung ist keine Definition",
+         "ruf_mich" not in exported_names("x = 1;\nruf_mich(2);\n")),
+        ("main ausserhalb jedes #if ist Einstieg",
+         unconditional_entry("int main(int argc, char **argv)\n{\n}\n")),
+        ("main hinter #ifdef ist KEIN Einstieg",
+         not unconditional_entry("#ifdef FDI_TEST\nint main(void) {\n}\n#endif\n")),
+        ("main nach geschlossenem #if ist Einstieg",
+         unconditional_entry("#if X\n#endif\nint main(void)\n{\n}\n")),
+    ]
+    gut = 0
+    for name, ok in faelle:
+        print(f"  {'ok  ' if ok else 'FAIL'} {name}")
+        gut += bool(ok)
+    print(f"SELBSTTEST {gut}/{len(faelle)}")
+    return 0 if gut == len(faelle) else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--selbsttest", action="store_true")
     ap.add_argument("--detail", action="store_true", help="jede verwaiste Datei nennen")
     ap.add_argument("--json", action="store_true", help="maschinenlesbare Ausgabe")
     ap.add_argument("--dirs", action="store_true",
                     help="Bericht: Verzeichnisse, in die von aussen nie "
                          "hineingerufen wird (ORPH-2). Kein Tor.")
     args = ap.parse_args()
+    if args.selbsttest:
+        return selbsttest()
 
     sources = built_sources()
     if not sources:
@@ -353,7 +438,9 @@ def main() -> int:
         if not names:
             continue  # z.B. reine Tabellen-Dateien
 
-        in_src = used_elsewhere(names, src_idx, path)
+        einstieg = bool(names & ENTRY_POINTS) and unconditional_entry(
+            path.read_text(encoding="utf-8", errors="ignore"))
+        in_src = einstieg or used_elsewhere(names, src_idx, path)
         in_tests = False if in_src else used_elsewhere(names, test_idx, path)
 
         state = "src" if in_src else ("tests" if in_tests else "none")

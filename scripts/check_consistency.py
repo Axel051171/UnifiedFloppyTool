@@ -707,6 +707,19 @@ def main() -> int:
         # ausdrueckliche Entscheidung.
         import orphan_module_gate as _orphan
         all_errors.append(("neue verwaiste Module", _orphan.check(repo)))
+        # MF-1400: die Messung darunter fuehrte `src/main.cpp` und
+        # `ufi_runners.cpp` (GNU-Definitionsstil) als verwaist. Ihr
+        # Selbsttest haelt Einstiegspunkt- und Definitionsregel fest,
+        # Mutationsmatrix 4/4.
+        _r = subprocess.run([sys.executable,
+                             str(repo / "scripts" / "audit_orphan_modules.py"),
+                             "--selbsttest"],
+                            cwd=repo, capture_output=True, text=True)
+        all_errors.append(("Waisenmessung-Selbsttest",
+                           [] if _r.returncode == 0 else
+                           [l for l in _r.stdout.splitlines() if "FAIL" in l]
+                           or ["audit_orphan_modules.py --selbsttest rc %d"
+                               % _r.returncode]))
         # Geteilte Include-Waechter (MF-511). Zwei Header, derselbe
         # #ifndef-Name, verschiedener Inhalt: der Praeprozessor meldet
         # nichts, er nimmt was zuerst kam. Bei einem Typ heisst das zwei
