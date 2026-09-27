@@ -804,6 +804,13 @@ foreach(test_source ${TEST_SOURCES})
         # MF-1405: the probe looked for the TR-DOS ID at 0x227 (catalogue)
         # instead of 0x8E7 (info sector); two real images measured.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+    elseif(${test_name} STREQUAL "test_msa_kaputt_ist_kein_ok")
+        # MF-1427: a broken MSA opened with UFT_OK and zero padding; tracks
+        # before the start track came back as zero sectors. Reference:
+        # SAMdisk src/samdisk/msa.cpp ReadMSA().
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_ipf_sonde_beansprucht_nur_ipf")
         # MF-1002: die IPF-Sonde beanspruchte jede Datei, die mit
         # 00 00 00 01 beginnt, mit Konfidenz 90 — und wies ein echtes

@@ -31,25 +31,39 @@ typedef struct {
     uint8_t  cyl;
     uint8_t  heads;
     uint8_t  spt;
+    uint8_t  start_trk; /* first cylinder the file records (MF-1427) */
 } msa_plugin_data_t;
 
-/* Simple MSA RLE decompressor (marker 0xE5) */
-static size_t msa_decompress_track(const uint8_t *src, size_t src_len,
-                                    uint8_t *dst, size_t track_size)
+/* MSA RLE decompressor (marker 0xE5).
+ *
+ * MF-1427: returns false for anything SAMdisk's ReadMSA() refuses
+ * (src/samdisk/msa.cpp, MIT): an E5 block with fewer than 4 bytes left
+ * (:96-97), a run past the end of the track (:106-107), and an expansion
+ * that is not exactly the track size (:119-120). Before, a cut E5 block
+ * was copied as data, a long run was silently clipped, and a short
+ * expansion left the rest of the track as calloc zeros under UFT_OK.
+ *
+ * A run of length 0 is still accepted: SAMdisk refuses it, Hatari
+ * (floppies/msa.c) tolerates it — the references disagree. */
+static bool msa_decompress_track(const uint8_t *src, size_t src_len,
+                                 uint8_t *dst, size_t track_size)
 {
     size_t sp = 0, dp = 0;
-    while (sp < src_len && dp < track_size) {
-        if (src[sp] == 0xE5 && sp + 3 < src_len) {
+    while (sp < src_len) {
+        if (src[sp] == 0xE5) {
+            if (src_len - sp < 4) return false;
             uint8_t val = src[sp + 1];
-            uint16_t count = ((uint16_t)src[sp + 2] << 8) | src[sp + 3];
+            size_t count = ((size_t)src[sp + 2] << 8) | src[sp + 3];
             sp += 4;
-            for (uint16_t i = 0; i < count && dp < track_size; i++)
-                dst[dp++] = val;
+            if (count > track_size - dp) return false;
+            memset(dst + dp, val, count);
+            dp += count;
         } else {
+            if (dp >= track_size) return false;
             dst[dp++] = src[sp++];
         }
     }
-    return dp;
+    return dp == track_size;
 }
 
 static bool msa_plugin_probe(const uint8_t *data, size_t size,
@@ -110,24 +124,40 @@ static uft_error_t msa_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     uint8_t *st = calloc(1, st_size);
     if (!st) { free(msa); return UFT_ERROR_NO_MEMORY; }
 
-    /* Decompress each track */
+    /* Decompress each track.
+     *
+     * MF-1427: every inconsistency used to `break` out of the loop and
+     * still return UFT_OK, leaving the rest of the calloc'd image as zeros
+     * — a file cut 100 bytes short opened "fine" with 9198 invented zero
+     * bytes. SAMdisk's ReadMSA() (src/samdisk/msa.cpp:64-120) throws for a
+     * short track header, a stored length of 0 or above the track size,
+     * short data and bad RLE; Hatari (floppies/msa.c) refuses the short
+     * file as "Premature end of file". So does this reader now.
+     * Test: tests/test_msa_kaputt_ist_kein_ok.c. */
     size_t pos = 10;
     for (int t = start_trk; t <= end_trk; t++) {
         for (int s = 0; s < (int)sides; s++) {
-            if (pos + 2 > file_size) break;
-            uint16_t data_len = ((uint16_t)msa[pos] << 8) | msa[pos + 1];
-            pos += 2;
-            if (pos + data_len > file_size) break;
-
-            size_t dst_off = ((size_t)t * sides + s) * track_size;
-            if (data_len == track_size) {
-                /* Uncompressed */
-                memcpy(st + dst_off, msa + pos, track_size);
-            } else {
-                /* RLE compressed */
-                msa_decompress_track(msa + pos, data_len, st + dst_off, track_size);
+            size_t data_len;
+            bool ok = (pos + 2 <= file_size);
+            if (ok) {
+                data_len = ((size_t)msa[pos] << 8) | msa[pos + 1];
+                pos += 2;
+                ok = data_len != 0 && data_len <= track_size
+                     && data_len <= file_size - pos;
             }
-            pos += data_len;
+            if (ok) {
+                size_t dst_off = ((size_t)t * sides + s) * track_size;
+                if (data_len == track_size)
+                    memcpy(st + dst_off, msa + pos, track_size);  /* raw */
+                else
+                    ok = msa_decompress_track(msa + pos, data_len,
+                                              st + dst_off, track_size);
+                pos += data_len;
+            }
+            if (!ok) {
+                free(msa); free(st);
+                return UFT_ERROR_FORMAT_INVALID;
+            }
         }
     }
     free(msa);
@@ -136,6 +166,7 @@ static uft_error_t msa_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     if (!p) { free(st); return UFT_ERROR_NO_MEMORY; }
     p->st_data = st; p->st_size = st_size;
     p->cyl = cyl; p->heads = (uint8_t)sides; p->spt = (uint8_t)spt;
+    p->start_trk = (uint8_t)start_trk;
 
     disk->plugin_data = p;
     disk->geometry.cylinders = cyl;
@@ -163,6 +194,13 @@ static uft_error_t msa_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     msa_plugin_data_t *p = disk->plugin_data;
     if (!p || !p->st_data) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
+
+    /* MF-1427: cylinders below the start track are not in the file. They
+     * came back as nine zero sectors marked OK. Same convention as SCP
+     * (uft_scp_plugin.c:254-260): "not recorded" is a statement about the
+     * capture, not about the disk, and gets TRACK_NOT_FOUND. SAMdisk only
+     * writes the tracks start..end (msa.cpp:59-126). */
+    if (cyl < (int)p->start_trk) return UFT_ERROR_TRACK_NOT_FOUND;
 
     size_t off = ((size_t)cyl * p->heads + head) * p->spt * 512;
     uint8_t buf[512];
