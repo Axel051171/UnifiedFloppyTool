@@ -3009,6 +3009,15 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
 
+### A-041 · Zulieferung `uft-limits-code.zip` pruefen und uebernehmen, was UFT weiterbringt
+- **Status:** erledigt · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** Pfad der Zip ohne weiteren Text (zusammen mit `UFT_DTC_Upgrade_v1.zip`, das A-035 ist)
+- **Kennzahl:** keine der vier
+- **Kanal:** Port (Eigentuemerpaket) — uebernommen wurden Befunde, kein Code
+- **Fertig heißt:** Pruefbericht; Belegtes eingebaut; der Rest benannt
+- **Stand:** kein Code aus dem Paket (zweite Rechnung mit festem Spurkopf, nicht unabhaengiges Orakel, Kollisionen); eingebaut ED-GAP2 41 und gap2 aus dem Profil; P3-603, P3-604
+- **Beleg:** MF-1388
+
 ### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
 - **Status:** erledigt · **Aufgenommen:** 2026-09-27
 - **Wortlaut:** „ja mach das so weiter, arbeite die OPEN_ITEMS liste ab"

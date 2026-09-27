@@ -4223,7 +4223,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
     elseif(${test_name} STREQUAL "test_fdc_gap3"
-           OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet")
+           OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet"
+           OR ${test_name} STREQUAL "test_fdc_gap2_aus_profil")
         # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —
         # anders als die statischen Profiltafeln, die `test_fdc_gaps_1440k`
         # direkt nimmt.

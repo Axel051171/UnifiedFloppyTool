@@ -380,9 +380,16 @@ void uft_fdc_list_formats(void)
  *  dieser Abschnitt behebt. */
 static uint32_t fdc_satzlaenge(const uft_fdc_format_t *f)
 {
+    /* BERICHTIGT MF-1388: hier stand gap2 fest als 22 (MFM) / 11 (FM),
+     * waehrend jedes Profil sein eigenes `gaps.gap2` fuehrt — dieselbe
+     * Groesse an zwei Stellen (MF-1177). Solange alle Profile 22/11
+     * sagten, fiel es nicht auf; beim ED-Profil (gap2 41, gw ibm.py:738-742
+     * und MAME pc_dsk.cpp:92) rechnete die Konstante 36 x 19 = 684 Byte
+     * Spurplatz zu viel frei. Jetzt gilt das Profilfeld. */
+    const uint32_t gap2 = (uint32_t)f->gaps.gap2;
     const uint32_t je_sektor = f->mfm
-        ? (12u + 4u + 4u + 2u + 22u + 12u + 4u)   /* 60 */
-        : (6u + 1u + 4u + 2u + 11u + 6u + 1u);    /* 31 */
+        ? (12u + 4u + 4u + 2u + gap2 + 12u + 4u)  /* 38 + gap2 */
+        : (6u + 1u + 4u + 2u + gap2 + 6u + 1u);   /* 20 + gap2 */
     /* die `+ 2` sind die Daten-CRC; in `uft_fdc_calc_gap3()` steht sie in
      * `data_space` und nicht im Aufschlag. Hier zusammengezogen, damit die
      * Summe an einer Stelle steht. */
