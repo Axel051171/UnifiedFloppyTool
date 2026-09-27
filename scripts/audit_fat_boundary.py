@@ -12,7 +12,7 @@ benutzt.
     src/formats/fat/uft_fat_bootsector.c   cluster_count < 4085
     src/formats/legacy/uft_fdi.c           data_clusters >= 4085   (entfernt MF-1402)
     src/fs/uft_fat12.c                     zweimal, < 4085
-    include/uft/uft_fat12.h                #define … 4084   (0 Aufrufer)
+    include/uft/uft_fat12.h                #define … 4084   (0 Aufrufer; entfernt MF-1425)
 
 Das ist die Form aus MF-870: derselbe Wert unter verschiedenen Namen,
 und Tor 52 (`audit_macro_drift.py`) faengt genau das NICHT — es

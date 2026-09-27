@@ -1,7 +1,6 @@
 {
   "_doc": "Declarations whose parameter count disagrees with the single definition of that name. Rule A: hand-written externs in .c files (MF-442). Rule B: header prototypes (MF-464) — 21 of these were already in the tree when the rule was added; none has a caller yet, which is the only reason they have not bitten. Comparison is on arity only — type spelling varies legitimately across files. An entry here is a KNOWN mismatch, not an acceptable one; the fix is to include the header.",
   "accepted": [
-    "include/uft/formats/cpm.h:cpm_open",
     "include/uft/formats/uft_format_params.h:uft_format_detect",
     "include/uft/formats/uft_imd_adapter.h:uft_imd_get_track",
     "include/uft/formats/uft_scp.h:uft_scp_read",
@@ -10,29 +9,9 @@
     "include/uft/protection/uft_protection.h:uft_copylock_reconstruct",
     "include/uft/uft_core.h:uft_chs_to_lba",
     "include/uft/uft_core.h:uft_detect_format",
-    "include/uft/uft_core.h:uft_lba_to_chs",
-    "src/algorithms/format/uft_format_detect.h:uft_format_detect",
-    "src/algorithms/format/uft_format_detect.h:uft_format_registry_init"
+    "include/uft/uft_core.h:uft_lba_to_chs"
   ],
   "detail": [
-    {
-      "rule": "B",
-      "name": "uft_format_registry_init",
-      "decl_file": "src/algorithms/format/uft_format_detect.h",
-      "decl_line": 146,
-      "decl_arity": 1,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 0
-    },
-    {
-      "rule": "B",
-      "name": "uft_format_detect",
-      "decl_file": "src/algorithms/format/uft_format_detect.h",
-      "decl_line": 174,
-      "decl_arity": 5,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 2
-    },
     {
       "rule": "B",
       "name": "uft_chs_to_lba",
@@ -77,15 +56,6 @@
       "decl_arity": 2,
       "def_file": "src/formats/uft_format_registry.c",
       "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "cpm_open",
-      "decl_file": "include/uft/formats/cpm.h",
-      "decl_line": 35,
-      "decl_arity": 2,
-      "def_file": "src/detect/mfm/cpm_fs.c",
-      "def_arity": 5
     },
     {
       "rule": "B",
@@ -170,6 +140,12 @@
       "include/uft/formats/c64/uft_c64_bam.h:bam_sector_offset",
       "include/uft/formats/c64/uft_c64_bam.h:bam_validate",
       "_note: aufgeloest durch das Entfernen von include/uft/formats/c64/uft_c64_bam.h — ein Header ohne jeden #include und ohne Aufrufer (gemessen 2026-09-20, Eimer-4-Zensus). Dieselbe Gestalt wie MF-622."
+    ],
+    "MF-1425": [
+      "include/uft/formats/cpm.h:cpm_open",
+      "src/algorithms/format/uft_format_detect.h:uft_format_detect",
+      "src/algorithms/format/uft_format_detect.h:uft_format_registry_init",
+      "_note: die abweichende Deklaration stand in include/uft/formats/cpm.h bzw. src/algorithms/format/uft_format_detect.h — beide ohne Einbinder, geloescht (Paket B3, 2026-09-27)."
     ]
   }
 }

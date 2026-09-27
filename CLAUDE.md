@@ -159,7 +159,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 > seit MF-1176 (`uft_roland_identify()`, sieben Fälle aus Sektor 0, doppelt
 > belegt); registriert ist sie nicht, weil das Moratorium der
 > EINFRIER-REGEL gemessen weiter gilt (`nfd` steht auf T2, nicht T1/T1b).
-> Siehe **P3-427**. Und `include/uft/formats/rolandd20.h` ist ein
+> Siehe **P3-427**. Und `include/uft/formats/rolandd20.h` war ein
 > Phantom-Header: vier Zeilen, kein `.c`, kein Inhalt.
 
 > **Ehrlichkeits-Hinweis (MF-729) — kopflose Formate werden nur an der

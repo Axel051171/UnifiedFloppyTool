@@ -8,31 +8,6 @@
     "UFT_CAP_WEAK_BITS",
     "UFT_CONFIDENCE_HIGH",
     "UFT_CONFIDENCE_LOW",
-    "UFT_ERROR_BUFFER_TOO_SMALL",
-    "UFT_ERROR_CANCELLED",
-    "UFT_ERROR_CRC",
-    "UFT_ERROR_DISK_NOT_READY",
-    "UFT_ERROR_DISK_PROTECTED",
-    "UFT_ERROR_ENCODING",
-    "UFT_ERROR_FILE_NOT_FOUND",
-    "UFT_ERROR_FILE_OPEN",
-    "UFT_ERROR_FILE_READ",
-    "UFT_ERROR_FILE_SEEK",
-    "UFT_ERROR_FILE_TOO_LARGE",
-    "UFT_ERROR_FILE_WRITE",
-    "UFT_ERROR_FORMAT_INVALID",
-    "UFT_ERROR_FORMAT_UNKNOWN",
-    "UFT_ERROR_FORMAT_VERSION",
-    "UFT_ERROR_INVALID_PARAM",
-    "UFT_ERROR_NOT_IMPLEMENTED",
-    "UFT_ERROR_NOT_SUPPORTED",
-    "UFT_ERROR_NULL_POINTER",
-    "UFT_ERROR_SECTOR_NOT_FOUND",
-    "UFT_ERROR_TIMEOUT",
-    "UFT_ERROR_TRACK_NOT_FOUND",
-    "UFT_ERROR_UNKNOWN",
-    "UFT_ERROR_WEAK_BITS",
-    "UFT_FORMAT_MAX",
     "UFT_IMD_SECTOR_COMPRESSED",
     "UFT_IMD_SECTOR_DELETED",
     "UFT_IMD_SECTOR_ERROR",
@@ -179,360 +154,6 @@
         "include/uft/detect/uft_format_detect.h"
       ]
     },
-    "UFT_ERROR_BUFFER_TOO_SMALL": {
-      "enum": [
-        5
-      ],
-      "macro": [
-        -2
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_CANCELLED": {
-      "enum": [
-        9
-      ],
-      "macro": [
-        -92
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_CRC": {
-      "enum": [
-        206
-      ],
-      "macro": [
-        -24
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_DISK_NOT_READY": {
-      "enum": [
-        300
-      ],
-      "macro": [
-        -53
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_DISK_PROTECTED": {
-      "enum": [
-        301
-      ],
-      "macro": [
-        -54
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_ENCODING": {
-      "enum": [
-        307
-      ],
-      "macro": [
-        -27
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_NOT_FOUND": {
-      "enum": [
-        100
-      ],
-      "macro": [
-        -11
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_OPEN": {
-      "enum": [
-        101
-      ],
-      "macro": [
-        -15
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_READ": {
-      "enum": [
-        102
-      ],
-      "macro": [
-        -16
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_SEEK": {
-      "enum": [
-        104
-      ],
-      "macro": [
-        -18
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_TOO_LARGE": {
-      "enum": [
-        106
-      ],
-      "macro": [
-        -10
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FILE_WRITE": {
-      "enum": [
-        103
-      ],
-      "macro": [
-        -19
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FORMAT_INVALID": {
-      "enum": [
-        201
-      ],
-      "macro": [
-        -25
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FORMAT_UNKNOWN": {
-      "enum": [
-        200
-      ],
-      "macro": [
-        -26
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_FORMAT_VERSION": {
-      "enum": [
-        202
-      ],
-      "macro": [
-        -22
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_INVALID_PARAM": {
-      "enum": [
-        2
-      ],
-      "macro": [
-        -1
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_NOT_IMPLEMENTED": {
-      "enum": [
-        6
-      ],
-      "macro": [
-        -41
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_NOT_SUPPORTED": {
-      "enum": [
-        7
-      ],
-      "macro": [
-        -40
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_NULL_POINTER": {
-      "enum": [
-        3
-      ],
-      "macro": [
-        -5,
-        -1
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h",
-        "include/uft/core/uft_error_ext.h"
-      ]
-    },
-    "UFT_ERROR_SECTOR_NOT_FOUND": {
-      "enum": [
-        303
-      ],
-      "macro": [
-        -65
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_TIMEOUT": {
-      "enum": [
-        8
-      ],
-      "macro": [
-        -53
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_TRACK_NOT_FOUND": {
-      "enum": [
-        302
-      ],
-      "macro": [
-        -65
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_UNKNOWN": {
-      "enum": [
-        1
-      ],
-      "macro": [
-        -100
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_ERROR_WEAK_BITS": {
-      "enum": [
-        502
-      ],
-      "macro": [
-        -61
-      ],
-      "enum_files": [
-        "src/core/uft_error_codes.h"
-      ],
-      "macro_files": [
-        "include/uft/core/uft_error_compat_gen.h"
-      ]
-    },
-    "UFT_FORMAT_MAX": {
-      "enum": [
-        27,
-        54
-      ],
-      "macro": [
-        64
-      ],
-      "enum_files": [
-        "include/uft/profiles/uft_format_registry.h",
-        "include/uft/uft_types.h"
-      ],
-      "macro_files": [
-        "src/algorithms/format/uft_format_detect.h"
-      ]
-    },
     "UFT_IMD_SECTOR_COMPRESSED": {
       "enum": [
         2
@@ -602,6 +223,34 @@
       "HFE_IF_S950_DD",
       "HFE_IF_S950_HD",
       "_note: die Interface-Tabelle im registrierten HFE-Plugin war ab 0x08 um eins verschoben (IBMPC_ED fehlte). Nach der Berichtigung stimmen Plugin-Enum und include/uft/uft_hfe_format.h ueberein — die Namen kollidieren zwar weiter, aber nicht mehr mit ABWEICHENDEN Werten, und genau das war der Grund fuer den Eintrag."
+    ],
+    "MF-1425": [
+      "UFT_ERROR_BUFFER_TOO_SMALL",
+      "UFT_ERROR_CANCELLED",
+      "UFT_ERROR_CRC",
+      "UFT_ERROR_DISK_NOT_READY",
+      "UFT_ERROR_DISK_PROTECTED",
+      "UFT_ERROR_ENCODING",
+      "UFT_ERROR_FILE_NOT_FOUND",
+      "UFT_ERROR_FILE_OPEN",
+      "UFT_ERROR_FILE_READ",
+      "UFT_ERROR_FILE_SEEK",
+      "UFT_ERROR_FILE_TOO_LARGE",
+      "UFT_ERROR_FILE_WRITE",
+      "UFT_ERROR_FORMAT_INVALID",
+      "UFT_ERROR_FORMAT_UNKNOWN",
+      "UFT_ERROR_FORMAT_VERSION",
+      "UFT_ERROR_INVALID_PARAM",
+      "UFT_ERROR_NOT_IMPLEMENTED",
+      "UFT_ERROR_NOT_SUPPORTED",
+      "UFT_ERROR_NULL_POINTER",
+      "UFT_ERROR_SECTOR_NOT_FOUND",
+      "UFT_ERROR_TIMEOUT",
+      "UFT_ERROR_TRACK_NOT_FOUND",
+      "UFT_ERROR_UNKNOWN",
+      "UFT_ERROR_WEAK_BITS",
+      "UFT_FORMAT_MAX",
+      "_note: die Makro-Seite stand in src/core/uft_error_codes.h — geloescht, weil ohne Einbinder (Paket B3, Eigentuemerentscheidung 2026-09-27)."
     ]
   }
 }

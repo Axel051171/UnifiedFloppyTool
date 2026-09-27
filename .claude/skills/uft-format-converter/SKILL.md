@@ -47,7 +47,7 @@ warnings and audit entries.
 | # | File | Purpose |
 |---|------|---------|
 | 1 | `src/convert/uft_convert_<src>_to_<dst>.c` | Conversion function |
-| 2 | `include/uft/convert/uft_format_convert.h` | Public API entry |
+| 2 | `include/uft/uft_format_convert.h` | Public API entry |
 | 3 | `src/convert/uft_convert_registry.c` | Path registration |
 | 4 | `tests/test_convert_<src>_to_<dst>.c` | Round-trip test |
 
