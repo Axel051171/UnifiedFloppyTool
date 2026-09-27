@@ -501,9 +501,19 @@ static const uft_fat_geometry_t uft_fat_std_geometries[] = {
     { "MSX 720KB DD",      1440,  9, 2, 80, 2, 112, 3, 0xF9, UFT_FAT_PLATFORM_MSX },
     { "MSX 360KB SS",       720,  9, 1, 80, 2, 112, 3, 0xF8, UFT_FAT_PLATFORM_MSX },
     
-    /* Atari ST formats */
-    { "Atari ST SS",        720,  9, 1, 80, 2, 112, 3, 0xF8, UFT_FAT_PLATFORM_ATARI },
-    { "Atari ST DS",       1440,  9, 2, 80, 2, 112, 3, 0xF9, UFT_FAT_PLATFORM_ATARI },
+    /* Atari ST formats.
+     * MF-1374: SS and DS carry 5 sectors per FAT, not the PC-720K 3 — two
+     * independent sources: SED 5.68 (media-byte table in SED_568.HLP,
+     * read only, commercial) and Hatari createBlankImage.c:13-27/:143-148
+     * (GPL-2, read only: `nTracks >= 80 -> SPF = 5`). The size cannot
+     * decide it, 3 would fit as well (tests/test_fat_atari_geometrie.c).
+     * NOT BELEGT, left as they were: the SS media byte (SED 0xF9, Hatari
+     * 0xF8, "isn't used by ST-BIOS") and the HD row (SED SPF 6, Hatari
+     * SPF 9, both SPC 2 — the sources disagree). P3-597; and these rows
+     * are unreachable through uft_fat_geometry_from_size(), which returns
+     * the first row of a size — the PC rows come first. */
+    { "Atari ST SS",        720,  9, 1, 80, 2, 112, 5, 0xF8, UFT_FAT_PLATFORM_ATARI },
+    { "Atari ST DS",       1440,  9, 2, 80, 2, 112, 5, 0xF9, UFT_FAT_PLATFORM_ATARI },
     { "Atari ST HD",       2880, 18, 2, 80, 1, 224, 9, 0xF0, UFT_FAT_PLATFORM_ATARI },
     
     /* PC-98 formats */
