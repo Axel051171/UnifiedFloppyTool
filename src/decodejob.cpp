@@ -177,6 +177,7 @@ void DecodeJob::run()
     const QString resultMsg = resultMessage(m_result);
 
     emit progress(100);
+    emit resultReady(m_result);   /* P3-555: before finished(), by value */
     emit finished(resultMsg);
 
     qDebug() << "DecodeJob::run() completed successfully";

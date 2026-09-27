@@ -147,6 +147,8 @@ private:
     bool m_isPaused;
     QThread* m_workerThread;
     DecodeJob* m_decodeJob;
+    /** P3-555: did the last decode put a sector into the model? */
+    bool m_decodeHatSektoren = false;
     FluxCaptureJob* m_captureJob;
     FluxWriteJob* m_writeJob;
     int m_fluxThreadsRunning = 0;   /* #43: see fluxJobRunningChanged() */

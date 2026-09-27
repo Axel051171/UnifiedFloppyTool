@@ -86,6 +86,10 @@ struct JobRun {
     QString finished;
     QString error;
     DecodeResult result;
+    /* P3-555 (MF-1382): the result as it LEAVES the job, carried by
+     * resultReady() — what the Workflow tab decides its heading from. */
+    int readyCount = 0;
+    int readyTotal = -1;
 };
 
 QString corpus(const QString &name)
@@ -116,6 +120,11 @@ JobRun runJob(const QString &path, StatusTab *tab = nullptr)
     QSignalSpy spy(&job, s.constData());
     QSignalSpy fin(&job, SIGNAL(finished(QString)));
     QSignalSpy err(&job, SIGNAL(error(QString)));
+    QObject::connect(&job, &DecodeJob::resultReady, &job,
+                     [&r](const DecodeResult &res) {
+                         r.readyCount++;
+                         r.readyTotal = res.totalSectors;
+                     }, Qt::DirectConnection);
     job.run();
 
     for (const QList<QVariant> &a : spy) {
@@ -250,6 +259,15 @@ private slots:
         QVERIFY2(r.error.isEmpty(), qPrintable("Fehler statt Ergebnis: " + r.error));
         QVERIFY2(!r.finished.isEmpty(), "Der Auftrag endete nicht.");
 
+        /* P3-555 (MF-1382): the Workflow tab put this run under the
+         * heading "Success" and sent operationFinished(true) — for a run
+         * that decoded nothing. The decision now comes from the result
+         * the job hands out with resultReady(). */
+        QCOMPARE(r.readyCount, 1);
+        QCOMPARE(r.readyTotal, r.result.totalSectors);
+        QVERIFY2(!DecodeJob::decodedAnything(r.result),
+                 "eine Flussdatei ohne Sektorzerlegung gilt als dekodiert");
+
         const QMap<QString, int> t = tally(r.em);
         qInfo().noquote() << name << "| gesendet:" << show(t)
                           << "| gut" << r.result.goodSectors
@@ -366,6 +384,12 @@ private slots:
         QCOMPARE(r.result.goodSectors, 0);
         QCOMPARE(r.result.badSectors, 0);
         QCOMPARE(r.result.totalSectors, erwartet);
+        /* P3-555 (MF-1382), the other side: sectors in the model ARE a
+         * decode — so "decoded" is not simply "never". */
+        QCOMPARE(r.readyCount, 1);
+        QCOMPARE(r.readyTotal, erwartet);
+        QVERIFY2(DecodeJob::decodedAnything(r.result),
+                 "ein Behaelter mit 1512 Sektoren im Modell gilt als nicht dekodiert");
 #ifdef UFT_DECODEJOB_MODEL_STATUS
         QCOMPARE(r.result.uncheckedSectors, erwartet);
         QCOMPARE(r.result.tracksWithoutSectors, 0);

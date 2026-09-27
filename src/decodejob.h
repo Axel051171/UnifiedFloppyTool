@@ -172,7 +172,18 @@ public:
      * @brief Get decode results after completion
      */
     DecodeResult result() const { return m_result; }
-    
+
+    /**
+     * @brief Did the run decode anything? (P3-555, MF-1382)
+     *
+     * True iff the model holds at least one sector — the same line
+     * resultMessage() draws between "N Sektoren gelesen" and "keine
+     * Sektoraussage". One rule for every caller that has to say
+     * "success": a flux run the plugin does not split into sectors ENDS,
+     * it does not SUCCEED.
+     */
+    static bool decodedAnything(const DecodeResult& r) { return r.totalSectors > 0; }
+
     /**
      * @brief Request cancellation of running job
      */
@@ -254,6 +265,14 @@ signals:
      */
     void imageInfo(const DecodeResult& info);
     
+    /**
+     * @brief The final tally, emitted right BEFORE finished() (P3-555).
+     *
+     * Carried by value: a caller in another thread must not read the job
+     * object itself after finished(), which is also wired to deleteLater.
+     */
+    void resultReady(const DecodeResult& result);
+
     /**
      * @brief Job completed successfully
      */
