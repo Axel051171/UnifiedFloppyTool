@@ -105,7 +105,9 @@ int uft_ipf_zellstrom(const ipf_air_disk_t *disk, int cyl, int head,
     const int bloecke = ipf_air_get_block_count(disk, cyl, head);
     if (bloecke <= 0 || track_bits == 0) return -1;
 
-    /* MF-830 hat den Verlust schon gemessen und festgehalten; hier
+    /* NACHGETRAGEN MF-1385: die Grenze gibt es seit MF-1373 nicht mehr — die Bloecke werden angelegt, so viele wie der DATA-Satz traegt (P3-361 Weg b); am Korpus belegt: Spur 79/0 baut alle 35.
+     *
+     * MF-830 hat den Verlust schon gemessen und festgehalten; hier
      * wird er zum ersten Mal an einem echten Abbild SICHTBAR.
      * `IPF_MAX_BLOCKS` ist 16, und Spur 79/0 von
      * `sps_lethalxcess_a.ipf` sagt **35** Bloecke an — 19

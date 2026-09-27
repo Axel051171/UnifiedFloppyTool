@@ -107,6 +107,7 @@ int ipf_air_get_track_meta(const ipf_air_disk_t *disk, int cyl, int head,
  * @brief Was die Datei je Spur ANKUENDIGT gegen das, was dieser Leser HAELT.
  *
  * MF-830. Der Leser fasst hoechstens IPF_MAX_BLOCKS (16) Bloecke je Spur.
+ * NACHGETRAGEN MF-1385: die Grenze gibt es seit MF-1373 nicht mehr — die Bloecke werden angelegt, so viele wie der DATA-Satz traegt (P3-361 Weg b); am Korpus belegt: Spur 79/0 baut alle 35.
  * Gibt eine Datei mehr an, wurde der Rest bis MF-830 STILL verworfen: die
  * Zahlen dafuer lagen beide vor (`block_count` aus dem IMGE-Satz,
  * `actual_blocks` aus dem Lesevorgang), nur verglichen hat sie niemand.
