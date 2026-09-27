@@ -58,9 +58,6 @@ src/formats/amstrad/trd_scl.c
 src/formats/apple/mac_dsk.c
 src/formats/apple/prodos_po_do.c
 src/formats/apple/uft_2mg_parser.c
-src/formats/apple/uft_dart.c
-src/formats/apple/uft_edd.c
-src/formats/apple/uft_ndif.c
 src/formats/apple/woz.c
 src/formats/atari/atari_util.c
 src/formats/atari/atr.c
@@ -80,17 +77,7 @@ src/formats/bbc/uft_bbc_tape.c
 src/formats/brother/brother.c
 src/formats/cbm/uft_cbm_formats.c
 src/formats/cmd_fd/uft_cmd_fd.c
-src/formats/commodore/crt.c
 src/formats/commodore/d81.c
-src/formats/commodore/dnp.c
-src/formats/commodore/dnp2.c
-src/formats/commodore/p00.c
-src/formats/commodore/prg.c
-src/formats/commodore/t64.c
-src/formats/commodore/uft_m2i.c
-src/formats/commodore/x64.c
-src/formats/commodore/x71.c
-src/formats/commodore/x81.c
 src/formats/cpm/uft_supercopy_detect.c
 src/formats/d81/uft_d81_parser_v2.c
 src/formats/dec/uft_rx50.c

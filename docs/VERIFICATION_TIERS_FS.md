@@ -8,13 +8,13 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 
 | Stufe | Leser | heisst |
 |---|---|---|
-| FS-T0 | 27 | kein Test |
+| FS-T0 | 26 | kein Test |
 | FS-T1 | 7 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
 | FS-T2 | 4 | Korpus von **registrierter** fremder Hand |
-| **gesamt gefuehrt** | **38** | |
+| **gesamt gefuehrt** | **37** | |
 
-Dazu **30 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
+Dazu **29 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
 
 ## Pro Leser
 
@@ -48,7 +48,6 @@ Dazu **30 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_flex` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_fs_amigados_driver` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_geos` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
-| `uft_m2i` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_mgt` | **FS-T1** | `test_mgt_gegen_mame`, `test_mgt_verzeichnis_vollstaendig` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_msx` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_opus` | **FS-T1** | `test_opd_geometrie` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
@@ -63,7 +62,7 @@ Dazu **30 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 
 Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser Abschnitt nennt Dateien im uebrigen Baum, die ein **Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier steht, worueber zu entscheiden ist, nicht ein Urteil.
 
-Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **38** Leser, waehrend der Baum **68** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
+Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **37** Leser, waehrend der Baum **66** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
 
 Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`).
 
@@ -79,7 +78,7 @@ Ein Zaehler auf Begriffsnennungen misst ausserdem die falsche Sache. Ein Dateisy
 
 Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDOS** (`uft_adf_parser_v3.c`), **BBC DFS**, **CBM DOS** (`uft_d64_parser_v3.c`) und **CP/M** (`uft_cpm_diskdef.c`) — und laesst zwei fallen, die keine Dateisysteme sind: `uft_jv3.c` ist ein Abbildformat, `mfm_detect.c` ein Erkenner.
 
-**30 Kandidaten**, nach Nennungen sortiert:
+**29 Kandidaten**, nach Nennungen sortiert:
 
 | Datei | Verzeichnis-Nennungen | Zeilen |
 |---|---|---|
@@ -101,7 +100,6 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/msx/uft_msx.c` | 7 | 987 |
 | `src/formats/scl/uft_scl_parser_v2.c` | 7 | 513 |
 | `src/formats/c64/uft_geos.c` | 6 | 585 |
-| `src/formats/commodore/uft_m2i.c` | 6 | 433 |
 | `src/formats/flex/uft_flex.c` | 6 | 276 |
 | `src/fileops/uft_file_ops_extended.c` | 5 | 663 |
 | `src/formats/atari/atari_check.c` | 5 | 752 |

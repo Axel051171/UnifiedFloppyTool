@@ -9,7 +9,7 @@
 | Kennzahl | Stand | Richtung | Quelle |
 |---|---|---|---|
 | ungeprüfte **Format-Plugins** (T3) | **1** von 87 | runter | `docs/VERIFICATION_TIERS.md` |
-| ungeprüfte **Dateisystem-Leser** | T0 27 · T1 7 · T1b 0 · T2 4 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
+| ungeprüfte **Dateisystem-Leser** | T0 26 · T1 7 · T1b 0 · T2 4 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
 | angebotene **Wandlungspfade** | **18**, davon 7 verlustfrei | rauf | `src/core/uft_roundtrip.c` |
 | leckende Tests | 0 zu halten | null halten | ASan/UBSan in CI |
 | **Bench-Alter je Controller** | keine Hardware (MF-310) | runter | `docs/CAPABILITIES.md` |
@@ -23,7 +23,7 @@
 - **7** Port-Erklärungen im Quellkopf, davon **1** ohne SPDX-Kopf
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
-- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **179**
+- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **177**
 - Quarantäne: 2 vollzogen, 7 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone

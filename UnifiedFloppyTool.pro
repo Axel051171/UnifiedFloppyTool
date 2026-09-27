@@ -1331,20 +1331,10 @@ HEADERS += \
 
 # Commodore formats (21 files)
 SOURCES += \
-    src/formats/commodore/crt.c \
     src/formats/commodore/d67.c \
     src/formats/commodore/d80.c \
     src/formats/commodore/d81.c \
-    src/formats/commodore/d82.c \
-    src/formats/commodore/dnp.c \
-    src/formats/commodore/dnp2.c \
-    src/formats/commodore/p00.c \
-    src/formats/commodore/prg.c \
-    src/formats/commodore/t64.c \
-    src/formats/commodore/uft_m2i.c \
-    src/formats/commodore/x64.c \
-    src/formats/commodore/x71.c \
-    src/formats/commodore/x81.c
+    src/formats/commodore/d82.c
 
 # Amstrad formats (6 files)
 SOURCES += \
@@ -1361,10 +1351,7 @@ SOURCES += \
     src/formats/apple/uft_moof_parser.c \
     src/formats/apple/uft_apple_gcr.c \
     src/formats/apple/uft_woz.c \
-    src/formats/apple/woz.c \
-    src/formats/apple/uft_ndif.c \
-    src/formats/apple/uft_edd.c \
-    src/formats/apple/uft_dart.c
+    src/formats/apple/woz.c
 
 # Atari formats (19 files)
 SOURCES += \
@@ -1550,10 +1537,7 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     include/uft/formats/polyglot_boot.h \
-    include/uft/formats/apple/uft_moof.h \
-    include/uft/formats/apple/uft_ndif.h \
-    include/uft/formats/apple/uft_edd.h \
-    include/uft/formats/apple/uft_dart.h
+    include/uft/formats/apple/uft_moof.h
 
 # Atari DOS Filesystem Module
 SOURCES += \
@@ -1689,9 +1673,6 @@ HEADERS += \
 SOURCES += \
     src/formats/nordic/uft_abc800.c
 
-# Northstar (1 files)
-SOURCES += \
-
 # Obscure (5 files)
 SOURCES += \
     src/formats/obscure/uft_applix.c \
@@ -1749,14 +1730,11 @@ SOURCES +=
 # TI99 (4 files)
 SOURCES += \
     src/formats/ti99/uft_fiad.c \
-    src/formats/ti99/uft_tifiles.c \
+    src/formats/ti99/uft_tifiles.c
 
 # Thomson (1 files)
 SOURCES += \
     src/formats/thomson/sap.c
-
-# Victor (1 files)
-SOURCES += \
 
 # X68K (1 files)
 SOURCES +=
