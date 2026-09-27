@@ -1666,6 +1666,28 @@
       "oracle": "disk-analyse",
       "fremdcode": "nein - der INHALT ist UFT-eigen (selbstbenennend, kein Bootblock, kein Dateisystem); fremd ist allein die IPF-Kodierung. Das INFO-Feld traegt disk-analyses Kennung crc32(\"User IPF\") = 0x843265bb und ist unveraendert (Bitte des Autors im Quelltext, SPS-Erhaltungen nicht nachzuahmen).",
       "content": "IPF, CAPS-Kodierer (encoder 1), Zylinder 0..3 IBM-PC DD mit je 19 Bloecken (mehr als die fruehere Klemme von 16, P3-361), Fuellbyte 0x4E, letzter Zwischenraum 4342 Zellen, Startbit 1280. INFO nennt Plattform AMIGA - disk-analyse schreibt das fuer JEDE Datei (ipf.c: info.platform[0] = 1); UFT waehlt den Dekoder deshalb nach dem Inhalt. Seit MF-1373 72 von 72 Sektoren an ihrer eigenen Ortsmarke (voll: 1440 von 1440)."
+    },
+    {
+      "file": "tests/corpus/wozaday_gauntlet_e7.woz",
+      "sha256": "92df2ec79d7e544b27df2baab9ea422fc074cd1a4a42cb8ec00f70b8a2c8590d",
+      "format": "woz",
+      "origin": "real",
+      "tool": "Applesauce (4am, woz-a-day collection) — echte Aufnahme einer physischen Diskette, WOZ2",
+      "source": "archive.org item wozaday_Gauntlet, file 00playable.woz. Gauntlet (Atari Games / Mindscape 1986), Apple ][+ 64K. 4ams Beschreibung nennt das Schutzverfahren: \"this version was protected with the E7 bitstream\" — benannte Referenz, nicht eigene Messung. Spielcode urheberrechtlich geschuetzt, KEINE Lizenz angegeben -> LOCAL-ONLY (tests/corpus/ ist gitignored, .gitignore:153), keine Weitergabe. Kanal: Daten/Fixture (MF-695).",
+      "test": "test_woz_echte_aufnahme",
+      "fremdcode": "ja - Spielcode. Deshalb LOCAL-ONLY und nur als Fixture benutzt; kein Byte davon geht in den Baum.",
+      "content": "35 Spuren mit Daten, 28 verschiedene Bitlaengen, Spanne 119 (51505..51624) - gemessen am TRKS-Block. Die Streuung belegt eine ECHTE Aufnahme; sie belegt NICHT, dass der Schutz intakt ist."
+    },
+    {
+      "file": "tests/corpus/wozaday_copy2plus_52.woz",
+      "sha256": "320fa26ce94ecd020f4b11205b062e3e685313ca3f5c3c39aeefa5f9e0ad9063",
+      "format": "woz",
+      "origin": "real",
+      "tool": "Applesauce (4am, woz-a-day collection) — echte Aufnahme einer physischen Diskette, WOZ2",
+      "source": "archive.org item wozaday_Copy_II_Plus_5_2, file 00playable.woz. Copy II Plus v5.2 (Central Point Software 1985), Apple ][+ 48K. Ein KOPIERPROGRAMM - die Achse aus P3-79 (Artefaktsignaturen identifizieren Codefamilien, bisher nur 17 C64-Kopierprogramme). KEINE Lizenz angegeben -> LOCAL-ONLY, keine Weitergabe. Kanal: Daten/Fixture (MF-695).",
+      "test": "test_woz_echte_aufnahme",
+      "fremdcode": "ja - Programmcode. LOCAL-ONLY, nur als Fixture.",
+      "content": "35 Spuren mit Daten, 33 verschiedene Bitlaengen, Spanne 161 (51050..51211) - gemessen am TRKS-Block. 4ams Beschreibung nennt KEIN Schutzverfahren."
     }
   ]
 }

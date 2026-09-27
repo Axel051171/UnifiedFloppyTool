@@ -3669,7 +3669,12 @@ foreach(test_source ${TEST_SOURCES})
            # P3-599 / K4: oeffnet vice_c1541_1571.g71 ueber den ECHTEN
            # `uft_disk_open()` und liest beide Seiten — derselbe Weg wie
            # der Analysator, also dieselbe Menge.
-           OR ${test_name} STREQUAL "test_g71_liefert_sektoren")
+           OR ${test_name} STREQUAL "test_g71_liefert_sektoren"
+           # Echte Applesauce-Aufnahmen gegen das selbst erzeugte
+           # Kontrollabbild: geht durch `uft_disk_open()`, also dieselbe
+           # Menge. Braucht beide Korpuspfade — der freie traegt die
+           # Kontrolle, der lokale die Aufnahmen (LOCAL-ONLY).
+           OR ${test_name} STREQUAL "test_woz_echte_aufnahme")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
@@ -3706,7 +3711,11 @@ foreach(test_source ${TEST_SOURCES})
             # Pfad steht hier statt als `UFT_CORPUS_DIR "/../.."`, weil
             # eine Ableitung ueber zwei Ebenen bei jeder Umstellung des
             # Korpusverzeichnisses still falsch wuerde.
-            UFT_REPO_DIR="${CMAKE_SOURCE_DIR}")
+            UFT_REPO_DIR="${CMAKE_SOURCE_DIR}"
+            # Der LOKALE Korpus (gitignored): echte Aufnahmen mit
+            # geschuetztem Inhalt. Wer ihn nicht hat, ueberspringt die
+            # betroffenen Abschnitte SICHTBAR mit 77 — nie still.
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_amiga_decoder_limits")
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE
