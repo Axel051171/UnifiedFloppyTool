@@ -368,6 +368,26 @@ private slots:
                  "zurueck auf der Sektorebene muss die Beschriftung wieder "
                  "da sein");
     }
+
+    /* P3-602 / MF-1436: "Track Alignment Issues" hat im Baum keinen
+     * Erkenner und wurde in diesem Reiter nie gelesen. Es ist abgeschaltet,
+     * ungesetzt und nennt den Grund — auch nach jedem Moduswechsel, denn
+     * die Modi schalten Elemente an und aus. */
+    void spurausrichtung_sagt_dass_sie_fehlt()
+    {
+        FormatTab tab;
+        auto *k = tab.findChild<QCheckBox *>(QStringLiteral("checkC64Alignment"));
+        QVERIFY(k);
+        auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
+        QVERIFY(lvl);
+        for (int stufe : { (int)UFT_COPY_FLUX, (int)UFT_COPY_SECTOR }) {
+            waehle(lvl, (uft_copy_level_t)stufe);
+            QVERIFY2(!k->isEnabled(), "Spurausrichtung bedienbar ohne Erkenner");
+            QVERIFY2(!k->isChecked(), "ein Haken ohne Wirkung");
+            QVERIFY2(k->toolTip().contains(QStringLiteral("P3-602")),
+                     qPrintable(k->toolTip()));
+        }
+    }
 };
 
 QTEST_MAIN(TestFormatTabBindung)

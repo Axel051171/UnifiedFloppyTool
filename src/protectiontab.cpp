@@ -9,6 +9,7 @@
  */
 
 #include "protectiontab.h"
+#include "gui/uft_spurausrichtung.h"
 #include "ui_tab_protection.h"
 #include <QMessageBox>
 
@@ -184,7 +185,7 @@ void ProtectionTab::applyProfile(const QString& profileName) {
         ui->checkC64Expert->setChecked(true);
         ui->checkC64WeakBits->setChecked(true);
         ui->checkC64VarTiming->setChecked(true);
-        ui->checkC64Alignment->setChecked(true);
+        /* MF-1436: checkC64Alignment bleibt aus - kein Erkenner (P3-602) */
         ui->checkHalfTrack->setChecked(true);
         syncC64Widgets(true);
     }
@@ -318,7 +319,7 @@ void ProtectionTab::loadSettings() {
     ui->checkC64Expert->setChecked(settings.value("c64Expert", false).toBool());
     ui->checkC64WeakBits->setChecked(settings.value("c64WeakBits", true).toBool());
     ui->checkC64VarTiming->setChecked(settings.value("c64VarTiming", true).toBool());
-    ui->checkC64Alignment->setChecked(settings.value("c64Alignment", false).toBool());
+    uftSperreSpurausrichtung(ui->checkC64Alignment);  /* MF-1436: kein Erkenner, ein gespeicherter Haken gilt nicht */
     ui->checkC64SectorCount->setChecked(settings.value("c64SectorCount", true).toBool());
     
     settings.endGroup();
@@ -430,6 +431,7 @@ void ProtectionTab::setupDefaults() {
     // Ensure expert groups are initially disabled
     ui->groupC64ExpertParams->setEnabled(false);
     ui->groupDDExpert->setEnabled(false);
+    uftSperreSpurausrichtung(ui->checkC64Alignment);
 }
 
 void ProtectionTab::syncC64Widgets(bool enabled) {

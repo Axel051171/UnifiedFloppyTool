@@ -6296,6 +6296,7 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_visual_disk_no_fiction" OR
            ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
            ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
+           ${qt_test_name} STREQUAL "test_protection_bedienelemente" OR
            ${qt_test_name} STREQUAL "test_decode_job_no_fiction" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
            ${qt_test_name} STREQUAL "test_main_window_fits_fullhd" OR
@@ -6418,6 +6419,7 @@ if(TARGET Qt6::Test)
                     UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
                    ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
+                   ${qt_test_name} STREQUAL "test_protection_bedienelemente" OR
                    ${qt_test_name} STREQUAL "test_decode_job_no_fiction")
                 # MF-576: der Status-Reiter mit der Belegungskarte. Er
                 # bettet ProtectionAnalysisWidget ein, und DecodeJob
@@ -6440,6 +6442,17 @@ if(TARGET Qt6::Test)
                 # Korpus-Abbilder. Ohne diese Definition uebersprang sich
                 # der Test — die Falle aus MF-598 —, also bricht er dann ab.
                 if(${qt_test_name} STREQUAL "test_decode_job_no_fiction")
+                    target_compile_definitions(${qt_test_name} PRIVATE
+                        UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+                endif()
+                # MF-1436 / P3-602: Filter der Schutzanalyse gegen das
+                # VICE-G64 und das Spurausrichtungs-Kaestchen im
+                # Protection Analyzer (der eigene Reiter samt Formular).
+                if(${qt_test_name} STREQUAL "test_protection_bedienelemente")
+                    target_sources(${qt_test_name} PRIVATE
+                        ${CMAKE_SOURCE_DIR}/src/protectiontab.cpp
+                        ${CMAKE_SOURCE_DIR}/forms/tab_protection.ui
+                        ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c)
                     target_compile_definitions(${qt_test_name} PRIVATE
                         UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
                 endif()

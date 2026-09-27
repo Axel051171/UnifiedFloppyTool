@@ -367,6 +367,23 @@ void ToolsTab::onTrackView()
         grid->updateTrackStatus(s.cyl, s.head, st,
                                 gut > 0 ? gut : 0,
                                 static_cast<int>(s.sektoren));
+
+        /* P3-602 / MF-1436: die drei Signale dieser Messung als Schutz-
+         * SIGNAL an die Spur. Das Raster urteilt damit nicht auf
+         * Kopierschutz (updateTrackProtection() setzt seither keinen
+         * Zustand PROTECTED) — es zeigt, WAS gemessen wurde. Eine Spur
+         * kann mehrere tragen; gezeigt wird das erste in dieser Reihe,
+         * der Name nennt alle Zaehler. */
+        if (s.schwach || s.crc_fehler || s.ohne_daten) {
+            const ProtectionType typ =
+                s.schwach    ? ProtectionType::WEAK_BITS :
+                s.crc_fehler ? ProtectionType::BAD_CRC
+                             : ProtectionType::MISSING_SECTORS;
+            grid->updateTrackProtection(
+                s.cyl, s.head, typ,
+                tr("%1 schwach, %2 CRC falsch, %3 ohne Daten")
+                    .arg(s.schwach).arg(s.crc_fehler).arg(s.ohne_daten));
+        }
     }
     layout->addWidget(grid, 1);
 

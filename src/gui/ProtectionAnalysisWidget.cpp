@@ -8,6 +8,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QMap>
+#include <QStandardItemModel>
 
 extern "C" {
 #include "uft/uft_format_parsers.h"
@@ -26,7 +28,12 @@ ProtectionAnalysisWidget::ProtectionAnalysisWidget(QWidget *parent)
         tr("Half Track"),
         tr("Illegal GCR"),
         tr("Long Sync"),
-        tr("Sector Anomaly")
+        tr("Sector Anomaly"),
+        /* MF-1436: UFM_PROT_CUSTOM_SYNC = Syncs ohne 1541-Kopfblock
+         * (ufm_c64_metrics.c, nach nibtools "non-standard headers").
+         * Das ist kein "Long Sync" und bekommt deshalb eine eigene
+         * Spalte statt einer falschen. */
+        tr("Custom Sync")
     };
     
     setupUI();
@@ -145,10 +152,27 @@ void ProtectionAnalysisWidget::createSchemePanel()
     // Filter
     QHBoxLayout *filterLayout = new QHBoxLayout();
     filterLayout->addWidget(new QLabel(tr("Filter:")));
+    /* P3-602 / MF-1436: der Filter verwarf seinen Index (Q_UNUSED) —
+     * jede Auswahl zeigte dieselbe Liste. Und "High Confidence Only"
+     * versprach eine Konfidenz, die MF-508 als erfunden entfernt hat.
+     * Gefiltert wird jetzt nach dem, was die Zeilen WIRKLICH tragen:
+     * ihrer Basis (Signal = gemessen; Heuristik = Regel ohne Quelle)
+     * und ob sie auf schwachen Bits beruhen. Der Index ist die Rolle,
+     * daher die festen Nummern. */
     m_schemeFilter = new QComboBox();
-    m_schemeFilter->addItem(tr("All Detected"));
-    m_schemeFilter->addItem(tr("High Confidence Only"));
-    m_schemeFilter->addItem(tr("Weak Bit Based"));
+    m_schemeFilter->setObjectName(QStringLiteral("schemeFilter"));
+    m_schemeFilter->addItem(tr("All Detected"));            /* 0 */
+    m_schemeFilter->addItem(tr("Signals only (no heuristic)")); /* 1 */
+    m_schemeFilter->addItem(tr("Weak Bit Based"));          /* 2 */
+    /* Gemessen: ufm_c64_prot_analyze() meldet nie schwache Bits (ein
+     * G64 hat eine Umdrehung). Ein waehlbarer Eintrag, den nichts
+     * fuellen kann, zeigte "keine Weak-Bit-Treffer" als Befund. */
+    if (auto *mod = qobject_cast<QStandardItemModel *>(m_schemeFilter->model())) {
+        if (QStandardItem *it = mod->item(2)) {
+            it->setEnabled(false);
+            it->setToolTip(tr("Keine C64-Analyse im Baum meldet schwache Bits."));
+        }
+    }
     connect(m_schemeFilter, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ProtectionAnalysisWidget::onSchemeFilterChanged);
     filterLayout->addWidget(m_schemeFilter);
@@ -261,6 +285,15 @@ void ProtectionAnalysisWidget::updateHeatmap()
             case UFM_C64_PROT_ILLEGAL_GCR:    col = 4; break;
             case UFM_C64_PROT_LONG_SYNC:      col = 5; break;
             case UFM_C64_PROT_SECTOR_ANOMALY: col = 6; break;
+            /* MF-1436: ufm_c64_prot_analyze() setzt DIESE Werte. Bis
+             * hierher fragte die Karte nur die UFM_C64_PROT_*-Aliase ab,
+             * die laut MF-842 kein Erkenner setzt — jeder Treffer fiel
+             * in `default` und die Karte blieb leer. */
+            case UFM_PROT_LONG_TRACK:         col = 1; break;
+            case UFM_PROT_HALF_TRACK:         col = 3; break;
+            case UFM_PROT_BAD_GCR:            col = 4; break;
+            case UFM_PROT_DUPLICATE_ID:       col = 6; break;
+            case UFM_PROT_CUSTOM_SYNC:        col = 7; break;
             default: continue;
         }
 
@@ -301,6 +334,8 @@ void ProtectionAnalysisWidget::updateSchemeList()
         QString name;
         QString basis;    /**< worauf der Eintrag beruht */
         QString details;  /**< die Regel, die gefeuert hat */
+        bool    signal;   /**< Basis "Signal" (gemessen), sonst Heuristik */
+        bool    weakBit;  /**< beruht auf schwachen Bits */
     };
     
     QVector<SchemeGuess> schemes;
@@ -322,29 +357,57 @@ void ProtectionAnalysisWidget::updateSchemeList()
         if (hit.track == 36) hasTrack36 = true;  // Track 36
         if (hit.type == UFM_C64_PROT_WEAK_BITS) weakBitTracks++;
     }
+
+    /* MF-1436: je gemessenem Merkmal eine Zeile mit Basis "Signal" —
+     * das, was die Analyse wirklich gefunden hat, samt Spuren. Vorher
+     * erreichte kein Treffer diese Liste (siehe updateHeatmap()). */
+    {
+        QMap<int, QStringList> spurenJeTyp;
+        for (const auto &hit : m_hits)
+            spurenJeTyp[(int)hit.type] << QString::number(hit.track);
+        for (auto it = spurenJeTyp.constBegin(); it != spurenJeTyp.constEnd(); ++it) {
+            const char *n = ufm_c64_prot_type_name((ufm_c64_prot_type_t)it.key());
+            schemes.append({QString::fromUtf8(n ? n : "?"), tr("Signal"),
+                            tr("%1 Spur(en): %2").arg(it.value().size())
+                                .arg(it.value().join(QStringLiteral(", "))),
+                            true,
+                            it.key() == (int)UFM_C64_PROT_WEAK_BITS});
+        }
+    }
     
     if (hasLongSync && hasTrack36) {
         schemes.append({tr("Langer Sync + Spur 36"), tr("Signal"),
                         tr("Beide Signale gefunden. Ein Schutzverfahren "
                            "wird daraus nicht abgeleitet — dafuer gibt es "
-                           "im Baum keine Referenz.")});
+                           "im Baum keine Referenz."), true, false});
     }
 
     if (weakBitTracks >= 3) {
         schemes.append({"Weak Bit Protection", tr("Heuristik"),
                         tr("Regel: mindestens 3 Spuren mit Weak Bits "
-                           "(gefunden: %1)").arg(weakBitTracks)});
+                           "(gefunden: %1)").arg(weakBitTracks), false, true});
     }
     
     // Check for long tracks
     int longTrackCount = 0;
     for (const auto &hit : m_hits) {
-        if (hit.type == UFM_C64_PROT_LONG_TRACK) longTrackCount++;
+        if (hit.type == UFM_C64_PROT_LONG_TRACK ||
+            hit.type == UFM_PROT_LONG_TRACK) longTrackCount++;  /* MF-1436 */
     }
     if (longTrackCount > 0) {
         schemes.append({"FAT Track / Long Track", tr("Heuristik"),
                         tr("Regel: mindestens eine ueberlange Spur "
-                           "(gefunden: %1)").arg(longTrackCount)});
+                           "(gefunden: %1)").arg(longTrackCount), false, false});
+    }
+
+    /* P3-602 / MF-1436: der Filter wirkt. */
+    const int filter = m_schemeFilter ? m_schemeFilter->currentIndex() : 0;
+    if (filter == 1 || filter == 2) {
+        QVector<SchemeGuess> behalten;
+        for (const auto &s : schemes)
+            if ((filter == 1 && s.signal) || (filter == 2 && s.weakBit))
+                behalten.append(s);
+        schemes = behalten;
     }
     
     // Populate table
@@ -449,9 +512,10 @@ void ProtectionAnalysisWidget::updateDetailView(int track)
     m_detailText->setText(details);
 }
 
-void ProtectionAnalysisWidget::onSchemeFilterChanged(int index)
+void ProtectionAnalysisWidget::onSchemeFilterChanged(int /*index*/)
 {
-    Q_UNUSED(index);
+    /* updateSchemeList() liest den Filter selbst (MF-1436) — so gilt er
+     * auch nach einer neuen Analyse, nicht nur beim Umschalten. */
     updateSchemeList();
 }
 

@@ -153,9 +153,12 @@ void TrackGridWidget::updateTrackProtection(int cylinder, int head, ProtectionTy
     if (index >= 0 && index < static_cast<int>(m_tracks.size())) {
         m_tracks[index].protection = type;
         m_tracks[index].protectionName = name;
-        if (type != ProtectionType::NONE) {
-            m_tracks[index].status = TrackStatus::PROTECTED;
-        }
+        /* P3-602 / MF-1436: hier stand
+         *     if (type != NONE) status = TrackStatus::PROTECTED;
+         * — ein Schutz-SIGNAL (schwache Bits, falsche CRC, fehlende Daten)
+         * wurde zum Urteil "copy protection detected" befoerdert. Das kann
+         * genauso Beschaedigung sein. Der gemessene Zustand bleibt stehen;
+         * das Signal zeigt das Eckdreieck und der Tooltip. */
         update();
     }
 }
@@ -654,7 +657,10 @@ void TrackGridWidget::drawLegend(QPainter& painter, int x, int y)
             {getColorForStatus(TrackStatus::GOOD), "Good"},
             {getColorForStatus(TrackStatus::WARNING), "Warning"},
             {getColorForStatus(TrackStatus::ERROR), "Error"},
-            {getColorForStatus(TrackStatus::PROTECTED), "Protected"},
+            /* P3-602 / MF-1436: "Protected" konnte nach dem Entfernen des
+             * Urteils in updateTrackProtection() nicht mehr erscheinen. Die
+             * Farbe ist dieselbe wie das Eckdreieck eines Schutz-Signals. */
+            {getColorForStatus(TrackStatus::PROTECTED), "Schutz-Signal"},
             {getColorForStatus(TrackStatus::UNKNOWN), "Unknown"}
         };
     } else if (m_heatmapMode == HeatmapMode::PROTECTION) {
@@ -662,10 +668,14 @@ void TrackGridWidget::drawLegend(QPainter& painter, int x, int y)
             {getColorForProtection(ProtectionType::NONE), "None"},
             /* MF-1387: die Legende nannte zusaetzlich CopyLock, V-MAX
              * und RapidLok. Gesetzt wird ein Schutztyp nur ueber
-             * updateTrackProtection() — ausserhalb dieser Datei ruft das
+             * updateTrackProtection() — ausserhalb dieser Datei rief das (bis MF-1436)
              * niemand — und intern allein WEAK_BITS. Die drei Namen
              * konnten im Raster nie erscheinen. */
-            {getColorForProtection(ProtectionType::WEAK_BITS), "Weak"}
+            {getColorForProtection(ProtectionType::WEAK_BITS), "Weak"},
+            /* MF-1436: die zwei Signale, die ToolsTab::onTrackView() seither
+             * setzt. Mehr setzt im Baum niemand. */
+            {getColorForProtection(ProtectionType::BAD_CRC), "Bad CRC"},
+            {getColorForProtection(ProtectionType::MISSING_SECTORS), "No data"}
         };
     } else if (m_heatmapMode == HeatmapMode::RETRIES) {
         items = {
@@ -864,8 +874,9 @@ QString TrackGridWidget::formatTrackTooltip(const TrackGridTrackInfo& info) cons
     }
     
     if (info.protection != ProtectionType::NONE) {
-        tooltip += QString("Protection: <font color='darkorange'>%1</font><br>")
-                  .arg(info.protectionName.isEmpty() ? "Detected" : info.protectionName);
+        /* MF-1436: ein Signal, kein Befund "Kopierschutz" */
+        tooltip += QString("Schutz-Signal (kein Urteil): <font color='darkorange'>%1</font><br>")
+                  .arg(info.protectionName.isEmpty() ? "?" : info.protectionName);
     }
     
     if (info.hasWeakBits) {

@@ -160,6 +160,59 @@ private slots:
                  "keiner Messung.");
     }
 
+    /* ── P3-602 / MF-1436: Signal an der Spur, kein Schutzurteil ────────
+     *
+     * `updateTrackProtection()` hatte ausserhalb seiner Datei keinen
+     * Aufrufer — und setzte fuer JEDEN Typ den Zustand PROTECTED ("copy
+     * protection detected"). Seit MF-1436 gibt onTrackView() die drei
+     * gemessenen Signale der Spur weiter, und das Raster urteilt nicht.
+     *
+     * Eingabe: das VICE-D64 plus 683-Byte-Fehlerblock (1541-Codes je
+     * Sektor, 0x01 = OK). Code 0x05 ("data checksum error") auf dem
+     * linearen Sektor 21 = Spur 2, Sektor 0; der D64-Plugin setzt dafuer
+     * crc_ok = false (uft_d64_plugin.c). Spur 2 ist Zylinder 1. */
+    void aCrcErrorIsASignalNotAVerdict()
+    {
+        const QString d64 = korpus("vice_c1541_35trk.d64");
+        if (d64.isEmpty() || !QFile::exists(d64))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 nicht vorhanden");
+        QFile q(d64);
+        QVERIFY(q.open(QIODevice::ReadOnly));
+        QByteArray d = q.readAll();
+        QCOMPARE(d.size(), 174848);
+        QByteArray fehler(683, char(0x01));
+        fehler[21] = char(0x05);
+        d += fehler;
+
+        QTemporaryFile f(QDir::tempPath() + QStringLiteral("/uft_mf1436_XXXXXX.d64"));
+        QVERIFY(f.open());
+        f.write(d);
+        f.flush();
+
+        ToolsTab tab;
+        QVERIFY(setzeDatei(&tab, f.fileName()));
+        QVERIFY(QMetaObject::invokeMethod(&tab, "onTrackView"));
+        QDialog *dlg = openedDialog(&tab);
+        QVERIFY(dlg);
+        auto *grid = dlg->findChild<TrackGridWidget *>();
+        QVERIFY(grid);
+
+        const TrackGridTrackInfo *spur2 = grid->getTrackInfo(1, 0);
+        QVERIFY(spur2);
+        QVERIFY2(spur2->protection == ProtectionType::BAD_CRC,
+                 "das Signal 'CRC falsch' erreicht die Spur nicht");
+        QVERIFY2(spur2->protectionName.contains(QStringLiteral("1 CRC falsch")),
+                 qPrintable(spur2->protectionName));
+        QVERIFY2(spur2->status != TrackStatus::PROTECTED,
+                 "ein Signal wurde zum Urteil 'copy protection detected'");
+        QCOMPARE(spur2->status, TrackStatus::WARNING);
+
+        const TrackGridTrackInfo *spur1 = grid->getTrackInfo(0, 0);
+        QVERIFY(spur1);
+        QVERIFY2(spur1->protection == ProtectionType::NONE,
+                 "eine saubere Spur traegt ein Signal");
+    }
+
     /* ── Nicht lesbare Datei: Raster ohne Behauptung ──────────────────── */
     void anUnreadableFileClaimsNothing()
     {

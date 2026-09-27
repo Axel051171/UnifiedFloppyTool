@@ -13,6 +13,7 @@
 #include <QFontMetrics>
 #include <QAbstractSpinBox>
 #include "ui_tab_format.h"
+#include "gui/uft_spurausrichtung.h"
 #include "uft_gw2dmk_panel.h"
 #include <uft/uft_format_plugin.h>  /* MF-661: Faehigkeits-Manifest */
 #include <uft/uft_format_probe.h>   /* MF-1231: uft_format_variant_t */
@@ -59,7 +60,10 @@ FormatTab::FormatTab(QWidget *parent)
 
 {
     ui->setupUi(this);
-    
+    /* P3-602 / MF-1436: dasselbe Kaestchen wie im Protection Analyzer,
+     * hier ebenfalls ohne Leser — und ohne Erkenner im Baum. */
+    uftSperreSpurausrichtung(ui->checkC64Alignment);
+
     setupFormatDatabase();
     
     // Initialize presets

@@ -23,8 +23,14 @@ extern "C" {
 namespace Ui { class TabProtection; }
 
 /**
- * @brief Protection settings tab with full backend integration
- * 
+ * @brief Protection settings tab
+ *
+ * BERICHTIGT MF-1436: hier stand "with full backend integration".
+ * Gemessen hat der Reiter 54 Bedienelemente, und KEINES erreicht eine
+ * Analyse: getConfig(), getAnalysisFlags() und die is*Enabled()-Abfragen
+ * haben im ganzen Baum 0 Aufrufer; 21 Elemente werden nicht einmal
+ * gespeichert. Siehe P3-635.
+ *
  * Maps 40+ UI widgets to uft_prot_config_t parameters.
  * Supports profile save/load and real-time validation.
  */
