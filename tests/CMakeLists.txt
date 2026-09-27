@@ -3130,6 +3130,7 @@ foreach(test_source ${TEST_SOURCES})
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip"
            OR ${test_name} STREQUAL "test_convert_adf_hfe_roundtrip"
+           OR ${test_name} STREQUAL "test_convert_d81_hfe_roundtrip"
            OR ${test_name} STREQUAL "test_hfe_drehzahl"
            OR ${test_name} STREQUAL "test_hfe_kappt_nicht_still"
            OR ${test_name} STREQUAL "test_adf_ext_gegen_disk_analyse")

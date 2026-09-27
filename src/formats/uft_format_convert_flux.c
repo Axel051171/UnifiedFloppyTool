@@ -1759,8 +1759,24 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
 
     /* Determine geometry for output */
     int sectors = 18, sector_size = 512;
+    size_t d81_ausserhalb = 0;   /* MF-1437: Datenfelder mit R ausserhalb 1..10 */
     if (dst_format == UFT_FORMAT_ADF) {
         sectors = 11; /* Amiga DD */
+    } else if (dst_format == UFT_FORMAT_D81) {
+        /* A-037 (MF-1437): 1581, 80 x 2 x 10 x 512. Die Seitenvertauschung
+         * der 1581 braucht hier KEINEN eigenen Code: die Schleife unten legt
+         * jeden Sektor nach der Seite aus seinem ID-Feld ab, nicht nach dem
+         * physischen Kopf — und das ID-Feld traegt die logische Seite. Eine
+         * HFE, die keine 80 Zylinder und 2 Seiten hat, ist keine 1581. */
+        if (cylinders != 80 || heads != 2) {
+            result->error = UFT_ERR_INVALID_FORMAT;
+            uftc_add_warning(result,
+                     "HFE->D81: the HFE has %d cylinders and %d heads; a 1581 "
+                     "disk has 80 and 2. Refused rather than padded or cut "
+                     "(MF-1437).", cylinders, heads);
+            return UFT_ERR_INVALID_FORMAT;
+        }
+        sectors = 10;
     } else {
         /* IMG: guess from cylinder/head count */
         if (cylinders <= 40) {
@@ -1938,6 +1954,13 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
                             result->sectors_converted++;
                         }
                         current_sec = -1;
+                    } else if (mark == 0xFB && dst_format == UFT_FORMAT_D81) {
+                        /* MF-1437: ein Datenfeld, dessen Sektornummer eine
+                         * 1581 nicht kennt. Die Schleife liess es fallen;
+                         * fuer D81 wird es gezaehlt, damit eine fremde
+                         * Diskette nicht still zurechtgeschnitten wird. */
+                        d81_ausserhalb++;
+                        current_sec = -1;
                     }
                     sync_count = 0;
                 }
@@ -1974,6 +1997,24 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
      * gemessen hat: er reichte eine Quelle hinein, die als DSK erkannt
      * wurde, und pruefte damit nur den Fall „Paar gibt es nicht" — nie
      * den, um den es MF-545 ging. */
+    if (dst_format == UFT_FORMAT_D81 &&
+        (d81_ausserhalb > 0 ||
+         result->sectors_converted != (int)(80 * 2 * 10))) {
+        /* MF-1437: eine D81 ist entweder vollstaendig oder sie wird nicht
+         * geschrieben. Ein fehlender Sektor bliebe als calloc-Null im Abbild
+         * stehen — erfundene Daten mit Erfolgsmeldung —, und ein Datenfeld
+         * mit R > 10 hiesse, dass die Quelle keine 1581-Diskette ist (eine
+         * PC-HFE mit 18 Sektoren hat auch 80 x 2 und haette 1600 „passende"
+         * Sektoren geliefert). */
+        free(output);
+        result->error = UFT_ERR_INVALID_FORMAT;
+        uftc_add_warning(result,
+                 "HFE->D81: %d of 1600 sectors found and %u data fields with a "
+                 "sector number outside 1..10. A D81 is written only when "
+                 "every sector of a 1581 disk is there (MF-1437).",
+                 (int)result->sectors_converted, (unsigned)d81_ausserhalb);
+        return UFT_ERR_INVALID_FORMAT;
+    }
     uft_error_t err = uftc_finish_or_refuse(result, dst_path,
                                             output, output_size,
                                             "HFE->Sektoren");

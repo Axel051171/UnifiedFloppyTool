@@ -188,6 +188,13 @@ const uft_conversion_path_t g_conversion_paths[] = {
         .warning = "Bitstream encoding will be lost",
         .description = "Decode HFE to raw IMG"
     },
+    {   /* MF-1437 (A-037): Commodore 1581, sorted by the ID-field side */
+        .source = UFT_FORMAT_HFE, .target = UFT_FORMAT_D81,
+        .quality = UFT_CONV_LOSSY,
+        .requires_decode = true,
+        .warning = "Bitstream encoding will be lost",
+        .description = "Decode HFE to D81 (Commodore 1581)"
+    },
     {
         .source = UFT_FORMAT_HFE, .target = UFT_FORMAT_ADF,
         .quality = UFT_CONV_LOSSY,
@@ -254,6 +261,12 @@ const uft_conversion_path_t g_conversion_paths[] = {
         .quality = UFT_CONV_SYNTHETIC,
         .warning = "MFM encoding will be synthesized",
         .description = "Encode IMG to HFE (synthetic MFM)"
+    },
+    {   /* MF-1437 (A-037): track layout of the 1581 ROM, sides swapped */
+        .source = UFT_FORMAT_D81, .target = UFT_FORMAT_HFE,
+        .quality = UFT_CONV_SYNTHETIC,
+        .warning = "MFM encoding will be synthesized (1581 layout)",
+        .description = "Encode D81 to HFE (Commodore 1581, synthetic MFM)"
     },
     {
         .source = UFT_FORMAT_DSK, .target = UFT_FORMAT_WOZ,
