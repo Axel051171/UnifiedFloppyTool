@@ -43,6 +43,11 @@ typedef enum {
     HFE_ENC_AMIGA_MFM       = 0x01,     /* Amiga MFM (odd/even) */
     HFE_ENC_ISOIBM_FM       = 0x02,     /* IBM FM (single density) */
     HFE_ENC_EMU_FM          = 0x03,     /* Emulator FM */
+    /* MF-1440: Commodore GCR. Value from the HFE format's author, HxC
+     * libhxcfe `libhxcfe.h` (C64_GCR_ENCODING 0x12; GPL, read only —
+     * channel Spec, the number taken, no code). HxC's own HFE writer puts
+     * the track's encoding into this header field (`hfe_writer.c`). */
+    HFE_ENC_C64_GCR         = 0x12,
     HFE_ENC_UNKNOWN         = 0xFF
 } hfe_track_encoding_t;
 

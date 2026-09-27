@@ -2057,7 +2057,17 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
 
     /* Determine bitrate from SCP disk type */
     uint16_t bitrate_kbps = 250; /* Default DD */
-    hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM;
+    /* MF-1440: here stood HFE_ENC_ISOIBM_MFM, fixed. This path PLL-decodes
+     * flux into cells and never determines the encoding; an FM capture
+     * (tests/corpus_free/gw_fm_acorn_3trk.scp) came out as an HFE claiming
+     * MFM. HFE has an honest value for it, and greaseweazle writes it too
+     * (measured on its D81 -> HFE: 0xFF). Test:
+     * tests/test_hfe_kodierung_nicht_erfunden.c.
+     * Not touched, same class, named: `iface` below (HFE_IF_IBMPC_DD for
+     * any capture) and `drive_rpm = 300` further down — the interface may
+     * steer a Gotek, and the rpm is measurable from the SCP index times;
+     * both are their own step (P3-641). */
+    hfe_track_encoding_t encoding = HFE_ENC_UNKNOWN;
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
     /* Spurlaenge JE SEITE, aus der Zellrate gerechnet, mit der weiter unten
@@ -2549,7 +2559,10 @@ uft_error_t uftc_convert_kryoflux_to_hfe(const uint8_t* src_data,
      */
     int cylinders = 1, heads = 1;
     uint16_t bitrate_kbps = 250;
-    hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM;
+    /* MF-1440: same as SCP -> HFE — the encoding is never determined here,
+     * so the header says "unknown", not MFM. (This path cannot run today:
+     * uft_kfx_read_stream() is a stub that always fails, P3-640.) */
+    hfe_track_encoding_t encoding = HFE_ENC_UNKNOWN;
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
     /* PLL decode flux to bitstream */

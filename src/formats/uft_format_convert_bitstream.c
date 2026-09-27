@@ -518,7 +518,11 @@ uft_error_t uftc_convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
 
     /* Use C64 DD interface, GCR stored as raw bitstream */
     uint16_t bitrate_kbps = 250;
-    hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM; /* Raw bitstream */
+    /* MF-1440: here stood HFE_ENC_ISOIBM_MFM with the comment "Raw
+     * bitstream" — for a G64, whose content is Commodore GCR by
+     * definition. The HFE format has a value for it (HxC libhxcfe.h
+     * C64_GCR_ENCODING, see uft_hfe_format.h). */
+    hfe_track_encoding_t encoding = HFE_ENC_C64_GCR;
     hfe_floppy_interface_t iface = HFE_IF_C64_DD;
 
     /* Track length: G64 max track size is ~7928 bytes, round up to 256 */

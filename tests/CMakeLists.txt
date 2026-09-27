@@ -3615,6 +3615,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_snprintf_not_shadowed"
            OR ${test_name} STREQUAL "test_convert_fuzz"
            OR ${test_name} STREQUAL "test_convert_roundtrip_lossless"
+           OR ${test_name} STREQUAL "test_hfe_kodierung_nicht_erfunden"
            OR ${test_name} STREQUAL "test_convert_identity_lossless"
            OR ${test_name} STREQUAL "test_convert_atr_xfd"
            OR ${test_name} STREQUAL "test_convert_options_reach_encoder"
