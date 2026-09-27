@@ -1138,7 +1138,6 @@ SOURCES += \
     src/formats/d88/uft_d88_parser_v2.c \
     src/formats/dmk/uft_dmk_parser_v2.c \
     src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c \
-    src/formats/fdi/uft_fdi_parser_v2.c \
     src/formats/g64/uft_g64.c \
     src/formats/g64/uft_g64_parser_v3.c \
     src/formats/imd/uft_imd_parser_v2.c \

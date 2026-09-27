@@ -262,6 +262,55 @@ static const uft_plugin_feature_t uft_format_plugin_fdi_features[] = {
     { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* ── MF-1442 (P3-620 Fall 7): Beschreibung und Schreibschutz ────────────
+ *
+ * Referenz SAMdisk `src/samdisk/fdi.cpp` (im Baum):
+ *     :11  uint8_t bWriteProtect;   // Non-zero if write-protected
+ *     :14  uint8_t bDescOffset[2];  // Offset of disk description
+ *     :18  // Description data here (if description offset is non-zero)
+ * Der Text endet am ersten NUL oder spaetestens am Datenblock bzw.
+ * Dateiende; nicht druckbare Zeichen werden als \xNN gezeigt, nicht
+ * verschluckt. Der Schreibschutz wird GEMELDET, nicht durchgesetzt.
+ *
+ * Bis hierher nannte das Plugin beide Felder nur im Kommentar; das
+ * verwaiste Doppel `uft_fdi_parser_v2.c:331-335` las sie (entfernt MF-1442:
+ * seine Sektorflaggen widersprachen SAMdisk, UDI erkannte es nur an der
+ * Kennung und zerlegte es dann als FDI; UDI hat ein eigenes Plugin). */
+static uft_error_t fdi_plugin_read_metadata(uft_disk_t *disk, const char *key,
+                                            char *value, size_t max_len)
+{
+    if (!disk || !key || !value || max_len == 0) return UFT_ERROR_NULL_POINTER;
+    value[0] = '\0';
+    fdi_pd_t *p = disk->plugin_data;
+    if (!p || !p->data || p->size < FDI_HDR) return UFT_ERROR_INVALID_STATE;
+
+    if (strcmp(key, "write_protected") == 0) {
+        snprintf(value, max_len, "%s", p->data[3] ? "yes" : "no");
+        return UFT_OK;
+    }
+    if (strcmp(key, "comment") == 0) {
+        const size_t von = (size_t)p->data[8] | ((size_t)p->data[9] << 8);
+        if (von == 0) return UFT_ERROR_NOT_FOUND;
+        if (von >= p->size) return UFT_ERROR_FORMAT_INVALID;
+        size_t bis = p->size;
+        if (p->data_pos > von && p->data_pos < bis) bis = p->data_pos;
+        size_t k = 0;
+        for (size_t i = von; i < bis && p->data[i] != 0; i++) {
+            const uint8_t b = p->data[i];
+            if (b >= 0x20 && b < 0x7F) {
+                if (k + 1 >= max_len) break;
+                value[k++] = (char)b;
+            } else {
+                if (k + 5 >= max_len) break;
+                k += (size_t)snprintf(value + k, max_len - k, "\\x%02X", b);
+            }
+        }
+        value[k] = '\0';
+        return UFT_OK;
+    }
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
 const uft_format_plugin_t uft_format_plugin_fdi = {
     .name = "FDI", .description = "ZX Spectrum Full Disk Image",
     .extensions = "fdi", .format = UFT_FORMAT_FDI,
@@ -269,6 +318,7 @@ const uft_format_plugin_t uft_format_plugin_fdi = {
     .probe = fdi_plugin_probe, .open = fdi_plugin_open,
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,
     .write_track = fdi_plugin_write_track,
+    .read_metadata = fdi_plugin_read_metadata,   /* MF-1442 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_fdi_features,  /* V415-PLAN PLUGIN.features (MF-263) */

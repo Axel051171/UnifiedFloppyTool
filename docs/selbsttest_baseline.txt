@@ -19,7 +19,6 @@ src/formats/d64/uft_d64_parser_v3.c:1869:D64_V3_TEST:32
 src/formats/d81/uft_d81_parser_v2.c:393:D81_PARSER_TEST:15
 src/formats/dmk/uft_dmk_parser_v2.c:440:DMK_PARSER_TEST:8
 src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c:760:DSK_TEST:29
-src/formats/fdi/uft_fdi_parser_v2.c:598:FDI_TEST:22
 src/formats/g64/uft_g64_parser_v2.c:551:G64_PARSER_TEST:19
 src/formats/g64/uft_g64_parser_v3.c:2038:G64_V3_TEST:35
 src/formats/hfe/uft_hfe_parser_v2.c:334:HFE_PARSER_TEST:15

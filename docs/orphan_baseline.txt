@@ -69,7 +69,6 @@ src/formats/cpm/uft_supercopy_detect.c
 src/formats/d81/uft_d81_parser_v2.c
 src/formats/dmk/uft_dmk_parser_v2.c
 src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c
-src/formats/fdi/uft_fdi_parser_v2.c
 src/formats/flux/scp.c
 src/formats/g64/uft_g64_parser_v2.c
 src/formats/hfe/uft_hfe_parser_v2.c

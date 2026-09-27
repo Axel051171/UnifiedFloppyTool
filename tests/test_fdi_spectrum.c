@@ -57,15 +57,21 @@ static void put_sec(uint8_t *f, size_t off, uint8_t c, uint8_t h, uint8_t r,
     wle16(f+off+5, soff);
 }
 
-static size_t build_fdi(const char *path) {
-    uint8_t *f = calloc(1, TOTAL);
+/* MF-1442: `wp` und `desc` setzen die zwei Kopffelder, die SAMdisk
+ * (src/samdisk/fdi.cpp:11,14) fuehrt; die Beschreibung liegt zwischen den
+ * Spurkoepfen und dem Datenblock, der dafuer nach hinten rueckt. */
+static size_t build_fdi_mit(const char *path, uint8_t wp, const char *desc) {
+    const size_t dlen = desc ? strlen(desc) + 1 : 0;   /* samt NUL */
+    const size_t data_off = DATA_OFF + dlen, total = data_off + 4u * SEC;
+    uint8_t *f = calloc(1, total);
     if (!f) return 0;
     memcpy(f, "FDI", 3);
-    f[3] = 0;                       /* write-protect off */
+    f[3] = wp;                      /* write-protect */
     wle16(f + 4, 2);                /* cylinders */
     wle16(f + 6, 1);                /* heads */
-    wle16(f + 8, 0);                /* desc offset */
-    wle16(f + 0x0A, DATA_OFF);      /* data offset */
+    wle16(f + 8, desc ? (uint16_t)DATA_OFF : 0);  /* desc offset */
+    if (desc) memcpy(f + DATA_OFF, desc, dlen);
+    wle16(f + 0x0A, (uint16_t)data_off);  /* data offset */
     wle16(f + 0x0C, 0);             /* extra length -> track headers at 14 */
 
     /* Track 0 (cyl0,head0): FDI_TRACK @14 */
@@ -81,14 +87,15 @@ static size_t build_fdi(const char *path) {
 
     /* Data block: 4 sectors, each a distinct marker. */
     for (unsigned s = 0; s < 4; s++)
-        memset(f + DATA_OFF + s * SEC, (int)(0x11 + s), SEC);
+        memset(f + data_off + s * SEC, (int)(0x11 + s), SEC);
 
     FILE *fp = fopen(path, "wb");
     if (!fp) { free(f); return 0; }
-    size_t w = fwrite(f, 1, TOTAL, fp);
+    size_t w = fwrite(f, 1, total, fp);
     fclose(fp); free(f);
-    return w == TOTAL ? TOTAL : 0;
+    return w == total ? total : 0;
 }
+static size_t build_fdi(const char *path) { return build_fdi_mit(path, 0, NULL); }
 
 static int open_disk(const char *path, uft_disk_t *disk) {
     memset(disk, 0, sizeof(*disk));
@@ -160,11 +167,50 @@ TEST(probe_valid) {
     ASSERT(conf > 0);
 }
 
+/* ── MF-1442 (P3-620 Fall 7): Beschreibung und Schreibschutz ──────────
+ * SAMdisk src/samdisk/fdi.cpp:11 `bWriteProtect // Non-zero if
+ * write-protected`, :14 `bDescOffset // Offset of disk description`,
+ * :18 `Description data here (if description offset is non-zero)`. */
+TEST(beschreibung_und_schreibschutz) {
+    char path[300]; get_temp_path(path, sizeof(path));
+    ASSERT(build_fdi_mit(path, 1, "UFT FDI Beschreibung 42"));
+    uft_disk_t disk; ASSERT(open_disk(path, &disk));
+    ASSERT(uft_format_plugin_fdi.read_metadata != NULL);
+    char v[128];
+    ASSERT(uft_format_plugin_fdi.read_metadata(&disk, "write_protected", v, sizeof v) == UFT_OK);
+    ASSERT(strcmp(v, "yes") == 0);
+    ASSERT(uft_format_plugin_fdi.read_metadata(&disk, "comment", v, sizeof v) == UFT_OK);
+    ASSERT(strcmp(v, "UFT FDI Beschreibung 42") == 0);
+    /* die Sektoren liegen weiter richtig, obwohl der Datenblock rueckte */
+    uft_track_t t; memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_fdi.read_track(&disk, 0, 0, &t) == UFT_OK);
+    ASSERT(t.sector_count == 2 && t.sectors[0].data[0] == 0x11);
+    free_ts(&t);
+    uft_format_plugin_fdi.close(&disk);
+    remove(path);
+}
+
+TEST(ohne_beschreibung_wird_nichts_erfunden) {
+    char path[300]; get_temp_path(path, sizeof(path));
+    ASSERT(build_fdi(path));
+    uft_disk_t disk; ASSERT(open_disk(path, &disk));
+    ASSERT(uft_format_plugin_fdi.read_metadata != NULL);
+    char v[64];
+    ASSERT(uft_format_plugin_fdi.read_metadata(&disk, "write_protected", v, sizeof v) == UFT_OK);
+    ASSERT(strcmp(v, "no") == 0);
+    ASSERT(uft_format_plugin_fdi.read_metadata(&disk, "comment", v, sizeof v) != UFT_OK);
+    ASSERT(v[0] == '\0');
+    uft_format_plugin_fdi.close(&disk);
+    remove(path);
+}
+
 int main(void) {
     printf("=== ZX Spectrum FDI reader/writer rewrite (MF-359) ===\n");
     RUN(geometry_and_recovery);
     RUN(write_persists);
     RUN(probe_valid);
+    RUN(beschreibung_und_schreibschutz);
+    RUN(ohne_beschreibung_wird_nichts_erfunden);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
