@@ -715,6 +715,55 @@ static void t10_abwesenheit(void) {
     uft_d2_destroy(d);
 }
 
+/* ═══════════ 11. Index jenseits des Bitstroms (MF-1432) ═════════════ */
+
+/* validate() prueft seit jeher, ob SEKTOREN Bitlagen jenseits des
+ * Bitstroms nennen (POS_BEYOND), aber nicht den Index. Eine .uftd-Datei
+ * traegt `index_bit` als eigenes Feld (uft_disk2_io.c:433), und
+ * uft_d2_set_bitstream() uebernimmt es ungeprueft — ein Index bei Bit 70
+ * in einem 64-Bit-Strom blieb stumm, und uft_d2_sector_crosses_index()
+ * sagte dann fuer jeden Sektor still „nein". Gefunden beim Sichten des
+ * Eigentuemerpakets UFT_AnalysisBooster (A-032). */
+static void t11_index_jenseits(void) {
+    printf("Test 11: ein Index jenseits des Bitstroms wird gemeldet\n");
+    uint8_t bits[8] = { 0xAAu, 0, 0, 0, 0, 0, 0, 0 };
+
+    uft_disk2_t *d = uft_d2_create();
+    const uft_d2_deriv_id_t dv = uft_d2_register_deriv(d,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    uft_d2_track_t *t = uft_d2_track(d, 0u, 0u);
+    uft_d2_set_bitstream(d, t, bits, 64u, NULL, NULL, 0u, NULL, NULL,
+                         70u, UFT_ENC_MFM, 2000u, dv);
+    uft_d2_validate(d);
+    CHECK(hat_befund(d, "INDEX_BEYOND"),
+          "index_bit 70 in 64 Bit: INDEX_BEYOND");
+    uft_d2_destroy(d);
+
+    /* Grenzfall: das letzte Bit ist ein gueltiger Ort, kein Befund. */
+    d = uft_d2_create();
+    const uft_d2_deriv_id_t dv2 = uft_d2_register_deriv(d,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    t = uft_d2_track(d, 0u, 0u);
+    uft_d2_set_bitstream(d, t, bits, 64u, NULL, NULL, 0u, NULL, NULL,
+                         63u, UFT_ENC_MFM, 2000u, dv2);
+    uft_d2_validate(d);
+    CHECK(!hat_befund(d, "INDEX_BEYOND"),
+          "index_bit 63 in 64 Bit ist gueltig");
+    uft_d2_destroy(d);
+
+    /* Unbekannt ist kein Befund dieser Art (dafuer gibt es NO_INDEX_BIT). */
+    d = uft_d2_create();
+    const uft_d2_deriv_id_t dv3 = uft_d2_register_deriv(d,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    t = uft_d2_track(d, 0u, 0u);
+    uft_d2_set_bitstream(d, t, bits, 64u, NULL, NULL, 0u, NULL, NULL,
+                         SIZE_MAX, UFT_ENC_MFM, 2000u, dv3);
+    uft_d2_validate(d);
+    CHECK(!hat_befund(d, "INDEX_BEYOND"),
+          "index_bit unbekannt: kein INDEX_BEYOND");
+    uft_d2_destroy(d);
+}
+
 int main(void) {
     printf("=== test_disk2 (zweite Fassung, MF-1274) ===\n\n");
     t1_generationen();
@@ -727,6 +776,7 @@ int main(void) {
     t8_alte_garantien();
     t9_projektion();
     t10_abwesenheit();
+    t11_index_jenseits();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }
