@@ -26,6 +26,7 @@
 #include "uft/formats/ipf/uft_ipf_air.h"
 #include "uft/formats/ipf/uft_ipf_helper.h"
 #include "uft/formats/ipf/uft_ipf_zellstrom.h"
+#include "uft/formats/ipf/uft_ipf_sektoren.h"
 #include "uft/uft_log.h"
 
 /* IPF IMGE.track_flags — fuzzy-bit indicator (matches IPF_TF_FUZZY in
@@ -464,6 +465,29 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         track->raw_bits     = zell_bits;
         track->raw_capacity = bytes;
         track->owns_data    = true;
+
+        /* MF-1372 (P3-360 Teil 1): die Sektorebene. Bis hier lieferte
+         * jede IPF Zellen und null Sektoren. Dekodiert wird mit den zwei
+         * vorhandenen Dekodern; welcher gilt, entscheidet der Inhalt
+         * (siehe uft_ipf_sektoren.h). */
+        uft_ipf_sektor_bericht_t sb;
+        if (uft_ipf_sektoren(zellen, zell_bits, track, &sb) == 0) {
+            if (sb.art == UFT_IPF_SEKTOR_MEHRDEUTIG) {
+                UFT_WARN("IPF Spur %d/%d: IBM- UND Amiga-Sektorkoepfe mit "
+                         "gueltiger Pruefsumme (%u/%u) - keine Sektoren "
+                         "angelegt statt geraten",
+                         cyl, head, sb.ibm_koepfe_ok, sb.amiga_koepfe_ok);
+            } else if (sb.art != UFT_IPF_SEKTOR_KEINE) {
+                track->decoded = true;
+                if (sb.daten_crc_falsch || sb.kopf_crc_falsch ||
+                    sb.ohne_daten)
+                    UFT_WARN("IPF Spur %d/%d: %u Sektoren, davon %u mit "
+                             "falscher Daten- und %u mit falscher "
+                             "Kopfpruefsumme, %u Koepfe ohne Datenfeld",
+                             cyl, head, sb.angelegt, sb.daten_crc_falsch,
+                             sb.kopf_crc_falsch, sb.ohne_daten);
+            }
+        }
     } else {
         free(zellen);   /* vorsichtshalber — sollte NULL sein */
         if (zrc == -3) {
@@ -496,7 +520,13 @@ static const uft_plugin_feature_t ipf_features[] = {
     { "Standard MFM Tracks (SPS)",     UFT_FEATURE_PARTIAL,
       "SPS-Kodierer: raw_data ist der MFM-ZELLSTROM (MF-1079); Gap-Elemente werden als 0x00-Muster gefuellt, nicht ausgewertet" },
     { "Standard MFM Tracks (CAPS)",    UFT_FEATURE_PARTIAL,
-      "CAPS encoder: metadata only; data-element decode for CAPS layout deferred" },
+      "CAPS-Kodierer (MF-1372): Elemente in Byte, Zwischenraum aus dem Fuellbyte "
+      "vorwaerts+rueckwaerts (Keir Fraser ipf.txt, MAME ipf_dsk.cpp); abgenommen "
+      "an disk-analyse-Erzeugnissen, nicht an einem SPS-Original" },
+    { "Sektorebene",                   UFT_FEATURE_PARTIAL,
+      "MF-1372: IBM-MFM und AmigaDOS aus dem Zellstrom, Wahl nach gueltigen "
+      "Kopfpruefsummen; 1760/1760 bzw. 1440/1440 an disk-analyse-Abbildern. "
+      "SPS-Originale hier nicht gemessen; andere Kodierungen liefern keine Sektoren" },
     { "Timing Tracks",                 UFT_FEATURE_PARTIAL,
       "track_flags + density exposed; per-cell timing not extracted" },
     { "Weak Bits / Fuzzy",             UFT_FEATURE_PARTIAL,

@@ -807,12 +807,13 @@ foreach(test_source ${TEST_SOURCES})
         #
         # `uft_caps_ipf.c` ist hier NICHT eingebunden: der zweite Zweig
         # ist seit MF-1002 weg, und die Datei damit ohne Aufrufer.
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # MF-1372: das Plugin dekodiert seit MF-1372 Sektoren und braucht
+        # dafuer uft_mfm_sector_parser.c und uft_flux_decoder.c samt deren
+        # Abhaengigkeiten. Statt einer weiteren Einzelliste die EINE
+        # Formatschicht-Bibliothek (P3-10), die beides schon traegt.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_opus_gegen_floptool")
         # MF-1084: `opus` T2 -> T1b. Das Abbild kommt aus MAMEs
         # floptool (seit MF-1083 gebaut), gefuehrt ueber einen
@@ -842,12 +843,13 @@ foreach(test_source ${TEST_SOURCES})
         # trug die dekodierten Bytes. Spur 0/0 lieferte 48 272 Bit,
         # die Datei sagt 101 304. Braucht den eingeschraenkten Korpus
         # (zwei SPS-Abbilder), sonst 77.
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # MF-1372: das Plugin dekodiert seit MF-1372 Sektoren und braucht
+        # dafuer uft_mfm_sector_parser.c und uft_flux_decoder.c samt deren
+        # Abhaengigkeiten. Statt einer weiteren Einzelliste die EINE
+        # Formatschicht-Bibliothek (P3-10), die beides schon traegt.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_ipf_satzlauf_schranken")
@@ -856,12 +858,23 @@ foreach(test_source ${TEST_SOURCES})
         # -> Lesen hinter den Puffer), die CRC erreichte niemanden, und
         # Spurkoepfe ausserhalb 84 x 2 oder jenseits des 512. fielen
         # still weg. Prueft an selbst gebauten Puffern, keine Korpus-Datei.
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # MF-1372: das Plugin dekodiert seit MF-1372 Sektoren und braucht
+        # dafuer uft_mfm_sector_parser.c und uft_flux_decoder.c samt deren
+        # Abhaengigkeiten. Statt einer weiteren Einzelliste die EINE
+        # Formatschicht-Bibliothek (P3-10), die beides schon traegt.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_ipf_sektorebene")
+        # MF-1372 (P3-360 Teil 1): IPF liefert Sektoren. Zwei Pruefdateien
+        # aus disk-analyse (Keir Fraser, Public Domain), UFT-eigene
+        # selbstbenennende Eingabe; Rezept tests/corpus_manifest/
+        # gen_ipf_corpus.py.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_ipf_erfindet_keine_geometrie")
         # MF-1073: `ipf_plugin_open()` setzte sectors=11 und
         # sector_size=512 unbedingt - "Amiga DD typical" - und fiel
@@ -870,12 +883,13 @@ foreach(test_source ${TEST_SOURCES})
         # denen es keinen gibt. Dieselbe Datei ist zugleich der
         # zweite hxcfe-Leerlauf nach MF-1021: 168 IMGE-Saetze, alle
         # mit trackbytes=0. Der Test belegt beides am Objekt.
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
-            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        # MF-1372: das Plugin dekodiert seit MF-1372 Sektoren und braucht
+        # dafuer uft_mfm_sector_parser.c und uft_flux_decoder.c samt deren
+        # Abhaengigkeiten. Statt einer weiteren Einzelliste die EINE
+        # Formatschicht-Bibliothek (P3-10), die beides schon traegt.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_zx_und_pc98_echte_abbilder")
@@ -4373,6 +4387,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            # MF-1372: das IPF-Plugin dekodiert Sektoren; es braucht die
+            # zwei Bitstrom-Dekoder und deren Abhaengigkeiten.
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_sektoren.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c
@@ -4425,6 +4450,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_helper.c
+            # MF-1372: das IPF-Plugin dekodiert Sektoren; es braucht die
+            # zwei Bitstrom-Dekoder und deren Abhaengigkeiten.
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_sektoren.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_air.c

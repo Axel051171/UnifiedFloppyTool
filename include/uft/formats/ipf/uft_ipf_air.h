@@ -224,6 +224,30 @@ int ipf_air_get_block_sizes(const ipf_air_disk_t *disk, int cyl,
                             int head, uint32_t block,
                             uint32_t *out_data_bits,
                             uint32_t *out_gap_bits);
+/**
+ * @brief MF-1372: der „Gap Value“ eines Blocks, wie ihn die Datei nennt.
+ *
+ * Louis-Guerin, „IPF Documentation“ V0.0, Kap. 2.5: „Gap Value: Default
+ * Gap value“. Keir Frasers Schreiber (disk-utilities, libdisk/container/
+ * ipf.c) setzt dort das Fuellbyte der Spur (`gap_fill_byte`).
+ * @return 0 wenn es den Block gibt, -1 sonst.
+ */
+int ipf_air_get_block_gap_value(const ipf_air_disk_t *disk, int cyl,
+                                int head, uint32_t block,
+                                uint32_t *out_gap_value);
+
+/**
+ * @brief MF-1372: IMGE „Start Bits“ — Abstand vom Index zum Datenbeginn
+ *        in Zellen (Keir Fraser, libdisk/container/ipf.c: „bit offset
+ *        from index of data start“; MAME ipf_dsk.cpp: `index_cells`).
+ * @return 0 wenn es die Spur gibt, -1 sonst.
+ */
+int ipf_air_get_track_start_bit(const ipf_air_disk_t *disk, int cyl,
+                                int head, uint32_t *out_start_bit);
+
+/** @brief MF-1372: Kodierer laut INFO-Satz (1 = CAPS, 2 = SPS, 0 = unbekannt). */
+uint32_t ipf_air_get_encoder(const ipf_air_disk_t *disk);
+
 int ipf_air_get_elem_count(const ipf_air_disk_t *disk, int cyl,
                            int head, uint32_t block);
 int ipf_air_get_elem(const ipf_air_disk_t *disk, int cyl, int head,

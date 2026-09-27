@@ -59,6 +59,27 @@ static void zellen_mfm_bit(uint8_t *puffer, uint32_t *bitpos, int d,
     *vorher = d;
 }
 
+/**
+ * MF-1372: `zellen` Zellen aus dem wiederholten Musterbyte `muster`, ab
+ * Zelle `start` des 16-Zellen-Musters (MSB zuerst). Ungerade Zellen tragen
+ * das Datenbit, gerade den MFM-Takt aus dem Kontext — dieselbe Regel wie
+ * `zellen_mfm_bit()`, nur an einer beliebigen Stelle des Musters begonnen.
+ */
+static void luecke_muster(uint8_t *puffer, uint32_t *bitpos, uint8_t muster,
+                          uint32_t zellen, uint32_t start, int *vorher)
+{
+    for (uint32_t i = 0; i < zellen; i++) {
+        const uint32_t p = (i + start) & 15u;
+        const int bit = (muster >> (7u - (p >> 1))) & 1;
+        if (p & 1u) {
+            bit_schreiben(puffer, (*bitpos)++, bit);
+            *vorher = bit;
+        } else {
+            bit_schreiben(puffer, (*bitpos)++, (*vorher || bit) ? 0 : 1);
+        }
+    }
+}
+
 /** Ein ganzes dekodiertes Byte, MSB zuerst. */
 static void zellen_mfm(uint8_t *puffer, uint32_t *bitpos, uint8_t b,
                        int *vorher)
@@ -202,6 +223,45 @@ int uft_ipf_zellstrom(const ipf_air_disk_t *disk, int cyl, int head,
              *
              * Die Grenze aus dem Kopf bleibt: ausdrueckliche
              * Gap-Beschreibungen wertet diese Fassung nicht aus. */
+            if (ipf_air_get_encoder(disk) == 1u) {
+                /* MF-1372: CAPS-Kodierer, Zwischenraum ohne Gap-Strom
+                 * (das Flaggenfeld gilt dort nicht). Zwei unabhaengige
+                 * Beschreibungen sagen dasselbe:
+                 *   Keir Fraser, disk-utilities ipfinfo/ipf.txt (Public
+                 *   Domain): „the decoder will fill the gap with the
+                 *   gapvalue byte … The decoder fills forward and
+                 *   backward in the gap at the same time, hence the
+                 *   'write splice' … occurs in the exact middle“;
+                 *   MAME ipf_dsk.cpp (BSD-3, gelesen, nicht uebernommen)
+                 *   `generate_block_gap_0()`: erste Haelfte ab
+                 *   Musteranfang, bei ungerader Zahl eine 0-Zelle, der
+                 *   Rest so ausgerichtet, dass das Muster am Lueckenende
+                 *   aufgeht; beim LETZTEN Block liegt die Naht am Index,
+                 *   wenn der mindestens 16 Zellen von beiden Raendern
+                 *   entfernt in der Luecke liegt. */
+                uint32_t gw = 0, start_bit = 0;
+                if (ipf_air_get_block_gap_value(disk, cyl, head, b,
+                                                &gw) != 0 || gw > 0xFFu ||
+                    ipf_air_get_track_start_bit(disk, cyl, head,
+                                                &start_bit) != 0) {
+                    free(puffer);
+                    return -2;
+                }
+                uint32_t naht = gap_bits >> 1;
+                if (b + 1u == (uint32_t)bloecke && start_bit < track_bits) {
+                    const uint32_t index = track_bits - start_bit;
+                    const uint32_t rel = index > bitpos ? index - bitpos : 0u;
+                    if (rel >= 16u && rel + 16u <= gap_bits) naht = rel;
+                }
+                const uint32_t ungerade = gap_bits & 1u;
+                luecke_muster(puffer, &bitpos, (uint8_t)gw, naht, 0u,
+                              &vorher);
+                if (ungerade) bit_schreiben(puffer, bitpos++, 0);
+                luecke_muster(puffer, &bitpos, (uint8_t)gw,
+                              gap_bits - naht - ungerade,
+                              (naht + ungerade - gap_bits) & 15u, &vorher);
+                continue;
+            }
             if (gap_bits & 1u) {
                 free(puffer);
                 return -2;

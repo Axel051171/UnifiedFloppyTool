@@ -387,6 +387,38 @@ int main(void)
         free(b.p);
     }
 
+    printf("== Befund 4 (MF-1372): ein Element ueber das Nutzlastende ==\n");
+    {
+        /* Ein Datenelement sagt 100 Byte an, die Nutzlast traegt 10. Vor
+         * MF-1372 blieb ein uninitialisierter 100-Byte-Block als „Wert“
+         * stehen, und die Zellsummen-Gleichung konnte ihn nicht sehen,
+         * weil die Laenge stimmte. Seit MF-1372 bricht die Zerlegung ab. */
+        puffer_t b = {0};
+        ipf_air_disk_t *d = NULL;
+        uint8_t nutz[32 + 2 + 10];
+        memset(nutz, 0, sizeof nutz);
+        be32_setzen(nutz + 0, 1600);   /* Datenbits */
+        be32_setzen(nutz + 16, 1);     /* MFM */
+        be32_setzen(nutz + 28, 32);    /* Datenversatz hinter dem Deskriptor */
+        nutz[32] = 0x22;               /* Typ 2 (Daten), 1 Zaehlbyte */
+        nutz[33] = 100;                /* 100 Byte angesagt */
+        memcpy(nutz + 34, "UFT-K 0123", 10);
+        /* SPS-Kodierer (2): dort hat auch der Stand VOR MF-1372 Elemente
+         * zerlegt — mit dem CAPS-Kodierer waere 4b dort leer erfuellt. */
+        uint32_t info_sps[21];
+        memset(info_sps, 0, sizeof info_sps);
+        info_sps[0] = 1; info_sps[1] = 2; info_sps[2] = 1; info_sps[12] = 2;
+        caps_satz(&b);
+        satz(&b, "INFO", info_sps, 21);
+        imge_satz(&b, 0, 0, 1, 1);
+        data_satz(&b, 1, nutz, sizeof nutz);
+        pruefe("4a die Datei selbst bleibt lesbar", parse(&b, &d) == IPF_AIR_OK);
+        pruefe("4b das Element ueber das Nutzlastende wird NICHT angelegt",
+               d && ipf_air_get_elem_count(d, 0, 0, 0) == 0);
+        if (d) weg(d);
+        free(b.p);
+    }
+
     printf("test_ipf_satzlauf_schranken: %d gruen, %d rot\n", gruen, rot);
     return rot == 0 ? 0 : 1;
 }
