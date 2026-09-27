@@ -385,12 +385,6 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/formats/apple/uft_diskcopy.c
     classification: UNMARKED — triage
-  - file: src/formats/pc98/fdd.c
-    classification: UNMARKED — triage
-  - file: src/formats/pc98/nfd.c
-    classification: UNMARKED — triage
-  - file: src/formats/pc98/uft_pc98.c
-    classification: UNMARKED — triage
   - file: src/formats/uft_format_converters.c
     classification: UNMARKED — triage
   - file: src/formats/xdf/uft_xdf_api_impl.c

@@ -37,7 +37,5 @@ src/formats/stx/uft_stx_air.c:988:STX_AIR_TEST:13
 src/formats/stx/uft_stx_parser_v2.c:468:STX_PARSER_TEST:15
 src/formats/tap/uft_tap_parser_v2.c:255:TAP_PARSER_TEST:9
 src/formats/trd/uft_trd_parser_v2.c:615:TRD_PARSER_TEST:21
-src/formats/tzx/uft_tzx_wav.c:1217:TZX_WAV_TEST:14
-src/formats/tzx/uft_zxtap.c:597:ZXTAP_TEST:13
 src/formats/uff/uft_uff.c:1292:UFT_TEST:21
 src/recovery/uft_recovery_meta.c:731:UFT_RECOVERY_META_TEST:22

@@ -1109,8 +1109,6 @@ SOURCES += \
     src/formats/td0/uft_td0.c \
     src/formats/udi/uft_udi.c \
     src/formats/dsk_cpc/uft_dsk_cpc.c \
-    src/formats/tzx/uft_tzx_wav.c \
-    src/formats/tzx/uft_zxtap.c \
     src/formats/img/uft_img.c \
     src/formats/imz/uft_imz.c \
     src/formats/cqm/uft_cqm.c \
@@ -1379,17 +1377,11 @@ SOURCES += \
 
 # TRS80 formats (5 files)
 SOURCES += \
-    src/formats/trs80/uft_trs80.c \
 
 # PC98 formats (7 files)
 SOURCES += \
     src/formats/pc98/d88.c \
-    src/formats/pc98/dim.c \
-    src/formats/pc98/fdd.c \
-    src/formats/pc98/fdx.c \
-    src/formats/pc98/hdm.c \
-    src/formats/pc98/nfd.c \
-    src/formats/pc98/uft_pc98.c
+    src/formats/pc98/dim.c
 
 # Misc formats (23 files)
 SOURCES += \
@@ -1402,13 +1394,7 @@ SOURCES += \
 
 # Flux formats (12 files)
 SOURCES += \
-    src/formats/flux/dfi.c \
-    src/formats/flux/f86.c \
-    src/formats/flux/gwraw.c \
-    src/formats/flux/kfraw.c \
     src/formats/flux/mfi.c \
-    src/formats/flux/pfi.c \
-    src/formats/flux/psi.c \
     src/formats/flux/scp.c
 
 # 86Box (1 files)
@@ -1589,9 +1575,7 @@ SOURCES += \
 
 # Japanese Ext (3 files)
 SOURCES += \
-    src/formats/japanese_ext/uft_hitachi_s1.c \
-    src/formats/japanese_ext/uft_sanyo_mbc.c \
-    src/formats/japanese_ext/uft_sharp_x1.c
+    src/formats/japanese_ext/uft_hitachi_s1.c
 
 # KryoFlux (2 files)
 SOURCES += \
@@ -1661,12 +1645,7 @@ SOURCES += \
     src/formats/nordic/uft_abc800.c
 
 # Obscure (5 files)
-SOURCES += \
-    src/formats/obscure/uft_applix.c \
-    src/formats/obscure/uft_calcomp.c \
-    src/formats/obscure/uft_pmc_micromate.c \
-    src/formats/obscure/uft_pyldin.c \
-    src/formats/obscure/uft_rc759.c
+SOURCES +=
 
 # Opus (1 files)
 SOURCES +=
@@ -1803,13 +1782,11 @@ SOURCES += \
 # ═══════════════════════════════════════════════════════════════════════════════
 SOURCES += \
     src/formats/modern/uft_aaru.c \
-    src/formats/flux/uft_hxcstream.c \
     src/formats/pc/uft_86f.c \
     src/formats/pc/uft_savedskf.c
 
 HEADERS += \
     include/uft/formats/modern/uft_aaru.h \
-    include/uft/formats/flux/uft_hxcstream.h \
     include/uft/formats/pc/uft_86f.h \
     include/uft/formats/pc/uft_savedskf.h
 
