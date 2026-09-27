@@ -1642,6 +1642,30 @@
       "test": "test_td0_schreiber",
       "fremdcode": "nein, siehe uft_gepackt_pc720.td0.",
       "content": "PC 1.2M, 80 x 2 x 15 x 512 = 1 228 800 Byte Nutzdaten, gepackt auf **608 535 Byte** (49,5 %). Marken und BPB wie bei der 720K, BPB-Zahlen entsprechend: 2400 Sektoren, 1 je Cluster, 224 Wurzeleintraege, FAT 7 Sektoren, 15 Sektoren je Spur."
+    },
+    {
+      "file": "tests/corpus_free/disk_analyse_uftk_amiga.ipf",
+      "sha256": "03c261e2fece21166d277854f22bcee243c75a91bfc745c87a4c545d290dbbf2",
+      "format": "ipf",
+      "origin": "cross-tool",
+      "tool": "disk-analyse aus keirf/disk-utilities (github.com/keirf/disk-utilities, Quellstand 5e690f3aa248c4d66d2b233ba3e6f7147fbd0311). Lizenz Unlicense / public domain, COPYING im Klon gemessen. Gebaut unter Linux mit `make` (gcc, erster Versuch rc 0). IPF-Schreiber libdisk/container/ipf.c (\"Written in 2011 by Keir Fraser\"), unabhaengig von AIR. Kanal *Oracle* nach MF-695 - ausgefuehrt, nicht eingebunden.",
+      "source": "python tests/corpus_manifest/gen_ipf_corpus.py <disk-utilities-klon> <ausgabe> [--vergleich]. UFT-eigene selbstbenennende Eingabe (je Sektor die Marke `UFT-K Ccc Hh Sss ` alle 17 Byte), Zylinder 0..3 (`-e 3`). Zwei Laeufe unterscheiden sich in genau zwoelf Byte - Datum/Uhrzeit im INFO-Satz (Versatz 64..71) und dessen CRC (20..23); `--vergleich` prueft alles uebrige byteweise gegen diese Datei (gemessen 0 Byte).",
+      "test": "test_ipf_sektorebene",
+      "oracle": "disk-analyse",
+      "fremdcode": "nein - der INHALT ist UFT-eigen (selbstbenennend, kein Bootblock, kein Dateisystem); fremd ist allein die IPF-Kodierung. Das INFO-Feld traegt disk-analyses Kennung crc32(\"User IPF\") = 0x843265bb und ist unveraendert (Bitte des Autors im Quelltext, SPS-Erhaltungen nicht nachzuahmen).",
+      "content": "IPF, CAPS-Kodierer (encoder 1), 168 IMGE-Saetze (84 x 2): Zylinder 0..3 AmigaDOS mit je 11 Bloecken, 100 150 Zellen je Spur, Zwischenraum 4406 Zellen, Fuellbyte 0x00; Zylinder 4..83 unformatiert. INFO nennt Plattform Amiga. UFT liest seit MF-1373 88 von 88 Sektoren an ihrer eigenen Ortsmarke (volle 80-Zylinder-Fassung: 1760 von 1760), alle Pruefsummen gueltig."
+    },
+    {
+      "file": "tests/corpus_free/disk_analyse_uftk_pcdd.ipf",
+      "sha256": "61fc6ba51c583f6ab60c74fe08ed7e54ef2e68530d2d16cc061020d1680caba3",
+      "format": "ipf",
+      "origin": "cross-tool",
+      "tool": "disk-analyse aus keirf/disk-utilities (github.com/keirf/disk-utilities, Quellstand 5e690f3aa248c4d66d2b233ba3e6f7147fbd0311). Lizenz Unlicense / public domain, COPYING im Klon gemessen. Gebaut unter Linux mit `make` (gcc, erster Versuch rc 0). IPF-Schreiber libdisk/container/ipf.c (\"Written in 2011 by Keir Fraser\"), unabhaengig von AIR. Kanal *Oracle* nach MF-695 - ausgefuehrt, nicht eingebunden.",
+      "source": "python tests/corpus_manifest/gen_ipf_corpus.py <disk-utilities-klon> <ausgabe> [--vergleich]. UFT-eigene selbstbenennende Eingabe (je Sektor die Marke `UFT-K Ccc Hh Sss ` alle 17 Byte), Zylinder 0..3 (`-e 3`). Zwei Laeufe unterscheiden sich in genau zwoelf Byte - Datum/Uhrzeit im INFO-Satz (Versatz 64..71) und dessen CRC (20..23); `--vergleich` prueft alles uebrige byteweise gegen diese Datei (gemessen 0 Byte).",
+      "test": "test_ipf_sektorebene",
+      "oracle": "disk-analyse",
+      "fremdcode": "nein - der INHALT ist UFT-eigen (selbstbenennend, kein Bootblock, kein Dateisystem); fremd ist allein die IPF-Kodierung. Das INFO-Feld traegt disk-analyses Kennung crc32(\"User IPF\") = 0x843265bb und ist unveraendert (Bitte des Autors im Quelltext, SPS-Erhaltungen nicht nachzuahmen).",
+      "content": "IPF, CAPS-Kodierer (encoder 1), Zylinder 0..3 IBM-PC DD mit je 19 Bloecken (mehr als die fruehere Klemme von 16, P3-361), Fuellbyte 0x4E, letzter Zwischenraum 4342 Zellen, Startbit 1280. INFO nennt Plattform AMIGA - disk-analyse schreibt das fuer JEDE Datei (ipf.c: info.platform[0] = 1); UFT waehlt den Dekoder deshalb nach dem Inhalt. Seit MF-1373 72 von 72 Sektoren an ihrer eigenen Ortsmarke (voll: 1440 von 1440)."
     }
   ]
 }

@@ -54,7 +54,6 @@
 
 #define IPF_MAX_TRACKS       84
 #define IPF_MAX_SIDES        2
-#define IPF_MAX_BLOCKS       16
 #define IPF_MAX_GAP_ELEMS    16
 #define IPF_MAX_DATA_ELEMS   16
 
@@ -246,7 +245,11 @@ typedef struct {
     uint32_t block_count;
     uint32_t track_flags;
 
-    ipf_block_desc_t blocks[IPF_MAX_BLOCKS];
+    /* MF-1373 (P3-361 Weg b): so viele, wie der DATA-Satz traegt. Hier
+     * stand ein festes `blocks[IPF_MAX_BLOCKS]` mit 16 Plaetzen; eine
+     * PC-DD-Spur aus disk-analyse hat 19 Bloecke, Spur 79/0 von
+     * `sps_lethalxcess_a.ipf` 35. */
+    ipf_block_desc_t *blocks;
     uint32_t actual_blocks;
 
     bool has_fuzzy;
@@ -447,30 +450,42 @@ static int parse_data_elements(const uint8_t* data, size_t len,
         if (block_flags & IPF_BF_DATA_IN_BIT) {
             size_bits = data_size;
         } else {
+            /* MF-1373: `data_size * 8` lief in uint32_t ueber. */
+            if (data_size > UINT32_MAX / 8u) return -1;
             size_bits = data_size * 8;
         }
 
         /* Read sample data (except for fuzzy type) */
         uint32_t byte_count = (size_bits / 8) + ((size_bits % 8) ? 1 : 0);
 
-        if (block->data_elem_count < IPF_MAX_DATA_ELEMS) {
-            ipf_data_elem_t* de = &block->data_elems[block->data_elem_count++];
-            de->type = dtype;
-            de->data_bits = size_bits;
-            de->data_bytes = byte_count;
+        /* MF-1373: zwei stille Fehler. Ab dem 17. Element wurde die
+         * Position NICHT weitergeschoben — die Wertbytes wurden danach
+         * als Elementkoepfe gelesen. Und ein Wert, der ueber das Ende
+         * reichte, blieb als uninitialisierter Speicherblock mit voller
+         * Laenge stehen. Beides bricht jetzt die Zerlegung des Blocks
+         * ab; die fehlenden Zellen fallen danach in der Zellsummen-
+         * Gleichung auf (uft_ipf_zellstrom(), -2), statt als Daten
+         * durchzugehen. */
+        if (block->data_elem_count >= IPF_MAX_DATA_ELEMS) return -1;
+        if (dtype != IPF_DTYPE_FUZZY &&
+            (uint64_t)data_pos + byte_count > len) return -1;
 
-            if (dtype != IPF_DTYPE_FUZZY && byte_count > 0) {
-                de->value = (uint8_t*)malloc(byte_count);
-                if (de->value && data_pos + byte_count <= len) {
-                    memcpy(de->value, data + data_pos, byte_count);
-                }
-                de->value_size = byte_count;
-                data_pos += byte_count;
-            } else {
-                de->value = NULL;
-                de->value_size = 0;
-            }
+        ipf_data_elem_t* de = &block->data_elems[block->data_elem_count];
+        de->type = dtype;
+        de->data_bits = size_bits;
+        de->data_bytes = byte_count;
+
+        if (dtype != IPF_DTYPE_FUZZY && byte_count > 0) {
+            de->value = (uint8_t*)malloc(byte_count);
+            if (!de->value) return -1;
+            memcpy(de->value, data + data_pos, byte_count);
+            de->value_size = byte_count;
+            data_pos += byte_count;
+        } else {
+            de->value = NULL;
+            de->value_size = 0;
         }
+        block->data_elem_count++;
     }
 
     return 0;
@@ -479,6 +494,22 @@ static int parse_data_elements(const uint8_t* data, size_t len,
 /*============================================================================
  * MAIN PARSER - Ported from IPFReader.cs decodeIPF()
  *============================================================================*/
+
+/** MF-1373: gibt die Bloecke EINER Spur samt Elementwerten frei. Auch
+ *  vor einem zweiten DATA-Satz fuer dieselbe Spur, damit der erste
+ *  nicht leckt. */
+static void track_blocks_free(ipf_track_t *trk)
+{
+    if (!trk->blocks) return;
+    for (uint32_t b = 0; b < trk->actual_blocks; b++) {
+        for (uint32_t d = 0; d < trk->blocks[b].data_elem_count; d++) {
+            free(trk->blocks[b].data_elems[d].value);
+        }
+    }
+    free(trk->blocks);
+    trk->blocks = NULL;
+    trk->actual_blocks = 0;
+}
 
 static bool image_list_add(ipf_image_list_t *l, const ipf_image_record_t *r)
 {
@@ -633,12 +664,11 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                 trk->track_bits  = img.track_bits;
                 trk->block_count = img.block_count;
                 trk->track_flags = img.track_flags;
-                /* MF-830: schon bei der ANKUENDIGUNG festhalten. Wenn die
-                 * Datei mehr Bloecke angibt, als dieser Leser fassen kann,
-                 * steht der Verlust fest — unabhaengig davon, ob spaeter
-                 * ueberhaupt ein DATA-Satz dazu kommt. Frueher und
-                 * genauer als am Klemmpunkt selbst. */
-                trk->blocks_truncated = (img.block_count > IPF_MAX_BLOCKS);
+                /* MF-830 hielt hier die 16-Block-Klemme fest. Seit
+                 * MF-1373 gibt es keine Klemme mehr; ein Verlust steht
+                 * erst fest, wenn der DATA-Satz weniger Blockbeschreibungen
+                 * TRAEGT, als hier angesagt sind (siehe DATA). */
+                trk->blocks_truncated = false;
                 if (img.track_flags & IPF_TF_FUZZY)
                     trk->has_fuzzy = true;
                 disk->total_tracks++;
@@ -694,6 +724,10 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
             {
                 ipf_track_t* trk = &disk->tracks[img->track][img->side];
                 uint32_t extra_start = pos;
+                /* MF-1373: Elemente bleiben in IHRER Nutzlast. Hier wurde
+                 * gegen `size` (das Dateiende) geprueft; ein Versatz ins
+                 * naechste Satzpaar las fremde Bytes als Elemente. */
+                const uint32_t extra_end = pos + dr.length;
 
                 /*
                  * Parse block descriptors (32 bytes each)
@@ -701,11 +735,20 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                  */
                 uint32_t bpos = pos;
                 uint32_t nblocks = img->block_count;
-                if (nblocks > IPF_MAX_BLOCKS) nblocks = IPF_MAX_BLOCKS;
+                /* MF-1373 (P3-361 Weg b): so viele Bloecke, wie die Datei
+                 * ansagt UND die Nutzlast als Beschreibung traegt. Traegt
+                 * sie weniger, ist das der Verlust, den MF-830 meldet. */
+                const uint32_t tragbar = dr.length / IPF_BLOCK_DESC_SZ;
+                if (nblocks > tragbar) {
+                    trk->blocks_truncated = true;
+                    nblocks = tragbar;
+                }
+                track_blocks_free(trk);
+                trk->blocks = (ipf_block_desc_t *)calloc(
+                    nblocks ? nblocks : 1u, sizeof(ipf_block_desc_t));
+                if (!trk->blocks) return IPF_AIR_FILE_ERROR;
 
                 for (uint32_t bi = 0; bi < nblocks; bi++) {
-                    if (bpos + IPF_BLOCK_DESC_SZ > size) break;
-
                     ipf_block_desc_t* bd = &trk->blocks[bi];
                     bd->data_bits      = ipf_be32(data + bpos); bpos += 4;
                     bd->gap_bits       = ipf_be32(data + bpos); bpos += 4;
@@ -716,29 +759,48 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                     bd->gap_bytes      = bd->cell_type;         bpos += 4;
                     bd->encoder_type   = (ipf_block_encoder_t)ipf_be32(data + bpos); bpos += 4;
                     bd->block_flags    = ipf_be32(data + bpos); bpos += 4;
+                    /* MF-1373: beim CAPS-Kodierer gilt das Flaggenfeld
+                     * nicht — Keir Fraser, ipfinfo/ipf.txt: „The flags
+                     * field is ignored and assumed 0 if the encoder release
+                     * in the INFO descriptor is 1“; MAME ipf_dsk.cpp
+                     * `flags = encoder_type == 1 ? 0 : ...`. Zaehlungen
+                     * stehen dann in Byte, Gap-Stroeme gibt es nicht. */
+                    if (disk->info.encoder_type == IPF_ENC_CAPS)
+                        bd->block_flags = 0;
                     bd->gap_default    = ipf_be32(data + bpos); bpos += 4;
                     bd->data_offset    = ipf_be32(data + bpos); bpos += 4;
 
                     disk->total_blocks++;
 
                     /*
-                     * Parse SPS gap and data elements
-                     * (only for SPS encoder)
+                     * Gap elements: nur der SPS-Kodierer hat einen
+                     * Gap-Versatz (beim CAPS-Kodierer steht an derselben
+                     * Stelle die gerundete Blockgroesse).
                      */
-                    if (disk->info.encoder_type == IPF_ENC_SPS) {
-                        /* Gap elements */
-                        if (bd->gap_bits > 0 && (bd->block_flags & (IPF_BF_FW_GAP | IPF_BF_BW_GAP))) {
-                            uint32_t gap_pos = extra_start + bd->gap_offset;
-                            parse_gap_elements(data, size, gap_pos,
-                                             bd->block_flags, bd);
-                        }
+                    if (disk->info.encoder_type == IPF_ENC_SPS
+                        && bd->gap_bits > 0
+                        && (bd->block_flags & (IPF_BF_FW_GAP | IPF_BF_BW_GAP))
+                        && bd->gap_offset < dr.length) {
+                        uint32_t gap_pos = extra_start + bd->gap_offset;
+                        parse_gap_elements(data, extra_end, gap_pos,
+                                         bd->block_flags, bd);
+                    }
 
-                        /* Data elements */
-                        if (bd->data_bits > 0) {
-                            uint32_t dpos = extra_start + bd->data_offset;
-                            parse_data_elements(data, size, dpos,
-                                              bd->block_flags, bd);
-                        }
+                    /*
+                     * Data elements — MF-1373: fuer BEIDE Kodierer. Hier
+                     * stand die Bedingung `encoder_type == SPS`, und MF-1079
+                     * hielt fest, beim CAPS-Kodierer gebe es keine
+                     * Blockelemente. Das trifft nicht: Keir Frasers
+                     * IPF-Schreiber (disk-utilities, libdisk/container/
+                     * ipf.c, Public Domain) legt auch im CAPS-Modus einen
+                     * Elementstrom ab — nur zaehlt er dort in BYTE statt in
+                     * Bit (Blockflagge Bit 2 aus). Genau diese Unterscheidung
+                     * trifft `parse_data_elements()` schon.
+                     */
+                    if (bd->data_bits > 0 && bd->data_offset < dr.length) {
+                        uint32_t dpos = extra_start + bd->data_offset;
+                        parse_data_elements(data, extra_end, dpos,
+                                          bd->block_flags, bd);
                     }
 
                     trk->actual_blocks++;
@@ -806,12 +868,7 @@ void ipf_air_free(ipf_air_disk_t* disk) {
     if (!disk) return;
     for (int t = 0; t < IPF_MAX_TRACKS; t++) {
         for (int s = 0; s < IPF_MAX_SIDES; s++) {
-            ipf_track_t* trk = &disk->tracks[t][s];
-            for (uint32_t b = 0; b < trk->actual_blocks; b++) {
-                for (uint32_t d = 0; d < trk->blocks[b].data_elem_count; d++) {
-                    free(trk->blocks[b].data_elems[d].value);
-                }
-            }
+            track_blocks_free(&disk->tracks[t][s]);
         }
     }
     free(disk->ctei);
@@ -882,6 +939,28 @@ int ipf_air_get_block_sizes(const ipf_air_disk_t *disk, int cyl,
     if (out_data_bits) *out_data_bits = trk->blocks[block].data_bits;
     if (out_gap_bits)  *out_gap_bits  = trk->blocks[block].gap_bits;
     return 0;
+}
+
+int ipf_air_get_block_gap_value(const ipf_air_disk_t *disk, int cyl,
+                                int head, uint32_t block,
+                                uint32_t *out_gap_value) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+    if (block >= trk->actual_blocks) return -1;
+    if (out_gap_value) *out_gap_value = trk->blocks[block].gap_default;
+    return 0;
+}
+
+int ipf_air_get_track_start_bit(const ipf_air_disk_t *disk, int cyl,
+                                int head, uint32_t *out_start_bit) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    if (out_start_bit)
+        *out_start_bit = disk->tracks[cyl][head].start_bit_pos;
+    return 0;
+}
+
+uint32_t ipf_air_get_encoder(const ipf_air_disk_t *disk) {
+    return (disk && disk->valid) ? (uint32_t)disk->info.encoder_type : 0u;
 }
 
 int ipf_air_get_elem_count(const ipf_air_disk_t *disk, int cyl,

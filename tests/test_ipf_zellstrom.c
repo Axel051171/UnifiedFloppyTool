@@ -52,6 +52,10 @@
  *   nicht auswertet. Steht so im Kopf der Umsetzung.
  * * **Der CAPS-Pfad** (`encoder_type=1`) — dort gibt es keine
  *   Blockelemente, und `uft_ipf_zellstrom()` sagt mit -1 ab.
+ *   **BERICHTIGT MF-1373:** es gibt sie. disk-analyse (Keir Fraser)
+ *   legt auch beim CAPS-Kodierer Elementstroeme ab, nur in Byte gezaehlt;
+ *   der Leser zerlegte sie bloss nicht. Seit MF-1373 baut der CAPS-Pfad
+ *   einen Zellstrom — belegt in test_ipf_sektorebene, nicht hier.
  * * **Ob der Strom eine echte Diskette trifft.** Belegt ist, dass er die
  *   Zahlen der DATEI trifft. Ein Vergleich gegen eine Aufnahme derselben
  *   Diskette braucht Hardware (MF-310).
