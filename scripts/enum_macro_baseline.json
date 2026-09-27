@@ -4,7 +4,6 @@
     "FMT_D64",
     "FMT_G64",
     "FMT_SCP",
-    "IPF_DENS_AUTO",
     "N",
     "UFT_CAP_WEAK_BITS",
     "UFT_CONFIDENCE_HIGH",
@@ -122,20 +121,6 @@
       ],
       "macro_files": [
         "src/core/uft_smart_open.c"
-      ]
-    },
-    "IPF_DENS_AUTO": {
-      "enum": [
-        2
-      ],
-      "macro": [
-        0
-      ],
-      "enum_files": [
-        "src/formats/ipf/uft_ipf_air.c"
-      ],
-      "macro_files": [
-        "src/formats/ipf/uft_ipf_ctraw_v2.c"
       ]
     },
     "N": {

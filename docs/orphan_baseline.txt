@@ -111,7 +111,6 @@ src/formats/flex/uft_flex.c
 src/formats/flux/dfi.c
 src/formats/flux/f86.c
 src/formats/flux/gwraw.c
-src/formats/flux/ipf.c
 src/formats/flux/kfraw.c
 src/formats/flux/pfi.c
 src/formats/flux/pri.c
@@ -124,8 +123,6 @@ src/formats/hp/lif.c
 src/formats/imd/uft_imd_parser_v2.c
 src/formats/imz/uft_imz.c
 src/formats/industrial/uft_cromemco.c
-src/formats/ipf/uft_ipf_caps.c
-src/formats/ipf/uft_ipf_ctraw_v2.c
 src/formats/japanese_ext/uft_sanyo_mbc.c
 src/formats/japanese_ext/uft_sharp_x1.c
 src/formats/jv/uft_jv_parser_v2.c

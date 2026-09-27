@@ -255,29 +255,14 @@ typedef struct {
  * ASCII-Vierer „CAPS", der wirklich am Anfang jeder IPF-Datei steht.
  */
 
-/**
- * @brief Parse IPF header
- */
-int uft_caps_parse_header(const uint8_t *data, size_t size,
-                          uft_ipf_header_t *header);
-
-/**
- * @brief Parse IPF INFO record
- */
-int uft_caps_parse_info(const uint8_t *data, size_t size,
-                        uft_ipf_info_t *info);
-
-/**
- * @brief Parse IPF IMGE record
- */
-int uft_caps_parse_imge(const uint8_t *data, size_t size,
-                        uft_ipf_imge_t *imge);
-
-/**
- * @brief Full IPF analysis
- */
-int uft_caps_analyze_ipf(const uint8_t *data, size_t size,
-                         uft_caps_analysis_t *result);
+/* MF-1374: hier standen `uft_caps_parse_header/_info/_imge`,
+ * `uft_caps_analyze_ipf`, `uft_caps_has_ctraw`, `uft_caps_analyze_ctraw`
+ * und `uft_caps_crc32` — ein ZWEITER IPF-Satzleser neben
+ * `uft_ipf_air.c`, ohne Aufrufer, der INFO und IMGE vier Byte versetzt
+ * las (`data + 16` statt Satzbeginn + 12), keine CRC pruefte und fuer
+ * CTRaw feste Werte (25 MHz, 200 ms, 0,9) als Analyse ausgab. IPF-Saetze
+ * liest seither nur noch `uft_ipf_air.c`. Die Schutz-Heuristiken darunter
+ * bleiben; ueber sie entscheidet P0-2. */
 
 /*===========================================================================
  * Function Prototypes - Protection Detection
@@ -316,17 +301,6 @@ int uft_caps_analyze_density(const uint8_t *track_data, size_t size,
 /*===========================================================================
  * Function Prototypes - CTRaw Analysis
  *===========================================================================*/
-
-/**
- * @brief Check if IPF contains CTRaw data
- */
-bool uft_caps_has_ctraw(const uint8_t *data, size_t size);
-
-/**
- * @brief Analyze CTRaw data
- */
-int uft_caps_analyze_ctraw(const uint8_t *data, size_t size,
-                           uft_ctraw_analysis_t *result);
 
 /**
  * @brief Extract flux timing from CTRaw
@@ -371,11 +345,6 @@ const char *uft_caps_density_name(uft_caps_density_t density);
  * @brief Get encoder name
  */
 const char *uft_caps_encoder_name(uft_ipf_encoder_t encoder);
-
-/**
- * @brief Calculate IPF CRC32
- */
-uint32_t uft_caps_crc32(const uint8_t *data, size_t size);
 
 /**
  * @brief Export analysis to JSON

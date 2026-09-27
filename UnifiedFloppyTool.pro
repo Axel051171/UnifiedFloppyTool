@@ -1151,8 +1151,6 @@ SOURCES += \
     src/formats/g64/uft_g64.c \
     src/formats/g64/uft_g64_parser_v3.c \
     src/formats/imd/uft_imd_parser_v2.c \
-    src/formats/ipf/uft_ipf_caps.c \
-    src/formats/ipf/uft_ipf_ctraw_v2.c \
     src/formats/ipf/uft_ipf_air.c \
     src/formats/ipf/uft_ipf_zellstrom.c \
     src/formats/ipf/uft_ipf_sektoren.c \
@@ -1449,7 +1447,6 @@ SOURCES += \
     src/formats/flux/dfi.c \
     src/formats/flux/f86.c \
     src/formats/flux/gwraw.c \
-    src/formats/flux/ipf.c \
     src/formats/flux/kfraw.c \
     src/formats/flux/mfi.c \
     src/formats/flux/pfi.c \

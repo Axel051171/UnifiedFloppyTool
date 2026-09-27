@@ -79,7 +79,7 @@ void ipf_air_free(ipf_air_disk_t *disk);
  * @brief Geometry derived from INFO record.
  * @param out_cylinders Set to (max_track - min_track + 1), or 0
  * @param out_sides     Set to (max_side  - min_side  + 1), or 0
- * @param out_primary_platform Set to platforms[0] (caps_platform_t value)
+ * @param out_primary_platform Set to platforms[0] (1 = Amiga ... 9 = Atari 8-bit)
  * @return 0 on success, -1 on invalid handle / not parsed
  */
 int ipf_air_get_geometry(const ipf_air_disk_t *disk,

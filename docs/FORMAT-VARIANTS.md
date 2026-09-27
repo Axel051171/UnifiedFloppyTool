@@ -90,7 +90,7 @@ verifizieren dass der Reader das nutzt (sonst Seiten-Vertauschung): Prüf-S.
 
 | Variante | Spezifikation | UFT-Status | Aufwand |
 |---|---|---|---|
-| IPF (CAPS/SPS, Density + Protection) | [IPF v1.6 PDF](https://www.kryoflux.com/download/ipf_documentation_v1.6.pdf) | R (CTRaw, `uft_ipf_ctraw_v2.c`) | — |
+| IPF (CAPS/SPS, Density + Protection) | [IPF v1.6 PDF](https://www.kryoflux.com/download/ipf_documentation_v1.6.pdf) | R (`uft_ipf_air.c`, Sektorebene `uft_ipf_sektoren.c`; der fruehere CTRaw-Leser `uft_ipf_ctraw_v2.c` ist seit MF-1374 fort — er las Satztypen als Little-Endian-Zahlen und damit kein echtes IPF) | — |
 
 IPF ist proprietär (CAPS-Lib-Referenz). Read über eigene CTRaw-Impl.
 Density-/Protection-Marker-Vollständigkeit ist ohne Ground-Truth-Korpus nicht
