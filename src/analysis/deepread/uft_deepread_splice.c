@@ -57,6 +57,59 @@ static uint32_t bitcell_to_ns(const otdr_track_t *track, uint32_t bitcell)
                       / track->bitcell_count);
 }
 
+/**
+ * Largest first-derivative jump of a quality profile.
+ * d[i] = profile[i+1] - profile[i]; returns the position i of max |d|.
+ */
+static uint32_t profile_peak(const float *profile, uint32_t n, float *mag)
+{
+    uint32_t max_pos = 0;
+    float    max_abs = 0.0f;
+
+    for (uint32_t i = 0; i + 1 < n; i++) {
+        float a = fabsf(profile[i + 1] - profile[i]);
+        if (a > max_abs) {
+            max_abs = a;
+            max_pos = i;
+        }
+    }
+    *mag = max_abs;
+    return max_pos;
+}
+
+/**
+ * Splice position of ONE revolution, measured the same way as the track:
+ * the revolution runs through the OTDR analysis as its own track (same
+ * encoding as the main track, default configuration otherwise) and its
+ * profile peak is taken. Returns 0 on success.
+ */
+static int revolution_peak(const otdr_track_t *track, uint8_t rev,
+                           uint32_t *pos)
+{
+    const uint32_t *flux = track->flux_multi[rev];
+    uint32_t        cnt  = track->flux_multi_count[rev];
+    if (!flux || cnt < MIN_BITCELLS)
+        return -1;
+
+    otdr_track_t *tmp = (otdr_track_t *)calloc(1, sizeof(*tmp));
+    if (!tmp)
+        return -1;
+    otdr_track_load_flux(tmp, flux, cnt, 0);
+
+    otdr_config_t cfg;
+    otdr_config_defaults(&cfg);
+    cfg.encoding = track->encoding;
+    int rc = -1;
+    if (otdr_track_analyze(tmp, &cfg) == 0 && tmp->quality_profile &&
+        tmp->bitcell_count >= MIN_BITCELLS) {
+        float mag;
+        *pos = profile_peak(tmp->quality_profile, tmp->bitcell_count, &mag);
+        rc = 0;
+    }
+    otdr_track_free(tmp);   /* frees the struct as well */
+    return rc;
+}
+
 /* -----------------------------------------------------------------------
  * Single-track splice detection
  * ----------------------------------------------------------------------- */
@@ -76,19 +129,9 @@ int uft_deepread_detect_splice(const otdr_track_t *track,
 
     const uint32_t n = track->bitcell_count;
 
-    /* --- Step 1: compute first derivative of quality profile ---------- */
-    /*     d[i] = quality_profile[i+1] - quality_profile[i]              */
-    uint32_t max_pos = 0;
+    /* --- Step 1: largest jump of the quality profile ----------------- */
     float    max_abs = 0.0f;
-
-    for (uint32_t i = 0; i < n - 1; i++) {
-        float d = track->quality_profile[i + 1] - track->quality_profile[i];
-        float a = fabsf(d);
-        if (a > max_abs) {
-            max_abs = a;
-            max_pos = i;
-        }
-    }
+    uint32_t max_pos = profile_peak(track->quality_profile, n, &max_abs);
 
     /* --- Step 2: fill basic result fields ----------------------------- */
     result->splice_bitcell  = max_pos;
@@ -96,43 +139,27 @@ int uft_deepread_detect_splice(const otdr_track_t *track,
     result->splice_magnitude = max_abs;
 
     /* --- Step 3: multi-revolution stability --------------------------- */
-    /*     Re-derive per-revolution and compute std-dev of positions.     */
+    /*     Std-dev (bitcells) of the peak position over revolutions, each
+     *     revolution measured exactly like the track. A write splice sits
+     *     on the medium and recurs every revolution; a noise peak does not.
+     *     Before MF-1431 this took the largest jump between consecutive RAW
+     *     intervals (the first 2T->4T change, not the splice) and reported
+     *     a spread of FLUX indices: the same splice on two revolutions gave
+     *     4414.5 (tests/test_deepread_naht.c W2). */
     result->splice_stability = 0.0f;
-
     if (track->num_revolutions > 1) {
         uint32_t positions[OTDR_MAX_REVOLUTIONS];
         uint32_t valid_revs = 0;
         double   sum = 0.0;
 
         for (uint8_t r = 0; r < track->num_revolutions; r++) {
-            const uint32_t *flux = track->flux_multi[r];
-            uint32_t        cnt  = track->flux_multi_count[r];
-
-            if (!flux || cnt < MIN_BITCELLS)
+            uint32_t pos;
+            if (revolution_peak(track, r, &pos) != 0)
                 continue;
-
-            /* Find the biggest derivative jump in this revolution's raw
-             * flux data (as a proxy -- the full quality profile is only
-             * available for the merged track, but the raw flux still
-             * shows the splice as a timing discontinuity). */
-            uint32_t rev_max_pos = 0;
-            float    rev_max_abs = 0.0f;
-
-            for (uint32_t i = 0; i < cnt - 1; i++) {
-                float d = (float)flux[i + 1] - (float)flux[i];
-                float a = fabsf(d);
-                if (a > rev_max_abs) {
-                    rev_max_abs = a;
-                    rev_max_pos = i;
-                }
-            }
-
-            positions[valid_revs] = rev_max_pos;
-            sum += (double)rev_max_pos;
-            valid_revs++;
+            positions[valid_revs++] = pos;
+            sum += (double)pos;
         }
 
-        /* Standard deviation of splice positions across revolutions. */
         if (valid_revs > 1) {
             double mean = sum / valid_revs;
             double var  = 0.0;

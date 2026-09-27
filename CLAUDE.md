@@ -312,6 +312,14 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 > Rauschabstand), und der Fingerprint-Hash kippt bei einem einzigen
 > Intervall ueber eine Bingrenze. Der freie Korpus hat **keine** echte
 > Flussaufnahme mit Jitter; geeicht ist also keine Schwelle (P3-630).
+>
+> **Stand MF-1431: 4 erreichbar, 4 ohne Aufrufer.** Dazu kam die
+> Schreibnaht (Feld „Naht:“ je Spur). Gemessen an einer MFM-Spur aus dem
+> Encoder mit bekannter Naht: Lage bis 60 ns Jitter auf ±4 Zellen; die
+> Wiederkehr ueber die Umdrehungen trennt Naht (0–2,8 Zellen) von
+> Rauschen (3 807–30 422) — erst nach der Reparatur, vorher streute
+> dieselbe Naht um 4414,5 Fluss-Indizes. `detected` (3 dB) schlaegt auf
+> blossem Jitter an und wird nicht gezeigt.
 
 **5 Forensik-Module:**
 - **Write-Splice Detection:** Erkennt Schreibkopf-Ein/Aus-Übergänge
@@ -367,7 +375,7 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
 │  OTDR (12 Module) │ TDFC │ φ-OTDR Denoise │ Confidence  │
-│  DeepRead (3 verdrahtet + 5 unwired) │ Protection (Signale)  │
+│  DeepRead (4 verdrahtet + 4 unwired) │ Protection (Signale)  │
 ├─────────────────────────────────────────────────────────┤
 │              Recovery Pipeline (C)                       │
 │  Multiread Voting │ Adaptive Decode │ Partial Recovery   │
@@ -985,8 +993,9 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
   erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
-- 8 DeepRead-Module, davon **3 erreichbar** und **5 ohne Aufrufer**
-  seit MF-1430 (Magnetic Aging + Cross-Track im OTDR-Panel, siehe
+- 8 DeepRead-Module, davon **4 erreichbar** und **4 ohne Aufrufer**
+  seit MF-1431 (Magnetic Aging + Cross-Track seit MF-1430,
+  Write-Splice seit MF-1431, alle im OTDR-Panel, siehe
   §DeepRead). Bis dahin (MF-767, gemessen je Bezeichner über
   `git ls-files`) galt 1 zu 7: erreichbar war
   allein der **Encoding Boost** (`uft_otdr_detect_encoding`, gerufen in

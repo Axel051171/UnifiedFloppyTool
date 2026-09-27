@@ -22,6 +22,7 @@ extern "C" {
 #include "uft/encoding/uft_otdr_encoding_boost.h"
 #include "uft/analysis/uft_deepread_aging.h"
 #include "uft/analysis/uft_deepread_crosstrack.h"
+#include "uft/analysis/uft_deepread_splice.h"
 }
 
 /* DeepRead adaptive decode constants (mirrored from the C header) */
@@ -71,6 +72,7 @@ UftOtdrPanel::UftOtdrPanel(QWidget *parent)
     , m_lblAnomaly(nullptr)
     , m_lblMLProtection(nullptr)
     , m_lblDeepReadDisk(nullptr)
+    , m_lblSplice(nullptr)
     , m_progressBar(nullptr)
     , m_statusLabel(nullptr)
     , m_provGroup(nullptr)
@@ -337,7 +339,15 @@ void UftOtdrPanel::setupStatsPanel(QVBoxLayout *layout)
     addStat("Protection:", m_lblProtection);
     addStat("Anomaly:", m_lblAnomaly);
     addStat("ML-Prot:", m_lblMLProtection);
-
+    addStat(tr("Naht:"), m_lblSplice);
+    m_lblSplice->setObjectName(QStringLiteral("lblSplice"));
+    m_lblSplice->setToolTip(
+        tr("Groesster Sprung im Qualitaetsprofil dieser Spur und seine Lage nach\n"
+           "dem Index. Ob er eine Schreibnaht ist, entscheidet die Wiederkehr:\n"
+           "eine Naht sitzt auf dem Traeger und kehrt jede Umdrehung an derselben\n"
+           "Stelle wieder, Rauschen nicht (Streuung in Zellen).\n"
+           "Kein Urteil: gemessen ist das nur an einer synthetischen Spur, und\n"
+           "ab etwa 100 ns Jitter liegt auch eine echte Naht im Rauschen."));
     statsLayout->addStretch();
     layout->addLayout(statsLayout);
 
@@ -884,6 +894,7 @@ void UftOtdrPanel::updateStatsDisplay()
         m_lblFluxCount->setText(dash);
         m_lblWeakBits->setText(dash);
         m_lblProtection->setText(dash);
+        if (m_lblSplice) m_lblSplice->setText(dash);
         return;
     }
 
@@ -936,6 +947,29 @@ void UftOtdrPanel::updateStatsDisplay()
             .arg(m_disk->stats.protection_type));
     else
         m_lblProtection->setText("None");
+
+    /* Schreibnaht (MF-1431): Lage, Sprung, Wiederkehr — kein `detected`,
+     * dessen 3-dB-Schwelle auf blossem Jitter anschlaegt. */
+    if (m_lblSplice) {
+        uft_splice_result_t sp;
+        std::memset(&sp, 0, sizeof(sp));
+        if (uft_deepread_detect_splice(trk, &sp) != 0) {
+            m_lblSplice->setText(dash);
+        } else if (sp.splice_magnitude <= 0.0f) {
+            m_lblSplice->setText(tr("kein Sprung"));
+        } else {
+            QString s = tr("%1 ms nach Index, Sprung %2 dB")
+                            .arg(sp.splice_ns / 1.0e6, 0, 'f', 3)
+                            .arg(sp.splice_magnitude, 0, 'f', 1);
+            if (trk->num_revolutions > 1)
+                s += tr(", Wiederkehr \xc2\xb1%1 Zellen (%2 Umdr.)")
+                         .arg(sp.splice_stability, 0, 'f', 1)
+                         .arg(trk->num_revolutions);
+            else
+                s += tr(", Wiederkehr nicht messbar (1 Umdr.)");
+            m_lblSplice->setText(s);
+        }
+    }
 }
 
 void UftOtdrPanel::updateDeepReadDiskStats()

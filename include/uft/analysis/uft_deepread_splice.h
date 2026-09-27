@@ -8,6 +8,16 @@
  * write -- it manifests as an abrupt phase/jitter discontinuity that is
  * consistent across all tracks written in one session.
  *
+ * GEMESSEN MF-1431 (tests/test_deepread_naht.c; Spur aus
+ * uft_mfm_encode_track(), Naht als Phasensprung, Jitter gewobbelt):
+ *   - die LAGE stimmt bis 60 ns Jitter auf +-4 Zellen, ab 100 ns nicht;
+ *   - `splice_stability` trennt Naht und Rauschen: dieselbe Naht auf zwei
+ *     Umdrehungen 0-2,8 Zellen, ohne Naht 3 807-30 422 Zellen;
+ *   - `detected` (Sprung > 3 dB, Schwelle ohne Quelle) meldet ohne jede
+ *     Naht ab 60 ns Jitter 1 — KEIN Befund, das Panel zeigt es nicht;
+ *   - das Modell ist eine Annahme, keine Aufnahme: an einer echten
+ *     Diskette ist nichts davon gemessen (P3-630).
+ *
  * @author UFT Project
  * @license GPL-3.0
  */
@@ -33,9 +43,14 @@ typedef struct {
     uint32_t splice_bitcell;      /**< Position relative to track start */
     uint32_t splice_ns;           /**< Position in nanoseconds */
     float    splice_magnitude;    /**< Jitter jump in dB */
-    float    splice_stability;    /**< Variance across revolutions (0=stable) */
-    int32_t  index_offset_ns;     /**< Distance to index pulse */
-    bool     detected;            /**< true if a splice was found */
+    float    splice_stability;    /**< Std-dev of the peak position across
+                                       revolutions, in BITCELLS; each revolution
+                                       measured like the track (MF-1431).
+                                       0 with a single revolution. */
+    int32_t  index_offset_ns;     /**< splice_ns - revolution_ns: the NEGATIVE
+                                       distance to the NEXT index pulse */
+    bool     detected;            /**< magnitude > 3 dB. Unsourced threshold,
+                                       fires on jitter alone (MF-1431 W3) */
 } uft_splice_result_t;
 
 /* -----------------------------------------------------------------------

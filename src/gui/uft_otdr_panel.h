@@ -248,6 +248,7 @@ private:
     QLabel              *m_lblAnomaly;       /**< ML anomaly detection result */
     QLabel              *m_lblMLProtection;  /**< ML protection classifier result */
     QLabel              *m_lblDeepReadDisk;  /**< Disk-wide DeepRead measurements */
+    QLabel              *m_lblSplice;        /**< Write-splice candidate of this track */
     QProgressBar        *m_progressBar;      /**< Analysis progress */
     QLabel              *m_statusLabel;      /**< Status text */
 
