@@ -1361,7 +1361,6 @@ SOURCES += \
     src/formats/atari/st_msa.c \
     src/formats/atari/stt.c \
     src/formats/atari/stx.c \
-    src/formats/atari/stz.c \
     src/formats/atari/uft_atari.c \
     src/formats/atari/uft_atari8_disk.c \
     src/formats/atari/uft_atari_dos.c \
@@ -1370,15 +1369,13 @@ SOURCES += \
     src/formats/atari/uft_dcm_parser_v2.c \
     src/formats/atari/uft_pro_parser_v2.c \
     src/formats/atari/uft_stx_parser.c \
-    src/formats/atari/uft_xfd_parser_v2.c \
-    src/formats/atari/uft_atari_xdf_legacy.c
+    src/formats/atari/uft_xfd_parser_v2.c
 
 # BBC formats (4 files)
 SOURCES += \
     src/formats/bbc/adf_adl.c \
     src/formats/bbc/ssd_dsd.c \
-    src/formats/bbc/uft_bbc_dfs.c \
-    src/formats/bbc/uft_bbc_tape.c
+    src/formats/bbc/uft_bbc_dfs.c
 
 # TRS80 formats (5 files)
 SOURCES += \
@@ -1396,21 +1393,11 @@ SOURCES += \
 
 # Misc formats (23 files)
 SOURCES += \
-    src/formats/misc/adz.c \
     src/formats/misc/cqm.c \
     src/formats/misc/dcp_dcu.c \
-    src/formats/misc/dhd.c \
-    src/formats/misc/dmf_msx.c \
-    src/formats/misc/edd.c \
     src/formats/misc/fdi.c \
-    src/formats/misc/imz.c \
     src/formats/misc/lnx.c \
-    src/formats/misc/ms_dmf.c \
-    src/formats/misc/oric_dsk.c \
-    src/formats/misc/osd.c \
     src/formats/misc/pc_img.c \
-    src/formats/misc/sf7.c \
-    src/formats/misc/tap.c \
     src/formats/misc/udi.c
 
 # Flux formats (12 files)

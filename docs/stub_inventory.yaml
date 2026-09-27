@@ -385,12 +385,6 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/formats/apple/uft_diskcopy.c
     classification: UNMARKED — triage
-  - file: src/formats/atari/uft_atari_xdf_legacy.c
-    classification: UNMARKED — triage
-  - file: src/formats/misc/edd.c
-    classification: UNMARKED — triage
-  - file: src/formats/misc/sf7.c
-    classification: UNMARKED — triage
   - file: src/formats/pc98/fdd.c
     classification: UNMARKED — triage
   - file: src/formats/pc98/nfd.c
