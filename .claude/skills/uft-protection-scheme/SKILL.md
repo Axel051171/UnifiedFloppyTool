@@ -49,7 +49,7 @@ read-only forensic software — detectors observe and report, never modify.
 | Custom sync markers (non-4489) | `src/protection/uft_copylock.c` |
 | Density mismatch (MFM↔FM mix) | `src/protection/uft_speedlock.c` |
 | Amiga-specific (RNC, CopyLock) | `src/protection/uft_amiga_caps.c` |
-| C64-specific (V-MAX, RapidLok) | `src/protection/uft_rapidlok.c` |
+| C64-specific (V-MAX, RapidLok) | `src/protection/c64/c64_protection_analysis.c` |
 
 Read the closest existing detector end-to-end before writing.
 

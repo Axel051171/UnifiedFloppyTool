@@ -623,7 +623,7 @@ REGISTRY: tuple[Oracle, ...] = (
         version_exit_ok=(0, 1),
         abstammung=(
             "VERDACHT, gemessen: `include/uft/formats/flux/uft_hxcstream.h` "
-            "(samt `uft_hxcstream.c` ohne Aufrufer entfernt MF-1405) "
+            "(samt `uft_hxcstream.c` ohne Aufrufer entfernt MF-1422) "
             "nennt „HxC Floppy Emulator project by Jean-Francois DEL "
             "NERO“, `rawformatdialog.h` „der Oberflaeche von "
             "HxCFloppyEmulator“. Ob die Attributionen Doku oder Code "

@@ -32,9 +32,6 @@
 #
 # Ohne diese Zeile ist der Eintrag ein Loeschkandidat, kein Bestand.
 src/algorithms/advanced/uft_bayesian_detect.c
-src/algorithms/advanced/uft_bayesian_detect_v2.c
-src/algorithms/advanced/uft_decoder_metrics.c
-src/algorithms/advanced/uft_fuzzy_sync_v2.c
 src/algorithms/advanced/uft_gcr_viterbi.c
 src/algorithms/advanced/uft_gcr_viterbi_v2.c
 src/algorithms/recovery/uft_otdr_adaptive_decode.c
@@ -48,7 +45,6 @@ src/analysis/profiles/uft_profiles_all.c
 src/analysis/uft_track_analysis.c
 src/compat/uft_fnmatch.c
 src/core/uft_capture.c
-src/core/uft_disk_compare.c
 src/core/uft_disk_transaction.c
 src/core/uft_error_strings.c
 src/core/uft_recovery_fusion.c
@@ -121,30 +117,18 @@ src/formats/uft_format_extensions.c
 src/formats/uft_format_versions.c
 src/formats/zx/uft_zxbasic.c
 src/hal/greaseweazle_backend.c
-src/hal/sync_backends.c
 src/hal/uft_drive.c
 src/protection/uft_amiga_caps.c
-src/protection/uft_amiga_missing_schemes.c
 src/protection/uft_amiga_protection.c
 src/protection/uft_amiga_protection_full.c
 src/protection/uft_atari8_protection.c
 src/protection/uft_atarist_macrodos.c
-src/protection/uft_atarist_missing_schemes.c
-src/protection/uft_c64_missing_schemes.c
-src/protection/uft_magnetic_state.c
-src/protection/uft_pc_cdrom_protection.c
 src/protection/uft_pc_protection.c
-src/protection/uft_protection.c
 src/protection/uft_protection_classify.c
 src/protection/uft_protection_params.c
 src/protection/uft_protection_stubs.c
-src/protection/uft_protection_unified.c
-src/protection/uft_rapidlok.c
-src/protection/uft_rtc_decompress.c
 src/recovery/uft_bitstream_recovery.c
 src/recovery/uft_cross_track.c
-src/recovery/uft_flux_recovery.c
-src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 
 # ── dtc_components, zuschaltbar seit MF-1100 ──────────────────────────

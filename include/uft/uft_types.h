@@ -410,7 +410,8 @@ typedef struct uft_sector {
      *                 Bitposition
      *   bit_position  alle Treffer auf anderen Strukturen
      *   bit_offset    dito
-     *   byte_offset   nur `uft_disk_compare.c` (eigene Struktur) und
+     *   byte_offset   nur `uft_disk_compare.c` (eigene Struktur; entfernt
+     *                 MF-1424) und
      *                 die Kopierfunktion in `uft_unified_types.c:180`
      *   gap_before    ein Treffer, `uft_atarist_macrodos.c:116`, auf
      *                 einer eigenen Struktur

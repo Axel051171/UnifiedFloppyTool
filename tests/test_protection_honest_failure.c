@@ -7,7 +7,8 @@
  *
  *   uft_c64_scan_all_protection()  -> "no protection", confidence 0.0
  *   uft_c64_scan_fat_tracks()      -> "no fat tracks"
- *   uft_rapidlok_scan_disk()       -> "no RapidLok"
+ *   uft_rapidlok_scan_disk()       -> "no RapidLok"   (file removed MF-1424:
+ *                                     no caller, never compiled here)
  *   uft_ir_detect_weak_bits()      -> "no weak bits"
  *   uft_protection_detect_pirateslayer() -> "not detected"
  *   uft_speedlock_write()          -> a hand-invented 16 KB track

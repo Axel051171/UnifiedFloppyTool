@@ -46,9 +46,9 @@ wrapper, or (b) splitting into platform-specific TUs. Separate task.
 |---|---|---|
 | `uft_bitstream_recovery.c` | 424 | Bitstream-level recovery |
 | `uft_cross_track.c`        | 475 | Cross-track correlation recovery |
-| `uft_flux_recovery.c`      | 422 | Flux-level recovery |
+| `uft_flux_recovery.c`      | 422 | Flux-level recovery — no caller, removed MF-1424 |
 | `uft_multiread_pipeline.c` | 806 | Multi-read fusion pipeline |
-| `uft_protection.c`         | 517 | Copy-protection-aware recovery |
+| `uft_protection.c`         | 517 | Copy-protection-aware recovery — no caller, removed MF-1424 |
 | `uft_recovery_meta.c`      | 881 | Meta-recovery orchestration |
 | `uft_sector_recovery.c`    | 432 | Sector-level recovery |
 

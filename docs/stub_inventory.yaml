@@ -393,15 +393,11 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/hal/uft_hal_unified.c
     classification: UNMARKED — triage
-  - file: src/protection/uft_protection_unified.c
-    classification: UNMARKED — triage
   - file: src/core/uft_core_stubs.c
     classification: honest (tracked)
   - file: src/formats/uft_adf.c
     classification: honest (tracked)
   - file: src/fs/uft_amigados_extended.c
-    classification: honest (tracked)
-  - file: src/hal/sync_backends.c
     classification: honest (tracked)
   - file: src/hal/uft_applesauce.c
     classification: honest (tracked)

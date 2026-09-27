@@ -376,8 +376,8 @@ typedef enum {
     UFT_CMP_METADATA_DIFFERS = 4,
 } uft_compare_result_t;
 
-/* Legacy compare — new callers should use the Master-API uft_disk_compare
- * from include/uft/uft_disk_compare.h (operates on uft_disk_t*). */
+/* Legacy compare. The "Master-API" this comment used to point to,
+ * include/uft/uft_disk_compare.h, had no caller and was removed (MF-1424). */
 int uft_disk_image_compare(const uft_disk_image_t *a,
                             const uft_disk_image_t *b,
                             uft_compare_result_t *result);

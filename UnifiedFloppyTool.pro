@@ -755,7 +755,6 @@ SOURCES += \
     src/core/uft_disk_stream.c \
     src/core/uft_disk_verify.c \
     src/core/uft_disk_stats.c \
-    src/core/uft_disk_compare.c \
     src/core/uft_disk_transaction.c \
     src/core/uft_disk_convert.c \
     src/core/uft_disk_batch.c \
@@ -802,11 +801,9 @@ SOURCES += \
     src/policy/uft_write_gate.c \
     src/recovery/uft_bitstream_recovery.c \
     src/recovery/uft_cross_track.c \
-    src/recovery/uft_flux_recovery.c \
     src/recovery/uft_forensic_recovery.c \
     src/recovery/uft_forensic_track.c \
     src/recovery/uft_multiread_pipeline.c \
-    src/recovery/uft_protection.c \
     src/recovery/uft_recovery_meta.c \
     src/recovery/uft_salvage_fs.c \
     src/recovery/uft_sector_recovery.c \
@@ -822,7 +819,6 @@ SOURCES += \
     src/formats/uft_format_converters.c \
     src/formats/uft_format_validators.c \
     src/hal/greaseweazle_backend.c \
-    src/hal/sync_backends.c \
     src/formats/stx/uft_stx_plugin.c \
     src/formats/atari/uft_pro_plugin.c \
     src/formats/do/uft_do.c \
@@ -864,11 +860,8 @@ SOURCES += \
     src/algorithms/advanced/uft_gcr_viterbi.c \
     src/algorithms/advanced/uft_gcr_viterbi_v2.c \
     src/algorithms/advanced/uft_bayesian_detect.c \
-    src/algorithms/advanced/uft_bayesian_detect_v2.c \
     src/algorithms/advanced/uft_multi_rev_fusion.c \
     src/algorithms/advanced/uft_crc_correction_v2.c \
-    src/algorithms/advanced/uft_fuzzy_sync_v2.c \
-    src/algorithms/advanced/uft_decoder_metrics.c \
     src/algorithms/encoding/uft_otdr_encoding_boost.c \
     src/algorithms/recovery/uft_otdr_adaptive_decode.c \
     src/analysis/deepread/uft_deepread_splice.c \
@@ -1420,11 +1413,7 @@ SOURCES += \
     src/formats/amiga/uft_amiga_syncs.c \
     src/protection/uft_d64_fehlerbytes.c \
     src/protection/ufm_c64_metrics.c \
-    src/protection/ufm_c64_scheme_detect.c \
-    src/protection/uft_protection_unified.c \
-    src/protection/uft_c64_missing_schemes.c \
-    src/protection/uft_amiga_missing_schemes.c \
-    src/protection/uft_atarist_missing_schemes.c
+    src/protection/ufm_c64_scheme_detect.c
 
 # Amiga Extended (9 files)
 SOURCES += \
@@ -1795,7 +1784,6 @@ SOURCES += \
 
 # Core Protection Framework (4 files)
 SOURCES += \
-    src/protection/uft_protection.c \
     src/protection/uft_protection_api.c \
     src/protection/uft_protection_classify.c \
     src/protection/uft_protection_detect.c
@@ -1833,21 +1821,17 @@ SOURCES += \
 
 # PC Protection (2 files)
 SOURCES += \
-    src/protection/uft_pc_protection.c \
-    src/protection/uft_pc_cdrom_protection.c
+    src/protection/uft_pc_protection.c
 
 # Individual Scheme Detectors (5 files)
 SOURCES += \
     src/protection/uft_copylock.c \
     src/protection/uft_fuzzy_bits.c \
     src/protection/uft_longtrack.c \
-    src/protection/uft_rapidlok.c \
     src/protection/uft_speedlock.c
 
 # Support Modules (2 files)
-SOURCES += \
-    src/protection/uft_magnetic_state.c \
-    src/protection/uft_rtc_decompress.c
+SOURCES +=
 
 # Protection Headers (31 files)
 HEADERS += \
@@ -1873,16 +1857,12 @@ HEADERS += \
     include/uft/protection/uft_geos_rebuild.h \
     include/uft/formats/cbm/uft_cbm_track_segment.h \
     include/uft/protection/uft_longtrack.h \
-    include/uft/protection/uft_magnetic_state.h \
-    include/uft/protection/uft_pc_cdrom_protection.h \
     include/uft/protection/uft_protection.h \
     include/uft/protection/uft_protection_classify.h \
     include/uft/protection/uft_protection_ext.h \
     include/uft/protection/uft_protection_extended.h \
     include/uft/protection/uft_protection_params.h \
     include/uft/protection/uft_protection_stubs.h \
-    include/uft/protection/uft_protection_unified.h \
-    include/uft/protection/uft_rtc_decompress.h \
     include/uft/protection/uft_speedlock.h
 
 # Internal header (not in include/uft/)

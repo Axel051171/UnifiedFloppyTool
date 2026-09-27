@@ -99,7 +99,10 @@ ARMED_BASELINE: dict[str, dict[int, int]] = {
     # — was dann richtig ist.
     "UFT_FORMAT_ADF":     {3: 8, 6: 1},
     "UFT_PLATFORM_AMIGA": {1: 1, 2: 1, 5: 1},
-    "UFT_PROT_COPYLOCK":  {1: 1, 10: 1, 22: 1, 512: 1, 4096: 1},
+    # MF-1424: 22 gestrichen. Die Einheit, die UFT_PROT_COPYLOCK als 22
+    # sah, war `src/protection/uft_protection.c` — ohne Aufrufer, entfernt
+    # im Paket B1-Rest. Eine Bedeutung weniger, nicht eine verschoben.
+    "UFT_PROT_COPYLOCK":  {1: 1, 10: 1, 512: 1, 4096: 1},
 }
 
 ENUM_BODY = re.compile(r"enum[^{]*\{([^{}]*)\}", re.S)

@@ -308,7 +308,7 @@ void ProtectionAnalysisWidget::updateSchemeList()
     /* MF-1387: hier stand der Name "RapidLok" als Ergebnis dieser
      * Regel. Im Baum gibt es keine Referenz, die "langer Sync UND
      * Spur 36" einem Verfahren zuordnet, und kein RapidLok-Abbild im
-     * Korpus; `src/protection/uft_rapidlok.c` hat keinen Aufrufer und
+     * Korpus; `src/protection/uft_rapidlok.c` hatte keinen Aufrufer (entfernt MF-1424) und
      * keine benannte Quelle (seine V2-Signatur A9 00 85 02 ist
      * gewoehnlicher 6502-Code, LDA #0 / STA $02). Der Eintrag heisst
      * deshalb nach dem, was gemessen wurde — die Signale —, und nennt
