@@ -148,7 +148,6 @@ void ProtectionAnalysisWidget::createSchemePanel()
     m_schemeFilter = new QComboBox();
     m_schemeFilter->addItem(tr("All Detected"));
     m_schemeFilter->addItem(tr("High Confidence Only"));
-    m_schemeFilter->addItem(tr("RapidLok Variants"));
     m_schemeFilter->addItem(tr("Weak Bit Based"));
     connect(m_schemeFilter, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ProtectionAnalysisWidget::onSchemeFilterChanged);
@@ -306,7 +305,14 @@ void ProtectionAnalysisWidget::updateSchemeList()
     
     QVector<SchemeGuess> schemes;
     
-    // Check for RapidLok indicators
+    /* MF-1387: hier stand der Name "RapidLok" als Ergebnis dieser
+     * Regel. Im Baum gibt es keine Referenz, die "langer Sync UND
+     * Spur 36" einem Verfahren zuordnet, und kein RapidLok-Abbild im
+     * Korpus; `src/protection/uft_rapidlok.c` hat keinen Aufrufer und
+     * keine benannte Quelle (seine V2-Signatur A9 00 85 02 ist
+     * gewoehnlicher 6502-Code, LDA #0 / STA $02). Der Eintrag heisst
+     * deshalb nach dem, was gemessen wurde — die Signale —, und nennt
+     * kein Schutzverfahren. */
     bool hasLongSync = false;
     bool hasTrack36 = false;
     int weakBitTracks = 0;
@@ -318,8 +324,10 @@ void ProtectionAnalysisWidget::updateSchemeList()
     }
     
     if (hasLongSync && hasTrack36) {
-        schemes.append({"RapidLok", tr("Heuristik"),
-                        tr("Regel: langer Sync UND Spur 36 vorhanden")});
+        schemes.append({tr("Langer Sync + Spur 36"), tr("Signal"),
+                        tr("Beide Signale gefunden. Ein Schutzverfahren "
+                           "wird daraus nicht abgeleitet — dafuer gibt es "
+                           "im Baum keine Referenz.")});
     }
 
     if (weakBitTracks >= 3) {

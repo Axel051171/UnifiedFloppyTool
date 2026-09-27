@@ -94,3 +94,11 @@ jobs:
           echo "::group::Tier-2.5 simulation report"
           cat hil_simulated_ci.md
           echo "::endgroup::"
+
+      # MF-1387: the .pro (above generated/tab_hardware_wiring.gen.cpp)
+      # has called this a "CI gate" since P1.0, but no workflow ran it.
+      # Six cases: happy path, H-3 (widget not in .ui), H-4 (unknown
+      # capability), idempotence, the production actions.yaml, and
+      # "committed generated file == regenerated". Green when wired in.
+      - name: Wiring codegen gate (tools/wiring_codegen_tests)
+        run: python3 tools/wiring_codegen_tests/run_tests.py

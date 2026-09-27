@@ -1656,6 +1656,14 @@ def main() -> int:
         import audit_heredoc as _hd
         all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
 
+        # Sonden-Doktrin (MF-1153, eingehaengt MF-1387). CLAUDE.md nennt
+        # `audit_sondendoktrin.py` seit MF-1153 den Halter der Doktrin —
+        # gemessen rief es bis MF-1387 weder CI noch Haken noch dieses
+        # Skript. Ein Tor, das nie laeuft, ist eine Zusage (BACKLOG C2).
+        # Beim Einhaengen war es gruen: 81 Sonden in der Grundlinie, 0 neu.
+        import audit_sondendoktrin as _sd
+        all_errors.append(("Sonden-Doktrin", _sd.check(repo)))
+
     # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
     #
     # Git EXPORTIERT `GIT_DIR` in jeden Haken. Ein `git init` gegen ein

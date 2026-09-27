@@ -660,10 +660,12 @@ void TrackGridWidget::drawLegend(QPainter& painter, int x, int y)
     } else if (m_heatmapMode == HeatmapMode::PROTECTION) {
         items = {
             {getColorForProtection(ProtectionType::NONE), "None"},
-            {getColorForProtection(ProtectionType::WEAK_BITS), "Weak"},
-            {getColorForProtection(ProtectionType::COPYLOCK), "CopyLock"},
-            {getColorForProtection(ProtectionType::VMAX), "V-MAX"},
-            {getColorForProtection(ProtectionType::RAPIDLOK), "RapidLok"}
+            /* MF-1387: die Legende nannte zusaetzlich CopyLock, V-MAX
+             * und RapidLok. Gesetzt wird ein Schutztyp nur ueber
+             * updateTrackProtection() — ausserhalb dieser Datei ruft das
+             * niemand — und intern allein WEAK_BITS. Die drei Namen
+             * konnten im Raster nie erscheinen. */
+            {getColorForProtection(ProtectionType::WEAK_BITS), "Weak"}
         };
     } else if (m_heatmapMode == HeatmapMode::RETRIES) {
         items = {

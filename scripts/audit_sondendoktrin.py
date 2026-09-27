@@ -200,6 +200,25 @@ def selbsttest() -> int:
     return 0 if gut == len(faelle) else 1
 
 
+def check(repo=None) -> list:
+    """Einstieg fuer check_consistency.py (MF-1387).
+
+    Bis dahin lief dieses Tor nur, wenn es jemand von Hand startete —
+    CLAUDE.md nannte es trotzdem den Halter der Doktrin. Liefert je
+    neuer Sonde ohne hergeleitete Konfidenz eine Zeile, und eine Zeile,
+    wenn die Grundlinie fehlt: ein Tor ohne Grundlinie sagt nichts."""
+    wurzel = Path(repo) if repo else WURZEL
+    gl_pfad = wurzel / GRUNDLINIE.relative_to(WURZEL)
+    if not gl_pfad.is_file():
+        return [f"{gl_pfad.relative_to(wurzel)} fehlt — ohne Grundlinie "
+                "kann das Tor nicht sagen, was neu ist"]
+    offen, _ = messe(quellen(wurzel), wurzel)
+    gl = grundlinie_lesen(gl_pfad)
+    return [f"{z} — vergibt eine Konfidenz von Hand statt ueber "
+            "uft_probe_konfidenz() (docs/SONDEN_DOKTRIN.md)"
+            for z in sorted(offen) if z not in gl]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--selbsttest", action="store_true")

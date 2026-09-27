@@ -352,7 +352,7 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
 │  OTDR (12 Module) │ TDFC │ φ-OTDR Denoise │ Confidence  │
-│  DeepRead (3 verdrahtet + 5 unwired) │ Protection (Signale)  │
+│  DeepRead (1 verdrahtet + 7 unwired) │ Protection (Signale)  │
 ├─────────────────────────────────────────────────────────┤
 │              Recovery Pipeline (C)                       │
 │  Multiread Voting │ Adaptive Decode │ Partial Recovery   │

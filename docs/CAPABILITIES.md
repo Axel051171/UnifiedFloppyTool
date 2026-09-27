@@ -182,14 +182,22 @@ fields). Vollständige Liste über `audit_plugin_compliance.py --list`.
 
 | Modul | Status | Tier |
 |---|---|---|
-| Adaptive Decode (CRC-Fehler → OTDR → Re-Decode → Fusion) | wired | unit-getestet |
-| Weighted Voting (Float-gewichtete Multi-Rev) | wired | unit-getestet |
-| Encoding Boost (OTDR-Histogramm) | wired | unit-getestet |
-| Write-Splice Detection | wired | unit-getestet |
-| Magnetic Aging Profile | wired | unit-getestet |
-| Cross-Track Correlation | wired | unit-getestet |
-| Revolution Fingerprint | wired | unit-getestet |
-| Soft-Decision LLR | wired | unit-getestet |
+| Encoding Boost (OTDR-Histogramm) | **wired** — `uft_otdr_detect_encoding`, gerufen in `src/gui/uft_otdr_panel.cpp` | mitgebaut in `test_main_window_fits_fullhd`, **kein Test ruft die Funktion** |
+| Adaptive Decode (CRC-Fehler → OTDR → Re-Decode → Fusion) | **ohne Aufrufer** — `uft_otdr_adaptive_decode` außerhalb der eigenen Datei nur in Kommentaren | kein Test |
+| Weighted Voting (Float-gewichtete Multi-Rev) | **ohne Aufrufer** — `uft_otdr_fuse_sector` nur in der eigenen Datei | kein Test |
+| Write-Splice Detection | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test (`test_schreibnaht_mfm.c` nennt `uft_deepread_detect_splice` nur im Kommentar) |
+| Magnetic Aging Profile | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
+| Cross-Track Correlation | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
+| Revolution Fingerprint | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
+| Soft-Decision LLR | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
+
+**Berichtigt MF-1387 (2026-09-27):** hier stand bei allen acht Zeilen „wired |
+unit-getestet". Beides war für sieben Module falsch, und „unit-getestet"
+auch für das achte. Gemessen je exportierter Funktion über `git grep -w`
+in `src/` und `tests/` (ohne die eigene Datei) sowie über
+`tests/CMakeLists.txt`: **1 wired, 7 ohne Aufrufer, 0 mit eigenem Test.**
+Der Hinweis darunter (MF-983) hatte das schon richtig gemessen — die
+Tabelle darüber war nur nicht nachgezogen worden.
 
 **Caveat (berichtigt MF-983):** hier stand „Alle 8 DeepRead-Module sind als
 C-Modul implementiert und in der GUI über `UftOtdrPanel` zugänglich." Der

@@ -415,9 +415,10 @@ Everything else in this layer was header hygiene.
 
 **What runs automatically** is *signal* detection over the flux: fuzzy
 bits, long and short tracks, no-flux areas, track overlap, desync, weak
-bits and illegal GCR. Three schemes are named heuristically from those
-signals (RapidLok, weak-bit protection, FAT/long track) — the UI labels
-them as heuristics, not as measurements.
+bits and illegal GCR. Two signal combinations are summarised (weak-bit
+tracks, FAT/long track) and one is shown by its signals only (long sync
++ track 36); no named scheme is claimed from them. RapidLok used to be
+named here without a reference in the tree (corrected MF-1387).
 
 **What exists in the source but is not reachable:** a catalogue of 55+
 *named* schemes across 10 platforms in `src/protection/`. Those ~200
@@ -438,13 +439,14 @@ The catalogue covers (as source, not as a reachable feature):
 
 - Flux timing histogram with encoding auto-detection
 - PLL phase analysis and clock recovery
-- Track alignment (V-MAX!, RapidLok, Pirate Slayer)
 - Weak bit and copy-protection mapping
 - Sector-level hex editor
 - Side-by-side disk comparison
-- **8 DeepRead modules** — adaptive decode, weighted voting, encoding
-  boost, write-splice detection, magnetic aging profile, cross-track
-  correlation, revolution fingerprint, soft-decision LLR
+- **DeepRead: 1 of 8 modules reachable** — the encoding boost is
+  wired into the OTDR panel. Adaptive decode, weighted voting,
+  write-splice detection, magnetic aging, cross-track correlation,
+  revolution fingerprint and soft-decision LLR exist as C code with
+  no caller (measured, see `docs/CAPABILITIES.md` §DeepRead)
 - **LOSS.preflight** at the `uft_convert_file()` chokepoint —
   category-level `.loss.json` sidecar for every lossy conversion
 

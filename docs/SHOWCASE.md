@@ -47,7 +47,7 @@ Detailliertes Capability-Bild: [`CAPABILITIES.md`](CAPABILITIES.md).
   stehen auf T3, also ungeprüft**
   ([`VERIFICATION_TIERS.md`](VERIFICATION_TIERS.md)). Die früher hier
   stehende Zahl „80 Plugins" war außerdem veraltet.
-- **8 DeepRead-Module** (Adaptive Decode, Weighted Voting, Encoding Boost, Write-Splice, Magnetic Aging, Cross-Track, Revolution Fingerprint, Soft-Decision LLR).
+- **DeepRead: 1 von 8 Modulen erreichbar** — der Encoding Boost im OTDR-Panel. Die übrigen sieben (Adaptive Decode, Weighted Voting, Write-Splice, Magnetic Aging, Cross-Track, Revolution Fingerprint, Soft-Decision LLR) liegen als C-Code ohne Aufrufer vor (gemessen MF-1387, `docs/CAPABILITIES.md` §DeepRead).
 - **Schutz-Signale** erkannt (Fuzzy Bits, lange/kurze Spuren, No-Flux,
   Overlap, Desync, Weak Bits, Illegal GCR) + 3 heuristisch benannte
   Schemata. Der Katalog von 55+ benannten Verfahren ist **Bestand,
