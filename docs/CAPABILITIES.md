@@ -218,6 +218,16 @@ unverdrahtet, weil die Messung ihre Zusage widerlegt (F1, S1). Die
 Klassengrenzen sind an **keiner echten Aufnahme** geeicht — der freie
 Korpus hat keine Flussaufnahme mit Jitter (P3-630).
 
+**Nachtrag MF-1471:** seitdem hat er eine — zwei Spuren einer fluxfox-
+Aufnahme (MIT), deren Zustand zwei Leser und ein Sektorabbild belegen
+(719 von 720 Sektoren gut, ein echter Fehler auf Spur 77). Daran ist die
+**Alterungsklasse widerlegt**: sie meldet „Damaged“, weil der Rest > 10 dB
+35 von 80 gesunden Spuren trifft, und uebersieht die Spur mit dem Fehler.
+Das Panel zeigt sie seitdem mit diesem Befund. Die **Naht** ist an der
+Aufnahme nicht messbar — die groesste Stufe ist das Einschwingen der
+Profilrechnung nach dem Index; das Panel sagt es. Cross-Track bleibt
+ungeeicht (keine Aufnahme mit belegtem flaechigem Schaden).
+
 **Caveat (berichtigt MF-983):** hier stand „Alle 8 DeepRead-Module sind als
 C-Modul implementiert und in der GUI über `UftOtdrPanel` zugänglich." Der
 erste Halbsatz stimmt, der zweite nicht.

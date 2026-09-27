@@ -1294,6 +1294,18 @@
       "content": "Dieselbe Diskette wie die .img daneben, als 86F-Bitstrom. 172 Positionen (86 Zylinder x 2 Seiten), davon 160 mit Inhalt: jede logische Spur an ZWEI Positionen (2c und 2c+1). 1440 Sektoren, alle byteidentisch mit der .img."
     },
     {
+      "file": "tests/corpus_free/fluxfox_sector_test_t34_t77.scp",
+      "sha256": "7056ec09179cd1d369701dc882476bd4e4ccac2a81258ba90283320532a9ea14",
+      "format": "scp",
+      "origin": "real",
+      "tool": "fluxfox (Daniel Balsom, 2024, MIT), Quellstand 1d72ff1b329cc072cec00fe42ae51bededf5374f. Die Aufnahme liegt dort als Testabbild `tests/images/sector_test/sector_test_360k.scp`; fluxfox wurde **nicht ausgefuehrt**, Kanal *Daten* nach MF-695.",
+      "source": "Ausschnitt: die SCP-Spurbloecke 34 und 77 BYTEGLEICH uebernommen (alle drei Umdrehungen), start/end_track auf 34/77, Spurtafel fuer die uebrigen Spuren 0, Pruefsumme (Summe ab 0x10) neu gerechnet — Rezept `python tests/corpus_manifest/gen_scp_schnitt.py <sector_test_360k.scp> <aus> 34 77`, 446 724 Byte. ECHT, nicht kodiert: Spur 0 Umdrehung 0 gegen 1 unterscheidet sich in 18 851 von 42 564 Intervallen, Intervalle 3 350-10 975 ns. Zustand doppelt belegt: fluxfox legt dieselbe Diskette als `sector_test_360k.img` (jeder Sektor k ganz mit `k mod 256`, 720 von 720) und als KryoFlux-Strom (`sector_test_kryoflux_360k.zip`) bei; beide Aufnahmen ergeben ueber flux_decode_mfm() 719 von 720 guten Sektoren und denselben einen Fehler C38 H1 S9 (Spur 77), in allen drei Umdrehungen beider Leser.",
+      "test": "test_deepread_echte_aufnahme",
+      "oracle": "fluxfox",
+      "fremdcode": "nein — Flussintervalle einer Diskette, deren Sektoren nur Fuellbytes tragen; kein Code, kein Dateisystem.",
+      "content": "Zwei Spuren einer echten MFM-DD-Aufnahme (300 U/min, 9 x 512): Spur 34 (C17 H0) liest 9 von 9 Sektoren gut und hat den GROESSTEN DeepRead-Alterungsrest der Diskette (16,04 dB); Spur 77 (C38 H1) traegt den einen echten Fehler (S9, Daten-CRC in 3 von 3 Umdrehungen falsch) bei einem Rest von 4,70 dB. Belegt damit, dass die Aging-Klasse an einer gesunden Diskette „Damaged“ meldet (P3-630)."
+    },
+    {
       "file": "tests/corpus_free/fluxfox_sector_test_360k.pri",
       "sha256": "8e8c4f274118882412515114a1a9d3543f7840ce7a7f9a95cb8869d84fc25c5a",
       "format": "pri",

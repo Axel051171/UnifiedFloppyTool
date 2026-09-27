@@ -18,6 +18,17 @@
  *   - das Modell ist eine Annahme, keine Aufnahme: an einer echten
  *     Diskette ist nichts davon gemessen (P3-630).
  *
+ * GEMESSEN MF-1471 an einer ECHTEN Aufnahme (fluxfox sector_test_360k,
+ * SCP und KryoFlux; tests/test_deepread_echte_aufnahme.c):
+ *   - die groesste Stufe liegt auf 79 von 80 Spuren in den ersten 64
+ *     Zellen — das Qualitaetsprofil schwingt nach dem Index ein (-3 bis
+ *     -7 dB in Zellen 0-16, -1,65 dB bei 24). Das ist der Anfang der
+ *     Rechnung, keine Naht, auch bei 15 dB und kleiner Wiederkehr;
+ *   - ohne die ersten 64 Zellen bleibt eine Stufe um 3 dB, die nur auf 10
+ *     von 80 Spuren ueber die Umdrehungen (50 Zellen) und auf 13 von 80
+ *     beim zweiten Leser (200 Zellen) wiederkehrt: Rauschen. Ein
+ *     Ausschlussfenster ist deshalb NICHT eingebaut.
+ *
  * @author UFT Project
  * @license GPL-3.0
  */

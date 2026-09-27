@@ -346,8 +346,11 @@ void UftOtdrPanel::setupStatsPanel(QVBoxLayout *layout)
            "dem Index. Ob er eine Schreibnaht ist, entscheidet die Wiederkehr:\n"
            "eine Naht sitzt auf dem Traeger und kehrt jede Umdrehung an derselben\n"
            "Stelle wieder, Rauschen nicht (Streuung in Zellen).\n"
-           "Kein Urteil: gemessen ist das nur an einer synthetischen Spur, und\n"
-           "ab etwa 100 ns Jitter liegt auch eine echte Naht im Rauschen."));
+           "Kein Urteil. An einer echten Aufnahme (P3-630) liegt der Sprung auf\n"
+           "79 von 80 Spuren in den ersten 64 Zellen nach dem Index, wo die\n"
+           "Profilrechnung einschwingt; ohne sie bleibt ein Sprung um 3 dB, der\n"
+           "weder ueber die Umdrehungen noch beim zweiten Leser wiederkehrt.\n"
+           "Eine Naht ist dort nicht messbar gewesen."));
     statsLayout->addStretch();
     layout->addLayout(statsLayout);
 
@@ -363,8 +366,10 @@ void UftOtdrPanel::setupStatsPanel(QVBoxLayout *layout)
            "mittlerer Rauschabstand der gemessenen Spuren und sein Gradient.\n"
            "Nachbarspuren: Korrelation (Pearson) zwischen Zylinder c und c+1\n"
            "derselben Oberflaeche.\n"
-           "Die Klassen dahinter sind eine Heuristik: ihre Schwellen haben\n"
-           "keine Quelle und sind an keiner echten Aufnahme geeicht."));
+           "Die Klassen dahinter haben Schwellen ohne Quelle. Die Alterungsklasse\n"
+           "ist an einer echten Aufnahme widerlegt: der Rest > 10 dB trifft auf\n"
+           "einer Diskette mit 719 von 720 guten Sektoren 35 von 80 Spuren, und\n"
+           "die Spur mit dem einen echten Fehler ist nicht darunter (P3-630)."));
     layout->addWidget(m_lblDeepReadDisk);
 
     auto *statusLayout = new QHBoxLayout();
@@ -967,6 +972,13 @@ void UftOtdrPanel::updateStatsDisplay()
                          .arg(trk->num_revolutions);
             else
                 s += tr(", Wiederkehr nicht messbar (1 Umdr.)");
+            /* MF-1471: an der echten Aufnahme schwingt das Profil nach dem
+             * Index ueber rund 24 Zellen ein (-3 bis -7 dB in 0-16), und
+             * die groesste Stufe lag auf 79 von 80 Spuren unter 64 Zellen.
+             * Dort ist sie der Anfang der Rechnung, keine Naht — auch mit
+             * 15 dB und kleiner Wiederkehr. */
+            if (sp.splice_bitcell < 64)
+                s += tr(" \xe2\x80\x94 im Einschwingbereich, keine Naht belegbar");
             m_lblSplice->setText(s);
         }
     }
@@ -1008,15 +1020,20 @@ void UftOtdrPanel::updateDeepReadDiskStats()
 
     /* Klassen nur mit Kennzeichnung — die Schwellen haben keine Quelle.
      * may_be_protection wird bewusst NICHT gezeigt: die Spurbereiche
-     * (0-2, >= 36) sind unbelegt und zaehlen den linearen Index (P3-630). */
-    QStringList klassen;
+     * (0-2, >= 36) sind unbelegt und zaehlen den linearen Index (P3-630).
+     *
+     * Die Alterungsklasse ist seit MF-1471 an einer echten Aufnahme
+     * WIDERLEGT, nicht nur ungeeicht: eine Diskette mit 719 von 720 guten
+     * Sektoren (zwei Leser, tests/test_deepread_echte_aufnahme.c) bekommt
+     * „Damaged“, weil der Rest > 10 dB dort 35 von 80 Spuren trifft. Sie
+     * bleibt sichtbar, steht aber mit dem Befund da statt als Heuristik. */
     if (ar_ok)
-        klassen << QString::fromUtf8(uft_aging_class_name(ar.classification));
+        teile << tr("Alterungsklasse \"%1\" \xe2\x80\x94 widerlegt: eine gepruefte "
+                    "Diskette (719 von 720 Sektoren gut) erhaelt \"Damaged\"")
+                     .arg(QString::fromUtf8(uft_aging_class_name(ar.classification)));
     if (cr_ok && cr.pair_count > 0)
-        klassen << QString::fromUtf8(uft_damage_type_name(cr.overall));
-    if (!klassen.isEmpty())
         teile << tr("Heuristik (Schwellen ohne Quelle): %1")
-                     .arg(klassen.join(QStringLiteral(" / ")));
+                     .arg(QString::fromUtf8(uft_damage_type_name(cr.overall)));
     if (cr_ok)
         uft_crosstrack_result_free(&cr);
 

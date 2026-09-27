@@ -312,6 +312,11 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 > Rauschabstand), und der Fingerprint-Hash kippt bei einem einzigen
 > Intervall ueber eine Bingrenze. Der freie Korpus hat **keine** echte
 > Flussaufnahme mit Jitter; geeicht ist also keine Schwelle (P3-630).
+> **Seit MF-1471 hat er eine** (fluxfox, zwei Leser, 719 von 720 Sektoren
+> gut) — und an ihr ist die Alterungsklasse **widerlegt** („Damaged“ auf
+> der gesunden Diskette, die Fehlerspur nicht erkannt) und die Naht nicht
+> messbar (die Stufe ist das Einschwingen nach dem Index). Das Panel sagt
+> beides; gepinnt in `tests/test_deepread_echte_aufnahme.c`.
 >
 > **Stand MF-1435: 4 erreichbar, 4 ohne Aufrufer.** Dazu kam die
 > Schreibnaht (Feld „Naht:“ je Spur). Gemessen an einer MFM-Spur aus dem

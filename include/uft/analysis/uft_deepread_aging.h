@@ -17,6 +17,13 @@
  * (MF-1430, P3-630). Bis MF-1430 zaehlten leere Spurplaetze als SNR 0:
  * an gw_fm_acorn_3trk.scp gemessen 21,01 statt 42,01 dB.
  *
+ * WIDERLEGT MF-1471 an einer echten Aufnahme (fluxfox sector_test_360k,
+ * zwei Leser, 719 von 720 Sektoren gut; tests/test_deepread_echte_aufnahme.c):
+ * der Rest > 10 dB trifft 35 von 80 Spuren (KryoFlux-Lesung 44), die
+ * Klasse lautet "Damaged", und die Spur mit dem einen echten Fehler
+ * (Rest 4,70 dB) ist nicht darunter. Die Rechnung bleibt, die Klasse
+ * steht im Panel mit diesem Befund.
+ *
  * @author UFT Project
  * @license GPL-3.0
  */

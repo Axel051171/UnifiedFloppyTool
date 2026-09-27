@@ -2142,6 +2142,28 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_deepread_echte_aufnahme")
+        # P3-630/MF-1471: DeepRead an einer ECHTEN Aufnahme mit doppelt
+        # belegtem Zustand (fluxfox, MIT; zwei Leser, 719 von 720 Sektoren).
+        # Die Sektoren werden ueber flux_decode_mfm() gezaehlt, deshalb
+        # dieselbe Dekoderliste wie test_fm_gegen_gw.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_aging.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_splice.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_fingerprint.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_otdr_kein_nullintervall")
         # MF-967: der SCP-Ueberlauf-Platzhalter (0) lief als echter
         # Uebergang in Histogramm und PLL. Zwei von drei Verbrauchern
