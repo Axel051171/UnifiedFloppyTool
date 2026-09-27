@@ -1318,6 +1318,18 @@
       "content": "Frisch formatierte, leere ADFS-L-Diskette: echtes Verzeichnis mit Kennung Hugo bei 0x201, sonst unbelegt. Keine Nutzdaten."
     },
     {
+      "file": "tests/corpus_free/dim_adfs_s.ads",
+      "sha256": "a9e56eeac5d95e02f8c79227cc40a0cc6aea9981fc42c72749d2ed287484f455",
+      "format": "adf_arc",
+      "origin": "cross-tool",
+      "tool": "DiscImageManager (Gerald Holdsworth, GPL-3), Quellstand ffba573816b852cf7fa1ba57b11df680b0bb544c (2026-09-16). **Nicht ausgefuehrt** — das Leerabbild liegt in seinem eigenen Repositorium; Kanal *Daten* nach MF-695.",
+      "source": "Die ERSTEN 163 840 Byte von `Blank Images/Acorn ADFS/ADFS_S.adl` (Datei-SHA-256 fef24dfb351a03005b70af11cc5464aeccef79e9f225c5a183b3d60a5d02b43c, 323 584 Byte). Warum abgeschnitten, gemessen statt angenommen: die Datei ist 79 x 4096 lang, die geraden 4096er-Fenster tragen Inhalt, die ungeraden sind null — DIM liest sie aber LINEAR (DiscImage_Private.pas:547-548 verlaesst die Umrechnung fuer jedes ADFS ausser L), und die Freiraumkarte sagt selbst 640 Sektoren = 163 840 Byte (Read24b($0FC)*$100, DiscImage_ADFS.pas:52). Die ersten 163 840 Byte sind also genau das, was DIM als ADFS S liest.",
+      "test": "test_acorn_gegen_dim",
+      "oracle": "DiscImageManager",
+      "fremdcode": "nein - ein leer formatiertes ADFS S: Freiraumkarte (Sektor 0/1), Wurzelverzeichnis mit \"Hugo\" bei $201 und $6FB, der Rest ist Freiraum (Fuellbyte 0x5A oder null). Kein Programm, keine Zeile DIM-Quelltext uebernommen.",
+      "content": "ADFS S, 40 x 1 x 16 x 256, altes Kartenformat, alte Verzeichnisse. Freiraum ab Sektor 7, 633 Sektoren lang (Karte), also bis zum Ende. Gemessen durch adf_arc: 40 Spuren, 640 Sektoren, alle byteidentisch mit der Datei, Sonde 90 aus Kennung + Karte + Verzeichnisende (MF-1441)."
+    },
+    {
       "file": "tests/corpus_free/dim_adfs_d.adf",
       "sha256": "bc3c4e34d8cc6d1f72cd2f3f643a0e0a573357ce2e957a20a20906c14a8094e3",
       "format": "adf_arc",

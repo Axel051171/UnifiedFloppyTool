@@ -59,7 +59,6 @@ src/formats/atari/stx.c
 src/formats/atari/uft_atari8_disk.c
 src/formats/atari/uft_atari_dos.c
 src/formats/atari/uft_stx_parser.c
-src/formats/bbc/adf_adl.c
 src/formats/bbc/ssd_dsd.c
 src/formats/bbc/uft_bbc_dfs.c
 src/formats/brother/brother.c

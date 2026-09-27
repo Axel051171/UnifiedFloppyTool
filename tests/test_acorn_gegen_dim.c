@@ -141,7 +141,8 @@ static int kennung_in_spur(const uft_track_t *t, const char *kw)
 
 static void lies(const char *name, const uft_format_plugin_t *p,
                  const char *datei, unsigned zyl, unsigned koepfe,
-                 unsigned sekt, unsigned sgr, const char *kennung)
+                 unsigned sekt, unsigned sgr, const char *kennung,
+                 int konf_min, int konf_max)
 {
     char pfad[600], det[300];
     uft_disk_t disk;
@@ -216,7 +217,7 @@ static void lies(const char *name, const uft_format_plugin_t *p,
              disk.geometry.sectors, disk.geometry.sector_size,
              spuren, sektoren, kennung_gefunden, verglichen, abweichend);
     pruefe(name,
-           ok && konf > 0 && konf < 50            /* MF-729: nur die Groesse */
+           ok && konf >= konf_min && konf <= konf_max  /* MF-729 / MF-1441 */
            && (unsigned)disk.geometry.cylinders == zyl
            && (unsigned)disk.geometry.heads == koepfe
            && (unsigned)disk.geometry.sectors == sekt
@@ -254,18 +255,18 @@ int main(void)
      * Fundstelle (DiscImage_ADFS.pas:73-75). */
     lies("adl: ADFS_L liest 160 Spuren zu 16 Sektoren und traegt die "
          "Verzeichniskennung \"Hugo\" IM SEKTOR",
-         &uft_format_plugin_adl, "dim_adfs_l.adl", 80, 2, 16, 256, "Hugo");
+         &uft_format_plugin_adl, "dim_adfs_l.adl", 80, 2, 16, 256, "Hugo", 1, 49);
 
     /* ADFS D/E: 819 200 Byte = 80 x 2 x 5 x 1024. */
     lies("adf_arc: ADFS_D liest 160 Spuren zu 5 Sektoren a 1024",
-         &uft_format_plugin_adf_arc, "dim_adfs_d.adf", 80, 2, 5, 1024, NULL);
+         &uft_format_plugin_adf_arc, "dim_adfs_d.adf", 80, 2, 5, 1024, NULL, 1, 49);
     lies("adf_arc: ADFS_E liest 160 Spuren zu 5 Sektoren a 1024",
-         &uft_format_plugin_adf_arc, "dim_adfs_e.adf", 80, 2, 5, 1024, NULL);
+         &uft_format_plugin_adf_arc, "dim_adfs_e.adf", 80, 2, 5, 1024, NULL, 1, 49);
 
     /* ADFS F: 1 638 400 Byte = 80 x 2 x 10 x 1024. */
     lies("adf_arc: ADFS_F liest 160 Spuren zu 10 Sektoren a 1024 - die "
          "doppelte Kapazitaet, aus der Dateigroesse abgeleitet",
-         &uft_format_plugin_adf_arc, "dim_adfs_f.adf", 80, 2, 10, 1024, NULL);
+         &uft_format_plugin_adf_arc, "dim_adfs_f.adf", 80, 2, 10, 1024, NULL, 1, 49);
 
     /* Gegenprobe: `adl` darf die ADFS-D/E/F-Dateien NICHT annehmen. Vor
      * MF-1072 hat `open` jede Groesse angenommen. */
@@ -303,6 +304,52 @@ int main(void)
         pruefe("adf_arc weist das ADFS-L-Abbild ab - die Verschraenkung "
                "traefe mit seiner linearen Rechnung die falschen Bytes",
                angenommen == 0, det);
+    }
+
+    /* ── MF-1441 (P3-620 Fall 5): ADFS S, 163 840 Byte = 40 x 1 x 16 x 256 ──
+     *
+     * Kein Plugin nahm diese Groesse an; das verwaiste Doppel bbc/adf_adl.c
+     * tat es (entfernt MF-1441). Referenz DiscImageManager (GPL-3, als Spec gelesen):
+     * DiscImage_ADFS.pas:73 `163840: ... // ADFS S`; die Groesse steht im
+     * Abbild selbst (:52 TotalSize = Read24b($0FC)*$100); Wurzel bei $200
+     * mit "Hugo" (:399, :87 `ReadString($6FB,-4)='Hugo'`); lineare Ablage,
+     * denn DiscImage_Private.pas:547-548 verlaesst die Umrechnung fuer
+     * jedes ADFS ausser L.
+     *
+     * Das Abbild: die ersten 163 840 Byte von DIMs `Blank Images/Acorn
+     * ADFS/ADFS_S.adl` (Stand ffba5738) — genau die Bytes, die DIM selbst
+     * linear liest (die Datei ist 323 584 Byte lang, siehe P3-620).
+     *
+     * 163 840 Byte ist AUCH ein PC-160K-Abbild (40 x 1 x 8 x 512). Die
+     * Groesse allein darf deshalb nichts beanspruchen (Sonden-Doktrin):
+     * Kennung "Hugo" bei $201 (+50), Kartengroesse = Dateigroesse (+25),
+     * "Hugo" am Verzeichnisende $6FB samt gleicher Pruefbytes (+15) = 90. */
+    lies("adf_arc: ADFS_S liest 40 Spuren zu 16 Sektoren a 256, beansprucht "
+         "90 aus Kennung + Karte + Verzeichnisende, nicht aus der Groesse",
+         &uft_format_plugin_adf_arc, "dim_adfs_s.ads", 40, 1, 16, 256, "Hugo",
+         90, 90);
+    {
+        /* Gegenprobe: dieselbe Groesse OHNE ADFS-Struktur (PC-160K-Gestalt) */
+        static uint8_t null160[163840];
+        char pfad[600], det[160];
+        int konf = -1;
+        const int ok = uft_format_plugin_adf_arc.probe(null160, 4096, sizeof null160, &konf);
+        snprintf(pfad, sizeof pfad, "%s/uft_adfs_s_null_%d.img",
+                 getenv("TMPDIR") && *getenv("TMPDIR") ? getenv("TMPDIR") : ".", rand() % 100000);
+        FILE *f = fopen(pfad, "wb");
+        int geoeffnet = -1;
+        if (f) {
+            fwrite(null160, 1, sizeof null160, f);
+            fclose(f);
+            uft_disk_t disk;
+            memset(&disk, 0, sizeof disk);
+            geoeffnet = uft_format_plugin_adf_arc.open(&disk, pfad, true) == UFT_OK;
+            if (geoeffnet) uft_format_plugin_adf_arc.close(&disk);
+            remove(pfad);
+        }
+        snprintf(det, sizeof det, "probe=%d(%d), open=%d", ok, konf, geoeffnet);
+        pruefe("adf_arc nimmt 163 840 Byte OHNE ADFS-Struktur nicht an (PC 160K)",
+               !ok && geoeffnet == 0, det);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);
