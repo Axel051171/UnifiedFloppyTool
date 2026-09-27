@@ -112,7 +112,7 @@ std::string KryoFluxProviderV2::stream_file_path(const std::string& prefix,
  * ──────────────────────────────────────────────────────────────────────── */
 
 std::vector<std::string> KryoFluxProviderV2::build_read_argv(
-    int cylinder, int head, const std::string& prefix) const
+    int cylinder, int head, const std::string& prefix, int revolutions) const
 {
     /* BERICHTIGT MF-1046 gegen das Handbuch des Urhebers (KryoFlux
      * Manual, (c) 2009-2024 KryoFlux Products and Services Ltd,
@@ -161,6 +161,17 @@ std::vector<std::string> KryoFluxProviderV2::build_read_argv(
     args.push_back(m_dtc_binary);
     args.push_back("-c2");                              /* global */
     args.push_back("-d0");                              /* global */
+    /* A-035 DTC-3 (MF-1386): the requested revolutions reach DTC. Manual
+     * (KryoFlux Release 3.50, docs/KryoFlux Manual.pdf p. 13): „-r<rev> :
+     * set number of revolutions to sample (default by image type)"; the
+     * order rule (p. 14) lists „Revolutions (-r)" among the GLOBAL
+     * settings. Until here FluxCaptureJob asked for 2 and DTC used its
+     * default. 0 = not specified: nothing is claimed, DTC's default holds.
+     * The C shell's second builder (uft_kf_build_capture_command) does not
+     * pass cfg->revolutions either — named, not touched here (two
+     * builders are MF-1177, see docs/plans/DTC_UPGRADE.md DTC-3). */
+    if (revolutions > 0)
+        args.push_back("-r" + std::to_string(revolutions)); /* global */
     args.push_back("-f" + prefix);                      /* image local */
     args.push_back("-s" + std::to_string(cylinder));    /* start track */
     args.push_back("-e" + std::to_string(cylinder));    /* end track   */
@@ -366,7 +377,9 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
      */
     const std::string prefix = stream_prefix(cylinder, head);
 
-    std::vector<std::string> argv = build_read_argv(cylinder, head, prefix);
+    /* the REQUESTED count, not the clamped one above (MF-1386) */
+    std::vector<std::string> argv =
+        build_read_argv(cylinder, head, prefix, p.revolutions);
 
     /* MF-1363 / P3-562 Teil 2: DTC schreibt den Strom in eine DATEI,
      * `<praefix>NN.S.raw`; stdout ist sein Protokoll. Bis hierher stand an

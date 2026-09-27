@@ -85,7 +85,8 @@ laufen fort und werden nie wiederverwendet.
   (Bench) gelaufen ist.
 - **Aufwand:** DTC-1 ~40, DTC-2 ~120, DTC-3 ~60 Zeilen (Schätzung aus dem
   Plan, nicht gemessen); DTC-7 nicht schätzbar (Gerät, MF-310).
-- **Stand:** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
+- **Stand 2026-09-27:** DTC-0 **entschieden** (Paket vom Eigentümer, GPL-2 ok; Solver bekommt den Differenzlauf), DTC-3 **erledigt** (MF-1386, Beleg: KryoFlux Manual 3.50 S. 13/14 aus `neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz`). Offen: DTC-5 (Differenzlauf, braucht echte Mehrfachumdrehungen), der C-Bauer, DTC-7 (Bench, Eigentümer).
+- **Stand (alt):** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
   (1) wer hat das Paket verfasst, unter welcher Erteilung; (2) Solver in
   den Fundus oder Differenzlauf gegen `uft_multi_rev_fusion`.
 - **Stand 2026-09-26 — DTC-1 fertig (MF-1362):** ein Helfer im Läufer

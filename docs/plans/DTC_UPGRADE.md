@@ -128,7 +128,19 @@ Jeder Schritt ist ein eigener Commit mit eigenem MF. Kein Schritt
 übernimmt Paketdateien ungeprüft; übernommen wird **Verhalten**, das
 vorher rot gemessen wurde.
 
-### DTC-0 — Eigentümer-Entscheidungen *(vor allem anderen)*
+### DTC-0 — Eigentümer-Entscheidungen *(vor allem anderen)* — ✅ entschieden 2026-09-27
+
+> **Entschieden vom Eigentümer am 2026-09-27** (Rückfrage mit
+> Auswahl, Wortlaut der Antworten): **Herkunft** „Von mir, GPL-2 ok" —
+> das Paket stammt vom Eigentümer, der Code darf unter
+> GPL-2.0-or-later in den Baum (Kanal *Port*). **Solver**
+> „Differenzlauf versuchen" — DTC-5 bekommt den Differenzlauf, mit
+> der Bedingung unten. **Keine Zeile in `docs/QUARANTINE.md`**,
+> anders als hier zuerst vorgesehen: die Zeilen dort zählen zur
+> Kennzahl „Dateien mit ungeklärter Herkunft", und die Herkunft ist
+> jetzt GEKLÄRT. Eine Zeile würde einen Verdacht behaupten, den es
+> nicht gibt — eine Kennzahl, die sich ohne Messung bewegt (MF-1077).
+
 
 1. **Herkunft (E5):** Wer hat das Paket verfasst, und unter welcher
    Erteilung? Wird das nicht beantwortet, dann wird nur **nachgebaut**:
@@ -212,7 +224,23 @@ vorher rot gemessen wurde.
   `tests/corpus_free/hxcfe_kfx_t00.0.raw`. So ist der Weg
   Prozess → Datei → Läufer → Dekoder ohne Gerät abgenommen.
 
-### DTC-3 — `-r` durchreichen, sonst nichts Neues im Befehl *(B3 + E2, ~60 Zeilen)* — ⏸ wartet auf eine Quelle
+### DTC-3 — `-r` durchreichen, sonst nichts Neues im Befehl *(B3 + E2, ~60 Zeilen)* — ✅ MF-1386
+
+> **Erledigt MF-1386.** Die Quelle lag beim Eigentümer: das offizielle
+> Paket `neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz` trägt
+> `docs/KryoFlux Manual.pdf` (Release 3.50). S. 13: „-r<rev> : set
+> number of revolutions to sample (default by image type)"; die
+> Reihenfolge-Regel S. 14 führt „Revolutions (-r)" unter den
+> GLOBALEN Einstellungen („can be anywhere in the command line") —
+> `-r` ist also NICHT bildlokal. `build_read_argv()` hängt `-r<n>` an,
+> wenn Umdrehungen angefordert sind, sonst nichts (DTCs Vorgabe gilt).
+> Rotbeweis `test_kryoflux_dtc_befehl` 3 rot → grün; die Befehlszeile
+> aus MF-1046 bleibt bis auf `-r` gleich (Zusage: genau ein Wort mehr).
+> **Offen und benannt:** der C-Bauer `uft_kf_build_capture_command()`
+> gibt `cfg->revolutions` weiterhin nicht weiter (zwei Bauer = MF-1177).
+> Die typisierte `validate` aus dem Paket ist nicht übernommen — ohne
+> Aufrufer wäre sie Bestand ohne Fähigkeit.
+
 
 > **Angehalten 2026-09-26, und zwar am Beleg, nicht an der Arbeit.**
 > `-r` ist im Baum NIRGENDS belegt: MF-1046 hat die Schalter gegen das
