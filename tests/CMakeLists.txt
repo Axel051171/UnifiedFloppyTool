@@ -2484,6 +2484,12 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_imd_ausser_spec_abgewiesen")
+        # MF-1473: Modus/Kopf/Groessencode/Satztyp ausserhalb Dunfields
+        # Wertebereichen wird abgewiesen, nicht zu Geometrie erfunden.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_edsk_error_marks")
         # EDSK uPD765 ST1/ST2 disk-error marking read/represent/preserve (Phase-4 WP5, MF-332)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c)

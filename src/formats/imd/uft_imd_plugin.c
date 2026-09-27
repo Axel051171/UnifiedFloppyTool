@@ -23,6 +23,14 @@
  *
  * NOT covered here (named): a truncated file loses its trailing sectors
  * without a marker, and a size code > 6 is read as 512 (MAME: 8192).
+ * BERICHTIGT MF-1473: the second half no longer holds. open() rejects a
+ * size code > 6 (and 0xFF), a head > 1, a mode > 5 and a sector record
+ * type > 8, after Dave Dunfield's ImageDisk 1.20 source (neue-ideen/
+ * floppy1/IMDSRC.ZIP: IMD.SRC |MODE| |SSIZE| |SNOTE| |HNOTE| and the
+ * sector-record list, IMDU.C's range checks; COPY.TXT: free for any
+ * reasonable purpose, attribution requested). Guarded by
+ * tests/test_imd_ausser_spec_abgewiesen.c. The first half (truncation)
+ * was closed by MF-1371.
  */
 #include "uft/uft_format_common.h"
 
@@ -57,17 +65,29 @@ static size_t imd_skip_comment(const uint8_t *data, size_t size) {
     return size;
 }
 
-/* Scan geometry without extracting sector data */
-static void imd_scan_geometry(const uint8_t *data, size_t size, size_t pos,
+/* Scan geometry without extracting sector data.
+ *
+ * MF-1473: every track record is checked against Dunfield's value ranges
+ * (ImageDisk 1.20, IMD.SRC |MODE| 00..05, |SSIZE| 00..06, |HNOTE| "HEAD
+ * can only be 0 or 1", sector records 00..08; IMDU.C stops on the first
+ * three with "... out of range"). A value outside them is rejected: the
+ * record layout after it is unknown, and reading on invented geometry and
+ * sectors (size code 7 read as 512 gave 66x3x67 from a one-sector file).
+ * 0xFF, the per-sector size table, is only a SUGGESTED extension that
+ * ImageDisk itself does not handle (|SNOTE|) — rejected as well (MF-1384:
+ * the plugin does not carry mixed sizes). */
+static bool imd_scan_geometry(const uint8_t *data, size_t size, size_t pos,
                                uint8_t *max_cyl, uint8_t *max_head,
                                uint8_t *max_spt, uint16_t *sec_size) {
     *max_cyl = 0; *max_head = 0; *max_spt = 0; *sec_size = 512;
     while (pos + 5 <= size) {
+        uint8_t mode = data[pos];
         uint8_t cyl = data[pos + 1];
         uint8_t head_raw = data[pos + 2];
         uint8_t head = head_raw & 0x0F;
         uint8_t nsec = data[pos + 3];
         uint8_t scode = data[pos + 4];
+        if (mode > 5 || head > 1 || scode > 6) return false;
         uint16_t ss = imd_sec_size(scode);
 
         if (cyl > *max_cyl) *max_cyl = cyl;
@@ -85,6 +105,7 @@ static void imd_scan_geometry(const uint8_t *data, size_t size, size_t pos,
         /* sector data */
         for (int s = 0; s < nsec && pos < size; s++) {
             uint8_t dtype = data[pos++];
+            if (dtype > 8) return false;
             switch (dtype) {
                 case 0: break; /* unavailable */
                 case 2: case 4: case 6: case 8:
@@ -94,6 +115,7 @@ static void imd_scan_geometry(const uint8_t *data, size_t size, size_t pos,
             }
         }
     }
+    return true;
 }
 
 static uft_error_t imd_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
@@ -109,8 +131,11 @@ static uft_error_t imd_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     p->size = file_size;
 
     size_t start = imd_skip_comment(data, file_size);
-    imd_scan_geometry(data, file_size, start,
-                      &p->max_cyl, &p->max_head, &p->max_spt, &p->sec_size);
+    if (!imd_scan_geometry(data, file_size, start,
+                           &p->max_cyl, &p->max_head, &p->max_spt, &p->sec_size)) {
+        free(data); free(p);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
 
     disk->plugin_data = p;
     disk->geometry.cylinders = p->max_cyl + 1;
