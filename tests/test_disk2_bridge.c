@@ -158,9 +158,22 @@ static void a_korpus_86f(void) {
             }
         }
     CHECK(geprueft == st.sectors, "alle %zu erreichbar, %zu", st.sectors, geprueft);
-    CHECK(mit_crc == 0u, "das 86F-Plugin reicht keine Pruefsumme durch — "
-          "%zu Sektoren behaupten trotzdem eine", mit_crc);
-    CHECK(mit_255 == 0u, "ohne Pruefsumme keine 255 — %zu tragen sie", mit_255);
+    printf("  86F: %zu von %zu Sektoren mit bekannter CRC, %zu mit Zuversicht 255\n",
+           mit_crc, geprueft, mit_255);
+    /* BERICHTIGT MF-1375 (P3-595). Hier stand „das 86F-Plugin reicht
+     * keine Pruefsumme durch", erwartet 0 — und das war der DEFEKT, nicht
+     * eine Eigenschaft: der Leser dekodiert mit `uft_mfm_decode_track()`,
+     * das beide CRCs nachrechnet, warf das Ergebnis aber weg, und ein
+     * Sektor mit falscher Pruefsumme kam als guter heraus. Seit MF-1375
+     * traegt jeder Sektor `UFT_SECTOR_CRC_CHECKED` samt Ergebnis; an
+     * dieser echten Diskette gehen gemessen alle 1440 auf, also gilt nach
+     * der Regel der Bruecke (255 nur mit gemessener, stimmender
+     * Pruefsumme) jetzt erstmals 255. Dass eine FALSCHE Pruefsumme als
+     * falsch ankommt, belegt test_86f_crc_flaggen. */
+    CHECK(mit_crc == st.sectors, "das 86F-Plugin reicht die Pruefsumme durch — "
+          "%zu von %zu", mit_crc, st.sectors);
+    CHECK(mit_255 == st.sectors, "gemessene, stimmende Pruefsumme -> 255: "
+          "%zu von %zu", mit_255, st.sectors);
     CHECK(ohne_daten == 0u, "%zu Sektoren ohne Daten", ohne_daten);
 
     /* Byteidentitaet an einer Spur, die das Konformitaetstest-Raster
@@ -211,7 +224,7 @@ static void a_korpus_86f(void) {
     CHECK(need < sizeof buf, "Bericht passt, braucht %zu", need);
     char erwartet[96];
     snprintf(erwartet, sizeof erwartet,
-             "mit CRC-Angabe: 0 (davon falsch: 0), ohne CRC-Angabe: %zu", st.sectors);
+             "mit CRC-Angabe: %zu (davon falsch: 0), ohne CRC-Angabe: 0", st.sectors);
     CHECK(strstr(buf, erwartet) != NULL, "Bericht sagt '%s':\n%s", erwartet, buf);
     printf("    --- Bericht ---\n%s    ---------------\n", buf);
 

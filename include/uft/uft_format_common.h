@@ -201,6 +201,46 @@ static inline void uft_format_mark_last_missing(uft_track_t* track)
     uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
 }
 
+/**
+ * @brief Traegt in den zuletzt angelegten Sektor ein, was ein Dekoder an
+ *        den Pruefsummen GEMESSEN hat (MF-1375, P3-595)
+ *
+ * `uft_format_add_sector_with_id()` setzt unbedingt `UFT_SECTOR_OK` und
+ * beide CRC-Flaggen auf gut. Ein Leser, der die Sektoren aus einem
+ * Bitstrom dekodiert und die Pruefsummen dabei nachrechnet, ruft danach
+ * diese Funktion: sie setzt `UFT_SECTOR_CRC_CHECKED` (es WURDE geprueft)
+ * und kehrt fuer jede falsche Pruefsumme die Aussage um. Eine geloeschte
+ * Datenmarke wird ebenso uebernommen.
+ *
+ * Eine Stelle fuer die Regel (MF-1177): gerufen von `uft_ipf_sektoren.c`
+ * und `uft_86f_plugin.c`. Vorher trug nur die IPF-Seite sie, und 86F
+ * meldete einen Sektor mit falscher Pruefsumme als gut.
+ *
+ * Wirkungslos (und ohne Fehler), wenn die Spur leer ist.
+ */
+static inline void uft_format_mark_last_crc(uft_track_t* track,
+                                            bool id_crc_ok,
+                                            bool data_crc_ok,
+                                            bool deleted)
+{
+    if (!track || track->sector_count == 0 || !track->sectors) return;
+    uft_sector_t* s = &track->sectors[track->sector_count - 1];
+    s->status |= (uint32_t)UFT_SECTOR_CRC_CHECKED;
+    if (!id_crc_ok) {
+        uft_sector_set_id_crc(s, false);
+        s->id.crc_ok = false;
+        s->status |= (uint32_t)UFT_SECTOR_ID_CRC_ERROR;
+    }
+    if (!data_crc_ok) {
+        uft_sector_set_crc(s, false);
+        s->status |= (uint32_t)UFT_SECTOR_CRC_ERROR;
+    }
+    if (deleted) {
+        s->deleted = true;
+        s->status |= (uint32_t)UFT_SECTOR_DELETED;
+    }
+}
+
 /** Wie uft_format_mark_last_missing(), mit dem Grund „nicht lesbar" (H-30). */
 static inline void uft_format_mark_last_unavailable(uft_track_t* track)
 {

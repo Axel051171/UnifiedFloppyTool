@@ -316,10 +316,18 @@ static uft_error_t f86_read_track(uft_disk_t *disk, int cyl, int head,
          * ein erster Entwurf hier hat ihn gemacht: die echte Spur kam
          * als R=2..10 statt R=1..9 heraus. Deshalb die Fassung, die die
          * ID nimmt, wie sie ist. */
-        uft_format_add_sector_with_id(track, r->sector,
-                                      pool + r->data_offset,
-                                      (uint16_t)r->data_len,
-                                      r->cylinder, r->head);
+        if (uft_format_add_sector_with_id(track, r->sector,
+                                          pool + r->data_offset,
+                                          (uint16_t)r->data_len,
+                                          r->cylinder, r->head) != UFT_OK)
+            continue;
+        /* MF-1375 (P3-595): was der Dekoder gemessen hat. Vorher kam ein
+         * Sektor mit falscher Kopf- oder Datenpruefsumme als GUTER Sektor
+         * heraus, weil `add_sector_with_id()` unbedingt „gut" setzt —
+         * gemessen an fluxfox_sector_test_360k.86f mit zwei gekippten
+         * Zellen: 9 von 9 „gut" (test_86f_crc_flaggen). */
+        uft_format_mark_last_crc(track, r->id_crc_ok, r->data_crc_ok,
+                                 r->deleted);
     }
 
     free(pool);
