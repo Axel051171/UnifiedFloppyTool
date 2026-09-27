@@ -1242,6 +1242,363 @@
       "kanal": "Fundus",
       "kennzahl": "Fundus",
       "naechster_griff": "Readme lesen. Bis dahin: nicht uebernehmen, nicht weitergeben."
+    },
+    "Apple DOS.zip": {
+      "lizenz": "eigenes Material (Eigentuemer) — Zulieferung 'UFT-NN', Code GPL-2.0-or-later, abgeleitet aus catseye/a2tools (GPL-2.0-or-later laut Bericht)",
+      "lizenz_beleg": "7 Dateien: `UFT-NN_AppleDOS33_Basic.md` (12132 B, Kopfzeile nennt a2tools, 837 Zeilen ANSI C, GPL-2.0-or-later, Terry Kyriacopoulos 1998/2001), `uft_appledos33.c/.h`, `uft_a2basic.c/.h` (je SPDX `GPL-2.0-or-later`, Tokentafeln aus a2tools.c:98-180), `test_a2.c`, `uft-a2-code.zip`. Die a2tools-Lizenz ist nur ueber den Bericht belegt, nicht an einer Datei aus a2tools.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Die Module sind nicht im Baum (`uft_appledos33`, `uft_a2basic`: 0 Treffer); der Fall steht als P3-384 (docs/OPEN_ITEMS.md:930), und MF-1207 hat gemessen, dass es KEIN echtes DOS-3.3-Abbild im Pruefbaum gibt — ein Einbau waere baubar, aber nicht belegbar. Erst ein echtes DOS-3.3-Abbild beschaffen, dann gegen das gebaute a2tools-Orakel einbauen; bewegt die FS-Stufen, keine der vier Kennzahlen (`do`/`po` stehen auf T1b)."
+    },
+    "Apple-Sektorordnung.zip": {
+      "lizenz": "eigenes Material (Eigentuemer) — Zulieferung 'UFT-NN', Code GPL-2.0-or-later, Verfahren aus emdeejay/a2til (MIT laut Bericht)",
+      "lizenz_beleg": "5 Dateien: `UFT-NN_Apple_Sektorordnung.md` (10269 B, Kopfzeile: a2til, 11.514 Zeilen Python, MIT, mdj 2026; 'Verfahren und Konstanten uebernommen, Code neu geschrieben'), `uft_a2_order.c` (SPDX `GPL-2.0-or-later`), `uft_a2_order.h`, `test_a2_order.c`, `uft-a2order-code.zip`. Die MIT-Lizenz ist nicht an einer a2til-Datei gemessen.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum kennt das Paket: docs/PLAN_MODERNISIERUNG.md:92 und :277 fuehren `uft_a2_order` als 'offen — trifft `uft_sector_order.h` (MF-1175), Kollision pruefen'; beantwortet den offenen Punkt aus `test_do_po_probe_ignores_content.c` (ProDOS-Kopf in Block 2, Versatz 0x400). Naechster Schritt: Kollision mit `uft_sector_order.h` und der Tafel aus P3-469 pruefen und die Sonde als Rotbeweis-zuerst gegen ein echtes ProDOS-Abbild (floptool-Erzeuger aus P3-390) abnehmen; `do`/`po` stehen schon auf T1b, also keine Kennzahl."
+    },
+    "BASMNU.BAS": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei, Einzeldatei 9658 B: tokenisiertes Atari-8-Bit-BASIC (Menueprogramm, Zeichenketten `D:DOS.SYS`, `D:DUP.SYS`, ': READ TITLE FROM SECTOR 720.'), Kommentar 'compiled for the SLCC by Jim (and Nate) Hood' — keine Lizenzaussage.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:214. Ein Diskettenmenue ohne Format- oder Verfahrenswissen ausser 'Titel in Sektor 720'; kein Griff."
+    },
+    "BeWeSoft_A_6947.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei im Paket: 163 Eintraege (1 Ordner + 162 `trackNN.S.hxcstream`, Spuren 00–80, Seiten 0–1, 32718832 B entpackt). Kopf von track00.0 gelesen: Chunk `CHKH`, `software_version v1.3.3.1 12 November 2021`, `sample_rate_hz 25000000`, `floppy_drive 0 \"3.5-inch Floppy drive\"`, `dump_name \"BeWeSoft A\"`, `current_time 2024-01-28` — eine echte Flussaufnahme; Herkunft und Rechte am Disketteninhalt unbekannt.",
+      "kanal": "Daten/Fixture",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Befund: `src/formats/flux/uft_hxcstream.c:61/103` prueft die Kennung `HXCSTREAM` (`include/uft/formats/flux/uft_hxcstream.h:30`), diese echte Aufnahme beginnt aber mit `CHKH` — der Leser (laut docs/PLAN_MODERNISIERUNG.md:415 ohne Aufrufer) wuerde sie an der Kennung abweisen (nur am Code gelesen, nicht ausgefuehrt). Naechster Schritt: diesen Widerspruch als P3 festhalten und mit einer lokal (nicht eingecheckt) gehaltenen Spur als Rotbeweis messen; `hxcstream` hat keine Stufenzeile, daher keine Kennzahl."
+    },
+    "CapsFDCEmulator.cpp": {
+      "lizenz": "ungemessen an der Datei — der Quellbaum, aus dem sie stammt, fuehrt laut P3-293 eine `LICENSE` 'THIS IS NOT FREE SOFTWARE'",
+      "lizenz_beleg": "Einzeldatei 52528 B, 2521 Zeilen C++ ohne Kopfkommentar und ohne Lizenzvermerk (beginnt mit `#include \"stdafx.h\"`, Tafeln `fdcrobbit[]`, `fdcddnoise[]`, `fdcinit[]`): WD1772-FDC-Emulatorkern aus CAPSLib.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon beurteilt: docs/NEUE_IDEEN_REGISTER.md:139 (Bericht UFT-56, Spec/Fundus) und P3-293 (docs/OPEN_ITEMS.md:843) — 'offen als FUNDUS mit Sperre'; geoeffnet wuerde er nur durch den Lizenztext `LICENCE.TXT` oder eine Freigabe. Nichts Neues vorzuschlagen."
+    },
+    "DFSXFER.BAS": {
+      "lizenz": "ungemessen — Kopfkommentar nennt nur Urheber: '(c) Jon Welch, 2006', 'Based on code written by Mark de Weger, 1996-1997, Angus Duggan, 1999'",
+      "lizenz_beleg": "keine Lizenzdatei, Einzeldatei 12583 B, 503 Zeilen BBC BASIC: BBC-Seite (Slave) einer seriellen BBC<->PC-Uebertragung. Byteidentisch (cmp) mit `DFSXFER.BAS` aus `dfs.CAB` in `DFS_Explorer_2_2_0.zip`.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:220. Ein Uebertragungsprogramm fuer die Hardware-Seite, das UFT ohne serielles BBC-Kabel nicht nutzen kann (keine Hardware, MF-310); kein Griff, gehoert inhaltlich zu `DFS_Explorer_2_2_0.zip`."
+    },
+    "DFS_Explorer_2_2_0.zip": {
+      "lizenz": "proprietaer — '(C) Jon Welch, July 2012' und 'This computer program is protected by copyright law and international treaties', 'Licensed To :' in `dfs.exe`",
+      "lizenz_beleg": "3 Dateien: `setup.exe` (140800 B), `SETUP.LST` (4516 B, VB6-Installer), `dfs.CAB` (2371104 B, 21 Dateien, darunter `dfs.exe` 434176 B v2.2.0.0, `DFSXFER.BAS`, `sercable.txt`, VB6-Laufzeit). Keine Lizenzdatei; Aussage aus den Zeichenketten von `dfs.exe`.",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:219. Denkbar als Lese-Oracle fuer BBC DFS (`uft_bbc_dfs` steht auf FS-T0, docs/VERIFICATION_TIERS_FS.md:36), aber eine VB6-GUI ohne Kommandozeile laesst sich nicht automatisch abnehmen, und `ssd` steht schon auf T1b — daher heute kein Griff."
+    },
+    "DISKIMAG.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei, 1 Datei: `DISKIMAG.PRG` (4593 B, 2006-07-28), Atari-TOS-Programm (Kopf `60 1A`), Zeichenketten 'READ DISK BPB', 'SAVE IMAGE', 'RESTORE', '*.BFR' — kein Urheber-/Lizenzvermerk in den Zeichenketten.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:223. Ein Abbildwerkzeug fuer den Atari selbst mit eigenem `.BFR`-Behaelter; ohne Doku und ohne Emulatorlauf nichts Belegbares — kein Griff."
+    },
+    "DiskImageTool-extrakt.zip": {
+      "lizenz": "eigenes Material (Eigentuemer) — Zulieferung 'UFT-NN'; die Module tragen SPDX `GPL-2.0-or-later`, die Quelle Digitoxin1/DiskImageTool ist laut Bericht GPL-3.0 — das Etikett ist fuer abgeleiteten Code zu weit",
+      "lizenz_beleg": "7 Dateien: `UFT-NN_DiskImageTool_Analyse.md` (28222 B, Kopf: 79.225 Zeilen VB.NET, GPL-3.0, 'Uebernahme ist zulaessig'), `uft_splice.c`, `uft_pc_protect_sig.c` (beide SPDX `GPL-2.0-or-later`, letzteres Muster aus `Modules/CopyProtection.vb`), `uft_bootstrap_db.h`, `bootstrap_xml_to_c.py`, `test_dit.c`, `uft-dit-code.zip`.",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Weitgehend verarbeitet: P3-454 → Mechanismus gebaut MF-1189 (`src/forensic/uft_bootstrap.c`), P3-453 → Messung gebaut MF-1190, P3-455 offen (Musterschluss auf Fehlsektoren, `uft_pc_protect_sig`: 0 Treffer). Zu berichtigen: docs/PLAN_MODERNISIERUNG.md:94/:280 meldet `uft_splice` 'kein Paket gefunden' — es liegt in diesem Paket; und P3-453/P3-455 fuehren die Zulieferung als 'GPL-2.0-or-later', obwohl sie aus GPL-3.0-Code abgeleitet ist."
+    },
+    "EMPTYFLO.ZIP": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei, 4 Leerabbilder: `144ATARI.ST` und `144PC.ST` (je 1474560 B), `720PC.ST` (737280 B), `800ATARI.ST` (819200 B). Bootsektoren gelesen: drei mit `60 3C`/`PPUT`-OEM und Fuellwert `E5`, `144PC.ST` mit OEM `MSDOS5.0` und `55 AA`.",
+      "kanal": "Daten/Fixture",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Zwei der vier sind schon beurteilt: `720PC.ST` (SHA-256 `fd250521…`) und `800ATARI.ST` (`b5dd394a…`) stehen in docs/scout/GUTACHTEN_SAMMLUNG_2026.md:259/:268-276 als 'EmptyFlops', Herkunft unbekannt, ROT/PRUEFEN (ausfuehrbarer Bootsektor). Neu sind nur die zwei 1,44-MB-Abbilder; `st` steht inzwischen auf T1b, also keine Kennzahl — kein Griff ohne geklaerte Herkunft."
+    },
+    "FloImg-extrakt.zip": {
+      "lizenz": "eigenes Material (Eigentuemer) — Zulieferung 'UFT-NN', Code GPL-2.0-or-later; FloImg (Petari) nur als Verhaltensquelle zitiert",
+      "lizenz_beleg": "6 Dateien: `UFT-NN_Passes_Diagnosen.md` (12113 B; Quellen: FloImg 1.02 Hilfe vom 08.08.2011, NFORMAT.DOC 1992, cw2dmk `jv3.h` GPL-2), `uft_os_volume.c` (374 Zeilen) und `uft_media_diag.c` (beide SPDX `GPL-2.0-or-later`), `uft_os_volume.h`, `uft_media_diag.h`, `test_passes.c`, `uft-passes-code.zip`.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Namenskollision: der Baum hat seit MF-1176 ein eigenes `src/hal/uft_os_volume.c` (298 Zeilen, aus SDISK, 0 Treffer auf 'pass'); die Durchlaufschleife dieses Pakets ist dort nicht, `uft_media_diag`: 0 Treffer. Vor jedem Einbau die beiden `uft_os_volume` zusammenfuehren statt ueberschreiben (Klasse P3-443); die Diagnosen sind laut Bericht 'nicht verifiziert: kein Traeger im Korpus' — keine Kennzahl."
+    },
+    "IMG2DISK.LST": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei, Einzeldatei 8452 B, 369 Zeilen GFA-BASIC: schreibt `.ST`/`.MSA`-Abbilder per `XBIOS(10)` auf Diskette; ohne Urheber- oder Lizenzvermerk.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:234. Als MSA-Referenz untauglich: Zeile 97 rechnet `tracks%=trend%-trstart%` und Zeile 286 laeuft `0 TO tracks%-1` — die im MSA-Kopf inklusive Endspur fehlt; `msa` steht ohnehin auf T1b. Kein Griff."
+    },
+    "IMG2DISK.PRG": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "keine Lizenzdatei, Einzeldatei 15793 B, Atari-TOS-Programm (Kopf `60 1A`) mit GFA-Laufzeitmeldungen ('[1][Error +111][Return]'); vermutlich die Uebersetzung von `IMG2DISK.LST` — nicht gemessen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur als Namenszeile in docs/NEUE_IDEEN_REGISTER.md:235. Ausfuehrbar nur im Atari-Emulator und schreibt auf eine Diskette, nicht in eine Datei — kein Oracle-Weg, kein Griff."
+    },
+    "IMGRSRC.ZIP": {
+      "lizenz": "ungemessen — nur eine Autorzeile, keine Bedingung",
+      "lizenz_beleg": "1 Datei im Paket: `IMGRUN3.S` (25 209 Byte, 1541 Zeilen, 68000-Assembler fuer Atari ST, \"Floppy image runner\", laedt ein ST- oder MSA-Abbild in eine Ramdisk und startet dessen Bootsektor). Kopf vollstaendig gelesen: \"By P. Putnik / Dev. started on April 26 2007\"; keine Lizenzdatei, kein Readme, keine Bedingung im Quelltext (grep nach licen/copyright/gpl/freeware: 0).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts zu tun: `IMGRUN` kommt im Baum nicht vor (git grep: nur der Registereintrag), und die einzige verwertbare Stelle — MSA-Kopf nach Laenge, `IMGRUN3.S:322-345` (Zylinder = Ende − Anfang + 1, Seiten + 1, 512 Byte fest) — deckt ein Format ab, das schon auf T1b steht (`msa`, SAMdisk-Referenz, VERIFICATION_TIERS.md:253). Gehoert zum Bestand \"Atari-ST-Werkzeuge von P. Putnik\", den P3-436 (drimg) und ORACLES.md:850 (FLOFOR, abgelehnt) schon fuehren; dort mitnennen, falls dieser Bestand je als Ganzes geprueft wird."
+    },
+    "Kracker Jax Elite V4.0.zip": {
+      "lizenz": "ungemessen — kommerzielles Parameterpaket, keine Bedingung im Paket",
+      "lizenz_beleg": "keine Lizenzdatei und kein Readme im Paket; mit unzip GELISTET: 30 `.prg`-Dateien (58 606 Byte), C64-Binaerprogramme — Parameter je Spiel (Gauntlet, Paperboy, Gradius …) plus `nibbler.prg`, `max-copy.prg`, `c64shotgun.prg`, `geohacker v1.6.prg`. Einzige Textspur ist die BASIC-SYS-Zeile \"2076 (KRACKER JAX)\" am Dateianfang (xxd gelesen).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum kennt das Paket bereits: das Urteil zu `UFT-92-Geohacker-GEOS-Serial.md` (neue_ideen_urteile.json:1080) stammt aus `geohacker v1.6.prg` DIESES Pakets, und `include/uft/protection/uft_c64_protection_ext.h:38` fuehrt `C64_PROT_EXT_KRACKER_JAX` — im Katalog, also Bestand ohne Aufrufer (P0-2). Das Wissen der Parameter steckt nur als 6502-Code; es zu heben hiesse disassemblieren, und das setzt eine gemessene Lizenz voraus, die es nicht gibt — bis dahin Fundus."
+    },
+    "SCPmodSideB.py": {
+      "lizenz": "ungemessen — keine Lizenzzeile, kein Autor",
+      "lizenz_beleg": "Datei vollstaendig gelesen (1576 Byte, ca. 50 Zeilen Python): kopiert den 16-Byte-SCP-Kopf und schreibt fuer 84 Spuren den Seite-B-Datenversatz in BEIDE Tabellenplaetze, \"to allow decoding by a8rawconv v0.94\". Kein Lizenztext, kein Urheber.",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "ERLEDIGT durch MF-1162: `include/uft/formats/uft_scp_integrity.h:11,20` und `src/formats/scp/uft_scp_integrity.c:99,295` nennen das Skript als den Fall, den die Kopfpruefsumme und die Seiten-Deutung aus Byte 0x0A erkennen; `tests/test_scp_integrity.c:111` baut die Umformung nach (Fall 4: Pruefsumme falsch UND Tabelle aliasiert). Kein Code uebernommen, nur Verhalten — nichts weiter offen."
+    },
+    "Skript.pdf": {
+      "lizenz": "ungemessen — keine Lizenzangabe im Dokument",
+      "lizenz_beleg": "PDF 1.5 (2 499 600 Byte), mit pdftotext vollstaendig extrahiert (5372 Zeilen): Vorlesungsskript \"Algorithmen und Datenstrukturen\", TU Braunschweig, Institut fuer Betriebssysteme und Rechnerverbund, Abteilung Algorithmik, Stand 9. Februar 2026 (Graphen, Suche, dynamische Datenstrukturen, Sortieren). grep nach Lizenz/Copyright/Creative: 0 Treffer.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Kein Fund fuer UFT: das Skript nennt kein einziges Mal Diskette, Floppy, CRC oder MFM (grep: 0), und der Baum zitiert es nirgends (git grep: nur der Registereintrag). Steht hier, damit der Eintrag nicht als Luecke erscheint."
+    },
+    "UFT-NN — TR-DOS.zip": {
+      "lizenz": "GPL-2.0-or-later — eigenes Material (Eigentuemer)",
+      "lizenz_beleg": "SPDX-Zeile `GPL-2.0-or-later` in allen drei Code-Dateien IM PAKET gelesen: `uft_trdos.c` (16 410 Byte), `uft_trdos.h` (12 973), `test_trdos.c` (18 924); dazu `UFT-NN_TRDOS_SCL_Hobeta.md` (12 416, eigene Ausarbeitung der Reihe) und `uft-trdos-code.zip` (dieselben Dateien plus Makefile). Gelesene Fremdquelle laut Dokument: `alffcpu/dc-trd-scl-plugins` (Rust, MIT) — nur gelesen, nicht mitgeliefert.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nicht uebernommen: `uft_trdos.h`, `uft_tr_disk_geometry`, `dc-trd-scl-plugins` und `Hobeta` haben im Baum 0 Treffer. Der Hauptfund steht unveraendert — `src/formats/trd/uft_trd_parser_v2.c:263-268` prueft 0xE2 als Kennung und 0xE7 als Diskettentyp, vertauscht gegen die eigene Feldkarte weiter unten —, aber die Datei steht in `docs/orphan_baseline.txt:192`, trifft also keinen lebenden Pfad; `trd` (T1b) und `scl` (T1) liegen schon ueber T3. Naechster Griff: entscheiden, ob Katalog/geloeschte Dateien als Dateisystem-Stufe gebraucht werden, und den Waisen dabei berichtigen oder stehen lassen; Hobeta waere ein neues Plugin unter dem Moratorium."
+    },
+    "UFT_Atari_ST_Cartridge_Detection.zip": {
+      "lizenz": "eigenes Material (Eigentuemer) — aber ohne Lizenzdatei und ohne SPDX-Kopf",
+      "lizenz_beleg": "mit unzip GELISTET: 21 Eintraege, ein Teilbaum `UnifiedFloppyTool/` (Erkenner `src/formats/atari/uft_atari_st_cartridge.c` 12 050 Byte, Header, Test, `docs/ATARI_ST_CARTRIDGE_DETECTION.md` 1413 Byte vollstaendig gelesen, dazu Kopien von `.pro`, `tests/CMakeLists.txt`, `mainwindow.cpp`, `explorertab.cpp`). Keine Lizenzdatei; die neuen Dateien tragen keinen SPDX-Kopf (grep: nur die mitkopierten Baudateien). Herkunftssatz im Dokument: \"anhand der oeffentlich beschriebenen Atari-ST-Cartridge-Header neu implementiert\" — ohne Namen der Quelle.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum kennt es nur als Warnung: P3-443 misst, dass die mitgelieferten Baudateien KLEINER sind als die des Baums (`tests/CMakeLists.txt` −19 873 Byte, `.pro` −1 665, `mainwindow.cpp` −139) — Kopieren waere eine stille Ruecknahme; sonst 0 Treffer fuer `st_cartridge`. Vor jeder Uebernahme fehlt Bedingung (c) der EINFRIER-REGEL: die Quelle der Signatur 0xABCDEF42 und der `CA_NEXT`-Kette muss benannt in den Kopf; danach nur Zeilen uebernehmen, nicht die Dateien."
+    },
+    "UFT_VORBEREITUNG_A8RAWCONV_GUI_KOMPONENTEN.md": {
+      "lizenz": "eigenes Material (Eigentuemer)",
+      "lizenz_beleg": "Dokument (34 530 Byte), Kopf gelesen: \"Vorbereitung zur vollstaendigen a8rawconv-Integration und GUI-Verdrahtung\", Stand `5cbff5d`, Referenz `Axel051171/a8rawconv-0.95`; laut P3-416 \"vom Eigentuemer uebergeben am 2026-09-15\". Keine Lizenzzeile — eine Planungsschrift, kein Code.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Bereits aufgenommen als P3-416 (MF-1161: acht der elf Rueckstaende V1–V11 gemessen, alle acht treffen zu). Von 33 genannten Bezeichnern gibt es 13 im Baum — das sind die, die das Dokument als BESTAND zitiert —, 20 Vorschlaege fehlen, darunter alle sechs GUI-Dateien (`uft_media_options_panel`, `uft_layout_preview_widget`, `uft_capability_controller`) und der Dreizustand `UFT_CAP_*`. V7 ist weiter lebendig: `src/hal/uft_scp_direct.c:512` setzt `can_write_flux = true`, `tests/test_scp_direct_hal.c:92` nagelt es fest. Naechster Griff laut P3-416: die Eigentuemerentscheidung zum Dreizustand, weil sie eine API aendert."
+    },
+    "UFT_VORBEREITUNG_MEDIENLAYOUT_ALLE_FORMATE.md": {
+      "lizenz": "eigenes Material (Eigentuemer)",
+      "lizenz_beleg": "Dokument (36 260 Byte), Kopf gelesen: \"Vorbereitung fuer ein gemeinsames Medienlayout aller geeigneten Formate\", Stand 2026-09-15, geprueft gegen `5cbff5d76daa…`; laut P3-415 \"vom Eigentuemer uebergeben\". Keine Lizenzzeile — Planungsschrift mit Formatmatrix ueber 88 Plugins.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Bereits aufgenommen als P3-415 (MF-1159: fuenf pruefbare Aussagen gemessen, alle zutreffend). Von 59 genannten Bezeichnern gibt es 14 (alle als Bestand zitiert), 45 Vorschlaege fehlen, ebenso die vier neuen Dateien `uft_media_layout.{h,c}` und `uft_layout_registry.{h,c}`. Teilweise ist die Sache unter ANDEREM Namen da: die Spurreihenfolge als `include/uft/core/uft_sector_order.h` (MF-1175) und die Sektorherkunft als `uft_track_layout.h` (MF-1173, ohne Aufrufer, P3-422). Naechster Griff laut P3-415: vor Phase 2 die Matrixzeile `DSK` aufloesen (101 Plugins tragen `UFT_FORMAT_DSK`, MF-1087)."
+    },
+    "UFT_VORBEREITUNG_SPURREIHENFOLGE.md": {
+      "lizenz": "eigenes Material (Eigentuemer)",
+      "lizenz_beleg": "Dokument (16 551 Byte), Kopf gelesen: \"Vorbereitung fuer Spur- und Seitenreihenfolgen\", Stand `5cbff5d` vom 15.09.2026; laut P3-414 \"vom Eigentuemer uebergeben\". Keine Lizenzzeile — Planungsschrift.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Bereits aufgenommen als P3-414 (MF-1158: GUI-Schalter `interSideNumbering`/`reverseSide`/`sidesGrouped` ohne Wirkung; die vier libdsk-Anordnungen liegen schon in `uft_logical`). Von 32 genannten Bezeichnern gibt es 10, 22 fehlen, ebenso die sieben vorgeschlagenen Dateien (`uft_track_order.{h,c}`, `uft_format_layout_policy.{h,c}`, drei Tests). ABER: MF-1175 hat die drei Reihenfolgen des Vorschlags (CYLINDER_HEAD/HEAD_CYLINDER/OUT_AND_BACK) als `UFT_ORDER_CHS`/`HCS`/`SERPENTINE` in `include/uft/core/uft_sector_order.h:53-66` gebaut, einziger Produktivnutzer `src/formats/xfd/uft_xfd.c` — und P3-414 nennt MF-1175 nicht. Naechster Griff: P3-414 gegen `uft_sector_order` abgleichen, damit `uft_track_order` nicht die dritte Kopie derselben Rechnung wird (MF-1177)."
+    },
+    "Vier Code-Fallen.zip": {
+      "lizenz": "GPL-2.0-or-later — eigenes Material (Eigentuemer)",
+      "lizenz_beleg": "SPDX-Zeile `GPL-2.0-or-later` IM PAKET gelesen in `code_audit.py` (15 448 Byte), `audit_common.py` (10 406), `run_code_selftest.py` (7896), `code-audit.yml` (13 187); dazu `UFT-NN_Code_Fallen.md` (11 948, eigene Ausarbeitung: Regeln K4/K6/P2/P3) und `uft-code-code.zip` (30 Eintraege, Pruefer, Koederdateien, `uft_match`).",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "UEBERNOMMEN als Tor 67 (MF-1230, Commit af693c8e): `scripts/audit_codefallen.py`, `scripts/audit_common.py`, `scripts/c_lex.py`, `docs/codefallen_baseline.json`, die Koederdateien `tests/formats/fixture_code_a.c`, `fixture_code_b.c`, `fixture_traps.c` und `src/util/uft_match.c`; CI in `.github/workflows/teilstring.yml:160-166` (Selbsttest) und `:263-268` (Grundlinie). Nichts weiter offen; P3-507 fuehrt die Zahlenpflege dazu."
+    },
+    "X-Copy_Professional_": {
+      "lizenz": "proprietaer — \"All Rights Reserved\", keine freie Lizenz",
+      "lizenz_beleg": "Verzeichnis mit 2 Dateien: `X-Copy_Professional__Tools_1993-09_Cachet.zip` (518 311 Byte, 83 Dateien, Amiga-Installation) und `UFT-42-XCopyPro-BBBF.md` (8945 Byte, eigene Ausarbeitung vom 2026-09-06). Im Paket `Guides/MANUAL.XCOPY` gelesen: \"This software Copyright (C) ASI 1991, All Rights Reserved.\" Das mitgelieferte `L/Bootblock.brainfile` hat eine EIGENE, in P3-216 gemessene Bedingung (Safe Hex International, keine kommerzielle Nutzung).",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Hand-A-Material fuer den X-Copy-Nachbau, der im Baum steht (`docs/nachbau/XCOPY_VERHALTEN_HAND-A.md`, `…_HAND-A2.md`, `XCOPY_TRIPEL_TABELLE.md`); Hand B darf es nicht sehen. Das Brainfile ist in P3-216 als Massstab, nicht als Quelle beurteilt, und die Korrektur aus `UFT-42` (Kopf von `Bootblock.library`) ist vorbeugend erledigt — `uft_bb_entry_t` hat 0 Treffer (Urteil zu `D_Mob-DCopy31.zip`). Neu waere hoechstens das Cyclone-Handbuch fuer H-32 (Hardware-Synchronkopie)."
+    },
+    "a-copy_1_2m_eurosystems_holland.zip": {
+      "lizenz": "ungemessen — nur eine Copyright-Zeile gefunden",
+      "lizenz_beleg": "1 Datei im Paket: `a-copy_1_2m_eurosystems_holland.msa` (25 461 Byte). MSA-Kopf mit xxd gelesen: Kennung 0x0E0F, 10 Sektoren je Spur, Seitenfeld 1 (= zwei Seiten), Spuren 0–80. Textspuren im Abbild: \"copy ST (v 1.2m) Eurosystems 1988\", \"written in 1987 by Uwe Stahl for EUROSYSTEMS Holland\", \"(c) EUROSYSTEMS\" — eine Copyright-Zeile ist keine Bedingung; Readme oder Lizenzdatei gibt es nicht.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum 0 Treffer fuer `a-copy`/`eurosystems`. Als Abbild eines kommerziellen Programms nicht fuers Repository geeignet; lokal (nicht eingecheckt) taugt es als echte 81-Spur-MSA mit Lauflaengenpackung fuer den MSA-Leser — der aber schon T1b ist, also bewegt es keine Zahl. Die \"Format + Prot. parameters\" des Programms waeren Hand-A-Stoff, falls je ein Atari-ST-Kopierer nachgebaut wird."
+    },
+    "acc.spl": {
+      "lizenz": "ungemessen — nur Urheberzeilen, keine Bedingung",
+      "lizenz_beleg": "Datei vollstaendig durchsucht (21 119 Byte, 1099 Zeilen Forth-artiger Quelltext): \"ATR Copy Center\", Kopf \"2008-2014 Carsten Strotmann up to V1.3.1 / 2014-2015 Thomas Grasel / 2015/08/08\", Zeile 1021 \"(c) 2015 C. Strotmann\". Keine Lizenzangabe (grep nach licen/gpl/public: 0).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum 0 Treffer (\"ATR Copy Center\", Strotmann). Lesbar ist die Laufwerksseite: PERCOM-Abfrage per SIO-Kommando $4E, 12 Byte (`acc.spl:322-328`), Medium Density als 1040 Sektoren, 128 Byte, 26 je Spur (`:307-313`) — dieselben 26, die `docs/spec_verification.json:34` schon dreifach belegt —, und `getsectors` (`:318-320`) rechnet Spuren × Sektoren je Spur OHNE das Seitenbyte percom[4]. Als vierte Lesart zu P3-424 (XF551-QD) notieren, sonst nichts: `atr`/`xfd` stehen auf T1b."
+    },
+    "adf01.zip": {
+      "lizenz": "ungemessen — Szene-Sammeldisketten, darin fremde kommerzielle Bestandteile (u. a. diskcode.library, Copyright 1988,1990 Fuller Computer Systems, laut P3-215)",
+      "lizenz_beleg": "5 219 850 Byte, 10 innere ZIPs (ACS-UtilitiesCompilation4, BS1-Copydisk10, DCW-Utilities, Epic-AnotherDiskSavingComp, Powerline-HAIsUtilityDiskv5.2, Sargon-UtilityDisk1, Switch-CopyDisk6, TheOmegaCrew-…2, Threat-MegaCompilationV, UAC-RattleCollection) mit AUSGEPACKTEN Dateien (c/, devs/, libs/ …); nach Endung .adf/.dms/.adz gezaehlt: 0 Abbilder. Keine Lizenzdatei im Paket.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon ausgewertet: P3-215 (MF-936) hat die diskcode.library aus BS1-Copydisk10/Epic-AnotherDiskSavingComp disassembliert und als Fundus mit rechtlicher Grenze festgehalten. Weil das Paket Dateiauszuege statt Diskettenabbilder enthaelt, taugt es auch nicht als Korpus — nichts weiter zu tun."
+    },
+    "apple_ii_library_4am.md": {
+      "lizenz": "eigenes Material (Eigentuemer) — die BESCHRIEBENE Sammlung ist laut Dokument zu 3367 von 3372 Items ohne Lizenzangabe",
+      "lizenz_beleg": "apple_ii_library_4am.md, 65 907 Byte; Kopf: 'Erhoben: 2026-09-10 · Erheber: Claude Opus 5, im Auftrag von Axel'; §1.1 'Die Lizenzfrage, gemessen' (licenseurl leer 3367, CC-BY-4.0 5). Verzeichnis der 4am-Crack-Notizen samt Abrufwerkzeug.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum nennt die Datei nur in docs/NEUE_IDEEN_REGISTER.md:211; die 4am-Auswertungen UFT-75/84/85/86 stehen bereits im Register. Der im Dokument beschriebene zweite Durchlauf (Inhalte der Notizen) lohnt erst mit einer benannten Frage an die Schutzerkennung, und die ist durch P0-2 (Katalog ohne Aufrufer) angehalten."
+    },
+    "atari-icedpck-mei2007.zip": {
+      "lizenz": "Public Domain (C-Entpacker, Hans Wessels 2007); die 68k-Originalroutinen *_r.s ohne Lizenzangabe — ungemessen",
+      "lizenz_beleg": "19 977 Byte, 33 Dateien. Kopfkommentare ice210/ice_21.c (5164 B), ice240/ice_24.c (5161 B), atm35/atm_35.c (9188 B): 'placed in public domain 2007 by Hans Wessels'. ice240/ice_24_r.s (4610 B) ist die PACK-ICE-Entpackroutine ohne Lizenzzeile. CVS/Root nennt atari-icedpck.cvs.sourceforge.net.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nicht genannt (git grep 'icedpck', 'Hans Wessels', 'Atomik', 'Pack-Ice': nur NEUE_IDEEN_REGISTER.md:212). Ice 2.1/2.4 und Atomik 3.5 packen DATEIEN, keine Disketten — der Port ist rechtlich offen, wartet aber auf einen Aufrufer (etwa ein ST-Dateisystem, das gepackte Dateien anzeigt)."
+    },
+    "atari.zip": {
+      "lizenz": "ungemessen — gemischt; bigdos03.lzh ist Freeware (Rainer Seitel 1995), die uebrigen zehn Archive hier nicht geoeffnet",
+      "lizenz_beleg": "282 613 Byte, 11 Archive (5 ARC Methode 8: analyzer, bpb37, diskmech, dskmap, fdi; 6 LZH: bigdos03, certify, diskfix2, dupltwix, fcpy_iii). 7z entpackt nur bigdos03.lzh: BIGDOS/BIGDOS.TXT und ENGLISH.TXT 'Copyright 1995 by Rainer Seitel … Big-DOS is freeware'. Die -lh1-Archive und ARC oeffnet 7z nicht (Befund wie P3-231).",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon ausgewertet: MF-945 (bpb37.doc Wurzelverzeichnis-Formel, fdi.arc-Fehlschluss), P3-231 (Archive gesichtet, ARC-Entpacker) und P3-239 (MF-949: BPB-Konstantentafel und certify.c-Zwei-Stufen-Pruefung begruendet abgelehnt). Nichts Neues vorzuschlagen."
+    },
+    "crc_v3.txt": {
+      "lizenz": "Text: Copyright Ross Williams 1993, woertliche Weitergabe mit Kopfblock erlaubt; die C-Module darin Public Domain",
+      "lizenz_beleg": "crc_v3.txt, 89 127 Byte, Kopfblock Zeile 17-21 ('permission is granted to make and distribute verbatim copies … the C code modules included in this document are fully public domain'); Ross N. Williams, 'A Painless Guide to CRC Error Detection Algorithms', Version 3, 19.08.1993.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur im Register (NEUE_IDEEN_REGISTER.md:217); 'Ross Williams'/'Rocksoft': 0 Treffer. Das Rocksoft-Parametermodell ist dasselbe, das CRC RevEng (P3-370) katalogisiert — als benannte Quelle nachtragen, sobald die CRC-Registry aus P3-561 (MF-1113) einen Aufrufer bekommt; vorher kein Griff."
+    },
+    "ddi2raw.py": {
+      "lizenz": "GPL-3.0-or-later",
+      "lizenz_beleg": "Kopfkommentar ddi2raw.py (5458 Byte, 106 Zeilen): 'Copyright 2017 Sergiy Kolesnikov … either version 3 of the License, or (at your option) any later version'. Tafel KNOWN_HEADERS mit Nutzlast-Versatz 0x1200/0x1E00/0x2400/0x500.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon eingeordnet: P3-356 Punkt (5) fuehrt es als Kanal Spec (Kopfsignaturen samt Nutzlast-Versatz); DDI steht in P3-350 ohne Plugin, ein neues faellt unter das Moratorium. Nichts zu tun, bis DDI aus dem Moratorium darf."
+    },
+    "disk": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Verzeichnis mit disk.zip (81 785 Byte, 78 Dateien) und disk1.zip (23 273 Byte, grossenteils dieselben Dateinamen): lose C64-PRGs (Kopier- und Fehlererzeuger wie '20 no header', '21 erase trk', '22 no data', dupdac, psimain, supermon64) und dc.source.seq ('BY P.J. MYERS'); Zeichenketten '(C) PSIDAC 1983', 'PSIDAC (C)84 VBN'. Keine Lizenzdatei.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nicht genannt (git grep 'dupdac', 'psimain', 'PSIDAC': 0 Treffer ausser Register). Lose Programmdateien statt Abbilder, ohne Lizenz — kein Korpus, und ohne benannte Frage kein Griff."
+    },
+    "disk_encoder-master.zip": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "1338 Byte, 3 Dateien (.gitignore, Makefile, disk_encoder.C 1627 B); keine Lizenzdatei, Kopfkommentar nennt nur den Zweck ('Take hex input and display the number as encoded with FM and MFM'); ZIP-Kommentar ist ein git-Commit-Hash.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nur im Register (NEUE_IDEEN_REGISTER.md:222). Lehrwerkzeug ohne Lizenz und als Referenz ungeeignet: fm_encode beginnt bei i = sizeof(x)*8 = 32 und bildet (uint32_t)1 << 32 (undefiniert) — kein Griff."
+    },
+    "diskwzd.zip": {
+      "lizenz": "ungemessen — kommerzielle Programmdiskette ('disk wizard ii REL. 2.5 (C) 1984')",
+      "lizenz_beleg": "18 830 Byte, eine Datei DISKWZD.ATR (92 176 B, ATR-Kennung 0x0296); Zeichenketten im Abbild gelesen, keine Lizenzdatei, keine Weitergabeerlaubnis.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum nennt Disk Wizard II bereits in P3-291 (MF-977, 'EMP SECT WRT' aus UFT-46), dort Fundus. ATR ist nicht T3, und ein kommerzielles Abbild ohne Weitergabeerlaubnis gehoert nicht in den Korpus — nichts zu tun."
+    },
+    "dtc_.c": {
+      "lizenz": "proprietaer — statisches Dekompilat eines fremden Binaers (KryoFlux dtc), keine Lizenzzeile",
+      "lizenz_beleg": "dtc_.c, 95 812 Byte, Kopfkommentar leer, 116 Funktionen ('[n/116] … @ 0x…'): CBitBuffer 25, CMemoryFile 24, CDiskFile 21, CDiskEncoding 16, CCTRawCodec 12, CBaseFile 11, CRC-Routinen 6, main 1. Von diesem Urteil gelesen: nur Zeilen 1-50 und die Funktionskopfzeilen.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon verarbeitet: P3-356 Punkt (2) fuehrt dasselbe Dekompilat (96 KB, 116 Funktionen) als absichtlich ungelesen, und src/dtc_components/ (MF-1099; SOURCE_MAP.md, UEBERNAHME.md) ist daraus abgeleitet — ctraw.c/ipf.c/protection.c bleiben bis Fall B gesperrt. Nichts neu vorzuschlagen; die Datei nicht an Implementierer weitergeben (Brandmauer QUARANTINE_PROCESS.md §5)."
+    },
+    "e-copy_1_72_mw_electronic_cr.zip": {
+      "lizenz": "kommerziell — 'Copyright by Robert Weiss', Vertrieb MW electronic mit Registrierkarte; nur das Beiprogramm FLOP_FIX.PRG nennt sich Freeware. Weitergabe ungemessen.",
+      "lizenz_beleg": "117 606 Byte, eine Datei e-copy_1_72_mw_electronic_cr.msa (247 657 B; MSA, 10 Sektoren, 2 Seiten, Spur 0-80), hier zu 829 440 B dekodiert. Stammverzeichnis: ECOPY.PRG 182 218 B, VERSION.TXT, UPDATE.TXT, LIESMICH.TXT; Texte nach Lizenz-/Weitergabezeilen durchsucht, nicht vollstaendig gelesen.",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum nennt E-Copy in docs/OPEN_ITEMS.md:4938 als einzige kopflose .dim-Fassung, 'unbelegt: nur Jacknife'. Dies ist der SCHREIBER selbst (VERSION.TXT erwaehnt *.DIM-Dateien): im ST-Emulator eine bekannte Diskette als DIM sichern und gegen die Lesart von dim_atari halten; die Ausgabe bleibt wegen ungeklaerter Weitergabe ausserhalb des Korpus."
+    },
+    "fdc.vhd.txt": {
+      "lizenz": "GPL-3.0-or-later",
+      "lizenz_beleg": "Kopfkommentar fdc.vhd.txt (28 842 Byte, 698 Zeilen): 'Floppy Disk Controller in VHDL. Copyright (C) <2015> <Mostafa Abd El-Aziz> … either version 3 of the License, or (at your option) any later version'. FPGA-Controller mit 50-MHz-Takt und MFM-Bitpuffer.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Im Baum nicht genannt (git grep 'fdc.vhd', 'Abd El-Aziz': nur NEUE_IDEEN_REGISTER.md:229). Hardware-Beschreibung ohne Geraet (MF-310), und die Dekodierer-Schicht steht unter der EINFRIER-REGEL — kein Griff."
+    },
+    "fluxdoctor.asm": {
+      "lizenz": "MIT",
+      "lizenz_beleg": "Kopfkommentar fluxdoctor.asm (46 939 Byte, 1591 Zeilen): 'FLUXDOCTOR V1.3 / Copyright Fred Sauer 2026 / MIT License'; 6502-Diagnoseprogramm fuer Apple-II-Laufwerke.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon eingeordnet: docs/OPEN_ITEMS.md:5588 fuehrt apple-ii-fluxdoctor als Community-Bench-Hinweis ('6502-Assembler auf echter Hardware, fuer diesen Baum gegenstandslos'), docs/STAND.md:32 als GELB. Der Port waere rechtlich offen, aber es gibt nichts zu portieren — nichts zu tun."
+    },
+    "hacking floppy disk.zip": {
+      "lizenz": "GPL-2.0-or-later — eigenes Material (Eigentuemer): UFT-NN-Ausarbeitung zum Kopierschutz samt C-Beigaben",
+      "lizenz_beleg": "keine Lizenzdatei im Paket; SPDX-Kopfzeile `GPL-2.0-or-later` in `uft_revolution.c` (9856 B), `uft_revolution.h` (9045 B), `uft_protection_scan.h` (6860 B) und `test_protect.c` (14915 B). `UFT-NN_Kopierschutz_Analyse.md` (26398 B) ist eine Ausarbeitung dieser Reihe („Nummer bitte selbst zuweisen“, Abgleich gegen `Axel051171/UnifiedFloppyTool`). Das innere `uft-protect-code.zip` (30230 B) enthaelt dieselben Dateien plus `uft_protection_scan.c` (8326 B).",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum hat das Paket schon gemessen: P3-448 (der Vertrag nennt `uft_rev_align()`, das Paket liefert es nicht; bei einem Bit Versatz 50,17 % Flackern) und P3-449 (`flux_count` speichert die Spanne), beide MF-1185 und beide offen. Laut P3-448 heisst der Weg: die Konfidenzkarte auf die VORHANDENE Ausrichtung (`src/analysis/events/uft_align_fuse_bridge.c`) verdrahten und keine zweite bauen. Zu berichtigen ist ausserdem `docs/PLAN_MODERNISIERUNG.md:94` und `:280`: dort stehen `uft_revolution` und `uft_protection_scan` als „Paket nicht gefunden“ — es ist dieses Paket."
+    },
+    "idad400_v2r3.pdf": {
+      "lizenz": "proprietaer — © International Business Machines Corporation 1987, 2018, „US Government Users Restricted Rights“",
+      "lizenz_beleg": "Titel und Impressum der PDF (4102484 B) mit pdftotext gelesen: „z/OS Version 2 Release 3 / DFSMS Using Data Sets / SC23-6855-30“",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts. Es ist ein Handbuch fuer Grossrechner-DASD/VSAM, kein Diskettenformat; „diskette“ kommt im ganzen Text genau einmal vor, im Glossar. Der Baum nennt die Datei nur in der Namensliste `docs/NEUE_IDEEN_REGISTER.md:233`, und „z/OS“ bzw. „DFSMS“ kommen in docs/src nicht vor."
+    },
+    "mfm_dp_dewarp.cc": {
+      "lizenz": "ungemessen",
+      "lizenz_beleg": "Einzeldatei (21977 B, 648 Zeilen) ohne Lizenz-, Copyright- oder SPDX-Vermerk (grep ohne Treffer) und ohne Urhebernamen. Die Zuordnung zu flux-analyze (GPL-3.0 laut `src/flux/analyze/FLUX_ANALYZE.md:5`) ist an DIESER Datei nicht belegt.",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Der Baum hat Dewarp schon als eigenstaendige Umsetzung: `src/flux/uft_dewarp.c` (MF-495) glaettet exponentiell vorwaerts und rueckwaerts, und `include/uft/flux/uft_dewarp.h:47` beruft sich nur auf eine Warnung von flux-analyze. Diese Datei arbeitet anders, naemlich mit dynamischer Programmierung ueber `BANDS = 3` und einem Lp-Strafterm `P = 1`; im Baum steht `mfm_dp` nur in `docs/NEUE_IDEEN_REGISTER.md:238`. Zuerst die Herkunft im flux-analyze-Repo belegen; ein Auftrag entsteht erst mit einem roten Fall, den `uft_dewarp` verliert."
+    },
+    "nächste runde": {
+      "lizenz": "eigenes Material (Eigentuemer), je Paket an der Datei gemessen: 7 Pakete MIT © 2026 Axel Kramer, 5 GPL-2.0-or-later, bei `uft-limits-code.zip` nur SPDX-Kopfzeilen",
+      "lizenz_beleg": "MIT (`LICENSE`/`LICENSE.txt`, 809 bis 1069 B): UFT_Missing_Core_v1, formaster_copylock_c, protector64_prg_floppy_extract_c, uft_c64_historical_profiler_v1, uft_cbm_scp_recovery_bridge_v1, uft_harvest_cleanroom_v1, uft_synchronized_track_writer_v1. GPL-2-Volltext (1783 B): UFT_AdaptiveCopyCore (`LICENSES/UFT_LICENSE_NOTICE.txt`, 11× SPDX), t2/UFT_AnalysisBooster (`LICENSE`, 8× SPDX), t2/UFT_Robust_Probe_Guard (`LICENSE`, 9× SPDX), t2/UFT_SurfaceIntegrity (`LICENSE`, 17× SPDX), t2/UFT_DTC_Upgrade (`LICENSE_UFT_GPL2.txt`). t2/uft-limits-code.zip hat keine Lizenzdatei, aber 8× SPDX `GPL-2.0-or-later`.",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "13 Dateien, je eine Zeile. (1) UFT_Missing_Core_v1: P3-561(1) — die CRC-Registry wuerde MF-1113 schliessen, braucht aber einen Aufrufer; PLL System B und der Takt-Schaetzer werden nicht uebernommen. (2) uft_cbm_scp_recovery_bridge_v1: P3-561(2) — der Paketbefund zur G64-Tafel ist als P3-545/MF-1337 behoben, der Statusparser wartet auf M3.2. (3) formaster_copylock_c: P3-561(3) — vier Code-Defekte, die Erkennung ist durch P0-2/P3-455 angehalten. (4) uft_harvest_cleanroom_v1: P3-561(4) — offen ist nur der Befund zur DO-Richtung in `uft_apple_order.h`, zuerst mit Rotbeweis. (5) uft_synchronized_track_writer_v1: P3-561(5) — verwertbar ist `uft_rotation_analyze` fuer `rpm_jitter`/`index_jitter_us`. (6) uft_c64_historical_profiler_v1: P3-561(6), nicht uebernommen; der Anlass steht in OPEN_ITEMS:58. (7) protector64_prg_floppy_extract_c: P3-561(7), nicht uebernommen; `samples/*.prg` ist fremde Software und darf nicht in den Baum. (8) UFT_AdaptiveCopyCore_v1.0.0: P3-593, nichts uebernommen; `tests/test_gap_gegenrechnung.c:13` fuehrt es als Gegenrechnung. (9) t2/UFT_DTC_Upgrade_v1: DTC-3 ist als MF-1386 erledigt (`docs/plans/DTC_UPGRADE.md:227`); der Solver bleibt laut Auftrag Fundus (MF-1403 — die Nummer steht im Arbeitsbaum noch nirgends). (10) t2/uft-limits-code.zip: MF-1388, Urteil P3-604, nichts uebernommen. (11) t2/UFT_Robust_Probe_Guard_v1: uebernommen, `uft_probe_guard` hat 36 Treffer im Baum (MF-1368); offen ist die Eigentuemerentscheidung P3-568. (12) t2/UFT_AnalysisBooster_v1.0.0 und (13) t2/UFT_SurfaceIntegrity_v1.0.0: im Baum 0 Treffer, also UNGESICHTET. Beide geben als Stand `e60d3e7d` an. Fuer SurfaceIntegrity zuerst gegen den Bestand halten: `msa` steht schon auf T1b, `uft_save_image.cpp`/`uft_disk_transaction.c` haben einen Speicherweg, und `e02adcec` (MF-1346) hat den Oberflaechen-Scan. Fuer den Booster: die XDF-Pipeline gegen `uft_disk2_t`/CopyPlan pruefen."
+    },
+    "proboot.s": {
+      "lizenz": "BSD-3-Clause, © Peter Ferrie 2016-2017",
+      "lizenz_beleg": "Kopfzeilen der Datei (5797 B, 244 Zeilen): „;license:BSD-3-Clause“ und „;copyright (c) Peter Ferrie 2016-2017“",
+      "kanal": "Nachbau",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon gesichtet in P3-356 (11): ein minimaler ProDOS-Dateileser in 6502-Assembler. Aus Assembler nach C waere das ein Nachbau, kein Port. Er trifft die Luecke aus MF-710 (`src/formats/apple/prodos_po_do.c` liest kein Verzeichnis). Er bewegt keine der vier Kennzahlen, weil `do`/`po` Behaelterformate sind und die Dateisystemstufe getrennt gefuehrt wird. Er wird erst gebraucht, wenn ein ProDOS-Dateisystemleser beauftragt ist."
+    },
+    "scp_sdk.pdf": {
+      "lizenz": "proprietaer — © 2013-2015 Jim Drew, „Distribution of this data without permission is strictly prohibited. All rights reserved, worldwide.“",
+      "lizenz_beleg": "Seite 1 der PDF (85750 B) mit pdftotext gelesen: „SuperCard Pro Software Developer's Kit Manual v1.7, Release Date: December 23, 2013, Last Revision: December 7, 2015“",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Schon eingeloest: der Baum arbeitet nach genau dieser Fassung — `include/uft/hal/uft_scp_direct.h:53` („SCP SDK v1.7 protocol“), `tests/test_scp_status.c:131` (MF-804, die Statuscodes aus der SDK v1.7) und `src/samdisk/scp_dev.cpp:2` (URL der PDF). Die Datei darf wegen des Weitergabeverbots nicht in den Baum. Ohne Hardware (MF-310) bewegt sie das Bench-Alter nicht."
+    },
+    "uft-trs80-code.zip": {
+      "lizenz": "GPL-2.0-or-later — eigenes Material (Eigentuemer), UFT-NN-Ausarbeitung zu TRS-80 JV1/JV3 samt Modul",
+      "lizenz_beleg": "keine Lizenzdatei im Paket; SPDX-Kopfzeile `GPL-2.0-or-later` in `src/formats/trs80/uft_jv13.c` (8669 B), `include/uft/formats/uft_jv13.h` (8854 B) und `tests/test_jv13.c` (16680 B). `UFT-NN_TRS80_JV13_Analyse.md` (25197 B) ist byteidentisch mit der Einzeldatei auf der obersten Ebene von neue-ideen/.",
+      "kanal": "Spec",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Eingeloest: der JV3-Hauptfund ist MF-1017, und `docs/neue_ideen_urteile.json:1176` urteilt die Ausarbeitung schon. `uft_jv13` fehlt im Baum absichtlich; `docs/PLAN_MODERNISIERUNG.md:302` sagt, TRS-80 sei ueber `jv3_jvc.h` eingeloest. `jv1` und `jv3` stehen beide auf T1b (`docs/VERIFICATION_TIERS.md:226-227`), also kann das Paket keine Stufe mehr heben. Offen bleibt nur ein Abgleich: sind die zwei `uft_jv1.c`-Abweichungen aus dem Dokument durch `test_jv1_ist_einseitig` gedeckt?"
+    },
+    "uft_a2r_parser.zip": {
+      "lizenz": "GPL-2.0 (Projektlizenz) — eigenes Material (Eigentuemer), Abzug aus dem eigenen Baum",
+      "lizenz_beleg": "keine Lizenzdatei im Paket und keine SPDX-Zeile in den drei Dateien. Alle drei sind byteidentisch (CRLF bereinigt) mit Baumstaenden: `uft_a2r_parser.c` (43539 B) = `06cf57db` (MF-1157), `uft_copy_plan.h` (26421 B) = `f3fdb428`, `formattab.cpp` (90284 B) = `9f7d6d6d` (MF-1295). Damit gilt die Baumlizenz `LICENSE` (GPL-2, 1783 B).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts — es ist ein veralteter Abzug. Der Baum ist weiter: `src/parsers/a2r/uft_a2r_parser.c` traegt seither MF-1319 (`a2r_location_deuten`, `hard_sector_count`), gemessen 82 abweichende Zeilen; `uft_copy_plan.h` weicht um 158 Zeilen ab, `formattab.cpp` um 1254. `a2r` steht seit MF-1332 auf T2."
+    },
+    "uft_copy_plan.zip": {
+      "lizenz": "GPL-2.0-or-later (Projektlizenz) — eigenes Material (Eigentuemer), Abzug aus dem eigenen Baum",
+      "lizenz_beleg": "keine Lizenzdatei im Paket; SPDX `GPL-2.0-or-later` in `uft_copy_plan.c` (68905 B) und `uft_disk2.c` (42827 B). Alle sechs Dateien sind byteidentisch mit Baumstaenden: `uft_copy_plan.c` = `f3fdb428`, `uft_disk2.c` = `296c7835`, `uft_format_convert_dispatch.c` = `be7970a5`, `formattab.cpp` = `9f7d6d6d`; `uft_preflight.c` und `uft_write_gate.c` gleichen dem heutigen Stand (0 abweichende Zeilen).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts — es ist ein veralteter Abzug vom 2026-09-20. Heute weicht der Baum ab: `src/core/uft_copy_plan.c` um 261 Zeilen, `src/core/uft_disk2.c` um 468 (u. a. MF-1347/1370/1383), `uft_format_convert_dispatch.c` um 148. Das Paket bringt nichts, was der Baum nicht hat."
+    },
+    "uft_flux_decoder.zip": {
+      "lizenz": "GPL-2.0 (Projektlizenz) — eigenes Material (Eigentuemer), Abzug aus dem eigenen Baum",
+      "lizenz_beleg": "keine Lizenzdatei im Paket und keine SPDX-Zeile. Alle vier Header sind byteidentisch (0 abweichende Zeilen) mit dem heutigen Baum: `include/uft/flux/uft_flux_decoder.h` (36479 B), `include/uft/uft_flux_pll.h` (27639 B), `include/uft/flux/uft_mfm_sector_parser.h` (12179 B), `include/uft/uft_pll.h` (4871 B). Damit gilt die Baumlizenz `LICENSE` (GPL-2).",
+      "kanal": "Fundus",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Nichts — es ist ein Duplikat des heutigen Baums. Es enthaelt keine .c-Datei, also auch keine Umsetzung, die fehlen koennte."
+    },
+    "uft_scp_parser.zip": {
+      "lizenz": "GPL-2.0-or-later — eigenes Material (Eigentuemer), Arbeitspaket SCP-Integritaet",
+      "lizenz_beleg": "keine Lizenzdatei im Paket; SPDX `GPL-2.0-or-later` in `uft_scp_integrity.c` (13442 B), `uft_scp_integrity.h` (11710 B), `test_scp_integrity.c` (12053 B) und `make_scp_pathological.py` (7160 B). `PATCHES.md` (8185 B): „Stand geprueft gegen `Axel051171/UnifiedFloppyTool`, Hauptzweig“.",
+      "kanal": "Port",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Bereits portiert mit MF-1162 (`76d58ce2`, 2026-09-15): `src/formats/scp/uft_scp_integrity.c` unterscheidet sich nur durch das Namenspraefix `uft_scp_integrity_*` (8 Zeilen), `tools/make_scp_pathological.py` ist identisch, und `include/uft/formats/uft_scp_integrity.h:11` nennt den SCPmodSideB-Fall. Nichts mehr zu holen."
+    },
+    "victor9k-flux-tools.txt": {
+      "lizenz": "MIT, © 2026 Paul Devine",
+      "lizenz_beleg": "Die Datei selbst (1101 B) ist ein MIT-Lizenztext, der die Software ausdruecklich „victor9k-flux-tools“ nennt; sonst enthaelt sie nichts. Sie liegt NEBEN `victor9k-flux-tools-main.zip`, nicht darin.",
+      "kanal": "Oracle",
+      "kennzahl": "Fundus",
+      "naechster_griff": "Das ist die fehlende Lizenz fuer `victor9k-flux-tools-main.zip`: dessen Urteil (`docs/neue_ideen_urteile.json:1211`) steht auf „ungemessen“/Fundus, weil im Paket keine Lizenzdatei liegt. Gegen das Repo des Urhebers pruefen, ob dieselbe MIT-Datei dort liegt, und dann das Urteil nachziehen. Die Kennzahl bleibt Fundus, weil `victor9k` schon auf T1b steht (`docs/VERIFICATION_TIERS.md:400`)."
     }
   }
 }

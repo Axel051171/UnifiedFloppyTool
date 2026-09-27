@@ -93,6 +93,11 @@ Aus dem Register (MF-1266…1271) und den Messungen dieser Sitzung:
   * `neue-ideen/UFT-NN — Amiga.zip` → `uft_amiga_media` — offen
   * `uft_revolution`, `uft_protection_scan`, `uft_splice` — **kein Paket
     gefunden** (0 Treffer außerhalb der Aufgabenliste)
+    **BERICHTIGT MF-1405:** zwei der drei gibt es — `uft_revolution.c/.h`
+    und `uft_protection_scan.h` liegen in `neue-ideen/hacking floppy
+    disk.zip` (Listing gelesen) und sind dort schon gemessen: P3-448,
+    P3-449. Gesucht war nach dem Modulnamen, das Paket heißt anders.
+    `uft_splice` bleibt ohne Paket.
 * **Gesperrt oder mit offener Lizenzfrage** (nicht anfassen, bis der
   Eigentümer entscheidet): OmniFlop-239-Format-Harvest, `dtc_code/`
   (Zone ROT), `x50conv.exe` (Disassemblierung verboten), `samdisk_plus`
@@ -278,6 +283,7 @@ Zeile Code entsteht.**
 | `UFT-NN — Amiga.zip` | `uft_amiga_media` | offen |
 | `exsource/*.zip` (24 Stück) | diverse | offen, Lizenzen je Paket messen |
 | `uft_revolution`, `uft_protection_scan`, `uft_splice` | — | **Paket nicht gefunden**, beim Eigentümer nachfragen |
+| ↳ BERICHTIGT MF-1405 | `hacking floppy disk.zip` | `uft_revolution` und `uft_protection_scan` gefunden, gemessen in P3-448/P3-449; nur `uft_splice` ohne Paket |
 
 ### Der Zensus, gemessen (2026-09-20)
 
