@@ -287,6 +287,16 @@ typedef struct {
     uint32_t       cell_ns;
     uft_d2_deriv_id_t deriv;
     uint32_t          gen;
+    /** Bits je Umdrehung; 0 = unbekannt (MF-1433, P3-631).
+     *
+     *  Eine Spur ist ein Kreis. Nur wenn ihre Laenge in Bit bekannt ist,
+     *  sind die Bitlagen RINGPOSITIONEN modulo `rev_bits`, und Reihenfolge
+     *  und Index-Ueberquerung werden auf dem Ring gerechnet. `nbits` ist
+     *  dafuer NICHT die Ringlaenge: der Strom ist gemessen und darf laenger
+     *  oder kuerzer als eine Umdrehung sein. Unbekannt heisst linear — so,
+     *  wie es vor diesem Feld galt. Gesetzt ueber uft_d2_set_rev_bits();
+     *  ein neuer Bitstrom setzt es auf 0 zurueck. */
+    size_t            rev_bits;
 } uft_d2_bitstream_t;
 
 /* ═══════════════════════ Schicht 3: Sektoren ════════════════════════════ */
@@ -337,6 +347,11 @@ typedef struct {
  *
  * Geprueft werden BEIDE Felder: ein Adressfeld ueber dem Index (IOI) und
  * ein Datenfeld ueber dem Index (DOI) sind verschiedene Schutzmuster.
+ *
+ * MF-1433: mit bekannter Umdrehungslaenge (`rev_bits`) auf dem RING
+ * gerechnet — ein Sektor bei 99 900 -> 400 mit Index bei 0 ueberquert ihn
+ * (Datenfeld ueber dem Index). Ohne sie linear wie zuvor; ein Feld, das
+ * „rueckwaerts" liegt, ist dann nicht deutbar und ergibt false.
  */
 bool uft_d2_sector_crosses_index(const uft_d2_track_t *t,
                                  const uft_d2_sector_t *s);
@@ -458,6 +473,10 @@ bool uft_d2_set_bitstream(uft_disk2_t *d, uft_d2_track_t *t,
                           size_t index_bit, uft_encoding_t enc,
                           uint32_t cell_ns, uft_d2_deriv_id_t deriv);
 
+/** Setzt die Laenge einer Umdrehung in Bit (siehe `rev_bits`). Verlangt
+ *  einen Bitstrom und @p rev_bits > 0; sonst false und ein Befund. */
+bool uft_d2_set_rev_bits(uft_disk2_t *d, uft_d2_track_t *t, size_t rev_bits);
+
 bool uft_d2_add_sector(uft_disk2_t *d, uft_d2_track_t *t,
                        const uft_d2_sector_t *s);
 
@@ -487,6 +506,15 @@ size_t uft_d2_diag_count_sev(const uft_disk2_t *d, uft_d2_diag_sev_t at_least);
  *   POS_BEYOND      Sektor nennt Bitpositionen jenseits des Bitstroms
  *   ENC_MISMATCH    Spur- und Bitstromkodierung widersprechen sich
  *   REV_EMPTY_INDEX Umdrehung mit Indexzeit, aber ohne Flusswechsel
+ *   INDEX_BEYOND    Index liegt jenseits des Bitstroms (MF-1432; hier
+ *                   NACHGETRAGEN MF-1433 — die Liste fehlte im Commit)
+ *   FIELD_ORDER     FEHLER: IDAM -> DAM -> Datenende liegen auf dem Ring
+ *                   nicht vorwaerts, d. h. mehr als eine Umdrehung
+ *                   auseinander; nur mit bekannter `rev_bits` (MF-1433)
+ *   DAM_FAR         WARNUNG: das Datenfeld liegt weiter hinter dem
+ *                   Adressfeld, als ein WD17xx es sucht (MFM 43, FM 30
+ *                   Byte nach dem ID-Feld). Kein Schaden an sich — Blue
+ *                   Max verschraenkt IDAM und DAM absichtlich (MF-1433)
  *   FS_RANGE        Dateisystem nennt Spuren, die es nicht gibt
  * @return Zahl der NEUEN Befunde. 0 heisst stimmig.
  */

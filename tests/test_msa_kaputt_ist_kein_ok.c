@@ -17,15 +17,18 @@
  * sectors marked OK.
  *
  * Reference: SAMdisk src/samdisk/msa.cpp (MIT, in the tree, the named
- * reference of msa's T1b row), ReadMSA(): throws on a short track header
- * (:66-67), length 0 or > track size (:70-71), short raw/compressed data
- * (:75-76, :83-84), an RLE block with < 4 bytes left (:96-97), a run of
- * length 0 or past the track (:106-107), and an expansion that is not
- * exactly the track size (:119-120); it writes only the tracks
- * start..end (:59-126). Second hand for the truncated file: Hatari
- * src/floppies/msa.c:220-224 (GPL-2+, read only) "Premature end of file".
+ * reference of msa's T1b row), ReadMSA(), throws — quoted by its own
+ * messages — on a short track header ("short file reading ... header"),
+ * length 0 or > track size ("invalid track length"), short raw or
+ * compressed data ("short file reading raw/compressed data"), an RLE
+ * block with < 4 bytes left ("invalid RLE block"), a run of length 0 or
+ * past the track ("invalid RLE data") and an expansion that is not
+ * exactly the track size ("expanded data doesn't match track size");
+ * its cylinder loop writes only the tracks start..end. Second hand for
+ * the truncated file: Hatari src/floppies/msa.c (GPL-2+, read only),
+ * "Premature end of file".
  *
- * NOT decided here: a run of length 0 — SAMdisk refuses it (:106), Hatari
+ * NOT decided here: a run of length 0 — SAMdisk refuses it, Hatari
  * tolerates it. The references disagree, so the plugin keeps accepting it
  * (MF-1077: no number against another number).
  */
@@ -148,30 +151,30 @@ int main(void)
         if (i == 1) { rle = e; rle_n = n; } else free(e);
     }
 
-    /* B: the real RLE file, last 100 bytes cut (SAMdisk :83-84, Hatari). */
+    /* B: the real RLE file, last 100 bytes cut (SAMdisk, Hatari). */
     if (rle && rle_n > 200)
         abgewiesen("abgeschnittene Datei (100 Byte fehlen)", rle, rle_n - 100);
     free(rle);
 
-    /* D: stored length 4610 > track size 4608 (SAMdisk :70-71). */
+    /* D: stored length 4610 > track size 4608 (SAMdisk "invalid track length"). */
     p = kopf(b, 0, 0);
     b[p++] = 0x12; b[p++] = 0x02;
     memset(b + p, 0x11, SPUR + 2); p += SPUR + 2;
     abgewiesen("Spurlaenge groesser als die Spur", b, p);
 
-    /* I: stored length 0 (SAMdisk :70-71). */
+    /* I: stored length 0 (SAMdisk "invalid track length"). */
     p = kopf(b, 0, 0);
     b[p++] = 0; b[p++] = 0;
     abgewiesen("Spurlaenge 0", b, p);
 
-    /* E: RLE expands to 100 of 4608 bytes (SAMdisk :119-120). */
+    /* E: RLE expands to 100 of 4608 bytes (SAMdisk "expanded data doesn't match"). */
     p = kopf(b, 0, 0);
     b[p++] = 0; b[p++] = 4;
     b[p++] = 0xE5; b[p++] = 0x00; b[p++] = 0x00; b[p++] = 100;
     abgewiesen("RLE ergibt weniger als eine Spur", b, p);
 
     /* F: 4604 literals + "E5 AB 00" — the E5 block has only 3 bytes left
-     *    (SAMdisk :96-97). */
+     *    (SAMdisk "invalid RLE block"). */
     p = kopf(b, 0, 0);
     b[p++] = 0x11; b[p++] = 0xFF;             /* 4607 */
     memset(b + p, 0x11, 4604); p += 4604;
@@ -179,7 +182,8 @@ int main(void)
     abgewiesen("E5-Block abgeschnitten", b, p);
 
     /* O: a full-track run followed by one more literal: past the track
-     *    (SAMdisk :106-107 for runs, :119-120 for the total). */
+     *    (SAMdisk "invalid RLE data" for runs, "expanded data
+     *    doesn't match" for the total). */
     p = kopf(b, 0, 0);
     b[p++] = 0; b[p++] = 5;
     b[p++] = 0xE5; b[p++] = 0x22; b[p++] = 0x12; b[p++] = 0x00;

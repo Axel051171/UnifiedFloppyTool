@@ -719,7 +719,7 @@ static void t10_abwesenheit(void) {
 
 /* validate() prueft seit jeher, ob SEKTOREN Bitlagen jenseits des
  * Bitstroms nennen (POS_BEYOND), aber nicht den Index. Eine .uftd-Datei
- * traegt `index_bit` als eigenes Feld (uft_disk2_io.c:433), und
+ * traegt `index_bit` als eigenes Feld (BITS-Block in uft_disk2_io.c), und
  * uft_d2_set_bitstream() uebernimmt es ungeprueft — ein Index bei Bit 70
  * in einem 64-Bit-Strom blieb stumm, und uft_d2_sector_crosses_index()
  * sagte dann fuer jeden Sektor still „nein". Gefunden beim Sichten des
@@ -764,6 +764,103 @@ static void t11_index_jenseits(void) {
     uft_d2_destroy(d);
 }
 
+/* ═══════════ 12. Die Spur ist ein Ring (MF-1433, P3-631) ════════════ */
+
+/* Vier Sektoren auf einer Spur von 100 000 Bit, Index bei 0, MFM:
+ *
+ *   normal   10 000 ->  10 100 -> 14 000   vorwaerts, nicht ueber dem Index
+ *   doi      99 900 ->     100 ->  4 000   vorwaerts, UEBER dem Index
+ *   fern     10 000 ->  90 000 ->  4 000   vorwaerts (80 000 + 14 000 Bit),
+ *                                          aber das Datenfeld liegt 80 000
+ *                                          Bit hinter dem Adressfeld
+ *   rueck    10 000 ->   4 000 -> 90 000   NICHT vorwaerts — die Felder
+ *                                          liegen mehr als eine Umdrehung
+ *                                          auseinander
+ *
+ * „fern" ist der Fall, den die Ordnungspruefung allein NICHT faengt
+ * (94 000 < 100 000); ihn unterscheidet erst das Suchfenster eines WD17xx
+ * (DAM_FAR). Ohne rev_bits bleibt alles linear wie vor MF-1433. */
+static uft_d2_sector_t lagen(uint8_t sec, size_t i, size_t a, size_t e,
+                             uft_d2_deriv_id_t dv) {
+    uft_d2_sector_t s = guter_sektor(0u, sec, 8u, dv);
+    s.idam_bit = i; s.dam_bit = a; s.data_end_bit = e;
+    return s;
+}
+
+static bool befund_fuer(const uft_disk2_t *d, const char *code, int sec) {
+    for (size_t i = 0; i < uft_d2_diag_count(d); ++i) {
+        const uft_d2_diag_t *g = uft_d2_diag_at(d, i);
+        if (strcmp(g->code, code) == 0 && g->sector == sec) return true;
+    }
+    return false;
+}
+
+static void t12_ring(void) {
+    printf("Test 12: Bitlagen sind Ringpositionen, wenn die Umdrehung bekannt ist\n");
+    static uint8_t bits[12500];                 /* 100 000 Bit */
+    uft_disk2_t *d = uft_d2_create();
+    const uft_d2_deriv_id_t dv = uft_d2_register_deriv(d,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    uft_d2_track_t *t = uft_d2_track(d, 0u, 0u);
+    uft_d2_set_bitstream(d, t, bits, 100000u, NULL, NULL, 0u, NULL, NULL,
+                         0u, UFT_ENC_MFM, 2000u, dv);
+
+    uft_d2_sector_t normal = lagen(1u, 10000u, 10100u, 14000u, dv);
+    uft_d2_sector_t doi    = lagen(2u, 99900u,   100u,  4000u, dv);
+    uft_d2_sector_t fern   = lagen(3u, 10000u, 90000u,  4000u, dv);
+    uft_d2_sector_t rueck  = lagen(4u, 10000u,  4000u, 90000u, dv);
+    normal.source_gen = doi.source_gen = fern.source_gen =
+        rueck.source_gen = t->bitstream.gen;
+
+    /* Ohne Umdrehungslaenge: linear, wie vorher. */
+    CHECK(!uft_d2_sector_crosses_index(t, &doi),
+          "ohne rev_bits: der umbrechende Sektor ist nicht deutbar -> nein");
+
+    CHECK(uft_d2_set_rev_bits(d, t, 100000u), "rev_bits 100 000 gesetzt");
+    CHECK(!uft_d2_sector_crosses_index(t, &normal), "normal: nicht ueber dem Index");
+    CHECK(uft_d2_sector_crosses_index(t, &doi),
+          "doi 99 900 -> 4 000: UEBER dem Index (Datenfeld ueber dem Index)");
+
+    uft_d2_add_sector(d, t, &normal);
+    uft_d2_add_sector(d, t, &doi);
+    uft_d2_add_sector(d, t, &fern);
+    uft_d2_add_sector(d, t, &rueck);
+    uft_d2_validate(d);
+
+    CHECK(!befund_fuer(d, "FIELD_ORDER", 1) && !befund_fuer(d, "DAM_FAR", 1),
+          "normal: kein Befund");
+    CHECK(!befund_fuer(d, "FIELD_ORDER", 2) && !befund_fuer(d, "DAM_FAR", 2),
+          "doi: umbrechend, aber in Ordnung — kein Befund");
+    CHECK(!befund_fuer(d, "FIELD_ORDER", 3),
+          "fern: auf dem Ring vorwaerts -> KEIN FIELD_ORDER");
+    CHECK(befund_fuer(d, "DAM_FAR", 3),
+          "fern: Datenfeld 80 000 Bit hinter dem Adressfeld -> DAM_FAR");
+    CHECK(befund_fuer(d, "FIELD_ORDER", 4),
+          "rueck: mehr als eine Umdrehung auseinander -> FIELD_ORDER");
+    uft_d2_destroy(d);
+
+    /* Grenze des Fensters: MFM (7 + 43) x 16 = 800 Zellen. */
+    d = uft_d2_create();
+    const uft_d2_deriv_id_t dv2 = uft_d2_register_deriv(d,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    t = uft_d2_track(d, 0u, 0u);
+    uft_d2_set_bitstream(d, t, bits, 100000u, NULL, NULL, 0u, NULL, NULL,
+                         SIZE_MAX, UFT_ENC_MFM, 2000u, dv2);
+    uft_d2_sector_t am_rand = lagen(5u, 1000u, 1800u, 5000u, dv2);
+    uft_d2_sector_t drueber  = lagen(6u, 20000u, 20801u, 25000u, dv2);
+    am_rand.source_gen = drueber.source_gen = t->bitstream.gen;
+    uft_d2_add_sector(d, t, &am_rand);
+    uft_d2_add_sector(d, t, &drueber);
+    uft_d2_validate(d);
+    CHECK(!befund_fuer(d, "DAM_FAR", 5), "800 Zellen: noch im Fenster");
+    CHECK(befund_fuer(d, "DAM_FAR", 6), "801 Zellen: DAM_FAR (auch linear)");
+    CHECK(!befund_fuer(d, "FIELD_ORDER", 5) && !befund_fuer(d, "FIELD_ORDER", 6),
+          "ohne rev_bits nie FIELD_ORDER");
+
+    CHECK(!uft_d2_set_rev_bits(d, t, 0u), "rev_bits 0 wird abgewiesen");
+    uft_d2_destroy(d);
+}
+
 int main(void) {
     printf("=== test_disk2 (zweite Fassung, MF-1274) ===\n\n");
     t1_generationen();
@@ -777,6 +874,7 @@ int main(void) {
     t9_projektion();
     t10_abwesenheit();
     t11_index_jenseits();
+    t12_ring();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }

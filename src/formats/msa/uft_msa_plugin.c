@@ -38,8 +38,9 @@ typedef struct {
  *
  * MF-1427: returns false for anything SAMdisk's ReadMSA() refuses
  * (src/samdisk/msa.cpp, MIT): an E5 block with fewer than 4 bytes left
- * (:96-97), a run past the end of the track (:106-107), and an expansion
- * that is not exactly the track size (:119-120). Before, a cut E5 block
+ * ("invalid RLE block"), a run past the end of the track ("invalid RLE
+ * data"), and an expansion that is not exactly the track size ("expanded
+ * data doesn't match track size"). Before, a cut E5 block
  * was copied as data, a long run was silently clipped, and a short
  * expansion left the rest of the track as calloc zeros under UFT_OK.
  *
@@ -129,7 +130,7 @@ static uft_error_t msa_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
      * MF-1427: every inconsistency used to `break` out of the loop and
      * still return UFT_OK, leaving the rest of the calloc'd image as zeros
      * — a file cut 100 bytes short opened "fine" with 9198 invented zero
-     * bytes. SAMdisk's ReadMSA() (src/samdisk/msa.cpp:64-120) throws for a
+     * bytes. SAMdisk's ReadMSA() (src/samdisk/msa.cpp) throws for a
      * short track header, a stored length of 0 or above the track size,
      * short data and bad RLE; Hatari (floppies/msa.c) refuses the short
      * file as "Premature end of file". So does this reader now.
@@ -197,9 +198,10 @@ static uft_error_t msa_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 
     /* MF-1427: cylinders below the start track are not in the file. They
      * came back as nine zero sectors marked OK. Same convention as SCP
-     * (uft_scp_plugin.c:254-260): "not recorded" is a statement about the
+     * (uft_scp_plugin.c, the comment before scp_get_geometry() and the
+     * range check in scp_read_track()): "not recorded" is a statement about the
      * capture, not about the disk, and gets TRACK_NOT_FOUND. SAMdisk only
-     * writes the tracks start..end (msa.cpp:59-126). */
+     * writes the tracks start..end (the cylinder loop in ReadMSA()). */
     if (cyl < (int)p->start_trk) return UFT_ERROR_TRACK_NOT_FOUND;
 
     size_t off = ((size_t)cyl * p->heads + head) * p->spt * 512;

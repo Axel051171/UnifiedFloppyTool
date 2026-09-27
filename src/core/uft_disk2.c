@@ -444,6 +444,29 @@ bool uft_d2_set_bitstream(uft_disk2_t *d, uft_d2_track_t *t,
     return true;
 }
 
+/* Abstand auf dem Ring der Laenge @p n, immer vorwaerts (MF-1433). Beide
+ * Lagen werden zuerst auf den Ring gelegt: ein Strom darf laenger als eine
+ * Umdrehung sein, seine Lagen also groesser als @p n. */
+static size_t ring_dist(size_t von, size_t zu, size_t n) {
+    von %= n; zu %= n;
+    return (zu >= von) ? (zu - von) : (n - von + zu);
+}
+
+bool uft_d2_set_rev_bits(uft_disk2_t *d, uft_d2_track_t *t, size_t rev_bits) {
+    if (!d || !t) return false;
+    if (!t->has_bitstream || rev_bits == 0u) {
+        uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_BITSTREAM, t->cyl,
+                    t->head, -1, "REV_BITS_INVALID",
+                    "Umdrehungslaenge %zu Bit abgewiesen — %s.", rev_bits,
+                    t->has_bitstream ? "0 ist keine Laenge"
+                                     : "die Spur hat keinen Bitstrom");
+        return false;
+    }
+    t->bitstream.rev_bits = rev_bits;
+    d->feat_dirty = true;
+    return true;
+}
+
 bool uft_d2_sector_crosses_index(const uft_d2_track_t *t,
                                  const uft_d2_sector_t *s) {
     if (!t || !s || !t->has_bitstream) return false;
@@ -454,7 +477,19 @@ bool uft_d2_sector_crosses_index(const uft_d2_track_t *t,
      * Datenfeld prueft, sieht IOI nicht. */
     const size_t von = (s->idam_bit != SIZE_MAX) ? s->idam_bit : s->dam_bit;
     const size_t bis = s->data_end_bit;
-    if (von == SIZE_MAX || bis == SIZE_MAX || bis <= von) return false;
+    if (von == SIZE_MAX || bis == SIZE_MAX) return false;
+
+    /* MF-1433 (P3-631): mit bekannter Umdrehungslaenge ist die Spur ein
+     * Ring. Ein Sektor 99 900 -> 400 bei Index 0 lag linear „rueckwaerts"
+     * und wurde als „nein" beantwortet — genau das Schutzmuster Datenfeld
+     * ueber dem Index. Auf dem Ring liegt der Index auf dem Weg. */
+    const size_t n = t->bitstream.rev_bits;
+    if (n) {
+        const size_t weg = ring_dist(von, bis, n);
+        const size_t bis_index = ring_dist(von, ix, n);
+        return bis_index > 0u && bis_index < weg;
+    }
+    if (bis <= von) return false;   /* ohne Ringlaenge nicht deutbar */
     return von < ix && ix < bis;
 }
 
@@ -782,6 +817,57 @@ size_t uft_d2_validate(uft_disk2_t *d) {
                                 t->cyl, t->head, x->id_sec, "POS_BEYOND",
                                 "Sektor %u nennt Bitlagen jenseits der %zu "
                                 "Bit des Bitstroms.", (unsigned)x->id_sec, n);
+
+                /* MF-1433 (P3-631): Reihenfolge und Abstand. */
+                const size_t ring = t->bitstream.rev_bits;
+                const bool ia = x->idam_bit != SIZE_MAX
+                             && x->dam_bit != SIZE_MAX;
+
+                /* Reihenfolge — NUR auf dem Ring deutbar. Drei Punkte auf
+                 * einem Kreis liegen entweder vorwaerts (Summe der zwei
+                 * Abstaende < Umfang) oder ihre Felder liegen mehr als eine
+                 * Umdrehung auseinander; das zweite gibt es nicht. Linear
+                 * waere „DAM vor IDAM" dagegen genau das Datenfeld ueber
+                 * dem Index — deshalb ohne `rev_bits` keine Pruefung. */
+                if (ring && ia && x->data_end_bit != SIZE_MAX
+                    && ring_dist(x->idam_bit, x->dam_bit, ring)
+                       + ring_dist(x->dam_bit, x->data_end_bit, ring)
+                       >= ring)
+                    uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_SECTORS,
+                                t->cyl, t->head, x->id_sec, "FIELD_ORDER",
+                                "Sektor %u: Adressfeld (%zu), Datenfeld (%zu) "
+                                "und Datenende (%zu) liegen auf dem Ring von "
+                                "%zu Bit nicht vorwaerts.", (unsigned)x->id_sec,
+                                x->idam_bit, x->dam_bit, x->data_end_bit, ring);
+
+                /* Abstand IDAM -> DAM gegen das Suchfenster des Controllers.
+                 * Quelle: WD1772-Dokumentation, „the DAM must come within 30
+                 * bytes (FM) or 43 bytes (DD)" nach dem ID-Feld — zitiert in
+                 * src/a8rawconv/sectorparser.cpp, SectorParser::Parse();
+                 * dasselbe Fenster nutzt der Flussdekoder in
+                 * src/flux/uft_flux_decoder.c, decode_mfm_sector() und
+                 * decode_fm_sector(). Gerechnet von Marke zu Marke: ID-Feld ab der Marke
+                 * 7 Byte (Marke, C, H, R, N, CRC 2), je Byte 16 Zellen in FM
+                 * und MFM. Eine WARNUNG, kein Fehler: derselbe Kommentar
+                 * nennt Blue Max, das IDAM und DAM absichtlich
+                 * verschraenkt. */
+                const uft_encoding_t enc = uft_d2_sector_encoding(t, x);
+                const size_t fenster =
+                    enc == UFT_ENC_MFM ? (size_t)(7u + 43u) * 16u
+                  : enc == UFT_ENC_FM  ? (size_t)(7u + 30u) * 16u : 0u;
+                if (fenster && ia) {
+                    size_t ab = SIZE_MAX;
+                    if (ring) ab = ring_dist(x->idam_bit, x->dam_bit, ring);
+                    else if (x->dam_bit > x->idam_bit)
+                        ab = x->dam_bit - x->idam_bit;
+                    if (ab != SIZE_MAX && ab > fenster)
+                        uft_d2_diag(d, UFT_D2_DIAG_WARN, UFT_D2_LAYER_SECTORS,
+                                    t->cyl, t->head, x->id_sec, "DAM_FAR",
+                                    "Sektor %u: Datenfeld %zu Bit hinter dem "
+                                    "Adressfeld; ein WD17xx sucht es nur %zu "
+                                    "Bit weit. Gehoert es zu diesem Sektor?",
+                                    (unsigned)x->id_sec, ab, fenster);
+                }
             }
         }
     }

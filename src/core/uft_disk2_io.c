@@ -198,6 +198,17 @@ uftd_result_t uftd_save(const uft_disk2_t *d, uint8_t **out_buf,
             if (s->phase_q8)   wbytes(&w, s->phase_q8, s->nbits * 2u);
             if (s->flux_count) wbytes(&w, s->flux_count, s->nbits * 2u);
             blk_end(&w, f);
+            /* MF-1433: die Umdrehungslaenge als EIGENER Unterblock, nicht
+             * als neues Feld in BITS. So bleibt die Datei fuer einen Leser
+             * ohne dieses Feld lesbar — er ueberspringt den Block und
+             * vermerkt ihn (Eigenschaft 1 in uft_disk2_io.h) —, und
+             * UFTD_VERSION muss nicht steigen. Nach BITS, weil ein neuer
+             * Bitstrom die Laenge zuruecksetzt. */
+            if (s->rev_bits) {
+                blk_t r = blk_begin(&w, "REVB");
+                w64(&w, (uint64_t)s->rev_bits);
+                blk_end(&w, r);
+            }
         }
         if (t->has_sectors) {
             blk_t f = blk_begin(&w, "SECT");
@@ -435,6 +446,13 @@ static bool load_trak(uft_disk2_t *d, rbuf_t *b, size_t off, const char *tag,
                                  be, cell, dv);
             free(phv); free(fcv);
             t->bitstream.gen = gen;
+        } else if (strcmp(sub, "REVB") == 0 && (has & 2u)) {
+            /* MF-1433: Umdrehungslaenge des Bitstroms davor. Steht er nicht
+             * da, meldet uft_d2_set_rev_bits() das als Befund. */
+            const uint64_t rb = r64(&sb);
+            if (sb.bad) FAIL_STRUCT("REVB zu kurz");
+            if (rb > (1ull << 32)) FAIL_STRUCT("REVB: unplausible Laenge");
+            uft_d2_set_rev_bits(d, t, (size_t)rb);
         } else if (strcmp(sub, "SECT") == 0 && (has & 4u)) {
             const uint32_t gen = r32(&sb);
             const uint32_t n = r32(&sb);
