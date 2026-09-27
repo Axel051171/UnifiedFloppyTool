@@ -318,6 +318,46 @@ static void t4_die_verdrahtung_ist_lebendig(void)
           "eine saubere Wandlung muss MIT Nachpruefung durchgehen — sonst "
           "prueft Gruppe 4 nur, dass `verify_after` alles ablehnt");
 
+    /* ── H-14 (MF-1378): angefordert / ausgefuehrt / Ausgang getrennt ────
+     * Vorher hinterliess ein BESTANDENER Lauf keine Spur im Ergebnis:
+     * „verifiziert" und „nie angefordert" sahen fuer jeden Aufrufer gleich
+     * aus. Alle vier Laeufe von oben, je ihr Ausgang. */
+    printf("    H-14: ohne=%d/%d/%d  gefallen=%d/%d/%d  gut=%d/%d/%d (%zu Spuren, %zu Sektoren)\n",
+           (int)ohne.verify_requested, (int)ohne.verify_performed, (int)ohne.verify_outcome,
+           (int)mit.verify_requested, (int)mit.verify_performed, (int)mit.verify_outcome,
+           (int)g_mit.verify_requested, (int)g_mit.verify_performed, (int)g_mit.verify_outcome,
+           g_mit.verify_tracks_compared, g_mit.verify_sectors_compared);
+    CHECK(ohne.verify_requested == UFT_VERIFY_STAGE_NONE &&
+          ohne.verify_performed == UFT_VERIFY_STAGE_NONE &&
+          ohne.verify_outcome == UFT_VERIFY_NOT_REQUESTED,
+          "ohne Anforderung: nichts angefordert, nichts getan, kein Ausgang");
+    CHECK(mit.verify_requested == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+          mit.verify_performed == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+          mit.verify_outcome == UFT_VERIFY_FAILED,
+          "abweichende Daten: angefordert, ausgefuehrt, GEFALLEN");
+    CHECK(g_mit.verify_outcome == UFT_VERIFY_PASSED &&
+          g_mit.verify_performed == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+          g_mit.verify_tracks_compared == 160 &&
+          g_mit.verify_sectors_compared > 0,
+          "saubere Wandlung: BESTANDEN, mit den 160 Spuren, die es tragen");
+
+    /* Angefordert, aber nie erreicht: die Wandlung scheitert vorher
+     * (Quelle fehlt). Das darf NICHT „nicht angefordert" heissen. */
+    {
+        uft_convert_options_t o = uft_convert_default_options();
+        o.verify_after = true;
+        uft_convert_result_t nie;
+        memset(&nie, 0, sizeof nie);
+        (void)uft_convert_file("uft_mf1378_gibt_es_nicht.td0",
+                               "uft_mf1378_ziel.imd", UFT_FORMAT_IMD, &o, &nie);
+        CHECK(nie.verify_requested == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+              nie.verify_performed == UFT_VERIFY_STAGE_NONE &&
+              nie.verify_outcome == UFT_VERIFY_NOT_RUN,
+              "angefordert und nie erreicht heisst NOT_RUN, gemessen %d/%d/%d",
+              (int)nie.verify_requested, (int)nie.verify_performed,
+              (int)nie.verify_outcome);
+    }
+
     remove(quelle);
 }
 

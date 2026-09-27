@@ -799,6 +799,12 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
     }
 
     memset(result, 0, sizeof(*result));
+    /* H-14 (MF-1378): the request is recorded BEFORE anything can fail —
+     * a conversion that stops early must not read as "no check asked". */
+    if (options && options->verify_after) {
+        result->verify_requested = UFT_VERIFY_STAGE_READBACK_COMPARE;
+        result->verify_outcome   = UFT_VERIFY_NOT_RUN;
+    }
 
     /* Read source file */
     FILE* f = fopen(src_path, "rb");
@@ -1020,6 +1026,15 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
             uft_resolve_format_plugin(dst_format, dst_path, NULL);
         uft_error_t verr = uft_convert_verify_after(src_path, dst_path,
                                                     zp, &bilanz);
+        /* H-14 (MF-1378): performed stage, outcome and the numbers that
+         * carry it — a PASSED check is now visible, not just implied. */
+        result->verify_performed        = UFT_VERIFY_STAGE_READBACK_COMPARE;
+        result->verify_tracks_compared  = bilanz.spuren_geprueft;
+        result->verify_sectors_compared = bilanz.sektoren_geprueft;
+        result->verify_outcome =
+            verr == UFT_OK                  ? UFT_VERIFY_PASSED
+          : verr == UFT_ERROR_NOT_SUPPORTED ? UFT_VERIFY_NOT_ASSESSABLE
+          :                                   UFT_VERIFY_FAILED;
         if (verr == UFT_ERROR_NOT_SUPPORTED) {
             /* Nicht beurteilbar — gesagt, aber nicht geahndet. */
             uftc_add_warning(result,
@@ -1148,6 +1163,13 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     }
 
     memset(result, 0, sizeof(*result));
+    /* H-14 (MF-1378): in memory there is no written FILE to reopen, so a
+     * requested read-back comparison cannot run here. Said, not faked:
+     * requested READBACK_COMPARE, performed NONE, outcome NOT_RUN. */
+    if (options && options->verify_after) {
+        result->verify_requested = UFT_VERIFY_STAGE_READBACK_COMPARE;
+        result->verify_outcome   = UFT_VERIFY_NOT_RUN;
+    }
     *dst_data = NULL;
     *dst_size = 0;
 

@@ -327,7 +327,15 @@ private slots:
      * ROTBEWEIS: vor MF-1325 stand dort „Nachprüfung ja", und beide
      * Zusagen unten fielen. Der fehlende Leser ist eigene Arbeit und
      * steht als `P3-509` — dieser Test ersetzt ihn nicht, er verhindert
-     * nur die Falschaussage bis dahin. */
+     * nur die Falschaussage bis dahin.
+     *
+     * BERICHTIGT MF-1378 (H-14). Den handelnden Leser gibt es seit
+     * MF-1307: `uft_convert_file()` oeffnet das Geschriebene neu und
+     * vergleicht jedes Datenbyte (`uft_convert_verify_after()`). Ab da
+     * hat dieser Test die FALSCHAUSSAGE bewacht, gegen die er gebaut war:
+     * er verlangte „nicht ausgeführt" fuer eine Pruefung, die lief. Seit
+     * MF-1378 meldet das Ergebnis angefordert / ausgefuehrt / Ausgang
+     * getrennt, und die Anzeige sagt den AUSGANG. */
     void nachpruefung_wird_nicht_als_getan_gemeldet()
     {
         const QString src = korpus("vice_c1541_35trk.d64");
@@ -344,11 +352,19 @@ private slots:
         QVERIFY2(!r.planAngewandt.contains(QStringLiteral("Nachprüfung ja")),
                  qPrintable("behauptet eine Nachpruefung, die niemand "
                             "ausfuehrt: " + r.planAngewandt));
-        QVERIFY2(r.planAngewandt.contains(QStringLiteral("nicht ausgeführt")),
-                 qPrintable("die Anzeige muss sagen, dass sie ausbleibt: "
+        /* MF-1378: die Pruefung lief, also sagt die Anzeige ihren Ausgang
+         * — mit Zahlen, damit „bestanden" nicht aus einem Schalter kommt. */
+        QVERIFY2(!r.planAngewandt.contains(QStringLiteral("nicht ausgeführt")),
+                 qPrintable("bestreitet eine Pruefung, die lief: "
+                            + r.planAngewandt));
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("Nachprüfung bestanden")),
+                 qPrintable("der Ausgang der Nachpruefung fehlt: "
+                            + r.planAngewandt));
+        QVERIFY2(r.planAngewandt.contains(QStringLiteral("Sektoren verglichen")),
+                 qPrintable("\"bestanden\" ohne die Zahl, die es traegt: "
                             + r.planAngewandt));
 
-        /* Gegenprobe, sonst waere „sage immer nicht ausgefuehrt" gruen:
+        /* Gegenprobe, sonst waere „sage immer bestanden" gruen:
          * NORMAL verlangt gar keine Nachpruefung, und dann ist „nein"
          * die wahre Auskunft. */
         uft_copy_plan_t ohne = uft_copy_plan_default();

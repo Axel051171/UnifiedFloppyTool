@@ -242,6 +242,7 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
      * bleibt false: die Zustimmung gehoert an eine Stelle, an der
      * jemand sie geben kann, und ein Plan ist keine Zustimmung
      * (UFT-A05). Kein Plan darf sie sich selbst erteilen. */
+    QString planMitte;   /* MF-1378: set only when a plan was given */
     if (plan) {
         /* `uft_convert_options_t` IST `struct uft_convert_options` —
          * der Kopf des Plans deklariert ihn nur vorwaerts, damit er
@@ -277,17 +278,19 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
          * Also sagt die Anzeige jetzt, was der Fall ist. „ja" waere eine
          * erfundene Tat — die Sorte Aussage, gegen die dieses Programm
          * gebaut ist. Der fehlende Leser ist eigene Arbeit und steht als
-         * `P3-509`; bis er da ist, bleibt dieser Text. */
-        const QString nachpruefung =
-            opts.verify_after
-                ? QObject::tr("verlangt, aber vom Wandler nicht ausgeführt")
-                : QObject::tr("nein");
-        r.planAngewandt =
-            QObject::tr("Wiederholungen %1 · Mehrfachlesung %2 · Nachprüfung %3")
+         * `P3-509`; bis er da ist, bleibt dieser Text.
+         *
+         * BERICHTIGT MF-1378 (H-14). Der Leser kam mit MF-1307:
+         * `uft_convert_file()` oeffnet das Geschriebene neu und vergleicht
+         * jedes Datenbyte. Ab da war „vom Wandler nicht ausgeführt" selbst
+         * die Falschaussage. Die dritte Angabe steht deshalb erst NACH der
+         * Wandlung fest und kommt aus dem ERGEBNIS (angefordert /
+         * ausgefuehrt / Ausgang), nie aus dem Schalter. */
+        planMitte =
+            QObject::tr("Wiederholungen %1 · Mehrfachlesung %2")
                 .arg(opts.decode_retries)
                 .arg(opts.use_multiple_revs ? QObject::tr("ja")
-                                            : QObject::tr("nein"))
-                .arg(nachpruefung);
+                                            : QObject::tr("nein"));
     }
 
     uft_convert_result_t res;
@@ -296,6 +299,39 @@ UftSaveOutcome uftSaveImageAs(const QString &source, const QString &target,
     const uft_error_t rc = uft_convert_file(source.toUtf8().constData(),
                                             target.toUtf8().constData(),
                                             zielFmt, &opts, &res);
+
+    /* H-14 (MF-1378): the check's OUTCOME, from the result — with the
+     * numbers that carry a "passed". Reported on success AND refusal. */
+    if (plan) {
+        QString pruefung;
+        switch (res.verify_outcome) {
+        case UFT_VERIFY_NOT_REQUESTED:
+            pruefung = QObject::tr("nein");
+            break;
+        case UFT_VERIFY_PASSED:
+            pruefung = QObject::tr("bestanden (%1 Spuren, %2 Sektoren verglichen)")
+                           .arg(res.verify_tracks_compared)
+                           .arg(res.verify_sectors_compared);
+            break;
+        case UFT_VERIFY_FAILED:
+            pruefung = QObject::tr("GEFALLEN (%1 Spuren, %2 Sektoren verglichen)")
+                           .arg(res.verify_tracks_compared)
+                           .arg(res.verify_sectors_compared);
+            break;
+        case UFT_VERIFY_NOT_ASSESSABLE:
+            pruefung = QObject::tr("nicht beurteilbar (die Quelle liefert "
+                                   "keine Sektoren)");
+            break;
+        case UFT_VERIFY_NOT_RUN:
+        default:
+            pruefung = QObject::tr("verlangt, aber nicht ausgeführt — die "
+                                   "Wandlung endete vorher");
+            break;
+        }
+        r.planAngewandt = QObject::tr("%1 · Nachprüfung %2")
+                              .arg(planMitte, pruefung);
+    }
+
     if (rc != UFT_OK || !res.success) {
         QString m = QObject::tr("Speichern als %1 abgelehnt (Fehler %2).")
                         .arg(QString::fromUtf8(uft_format_get_name(zielFmt)))
