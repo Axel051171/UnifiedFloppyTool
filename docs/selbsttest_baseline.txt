@@ -35,7 +35,6 @@ src/formats/scp/uft_scp_parser_v3.c:1925:SCP_V3_TEST:35
 src/formats/ssd/uft_ssd_parser_v2.c:467:SSD_PARSER_TEST:20
 src/formats/stx/uft_stx_air.c:988:STX_AIR_TEST:13
 src/formats/stx/uft_stx_parser_v2.c:468:STX_PARSER_TEST:15
-src/formats/tap/uft_tap_parser_v2.c:255:TAP_PARSER_TEST:9
 src/formats/trd/uft_trd_parser_v2.c:615:TRD_PARSER_TEST:21
 src/formats/uff/uft_uff.c:1292:UFT_TEST:21
 src/recovery/uft_recovery_meta.c:731:UFT_RECOVERY_META_TEST:22

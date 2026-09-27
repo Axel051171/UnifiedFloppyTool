@@ -799,7 +799,6 @@ SOURCES += \
     src/formats/xdf/uft_xdf_api_impl.c \
     src/formats/xdf/uft_xdf_core.c \
     src/formats/zx/uft_zxbasic.c \
-    src/formats/zx/uft_zxscreen.c \
     src/policy/uft_write_gate.c \
     src/recovery/uft_bitstream_recovery.c \
     src/recovery/uft_cross_track.c \
@@ -1130,7 +1129,6 @@ SOURCES += \
     src/detect/mfm/cpm_fs.c \
     src/detect/mfm/uft_mfm_detect_bridge.c \
     src/formats/kfx/uft_kfstream_air.c \
-    src/formats/kfx/uft_kf_histogram.c \
     # WOZ: real impl in src/formats/apple/uft_woz.c (already in SOURCES below)
 
 
@@ -1162,14 +1160,12 @@ SOURCES += \
     src/formats/scl/uft_scl_parser_v2.c \
     src/formats/scp/uft_scp_writer.c \
     src/formats/ssd/uft_ssd_parser_v2.c \
-    src/formats/tap/uft_tap_parser_v2.c \
     src/formats/td0/uft_td0_lzss.c \
     src/formats/td0/uft_td0_schreiber.c \
     src/formats/td0/uft_td0_parser_v2.c \
     src/formats/trd/uft_trd_parser_v2.c \
     src/formats/uft_d64_writer.c \
     src/formats/uft_format_extensions.c \
-    src/formats/uft_format_names_extended.c \
     src/formats/uft_format_versions.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1191,8 +1187,6 @@ SOURCES += \
 SOURCES += \
     src/formats/adf/uft_adf_parser_v2.c \
     src/formats/uft_adf.c \
-    src/formats/uft_axdf.c \
-    src/formats/uft_cw_raw.c \
     src/formats/uft_fdc_gaps.c \
 
 SOURCES += \
@@ -1485,8 +1479,7 @@ SOURCES += \
     src/formats/retro_image/uft_retro_image_detect.c
 
 # Dec (1 files)
-SOURCES += \
-    src/formats/dec/uft_rx50.c
+SOURCES +=
 
 # Eastern Block (3 files)
 SOURCES += \
@@ -1548,12 +1541,10 @@ SOURCES += \
     src/formats/fat32/uft_fat32_mbr.c
 
 # FlashFloppy (1 files)
-SOURCES += \
-    src/formats/flashfloppy/uft_ff_formats.c
+SOURCES +=
 
 # Flex (1 files)
-SOURCES += \
-    src/formats/flex/uft_flex.c
+SOURCES +=
 
 # Format Core (1 files)
 SOURCES +=
@@ -1562,8 +1553,7 @@ SOURCES +=
 SOURCES +=
 
 # HP (1 files)
-SOURCES += \
-    src/formats/hp/lif.c
+SOURCES +=
 
 # Hardsector (1 files)
 SOURCES +=
@@ -1583,22 +1573,18 @@ SOURCES += \
 
 # Legacy (4 files)
 SOURCES += \
-    src/formats/legacy/uft_altair_hd.c \
     src/formats/legacy/uft_imd.c
 
 # Logical (1 files)
 SOURCES +=
 
 # MAME (1 files)
-SOURCES += \
-    src/formats/mame/uft_chd.c
+SOURCES +=
 
-HEADERS += \
-    include/uft/formats/mame/uft_chd.h
+HEADERS +=
 
 # MFM Native (1 files)
-SOURCES += \
-    src/formats/mfm_native/uft_mfm_image.c
+SOURCES +=
 
 # MSX (1 files)
 SOURCES += \
@@ -1613,8 +1599,7 @@ SOURCES += \
 
 # Minicomputer (2 files)
 SOURCES += \
-    src/formats/minicomputer/uft_dg_nova.c \
-    src/formats/minicomputer/uft_prime.c
+    src/formats/minicomputer/uft_dg_nova.c
 
 # MyZ80 (1 files)
 SOURCES +=
@@ -1641,8 +1626,7 @@ HEADERS += \
     include/uft/formats/nintendo/uft_fds.h
 
 # Nordic (1 files)
-SOURCES += \
-    src/formats/nordic/uft_abc800.c
+SOURCES +=
 
 # Obscure (5 files)
 SOURCES +=
@@ -1654,8 +1638,7 @@ SOURCES +=
 SOURCES +=
 
 # QL (1 files)
-SOURCES += \
-    src/formats/ql/qdos.c
+SOURCES +=
 
 # QRST (1 files)
 SOURCES +=
@@ -1709,8 +1692,7 @@ SOURCES +=
 SOURCES +=
 
 # Zilog (1 files)
-SOURCES += \
-    src/formats/zilog/zilogmcz.c
+SOURCES +=
 
 
 # Additional include paths for legacy format modules
@@ -1781,12 +1763,10 @@ SOURCES += \
 # New Format Parsers: Aaru, HxCStream, 86F (pc), SaveDskF
 # ═══════════════════════════════════════════════════════════════════════════════
 SOURCES += \
-    src/formats/modern/uft_aaru.c \
     src/formats/pc/uft_86f.c \
     src/formats/pc/uft_savedskf.c
 
 HEADERS += \
-    include/uft/formats/modern/uft_aaru.h \
     include/uft/formats/pc/uft_86f.h \
     include/uft/formats/pc/uft_savedskf.h
 
