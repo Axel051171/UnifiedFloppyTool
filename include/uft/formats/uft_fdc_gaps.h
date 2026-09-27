@@ -710,6 +710,51 @@ static const uft_fdc_format_t UFT_FDC_MSX_2DD = {
  * `tests/test_fdc_profil_verdrahtet.c:245` laufen sie direkt durch, ein
  * Verschieben braeuchte also erst einen exportierten Zugang. Das ist
  * ein eigener Posten (`P3-491`), kein Beifang. */
+
+/**
+ * @brief Commodore 1581 (3.5" DD) — gewaehlt ueber das QUELLformat D81,
+ *        NICHT ueber die Geometrie (A-037, MF-1437).
+ *
+ * Deshalb steht es NICHT in `UFT_FDC_FORMATS` darunter: 80x2x10x512 ist
+ * keine 1581-Kennung. Stuende es dort, stellte `uft_fdc_detect_format()`
+ * jede Datei dieser Geometrie (auch Atari ST mit 10 Sektoren) auf dieses
+ * Profil, und der HFE-Kopf bekaeme fuer fremde Disketten eine Drehzahl,
+ * die niemand gemessen hat (gemessen in A-037: die beiden einzigen Leser
+ * der Tafel sind die HFE-Schreiber, beide ueber die Geometrie).
+ *
+ * Anker ist der SCHREIBER, die 1581-ROM (`neue-ideen/1/1581.zip`, gelesen,
+ * nicht uebernommen — Kanal Spec):
+ *   - `fmtrk` in MROUT.SRC: 32x 0x4E, KEINE Index-Adressmarke, dann je
+ *     Sektor 12x 00, 3x A1, FE, Spur, Seite, Sektor, Groesse, CRC,
+ *     22x 4E, 12x 00, 3x A1, FB, 512 Datenbytes, CRC, `gap3`x 4E;
+ *   - `psetdef` in DSKINT.SRC: `gap3` = 35, 10 Sektoren zu 512 ab 1;
+ *   - Rest der Spur fuellt der Controller: 6250 - 32 - 10 x (574 + 35)
+ *     = 128 (gap4b, gerechnet).
+ * Zweite Hand: MAME `src/lib/formats/d81_dsk.cpp` (BSD-3-Clause, Curt
+ * Coder) fuehrt dieselben 32/22/35 und Zellen zu 2000 ns (250 kbit/s);
+ * greaseweazle `diskdefs_commodore.cfg` `disk 1581` (Unlicense) fuehrt
+ * `iam = no`, `rate = 250` — aber gap3 30, nicht 35: gw formatiert anders
+ * als die ROM, und hier gilt die ROM.
+ *
+ * `gap3_rw` hat in der ROM keinen eigenen Wert (ein Sektorschreiben
+ * beruehrt gap3 nicht); er steht gleich `gap3_fmt`, damit die
+ * Ordnungsregel `gap3_fmt >= gap3_rw` haelt, ohne eine Zahl zu erfinden.
+ */
+UFT_MAYBE_UNUSED
+static const uft_fdc_format_t UFT_FDC_CBM_1581 = {
+    .name = "Commodore 1581 (3.5\" DD)",
+    .tracks = 80, .sides = 2, .sectors = 10, .sector_size = 512, .size_code = 2,
+    .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
+    .gaps = { .gap4a = 32, .gap1 = 0, .gap2 = 22, .gap3_rw = 35, .gap3_fmt = 35, .gap4b = 128 },
+    .track_bytes = 6250, .raw_bits = 100000,
+    .iam = false,
+    .gap_beleg = UFT_FDC_GAP_BELEGT,
+    .gap_quelle =
+        "1581-ROM, MROUT.SRC fmtrk (32x4E ohne IAM, gap2 22) und DSKINT.SRC "
+        "psetdef (gap3 35); MAME d81_dsk.cpp 32/22/35. gap4b gerechnet: "
+        "6250 - 32 - 10 x 609."
+};
+
 UFT_MAYBE_UNUSED
 static const uft_fdc_format_t *UFT_FDC_FORMATS[] = {
     &UFT_FDC_PC_360K,

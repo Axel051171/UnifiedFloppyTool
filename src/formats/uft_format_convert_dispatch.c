@@ -226,7 +226,8 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
                                         opts, result);
     }
     if (src_format == UFT_FORMAT_HFE &&
-        (dst_format == UFT_FORMAT_IMG || dst_format == UFT_FORMAT_ADF)) {
+        (dst_format == UFT_FORMAT_IMG || dst_format == UFT_FORMAT_ADF ||
+         dst_format == UFT_FORMAT_D81)) {       /* D81: MF-1437 */
         return uftc_convert_hfe_to_sectors(src_data, src_size, src_path,
                                             dst_path, dst_format, opts, result);
     }
@@ -236,7 +237,8 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
         return uftc_convert_d64_to_g64(src_data, src_size, src_path, dst_path,
                                         opts, result);
     }
-    if ((src_format == UFT_FORMAT_ADF || src_format == UFT_FORMAT_IMG) &&
+    if ((src_format == UFT_FORMAT_ADF || src_format == UFT_FORMAT_IMG ||
+         src_format == UFT_FORMAT_D81) &&           /* D81: MF-1437 */
         dst_format == UFT_FORMAT_HFE) {
         return uftc_convert_sectors_to_hfe(src_data, src_size, dst_path,
                                             src_format, opts, result);

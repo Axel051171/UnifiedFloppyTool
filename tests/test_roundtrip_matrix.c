@@ -129,16 +129,23 @@ TEST(every_lossless_pair_is_named_and_proven) {
              * ist mit einer Quelle MIT INHALT gemessen — genau das
              * fehlte MF-538, dessen Ruecknahme an einer LEEREN
              * Diskette scheiterte. */
-            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_HFE))
+            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_HFE) ||
+            /* MF-1437: D81 -> HFE (Commodore 1581, Spuraufbau nach der
+             * 1581-ROM). Rundlauf byteidentisch in
+             * tests/test_convert_d81_hfe_roundtrip.c (0 von 819 200 Byte),
+             * dazu fremde Hand in beide Richtungen: greaseweazle liest die
+             * UFT-HFE zu derselben D81, UFT die greaseweazle-HFE. */
+            (tbl[i].from == UFT_FORMAT_D81 && tbl[i].to == UFT_FORMAT_HFE))
             n_known++;
     }
     /* MF-1081: 6 -> 7. ADF -> HFE ist zurueck, weil der
      * AmigaDOS-Encoder da ist und der Rundlauf byteidentisch
      * gemessen wurde — 0 von 901 120 Byte abweichend, an einer
      * Quelle MIT Inhalt. Die Zahl aendert sich als FOLGE der
-     * Messung (MF-1077), nicht damit sie steigt. */
-    ASSERT(n_ll == 7);
-    ASSERT(n_known == 7);
+     * Messung (MF-1077), nicht damit sie steigt.
+     * MF-1437: 7 -> 8, D81 -> HFE — dieselbe Regel, dieselbe Art Beleg. */
+    ASSERT(n_ll == 8);
+    ASSERT(n_known == 8);
 }
 
 TEST(known_ld_scp_to_img) {

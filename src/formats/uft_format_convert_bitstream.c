@@ -849,7 +849,22 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
     hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM;
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
-    if (src_format == UFT_FORMAT_ADF) {
+    if (src_format == UFT_FORMAT_D81) {
+        /* A-037 (MF-1437): D81 -> HFE. Die Geometrie steht fest — eine D81
+         * ist genau 80 Spuren x 40 logische Sektoren x 256 Byte = 819 200
+         * Byte, physisch 80 x 2 x 10 x 512 (1581-ROM, DSKINT.SRC `psetdef`).
+         * Eine D81 mit angehaengter Fehlertafel (822 400 Byte) wird von der
+         * Groessenpruefung unten abgewiesen, nicht beschnitten: ihre 3200
+         * Byte gehoeren in keinen Sektor.
+         *
+         * Wie die Sektoren auf die KOEPFE kommen, steht in der Kodierschleife
+         * unten (die 1581 vertauscht die Seiten). Die Schnittstelle ist der
+         * Shugart-Bus, an dem die 1581 haengt — wie MAME; `HFE_IF_C64_DD`
+         * meint den seriellen 1541-Betrieb. */
+        cylinders = 80; heads = 2; sectors = 10; sector_size = 512;
+        bitrate = 250;
+        iface = HFE_IF_GENERIC_SHUGART;
+    } else if (src_format == UFT_FORMAT_ADF) {
         /* MF-539: hier stand eine Amiga-Geometrie, und darunter kodierte die
          * IBM-System-34-Schleife. Der Kopf sagte AMIGA_MFM, der Inhalt war
          * IBM — und beides war ohnehin unkodiert (siehe unten).
@@ -1253,9 +1268,14 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
      * trifft „PC 1.44M" UND „Atari ST HD", beide mit rpm 300 und raw 200000.
      * Gebraucht werden nur diese zwei Zahlen; Name und Luecken bleiben
      * unbeansprucht. */
+    /* A-037 (MF-1437): fuer D81 gilt das 1581-Profil, gewaehlt ueber das
+     * QUELLformat. Ueber die Geometrie waere es nicht zu finden (es steht
+     * absichtlich nicht in UFT_FDC_FORMATS, siehe dort). */
     const uft_fdc_format_t *profil =
-        uft_fdc_detect_format((uint8_t)cylinders, (uint8_t)heads,
-                              (uint8_t)sectors, (uint16_t)sector_size);
+        (src_format == UFT_FORMAT_D81)
+        ? &UFT_FDC_CBM_1581
+        : uft_fdc_detect_format((uint8_t)cylinders, (uint8_t)heads,
+                                (uint8_t)sectors, (uint16_t)sector_size);
     if (profil) {
         rpm = profil->rpm;
     }
@@ -1407,6 +1427,17 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
             uft_mfm_encode_params_t hd = UFT_MFM_PARAMS_DEFAULT_HD;
             enc_params = hd;
         }
+        if (src_format == UFT_FORMAT_D81) {
+            /* A-037 (MF-1437): die Spur, wie die 1581 sie formatiert — aus
+             * dem Profil, nicht aus den PC-Vorgaben. Keine IAM; der Vorlauf
+             * von 32x 4E ist `gap4a` (der Encoder schreibt `gap1` nur hinter
+             * einer IAM). */
+            enc_params.gap4a = UFT_FDC_CBM_1581.gaps.gap4a;
+            enc_params.gap1  = UFT_FDC_CBM_1581.gaps.gap1;
+            enc_params.gap2  = UFT_FDC_CBM_1581.gaps.gap2;
+            enc_params.gap3  = UFT_FDC_CBM_1581.gaps.gap3_fmt;
+            enc_params.iam   = UFT_FDC_CBM_1581.iam ? 1u : 0u;
+        }
 
         /* Ein Ersatzsektor fuer Quelldaten, die die Datei nicht mehr
          * hergibt. 0xE5 ist das Formatier-Fuellbyte der IBM-Welt — es
@@ -1426,13 +1457,28 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 
             int heads_done = 0;
             for (int hd = 0; hd < heads; hd++) {
+                /* A-037 (MF-1437): die 1581 vertauscht die Seiten. Ihre
+                 * LOGISCHE Seite 0 — die ersten 20 logischen Sektoren einer
+                 * Spur, also die erste Haelfte der D81-Spur — liegt auf dem
+                 * PHYSISCHEN Kopf 1 und traegt im ID-Feld die Seite 0.
+                 * Beleg, der Schreiber selbst (1581-ROM): MSUB.SRC setzt
+                 * `tcacheside` = 0 fuer logische Sektoren unter numsec/2 = 20;
+                 * MROUT.SRC `fmtrk` schreibt `tcacheside` als Seitenbyte ins
+                 * ID-Feld; `side_ctl` waehlt fuer Seite 0 („lda #0 ; side
+                 * one") den physischen Kopf 1. Zweite Hand: greaseweazle
+                 * `image/d81.py` `sides_swapped = True` mit `disk 1581`
+                 * (Kopf 0: h = 1, Kopf 1: h = 0) — gemessen: dieselbe
+                 * Zuordnung. MAME `d81_dsk.cpp` legt die erste Haelfte auf
+                 * Kopf 0 und widerspricht damit ROM, gw und der eigenen
+                 * Kommentartafel (P3-634). */
+                const int seite = (src_format == UFT_FORMAT_D81) ? 1 - hd : hd;
                 for (int sec = 0; sec < sectors; sec++) {
                     size_t src_offset = ((size_t)cyl * heads * sectors +
-                                         (size_t)hd * sectors + sec)
+                                         (size_t)seite * sectors + sec)
                                         * (size_t)sector_size;
                     memset(&secs[sec], 0, sizeof(secs[sec]));
                     secs[sec].id.cylinder  = (uint8_t)cyl;
-                    secs[sec].id.head      = (uint8_t)hd;
+                    secs[sec].id.head      = (uint8_t)seite;
                     secs[sec].id.sector    = (uint8_t)(sec + 1);
                     secs[sec].id.size_code = 2;   /* 2 = 512 Byte */
                     secs[sec].data_len     = (size_t)sector_size;
@@ -1466,8 +1512,11 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
                         : 0u;
                     if (written) written = track_cap;   /* Rest ist Gap */
                 } else {
+                    /* Das ID-Feld traegt die LOGISCHE Seite (`seite`), der
+                     * Puffer ist der PHYSISCHE Kopf (`hd`) — bei allen
+                     * Formaten ausser D81 dieselbe Zahl. */
                     written = uft_mfm_encode_track(secs, (size_t)sectors,
-                                                   (uint8_t)cyl, (uint8_t)hd,
+                                                   (uint8_t)cyl, (uint8_t)seite,
                                                    &enc_params,
                                                    head_buf[hd], track_cap);
                 }

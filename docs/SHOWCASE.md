@@ -12,7 +12,7 @@ Floppy-Disketten**. Sie liest Flux-Transitions auf 25-ns-Auflösung, dekodiert
 über alle gängigen 8-Bit/16-Bit-Format-Konventionen hinweg (Commodore, Apple,
 Atari, Amiga, IBM PC, Amstrad, BBC, Japan), und dokumentiert jedes Bit das
 verloren ginge **bevor** es verloren geht — über einen Single-Chokepoint
-LOSS.preflight an allen 44 Konvertierungspfaden — und es laesst nur 14
+LOSS.preflight an allen 46 Konvertierungspfaden — und es laesst nur 14
 davon durch: **6 verlustfrei** (jedes mit einer Bit-Identitaets-Messung
 im Baum) und **8 nur mit ausdruecklicher Zustimmung**; 30 weist es als
 **ungeprueft** ab, 2 als **unmoeglich** (Stand MF-982; hier stand

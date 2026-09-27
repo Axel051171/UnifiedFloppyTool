@@ -66,20 +66,6 @@ laufen fort und werden nie wiederverwendet.
 
 *(Reihenfolge = Bearbeitungsreihenfolge; oben ist als Nächstes dran)*
 
-
-### A-037 · UFT_AdaptiveCopyCore: Gegenrechnung, 1581-Datenzeile, Verify-Stufen
-- **Status:** wartet (Eigentuemerentscheidung zu Schritt 2; 1 und 3 erledigt) · **Aufgenommen:** 2026-09-27
-- **Wortlaut:** „weiter mit H-30 Schritt 2 | und neuer code von mir …\UFT_AdaptiveCopyCore_v1.0.0.zip" · Freigabe „los" (2026-09-27)
-- **Kennzahl:** keine der vier (Verify-Stufen: H-14)
-- **Kanal:** Nachbau/Spec — Gap-Rechner des Pakets nur als Gegenrechnung im Test (keine fremde Hand, Konstanten aus benannter Quelle); 1581-Zahlen aus 1581-Copy 0.50 (GPL-2+) und 1581-ROM
-- **Einfrier-Regel:** nein fuer Test und Plan; die 1581-Datenzeile nur mit Referenz im Header
-- **OPEN_ITEMS:** P3-593, P3-561
-- **Fertig heißt:** (1) Paritaetstest Gegenrechnung ↔ `uft_fdc_gap_space()` an allen 17 Profilen, Rotbeweis zuerst; (2) 1581 als Datenzeile mit Anker; (3) `verify_kind` im bestehenden `uft_copy_plan_t` mit eigenem Rueckvergleich, gueltige CRC bei falschem Inhalt faellt; (4) Transfer-Kern bleibt Fundus unter P3-593
-- **Aufwand:** 300–500 Zeilen ueber drei Commits
-- **Stand:** (1) Gegenrechnung erledigt `fbf86dee` MF-1377 — 67/67, Mutationen 7/7, Konstanten aus gw ibm.py; (3) Verify-Ausgang erledigt `780d051d` MF-1378 — angefordert/ausgefuehrt/Ausgang im Ergebnis, der Speichern-Dialog bestritt eine laufende Pruefung (berichtigt), Mutationen 6/6; (2) 1581-Datenzeile **gemessen und nicht gebaut**: eine 18. Profilzeile 80×2×10×512 wuerde `uft_fdc_detect_format()` fuer JEDE 10-Sektor-DD-Datei (auch Atari ST) auf das 1581-Profil stellen, und `hfe_create()`/`uft_format_convert_bitstream.c:1257` schrieben dann 300 U/min statt 0 (unbestimmt) in den HFE-Kopf — geaenderte Ausgabe bestehender Wandlungen fuer Gap-Werte ohne Leser. Wartet auf Eigentuemerentscheidung; bis dahin Fundus unter P3-593.
-- **Beleg:** —
-
-
 ### A-039 · AUFGABEN-Warteschlange und OPEN_ITEMS weiter abtragen, GitHub regelmaessig abgleichen
 - **Status:** aufgenommen · **Aufgenommen:** 2026-09-27
 - **Wortlaut:** „AUFGABEN.md sind auch noch viele aufgaben offen nimm sie mit auf" · „kontroliere ab und zu ob über github neue einträge in OPEN_ITEMS sind und arbeite sie mit ab"
@@ -2213,6 +2199,20 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-037 · UFT_AdaptiveCopyCore: Gegenrechnung, 1581-Datenzeile, Verify-Stufen
+- **Status:** **erledigt** 2026-09-27 (MF-1437) · vorher wartet (Eigentuemerentscheidung zu Schritt 2; 1 und 3 erledigt) · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** „weiter mit H-30 Schritt 2 | und neuer code von mir …\UFT_AdaptiveCopyCore_v1.0.0.zip" · Freigabe „los" (2026-09-27)
+- **Kennzahl:** keine der vier (Verify-Stufen: H-14)
+- **Kanal:** Nachbau/Spec — Gap-Rechner des Pakets nur als Gegenrechnung im Test (keine fremde Hand, Konstanten aus benannter Quelle); 1581-Zahlen aus 1581-Copy 0.50 (GPL-2+) und 1581-ROM
+- **Einfrier-Regel:** nein fuer Test und Plan; die 1581-Datenzeile nur mit Referenz im Header
+- **OPEN_ITEMS:** P3-593, P3-561
+- **Fertig heißt:** (1) Paritaetstest Gegenrechnung ↔ `uft_fdc_gap_space()` an allen 17 Profilen, Rotbeweis zuerst; (2) 1581 als Datenzeile mit Anker; (3) `verify_kind` im bestehenden `uft_copy_plan_t` mit eigenem Rueckvergleich, gueltige CRC bei falschem Inhalt faellt; (4) Transfer-Kern bleibt Fundus unter P3-593
+- **Aufwand:** 300–500 Zeilen ueber drei Commits
+- **Stand:** (1) Gegenrechnung erledigt `fbf86dee` MF-1377 — 67/67, Mutationen 7/7, Konstanten aus gw ibm.py; (3) Verify-Ausgang erledigt `780d051d` MF-1378 — angefordert/ausgefuehrt/Ausgang im Ergebnis, der Speichern-Dialog bestritt eine laufende Pruefung (berichtigt), Mutationen 6/6; (2) 1581-Datenzeile **gemessen und nicht gebaut**: eine 18. Profilzeile 80×2×10×512 wuerde `uft_fdc_detect_format()` fuer JEDE 10-Sektor-DD-Datei (auch Atari ST) auf das 1581-Profil stellen, und `hfe_create()`/`uft_format_convert_bitstream.c:1257` schrieben dann 300 U/min statt 0 (unbestimmt) in den HFE-Kopf — geaenderte Ausgabe bestehender Wandlungen fuer Gap-Werte ohne Leser. Wartet auf Eigentuemerentscheidung; bis dahin Fundus unter P3-593.
+- **Beleg:** (1) `fbf86dee` MF-1377; (3) `780d051d` MF-1378; (2) MF-1437 — Eigentuemerentscheidung 2026-09-27 „Weg D81→HFE bauen": die 1581-Zeile hat mit dem neuen Weg D81→HFE (und HFE→D81) ihren ersten Leser, gewaehlt ueber das Quellformat statt die Geometrie; Spuraufbau nach der 1581-ROM, Rundlauf byteidentisch, fremde Hand (greaseweazle) in beide Richtungen; angebotene Wandlungspfade 18 → 20. **Erledigt 2026-09-27.** Nebenbefund P3-634 (MAME d81).
+
+---
 
 ### A-035 · DTC-Upgrade-Paket umsetzen — nach `docs/plans/DTC_UPGRADE.md` (DTC-0 bis DTC-7)
 - **Status:** **erledigt** 2026-09-27 (MF-1434) · vorher **in Arbeit** (seit 2026-09-26, auf „weiter mit den Nächsten"; `A-032` ist an der Umgebung angehalten, die Posten davor hängen an Eigentümerentscheidungen oder an ungemessenen Befunden) · **Aufgenommen:** 2026-09-26

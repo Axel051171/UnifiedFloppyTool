@@ -401,6 +401,14 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "ein IMG und hat keine schwachen Bits)", 0u },
     { UFT_FORMAT_HFE, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
       "bitstream decoded to AmigaDOS sectors", 0u },
+    /* MF-1437 (A-037): wie HFE -> IMG. Gemessen an FREMDER Hand: die HFE,
+     * die greaseweazle (26690f8) aus einer D81 schreibt, liest UFT zu
+     * derselben D81 (0 von 819 200 Byte abweichend). Unvollstaendiges wird
+     * abgewiesen, nicht aufgefuellt (test_convert_d81_hfe_roundtrip). */
+    { UFT_FORMAT_HFE, UFT_FORMAT_D81, UFT_RT_LOSSY_DOCUMENTED,
+      "bitstream decoded to 1581 sectors by their ID-field side; gaps, "
+      "timing and weak bits are lost; an incomplete disk is refused "
+      "(MF-1437)", 0u },
 
     /* ADF -> HFE stand hier bis MF-538 als LOSSY_DOCUMENTED mit einer
      * bezifferten Verlustliste. Der Eintrag ist ZURUECKGENOMMEN, und der
@@ -453,6 +461,27 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "AmigaDOS-Encoder ist an einer ECHTEN Aufnahme abgenommen: "
       "11 von 11 Sektoren byteidentisch in gw_amigados.hfe. Die HFE "
       "ist eine Rekonstruktion, keine Aufnahme.", 0u },
+
+    /* D81 -> HFE (A-037, MF-1437). Spuraufbau aus dem Schreiber selbst,
+     * der 1581-ROM: Seitenvertauschung (MSUB.SRC, MROUT.SRC `side_ctl`)
+     * und Luecken 32/22/35 ohne IAM (MROUT.SRC `fmtrk`, DSKINT.SRC
+     * `psetdef`). Drei Messungen, zwei davon mit fremder Hand:
+     *   - Rundlauf UFT -> UFT: 0 von 819 200 Byte abweichend
+     *     (`tests/test_convert_d81_hfe_roundtrip.c`, 9 Zusagen, Mutationen
+     *     3 von 3);
+     *   - greaseweazle (26690f8, Unlicense) liest die UFT-HFE mit
+     *     `commodore.1581`: 1600 von 1600 Sektoren, D81 byteidentisch;
+     *   - UFT liest die HFE, die greaseweazle aus derselben D81 schreibt
+     *     (gap3 30 statt 35): 0 von 819 200 Byte abweichend.
+     * MAME floptool liest dieselbe UFT-HFE mit vertauschten Spurhaelften —
+     * MAMEs Zuordnung widerspricht der ROM (P3-634), nicht diese Datei.
+     * Die HFE ist eine Rekonstruktion, keine Aufnahme. */
+    { UFT_FORMAT_D81, UFT_FORMAT_HFE, UFT_RT_LOSSLESS,
+      "MF-1437: Rundlauf D81 -> HFE -> D81 byteidentisch (0 von 819200 "
+      "Byte). Fremde Hand in beide Richtungen: greaseweazle liest die "
+      "UFT-HFE als 1581 zu derselben D81 (1600/1600), UFT liest die "
+      "greaseweazle-HFE zu derselben D81. Spuraufbau nach der 1581-ROM. "
+      "Die HFE ist eine Rekonstruktion, keine Aufnahme.", 0u },
 
 
     /* Sector → Flux: target cannot be reproduced from sectors alone */
