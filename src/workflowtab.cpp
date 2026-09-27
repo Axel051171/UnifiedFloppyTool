@@ -571,6 +571,10 @@ void WorkflowTab::onStartAbortClicked()
             // provider. The drive unit is already bound on the provider
             // (GreaseweazleProviderV2 ctor / set_drive_unit), so there is
             // no separate setDriveUnit() on the job any more.
+            // #43 (MF-XXXX): that sentence only became true with #43 —
+            // before it HardwareTab never passed the combo's unit, so the
+            // provider ran unit 0. Now open(port, unit) binds it and a
+            // combo change re-binds it (locked while this thread runs).
             m_captureJob->setProvider(m_gwProvider);
             m_captureJob->setOutputPath(m_destFile);
             m_captureJob->setGeometry(m_hwCylinders, m_hwSides);
@@ -610,6 +614,7 @@ void WorkflowTab::onStartAbortClicked()
             connect(m_captureJob, &FluxCaptureJob::error,    m_captureJob, &QObject::deleteLater);
             connect(m_workerThread, &QThread::finished, m_workerThread, &QObject::deleteLater);
 
+            trackFluxThread(m_workerThread);   /* #43: lock the drive combo */
             m_workerThread->start();
             return;
         }
@@ -655,6 +660,7 @@ void WorkflowTab::onStartAbortClicked()
             connect(m_writeJob, &FluxWriteJob::error,    m_writeJob, &QObject::deleteLater);
             connect(m_workerThread, &QThread::finished, m_workerThread, &QObject::deleteLater);
 
+            trackFluxThread(m_workerThread);   /* #43: lock the drive combo */
             m_workerThread->start();
             return;
         }
@@ -715,6 +721,23 @@ void WorkflowTab::onStartAbortClicked()
         emit operationFinished(false);
         resetUI();
     }
+}
+
+void WorkflowTab::trackFluxThread(QThread *thread)
+{
+    /* #43 (MF-XXXX): the capture/write job drives the SAME provider the
+     * Hardware tab holds, from this worker thread. The count follows the
+     * thread's `finished`, not the job's signals: after an abort
+     * (requestCancel + resetUI) the job keeps running until it notices the
+     * cancel, and a second job may start before the first thread ends. */
+    if (m_fluxThreadsRunning++ == 0) {
+        emit fluxJobRunningChanged(true);
+    }
+    connect(thread, &QThread::finished, this, [this]() {
+        if (m_fluxThreadsRunning > 0 && --m_fluxThreadsRunning == 0) {
+            emit fluxJobRunningChanged(false);
+        }
+    });
 }
 
 void WorkflowTab::resetUI()

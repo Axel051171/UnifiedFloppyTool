@@ -90,8 +90,38 @@ bool GreaseweazleProviderV2::open(const char *port_path, std::string *err_out)
         return false;
     }
 
+    /* #42 (MF-XXXX): the Hardware tab passes QSerialPortInfo::portName(),
+     * i.e. a SHORT name — "ttyACM0" on Linux, "cu.usbmodemXXXX" on macOS.
+     * The C HAL's POSIX serial_open() hands it to a raw open(), which
+     * resolves a relative name against the process's current directory:
+     * "[GW] open(ttyACM0): No such file or directory (errno=2)".
+     *
+     * The rule is Qt's own QSerialPortInfoPrivate::portNameToSystemLocation()
+     * (qtserialport, src/serialport/qserialportinfo_unix.cpp): a name that
+     * starts with '/', "./" or "../" is a location already, anything else
+     * lives under /dev/. Measured with tests/test_gw_port_kurzname.cpp
+     * (pty + firmware automaton): "pts/N" failed with ENOENT before this,
+     * and "./link" must stay relative.
+     *
+     * Here and not in src/hal/uft_greaseweazle_full.c: that file is a
+     * protected path, and the boundary between the GUI's port NAME and the
+     * HAL's port PATH is this provider.
+     *
+     * Windows is untouched: serial_open() prefixes "COMn" with the device
+     * namespace itself. Do not switch the GUI to
+     * QSerialPortInfo::systemLocation() instead — on Windows that already
+     * carries the prefix, and the HAL would prefix it a second time. */
+#ifdef _WIN32
+    const std::string pfad(port_path);
+#else
+    const std::string name(port_path);
+    const bool ist_ort = name[0] == '/' || name.rfind("./", 0) == 0 ||
+                         name.rfind("../", 0) == 0;
+    const std::string pfad = ist_ort ? name : "/dev/" + name;
+#endif
+
     uft_gw_device_t *gw = nullptr;
-    const int rc = uft_gw_open(port_path, &gw);
+    const int rc = uft_gw_open(pfad.c_str(), &gw);
     if (rc != 0 || gw == nullptr) {
         if (err_out) {
             const char *msg = uft_gw_strerror(rc);
@@ -306,10 +336,10 @@ FluxOutcome GreaseweazleProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
@@ -466,10 +496,10 @@ WriteOutcome GreaseweazleProviderV2::do_write_raw_flux(
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
@@ -563,10 +593,10 @@ MotorOutcome GreaseweazleProviderV2::do_set_motor(bool on)
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
@@ -609,10 +639,10 @@ SeekOutcome GreaseweazleProviderV2::do_seek(int cylinder)
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
@@ -677,10 +707,10 @@ SeekOutcome GreaseweazleProviderV2::do_recalibrate()
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
@@ -717,12 +747,14 @@ SeekOutcome GreaseweazleProviderV2::do_recalibrate()
  *  short READ_FLUX capture and computes RPM from the average index-to-
  *  index interval.
  *
- *  uft_gw_read_flux_simple(revs=3) + uft_gw_get_index_times() replicates
- *  the V1 logic without duplicating it here. The C backend owns the
- *  protocol logic.
+ *  #43 D2 (MF-XXXX): the speed comes from the index durations the C
+ *  backend decodes out of THIS capture (`flux->index_times[]`), with
+ *  entry 0 skipped — see the comment in the body. uft_gw_get_index_times()
+ *  is no longer called here (the function and its enum stay; see there).
  *
- *  jitter_pct: computed from the spread of index intervals. If only one
- *  interval is available, jitter is reported as 0.0 (not determinable).
+ *  jitter_pct: computed from the spread of the full revolutions. If only
+ *  one full revolution is available, jitter is reported as 0.0 (not
+ *  determinable).
  * ──────────────────────────────────────────────────────────────────────── */
 
 RpmOutcome GreaseweazleProviderV2::do_measure_rpm()
@@ -737,14 +769,18 @@ RpmOutcome GreaseweazleProviderV2::do_measure_rpm()
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 
-    /* Capture 3 index pulses — enough for 2 revolution intervals. */
+    /* revolutions = 3: uft_gw_read_flux() asks the firmware for at most
+     * 3 + 1 index pulses within ticks = 3 x sample_freq/5 x 2, i.e. a
+     * 1.2 s window at any sample rate. (This line said "Capture 3 index
+     * pulses" until #43; the window, not the pulse count, ends the
+     * capture on a drive slower than 200 rpm — see below.) */
     uft_gw_flux_data_t* flux = nullptr;
     int rc = uft_gw_read_flux_simple(m_handle, 3, &flux);
 
@@ -765,49 +801,135 @@ RpmOutcome GreaseweazleProviderV2::do_measure_rpm()
             "uft_gw_read_flux_simple returned error");
     }
 
-    /* Retrieve index-to-index intervals. */
-    uint32_t index_times[UFT_GW_MAX_REVOLUTIONS + 1] = {};
-    int index_count = uft_gw_get_index_times(
-        m_handle, index_times,
-        static_cast<int>(UFT_GW_MAX_REVOLUTIONS + 1));
-
+    /* #43 D2 (MF-XXXX). Here stood a SECOND request after the capture:
+     * uft_gw_get_index_times(), i.e. CMD_GET_INDEX_TIMES (0x0A). That
+     * command left the Greaseweazle firmware in v0.22 — measured:
+     * keirf/greaseweazle v0.21 inc/cdc_acm_protocol.h defines
+     * `CMD_GET_INDEX_TIMES 10`, v0.22 and v0.31 go from 9 straight to 11 —
+     * and UFT refuses anything older than v0.31. On every firmware UFT
+     * accepts the answer was an error, the list stayed empty, and the tab
+     * showed "RPM measurement produced no index intervals" for every drive
+     * (issue #43, the reporter's screenshot).
+     *
+     * The durations were already here: uft_gw_read_flux() decodes the
+     * index opcodes of this very stream into flux->index_times[] — each
+     * entry the time SINCE THE PREVIOUS index (MF-957, see
+     * do_read_raw_flux). Entry 0 is NOT a revolution: it is either the
+     * sync zero of an index-aligned stream or the partial revolution from
+     * capture start to the first pulse. gw computes its speed from full
+     * revolutions only, and so does this.
+     *
+     * Why "at least two entries" and not "revs + 1": the HAL bounds the
+     * capture to 1.2 s (ticks = revs x sample_freq/5 x 2). At 150 rpm a
+     * revolution takes 400 ms, so a real drive delivers the partial
+     * revolution plus two full ones — three entries, not four. Requiring
+     * four would refuse exactly the reporter's drive
+     * (tests/test_gw_rpm_indexzeiten.cpp, promise 4).
+     *
+     * Everything is read out of `flux` BEFORE it is freed. */
+    const uint32_t sample_freq = flux->sample_freq;
+    const int      index_count = flux->index_count;
+    std::vector<uint32_t> umlauf_ticks;
+    if (flux->index_times && flux->index_count > 1)
+        umlauf_ticks.assign(flux->index_times + 1,
+                            flux->index_times + flux->index_count);
     uft_gw_flux_free(flux);
 
-    uint32_t sample_freq = uft_gw_get_sample_freq(m_handle);
-    if (sample_freq == 0) sample_freq = UFT_GW_SAMPLE_FREQ_HZ;
+    /* P3-551 (MF-1356): 0 Hz is an unread field, not an invitation to
+     * assume 72 MHz — on an F7 Plus (84 MHz) that would be a wrong speed
+     * presented as a measurement. The handshake refuses 0 Hz at open(), so
+     * this is defensive: no test rig can reach it through the provider. */
+    if (sample_freq == 0) {
+        return gw_err_to_provider_error(
+            UFT_GW_ERR_NO_CLOCK,
+            "RPM measurement refused: no sample clock",
+            "the flux capture carries a sample rate of 0 Hz");
+    }
 
-    if (index_count < 1) {
+    /* Fewer than two index pulses: no full revolution to time. Zero and
+     * one pulse have different causes, so they get different texts — a
+     * single pulse proves the disk turns, and "Motor on?" would send the
+     * operator the wrong way (#43 review). */
+    if (index_count <= 0) {
+        /* Real firmware ends READ_FLUX at the 1.2 s ticks deadline before
+         * its 2 s no-index timeout (greaseweazle-firmware floppy.c,
+         * read-flux loop), so a standing disk yields ACK_OKAY, flux and
+         * no index entry — not UFT_GW_ERR_NO_INDEX. */
         return ProviderError{
             UFT_ERR_HARDWARE,
             "RPM measurement produced no index intervals",
-            "The flux capture succeeded but uft_gw_get_index_times() returned "
-            "zero index-to-index timestamps. The drive may have a faulty index sensor.",
-            "Inspect the drive's index hole sensor and belt. Re-seat the disk."
+            "The capture window saw no index pulse. The Greaseweazle "
+            "returns flux while the disk stands still or no disk is "
+            "inserted; it just sees no index hole passing.",
+            "Motor on? Switch the drive motor on before measuring RPM and "
+            "make sure a disk is inserted; if it still fails, inspect the "
+            "index hole sensor."
+        };
+    }
+    if (index_count == 1) {
+        /* Exactly one pulse. The window is 1.2 s, and any 1.2 s window
+         * holds at least two pulses of a disk turning faster than 100 rpm
+         * (period < 0.6 s) — so the disk turned slower than that, or the
+         * sensor missed pulses. */
+        return ProviderError{
+            UFT_ERR_HARDWARE,
+            "RPM measurement produced no index intervals",
+            "The capture window saw exactly one index pulse. It only ends "
+            "the partial revolution before it, so there is no full "
+            "revolution to time: in the 1.2 s window the disk turned "
+            "slower than 100 rpm (still spinning up?) or the index sensor "
+            "missed pulses.",
+            "Let the drive reach its speed and repeat the measurement; if "
+            "it persists, check the drive belt and spindle and the index "
+            "hole sensor."
+        };
+    }
+    if (umlauf_ticks.empty()) {
+        /* Two or more pulses counted but no duration list: the HAL
+         * allocates index_times[] with every successful capture, so this
+         * is a broken capture, not a slow disk. */
+        return ProviderError{
+            UFT_ERR_HARDWARE,
+            "RPM measurement produced no index intervals",
+            "The capture reports " + std::to_string(index_count) +
+                " index pulses but carries no index durations.",
+            "Repeat the measurement; if it persists, report it with the "
+            "Greaseweazle firmware version."
         };
     }
 
-    /* Compute average RPM from all available intervals. */
     uint64_t total_ticks = 0;
-    uint32_t min_ticks   = index_times[0];
-    uint32_t max_ticks   = index_times[0];
-
-    for (int i = 0; i < index_count; ++i) {
-        total_ticks += index_times[i];
-        if (index_times[i] < min_ticks) min_ticks = index_times[i];
-        if (index_times[i] > max_ticks) max_ticks = index_times[i];
+    uint32_t min_ticks   = umlauf_ticks.front();
+    uint32_t max_ticks   = umlauf_ticks.front();
+    for (const uint32_t t : umlauf_ticks) {
+        if (t == 0) {
+            /* A revolution of zero length does not exist; averaging it in
+             * would double the speed (MF-957 treats a mid-list zero the
+             * same way: an abort, not a value). */
+            return ProviderError{
+                UFT_ERR_HARDWARE,
+                "RPM measurement saw a zero-length revolution",
+                "Two index pulses arrived without any time between them — "
+                "the index signal is bouncing or the stream is damaged.",
+                "Inspect the index hole sensor and its wiring, then repeat "
+                "the measurement."
+            };
+        }
+        total_ticks += t;
+        min_ticks = std::min(min_ticks, t);
+        max_ticks = std::max(max_ticks, t);
     }
 
-    double avg_ticks = static_cast<double>(total_ticks) / index_count;
-    double rpm       = (avg_ticks > 0.0)
-        ? (60.0 * static_cast<double>(sample_freq)) / avg_ticks
-        : 0.0;
+    const int    umlaeufe  = static_cast<int>(umlauf_ticks.size());
+    const double avg_ticks = static_cast<double>(total_ticks) / umlaeufe;
+    const double rpm       = (60.0 * static_cast<double>(sample_freq)) / avg_ticks;
 
-    /* Jitter: (max - min) / avg as a percentage. */
-    double jitter_pct = (avg_ticks > 0.0 && index_count >= 2)
+    /* Jitter: (max - min) / avg as a percentage, over full revolutions. */
+    const double jitter_pct = (umlaeufe >= 2)
         ? (static_cast<double>(max_ticks - min_ticks) / avg_ticks) * 100.0
         : 0.0;
 
-    return RpmMeasured{rpm, jitter_pct, index_count};
+    return RpmMeasured{rpm, jitter_pct, umlaeufe};
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -840,10 +962,10 @@ DetectOutcome GreaseweazleProviderV2::do_detect_drive()
     /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
      * unit or a uft_gw_select_drive() failure surfaces as a typed
      * ProviderError — an alternative of every Outcome variant — never a
-     * silent no-op. For drive_unit 0 (the default + only value used by
-     * callers today) on a healthy device this is exactly the
-     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
-     * observable behaviour for current callers is unchanged. */
+     * silent no-op. Since #43 (MF-XXXX) the unit is the one the Hardware
+     * tab's drive combo names — 0 (A:) or 1 (B:), bound by
+     * open(port, unit) and re-bound by set_drive_unit(); before #43
+     * every caller left it at the default 0. */
     if (auto sel_err = ensure_drive_selected())
         return std::move(*sel_err);
 

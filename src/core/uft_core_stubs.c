@@ -9,6 +9,7 @@
  * subsystems are implemented.
  */
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_probe_guard.h"
 #include "uft/uft_error.h"
 #include "uft/uft_format_autodetect.h"
 #include "uft/uft_file_ops.h"                /* uft_file_type_t */
@@ -169,8 +170,10 @@ uft_disk_t* uft_disk_open_as(const char *path, bool read_only,
  * Die Warnung darf nicht in einem Protokoll stehen, das niemand
  * liest — sie IST die Auswahl.
  */
-uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
-                                 uft_probe_ranking_t *ranking_out) {
+uft_disk_t* uft_disk_open_with_policy(const char *path, bool read_only,
+                                      uft_probe_policy_t policy,
+                                      uft_probe_ranking_t *ranking_out,
+                                      uft_probe_guard_result_t *decision_out) {
     if (!path) return NULL;
     /* EINE Entscheidungsstelle: hoechste Konfidenz -> bei Gleichstand
      * die Endung -> sonst NULL. `ranking_out` traegt die Messung
@@ -192,12 +195,17 @@ uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
     uft_probe_ranking_t lokal;
     memset(&lokal, 0, sizeof(lokal));
 
-    const uft_format_plugin_t *plugin =
+    const uft_format_plugin_t *selected =
         uft_probe_file_entschieden(path, &lokal);
     if (ranking_out) *ranking_out = lokal;
-    if (!plugin) return NULL;
 
-    uft_disk_t *disk = disk_oeffnen_mit(path, read_only, plugin);
+    uft_probe_guard_result_t decision;
+    if (!uft_probe_guard_decide(&lokal, selected, policy, &decision))
+        return NULL;
+    if (decision_out) *decision_out = decision;
+    if (!decision.auto_open || !decision.plugin) return NULL;
+
+    uft_disk_t *disk = disk_oeffnen_mit(path, read_only, decision.plugin);
     if (disk) {
         /* Geklemmt statt gekuerzt: die Felder sind 8 Bit breit, die
          * Messung ist es nicht. Ein stiller Ueberlauf waere eine
@@ -215,6 +223,18 @@ uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
         disk->probe_gemessen   = true;
     }
     return disk;
+}
+
+uft_disk_t* uft_disk_open_ranked(const char *path, bool read_only,
+                                 uft_probe_ranking_t *ranking_out) {
+    /* MF-1368: COMPATIBLE, not INTERACTIVE as the delivered package had it.
+     * Measured on tests/corpus_free: 94 of 110 files open today; with
+     * INTERACTIVE as the default only 64 would, and the 30 lost include
+     * VICE's own D64/D71/D81 and plain PC .img. The guard's verdict is
+     * SHOWN instead (disk_image_validator.cpp), not enforced here. */
+    return uft_disk_open_with_policy(path, read_only,
+                                     UFT_PROBE_POLICY_COMPATIBLE,
+                                     ranking_out, NULL);
 }
 
 uft_disk_t* uft_disk_open(const char *path, bool read_only) {

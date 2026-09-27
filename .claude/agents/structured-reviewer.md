@@ -13,7 +13,7 @@ description: |
 
   Auto-invoke after:
     - any user request that mentions source files in src/flux/, src/algorithms/,
-      src/pll/, src/protection/, src/recovery/, src/crc/, src/analysis/otdr/,
+      src/core/ (PLL, MFM), src/protection/, src/recovery/, src/crc/, src/analysis/otdr/,
       src/hal/ and asks for evaluation
     - external code uploads that should be compared to UFT (legacy tools, other
       floppy software, reference implementations)
@@ -244,7 +244,9 @@ Grep aggressively for these — they appear repeatedly:
 
 ## Known architectural facts
 
-- `src/formats_v2/` is dead code. Do not reference or recommend changes there.
+- `src/formats_v2/`, `src/fluxengine/`, `src/pll/` and `src/decoders/` no
+  longer exist (removed in the MF-011 cleanup; PLL lives in
+  `src/core/uft_pll.c` since MF-287). Do not recommend resurrecting them.
 - `CONFIG += object_parallel_to_source` is mandatory (35+ basename collisions).
 - DEEPREAD pipeline is OTDR-adjacent (see `src/analysis/deepread/`).
 - 3 parallel decoder paths exist — consolidation recommendation is appropriate

@@ -363,6 +363,78 @@ private slots:
                  qPrintable(woz.formatName));
     }
 
+    /* ── MF-1368: mehrere Bewerber im selben Beweisband werden gesagt ──────
+     *
+     * Kein exakter Gleichstand (dann greift gleichstandHeisstMehrdeutig),
+     * aber mehr als ein Plugin im Siegerband: die Rangfolge hat gewaehlt,
+     * der Inhalt hat nicht entschieden. Das Urteil faellt EINMAL, im
+     * Probe-Guard unter der forensischen Richtlinie; das Pruefetor zeigt es.
+     * Die Datei geht weiter auf (kompatible Richtlinie) — gemessen haette
+     * INTERACTIVE als Vorgabe 30 von 110 Korpusdateien gesperrt.
+     *
+     * Die Vorbedingungen stehen im Test, damit er nicht gruen wird, weil
+     * sich die Messung unter ihm veraendert hat. */
+    void beweisbandMehrdeutigWirdGesagt()
+    {
+        registriert();
+        /* MEASURED: `.img` never reaches this path — the validator's own
+         * extension list handles it first and the registry is only the
+         * fallback (P2-2). The first draft of this test used gw_msx_2dd.img
+         * and was red in BOTH runs for that reason. hxcfe_pc160.d88 does go
+         * through the registry: band MAGIC, confidence 95, two claimants. */
+        const QString pfad = korpus("hxcfe_pc160.d88");
+        if (!QFile::exists(pfad))
+            QSKIP("Korpus fehlt: hxcfe_pc160.d88");
+
+        uft_probe_ranking_t rang;
+        memset(&rang, 0, sizeof rang);
+        uft_disk_t *disk = uft_disk_open_ranked(pfad.toUtf8().constData(),
+                                                true, &rang);
+        QVERIFY(disk != nullptr);
+        uft_disk_close(disk);
+        QVERIFY2(rang.band >= UFT_PROBE_BAND_STRUCT && rang.band_claimants > 1
+                     && rang.tied <= 1,
+                 qPrintable(QString("band %1, Bewerber im Band %2, gleichauf %3")
+                                .arg(int(rang.band)).arg(rang.band_claimants)
+                                .arg(rang.tied)));
+
+        const DiskImageInfo info = DiskImageValidator::validate(pfad);
+        QVERIFY(info.isValid);
+        QVERIFY2(info.formatName.contains(QLatin1String("nicht eindeutig")),
+                 qPrintable(info.formatName));
+        QVERIFY2(!info.formatName.contains(QLatin1String("Dateigroesse")),
+                 qPrintable(info.formatName));
+    }
+
+    /* ── MF-1368: unter der Groessenschwelle geoeffnet wird gesagt ─────────
+     * Konfidenz 0..29 heisst nach MF-729 „kein Anspruch" — die Datei geht
+     * trotzdem auf (kompatible Richtlinie). Das alte Pruefetor kannte nur
+     * das Groessenband und schwieg hier; „nur an der Dateigroesse" waere
+     * falsch, weil nicht einmal die Groesse den Anspruch traegt. */
+    void unterDerSchwelleWirdGesagt()
+    {
+        registriert();
+        const QString pfad = korpus("myz80_spec_1zyl.myz80");
+        if (!QFile::exists(pfad))
+            QSKIP("Korpus fehlt: myz80_spec_1zyl.myz80");
+
+        uft_probe_ranking_t rang;
+        memset(&rang, 0, sizeof rang);
+        uft_disk_t *disk = uft_disk_open_ranked(pfad.toUtf8().constData(),
+                                                true, &rang);
+        QVERIFY(disk != nullptr);
+        uft_disk_close(disk);
+        QCOMPARE(int(rang.band), int(UFT_PROBE_BAND_NONE));
+
+        const DiskImageInfo info = DiskImageValidator::validate(pfad);
+        QVERIFY(info.isValid);
+        QVERIFY2(info.formatName.contains(
+                     QLatin1String("ohne belastbare Erkennung")),
+                 qPrintable(info.formatName));
+        QVERIFY2(!info.formatName.contains(QLatin1String("Dateigroesse")),
+                 qPrintable(info.formatName));
+    }
+
     /* ── Erkannt, aber nicht geoeffnet: kein Freispruch ─────────────────── */
     void erkanntAberNichtGeoeffnet()
     {

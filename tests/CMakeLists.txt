@@ -69,6 +69,9 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp"    # MF-252
     "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_dtc_befehl.cpp"         # MF-1046
     "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_befehl.cpp"           # MF-1047
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_port_kurzname.cpp"            # #42 MF-1366
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_rpm_indexzeiten.cpp"          # #43 MF-1366
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_gw_drive_unit_select.cpp"        # #43 MF-1366
     "${CMAKE_CURRENT_SOURCE_DIR}/test_provider_temppfad.cpp")          # MF-1108
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
@@ -4834,6 +4837,29 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_gw_port_kurzname" OR
+           ${test_name} STREQUAL "test_gw_rpm_indexzeiten")
+        # #42 / #43 (MF-1366): the GW V2 provider against the firmware
+        # automaton over the wire bridge (MF-848). test_gw_port_kurzname
+        # also pumps bytes between a pty and the bridge in a thread (Linux).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/gw_wire_bridge.c
+            ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+        if(UNIX)
+            find_package(Threads REQUIRED)
+            set(TEST_LIBS Threads::Threads)
+        endif()
+    elseif(${test_name} STREQUAL "test_gw_drive_unit_select")
+        # #43 D1 (MF-1366): the header-only drive-combo -> bus-unit mapping.
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_scp_provider_v2")
         # MF-161 P1.8: SCPProviderV2 mixin composition test.
         # Needs: V2 provider .cpp + SCP direct C backend (now libusb-wired
@@ -6139,6 +6165,7 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_status_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_decode_job_no_fiction" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
+           ${qt_test_name} STREQUAL "test_main_window_fits_fullhd" OR
            ${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             # P3-10: die Format-Schicht samt Wandlungs-Maschine
@@ -6169,10 +6196,33 @@ if(TARGET Qt6::Test)
                 # oeffnen. Der Rotbeweis braucht das Korpus-Abbild.
                 target_compile_definitions(${qt_test_name} PRIVATE
                     UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-            elseif(${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
+            elseif(${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
+                   ${qt_test_name} STREQUAL "test_main_window_fits_fullhd")
                 # MF-577: die zwei Reiter, an denen NICHTS zu beanstanden
                 # war — festgehalten, damit sie es bleiben. Workflow zieht
                 # die drei Auftragsklassen und das Histogramm-Widget nach.
+                #
+                # Issue #44 (MF-1366): the FullHD test builds the SAME
+                # Workflow page, so it shares this list instead of copying
+                # it (MF-1233), and adds the window chrome plus the Signal
+                # Analysis page: uftBuildSignalPage(), UftOtdrPanel with the
+                # C code it calls, FloppyOtdrWidget.h (header-only Q_OBJECT
+                # classes, listed so AUTOMOC sees them) and the flux view.
+                if(${qt_test_name} STREQUAL "test_main_window_fits_fullhd")
+                    target_sources(${qt_test_name} PRIVATE
+                        ${CMAKE_SOURCE_DIR}/forms/mainwindow.ui
+                        ${CMAKE_SOURCE_DIR}/src/gui/uft_signal_page.cpp
+                        ${CMAKE_SOURCE_DIR}/src/gui/uft_otdr_panel.cpp
+                        ${CMAKE_SOURCE_DIR}/src/analysis/otdr/FloppyOtdrWidget.h
+                        ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c
+                        ${CMAKE_SOURCE_DIR}/src/analysis/uft_anomaly_detect.c
+                        ${CMAKE_SOURCE_DIR}/src/analysis/uft_ml_protection.c
+                        ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/uft_otdr_encoding_boost.c
+                        ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+                        ${CMAKE_SOURCE_DIR}/src/widgets/fluxvisualizerwidget.cpp)
+                    target_include_directories(${qt_test_name} PRIVATE
+                        ${CMAKE_SOURCE_DIR}/src/analysis/otdr)
+                endif()
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/xcopytab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_xcopy.ui
@@ -6465,6 +6515,7 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
            ${qt_test_name} STREQUAL "test_laeufer_argv" OR
+           ${qt_test_name} STREQUAL "test_main_window_fits_fullhd" OR
            ${qt_test_name} STREQUAL "test_provider_switch")
             set_target_properties(${qt_test_name} PROPERTIES
                 CXX_STANDARD 20

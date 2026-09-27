@@ -187,7 +187,7 @@ In allen anderen Fällen: Problem fixen, nicht umgehen.
 - Kein Architektur-Review — das ist `single-source-enforcer`
 - Kein Linting (Stil, Format) — dafür existieren `clang-format` / Editor-Hooks
 - Keine Performance-Analyse
-- Kein Verhaltens-Test — `test-master`
+- Kein Verhaltens-Test — MF-Workflow (Rotbeweis zuerst)
 
 ---
 

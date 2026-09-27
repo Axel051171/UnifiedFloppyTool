@@ -94,7 +94,10 @@ public:
      * null handle is a no-op).
      *
      * MF-199 (P1.20): the optional `drive_unit` binds the Greaseweazle
-     * bus unit (0 = DS0, 1 = DS1). The provider issues
+     * bus unit (0 = drive A, 1 = drive B on the IBM-PC bus that
+     * uft_gw_select_drive() configures when none is set — gw's
+     * `--drive=A/B`, not the Shugart `--drive=0/1`; wording
+     * corrected #43, MF-XXXX). The provider issues
      * uft_gw_select_drive() once, lazily, before the first bus
      * operation. An out-of-range unit or a select failure surfaces as a
      * ProviderError on the first do_* call — never silently ignored.
@@ -112,8 +115,15 @@ public:
      * destructor releases it. Sets `firmware_version()` and
      * `hardware_model()` from `uft_gw_get_info()` upon successful open.
      *
-     * @param port_path  serial-port path (Linux: /dev/ttyACMx,
-     *                   Windows: COMx, macOS: /dev/tty.usbmodemXXX).
+     * @param port_path  serial port — either a location ("/dev/ttyACM0",
+     *                   "./link", "../dev/x") or, since #42 (MF-XXXX),
+     *                   the SHORT name the Hardware tab lists
+     *                   (QSerialPortInfo::portName(): "ttyACM0",
+     *                   "cu.usbmodemXXX"). Outside Windows a name that
+     *                   does not start with '/', "./" or "../" is opened
+     *                   under /dev/ — Qt's portNameToSystemLocation()
+     *                   rule. Windows: "COMx"; the C HAL adds the device
+     *                   namespace prefix itself.
      * @param err_out    optional out-param populated with a
      *                   human-readable error string on failure.
      * @return true if device opened, false otherwise. On false, the
@@ -133,8 +143,8 @@ public:
               std::string *err_out = nullptr);
 
     /**
-     * @brief Set the Greaseweazle bus unit (0 = DS0, 1 = DS1) for
-     *        subsequent operations.
+     * @brief Set the Greaseweazle bus unit (0 = drive A, 1 = drive B on
+     *        the IBM-PC bus) for subsequent operations.
      *
      * Records the unit and clears the lazy-select latch so the next bus
      * operation re-asserts it via uft_gw_select_drive(). The range is

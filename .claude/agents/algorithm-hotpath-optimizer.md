@@ -11,11 +11,11 @@ description: |
   of", "is this cache-friendly", "should this be SIMD", "benchmark before/after".
 
   Auto-invoke after:
-    - any benchmark-runner agent reports a regression >5%
-    - PR diffs touch files in src/flux/, src/algorithms/, src/pll/, src/decoders/,
-      src/protection/, src/recovery/, src/crc/, src/fluxengine/, src/analysis/
-    - format-implementation agents report CRC/decode being the bottleneck
-    - static-analyzer flags O(N²) or hot allocations in these paths
+    - a benchmark run (tests/benchmarks/, `uft-benchmark` skill) reports a regression >5%
+    - PR diffs touch files in src/flux/, src/algorithms/, src/core/ (PLL: uft_pll.c,
+      MFM codec), src/protection/, src/recovery/, src/crc/, src/analysis/
+    - format work (MF-Workflow, `uft-format-plugin` skill) reports CRC/decode being the bottleneck
+    - a static-analysis run flags O(N²) or hot allocations in these paths
 
   <example>
     Context: gw2dmk decodes a capture in 1.2s, UFT takes 8s on the same file.
@@ -38,8 +38,8 @@ description: |
 
   <example>
     Context: user asks to add IPF format support.
-    assistant: "This is new-format work — delegating to format-implementation agent, not
-    hotpath-optimizer."
+    assistant: "This is new-format work — falls under the EINFRIER-REGEL and the MF-Workflow
+    (`uft-format-plugin` skill), not hotpath-optimizer."
     <commentary>
       New features are NOT this agent's job. It only reviews existing code.
     </commentary>
@@ -155,7 +155,7 @@ If you find any of these, stop analysis and return the finding immediately — d
 continue with minor fixes:
 
 - **Correctness bug in PLL math** (wrong covariance update, missing drift propagation,
-  sign errors in Kalman gain). Flag and route to pll-specialist agent.
+  sign errors in Kalman gain). Flag and route to `deep-diagnostician` (CONSULT block).
 - **Undefined behavior** (signed overflow in hot loop, use-after-free, aliasing
   violations). Flag to safety-reviewer.
 - **API contract break** needed for the fix. Route to architect agent first — do not

@@ -1,6 +1,6 @@
 ---
 name: github-expert
-description: GitHub platform specialist for UnifiedFloppyTool. Use when: optimizing GitHub Actions workflows, setting up release automation, configuring branch protection, creating PR/issue templates, integrating CodeQL security scanning, improving Qt build cache strategies, managing artifact retention, or setting up GitHub Pages for documentation. Distinct from build-ci-release which focuses on build system correctness — this agent focuses on GitHub platform features and repository management.
+description: "GitHub platform specialist for UnifiedFloppyTool. Use when: optimizing GitHub Actions workflows, setting up release automation, configuring branch protection, creating PR/issue templates, integrating CodeQL security scanning, improving Qt build cache strategies, managing artifact retention, or setting up GitHub Pages for documentation. Distinct from build-ci-release which focuses on build system correctness — this agent focuses on GitHub platform features and repository management."
 model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash, mcp__github__search_repositories, mcp__github__search_code, mcp__github__get_file_contents, mcp__github__list_commits, mcp__github__list_pull_requests, mcp__github__get_pull_request, mcp__github__get_pull_request_status, mcp__github__list_issues
 ---
@@ -9,7 +9,7 @@ tools: Read, Glob, Grep, Edit, Write, Bash, mcp__github__search_repositories, mc
 
 ## Abgrenzung
 
-- `build-ci-release`  → Ist der Build korrekt? (qmake, MSVC, Qt6-Flags)
+- `preflight-check`  → Ist der Build korrekt? (CI-Fehlerpattern lokal, qmake, Qt6-Flags)
 - **`github-expert`** → Ist GitHub optimal genutzt? (Actions, Releases, Security, Community)
 
 ## UFT-Kontext

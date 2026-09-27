@@ -62,7 +62,7 @@ mit <5 Zeilen Body; Plugin-Registrierungen die auf sie zeigen.
 Definition in irgendeiner `.c`-Datei.
 **Signal:** Für jede `extern` / Prototyp-Deklaration in `include/uft/`
 prüfen ob irgendwo `<name>(` als Definition existiert.
-**Delegation:** `header-consolidator` bzw. Header manuell bereinigen.
+**Delegation:** `single-source-enforcer` bzw. Header manuell bereinigen.
 
 ### 5. Build-System-Divergenz
 
@@ -77,7 +77,7 @@ oder umgekehrt (single source).
 **Was:** Plugins ohne dediziertes `tests/test_<name>.c` bzw. ohne Mini-Probe-
 Test.
 **Signal:** 83 Plugins in `src/formats/`, weniger Tests in `tests/test_*_plugin.c`.
-**Delegation:** `test-master` (falls vorhanden) oder manuelle Template-
+**Delegation:** MF-Workflow (kein Test-Agent in der Suite) — manuelle Template-
 Anwendung nach Pattern von `test_stx_plugin.c`.
 
 ### 7. Doku-Reality-Gap
@@ -127,8 +127,9 @@ TODO-Debt zuletzt).
 
 - **Aufrufer:** Nightly via CI, `preflight-check` vor Release-Tag,
   manuell beim Onboarding.
-- **Delegiert an:** `single-source-enforcer`, `stub-eliminator`, `quick-fix`,
-  `header-consolidator`, `test-master`, `github-expert`.
+- **Delegiert an:** `single-source-enforcer` (auch Typ-Duplikate),
+  `stub-eliminator`, `quick-fix`, `github-expert`; fehlende Tests gehen
+  an den MF-Workflow (Rotbeweis zuerst).
 - **Kein Fixer:** schreibt keinen Code, nur Findings + Delegationsauftrag.
 
 ---
@@ -145,7 +146,7 @@ Ohne CI: `claude-agent run must-fix-hunter` manuell.
 
 ## Nicht-Ziele
 
-- Kein Verhaltens-Test — das ist `test-master`-Sache
+- Kein Verhaltens-Test — das ist Sache des MF-Workflows (Rotbeweis zuerst)
 - Kein Architektur-Audit — das macht `single-source-enforcer`
 - Kein Auto-Fix — nur Detection + Delegation
 - Kein ABI-Check — dafür existiert `abi-bomb-detector`
@@ -176,8 +177,8 @@ Superpowers-Skills: `dispatching-parallel-agents` für das 9-fache Fan-Out;
 
 ---
 
-## Unterschied zu `code-auditor`
+## Unterschied zu `structured-reviewer`
 
-- `code-auditor`: Stil, Best-Practices, Review-Feedback
+- `structured-reviewer`: Review/Audit einzelner Stellen, Best-Practices, Review-Feedback
 - `must-fix-hunter`: **systemische** Widersprüche die den Build grün lassen
   aber semantisch falsch sind

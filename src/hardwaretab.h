@@ -20,6 +20,7 @@
 #include <QButtonGroup>
 
 #include <memory>
+#include <optional>
 #include <variant>
 
 #include "uft/hal/outcomes.h"   /* forensic Sum-Types — handlers take refs */
@@ -186,6 +187,20 @@ public slots:
      */
     void setWorkflowModes(bool sourceIsHardware, bool destIsHardware);
 
+    /**
+     * @brief #43 (MF-XXXX): lock the drive selection while a flux capture
+     *        or write job drives the connected provider from its worker
+     *        thread.
+     *
+     * Switching the Greaseweazle unit underneath a running job would
+     * re-select the bus between two tracks of one image — the "forensic
+     * foot-gun" of docs/proposals/V2_DRIVE_UNIT_SELECTION.md §2, option (c).
+     * MainWindow feeds this from WorkflowTab::fluxJobRunningChanged, which
+     * follows the worker THREAD, not the job object — after an abort the
+     * thread still runs until the job notices the cancel.
+     */
+    void setFluxJobRunning(bool running);
+
 private slots:
     // Connection
     void onRefreshPorts();
@@ -193,7 +208,11 @@ private slots:
     void onConnect();
     void onDisconnect();
     void onControllerChanged(int index);
-    
+
+    /* #43 (MF-XXXX): comboDriveSelect changed. With a Greaseweazle
+     * connected: motor off on the previous unit, then set_drive_unit(). */
+    void onDriveSelectChanged(int index);
+
     // Role selection (Source/Destination)
     void onRoleChanged(int roleId);
     
@@ -271,7 +290,13 @@ private:
      * cap::DetectsDrive) and dispatch the DetectOutcome through the same
      * handler set the codegen-wired btnDetect uses. No-op if disconnected. */
     void runDetectProbe();
-    
+
+    /* #43 (MF-XXXX): the Greaseweazle bus unit comboDriveSelect names, or
+     * std::nullopt when it names none (other controller, no user data,
+     * Commodore device number). One mapping for connect AND change:
+     * uft::hal::gw_drive_unit_from_combo(). */
+    std::optional<int> selectedGwDriveUnit() const;
+
     // Status updates
     void updateStatus(const QString& status, bool isError = false);
     void clearDetectedInfo();
@@ -295,6 +320,7 @@ private:
     bool m_connected;
     bool m_autoDetect;
     bool m_motorRunning;
+    bool m_fluxJobRunning = false;   /* #43: see setFluxJobRunning() */
     ControllerRole m_controllerRole;
     
     // Workflow state (from WorkflowTab)

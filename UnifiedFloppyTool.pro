@@ -337,6 +337,7 @@ SOURCES += \
     src/gw_output_parser.cpp \
     # src/qmake_stubs/uft_protection_stubs.cpp \ # DISABLED: conflicts with real impls
     src/gui/uft_otdr_panel.cpp \
+    src/gui/uft_signal_page.cpp \
     src/gui/ProtectionAnalysisWidget.cpp \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_flux_histogram.c \
@@ -416,6 +417,7 @@ HEADERS += \
     src/gw_device_detector.h \
     src/gw_output_parser.h \
     src/gui/uft_otdr_panel.h \
+    src/gui/uft_signal_page.h \
     src/gui/ProtectionAnalysisWidget.h \
     src/gui/uft_sector_editor.h \
     include/uft/flux/uft_scp_parser.h \
@@ -552,7 +554,8 @@ HEADERS += \
     src/hardware_providers/xum1541_usb.h \
     src/hardware_providers/teensy_probe.h \
     src/hardware_providers/qprocess_subprocess_runner.h \
-    src/hardware_providers/ufi_runners.h
+    src/hardware_providers/ufi_runners.h \
+    src/hardware_providers/gw_drive_unit_select.h
 
 # Widget Sources
 SOURCES += \
@@ -1026,6 +1029,7 @@ SOURCES += \
     src/formats/uft_format_registry.c \
     src/formats/uft_v3_bridge.c \
     src/core/uft_format_plugin.c \
+    src/core/uft_probe_guard.c \
     src/core/uft_preflight.c \
     src/core/uft_loss_report.c \
     src/core/uft_roundtrip.c \
@@ -1034,6 +1038,8 @@ SOURCES += \
     src/core/uft_imaging_recipe.c \
     src/core/uft_recipe_copyplan.c \
     src/core/uft_amiga_recipe_profiles.c
+
+HEADERS += include/uft/uft_probe_guard.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Track Analysis

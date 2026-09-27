@@ -26,7 +26,7 @@
 #include "xcopytab.h"
 #include "uft_otdr_panel.h"
 #include "widgets/fluxvisualizerwidget.h"   /* MF-632 */
-#include <QSplitter>
+#include "gui/uft_signal_page.h"             /* #44, MF-1366 */
 
 #include <QVBoxLayout>
 #include <QAction>
@@ -124,6 +124,11 @@ void MainWindow::loadTabWidgets()
     // Connect HardwareTab device info to WorkflowTab status display
     connect(hardwareTab, &HardwareTab::deviceInfoChanged,
             workflowTab, &WorkflowTab::onDeviceInfoChanged);
+
+    // #43 (MF-1366): a flux capture/write thread drives the provider the
+    // Hardware tab holds — its drive selection is locked meanwhile.
+    connect(workflowTab, &WorkflowTab::fluxJobRunningChanged,
+            hardwareTab, &HardwareTab::setFluxJobRunning);
     
     // Connect HardwareTab connection state to MainWindow LED status
     // Use Qt::QueuedConnection to ensure UI updates happen in main thread
@@ -256,20 +261,17 @@ void MainWindow::loadTabWidgets()
     // CRC-Orakel beide Sichten gleichzeitig braucht — Qualitaet oben,
     // Zeitbereich unten. Voreinstellung 60/40 zugunsten des OTDR-Panels,
     // das die Bedienelemente traegt.
+    // BERICHTIGT #44 (MF-1366): seit dem Scrollbereich um das OTDR-Panel
+    // teilt sich der Platz gemessen etwa 55/45, nicht 60/40 — siehe
+    // uft_signal_page.cpp.
+    //
+    // Issue #44 (MF-1366): the page is laid out by uftBuildSignalPage()
+    // (src/gui/uft_signal_page.cpp), the same function the FullHD
+    // regression test measures — see there for the interim scroll area.
     m_otdrPanel = new UftOtdrPanel();
     m_fluxView  = new FluxVisualizerWidget();
     m_fluxView->setViewMode(FluxViewMode::WAVEFORM);
-    m_fluxView->setMinimumHeight(120);
-
-    QSplitter* signalSplit = new QSplitter(Qt::Vertical, ui->tab_signal_analysis);
-    signalSplit->addWidget(m_otdrPanel);
-    signalSplit->addWidget(m_fluxView);
-    signalSplit->setStretchFactor(0, 6);
-    signalSplit->setStretchFactor(1, 4);
-
-    QVBoxLayout* layoutOtdr = new QVBoxLayout(ui->tab_signal_analysis);
-    layoutOtdr->setContentsMargins(0, 0, 0, 0);
-    layoutOtdr->addWidget(signalSplit);
+    uftBuildSignalPage(ui->tab_signal_analysis, m_otdrPanel, m_fluxView);
 
     // Die Verbindung, die aus zwei Widgets eine Ansicht macht. Das Panel
     // schickt nur die Spurkennung; die Zeiten holt der Empfaenger selbst,

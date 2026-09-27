@@ -20,7 +20,7 @@ provider surface.
   ordering, no timestamps in output) — `git diff` must be empty when
   inputs are unchanged.
 - A YAML entry referencing a capability concept that no provider in
-  `hal_conformance.cpp`'s typename list implements → codegen errors out
+  the `run_conformance<P>` list in `tests/test_hal_conformance.cpp` implements → codegen errors out
   with a 3-part message (what / why / fix per rule F-4).
 - A YAML entry referencing a `widget:` name that doesn't exist in the
   associated `.ui` → codegen errors out.

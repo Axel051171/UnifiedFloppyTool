@@ -35,7 +35,7 @@ Status legend:
 | `CMD_WRITE_FLUX` | 0x08 | PARTIAL (refusal only) | Forensic-safety: never emulated, only refusal asserted (`write_flux_always_refused`) |
 | `CMD_ERASE_FLUX` | 0x11 | PARTIAL (refusal only) | Same as above (`erase_flux_always_refused`) |
 | `CMD_SET_PIN` | 0x0F | PARTIAL (refusal only) | See DIVERGENCES.md D-5 (`set_pin_always_refused`) |
-| `CMD_GET_INDEX_TIMES` | 0x0A | NO | Used only for post-read index-timing diagnostics; not on critical read path. v4.1.6+ candidate. |
+| `CMD_GET_INDEX_TIMES` | 0x0A | NO — and never will be | Not a firmware command any more: keirf/greaseweazle v0.21 `inc/cdc_acm_protocol.h` defines `CMD_GET_INDEX_TIMES 10`, v0.22 and v0.31 go from 9 to 11 (measured #43, MF-XXXX), and UFT refuses firmware older than v0.31. Its one caller, `do_measure_rpm()`, now takes the index durations from the flux stream itself (#43); the bridge answers 0x0A with BAD_COMMAND and counts it in `unbekannt`, as the real firmware would. |
 | `CMD_SET_PARAMS` / `CMD_GET_PARAMS` | 0x04/0x05 | NO | Drive-delay tuning; UFT uses defaults. |
 | `CMD_UPDATE` | 0x01 | NO | Bootloader entry — would brick real HW; never emulated. |
 | `CMD_SOURCE_BYTES` / `CMD_SINK_BYTES` | 0x12/0x13 | NO | USB throughput test mode; not used by UFT. |

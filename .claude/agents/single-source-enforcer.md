@@ -191,7 +191,8 @@ Jeder Schritt ist ein eigener Commit mit klarer Message
 
 - **Aufrufer:** einmal pro Fakt beim Setup; dann nur wenn neue Fakt-Kategorie
   hinzukommt. `consistency-auditor` verweist bei BLOCK-1 auf diesen Agenten.
-- **Delegiert an:** `header-consolidator` wenn Typ-Duplikate das Ergebnis sind,
+- **Delegiert an:** niemanden bei Typ-Duplikaten (die bereinigt er selbst —
+  der fruehere `header-consolidator` ist nicht mehr in der Suite),
   `github-expert` wenn `.gitattributes`/CI-Integration nötig.
 
 ---
