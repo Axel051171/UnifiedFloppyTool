@@ -9,7 +9,7 @@
 | Kennzahl | Stand | Richtung | Quelle |
 |---|---|---|---|
 | ungeprüfte **Format-Plugins** (T3) | **1** von 87 | runter | `docs/VERIFICATION_TIERS.md` |
-| ungeprüfte **Dateisystem-Leser** | T0 29 · T1 7 · T1b 0 · T2 4 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
+| ungeprüfte **Dateisystem-Leser** | T0 27 · T1 7 · T1b 0 · T2 4 | runter | `docs/VERIFICATION_TIERS_FS.md` (MF-694) |
 | angebotene **Wandlungspfade** | **18**, davon 7 verlustfrei | rauf | `src/core/uft_roundtrip.c` |
 | leckende Tests | 0 zu halten | null halten | ASan/UBSan in CI |
 | **Bench-Alter je Controller** | keine Hardware (MF-310) | runter | `docs/CAPABILITIES.md` |

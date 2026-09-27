@@ -10,7 +10,7 @@ benutzt.
 
     src/detect/mfm/mfm_detect.c            clusters < 4085
     src/formats/fat/uft_fat_bootsector.c   cluster_count < 4085
-    src/formats/legacy/uft_fdi.c           data_clusters >= 4085
+    src/formats/legacy/uft_fdi.c           data_clusters >= 4085   (entfernt MF-1402)
     src/fs/uft_fat12.c                     zweimal, < 4085
     include/uft/uft_fat12.h                #define … 4084   (0 Aufrufer)
 

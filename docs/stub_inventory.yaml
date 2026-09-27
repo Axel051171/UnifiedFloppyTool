@@ -383,8 +383,6 @@ c8_stub_marker_files:
     classification: UNMARKED — triage
   - file: src/core/uft_probe_format_impl.c
     classification: UNMARKED — triage
-  - file: src/formats/amstrad/dsk_mfm.c
-    classification: UNMARKED — triage
   - file: src/formats/apple/uft_diskcopy.c
     classification: UNMARKED — triage
   - file: src/formats/atari/uft_atari_xdf_legacy.c

@@ -1142,7 +1142,6 @@ SOURCES += \
 
 SOURCES += \
     src/formats/d64/uft_d64_parser_v3.c \
-    src/formats/d71/uft_d71_parser_v2.c \
     src/formats/d81/uft_d81_parser_v2.c \
     src/formats/d88/uft_d88.c \
     src/formats/d88/uft_d88_parser_v2.c \
@@ -1334,13 +1333,11 @@ HEADERS += \
 SOURCES += \
     src/formats/commodore/crt.c \
     src/formats/commodore/d67.c \
-    src/formats/commodore/d71.c \
     src/formats/commodore/d80.c \
     src/formats/commodore/d81.c \
     src/formats/commodore/d82.c \
     src/formats/commodore/dnp.c \
     src/formats/commodore/dnp2.c \
-    src/formats/commodore/g64.c \
     src/formats/commodore/p00.c \
     src/formats/commodore/prg.c \
     src/formats/commodore/t64.c \
@@ -1351,18 +1348,12 @@ SOURCES += \
 
 # Amstrad formats (6 files)
 SOURCES += \
-    src/formats/amstrad/dsk.c \
-    src/formats/amstrad/dsk_mfm.c \
-    src/formats/amstrad/edsk_extdsk.c \
-    src/formats/amstrad/mgt_sad_sdf.c \
     src/formats/amstrad/trd_scl.c \
     src/formats/amstrad/uft_edsk_parser.c
 
 # Apple formats (15 files)
 SOURCES += \
-    src/formats/apple/2mg.c \
     src/formats/apple/mac_dsk.c \
-    src/formats/apple/nib.c \
     src/formats/apple/nib_nbz.c \
     src/formats/apple/prodos_po_do.c \
     src/formats/apple/uft_2mg_parser.c \
@@ -1422,7 +1413,6 @@ SOURCES += \
 
 # Misc formats (23 files)
 SOURCES += \
-    src/formats/misc/adf.c \
     src/formats/misc/adz.c \
     src/formats/misc/cqm.c \
     src/formats/misc/dcp_dcu.c \
@@ -1647,7 +1637,6 @@ SOURCES += \
 # Legacy (4 files)
 SOURCES += \
     src/formats/legacy/uft_altair_hd.c \
-    src/formats/legacy/uft_fdi.c \
     src/formats/legacy/uft_imd.c
 
 # Logical (1 files)

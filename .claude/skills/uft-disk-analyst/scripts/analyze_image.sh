@@ -55,7 +55,7 @@ with open(path, 'rb') as fh:
 
 # Signatur -> (Offset, Plugin-Quelle im Baum). Nur was UFT wirklich kennt.
 MAGIC = [
-    (b"GCR-1541",         0, "g64   src/formats/commodore/g64.c"),
+    (b"GCR-1541",         0, "g64   src/formats/g64/uft_g64.c"),
     (b"HXCPICFE",         0, "hfe   src/formats/hfe/uft_hfe.c:39"),
     (b"HXCHFEV3",         0, "hfe   src/formats/hfe/uft_hfe.c:40 (v3)"),
     (b"SCP",              0, "scp   src/formats/flux/scp.c:62"),
