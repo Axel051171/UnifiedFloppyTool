@@ -83,6 +83,7 @@ extern "C" {
  *             Spur 79/0 von `sps_lethalxcess_a.ipf` mit **35**
  *             Bloecken. Ein Strom aus 16 davon waere kuerzer als
  *             `track_bits` — also gibt es keinen.
+ *             NACHGETRAGEN MF-1385: die Grenze gibt es seit MF-1373 nicht mehr — die Bloecke werden angelegt, so viele wie der DATA-Satz traegt (P3-361 Weg b); am Korpus belegt: Spur 79/0 baut alle 35.
  */
 int uft_ipf_zellstrom(const ipf_air_disk_t *disk, int cyl, int head,
                       uint8_t **out_buf, uint32_t *out_bits);

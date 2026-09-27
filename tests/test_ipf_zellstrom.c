@@ -219,10 +219,17 @@ int main(void)
         snprintf(det, sizeof det,
                  "%u gebaut, %u ohne Bloecke, %u gekappt, %u falsch, "
                  "%llu Bit", gebaut, ohne_bloecke, gekappt, falsch, summe);
-        pruefe("Diskette A: 159 Spuren gebaut, jede genau so lang wie ihr "
-               "eigenes trackbits - 4 ohne Bloecke, 1 gekappt, 0 falsch",
-               gebaut == 159 && ohne_bloecke == 4 && gekappt == 1
-               && falsch == 0 && summe == 16106832ULL, det);
+        /* NACHGEZOGEN MF-1385: hier stand „159 Spuren gebaut … 1
+         * gekappt", summe 16 106 832 — Spur 79/0 (35 Bloecke) fiel an
+         * IPF_MAX_BLOCKS 16 (P3-361). Seit MF-1380 haelt der Leser alle
+         * 35; gemessen 160 gebaut, 0 gekappt, 0 falsch, und die Summe
+         * waechst um GENAU 101 296 Bit, das trackbits von 79/0. Die
+         * Zusage „jede so lang wie ihr eigenes trackbits" traegt also
+         * auch die neue Spur. */
+        pruefe("Diskette A: 160 Spuren gebaut, jede genau so lang wie ihr "
+               "eigenes trackbits - 4 ohne Bloecke, 0 gekappt, 0 falsch",
+               gebaut == 160 && ohne_bloecke == 4 && gekappt == 0
+               && falsch == 0 && summe == 16208128ULL, det);
     }
     {
         unsigned gebaut = 0, ohne = 0, falsch = 0;
@@ -330,7 +337,9 @@ int main(void)
                "benachbarten 1-Zellen und hoechstens drei Nullen am "
                "Stueck - vor dem Zwischenraum-Fix waren es 587 bzw. "
                "760 unmoegliche Paare",
-               sa == 159 && sb == 160 && pa == 0 && pb == 0
+               /* MF-1385: A hat jetzt 160 gebaute Spuren (vorher 159,
+                * siehe oben) — und die neue haelt die Regel ebenfalls. */
+               sa == 160 && sb == 160 && pa == 0 && pb == 0
                && na == 3 && nb2 == 3, det);
     }
 
@@ -347,11 +356,15 @@ int main(void)
                  "rc=%d buf=%s bits=%u | loss rc=%d %u angesagt, %u "
                  "gehalten, gekappt=%d", rc, buf ? "gesetzt" : "NULL",
                  bits, lrc, angesagt, gehalten, (int)gekappt);
-        pruefe("Spur 79/0 sagt mit -3 ab UND gibt nichts aus - die Datei "
-               "sagt 35 Bloecke an, IPF_MAX_BLOCKS ist 16 (MF-830, erster "
-               "beobachteter Fall)",
-               rc == -3 && buf == NULL && bits == 0 && lrc == 0
-               && angesagt == 35u && gehalten == 16u && gekappt, det);
+        /* NACHGEZOGEN MF-1385: hier stand „Spur 79/0 sagt mit -3 ab
+         * UND gibt nichts aus — 35 angesagt, IPF_MAX_BLOCKS ist 16"
+         * (MF-830, P3-361). Das war richtig, solange die Grenze stand;
+         * MF-1380 haelt alle 35. Gemessen: rc 0, 101 296 Bit, 35 von 35
+         * gehalten, nichts gekappt. */
+        pruefe("Spur 79/0 baut ALLE 35 angesagten Bloecke - 101 296 Bit, "
+               "nichts gekappt (P3-361 behoben mit MF-1380)",
+               rc == 0 && buf != NULL && bits == 101296u && lrc == 0
+               && angesagt == 35u && gehalten == 35u && !gekappt, det);
     }
 
     /* ── 5. Der Weg durch das PLUGIN, nicht nur durch die Funktion ── */
@@ -384,10 +397,13 @@ int main(void)
             } else {
                 snprintf(det, sizeof det, "raw_data=%s raw_size=%u",
                          t.raw_data ? "da" : "NULL", (unsigned)t.raw_size);
-                pruefe("read_track(79,0) liefert die Metadaten und LAESST "
-                       "raw_data leer - ein gekuerzter Strom waere eine "
-                       "erfundene Spur",
-                       t.raw_data == NULL && t.raw_size == 0, det);
+                /* NACHGEZOGEN MF-1385: hier stand „LAESST raw_data leer —
+                 * ein gekuerzter Strom waere eine erfundene Spur". Die
+                 * Absage war richtig; seit MF-1380 ist der Strom nicht
+                 * mehr gekuerzt. 12 662 Byte = 101 296 Bit / 8. */
+                pruefe("read_track(79,0) reicht den VOLLEN Zellstrom heraus "
+                       "- 12 662 Byte (101 296 Bit)",
+                       t.raw_data != NULL && t.raw_size == 12662u, det);
                 uft_track_release(&t);
             }
             uft_format_plugin_ipf.close(&disk);
