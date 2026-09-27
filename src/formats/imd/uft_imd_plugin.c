@@ -171,14 +171,31 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         if (head_raw & 0x40) { head_map = p->data + pos; pos += nsec; }
 
         /* sector data */
-        for (int s = 0; s < nsec && pos < p->size; s++) {
-            uint8_t dtype = p->data[pos++];
+        for (int s = 0; s < nsec; s++) {
             /* The ID is what the sector header says: numbering map as is
              * (uft_format_add_sector() would add 1 — it takes an INDEX),
              * cylinder/head from their maps when present. */
             const uint8_t id_sec = sec_map[s];
             const uint8_t id_cyl = cyl_map ? cyl_map[s] : (uint8_t)cyl;
             const uint8_t id_head = head_map ? head_map[s] : (uint8_t)head;
+            /* P3-558 / H-30 step 2 (MF-1371): the record head names this
+             * sector, the FILE ends before its data (or its type byte).
+             * Before, the loop stopped at `pos < size` and the rest of the
+             * record vanished silently. The sector is reported with its ID,
+             * the bytes that are in the file kept, the rest filled — and
+             * marked TRUNCATED: the source ended, nothing is said about the
+             * medium. Rot-Beweis: test_imd_sektor_ids, Faelle 4 und 5. */
+            if (pos >= p->size) {
+                if (is_target) {
+                    uint8_t fill[8192];
+                    memset(fill, 0xE5, ss);
+                    uft_format_add_sector_with_id(track, id_sec, fill, ss,
+                                                  id_cyl, id_head);
+                    uft_format_mark_last_truncated(track);
+                }
+                continue;
+            }
+            uint8_t dtype = p->data[pos++];
             if (dtype == 0) {
                 /* "Sector data unavailable - could not be read": the sector
                  * header exists, its data does not. The fill stays (no bit
@@ -200,24 +217,43 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             bool compressed = (dtype == 2 || dtype == 4 || dtype == 6 || dtype == 8);
             bool is_deleted = (dtype >= 3 && dtype <= 4) || (dtype >= 7);
             bool is_crc_err = (dtype >= 5);
+            bool angelegt = false;
             if (compressed) {
-                if (is_target && pos < p->size) {
+                if (is_target) {
                     uint8_t fill_buf[8192];
-                    memset(fill_buf, p->data[pos], ss);
+                    const bool da = pos < p->size;
+                    memset(fill_buf, da ? p->data[pos] : 0xE5, ss);
                     uft_format_add_sector_with_id(track, id_sec, fill_buf, ss,
                                                   id_cyl, id_head);
+                    if (!da) uft_format_mark_last_truncated(track);
+                    angelegt = true;
                 }
                 pos += 1;
             } else {
-                if (is_target && pos + ss <= p->size) {
-                    uft_format_add_sector_with_id(track, id_sec,
-                                                  p->data + pos, ss,
-                                                  id_cyl, id_head);
+                if (is_target) {
+                    if (pos + ss <= p->size) {
+                        uft_format_add_sector_with_id(track, id_sec,
+                                                      p->data + pos, ss,
+                                                      id_cyl, id_head);
+                    } else {
+                        /* cut inside the data: keep what the file holds */
+                        uint8_t teil[8192];
+                        const size_t da = p->size - pos;
+                        memcpy(teil, p->data + pos, da);
+                        memset(teil + da, 0xE5, ss - da);
+                        uft_format_add_sector_with_id(track, id_sec, teil, ss,
+                                                      id_cyl, id_head);
+                        uft_format_mark_last_truncated(track);
+                    }
+                    angelegt = true;
                 }
                 pos += ss;
             }
-            /* Propagate IMD sector status flags */
-            if (is_target && track->sector_count > 0) {
+            /* Propagate IMD sector status flags — only onto the sector
+             * created in THIS iteration. Before MF-1371 a sector whose data
+             * lay past the end was not created, and its flags hit the
+             * PREVIOUS one (measured: a "deleted" mark moved one back). */
+            if (angelegt && track->sector_count > 0) {
                 if (is_crc_err)
                     uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
                 if (is_deleted)

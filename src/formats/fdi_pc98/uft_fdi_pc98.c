@@ -271,7 +271,7 @@ static uft_error_t fdi_pc98_read_track(uft_disk_t *disk, int cyl, int head,
         if (kurz) memset(buf, 0xE5, p->sector_size);
         uft_format_add_sector(track, (uint8_t)s, buf, (uint16_t)p->sector_size,
                               (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     free(buf);
     return UFT_OK;

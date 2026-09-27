@@ -262,7 +262,7 @@ static void abgeschnitten(void) {
      * zeigte elf gute Sektoren mit erfundenen 0xE5-Bytes. Das ist die
      * Klasse MF-1001/MF-1022/MF-1038. */
     int vorn_gut = 0, vorn_fehlend = 0;
-    int hinten_gut = 0, hinten_fehlend = 0;
+    int hinten_gut = 0, hinten_fehlend = 0, hinten_abgeschnitten = 0;
     if (rc == UFT_OK) {
         uft_track_t t;
         memset(&t, 0, sizeof t);
@@ -279,6 +279,7 @@ static void abgeschnitten(void) {
             for (size_t s = 0; s < t.sector_count; s++) {
                 if (t.sectors[s].status & UFT_SECTOR_MISSING) hinten_fehlend++;
                 else hinten_gut++;
+                if (t.sectors[s].status & (1u << 9)) hinten_abgeschnitten++;
             }
         }
         uft_track_cleanup(&t);
@@ -297,6 +298,9 @@ static void abgeschnitten(void) {
            "hinter der Wiederherstellungsgrenze ist JEDER Sektor als "
            "fehlend gekennzeichnet — 0xE5-Fuellung gilt nicht als "
            "gelesenes Datum");
+    ZUSAGE(hinten_fehlend > 0 && hinten_abgeschnitten == hinten_fehlend,
+           "H-30 (MF-1371): jeder fehlende Sektor hinter der Grenze nennt "
+           "seinen Grund — die Datei endete: abgeschnitten (Bit 9)");
     ZUSAGE(vorn_gut > 0 && vorn_fehlend == 0,
            "und im wiederhergestellten Teil ist KEINER gekennzeichnet — "
            "die Kennzeichnung trifft die Grenze, nicht alles");

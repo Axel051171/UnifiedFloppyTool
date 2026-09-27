@@ -450,7 +450,7 @@ uft_error_t uft_qrst_read_mem(const uint8_t *data, size_t size,
                          * sie ist nicht da. Ohne diese Kennzeichnung
                          * waeren die genullten Bytes von echten Daten
                          * nicht zu unterscheiden. */
-                        uft_format_mark_last_missing(tr);
+                        uft_format_mark_last_unavailable(tr);
                     }
                 }
                 image->track_data[idx] = tr;

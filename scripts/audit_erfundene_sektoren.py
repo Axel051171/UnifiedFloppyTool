@@ -114,10 +114,21 @@ FUELLT = re.compile(r"memset\s*\(")
 FREAD = re.compile(r"\bfread\s*\(")
 ANLEGT = re.compile(r"uft_format_add_sector(?:_with_id)?\s*\(")
 LEER_ANLEGT = re.compile(r"uft_format_add_empty_sector\s*\(")
-# H-30: die beiden Helfer, die zusaetzlich den GRUND nennen (nicht lesbar /
-# abgeschnitten), kennzeichnen genauso — sie rufen `mark_missing` selbst.
+# H-30: die Helfer, die zusaetzlich den GRUND nennen (nicht lesbar /
+# abgeschnitten / nach `ferror` gemessen), kennzeichnen genauso — sie rufen
+# `mark_missing` selbst.
 KENNZEICHNET = re.compile(
-    r"uft_format_mark_last_(?:missing|unavailable|truncated)\s*\(")
+    r"uft_format_mark_last_(?:missing|unavailable|truncated|short_read)\s*\(")
+
+# Messung (d), H-30 Schritt 2 (MF-1371): eine Kennzeichnung OHNE Grund.
+# Seit MF-1370 bildet die Bruecke „fehlend ohne Grund" auf UNAVAILABLE ab
+# und meldet MISSING_NO_REASON — richtig als Rueckfall, falsch als Regel:
+# eine zu kurze Datei hiesse dann „nicht lesbar". Im Format-Layer muss
+# jede Kennzeichnung ihren Grund tragen. Grundlinie 0.
+OHNE_GRUND = re.compile(
+    r"\b(?:uft_format_mark_last_missing|uft_sector_mark_missing)\s*\(")
+OHNE_GRUND_DIREKT = re.compile(r"\|=\s*UFT_SECTOR_MISSING\b(?![^;]*"
+                               r"UFT_SECTOR_(?:UNAVAILABLE|TRUNCATED))")
 
 
 def entkerne(t: str) -> str:
@@ -267,10 +278,36 @@ def messe_direkt(repo: Path):
             if re.search(r"uft_sector_mark_(?:missing|unavailable|truncated)"
                          r"\s*\(\s*%s\s*\)" % re.escape(var), fenster):
                 continue
-            if re.search(r"mark_last_(?:missing|unavailable|truncated)\s*\(",
-                         fenster):
+            if re.search(r"mark_last_(?:missing|unavailable|truncated"
+                         r"|short_read)\s*\(", fenster):
                 continue
             befunde.append((rel, i + 1, var))
+    return befunde, []
+
+
+def messe_grund(repo: Path):
+    """Messung (d): Kennzeichnungen ohne Grund im Format-Layer."""
+    pfade = dateien(repo)
+    if pfade is None:
+        return None, ["Guard-frei: `git ls-files` war nicht befragbar, "
+                      "Messung (d) hat NICHTS geprueft."]
+    befunde = []
+    for rel in pfade:
+        if not rel.startswith("src/formats/"):
+            continue
+        try:
+            roh = (repo / rel).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "MISSING" not in roh and "mark_" not in roh:
+            continue
+        # comments out, but line numbers kept (entkerne() folds them)
+        t = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"),
+                   roh, flags=re.S)
+        t = re.sub(r"//[^\n]*", " ", t)
+        for i, z in enumerate(t.splitlines()):
+            if OHNE_GRUND.search(z) or OHNE_GRUND_DIREKT.search(z):
+                befunde.append((rel, i + 1))
     return befunde, []
 
 
@@ -346,6 +383,22 @@ def check(repo) -> list:
         fehler.append(
             "%d Fuellorte schreiben direkt in den Sektorpuffer, "
             "Grundlinie 0." % len(direkt))
+
+    # Messung (d), H-30 Schritt 2 — Kennzeichnung ohne Grund.
+    grund, gfehler = messe_grund(Path(repo))
+    if grund is None:
+        return fehler + gfehler
+    for rel, zeile in grund:
+        fehler.append(
+            "%s:%d: fehlend ohne Grund. Seit H-30 nennt der Format-Layer, "
+            "WARUM ein Sektor fehlt: `uft_format_mark_last_unavailable` / "
+            "`_truncated` / `_short_read(track, f)` bzw. "
+            "`uft_sector_mark_unavailable` / `_truncated`. Ohne Grund "
+            "macht die Bruecke daraus „nicht lesbar\" — bei einer zu "
+            "kurzen Datei eine Falschaussage (MF-1371)." % (rel, zeile))
+    if grund:
+        fehler.append("%d Kennzeichnungen ohne Grund, Grundlinie 0."
+                      % len(grund))
     return fehler
 
 
@@ -488,7 +541,41 @@ static void x_fuellt(uft_track_t *track, const uint8_t *data,
                 print("  ROT  (c) %-30s erwartet %d, gemessen %d"
                       % (name, soll, ist))
 
-    gesamt = len(faelle) + len(faelle_c)
+    # Messung (d), H-30 Schritt 2: Kennzeichnung ohne Grund.
+    faelle_d = [
+        ("mark_last_missing ohne Grund",
+         "if (kurz) uft_format_mark_last_missing(track);", 1),
+        ("sector_mark_missing ohne Grund",
+         "uft_sector_mark_missing(sect);", 1),
+        ("direktes |= MISSING ohne Grund",
+         "sec->status |= UFT_SECTOR_MISSING;", 1),
+        ("direktes |= MISSING MIT Grund",
+         "sec->status |= UFT_SECTOR_MISSING | UFT_SECTOR_UNAVAILABLE;", 0),
+        ("short_read nennt den Grund",
+         "if (kurz) uft_format_mark_last_short_read(track, p->file);", 0),
+        ("truncated nennt den Grund",
+         "uft_sector_mark_truncated(sect);", 0),
+        ("nur im Kommentar",
+         "/* frueher: uft_format_mark_last_missing(track); */", 0),
+        ("Abfrage ist keine Kennzeichnung",
+         "if (s->status & UFT_SECTOR_MISSING) n++;", 0),
+    ]
+    for name, zeile, soll in faelle_d:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d,
+                           capture_output=True)
+            (p / "src" / "formats" / "x").mkdir(parents=True, exist_ok=True)
+            (p / "src" / "formats" / "x" / "x.c").write_text(
+                "void f(void) {\n    %s\n}\n" % zeile, encoding="utf-8")
+            ist = len(messe_grund(p)[0])
+            if ist == soll:
+                gut += 1
+            else:
+                print("  ROT  (d) %-30s erwartet %d, gemessen %d"
+                      % (name, soll, ist))
+
+    gesamt = len(faelle) + len(faelle_c) + len(faelle_d)
     print("Selbsttest: %d/%d" % (gut, gesamt))
     return 0 if gut == gesamt else 1
 

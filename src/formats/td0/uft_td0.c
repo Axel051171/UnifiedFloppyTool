@@ -536,13 +536,14 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * einem unbekannten Verfahrensbyte ist `decoded_len`
                      * null und der ganze Sektor erfunden. */
                     /* H-30: NICHTS dekodiert (unbekanntes Verfahren) heisst
-                     * nicht lesbar. Ein TEIL dekodiert bleibt vorerst ohne
-                     * Grund — ob das „abgeschnitten" ist, entscheidet ein
-                     * eigener Rotbeweis (H-30, zweiter Schritt). */
+                     * nicht lesbar. Ein TEIL dekodiert heisst abgeschnitten
+                     * (H-30 Schritt 2, MF-1371; Rotbeweis
+                     * test_td0_erfindet_keine_sektoren::
+                     * teilweise_dekodiert_heisst_abgeschnitten). */
                     if (decoded_len == 0)
                         uft_format_mark_last_unavailable(track);
                     else if (decoded_len < sec_size)
-                        uft_format_mark_last_missing(track);
+                        uft_format_mark_last_truncated(track);
                     /* MF-1286: hier stand `sec_flags & 0x01` — und
                      * 0x01 ist DUP, die doppelte Sektor-ID, NICHT der
                      * CRC-Fehler. Die Wirkung ging in beide Richtungen:

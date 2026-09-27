@@ -107,7 +107,7 @@ static uft_error_t mpls_read_track(uft_disk_t *disk, int cyl, int head,
         if (kurz) memset(buf, 0xE5, MPLS_SS);
         uft_format_add_sector(track, (uint8_t)s, buf, MPLS_SS,
                               (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     return UFT_OK;
 }

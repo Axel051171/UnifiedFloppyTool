@@ -168,7 +168,7 @@ static uft_error_t vdk_read_track(uft_disk_t *disk, int cyl, int head, uft_track
         const bool kurz = (fread(buf, 1, VDK_SS, p->file) != VDK_SS);
         if (kurz) memset(buf, 0xE5, VDK_SS);
         uft_format_add_sector(track, (uint8_t)s, buf, VDK_SS, (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     return UFT_OK;
 }

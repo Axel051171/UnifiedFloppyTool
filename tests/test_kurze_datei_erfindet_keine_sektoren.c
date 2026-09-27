@@ -148,6 +148,10 @@ TEST(fehlende_sektoren_sind_gekennzeichnet)
         }
         /* Gekennzeichnet werden MUSS als fehlend. */
         ASSERT((t.sectors[s].status & UFT_SECTOR_MISSING) != 0);
+        /* H-30 step 2 (MF-1371): and with its reason — the file ended,
+         * no read error: truncated (bit 9), not unavailable (bit 8). */
+        ASSERT((t.sectors[s].status & (1u << 9)) != 0);
+        ASSERT((t.sectors[s].status & (1u << 8)) == 0);
     }
 
     sektoren_frei(&t);

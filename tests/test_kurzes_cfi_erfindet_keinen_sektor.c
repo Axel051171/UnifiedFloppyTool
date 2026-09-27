@@ -170,6 +170,10 @@ int main(void)
     pruefe("Sektor 2 ist NICHT als gelesen gekennzeichnet",
            (erfunden->status & UFT_SECTOR_MISSING) != 0,
            hinweis);
+    pruefe("H-30 (MF-1371): und mit Grund — die Datei endete, abgeschnitten",
+           (erfunden->status & (1u << 9)) != 0
+           && (erfunden->status & (1u << 8)) == 0,
+           "der fehlende Sektor nennt keinen oder den falschen Grund");
 
     uft_disk_free(disk);
     printf("\n%d gruen, %d rot\n", gruen, rot);

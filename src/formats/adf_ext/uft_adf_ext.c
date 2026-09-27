@@ -180,7 +180,7 @@ static uft_error_t adfext_read_track(uft_disk_t *disk, int cyl, int head,
             /* AmigaDOS sectors are 0-based (ARCH-20) */
             uft_format_add_sector_with_id(track, (uint8_t)s, buf, 512,
                                   (uint8_t)cyl, (uint8_t)head);
-            if (kurz) uft_format_mark_last_missing(track);
+            if (kurz) uft_format_mark_last_short_read(track, p->file);
         }
     } else {
         /* Raw MFM (type 1): preserve the uninterpreted bitstream so the

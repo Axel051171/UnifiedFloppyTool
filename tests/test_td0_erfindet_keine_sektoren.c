@@ -142,6 +142,59 @@ static int baue_td0(const char *pfad)
     return 1;
 }
 
+/* H-30 step 2: one sector whose method-1 record ("repeat", 2-byte count
+ * + 2-byte pattern) expands to 10 x 2 = 20 of 128 bytes. A PART was
+ * decoded — the reason is "truncated" (bit 9), not "unavailable" (bit 8).
+ * Kept in its own file so the IMD test below keeps its fixture. */
+static int baue_td0_teil(const char *pfad)
+{
+    FILE *f = fopen(pfad, "wb");
+    if (!f) return 0;
+    uint8_t kopf[12] = {0};
+    kopf[0] = 'T'; kopf[1] = 'D'; kopf[4] = 0x15; kopf[9] = 1;
+    fwrite(kopf, 1, sizeof(kopf), f);
+    uint8_t sk[4] = {1, 0, 0, 0};
+    fwrite(sk, 1, sizeof(sk), f);
+    uint8_t s1[6] = {0, 0, 1, 0, 0x00, 0};
+    fwrite(s1, 1, sizeof(s1), f);
+    uint8_t len[2] = {5, 0};
+    fwrite(len, 1, 2, f);
+    uint8_t roh[5] = {1, 10, 0, 0x5A, 0xA5};   /* count 10, pattern 5A A5 */
+    fwrite(roh, 1, sizeof(roh), f);
+    uint8_t ende = 0xFF;
+    fwrite(&ende, 1, 1, f);
+    fclose(f);
+    return 1;
+}
+
+TEST(teilweise_dekodiert_heisst_abgeschnitten)
+{
+    char pfad[400];
+    temp_pfad(pfad, sizeof(pfad));
+    ASSERT(baue_td0_teil(pfad));
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    ASSERT(uft_format_plugin_td0.open(&disk, pfad, true) == UFT_OK);
+
+    uft_track_t t;
+    memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_td0.read_track(&disk, 0, 0, &t) == UFT_OK);
+    ASSERT(t.sector_count == 1);
+    ASSERT(t.sectors[0].data != NULL);
+    /* the fixture really reached the partial branch */
+    ASSERT(t.sectors[0].data[0] == 0x5A && t.sectors[0].data[19] == 0xA5);
+    ASSERT(t.sectors[0].data[20] == 0x00);
+    ASSERT((t.sectors[0].status & UFT_SECTOR_MISSING) != 0);
+    ASSERT((t.sectors[0].status & (1u << 9)) != 0);   /* TRUNCATED */
+    ASSERT((t.sectors[0].status & (1u << 8)) == 0);   /* not UNAVAILABLE */
+
+    sektoren_frei(&t);
+    uft_format_plugin_td0.close(&disk);
+    remove(pfad);
+}
+
 TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
 {
     char pfad[400];
@@ -300,6 +353,7 @@ int main(void)
     printf("=== TD0 erfindet keine Sektoren (MF-981) ===\n");
     RUN(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen);
     RUN(fehlender_sektor_wird_in_imd_nicht_zu_daten);
+    RUN(teilweise_dekodiert_heisst_abgeschnitten);
     printf("\n%d passed, %d failed\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

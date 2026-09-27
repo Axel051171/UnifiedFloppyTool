@@ -100,7 +100,7 @@ static uft_error_t ns_read_track(uft_disk_t *disk, int cyl, int head,
         if (kurz) memset(buf, 0xE5, ss);
         uft_format_add_sector(track, (uint8_t)s, buf, ss,
                               (uint8_t)cyl, 0);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     return UFT_OK;
 }

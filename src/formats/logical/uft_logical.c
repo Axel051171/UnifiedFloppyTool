@@ -245,7 +245,7 @@ uft_error_t uft_logical_read_mem(const uint8_t *data, size_t size,
                          * Zeile sind erfundene 0xE5 von echten nicht zu
                          * unterscheiden — und `status` stand schon auf
                          * OK (MF-980). */
-                        uft_sector_mark_missing(sect);
+                        uft_sector_mark_truncated(sect);
                     }
                 }
                 track->sector_count++;

@@ -328,12 +328,126 @@ static void t_zylinder_und_kopfkarte(void)
     spur_frei(&t);
 }
 
+/* Keep only the first `n` bytes of `pfad`. */
+static int kuerzen(const char *pfad, size_t n)
+{
+    size_t groesse = 0;
+    uint8_t *d = datei_lesen(pfad, &groesse);
+    if (!d || n > groesse) { free(d); return 0; }
+    FILE *f = fopen(pfad, "wb");
+    if (!f) { free(d); return 0; }
+    const int ok = fwrite(d, 1, n, f) == n;
+    fclose(f);
+    free(d);
+    return ok;
+}
+
+/* P3-558 / H-30 step 2 (MF-1371): a file cut INSIDE a track record. The
+ * record head (numbering map) names four sectors; the file ends in the
+ * middle of the third one's data. The sectors are there on the medium —
+ * the FILE ended. Before: two sectors came back, the other two vanished
+ * silently, and the third one's "deleted" flag landed on the SECOND. */
+static void t_abgeschnittener_satz(void)
+{
+    puts("4. Satz mit 4 Sektoren, Datei endet in Sektor 3 (P3-558)");
+    char pfad[1024];
+    wegwerf_pfad(pfad, sizeof pfad, "imd_kurz");
+    const uint8_t karte[4] = { 1, 2, 3, 4 };
+    const uint8_t typen[4] = { 1, 1, 3, 1 };   /* normal, normal, deleted, normal */
+    if (!imd_schreiben(pfad, 0, 0, 4, karte, NULL, NULL, typen)) {
+        pruefe("Wegwerf-Datei anlegbar", 0, pfad);
+        return;
+    }
+    /* comment 30 + 0x1A + head 5 + map 4, then 2 x (1 + 128), then the
+     * type byte of sector 3 and 50 of its 128 data bytes */
+    const size_t schnitt = 30 + 1 + 5 + 4 + 2 * 129 + 1 + 50;
+    if (!kuerzen(pfad, schnitt)) {
+        pruefe("Wegwerf-Datei kuerzbar", 0, pfad);
+        remove(pfad);
+        return;
+    }
+    uft_track_t t;
+    const int ok = lesen(pfad, 0, 0, &t);
+    char h[200];
+    snprintf(h, sizeof h, "rc ok=%d, %zu Sektoren", ok, t.sector_count);
+    pruefe("der Satzkopf nennt 4 Sektoren — alle 4 werden gemeldet",
+           ok && t.sector_count == 4, h);
+    if (ok && t.sector_count == 4) {
+        pruefe("Sektor 1 und 2 stehen ganz in der Datei: gelesen",
+               (t.sectors[0].status & UFT_SECTOR_MISSING) == 0
+               && (t.sectors[1].status & UFT_SECTOR_MISSING) == 0,
+               "ein vollstaendiger Sektor gilt als fehlend");
+        pruefe("Sektor 3 (angeschnitten) und 4 (hinter dem Ende): "
+               "fehlend, Grund abgeschnitten",
+               (t.sectors[2].status & UFT_SECTOR_MISSING)
+               && (t.sectors[2].status & UFT_SECTOR_TRUNCATED)
+               && (t.sectors[3].status & UFT_SECTOR_MISSING)
+               && (t.sectors[3].status & UFT_SECTOR_TRUNCATED),
+               "ein Sektor hinter dem Dateiende nennt keinen Grund");
+        pruefe("ihre IDs kommen aus der Nummernkarte (3, 4)",
+               t.sectors[2].id.sector == 3 && t.sectors[3].id.sector == 4,
+               "die ID eines abgeschnittenen Sektors ist nicht die der Karte");
+    }
+    pruefe("die Loeschmarke von Sektor 3 landet NICHT auf Sektor 2",
+           ok && t.sector_count >= 2 && !t.sectors[1].deleted,
+           "Flaggen eines nicht angelegten Sektors trafen den vorigen");
+    spur_frei(&t);
+    remove(pfad);
+}
+
+/* The same at a real file: hxcfe_pc160.imd, cut in half. The last record
+ * the geometry scan sees is the cut one; its track must report the
+ * sectors its head names, the tail ones as truncated. */
+static void t_fremde_datei_halbiert(void)
+{
+    puts("5. hxcfe_pc160.imd, halbiert (P3-558)");
+    size_t n = 0;
+    uint8_t *d = datei_lesen(UFT_CORPUS_FREE_DIR "/hxcfe_pc160.imd", &n);
+    if (!d) { puts("   (Korpus fehlt — uebersprungen, benannt)"); return; }
+    char pfad[1024];
+    wegwerf_pfad(pfad, sizeof pfad, "imd_halb");
+    FILE *f = fopen(pfad, "wb");
+    const int geschrieben = f && fwrite(d, 1, n / 2, f) == n / 2;
+    if (f) fclose(f);
+    free(d);
+    if (!geschrieben) { pruefe("Wegwerf-Datei anlegbar", 0, pfad); return; }
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    if (uft_format_plugin_imd.open(&disk, pfad, true) != UFT_OK) {
+        pruefe("halbe Datei oeffnet", 0, pfad);
+        remove(pfad);
+        return;
+    }
+    const int letzte = (int)disk.geometry.cylinders - 1;
+    uft_track_t t;
+    memset(&t, 0, sizeof t);
+    const int ok = uft_format_plugin_imd.read_track(&disk, letzte, 0, &t) == UFT_OK;
+    uft_format_plugin_imd.close(&disk);
+    size_t abgeschnitten = 0, gut_danach = 0;
+    for (size_t s = 0; s < t.sector_count; s++) {
+        if (t.sectors[s].status & UFT_SECTOR_TRUNCATED) abgeschnitten++;
+        else if (abgeschnitten) gut_danach++;
+    }
+    char h[200];
+    snprintf(h, sizeof h, "Zyl %d: %zu Sektoren, %zu abgeschnitten, "
+             "%zu gut hinter dem Schnitt", letzte, t.sector_count,
+             abgeschnitten, gut_danach);
+    printf("   %s\n", h);
+    pruefe("die angeschnittene Spur meldet 8 Sektoren, der Rest abgeschnitten",
+           ok && t.sector_count == 8 && abgeschnitten > 0 && gut_danach == 0, h);
+    spur_frei(&t);
+    remove(pfad);
+}
+
 int main(void)
 {
     puts("=== IMD: die gemeldete ID ist die ID der Datei (P0-18, Referenz MAME imd_dsk.cpp) ===");
     t_fremde_datei();
     t_nicht_verfuegbar_und_fremde_nummern();
     t_zylinder_und_kopfkarte();
+    t_abgeschnittener_satz();
+    t_fremde_datei_halbiert();
     printf("\n%d gruen, %d rot\n", gruen, rot);
     return rot ? 1 : 0;
 }

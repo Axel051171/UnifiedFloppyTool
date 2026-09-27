@@ -220,7 +220,7 @@ uft_error_t uft_myz80_read_mem(const uint8_t *data, size_t size,
                  * Sektor wird deshalb gekennzeichnet — der Aufrufer
                  * bekommt die Bytes UND die Auskunft, dass sie nicht
                  * in der Datei standen. */
-                uft_format_mark_last_missing(tr);
+                uft_format_mark_last_truncated(tr);
             }
         }
         if (zylinder_ganz_fehlt) zyl_gefuellt++;

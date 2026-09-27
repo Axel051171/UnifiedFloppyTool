@@ -314,7 +314,7 @@ static uft_error_t sap_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             memset(fill_buf, 0xE5, sizeof(fill_buf));
             uft_format_add_sector(track, (uint8_t)s, fill_buf,
                                   p->sector_size, (uint8_t)cyl, 0);
-            uft_format_mark_last_missing(track);
+            uft_format_mark_last_truncated(track);
             continue;
         }
 
