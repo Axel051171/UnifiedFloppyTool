@@ -663,6 +663,76 @@ static void smoke_detect_drive_no_rpm_in_output() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+ *  A-035 DTC-6 (MF-1434): "Device not found" with exit code 0
+ *
+ *  MEASURED 2026-09-27 on the owner's package
+ *  neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz (dtc v3.50 Linux
+ *  x86-64, run under WSL with no device attached): `dtc -i0` — the exact
+ *  call of do_detect_drive() — exits with **0**, writes nothing to stdout
+ *  and `Device not found\n` (17 bytes) to stderr. The provider only looked
+ *  at the exit code and reported a DriveDetected ("Unknown (no RPM
+ *  signal)", firmware "version unknown") for a KryoFlux that is not there.
+ *  Whether the Windows build exits the same way is NOT measured.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+static void smoke_detect_drive_device_not_found_exit_zero() {
+    SubprocessMock mock;
+    mock.queue_run(SubprocessMock::ScriptedRun{
+        { "dtc", "-i0" },
+        "",                       /* stdout: empty, as measured */
+        "Device not found\n",     /* stderr: verbatim, as measured */
+        0                         /* exit code: 0, as measured */
+    });
+
+    KryoFluxProviderV2 p(make_runner(mock), "dtc");
+    auto outcome = p.detect_drive();
+
+    bool detected = false, error = false;
+    std::visit(overloaded{
+        [&](const DriveDetected&)            { detected = true; },
+        [&](const DriveAbsent&)              {},
+        [&](const CapabilityRequiresPolicy&) {},
+        [&](const HardwareDisconnected&)     {},
+        [&](const ProviderError& e)          {
+            error = true;
+            assert(e.why.find("Device not found") != std::string::npos
+                   && "the error must quote what DTC said");
+        },
+    }, outcome);
+
+    if (detected)
+        std::cerr << "ROT: 'Device not found' with exit 0 became DriveDetected\n";
+    assert(!detected && "no device must never be reported as a detected drive");
+    assert(error && "'Device not found' must be a ProviderError");
+    mock.assert_consumed();
+
+    /* The read path: same answer, same exit code. Before, the missing
+     * stream file was reported as "DTC wrote no stream file" — true, but
+     * the cause (no board) was not named. */
+    SubprocessMock mock2;
+    mock2.queue_run(SubprocessMock::ScriptedRun{
+        { "dtc" }, "", "Device not found\n", 0 });
+    KryoFluxProviderV2 p2(make_runner(mock2), "dtc");
+    auto gelesen = p2.read_raw_flux(ReadFluxParams{5, 0, 2, 0});
+    bool benannt = false;
+    std::visit(overloaded{
+        [&](const FluxCaptured&)             {},
+        [&](const FluxMarginal&)             {},
+        [&](const FluxUnreadable&)           {},
+        [&](const CapabilityRequiresPolicy&) {},
+        [&](const HardwareDisconnected&)     {},
+        [&](const ProviderError& e)          {
+            benannt = e.what.find("not connected") != std::string::npos
+                   && e.why.find("Device not found") != std::string::npos;
+        },
+    }, gelesen);
+    if (!benannt)
+        std::cerr << "ROT: read path does not name the missing board\n";
+    assert(benannt && "read path must name 'KryoFlux not connected'");
+    mock2.assert_consumed();
+}
+
+/* ────────────────────────────────────────────────────────────────────────
  *  Entry
  * ──────────────────────────────────────────────────────────────────────── */
 
@@ -680,6 +750,7 @@ int main() {
     smoke_out_of_range_head();
     smoke_provider_error_3part_contract();
     smoke_detect_drive_no_rpm_in_output();
+    smoke_detect_drive_device_not_found_exit_zero();
 
     std::cout << "test_kryoflux_provider_v2: 0 errors, V2 provider type-shape sound.\n";
     return 0;

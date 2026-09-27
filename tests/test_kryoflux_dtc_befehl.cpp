@@ -446,6 +446,62 @@ static void der_schreibbefehl_weist_unsinn_ab()
     uft_kf_config_destroy(cfg);
 }
 
+/* A-035 (MF-1434): der zweite Bauer gibt die Umdrehungen ebenfalls weiter.
+ *
+ * MF-1386 hat `-r<n>` im C++-Bauer eingefuehrt und die C-Huelle benannt,
+ * nicht angefasst: sie fuehrt `cfg->revolutions` (Vorgabe 5, gesetzt aus
+ * den Plattform-Presets und `uft_kf_set_revolutions()`), gab den Wert aber
+ * nie an DTC. Zwei Bauer derselben Zeile (MF-1177) werden hier am
+ * selben Wort gehalten: dieselbe Zahl ergibt in beiden dasselbe `-r<n>`. */
+static std::string c_befehl_umdrehungen(int track, int side, int revs)
+{
+    uft_kf_config_t *cfg = uft_kf_config_create();
+    assert(cfg != nullptr);
+    uft_kf_set_dtc_path(cfg, "/kein/dtc/hier/dtc");
+    const int rc = uft_kf_set_revolutions(cfg, revs);
+    assert(rc == 0);
+    (void)rc;
+    char cmd[2048] = { 0 };
+    uft_kf_build_capture_command(cfg, track, side, cmd, sizeof(cmd));
+    uft_kf_config_destroy(cfg);
+    return std::string(cmd);
+}
+
+static size_t vorkommen(const std::string& h, const std::string& n)
+{
+    size_t k = 0;
+    for (size_t p = h.find(n); p != std::string::npos; p = h.find(n, p + 1))
+        ++k;
+    return k;
+}
+
+static void die_c_huelle_gibt_die_umdrehungen_weiter()
+{
+    const std::string c3 = c_befehl_umdrehungen(7, 1, 3);
+    PRUEFE(vorkommen(c3, " -r3") == 1,
+           "C-Huelle: 3 Umdrehungen erreichen DTC als -r3, genau einmal");
+    PRUEFE(vorkommen(c3, " -r") == 1, "C-Huelle: genau ein -r");
+
+    /* Handbuch S. 14: -r ist GLOBAL; hier steht es vor dem ersten
+     * bild-lokalen Schalter -f, wie im C++-Bauer. */
+    const size_t r = c3.find(" -r3"), f = c3.find(" -f\"");
+    PRUEFE(r != std::string::npos && f != std::string::npos && r < f,
+           "C-Huelle: -r steht im globalen Teil, vor -f");
+
+    /* Gleichlauf mit dem C++-Bauer: dieselbe Zahl, dasselbe Wort. */
+    const auto argv3 = lese_argv_rev(7, 1, 3);
+    PRUEFE(hat(argv3, "-r3") && vorkommen(c3, " -r3") == 1,
+           "beide Bauer: 3 Umdrehungen -> -r3");
+
+    /* Die Vorgabe der Huelle (5) ist eine Anforderung, keine Leerstelle —
+     * sie steht in der Konfiguration und erreicht DTC jetzt auch. */
+    const std::string c5 = c_befehl(7, 1, false);
+    PRUEFE(vorkommen(c5, " -r5") == 1,
+           "C-Huelle: die Vorgabe 5 Umdrehungen erreicht DTC als -r5");
+
+    if (g_fail) std::printf("    Befehl war: %s\n", c3.c_str());
+}
+
 int main()
 {
     std::printf("=== KryoFlux: DTC-Befehl gegen das Handbuch (MF-1046) ===\n");
@@ -459,6 +515,7 @@ int main()
     std::printf("--- der zweite Bauer: die C-Huelle ---\n");
     die_c_huelle_nennt_dieselben_optionen();
     die_c_huelle_haelt_die_reihenfolge();
+    die_c_huelle_gibt_die_umdrehungen_weiter();
     der_spurabstand_steht_an_seiner_option();
 
     std::printf("--- die Schreibseite ---\n");

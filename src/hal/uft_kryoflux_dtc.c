@@ -594,6 +594,18 @@ int uft_kf_build_capture_command(const uft_kf_config_t *cfg, int track, int side
         len += snprintf(cmd + len, cmd_size - (size_t)len, " -t%d",
                         cfg->retry_count);
     }
+    if (cfg->revolutions > 0) {
+        /* A-035 (MF-1434): die Umdrehungen erreichen DTC. Handbuch
+         * KryoFlux Release 3.50: „-r<rev> : set number of revolutions to
+         * sample"; die Reihenfolge-Regel fuehrt „Revolutions (-r)" unter
+         * den GLOBALEN Einstellungen. `cfg->revolutions` stand hier seit
+         * jeher in der Konfiguration (Presets, uft_kf_set_revolutions())
+         * und wurde nie weitergegeben — MF-1386 hat es im C++-Bauer
+         * behoben und diese Stelle benannt. Den Gleichlauf beider Bauer
+         * haelt test_kryoflux_dtc_befehl.cpp. */
+        len += snprintf(cmd + len, cmd_size - (size_t)len, " -r%d",
+                        cfg->revolutions);
+    }
 
     /* Bild-lokale Einstellungen: muessen VOR -i stehen. */
     len += snprintf(cmd + len, cmd_size - (size_t)len, " -f\"%s%strack\"",
