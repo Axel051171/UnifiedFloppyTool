@@ -320,9 +320,45 @@ static uint8_t imd_groessencode(size_t bytes)
     return 0xFF;
 }
 
+bool uft_td0_erste_gemischte_spur(const uft_td0_strom_t *s,
+                                  unsigned *cyl, unsigned *head)
+{
+    if (!s) return false;
+    const unsigned koepfe = s->sides ? s->sides : 1u;
+    for (unsigned c = 0; c < s->zylinder; c++) {
+        for (unsigned h = 0; h < koepfe; h++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_td0_strom_spur(s, (int)c, (int)h, &t) != UFT_OK) continue;
+            bool gemischt = false, hat_bezug = false;
+            size_t bezug = 0;
+            for (size_t k = 0; k < t.sector_count && !gemischt; k++) {
+                const uft_sector_t *p = &t.sectors[k];
+                if (!p->data || p->data_len == 0) continue;
+                if (!hat_bezug) { bezug = p->data_len; hat_bezug = true; }
+                else if (p->data_len != bezug) gemischt = true;
+            }
+            uft_track_cleanup(&t);
+            if (gemischt) {
+                if (cyl) *cyl = c;
+                if (head) *head = h;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int uft_td0_to_imd(const uft_td0_strom_t *s, struct uft_imd_image_t *imd_aus)
 {
     uft_imd_image_t *imd = (uft_imd_image_t *)imd_aus;
+
+    /* MF-1384: a track with mixed sector sizes is REFUSED, as ImageDisk's
+     * own TD02IMD does (Dunfield, TD02IMD.C:907-908). Before, the whole
+     * track was flattened to the first sector's size and smaller sectors
+     * were padded with zeros — invented bytes in a sector (P3-524). */
+    if (uft_td0_erste_gemischte_spur(s, NULL, NULL))
+        return UFT_ERROR_NOT_SUPPORTED;
     if (!s || !imd) return -1;
     if (uft_imd_init(imd) != UFT_OK) return -1;
 
@@ -379,14 +415,22 @@ int uft_td0_to_imd(const uft_td0_strom_t *s, struct uft_imd_image_t *imd_aus)
             it->header.nsectors = (uint8_t)nsec;
 
             /* Die Spur bekommt EINE Sektorgroesse — die des ersten.
-             * TD0 laesst je Sektor eine eigene zu, IMD ebenfalls
-             * (`has_varsizes`), und dieser Wandler nutzt das nicht:
-             * gemischte Groessen werden auf die erste geebnet. Das ist
-             * das Merkmal VAR_SECTOR_SZ aus `uft_format_traegt()` und
-             * damit ein benannter Verlust, kein stiller — siehe
-             * P3-524. */
+             * BERICHTIGT MF-1384: hier stand, IMD lasse je Sektor eine
+             * eigene zu (`has_varsizes`) und gemischte Groessen wuerden
+             * „benannt" geebnet. IMD fuehrt eine Groesse je Spurkopf
+             * (Dunfield TD02IMD.C:907-908), und die Ebnung fuellte
+             * kleinere Sektoren mit Nullen auf. Gemischte Spuren sind
+             * deshalb oben abgesagt; hier sind alle Datengroessen gleich.
+             *
+             * Ebenso abgesagt statt still auf 512 gesetzt: eine Groesse
+             * ohne IMD-Code (nicht 128 << 0..6). TD0 kennt nur solche
+             * Codes; ein anderer Wert waere ein kaputter Strom. */
             uint8_t code = imd_groessencode(t.sectors[0].data_len);
-            if (code == 0xFF) code = 2;             /* 512, wie bisher */
+            if (code == 0xFF) {
+                uft_track_cleanup(&t);
+                uft_imd_free(imd);
+                return UFT_ERROR_NOT_SUPPORTED;
+            }
             it->header.sector_size = code;
             it->header.mode = guess_imd_mode_mfm(it->header.nsectors, code);
 

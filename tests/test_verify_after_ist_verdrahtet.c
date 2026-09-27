@@ -290,18 +290,32 @@ static void t4_die_verdrahtung_ist_lebendig(void)
     for (int i = 0; i < mit.warning_count && i < 8; i++)
         printf("        W%d: %s\n", i, mit.warnings[i]);
 
-    CHECK(ohne.success,
-          "OHNE Nachpruefung meldet die Ebnung aus P3-524 weiterhin Erfolg "
-          "— genau das ist der stille Verlust");
-    CHECK(!mit.success,
-          "MIT Nachpruefung muss der Erfolg zurueckgenommen werden. Faellt "
-          "diese Zusage, ist der Aufruf im Verteiler verschwunden — sie IST "
-          "der Rotbeweis nach Regel D2");
-    CHECK(mit.error == UFT_ERROR_VERIFY_FAILED,
-          "und der Fehlerkode muss die Nachpruefung nennen, gemessen %d",
-          (int)mit.error);
-    CHECK(nennt_die_nachpruefung(&mit),
-          "eine Warnung muss `verify_after` nennen, sonst raet der Bediener");
+    /* BERICHTIGT MF-1384. Hier stand „OHNE Nachpruefung meldet die Ebnung
+     * aus P3-524 weiterhin Erfolg — genau das ist der stille Verlust", und
+     * MIT Nachpruefung fiel der Lauf mit UFT_ERROR_VERIFY_FAILED. Die
+     * Ebnung ist abgeschafft: IMD fuehrt EINE Sektorgroesse je Spurkopf
+     * (Dunfield, ImageDisk TD02IMD.C:907-908 „Cannot do mixed sector size
+     * within track"; MAME imd_dsk.cpp:554-556), und der Wandler sagt eine
+     * gemischte Spur jetzt ab wie der Urheber — benannt, mit ihrer Lage,
+     * in BEIDEN Laeufen, bevor irgendetwas geschrieben wird. */
+    bool nennt_spur = false;
+    for (int i = 0; i < ohne.warning_count && i < 8; i++)
+        if (strstr(ohne.warnings[i], "C0 H0") &&
+            strstr(ohne.warnings[i], "gemischte Sektorgroessen"))
+            nennt_spur = true;
+    CHECK(!ohne.success && !mit.success,
+          "eine gemischte Spur wird abgesagt statt geebnet — ohne UND mit "
+          "Nachpruefung");
+    CHECK(nennt_spur,
+          "die Absage nennt die Spur (C0 H0) und den Grund, sonst raet der "
+          "Bediener");
+    CHECK(mit.verify_requested == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+          mit.verify_performed == UFT_VERIFY_STAGE_NONE &&
+          mit.verify_outcome == UFT_VERIFY_NOT_RUN,
+          "angefordert, aber die Wandlung endete vorher: NOT_RUN, gemessen "
+          "%d/%d/%d", (int)mit.verify_requested, (int)mit.verify_performed,
+          (int)mit.verify_outcome);
+    (void)nennt_die_nachpruefung;
 
     /* ── ANTI-TAUTOLOGIE ─────────────────────────────────────────────────
      *
@@ -317,6 +331,14 @@ static void t4_die_verdrahtung_ist_lebendig(void)
     CHECK(g_ohne.success && g_mit.success,
           "eine saubere Wandlung muss MIT Nachpruefung durchgehen — sonst "
           "prueft Gruppe 4 nur, dass `verify_after` alles ablehnt");
+    /* D2 seit MF-1384: die Verdrahtung ist am BESTANDENEN Lauf belegt —
+     * ohne den Aufruf im Verteiler stuende hier NONE und 0 Spuren. Den
+     * Ausgang GEFALLEN fuehrt auf Verteilerebene kein Fall mehr vor (er
+     * hing an der Ebnung); auf Funktionsebene tun es Test 2 und 3. */
+    CHECK(g_mit.verify_performed == UFT_VERIFY_STAGE_READBACK_COMPARE &&
+          g_mit.verify_tracks_compared == 160,
+          "der Aufruf im Verteiler ist lebendig: ausgefuehrt, 160 Spuren "
+          "verglichen");
 
     /* ── H-14 (MF-1378): angefordert / ausgefuehrt / Ausgang getrennt ────
      * Vorher hinterliess ein BESTANDENER Lauf keine Spur im Ergebnis:
@@ -331,10 +353,6 @@ static void t4_die_verdrahtung_ist_lebendig(void)
           ohne.verify_performed == UFT_VERIFY_STAGE_NONE &&
           ohne.verify_outcome == UFT_VERIFY_NOT_REQUESTED,
           "ohne Anforderung: nichts angefordert, nichts getan, kein Ausgang");
-    CHECK(mit.verify_requested == UFT_VERIFY_STAGE_READBACK_COMPARE &&
-          mit.verify_performed == UFT_VERIFY_STAGE_READBACK_COMPARE &&
-          mit.verify_outcome == UFT_VERIFY_FAILED,
-          "abweichende Daten: angefordert, ausgefuehrt, GEFALLEN");
     CHECK(g_mit.verify_outcome == UFT_VERIFY_PASSED &&
           g_mit.verify_performed == UFT_VERIFY_STAGE_READBACK_COMPARE &&
           g_mit.verify_tracks_compared == 160 &&

@@ -295,16 +295,26 @@ static const uft_roundtrip_entry_t g_matrix[] = {
      * Der Weg zu `LOSSLESS` ist benannt und nicht kurz: P3-524 schliessen
      * (IMDs `has_varsizes`/`ssize[]` nutzen) UND ein Fixture mit
      * gemischten Sektorgroessen bauen — der Korpus hat keines, alle 1440
-     * Sektoren der Referenzdatei tragen 512 Byte. */
+     * Sektoren der Referenzdatei tragen 512 Byte.
+     *
+     * BERICHTIGT MF-1384 — der Absatz „WARUM LOSSY" und dieser Weg trugen
+     * nicht. `F_TD0 == F_IMD` war selbst falsch: IMD fuehrt EINE Groesse je
+     * Spurkopf, und das ist keine Grenze des Wandlers, sondern des FORMATS
+     * — belegt beim Urheber (Dunfield, ImageDisk TD02IMD.C:907-908 „Cannot
+     * do mixed sector size within track") und bei MAME (imd_dsk.cpp:
+     * 554-556). `has_varsizes`/`ssize[]` in uft_imd.h beschreiben keine
+     * Faehigkeit von IMD. Die Tafel fuehrt VAR_SECTOR_SZ fuer IMD nicht
+     * mehr, die gerechnete Differenz IST jetzt diese Maske, und der Weg zu
+     * `LOSSLESS` fuer gemischte Spuren existiert nicht. Der Wandler ebnet
+     * nicht mehr, er sagt ab — kein Byte wird mehr erfunden. */
     { UFT_FORMAT_TD0, UFT_FORMAT_IMD, UFT_RT_LOSSY_DOCUMENTED,
       "MF-1307: vorwaerts gegen zwei Orakel — libdsk 1.5 und hxcfe 2.x, "
       "Korpus 3 gepackte TD0 (eine fremde Hand, zwei eigene mit fremder "
-      "Bestaetigung). VERLOREN gehen die variablen Sektorgroessen: "
-      "uft_td0_to_imd() ebnet die ganze Spur auf die Groesse des ERSTEN "
-      "Sektors (P3-524) — IMD koennte sie tragen (has_varsizes/ssize[]), "
-      "der Wandler nutzt es nicht. Dazu, ohne dass die Maske es sagen "
-      "kann: TD0s Kommentarkopf traegt eine CRC-16 und einen Zeitstempel "
-      "aus sechs Feldern, IMDs Kommentar ist reiner Text",
+      "Bestaetigung). NICHT TRAGBAR sind gemischte Sektorgroessen in einer "
+      "Spur: IMD fuehrt eine Groesse je Spurkopf (Dunfield TD02IMD, MF-1384); "
+      "eine solche Spur wird abgesagt statt geebnet. Dazu, ohne dass die "
+      "Maske es sagen kann: TD0s Kommentarkopf traegt eine CRC-16 und einen "
+      "Zeitstempel aus sechs Feldern, IMDs Kommentar ist reiner Text",
       UFT_D2_FEAT_VAR_SECTOR_SZ },
 
     /* ── TD0 -> IMG (MF-1307) ─────────────────────────────────────────

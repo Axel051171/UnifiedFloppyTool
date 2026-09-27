@@ -258,7 +258,12 @@ typedef struct {
 
     bool     has_cylmap;        /**< Cylinder map present */
     bool     has_headmap;       /**< Head map present */
-    bool     has_varsizes;      /**< Variable sector sizes */
+    /** Variable sector sizes.
+     *  MF-1384: NOT a capability of the IMD format — one size code per
+     *  track header (Dunfield, ImageDisk TD02IMD.C:907-908; MAME
+     *  imd_dsk.cpp rejects size 0xFF). Measured: no writer in the tree
+     *  sets it, so it is always false and `ssize[]` is never used. */
+    bool     has_varsizes;
 
     uint8_t* data;              /**< Sector data buffer */
     size_t   data_size;         /**< Total data size */

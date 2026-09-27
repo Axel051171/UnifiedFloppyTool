@@ -74,6 +74,15 @@ uft_error_t uftc_td0_to_img_mem(const uint8_t* src_data, size_t src_size,
     const size_t spuren = imd_zwischen.num_tracks;
     uft_imd_free(&imd_zwischen);
     if (rc != 0 || !raw_data) {
+        unsigned gc = 0, gh = 0;
+        if (rc == UFT_ERROR_NOT_SUPPORTED &&
+            uft_td0_erste_gemischte_spur(&strom, &gc, &gh)) {
+            /* MF-1384: said, with its place — not "error -N". */
+            uftc_add_warning(result,
+                     "TD0: Spur C%u H%u traegt gemischte Sektorgroessen; ein "
+                     "flaches Abbild kann das nicht — abgesagt statt geebnet",
+                     gc, gh);
+        }
         uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
         uftc_add_warning(result,
@@ -156,6 +165,17 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
 
     rc = uft_td0_to_imd(&strom, &imd_img);
     if (rc != 0) {
+        unsigned gc = 0, gh = 0;
+        if (rc == UFT_ERROR_NOT_SUPPORTED &&
+            uft_td0_erste_gemischte_spur(&strom, &gc, &gh)) {
+            /* MF-1384: IMD carries ONE sector size per track header —
+             * ImageDisk's own TD02IMD refuses the same case. */
+            uftc_add_warning(result,
+                     "TD0->IMD: Spur C%u H%u traegt gemischte "
+                     "Sektorgroessen; IMD fuehrt EINE Groesse je Spur "
+                     "(wie ImageDisks TD02IMD) — abgesagt statt geebnet",
+                     gc, gh);
+        }
         uft_imd_free(&imd_img);
         uft_td0_strom_frei(&strom);
         result->error = UFT_ERR_FORMAT;
