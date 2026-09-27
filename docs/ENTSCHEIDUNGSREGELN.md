@@ -111,6 +111,39 @@ werden. Arbeitsstand dagegen — offene Punkte, Befunde, Entscheidungen —
 gehört nach `docs/OPEN_ITEMS.md`. Anlass: `docs/research/*.md` (fünf
 Dateien, 2026-09-26) bleibt ungetrackt.
 
+E-16 bis E-19 kamen am 2026-09-27 aus einer Eigentümerantwort dazu (dort
+als „E-20" vorgeschlagen; vergeben sind wieder die nächsten freien
+Nummern). Anlass war P3-631.
+
+**E-16  Bitlagen auf einer Spur sind Ringpositionen — wenn die Umdrehung
+bekannt ist.** Reihenfolge und Lage werden mit `ring_dist()` gerechnet, nie
+linear. Ein Sektor über dem Index ist eine Tatsache; ein Sektor, dessen
+Felder mehr als eine Umdrehung auseinanderliegen, ist ein Fehler. Die
+Ringlänge ist `rev_bits`, **nicht** `nbits` — der Bitstrom ist gemessen und
+darf länger oder kürzer als eine Umdrehung sein; ohne `rev_bits` bleibt es
+linear. Die Ordnung allein erkennt nicht jeden kaputten Sektor: ein
+Datenfeld, das auf dem Ring vorwärts, aber weit hinter seinem Adressfeld
+liegt, fängt erst das Suchfenster des Controllers (`DAM_FAR`). Umgesetzt
+MF-1433.
+
+**E-17  Doppelt vergebene Nummern: die jüngere Sitzung nummeriert um; wer
+zuerst gepusht hat, behält.** Gemessen wird der **Push**, nicht der Commit:
+`git log --format=%ci` nennt das Commit-Datum. Den Push belegen nur
+`git reflog show origin/<zweig>` (der Fetch, in dem der Commit zuerst
+auftaucht) oder die Push-Protokolle. Lässt sich die Reihenfolge so nicht
+entscheiden, sagt man es und fragt — Anlass: MF-1403/MF-1405, deren
+Cloud-Gegenstücke zwischen zwei Fetches im selben Fenster lagen wie der
+eigene Push.
+
+**E-18  Pushes werden nicht gebündelt.** Ein Commit je `Ruecknahme:`-Zeile;
+gebündelt ist die Zeile nichts wert.
+
+**E-19  Ein Format, das ein anderes erweitert, ruft dessen Leser, statt ihn
+zu kopieren.** G71 ist G64 mit zwei Seiten und dem 1571-Spurlayout; der
+Weg, bei dem der G71-Leser den G64-Leser aufruft, ist der richtige (K4:
+dieselbe Rechnung nicht an zwei Stellen). Unter der Einfrier-Regel bleibt
+es ein Auftrag mit Rotbeweis, kein Umbau ohne Test.
+
 ## Was die Beispiele heute schon nennen, und was noch nicht
 
 Damit niemand einem Verweis nachgeht, den es nicht gibt — gemessen am

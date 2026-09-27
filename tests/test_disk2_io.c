@@ -610,6 +610,53 @@ static void t5_herkunft(void) {
     uft_d2_destroy(a);
 }
 
+/* ═══════════ 6. Umdrehungslaenge als eigener Block (MF-1433) ════════ */
+
+static bool enthaelt(const uint8_t *buf, size_t n, const char *tag) {
+    for (size_t i = 0; i + 4u <= n; ++i)
+        if (memcmp(buf + i, tag, 4u) == 0) return true;
+    return false;
+}
+
+static void t6_umdrehungslaenge(void) {
+    printf("Test 6: rev_bits uebersteht den Rundlauf, als eigener Block\n");
+    static uint8_t bits[16];
+    memset(bits, 0xAA, sizeof(bits));
+
+    uft_disk2_t *a = uft_d2_create();
+    const uft_d2_deriv_id_t dv = uft_d2_register_deriv(a,
+        UFT_D2_LAYER_BITSTREAM, UFT_D2_ORIGIN_DERIVED, "scanner", "", 1u);
+    uft_d2_track_t *t = uft_d2_track(a, 0u, 0u);
+    uft_d2_set_bitstream(a, t, bits, 128u, NULL, NULL, 0u, NULL, NULL,
+                         0u, UFT_ENC_MFM, 2000u, dv);
+
+    /* Ohne Umdrehungslaenge: kein REVB in der Datei. */
+    uint8_t *buf = NULL; size_t n = 0u;
+    uftd_save(a, &buf, &n);
+    CHECK(buf && !enthaelt(buf, n, "REVB"), "ohne rev_bits kein REVB-Block");
+    free(buf); buf = NULL;
+
+    CHECK(uft_d2_set_rev_bits(a, t, 120u), "rev_bits 120 gesetzt");
+    uftd_result_t r = uftd_save(a, &buf, &n);
+    CHECK(r.code == UFTD_OK && buf && enthaelt(buf, n, "REVB"),
+          "mit rev_bits steht ein REVB-Block in der Datei");
+
+    uft_disk2_t *b = NULL;
+    r = uftd_load(buf, n, &b);
+    const uft_d2_track_t *tb = b ? uft_d2_track_get(b, 0u, 0u) : NULL;
+    CHECK(r.code == UFTD_OK && tb && tb->bitstream.rev_bits == 120u,
+          "nach dem Laden rev_bits %zu, erwartet 120",
+          tb ? tb->bitstream.rev_bits : (size_t)0);
+
+    /* Ein neuer Bitstrom kennt seine Umdrehungslaenge nicht. */
+    uft_d2_set_bitstream(a, t, bits, 128u, NULL, NULL, 0u, NULL, NULL,
+                         0u, UFT_ENC_MFM, 2000u, dv);
+    CHECK(t->bitstream.rev_bits == 0u, "neuer Bitstrom: rev_bits 0");
+
+    free(buf);
+    uft_d2_destroy(a); uft_d2_destroy(b);
+}
+
 int main(void) {
     printf("=== test_disk2_io (UFTD, MF-1275) ===\n\n");
     t1_rundlauf();
@@ -617,6 +664,7 @@ int main(void) {
     t3_gefaelscht();
     t4_ueberlauf();
     t5_herkunft();
+    t6_umdrehungslaenge();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }
