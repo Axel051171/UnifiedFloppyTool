@@ -153,11 +153,12 @@ laufen fort und werden nie wiederverwendet.
 ### A-032 · `neue-ideen/` vollständig sichten: was vergessen wurde, was den Code verbessert
 - **Status:** **angehalten an der Umgebung** (2026-09-26: `neue-ideen/` ist gitignored und liegt nur auf dem Eigentümerrechner, im Cloud-Container fehlt es — gemessen `ls neue-ideen`: nicht vorhanden; weiter, sobald die Sitzung dort läuft) · vorher **in Arbeit** (seit 2026-09-19, auf ausdrückliche
   Anweisung: „Danach weiter mit A-032 (neue-ideen/, 2408 Dateien) —
-  oberster der Warteschlange, anfangen !!"). `A-028` steht ebenfalls
-  auf `in Arbeit`, wartet aber seit 2026-09-17 auf eine
-  **Eigentümerentscheidung** (öffentlicher Wegwerf-PR) und blockiert
-  nichts — das ist hier vermerkt statt verschwiegen, weil zwei Posten
-  auf `in Arbeit` gegen die Ein-Schloss-Regel verstoßen.
+  oberster der Warteschlange, anfangen !!"). `A-028` stand damals
+  ebenfalls auf `in Arbeit` und wartete seit 2026-09-17 auf eine
+  **Eigentümerentscheidung** (öffentlicher Wegwerf-PR); zwei Posten auf
+  `in Arbeit` verstießen gegen die Ein-Schloss-Regel. Seit dem
+  Aufräumen vom 2026-09-26 steht `A-028` auf `angehalten` (siehe dort) —
+  berichtigt MF-1426 nach dem Codex-Befund auf PR #45.
   · **Aufgenommen:** 2026-09-19
 - **Wortlaut:** „`C:\Users\Axel\Github\UnifiedFloppyTool-4.1.0\neue-ideen`
   gehe hier alles gründlich , schau ab was vergessen wurde, ob man den
