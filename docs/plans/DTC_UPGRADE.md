@@ -238,6 +238,13 @@ vorher rot gemessen wurde.
 > aus MF-1046 bleibt bis auf `-r` gleich (Zusage: genau ein Wort mehr).
 > **Offen und benannt:** der C-Bauer `uft_kf_build_capture_command()`
 > gibt `cfg->revolutions` weiterhin nicht weiter (zwei Bauer = MF-1177).
+> **Erledigt MF-1434:** er setzt `-r<n>` jetzt ebenfalls, im globalen
+> Teil vor `-f`; `test_kryoflux_dtc_befehl` hält beide Bauer am selben
+> Wort (5 Prüfungen, vorher rot). Die Vorgabe der C-Hülle ist 5 — sie war
+> immer eine Anforderung in der Konfiguration und erreicht DTC jetzt.
+> **Nicht getan:** die beiden Bauer zu EINEM zusammenzulegen. Der eine
+> baut `QProcess`-argv, der andere eine Shell-Zeichenkette; das wäre ein
+> eigener Umbau, und bis dahin hält der Gleichlauftest sie zusammen.
 > Die typisierte `validate` aus dem Paket ist nicht übernommen — ohne
 > Aufrufer wäre sie Bestand ohne Fähigkeit.
 
@@ -363,7 +370,21 @@ vorher rot gemessen wurde.
 > globale Versatz verliert. Ein synthetischer Strom genügt dafür nicht:
 > er beweist den Kodierer, nicht die Drift.
 
-### DTC-6 — Doku nachziehen *(mit jedem Schritt, nicht am Ende)*
+### DTC-6 — Doku nachziehen *(mit jedem Schritt, nicht am Ende)* — ✅ MF-1434
+
+> **Erledigt MF-1434, Punkt für Punkt:** (1) P3-342: der KryoFlux-Teil ist
+> mit MF-1362/MF-1363 (`1c74c598`) erledigt — der Läufer liest die
+> Stromdatei, nicht stdout; P3-342 und P3-562 bleiben wegen FluxEngine
+> offen. (2) `dtc` in `docs/ORACLES.md`: **ausgeführt**, nicht nur
+> eingetragen — Eigentümerpaket 3.50 unter WSL, SHA-256 von Paket und
+> Binär, `-h` bestätigt alle 14 gesetzten Schalter. Dabei gemessen: ohne
+> Gerät endet `dtc -i0` mit Exitcode **0** und „Device not found" auf
+> stderr; die Erkennung meldete daraus ein Laufwerk. Behoben mit
+> Rotbeweis (`test_kryoflux_provider_v2`, Erkennung und Lesen).
+> (3) `docs/CAPABILITIES.md`: KryoFlux Read **bleibt 🟡** — geändert
+> wurde nichts, und das ist die Zusage. (4) Der Kopf von
+> `kryoflux_provider_v2.cpp` nannte den V1-Befehl von vor MF-1046 und
+> behauptete, es gebe keine C-Hülle; berichtigt, das Alte zitiert.
 
 * `docs/OPEN_ITEMS.md` P3-342: den KryoFlux-Teil erledigen (DTC-2).
 * Neuer Punkt: die Eichung von `dtc` in `docs/ORACLES.md` (`dtc -h`,
@@ -383,6 +404,11 @@ Die Messliste des Pakets ist gut und wird übernommen:
 4. SHA-256 des Artefakts mit dem vergleichen, was der Provider gelesen
    hat.
 5. Byteweiser Vergleich gegen einen direkten DTC-Lauf.
+6. *(neu MF-1434)* Unter **Windows** `dtc -i0` ohne Board: Exitcode und
+   Meldung festhalten. Unter Linux ist es gemessen 0 + „Device not found"
+   auf stderr; die Erkennung verlässt sich jetzt auf diesen Text.
+7. *(neu MF-1434)* Mit Board: was `-c2` bei einem Bildlauf tut (P3-341) —
+   ohne Gerät melden alle Varianten nur „Device not found".
 
 Neu dazu kommt die Hilfeausgabe `dtc -h` als Beleg für jeden Schalter
 aus E2. Erst danach geht KryoFlux Read auf ✅.

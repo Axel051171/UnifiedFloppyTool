@@ -17,6 +17,18 @@
  *   Read:   dtc -c2 -d0 -s{head} -b{cylinder} -e{cylinder} -f{prefix} -i0
  *   Detect: dtc -i0   (probe — firmware banner + drive info in output)
  *
+ * CORRECTED MF-1434 (A-035 DTC-6: the head describes what the code does).
+ * The two lines above are the V1 command that MF-1046 found wrong against
+ * the manual; they stay quoted. What build_read_argv() emits today:
+ *   Read:   dtc -c2 -d0 [-r{revs}] -f{prefix} -s{cyl} -e{cyl} -g{head} -i0
+ * and the detect probe is still `dtc -i0` — but without a board it prints
+ * "Device not found" on stderr and exits 0 (measured, dtc v3.50 Linux),
+ * which do_detect_drive() now reports as an error, not as a drive.
+ * Also not true any more: "no uft_kryoflux_*.c C-HAL backbone" above —
+ * src/hal/uft_kryoflux_dtc.c is that shell, with its own command builder
+ * uft_kf_build_capture_command() (kept in step by
+ * tests/test_kryoflux_dtc_befehl.cpp).
+ *
  *   DTC writes KryoFlux stream files as: track{NN}.{S}.raw
  *   where NN = zero-padded track number, S = side (0 or 1).
  *
@@ -169,7 +181,9 @@ std::vector<std::string> KryoFluxProviderV2::build_read_argv(
      * default. 0 = not specified: nothing is claimed, DTC's default holds.
      * The C shell's second builder (uft_kf_build_capture_command) does not
      * pass cfg->revolutions either — named, not touched here (two
-     * builders are MF-1177, see docs/plans/DTC_UPGRADE.md DTC-3). */
+     * builders are MF-1177, see docs/plans/DTC_UPGRADE.md DTC-3).
+     * DONE MF-1434: it now emits -r<n> as well, in its global part;
+     * test_kryoflux_dtc_befehl holds both builders to the same word. */
     if (revolutions > 0)
         args.push_back("-r" + std::to_string(revolutions)); /* global */
     args.push_back("-f" + prefix);                      /* image local */
@@ -178,6 +192,35 @@ std::vector<std::string> KryoFluxProviderV2::build_read_argv(
     args.push_back("-g" + std::to_string(head));        /* 0=Seite 0, 1=Seite 1 */
     args.push_back("-i0");                              /* zuletzt: Bildtyp */
     return args;
+}
+
+/* A-035 DTC-6 (MF-1434): DTC says "no device" with exit code 0.
+ *
+ * MEASURED 2026-09-27 with the owner's package
+ * neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz (dtc v3.50 Linux x86-64,
+ * no device attached): `dtc -i0` exits with 0, stdout empty, stderr
+ * "Device not found". The exit code alone cannot tell a missing KryoFlux
+ * from a run — the detect path turned it into a DriveDetected. The text is
+ * DTC's own; whether the Windows build behaves the same is NOT measured. */
+static bool dtc_meldet_kein_geraet(const DtcRunResult& r)
+{
+    static const char kein[] = "Device not found";
+    return r.stderr_text.find(kein) != std::string::npos
+        || r.stdout_text.find(kein) != std::string::npos;
+}
+
+static ProviderError kein_kryoflux_error(const DtcRunResult& r)
+{
+    return ProviderError{
+        UFT_E_GENERIC,
+        "KryoFlux not connected: DTC reports \"Device not found\"",
+        "DTC started and answered, but found no KryoFlux board. It exits with "
+        "code 0 in this case (measured with DTC v3.50), so the exit code is not "
+        "a success signal. DTC said: " + r.stderr_text + r.stdout_text,
+        "Connect the KryoFlux board by USB, check that the operating system "
+        "lists it (Windows: device manager; Linux: lsusb) and that no other "
+        "program holds it, then retry."
+    };
 }
 
 /* static */
@@ -423,6 +466,11 @@ FluxOutcome KryoFluxProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     if (result.exit_code != 0) {
         return dtc_read_error(cylinder, head, result.stderr_text);
     }
+    /* MF-1434: without a board DTC also exits 0 here; the missing stream
+     * file below would be reported as "DTC wrote no stream file", which
+     * hides the cause. */
+    if (dtc_meldet_kein_geraet(result))
+        return kein_kryoflux_error(result);
 
     std::ifstream stream_file(stream_path, std::ios::binary);
     if (!stream_file) {
@@ -620,6 +668,8 @@ DetectOutcome KryoFluxProviderV2::do_detect_drive()
         /* DTC not found, not executable, or KryoFlux not connected. */
         return dtc_not_found_error(result.stderr_text);
     }
+    if (dtc_meldet_kein_geraet(result))       /* exit 0, no board (MF-1434) */
+        return kein_kryoflux_error(result);
 
     const std::string combined = result.stdout_text + result.stderr_text;
 
