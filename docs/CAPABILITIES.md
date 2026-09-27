@@ -186,10 +186,10 @@ fields). Vollständige Liste über `audit_plugin_compliance.py --list`.
 | Adaptive Decode (CRC-Fehler → OTDR → Re-Decode → Fusion) | **ohne Aufrufer** — `uft_otdr_adaptive_decode` außerhalb der eigenen Datei nur in Kommentaren | kein Test |
 | Weighted Voting (Float-gewichtete Multi-Rev) | **ohne Aufrufer** — `uft_otdr_fuse_sector` nur in der eigenen Datei | kein Test |
 | Write-Splice Detection | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test (`test_schreibnaht_mfm.c` nennt `uft_deepread_detect_splice` nur im Kommentar) |
-| Magnetic Aging Profile | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
-| Cross-Track Correlation | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
-| Revolution Fingerprint | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
-| Soft-Decision LLR | **ohne Aufrufer** (`docs/orphan_baseline.txt`) | kein Test |
+| Magnetic Aging Profile | **wired seit MF-1430** — `UftOtdrPanel::analyzeFullDisk()` zeigt Steigung, R², groessten Rest, mittleren SNR und Gradient; die Klasse nur als „Heuristik (Schwellen ohne Quelle)“ | `test_deepread_messung` (Regressionsgerade geschlossen; Rotbeweis A1) + `test_otdr_panel_deepread` (Anzeige nach „Analyze All“) |
+| Cross-Track Correlation | **wired seit MF-1430** — Korrelation radial benachbarter Spuren derselben Oberflaeche samt Paarzahl; Klasse nur als Heuristik, `may_be_protection` **nicht** gezeigt | `test_deepread_messung` (Rotbeweis C1) + `test_otdr_panel_deepread` |
+| Revolution Fingerprint | **ohne Aufrufer** (`docs/orphan_baseline.txt`) — der Hash ist gemessen **keine** Kennung (F1) | `test_deepread_messung` haelt F1 fest |
+| Soft-Decision LLR | **ohne Aufrufer** (`docs/orphan_baseline.txt`) — gemessen ist jede LLR ±0,1, also nur die harte Entscheidung (S1) | `test_deepread_messung` haelt S1 fest |
 
 **Berichtigt MF-1387 (2026-09-27):** hier stand bei allen acht Zeilen „wired |
 unit-getestet". Beides war für sieben Module falsch, und „unit-getestet"
@@ -199,14 +199,26 @@ in `src/` und `tests/` (ohne die eigene Datei) sowie über
 Der Hinweis darunter (MF-983) hatte das schon richtig gemessen — die
 Tabelle darüber war nur nicht nachgezogen worden.
 
+**Stand MF-1430: 3 wired, 5 ohne Aufrufer, 4 mit eigenem Test.** Angebunden
+sind Alterung und Nachbarspur-Korrelation — erst nachdem
+`tests/test_deepread_messung.c` ihre Rechnung gegen geschlossene Loesungen
+geprueft und zwei Fehler gefunden hatte: leere Spurplaetze zaehlten als
+SNR 0 (an der gw-Aufnahme 21,01 statt 42,01 dB), und die Korrelation
+verglich auf zweiseitigen Disketten die beiden Oberflaechen statt radial
+benachbarter Spuren. Fingerprint und LLR blieben absichtlich
+unverdrahtet, weil die Messung ihre Zusage widerlegt (F1, S1). Die
+Klassengrenzen sind an **keiner echten Aufnahme** geeicht — der freie
+Korpus hat keine Flussaufnahme mit Jitter (P3-630).
+
 **Caveat (berichtigt MF-983):** hier stand „Alle 8 DeepRead-Module sind als
 C-Modul implementiert und in der GUI über `UftOtdrPanel` zugänglich." Der
 erste Halbsatz stimmt, der zweite nicht.
 
 Gemessen (MF-767, nachgemessen MF-983 je Bezeichner über `git ls-files`):
-**1 von 8 ist erreichbar.** Zugänglich ist allein der *Encoding Boost*
+**1 von 8 ist erreichbar** (Stand MF-983; seit MF-1430 3 von 8, siehe
+oben). Zugänglich war allein der *Encoding Boost*
 (`uft_otdr_detect_encoding`, gerufen in `src/gui/uft_otdr_panel.cpp`). Die
-fünf Forensik-Module in `src/analysis/deepread/` tragen **13 Funktionen mit
+fünf Forensik-Module in `src/analysis/deepread/` trugen **13 Funktionen mit
 null Aufrufern außerhalb ihres Verzeichnisses**; *Adaptive Decode* und die
 float-gewichtete Fusion (`uft_otdr_fuse_sector`) werden nur innerhalb ihrer
 eigenen Datei genannt.

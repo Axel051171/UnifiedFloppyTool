@@ -442,11 +442,14 @@ The catalogue covers (as source, not as a reachable feature):
 - Weak bit and copy-protection mapping
 - Sector-level hex editor
 - Side-by-side disk comparison
-- **DeepRead: 1 of 8 modules reachable** — the encoding boost is
-  wired into the OTDR panel. Adaptive decode, weighted voting,
-  write-splice detection, magnetic aging, cross-track correlation,
-  revolution fingerprint and soft-decision LLR exist as C code with
-  no caller (measured, see `docs/CAPABILITIES.md` §DeepRead)
+- **DeepRead: 3 of 8 modules reachable** — the encoding boost, and
+  since MF-1430 magnetic aging and cross-track correlation after
+  "Analyze All" in the OTDR panel (measured values; their classes
+  are shown as an unsourced heuristic). Adaptive decode, weighted
+  voting, write-splice detection, revolution fingerprint and
+  soft-decision LLR exist as C code with no caller — the last two
+  on purpose, because measurement contradicts what they promise
+  (see `docs/CAPABILITIES.md` §DeepRead)
 - **LOSS.preflight** at the `uft_convert_file()` chokepoint —
   category-level `.loss.json` sidecar for every lossy conversion
 

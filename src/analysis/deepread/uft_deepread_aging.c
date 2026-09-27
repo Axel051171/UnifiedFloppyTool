@@ -144,23 +144,27 @@ int uft_deepread_aging_analyze(const otdr_disk_t *disk,
     uint32_t damage_count  = 0;
     uint16_t valid_tracks  = 0;
 
-    /* Arrays for SNR-gradient regression (stack-friendly for <=168 tracks) */
-    float *track_snr = (float *)calloc(tc, sizeof(float));
-    if (!track_snr)
+    /* SNR-gradient regression runs over MEASURED tracks only. An empty
+     * slot is not a track with SNR 0 — counting it that way halved the
+     * mean on gw_fm_acorn_3trk.scp (21.01 instead of 42.01 dB) and
+     * invented a gradient of -3.6 dB/track (MF-1430). */
+    float    *track_snr = (float *)calloc(tc, sizeof(float));
+    uint16_t *track_idx = (uint16_t *)calloc(tc, sizeof(uint16_t));
+    if (!track_snr || !track_idx) {
+        free(track_snr);
+        free(track_idx);
         return -1;
+    }
 
     for (uint16_t t = 0; t < tc; t++) {
         const otdr_track_t *trk = &disk->tracks[t];
 
         float trk_slope, trk_r2, trk_resmax;
-        if (uft_deepread_aging_track(trk, &trk_slope, &trk_r2, &trk_resmax) != 0) {
-            track_snr[t] = 0.0f;
+        if (uft_deepread_aging_track(trk, &trk_slope, &trk_r2, &trk_resmax) != 0)
             continue;
-        }
 
         slope_sum += (double)trk_slope;
         r2_sum    += (double)trk_r2;
-        valid_tracks++;
 
         if (trk_resmax > worst_residual)
             worst_residual = trk_resmax;
@@ -170,39 +174,45 @@ int uft_deepread_aging_analyze(const otdr_disk_t *disk,
 
         /* Use the track-level SNR estimate from the OTDR stats */
         float snr = trk->stats.snr_estimate;
-        track_snr[t] = snr;
+        track_snr[valid_tracks] = snr;
+        track_idx[valid_tracks] = t;
         snr_sum += (double)snr;
+        valid_tracks++;
     }
 
     if (valid_tracks == 0) {
         free(track_snr);
+        free(track_idx);
         return -1;
     }
 
     float mean_slope = (float)(slope_sum / (double)valid_tracks);
     float mean_r2    = (float)(r2_sum    / (double)valid_tracks);
-    float mean_snr   = (float)(snr_sum   / (double)tc);
+    float mean_snr   = (float)(snr_sum   / (double)valid_tracks);
 
-    /* SNR gradient: linear regression of per-track mean SNR over track number */
+    /* SNR gradient: linear regression of per-track SNR over track index,
+     * measured tracks only (x = their slot index, so gaps keep their
+     * distance). */
     double sx  = 0.0, sy  = 0.0;
     double sxy = 0.0, sx2 = 0.0;
 
-    for (uint16_t t = 0; t < tc; t++) {
-        double xi = (double)t;
-        double yi = (double)track_snr[t];
+    for (uint16_t k = 0; k < valid_tracks; k++) {
+        double xi = (double)track_idx[k];
+        double yi = (double)track_snr[k];
         sx  += xi;
         sy  += yi;
         sxy += xi * yi;
         sx2 += xi * xi;
     }
 
-    double dn    = (double)tc;
+    double dn    = (double)valid_tracks;
     double denom = dn * sx2 - sx * sx;
     float  snr_grad = 0.0f;
     if (fabs(denom) > 1e-30)
         snr_grad = (float)((dn * sxy - sx * sy) / denom);
 
     free(track_snr);
+    free(track_idx);
 
     /* Populate result */
     result->slope          = mean_slope;
@@ -211,7 +221,7 @@ int uft_deepread_aging_analyze(const otdr_disk_t *disk,
     result->mean_snr_db    = mean_snr;
     result->snr_gradient   = snr_grad;
     result->damage_regions = damage_count;
-    result->classification = classify(mean_slope, damage_count, tc);
+    result->classification = classify(mean_slope, damage_count, valid_tracks);
 
     return 0;
 }

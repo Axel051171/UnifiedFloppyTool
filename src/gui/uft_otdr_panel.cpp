@@ -20,6 +20,8 @@
  * Adaptive decode is called from C code in the recovery pipeline, not here. */
 extern "C" {
 #include "uft/encoding/uft_otdr_encoding_boost.h"
+#include "uft/analysis/uft_deepread_aging.h"
+#include "uft/analysis/uft_deepread_crosstrack.h"
 }
 
 /* DeepRead adaptive decode constants (mirrored from the C header) */
@@ -68,6 +70,7 @@ UftOtdrPanel::UftOtdrPanel(QWidget *parent)
     , m_lblProtection(nullptr)
     , m_lblAnomaly(nullptr)
     , m_lblMLProtection(nullptr)
+    , m_lblDeepReadDisk(nullptr)
     , m_progressBar(nullptr)
     , m_statusLabel(nullptr)
     , m_provGroup(nullptr)
@@ -338,6 +341,22 @@ void UftOtdrPanel::setupStatsPanel(QVBoxLayout *layout)
     statsLayout->addStretch();
     layout->addLayout(statsLayout);
 
+    /* Disk-weite DeepRead-Messung — gefuellt erst nach "Analyze All",
+     * weil Alterung und Nachbarspur-Korrelation alle Spuren brauchen. */
+    m_lblDeepReadDisk = new QLabel(tr("DeepRead: \xe2\x80\x94 (Analyze All)"));
+    m_lblDeepReadDisk->setObjectName(QStringLiteral("lblDeepReadDisk"));
+    m_lblDeepReadDisk->setWordWrap(true);
+    m_lblDeepReadDisk->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_lblDeepReadDisk->setToolTip(
+        tr("Messwerte aus den Qualitaetsprofilen aller Spuren.\n"
+           "Alterung: Regressionsgerade je Spur (Steigung, R\xc2\xb2, groesster Rest),\n"
+           "mittlerer Rauschabstand der gemessenen Spuren und sein Gradient.\n"
+           "Nachbarspuren: Korrelation (Pearson) zwischen Zylinder c und c+1\n"
+           "derselben Oberflaeche.\n"
+           "Die Klassen dahinter sind eine Heuristik: ihre Schwellen haben\n"
+           "keine Quelle und sind an keiner echten Aufnahme geeicht."));
+    layout->addWidget(m_lblDeepReadDisk);
+
     auto *statusLayout = new QHBoxLayout();
     m_progressBar = new QProgressBar();
     m_progressBar->setMaximumHeight(16);
@@ -569,6 +588,7 @@ void UftOtdrPanel::analyzeFullDisk()
     m_otdrWidget->setDisk(m_disk);
     populateTrackCombo();
     updateStatsDisplay();
+    updateDeepReadDiskStats();
 
     /* Run ML-based analysis after OTDR completes */
     if (m_deepReadActive) {
@@ -918,6 +938,60 @@ void UftOtdrPanel::updateStatsDisplay()
         m_lblProtection->setText("None");
 }
 
+void UftOtdrPanel::updateDeepReadDiskStats()
+{
+    if (!m_lblDeepReadDisk || !m_disk) return;
+
+    QStringList teile;
+
+    uft_aging_result_t ar;
+    std::memset(&ar, 0, sizeof(ar));
+    const bool ar_ok = (uft_deepread_aging_analyze(m_disk, &ar) == 0);
+    if (ar_ok) {
+        teile << tr("Alterung: Steigung %1 dB/Zelle, R\xc2\xb2 %2, groesster Rest %3 dB, "
+                    "SNR %4 dB (Gradient %5 dB/Spur), %6 Spuren mit Rest > 10 dB")
+                     .arg(ar.slope, 0, 'g', 3)
+                     .arg(ar.r_squared, 0, 'f', 3)
+                     .arg(ar.residual_max, 0, 'f', 2)
+                     .arg(ar.mean_snr_db, 0, 'f', 1)
+                     .arg(ar.snr_gradient, 0, 'f', 3)
+                     .arg(ar.damage_regions);
+    } else {
+        teile << tr("Alterung: keine Spur mit Qualitaetsprofil");
+    }
+
+    uft_crosstrack_result_t cr;
+    std::memset(&cr, 0, sizeof(cr));
+    const bool cr_ok = (uft_deepread_crosstrack_analyze(m_disk, &cr) == 0);
+    if (cr_ok && cr.pair_count > 0) {
+        teile << tr("Nachbarspuren: Korrelation %1 ueber %2 Paare")
+                     .arg(cr.mean_correlation, 0, 'f', 3)
+                     .arg(cr.pair_count);
+    } else {
+        /* 0 Paare: der Mittelwert 0 waere sonst "unkorreliert" gelesen. */
+        teile << tr("Nachbarspuren: kein benachbartes Spurpaar gemessen");
+    }
+
+    /* Klassen nur mit Kennzeichnung — die Schwellen haben keine Quelle.
+     * may_be_protection wird bewusst NICHT gezeigt: die Spurbereiche
+     * (0-2, >= 36) sind unbelegt und zaehlen den linearen Index (P3-630). */
+    QStringList klassen;
+    if (ar_ok)
+        klassen << QString::fromUtf8(uft_aging_class_name(ar.classification));
+    if (cr_ok && cr.pair_count > 0)
+        klassen << QString::fromUtf8(uft_damage_type_name(cr.overall));
+    if (!klassen.isEmpty())
+        teile << tr("Heuristik (Schwellen ohne Quelle): %1")
+                     .arg(klassen.join(QStringLiteral(" / ")));
+    if (cr_ok)
+        uft_crosstrack_result_free(&cr);
+
+    /* fromUtf8, nicht QStringLiteral: dort waere jedes \x-Byte ein
+     * eigenes UTF-16-Zeichen ("â€”" statt Gedankenstrich). */
+    m_lblDeepReadDisk->setText(QString::fromUtf8("DeepRead \xe2\x80\x94 ")
+                               + teile.join(QString::fromUtf8(" \xc2\xb7 ")));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  * Forensic Panel Setup
  * ═══════════════════════════════════════════════════════════════════════ */
@@ -1109,4 +1183,6 @@ void UftOtdrPanel::freeCurrentAnalysis()
     m_currentFile.clear();
     m_deepReadImproved = 0;
     m_deepReadAttempted = 0;
+    if (m_lblDeepReadDisk)
+        m_lblDeepReadDisk->setText(tr("DeepRead: \xe2\x80\x94 (Analyze All)"));
 }

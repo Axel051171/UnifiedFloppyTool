@@ -11,6 +11,16 @@
  * The fingerprint is NOT cryptographic — it uses CRC32 for compactness.
  * It is intended for media identification and duplicate detection.
  *
+ * BERICHTIGT MF-1430 (gemessen, tests/test_deepread_messung.c F1): der
+ * Satz "two reads … produce matching fingerprints" gilt fuer den
+ * KOSINUS-Vergleich, nicht fuer `hash`. Der Hash ist CRC32 ueber die
+ * Float-Bytes des normierten Histogramms; ein einziges Intervall, das
+ * 60 ns ueber eine 100-ns-Bingrenze rutscht, aendert ihn, waehrend der
+ * Kosinus > 0,9999 bleibt. Zwei Lesungen derselben Diskette haben
+ * Jitter — der Hash ist also keine Kennung des Datentraegers. Ob der
+ * Kosinus zwei Disketten trennt, ist an keiner echten Aufnahme gemessen
+ * (der freie Korpus hat keine; P3-630). Kein Aufrufer.
+ *
  * @author UFT Project
  * @license GPL-3.0
  */

@@ -12,6 +12,17 @@
  * per-byte confidence metric for downstream error-correction or
  * multi-revolution fusion.
  *
+ * GEMESSEN MF-1430 — DIE LLR TRAEGT HEUTE KEINE WEICHE INFORMATION
+ * (tests/test_deepread_messung.c S1). Die Rechnung liest
+ * `quality_profile` als positiven Rauschabstand ("higher = better").
+ * `otdr_quality_to_db()` liefert aber einen VERLUST: 0 dB = perfekt,
+ * sonst negativ. Damit wird `quality_norm = q / 20` stets auf 0,1
+ * geklemmt, und jede LLR ist genau +0,1 (Uebergang) oder -0,1 (kein
+ * Uebergang) — die harte Entscheidung. Nicht behoben, weil ein
+ * Weichmodell eine Quelle braucht (P3-630); der Test wird rot, sobald
+ * jemand es aendert. Kein Aufrufer, und es darf keinen bekommen, der
+ * diese Werte als Konfidenz anzeigt.
+ *
  * @author UFT Project
  * @license GPL-3.0
  */

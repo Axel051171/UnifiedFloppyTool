@@ -35,10 +35,6 @@ src/algorithms/advanced/uft_bayesian_detect.c
 src/algorithms/advanced/uft_gcr_viterbi.c
 src/algorithms/advanced/uft_gcr_viterbi_v2.c
 src/algorithms/recovery/uft_otdr_adaptive_decode.c
-src/analysis/deepread/uft_deepread_aging.c
-src/analysis/deepread/uft_deepread_crosstrack.c
-src/analysis/deepread/uft_deepread_fingerprint.c
-src/analysis/deepread/uft_deepread_soft_decode.c
 src/analysis/deepread/uft_deepread_splice.c
 src/analysis/profiles/uft_profile_xdf.c
 src/analysis/profiles/uft_profiles_all.c

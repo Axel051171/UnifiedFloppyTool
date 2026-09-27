@@ -158,6 +158,11 @@ private:
     void updateProvenanceDisplay();
     void updateDeepReadStats(uint32_t sectors_improved, uint32_t sectors_attempted,
                              bool used_otdr, float avg_quality);
+    /* Disk-weite DeepRead-Messwerte (Alterung, Nachbarspur-Korrelation)
+     * nach einer Gesamtanalyse. Zeigt MESSWERTE; die Klassen der Module
+     * stehen nur mit dem Zusatz "Heuristik" da, weil ihre Schwellen keine
+     * Quelle haben (MF-1430, P3-630). */
+    void updateDeepReadDiskStats();
     /* Traegt ALLE von der Oberflaeche gesteuerten Werte in m_config ein.
      *
      * Vor MF-671 stand diese Zuweisung viermal im Quelltext, je einmal vor
@@ -242,6 +247,7 @@ private:
     QLabel              *m_lblProtection;    /**< Protection detected */
     QLabel              *m_lblAnomaly;       /**< ML anomaly detection result */
     QLabel              *m_lblMLProtection;  /**< ML protection classifier result */
+    QLabel              *m_lblDeepReadDisk;  /**< Disk-wide DeepRead measurements */
     QProgressBar        *m_progressBar;      /**< Analysis progress */
     QLabel              *m_statusLabel;      /**< Status text */
 

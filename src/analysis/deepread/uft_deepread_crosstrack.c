@@ -136,15 +136,19 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
     uint32_t high_corr_damaged = 0;
     uint32_t low_corr_damaged  = 0;
 
-    for (uint16_t t = 0; t + 1 < tc; t++) {
+    /* Radial neighbour = same head, next cylinder. otdr_disk_create()
+     * stores tracks as cylinder * heads + head, so on a double-sided disk
+     * t and t+1 are the two SURFACES of one cylinder — comparing those
+     * never saw a radial scratch (MF-1430). */
+    const uint16_t nb = (disk->num_heads > 0) ? disk->num_heads : 1;
+
+    for (uint16_t t = 0; t + nb < tc; t++) {
         const otdr_track_t *ta = &disk->tracks[t];
-        const otdr_track_t *tb = &disk->tracks[t + 1];
+        const otdr_track_t *tb = &disk->tracks[t + nb];
 
         /* Skip tracks without quality profiles */
         if (!ta->quality_profile || ta->bitcell_count == 0 ||
             !tb->quality_profile || tb->bitcell_count == 0) {
-            matrix[t * tc + (t + 1)] = 0.0f;
-            matrix[(t + 1) * tc + t] = 0.0f;
             continue;
         }
 
@@ -152,8 +156,8 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
                                 tb->quality_profile, tb->bitcell_count);
 
         /* Store symmetrically */
-        matrix[t * tc + (t + 1)] = ncc;
-        matrix[(t + 1) * tc + t] = ncc;
+        matrix[t * tc + (t + nb)] = ncc;
+        matrix[(t + nb) * tc + t] = ncc;
 
         adjacent_sum += (double)ncc;
         adjacent_count++;
@@ -185,8 +189,8 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
      * If "radial damage" falls in those ranges, it may actually be
      * intentional copy protection rather than physical damage. */
     result->may_be_protection = false;
-    for (uint16_t t = 0; t + 1 < tc; t++) {
-        float ncc = matrix[t * tc + (t + 1)];
+    for (uint16_t t = 0; t + nb < tc; t++) {
+        float ncc = matrix[t * tc + (t + nb)];
         if (ncc > 0.7f && track_is_damaged(&disk->tracks[t])) {
             uint16_t track_num = disk->tracks[t].track_num;
             if (track_num <= 2 || track_num >= 36) {
@@ -200,6 +204,7 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
     result->correlation_matrix = matrix;
     result->matrix_size        = tc;
     result->radial_damage_count = radial_count;
+    result->pair_count          = adjacent_count;
 
     if (adjacent_count > 0)
         result->mean_correlation = (float)(adjacent_sum / (double)adjacent_count);
@@ -219,8 +224,8 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
     if (adjacent_count >= 4 && result->mean_correlation > 0.6f) {
         /* Count how many tracks show damage at similar positions */
         uint32_t consistent_damage = 0;
-        for (uint16_t t = 0; t + 1 < tc; t++) {
-            float ncc = matrix[t * tc + (t + 1)];
+        for (uint16_t t = 0; t + nb < tc; t++) {
+            float ncc = matrix[t * tc + (t + nb)];
             if (ncc > 0.6f && track_is_damaged(&disk->tracks[t]))
                 consistent_damage++;
         }

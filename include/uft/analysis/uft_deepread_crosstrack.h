@@ -7,6 +7,19 @@
  * Radial scratches, magnetic degradation, and circumferential wear each
  * produce distinctive correlation signatures across the disk surface.
  *
+ * "Adjacent" heisst seit MF-1430: derselbe Kopf, Zylinder c und c+1 —
+ * also Index t und t + num_heads in der Ablage von otdr_disk_create().
+ * Vorher wurden t und t+1 verglichen, auf zweiseitigen Disketten also
+ * stets die beiden OBERFLAECHEN (gemessen: Korrelation -1 statt +1 im
+ * Fall tests/test_deepread_messung.c C1).
+ *
+ * Die Klassen (Radial/Magnetic/Circumferential) haengen an Schwellen
+ * ohne Quelle (0,7 / 0,3 / 0,6) und sind an keiner echten Aufnahme
+ * geeicht; das OTDR-Panel zeigt sie nur als "Heuristik". Die Spurbereiche
+ * hinter `may_be_protection` (0-2, >= 36) sind unbelegt und zaehlen den
+ * linearen Index, nicht den Zylinder — das Panel zeigt das Feld nicht
+ * (P3-630).
+ *
  * @author UFT Project
  * @license GPL-3.0
  */
@@ -43,6 +56,9 @@ typedef struct {
     uint32_t     radial_damage_count;   /**< Number of radial damage regions */
     uft_damage_type_t overall;          /**< Overall damage classification */
     bool         may_be_protection;     /**< True if damage overlaps known protection track ranges */
+    uint32_t     pair_count;            /**< Radially adjacent pairs actually measured
+                                             (same head, cylinder c and c+1). 0 means
+                                             mean_correlation is NOT a measurement. */
 } uft_crosstrack_result_t;
 
 /* ===================================================================

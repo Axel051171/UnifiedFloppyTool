@@ -297,6 +297,21 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 >
 > Damit steht es bei den 8 DeepRead-Modulen: **1 erreichbar, 7 ohne
 > Aufrufer** — nicht 3 zu 5.
+>
+> **Stand MF-1430: 3 erreichbar, 5 ohne Aufrufer** — diesmal wirklich,
+> und erst nach einer Messung. `tests/test_deepread_messung.c` prueft die
+> Rechnungen gegen geschlossene Loesungen und fand zwei Fehler, bevor
+> irgendetwas angezeigt wurde: Magnetic Aging zaehlte leere Spurplaetze
+> als SNR 0 (an der gw-Aufnahme **21,01 statt 42,01 dB**), und
+> Cross-Track verglich auf zweiseitigen Disketten die beiden
+> **Oberflaechen** statt radial benachbarter Spuren. Beide sind behoben
+> und stehen nach „Analyze All“ im OTDR-Panel — als Messwerte; ihre
+> Klassen nur mit dem Zusatz „Heuristik (Schwellen ohne Quelle)“.
+> **Nicht** angebunden, weil die Messung die Zusage widerlegt: die LLR
+> ist auf jeder Eingabe ±0,1 (das Modul liest einen dB-VERLUST als
+> Rauschabstand), und der Fingerprint-Hash kippt bei einem einzigen
+> Intervall ueber eine Bingrenze. Der freie Korpus hat **keine** echte
+> Flussaufnahme mit Jitter; geeicht ist also keine Schwelle (P3-630).
 
 **5 Forensik-Module:**
 - **Write-Splice Detection:** Erkennt Schreibkopf-Ein/Aus-Übergänge
@@ -352,7 +367,7 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
 │  OTDR (12 Module) │ TDFC │ φ-OTDR Denoise │ Confidence  │
-│  DeepRead (1 verdrahtet + 7 unwired) │ Protection (Signale)  │
+│  DeepRead (3 verdrahtet + 5 unwired) │ Protection (Signale)  │
 ├─────────────────────────────────────────────────────────┤
 │              Recovery Pipeline (C)                       │
 │  Multiread Voting │ Adaptive Decode │ Partial Recovery   │
@@ -970,8 +985,10 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
   erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
-- 8 DeepRead-Module, davon **1 erreichbar** und **7 ohne Aufrufer**
-  (MF-767, gemessen je Bezeichner über `git ls-files`). Erreichbar ist
+- 8 DeepRead-Module, davon **3 erreichbar** und **5 ohne Aufrufer**
+  seit MF-1430 (Magnetic Aging + Cross-Track im OTDR-Panel, siehe
+  §DeepRead). Bis dahin (MF-767, gemessen je Bezeichner über
+  `git ls-files`) galt 1 zu 7: erreichbar war
   allein der **Encoding Boost** (`uft_otdr_detect_encoding`, gerufen in
   `src/gui/uft_otdr_panel.cpp:888`). Ohne Aufrufer: die fünf
   Forensik-Module in `src/analysis/deepread/` (13 exportierte

@@ -2105,6 +2105,18 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0_lzss.c)
+    elseif(${test_name} STREQUAL "test_deepread_messung")
+        # MF-1430: die DeepRead-Forensikmodule gegen geschlossene Loesungen
+        # und an der gw-Aufnahme im Produktions-Ladepfad (SCP -> OTDR).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_aging.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_crosstrack.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_fingerprint.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_soft_decode.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_otdr_kein_nullintervall")
         # MF-967: der SCP-Ueberlauf-Platzhalter (0) lief als echter
         # Uebergang in Histogramm und PLL. Zwei von drei Verbrauchern
@@ -6233,6 +6245,26 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/hardware_providers)
         endif()
 
+        if(${qt_test_name} STREQUAL "test_otdr_panel_deepread")
+            # MF-1430: das Panel ruft die DeepRead-Module; der Test
+            # laedt die gw-Aufnahme und drueckt "Analyze All".
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/gui/uft_otdr_panel.cpp
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr/FloppyOtdrWidget.h
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/uft_anomaly_detect.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/uft_ml_protection.c
+                ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/uft_otdr_encoding_boost.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_aging.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_crosstrack.c
+                ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr)
+            target_compile_definitions(${qt_test_name} PRIVATE
+                UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        endif()
+
         # MF-574: der ToolsTab-Konvertieren-Knopf, kopflos angetrieben.
         # MF-568 hat ihn von `QFile::copy()` auf `uft_convert_file()`
         # umgestellt — geklickt hatte das niemand. Der Reiter braucht sein
@@ -6301,6 +6333,9 @@ if(TARGET Qt6::Test)
                         ${CMAKE_SOURCE_DIR}/src/analysis/uft_anomaly_detect.c
                         ${CMAKE_SOURCE_DIR}/src/analysis/uft_ml_protection.c
                         ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/uft_otdr_encoding_boost.c
+                        # MF-1430: das Panel zeigt Alterung + Nachbarspuren
+                        ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_aging.c
+                        ${CMAKE_SOURCE_DIR}/src/analysis/deepread/uft_deepread_crosstrack.c
                         ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
                         ${CMAKE_SOURCE_DIR}/src/widgets/fluxvisualizerwidget.cpp)
                     target_include_directories(${qt_test_name} PRIVATE

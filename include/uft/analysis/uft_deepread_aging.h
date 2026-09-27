@@ -9,6 +9,14 @@
  * are mapped to a five-level aging classification from PRISTINE to
  * DAMAGED.
  *
+ * Referenz der Rechnung: die Kleinste-Quadrate-Gerade selbst (geschlossen
+ * geprueft in tests/test_deepread_messung.c). Die Klassengrenzen
+ * (|Steigung| 0,01 / 0,005 / 0,001, Rest > 10 dB, "> 1/4 der Spuren")
+ * haben KEINE Quelle und sind an keiner echten Aufnahme geeicht — das
+ * OTDR-Panel zeigt die Messwerte und die Klasse nur als "Heuristik"
+ * (MF-1430, P3-630). Bis MF-1430 zaehlten leere Spurplaetze als SNR 0:
+ * an gw_fm_acorn_3trk.scp gemessen 21,01 statt 42,01 dB.
+ *
  * @author UFT Project
  * @license GPL-3.0
  */
@@ -41,8 +49,8 @@ typedef struct {
     float    slope;                     /**< Mean quality-profile slope across all tracks */
     float    r_squared;                 /**< Mean R-squared of per-track regressions */
     float    residual_max;              /**< Worst residual_max across all tracks */
-    float    mean_snr_db;               /**< Mean SNR across all tracks (dB) */
-    float    snr_gradient;              /**< Slope of per-track mean SNR over track number */
+    float    mean_snr_db;               /**< Mean SNR over MEASURED tracks (dB); empty slots excluded (MF-1430) */
+    float    snr_gradient;              /**< Slope of per-track SNR over track index, measured tracks only */
     uint32_t damage_regions;            /**< Number of tracks with residual_max > 10 dB */
 } uft_aging_result_t;
 
