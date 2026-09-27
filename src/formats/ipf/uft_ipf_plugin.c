@@ -248,7 +248,7 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
         disk->plugin_data = NULL;
         return UFT_ERR_FORMAT_INVALID;
     }
-    /* MF-1371: beides wurde gerechnet bzw. verworfen, und niemand
+    /* MF-1372: beides wurde gerechnet bzw. verworfen, und niemand
      * erfuhr es. Die Datei bleibt lesbar; die Spuren tragen ihre
      * eigene Flagge (read_track), hier steht die Summe. */
     if (!ipf_air_crc_ok(p->air))
@@ -378,7 +378,7 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     track->avg_bit_cell_ns       = 2000.0;
     track->raw_bits = track_bits;
 
-    /* MF-1371: die CRC der Saetze erreicht die Spur.
+    /* MF-1372: die CRC der Saetze erreicht die Spur.
      *
      * Spurkopf gebrochen: dieselbe Regel wie bei TD0 (UFT_TRACK_HDR_CRC)
      * — hinter einem Kopf, dessen Zahlen nicht stimmen, steht keine
@@ -469,7 +469,7 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         track->raw_capacity = bytes;
         track->owns_data    = true;
 
-        /* MF-1372 (P3-360 Teil 1): die Sektorebene. Bis hier lieferte
+        /* MF-1373 (P3-360 Teil 1): die Sektorebene. Bis hier lieferte
          * jede IPF Zellen und null Sektoren. Dekodiert wird mit den zwei
          * vorhandenen Dekodern; welcher gilt, entscheidet der Inhalt
          * (siehe uft_ipf_sektoren.h). */
@@ -523,11 +523,11 @@ static const uft_plugin_feature_t ipf_features[] = {
     { "Standard MFM Tracks (SPS)",     UFT_FEATURE_PARTIAL,
       "SPS-Kodierer: raw_data ist der MFM-ZELLSTROM (MF-1079); Gap-Elemente werden als 0x00-Muster gefuellt, nicht ausgewertet" },
     { "Standard MFM Tracks (CAPS)",    UFT_FEATURE_PARTIAL,
-      "CAPS-Kodierer (MF-1372): Elemente in Byte, Zwischenraum aus dem Fuellbyte "
+      "CAPS-Kodierer (MF-1373): Elemente in Byte, Zwischenraum aus dem Fuellbyte "
       "vorwaerts+rueckwaerts (Keir Fraser ipf.txt, MAME ipf_dsk.cpp); abgenommen "
       "an disk-analyse-Erzeugnissen, nicht an einem SPS-Original" },
     { "Sektorebene",                   UFT_FEATURE_PARTIAL,
-      "MF-1372: IBM-MFM und AmigaDOS aus dem Zellstrom, Wahl nach gueltigen "
+      "MF-1373: IBM-MFM und AmigaDOS aus dem Zellstrom, Wahl nach gueltigen "
       "Kopfpruefsummen; 1760/1760 bzw. 1440/1440 an disk-analyse-Abbildern. "
       "SPS-Originale hier nicht gemessen; andere Kodierungen liefern keine Sektoren" },
     { "Timing Tracks",                 UFT_FEATURE_PARTIAL,

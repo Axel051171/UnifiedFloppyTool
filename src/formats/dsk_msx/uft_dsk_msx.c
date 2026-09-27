@@ -135,17 +135,20 @@ static uft_error_t msx_read_track(uft_disk_t *disk, int cyl, int head,
          * `status = UFT_SECTOR_OK` und „CRC gueltig" an — die Fuellung war
          * damit von echten Daten nicht zu unterscheiden. ZWEI Fehlerwege
          * (Positionierung und Lesen); beide zaehlen. */
-        bool kurz = false;
+        bool kurz = false, seek_fehler = false;
         if (fseek(p->file, off, SEEK_SET) != 0) {
             memset(buf, 0xE5, MSX_SS);
-            kurz = true;
+            kurz = true; seek_fehler = true;
         } else if (fread(buf, 1, MSX_SS, p->file) != MSX_SS) {
             memset(buf, 0xE5, MSX_SS);
             kurz = true;
         }
         uft_format_add_sector(track, (uint8_t)s, buf, MSX_SS,
                               (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) {  /* H-30: failed seek -> unavailable; short read -> measured */
+            if (seek_fehler) uft_format_mark_last_unavailable(track);
+            else             uft_format_mark_last_short_read(track, p->file);
+        }
     }
     return UFT_OK;
 }

@@ -217,6 +217,25 @@ static inline void uft_format_mark_last_truncated(uft_track_t* track)
 }
 
 /**
+ * @brief Nach einem zu kurzen fread(): den Grund MESSEN statt raten (H-30).
+ *
+ * `ferror(f)` gesetzt heisst, das Lesen selbst ist gescheitert — die Daten
+ * stehen womoeglich in der Datei, waren aber nicht zu haben: nicht lesbar.
+ * Sonst endet die Datei vor diesem Sektor: abgeschnitten. Vorher hiess
+ * beides nur „fehlt", und die Bruecke ins Zentrum machte daraus
+ * Fuellmaterial „auf dem Traeger stand hier nichts".
+ *
+ * Fuer einen gescheiterten fseek() ist das NICHT der Helfer (fseek setzt
+ * das Fehlerkennzeichen nicht verlaesslich) — dort ist
+ * uft_format_mark_last_unavailable() die ehrliche Aussage.
+ */
+static inline void uft_format_mark_last_short_read(uft_track_t* track, FILE* f)
+{
+    if (f && ferror(f)) uft_format_mark_last_unavailable(track);
+    else                uft_format_mark_last_truncated(track);
+}
+
+/**
  * @brief Erstellt einen leeren Sektor
  */
 static inline uft_error_t uft_format_add_empty_sector(

@@ -1095,7 +1095,7 @@ static uft_error_t cpm_open(uft_disk_t *disk, const char *path, bool read_only) 
                          * genau diesen Aufruf, und es hat meine
                          * handgesetzte Variante beim ersten Lauf
                          * gemeldet. */
-                        uft_sector_mark_missing(sect);
+                        uft_sector_mark_truncated(sect);
                     }
                 }
                 data_pos += def->sector_size;

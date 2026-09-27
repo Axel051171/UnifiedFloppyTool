@@ -108,10 +108,10 @@ int main(void) {
     free(disk);
     printf("OK\n");
 
-    /* === Test 7b: ein Blockverlust muss sich melden (MF-830/MF-1372) =
+    /* === Test 7b: ein Blockverlust muss sich melden (MF-830/MF-1373) =
      *
      * MF-830 hielt hier die feste Klemme IPF_MAX_BLOCKS (16) fest: mehr
-     * angekuendigte Bloecke fielen bis dahin STILL weg. Seit MF-1372
+     * angekuendigte Bloecke fielen bis dahin STILL weg. Seit MF-1373
      * (P3-361 Weg b) gibt es keine Klemme mehr — gehalten wird, was der
      * DATA-Satz an Blockbeschreibungen TRAEGT. Ein Verlust steht also
      * genau dann fest, wenn die Nutzlast weniger Beschreibungen (je 32
@@ -119,12 +119,12 @@ int main(void) {
      *
      * Drei Spuren, damit keine Zusicherung leer ist:
      *   Spur 1: 20 angesagt, 20 getragen  -> 20 gehalten, kein Verlust
-     *           (vor MF-1372: 16 gehalten, Verlust — die alte Klemme)
+     *           (vor MF-1373: 16 gehalten, Verlust — die alte Klemme)
      *   Spur 2: 20 angesagt,  8 getragen  -> 8 gehalten, Verlust
      *   Spur 3:  8 angesagt, kein DATA    -> 0 gehalten, KEIN Verlust
      *           (fehlender DATA-Satz ist eine andere Ursache, siehe
      *           Kopfkommentar von ipf_air_get_track_loss) */
-    printf("Test 7b: Blockverlust meldet sich (MF-830/MF-1372)... ");
+    printf("Test 7b: Blockverlust meldet sich (MF-830/MF-1373)... ");
     {
         static uint8_t b2[12 + 96 + 3 * 80 + 2 * (28 + 20 * 32)];
         memset(b2, 0, sizeof b2);

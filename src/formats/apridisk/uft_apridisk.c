@@ -322,7 +322,7 @@ uft_error_t uft_apridisk_read_mem(const uint8_t *data, size_t size,
                  * Tor `audit_sektor_laenge.py` sucht. */
                 sect->data_size = 0;
                 sect->data_len  = 0;
-                uft_sector_mark_missing(sect);
+                uft_sector_mark_unavailable(sect);
             }
 
             disk->track_data[idx] = track;
@@ -403,7 +403,7 @@ uft_error_t uft_apridisk_read_mem(const uint8_t *data, size_t size,
                             memset(sect->data + data_len, 0xE5,
                                    sec_size - data_len);
                             /* MF-1001: gefuellt, nicht gelesen. */
-                            uft_sector_mark_missing(sect);
+                            uft_sector_mark_truncated(sect);
                         }
                         /* MF-1080: `data_len` ist das verbindliche Feld;
                          * hier stand nur das legacy `data_size`. Die

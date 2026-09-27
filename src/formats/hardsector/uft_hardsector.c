@@ -292,7 +292,7 @@ uft_error_t uft_hardsector_read_mem(const uint8_t *data, size_t size,
                         /* MF-1001: gefuellt, nicht gelesen. Ohne diese Zeile sind
                          * erfundene 0xE5 von echten 0xE5-Daten nicht zu
                          * unterscheiden -- und `status` stand schon auf OK. */
-                        uft_sector_mark_missing(sect);
+                        uft_sector_mark_truncated(sect);
                         if (result) result->bad_sectors++;
                     }
                 }

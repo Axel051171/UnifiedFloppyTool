@@ -1,11 +1,11 @@
 /**
  * @file test_ipf_sektorebene.c
- * @brief IPF liefert Sektoren — an fremd erzeugten Abbildern (MF-1372,
+ * @brief IPF liefert Sektoren — an fremd erzeugten Abbildern (MF-1373,
  *        P3-360 Teil 1)
  *
  * ── Der Befund ──────────────────────────────────────────────────────────
  *
- * Bis MF-1372 lieferte jede IPF Zellen und **null** Sektoren (P3-360).
+ * Bis MF-1373 lieferte jede IPF Zellen und **null** Sektoren (P3-360).
  * Und fuer die zwei Pruefdateien dieses Tests lieferte sie nicht einmal
  * Zellen: gemessen vor der Behebung an den vollen 80-Zylinder-Fassungen
  * 0 von 160 Spuren mit Zellstrom, bei der Amiga-Datei „die Zellzahl trifft

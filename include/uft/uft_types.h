@@ -647,7 +647,7 @@ typedef enum uft_track_status {
      */
     UFT_TRACK_HDR_CRC       = (1 << 6),
     /** Die Nutzdaten der Spur haben die Pruefsumme ihres BEHAELTERS
-     *  nicht gehalten (MF-1371, zuerst IPF: CRC32 des DATA-Satzes).
+     *  nicht gehalten (MF-1372, zuerst IPF: CRC32 des DATA-Satzes).
      *
      * Anders als UFT_TRACK_HDR_CRC wird die Spur trotzdem GELIEFERT:
      * der Spurkopf steht, nur der Inhalt ist nicht bestaetigt. Eine

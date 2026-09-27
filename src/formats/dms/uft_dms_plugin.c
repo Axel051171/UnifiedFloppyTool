@@ -418,7 +418,7 @@ static uft_error_t dms_read_track(uft_disk_t *disk, int cyl, int head,
          * Die Daten bleiben stehen; ein Befund darf den Zugriff nicht
          * verstellen (MF-830). Er darf nur nicht verschwiegen werden. */
         if (soff + AMIGA_SS > p->gelesen && track->sector_count > 0) {
-            uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
+            uft_sector_mark_truncated(&track->sectors[track->sector_count - 1]);
         }
 
         /* A-026: und zusaetzlich — nicht stattdessen — die Angabe des
@@ -437,7 +437,7 @@ static uft_error_t dms_read_track(uft_disk_t *disk, int cyl, int head,
          * verschwiegen und nicht verstellt. */
         if (p->satz_faul && (size_t)cyl < p->saetze && p->satz_faul[cyl]
             && track->sector_count > 0) {
-            uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
+            uft_sector_mark_unavailable(&track->sectors[track->sector_count - 1]);
         }
     }
     return UFT_OK;

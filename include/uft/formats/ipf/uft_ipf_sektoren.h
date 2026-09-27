@@ -1,10 +1,10 @@
 /**
  * @file uft_ipf_sektoren.h
- * @brief IPF: die Sektorebene aus dem Zellstrom (MF-1372, P3-360 Teil 1)
+ * @brief IPF: die Sektorebene aus dem Zellstrom (MF-1373, P3-360 Teil 1)
  *
  * IPF ist ein Bitstrom-Behaelter. Seine Sektoren stehen nicht in den
  * Saetzen, sie entstehen erst beim Dekodieren der Spur — so steht es seit
- * MF-1073 im Plugin. Bis MF-1372 hat das niemand getan: eine IPF lieferte
+ * MF-1073 im Plugin. Bis MF-1373 hat das niemand getan: eine IPF lieferte
  * Zellen und **null** Sektoren.
  *
  * Diese Stelle dekodiert NICHTS selbst. Sie gibt den Zellstrom aus

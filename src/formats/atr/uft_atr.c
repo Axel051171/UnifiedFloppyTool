@@ -449,7 +449,7 @@ static uft_error_t atr_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         const bool kurz = (fread(sec_buf, 1, this_size, pdata->file) != this_size);
         if (kurz) memset(sec_buf, 0xE5, this_size);
         uft_format_add_sector(track, s, sec_buf, this_size, cyl, head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, pdata->file);
     }
     free(sec_buf);
     

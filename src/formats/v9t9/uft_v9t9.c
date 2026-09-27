@@ -313,7 +313,7 @@ static uft_error_t v9t9_read_track(uft_disk_t *disk, int cyl, int head,
          * haette laut eigenem Kopf 1 addiert. Gestalt von MF-1016. */
         uft_format_add_sector_with_id(track, (uint8_t)s, buf, V9T9_SS,
                                       (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     return UFT_OK;
 }

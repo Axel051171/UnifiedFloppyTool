@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""IPF von FREMDER Hand — das Rezept zu MF-1372 (P3-360 Teil 1, P3-361).
+"""IPF von FREMDER Hand — das Rezept zu MF-1373 (P3-360 Teil 1, P3-361).
 
-Bis MF-1372 lag im freien Korpus genau EINE IPF, `hxcfe_ibmdd.ipf`, und
+Bis MF-1373 lag im freien Korpus genau EINE IPF, `hxcfe_ibmdd.ipf`, und
 die ist hohl: 168 IMGE-Saetze, alle mit trackbytes=0 (MF-1073). Die zwei
 echten SPS-Abbilder liegen im EINGESCHRAENKTEN Korpus und sind SPS-kodiert.
 Eine Sektorebene liess sich damit nirgends abnehmen.

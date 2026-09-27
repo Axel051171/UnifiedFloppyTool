@@ -1,7 +1,7 @@
 /**
  * @file test_ipf_satzlauf_schranken.c
  * @brief IPF: der Satzlauf haelt an seinen Grenzen, die CRC erreicht den
- *        Aufrufer, und kein Spurkopf faellt still weg (MF-1371).
+ *        Aufrufer, und kein Spurkopf faellt still weg (MF-1372).
  *
  * ── Die drei Befunde ────────────────────────────────────────────────────
  *
@@ -387,12 +387,12 @@ int main(void)
         free(b.p);
     }
 
-    printf("== Befund 4 (MF-1372): ein Element ueber das Nutzlastende ==\n");
+    printf("== Befund 4 (MF-1373): ein Element ueber das Nutzlastende ==\n");
     {
         /* Ein Datenelement sagt 100 Byte an, die Nutzlast traegt 10. Vor
-         * MF-1372 blieb ein uninitialisierter 100-Byte-Block als „Wert“
+         * MF-1373 blieb ein uninitialisierter 100-Byte-Block als „Wert“
          * stehen, und die Zellsummen-Gleichung konnte ihn nicht sehen,
-         * weil die Laenge stimmte. Seit MF-1372 bricht die Zerlegung ab. */
+         * weil die Laenge stimmte. Seit MF-1373 bricht die Zerlegung ab. */
         puffer_t b = {0};
         ipf_air_disk_t *d = NULL;
         uint8_t nutz[32 + 2 + 10];
@@ -403,7 +403,7 @@ int main(void)
         nutz[32] = 0x22;               /* Typ 2 (Daten), 1 Zaehlbyte */
         nutz[33] = 100;                /* 100 Byte angesagt */
         memcpy(nutz + 34, "UFT-K 0123", 10);
-        /* SPS-Kodierer (2): dort hat auch der Stand VOR MF-1372 Elemente
+        /* SPS-Kodierer (2): dort hat auch der Stand VOR MF-1373 Elemente
          * zerlegt — mit dem CAPS-Kodierer waere 4b dort leer erfuellt. */
         uint32_t info_sps[21];
         memset(info_sps, 0, sizeof info_sps);

@@ -977,9 +977,19 @@ FAELLE: dict[str, list[Fall]] = {
                 "        const bool k = (fread(buf, 1, 256, d->f) != 256);\n"
                 "        if (k) memset(buf, 0xE5, 256);\n"
                 "        uft_format_add_sector(track, s, buf, 256, cyl, head);\n"
-                "        if (k) uft_format_mark_last_missing(track);")},
+                "        if (k) uft_format_mark_last_short_read(track, d->f);")},
             erwartet="sauber",
-            warum="die richtige Form."),
+            warum="die richtige Form — seit H-30 (MF-1371) mit Grund."),
+        Fall(
+            name="fuellt UND kennzeichnet, aber ohne Grund",
+            dateien={"src/formats/x/x.c": _leser(
+                "        const bool k = (fread(buf, 1, 256, d->f) != 256);\n"
+                "        if (k) memset(buf, 0xE5, 256);\n"
+                "        uft_format_add_sector(track, s, buf, 256, cyl, head);\n"
+                "        if (k) uft_format_mark_last_missing(track);")},
+            erwartet="treffer", muster="ohne Grund",
+            warum="Messung (d), H-30: fehlend ohne Grund macht die Bruecke "
+                  "zu „nicht lesbar\" — bei einer zu kurzen Datei falsch."),
         Fall(
             name="bricht ab statt zu fuellen",
             dateien={"src/formats/x/x.c": _leser(

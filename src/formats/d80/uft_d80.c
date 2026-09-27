@@ -95,7 +95,7 @@ static uft_error_t d80_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         if (kurz) memset(buf, 0xE5, 256);
         /* CBM sectors are 0-based (ARCH-20) */
         uft_format_add_sector_with_id(track, (uint8_t)s, buf, 256, (uint8_t)cyl, (uint8_t)head);
-        if (kurz) uft_format_mark_last_missing(track);
+        if (kurz) uft_format_mark_last_short_read(track, p->file);
     }
     return UFT_OK;
 }

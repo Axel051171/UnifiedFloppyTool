@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * @file uft_ipf_sektoren.c
- * @brief IPF: Sektorebene aus dem Zellstrom (MF-1372, P3-360 Teil 1)
+ * @brief IPF: Sektorebene aus dem Zellstrom (MF-1373, P3-360 Teil 1)
  *
  * Eigene Umsetzung. Dekodiert selbst nichts, sondern waehlt zwischen den
  * zwei Bitstrom-Dekodern des Baums und uebertraegt ihr Ergebnis in die

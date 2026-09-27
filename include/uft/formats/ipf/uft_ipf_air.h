@@ -126,9 +126,9 @@ int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
                             bool     *out_truncated);
 
 /**
- * @brief MF-1371: hat JEDER gelesene Satz seine Pruefsumme gehalten?
+ * @brief MF-1372: hat JEDER gelesene Satz seine Pruefsumme gehalten?
  *
- * Bis MF-1371 wurde die CRC gerechnet und nur von einem `printf` gelesen;
+ * Bis MF-1372 wurde die CRC gerechnet und nur von einem `printf` gelesen;
  * das Plugin meldete trotzdem `UFT_FORMAT_CAP_VERIFY`. Eine Datei mit
  * gebrochener CRC bleibt LESBAR — eine beschaedigte Sicherung ist mehr
  * wert als keine —, aber sie wird benannt.
@@ -140,7 +140,7 @@ int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
 bool ipf_air_crc_ok(const ipf_air_disk_t *disk);
 
 /**
- * @brief MF-1371: Pruefsummen EINER Spur.
+ * @brief MF-1372: Pruefsummen EINER Spur.
  *
  * `*out_imge_ok` — der IMGE-Satz (Spurkopf) hielt seine CRC.
  * `*out_data_ok` — der zugehoerige DATA-Satz hielt Kopf- UND
@@ -152,10 +152,10 @@ int ipf_air_get_track_crc(const ipf_air_disk_t *disk, int cyl, int head,
                           bool *out_imge_ok, bool *out_data_ok);
 
 /**
- * @brief MF-1371: Zahl der IMGE-Saetze, die der Leser NICHT halten kann.
+ * @brief MF-1372: Zahl der IMGE-Saetze, die der Leser NICHT halten kann.
  *
  * Der Leser fasst Zylinder 0..83 und Kopf 0..1. Ein Spurkopf ausserhalb
- * fiel bis MF-1371 ohne Zaehler weg (Klasse MF-1040); jetzt wird er
+ * fiel bis MF-1372 ohne Zaehler weg (Klasse MF-1040); jetzt wird er
  * gezaehlt, und das Plugin nennt die Zahl.
  */
 uint32_t ipf_air_get_dropped_images(const ipf_air_disk_t *disk);
@@ -225,7 +225,7 @@ int ipf_air_get_block_sizes(const ipf_air_disk_t *disk, int cyl,
                             uint32_t *out_data_bits,
                             uint32_t *out_gap_bits);
 /**
- * @brief MF-1372: der „Gap Value“ eines Blocks, wie ihn die Datei nennt.
+ * @brief MF-1373: der „Gap Value“ eines Blocks, wie ihn die Datei nennt.
  *
  * Louis-Guerin, „IPF Documentation“ V0.0, Kap. 2.5: „Gap Value: Default
  * Gap value“. Keir Frasers Schreiber (disk-utilities, libdisk/container/
@@ -237,7 +237,7 @@ int ipf_air_get_block_gap_value(const ipf_air_disk_t *disk, int cyl,
                                 uint32_t *out_gap_value);
 
 /**
- * @brief MF-1372: IMGE „Start Bits“ — Abstand vom Index zum Datenbeginn
+ * @brief MF-1373: IMGE „Start Bits“ — Abstand vom Index zum Datenbeginn
  *        in Zellen (Keir Fraser, libdisk/container/ipf.c: „bit offset
  *        from index of data start“; MAME ipf_dsk.cpp: `index_cells`).
  * @return 0 wenn es die Spur gibt, -1 sonst.
@@ -245,7 +245,7 @@ int ipf_air_get_block_gap_value(const ipf_air_disk_t *disk, int cyl,
 int ipf_air_get_track_start_bit(const ipf_air_disk_t *disk, int cyl,
                                 int head, uint32_t *out_start_bit);
 
-/** @brief MF-1372: Kodierer laut INFO-Satz (1 = CAPS, 2 = SPS, 0 = unbekannt). */
+/** @brief MF-1373: Kodierer laut INFO-Satz (1 = CAPS, 2 = SPS, 0 = unbekannt). */
 uint32_t ipf_air_get_encoder(const ipf_air_disk_t *disk);
 
 int ipf_air_get_elem_count(const ipf_air_disk_t *disk, int cyl,

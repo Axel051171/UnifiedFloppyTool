@@ -1653,7 +1653,7 @@
       "test": "test_ipf_sektorebene",
       "oracle": "disk-analyse",
       "fremdcode": "nein - der INHALT ist UFT-eigen (selbstbenennend, kein Bootblock, kein Dateisystem); fremd ist allein die IPF-Kodierung. Das INFO-Feld traegt disk-analyses Kennung crc32(\"User IPF\") = 0x843265bb und ist unveraendert (Bitte des Autors im Quelltext, SPS-Erhaltungen nicht nachzuahmen).",
-      "content": "IPF, CAPS-Kodierer (encoder 1), 168 IMGE-Saetze (84 x 2): Zylinder 0..3 AmigaDOS mit je 11 Bloecken, 100 150 Zellen je Spur, Zwischenraum 4406 Zellen, Fuellbyte 0x00; Zylinder 4..83 unformatiert. INFO nennt Plattform Amiga. UFT liest seit MF-1372 88 von 88 Sektoren an ihrer eigenen Ortsmarke (volle 80-Zylinder-Fassung: 1760 von 1760), alle Pruefsummen gueltig."
+      "content": "IPF, CAPS-Kodierer (encoder 1), 168 IMGE-Saetze (84 x 2): Zylinder 0..3 AmigaDOS mit je 11 Bloecken, 100 150 Zellen je Spur, Zwischenraum 4406 Zellen, Fuellbyte 0x00; Zylinder 4..83 unformatiert. INFO nennt Plattform Amiga. UFT liest seit MF-1373 88 von 88 Sektoren an ihrer eigenen Ortsmarke (volle 80-Zylinder-Fassung: 1760 von 1760), alle Pruefsummen gueltig."
     },
     {
       "file": "tests/corpus_free/disk_analyse_uftk_pcdd.ipf",
@@ -1665,7 +1665,7 @@
       "test": "test_ipf_sektorebene",
       "oracle": "disk-analyse",
       "fremdcode": "nein - der INHALT ist UFT-eigen (selbstbenennend, kein Bootblock, kein Dateisystem); fremd ist allein die IPF-Kodierung. Das INFO-Feld traegt disk-analyses Kennung crc32(\"User IPF\") = 0x843265bb und ist unveraendert (Bitte des Autors im Quelltext, SPS-Erhaltungen nicht nachzuahmen).",
-      "content": "IPF, CAPS-Kodierer (encoder 1), Zylinder 0..3 IBM-PC DD mit je 19 Bloecken (mehr als die fruehere Klemme von 16, P3-361), Fuellbyte 0x4E, letzter Zwischenraum 4342 Zellen, Startbit 1280. INFO nennt Plattform AMIGA - disk-analyse schreibt das fuer JEDE Datei (ipf.c: info.platform[0] = 1); UFT waehlt den Dekoder deshalb nach dem Inhalt. Seit MF-1372 72 von 72 Sektoren an ihrer eigenen Ortsmarke (voll: 1440 von 1440)."
+      "content": "IPF, CAPS-Kodierer (encoder 1), Zylinder 0..3 IBM-PC DD mit je 19 Bloecken (mehr als die fruehere Klemme von 16, P3-361), Fuellbyte 0x4E, letzter Zwischenraum 4342 Zellen, Startbit 1280. INFO nennt Plattform AMIGA - disk-analyse schreibt das fuer JEDE Datei (ipf.c: info.platform[0] = 1); UFT waehlt den Dekoder deshalb nach dem Inhalt. Seit MF-1373 72 von 72 Sektoren an ihrer eigenen Ortsmarke (voll: 1440 von 1440)."
     }
   ]
 }

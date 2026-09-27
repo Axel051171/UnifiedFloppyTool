@@ -60,7 +60,7 @@ static void zellen_mfm_bit(uint8_t *puffer, uint32_t *bitpos, int d,
 }
 
 /**
- * MF-1372: `zellen` Zellen aus dem wiederholten Musterbyte `muster`, ab
+ * MF-1373: `zellen` Zellen aus dem wiederholten Musterbyte `muster`, ab
  * Zelle `start` des 16-Zellen-Musters (MSB zuerst). Ungerade Zellen tragen
  * das Datenbit, gerade den MFM-Takt aus dem Kontext — dieselbe Regel wie
  * `zellen_mfm_bit()`, nur an einer beliebigen Stelle des Musters begonnen.
@@ -224,7 +224,7 @@ int uft_ipf_zellstrom(const ipf_air_disk_t *disk, int cyl, int head,
              * Die Grenze aus dem Kopf bleibt: ausdrueckliche
              * Gap-Beschreibungen wertet diese Fassung nicht aus. */
             if (ipf_air_get_encoder(disk) == 1u) {
-                /* MF-1372: CAPS-Kodierer, Zwischenraum ohne Gap-Strom
+                /* MF-1373: CAPS-Kodierer, Zwischenraum ohne Gap-Strom
                  * (das Flaggenfeld gilt dort nicht). Zwei unabhaengige
                  * Beschreibungen sagen dasselbe:
                  *   Keir Fraser, disk-utilities ipfinfo/ipf.txt (Public

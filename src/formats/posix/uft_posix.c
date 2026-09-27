@@ -442,7 +442,7 @@ uft_error_t uft_posix_read(const char *path,
                     } else {
                         memset(sect->data, 0xE5, geometry.sector_size);
                         /* MF-1001: gefuellt, nicht gelesen (MF-980). */
-                        uft_sector_mark_missing(sect);
+                        uft_sector_mark_truncated(sect);
                     }
                 }
                 track->sector_count++;

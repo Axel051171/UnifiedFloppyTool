@@ -173,7 +173,7 @@ typedef struct {
     uint32_t reserved[3];
 } ipf_image_record_t;
 
-/** MF-1371: die IMGE-Saetze fuer die DATA-Verknuepfung. Hier stand ein
+/** MF-1372: die IMGE-Saetze fuer die DATA-Verknuepfung. Hier stand ein
  *  festes `images[512]` auf dem Stapel; ab dem 513. Satz fand kein
  *  DATA-Satz mehr seinen Spurkopf, ohne Meldung. */
 typedef struct {
@@ -245,7 +245,7 @@ typedef struct {
     uint32_t block_count;
     uint32_t track_flags;
 
-    /* MF-1372 (P3-361 Weg b): so viele, wie der DATA-Satz traegt. Hier
+    /* MF-1373 (P3-361 Weg b): so viele, wie der DATA-Satz traegt. Hier
      * stand ein festes `blocks[IPF_MAX_BLOCKS]` mit 16 Plaetzen; eine
      * PC-DD-Spur aus disk-analyse hat 19 Bloecke, Spur 79/0 von
      * `sps_lethalxcess_a.ipf` 35. */
@@ -263,7 +263,7 @@ typedef struct {
      * als 16 Bloecke. */
     bool blocks_truncated;
 
-    /* MF-1371: hielt der IMGE-Satz dieser Spur seine CRC, und hielt der
+    /* MF-1372: hielt der IMGE-Satz dieser Spur seine CRC, und hielt der
      * zugehoerige DATA-Satz Kopf- und Nutzlast-CRC? */
     bool imge_crc_ok;
     bool data_crc_ok;
@@ -305,7 +305,7 @@ typedef struct ipf_air_disk {
     uint32_t record_count;
     bool     valid;
     bool     crc_ok;
-    uint32_t dropped_images;   /* MF-1371: IMGE ausserhalb 84 x 2 */
+    uint32_t dropped_images;   /* MF-1372: IMGE ausserhalb 84 x 2 */
 } ipf_air_disk_t;
 
 /* Status codes ipf_air_status_t are now declared in
@@ -450,7 +450,7 @@ static int parse_data_elements(const uint8_t* data, size_t len,
         if (block_flags & IPF_BF_DATA_IN_BIT) {
             size_bits = data_size;
         } else {
-            /* MF-1372: `data_size * 8` lief in uint32_t ueber. */
+            /* MF-1373: `data_size * 8` lief in uint32_t ueber. */
             if (data_size > UINT32_MAX / 8u) return -1;
             size_bits = data_size * 8;
         }
@@ -458,7 +458,7 @@ static int parse_data_elements(const uint8_t* data, size_t len,
         /* Read sample data (except for fuzzy type) */
         uint32_t byte_count = (size_bits / 8) + ((size_bits % 8) ? 1 : 0);
 
-        /* MF-1372: zwei stille Fehler. Ab dem 17. Element wurde die
+        /* MF-1373: zwei stille Fehler. Ab dem 17. Element wurde die
          * Position NICHT weitergeschoben — die Wertbytes wurden danach
          * als Elementkoepfe gelesen. Und ein Wert, der ueber das Ende
          * reichte, blieb als uninitialisierter Speicherblock mit voller
@@ -495,7 +495,7 @@ static int parse_data_elements(const uint8_t* data, size_t len,
  * MAIN PARSER - Ported from IPFReader.cs decodeIPF()
  *============================================================================*/
 
-/** MF-1372: gibt die Bloecke EINER Spur samt Elementwerten frei. Auch
+/** MF-1373: gibt die Bloecke EINER Spur samt Elementwerten frei. Auch
  *  vor einem zweiten DATA-Satz fuer dieselbe Spur, damit der erste
  *  nicht leckt. */
 static void track_blocks_free(ipf_track_t *trk)
@@ -539,7 +539,7 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
     memset(disk, 0, sizeof(ipf_air_disk_t));
     disk->crc_ok = true;
 
-    /* MF-1371: Positionen laufen in uint32_t. Eine Datei jenseits von
+    /* MF-1372: Positionen laufen in uint32_t. Eine Datei jenseits von
      * 4 GiB liesse sie ueberlaufen — eine IPF dieser Groesse gibt es
      * nicht (eine volle Amiga-Diskette sind rund 1 MiB). */
     if (size > (size_t)UINT32_MAX) return IPF_AIR_BAD_RECORD;
@@ -572,7 +572,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
         uint32_t rec_crc = ipf_be32(data + pos + 8);
         pos += 12;
 
-        /* MF-1371: ein Satz umfasst mindestens seinen eigenen Kopf und
+        /* MF-1372: ein Satz umfasst mindestens seinen eigenen Kopf und
          * endet in der Datei. Ohne diese zwei Pruefungen blieb bei
          * `rec_len == 0` die Position stehen (Endlosschleife, gemessen),
          * und ein Satz ueber das Dateiende wurde ohne CRC uebersprungen,
@@ -643,7 +643,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                 img.reserved[i]= ipf_be32(data + pos); pos += 4;
             }
 
-            /* Store for DATA linking. MF-1371: ohne feste Obergrenze;
+            /* Store for DATA linking. MF-1372: ohne feste Obergrenze;
              * scheitert die Anforderung, sagt der Leser ab, statt die
              * Verknuepfung still zu verlieren. */
             if (!image_list_add(images, &img)) return IPF_AIR_FILE_ERROR;
@@ -665,7 +665,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                 trk->block_count = img.block_count;
                 trk->track_flags = img.track_flags;
                 /* MF-830 hielt hier die 16-Block-Klemme fest. Seit
-                 * MF-1372 gibt es keine Klemme mehr; ein Verlust steht
+                 * MF-1373 gibt es keine Klemme mehr; ein Verlust steht
                  * erst fest, wenn der DATA-Satz weniger Blockbeschreibungen
                  * TRAEGT, als hier angesagt sind (siehe DATA). */
                 trk->blocks_truncated = false;
@@ -673,7 +673,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                     trk->has_fuzzy = true;
                 disk->total_tracks++;
             } else {
-                /* MF-1371: fiel bis hier ohne Zaehler weg. */
+                /* MF-1372: fiel bis hier ohne Zaehler weg. */
                 disk->dropped_images++;
             }
         }
@@ -687,7 +687,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
             dr.crc      = ipf_be32(data + pos); pos += 4;
             dr.key      = ipf_be32(data + pos); pos += 4;
 
-            /* MF-1371: die Nutzlast endet in der Datei. Hier stand
+            /* MF-1372: die Nutzlast endet in der Datei. Hier stand
              * `pos + dr.length <= size` in uint32_t — bei einer Laenge
              * nahe 2^32 wickelte die Summe ueber, die Pruefung bestand,
              * und die CRC-Rechnung las hinter den Puffer (ASan, gemessen).
@@ -714,7 +714,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                 }
             }
 
-            /* MF-1371: die CRC gehoert der Spur, nicht nur der Datei. */
+            /* MF-1372: die CRC gehoert der Spur, nicht nur der Datei. */
             if (img && img->track < IPF_MAX_TRACKS && img->side < IPF_MAX_SIDES
                 && (!rec_crc_ok || !payload_crc_ok))
                 disk->tracks[img->track][img->side].data_crc_ok = false;
@@ -724,7 +724,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
             {
                 ipf_track_t* trk = &disk->tracks[img->track][img->side];
                 uint32_t extra_start = pos;
-                /* MF-1372: Elemente bleiben in IHRER Nutzlast. Hier wurde
+                /* MF-1373: Elemente bleiben in IHRER Nutzlast. Hier wurde
                  * gegen `size` (das Dateiende) geprueft; ein Versatz ins
                  * naechste Satzpaar las fremde Bytes als Elemente. */
                 const uint32_t extra_end = pos + dr.length;
@@ -735,7 +735,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                  */
                 uint32_t bpos = pos;
                 uint32_t nblocks = img->block_count;
-                /* MF-1372 (P3-361 Weg b): so viele Bloecke, wie die Datei
+                /* MF-1373 (P3-361 Weg b): so viele Bloecke, wie die Datei
                  * ansagt UND die Nutzlast als Beschreibung traegt. Traegt
                  * sie weniger, ist das der Verlust, den MF-830 meldet. */
                 const uint32_t tragbar = dr.length / IPF_BLOCK_DESC_SZ;
@@ -759,7 +759,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                     bd->gap_bytes      = bd->cell_type;         bpos += 4;
                     bd->encoder_type   = (ipf_block_encoder_t)ipf_be32(data + bpos); bpos += 4;
                     bd->block_flags    = ipf_be32(data + bpos); bpos += 4;
-                    /* MF-1372: beim CAPS-Kodierer gilt das Flaggenfeld
+                    /* MF-1373: beim CAPS-Kodierer gilt das Flaggenfeld
                      * nicht — Keir Fraser, ipfinfo/ipf.txt: „The flags
                      * field is ignored and assumed 0 if the encoder release
                      * in the INFO descriptor is 1“; MAME ipf_dsk.cpp
@@ -787,7 +787,7 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                     }
 
                     /*
-                     * Data elements — MF-1372: fuer BEIDE Kodierer. Hier
+                     * Data elements — MF-1373: fuer BEIDE Kodierer. Hier
                      * stand die Bedingung `encoder_type == SPS`, und MF-1079
                      * hielt fest, beim CAPS-Kodierer gebe es keine
                      * Blockelemente. Das trifft nicht: Keir Frasers
