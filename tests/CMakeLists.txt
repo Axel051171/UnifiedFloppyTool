@@ -3640,7 +3640,13 @@ foreach(test_source ${TEST_SOURCES})
            # (D88, D77) ueber den ECHTEN `uft_disk_open()` und fuehrt sie
            # durch die Bruecke — derselbe Weg wie der Analysator, also
            # dieselbe Menge wie die Zeilen darueber.
-           OR ${test_name} STREQUAL "test_d2_bruecke_am_korpus")
+           OR ${test_name} STREQUAL "test_d2_bruecke_am_korpus"
+           # H-30 Schritt 3 (MF-1383): prueft die Umkehrung der Regel aus
+           # Schritt 1 — keine Daten muss einen Grund nennen. Der zweite
+           # Abschnitt fuehrt JEDES Abbild aus `corpus_free` durch dieselbe
+           # Bruecke, also dieselbe Menge (und braucht UFT_CORPUS_DIR,
+           # das dieser Block unten setzt).
+           OR ${test_name} STREQUAL "test_h30_ohne_daten_nennt_grund")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
@@ -4217,7 +4223,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_sector_order.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
     elseif(${test_name} STREQUAL "test_fdc_gap3"
-           OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet")
+           OR ${test_name} STREQUAL "test_fdc_profil_verdrahtet"
+           OR ${test_name} STREQUAL "test_fdc_gap2_aus_profil")
         # MF-1167: `uft_fdc_calc_gap3()` liegt in der .c, nicht im Header —
         # anders als die statischen Profiltafeln, die `test_fdc_gaps_1440k`
         # direkt nimmt.

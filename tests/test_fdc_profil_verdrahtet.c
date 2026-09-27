@@ -407,8 +407,11 @@ TEST(jedes_profil_schliesst_oder_nennt_seinen_grund)
      * Einzelzahlen (MF-1026: eine Summe, die aufgeht, sagt nichts ueber
      * die Verteilung darin). */
     ASSERT(belegt == 11u);
-    ASSERT(teil == 1u);
-    ASSERT(unbelegt == 5u);
+    /* MF-1388: PC 2.88M von UNBELEGT nach TEILBELEGT — gap2 41 ist mit
+     * zwei Quellen belegt (gw ibm.py:738-742, MAME pc_dsk.cpp:92), gap3
+     * nicht. Vorher: teil 1, unbelegt 5. */
+    ASSERT(teil == 2u);
+    ASSERT(unbelegt == 4u);
     ASSERT(belegt + teil + unbelegt == 17u);
 }
 

@@ -303,11 +303,12 @@ typedef struct {
  *     korrigiert:   PC 360K, PC 720K, MSX 1DD, MSX 2DD  (gap3 80 -> 84)
  *                   BBC ADFS  (gap4b 400 -> 104)
  *                   PC-98 2HD (gap4b 600 -> 654)
- *   TEILBELEGT (ein Teil belegt, Identitaet geht NICHT auf)   1
+ *   TEILBELEGT (ein Teil belegt, Identitaet geht NICHT auf)   2
  *     BBC DFS — gap3 21 und `iam = no` belegt, gap4a/gap1 sind IBM-Werte
- *   UNBELEGT (keine Quelle)                                   5
- *     PC 2.88M, Atari ST HD, Amstrad CPC Data, Amstrad CPC System,
- *     PC-98 2DD
+ *     PC 2.88M — gap2 41 belegt (MF-1388, gw + MAME), gap3/gap4b nicht
+ *   UNBELEGT (keine Quelle)                                   4
+ *     Atari ST HD, Amstrad CPC Data, Amstrad CPC System, PC-98 2DD
+ *     (bis MF-1388 stand PC 2.88M hier, und die Zahlen waren 1 / 5)
  *
  * `gap4b` ist dabei kein neuer Messwert, sondern der REST — greaseweazle
  * hat gar kein solches Feld, weil der Vor-Index-Zwischenraum das ist, was
@@ -401,18 +402,22 @@ static const uft_fdc_format_t UFT_FDC_PC_2880K = {
     .name = "PC 2.88M (3.5\" ED)",
     .tracks = 80, .sides = 2, .sectors = 36, .sector_size = 512, .size_code = 2,
     .data_rate = UFT_FDC_RATE_1M, .rpm = 300, .mfm = true,
-    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 54, .gap3_fmt = 84, .gap4b = 400 },
+    /* MF-1388: gap2 22 -> 41 — greaseweazle ibm.py:738-742 ("At ED rate
+     * the default GAP2 is 41 bytes") and MAME pc_dsk.cpp:90-92 (2880K,
+     * gap_2 41) agree. gap3/gap4b stay the copied values, UNBELEGT. */
+    .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 41, .gap3_rw = 54, .gap3_fmt = 84, .gap4b = 400 },
     .track_bytes = 25000, .raw_bits = 400000,
     .iam = true,
-    .gap_beleg = UFT_FDC_GAP_UNBELEGT,
+    .gap_beleg = UFT_FDC_GAP_TEILBELEGT,
     .gap_quelle =
-        "KEINE greaseweazle-Definition fuer 36 x 512 (dessen ibm.cfg "
-        "endet bei 1680/dmf). gap3 = 84 ist der aus PC 1.2M kopierte "
-        "Wert, gap4b = 400 ebenso — MF-838 hat genau dieses Muster "
-        "gemessen: 84 steht in vier Eintraegen mit drei verschiedenen "
-        "Sektorzahlen. Es fehlen 4190 - 3424 = 766 Byte, die Spur ist "
-        "also nicht ueberbelegt, sondern die Lueckenwerte sind zu "
-        "klein."
+        "gap2 = 41 BELEGT (MF-1388): greaseweazle ibm.py:738-742 „At ED "
+        "rate the default GAP2 is 41 bytes“ und MAME pc_dsk.cpp:90-92 "
+        "(2880K, gap_2 41) — zwei unabhaengige Haende. NICHT belegt: "
+        "gap3/gap4b — keine greaseweazle-Definition fuer 36 x 512 (dessen "
+        "ibm.cfg endet bei 1680/dmf), MAME nennt gap_3 80 mit „gaps "
+        "unverified“. gap3 = 84 ist der aus PC 1.2M kopierte Wert, "
+        "gap4b = 400 ebenso (Muster MF-838). Mit gap2 41 fehlen "
+        "3506 - 3424 = 82 Byte (vorher, mit gap2 22 gerechnet, 766)."
 };
 
 /* Atari ST Formats

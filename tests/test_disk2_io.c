@@ -583,11 +583,27 @@ static void t5_herkunft(void) {
                 if (strcmp(uft_d2_diag_at(b, i)->code, "ORIGIN_RANGE") == 0) befund++;
         CHECK(befund == 1u, "Herkunft 200 muss als ORIGIN_RANGE auffallen, "
               "gezaehlt %zu", befund);
+        /* H-30 Schritt 3 (MF-1383): hier stand `UNKNOWN`.
+         *
+         * Der gefaelschte Sektor trug gespeichert die Herkunft 7
+         * (`SKIPPED`), traegt also KEINE Daten — die Zeile darueber
+         * prueft die 7. Seit `uft_d2_add_sector()` die Umkehrung der
+         * H-30-Regel haelt (keine Daten muss einen Grund nennen), haette
+         * eine Klemmung auf `UNKNOWN` den Sektor beim LADEN verworfen:
+         * das Modell haette ihn abgewiesen, und `sectors.count` waere 2.
+         * Ein verlorener Sektor ist schlimmer als eine vorsichtige
+         * Angabe, also klemmt der Lader jetzt auf `UNAVAILABLE` —
+         * „gelesen versucht, kein Ergebnis". Der Befund ORIGIN_RANGE
+         * bleibt unveraendert; auffaellig ist die Datei, nicht der
+         * Eintrag. */
         CHECK(bt && bt->sectors.count == 3u
-              && bt->sectors.items[0].origin == UFT_D2_ORIGIN_UNKNOWN,
-              "Sektor 1 bleibt erhalten, aber mit Herkunft UNKNOWN statt 200 "
-              "(hat %u)", bt && bt->sectors.count ? (unsigned)bt->sectors.items[0].origin : 0u);
-        printf("    7/8/9 zurueck; 200 als ORIGIN_RANGE gemeldet, als UNKNOWN gefuehrt\n");
+              && bt->sectors.items[0].origin == UFT_D2_ORIGIN_UNAVAILABLE,
+              "Sektor 1 bleibt ERHALTEN, mit Herkunft UNAVAILABLE statt 200 "
+              "(hat %u, Sektoren %zu)",
+              bt && bt->sectors.count ? (unsigned)bt->sectors.items[0].origin : 0u,
+              bt ? bt->sectors.count : (size_t)0u);
+        printf("    7/8/9 zurueck; 200 als ORIGIN_RANGE gemeldet, ohne Daten "
+               "als UNAVAILABLE gefuehrt (H-30 Schritt 3)\n");
         uft_d2_destroy(b);
     }
     free(buf);

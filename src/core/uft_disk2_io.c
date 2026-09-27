@@ -313,15 +313,29 @@ static void rstr(rbuf_t *r, char *dst, size_t field) {
  *  dieser Lader nicht kennt. Jetzt: bekannt -> unveraendert; unbekannt ->
  *  UNKNOWN, und der Befund nennt das Byte. Nicht abgewiesen, weil die
  *  uebrigen Felder des Sektors weiter gelten — nur seine Herkunft nicht. */
+/**
+ * @param hat_inhalt  traegt der Traeger dieser Herkunft Daten? Entscheidet,
+ *                    worauf ein unbekanntes Byte geklemmt wird.
+ *
+ * H-30 Schritt 3 (MF-1383): hier stand unbedingt `UNKNOWN`. Seit
+ * `uft_d2_add_sector()` die Umkehrung der H-30-Regel haelt — keine Daten
+ * muss einen Grund nennen — haette das einen Sektor OHNE Daten beim LADEN
+ * verworfen. Ein verlorener Sektor ist schlimmer als eine vorsichtige
+ * Angabe: `UNAVAILABLE` („gelesen versucht, kein Ergebnis") ist wahr,
+ * traegt den Grund und erhaelt den Eintrag. Der Befund ORIGIN_RANGE bleibt
+ * unveraendert — die Datei ist auffaellig, nicht der Eintrag.
+ */
 static uft_d2_origin_t herkunft_lesen(uft_disk2_t *d, uint8_t roh,
                                       uft_d2_layer_t layer, int cyl, int head,
-                                      int sec) {
+                                      int sec, bool hat_inhalt) {
     if (roh <= (uint8_t)UFT_D2_ORIGIN_MAX) return (uft_d2_origin_t)roh;
+    const uft_d2_origin_t ersatz = hat_inhalt ? UFT_D2_ORIGIN_UNKNOWN
+                                              : UFT_D2_ORIGIN_UNAVAILABLE;
     uft_d2_diag(d, UFT_D2_DIAG_WARN, layer, cyl, head, sec, "ORIGIN_RANGE",
                 "Herkunftsbyte %u ist diesem Lader unbekannt (bekannt 0..%u) "
-                "— als 'unbekannt' gefuehrt.", (unsigned)roh,
-                (unsigned)UFT_D2_ORIGIN_MAX);
-    return UFT_D2_ORIGIN_UNKNOWN;
+                "— als '%s' gefuehrt.", (unsigned)roh,
+                (unsigned)UFT_D2_ORIGIN_MAX, uft_d2_origin_name(ersatz));
+    return ersatz;
 }
 
 /** Einen Block einlesen und seine CRC pruefen. */
@@ -438,7 +452,7 @@ static bool load_trak(uft_disk2_t *d, rbuf_t *b, size_t off, const char *tag,
                 x.dam = r8(&sb); x.encoding = (uft_encoding_t)r8(&sb);
                 x.origin = herkunft_lesen(d, r8(&sb), UFT_D2_LAYER_SECTORS,
                                           (int)t->cyl, (int)t->head,
-                                          (int)x.id_sec);
+                                          (int)x.id_sec, x.has_data);
                 x.conf = r8(&sb);
                 x.deriv = (uft_d2_deriv_id_t)r16(&sb);
                 x.source_gen = r32(&sb);
@@ -585,8 +599,11 @@ uftd_result_t uftd_load(const uint8_t *buf, size_t len, uft_disk2_t **out_disk) 
             const uint32_t n = r32(&b);
             for (uint32_t i = 0; i < n; ++i) {
                 const uft_d2_layer_t fl = (uft_d2_layer_t)r8(&b);
+                /* Eine Ableitung ist kein Sektor — sie traegt immer einen
+                 * Inhalt (die Herkunftsangabe selbst), also bleibt hier
+                 * `UNKNOWN` die richtige Klemmung. */
                 const uft_d2_origin_t og = herkunft_lesen(
-                    d, r8(&b), UFT_D2_LAYER_SECTORS, -1, -1, -1);
+                    d, r8(&b), UFT_D2_LAYER_SECTORS, -1, -1, -1, true);
                 const uint32_t sg = r32(&b);
                 char by[UFT_D2_DERIV_BY], pa[UFT_D2_DERIV_PARAMS];
                 rstr(&b, by, UFT_D2_DERIV_BY);

@@ -58,6 +58,13 @@ static int g_fail = 0, g_pass = 0;
 
 /* ── Bau eines Modells ─────────────────────────────────────────────────── */
 
+/* Inhalt für die Prüflinge. Er wird nie gelesen — die Querprüfung
+ * vergleicht Kennungen —, aber er ist nötig: ein Sektor OHNE Daten muss
+ * seit MF-1383 einen Grund nennen, und diese Sektoren stellen gelesene
+ * dar, keine abwesenden. Genullt — der Inhalt spielt keine Rolle, nur
+ * seine Anwesenheit. */
+static uint8_t g_sektordaten[512];
+
 /** Legt Spur (c,h) mit den Sektornummern ids[0..n) an. n == 0: keine Spur. */
 static void spur(uft_disk2_t *d, unsigned c, unsigned h,
                  const uint8_t *ids, size_t n) {
@@ -69,6 +76,21 @@ static void spur(uft_disk2_t *d, unsigned c, unsigned h,
         s.id_cyl = (uint8_t)c; s.id_head = (uint8_t)h; s.id_sec = ids[i];
         s.id_size_code = 2;
         s.idam_bit = s.dam_bit = s.data_end_bit = SIZE_MAX;
+        /* H-30 Schritt 3 (MF-1383): diese Prüflinge stellen GELESENE
+         * Sektoren dar — die Querprüfung vergleicht ihre IDs gegen die
+         * Spurangaben. Bis MF-1383 trugen sie `CONTAINER` und KEINE
+         * Daten; seit `uft_d2_add_sector()` die Umkehrung der H-30-Regel
+         * hält (keine Daten muss einen Grund nennen), wäre das eine
+         * Abwesenheit ohne Grund und würde abgewiesen.
+         *
+         * Der Prüfling bekommt deshalb ein Datenfeld, statt Abwesenheit
+         * zu BEHAUPTEN: er stellt keine dar. (Die andere Fassung —
+         * `UNAVAILABLE` mit Zuversicht 0 — wurde gemessen und verworfen:
+         * das Zentrum schreibt je Abwesenheit einen eigenen Befund
+         * (MF-1370), und 26 Zusicherungen dieses Tests zählen Befunde.) */
+        s.data = g_sektordaten;
+        s.data_len = (uint32_t)sizeof g_sektordaten;
+        s.has_data = true;
         s.origin = UFT_D2_ORIGIN_CONTAINER;
         s.conf = UFT_D2_CONF_UNVERIFIED;
         if (!uft_d2_add_sector(d, t, &s)) { printf("add_sector\n"); exit(2); }

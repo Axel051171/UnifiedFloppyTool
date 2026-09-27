@@ -53,6 +53,11 @@ static int g_fail = 0, g_pass = 0;
 
 static uint8_t g_bits[NBITS / 8u];
 
+/* Inhalt der Prüflinge. Genullt — er wird nie gelesen, aber seine
+ * Anwesenheit ist nötig: ein Sektor ohne Daten muss seit MF-1383 einen
+ * Grund nennen, und diese Sektoren stellen gelesene dar. */
+static uint8_t g_sektordaten[512];
+
 /**
  * Spur (c,h) mit den Sektornummern `phys[0..n)` in PHYSISCHER Reihenfolge
  * ab dem Index. Mit `lagen` bekommt jeder Sektor seine Bitlage und die
@@ -79,6 +84,20 @@ static void spur(uft_disk2_t *d, unsigned c, unsigned h, const uint8_t *phys,
         s.idam_bit = (lagen == LAGEN || lagen == KEIN_INDEX)
                    ? 1000u + (size_t)k * SLOT : SIZE_MAX;
         s.dam_bit = s.data_end_bit = SIZE_MAX;
+        /* H-30 Schritt 3 (MF-1383): diese Prüflinge stellen GELESENE
+         * Sektoren dar — der Spiralfaktor wird aus `idam_bit` gelesen,
+         * der Inhalt spielt keine Rolle, seine ANWESENHEIT aber schon:
+         * seit `uft_d2_add_sector()` die Umkehrung der H-30-Regel hält,
+         * muss ein Sektor ohne Daten einen Grund nennen.
+         *
+         * Die andere Fassung — `UNAVAILABLE` mit Zuversicht 0 — wurde
+         * gemessen und verworfen: das Zentrum schreibt je Abwesenheit
+         * einen eigenen Befund (MF-1370), und der Bericht zählte
+         * daraufhin **512** statt 3. Ein Prüfling, der Abwesenheit
+         * BEHAUPTET, ohne eine darzustellen, verfälscht das Gemessene. */
+        s.data = g_sektordaten;
+        s.data_len = (uint32_t)sizeof g_sektordaten;
+        s.has_data = true;
         s.origin = UFT_D2_ORIGIN_CONTAINER;
         s.conf = UFT_D2_CONF_UNVERIFIED;
         if (!uft_d2_add_sector(d, t, &s)) { printf("add_sector\n"); exit(2); }

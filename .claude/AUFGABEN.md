@@ -85,6 +85,7 @@ laufen fort und werden nie wiederverwendet.
   (Bench) gelaufen ist.
 - **Aufwand:** DTC-1 ~40, DTC-2 ~120, DTC-3 ~60 Zeilen (Schätzung aus dem
   Plan, nicht gemessen); DTC-7 nicht schätzbar (Gerät, MF-310).
+- **Stand 2026-09-27 (2):** DTC-5 Differenzlauf **versucht, bleibt Fundus** (MF-1403): alle echten Aufnahmen im Korpus tragen 2 Umdrehungen, und bei 2 Umdrehungen ist die Ausgabe des Solvers nach seinem eigenen Code Bit für Bit Umdrehung 0 (`uft_rev_path_solver.c:233`, Gleichstand → Referenz). Öffnet sich erst mit einer echten Aufnahme mit ≥ 3 Umdrehungen und einem Sektor, der in jeder einzelnen falsch liest — Begründung in `docs/plans/DTC_UPGRADE.md` §DTC-5. Offen bleiben: der C-Bauer, DTC-7 (Bench, Eigentümer).
 - **Stand 2026-09-27:** DTC-0 **entschieden** (Paket vom Eigentümer, GPL-2 ok; Solver bekommt den Differenzlauf), DTC-3 **erledigt** (MF-1386, Beleg: KryoFlux Manual 3.50 S. 13/14 aus `neue-ideen/fertige/kryoflux_3.50_linux_r4.tar.gz`). Offen: DTC-5 (Differenzlauf, braucht echte Mehrfachumdrehungen), der C-Bauer, DTC-7 (Bench, Eigentümer).
 - **Stand (alt):** Plan steht (`8b39700d`, MF-1360). **Wartet auf DTC-0:**
   (1) wer hat das Paket verfasst, unter welcher Erteilung; (2) Solver in
@@ -3008,6 +3009,15 @@ nicht Auftrag. Steht hier, bis ein Anlass es hochholt.)*
 ## Erledigt
 
 *(mit Beleg: Commit-Hash und MF-Nummer)*
+
+### A-041 · Zulieferung `uft-limits-code.zip` pruefen und uebernehmen, was UFT weiterbringt
+- **Status:** erledigt · **Aufgenommen:** 2026-09-27
+- **Wortlaut:** Pfad der Zip ohne weiteren Text (zusammen mit `UFT_DTC_Upgrade_v1.zip`, das A-035 ist)
+- **Kennzahl:** keine der vier
+- **Kanal:** Port (Eigentuemerpaket) — uebernommen wurden Befunde, kein Code
+- **Fertig heißt:** Pruefbericht; Belegtes eingebaut; der Rest benannt
+- **Stand:** kein Code aus dem Paket (zweite Rechnung mit festem Spurkopf, nicht unabhaengiges Orakel, Kollisionen); eingebaut ED-GAP2 41 und gap2 aus dem Profil; P3-603, P3-604
+- **Beleg:** MF-1388
 
 ### A-038 · P3-555: „Success" im Workflow-Reiter nur, wenn Sektoren dekodiert sind
 - **Status:** erledigt · **Aufgenommen:** 2026-09-27
