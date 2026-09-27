@@ -174,6 +174,14 @@ typedef struct {
     uint32_t reserved[3];
 } ipf_image_record_t;
 
+/** MF-1372: die IMGE-Saetze fuer die DATA-Verknuepfung. Hier stand ein
+ *  festes `images[512]` auf dem Stapel; ab dem 513. Satz fand kein
+ *  DATA-Satz mehr seinen Spurkopf, ohne Meldung. */
+typedef struct {
+    ipf_image_record_t *v;
+    uint32_t            n, cap;
+} ipf_image_list_t;
+
 /** DATA record header */
 typedef struct {
     uint32_t length;
@@ -251,6 +259,11 @@ typedef struct {
      * Und sie ist erreichbar: eine PC-HD-Spur mit 18 Sektoren hat mehr
      * als 16 Bloecke. */
     bool blocks_truncated;
+
+    /* MF-1372: hielt der IMGE-Satz dieser Spur seine CRC, und hielt der
+     * zugehoerige DATA-Satz Kopf- und Nutzlast-CRC? */
+    bool imge_crc_ok;
+    bool data_crc_ok;
 } ipf_track_t;
 
 /** CTEI/CTEX extension records */
@@ -289,6 +302,7 @@ typedef struct ipf_air_disk {
     uint32_t record_count;
     bool     valid;
     bool     crc_ok;
+    uint32_t dropped_images;   /* MF-1372: IMGE ausserhalb 84 x 2 */
 } ipf_air_disk_t;
 
 /* Status codes ipf_air_status_t are now declared in
@@ -466,6 +480,25 @@ static int parse_data_elements(const uint8_t* data, size_t len,
  * MAIN PARSER - Ported from IPFReader.cs decodeIPF()
  *============================================================================*/
 
+static bool image_list_add(ipf_image_list_t *l, const ipf_image_record_t *r)
+{
+    if (l->n == l->cap) {
+        const uint32_t neu = l->cap ? l->cap * 2u : 256u;
+        ipf_image_record_t *tmp = (ipf_image_record_t *)realloc(
+            l->v, (size_t)neu * sizeof(*tmp));
+        if (!tmp) return false;
+        l->v = tmp;
+        l->cap = neu;
+    }
+    l->v[l->n++] = *r;
+    return true;
+}
+
+static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
+                                              size_t size,
+                                              ipf_air_disk_t* disk,
+                                              ipf_image_list_t *images);
+
 ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
                                 ipf_air_disk_t* disk)
 {
@@ -475,13 +508,27 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
     memset(disk, 0, sizeof(ipf_air_disk_t));
     disk->crc_ok = true;
 
-    uint32_t pos = 0;
+    /* MF-1372: Positionen laufen in uint32_t. Eine Datei jenseits von
+     * 4 GiB liesse sie ueberlaufen — eine IPF dieser Groesse gibt es
+     * nicht (eine volle Amiga-Diskette sind rund 1 MiB). */
+    if (size > (size_t)UINT32_MAX) return IPF_AIR_BAD_RECORD;
 
     /* We need a lookup: data_key → ImageRecord for linking DATA to IMGE */
-    ipf_image_record_t images[512];
-    uint32_t image_count = 0;
+    ipf_image_list_t images = { NULL, 0, 0 };
+    const ipf_air_status_t st =
+        ipf_air_parse_records(data, size, disk, &images);
+    free(images.v);
+    return st;
+}
 
-    while (pos + IPF_REC_HDR_SZ <= size) {
+static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
+                                              size_t size,
+                                              ipf_air_disk_t* disk,
+                                              ipf_image_list_t *images)
+{
+    uint32_t pos = 0;
+
+    while ((uint64_t)pos + IPF_REC_HDR_SZ <= size) {
         uint32_t start_pos = pos;
 
         /* ---- Record Header (12 bytes, BE) ---- */
@@ -494,13 +541,18 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
         uint32_t rec_crc = ipf_be32(data + pos + 8);
         pos += 12;
 
+        /* MF-1372: ein Satz umfasst mindestens seinen eigenen Kopf und
+         * endet in der Datei. Ohne diese zwei Pruefungen blieb bei
+         * `rec_len == 0` die Position stehen (Endlosschleife, gemessen),
+         * und ein Satz ueber das Dateiende wurde ohne CRC uebersprungen,
+         * mit IPF_AIR_OK. */
+        if (rec_len < IPF_REC_HDR_SZ) return IPF_AIR_BAD_RECORD;
+        if ((uint64_t)start_pos + rec_len > size) return IPF_AIR_TRUNCATED;
+
         /* Validate CRC */
-        if (start_pos + rec_len <= size) {
-            uint32_t computed = air_crc32_header(data, start_pos, rec_len);
-            if (computed != rec_crc) {
-                disk->crc_ok = false;
-            }
-        }
+        const bool rec_crc_ok =
+            (air_crc32_header(data, start_pos, rec_len) == rec_crc);
+        if (!rec_crc_ok) disk->crc_ok = false;
         disk->record_count++;
 
         /* ---- CAPS record (file magic) ---- */
@@ -560,14 +612,17 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
                 img.reserved[i]= ipf_be32(data + pos); pos += 4;
             }
 
-            /* Store for DATA linking */
-            if (image_count < 512)
-                images[image_count++] = img;
+            /* Store for DATA linking. MF-1372: ohne feste Obergrenze;
+             * scheitert die Anforderung, sagt der Leser ab, statt die
+             * Verknuepfung still zu verlieren. */
+            if (!image_list_add(images, &img)) return IPF_AIR_FILE_ERROR;
 
             /* Create track */
             if (img.track < IPF_MAX_TRACKS && img.side < IPF_MAX_SIDES) {
                 ipf_track_t* trk = &disk->tracks[img.track][img.side];
                 disk->track_present[img.track][img.side] = true;
+                trk->imge_crc_ok = rec_crc_ok;
+                trk->data_crc_ok = true;
                 trk->track       = img.track;
                 trk->side        = img.side;
                 trk->density     = img.density;
@@ -587,6 +642,9 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
                 if (img.track_flags & IPF_TF_FUZZY)
                     trk->has_fuzzy = true;
                 disk->total_tracks++;
+            } else {
+                /* MF-1372: fiel bis hier ohne Zaehler weg. */
+                disk->dropped_images++;
             }
         }
 
@@ -599,21 +657,37 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
             dr.crc      = ipf_be32(data + pos); pos += 4;
             dr.key      = ipf_be32(data + pos); pos += 4;
 
+            /* MF-1372: die Nutzlast endet in der Datei. Hier stand
+             * `pos + dr.length <= size` in uint32_t — bei einer Laenge
+             * nahe 2^32 wickelte die Summe ueber, die Pruefung bestand,
+             * und die CRC-Rechnung las hinter den Puffer (ASan, gemessen).
+             * Eine Nutzlast hinter dem Dateiende wurde ausserdem ohne
+             * CRC uebersprungen. */
+            if ((uint64_t)pos + dr.length > size) return IPF_AIR_TRUNCATED;
+
             /* Validate data CRC */
-            if (dr.length > 0 && pos + dr.length <= size) {
+            bool payload_crc_ok = true;
+            if (dr.length > 0) {
                 uint32_t data_crc = air_crc32_buffer(data, pos, dr.length);
-                if (data_crc != dr.crc)
+                if (data_crc != dr.crc) {
+                    payload_crc_ok = false;
                     disk->crc_ok = false;
+                }
             }
 
             /* Find matching IMGE by data_key */
             ipf_image_record_t* img = NULL;
-            for (uint32_t i = 0; i < image_count; i++) {
-                if (images[i].data_key == dr.key) {
-                    img = &images[i];
+            for (uint32_t i = 0; i < images->n; i++) {
+                if (images->v[i].data_key == dr.key) {
+                    img = &images->v[i];
                     break;
                 }
             }
+
+            /* MF-1372: die CRC gehoert der Spur, nicht nur der Datei. */
+            if (img && img->track < IPF_MAX_TRACKS && img->side < IPF_MAX_SIDES
+                && (!rec_crc_ok || !payload_crc_ok))
+                disk->tracks[img->track][img->side].data_crc_ok = false;
 
             if (img && img->track < IPF_MAX_TRACKS && img->side < IPF_MAX_SIDES
                 && dr.length > 0)
@@ -960,6 +1034,23 @@ int ipf_air_get_track_loss(const ipf_air_disk_t *disk, int cyl, int head,
     if (out_stored)    *out_stored    = trk->actual_blocks;
     if (out_truncated) *out_truncated = trk->blocks_truncated;
     return 0;
+}
+
+bool ipf_air_crc_ok(const ipf_air_disk_t *disk) {
+    return disk && disk->valid && disk->crc_ok;
+}
+
+int ipf_air_get_track_crc(const ipf_air_disk_t *disk, int cyl, int head,
+                          bool *out_imge_ok, bool *out_data_ok) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+    if (out_imge_ok) *out_imge_ok = trk->imge_crc_ok;
+    if (out_data_ok) *out_data_ok = trk->data_crc_ok;
+    return 0;
+}
+
+uint32_t ipf_air_get_dropped_images(const ipf_air_disk_t *disk) {
+    return disk ? disk->dropped_images : 0u;
 }
 
 int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
