@@ -66,6 +66,11 @@
 
 static int g_pass = 0, g_fail = 0;
 
+/* MF-1474: lokal deklariert wie in den uebrigen Plugin-Tests
+ * (z. B. tests/test_plugin_probe_real.c:45) — es gibt keinen Header,
+ * der die Plugin-Bezeichner ausstellt. */
+extern const uft_format_plugin_t uft_format_plugin_woz;
+
 #define CHECK(c, ...) do { if (c) { g_pass++; } else { g_fail++; \
     printf("  FEHLGESCHLAGEN Zeile %d: ", __LINE__); \
     printf(__VA_ARGS__); printf("\n"); } } while (0)
@@ -106,6 +111,17 @@ static int messen(const char *pfad, int *out_sektoren, int *out_bits_gesetzt,
            uft_disk_plugin(disk) ? uft_disk_plugin(disk)->name : "(keins)",
            (unsigned)disk->geometry.cylinders,
            (unsigned)disk->geometry.heads);
+
+    /* MF-1474: das WOZ-Plugin muss das Erkennungsrennen auch GEWONNEN
+     * haben. Ohne diese Zeile war der Test gruen, wenn ein fremdes
+     * Plugin die Datei aufmacht — und `gen_verification_tiers.py`
+     * ordnete ihn WOZ nicht zu (es verbindet ueber den Bezeichner
+     * `uft_format_plugin_<sym>`), meldete also fuer beide Aufnahmen
+     * woertlich „no tier credit". Zwei Fliegen, eine Zeile. */
+    CHECK(uft_disk_plugin(disk) == &uft_format_plugin_woz,
+          "%s wurde von \"%s\" geoeffnet, nicht vom WOZ-Plugin — eine "
+          "echte WOZ-Aufnahme muss ihr eigenes Plugin gewinnen", pfad,
+          uft_disk_plugin(disk) ? uft_disk_plugin(disk)->name : "(keins)");
 
     for (unsigned c = 0; c < disk->geometry.cylinders && c < 100u; c++) {
         uft_track_t tr;

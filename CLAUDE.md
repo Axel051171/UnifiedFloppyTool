@@ -110,7 +110,7 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > byteidentisch): kein Test, oder ein
 > synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau
 > in dieser Lage waren die fünf fabrizierten Parser grün
-> (FMT-2/3/10/11/12). Belegt sind T1=8, T1b=70, T2=8 (Verlauf jeder Hebung, MF-690 bis MF-1332, woertlich in [`docs/CLAUDE_CHRONIK.md`](docs/CLAUDE_CHRONIK.md) §1). Die Liste unten
+> (FMT-2/3/10/11/12). Belegt sind T1=9, T1b=69, T2=8 (Verlauf jeder Hebung, MF-690 bis MF-1474, woertlich in [`docs/CLAUDE_CHRONIK.md`](docs/CLAUDE_CHRONIK.md) §1; MF-1474 hob `woz` auf T1 — nicht durch neue Belege, sondern weil `test_woz_echte_aufnahme` die zwei echten Applesauce-Aufnahmen schon durch `uft_disk_open()` fuehrte und das Plugin nur nicht BENANNTE, worauf der Generator verbindet). Die Liste unten
 > nennt, was **gelesen werden soll**, nicht was **geprüft ist** — pro
 > Format: [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md).
 

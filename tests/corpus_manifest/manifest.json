@@ -541,7 +541,7 @@
     {
       "file": "tests/corpus/fluxfox_sector_test/track00.0.raw",
       "sha256": "dec2381d2dba9491e2a9b77c22acc5adf8c5788574e8ecc4443f38beb267350c",
-      "format": "kfraw",
+      "format": "kfx",
       "origin": "real",
       "tool": "Greaseweazle 1.18 (aus der KFInfo-Zeile der Datei selbst gelesen: name=Greaseweazle, version=1.18, host_date=2024.11.09, host_time=11:57:59)",
       "source": "github.com/dbalsom/fluxfox, tests/images/sector_test/, Commit 2b852552, abgerufen 2026-09-08. Lizenz: MIT, Repo-LICENSE (\"Copyright (c) 2024 Daniel Balsom\"); derselbe MIT-Text steht im Kopf von scripts/make_sector_test_img.py, dem Skript, das den Diskettinhalt erzeugt. Wieder-Beschaffung: das ZIP sector_test_kryoflux_360k.zip (SHA-256 26c0c077f9227e49e804a04bd8423542874905af81e4b0bd2a692d4977def00e) entpacken, track00.0.raw entnehmen und diesen Hash pruefen.",

@@ -114,6 +114,48 @@ def _testnamen_im_feld(wert: str) -> set[str]:
     return set(re.findall(r"\btest_[A-Za-z0-9_]+", wert or ""))
 
 
+def formatnamen_ohne_plugin(bilder: list, symbole) -> list:
+    """Manifest-`format`-Namen, die kein registriertes Plugin traegt.
+
+    Der Nachschlagepfad in `compute_tiers()` ist
+    `corpus_by_fmt.get(p["symbol"])`. Ein Name, den KEIN Plugin traegt,
+    wird also nie nachgefragt — der Eintrag fiel bis MF-1474 **still**
+    heraus. Die beiden Nachbarpruefungen melden sich: eine fehlende
+    Provenienz warnt, eine nicht zugeordnete Testzeile warnt. Nur der
+    Name nicht, und das ist die Asymmetrie.
+
+    Gemessen beim Einbau: **5 Namen, 10 Dateien**. Drei davon sind
+    ABSICHTLICH keine Formate (`n/a` fuer ein Aufnahmeprotokoll, `none`
+    fuer ein Negativ-Beispiel ohne Kennung, `protection:copylock_st`
+    fuer sechs Schutz-Belege) — deshalb urteilt diese Funktion NICHT,
+    sie zaehlt nur. Wer hier eine Ausnahmeliste einbaut, hat die
+    Aufzaehlung zurueckgeholt, die in diesem Baum viermal veraltet ist
+    (MF-636).
+
+    Echte Fehlzuordnungen sind damit **zwei**: `kfraw` (das Plugin heisst
+    `kfx`) und `fat12_fs`. Und die 5 sind selbst ein Beleg fuer den Wert
+    des Tors: die erste Zaehlung von Hand ergab 10 Namen / 17 Dateien,
+    weil sie gegen die ANZEIGENAMEN aus `gen_format_list.py --md`
+    verglich statt gegen `p["symbol"]` — `adf_ext`, `cpm`, `dsk_cpc`,
+    `msx_disk` und `sap_thomson` sind gueltige Symbole. Wer den
+    Verbinder nicht nimmt, den der Code nimmt, misst etwas anderes
+    (Klasse MF-1177).
+
+    `gen_fs_tiers.py` ist kein zweiter Abnehmer: es schluesselt das
+    Manifest ueber den **Basisnamen** und liest `format` gar nicht
+    (gemessen MF-1474). Das Feld hat genau einen Verbinder.
+
+    Rueckgabe: [(name, [dateien...]), ...], nach Name sortiert.
+    """
+    bekannt = {str(s) for s in symbole}
+    treffer: dict[str, list] = {}
+    for e in bilder or []:
+        name = (e.get("format") or "").strip()
+        if name not in bekannt:
+            treffer.setdefault(name, []).append(e.get("file") or "?")
+    return sorted(treffer.items())
+
+
 def _excluded_tests(repo: Path) -> set[str]:
     cml = repo / "tests" / "CMakeLists.txt"
     if not cml.exists():
@@ -166,6 +208,17 @@ def compute_tiers(repo: Path) -> list[dict]:
                   file=sys.stderr)
             continue
         corpus_by_fmt.setdefault(entry.get("format", ""), []).append(entry)
+
+    # MF-1474: ein `format`-Name, den kein Plugin traegt, wird unten nie
+    # nachgefragt und fiel bisher STILL heraus — anders als eine fehlende
+    # Provenienz (warnt oben) und eine nicht zugeordnete Testzeile (warnt
+    # unten). Hier wird gezaehlt, nicht geurteilt: `n/a`, `none` und
+    # `protection:*` sind absichtlich keine Formate.
+    for name, dateien in formatnamen_ohne_plugin(manifest.get("images", []),
+                                                 (p["symbol"] for p in plugins)):
+        print(f"WARN: corpus format name '{name}' matches no registered "
+              f"plugin symbol — {len(dateien)} file(s) earn no tier credit, "
+              f"first: {dateien[0]}", file=sys.stderr)
 
     # Directory credit: a test that target_sources a MODULE file of a format
     # (e.g. apple/uft_woz.c while the plugin struct lives in uft_woz_plugin.c)
@@ -625,6 +678,30 @@ def _selbsttest(repo: Path) -> int:
     faelle.append(("Praefix allein ist kein Name",
                    _testnamen_im_feld("test_") == set()
                    and _testnamen_im_feld("kein test hier") == set()))
+
+    # MF-1474: Namen ohne Plugin. Der Nachschlagepfad verbindet auf
+    # `p["symbol"]`; was dort nicht hinpasst, fiel still heraus.
+    B = [{"file": "a.raw", "format": "kfraw"},
+         {"file": "b.raw", "format": "kfx"},
+         {"file": "c.raw", "format": "kfraw"},
+         {"file": "d.log", "format": "n/a"}]
+    faelle.append(("bekannter Name wird NICHT gemeldet",
+                   "kfx" not in dict(formatnamen_ohne_plugin(B, {"kfx"}))))
+    faelle.append(("unbekannter Name wird gemeldet, mit allen Dateien",
+                   dict(formatnamen_ohne_plugin(B, {"kfx"})).get("kfraw")
+                   == ["a.raw", "c.raw"]))
+    faelle.append(("absichtliche Nicht-Formate werden gezaehlt, nicht "
+                   "verschwiegen",
+                   "n/a" in dict(formatnamen_ohne_plugin(B, {"kfx"}))))
+    faelle.append(("leerer Name faellt nicht durch",
+                   dict(formatnamen_ohne_plugin([{"file": "x", "format": ""}],
+                                                {"kfx"})).get("") == ["x"]))
+    faelle.append(("Rand: kein Abbild, keine Meldung",
+                   formatnamen_ohne_plugin([], {"kfx"}) == []
+                   and formatnamen_ohne_plugin(None, {"kfx"}) == []))
+    faelle.append(("fehlendes format-Feld zaehlt wie leer",
+                   dict(formatnamen_ohne_plugin([{"file": "y"}],
+                                                {"kfx"})).get("") == ["y"]))
 
     gut = 0
     for name, ok in faelle:
