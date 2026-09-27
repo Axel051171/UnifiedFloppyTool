@@ -194,12 +194,14 @@ int main(void)
 
     for (unsigned f = 0; f < DATEIEN; f++) {
         const uint8_t *h = seite + hdr[f];
-        char name[9];
+        /* Das Namensfeld hat 8 Byte; verglichen wird das GANZE Feld samt
+         * NUL-Polsterung, nicht nur ein Praefix (Teilstring-Tor C3). */
+        char name[9] = {0};
         snprintf(name, sizeof(name), "UFTK%u", f);
         unsigned adr = (unsigned)h[11] | ((unsigned)h[12] << 8);
         unsigned gr  = (unsigned)h[13] | ((unsigned)h[14] << 8);
         int ok = (h[0] == 0x03) && (h[1] == (uint8_t)f)
-              && (memcmp(h + 3, name, strlen(name)) == 0)
+              && (memcmp(h + 3, name, 8) == 0)
               && (adr == 0x8000u) && (gr == NUTZ_LEN)
               && (seite[hdr[f] + BLOCK3_LEN] == 0x04);
         snprintf(d, sizeof(d), "id=0x%02X nr=%u adr=0x%04X gr=%u danach=0x%02X",
