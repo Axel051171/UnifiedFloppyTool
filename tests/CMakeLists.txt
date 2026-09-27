@@ -990,6 +990,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
+    elseif(${test_name} STREQUAL "test_2img_metadaten")
+        # P3-620 Fall 3 / MF-1439: Sperre, Volumennummer, Kommentar und
+        # Erzeuger aus dem 2IMG-Kopf, nach CiderPress2 TwoIMG-notes.md.
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c)
     elseif(${test_name} STREQUAL "test_victor9k_gegen_floptool")
         # MF-1085: `victor9k` T2 -> T1b, und von den vier Hebungen
         # dieser Sitzung ist das die schaerfste.

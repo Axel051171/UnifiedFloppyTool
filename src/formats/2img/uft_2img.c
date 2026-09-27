@@ -159,6 +159,7 @@ typedef struct {
     uint32_t data_length;
     uint32_t img_format;
     const img2_tafel_t *g;
+    uint8_t  kopf[IMG2_HDR_SIZE];   /* MF-1439: fuer read_metadata */
 } img2_data_t;
 
 /* MAME ap_dsk35.cpp:560 — `int ns = 12 - (track/16);` */
@@ -265,6 +266,93 @@ bool img2_probe(const uint8_t *data, size_t size, size_t file_size,
     return true;
 }
 
+/* ── MF-1439 (P3-620 Fall 3): Sperre, Volumennummer, Kommentar, Erzeuger ──
+ *
+ * Referenz: CiderPress2 `DiskArc/Disk/TwoIMG-notes.md` (Andy McFadden,
+ * Apache-2.0, Stand 7a055a2), dort nach der Originalbeschreibung
+ * (magnet.ch/emutech, Archivfassung 1998) zitiert:
+ *
+ *     +$04 / 4: creator signature code, a 4-char string
+ *     +$10 / 4: flags and DOS 3.3 volume number
+ *        0-7 | sector volume number (0-254), if bit 8 is set; otherwise zero
+ *          8 | if set, sector volume number is in low bits
+ *         31 | if set, disk is write-protected
+ *     +$20 / 4, +$24 / 4: offset / length of comment ("plain ASCII text")
+ *     +$28 / 4, +$2c / 4: offset / length of creator data
+ *     "If the comment or creator chunks are not included, the relevant
+ *      offset and length fields are set to zero."
+ *
+ * Bis hierher las das Plugin keines davon; das verwaiste Doppel
+ * `apple/uft_2mg_parser.c` las alle (Rotprobe MF-1402). Die Sperre wird
+ * GEMELDET, nicht durchgesetzt — ob sie den Schreibweg sperren soll, ist
+ * eine eigene Frage (bei HFE hat ein falsch gelesenes Sperrbit genau das
+ * getan, uft_hfe.c:197).
+ *
+ * Ohne Bit 8 sagt die Beschreibung, 254 sei "anzunehmen" — das ist eine
+ * Voreinstellung fuer Emulatoren, kein Inhalt der Datei. Die Antwort ist
+ * dann "weiss ich nicht", nicht 254. */
+static uft_error_t img2_teil_lesen(img2_data_t *p, uint32_t versatz,
+                                   uint32_t laenge, char *value, size_t max_len)
+{
+    long groesse;
+    size_t n, i;
+    if (versatz == 0 || laenge == 0) return UFT_ERROR_NOT_FOUND;
+    if (fseek(p->file, 0, SEEK_END) != 0) return UFT_ERROR_FILE_SEEK;
+    groesse = ftell(p->file);
+    if (groesse < 0 || (uint64_t)versatz + laenge > (uint64_t)groesse)
+        return UFT_ERROR_FORMAT_INVALID;         /* Teil zeigt hinter die Datei */
+    n = laenge < max_len - 1 ? laenge : max_len - 1;
+    if (fseek(p->file, (long)versatz, SEEK_SET) != 0) return UFT_ERROR_FILE_SEEK;
+    if (fread(value, 1, n, p->file) != n) return UFT_ERROR_FILE_READ;
+    for (i = 0; i < n; i++) if (value[i] == '\0') value[i] = ' ';
+    value[n] = '\0';
+    return UFT_OK;
+}
+
+static uft_error_t img2_read_metadata(uft_disk_t *disk, const char *key,
+                                      char *value, size_t max_len)
+{
+    img2_data_t *p;
+    uint32_t flags;
+    if (!disk || !key || !value || max_len == 0) return UFT_ERROR_NULL_POINTER;
+    value[0] = '\0';
+    p = (img2_data_t *)disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    flags = uft_read_le32(p->kopf + 0x10);
+
+    if (strcmp(key, "write_protected") == 0) {
+        snprintf(value, max_len, "%s", (flags & 0x80000000u) ? "yes" : "no");
+        return UFT_OK;
+    }
+    if (strcmp(key, "volume_number") == 0) {
+        if (!(flags & 0x100u)) return UFT_ERROR_NOT_FOUND;
+        snprintf(value, max_len, "%u", (unsigned)(flags & 0xFFu));
+        return UFT_OK;
+    }
+    if (strcmp(key, "creator") == 0) {
+        char c[5];
+        for (int i = 0; i < 4; i++) {
+            uint8_t b = p->kopf[0x04 + i];
+            c[i] = (b >= 0x20 && b < 0x7F) ? (char)b : '?';
+        }
+        c[4] = '\0';
+        snprintf(value, max_len, "%s", c);
+        return UFT_OK;
+    }
+    if (strcmp(key, "comment") == 0)
+        return img2_teil_lesen(p, uft_read_le32(p->kopf + 0x20),
+                               uft_read_le32(p->kopf + 0x24), value, max_len);
+    if (strcmp(key, "creator_data") == 0) {
+        uint32_t o = uft_read_le32(p->kopf + 0x28), l = uft_read_le32(p->kopf + 0x2C);
+        if (o == 0 || l == 0) return UFT_ERROR_NOT_FOUND;
+        /* Inhalt ist erzeugerspezifisch und binaer — gemeldet wird nur,
+         * dass es ihn gibt und wie gross er ist. */
+        snprintf(value, max_len, "%u Byte", (unsigned)l);
+        return UFT_OK;
+    }
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
 static uft_error_t img2_open(uft_disk_t *disk, const char *path, bool ro)
 {
     FILE *f;
@@ -335,6 +423,7 @@ static uft_error_t img2_open(uft_disk_t *disk, const char *path, bool ro)
     p->data_offset = versatz;
     p->data_length = berichtigt;
     p->g = t;
+    memcpy(p->kopf, hdr, IMG2_HDR_SIZE);
 
     disk->plugin_data = p;
     disk->geometry.cylinders = (uint32_t)t->zylinder;
@@ -466,6 +555,7 @@ const uft_format_plugin_t uft_format_plugin_2img = {
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
+    .read_metadata = img2_read_metadata,   /* MF-1439 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */
     .features = uft_format_plugin_2img_features,  /* V415-PLAN PLUGIN.features (MF-263) */
