@@ -697,9 +697,24 @@ void WorkflowTab::onStartAbortClicked()
         connect(m_decodeJob, &DecodeJob::progress, this, [this](int pct) {
             emit progressChanged(pct);
         });
+        /* P3-555 (MF-1382): the heading and operationFinished() follow the
+         * CONTENT. Here stood tr("Success") and operationFinished(true) for
+         * every finished run — also for "Lauf beendet — keine
+         * Sektoraussage" (flux without sector decoding), the class of P0-17
+         * one level up. resultReady() arrives before finished() (same
+         * receiver, queued in emit order) and carries the tally by value. */
+        m_decodeHatSektoren = false;
+        connect(m_decodeJob, &DecodeJob::resultReady, this,
+                [this](const DecodeResult& r) {
+                    m_decodeHatSektoren = DecodeJob::decodedAnything(r);
+                });
         connect(m_decodeJob, &DecodeJob::finished, this, [this](const QString& result) {
-            QMessageBox::information(this, tr("Success"), result);
-            emit operationFinished(true);
+            if (m_decodeHatSektoren)
+                QMessageBox::information(this, tr("Success"), result);
+            else
+                QMessageBox::information(this, tr("Finished — nothing decoded"),
+                                         result);
+            emit operationFinished(m_decodeHatSektoren);
             resetUI();
         });
         connect(m_decodeJob, &DecodeJob::error, this, [this](const QString& error) {
