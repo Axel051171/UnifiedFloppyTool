@@ -311,6 +311,27 @@ int main(void)
         }
     }
     spur_freigeben(&t);
+
+    /* 8. MF-1440 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ueber
+     *    `read_metadata`. Erwartet sind die Werte, die das REZEPT den
+     *    fremden Werkzeugen gab ("UFT", UFTK0/UFTK1, $8000) und die
+     *    fdstool bestaetigt hat (2 Dateien, $8000, 8192 Byte) — die Namen
+     *    in voller Laenge, weil fdstool sie abschneidet (siehe 7.). */
+    {
+        char v[256];
+        const int hat = uft_format_plugin_fds.read_metadata != NULL;
+        pruefe("Plugin beantwortet Metadaten (read_metadata)", hat,
+               "fds hat kein read_metadata");
+        if (hat) {
+            int r = uft_format_plugin_fds.read_metadata(&disk, "volume_name", v, sizeof v);
+            pruefe("Diskettenname = \"UFT\" (fdtc-Eingabe)",
+                   r == UFT_OK && strcmp(v, "UFT") == 0, v);
+            r = uft_format_plugin_fds.read_metadata(&disk, "files", v, sizeof v);
+            pruefe("Verzeichnis = UFTK0/UFTK1, je $8000 und 8192 Byte",
+                   r == UFT_OK && strcmp(v, "Seite 1: UFTK0 $8000 8192 Byte, "
+                                            "UFTK1 $8000 8192 Byte") == 0, v);
+        }
+    }
     if (uft_format_plugin_fds.close) uft_format_plugin_fds.close(&disk);
 
     /* 7. Die Namen prueft dieser Test SELBST, weil das Orakel sie

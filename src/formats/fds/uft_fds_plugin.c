@@ -343,6 +343,93 @@ static uft_error_t fds_open(uft_disk_t *disk, const char *path,
  * close
  * ============================================================================ */
 
+/* ── MF-1440 (P3-620 Fall 1): Diskettenname und Dateiverzeichnis ─────────
+ *
+ * Die Blockkette je Seite (nesdev `FDS_disk_format`, im Dateikopf zitiert):
+ * Block 1 (56 Byte in .FDS), Block 2 (2), dann je Datei Block 3 (16) und
+ * Block 4 (1 + Nutzlast). Die Lage der Felder IN den Bloecken ist hier nicht
+ * aus dem Gedaechtnis gesetzt, sondern an einem Abbild von FREMDER Hand
+ * gemessen: `fdtc_fdstool_uftk.fds` (fdtc + bintofdf, BSD-3, als Schreiber;
+ * fdstool als Leser, MF-1226). Das Rezept gab vor: Diskettenname "UFT",
+ * Dateien UFTK0/UFTK1, Ladeadresse $8000; fdstool bestaetigte 2 Dateien,
+ * $8000, 8192 Byte. Gefunden an:
+ *     Block 1 +$10..+$12   Diskettenname (3 Byte)
+ *     Block 3 +$03..+$0A   Dateiname (8 Byte)
+ *             +$0B/+$0C    Ladeadresse (LE)
+ *             +$0D/+$0E    Groesse (LE) — und Block 4 hat genau so viele Byte
+ * Das verwaiste Doppel `nintendo/uft_fds.c:107-122` liest dieselben Lagen.
+ * Weitere Felder (Hersteller, Datum, Dateityp) sind am Abbild nicht
+ * unterscheidbar belegt (dort alle 0) und werden NICHT gemeldet.
+ *
+ * Laeuft die Kette nicht bis zur angesagten Dateizahl, sagt die Antwort
+ * das ("2 angesagt, 1 lesbar"), statt die Luecke zu schliessen. */
+static void fds_name(const uint8_t *q, size_t n, char *z)
+{
+    size_t i, k = 0;
+    for (i = 0; i < n && q[i]; i++) {
+        if (q[i] >= 0x20 && q[i] < 0x7F) z[k++] = (char)q[i];
+        else k += (size_t)sprintf(z + k, "\\x%02X", q[i]);
+    }
+    z[k] = '\0';
+}
+
+static uft_error_t fds_read_metadata(uft_disk_t *disk, const char *key,
+                                     char *value, size_t max_len)
+{
+    fds_data_t *p;
+    static uint8_t seite[FDS_SIDE_SIZE];
+    if (!disk || !key || !value || max_len == 0) return UFT_ERROR_NULL_POINTER;
+    value[0] = '\0';
+    p = (fds_data_t *)disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+
+    const bool name_frage  = strcmp(key, "volume_name") == 0;
+    const bool datei_frage = strcmp(key, "files") == 0;
+    if (!name_frage && !datei_frage) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t w = 0;
+    for (uint8_t s = 0; s < p->side_count; s++) {
+        if (fseek(p->file, (long)(p->data_offset + (size_t)s * FDS_SIDE_SIZE),
+                  SEEK_SET) != 0) return UFT_ERROR_FILE_SEEK;
+        if (fread(seite, 1, FDS_SIDE_SIZE, p->file) != FDS_SIDE_SIZE)
+            return UFT_ERROR_FILE_READ;
+        if (seite[0] != 0x01) return UFT_ERROR_FORMAT_INVALID;   /* Block 1 */
+
+        char n[64];
+        if (name_frage) {                     /* Diskettenname von Seite 1 */
+            fds_name(seite + 0x10, 3, n);
+            snprintf(value, max_len, "%s", n);
+            return UFT_OK;
+        }
+
+        size_t o = 56;
+        unsigned angesagt = 0, gelesen = 0;
+        if (o + 2 <= FDS_SIDE_SIZE && seite[o] == 0x02) angesagt = seite[o + 1];
+        o += 2;
+        w += (size_t)snprintf(value + w, w < max_len ? max_len - w : 0,
+                              "%sSeite %u: ", s ? "; " : "", (unsigned)s + 1);
+        for (unsigned i = 0; i < angesagt; i++) {
+            if (o + 16 + 1 > FDS_SIDE_SIZE || seite[o] != 0x03) break;
+            const uint8_t *h = seite + o;
+            unsigned adr = (unsigned)h[0x0B] | ((unsigned)h[0x0C] << 8);
+            unsigned gr  = (unsigned)h[0x0D] | ((unsigned)h[0x0E] << 8);
+            if (seite[o + 16] != 0x04 || o + 17 + gr > FDS_SIDE_SIZE) break;
+            fds_name(h + 3, 8, n);
+            w += (size_t)snprintf(value + w, w < max_len ? max_len - w : 0,
+                                  "%s%s $%04X %u Byte", i ? ", " : "", n, adr, gr);
+            gelesen++;
+            o += 17 + gr;
+        }
+        if (gelesen != angesagt)
+            w += (size_t)snprintf(value + w, w < max_len ? max_len - w : 0,
+                                  " [%u angesagt, %u lesbar]", angesagt, gelesen);
+        else if (angesagt == 0)
+            w += (size_t)snprintf(value + w, w < max_len ? max_len - w : 0,
+                                  "keine Dateien");
+    }
+    return UFT_OK;
+}
+
 static void fds_close(uft_disk_t *disk)
 {
     fds_data_t *pdata = disk->plugin_data;
@@ -456,6 +543,7 @@ const uft_format_plugin_t uft_format_plugin_fds = {
     .close        = fds_close,
     .read_track   = fds_read_track,
     .write_track  = fds_write_track,
+    .read_metadata = fds_read_metadata,   /* MF-1440 */
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_fds_features,  /* V415-PLAN PLUGIN.features (MF-263) */
