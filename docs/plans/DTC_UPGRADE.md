@@ -329,6 +329,40 @@ vorher rot gemessen wurde.
   nie. Die Uneinigkeits-Bitmap ist die eigentliche forensische
   Aussage.
 
+> **Differenzlauf versucht, 2026-09-27 (MF-1403) — Ergebnis: bleibt
+> Fundus, und die Öffnungsbedingung oben war zu schwach.**
+>
+> DTC-0 ist entschieden (Paket vom Eigentümer, GPL-2), das erste
+> Hindernis ist also weg. Das zweite nicht:
+>
+> | Aufnahme im Korpus | Umdrehungen | heutiger Pfad |
+> |---|---|---|
+> | `gw_amigados.scp` (Greaseweazle, echt) | **2** (Kopf-Byte 5) | SCP → ADF **byteidentisch** zum Original (`test_convert_scp_adf`, 3/3 grün am 2026-09-27) |
+> | `gw_fm_acorn_3trk.scp` | **2** | — |
+> | `hxcfe_kfx_t00.0.raw`, `hxcfe_kfx_t40.0.raw` | **2** (3 Indexmarken) | Kopien aus einem Sektorabbild (MF-1024) |
+> | `fluxfox_sector_test/track00.0.raw` | 3–4 Index-OOB gezählt, Herkunft nicht geprüft | — |
+>
+> An der echten Aufnahme gibt es nichts zu retten: der Produktionspfad
+> liefert schon jeden Sektor. **Und bei zwei Umdrehungen kann der Solver
+> gar nichts retten — das folgt aus seinem Code, nicht aus der Messung.**
+> `uft_rev_path_solver.c:233` wählt
+> `one > zero ? 1 : zero > one ? 0 : reference`. Mit zwei Stimmen gibt es
+> nur 2:0 (dann ist der Wert der von Umdrehung 0) und 1:1 (dann entscheidet
+> `reference`, also Umdrehung 0). Das fusionierte Ergebnis ist damit Bit
+> für Bit Umdrehung 0, gleich wie gut oder schlecht die segmentweise
+> Ausrichtung ist. Was bleibt, ist die Uneinigkeits-Bitmap — und die
+> liefert `uft_fuse_revolutions_ausgerichtet()` im Baum schon.
+>
+> **BERICHTIGT — Öffnungsbedingung.** Oben stand „≥ 2 Indexmarken". Zwei
+> Indexmarken sind eine Umdrehung, drei sind zwei — und zwei reichen nach
+> dem Satz eben nicht. Was DTC-5 öffnet, ist eine **echte** Aufnahme mit
+> **≥ 3 Umdrehungen** und mindestens einem Sektor, der in **jeder**
+> einzelnen Umdrehung falsch liest (sonst holt ihn die Sektorwahl über
+> alle Umdrehungen, MF-473, bereits heraus). Erst an so einer Spur lässt
+> sich messen, ob die segmentweise Ausrichtung etwas rettet, das der
+> globale Versatz verliert. Ein synthetischer Strom genügt dafür nicht:
+> er beweist den Kodierer, nicht die Drift.
+
 ### DTC-6 — Doku nachziehen *(mit jedem Schritt, nicht am Ende)*
 
 * `docs/OPEN_ITEMS.md` P3-342: den KryoFlux-Teil erledigen (DTC-2).
