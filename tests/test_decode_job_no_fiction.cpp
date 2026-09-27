@@ -771,7 +771,16 @@ private slots:
         s.data_crc_known = true; s.data_crc_ok = true; s.dam = 0xF8;
         QVERIFY(uft_d2_add_sector(d.get(), t, &s));
         s = sektor(6);                                       /* MISSING */
+        /* H-30 Schritt 3 (MF-1383): hier stand nur `has_data = false`, die
+         * Herkunft blieb `CONTAINER` aus der Vorlage. Seit
+         * `uft_d2_add_sector()` die Umkehrung der H-30-Regel haelt — keine
+         * Daten muss einen Grund nennen — wird das abgewiesen, und zwar
+         * zu Recht: der Pruefling stellt einen FEHLENDEN Sektor dar, also
+         * nennt er auch dessen Grund. `statusOf()` muss ihn weiterhin als
+         * MISSING einordnen; genau das prueft die Zusicherung unten. */
         s.has_data = false; s.data = nullptr; s.data_len = 0;
+        s.origin = UFT_D2_ORIGIN_UNAVAILABLE;
+        s.conf = UFT_D2_CONF_NONE;
         QVERIFY(uft_d2_add_sector(d.get(), t, &s));
         s = sektor(7);                                       /* UNCHECKED */
         QVERIFY(uft_d2_add_sector(d.get(), t, &s));

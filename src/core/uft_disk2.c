@@ -489,6 +489,42 @@ bool uft_d2_add_sector(uft_disk2_t *d, uft_d2_track_t *t,
         return false;
     }
 
+    /* H-30 Schritt 3: die UMKEHRUNG derselben Regel — keine Daten muss
+     * einen Grund nennen.
+     *
+     * Schritt 1 hat „Abwesenheit traegt keine Daten" erzwungen, Schritt 2
+     * hat 37 Kennzeichnungen in den Plugins zum Nennen gebracht. Was
+     * niemand hielt: ein Sektor OHNE Daten mit einer Nicht-Abwesenheits-
+     * Herkunft. Die Bruecke laesst ihn entstehen —
+     *
+     *     out->has_data = !missing && out->data_len > 0u;
+     *     if (!missing) out->origin = UFT_D2_ORIGIN_CONTAINER;
+     *
+     * — sobald ein Plugin einen Sektor NICHT als fehlend kennzeichnet,
+     * dessen Datenzeiger aber NULL oder dessen Laenge 0 ist. Das Modell
+     * fuehrte ihn dann als „aus einer Abbilddatei", und es stand nichts
+     * darin: er sah aus wie ein GELESENER Sektor, der leer war — genau
+     * die Aussage, die niemand belegen kann, und die ganze H-30-Arbeit
+     * existiert, um sie von „fehlend" unterscheidbar zu machen.
+     *
+     * `PADDING` und `RECONSTRUCTED` fallen mit: Fuellmaterial ohne
+     * Fuellung und eine Rekonstruktion ohne Ergebnis sind keine
+     * Gruende, sondern leere Behauptungen.
+     *
+     * Gemessen vor der Regel (MF-1383): 94 Korpusabbilder durch die
+     * Bruecke, 0 Sektoren dieser Form. Kein legitimer Fall wird also
+     * abgewiesen; ein Sektorkopf ohne Datenfeld ist `UNAVAILABLE`, und
+     * das kann das Plugin sagen. */
+    if (!s->has_data && !uft_d2_origin_is_absence(s->origin)) {
+        uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_SECTORS, t->cyl,
+                    t->head, s->id_sec, "ABSENCE_WITHOUT_REASON",
+                    "Sektor %u traegt keine Daten, nennt als Herkunft aber "
+                    "%s — das ist kein Grund. Wer nichts liefert, sagt "
+                    "warum: ausgelassen, nicht lesbar oder abgeschnitten.",
+                    (unsigned)s->id_sec, uft_d2_origin_name(s->origin));
+        return false;
+    }
+
     /* Zuversicht 255 heisst: vom Traeger gelesen UND belegt. Alles andere
      * ist rekonstruiert, gepolstert oder unsicher. */
     const bool belegt = s->data_crc_known && s->data_crc_ok
