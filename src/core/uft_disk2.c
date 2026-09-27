@@ -471,6 +471,24 @@ bool uft_d2_add_sector(uft_disk2_t *d, uft_d2_track_t *t,
                        const uft_d2_sector_t *s) {
     if (!d || !t || !s) return false;
 
+    /* H-30: Abwesenheit traegt keine Daten. Die Regel steht HIER, an der
+     * einzigen Tuer ins Modell, und nicht in jedem Leser: MF-1348 (IMD
+     * „unavailable" als guter Sektor) und P3-558 (abgeschnitten gilt als
+     * gueltig) waren zwei Leser, aber EIN Verstoss. Weder Daten noch eine
+     * Laenge noch Zuversicht — ueber etwas, das nicht da ist, gibt es
+     * nichts zu wissen ausser dem Grund. */
+    if (uft_d2_origin_is_absence(s->origin)
+        && (s->has_data || s->data_len != 0u || s->conf != UFT_D2_CONF_NONE)) {
+        uft_d2_diag(d, UFT_D2_DIAG_ERROR, UFT_D2_LAYER_SECTORS, t->cyl,
+                    t->head, s->id_sec, "ABSENCE_WITH_DATA",
+                    "Sektor %u ist als abwesend gefuehrt (%s), traegt aber "
+                    "%s%u Datenbytes und Zuversicht %u — abgewiesen.",
+                    (unsigned)s->id_sec, uft_d2_origin_name(s->origin),
+                    s->has_data ? "" : "(als nicht vorhanden markierte) ",
+                    (unsigned)s->data_len, (unsigned)s->conf);
+        return false;
+    }
+
     /* Zuversicht 255 heisst: vom Traeger gelesen UND belegt. Alles andere
      * ist rekonstruiert, gepolstert oder unsicher. */
     const bool belegt = s->data_crc_known && s->data_crc_ok
@@ -537,6 +555,20 @@ bool uft_d2_add_sector(uft_disk2_t *d, uft_d2_track_t *t,
         INGEST_DIAG(d, UFT_D2_DIAG_WARN, UFT_D2_LAYER_SECTORS, t->cyl,
                     t->head, s->id_sec, "RECONSTRUCTED",
                     "Rekonstruiert — ein Versuch, keine Lesung.");
+    /* H-30: je Grund ein eigener Befund. NOTE und nicht WARN: der Sektor
+     * ist ehrlich gefuehrt — auffaellig ist die Diskette, nicht das Modell. */
+    if (s->origin == UFT_D2_ORIGIN_SKIPPED)
+        INGEST_DIAG(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS, t->cyl,
+                    t->head, s->id_sec, "SKIPPED",
+                    "Nicht gelesen — lag ausserhalb der Anforderung.");
+    if (s->origin == UFT_D2_ORIGIN_UNAVAILABLE)
+        INGEST_DIAG(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS, t->cyl,
+                    t->head, s->id_sec, "UNAVAILABLE",
+                    "Nicht lesbar — die Quelle hatte hier keine Daten.");
+    if (s->origin == UFT_D2_ORIGIN_TRUNCATED)
+        INGEST_DIAG(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS, t->cyl,
+                    t->head, s->id_sec, "TRUNCATED",
+                    "Abgeschnitten — die Quelle endet vor diesem Sektor.");
     return true;
 }
 
@@ -1070,6 +1102,9 @@ const char *uft_d2_origin_name(uft_d2_origin_t o) {
     case UFT_D2_ORIGIN_FUSED:         return "fusioniert";
     case UFT_D2_ORIGIN_PADDING:       return "Fuellmaterial";
     case UFT_D2_ORIGIN_RECONSTRUCTED: return "rekonstruiert";
+    case UFT_D2_ORIGIN_SKIPPED:       return "ausgelassen";
+    case UFT_D2_ORIGIN_UNAVAILABLE:   return "nicht lesbar";
+    case UFT_D2_ORIGIN_TRUNCATED:     return "abgeschnitten";
     default:                          return "unbekannt";
     }
 }

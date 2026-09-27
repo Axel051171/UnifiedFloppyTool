@@ -307,6 +307,23 @@ static void rstr(rbuf_t *r, char *dst, size_t field) {
     else dst[0] = '\0';
 }
 
+/** Ein Herkunftsbyte aus der Datei (H-30). Bis hierher wurde JEDES Byte als
+ *  Herkunft uebernommen, und `uft_d2_origin_name()` nannte ein unbekanntes
+ *  „unbekannt" — ohne dass jemand erfuhr, dass die Datei etwas sagte, das
+ *  dieser Lader nicht kennt. Jetzt: bekannt -> unveraendert; unbekannt ->
+ *  UNKNOWN, und der Befund nennt das Byte. Nicht abgewiesen, weil die
+ *  uebrigen Felder des Sektors weiter gelten — nur seine Herkunft nicht. */
+static uft_d2_origin_t herkunft_lesen(uft_disk2_t *d, uint8_t roh,
+                                      uft_d2_layer_t layer, int cyl, int head,
+                                      int sec) {
+    if (roh <= (uint8_t)UFT_D2_ORIGIN_MAX) return (uft_d2_origin_t)roh;
+    uft_d2_diag(d, UFT_D2_DIAG_WARN, layer, cyl, head, sec, "ORIGIN_RANGE",
+                "Herkunftsbyte %u ist diesem Lader unbekannt (bekannt 0..%u) "
+                "— als 'unbekannt' gefuehrt.", (unsigned)roh,
+                (unsigned)UFT_D2_ORIGIN_MAX);
+    return UFT_D2_ORIGIN_UNKNOWN;
+}
+
 /** Einen Block einlesen und seine CRC pruefen. */
 static bool blk_read(rbuf_t *r, char tag[5], rbuf_t *body, uftd_result_t *err) {
     const size_t at = r->pos;
@@ -419,7 +436,9 @@ static bool load_trak(uft_disk2_t *d, rbuf_t *b, size_t off, const char *tag,
                 x.data_crc_known = (fl & 8u)  != 0u;
                 x.has_data       = (fl & 16u) != 0u;
                 x.dam = r8(&sb); x.encoding = (uft_encoding_t)r8(&sb);
-                x.origin = (uft_d2_origin_t)r8(&sb);
+                x.origin = herkunft_lesen(d, r8(&sb), UFT_D2_LAYER_SECTORS,
+                                          (int)t->cyl, (int)t->head,
+                                          (int)x.id_sec);
                 x.conf = r8(&sb);
                 x.deriv = (uft_d2_deriv_id_t)r16(&sb);
                 x.source_gen = r32(&sb);
@@ -566,7 +585,8 @@ uftd_result_t uftd_load(const uint8_t *buf, size_t len, uft_disk2_t **out_disk) 
             const uint32_t n = r32(&b);
             for (uint32_t i = 0; i < n; ++i) {
                 const uft_d2_layer_t fl = (uft_d2_layer_t)r8(&b);
-                const uft_d2_origin_t og = (uft_d2_origin_t)r8(&b);
+                const uft_d2_origin_t og = herkunft_lesen(
+                    d, r8(&b), UFT_D2_LAYER_SECTORS, -1, -1, -1);
                 const uint32_t sg = r32(&b);
                 char by[UFT_D2_DERIV_BY], pa[UFT_D2_DERIV_PARAMS];
                 rstr(&b, by, UFT_D2_DERIV_BY);

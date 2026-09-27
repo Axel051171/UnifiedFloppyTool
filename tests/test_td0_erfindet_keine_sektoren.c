@@ -184,6 +184,10 @@ TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
         return;
     }
     ASSERT((t.sectors[1].status & UFT_SECTOR_MISSING) != 0);
+    /* H-30: und mit Grund — Flag 0x10 heisst, die Quelle hatte keine
+     * Daten fuer diesen Sektor: nicht lesbar (Bit 8), nicht abgeschnitten. */
+    ASSERT((t.sectors[1].status & (1u << 8)) != 0);
+    ASSERT((t.sectors[1].status & (1u << 9)) == 0);
 
     /* DIE ZEILE (2): unbekanntes Verfahren -> der Dekoder erzeugte nichts,
      * der Puffer ist der genullte calloc. */
@@ -199,6 +203,10 @@ TEST(was_die_datei_nicht_traegt_gilt_nicht_als_gelesen)
         return;
     }
     ASSERT((t.sectors[2].status & UFT_SECTOR_MISSING) != 0);
+    /* H-30: ein unbekanntes Verfahren hat NICHTS dekodiert — nicht lesbar
+     * (Bit 8). Abgeschnitten (Bit 9) waere es erst, wenn ein Teil da waere. */
+    ASSERT((t.sectors[2].status & (1u << 8)) != 0);
+    ASSERT((t.sectors[2].status & (1u << 9)) == 0);
 
     sektoren_frei(&t);
     uft_format_plugin_td0.close(&disk);

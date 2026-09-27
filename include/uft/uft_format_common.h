@@ -201,6 +201,21 @@ static inline void uft_format_mark_last_missing(uft_track_t* track)
     uft_sector_mark_missing(&track->sectors[track->sector_count - 1]);
 }
 
+/** Wie uft_format_mark_last_missing(), mit dem Grund „nicht lesbar" (H-30). */
+static inline void uft_format_mark_last_unavailable(uft_track_t* track)
+{
+    if (!track || track->sector_count == 0 || !track->sectors) return;
+    uft_sector_mark_unavailable(&track->sectors[track->sector_count - 1]);
+}
+
+/** Wie uft_format_mark_last_missing(), mit dem Grund „Quelle endet vorher"
+ *  (H-30). */
+static inline void uft_format_mark_last_truncated(uft_track_t* track)
+{
+    if (!track || track->sector_count == 0 || !track->sectors) return;
+    uft_sector_mark_truncated(&track->sectors[track->sector_count - 1]);
+}
+
 /**
  * @brief Erstellt einen leeren Sektor
  */

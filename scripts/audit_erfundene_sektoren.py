@@ -114,7 +114,10 @@ FUELLT = re.compile(r"memset\s*\(")
 FREAD = re.compile(r"\bfread\s*\(")
 ANLEGT = re.compile(r"uft_format_add_sector(?:_with_id)?\s*\(")
 LEER_ANLEGT = re.compile(r"uft_format_add_empty_sector\s*\(")
-KENNZEICHNET = re.compile(r"uft_format_mark_last_missing\s*\(")
+# H-30: die beiden Helfer, die zusaetzlich den GRUND nennen (nicht lesbar /
+# abgeschnitten), kennzeichnen genauso — sie rufen `mark_missing` selbst.
+KENNZEICHNET = re.compile(
+    r"uft_format_mark_last_(?:missing|unavailable|truncated)\s*\(")
 
 
 def entkerne(t: str) -> str:
@@ -261,10 +264,11 @@ def messe_direkt(repo: Path):
                 continue
             var = m.group(1)
             fenster = "\n".join(zeilen[i:i + FENSTER + 1])
-            if re.search(r"uft_sector_mark_missing\s*\(\s*%s\s*\)"
-                         % re.escape(var), fenster):
+            if re.search(r"uft_sector_mark_(?:missing|unavailable|truncated)"
+                         r"\s*\(\s*%s\s*\)" % re.escape(var), fenster):
                 continue
-            if re.search(r"mark_last_missing\s*\(", fenster):
+            if re.search(r"mark_last_(?:missing|unavailable|truncated)\s*\(",
+                         fenster):
                 continue
             befunde.append((rel, i + 1, var))
     return befunde, []
@@ -381,6 +385,18 @@ const uft_format_plugin_t uft_format_plugin_x = {
          "        /* frueher: memset(buf, 0xE5, 256); */\n"
          "        if (fread(buf, 1, 256, d->f) != 256) return UFT_ERROR_IO;\n"
          "        uft_format_add_sector(track, s, buf, 256, cyl, head);", 0),
+        # H-30: die Helfer, die den GRUND nennen, kennzeichnen ebenso. In
+        # der Form des ERSTEN Falls — die `k`-Form oben erkennt das Tor
+        # gar nicht als Fuellung im Fehlerzweig, sie waere auch ohne
+        # Kennzeichnung gruen (gemessen, H-30).
+        ("kennzeichnet mit Grund: abgeschnitten",
+         "        if (fread(buf, 1, 256, d->f) != 256) memset(buf, 0xE5, 256);\n"
+         "        uft_format_add_sector(track, s, buf, 256, cyl, head);\n"
+         "        uft_format_mark_last_truncated(track);", 0),
+        ("kennzeichnet mit Grund: nicht lesbar",
+         "        if (fread(buf, 1, 256, d->f) != 256) memset(buf, 0xE5, 256);\n"
+         "        uft_format_add_sector(track, s, buf, 256, cyl, head);\n"
+         "        uft_format_mark_last_unavailable(track);", 0),
     ]
 
     gut = 0
@@ -435,6 +451,20 @@ static void x_fuellt(uft_track_t *track, const uint8_t *data,
          "        } else {\n"
          "            memset(sect->data, 0xE5, ss);\n"
          "            uft_sector_mark_missing(anderer);\n"
+         "        }", 1),
+        ("H-30: direkt gefuellt, Grund 'abgeschnitten' genannt",
+         "        if (data_pos + ss <= size) {\n"
+         "            memcpy(sect->data, data + data_pos, ss);\n"
+         "        } else {\n"
+         "            memset(sect->data, 0xE5, ss);\n"
+         "            uft_sector_mark_truncated(sect);\n"
+         "        }", 0),
+        ("H-30: Grund auf ANDERER Variablen zaehlt nicht",
+         "        if (data_pos + ss <= size) {\n"
+         "            memcpy(sect->data, data + data_pos, ss);\n"
+         "        } else {\n"
+         "            memset(sect->data, 0xE5, ss);\n"
+         "            uft_sector_mark_unavailable(anderer);\n"
          "        }", 1),
         ("Ausgabepuffer im Schreibpfad ist KEIN Befund",
          "        memset(ausgabe, 0xE5, ss);\n"

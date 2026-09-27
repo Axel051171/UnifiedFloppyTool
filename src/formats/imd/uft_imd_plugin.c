@@ -189,7 +189,9 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                     memset(fill, 0xE5, ss);
                     uft_format_add_sector_with_id(track, id_sec, fill, ss,
                                                   id_cyl, id_head);
-                    uft_format_mark_last_missing(track);
+                    /* H-30: mit Grund — IMD Typ 0 heisst „could not be
+                     * read": dort STAND etwas, nicht lesbar. */
+                    uft_format_mark_last_unavailable(track);
                 }
                 continue;
             }

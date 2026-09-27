@@ -290,7 +290,13 @@ static uint8_t imd_stype_aus_sektor(const uft_sector_t *p, bool compressed)
      * dem weniger dekodiert wurde als der Sektor gross ist (MF-981).
      * Von aussen sind sie nicht zu unterscheiden, und beide werden hier
      * zu `UNAVAILABLE`. Das ist die vorsichtige Richtung: lieber sagen
-     * „nicht gelesen" als Fuellbytes als Daten ausgeben. */
+     * „nicht gelesen" als Fuellbytes als Daten ausgeben.
+     *
+     * BERICHTIGT H-30: „von aussen nicht zu unterscheiden" gilt nicht mehr
+     * — seit H-30 traegt der Sektor den Grund (`UFT_SECTOR_UNAVAILABLE`
+     * bzw. `UFT_SECTOR_TRUNCATED`). Die Abbildung bleibt trotzdem: IMD
+     * kennt fuer „abgeschnitten" keinen eigenen Sektortyp, und 0x00
+     * („could not be read") ist der einzige, der keine Daten behauptet. */
     if (p->status & UFT_SECTOR_MISSING) return UFT_IMD_SEC_UNAVAIL;
 
     bool deleted = p->deleted;

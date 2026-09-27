@@ -405,8 +405,9 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * setzt UFT_SECTOR_OK und beide CRC-Flags auf „gut".
                      * Die 0xE5 waeren damit von echten Daten nicht zu
                      * unterscheiden gewesen. Kein `fread`, kein `memset` —
-                     * Tor 62 sieht diesen Weg nicht. */
-                    uft_format_mark_last_missing(track);
+                     * Tor 62 sieht diesen Weg nicht.
+                     * H-30: mit Grund — die Quelle hatte keine Daten. */
+                    uft_format_mark_last_unavailable(track);
                     if (track->sector_count > 0) {
                         if (sec_flags & UFT_TD0_SEC_CRC)
                             uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
@@ -534,7 +535,13 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                      * der Rest ist genullter `calloc`, kein Messwert. Bei
                      * einem unbekannten Verfahrensbyte ist `decoded_len`
                      * null und der ganze Sektor erfunden. */
-                    if (decoded_len < sec_size)
+                    /* H-30: NICHTS dekodiert (unbekanntes Verfahren) heisst
+                     * nicht lesbar. Ein TEIL dekodiert bleibt vorerst ohne
+                     * Grund — ob das „abgeschnitten" ist, entscheidet ein
+                     * eigener Rotbeweis (H-30, zweiter Schritt). */
+                    if (decoded_len == 0)
+                        uft_format_mark_last_unavailable(track);
+                    else if (decoded_len < sec_size)
                         uft_format_mark_last_missing(track);
                     /* MF-1286: hier stand `sec_flags & 0x01` — und
                      * 0x01 ist DUP, die doppelte Sektor-ID, NICHT der

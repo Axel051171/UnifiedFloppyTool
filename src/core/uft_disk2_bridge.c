@@ -165,8 +165,12 @@ static void sektor_uebersetzen(uft_d2_sector_t *out, const uft_sector_t *in,
     const bool missing = (in->status & UFT_SECTOR_MISSING) != 0;
     const uint32_t len = in->data_len ? (uint32_t)in->data_len
                                       : (uint32_t)in->data_size;
-    out->data     = in->data;
-    out->data_len = (in->data && len) ? len : 0u;
+    /* H-30: ein fehlender Sektor geht OHNE Daten und OHNE Laenge ins
+     * Zentrum — `uft_d2_add_sector()` weist Abwesenheit mit Daten ab. Die
+     * Fuellbytes des Plugins bleiben im Plugin; hier waeren sie genau die
+     * erfundenen Daten, gegen die die Regel steht. */
+    out->data     = missing ? NULL : in->data;
+    out->data_len = (!missing && in->data && len) ? len : 0u;
     out->has_data = !missing && out->data_len > 0u;
 
     out->dam = in->data_mark ? in->data_mark
@@ -175,7 +179,15 @@ static void sektor_uebersetzen(uft_d2_sector_t *out, const uft_sector_t *in,
     /* Lage: drei Versatzfelder ohne Aussage, welches gilt — nicht geraten. */
     out->idam_bit = out->dam_bit = out->data_end_bit = SIZE_MAX;
 
-    out->origin = missing ? UFT_D2_ORIGIN_PADDING : UFT_D2_ORIGIN_CONTAINER;
+    /* H-30. BERICHTIGT: hier stand `missing ? UFT_D2_ORIGIN_PADDING : …`,
+     * und das Zentrum schrieb dazu „auf dem Traeger stand hier nichts". Das
+     * weiss niemand: eine zu kurze Datei sagt nichts ueber den Traeger, und
+     * IMD „data unavailable" heisst, dort STAND etwas. Der Grund kommt jetzt
+     * aus dem Plugin (Bit 8/9); ohne Grund ist „nicht lesbar" die
+     * vorsichtigste wahre Aussage, und der Aufrufer meldet, dass er fehlt. */
+    if (!missing)                                  out->origin = UFT_D2_ORIGIN_CONTAINER;
+    else if (in->status & UFT_SECTOR_TRUNCATED)    out->origin = UFT_D2_ORIGIN_TRUNCATED;
+    else                                           out->origin = UFT_D2_ORIGIN_UNAVAILABLE;
 
     /* Flackern: die per-Byte-Maske zaehlt markierte Bytes — eine
      * UNTERGRENZE der Bits. Die blosse Flagge ohne Maske sagt „mindestens
@@ -305,6 +317,15 @@ bool uft_d2_from_disk(uft_disk2_t *d, uft_disk_t *disk,
             for (size_t i = 0; i < t.sector_count; i++) {
                 uft_d2_sector_t s;
                 sektor_uebersetzen(&s, &t.sectors[i], dv_sect);
+                const uint32_t stt = t.sectors[i].status;
+                if ((stt & UFT_SECTOR_MISSING)
+                    && !(stt & (UFT_SECTOR_UNAVAILABLE | UFT_SECTOR_TRUNCATED)))
+                    uft_d2_diag(d, UFT_D2_DIAG_NOTE, UFT_D2_LAYER_SECTORS,
+                                (int)c, (int)h, (int)s.id_sec,
+                                "MISSING_NO_REASON",
+                                "%s nennt fuer Sektor %u keinen Grund, warum er "
+                                "fehlt — gefuehrt als 'nicht lesbar'.",
+                                name, (unsigned)s.id_sec);
                 if (uft_d2_add_sector(d, dt, &s)) st.sectors++;
                 else st.sectors_rejected++;
             }

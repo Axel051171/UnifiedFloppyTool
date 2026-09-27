@@ -247,6 +247,10 @@ TEST(fdc_status_becomes_sector_status)
     /* 0x10: the sector header exists, the data field does not. Zeros must
      * not be handed over as if they had been read. */
     ASSERT((tr.sectors[3].status & UFT_SECTOR_MISSING) != 0);
+    /* H-30: the reason is named — the FDC reported "data not found", so
+     * the field was not readable (bit 8), not cut off (bit 9). */
+    ASSERT((tr.sectors[3].status & (1u << 8)) != 0);
+    ASSERT((tr.sectors[3].status & (1u << 9)) == 0);
 
     free_track(&tr);
     uft_format_plugin_atx.close(&disk);

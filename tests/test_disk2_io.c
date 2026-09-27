@@ -517,12 +517,90 @@ static void t4_ueberlauf(void) {
     uft_d2_destroy(a); uft_d2_destroy(b);
 }
 
+/* Blockpruefsumme an Stelle `at` (Kennung 4, Laenge 4, Inhalt, CRC 4) neu
+ * rechnen — damit eine gezielt geaenderte Datei formal HEIL ist. */
+static void block_crc_neu(uint8_t *buf, size_t at) {
+    const uint32_t len = (uint32_t)buf[at + 4u] | ((uint32_t)buf[at + 5u] << 8)
+                       | ((uint32_t)buf[at + 6u] << 16) | ((uint32_t)buf[at + 7u] << 24);
+    const uint32_t c = uftd_crc32(buf + at + 8u, len);
+    for (int k = 0; k < 4; ++k)
+        buf[at + 8u + len + (size_t)k] = (uint8_t)(c >> (8 * k));
+}
+
+/* ═══════════ 5. Die Herkunft ist ein Dateivertrag (H-30) ════════════
+ *
+ * `uft_disk2_io.c` schreibt die Herkunft als rohes Byte. Zwei Zusagen:
+ * die drei Abwesenheitswerte (7, 8, 9) kommen unveraendert zurueck, und
+ * ein Byte, das keine bekannte Herkunft ist, wird beim Laden NICHT still
+ * uebernommen. Vorher nahm der Lader jedes Byte, und `uft_d2_origin_name()`
+ * nannte es „unbekannt" — ohne Befund. */
+static void t5_herkunft(void) {
+    printf("Test 5: Herkunftsbyte — Rundlauf und Bereichspruefung (H-30)\n");
+    uft_disk2_t *a = uft_d2_create();
+    uft_d2_track_t *t = uft_d2_track(a, 0u, 0u);
+    for (unsigned o = 7u; o <= 9u; ++o) {
+        uft_d2_sector_t s = guter_sektor(0u, (uint8_t)o, 0u, 0u);
+        s.has_data = false; s.data = NULL; s.data_len = 0u;
+        s.data_crc_known = s.data_crc_ok = false;
+        s.origin = (uft_d2_origin_t)o; s.conf = UFT_D2_CONF_NONE;
+        CHECK(uft_d2_add_sector(a, t, &s), "Herkunft %u ohne Daten angenommen", o);
+    }
+    uint8_t *buf = NULL; size_t n = 0u;
+    uftd_save(a, &buf, &n);
+
+    uft_disk2_t *b = NULL;
+    uftd_load(buf, n, &b);
+    const uft_d2_track_t *bt = b ? uft_d2_track_get(b, 0u, 0u) : NULL;
+    CHECK(bt && bt->sectors.count == 3u, "drei Sektoren zurueck");
+    if (bt && bt->sectors.count == 3u)
+        for (unsigned i = 0; i < 3u; ++i)
+            CHECK((unsigned)bt->sectors.items[i].origin == 7u + i,
+                  "Sektor %u: Herkunft %u zurueck, erwartet %u", i,
+                  (unsigned)bt->sectors.items[i].origin, 7u + i);
+    uft_d2_destroy(b); b = NULL;
+
+    /* Das Herkunftsbyte des ersten Sektors auf 200 setzen. Aufbau: "SECT"(4)
+     * Laenge(4) | gen(4) count(4) | id_cyl id_head id_sec id_size_code
+     * flags dam encoding ORIGIN — also Flaggenbyte + 3. */
+    size_t sect = 0u, trak = 0u;
+    for (size_t i = 16u; i + 4u < n; ++i) {
+        if (!trak && memcmp(buf + i, "TRAK", 4u) == 0) trak = i;
+        if (memcmp(buf + i, "SECT", 4u) == 0) { sect = i; break; }
+    }
+    CHECK(sect > 0u && trak > 0u && trak < sect, "TRAK umschliesst SECT");
+    if (sect && trak && trak < sect) {
+        const size_t origin_at = sect + 8u + 8u + 4u + 3u;
+        CHECK(buf[origin_at] == 7u, "das Byte an der berechneten Stelle ist "
+              "die gespeicherte Herkunft 7, hat %u", buf[origin_at]);
+        buf[origin_at] = 200u;
+        block_crc_neu(buf, sect);   /* innen zuerst */
+        block_crc_neu(buf, trak);   /* dann die Huelle */
+        uftd_load(buf, n, &b);
+        bt = b ? uft_d2_track_get(b, 0u, 0u) : NULL;
+        size_t befund = 0u;
+        if (b)
+            for (size_t i = 0; i < uft_d2_diag_count(b); ++i)
+                if (strcmp(uft_d2_diag_at(b, i)->code, "ORIGIN_RANGE") == 0) befund++;
+        CHECK(befund == 1u, "Herkunft 200 muss als ORIGIN_RANGE auffallen, "
+              "gezaehlt %zu", befund);
+        CHECK(bt && bt->sectors.count == 3u
+              && bt->sectors.items[0].origin == UFT_D2_ORIGIN_UNKNOWN,
+              "Sektor 1 bleibt erhalten, aber mit Herkunft UNKNOWN statt 200 "
+              "(hat %u)", bt && bt->sectors.count ? (unsigned)bt->sectors.items[0].origin : 0u);
+        printf("    7/8/9 zurueck; 200 als ORIGIN_RANGE gemeldet, als UNKNOWN gefuehrt\n");
+        uft_d2_destroy(b);
+    }
+    free(buf);
+    uft_d2_destroy(a);
+}
+
 int main(void) {
     printf("=== test_disk2_io (UFTD, MF-1275) ===\n\n");
     t1_rundlauf();
     t2_fehler();
     t3_gefaelscht();
     t4_ueberlauf();
+    t5_herkunft();
     printf("\n%s (%d Fehler)\n", g_fail ? "FEHLGESCHLAGEN" : "BESTANDEN", g_fail);
     return g_fail ? 1 : 0;
 }
