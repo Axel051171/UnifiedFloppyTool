@@ -800,6 +800,10 @@ foreach(test_source ${TEST_SOURCES})
         # jede Dateigroesse annimmt — der Fall entsteht bei jedem
         # abgebrochenen Abzug, ohne Kunstgriff.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
+    elseif(${test_name} STREQUAL "test_trd_kennung_bei_0x8e7")
+        # MF-1405: the probe looked for the TR-DOS ID at 0x227 (catalogue)
+        # instead of 0x8E7 (info sector); two real images measured.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/trd/uft_trd.c)
     elseif(${test_name} STREQUAL "test_ipf_sonde_beansprucht_nur_ipf")
         # MF-1002: die IPF-Sonde beanspruchte jede Datei, die mit
         # 00 00 00 01 beginnt, mit Konfidenz 90 — und wies ein echtes

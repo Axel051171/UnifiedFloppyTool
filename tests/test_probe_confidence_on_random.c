@@ -15,6 +15,10 @@
  *     if (data[0x227] == 0x10)         *confidence = 92;   // echte Signatur
  *     else if (data[0x8E4] <= 128)     *confidence = 82;   // <-- dies
  *
+ * (NACHGETRAGEN MF-1405: auch die „echte Signatur" in der ersten Zeile
+ * war keine — 0x227 liegt im Katalog; die Kennung steht bei 0x8E7. Das
+ * Zitat oben bleibt, wie der Code damals stand.)
+ *
  * Die zweite Bedingung trifft auf **die Haelfte aller Bytewerte** zu.
  * Sie liest den Inhalt — und sagt nichts. Auf Nullen faellt sie auf,
  * auf Zufall zur Haelfte nicht.

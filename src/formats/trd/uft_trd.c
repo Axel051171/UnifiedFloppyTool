@@ -16,9 +16,18 @@ bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     *confidence = 45;  /* MF-729: nur die Groesse */
 
     /* TR-DOS disk info at track 0, sector 9 (offset 0x800) */
-    if (size >= 0x228) {
-        /* Byte 0x227 = disk type: 0x10 = TR-DOS */
-        if (data[0x227] == 0x10) *confidence = 92;
+    if (size >= 0x8E8) {
+        /* Byte 0x8E7 (info sector + 0xE7) = TR-DOS ID 0x10.
+         *
+         * MF-1405: here stood `size >= 0x228` and `data[0x227] == 0x10`.
+         * 0x227 is byte 0x27 of the THIRD sector — the catalogue, not the
+         * info sector this comment names. SAMdisk (`pb[231] = 0x10`) and
+         * HxC's scl_loader write the ID at 0x8E7 (table in the head of
+         * src/formats/scl/uft_scl_plugin.c, MF-1014); two real images
+         * measured 2026-09-27 (WDC11sorc.trd, betadisk_dsdd.trd) carry
+         * 0x10 at 0x8E7 and 0x00 at 0x227 — the old check gave neither
+         * its ID. Test: tests/test_trd_kennung_bei_0x8e7.c. */
+        if (data[0x8E7] == 0x10) *confidence = 92;
         /* File count (0x8E4 = track 0 sector 8 + 0xE4) should be 0-128 */
         /* MF-729: hier stand `else if (data[0x8E4] <= 128) *confidence = 82;`
          * — eine Bereichspruefung, die auf die HAELFTE aller Bytewerte

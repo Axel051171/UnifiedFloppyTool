@@ -51,6 +51,7 @@ from __future__ import annotations
 import io
 import json
 import pathlib
+import re
 import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
@@ -82,9 +83,33 @@ def lies_urteile(pfad: pathlib.Path):
             d.get("_kennzahlen", []))
 
 
+def tiefe_vorhanden(quelle: pathlib.Path, urteile):
+    """Die Schluessel zweiter Ebene, deren Pfad es auf der Platte gibt."""
+    da = set()
+    for k in urteile:
+        t = tiefer_schluessel(k)
+        if t and (quelle / t[0] / t[1]).exists():
+            da.add(k)
+    return da
+
+
 # ── reiner Teil: pruefbar ohne Platte ───────────────────────────────
 
-def pruefe(namen, urteile, kanaele, kennzahlen):
+_TIEF = re.compile(r"^(?P<name>.+?) \(neue-ideen/(?P<pfad>[^()]+?)/?\)$")
+
+
+def tiefer_schluessel(schluessel):
+    """`WHDLoad_dev (neue-ideen/fertige/2/)` -> ("fertige/2", "WHDLoad_dev").
+
+    Ein Urteil ueber einen Eintrag UNTERHALB der obersten Ebene nennt
+    seinen Ort im Schluessel. Ohne diese Lesart galt es als verwaist,
+    obwohl die Datei da ist (gemessen 2026-09-27, MF-1405).
+    """
+    m = _TIEF.match(schluessel)
+    return (m.group("pfad"), m.group("name")) if m else None
+
+
+def pruefe(namen, urteile, kanaele, kennzahlen, tief_da=()):
     """Die Differenz zwischen Platte und Meinung — in beide Richtungen.
 
     `namen` ist die Verzeichnisebene, `urteile` die JSON-Abbildung.
@@ -92,13 +117,16 @@ def pruefe(namen, urteile, kanaele, kennzahlen):
     „in dieser Hinsicht nichts offen".
     """
     auf_platte = set(namen)
-    beurteilt = set(urteile)
+    tief = {k for k in urteile if tiefer_schluessel(k)}
+    tief_ok = tief & set(tief_da)
+    beurteilt = set(urteile) - tief
 
     ohne_urteil = sorted(auf_platte - beurteilt, key=str.lower)
-    verwaist = sorted(beurteilt - auf_platte, key=str.lower)
+    verwaist = sorted((beurteilt - auf_platte) | (tief - tief_ok),
+                      key=str.lower)
 
     unvollstaendig, falscher_kanal, falsche_kennzahl = [], [], []
-    for name in sorted(beurteilt & auf_platte, key=str.lower):
+    for name in sorted((beurteilt & auf_platte) | tief_ok, key=str.lower):
         u = urteile[name]
         fehlend = [f for f in PFLICHTFELDER if not str(u.get(f, "")).strip()]
         if fehlend:
@@ -113,6 +141,7 @@ def pruefe(namen, urteile, kanaele, kennzahlen):
         "beurteilt": len(beurteilt & auf_platte),
         "ohne_urteil": ohne_urteil,
         "verwaist": verwaist,
+        "tief": sorted(tief_ok, key=str.lower),
         "unvollstaendig": unvollstaendig,
         "falscher_kanal": falscher_kanal,
         "falsche_kennzahl": falsche_kennzahl,
@@ -150,6 +179,8 @@ def render_md(namen, urteile, befund) -> str:
              % len(befund["verwaist"]))
     z.append("| Urteile mit fehlendem Feld | %d |"
              % len(befund["unvollstaendig"]))
+    z.append("| Urteile zweiter Ebene (Pfad geprueft) | %d |"
+             % len(befund.get("tief", [])))
     z.append("")
 
     if befund["verwaist"]:
@@ -182,7 +213,7 @@ def render_md(namen, urteile, befund) -> str:
         z.append("| Eintrag | Lizenz | Beleg | Kanal | Kennzahl "
                  "| naechster Griff |")
         z.append("|---|---|---|---|---|---|")
-        auf_platte = set(namen)
+        auf_platte = set(namen) | set(befund.get("tief", []))
         for n in sorted(urteile, key=str.lower):
             if n not in auf_platte:
                 continue
@@ -214,7 +245,7 @@ def render_md(namen, urteile, befund) -> str:
 # ── Abnahme ─────────────────────────────────────────────────────────
 
 def _selbsttest() -> int:
-    """Neun Zusagen an den reinen Teil. Jede kann fallen."""
+    """Zwoelf Zusagen an den reinen Teil. Jede kann fallen."""
     K = ["Spec", "Fundus"]
     Z = ["T3 runter", "Fundus"]
     voll = {f: "x" for f in PFLICHTFELDER}
@@ -262,6 +293,19 @@ def _selbsttest() -> int:
     b = pruefe(["a"], {"a": dict(voll, kanal="Spec", kennzahl="Fundus")}, K, Z)
     faelle.append(("sauberer Fall meldet 0 offen", offen(b) == 0))
 
+    # 10-12: Urteile zweiter Ebene (MF-1405)
+    t = "tief (neue-ideen/sammel/2/)"
+    u = {"a": dict(voll, kanal="Spec", kennzahl="Fundus"),
+         t: dict(voll, kanal="Spec", kennzahl="Fundus")}
+    b = pruefe(["a"], u, K, Z, tief_da={t})
+    faelle.append(("zweite Ebene mit Pfad ist nicht verwaist",
+                   b["verwaist"] == [] and b["tief"] == [t]))
+    b = pruefe(["a"], u, K, Z, tief_da=set())
+    faelle.append(("zweite Ebene ohne Pfad IST verwaist",
+                   b["verwaist"] == [t]))
+    faelle.append(("zweite Ebene zaehlt nicht zur obersten",
+                   b["beurteilt"] == 1 and b["ohne_urteil"] == []))
+
     gut = sum(1 for _, ok in faelle if ok)
     for name, ok in faelle:
         print("  [%s] %s" % ("ok " if ok else "ROT", name))
@@ -287,12 +331,14 @@ def main(argv) -> int:
         return 2
 
     urteile, kanaele, kennzahlen = lies_urteile(URTEILE)
-    befund = pruefe(namen, urteile, kanaele, kennzahlen)
+    befund = pruefe(namen, urteile, kanaele, kennzahlen,
+                    tiefe_vorhanden(QUELLE, urteile))
 
     print("neue-ideen/ oberste Ebene : %d Eintraege" % befund["gesamt"])
     print("  mit Urteil               : %d" % befund["beurteilt"])
     print("  OHNE Urteil              : %d" % len(befund["ohne_urteil"]))
     print("  verwaiste Urteile        : %d" % len(befund["verwaist"]))
+    print("  Urteile zweiter Ebene    : %d" % len(befund["tief"]))
     print("  Urteil mit fehlendem Feld: %d" % len(befund["unvollstaendig"]))
     print("  Kanal ausserhalb Menge   : %d" % len(befund["falscher_kanal"]))
     print("  Kennzahl ausserhalb      : %d" % len(befund["falsche_kennzahl"]))
