@@ -195,9 +195,53 @@ static bool verify_stream_position(
             
             const uint8_t* payload = data + file_pos + 4;
             
-            /* Check position in Stream Info, Index, and Stream End */
-            if ((type == UFT_KFC_OOB_STREAM_INFO || 
-                 type == UFT_KFC_OOB_INDEX ||
+            /* MF-1479 — HIER WURDEN ECHTE KRYOFLUX-AUFNAHMEN ABGEWIESEN.
+             *
+             * Die Bedingung lautete:
+             *
+             *     if ((type == UFT_KFC_OOB_STREAM_INFO ||
+             *          type == UFT_KFC_OOB_INDEX ||
+             *          type == UFT_KFC_OOB_STREAM_END) && size >= 4)
+             *
+             * Ein Index-Block traegt aber KEINE laufende Position. Seine
+             * erste u32 verweist auf den Flusswert, WAEHREND dessen der
+             * Indexpuls fiel — eine Rueckverweisung, nicht der Stand des
+             * Zaehlers an der Stelle, an der der Block steht. Sie gegen
+             * `stream_pos` zu halten vergleicht zwei verschiedene Groessen.
+             *
+             * Gemessen an vier echten Aufnahmen der Sierra-Zulieferung
+             * (MF-1476, `name=KryoFlux DiskSystem, version=2.20s`):
+             *
+             *   hxcfe_kfx_t00.0.raw          0 Brueche -> oeffnete
+             *   fluxfox track00.0.raw        0 Brueche -> oeffnete
+             *   sierra bc_quest_tires t00    6 Brueche -> abgewiesen
+             *   sierra ulysses_1 t01         3 Brueche -> abgewiesen
+             *
+             * JEDER Bruch sass auf einem Index-Block, keiner auf
+             * StreamInfo oder StreamEnd — die stimmen bei denselben
+             * Dateien 7 von 7 exakt. Und die Abweichungen gingen nach
+             * OBEN (+3567, +2556, +1545, +537 …), also auf eine Stelle
+             * hinter dem Block.
+             *
+             * `uft_disk_open_ranked()` meldete fuer diese Dateien **0
+             * Anspruchsteller**: kein Plugin nahm sie, das Format hiess
+             * aber nach dem Geraet, das sie geschrieben hat.
+             *
+             * Die Autoritaetsfrage entscheidet den Fall (Gattung *Spec*
+             * mit dem Zeugen auf der richtigen Seite, MF-1179): diese
+             * Stroeme stammen von KryoFlux' eigener Hardware, und `dtc`
+             * — derselbe Hersteller, ihr eigener Leser — hat sie
+             * fehlerfrei dekodiert; das Protokoll liegt je Diskette bei
+             * (`dtc_log.txt`, Sektorzahlen pro Spur). Schreiber und
+             * Leser derselben Hand stimmen ueberein; nur UFT widersprach.
+             *
+             * Geprueft wird deshalb nur noch, was eine laufende Position
+             * FUEHRT: StreamInfo und StreamEnd. Die Index-Position bleibt
+             * ungeprueft — sie ist damit nicht wertlos, sondern nur nicht
+             * mit dieser Groesse vergleichbar; sie gegen die Flussdaten
+             * zu pruefen ist ein eigener Eingriff mit eigener Messung
+             * (P3-655). */
+            if ((type == UFT_KFC_OOB_STREAM_INFO ||
                  type == UFT_KFC_OOB_STREAM_END) && size >= 4) {
                 
                 uint32_t oob_stream_pos = payload[0] | (payload[1] << 8) |

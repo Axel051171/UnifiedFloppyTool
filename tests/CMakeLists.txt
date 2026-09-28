@@ -3699,7 +3699,12 @@ foreach(test_source ${TEST_SOURCES})
            # Kontrollabbild: geht durch `uft_disk_open()`, also dieselbe
            # Menge. Braucht beide Korpuspfade — der freie traegt die
            # Kontrolle, der lokale die Aufnahmen (LOCAL-ONLY).
-           OR ${test_name} STREQUAL "test_woz_echte_aufnahme")
+           OR ${test_name} STREQUAL "test_woz_echte_aufnahme"
+           # Echte KryoFluss-Stroeme aus der Sierra-Zulieferung gegen die
+           # zwei Kontrollstroeme in git: geht durch `uft_disk_open()`,
+           # also dieselbe Menge. Braucht beide Korpuspfade — der freie
+           # die Kontrolle, der lokale die Aufnahmen (LOCAL-ONLY).
+           OR ${test_name} STREQUAL "test_kfx_sierra_schutzspur")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

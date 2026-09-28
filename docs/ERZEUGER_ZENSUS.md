@@ -262,7 +262,7 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `jv1` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
 | `jv3` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TRS80_JV3 | dsk (?), jv3 |
 | `jvc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
-| `kfx` | T1b | KRYOFLUXSTREAM (?) | raw (?) |
+| `kfx` | T1 | KRYOFLUXSTREAM (?) | raw (?) |
 | `logical` | T1b | — | logical |
 | `mfi` | T1b | MAME_MFI | — |
 | `mgt` | T1 | RAW_LOADER (?) | — |

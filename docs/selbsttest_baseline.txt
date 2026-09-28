@@ -27,7 +27,7 @@ src/formats/hfe/uft_hfe_parser_v2.c:334:HFE_PARSER_TEST:15
 src/formats/ipf/uft_ipf_air.c:1202:IPF_AIR_TEST:9
 src/formats/jv/uft_jv_parser_v2.c:427:JV_PARSER_TEST:16
 src/formats/kfx/uft_kfstream_air.c:761:KF_AIR_TEST:17
-src/formats/kryoflux/uft_kryoflux_checker.c:742:UFT_KFC_TEST:8
+src/formats/kryoflux/uft_kryoflux_checker.c:786:UFT_KFC_TEST:8
 src/formats/msa/uft_msa_parser_v2.c:566:MSA_TEST:21
 src/formats/nib/uft_nib_parser_v2.c:525:NIB_PARSER_TEST:13
 src/formats/sap/uft_sap_parser_v2.c:293:SAP_PARSER_TEST:11
