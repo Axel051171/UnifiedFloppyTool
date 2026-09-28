@@ -2641,6 +2641,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_atr.c
             ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_check.c
             ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_sparta.c)
+    elseif(${test_name} STREQUAL "test_atari_dos25_verzeichnis_und_vtoc2")
+        # MF-1493: DOS 2.5 — Flag 0x03 ist eine Datei (jhallen atr.c,
+        # FLAG_IN_USE_ED 0x41), VTOC2-Bitmap ab Byte 84 (jhallen readme).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_dos2.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_atr.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_check.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/atari_sparta.c)
     elseif(${test_name} STREQUAL "test_atr_boot_layout")
         # MF-833: ATR mit 256-B-Sektoren ist dreifach ambig
         # (LOGICAL/PHYSICAL/WEIRD). Das Plugin meldet die Erkennung ueber
