@@ -3968,6 +3968,11 @@ foreach(test_source ${TEST_SOURCES})
         # an einer echten Applesauce-Aufnahme nachgemessen.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_a2r_ueberlauf_0xff")
+        # MF-1496 (P3-657): 0xFF ist ein Ueberlauf von 255 Ticks, der zum
+        # Folgewert addiert wird — an JEDER Stelle, die Flussbytes zaehlt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
     elseif(${test_name} STREQUAL "test_a2r_strm_verschachtelt")
         # MF-1157: eine STRM-Folge 0,1,0 schrieb hinter das Ende des
         # Spurfeldes. Dieselbe Quellenmenge wie test_a2r_layout darueber;

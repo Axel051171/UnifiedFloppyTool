@@ -140,6 +140,38 @@ static void a2r_location_deuten(uint16_t location, uint8_t drive_type,
     if (side_out)  *side_out  = (uint8_t)(location & 1u);
 }
 
+/* MF-1496 (P3-657): ONE rule for turning flux bytes into ticks.
+ *
+ * A2R 2.x and 3.x references: a flux value of 255 is an overflow — it is
+ * ADDED to what follows, and a run of 255s keeps adding. Reads the next
+ * transition starting at data[*pos], advances *pos past it and returns its
+ * length in ticks; *ueberlauf (optional) says whether 0xFF bytes were in it.
+ *
+ * Why here and not in each caller: the RWCP branch already did this, while
+ * four other places (the STRM duration and rpm, a2r_decode_flux(),
+ * a2r_flux_to_nibbles(), a2r_get_raw_timings()) read "0xFF + next byte" as
+ * the next byte ALONE — 255 ticks lost per 0xFF, in the capture length AND
+ * the rpm derived from it. Measured by tests/test_a2r_ueberlauf_0xff.c:
+ * FF FF 20 40 is 542 + 64 = 606 ticks; the four places gave 351 (43.875 us
+ * instead of 75.75 us). Same pattern as a2r_location_deuten(): one rule,
+ * next to the other one, instead of a copy per caller (MF-1177). */
+static uint64_t a2r_fluss_wechsel(const uint8_t *data, uint32_t len,
+                                  uint32_t *pos, bool *ueberlauf) {
+    uint64_t ticks = 0;
+    bool ext = false;
+    while (*pos < len && data[*pos] == 0xFFu) {
+        ticks += 0xFFu;
+        ext = true;
+        (*pos)++;
+    }
+    if (*pos < len) {
+        ticks += data[*pos];
+        (*pos)++;
+    }
+    if (ueberlauf) *ueberlauf = ext;
+    return ticks;
+}
+
 /*============================================================================
  * Utility Functions
  *============================================================================*/
@@ -508,16 +540,10 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
                 if (cap->data) {
                     memcpy(cap->data, e + 10, data_len);
                     
-                    /* Calculate duration */
+                    /* Calculate duration (MF-1496: one overflow rule) */
                     uint64_t total_ticks = 0;
-                    const uint8_t *flux = cap->data;
-                    for (uint32_t i = 0; i < data_len; i++) {
-                        if (flux[i] == 0xFF && i + 1 < data_len) {
-                            total_ticks += flux[++i];
-                        } else {
-                            total_ticks += flux[i];
-                        }
-                    }
+                    for (uint32_t i = 0; i < data_len; )
+                        total_ticks += a2r_fluss_wechsel(cap->data, data_len, &i, NULL);
                     cap->duration_us = (total_ticks * A2R_TICK_NS) / 1000.0;
                     cap->rpm = a2r_duration_to_rpm(cap->duration_us);
                     
@@ -689,15 +715,11 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
 
                 /* Flusswerte: 0xFF ist ein Ueberlauf und wird zum
                  * FOLGENDEN Wert addiert; der alte Rumpf zaehlte
-                 * stattdessen nur das Folgebyte. */
+                 * stattdessen nur das Folgebyte. MF-1496: dieselbe
+                 * Regel wie ueberall, an einer Stelle. */
                 uint64_t ticks = 0;
-                uint32_t traeger = 0;
-                for (uint32_t k = 0; k < data_len; k++) {
-                    if (cap->data[k] == 0xFF) { traeger += 0xFF; continue; }
-                    ticks += traeger + cap->data[k];
-                    traeger = 0;
-                }
-                ticks += traeger;
+                for (uint32_t k = 0; k < data_len; )
+                    ticks += a2r_fluss_wechsel(cap->data, data_len, &k, NULL);
 
                 cap->tick_count  = (uint32_t)((ticks > 0xFFFFFFFFu)
                                               ? 0xFFFFFFFFu : ticks);
@@ -1040,21 +1062,14 @@ a2r_error_t a2r_decode_flux(const a2r_capture_t *capture,
     const uint8_t *data = capture->data;
     uint32_t len = capture->data_length;
     
-    for (uint32_t i = 0; i < len && *out_count < max_samples; i++) {
-        uint32_t tick;
+    for (uint32_t i = 0; i < len && *out_count < max_samples; ) {
         bool is_extended = false;
-        
-        if (data[i] == 0xFF && i + 1 < len) {
-            /* Extended timing: 0xFF followed by count */
-            tick = data[++i];
-            is_extended = true;
-        } else if (data[i] == 0x00) {
-            /* Sync byte, skip */
-            continue;
-        } else {
-            tick = data[i];
-        }
-        
+        /* MF-1496: one overflow rule (a2r_fluss_wechsel); before, 0xFF +
+         * next byte became the next byte alone. A zero-length result (a
+         * lone 0x00) is skipped as before. */
+        uint32_t tick = (uint32_t)a2r_fluss_wechsel(data, len, &i, &is_extended);
+        if (tick == 0) continue;
+
         time_ns += tick * A2R_TICK_NS;
         
         samples[*out_count].tick = tick;
@@ -1087,17 +1102,11 @@ a2r_error_t a2r_flux_to_nibbles(const a2r_capture_t *capture,
     uint8_t current_byte = 0;
     int bit_count = 0;
     
-    for (uint32_t i = 0; i < len; i++) {
-        uint32_t tick;
-        
-        if (data[i] == 0xFF && i + 1 < len) {
-            tick = data[++i];
-        } else if (data[i] == 0x00) {
-            continue;
-        } else {
-            tick = data[i];
-        }
-        
+    for (uint32_t i = 0; i < len; ) {
+        /* MF-1496: one overflow rule (a2r_fluss_wechsel). */
+        uint32_t tick = (uint32_t)a2r_fluss_wechsel(data, len, &i, NULL);
+        if (tick == 0) continue;
+
         double interval_ns = tick * A2R_TICK_NS;
         accum_ns += interval_ns;
         
@@ -1214,17 +1223,11 @@ a2r_error_t a2r_get_raw_timings(const a2r_capture_t *capture,
     const uint8_t *data = capture->data;
     uint32_t len = capture->data_length;
     
-    for (uint32_t i = 0; i < len && *out_count < max_timings; i++) {
-        uint32_t tick;
-        
-        if (data[i] == 0xFF && i + 1 < len) {
-            tick = data[++i];
-        } else if (data[i] == 0x00) {
-            continue;
-        } else {
-            tick = data[i];
-        }
-        
+    for (uint32_t i = 0; i < len && *out_count < max_timings; ) {
+        /* MF-1496: one overflow rule (a2r_fluss_wechsel). */
+        uint32_t tick = (uint32_t)a2r_fluss_wechsel(data, len, &i, NULL);
+        if (tick == 0) continue;
+
         timings[(*out_count)++] = tick * A2R_TICK_NS;
     }
     
