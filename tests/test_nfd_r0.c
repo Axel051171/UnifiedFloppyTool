@@ -120,7 +120,17 @@ TEST(geometry_and_recovery) {
     ASSERT(uft_format_plugin_nfd.read_track(&disk, 1, 0, &t2) == UFT_OK);
     ASSERT(t2.sector_count == 2);
     ASSERT(t2.sectors[0].data[0] == 0x13);
-    ASSERT(t2.sectors[0].crc_ok == false);         /* ST1 bit5 */
+    /* BERICHTIGT MF-1490 (P3-659). Here stood
+     *     ASSERT(t2.sectors[0].crc_ok == false);   // ST1 bit5
+     * i.e. ST1 bit 5 alone made the DATA CRC bad. uPD765: ST1 bit 5 (DE)
+     * is a CRC error "in either the ID field or the data field"; ST2 bit 5
+     * (DD) narrows it to the data field. DE without DD is therefore the ID
+     * field — the same separation the EDSK reader already makes. The entry
+     * here sets only ST1, so the sector carries an ID CRC error, and its
+     * data CRC is not claimed bad. */
+    ASSERT((t2.sectors[0].status & UFT_SECTOR_ID_CRC_ERROR) != 0);   /* ST1 bit5 */
+    ASSERT(t2.sectors[0].id.crc_ok == false);
+    ASSERT(t2.sectors[0].crc_ok == true);
     ASSERT(t2.sectors[1].crc_ok == true);
     free_ts(&t2);
 

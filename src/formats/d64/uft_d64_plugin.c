@@ -160,17 +160,36 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                               (uint8_t)cyl, (uint8_t)head);
 
         /* Surface the 1541 error code for this sector (represent, don't drop).
-         * Code 0x01 = "00, OK"; anything else (02=header not found, 04=data
-         * not found, 05=data checksum error, ...) is a read error → mark the
-         * sector CRC-bad so consumers see the original media defect. */
+         *
+         * MF-1490 (P3-659): here every code other than 00/01 became
+         * "data CRC bad" through uft_sector_set_crc(false) — which the
+         * disk2 bridge does not even read, so the model saw "unchecked".
+         * The codes mean different things. Peter Schepers, D64.TXT, error
+         * byte table:
+         *   05 = 23 checksum error in data block      -> data CRC error
+         *   09 = 27 checksum error in header block    -> ID CRC error
+         *   02 = 20 header descriptor byte not found  \
+         *   03 = 21 no SYNC sequence found             | the sector was not
+         *   04 = 22 data descriptor byte not found     | read at all: the
+         *   0F = 74 drive not ready                   /  bytes are no reading
+         *   0B = 29 disk sector ID mismatch, and the write codes 06/07/08/0A:
+         *        no CRC statement; kept as before (crc_ok=false) because
+         *        the tree has no status bit for them — named in P3-659.
+         * Guarded by tests/test_crc_befund_erreicht_modell.c. */
         if (p->has_errors && track->sector_count > 0) {
             long ei = p->err_offset + (off / 256);
             uint8_t code = 0x01;
             if (fseek(p->file, ei, SEEK_SET) == 0 &&
                 fread(&code, 1, 1, p->file) == 1 &&
                 code != 0x00 && code != 0x01) {
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1],
-                                   false);
+                uft_sector_t *z = &track->sectors[track->sector_count - 1];
+                switch (code) {
+                case 0x05: uft_sector_mark_data_crc_error(z); break;
+                case 0x09: uft_sector_mark_id_crc_error(z);   break;
+                case 0x02: case 0x03: case 0x04: case 0x0F:
+                    uft_format_mark_last_unavailable(track);  break;
+                default:   uft_sector_set_crc(z, false);      break;
+                }
             }
         }
     }

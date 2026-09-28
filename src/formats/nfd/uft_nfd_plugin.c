@@ -283,8 +283,10 @@ static uft_error_t nfd_read_track(uft_disk_t *disk, int cyl, int head,
             uft_format_add_sector(track, sec_arg, fill, s->size,
                                   (uint8_t)cyl, (uint8_t)head);
             free(fill);
-            if (track->sector_count > 0)
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+            /* MF-1490 (P3-659): the SOURCE ended here — no statement about
+             * the medium and none about a CRC. Before, set_crc(false) only,
+             * and the 0xE5 fill reached the model as data. */
+            uft_format_mark_last_truncated(track);
         } else {
             uft_format_add_sector(track, sec_arg, p->data + s->data_off, s->size,
                                   (uint8_t)cyl, (uint8_t)head);
@@ -293,10 +295,15 @@ static uft_error_t nfd_read_track(uft_disk_t *disk, int cyl, int head,
         if (track->sector_count > 0) {
             uft_sector_t *sec = &track->sectors[track->sector_count - 1];
             if (s->ddam) sec->deleted = true;
-            /* uPD765 status: ST1 bit5 = CRC error in ID field, ST2 bit5 = CRC
-             * error in data field. */
-            if ((s->st1 & 0x20) || (s->st2 & 0x20))
-                uft_sector_set_crc(sec, false);
+            /* uPD765 status: ST2 bit5 (DD) = CRC error in the DATA field;
+             * ST1 bit5 (DE) without DD = the error is in the ID field.
+             * MF-1490 (P3-659): both became "data CRC bad" through
+             * set_crc(false), which the disk2 bridge does not read — the
+             * model saw "unchecked". Same separation as the EDSK reader. */
+            if (s->st2 & 0x20)
+                uft_sector_mark_data_crc_error(sec);
+            else if (s->st1 & 0x20)
+                uft_sector_mark_id_crc_error(sec);
         }
     }
     return UFT_OK;

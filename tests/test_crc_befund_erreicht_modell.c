@@ -40,6 +40,8 @@
 #include <string.h>
 
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
+extern const uft_format_plugin_t uft_format_plugin_d64;
+extern const uft_format_plugin_t uft_format_plugin_nfd;
 
 static int gruen = 0, rot = 0;
 
@@ -81,7 +83,8 @@ static void modell(uft_disk_t *disk, const uft_format_plugin_t *p,
         const uft_d2_sector_t *s = &dt->sectors.items[i];
         for (int k = 0; k < n; k++) {
             if (s->id_sec != rs[k]) continue;
-            if (s->id_crc_known && !s->id_crc_ok) out[k] = 'I';
+            if (!s->has_data) out[k] = 'M';
+            else if (s->id_crc_known && !s->id_crc_ok) out[k] = 'I';
             else if (s->data_crc_known && !s->data_crc_ok) out[k] = 'B';
             else if (s->data_crc_known) out[k] = 'G';
             else out[k] = 'U';
@@ -204,6 +207,65 @@ int main(void)
         snprintf(h, sizeof h, "Modell R1,R2,R3 = %s", urteil);
         pruefe("EDSK ST2 DD -> Daten-CRC-Fehler, ST1 DE allein -> ID-CRC-Fehler (uPD765)",
                urteil[0] == 'U' && urteil[1] == 'B' && urteil[2] == 'I', h);
+    }
+
+    /* D64 with error bytes — second slice (MF-1490). Peter Schepers,
+     * D64.TXT, error byte table (read 2026-09-28):
+     *   01 = 00 no error          05 = 23 checksum error in data block
+     *   09 = 27 checksum error in header block
+     *   02 = 20 header descriptor byte not found  (seek)
+     *   03 = 21 no SYNC,  04 = 22 data descriptor byte not found,
+     *   0F = 74 drive not ready  — the sector could not be read at all
+     *   0B = 29 disk sector ID mismatch — no CRC statement
+     * Track 1 sectors 0..5 carry 01, 05, 09, 02, 04, 0B. */
+    {
+        enum { D64 = 174848, ERR = 683 };
+        static uint8_t b[D64 + ERR];
+        memset(b, 0, sizeof b);
+        for (int s = 0; s < 21; s++) memset(b + 256 * s, 0x30 + s, 256);
+        memset(b + D64, 0x01, ERR);
+        const uint8_t code[6] = { 0x01, 0x05, 0x09, 0x02, 0x04, 0x0B };
+        memcpy(b + D64, code, 6);
+        const uint8_t r012345[6] = { 0, 1, 2, 3, 4, 5 };
+        snprintf(pfad, sizeof pfad, "%s/uft_mf1490.d64", tmpdir());
+        schreibe(pfad, b, sizeof b);
+        char u6[8];
+        urteile_mit(&uft_format_plugin_d64, pfad, r012345, u6, 6);
+        remove(pfad);
+        snprintf(h, sizeof h, "Modell S0..S5 (01,05,09,02,04,0B) = %s (M=nicht lesbar)", u6);
+        pruefe("D64: 05 Daten-CRC, 09 Kopf-CRC, 02/04 nicht lesbar, 01 und 0B ohne CRC-Befund (Schepers D64.TXT)",
+               strcmp(u6, "UBIMMU") == 0, h);
+    }
+
+    /* NFD r0 (PC-98, uPD765 status) — second slice (MF-1490): R1 ST2 bit 5
+     * (data CRC), R2 ST1 bit 5 without ST2 (ID CRC), R3 clean, R4 whose data
+     * lies past the end of the file (truncated: no CRC statement, the source
+     * ended). */
+    {
+        enum { TAB = 163 * 26 * 16, KOPF = 0x120 + TAB };
+        static uint8_t b[KOPF + 3 * 256];
+        memset(b, 0, sizeof b);
+        memcpy(b, "T98FDDIMAGE.R0", 14);
+        b[0x110] = (uint8_t)KOPF; b[0x111] = (uint8_t)(KOPF >> 8);
+        b[0x112] = (uint8_t)(KOPF >> 16);
+        b[0x115] = 1;
+        for (int slot = 0; slot < 163 * 26; slot++) b[0x120 + 16 * slot] = 0xFF;
+        const uint8_t st1[4] = { 0x00, 0x20, 0x00, 0x00 }, st2[4] = { 0x20, 0x00, 0x00, 0x00 };
+        for (int i = 0; i < 4; i++) {
+            uint8_t *e = b + 0x120 + 16 * i;
+            e[0] = 0; e[1] = 0; e[2] = (uint8_t)(i + 1); e[3] = 1;
+            e[4] = 1; e[8] = st1[i]; e[9] = st2[i]; e[10] = 0x90;
+        }
+        for (int i = 0; i < 3; i++) memset(b + KOPF + 256 * i, 0x40 + i, 256);
+        const uint8_t r1234[4] = { 1, 2, 3, 4 };
+        snprintf(pfad, sizeof pfad, "%s/uft_mf1490.nfd", tmpdir());
+        schreibe(pfad, b, sizeof b);
+        char u4[8];
+        urteile_mit(&uft_format_plugin_nfd, pfad, r1234, u4, 4);
+        remove(pfad);
+        snprintf(h, sizeof h, "Modell R1..R4 = %s", u4);
+        pruefe("NFD: ST2 -> Daten-CRC, ST1 allein -> ID-CRC, abgeschnitten -> fehlt (uPD765)",
+               strcmp(u4, "BIUM") == 0, h);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);
