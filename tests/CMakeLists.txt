@@ -4692,6 +4692,12 @@ foreach(test_source ${TEST_SOURCES})
         # brachen nur bei einer Selbst-Schleife ab
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
+    elseif(${test_name} STREQUAL "test_d88_tafel_und_status")
+        # MF-1480: Tafel einseitiger Disketten (MAME, hxcfe ausgefuehrt),
+        # Geometrie aus der Tafel, Status 0xE0/0x10 (hxcfe ausgefuehrt).
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d88_spur_nach_kopf")
         # MF-1475: Sektorzahl aus dem Spurkopf, ID aus C/H/R/N, Laenge 0 =
         # Sektor ohne Daten — gegen MAME d88_dsk.cpp.

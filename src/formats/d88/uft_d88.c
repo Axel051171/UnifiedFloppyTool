@@ -36,7 +36,31 @@ static int d88_track_entries(const uint8_t* tbl_base)
     return (lowest == D88_HEADER_160) ? D88_TRACKS_160 : D88_TRACKS_164;
 }
 
-typedef struct { FILE* file; uint8_t media; uint32_t track_off[164]; } d88_data_t;
+typedef struct {
+    FILE* file;
+    uint8_t media;
+    /* MF-1480: 1D/1DD table read one entry per cylinder (see d88_index) */
+    uint8_t fortlaufend;
+    uint32_t track_off[164];
+} d88_data_t;
+
+/* MF-1480 (P3-652 c): the table index of (cyl, head), or -1.
+ *
+ * For 1D/1DD (media 0x30/0x40) MAME d88_dsk.cpp (BSD-3-Clause, read only)
+ * indexes track_pos[track * head_count + head] with head_count 1, and
+ * hxcfe's d88_loader.c reads entry i>>1 per cylinder for side==1 —
+ * EXECUTED, hxcfe.exe put entries 0,1,2 of a 1DD image on cylinders 0,1,2
+ * head 0. greaseweazle's d88.py takes cyl = index // 2 whatever the media
+ * byte says. Both layouts are therefore kept apart by the table itself: a
+ * single-sided table that uses an odd entry can only be sequential; one
+ * that uses only even entries is the cyl*2 layout (read sequentially it
+ * would leave every odd cylinder empty). Guarded by
+ * tests/test_d88_tafel_und_status.c. */
+static int d88_index(const d88_data_t* p, int cyl, int head)
+{
+    if (p->fortlaufend) return (head == 0) ? cyl : -1;
+    return cyl * 2 + head;
+}
 
 /* MF-447: this probe claimed EVERY file in tests/corpus_free at confidence 90.
  *
@@ -132,7 +156,22 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = 2;
     disk->geometry.sectors = (p->media == 0x20) ? 8 : 16;
     disk->geometry.sector_size = (p->media == 0x20) ? 1024 : 256;
-    disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders * disk->geometry.heads * disk->geometry.sectors;
+
+    /* MF-1480 (P3-652 c, d): layout and geometry from the table. The media
+     * byte alone said 80 x 2 for every 2D image; the foreign
+     * hxcfe_pc160.d88 has 40 tracks on one side (entries 0,2,..,78). MAME
+     * loads only the entries that are set (`if(!pos) continue`). */
+    int hoechster = -1, ungerade = 0;
+    for (int i = 0; i < entries; i++) {
+        if (p->track_off[i] == 0) continue;
+        hoechster = i;
+        if (i & 1) ungerade = 1;
+    }
+    p->fortlaufend = (uint8_t)((p->media == 0x30 || p->media == 0x40) && ungerade);
+    if (hoechster >= 0) {
+        disk->geometry.cylinders = p->fortlaufend ? hoechster + 1 : hoechster / 2 + 1;
+        disk->geometry.heads = (!p->fortlaufend && ungerade) ? 2 : 1;
+    }
 
     /* Read actual geometry from first track's sector headers rather than
      * relying solely on the media type byte (which is often wrong for
@@ -151,6 +190,8 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
             }
         }
     }
+    disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders
+                                 * disk->geometry.heads * disk->geometry.sectors;
 
     return UFT_OK;
 }
@@ -170,10 +211,10 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
 
     d88_data_t* p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
-    
-    int idx = cyl * 2 + head;
-    if (idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
-    
+
+    int idx = d88_index(p, cyl, head);
+    if (idx < 0 || idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
+
     uft_track_init(track, cyl, head);
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { return UFT_ERROR_INVALID_ARG; }
     /* MF-1475, reference MAME src/lib/formats/d88_dsk.cpp (BSD-3-Clause,
@@ -239,6 +280,18 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                 uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
             if (ddam == 0x10)
                 track->sectors[track->sector_count - 1].deleted = true;
+            /* MF-1480 (P3-652 b), decided by hxcfe EXECUTED (hxcfe.exe,
+             * D88 -> IMD; its d88_loader.c names the codes): status 0x10
+             * came out as a deleted sector (IMD type 4); 0xE0 "no address
+             * mark" as a record without ID, type 0 — the sector cannot be
+             * found. Both were reported as clean sectors. The bytes in the
+             * file stay; only the finding is set. 0xF0 "no data mark" is NOT
+             * decided: hxcfe's own IMD output carries its data as a normal
+             * sector, against its own comment — open in P3-652. */
+            if (st == 0x10)
+                track->sectors[track->sector_count - 1].deleted = true;
+            if (st == 0xE0)
+                uft_format_mark_last_unavailable(track);  /* reason: not readable (H-30) */
         }
         free(buf);
     }
@@ -263,8 +316,8 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
-    int idx = cyl * 2 + head;
-    if (idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
+    int idx = d88_index(p, cyl, head);
+    if (idx < 0 || idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
 
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) return UFT_ERROR_IO;
 

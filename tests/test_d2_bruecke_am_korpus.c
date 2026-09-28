@@ -18,6 +18,11 @@
  * **80**. „nicht leer" ist dort eine erfundene Aussage; der Rueckgabewert
  * belegt weder „unlesbar" noch „unformatiert".
  *
+ * BERICHTIGT MF-1480: die 120/80 waren Spuren, die das Plugin selbst
+ * erfand — es riet 80 x 2 aus dem Medienbyte, die Spurtafel sagt 40 x 1
+ * bzw. 40 x 2 (P3-652 d). Seither scheitert an beiden Abbildern keine
+ * Spur; der Fall steht an einer Kopie mit genullten Tafeleintraegen (main).
+ *
  * Verlangt wird seither:
  *   1. kein WARN TRACK_UNREADABLE — der Rueckgabewert traegt es nicht;
  *   2. ein NOTE je LAUF (aufeinanderfolgende Zylinder, derselbe
@@ -112,11 +117,9 @@ static size_t laeufe_selbst_zaehlen(uft_disk_t *disk, size_t *gescheitert) {
     return laeufe;
 }
 
-static void abbild(const char *name, size_t erwartet_gescheitert,
-                   size_t erwartet_laeufe) {
-    char pfad[1024];
-    snprintf(pfad, sizeof pfad, "%s/%s", UFT_CORPUS_DIR, name);
-    printf("%s\n", name);
+static void abbild_pfad(const char *pfad, size_t erwartet_gescheitert,
+                        size_t erwartet_laeufe) {
+    printf("%s\n", pfad);
     uft_disk_t *disk = uft_disk_open(pfad, true);
     CHECK(disk != NULL, "uft_disk_open(%s) lieferte NULL", pfad);
     if (!disk) return;
@@ -194,6 +197,39 @@ static void abbild(const char *name, size_t erwartet_gescheitert,
     uft_disk_close(disk);
 }
 
+static void abbild(const char *name, size_t erwartet_gescheitert,
+                   size_t erwartet_laeufe) {
+    char pfad[1024];
+    snprintf(pfad, sizeof pfad, "%s/%s", UFT_CORPUS_DIR, name);
+    abbild_pfad(pfad, erwartet_gescheitert, erwartet_laeufe);
+}
+
+/* MF-1480: hxcfe_pc160.d88 with the table entries of cylinders 10..14
+ * (entries 20, 22, 24, 26, 28 — the file uses the cyl*2 layout) set to 0,
+ * i.e. "0 = unformatted" inside the geometry the table still spans (40 x 1,
+ * highest entry 78). Written to TMP; the corpus file itself is untouched. */
+static int kopie_mit_luecke(char *ziel, size_t zn) {
+    char quelle[1024];
+    snprintf(quelle, sizeof quelle, "%s/hxcfe_pc160.d88", UFT_CORPUS_DIR);
+    FILE *f = fopen(quelle, "rb");
+    if (!f) return 0;
+    static uint8_t buf[200000];
+    size_t n = fread(buf, 1, sizeof buf, f);
+    fclose(f);
+    if (n < 0x2B0) return 0;
+    for (int e = 20; e <= 28; e += 2) memset(buf + 0x20 + 4 * e, 0, 4);
+    const char *d = getenv("TMPDIR");
+    if (!d || !d[0]) d = getenv("TMP");
+    if (!d || !d[0]) d = getenv("TEMP");
+    if (!d || !d[0]) d = ".";
+    snprintf(ziel, zn, "%s/uft_mf1480_luecke.d88", d);
+    f = fopen(ziel, "wb");
+    if (!f) return 0;
+    const int ok = fwrite(buf, 1, n, f) == n;
+    fclose(f);
+    return ok;
+}
+
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("=== test_d2_bruecke_am_korpus ===\n\n");
@@ -201,10 +237,25 @@ int main(void) {
         printf("uft_register_all_formats scheiterte\n");
         return 1;
     }
-    /* Die Zahlen sind am Abbild gemessen (siehe Kopf): PC-160K ist
-     * einseitig mit 40 Zylindern, der D88-Kopf nennt 80 x 2. */
-    abbild("hxcfe_pc160.d88", 120u, 2u);
-    abbild("hxcfe_uftk_nec_2d.d77", 80u, 1u);
+    /* BERICHTIGT MF-1480. Hier stand: „PC-160K ist einseitig mit 40
+     * Zylindern, der D88-Kopf nennt 80 x 2" und erwartet waren 120 bzw. 80
+     * gescheiterte Spuren. Die 80 x 2 nannte nicht der Kopf, sondern das
+     * Plugin, das seine Geometrie aus dem Medienbyte riet (P3-652 d); seit
+     * MF-1480 kommt sie aus der Spurtafel — 40 x 1 bzw. 40 x 2 —, und auf
+     * den beiden sauberen Abbildern scheitert KEINE Spur. Das ist jetzt die
+     * erste Zusage: ein sauberes Abbild erzeugt keinen TRACK_UNREADABLE.
+     * Der Fall, fuer den der Test da ist (ein gescheitertes read_track ist
+     * ein NOTE je Lauf, kein WARN), braucht echte unformatierte Spuren —
+     * die liefert die Kopie mit Luecke: 5 Spuren, 1 Lauf, selbst gezaehlt. */
+    abbild("hxcfe_pc160.d88", 0u, 0u);
+    abbild("hxcfe_uftk_nec_2d.d77", 0u, 0u);
+    {
+        char luecke[1024];
+        CHECK(kopie_mit_luecke(luecke, sizeof luecke),
+              "Kopie mit Luecke nicht anzulegen");
+        abbild_pfad(luecke, 5u, 1u);
+        remove(luecke);
+    }
     printf("\n%d bestanden, %d fehlgeschlagen\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }

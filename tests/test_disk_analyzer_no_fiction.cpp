@@ -366,7 +366,14 @@ private slots:
      * Datei nennt den Fall „unformatted". Gemessen an der Fassung davor
      * stand im Kasten 120 x „[WARN] TRACK_UNREADABLE … nicht gelesen,
      * nicht leer". Verlangt: kein WARN, und die Laeufe als NOTE mit dem
-     * Bereich (Kern: tests/test_d2_bruecke_am_korpus.c). */
+     * Bereich (Kern: tests/test_d2_bruecke_am_korpus.c).
+     *
+     * BERICHTIGT MF-1480: „ihr D88-Kopf nennt 80 x 2" stimmte nicht — das
+     * Plugin riet 80 x 2 aus dem Medienbyte; die Spurtafel sagt 40 x 1
+     * (P3-652 d). Seither scheitert an der sauberen Datei keine Spur, und
+     * genau das ist die erste Zusage: kein TRACK_UNREADABLE. Der Fall selbst
+     * steht an einer Kopie, deren Tafeleintraege fuer C10..C14 genullt sind
+     * („0 = unformatted" innerhalb der Geometrie). */
     void aFailedReadTrackIsANoteNotAClaimAboutTheTrack()
     {
 #ifdef UFT_CORPUS_DIR
@@ -376,8 +383,33 @@ private slots:
 #endif
         if (img.isEmpty() || !QFile::exists(img))
             QSKIP("Korpus-Abbild hxcfe_pc160.d88 fehlt");
+        {
+            DiskAnalyzerWindow w;
+            w.loadImage(img);
+            auto *t = w.findChild<QTextEdit *>("textDiskReport");
+            QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
+            const QString text = t->toPlainText();
+            QVERIFY2(!text.contains("TRACK_UNREADABLE"),
+                     qPrintable("Ein sauberes Abbild meldet TRACK_UNREADABLE:\n"
+                                + text));
+        }
+
+        QFile quelle(img);
+        QVERIFY(quelle.open(QIODevice::ReadOnly));
+        QByteArray daten = quelle.readAll();
+        QVERIFY(daten.size() > 0x2B0);
+        for (int e = 20; e <= 28; e += 2)             /* C10..C14, cyl*2 */
+            for (int b = 0; b < 4; ++b) daten[0x20 + 4 * e + b] = '\0';
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString kopie = dir.filePath("luecke.d88");
+        QFile ziel(kopie);
+        QVERIFY(ziel.open(QIODevice::WriteOnly));
+        QCOMPARE(ziel.write(daten), daten.size());
+        ziel.close();
+
         DiskAnalyzerWindow w;
-        w.loadImage(img);
+        w.loadImage(kopie);
         auto *t = w.findChild<QTextEdit *>("textDiskReport");
         QVERIFY2(t, "Der Kasten textDiskReport fehlt im Formular.");
         const QString text = t->toPlainText();
@@ -387,12 +419,9 @@ private slots:
         QVERIFY2(!text.contains("nicht leer"),
                  qPrintable("„nicht leer\" traegt der Rueckgabewert nicht:\n"
                             + text));
-        QCOMPARE(text.count("TRACK_UNREADABLE"), 2);
-        QVERIFY2(text.contains("[note] TRACK_UNREADABLE: C40..C79 H0/H1: "),
-                 qPrintable("Der Lauf C40..C79 auf beiden Koepfen fehlt:\n"
-                            + text));
-        QVERIFY2(text.contains("[note] TRACK_UNREADABLE: C0..C39 H1: "),
-                 qPrintable("Der Lauf C0..C39 auf Kopf 1 fehlt:\n" + text));
+        QCOMPARE(text.count("TRACK_UNREADABLE"), 1);
+        QVERIFY2(text.contains("[note] TRACK_UNREADABLE: C10..C14 H0: "),
+                 qPrintable("Der Lauf C10..C14 auf Kopf 0 fehlt:\n" + text));
     }
 };
 
