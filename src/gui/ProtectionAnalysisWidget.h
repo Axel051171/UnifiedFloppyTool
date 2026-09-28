@@ -29,6 +29,7 @@
 #include <QHeaderView>
 
 extern "C" {
+#include "uft/core/uft_gcr.h"
 #include "uft/protection/ufm_c64_protection_taxonomy.h"
 #include "uft/protection/ufm_c64_scheme_detect.h"
 #include "uft/protection/ufm_cbm_protection_methods.h"
@@ -92,6 +93,13 @@ private:
     QString m_summary;
     QVector<ufm_c64_track_metrics_t> m_trackMetrics;
     QVector<ufm_c64_prot_hit_t> m_hits;
+
+    /* MF-1511: je Spur der Anteil gueltiger Kodewoerter unter jedem
+     * Codec des Registers, bester zuerst. Gemessen BEIM LADEN — die
+     * Rohbits sind nach `g64_free()` fort, und sie nur fuer diese Zahl
+     * zu behalten waere ein Vielfaches an Speicher fuer drei Werte.
+     * Gleicher Index wie `m_trackMetrics`. */
+    QVector<QVector<uft_gcr_erkennung_t>> m_gcrKandidaten;
     
     // UI Elements
     QSplitter *m_mainSplitter;
@@ -110,6 +118,7 @@ private:
     // Detail panel
     QGroupBox *m_detailGroup;
     QTextEdit *m_detailText;
+    QComboBox *m_gcrCodec;      /**< MF-1511: Codec-Auswahl der Spur */
     QLabel *m_selectedTrackLabel;
     
     // Controls
