@@ -205,10 +205,23 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
     if (size >= 205312)      { spuren = 42; bloecke_gesamt = 802; }
     else if (size >= 196608) { spuren = 40; bloecke_gesamt = 768; }
 
+    /* MF-1501 (P3-664): die Schrittbremse allein fing eine Schleife nicht,
+     * sie begrenzte sie nur — gemessen lieferte `simpletest-loop.d64`
+     * (libcbmimage, GPL-2, im t4-Review ausgefuehrt) **5192** Eintraege,
+     * wo libcbmimage 76 und "Loop detected" meldet. Ein Sektor, der zum
+     * zweiten Mal an die Reihe kaeme, beendet die Kette jetzt und wird
+     * gemeldet (`chain_loop`); die Eintraege bis dahin bleiben stehen.
+     * `cbm_offset()` laesst nur Spur 1..40 und gueltige Sektoren durch,
+     * daher reicht die Tafel 41 x 21. */
+    uint8_t besucht[41 * 21];
+    memset(besucht, 0, sizeof(besucht));
+
     int track = CBM_DIR_TRACK, sector = CBM_DIR_SECTOR;
     for (int schritt = 0; schritt < 683 && track != 0; schritt++) {
         long off = cbm_offset(track, sector);
         if (off < 0 || off + CBM_SECTOR_SIZE > size) break;
+        if (besucht[track * 21 + sector]) { out->chain_loop = true; break; }
+        besucht[track * 21 + sector] = 1;
 
         uint8_t sec[CBM_SECTOR_SIZE];
         if (fseek(f, off, SEEK_SET) != 0 ||
@@ -217,7 +230,29 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
         for (int i = 0; i < CBM_ENTRIES_PER_SEC; i++) {
             const uint8_t *e = sec + i * CBM_ENTRY_SIZE;
             uint8_t tb = e[2];
-            if (tb == 0x00) continue;            /* nie benutzt */
+
+            /* BERICHTIGT MF-1501 (P3-664). Hier stand
+             * `if (tb == 0x00) continue;` (Kommentar: „nie benutzt") und weiter
+             * unten `geloescht = (typ == UFT_CBMDOS_DEL)` — beides gegen
+             * die Referenz. docs/format_specs/commodore/D64.TXT, Byte $02:
+             * „$00 - Scratched (deleted file entry)", „80 - DEL". Eine
+             * gescratchte Datei hat also Typbyte $00 und behaelt Namen,
+             * Zeiger und Blockzahl; $80/$C0 ist eine SICHTBARE DEL-Datei
+             * (libcbmimage dir.c:179 urteilt ebenso). Gemessen im
+             * t4-Review: der gescratchte "SINGLER" auf Fast Hack'em und
+             * vier Eintraege von OpenCBMs test.d64 fehlten; 28 sichtbare
+             * `DEL<`-Eintraege von filleddk.d64 hiessen geloescht.
+             *
+             * Nie beschrieben ist eine Zeile erst, wenn auch Name und
+             * Zeiger fehlen: alle 30 Byte ab Typbyte sind null. */
+            bool geloescht = false;
+            if (tb == 0x00) {
+                bool leer = true;
+                for (int k = 3; k < CBM_ENTRY_SIZE; k++)
+                    if (e[k] != 0) { leer = false; break; }
+                if (leer) continue;              /* nie beschrieben */
+                geloescht = true;                /* gescratcht */
+            }
 
             uft_cbmdos_type_t typ = (uft_cbmdos_type_t)(tb & 0x0F);
 
@@ -237,8 +272,10 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
              *
              * Ein NIE BENUTZTER Eintrag (Typbyte 0x00) faellt schon
              * darueber heraus und bleibt draussen; das ist etwas anderes
-             * als eine geloeschte Datei. */
-            const bool geloescht = (typ == UFT_CBMDOS_DEL);
+             * als eine geloeschte Datei.
+             *
+             * (MF-1501: das Urteil „geloescht" steht jetzt oben, am
+             * Typbyte $00 — nicht mehr an der Typkennung DEL.) */
             if (geloescht) out->deleted_count++;
 
             if (n == cap) {

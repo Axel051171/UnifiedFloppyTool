@@ -247,6 +247,42 @@ private slots:
         QCOMPARE(tbl->rowCount(), 1);
     }
 
+    /* -- MF-1501 (P3-664): eine Verzeichniskette im Kreis wird gesagt --- */
+    void loopedD64SaysTheListIsIncomplete()
+    {
+        const QString src = korpusD64();
+        if (src.isEmpty() || !QFile::exists(src))
+            QSKIP("Korpus-Abbild vice_c1541_35trk.d64 fehlt");
+
+        QFile in(src);
+        QVERIFY(in.open(QIODevice::ReadOnly));
+        QByteArray b = in.readAll();
+        in.close();
+        /* Spur 18, Sektor 1 (0x16600): Verweis auf sich selbst. */
+        QVERIFY(b.size() > 0x16602);
+        b[0x16600] = static_cast<char>(18);
+        b[0x16601] = static_cast<char>(1);
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString img = dir.filePath("schleife.d64");
+        QFile out(img);
+        QVERIFY(out.open(QIODevice::WriteOnly));
+        QCOMPARE(out.write(b), static_cast<qint64>(b.size()));
+        out.close();
+
+        ExplorerTab tab;
+        tab.loadImage(img);
+        const QString shown = tableText(&tab);
+
+        /* Vorher: 683 Zeilen "UFT MARKER" und kein Wort dazu. */
+        QVERIFY2(shown.contains("Verzeichniskette"),
+                 qPrintable("Die Schleife wird dem Benutzer nicht gesagt:\n" + shown));
+        auto *tbl = tab.findChild<QTableWidget *>("tableFiles");
+        QVERIFY(tbl != nullptr);
+        QCOMPARE(tbl->rowCount(), 2);   /* der Eintrag einmal + die Meldung */
+    }
+
     /* -- MF-889: und der Extract-Knopf schreibt wirklich ---------------- */
     void extractWritesARealFile()
     {

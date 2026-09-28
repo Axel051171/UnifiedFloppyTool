@@ -4453,6 +4453,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_cbmdos_scratch_und_schleife")
+        # MF-1501 (P3-664): Typbyte $00 mit Namen = gescratcht, $80 =
+        # sichtbare DEL-Datei (D64.TXT), Kettenschleife gemeldet statt
+        # 683-fach durchlaufen. Einzelne Bytes der VICE-D64 geaendert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_vote_confidence")
         # MF-673: prueft die Abstimm-Strenge direkt am Abstimmer — kein
         # Korpus noetig, damit der Beweis auch in CI feuert statt sich zu
