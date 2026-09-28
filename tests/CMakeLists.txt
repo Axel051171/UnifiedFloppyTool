@@ -3725,7 +3725,12 @@ foreach(test_source ${TEST_SOURCES})
            # echten Aufnahmen, durch `uft_disk_open()` — also dieselbe
            # Menge. Braucht nur den eingeschraenkten Korpus, alle sechs
            # Aufnahmen sind LOCAL-ONLY.
-           OR ${test_name} STREQUAL "test_a2r_blockarten")
+           OR ${test_name} STREQUAL "test_a2r_blockarten"
+           # MF-1484 (P3-656): baut ein A2R2 mit Disk Type 2 nach der
+           # A2R-2.x-Referenz und prueft die Zerlegung der Location
+           # durch `uft_disk_open()` — also dieselbe Menge. Braucht
+           # KEINEN Korpus, die Pruefdatei entsteht im Test.
+           OR ${test_name} STREQUAL "test_a2r2_dreieinhalbzoll_seite")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

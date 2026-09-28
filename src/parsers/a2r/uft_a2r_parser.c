@@ -220,12 +220,47 @@ static a2r_error_t parse_info_chunk(const uint8_t *data, size_t size,
     info->version = version;
 
     if (version == 2) {
-        /* NICHT nachgemessen: keine 2.x-Datei im Korpus (MF-868). */
+        /* MF-1484 (P3-656) — JETZT NACHGEMESSEN, und der Zweig war in
+         * JEDEM Feld um ein Byte verschoben.
+         *
+         * Hier stand „NICHT nachgemessen: keine 2.x-Datei im Korpus
+         * (MF-868)", und das war ehrlich: der Zweig nahm an, A2R 2 habe
+         * kein fuehrendes Versionsbyte, las den Erzeuger ab data[0] und
+         * `disk_type` aus data[32]. MF-1319 hat genau diesen Versatz fuer
+         * v3 behoben und v2 ausgelassen — mangels Datei.
+         *
+         * Seit MF-1483 liegt eine: `tests/corpus/fahey_a2r2/
+         * appleworks_d1_a.a2r` (Applesauce v1.1.7, archive.org
+         * Fahey_Set_2019-07, Hash im Manifest). Ihre INFO-Bytes,
+         * gemessen:
+         *
+         *   d[0]      0x01                      INFO-Version
+         *   d[1..32]  "Applesauce v1.1.7   …"   Erzeuger
+         *   d[32]     0x20 (Fuellzeichen)       <- las der Zweig als disk_type
+         *   d[33]     0x01                      Disk Type (1 = 5.25")
+         *   d[34]     0x00                      write protected
+         *   d[35]     0x01                      synchronized
+         *
+         * Die „A2R 2.x Reference" (applesaucefdc.com/a2r2-reference/)
+         * nennt Disk Type ausdruecklich bei **+33** und die Werte
+         * „1 = 5.25, 2 = 3.5". Beides deckt sich mit der Messung.
+         *
+         * Vier falsche Auskuenfte kamen aus dem Versatz, und eine davon
+         * ist forensisch: `write_protected` las den Disk Type und war
+         * damit fuer JEDE A2R2-Datei wahr; `synchronized` las die 0 und
+         * war immer falsch, obwohl die Datei 1 sagt; `creator` trug ein
+         * fuehrendes 0x01; `disk_type` war 32 und fiel in den
+         * „nicht deuten"-Rueckfall — der fuer 5.25" zufaellig richtig
+         * liegt und fuer 3.5" die Seite verwirft.
+         *
+         * Der Aufbau ist damit derselbe wie bei v3; nur die Laenge
+         * unterscheidet sich (36 statt 37, kein Hartsektor-Feld). */
         if (size < 36) return A2R_ERR_BAD_CHUNK;
-        copy_fixed_string(info->creator, data, 32, sizeof(info->creator));
-        info->disk_type = data[32];
-        info->write_protected = data[33] != 0;
-        info->synchronized = data[34] != 0;
+        copy_fixed_string(info->creator, &data[1], 32,
+                          sizeof(info->creator));
+        info->disk_type       = data[33];
+        info->write_protected = data[34] != 0;
+        info->synchronized    = data[35] != 0;
         return A2R_OK;
     }
 
@@ -399,15 +434,45 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
         }
         current_track = &ctx->tracks[stelle];
         current_track->location = location;
-        /* MF-1319 fasst den v2-Pfad NICHT an. Die Zerlegung
-         * ((track << 1) + side) steht in der A2R-3-Referenz; ob sie fuer
-         * A2R 2 ebenso gilt, steht in der separaten „A2R 2.x"-Referenz
-         * (applesaucefdc.com/a2r2-reference/), und die ist hier NICHT
-         * gelesen worden. Die Zeile darunter bleibt deshalb, wie sie war
-         * — samt ihrer Behauptung. Sie ist nicht belegt, und das steht
-         * jetzt hier, statt wie eine Messung auszusehen. */
-        current_track->track_number = (uint8_t)(location & 0xFFu);
-        current_track->side = 0;  /* v2 is always side 0 — NICHT belegt */
+        /* MF-1484 (P3-656) — DIE REFERENZ IST JETZT GELESEN.
+         *
+         * Hier stand: „ob sie fuer A2R 2 ebenso gilt, steht in der
+         * separaten ‚A2R 2.x'-Referenz (applesaucefdc.com/a2r2-reference/),
+         * und die ist hier NICHT gelesen worden." Das war ehrlich und
+         * blieb zwei Jahre stehen; MF-1319 hat den v2-Pfad ausgelassen,
+         * und weil KEIN Register es fuehrte (`MF-1319`: null Treffer in
+         * OPEN_ITEMS bis MF-1483), hat es nie jemand nachgeholt.
+         *
+         * Die Referenz sagt woertlich:
+         *
+         *   INFO, Disk Type bei +33:  „1 = 5.25, 2 = 3.5"
+         *
+         *   STRM, Location:
+         *     5.25"  „For 5.25 disks, this value is in halfphases or
+         *             quarter tracks. For example track 0.00 is
+         *             halfphase 0 and track 1.00 is halfphase 4."
+         *     3.5"   „For 3.5 disks, this value indicates track number
+         *             as well as side. The formula ((track << 1) + side)
+         *             can be used (0 = Track 0 Side 0, 1 = Track 0
+         *             Side 1, 2 = Track 1 Side 0)."
+         *
+         * Die alte Zeile war damit fuer Disk Type 1 RICHTIG und fuer
+         * Disk Type 2 FALSCH: sie setzte `side = 0` unbedingt und
+         * verwarf die Seite. Gemessen am Rotbeweis
+         * `tests/test_a2r2_dreieinhalbzoll_seite.c`: aus den Locations
+         * 2 und 3 wurden 4x1 statt 2x2.
+         *
+         * Gerufen wird `a2r_location_deuten()` — dieselbe Stelle wie auf
+         * dem v3-Pfad, eine Groesse eine Rechnung (MF-1177). Fuer die
+         * beiden Werte, die A2R 2 ueberhaupt kennt, deckt sie sich mit
+         * dieser Referenz: 1 bleibt ungeteilt, 2 wird zerlegt. Das ist
+         * kein Zufall, den man hinnimmt, sondern eine Uebereinstimmung,
+         * die hier belegt steht — und der Rueckfall fuer unbekannte
+         * Werte (0 oder > 8) bleibt „nicht deuten", weil eine falsche
+         * Zerlegung schlimmer ist als keine. */
+        a2r_location_deuten(location, ctx->info.disk_type,
+                            &current_track->track_number,
+                            &current_track->side);
 
         /* Add capture.
          *
