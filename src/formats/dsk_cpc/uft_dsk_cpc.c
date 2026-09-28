@@ -251,10 +251,12 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
             /* uPD765: ST2 bit5 (DD) = CRC error in the DATA field; ST1 bit5
              * (DE) = CRC error detected — if DD is not also set, the error is
              * in the ID/address field. Separate the two faults. */
+            /* MF-1488 (P3-659): recorded in `status`, where the disk2
+             * bridge reads a CRC verdict. */
             if (st2 & 0x20)
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+                uft_sector_mark_data_crc_error(&track->sectors[track->sector_count - 1]);
             else if (st1 & 0x20)
-                uft_sector_set_id_crc(&track->sectors[track->sector_count - 1], false);
+                uft_sector_mark_id_crc_error(&track->sectors[track->sector_count - 1]);
             if (st2 & 0x40)
                 track->sectors[track->sector_count - 1].deleted = true;
         }

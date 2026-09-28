@@ -279,8 +279,11 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
              * lay past the end was not created, and its flags hit the
              * PREVIOUS one (measured: a "deleted" mark moved one back). */
             if (angelegt && track->sector_count > 0) {
+                /* MF-1488 (P3-659): types 5..8 are "data read with data
+                 * error" (Dunfield IMD.SRC) — recorded as a data CRC error
+                 * in `status`, where the disk2 bridge reads it. */
                 if (is_crc_err)
-                    uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+                    uft_sector_mark_data_crc_error(&track->sectors[track->sector_count - 1]);
                 if (is_deleted)
                     track->sectors[track->sector_count - 1].deleted = true;
             }

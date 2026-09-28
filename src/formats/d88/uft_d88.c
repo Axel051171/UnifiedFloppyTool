@@ -274,10 +274,12 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
             /* 0xA0 = ID-field (address-mark) CRC error, 0xB0 = data-field CRC
              * error — kept separate (header vs data fault, different
              * protection relevance) instead of collapsing both into crc_ok. */
+            /* MF-1488 (P3-659): recorded in `status`, where the disk2
+             * bridge reads a CRC verdict (MAME: bad_addr_crc / bad_data_crc). */
             if (st == 0xA0)
-                uft_sector_set_id_crc(&track->sectors[track->sector_count - 1], false);
+                uft_sector_mark_id_crc_error(&track->sectors[track->sector_count - 1]);
             if (st == 0xB0)
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+                uft_sector_mark_data_crc_error(&track->sectors[track->sector_count - 1]);
             if (ddam == 0x10)
                 track->sectors[track->sector_count - 1].deleted = true;
             /* MF-1480 (P3-652 b), decided by hxcfe EXECUTED (hxcfe.exe,

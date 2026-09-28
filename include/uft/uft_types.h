@@ -566,6 +566,44 @@ static inline void uft_sector_set_id_crc(uft_sector_t *s, bool ok) {
 }
 
 /**
+ * @brief The container RECORDS a data-field CRC error for this sector
+ *        (MF-1488, P3-659).
+ *
+ * uft_sector_set_crc(s, false) sets crc_ok/crc_valid/data_crc_ok but not
+ * `status` — and the disk2 bridge reads the CRC verdict from `status` only
+ * (it ignores crc_ok on purpose: memset-built sectors carry crc_ok=false
+ * without a finding, MF-1001). Measured: a CRC-bad sector from 11 of 14
+ * producers reached the model as "unchecked", indistinguishable from a
+ * good one. Use this where the SOURCE says "data CRC error" (IMD types
+ * 5..8, D88 0xB0, uPD765 ST2 bit 5, ...). It does NOT set
+ * UFT_SECTOR_CRC_CHECKED: a recorded flag is not a recomputation.
+ *
+ * Deliberately not folded into uft_sector_set_crc(false): producers call
+ * that loosely — for "header not found", "data not found", a truncated
+ * fill — and a central bit would turn each into an invented CRC error.
+ */
+static inline void uft_sector_mark_data_crc_error(uft_sector_t *s) {
+    if (!s) return;
+    uft_sector_set_crc(s, false);
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_CRC_ERROR);
+}
+
+/**
+ * @brief The container RECORDS an ID-field (address) CRC error (MF-1488).
+ *
+ * Sets both ID flags the tree carries — `id_crc_ok` (read by writers) and
+ * `id.crc_ok` (read by the bridge) — plus UFT_SECTOR_ID_CRC_ERROR in
+ * `status`. uft_sector_set_id_crc() alone sets only the first, which the
+ * bridge does not read.
+ */
+static inline void uft_sector_mark_id_crc_error(uft_sector_t *s) {
+    if (!s) return;
+    uft_sector_set_id_crc(s, false);
+    s->id.crc_ok = false;
+    s->status = (uft_sector_status_t)(s->status | UFT_SECTOR_ID_CRC_ERROR);
+}
+
+/**
  * @brief Kennzeichnet EINEN Sektor als nicht gelesen (MF-1001).
  *
  * Fuer jeden Sektor, dessen Inhalt gefuellt statt gelesen wurde — ein

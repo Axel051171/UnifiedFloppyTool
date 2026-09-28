@@ -3709,6 +3709,10 @@ foreach(test_source ${TEST_SOURCES})
            # durch die Bruecke — derselbe Weg wie der Analysator, also
            # dieselbe Menge wie die Zeilen darueber.
            OR ${test_name} STREQUAL "test_d2_bruecke_am_korpus"
+           # MF-1488 (P3-659): ein vom Behaelter gemeldeter CRC-Fehler
+           # erreicht das Modell als CRC-Fehler — IMD, D88, EDSK durch
+           # `uft_disk_open()` und die Bruecke.
+           OR ${test_name} STREQUAL "test_crc_befund_erreicht_modell"
            # H-30 Schritt 3 (MF-1383): prueft die Umkehrung der Regel aus
            # Schritt 1 — keine Daten muss einen Grund nennen. Der zweite
            # Abschnitt fuehrt JEDES Abbild aus `corpus_free` durch dieselbe
