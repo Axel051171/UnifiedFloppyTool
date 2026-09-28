@@ -110,9 +110,19 @@ static uft_error_t woz_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                               sek[i].data,
                                               UFT_A2_SECTOR_SIZE,
                                               (uint8_t)cyl, (uint8_t)head);
-                if (!sek[i].data_checksum_ok && track->sector_count > 0)
-                    uft_sector_set_crc(
-                        &track->sectors[track->sector_count - 1], false);
+                /* MF-1485 (P3-639): on a checksum failure the decoder
+                 * leaves `data` untouched on purpose (MF-721) — the buffer
+                 * is zeros, not what the disk holds. Handed on with only
+                 * crc=false it came out as a sector of 256 zero bytes with
+                 * status OK (measured: gauntlet_e7, 550 sectors). The
+                 * sector is reported with its ID and marked not readable,
+                 * without data. */
+                if (!sek[i].data_checksum_ok && track->sector_count > 0) {
+                    uft_sector_t *z = &track->sectors[track->sector_count - 1];
+                    z->data_len = 0;
+                    z->data_size = 0;
+                    uft_format_mark_last_unavailable(track);
+                }
             }
             return UFT_OK;
         }

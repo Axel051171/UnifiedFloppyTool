@@ -2151,6 +2151,22 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_apple_gcr_naht_und_pruefsumme")
+        # MF-1485: Datenfeld hinter der Spurnaht (P3-638) und Sektor mit
+        # gebrochener Pruefsumme als „nicht lesbar" statt Nullen (P3-639),
+        # an der von to_woz2 geschriebenen, eingecheckten Kontrolle.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_apple_gcr.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_acorn_gegen_dim")
         # MF-1072: `adl` und `adf_arc` standen auf T2, weil im Korpus
         # kein Acorn-Abbild von fremder Hand lag. Die 21 Leer-Abbilder

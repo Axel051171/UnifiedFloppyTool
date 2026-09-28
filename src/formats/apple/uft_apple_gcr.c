@@ -275,17 +275,40 @@ int uft_apple_gcr_scan_track(const uint8_t *bits, uint32_t bit_count,
      * trotzdem falsch, und eine Doppelung stillschweigend zu liefern
      * waere schlimmer als eine fehlende: sie sieht aus wie ein Fund. */
     uint8_t w0 = 0, w1 = 0, w2 = 0;
+    /* where each of the three nibbles began (MF-1485) */
+    uint32_t p0 = 0, p1 = 0, p2 = 0;
     uft_a2_sector_t cur;
     bool cur_valid = false;
     bool cur_5_3 = false;
     memset(&cur, 0, sizeof(cur));
 
-    while (r.pos < bit_count && found < max) {
+    /* MF-1485 (P3-638): an address field read before the seam whose data
+     * field begins AFTER it. The loop used to stop at `r.pos < bit_count`
+     * and that sector vanished without a word — measured at the real
+     * capture copy2plus_52, T4 P15 and T5 P7 (558 instead of 560). While
+     * an address field is pending the loop now reads on past the seam,
+     * and stops at the first ADDRESS prologue that begins after it: that
+     * is the start of the track a second time, and recording it would be
+     * the 595-instead-of-560 double of MF-715. At most one more
+     * revolution, so a track without a data field cannot spin forever.
+     * The same holds for a PROLOGUE that began before the seam and is not
+     * complete yet (`D5` before it, `AA 96` after it): measured, 32 of 6328
+     * rotations of a to_woz2 track lost a sector that way even with the
+     * pending-field rule alone.
+     * Guarded by tests/test_apple_gcr_naht_und_pruefsumme.c. */
+    while (found < max
+           && (r.pos < bit_count
+               || ((uint64_t)r.pos < 2u * (uint64_t)bit_count
+                   && (cur_valid
+                       || (w2 == 0xD5 && p2 < bit_count)
+                       || (w1 == 0xD5 && w2 == 0xAA && p1 < bit_count))))) {
         uint8_t n;
         if (!a2_next_nibble(&r, &n, bit_count)) break;
         w0 = w1; w1 = w2; w2 = n;
+        p0 = p1; p1 = p2; p2 = r.pos - 8u;
 
         if (w0 != 0xD5 || w1 != 0xAA) continue;
+        if ((w2 == 0x96 || w2 == 0xB5) && p0 >= bit_count) break;
 
         /* Der Adress-Vorspann sagt, welche Kodierung folgt — die Spur
          * weiss es, der Aufrufer muss es nicht mitgeben:

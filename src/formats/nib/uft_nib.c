@@ -132,8 +132,15 @@ static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track
          * Diskette und darf nicht verschoben werden (ARCH-20). */
         uft_format_add_sector_with_id(track, sek[i].sector, sek[i].data,
                                       UFT_A2_SECTOR_SIZE, cyl, head);
-        if (!sek[i].data_checksum_ok && track->sector_count > 0)
-            uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+        /* MF-1485 (P3-639), same as the WOZ plugin: on a checksum failure
+         * `data` is the untouched zero buffer, not disk content. Reported
+         * with its ID, marked not readable, without data. */
+        if (!sek[i].data_checksum_ok && track->sector_count > 0) {
+            uft_sector_t *z = &track->sectors[track->sector_count - 1];
+            z->data_len = 0;
+            z->data_size = 0;
+            uft_format_mark_last_unavailable(track);
+        }
     }
     return UFT_OK;
 }
