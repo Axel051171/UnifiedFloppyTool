@@ -171,6 +171,18 @@ bool st_probe(const uint8_t *data, size_t size, size_t file_size,
             *confidence = 90;
             return true;
         }
+        /* x86 JMP: this is far more likely a PC image of the same size.
+         * MF-1478 (P3-653): this check stood AFTER the BPB return below, so
+         * it was unreachable for every PC image whose BPB is correct — a
+         * DOS 720K boot sector got 75 from the ST probe. A PC BPB describes
+         * the file just as well as an Atari one; it is no ST evidence.
+         * Guarded by tests/test_st_sonde_pc_bootsektor.c. The 75 and 65
+         * below still exceed the doctrine's cap of 45 without a marker;
+         * that is the known debt in docs/sondendoktrin_baseline.txt. */
+        if (data[0] == 0xEB && data[2] == 0x90) {
+            *confidence = 30;
+            return true;
+        }
         /* A BPB that describes exactly this file is strong, if mute about
          * which machine wrote it. */
         if (st_geometry_from_bpb(boot, file_size, &cyl, &heads, &spt)) {
@@ -181,11 +193,6 @@ bool st_probe(const uint8_t *data, size_t size, size_t file_size,
          * byte in sixteen of an arbitrary image. */
         if (data[0] == 0x60) {
             *confidence = 65;
-            return true;
-        }
-        /* x86 JMP: this is far more likely a PC image of the same size. */
-        if (data[0] == 0xEB && data[2] == 0x90) {
-            *confidence = 30;
             return true;
         }
     }

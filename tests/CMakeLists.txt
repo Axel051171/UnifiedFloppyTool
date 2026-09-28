@@ -2669,6 +2669,10 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_st_sonde_pc_bootsektor")
+        # MF-1478: ein PC-Bootsektor mit passendem BPB ist kein ST-Beleg —
+        # der x86-Zweig der Sonde war hinter der BPB-Rueckgabe unerreichbar.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
     elseif(${test_name} STREQUAL "test_ml_schutz_kann_nicht_freisprechen")
         # MF-882: der Signaturvergleich konnte keine Diskette freisprechen —
         # 0 von 500000 abgetasteten Merkmalsvektoren — und meldete jeder
