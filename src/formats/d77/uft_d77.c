@@ -249,11 +249,34 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
         uint16_t num_sectors = uft_read_le16(sec_hdr + 4);
 
         /* Sanity check */
-        if (data_size == 0 || data_size > D77_MAX_SECTOR_SIZE) break;
+        if (data_size > D77_MAX_SECTOR_SIZE) break;
         if (num_sectors == 0) break;
 
         /* Only read num_sectors sectors total */
         if (s >= num_sectors) break;
+
+        /* MF-1477, same reference as the D88 plugin (MF-1475): MAME
+         * src/lib/formats/d88_dsk.cpp (BSD-3-Clause, read only),
+         * d88_format::load(). The ID is hs[0..3] (C, H, R, N) as recorded —
+         * not the physical position, not N from the data length, and R
+         * unchanged (the old `if (sec_num > 0) sec_num--` plus the +1 of
+         * uft_format_add_sector() turned a recorded R=0 into R=1). A header
+         * with data length 0 is a sector without data (MAME: data = nullptr),
+         * not the end of the track: kept with its ID, marked unavailable.
+         * Guarded by tests/test_d77_spur_nach_kopf.c. */
+        if (data_size == 0) {
+            const uint8_t leer = 0;
+            uft_format_add_sector_with_id(track, sec_hdr[2], &leer, 1,
+                                          sec_hdr[0], sec_hdr[1]);
+            if (track->sector_count > 0) {
+                uft_sector_t *z = &track->sectors[track->sector_count - 1];
+                z->id.size_code = sec_hdr[3];
+                z->data_len = 0;
+                z->data_size = 0;
+            }
+            uft_format_mark_last_unavailable(track);
+            continue;
+        }
 
         uint8_t *buf = malloc(data_size);
         if (!buf) return UFT_ERROR_NO_MEMORY;
@@ -263,12 +286,10 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
             return UFT_ERROR_IO;
         }
 
-        /* Sector number is 1-based in header, convert to 0-based for add */
-        uint8_t sec_num = sec_hdr[2];
-        if (sec_num > 0) sec_num--;
-
-        uft_format_add_sector(track, sec_num, buf, data_size,
-                              (uint8_t)cyl, (uint8_t)head);
+        uft_format_add_sector_with_id(track, sec_hdr[2], buf, data_size,
+                                      sec_hdr[0], sec_hdr[1]);
+        if (track->sector_count > 0)
+            track->sectors[track->sector_count - 1].id.size_code = sec_hdr[3];
         /* D77 sector flags: byte 7=deleted (0x10), byte 8=status (0x00=OK) */
         if (track->sector_count > 0) {
             if (sec_hdr[7] == 0x10)

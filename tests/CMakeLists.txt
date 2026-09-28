@@ -2305,6 +2305,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_d77_spur_nach_kopf")
+        # MF-1477: ID aus C/H/R/N, R=0 bleibt 0, Laenge 0 = Sektor ohne
+        # Daten — gegen MAME d88_dsk.cpp (D77 = FM-7-Variante von D88).
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d77/uft_d77.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d77_schreiben_positioniert")
         # MF-1439: fread -> fwrite on the "r+b" stream without fseek in
         # d77_write_track (ISO C 7.21.5.3); MinGW shows it, glibc does not.
