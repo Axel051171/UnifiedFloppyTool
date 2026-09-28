@@ -523,7 +523,7 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 | **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **2 von 10** (24. Zonenkopie · `STAND.md` veraltet) |
 | **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
 | **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
-| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_cbm_zonen.py` (Zonen). Kapazitäten, Lückenmaße, CRC-Polynome: **kein Audit** | Zonen **0 außerhalb** (23 im Manifest) |
+| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 58 Familien mit **113 überzähligen Kopien** im Manifest, Zonen davon 23 |
 | **K4** | Formate ohne **gemessenen** Erzeuger-Kanal | **runter** | `python scripts/gen_erzeuger_zensus.py` → §Stand, abgeleitet | **8** von 89 offen, davon **0** mit gemessenem Kanal |
 | **K5** | Waisen im Baum | **runter** | `docs/orphan_baseline.txt`, Datenzeilen | **199** |
 | **K6** | Regeln, die als Satz dastehen und **kein Tor** haben | **runter** | Rückschau, [`.claude/STEHENDE_AUFTRAEGE.md`](.claude/STEHENDE_AUFTRAEGE.md) | **2** — „Orakelzahlen durchs Binary"; „wer eine Menge parst, zählt sie gegen" |
@@ -531,13 +531,32 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 | **K8** | leckende Tests | **null halten** | ASan/UBSan in CI | 0 |
 | **K9** | Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` | siehe dort |
 
-> **Eine Kennzahl trägt absichtlich keinen vollständigen Messbefehl:**
-> K3 hat einen für **eine** Konstantenfamilie (Zonen). Kapazitäten,
-> Lückenmaße und CRC-Polynome haben kein Audit. Das ist der ehrliche
-> Stand — und der nächste Schritt dort ist die **Messung** (welche
-> Familien werden mehrfach geführt?), nicht das Tor. Eine Zahl aus einem
-> anderen Baum einzutragen wäre die Klasse, die dieser Baum viermal
-> bezahlt hat.
+> **K3 hatte hier zuerst „Audit nur für Zonen" stehen — die Lücke ist
+> seit MF-1506 geschlossen, und die Messung hat mehr gefunden als die
+> Vermutung.** Genannt waren Kapazitäten, Lückenmaße, CRC-Polynome.
+> Gemessen über `git ls-files` (2117 Dateien) stehen **58 Zahlenfolgen in
+> mehr als einer Datei**, zusammen **113 überzählige Kopien** — und die
+> größten sind keine davon:
+>
+> | Dateien | Familie |
+> |---|---|
+> | **12** | CBM-GCR-**Encode**-Tafel (`gcr_encode_table`, `DEFAULT_GCR`, `GCR_ENC`, …) — `uft_g64.c` führt sie sogar **zweimal** |
+> | **10** | CBM-GCR-**Decode**-Tafel |
+> | **7** | Apple-GCR-6&2-Tafel (`A2_WRITE_TAB`, `GCR62`, …) |
+> | 5 | CBM-Zonenlängen (dort greift zusätzlich das speziellere Tor) |
+> | 4 | Spurkapazitäten 6250/6666/7142/7692 |
+> | 3 | CRC-16-Tafel |
+>
+> Die Gedächtnisnotizen dieses Projekts sagten „GCR-Tafel sechsfach" und
+> „Apple-GCR-Tafel siebenfach"; gemessen sind es 12 und 7. Eine von Hand
+> geführte Zahl neben einer gemessenen driftet — deshalb **zählt das Tor
+> selbst**, statt eine Liste zu lesen. Die Reihenfolge war dabei die aus
+> Abschnitt C der stehenden Aufträge: erst die Messung, dann das Tor.
+>
+> **Die beiden Tore ersetzen einander nicht.**
+> `audit_konstantenfamilien.py` sieht *dass* eine Folge mehrfach dasteht;
+> `audit_cbm_zonen.py` rechnet die Zonentafeln gegen die SSOT und sieht
+> damit auch eine Kopie, die schon **falsch** ist. Breite und Tiefe.
 >
 > **K4 hatte hier zuerst „Messbefehl fehlt" stehen, und das war falsch.**
 > Der Erzeuger-Zensus misst genau diese Frage seit MF-1087 und wird bei

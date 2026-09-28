@@ -1,0 +1,952 @@
+{
+  "_": "Grundlinie des Konstantenfamilien-Tors (MF-1506). ERZEUGT, nicht getippt: `python scripts/audit_konstantenfamilien.py --grundlinie-schreiben`. Die Pruefmenge kommt aus `git ls-files` (MF-636); diese Datei haelt nur fest, was gefunden wurde. Sie darf nur SCHRUMPFEN — die Richtung ist Zusammenfuehrung auf je EINE Stelle je Groesse (MF-1177). `beginn` und `laenge` stehen nur zum Wiedererkennen da; verglichen wird ueber `signatur`.",
+  "familien": [
+    {
+      "signatur": "dd00ee1840ff",
+      "laenge": 16,
+      "beginn": [
+        10,
+        11,
+        18,
+        19,
+        14,
+        15
+      ],
+      "stellen": [
+        "include/uft/uft_cbm_gcr.h::cbm_gcr_encode_table",
+        "src/dtc_components/src/encoding.c::dtc_gcr_cbm_4to5",
+        "src/formats/c64/uft_d64_g64.c::gcr_encode",
+        "src/formats/c64/uft_gcr_ops.c::gcr_encode_table",
+        "src/formats/d64/uft_d64_parser_v3.c::gcr_encode",
+        "src/formats/g64/uft_g64.c::gcr_enc",
+        "src/formats/g64/uft_g64.c::gcr_encode_table",
+        "src/formats/g64/uft_g64_parser_v2.c::gcr_encode_table",
+        "src/formats/g64/uft_g64_parser_v3.c::gcr_encode_table",
+        "src/protection/uft_c64_protection_enhanced.c::DEFAULT_GCR",
+        "tests/flux_gen/xum1541/flux_gen.c::GCR_ENC",
+        "tests/unit/test_flux_gcr_c64_sync.c::c64_gcr_encode"
+      ]
+    },
+    {
+      "signatur": "7a9b0d4ab5aa",
+      "laenge": 32,
+      "beginn": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        255
+      ],
+      "stellen": [
+        "include/uft/uft_cbm_gcr.h::cbm_gcr_decode_table",
+        "src/algorithms/advanced/uft_gcr_viterbi.c::gcr_decode_cbm",
+        "src/algorithms/advanced/uft_gcr_viterbi_v2.c::GCR_CBM_DECODE",
+        "src/flux/uft_flux_decoder.c::c64_gcr_decode",
+        "src/formats/c64/uft_d64_g64.c::gcr_decode_low",
+        "src/formats/c64/uft_gcr_ops.c::gcr_decode_low",
+        "src/formats/d64/uft_d64_parser_v3.c::gcr_decode",
+        "src/formats/g64/uft_g64.c::gcr_decode_table",
+        "src/formats/g64/uft_g64_parser_v2.c::gcr_decode_table",
+        "src/formats/g64/uft_g64_parser_v3.c::gcr_decode_table"
+      ]
+    },
+    {
+      "signatur": "48f04b430dc6",
+      "laenge": 64,
+      "beginn": [
+        150,
+        151,
+        154,
+        155,
+        157,
+        158
+      ],
+      "stellen": [
+        "src/a8rawconv/encode.cpp::kGCR6Encoder",
+        "src/dtc_components/src/encoding.c::dtc_gcr_apple_6and2",
+        "src/formats/apple/uft_apple_gcr.c::A2_WRITE_TAB",
+        "tests/flux_gen/applesauce/flux_gen.c::GCR62",
+        "tests/test_apple_gcr_6and2.c::TAB",
+        "tests/test_nib_ring_und_blindzone.c::TAB",
+        "tests/unit/test_flux_gcr_apple_sync.c::apple_gcr62_encode"
+      ]
+    },
+    {
+      "signatur": "916ba0ef75af",
+      "laenge": 41,
+      "beginn": [
+        0,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "include/uft/protection/uft_c64_protection.h::c64_sectors_per_track",
+        "include/uft/uft_cbm_gcr.h::cbm_gcr_sectors_per_track",
+        "src/formats/d64/uft_d64_parser_v3.c::d64_sectors_per_track",
+        "src/formats/uft_d64_writer.c::sectors_per_track",
+        "tests/test_cbm_geometry.c::legacy_41"
+      ]
+    },
+    {
+      "signatur": "aacb95173805",
+      "laenge": 4,
+      "beginn": [
+        222,
+        173,
+        190,
+        239
+      ],
+      "stellen": [
+        "tests/test_imaging_recipe.c::erwartet",
+        "tests/test_marginal_data_preserved.c::stable",
+        "tests/test_marginal_data_preserved.c::x",
+        "tests/test_protection_detection.c::serial",
+        "tests/test_provenance_chain.c::data"
+      ]
+    },
+    {
+      "signatur": "dbb2b4a7c2a6",
+      "laenge": 43,
+      "beginn": [
+        0,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "include/uft/formats/c64/uft_bam_editor.h::bam_sectors_per_track",
+        "src/formats/c64/uft_d64_file.c::sectors_per_track",
+        "src/formats/c64/uft_gcr_ops.c::sector_map",
+        "src/formats/g64/uft_g64_parser_v3.c::g64_sectors_per_track",
+        "tests/test_cbm_geometry.c::legacy_43"
+      ]
+    },
+    {
+      "signatur": "e49b126d775f",
+      "laenge": 16,
+      "beginn": [
+        0,
+        7,
+        14,
+        6,
+        13,
+        5
+      ],
+      "stellen": [
+        "src/formats/2img/uft_2img_parser_v2.c::physical_to_dos",
+        "src/formats/2img/uft_2img_parser_v2.c::prodos_to_dos",
+        "src/formats/nib/uft_nib_parser_v2.c::dos33_interleave",
+        "tests/differential/uft_flux_decode.c::apple_dos33_phys_to_log",
+        "tests/test_nib_gegen_a2nibblize.c::PHYS2LOG"
+      ]
+    },
+    {
+      "signatur": "fa78b63b8e35",
+      "laenge": 40,
+      "beginn": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "src/flux/uft_flux_decoder.c::c64_sectors_per_track",
+        "src/formats/cbm/uft_cbm_formats.c::d64_sectors_per_track",
+        "src/formats/xdf/uft_xdf_api_impl.c::sectors_per_track",
+        "tests/differential/uft_flux_decode.c::d64_spt",
+        "tests/test_cbm_geometry.c::legacy_40"
+      ]
+    },
+    {
+      "signatur": "0da69febdcc8",
+      "laenge": 77,
+      "beginn": [
+        29,
+        29,
+        29,
+        29,
+        29,
+        29
+      ],
+      "stellen": [
+        "src/formats/commodore/d80.c::spt",
+        "src/formats/commodore/d82.c::spt",
+        "src/formats/d80/uft_d80.c::d80_spt",
+        "src/formats/d82/uft_d82.c::d82_spt"
+      ]
+    },
+    {
+      "signatur": "146a03372568",
+      "laenge": 16,
+      "beginn": [
+        0,
+        13,
+        11,
+        9,
+        7,
+        5
+      ],
+      "stellen": [
+        "src/a8rawconv/diska2.cpp::kLogicalToPhysicalA2DOS",
+        "src/formats/2img/uft_2img_parser_v2.c::dos_to_prodos",
+        "src/formats/apple/prodos_po_do.c::dos_to_prodos",
+        "tests/test_woz_gegen_to_woz2.c::INTERLEAVE"
+      ]
+    },
+    {
+      "signatur": "6800fe0bc423",
+      "laenge": 8,
+      "beginn": [
+        128,
+        256,
+        512,
+        1024,
+        2048,
+        4096
+      ],
+      "stellen": [
+        "include/uft/uft_format_common.h::uft_sector_sizes",
+        "src/formats/dsk_cpc/uft_dsk_cpc.c::dsk_sector_sizes",
+        "src/formats/td0/uft_td0.c::td0_sector_sizes",
+        "src/formats/uft_fdc_gaps.c::SIZE_TABLE"
+      ]
+    },
+    {
+      "signatur": "d40f78627665",
+      "laenge": 4,
+      "beginn": [
+        6250,
+        6666,
+        7142,
+        7692
+      ],
+      "stellen": [
+        "include/uft/uft_c64_gcr.h::bytes",
+        "src/formats/c64/uft_gcr_ops.c::track_capacity",
+        "src/formats/cbm/uft_cbm_geometry.c::capacity_by_speed",
+        "src/protection/ufm_c64_metrics.c::UFM_ZONE_BYTES"
+      ]
+    },
+    {
+      "signatur": "ebb52504654c",
+      "laenge": 4,
+      "beginn": [
+        170,
+        187,
+        204,
+        221
+      ],
+      "stellen": [
+        "tests/test_multiread_kein_mischbyte.c::C1",
+        "tests/test_multiread_kein_mischbyte.c::C2",
+        "tests/test_multiread_selbsttests_leben.c::b",
+        "tests/test_t64.c::file_data"
+      ]
+    },
+    {
+      "signatur": "428a7191ca19",
+      "laenge": 4,
+      "beginn": [
+        17,
+        34,
+        51,
+        68
+      ],
+      "stellen": [
+        "src/formats/td0/uft_td0_parser_v2.c::raw_in",
+        "tests/test_jv3_gegen_mame.c::fuell",
+        "tests/test_marginal_data_preserved.c::pass"
+      ]
+    },
+    {
+      "signatur": "5a3ac60cfe8e",
+      "laenge": 4,
+      "beginn": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "stellen": [
+        "src/formats/apple/uft_apple_gcr.c::A2_SWAP2",
+        "tests/test_apple_gcr_6and2.c::SWAP2",
+        "tests/test_nib_ring_und_blindzone.c::SWAP2"
+      ]
+    },
+    {
+      "signatur": "7e55f096635b",
+      "laenge": 11,
+      "beginn": [
+        35473,
+        35396,
+        35397,
+        35409,
+        35090,
+        35089
+      ],
+      "stellen": [
+        "include/uft/protection/uft_amiga_protection_registry.h::uft_copylock_sync_list",
+        "include/uft/protection/uft_copylock.h::uft_copylock_sync_standard",
+        "src/protection/uft_protection.c::uft_copylock_sync_marks"
+      ]
+    },
+    {
+      "signatur": "85cdb8614b64",
+      "laenge": 4,
+      "beginn": [
+        255,
+        0,
+        0,
+        0
+      ],
+      "stellen": [
+        "tests/test_td0_error_marks.c::end",
+        "tests/test_td0_kommentarflag.c::ende",
+        "tests/test_verify_after_ist_verdrahtet.c::ende"
+      ]
+    },
+    {
+      "signatur": "b6962817c1d9",
+      "laenge": 64,
+      "beginn": [
+        1116352408,
+        1899447441,
+        3049323471,
+        3921009573,
+        961987163,
+        1508970993
+      ],
+      "stellen": [
+        "src/core/uft_sha256.c::K",
+        "src/forensic/uft_provenance.c::sha256_k",
+        "src/formats/uff/uft_uff.c::sha256_k"
+      ]
+    },
+    {
+      "signatur": "c007e48966ad",
+      "laenge": 256,
+      "beginn": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stellen": [
+        "src/formats/dms/uft_dms.c::d_code",
+        "src/formats/td0/uft_td0_lzss.c::uft_td0_d_code",
+        "src/samdisk/td0.cpp::d_code"
+      ]
+    },
+    {
+      "signatur": "fe253d97bc33",
+      "laenge": 256,
+      "beginn": [
+        0,
+        49345,
+        49537,
+        320,
+        49921,
+        960
+      ],
+      "stellen": [
+        "src/formats/dms/uft_dms.c::crc_tab",
+        "src/formats/nintendo/uft_nds.c::crc16_table",
+        "tests/test_uft_dms.c::test_crc_tab"
+      ]
+    },
+    {
+      "signatur": "00295538f9d6",
+      "laenge": 12,
+      "beginn": [
+        84,
+        68,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stellen": [
+        "tests/test_td0_error_marks.c::header",
+        "tests/test_verify_after_ist_verdrahtet.c::kopf"
+      ]
+    },
+    {
+      "signatur": "02dacc2df12f",
+      "laenge": 5,
+      "beginn": [
+        100,
+        150,
+        200,
+        248,
+        249
+      ],
+      "stellen": [
+        "tests/external_audits/gw/test_encode_match.c::v_small",
+        "tests/test_gw_encoder.c::v_small"
+      ]
+    },
+    {
+      "signatur": "05f715d94756",
+      "laenge": 6,
+      "beginn": [
+        6,
+        3,
+        3,
+        3,
+        2,
+        1
+      ],
+      "stellen": [
+        "src/samdisk/builtin.cpp::sizes",
+        "src/samdisk/s24.cpp::ab2f00"
+      ]
+    },
+    {
+      "signatur": "13037ba513fa",
+      "laenge": 10,
+      "beginn": [
+        1,
+        4,
+        7,
+        0,
+        3,
+        6
+      ],
+      "stellen": [
+        "src/formats/nanowasp/uft_nanowasp.c::uft_nanowasp_skew",
+        "tests/test_nanowasp_gegen_libdsk.c::SKEW"
+      ]
+    },
+    {
+      "signatur": "230698140633",
+      "laenge": 4,
+      "beginn": [
+        128,
+        256,
+        512,
+        1024
+      ],
+      "stellen": [
+        "src/formats/jv3/uft_jv3.c::jv3_ibm_size",
+        "tests/test_jv3_gegen_mame.c::soll"
+      ]
+    },
+    {
+      "signatur": "2fcb8ac78ffb",
+      "laenge": 4,
+      "beginn": [
+        1,
+        5,
+        4,
+        1
+      ],
+      "stellen": [
+        "src/formats/uft_format_registry.c::magic_g64",
+        "src/policy/uft_write_gate.c::MAGIC_G64"
+      ]
+    },
+    {
+      "signatur": "3948c35aae2e",
+      "laenge": 12,
+      "beginn": [
+        0,
+        255,
+        255,
+        255,
+        255,
+        255
+      ],
+      "stellen": [
+        "include/uft/formats/sony/uft_ps1.h::PS1_SYNC_PATTERN",
+        "src/formats/sega/uft_sega_cd.c::sync"
+      ]
+    },
+    {
+      "signatur": "3e99c25064d9",
+      "laenge": 32,
+      "beginn": [
+        171,
+        173,
+        174,
+        175,
+        181,
+        182
+      ],
+      "stellen": [
+        "src/formats/apple/uft_apple_gcr.c::A2_TAB5",
+        "tests/test_apple_gcr_6and2.c::TAB5"
+      ]
+    },
+    {
+      "signatur": "3eb3bc8f014f",
+      "laenge": 4,
+      "beginn": [
+        8,
+        0,
+        1,
+        0
+      ],
+      "stellen": [
+        "src/formats/d64/uft_d64_parser_v3.c::data",
+        "src/formats/g64/uft_g64_parser_v3.c::data"
+      ]
+    },
+    {
+      "signatur": "3ec5245e39e3",
+      "laenge": 4,
+      "beginn": [
+        1525,
+        2000,
+        5000,
+        10000
+      ],
+      "stellen": [
+        "tests/external_audits/gw/test_encode_match.c::v_three_form",
+        "tests/test_gw_encoder.c::v_three_form"
+      ]
+    },
+    {
+      "signatur": "464424a06e70",
+      "laenge": 7,
+      "beginn": [
+        100,
+        250,
+        1500,
+        2500,
+        100,
+        50
+      ],
+      "stellen": [
+        "tests/external_audits/gw/test_encode_match.c::v_mixed",
+        "tests/test_gw_encoder.c::v_mixed"
+      ]
+    },
+    {
+      "signatur": "4abce98c7033",
+      "laenge": 4,
+      "beginn": [
+        0,
+        16,
+        0,
+        0
+      ],
+      "stellen": [
+        "tests/test_d88_error_marks.c::ddam",
+        "tests/test_scp_direct_usb_mock.c::flux0"
+      ]
+    },
+    {
+      "signatur": "4e19f304b389",
+      "laenge": 4,
+      "beginn": [
+        82,
+        65,
+        73,
+        78
+      ],
+      "stellen": [
+        "src/protection/c64/uft_c64_protection_ext.c::rainbow_arts_sig",
+        "src/protection/uft_protection_stubs.c::ra_header"
+      ]
+    },
+    {
+      "signatur": "4f145c80586e",
+      "laenge": 4,
+      "beginn": [
+        21,
+        19,
+        18,
+        17
+      ],
+      "stellen": [
+        "src/hardware_providers/xum1541_usb.h::GCR_ZONE_SECTORS",
+        "src/protection/uft_c64_protection_enhanced.c::ZONE_SECTORS"
+      ]
+    },
+    {
+      "signatur": "5678588d71f0",
+      "laenge": 32,
+      "beginn": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        255
+      ],
+      "stellen": [
+        "src/formats/c64/uft_d64_g64.c::gcr_decode_high",
+        "src/formats/c64/uft_gcr_ops.c::gcr_decode_high"
+      ]
+    },
+    {
+      "signatur": "5ea10217af36",
+      "laenge": 5,
+      "beginn": [
+        0,
+        100,
+        0,
+        200,
+        0
+      ],
+      "stellen": [
+        "tests/external_audits/gw/test_encode_match.c::v_zeros",
+        "tests/test_gw_encoder.c::v_zeros"
+      ]
+    },
+    {
+      "signatur": "631de44d83c7",
+      "laenge": 4,
+      "beginn": [
+        3,
+        0,
+        0,
+        0
+      ],
+      "stellen": [
+        "tests/test_td0_erfindet_keine_sektoren.c::sk",
+        "tests/test_verify_after_ist_verdrahtet.c::spurkopf"
+      ]
+    },
+    {
+      "signatur": "7069e600771e",
+      "laenge": 48,
+      "beginn": [
+        206,
+        237,
+        102,
+        102,
+        204,
+        13
+      ],
+      "stellen": [
+        "src/formats/nintendo/uft_gameboy.c::NINTENDO_LOGO",
+        "tests/test_gameboy.c::NINTENDO_LOGO"
+      ]
+    },
+    {
+      "signatur": "75bc6d286ade",
+      "laenge": 8,
+      "beginn": [
+        0,
+        0,
+        0,
+        12,
+        0,
+        0
+      ],
+      "stellen": [
+        "src/formats/ipf/uft_ipf_air.c::buf",
+        "tests/test_air_cross_validate.c::ipf_trunc"
+      ]
+    },
+    {
+      "signatur": "77265a8c888d",
+      "laenge": 8,
+      "beginn": [
+        17,
+        34,
+        51,
+        68,
+        85,
+        102
+      ],
+      "stellen": [
+        "tests/test_marginal_data_preserved.c::prot",
+        "tests/test_platform.c::VEC"
+      ]
+    },
+    {
+      "signatur": "78a0a3e1e5d3",
+      "laenge": 4,
+      "beginn": [
+        255,
+        8,
+        127,
+        128
+      ],
+      "stellen": [
+        "tests/test_cfi_gegen_samdisk.c::z",
+        "tests/test_cfi_schreibt_in_die_datei.c::z"
+      ]
+    },
+    {
+      "signatur": "81df6c3c3e51",
+      "laenge": 35,
+      "beginn": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "src/formats/commodore/d67.c::spt",
+        "tests/test_cbm_geometry.c::legacy_d67_35"
+      ]
+    },
+    {
+      "signatur": "85bda12185e0",
+      "laenge": 256,
+      "beginn": [
+        0,
+        1996959894,
+        3993919788,
+        2567524794,
+        124634137,
+        1886057615
+      ],
+      "stellen": [
+        "include/uft/formats/uft_air_crc32.h::air_crc32_tab",
+        "src/formats/apple/uft_woz.c::crc32_tab"
+      ]
+    },
+    {
+      "signatur": "94dae8b8c021",
+      "laenge": 5,
+      "beginn": [
+        165,
+        30,
+        120,
+        225,
+        135
+      ],
+      "stellen": [
+        "src/protection/uft_protection_detect.c::UFT_VMAX_MARKERS",
+        "tests/test_schutz_erkennung_lebt.c::kVmaxErwartet"
+      ]
+    },
+    {
+      "signatur": "966c49c78bea",
+      "laenge": 5,
+      "beginn": [
+        250,
+        500,
+        1000,
+        1500,
+        1524
+      ],
+      "stellen": [
+        "tests/external_audits/gw/test_encode_match.c::v_two_byte",
+        "tests/test_gw_encoder.c::v_two_byte"
+      ]
+    },
+    {
+      "signatur": "9bfb9ba3d791",
+      "laenge": 43,
+      "beginn": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "stellen": [
+        "src/formats/g64/uft_g64_parser_v2.c::track_speed_zone",
+        "tests/test_cbm_geometry.c::legacy_speed_43"
+      ]
+    },
+    {
+      "signatur": "9e1c96a0eaf0",
+      "laenge": 6,
+      "beginn": [
+        2,
+        2,
+        255,
+        10,
+        13,
+        10
+      ],
+      "stellen": [
+        "tests/test_a2r2_dreieinhalbzoll_seite.c::kopf",
+        "tests/test_a2r_ueberlauf_0xff.c::kopf"
+      ]
+    },
+    {
+      "signatur": "a63ddb70e3cd",
+      "laenge": 8,
+      "beginn": [
+        31,
+        166,
+        222,
+        186,
+        204,
+        19
+      ],
+      "stellen": [
+        "src/formats/cas/uft_cas.c::CAS_MSX_MAGIC",
+        "tests/test_cas_gegen_castools.c::CAS_SYNC"
+      ]
+    },
+    {
+      "signatur": "b08128f0ee41",
+      "laenge": 32,
+      "beginn": [
+        64,
+        80,
+        96,
+        13,
+        2,
+        12
+      ],
+      "stellen": [
+        "tests/test_kryoflux_dtc_befehl.cpp::b",
+        "tests/test_kryoflux_provider_v2.cpp::stream_bytes"
+      ]
+    },
+    {
+      "signatur": "b9d933e93b56",
+      "laenge": 7,
+      "beginn": [
+        3,
+        0,
+        16,
+        0,
+        128,
+        0
+      ],
+      "stellen": [
+        "src/formats/tzx/uft_tzx_wav.c::tap_data",
+        "src/formats/tzx/uft_zxtap.c::test_data"
+      ]
+    },
+    {
+      "signatur": "c684e82184c2",
+      "laenge": 256,
+      "beginn": [
+        0,
+        4129,
+        8258,
+        12387,
+        16516,
+        20645
+      ],
+      "stellen": [
+        "src/formats/bbc/uft_bbc_tape.c::crc16_table",
+        "src/formats/sap/uft_sap_parser_v2.c::sap_crc_table"
+      ]
+    },
+    {
+      "signatur": "ca0ac7ccb303",
+      "laenge": 71,
+      "beginn": [
+        0,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "src/formats/c64/uft_d71_d81.c::d71_sectors",
+        "src/formats/d71/uft_d71_parser_v2.c::d71_sectors_per_track"
+      ]
+    },
+    {
+      "signatur": "d9009a2629c0",
+      "laenge": 10,
+      "beginn": [
+        14,
+        15,
+        0,
+        9,
+        0,
+        1
+      ],
+      "stellen": [
+        "src/formats/msa/uft_msa_parser_v2.c::valid",
+        "tests/test_msa.c::TEST_MSA_HEADER"
+      ]
+    },
+    {
+      "signatur": "d9626b1ebb3b",
+      "laenge": 9,
+      "beginn": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "stellen": [
+        "tests/test_st_reihenfolge_bericht.c::versetzt",
+        "tests/test_st_spiralfaktor.c::b"
+      ]
+    },
+    {
+      "signatur": "ea46e11a4366",
+      "laenge": 32,
+      "beginn": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "stellen": [
+        "src/nibbletab.cpp::gcrDecode",
+        "src/protection/uft_c64_protection_enhanced.c::GCR_DECODE_STD"
+      ]
+    },
+    {
+      "signatur": "ed7fb65df02d",
+      "laenge": 18,
+      "beginn": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11
+      ],
+      "stellen": [
+        "tests/test_1050_firmware_als_quelle.c::JH18",
+        "tests/test_atx_gegen_a8rawconv.c::KARTE_S0"
+      ]
+    },
+    {
+      "signatur": "f34018ef11af",
+      "laenge": 4,
+      "beginn": [
+        18,
+        52,
+        86,
+        120
+      ],
+      "stellen": [
+        "src/formats/stx/uft_stx_parser_v2.c::data",
+        "tests/test_air_cross_validate.c::be32"
+      ]
+    },
+    {
+      "signatur": "fb1929aa9805",
+      "laenge": 8,
+      "beginn": [
+        161,
+        161,
+        161,
+        254,
+        0,
+        0
+      ],
+      "stellen": [
+        "tests/test_crc.c::address_mark",
+        "tests/test_mfm_sector_parser.c::idam"
+      ]
+    }
+  ]
+}

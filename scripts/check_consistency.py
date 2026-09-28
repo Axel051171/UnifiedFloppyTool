@@ -1667,6 +1667,22 @@ def main() -> int:
         import audit_heredoc as _hd
         all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
 
+    # Kategorie (MF-1506): dieselbe Zahlenfolge als Tabelle in mehreren
+    # DATEIEN. `audit_cbm_zonen.py` haelt EINE Familie; Kennzahl K3 fuehrte
+    # fuer alles andere „kein Audit". Gemessen waren es 58 Familien mit
+    # zusammen 113 ueberzaehligen Kopien — die groessten die CBM-GCR-Tafeln
+    # (12 bzw. 10 Dateien) und die Apple-GCR-6&2-Tafel (7). Breite hier,
+    # Tiefe dort: jenes rechnet die Zonentafeln gegen die SSOT und sieht
+    # auch eine Kopie, die schon falsch ist.
+    if True:
+        try:
+            import audit_konstantenfamilien as _kf
+            all_errors.append(("Konstantenfamilien", _kf.check(repo)))
+        except Exception as _e:
+            # Ein Tor, das nicht laeuft, ist ein Befund und kein Schweigen.
+            all_errors.append(("Konstantenfamilien",
+                               ["Tor nicht lauffaehig: %s" % _e]))
+
     # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
     #
     # Git EXPORTIERT `GIT_DIR` in jeden Haken. Ein `git init` gegen ein
