@@ -101,7 +101,7 @@ extern "C" {
 #define UFT_FDC_RATE_T_DEFINED
 typedef enum {
     UFT_FDC_RATE_500K = 0,      /**< 500 kbps (HD) */
-    UFT_FDC_RATE_300K = 1,      /**< 300 kbps (DD 5.25") */
+    UFT_FDC_RATE_300K = 1,      /**< 300 kbps (DD 5.25" in a 1.2M drive at 360 rpm) */
     UFT_FDC_RATE_250K = 2,      /**< 250 kbps (DD 3.5") */
     UFT_FDC_RATE_1M   = 3       /**< 1 Mbps (ED) */
 } uft_fdc_rate_t;
@@ -326,7 +326,12 @@ typedef struct {
 static const uft_fdc_format_t UFT_FDC_PC_360K = {
     .name = "PC 360K (5.25\" DD)",
     .tracks = 40, .sides = 2, .sectors = 9, .sector_size = 512, .size_code = 2,
-    .data_rate = UFT_FDC_RATE_300K, .rpm = 300, .mfm = true,
+    /* MF-1482 (P3-644): was UFT_FDC_RATE_300K — 300 000 x 60 / 300 / 8 =
+     * 7500, not the 6250 below. 300 kbit/s is this disk in a 1.2M drive at
+     * 360 rpm; at 300 rpm it is 250, as the profile's own source says:
+     * greaseweazle 26690f89 diskdefs_ibm.cfg `disk 360`: `rate = 250`.
+     * Guarded by tests/test_fdc_rate_passt_zur_spur.c. */
+    .data_rate = UFT_FDC_RATE_250K, .rpm = 300, .mfm = true,
     .gaps = { .gap4a = 80, .gap1 = 50, .gap2 = 22, .gap3_rw = 80, .gap3_fmt = 84, .gap4b = 182 },
     .track_bytes = 6250, .raw_bits = 100000,
     .iam = true,
@@ -610,11 +615,34 @@ static const uft_fdc_format_t UFT_FDC_BBC_ADFS = {
  * Feld, die Klasse aus MF-1036/P3-357. Das ist eine Konventionsfrage ueber
  * alle FM-Eintraege hinweg und wird hier nicht im Vorbeigehen entschieden;
  * `bitrate` bleibt im HFE-Wandler deshalb aus dessen eigener Herleitung.
+ *
+ * ENTSCHIEDEN MF-1482 (P3-644), nicht im Vorbeigehen, sondern gemessen:
+ * `data_rate` ist die FDC-Uebertragungsrate. Bei MFM ist sie die Datenrate,
+ * bei FM der Zellentakt; die FM-Daten laufen mit der Haelfte. Das ist
+ * Dunfields Definition (IMD.SRC |MODE|: „kbps indicates transfer rate, not
+ * the data rate, which is 1/2 for FM"), `UFT_FDC_BBC_DFS` folgt ihr schon,
+ * und die echte 8"-Aufnahme `kor_a` (1979) traegt ihre FM-Spur 0 als IMD-
+ * Modus 0 = „500 kbps FM" (Applesauce-Log: „SS500kbps FM+MFM"). Dieser
+ * Eintrag stand damit als einziger von 18 ausserhalb der Identitaet
+ * `rate x 60 / rpm / 8 (FM: / 2) == track_bytes` — neben der 360K, die ihre
+ * eigene Quelle verfehlte. Beide sind berichtigt; der Test
+ * `tests/test_fdc_rate_passt_zur_spur.c` haelt die Identitaet fuer JEDES
+ * Profil der Tafel. Der HFE-Wandler leitet `bitrate` weiter selbst her —
+ * dass er jetzt die Tafel nehmen koennte, ist offen, nicht erledigt.
  */
 static const uft_fdc_format_t UFT_FDC_FM_SD = {
     .name = "FM Single Density",
     .tracks = 77, .sides = 1, .sectors = 26, .sector_size = 128, .size_code = 0,
-    .data_rate = UFT_FDC_RATE_250K, .rpm = 360, .mfm = false,
+    /* MF-1482 (P3-644): was UFT_FDC_RATE_250K. The field is the FDC rate
+     * setting, under which FM runs at half the data rate (BBC DFS: 250K FM
+     * at 300 rpm = 3125 bytes). This profile's own raw_bits 83333 at
+     * 360 rpm are 500 000 cells/s — setting 500K, FM data 250 kbit/s,
+     * 5208 bytes. Named: Dave Dunfield, IMD.SRC |MODE|, "00 = 500 kbps FM
+     * ... kbps indicates transfer rate, not the data rate, which is 1/2
+     * for FM"; and the real 8" capture tests/corpus/kor_a (1979, LOCAL-ONLY)
+     * carries its 26 x 128 FM track 0 as IMD mode 0, its Applesauce imaging
+     * log says "SS500kbps FM+MFM". Guarded by test_fdc_rate_passt_zur_spur. */
+    .data_rate = UFT_FDC_RATE_500K, .rpm = 360, .mfm = false,
     .gaps = { .gap4a = 40, .gap1 = 26, .gap2 = 11, .gap3_rw = 27, .gap3_fmt = 27, .gap4b = 247 },
     .track_bytes = 5208, .raw_bits = 83333,
     .iam = true,
