@@ -18,6 +18,11 @@
 #define ADF_TRACK_DD    (ADF_SPT_DD * ADF_SECTOR_SIZE)   /*  5632 */
 #define ADF_TRACK_HD    (ADF_SPT_HD * ADF_SECTOR_SIZE)   /* 11264 */
 #define ADF_TRACKS      160                              /* 80 Zyl. x 2 */
+/* MF-1486: the most DD cylinders a whole-cylinder ADF may carry. hxcfe's
+ * raw_amiga.c allocates its floppy for 86 cylinders (`hxcfe_initFloppy(
+ * .., 86, 2)`) and reads everything below 100 * 11 * 2 * 512 bytes as DD;
+ * greaseweazle writes 82 (`amigados_plus`, ADFDiskBox diskdefs). */
+#define ADF_DD_MAX_CYL  86
 
 /**
  * @brief Wie vollstaendig ist diese Datei (MF-840)?
@@ -86,6 +91,24 @@ static adf_extent_t adf_classify(size_t len, adf_shape_t *out)
     if (len == (size_t)ADF_HD_SIZE) {
         out->spt = ADF_SPT_HD;
         out->tracks_present = ADF_TRACKS;
+        return out->extent = ADF_EXT_VOLLSTAENDIG;
+    }
+
+    /* MF-1486: a DD disk with MORE than 80 whole cylinders. Every such
+     * size (912 384 / 923 648 / ... for 81 / 82 / ...) is also a multiple
+     * of the HD track length, so the HD partial-dump rule below took it:
+     * a 923 648-byte ADF written by greaseweazle (`amiga.amigados.plus`,
+     * 82 x 2 x 11) opened as 22 sectors per track, and cylinder 1 / head 0
+     * carried the data of DD track 4. Both references say DD: the writer
+     * (82 x 2 x 11) and hxcfe's raw_amiga.c, executed (`hxcfe -infos`:
+     * "11 sectors/track"). The size alone stays ambiguous against an HD
+     * partial dump of the same length; the probe claims no more than for
+     * any full size (45), and open() says which reading it took.
+     * Guarded by tests/test_adf_mehr_zylinder.c. */
+    if (len > (size_t)ADF_DD_SIZE && (len % (2u * ADF_TRACK_DD)) == 0
+        && len / (2u * ADF_TRACK_DD) <= ADF_DD_MAX_CYL) {
+        out->spt = ADF_SPT_DD;
+        out->tracks_present = (unsigned)(len / ADF_TRACK_DD);
         return out->extent = ADF_EXT_VOLLSTAENDIG;
     }
 
@@ -208,11 +231,19 @@ static uft_error_t adf_open(uft_disk_t *disk, const char *path, bool ro) {
     p->extent = shape.extent;
 
     disk->plugin_data = p;
-    disk->geometry.cylinders = 80;
+    /* MF-1486: a full disk carries as many cylinders as the file holds
+     * (80, or 81..86 DD); a partial dump keeps its 80-cylinder frame. */
+    const unsigned zyl = (shape.extent == ADF_EXT_VOLLSTAENDIG)
+                       ? shape.tracks_present / 2u : 80u;
+    if (zyl > 80u)
+        UFT_WARN("ADF mit %u Zylindern (DD, 11 Sekt./Spur) — gelesen nach "
+                 "greaseweazle/hxcfe; dieselbe Groesse waere auch ein "
+                 "HD-Teilabzug von %u Spuren", zyl, shape.tracks_present / 2u);
+    disk->geometry.cylinders = (uint16_t)zyl;
     disk->geometry.heads = 2;
     disk->geometry.sectors = spt;
     disk->geometry.sector_size = ADF_SECTOR_SIZE;
-    disk->geometry.total_sectors = 80 * 2 * spt;
+    disk->geometry.total_sectors = zyl * 2u * spt;
     return UFT_OK;
 }
 

@@ -2571,6 +2571,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_adf_mehr_zylinder")
+        # MF-1486: 81..86 DD-Zylinder sind DD, kein HD-Teilabzug
+        # (greaseweazle schreibt 82 x 2 x 11, hxcfe liest DD).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_ssd_hadfs_nicht_dfs")
         # MF-836: HADFS legt einen echten DFS-Katalog in Sektor 0/1 —
         # die SSD-Sonde darf darauf kein Merkmal beanspruchen.
