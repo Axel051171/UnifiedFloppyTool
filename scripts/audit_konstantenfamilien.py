@@ -66,6 +66,7 @@ import collections
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -168,6 +169,65 @@ def manifest_schreiben(familien: dict, pfad: Path = MANIFEST) -> int:
     pfad.write_text(json.dumps(inhalt, indent=2, ensure_ascii=False) + "\n",
                     encoding="utf-8")
     return len(inhalt["familien"])
+
+
+def ratsche(repo: Path, basis: str, manifest: Path = MANIFEST,
+            scharf: bool = False) -> tuple[list, list]:
+    """Wer eine Datei anfasst, in der eine Manifest-Stelle liegt, nimmt
+    sie mit. -> (fehler, hinweise).
+
+    Die Absicht (Eigentuemer, MF-1507): das Manifest soll mit der
+    NORMALEN Arbeit sinken, nicht durch einen Grossumbau — jede Zeile mit
+    eigenem Rotbeweis, kein Vollbau, der wegen einer Aufraeumaktion
+    stillsteht.
+
+    **Standardmaessig meldet das nur, es blockiert nicht**, und der Grund
+    ist gemessen statt befuerchtet: 119 der 2116 Quelldateien tragen eine
+    Manifest-Stelle (5,6 %), und von den letzten 40 Commits haetten
+    **7 (18 %)** eine davon beruehrt — darunter `src/formats/g64/uft_g64.c`
+    mit drei Stellen. Scharf gestellt haette die Ratsche also die
+    G64-Sync-Korrektur MF-1500 an die Zusammenfuehrung von drei
+    GCR-Tafeln gekoppelt. Eine Kopplung, die jeden fuenften Bugfix an
+    einen Umbau haengt, wird umgangen statt befolgt.
+
+    `--ratsche-scharf` macht daraus einen Fehler. Diese Entscheidung
+    gehoert dem Eigentuemer, nicht diesem Skript.
+    """
+    bekannt = manifest_lesen(manifest)
+    if bekannt is None:
+        return ([], [])
+    nach_datei: dict[str, list[str]] = {}
+    for sig, stellen in bekannt.items():
+        for s in stellen:
+            nach_datei.setdefault(s.split("::")[0], []).append(s)
+
+    aus = subprocess.run(["git", "diff", "--name-only", basis],
+                         cwd=str(repo), capture_output=True, text=True,
+                         encoding="utf-8", errors="replace")
+    if aus.returncode != 0:
+        return ([], ["Ratsche: `git diff %s` nicht befragbar — nichts "
+                     "geprueft." % basis])
+
+    familien_jetzt, _ = messe(repo)
+    noch_da = set()
+    if familien_jetzt:
+        for _, stellen in familien_jetzt.values():
+            noch_da.update(stellen)
+
+    treffer = []
+    for datei in (z.strip() for z in aus.stdout.split("\n") if z.strip()):
+        offen = [s for s in nach_datei.get(datei, []) if s in noch_da]
+        if offen:
+            treffer.append("%s: %d Stelle(n) noch da (%s)"
+                           % (datei, len(offen), ", ".join(
+                               s.split("::")[1] for s in offen[:3])))
+    if not treffer:
+        return ([], [])
+    text = ("%d beruehrte Datei(en) tragen weiterhin eine "
+            "Konstantenkopie: %s. Wer eine solche Datei anfasst, nimmt die "
+            "Stelle mit — so sinkt das Manifest mit der normalen Arbeit "
+            "(MF-1507)." % (len(treffer), " | ".join(treffer[:4])))
+    return ([text], []) if scharf else ([], [text])
 
 
 def check(repo, hinweise: list | None = None,
@@ -345,6 +405,19 @@ def main() -> int:
 
     hinweise: list = []
     errs = check(repo, hinweise)
+
+    # Ratsche: nur auf Verlangen, weil sie sonst jeden fuenften Commit
+    # an einen Umbau koppeln wuerde (gemessen, siehe `ratsche()`).
+    basis = None
+    for i, a in enumerate(sys.argv):
+        if a == "--ratsche" and i + 1 < len(sys.argv):
+            basis = sys.argv[i + 1]
+    if basis:
+        r_fehler, r_hinweise = ratsche(
+            repo, basis, scharf="--ratsche-scharf" in sys.argv)
+        errs += r_fehler
+        hinweise += r_hinweise
+
     for h in hinweise[:6]:
         print("  HINWEIS: %s" % h)
     if not errs:

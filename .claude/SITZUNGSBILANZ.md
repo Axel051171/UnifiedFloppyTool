@@ -116,7 +116,16 @@ Fehler dieser Sitzung — was | gefangen von | Folge
      `stand_md_zuletzt_erzeugen.md` steht | TOR (pre-commit,
      `[STAND.md stale]`) | Generator nachgezogen, Merge liegt als 7a1d6b07
 
-K0 dieser Sitzung: 2 von 10
+ 11. Der Betreff von MF-1505 sagt „1 of 7", sein eigener Rumpf sagt
+     „2 von 10" — dieselbe Zahl zweimal von Hand, zu verschiedenen
+     Zeiten geschrieben. Dass sie auseinanderliefen, ist kein Versehen,
+     sondern das, was zwei Kopien immer tun (MF-1177) | Mensch
+     | berichtigt in MF-1506; die DAUERHAFTE Behebung ist MF-1507:
+       `commit_verified.py` liest K0 aus DIESER Datei und haengt sie an,
+       und eine abweichende Zahl im Text weist es ab (Selbsttest 10/10).
+       Die zweite Stelle ist damit abgeschafft, nicht geprueft.
+
+K0 dieser Sitzung: 2 von 11
 
 **Befund ueber diese Bilanz selbst, und er gehoert hierher:** zwischen
 ihrem ersten Schreiben und dem Sitzungsende kamen die Fehler 8, 9 und 10

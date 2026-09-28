@@ -43,10 +43,51 @@ from pathlib import Path
 
 WURZEL = Path(__file__).resolve().parent.parent
 LOCKNAME = "uft-commit.lock"
+BILANZ = WURZEL / ".claude" / "SITZUNGSBILANZ.md"
 
 # Zeilen, an denen ein abgewiesener Lauf seinen Grund nennt.
 RE_GRUND = re.compile(r"^\s*(?:\[[^\]]+\]\s*)?(FAIL|FEHLER|ERROR|abgewiesen)",
                       re.IGNORECASE)
+
+# K0 in der Sitzungsbilanz — die EINE Stelle, an der die Zahl steht.
+RE_K0_BILANZ = re.compile(r"^\s*K0 dieser Sitzung:\s*(\d+)\s*von\s*(\d+)",
+                          re.MULTILINE)
+# K0 irgendwo in einer Commit-Nachricht — die Stelle, die veralten kann.
+RE_K0_TEXT = re.compile(r"\bK0\b[^.\n]{0,60}?(\d+)\s*(?:von|of)\s*(\d+)",
+                        re.IGNORECASE)
+
+
+def k0_aus_bilanz(pfad: Path = BILANZ) -> tuple[int, int] | None:
+    """Der LETZTE K0-Eintrag der Bilanz; None, wenn es keinen gibt."""
+    try:
+        text = pfad.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    treffer = RE_K0_BILANZ.findall(text)
+    return (int(treffer[-1][0]), int(treffer[-1][1])) if treffer else None
+
+
+def k0_pruefen(nachricht: str, k0: tuple[int, int] | None) -> list[str]:
+    """Widerspricht die Nachricht der Bilanz? -> Liste von Einwaenden.
+
+    MF-1507: Betreff und Rumpf von MF-1505 trugen dieselbe Zahl zweimal,
+    von Hand, zu verschiedenen Zeiten geschrieben — „1 of 7" gegen „2 von
+    10". Dass sie auseinanderliefen, ist kein Versehen, sondern das, was
+    zwei Kopien immer tun (MF-1177). Die Zahl steht deshalb in der
+    Sitzungsbilanz, und dieses Werkzeug haengt sie als Schlusszeile an;
+    wer sie zusaetzlich tippt, bekommt sie geprueft.
+    """
+    if k0 is None:
+        return []
+    einwaende = []
+    for tor, nenner in RE_K0_TEXT.findall(nachricht):
+        if (int(tor), int(nenner)) != k0:
+            einwaende.append(
+                "die Nachricht nennt K0 als %s von %s, die Sitzungsbilanz "
+                "sagt %d von %d. Die Zahl gehoert NICHT in den Text — sie "
+                "wird aus `.claude/SITZUNGSBILANZ.md` angehaengt."
+                % (tor, nenner, k0[0], k0[1]))
+    return einwaende
 
 
 def git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -86,6 +127,25 @@ def committe(nachricht: Path, pfade: list[str], log: Path | None = None,
     vorher = kopf(baum)
     if not vorher:
         return 1, ["KEIN NEUER COMMIT — `git rev-parse HEAD` nicht befragbar"]
+
+    # Die K0-Zahl kommt aus der Bilanz, nicht aus dem Text (MF-1507).
+    text = nachricht.read_text(encoding="utf-8", errors="replace")
+    k0 = k0_aus_bilanz(baum / ".claude" / "SITZUNGSBILANZ.md")
+    einwaende = k0_pruefen(text, k0)
+    if einwaende:
+        return 1, ["KEIN NEUER COMMIT — %s" % einwaende[0]]
+    if k0 is not None:
+        marke = "Kennzahl-K0:"
+        if marke not in text:
+            ergaenzt = nachricht.with_suffix(nachricht.suffix + ".k0")
+            ergaenzt.write_text(
+                text.rstrip("\n")
+                + "\n\n%s %d von %d Fehlern vom Tor gefangen "
+                  "(.claude/SITZUNGSBILANZ.md)\n" % (marke, k0[0], k0[1]),
+                encoding="utf-8")
+            nachricht = ergaenzt
+            zeilen.append("K0 aus der Bilanz angehaengt: %d von %d"
+                          % (k0[0], k0[1]))
 
     zu = git("add", "--", *pfade, cwd=baum)
     if zu.returncode != 0:
@@ -171,6 +231,56 @@ def _selbsttest() -> int:
     rc, zeilen = committe(d / "gibtsnicht.txt", ["a.txt"], cwd=d)
     faelle.append(("Nachricht fehlt", rc == 1
                    and zeilen[-1].startswith("KEIN NEUER COMMIT"),
+                   rc, zeilen[-1][:56]))
+
+    # ── K0 kommt aus der Bilanz, nicht aus dem Text (MF-1507) ──────────
+    def mit_bilanz(k0_zeile: str, nachricht: str):
+        d = _wegwerfbaum(HAKEN_GUT)
+        (d / ".claude").mkdir(exist_ok=True)
+        (d / ".claude" / "SITZUNGSBILANZ.md").write_text(
+            "## Bilanz\n\n%s\n" % k0_zeile, encoding="utf-8")
+        (d / "a.txt").write_text("neu\n", encoding="utf-8")
+        m = d / "m.txt"
+        m.write_text(nachricht, encoding="utf-8")
+        return d, committe(m, ["a.txt"], cwd=d)
+
+    d, (rc, zeilen) = mit_bilanz("K0 dieser Sitzung: 2 von 10",
+                                 "betreff ohne zahl\n\nrumpf\n")
+    letzte_nachricht = git("log", "-1", "--format=%B", cwd=d).stdout
+    faelle.append(("K0 wird angehaengt",
+                   rc == 0 and "Kennzahl-K0: 2 von 10" in letzte_nachricht,
+                   rc, zeilen[-1][:56]))
+
+    d, (rc, zeilen) = mit_bilanz("K0 dieser Sitzung: 2 von 10",
+                                 "betreff sagt K0 1 von 7\n\nrumpf\n")
+    faelle.append(("widersprechende K0 im Text faellt",
+                   rc == 1 and "Sitzungsbilanz sagt 2 von 10" in zeilen[-1],
+                   rc, zeilen[-1][:56]))
+
+    d, (rc, zeilen) = mit_bilanz("K0 dieser Sitzung: 2 von 10",
+                                 "betreff nennt K0 2 von 10\n\nrumpf\n")
+    faelle.append(("uebereinstimmende K0 im Text ist erlaubt",
+                   rc == 0, rc, zeilen[-1][:56]))
+
+    # Die LETZTE Bilanzzeile gilt — eine Datei sammelt mehrere Sitzungen.
+    d, (rc, zeilen) = mit_bilanz(
+        "K0 dieser Sitzung: 1 von 7\n\n## Spaeter\n\n"
+        "K0 dieser Sitzung: 2 von 10",
+        "betreff ohne zahl\n\nrumpf\n")
+    letzte_nachricht = git("log", "-1", "--format=%B", cwd=d).stdout
+    faelle.append(("juengste Bilanzzeile gewinnt",
+                   rc == 0 and "Kennzahl-K0: 2 von 10" in letzte_nachricht,
+                   rc, zeilen[-1][:56]))
+
+    # Ohne Bilanz bleibt alles beim Alten — kein Zwang, keine Erfindung.
+    d = _wegwerfbaum(HAKEN_GUT)
+    (d / "a.txt").write_text("ohne\n", encoding="utf-8")
+    m = d / "m.txt"
+    m.write_text("betreff\n\nrumpf\n", encoding="utf-8")
+    rc, zeilen = committe(m, ["a.txt"], cwd=d)
+    faelle.append(("ohne Bilanz: kein Anhang, kein Fehler",
+                   rc == 0 and "Kennzahl-K0"
+                   not in git("log", "-1", "--format=%B", cwd=d).stdout,
                    rc, zeilen[-1][:56]))
 
     gut = sum(1 for _, ok, _, _ in faelle if ok)
