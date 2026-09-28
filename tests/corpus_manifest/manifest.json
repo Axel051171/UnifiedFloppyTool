@@ -1118,6 +1118,18 @@
       "content": "UFT-K T00 S00 … (6-and-2-nibblisiert, physische Sektorfolge nach DOS-3.3-Verschraenkung)"
     },
     {
+      "file": "tests/corpus_free/a2tools_dos33_filled.do",
+      "sha256": "0b2631c91e449ebba77d87afe5d12c38c1d988b00a6368dc6dc4f06c532768a1",
+      "format": "dos33_fs",
+      "origin": "cross-tool",
+      "oracle": "a2tools",
+      "tool": "a2tools (catseye/a2tools, Quellstand 52ad81cc, GPL-2.0-or-later, Terry Kyriacopoulos), gebaut mit gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c unter MinGW 13.1.0, sha256 28a52f894c4ccc7a58e106cf6b336111f3e1e95a84376ef091b4c547f46d3d9a",
+      "source": "ZWEI HAENDE. UFT-eigen: das leere Geruest `python scripts/mk_dos33_leer.py x.do` (VTOC T17 S0, Katalogkette S15->S1, Volume 254, Spur 0 und 17 belegt; sha256 44a25ebe836a0177...) - a2tools kann nicht formatieren (MF-1207). Fremd: alles darin, von a2tools geschrieben: `a2tools in t x.do MARKER marker.txt`; `in b.0803 x.do BINDATA bin.bin`; `in t x.do GROSS big.txt`; `in -r t x.do RAWX marker.txt`; `in t x.do WEG marker.txt`; `del x.do WEG`. Eingaben UFT-eigen und rechtefrei: marker.txt = 'UFT P3-384 MARKER TEXT\\nZEILE ZWEI\\n' (sha256 d18d7f29...), bin.bin = bytes(range(256))*3 (sha256 f3a25aa9...), big.txt = 1200 Zeilen 'ZEILE %05d UFT-A2TOOLS-FIXTURE\\n' (sha256 96a26145...). Zwei Laeufe liefern dieselbe sha256. Nachbau: scripts/mk_dos33_leer.py (Kopf).",
+      "fremdcode": "nein - a2tools schreibt nur die Dateiinhalte aus den drei UFT-eigenen Eingaben; Spur 0 (DOS-Abbild) bleibt Null, kein ausfuehrbarer Code",
+      "content": "a2tools dir: Disk Volume 254, Free Blocks 367; T 002 MARKER, B 005 BINDATA, T 152 GROSS, T 002 RAWX; WEG geloescht (nicht gelistet)",
+      "test": "test_dos33_katalog_gegen_a2tools"
+    },
+    {
       "file": "tests/corpus_free/atrip_uftk_sd_alle6.dcm",
       "sha256": "6f25703ef425943918261d6c7b6a8ff4a4fca16c98cdc829c29c6dbcd237ba35",
       "format": "dcm",

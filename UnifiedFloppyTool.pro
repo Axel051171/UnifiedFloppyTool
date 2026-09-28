@@ -813,6 +813,7 @@ SOURCES += \
     src/whdload/whd_crc16.c \
     src/whdload/whdload_resload_api.c \
     src/fs/uft_cbmdos.c \
+    src/fs/uft_dos33.c \
     src/fs/uft_amigados.c \
     src/fs/uft_amiga_virus_db.c \
     src/fs/uft_bootblock_scanner.c \

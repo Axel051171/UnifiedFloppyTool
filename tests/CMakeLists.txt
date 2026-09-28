@@ -4461,6 +4461,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_dos33_katalog_gegen_a2tools")
+        # MF-1497 (P3-384): Apple-DOS-3.3-Katalog gegen a2tools. Das
+        # Fixture traegt ein UFT-eigenes Geruest (scripts/mk_dos33_leer.py)
+        # und a2tools-Inhalt; die Erwartungen sind a2tools' `dir`-Ausgabe.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_dos33.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_vote_confidence")
         # MF-673: prueft die Abstimm-Strenge direkt am Abstimmer — kein
         # Korpus noetig, damit der Beweis auch in CI feuert statt sich zu

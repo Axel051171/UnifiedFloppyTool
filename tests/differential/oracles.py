@@ -1658,6 +1658,50 @@ REGISTRY: tuple[Oracle, ...] = (
             "bestaetigt es ohne Kenntnis von fdtc."
         ),
     ),
+    Oracle(
+        name="a2tools",
+        env="A2TOOLS",
+        exes=("a2tools", "a2tools.exe", "a2tools_dos.exe"),
+        # Keine Versionsabfrage — gemessen (MF-1497): der Aufruf ohne
+        # Argumente und `--version` drucken beide nur die Gebrauchsanweisung
+        # mit „Copyright (C) 1998, 2001 Terry Kyriacopoulos", keine Fassung.
+        # Gepinnt ueber Quellstand catseye/a2tools 52ad81cc (2015-06-28) und
+        # die SHA-256 des Baus `gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c`
+        # unter MinGW 13.1.0:
+        # 28a52f894c4ccc7a58e106cf6b336111f3e1e95a84376ef091b4c547f46d3d9a.
+        # Die DOS-Fassung, weil die UNIX-Fassung ueber argv[0] verteilt und
+        # unter Windows daran scheitert (MF-1207).
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for="Apple-DOS-3.3-ERZEUGER und -LESER seit MF-1497: "
+                      "`a2tools in` legt Dateien in ein DOS-3.3-Abbild "
+                      "(Katalogeintrag, T/S-Liste, Daten, VTOC-Freiliste), "
+                      "`a2tools dir` listet es. FORMATIEREN kann es NICHT "
+                      "(Befehle nur dir/out/in/del, MF-1207) — das Geruest "
+                      "des Fixtures `a2tools_dos33_filled.do` ist deshalb "
+                      "UFT-eigen (`scripts/mk_dos33_leer.py`), und das "
+                      "Manifest nennt beide Haende. Entscheidet: Katalog "
+                      "(Namen, Typen, Laengen), Freizaehlung, geloeschte "
+                      "Eintraege — fuer `src/fs/uft_dos33.c`.",
+        origin="https://github.com/catseye/a2tools (Quellstand 52ad81cc)",
+        licence="GPL-2.0-or-later (a2tools.c:5-20, LICENSE)",
+        abstammung=(
+            "NEIN, mit Vorbehalt benannt: `src/fs/uft_dos33.c` ist eigene "
+            "Umsetzung nach der Tafel in `uft_dos33.h`; die OFFSETS dort "
+            "sind gegen a2tools' Code GELESEN (a2tools.c:199-203, "
+            ":239-294, :336-373, :505-514), nicht uebernommen — keine "
+            "Zeile. Der Vorbehalt: wer den Aufbau aus demselben Code "
+            "abliest, den er als Zeugen nimmt, hat fuer das LAYOUT keine "
+            "zweite Hand (MF-644). Die zweite Hand fuer das Layout ist "
+            "ein ECHTES DOS-3.3-Abbild (Copy II Plus in "
+            "`tests/corpus/wozaday_copy2plus_52.woz`, nur lokal), dessen "
+            "Katalog a2tools mit 6 Eintraegen und 80 freien Sektoren "
+            "liest — der WOZ-Weg dorthin steht in P3-384 noch offen. "
+            "Das Paket `neue-ideen/Apple DOS.zip` (aus a2tools "
+            "abgeleitet) ist NICHT verwendet."
+        ),
+    ),
 )
 
 

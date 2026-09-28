@@ -11,8 +11,8 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 | FS-T0 | 29 | kein Test |
 | FS-T1 | 7 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
-| FS-T2 | 4 | Korpus von **registrierter** fremder Hand |
-| **gesamt gefuehrt** | **40** | |
+| FS-T2 | 5 | Korpus von **registrierter** fremder Hand |
+| **gesamt gefuehrt** | **41** | |
 
 Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
 
@@ -43,6 +43,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_d64_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d71_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d81_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_dos33` | **FS-T2** | `test_dos33_katalog_gegen_a2tools` | `a2tools_dos33_filled.do` stammt von `a2tools (catseye/a2tools, Quellstand 52ad81cc, GPL-2.0-or-later, Terry Kyriacopoulos), gebaut mit gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c unter MinGW 13.1.0, sha256 28a52f894c4ccc7a58e106cf6b336111f3e1e95a84376ef091b4c547f46d3d9a` — im Oracle-Register als `a2tools`, der Beleg ist zitierfaehig |
 | `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fat_kette_robust`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
 | `uft_fat32_mbr` | **FS-T1** | `test_fat_extensions`, `test_mega65_fat32` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_fdi` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
@@ -65,7 +66,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 
 Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser Abschnitt nennt Dateien im uebrigen Baum, die ein **Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier steht, worueber zu entscheiden ist, nicht ein Urteil.
 
-Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **40** Leser, waehrend der Baum **72** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
+Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **41** Leser, waehrend der Baum **73** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
 
 Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`).
 
