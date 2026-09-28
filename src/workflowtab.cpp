@@ -151,7 +151,15 @@ void WorkflowTab::connectSignals()
     
     // Pause button
     connect(ui->btnPause, &QPushButton::clicked, this, &WorkflowTab::onPauseClicked);
-    ui->btnPause->setEnabled(false); // Only enabled during operation
+    /* MF-1481 (P3-643). Here stood "// Only enabled during operation" —
+     * measured, nothing enables this button anywhere (git grep btnPause;
+     * the .ui sets enabled=false as well), and no job has a pause point
+     * (DecodeJob, FluxWriteJob and FluxCaptureJob only know requestCancel).
+     * So it stays off, and says why instead of being a mute grey button. */
+    ui->btnPause->setEnabled(false);
+    ui->btnPause->setToolTip(tr("Pausing is not supported: no read or write "
+                                "job can stop between tracks yet. Use ABORT "
+                                "to stop a running job."));
     
     // Log button
     connect(ui->btnLog, &QPushButton::clicked, this, &WorkflowTab::onLogClicked);
@@ -904,6 +912,10 @@ void WorkflowTab::updateOperationModeUI()
     updateCombinationUI();
 }
 
+/* MF-1481 (P3-643): unreachable from the GUI — btnPause is never enabled
+ * (see the constructor), so this handler never runs. The two job calls
+ * below are commented out because no job implements them. Kept, not
+ * removed (MF-1077); wiring it needs a pause point in the jobs first. */
 void WorkflowTab::onPauseClicked()
 {
     if (!m_isRunning) return;

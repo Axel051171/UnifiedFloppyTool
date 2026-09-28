@@ -115,6 +115,27 @@ private slots:
                  "Pause ist bedienbar, obwohl nichts laeuft.");
     }
 
+    /* ── MF-1481 (P3-643): Pause kann es nicht, und der Knopf sagt es ─────
+     * Gemessen: btnPause wird in forms/tab_workflow.ui UND im Konstruktor
+     * abgeschaltet und NIRGENDS eingeschaltet (git grep btnPause); kein Job
+     * hat ein requestPause. Der Knopf ist also immer grau — auch waehrend
+     * eines Laufs, wo der Kommentar „Only enabled during operation" ihn
+     * versprach. Ein grauer Knopf ohne Grund ist eine stumme Absage; er
+     * muss sagen, warum, und auf den Weg zeigen, der geht (ABORT). */
+    void workflowPauseSaysWhyItIsOff()
+    {
+        WorkflowTab tab;
+        auto *pause = tab.findChild<QPushButton *>("btnPause");
+        QVERIFY2(pause, "btnPause ist nicht erreichbar.");
+        QVERIFY2(!pause->isEnabled(), "Pause ist bedienbar.");
+        const QString tip = pause->toolTip();
+        QVERIFY2(tip.contains("not supported"),
+                 qPrintable("Der graue Pause-Knopf nennt keinen Grund:\n" + tip));
+        QVERIFY2(tip.contains("ABORT"),
+                 qPrintable("Der Tooltip zeigt nicht auf den Weg, der geht:\n"
+                            + tip));
+    }
+
     /* ── MF-1364: die Umdrehungen kommen aus dem Settings-Reiter ─────────
      * MF-1293 legte die Umdrehungen in den Settings-Reiter; verbunden war
      * nichts, und die Aufnahme lief immer mit 2. Der Reiter fragt jetzt
