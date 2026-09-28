@@ -2195,6 +2195,16 @@
       "content": "Applesauce-Flussaufnahme einer 3,5\"-Diskette, 18367150 Byte, Disk Type 2. STRM fuehrt 160 verschiedene Locations (0..159), davon 80 UNGERADE — nach der A2R-2.x-Referenz ist die Location hier ((track << 1) + side), eine ungerade Zahl belegt also Seite 1. Das sind 80 Spuren auf 2 Seiten. Genau dieser Fall fehlte dem Korpus bis MF-1487: alle 50 Fahey-Aufnahmen (MF-1483) sind Disk Type 1, wo rohe und zerlegte Location zusammenfallen."
     },
     {
+      "file": "tests/corpus/copyiiplus_3loc.a2r",
+      "sha256": "969642f8bf9d54fe52f8a978dd0140166a8b14633b2bcf7278a265285abbae51",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce v1.1b10 (A2R2, INFO v1, Disk Type 2 = 3.5\", schreibgeschuetzt, nicht synchron) — Fassung und Typ aus dem Dateikopf gelesen",
+      "source": "Zulieferung im Paket `neue-ideen/uft-a2r-code.zip`, Datei tests/fixtures/copyiiplus_3loc.a2r (373 186 Byte): drei Orte (Location 0/80/158, je eine timing- und eine xtiming-Aufnahme) aus „Copy II Plus - Disk 1.a2r“ (320 Aufnahmen), in einem echten A2R2-Behaelter belassen. Kommerzieller Titel ohne belegte Weitergabe — EIGENTUEMERENTSCHEIDUNG 2026-09-28, woertlich „Copy-II-Plus-Fixture aus uft-a2r-code auf alle faelle verwenden“: verwendet, LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153). Nachbeschaffung aus dem Paket; die Summe oben pruefen.",
+      "test": "test_a2r_drehzahl_echte_aufnahmen",
+      "content": "Applesauce-Flussaufnahme einer 3,5\"-Diskette, 3 Orte = Spur 0/40/79 Seite 0 (Zonen 0, 2, 4). Schleifenpunkte 1222864 / 1020536 / 815856 Ticks zu 125 ns = 392,5 / 470,3 / 588,3 U/min."
+    },
+    {
       "file": "tests/corpus/vignau_a2r2_35/qdrive_iigs_d1.a2r",
       "sha256": "d6e276b3041ed6caf13f63818219befe82af364df98f6a9e0fbe188f6fa09f16",
       "format": "a2r",

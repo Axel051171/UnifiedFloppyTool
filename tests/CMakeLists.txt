@@ -3983,6 +3983,14 @@ foreach(test_source ${TEST_SOURCES})
         # Folgewert addiert wird — an JEDER Stelle, die Flussbytes zaehlt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_a2r_drehzahl_echte_aufnahmen")
+        # MF-1510 (P3-667): rpm ist EINE Umdrehung (A2R2: Schleifenpunkt,
+        # A2R3: Abstand der Indexsignale), nicht das Aufnahmefenster.
+        # Gemessen an echten Applesauce-Dateien, alle nur lokal (77 ohne).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_a2r_strm_verschachtelt")
         # MF-1157: eine STRM-Folge 0,1,0 schrieb hinter das Ende des
         # Spurfeldes. Dieselbe Quellenmenge wie test_a2r_layout darueber;
