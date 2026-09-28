@@ -237,6 +237,78 @@ int main(void)
         remove(pfad);
     }
 
+    /* ── Und jetzt an ECHTEN 3,5"-Aufnahmen (MF-1487) ───────────────
+     *
+     * Bis MF-1484 ruhte die 3,5"-Haelfte allein auf der Referenz und dem
+     * Behaelter oben. Der Korpus hatte keine zweiseitige A2R2 — alle 50
+     * Fahey-Aufnahmen (MF-1483) sind Disk Type 1, wo rohe und zerlegte
+     * Location zusammenfallen.
+     *
+     * Seit MF-1487 liegen zwei da. Auswahl gemessen, nicht geraten: der
+     * Quellordner ist ein LAUFENDER, unvollstaendiger Download (innerhalb
+     * von Minuten 310 -> 335 Dateien, 262 -> 280 mit Nullkopf), und eine
+     * halbe Flussdatei liest sich plausibel. Aufgenommen wurde nur, was
+     * zwei Pruefungen bestand: Blocklaengen enden genau bei der
+     * Dateigroesse UND ein META-Block steht hinter STRM. Von 327 Dateien
+     * blieben 28; `Alge-Blaster Plus` erklaerte 19 919 745 Byte und hatte
+     * 4 194 304.
+     *
+     * Was hier zaehlt, ist die UNGERADE Location: sie belegt Seite 1 und
+     * loest die Zerlegung ueberhaupt aus. `waitless_d1` traegt 160 Orte,
+     * 80 davon ungerade, also 80 Spuren auf 2 Seiten. */
+    printf("\n== Echte 3,5\"-Aufnahmen, Disk Type 2 (LOCAL-ONLY) ==\n");
+    struct { const char *datei; const char *etikett; unsigned zyl, kopf; }
+    echt[] = {
+        { "vignau_a2r2_35/waitless_d1.a2r",
+          "WaitLess D1 (160 Orte, 80 ungerade)", 80, 2 },
+        { "vignau_a2r2_35/qdrive_iigs_d1.a2r",
+          "Q Drive IIgs D1 (10 Orte, 5 ungerade)", 5, 2 },
+    };
+    int echt_da = 0;
+    for (size_t i = 0; i < sizeof echt / sizeof echt[0]; i++) {
+        snprintf(pfad, sizeof pfad, "%s/%s", UFT_CORPUS_RESTRICTED_DIR,
+                 echt[i].datei);
+        FILE *pruef = fopen(pfad, "rb");
+        if (!pruef) continue;
+        fclose(pruef);
+        echt_da++;
+
+        uft_disk_t *de = uft_disk_open(pfad, true);
+        CHECK(de != NULL, "%s: uft_disk_open lieferte NULL",
+              echt[i].etikett);
+        if (!de) continue;
+        printf("    %-40s %ux%u\n", echt[i].etikett,
+               (unsigned)de->geometry.cylinders,
+               (unsigned)de->geometry.heads);
+        CHECK(uft_disk_plugin(de) == &uft_format_plugin_a2r,
+              "%s wurde nicht vom a2r-Plugin geoeffnet", echt[i].etikett);
+        /* Der Kern: zwei Koepfe. Roh gelesen waere die groesste Location
+         * der „Zylinder" und die Seite verloren — bei waitless_d1 also
+         * 160x1 statt 80x2. */
+        CHECK(de->geometry.heads == echt[i].kopf,
+              "%s meldet %u Kopf/Koepfe statt %u. Ungerade Locations sind "
+              "nach der A2R-2.x-Referenz Seite 1; wer sie roh nimmt, "
+              "verwirft die Seite", echt[i].etikett,
+              (unsigned)de->geometry.heads, echt[i].kopf);
+        CHECK(de->geometry.cylinders == echt[i].zyl,
+              "%s meldet %u Zylinder statt %u — ((track << 1) + side) "
+              "halbiert die Location, roh waere es das Doppelte",
+              echt[i].etikett, (unsigned)de->geometry.cylinders,
+              echt[i].zyl);
+        uft_disk_close(de);
+    }
+    if (echt_da == 0) {
+        printf("    (keine vorhanden — LOCAL-ONLY, Hash und Herkunft in "
+               "tests/corpus_manifest/manifest.json)\n");
+        printf("    Die Zusicherungen oben sind gelaufen; die "
+               "3,5\"-Haelfte ruht dann auf der Referenz und dem "
+               "gebauten Behaelter allein.\n");
+    } else {
+        /* MF-1340: teilweise vorhanden ist kein Skip. */
+        CHECK(echt_da == 2, "nur %d von 2 echten Aufnahmen vorhanden — "
+                            "teilweise ist kein Skip", echt_da);
+    }
+
     printf("\n%d bestanden, %d fehlgeschlagen\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }
