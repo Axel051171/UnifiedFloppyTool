@@ -4682,6 +4682,12 @@ foreach(test_source ${TEST_SOURCES})
         # brachen nur bei einer Selbst-Schleife ab
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
+    elseif(${test_name} STREQUAL "test_d88_spur_nach_kopf")
+        # MF-1475: Sektorzahl aus dem Spurkopf, ID aus C/H/R/N, Laenge 0 =
+        # Sektor ohne Daten — gegen MAME d88_dsk.cpp.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_FREE_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)

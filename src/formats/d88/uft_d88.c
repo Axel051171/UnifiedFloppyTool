@@ -176,16 +176,50 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     
     uft_track_init(track, cyl, head);
     if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { return UFT_ERROR_INVALID_ARG; }
+    /* MF-1475, reference MAME src/lib/formats/d88_dsk.cpp (BSD-3-Clause,
+     * read only), d88_format::load():
+     *   - the track's sector count is get_u16le(hs+4) of its FIRST header
+     *     (0x1000 means 0x10, "broken vfman converter"), not the geometry:
+     *     reading geometry.sectors headers ran a one-sector track on into
+     *     the next track and reported its data under an invented sector;
+     *   - the ID is hs[0..3] (C, H, R, N) as recorded, not the physical
+     *     position and not N computed from the data length;
+     *   - size 0 is a sector without data (data = nullptr), not the end of
+     *     the track: it is kept with its ID, marked unavailable (as the IMD
+     *     plugin marks its type 0), and the track goes on.
+     * Guarded by tests/test_d88_spur_nach_kopf.c. */
     uint8_t sec_hdr[16];
-    for (int s = 0; s < disk->geometry.sectors; s++) {
+    int anzahl = 1;
+    for (int s = 0; s < anzahl; s++) {
         if (fread(sec_hdr, 1, 16, p->file) != 16) break;
+        if (s == 0) {
+            anzahl = uft_read_le16(&sec_hdr[4]);
+            if (anzahl == 0x1000) anzahl = 0x10;
+            if (anzahl < 1 || anzahl > 256) break;
+        }
         uint16_t dsize = uft_read_le16(&sec_hdr[14]);
-        if (dsize == 0 || dsize > 8192) break;
-        
+        if (dsize > 8192) break;
+        if (dsize == 0) {
+            const uint8_t leer = 0;
+            uft_format_add_sector_with_id(track, sec_hdr[2], &leer, 1,
+                                          sec_hdr[0], sec_hdr[1]);
+            if (track->sector_count > 0) {
+                uft_sector_t *z = &track->sectors[track->sector_count - 1];
+                z->id.size_code = sec_hdr[3];
+                z->data_len = 0;
+                z->data_size = 0;
+            }
+            uft_format_mark_last_unavailable(track);
+            continue;
+        }
+
         uint8_t* buf = malloc(dsize);
         if (!buf) break;
         if (fread(buf, 1, dsize, p->file) != dsize) { free(buf); break; }
-        uft_format_add_sector(track, sec_hdr[2] - 1, buf, dsize, cyl, head);
+        uft_format_add_sector_with_id(track, sec_hdr[2], buf, dsize,
+                                      sec_hdr[0], sec_hdr[1]);
+        if (track->sector_count > 0)
+            track->sectors[track->sector_count - 1].id.size_code = sec_hdr[3];
         /* D88 sector header (pc98.org spec / MAME d88_dsk):
          *   +07 DDAM flag  (0x00 normal, 0x10 deleted-data mark)
          *   +08 FDC status (0x00 normal, 0xA0 ID CRC error, 0xB0 data CRC

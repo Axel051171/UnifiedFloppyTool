@@ -590,6 +590,16 @@ FAELLE: dict[str, list[Fall]] = {
                      "    return UFT_OK;\n}\n"},
             erwartet="sauber",
             warum="add_sector legt den Zeiger vorher an."),
+        Fall(
+            name="benutzt add_sector_with_id",
+            dateien={"src/x.c":
+                     "uft_error_t x_read_track(uft_disk_t *d, "
+                     "uft_track_t *t) {\n"
+                     "    uft_format_add_sector_with_id(t, 1, buf, 256, 0, 0);\n"
+                     "    t->sectors[0].data = buf;\n"
+                     "    return UFT_OK;\n}\n"},
+            erwartet="sauber",
+            warum="sie ruft uft_track_add_sector() (MF-1475)."),
     ],
 
     # ---------------------------------------------------------------

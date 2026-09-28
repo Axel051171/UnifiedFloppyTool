@@ -64,7 +64,13 @@ WRITE = re.compile(r"->sectors\s*\[[^\]]+\]\s*(?:\.\w+\s*)?=(?!=)")
 # Messwerkzeug, das falsch misst, ist schlimmer als keines — dieselbe
 # Lehre wie beim Verwaisten-Tor (306 gegen 228) und beim Banner-Audit
 # (12 gegen 6).
+#
+# MF-1475: `uft_format_add_sector_with_id` fehlte. Sie ruft
+# uft_track_add_sector() (include/uft/uft_format_common.h) und legt den
+# Zeiger damit genauso an; ohne sie meldete das Tor den D88-Leser, der die
+# ID aus dem Sektorkopf nimmt, als Schreiber durch NULL.
 ADD_API = re.compile(r"\b(uft_track_add_sector|uft_format_add_sector|"
+                     r"uft_format_add_sector_with_id|"
                      r"uft_track_reserve_sectors)\s*\(")
 
 
