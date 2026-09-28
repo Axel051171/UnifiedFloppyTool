@@ -110,6 +110,39 @@ def grund_aus(protokoll: str) -> str:
     return rest[-1] if rest else "kein Grund im Protokoll"
 
 
+def _ratsche_zeile(baum: Path, pfade: list[str]) -> str:
+    """-> `Ratsche-uebersprungen: …`-Zeile, oder "" wenn nichts offen ist.
+
+    MF-1508: `audit_konstantenfamilien.py` meldet, wenn eine beruehrte
+    Datei weiterhin eine Konstantenkopie traegt, blockiert aber nicht
+    (gemessen: es traefe jeden fuenften Commit). Damit die Meldung nicht
+    folgenlos bleibt, wandert sie in den Rumpf — dort ist sie zaehlbar.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import audit_konstantenfamilien as _kf
+        bekannt = _kf.manifest_lesen()
+        if not bekannt:
+            return ""
+        nach_datei: dict[str, list[str]] = {}
+        for stellen in bekannt.values():
+            for s in stellen:
+                nach_datei.setdefault(s.split("::")[0], []).append(s)
+        offen = []
+        for p in pfade:
+            norm = p.replace("\\", "/")
+            if norm in nach_datei:
+                offen.append("%s (%d)" % (norm, len(nach_datei[norm])))
+        if not offen:
+            return ""
+        return ("\nRatsche-uebersprungen: %s — Konstantenkopie(n) bleiben "
+                "(P3-666)\n" % ", ".join(sorted(offen)))
+    except Exception:
+        # Ein Vermerk, der nicht zustande kommt, darf keinen Commit
+        # verhindern — er ist eine Notiz, kein Tor.
+        return ""
+
+
 def committe(nachricht: Path, pfade: list[str], log: Path | None = None,
              cwd: Path | None = None) -> tuple[int, list[str]]:
     """-> (rc, zeilen); die LETZTE Zeile ist immer das Urteil."""
@@ -146,6 +179,22 @@ def committe(nachricht: Path, pfade: list[str], log: Path | None = None,
             nachricht = ergaenzt
             zeilen.append("K0 aus der Bilanz angehaengt: %d von %d"
                           % (k0[0], k0[1]))
+
+    # Uebersprungene Ratsche als Zeile in den Rumpf (MF-1508). Die
+    # Warnung blockiert nicht (gemessen: sie traefe jeden fuenften
+    # Commit) — aber folgenlos darf sie auch nicht bleiben. Wer dreimal
+    # dieselbe Datei ueberspringt, hat P3-666 auf dem Tisch, und die
+    # Rueckschau zaehlt genau diese Zeilen.
+    ratschenzeile = _ratsche_zeile(baum, pfade)
+    if ratschenzeile:
+        text2 = nachricht.read_text(encoding="utf-8", errors="replace")
+        if "Ratsche-uebersprungen:" not in text2:
+            erg = nachricht.with_suffix(nachricht.suffix + ".r")
+            erg.write_text(text2.rstrip("\n") + "\n" + ratschenzeile,
+                           encoding="utf-8")
+            nachricht = erg
+            zeilen.append("Ratsche vermerkt: %s"
+                          % ratschenzeile.strip()[:70])
 
     zu = git("add", "--", *pfade, cwd=baum)
     if zu.returncode != 0:
