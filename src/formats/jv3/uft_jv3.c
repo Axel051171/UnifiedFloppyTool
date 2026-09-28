@@ -403,8 +403,12 @@ static uft_error_t jv3_read_track(uft_disk_t *disk, int cyl, int head,
                                       (uint8_t)cyl, (uint8_t)head);
         if (track->sector_count > 0) {
             uft_sector_t *s = &track->sectors[track->sector_count - 1];
+            /* MF-1492 (P3-659): Tim Mann, the format's author: "JV3_ERROR,
+             * if set, indicates that the sector should show a data CRC
+             * error when read." Recorded in `status`, where the disk2
+             * bridge reads a CRC verdict. */
             if (e->flags & JV3_F_CRC_ERR)
-                uft_sector_set_crc(s, false);
+                uft_sector_mark_data_crc_error(s);
             /* MF-1017, Befund 5: „deleted" ist DAM 0xF8, und der Kode
              * steht in den Bits 5-6 ZUSAMMEN mit der Dichte in Bit 7 —
              * nicht in Bit 6 allein. */

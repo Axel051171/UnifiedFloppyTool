@@ -147,7 +147,14 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
 
         if (track->sector_count > 0) {
             uft_sector_t *dst = &track->sectors[track->sector_count - 1];
-            if (sv.crc_error) uft_sector_set_crc(dst, false);
+            /* MF-1492 (P3-659): the Pasti FDC flag is a CONDITION, not one
+             * value — "CRC error (data if RNF=0, ID if RNF=1)"
+             * (STX_SF_CRC_ERR in uft_stx_air.c). Recorded in `status`,
+             * where the disk2 bridge reads a CRC verdict. */
+            if (sv.crc_error) {
+                if (sv.rnf) uft_sector_mark_id_crc_error(dst);
+                else        uft_sector_mark_data_crc_error(dst);
+            }
             if (sv.deleted)   dst->deleted = true;
         }
     }

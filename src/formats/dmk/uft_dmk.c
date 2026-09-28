@@ -302,8 +302,14 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                                                         (d_mfm ? 3u : 0u) + 1u + sec_sz);
                         uint16_t d_crc_stored = (uint16_t)(((uint16_t)dam[1 + sec_sz] << 8) |
                                                             dam[2 + sec_sz]);
+                        /* MF-1492 (P3-659): recomputed here, so "checked"
+                         * is proven for the good sector too; before, only
+                         * crc_ok changed, which the disk2 bridge does not
+                         * read — both came out as "unchecked". */
+                        last->status = (uft_sector_status_t)(last->status
+                                                             | UFT_SECTOR_CRC_CHECKED);
                         if (d_crc_calc != d_crc_stored)
-                            uft_sector_set_crc(last, false);
+                            uft_sector_mark_data_crc_error(last);
                     }
                 }
                 break;
