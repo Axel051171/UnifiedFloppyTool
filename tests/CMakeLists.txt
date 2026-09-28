@@ -4666,6 +4666,13 @@ foreach(test_source ${TEST_SOURCES})
             # MF-404: the half-track test needs the rights-free VICE G64 as
             # its negative control (a disk that has none).
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gcr_register_gegen_bestehende")
+        # MF-1509: das GCR-Codec-Register gegen die Kodierer, die es
+        # ersetzen soll — zwei Haende (MF-644), und der Vergleich laeuft
+        # ueber `cbm_gcr_encode_chunk()`, nicht ueber eine Tafel: die
+        # Bitpackung ist der Teil, in dem die Fehler wohnen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c)
     elseif(${test_name} STREQUAL "test_c64_g64_gegen_nibscan")
         # MF-1503: Differenzlauf gegen das Oracle `nibscan` je Halbspur —
         # die Eichung, die der ORACLES.md-Eintrag aus MF-1502 selbst als

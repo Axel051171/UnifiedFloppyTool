@@ -125,7 +125,24 @@ Fehler dieser Sitzung — was | gefangen von | Folge
        und eine abweichende Zahl im Text weist es ab (Selbsttest 10/10).
        Die zweite Stelle ist damit abgeschafft, nicht geprueft.
 
-K0 dieser Sitzung: 2 von 11
+ 12. Der Teststrom fuer die GCR-Erkennung war 64 Byte lang — das geht
+     durch 5 Bit nicht auf, die letzten Bytes blieben 0x00 und wurden als
+     ungueltige Quintette gezaehlt. Der Test mass damit seinen eigenen
+     AUFBAU, nicht den Codec | TEST (wurde rot, 10 von 11) | 60 Byte =
+       genau 96 Quintette, plus `ASSERT(aus == STROM_BYTE && bits == 0)`
+       als Sperre. Der Code war richtig, die Messung falsch — geprueft
+       nach MF-1177 Satz 1, bevor irgendetwas am Register geaendert wurde.
+
+ 13. Der erste Entwurf des GCR-Registers legte eine eigene 16-Byte-Tafel
+     an — die **13.** Kopie der CBM-Encode-Tafel. Ein Register, das die
+     Kopien zusammenfuehren soll und dabei eine neue anlegt
+     | TOR audit_konstantenfamilien (drei Stunden nach seinem Bau)
+     | die Tafel wird jetzt aus `include/uft/uft_cbm_gcr.h` GELESEN statt
+       wiederholt; sie wandert erst mit dem letzten Umhaengen ins
+       Register (Schritt 3 von P3-666). Das Tor hat damit nicht nur einen
+       Fehler gefangen, sondern die bessere Bauform erzwungen.
+
+K0 dieser Sitzung: 4 von 13
 
 **Befund ueber diese Bilanz selbst, und er gehoert hierher:** zwischen
 ihrem ersten Schreiben und dem Sitzungsende kamen die Fehler 8, 9 und 10
