@@ -1648,7 +1648,18 @@ def main() -> int:
         # durch einen PreToolUse-Haken auf User-Ebene
         # (`audit_heredoc.py --haken`, Eigentuemerentscheidung
         # 2026-09-26); hier im Tor steht nur, was das CI sehen kann: der
-        # Klassifizierer haelt seine Faelle (29, Mutationsmatrix 11/11).
+        # Klassifizierer haelt seine Faelle (39 seit MF-1504; hier stand
+        # 29, und die Zahl war gedriftet — dieselbe Klasse wie MF-541).
+        #
+        # MF-1504 hat die Regel auf INLINE-Skripte ausgeweitet
+        # (`python -c`, `perl -e`): ein Heredoc ist nicht der einzige Weg,
+        # ein Skript durch bash zu schicken. Gemessen war ein
+        # `python -c "...`...`..."`, dessen Backticks bash als
+        # Kommando-Substitution AUSGEFUEHRT hat, bevor python das
+        # Argument sah. Abgewiesen wird seither ein mehrzeiliges
+        # Inline-Skript und eines mit ` oder $( in DOPPELTEN
+        # Anfuehrungszeichen; in einfachen substituiert bash nicht, und
+        # ein einzeiliges `-c` bleibt der normale Weg.
         #
         # Benannte Luecke: Sitzungsprotokolle sieht das CI nicht. Ob der
         # Haken wirkt, misst `audit_heredoc.py --protokolle` lokal, und es

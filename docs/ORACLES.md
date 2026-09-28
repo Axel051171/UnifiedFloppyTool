@@ -35,6 +35,40 @@ ausgeführt wurde, ist kein Eintrag. Der Selbsttest
 (`python tests/differential/oracles.py`) sagt, welche vorhanden sind —
 und meldet **nicht** Erfolg, wenn es keines ist.
 
+**Und die Schwesterregel: eine Konstante des Orakels wird nicht
+abgetippt (MF-1504).** Zahlen aus einem Oracle kommen durch sein
+*Binary*, nicht durch eine Tafel im eigenen Baum. Der Anlass ist
+gemessen: beim Eichen von `nibscan` (MF-1503) lag nibtools'
+`sector_map` (gcr.c:28-35) als Array im Test, um sie gegen
+`uft_cbm_sectors_per_track()` zu rechnen — und `audit_cbm_zonen.py`
+hat den Commit dafür abgewiesen, weil es die **24.** Kopie der
+CBM-Zonenlängen im Baum gewesen wäre.
+
+**Die Regel unterscheidet zwei Dinge, und das ist ihr ganzer Inhalt:**
+
+| | gehört **nicht** in den Baum | gehört hinein |
+|---|---|---|
+| **Konstantenfamilie**, die beide Seiten führen (Zonenlängen, Kapazitäten, Lückenmaße, Prüfsummen-Polynome) | eine zweite Tafel ist eine zweite Wahrheit — sie driftet, und die Abweichung sieht aus wie ein Fehler in den DATEN (MF-1177) | die Rechnung an **einer** Stelle; das Orakel wird dagegen gehalten, indem man es **laufen lässt** |
+| **Messergebnis** an einem benannten Gegenstand (dieses Abbild, diese Spur, diese Byte-Zahl) | — | ja, als Tafel mit Datum und Bauzeile: es ist ein Beleg, keine zweite Rechnung, und ohne ihn wäre der Lauf nicht nachvollziehbar |
+
+Wo die Konstante trotzdem gebraucht wird, lässt sie sich meist aus der
+**Ausgabe** des Orakels ablesen statt aus seinem Quelltext — und das ist
+der stärkere Weg, weil er auch einen Fehler des Orakels fangen würde,
+den ein Quelltextvergleich nicht sieht. Vorgeführt in
+`tests/test_c64_g64_gegen_nibscan.c`: auf einer Spur, deren Sollsektoren
+`nibscan` samt und sonders vermisst, **ist** die Zahl der `[E2Sn]`-Marken
+sein `sector_map`-Wert; die Zusage zählt genau die 68 Spuren, in denen er
+mit UFTs Rechnung übereinstimmt.
+
+> **Offener Fall dazu, benannt statt übergangen.** Die t4-Zulieferung
+> (`neue-ideen/…/uft-flux-code.zip`, nicht im Baum) führt
+> `data/nibtools_params.json` mit Kapazitäten und Lückenmaßen, die
+> `uft_gcr5.c` daneben rechnet — mit Fundstelle beschriftet, aber eine
+> zweite Kopie. Bei einer Übernahme gilt: entweder die JSON entfällt,
+> oder sie wird **aus dem Code erzeugt** (`make data`), nie umgekehrt.
+> Festgehalten hier, damit die Frage bei der Übernahme gestellt wird und
+> nicht danach.
+
 ### Fünfte Frage: dieselbe Hand? (MF-644)
 
 > **Wer den Korpus erzeugt hat, darf ihn nicht allein prüfen.**

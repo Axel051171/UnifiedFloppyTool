@@ -88,6 +88,55 @@ INTERPRETER = {
 }
 VORSILBEN = {"sudo", "env", "exec", "time", "command", "nohup"}
 
+# Inline-Skript: `python -c "..."`, `perl -e '...'` und Verwandte (MF-1504).
+# Ein Heredoc ist nicht der einzige Weg, ein Skript durch bash zu schicken;
+# gemessen ist ein `python -c "...`...`..."` durch die Backticks als
+# Kommando-Substitution AUSGEFUEHRT worden, bevor python es je sah.
+RE_INLINE = re.compile(
+    r"(?:^|[;&|(]|\|\||&&)\s*"
+    r"(?:(?:sudo|env|exec|time|command|nohup)\s+)*"
+    r"(python3?|py|perl|ruby|node|deno|bun|php|lua)(?:\.exe)?"
+    r"((?:\s+-[A-Za-z]+)*)\s+-([ce])\s+")
+
+
+def _argument_ab(text: str, pos: int) -> tuple[str, str]:
+    """Das quotierte Argument ab `pos`. -> (inhalt, quote-zeichen).
+
+    Ohne Anfuehrungszeichen wird bis zum naechsten Leerzeichen gelesen;
+    das ist dann ein Einwort-Skript und ohnehin harmlos.
+    """
+    i = pos
+    while i < len(text) and text[i] in " \t":
+        i += 1
+    if i >= len(text):
+        return "", ""
+    q = text[i]
+    if q not in "'\"":
+        ende = text.find(" ", i)
+        return text[i:ende if ende != -1 else len(text)], ""
+    i += 1
+    aus = []
+    while i < len(text):
+        c = text[i]
+        if c == "\\" and q == '"' and i + 1 < len(text):
+            aus.append(text[i:i + 2])
+            i += 2
+            continue
+        if c == q:
+            break
+        aus.append(c)
+        i += 1
+    return "".join(aus), q
+
+
+def _inline_skripte(befehl: str) -> list[tuple[str, str, str, str]]:
+    """-> [(interpreter, schalter, inhalt, quote)] je Inline-Skript."""
+    treffer = []
+    for m in RE_INLINE.finditer(befehl):
+        inhalt, q = _argument_ab(befehl, m.end())
+        treffer.append((m.group(1), m.group(3), inhalt, q))
+    return treffer
+
 
 def _befehlswort(segment: str) -> str:
     """First real command word of a shell segment, lower-case, no `.exe`."""
@@ -142,6 +191,33 @@ def klassifiziere(befehl: str) -> list[tuple[str, str]]:
                         "halbiert ihn vor bash (gemessen: 'x' + 2 Backslashes "
                         "+ 'y' kommt mit 3 Zeichen an). PowerShell oder "
                         "Write benutzen."))
+    # Inline-Skripte (MF-1504) — derselbe Transport, andere Gestalt.
+    for wort, schalter, inhalt, quote in _inline_skripte(befehl):
+        nichtleer = [z for z in inhalt.splitlines() if z.strip()]
+        if len(nichtleer) >= 2:
+            urteile.append((ABWEISEN,
+                            "mehrzeiliges Inline-Skript (%s -%s, %d Zeilen): "
+                            "Skript mit Write als Datei anlegen, dann "
+                            "ausfuehren (MF-1096 Regel 1 Satz 2). Ein "
+                            "Heredoc ist nicht der einzige Weg, ein Skript "
+                            "durch bash zu schicken."
+                            % (wort, schalter, len(nichtleer))))
+        elif quote == '"' and ("`" in inhalt or "$(" in inhalt):
+            # In DOPPELTEN Anfuehrungszeichen ersetzt bash Backtick und
+            # `$(...)` durch die Ausgabe des Befehls, BEVOR der Interpreter
+            # das Argument sieht. Gemessen MF-1504: ein `python -c` mit
+            # Backticks im Argument hat fremde Kommandos ausgefuehrt und
+            # deren Ausgabe als Fehlermeldungen geliefert. In EINFACHEN
+            # Anfuehrungszeichen passiert das nicht — deshalb wird hier
+            # nach dem Quote unterschieden statt pauschal abgewiesen.
+            urteile.append((ABWEISEN,
+                            "Inline-Skript (%s -%s) enthaelt ` oder $( in "
+                            "DOPPELTEN Anfuehrungszeichen: bash ersetzt das "
+                            "durch die Ausgabe eines Befehls, bevor %s es "
+                            "sieht (MF-1504). Einfache Anfuehrungszeichen "
+                            "oder Write benutzen."
+                            % (wort, schalter, wort)))
+
     for zeile, m, rumpf in _heredocs(befehl):
         if RE_GIT.search(zeile):
             continue                      # commit/PR message
@@ -222,6 +298,27 @@ def haken(roh: bytes) -> tuple[int, str]:
 BS2 = "\\" * 2
 FAELLE: list[tuple[str, str, bool]] = [
     # (name, command, expected_blocked)
+    # ── Inline-Skripte (MF-1504) ──────────────────────────────────────
+    ("inline_python_mehrzeilig",
+     "python -c \"import io\nprint(1)\"", True),
+    ("inline_python_backtick_doppelquote",
+     "python -c \"t=t.replace('a','`b`')\"", True),
+    ("inline_python_dollarklammer_doppelquote",
+     'python -c "print(\'$(whoami)\')"', True),
+    ("inline_perl_mehrzeilig",
+     "perl -e 'my $x = 1;\nprint $x;'", True),
+    ("inline_nach_und",
+     "cd x && python3 -c \"a\nb\"", True),
+    ("inline_mit_schaltern",
+     "python -B -u -c \"eins\nzwei\"", True),
+    # Erlaubt: ein einzeiliges Inline-Skript ist der normale Weg.
+    ("inline_python_einzeilig", "python -c \"print(1)\"", False),
+    # Erlaubt: in EINFACHEN Anfuehrungszeichen substituiert bash nicht.
+    ("inline_backtick_einfachquote",
+     "python -c 'print(\"`date`\")'", False),
+    # Kein Inline-Skript: `-c` gehoert einem anderen Programm.
+    ("grep_c_ist_kein_skript", "grep -c muster datei.txt", False),
+    ("sh_datei_statt_c", "python scripts/x.py -c 5", False),
     ("cat_senke_vorn", "cat > f.c <<'EOF'\nint x;\nEOF", True),
     ("cat_senke_hinten", "cat <<'EOF' > f.c\nint x;\nEOF", True),
     # One body line on purpose: with two, the multi-line rule would reject
