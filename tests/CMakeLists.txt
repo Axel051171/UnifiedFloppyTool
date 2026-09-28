@@ -2468,6 +2468,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+    elseif(${test_name} STREQUAL "test_pro_phantom_behaelt_duplikat")
+        # MF-1495: ein schlechtes Phantom behaelt UFT_SECTOR_DUPLICATE —
+        # vorher ersetzte der Fehler das Duplikat-Bit. Selbe Quellen wie
+        # test_pro_gegen_atari800, dieselbe Satzanordnung.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atari/uft_pro_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_format_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_dcm_gegen_atrip")
         # MF-1053: das erste DCM von FREMDER Hand. `atrip` (Rob McMullen,
         # GPL-2) hat beide Pruefdateien mit seinem Kodierer erzeugt —
