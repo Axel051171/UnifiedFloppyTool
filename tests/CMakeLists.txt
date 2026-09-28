@@ -4625,6 +4625,20 @@ foreach(test_source ${TEST_SOURCES})
             # MF-404: the half-track test needs the rights-free VICE G64 as
             # its negative control (a disk that has none).
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_c64_g64_gegen_nibscan")
+        # MF-1503: Differenzlauf gegen das Oracle `nibscan` je Halbspur —
+        # die Eichung, die der ORACLES.md-Eintrag aus MF-1502 selbst als
+        # fehlend benennt. Derselbe Pfad wie test_c64_protection_real_corpus,
+        # ohne ufm_c64_scheme_detect.c: hier wird gemessen, nicht klassifiziert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_d64_writer.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_copylock_seed_wird_nicht_erfunden")
         # MF-943: uft_copylock_extract_seed() erfand bei fehlgeschlagener
         # Rueckgewinnung einen Seed aus Byte-Positionen und meldete 0 —
