@@ -511,14 +511,50 @@ nicht befragbar, lässt der Filter alles durch **und sagt es**.
 er bewegt.** Ein Fund, der keine Zahl bewegt, ist **Fundus, nicht
 Auftrag** — er wird notiert, nicht eingeplant.
 
-Die vier geführten Zahlen:
+**Jede Kennzahl hat eine Richtung, einen MESSBEFEHL und einen Stand mit
+Datum (Eigentümerentscheidung 2026-09-28, MF-1505).** Eine Kennzahl ohne
+Messbefehl ist ein Wunsch, kein Maß — sie wird dann mit `Messbefehl
+fehlt` geführt und nicht mit einer Zahl, die hier niemand nachrechnen
+kann. Hier standen früher vier Zahlen ohne Messbefehlspalte; die vier
+sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
-| Kennzahl | Richtung | Quelle |
-|---|---|---|
-| ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `docs/VERIFICATION_TIERS.md`, abgeleitet |
-| angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet |
-| leckende Tests | **null halten** | ASan/UBSan in CI |
-| Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` |
+| # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
+|---|---|---|---|---|
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **2 von 10** (24. Zonenkopie · `STAND.md` veraltet) |
+| **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
+| **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
+| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_cbm_zonen.py` (Zonen). Kapazitäten, Lückenmaße, CRC-Polynome: **kein Audit** | Zonen **0 außerhalb** (23 im Manifest) |
+| **K4** | Formate ohne **gemessenen** Erzeuger-Kanal | **runter** | `python scripts/gen_erzeuger_zensus.py` → §Stand, abgeleitet | **8** von 89 offen, davon **0** mit gemessenem Kanal |
+| **K5** | Waisen im Baum | **runter** | `docs/orphan_baseline.txt`, Datenzeilen | **199** |
+| **K6** | Regeln, die als Satz dastehen und **kein Tor** haben | **runter** | Rückschau, [`.claude/STEHENDE_AUFTRAEGE.md`](.claude/STEHENDE_AUFTRAEGE.md) | **2** — „Orakelzahlen durchs Binary"; „wer eine Menge parst, zählt sie gegen" |
+| **K7** | angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet über `update_inventory.py` | siehe §3 |
+| **K8** | leckende Tests | **null halten** | ASan/UBSan in CI | 0 |
+| **K9** | Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` | siehe dort |
+
+> **Eine Kennzahl trägt absichtlich keinen vollständigen Messbefehl:**
+> K3 hat einen für **eine** Konstantenfamilie (Zonen). Kapazitäten,
+> Lückenmaße und CRC-Polynome haben kein Audit. Das ist der ehrliche
+> Stand — und der nächste Schritt dort ist die **Messung** (welche
+> Familien werden mehrfach geführt?), nicht das Tor. Eine Zahl aus einem
+> anderen Baum einzutragen wäre die Klasse, die dieser Baum viermal
+> bezahlt hat.
+>
+> **K4 hatte hier zuerst „Messbefehl fehlt" stehen, und das war falsch.**
+> Der Erzeuger-Zensus misst genau diese Frage seit MF-1087 und wird bei
+> jedem Commit erzeugt; die Kennzahl war nur nie mit ihm verbunden. Die
+> **Erfindungsfälle**, die dabei auffallen, sind eine Teilmenge und
+> bleiben einzeln benannt: `gwraw` (Absage statt Sonde), `hxcstream`
+> (berichtigt — Dateimagie ist `CHKH`, nicht die Plugin-ID; P3-660),
+> C64FRZ (**offen**, P3-661). Sie zählen nicht doppelt, sie sind der
+> Grund, warum die 8 offen sind.
+>
+> **Und K0 ist die Kennzahl über alle anderen.** Sie misst nicht den
+> Baum, sondern ob die Regeln greifen. Der Anlass ist gemessen: am
+> 2026-09-28 standen fünf Regeln als Satz da, und dieselbe Sitzung hat
+> eine davon im selben Atemzug verletzt (die 24. Kopie der
+> CBM-Zonenlängen). Gefangen hat es das **Tor**, nicht der Agent.
+> Steigt K0, halten die Regeln; bleibt sie niedrig, ist jede weitere
+> Regel als Prosa verschwendet.
 
 > **Die erste Zahl kann gemessen nicht durch Arbeit fallen (MF-1489).**
 > „T3 runter" liest sich wie ein Rückstand. Gemessen ist er keiner:
@@ -549,7 +585,16 @@ Die vier geführten Zahlen:
 > und `docs/VERIFICATION_TIERS.md` sagt es seit MF-1489 selbst,
 > abgeleitet aus dem Zensus statt hier gepflegt.
 
-Wer eine **fünfte** Zahl einführt, begründet sie. Eine Kandidatin steht
+**Jede Sitzung endet mit einer Bilanz (MF-1505).** Vorlage und Regeln:
+[`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md). Sie nennt,
+welche Kennzahl sich bewegt hat, und listet **jeden Fehler der Sitzung
+mit der Angabe, wer ihn gefangen hat** — Tor, Mensch oder niemand. Ein
+vom Menschen gefangener Fehler bekommt vor dem Ende ein Tor, einen
+Rotbeweis, oder eine Fundus-Zeile mit der Begründung, warum beides
+nicht geht. Ohne Bilanz ist die Sitzung offen, und für die Rückschau
+ist sie unsichtbar.
+
+Wer eine **weitere** Zahl einführt, begründet sie. Eine Kandidatin steht
 bereit: **Dateien mit ungeklärter Herkunft**. Sie hat **zwei Stufen**,
 und die zu verwechseln wäre genau die Zahlendrift, die dieser Baum
 dreimal gesehen hat (MF-645):
