@@ -22,6 +22,38 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 > 49 Geometriezeilen — und stehen deshalb in einem eigenen Abschnitt
 > unten, statt diese Summe zu verwaessern (MF-1256).
 
+### Warum diese Zahlen nicht durch Arbeit fallen (MF-1489)
+
+**8 der 8 Formate auf T2/T3 haben im Erzeuger-Zensus Kanal „keiner“** — 
+Klasse „C: gemessen, dieser Weg traegt nicht“. T1b verlangt ein Abbild von
+**fremder Hand**; wo keine fremde Hand existiert, senkt keine Arbeit die
+Zahl. `CLAUDE.md` fuehrt die Kennzahl „ungeprüfte Formate (T3)“ mit der
+Richtung *runter* — das gilt, ist hier aber **nicht durch Arbeit** zu
+erreichen, sondern nur ueber eine echte Aufnahme (Hardware, und die ist
+community-delegiert — MF-310) oder eine Eigentuemerentscheidung ueber eine
+Quelle ohne Lizenzangabe.
+
+| Format | Stufe | Erzeuger |
+|---|---|---|
+| `akai_s900` | **T2** | keiner |
+| `dim` | **T2** | keiner |
+| `korg_dss1` | **T2** | keiner |
+| `lisa_twiggy` | **T2** | keiner |
+| `nfd` | **T2** | keiner |
+| `pro` | **T2** | keiner |
+| `syn` | **T3** | keiner |
+| `udi` | **T2** | keiner |
+
+Das betrifft **das einzige T3** (`syn`). Der Fall ist am Einzelnen belegt:
+`floptool` antwortet `Error: Format 'syn' unknown`, hxcfes 207 Module
+kennen es nicht (MF-1097), und es gibt keine oeffentliche Beschreibung
+eines `.syn`-Behaelters — Synclavier-Disketten werden als Rohfluss
+aufgenommen (unabhaengig nachgeprueft MF-1489). Die Geometrie selbst ist
+seit MF-1141 an Synclaviers EIGENEN NED-Quellen (MIT) belegt; offen sind
+die Seitenzahl — NED liest sie zur Laufzeit aus der Laufwerks-ID, sie steht
+in keiner Datei — und die Anordnung in der `.syn`-Datei, die die Quelle
+gar nicht beschreibt. Beides ist durch Lesen nicht entscheidbar.
+
 ## Die 49 DSK-Makrozeilen — nach Koernung, nicht nach Zahl
 
 `src/formats/dsk_generic/uft_dsk_generic.c` erzeugt ueber EIN Makro 49

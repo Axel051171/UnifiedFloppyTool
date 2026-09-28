@@ -52,6 +52,60 @@ HEADER = (
 )
 
 
+def _zensus_text(repo: Path | None = None) -> str:
+    """Der Erzeuger-Zensus als Text, oder leer.
+
+    Fehlt er, faellt der Abschnitt unten ganz weg — eine Aussage ohne
+    Grundlage ist schlimmer als keine. Er wird NICHT nachgebaut: seine
+    Messung gehoert `gen_erzeuger_zensus.py` (MF-1177, eine Groesse eine
+    Rechnung).
+    """
+    p = (repo or Path(__file__).resolve().parents[1]) / "docs" / \
+        "ERZEUGER_ZENSUS.md"
+    try:
+        return p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def stufen_ohne_erzeuger(tafel_zeilen, zensus_text: str) -> list:
+    """T2-/T3-Formate, fuer die der Erzeuger-Zensus Kanal „keiner" fuehrt.
+
+    Warum das hierher gehoert: `CLAUDE.md` fuehrt die Kennzahl „ungeprüfte
+    Formate (T3)" mit der Richtung **runter**. Das liest sich wie ein
+    Rueckstand, der abgearbeitet wird. Gemessen ist er das nicht: T1b
+    verlangt ein Abbild von **fremder Hand**, und der Zensus
+    (`docs/ERZEUGER_ZENSUS.md`, selbst erzeugt) fuehrt fuer ALLE
+    T2/T3-Formate Kanal „keiner" mit der Klasse „C — gemessen: dieser Weg
+    traegt nicht". Wo keine fremde Hand existiert, senkt keine Arbeit die
+    Zahl.
+
+    Belegt am Einzelfall `syn` (MF-1097, unabhaengig nachgeprueft
+    MF-1489): `floptool` antwortet `Error: Format 'syn' unknown`, hxcfes
+    207 Module kennen es nicht, und es gibt keine oeffentliche
+    Beschreibung eines `.syn`-Behaelters — Synclavier-Disketten werden als
+    Rohfluss aufgenommen.
+
+    Die Zahl bleibt unveraendert; was sich aendert, ist nur, dass die
+    Tafel ihren eigenen Grund nennt (MF-1077: Kennzahlen sind Folgen,
+    keine Ziele — hier eine Folge, die ohne fremde Hand nicht fallen
+    KANN).
+
+    Diese Funktion urteilt nicht ueber die Formate; sie verbindet zwei
+    erzeugte Dokumente und zaehlt. Rueckgabe: [(name, stufe), …] sortiert.
+    """
+    kanal = {}
+    for z in (zensus_text or "").split("\n"):
+        sp = z.split("|")
+        if len(sp) > 7 and sp[1].strip().startswith("`"):
+            kanal[sp[1].strip().strip("`")] = sp[6].strip()
+    treffer = []
+    for name, stufe in tafel_zeilen or []:
+        if stufe in ("T2", "T3") and kanal.get(name) == "keiner":
+            treffer.append((name, stufe))
+    return sorted(treffer)
+
+
 def _tests_from_cmake(repo: Path) -> dict[str, set[str]]:
     """Map plugin source path -> set of test names that target_sources it."""
     cml = repo / "tests" / "CMakeLists.txt"
@@ -574,6 +628,69 @@ def render_md(rows: list[dict], dsk: dict | None = None) -> str:
                  "eigenen Abschnitt")
     lines.append("> unten, statt diese Summe zu verwaessern (MF-1256).")
     lines.append("")
+
+    # MF-1489: die Zahl nennt ihren eigenen Grund. Abgeleitet aus dem
+    # Erzeuger-Zensus, nicht hier gepflegt — eine Zahl neben einer
+    # gemessenen driftet (MF-541).
+    # Verbunden wird auf `symbol`, NICHT auf `name`. Die Zeile traegt
+    # beides — `name` ist der Anzeigename (`SYN`, `AkaiS900`), `symbol`
+    # der Bezeichner (`syn`, `akai_s900`), und der Zensus fuehrt Symbole.
+    # Der erste Entwurf nahm `name` und fand 0 von 8; es ist derselbe
+    # Fehlgriff wie in MF-1474, dort schon einmal gemessen und in genau
+    # dieser Datei als Lehre notiert. Ein Verbinder wird nachgesehen,
+    # nicht erinnert.
+    ohne = stufen_ohne_erzeuger(
+        [(r["symbol"], r["tier"]) for r in rows],
+        _zensus_text())
+    if ohne:
+        t3 = [n for n, s in ohne if s == "T3"]
+        lines.append("### Warum diese Zahlen nicht durch Arbeit fallen "
+                     "(MF-1489)")
+        lines.append("")
+        lines.append("**%d der %d Formate auf T2/T3 haben im "
+                     "Erzeuger-Zensus Kanal „keiner“** — "
+                     % (len(ohne),
+                        counts.get("T2", 0) + counts.get("T3", 0)))
+        lines.append("Klasse „C: gemessen, dieser Weg traegt nicht“. "
+                     "T1b verlangt ein Abbild von")
+        lines.append("**fremder Hand**; wo keine fremde Hand existiert, "
+                     "senkt keine Arbeit die")
+        lines.append("Zahl. `CLAUDE.md` fuehrt die Kennzahl „ungeprüfte "
+                     "Formate (T3)“ mit der")
+        lines.append("Richtung *runter* — das gilt, ist hier aber **nicht "
+                     "durch Arbeit** zu")
+        lines.append("erreichen, sondern nur ueber eine echte Aufnahme "
+                     "(Hardware, und die ist")
+        lines.append("community-delegiert — MF-310) oder eine "
+                     "Eigentuemerentscheidung ueber eine")
+        lines.append("Quelle ohne Lizenzangabe.")
+        lines.append("")
+        lines.append("| Format | Stufe | Erzeuger |")
+        lines.append("|---|---|---|")
+        for n, s in ohne:
+            lines.append("| `%s` | **%s** | keiner |" % (n, s))
+        lines.append("")
+        if t3:
+            lines.append("Das betrifft **das einzige T3** (`%s`). Der Fall "
+                         "ist am Einzelnen belegt:" % "`, `".join(t3))
+            lines.append("`floptool` antwortet `Error: Format 'syn' "
+                         "unknown`, hxcfes 207 Module")
+            lines.append("kennen es nicht (MF-1097), und es gibt keine "
+                         "oeffentliche Beschreibung")
+            lines.append("eines `.syn`-Behaelters — Synclavier-Disketten "
+                         "werden als Rohfluss")
+            lines.append("aufgenommen (unabhaengig nachgeprueft MF-1489). "
+                         "Die Geometrie selbst ist")
+            lines.append("seit MF-1141 an Synclaviers EIGENEN "
+                         "NED-Quellen (MIT) belegt; offen sind")
+            lines.append("die Seitenzahl — NED liest sie zur Laufzeit aus "
+                         "der Laufwerks-ID, sie steht")
+            lines.append("in keiner Datei — und die Anordnung in der "
+                         "`.syn`-Datei, die die Quelle")
+            lines.append("gar nicht beschreibt. Beides ist durch Lesen "
+                         "nicht entscheidbar.")
+            lines.append("")
+
     if dsk is not None:
         lines.extend(render_dsk_abschnitt(dsk))
     lines.append("## Pro Format\n")
@@ -702,6 +819,34 @@ def _selbsttest(repo: Path) -> int:
     faelle.append(("fehlendes format-Feld zaehlt wie leer",
                    dict(formatnamen_ohne_plugin([{"file": "y"}],
                                                 {"kfx"})).get("") == ["y"]))
+
+    # MF-1489: T2/T3 ohne Erzeuger. Der Zensus ist ein ERZEUGTES
+    # Dokument; faellt es weg, darf die Aussage wegfallen, nicht raten.
+    Z = ("| Format | Stufe | hxcfe (RW) | libdsk | floptool (w) | Kanal "
+         "| Klasse |\n"
+         "|---|---|---|---|---|---|---|\n"
+         "| `syn` | T3 | — | — | — | keiner | **C** |\n"
+         "| `udi` | T2 | — | — | — | keiner | **C** |\n"
+         "| `d64` | T1b | ja | — | ja | Oracle | **A** |\n"
+         "| `edk` | T2 | ja | — | — | Oracle | **A** |\n")
+    T = [("syn", "T3"), ("udi", "T2"), ("d64", "T1b"), ("edk", "T2")]
+    faelle.append(("nur T2/T3 OHNE Erzeuger werden gemeldet",
+                   stufen_ohne_erzeuger(T, Z) == [("syn", "T3"),
+                                                  ("udi", "T2")]))
+    faelle.append(("ein T2 MIT Kanal wird NICHT gemeldet",
+                   ("edk", "T2") not in stufen_ohne_erzeuger(T, Z)))
+    faelle.append(("T1b bleibt aussen vor, auch ohne Kanal",
+                   stufen_ohne_erzeuger([("x", "T1b")],
+                                        "| `x` | T1b | — | — | — | keiner "
+                                        "| C |") == []))
+    faelle.append(("ohne Zensus wird NICHTS behauptet",
+                   stufen_ohne_erzeuger(T, "") == []
+                   and stufen_ohne_erzeuger(T, None) == []))
+    faelle.append(("Format im Zensus unbekannt -> keine Aussage",
+                   stufen_ohne_erzeuger([("fremd", "T3")], Z) == []))
+    faelle.append(("Rand: keine Tafelzeilen",
+                   stufen_ohne_erzeuger([], Z) == []
+                   and stufen_ohne_erzeuger(None, Z) == []))
 
     gut = 0
     for name, ok in faelle:

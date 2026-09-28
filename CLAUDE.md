@@ -515,10 +515,39 @@ Die vier geführten Zahlen:
 
 | Kennzahl | Richtung | Quelle |
 |---|---|---|
-| ungeprüfte Formate (T3) | **runter** | `docs/VERIFICATION_TIERS.md`, abgeleitet |
+| ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `docs/VERIFICATION_TIERS.md`, abgeleitet |
 | angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet |
 | leckende Tests | **null halten** | ASan/UBSan in CI |
 | Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` |
+
+> **Die erste Zahl kann gemessen nicht durch Arbeit fallen (MF-1489).**
+> „T3 runter" liest sich wie ein Rückstand. Gemessen ist er keiner:
+> **jedes** Format, das heute auf T2 oder T3 steht, führt im
+> Erzeuger-Zensus Kanal **„keiner"** mit der Klasse „C — gemessen:
+> dieser Weg trägt nicht" — ohne Ausnahme. Die Zahl dazu steht
+> absichtlich nicht hier, sondern abgeleitet in
+> `docs/VERIFICATION_TIERS.md`; eine von Hand gepflegte Zahl neben einer
+> gemessenen driftet (MF-541).
+> T1b verlangt ein Abbild von **fremder Hand**; wo keine fremde Hand
+> existiert, senkt keine Arbeit die Zahl.
+>
+> Am einzigen T3 ist es belegt: `floptool` antwortet
+> `Error: Format 'syn' unknown`, hxcfes 207 Module kennen es nicht
+> (MF-1097), und es gibt **keine öffentliche Beschreibung eines
+> `.syn`-Behälters** — Synclavier-Disketten werden als Rohfluss
+> aufgenommen (unabhängig nachgeprüft MF-1489). Die Geometrie selbst ist
+> seit MF-1141 an Synclaviers **eigenen** NED-Quellen (MIT) belegt und
+> war dort in zwei von drei Maßen falsch; offen bleiben die Seitenzahl —
+> NED liest sie zur Laufzeit aus der Laufwerks-ID, sie steht in keiner
+> Datei — und die Anordnung in der `.syn`-Datei, die die Quelle gar
+> nicht beschreibt. **Beides ist durch Lesen nicht entscheidbar.**
+>
+> Es bleiben zwei Wege, und keiner ist Arbeit an dieser Stelle: eine
+> echte Aufnahme (Hardware, community-delegiert — MF-310) oder eine
+> Eigentümerentscheidung über eine Quelle ohne Lizenzangabe. Die Zahl
+> steht deshalb **nicht** zur Bearbeitung, sondern als Feststellung —
+> und `docs/VERIFICATION_TIERS.md` sagt es seit MF-1489 selbst,
+> abgeleitet aus dem Zensus statt hier gepflegt.
 
 Wer eine **fünfte** Zahl einführt, begründet sie. Eine Kandidatin steht
 bereit: **Dateien mit ungeklärter Herkunft**. Sie hat **zwei Stufen**,
