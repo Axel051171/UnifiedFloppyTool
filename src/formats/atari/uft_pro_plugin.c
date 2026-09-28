@@ -215,10 +215,15 @@ static uft_error_t pro_read_track(uft_disk_t *disk, int cyl, int head,
                                   (uint8_t)cyl, 0);
             if (track->sector_count > 0) {
                 uft_sector_t *sec = &track->sectors[track->sector_count - 1];
-                sec->status = (phdr[1] != PRO_STATUS_OK)
-                                  ? UFT_SECTOR_CRC_ERROR
-                                  : UFT_SECTOR_DUPLICATE;
-                if (phdr[1] != PRO_STATUS_OK) sec->crc_ok = false;
+                /* MF-1495: a phantom is ALWAYS a duplicate; a bad one is a
+                 * bad duplicate. Before, the error replaced DUPLICATE, and a
+                 * bad phantom looked like a nominal sector with the same
+                 * number (tests/test_pro_phantom_behaelt_duplikat.c). */
+                sec->status = UFT_SECTOR_DUPLICATE;
+                if (phdr[1] != PRO_STATUS_OK) {
+                    sec->status = (uft_sector_status_t)(sec->status | UFT_SECTOR_CRC_ERROR);
+                    sec->crc_ok = false;
+                }
             }
         }
     }

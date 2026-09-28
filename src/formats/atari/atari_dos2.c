@@ -143,9 +143,16 @@ atari_error_t dos2_read_vtoc(atari_disk_t *disk)
         if (err == ATARI_OK) {
             disk->vtoc.has_vtoc2 = true;
             disk->vtoc.free_sectors_above_719 = read_le16(&disk->vtoc.raw2[122]);
-            /* Bitmap2: Sektoren 720-1023 */
-            memcpy(disk->vtoc.bitmap2, &disk->vtoc.raw2[0],
-                   sizeof(disk->vtoc.bitmap2));
+            /* Bitmap2: Sektoren 720-1023.
+             * MF-1493: Joe Allen, atari-tools readme §DOS 2.5: VTOC2
+             * "0..83: Repeat VTOC bitmap for sectors 48..719 (write these,
+             * do not read them)", "84..121: Bitmap for sectors 720..1023".
+             * Hier stand ein memcpy ab raw2[0] — also die WIEDERHOLUNG der
+             * Sektoren 48..719 als Bitmap fuer 720..1023; an 475.atr wichen
+             * 23 von 304 Bits ab (Gutachten uft-atari-code). */
+            memset(disk->vtoc.bitmap2, 0, sizeof(disk->vtoc.bitmap2));
+            memcpy(disk->vtoc.bitmap2, &disk->vtoc.raw2[VTOC2_BITMAP_OFFSET],
+                   VTOC2_BITMAP_BYTES);
         }
     }
 
@@ -180,9 +187,15 @@ atari_error_t dos2_write_vtoc(atari_disk_t *disk)
 
     /* DOS 2.5: Extended VTOC schreiben */
     if (disk->vtoc.has_vtoc2) {
+        /* MF-1493 (same readme): 0..83 repeat the VTOC bitmap for sectors
+         * 48..719 — VTOC bytes 10 + 48/8 = 16 .. 99 —, 84..121 carry the
+         * bitmap for 720..1023, 122..123 the free count. Before, bitmap2
+         * went to byte 0 over the repeat. */
         memset(disk->vtoc.raw2, 0, sizeof(disk->vtoc.raw2));
-        memcpy(disk->vtoc.raw2, disk->vtoc.bitmap2,
-               sizeof(disk->vtoc.bitmap2));
+        memcpy(disk->vtoc.raw2, &disk->vtoc.raw[VTOC_BITMAP_OFFSET + 48 / 8],
+               VTOC2_BITMAP_OFFSET);
+        memcpy(&disk->vtoc.raw2[VTOC2_BITMAP_OFFSET], disk->vtoc.bitmap2,
+               VTOC2_BITMAP_BYTES);
         write_le16(&disk->vtoc.raw2[122], disk->vtoc.free_sectors_above_719);
 
         err = ados_atr_write_sector(disk, VTOC2_SECTOR,
@@ -386,7 +399,9 @@ atari_error_t dos2_read_directory(atari_disk_t *disk)
 
             /* Status-Flags interpretieren */
             entry->is_deleted    = (entry->status & DIR_FLAG_DELETED) != 0;
-            entry->is_valid      = (entry->status & DIR_FLAG_IN_USE) != 0;
+            /* MF-1493: in use is 0x41, not 0x40 (jhallen atr.c,
+             * FLAG_IN_USE_ED) — see DIR_FLAG_IN_USE_ED in atari_dos.h. */
+            entry->is_valid      = (entry->status & DIR_FLAG_IN_USE_ED) != 0;
             entry->is_locked     = (entry->status & DIR_FLAG_LOCKED) != 0;
             entry->is_dos2_compat = (entry->status & DIR_FLAG_DOS2_CREATED) != 0;
             entry->is_open       = (entry->status & DIR_FLAG_OPEN_OUTPUT) != 0;

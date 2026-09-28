@@ -87,7 +87,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 |---|---|---|
 | `src/formats/ssd/uft_ssd_parser_v2.c` | 48 | 556 |
 | `src/detect/mfm/cpm_fs.c` | 41 | 1426 |
-| `src/formats/atari/atari_dos2.c` | 23 | 1038 |
+| `src/formats/atari/atari_dos2.c` | 23 | 1053 |
 | `src/formats/trd/uft_trd_parser_v2.c` | 23 | 696 |
 | `src/formats/c64/uft_bam_editor.c` | 20 | 1021 |
 | `src/formats/nintendo/uft_switch.c` | 13 | 411 |

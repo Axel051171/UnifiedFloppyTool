@@ -162,7 +162,14 @@ static uft_error_t fdi_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         bool no_data = (flags & 0x40) != 0;
         bool crc_ok  = (flags & (1u << (sec_n & 3))) != 0;
 
-        if (no_data || sec_pos + ss > p->size) {
+        /* MF-1492 (P3-659): three different facts, until now all folded
+         * into set_crc(false) — which the disk2 bridge does not read, so
+         * each came out as "unchecked". SAMdisk fdi.cpp (read): flag 0x40
+         * is "no data"; a clear CRC-ok bit for the size is a DATA CRC
+         * error ("if the flags say no error, clear the data CRC error").
+         * Data past the end of the file is neither: the source ended. */
+        const bool kurz = !no_data && sec_pos + ss > p->size;
+        if (no_data || kurz) {
             /* No/short data: forensic fill rather than dropping or over-reading. */
             uint8_t *fill = malloc(ss);
             if (!fill) return UFT_ERROR_NO_MEMORY;
@@ -170,16 +177,18 @@ static uft_error_t fdi_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             uft_format_add_sector(track, sec_r ? sec_r - 1 : 0, fill, ss,
                                   (uint8_t)cyl, (uint8_t)head);
             free(fill);
-            crc_ok = false;
+            if (no_data) uft_format_mark_last_unavailable(track);
+            else         uft_format_mark_last_truncated(track);
         } else {
             uft_format_add_sector(track, sec_r ? sec_r - 1 : 0,
                                   p->data + sec_pos, ss,
                                   (uint8_t)cyl, (uint8_t)head);
+            if (!crc_ok && track->sector_count > 0)
+                uft_sector_mark_data_crc_error(&track->sectors[track->sector_count - 1]);
         }
         if (track->sector_count > 0) {
             uft_sector_t *sec = &track->sectors[track->sector_count - 1];
             if (deleted) sec->deleted = true;
-            if (!crc_ok) uft_sector_set_crc(sec, false);
         }
     }
     return UFT_OK;

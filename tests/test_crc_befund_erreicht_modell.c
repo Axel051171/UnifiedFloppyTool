@@ -42,6 +42,41 @@
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
 extern const uft_format_plugin_t uft_format_plugin_d64;
 extern const uft_format_plugin_t uft_format_plugin_nfd;
+extern const uft_format_plugin_t uft_format_plugin_dmk;
+extern const uft_format_plugin_t uft_format_plugin_sap_thomson;
+extern const uft_format_plugin_t uft_format_plugin_fdi;
+extern const uft_format_plugin_t uft_format_plugin_jv3;
+extern const uft_format_plugin_t uft_format_plugin_stx;
+extern const uft_format_plugin_t uft_format_plugin_d77;
+
+#ifndef UFT_CORPUS_DIR
+#error "UFT_CORPUS_DIR must be set by tests/CMakeLists.txt (it points to tests/corpus_free)"
+#endif
+
+static const char *tmpdir(void);
+static int schreibe(const char *pfad, const uint8_t *b, size_t n);
+
+/* Copy a committed corpus file, change ONE byte (XOR), write it to TMP. */
+static int kopie_mit_eingriff(const char *name, long off, uint8_t xor_mit,
+                              char *ziel, size_t zn, const char *endung)
+{
+    char quelle[600];
+    snprintf(quelle, sizeof quelle, "%s/%s", UFT_CORPUS_DIR, name);
+    FILE *f = fopen(quelle, "rb");
+    if (!f) return 0;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (n <= off) { fclose(f); return 0; }
+    uint8_t *b = (uint8_t *)malloc((size_t)n);
+    if (!b || fread(b, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(b); return 0; }
+    fclose(f);
+    b[off] ^= xor_mit;
+    snprintf(ziel, zn, "%s/uft_mf1492.%s", tmpdir(), endung);
+    int ok = schreibe(ziel, b, (size_t)n);
+    free(b);
+    return ok;
+}
 
 static int gruen = 0, rot = 0;
 
@@ -266,6 +301,103 @@ int main(void)
         snprintf(h, sizeof h, "Modell R1..R4 = %s", u4);
         pruefe("NFD: ST2 -> Daten-CRC, ST1 allein -> ID-CRC, abgeschnitten -> fehlt (uPD765)",
                strcmp(u4, "BIUM") == 0, h);
+    }
+
+    /* Third slice (MF-1492): DMK, SAP, JV3, STX from committed corpus files
+     * with ONE finding injected into sector R1 (R2 stays the control), and
+     * a synthetic ZX FDI.
+     *   DMK, SAP  recompute the data CRC themselves: a flipped data byte
+     *             must reach the model as a data CRC error, and the clean
+     *             neighbour as CHECKED good ('G') — "I checked" is
+     *             something UFT can prove, unlike a passed-on flag.
+     *   JV3       Tim Mann, "Common File Formats for Emulated TRS-80 Floppy
+     *             Disks": "JV3_ERROR, if set, indicates that the sector
+     *             should show a data CRC error when read."
+     *   STX       Pasti FDC flags (uft_stx_air.c STX_SF_CRC_ERR): "CRC error
+     *             (data if RNF=0, ID if RNF=1)".
+     *   FDI       SAMdisk fdi.cpp: a clear CRC-ok bit for the size is a data
+     *             CRC error, flag 0x40 is "no data". */
+    const uint8_t r12[2] = { 1, 2 };
+    char u2[4];
+    struct { const char *datei, *endung; long off; uint8_t x;
+             const uft_format_plugin_t *p; const char *soll; const char *was; } fall[] = {
+        { "hxcfe_pc160.dmk", "dmk", 350, 0x5A, &uft_format_plugin_dmk, "BG",
+          "DMK: Datenbyte gekippt -> Daten-CRC-Fehler, Nachbar nachgerechnet gut" },
+        { "sap2_thomson.sap", "sap", 70, 0x5A, &uft_format_plugin_sap_thomson, "BG",
+          "SAP: Datenbyte gekippt -> Daten-CRC-Fehler, Nachbar nachgerechnet gut" },
+        { "hxcfe_pc160.jv3", "jv3", 2, 0x08, &uft_format_plugin_jv3, "BU",
+          "JV3: JV3_ERROR -> Daten-CRC-Fehler (Tim Mann)" },
+        { "hxcfe_pc160.stx", "stx", 46, 0x08, &uft_format_plugin_stx, "BU",
+          "STX: CRC-Flag ohne RNF -> Daten-CRC-Fehler (Pasti)" },
+    };
+    for (size_t k = 0; k < sizeof fall / sizeof fall[0]; k++) {
+        if (!kopie_mit_eingriff(fall[k].datei, fall[k].off, fall[k].x, pfad, sizeof pfad,
+                                fall[k].endung)) {
+            pruefe(fall[k].was, 0, "Korpusdatei nicht lesbar");
+            continue;
+        }
+        urteile_mit(fall[k].p, pfad, r12, u2, 2);
+        remove(pfad);
+        snprintf(h, sizeof h, "Modell R1,R2 = %s, erwartet %s", u2, fall[k].soll);
+        pruefe(fall[k].was, strcmp(u2, fall[k].soll) == 0, h);
+    }
+
+    /* D77 (the D88 container of the FM-7): status 0x00, 0xB0, 0xA0, 0xE0 —
+     * the same meanings as D88 (MAME; hxcfe executed, MF-1480). */
+    {
+        static uint8_t b[0x2B0 + 4 * (16 + 256)];
+        memset(b, 0, sizeof b);
+        memcpy(b, "MF1492", 6);
+        size_t pos = 0x2B0;
+        b[0x20] = (uint8_t)pos; b[0x21] = (uint8_t)(pos >> 8);
+        const uint8_t st[4] = { 0x00, 0xB0, 0xA0, 0xE0 };
+        for (int i = 0; i < 4; i++) {
+            uint8_t *s = b + pos;
+            s[0] = 0; s[1] = 0; s[2] = (uint8_t)(i + 1); s[3] = 1;
+            s[4] = 4; s[8] = st[i]; s[14] = 0x00; s[15] = 0x01;
+            pos += 16;
+            memset(b + pos, 0x70 + i, 256);
+            pos += 256;
+        }
+        b[0x1C] = (uint8_t)pos; b[0x1D] = (uint8_t)(pos >> 8);
+        const uint8_t r1234b[4] = { 1, 2, 3, 4 };
+        char u4b[8];
+        snprintf(pfad, sizeof pfad, "%s/uft_mf1492.d77", tmpdir());
+        schreibe(pfad, b, pos);
+        urteile_mit(&uft_format_plugin_d77, pfad, r1234b, u4b, 4);
+        remove(pfad);
+        snprintf(h, sizeof h, "Modell R1..R4 = %s", u4b);
+        pruefe("D77 0xB0 Daten-CRC, 0xA0 ID-CRC, 0xE0 nicht lesbar (wie D88)",
+               strcmp(u4b, "UBIM") == 0, h);
+    }
+
+    /* ZX FDI: one track, R1 CRC-ok bit set, R2 clear, R3 flag 0x40 (no data) */
+    {
+        enum { DATEN = 64 };
+        static uint8_t b[DATEN + 3 * 256];
+        memset(b, 0, sizeof b);
+        memcpy(b, "FDI", 3);
+        b[4] = 1;                       /* cylinders */
+        b[6] = 1;                       /* heads */
+        b[0x0A] = DATEN;                /* data offset */
+        /* FDI_TRACK @14: track data offset 0, 2 reserved, sector count 3 */
+        b[14 + 6] = 3;
+        const uint8_t flags[3] = { 0x02, 0x00, 0x40 };
+        for (int i = 0; i < 3; i++) {
+            uint8_t *s = b + 21 + 7 * i;
+            s[0] = 0; s[1] = 0; s[2] = (uint8_t)(i + 1); s[3] = 1;   /* N=1: 256 */
+            s[4] = flags[i];
+            s[5] = (uint8_t)((256 * i) & 0xFF); s[6] = (uint8_t)((256 * i) >> 8);
+            memset(b + DATEN + 256 * i, 0x60 + i, 256);
+        }
+        const uint8_t r123b[3] = { 1, 2, 3 };
+        snprintf(pfad, sizeof pfad, "%s/uft_mf1492.fdi", tmpdir());
+        schreibe(pfad, b, sizeof b);
+        urteile_mit(&uft_format_plugin_fdi, pfad, r123b, urteil, 3);
+        remove(pfad);
+        snprintf(h, sizeof h, "Modell R1,R2,R3 = %s", urteil);
+        pruefe("FDI: CRC-ok-Bit gesetzt ungeprueft, geloescht Daten-CRC, 0x40 keine Daten (SAMdisk)",
+               strcmp(urteil, "UBM") == 0, h);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

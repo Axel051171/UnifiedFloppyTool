@@ -294,8 +294,22 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
         if (track->sector_count > 0) {
             if (sec_hdr[7] == 0x10)
                 track->sectors[track->sector_count - 1].deleted = true;
-            if (sec_hdr[8] != 0x00)
-                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+            /* MF-1492 (P3-659): D77 is the D88 container (FM-7), so the
+             * status byte means what it means there — MAME d88_dsk.cpp
+             * (0xB0 bad data CRC, 0xA0 bad address CRC) and hxcfe, executed
+             * in MF-1480 (0x10 deleted, 0xE0 no address mark = not
+             * findable). Before, ANY non-zero byte became set_crc(false),
+             * which the disk2 bridge does not read. Other values keep that
+             * old marking; 0xF0 stays undecided as in the D88 reader. */
+            uft_sector_t *z = &track->sectors[track->sector_count - 1];
+            switch (sec_hdr[8]) {
+            case 0x00: break;
+            case 0xB0: uft_sector_mark_data_crc_error(z); break;
+            case 0xA0: uft_sector_mark_id_crc_error(z);   break;
+            case 0x10: z->deleted = true;                 break;
+            case 0xE0: uft_format_mark_last_unavailable(track); break;
+            default:   uft_sector_set_crc(z, false);      break;
+            }
         }
         free(buf);
     }

@@ -83,6 +83,11 @@ extern "C" {
 #define BOOT_SECTOR_COUNT           3
 #define VTOC_SECTOR                 360     /* $168 */
 #define VTOC2_SECTOR                1024    /* DOS 2.5 Extended VTOC */
+/* MF-1493, Joe Allen atari-tools readme §DOS 2.5: VTOC2 bytes 84..121 are
+ * the bitmap for sectors 720..1023 (304 bits); 0..83 repeat the VTOC bitmap
+ * for sectors 48..719 ("write these, do not read them"). */
+#define VTOC2_BITMAP_OFFSET         84
+#define VTOC2_BITMAP_BYTES          38
 #define DIR_SECTOR_START            361     /* $169 */
 #define DIR_SECTOR_COUNT            8
 #define DIR_SECTOR_END              368     /* $170 */
@@ -144,8 +149,23 @@ extern "C" {
  * both 0)".
  *
  * Der Unterschied ist nicht akademisch: mit der Gleichheitspruefung sah
- * UFT Dateien, die DOS nicht sieht, und sagte es nicht. */
-#define DIR_FLAG_END_MASK           (DIR_FLAG_IN_USE | DIR_FLAG_DELETED)
+ * UFT Dateien, die DOS nicht sieht, und sagte es nicht.
+ *
+ * BERICHTIGT MF-1493: „bits 6 and 7" steht in der readme im Abschnitt
+ * DOS 2.0s — dieselbe Quelle rechnet in ihrem Code (`atr.c`) anders:
+ *     #define FLAG_IN_USE_ED 0x41
+ *     Datei:          d->flag & FLAG_IN_USE_ED
+ *     Verzeichnisende: !(d->flag & (FLAG_IN_USE_ED | FLAG_DELETED))
+ * DOS 2.5 kennzeichnet Dateien im erweiterten Bereich mit Bit 0 (auf einer
+ * echten DOS-2.5-Diskette als 0x03 gesehen, Bits 6/7 frei). Mit der
+ * DOS-2.0s-Regel galt so eine Datei als ENDE des Verzeichnisses: an
+ * 475.atr fehlten 6 von 24 Dateien, 41 168 Byte; `lsatr` (ausgefuehrt)
+ * listet alle 24 (Gutachten uft-atari-code). Bit 0 zaehlt jetzt mit — eine
+ * Regel an EINER Stelle; ein 0x02-Eintrag bleibt Endmarke wie zuvor
+ * (tests/test_atari_dir_past_end.c). Belegt durch
+ * tests/test_atari_dos25_verzeichnis_und_vtoc2.c. */
+#define DIR_FLAG_IN_USE_ED          (DIR_FLAG_IN_USE | DIR_FLAG_OPEN_OUTPUT)   /* 0x41 */
+#define DIR_FLAG_END_MASK           (DIR_FLAG_IN_USE_ED | DIR_FLAG_DELETED)
 #define DIR_IST_ENDMARKE(st)        (((st) & DIR_FLAG_END_MASK) == 0)
 
 /* Normale Statuswerte */

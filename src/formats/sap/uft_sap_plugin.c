@@ -339,7 +339,12 @@ static uft_error_t sap_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             uft_sector_t *sek = &track->sectors[track->sector_count - 1];
             bool gut = (stored_crc == calc_crc);
             sek->crc_ok = gut;
-            if (!gut) uft_sector_set_crc(sek, false);
+            /* MF-1492 (P3-659): this reader RECOMPUTES the CRC, so "checked"
+             * is something it can prove — for the good sector as well as
+             * the bad one. Before, only crc_ok changed, which the disk2
+             * bridge does not read: both came out as "unchecked". */
+            sek->status = (uft_sector_status_t)(sek->status | UFT_SECTOR_CRC_CHECKED);
+            if (!gut) uft_sector_mark_data_crc_error(sek);
         }
     }
     return UFT_OK;

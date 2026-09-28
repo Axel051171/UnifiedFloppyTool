@@ -32,6 +32,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/formats/cbm/uft_cbm_geometry.h"
+#include "uft/formats/c64/uft_gcr_ops.h"   /* gcr_find_sync, MF-1500 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -182,6 +183,36 @@ static bool gcr_decode_group(const uint8_t* gcr, uint8_t* data) {
 }
 
 /**
+ * @brief Decodes 5 GCR bytes to 4 bytes nibble by nibble (MF-1500, P3-663).
+ *
+ * Unlike gcr_decode_group() an invalid code does not abort: it becomes
+ * nibble 0 and is COUNTED. The caller decides which groups count — for a
+ * data block only the first 64 groups (320 GCR bytes: block id and 255 data
+ * bytes); the last group also carries the two off bytes, which a 1541 does
+ * not check. Behaviour after nibtools gcr.c convert_GCR_sector()
+ * (rittwage/nibtools @ 0abdc11), own implementation.
+ *
+ * @return number of invalid 5-bit codes in the group (0..8)
+ */
+static int gcr_decode_group_counted(const uint8_t* gcr, uint8_t* data) {
+    uint64_t bits = ((uint64_t)gcr[0] << 32) | ((uint64_t)gcr[1] << 24) |
+                    ((uint64_t)gcr[2] << 16) | ((uint64_t)gcr[3] << 8) |
+                    (uint64_t)gcr[4];
+    uint8_t n[8];
+    int bad = 0;
+
+    for (int k = 0; k < 8; k++) {
+        n[k] = gcr_decode_table[(bits >> (35 - 5 * k)) & 0x1F];
+        if (n[k] == 0xFF) { n[k] = 0; bad++; }
+    }
+    data[0] = (uint8_t)((n[0] << 4) | n[1]);
+    data[1] = (uint8_t)((n[2] << 4) | n[3]);
+    data[2] = (uint8_t)((n[4] << 4) | n[5]);
+    data[3] = (uint8_t)((n[6] << 4) | n[7]);
+    return bad;
+}
+
+/**
  * @brief Enkodiert 4 Daten-Bytes zu 5 GCR-Bytes
  */
 static void gcr_encode_group(const uint8_t* data, uint8_t* gcr) {
@@ -205,29 +236,32 @@ static void gcr_encode_group(const uint8_t* data, uint8_t* gcr) {
 }
 
 /**
- * @brief Findet Sync-Marker in GCR-Daten
- * 
- * Sync = 10× 0xFF (mindestens 5 aufeinanderfolgende 0xFF-Bytes)
+ * @brief Findet Sync-Marker in GCR-Daten; liefert die Position NACH dem Sync.
+ *
+ * BERICHTIGT MF-1500 (P3-663). Hier stand „Sync = 10× 0xFF (mindestens 5
+ * aufeinanderfolgende 0xFF-Bytes)" — also 40 Einsbits. Die 1541 hebt ihr
+ * Sync-Signal nach 10 Einsbits, und echte Disketten tragen oft Syncs von 3
+ * bis 4 Byte: gemessen lieferte dieser Leser von `c64pp_aliensyndrome.g64`
+ * (echt, Sega 1987) **33 von 768** Sektoren; nibconv (nibtools, ausgefuehrt)
+ * liest 768 von 768.
+ *
+ * Jetzt ruft er die Regel, die im Baum schon steht, statt eine eigene zu
+ * fuehren (MF-1177): gcr_find_sync() in uft_gcr_ops.c, Definition A aus
+ * uft_gcr_ops.h — 0xFF, gefolgt von einem Byte mit gesetztem MSB, also 9
+ * Einsbits ab einer Bytegrenze. Gueltiges GCR traegt hoechstens 8 Einsen am
+ * Stueck (4 + 4 ueber eine Codegrenze), die Regel feuert also nicht in Daten.
+ * Mit ihr: 768 von 768 (tests/test_g64_sync_und_offbytes.c).
+ *
+ * NICHT entschieden, und benannt: nibtools' find_sync() fragt stattdessen
+ * „Byte mit gesetztem LSB, gefolgt von 0xFF". Beide zaehlen 9 Bits; sie
+ * unterscheiden sich nur bei einem Sync aus einem EINZIGEN 0xFF-Byte, das
+ * vorne Einsbits aus dem Vorgaengerbyte braucht. An keiner Datei im Korpus
+ * gemessen — an Alien Syndrome liefern beide 768 von 768.
  */
 static int find_sync(const uint8_t* data, size_t len, size_t start) {
-    int consecutive_ff = 0;
-    
-    for (size_t i = start; i < len; i++) {
-        if (data[i] == 0xFF) {
-            consecutive_ff++;
-            if (consecutive_ff >= 5) {
-                // Sync gefunden, finde Ende
-                while (i + 1 < len && data[i + 1] == 0xFF) {
-                    i++;
-                }
-                return (int)(i + 1);  // Position nach Sync
-            }
-        } else {
-            consecutive_ff = 0;
-        }
-    }
-    
-    return -1;  // Nicht gefunden
+    int s = gcr_find_sync(data, len, start);
+    if (s < 0) return -1;  // Nicht gefunden
+    return (int)gcr_find_sync_end(data, len, (size_t)s);
 }
 
 // ============================================================================
@@ -605,20 +639,19 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
         if (pos + 325 > track_size) break;
         
         uint8_t data_block[260];
-        bool decode_ok = true;
-        
+        int bad_gcr = 0;
+
+        /* MF-1500 (P3-663): vorher liess EIN ungueltiger Code irgendwo in
+         * den 65 Gruppen den Sektor ohne Eintrag fallen (`continue`) — die
+         * zwei Off-Bytes in der letzten Gruppe eingeschlossen, die eine
+         * 1541 gar nicht prueft. Jetzt zaehlen nur die ersten 64 Gruppen
+         * (320 GCR-Byte), und ein Sektor mit ungueltigem Code BLEIBT, als
+         * fehlerhaft gefuehrt. */
         for (int i = 0; i < 65; i++) {  // 65 Gruppen × 4 Bytes = 260
-            if (!gcr_decode_group(&gcr_data[pos + i * 5], &data_block[i * 4])) {
-                decode_ok = false;
-                break;
-            }
+            int b = gcr_decode_group_counted(&gcr_data[pos + i * 5], &data_block[i * 4]);
+            if (i < 64) bad_gcr += b;
         }
-        
-        if (!decode_ok) {
-            pos += 325;
-            continue;
-        }
-        
+
         // Data-Block-Format: 07 data[256] checksum 00 00
         if (data_block[0] != 0x07) {
             pos += 325;
@@ -630,8 +663,9 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
         for (int i = 1; i <= 256; i++) {
             data_checksum ^= data_block[i];
         }
-        bool data_ok = (data_checksum == data_block[257]);
-        
+        /* A matching XOR over nibbles that were invalid is no proof. */
+        bool data_ok = (data_checksum == data_block[257]) && bad_gcr == 0;
+
         // Sektor erstellen
         uft_sector_t sector = {0};
         sector.id.cylinder = track_num;
@@ -652,10 +686,16 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
             sector.data_len  = 256;
         }
         
-        sector.status = UFT_SECTOR_OK;
+        /* MF-1500: both checksums ARE recomputed here, so the sector says
+         * so. Without UFT_SECTOR_CRC_CHECKED a good sector reached the disk2
+         * bridge as "unchecked", indistinguishable from one nobody looked at
+         * (the counterpart of P3-659). The flag fields follow the verdict. */
+        sector.status = (uft_sector_status_t)(UFT_SECTOR_OK | UFT_SECTOR_CRC_CHECKED);
+        uft_sector_set_id_crc(&sector, header_ok);
+        uft_sector_set_crc(&sector, data_ok);
         if (!header_ok) sector.status |= UFT_SECTOR_ID_CRC_ERROR;
         if (!data_ok) sector.status |= UFT_SECTOR_CRC_ERROR;
-        
+
         uft_error_t err = uft_track_add_sector(track, &sector);
         free(sector.data);
         
