@@ -164,6 +164,41 @@ uint8_t uft_gcr_kodieren(uft_gcr_codec_t codec, uint8_t index) {
     return 0xFFu;
 }
 
+/* ── Die Gegenrichtung ───────────────────────────────────────────────── */
+
+/* Erzeugt, nicht gespeichert: beim ersten Aufruf je Codec aus dem
+ * Praedikat aufgezaehlt. Das ist der Unterschied zu den zehn
+ * Dekodiertafeln, die heute im Baum stehen (gemessen MF-1506) — hier
+ * steht keine Zahlenfolge im Quelltext, nur die Ableitung.
+ *
+ * Warum ueberhaupt gehalten: ein Dekoder laeuft je BYTE. Die Position im
+ * Praedikat jedes Mal neu zu suchen waere ueber 256 Werte hundertfacher
+ * Aufwand gegenueber einem Tafelzugriff — und dieser Pfad liegt in der
+ * Dekodierung einer ganzen Spur. */
+static uint8_t g_rueck[UFT_GCR_ANZAHL][256];
+static bool g_rueck_bereit[UFT_GCR_ANZAHL];
+
+static void rueck_aufbauen(uft_gcr_codec_t codec) {
+    memset(g_rueck[codec], UFT_GCR_UNGUELTIG, sizeof(g_rueck[codec]));
+    /* Gewonnen aus `uft_gcr_kodieren()`, nicht aus dem Praedikat direkt:
+     * bei Commodore traegt die TAFEL die Zuordnung, bei Apple die
+     * Reihenfolge — jene Funktion kennt beide Faelle, hier wird der
+     * Unterschied also nicht ein zweites Mal geschrieben. */
+    const uft_gcr_info_t *info = &INFOS[codec];
+    for (uint16_t i = 0; i < info->woerter; i++) {
+        const uint8_t wort = uft_gcr_kodieren(codec, (uint8_t)i);
+        g_rueck[codec][wort] = (uint8_t)i;
+    }
+    g_rueck_bereit[codec] = true;
+}
+
+uint8_t uft_gcr_dekodieren(uft_gcr_codec_t codec, uint32_t wort) {
+    if (codec < 0 || codec >= UFT_GCR_ANZAHL || wort > 0xFFu)
+        return UFT_GCR_UNGUELTIG;
+    if (!g_rueck_bereit[codec]) rueck_aufbauen(codec);
+    return g_rueck[codec][wort];
+}
+
 /* ── Erkennung ───────────────────────────────────────────────────────── */
 
 /** @return @p breite Bits ab @p pos, MSB zuerst. */

@@ -159,19 +159,18 @@ static const uint16_t g64_track_size_zone[4] = {
  * GCR TABLES
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* 4-bit to 5-bit GCR encoding */
-static const uint8_t gcr_encode_table[16] = {
-    0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
-    0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
-};
-
-/* 5-bit GCR to 4-bit decode (0xFF = invalid) */
-static const uint8_t gcr_decode_table[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,
-    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,
-    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF
-};
+/* Die beiden GCR-Tafeln standen hier bis MF-1513 als eigene Kopien —
+ * die 4-zu-5-Kodierung an 12 Stellen im Baum, die Dekodierung an 10
+ * (gemessen MF-1506). Jetzt kommen beide aus dem Codec-Register
+ * (`include/uft/core/uft_gcr.h`): die Wortmenge folgt dort einer
+ * gemessenen Regel, die Zuordnung steht genau einmal, und die
+ * Rueckrichtung wird daraus abgeleitet statt ein zweites Mal
+ * geschrieben.
+ *
+ * Nichts ist verloren gegangen: `tests/test_gcr_register_gegen_bestehende.c`
+ * haelt das Register gegen die ausgelieferten Kodierer, ueber alle 32
+ * Quintette und alle 65 536 Wertepaare der Bitpackung. */
+#include "uft/core/uft_gcr.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * DIAGNOSIS CODES (G64 specific)
@@ -655,8 +654,8 @@ static bool g64_gcr_decode_block(const uint8_t* gcr, uint8_t* data, uint8_t* err
     
     /* Decode each */
     for (int i = 0; i < 8; i++) {
-        n[i] = gcr_decode_table[g[i]];
-        if (n[i] == 0xFF) {
+        n[i] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g[i]);
+        if (n[i] == UFT_GCR_UNGUELTIG) {
             *errors |= (1 << i);
             n[i] = 0;
             valid = false;
@@ -691,7 +690,7 @@ void g64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
     
     /* Encode */
     for (int i = 0; i < 8; i++) {
-        g[i] = gcr_encode_table[n[i]];
+        g[i] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, n[i]);
     }
     
     /* Pack */

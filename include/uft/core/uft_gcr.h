@@ -146,6 +146,30 @@ size_t uft_gcr_wortmenge(uft_gcr_codec_t codec, uint8_t *out, size_t max);
  */
 uint8_t uft_gcr_kodieren(uft_gcr_codec_t codec, uint8_t index);
 
+/** Ungueltiges Kodewort — Rueckgabe von `uft_gcr_dekodieren()`. */
+#define UFT_GCR_UNGUELTIG 0xFFu
+
+/**
+ * @brief Der Datenwert zu einem Kodewort — die Gegenrichtung.
+ *
+ * Die Rueckwaerts-Zuordnung wird beim ersten Aufruf je Codec AUS DEM
+ * PRAEDIKAT erzeugt und dann gehalten. Sie ist damit keine Kopie im
+ * Quelltext, sondern eine Ableitung zur Laufzeit — und sie ist noetig,
+ * weil ein Dekoder je Byte laeuft: eine lineare Suche ueber 256 Werte
+ * waere hier hundertfacher Aufwand gegenueber einem Tafelzugriff.
+ *
+ * Die Erzeugung ist idempotent (dasselbe Ergebnis aus demselben
+ * Praedikat). Laufen zwei Faeden gleichzeitig hinein, schreiben beide
+ * dieselben Werte; der Zustand bleibt gueltig.
+ *
+ * @param codec Verfahren.
+ * @param wort  Kodewort von der Platte.
+ * @return Datenwert, oder `UFT_GCR_UNGUELTIG`, wenn @p wort dort nicht
+ *         vorkommen darf. Der Wert ist absichtlich derselbe, den die
+ *         bestehenden Dekodiertafeln des Baums fuer „ungueltig" fuehren.
+ */
+uint8_t uft_gcr_dekodieren(uft_gcr_codec_t codec, uint32_t wort);
+
 /** Was die Messung ueber einen Bitstrom sagt. */
 typedef struct {
     uft_gcr_codec_t codec;   /**< geprueftes Verfahren */

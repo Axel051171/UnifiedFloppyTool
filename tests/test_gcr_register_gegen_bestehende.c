@@ -106,6 +106,65 @@ TEST(jedes_ungueltige_quintett_wird_vom_alten_dekoder_abgewiesen) {
     }
 }
 
+/* ── Die Gegenrichtung, gegen die bestehende Funktion ────────────────── */
+
+TEST(register_dekodiert_wie_cbm_gcr_decode_quintet) {
+    /* Alle 32 Quintette, gueltige wie ungueltige — die zweite Haelfte
+     * ist die wichtigere: ein Dekoder, der Unsinn annimmt, faellt bei
+     * keiner Rundreise auf. */
+    for (uint32_t w = 0; w < 32u; w++) {
+        bool fehler = false;
+        const uint8_t alt = cbm_gcr_decode_quintet((uint8_t)w, &fehler);
+        const uint8_t neu = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, w);
+        if (fehler) {
+            ASSERT(neu == UFT_GCR_UNGUELTIG);
+        } else {
+            ASSERT(neu == alt);
+        }
+    }
+}
+
+TEST(kodieren_und_dekodieren_sind_umkehrbar_fuer_jeden_codec) {
+    for (int c = 0; c < UFT_GCR_ANZAHL; c++) {
+        const uft_gcr_codec_t codec = (uft_gcr_codec_t)c;
+        const uft_gcr_info_t *info = uft_gcr_info(codec);
+        for (uint16_t i = 0; i < info->woerter; i++) {
+            const uint8_t wort = uft_gcr_kodieren(codec, (uint8_t)i);
+            ASSERT(wort != 0xFFu || codec != UFT_GCR_CBM_5_4);
+            ASSERT(uft_gcr_dekodieren(codec, wort) == (uint8_t)i);
+        }
+    }
+}
+
+TEST(jedes_ungueltige_wort_dekodiert_zu_UNGUELTIG) {
+    /* Die dritte Zusage, jetzt fuer die Gegenrichtung: das Praedikat und
+     * der Dekoder muessen sich ueber die UNGUELTIGEN einig sein. Waere
+     * die Rueckwaertstafel unvollstaendig aufgebaut, faende man es nur
+     * hier — eine Rundreise ueber die gueltigen bliebe gruen. */
+    for (int c = 0; c < UFT_GCR_ANZAHL; c++) {
+        const uft_gcr_codec_t codec = (uft_gcr_codec_t)c;
+        int gueltige = 0;
+        for (uint32_t w = 0; w < 256u; w++) {
+            const bool ok = uft_gcr_wort_gueltig(codec, w);
+            const uint8_t d = uft_gcr_dekodieren(codec, w);
+            if (ok) {
+                ASSERT(d != UFT_GCR_UNGUELTIG);
+                gueltige++;
+            } else {
+                ASSERT(d == UFT_GCR_UNGUELTIG);
+            }
+        }
+        ASSERT(gueltige == (int)uft_gcr_info(codec)->woerter);
+    }
+}
+
+TEST(dekodieren_weist_unsinn_ab_statt_zu_raten) {
+    ASSERT(uft_gcr_dekodieren((uft_gcr_codec_t)99, 0x96u)
+           == UFT_GCR_UNGUELTIG);
+    ASSERT(uft_gcr_dekodieren(UFT_GCR_APPLE_6_2, 0x1FFu)
+           == UFT_GCR_UNGUELTIG);
+}
+
 /* ── Das Register in sich ────────────────────────────────────────────── */
 
 TEST(wortmengen_haben_die_gemessene_groesse) {
@@ -229,6 +288,10 @@ int main(void) {
     RUN(register_deckt_die_bitpackung_von_encode_chunk);
     RUN(register_und_bestehender_dekoder_sind_umkehrbar);
     RUN(jedes_ungueltige_quintett_wird_vom_alten_dekoder_abgewiesen);
+    RUN(register_dekodiert_wie_cbm_gcr_decode_quintet);
+    RUN(kodieren_und_dekodieren_sind_umkehrbar_fuer_jeden_codec);
+    RUN(jedes_ungueltige_wort_dekodiert_zu_UNGUELTIG);
+    RUN(dekodieren_weist_unsinn_ab_statt_zu_raten);
     RUN(wortmengen_haben_die_gemessene_groesse);
     RUN(apple_zuordnung_ist_die_sortierte_menge);
     RUN(apple_5_3_ist_echte_teilmenge_von_6_2);

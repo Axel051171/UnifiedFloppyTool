@@ -21,7 +21,6 @@
         "src/formats/g64/uft_g64.c::gcr_enc",
         "src/formats/g64/uft_g64.c::gcr_encode_table",
         "src/formats/g64/uft_g64_parser_v2.c::gcr_encode_table",
-        "src/formats/g64/uft_g64_parser_v3.c::gcr_encode_table",
         "src/protection/uft_c64_protection_enhanced.c::DEFAULT_GCR",
         "tests/flux_gen/xum1541/flux_gen.c::GCR_ENC",
         "tests/unit/test_flux_gcr_c64_sync.c::c64_gcr_encode"
@@ -47,8 +46,7 @@
         "src/formats/c64/uft_gcr_ops.c::gcr_decode_low",
         "src/formats/d64/uft_d64_parser_v3.c::gcr_decode",
         "src/formats/g64/uft_g64.c::gcr_decode_table",
-        "src/formats/g64/uft_g64_parser_v2.c::gcr_decode_table",
-        "src/formats/g64/uft_g64_parser_v3.c::gcr_decode_table"
+        "src/formats/g64/uft_g64_parser_v2.c::gcr_decode_table"
       ]
     },
     {
