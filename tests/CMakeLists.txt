@@ -3231,6 +3231,7 @@ foreach(test_source ${TEST_SOURCES})
         # SSOT und gegen die VICE-Aufnahme im Korpus.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -4139,6 +4140,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
             ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
@@ -4157,6 +4159,7 @@ foreach(test_source ${TEST_SOURCES})
             ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
     elseif(${test_name} STREQUAL "test_g64_v3_halbspur_index")
@@ -4200,6 +4203,7 @@ foreach(test_source ${TEST_SOURCES})
             ${UFT_D64_PLUGIN_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -4486,7 +4490,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
-            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_format_probe_fuzz")
@@ -4497,6 +4502,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
             ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
             ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c
@@ -4559,6 +4565,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
             ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
             ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c
@@ -4622,6 +4629,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_extended.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_speedlock.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_ir_format.c)
+    elseif(${test_name} STREQUAL "test_g64_sync_und_offbytes")
+        # MF-1500 (P3-663): G64 sync after the 1541 measure, off bytes do not
+        # decide whether a sector exists, CRC_CHECKED on recomputed sectors.
+        # CI part derived in memory from the VICE G64; the real disk part is
+        # local-only (tests/corpus, gitignored) and says so when absent.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_scp_legacy_adapter")
         # MF-418: legacy uft_scp_* adapters over the shipped parser, checked
         # against the local-only cross-tool SCP capture.
@@ -4637,6 +4655,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             # MF-405: the GUI's own G64 reader, so its data path is testable
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
