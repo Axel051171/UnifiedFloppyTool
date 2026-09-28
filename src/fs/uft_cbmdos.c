@@ -270,6 +270,12 @@ uft_error_t uft_cbmdos_read_directory(const char *path,
              * sie nahm ihn auf, OHNE ihn zu kennzeichnen — dort steht
              * jetzt dieselbe Antwort.
              *
+             * BERICHTIGT MF-1515 (P3-668): der letzte Halbsatz traf nie zu.
+             * `git log -S MF-909` auf uft_d64_parser_v3.c findet keinen
+             * Commit; die Datei hatte kein `deleted`-Feld und uebersprang
+             * Typbyte $00 weiter. Seit MF-1515 steht dort die Antwort nach
+             * D64.TXT, wie hier seit MF-1501.
+             *
              * Ein NIE BENUTZTER Eintrag (Typbyte 0x00) faellt schon
              * darueber heraus und bleibt draussen; das ist etwas anderes
              * als eine geloeschte Datei.

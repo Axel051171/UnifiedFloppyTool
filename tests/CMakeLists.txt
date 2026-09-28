@@ -2554,6 +2554,14 @@ foreach(test_source ${TEST_SOURCES})
         # d64_disk_v3_t exists only in the .c file — so do NOT add the parser
         # here as well, only the logger it now uses.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_d64_v3_scratch_und_schleife")
+        # MF-1515 (P3-668): the second CBM directory door. Like
+        # test_d64_bam_40track it includes the parser translation unit
+        # directly (d64_disk_v3_t is private to the .c file) — so only the
+        # logger here, not the parser again.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
