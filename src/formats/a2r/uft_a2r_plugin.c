@@ -124,9 +124,28 @@ static uft_error_t a2r_plugin_open(uft_disk_t *disk, const char *path,
     disk->format      = UFT_FORMAT_A2R;
     disk->encoding    = UFT_ENC_UNKNOWN;   /* der Behaelter sagt es nicht */
 
-    /* Geometrie: der Leser hat die Locations bereits nach der
-     * Referenzregel in Zylinder und Kopf zerlegt (MF-1319). Die Zahlen
-     * kommen von dort und werden hier NICHT neu gerechnet. */
+    /* Geometrie: die Zahlen kommen aus dem Leser und werden hier NICHT
+     * neu gerechnet.
+     *
+     * BERICHTIGT MF-1483. Hier stand „der Leser hat die Locations
+     * bereits nach der Referenzregel in Zylinder und Kopf zerlegt
+     * (MF-1319)". Das gilt fuer den **v3/RWCP**-Pfad
+     * (`a2r_location_deuten()`, uft_a2r_parser.c:571) — auf dem
+     * **v2/STRM**-Pfad wird `track_number` ROH zugewiesen
+     * (uft_a2r_parser.c:409) und `side = 0` gesetzt, mit dem
+     * ausdruecklichen Vermerk „NICHT belegt": die „A2R 2.x"-Referenz ist
+     * nie gelesen worden.
+     *
+     * Gemessen durch Handanlegen (MF-1483): die Regel mutiert, der
+     * Uebersetzer baut es ein, die Geometrie einer A2R2-Aufnahme bleibt
+     * 141x1. Ein Kommentar, der eine Zerlegung fuer BEIDE Pfade
+     * behauptet, ist deshalb eine Aussage ueber eine andere Datei, als
+     * sie beschreibt. Offen als P3-656.
+     *
+     * Praktisch heisst das: `cylinders` zaehlt bei Laufwerkstyp 1 die
+     * AUFNAHMEPOSITIONEN in Viertelschritten (141 fuer eine
+     * 35-Spur-Diskette), nicht Zylinder. Wer daraus eine Spurzahl
+     * rechnet, teilt eine unbelegte Zahl. */
     int max_cyl = -1, max_head = 0;
     for (unsigned n = 0; n < ctx->track_count; n++) {
         if ((int)ctx->tracks[n].track_number > max_cyl)

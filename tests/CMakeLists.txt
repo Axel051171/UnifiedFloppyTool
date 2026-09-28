@@ -3704,7 +3704,12 @@ foreach(test_source ${TEST_SOURCES})
            # zwei Kontrollstroeme in git: geht durch `uft_disk_open()`,
            # also dieselbe Menge. Braucht beide Korpuspfade — der freie
            # die Kontrolle, der lokale die Aufnahmen (LOCAL-ONLY).
-           OR ${test_name} STREQUAL "test_kfx_sierra_schutzspur")
+           OR ${test_name} STREQUAL "test_kfx_sierra_schutzspur"
+           # MF-1483: BEIDE A2R-Blockarten (A2R2/STRM und A2R3/RWCP) an
+           # echten Aufnahmen, durch `uft_disk_open()` — also dieselbe
+           # Menge. Braucht nur den eingeschraenkten Korpus, alle sechs
+           # Aufnahmen sind LOCAL-ONLY.
+           OR ${test_name} STREQUAL "test_a2r_blockarten")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

@@ -456,9 +456,10 @@
       "origin": "real",
       "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
       "source": "archive.org @floppyarchaeology, https://archive.org/details/cpm-ver-2.2-cbios-rev-3.1-disk-jockey-2-d-e-000h-1979 — Datei \"CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).a2r\", 27958725 Byte, md5 laut Archiv 3ec28534b16f32b51de8cf97c2b58bcb, abgerufen 2026-09-04. ZWECK: P3-123c: echte FM-Aufnahme. Applesauce 1.88.4, 8 Zoll, 1979. Imaging-Log woertlich: \"611K SS 500kbps FM+MFM encoded disk with IBM sector structure\". Zylinder 0 = FM 500 kbps, 26x128 (aus der IMD ausgezaehlt) = IBM-3740-Layout, gegen das flux_decode_fm() geschrieben ist (MF-864). Die IMD ist Applesauces EIGENER Dekoder und damit die Sektorreferenz aus fremder Hand.",
-      "test": "test_fm_echte_aufnahme — **berichtigt MF-1066:** hier stand „noch keiner“, und das war seit **MF-869** falsch. `tests/test_fm_echte_aufnahme.c:77` öffnet genau diese Datei (`KOR_A \".a2r\"`) und misst Zylinder 0 des FM-Flusspfads gegen die IMD aus demselben Objekt — 26 von 26 Sektoren byteidentisch. Die Zeile ist der zweite Fall von Manifest-Drift in dieser Runde nach `atx` (MF-1065); dort fehlte der Test wirklich, hier fehlte nur der Eintrag. **Stufenwirkung hat keiner von beiden:** `a2r` hat kein Plugin, also kann `gen_verification_tiers.py` es gar nicht bewerten — siehe P3-351.",
+      "test": "test_a2r_blockarten",
       "oracle": "IMD desselben Objekts (Applesauce-Dekoder)",
-      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht.",
+      "content": "Zur Testzuordnung (MF-1483): das `test`-Feld traegt jetzt NUR den Namen, weil die Stufenrechnung auf Zeichengleichheit prueft (MF-1332) und Prosa darin still herausfaellt. Der bisherige Feldinhalt lautete woertlich: „test_fm_echte_aufnahme, test_a2r_blockarten — **berichtigt MF-1066:** hier stand „noch keiner“, und das war seit **MF-869** falsch. `tests/test_fm_echte_aufnahme.c:77` öffnet genau diese Datei (`KOR_A \".a2r\"`) und misst Zylinder 0 des FM-Flusspfads gegen die IMD aus demselben Objekt — 26 von 26 Sektoren byteidentisch. Die Zeile ist der zweite Fall von Manifest-Drift in dieser Runde nach `atx` (MF-1065); dort fehlte der Test wirklich, hier fehlte nur der Eintrag. **Stufenwirkung hat keiner von beiden:** `a2r` hat kein Plugin, also kann `gen_verification_tiers.py` es gar nicht bewerten — siehe P3-351.“ — er bleibt hier erhalten, statt geloescht zu werden. Er nennt weitere Tests, die diese Datei benutzen; fuer die Stufe zaehlt nur ein woertlicher Name."
     },
     {
       "file": "tests/corpus/kor_a/CPM Ver 2.2 CBIOS Rev 3.1 Disk Jockey 2D @ E000h (1979).imd",
@@ -478,9 +479,10 @@
       "origin": "real",
       "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
       "source": "archive.org @floppyarchaeology, https://archive.org/details/f-15-strike-eagle-f-15-strike-eagle — Datei \"F-15 Strike Eagle - F-15 Strike Eagle.a2r\", 7810459 Byte, md5 laut Archiv 66062dde7544150d1c4bb6717aab08d3, abgerufen 2026-09-04. ZWECK: Erstes reales ATX und erstes reales MFI im Korpus — beide Tier-Vermerke \"kein reales Abbild\" (VERIFICATION_TIERS.md Z.54/66) faellig. Dazu Atari-FM-Fluss (P3-123c Vorrang 2, UFT_MEDIA_ATARI_FM). Herkunftsluecke benannt: kein Imaging-Log im Objekt.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "test": "test_a2r_blockarten",
       "oracle": "offen",
-      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht.",
+      "content": "Zur Testzuordnung (MF-1483): das `test`-Feld traegt jetzt NUR den Namen, weil die Stufenrechnung auf Zeichengleichheit prueft (MF-1332) und Prosa darin still herausfaellt. Der bisherige Feldinhalt lautete woertlich: „test_a2r_blockarten — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6“ — er bleibt hier erhalten, statt geloescht zu werden. Er nennt weitere Tests, die diese Datei benutzen; fuer die Stufe zaehlt nur ein woertlicher Name."
     },
     {
       "file": "tests/corpus/kor_b/F-15 Strike Eagle - F-15 Strike Eagle.atx",
@@ -512,9 +514,10 @@
       "origin": "real",
       "tool": "Applesauce 1.88.4 (laut Objekt-Log)",
       "source": "archive.org @floppyarchaeology, https://archive.org/details/out-think-kamasoft-out-think-for-cpm — Datei \"OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.a2r\", 17824640 Byte, md5 laut Archiv 8f5584352c1652834a3e8963a5e34fe9, abgerufen 2026-09-04. ZWECK: T3-Hebung fuer cpm (VERIFICATION_TIERS.md Z.77). Uploader-Beleg woertlich: \"40 track 400K Kaypro DSDD disk (10x512)\", Verzeichnis mit 22disk gegengelesen — zweite Hand vorhanden. Im Baum: cpm_kaypro_4, src/formats/cpm/uft_cpm_diskdefs.c:221-223.",
-      "test": "noch keiner — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6",
+      "test": "test_a2r_blockarten",
       "oracle": "offen",
-      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht."
+      "rechte": "ZONE PRUEFEN — am Objekt steht KEIN Rechte-Feld (gemessen ueber die archive.org-Metadaten-API, nicht vermutet). Datei bleibt ungetrackt; Weg wie bei den dec0de-Proben. Eigentuemer-Entscheidung 2026-09-04: beschaffen und messen, Weitergabe nicht.",
+      "content": "Zur Testzuordnung (MF-1483): das `test`-Feld traegt jetzt NUR den Namen, weil die Stufenrechnung auf Zeichengleichheit prueft (MF-1332) und Prosa darin still herausfaellt. Der bisherige Feldinhalt lautete woertlich: „test_a2r_blockarten — Messkette in tools/uft-scout/out/floppyarchaeology_korpus.gutachten.md §6“ — er bleibt hier erhalten, statt geloescht zu werden. Er nennt weitere Tests, die diese Datei benutzen; fuer die Stufe zaehlt nur ein woertlicher Name."
     },
     {
       "file": "tests/corpus/kor_c/OUT-THINK - KAMASOFT - OUT-THINK FOR CPM.hfe",
@@ -2138,6 +2141,36 @@
       "source": "archive.org-Eintrag 20220303_20220303_0527, aus Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) [cp] [Flux] [!].zip, Ordner Ulysses and the Golden Fleece (Booter) (1982) (Sierra On-Line, Inc.) (160K) (Disk 1) [cp] [!]. Kein Lizenzfeld; urheberrechtlich belegte Sierra-/Tandy-Software, deshalb LOCAL-ONLY (.gitignore:153). ZIP-SHA-256 360d06a6e6667512c366b71758b4639a5458cebbbb367bd5498616c0a7af139e.",
       "test": "",
       "content": "Spurplan des Erhalters, woertlich: 0-0:0,120,80 | 1-1:0,140,100 | 2-39:0,120,80. Die von der Mehrheitszeile abweichende(n) Spur(en): [1]."
+    },
+    {
+      "file": "tests/corpus/fahey_a2r2/appleworks_d1_a.a2r",
+      "sha256": "5b5dcd6e1d38a3391918ac7ddf000fd6f786b2a162a928d3553d163d8d1d1b4b",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce (A2R 2, INFO-Block v1, Blockarten INFO+STRM) — die Fassung ist aus dem Dateikopf gelesen, nicht aus dem Sammlungstitel",
+      "source": "archive.org-Element Fahey_Set_2019-07 (Sammlung flux_compilations), Datei AppleWorks Program Disk - Viroqua Area Schools - November 10, 1987/AppleWorks Program Disk - Disk 1, Side A.a2r. Kein Lizenzfeld; der Inhalt ist urheberrechtlich belegte Apple-II-Software (AppleWorks/Apple Computer bzw. Scholastic), deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Wiederbeschaffung: Element herunterladen, diese Datei entnehmen. GEGENGERECHNET gegen die drei Pruefsummen aus Fahey_Set_2019-07_files.xml des Archivs: md5 bf4f53db4db288831bab218984217dbc, sha1 0154889e8b30488bd70ac34215ae08d823bbe35e, crc32 05049fc9, Groesse 16148688 — alle drei stimmen (gemessen MF-1483). Rolle im Korpus: Seite A des Paares.",
+      "test": "test_a2r_blockarten",
+      "content": "Applesauce-Flussaufnahme, 16148688 Byte. Kopf sagt \"A2R2\" + 0xFF 0x0A 0x0D 0x0A, danach die Blockarten INFO+STRM — A2R2 fuehrt den Fluss in `STRM`, A2R3 in `RWCP`; das sind verschiedene Behaelteraufbauten, keine Varianten desselben. Der Korpus hatte bis MF-1483 NUR A2R3 (drei Abbilder, alle mit RWCP)."
+    },
+    {
+      "file": "tests/corpus/fahey_a2r2/appleworks_d1_b.a2r",
+      "sha256": "fb15fa7c2c1ce86fe3df3b35ccba24f08afcfa160897131c44d367598cb757ff",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce (A2R 2, INFO-Block v1, Blockarten INFO+STRM) — die Fassung ist aus dem Dateikopf gelesen, nicht aus dem Sammlungstitel",
+      "source": "archive.org-Element Fahey_Set_2019-07 (Sammlung flux_compilations), Datei AppleWorks Program Disk - Viroqua Area Schools - November 10, 1987/AppleWorks Program Disk - Disk 1, Side B.a2r. Kein Lizenzfeld; der Inhalt ist urheberrechtlich belegte Apple-II-Software (AppleWorks/Apple Computer bzw. Scholastic), deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Wiederbeschaffung: Element herunterladen, diese Datei entnehmen. GEGENGERECHNET gegen die drei Pruefsummen aus Fahey_Set_2019-07_files.xml des Archivs: md5 9160fe91d886a67d28ec7d2e08bbdc10, sha1 2ee7b1d24640e5349440f445141fda9421cc4669, crc32 e1b1e6cc, Groesse 12550605 — alle drei stimmen (gemessen MF-1483). Rolle im Korpus: Seite B desselben Datentraegers.",
+      "test": "test_a2r_blockarten",
+      "content": "Applesauce-Flussaufnahme, 12550605 Byte. Kopf sagt \"A2R2\" + 0xFF 0x0A 0x0D 0x0A, danach die Blockarten INFO+STRM — A2R2 fuehrt den Fluss in `STRM`, A2R3 in `RWCP`; das sind verschiedene Behaelteraufbauten, keine Varianten desselben. Der Korpus hatte bis MF-1483 NUR A2R3 (drei Abbilder, alle mit RWCP)."
+    },
+    {
+      "file": "tests/corpus/fahey_a2r2/algebra_shop_d1_a.a2r",
+      "sha256": "c35bed6ad75b5a7d5f1a9915a1e0d082c62aa39801dc7e77208a74c76858fbf2",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce (A2R 2, INFO-Block v1, Blockarten INFO+STRM) — die Fassung ist aus dem Dateikopf gelesen, nicht aus dem Sammlungstitel",
+      "source": "archive.org-Element Fahey_Set_2019-07 (Sammlung flux_compilations), Datei Algebra Shop (Scholastic)/Algebra Shop - Disk 1, Side A.a2r. Kein Lizenzfeld; der Inhalt ist urheberrechtlich belegte Apple-II-Software (AppleWorks/Apple Computer bzw. Scholastic), deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153): nur Hash und Provenienz stehen im Repo, die Datei selbst wird NICHT weitergegeben. Wiederbeschaffung: Element herunterladen, diese Datei entnehmen. GEGENGERECHNET gegen die drei Pruefsummen aus Fahey_Set_2019-07_files.xml des Archivs: md5 7cec2213ca1e5559595424c00b2e33d2, sha1 8c8d86be8bc12bc26ada63736f7e3ad6d450bc49, crc32 42e44bed, Groesse 16603044 — alle drei stimmen (gemessen MF-1483). Rolle im Korpus: zweiter Titel, damit der Beleg nicht an einer Diskette haengt.",
+      "test": "test_a2r_blockarten",
+      "content": "Applesauce-Flussaufnahme, 16603044 Byte. Kopf sagt \"A2R2\" + 0xFF 0x0A 0x0D 0x0A, danach die Blockarten INFO+STRM — A2R2 fuehrt den Fluss in `STRM`, A2R3 in `RWCP`; das sind verschiedene Behaelteraufbauten, keine Varianten desselben. Der Korpus hatte bis MF-1483 NUR A2R3 (drei Abbilder, alle mit RWCP)."
     }
   ]
 }
