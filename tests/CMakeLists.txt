@@ -3054,6 +3054,15 @@ foreach(test_source ${TEST_SOURCES})
         target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_recovery_wizard_ohne_prozente")
+        # MF-1611 (P3-705): der Recovery-Assistent ohne erfundene
+        # Erfolgsprozente. Triage + Assistent ueber der Formatschicht.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_triage.c
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_recovery_wizard.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})

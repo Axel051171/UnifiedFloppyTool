@@ -35,17 +35,11 @@ static void rank_strategies_good(uft_recovery_wizard_t *wiz)
 {
     /* quality > 80 — disk is in good shape */
     wiz->strategies[0]          = UFT_REC_STRATEGY_REREAD;
-    wiz->strategy_probability[0] = 0.95f;
     wiz->strategies[1]          = UFT_REC_STRATEGY_MULTIREV;
-    wiz->strategy_probability[1] = 0.90f;
     wiz->strategies[2]          = UFT_REC_STRATEGY_AGGRESSIVE;
-    wiz->strategy_probability[2] = 0.85f;
     wiz->strategies[3]          = UFT_REC_STRATEGY_DEEPREAD;
-    wiz->strategy_probability[3] = 0.80f;
     wiz->strategies[4]          = UFT_REC_STRATEGY_CLEAN;
-    wiz->strategy_probability[4] = 0.75f;
     wiz->strategies[5]          = UFT_REC_STRATEGY_MANUAL;
-    wiz->strategy_probability[5] = 0.70f;
     wiz->recommended_strategy = 0;
 }
 
@@ -53,17 +47,11 @@ static void rank_strategies_moderate(uft_recovery_wizard_t *wiz)
 {
     /* quality 60-80 — some errors, standard recovery */
     wiz->strategies[0]          = UFT_REC_STRATEGY_MULTIREV;
-    wiz->strategy_probability[0] = 0.70f;
     wiz->strategies[1]          = UFT_REC_STRATEGY_AGGRESSIVE;
-    wiz->strategy_probability[1] = 0.60f;
     wiz->strategies[2]          = UFT_REC_STRATEGY_REREAD;
-    wiz->strategy_probability[2] = 0.50f;
     wiz->strategies[3]          = UFT_REC_STRATEGY_DEEPREAD;
-    wiz->strategy_probability[3] = 0.45f;
     wiz->strategies[4]          = UFT_REC_STRATEGY_CLEAN;
-    wiz->strategy_probability[4] = 0.35f;
     wiz->strategies[5]          = UFT_REC_STRATEGY_MANUAL;
-    wiz->strategy_probability[5] = 0.20f;
     wiz->recommended_strategy = 0;
 }
 
@@ -71,17 +59,11 @@ static void rank_strategies_degraded(uft_recovery_wizard_t *wiz)
 {
     /* quality 40-60 — significant damage */
     wiz->strategies[0]          = UFT_REC_STRATEGY_DEEPREAD;
-    wiz->strategy_probability[0] = 0.65f;
     wiz->strategies[1]          = UFT_REC_STRATEGY_AGGRESSIVE;
-    wiz->strategy_probability[1] = 0.55f;
     wiz->strategies[2]          = UFT_REC_STRATEGY_CLEAN;
-    wiz->strategy_probability[2] = 0.45f;
     wiz->strategies[3]          = UFT_REC_STRATEGY_MULTIREV;
-    wiz->strategy_probability[3] = 0.40f;
     wiz->strategies[4]          = UFT_REC_STRATEGY_REREAD;
-    wiz->strategy_probability[4] = 0.30f;
     wiz->strategies[5]          = UFT_REC_STRATEGY_MANUAL;
-    wiz->strategy_probability[5] = 0.25f;
     wiz->recommended_strategy = 0;
 }
 
@@ -89,17 +71,11 @@ static void rank_strategies_critical(uft_recovery_wizard_t *wiz)
 {
     /* quality < 40 — severe damage */
     wiz->strategies[0]          = UFT_REC_STRATEGY_MANUAL;
-    wiz->strategy_probability[0] = 0.30f;
     wiz->strategies[1]          = UFT_REC_STRATEGY_CLEAN;
-    wiz->strategy_probability[1] = 0.25f;
     wiz->strategies[2]          = UFT_REC_STRATEGY_DEEPREAD;
-    wiz->strategy_probability[2] = 0.20f;
     wiz->strategies[3]          = UFT_REC_STRATEGY_AGGRESSIVE;
-    wiz->strategy_probability[3] = 0.15f;
     wiz->strategies[4]          = UFT_REC_STRATEGY_MULTIREV;
-    wiz->strategy_probability[4] = 0.10f;
     wiz->strategies[5]          = UFT_REC_STRATEGY_REREAD;
-    wiz->strategy_probability[5] = 0.05f;
     wiz->recommended_strategy = 0;
 }
 
@@ -107,17 +83,11 @@ static void rank_strategies_protection(uft_recovery_wizard_t *wiz)
 {
     /* Copy protection detected — flux-level recovery preferred */
     wiz->strategies[0]          = UFT_REC_STRATEGY_DEEPREAD;
-    wiz->strategy_probability[0] = 0.80f;
     wiz->strategies[1]          = UFT_REC_STRATEGY_MULTIREV;
-    wiz->strategy_probability[1] = 0.70f;
     wiz->strategies[2]          = UFT_REC_STRATEGY_AGGRESSIVE;
-    wiz->strategy_probability[2] = 0.50f;
     wiz->strategies[3]          = UFT_REC_STRATEGY_REREAD;
-    wiz->strategy_probability[3] = 0.40f;
     wiz->strategies[4]          = UFT_REC_STRATEGY_CLEAN;
-    wiz->strategy_probability[4] = 0.30f;
     wiz->strategies[5]          = UFT_REC_STRATEGY_MANUAL;
-    wiz->strategy_probability[5] = 0.20f;
     wiz->recommended_strategy = 0;
 }
 
@@ -150,9 +120,8 @@ static void update_step_description(uft_recovery_wizard_t *wiz)
             break;
         case UFT_REC_STEP_EXECUTE:
             snprintf(wiz->step_description, sizeof(wiz->step_description),
-                     "Step 3/5: Executing recovery — %s (est. %.0f%% success).",
-                     strategy_name(wiz->strategies[wiz->recommended_strategy]),
-                     (double)wiz->strategy_probability[wiz->recommended_strategy] * 100.0);
+                     "Step 3/5: Executing recovery — %s.",
+                     strategy_name(wiz->strategies[wiz->recommended_strategy]));
             break;
         case UFT_REC_STEP_VERIFY:
             snprintf(wiz->step_description, sizeof(wiz->step_description),
@@ -185,51 +154,46 @@ static void generate_recommendation(uft_recovery_wizard_t *wiz)
     if (wiz->protection_detected) {
         snprintf(wiz->recommendation, sizeof(wiz->recommendation),
                  "Copy protection detected! Score: %d/100. "
-                 "Recommended: %s (est. %.0f%% success). "
+                 "Recommended: %s. "
                  "Use flux-level capture (SCP/KryoFlux) to preserve "
                  "protection signatures. Sector-only formats will lose "
                  "protection data.",
                  wiz->quality_score,
-                 strategy_name(wiz->strategies[0]),
-                 (double)wiz->strategy_probability[0] * 100.0);
+                 strategy_name(wiz->strategies[0]));
         return;
     }
 
     if (wiz->quality_score >= 60) {
         snprintf(wiz->recommendation, sizeof(wiz->recommendation),
                  "Some errors detected (score %d/100, %d bad sectors). "
-                 "Recommended: %s (est. %.0f%% success). "
-                 "If that fails, try: %s (est. %.0f%%).",
+                 "Recommended: %s. "
+                 "If that fails, try: %s.",
                  wiz->quality_score, wiz->sectors_bad,
                  strategy_name(wiz->strategies[0]),
-                 (double)wiz->strategy_probability[0] * 100.0,
-                 strategy_name(wiz->strategies[1]),
-                 (double)wiz->strategy_probability[1] * 100.0);
+                 strategy_name(wiz->strategies[1]));
         return;
     }
 
     if (wiz->quality_score >= 40) {
         snprintf(wiz->recommendation, sizeof(wiz->recommendation),
                  "Significant damage (score %d/100, %d bad sectors). "
-                 "Recommended: %s (est. %.0f%% success). "
+                 "Recommended: %s. "
                  "Consider cleaning the disk surface before re-imaging. "
                  "Flux-level capture is strongly recommended.",
                  wiz->quality_score, wiz->sectors_bad,
-                 strategy_name(wiz->strategies[0]),
-                 (double)wiz->strategy_probability[0] * 100.0);
+                 strategy_name(wiz->strategies[0]));
         return;
     }
 
     /* Critical damage */
     snprintf(wiz->recommendation, sizeof(wiz->recommendation),
              "SEVERE damage (score %d/100, %d bad sectors). "
-             "Best option: %s (est. %.0f%% success). "
+             "Best option: %s. "
              "Professional data recovery may be required. "
              "Handle the disk with extreme care — further reads "
              "may cause additional degradation.",
              wiz->quality_score, wiz->sectors_bad,
-             strategy_name(wiz->strategies[0]),
-             (double)wiz->strategy_probability[0] * 100.0);
+             strategy_name(wiz->strategies[0]));
 }
 
 /* ============================================================================

@@ -138,7 +138,6 @@ private:
 
     /* Dynamic radio buttons (re-created each initializePage) */
     QList<QRadioButton *> m_radios;
-    QList<QLabel *>       m_probLabels;
 };
 
 /* ============================================================================

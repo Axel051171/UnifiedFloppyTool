@@ -4,7 +4,7 @@
  *
  * Provides a stateful wizard that guides the user through:
  *   1. ASSESS  — Run triage to evaluate disk quality
- *   2. STRATEGY — Rank recovery strategies by success probability
+ *   2. STRATEGY — Rank recovery strategies by quality band (order only)
  *   3. EXECUTE — Apply the chosen strategy
  *   4. VERIFY  — Confirm results
  *   5. EXPORT  — Recommend output format + archive
@@ -64,7 +64,10 @@ typedef struct {
     int                  tracks_with_errors;
     int                  recommended_strategy;    /**< Best strategy index */
     uft_rec_strategy_t   strategies[UFT_REC_MAX_STRATEGIES];
-    float                strategy_probability[UFT_REC_MAX_STRATEGIES];
+    /* MF-1611 (P3-705): hier stand `float strategy_probability[]` —
+     * feste Erfolgswahrscheinlichkeiten je Qualitaetsband, keine davon
+     * gemessen. Die Reihenfolge von `strategies[]` ist die einzige
+     * Aussage, die sie trugen; entfernt nach Eigentuemerentscheidung. */
     char                 step_description[256];   /**< Current step explanation */
     char                 recommendation[512];     /**< What to do next */
     bool                 protection_detected;
@@ -84,7 +87,7 @@ uft_recovery_wizard_t *uft_recovery_wizard_create(void);
  * @brief Assess a disk image and populate the wizard state
  *
  * Runs uft_triage_analyze() internally, then ranks recovery strategies
- * by estimated success probability.
+ * in the order of the quality band.
  *
  * @param wiz  Wizard instance
  * @param path File path to the disk image / flux file

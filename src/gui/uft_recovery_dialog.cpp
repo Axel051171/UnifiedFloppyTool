@@ -252,8 +252,6 @@ void UftRecStrategyPage::initializePage()
     /* Clear old radio buttons */
     qDeleteAll(m_radios);
     m_radios.clear();
-    qDeleteAll(m_probLabels);
-    m_probLabels.clear();
 
     /* Remove old items from layout (skip advice label and stretch) */
     while (m_stratLayout->count() > 0) {
@@ -262,44 +260,24 @@ void UftRecStrategyPage::initializePage()
         delete item;
     }
 
-    /* Create radio button per strategy, sorted by probability desc */
-    /* Build sorted index list */
-    struct StratEntry { int idx; float prob; };
-    QList<StratEntry> sorted;
-    for (int i = 0; i < UFT_REC_MAX_STRATEGIES; i++) {
-        if (ws->strategy_probability[i] > 0.0f) {
-            sorted.append({i, ws->strategy_probability[i]});
-        }
-    }
-    std::sort(sorted.begin(), sorted.end(),
-              [](const StratEntry &a, const StratEntry &b) {
-                  return a.prob > b.prob;
-              });
-
+    /* One radio button per strategy, in the order of the quality band.
+     * MF-1611 (P3-705): they were sorted by invented success
+     * probabilities and showed a "95%" badge; no number was measured. */
     bool first = true;
-    for (const auto &se : sorted) {
+    int shown = 0;
+    for (int idx = 0; idx < UFT_REC_MAX_STRATEGIES; idx++) {
+        shown++;
         QHBoxLayout *row = new QHBoxLayout;
 
         QRadioButton *rb = new QRadioButton(
-            QString::fromUtf8(strategyName(ws->strategies[se.idx])));
-        m_group->addButton(rb, se.idx);
+            QString::fromUtf8(strategyName(ws->strategies[idx])));
+        m_group->addButton(rb, idx);
         m_radios.append(rb);
         row->addWidget(rb, 1);
 
-        /* Probability badge */
-        QLabel *probLbl = new QLabel(
-            QString("%1%").arg(static_cast<double>(se.prob * 100.0f), 0, 'f', 0));
-        probLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        probLbl->setMinimumWidth(50);
-        QFont pf = probLbl->font();
-        pf.setBold(true);
-        probLbl->setFont(pf);
-        m_probLabels.append(probLbl);
-        row->addWidget(probLbl);
-
-        /* "Recommended" badge for the first (highest probability) */
+        /* The first of the band is a suggestion, not a measured best. */
         if (first) {
-            QLabel *badge = new QLabel(tr("  Recommended"));
+            QLabel *badge = new QLabel(tr("  Suggested first"));
             badge->setStyleSheet(
                 "QLabel { background-color: #4caf50; color: white; "
                 "border-radius: 3px; padding: 2px 6px; font-size: 11px; "
@@ -313,7 +291,7 @@ void UftRecStrategyPage::initializePage()
     }
 
     /* If no strategies were found, show a fallback */
-    if (sorted.isEmpty()) {
+    if (shown == 0) {
         QLabel *none = new QLabel(tr("No recovery strategies available for this disk."));
         m_stratLayout->addWidget(none);
     }
