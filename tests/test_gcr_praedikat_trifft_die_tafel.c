@@ -63,7 +63,19 @@
  * Zuordnung nicht".
  */
 
-#include "uft/uft_cbm_gcr.h"
+#include "uft/core/uft_gcr.h"
+
+/* Der eingefrorene Zeuge — `tests/oracles/gcr_cbm_tafel_87345aab.c`.
+ *
+ * Bis MF-1522 las dieser Test `ORAKEL_CBM_ENCODE` aus
+ * `uft/uft_cbm_gcr.h`. Mit MF-1522 ist die Tafel ins Register gewandert,
+ * und damit waere der Abgleich eine SELBSTPRUEFUNG geworden — der
+ * Vollbau hat den Test folgerichtig fallen lassen, weil sein Zeuge fort
+ * war. Jetzt steht der Zeuge in `tests/oracles/`, mit dem Commit-Hash
+ * seiner Fassung im Dateinamen, und wird nie gegen das Register
+ * gepflegt: zwei Haende, wie MF-644 es verlangt. */
+extern const uint8_t ORAKEL_CBM_ENCODE[16];
+extern const uint8_t ORAKEL_CBM_DECODE[32];
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -141,7 +153,7 @@ TEST(cbm_jedes_tafelwort_besteht_das_praedikat) {
     /* Die Tafel kommt aus `include/uft/uft_cbm_gcr.h` — dieselbe
      * Definition, die der Produktionscode benutzt. Keine Kopie hier. */
     for (int i = 0; i < 16; i++)
-        ASSERT(cbm_gcr_wort_gueltig(cbm_gcr_encode_table[i]));
+        ASSERT(cbm_gcr_wort_gueltig(ORAKEL_CBM_ENCODE[i]));
 }
 
 TEST(cbm_kein_nichttafelwort_besteht_das_praedikat) {
@@ -150,7 +162,7 @@ TEST(cbm_kein_nichttafelwort_besteht_das_praedikat) {
     for (int w = 0; w < 32; w++) {
         bool in_tafel = false;
         for (int i = 0; i < 16; i++)
-            if (cbm_gcr_encode_table[i] == (uint8_t)w) { in_tafel = true; break; }
+            if (ORAKEL_CBM_ENCODE[i] == (uint8_t)w) { in_tafel = true; break; }
         ASSERT(cbm_gcr_wort_gueltig((uint8_t)w) == in_tafel);
     }
 }
@@ -197,12 +209,43 @@ TEST(apple_bit7_und_einserpaar_ohne_bit7_sind_beide_noetig) {
     ASSERT(apple62_byte_gueltig(0xFFu));
 }
 
+TEST(cbm_register_dekodiert_wie_der_eingefrorene_zeuge) {
+    /* Diese Zusage war vor MF-1522 nicht moeglich: die Dekodiertafel lag
+     * im Header, den das Register selbst einband — ein Abgleich waere
+     * zirkulaer gewesen. Der eingefrorene Zeuge traegt sie jetzt
+     * unabhaengig, also laesst sich beide Richtungen pruefen.
+     *
+     * Alle 32 Quintette, gueltige UND ungueltige: die zweite Haelfte ist
+     * die, an der eine unvollstaendige Rueckwaertstafel faellt. */
+    for (uint32_t q = 0; q < 32u; q++) {
+        const uint8_t soll = ORAKEL_CBM_DECODE[q];
+        const uint8_t ist = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q);
+        if (soll == 0xFFu) {
+            ASSERT(ist == UFT_GCR_UNGUELTIG);
+            ASSERT(!cbm_gcr_wort_gueltig((uint8_t)q));
+        } else {
+            ASSERT(ist == soll);
+            ASSERT(cbm_gcr_wort_gueltig((uint8_t)q));
+        }
+    }
+}
+
+TEST(cbm_register_kodiert_wie_der_eingefrorene_zeuge) {
+    /* Die Zuordnung 0..F ist Commodores Wahl, nicht Folge der Regel —
+     * also muss sie byteweise stimmen, nicht nur als Menge. */
+    for (int k = 0; k < 16; k++)
+        ASSERT(uft_gcr_kodieren(UFT_GCR_CBM_5_4, (uint8_t)k)
+               == ORAKEL_CBM_ENCODE[k]);
+}
+
 int main(void) {
     printf("=== GCR: Praedikat gegen Tafel (MF-1508) ===\n");
     RUN(cbm_praedikat_liefert_genau_sechzehn_woerter);
     RUN(cbm_jedes_tafelwort_besteht_das_praedikat);
     RUN(cbm_kein_nichttafelwort_besteht_das_praedikat);
     RUN(cbm_sync_wort_ist_ausgeschlossen_und_das_ist_der_grund);
+    RUN(cbm_register_kodiert_wie_der_eingefrorene_zeuge);
+    RUN(cbm_register_dekodiert_wie_der_eingefrorene_zeuge);
     RUN(apple_praedikat_liefert_genau_vierundsechzig_woerter);
     RUN(apple_das_kleinste_gueltige_byte_ist_0x96);
     RUN(apple_bit7_und_einserpaar_ohne_bit7_sind_beide_noetig);

@@ -520,10 +520,10 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
 | # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
 |---|---|---|---|---|
-| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **4 von 13** (24. Zonenkopie · `STAND.md` veraltet · Teststrom mass den Aufbau · 13. Tafel im Register selbst) |
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **5 von 11** (2026-09-29; vorher 4 von 13). Vier der fünf Fänge sind der **Vollbau** — das wirksamste Tor dieses Baums und das am seltensten gefahrene |
 | **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
 | **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
-| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 58 Familien mit **113 überzähligen Kopien** im Manifest, Zonen davon 23 |
+| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 56 Familien mit **97 überzähligen Kopien** im Manifest, Zonen davon 23 (Stand 2026-09-29, MF-1522) |
 | **K4** | Formate ohne **gemessenen** Erzeuger-Kanal | **runter** | `python scripts/gen_erzeuger_zensus.py` → §Stand, abgeleitet | **8** von 89 offen, davon **0** mit gemessenem Kanal |
 | **K5** | Waisen im Baum | **runter** | `docs/orphan_baseline.txt`, Datenzeilen | **199** |
 | **K6** | Regeln, die als Satz dastehen und **kein Tor** haben | **runter** | Rückschau, [`.claude/STEHENDE_AUFTRAEGE.md`](.claude/STEHENDE_AUFTRAEGE.md) | **2** — „Orakelzahlen durchs Binary"; „wer eine Menge parst, zählt sie gegen" |
@@ -534,9 +534,9 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 > **K3 hatte hier zuerst „Audit nur für Zonen" stehen — die Lücke ist
 > seit MF-1506 geschlossen, und die Messung hat mehr gefunden als die
 > Vermutung.** Genannt waren Kapazitäten, Lückenmaße, CRC-Polynome.
-> Gemessen über `git ls-files` (2117 Dateien) stehen **58 Zahlenfolgen in
-> mehr als einer Datei**, zusammen **113 überzählige Kopien** — und die
-> größten sind keine davon:
+> Der **erste Lauf** (2026-09-28) hat über `git ls-files` (2117 Dateien)
+> **58 Zahlenfolgen in mehr als einer Datei** gemessen, zusammen **113
+> überzählige Kopien** — und die größten sind keine davon:
 >
 > | Dateien | Familie |
 > |---|---|
@@ -557,6 +557,34 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 > `audit_konstantenfamilien.py` sieht *dass* eine Folge mehrfach dasteht;
 > `audit_cbm_zonen.py` rechnet die Zonentafeln gegen die SSOT und sieht
 > damit auch eine Kopie, die schon **falsch** ist. Breite und Tiefe.
+>
+> **NACHTRAG MF-1522 — die Tafel oben ist ein Anlass mit Datum, kein Stand,
+> und das Tor kannte einen Begriff nicht.** P3-666 hat die drei größten
+> Familien angegangen: die CBM-Encode-Tafel steht jetzt in 6 statt 12
+> Dateien, die Decode-Tafel in 4 statt 10, und eine Familie ist ganz
+> verschwunden — **113 → 97** überzählige Kopien, 58 → 56 Familien
+> (gemessen, Stand oben in der Zeile K3).
+>
+> Dabei hat das Tor die letzte Hebung **abgewiesen, und zwar richtig**: die
+> Ratsche lässt das Manifest nur kürzer werden, und eine *Verschiebung* der
+> Tafel in das Register sieht genauso aus wie eine neue Kopie — 5 weg, 1
+> dazu. Der Kommentar bei `ZEUGENORTE` sagt diese Lücke selbst („eine
+> Verschiebung nicht von einem Zuwachs unterscheiden können"); dort war die
+> Antwort ein Ort mit einer Zusage im Namen, hier ist sie dieselbe.
+> `REGISTERORTE` nennt den **Heimatort**, und drei Klammern halten ihn eng:
+> der Ort steht in der Liste · die Familie steht dort **genau einmal** (ein
+> Register, das eine zweite Tafel anlegt, fällt — dieser Fall ist bei
+> MF-1509 schon eingetreten) · die Familie ist insgesamt **kleiner**
+> geworden. Ein Heimatort kann damit nur als Teil einer Auflösung
+> entstehen, nie neben einem Zuwachs.
+>
+> **Und die Klammern sind einzeln belegt, nicht als Gruppe.** Der
+> Selbsttest steht auf 19/19, und eine Mutationsprobe entschärft jede
+> Klammer für sich: alle drei lassen ihn auf 18/19 fallen. Die erste
+> Fassung hatte nur zwei Fälle — mit entschärfter **Ortsklammer** blieb sie
+> 18/18 grün, die Klammer war Zierde. Gefunden hat das die Mutation, nicht
+> das Lesen; der fehlende Fall (eine gewöhnliche Datei beansprucht die
+> Ausnahme mitten in einer echten Auflösung) steht jetzt als (iv) drin.
 >
 > **K4 hatte hier zuerst „Messbefehl fehlt" stehen, und das war falsch.**
 > Der Erzeuger-Zensus misst genau diese Frage seit MF-1087 und wird bei

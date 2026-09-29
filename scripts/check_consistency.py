@@ -1667,6 +1667,20 @@ def main() -> int:
         import audit_heredoc as _hd
         all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
 
+        # Tor 72 (MF-1522): eine MF-Nummer gehoert genau EINEM Commit.
+        # Der Anlass ist gemessen: MF-1515 liegt auf 87345aab (main) UND
+        # auf d39834ff (Arbeitsbaum wt-dtc) — beide Seiten hatten
+        # `git log` gefragt, nur nicht denselben. Vier weitere Nummern
+        # lagen unvorgemerkt doppelt und liessen sich noch verschieben;
+        # die committete nicht mehr.
+        #
+        # Wie bei Tor 71 sieht das CI den HAKEN nicht (er liegt in
+        # `.git/hooks/`, unversioniert). Es sieht den Klassifizierer und
+        # die Zeile in der Vorlage, die ihn ruft — ein Tor ohne Tuer ist
+        # in diesem Baum eine eigene Fehlerklasse (P3-204).
+        import audit_mf_nummer as _mfn
+        all_errors.append(("MF-Nummer einmalig", _mfn.check(repo)))
+
     # Kategorie (MF-1506): dieselbe Zahlenfolge als Tabelle in mehreren
     # DATEIEN. `audit_cbm_zonen.py` haelt EINE Familie; Kennzahl K3 fuehrte
     # fuer alles andere „kein Audit". Gemessen waren es 58 Familien mit

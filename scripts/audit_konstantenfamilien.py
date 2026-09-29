@@ -6,9 +6,10 @@
 
 `audit_cbm_zonen.py` haelt EINE Konstantenfamilie: die Sektoren je Spur
 eines 1541. Kennzahl **K3** fuehrte fuer alles andere „kein Audit" — und
-das war kein Verdacht, sondern eine Luecke mit Namen. Gemessen ueber
-`git ls-files` (2117 Dateien): **58 Zahlenfolgen stehen in mehr als einer
-Datei**, zusammen **113 ueberzaehlige Kopien**. Die groessten:
+das war kein Verdacht, sondern eine Luecke mit Namen. Der ERSTE LAUF
+(MF-1506, 2026-09-28) hat ueber `git ls-files` (2117 Dateien) gemessen:
+**58 Zahlenfolgen in mehr als einer Datei**, zusammen **113 ueberzaehlige
+Kopien**. Die groessten:
 
     12 Dateien   CBM-GCR-Encode-Tafel  (DEFAULT_GCR, GCR_ENC,
                  c64_gcr_encode, cbm_gcr_encode_table, …)
@@ -19,9 +20,12 @@ Datei**, zusammen **113 ueberzaehlige Kopien**. Die groessten:
      3 Dateien   CRC-16-Tafel          (crc16_table, crc_tab, test_crc_tab)
 
 Die Gedaechtnisnotizen dieses Projekts nannten „GCR-Tafel sechsfach" und
-„Apple-GCR-Tafel siebenfach"; gemessen sind es heute 12 und 7. Eine von
+„Apple-GCR-Tafel siebenfach"; beim ersten Lauf waren es 12 und 7. Eine von
 Hand gefuehrte Zahl neben einer gemessenen driftet — genau deshalb zaehlt
-dieses Tor selbst statt eine Liste zu lesen.
+dieses Tor selbst statt eine Liste zu lesen, **und deshalb steht der
+heutige Stand nicht hier, sondern in der Ausgabe.** Die Tafel oben ist ein
+Anlass mit Datum, keine Aussage ueber jetzt: seit P3-666 sind die drei
+GCR-Familien in Arbeit, und jede Hebung aendert die Zahlen.
 
 Der Schaden ist in diesem Baum dreifach belegt und immer derselbe: die
 Kopien driften, und **die Abweichung sieht aus wie ein Fehler in den
@@ -98,6 +102,29 @@ MAX_LAENGE = 300       # darueber sind es Daten, keine Parametertafel
 ZEUGENORTE = (
     "tests/oracles/",      # eingefrorene Fassungen, gegen die geprueft wird
     "tests/flux_gen/",     # Erzeuger der Testeingabe — MUSS unabhaengig sein
+)
+
+# Orte, die den HEIMATORT einer Familie tragen duerfen (MF-1522). Die
+# Ratsche laesst das Manifest nur KUERZER werden — richtig gegen eine neue
+# Kopie, aber eine VERSCHIEBUNG sieht genauso aus. Der Kommentar bei
+# ZEUGENORTE sagt das selbst; dort war die Antwort ein Ort mit einer Zusage
+# im Namen, hier ist sie dieselbe.
+#
+# Der Anlass ist gemessen: MF-1522 hat die CBM-Zuordnungstafel aus
+# `include/uft/uft_cbm_gcr.h` in das Register geholt und dabei FUENF
+# Fundstellen der Familie dd00ee1840ff aufgeloest. Das Tor sah eine
+# hinzugekommene und wies ab — die Bilanz war 5 weg, 1 dazu, und genau
+# diese Bilanz soll es abweisen, wenn die Eine WIRKLICH neu ist.
+#
+# Drei Bedingungen halten den Begriff eng, und sie werden je einzeln
+# geprueft (siehe `check()`): der Ort steht hier; die Familie steht dort
+# GENAU EINMAL — ein Register, das eine zweite Tafel derselben Groesse
+# anlegt, faellt, und dieser Fall ist bei MF-1509 schon einmal
+# eingetreten; und die Familie ist insgesamt KLEINER geworden. Ein
+# Heimatort kann damit nur als Teil einer Aufloesung entstehen, nie neben
+# einem Zuwachs.
+REGISTERORTE = (
+    "src/core/uft_gcr.c",  # GCR-Codec-Register, MF-1509: Praedikat + Tafel
 )
 
 ZAHL = re.compile(r"\b(?:0[xX][0-9a-fA-F]+|\d+)\b")
@@ -281,6 +308,23 @@ def check(repo, hinweise: list | None = None,
                    ", ".join(stellen[:3])))
             continue
         dazu = sorted(set(stellen) - bekannt[sig])
+        geschrumpft = len(stellen) < len(bekannt[sig])
+        for s in list(dazu):
+            datei = s.split("::")[0]
+            if datei not in REGISTERORTE:
+                continue
+            # Genau EINMAL je Familie — sonst legt das Register eine zweite
+            # Tafel an, und das ist der Fall aus MF-1509.
+            if sum(1 for x in stellen if x.split("::")[0] == datei) != 1:
+                continue
+            if not geschrumpft:
+                continue
+            dazu.remove(s)
+            hinweise.append(
+                "Familie %s: `%s` ist ein HEIMATORT (REGISTERORTE) und wird "
+                "nicht als Kopie gezaehlt — die Familie ist von %d auf %d "
+                "Fundstellen gefallen. `--grundlinie-schreiben` zieht es "
+                "nach." % (sig, s, len(bekannt[sig]), len(stellen)))
         if dazu:
             neue_stellen.extend("%s (Familie %s)" % (s, sig) for s in dazu)
         weg = sorted(bekannt[sig] - set(stellen))
@@ -378,6 +422,80 @@ def _selbsttest() -> int:
               "tests/oracles/a_2.c": TAFEL % "z2"})
     faelle.append(("zwei Zeugen allein sind keine Familie",
                    len(messe(d)[0]) == 0))
+
+    # 5c Heimatort (MF-1522) — in DREI Richtungen, weil eine Ausnahme, die
+    #    nur in ihrer guten Richtung geprueft ist, alles durchlaesst.
+    REG = "src/core/uft_gcr.c"
+
+    # (i) Aufloesung MIT Verschiebung: drei Stellen werden zwei, eine davon
+    #     ist der Heimatort -> kein Verstoss, nur ein Hinweis.
+    d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei",
+              "c.c": TAFEL % "drei"})
+    m5 = d / "g5.json"
+    manifest_schreiben(messe(d)[0], m5)
+    (d / "b.c").write_text("int leer(void){return 0;}\n", encoding="utf-8")
+    (d / "c.c").write_text("int leer2(void){return 0;}\n", encoding="utf-8")
+    ziel = d / REG
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    ziel.write_text(TAFEL % "HEIMAT", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
+    hin5: list = []
+    fehler5 = check(d, hin5, m5)
+    faelle.append(("Heimatort bei Aufloesung ist kein Verstoss",
+                   not fehler5))
+    faelle.append(("Heimatort wird als solcher gemeldet",
+                   any("HEIMATORT" in h for h in hin5)))
+
+    # (ii) Heimatort OHNE Aufloesung: die Familie waechst von zwei auf drei
+    #      Stellen. Das muss fallen — sonst ist der Begriff ein Freibrief.
+    d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei"})
+    m5b = d / "g5b.json"
+    manifest_schreiben(messe(d)[0], m5b)
+    ziel = d / REG
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    ziel.write_text(TAFEL % "HEIMAT", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
+    faelle.append(("Heimatort ohne Aufloesung faellt",
+                   any("NEUE Kopie" in f for f in check(d, [], m5b))))
+
+    # (iii) ZWEI Tafeln derselben Familie im Register: das ist der Fall aus
+    #       MF-1509, wo das Register eine dreizehnte Tafel anlegen wollte.
+    #
+    #       Der Aufbau hat VIER Ausgangsstellen, damit die Familie trotz der
+    #       zwei Registertafeln von 4 auf 3 FAELLT. Sonst fiele der Fall an
+    #       der Schrumpf-Bedingung und die Einmal-Klammer waere ungeprueft —
+    #       ein Fall, der aus dem falschen Grund gruen wird, prueft nichts.
+    d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei",
+              "c.c": TAFEL % "drei", "dd.c": TAFEL % "vier"})
+    m5c = d / "g5c.json"
+    manifest_schreiben(messe(d)[0], m5c)
+    (d / "b.c").write_text("int leer(void){return 0;}\n", encoding="utf-8")
+    (d / "c.c").write_text("int leer2(void){return 0;}\n", encoding="utf-8")
+    (d / "dd.c").write_text("int leer3(void){return 0;}\n", encoding="utf-8")
+    ziel = d / REG
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    ziel.write_text(TAFEL % "HEIMAT" + TAFEL % "ZWEITE", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
+    faelle.append(("zwei Tafeln im Register fallen",
+                   any("NEUE Kopie" in f for f in check(d, [], m5c))))
+
+    # (iv) Eine GEWOEHNLICHE Datei als neue Stelle, mitten in einer echten
+    #      Aufloesung: drei Stellen werden zwei, die neue liegt aber NICHT
+    #      an einem Registerort. Das muss fallen.
+    #
+    #      Dieser Fall fehlte zuerst, und die Mutationsprobe hat es gezeigt:
+    #      mit entschaerfter Ortsklammer blieb der Selbsttest 18/18 gruen —
+    #      die Klammer war Zierde. Jetzt faellt er auf 17/18.
+    d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei",
+              "c.c": TAFEL % "drei"})
+    m5d = d / "g5d.json"
+    manifest_schreiben(messe(d)[0], m5d)
+    (d / "b.c").write_text("int leer(void){return 0;}\n", encoding="utf-8")
+    (d / "c.c").write_text("int leer2(void){return 0;}\n", encoding="utf-8")
+    (d / "x.c").write_text(TAFEL % "WOANDERS", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
+    faelle.append(("neue Stelle ausserhalb der Registerorte faellt",
+                   any("NEUE Kopie" in f for f in check(d, [], m5d))))
 
     # 6-9 Manifest: Bestand haelt, neue Kopie faellt, Wegfall meldet nur.
     d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei"})

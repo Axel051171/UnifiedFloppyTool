@@ -13,39 +13,12 @@
         15
       ],
       "stellen": [
-        "include/uft/uft_cbm_gcr.h::cbm_gcr_encode_table",
+        "src/core/uft_gcr.c::CBM_ZUORDNUNG",
         "src/dtc_components/src/encoding.c::dtc_gcr_cbm_4to5",
-        "src/formats/c64/uft_d64_g64.c::gcr_encode",
-        "src/formats/c64/uft_gcr_ops.c::gcr_encode_table",
         "src/formats/d64/uft_d64_parser_v3.c::gcr_encode",
-        "src/formats/g64/uft_g64.c::gcr_enc",
-        "src/formats/g64/uft_g64.c::gcr_encode_table",
         "src/formats/g64/uft_g64_parser_v2.c::gcr_encode_table",
         "src/protection/uft_c64_protection_enhanced.c::DEFAULT_GCR",
         "tests/unit/test_flux_gcr_c64_sync.c::c64_gcr_encode"
-      ]
-    },
-    {
-      "signatur": "7a9b0d4ab5aa",
-      "laenge": 32,
-      "beginn": [
-        255,
-        255,
-        255,
-        255,
-        255,
-        255
-      ],
-      "stellen": [
-        "include/uft/uft_cbm_gcr.h::cbm_gcr_decode_table",
-        "src/algorithms/advanced/uft_gcr_viterbi.c::gcr_decode_cbm",
-        "src/algorithms/advanced/uft_gcr_viterbi_v2.c::GCR_CBM_DECODE",
-        "src/flux/uft_flux_decoder.c::c64_gcr_decode",
-        "src/formats/c64/uft_d64_g64.c::gcr_decode_low",
-        "src/formats/c64/uft_gcr_ops.c::gcr_decode_low",
-        "src/formats/d64/uft_d64_parser_v3.c::gcr_decode",
-        "src/formats/g64/uft_g64.c::gcr_decode_table",
-        "src/formats/g64/uft_g64_parser_v2.c::gcr_decode_table"
       ]
     },
     {
@@ -212,6 +185,24 @@
         "src/formats/dsk_cpc/uft_dsk_cpc.c::dsk_sector_sizes",
         "src/formats/td0/uft_td0.c::td0_sector_sizes",
         "src/formats/uft_fdc_gaps.c::SIZE_TABLE"
+      ]
+    },
+    {
+      "signatur": "7a9b0d4ab5aa",
+      "laenge": 32,
+      "beginn": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        255
+      ],
+      "stellen": [
+        "src/algorithms/advanced/uft_gcr_viterbi.c::gcr_decode_cbm",
+        "src/algorithms/advanced/uft_gcr_viterbi_v2.c::GCR_CBM_DECODE",
+        "src/formats/d64/uft_d64_parser_v3.c::gcr_decode",
+        "src/formats/g64/uft_g64_parser_v2.c::gcr_decode_table"
       ]
     },
     {
@@ -550,22 +541,6 @@
       "stellen": [
         "src/hardware_providers/xum1541_usb.h::GCR_ZONE_SECTORS",
         "src/protection/uft_c64_protection_enhanced.c::ZONE_SECTORS"
-      ]
-    },
-    {
-      "signatur": "5678588d71f0",
-      "laenge": 32,
-      "beginn": [
-        255,
-        255,
-        255,
-        255,
-        255,
-        255
-      ],
-      "stellen": [
-        "src/formats/c64/uft_d64_g64.c::gcr_decode_high",
-        "src/formats/c64/uft_gcr_ops.c::gcr_decode_high"
       ]
     },
     {

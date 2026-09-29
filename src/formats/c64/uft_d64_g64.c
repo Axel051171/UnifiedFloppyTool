@@ -77,11 +77,10 @@ static const int block_offset[43] = {
     768, 785                                          /* 41 - 42 */
 };
 
-/** GCR encode table */
-static const uint8_t gcr_encode[16] = {
-    0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
-    0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
-};
+// Die GCR-Tafel stand hier bis MF-1522 — jetzt aus dem
+// Codec-Register (`uft/core/uft_gcr.h`): die Wortmenge folgt dort
+// einer gemessenen Regel, die Zuordnung steht genau einmal.
+#include "uft/core/uft_gcr.h"
 
 /** GCR decode table (high nibble) */
 static const uint8_t gcr_decode_high[32] = {
@@ -91,13 +90,10 @@ static const uint8_t gcr_decode_high[32] = {
     0xFF, 0x90, 0xA0, 0xB0, 0xFF, 0xD0, 0xE0, 0xFF
 };
 
-/** GCR decode table (low nibble) */
-static const uint8_t gcr_decode_low[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,
-    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,
-    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF
-};
+// Die GCR-Tafel stand hier bis MF-1522 — jetzt aus dem
+// Codec-Register (`uft/core/uft_gcr.h`): die Wortmenge folgt dort
+// einer gemessenen Regel, die Zuordnung steht genau einmal.
+#include "uft/core/uft_gcr.h"
 
 /** Error names */
 static const char *error_names[] = {
@@ -124,14 +120,14 @@ static const char *error_names[] = {
  */
 static void encode_4_to_5(const uint8_t *plain, uint8_t *gcr)
 {
-    uint8_t g0 = gcr_encode[plain[0] >> 4];
-    uint8_t g1 = gcr_encode[plain[0] & 0x0F];
-    uint8_t g2 = gcr_encode[plain[1] >> 4];
-    uint8_t g3 = gcr_encode[plain[1] & 0x0F];
-    uint8_t g4 = gcr_encode[plain[2] >> 4];
-    uint8_t g5 = gcr_encode[plain[2] & 0x0F];
-    uint8_t g6 = gcr_encode[plain[3] >> 4];
-    uint8_t g7 = gcr_encode[plain[3] & 0x0F];
+    uint8_t g0 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[0] >> 4);
+    uint8_t g1 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[0] & 0x0F);
+    uint8_t g2 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[1] >> 4);
+    uint8_t g3 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[1] & 0x0F);
+    uint8_t g4 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[2] >> 4);
+    uint8_t g5 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[2] & 0x0F);
+    uint8_t g6 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[3] >> 4);
+    uint8_t g7 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, plain[3] & 0x0F);
     
     gcr[0] = (g0 << 3) | (g1 >> 2);
     gcr[1] = (g1 << 6) | (g2 << 1) | (g3 >> 4);
@@ -157,13 +153,13 @@ static int decode_5_to_4(const uint8_t *gcr, uint8_t *plain)
     int errors = 0;
     
     uint8_t h0 = gcr_decode_high[g0];
-    uint8_t l0 = gcr_decode_low[g1];
+    uint8_t l0 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g1);
     uint8_t h1 = gcr_decode_high[g2];
-    uint8_t l1 = gcr_decode_low[g3];
+    uint8_t l1 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g3);
     uint8_t h2 = gcr_decode_high[g4];
-    uint8_t l2 = gcr_decode_low[g5];
+    uint8_t l2 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g5);
     uint8_t h3 = gcr_decode_high[g6];
-    uint8_t l3 = gcr_decode_low[g7];
+    uint8_t l3 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g7);
     
     if (h0 == 0xFF || l0 == 0xFF) errors++;
     if (h1 == 0xFF || l1 == 0xFF) errors++;

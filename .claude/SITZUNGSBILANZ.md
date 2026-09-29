@@ -173,3 +173,274 @@ Fundus (nicht gebaut, weil keine Kennzahl bewegt):
     `system("./...")`) — bewegen keine Kennzahl dieses Baums, dem Autor
     gemeldet, nicht registriert.
 ```
+
+---
+
+## Sitzungsbilanz 2026-09-29 — GCR-Codec-Register und die Umhaengungen (P3-666)
+
+```
+Kennzahlen bewegt:
+  K3  113 -> 97 ueberzaehlige Kopien, 58 -> 56 Familien
+      (MF-1513/1515/1522/1523/1524/1525; Messbefehl
+      `python scripts/audit_konstantenfamilien.py`, Ausgabe im Commit)
+  K0  4 von 13 (28.9.)                   -> 5 von 8 (siehe unten)
+  K6  unveraendert 2 — die Heimatort-Regel ist KEIN neuer Satz ohne Tor,
+      sie ist ein Tor (`REGISTERORTE` in audit_konstantenfamilien.py)
+
+Kennzahlen unbewegt:
+  K1/K2  Tierstand unveraendert (T1=11, T1b=68, T2=7, T3=1). Das Register
+         hebt kein Format — es fuehrt Tafeln zusammen, die alle schon
+         gelesen wurden.
+  K4     nicht beruehrt.
+  K5     199 Waisen, unangetastet — und das ist eine ENTSCHEIDUNG, keine
+         Unterlassung: drei der fuenf verbleibenden Encode-Kopien liegen in
+         Waisen, ihre Umhaengung senkte K3 um 3, ohne dass ein Aufrufer
+         davon profitiert. Das waere „die Zahl als Motiv" (P3-338, MF-1077).
+  K7-K9  nicht beruehrt.
+
+Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
+  1. MF-1513 hat `uft_gcr.c` aus den Quellenlisten geloest, in denen die
+     Register-Aufrufer standen, und damit 89 Link-Ziele zerbrochen — eine
+     Aenderung, die im eigenen Ziel gruen war | TOR (Vollbau, Linker)
+     | MF-1515 nimmt `uft_gcr.c` in `CORE_SOURCES`: die eine Stelle statt
+       der 89
+  2. Fuenf Musterfehler beim Umhaengen, jeder mit derselben Form — eine
+     Struktur angenommen, die der Baum nur MEISTENS hat: `sed` mit
+     `$`-Anker (zwei CMake-Zeilen enden auf `)`), Gegenprobe ueber
+     `elseif`-Bloecke (die Sammelbibliothek ist keiner), Tafelblock-Regex
+     mit `/* */` (die Datei benutzt `//`), geschachtelte Klammern
+     (`[^\]]+` zerriss `gcr_encode_table[(data[0] >> 4) & 0x0F]` an acht
+     Stellen), Funktionskopf-Regex (schnitt `const` in `con`+`st`)
+     | Compiler bzw. Gegenprobe | `scripts/gcr_umhaengen.py` mit
+       KLAMMERZAEHLUNG statt Mustersuche, Selbsttest 10/10
+  3. Das eigene Umhaenge-Skript schrieb, BEVOR es gegenprueft hat — der
+     fehlende Bezeichner `gcr_decode_high` wurde gemeldet, die Datei war
+     aber schon zerbrochen | Mensch | Reihenfolge umgedreht: Gegenproben
+       (kein Bezeichner mehr im Code, Klammerbilanz unveraendert) laufen
+       VOR dem Schreiben
+  4. `test_gcr_praedikat_trifft_die_tafel` verlor seinen Zeugen, als die
+     CBM-Tafel ins Register wanderte — der Abgleich waere eine
+     Selbstpruefung geworden | TOR (Vollbau, der Test wurde rot)
+     | `tests/oracles/gcr_cbm_tafel_87345aab.c` eingefroren; der Test hat
+       dadurch ZWEI Zusagen bekommen, die vorher zirkulaer gewesen waeren
+  5. Das Blastradius-Skript suchte nur `uft_gcr.c.obj` im Link-Block und
+     sah nicht, dass `libuft_core.a` das Objekt ebenfalls liefert — es
+     meldete 98 unversorgte Ziele, gemessen waren es 9. Eine Messung, die
+     die falsche KLASSE meldet, ist schlimmer als keine | TOR (Vollbau:
+     genau ein Ziel fiel, nicht 98) | Skript berichtigt, danach 9
+       eingetragen und 0 unversorgt gemessen
+  6. Neun Link-Ziele riefen das Register, ohne es zu bekommen | TOR
+     (Linker, `undefined reference to uft_gcr_dekodieren`) | in
+       `tests/CMakeLists.txt` eingetragen, Blastradius 0, Vollbau 0 Fehler
+  7. Ein Heredoc fuer ein siebenzeiliges Python-Skript — die Regel steht
+     seit MF-1096 im Baum und ich habe sie im Vorbeigehen gebrochen
+     | TOR 71 (PreToolUse, wies VOR der Ausfuehrung ab) | mit `sed`
+       einzeilig erledigt; kein weiterer Bedarf
+  8. Der Heimatort-Selbsttest war in der ersten Fassung 18/18 gruen, aber
+     Fall (iii) fiel an der SCHRUMPF-Bedingung statt an der Einmal-Klammer,
+     und die ORTSKLAMMER war ganz ohne Fall — entschaerft blieb der Test
+     gruen. Eine Ausnahme, die nur in ihrer guten Richtung geprueft ist,
+     laesst alles durch | MUTATIONSPROBE (3 Klammern einzeln entschaerft)
+     | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
+       19/19, Mutationsmatrix 3/3
+
+K0 dieser Sitzung: 6 von 12
+
+Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
+liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
+im Lauf der Sitzung 5 von 8, dann 5 von 10, dann 5 von 11 gesagt; die
+Fehler 9 bis 12 kamen nach dem ersten Schreiben dazu, und die Nachtraege
+unten erzaehlen, wann. **Wer sie fortschreibt, aendert diese Zeile** und
+schreibt keine zweite mit demselben Wortlaut irgendwo darunter — genau das
+ist Fehler 12 gewesen.
+
+**Zur Lesart von K0, damit die Zahl nicht mehr sagt, als sie misst.** Sie
+steigt von 4/13 auf 5/8, und der groessere Teil davon ist der NENNER: acht
+Fehler statt dreizehn, bei aehnlich viel Arbeit. Das ist kein Beleg fuer
+Besserung — es kann auch heissen, dass weniger gefunden wurde. Belastbar
+ist nur der Zaehler, und dort steht eine Beobachtung: **vier der fuenf
+Tor-Faenge sind der VOLLBAU** (Fehler 1, 4, 5, 6). Der Vollbau ist damit
+das wirksamste Tor dieses Baums und wird zugleich am seltensten gefahren,
+weil er zehn Minuten dauert. Fehler 5 zeigt, warum das teuer ist: ein
+Messskript hatte die falsche Klasse gemeldet, und nur der Linker hat
+widersprochen.
+
+Und Fehler 8 ist die einzige Zeile, die kein bestehendes Tor gefangen hat,
+sondern eine **Mutationsprobe** — also die Frage „faengt mein Tor
+ueberhaupt etwas". Sie hat eine Klammer als Zierde entlarvt, die beim
+Lesen richtig aussah. Das gehoert in die Rueckschau: ein neues Tor ohne
+Mutationsprobe ist ungemessen.
+
+Fundus (nicht gebaut, weil keine Kennzahl bewegt):
+  * Die drei Waisen-Kopien (`uft_d64_parser_v3.c`, `uft_g64_parser_v2.c`,
+    `uft_c64_protection_enhanced.c`) und die zwei Viterbi-Kopien bleiben
+    stehen — siehe K5 oben. Naechster Schritt ist NICHT ihre Umhaengung,
+    sondern die Frage, ob die Waisen einen Weg bekommen (P3-666).
+  * P3-674 (Brother-Tafel: keine Quelle, keine Aufrufer, Kommentar sagt
+    „5-to-8", aber kein Wert hat Bit 7) und P3-675 (`uft_vorpal_decode()`
+    liest 4 von 8 Quintetten, null Aufrufer) — beide registriert, beide
+    ohne Kennzahl.
+  * Zwei Dateien mit 0 Byte im Wurzelverzeichnis (`Was`, `Werkzeuge,`,
+    28.9. 18:24) sind Reste eines zerbrochenen Shell-Aufrufs. NICHT
+    angetastet: unversioniert, fremder Herkunft, und Loeschen ohne
+    Auftrag ist in diesem Baum eine eigene Fehlerklasse.
+```
+
+### Nachtrag zur Bilanz 2026-09-29 — zwei Fehler nach dem ersten Schreiben
+
+Genau das, was die Vorlage vorhersagt: die Bilanz war geschrieben, dann
+kamen Fehler 9 und 10 dazu. Sie stehen hier, nicht oben, damit die
+Reihenfolge erkennbar bleibt.
+
+```
+  9. **Eine MF-Nummer war zweimal vergeben, und zwar auf beiden Seiten
+     schon committet.** MF-1515 liegt auf `87345aab` (main, Apple-Tafeln
+     ins Register) UND auf `d39834ff` im Arbeitsbaum `wt-dtc` (zweite
+     CBM-Verzeichnistuer). Beide Seiten hatten `git log` gefragt, nur
+     nicht denselben: `wt-dtc` haelt MF-1515…1520 committet und MF-1521
+     unvorgemerkt. | Mensch (beim Suchen der naechsten freien Nummer)
+     | **TOR 72 gebaut** (`scripts/audit_mf_nummer.py`, im
+       `commit-msg`-Haken): die LETZTE MF-Nummer des Betreffs ist die
+       beanspruchte, und sie darf in `git log --all` nicht schon stehen.
+       Selbsttest 14/14, Mutationsmatrix 5/5, Einspeiseprobe am echten
+       Baum: der Betreff `(MF-1515, P3-666)` faellt mit rc 1 und nennt
+       `d39834ff`, `(MF-1526)` geht durch. MF-1515 selbst bleibt doppelt —
+       eine committete Kollision wird nicht still ueberschrieben, sie
+       braucht eine Eigentuemerentscheidung.
+
+ 10. Dieselbe Ursache, zweite Haelfte: meine noch nicht committeten Zeilen
+     benutzten MF-1516/1517/1518/1519/1521 und P3-669/670 — alle sieben
+     von `wt-dtc` belegt, alle mit anderem Inhalt. Und die fuenf MF-Zahlen
+     waren fuer EINEN Commit gedacht, also fuenf Anker ohne Commit
+     | Mensch (dieselbe Messung) | je Zeile umgehaengt, nie dateiweit
+       (Gedaechtnisnotiz `mf_nummer_von_origin`): 41 Ersetzungen, danach
+       auf eine Nummer zusammengezogen — **MF-1522** fuer den Commit,
+       P3-674/675 fuer die zwei Fundus-Zeilen. P3-673 bleibt frei, die
+       Nachbararbeit hat sie vorgesehen.
+```
+
+**K0 wandert weiter** (die kanonische Zeile oben traegt den Stand). Die Zahl oben
+war richtig, als sie geschrieben wurde, und ist es zwei Fehler spaeter
+nicht mehr — das ist der Grund, warum die Vorlage „beim Auftreten fuehren"
+verlangt.
+
+Und eine Beobachtung, die sich mit Fehler 8 trifft: **Fehler 9 und 10
+haette kein bestehendes Tor gefangen**, weil es keines gab. Gemessen ueber
+`git ls-files`: von **76** Tor-Skripten (`scripts/audit_*.py`) haben **54**
+einen Selbsttest, **22** keinen — und **3** eine Mutationsprobe (eines
+davon ist Tor 72, gebaut heute). Ein Tor ohne Selbsttest ist eine
+Behauptung; ein Tor ohne Mutationsprobe ist ungemessen. Das ist ein
+Rueckstand mit Zahl, aber ohne Kennzahl: er gehoert in den Fundus, bis
+entschieden ist, ob daraus eine eigene Zahl wird.
+
+Zusaetzlich zum Fundus oben:
+  * Die 22 Tore ohne Selbsttest, und die 73 ohne Mutationsprobe. Der
+    naechste Schritt ist KEINE Nachruestung ins Blaue, sondern die Frage,
+    welche dieser Tore ueberhaupt eine Entscheidung treffen (manche
+    berichten nur). Messung vor Arbeit.
+  * MF-1515 doppelt: `main` und `wt-dtc` muessen beim Zusammenfuehren
+    entscheiden, welcher Commit die Nummer behaelt. Kein stiller Umschrieb
+    — beide sind committet.
+
+### Nachtrag 2 zur Bilanz 2026-09-29 — ein Fundus-Eintrag aus dem Wartezimmer
+
+Waehrend auf einen Nachbar-Commit gewartet wurde, ist eine Sache gemessen
+worden, die **kein Fehler dieser Sitzung** war und deshalb nicht in der
+Fehlerliste steht:
+
+**`.git/hooks/` ist allen Arbeitsbaeumen GEMEINSAM und von keiner Sperre
+gedeckt.** Die Commit-Sperre liegt pro Arbeitsbaum — der Haken schreibt
+sie nach `git rev-parse --absolute-git-dir`, in einem Arbeitsbaum also
+nach `.git/worktrees/<name>/uft-commit.lock`, und `scripts/commit_lock.py`
+loest genauso auf (gemessen: es folgt der `.git`-DATEI zum
+Arbeitsbaum-Verzeichnis). Das ist in sich stimmig, weil jeder Arbeitsbaum
+seinen eigenen Dateibaum hat.
+
+Nicht gedeckt ist damit aber der **gemeinsame** Teil. Gemessen am
+2026-09-29: ein Commit aus `wt-dtc` lief von 06:05:38Z an, seine Sperre lag
+unter `.git/worktrees/wt-dtc/`, und `.git/uft-commit.lock` im Hauptbaum
+existierte nicht — ein Generator im Hauptbaum haette „frei" gelesen. Fuer
+seine eigenen Dateien ist das richtig. Fuer `.git/hooks/` nicht: bash liest
+ein Skript in Stuecken, und wer eine laufende Hakendatei ueberschreibt,
+kann den Rest eines halb gelesenen Skripts zerreissen.
+
+**Hier ist nichts passiert, und das ist gemessen, nicht gehofft:** der
+`commit-msg`-Haken wurde um 07:58:20 installiert, der Nachbar-Commit begann
+um 08:05:38 — sieben Minuten spaeter. Was bleibt, ist die Folge: dieser
+Commit wird von **Tor 72** beurteilt, einem Tor, das sein Autor nie gesehen
+hat. Das ist bei einem gemeinsamen Haken normal und nur dann harmlos, wenn
+das Tor keine falschen Treffer hat.
+
+**Kein Auftrag (MF-640):** eine Abweichung zwischen Vorlage und
+Installation gibt es heute nicht — `commit-msg`, `pre-commit` und
+`pre-push` sind je identisch (gemessen mit `diff -q`). Ein Installier-Tor
+gegen ein Problem, das nicht vorliegt, waere Vorratsbau. Der Eintrag steht
+hier mit dem, was ihn oeffnen wuerde: die erste gemessene Abweichung, oder
+der erste Fall, in dem ein Haken WAEHREND eines Commits geschrieben wird.
+
+### Nachtrag 3 zur Bilanz 2026-09-29 — Fehler 11, und was ihn gefunden hat
+
+```
+ 11. **Ein Ziel blieb unversorgt, das meine Messung gar nicht sehen
+     konnte.** `bench_decode_hotpath` linkt `src/flux/uft_flux_decoder.c`,
+     das seit dem Umhaengen `uft_gcr_dekodieren()` ruft — und nicht
+     `src/core/uft_gcr.c`. Es haengt an
+     `option(UFT_ENABLE_BENCHMARKS ... OFF)`, stand deshalb NIE in
+     `build.ninja`, und die Blastradius-Messung ueber die Link-Bloecke war
+     blind dafuer. Dasselbe Muster wie Fehler 5: die Messung meldete die
+     falsche Klasse, diesmal nicht zu viel, sondern zu wenig
+     | Mensch (beim Nachlesen des Bench-Ziels, waehrend auf einen
+       Nachbar-Commit gewartet wurde) | zweite Messung ueber den
+       CMake-TEXT statt ueber `build.ninja`: von 2 Zielen mit einem
+       Register-Aufrufer war genau dieses unversorgt, danach 0.
+       Rotbeweis von Hand gelinkt: OHNE das Register rc 1 mit
+       `undefined reference to uft_gcr_dekodieren`, MIT ihm rc 0.
+```
+
+**K0 wandert weiter — die kanonische Zeile oben traegt den Stand.** Der Zaehler steht, weil kein
+Tor den Fall fangen konnte — es gab keines, das optionsgeschaltete Ziele
+sieht.
+
+**Und eine Frage, die vorher UNGEMESSEN war und es jetzt nicht mehr ist.**
+Aus Tafelzugriffen in einer inline-Funktion sind Aufrufe in eine andere
+Uebersetzungseinheit geworden. Der vorhandene Bench deckt MFM-PLL und
+Sync-Suche, nicht GCR — er konnte die Frage nicht beantworten. Gemessen mit
+einem Wegwerf-Programm im Kratzverzeichnis (gegen eine lokale Tafel im
+selben Programm, also als OBERE Schranke), drei Laeufe, MinGW gcc 13.1.0
+`-O3`: **1,0–1,1 ns je Aufruf**, hochgerechnet auf die ~470 000 Aufrufe
+einer 1541-Diskette (42 Spuren x ~1400 Fuenferbloecke x 8 Quintette)
+**0,50–0,52 ms**. Als Bereich, nicht als Faktor.
+
+Kein Auftrag daraus: ein GCR-Bench im Baum waere Vorratsbau fuer eine
+Differenz von einer halben Millisekunde. Die Zahl steht hier, damit
+niemand sie spaeter schaetzen muss.
+
+### Nachtrag 4 zur Bilanz 2026-09-29 — Fehler 12, gefangen vom Tor aus MF-1507
+
+```
+ 12. **Ich habe K0 an drei Stellen geschrieben, und sie sind auseinander-
+     gelaufen** — genau der Fehler, den MF-1505 als Nummer 11 der letzten
+     Sitzung verzeichnet und den MF-1507 dauerhaft abschaffen sollte. Die
+     kanonische Zeile sagte weiter „5 von 8", waehrend die Nachtraege
+     „berichtigt: 5 von 10" und „endgueltig: 5 von 11" trugen und die
+     Commit-Nachricht „5 of 11". Die Nachtragsformen trafen den Anker
+     `^K0 dieser Sitzung: N von M` nicht, also blieb die alte Zahl die
+     gueltige. | TOR (`commit_verified.py`: „die Nachricht nennt K0 als
+     5 von 11, die Sitzungsbilanz sagt 5 von 8" — KEIN NEUER COMMIT)
+     | die kanonische Zeile wird jetzt FORTGESCHRIEBEN statt ergaenzt, mit
+       einem Satz daneben, der genau das verlangt; die Zahl steht nicht
+       mehr in der Commit-Nachricht, das Werkzeug haengt sie an.
+```
+
+**Das ist der beste Fang dieser Sitzung, und er verdient einen Satz.** Tor
+1507 wurde gebaut, weil derselbe Fehler am Vortag durch die Finger ging
+(„1 of 7" im Betreff gegen „2 von 10" im Rumpf). Einen Tag spaeter hat es
+ihn gefangen — bei mir, in derselben Form, an derselben Kennzahl. Die
+Begruendung von MF-1507 lautete: „Die zweite Stelle ist damit abgeschafft,
+nicht geprueft." Gemessen war sie nicht abgeschafft, sondern nur bewacht —
+ich habe eine dritte angelegt. Ein Tor ersetzt keine Disziplin, es
+ueberlebt sie.
+
+**K0 steht damit auf 6 von 12** (der Fang selbst ist der sechste). Die Zahl
+ist ueber die Sitzung von 5/8 auf 6/12 gewandert, und beide Bewegungen
+kamen aus ehrlicherem Zaehlen, nicht aus besserer Arbeit.

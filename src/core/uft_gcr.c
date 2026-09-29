@@ -9,19 +9,17 @@
  */
 #include "uft/core/uft_gcr.h"
 
-/* Die Commodore-Zuordnung wird NICHT hier wiederholt, sondern von dort
- * gelesen, wo sie schon steht (MF-1509). Das Tor `audit_cbm_zonen`s
- * Schwester `audit_konstantenfamilien.py` hat den ersten Entwurf dieses
- * Registers abgewiesen: eine eigene 16-Byte-Tafel hier waere die
- * **13.** Kopie gewesen — ein Register, das die Kopien zusammenfuehren
- * soll und dabei eine neue anlegt.
+/* **Kein `uft_cbm_gcr.h` mehr — und das ist der Punkt (MF-1522).**
  *
- * Solange die uebrigen Aufrufer nicht umgehaengt sind, ist der Header die
- * eine Stelle; mit dem letzten Umhaengen (Schritt 3 von P3-666) wandert
- * sie hierher, und dann verschwinden die anderen. Das ist die Richtung,
- * in die das Manifest schrumpfen soll — nicht eine Kopie mehr auf dem
- * Weg dorthin. */
-#include "uft/uft_cbm_gcr.h"
+ * Bis MF-1522 stand hier `#include "uft/uft_cbm_gcr.h"`, weil die
+ * Commodore-Zuordnung dort lag und eine eigene hier die **13.** Kopie
+ * gewesen waere. Das Tor `audit_konstantenfamilien.py` hat den ersten
+ * Entwurf dieses Registers genau dafuer abgewiesen — drei Stunden nach
+ * seinem eigenen Bau.
+ *
+ * Mit dem letzten Umhaengen ist die Richtung umgekehrt: die Tafel steht
+ * jetzt hier, und der Header holt sie von hier. Damit gibt es keinen
+ * Zirkel und keine zweite Stelle. */
 
 #include <string.h>
 
@@ -89,13 +87,41 @@ bool uft_gcr_wort_gueltig(uft_gcr_codec_t codec, uint32_t wort) {
 
 /* ── Die eine Tafel: Commodores Zuordnung 0..F ───────────────────────── */
 
-/* Sie steht in `include/uft/uft_cbm_gcr.h` als `cbm_gcr_encode_table` und
- * wird von dort gelesen — siehe die Begruendung beim Include oben. Die
- * MENGE ihrer Werte folgt dem Praedikat (geprueft in
- * `tests/test_gcr_praedikat_trifft_die_tafel.c`); die REIHENFOLGE ist
- * Commodores Wahl und deshalb ueberhaupt eine Tafel. Bei Apple ist auch
- * die Zuordnung Regel. */
-#define CBM_ZUORDNUNG cbm_gcr_encode_table
+/* **Seit MF-1522 steht sie HIER — das ist das Ende der Wanderung.**
+ *
+ * Bis MF-1522 las das Register sie aus `include/uft/uft_cbm_gcr.h`, weil
+ * dort eine der zwoelf Kopien lag und eine eigene die dreizehnte gewesen
+ * waere (das Tor hat den ersten Entwurf genau dafuer abgewiesen). Jetzt
+ * sind alle anderen Aufrufer umgehaengt, also darf die Tafel an ihren
+ * Platz: an die eine Stelle, die das Register ist. Der Header holt sie
+ * seither von hier, statt sie zu halten.
+ *
+ * Die MENGE ihrer Werte folgt dem Praedikat (geprueft in
+ * `tests/test_gcr_praedikat_trifft_die_tafel.c`, bijektiv); die
+ * REIHENFOLGE ist Commodores Wahl und deshalb ueberhaupt eine Tafel. Bei
+ * Apple ist auch die Zuordnung Regel, dort gibt es keine.
+ *
+ * Die Bitmuster stehen dabei, weil sie die Regel LESBAR machen: kein
+ * Wort hat zwei fuehrende oder zwei abschliessende Nullen, keines drei in
+ * Folge, und 11111 fehlt — das waere eine Sync-Marke. */
+static const uint8_t CBM_ZUORDNUNG[16] = {
+    0x0A,  /* 0: 01010 */
+    0x0B,  /* 1: 01011 */
+    0x12,  /* 2: 10010 */
+    0x13,  /* 3: 10011 */
+    0x0E,  /* 4: 01110 */
+    0x0F,  /* 5: 01111 */
+    0x16,  /* 6: 10110 */
+    0x17,  /* 7: 10111 */
+    0x09,  /* 8: 01001 */
+    0x19,  /* 9: 11001 */
+    0x1A,  /* A: 11010 */
+    0x1B,  /* B: 11011 */
+    0x0D,  /* C: 01101 */
+    0x1D,  /* D: 11101 */
+    0x1E,  /* E: 11110 */
+    0x15,  /* F: 10101 */
+};
 
 /* ── Auskunft ────────────────────────────────────────────────────────── */
 

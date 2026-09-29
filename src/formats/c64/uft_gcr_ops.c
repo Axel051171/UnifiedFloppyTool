@@ -57,27 +57,34 @@
  * GCR Encoding Tables
  * ============================================================================ */
 
-/** Nibble to GCR encoding table */
-static const uint8_t gcr_encode_table[16] = {
-    0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
-    0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
-};
+/* ── Die drei GCR-Tafeln, gerechnet statt geschrieben (MF-1522) ────────
+ *
+ * Hier standen drei Zahlenfolgen: die 4-zu-5-Kodierung (im Baum
+ * zwoelfmal), ihre Umkehrung (zehnmal) und `gcr_decode_high` — das ist
+ * kein eigener Fakt, sondern `gcr_decode_low << 4` mit `0xFF` als
+ * Sonderfall, eine Vorberechnung fuer die obere Nibble-Haelfte.
+ *
+ * Die Zugriffe im Code rufen jetzt das Codec-Register
+ * (`uft/core/uft_gcr.h`), dessen Wortmenge einer gemessenen Regel folgt.
+ * Einen SPEICHER brauchen nur die drei Zeigerfunktionen weiter unten,
+ * denn ein Zeiger muss auf etwas zeigen — und drei Tests leben von ihnen,
+ * darunter `tests/test_gcr_tafeln.c`, das die Tafel gegen das
+ * Fremdcode-Orakel `dtc_gcr_cbm_4to5` haelt. Diese Zusage wegzunehmen
+ * waere ein Verlust, kein Aufraeumen.
+ */
+#include "uft/core/uft_gcr.h"
 
-/** GCR to high nibble decode table */
-static const uint8_t gcr_decode_high[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0x80, 0x00, 0x10, 0xFF, 0xC0, 0x40, 0x50,
-    0xFF, 0xFF, 0x20, 0x30, 0xFF, 0xF0, 0x60, 0x70,
-    0xFF, 0x90, 0xA0, 0xB0, 0xFF, 0xD0, 0xE0, 0xFF
-};
-
-/** GCR to low nibble decode table */
-static const uint8_t gcr_decode_low[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,
-    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,
-    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF
-};
+/** Die hochgeschobene Dekodierung: obere Nibble-Haelfte in einem Schritt.
+ *
+ * Kein eigener Fakt, sondern eine Rechnung — deshalb steht sie hier als
+ * Zeile und nicht als vierte API im Register. Bei ungueltig bleibt 0xFF
+ * stehen; aus `0xFF << 4` waere ein gueltig aussehendes 0xF0 geworden.
+ */
+static inline uint8_t gcr_dekodieren_hoch(uint32_t quintett)
+{
+    const uint8_t v = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, quintett);
+    return (v == UFT_GCR_UNGUELTIG) ? UFT_GCR_UNGUELTIG : (uint8_t)(v << 4);
+}
 
 /** Sectors per track for 1541 (track 1-42) */
 static const int sector_map[43] = {
@@ -96,19 +103,41 @@ static const size_t track_capacity[4] = { 6250, 6666, 7142, 7692 };
  * GCR Table Access
  * ============================================================================ */
 
+/* Speicher fuer die Zeigerfunktionen: einmal aus dem Register gefuellt,
+ * danach nur gelesen. Idempotent — zwei Faeden schreiben dieselben Werte. */
+static uint8_t tafel_encode[16];
+static uint8_t tafel_decode_high[32];
+static uint8_t tafel_decode_low[32];
+static int     tafeln_bereit;
+
+static void tafeln_aufbauen(void)
+{
+    if (tafeln_bereit) return;
+    for (int i = 0; i < 16; i++)
+        tafel_encode[i] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (uint8_t)i);
+    for (uint32_t q = 0; q < 32u; q++) {
+        tafel_decode_low[q]  = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q);
+        tafel_decode_high[q] = gcr_dekodieren_hoch(q);
+    }
+    tafeln_bereit = 1;
+}
+
 const uint8_t *gcr_get_encode_table(void)
 {
-    return gcr_encode_table;
+    tafeln_aufbauen();
+    return tafel_encode;
 }
 
 const uint8_t *gcr_get_decode_high_table(void)
 {
-    return gcr_decode_high;
+    tafeln_aufbauen();
+    return tafel_decode_high;
 }
 
 const uint8_t *gcr_get_decode_low_table(void)
 {
-    return gcr_decode_low;
+    tafeln_aufbauen();
+    return tafel_decode_low;
 }
 
 /* ============================================================================
@@ -133,14 +162,14 @@ size_t gcr_encode(const uint8_t *plain, size_t plain_size, uint8_t *gcr)
         uint8_t b3 = (i + 3 < plain_size) ? plain[i + 3] : 0;
         
         /* Encode high and low nibbles to GCR */
-        uint8_t g0 = gcr_encode_table[b0 >> 4];
-        uint8_t g1 = gcr_encode_table[b0 & 0x0F];
-        uint8_t g2 = gcr_encode_table[b1 >> 4];
-        uint8_t g3 = gcr_encode_table[b1 & 0x0F];
-        uint8_t g4 = gcr_encode_table[b2 >> 4];
-        uint8_t g5 = gcr_encode_table[b2 & 0x0F];
-        uint8_t g6 = gcr_encode_table[b3 >> 4];
-        uint8_t g7 = gcr_encode_table[b3 & 0x0F];
+        uint8_t g0 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b0 >> 4);
+        uint8_t g1 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b0 & 0x0F);
+        uint8_t g2 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b1 >> 4);
+        uint8_t g3 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b1 & 0x0F);
+        uint8_t g4 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b2 >> 4);
+        uint8_t g5 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b2 & 0x0F);
+        uint8_t g6 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b3 >> 4);
+        uint8_t g7 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, b3 & 0x0F);
         
         /* Pack 8 5-bit values into 5 bytes */
         gcr[out_pos++] = (g0 << 3) | (g1 >> 2);
@@ -176,14 +205,14 @@ size_t gcr_decode(const uint8_t *gcr, size_t gcr_size, uint8_t *plain, size_t *e
         uint8_t g7 = gcr[i+4] & 0x1F;
         
         /* Decode to nibbles */
-        uint8_t h0 = gcr_decode_high[g0];
-        uint8_t l0 = gcr_decode_low[g1];
-        uint8_t h1 = gcr_decode_high[g2];
-        uint8_t l1 = gcr_decode_low[g3];
-        uint8_t h2 = gcr_decode_high[g4];
-        uint8_t l2 = gcr_decode_low[g5];
-        uint8_t h3 = gcr_decode_high[g6];
-        uint8_t l3 = gcr_decode_low[g7];
+        uint8_t h0 = gcr_dekodieren_hoch(g0);
+        uint8_t l0 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g1);
+        uint8_t h1 = gcr_dekodieren_hoch(g2);
+        uint8_t l1 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g3);
+        uint8_t h2 = gcr_dekodieren_hoch(g4);
+        uint8_t l2 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g5);
+        uint8_t h3 = gcr_dekodieren_hoch(g6);
+        uint8_t l3 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, g7);
         
         /* Check for errors */
         if (h0 == 0xFF || l0 == 0xFF) errors++;
@@ -216,8 +245,8 @@ size_t gcr_check_errors(const uint8_t *gcr, size_t size)
         uint8_t high = (gcr[i] >> 3) & 0x1F;
         uint8_t low = ((gcr[i] << 2) | (gcr[i+1] >> 6)) & 0x1F;
         
-        if (gcr_decode_high[high] == 0xFF) errors++;
-        if (gcr_decode_low[low] == 0xFF) errors++;
+        if (gcr_dekodieren_hoch(high) == 0xFF) errors++;
+        if (uft_gcr_dekodieren(UFT_GCR_CBM_5_4, low) == 0xFF) errors++;
     }
     
     return errors;

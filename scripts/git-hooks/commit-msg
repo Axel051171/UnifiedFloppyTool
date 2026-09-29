@@ -38,4 +38,30 @@ if [ -n "$GELOESCHT" ]; then
     fi
 fi
 
+# --------------------------------------------------------------------
+# Tor 72 (MF-1522): eine MF-Nummer gehoert genau EINEM Commit.
+#
+# Der Anlass ist gemessen: MF-1515 liegt auf 87345aab (main) UND auf
+# d39834ff (Arbeitsbaum wt-dtc). Beide Seiten hatten `git log` gefragt,
+# nur nicht denselben. Die Begruendung, die Grenzen und der Selbsttest
+# (14/14, Mutationsmatrix 5/5) stehen in scripts/audit_mf_nummer.py.
+#
+# Ist Python nicht da, prueft dieses Tor NICHTS und sagt es.
+if command -v python >/dev/null 2>&1; then
+    PY=python
+elif command -v python3 >/dev/null 2>&1; then
+    PY=python3
+else
+    PY=""
+fi
+
+if [ -n "$PY" ]; then
+    WURZEL=$(git rev-parse --show-toplevel)
+    if [ -f "$WURZEL/scripts/audit_mf_nummer.py" ]; then
+        "$PY" "$WURZEL/scripts/audit_mf_nummer.py" "$MSG_FILE" || exit 1
+    fi
+else
+    echo "[Tor 72] kein Python gefunden - MF-Nummer NICHT geprueft."
+fi
+
 exit 0

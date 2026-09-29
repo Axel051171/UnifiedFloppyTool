@@ -55,6 +55,9 @@ Bau:          mit Rotbeweis — der Test, der VOR dem Bau faellt und nach
               Schwesterregel zu „Kein Oracle auf Zusicherung").
               Skripte per Write in Dateien, nie per Heredoc oder
               mehrzeiligem `python -c` (Tor 71).
+Baust du ein TOR: jede seiner Klammern bekommt einen Fall, und dann wird
+              jede Klammer EINZELN entschaerft — der Selbsttest muss je
+              einmal fallen. Ein Tor ohne Mutationsprobe ist ungemessen.
 Nach dem Bau: Messbefehl erneut, Stand notieren, Sitzungsbilanz.
 
 Commit nur ueber `python scripts/commit_verified.py`. Ein Commit, dessen
@@ -72,3 +75,13 @@ behauptet dieser Commit bewegt zu haben, und stimmt der Messbefehl?"
 belegt (`rcpmfs`, P3-338: die Begründung lautete wörtlich, T3 sinke dann
 „ohne einen Beweis zu fälschen"). Deshalb hat jede Kennzahl einen
 Messbefehl im Baum, und deshalb bewertet eine andere Rolle.
+
+**Warum die Mutationsprobe in der Liste steht (2026-09-29, MF-1522):** am
+selben Tag sind zwei Tor-Klammern durchgefallen, die beim LESEN richtig
+aussahen. Beim Heimatort-Tor blieb der Selbsttest 18/18 grün, obwohl die
+Ortsklammer ganz ohne Fall war — sie hätte jede Datei als Heimatort
+durchgelassen. Beim MF-Nummern-Tor fehlte die Wortgrenze, mit der sich
+`MF-15155` als `MF-1515` liest. **Beides hat die Mutationsprobe gefunden,
+nicht das Lesen und nicht der grüne Selbsttest.** Gemessen über
+`git ls-files`: von 76 Tor-Skripten haben 54 einen Selbsttest und **3**
+eine Mutationsprobe — der Rest ist ungemessen, nicht falsch.

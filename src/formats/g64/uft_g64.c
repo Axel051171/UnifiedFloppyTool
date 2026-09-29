@@ -58,19 +58,22 @@
 // Leser. Alle drei sind entfernt statt korrigiert: der Baum fuehrt diese
 // Zahlen einmal, in uft_cbm_speed_zone(). Siehe g64_create().
 
-// GCR Dekodierungs-Tabelle (5 Bits → 4 Bits)
-static const uint8_t gcr_decode_table[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  // 00-07: ungültig
-    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,  // 08-0F
-    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,  // 10-17
-    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF   // 18-1F
-};
-
-// GCR Enkodierungs-Tabelle (4 Bits → 5 Bits)
-static const uint8_t gcr_encode_table[16] = {
-    0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
-    0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
-};
+// Die beiden GCR-Tafeln standen hier bis MF-1522 — die 4-zu-5-Kodierung
+// an zwoelf Stellen im Baum, die Dekodierung an zehn (gemessen MF-1506),
+// und in DIESER Datei die Kodierung sogar zweimal: einmal hier und einmal
+// funktionslokal als `gcr_enc` im Schreibpfad.
+//
+// Jetzt kommen beide aus dem Codec-Register: die Wortmenge folgt dort
+// einer gemessenen Regel, die Zuordnung steht genau einmal, und die
+// Rueckrichtung wird daraus abgeleitet statt ein zweites Mal geschrieben.
+//
+// Zur Laufzeit: `uft_gcr_dekodieren()` ist ein Aufruf statt eines
+// Tafelzugriffs, und er steht im Dekodierpfad jeder Spur. Groessenordnung:
+// eine 1541-Spur hat rund 7000 GCR-Byte, also etwa 1400 Gruppen zu acht
+// Nibbles — ueber 71 Halbspuren rund 100 000 Aufrufe je Diskette, gegen
+// das Lesen der Datei vernachlaessigbar. Wird es je messbar, ist der Weg
+// eine `static inline`-Fassung im Header, nicht eine dreizehnte Tafel.
+#include "uft/core/uft_gcr.h"
 
 // ============================================================================
 // G64 Header Structure
@@ -159,14 +162,14 @@ static bool gcr_decode_group(const uint8_t* gcr, uint8_t* data) {
                     (uint64_t)gcr[4];
     
     uint8_t n[8];
-    n[0] = gcr_decode_table[(bits >> 35) & 0x1F];
-    n[1] = gcr_decode_table[(bits >> 30) & 0x1F];
-    n[2] = gcr_decode_table[(bits >> 25) & 0x1F];
-    n[3] = gcr_decode_table[(bits >> 20) & 0x1F];
-    n[4] = gcr_decode_table[(bits >> 15) & 0x1F];
-    n[5] = gcr_decode_table[(bits >> 10) & 0x1F];
-    n[6] = gcr_decode_table[(bits >> 5) & 0x1F];
-    n[7] = gcr_decode_table[bits & 0x1F];
+    n[0] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 35) & 0x1F);
+    n[1] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 30) & 0x1F);
+    n[2] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 25) & 0x1F);
+    n[3] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 20) & 0x1F);
+    n[4] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 15) & 0x1F);
+    n[5] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 10) & 0x1F);
+    n[6] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> 5) & 0x1F);
+    n[7] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, bits & 0x1F);
     
     // Prüfe auf ungültige GCR-Codes
     for (int i = 0; i < 8; i++) {
@@ -202,7 +205,7 @@ static int gcr_decode_group_counted(const uint8_t* gcr, uint8_t* data) {
     int bad = 0;
 
     for (int k = 0; k < 8; k++) {
-        n[k] = gcr_decode_table[(bits >> (35 - 5 * k)) & 0x1F];
+        n[k] = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, (bits >> (35 - 5 * k)) & 0x1F);
         if (n[k] == 0xFF) { n[k] = 0; bad++; }
     }
     data[0] = (uint8_t)((n[0] << 4) | n[1]);
@@ -218,14 +221,14 @@ static int gcr_decode_group_counted(const uint8_t* gcr, uint8_t* data) {
 static void gcr_encode_group(const uint8_t* data, uint8_t* gcr) {
     // 32 Daten-Bits → 40 GCR-Bits
     uint8_t n[8];
-    n[0] = gcr_encode_table[(data[0] >> 4) & 0x0F];
-    n[1] = gcr_encode_table[data[0] & 0x0F];
-    n[2] = gcr_encode_table[(data[1] >> 4) & 0x0F];
-    n[3] = gcr_encode_table[data[1] & 0x0F];
-    n[4] = gcr_encode_table[(data[2] >> 4) & 0x0F];
-    n[5] = gcr_encode_table[data[2] & 0x0F];
-    n[6] = gcr_encode_table[(data[3] >> 4) & 0x0F];
-    n[7] = gcr_encode_table[data[3] & 0x0F];
+    n[0] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (data[0] >> 4) & 0x0F);
+    n[1] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, data[0] & 0x0F);
+    n[2] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (data[1] >> 4) & 0x0F);
+    n[3] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, data[1] & 0x0F);
+    n[4] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (data[2] >> 4) & 0x0F);
+    n[5] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, data[2] & 0x0F);
+    n[6] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (data[3] >> 4) & 0x0F);
+    n[7] = uft_gcr_kodieren(UFT_GCR_CBM_5_4, data[3] & 0x0F);
     
     // Pack 8× 5-Bit zu 5 Bytes
     gcr[0] = (n[0] << 3) | (n[1] >> 2);
@@ -825,11 +828,9 @@ static uft_error_t g64_write_track(uft_disk_t* disk, int cylinder, int head,
     
     // Encode sectors to GCR when no raw track data available
     if (track->sectors && track->sector_count > 0) {
-        /* C64 GCR encoding constants */
-        static const uint8_t gcr_enc[16] = {
-            0x0A,0x0B,0x12,0x13,0x0E,0x0F,0x16,0x17,
-            0x09,0x19,0x1A,0x1B,0x0D,0x1D,0x1E,0x15
-        };
+        /* MF-1522: die Kodiertafel stand hier ein zweites Mal —
+         * dieselben 16 Werte wie am Dateikopf. Beide kommen jetzt
+         * aus dem Register, also aus einer Rechnung. */
         
         /* Max G64 track size: 7928 bytes */
         uint8_t gcr_track[7928];
@@ -837,8 +838,8 @@ static uft_error_t g64_write_track(uft_disk_t* disk, int cylinder, int head,
         size_t pos = 0;
         
         #define GCR_ENCODE_BYTE(b, buf, bp) do { \
-            uint8_t _hi = gcr_enc[((b) >> 4) & 0x0F]; \
-            uint8_t _lo = gcr_enc[(b) & 0x0F]; \
+            uint8_t _hi = uft_gcr_kodieren(UFT_GCR_CBM_5_4, ((b) >> 4) & 0x0F); \
+            uint8_t _lo = uft_gcr_kodieren(UFT_GCR_CBM_5_4, (b) & 0x0F); \
             /* Write 10 bits: 5 hi + 5 lo */ \
             for (int _i = 4; _i >= 0; _i--) { \
                 if ((_hi >> _i) & 1) buf[(bp)/8] |= (1 << (7 - ((bp)%8))); \

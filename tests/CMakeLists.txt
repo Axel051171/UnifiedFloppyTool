@@ -4666,6 +4666,14 @@ foreach(test_source ${TEST_SOURCES})
             # MF-404: the half-track test needs the rights-free VICE G64 as
             # its negative control (a disk that has none).
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gcr_praedikat_trifft_die_tafel")
+        # MF-1522: der Test las die Tafel aus `uft/uft_cbm_gcr.h`, bis sie
+        # ins Register wanderte — danach waere der Abgleich eine
+        # Selbstpruefung gewesen, und der Vollbau hat ihn folgerichtig
+        # fallen lassen. Jetzt prueft er gegen den eingefrorenen Zeugen
+        # in tests/oracles/, der NIE nachgezogen wird (MF-644).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/oracles/gcr_cbm_tafel_87345aab.c)
     elseif(${test_name} STREQUAL "test_gcr_apple_gegen_tafel")
         # MF-1515: das Register gegen die eingefrorenen Apple-Tafeln, die
         # bis f08d1a7a im Produktionscode standen. Zwei Haende (MF-644):
@@ -5226,7 +5234,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
             ${CMAKE_SOURCE_DIR}/src/dtc_components/src/bitbuffer.c
-            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c)   # MF-1522
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
         set(TEST_LIBS "")
@@ -5244,6 +5253,7 @@ foreach(test_source ${TEST_SOURCES})
         # sie war die dritte Kopie derselben Regel im Baum.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
             ${CMAKE_SOURCE_DIR}/src/dtc_components/src/encoding.c)
         target_include_directories(${test_name} PRIVATE
@@ -5262,6 +5272,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/dtc_components/src/crc.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
@@ -5712,6 +5723,7 @@ foreach(test_source ${TEST_SOURCES})
         # for the PLL math).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -5732,6 +5744,7 @@ foreach(test_source ${TEST_SOURCES})
         # needed.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -5752,6 +5765,7 @@ foreach(test_source ${TEST_SOURCES})
         # Apple ][ 6-and-2 GCR decoder regression test.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -5770,6 +5784,7 @@ foreach(test_source ${TEST_SOURCES})
         # MFM decoder regression test (odd/even-split sector layout).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -5805,6 +5820,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_longtrack.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_fuzzy_bits.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -5999,6 +6015,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_amiga_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -6957,6 +6974,15 @@ if(UFT_ENABLE_BENCHMARKS)
     add_executable(bench_decode_hotpath
         ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/bench_decode_hotpath.c
         ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+        # MF-1522: `uft_flux_decoder.c` ruft seit dem Umhaengen auf das
+        # GCR-Register `uft_gcr_dekodieren()`. Dieses Ziel haengt an
+        # `option(UFT_ENABLE_BENCHMARKS ... OFF)` und stand deshalb NICHT in
+        # `build.ninja` — die Blastradius-Messung ueber die Link-Bloecke
+        # konnte es gar nicht sehen. Gefunden hat es eine zweite Messung
+        # ueber den CMake-TEXT: von 2 Zielen, die einen Register-Aufrufer
+        # nennen, war genau dieses unversorgt. Ein Ziel, das niemand baut,
+        # faellt beim ersten auf, der es einschaltet.
+        ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c
         ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
         ${CMAKE_SOURCE_DIR}/src/flux/uft_track_verdikt.c
         ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
