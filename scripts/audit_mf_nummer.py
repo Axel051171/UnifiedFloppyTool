@@ -275,6 +275,19 @@ def betrieb(repo, umgebung: dict | None = None) -> list:
                % (seit, len(eintraege), betrachtet, len(ohne))]
     for z in ohne[:10]:
         meldung.append("   ohne Vermerk: %s" % z)
+    if ohne:
+        # Was „kein Vermerk" heissen KANN, und was nicht — sonst liest
+        # jemand eine Ursache hinein (MF-1530). Zwei der drei Ursachen sind
+        # seit MF-1530 unterscheidbar, weil die Bash des Hakens dann selbst
+        # eine Zeile schreibt (`ungeprueft-kein-python`,
+        # `ungeprueft-skript-fehlt`).
+        meldung.append(
+            "   Lesart: eine fehlende Zeile heisst - der Haken lief nicht. "
+            "Die Faelle kein-Python und Skript-fehlt schreiben seit MF-1530 "
+            "eine eigene Zeile, sind also unterscheidbar. NICHT "
+            "unterscheidbar bleibt ein unschreibbares Laufbuch: es kann "
+            "nicht vermerken, dass es unschreibbar ist. Und ohne `git` "
+            "findet der Haken es gar nicht (gemessen).")
     return meldung
 
 

@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 15 von 25
+K0 dieser Sitzung: 17 von 28
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -832,3 +832,78 @@ Erst die Messung, dann das Urteil — und die Messung hat sowohl meinen
 angekündigten Plan verworfen als auch den Bau verhindert, der sich sonst
 plausibel angefühlt hätte. Drei gemessene Defekte sind ein guter Grund
 hinzusehen und kein Grund zu bauen, solange sie nicht zuschlagen.
+
+### Nachtrag 12 zur Bilanz 2026-09-29 — die Betriebsprobe hat geliefert, und die Antwort ist unbequem
+
+Die Probe aus MF-1528 war zwei Stunden alt, als sie ihren ersten echten
+Befund gemeldet hat:
+
+```
+Laufbuch seit 09:09:57Z, 107 Vermerke
+Commits mit Anspruch seither: 4, davon ohne Vermerk: 2
+   ohne Vermerk: 97b2888a  MF-1601
+   ohne Vermerk: cc204479  MF-1602
+```
+
+Beide sind HEAD des Arbeitsbaums `C:/Users/Axel/wt-dtc`; meine eigenen zwei
+(`0d50177e`, `04b8a400`) tragen je einen Vermerk. **Tor 72 bindet gemessen
+nur eine Seite.** Eingetragen als **P3-680**.
+
+Die Arithmetik der Probe ist dabei nachprüfbar richtig: die zwei anderen
+fremden Commits des Tages (10:17 und 11:00 Ortszeit) liegen **vor** dem
+Laufbuch und werden korrekt ausgenommen — genau der Fall, für den `utc()`
+gebaut wurde, nachdem der Tagesvergleich ihn verfehlt hätte.
+
+**Und die naheliegenden Ursachen sind ausgeschlossen, nicht vermutet:**
+`core.hooksPath` liefert in **beiden** Bäumen denselben Pfad, die Datei dort
+ist vorhanden und ruft Tor 72 (3 Nennungen), das Reflog sagt `commit:` (also
+kein Rebase, bei dem `commit-msg` ohnehin nicht liefe). Seit MF-1530
+schreibt zusätzlich die **Bash** des Hakens selbst eine Zeile, wenn sie kein
+Python findet oder das Skript fehlt — beide Zeilen fehlen ebenfalls. Es
+bleiben `--no-verify` oder git-Plumbing; **welches, ist NICHT gemessen** und
+wird nicht mit einer Geschichte gefüllt.
+
+```
+ 26. **„Kein Vermerk" hatte drei Ursachen, und die Probe konnte sie nicht
+     unterscheiden** — der Haken lief nicht · der Haken lief und fand kein
+     Python · das Anhaengen scheiterte. Mein eigener Bau von MF-1528 hat
+     also einen Befund geliefert, dessen Deutung offen blieb | Mensch
+     (beim Lesen des ersten echten Befunds) | MF-1530: die Bash des Hakens
+       schreibt in den zwei Zweigen selbst eine Zeile, je einzeln
+       nachgestellt und belegt — `ungeprueft-kein-python` (mit git im PATH,
+       Python entfernt) und `ungeprueft-skript-fehlt` (Wegwerf-Depot ohne
+       `scripts/`). Der gewoehnliche Weg schreibt weiterhin genau eine
+       Zeile, von Python. `--betrieb` sagt die verbleibende
+       Zweideutigkeit jetzt AUS statt sie zu verschweigen.
+
+ 27. Meine erste Probe des Zweigs „kein Python" nahm `PATH=/usr/bin:/bin`
+     — darin fehlt auch `git`, und ohne git findet der Haken das Laufbuch
+     gar nicht. Gemessen 101 -> 101 Zeilen, und ich haette daraus
+     geschlossen, der Zweig schreibe nicht | Mensch (die Zahl passte nicht
+     zur Erwartung, also wurde der Aufbau geprueft, nicht der Code —
+     MF-1177 Satz 1) | Probe mit `PATH="$(dirname $(command -v
+     git)):/usr/bin:/bin"`, danach 102 -> 103 mit
+     `ungeprueft-kein-python`. Der vierte Fall (kein git ueberhaupt) ist
+     damit ebenfalls gemessen und unvermeidlich.
+
+ 28. Ein schliessendes `"` in `„der Haken lief nicht"` hat mitten in einer
+     Python-Zeichenkette die Zeichenkette BEENDET; der Em-Dash danach war
+     ein freies Zeichen -> `SyntaxError` | TOR (der Selbsttest lief nicht
+     mehr, drei Aufrufe hintereinander rot) | ohne Anfuehrungszeichen
+       geschrieben. In Kommentaren sind `„…"` harmlos, in Zeichenketten
+       nicht — und die Datei tut beides.
+```
+
+**K0: 17 von 28** (26 Mensch, 27 Mensch, 28 Tor).
+
+**Was dieser Nachtrag über die Probe sagt.** Sie war zwei Stunden alt und
+hat in dieser Zeit: einen echten Befund gemeldet (zwei Commits ohne
+Hakenlauf), eine Lücke in sich selbst gezeigt (drei Ursachen, nicht
+unterscheidbar), und nach deren Schließen eine Aussage geliefert, die ohne
+sie nicht zu haben war — *dass* der Haken nicht lief, mit ausgeschlossenen
+Alternativen. Das ist der Unterschied zwischen einem Tor und einem Skript
+mit einem Haken davor.
+
+**Und die richtige Lesart des grünen Tores ist damit enger als gedacht:**
+„meine Nummern kollidieren nicht mit bekannten" — nicht „Nummern
+kollidieren nicht".

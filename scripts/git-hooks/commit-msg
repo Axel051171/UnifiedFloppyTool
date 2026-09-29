@@ -47,6 +47,37 @@ fi
 # (14/14, Mutationsmatrix 5/5) stehen in scripts/audit_mf_nummer.py.
 #
 # Ist Python nicht da, prueft dieses Tor NICHTS und sagt es.
+#
+# MF-1530: und es VERMERKT dann auch, dass es nichts geprueft hat. Der
+# Grund ist gemessen. Die Betriebsprobe (`--betrieb`) zaehlt Commits ohne
+# Laufbuch-Vermerk und hat am 2026-09-29 einen gefunden: `97b2888a`
+# (MF-1601) aus dem Arbeitsbaum `wt-dtc`, dessen `core.hooksPath` genau auf
+# DIESE Datei zeigt und die Tor 72 ruft. „Kein Vermerk" hatte dabei DREI
+# moegliche Ursachen, und die Probe konnte sie nicht unterscheiden:
+#
+#   1 der Haken lief nicht (--no-verify, git-Plumbing)
+#   2 der Haken lief, fand kein Python -> Hinweis, exit 0, KEIN Vermerk
+#   3 das Skript lief, das Anhaengen scheiterte -> False, KEIN Vermerk
+#
+# Die beiden Zweige unten schliessen Ursache 2 und den Fall „Skript fehlt":
+# dann schreibt die BASH die Zeile. Ursache 3 bleibt unauflösbar — ein
+# unschreibbares Laufbuch kann nicht vermerken, dass es unschreibbar ist;
+# `--betrieb` sagt das statt es zu verschweigen.
+tor72_vermerk() {
+    # $1 = Urteil. Darf einen Commit NIE kosten (MF-1000).
+    _gcd=$(git rev-parse --git-common-dir 2>/dev/null) || return 0
+    [ -n "$_gcd" ] || return 0
+    case "$_gcd" in
+        /*|[A-Za-z]:*) : ;;
+        *) _gcd="$(git rev-parse --show-toplevel 2>/dev/null)/$_gcd" ;;
+    esac
+    printf '%s\t-\t%s\t%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" \
+        "$(git rev-parse --short HEAD 2>/dev/null || echo -)" \
+        >> "$_gcd/uft-tor72-laeufe.log" 2>/dev/null || true
+    return 0
+}
+
 if command -v python >/dev/null 2>&1; then
     PY=python
 elif command -v python3 >/dev/null 2>&1; then
@@ -59,9 +90,13 @@ if [ -n "$PY" ]; then
     WURZEL=$(git rev-parse --show-toplevel)
     if [ -f "$WURZEL/scripts/audit_mf_nummer.py" ]; then
         "$PY" "$WURZEL/scripts/audit_mf_nummer.py" "$MSG_FILE" || exit 1
+    else
+        echo "[Tor 72] scripts/audit_mf_nummer.py fehlt - NICHTS geprueft."
+        tor72_vermerk "ungeprueft-skript-fehlt"
     fi
 else
     echo "[Tor 72] kein Python gefunden - MF-Nummer NICHT geprueft."
+    tor72_vermerk "ungeprueft-kein-python"
 fi
 
 exit 0
