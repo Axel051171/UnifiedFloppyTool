@@ -260,17 +260,17 @@ int main(void)
 
     /* ── 2. Der Strom ist NICHT die alte Ausgabe ───────────────────── */
     {
-        uint8_t *zellen = NULL, *bytes = NULL;
-        uint32_t zbits = 0, bbits = 0;
+        /* MF-1617: `ipf_air_get_track_raw()`, die alte Ausgabe mit
+         * 48 272 Bit dekodierter Bytes, ist entfernt. Die Gegenueber-
+         * stellung steht als Zahl in P3-360; geprueft wird hier, was der
+         * Strom zusagt: die Zellenzahl der Datei, nicht die Bytezahl. */
+        uint8_t *zellen = NULL;
+        uint32_t zbits = 0;
         int rz = uft_ipf_zellstrom(a, 0, 0, &zellen, &zbits);
-        int rb = ipf_air_get_track_raw(a, 0, 0, &bytes, &bbits);
-        snprintf(det, sizeof det, "Zellen rc=%d %u Bit, alt rc=%d %u Bit",
-                 rz, zbits, rb, bbits);
-        pruefe("Spur 0/0: der Zellstrom hat 101 304 Bit, die frueher "
-               "gelieferten dekodierten Bytes haben 48 272 - genau diese "
-               "Verwechslung war P3-360",
-               rz == 0 && zbits == 101304u && rb == 0 && bbits == 48272u,
-               det);
+        snprintf(det, sizeof det, "Zellen rc=%d %u Bit", rz, zbits);
+        pruefe("Spur 0/0: der Zellstrom hat 101 304 Bit, nicht die 48 272 "
+               "Bit dekodierter Bytes der frueheren Ausgabe (P3-360)",
+               rz == 0 && zbits == 101304u && zbits != 48272u, det);
 
         /* ── 3. Die Zellen tragen den Amiga-Sync UNKODIERT ─────────
          *
@@ -308,7 +308,6 @@ int main(void)
             pruefe("Sync-Gegenprobe", 0, det);
         }
         free(zellen);
-        free(bytes);
     }
 
     /* ── 3b. Die MFM-ZELLREGEL, ueber beide Disketten ──────────────

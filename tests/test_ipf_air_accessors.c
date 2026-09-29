@@ -84,22 +84,14 @@ int main(void) {
     assert(rc == -1);
     printf("OK\n");
 
-    /* === Test 5: get_track_raw -1 for absent ======================= */
-    printf("Test 5: get_track_raw -1 for absent... ");
-    uint8_t *bufp = (uint8_t *)0xDEADBEEF;
-    uint32_t bits = 0xCAFEBABEu;
-    rc = ipf_air_get_track_raw(disk, 0, 0, &bufp, &bits);
-    assert(rc == -1);
-    assert(bufp == NULL);
-    assert(bits == 0);
-    printf("OK\n");
-
-    /* === Test 6: get_track_raw NULL-arg guards ===================== */
-    printf("Test 6: get_track_raw NULL arg guards... ");
-    rc = ipf_air_get_track_raw(disk, 0, 0, NULL, &bits);
-    assert(rc == -1);
-    rc = ipf_air_get_track_raw(disk, 0, 0, &bufp, NULL);
-    assert(rc == -1);
+    /* === Test 5/6 (MF-1617): get_track_raw is removed (only tests
+     * called it; the cell stream replaces it). In its place: the count
+     * of records the reader skips — none in this buffer. ============== */
+    printf("Test 5: no unread records in a CAPS+INFO buffer... ");
+    uint32_t ct = 99u, fremd = 99u;
+    assert(ipf_air_get_unread_records(disk, &ct, &fremd) == 0u);
+    assert(ct == 0u && fremd == 0u);
+    assert(ipf_air_get_unread_records(disk, NULL, NULL) == 0u);
     printf("OK\n");
 
     /* === Test 7: cleanup =========================================== */
@@ -222,10 +214,9 @@ int main(void) {
     assert(ipf_air_track_present(NULL, 0, 0) == false);
     rc = ipf_air_get_track_meta(NULL, 0, 0, &tb, &dens, &flags, &fuzzy);
     assert(rc == -1);
-    bufp = (uint8_t *)0x1; bits = 1;
-    rc = ipf_air_get_track_raw(NULL, 0, 0, &bufp, &bits);
-    assert(rc == -1);
-    assert(bufp == NULL && bits == 0);
+    ct = 7u; fremd = 7u;
+    assert(ipf_air_get_unread_records(NULL, &ct, &fremd) == 0u);
+    assert(ct == 0u && fremd == 0u);
     printf("OK\n");
 
     printf("\n=== All IPF AIR accessor smoke-tests passed ===\n");

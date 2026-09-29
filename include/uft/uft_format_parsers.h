@@ -270,7 +270,9 @@ static inline uint16_t uft_td0_crc16(const uint8_t *data, size_t length, uint16_
 
 /* UFT_IPF_SIGNATURE is deliberately NOT defined here — same reason as
  * UFT_SCP_SIGNATURE above. Canonical is "CAPS" in
- * include/uft/profiles/uft_ipf_format.h. The numeric form survives with a
+ * include/uft/profiles/uft_ipf_format.h (removed MF-1617: a second IPF
+ * parser without callers; the reader is src/formats/ipf/uft_ipf_air.c,
+ * which compares the magic itself). The numeric form survives with a
  * distinct name as UFT_IPF_CHUNK_CAPS in the enum below, which is where a
  * 32-bit chunk tag actually belongs. */
 

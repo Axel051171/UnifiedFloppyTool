@@ -8,20 +8,15 @@
  *
  *   1. lifecycle:   ipf_air_alloc / ipf_air_parse / ipf_air_free
  *   2. queries:     ipf_air_get_geometry / ipf_air_track_present
- *                   ipf_air_get_track_meta
- *   3. payload:     ipf_air_get_track_raw — concatenates decoded data-element
- *                   value bytes from all blocks of a track into a single
- *                   buffer. Honest scope: this returns the *data-element*
- *                   payload (SYNC / DATA / RAW / IGAP byte sequences as
- *                   recorded in the IPF DATA records). It does NOT
- *                   reconstruct the full track bitstream including gap
- *                   padding — that requires gap-element synthesis from
- *                   gap_default values, which is a separate task.
+ *                   ipf_air_get_track_meta / _loss / _crc
+ *   3. blocks:      ipf_air_get_block_* / ipf_air_get_elem* — the parsed
+ *                   block descriptors and data elements; the cell stream
+ *                   is built from them in uft_ipf_zellstrom.c
  *
- * The data_elements path is currently populated only for the SPS encoder
- * (info->encoder_type == IPF_ENC_SPS = 2). Older CAPS-encoded IPFs route
- * data through a different block layout that is not yet decoded here;
- * ipf_air_get_track_raw will return UFT_ERR_NOT_IMPLEMENTED for those.
+ * BERICHTIGT MF-1617: here stood `ipf_air_get_track_raw` as the payload
+ * path and "data elements only for the SPS encoder". Data elements are
+ * parsed for BOTH encoders since MF-1373, and get_track_raw (decoded
+ * bytes, not cells — P3-360) had only tests as callers; it is removed.
  */
 #ifndef UFT_IPF_AIR_H
 #define UFT_IPF_AIR_H
@@ -162,31 +157,17 @@ int ipf_air_get_track_crc(const ipf_air_disk_t *disk, int cyl, int head,
 uint32_t ipf_air_get_dropped_images(const ipf_air_disk_t *disk);
 
 /**
- * @brief Concatenate decoded data-element payload bytes from every block of
- *        a track into a single contiguous buffer.
+ * @brief MF-1617: records this reader skips by their length, counted.
  *
- * The returned buffer is malloc'd and ownership transfers to the caller —
- * free with free() when done. *out_buf is set to NULL and *out_bits to 0
- * when the track has no decoded data elements (e.g. CAPS-encoded files
- * where SPS data-element parsing did not run).
+ * CTEI and CTEX ("CTRaw Extra Info") and any record type the reader does
+ * not know. Until MF-1617 CTEI/CTEX were parsed into structures nothing
+ * read, and unknown records vanished without a trace; the plugin now
+ * names the count.
  *
- * The bit count corresponds to the sum of data_bits across data_elements.
- * Element ordering follows block order, then data-element order within
- * each block. FUZZY elements (which carry no value bytes) contribute
- * their bit count but no buffer bytes — the byte buffer therefore
- * represents the deterministic-decoded portion only.
- *
- * @return 0 on success (including "no data elements" → buf=NULL, bits=0),
- *         -1 on invalid args / track not present,
- *         -2 if data-element decoding was not run for this file (CAPS
- *            encoder fallback path not yet implemented).
+ * @return total; out-pointers (may be NULL) get CTEI+CTEX and the rest
  */
-int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
-                           uint8_t **out_buf, uint32_t *out_bits);
-
-#ifdef __cplusplus
-}
-#endif
+uint32_t ipf_air_get_unread_records(const ipf_air_disk_t *disk,
+                                    uint32_t *out_ct, uint32_t *out_unknown);
 
 
 /* ── Der Dichtename ist ein BEFUND (MF-823) ──────────────────────────────
@@ -218,6 +199,10 @@ int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
  * dekodierte Bytes und ergeben je Bit ZWEI Zellen.
  *
  * Rueckgabe 0 = gut, -1 = Spur, Block oder Element gibt es nicht.
+ *
+ * MF-1617: these declarations stood AFTER the closing brace of
+ * `extern "C"` — a C++ caller would have got C++ linkage for them. The
+ * brace now closes at the end of the file.
  */
 int ipf_air_get_block_count(const ipf_air_disk_t *disk, int cyl,
                             int head);
@@ -257,5 +242,9 @@ int ipf_air_get_elem(const ipf_air_disk_t *disk, int cyl, int head,
                      const uint8_t **out_value, uint32_t *out_len);
 
 const char* ipf_air_density_name(uint32_t d);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* UFT_IPF_AIR_H */

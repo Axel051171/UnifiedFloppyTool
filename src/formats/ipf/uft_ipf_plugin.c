@@ -39,7 +39,8 @@
  * reflects descriptor truth and leaves the absent fields NULL.
  */
 #include "uft/uft_format_common.h"
-#include "uft/profiles/uft_ipf_format.h"
+#include "uft/uft_endian.h"   /* MF-1617: was uft_ipf_format.h, a second,
+                                 * uncalled IPF parser (removed) */
 #include "uft/formats/ipf/uft_ipf_air.h"
 #include "uft/formats/ipf/uft_ipf_helper.h"
 #include "uft/formats/ipf/uft_ipf_zellstrom.h"
@@ -92,11 +93,6 @@ static bool ipf_plugin_probe(const uint8_t *data, size_t size,
     return false;
 }
 
-static uint32_t ipf_be32(const uint8_t *p)
-{
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16)
-         | ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
-}
 
 /* MF-1614: is this a CT-Raw file (SPS raw dump)? CT-Raw uses the IPF's
  * CAPS record chain, but carries TRCK records instead of IMGE. Measured
@@ -116,14 +112,14 @@ static bool ipf_ist_ctraw(const uint8_t *d, size_t n)
     if (n < 12 || memcmp(d, "CAPS", 4) != 0) return false;
     while (o < n) {
         if (n - o < 12) return false;
-        uint32_t len = ipf_be32(d + o + 4);
+        uint32_t len = uft_read_be32(d + o + 4);
         if (len < 12 || len > n - o) return false;
         size_t next = o + len;
         if (memcmp(d + o, "IMGE", 4) == 0) return false;
         if (memcmp(d + o, "TRCK", 4) == 0) trck++;
         if (memcmp(d + o, "DATA", 4) == 0) {
             if (len < 16) return false;
-            uint32_t dl = ipf_be32(d + o + 12);
+            uint32_t dl = uft_read_be32(d + o + 12);
             if (dl > n - next) return false;
             next += dl;
         }
@@ -333,6 +329,13 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
         UFT_WARN("IPF '%s': mindestens ein Satz haelt seine CRC32 nicht "
                  "- betroffene Spuren tragen UFT_TRACK_HDR_CRC bzw. "
                  "UFT_TRACK_DATA_CRC", path);
+    {   /* MF-1617: what the reader skipped by length is named */
+        uint32_t ct = 0, fremd = 0;
+        if (ipf_air_get_unread_records(p->air, &ct, &fremd) > 0)
+            UFT_WARN("IPF '%s': %u Saetze ohne Leser uebersprungen "
+                     "(%u CTEI/CTEX, %u unbekannter Art)", path,
+                     (unsigned)(ct + fremd), (unsigned)ct, (unsigned)fremd);
+    }
     if (ipf_air_get_dropped_images(p->air) > 0)
         UFT_WARN("IPF '%s': %u Spurkoepfe ausserhalb Zylinder 0..83 / "
                  "Kopf 0..1 nicht gelesen", path,

@@ -5202,6 +5202,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_zellstrom.c)
+    elseif(${test_name} STREQUAL "test_ipf_air_satzlaenge")
+        # MF-1617: the IPF reader follows each record's own length; the
+        # free disk-analyse IPF is rebuilt with a changed INFO record.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_greaseweazle_v2")
         # MF-154 P1.1: GreaseweazleProviderV2 mixin composition test.
         # Needs: V2 provider .cpp + GW C backend (for uft_gw_strerror etc.).

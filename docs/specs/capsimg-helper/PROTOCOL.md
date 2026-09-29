@@ -213,7 +213,8 @@ Helfer von uns, und `capsimg` deutet. Drei Hände.
 
 Dieses Dokument beschreibt **UFTs Bedarf**, nicht `capsimg`s API. Die
 Feldnamen oben stammen aus den vorhandenen Zugriffsfunktionen des Baums
-(`ipf_air_get_track_meta`, `ipf_air_get_track_raw`), nicht aus fremden
+(`ipf_air_get_track_meta`, `ipf_air_get_track_raw` — letztere seit
+MF-1617 entfernt), nicht aus fremden
 Datenstrukturen. Das ist Absicht: ein Protokoll, das die fremde API
 nachzeichnet, wäre eine Ableitung mit Zwischenschritt — genau das, was
 §5 Weg 2 verbietet („nicht aus dem fremden Quelltext abschreiben, sonst

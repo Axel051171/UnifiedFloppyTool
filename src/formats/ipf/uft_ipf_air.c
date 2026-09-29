@@ -20,24 +20,26 @@
  * niemand gemessen hat; `-only` ist die konservative Lesart und irrt,
  * wenn ueberhaupt, zu unseren Lasten.
  *
- * Improvements over existing UFT IPF parsers:
- * - Complete SPS encoder: block descriptors with gap/data element decoding
- * - Gap elements: forward/backward with GapLength/SampleLength types
- * - Data elements: Sync/Data/IGap/Raw/Fuzzy with DataInBit flag
- * - CAPS and SPS encoder differentiation
- * - CTEI/CTEX extension record parsing
- * - CRC-32 validation on all records + data segments
- * - Full round-trip write support with gap/data element serialization
- * - Big-endian I/O (IPF is BE, unlike STX which is LE)
+ * What it does (BERICHTIGT MF-1617 — here stood a list that promised
+ * "full round-trip write support" and CTEI/CTEX parsing; there is no
+ * writer in this file, and the CTEI/CTEX values had no reader):
+ * - record chain CAPS / INFO / IMGE / DATA, each record by its OWN length
+ *   (MF-1617), CRC-32 on every record and on each DATA payload (MF-1372)
+ * - block descriptors and data elements for BOTH encoders, CAPS and SPS
+ *   (MF-1373); the cell stream is built in uft_ipf_zellstrom.c
+ * - forward/backward gap elements of the SPS encoder are parsed; they
+ *   have no reader yet (P3-710)
+ * - CTEI, CTEX and unknown records are skipped and COUNTED
+ *   (ipf_air_get_unread_records), not dropped silently
  *
  * "Kein Bit geht verloren" - UFT Preservation Philosophy
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "uft/uft_endian.h"
 #include "uft/formats/uft_air_crc32.h"
 #include "uft/formats/ipf/uft_ipf_air.h"  /* opaque-handle public API */
 
@@ -269,21 +271,6 @@ typedef struct {
     bool data_crc_ok;
 } ipf_track_t;
 
-/** CTEI/CTEX extension records */
-typedef struct {
-    uint32_t release_crc;
-    uint32_t analyzer_rev;
-} ipf_ctei_t;
-
-typedef struct {
-    uint32_t track;
-    uint32_t side;
-    ipf_density_t density;
-    uint32_t format_id;
-    uint32_t fix;
-    uint32_t track_size;
-} ipf_ctex_t;
-
 /** Complete parsed IPF disk
  *  The named tag `ipf_air_disk` matches the forward-declaration in
  *  include/uft/formats/ipf/uft_ipf_air.h so that out-of-TU callers see
@@ -294,9 +281,9 @@ typedef struct ipf_air_disk {
     ipf_track_t tracks[IPF_MAX_TRACKS][IPF_MAX_SIDES];
     bool track_present[IPF_MAX_TRACKS][IPF_MAX_SIDES];
 
-    ipf_ctei_t* ctei;       /* Optional */
-    ipf_ctex_t* ctex;       /* Optional array */
-    uint32_t ctex_count;
+    /* MF-1617: records this reader skips by length and counts */
+    uint32_t unread_ct_records;       /* CTEI / CTEX */
+    uint32_t unread_unknown_records;  /* any other type */
 
     /* Stats */
     uint32_t total_tracks;
@@ -311,18 +298,9 @@ typedef struct ipf_air_disk {
 /* Status codes ipf_air_status_t are now declared in
  * include/uft/formats/ipf/uft_ipf_air.h (single source). */
 
-/*============================================================================
- * BIG-ENDIAN READ HELPERS (IPF is Big-Endian)
- *============================================================================*/
-
-static inline uint32_t ipf_be32(const uint8_t* p) {
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-           ((uint32_t)p[2] << 8) | (uint32_t)p[3];
-}
-
-static inline char ipf_char(const uint8_t* p) {
-    return (char)*p;
-}
+/* IPF is big-endian throughout. MF-1617: the reader is the tree's one
+ * `uft_read_be32()` (uft/uft_endian.h); this file had its own copy, the
+ * IPF plugin a second one, and uft_ipf_format.h a third. */
 
 /*============================================================================
  * DECODE GAP ELEMENTS - Ported from IPFReader.cs readExtraDataSegment()
@@ -568,8 +546,8 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
         rec_type[1] = (char)data[pos + 1];
         rec_type[2] = (char)data[pos + 2];
         rec_type[3] = (char)data[pos + 3];
-        uint32_t rec_len = ipf_be32(data + pos + 4);
-        uint32_t rec_crc = ipf_be32(data + pos + 8);
+        uint32_t rec_len = uft_read_be32(data + pos + 4);
+        uint32_t rec_crc = uft_read_be32(data + pos + 8);
         pos += 12;
 
         /* MF-1372: ein Satz umfasst mindestens seinen eigenen Kopf und
@@ -597,51 +575,57 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
 
         /* ---- INFO record ---- */
         else if (strcmp(rec_type, "INFO") == 0) {
-            if (pos + 84 > size) return IPF_AIR_TRUNCATED;
+            /* MF-1617: the record's own length decides, not a fixed
+             * advance. Shorter than its fields: refused, instead of
+             * reading the next record's bytes as geometry. Longer: the
+             * fields are read and the rest is skipped by the length. */
+            if (rec_len < IPF_INFO_REC_SZ) return IPF_AIR_BAD_RECORD;
             ipf_info_record_t* info = &disk->info;
-            info->media_type   = ipf_be32(data + pos); pos += 4;
-            info->encoder_type = (ipf_encoder_type_t)ipf_be32(data + pos); pos += 4;
-            info->encoder_rev  = ipf_be32(data + pos); pos += 4;
-            info->file_key     = ipf_be32(data + pos); pos += 4;
-            info->file_rev     = ipf_be32(data + pos); pos += 4;
-            info->origin       = ipf_be32(data + pos); pos += 4;
-            info->min_track    = ipf_be32(data + pos); pos += 4;
-            info->max_track    = ipf_be32(data + pos); pos += 4;
-            info->min_side     = ipf_be32(data + pos); pos += 4;
-            info->max_side     = ipf_be32(data + pos); pos += 4;
-            info->creation_date= ipf_be32(data + pos); pos += 4;
-            info->creation_time= ipf_be32(data + pos); pos += 4;
+            info->media_type   = uft_read_be32(data + pos); pos += 4;
+            info->encoder_type = (ipf_encoder_type_t)uft_read_be32(data + pos); pos += 4;
+            info->encoder_rev  = uft_read_be32(data + pos); pos += 4;
+            info->file_key     = uft_read_be32(data + pos); pos += 4;
+            info->file_rev     = uft_read_be32(data + pos); pos += 4;
+            info->origin       = uft_read_be32(data + pos); pos += 4;
+            info->min_track    = uft_read_be32(data + pos); pos += 4;
+            info->max_track    = uft_read_be32(data + pos); pos += 4;
+            info->min_side     = uft_read_be32(data + pos); pos += 4;
+            info->max_side     = uft_read_be32(data + pos); pos += 4;
+            info->creation_date= uft_read_be32(data + pos); pos += 4;
+            info->creation_time= uft_read_be32(data + pos); pos += 4;
             for (int i = 0; i < 4; i++) {
-                info->platforms[i] = (ipf_platform_t)ipf_be32(data + pos); pos += 4;
+                info->platforms[i] = (ipf_platform_t)uft_read_be32(data + pos); pos += 4;
             }
-            info->disk_number  = ipf_be32(data + pos); pos += 4;
-            info->creator_id   = ipf_be32(data + pos); pos += 4;
+            info->disk_number  = uft_read_be32(data + pos); pos += 4;
+            info->creator_id   = uft_read_be32(data + pos); pos += 4;
             for (int i = 0; i < 3; i++) {
-                info->reserved[i] = ipf_be32(data + pos); pos += 4;
+                info->reserved[i] = uft_read_be32(data + pos); pos += 4;
             }
+            pos = start_pos + rec_len;
         }
 
         /* ---- IMGE record ---- */
         else if (strcmp(rec_type, "IMGE") == 0) {
-            if (pos + 68 > size) return IPF_AIR_TRUNCATED;
+            if (rec_len < IPF_IMGE_REC_SZ) return IPF_AIR_BAD_RECORD;
             ipf_image_record_t img;
-            img.track          = ipf_be32(data + pos); pos += 4;
-            img.side           = ipf_be32(data + pos); pos += 4;
-            img.density        = (ipf_density_t)ipf_be32(data + pos); pos += 4;
-            img.signal_type    = ipf_be32(data + pos); pos += 4;
-            img.track_bytes    = ipf_be32(data + pos); pos += 4;
-            img.start_byte_pos = ipf_be32(data + pos); pos += 4;
-            img.start_bit_pos  = ipf_be32(data + pos); pos += 4;
-            img.data_bits      = ipf_be32(data + pos); pos += 4;
-            img.gap_bits       = ipf_be32(data + pos); pos += 4;
-            img.track_bits     = ipf_be32(data + pos); pos += 4;
-            img.block_count    = ipf_be32(data + pos); pos += 4;
-            img.encoder        = ipf_be32(data + pos); pos += 4;
-            img.track_flags    = ipf_be32(data + pos); pos += 4;
-            img.data_key       = ipf_be32(data + pos); pos += 4;
+            img.track          = uft_read_be32(data + pos); pos += 4;
+            img.side           = uft_read_be32(data + pos); pos += 4;
+            img.density        = (ipf_density_t)uft_read_be32(data + pos); pos += 4;
+            img.signal_type    = uft_read_be32(data + pos); pos += 4;
+            img.track_bytes    = uft_read_be32(data + pos); pos += 4;
+            img.start_byte_pos = uft_read_be32(data + pos); pos += 4;
+            img.start_bit_pos  = uft_read_be32(data + pos); pos += 4;
+            img.data_bits      = uft_read_be32(data + pos); pos += 4;
+            img.gap_bits       = uft_read_be32(data + pos); pos += 4;
+            img.track_bits     = uft_read_be32(data + pos); pos += 4;
+            img.block_count    = uft_read_be32(data + pos); pos += 4;
+            img.encoder        = uft_read_be32(data + pos); pos += 4;
+            img.track_flags    = uft_read_be32(data + pos); pos += 4;
+            img.data_key       = uft_read_be32(data + pos); pos += 4;
             for (int i = 0; i < 3; i++) {
-                img.reserved[i]= ipf_be32(data + pos); pos += 4;
+                img.reserved[i]= uft_read_be32(data + pos); pos += 4;
             }
+            pos = start_pos + rec_len;
 
             /* Store for DATA linking. MF-1372: ohne feste Obergrenze;
              * scheitert die Anforderung, sagt der Leser ab, statt die
@@ -680,12 +664,12 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
 
         /* ---- DATA record ---- */
         else if (strcmp(rec_type, "DATA") == 0) {
-            if (pos + 16 > size) return IPF_AIR_TRUNCATED;
+            if (rec_len < IPF_DATA_REC_HDR_SZ) return IPF_AIR_BAD_RECORD;
             ipf_data_record_t dr;
-            dr.length   = ipf_be32(data + pos); pos += 4;
-            dr.bit_size = ipf_be32(data + pos); pos += 4;
-            dr.crc      = ipf_be32(data + pos); pos += 4;
-            dr.key      = ipf_be32(data + pos); pos += 4;
+            dr.length   = uft_read_be32(data + pos); pos += 4;
+            dr.bit_size = uft_read_be32(data + pos); pos += 4;
+            dr.crc      = uft_read_be32(data + pos); pos += 4;
+            dr.key      = uft_read_be32(data + pos); pos += 4;
 
             /* MF-1372: die Nutzlast endet in der Datei. Hier stand
              * `pos + dr.length <= size` in uint32_t — bei einer Laenge
@@ -750,15 +734,15 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
 
                 for (uint32_t bi = 0; bi < nblocks; bi++) {
                     ipf_block_desc_t* bd = &trk->blocks[bi];
-                    bd->data_bits      = ipf_be32(data + bpos); bpos += 4;
-                    bd->gap_bits       = ipf_be32(data + bpos); bpos += 4;
+                    bd->data_bits      = uft_read_be32(data + bpos); bpos += 4;
+                    bd->gap_bits       = uft_read_be32(data + bpos); bpos += 4;
                     /* Union: CAPS uses data_bytes/gap_bytes, SPS uses gap_offset/cell_type */
-                    bd->gap_offset     = ipf_be32(data + bpos);
+                    bd->gap_offset     = uft_read_be32(data + bpos);
                     bd->data_bytes     = bd->gap_offset;        bpos += 4;
-                    bd->cell_type      = ipf_be32(data + bpos);
+                    bd->cell_type      = uft_read_be32(data + bpos);
                     bd->gap_bytes      = bd->cell_type;         bpos += 4;
-                    bd->encoder_type   = (ipf_block_encoder_t)ipf_be32(data + bpos); bpos += 4;
-                    bd->block_flags    = ipf_be32(data + bpos); bpos += 4;
+                    bd->encoder_type   = (ipf_block_encoder_t)uft_read_be32(data + bpos); bpos += 4;
+                    bd->block_flags    = uft_read_be32(data + bpos); bpos += 4;
                     /* MF-1373: beim CAPS-Kodierer gilt das Flaggenfeld
                      * nicht — Keir Fraser, ipfinfo/ipf.txt: „The flags
                      * field is ignored and assumed 0 if the encoder release
@@ -767,8 +751,8 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
                      * stehen dann in Byte, Gap-Stroeme gibt es nicht. */
                     if (disk->info.encoder_type == IPF_ENC_CAPS)
                         bd->block_flags = 0;
-                    bd->gap_default    = ipf_be32(data + bpos); bpos += 4;
-                    bd->data_offset    = ipf_be32(data + bpos); bpos += 4;
+                    bd->gap_default    = uft_read_be32(data + bpos); bpos += 4;
+                    bd->data_offset    = uft_read_be32(data + bpos); bpos += 4;
 
                     disk->total_blocks++;
 
@@ -811,47 +795,17 @@ static ipf_air_status_t ipf_air_parse_records(const uint8_t* data,
             pos += dr.length;
         }
 
-        /* ---- CTEI record ---- */
-        else if (strcmp(rec_type, "CTEI") == 0) {
-            if (pos + 64 > size) { pos = start_pos + rec_len; continue; }
-            disk->ctei = (ipf_ctei_t*)calloc(1, sizeof(ipf_ctei_t));
-            if (disk->ctei) {
-                disk->ctei->release_crc  = ipf_be32(data + pos); pos += 4;
-                disk->ctei->analyzer_rev = ipf_be32(data + pos); pos += 4;
-                /* Skip 14 reserved uint32s */
-            }
-            pos = start_pos + rec_len;
-        }
-
-        /* ---- CTEX record ---- */
-        else if (strcmp(rec_type, "CTEX") == 0) {
-            if (pos + 32 > size) { pos = start_pos + rec_len; continue; }
-            uint32_t idx = disk->ctex_count;
-            /* MF-125: classic realloc-into-original-pointer leak. If
-             * realloc returns NULL, disk->ctex was overwritten with NULL
-             * and the previous buffer is unreachable. Use a temp so we
-             * keep the old buffer alive on failure. */
-            ipf_ctex_t* tmp = (ipf_ctex_t*)realloc(disk->ctex,
-                          (idx + 1) * sizeof(ipf_ctex_t));
-            if (tmp) {
-                disk->ctex = tmp;
-                ipf_ctex_t* cx = &disk->ctex[idx];
-                cx->track      = ipf_be32(data + pos); pos += 4;
-                cx->side       = ipf_be32(data + pos); pos += 4;
-                cx->density    = (ipf_density_t)ipf_be32(data + pos); pos += 4;
-                cx->format_id  = ipf_be32(data + pos); pos += 4;
-                cx->fix        = ipf_be32(data + pos); pos += 4;
-                cx->track_size = ipf_be32(data + pos); pos += 4;
-                disk->ctex_count++;
-            }
-            /* On realloc failure: previous buffer + count stay intact;
-             * we just skip this record. The parse continues honestly
-             * with what was already accumulated. */
-            pos = start_pos + rec_len;
-        }
-
-        /* ---- Unknown record - skip ---- */
+        /* ---- CTEI, CTEX and unknown records ----
+         *
+         * MF-1617: CTEI and CTEX were parsed into structures that nothing
+         * outside this file read (only the removed printf dump), and a
+         * second CTEI leaked the first. They are skipped by their length
+         * now and COUNTED, so a file that carries them says so. */
         else {
+            if (strcmp(rec_type, "CTEI") == 0 || strcmp(rec_type, "CTEX") == 0)
+                disk->unread_ct_records++;
+            else
+                disk->unread_unknown_records++;
             pos = start_pos + rec_len;
         }
     }
@@ -871,18 +825,11 @@ void ipf_air_free(ipf_air_disk_t* disk) {
             track_blocks_free(&disk->tracks[t][s]);
         }
     }
-    free(disk->ctei);
-    free(disk->ctex);
 }
 
 /*============================================================================
  * PLATFORM NAME
  *============================================================================*/
-
-static const char* ipf_platform_names[] = {
-    "Unknown", "Amiga", "Atari ST", "PC", "Amstrad CPC",
-    "Spectrum", "Sam Coupe", "Archimedes", "C64", "Atari 8-bit"
-};
 
 static const char* ipf_density_names[] = {
     "Unknown", "Noise", "Auto", "Copylock Amiga", "Copylock Amiga New",
@@ -916,6 +863,8 @@ static const char* ipf_density_names[] = {
  * Der Parser zerlegt die Blockbeschreibungen und ihre Datenelemente
  * seit jeher — und `ipf_air_get_track_raw()` daneben haengte
  * sie aneinander und warf dabei die Blockgrenzen UND die Typen weg.
+ * (MF-1617: `ipf_air_get_track_raw()` ist entfernt — gerufen hatten sie
+ * nur noch Tests; der Zellstrom ersetzt sie.)
  * Was herauskam, waren die DEKODIERTEN Bytes, waehrend das Feld
  * `raw_bits` einen Zellstrom versprach (P3-360).
  *
@@ -993,66 +942,6 @@ const char* ipf_air_density_name(uint32_t d) {
     return ((size_t)d < n) ? ipf_density_names[d] : "Unknown";
 }
 
-const char* ipf_air_platform_name(ipf_platform_t p) {
-    return (p <= IPF_PLAT_ATARI_8BIT) ? ipf_platform_names[p] : "Unknown";
-}
-
-/*============================================================================
- * DIAGNOSTICS
- *============================================================================*/
-
-void ipf_air_print_info(const ipf_air_disk_t* disk) {
-    if (!disk || !disk->valid) { printf("Invalid IPF\n"); return; }
-
-    const ipf_info_record_t* info = &disk->info;
-    printf("=== IPF Disk (AIR Enhanced) ===\n");
-    printf("Encoder: %s (rev %u)  File: %u (rev %u)\n",
-           info->encoder_type == IPF_ENC_CAPS ? "CAPS" :
-           info->encoder_type == IPF_ENC_SPS ? "SPS" : "Unknown",
-           info->encoder_rev, info->file_key, info->file_rev);
-    printf("Tracks: %u-%u  Sides: %u-%u\n",
-           info->min_track, info->max_track, info->min_side, info->max_side);
-    printf("Platform: %s", ipf_air_platform_name(info->platforms[0]));
-    for (int i = 1; i < 4 && info->platforms[i]; i++)
-        printf(", %s", ipf_air_platform_name(info->platforms[i]));
-    printf("\n");
-    printf("Records: %u  Tracks: %u  Blocks: %u  CRC: %s\n",
-           disk->record_count, disk->total_tracks, disk->total_blocks,
-           disk->crc_ok ? "OK" : "ERRORS");
-
-    if (disk->ctei) {
-        printf("CTEI: release CRC=%08X analyzer=%u\n",
-               disk->ctei->release_crc, disk->ctei->analyzer_rev);
-    }
-
-    for (int t = 0; t < IPF_MAX_TRACKS; t++) {
-        for (int s = 0; s < IPF_MAX_SIDES; s++) {
-            if (!disk->track_present[t][s]) continue;
-            const ipf_track_t* trk = &disk->tracks[t][s];
-            printf("  T%02u.%u: %u bytes (%u bits = %u data + %u gap) %u blocks",
-                   t, s, trk->track_bytes, trk->track_bits,
-                   trk->data_bits, trk->gap_bits, trk->actual_blocks);
-            if (trk->density > 0 && trk->density <= IPF_DENS_ADAM_BRIERLEY_KEY)
-                printf(" [%s]", ipf_density_names[trk->density]);
-            if (trk->has_fuzzy) printf(" FUZZY");
-            printf("\n");
-
-            for (uint32_t b = 0; b < trk->actual_blocks; b++) {
-                const ipf_block_desc_t* bd = &trk->blocks[b];
-                printf("    B%u: data=%u gap=%u %s flags=%X",
-                       b, bd->data_bits, bd->gap_bits,
-                       bd->encoder_type == IPF_BENC_MFM ? "MFM" : "RAW",
-                       bd->block_flags);
-                if (bd->gap_elem_count)
-                    printf(" %u gap_elems", bd->gap_elem_count);
-                if (bd->data_elem_count)
-                    printf(" %u data_elems", bd->data_elem_count);
-                printf("\n");
-            }
-        }
-    }
-}
-
 /*============================================================================
  * OPAQUE-HANDLE ACCESSOR API (declared in uft/formats/ipf/uft_ipf_air.h)
  *
@@ -1128,141 +1017,15 @@ int ipf_air_get_track_crc(const ipf_air_disk_t *disk, int cyl, int head,
     return 0;
 }
 
+uint32_t ipf_air_get_unread_records(const ipf_air_disk_t *disk,
+                                    uint32_t *out_ct, uint32_t *out_unknown) {
+    const uint32_t ct = disk ? disk->unread_ct_records : 0u;
+    const uint32_t un = disk ? disk->unread_unknown_records : 0u;
+    if (out_ct) *out_ct = ct;
+    if (out_unknown) *out_unknown = un;
+    return ct + un;
+}
+
 uint32_t ipf_air_get_dropped_images(const ipf_air_disk_t *disk) {
     return disk ? disk->dropped_images : 0u;
 }
-
-int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
-                           uint8_t **out_buf, uint32_t *out_bits) {
-    if (out_buf)  *out_buf  = NULL;
-    if (out_bits) *out_bits = 0;
-    if (!out_buf || !out_bits) return -1;
-    if (!ipf_air_track_present(disk, cyl, head)) return -1;
-
-    /* Data-element decoding only ran for SPS-encoded files. CAPS encoder
-     * uses a different block layout that this parser pass does not
-     * surface — return UFT_ERR_NOT_IMPLEMENTED-equivalent so callers can
-     * report deferred status honestly instead of silently producing
-     * empty output. */
-    if (disk->info.encoder_type != IPF_ENC_SPS) {
-        return -2;
-    }
-
-    const ipf_track_t *trk = &disk->tracks[cyl][head];
-
-    /* Pass 1: total byte count + total bit count across all blocks /
-     * data-elements. FUZZY elements have value=NULL (no bytes) but still
-     * contribute their data_bits — bit count > byte_count*8 is therefore
-     * legal and meaningful. */
-    size_t total_bytes = 0;
-    uint64_t total_bits = 0;
-    for (uint32_t b = 0; b < trk->actual_blocks; b++) {
-        const ipf_block_desc_t *bd = &trk->blocks[b];
-        for (uint32_t d = 0; d < bd->data_elem_count; d++) {
-            const ipf_data_elem_t *de = &bd->data_elems[d];
-            total_bits += de->data_bits;
-            if (de->value && de->value_size > 0) {
-                total_bytes += de->value_size;
-            }
-        }
-    }
-
-    if (total_bits == 0) {
-        /* SPS file but no data elements decoded for this track — track is
-         * present but unformatted / pure-gap. Honest empty result. */
-        return 0;
-    }
-
-    if (total_bytes > 0) {
-        uint8_t *buf = (uint8_t *)malloc(total_bytes);
-        if (!buf) return -1;
-        size_t off = 0;
-        for (uint32_t b = 0; b < trk->actual_blocks; b++) {
-            const ipf_block_desc_t *bd = &trk->blocks[b];
-            for (uint32_t d = 0; d < bd->data_elem_count; d++) {
-                const ipf_data_elem_t *de = &bd->data_elems[d];
-                if (de->value && de->value_size > 0) {
-                    memcpy(buf + off, de->value, de->value_size);
-                    off += de->value_size;
-                }
-            }
-        }
-        *out_buf = buf;
-    }
-    /* Cap the reported bit count at uint32_t range (track_bits never
-     * exceeds ~200K for floppy media). */
-    *out_bits = (total_bits > UINT32_MAX) ? UINT32_MAX : (uint32_t)total_bits;
-    return 0;
-}
-
-/*============================================================================
- * SELF-TEST
- *============================================================================*/
-
-#ifdef IPF_AIR_TEST
-#include <assert.h>
-
-int main(void) {
-    printf("=== IPF AIR Enhanced Parser Tests ===\n");
-
-    /* Test 1: CAPS magic */
-    printf("Test 1: CAPS magic... ");
-    {
-        /* Minimal IPF: CAPS + INFO records */
-        uint8_t buf[12 + 96];
-        memset(buf, 0, sizeof(buf));
-        /* CAPS record (12 bytes) */
-        buf[0]='C'; buf[1]='A'; buf[2]='P'; buf[3]='S';
-        buf[4]=0; buf[5]=0; buf[6]=0; buf[7]=12; /* length=12 */
-        uint32_t crc = air_crc32_header(buf, 0, 12);
-        buf[8]=(crc>>24)&0xFF; buf[9]=(crc>>16)&0xFF;
-        buf[10]=(crc>>8)&0xFF; buf[11]=crc&0xFF;
-
-        /* INFO record (96 bytes) */
-        uint8_t* p = buf + 12;
-        p[0]='I'; p[1]='N'; p[2]='F'; p[3]='O';
-        p[4]=0; p[5]=0; p[6]=0; p[7]=96; /* length=96 */
-        /* encoder_type = SPS (2) at offset 16 within record (BE) */
-        p[19] = 2;
-        /* platforms[0] = Atari_ST (2) at offset 60 within record (BE) */
-        p[63] = 2;
-        crc = air_crc32_header(p, 0, 96);
-        p[8]=(crc>>24)&0xFF; p[9]=(crc>>16)&0xFF;
-        p[10]=(crc>>8)&0xFF; p[11]=crc&0xFF;
-
-        ipf_air_disk_t* disk = (ipf_air_disk_t*)calloc(1, sizeof(ipf_air_disk_t));
-        ipf_air_status_t st = ipf_air_parse(buf, sizeof(buf), disk);
-        assert(st == IPF_AIR_OK);
-        assert(disk->valid);
-        assert(disk->info.encoder_type == IPF_ENC_SPS);
-        assert(disk->info.platforms[0] == IPF_PLAT_ATARI_ST);
-        assert(disk->crc_ok);
-        ipf_air_free(disk);
-        free(disk);
-        printf("OK\n");
-    }
-
-    /* Test 2: Not IPF */
-    printf("Test 2: Not IPF... ");
-    {
-        uint8_t buf[16] = {'N','O','P','E', 0,0,0,12, 0,0,0,0};
-        ipf_air_disk_t* disk = (ipf_air_disk_t*)calloc(1, sizeof(ipf_air_disk_t));
-        ipf_air_status_t st = ipf_air_parse(buf, sizeof(buf), disk);
-        assert(st == IPF_AIR_NOT_IPF || !disk->valid);
-        free(disk);
-        printf("OK\n");
-    }
-
-    /* Test 3: Platform names */
-    printf("Test 3: Platform names... ");
-    {
-        assert(strcmp(ipf_air_platform_name(IPF_PLAT_AMIGA), "Amiga") == 0);
-        assert(strcmp(ipf_air_platform_name(IPF_PLAT_ATARI_ST), "Atari ST") == 0);
-        assert(strcmp(ipf_air_platform_name(IPF_PLAT_C64), "C64") == 0);
-        printf("OK\n");
-    }
-
-    printf("\n=== All IPF AIR tests passed ===\n");
-    return 0;
-}
-#endif

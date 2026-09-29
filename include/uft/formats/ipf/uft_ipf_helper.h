@@ -91,7 +91,8 @@ extern "C" {
  * Eine Spur, wie der Helfer sie meldet.
  *
  * Die Felder spiegeln bewusst die Zugriffsfunktionen des vorhandenen
- * Lesers (`ipf_air_get_track_meta`, `ipf_air_get_track_raw`) — nicht
+ * Lesers (`ipf_air_get_track_meta`, `ipf_air_get_track_raw` — letztere
+ * seit MF-1617 entfernt) — nicht
  * die Datenstrukturen von `capsimg`. Der Vertrag gehoert UFT; was der
  * Helfer intern tut, ist seine Sache und bleibt hinter der Grenze.
  */
