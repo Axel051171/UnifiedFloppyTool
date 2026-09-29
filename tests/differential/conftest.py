@@ -63,6 +63,12 @@ HELPER_DEPS = [
     REPO_ROOT / "src" / "flux" / "uft_mfm_sector_parser.c",
     REPO_ROOT / "src" / "formats" / "amiga" / "uft_amiga_syncs.c",  # MF-768
     REPO_ROOT / "src" / "core" / "uft_log.c",                # MF-766
+    # MF-1610: uft_flux_decoder.c:1446 decodes CBM GCR through the codec
+    # register (uft_gcr_dekodieren) since the GCR tables moved there
+    # (P3-666). Without this file the helper did not link — CI run
+    # 36600177336, "undefined reference to `uft_gcr_dekodieren'", all six
+    # parity cases ERROR. Reproduced in WSL: rc 1 without, rc 0 with.
+    REPO_ROOT / "src" / "core" / "uft_gcr.c",
 ]
 
 
