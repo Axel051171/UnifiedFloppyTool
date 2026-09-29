@@ -156,8 +156,11 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         if (fseek(p->file, off, SEEK_SET) != 0) continue;
         if (fread(buf, 1, 256, p->file) != 256) continue;
         /* CBM drives number sectors 0..N-1 per zone (ARCH-20) */
-        uft_format_add_sector_with_id(track, (uint8_t)s, buf, 256,
-                              (uint8_t)cyl, (uint8_t)head);
+        /* MF-1525 (P3-677): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+        if (uft_format_add_sector_with_id(track, (uint8_t)s, buf, 256,
+                                      (uint8_t)cyl, (uint8_t)head) == UFT_OK &&
+            uft_sector_is_gw_filler(buf, 256))
+            uft_format_mark_last_unavailable(track);
 
         /* Surface the 1541 error code for this sector (represent, don't drop).
          *

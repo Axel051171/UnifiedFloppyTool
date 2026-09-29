@@ -122,7 +122,10 @@ static uft_error_t d81_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         if (fseek(pdata->file, track_offset + sec * D81_SECTOR_SIZE, SEEK_SET) != 0) continue;
         if (fread(sector_buf, 1, D81_SECTOR_SIZE, pdata->file) == D81_SECTOR_SIZE) {
             /* CBM sectors are 0-based (ARCH-20) */
-            uft_format_add_sector_with_id(track, sec, sector_buf, D81_SECTOR_SIZE, cyl, head);
+            /* MF-1525 (P3-677): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+            if (uft_format_add_sector_with_id(track, sec, sector_buf, D81_SECTOR_SIZE, cyl, head) == UFT_OK &&
+                uft_sector_is_gw_filler(sector_buf, D81_SECTOR_SIZE))
+                uft_format_mark_last_unavailable(track);
         }
     }
     

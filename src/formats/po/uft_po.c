@@ -60,7 +60,10 @@ static uft_error_t po_read_track(uft_disk_t *disk, int cyl, int head, uft_track_
          * (MF-463; same change in uft_do.c). */
         if (fread(buf, 1, PO_SS, p->file) != PO_SS) break;
         /* Apple sectors are 0..15 (ARCH-20) */
-        uft_format_add_sector_with_id(track, (uint8_t)s, buf, PO_SS, (uint8_t)cyl, 0);
+        /* MF-1525 (P3-677): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+        if (uft_format_add_sector_with_id(track, (uint8_t)s, buf, PO_SS, (uint8_t)cyl, 0) == UFT_OK &&
+            uft_sector_is_gw_filler(buf, PO_SS))
+            uft_format_mark_last_unavailable(track);
     }
     return UFT_OK;
 }

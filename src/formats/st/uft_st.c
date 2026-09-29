@@ -297,8 +297,11 @@ static uft_error_t st_read_track(uft_disk_t *disk, int cyl, int head,
         if (fread(buf, 1, ST_SECTOR_SIZE, pdata->file) != ST_SECTOR_SIZE)
             return UFT_ERROR_IO;
 
-        uft_format_add_sector(track, (uint8_t)s, buf,
-                              ST_SECTOR_SIZE, (uint8_t)cyl, (uint8_t)head);
+        /* MF-1525 (P3-677): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+        if (uft_format_add_sector(track, (uint8_t)s, buf,
+                                  ST_SECTOR_SIZE, (uint8_t)cyl, (uint8_t)head) == UFT_OK &&
+            uft_sector_is_gw_filler(buf, ST_SECTOR_SIZE))
+            uft_format_mark_last_unavailable(track);
     }
 
     return UFT_OK;

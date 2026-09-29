@@ -3039,6 +3039,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gw_fuellsektor_sektorabbilder")
+        # MF-1525 (P3-677): gws Fuellmuster -=[BAD SECTOR]=- ist auch in
+        # ADF/ST/DO/PO/D64/D71/D81 kein gelesener Sektor. Sieben Plugins —
+        # die Format-Schicht aus der EINEN Bibliothek (P3-10).
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
