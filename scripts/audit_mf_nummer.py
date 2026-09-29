@@ -599,7 +599,25 @@ def _selbsttest() -> int:
     #    Wegwerf-Depot, nicht am Baum — sonst waere der Selbsttest von der
     #    Vorgeschichte dieses Klons abhaengig.
     import subprocess as _sp
-    from git_env import git_umgebung as _gu
+    from git_env import git_umgebung as _git_umgebung
+
+    def _gu():
+        """Die Depot-freie Umgebung PLUS eine feste Identitaet.
+
+        MF-1608: `git_umgebung()` streicht nur die Depot-Variablen. Auf einem
+        Rechner ohne `user.name`/`user.email` — gemessen: dem CI-Runner —
+        scheitert damit jedes `git commit` im Wegwerf-Depot, und der
+        Selbsttest fiel dort mit 35/45 aus (lokal 45/45). Nachgestellt mit
+        GIT_CONFIG_GLOBAL auf eine leere Datei und GIT_CONFIG_NOSYSTEM=1:
+        dieselben 10 roten Faelle wie in der CI (Lauf 36587407129). Eine
+        vorhandene Identitaet des Aufrufers bleibt stehen (`setdefault`)."""
+        e = _git_umgebung()
+        for k, v in (("GIT_AUTHOR_NAME", "uft-selbsttest"),
+                     ("GIT_AUTHOR_EMAIL", "selbsttest@uft.invalid"),
+                     ("GIT_COMMITTER_NAME", "uft-selbsttest"),
+                     ("GIT_COMMITTER_EMAIL", "selbsttest@uft.invalid")):
+            e.setdefault(k, v)
+        return e
 
     def depot():
         import os as _os
