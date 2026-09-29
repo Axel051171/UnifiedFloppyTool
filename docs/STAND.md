@@ -23,7 +23,7 @@
 - **7** Port-Erklärungen im Quellkopf, davon **1** ohne SPDX-Kopf
   - src/formats/amiga/uft_amiga_protection.c             C99 port of XCopy Pro (1989-2011) 68000 Assembly algorithms:
 - SPDX außerhalb der Politik: **0**
-- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **179**
+- Fließtext-Attributionen (Verdachts-Stufe, `LIZ-1`): **180**
 - Quarantäne: 2 vollzogen, 7 vorgemerkt, 2 aufgelöst (`docs/QUARANTINE.md`, abgeleitet)
 
 ### Gesichtete Fremd-Repos, nach Lizenzzone
@@ -39,7 +39,7 @@
 
 ## Was offen ist
 
-`docs/OPEN_ITEMS.md` führt **8351** Zeilen in **87** Abschnitten.
+`docs/OPEN_ITEMS.md` führt **8352** Zeilen in **87** Abschnitten.
 
 **erledigt** (1):
 - GCR-1 — der 6-and-2-Dekoder steht, 560 von 560 Sektoren belegt (MF-715)

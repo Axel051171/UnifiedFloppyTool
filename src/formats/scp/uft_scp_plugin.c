@@ -18,6 +18,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_decoder_plugin.h"
+#include "uft/flux/uft_scp_ablage.h"   /* MF-1524: legacy single-sided */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,6 +97,7 @@ typedef struct {
     scp_header_t    header;
     uint32_t*       track_offsets;      // Offset für jeden Track
     size_t          file_size;
+    uft_scp_ablage_t ablage;            // MF-1524: slot of (cyl, head)
 } scp_data_t;
 
 // ============================================================================
@@ -417,13 +419,25 @@ static uft_error_t scp_open(uft_disk_t* disk, const char* path, bool read_only) 
     pdata->header = header;
     pdata->track_offsets = track_offsets;
     pdata->file_size = file_size;
-    
+    /* MF-1524 (P3-676): greaseweazle's rule for single-sided images in
+     * CONSECUTIVE table slots (uft_scp_ablage.h). */
+    pdata->ablage = uft_scp_ablage_bestimmen(header.heads, track_offsets,
+                                            table_entries);
+
     disk->plugin_data = pdata;
-    
+
     // Geometrie ermitteln
     scp_get_geometry(header.disk_type, header.start_track, header.end_track,
                      &disk->geometry);
-    
+    /* In the consecutive layout every slot is one cylinder of the one
+     * side — (end + 2) / 2 would halve the cylinder count. */
+    if (pdata->ablage.fortlaufend) {
+        disk->geometry.cylinders = (int)header.end_track + 1;
+        disk->geometry.total_sectors = disk->geometry.cylinders *
+                                       disk->geometry.heads *
+                                       disk->geometry.sectors;
+    }
+
     return UFT_OK;
 }
 
@@ -465,10 +479,16 @@ static uft_error_t scp_read_track(uft_disk_t* disk, int cylinder, int head,
     
     uft_track_init(track, cylinder, head);
     
-    // SCP Track-Nummer (interleaved: 0=C0H0, 1=C0H1, 2=C1H0, ...)
-    int track_num = cylinder * 2 + head;
-    
-    if (track_num < pdata->header.start_track || 
+    // SCP Track-Nummer (interleaved: 0=C0H0, 1=C0H1, 2=C1H0, ...) —
+    // MF-1524: or consecutive, for a legacy single-sided image
+    int track_num = uft_scp_ablage_platz(pdata->ablage, cylinder, head);
+    if (track_num < 0) {
+        /* the image holds only the other side */
+        track->status = UFT_TRACK_UNFORMATTED;
+        return UFT_OK;
+    }
+
+    if (track_num < pdata->header.start_track ||
         track_num > pdata->header.end_track) {
         return UFT_ERROR_TRACK_NOT_FOUND;
     }

@@ -3031,6 +3031,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_scp_einseitig_fortlaufend")
+        # MF-1524 (P3-676): einseitiges SCP mit fortlaufenden Tafelplaetzen
+        # (greaseweazle image/scp.py:246-254). Quellen wie test_corpus_scp.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
