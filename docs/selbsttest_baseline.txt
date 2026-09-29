@@ -22,7 +22,7 @@ src/formats/dmk/uft_dmk_parser_v2.c:440:DMK_PARSER_TEST:8
 src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c:760:DSK_TEST:29
 src/formats/fdi/uft_fdi_parser_v2.c:598:FDI_TEST:22
 src/formats/g64/uft_g64_parser_v2.c:551:G64_PARSER_TEST:19
-src/formats/g64/uft_g64_parser_v3.c:2038:G64_V3_TEST:35
+src/formats/g64/uft_g64_parser_v3.c:2037:G64_V3_TEST:35
 src/formats/hfe/uft_hfe_parser_v2.c:334:HFE_PARSER_TEST:15
 src/formats/ipf/uft_ipf_air.c:1202:IPF_AIR_TEST:9
 src/formats/jv/uft_jv_parser_v2.c:427:JV_PARSER_TEST:16

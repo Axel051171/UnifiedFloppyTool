@@ -22,7 +22,6 @@
         "src/formats/g64/uft_g64.c::gcr_encode_table",
         "src/formats/g64/uft_g64_parser_v2.c::gcr_encode_table",
         "src/protection/uft_c64_protection_enhanced.c::DEFAULT_GCR",
-        "tests/flux_gen/xum1541/flux_gen.c::GCR_ENC",
         "tests/unit/test_flux_gcr_c64_sync.c::c64_gcr_encode"
       ]
     },
@@ -63,8 +62,6 @@
       "stellen": [
         "src/a8rawconv/encode.cpp::kGCR6Encoder",
         "src/dtc_components/src/encoding.c::dtc_gcr_apple_6and2",
-        "src/formats/apple/uft_apple_gcr.c::A2_WRITE_TAB",
-        "tests/flux_gen/applesauce/flux_gen.c::GCR62",
         "tests/test_apple_gcr_6and2.c::TAB",
         "tests/test_nib_ring_und_blindzone.c::TAB",
         "tests/unit/test_flux_gcr_apple_sync.c::apple_gcr62_encode"
@@ -467,22 +464,6 @@
       "stellen": [
         "include/uft/formats/sony/uft_ps1.h::PS1_SYNC_PATTERN",
         "src/formats/sega/uft_sega_cd.c::sync"
-      ]
-    },
-    {
-      "signatur": "3e99c25064d9",
-      "laenge": 32,
-      "beginn": [
-        171,
-        173,
-        174,
-        175,
-        181,
-        182
-      ],
-      "stellen": [
-        "src/formats/apple/uft_apple_gcr.c::A2_TAB5",
-        "tests/test_apple_gcr_6and2.c::TAB5"
       ]
     },
     {

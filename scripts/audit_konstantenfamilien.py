@@ -79,6 +79,27 @@ MIND_LAENGE = 4        # kuerzer ist ein Tupel, keine Familie
 MIND_VERSCHIEDEN = 2   # {0,0,0,0} ist eine Fuellung
 MAX_LAENGE = 300       # darueber sind es Daten, keine Parametertafel
 
+# Orte, an denen eine Tafel ZEUGE ist und deshalb unabhaengig bleiben MUSS
+# (MF-1515). Das ist keine Nachsicht, sondern dieselbe Regel wie MF-644:
+# eine Tafel, gegen die geprueft wird, darf nicht aus dem Prueflingen
+# stammen — sonst prueft der Test sich selbst.
+#
+# Der Anlass ist gemessen: MF-1515 hat die Apple-GCR-Tafeln aus
+# `src/formats/apple/uft_apple_gcr.c` nach `tests/oracles/` verschoben,
+# wo sie vom Bestand zur ZUSAGE wurden. Netto ist keine Kopie
+# dazugekommen — dieses Tor sah aber zwei neue Stellen und eine
+# Verschiebung nicht von einem Zuwachs unterscheiden koennen.
+#
+# Warum das KEINE Ausschlussliste im Sinne von MF-636 ist: es sind keine
+# aufgezaehlten DATEIEN, sondern zwei Verzeichnisse mit einer Zusage im
+# Namen. Wer dort etwas ablegt, erklaert damit „das ist ein Zeuge" — und
+# `tests/oracles/*` traegt den Commit-Hash der eingefrorenen Fassung im
+# Dateinamen, ist also nachpruefbar.
+ZEUGENORTE = (
+    "tests/oracles/",      # eingefrorene Fassungen, gegen die geprueft wird
+    "tests/flux_gen/",     # Erzeuger der Testeingabe — MUSS unabhaengig sein
+)
+
 ZAHL = re.compile(r"\b(?:0[xX][0-9a-fA-F]+|\d+)\b")
 
 
@@ -129,6 +150,9 @@ def messe(repo: Path):
 
     familien = {}
     for folge, stellen in nach_folge.items():
+        # Zeugen zaehlen nicht als Kopie (MF-1515, siehe ZEUGENORTE).
+        stellen = [(d, n) for d, n in stellen
+                   if not d.replace("\\", "/").startswith(ZEUGENORTE)]
         if len({d for d, _ in stellen}) < 2:
             continue                      # lokale Doppelung, keine Drift
         familien[signatur(folge)] = (folge, sorted(stelle(d, n)
@@ -302,7 +326,9 @@ def _selbsttest() -> int:
         subprocess.run(["git", "init", "-q"], env=git_umgebung(), cwd=d,
                        capture_output=True)
         for name, inhalt in dateien_inhalt.items():
-            (d / name).write_text(inhalt, encoding="utf-8")
+            ziel = d / name
+            ziel.parent.mkdir(parents=True, exist_ok=True)
+            ziel.write_text(inhalt, encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
         return d
 
@@ -331,6 +357,27 @@ def _selbsttest() -> int:
     d = baum({"a.c": TAFEL % "eins",
               "b.c": "/* " + TAFEL % "zwei" + " */\nint f(void){return 0;}\n"})
     faelle.append(("im Kommentar -> keine Familie", len(messe(d)[0]) == 0))
+
+    # 5b Zeugenorte: eine Tafel in tests/oracles/ zaehlt NICHT als Kopie
+    #    (MF-1515). Geprueft in beide Richtungen, sonst koennte die Regel
+    #    alles durchlassen und niemand saehe es.
+    d = baum({"a.c": TAFEL % "eins",
+              "tests/oracles/gcr_x_abc123.c": TAFEL % "zeuge"})
+    faelle.append(("Zeuge in tests/oracles zaehlt nicht",
+                   len(messe(d)[0]) == 0))
+    d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei",
+              "tests/oracles/gcr_x_abc123.c": TAFEL % "zeuge"})
+    familien = messe(d)[0]
+    faelle.append(("zwei echte Stellen zaehlen trotz Zeuge",
+                   len(familien) == 1))
+    if familien:
+        stellen = list(familien.values())[0][1]
+        faelle.append(("der Zeuge steht NICHT in der Fundstellenliste",
+                       not any("oracles" in s for s in stellen)))
+    d = baum({"tests/oracles/a_1.c": TAFEL % "z1",
+              "tests/oracles/a_2.c": TAFEL % "z2"})
+    faelle.append(("zwei Zeugen allein sind keine Familie",
+                   len(messe(d)[0]) == 0))
 
     # 6-9 Manifest: Bestand haelt, neue Kopie faellt, Wegfall meldet nur.
     d = baum({"a.c": TAFEL % "eins", "b.c": TAFEL % "zwei"})

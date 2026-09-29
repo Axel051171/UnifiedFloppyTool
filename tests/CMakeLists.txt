@@ -4168,7 +4168,6 @@ foreach(test_source ${TEST_SOURCES})
         # Ergebnis von g64_export_d64(), genau wie es die Bruecke tut.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1513
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c
@@ -4667,6 +4666,14 @@ foreach(test_source ${TEST_SOURCES})
             # MF-404: the half-track test needs the rights-free VICE G64 as
             # its negative control (a disk that has none).
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gcr_apple_gegen_tafel")
+        # MF-1515: das Register gegen die eingefrorenen Apple-Tafeln, die
+        # bis f08d1a7a im Produktionscode standen. Zwei Haende (MF-644):
+        # Erzeuger ist das Praedikat, Pruefer die alte Tafel — deshalb liegt
+        # sie in tests/oracles/ und wird NIE nachgezogen.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c
+            ${CMAKE_SOURCE_DIR}/tests/oracles/gcr_apple_tafeln_f08d1a7a.c)
     elseif(${test_name} STREQUAL "test_gcr_register_gegen_bestehende")
         # MF-1509: das GCR-Codec-Register gegen die Kodierer, die es
         # ersetzen soll — zwei Haende (MF-644), und der Vergleich laeuft
@@ -5392,7 +5399,6 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/uft_v3_bridge.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64_parser_v3.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1513
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_parser_v3.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_integrity.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
