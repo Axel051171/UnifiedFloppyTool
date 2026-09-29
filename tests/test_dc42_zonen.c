@@ -174,7 +174,7 @@ static void pruefe_lage(const char *pfad, long erwartete_sektoren,
              titel, erwartete_sektoren);
     zusage(t, disk.geometry.total_sectors == (uint32_t)erwartete_sektoren);
 
-    long richtig = 0, falsch = 0;
+    long richtig = 0, falsch = 0, id_richtig = 0;
     for (int c = 0; c < disk.geometry.cylinders; c++)
         for (int h = 0; h < disk.geometry.heads; h++) {
             uft_track_t tr;
@@ -190,6 +190,8 @@ static void pruefe_lage(const char *pfad, long erwartete_sektoren,
                 const uint8_t *d = tr.sectors[s].data;
                 if (d && memcmp(d, erw, strlen(erw)) == 0) richtig++;
                 else falsch++;
+                /* MF-1519 (P3-671): Apple 3,5"-GCR zaehlt ab 0 */
+                if (tr.sectors[s].id.sector == (uint8_t)s) id_richtig++;
             }
             uft_track_cleanup(&tr);
         }
@@ -199,6 +201,59 @@ static void pruefe_lage(const char *pfad, long erwartete_sektoren,
              "%s: %ld von %ld Sektoren an ihrer eigenen Marke",
              titel, richtig, erwartete_sektoren);
     zusage(t, richtig == erwartete_sektoren && falsch == 0);
+
+    /* MF-1519 (P3-671): die ID ist die Nummer, die AUF DER DISKETTE steht.
+     * Apple-3,5"-GCR nummeriert ab 0 (die Doku am Helfer selbst,
+     * uft_format_plugin.h: „für IBM-PC-Formate richtig (Sektoren 1..N)
+     * und für Apple (0..15) … falsch"; uft_2img.c ruft deshalb seit MAMEs
+     * ap_dsk35 `with_id(s)`). Vorher meldete dieses Plugin 1..N. */
+    snprintf(t, sizeof t, "%s: %ld von %ld Sektor-IDs ab 0 wie auf der Diskette",
+             titel, id_richtig, erwartete_sektoren);
+    zusage(t, id_richtig == erwartete_sektoren);
+}
+
+/** 720K MFM (Formatbyte 2): 80 x 2 x 9 x 512, IBM-Nummerierung 1..9. */
+static int mfm_ids_ab_eins(void)
+{
+    const char *pfad = "t_dc42_720k.dc42";
+    const long laenge = 80L * 2 * 9 * SS;
+    uint8_t *daten = calloc(1, (size_t)laenge);
+    if (!daten) return 0;
+    uint8_t kopf[84];
+    memset(kopf, 0, sizeof kopf);
+    kopf[0] = 3; memcpy(kopf + 1, "UFT", 3);
+    kopf[0x40] = (uint8_t)(laenge >> 24); kopf[0x41] = (uint8_t)(laenge >> 16);
+    kopf[0x42] = (uint8_t)(laenge >> 8);  kopf[0x43] = (uint8_t)laenge;
+    uint32_t ck = dc42_summe(daten, (size_t)laenge);
+    kopf[0x48] = (uint8_t)(ck >> 24); kopf[0x49] = (uint8_t)(ck >> 16);
+    kopf[0x4A] = (uint8_t)(ck >> 8);  kopf[0x4B] = (uint8_t)ck;
+    kopf[0x50] = 0x02;
+    kopf[0x51] = 0x22;
+    kopf[82] = 0x01; kopf[83] = 0x00;
+    FILE *f = fopen(pfad, "wb");
+    if (!f) { free(daten); return 0; }
+    fwrite(kopf, 1, sizeof kopf, f);
+    fwrite(daten, 1, (size_t)laenge, f);
+    fclose(f);
+    free(daten);
+
+    int ok = 0;
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof disk);
+    if (uft_format_plugin_dc42.open(&disk, pfad, true) == UFT_OK) {
+        uft_track_t tr;
+        memset(&tr, 0, sizeof tr);
+        if (uft_format_plugin_dc42.read_track(&disk, 0, 0, &tr) == UFT_OK &&
+            tr.sector_count == 9) {
+            ok = 1;
+            for (size_t s = 0; s < tr.sector_count; s++)
+                if (tr.sectors[s].id.sector != (uint8_t)(s + 1)) ok = 0;
+            uft_track_cleanup(&tr);
+        }
+        uft_format_plugin_dc42.close(&disk);
+    }
+    remove(pfad);
+    return ok;
 }
 
 int main(void)
@@ -212,6 +267,10 @@ int main(void)
         remove("t_dc42_800k.dc42");
     } else zusage("800K: Pruefabbild angelegt", 0);
 
+    /* MF-1519: Gegenprobe — MFM bleibt bei der IBM-Nummerierung 1..N */
+    zusage("720K MFM: Sektor-IDs 1..9 (IBM), nicht 0..8",
+           mfm_ids_ab_eins());
+
     /* 400K, einseitig, dieselbe Tafel auf einer Seite */
     long n1 = baue("t_dc42_400k.dc42", 0x00, 1, 0);
     if (n1 > 0) {
@@ -224,6 +283,18 @@ int main(void)
             zusage("400K GCR: EINE Seite", d.geometry.heads == 1);
             zusage("400K GCR: 800 Sektoren gesamt",
                    d.geometry.total_sectors == 800);
+            /* MF-1519: auch die einseitige GCR-Diskette zaehlt ab 0 */
+            uft_track_t tr;
+            memset(&tr, 0, sizeof tr);
+            int ids_ok = 0;
+            if (uft_format_plugin_dc42.read_track(&d, 0, 0, &tr) == UFT_OK &&
+                tr.sector_count == 12) {
+                ids_ok = 1;
+                for (size_t s = 0; s < tr.sector_count; s++)
+                    if (tr.sectors[s].id.sector != (uint8_t)s) ids_ok = 0;
+                uft_track_cleanup(&tr);
+            }
+            zusage("400K GCR: Spur 0 traegt die IDs 0..11", ids_ok);
             uft_format_plugin_dc42.close(&d);
         }
         remove("t_dc42_400k.dc42");
