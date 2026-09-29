@@ -1118,6 +1118,18 @@
       "content": "UFT-K T00 S00 … (6-and-2-nibblisiert, physische Sektorfolge nach DOS-3.3-Verschraenkung)"
     },
     {
+      "file": "tests/corpus_free/a2tools_dos33_filled.do",
+      "sha256": "0b2631c91e449ebba77d87afe5d12c38c1d988b00a6368dc6dc4f06c532768a1",
+      "format": "dos33_fs",
+      "origin": "cross-tool",
+      "oracle": "a2tools",
+      "tool": "a2tools (catseye/a2tools, Quellstand 52ad81cc, GPL-2.0-or-later, Terry Kyriacopoulos), gebaut mit gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c unter MinGW 13.1.0, sha256 28a52f894c4ccc7a58e106cf6b336111f3e1e95a84376ef091b4c547f46d3d9a",
+      "source": "ZWEI HAENDE. UFT-eigen: das leere Geruest `python scripts/mk_dos33_leer.py x.do` (VTOC T17 S0, Katalogkette S15->S1, Volume 254, Spur 0 und 17 belegt; sha256 44a25ebe836a0177...) - a2tools kann nicht formatieren (MF-1207). Fremd: alles darin, von a2tools geschrieben: `a2tools in t x.do MARKER marker.txt`; `in b.0803 x.do BINDATA bin.bin`; `in t x.do GROSS big.txt`; `in -r t x.do RAWX marker.txt`; `in t x.do WEG marker.txt`; `del x.do WEG`. Eingaben UFT-eigen und rechtefrei: marker.txt = 'UFT P3-384 MARKER TEXT\\nZEILE ZWEI\\n' (sha256 d18d7f29...), bin.bin = bytes(range(256))*3 (sha256 f3a25aa9...), big.txt = 1200 Zeilen 'ZEILE %05d UFT-A2TOOLS-FIXTURE\\n' (sha256 96a26145...). Zwei Laeufe liefern dieselbe sha256. Nachbau: scripts/mk_dos33_leer.py (Kopf).",
+      "fremdcode": "nein - a2tools schreibt nur die Dateiinhalte aus den drei UFT-eigenen Eingaben; Spur 0 (DOS-Abbild) bleibt Null, kein ausfuehrbarer Code",
+      "content": "a2tools dir: Disk Volume 254, Free Blocks 367; T 002 MARKER, B 005 BINDATA, T 152 GROSS, T 002 RAWX; WEG geloescht (nicht gelistet)",
+      "test": "test_dos33_katalog_gegen_a2tools"
+    },
+    {
       "file": "tests/corpus_free/atrip_uftk_sd_alle6.dcm",
       "sha256": "6f25703ef425943918261d6c7b6a8ff4a4fca16c98cdc829c29c6dbcd237ba35",
       "format": "dcm",
@@ -2181,6 +2193,16 @@
       "source": "archive.org-Element Antoine_Vignau_3.5_Floppies_Flux_May_2019_Batch, Datei „WaitLess - Disk 1.a2r“. Kein Lizenzfeld; Apple-II-Software, deshalb LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153). **Provenienz schwaecher als beim Fahey-Satz (MF-1483):** dieses Element fuehrt KEINE Pruefsummen je Datei — sein XML ist ein `_meta.xml`, kein `_files.xml` (gemessen: 0 fremde a2r-Hashes). Der sha256 hier ist deshalb NUR selbst gerechnet, nicht gegengerechnet. **Und der Quellordner war beim Aufnehmen ein LAUFENDER, unvollstaendiger Download** (innerhalb von Minuten 310 -> 335 Dateien, 262 -> 280 davon mit Nullkopf). Aufgenommen wurde nur, was zwei Pruefungen bestand: Blocklaengen enden genau bei der Dateigroesse UND ein META-Block steht hinter STRM; von 327 Dateien blieben 28. Rolle: volle zweiseitige Aufnahme: 160 Orte, 80 ungerade, 80 Spuren — der eigentliche Beleg fuer ((track << 1) + side).",
       "test": "test_a2r2_dreieinhalbzoll_seite",
       "content": "Applesauce-Flussaufnahme einer 3,5\"-Diskette, 18367150 Byte, Disk Type 2. STRM fuehrt 160 verschiedene Locations (0..159), davon 80 UNGERADE — nach der A2R-2.x-Referenz ist die Location hier ((track << 1) + side), eine ungerade Zahl belegt also Seite 1. Das sind 80 Spuren auf 2 Seiten. Genau dieser Fall fehlte dem Korpus bis MF-1487: alle 50 Fahey-Aufnahmen (MF-1483) sind Disk Type 1, wo rohe und zerlegte Location zusammenfallen."
+    },
+    {
+      "file": "tests/corpus/copyiiplus_3loc.a2r",
+      "sha256": "969642f8bf9d54fe52f8a978dd0140166a8b14633b2bcf7278a265285abbae51",
+      "format": "a2r",
+      "origin": "real",
+      "tool": "Applesauce v1.1b10 (A2R2, INFO v1, Disk Type 2 = 3.5\", schreibgeschuetzt, nicht synchron) — Fassung und Typ aus dem Dateikopf gelesen",
+      "source": "Zulieferung im Paket `neue-ideen/uft-a2r-code.zip`, Datei tests/fixtures/copyiiplus_3loc.a2r (373 186 Byte): drei Orte (Location 0/80/158, je eine timing- und eine xtiming-Aufnahme) aus „Copy II Plus - Disk 1.a2r“ (320 Aufnahmen), in einem echten A2R2-Behaelter belassen. Kommerzieller Titel ohne belegte Weitergabe — EIGENTUEMERENTSCHEIDUNG 2026-09-28, woertlich „Copy-II-Plus-Fixture aus uft-a2r-code auf alle faelle verwenden“: verwendet, LOCAL-ONLY nach der Regel fuer tests/corpus/ (.gitignore:153). Nachbeschaffung aus dem Paket; die Summe oben pruefen.",
+      "test": "test_a2r_drehzahl_echte_aufnahmen",
+      "content": "Applesauce-Flussaufnahme einer 3,5\"-Diskette, 3 Orte = Spur 0/40/79 Seite 0 (Zonen 0, 2, 4). Schleifenpunkte 1222864 / 1020536 / 815856 Ticks zu 125 ns = 392,5 / 470,3 / 588,3 U/min."
     },
     {
       "file": "tests/corpus/vignau_a2r2_35/qdrive_iigs_d1.a2r",

@@ -409,11 +409,16 @@ typedef struct d64_dir_entry {
     bool closed;
     bool locked;
     bool splat;                 /* Unclosed file marker */
-    
+
     /* GEOS extensions */
     bool is_geos;
     uint8_t geos_type;
     uint8_t geos_structure;
+
+    /* MF-1515 (P3-668): a SCRATCHED file — type byte $00 with its name and
+     * pointers still in place (D64.TXT: „$00 - Scratched"). $80 is a
+     * visible DEL file and is NOT deleted. */
+    bool deleted;
 } d64_dir_entry_t;
 
 /**
@@ -439,6 +444,9 @@ typedef struct d64_disk_v3 {
     /* Directory */
     d64_dir_entry_t directory[D64_MAX_DIR_ENTRIES];
     uint16_t file_count;
+    /* MF-1515: the directory chain pointed back at a sector already read;
+     * the entries up to there stand in `directory`, the rest is unread. */
+    bool dir_chain_loop;
     
     /* Tracks */
     d64_track_v3_t track_data[41];
@@ -1263,23 +1271,51 @@ static bool d64_parse_directory(const uint8_t* data, size_t size, d64_disk_v3_t*
     disk->file_count = 0;
     
     int max_sectors = 20;
-    
+    disk->dir_chain_loop = false;
+
+    /* MF-1515 (P3-668): the step brake alone bounded a loop instead of
+     * noticing it — a sector pointing at itself gave its entries 20 times,
+     * with no report. A sector read a second time now ends the walk and
+     * sets `dir_chain_loop`; the entries up to there stay. Same rule as
+     * src/fs/uft_cbmdos.c since MF-1501. */
+    uint8_t besucht[43 * 21];
+    memset(besucht, 0, sizeof(besucht));
+
     while (track != 0 && max_sectors-- > 0) {
+        if (track > 42 || sector >= 21) break;
+        if (besucht[track * 21 + sector]) { disk->dir_chain_loop = true; break; }
+        besucht[track * 21 + sector] = 1;
+
         size_t offset = d64_get_sector_offset(track, sector);
         if (offset + D64_SECTOR_SIZE > size) break;
-        
+
         const uint8_t* sec = data + offset;
-        
+
         /* 8 entries per sector */
         for (int i = 0; i < 8; i++) {
             if (disk->file_count >= D64_MAX_DIR_ENTRIES) break;
-            
+
             const uint8_t* entry = sec + i * 32;
             uint8_t ftype = entry[2];
-            
-            if (ftype == 0) continue;  /* Empty entry */
-            
+
+            /* MF-1515 (P3-668): here stood `if (ftype == 0) continue;` with
+             * the comment "Empty entry". docs/format_specs/commodore/D64.TXT,
+             * byte $02: „$00 - Scratched (deleted file entry)", „80 - DEL".
+             * A scratched file keeps its name, pointers and block count and
+             * is listed, marked `deleted`; a row is never written only when
+             * all 30 bytes from the type byte are zero. */
+            bool scratched = false;
+            if (ftype == 0) {
+                bool leer = true;
+                for (int k = 3; k < 32; k++)
+                    if (entry[k] != 0) { leer = false; break; }
+                if (leer) continue;   /* never written */
+                scratched = true;
+            }
+
             d64_dir_entry_t* dir = &disk->directory[disk->file_count];
+            memset(dir, 0, sizeof(*dir));
+            dir->deleted = scratched;
             
             dir->file_type = ftype;
             dir->first_track = entry[3];

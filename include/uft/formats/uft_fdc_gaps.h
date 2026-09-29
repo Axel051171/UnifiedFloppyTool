@@ -107,6 +107,22 @@ typedef enum {
 } uft_fdc_rate_t;
 #endif /* UFT_FDC_RATE_T_DEFINED */
 
+/**
+ * kbit/s of a rate code — the number an HFE header carries in its bitrate
+ * field (MF-1517, P3-670: hxcfe writes exactly this, e.g. X68000 2HD 500,
+ * Acorn ADFS 640K 250). ONE place for the mapping; 0 for an unknown code.
+ */
+static inline uint16_t uft_fdc_rate_kbps(uft_fdc_rate_t r)
+{
+    switch (r) {
+    case UFT_FDC_RATE_500K: return 500;
+    case UFT_FDC_RATE_300K: return 300;
+    case UFT_FDC_RATE_250K: return 250;
+    case UFT_FDC_RATE_1M:   return 1000;
+    }
+    return 0;
+}
+
 /*===========================================================================
  * Gap Definitions
  *===========================================================================*/

@@ -23,7 +23,10 @@
 #ifdef __linux__
 
 #include "uft/hal/ufi.h"
+#include "uft/hal/ufi_mountinfo.h"
 
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,11 +66,54 @@ static uft_rc_t linux_open(uft_ufi_device_t **out, const char *path,
     }
     *out = NULL;
 
-    int fd = open(path, O_RDWR | O_NONBLOCK);
+    /* MF-1516 (P3-669): here stood open(path, O_RDWR | O_NONBLOCK) and
+     * nothing else — and the write path through this fd is wired into the
+     * product (hardwaretab.cpp -> ufi_runners.cpp). A floppy the desktop had
+     * auto-mounted was written to past its mounted file system.
+     *
+     * Guard 1, the kernel's: open(2), "on Linux 2.6 and later, O_EXCL can
+     * be used without O_CREAT if path refers to a block device. If the
+     * block device is in use by the system (e.g., mounted), open() fails
+     * with the error EBUSY." */
+    int fd = open(path, O_RDWR | O_NONBLOCK | O_EXCL);
     if (fd < 0) {
+        int e = errno;
+        if (e == EBUSY) {
+            ufi_diag_setf(diag, "ufi/linux: %s is in use by the system "
+                          "(mounted?) - refused; unmount it first", path);
+            return UFT_ERR_BUSY;
+        }
         ufi_diag_setf(diag, "ufi/linux: open(%s) failed: %s",
-                      path, strerror(errno));
+                      path, strerror(e));
         return UFT_ERR_IO;
+    }
+
+    /* Guard 2, for what O_EXCL on the whole disk is not documented to
+     * cover: a mounted PARTITION of it (ufi_mountinfo.h). An unknown mount
+     * state is refused too — the fd may be used to write.
+     *
+     * NOT covered, and named: an SG node (/dev/sg*, a character device).
+     * Its block device would have to be found through sysfs first; for it
+     * only the kernel's O_EXCL of the sg driver applies (exclusive sg use,
+     * not a mount check). */
+    struct stat st;
+    if (fstat(fd, &st) == 0 && S_ISBLK(st.st_mode)) {
+        char punkt[256];
+        punkt[0] = '\0';
+        int belegt = uft_ufi_linux_belegt(major(st.st_rdev), minor(st.st_rdev),
+                                          punkt, sizeof punkt);
+        if (belegt != 0) {
+            if (belegt > 0)
+                ufi_diag_setf(diag, "ufi/linux: %s (or a partition of it) is "
+                              "mounted on %s - refused; unmount it first",
+                              path, punkt);
+            else
+                ufi_diag_setf(diag, "ufi/linux: cannot read "
+                              "/proc/self/mountinfo - mount state of %s "
+                              "unknown, refused", path);
+            close(fd);
+            return UFT_ERR_BUSY;
+        }
     }
 
     /* Confirm the fd actually speaks SG_IO before handing it back —

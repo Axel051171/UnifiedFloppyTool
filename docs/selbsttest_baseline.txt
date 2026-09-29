@@ -15,7 +15,7 @@ src/formats/apple/uft_2mg_parser.c:572:IMG2_PARSER_TEST:9
 src/formats/atari/uft_atx_parser_v2.c:669:ATX_PARSER_TEST:12
 src/formats/atari/uft_pro_parser_v2.c:489:PRO_PARSER_TEST:20
 src/formats/atari/uft_stx_parser.c:715:STX_PARSER_TEST:10
-src/formats/d64/uft_d64_parser_v3.c:1869:D64_V3_TEST:32
+src/formats/d64/uft_d64_parser_v3.c:1905:D64_V3_TEST:32
 src/formats/d71/uft_d71_parser_v2.c:338:D71_PARSER_TEST:10
 src/formats/d81/uft_d81_parser_v2.c:393:D81_PARSER_TEST:15
 src/formats/dmk/uft_dmk_parser_v2.c:440:DMK_PARSER_TEST:8

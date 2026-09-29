@@ -454,9 +454,59 @@ static void test_hardwarefehler_schlaegt_positionsfehler(void)
     printf("  ok: hardwarefehler_schlaegt_positionsfehler\n");
 }
 
+/* ── MF-1521 (P3-673): more than 16 index signals are all kept ─────────
+ *
+ * The decoder held a fixed array of UFT_UFT_KF_MAX_INDEX = 16 and dropped
+ * every later index SILENTLY, status OK. A real capture carries more:
+ * kq_tandy/track38.1.raw (local corpus) has 51 index blocks — the tree
+ * returned 16 indexes and 15 revolutions, greaseweazle (image/kryoflux.py)
+ * and dtc 3.50, both executed in the uft-kfraw-code review (neue-ideen,
+ * t4), read 50 revolutions. The product path kryoflux_provider_v2.cpp
+ * handed on revolutions = 16.
+ *
+ * The stream here: 51 index blocks, one revolution (200 ms = 600 686 ick
+ * ticks, as in the case above) apart, three flux cells between them. */
+static void test_mehr_als_16_indexe(void)
+{
+    enum { N = 51 };
+    uint8_t data[N * (3 + 16)];
+    size_t o = 0;
+    for (uint32_t k = 0; k < N; k++) {
+        uint32_t pos = k * 3u;                   /* stream pos before the flux */
+        uint32_t ick = 1000u + k * 600686u;
+        data[o++] = 0x0D; data[o++] = 0x02; data[o++] = 0x0C; data[o++] = 0x00;
+        for (int b = 0; b < 4; b++) data[o++] = (uint8_t)(pos >> (8 * b));
+        for (int b = 0; b < 4; b++) data[o++] = 0x00;       /* sample counter */
+        for (int b = 0; b < 4; b++) data[o++] = (uint8_t)(ick >> (8 * b));
+        data[o++] = 0x40; data[o++] = 0x50; data[o++] = 0x60;
+    }
+
+    uft_kf_stream_t s;
+    if (uft_kf_init(&s) != UFT_UFT_KF_STATUS_OK) { CHECK(0, "init"); return; }
+    uft_kf_decode(&s, data, o);
+
+    printf("    Indexe: %u (erwartet %d)\n", (unsigned)s.index_count, N);
+    CHECK(s.index_count == N, "Indexe hinter dem 16. still verworfen");
+    if (s.index_count > 20) {
+        double ms = uft_kf_revolution_time_ms(&s, 20);
+        CHECK(ms > 199.0 && ms < 201.0, "Umdrehung hinter dem 16. Index nicht 200 ms");
+    }
+    if (s.index_count == N) {
+        CHECK(s.indexes[N - 1].flux_position == (uint32_t)(3 * (N - 1)),
+              "letzter Index zeigt nicht auf seinen Flusswert");
+    }
+    /* reset keeps the grown arrays usable */
+    uft_kf_reset(&s);
+    uft_kf_decode(&s, data, o);
+    CHECK(s.index_count == N, "nach uft_kf_reset nicht wieder alle Indexe");
+    uft_kf_free(&s);
+    printf("  ok: mehr_als_16_indexe\n");
+}
+
 int main(void)
 {
     printf("test_kryoflux_stream: KryoFlux stream decoder (P1.24 / MF-208)\n");
+    test_mehr_als_16_indexe();
     test_flux1_single_byte();
     test_flux2_two_byte();
     test_flux3_three_byte();

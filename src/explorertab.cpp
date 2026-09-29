@@ -460,6 +460,16 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
                        "gekennzeichnet)").arg(dir.deleted_count),
                     0, "", false, ""});
             }
+            /* MF-1501 (P3-664): eine Verzeichniskette, die im Kreis zeigt,
+             * wird nicht mehr 683-mal durchlaufen, sondern angehalten. Die
+             * Liste oben ist dann UNVOLLSTAENDIG — das gehoert dem
+             * Benutzer gesagt, nicht nur dem Aufrufer. */
+            if (dir.chain_loop) {
+                entries.append({
+                    tr("  (Verzeichniskette zeigt auf einen schon gelesenen "
+                       "Sektor zurueck - Verzeichnis danach nicht gelesen)"),
+                    0, "", false, ""});
+            }
             uft_cbmdos_free(&dir);
             return entries;
         }

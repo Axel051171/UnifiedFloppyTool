@@ -11,8 +11,8 @@ Diese Tabelle ist die **Dateisystem-Seite** der Kennzahl „ungeprueft runter. `
 | FS-T0 | 29 | kein Test |
 | FS-T1 | 7 | nur selbst gebaute Eingaben — zirkulaer |
 | FS-T1b | 0 | Korpus von fremder Hand, Hand nicht registriert |
-| FS-T2 | 4 | Korpus von **registrierter** fremder Hand |
-| **gesamt gefuehrt** | **40** | |
+| FS-T2 | 5 | Korpus von **registrierter** fremder Hand |
+| **gesamt gefuehrt** | **41** | |
 
 Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die Kennzahl zaehlt heute nur die gefuehrten; wer sie liest, muss beide Zahlen sehen (MF-710).
 
@@ -36,13 +36,14 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 | `uft_bbc_dfs` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_bootblock_scanner` | **FS-T1** | `test_amigados_validate`, `test_bootblock_scanner` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_cbm_formats` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
-| `uft_cbmdos` | **FS-T2** | `test_cbm_geloeschte_eintraege`, `test_cbmdos_directory` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
+| `uft_cbmdos` | **FS-T2** | `test_cbm_geloeschte_eintraege`, `test_cbmdos_directory`, `test_cbmdos_scratch_und_schleife` | `vice_c1541_35trk.d64` stammt von `VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)` — im Oracle-Register als `c1541`, der Beleg ist zitierfaehig |
 | `uft_cmd` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_cpm_diskdef` | **FS-T2** | `test_cpm_gegen_cpmtools`, `test_cpm_gegen_libdsk` | `cpmtools_cf2dd_720k.cpm` stammt von `cpmtools 2.21 `mkfs.cpm` + `cpmcp` (Michael Haardt, GPL-3 - gemessen an COPYING und configure.in im Klon) auf einem Behaelter von libdsk 1.5.12 `dskform` (John Elliott, LGPL-2+). Beide im Baum geklont und gebaut unter `tools/uft-scout/work/`; SHA-256 der benutzten Programme: dskform.exe 73586b31a80b0cb141dfa3c82ece6556af3b0a52a015e0863f27bdd2c5fe70d2, mkfs.cpm.exe f5ad7261a9714a9f3c6c0b8e2406a518ebef9d4ac822babf572f7098f49bb8d4, cpmcp.exe 76f3a12e1d7428630f4171fdff534d586a45c0b97140f06f53ffc41802504260, fsck.cpm.exe f7ef3fd36329d1348d0fef50efa2d49eefaf14dc5c25f84e47270160c405b03f. Beide werden AUSGEFUEHRT, nicht uebernommen - Kanal Oracle nach MF-695.` — im Oracle-Register als `mkfs.cpm`, der Beleg ist zitierfaehig |
 | `uft_d64_file` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d64_parser_v3` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d71_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
 | `uft_d81_parser_v2` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
+| `uft_dos33` | **FS-T2** | `test_dos33_katalog_gegen_a2tools` | `a2tools_dos33_filled.do` stammt von `a2tools (catseye/a2tools, Quellstand 52ad81cc, GPL-2.0-or-later, Terry Kyriacopoulos), gebaut mit gcc -O2 -DDOS -o a2tools_dos.exe a2tools.c unter MinGW 13.1.0, sha256 28a52f894c4ccc7a58e106cf6b336111f3e1e95a84376ef091b4c547f46d3d9a` — im Oracle-Register als `a2tools`, der Beleg ist zitierfaehig |
 | `uft_fat12` | **FS-T2** | `test_fat12_fremd`, `test_fat_kette_robust`, `test_fatfs` | `mtools_fat12_720k.img` stammt von `mtools 4.0.49 (GNU), gebaut unter WSL Ubuntu mit gcc 15.2` — im Oracle-Register als `mformat`, der Beleg ist zitierfaehig |
 | `uft_fat32_mbr` | **FS-T1** | `test_fat_extensions`, `test_mega65_fat32` | alle Tests bauen ihre Eingabe selbst — geprueft gegen den eigenen Erzeuger |
 | `uft_fdi` | **FS-T0** | — | kein Test nennt ein Symbol dieses Lesers |
@@ -65,7 +66,7 @@ Dazu **32 ungefuehrte Kandidaten** ausserhalb von `src/fs/` — siehe unten. Die
 
 Die Tabelle oben fuehrt die Leser in `src/fs/`. Dieser Abschnitt nennt Dateien im uebrigen Baum, die ein **Verzeichnis lesen** und damit dieselbe Arbeit tun, ohne eine Stufe zu tragen. Sie sind **nicht** eingestuft — hier steht, worueber zu entscheiden ist, nicht ein Urteil.
 
-Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **40** Leser, waehrend der Baum **72** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
+Warum der Abschnitt existiert: bis MF-710 waehlte `leser()` seine Dateien mit `(WURZEL/'src'/'fs').glob('*.c')` — eine hartkodierte Verzeichnisliste in genau jenem Werkzeug, das eine der vier Release-Kennzahlen speist. Gemessen fuehrte die Tabelle **41** Leser, waehrend der Baum **73** Dateien hat, die ein Verzeichnis lesen. Die Kennzahl unterberichtete damit still. Das ist das **zwoelfte** belegte Vorkommen der Aufzaehlung statt der Messung (MF-567/578/598/633/651/652/668/671/678/703/708) — und das erste in einem Werkzeug, das ich selbst dagegen gebaut habe.
 
 Die Dateimenge kommt jetzt aus `git ls-files` (`scripts/repo_scope.py`).
 
@@ -112,7 +113,7 @@ Die Regel findet acht Dateien, die der Schwellwert verlor — darunter **AmigaDO
 | `src/formats/atari/atari_util.c` | 4 | 315 |
 | `src/formats/bbc/uft_bbc_dfs.c` | 4 | 359 |
 | `src/formats/cpm/uft_cpm_diskdef.c` | 4 | 1257 |
-| `src/formats/d64/uft_d64_parser_v3.c` | 4 | 1991 |
+| `src/formats/d64/uft_d64_parser_v3.c` | 4 | 2027 |
 | `src/formats/adf/uft_adf_parser_v3.c` | 3 | 545 |
 | `src/formats/cbm/uft_cbm_formats.c` | 2 | 969 |
 | `src/formats/fat32/uft_fat32_mbr.c` | 2 | 590 |

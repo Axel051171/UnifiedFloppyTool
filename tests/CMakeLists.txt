@@ -2554,6 +2554,14 @@ foreach(test_source ${TEST_SOURCES})
         # d64_disk_v3_t exists only in the .c file — so do NOT add the parser
         # here as well, only the logger it now uses.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_d64_v3_scratch_und_schleife")
+        # MF-1515 (P3-668): the second CBM directory door. Like
+        # test_d64_bam_40track it includes the parser translation unit
+        # directly (d64_disk_v3_t is private to the .c file) — so only the
+        # logger here, not the parser again.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})
@@ -2797,6 +2805,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             # img warns honestly when it pads a short track (MF-465)
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_img_gw_fuellsektor")
+        # MF-1522 (P3-674): gws Fuellmuster -=[BAD SECTOR]=- ist kein
+        # gelesener Sektor. Dieselben Quellen wie der Rundlauftest oben.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_do_write_roundtrip")
         # Phase-6 round-trip: Apple DOS-order DO write_track -> read_track (MF-343)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c)
@@ -3424,6 +3441,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus_provenance.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus_provenance")
         # MF-504: das Artefakt zitiert seine Herkunftskette
@@ -3431,6 +3449,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus_provenance.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus_walk")
         # MF-561: Aufzaehlung — alle Aufnahmen einer Diskette
@@ -3983,6 +4002,20 @@ foreach(test_source ${TEST_SOURCES})
         # Folgewert addiert wird — an JEDER Stelle, die Flussbytes zaehlt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_ufi_mountinfo")
+        # MF-1516 (P3-669): ist ein Blockgeraet oder eine Partition davon
+        # eingehaengt? Reine Funktion ueber den TEXT von mountinfo, laeuft
+        # damit auf jeder Plattform ohne Hardware.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/ufi_mountinfo.c)
+    elseif(${test_name} STREQUAL "test_a2r_drehzahl_echte_aufnahmen")
+        # MF-1510 (P3-667): rpm ist EINE Umdrehung (A2R2: Schleifenpunkt,
+        # A2R3: Abstand der Indexsignale), nicht das Aufnahmefenster.
+        # Gemessen an echten Applesauce-Dateien, alle nur lokal (77 ohne).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_a2r_strm_verschachtelt")
         # MF-1157: eine STRM-Folge 0,1,0 schrieb hinter das Ende des
         # Spurfeldes. Dieselbe Quellenmenge wie test_a2r_layout darueber;
@@ -4451,6 +4484,22 @@ foreach(test_source ${TEST_SOURCES})
         # keinem Format-Parser.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_cbmdos_scratch_und_schleife")
+        # MF-1501 (P3-664): Typbyte $00 mit Namen = gescratcht, $80 =
+        # sichtbare DEL-Datei (D64.TXT), Kettenschleife gemeldet statt
+        # 683-fach durchlaufen. Einzelne Bytes der VICE-D64 geaendert.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_dos33_katalog_gegen_a2tools")
+        # MF-1497 (P3-384): Apple-DOS-3.3-Katalog gegen a2tools. Das
+        # Fixture traegt ein UFT-eigenes Geruest (scripts/mk_dos33_leer.py)
+        # und a2tools-Inhalt; die Erwartungen sind a2tools' `dir`-Ausgabe.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_dos33.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_vote_confidence")
@@ -5682,7 +5731,8 @@ foreach(test_source ${TEST_SOURCES})
         # improvement test. uft_provenance.c is self-contained (it ships
         # its own SHA-256), so the one TU is the only source needed.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c)
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_marginal_data_preserved")
         # MF-215 / P3.3 #110: "Kein Bit verloren" improvement test —
@@ -6392,7 +6442,12 @@ if(TARGET Qt6::Test)
         # became ctest "Not Run". ufi_linux.c is wholly `#ifdef __linux__`,
         # so on Windows/macOS it compiles to an empty object — safe to add
         # unconditionally.
-        ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c)
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c
+        # MF-1518: ufi_linux.c calls uft_ufi_linux_belegt() since MF-1516;
+        # without this the Linux link failed exactly as CI-1 describes
+        # above (sanitizer run of 91433680: undefined reference in
+        # test_hardware_tab_gui and test_provider_switch). Portable file.
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_mountinfo.c)
 
     # MF-1362 / P3-562: das Werkzeug, das test_laeufer_argv an die Stelle
     # von `dtc`, `fluxengine` und `fcimage` setzt. Es schreibt auf, welche

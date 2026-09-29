@@ -520,7 +520,7 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
 | # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
 |---|---|---|---|---|
-| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **6 von 13** (2026-09-29; vorher 4 von 13). Vier der fünf Fänge sind der **Vollbau** — das wirksamste Tor dieses Baums und das am seltensten gefahrene |
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **7 von 15** (2026-09-29; vorher 4 von 13). Vier der fünf Fänge sind der **Vollbau** — das wirksamste Tor dieses Baums und das am seltensten gefahrene |
 | **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
 | **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
 | **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 56 Familien mit **97 überzähligen Kopien** im Manifest, Zonen davon 23 (Stand 2026-09-29, MF-1522) |

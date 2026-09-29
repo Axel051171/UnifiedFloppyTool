@@ -30,7 +30,11 @@ extern "C" {
 /** Maximum flux values per track (typical ~50000) */
 #define UFT_UFT_KF_MAX_FLUX      200000
 
-/** Maximum indexes per track */
+/** INITIAL capacity of the index arrays — BERICHTIGT MF-1521 (P3-673):
+ *  here stood "Maximum indexes per track", and it was one: every index
+ *  after the 16th was dropped silently with status OK. A real capture
+ *  (kq_tandy/track38.1) carries 51. The arrays now grow like the flux
+ *  buffer; `index_capacity` holds the current size. */
 #define UFT_UFT_KF_MAX_INDEX     16
 
 /*===========================================================================
@@ -153,6 +157,10 @@ typedef struct {
     uft_kf_stats_t stats;
     uint32_t data_count;        /**< Transfer data bytes */
     uint32_t data_time;         /**< Transfer time (ms) */
+
+    /** Allocated entries of `indexes` and `index_internal` (MF-1521,
+     *  appended at the end). Grows on demand; never a limit. */
+    uint32_t index_capacity;
 } uft_kf_stream_t;
 
 /*===========================================================================

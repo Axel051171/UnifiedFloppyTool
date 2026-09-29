@@ -43,6 +43,25 @@
  * geloeschte Datei auf einer echten Diskette hinterlaesst: Name und
  * Zeiger intakt, Typ DEL.
  *
+ * ── BERICHTIGT MF-1501 (P3-664) ───────────────────────────────────────────
+ *
+ * Der Absatz darueber hat das Typbyte verwechselt, und der Test hat die
+ * Verwechslung festgenagelt. Die Referenz im Baum,
+ * docs/format_specs/commodore/D64.TXT (Byte $02), sagt:
+ *
+ *     $00 - Scratched (deleted file entry)
+ *      80 - DEL
+ *
+ * Gescratcht heisst also Typbyte **$00** (Name und Zeiger bleiben);
+ * **$80** ist eine SICHTBARE Datei vom Typ DEL. libcbmimage (GPL-2, im
+ * t4-Review ausgefuehrt) urteilt ebenso (dir.c:179). Die Absicht von
+ * MF-909 — ein gescratchter Eintrag ist Bestand und wird gezeigt — bleibt;
+ * geaendert ist nur, WELCHES Byte ihn ausmacht:
+ *
+ *   2. gescratcht: Typbyte 0x00, Rest intakt   -> gezeigt, `deleted`
+ *   3. nie beschrieben: alle 30 Byte ab Typbyte null -> nicht gezeigt
+ *   4. DEL-Datei: Typbyte 0x80                 -> gezeigt, NICHT `deleted`
+ *
  * Das Korpus-Abbild selbst wird nicht angefasst; der Test arbeitet auf
  * einer Kopie.
  */
@@ -73,10 +92,14 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 /**
  * @brief Kopiert das Korpus-Abbild und setzt das Typbyte des ersten
  *        Verzeichniseintrags.
- * @param typ 0x82 = geschlossen/PRG (wie im Korpus), 0x80 = gescratcht
+ * @param typ 0x82 = geschlossen/PRG (wie im Korpus), 0x00 = gescratcht,
+ *            0x80 = sichtbare DEL-Datei (BERICHTIGT MF-1501: hier stand
+ *            „0x80 = gescratcht")
+ * @param leeren true: zusaetzlich alle 30 Byte ab dem Typbyte nullen —
+ *            eine Zeile, die nie beschrieben wurde (MF-1501)
  * @return Pfad der Kopie, oder NULL
  */
-static const char *kopie_mit_typ(const char *name, uint8_t typ)
+static const char *kopie_mit_typ_x(const char *name, uint8_t typ, int leeren)
 {
     static char pfad[512];
     char quelle[512];
@@ -97,6 +120,7 @@ static const char *kopie_mit_typ(const char *name, uint8_t typ)
     /* Erst pruefen, dass der Korpus traegt, was der Kopf behauptet. */
     if (puffer[TYP_OFFSET] != 0x82) { free(puffer); return NULL; }
     puffer[TYP_OFFSET] = typ;
+    if (leeren) memset(puffer + TYP_OFFSET, 0, 30);
 
     FILE *z = fopen(pfad, "wb");
     if (!z) { free(puffer); return NULL; }
@@ -104,6 +128,11 @@ static const char *kopie_mit_typ(const char *name, uint8_t typ)
     fclose(z);
     free(puffer);
     return (w == (size_t)n) ? pfad : NULL;
+}
+
+static const char *kopie_mit_typ(const char *name, uint8_t typ)
+{
+    return kopie_mit_typ_x(name, typ, 0);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -133,10 +162,12 @@ TEST(waechter_korpus_unveraendert)
  *
  *  Heute: `uft_cbmdos.c` zaehlt ihn und wirft ihn weg — `entry_count`
  *  ist 0, der Name „UFT MARKER" erreicht den Aufrufer nie.
+ *
+ *  BERICHTIGT MF-1501: gescratcht ist Typbyte 0x00 (D64.TXT), nicht 0x80.
  * ───────────────────────────────────────────────────────────────────────── */
 TEST(geloeschter_eintrag_wird_gezeigt)
 {
-    const char *p = kopie_mit_typ("uft_cbm_del.d64", 0x80);
+    const char *p = kopie_mit_typ("uft_cbm_del.d64", 0x00);
     ASSERT(p != NULL);
 
     uft_cbmdos_dir_t dir;
@@ -164,10 +195,14 @@ TEST(geloeschter_eintrag_wird_gezeigt)
  *  Typbyte 0x00 heisst „diese Zeile wurde nie beschrieben" — anders als
  *  DEL, das eine geloeschte Datei bezeichnet. Wer beides gleich
  *  behandelt, erfindet Eintraege.
+ *
+ *  BERICHTIGT MF-1501: Typbyte 0x00 allein heisst „gescratcht" (D64.TXT).
+ *  Nie beschrieben ist eine Zeile, deren 30 Byte ab dem Typbyte ALLE null
+ *  sind — kein Name, keine Zeiger. Die Kopie nullt sie deshalb ganz.
  * ───────────────────────────────────────────────────────────────────────── */
 TEST(waechter_nie_benutzt_bleibt_draussen)
 {
-    const char *p = kopie_mit_typ("uft_cbm_leer.d64", 0x00);
+    const char *p = kopie_mit_typ_x("uft_cbm_leer.d64", 0x00, 1);
     ASSERT(p != NULL);
 
     uft_cbmdos_dir_t dir;
@@ -183,12 +218,36 @@ TEST(waechter_nie_benutzt_bleibt_draussen)
     remove(p);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ *  4. Eine DEL-Datei (Typbyte 0x80) ist SICHTBAR und nicht geloescht
+ *     (MF-1501, D64.TXT: „80 - DEL"). Vorher hiess sie `deleted` —
+ *     gemessen im t4-Review: 28 sichtbare `DEL<`-Eintraege von
+ *     filleddk.d64 als geloeschte Dateien gemeldet.
+ * ───────────────────────────────────────────────────────────────────────── */
+TEST(del_datei_ist_sichtbar_nicht_geloescht)
+{
+    const char *p = kopie_mit_typ("uft_cbm_delfile.d64", 0x80);
+    ASSERT(p != NULL);
+
+    uft_cbmdos_dir_t dir;
+    memset(&dir, 0, sizeof(dir));
+    ASSERT(uft_cbmdos_read_directory(p, &dir) == UFT_OK);
+    ASSERT(dir.entry_count == 1);
+    ASSERT(dir.deleted_count == 0);
+    ASSERT(dir.entries[0].deleted == false);
+    ASSERT(dir.entries[0].type == UFT_CBMDOS_DEL);
+    ASSERT(dir.entries[0].closed == true);
+    uft_cbmdos_free(&dir);
+    remove(p);
+}
+
 int main(void)
 {
-    printf("CBM DOS: ein gescratchter Eintrag ist Bestand (MF-909)\n");
+    printf("CBM DOS: ein gescratchter Eintrag ist Bestand (MF-909, MF-1501)\n");
     RUN(waechter_korpus_unveraendert);
     RUN(geloeschter_eintrag_wird_gezeigt);
     RUN(waechter_nie_benutzt_bleibt_draussen);
+    RUN(del_datei_ist_sichtbar_nicht_geloescht);
     printf("\n  %d bestanden, %d gefallen\n", _pass, _fail);
     return _fail ? 1 : 0;
 }

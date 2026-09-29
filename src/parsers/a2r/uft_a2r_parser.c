@@ -172,6 +172,25 @@ static uint64_t a2r_fluss_wechsel(const uint8_t *data, uint32_t len,
     return ticks;
 }
 
+/* MF-1510 (P3-667): ONE revolution in ticks -> rpm; 0 means "not
+ * measurable from this capture", never "standing still".
+ *
+ * Before, both paths computed rpm from the length of the WHOLE capture.
+ * The references say a capture is longer than a revolution — A2R 2.x:
+ * timing „about 450 degrees of rotation", xtiming „about 810 degrees";
+ * A2R 3.x: timing „1.25 disk revolutions", xtiming „2.25 or more". Measured
+ * on the real Copy II Plus 3.5" A2R2: 350.7 and 185.6 rpm reported for a
+ * zone-0 track that turns at 392.5 (tests/test_a2r_drehzahl_echte_
+ * aufnahmen.c). What is ONE revolution the references also say:
+ * A2R 2.x STRM „Estimated Loop Point contains the number of ticks from the
+ * start of the capture till the sync sensor is triggered"; A2R 3.x RWCP
+ * index array „an absolute timing (in ticks) from the start of the capture
+ * to when the index signal was detected" — two of them are a revolution. */
+static double a2r_umdrehung_zu_rpm(uint64_t ticks, double ns_je_tick) {
+    if (ticks == 0 || ns_je_tick <= 0.0) return 0.0;
+    return a2r_duration_to_rpm(((double)ticks * ns_je_tick) / 1000.0);
+}
+
 /*============================================================================
  * Utility Functions
  *============================================================================*/
@@ -545,12 +564,19 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
                     for (uint32_t i = 0; i < data_len; )
                         total_ticks += a2r_fluss_wechsel(cap->data, data_len, &i, NULL);
                     cap->duration_us = (total_ticks * A2R_TICK_NS) / 1000.0;
-                    cap->rpm = a2r_duration_to_rpm(cap->duration_us);
-                    
+                    /* MF-1510: rpm from the loop point (one revolution),
+                     * not from the capture window. For a bits capture
+                     * (type 2) the reference defines no revolution in
+                     * ticks; it stays 0 = not measurable. */
+                    cap->rpm = (capture_type == 1 || capture_type == 3)
+                             ? a2r_umdrehung_zu_rpm(tick_count, (double)A2R_TICK_NS)
+                             : 0.0;
+
                     ctx->total_flux_bytes += data_len;
                     ctx->total_captures++;
-                    
-                    if (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm)
+
+                    if (cap->rpm > 0.0 &&
+                        (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm))
                         ctx->min_rpm = cap->rpm;
                     if (cap->rpm > ctx->max_rpm)
                         ctx->max_rpm = cap->rpm;
@@ -724,12 +750,23 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
                 cap->tick_count  = (uint32_t)((ticks > 0xFFFFFFFFu)
                                               ? 0xFFFFFFFFu : ticks);
                 cap->duration_us = ((double)ticks * ns_je_tick) / 1000.0;
-                cap->rpm         = a2r_duration_to_rpm(cap->duration_us);
+                /* MF-1510: rpm from the first two index signals (one
+                 * revolution). A timing capture carries ONE — measured on
+                 * the three A2R3 files in the corpus — so its rpm is not
+                 * measurable and stays 0, instead of the capture window. */
+                cap->rpm = 0.0;
+                if (idx_count >= 2) {
+                    uint32_t i0 = read_le32(ptr + 5);
+                    uint32_t i1 = read_le32(ptr + 9);
+                    if (i1 > i0)
+                        cap->rpm = a2r_umdrehung_zu_rpm((uint64_t)(i1 - i0), ns_je_tick);
+                }
 
                 ctx->total_flux_bytes += data_len;
                 ctx->total_captures++;
 
-                if (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm)
+                if (cap->rpm > 0.0 &&
+                    (ctx->min_rpm == 0.0 || cap->rpm < ctx->min_rpm))
                     ctx->min_rpm = cap->rpm;
                 if (cap->rpm > ctx->max_rpm)
                     ctx->max_rpm = cap->rpm;

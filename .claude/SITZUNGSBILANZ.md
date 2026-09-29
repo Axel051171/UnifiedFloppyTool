@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 6 von 13
+K0 dieser Sitzung: 7 von 15
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -276,7 +276,7 @@ Fundus (nicht gebaut, weil keine Kennzahl bewegt):
     `uft_c64_protection_enhanced.c`) und die zwei Viterbi-Kopien bleiben
     stehen — siehe K5 oben. Naechster Schritt ist NICHT ihre Umhaengung,
     sondern die Frage, ob die Waisen einen Weg bekommen (P3-666).
-  * P3-674 (Brother-Tafel: keine Quelle, keine Aufrufer, Kommentar sagt
+  * P3-678 (Brother-Tafel: keine Quelle, keine Aufrufer, Kommentar sagt
     „5-to-8", aber kein Wert hat Bit 7) und P3-675 (`uft_vorpal_decode()`
     liest 4 von 8 Quintetten, null Aufrufer) — beide registriert, beide
     ohne Kennzahl.
@@ -315,7 +315,7 @@ Reihenfolge erkennbar bleibt.
      | Mensch (dieselbe Messung) | je Zeile umgehaengt, nie dateiweit
        (Gedaechtnisnotiz `mf_nummer_von_origin`): 41 Ersetzungen, danach
        auf eine Nummer zusammengezogen — **MF-1522** fuer den Commit,
-       P3-674/675 fuer die zwei Fundus-Zeilen. P3-673 bleibt frei, die
+       P3-674/675 fuer die zwei Fundus-Zeilen (P3-674 ist beim Merge auf 678 gewandert, zweimal — siehe Nachtrag 6 und 7). P3-673 bleibt frei, die
        Nachbararbeit hat sie vorgesehen.
 ```
 
@@ -484,3 +484,95 @@ falsch geformte Eingaben.**
 Bemerkenswert bleibt die Reihenfolge: das Tor war 14/14 gruen und
 5/5 mutationsfest, als es committet wurde. Beides stimmte — und beides
 bezog sich nur auf gueltige Eingaben. Ein Selbsttest prueft, was er kennt.
+
+### Nachtrag 6 zur Bilanz 2026-09-29 — Fehler 14, und dieses Mal hat das Tor NICHT gefeuert
+
+Beim Zusammenfuehren von `origin/main` (11 fremde Commits) ist derselbe
+Zusammenstoss ein zweites Mal aufgetreten, in die andere Richtung:
+
+```
+ 14. **MF-1522 und P3-674 sind DOPPELT vergeben** — mein `0a66fb21`
+     (08:22:12) und `e36346ce` (08:39:53) aus dem Arbeitsbaum, siebzehn
+     Minuten spaeter, beide mit derselben MF- und derselben P3-Nummer.
+     | Mensch (beim Merge, nicht vom Tor) | P3-674 ist mein Eintrag
+       gewichen — gepusht schlaegt nicht-gepusht: die Brother-Tafel heisst
+       jetzt **P3-676**, und die Zeile sagt das selbst, weil die Nachricht
+       von `0a66fb21` sie noch P3-674 nennt. MF-1522 bleibt doppelt: beide
+       Commits sind geschrieben, einer davon gepusht. Wie bei MF-1515
+       braucht das eine Eigentuemerentscheidung, kein stilles Umschreiben.
+```
+
+**Und das ist der unangenehme Teil: Tor 72 haette es fangen muessen.**
+Gemessen, gerade nachgeprueft:
+
+* der Haken liegt installiert (`.git/hooks/commit-msg`, 07:58:20, also
+  24 Minuten vor `e36346ce`), er enthaelt den Aufruf, und `core.hooksPath`
+  zeigt in BEIDEN Baeumen genau dorthin;
+* mit ihrem Betreff gefuettert weist er ab: „MF-1522 ist bereits
+  beansprucht von: e36346ce, 0a66fb21";
+* ihr Reflog sagt `commit:` — kein Rebase, kein Cherry-pick, bei denen
+  `commit-msg` nicht laeuft.
+
+**Warum es trotzdem durchging, ist NICHT gemessen**, und diese Luecke wird
+hier nicht mit einer plausiblen Geschichte gefuellt (dieselbe Zurueckhaltung
+wie bei `repo_scope` in MF-1171: „einmal beobachtet, nicht reproduziert").
+Denkbar bleiben ein `--no-verify`, eine andere Python-Umgebung im
+Nachbarprozess, oder ein Weg, den ich nicht kenne. **Bis das gemessen ist,
+gilt Tor 72 als ungeprueft IM BETRIEB** — sein Selbsttest (18/18) und seine
+Mutationsmatrix (7/7) sagen etwas ueber den Klassifizierer, nicht ueber den
+Haken. Dieselbe Unterscheidung fuehrt Tor 71 ausdruecklich („ob der Haken
+wirkt, misst `--protokolle`"), und mein Tor hat dieses Gegenstueck nicht.
+
+Das ist die ehrliche Bilanz dieses Baus: **ein Tor, das im Klassifizierer
+belegt und im Betrieb unbelegt ist, ist kein Tor, sondern ein Skript mit
+einem Haken davor.** Eintrag dafuer ist die Zeile unten im Fundus; er
+bewegt K0, sobald er messbar ist.
+
+**K0: 6 von 14.**
+
+Zusaetzlich zum Fundus:
+  * **Eine Betriebsprobe fuer Tor 72.** Tor 71 misst seine Wirkung ueber
+    die Sitzungsprotokolle (`--protokolle --seit <Einbauzeit>`) und meldet
+    dabei, wie viele Aufrufe es GESEHEN hat. Tor 72 braucht das Gegenstueck:
+    eine Messung, die sagt, bei wie vielen Commits seit dem Einbau der
+    Haken gelaufen ist — sonst ist „es hat nicht gefeuert" nicht von „es
+    lief nicht" zu unterscheiden. Der erste Schritt ist die MESSUNG, nicht
+    das Tor.
+
+### Nachtrag 7 zur Bilanz 2026-09-29 — Fehler 15, und Tor 72 hat gefangen
+
+```
+ 15. **Der Merge-Commit selbst trug eine belegte Nummer.** Ich hatte
+     MF-1524 als frei gemessen (`git log --all --format=%s | grep -c
+     "MF-1524"` ergab 0) und die Nachricht damit geschrieben. Waehrend die
+     Konflikte aufgeloest, die Generatoren gelaufen und 601 Tests gebaut
+     wurden — knapp eine Stunde — hat die Nachbarsitzung `ea1f2436` mit
+     **MF-1524 und P3-676** committet. P3-676 war die Nummer, auf die mein
+     Brother-Eintrag in Nachtrag 6 gerade ausgewichen war; er ist damit
+     ZWEIMAL gewichen. | **TOR 72** (im commit-msg-Haken: „MF-1524 ist
+     bereits beansprucht von: ea1f2436" — KEIN NEUER COMMIT)
+     | Merge auf **MF-1526**, Brother-Eintrag auf **P3-678**. Frei gemessen
+       diesmal ueber committete UND unvorgemerkte Nummern beider Baeume:
+       MF-1525 und P3-677 liegen unvorgemerkt in `wt-dtc`.
+```
+
+**Damit ist Tor 72 auch im BETRIEB belegt — und zwar an genau der Klasse,
+fuer die es gebaut wurde.** Nachtrag 6 sagt, es gelte im Betrieb als
+ungeprueft, weil `e36346ce` unerklaert durchgegangen ist. Das bleibt so;
+aber jetzt steht daneben ein Fall, in dem es gefeuert hat, in demselben
+Haken, an demselben Tag. Was von Nachtrag 6 stehen bleibt, ist also die
+praezisere Aussage: **es wirkt, aber es ist nicht bewiesen, dass es bei
+JEDEM Commit laeuft** — und die Betriebsprobe, die diese Frage beantworten
+wuerde, fehlt weiter.
+
+**Und die eigentliche Lehre ist nicht das Tor, sondern die HALTBARKEIT
+einer Nummernmessung.** Zwischen „MF-1524 ist frei" und dem Commit lagen
+Konfliktaufloesung, fuenf Generatoren, ein Vollbau und 601 Tests. In dieser
+Zeit sind vier fremde Commits entstanden. Die Gedaechtnisnotiz
+`mf_nummer_von_origin` sagt schon „Nummer direkt vor dem Commit bestimmen";
+gemessen heisst „direkt" hier **weniger als eine Stunde**, und bei einem
+Vollbau im Haken ist das nicht einzuhalten. Deshalb ist das Tor die
+richtige Stelle: es prueft die Nummer in dem Augenblick, in dem der Commit
+entsteht, nicht in dem, in dem die Nachricht geschrieben wurde.
+
+**K0: 7 von 15.**

@@ -68,13 +68,17 @@ typedef struct {
     bool                closed;      /**< Bit 7 des Typbytes: sauber geschlossen */
     bool                locked;      /**< Bit 6: schreibgeschuetzt */
     /**
-     * Der Eintrag bezeichnet eine GELOESCHTE Datei (MF-909).
+     * Der Eintrag bezeichnet eine GELOESCHTE (gescratchte) Datei (MF-909).
      *
-     * CBM DOS setzt beim Scratchen nur die Typkennung auf DEL; Name,
-     * Blockzahl und die Zeiger auf den ersten Datensektor bleiben
-     * stehen. Ein solcher Eintrag ist Bestand, kein Nichts — und
-     * unterscheidet sich von einer NIE BENUTZTEN Zeile, deren Typbyte
-     * 0x00 ist und die gar nicht erst in die Liste kommt.
+     * BERICHTIGT MF-1501 (P3-664). Hier stand: „CBM DOS setzt beim
+     * Scratchen nur die Typkennung auf DEL … eine NIE BENUTZTE Zeile hat
+     * Typbyte 0x00". Die Referenz sagt es umgekehrt
+     * (docs/format_specs/commodore/D64.TXT, Byte $02: „$00 - Scratched",
+     * „80 - DEL"): gescratcht heisst Typbyte **$00**, Name, Blockzahl und
+     * die Zeiger auf den ersten Datensektor bleiben stehen. $80/$C0 ist
+     * eine SICHTBARE Datei vom Typ DEL, `deleted` ist dort false. Nie
+     * beschrieben ist eine Zeile erst, wenn alle 30 Byte ab dem Typbyte
+     * null sind; sie kommt nicht in die Liste.
      */
     bool                deleted;
     uint16_t            blocks;      /**< belegte Bloecke laut Eintrag */
@@ -93,7 +97,19 @@ typedef struct {
     char                 disk_id[3];    /**< die zwei ID-Zeichen (nicht der DOS-Typ) */
     uft_cbmdos_entry_t  *entries;
     int                  entry_count;
-    int                  deleted_count; /**< uebersprungene DEL-Eintraege */
+    int                  deleted_count; /**< gescratchte Eintraege (Typbyte $00
+                                             mit Namen), die in `entries`
+                                             MIT stehen; BERICHTIGT MF-1501:
+                                             hier stand „uebersprungene
+                                             DEL-Eintraege" */
+    /**
+     * Die Verzeichniskette zeigte auf einen Sektor zurueck, der schon
+     * gelesen war (MF-1501, P3-664). Die Eintraege bis dahin stehen in
+     * `entries`; die Kette danach ist NICHT gelesen. Vorher lief der Leser
+     * 683 Schritte im Kreis und lieferte jeden Eintrag vielfach — ohne
+     * Meldung.
+     */
+    bool                 chain_loop;
 } uft_cbmdos_dir_t;
 
 /**

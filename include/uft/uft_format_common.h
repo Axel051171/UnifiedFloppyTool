@@ -393,6 +393,33 @@ static inline uint8_t uft_bytes_to_size_code(uint16_t bytes) {
         return uft_register_format_plugin(&uft_format_plugin_##name); \
     }
 
+/**
+ * @brief Is this whole sector greaseweazle's filler for a sector it could
+ *        NOT read? (MF-1522, P3-674)
+ *
+ * greaseweazle (keirf/greaseweazle @ 26690f8, Unlicense) builds a
+ * formatted track with every sector set to b'-=[BAD SECTOR]=-' repeated
+ * over the sector (codec/ibm/ibm.py:794; the same text in
+ * codec/amiga/amigados.py:26 and codec/apple2/apple2_gcr.py:34) and
+ * replaces only the sectors it decodes. A sector image written by gw
+ * therefore carries this text in every unread sector — and a reader that
+ * reports it as UFT_SECTOR_OK turns "gw could not read this" into "read".
+ *
+ * True only when the WHOLE sector is the 16-byte text repeated (size a
+ * multiple of 16); a sector that merely starts with it is ordinary data.
+ * ONE place for the rule; sector-image readers call it.
+ */
+static inline bool uft_sector_is_gw_filler(const uint8_t *data, size_t size)
+{
+    static const char muster[16] = {
+        '-', '=', '[', 'B', 'A', 'D', ' ', 'S', 'E', 'C', 'T', 'O', 'R', ']', '=', '-'
+    };
+    if (!data || size == 0 || (size % 16u) != 0) return false;
+    for (size_t i = 0; i < size; i += 16u)
+        if (memcmp(data + i, muster, 16u) != 0) return false;
+    return true;
+}
+
 #ifdef __cplusplus
 }
 #endif

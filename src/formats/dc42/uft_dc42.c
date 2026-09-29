@@ -413,9 +413,19 @@ static uft_error_t dc42_read_track(uft_disk_t *disk, int cyl, int head,
         if (fread(buf, 1, DC42_SECTOR_SIZE, pdata->file) != DC42_SECTOR_SIZE)
             return UFT_ERROR_IO;
 
-        uft_format_add_sector(track, (uint8_t)s, buf,
-                              DC42_SECTOR_SIZE,
-                              (uint8_t)cyl, (uint8_t)head);
+        /* MF-1519 (P3-671): hier stand `uft_format_add_sector()`, das
+         * dem Laufindex 1 hinzuzaehlt. Das ist fuer IBM-MFM richtig
+         * (720K/1440K: Sektoren 1..N) und fuer Apple-3,5"-GCR falsch
+         * (400K/800K: 0..N-1) — so steht es am Helfer selbst
+         * (uft_format_common.h), und uft_2img.c ruft fuer dieselbe
+         * Anordnung deshalb `with_id(s)`. Gemessen vorher: 0 von 1600
+         * GCR-IDs richtig (tests/test_dc42_zonen.c). */
+        const uint8_t id = (pdata->disk_format == DC42_FMT_400K_GCR ||
+                            pdata->disk_format == DC42_FMT_800K_GCR)
+                         ? (uint8_t)s : (uint8_t)(s + 1);
+        uft_format_add_sector_with_id(track, id, buf,
+                                      DC42_SECTOR_SIZE,
+                                      (uint8_t)cyl, (uint8_t)head);
     }
 
     return UFT_OK;

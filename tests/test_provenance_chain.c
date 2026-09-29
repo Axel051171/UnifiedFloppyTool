@@ -211,9 +211,131 @@ TEST(export_json_writes_audit_artifact) {
     uft_prov_free(ch);
 }
 
+/* ── MF-1520 (P3-672): free text is ESCAPED in the audit artifact ──────
+ *
+ * uft_prov_export_json() wrote tool, operator and description with a bare
+ * "%s". A file name with a quote or a backslash — "disk "A" side 1.scp",
+ * "C:\archiv\x.scp" — made the forensic artifact invalid JSON (measured
+ * with Python's json in the uft-intake-code review, neue-ideen t4), and
+ * uft_fundus_provenance.c puts the file name into the description.
+ *
+ * REFERENCE: RFC 8259 §7 — inside a string, '"' and '\' must be escaped,
+ * and so must every control character U+0000..U+001F. The checker below is
+ * a minimal RFC 8259 validator (values, objects, arrays, strings, numbers,
+ * literals); it also decodes one string to prove the text survives. */
+static const char *js_ws(const char *p) { while (*p == ' ' || *p == '\n' || *p == '\r' || *p == '\t') p++; return p; }
+static const char *js_value(const char *p, int tiefe);
+static const char *js_string(const char *p, char *out, size_t cap)
+{
+    size_t n = 0;
+    if (*p != '"') return NULL;
+    for (p++; *p != '"'; p++) {
+        unsigned char c = (unsigned char)*p;
+        char ch = (char)c;
+        if (c == 0 || c < 0x20) return NULL;              /* raw control char */
+        if (c == '\\') {
+            p++;
+            switch (*p) {
+            case '"': ch = '"'; break;   case '\\': ch = '\\'; break;
+            case '/': ch = '/'; break;   case 'b': ch = '\b'; break;
+            case 'f': ch = '\f'; break;  case 'n': ch = '\n'; break;
+            case 'r': ch = '\r'; break;  case 't': ch = '\t'; break;
+            case 'u': {
+                unsigned v = 0;
+                for (int k = 1; k <= 4; k++) {
+                    char h = p[k];
+                    if (!((h >= '0' && h <= '9') || (h >= 'a' && h <= 'f') || (h >= 'A' && h <= 'F'))) return NULL;
+                    v = v * 16 + (unsigned)(h <= '9' ? h - '0' : (h | 0x20) - 'a' + 10);
+                }
+                p += 4;
+                ch = (char)v;
+                break;
+            }
+            default: return NULL;                         /* invalid escape */
+            }
+        }
+        if (out && n + 1 < cap) out[n++] = ch;
+    }
+    if (out && cap) out[n] = '\0';
+    return p + 1;
+}
+static const char *js_value(const char *p, int tiefe)
+{
+    if (tiefe > 32) return NULL;
+    p = js_ws(p);
+    if (*p == '"') return js_string(p, NULL, 0);
+    if (*p == '{' || *p == '[') {
+        char zu = (*p == '{') ? '}' : ']';
+        int obj = (*p == '{');
+        p = js_ws(p + 1);
+        if (*p == zu) return p + 1;
+        for (;;) {
+            if (obj) {
+                p = js_string(js_ws(p), NULL, 0);
+                if (!p) return NULL;
+                p = js_ws(p);
+                if (*p != ':') return NULL;
+                p++;
+            }
+            p = js_value(p, tiefe + 1);
+            if (!p) return NULL;
+            p = js_ws(p);
+            if (*p == ',') { p++; continue; }
+            if (*p == zu) return p + 1;
+            return NULL;
+        }
+    }
+    if (*p == '-' || (*p >= '0' && *p <= '9')) {
+        p++;
+        while ((*p >= '0' && *p <= '9') || *p == '.' || *p == 'e' || *p == 'E' || *p == '+' || *p == '-') p++;
+        return p;
+    }
+    if (!strncmp(p, "true", 4)) return p + 4;
+    if (!strncmp(p, "false", 5)) return p + 5;
+    if (!strncmp(p, "null", 4)) return p + 4;
+    return NULL;
+}
+
+TEST(export_json_escapes_free_text) {
+    uft_provenance_chain_t *ch = uft_prov_create();
+    ASSERT(ch != NULL);
+    const uint8_t d[] = { 0x10, 0x20 };
+    const char *beschreibung = "Fundus: disk \"A\" side 1.scp from C:\\archiv\\x.scp";
+    const char *bediener = "axel\tnachtschicht\nzeile2";
+    ASSERT(uft_prov_add(ch, UFT_PROV_CAPTURE, d, sizeof(d), beschreibung, bediener) == 0);
+
+    const char *path = "uft_prov_test_esc.json";
+    remove(path);
+    ASSERT(uft_prov_export_json(ch, path) == 0);
+    FILE *f = fopen(path, "rb");
+    ASSERT(f != NULL);
+    char buf[8192];
+    size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[n] = '\0';
+    remove(path);
+
+    const char *ende = js_value(buf, 0);
+    ASSERT(ende != NULL);                       /* the whole file is JSON */
+    ASSERT(*js_ws(ende) == '\0');               /* and nothing trails it */
+
+    /* the description survives: decode it back and compare */
+    const char *k = strstr(buf, "\"description\":");
+    ASSERT(k != NULL);
+    char zurueck[256];
+    ASSERT(js_string(js_ws(k + strlen("\"description\":")), zurueck, sizeof zurueck) != NULL);
+    ASSERT(strcmp(zurueck, beschreibung) == 0);
+    k = strstr(buf, "\"operator\":");
+    ASSERT(k != NULL);
+    ASSERT(js_string(js_ws(k + strlen("\"operator\":")), zurueck, sizeof zurueck) != NULL);
+    ASSERT(strcmp(zurueck, bediener) == 0);
+    uft_prov_free(ch);
+}
+
 int main(void) {
     printf("=== Improvement: forensic provenance chain-of-custody "
            "(P3.3 / #110) ===\n");
+    RUN(export_json_escapes_free_text);
     RUN(create_yields_empty_valid_chain);
     RUN(add_records_step_metadata);
     RUN(multi_step_chain_verifies);

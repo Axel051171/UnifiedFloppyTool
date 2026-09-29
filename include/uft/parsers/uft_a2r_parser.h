@@ -164,12 +164,24 @@ typedef struct {
 typedef struct {
     uint8_t     capture_type;       /**< Capture type (1=timing, 2=bits, 3=xtiming) */
     uint32_t    data_length;        /**< Length of flux data in bytes */
-    uint32_t    tick_count;         /**< Number of timing ticks */
+    /** BERICHTIGT MF-1510: hier stand „Number of timing ticks". Das Feld
+     *  traegt je nach Behaelter ZWEI Groessen: A2R 2 — der „Estimated Loop
+     *  Point" aus dem STRM-Eintrag (Ticks vom Aufnahmestart bis zum
+     *  Sync-Sensor, also eine Umdrehung); A2R 3 — die Summe aller
+     *  Flusswechsel der Aufnahme. Offen benannt in P3-667. */
+    uint32_t    tick_count;
     uint8_t    *data;               /**< Flux timing data (caller-owns after read) */
-    
+
     /* Derived values */
-    double      duration_us;        /**< Track duration in microseconds */
-    double      rpm;                /**< Estimated RPM */
+    double      duration_us;        /**< Laenge der GANZEN Aufnahme in us
+                                     *   (1,25 bzw. 2,25 Umdrehungen) */
+    /** Drehzahl aus EINER Umdrehung (MF-1510): A2R 2 aus dem Schleifenpunkt
+     *  (timing/xtiming), A2R 3 aus den ersten zwei Indexsignalen.
+     *  **0 heisst „aus dieser Aufnahme nicht messbar"** (bits-Aufnahme,
+     *  A2R-3-Aufnahme mit nur einem Indexsignal) — nie „steht still".
+     *  BERICHTIGT: hier stand „Estimated RPM", gerechnet aus der ganzen
+     *  Aufnahme; gemessen 350,7 statt 392,5 U/min. */
+    double      rpm;
 } a2r_capture_t;
 
 /**
