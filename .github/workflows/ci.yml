@@ -42,6 +42,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          # MF-1609: Tor 72's self-test checks on the REAL repository that
+          # an MF number already claimed in history is refused. A shallow
+          # checkout has one commit, so no number is ever claimed and the
+          # case failed here (run 36595998750, 44/45; locally 45/45).
+          fetch-depth: 0
       - name: SSOT parity (verify_build_sources.py)
         run: python3 scripts/verify_build_sources.py
       - name: Consistency (check_consistency.py)
