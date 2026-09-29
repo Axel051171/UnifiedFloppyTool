@@ -244,6 +244,39 @@ int main(void)
     ZUSAGE(dd.bitrate == 250 && hd.bitrate == 500 && hd12.bitrate == 500,
            "GEGENPROBE: bitrate bleibt 250/500/500 wie bei HxC");
 
+    /* ---- 4b) BERICHTIGT MF-1517 (P3-670): die Gegenprobe oben war zu
+     * schmal. Der Kommentar dazu sagt „stimmt mit allen drei HxC-Dateien
+     * ueberein (250 / 500 / 500)"; die dritte HxC-Datei des Kopfkommentars
+     * in uft_hfe.c ist aber X68000_2HD_1232KB, geprueft wurde hier 1.2M.
+     * Fuer X68000 (77 x 2 x 8 x 1024) lieferte die Regel „mehr als 10
+     * Sektoren = HD" 250, hxcfe 2.16.15.2 schreibt 500. Ueber alle 84
+     * hxcfe-Layouts widerspricht sie in 45 (Review uft-medium-code, t4).
+     *
+     * Die Werte unten stammen aus hxcfe-Kopien, AUSGEFUEHRT mit
+     * `-uselayout:<L> -conv:HXC_HFE`: X68000_2HD_1232KB bitrate 500,
+     * ACORN_ADFL_640K bitrate 250. Dazu die Gleichung, die HxCs eigene
+     * Zahlen erfuellen (Kopfkommentar uft_hfe.c): Spurbytes je Seite =
+     * bitrate * 2 Zellen * (60 / rpm) / 8 — ein Kopf, dessen Bitrate nicht
+     * zu seiner Spurlaenge passt, erklaert eine andere Drehzahl, als er
+     * nennt (X68000 vorher: 180 statt 360 U/min). */
+    printf("\n4b) bitrate aus dem Profil, wie hxcfe sie schreibt\n");
+    hfe_befund_t x68 = erzeugen_und_lesen("uft_hfe_1517_x68k.hfe", 77, 2, 8, 1024);
+    hfe_befund_t adf = erzeugen_und_lesen("uft_hfe_1517_adfs.hfe", 80, 2, 16, 256);
+    ZUSAGE(x68.ok && x68.bitrate == 500, "X68000 2HD: bitrate 500 wie hxcfe (vorher 250)");
+    ZUSAGE(adf.ok && adf.bitrate == 250, "ADFS 640K: bitrate 250 wie hxcfe (vorher 500)");
+    {
+        const hfe_befund_t *alle[] = { &dd, &hd, &hd12, &x68, &adf };
+        int passt = 0;
+        for (int i = 0; i < 5; i++) {
+            const hfe_befund_t *b = alle[i];
+            if (!b->ok || b->rpm == 0) continue;
+            double soll = (double)b->bitrate * 2000.0 * 60.0 / (double)b->rpm / 8.0;
+            double ist = (double)b->lut_laenge / 2.0;
+            if (ist > soll * 0.998 && ist < soll * 1.002) passt++;
+        }
+        ZUSAGE(passt == 5, "Kopf stimmt mit sich: Spurbytes = bitrate*2*(60/rpm)/8, 5 von 5");
+    }
+
     /* ---- 5) DIE GRENZE: was nicht in ein u16 passt, wird ABGESAGT - */
     printf("\n5) die Grenze des Formats wird gemeldet, nicht gekappt\n");
 

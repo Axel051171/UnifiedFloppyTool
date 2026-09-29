@@ -796,6 +796,18 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     if (profil) {
         track_len = profil->raw_bits / 8u;
         rpm       = profil->rpm;
+        /* BERICHTIGT MF-1517 (P3-670). Der Absatz oben sagt, `bitrate`
+         * treffe „alle drei HxC-Werte (250/500/500)". Die dritte dort
+         * genannte HxC-Datei ist X68000_2HD_1232KB — dafuer lieferte die
+         * Regel „mehr als 10 Sektoren = HD" 250, hxcfe schreibt 500; der
+         * Test hatte stattdessen 1.2M geprueft. Ueber alle 84 hxcfe-Layouts
+         * widerspricht die Regel in 45 (ADFS 640K: 500 statt 250). Mit dem
+         * Profil kommen Spurlaenge, Drehzahl UND Bitrate aus derselben
+         * Quelle, und der Kopf erfuellt wieder die Gleichung, die HxCs
+         * Zahlen erfuellen: Spurbytes = bitrate * 2 * (60/rpm) / 8 —
+         * X68000 erklaerte vorher 180 statt 360 U/min. */
+        uint16_t kbps = uft_fdc_rate_kbps(profil->data_rate);
+        if (kbps) bitrate = kbps;
     } else {
         /* Ohne Profil bleibt die alte Herleitung, nur in der richtigen
          * Einheit: `bitrate` kbit/s * 2 Zellen je Datenbit * 0,2 s / 8
