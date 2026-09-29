@@ -3716,6 +3716,9 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_convert_fuzz"
            OR ${test_name} STREQUAL "test_convert_roundtrip_lossless"
            OR ${test_name} STREQUAL "test_hfe_kodierung_nicht_erfunden"
+           # MF-1603 (P3-703): SCP -> HFE behaelt jeden Zylinder einer
+           # einseitigen Aufnahme, moderne und fortlaufende Ablage.
+           OR ${test_name} STREQUAL "test_scp_hfe_zylinder"
            OR ${test_name} STREQUAL "test_convert_identity_lossless"
            OR ${test_name} STREQUAL "test_convert_atr_xfd"
            OR ${test_name} STREQUAL "test_convert_options_reach_encoder"

@@ -15,6 +15,7 @@
 #include "uft/uft_file_ops.h"                /* uft_file_type_t */
 #include "uft/uft_format_parsers.h"      /* uft_scp_file_t, uft_kfx_stream_t */
 #include "uft/flux/uft_scp_parser.h"  /* MF-418: real SCP parser behind the adapters */
+#include "uft/flux/uft_scp_ablage.h"  /* MF-1603: the one slot rule */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -384,6 +385,35 @@ int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp) {
     memcpy(scp->data, data, size);
     scp->data_size = size;
     return 0;
+}
+
+/* MF-1603 (P3-703): the layout from header and table — the same rule the
+ * plugin (MF-1524) and the ctx parser (MF-1602) use. */
+static uft_scp_ablage_t scp_file_ablage(const uft_scp_file_t *scp)
+{
+    return uft_scp_ablage_bestimmen(scp->header.heads, scp->track_offsets,
+                                    scp->track_offsets ? UFT_SCP_MAX_TRACKS : 0);
+}
+
+int uft_scp_file_slot_of(const uft_scp_file_t *scp, int cylinder, int head)
+{
+    if (!scp || cylinder < 0 || head < 0 || head > 1) return -1;
+    int platz = uft_scp_ablage_platz(scp_file_ablage(scp), cylinder, head);
+    return (platz >= 0 && platz < UFT_SCP_MAX_TRACKS) ? platz : -1;
+}
+
+int uft_scp_file_cylinders(const uft_scp_file_t *scp)
+{
+    if (!scp || !scp->track_offsets) return 0;
+    uft_scp_ablage_t a = scp_file_ablage(scp);
+    int n = 0;
+    for (int s = 0; s < UFT_SCP_MAX_TRACKS; s++) {
+        int zyl = 0, kopf = 0;
+        if (scp->track_offsets[s] && uft_scp_ablage_ort(a, s, &zyl, &kopf) &&
+            zyl + 1 > n)
+            n = zyl + 1;
+    }
+    return n;
 }
 
 void uft_scp_free(uft_scp_file_t *scp) {

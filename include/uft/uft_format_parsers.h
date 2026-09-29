@@ -424,6 +424,12 @@ int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp);
 int uft_scp_get_track_flux(const uft_scp_file_t *scp, int track, int revolution,
                            double *out_deltas, size_t max_deltas);
 void uft_scp_free(uft_scp_file_t *scp);
+/** MF-1603 (P3-703): table slot of (cylinder, head), legacy single-sided
+ *  layout included (uft_scp_ablage.h); -1 if the image has no such side. */
+int uft_scp_file_slot_of(const uft_scp_file_t *scp, int cylinder, int head);
+/** MF-1603 (P3-703): highest occupied cylinder + 1 — NOT ceil(occupied
+ *  slots / 2), which halves a single-sided capture. 0 if none. */
+int uft_scp_file_cylinders(const uft_scp_file_t *scp);
 
 /*============================================================================
  * Kryoflux Parser Functions

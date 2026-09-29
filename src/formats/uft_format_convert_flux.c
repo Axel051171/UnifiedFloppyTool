@@ -251,7 +251,10 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
     for (int track = 1; track <= 35; track++) {
         if (uftc_is_cancelled(opts)) break;
 
-        int scp_track_idx = (track - 1) * 2; /* Side 0 only for C64 */
+        /* Side 0 only for C64; the slot follows the layout rule — a
+         * legacy single-sided image holds track n in slot n - 1
+         * (MF-1603, P3-703). */
+        int scp_track_idx = uft_scp_file_slot_of(&scp, track - 1, 0);
         int sectors_per_trk = uft_c64_sectors_per_track(track);
         int bitrate = uft_c64_track_bitrate(track);
 
@@ -1255,7 +1258,9 @@ uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
         for (int head = 0; head < heads; head++) {
             if (uftc_is_cancelled(opts)) goto done_mfm;
 
-            int scp_track = cyl * 2 + head;
+            /* MF-1603 (P3-703): slot rule; -1 (no such side) reads as a
+             * missing track below. */
+            int scp_track = uft_scp_file_slot_of(&scp, cyl, head);
             double deltas[131072];
             int flux_count = uft_scp_get_track_flux(&scp, scp_track, 0,
                                                      deltas, 131072);
@@ -2049,9 +2054,13 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
     }
 
     /* Determine geometry from SCP header */
-    int total_tracks = (int)scp.track_count;
+    /* MF-1603 (P3-703): here stood cylinders = ceil(track_count / 2).
+     * track_count counts OCCUPIED slots, and a single-sided capture has
+     * one per cylinder — 80 cylinders became 40, and the loop below
+     * skipped every slot >= track_count. Measured on the free
+     * gw_fm_acorn_3trk.scp: 2 of 3 cylinders. */
     int heads = 2;
-    int cylinders = (total_tracks + heads - 1) / heads;
+    int cylinders = uft_scp_file_cylinders(&scp);
     if (cylinders < 1) cylinders = 1;
     if (cylinders > 85) cylinders = 85;
 
@@ -2146,8 +2155,8 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
         memset(head1_bits, 0x00, track_len_aligned);
 
         for (int hd = 0; hd < heads; hd++) {
-            int scp_track = cyl * 2 + hd;
-            if (scp_track >= total_tracks) continue;
+            int scp_track = uft_scp_file_slot_of(&scp, cyl, hd);
+            if (scp_track < 0 || !scp.track_offsets[scp_track]) continue;
 
             /* Get flux data from best revolution */
             double deltas[131072];
@@ -2283,7 +2292,10 @@ uft_error_t uftc_convert_scp_to_g64(const uint8_t* src_data, size_t src_size,
     for (int track = 1; track <= num_tracks; track++) {
         if (uftc_is_cancelled(opts)) break;
 
-        int scp_track_idx = (track - 1) * 2; /* Side 0 only for C64 */
+        /* Side 0 only for C64; the slot follows the layout rule — a
+         * legacy single-sided image holds track n in slot n - 1
+         * (MF-1603, P3-703). */
+        int scp_track_idx = uft_scp_file_slot_of(&scp, track - 1, 0);
 
         /* Get flux deltas from best revolution */
         double deltas[131072];
