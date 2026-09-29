@@ -145,9 +145,12 @@ int trd_inject_file(uint8_t *image, size_t img_size,
 
 /* FAT12 (PC IMG) */
 int fat12_list_files(const uint8_t *image, size_t size, uft_directory_t *dir);
-/* MF-874: 0 = gelesen, beide FAT-Kopien beschreiben dieselbe Kette;
- *         1 = gelesen, die Ketten weichen ab (Inhalt zweideutig);
- *        -1 = Fehler. Aufrufer pruefen >= 0, nicht == 0. */
+/* MF-874/MF-1600: >= 0 = gelesen, mit Befund-Bits:
+ *           Bit 0 (1) die Ketten der beiden FAT-Kopien weichen ab
+ *                     (Inhalt zweideutig);
+ *           Bit 1 (2) die Kette endet vor der Verzeichnisgroesse —
+ *                     `*size` ist, was gelesen wurde, nicht mehr;
+ *        -1 = Fehler. Aufrufer pruefen >= 0 und die Bits einzeln. */
 int fat12_extract_file(const uint8_t *image, size_t img_size,
                        const char *filename, uint8_t **data, size_t *size);
 

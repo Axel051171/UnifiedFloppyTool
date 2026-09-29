@@ -512,9 +512,18 @@ int fat12_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
  * unterscheiden, die diese Datei nicht beruehren, ohne dass ihr Inhalt
  * dadurch zweideutig waere.
  *
- * @return 0  gelesen, beide Kopien beschreiben dieselbe Kette
- *         1  gelesen, die Ketten weichen ab — der Inhalt ist zweideutig
- *        -1  Fehler
+ * MF-1600 (P3-700): endet die Kette vor der Groesse, die das Verzeichnis
+ * nennt — ein Ende-Eintrag mitten in der Datei oder ein Cluster hinter
+ * dem Abbildende —, wird geliefert, was gelesen wurde, und Bit 1 sagt
+ * es. Vorher stand `*size = f->size`, und der Rest des malloc()-Puffers
+ * — ungelesener Speicher — ging als Dateiinhalt hinaus.
+ *
+ * @return >= 0 gelesen; die Bits sagen, was dabei auffiel:
+ *           Bit 0 (1)  die Ketten der beiden Kopien weichen ab — der
+ *                      Inhalt ist zweideutig
+ *           Bit 1 (2)  die Kette endet vor der Verzeichnisgroesse;
+ *                      `*size` ist die Zahl der gelesenen Byte
+ *         -1  Fehler
  */
 int fat12_extract_file(const uint8_t *image, size_t img_size,
                        const char *filename, uint8_t **data, size_t *size)
@@ -565,8 +574,9 @@ int fat12_extract_file(const uint8_t *image, size_t img_size,
     
     size_t cluster_size = sects_per_clust * bytes_per_sect;
     
-    /* Allocate buffer */
-    uint8_t *buf = malloc(f->size);
+    /* Allocate buffer — one byte at least: a file of size 0 is a file,
+     * and malloc(0) may return NULL (C11 7.22.3). */
+    uint8_t *buf = malloc(f->size ? f->size : 1u);
     if (!buf) return -1;
     
     /* Follow cluster chain */
@@ -603,10 +613,13 @@ int fat12_extract_file(const uint8_t *image, size_t img_size,
         cluster = naechster;
     }
 
+    /* MF-1600 (P3-700): what was read, never the unread rest of `buf`. */
+    int ergebnis = ketten_weichen_ab;
+    if (pos < f->size) ergebnis |= 2;
     *data = buf;
-    *size = f->size;
+    *size = pos;
 
-    return ketten_weichen_ab;
+    return ergebnis;
 }
 
 /* ============================================================================

@@ -248,6 +248,97 @@ TEST(eine_einzelne_fat_meldet_nichts)
     free(d); free(img);
 }
 
+/* ── MF-1600 (P3-700): die Kette endet vor der Verzeichnisgroesse ──────
+ *
+ * Das Verzeichnis sagt, wie gross die Datei ist; die FAT sagt, wo ihre
+ * Bytes liegen. Endet die Kette frueher — ein Ende-Eintrag mitten in der
+ * Datei, oder ein Cluster hinter dem Abbildende —, lieferte die Funktion
+ * trotzdem `*size = f->size`. Der Puffer kommt aus malloc(), also war der
+ * Rest ungelesener Heap-Speicher, und die Oberflaeche speicherte ihn als
+ * Dateiinhalt: erfundene Daten, ohne ein Wort.
+ *
+ * Zusage: geliefert wird, was gelesen wurde, und Bit 2 des Rueckgabewerts
+ * sagt, dass es weniger ist, als das Verzeichnis verspricht. */
+
+TEST(kette_kuerzer_als_verzeichnis_wird_gemeldet)
+{
+    uint8_t *img = baue_abbild(2, false, false);
+    ASSERT(img != NULL);
+    put32(img + ROOT_START(2) + 28, 5u * CLUSTER);   /* verspricht 5 */
+    uint8_t *d = NULL; size_t n = 0;
+    int rc = fat12_extract_file(img, ABBILD, "DATEI.BIN", &d, &n);
+    if (rc < 0 || !(rc & 2) || n != DATEIGROESSE || !inhalt_folgt_fat1(d, n)) {
+        printf("\n      rc=%d, %zu Byte geliefert — erwartet Bit 2 und die "
+               "%u gelesenen Byte\n      ", rc, n, DATEIGROESSE);
+        _fail++;
+    }
+    free(d); free(img);
+}
+
+TEST(cluster_hinter_dem_abbild_wird_gemeldet)
+{
+    uint8_t *img = baue_abbild(2, false, false);
+    ASSERT(img != NULL);
+    /* Die Kette laeuft 2 -> 3 -> 200 (Ende), in beiden Kopien; das
+     * uebergebene Abbild endet vor Cluster 200. Es bleibt ueber der
+     * Untergrenze von fat12_list_files() (163840 Byte) — darunter kaeme
+     * der Fall gar nicht bis hierher. */
+    for (unsigned k = 0; k < FATS; k++) {
+        uint8_t *f = img + FAT_START + k * FAT_BYTES;
+        fat_set(f, C1, 200);
+        fat_set(f, 200, 0xFFF);
+    }
+    size_t kurz = 180000u;
+    ASSERT(DATA_START(2) + (200u - 2u) * CLUSTER > kurz);
+    uint8_t *d = NULL; size_t n = 0;
+    int rc = fat12_extract_file(img, kurz, "DATEI.BIN", &d, &n);
+    int inhalt = (n == 2u * CLUSTER);
+    for (size_t i = 0; inhalt && i < n; i++)
+        if (d[i] != (uint8_t)(C0 + i / CLUSTER)) inhalt = 0;
+    if (rc < 0 || !(rc & 2) || !inhalt) {
+        printf("\n      rc=%d, %zu Byte geliefert — erwartet Bit 2 und "
+               "die %u Byte der zwei ganzen Cluster\n      ",
+               rc, n, 2u * CLUSTER);
+        _fail++;
+    }
+    free(d); free(img);
+}
+
+TEST(vollstaendige_kette_setzt_bit_2_nicht)
+{
+    /* Gegenprobe: eine Kette, die LAENGER ist als die Datei, ist normal
+     * (der letzte Cluster ist nur angebrochen). */
+    uint8_t *img = baue_abbild(2, false, false);
+    ASSERT(img != NULL);
+    put32(img + ROOT_START(2) + 28, 2u * CLUSTER + 10u);
+    uint8_t *d = NULL; size_t n = 0;
+    int rc = fat12_extract_file(img, ABBILD, "DATEI.BIN", &d, &n);
+    if (rc != 0 || n != 2u * CLUSTER + 10u) {
+        printf("\n      rc=%d, %zu Byte\n      ", rc, n);
+        _fail++;
+    }
+    free(d); free(img);
+}
+
+TEST(leere_datei_wird_geliefert)
+{
+    /* Eine Datei der Groesse 0 ist eine Datei. malloc(0) darf NULL
+     * liefern, und die Oberflaeche prueft `outData` — dann galt eine
+     * leere Datei als nicht extrahierbar. */
+    uint8_t *img = baue_abbild(2, false, false);
+    ASSERT(img != NULL);
+    uint8_t *e = img + ROOT_START(2);
+    put16(e + 26, 0);
+    put32(e + 28, 0);
+    uint8_t *d = NULL; size_t n = 1;
+    int rc = fat12_extract_file(img, ABBILD, "DATEI.BIN", &d, &n);
+    if (rc != 0 || n != 0 || d == NULL) {
+        printf("\n      rc=%d, n=%zu, Zeiger %s\n      ", rc, n, d ? "da" : "NULL");
+        _fail++;
+    }
+    free(d); free(img);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -256,6 +347,10 @@ int main(void)
     RUN(eine_abweichende_kette_wird_gemeldet);
     RUN(abweichung_ausserhalb_der_kette_meldet_nichts);
     RUN(eine_einzelne_fat_meldet_nichts);
+    RUN(kette_kuerzer_als_verzeichnis_wird_gemeldet);
+    RUN(cluster_hinter_dem_abbild_wird_gemeldet);
+    RUN(vollstaendige_kette_setzt_bit_2_nicht);
+    RUN(leere_datei_wird_geliefert);
     printf("\nErgebnis: %d bestanden, %d fehlgeschlagen\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

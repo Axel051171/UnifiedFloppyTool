@@ -1209,6 +1209,20 @@ void ExplorerTab::showContextMenu(const QPoint& pos)
     }
 }
 
+/* MF-1600 (P3-700): fat12_extract_file() bit 1 — the cluster chain ends
+ * before the size the directory records. ONE text for the three places
+ * that read FAT12 files. */
+static QString fat12KetteZuKurz(const QString& name, size_t gelesen)
+{
+    return QCoreApplication::translate("ExplorerTab",
+        "The cluster chain of \"%1\" ends before the size the directory "
+        "records.\n\n"
+        "Only the %2 bytes that were read are delivered. The rest is not "
+        "on this image (an end mark inside the file, or a cluster past "
+        "the end of the image); nothing was filled in.")
+        .arg(name).arg(static_cast<qulonglong>(gelesen));
+}
+
 bool ExplorerTab::readFileBytes(const QString& fileName, QByteArray* out,
                                QString* fehler, QString* warnung)
 {
@@ -1285,7 +1299,7 @@ bool ExplorerTab::readFileBytes(const QString& fileName, QByteArray* out,
                                       static_cast<int>(outSize));
                 free(outData);
                 gelesen = true;
-                if (fatRc == 1 && warnung) {
+                if ((fatRc & 1) && warnung) {
                     *warnung = tr(
                         "Die beiden FAT-Kopien beschreiben fuer \"%1\" "
                         "verschiedene Clusterketten.\n\n"
@@ -1294,6 +1308,11 @@ bool ExplorerTab::readFileBytes(const QString& fileName, QByteArray* out,
                         "MS-DOS und MSX-DOS fuehren FAT 1, TOS liest FAT 2. "
                         "Das wird gemeldet, nicht entschieden.")
                             .arg(fileName);
+                }
+                if ((fatRc & 2) && warnung) {
+                    const QString t = fat12KetteZuKurz(fileName, outSize);
+                    *warnung = warnung->isEmpty() ? t
+                                                  : *warnung + "\n\n" + t;
                 }
             }
         }
@@ -1482,7 +1501,7 @@ void ExplorerTab::onViewHex()
                                       static_cast<int>(outSize));
                 free(outData);
                 extracted = true;
-                if (fatRc == 1) {
+                if (fatRc & 1) {
                     QMessageBox::warning(
                         this, tr("FAT copies disagree"),
                         tr("The two FAT copies describe different cluster "
@@ -1493,6 +1512,9 @@ void ExplorerTab::onViewHex()
                            "FAT 2. This is reported, not resolved.")
                             .arg(fileName));
                 }
+                if (fatRc & 2)
+                    QMessageBox::warning(this, tr("File incomplete"),
+                                         fat12KetteZuKurz(fileName, outSize));
             }
         }
     } else if (ext == "ssd" || ext == "dsd") {
@@ -1648,7 +1670,7 @@ void ExplorerTab::onViewText()
                                       static_cast<int>(outSize));
                 free(outData);
                 extracted = true;
-                if (fatRc == 1) {
+                if (fatRc & 1) {
                     QMessageBox::warning(
                         this, tr("FAT copies disagree"),
                         tr("The two FAT copies describe different cluster "
@@ -1659,6 +1681,9 @@ void ExplorerTab::onViewText()
                            "FAT 2. This is reported, not resolved.")
                             .arg(fileName));
                 }
+                if (fatRc & 2)
+                    QMessageBox::warning(this, tr("File incomplete"),
+                                         fat12KetteZuKurz(fileName, outSize));
             }
         }
     } else if (ext == "ssd" || ext == "dsd") {
