@@ -523,6 +523,7 @@ contains(CONFIG, uft_dtc_components) {
 SOURCES += src/hal/ufi.c
 SOURCES += src/hal/ufi_backend.c
 SOURCES += src/hal/ufi_linux.c
+SOURCES += src/hal/ufi_mountinfo.c
 
 # Hardware Provider Headers (CRITICAL for MOC!)
 HEADERS += \

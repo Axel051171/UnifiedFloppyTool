@@ -3991,6 +3991,12 @@ foreach(test_source ${TEST_SOURCES})
         # Folgewert addiert wird — an JEDER Stelle, die Flussbytes zaehlt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/parsers/a2r/uft_a2r_parser.c)
+    elseif(${test_name} STREQUAL "test_ufi_mountinfo")
+        # MF-1516 (P3-669): ist ein Blockgeraet oder eine Partition davon
+        # eingehaengt? Reine Funktion ueber den TEXT von mountinfo, laeuft
+        # damit auf jeder Plattform ohne Hardware.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/ufi_mountinfo.c)
     elseif(${test_name} STREQUAL "test_a2r_drehzahl_echte_aufnahmen")
         # MF-1510 (P3-667): rpm ist EINE Umdrehung (A2R2: Schleifenpunkt,
         # A2R3: Abstand der Indexsignale), nicht das Aufnahmefenster.
