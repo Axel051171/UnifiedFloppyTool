@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 15 von 24
+K0 dieser Sitzung: 15 von 25
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -777,3 +777,58 @@ Neuer Fundus-Eintrag an ihrer Stelle:
     Pruefstand einzutragen ist billig; der erste Schritt ist zu messen, ob
     sein `check()` die Signatur des Pruefstands hat (es hat kein `check()`,
     gemessen).
+
+### Nachtrag 11 zur Bilanz 2026-09-29 — der letzte ungeprüfte Urteilsträger, und warum er NICHT gebaut wird
+
+Nachtrag 10 nennt `audit_plugin_compliance.py` als das einzige der 77
+Tor-Skripte, das ein Urteil fällt und nirgends geprüft ist. Der
+angekündigte nächste Schritt lautete wörtlich: „ihm die Signatur des
+Prüfstands geben".
+
+```
+ 25. **Der angekuendigte Weg hat nicht getragen, und die Messung hat es
+     gezeigt statt einer Diskussion.** Der Pruefstand
+     `audit_selbsttest.py` pflanzt je Werkzeug einen Baum mit BEKANNTER
+     Antwort und ruft `check(pflanzung)`. `audit_plugin_compliance.py` hat
+     aber (a) kein `check()` und (b) eine GRUNDLINIEN-relative Entscheidung
+     (`--min-pass`), nicht eine fallweise — ein gepflanzter Baum mit einem
+     Plugin beantwortet das nur mit ausdruecklichen Schwellen. | Mensch
+     (Messung vor Plan, Konfliktordnung 1) | Plan verworfen, bevor eine
+       Zeile geschrieben war; der richtige Ort waere ein Selbsttest IM
+       Skript, und ob er gebaut wird, entscheidet die Kennzahlfrage unten
+```
+
+**Drei Zerleger-Lücken, je einzeln an gepflanzten Quellen gemessen.**
+`extract_plugin_body()` zählt Klammern über **rohen** C-Text:
+
+| Fall | gemessene Folge |
+|---|---|
+| Klammer in einer Zeichenkette (`.name = "B { mit Klammer"`) | Tiefe kehrt nie auf 0 zurück → **Plugin wird gar nicht gefunden**, still übersprungen |
+| Klammer in einem Kommentar (`/* Vorsicht: } */`) | Rumpf endet zu früh → `UFT_SPEC_UNKNOWN` → **falsches FAIL** |
+| `.features = &x` | `(\w+)` trifft das `&` nicht → **falsches FAIL** |
+
+Der erste ist der schlimmste: ein übersprungenes Plugin kann beliebig
+unvollständig sein, ohne gezählt zu werden — ein Tor, das an dieser Stelle
+schweigt statt zu melden.
+
+**Und alle drei sind heute LATENT.** Über `git ls-files` unter
+`src/formats/`: **89** Definitionen im Text, **89** vom Zerleger gelesen;
+`.features` mit einem Wert, der kein blosses Wort ist: **0**. Der Zerleger
+ist richtig — aus Glück, nicht aus Bauart.
+
+**Deshalb wird nichts gebaut.** Nach MF-640 bewegt der Fund keine der
+Kennzahlen K0–K9, ist also **Fundus, nicht Auftrag**: eingetragen als
+**P3-679**, mit dem, was ihn öffnet (der erste Plugin-Name oder
+Beschreibungstext mit einer geschweiften Klammer, oder der erste
+`.features`-Wert, der kein blosses Wort ist — beides eine gewöhnliche
+Änderung, die niemand als riskant erkennen würde). Und `scripts/c_lex.py`
+kann Zeichenketten und Kommentare bereits überspringen; es wird hier nur
+nicht benutzt.
+
+**K0: 15 von 25.**
+
+Was dieser Nachtrag über die Sitzung sagt: die Reihenfolge hat gehalten.
+Erst die Messung, dann das Urteil — und die Messung hat sowohl meinen
+angekündigten Plan verworfen als auch den Bau verhindert, der sich sonst
+plausibel angefühlt hätte. Drei gemessene Defekte sind ein guter Grund
+hinzusehen und kein Grund zu bauen, solange sie nicht zuschlagen.
