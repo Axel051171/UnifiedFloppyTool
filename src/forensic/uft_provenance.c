@@ -22,6 +22,7 @@
 
 #include "uft/forensic/uft_provenance.h"
 #include "uft/uft_version.h"   /* UFT_VERSION_FULL — UFT-A06 */
+#include "uft/util/uft_json.h"  /* uft_json_escape_byte — MF-1520 */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -229,6 +230,24 @@ static void hex_bytes(const uint8_t *b, size_t n, char *out) {
     out[n*2] = '\0';
 }
 
+/* MF-1520 (P3-672): a free-text field as a JSON string. Before, tool,
+ * operator, description and media_fingerprint went out with a bare "%s";
+ * a file name with '"' or '\' made the audit artifact invalid JSON
+ * (RFC 8259 §7). The rule is the tree's ONE escaping table,
+ * uft_json_escape_byte() — the same call uft_loss_report.c makes — not a
+ * third copy. */
+static void prov_json_string(FILE *f, const char *s)
+{
+    char esc[UFT_JSON_ESC_MAX];
+    fputc('"', f);
+    for (const unsigned char *p = (const unsigned char *)(s ? s : ""); *p; ++p) {
+        const char *e = uft_json_escape_byte(*p, esc);
+        if (e) fputs(e, f);
+        else fputc((int)*p, f);
+    }
+    fputc('"', f);
+}
+
 int uft_prov_export_json(const uft_provenance_chain_t *chain,
                           const char *output_path)
 {
@@ -241,7 +260,9 @@ int uft_prov_export_json(const uft_provenance_chain_t *chain,
             (unsigned)chain->count);
     hex_bytes(chain->root_hash, UFT_PROV_HASH_SIZE, hex);
     fprintf(f, "  \"root_hash\": \"%s\",\n", hex);
-    fprintf(f, "  \"media_fingerprint\": \"%s\",\n", chain->media_fingerprint);
+    fputs("  \"media_fingerprint\": ", f);
+    prov_json_string(f, chain->media_fingerprint);
+    fputs(",\n", f);
     fprintf(f, "  \"entries\": [\n");
 
     for (uint32_t i = 0; i < chain->count; i++) {
@@ -256,9 +277,13 @@ int uft_prov_export_json(const uft_provenance_chain_t *chain,
         hex_bytes(e->chain_hash, UFT_PROV_HASH_SIZE, hex);
         fprintf(f, "      \"chain_hash\": \"%s\",\n", hex);
         fprintf(f, "      \"data_size\": %u,\n", e->data_size);
-        fprintf(f, "      \"tool\": \"%s\",\n", e->tool_version);
-        fprintf(f, "      \"operator\": \"%s\",\n", e->operator_id);
-        fprintf(f, "      \"description\": \"%s\"\n", e->description);
+        fputs("      \"tool\": ", f);
+        prov_json_string(f, e->tool_version);
+        fputs(",\n      \"operator\": ", f);
+        prov_json_string(f, e->operator_id);
+        fputs(",\n      \"description\": ", f);
+        prov_json_string(f, e->description);
+        fputs("\n", f);
         fprintf(f, "    }%s\n", (i + 1 < chain->count) ? "," : "");
     }
     fprintf(f, "  ]\n}\n");

@@ -3432,6 +3432,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus_provenance.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus_provenance")
         # MF-504: das Artefakt zitiert seine Herkunftskette
@@ -3439,6 +3440,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus_provenance.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus_walk")
         # MF-561: Aufzaehlung — alle Aufnahmen einer Diskette
@@ -5675,7 +5677,8 @@ foreach(test_source ${TEST_SOURCES})
         # improvement test. uft_provenance.c is self-contained (it ships
         # its own SHA-256), so the one TU is the only source needed.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c)
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+            ${CMAKE_SOURCE_DIR}/src/util/uft_json.c)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_marginal_data_preserved")
         # MF-215 / P3.3 #110: "Kein Bit verloren" improvement test —
