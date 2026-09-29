@@ -30,7 +30,8 @@
  *     open() says so with UFT_ERR_NOT_SUPPORTED instead of calling a
  *     valid file invalid. capsimg's "flakey" bit is no protection
  *     finding on CT-Raw (set on every track, also of unprotected disks).
- *     Sectors from the helper's cells: not yet (0 sectors per track).
+ *     Sectors from the helper's cells: since MF-1615, through the same
+ *     uft_ipf_sektoren() call as the AIR path (ipf_sektoren_anlegen).
  *
  * Honest forensic stance: no fabricated bitstream content. Where the
  * payload cannot yet be reconstructed (CAPS path, or full track
@@ -364,6 +365,37 @@ static void ipf_plugin_close(uft_disk_t *disk) {
     disk->plugin_data = NULL;
 }
 
+/* MF-1373 (P3-360 Teil 1): die Sektorebene. Bis dahin lieferte jede IPF
+ * Zellen und null Sektoren. Dekodiert wird mit den zwei vorhandenen
+ * Dekodern; welcher gilt, entscheidet der Inhalt (siehe
+ * uft_ipf_sektoren.h).
+ *
+ * MF-1615: this block stood inline in the AIR branch, and the helper
+ * branch never reached it: through the helper, every IPF and every
+ * CT-Raw came out with cells and ZERO sectors (measured on three CT-Raw
+ * images, 168 tracks each). Now both branches call this one function
+ * (MF-1177: one rule, one place). */
+static void ipf_sektoren_anlegen(uft_track_t *track, const uint8_t *zellen,
+                                 uint32_t zell_bits, int cyl, int head)
+{
+    uft_ipf_sektor_bericht_t sb;
+    if (uft_ipf_sektoren(zellen, zell_bits, track, &sb) != 0) return;
+    if (sb.art == UFT_IPF_SEKTOR_MEHRDEUTIG) {
+        UFT_WARN("IPF Spur %d/%d: IBM- UND Amiga-Sektorkoepfe mit "
+                 "gueltiger Pruefsumme (%u/%u) - keine Sektoren "
+                 "angelegt statt geraten",
+                 cyl, head, sb.ibm_koepfe_ok, sb.amiga_koepfe_ok);
+    } else if (sb.art != UFT_IPF_SEKTOR_KEINE) {
+        track->decoded = true;
+        if (sb.daten_crc_falsch || sb.kopf_crc_falsch || sb.ohne_daten)
+            UFT_WARN("IPF Spur %d/%d: %u Sektoren, davon %u mit "
+                     "falscher Daten- und %u mit falscher "
+                     "Kopfpruefsumme, %u Koepfe ohne Datenfeld",
+                     cyl, head, sb.angelegt, sb.daten_crc_falsch,
+                     sb.kopf_crc_falsch, sb.ohne_daten);
+    }
+}
+
 static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
     /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
@@ -441,6 +473,7 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             track->raw_capacity = n;
             track->owns_data    = true;
             if (ht->bits == 0) track->raw_bits = (uint32_t)(n * 8u);
+            ipf_sektoren_anlegen(track, buf, track->raw_bits, cyl, head);
         }
         return UFT_OK;
     }
@@ -560,28 +593,7 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         track->raw_capacity = bytes;
         track->owns_data    = true;
 
-        /* MF-1373 (P3-360 Teil 1): die Sektorebene. Bis hier lieferte
-         * jede IPF Zellen und null Sektoren. Dekodiert wird mit den zwei
-         * vorhandenen Dekodern; welcher gilt, entscheidet der Inhalt
-         * (siehe uft_ipf_sektoren.h). */
-        uft_ipf_sektor_bericht_t sb;
-        if (uft_ipf_sektoren(zellen, zell_bits, track, &sb) == 0) {
-            if (sb.art == UFT_IPF_SEKTOR_MEHRDEUTIG) {
-                UFT_WARN("IPF Spur %d/%d: IBM- UND Amiga-Sektorkoepfe mit "
-                         "gueltiger Pruefsumme (%u/%u) - keine Sektoren "
-                         "angelegt statt geraten",
-                         cyl, head, sb.ibm_koepfe_ok, sb.amiga_koepfe_ok);
-            } else if (sb.art != UFT_IPF_SEKTOR_KEINE) {
-                track->decoded = true;
-                if (sb.daten_crc_falsch || sb.kopf_crc_falsch ||
-                    sb.ohne_daten)
-                    UFT_WARN("IPF Spur %d/%d: %u Sektoren, davon %u mit "
-                             "falscher Daten- und %u mit falscher "
-                             "Kopfpruefsumme, %u Koepfe ohne Datenfeld",
-                             cyl, head, sb.angelegt, sb.daten_crc_falsch,
-                             sb.kopf_crc_falsch, sb.ohne_daten);
-            }
-        }
+        ipf_sektoren_anlegen(track, zellen, zell_bits, cyl, head);
     } else {
         free(zellen);   /* vorsichtshalber — sollte NULL sein */
         if (zrc == -3) {
