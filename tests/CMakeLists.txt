@@ -6470,6 +6470,30 @@ if(TARGET Qt6::Test)
         # umgestellt — geklickt hatte das niemand. Der Reiter braucht sein
         # Formular (AUTOUIC), den Validator und die ganze Wandlungs-
         # Maschine dahinter.
+        # MF-1605 (P3-706): das OTDR-Panel legt jede SCP-Spur unter ihrem
+        # ECHTEN Zylinder/Kopf ab. Das Panel mit dem C-Code, den es ruft —
+        # dieselbe Liste wie im FullHD-Test unten, ohne das Fenster.
+        if(${qt_test_name} STREQUAL "test_otdr_panel_scp_ablage")
+            find_package(Qt6 REQUIRED COMPONENTS Widgets)
+            target_link_libraries(${qt_test_name} PRIVATE Qt6::Widgets)
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/gui/uft_otdr_panel.cpp
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr/FloppyOtdrWidget.h
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/uft_anomaly_detect.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/uft_ml_protection.c
+                ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/uft_otdr_encoding_boost.c
+                ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+                # uft_provenance.c escapes through uft_json since MF-1520;
+                # uft_wire_json() keys only on loss_report/xdf.
+                ${CMAKE_SOURCE_DIR}/src/util/uft_json.c)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/analysis/otdr)
+            target_compile_definitions(${qt_test_name} PRIVATE
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+        endif()
+
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
            ${qt_test_name} STREQUAL "test_tools_tab_track_view" OR
            ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR

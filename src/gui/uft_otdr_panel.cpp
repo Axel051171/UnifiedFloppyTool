@@ -396,8 +396,24 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
         return false;
     }
 
-    uint8_t cyls = (uint8_t)((totalTracks + 1) / 2);
-    uint8_t heads = (totalTracks > 1) ? 2 : 1;
+    /* MF-1605 (P3-706): tracks are filed under their REAL cylinder and
+     * head — cylinder * 2 + head, the index trackFlux(), trackRevolutions()
+     * and analyzeTrack() look up. They were filed under slot - start_track
+     * and labelled t / 2, t % 2: right only for start_track 0 in the
+     * interleaved layout. A legacy single-sided image (consecutive slots,
+     * P3-676) put cylinder 1 on head 1 of cylinder 0. The slot rule is
+     * the parser's (uft_scp_slot_position, MF-1602). */
+    int hoechsterZyl = -1;
+    for (int s = start_track; s <= end_track; s++) {
+        int z = 0, k = 0;
+        if (uft_scp_has_track(m_scpCtx, s) &&
+            uft_scp_slot_position(m_scpCtx, s, &z, &k) && z > hoechsterZyl)
+            hoechsterZyl = z;
+    }
+    if (hoechsterZyl < 0) hoechsterZyl = 0;
+    if (hoechsterZyl > 255) hoechsterZyl = 255;
+    uint8_t cyls = (uint8_t)(hoechsterZyl + 1);
+    uint8_t heads = 2;
     m_disk = otdr_disk_create(cyls, heads);
     if (!m_disk) {
         m_statusLabel->setText("Failed to create disk analysis");
@@ -413,18 +429,24 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     m_statusLabel->setText("Loading flux data...");
     QApplication::processEvents();
 
-    for (int t = 0; t < totalTracks && t < (int)m_disk->track_count; t++) {
+    for (int t = 0; t < totalTracks; t++) {
+        int zyl = 0, kopf = 0;
+        if (!uft_scp_slot_position(m_scpCtx, start_track + t, &zyl, &kopf))
+            continue;
+        const int idx = zyl * 2 + kopf;
+        if (idx >= (int)m_disk->track_count) continue;
+
         uft_scp_track_data_t td;
         memset(&td, 0, sizeof(td));
 
         if (uft_scp_read_track(m_scpCtx, start_track + t, &td) == 0) {
-            m_disk->tracks[t].cylinder  = (uint8_t)(t / 2);
-            m_disk->tracks[t].head      = (uint8_t)(t % 2);
-            m_disk->tracks[t].track_num = (uint8_t)t;
+            m_disk->tracks[idx].cylinder  = (uint8_t)zyl;
+            m_disk->tracks[idx].head      = (uint8_t)kopf;
+            m_disk->tracks[idx].track_num = (uint8_t)idx;
 
             for (int r = 0; r < (int)td.revolution_count && r < OTDR_MAX_REVOLUTIONS; r++) {
                 if (td.revolutions[r].flux_data && td.revolutions[r].flux_count > 0) {
-                    otdr_track_load_flux(&m_disk->tracks[t],
+                    otdr_track_load_flux(&m_disk->tracks[idx],
                                         td.revolutions[r].flux_data,
                                         td.revolutions[r].flux_count,
                                         (uint8_t)r);
