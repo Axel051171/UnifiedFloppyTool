@@ -2805,6 +2805,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
             # img warns honestly when it pads a short track (MF-465)
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_img_gw_fuellsektor")
+        # MF-1522 (P3-674): gws Fuellmuster -=[BAD SECTOR]=- ist kein
+        # gelesener Sektor. Dieselben Quellen wie der Rundlauftest oben.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_do_write_roundtrip")
         # Phase-6 round-trip: Apple DOS-order DO write_track -> read_track (MF-343)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c)

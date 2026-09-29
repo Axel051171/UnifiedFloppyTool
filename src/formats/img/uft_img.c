@@ -457,7 +457,14 @@ static uft_error_t img_read_track(uft_disk_t* disk, int cylinder, int head,
                                               * data — else a cross-format write
                                               * reads it as empty (no-op). */
         sector.status = UFT_SECTOR_OK;
-        
+        /* MF-1522 (P3-674): a sector greaseweazle could not read reaches
+         * the .img as its filler '-=[BAD SECTOR]=-' — it is NOT a read
+         * sector. Measured: 653 of 653 such sectors reported OK. The bytes
+         * stay (they are what the file holds); the status says the medium
+         * was not read here. Rule: uft_sector_is_gw_filler(). */
+        if (uft_sector_is_gw_filler(sector.data, IMG_SECTOR_SIZE))
+            uft_sector_mark_unavailable(&sector);
+
         uft_error_t err = uft_track_add_sector(track, &sector);
         free(sector.data);
         
