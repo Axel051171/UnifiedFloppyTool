@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 6 von 12
+K0 dieser Sitzung: 6 von 13
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -444,3 +444,43 @@ ueberlebt sie.
 **K0 steht damit auf 6 von 12** (der Fang selbst ist der sechste). Die Zahl
 ist ueber die Sitzung von 5/8 auf 6/12 gewandert, und beide Bewegungen
 kamen aus ehrlicherem Zaehlen, nicht aus besserer Arbeit.
+
+### Nachtrag 5 zur Bilanz 2026-09-29 — Fehler 13, im eigenen frischen Tor
+
+```
+ 13. **Tor 72 ist abgestuerzt, statt ein Urteil zu faellen** — und zwar in
+     der Fassung, die eine Stunde vorher committet wurde. Die Nachricht wird
+     mit `Path(...).read_text(...).splitlines()[0]` gelesen: eine FEHLENDE
+     Datei ergibt `FileNotFoundError`, eine LEERE `IndexError`, ein
+     VERZEICHNIS ebenfalls einen Fehler. In einem `commit-msg`-Haken haette
+     das den Commit mit einem Traceback abgebrochen — aus einem Grund, der
+     mit dem Inhalt der Nachricht nichts zu tun hat. Klasse MF-1000 /
+     Tor 64: „ein Absturz ist kein Urteil"; dieselbe Zusage macht
+     `scripts/c_literal.py` seit MF-1171 ausdruecklich, und mein Tor hat sie
+     nicht gemacht. | Mensch (Abschlusspruefung NACH dem Commit: `rc=1` sah
+     wie eine Abweisung aus und war ein Traceback — genau die
+     Verwechslung, vor der MF-1000 warnt)
+     | `betreff_lesen()` gibt `None` zurueck und wirft NIE; der Aufrufer
+       meldet „NICHTS geprueft" und laesst durch, weil eine unlesbare Datei
+       nichts ueber die Nummer sagt. Vier Faelle dazu (fehlend, leer,
+       Verzeichnis, erste-gegen-zweite-Zeile), Selbsttest 14 -> 18.
+
+     Und die Mutationsprobe hat eine ZWEITE Haelfte gefunden: mit
+     entschaerftem Abfangen starb der SELBSTTEST an der ersten fehlenden
+     Datei, also liefen die uebrigen Faelle nicht mehr — ein zweiter Defekt
+     waere dahinter unsichtbar geblieben. Die vier Faelle fangen jetzt
+     selbst ab und melden ROT statt abzubrechen. Mutationsmatrix 5 -> 7,
+     alle 7 rot.
+```
+
+**K0 bleibt bei 6, der Nenner geht auf 13.** Kein Tor konnte diesen Fall
+fangen, weil es das Tor selbst war — und das ist die Lehre: **ein neues Tor
+gehoert gegen seine eigenen Fehleingaben geprueft, nicht nur gegen die
+richtigen.** Der Satz dazu steht seit heute in den stehenden Auftraegen
+(„jede Klammer einzeln entschaerfen"); er muss um eine Zeile erweitert
+werden, und das ist mit MF-1523 geschehen: **auch gegen fehlende, leere und
+falsch geformte Eingaben.**
+
+Bemerkenswert bleibt die Reihenfolge: das Tor war 14/14 gruen und
+5/5 mutationsfest, als es committet wurde. Beides stimmte — und beides
+bezog sich nur auf gueltige Eingaben. Ein Selbsttest prueft, was er kennt.

@@ -58,6 +58,9 @@ Bau:          mit Rotbeweis — der Test, der VOR dem Bau faellt und nach
 Baust du ein TOR: jede seiner Klammern bekommt einen Fall, und dann wird
               jede Klammer EINZELN entschaerft — der Selbsttest muss je
               einmal fallen. Ein Tor ohne Mutationsprobe ist ungemessen.
+              Und die Faelle sind nicht nur die RICHTIGEN Eingaben: fehlend,
+              leer, falsch geformt, ein Verzeichnis statt einer Datei. Ein
+              Absturz ist kein Urteil (MF-1000).
 Nach dem Bau: Messbefehl erneut, Stand notieren, Sitzungsbilanz.
 
 Commit nur ueber `python scripts/commit_verified.py`. Ein Commit, dessen
@@ -85,3 +88,11 @@ durchgelassen. Beim MF-Nummern-Tor fehlte die Wortgrenze, mit der sich
 nicht das Lesen und nicht der grüne Selbsttest.** Gemessen über
 `git ls-files`: von 76 Tor-Skripten haben 54 einen Selbsttest und **3**
 eine Mutationsprobe — der Rest ist ungemessen, nicht falsch.
+
+**Und warum die Fehleingaben dazugehören (MF-1523, derselbe Tag):** Tor 72
+war mit 14/14 und einer Mutationsmatrix von 5/5 committet — beides stimmte,
+und beides bezog sich nur auf gültige Eingaben. Eine Stunde später ist es
+an einer **fehlenden Nachrichtendatei** abgestürzt: `FileNotFoundError`
+statt eines Urteils, in einem `commit-msg`-Haken also ein Traceback, das
+den Commit aus einem Grund abbricht, der mit dem Inhalt nichts zu tun hat.
+Ein Selbsttest prüft, was er kennt.

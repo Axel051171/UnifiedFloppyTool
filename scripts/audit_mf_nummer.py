@@ -69,6 +69,22 @@ def verstuemmelt(betreff: str) -> list:
             if not 3 <= len(z) <= 4]
 
 
+def betreff_lesen(pfad: Path) -> str | None:
+    """Erste Zeile der Nachrichtendatei, oder None wenn es keine gibt.
+
+    Gibt NIE eine Ausnahme weiter: eine fehlende, leere oder unlesbare Datei
+    ist kein Urteil ueber die Nummer, und ein Traceback in einem
+    `commit-msg`-Haken bricht den Commit aus einem Grund ab, der mit dem
+    Inhalt nichts zu tun hat (Klasse MF-1000, „ein Absturz ist kein
+    Urteil"). Dieselbe Zusage macht `scripts/c_literal.py` (MF-1171).
+    """
+    try:
+        zeilen = pfad.read_text(encoding="utf-8", errors="replace").splitlines()
+    except (OSError, ValueError):
+        return None
+    return zeilen[0] if zeilen else None
+
+
 def belegte_nummern(repo: Path) -> dict:
     """-> {MF-NNNN: [kurzhash, ...]} aus den Betreffs ALLER Refs."""
     r = subprocess.run(["git", "log", "--all", "--format=%h%x09%s"],
@@ -206,6 +222,39 @@ def _selbsttest() -> int:
     faelle.append(("gueltige Nummer wird nicht als verstuemmelt gemeldet",
                    verstuemmelt("x (P3-666, MF-9999)") == []))
 
+    # 10 Ein Absturz ist kein Urteil (Klasse MF-1000 / Tor 64). Die erste
+    #    Fassung starb an einer fehlenden Datei mit `FileNotFoundError` und
+    #    haette an einer leeren mit `IndexError` sterben koennen — in einem
+    #    `commit-msg`-Haken ein Traceback statt einer Aussage.
+    import tempfile as _tf
+    _d = Path(_tf.mkdtemp())
+
+    def ergibt(pfad, erwartet) -> bool:
+        """Eine Ausnahme ist hier ein ROTER Fall, kein Abbruch des Laufs.
+
+        Die Mutationsprobe hat gezeigt, warum: mit entschaerftem Abfangen
+        starb der SELBSTTEST an der ersten fehlenden Datei, und die uebrigen
+        Faelle liefen nicht mehr — ein zweiter Defekt waere dahinter
+        unsichtbar geblieben.
+        """
+        try:
+            return betreff_lesen(pfad) == erwartet
+        except BaseException:
+            return False
+
+    faelle.append(("fehlende Datei stuerzt nicht ab",
+                   ergibt(_d / "gibtsnicht.txt", None)))
+    (_d / "leer.txt").write_text("", encoding="utf-8")
+    faelle.append(("leere Datei stuerzt nicht ab",
+                   ergibt(_d / "leer.txt", None)))
+    (_d / "ordner").mkdir()
+    faelle.append(("ein VERZEICHNIS stuerzt nicht ab",
+                   ergibt(_d / "ordner", None)))
+    (_d / "gut.txt").write_text("fix: x (MF-9999)\nzweite Zeile\n",
+                                encoding="utf-8")
+    faelle.append(("erste Zeile wird gelesen, nicht die zweite",
+                   ergibt(_d / "gut.txt", "fix: x (MF-9999)")))
+
     gut = sum(1 for _, ok in faelle if ok)
     for name, ok in faelle:
         if not ok:
@@ -222,8 +271,18 @@ def main() -> int:
     repo = Path(__file__).resolve().parent.parent
     argv = [a for a in sys.argv[1:] if not a.startswith("--")]
     if argv:
-        betreff = Path(argv[0]).read_text(
-            encoding="utf-8", errors="replace").splitlines()[0]
+        betreff = betreff_lesen(Path(argv[0]))
+        if betreff is None:
+            # Ein Absturz ist kein Urteil (Klasse MF-1000 / Tor 64). Eine
+            # fehlende oder leere Nachrichtendatei sagt NICHTS ueber die
+            # Nummer, also wird sie nicht als Verstoss gewertet — aber auch
+            # nicht verschwiegen. Gemessen ist dieser Weg: die erste Fassung
+            # starb mit `FileNotFoundError` an einem falschen Pfad und mit
+            # `IndexError` an einer leeren Datei, und in einem `commit-msg`
+            # -Haken haette das den Commit mit einem Traceback abgebrochen.
+            print("[Tor 72] Nachrichtendatei `%s` fehlt, ist leer oder "
+                  "unlesbar — NICHTS geprueft." % argv[0])
+            return 0
     else:
         betreff = sys.stdin.readline()
 
