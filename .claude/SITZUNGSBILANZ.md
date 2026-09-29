@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 17 von 28
+K0 dieser Sitzung: 16 von 31
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -907,3 +907,86 @@ mit einem Haken davor.
 **Und die richtige Lesart des grünen Tores ist damit enger als gedacht:**
 „meine Nummern kollidieren nicht mit bekannten" — nicht „Nummern
 kollidieren nicht".
+
+### Nachtrag 13 zur Bilanz 2026-09-29 — Eigentümerentscheidung: Tor 72 ist herabgestuft
+
+Der Eigentümer hat einen Widerspruch benannt, den ich selbst gebaut hatte:
+**P3-680 und „verbindliches Tor" können nicht beide gelten.** Ein Tor, das
+als verbindlich *gilt* und nur eine Seite bindet, ist kein P3, sondern
+mindestens ein P1. Entscheidung vom 2026-09-29: **Tor 72 ist eine lokale
+Vorprüfung gegen den bekannten Stand**, kein verbindliches Tor.
+
+```
+ 29. **Ich hatte Tor 72 eine Zusage gegeben, die es technisch nicht halten
+     kann** — und den Widerspruch dann als P3 eingetragen, statt ihn
+     aufzulösen. Der Kopf des Skripts sagte „Eine MF-Nummer gehoert genau
+     einem Commit"; gemessen bindet es nur die Seite, die den Haken
+     durchläuft | Mensch (Eigentümer) | herabgestuft an VIER Stellen:
+       Skriptkopf, Hakenkommentar, CI-Kategorie (jetzt „MF-Nummer:
+       Vorpruefung intakt"), CLAUDE.md samt Aufgabenteilung-Tafel; P3-680
+       umgeschrieben statt entfernt (MF-1077), Gegenstand ist jetzt die
+       FEHLENDE Serverprüfung samt zehn Abnahmekriterien
+
+ 30. **Ein Selbsttestfall war auf die SEKUNDE flackernd.** „mit Vermerk: 1
+     Commit betrachtet, 0 ohne" war einmal rot und einmal grün. Ursache:
+     ich schrieb im Test den Vermerk NACH dem Commit — in Wirklichkeit
+     läuft der Haken davor, also ist die Commit-Zeit nie kleiner als die
+     Vermerk-Zeit. Bei Sekundengleichheit grün, sonst rot, weil
+     `ohne_vermerk()` alles vor dem ersten Vermerk ausnimmt
+     | TOR (der Fall wurde rot) | Reihenfolge umgedreht, dreimal
+       hintereinander 45/45. Und der Kommentar sagt jetzt, WARUM die
+       Reihenfolge so ist — sonst dreht sie der nächste zurück
+
+ 31. Sechstes Mal `python -` mit leerer Eingabe (diesmal als
+     Platzhalter `python - --nichts`), Prozess wartet auf stdin, per
+     TaskStop beendet | Mensch | dieselbe Folge wie bei Fehler 23 und
+       dieselbe Lehre; die Wiederholung selbst ist der Befund und steht
+       hier, statt sie mit Fehler 23 zu verrechnen
+```
+
+**K0: 16 von 31.**
+
+### Was gebaut ist
+
+**Die Nachprüfung** (`--nachpruefen`), nach dem Feldsatz des Eigentümers und
+in einer **eigenen** Datei neben dem Laufbuch:
+
+```
+status: nachgeprueft
+commit: 97b2888a
+claim: MF-1601
+urspruenglicher-hook-nachweis: fehlt
+ursache: nicht-gemessen
+nachpruefung: bestanden
+nachpruefung-zeitpunkt: 2026-09-29T11:53:18Z
+```
+
+Drei Sätze angelegt (`97b2888a`/MF-1601, `cc204479`/MF-1602,
+`16880094`/MF-1603), **alle bestanden** — und die Prüfung ist echt, nicht
+ein Stempel: sie stellt dieselbe Frage wie der Haken und wird von einer
+Mutation entlarvt, die sie zum Stempel macht.
+
+**Die Gegenrichtung ist die wichtigste Zusage:** `--betrieb` führt diese
+Commits weiter als „ohne Vermerk" und nennt die Nachprüfung getrennt. Eine
+Mutation, die den Nachweis als Hakenlauf zählt, lässt den Selbsttest fallen
+(43/45). Ein nachgetragener Eintrag im **Laufbuch** würde eine historische
+Sicherheit vortäuschen und findet nicht statt.
+
+Selbsttest **35 → 45**, Mutationsmatrix **6 von 6** für die neuen Klammern
+(zusammen mit den acht aus MF-1528/1530: 14 von 14). Und `ohne_vermerk()`
+ist jetzt die EINE Rechnung, die Probe und Nachprüfung gemeinsam benutzen —
+zweimal gerechnet driftet sie (MF-1177).
+
+### Was NICHT gebaut ist, und warum
+
+Punkte 2 und 3 des Auftrags — **Serverprüfung und Merge-Serialisierung** —
+kann diese Sitzung nicht herstellen: sie brauchen Depotverwaltung und einen
+Push, und beides habe ich nicht. Sie stehen mit allen zehn Abnahmekriterien
+und den drei Serialisierungswegen in P3-680, dazu der Ausnahmeweg mit
+seinen acht Pflichtfeldern. **Eine reine CI-Prüfung genügt nicht** — zwei
+Zweige können dieselbe Nummer beanspruchen und beide gegen denselben alten
+Zielstand grün werden.
+
+Und die Bedingung des Eigentümers für MF-1530 ist erfüllt: dass Tor 72
+vorläufig nur eine lokale Vorprüfung ist, steht jetzt ausdrücklich im Baum.
+Gepusht ist weiterhin nichts.

@@ -39,7 +39,15 @@ if [ -n "$GELOESCHT" ]; then
 fi
 
 # --------------------------------------------------------------------
-# Tor 72 (MF-1522): eine MF-Nummer gehoert genau EINEM Commit.
+# Tor 72 (MF-1522, herabgestuft MF-1531): LOKALE VORPRUEFUNG der MF-Nummer
+# gegen den bekannten Stand — kein verbindliches Tor.
+#
+# Eigentuemerentscheidung 2026-09-29. Gemessen ueber `--betrieb` sind 2 von
+# 4 Commits ohne Laufbuch-Vermerk entstanden, beide aus einem anderen
+# Arbeitsbaum, bei korrekter `core.hooksPath` und vorhandener Hakendatei.
+# Ein Haken im Arbeitsplatz bindet eine Seite nicht, die ihn nicht
+# durchlaeuft. Die verbindliche Pruefung gehoert an den gemeinsamen
+# Integrationspunkt und fehlt (P3-680).
 #
 # Der Anlass ist gemessen: MF-1515 liegt auf 87345aab (main) UND auf
 # d39834ff (Arbeitsbaum wt-dtc). Beide Seiten hatten `git log` gefragt,

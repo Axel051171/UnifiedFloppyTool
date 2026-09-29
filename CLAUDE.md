@@ -520,7 +520,7 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
 | # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
 |---|---|---|---|---|
-| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch). **Zählregel:** ein Tor-Fang ist jede MECHANISCHE Prüfung, die anschlägt, ohne dass jemand beschließt hinzusehen (CI- und Commit-Haken, Audit-Skripte, Compiler und Linker über den Bau, ein Test, eine Mutationsmatrix); ein Mensch-Fang kommt aus Lesen oder Nachdenken | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) — die Zeile `K0 dieser Sitzung: N von M` ist die EINE Stelle, `commit_verified.py` liest sie dort | **17 von 28** (2026-09-29; vorher 4 von 13). Davon sind **4 der Vollbau** und **4 die Mutationsprobe** — beide teuer und selten gefahren, also die Stelle, an der K0 am billigsten steigt |
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch). **Zählregel:** ein Tor-Fang ist jede MECHANISCHE Prüfung, die anschlägt, ohne dass jemand beschließt hinzusehen (CI- und Commit-Haken, Audit-Skripte, Compiler und Linker über den Bau, ein Test, eine Mutationsmatrix); ein Mensch-Fang kommt aus Lesen oder Nachdenken | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) — die Zeile `K0 dieser Sitzung: N von M` ist die EINE Stelle, `commit_verified.py` liest sie dort | **16 von 31** (2026-09-29; vorher 4 von 13). Davon sind **4 der Vollbau** und **4 die Mutationsprobe** — beide teuer und selten gefahren, also die Stelle, an der K0 am billigsten steigt |
 | **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
 | **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
 | **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 56 Familien mit **97 überzähligen Kopien** im Manifest, Zonen davon 23 (Stand 2026-09-29, MF-1522) |
@@ -630,6 +630,44 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 > `e36346ce` steht in 754 Protokollen kein einziger fremder
 > `git commit`-Aufruf); Tor 72 führt ein Laufbuch in `.git`, ist also **pro
 > Klon** und sagt nichts über Commits vor seiner Einführung.
+>
+> **Und die Betriebsprobe hat Tor 72 selbst herabgestuft
+> (Eigentümerentscheidung 2026-09-29, MF-1531).** Sie hat gemessen, dass
+> **2 von 4** Commits ohne Laufbuch-Vermerk entstanden sind — bei korrekter
+> `core.hooksPath`, vorhandener Hakendatei, ohne Rebase, und obwohl seit
+> MF-1530 sogar die Bash des Hakens eine Zeile schreibt, wenn sie kein
+> Python findet. **Ein Haken im Arbeitsplatz bindet eine Seite nicht, die
+> ihn nicht durchläuft.**
+>
+> Tor 72 ist deshalb ausdrücklich eine **lokale Vorprüfung gegen den
+> bekannten Stand**, kein verbindliches Tor. Die richtige Lesart eines
+> grünen Laufs: *„meine Nummern kollidieren nicht mit den bekannten"* —
+> nicht *„Nummern kollidieren nicht"*. Die verbindliche Prüfung gehört an
+> den **gemeinsamen Integrationspunkt** (pre-receive bzw. CI mit
+> serialisierter Merge-Queue) und fehlt; sie steht mit zehn
+> Abnahmekriterien als **P3-680**.
+>
+> Vier Bestandteile, vier Aufgaben — und sie werden nicht vermischt:
+>
+> | Bestandteil | Aufgabe |
+> |---|---|
+> | lokaler Haken | schnelle Rückmeldung und Diagnose |
+> | Laufbuch (`.git/uft-tor72-laeufe.log`) | Nachweis, welcher Weg **tatsächlich** lief |
+> | Serverprüfung | verbindliche Annahme oder Ablehnung — **fehlt** |
+> | Merge-Serialisierung | verhindert zwei parallel grüne Ansprüche auf dieselbe Nummer — **fehlt** |
+>
+> Nachträgliche Prüfungen stehen in einer **eigenen** Datei
+> (`uft-tor72-nachpruefung.log`, `--nachpruefen`) und zählen **nie** als
+> Hakennachweis: ein Satz dort sagt „die Nummer wurde gegen den bekannten
+> Stand geprüft", und er sagt in sich selbst, dass der ursprüngliche
+> Hakenlauf **fehlt** und die Ursache **nicht gemessen** ist. Ein
+> nachgetragener Eintrag im Laufbuch würde eine historische Sicherheit
+> vortäuschen, die nicht existiert.
+>
+> **Zwei committete Kollisionen stehen unabhängig davon** und brauchen eine
+> Eigentümerentscheidung, welcher Commit die Nummer behält: MF-1515
+> (`87345aab` / `d39834ff`) und MF-1522 (`0a66fb21` / `e36346ce`). Ein
+> stilles Umschreiben findet nicht statt (§„Kennzahlen sind Folgen").
 
 > **Die erste Zahl kann gemessen nicht durch Arbeit fallen (MF-1489).**
 > „T3 runter" liest sich wie ein Rückstand. Gemessen ist er keiner:

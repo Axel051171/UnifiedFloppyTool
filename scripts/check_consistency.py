@@ -1667,19 +1667,30 @@ def main() -> int:
         import audit_heredoc as _hd
         all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
 
-        # Tor 72 (MF-1522): eine MF-Nummer gehoert genau EINEM Commit.
-        # Der Anlass ist gemessen: MF-1515 liegt auf 87345aab (main) UND
-        # auf d39834ff (Arbeitsbaum wt-dtc) — beide Seiten hatten
-        # `git log` gefragt, nur nicht denselben. Vier weitere Nummern
-        # lagen unvorgemerkt doppelt und liessen sich noch verschieben;
-        # die committete nicht mehr.
+        # Tor 72 (MF-1522, herabgestuft MF-1531): LOKALE VORPRUEFUNG der
+        # MF-Nummer — kein verbindliches Tor.
         #
-        # Wie bei Tor 71 sieht das CI den HAKEN nicht (er liegt in
-        # `.git/hooks/`, unversioniert). Es sieht den Klassifizierer und
-        # die Zeile in der Vorlage, die ihn ruft — ein Tor ohne Tuer ist
-        # in diesem Baum eine eigene Fehlerklasse (P3-204).
+        # Der Anlass war gemessen: MF-1515 liegt auf 87345aab (main) UND auf
+        # d39834ff (Arbeitsbaum wt-dtc) — beide Seiten hatten `git log`
+        # gefragt, nur nicht denselben.
+        #
+        # **Und der Haken kann es nicht verhindern.** Die Betriebsprobe
+        # (`audit_mf_nummer.py --betrieb`) hat gemessen, dass 2 von 4
+        # Commits ohne Laufbuch-Vermerk entstanden sind — bei korrekter
+        # `core.hooksPath`, vorhandener Hakendatei und ohne Rebase. Ein
+        # Haken im Arbeitsplatz bindet eine Seite nicht, die ihn nicht
+        # durchlaeuft; die verbindliche Pruefung gehoert an den gemeinsamen
+        # Integrationspunkt und fehlt (P3-680, mit Abnahmekriterien).
+        #
+        # WAS DIESE KATEGORIE HIER PRUEFT, ist deshalb eng und genau das:
+        # dass der Klassifizierer seine Faelle haelt und die Haken-VORLAGE
+        # ihn ruft. Sie prueft NICHT, dass Nummern nicht kollidieren — wie
+        # bei Tor 71 sieht das CI den installierten Haken ohnehin nicht
+        # (`.git/hooks/` ist unversioniert). Ein Tor ohne Tuer waere eine
+        # eigene Fehlerklasse (P3-204); ein Tor mit einer Tuer, durch die
+        # nicht jeder geht, ist diese hier.
         import audit_mf_nummer as _mfn
-        all_errors.append(("MF-Nummer einmalig", _mfn.check(repo)))
+        all_errors.append(("MF-Nummer: Vorpruefung intakt", _mfn.check(repo)))
 
     # Kategorie (MF-1506): dieselbe Zahlenfolge als Tabelle in mehreren
     # DATEIEN. `audit_cbm_zonen.py` haelt EINE Familie; Kennzahl K3 fuehrte

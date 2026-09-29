@@ -1,8 +1,38 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Eine MF-Nummer gehoert genau einem Commit (Tor 72, MF-1522).
+"""LOKALE VORPRUEFUNG der MF-Nummer gegen den bekannten Stand (Tor 72).
 
-── Warum dieses Tor ──────────────────────────────────────────────────────
+── WAS DIESES WERKZEUG IST, UND WAS NICHT ────────────────────────────────
+
+**Eigentuemerentscheidung 2026-09-29 (MF-1531): Tor 72 ist eine lokale
+Vorpruefung, kein verbindliches Tor.** Hier stand vorher „Eine MF-Nummer
+gehoert genau einem Commit", und das war eine Zusage, die dieses Werkzeug
+technisch nicht halten kann.
+
+Der Grund ist gemessen, nicht befuerchtet. Die Betriebsprobe (`--betrieb`)
+zaehlt Commits ohne Laufbuch-Vermerk, und am 2026-09-29 waren es **2 von
+4**: `97b2888a` (MF-1601) und `cc204479` (MF-1602), beide HEAD des
+Arbeitsbaums `wt-dtc`. Die naheliegenden Ursachen sind ausgeschlossen —
+`core.hooksPath` zeigt in beiden Baeumen hierher, die Datei ist da und ruft
+dieses Skript, das Reflog sagt `commit:` —, und seit MF-1530 schreibt sogar
+die Bash des Hakens selbst eine Zeile, wenn sie kein Python findet. Keine
+davon fehlt. Es bleiben `--no-verify` oder git-Plumbing; **welches, ist
+NICHT gemessen.**
+
+Ein Haken im Arbeitsplatz kann eine Seite, die ihn nicht durchlaeuft, nicht
+binden. Die richtige Lesart eines gruenen Laufs ist deshalb:
+
+    „meine Nummern kollidieren nicht mit den BEKANNTEN"
+    — nicht „Nummern kollidieren nicht".
+
+Die verbindliche Pruefung gehoert an den gemeinsamen Integrationspunkt
+(pre-receive bzw. CI mit serialisierter Merge-Queue) und **fehlt**; sie
+steht mit Abnahmekriterien als **P3-680**. Bis dahin leistet dieses
+Werkzeug drei Dinge und mehr nicht: schnelle Rueckmeldung beim Commit, ein
+Laufbuch als Nachweis welcher Weg tatsaechlich lief, und `--nachpruefen`
+fuer das, was ohne Nachweis entstanden ist.
+
+── Warum es trotzdem da ist ──────────────────────────────────────────────
 
 Dieses Projekt arbeitet in mehreren Arbeitsbaeumen desselben Repositoriums
 gleichzeitig. Die Gedaechtnisnotiz `mf_nummer_von_origin` sagt deshalb:
@@ -85,10 +115,10 @@ def betreff_lesen(pfad: Path) -> str | None:
     return zeilen[0] if zeilen else None
 
 
-def belegte_nummern(repo: Path) -> dict:
+def belegte_nummern(repo: Path, umgebung: dict | None = None) -> dict:
     """-> {MF-NNNN: [kurzhash, ...]} aus den Betreffs ALLER Refs."""
     r = subprocess.run(["git", "log", "--all", "--format=%h%x09%s"],
-                       cwd=repo, capture_output=True, text=True)
+                       cwd=repo, env=umgebung, capture_output=True, text=True)
     if r.returncode != 0:
         return {}
     belegt: dict = {}
@@ -205,37 +235,24 @@ def laufbuch_lesen(pfad: Path) -> list:
     return eintraege
 
 
-def betrieb(repo, umgebung: dict | None = None) -> list:
-    """Ist der Haken bei jedem Commit gelaufen? -> Meldezeilen.
+def ohne_vermerk(repo, umgebung: dict | None = None):
+    """-> (seit, zahl_vermerke, betrachtet, [(kurz, nr, betreff)]) oder None.
 
-    Die Frage ist NICHT „faengt der Klassifizierer" — das sagt der
-    Selbsttest. Die Frage ist, ob der Haken ueberhaupt gelaufen ist, und
-    sie ist am 2026-09-29 teuer geworden: `e36346ce` hat MF-1522
-    beansprucht, obwohl mein `0a66fb21` es siebzehn Minuten vorher schon
-    trug, und der Haken war installiert und haette abgewiesen.
+    Die EINE Rechnung hinter `--betrieb` und `--nachpruefen`: welcher Commit
+    mit MF-Anspruch ist seit dem ersten Laufbuch-Vermerk entstanden, ohne
+    dass der Haken einen Vermerk hinterlassen hat? Zweimal gerechnet
+    driftet sie, und die Abweichung sah in diesem Baum schon dreimal aus wie
+    ein Fehler in den Daten (MF-1177).
 
-    **Rueckblickend ist das nicht entscheidbar gewesen.** Gemessen ueber
-    754 Sitzungsprotokolle im Zeitfenster des Commits: KEIN einziger
-    `git commit`-Aufruf einer fremden Sitzung. Der Weg, auf dem jener
-    Commit entstand, hinterlaesst dort keine Spur — womit auch Tor 71s
-    Betriebsprobe (`--protokolle`) fuer solche Commits blind ist, was in
-    ihrer Beschreibung nicht steht.
-
-    Deshalb misst diese Probe VORWAERTS: jeder Lauf vermerkt sich, und
-    hier wird gezaehlt, welcher Commit seit dem ersten Vermerk KEINEN hat.
-    Ein Commit ohne Vermerk heisst „der Haken lief nicht" — nicht „der
-    Haken hat nichts gefunden". Das sind zwei Dinge, und genau ihre
-    Verwechslung war der Befund.
+    `None` heisst: nicht messbar (kein git, kein Laufbuch).
     """
     repo = Path(repo)
     pfad = laufbuch(repo, umgebung)
     if pfad is None:
-        return ["git nicht befragbar — NICHTS geprueft."]
+        return None
     eintraege = laufbuch_lesen(pfad)
     if not eintraege:
-        return ["Laufbuch `%s` fehlt oder ist leer: die Betriebsfrage ist "
-                "UNGEMESSEN. Das ist kein Verstoss — es beginnt mit dem "
-                "ersten Lauf des Hakens." % pfad.name]
+        return None
 
     seit = min(e[0] for e in eintraege)
     gesehen = {e[1] for e in eintraege}
@@ -243,7 +260,7 @@ def betrieb(repo, umgebung: dict | None = None) -> list:
     r = subprocess.run(["git", "log", "--all", "--format=%h%x09%cI%x09%s"],
                        cwd=repo, env=umgebung, capture_output=True, text=True)
     if r.returncode != 0:
-        return ["git log nicht befragbar — NICHTS geprueft."]
+        return None
 
     betrachtet, ohne = 0, []
     for zeile in r.stdout.splitlines():
@@ -252,12 +269,11 @@ def betrieb(repo, umgebung: dict | None = None) -> list:
             continue
         kurz, wann, betreff = teile
         # `%cI` traegt eine Zeitzone, die Vermerke stehen in UTC. Ein
-        # Vergleich der Zeichenketten waere damit falsch, ein Vergleich nur
-        # der DATEN zu grob: am Starttag des Laufbuchs bekaeme jeder
-        # fruehere Commit desselben Tages faelschlich „ohne Vermerk". Also
-        # wird nach UTC umgerechnet und exakt verglichen; wo das nicht
-        # geht, bleibt der grobe Vergleich als Rueckfall — und er ist
-        # GROSSZUEGIG, meldet also eher zu viel als zu wenig.
+        # Vergleich der Zeichenketten waere falsch, ein Vergleich nur der
+        # DATEN zu grob: am Starttag des Laufbuchs bekaeme jeder fruehere
+        # Commit desselben Tages faelschlich „ohne Vermerk". Also nach UTC
+        # umrechnen und exakt vergleichen; wo das nicht geht, bleibt der
+        # grobe Vergleich als GROSSZUEGIGER Rueckfall.
         if utc(wann) and utc(seit):
             if utc(wann) < utc(seit):
                 continue
@@ -268,19 +284,161 @@ def betrieb(repo, umgebung: dict | None = None) -> list:
             continue
         betrachtet += 1
         if nr not in gesehen:
-            ohne.append("%s %s" % (kurz, nr))
+            ohne.append((kurz, nr, betreff))
+    return seit, len(eintraege), betrachtet, ohne
+
+
+def nachpruefung_pfad(repo: Path, umgebung: dict | None = None):
+    """Nachbardatei des Laufbuchs fuer NACHTRAEGLICHE Pruefungen.
+
+    Bewusst eine eigene Datei, nicht eine weitere Zeilenart im Laufbuch
+    (Eigentuemerentscheidung 2026-09-29). Ein nachgetragener Eintrag IM
+    Laufbuch wuerde eine historische Sicherheit vortaeuschen, die nicht
+    existiert: er sagt „die Nummer ist geprueft", nicht „der Haken lief".
+    Getrennte Dateien halten die zwei Aussagen auseinander, und `--betrieb`
+    zaehlt eine Nachpruefung NIE als Hakenlauf.
+    """
+    lb = laufbuch(repo, umgebung)
+    return None if lb is None else lb.parent / "uft-tor72-nachpruefung.log"
+
+
+def nachpruefungen_lesen(pfad) -> list:
+    """-> [{feld: wert}]; leer, wenn es keine gibt. Wirft nie."""
+    try:
+        text = pfad.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError, AttributeError):
+        return []
+    saetze, aktuell = [], {}
+    for zeile in text.splitlines():
+        if not zeile.strip():
+            if aktuell:
+                saetze.append(aktuell)
+                aktuell = {}
+            continue
+        if ":" in zeile:
+            k, _, v = zeile.partition(":")
+            aktuell[k.strip()] = v.strip()
+    if aktuell:
+        saetze.append(aktuell)
+    return saetze
+
+
+def nachpruefen(repo, umgebung: dict | None = None) -> list:
+    """Commits ohne Hakennachweis nachtraeglich pruefen und es FESTHALTEN.
+
+    Die Pruefung ist dieselbe wie im Haken — ist die beanspruchte Nummer im
+    bekannten Stand genau einmal vergeben? Ein Stempel ohne Pruefung waere
+    wertlos.
+
+    Was der Satz NICHT behauptet, steht in ihm selbst:
+    `urspruenglicher-hook-nachweis: fehlt` und `ursache: nicht-gemessen`.
+    Damit bleibt wahr, dass der Hakenlauf unbelegt ist, `--no-verify` und
+    Plumbing unentschieden sind, und nur die NUMMER geprueft wurde.
+
+    Mehrfaches Aufrufen legt keinen zweiten Satz zum selben Commit an.
+    """
+    from datetime import datetime, timezone
+    repo = Path(repo)
+    pfad = nachpruefung_pfad(repo, umgebung)
+    if pfad is None:
+        return ["git nicht befragbar - NICHTS nachgeprueft."]
+
+    lage = ohne_vermerk(repo, umgebung)
+    if lage is None:
+        return ["kein Laufbuch: die Betriebsfrage ist UNGEMESSEN, also gibt "
+                "es auch nichts nachzupruefen."]
+    _, _, _, offen = lage
+    if not offen:
+        return ["kein Commit ohne Hakennachweis - nichts nachzupruefen."]
+
+    schon = {s.get("commit") for s in nachpruefungen_lesen(pfad)}
+    belegt = belegte_nummern(repo, umgebung)
+    meldung, neu = [], 0
+    for kurz, nr, betreff in offen:
+        if kurz in schon:
+            meldung.append("%s (%s): Satz liegt schon vor" % (kurz, nr))
+            continue
+        fehler = pruefe(betreff, belegt, kurz)
+        urteil = "bestanden" if not fehler else "fehlgeschlagen"
+        satz = ("status: nachgeprueft\n"
+                "commit: %s\n"
+                "claim: %s\n"
+                "urspruenglicher-hook-nachweis: fehlt\n"
+                "ursache: nicht-gemessen\n"
+                "nachpruefung: %s\n"
+                "nachpruefung-zeitpunkt: %s\n"
+                % (kurz, nr, urteil,
+                   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")))
+        if fehler:
+            satz += "nachpruefung-befund: %s\n" % "; ".join(fehler)
+        try:
+            with open(pfad, "a", encoding="utf-8", newline="") as f:
+                f.write(satz + "\n")
+            neu += 1
+            meldung.append("%s (%s): %s" % (kurz, nr, urteil))
+        except (OSError, ValueError):
+            meldung.append("%s (%s): Satz NICHT schreibbar" % (kurz, nr))
+    meldung.append("%d Satz/Saetze neu in %s" % (neu, pfad.name))
+    meldung.append("Ein Satz sagt: die NUMMER wurde geprueft. Er sagt NICHT, "
+                   "dass der Haken lief - das bleibt unbelegt.")
+    return meldung
+
+
+def betrieb(repo, umgebung: dict | None = None) -> list:
+    """Ist der Haken bei jedem Commit gelaufen? -> Meldezeilen.
+
+    Die Frage ist NICHT „faengt der Klassifizierer" — das sagt der
+    Selbsttest. Die Frage ist, ob der Haken ueberhaupt gelaufen ist, und
+    sie ist am 2026-09-29 teuer geworden: `e36346ce` hat MF-1522
+    beansprucht, obwohl `0a66fb21` es siebzehn Minuten vorher schon trug,
+    und der Haken war installiert und haette abgewiesen.
+
+    **Rueckblickend war das nicht entscheidbar.** Gemessen ueber 754
+    Sitzungsprotokolle im Zeitfenster jenes Commits: KEIN einziger
+    `git commit`-Aufruf einer fremden Sitzung. Der Weg, auf dem er entstand,
+    hinterlaesst dort keine Spur — womit auch Tor 71s Betriebsprobe
+    (`--protokolle`) fuer solche Commits blind ist.
+
+    Deshalb misst diese Probe VORWAERTS: jeder Lauf vermerkt sich, und hier
+    wird gezaehlt, welcher Commit seit dem ersten Vermerk KEINEN hat. Ein
+    Commit ohne Vermerk heisst „der Haken lief nicht" — nicht „der Haken hat
+    nichts gefunden". Das sind zwei Dinge, und genau ihre Verwechslung war
+    der Befund.
+
+    Nachtraegliche Pruefungen werden GETRENNT gemeldet und zaehlen NIE als
+    Hakenlauf (MF-1531).
+    """
+    repo = Path(repo)
+    pfad = laufbuch(repo, umgebung)
+    if pfad is None:
+        return ["git nicht befragbar - NICHTS geprueft."]
+    lage = ohne_vermerk(repo, umgebung)
+    if lage is None:
+        if not laufbuch_lesen(pfad):
+            return ["Laufbuch `%s` fehlt oder ist leer: die Betriebsfrage "
+                    "ist UNGEMESSEN. Das ist kein Verstoss - es beginnt mit "
+                    "dem ersten Lauf des Hakens." % pfad.name]
+        return ["git log nicht befragbar - NICHTS geprueft."]
+
+    seit, zahl, betrachtet, ohne = lage
+    nach = {s.get("commit"): s for s in
+            nachpruefungen_lesen(nachpruefung_pfad(repo, umgebung))}
 
     meldung = ["Laufbuch seit %s, %d Vermerk(e); Commits mit Anspruch "
                "seither: %d, davon ohne Vermerk: %d"
-               % (seit, len(eintraege), betrachtet, len(ohne))]
-    for z in ohne[:10]:
-        meldung.append("   ohne Vermerk: %s" % z)
+               % (seit, zahl, betrachtet, len(ohne))]
+    for kurz, nr, _ in ohne[:10]:
+        s = nach.get(kurz)
+        wenn = (" - nachgeprueft %s am %s"
+                % (s.get("nachpruefung", "?"),
+                   s.get("nachpruefung-zeitpunkt", "?"))) if s else ""
+        meldung.append("   ohne Vermerk: %s %s%s" % (kurz, nr, wenn))
     if ohne:
-        # Was „kein Vermerk" heissen KANN, und was nicht — sonst liest
-        # jemand eine Ursache hinein (MF-1530). Zwei der drei Ursachen sind
-        # seit MF-1530 unterscheidbar, weil die Bash des Hakens dann selbst
-        # eine Zeile schreibt (`ungeprueft-kein-python`,
-        # `ungeprueft-skript-fehlt`).
+        offen_ohne_satz = [k for k, _, _ in ohne if k not in nach]
+        meldung.append(
+            "   davon nachtraeglich geprueft: %d, ohne Satz: %d "
+            "(`--nachpruefen` legt sie an)"
+            % (len(ohne) - len(offen_ohne_satz), len(offen_ohne_satz)))
         meldung.append(
             "   Lesart: eine fehlende Zeile heisst - der Haken lief nicht. "
             "Die Faelle kein-Python und Skript-fehlt schreiben seit MF-1530 "
@@ -288,8 +446,12 @@ def betrieb(repo, umgebung: dict | None = None) -> list:
             "unterscheidbar bleibt ein unschreibbares Laufbuch: es kann "
             "nicht vermerken, dass es unschreibbar ist. Und ohne `git` "
             "findet der Haken es gar nicht (gemessen).")
+        meldung.append(
+            "   Und eine Nachpruefung ist KEIN Hakennachweis: sie sagt, dass "
+            "die Nummer gegen den bekannten Stand geprueft wurde, nicht dass "
+            "der Haken lief. Tor 72 ist eine lokale Vorpruefung; die "
+            "verbindliche Pruefung fehlt (P3-680).")
     return meldung
-
 
 def pruefe(betreff: str, belegt: dict, head: str = "") -> list:
     """-> Liste von Fehlerzeilen; leer heisst in Ordnung."""
@@ -457,9 +619,14 @@ def _selbsttest() -> int:
         alt["GIT_AUTHOR_DATE"] = "2026-01-01T00:00:00+00:00"
         _sp.run(["git", "commit", "-qm", "feat: alt (MF-4000)"], cwd=d,
                 env=alt, capture_output=True)
-        _sp.run(["git", "commit", "-q", "--allow-empty",
-                 "-m", "feat: erster (MF-4001)"], env=_gu(), cwd=d,
-                capture_output=True)
+        # MF-4001 entsteht ABSICHTLICH erst spaeter, im Fall selbst — nach
+        # dem Vermerk. So laeuft es in Wirklichkeit: der Haken schreibt,
+        # DANN legt git das Commit-Objekt an, also ist die Commit-Zeit nie
+        # kleiner als die Vermerk-Zeit. Die erste Fassung machte es
+        # umgekehrt und war damit **auf die Sekunde flackernd** — bei
+        # Sekundengleichheit gruen, sonst rot, weil `ohne_vermerk()` alles
+        # VOR dem ersten Vermerk ausnimmt. Ein Test, der manchmal gruen ist,
+        # prueft nichts.
         return d
 
     def meldung(repo) -> list:
@@ -481,6 +648,10 @@ def _selbsttest() -> int:
     faelle.append(("ein Vermerk laesst sich anhaengen",
                    lauf_vermerken(_r, "MF-4001", "ok", "abc1234",
                                   _gu()) is True))
+    # Erst jetzt das Commit — die Reihenfolge des echten Hakens.
+    _sp.run(["git", "commit", "-q", "--allow-empty",
+             "-m", "feat: erster (MF-4001)"], env=_gu(), cwd=_r,
+            capture_output=True)
     faelle.append(("das Laufbuch liegt im gemeinsamen git-Verzeichnis",
                    laufbuch(_r, _gu()) is not None
                    and laufbuch(_r, _gu()).parent.name == ".git"))
@@ -548,6 +719,68 @@ def _selbsttest() -> int:
     _b3 = meldung(_r)
     faelle.append(("der Commit VOR dem Laufbuch wird nicht gemeldet",
                    not any("MF-4000" in z for z in _b3)))
+
+    # 12 Die NACHPRUEFUNG (MF-1531). Sie darf nie als Hakennachweis zaehlen
+    #    — das ist ihr ganzer Sinn: „die Nummer ist geprueft" und „der Haken
+    #    lief" bleiben getrennte Aussagen (Eigentuemerentscheidung
+    #    2026-09-29). Geprueft wird deshalb VOR ALLEM die Gegenrichtung.
+    def nachricht(repo) -> list:
+        try:
+            return list(nachpruefen(repo, _gu()))
+        except BaseException:
+            return []
+
+    _np = nachpruefung_pfad(_r, _gu())
+    faelle.append(("Nachpruefungsdatei liegt neben dem Laufbuch",
+                   _np is not None
+                   and _np.parent == laufbuch(_r, _gu()).parent
+                   and _np.name != laufbuch(_r, _gu()).name))
+    # `_r` traegt seit Fall 11 genau einen Commit ohne Vermerk: MF-4002.
+    _n1 = nachricht(_r)
+    faelle.append(("Nachpruefung urteilt bestanden",
+                   any("MF-4002" in z and "bestanden" in z for z in _n1)))
+    _saetze = ohne_wurf(nachpruefungen_lesen, _np)
+    faelle.append(("der Satz traegt die ehrlichen Felder",
+                   isinstance(_saetze, list) and len(_saetze) == 1
+                   and _saetze[0].get("status") == "nachgeprueft"
+                   and _saetze[0].get("claim") == "MF-4002"
+                   and _saetze[0].get("urspruenglicher-hook-nachweis")
+                   == "fehlt"
+                   and _saetze[0].get("ursache") == "nicht-gemessen"
+                   and _saetze[0].get("nachpruefung") == "bestanden"))
+    _n2 = nachricht(_r)
+    faelle.append(("ein zweiter Aufruf legt keinen zweiten Satz an",
+                   len(ohne_wurf(nachpruefungen_lesen, _np)) == 1
+                   and any("liegt schon vor" in z for z in _n2)))
+    # DIE Gegenrichtung: der Commit bleibt „ohne Vermerk".
+    _b4 = meldung(_r)
+    faelle.append(("eine Nachpruefung ist KEIN Hakennachweis",
+                   any("ohne Vermerk: 1" in z for z in _b4)
+                   and any("MF-4002" in z for z in _b4)))
+    faelle.append(("und sie wird getrennt gemeldet",
+                   any("nachtraeglich geprueft: 1" in z for z in _b4)))
+
+    # Ein FEHLGESCHLAGENER Fall — ohne ihn saehe die Nachpruefung wie ein
+    #    Stempel aus. Zwei Commits mit derselben Nummer, keiner vermerkt.
+    _z = depot()
+    lauf_vermerken(_z, "MF-4010", "ok", "x", _gu())
+    for _ in range(2):
+        _sp.run(["git", "commit", "-q", "--allow-empty",
+                 "-m", "feat: doppelt (MF-4011)"], env=_gu(), cwd=_z,
+                capture_output=True)
+    _n3 = nachricht(_z)
+    faelle.append(("doppelte Nummer faellt in der Nachpruefung",
+                   any("fehlgeschlagen" in z for z in _n3)))
+    _s3 = ohne_wurf(nachpruefungen_lesen, nachpruefung_pfad(_z, _gu()))
+    faelle.append(("und der Befund steht im Satz",
+                   isinstance(_s3, list) and _s3
+                   and any("nachpruefung-befund" in s for s in _s3)))
+
+    # Ohne Laufbuch gibt es nichts nachzupruefen, und das ist kein Verstoss.
+    faelle.append(("ohne Laufbuch: nichts nachzupruefen",
+                   any("UNGEMESSEN" in z for z in nachricht(depot()))))
+    faelle.append(("Nachpruefungen lesen stuerzt bei Unsinn nicht ab",
+                   ohne_wurf(nachpruefungen_lesen, None) == []))
 
     # Die VERDRAHTUNG in `main()` — und sie ist der Kern der Sache. Alles
     #    darueber prueft `betrieb()` und `lauf_vermerken()` als Bausteine;
@@ -633,6 +866,13 @@ def main() -> int:
 
     if "--betrieb" in sys.argv:
         for z in betrieb(repo):
+            print("[Tor 72] %s" % z)
+        return 0
+
+    if "--nachpruefen" in sys.argv:
+        # Nachtraeglich pruefen, was ohne Hakennachweis entstanden ist — und
+        # das FESTHALTEN, ohne es als Hakenlauf auszugeben (MF-1531).
+        for z in nachpruefen(repo):
             print("[Tor 72] %s" % z)
         return 0
 
