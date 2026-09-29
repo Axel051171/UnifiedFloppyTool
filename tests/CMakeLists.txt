@@ -5292,7 +5292,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
             ${CMAKE_SOURCE_DIR}/src/dtc_components/src/bitbuffer.c
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c)   # MF-1522
+            ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
+            # MF-1532: `uft_gcr_ops.c` fuehrt seine Sektorentafel nicht mehr
+            # selbst, sondern ruft `uft_cbm_sectors_per_track()`. Gemessen
+            # ueber `build.ninja`: ZWEI Ziele brauchten die Geometrie, der
+            # Linker nannte nur das erste — dieses hier waere als naechstes
+            # gefallen.
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/dtc_components/include)
         set(TEST_LIBS "")
@@ -5311,6 +5317,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_gcr.c   # MF-1522
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c  # MF-1532
             ${CMAKE_SOURCE_DIR}/src/core/uft_zellregel.c
             ${CMAKE_SOURCE_DIR}/src/dtc_components/src/encoding.c)
         target_include_directories(${test_name} PRIVATE

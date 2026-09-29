@@ -18,36 +18,8 @@
       "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
     },
     {
-      "stelle": "src/formats/c64/uft_d64_file.c::sectors_per_track",
-      "zaehlweise": "43 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
       "stelle": "src/formats/c64/uft_d71_d81.c::d71_sectors",
       "zaehlweise": "71 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
-      "stelle": "src/formats/c64/uft_gcr_ops.c::sector_map",
-      "zaehlweise": "43 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
-      "stelle": "src/formats/cbm/uft_cbm_formats.c::d64_sectors_per_track",
-      "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
-    },
-    {
-      "stelle": "src/formats/cbm/uft_cbm_formats.c::d71_sectors_per_track",
-      "zaehlweise": "70 Eintraege, 0-basiert (Index 0 = Spur 1)"
-    },
-    {
-      "stelle": "src/formats/commodore/d71.c::spt",
-      "zaehlweise": "36 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
-      "stelle": "src/formats/d64/uft_d64_parser_v3.c::d64_sectors_per_track",
-      "zaehlweise": "41 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
-      "stelle": "src/formats/d71/uft_d71.c::d71_sectors_per_track",
-      "zaehlweise": "35 Eintraege, 0-basiert (Index 0 = Spur 1)"
     },
     {
       "stelle": "src/formats/d71/uft_d71_parser_v2.c::d71_sectors_per_track",
@@ -56,14 +28,6 @@
     {
       "stelle": "src/formats/g64/uft_g64_parser_v2.c::zone_sectors",
       "zaehlweise": "4 Zonen, absteigend (Zone 0 = Spur 31-42)"
-    },
-    {
-      "stelle": "src/formats/g64/uft_g64_parser_v3.c::g64_sectors_per_track",
-      "zaehlweise": "43 Eintraege, 1-basiert (Index 0 unbenutzt)"
-    },
-    {
-      "stelle": "src/formats/uft_d64_writer.c::sectors_per_track",
-      "zaehlweise": "41 Eintraege, 1-basiert (Index 0 unbenutzt)"
     },
     {
       "stelle": "src/formats/xdf/uft_xdf_api_impl.c::sectors_per_track",

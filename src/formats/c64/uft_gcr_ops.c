@@ -49,6 +49,7 @@
  */
 
 #include "uft/formats/c64/uft_gcr_ops.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,15 +87,10 @@ static inline uint8_t gcr_dekodieren_hoch(uint32_t quintett)
     return (v == UFT_GCR_UNGUELTIG) ? UFT_GCR_UNGUELTIG : (uint8_t)(v << 4);
 }
 
-/** Sectors per track for 1541 (track 1-42) */
-static const int sector_map[43] = {
-    0,
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21,  /*  1 - 10 */
-    21, 21, 21, 21, 21, 21, 21, 19, 19, 19,  /* 11 - 20 */
-    19, 19, 19, 19, 18, 18, 18, 18, 18, 18,  /* 21 - 30 */
-    17, 17, 17, 17, 17, 17, 17, 17, 17, 17,  /* 31 - 40 */
-    17, 17                                    /* 41 - 42 */
-};
+/* Sectors per track: bis MF-1532 eine eigene Tafel, jetzt
+ * `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)`. Vor dem Umhaengen
+ * gemessen: identisch mit der SSOT in allen 42 Spuren, 0 Abweichungen.
+ * Gehalten von `tests/test_cbm_geometry.c` (Altformen 43/41/40). */
 
 /** Track capacity for each density */
 static const size_t track_capacity[4] = { 6250, 6666, 7142, 7692 };
@@ -984,7 +980,7 @@ size_t gcr_expected_capacity(int track)
 int gcr_sectors_per_track(int track)
 {
     if (track < 1 || track > 42) return 0;
-    return sector_map[track];
+    return uft_cbm_sectors_per_track(UFT_CBM_1541, track);
 }
 
 /**

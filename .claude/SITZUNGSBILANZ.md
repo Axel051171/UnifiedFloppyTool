@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 16 von 31
+K0 dieser Sitzung: 18 von 36
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -990,3 +990,116 @@ Zielstand grün werden.
 Und die Bedingung des Eigentümers für MF-1530 ist erfüllt: dass Tor 72
 vorläufig nur eine lokale Vorprüfung ist, steht jetzt ausdrücklich im Baum.
 Gepusht ist weiterhin nichts.
+
+### Nachtrag 14 zur Bilanz 2026-09-29 — neun Zonentafeln auf die SSOT, und der Umfang war größer als die Vorlage
+
+Freigegeben als „bau es". Umgehängt sind **acht Dateien mit neun Tafeln und
+21 Zugriffen** auf `uft_cbm_sectors_per_track()`, das als SSOT in
+`src/formats/cbm/uft_cbm_geometry.c:153` liegt und von 16 Dateien schon
+gerufen wurde.
+
+**Gemessen, vorher und nachher:**
+
+| | vorher | nachher |
+|---|---|---|
+| Tafeln mit dem CBM-Zonenmuster im Baum | 17 | **9** |
+| K3 überzählige Kopien | 97 | **91** |
+| `audit_cbm_zonen.py` Fundstellen | 23 | **14** |
+| dort Zählweisen | 9 | **6** |
+| Bau / ctest | — | 0 Fehler, **602/602** |
+
+Die entscheidende Vorprüfung stand vor dem ersten Eingriff: **alle Tafeln
+stimmten mit der SSOT überein, 0 Abweichungen** — je Spur, je Versatz
+geprüft. Wäre eine abgewichen, wäre das ein Befund gewesen und keine
+Aufräumarbeit (MF-1177 Satz 1). Der Zeuge dafür existierte schon:
+`tests/test_cbm_geometry.c` hält die drei Altformen 43/41/40 gegen die SSOT
+und benennt die Gefahr selbst — „same numbers, shifted".
+
+```
+ 32. **Der Linker nannte EIN Ziel, gemessen waren es zwei.**
+     `test_gcr_tafeln` fiel mit `undefined reference`, weil
+     `uft_gcr_ops.c` seine Tafel nicht mehr selbst fuehrt und das Ziel
+     `uft_cbm_geometry.c` nicht linkte. | TOR (Vollbau/Linker)
+     | Blastradius ueber `build.ninja` gemessen statt das genannte Ziel
+       geflickt: `test_zellregel` waere als naechstes gefallen. Beide
+       eingetragen, danach 0 unversorgt in BEIDEN Messungen (ninja und
+       CMake-Text). Dieselbe Klasse wie MF-1522, wo der Linker eines nannte
+       und neun fehlten — deshalb wird hier nicht mehr geflickt.
+
+ 33. **Meine Suche nach Zonentafeln hat eine übersehen, und zwar durch ihr
+     eigenes Fenster.** `d71_sectors_per_track` in `cbm/uft_cbm_formats.c`
+     hat **70** Einträge — die Zonenreihe zweimal — und mein Längenfenster
+     war 30 bis 60. Ein Muster, dessen Grenzen aus den bekannten Fällen
+     stammen, sieht den nächsten nicht | Mensch (beim Lesen der
+     Nachbarzeilen, nicht von der Messung) | mit umgehängt; der Grund steht
+       im Kommentar der Stelle, damit die Lehre am Fund klebt
+
+ 34. Erste Fassung derselben Suche zählte die Ziffern aus KOMMENTAREN mit —
+     Längen von 53 und 64 für eine 35-Spur-Tafel | Mensch (die Zahl passte
+     nicht zur Sache) | über `scripts/c_lex.py` gelesen statt über rohen
+       Text. Das Werkzeug existiert seit MF-1171 genau dafür und lag
+       ungenutzt; P3-679 hatte es zwei Stunden vorher benannt
+
+ 35. Zweite Fassung nahm nur Klammergruppen der OBERSTEN Ebene — und
+     Header wickeln alles in `extern "C" { … }`, womit die ganze Datei eine
+     Gruppe war. Drei Tafeln fehlten still | Mensch (sie standen in der
+     ersten Messung und in der zweiten nicht) | jede balancierte Gruppe,
+       die nur Zahlen und Kommas enthält; Verschachtelung erledigt sich
+       damit von selbst
+```
+
+**K0: 17 von 35.**
+
+**Ein Befund, der kein Aufräumen ist.** `d64_sectors_per_track` bezeichnete
+im Baum **drei verschiedene Dinge mit zwei Basen**: die Funktion in
+`uft_d64_writer.c`, eine 0-basierte Tafel in `d64/uft_d64_parser_v3.c`, eine
+1-basierte in `cbm/uft_cbm_formats.c` (`[t - 1]`). Genau die Verwechslung,
+deren Abweichung wie ein Datenfehler aussieht; der Grund steht jetzt an allen
+drei Stellen im Kommentar.
+
+**Was mit Grund stehen bleibt** (9 Tafeln):
+
+* **3 öffentliche Header** (`uft_bam_editor.h`, `uft_c64_protection.h`,
+  `uft_cbm_gcr.h`) — dort würde eine Include-Abhängigkeit in die
+  öffentliche Schnittstelle wandern. Eigener Schritt, eigene Vorlage.
+* **`src/flux/uft_flux_decoder.c::c64_sectors_per_track`** — **null
+  Zugriffe**, also tot. Das wäre ein Löschen und kein Umhängen, und Löschen
+  von Code braucht eine Eigentümerentscheidung (MF-1077). Nicht angefasst.
+* **`src/formats/xdf/uft_xdf_api_impl.c`** — `import_d64()` ist
+  `__attribute__((unused))`, Rumpf „Would copy sector data here".
+* **4 Test-Sollwerte**, darunter die drei `legacy_40/41/43` — die sind der
+  Zeuge und müssen unabhängig bleiben (MF-644).
+
+### Nachtrag 15 — der Commit MF-1532 wurde abgewiesen, wegen einer Zeilennummer
+
+```
+ 36. **`docs/selbsttest_baseline.txt` ist zeilennummer-basiert, und meine
+     Kommentare haben die Zeilen verschoben.** Die Grundlinie führte
+     `uft_d64_parser_v3.c:1905` und `uft_g64_parser_v3.c:2037`; gemessen
+     stehen die Wächter jetzt auf 1907 und 2038. `check_consistency` hat den
+     Commit mit 4 Befunden abgewiesen — zwei „Block nie übersetzt", zwei
+     „Grundlinienzeile ist weg", alle vier dieselbe Ursache.
+     | TOR (check_consistency im pre-commit) | die zwei Zeilennummern
+       nachgezogen, Tor danach `0 neu`
+
+     **Und ich habe genau davor heute gewarnt** — die Nachbarsitzung bekam
+     von mir den Hinweis, dass diese Grundlinie an Zeilennummern hängt und
+     bei jeder Einfügung darüber bricht. Dann hat sie mich getroffen. Eine
+     Warnung, die man weitergibt und selbst nicht befolgt, ist keine
+     Erkenntnis, sondern eine Notiz.
+```
+
+**K0: 18 von 36.**
+
+Zusätzlich zum Fundus:
+  * **Die Selbsttest-Grundlinie sollte nicht an Zeilennummern hängen.**
+    Schlüssel wäre `pfad:MAKRO` — die Zeile ist Zusatzinformation, nicht
+    Identität. Dieselbe Bauform, die MF-1506 beim Konstanten-Manifest
+    gewählt hat (`datei::symbol` statt einer Zahl), und der Grund ist
+    derselbe: eine Kennung, die bei fremder Arbeit oberhalb bricht, erzeugt
+    Befunde ohne Bezug zum Inhalt. `scripts/check_consistency.py` nennt
+    diese Klasse selbst: „Ein Tor, das aus einem Grund ohne Bezug zum
+    Inhalt schreit, wird ignoriert — und fängt dann auch die echten Fälle
+    nicht mehr." Bewegt keine der neun Kennzahlen, also Fundus; was es
+    öffnet, ist der zweite Fall, in dem jemand die Zahl nachzieht statt den
+    Schlüssel zu ändern (dies war der erste, gemessen).

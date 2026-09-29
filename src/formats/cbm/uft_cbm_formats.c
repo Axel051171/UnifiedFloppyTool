@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Constants
@@ -160,29 +161,28 @@ typedef struct {
 /**
  * @brief D64 sectors per track (1-40)
  */
-static const int d64_sectors_per_track[] = {
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,  /* 1-17 */
-    19, 19, 19, 19, 19, 19, 19,                                          /* 18-24 */
-    18, 18, 18, 18, 18, 18,                                              /* 25-30 */
-    17, 17, 17, 17, 17,                                                  /* 31-35 */
-    17, 17, 17, 17, 17                                                   /* 36-40 */
-};
+/* Die Tafel stand hier bis MF-1532 und war **1-BASIERT benutzt**
+ * (`[t - 1]` fuer Spur t) — waehrend derselbe Name in
+ * `d64/uft_d64_parser_v3.c` eine 0-basierte Tafel bezeichnete und in
+ * `uft_d64_writer.c` eine FUNKTION. Eine Groesse, drei Rechnungen, zwei
+ * Basen: genau die Verwechslung, deren Abweichung wie ein Datenfehler
+ * aussieht (MF-1177).
+ *
+ * Jetzt `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)` mit der Spur
+ * selbst, nicht mit ihrem Index. Vor dem Umhaengen gemessen: die Tafel
+ * stimmte mit der SSOT in allen 40 Spuren ueberein, 0 Abweichungen. */
 
 /**
  * @brief D71 sectors per track (side 1: 1-35, side 2: 36-70)
  */
-static const int d71_sectors_per_track[] = {
-    /* Side 1 */
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    19, 19, 19, 19, 19, 19, 19,
-    18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17,
-    /* Side 2 */
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    19, 19, 19, 19, 19, 19, 19,
-    18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17
-};
+/* Auch diese Tafel ist seit MF-1532 fort: `uft_cbm_sectors_per_track(
+ * UFT_CBM_1571, spur)` deckt beide Seiten (Spur 1-70) ab.
+ *
+ * Sie hat meine eigene Suche nach Zonentafeln UEBERLEBT, und das gehoert
+ * gesagt: mein Laengenfenster war 30 bis 60 Eintraege, diese hat **70** —
+ * die Zonenreihe zweimal. Ein Muster, dessen Grenzen aus den bekannten
+ * Faellen stammen, sieht den naechsten nicht (Klasse MF-1522). Gefunden
+ * beim Lesen der Nachbarzeilen, nicht von der Messung. */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Helper Functions
@@ -269,10 +269,10 @@ static long d64_sector_offset(int track, int sector)
     if (track < 1 || track > 40) return -1;
     
     for (int t = 1; t < track; t++) {
-        offset += d64_sectors_per_track[t - 1] * SECTOR_SIZE;
+        offset += uft_cbm_sectors_per_track(UFT_CBM_1541, t) * SECTOR_SIZE;
     }
     
-    if (sector < 0 || sector >= d64_sectors_per_track[track - 1]) {
+    if (sector < 0 || sector >= uft_cbm_sectors_per_track(UFT_CBM_1541, track)) {
         return -1;
     }
     
@@ -289,10 +289,10 @@ static long d71_sector_offset(int track, int sector)
     if (track < 1 || track > 70) return -1;
     
     for (int t = 1; t < track; t++) {
-        offset += d71_sectors_per_track[t - 1] * SECTOR_SIZE;
+        offset += uft_cbm_sectors_per_track(UFT_CBM_1571, t) * SECTOR_SIZE;
     }
     
-    if (sector < 0 || sector >= d71_sectors_per_track[track - 1]) {
+    if (sector < 0 || sector >= uft_cbm_sectors_per_track(UFT_CBM_1571, track)) {
         return -1;
     }
     
@@ -723,7 +723,7 @@ int uft_cbm_disk_create_d64(uft_cbm_disk_t *disk, const char *disk_name)
     
     /* Initialize BAM entries */
     for (int t = 1; t <= D64_TRACKS; t++) {
-        int sectors = d64_sectors_per_track[t - 1];
+        int sectors = uft_cbm_sectors_per_track(UFT_CBM_1541, t);
         uint8_t *entry = bam + 4 + (t - 1) * 4;
         
         if (t == D64_DIR_TRACK) {

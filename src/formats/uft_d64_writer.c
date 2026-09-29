@@ -10,21 +10,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Track Layout Tables
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* Sectors per track (1-indexed) */
-static const int sectors_per_track[41] = {
-    0,  /* Track 0 doesn't exist */
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21,  /* Tracks 1-10 */
-    21, 21, 21, 21, 21, 21, 21,              /* Tracks 11-17 */
-    19, 19, 19, 19, 19, 19, 19,              /* Tracks 18-24 */
-    18, 18, 18, 18, 18, 18,                  /* Tracks 25-30 */
-    17, 17, 17, 17, 17,                      /* Tracks 31-35 */
-    17, 17, 17, 17, 17                       /* Tracks 36-40 (extended) */
-};
+/* Die Sektorentafel stand hier bis MF-1532 als eigene Kopie; sie ist jetzt
+ * `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)`. Vor dem Umhaengen
+ * gemessen: identisch mit der SSOT in allen 40 Spuren, 0 Abweichungen.
+ *
+ * Bemerkenswert an DIESER Stelle: der Name `d64_sectors_per_track` bezeichnet
+ * im Baum drei verschiedene Dinge — die Funktion unten, eine 0-basierte
+ * Tafel in `d64/uft_d64_parser_v3.c` und eine 1-basierte in
+ * `cbm/uft_cbm_formats.c` (dort `[t - 1]`). Eine Groesse, drei Rechnungen,
+ * zwei Basen (MF-1177). */
 
 /* Track start offsets in D64 file */
 static const int track_offsets[41] = {
@@ -142,7 +143,7 @@ struct d64_writer {
 int d64_sectors_per_track(int track)
 {
     if (track < 1 || track > 40) return 0;
-    return sectors_per_track[track];
+    return uft_cbm_sectors_per_track(UFT_CBM_1541, track);
 }
 
 d64_speed_zone_t d64_track_zone(int track)

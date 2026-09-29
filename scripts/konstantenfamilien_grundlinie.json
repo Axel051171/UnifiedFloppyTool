@@ -41,25 +41,6 @@
       ]
     },
     {
-      "signatur": "916ba0ef75af",
-      "laenge": 41,
-      "beginn": [
-        0,
-        21,
-        21,
-        21,
-        21,
-        21
-      ],
-      "stellen": [
-        "include/uft/protection/uft_c64_protection.h::c64_sectors_per_track",
-        "include/uft/uft_cbm_gcr.h::cbm_gcr_sectors_per_track",
-        "src/formats/d64/uft_d64_parser_v3.c::d64_sectors_per_track",
-        "src/formats/uft_d64_writer.c::sectors_per_track",
-        "tests/test_cbm_geometry.c::legacy_41"
-      ]
-    },
-    {
       "signatur": "aacb95173805",
       "laenge": 4,
       "beginn": [
@@ -74,25 +55,6 @@
         "tests/test_marginal_data_preserved.c::x",
         "tests/test_protection_detection.c::serial",
         "tests/test_provenance_chain.c::data"
-      ]
-    },
-    {
-      "signatur": "dbb2b4a7c2a6",
-      "laenge": 43,
-      "beginn": [
-        0,
-        21,
-        21,
-        21,
-        21,
-        21
-      ],
-      "stellen": [
-        "include/uft/formats/c64/uft_bam_editor.h::bam_sectors_per_track",
-        "src/formats/c64/uft_d64_file.c::sectors_per_track",
-        "src/formats/c64/uft_gcr_ops.c::sector_map",
-        "src/formats/g64/uft_g64_parser_v3.c::g64_sectors_per_track",
-        "tests/test_cbm_geometry.c::legacy_43"
       ]
     },
     {
@@ -112,25 +74,6 @@
         "src/formats/nib/uft_nib_parser_v2.c::dos33_interleave",
         "tests/differential/uft_flux_decode.c::apple_dos33_phys_to_log",
         "tests/test_nib_gegen_a2nibblize.c::PHYS2LOG"
-      ]
-    },
-    {
-      "signatur": "fa78b63b8e35",
-      "laenge": 40,
-      "beginn": [
-        21,
-        21,
-        21,
-        21,
-        21,
-        21
-      ],
-      "stellen": [
-        "src/flux/uft_flux_decoder.c::c64_sectors_per_track",
-        "src/formats/cbm/uft_cbm_formats.c::d64_sectors_per_track",
-        "src/formats/xdf/uft_xdf_api_impl.c::sectors_per_track",
-        "tests/differential/uft_flux_decode.c::d64_spt",
-        "tests/test_cbm_geometry.c::legacy_40"
       ]
     },
     {
@@ -238,6 +181,24 @@
       ]
     },
     {
+      "signatur": "fa78b63b8e35",
+      "laenge": 40,
+      "beginn": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "src/flux/uft_flux_decoder.c::c64_sectors_per_track",
+        "src/formats/xdf/uft_xdf_api_impl.c::sectors_per_track",
+        "tests/differential/uft_flux_decode.c::d64_spt",
+        "tests/test_cbm_geometry.c::legacy_40"
+      ]
+    },
+    {
       "signatur": "428a7191ca19",
       "laenge": 4,
       "beginn": [
@@ -297,6 +258,23 @@
         "tests/test_td0_error_marks.c::end",
         "tests/test_td0_kommentarflag.c::ende",
         "tests/test_verify_after_ist_verdrahtet.c::ende"
+      ]
+    },
+    {
+      "signatur": "916ba0ef75af",
+      "laenge": 41,
+      "beginn": [
+        0,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "include/uft/protection/uft_c64_protection.h::c64_sectors_per_track",
+        "include/uft/uft_cbm_gcr.h::cbm_gcr_sectors_per_track",
+        "tests/test_cbm_geometry.c::legacy_41"
       ]
     },
     {
@@ -838,6 +816,22 @@
       "stellen": [
         "tests/test_st_reihenfolge_bericht.c::versetzt",
         "tests/test_st_spiralfaktor.c::b"
+      ]
+    },
+    {
+      "signatur": "dbb2b4a7c2a6",
+      "laenge": 43,
+      "beginn": [
+        0,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "stellen": [
+        "include/uft/formats/c64/uft_bam_editor.h::bam_sectors_per_track",
+        "tests/test_cbm_geometry.c::legacy_43"
       ]
     },
     {

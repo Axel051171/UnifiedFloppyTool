@@ -43,6 +43,7 @@
  * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
  * eine beliebige Adresse gefunden. */
 #include "uft/formats/uft_v3_parsers.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 #include <math.h>
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -129,14 +130,14 @@
 #define G64_HEADER_MARKER       0x08        /* Sector header ID */
 #define G64_DATA_MARKER         0x07        /* Sector data ID */
 
-/* Sectors per track (same as D64) */
-static const uint8_t g64_sectors_per_track[43] = {
-    0,
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    19, 19, 19, 19, 19, 19, 19,
-    18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17
-};
+/* Sectors per track: die Tafel stand hier bis MF-1532 als eigene Kopie.
+ *
+ * Sie ist jetzt `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)` — dieselbe
+ * Rechnung, die 16 andere Dateien schon rufen. Vor dem Umhaengen gemessen:
+ * die Tafel stimmte mit der SSOT in allen 42 Spuren ueberein (0
+ * Abweichungen), das Umhaengen ist also verhaltensgleich. Gehalten wird es
+ * von `tests/test_cbm_geometry.c`, das die drei Altformen 43/41/40 gegen
+ * die SSOT haelt und den Versatz ausdruecklich benennt. */
 
 /* Speed zone for track */
 static const uint8_t g64_speed_zone[43] = {
@@ -598,7 +599,7 @@ static inline bool g64_is_half_track(uint8_t half_track) {
  */
 static uint8_t g64_get_sectors(uint8_t full_track) {
     if (full_track < 1 || full_track > 42) return 0;
-    return g64_sectors_per_track[full_track];
+    return (uint8_t)uft_cbm_sectors_per_track(UFT_CBM_1541, full_track);
 }
 
 /**
