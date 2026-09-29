@@ -332,9 +332,77 @@ TEST(export_json_escapes_free_text) {
     uft_prov_free(ch);
 }
 
+/* ── MF-1604 (P3-704): a hash nobody measured is not written as one ──
+ *
+ * uft_prov_add() takes ONE data buffer — the input. It then copied the
+ * input hash into output_hash, and the export wrote both as SHA-256 values:
+ * an output nobody hashed, reported as measured. An entry without data
+ * (the OTDR panel's only call passes NULL, 0) kept 64 zero digits in
+ * input_hash, which the export printed exactly like a real hash. Found in
+ * the review of the UFT_RecoveryCaseEngine_v1 package (neue-ideen, t4). */
+
+static int alles_null(const uint8_t *h)
+{
+    int any = 0;
+    for (int i = 0; i < UFT_PROV_HASH_SIZE; i++) any |= h[i];
+    return any == 0;
+}
+
+static int export_lesen(const uft_provenance_chain_t *ch, char *buf, size_t cap)
+{
+    const char *path = "uft_prov_test_mf1604.json";
+    remove(path);
+    if (uft_prov_export_json(ch, path) != 0) return 0;
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+    size_t n = fread(buf, 1, cap - 1, f);
+    fclose(f);
+    buf[n] = '\0';
+    remove(path);
+    return 1;
+}
+
+TEST(output_hash_is_not_invented) {
+    uft_provenance_chain_t *ch = uft_prov_create();
+    ASSERT(ch != NULL);
+    const uint8_t d[] = { 0x10, 0x20, 0x30 };
+    ASSERT(uft_prov_add(ch, UFT_PROV_CONVERT, d, sizeof(d), "convert", "op") == 0);
+    const uft_prov_entry_t *e = &ch->entries[0];
+    ASSERT(!alles_null(e->input_hash));          /* the input WAS hashed */
+    ASSERT(alles_null(e->output_hash));          /* the output was not */
+
+    char buf[8192];
+    ASSERT(export_lesen(ch, buf, sizeof buf));
+    ASSERT(strstr(buf, "\"output_hash\": null") != NULL);
+    const char *ende = js_value(buf, 0);
+    ASSERT(ende != NULL && *js_ws(ende) == '\0');   /* still one JSON value */
+    ASSERT(uft_prov_verify(ch));
+    uft_prov_free(ch);
+}
+
+TEST(missing_input_is_null_not_a_zero_hash) {
+    uft_provenance_chain_t *ch = uft_prov_create();
+    ASSERT(ch != NULL);
+    ASSERT(uft_prov_add(ch, UFT_PROV_ANALYZE, NULL, 0, "analyze", "op") == 0);
+    /* a size without data is not a measured size */
+    ASSERT(uft_prov_add(ch, UFT_PROV_ANALYZE, NULL, 512, "analyze", "op") == 0);
+    ASSERT(ch->entries[1].data_size == 0);
+
+    char buf[8192];
+    ASSERT(export_lesen(ch, buf, sizeof buf));
+    ASSERT(strstr(buf, "\"input_hash\": null") != NULL);
+    ASSERT(strstr(buf, "0000000000000000000000000000000000000000000000000000000000000000") == NULL);
+    const char *ende = js_value(buf, 0);
+    ASSERT(ende != NULL && *js_ws(ende) == '\0');
+    ASSERT(uft_prov_verify(ch));
+    uft_prov_free(ch);
+}
+
 int main(void) {
     printf("=== Improvement: forensic provenance chain-of-custody "
            "(P3.3 / #110) ===\n");
+    RUN(output_hash_is_not_invented);
+    RUN(missing_input_is_null_not_a_zero_hash);
     RUN(export_json_escapes_free_text);
     RUN(create_yields_empty_valid_chain);
     RUN(add_records_step_metadata);

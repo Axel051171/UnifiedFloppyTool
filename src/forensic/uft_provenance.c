@@ -152,10 +152,14 @@ int uft_prov_add(uft_provenance_chain_t *chain,
     memset(e, 0, sizeof(*e));
     e->action = action;
     e->timestamp = time(NULL);
-    e->data_size = (uint32_t)data_size;
+    /* MF-1604 (P3-704): only what was passed is measured. A size without
+     * data is not a measured size, and this function never sees output
+     * data — output_hash used to be a copy of input_hash, exported as if
+     * the output had been hashed. It stays unset (all zero), and the
+     * export writes an unset hash as null. */
+    e->data_size = data ? (uint32_t)data_size : 0u;
 
-    if (data && data_size > 0) hash_bytes(data, data_size, e->input_hash);
-    memcpy(e->output_hash, e->input_hash, UFT_PROV_HASH_SIZE);
+    if (data) hash_bytes(data, data_size, e->input_hash);
 
     if (description) strncpy(e->description, description, sizeof(e->description)-1);
     if (operator_id) strncpy(e->operator_id, operator_id, sizeof(e->operator_id)-1);
@@ -230,6 +234,22 @@ static void hex_bytes(const uint8_t *b, size_t n, char *out) {
     out[n*2] = '\0';
 }
 
+/* MF-1604 (P3-704): a hash field — null when nothing was hashed. All
+ * zero is the unset value (uft_prov_add() memsets the entry); SHA-256
+ * yields it for no input anyone can find, so it cannot hide a real hash. */
+static void prov_json_hash(FILE *f, const char *key, const uint8_t *h)
+{
+    int gesetzt = 0;
+    for (int i = 0; i < UFT_PROV_HASH_SIZE; i++) gesetzt |= h[i];
+    if (!gesetzt) {
+        fprintf(f, "      \"%s\": null,\n", key);
+        return;
+    }
+    char hex[UFT_PROV_HASH_SIZE * 2 + 1];
+    hex_bytes(h, UFT_PROV_HASH_SIZE, hex);
+    fprintf(f, "      \"%s\": \"%s\",\n", key, hex);
+}
+
 /* MF-1520 (P3-672): a free-text field as a JSON string. Before, tool,
  * operator, description and media_fingerprint went out with a bare "%s";
  * a file name with '"' or '\' made the audit artifact invalid JSON
@@ -270,10 +290,8 @@ int uft_prov_export_json(const uft_provenance_chain_t *chain,
         fprintf(f, "    {\n");
         fprintf(f, "      \"action\": \"%s\",\n", uft_prov_action_name(e->action));
         fprintf(f, "      \"timestamp\": %lld,\n", (long long)e->timestamp);
-        hex_bytes(e->input_hash, UFT_PROV_HASH_SIZE, hex);
-        fprintf(f, "      \"input_hash\": \"%s\",\n", hex);
-        hex_bytes(e->output_hash, UFT_PROV_HASH_SIZE, hex);
-        fprintf(f, "      \"output_hash\": \"%s\",\n", hex);
+        prov_json_hash(f, "input_hash", e->input_hash);
+        prov_json_hash(f, "output_hash", e->output_hash);
         hex_bytes(e->chain_hash, UFT_PROV_HASH_SIZE, hex);
         fprintf(f, "      \"chain_hash\": \"%s\",\n", hex);
         fprintf(f, "      \"data_size\": %u,\n", e->data_size);
