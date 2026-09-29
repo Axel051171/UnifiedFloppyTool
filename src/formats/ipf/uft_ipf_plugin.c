@@ -24,6 +24,13 @@
  *     encoder_type != SPS weiter -2 antwortet — gerufen nur noch von
  *     Tests (`test_ipf_air_accessors`, `test_ipf_zellstrom`), von keinem
  *     Produktivpfad.
+ *   - CT-Raw (`.ct`/`.ctr`, SPS raw dumps; MF-1614): the same CAPS record
+ *     chain with TRCK instead of IMGE records. Read ONLY through the
+ *     capsimg helper (tools/capsimg-helper/, MF-1613); without it,
+ *     open() says so with UFT_ERR_NOT_SUPPORTED instead of calling a
+ *     valid file invalid. capsimg's "flakey" bit is no protection
+ *     finding on CT-Raw (set on every track, also of unprotected disks).
+ *     Sectors from the helper's cells: not yet (0 sectors per track).
  *
  * Honest forensic stance: no fabricated bitstream content. Where the
  * payload cannot yet be reconstructed (CAPS path, or full track
@@ -84,6 +91,46 @@ static bool ipf_plugin_probe(const uint8_t *data, size_t size,
     return false;
 }
 
+static uint32_t ipf_be32(const uint8_t *p)
+{
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16)
+         | ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
+}
+
+/* MF-1614: is this a CT-Raw file (SPS raw dump)? CT-Raw uses the IPF's
+ * CAPS record chain, but carries TRCK records instead of IMGE. Measured
+ * on three images from archive.org (collection `flux_floppies`, local
+ * only): CAPS 1, then DATA/TRCK pairs, 168 of each, and the chain ends
+ * EXACTLY at the end of the file. A DATA record is followed by its
+ * payload; the payload length is the u32 at record offset 12 (the same
+ * field an IPF's DATA record has). fluxfox names TRCK among the CAPS
+ * chunk types (src/file_parsers/ipf/chunk.rs).
+ *
+ * Only a chain that is complete counts: a broken IPF must not be passed
+ * off as CT-Raw, so any inconsistent length answers "no". */
+static bool ipf_ist_ctraw(const uint8_t *d, size_t n)
+{
+    size_t o = 0;
+    unsigned trck = 0;
+    if (n < 12 || memcmp(d, "CAPS", 4) != 0) return false;
+    while (o < n) {
+        if (n - o < 12) return false;
+        uint32_t len = ipf_be32(d + o + 4);
+        if (len < 12 || len > n - o) return false;
+        size_t next = o + len;
+        if (memcmp(d + o, "IMGE", 4) == 0) return false;
+        if (memcmp(d + o, "TRCK", 4) == 0) trck++;
+        if (memcmp(d + o, "DATA", 4) == 0) {
+            if (len < 16) return false;
+            uint32_t dl = ipf_be32(d + o + 12);
+            if (dl > n - next) return false;
+            next += dl;
+        }
+        o = next;
+    }
+    return trck > 0;
+}
+
 typedef struct {
     uint8_t        *data;     /* original file bytes (kept for future re-parse) */
     size_t          size;
@@ -98,6 +145,10 @@ typedef struct {
      * forensisches Ergebnis weitergibt, muss sagen koennen, woher es
      * kommt. */
     bool                   via_helper;
+    /* MF-1614: the file is CT-Raw (see ipf_ist_ctraw). Then capsimg's
+     * "flakey" bit is no protection finding — see read_track. */
+    bool                   ctraw;
+    bool                   ctraw_flakey_gemeldet;
     uft_ipf_helper_reply_t reply;
     char                   idx_path[512];
     char                   blob_path[512];
@@ -147,6 +198,7 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     ipf_data_t *p = calloc(1, sizeof(ipf_data_t));
     if (!p) { free(data); return UFT_ERR_MEMORY; }
     p->data = data; p->size = sz;
+    p->ctraw = ipf_ist_ctraw(data, sz);
 
     /* ── MF-917: zuerst die Prozessgrenze ───────────────────────────
      *
@@ -192,6 +244,22 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
         /* Ein eingerichteter Helfer, der nicht traegt, ist ein
          * Ereignis — nicht etwas, das man still uebergeht. */
         UFT_WARN("IPF-Helfer nicht verwendbar: %s", herr);
+    }
+
+    /* MF-1614: CT-Raw is a valid file that UFT's own reader does not
+     * interpret. Here stood the parse below, which answered
+     * UFT_ERR_FORMAT_INVALID (-25) — a false statement about the file.
+     * The answer is now "not supported on this path", with the path
+     * that does read it. */
+    if (p->ctraw) {
+        UFT_WARN("'%s' ist eine CT-Raw-Aufnahme (SPS, CAPS-Behaelter mit "
+                 "TRCK-Saetzen). UFTs eigener IPF-Leser deutet sie nicht; "
+                 "lesbar nur ueber den capsimg-Helfer. %s", path,
+                 uft_ipf_helper_path()
+                   ? "Der eingerichtete Helfer trug nicht (Grund oben)."
+                   : "Helfer einrichten: " UFT_IPF_HELPER_ENV "=<pfad>");
+        free(data); free(p);
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     p->air = ipf_air_alloc();
@@ -327,7 +395,21 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         track->avg_bit_cell_ns       = 2000.0;
         track->raw_bits              = ht->bits;
 
-        if ((ht->flags & IPF_PLUGIN_TF_FUZZY) || ht->fuzzy) {
+        if (((ht->flags & IPF_PLUGIN_TF_FUZZY) || ht->fuzzy) && p->ctraw) {
+            /* MF-1614: in an IPF, the SPS marks weak bits itself and
+             * bit 0 carries that mark. In CT-Raw it does not mean that:
+             * capsimg sets "flakey" on EVERY track of all three measured
+             * CT-Raw images, including an unprotected Workbench 1.3 disk
+             * and its unformatted tracks. Turning it into
+             * UFT_TRACK_PROTECTED made a protection finding nobody made.
+             * The bit is named once and makes no claim. */
+            if (!p->ctraw_flakey_gemeldet) {
+                UFT_INFO("CT-Raw: capsimg meldet 'flakey' (Spur %d/%d) - "
+                         "bei CT-Raw auch auf ungeschuetzten Disketten "
+                         "gesetzt, daher keine Schutzaussage", cyl, head);
+                p->ctraw_flakey_gemeldet = true;
+            }
+        } else if ((ht->flags & IPF_PLUGIN_TF_FUZZY) || ht->fuzzy) {
             track->status |= (uint32_t)UFT_TRACK_FUZZY |
                              (uint32_t)UFT_TRACK_PROTECTED;
             track->copy_protected = true;

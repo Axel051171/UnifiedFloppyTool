@@ -903,6 +903,16 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_ipf_ctraw")
+        # MF-1614: CT-Raw is named instead of called invalid, and
+        # capsimg's "flakey" bit on CT-Raw makes no protection finding.
+        # The test binary doubles as a protocol-v1 fake helper, so the
+        # plugin runs through a real process boundary.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_zx_und_pc98_echte_abbilder")
         # MF-1075: die Abbilder lagen IN ARCHIVEN im Baum - `find`
         # sieht dort nicht hinein, und deshalb meldete die
