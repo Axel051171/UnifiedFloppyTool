@@ -15,6 +15,15 @@
  *   - CAPS-encoded IPFs (encoder_type=1): geometry + IMGE metadata
  *     only — data-element layout for CAPS encoder is not yet decoded
  *     in uft_ipf_air.c. read_track() returns metadata + raw_data=NULL.
+ *     BERICHTIGT MF-1606: das gilt seit MF-1373 nicht mehr. Die
+ *     Datenelemente werden fuer BEIDE Kodierer gelesen (beim CAPS-Kodierer
+ *     in Byte, Flaggen ignoriert), und `tests/test_ipf_sektorebene.c`
+ *     liest aus den CAPS-kodierten `disk_analyse_uftk_*.ipf` jeden Sektor
+ *     mit gueltiger Pruefsumme; seit MF-1606 wird daraus auch ein ADF.
+ *     Uebrig von der alten Grenze ist `ipf_air_get_track_raw()`, das fuer
+ *     encoder_type != SPS weiter -2 antwortet — gerufen nur noch von
+ *     Tests (`test_ipf_air_accessors`, `test_ipf_zellstrom`), von keinem
+ *     Produktivpfad.
  *
  * Honest forensic stance: no fabricated bitstream content. Where the
  * payload cannot yet be reconstructed (CAPS path, or full track

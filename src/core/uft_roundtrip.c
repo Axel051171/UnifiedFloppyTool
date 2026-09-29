@@ -410,6 +410,20 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "timing and weak bits are lost; an incomplete disk is refused "
       "(MF-1437)", 0u },
 
+    /* MF-1606 (P3-707): IPF -> ADF. Die Tafel fuehrte das Paar, die Matrix
+     * nicht und der Verteiler hatte keinen Wandler — MF-567 hatte das
+     * Urteil genau deshalb entfernt. Jetzt setzt ein Wandler die Sektoren,
+     * die das IPF-Plugin fuer BEIDE Kodierer liefert (MF-1373), an ihren
+     * Platz; kein zweiter Dekoder. Gemessen an FREMDER Hand (disk-analyse,
+     * keirf/disk-utilities, Unlicense, CAPS-Kodierer) aus einer
+     * selbstbenennenden UFT-Quelle, siehe tests/test_ipf_nach_adf.c. */
+    { UFT_FORMAT_IPF, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-1606: AmigaDOS sectors placed as the IPF plugin decodes them "
+      "(both encoders); an incomplete disk is refused, never filled. "
+      "LOST: cell timing, gap and weak-bit data, the IPF metadata (INFO, "
+      "IMGE); tracks without all 11 AmigaDOS sectors (protection) make "
+      "the whole conversion refuse", 0u },
+
     /* ADF -> HFE stand hier bis MF-538 als LOSSY_DOCUMENTED mit einer
      * bezifferten Verlustliste. Der Eintrag ist ZURUECKGENOMMEN, und der
      * Grund gehoert hierher, damit ihn niemand zweimal macht.

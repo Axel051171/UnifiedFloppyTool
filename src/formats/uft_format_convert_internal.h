@@ -146,6 +146,15 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
                                            const uft_convert_options_ext_t* opts,
                                            uft_convert_result_t* result);
 
+/* MF-1606 (P3-707): IPF -> ADF through the IPF plugin; other targets
+ * answer UFT_ERR_NOT_SUPPORTED. */
+uft_error_t uftc_convert_ipf_to_sectors(const uint8_t* src_data,
+                                          size_t src_size,
+                                          const char* src_path,
+                                          const char* dst_path,
+                                          uft_format_t dst_format,
+                                          const uft_convert_options_ext_t* opts,
+                                          uft_convert_result_t* result);
 uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
                                           size_t src_size,
                                           const char* src_path,

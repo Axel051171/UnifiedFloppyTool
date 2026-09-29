@@ -3278,7 +3278,9 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_convert_imd_img_belegt"
             OR ${test_name} STREQUAL "test_verify_after_ist_verdrahtet"
             OR ${test_name} STREQUAL "test_convert_img_imd_erfindet_nicht"
-            OR ${test_name} STREQUAL "test_convert_g64_buchfuehrung")
+            OR ${test_name} STREQUAL "test_convert_g64_buchfuehrung"
+            # MF-1606 (P3-707): IPF -> ADF ueber uft_convert_file()
+            OR ${test_name} STREQUAL "test_ipf_nach_adf")
         # MF-1307: `test_verify_after_ist_verdrahtet` haengt am SELBEN
         # Zweig statt an einer zweiten Kopie dieser vierzig Zeilen — zwei
         # Listen fuer eine Wahrheit sind die Bauform aus MF-1177.

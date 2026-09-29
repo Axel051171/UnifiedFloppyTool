@@ -231,6 +231,11 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
         return uftc_convert_hfe_to_sectors(src_data, src_size, src_path,
                                             dst_path, dst_format, opts, result);
     }
+    if (src_format == UFT_FORMAT_IPF && dst_format == UFT_FORMAT_ADF) {
+        /* MF-1606 (P3-707) */
+        return uftc_convert_ipf_to_sectors(src_data, src_size, src_path,
+                                            dst_path, dst_format, opts, result);
+    }
 
     /* ===== Sector -> Bitstream (synthetic) ===== */
     if (src_format == UFT_FORMAT_D64 && dst_format == UFT_FORMAT_G64) {

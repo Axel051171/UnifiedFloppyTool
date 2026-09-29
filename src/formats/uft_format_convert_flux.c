@@ -21,6 +21,7 @@
 #include "uft/flux/uft_decode_timeline.h"
 
 extern const uft_format_plugin_t uft_format_plugin_hfe;
+extern const uft_format_plugin_t uft_format_plugin_ipf;   /* MF-1606 */
 extern const uft_format_plugin_t uft_format_plugin_scp;
 #include "uft/flux/uft_mfm_sector_parser.h"
 #include "uft/flux/uft_scp_parser.h"
@@ -1735,6 +1736,136 @@ static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
     free(output);
     uftc_report_progress(opts, 100, "HFE->ADF complete");
     return err;
+}
+
+/* ============================================================================
+ * IPF -> ADF (MF-1606, P3-707)
+ * ============================================================================
+ *
+ * The IPF plugin already decodes both encoders down to AmigaDOS sectors with
+ * their checksums (MF-1373, uft_ipf_sektoren.c; tests/test_ipf_sektorebene.c).
+ * This converter only PLACES them: sector N of cylinder C, head H at
+ * ((C * 2 + H) * 11 + N) * 512. No second decoder (MF-1177).
+ *
+ * A sector counts only when the plugin marked it CHECKED and without any
+ * error, missing or unavailable bit. An ADF has no way to say "this sector
+ * is not there" — a calloc zero would stand as data — so, as for HFE -> D81
+ * (MF-1437), the ADF is written only when all 1760 sectors are there and
+ * none lies outside 0..10. Protected tracks (the reason IPF exists) are
+ * therefore refused, by name and count, instead of being filled. */
+static uft_error_t uftc_convert_ipf_to_adf(const char* src_path,
+                                          const char* dst_path,
+                                          const uft_convert_options_ext_t* opts,
+                                          uft_convert_result_t* result)
+{
+    const size_t adf_size = (size_t)ADF_CYLS * ADF_HEADS * ADF_SPT * ADF_SECSZ;
+    if (!src_path) {
+        result->error = UFT_ERR_INVALID_PARAM;
+        uftc_add_warning(result, "IPF->ADF needs the source file path "
+                         "(the IPF plugin reads the file itself)");
+        return UFT_ERR_INVALID_PARAM;
+    }
+
+    uftc_report_progress(opts, 10, "Opening IPF via format plugin");
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    if (uft_format_plugin_ipf.open(&disk, src_path, true) != UFT_OK) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "IPF open failed via plugin");
+        return UFT_ERR_FORMAT;
+    }
+
+    uint8_t* output = calloc(1, adf_size);
+    if (!output) {
+        uft_format_plugin_ipf.close(&disk);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    unsigned ausserhalb = 0, doppelt = 0;
+    for (int cyl = 0; cyl < ADF_CYLS; cyl++) {
+        if (uftc_is_cancelled(opts)) break;
+        for (int hd = 0; hd < ADF_HEADS; hd++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_format_plugin_ipf.read_track(&disk, cyl, hd, &t) != UFT_OK) {
+                uft_track_release(&t);
+                result->tracks_failed++;
+                continue;
+            }
+            bool belegt[ADF_SPT] = { false };
+            int placed = 0;
+            for (size_t i = 0; i < t.sector_count; i++) {
+                const uft_sector_t* s = &t.sectors[i];
+                const uint32_t schlecht = UFT_SECTOR_CRC_ERROR |
+                    UFT_SECTOR_ID_CRC_ERROR | UFT_SECTOR_MISSING |
+                    UFT_SECTOR_UNAVAILABLE;
+                if (s->id.sector >= ADF_SPT) { ausserhalb++; continue; }
+                if (!s->data || s->data_len != ADF_SECSZ ||
+                    !(s->status & UFT_SECTOR_CRC_CHECKED) ||
+                    (s->status & schlecht)) {
+                    result->sectors_failed++;
+                    continue;
+                }
+                if (belegt[s->id.sector]) { doppelt++; continue; }
+                belegt[s->id.sector] = true;
+                size_t off = (((size_t)cyl * ADF_HEADS + (size_t)hd) * ADF_SPT
+                              + s->id.sector) * ADF_SECSZ;
+                memcpy(output + off, s->data, ADF_SECSZ);
+                placed++;
+            }
+            result->sectors_converted += placed;
+            if (placed > 0) result->tracks_converted++;
+            else            result->tracks_failed++;
+            uft_track_release(&t);
+        }
+        uftc_report_progress(opts, 10 + (cyl * 80 / ADF_CYLS),
+                             "Placing AmigaDOS sectors from IPF");
+    }
+    uft_format_plugin_ipf.close(&disk);
+
+    if (ausserhalb > 0 ||
+        result->sectors_converted != ADF_CYLS * ADF_HEADS * ADF_SPT) {
+        free(output);
+        result->error = UFT_ERR_INVALID_FORMAT;
+        uftc_add_warning(result,
+                 "IPF->ADF: %d of 1760 AmigaDOS sectors found (%d rejected: "
+                 "checksum, missing or unverified; %u duplicates; %u with a "
+                 "sector number outside 0..10). An ADF is written only when "
+                 "every sector is there — a missing one would stand as zeros "
+                 "(MF-1606, as MF-1437).",
+                 (int)result->sectors_converted, (int)result->sectors_failed,
+                 doppelt, ausserhalb);
+        return UFT_ERR_INVALID_FORMAT;
+    }
+
+    uftc_report_progress(opts, 95, "Writing output");
+    uftc_verify_output_filesystem(output, adf_size, result);
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, adf_size, "IPF->ADF");
+    free(output);
+    uftc_report_progress(opts, 100, "IPF->ADF complete");
+    return err;
+}
+
+/* Exported entry point; the dispatcher calls it for IPF -> ADF. */
+uft_error_t uftc_convert_ipf_to_sectors(const uint8_t* src_data,
+                                          size_t src_size,
+                                          const char* src_path,
+                                          const char* dst_path,
+                                          uft_format_t dst_format,
+                                          const uft_convert_options_ext_t* opts,
+                                          uft_convert_result_t* result)
+{
+    (void)src_data; (void)src_size;
+    if (dst_format != UFT_FORMAT_ADF) {
+        result->error = UFT_ERR_NOT_SUPPORTED;
+        uftc_add_warning(result, "IPF->%s is not implemented; IPF->ADF is "
+                         "(MF-1606)", uft_format_get_name(dst_format));
+        return UFT_ERR_NOT_SUPPORTED;
+    }
+    return uftc_convert_ipf_to_adf(src_path, dst_path, opts, result);
 }
 
 uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
