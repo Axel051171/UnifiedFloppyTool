@@ -716,6 +716,10 @@ static uft_error_t apridisk_read_track(uft_disk_t *disk, int cyl, int head,
     for (size_t s = 0; s < src->sector_count; s++) {
         uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
         if (add_err != UFT_OK) return add_err;
+        /* MF-1601 (P3-701): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+        const uft_sector_t *neu = &track->sectors[track->sector_count - 1];
+        if (uft_sector_is_gw_filler(neu->data, neu->data_len))
+            uft_format_mark_last_unavailable(track);
     }
 
     return UFT_OK;

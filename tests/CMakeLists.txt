@@ -3046,6 +3046,12 @@ foreach(test_source ${TEST_SOURCES})
         target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_gw_fuellsektor_weitere")
+        # MF-1601 (P3-701): dasselbe fuer DIM (X68000), FDI (PC-98), MSA
+        # und ApriDisk. Format-Schicht aus der EINEN Bibliothek (P3-10).
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})

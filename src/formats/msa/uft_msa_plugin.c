@@ -210,7 +210,11 @@ static uft_error_t msa_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         size_t soff = off + (size_t)s * 512;
         if (soff + 512 > p->st_size) break;
         memcpy(buf, p->st_data + soff, 512);
-        uft_format_add_sector(track, (uint8_t)s, buf, 512, (uint8_t)cyl, (uint8_t)head);
+        /* MF-1601 (P3-701): greaseweazle writes -=[BAD SECTOR]=- into every sector it could not read — not a read sector (rule: uft_sector_is_gw_filler()) */
+        if (uft_format_add_sector(track, (uint8_t)s, buf, 512,
+                                  (uint8_t)cyl, (uint8_t)head) == UFT_OK &&
+            uft_sector_is_gw_filler(buf, 512))
+            uft_format_mark_last_unavailable(track);
     }
     return UFT_OK;
 }

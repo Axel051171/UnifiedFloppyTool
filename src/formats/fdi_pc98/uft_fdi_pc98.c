@@ -269,9 +269,16 @@ static uft_error_t fdi_pc98_read_track(uft_disk_t *disk, int cyl, int head,
          * bleiben stehen, sie gelten nur nicht mehr als Messwert. */
         const bool kurz = (fread(buf, 1, p->sector_size, p->file) != p->sector_size);
         if (kurz) memset(buf, 0xE5, p->sector_size);
-        uft_format_add_sector(track, (uint8_t)s, buf, (uint16_t)p->sector_size,
-                              (uint8_t)cyl, (uint8_t)head);
+        uft_error_t add_err = uft_format_add_sector(track, (uint8_t)s, buf,
+                                                    (uint16_t)p->sector_size,
+                                                    (uint8_t)cyl, (uint8_t)head);
+        /* MF-1601 (P3-701): greaseweazle writes -=[BAD SECTOR]=- into
+         * every sector it could not read — not a read sector (rule:
+         * uft_sector_is_gw_filler()). A short read is marked already. */
         if (kurz) uft_format_mark_last_short_read(track, p->file);
+        else if (add_err == UFT_OK &&
+                 uft_sector_is_gw_filler(buf, p->sector_size))
+            uft_format_mark_last_unavailable(track);
     }
     free(buf);
     return UFT_OK;
