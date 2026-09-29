@@ -52,6 +52,25 @@ jobs:
         run: python3 scripts/verify_build_sources.py
       - name: Consistency (check_consistency.py)
         run: python3 scripts/check_consistency.py
+      - name: capsimg helper builds and refuses without the library (MF-1613)
+        run: |
+          set -euo pipefail
+          # The helper (tools/capsimg-helper/, MIT) loads capsimg at run
+          # time; CI has no capsimg and must not get one (SPS licence
+          # v1.02, non-commercial). What CI CAN hold: the file compiles
+          # warning-free, and without the library it answers with rc 3 and
+          # an ERROR line in the index, never a TRACK line.
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -o /tmp/uft_capsimg_helper \
+              tools/capsimg-helper/uft_capsimg_helper.c -ldl
+          set +e
+          UFT_CAPSIMG_LIB=/nonexistent/libcapsimage.so.5 \
+              /tmp/uft_capsimg_helper tests/corpus_free/disk_analyse_uftk_amiga.ipf /tmp/idx.txt /tmp/blob.bin
+          rc=$?
+          set -e
+          cat /tmp/idx.txt
+          test "$rc" -eq 3
+          grep -q '^ERROR capsimg library not loadable' /tmp/idx.txt
+          ! grep -q '^TRACK' /tmp/idx.txt
 
   # ══════════════════════════════════════════════════════════════════════════
   # gw-Paritaet (MF-798)

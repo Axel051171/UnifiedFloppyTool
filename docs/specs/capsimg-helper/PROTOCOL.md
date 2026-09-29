@@ -63,6 +63,11 @@ interpretiert nur*. Konkret:
         │    · nach stdout: den TEXT-Index (dieses Protokoll)           │
         │    · in die Beilage: die Nutzdaten, roh, ohne Kopf            │
         └───────────────────────────┬───────────────────────────────────┘
+
+**BERICHTIGT MF-1613:** der Index geht nicht nach stdout, sondern in eine
+DATEI. UFTs Seite ruft `helper <abbild> <index-datei> <beilage>`
+(`src/formats/ipf/uft_ipf_helper.c`, `_spawnv`/`execv`) und liest danach
+`<index-datei>`; so baut es auch der Helfer in `tools/capsimg-helper/`.
                                     │  Text + Beilage
                                     ▼
         ┌──────────────────────── UFT ──────────────────────────────────┐
@@ -179,6 +184,24 @@ gemessen; diese Liste ist die **rechte** Seite.
 | H5 | Beilagenpfad nicht schreibbar | `≠ 0`, `ERROR`, kein Index |
 | H6 | Spur mit unscharfen Bits | `flags` Bit 0 gesetzt |
 
+**NACHTRAG MF-1613 — gemessen am gebauten Helfer** (`tools/capsimg-helper/`,
+mit der `CAPSImg.dll` aus greaseweazle 1.23, win64):
+
+| # | Ergebnis |
+|---|---|
+| H1 | ✅ rc 0, `END`, 84×2 bzw. 82×2. `CYLS`/`HEADS` sind `maxcylinder + 1` / `maxhead + 1` aus `CAPSGetImageInfo`. Die Gleichheit folgt also aus der Bauart und ist nicht unabhängig geprüft |
+| H2 | ✅ Index und Beilage byteidentisch, zweimal gelaufen (IPF und CT-Raw) |
+| H3 | ✅ `hxcfe_ibmdd.ipf`: rc 5, `ERROR capsimg rejects the image (CAPSLockImage 14)`, keine `TRACK`-Zeile |
+| H4 | ✅ **erst nach einer Korrektur.** Eine auf 20 000 Byte gekürzte IPF: `capsimg` behält alle Spurköpfe und antwortet für 163 von 164 Spuren `CAPSLockTrack` rc 2. Die erste Fassung führte diese Spuren als leer auf und endete mit `END` — also genau die Teilantwort, die H4 verbietet. Jetzt: rc 5, `ERROR track 0/1: CAPSLockTrack 2 (image damaged or truncated)`, keine `TRACK`-Zeile. Eine wirklich unformatierte Spur (rc 0, keine Zellen) bleibt mit Länge 0 aufgeführt |
+| H5 | ✅ rc 6, `ERROR blob file not writable`, keine `TRACK`-Zeile |
+| H6 | ⚠ **nicht belegt.** Das Bit wird durchgereicht (`CTIT_FLAG_FLAKEY` → `flags` Bit 0), und `capsimg` setzt es auf **jeder** Spur der drei gemessenen CT-Raw-Abbilder. Ob diese Spuren unscharfe Bits tragen, ist ungemessen — eine Datei mit bekannt unscharfer Spur fehlt |
+
+H5 sagt „kein Index". Der Helfer schreibt bei jeder Absage trotzdem eine
+Indexdatei, die nur `ERROR` und `END` enthält. Das widerspricht der Tafel
+nicht: UFTs Seite liest bei rc ≠ 0 genau diese Datei, um den Grund
+anzuzeigen (`src/formats/ipf/uft_ipf_helper.c`, Zweig `rc != 0`).
+„Kein Index" heißt hier also „keine `TRACK`-Zeile".
+
 **Zirkularität ausschließen** (`ORACLES.md`, fünfte Frage): der Helfer
 und die IPF-Dateien im Prüfkorpus dürfen nicht dieselbe Hand sein. IPF
 erzeugt ohnehin nur die SPS — die Dateien kommen also von dort, der
@@ -202,6 +225,12 @@ kein `capsimg` (gemessen: `which capsimg` leer, keine `CAPSImg.dll` im
 System). Wer den Helfer baut, misst H1–H6 und trägt das Ergebnis hier
 nach.
 
+**NACHTRAG MF-1613:** nachgetragen in §5. Die Querprobe gegen UFTs
+eigenen IPF-Leser ergab je Spur dieselbe Zellenzahl, **160 von 160**
+Spuren, bei `sps_lethalxcess_a.ipf` und bei der 80-Zylinder-IPF aus
+disk-analyse. Damit sind drei Hände beteiligt: der Schreiber
+(SPS bzw. disk-analyse), `capsimg` und UFT.
+
 ---
 
 ## 7. Stand
@@ -209,5 +238,5 @@ nach.
 | | |
 |---|---|
 | **UFT-Seite** | gebaut und gemessen — MF-917 |
-| **Helfer** | offen; siehe `docs/OPEN_ITEMS.md` P3-190 |
+| **Helfer** | gebaut und gemessen — MF-1613, `tools/capsimg-helper/` (MIT; lädt die vom Nutzer bereitgestellte `CAPSImg.dll` zur Laufzeit, nichts davon wird mitgeliefert). H2, H3, H4, H5 gemessen, Einzelheiten im README dort. Vorher: offen, P3-190 |
 | **Kennzahl** | fünfte (Dateien mit ungeklärter Herkunft) — der fertige Helfer macht `src/formats/ipf/uft_ipf_air.c` entbehrlich und schließt damit die teuerste Zeile in `QUARANTINE.md` |
