@@ -6379,7 +6379,12 @@ if(TARGET Qt6::Test)
         # became ctest "Not Run". ufi_linux.c is wholly `#ifdef __linux__`,
         # so on Windows/macOS it compiles to an empty object — safe to add
         # unconditionally.
-        ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c)
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c
+        # MF-1518: ufi_linux.c calls uft_ufi_linux_belegt() since MF-1516;
+        # without this the Linux link failed exactly as CI-1 describes
+        # above (sanitizer run of 91433680: undefined reference in
+        # test_hardware_tab_gui and test_provider_switch). Portable file.
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_mountinfo.c)
 
     # MF-1362 / P3-562: das Werkzeug, das test_laeufer_argv an die Stelle
     # von `dtc`, `fluxengine` und `fcimage` setzt. Es schreibt auf, welche
