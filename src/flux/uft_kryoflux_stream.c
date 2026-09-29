@@ -76,6 +76,7 @@ uft_kf_status_t uft_kf_init(uft_kf_stream_t *stream)
     }
 
     stream->flux_capacity = KF_FLUX_INITIAL_CAP;
+    stream->index_capacity = UFT_UFT_KF_MAX_INDEX;   /* MF-1521: start, not limit */
     stream->sample_clock  = UFT_UFT_KF_SAMPLE_CLOCK;
     stream->index_clock   = UFT_UFT_KF_INDEX_CLOCK;
     return UFT_UFT_KF_STATUS_OK;
@@ -95,6 +96,7 @@ void uft_kf_free(uft_kf_stream_t *stream)
     stream->flux_capacity  = 0;
     stream->flux_count     = 0;
     stream->index_count    = 0;
+    stream->index_capacity = 0;
 }
 
 void uft_kf_reset(uft_kf_stream_t *stream)
@@ -110,10 +112,37 @@ void uft_kf_reset(uft_kf_stream_t *stream)
     memset(&stream->stats, 0, sizeof(stream->stats));
     if (stream->indexes)
         memset(stream->indexes, 0,
-               UFT_UFT_KF_MAX_INDEX * sizeof(uft_kf_index_t));
+               stream->index_capacity * sizeof(uft_kf_index_t));
     if (stream->index_internal)
         memset(stream->index_internal, 0,
-               UFT_UFT_KF_MAX_INDEX * sizeof(uft_kf_index_internal_t));
+               stream->index_capacity * sizeof(uft_kf_index_internal_t));
+}
+
+/* ── index array growth (MF-1521, P3-673) ───────────────────────────
+ *
+ * Before, the arrays held UFT_UFT_KF_MAX_INDEX = 16 and the decoder
+ * dropped every later index SILENTLY, status OK. kq_tandy/track38.1.raw
+ * has 51 index blocks; greaseweazle and dtc (both executed) read 50
+ * revolutions, the tree 15. Same growth rule as kf_push_flux(). */
+static int kf_grow_index(uft_kf_stream_t *s)
+{
+    if (s->index_count < s->index_capacity) return 0;
+    uint32_t new_cap = s->index_capacity ? s->index_capacity * 2u
+                                         : UFT_UFT_KF_MAX_INDEX;
+    uft_kf_index_t *ni = (uft_kf_index_t *)realloc(
+        s->indexes, new_cap * sizeof(uft_kf_index_t));
+    if (!ni) return -1;
+    s->indexes = ni;
+    uft_kf_index_internal_t *nn = (uft_kf_index_internal_t *)realloc(
+        s->index_internal, new_cap * sizeof(uft_kf_index_internal_t));
+    if (!nn) return -1;
+    s->index_internal = nn;
+    memset(ni + s->index_capacity, 0,
+           (new_cap - s->index_capacity) * sizeof(uft_kf_index_t));
+    memset(nn + s->index_capacity, 0,
+           (new_cap - s->index_capacity) * sizeof(uft_kf_index_internal_t));
+    s->index_capacity = new_cap;
+    return 0;
 }
 
 /* ── flux buffer growth ───────────────────────────────────────────── */
@@ -348,8 +377,9 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
                 break;
 
             case UFT_UFT_KF_OOB_INDEX:
-                if (oob_size >= 12 &&
-                    stream->index_count < UFT_UFT_KF_MAX_INDEX) {
+                if (oob_size >= 12) {
+                    if (kf_grow_index(stream) != 0)
+                        return UFT_UFT_KF_STATUS_READ_ERROR;
                     uft_kf_index_internal_t *ix =
                         &stream->index_internal[stream->index_count];
                     ix->stream_pos     = uft_kf_read_u32(&payload[0]);
