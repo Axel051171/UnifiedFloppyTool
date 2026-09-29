@@ -60,7 +60,14 @@ Baust du ein TOR: jede seiner Klammern bekommt einen Fall, und dann wird
               einmal fallen. Ein Tor ohne Mutationsprobe ist ungemessen.
               Und die Faelle sind nicht nur die RICHTIGEN Eingaben: fehlend,
               leer, falsch geformt, ein Verzeichnis statt einer Datei. Ein
-              Absturz ist kein Urteil (MF-1000).
+              Absturz ist kein Urteil (MF-1000). Wer im Fall abfaengt, gibt
+              ein MERKMAL zurueck, nie `None` — sonst kann der Fall „hat
+              geworfen" nicht von „hat None geliefert" unterscheiden und
+              ist gruen, was immer passiert (MF-1528).
+Haken-Tor?    Dann braucht es eine BETRIEBSPROBE: nicht „faengt es", sondern
+              „ist es gelaufen". Vorbilder: `audit_heredoc.py --protokolle`,
+              `audit_mf_nummer.py --betrieb`. Ohne sie ist es ein Skript mit
+              einem Haken davor.
 Nach dem Bau: Messbefehl erneut, Stand notieren, Sitzungsbilanz.
 
 Commit nur ueber `python scripts/commit_verified.py`. Ein Commit, dessen

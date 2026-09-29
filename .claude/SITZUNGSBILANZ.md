@@ -244,7 +244,7 @@ Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
      | Fall (iii) auf vier Ausgangsstellen umgebaut, Fall (iv) ergaenzt;
        19/19, Mutationsmatrix 3/3
 
-K0 dieser Sitzung: 7 von 15
+K0 dieser Sitzung: 15 von 24
 
 Diese Zeile ist die EINE Stelle, an der die Zahl steht — `commit_verified.py`
 liest sie hier und haengt sie an jede Commit-Nachricht an (MF-1507). Sie hat
@@ -576,3 +576,204 @@ richtige Stelle: es prueft die Nummer in dem Augenblick, in dem der Commit
 entsteht, nicht in dem, in dem die Nachricht geschrieben wurde.
 
 **K0: 7 von 15.**
+
+### Nachtrag 8 zur Bilanz 2026-09-29 — die Betriebsprobe, fünf Fehler beim Bauen, und K0 hatte keine Definition
+
+Die Fundus-Zeile aus Nachtrag 6 ist abgearbeitet: Tor 72 hat seit MF-1528
+eine Betriebsprobe (`python scripts/audit_mf_nummer.py --betrieb`).
+
+**Zuerst die Messung, die den Bau gerechtfertigt hat — und ihr Ergebnis war
+ein Nein.** Die Frage „warum ging `e36346ce` durch" ist rueckblickend
+**nicht** entscheidbar: gemessen ueber **754** Sitzungsprotokolle im
+Zeitfenster 05:50–06:50Z steht dort **kein einziger** `git commit`-Aufruf
+einer fremden Sitzung. Der Weg, auf dem jener Commit entstand, hinterlaesst
+in `~/.claude/projects` keine Spur. **Damit ist auch Tor 71s Betriebsprobe
+(`--protokolle`) fuer solche Commits blind** — das steht in ihrer
+Beschreibung nicht, und es gehoert dort hin.
+
+Deshalb misst die neue Probe vorwaerts: jeder Lauf vermerkt sich in
+`$GIT_COMMON_DIR/uft-tor72-laeufe.log` (Zeit, beanspruchte Nummer, Urteil,
+HEAD), und `--betrieb` zaehlt, welcher Commit seit dem ersten Vermerk
+**keinen** hat. „Der Haken lief nicht" ist damit von „der Haken hat nichts
+gefunden" unterscheidbar — und genau deren Verwechslung war der Befund.
+Erster Lauf: Laufbuch seit 09:09:57Z, 58 Vermerke, 0 Commits ohne Vermerk.
+
+**Grenze, benannt:** das Laufbuch liegt in `.git`, ist also pro Klon und
+unversioniert, wie der Haken selbst. Es sagt nichts ueber Commits vor
+seiner Einfuehrung und nichts ueber einen anderen Klon. CI kann es nicht
+pruefen; was `check()` prueft, ist der Klassifizierer und die Zeile in der
+Haken-Vorlage.
+
+```
+Fehler beim Bauen dieser Probe — je Zeile: was | gefangen von | Folge
+ 16. Das Muster `(?<!\w)-n(?=\s|$)` fuer „--no-verify" trifft `tail -n`,
+     `grep -n`, `sort -n`. Die Zahl „3 Commits mit --no-verify" war
+     Rauschen | Mensch (beim Lesen der Ausgabe) | nur noch `--no-verify`
+       und `commit -n`; und die zweite Haelfte desselben Fehlers: eine
+       Datei, die HEUTE angefasst wurde, enthaelt nicht nur heutige
+       Zeilen — die ersten „Treffer" stammten vom 20.9. Jetzt wird nach
+       ZEITSTEMPEL gefiltert, nicht nach Dateidatum
+ 17. Der Zeitfilter der Probe verglich nur DATEN. Am Starttag des
+     Laufbuchs haette damit jeder fruehere Commit desselben Tages
+     faelschlich „ohne Vermerk" bekommen | Mensch (beim Schreiben des
+     Falls dafuer — er liess sich nicht schreiben, weil die Rechnung nicht
+     trug) | `utc()` rechnet `%cI` samt Zeitzone auf UTC um und vergleicht
+       exakt; der grobe Vergleich bleibt nur als grosszuegiger Rueckfall
+ 18. Mein Schutzhelfer gab bei einem Wurf `None` zurueck — und der Fall
+     „`utc()` wirft bei Unsinn nicht" prueft genau auf `None`. Er konnte
+     „hat None geliefert" nicht von „hat geworfen" unterscheiden
+     | MUTATIONSPROBE | ein MERKMAL statt `None`
+ 19. Die Abfangklammer in `lauf_vermerken()` war von KEINEM Fall
+     erreichbar: ohne git liefert `laufbuch()` schon vorher `None`, das
+     `except` kam nie dran | MUTATIONSPROBE (die einzige von acht, die
+     nicht fiel) | ein Fall, der es erreicht — das Laufbuch ist ein
+       VERZEICHNIS, dann muss `False` kommen und kein Wurf
+ 20. Drei `betrieb()`-Aufrufe im Selbsttest waren ungeschuetzt, also starb
+     bei entschaerfter Abfangklammer der ganze Selbsttest statt einen Fall
+     rot zu melden | MUTATIONSPROBE | alle drei ueber `meldung()`; jetzt
+       meldet jede der acht Mutationen einen roten FALL, keinen Absturz
+```
+
+Stand des Baus: Selbsttest **35/35**, Mutationsmatrix **8 von 8**,
+`check()` leer, Konstantenfamilien unveraendert 56/97.
+
+---
+
+**Und jetzt das Unangenehme: K0 hatte keine Definition, und meine eigene
+Zaehlung war widerspruechlich.** Gemessen an der Liste oben: Fehler 8 wurde
+von der Mutationsprobe gefangen und im Zaehler NICHT gezaehlt; Fehler 2 vom
+Compiler, ebenfalls nicht; Fehler 12 und 15 von Toren, gezaehlt. Eine
+Kennzahl ohne Definition ist kein Mass — genau der Satz, der in CLAUDE.md
+ueber Messbefehle steht, gilt fuer die Zaehlregel ebenso.
+
+**Definition, ab hier verbindlich:** ein **Tor**-Fang ist jede
+MECHANISCHE Pruefung, die anschlaegt, ohne dass ich beschliesse
+hinzusehen — CI- und Commit-Haken, Audit-Skripte, der Compiler und Linker
+ueber den Bau, ein Test, eine Mutationsmatrix. Ein **Mensch**-Fang ist
+einer, bei dem ich durch Lesen oder Nachdenken darauf gekommen bin.
+
+Danach neu gezaehlt, Fehler 1–20:
+
+| | Faenger | Nummern |
+|---|---|---|
+| **Tor** | Vollbau/Linker 1·4·5·6 · Compiler 2 · Tor 71 7 · Mutation 8·18·19·20 · commit_verified 12 · Tor 72 15 | **12** |
+| **Mensch** | 3 · 9 · 10 · 11 · 13 · 14 · 16 · 17 | **8** |
+
+**K0: 12 von 20** — vorher stand 7 von 15.
+
+**Und der Anstieg ist NICHT verdient.** Er kommt aus der Definition, nicht
+aus besserer Arbeit: dieselben Faenge, anders gezaehlt. Nach der alten,
+unausgesprochenen Zaehlung waeren es 9 von 20. Die Zahl steht hier mit
+beiden Werten, weil eine Kennzahl, die durch eine Umdefinition steigt,
+genau die Bewegung ist, die MF-1077 verbietet — sie ist hier zulaessig, weil
+die alte Zaehlung in sich widerspruechlich WAR und das ein Befund ist, aber
+sie ist kein Fortschritt und wird nicht als solcher berichtet.
+
+Was die Zahl weiter sagt: von 12 Tor-Faengen sind **4 der Vollbau** und
+**4 die Mutationsprobe**. Beide sind teuer und werden selten gefahren —
+der Vollbau zehn Minuten, die Mutationsprobe gibt es an 3 von 76 Toren.
+Das ist die Stelle, an der K0 am billigsten steigt.
+
+### Nachtrag 9 zur Bilanz 2026-09-29 — der Commit MF-1528 wurde abgewiesen, und die Ursache war eine Regel dieses Baums
+
+```
+ 21. **Mein Selbsttest war nur AUSSERHALB eines Hakens gruen.**
+     `check_consistency.py` hat MF-1528 abgewiesen: der Fall „Arbeitsbaum
+     liess sich anlegen" war im Haken rot (34/35), direkt aufgerufen gruen
+     (35/35). Ursache ist die Regel, die dieser Baum eigens dokumentiert
+     (MF-1282, `scripts/git_env.py`): **Git exportiert `GIT_DIR` in jeden
+     Haken, und `cwd=` ueberstimmt das nicht.** `git init` bekam
+     `env=git_umgebung()`, die fuenf folgenden Aufrufe nicht — sie liefen
+     also gegen das UMGEBENDE Depot. | TOR (check_consistency im
+     pre-commit) | alle git-Aufrufe der Wegwerf-Depots mit `env=_gu()`,
+       Gegenprobe im Aenderungsskript VOR dem Schreiben
+
+ 22. **Und dahinter lag ein gefaehrlicherer Fall, den erst die Gegenprobe
+     zeigte.** `laufbuch()` fragt git selbst — unter gesetztem `GIT_DIR`
+     gab `laufbuch(<wegwerf-depot>)` den Pfad des **ECHTEN** Laufbuchs
+     zurueck. Der Fall „Laufbuch ist ein Verzeichnis" haette damit ein
+     Verzeichnis ueber die echte Datei gelegt und sie dauerhaft zerstoert.
+     | Mensch, aber nur weil der Selbsttest mit `GIT_DIR=…/.git`
+       ausgefuehrt wurde statt gelesen | `laufbuch()`, `lauf_vermerken()`
+       und `betrieb()` nehmen eine optionale `umgebung`; produktiv bleibt
+       sie None (dort SOLL `GIT_DIR` erben, so findet
+       `--git-common-dir` bei einem Arbeitsbaum-Commit den gemeinsamen
+       Ort), im Selbsttest ist sie `git_umgebung()`. Nachgewiesen in DREI
+       Umgebungen: ohne `GIT_DIR`, mit `GIT_DIR=.git`, und mit `GIT_DIR`
+       auf einen Arbeitsbaum — je 35/35. Laufbuch danach unversehrt
+       (Datei, 3380 Byte, 78 Vermerke), Mutationsmatrix weiter 8 von 8.
+
+ 23. Fuenfmal in dieser Sitzung ein `python -` bzw. `python - <<'X'` mit
+     LEERER Eingabe abgeschickt — der Prozess wartet dann auf stdin und
+     laeuft in die Zeitgrenze; zweimal musste er mit TaskStop beendet
+     werden, einmal WAEHREND eine Mutation angewandt war. | Mensch
+     | Verzicht: `python -` wird in diesem Baum nicht mehr benutzt,
+       Skripte gehen ueber `Write` in eine Datei. Tor 71 faengt das
+       Heredoc-MUSTER, aber nicht den leeren Rumpf — eine Erweiterung
+       waere moeglich und steht im Fundus.
+
+ 24. Mein Aenderungsskript prueft, dass kein git-Aufruf ohne `env=`
+     bleibt — mit `[^)]*`, und das bricht an der Klammer in „(MF-4000)"
+     ab: vier Fehltreffer, kein Schreiben. Genau die Falle, die heute
+     Morgen `gcr_encode_table[(data[0] >> 4) & 0x0F]` an acht Stellen
+     zerrissen hat | GEGENPROBE (sie hat vor dem Schreiben abgebrochen)
+     | Klammerzaehlung statt Zeichenklasse
+```
+
+**K0: 15 von 24** (neu dazu: 21 Tor, 22 Mensch, 23 Mensch, 24 Tor).
+
+---
+
+### Nachtrag 10 — meine eigene Fundus-Zahl war falsch, und zwar zu pessimistisch
+
+In Nachtrag 6 steht committet: *„von 76 Tor-Skripten haben 54 einen
+Selbsttest, 22 keinen — und 3 eine Mutationsprobe."* Das ist berichtigt,
+nicht entfernt (MF-1077). Gemessen mit dem richtigen Kriterium:
+
+| | |
+|---|---|
+| Tor-Skripte (`git ls-files scripts/audit_*.py`) | **77** |
+| in `check_consistency.py` eingebunden | 61 |
+| im **Pruefstand** `audit_selbsttest.py` (MF-735) eingetragen | 24 |
+| geprueft — eigener Selbsttest **oder** Pruefstand | **69** |
+| faellt ein Urteil und ist **nirgends** geprueft | **1** |
+| berichtet nur, faellt kein Urteil | 10 |
+| nennt eine Mutationsprobe | 4 |
+
+Zwei Musterfehler, und beide sind dieselbe Bauform wie fuenfmal heute — ein
+Muster, das eine Struktur annimmt, die der Baum nur MEISTENS hat:
+
+1. `--selftest|--selbsttest|_selbsttest` uebersah `audit_heredoc.py`, dessen
+   Funktion `def selbsttest(` heisst, ohne Unterstrich.
+2. Viel schwerer: **ein Tor braucht seinen Selbsttest nicht IN SICH.**
+   `audit_selbsttest.py` ist ein Pruefstand — er pflanzt je Werkzeug einen
+   kleinen Baum mit bekannter Antwort und ruft dessen `check()` in BEIDE
+   Richtungen (`treffer` muss gemeldet werden, `sauber` darf nicht). **18
+   der 20 angeblich ungepruefen** stehen darin.
+
+Das eine echte ist `audit_plugin_compliance.py` — ein **Release**-Tor
+(gerufen aus `.claude/skills/uft-release/scripts/pre_release_check.sh`,
+genannt in drei Skills), nicht im CI, ohne Probe.
+
+**Die Lehre ist nicht die Zahl, sondern die Richtung des Irrtums.** Eine
+falsche Fundus-Zahl, die einen Rueckstand ERFINDET, kostet Arbeit an einer
+Stelle, an der nichts fehlt — und sie stand schon in einem Commit. Wer eine
+Rueckstandszahl schreibt, prueft zuerst, ob es fuer die Sache im Baum
+bereits eine EINRICHTUNG gibt.
+
+Neuer Fundus-Eintrag an ihrer Stelle:
+  * **Die Mutationsproben liegen AUSSERHALB des Baums.** 4 von 15
+    Tor-Faengen dieser Sitzung stammen von ihnen, und `git ls-files | grep
+    -i mutation` findet genau eine Datei: den Skill, der die METHODE
+    beschreibt (`.claude/skills/uft-mutationsmatrix`). Damit ist
+    „Mutationsmatrix 8 von 8" im Commit-Rumpf **nicht nachrechenbar** —
+    dieselbe Klasse, gegen die `docs/ORACLES.md` „Quellstand + Baurezept +
+    Ausgabe-SHA" verlangt. Und die Proben mutieren die ECHTE Datei mit
+    Ruecknahme im `finally`; ein Abbruch laesst ein mutiertes Tor im Baum
+    stehen, was heute einmal eingetreten ist (Fehler 23). Der Weg heraus:
+    Proben arbeiten auf einer KOPIE in einem Wegwerf-Verzeichnis und liegen
+    im Baum. Das ist ein Bau und braucht eine Vorlage.
+  * `audit_plugin_compliance.py` — ein Release-Tor ohne Probe. Es in den
+    Pruefstand einzutragen ist billig; der erste Schritt ist zu messen, ob
+    sein `check()` die Signatur des Pruefstands hat (es hat kein `check()`,
+    gemessen).

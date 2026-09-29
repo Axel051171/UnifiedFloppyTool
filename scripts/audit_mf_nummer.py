@@ -108,6 +108,176 @@ def kopf(repo: Path) -> str:
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
+def laufbuch(repo: Path, umgebung: dict | None = None) -> Path | None:
+    """Pfad des Laufbuchs im GEMEINSAMEN git-Verzeichnis, oder None.
+
+    Gemeinsam und nicht pro Arbeitsbaum, weil die Frage lautet „ist der
+    Haken bei diesem COMMIT gelaufen" — und Commits aller Arbeitsbaeume
+    liegen in einem Objektspeicher. `--git-common-dir` loest das; in einem
+    gewoehnlichen Klon ist es `.git`.
+
+    `umgebung` ist im PRODUKTIVFALL None, und das ist Absicht: im Haken
+    exportiert git `GIT_DIR` (bei einem Arbeitsbaum auf
+    `…/.git/worktrees/<n>`), und `--git-common-dir` loest daraus richtig
+    den gemeinsamen Ort auf. Genau das soll erben.
+
+    Der SELBSTTEST muss es dagegen bereinigen, und der Grund ist gemessen:
+    unter gesetztem `GIT_DIR` gab `laufbuch(<wegwerf-depot>)` den Pfad des
+    ECHTEN Laufbuchs zurueck — der Fall „Laufbuch ist ein Verzeichnis"
+    haette damit ein Verzeichnis ueber die echte Datei gelegt und sie
+    dauerhaft zerstoert. Gefangen hat das der Lauf mit `GIT_DIR=…/.git`,
+    nicht das Lesen (MF-1282, Klasse „cwd ueberstimmt GIT_DIR nicht").
+    """
+    r = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=repo,
+                       env=umgebung, capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    p = Path(r.stdout.strip())
+    if not p.is_absolute():
+        p = Path(repo) / p
+    return p / "uft-tor72-laeufe.log"
+
+
+def lauf_vermerken(repo: Path, nummer, urteil: str, head: str,
+                   umgebung: dict | None = None) -> bool:
+    """Eine Zeile anhaengen. Gibt NIE eine Ausnahme weiter.
+
+    Ein fehlgeschlagener Vermerk darf einen Commit nicht kosten — das waere
+    ein Tor, das aus einem Grund ohne Bezug zum Inhalt abbricht (Klasse
+    MF-1000, dieselbe Zusage wie `betreff_lesen`). Der Rueckgabewert sagt,
+    ob es geklappt hat; niemand muss darauf reagieren.
+
+    Das Laufbuch liegt in `.git` und ist damit **pro Klon** und
+    unversioniert — genau wie der Haken selbst. Es sagt nichts ueber
+    Commits VOR seiner Einfuehrung und nichts ueber einen anderen Klon.
+    Das ist keine Nachlaessigkeit, sondern die Grenze der Sache: was ein
+    Haken tut, kann nur der Rechner bezeugen, auf dem er lief.
+    """
+    from datetime import datetime, timezone
+    pfad = laufbuch(repo, umgebung)
+    if pfad is None:
+        return False
+    zeile = "%s\t%s\t%s\t%s\n" % (
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        nummer or "-", urteil, head or "-")
+    try:
+        with open(pfad, "a", encoding="utf-8", newline="") as f:
+            f.write(zeile)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def utc(stempel: str):
+    """ISO-Zeit -> zeitzonenbewusste UTC-Zeit, oder None.
+
+    Nimmt sowohl `2026-09-29T08:39:53+02:00` (git `%cI`) als auch
+    `2026-09-29T06:39:53Z` (die Vermerke). Gibt NIE eine Ausnahme weiter —
+    ein unlesbarer Stempel ist kein Urteil, der Aufrufer faellt dann auf
+    den groberen Vergleich zurueck.
+    """
+    from datetime import datetime, timezone
+    if not stempel:
+        return None
+    s = stempel.strip()
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        t = datetime.fromisoformat(s)
+    except (ValueError, TypeError):
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return t.astimezone(timezone.utc)
+
+
+def laufbuch_lesen(pfad: Path) -> list:
+    """-> [(zeit, nummer, urteil, head)]; leer, wenn es keins gibt."""
+    try:
+        text = pfad.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError, AttributeError):
+        return []
+    eintraege = []
+    for z in text.splitlines():
+        teile = z.split("\t")
+        if len(teile) == 4:
+            eintraege.append(tuple(teile))
+    return eintraege
+
+
+def betrieb(repo, umgebung: dict | None = None) -> list:
+    """Ist der Haken bei jedem Commit gelaufen? -> Meldezeilen.
+
+    Die Frage ist NICHT „faengt der Klassifizierer" — das sagt der
+    Selbsttest. Die Frage ist, ob der Haken ueberhaupt gelaufen ist, und
+    sie ist am 2026-09-29 teuer geworden: `e36346ce` hat MF-1522
+    beansprucht, obwohl mein `0a66fb21` es siebzehn Minuten vorher schon
+    trug, und der Haken war installiert und haette abgewiesen.
+
+    **Rueckblickend ist das nicht entscheidbar gewesen.** Gemessen ueber
+    754 Sitzungsprotokolle im Zeitfenster des Commits: KEIN einziger
+    `git commit`-Aufruf einer fremden Sitzung. Der Weg, auf dem jener
+    Commit entstand, hinterlaesst dort keine Spur — womit auch Tor 71s
+    Betriebsprobe (`--protokolle`) fuer solche Commits blind ist, was in
+    ihrer Beschreibung nicht steht.
+
+    Deshalb misst diese Probe VORWAERTS: jeder Lauf vermerkt sich, und
+    hier wird gezaehlt, welcher Commit seit dem ersten Vermerk KEINEN hat.
+    Ein Commit ohne Vermerk heisst „der Haken lief nicht" — nicht „der
+    Haken hat nichts gefunden". Das sind zwei Dinge, und genau ihre
+    Verwechslung war der Befund.
+    """
+    repo = Path(repo)
+    pfad = laufbuch(repo, umgebung)
+    if pfad is None:
+        return ["git nicht befragbar — NICHTS geprueft."]
+    eintraege = laufbuch_lesen(pfad)
+    if not eintraege:
+        return ["Laufbuch `%s` fehlt oder ist leer: die Betriebsfrage ist "
+                "UNGEMESSEN. Das ist kein Verstoss — es beginnt mit dem "
+                "ersten Lauf des Hakens." % pfad.name]
+
+    seit = min(e[0] for e in eintraege)
+    gesehen = {e[1] for e in eintraege}
+
+    r = subprocess.run(["git", "log", "--all", "--format=%h%x09%cI%x09%s"],
+                       cwd=repo, env=umgebung, capture_output=True, text=True)
+    if r.returncode != 0:
+        return ["git log nicht befragbar — NICHTS geprueft."]
+
+    betrachtet, ohne = 0, []
+    for zeile in r.stdout.splitlines():
+        teile = zeile.split("\t", 2)
+        if len(teile) != 3:
+            continue
+        kurz, wann, betreff = teile
+        # `%cI` traegt eine Zeitzone, die Vermerke stehen in UTC. Ein
+        # Vergleich der Zeichenketten waere damit falsch, ein Vergleich nur
+        # der DATEN zu grob: am Starttag des Laufbuchs bekaeme jeder
+        # fruehere Commit desselben Tages faelschlich „ohne Vermerk". Also
+        # wird nach UTC umgerechnet und exakt verglichen; wo das nicht
+        # geht, bleibt der grobe Vergleich als Rueckfall — und er ist
+        # GROSSZUEGIG, meldet also eher zu viel als zu wenig.
+        if utc(wann) and utc(seit):
+            if utc(wann) < utc(seit):
+                continue
+        elif wann[:10] < seit[:10]:
+            continue
+        nr = beansprucht(betreff)
+        if nr is None:
+            continue
+        betrachtet += 1
+        if nr not in gesehen:
+            ohne.append("%s %s" % (kurz, nr))
+
+    meldung = ["Laufbuch seit %s, %d Vermerk(e); Commits mit Anspruch "
+               "seither: %d, davon ohne Vermerk: %d"
+               % (seit, len(eintraege), betrachtet, len(ohne))]
+    for z in ohne[:10]:
+        meldung.append("   ohne Vermerk: %s" % z)
+    return meldung
+
+
 def pruefe(betreff: str, belegt: dict, head: str = "") -> list:
     """-> Liste von Fehlerzeilen; leer heisst in Ordnung."""
     kaputt = verstuemmelt(betreff)
@@ -250,6 +420,184 @@ def _selbsttest() -> int:
     (_d / "ordner").mkdir()
     faelle.append(("ein VERZEICHNIS stuerzt nicht ab",
                    ergibt(_d / "ordner", None)))
+    # 11 Betriebsprobe (MF-1528). Geprueft wird sie an einem eigenen
+    #    Wegwerf-Depot, nicht am Baum — sonst waere der Selbsttest von der
+    #    Vorgeschichte dieses Klons abhaengig.
+    import subprocess as _sp
+    from git_env import git_umgebung as _gu
+
+    def depot():
+        import os as _os
+        d = Path(_tf.mkdtemp())
+        _sp.run(["git", "init", "-q"], env=_gu(), cwd=d, capture_output=True)
+        (d / "a.txt").write_text("x", encoding="utf-8")
+        _sp.run(["git", "add", "-A"], env=_gu(), cwd=d,
+                capture_output=True)
+        # MF-4000 bekommt ein FESTES, altes Datum. Sonst haengt der Fall
+        # „Commit vor dem Laufbuch" an der Sekunde, in der der Selbsttest
+        # laeuft — ein Test, der manchmal gruen ist, prueft nichts.
+        # Von `_gu()` ausgehen, NICHT von `os.environ` — sonst erbt
+        # der Aufruf `GIT_DIR` aus dem Haken und committet ins
+        # umgebende Depot (MF-1282).
+        alt = dict(_gu())
+        alt["GIT_COMMITTER_DATE"] = "2026-01-01T00:00:00+00:00"
+        alt["GIT_AUTHOR_DATE"] = "2026-01-01T00:00:00+00:00"
+        _sp.run(["git", "commit", "-qm", "feat: alt (MF-4000)"], cwd=d,
+                env=alt, capture_output=True)
+        _sp.run(["git", "commit", "-q", "--allow-empty",
+                 "-m", "feat: erster (MF-4001)"], env=_gu(), cwd=d,
+                capture_output=True)
+        return d
+
+    def meldung(repo) -> list:
+        """`betrieb()` als Liste; ein Wurf ergibt [], also einen ROTEN Fall.
+
+        Notwendig, weil `betrieb()` `laufbuch_lesen()` auf eine Datei ruft,
+        die es noch nicht gibt — mit entschaerfter Abfangklammer dort stirbt
+        sonst der ganze Selbsttest, statt einen Fall rot zu melden. Die
+        Mutationsprobe hat genau das gezeigt.
+        """
+        try:
+            return list(betrieb(repo, _gu()))
+        except BaseException:
+            return []
+
+    _r = depot()
+    faelle.append(("ohne Laufbuch ist die Betriebsfrage UNGEMESSEN",
+                   any("UNGEMESSEN" in z for z in meldung(_r))))
+    faelle.append(("ein Vermerk laesst sich anhaengen",
+                   lauf_vermerken(_r, "MF-4001", "ok", "abc1234",
+                                  _gu()) is True))
+    faelle.append(("das Laufbuch liegt im gemeinsamen git-Verzeichnis",
+                   laufbuch(_r, _gu()) is not None
+                   and laufbuch(_r, _gu()).parent.name == ".git"))
+    faelle.append(("der Vermerk wird wiedergelesen",
+                   [e[1] for e in laufbuch_lesen(laufbuch(_r, _gu()))]
+                   == ["MF-4001"]))
+    _b = meldung(_r)
+    faelle.append(("mit Vermerk: 1 Commit betrachtet, 0 ohne",
+                   any("seither: 1, davon ohne Vermerk: 0" in z for z in _b)))
+
+    # Und die Gegenrichtung, ohne die die Probe nichts aussagt: ein Commit
+    # OHNE Vermerk muss auffallen. Genau das war der Fall `e36346ce`.
+    _sp.run(["git", "commit", "-q", "--allow-empty",
+             "-m", "feat: ohne Haken (MF-4002)"], env=_gu(), cwd=_r,
+            capture_output=True)
+    _b2 = meldung(_r)
+    faelle.append(("ein Commit ohne Vermerk faellt auf",
+                   any("ohne Vermerk: 1" in z for z in _b2)
+                   and any("MF-4002" in z for z in _b2)))
+    faelle.append(("und der vermerkte Commit wird NICHT gemeldet",
+                   not any("MF-4001" in z for z in _b2)))
+
+    # Der ARBEITSBAUM — dafuer ist `--git-common-dir` da. Ein Laufbuch pro
+    #    Arbeitsbaum koennte die Frage „lief der Haken bei DIESEM Commit"
+    #    nicht beantworten, weil die Commits aller Baeume in einem
+    #    Objektspeicher liegen. Genau diese Lage war der Anlass (MF-1522).
+    _wt = _r.parent / (_r.name + "-wt")
+    _sp.run(["git", "worktree", "add", "-q", "--detach", str(_wt)],
+            env=_gu(), cwd=_r, capture_output=True)
+    if _wt.exists():
+        faelle.append(("Laufbuch ist im Arbeitsbaum DASSELBE",
+                       laufbuch(_wt, _gu()) == laufbuch(_r, _gu())))
+    else:
+        faelle.append(("Arbeitsbaum liess sich anlegen", False))
+
+    # Ein Commit VOR dem ersten Vermerk darf nicht gemeldet werden — sonst
+    #    schreit die Probe am Starttag ueber die ganze Vorgeschichte. Der
+    #    Tagesvergleich konnte das nicht; deshalb rechnet `utc()` um.
+    GEWORFEN = object()
+
+    def ohne_wurf(f, *a):
+        """Wirft die Funktion, ist der Fall ROT — nicht der Lauf zu Ende.
+
+        Sonst verdeckt der erste Absturz jeden weiteren Fall; dasselbe
+        Muster wie bei `ergibt()` oben, und die Mutationsprobe hat beide
+        Stellen erst als Abstuerze statt als rote Faelle gezeigt.
+
+        **Zurueck kommt ein MERKMAL, nicht `None`.** Die erste Fassung gab
+        `None` zurueck — und ein Fall wie „`utc()` wirft bei Unsinn nicht"
+        prueft genau darauf, konnte also „hat None geliefert" nicht von
+        „hat geworfen" unterscheiden. Die Mutationsprobe hat es gezeigt:
+        mit entschaerftem Abfangen blieb der Selbsttest gruen.
+        """
+        try:
+            return f(*a)
+        except BaseException:
+            return GEWORFEN
+
+    faelle.append(("utc() versteht git-Zeitzone und Z",
+                   utc("2026-09-29T08:39:53+02:00")
+                   == utc("2026-09-29T06:39:53Z")))
+    faelle.append(("utc() wirft bei Unsinn nicht",
+                   ohne_wurf(utc, "keine Zeit") is None
+                   and ohne_wurf(utc, "") is None))
+    _b3 = meldung(_r)
+    faelle.append(("der Commit VOR dem Laufbuch wird nicht gemeldet",
+                   not any("MF-4000" in z for z in _b3)))
+
+    # Die VERDRAHTUNG in `main()` — und sie ist der Kern der Sache. Alles
+    #    darueber prueft `betrieb()` und `lauf_vermerken()` als Bausteine;
+    #    dass der Erfolgspfad den Vermerk wirklich schreibt, sagt keiner
+    #    dieser Faelle. Genau diese Luecke war der Befund: ein Tor, das im
+    #    Klassifizierer belegt und in der Verdrahtung unbelegt ist.
+    #
+    #    Geprueft wird am ECHTEN Depot, weil `main()` seinen Pfad aus
+    #    `__file__` nimmt. Die Nebenwirkung ist eine Zeile im Laufbuch mit
+    #    einer erfundenen Nummer (MF-9998) — das Laufbuch liegt in `.git`,
+    #    ist unversioniert, und eine Zeile mehr ist genau das, was es
+    #    sammeln soll. Ein Ausweichschalter fuer den Test waere ein Umweg
+    #    um die Stelle, die geprueft werden soll.
+    _echt = Path(__file__).resolve().parent.parent
+    _lb = laufbuch(_echt)
+    _vorher = len(laufbuch_lesen(_lb)) if _lb else -1
+    _msg = _d / "wiring.txt"
+    _msg.write_text("test(tor72): Verdrahtungsprobe (MF-9998)\n",
+                    encoding="utf-8")
+    _sp.run([sys.executable, str(Path(__file__).resolve()), str(_msg)],
+            capture_output=True, text=True)
+    _nachher = laufbuch_lesen(_lb) if _lb else []
+    faelle.append(("main() vermerkt den Erfolgspfad",
+                   _vorher >= 0 and len(_nachher) == _vorher + 1
+                   and _nachher[-1][1] == "MF-9998"
+                   and _nachher[-1][2] == "ok"))
+
+    # Und der Abbruchpfad ebenso — sonst waere „kein Vermerk" zweideutig.
+    _msg2 = _d / "wiring2.txt"
+    _msg2.write_text("test(tor72): belegte Nummer (MF-1522)\n",
+                     encoding="utf-8")
+    _r2 = _sp.run([sys.executable, str(Path(__file__).resolve()), str(_msg2)],
+                  capture_output=True, text=True)
+    _nach2 = laufbuch_lesen(_lb) if _lb else []
+    faelle.append(("main() vermerkt auch den Abbruch",
+                   _r2.returncode == 1 and len(_nach2) == len(_nachher) + 1
+                   and _nach2[-1][2] == "abbruch"))
+
+    # Ein unschreibbares Laufbuch darf nichts kosten (MF-1000).
+    _v = Path(_tf.mkdtemp())
+    faelle.append(("ohne git kein Vermerk, aber auch kein Absturz",
+                   ohne_wurf(lauf_vermerken, _v, "MF-4003", "ok", "x",
+                             _gu()) is False))
+    faelle.append(("Laufbuch-Lesen eines Verzeichnisses stuerzt nicht ab",
+                   ohne_wurf(laufbuch_lesen, _v) == []))
+
+    # Und der Fall, der das `except` beim SCHREIBEN wirklich erreicht: der
+    #    Pfad ist da, aber es ist ein VERZEICHNIS. Ohne diesen Fall war die
+    #    Abfangklammer Zierde — die Mutationsprobe hat sie als einzige von
+    #    acht nicht fallen sehen, weil `laufbuch()` ohne git schon vorher
+    #    `None` liefert und das `except` gar nicht erreicht wird.
+    _sperr = depot()
+    _lbs = laufbuch(_sperr, _gu())
+    if _lbs is not None:
+        _lbs.mkdir(parents=True, exist_ok=True)
+        faelle.append(("Laufbuch ist ein Verzeichnis -> False, kein Wurf",
+                       ohne_wurf(lauf_vermerken, _sperr, "MF-4004",
+                                 "ok", "y", _gu()) is False))
+        faelle.append(("und Lesen davon ergibt leer, kein Wurf",
+                       ohne_wurf(laufbuch_lesen, _lbs) == []))
+    else:
+        faelle.append(("Sperrdepot liess sich anlegen", False))
+
     (_d / "gut.txt").write_text("fix: x (MF-9999)\nzweite Zeile\n",
                                 encoding="utf-8")
     faelle.append(("erste Zeile wird gelesen, nicht die zweite",
@@ -269,10 +617,21 @@ def main() -> int:
         return _selbsttest()
 
     repo = Path(__file__).resolve().parent.parent
+
+    if "--betrieb" in sys.argv:
+        for z in betrieb(repo):
+            print("[Tor 72] %s" % z)
+        return 0
+
     argv = [a for a in sys.argv[1:] if not a.startswith("--")]
     if argv:
         betreff = betreff_lesen(Path(argv[0]))
         if betreff is None:
+            # Auch dieser Ausgang wird vermerkt: „der Haken lief, konnte
+            # aber nichts pruefen" ist eine ANDERE Aussage als „der Haken
+            # lief nicht", und die Betriebsprobe soll sie unterscheiden.
+            lauf_vermerken(repo, None, "ungeprueft-keine-nachricht",
+                           kopf(repo))
             # Ein Absturz ist kein Urteil (Klasse MF-1000 / Tor 64). Eine
             # fehlende oder leere Nachrichtendatei sagt NICHTS ueber die
             # Nummer, also wird sie nicht als Verstoss gewertet — aber auch
@@ -286,15 +645,21 @@ def main() -> int:
     else:
         betreff = sys.stdin.readline()
 
+    head = kopf(repo)
+    nr = beansprucht(betreff)
+
     belegt = belegte_nummern(repo)
     if not belegt:
+        lauf_vermerken(repo, nr, "ungeprueft-kein-git-log", head)
         print("[Tor 72] git log nicht befragbar — NICHTS geprueft.")
         return 0
 
-    fehler = pruefe(betreff, belegt, kopf(repo))
+    fehler = pruefe(betreff, belegt, head)
     if not fehler:
+        lauf_vermerken(repo, nr, "ok", head)
         return 0
 
+    lauf_vermerken(repo, nr, "abbruch", head)
     print("")
     print("[Tor 72] ABBRUCH — die MF-Nummer ist schon belegt:")
     for f in fehler:

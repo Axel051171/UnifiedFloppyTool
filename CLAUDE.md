@@ -520,7 +520,7 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
 | # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
 |---|---|---|---|---|
-| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch) | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) | **7 von 15** (2026-09-29; vorher 4 von 13). Vier der fünf Fänge sind der **Vollbau** — das wirksamste Tor dieses Baums und das am seltensten gefahrene |
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch). **Zählregel:** ein Tor-Fang ist jede MECHANISCHE Prüfung, die anschlägt, ohne dass jemand beschließt hinzusehen (CI- und Commit-Haken, Audit-Skripte, Compiler und Linker über den Bau, ein Test, eine Mutationsmatrix); ein Mensch-Fang kommt aus Lesen oder Nachdenken | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) — die Zeile `K0 dieser Sitzung: N von M` ist die EINE Stelle, `commit_verified.py` liest sie dort | **15 von 24** (2026-09-29; vorher 4 von 13). Davon sind **4 der Vollbau** und **4 die Mutationsprobe** — beide teuer und selten gefahren, also die Stelle, an der K0 am billigsten steigt |
 | **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
 | **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
 | **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 56 Familien mit **97 überzähligen Kopien** im Manifest, Zonen davon 23 (Stand 2026-09-29, MF-1522) |
@@ -602,6 +602,34 @@ sind unverändert, sie sagen jetzt nur, wie man sie misst.
 > CBM-Zonenlängen). Gefangen hat es das **Tor**, nicht der Agent.
 > Steigt K0, halten die Regeln; bleibt sie niedrig, ist jede weitere
 > Regel als Prosa verschwendet.
+>
+> **NACHTRAG MF-1528 — K0 hatte keine Zählregel, und die eigene Zählung war
+> widersprüchlich.** Gemessen an der Bilanz vom 2026-09-29: ein Fang der
+> Mutationsprobe wurde nicht gezählt, einer des Compilers auch nicht,
+> Fänge von Toren schon. Eine Kennzahl ohne Definition ist kein Maß —
+> derselbe Satz, der hier über Messbefehle steht. Die Regel steht jetzt in
+> der Zeile K0 selbst.
+>
+> **Und die Neuzählung ließ die Zahl steigen, ohne dass Arbeit besser
+> wurde** — von 7/15 auf 12/20, bei alter Zählweise wären es 9/20. Das ist
+> die Bewegung, die §„Kennzahlen sind Folgen, keine Ziele" verbietet, und
+> sie war hier nur zulässig, weil die alte Zählung *in sich* widersprüchlich
+> war (Fehlklassifikation wird umgeschrieben, nicht entfernt). Die Bilanz
+> nennt deshalb **beide** Werte. Wer K0 künftig bewegt, bewegt sie durch
+> Tore, nicht durch Definitionen.
+>
+> **Ein Tor, das im Klassifizierer belegt und im Betrieb unbelegt ist, ist
+> kein Tor, sondern ein Skript mit einem Haken davor (MF-1528).** Deshalb
+> haben die beiden Haken-Tore je eine BETRIEBSPROBE, die nicht fragt „fängt
+> es", sondern „ist es überhaupt gelaufen":
+> `python scripts/audit_heredoc.py --protokolle --seit <Einbauzeit>` (Tor 71)
+> und `python scripts/audit_mf_nummer.py --betrieb` (Tor 72).
+> Ihre Grenzen sind verschieden und beide gemessen: Tor 71 liest
+> Sitzungsprotokolle und ist damit **blind für Commits, die nicht aus einer
+> protokollierten Sitzung kommen** (gemessen 2026-09-29: im Zeitfenster von
+> `e36346ce` steht in 754 Protokollen kein einziger fremder
+> `git commit`-Aufruf); Tor 72 führt ein Laufbuch in `.git`, ist also **pro
+> Klon** und sagt nichts über Commits vor seiner Einführung.
 
 > **Die erste Zahl kann gemessen nicht durch Arbeit fallen (MF-1489).**
 > „T3 runter" liest sich wie ein Rückstand. Gemessen ist er keiner:
@@ -833,6 +861,17 @@ kaputten Fälle waren alle kurz.
 > `python scripts/audit_heredoc.py --protokolle --seit <Einbauzeit>`
 > (Einbau 2026-09-26T09:05:19Z) — und meldet immer auch, wie viele
 > Aufrufe es gesehen hat.
+>
+> **Grenze dieser Betriebsprobe, gemessen MF-1528:** sie liest
+> Sitzungsprotokolle und ist damit **blind für alles, was nicht aus einer
+> protokollierten Sitzung kommt.** Der Anlass ist nicht theoretisch: im
+> Zeitfenster des Commits `e36346ce` steht in **754** Protokolldateien
+> **kein einziger** `git commit`-Aufruf einer fremden Sitzung, obwohl der
+> Commit entstanden ist. Was in diesem Baum committet, tut es zum Teil auf
+> Wegen, die diese Probe nicht sieht — „0 Verstöße" heißt hier also „0
+> unter den gesehenen Aufrufen", nicht „0 überhaupt". Tor 72 misst
+> dieselbe Frage deshalb anders: über ein Laufbuch, das der Haken selbst
+> schreibt (`--betrieb`).
 
 **2. Während ein Commit läuft, schreibt niemand in den Baum.**
 
