@@ -22,9 +22,17 @@
  * single-sided: slots 0/2/4). In memory, a legacy copy is built — slots
  * 0/1/2, TDH track numbers 0/1/2, end_track 2, checksum recomputed — and
  * both must deliver the same content per cylinder.
+ *
+ * MF-1602 (P3-702): the same for the SCP PARSER (uft_scp_ctx_t), which
+ * src/fluxwritejob.cpp uses to write an image onto a disk. The job took
+ * cylinder = t / 2 and side = t % 2 for slot t — for slot 1 of a legacy
+ * image that is cylinder 0, SIDE 1, where the image holds cylinder 1 of
+ * side 0. And the parser set data->side from the low bit of the track
+ * number. Both now ask uft_scp_slot_position() / uft_scp_slot_of().
  */
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
+#include "uft/flux/uft_scp_parser.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -81,6 +89,61 @@ static fingerabdruck_t lese(const char *pfad, int cyl, int kopf, int *zylinder_o
     }
     uft_format_plugin_scp.close(&disk);
     return fa;
+}
+
+/* The parser path (MF-1602): flux of revolution 0 of a slot. */
+static uint64_t parser_fluss(uft_scp_ctx_t *ctx, int slot, uint32_t *n, int *seite)
+{
+    uint64_t summe = 0;
+    *n = 0; *seite = -1;
+    uft_scp_track_data_t td;
+    memset(&td, 0, sizeof td);
+    if (slot < 0 || uft_scp_read_track(ctx, slot, &td) != UFT_SCP_OK) return 0;
+    *seite = td.side;
+    if (td.revolution_count > 0 && td.revolutions[0].flux_data) {
+        *n = td.revolutions[0].flux_count;
+        for (uint32_t k = 0; k < *n; k++)
+            summe = summe * 7u + td.revolutions[0].flux_data[k];
+    }
+    uft_scp_free_track(&td);
+    return summe;
+}
+
+/* kopf_der_kopie: the one side the legacy copy holds (heads field - 1) */
+static void pruefe_parser(const char *pfad, const char *leg, int kopf_der_kopie)
+{
+    char w[120], h[200];
+    uft_scp_ctx_t *m = uft_scp_create(), *l = uft_scp_create();
+    if (!m || !l || uft_scp_open(m, pfad) != UFT_SCP_OK ||
+        uft_scp_open(l, leg) != UFT_SCP_OK) {
+        pruefe("Parser oeffnet beide Dateien", 0, pfad);
+        if (m) uft_scp_destroy(m);
+        if (l) uft_scp_destroy(l);
+        return;
+    }
+    for (int c = 0; c < 3; c++) {
+        int zyl = -1, kopf = -1;
+        int ok = uft_scp_slot_position(l, c, &zyl, &kopf);
+        snprintf(w, sizeof w, "Parser, Kopf %d: Platz %d ist Zylinder %d (Schreibauftrag)",
+                 kopf_der_kopie, c, c);
+        snprintf(h, sizeof h, "ok=%d, Zylinder %d, Kopf %d — t/2, t%%2 hiesse %d/%d",
+                 ok, zyl, kopf, c / 2, c % 2);
+        pruefe(w, ok && zyl == c && kopf == kopf_der_kopie, h);
+
+        uint32_t na = 0, nb = 0;
+        int sa = -1, sb = -1;
+        uint64_t a = parser_fluss(m, uft_scp_slot_of(m, c, 0), &na, &sa);
+        uint64_t b = parser_fluss(l, uft_scp_slot_of(l, c, kopf_der_kopie), &nb, &sb);
+        snprintf(w, sizeof w, "Parser, Kopf %d: Zylinder %d traegt die Spur des Originals",
+                 kopf_der_kopie, c);
+        snprintf(h, sizeof h, "Original %u Wechsel, Kopie %u, Seite %d", na, nb, sb);
+        pruefe(w, na > 0 && na == nb && a == b && sb == kopf_der_kopie, h);
+    }
+    snprintf(h, sizeof h, "Platz %d", uft_scp_slot_of(l, 1, 1 - kopf_der_kopie));
+    pruefe("Parser: die fehlende Seite hat keinen Platz",
+           uft_scp_slot_of(l, 1, 1 - kopf_der_kopie) == -1, h);
+    uft_scp_destroy(m);
+    uft_scp_destroy(l);
 }
 
 int main(void)
@@ -146,6 +209,8 @@ int main(void)
                   (a.n > 0 || a.raw > 0), h);
     }
 
+    pruefe_parser(pfad, leg, 0);
+
     /* the same copy with heads = 2 ("side 1 only", scp.py: track n*2 + 1):
      * each slot is cylinder n of HEAD 1, and head 0 does not exist */
     l[0x0A] = 2;                        /* outside the checksum (from 0x10) */
@@ -166,6 +231,8 @@ int main(void)
         pruefe("Seite 1: Kopf 0 ist leer, nicht eine fremde Spur",
                z.ok && z.raw == 0 && z.status == (int)UFT_TRACK_UNFORMATTED, h);
     }
+
+    pruefe_parser(pfad, leg, 1);
 
     remove(leg);
     free(l);

@@ -148,8 +148,11 @@ void FluxWriteJob::run()
     int hard_errors    = 0;
     bool aborted = false;
 
-    /* SCP track numbering is interleaved: cylinder*2 + side. Walk the
-     * 0..167 slot space and write each populated slot. */
+    /* SCP track numbering is interleaved: cylinder*2 + side — except for a
+     * legacy single-sided image in consecutive slots, where t/2 and t%2
+     * put cylinder 1 onto SIDE 1 of cylinder 0 (MF-1602, P3-702). The
+     * parser knows the rule. Walk the 0..167 slot space and write each
+     * populated slot. */
     for (int t = 0; t < UFT_SCP_MAX_TRACKS && !aborted; ++t) {
         if (isCancelled()) { aborted = true; break; }
 
@@ -157,8 +160,8 @@ void FluxWriteJob::run()
             continue;
         }
 
-        int cyl  = t / 2;
-        int side = t % 2;
+        int cyl = 0, side = 0;
+        uft_scp_slot_position(scp, t, &cyl, &side);
 
         uft_scp_track_data_t track_data;
         memset(&track_data, 0, sizeof(track_data));

@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "uft/flux/uft_scp_parser.h"
+#include "uft/flux/uft_scp_ablage.h"   /* MF-1602: slot rule */
 
 /*============================================================================
  * Internal Helpers
@@ -351,6 +352,28 @@ bool uft_scp_has_track(uft_scp_ctx_t* ctx, int track)
     return ctx->track_offsets[track] != 0;
 }
 
+/* MF-1602 (P3-702): the layout is decided from the header and the table
+ * each time — no field in uft_scp_ctx_t, so its layout stays as it is. */
+static uft_scp_ablage_t scp_ablage(const uft_scp_ctx_t* ctx)
+{
+    return uft_scp_ablage_bestimmen(ctx->header.heads, ctx->track_offsets,
+                                    UFT_SCP_MAX_TRACKS);
+}
+
+int uft_scp_slot_of(uft_scp_ctx_t* ctx, int cylinder, int head)
+{
+    if (!ctx || cylinder < 0 || head < 0 || head > 1) return -1;
+    int platz = uft_scp_ablage_platz(scp_ablage(ctx), cylinder, head);
+    return (platz >= 0 && platz < UFT_SCP_MAX_TRACKS) ? platz : -1;
+}
+
+bool uft_scp_slot_position(uft_scp_ctx_t* ctx, int slot,
+                           int* cylinder, int* head)
+{
+    if (!ctx || slot < 0 || slot >= UFT_SCP_MAX_TRACKS) return false;
+    return uft_scp_ablage_ort(scp_ablage(ctx), slot, cylinder, head);
+}
+
 int uft_scp_read_track(uft_scp_ctx_t* ctx, int track, uft_scp_track_data_t* data)
 {
     if (!ctx || !data) return UFT_SCP_ERR_NULLPTR;
@@ -377,7 +400,14 @@ int uft_scp_read_track(uft_scp_ctx_t* ctx, int track, uft_scp_track_data_t* data
     }
     
     data->track_number = track_hdr.track_number;
-    data->side = track_hdr.track_number & 1;
+    /* MF-1602 (P3-702): the side follows the slot rule, not the low bit
+     * of the track number — in a legacy single-sided image every slot is
+     * a cylinder of the ONE side. */
+    {
+        int zyl = 0, kopf = 0;
+        uft_scp_ablage_ort(scp_ablage(ctx), track, &zyl, &kopf);
+        data->side = (uint8_t)kopf;
+    }
     data->revolution_count = ctx->header.revolutions;
     data->valid = true;
     

@@ -60,4 +60,15 @@ static inline int uft_scp_ablage_platz(uft_scp_ablage_t a, int zylinder, int kop
     return (kopf == (int)a.seite) ? zylinder : -1;
 }
 
+/** The inverse (MF-1602): which (cylinder, head) a table slot holds.
+ *  false for a negative slot. */
+static inline bool uft_scp_ablage_ort(uft_scp_ablage_t a, int platz,
+                                      int *zylinder, int *kopf)
+{
+    if (platz < 0 || !zylinder || !kopf) return false;
+    if (!a.fortlaufend) { *zylinder = platz / 2; *kopf = platz % 2; }
+    else                { *zylinder = platz;     *kopf = (int)a.seite; }
+    return true;
+}
+
 #endif /* UFT_FLUX_SCP_ABLAGE_H */

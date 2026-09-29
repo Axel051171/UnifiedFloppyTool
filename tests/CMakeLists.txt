@@ -3034,9 +3034,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_scp_einseitig_fortlaufend")
         # MF-1524 (P3-676): einseitiges SCP mit fortlaufenden Tafelplaetzen
         # (greaseweazle image/scp.py:246-254). Quellen wie test_corpus_scp.
+        # MF-1602 (P3-702): dazu der Parser, den der Schreibauftrag nutzt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_gw_fuellsektor_sektorabbilder")

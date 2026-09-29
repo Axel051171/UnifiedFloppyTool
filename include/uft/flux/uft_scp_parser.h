@@ -297,6 +297,24 @@ int uft_scp_get_track_count(uft_scp_ctx_t* ctx);
 bool uft_scp_has_track(uft_scp_ctx_t* ctx, int track);
 
 /**
+ * @brief Table slot of (cylinder, head) — MF-1602 (P3-702)
+ *
+ * Normally cylinder * 2 + head; for a legacy single-sided image in
+ * CONSECUTIVE slots (greaseweazle image/scp.py:246-254) the cylinder
+ * itself. The rule is uft_scp_ablage.h, shared with the plugin.
+ * @return the slot, or -1 if the image holds no such side
+ */
+int uft_scp_slot_of(uft_scp_ctx_t* ctx, int cylinder, int head);
+
+/**
+ * @brief The (cylinder, head) a table slot holds — the inverse of
+ *        uft_scp_slot_of(). MF-1602 (P3-702).
+ * @return false for a NULL context or a slot outside the table
+ */
+bool uft_scp_slot_position(uft_scp_ctx_t* ctx, int slot,
+                           int* cylinder, int* head);
+
+/**
  * @brief Read track data
  * @param ctx Parser context
  * @param track Track number
