@@ -62,11 +62,21 @@ static uft_error_t verify_pair_visitor(uft_disk_t *a, uft_disk_t *b,
         v_err = uft_generic_verify_track(a, cyl, head, tb);
     }
 
-    /* Byte-level Sektor-Zählung via Sektoren-Vergleich */
-    if (ta->sector_count == tb->sector_count) {
+    /* Byte-level Sektor-Zählung via Sektoren-Vergleich.
+     *
+     * MF-1616: gepaart nach Sektor-ID, nicht nach Position — `a` und die
+     * Referenz koennen verschiedene Formate sein, und eine Aufnahme
+     * liefert Plattenfolge, ein Sektorabbild ID-Folge. Die Zaehlung sagte
+     * sonst „fehlgeschlagen" zu Sektoren, die gleich sind. */
+    bool *used = (ta->sector_count == tb->sector_count)
+               ? calloc(ta->sector_count ? ta->sector_count : 1, sizeof(bool))
+               : NULL;
+    if (used) {
         for (size_t s = 0; s < tb->sector_count; s++) {
-            const uft_sector_t *sa = &ta->sectors[s];
             const uft_sector_t *sb = &tb->sectors[s];
+            long p = uft_verify_find_partner(ta, sb, used);
+            if (p < 0) { tr.sectors_missing++; continue; }
+            const uft_sector_t *sa = &ta->sectors[p];
             size_t la = sa->data_len ? sa->data_len : sa->data_size;
             size_t lb = sb->data_len ? sb->data_len : sb->data_size;
 
@@ -81,6 +91,7 @@ static uft_error_t verify_pair_visitor(uft_disk_t *a, uft_disk_t *b,
                 tr.sectors_matched++;
             }
         }
+        free(used);
     } else {
         tr.sectors_missing = (tb->sector_count > ta->sector_count) ?
                               (tb->sector_count - ta->sector_count) : 0;

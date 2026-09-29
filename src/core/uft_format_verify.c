@@ -9,57 +9,93 @@
  * Für Formate mit Weak-Bits, Timing oder Fuzzy-Bits muss eine eigene
  * verify_track-Funktion geschrieben werden (z.B. uft_atx_verify_track,
  * uft_stx_verify_track).
+ *
+ * MF-1616: "Sektor-für-Sektor" hiess hier "der s-te gegen den s-ten". Ein
+ * Sektorabbild liefert seine Sektoren in ID-Folge, eine Aufnahme in
+ * PLATTENfolge — und die beginnt, wo der Indexpuls lag. Gemessen an
+ * CT-Raw -> ADF (sq1_amiga.ctr): 125 von 160 Spuren „wichen ab", und
+ * genau die 35 Spuren, deren Plattenfolge zufaellig bei Sektor 0 beginnt,
+ * bestanden; nach ID verglichen waren 1760 von 1760 Sektoren gleich.
+ * Seit MF-1616 paaren alle drei Vergleiche ueber
+ * uft_verify_find_partner().
  */
 #include "uft/uft_format_common.h"
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_track.h"   /* uft_track_release (MF-433) */
 
+#include <stdlib.h>
 #include <string.h>
+
+long uft_verify_find_partner(const uft_track_t *actual, const uft_sector_t *r,
+                             bool *used)
+{
+    if (!actual || !r || !used) return -1;
+    for (size_t i = 0; i < actual->sector_count; i++) {
+        if (!used[i] && actual->sectors[i].id.sector == r->id.sector) {
+            used[i] = true;
+            return (long)i;
+        }
+    }
+    return -1;
+}
+
+/* Liest die Spur und legt das used[]-Feld fuer die Paarung an. Bei jedem
+ * Fehler ist `actual` freigegeben und *used NULL. */
+static uft_error_t verify_lesen(uft_disk_t *disk, int cyl, int head,
+                                const uft_track_t *reference,
+                                uft_track_t *actual, bool **used)
+{
+    *used = NULL;
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);   /* MF-445 */
+    if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
+
+    memset(actual, 0, sizeof(*actual));
+    uft_error_t err = plugin->read_track(disk, cyl, head, actual);
+    if (err != UFT_OK) {
+        uft_track_release(actual);
+        return err;
+    }
+    if (actual->sector_count != reference->sector_count) {
+        uft_track_release(actual);
+        return UFT_ERROR_VERIFY_FAILED;
+    }
+    *used = calloc(actual->sector_count ? actual->sector_count : 1, sizeof(bool));
+    if (!*used) {
+        uft_track_release(actual);
+        return UFT_ERROR_NO_MEMORY;
+    }
+    return UFT_OK;
+}
 
 uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference) {
     if (!disk || !reference) return UFT_ERROR_INVALID_STATE;
 
-    /* MF-445: disk->plugin IS im Struct — der Kommentar hier war die
-     * Diagnose, jetzt ist es der Fix. */
-    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
-    if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
-
     uft_track_t actual;
-    memset(&actual, 0, sizeof(actual));
+    bool *used;
+    uft_error_t err = verify_lesen(disk, cyl, head, reference, &actual, &used);
+    if (err != UFT_OK) return err;
 
-    uft_error_t err = plugin->read_track(disk, cyl, head, &actual);
-    if (err != UFT_OK) {
-        uft_track_release(&actual);
-        return err;
-    }
-
-    if (actual.sector_count != reference->sector_count) {
-        uft_track_release(&actual);
-        return UFT_ERROR_VERIFY_FAILED;
-    }
-
-    for (size_t s = 0; s < reference->sector_count; s++) {
-        const uft_sector_t *a = &actual.sectors[s];
+    uft_error_t ergebnis = UFT_OK;
+    for (size_t s = 0; s < reference->sector_count && ergebnis == UFT_OK; s++) {
         const uft_sector_t *r = &reference->sectors[s];
+        long p = uft_verify_find_partner(&actual, r, used);
+        if (p < 0) { ergebnis = UFT_ERROR_VERIFY_FAILED; break; }
+        const uft_sector_t *a = &actual.sectors[p];
 
         /* Datenlänge muss passen */
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
-        if (alen != rlen || !a->data || !r->data) {
-            uft_track_release(&actual);
-            return UFT_ERROR_VERIFY_FAILED;
-        }
-
+        if (alen != rlen || !a->data || !r->data)
+            ergebnis = UFT_ERROR_VERIFY_FAILED;
         /* Byte-genauer Vergleich */
-        if (memcmp(a->data, r->data, rlen) != 0) {
-            uft_track_release(&actual);
-            return UFT_ERROR_VERIFY_FAILED;
-        }
+        else if (memcmp(a->data, r->data, rlen) != 0)
+            ergebnis = UFT_ERROR_VERIFY_FAILED;
     }
 
+    free(used);
     uft_track_release(&actual);
-    return UFT_OK;
+    return ergebnis;
 }
 
 /* ============================================================================
@@ -74,29 +110,24 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
 uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
                                        const uft_track_t *reference) {
     if (!disk || !reference) return UFT_ERROR_INVALID_STATE;
-    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);   /* MF-445 */
-    if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
 
     uft_track_t actual;
-    memset(&actual, 0, sizeof(actual));
+    bool *used;
+    uft_error_t err = verify_lesen(disk, cyl, head, reference, &actual, &used);
+    if (err != UFT_OK) return err;
 
-    uft_error_t err = plugin->read_track(disk, cyl, head, &actual);
-    if (err != UFT_OK) { uft_track_release(&actual); return err; }
-
-    if (actual.sector_count != reference->sector_count) {
-        uft_track_release(&actual);
-        return UFT_ERROR_VERIFY_FAILED;
-    }
-
-    for (size_t s = 0; s < reference->sector_count; s++) {
-        const uft_sector_t *a = &actual.sectors[s];
+    uft_error_t ergebnis = UFT_OK;
+    for (size_t s = 0; s < reference->sector_count && ergebnis == UFT_OK; s++) {
         const uft_sector_t *r = &reference->sectors[s];
+        long p = uft_verify_find_partner(&actual, r, used);
+        if (p < 0) { ergebnis = UFT_ERROR_VERIFY_FAILED; break; }
+        const uft_sector_t *a = &actual.sectors[p];
 
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
         if (alen != rlen || !a->data || !r->data) {
-            uft_track_release(&actual);
-            return UFT_ERROR_VERIFY_FAILED;
+            ergebnis = UFT_ERROR_VERIFY_FAILED;
+            break;
         }
 
         /* Wenn Weak-Sektor ohne Mask: überspringen (nicht reproduzierbar) */
@@ -121,24 +152,21 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
          * Per docs/AI_COLLABORATION.md / structured-reviewer Finding #2. */
         if (a->weak_mask) {
             for (size_t b = 0; b < rlen; b++) {
-                if (a->weak_mask[b] == 0) {
-                    if (a->data[b] != r->data[b]) {
-                        uft_track_release(&actual);
-                        return UFT_ERROR_VERIFY_FAILED;
-                    }
+                if (a->weak_mask[b] == 0 && a->data[b] != r->data[b]) {
+                    ergebnis = UFT_ERROR_VERIFY_FAILED;
+                    break;
                 }
             }
         } else {
             /* Kein Weak-Sektor: normaler Vergleich */
-            if (memcmp(a->data, r->data, rlen) != 0) {
-                uft_track_release(&actual);
-                return UFT_ERROR_VERIFY_FAILED;
-            }
+            if (memcmp(a->data, r->data, rlen) != 0)
+                ergebnis = UFT_ERROR_VERIFY_FAILED;
         }
     }
 
+    free(used);
     uft_track_release(&actual);
-    return UFT_OK;
+    return ergebnis;
 }
 
 /* ============================================================================
@@ -173,27 +201,30 @@ uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
         return UFT_OK;
     }
 
-    /* Fallback: Sektor-Vergleich mit Weak-Bit-Toleranz */
+    /* Fallback: Sektor-Vergleich mit Weak-Bit-Toleranz, gepaart nach ID */
     if (actual.sector_count != reference->sector_count) {
         uft_track_release(&actual);
         return UFT_ERROR_VERIFY_FAILED;
     }
-    for (size_t s = 0; s < reference->sector_count; s++) {
-        const uft_sector_t *a = &actual.sectors[s];
+    bool *used = calloc(actual.sector_count ? actual.sector_count : 1, sizeof(bool));
+    if (!used) { uft_track_release(&actual); return UFT_ERROR_NO_MEMORY; }
+
+    uft_error_t ergebnis = UFT_OK;
+    for (size_t s = 0; s < reference->sector_count && ergebnis == UFT_OK; s++) {
         const uft_sector_t *r = &reference->sectors[s];
+        long p = uft_verify_find_partner(&actual, r, used);
+        if (p < 0) { ergebnis = UFT_ERROR_VERIFY_FAILED; break; }
+        const uft_sector_t *a = &actual.sectors[p];
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
-        if (alen != rlen || !a->data || !r->data) {
-            uft_track_release(&actual);
-            return UFT_ERROR_VERIFY_FAILED;
-        }
-        if (a->weak) continue;  /* Flux: weak-sectors gelten immer als OK */
-        if (memcmp(a->data, r->data, rlen) != 0) {
-            uft_track_release(&actual);
-            return UFT_ERROR_VERIFY_FAILED;
-        }
+        if (alen != rlen || !a->data || !r->data)
+            ergebnis = UFT_ERROR_VERIFY_FAILED;
+        else if (a->weak)
+            continue;  /* Flux: weak-sectors gelten immer als OK */
+        else if (memcmp(a->data, r->data, rlen) != 0)
+            ergebnis = UFT_ERROR_VERIFY_FAILED;
     }
+    free(used);
     uft_track_release(&actual);
-    return UFT_OK;
+    return ergebnis;
 }
-

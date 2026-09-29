@@ -903,6 +903,16 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_verify_nach_sektor_id")
+        # MF-1616: verify paired sectors by POSITION; every recording (disk
+        # order) against a sector image (ID order) failed. Reads the free
+        # xdftool ADF through the ADF plugin and rotates the sector list.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_disk_verify.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_disk_stream.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_ipf_ctraw" OR
            ${test_name} STREQUAL "test_ipf_helfer_sektoren")
         # MF-1614: CT-Raw is named instead of called invalid, and

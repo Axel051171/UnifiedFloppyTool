@@ -763,6 +763,26 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference);
 
 /**
+ * @brief The sector of @p actual that belongs to reference sector @p r
+ *        (MF-1616).
+ *
+ * Pairs by sector ID: the first sector of @p actual with the same
+ * `id.sector` whose `used[]` slot is still false; that slot is then set.
+ * Duplicate IDs (copy protection) therefore pair in their order.
+ *
+ * Why not by position: a sector image lists its sectors in ID order, a
+ * recording in DISK order, which starts wherever the index fell. Pairing
+ * the s-th with the s-th made every real disk fail a verify (measured on
+ * CT-Raw -> ADF: 125 of 160 tracks "differ", 1760 of 1760 sectors equal
+ * by ID).
+ *
+ * @param used  array of actual->sector_count flags, zeroed by the caller
+ * @return index into actual->sectors, or -1 if no unused sector has the ID
+ */
+long uft_verify_find_partner(const uft_track_t *actual, const uft_sector_t *r,
+                             bool *used);
+
+/**
  * @brief Weak-Bit-tolerante Verify-Implementierung (ATX/STX/PRO)
  *
  * Vergleicht Sektor-Daten byteweise, ignoriert aber Bytes die in weak_mask
