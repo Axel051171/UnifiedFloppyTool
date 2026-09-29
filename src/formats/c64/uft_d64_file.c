@@ -11,20 +11,22 @@
 #include <string.h>
 #include <ctype.h>
 #include "uft/uft_compat.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 
 /* ============================================================================
  * Static Data
  * ============================================================================ */
 
-/** Sectors per track (1-42) */
-static const int sectors_per_track[43] = {
-    0,
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    21, 21, 21, 21, 21, 21, 21, 19, 19, 19,
-    19, 19, 19, 19, 18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-    17, 17
-};
+/* Sectors per track: bis MF-1532 eine eigene Tafel, jetzt
+ * `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)`. Vor dem Umhaengen
+ * gemessen: identisch mit der SSOT in allen 42 Spuren, 0 Abweichungen.
+ *
+ * Achtung beim Lesen der Zugriffe unten: Zeile 51 nimmt `[t - 1]` (die
+ * Vorgaengerspur beim Aufsummieren), die uebrigen `[t]`. Beides bleibt so —
+ * die Umhaengung aendert nur, WOHER die Zahl kommt, nicht welche Spur
+ * gemeint ist. Ein Versatz hier waere der Fehler, den
+ * `tests/test_cbm_geometry.c` ausdruecklich benennt („same numbers,
+ * shifted"). */
 
 /** Track offsets (cumulative sectors) */
 static int track_offsets[43] = {0};
@@ -48,7 +50,7 @@ static void init_offsets(void)
     
     track_offsets[0] = 0;
     for (int t = 1; t <= 42; t++) {
-        track_offsets[t] = track_offsets[t - 1] + sectors_per_track[t - 1];
+        track_offsets[t] = track_offsets[t - 1] + uft_cbm_sectors_per_track(UFT_CBM_1541, t - 1);
     }
     offsets_init = true;
 }
@@ -59,7 +61,7 @@ static void init_offsets(void)
 static int sector_offset(int track, int sector)
 {
     if (track < 1 || track > 42) return -1;
-    if (sector < 0 || sector >= sectors_per_track[track]) return -1;
+    if (sector < 0 || sector >= uft_cbm_sectors_per_track(UFT_CBM_1541, track)) return -1;
     
     init_offsets();
     return (track_offsets[track] + sector) * 256;
@@ -412,7 +414,7 @@ int d64_insert_file(uint8_t *d64_data, size_t d64_size,
         /* Try track below directory */
         int t = 18 - delta;
         if (t >= 1) {
-            for (int s = 0; s < sectors_per_track[t] && allocated < blocks_needed; s++) {
+            for (int s = 0; s < uft_cbm_sectors_per_track(UFT_CBM_1541, t) && allocated < blocks_needed; s++) {
                 int byte_idx = s / 8;
                 int bit_idx = s % 8;
                 uint8_t *track_bam = bam + 4 + (t - 1) * 4;
@@ -432,7 +434,7 @@ int d64_insert_file(uint8_t *d64_data, size_t d64_size,
         /* Try track above directory (skip 18) */
         t = 18 + delta;
         if (t <= 35) {
-            for (int s = 0; s < sectors_per_track[t] && allocated < blocks_needed; s++) {
+            for (int s = 0; s < uft_cbm_sectors_per_track(UFT_CBM_1541, t) && allocated < blocks_needed; s++) {
                 int byte_idx = s / 8;
                 int bit_idx = s % 8;
                 uint8_t *track_bam = bam + 4 + (t - 1) * 4;
@@ -665,7 +667,7 @@ bool d64_validate_chain(const uint8_t *d64_data, size_t d64_size,
         int t = chain->entries[i].track;
         int s = chain->entries[i].sector;
         
-        if (t < 1 || t > 42 || s < 0 || s >= sectors_per_track[t]) {
+        if (t < 1 || t > 42 || s < 0 || s >= uft_cbm_sectors_per_track(UFT_CBM_1541, t)) {
             err_count++;
         }
     }

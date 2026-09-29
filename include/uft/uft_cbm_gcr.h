@@ -25,61 +25,24 @@ extern "C" {
  * GCR Tables
  *============================================================================*/
 
-/** 4-bit → 5-bit GCR Encode Table */
-static const uint8_t cbm_gcr_encode_table[16] = {
-    0x0A,  /* 0: 01010 */
-    0x0B,  /* 1: 01011 */
-    0x12,  /* 2: 10010 */
-    0x13,  /* 3: 10011 */
-    0x0E,  /* 4: 01110 */
-    0x0F,  /* 5: 01111 */
-    0x16,  /* 6: 10110 */
-    0x17,  /* 7: 10111 */
-    0x09,  /* 8: 01001 */
-    0x19,  /* 9: 11001 */
-    0x1A,  /* A: 11010 */
-    0x1B,  /* B: 11011 */
-    0x0D,  /* C: 01101 */
-    0x1D,  /* D: 11101 */
-    0x1E,  /* E: 11110 */
-    0x15,  /* F: 10101 */
-};
-
-/** 5-bit → 4-bit GCR Decode Table (0xFF = ungültig) */
-static const uint8_t cbm_gcr_decode_table[32] = {
-    0xFF,  /* 00: ungültig */
-    0xFF,  /* 01: ungültig */
-    0xFF,  /* 02: ungültig */
-    0xFF,  /* 03: ungültig */
-    0xFF,  /* 04: ungültig */
-    0xFF,  /* 05: ungültig */
-    0xFF,  /* 06: ungültig */
-    0xFF,  /* 07: ungültig */
-    0xFF,  /* 08: ungültig */
-    0x08,  /* 09: 8 */
-    0x00,  /* 0A: 0 */
-    0x01,  /* 0B: 1 */
-    0xFF,  /* 0C: ungültig */
-    0x0C,  /* 0D: C */
-    0x04,  /* 0E: 4 */
-    0x05,  /* 0F: 5 */
-    0xFF,  /* 10: ungültig */
-    0xFF,  /* 11: ungültig */
-    0x02,  /* 12: 2 */
-    0x03,  /* 13: 3 */
-    0xFF,  /* 14: ungültig */
-    0x0F,  /* 15: F */
-    0x06,  /* 16: 6 */
-    0x07,  /* 17: 7 */
-    0xFF,  /* 18: ungültig */
-    0x09,  /* 19: 9 */
-    0x0A,  /* 1A: A */
-    0x0B,  /* 1B: B */
-    0xFF,  /* 1C: ungültig */
-    0x0D,  /* 1D: D */
-    0x0E,  /* 1E: E */
-    0xFF,  /* 1F: ungültig */
-};
+/* ── Die zwei GCR-Tafeln stehen nicht mehr hier (MF-1522) ──────────────
+ *
+ * Bis MF-1522 lagen sie in dieser Datei, und das Codec-Register las die
+ * Zuordnung von HIER — weil eine eigene dort die dreizehnte Kopie gewesen
+ * waere. Mit dem letzten Umhaengen ist die Richtung umgekehrt: die
+ * Zuordnung steht in `src/core/uft_gcr.c`, die Wortmenge folgt dort einer
+ * gemessenen Regel, und die Dekodierrichtung wird daraus abgeleitet statt
+ * ein zweites Mal geschrieben.
+ *
+ * Damit ist die Wanderung zu Ende: von zwoelf Kopien der Kodiertafel und
+ * zehn der Dekodiertafel (gemessen MF-1506) bleibt je EINE Stelle.
+ *
+ * **Folge fuer Einbinder:** wer diesen Header benutzt, braucht
+ * `src/core/uft_gcr.c`. Seit MF-1515 liegt es in `libuft_core.a` — das
+ * ist gedeckt, und zwar gemessen: 89 Link-Ziele fielen, solange es das
+ * nicht war.
+ */
+#include "uft/core/uft_gcr.h"
 
 /*============================================================================
  * Nibble-Level Functions
@@ -90,7 +53,7 @@ static const uint8_t cbm_gcr_decode_table[32] = {
  */
 static inline uint8_t cbm_gcr_encode_nibble(uint8_t nibble)
 {
-    return cbm_gcr_encode_table[nibble & 0x0F];
+    return uft_gcr_kodieren(UFT_GCR_CBM_5_4, nibble & 0x0F);
 }
 
 /**
@@ -101,7 +64,7 @@ static inline uint8_t cbm_gcr_encode_nibble(uint8_t nibble)
  */
 static inline uint8_t cbm_gcr_decode_quintet(uint8_t quintet, bool *error)
 {
-    uint8_t result = cbm_gcr_decode_table[quintet & 0x1F];
+    uint8_t result = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, quintet & 0x1F);
     *error = (result == 0xFF);
     return result & 0x0F;
 }
@@ -117,14 +80,14 @@ static inline uint8_t cbm_gcr_decode_quintet(uint8_t quintet, bool *error)
  */
 static inline void cbm_gcr_encode_chunk(uint8_t out[5], const uint8_t in[4])
 {
-    uint8_t n0 = cbm_gcr_encode_table[in[0] >> 4];
-    uint8_t n1 = cbm_gcr_encode_table[in[0] & 0x0F];
-    uint8_t n2 = cbm_gcr_encode_table[in[1] >> 4];
-    uint8_t n3 = cbm_gcr_encode_table[in[1] & 0x0F];
-    uint8_t n4 = cbm_gcr_encode_table[in[2] >> 4];
-    uint8_t n5 = cbm_gcr_encode_table[in[2] & 0x0F];
-    uint8_t n6 = cbm_gcr_encode_table[in[3] >> 4];
-    uint8_t n7 = cbm_gcr_encode_table[in[3] & 0x0F];
+    uint8_t n0 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[0] >> 4);
+    uint8_t n1 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[0] & 0x0F);
+    uint8_t n2 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[1] >> 4);
+    uint8_t n3 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[1] & 0x0F);
+    uint8_t n4 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[2] >> 4);
+    uint8_t n5 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[2] & 0x0F);
+    uint8_t n6 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[3] >> 4);
+    uint8_t n7 = uft_gcr_kodieren(UFT_GCR_CBM_5_4, in[3] & 0x0F);
     
     /* Pack 8 quintets (40 bits) into 5 bytes */
     out[0] = (n0 << 3) | (n1 >> 2);
@@ -155,14 +118,14 @@ static inline int cbm_gcr_decode_chunk(uint8_t out[4], const uint8_t in[5])
     uint8_t q7 = in[4] & 0x1F;
     
     /* Dekodiere Quintets zu Nibbles */
-    uint8_t n0 = cbm_gcr_decode_table[q0]; if (n0 == 0xFF) { bad = 1; n0 = 0; }
-    uint8_t n1 = cbm_gcr_decode_table[q1]; if (n1 == 0xFF) { bad = 1; n1 = 0; }
-    uint8_t n2 = cbm_gcr_decode_table[q2]; if (n2 == 0xFF) { bad = 1; n2 = 0; }
-    uint8_t n3 = cbm_gcr_decode_table[q3]; if (n3 == 0xFF) { bad = 1; n3 = 0; }
-    uint8_t n4 = cbm_gcr_decode_table[q4]; if (n4 == 0xFF) { bad = 1; n4 = 0; }
-    uint8_t n5 = cbm_gcr_decode_table[q5]; if (n5 == 0xFF) { bad = 1; n5 = 0; }
-    uint8_t n6 = cbm_gcr_decode_table[q6]; if (n6 == 0xFF) { bad = 1; n6 = 0; }
-    uint8_t n7 = cbm_gcr_decode_table[q7]; if (n7 == 0xFF) { bad = 1; n7 = 0; }
+    uint8_t n0 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q0); if (n0 == 0xFF) { bad = 1; n0 = 0; }
+    uint8_t n1 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q1); if (n1 == 0xFF) { bad = 1; n1 = 0; }
+    uint8_t n2 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q2); if (n2 == 0xFF) { bad = 1; n2 = 0; }
+    uint8_t n3 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q3); if (n3 == 0xFF) { bad = 1; n3 = 0; }
+    uint8_t n4 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q4); if (n4 == 0xFF) { bad = 1; n4 = 0; }
+    uint8_t n5 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q5); if (n5 == 0xFF) { bad = 1; n5 = 0; }
+    uint8_t n6 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q6); if (n6 == 0xFF) { bad = 1; n6 = 0; }
+    uint8_t n7 = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, q7); if (n7 == 0xFF) { bad = 1; n7 = 0; }
     
     /* Kombiniere Nibbles zu Bytes */
     out[0] = (n0 << 4) | n1;

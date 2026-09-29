@@ -4,6 +4,7 @@
  */
 
 #include "uft/uft_format_common.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 
 #define D71_TRACKS_PER_SIDE     35
 #define D71_TOTAL_TRACKS        70
@@ -14,12 +15,17 @@
 #define D71_SIZE_WITH_ERRORS    351062
 #define D71_BAM_TRACK           18
 
-static const uint8_t d71_sectors_per_track[35] = {
-    21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
-    19,19,19,19,19,19,19,
-    18,18,18,18,18,18,
-    17,17,17,17,17
-};
+/* Bis MF-1532 eine eigene Tafel, jetzt
+ * `uft_cbm_sectors_per_track(UFT_CBM_1541, seitenspur)`.
+ *
+ * Die Familie ist 1541 und nicht 1571, obwohl die Datei D71 liest: alle
+ * Zugriffe hier nehmen `side_track` bzw. `t` im Bereich 1-35, also die
+ * SEITENLOKALE Spur (gemessen an den vier Stellen). Die 1571-Familie waere
+ * fuer die durchlaufende Spur 1-70 richtig — hier wuerde sie ab Spur 36
+ * dasselbe liefern, aber die Absicht falsch benennen.
+ *
+ * Vor dem Umhaengen gemessen: identisch mit der SSOT in allen 35 Spuren,
+ * 0 Abweichungen. */
 
 typedef struct {
     FILE*       file;
@@ -34,12 +40,12 @@ static size_t d71_get_offset(int track, int sector) {
     int side = (track > D71_TRACKS_PER_SIDE) ? 1 : 0;
     int side_track = side ? (track - D71_TRACKS_PER_SIDE) : track;
     if (side_track < 1 || side_track > D71_TRACKS_PER_SIDE) return 0;
-    if (sector < 0 || sector >= d71_sectors_per_track[side_track - 1]) return 0;
+    if (sector < 0 || sector >= uft_cbm_sectors_per_track(UFT_CBM_1541, side_track)) return 0;
     
     size_t offset = 0;
     if (side == 1) offset = D71_SECTORS_SIDE0 * D71_SECTOR_SIZE;
     for (int t = 1; t < side_track; t++)
-        offset += d71_sectors_per_track[t - 1] * D71_SECTOR_SIZE;
+        offset += uft_cbm_sectors_per_track(UFT_CBM_1541, t) * D71_SECTOR_SIZE;
     offset += sector * D71_SECTOR_SIZE;
     return offset;
 }
@@ -146,7 +152,7 @@ static uft_error_t d71_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     if (actual_track < 1 || actual_track > D71_TOTAL_TRACKS) return UFT_ERROR_INVALID_ARG;
 
     const int side_track = cyl + 1;      /* Tabelle gilt je Seite */
-    int num_sectors = d71_sectors_per_track[side_track - 1];
+    int num_sectors = uft_cbm_sectors_per_track(UFT_CBM_1541, side_track);
     
     uft_track_init(track, cyl, head);
     
@@ -197,7 +203,7 @@ static uft_error_t d71_write_track(uft_disk_t* disk, int cyl, int head,
     if (actual_track < 1 || actual_track > D71_TOTAL_TRACKS) return UFT_ERROR_INVALID_STATE;
 
     const int side_track = cyl + 1;
-    int num_sectors = d71_sectors_per_track[side_track - 1];
+    int num_sectors = uft_cbm_sectors_per_track(UFT_CBM_1541, side_track);
 
     for (size_t s = 0; s < track->sector_count && (int)s < num_sectors; s++) {
         size_t offset = d71_get_offset(actual_track, (int)s);

@@ -27,10 +27,10 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | davon auf T2/T3 (offen) | 8 |
 | davon mit **gemessenem** Erzeuger-Kanal | **0** |
 | davon mit Werkzeug-Zusage, Kanal ungemessen | 0 |
-| hxcfe-Module mit `RW` | 38 |
-| libdsk-Typen (alle les- und schreibbar) | 26 |
-| floptool-Module gesamt | 151 |
-| davon schreibfaehig (`rw`/`-w`) | 122 |
+| hxcfe-Module mit `RW` | 0 |
+| libdsk-Typen (alle les- und schreibbar) | 0 |
+| floptool-Module gesamt | 0 |
+| davon schreibfaehig (`rw`/`-w`) | 0 |
 
 ## Die offenen Formate
 
@@ -38,7 +38,7 @@ Die Spalte **Kanal** wird deshalb AUSGEFUEHRT, nicht gelesen. Sie steht in `docs
 | Format | Stufe | hxcfe (RW) | libdsk | floptool (w) | Kanal | Klasse |
 |---|---|---|---|---|---|---|
 | `akai_s900` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
-| `dim` | T2 | ATARIST_DIM (?) | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
+| `dim` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `korg_dss1` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `lisa_twiggy` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
 | `nfd` | T2 | — | — | — | keiner | **C** — gemessen: dieser Weg traegt nicht |
@@ -186,27 +186,15 @@ Die Zuordnung Werkzeugmodul -> Plugin laeuft ueber die **Dateiendung** — abgel
 **Was hier steht, ist also eine Untergrenze.** Die unzugeordneten Namen unten sind der Rueckstand, aus dem die naechsten Kandidaten kommen — jeder von Hand aufzuloesen und dann als gemessener Kanal einzutragen, nicht als Namenstafel.
 
 
-**hxcfe-`RW`-Module, deren Endung KEIN Plugin traegt (13)** — ein Werkzeug im Baum schreibt sie, UFT liest sie nicht. Das ist die **Lückenliste**, und jeder Eintrag käme als **T1b** auf die Welt statt als T3, weil der Erzeuger vom ersten Tag an da ist (Preis der 1:2-Regel damit gedeckt):
+**hxcfe-`RW`-Module, deren Endung KEIN Plugin traegt (0)** — ein Werkzeug im Baum schreibt sie, UFT liest sie nicht. Das ist die **Lückenliste**, und jeder Eintrag käme als **T1b** auf die Welt statt als T3, weil der Erzeuger vom ersten Tag an da ist (Preis der 1:2-Regel damit gedeckt):
 
 
-* `AMIGA_ADZ` — `*.adz`
-* `ARBURG` — `*.arburgfd`
-* `ATARIST_STW` — `*.stw`
-* `FDX68_FDX` — `*.fdx`
-* `GENERIC_XML` — `*.xml`
-* `H17_HEATHKIT` — `*.h17`
-* `HEATHKIT` — `*.h8d`
-* `HXCMFM_IMG` — `*.mfm`
-* `HXC_AFI` — `*.afi`
-* `HXC_QD` — `*.qd`
-* `SPECCYDOS_SDD` — `*.sdd`
-* `THOMSON_FD` — `*.fd`
-* `VTR_IMG` — `*.vtr`
+* keine
 
 **hxcfe-`RW`-Module, deren Endung ein Plugin traegt, die aber trotzdem nicht zugeordnet wurden (0):** keine — hier fehlt die ZUORDNUNG, nicht das Format.
 
 
-**libdsk-Typen ohne Zuordnung (12):** `copyqm`, `floppy`, `gotek`, `gotek72`, `ldbs`, `ntwdm`, `rawob`, `rawoo`, `remote`, `simh`, `tele`, `ydsk`
+**libdsk-Typen ohne Zuordnung (0):** keine
 
 
 Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung**, nur einen internen Namen. `copyqm` und `tele` standen genau deshalb hier, obwohl UFT sie als `cqm` und `td0` längst liest — MF-1063 hat sie von Hand aufgelöst und gehoben. Der Rest dieser Liste ist ungeprüft und kann beides sein.
@@ -220,16 +208,16 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `2img` | T1b | — | — |
 | `86f` | T1b | — | — |
 | `a2r` | T1 | — | — |
-| `adf` | T1b | AMIGA_ADF (?) | — |
-| `adf_arc` | T1b | AMIGA_ADF (?) | — |
-| `adf_ext` | T1b | AMIGA_ADF (?) | — |
-| `adl` | T1b | AMIGA_ADF (?) | — |
-| `apridisk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | apridisk, dsk (?) |
+| `adf` | T1b | — | — |
+| `adf_arc` | T1b | — | — |
+| `adf_ext` | T1b | — | — |
+| `adl` | T1b | — | — |
+| `apridisk` | T1b | — | — |
 | `atr` | T1b | — | — |
 | `atx` | T1 | — | — |
 | `cas` | T1b | — | — |
-| `cfi` | T1b | — | cfi |
-| `cpm` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `cfi` | T1b | — | — |
+| `cpm` | T1b | — | — |
 | `cqm` | T1b | — | — |
 | `d13` | T1b | — | — |
 | `d64` | T1b | — | — |
@@ -239,63 +227,63 @@ Bei libdsk lässt sich das nicht trennen: seine Typen tragen **keine Dateiendung
 | `d80` | T1b | — | — |
 | `d81` | T1b | — | — |
 | `d82` | T1b | — | — |
-| `d88` | T1b | NEC_D88 | — |
-| `dc42` | T1b | RAW_LOADER (?) | dc42 |
+| `d88` | T1b | — | — |
+| `dc42` | T1b | — | — |
 | `dcm` | T1b | — | — |
-| `dim_atari` | T1b | ATARIST_DIM (?) | — |
-| `dmk` | T1b | TRS80_DMK | — |
+| `dim_atari` | T1b | — | — |
+| `dmk` | T1b | — | — |
 | `dms` | T1b | — | — |
-| `do` | T1b | AMSTRADCPC_DSK (?), APPLE2_DO, ORIC_DSK (?) | dsk (?) |
-| `dsk_cpc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `do` | T1b | — | — |
+| `dsk_cpc` | T1b | — | — |
 | `edk` | T1b | — | — |
-| `edsk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?), edsk |
+| `edsk` | T1b | — | — |
 | `fdi` | T1 | — | — |
 | `fdi_pc98` | T1b | — | — |
 | `fds` | T1b | — | — |
 | `g64` | T1 | — | — |
 | `g71` | T1b | — | — |
-| `hardsector` | ? | RAW_LOADER (?) | — |
-| `hfe` | T1 | HXC_HFE, HXC_HFEV3, HXC_STREAMHFE | — |
-| `imd` | T1 | IMD_IMG | imd |
-| `img` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |
-| `ipf` | T1 | SPS_IPF | — |
-| `jv1` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
-| `jv3` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TRS80_JV3 | dsk (?), jv3 |
-| `jvc` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
-| `kfx` | T1 | KRYOFLUXSTREAM (?) | raw (?) |
-| `logical` | T1b | — | logical |
-| `mfi` | T1b | MAME_MFI | — |
-| `mgt` | T1 | RAW_LOADER (?) | — |
+| `hardsector` | ? | — | — |
+| `hfe` | T1 | — | — |
+| `imd` | T1 | — | — |
+| `img` | T1b | — | — |
+| `ipf` | T1 | — | — |
+| `jv1` | T1b | — | — |
+| `jv3` | T1b | — | — |
+| `jvc` | T1b | — | — |
+| `kfx` | T1 | — | — |
+| `logical` | T1b | — | — |
+| `mfi` | T1b | — | — |
+| `mgt` | T1 | — | — |
 | `micropolis` | T1b | — | — |
-| `msa` | T1b | ATARIST_MSA | — |
-| `msx_disk` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?) |
-| `myz80` | T1b | — | myz80 |
-| `nanowasp` | T1b | — | nanowasp |
+| `msa` | T1b | — | — |
+| `msx_disk` | T1b | — | — |
+| `myz80` | T1b | — | — |
+| `nanowasp` | T1b | — | — |
 | `nib` | T1b | — | — |
-| `northstar` | T1b | NORTHSTAR | — |
+| `northstar` | T1b | — | — |
 | `opus` | T1b | — | — |
-| `pdp` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
-| `po` | T1b | AMSTRADCPC_DSK (?), APPLE2_PO, ORIC_DSK (?) | dsk (?) |
-| `posix` | T1b | AMSTRADCPC_DSK (?), KRYOFLUXSTREAM (?), ORIC_DSK (?), RAW_LOADER (?) | dsk (?), raw (?) |
+| `pdp` | T1b | — | — |
+| `po` | T1b | — | — |
+| `posix` | T1b | — | — |
 | `pri` | T1b | — | — |
-| `qrst` | T1b | — | qrst |
-| `rcpmfs` | ? | — | rcpmfs |
+| `qrst` | T1b | — | — |
+| `rcpmfs` | ? | — | — |
 | `sad` | T1b | — | — |
 | `sam` | T1b | — | — |
-| `sap_thomson` | T1b | — | sap |
+| `sap_thomson` | T1b | — | — |
 | `scl` | T1 | — | — |
-| `scp` | T1b | SCP_FLUX_STREAM | — |
+| `scp` | T1b | — | — |
 | `ssd` | T1b | — | — |
-| `st` | T1b | ATARIST_ST | — |
-| `stx` | T1b | ATARIST_STX | — |
-| `t1k` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
-| `tan` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?) | dsk (?) |
+| `st` | T1b | — | — |
+| `stx` | T1b | — | — |
+| `t1k` | T1b | — | — |
+| `tan` | T1b | — | — |
 | `td0` | T1b | — | — |
-| `trd` | T1b | ZXSPECTRUM_TRD | — |
-| `v9t9` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
-| `vdk` | T1b | AMSTRADCPC_DSK (?), DRAGON3264_VDK, ORIC_DSK (?) | dsk (?) |
+| `trd` | T1b | — | — |
+| `v9t9` | T1b | — | — |
+| `vdk` | T1b | — | — |
 | `victor9k` | T1b | — | — |
 | `woz` | T1 | — | — |
-| `xdm86` | T1b | AMSTRADCPC_DSK (?), ORIC_DSK (?), TI994A_V9T9 (?) | dsk (?) |
+| `xdm86` | T1b | — | — |
 | `xfd` | T1b | — | — |
 

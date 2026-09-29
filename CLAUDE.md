@@ -511,14 +511,163 @@ nicht befragbar, lässt der Filter alles durch **und sagt es**.
 er bewegt.** Ein Fund, der keine Zahl bewegt, ist **Fundus, nicht
 Auftrag** — er wird notiert, nicht eingeplant.
 
-Die vier geführten Zahlen:
+**Jede Kennzahl hat eine Richtung, einen MESSBEFEHL und einen Stand mit
+Datum (Eigentümerentscheidung 2026-09-28, MF-1505).** Eine Kennzahl ohne
+Messbefehl ist ein Wunsch, kein Maß — sie wird dann mit `Messbefehl
+fehlt` geführt und nicht mit einer Zahl, die hier niemand nachrechnen
+kann. Hier standen früher vier Zahlen ohne Messbefehlspalte; die vier
+sind unverändert, sie sagen jetzt nur, wie man sie misst.
 
-| Kennzahl | Richtung | Quelle |
-|---|---|---|
-| ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `docs/VERIFICATION_TIERS.md`, abgeleitet |
-| angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet |
-| leckende Tests | **null halten** | ASan/UBSan in CI |
-| Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` |
+| # | Kennzahl | Richtung | Messbefehl | Stand (2026-09-28) |
+|---|---|---|---|---|
+| **K0** | Anteil der vom **Tor** gefangenen Fehler — Tor / (Tor + Mensch). **Zählregel:** ein Tor-Fang ist jede MECHANISCHE Prüfung, die anschlägt, ohne dass jemand beschließt hinzusehen (CI- und Commit-Haken, Audit-Skripte, Compiler und Linker über den Bau, ein Test, eine Mutationsmatrix); ein Mensch-Fang kommt aus Lesen oder Nachdenken | **rauf** | Sitzungsbilanzen, [`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md) — die Zeile `K0 dieser Sitzung: N von M` ist die EINE Stelle, `commit_verified.py` liest sie dort | **18 von 36** (2026-09-29; vorher 4 von 13). Davon sind **4 der Vollbau** und **4 die Mutationsprobe** — beide teuer und selten gefahren, also die Stelle, an der K0 am billigsten steigt |
+| **K1** | ungeprüfte Formate (T3) | **runter** — aber gemessen nicht durch Arbeit, siehe unten | `python scripts/gen_verification_tiers.py --write`, abgeleitet | T1=11 · T1b=68 · T2=7 · **T3=1** · gesamt 89 |
+| **K2** | Formate mit **echter fremder** Aufnahme (T1) / Formate mit Leser | **rauf** | dieselbe Tafel — T1 *ist* das Maß „echte Fixture" | **11 von 89** |
+| **K3** | Konstantenkopien **außerhalb** des Manifests | **runter**, Ziel 0 | `python scripts/audit_konstantenfamilien.py` (alle Familien) · `python scripts/audit_cbm_zonen.py` (Zonen, gegen die SSOT gerechnet) | **0 außerhalb** — 56 Familien mit **91 überzähligen Kopien** im Manifest, Zonen davon **14** (Stand 2026-09-29, MF-1532; die Zonenzahl fiel von 23, die Zählweisen von 9 auf 6) |
+| **K4** | Formate ohne **gemessenen** Erzeuger-Kanal | **runter** | `python scripts/gen_erzeuger_zensus.py` → §Stand, abgeleitet | **8** von 89 offen, davon **0** mit gemessenem Kanal |
+| **K5** | Waisen im Baum | **runter** | `docs/orphan_baseline.txt`, Datenzeilen | **199** |
+| **K6** | Regeln, die als Satz dastehen und **kein Tor** haben | **runter** | Rückschau, [`.claude/STEHENDE_AUFTRAEGE.md`](.claude/STEHENDE_AUFTRAEGE.md) | **2** — „Orakelzahlen durchs Binary"; „wer eine Menge parst, zählt sie gegen" |
+| **K7** | angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet über `update_inventory.py` | siehe §3 |
+| **K8** | leckende Tests | **null halten** | ASan/UBSan in CI | 0 |
+| **K9** | Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` | siehe dort |
+
+> **K3 hatte hier zuerst „Audit nur für Zonen" stehen — die Lücke ist
+> seit MF-1506 geschlossen, und die Messung hat mehr gefunden als die
+> Vermutung.** Genannt waren Kapazitäten, Lückenmaße, CRC-Polynome.
+> Der **erste Lauf** (2026-09-28) hat über `git ls-files` (2117 Dateien)
+> **58 Zahlenfolgen in mehr als einer Datei** gemessen, zusammen **113
+> überzählige Kopien** — und die größten sind keine davon:
+>
+> | Dateien | Familie |
+> |---|---|
+> | **12** | CBM-GCR-**Encode**-Tafel (`gcr_encode_table`, `DEFAULT_GCR`, `GCR_ENC`, …) — `uft_g64.c` führt sie sogar **zweimal** |
+> | **10** | CBM-GCR-**Decode**-Tafel |
+> | **7** | Apple-GCR-6&2-Tafel (`A2_WRITE_TAB`, `GCR62`, …) |
+> | 5 | CBM-Zonenlängen (dort greift zusätzlich das speziellere Tor) |
+> | 4 | Spurkapazitäten 6250/6666/7142/7692 |
+> | 3 | CRC-16-Tafel |
+>
+> Die Gedächtnisnotizen dieses Projekts sagten „GCR-Tafel sechsfach" und
+> „Apple-GCR-Tafel siebenfach"; gemessen sind es 12 und 7. Eine von Hand
+> geführte Zahl neben einer gemessenen driftet — deshalb **zählt das Tor
+> selbst**, statt eine Liste zu lesen. Die Reihenfolge war dabei die aus
+> Abschnitt C der stehenden Aufträge: erst die Messung, dann das Tor.
+>
+> **Die beiden Tore ersetzen einander nicht.**
+> `audit_konstantenfamilien.py` sieht *dass* eine Folge mehrfach dasteht;
+> `audit_cbm_zonen.py` rechnet die Zonentafeln gegen die SSOT und sieht
+> damit auch eine Kopie, die schon **falsch** ist. Breite und Tiefe.
+>
+> **NACHTRAG MF-1522 — die Tafel oben ist ein Anlass mit Datum, kein Stand,
+> und das Tor kannte einen Begriff nicht.** P3-666 hat die drei größten
+> Familien angegangen: die CBM-Encode-Tafel steht jetzt in 6 statt 12
+> Dateien, die Decode-Tafel in 4 statt 10, und eine Familie ist ganz
+> verschwunden — **113 → 97** überzählige Kopien, 58 → 56 Familien
+> (gemessen, Stand oben in der Zeile K3).
+>
+> Dabei hat das Tor die letzte Hebung **abgewiesen, und zwar richtig**: die
+> Ratsche lässt das Manifest nur kürzer werden, und eine *Verschiebung* der
+> Tafel in das Register sieht genauso aus wie eine neue Kopie — 5 weg, 1
+> dazu. Der Kommentar bei `ZEUGENORTE` sagt diese Lücke selbst („eine
+> Verschiebung nicht von einem Zuwachs unterscheiden können"); dort war die
+> Antwort ein Ort mit einer Zusage im Namen, hier ist sie dieselbe.
+> `REGISTERORTE` nennt den **Heimatort**, und drei Klammern halten ihn eng:
+> der Ort steht in der Liste · die Familie steht dort **genau einmal** (ein
+> Register, das eine zweite Tafel anlegt, fällt — dieser Fall ist bei
+> MF-1509 schon eingetreten) · die Familie ist insgesamt **kleiner**
+> geworden. Ein Heimatort kann damit nur als Teil einer Auflösung
+> entstehen, nie neben einem Zuwachs.
+>
+> **Und die Klammern sind einzeln belegt, nicht als Gruppe.** Der
+> Selbsttest steht auf 19/19, und eine Mutationsprobe entschärft jede
+> Klammer für sich: alle drei lassen ihn auf 18/19 fallen. Die erste
+> Fassung hatte nur zwei Fälle — mit entschärfter **Ortsklammer** blieb sie
+> 18/18 grün, die Klammer war Zierde. Gefunden hat das die Mutation, nicht
+> das Lesen; der fehlende Fall (eine gewöhnliche Datei beansprucht die
+> Ausnahme mitten in einer echten Auflösung) steht jetzt als (iv) drin.
+>
+> **K4 hatte hier zuerst „Messbefehl fehlt" stehen, und das war falsch.**
+> Der Erzeuger-Zensus misst genau diese Frage seit MF-1087 und wird bei
+> jedem Commit erzeugt; die Kennzahl war nur nie mit ihm verbunden. Die
+> **Erfindungsfälle**, die dabei auffallen, sind eine Teilmenge und
+> bleiben einzeln benannt: `gwraw` (Absage statt Sonde), `hxcstream`
+> (berichtigt — Dateimagie ist `CHKH`, nicht die Plugin-ID; P3-660),
+> C64FRZ (**offen**, P3-661). Sie zählen nicht doppelt, sie sind der
+> Grund, warum die 8 offen sind.
+>
+> **Und K0 ist die Kennzahl über alle anderen.** Sie misst nicht den
+> Baum, sondern ob die Regeln greifen. Der Anlass ist gemessen: am
+> 2026-09-28 standen fünf Regeln als Satz da, und dieselbe Sitzung hat
+> eine davon im selben Atemzug verletzt (die 24. Kopie der
+> CBM-Zonenlängen). Gefangen hat es das **Tor**, nicht der Agent.
+> Steigt K0, halten die Regeln; bleibt sie niedrig, ist jede weitere
+> Regel als Prosa verschwendet.
+>
+> **NACHTRAG MF-1528 — K0 hatte keine Zählregel, und die eigene Zählung war
+> widersprüchlich.** Gemessen an der Bilanz vom 2026-09-29: ein Fang der
+> Mutationsprobe wurde nicht gezählt, einer des Compilers auch nicht,
+> Fänge von Toren schon. Eine Kennzahl ohne Definition ist kein Maß —
+> derselbe Satz, der hier über Messbefehle steht. Die Regel steht jetzt in
+> der Zeile K0 selbst.
+>
+> **Und die Neuzählung ließ die Zahl steigen, ohne dass Arbeit besser
+> wurde** — von 7/15 auf 12/20, bei alter Zählweise wären es 9/20. Das ist
+> die Bewegung, die §„Kennzahlen sind Folgen, keine Ziele" verbietet, und
+> sie war hier nur zulässig, weil die alte Zählung *in sich* widersprüchlich
+> war (Fehlklassifikation wird umgeschrieben, nicht entfernt). Die Bilanz
+> nennt deshalb **beide** Werte. Wer K0 künftig bewegt, bewegt sie durch
+> Tore, nicht durch Definitionen.
+>
+> **Ein Tor, das im Klassifizierer belegt und im Betrieb unbelegt ist, ist
+> kein Tor, sondern ein Skript mit einem Haken davor (MF-1528).** Deshalb
+> haben die beiden Haken-Tore je eine BETRIEBSPROBE, die nicht fragt „fängt
+> es", sondern „ist es überhaupt gelaufen":
+> `python scripts/audit_heredoc.py --protokolle --seit <Einbauzeit>` (Tor 71)
+> und `python scripts/audit_mf_nummer.py --betrieb` (Tor 72).
+> Ihre Grenzen sind verschieden und beide gemessen: Tor 71 liest
+> Sitzungsprotokolle und ist damit **blind für Commits, die nicht aus einer
+> protokollierten Sitzung kommen** (gemessen 2026-09-29: im Zeitfenster von
+> `e36346ce` steht in 754 Protokollen kein einziger fremder
+> `git commit`-Aufruf); Tor 72 führt ein Laufbuch in `.git`, ist also **pro
+> Klon** und sagt nichts über Commits vor seiner Einführung.
+>
+> **Und die Betriebsprobe hat Tor 72 selbst herabgestuft
+> (Eigentümerentscheidung 2026-09-29, MF-1531).** Sie hat gemessen, dass
+> **2 von 4** Commits ohne Laufbuch-Vermerk entstanden sind — bei korrekter
+> `core.hooksPath`, vorhandener Hakendatei, ohne Rebase, und obwohl seit
+> MF-1530 sogar die Bash des Hakens eine Zeile schreibt, wenn sie kein
+> Python findet. **Ein Haken im Arbeitsplatz bindet eine Seite nicht, die
+> ihn nicht durchläuft.**
+>
+> Tor 72 ist deshalb ausdrücklich eine **lokale Vorprüfung gegen den
+> bekannten Stand**, kein verbindliches Tor. Die richtige Lesart eines
+> grünen Laufs: *„meine Nummern kollidieren nicht mit den bekannten"* —
+> nicht *„Nummern kollidieren nicht"*. Die verbindliche Prüfung gehört an
+> den **gemeinsamen Integrationspunkt** (pre-receive bzw. CI mit
+> serialisierter Merge-Queue) und fehlt; sie steht mit zehn
+> Abnahmekriterien als **P3-680**.
+>
+> Vier Bestandteile, vier Aufgaben — und sie werden nicht vermischt:
+>
+> | Bestandteil | Aufgabe |
+> |---|---|
+> | lokaler Haken | schnelle Rückmeldung und Diagnose |
+> | Laufbuch (`.git/uft-tor72-laeufe.log`) | Nachweis, welcher Weg **tatsächlich** lief |
+> | Serverprüfung | verbindliche Annahme oder Ablehnung — **fehlt** |
+> | Merge-Serialisierung | verhindert zwei parallel grüne Ansprüche auf dieselbe Nummer — **fehlt** |
+>
+> Nachträgliche Prüfungen stehen in einer **eigenen** Datei
+> (`uft-tor72-nachpruefung.log`, `--nachpruefen`) und zählen **nie** als
+> Hakennachweis: ein Satz dort sagt „die Nummer wurde gegen den bekannten
+> Stand geprüft", und er sagt in sich selbst, dass der ursprüngliche
+> Hakenlauf **fehlt** und die Ursache **nicht gemessen** ist. Ein
+> nachgetragener Eintrag im Laufbuch würde eine historische Sicherheit
+> vortäuschen, die nicht existiert.
+>
+> **Zwei committete Kollisionen stehen unabhängig davon** und brauchen eine
+> Eigentümerentscheidung, welcher Commit die Nummer behält: MF-1515
+> (`87345aab` / `d39834ff`) und MF-1522 (`0a66fb21` / `e36346ce`). Ein
+> stilles Umschreiben findet nicht statt (§„Kennzahlen sind Folgen").
 
 > **Die erste Zahl kann gemessen nicht durch Arbeit fallen (MF-1489).**
 > „T3 runter" liest sich wie ein Rückstand. Gemessen ist er keiner:
@@ -549,7 +698,16 @@ Die vier geführten Zahlen:
 > und `docs/VERIFICATION_TIERS.md` sagt es seit MF-1489 selbst,
 > abgeleitet aus dem Zensus statt hier gepflegt.
 
-Wer eine **fünfte** Zahl einführt, begründet sie. Eine Kandidatin steht
+**Jede Sitzung endet mit einer Bilanz (MF-1505).** Vorlage und Regeln:
+[`.claude/SITZUNGSBILANZ.md`](.claude/SITZUNGSBILANZ.md). Sie nennt,
+welche Kennzahl sich bewegt hat, und listet **jeden Fehler der Sitzung
+mit der Angabe, wer ihn gefangen hat** — Tor, Mensch oder niemand. Ein
+vom Menschen gefangener Fehler bekommt vor dem Ende ein Tor, einen
+Rotbeweis, oder eine Fundus-Zeile mit der Begründung, warum beides
+nicht geht. Ohne Bilanz ist die Sitzung offen, und für die Rückschau
+ist sie unsichtbar.
+
+Wer eine **weitere** Zahl einführt, begründet sie. Eine Kandidatin steht
 bereit: **Dateien mit ungeklärter Herkunft**. Sie hat **zwei Stufen**,
 und die zu verwechseln wäre genau die Zahlendrift, die dieser Baum
 dreimal gesehen hat (MF-645):
@@ -741,6 +899,17 @@ kaputten Fälle waren alle kurz.
 > `python scripts/audit_heredoc.py --protokolle --seit <Einbauzeit>`
 > (Einbau 2026-09-26T09:05:19Z) — und meldet immer auch, wie viele
 > Aufrufe es gesehen hat.
+>
+> **Grenze dieser Betriebsprobe, gemessen MF-1528:** sie liest
+> Sitzungsprotokolle und ist damit **blind für alles, was nicht aus einer
+> protokollierten Sitzung kommt.** Der Anlass ist nicht theoretisch: im
+> Zeitfenster des Commits `e36346ce` steht in **754** Protokolldateien
+> **kein einziger** `git commit`-Aufruf einer fremden Sitzung, obwohl der
+> Commit entstanden ist. Was in diesem Baum committet, tut es zum Teil auf
+> Wegen, die diese Probe nicht sieht — „0 Verstöße" heißt hier also „0
+> unter den gesehenen Aufrufen", nicht „0 überhaupt". Tor 72 misst
+> dieselbe Frage deshalb anders: über ein Laufbuch, das der Haken selbst
+> schreibt (`--betrieb`).
 
 **2. Während ein Commit läuft, schreibt niemand in den Baum.**
 

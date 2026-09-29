@@ -107,7 +107,30 @@ set(CORE_SOURCES
     # Rueckgriff auf die Format-Schicht, also keine neue Kopplung.
     ../formats/reference/uft_floppy_reference.c
     uft_write_precomp.c        # TA1 M2: Mac-800K peak-shift compensation
-)
+
+    # MF-1515: das GCR-Codec-Register. Hier eingetragen aus genau dem
+    # Grund, der zwei Absaetze weiter oben steht — die eine Stelle statt
+    # der vielen.
+    #
+    # Gemessen aus `build-tests-ci/build.ninja`: **99** Link-Ziele
+    # enthalten seit MF-1513/1515 einen Aufrufer des Registers
+    # (`uft_g64_parser_v3.c` oder `uft_apple_gcr.c`, meist ueber die
+    # Sammelbibliothek `uft_test_formatschicht`), und **89** davon hatten
+    # `uft_gcr.c` nicht — sie fielen mit `undefined reference to
+    # uft_gcr_dekodieren`. Einzeln nachzutragen waeren 89 CMake-Zeilen
+    # gewesen, von denen die naechste Umhaengung wieder welche vergisst.
+    #
+    # Der Pre-Commit-Haken hat es nicht gefangen, weil er ein
+    # Canary-Ziel baut und nicht alle; gefunden hat es erst ein
+    # Blastradius-Lauf ueber `build.ninja`. Zwei Versuche davor haben je
+    # einen Teil der Menge verfehlt: ein `sed` mit `$`-Anker (zwei Zeilen
+    # enden auf `)`) und eine Gegenprobe ueber `elseif`-Bloecke (die
+    # Sammelbibliothek ist keiner).
+    #
+    # Die Datei zieht nur ihren eigenen Header, `uft_cbm_gcr.h` und libc
+    # ein — kein Rueckgriff auf die Format-Schicht, also keine neue
+    # Kopplung.
+    uft_gcr.c)
 
 # Enforce: every source listed must actually exist (no dead whitelist)
 foreach(src ${CORE_SOURCES})

@@ -1648,13 +1648,65 @@ def main() -> int:
         # durch einen PreToolUse-Haken auf User-Ebene
         # (`audit_heredoc.py --haken`, Eigentuemerentscheidung
         # 2026-09-26); hier im Tor steht nur, was das CI sehen kann: der
-        # Klassifizierer haelt seine Faelle (29, Mutationsmatrix 11/11).
+        # Klassifizierer haelt seine Faelle (39 seit MF-1504; hier stand
+        # 29, und die Zahl war gedriftet — dieselbe Klasse wie MF-541).
+        #
+        # MF-1504 hat die Regel auf INLINE-Skripte ausgeweitet
+        # (`python -c`, `perl -e`): ein Heredoc ist nicht der einzige Weg,
+        # ein Skript durch bash zu schicken. Gemessen war ein
+        # `python -c "...`...`..."`, dessen Backticks bash als
+        # Kommando-Substitution AUSGEFUEHRT hat, bevor python das
+        # Argument sah. Abgewiesen wird seither ein mehrzeiliges
+        # Inline-Skript und eines mit ` oder $( in DOPPELTEN
+        # Anfuehrungszeichen; in einfachen substituiert bash nicht, und
+        # ein einzeiliges `-c` bleibt der normale Weg.
         #
         # Benannte Luecke: Sitzungsprotokolle sieht das CI nicht. Ob der
         # Haken wirkt, misst `audit_heredoc.py --protokolle` lokal, und es
         # meldet immer auch, wie viele Aufrufe es GESEHEN hat.
         import audit_heredoc as _hd
         all_errors.append(("Heredoc-Klassifizierer", _hd.check(repo)))
+
+        # Tor 72 (MF-1522, herabgestuft MF-1531): LOKALE VORPRUEFUNG der
+        # MF-Nummer — kein verbindliches Tor.
+        #
+        # Der Anlass war gemessen: MF-1515 liegt auf 87345aab (main) UND auf
+        # d39834ff (Arbeitsbaum wt-dtc) — beide Seiten hatten `git log`
+        # gefragt, nur nicht denselben.
+        #
+        # **Und der Haken kann es nicht verhindern.** Die Betriebsprobe
+        # (`audit_mf_nummer.py --betrieb`) hat gemessen, dass 2 von 4
+        # Commits ohne Laufbuch-Vermerk entstanden sind — bei korrekter
+        # `core.hooksPath`, vorhandener Hakendatei und ohne Rebase. Ein
+        # Haken im Arbeitsplatz bindet eine Seite nicht, die ihn nicht
+        # durchlaeuft; die verbindliche Pruefung gehoert an den gemeinsamen
+        # Integrationspunkt und fehlt (P3-680, mit Abnahmekriterien).
+        #
+        # WAS DIESE KATEGORIE HIER PRUEFT, ist deshalb eng und genau das:
+        # dass der Klassifizierer seine Faelle haelt und die Haken-VORLAGE
+        # ihn ruft. Sie prueft NICHT, dass Nummern nicht kollidieren — wie
+        # bei Tor 71 sieht das CI den installierten Haken ohnehin nicht
+        # (`.git/hooks/` ist unversioniert). Ein Tor ohne Tuer waere eine
+        # eigene Fehlerklasse (P3-204); ein Tor mit einer Tuer, durch die
+        # nicht jeder geht, ist diese hier.
+        import audit_mf_nummer as _mfn
+        all_errors.append(("MF-Nummer: Vorpruefung intakt", _mfn.check(repo)))
+
+    # Kategorie (MF-1506): dieselbe Zahlenfolge als Tabelle in mehreren
+    # DATEIEN. `audit_cbm_zonen.py` haelt EINE Familie; Kennzahl K3 fuehrte
+    # fuer alles andere „kein Audit". Gemessen waren es 58 Familien mit
+    # zusammen 113 ueberzaehligen Kopien — die groessten die CBM-GCR-Tafeln
+    # (12 bzw. 10 Dateien) und die Apple-GCR-6&2-Tafel (7). Breite hier,
+    # Tiefe dort: jenes rechnet die Zonentafeln gegen die SSOT und sieht
+    # auch eine Kopie, die schon falsch ist.
+    if True:
+        try:
+            import audit_konstantenfamilien as _kf
+            all_errors.append(("Konstantenfamilien", _kf.check(repo)))
+        except Exception as _e:
+            # Ein Tor, das nicht laeuft, ist ein Befund und kein Schweigen.
+            all_errors.append(("Konstantenfamilien",
+                               ["Tor nicht lauffaehig: %s" % _e]))
 
     # Kategorie (MF-1282): `git init` ohne bereinigte Umgebung.
     #

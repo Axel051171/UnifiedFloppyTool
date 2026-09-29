@@ -1,0 +1,61 @@
+{
+  "_": "Grundlinie des CBM-Zonen-Tors (MF-1504). ERZEUGT, nicht getippt: `python scripts/audit_cbm_zonen.py --grundlinie-schreiben`. Die Pruefmenge kommt aus `git ls-files` (MF-636); diese Datei haelt nur fest, was beim letzten Mal gefunden wurde. Sie darf nur SCHRUMPFEN — die Richtung ist Zusammenfuehrung auf `uft_cbm_track_capacity()`.",
+  "stellen": [
+    {
+      "stelle": "include/uft/formats/c64/uft_bam_editor.h::bam_sectors_per_track",
+      "zaehlweise": "43 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "include/uft/protection/uft_c64_protection.h::c64_sectors_per_track",
+      "zaehlweise": "41 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "include/uft/uft_cbm_gcr.h::cbm_gcr_sectors_per_track",
+      "zaehlweise": "41 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "src/flux/uft_flux_decoder.c::c64_sectors_per_track",
+      "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
+    },
+    {
+      "stelle": "src/formats/c64/uft_d71_d81.c::d71_sectors",
+      "zaehlweise": "71 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "src/formats/d71/uft_d71_parser_v2.c::d71_sectors_per_track",
+      "zaehlweise": "71 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "src/formats/g64/uft_g64_parser_v2.c::zone_sectors",
+      "zaehlweise": "4 Zonen, absteigend (Zone 0 = Spur 31-42)"
+    },
+    {
+      "stelle": "src/formats/xdf/uft_xdf_api_impl.c::sectors_per_track",
+      "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
+    },
+    {
+      "stelle": "src/hardware_providers/xum1541_usb.h::GCR_ZONE_SECTORS",
+      "zaehlweise": "4 Zonen, aufsteigend (Zone 0 = Spur 1-17)"
+    },
+    {
+      "stelle": "src/protection/uft_c64_protection_enhanced.c::ZONE_SECTORS",
+      "zaehlweise": "4 Zonen, aufsteigend (Zone 0 = Spur 1-17)"
+    },
+    {
+      "stelle": "tests/differential/uft_flux_decode.c::d64_spt",
+      "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
+    },
+    {
+      "stelle": "tests/test_cbm_geometry.c::legacy_40",
+      "zaehlweise": "40 Eintraege, 0-basiert (Index 0 = Spur 1)"
+    },
+    {
+      "stelle": "tests/test_cbm_geometry.c::legacy_41",
+      "zaehlweise": "41 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    },
+    {
+      "stelle": "tests/test_cbm_geometry.c::legacy_43",
+      "zaehlweise": "43 Eintraege, 1-basiert (Index 0 unbenutzt)"
+    }
+  ]
+}

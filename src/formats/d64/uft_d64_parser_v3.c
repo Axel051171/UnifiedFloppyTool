@@ -37,6 +37,7 @@
  * handgeschriebenen externs in uft_v3_bridge.c einen Schreibzugriff auf
  * eine beliebige Adresse gefunden. */
 #include "uft/formats/uft_v3_parsers.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * CONSTANTS
@@ -106,14 +107,15 @@
 #define D64_BITCELL_ZONE1       3750    /* ~266.7 kbps */
 #define D64_BITCELL_ZONE0       4000    /* 250 kbps */
 
-/* Sectors per track table */
-static const uint8_t d64_sectors_per_track[41] = {
-    0,
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    19, 19, 19, 19, 19, 19, 19,
-    18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17, 17, 17, 17, 17, 17
-};
+/* Sectors per track: bis MF-1532 eine eigene Tafel, jetzt
+ * `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)`. Vor dem Umhaengen
+ * gemessen: identisch mit der SSOT in allen 40 Spuren, 0 Abweichungen.
+ *
+ * Der Name war dabei dreifach belegt und mit ZWEI Basen: die Funktion
+ * `d64_sectors_per_track()` in `uft_d64_writer.c`, diese 0-basierte Tafel,
+ * und eine 1-BASIERTE in `cbm/uft_cbm_formats.c` (dort `[t - 1]`). Eine
+ * Groesse, drei Rechnungen — die teuerste Verwechslung dieses Baums
+ * (MF-1177), weil die Abweichung dann wie ein Datenfehler aussieht. */
 
 /* Track offset table (cumulative sectors) */
 static const uint16_t d64_track_offset[41] = {
@@ -554,7 +556,7 @@ typedef struct d64_params {
  */
 static uint8_t d64_get_sectors(uint8_t track) {
     if (track < 1 || track > 40) return 0;
-    return d64_sectors_per_track[track];
+    return (uint8_t)uft_cbm_sectors_per_track(UFT_CBM_1541, track);
 }
 
 /**
@@ -585,7 +587,7 @@ static uint32_t d64_get_bitcell_ns(uint8_t track) {
  */
 static size_t d64_get_sector_offset(uint8_t track, uint8_t sector) {
     if (track < 1 || track > 40) return 0;
-    if (sector >= d64_sectors_per_track[track]) return 0;
+    if (sector >= uft_cbm_sectors_per_track(UFT_CBM_1541, track)) return 0;
     return (d64_track_offset[track] + sector) * D64_SECTOR_SIZE;
 }
 
@@ -1189,7 +1191,7 @@ static size_t d64_extended_bam_base(const uint8_t* bam, int last_track) {
         bool all_fit = true;
         for (int track = D64_BAM_STD_LAST_TRACK + 1; track <= last_track; track++) {
             const uint8_t* entry = bam + bases[i] + (size_t)track * 4u;
-            if (!d64_bam_entry_consistent(entry, d64_sectors_per_track[track])) {
+            if (!d64_bam_entry_consistent(entry, (uint8_t)uft_cbm_sectors_per_track(UFT_CBM_1541, track))) {
                 all_fit = false;
                 break;
             }

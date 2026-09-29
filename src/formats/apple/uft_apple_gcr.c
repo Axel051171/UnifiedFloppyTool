@@ -27,39 +27,51 @@
  * fremde Nibbles —, falsch war die angegebene BEDINGUNG. Wer aus ihr
  * ableitet, erzeugt **33** Werte statt 64 (nachgerechnet).
  *
- * Was hier bewusst NICHT steht, ist eine ersetzende hinreichende Regel.
- * Mit „hohes Bit gesetzt", „zwei Einsen in Folge" und „Nulllauf <= 2"
- * kommen **74** Werte heraus; welche weitere Bedingung die zehn
- * ueberzaehligen ausschliesst, ist ohne die gedruckte Quelle nicht
- * feststellbar, und sie zu erraten waere dieselbe Falschaussage in
- * neuem Gewand. Die notwendigen Bedingungen haelt
- * `tests/test_gcr_tafeln.c`, ausdruecklich als notwendige.
+ * **BERICHTIGT MF-1515 — die hinreichende Regel IST feststellbar, und
+ * hier stand, sie sei es nicht.** Der Satz lautete: „Mit ‚hohes Bit
+ * gesetzt', ‚zwei Einsen in Folge' und ‚Nulllauf <= 2' kommen **74**
+ * Werte heraus; welche weitere Bedingung die zehn ueberzaehligen
+ * ausschliesst, ist ohne die gedruckte Quelle nicht feststellbar, und
+ * sie zu erraten waere dieselbe Falschaussage in neuem Gewand."
+ *
+ * Die 74 sind richtig gezaehlt. Was fehlte, waren ZWEI Bedingungen, und
+ * gefunden sind sie nicht durch Raten, sondern durch Aufzaehlen: alle
+ * Kombinationen von sieben Bedingungsbausteinen wurden gegen DIESE
+ * Tafel gerechnet, und genau eine liefert exakt die 64 Werte —
+ *
+ *     Bit 7 gesetzt · hoechstens EIN Paar benachbarter Nullen ·
+ *     mindestens ein Einserpaar in Bit 6..0
+ *
+ * „hoechstens ein Nullenpaar" ist schaerfer als „Nulllauf <= 2": drei
+ * Nullen enthalten zwei Paare, aber zwei GETRENNTE Paare haben auch nur
+ * Laufweite 2 — und genau die zehn Werte mit zwei getrennten Paaren
+ * (0x93, 0x99, 0x9C, 0xC9, 0xCA, 0xCC, 0xD2, 0xD4 u. a.) sind die
+ * ueberzaehligen. Das Einserpaar zaehlt OHNE Bit 7, das ohnehin steht.
+ *
+ * Belegt mit einer Mutationsmatrix (3 von 3): jede der beiden
+ * Praezisierungen einzeln gelockert macht die Zusagen rot. Die Regel
+ * liegt seit MF-1509 in `include/uft/core/uft_gcr.h`, festgenagelt in
+ * `tests/test_gcr_praedikat_trifft_die_tafel.c` — bijektiv, also auch
+ * gegen die Woerter, die NICHT in der Tafel stehen. Das ist die Zusage,
+ * die `tests/test_gcr_tafeln.c` (MF-1126) ausdruecklich offen liess.
+ *
+ * Die Tafel selbst ist deshalb entfallen: Index k ist das k-te gueltige
+ * Byte in aufsteigender Reihenfolge — gemessen byteweise gegen die
+ * Fassung, die hier stand. `uft_gcr_kodieren()` und
+ * `uft_gcr_dekodieren()` leisten beides, die Rueckwaertstafel wird dort
+ * aus dem Praedikat abgeleitet statt ein zweites Mal aufgebaut.
  */
-static const uint8_t A2_WRITE_TAB[64] = {
-    0x96, 0x97, 0x9A, 0x9B, 0x9D, 0x9E, 0x9F, 0xA6,
-    0xA7, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB2, 0xB3,
-    0xB4, 0xB5, 0xB6, 0xB7, 0xB9, 0xBA, 0xBB, 0xBC,
-    0xBD, 0xBE, 0xBF, 0xCB, 0xCD, 0xCE, 0xCF, 0xD3,
-    0xD6, 0xD7, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE,
-    0xDF, 0xE5, 0xE6, 0xE7, 0xE9, 0xEA, 0xEB, 0xEC,
-    0xED, 0xEE, 0xEF, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6,
-    0xF7, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
-};
+#include "uft/core/uft_gcr.h"
 
-/* Rueckwaerts: Diskettenbyte -> 6 Bit, 0xFF heisst „steht nicht in der
- * Tabelle". Einmal aufgebaut, danach nur gelesen — die Tabelle ist
- * konstant, also ist auch ihre Umkehrung es. */
-static uint8_t a2_read_tab[256];
-static int     a2_read_tab_ready;
-
-static void a2_build_read_tab(void)
-{
-    if (a2_read_tab_ready) return;
-    memset(a2_read_tab, 0xFF, sizeof(a2_read_tab));
-    for (int i = 0; i < 64; i++)
-        a2_read_tab[A2_WRITE_TAB[i]] = (uint8_t)i;
-    a2_read_tab_ready = 1;
-}
+/* Rueckwaerts: Diskettenbyte -> 6 Bit, `UFT_GCR_UNGUELTIG` (0xFF) heisst
+ * „steht nicht in der Tabelle".
+ *
+ * Bis MF-1515 baute diese Datei die Umkehrung selbst auf — 256 Byte
+ * `a2_read_tab` plus ein `ready`-Schalter, gefuellt aus `A2_WRITE_TAB`.
+ * Genau dasselbe tut `uft_gcr_dekodieren()` seit MF-1512, nur aus dem
+ * PRAEDIKAT statt aus einer Tafel, und fuer alle drei Codecs an einer
+ * Stelle. Der Aufbau war also nicht falsch, sondern die zweite Ausgabe
+ * derselben Rechnung (MF-1177). */
 
 /* Die zwei niederwertigen Bits eines Nutzbytes liegen in den
  * Hilfsnibbles **vertauscht** — Bit 0 und Bit 1 sind gegenueber der
@@ -77,31 +89,23 @@ static const uint8_t A2_SWAP2[4] = { 0x0, 0x2, 0x1, 0x3 };
  *
  * Drittbestaetigt durch `mamedev/mame` `ap2_dsk.cpp` (`translate5`,
  * BSD-3-Clause) — eine Quelle, die die Messung nicht kannte.
+ *
+ * **Seit MF-1515 liefert das Register diese 32 Werte** — als Menge, die
+ * ein Praedikat erzeugt (Bit 7 gesetzt · KEIN Paar benachbarter Nullen ·
+ * ein Einserpaar in Bit 6..0), byteweise gegen die hier gestandene Tafel
+ * gemessen, Reihenfolge eingeschlossen. Die Tafel selbst liegt als Zeuge
+ * in `tests/oracles/gcr_apple_tafeln_f08d1a7a.c` — mit dieser Herkunft
+ * woertlich, denn die Messung von MF-719 ist der Grund, warum die Zahlen
+ * tragen, und ein Praedikat kann sie nicht ersetzen. Es kann nur
+ * uebereinstimmen, und das tut es.
  */
-static const uint8_t A2_TAB5[32] = {
-    0xAB, 0xAD, 0xAE, 0xAF, 0xB5, 0xB6, 0xB7, 0xBA,
-    0xBB, 0xBD, 0xBE, 0xBF, 0xD6, 0xD7, 0xDA, 0xDB,
-    0xDD, 0xDE, 0xDF, 0xEA, 0xEB, 0xED, 0xEE, 0xEF,
-    0xF5, 0xF6, 0xF7, 0xFA, 0xFB, 0xFD, 0xFE, 0xFF
-};
-
-static uint8_t a2_read_tab5[256];
-static int     a2_read_tab5_ready;
-
-static void a2_build_read_tab5(void)
-{
-    if (a2_read_tab5_ready) return;
-    memset(a2_read_tab5, 0xFF, sizeof(a2_read_tab5));
-    for (int i = 0; i < 32; i++)
-        a2_read_tab5[A2_TAB5[i]] = (uint8_t)i;
-    a2_read_tab5_ready = 1;
-}
 
 bool uft_apple_gcr_denibblize_6_2(const uint8_t nib[UFT_A2_DATA_NIBBLES],
                                   uint8_t out[UFT_A2_SECTOR_SIZE])
 {
     if (!nib || !out) return false;
-    a2_build_read_tab();
+    /* MF-1515: kein eigener Tafelaufbau mehr — `uft_gcr_dekodieren()`
+     * baut seine Rueckrichtung beim ersten Zugriff aus dem Praedikat. */
 
     uint8_t aux[86];
     uint8_t pri[UFT_A2_SECTOR_SIZE];
@@ -109,23 +113,24 @@ bool uft_apple_gcr_denibblize_6_2(const uint8_t nib[UFT_A2_DATA_NIBBLES],
 
     /* 86 Hilfsbytes: je drei Bitpaare fuer drei spaetere Nutzbytes. */
     for (size_t i = 0; i < 86; i++) {
-        uint8_t v = a2_read_tab[nib[i]];
-        if (v == 0xFF) return false;
+        uint8_t v = uft_gcr_dekodieren(UFT_GCR_APPLE_6_2, nib[i]);
+        if (v == UFT_GCR_UNGUELTIG) return false;
         chk ^= v;
         aux[i] = chk;
     }
     /* 256 Hauptbytes: die oberen sechs Bit jedes Nutzbytes. */
     for (size_t i = 0; i < UFT_A2_SECTOR_SIZE; i++) {
-        uint8_t v = a2_read_tab[nib[86 + i]];
-        if (v == 0xFF) return false;
+        uint8_t v = uft_gcr_dekodieren(UFT_GCR_APPLE_6_2, nib[86 + i]);
+        if (v == UFT_GCR_UNGUELTIG) return false;
         chk ^= v;
         pri[i] = chk;
     }
     /* Das 343. Byte ist die Pruefsumme: sie muss die laufende XOR-Summe
      * auf null bringen. Geht sie nicht auf, bleibt `out` unberuehrt —
      * ein halb dekodierter Sektor waere eine stille Veraenderung. */
-    uint8_t last = a2_read_tab[nib[UFT_A2_DATA_NIBBLES - 1]];
-    if (last == 0xFF) return false;
+    uint8_t last = uft_gcr_dekodieren(UFT_GCR_APPLE_6_2,
+                                     nib[UFT_A2_DATA_NIBBLES - 1]);
+    if (last == UFT_GCR_UNGUELTIG) return false;
     if ((uint8_t)(chk ^ last) != 0) return false;
 
     for (size_t i = 0; i < UFT_A2_SECTOR_SIZE; i++) {
@@ -170,7 +175,7 @@ bool uft_apple_gcr_denibblize_5_3(const uint8_t nib[UFT_A2_DATA_NIBBLES_13],
                                   uint8_t out[UFT_A2_SECTOR_SIZE])
 {
     if (!nib || !out) return false;
-    a2_build_read_tab5();
+    /* MF-1515: siehe `denibblize_6_2` — das Register baut lazy auf. */
 
     /* Erst die laufende XOR aufloesen — 410 Nutzwerte, dann das
      * Pruefbyte. Ein Diskettenbyte ausserhalb der Tabelle beendet den
@@ -178,12 +183,12 @@ bool uft_apple_gcr_denibblize_5_3(const uint8_t nib[UFT_A2_DATA_NIBBLES_13],
     uint8_t n[410];
     uint8_t pval = 0;
     for (size_t i = 0; i < 410; i++) {
-        uint8_t v = a2_read_tab5[nib[i]];
+        uint8_t v = uft_gcr_dekodieren(UFT_GCR_APPLE_5_3, nib[i]);
         if (v == 0xFF) return false;
         pval = (uint8_t)(v ^ pval);
         n[i] = pval;
     }
-    uint8_t summe = a2_read_tab5[nib[410]];
+    uint8_t summe = uft_gcr_dekodieren(UFT_GCR_APPLE_5_3, nib[410]);
     if (summe == 0xFF) return false;
     if (summe != pval) return false;
 

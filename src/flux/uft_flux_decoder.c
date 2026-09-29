@@ -1409,13 +1409,10 @@ flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
  * GCR Decoders (Stub implementations)
  * ============================================================================ */
 
-/* C64 GCR tables */
-static const uint8_t c64_gcr_decode[32] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  /* 00-07 */
-    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,  /* 08-0F */
-    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,  /* 10-17 */
-    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF   /* 18-1F */
-};
+// Die GCR-Tafel stand hier bis MF-1522 — jetzt aus dem
+// Codec-Register (`uft/core/uft_gcr.h`): die Wortmenge folgt dort
+// einer gemessenen Regel, die Zuordnung steht genau einmal.
+#include "uft/core/uft_gcr.h"
 
 /* C64 sectors per track by speed zone */
 static const int c64_sectors_per_track[40] = {
@@ -1446,8 +1443,8 @@ static uint8_t c64_gcr_decode_byte(const uint8_t *bits, size_t pos, size_t bit_c
         lo_gcr = (lo_gcr << 1) | ((bits[bp / 8] >> (7 - (bp % 8))) & 1);
     }
     
-    uint8_t hi = c64_gcr_decode[hi_gcr & 0x1F];
-    uint8_t lo = c64_gcr_decode[lo_gcr & 0x1F];
+    uint8_t hi = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, hi_gcr & 0x1F);
+    uint8_t lo = uft_gcr_dekodieren(UFT_GCR_CBM_5_4, lo_gcr & 0x1F);
     if (hi == 0xFF || lo == 0xFF) return 0xFF;
     return (hi << 4) | lo;
 }

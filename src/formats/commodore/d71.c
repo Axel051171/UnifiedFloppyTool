@@ -7,20 +7,20 @@
 
 #include "uft/floppy/uft_floppy_device.h"
 #include "uft/formats/d71.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* MF-1532: EINE Rechnung */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* Error codes provided by uft_floppy_device.h */
 
-/* sectors per track table for 1541 zones (tracks 1..35) */
-static const uint8_t spt[36] = {
-    0,
-    21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
-    19,19,19,19,19,19,19,
-    18,18,18,18,18,18,
-    17,17,17,17,17
-};
+/* sectors per track for 1541 zones (tracks 1..35): bis MF-1532 eine eigene
+ * Tafel, jetzt `uft_cbm_sectors_per_track(UFT_CBM_1541, spur)`. Alle drei
+ * Zugriffe nehmen die Spur selbst (1-basiert, mit Blindstelle 0), also
+ * aendert die Umhaengung nur die Quelle, nicht den Index.
+ *
+ * Vor dem Umhaengen gemessen: identisch mit der SSOT in allen 35 Spuren,
+ * 0 Abweichungen. */
 
 typedef struct {
     FILE *fp;
@@ -31,14 +31,14 @@ static void log_msg(FloppyDevice *d, const char *m){ if(d && d->log_callback) d-
 
 static uint32_t track_base_lba(uint32_t track){
     uint32_t lba = 0;
-    for(uint32_t t=1; t<track; t++) lba += spt[t];
+    for(uint32_t t=1; t<track; t++) lba += uft_cbm_sectors_per_track(UFT_CBM_1541, (int)t);
     return lba;
 }
 
 static int validate_ts(uint32_t track, uint32_t head, uint32_t sector){
     if(track < 1 || track > 35) return UFT_EBOUNDS;
     if(head > 1) return UFT_EBOUNDS;
-    if(sector >= spt[track]) return UFT_EBOUNDS; /* sector is 0-based within track */
+    if(sector >= uft_cbm_sectors_per_track(UFT_CBM_1541, (int)track)) return UFT_EBOUNDS; /* sector is 0-based within track */
     return UFT_OK;
 }
 
@@ -56,7 +56,7 @@ static int uft_to_d71_lba(uint32_t t0, uint32_t h, uint32_t s1, uint32_t *out_lb
     if(rc != UFT_OK) return rc;
 
     uint32_t side_blocks = 0;
-    for(uint32_t tr=1; tr<=35; tr++) side_blocks += spt[tr];
+    for(uint32_t tr=1; tr<=35; tr++) side_blocks += uft_cbm_sectors_per_track(UFT_CBM_1541, (int)tr);
 
     uint32_t lba = (h ? side_blocks : 0) + track_base_lba(track) + sector;
     *out_lba = lba;

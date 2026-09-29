@@ -55,24 +55,84 @@ zehnte Zaehlweise koennte sich so dem Tor entziehen.
 
 ── Grundlinie ────────────────────────────────────────────────────────
 
-23 Fundstellen, 9 Zaehlweisen. Beide duerfen nur FALLEN. Die Richtung
-ist Zusammenfuehrung auf `uft_cbm_track_capacity()`; jeder Schritt
-dorthin senkt beide Zahlen.
+Die Grundlinie ist seit MF-1504 ein MANIFEST benannter Fundstellen
+(`scripts/cbm_zonen_grundlinie.json`, Schluessel `datei::symbol`), nicht
+mehr eine Anzahl. Der Grund ist gemessen, nicht ausgedacht: gegen eine
+ZAHL besteht ein Baum das Tor auch dann, wenn eine alte Kopie
+verschwindet und eine NEUE dazukommt — netto unveraendert, Regel
+verletzt, niemand merkt es. Vorgefuehrt an einem Wegwerf-Baum:
 
-Dateimenge aus `git ls-files` (MF-636), nicht aus einer gepflegten
-Liste.
+    A  23 Fundstellen                                   -> OK
+    B  23 Fundstellen, 1 NEU, 1 entfallen               -> OK   (!)
+       namentlich: +frisch_angelegte_tafel, -kopie_22
+
+Mit dem Manifest gilt:
+
+  * Fundstelle NICHT im Manifest        -> FAIL, mit Namen
+  * Fundstelle im Manifest verschwunden -> OK, plus Hinweis zum Kuerzen
+  * neue Zaehlweise                     -> FAIL (eigene Klasse, s.o.)
+
+Damit kann die Grundlinie nur sinken, und zwar sichtbar als Diff im
+Commit — die Richtung aus MF-1077, ohne dass jemand eine Zahl anfasst.
+Gekuerzt wird mit `--grundlinie-schreiben`; das ist Absicht und steht
+dann im Diff.
+
+**Das ist KEINE gepflegte Liste im Sinne von MF-636**, und der
+Unterschied ist der ganze Punkt: die PRUEFMENGE kommt weiterhin aus
+`git ls-files` — das Manifest waehlt nicht aus, was geprueft wird,
+sondern haelt fest, was beim letzten Mal gefunden WURDE. Es wird
+erzeugt, nicht getippt. Eine von Hand gepflegte Auswahlliste veraltet
+still (viermal belegt); ein erzeugter Abzug, der nur schrumpfen darf,
+kann das nicht.
+
+Die frueheren Zahlen (23 Fundstellen, 9 Zaehlweisen) bleiben als
+Anzeige erhalten, aber sie faellen kein Urteil mehr.
 """
 from __future__ import annotations
 
 import io
+import json
 import re
 import subprocess
 import sys
 from pathlib import Path
 from git_env import git_umgebung
 
+# Nur noch Anzeige — das Urteil faellt das Manifest (MF-1504).
 GRUNDLINIE_STELLEN = 23
 GRUNDLINIE_WEISEN = 9
+
+MANIFEST = Path(__file__).resolve().parent / "cbm_zonen_grundlinie.json"
+
+
+def schluessel(rel: str, name: str) -> str:
+    return "%s::%s" % (rel.replace("\\", "/"), name)
+
+
+def manifest_lesen(pfad: Path = MANIFEST) -> dict | None:
+    """-> {schluessel: zaehlweise}, oder None wenn es keins gibt."""
+    try:
+        roh = json.loads(pfad.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return {e["stelle"]: e.get("zaehlweise", "") for e in roh.get("stellen", [])}
+
+
+def manifest_schreiben(stellen: list, pfad: Path = MANIFEST) -> int:
+    inhalt = {
+        "_": ("Grundlinie des CBM-Zonen-Tors (MF-1504). ERZEUGT, nicht "
+              "getippt: `python scripts/audit_cbm_zonen.py "
+              "--grundlinie-schreiben`. Die Pruefmenge kommt aus "
+              "`git ls-files` (MF-636); diese Datei haelt nur fest, was "
+              "beim letzten Mal gefunden wurde. Sie darf nur SCHRUMPFEN "
+              "— die Richtung ist Zusammenfuehrung auf "
+              "`uft_cbm_track_capacity()`."),
+        "stellen": [{"stelle": schluessel(rel, name), "zaehlweise": w}
+                    for rel, name, w in sorted(stellen)],
+    }
+    pfad.write_text(json.dumps(inhalt, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8")
+    return len(inhalt["stellen"])
 
 ZONEN = {21, 19, 18, 17}
 ERLAUBT = ZONEN | {0}
@@ -144,20 +204,57 @@ def messe(repo: Path):
     return sorted(gefunden), []
 
 
-def check(repo) -> list:
+def check(repo, hinweise: list | None = None,
+          manifest: Path = MANIFEST) -> list:
+    """-> Fehlerliste. `hinweise` nimmt, wenn gegeben, die nicht
+    urteilsrelevanten Beobachtungen auf (verschwundene Stellen usw.)."""
+    if hinweise is None:
+        hinweise = []
     stellen, fehler = messe(Path(repo))
     if stellen is None:
         return fehler
 
     weisen = sorted({w for _, _, w in stellen})
 
-    if len(stellen) > GRUNDLINIE_STELLEN:
+    bekannt = manifest_lesen(manifest)
+    if bekannt is None:
+        # Kein Manifest -> das Tor sagt, dass es NICHTS geprueft hat,
+        # statt stillschweigend durchzuwinken (Klasse MF-1000/Tor 64).
         fehler.append(
-            "%d Kopien der CBM-Zonenlaengen, Grundlinie %d. Die Richtung "
-            "ist Zusammenfuehrung auf `uft_cbm_track_capacity()` — jede "
-            "neue Kopie geht dagegen. Zwei bestehende lesen nachweislich "
-            "falsch (P3-148, P3-149)."
-            % (len(stellen), GRUNDLINIE_STELLEN))
+            "Grundlinien-Manifest `%s` fehlt oder ist unlesbar: dieses Tor "
+            "hat NICHTS geprueft. Anlegen mit `python "
+            "scripts/audit_cbm_zonen.py --grundlinie-schreiben`."
+            % MANIFEST.name)
+    else:
+        ist = {schluessel(rel, name): w for rel, name, w in stellen}
+        neu = sorted(set(ist) - set(bekannt))
+        weg = sorted(set(bekannt) - set(ist))
+        if neu:
+            fehler.append(
+                "%d NEUE Kopie(n) der CBM-Zonenlaengen, nicht im "
+                "Grundlinien-Manifest: %s. Die Richtung ist "
+                "Zusammenfuehrung auf `uft_cbm_track_capacity()` — jede "
+                "neue Kopie geht dagegen. Zwei bestehende lesen "
+                "nachweislich falsch (P3-148, P3-149). Das Manifest wird "
+                "NICHT erweitert, um eine neue Kopie zuzulassen; es wird "
+                "nur gekuerzt, wenn eine verschwindet."
+                % (len(neu), ", ".join(neu)))
+        # Ein Zaehlweisen-Wechsel an BEKANNTER Stelle ist keine neue
+        # Kopie, aber er gehoert gesagt: dieselbe Tafel liest sich anders.
+        gewechselt = sorted(s for s in set(ist) & set(bekannt)
+                            if bekannt[s] and ist[s] != bekannt[s])
+        if gewechselt:
+            hinweise.append(
+                "%d bekannte Stelle(n) haben die Zaehlweise gewechselt: %s. "
+                "Kein Verstoss — aber `--grundlinie-schreiben` zieht es nach."
+                % (len(gewechselt), ", ".join(gewechselt)))
+        if weg:
+            hinweise.append(
+                "%d Stelle(n) aus dem Manifest sind verschwunden: %s. Das "
+                "ist die gewuenschte Richtung — `python "
+                "scripts/audit_cbm_zonen.py --grundlinie-schreiben` kuerzt "
+                "das Manifest, damit der Fortschritt im Diff steht."
+                % (len(weg), ", ".join(weg)))
     if len(weisen) > GRUNDLINIE_WEISEN:
         # Bewusst OHNE Liste der bekannten Zaehlweisen: die muesste
         # gepflegt werden, und eine gepflegte Liste driftet — genau die
@@ -214,6 +311,54 @@ def _selbsttest() -> int:
         else:
             print("  ROT  %-46s erwartet %d, gemessen %d"
                   % (name, soll, ist))
+
+    # ── Das Manifest gegen die Luecke, die eine ZAHL nicht sieht ────────
+    # Vorgefuehrt statt behauptet: zwei Baeume mit GLEICH VIELEN Kopien,
+    # einer davon mit einer neuen. Gegen eine Anzahl bestehen beide.
+    def manifest_fall() -> list:
+        ergebnis = []
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            subprocess.run(["git", "init", "-q"], env=git_umgebung(),
+                           cwd=d, capture_output=True)
+            tafel = "static const int %s[6] = { 0, 21, 19, 18, 17, 17 };\n"
+            for i, n in enumerate(("alt_a", "alt_b", "alt_c")):
+                (p / ("f%d.c" % i)).write_text(tafel % n, encoding="utf-8")
+            m = p / "grundlinie.json"
+            manifest_schreiben(messe(p)[0], m)
+            ergebnis.append(("Manifest deckt den Bestand", not check(p, None, m)))
+
+            # Eine alte Stelle weg, eine NEUE dazu: Anzahl unveraendert.
+            (p / "f2.c").write_text(tafel % "frisch", encoding="utf-8")
+            stellen_neu = messe(p)[0]
+            fehler = check(p, None, m)
+            ergebnis.append(("Anzahl unveraendert (%d)" % len(stellen_neu),
+                             len(stellen_neu) == 3))
+            ergebnis.append(("neue Stelle faellt trotzdem auf",
+                             any("frisch" in f for f in fehler)))
+
+            # Nur eine Stelle entfaellt: kein Verstoss, aber ein Hinweis.
+            (p / "f2.c").write_text("int leer(void){return 0;}\n",
+                                    encoding="utf-8")
+            hin: list = []
+            ergebnis.append(("Wegfall ist kein Verstoss",
+                             not check(p, hin, m)))
+            ergebnis.append(("Wegfall wird gemeldet",
+                             any("verschwunden" in h for h in hin)))
+
+            # Fehlendes Manifest -> das Tor sagt, dass es nichts geprueft hat.
+            ergebnis.append(("fehlendes Manifest ist ein FAIL",
+                             any("NICHTS geprueft" in f
+                                 for f in check(p, None, p / "gibtsnicht"))))
+        return ergebnis
+
+    for name, ok in manifest_fall():
+        faelle.append((name, None, None))
+        if ok:
+            gut += 1
+        else:
+            print("  ROT  %-46s Manifest-Zusage haelt nicht" % name)
+
     print("Selbsttest: %d/%d" % (gut, len(faelle)))
     return 0 if gut == len(faelle) else 1
 
@@ -240,12 +385,23 @@ def main() -> int:
                 print("    %-50s %s" % (rel, name))
             print()
 
-    print("CBM-Zonenlaengen: %d Fundstellen (Grundlinie %d), "
-          "%d Zaehlweisen (Grundlinie %d)"
-          % (len(stellen), GRUNDLINIE_STELLEN,
-             len(weisen), GRUNDLINIE_WEISEN))
+    if "--grundlinie-schreiben" in sys.argv:
+        n = manifest_schreiben(stellen)
+        alt = manifest_lesen() or {}
+        print("Grundlinien-Manifest geschrieben: %d Stellen (vorher %d) -> %s"
+              % (n, len(alt), MANIFEST.name))
+        print("Der Fortschritt steht jetzt im Diff, nicht in einer Zahl.")
+        return 0
 
-    errs = check(repo)
+    bekannt = manifest_lesen() or {}
+    print("CBM-Zonenlaengen: %d Fundstellen (Manifest %d), "
+          "%d Zaehlweisen (Grundlinie %d)"
+          % (len(stellen), len(bekannt), len(weisen), GRUNDLINIE_WEISEN))
+
+    hinweise: list = []
+    errs = check(repo, hinweise)
+    for h in hinweise:
+        print("  HINWEIS: %s" % h)
     if not errs:
         print("OK")
         return 0

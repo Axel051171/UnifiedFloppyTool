@@ -191,7 +191,16 @@ void ProtectionAnalysisWidget::createDetailPanel()
     
     m_selectedTrackLabel = new QLabel(tr("Select a track for details"));
     layout->addWidget(m_selectedTrackLabel);
-    
+
+    /* MF-1511: welches GCR liegt auf dieser Spur? Die Auswahl steht hier
+     * und nicht in der Heatmap, weil die sieben Spalten dort MERKMALE
+     * sind (gemessen) und eine Auswahl eine EINSTELLUNG waere — zwei
+     * Bedeutungen in einer Tabelle. */
+    m_gcrCodec = new QComboBox();
+    m_gcrCodec->setToolTip(tr("Share of valid code words per codec, "
+                              "measured on this track's raw bits."));
+    layout->addWidget(m_gcrCodec);
+
     m_detailText = new QTextEdit();
     m_detailText->setReadOnly(true);
     m_detailText->setFont(QFont("Monospace", 9));
@@ -354,7 +363,43 @@ void ProtectionAnalysisWidget::onTrackSelected(int row, int col)
     
     int track = row + 1;
     m_selectedTrackLabel->setText(tr("Track %1 Details").arg(track));
-    
+
+    /* MF-1511: die Codec-Kandidaten dieser Spur, bester zuerst.
+     *
+     * **Die Absage ist der wichtigere Teil dieser Anzeige.** Wo KEIN
+     * Codec ueber die Schwelle kommt, steht das auch da — ein Bitstrom,
+     * unter dem alles ungueltig ist, ist kein Codec-Problem, sondern
+     * Rauschen oder ein Schutz mit absichtlich ungueltigem GCR (Fast
+     * Hack'em `-f`, nibtools `-f`). Wer dann den Codec wechselt, hat
+     * einen Befund gegen eine Einstellung getauscht. */
+    m_gcrCodec->clear();
+    const int idx = row;
+    if (idx >= 0 && idx < m_gcrKandidaten.size()
+        && !m_gcrKandidaten[idx].isEmpty()) {
+        const QVector<uft_gcr_erkennung_t> &k = m_gcrKandidaten[idx];
+        /* Schwelle 0,80: darunter beansprucht kein Verfahren die Spur.
+         * Der Wert ist eine ANZEIGE-Grenze, keine gemessene Konstante —
+         * er entscheidet nur, ob ein Vorschlag oder ein Befund oben
+         * steht, und aendert keine Daten. */
+        const bool passt = (k[0].anteil >= 0.80f);
+        if (!passt) {
+            m_gcrCodec->addItem(tr("— kein Codec passt (best %1 %) —")
+                                .arg(k[0].anteil * 100.0f, 0, 'f', 1));
+        }
+        for (const uft_gcr_erkennung_t &e : k) {
+            const uft_gcr_info_t *info = uft_gcr_info(e.codec);
+            m_gcrCodec->addItem(tr("%1 — valid %2 % (%3 of %4 words)")
+                                .arg(QString::fromUtf8(info ? info->name : "?"))
+                                .arg(e.anteil * 100.0f, 0, 'f', 1)
+                                .arg(e.gueltig).arg(e.woerter));
+        }
+        m_gcrCodec->setCurrentIndex(0);
+        m_gcrCodec->setEnabled(true);
+    } else {
+        m_gcrCodec->addItem(tr("GCR: not measured for this track"));
+        m_gcrCodec->setEnabled(false);
+    }
+
     updateDetailView(track);
 }
 
@@ -450,6 +495,7 @@ void ProtectionAnalysisWidget::onSchemeFilterChanged(int index)
 void ProtectionAnalysisWidget::loadFluxData(const uint8_t *data, size_t len)
 {
     m_trackMetrics.clear();
+    m_gcrKandidaten.clear();   /* MF-1511: gleicher Index, gleiche Lebensdauer */
     clearResults();
 
     if (!data || len == 0) return;
@@ -580,6 +626,7 @@ void ProtectionAnalysisWidget::loadFluxData(const uint8_t *data, size_t len)
 void ProtectionAnalysisWidget::loadG64(const char *path)
 {
     m_trackMetrics.clear();
+    m_gcrKandidaten.clear();   /* MF-1511: gleicher Index, gleiche Lebensdauer */
     clearResults();
 
     if (!path) return;
@@ -658,6 +705,15 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
         }
 
         m_trackMetrics.append(metrics);
+
+        /* MF-1511: Codec-Kandidaten JETZT messen — nach `g64_free()`
+         * sind die Rohbits fort. Drei Zahlen je Spur statt der ganzen
+         * Spur im Speicher. */
+        QVector<uft_gcr_erkennung_t> kandidaten(UFT_GCR_ANZAHL);
+        const size_t n = uft_gcr_erkennen(trackData, trackLen * 8u,
+                                          kandidaten.data());
+        kandidaten.resize((int)n);
+        m_gcrKandidaten.append(kandidaten);
     }
 
     g64_free(g64);
