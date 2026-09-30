@@ -1190,3 +1190,56 @@ Messung ist verworfen, nicht verwendet), 16 (Doku-Zahlen, BERICHTIGT) und
 - (15) „Traeger im Kern" ist eine Erreichbarkeitsaussage. Oeffnen wuerde es
   eine Spalte „Leser erreichbar" in der Zuordnungstafel, gerechnet ueber
   den Aufrufgraphen statt ueber `git grep` nach dem Feldnamen.
+
+## Sitzungsbilanz 2026-09-30, Fortsetzung — wt-dtc: Taktkorrektur, Triage, Sektor-ID 0 (MF-1621 bis MF-1623)
+
+```
+Kennzahlen bewegt:
+  K3  Manifest der Konstantenfamilien 56 -> 55 (MF-1623). Anlass gemessen:
+      die Familie uft_ipf_air.c::buf / test_air_cross_validate.c::ipf_trunc
+      ist seit der IPF-Bereinigung MF-1617 verschwunden, das Manifest war
+      nicht nachgezogen. Ueberzaehlige Kopien laut Tor: 90.
+  K8  0 (CI von MF-1621 und von 981f2f91 in allen Laeufen gruen)
+
+Kennzahlen unbewegt:
+  K1/K2  Tierstand unveraendert; P3-708 und P3-549 sind Richtigkeit an
+         bestehenden Lesern, keine Hebung.
+  K4/K5/K6/K7/K9  nicht beruehrt.
+
+Fehler dieser Fortsetzung — je Zeile: was | gefangen von | Folge
+  1. Ein ueberfluessiges Heredoc, das eine Datei fuellen sollte | TOR
+     (Tor 71) | Datei per Write
+  2. Mein eigener Kommentar an uft_cbm_error_byte_ok() behauptete
+     „0x00 schreiben Werkzeuge ohne Fehler" — ohne Quelle | Mensch (vor
+     dem Commit gelesen) | berichtigt auf das, was Schepers' D64.TXT sagt
+  3. Der Verdacht in P3-708 („PC-Geometrie") war falsch; es war die
+     Fuellpruefung | Mensch (Messung) | BERICHTIGT in OPEN_ITEMS
+  4. Die Liste in P3-549 war veraltet: d77 war schon behoben | Mensch
+     (Lesen) | BERICHTIGT
+  5. Der P3-549-Test betrat die Fuellpfade von FDI und NFD nicht; zwei
+     Mutanten ueberlebten | TOR (Mutationsprobe) | zwei Faelle, 6 von 6 rot
+  6. Die synthetische D64 mit Fehlerbytes hatte keine gueltige BAM, der
+     Schutztext gewann | TOR (Test rot) | Vorrichtung berichtigt
+  7. Der TD0-Baukasten im Test kopierte drei Konstantenfamilien aus
+     test_td0_error_marks | TOR (audit_konstantenfamilien) | Korpusdatei
+     mit Eingriff statt Kopie
+  8. Das Manifest war nach MF-1617 nicht gekuerzt | TOR (Hinweis desselben
+     Tors) | 56 -> 55
+  9. Mein CI-Wartekript wartete ewig: `gh run list --commit` will den
+     vollen SHA | Mensch (Handabfrage) | Skript berichtigt, Gedaechtnis
+     ci-test-gating, achte Falle
+ 10. Ein leerer `python - <<X`-Platzhalter hing 120 s | Mensch | beendet,
+     ohne Folge
+
+K0 dieser Sitzung: 5 von 10
+```
+
+Die fuenf Mensch-Faenge nach der Regel: 3 und 4 sind Doku-Aussagen und
+stehen als BERICHTIGT da; 2 ist Prosa in einem Kommentar, die kein Tor
+lesen kann — der Weg dagegen ist die Quellenangabe im Kommentar selbst,
+die jetzt dasteht; 9 und 10 betreffen Werkzeuge im Scratchpad, die Lehre
+zu 9 steht im Gedaechtnis. Kein neuer Fundus.
+
+**Offen fuer den Eigentuemer:** P3-713 — zwei registrierte EDSK-Leser,
+der verlustbehaftete gewinnt, sobald jemand „EDSK" waehlt. Drei Wege mit
+Kosten stehen dort; Empfehlung (b) zuruecknehmen.
