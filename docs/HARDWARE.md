@@ -20,8 +20,8 @@ Complete guide to setting up floppy disk controllers with UnifiedFloppyTool.
 | **USB Floppy** | ✅ | ✅ | ❌ | Qt provider | $15 | Easy |
 
 ¹ "Partial HAL" = pure-utility functions and lifecycle scaffold real,
-USB/serial wiring still pending (see `docs/MASTER_PLAN.md` §M3 — M3.1
-SCP-Direct libusb, M3.2 XUM1541 libusb, M3.3 Applesauce serial). Until
+USB/serial wiring still pending (milestones M3.1 SCP-Direct libusb,
+M3.2 XUM1541 libusb, M3.3 Applesauce serial). Until
 the wiring lands, hardware access goes through the existing Qt
 provider (subprocess or QSerialPort), not the C HAL.
 

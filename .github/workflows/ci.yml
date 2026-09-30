@@ -1,205 +1,23 @@
-# ============================================================================
-# UnifiedFloppyTool - CI Build
+# Public CI for UnifiedFloppyTool (MF-1635).
 #
-# Fixes in diesem File:
-#   ROOT CAUSE: Qt 6.7.3 (C++17) vs Qt 6.10.1 (C++20) Mismatch behoben
-#   → Matrix-Build testet BEIDE Standards
-#   FAILURE-001: macos-14 arch mismatch → clang_64 entfernt
-#   FAILURE-002: IQTA_TOOLS MinGW → add-tools-to-path: true
-#   FAILURE-007: cmake --target all → entfernt
-# ============================================================================
-
+# The public repository holds only what the qmake application build needs
+# (see scripts/release/app_only_files.py in the development repository).
+# There is no test suite here, so this workflow proves exactly one thing:
+# the application compiles on the three release platforms.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-
-  # ══════════════════════════════════════════════════════════════════════════
-  # Consistency gate — fast pre-build check that mirrors the local pre-push
-  # hook (scripts/git-hooks/pre-push). Catches dangling #include refs,
-  # missing target_sources paths, and undefined TEST_LIBS targets BEFORE
-  # any compiler runs. Devs who installed the hook see the same failure
-  # locally; this gate catches everyone else.
-  # ══════════════════════════════════════════════════════════════════════════
-  consistency:
-    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
-    # five Linux jobs hung in the Qt/apt download and would have burned
-    # six hours each. A hang now dies here instead.
-    timeout-minutes: 10
-    name: Consistency check
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          # MF-1609: Tor 72's self-test checks on the REAL repository that
-          # an MF number already claimed in history is refused. A shallow
-          # checkout has one commit, so no number is ever claimed and the
-          # case failed here (run 36595998750, 44/45; locally 45/45).
-          fetch-depth: 0
-      - name: SSOT parity (verify_build_sources.py)
-        run: python3 scripts/verify_build_sources.py
-      - name: Consistency (check_consistency.py)
-        run: python3 scripts/check_consistency.py
-      - name: capsimg helper builds and refuses without the library (MF-1613)
-        run: |
-          set -euo pipefail
-          # The helper (tools/capsimg-helper/, MIT) loads capsimg at run
-          # time; CI has no capsimg and must not get one (SPS licence
-          # v1.02, non-commercial). What CI CAN hold: the file compiles
-          # warning-free, and without the library it answers with rc 3 and
-          # an ERROR line in the index, never a TRACK line.
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -o /tmp/uft_capsimg_helper \
-              tools/capsimg-helper/uft_capsimg_helper.c -ldl
-          set +e
-          UFT_CAPSIMG_LIB=/nonexistent/libcapsimage.so.5 \
-              /tmp/uft_capsimg_helper tests/corpus_free/disk_analyse_uftk_amiga.ipf /tmp/idx.txt /tmp/blob.bin
-          rc=$?
-          set -e
-          cat /tmp/idx.txt
-          test "$rc" -eq 3
-          grep -q '^ERROR capsimg library not loadable' /tmp/idx.txt
-          ! grep -q '^TRACK' /tmp/idx.txt
-
-  # ══════════════════════════════════════════════════════════════════════════
-  # gw-Paritaet (MF-798)
-  #
-  # `tests/differential/test_gw_parity.py` dekodiert DENSELBEN von gw
-  # erzeugten Flussstrom zweimal — einmal mit `gw convert`, einmal mit UFTs
-  # Flussmaschine — und verlangt BYTEIDENTISCHE Sektorabbilder. Sechs
-  # Diskettenklassen: IBM MFM DD/HD, Atari ST MFM, Commodore 1541 GCR,
-  # Apple II GCR, AmigaDOS MFM.
-  #
-  # Das ist das staerkste Stueck Beweisfuehrung im Baum, und es lief bis
-  # MF-798 NIE: keiner der sechs Arbeitsablaeufe rief `pytest` auf oder
-  # installierte `gw`. Der Test uebersprang sich sauber — und war damit
-  # eine einmal behauptete Aussage statt einer bei jedem Push erneuerten.
-  #
-  # EIN SKIP MACHT DIESEN JOB ROT. Das ist die Lehre aus MF-598: ein
-  # Skip, der einen Bruch verdeckt, ist schlimmer als ein roter Test. Die
-  # gw-Paritaet meldete jahrelang „6 skipped", und dahinter lag ein Ziel,
-  # das sich nicht einmal uebersetzen liess.
-  # ══════════════════════════════════════════════════════════════════════════
-  gw-parity:
-    timeout-minutes: 20
-    needs: consistency
-    name: gw parity (differential)
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install Greaseweazle host tools
-        run: |
-          set -euo pipefail
-          # gw steht nicht auf PyPI. Unlicense (Public Domain) — die
-          # Installation ist unbedenklich, und wir binden NICHTS davon
-          # ein: gw laeuft als eigener Prozess, als Oracle.
-          #
-          # GEPINNT AUF DEN COMMIT, nicht auf den Tag `v1.23`. Ein Tag
-          # laesst sich verschieben; dann waere das Oracle still ein
-          # anderes als das, gegen das die Aussagen gemessen wurden.
-          # Der Hash ist der von `v1.23`, nachgesehen ueber die
-          # GitHub-API am 2026-09-02.
-          python3 -m pip install --upgrade pip
-          python3 -m pip install "git+https://github.com/keirf/greaseweazle@a0ae343d7e2603b9f3fdc0149ef8e89de5399f58"
-          python3 -m pip install pytest
-          # `gw --version` gibt es NICHT (MF-776) — die Option faellt auf
-          # den Usage-Text zurueck, in dem die Zahl aus dem INSTALLATIONS-
-          # PFAD steht. `gw info` ist die richtige Quelle und laeuft ohne
-          # Geraet.
-          #
-          # EINMAL AUSFUEHREN, IN EINE DATEI (MF-805). Hier stand
-          # `gw info 2>&1 | grep -qE ...` — und das ist mit
-          # `set -o pipefail` ein WETTLAUF: `grep -q` steigt beim ersten
-          # Treffer aus und schliesst die Pipe, der Erzeuger bekommt
-          # SIGPIPE und endet mit 141, und pipefail macht daraus einen
-          # Fehlschlag der ganzen Pipeline — obwohl der Treffer da war.
-          #
-          # Der erste CI-Lauf ist genau daran gescheitert: das Protokoll
-          # zeigt `Host Tools: 1.23` UND darunter „gw meldet nicht 1.23".
-          # Lokal lief dieselbe Zeile gruen, weil gws Ausgabe klein genug
-          # ist, um vor dem Schliessen durchzulaufen. Nachgestellt:
-          # `set -o pipefail; yes | grep -q y` gibt 141.
-          gw info > gwinfo.txt 2>&1 || true
-          echo "gw-Fassung, wie das Oracle-Register sie fuehrt:"
-          grep -i "host tools" gwinfo.txt || true
-          # Auf der DATEI greppen, nicht auf einer Pipe: kein SIGPIPE,
-          # kein zweiter Lauf, und die Ausgabe steht fuer die
-          # Fehlermeldung noch zur Verfuegung.
-          if ! grep -qiE "Host Tools:[[:space:]]*1\.23" gwinfo.txt; then
-            echo "::error::gw meldet nicht 1.23 — das Oracle ist ein anderes"
-            echo "Was gw tatsaechlich ausgegeben hat:"
-            cat gwinfo.txt
-            exit 1
-          fi
-
-      - name: Parity suite (a skip fails this job)
-        run: |
-          set -uo pipefail
-          # MF-817: `set -e` NICHT ueber dieser Pipe.
-          #
-          # Bei einem echten Testfehlschlag beendete `set -e` den Schritt
-          # sofort an der Pipe — und die Skip- und Pass-Diagnostik
-          # darunter lief nie. Man sah einen nackten roten Schritt,
-          # obwohl der Job Namen und Gruende haette ausgeben koennen.
-          # Derselbe Fallstrick wie `grep -q` in MF-805, nur andersherum.
-          #
-          # Deshalb: Rueckgabewert von pytest EXPLIZIT aufheben
-          # (`PIPESTATUS[0]`, nicht der von `tee`), erst alle Pruefungen
-          # laufen lassen, dann entscheiden.
-          python3 -m pytest tests/differential/test_gw_parity.py \
-            -v -rs 2>&1 | tee parity.log
-          rc=${PIPESTATUS[0]}
-          set -e
-          # `pytest` gibt bei durchweg uebersprungenen Tests 0 zurueck.
-          # Genau daran ist diese Aussage jahrelang vorbeigelaufen.
-          if grep -qiE '[0-9]+ skipped' parity.log; then
-            echo "::error::Die gw-Paritaet hat uebersprungen statt zu pruefen."
-            echo "Ein Skip ist hier KEIN Erfolg — siehe MF-598. Gruende:"
-            grep -iE 'SKIPPED' parity.log || true
-            exit 1
-          fi
-          if ! grep -qE '[0-9]+ passed' parity.log; then
-            echo "::error::Kein einziger Paritaetsfall ist gelaufen."
-            exit 1
-          fi
-          # Erst JETZT ueber pytests eigenen Rueckgabewert entscheiden —
-          # nach den Pruefungen, damit ihre Meldungen im Protokoll stehen.
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::pytest endete mit $rc — Paritaet NICHT erreicht."
-            grep -E 'FAILED|assert' parity.log | head -20 || true
-            exit 1
-          fi
-          echo "gw-Paritaet: byteidentisch, nachgewiesen statt behauptet."
-
-      - name: Upload parity log on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gw-parity-log-${{ github.sha }}
-          path: parity.log
-          retention-days: 7
-
-  # ══════════════════════════════════════════════════════════════════════════
-  # Matrix: C++17 (Qt 6.7.3) UND C++20 (Qt 6.10.1) — beide müssen grün sein
-  # ══════════════════════════════════════════════════════════════════════════
-  build-linux:
-    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
-    # five Linux jobs hung in the Qt/apt download and would have burned
-    # six hours each. A hang now dies here instead.
-    timeout-minutes: 45
-    needs: consistency
+  linux:
+    timeout-minutes: 60
     name: Linux (${{ matrix.qt_version }}, ${{ matrix.cxx_std }})
     runs-on: ubuntu-22.04
     strategy:
@@ -212,187 +30,50 @@ jobs:
           - qt_version: '6.10.1'
             cxx_std: 'c++20'
             qmake_extra: 'CONFIG+=cxx20'
-
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install Qt ${{ matrix.qt_version }}
-        uses: jurplel/install-qt-action@v4
+      - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
           host: linux
           target: desktop
           modules: 'qtserialport'
           cache: true
-
-      - name: Install system dependencies
+      - name: System dependencies
         run: |
           sudo apt-get update -q
           sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
-
-      - name: Build (qmake, ${{ matrix.cxx_std }})
+      - name: Build (qmake)
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro CONFIG+=release ${{ matrix.qmake_extra }}
-          make -j$(nproc)
+          make -j"$(nproc)"
+          file UnifiedFloppyTool
 
-      - name: Smoke test
-        run: |
-          file build/UnifiedFloppyTool
-          ldd build/UnifiedFloppyTool | grep -v "not found" || true
-
-      - name: Build tests (CMake)
-        id: buildtests
-        # qmake is the canonical build (above). CMake test infra is
-        # keep-going: one unbuildable target must not abort the parallel
-        # build and leave ~150 others as ctest "Not Run" (KNOWN_ISSUES
-        # CI-1). Independent test executables still build.
-        #
-        # MF-667: hier stand `|| true` — und der Kommentar am ctest-Schritt
-        # behauptete gleichzeitig, "a build breakage surfaces in the build
-        # step". Beides zusammen ging nicht auf: der Schritt KONNTE nicht
-        # rot werden.
-        #
-        # Gemessen wurde die Folge: VIER Qt-Ziele bauten laengere Zeit
-        # nicht, und niemand sah es. ctest blieb gruen, weil die
-        # betroffenen Ziele nicht liefen; lokal blieb es unsichtbar, weil
-        # ausfuehrbare Dateien aus frueheren Baeufen herumlagen.
-        #
-        # Der Rueckgabewert wird jetzt FESTGEHALTEN statt verworfen. Der
-        # Schritt bleibt gruen, damit ctest danach noch laeuft und man die
-        # Ergebnisse der bauenden Ziele sieht — die Bewertung faellt am
-        # Ende, mit Namen.
-        run: |
-          set +e
-          cmake -B build-tests \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DUFT_BUILD_TESTS=ON
-          echo "configure_rc=$?" >> "$GITHUB_OUTPUT"
-          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 \
-            | tee build-tests.log
-          echo "build_rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Run tests
-        # GATED (KNOWN_ISSUES CI-1 resolved): no more `|| true`. A test that
-        # builds and then FAILS now reddens CI. The env defects that had
-        # been masked — Linux uft_ufi_linux_ops link + headless-Qt offscreen,
-        # Windows libusb mock + /tmp path — are fixed; all three test jobs
-        # verified 163/163 green before this gate was armed.
-        # `--no-tests=ignore` (CMake >= 3.20) still tolerates a fully-failed
-        # test build (exit 0) so a build breakage surfaces as a build
-        # breakage, not as a confusing "no tests" ctest error.
-        #
-        # MF-667: dieser Satz stand hier schon und war UNWAHR — der
-        # Bau-Schritt trug `|| true` und konnte nicht rot werden. Bewertet
-        # wird er jetzt von einem eigenen Schritt direkt darunter.
-        run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
-
-      - name: Der Pruefstand muss BAUEN, nicht nur bestehen (MF-667)
-        # Laeuft NACH ctest, damit die Ergebnisse der bauenden Ziele
-        # sichtbar bleiben — und faellt trotzdem, wenn irgendein Ziel
-        # nicht uebersetzt.
-        #
-        # "Tests gruen" und "Bau gruen" sind ZWEI Aussagen. Bis MF-667
-        # wurde nur die erste geprueft; die zweite war mit `|| true`
-        # verworfen, und vier Ziele bauten laengere Zeit unbemerkt nicht.
-        if: always()
-        run: |
-          if [ "${{ steps.buildtests.outputs.configure_rc }}" != "0" ]; then
-            echo "::error::cmake configure fuer den Pruefstand ist gescheitert."
-            exit 1
-          fi
-          rc="${{ steps.buildtests.outputs.build_rc }}"
-          if [ "$rc" = "0" ]; then
-            echo "Pruefstand baut vollstaendig."
-            exit 0
-          fi
-          echo "::error::Der Pruefstand baut NICHT vollstaendig (rc=$rc)."
-          echo "Ziele mit Fehlern:"
-          grep -oE 'CMakeFiles/[A-Za-z0-9_]+\.dir' build-tests.log \
-            | sed 's|CMakeFiles/||; s|\.dir$||' | sort -u | head -40
-          echo
-          echo "Erste Uebersetzungsfehler:"
-          grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|fatal error):' \
-            build-tests.log | head -20
-          exit 1
-
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: linux-build-logs-${{ matrix.qt_version }}-${{ github.sha }}
-          path: |
-            build/*.log
-            build-tests/CMakeFiles/*.log
-          retention-days: 3
-
-  # ══════════════════════════════════════════════════════════════════════════
-  # macOS — ARM64, Qt 6.10.1
-  # ══════════════════════════════════════════════════════════════════════════
-  build-macos:
-    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
-    # five Linux jobs hung in the Qt/apt download and would have burned
-    # six hours each. A hang now dies here instead.
-    timeout-minutes: 45
-    needs: consistency
+  macos:
+    timeout-minutes: 60
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install Qt
-        # FIX-001: kein arch: clang_64 — macos-14 ist ARM64
-        uses: jurplel/install-qt-action@v4
+      - uses: jurplel/install-qt-action@v4
         with:
           version: '6.10.1'
           host: mac
           target: desktop
           modules: 'qtserialport'
           cache: true
-
-      - name: Build
+      - name: Build (qmake)
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro CONFIG+=release CONFIG+=cxx20
-          make -j$(sysctl -n hw.ncpu)
+          make -j"$(sysctl -n hw.ncpu)"
 
-      - name: Smoke test
-        run: |
-          file build/UnifiedFloppyTool.app/Contents/MacOS/UnifiedFloppyTool
-
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: macos-build-logs-${{ github.sha }}
-          path: build/*.log
-          retention-days: 3
-
-  # ══════════════════════════════════════════════════════════════════════════
-  # Windows — MinGW, Qt 6.10.1
-  # ══════════════════════════════════════════════════════════════════════════
-  build-windows:
-    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
-    # five Linux jobs hung in the Qt/apt download and would have burned
-    # six hours each. A hang now dies here instead.
-    #
-    # MF-1352: 60 -> 90. Not a hang: "Build tests (CMake)" alone took
-    # 51 min on 631b3d81 and was killed at 60 on 19408cef, and the job
-    # still counted as "cancelled" instead of failed. Cause measured in
-    # build.ninja: 74 test targets compile the format layer each on their
-    # own, 29 055 of 31 461 objects (92 %). The limit keeps its purpose
-    # (a hang still dies); the real fix is P3-10 in docs/OPEN_ITEMS.md
-    # (one object library instead of 74 compilations).
+  windows:
     timeout-minutes: 90
-    needs: consistency
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install Qt + MinGW
-        # FIX-002: add-tools-to-path: true — kein manuelles IQTA_TOOLS
-        uses: jurplel/install-qt-action@v4
+      - uses: jurplel/install-qt-action@v4
         with:
           version: '6.10.1'
           host: windows
@@ -402,86 +83,10 @@ jobs:
           tools: 'tools_mingw1310'
           add-tools-to-path: true
           cache: true
-
-      - name: Verify toolchain
-        shell: bash
-        run: |
-          which mingw32-make || (echo "ERROR: mingw32-make not found" && exit 1)
-          which qmake        || (echo "ERROR: qmake not found"        && exit 1)
-
-      - name: Build
+      - name: Build (qmake)
         shell: bash
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro CONFIG+=release CONFIG+=cxx20
-          mingw32-make -j$(nproc)
-
-      - name: Smoke test
-        shell: bash
-        run: |
-          file build/release/UnifiedFloppyTool.exe
-
-      - name: Build tests (CMake)
-        id: buildtests
-        # Same best-effort policy as the Linux job: partial CMake test
-        # builds are acceptable since qmake (above) is the canonical
-        # production build. The Windows build of test_gw_protocol
-        # (MF-135) is the one we actually want to keep green here -
-        # protocol regressions on the platform where the FB-bug
-        # appeared should fail the CI on that platform.
-        shell: bash
-        run: |
-          set +e
-          cmake -B build-tests -G "MinGW Makefiles" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DUFT_BUILD_TESTS=ON
-          echo "configure_rc=$?" >> "$GITHUB_OUTPUT"
-          # keep-going (`-- -k`): see Linux job — one unbuildable target must
-          # not abort the whole build (KNOWN_ISSUES CI-1).
-          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 \
-            | tee build-tests.log
-          echo "build_rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Run tests
-        # GATED (KNOWN_ISSUES CI-1 resolved): no `|| true`. The Windows env
-        # defects (libusb mock header + /tmp temp path) are fixed; this job
-        # verified 163/163 green before the gate was armed.
-        shell: bash
-        run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
-
-      - name: Der Pruefstand muss BAUEN, nicht nur bestehen (MF-667)
-        # Wie im Linux-Auftrag: nach ctest, damit die Ergebnisse der
-        # bauenden Ziele sichtbar bleiben — und trotzdem rot, wenn eines
-        # nicht uebersetzt. "Tests gruen" und "Bau gruen" sind zwei
-        # Aussagen; bis MF-667 wurde nur die erste geprueft.
-        if: always()
-        shell: bash
-        run: |
-          if [ "${{ steps.buildtests.outputs.configure_rc }}" != "0" ]; then
-            echo "::error::cmake configure fuer den Pruefstand ist gescheitert."
-            exit 1
-          fi
-          rc="${{ steps.buildtests.outputs.build_rc }}"
-          if [ "$rc" = "0" ]; then
-            echo "Pruefstand baut vollstaendig."
-            exit 0
-          fi
-          echo "::error::Der Pruefstand baut NICHT vollstaendig (rc=$rc)."
-          echo "Ziele mit Fehlern:"
-          grep -oE 'CMakeFiles/[A-Za-z0-9_]+[.]dir' build-tests.log \
-            | sed 's|CMakeFiles/||; s|[.]dir$||' | sort -u | head -40
-          echo
-          echo "Erste Uebersetzungsfehler:"
-          grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|fatal error):' \
-            build-tests.log | head -20
-          exit 1
-
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-build-logs-${{ github.sha }}
-          path: build/*.log
-          retention-days: 3
+          mingw32-make -j"$(nproc)"
+          file release/UnifiedFloppyTool.exe

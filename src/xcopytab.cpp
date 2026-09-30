@@ -152,14 +152,16 @@ XCopyTab::XCopyTab(QWidget *parent)
      * XCopy functionality. Browse + configure stays active so the
      * planned UI shape is visible.
      */
+    /* The plan for the backend lives in docs/XCOPY_INTEGRATION_TODO.md
+     * (development repository). The tooltip speaks to the user of THIS
+     * build and names no document they do not have (MF-1634). */
     if (ui->btnStartCopy) {
         ui->btnStartCopy->setEnabled(false);
         ui->btnStartCopy->setToolTip(
-            tr("Amiga XCopy backend planned for v4.2.0.\n"
+            tr("Amiga XCopy is not included in this version.\n"
                "Current engine is generic file-copy only — not\n"
                "compatible with Amiga-specific disk protection,\n"
-               "virus-scan, or BAMCOPY features.\n"
-               "See docs/XCOPY_INTEGRATION_TODO.md"));
+               "virus-scan, or BAMCOPY features."));
     }
 }
 

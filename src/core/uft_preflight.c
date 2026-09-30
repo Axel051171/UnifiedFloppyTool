@@ -177,7 +177,8 @@ uft_error_t uft_preflight_check(uft_format_id_t from,
                 plan_out->decision     = UFT_PREFLIGHT_ABORT_NEED_CONSENT;
                 plan_out->abort_reason =
                     "conversion is LOSSY-DOCUMENTED — requires "
-                    "accept_data_loss=true (see docs/DESIGN_PRINCIPLES.md §1)";
+                    "accept_data_loss=true (design principle 1: no silent "
+                    "loss)";
                 plan_out->writes_sidecar = false;
             } else {
                 plan_out->decision     = UFT_PREFLIGHT_OK;

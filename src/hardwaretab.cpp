@@ -1075,11 +1075,13 @@ void HardwareTab::onConnect()
         } else {
             ui->btnConnect->setText(tr("Disconnect (Preview)"));
             ui->btnConnect->setStyleSheet("background-color: #ffaa55;");
+            /* Wiring milestones: docs/MASTER_PLAN.md §M3 (development
+             * repository). Not named in the tooltip — a user of this
+             * build has no such file (MF-1634). */
             ui->btnConnect->setToolTip(
                 tr("Honest-stub connection — the production transport "
                    "for this controller is not wired yet. Read/Write "
-                   "actions will return UFT_ERR_NOT_IMPLEMENTED. See "
-                   "docs/MASTER_PLAN.md §M3."));
+                   "actions will return UFT_ERR_NOT_IMPLEMENTED."));
             updateStatus(tr("%1 connected — V2 provider routed (PREVIEW). "
                             "The production transport for this controller "
                             "is not wired yet; capability actions return a "

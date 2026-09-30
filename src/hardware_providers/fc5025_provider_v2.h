@@ -346,7 +346,7 @@ static_assert(DetectsDrive<FC5025ProviderV2>,
 /* Negative assertions — intentionally omitted mixins. */
 static_assert(!ReadsRawFlux<FC5025ProviderV2>,
     "FC5025ProviderV2 must NOT satisfy ReadsRawFlux "
-    "(FC5025 delivers decoded sector data only — CLAUDE.md hard rule: "
+    "(FC5025 delivers decoded sector data only — project hard rule: "
     "FC5025 cannot read flux)");
 static_assert(!WritesSectors<FC5025ProviderV2>,
     "FC5025ProviderV2 must NOT satisfy WritesSectors "
@@ -384,7 +384,7 @@ static_assert(!FullDriveControl<FC5025ProviderV2>,
     "(ControlsMotor + SeeksHead + Recalibrates are all absent)");
 static_assert(!ImagesFlux<FC5025ProviderV2>,
     "FC5025ProviderV2 must NOT satisfy ImagesFlux "
-    "(FC5025 reads sectors only — CLAUDE.md hard rule)");
+    "(FC5025 reads sectors only — project hard rule)");
 
 }  // namespace uft::hal
 

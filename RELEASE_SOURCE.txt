@@ -1,0 +1,5 @@
+UnifiedFloppyTool 4.1.6 (snapshot)
+Development commit: 4562acad238dbf12c6712f4d4d9784d46f04e7a1
+Content SHA-256 (sorted per-file sha256 list, before this file): 66ea15bd46ae29656e79609996df0427e6fbaefc4011fd6178e1a0b98bb513e4
+qmake build of this tree: passed
+Date: 2026-09-30

@@ -648,7 +648,7 @@ static const uft_plugin_feature_t ipf_features[] = {
       "requires closed-source libcapsimage" },
     /* MF-917 */
     { "Lesen ueber Helfer-Prozess",    UFT_FEATURE_PARTIAL,
-      "UFT-Seite gebaut und gemessen (Protokoll v1, docs/specs/capsimg-helper/); "
+      "UFT-Seite gebaut und gemessen (Helfer-Protokoll v1); "
       "der Helfer selbst ist nicht Teil dieses Baums und muss vom Benutzer "
       "eingerichtet werden (UFT_IPF_HELPER). Ohne ihn liest der vorhandene "
       "Parser, der unter LIZ-2 in Quarantaene vorgemerkt ist" },

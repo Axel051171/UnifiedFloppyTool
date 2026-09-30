@@ -323,7 +323,7 @@ static_assert(!WritesRawFlux<KryoFluxProviderV2>,
     "(UFT has no wired path to a KryoFlux writer — src/hal/uft_kryoflux_dtc.c "
     "holds a complete but UNREACHABLE uft_kf_write_track(); whether the "
     "device itself can write is unmeasured, see P3-341. Corrected MF-1045: "
-    "this said 'read-only by design' and cited CLAUDE.md, which says it "
+    "this said 'read-only by design' and cited the project notes, which say it "
     "without a source)");
 static_assert(!WritesSectors<KryoFluxProviderV2>,
     "KryoFluxProviderV2 must NOT satisfy WritesSectors "

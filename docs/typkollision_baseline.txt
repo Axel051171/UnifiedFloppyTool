@@ -1,7 +1,0 @@
-# Grundlinie fuer scripts/audit_typkollision.py (MF-1155).
-# Ein Funktionsname je Zeile: gleiche Aritaet, Zeiger auf
-# verschiedene Typen, in mehr als einem Header deklariert.
-# FALLENDE Grundlinie (Tor-57-Bauform): die Zahl darf nur sinken.
-# Eine Zeile verschwindet, wenn die Kollision aufgeloest ist —
-# welche der beiden Fassungen die kanonische ist, entscheidet der
-# Eigentuemer (P3-410), nicht dieses Tor.
