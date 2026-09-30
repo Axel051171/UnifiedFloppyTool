@@ -1243,3 +1243,65 @@ zu 9 steht im Gedaechtnis. Kein neuer Fundus.
 **Offen fuer den Eigentuemer:** P3-713 — zwei registrierte EDSK-Leser,
 der verlustbehaftete gewinnt, sobald jemand „EDSK" waehlt. Drei Wege mit
 Kosten stehen dort; Empfehlung (b) zuruecknehmen.
+
+## Sitzungsbilanz 2026-09-30, zweite Fortsetzung — wt-dtc: Oberflaeche verdrahten (MF-1625 bis MF-1629)
+
+Auftrag: „Weiter mit dem Gui alles Verdrahtung und verbessern".
+
+```
+Kennzahlen bewegt:
+  K8  0 (CI von MF-1625, MF-1626, MF-1627 in allen Laeufen gruen)
+
+Kennzahlen unbewegt:
+  K6  unveraendert 2. Das neue Menue-Tor (audit_menue_aktionen.py,
+      Rotbeweis 20 -> 0) haelt eine Lage, die als Befund in OPEN_ITEMS
+      stand, nicht eine der zwei in STEHENDE_AUFTRAEGE gefuehrten Regeln
+      — der erste Entwurf dieser Bilanz buchte es als K6 -1 (Fehler 7).
+  K1-K5, K7, K9  nicht beruehrt. Die GUI-Arbeit bewegt keine Format-,
+         Konstanten- oder Waisenzahl; ehrlich gesagt ist sie Fundus-nah,
+         aber ausdruecklich beauftragt.
+
+Was die Oberflaeche jetzt tut, das sie vorher nicht tat:
+  MF-1625  „Adaptive Taktrueckgewinnung" erreicht den Flussdekoder
+           (use_pll), gemessen an einer schwankenden AmigaDOS-Spur.
+  MF-1626  der Volume-Label-Dialog erfindet keinen Namen mehr.
+  MF-1627  20 tote Menueeintraege: verbunden oder mit Grund aus; dazu
+           drei tote Workflow-Knoepfe; und das Programm baut zum ersten
+           Mal lokal ueber CMake (zwei Ursachen gemessen und behoben).
+  MF-1628  die Forensik-Zusammenfassung zaehlt statt „complete".
+  MF-1629  der letzte echte tote Knopf (GW->DMK) ist aus und sagt warum.
+
+Fehler dieser Fortsetzung — je Zeile: was | gefangen von | Folge
+  1. Ein mehrzeiliges `python -c` | TOR (Tor 71) | Skript als Datei
+  2. Der Unteragent nannte XCopy „Copy complete" und RAW „Applied" als
+     falsche Erfolgsmeldungen — beide sind fuer einen Bediener nicht
+     erreichbar | Mensch (nachgeprueft) | in P3-714 mit Grund festgehalten
+  3. Das neue Menue-Tor war zu eng: `abschalten(ui->X, grund)` mit einem
+     Bezeichner zaehlte nicht | TOR (das Tor selbst schlug an) | Form
+     ergaenzt, Selbsttestfaelle (ix)/(x)
+  4. Der CMake-Programmbau uebersetzte die Opt-in-dtc-Quellen (Parser
+     kannte `contains(CONFIG, …)` nicht) | TOR (Compiler) | Parser ohne
+     gepflegte Liste, Rotbeweis 10 -> 0
+  5. Das Programmziel linkte zlib nicht | TOR (Linker) | ZLIB::ZLIB
+  6. Der erste Forensik-Test pruefte nur die Formulierung, nicht die Zahl
+     — ein vergessener Zaehler waere durchgekommen | Mensch (vor der
+     Mutationsprobe gelesen) | Test zaehlt die Zeilen selbst; Mutation 4/4
+  7. Der Entwurf dieser Bilanz buchte das Menue-Tor als K6 -1 | Mensch
+     (Gegenlesen gegen die K6-Zaehlregel) | berichtigt, K6 bleibt 2
+
+K0 dieser Sitzung: 4 von 7
+```
+
+Die drei Mensch-Faenge nach der Regel: 2 ist eine Aussage in einem
+Bericht und steht berichtigt in P3-714 (die Messung des Unteragenten
+wurde nicht uebernommen, bevor sie nachgeprueft war); 6 hat einen
+Rotbeweis — die Mutationsmatrix haette ihn gefunden, wenn ich nicht
+vorher geschaerft haette, deshalb kein weiteres Tor; 7 ist eine
+Kennzahlbuchung von Hand, genau die Art Zahl, fuer die K6 ausdruecklich
+„Rueckschau" als Messbefehl hat — ein Tor dafuer wuerde
+`STEHENDE_AUFTRAEGE.md` gegen die Bilanz lesen und steht als Fundus.
+
+**Fundus:** die Knopf-Zaehlung ueber alle Formulare (27, davon 22
+Fehlalarme) ist bewusst kein Tor geworden; oeffnen wuerde es ein Pruefer,
+der Verdrahtung ueber zusammengesetzte Namen (`btnModus_<id>`) und
+erzeugten Code (`generated/*.gen.cpp`) mitzaehlt.
