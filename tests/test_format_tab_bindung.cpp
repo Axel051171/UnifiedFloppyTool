@@ -77,10 +77,11 @@ private slots:
         /* gemessen: 29 Felder des Entwurfs ohne Leser (MF-1618), siehe die
          * Liste in formattab.cpp und ZUORDNUNG_settings_redesign.md; seit
          * MF-1619 ist spinMaxRetries verdrahtet -> 28, seit MF-1621
-         * spinClockAdjust -> 27 */
-        QCOMPARE(namen.size(), 27);
+         * spinClockAdjust -> 27, seit MF-1625 checkAdaptivePll -> 26 */
+        QCOMPARE(namen.size(), 26);
         QVERIFY(!namen.contains(QStringLiteral("spinMaxRetries")));
         QVERIFY(!namen.contains(QStringLiteral("spinClockAdjust")));
+        QVERIFY(!namen.contains(QStringLiteral("checkAdaptivePll")));
         auto pruefe = [&](const char *wann) {
             for (const QString &n : namen) {
                 QWidget *w = tab.findChild<QWidget *>(n);
@@ -187,6 +188,38 @@ private slots:
         QVERIFY2(b.setupAnwenden(o, &fehler, &weg), qPrintable(fehler));
         QVERIFY2(weg.isEmpty(), qPrintable(weg.join(", ")));
         QCOMPARE(b.copyPlan().cell_adjust_pct, 104.0);
+    }
+
+    /* MF-1625: „Adaptive Taktrueckgewinnung" abgewaehlt heisst feste
+     * Taktung im Plan — nur mit eingeschalteten „Erweiterten Optionen";
+     * angewaehlt (Vorgabe) bleibt es adaptiv. Ein Setup traegt es. */
+    void adaptive_taktrueckgewinnung_erreicht_den_plan()
+    {
+        FormatTab tab;
+        auto *grp = tab.findChild<QGroupBox *>("groupAdvanced");
+        auto *pll = tab.findChild<QCheckBox *>("checkAdaptivePll");
+        QVERIFY(grp && pll);
+        QVERIFY(pll->isChecked());                       /* Vorgabe: adaptiv */
+        pll->setChecked(false);
+        QVERIFY(!tab.copyPlan().fixed_clock);            /* Gruppe aus */
+        grp->setChecked(true);
+        QVERIFY(pll->isEnabled());
+        QVERIFY(tab.copyPlan().fixed_clock);
+        uft_convert_options_t o{};                       /* false = adaptiv */
+        const uft_copy_plan_t p = tab.copyPlan();
+        uft_copy_plan_to_convert_options(&p, &o);
+        QVERIFY(o.decode_fixed_clock);
+        pll->setChecked(true);
+        QVERIFY(!tab.copyPlan().fixed_clock);
+        pll->setChecked(false);
+        const QJsonObject s = tab.setupAlsJson();
+
+        FormatTab b;
+        QString fehler;
+        QStringList weg;
+        QVERIFY2(b.setupAnwenden(s, &fehler, &weg), qPrintable(fehler));
+        QVERIFY2(weg.isEmpty(), qPrintable(weg.join(", ")));
+        QVERIFY(b.copyPlan().fixed_clock);
     }
 
     /* B2 */

@@ -3709,6 +3709,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
+    elseif(${test_name} STREQUAL "test_convert_fester_takt")
+        # MF-1625: „Adaptive Taktrueckgewinnung" aus -> use_pll = false im
+        # Flussdekoder, bewiesen an einer schwankenden AmigaDOS-Spur.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_convert_geometry_override")
         # MF-482: Geometrie-Vorgabe und Ueberhang beim SCP->ADF-Wandeln
         # P3-10: Format-Schicht aus der EINEN Bibliothek; keine

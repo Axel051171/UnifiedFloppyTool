@@ -149,8 +149,9 @@ static const char *const kUnverdrahtet[] = {
     "comboErrors", "checkRetryOnError",
     "checkSkipBadSectors",
     "checkDiskStructure", "checkFilesystem", "checkAllocationMap",
-    /* spinClockAdjust: verdrahtet seit MF-1621 (decode_cell_adjust_pct) */
-    "checkAdaptivePll", "spinSyncTolerance",
+    /* spinClockAdjust: verdrahtet seit MF-1621 (decode_cell_adjust_pct);
+     * checkAdaptivePll: verdrahtet seit MF-1625 (decode_fixed_clock) */
+    "spinSyncTolerance",
 };
 
 QStringList FormatTab::unverdrahteteFelder()
@@ -301,6 +302,18 @@ FormatTab::FormatTab(QWidget *parent)
     connect(ui->spinClockAdjust, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, [this](double) { applyCopyPlan(); });
     connect(ui->groupAdvanced, &QGroupBox::toggled, this, [this](bool) { applyCopyPlan(); });
+
+    /* MF-1625: die Taktrueckgewinnung. Abgewaehlt friert der Dekoder die
+     * Zellperiode ein (use_pll = false) — gemessen haelt eine feste Taktung
+     * bis etwa 10 % Drehzahlschwankung, die adaptive bis 30 %
+     * (tests/test_convert_fester_takt.c). Wie die Taktkorrektur gilt sie nur
+     * bei eingeschalteten „Erweiterten Optionen". */
+    ui->checkAdaptivePll->setToolTip(
+        tr("An (Vorgabe): der Dekoder folgt Drehzahl und Phase der Diskette. "
+           "Aus: feste Taktung, die Zellperiode bleibt eingefroren. Wirkt "
+           "heute in der Wandlung SCP → ADF; bei HFE-Quellen sagt die "
+           "Wandlung, dass sie es nicht anwendet (decode_fixed_clock)."));
+    connect(ui->checkAdaptivePll, &QCheckBox::toggled, this, [this](bool) { applyCopyPlan(); });
 
     /* Die benannten Modi (MF-1237/1293): ein Knopf je Profil des Kerns,
      * verdrahtet ueber den Namen `btnModus_<Kennung>`. */
@@ -736,6 +749,11 @@ uft_copy_plan_t FormatTab::copyPlan() const
         && !istUnverdrahtet(ui->spinClockAdjust)
         && ui->spinClockAdjust->value() != 100.0)
         p.cell_adjust_pct = ui->spinClockAdjust->value();
+    /* MF-1625: nur ein wirksames, abgewaehltes Feld setzt feste Taktung. */
+    if (!istVerborgen(ui->checkAdaptivePll) && ui->checkAdaptivePll->isEnabled()
+        && !istUnverdrahtet(ui->checkAdaptivePll)
+        && !ui->checkAdaptivePll->isChecked())
+        p.fixed_clock = true;
     return p;
 }
 
@@ -1053,7 +1071,7 @@ const AchsenFeld kAchsen[] = {
 /* Die wirksamen Einzelwerte eines Setups. Nur Felder mit Leser — ein
  * Setup soll nicht wieder zur Ablage fuer Werte werden, die nichts tun. */
 const char *const kSetupWerte[] = { "spinRevolutions", "spinMaxRetries",
-                                    "spinClockAdjust" };
+                                    "spinClockAdjust", "checkAdaptivePll" };
 } // namespace
 
 static QComboBox *achsenFeld(Ui::TabFormat *ui, int i)
@@ -1106,6 +1124,7 @@ QJsonObject FormatTab::setupAlsJson() const
         if (!w || istVerborgen(w) || istUnverdrahtet(w) || !w->isEnabled()) continue;
         if (auto *s = qobject_cast<QSpinBox *>(w)) werte[k] = s->value();
         else if (auto *d = qobject_cast<QDoubleSpinBox *>(w)) werte[k] = d->value();
+        else if (auto *c = qobject_cast<QCheckBox *>(w)) werte[k] = c->isChecked();
     }
     o[QStringLiteral("werte")] = werte;
     return o;
@@ -1169,12 +1188,14 @@ bool FormatTab::setupAnwenden(const QJsonObject &o, QString *fehler,
         QWidget *w = findChild<QWidget *>(it.key());
         auto *s = qobject_cast<QSpinBox *>(w);
         auto *d = qobject_cast<QDoubleSpinBox *>(w);
-        if ((!s && !d) || istVerborgen(w) || istUnverdrahtet(w) || !w->isEnabled()) {
+        auto *c = qobject_cast<QCheckBox *>(w);
+        if ((!s && !d && !c) || istVerborgen(w) || istUnverdrahtet(w) || !w->isEnabled()) {
             if (uebergangen) *uebergangen << it.key();
             continue;
         }
         if (s) s->setValue(it.value().toInt());
-        else d->setValue(it.value().toDouble());
+        else if (d) d->setValue(it.value().toDouble());
+        else c->setChecked(it.value().toBool(true));
     }
     applyCopyPlan();
     return true;

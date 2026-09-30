@@ -57,6 +57,23 @@ int main(void)
     uft_copy_plan_to_json(&q, j, sizeof j);
     pruefe("(5) and says nothing when unset", strstr(j, "cellAdjustPct") == NULL, j);
 
+    /* MF-1625: fixed clock (the PLL switched off) travels the same way. */
+    uft_copy_plan_t r = uft_copy_plan_default();
+    pruefe("(6) default plan: adaptive clock", !r.fixed_clock, "fixed");
+    uft_convert_options_t o2, o3;
+    memset(&o2, 0, sizeof o2);
+    memset(&o3, 0, sizeof o3);
+    uft_copy_plan_to_convert_options(&r, &o2);
+    r.fixed_clock = true;
+    uft_copy_plan_to_convert_options(&r, &o3);
+    pruefe("(7) fixed clock reaches decode_fixed_clock, unset stays adaptive",
+           o3.decode_fixed_clock && !o2.decode_fixed_clock, "mapping");
+    uft_copy_plan_to_json(&r, j, sizeof j);
+    pruefe("(8) the JSON names a fixed clock", strstr(j, "\"fixedClock\": true") != NULL, j);
+    r.fixed_clock = false;
+    uft_copy_plan_to_json(&r, j, sizeof j);
+    pruefe("(9) and says nothing when adaptive", strstr(j, "fixedClock") == NULL, j);
+
     printf("%d ok, %d failed\n", gruen, rot);
     return rot ? 1 : 0;
 }

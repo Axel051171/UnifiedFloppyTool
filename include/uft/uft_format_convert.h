@@ -169,6 +169,11 @@ typedef struct uft_convert_options_ext {
      * — the back side of a flippy disk. Mirrors
      * uft_convert_options_t::reverse_decode. */
     bool                reverse_decode;
+
+    /* MF-1625 (appended for ABI safety): switch the flux decoder's clock
+     * recovery (PLL) off. Mirrors uft_convert_options_t::decode_fixed_clock
+     * — see the rationale there. */
+    bool                decode_fixed_clock;
 } uft_convert_options_ext_t;
 
 // ============================================================================

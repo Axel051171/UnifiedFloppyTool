@@ -996,6 +996,8 @@ static uft_error_t uft_convert_file_inner(const char* src_path,
                 options->decode_vote_confidence_pct;             /* MF-673 */
             ext_opts.target_geometry = options->target_geometry;      /* MF-482 */
             ext_opts.reverse_decode  = options->reverse_decode;       /* MF-484 */
+            ext_opts.decode_fixed_clock =
+                options->decode_fixed_clock;                         /* MF-1625 */
         }
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,

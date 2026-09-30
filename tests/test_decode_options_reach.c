@@ -101,6 +101,26 @@ static const char *warnung_zum_regler(const uft_convert_result_t *r)
     return NULL;
 }
 
+/* MF-1625: dieselbe Wandlung mit fester Taktung (PLL aus). */
+static uft_error_t wandle_fest(const char *src, const char *dst,
+                               uft_convert_result_t *res)
+{
+    uft_convert_options_t o;
+    memset(&o, 0, sizeof(o));
+    o.decode_fixed_clock = true;
+    o.accept_data_loss = true;
+    memset(res, 0, sizeof(*res));
+    remove(dst);
+    return uft_convert_file(src, dst, UFT_FORMAT_ADF, &o, res);
+}
+
+static const char *warnung_zur_taktung(const uft_convert_result_t *r)
+{
+    for (int i = 0; i < r->warning_count; i++)
+        if (strstr(r->warnings[i], "Feste Taktung")) return r->warnings[i];
+    return NULL;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -185,6 +205,23 @@ int main(void)
            ohne.sectors_converted, mit.sectors_converted);
     remove("uft_opt_a.adf");
     remove("uft_opt_b.adf");
+
+    /* MF-1625: feste Taktung auf einem getakteten Bitstrom. Dort laeuft
+     * keine PLL, also kann sie nichts bewirken — das wird gesagt, und das
+     * Ergebnis bleibt dasselbe. Ohne Vorgabe erscheint keine solche Zeile. */
+    uft_convert_result_t fest;
+    e = wandle_fest(src, "uft_opt_fest.adf", &fest);
+    PRUEFE(e == UFT_OK, "Wandlung mit fester Taktung scheiterte (rc=%d)", (int)e);
+    w = warnung_zur_taktung(&fest);
+    PRUEFE(w != NULL && strstr(w, "Bitstrom") != NULL,
+           "feste Taktung auf einem Bitstrom muss sich erklaeren");
+    PRUEFE(fest.sectors_converted == ohne.sectors_converted,
+           "feste Taktung hat einen Bitstrom veraendert (%d vs %d Sektoren)",
+           fest.sectors_converted, ohne.sectors_converted);
+    PRUEFE(warnung_zur_taktung(&ohne) == NULL,
+           "ohne Vorgabe darf keine Taktungs-Warnung erscheinen");
+    if (w) printf("  ok   feste Taktung auf Bitstrom -> erklaert, nichts veraendert\n");
+    remove("uft_opt_fest.adf");
 
     printf("\n%s (%d Abweichungen)\n",
            fehler ? "FEHLGESCHLAGEN" : "OK", fehler);

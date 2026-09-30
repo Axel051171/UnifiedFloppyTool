@@ -874,6 +874,19 @@ typedef struct uft_convert_options {
      * das (lokale Variable bzw. Mitglied, das den Aufruf umschliesst).
      * NULL heisst schlicht "ohne Plan gewandelt" und ist zulaessig. */
     const struct uft_copy_plan *copy_plan;
+
+    /* MF-1625 (angehaengt, nicht eingefuegt — ABI, wie oben).
+     *
+     * Feste Taktung: die Taktrueckgewinnung (PLL) des Flussdekoders wird
+     * abgeschaltet, die Zellperiode bleibt beim Startwert eingefroren und
+     * die Phasenkorrektur entfaellt (`flux_decoder_options_t.use_pll =
+     * false`). Standard `false` = adaptiv, wie bisher. Der Schalter
+     * „Adaptive Taktrueckgewinnung" im Einstellungsreiter setzt es.
+     *
+     * Wirkt nur auf Fluss-Quellen (heute SCP -> ADF); ein getakteter
+     * Bitstrom (HFE) hat keine Zeitachse mehr, dort sagt der Wandler, dass
+     * der Wert nicht gilt. */
+    bool            decode_fixed_clock;
 } uft_convert_options_t;
 
 // ============================================================================

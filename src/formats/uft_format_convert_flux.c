@@ -871,6 +871,20 @@ static void uftc_apply_decode_options(const uft_convert_options_ext_t* opts,
                                       bool quelle_hat_zeit)
 {
     if (!opts || !dopts) return;
+
+    /* MF-1625: feste Taktung. Bei einer Fluss-Quelle schaltet sie die
+     * Taktrueckgewinnung ab (Periode eingefroren, keine Phasenkorrektur);
+     * bei einem getakteten Bitstrom gibt es keine Zeitachse, auf der eine
+     * PLL laufen koennte — das wird gesagt, nicht verschwiegen. */
+    if (opts->decode_fixed_clock) {
+        if (quelle_hat_zeit)
+            dopts->use_pll = false;
+        else
+            uftc_add_warning(result,
+                "Feste Taktung gilt nur fuer Fluss-Quellen und wurde nicht "
+                "angewandt: die Quelle ist ein bereits getakteter Bitstrom");
+    }
+
     if (opts->decode_cell_adjust_pct <= 0.0) return;
 
     if (!quelle_hat_zeit) {

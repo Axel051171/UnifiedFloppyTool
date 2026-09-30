@@ -523,7 +523,7 @@ uft_copy_plan_t uft_copy_plan_current(void)
                          UFT_TRACK_DECODED, (fs),                       \
                          UFT_GCR_COMMODORE, UFT_VOTE_STRICT_MAJORITY,   \
                          (uint32_t)UFT_HASH_SHA256, 0u, false, false, 0u, \
-                         0.0 }
+                         0.0, false }
 #define PLF(l, s, e, p, fs) PLX(l, s, e, p, UFT_EXACT_SECTOR, fs)
 #define PL(l, s, e, p) PLF(l, s, e, p, UFT_FILE_GENERIC)
 
@@ -852,6 +852,11 @@ void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
      *     selbst und sagt es, wenn er den Wert nicht anwendet. */
     if (plan->cell_adjust_pct > 0.0)
         o->decode_cell_adjust_pct = plan->cell_adjust_pct;
+
+    /* 2d. MF-1625: feste Taktung. Nur ein gesetztes true wird uebergeben;
+     *     ob die Quelle eine Zeitachse hat, entscheidet der Wandler. */
+    if (plan->fixed_clock)
+        o->decode_fixed_clock = true;
 
     /* 3. Ebene und Erhaltung erreichen die Wandlung NICHT, und das ist
      *    gemessen statt vergessen: die Felder, auf die sie abbilden
@@ -1245,6 +1250,9 @@ size_t uft_copy_plan_to_json(const uft_copy_plan_t *plan, char *buf, size_t n)
         pos = haenge(buf, n, pos, ",\n    \"cellAdjustPct\": ");
         pos = haenge(buf, n, pos, zahl);
     }
+    /* MF-1625 */
+    if (p.fixed_clock)
+        pos = haenge(buf, n, pos, ",\n    \"fixedClock\": true");
     pos = haenge(buf, n, pos, "\n  }");
 
     /* Die erzwungenen Werte, nach Abschnitten gebuendelt. */

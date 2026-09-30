@@ -283,6 +283,12 @@ typedef struct uft_copy_plan {
      * Wirksam ueber `uft_convert_options_t.decode_cell_adjust_pct`
      * (MF-480), heute auf dem Pfad SCP -> ADF. */
     double               cell_adjust_pct;
+
+    /* MF-1625: „Adaptive Taktrueckgewinnung" aus dem Settings-Reiter
+     * abgeschaltet — feste Taktung. false (Vorgabe) = adaptiv. Wirksam ueber
+     * `uft_convert_options_t.decode_fixed_clock`, heute auf dem Pfad
+     * SCP -> ADF (`flux_decoder_options_t.use_pll = false`). */
+    bool                 fixed_clock;
 } uft_copy_plan_t;
 
 /** Ein Befund aus der Pruefung. `hard` heisst: so nicht ausfuehrbar. */
