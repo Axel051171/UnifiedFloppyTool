@@ -124,8 +124,18 @@ static QStringList formateVon(const char *system, const QStringList &registriert
  * „noch nicht verdrahtet". Die Liste ist gemessen, nicht geschaetzt: fuer
  * jedes Feld des Entwurfs ist in t5/settings/ZUORDNUNG_settings_redesign.md
  * der Leser gesucht (git grep ueber src/), und diese hier haben keinen.
- * `spinMaxRetries` und `comboEncoding` haben einen Traeger im Kern, aber
- * noch keinen Weg dorthin — sie stehen hier, bis er gebaut ist. */
+ * `spinMaxRetries` ist seit MF-1619 verdrahtet (`uft_copy_plan_t.read_retries`
+ * -> `decode_retries`).
+ *
+ * BERICHTIGT MF-1619 — `comboEncoding`: hier stand, es habe „einen Traeger
+ * im Kern, aber noch keinen Weg dorthin". Gemessen hat der Traeger
+ * (`flux_decoder_options_t.encoding`) genau EINEN Leser,
+ * `flux_decode_track()`, und dessen Aufrufer ausserhalb seiner Datei sind
+ * `uft_otdr_adaptive_decode.c` (ohne Aufrufer, MF-767) und
+ * `uft_diag_gw.c` (nennt nur sich selbst). Keine Wandlung und kein
+ * Lesevorgang fuehrt dorthin; die Wandler waehlen ihren Dekoder nach dem
+ * ZIEL. Eine Verdrahtung waere eine Zusage ohne Tat — das Feld bleibt
+ * markiert (P3-711). */
 static const char *const kUnverdrahtet[] = {
     "comboEncoding", "comboRpm", "comboReadMode",
     "checkReadBetweenIndex", "checkIncludeRawFlux",
@@ -135,7 +145,7 @@ static const char *const kUnverdrahtet[] = {
     "checkDuplicateSectors", "checkProtectionSignals",
     "checkSectorCountAnomalies",
     "comboPrecomp", "checkSplicePoint", "checkEraseOddTracks",
-    "comboErrors", "spinMaxRetries", "checkRetryOnError",
+    "comboErrors", "checkRetryOnError",
     "checkSkipBadSectors",
     "checkDiskStructure", "checkFilesystem", "checkAllocationMap",
     "spinClockAdjust", "checkAdaptivePll", "spinSyncTolerance",
@@ -268,6 +278,15 @@ FormatTab::FormatTab(QWidget *parent)
            "Sektor für Sektor gegen die Quelle gehalten (verify_after). "
            "Einstellbar im Modus „Benutzerdefiniert“."));
     connect(ui->checkVerify, &QCheckBox::toggled, this, &FormatTab::onVerifyToggled);
+
+    /* MF-1619: wo die Zahl wirkt, steht an der Beschriftung — das
+     * Parameter-Tor leert den Kurzhinweis des Feldes, sobald es frei ist. */
+    ui->labelMaxRetries->setToolTip(
+        tr("Leseversuche je Spur. Wirkt heute in der Wandlung SCP → D64: "
+           "so viele Umdrehungen werden versucht (decode_retries). Legt die "
+           "Lesestrategie die Zahl fest, ist das Feld gesperrt."));
+    connect(ui->spinMaxRetries, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [this](int) { applyCopyPlan(); });
 
     /* Die benannten Modi (MF-1237/1293): ein Knopf je Profil des Kerns,
      * verdrahtet ueber den Namen `btnModus_<Kennung>`. */
@@ -688,6 +707,14 @@ uft_copy_plan_t FormatTab::copyPlan() const
     p.hashes = (uint32_t)UFT_HASH_SHA256;
     if (gesetzt(ui->checkHashSha512)) p.hashes |= (uint32_t)UFT_HASH_SHA512;
     if (gesetzt(ui->checkCRC32))      p.hashes |= (uint32_t)UFT_HASH_CRC32;
+    /* MF-1619: die Zahl der Leseversuche — nur, wenn das Feld sichtbar
+     * und frei ist. Legt die Lesestrategie `read.retries` fest, sperrt
+     * das Parameter-Tor das Feld, und dann entscheidet die Strategie. */
+    if (!istVerborgen(ui->spinMaxRetries) && ui->spinMaxRetries->isEnabled()
+        && !istUnverdrahtet(ui->spinMaxRetries)) {
+        p.read_retries_gesetzt = true;
+        p.read_retries = (uint32_t)ui->spinMaxRetries->value();
+    }
     return p;
 }
 
@@ -1004,7 +1031,7 @@ const AchsenFeld kAchsen[] = {
 };
 /* Die wirksamen Einzelwerte eines Setups. Nur Felder mit Leser — ein
  * Setup soll nicht wieder zur Ablage fuer Werte werden, die nichts tun. */
-const char *const kSetupWerte[] = { "spinRevolutions" };
+const char *const kSetupWerte[] = { "spinRevolutions", "spinMaxRetries" };
 } // namespace
 
 static QComboBox *achsenFeld(Ui::TabFormat *ui, int i)

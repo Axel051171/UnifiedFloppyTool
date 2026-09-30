@@ -72,9 +72,11 @@ private slots:
     {
         FormatTab tab;
         const QStringList namen = FormatTab::unverdrahteteFelder();
-        /* gemessen: 29 Felder des Entwurfs ohne Leser, siehe die Liste in
-         * formattab.cpp und ZUORDNUNG_settings_redesign.md */
-        QCOMPARE(namen.size(), 29);
+        /* gemessen: 29 Felder des Entwurfs ohne Leser (MF-1618), siehe die
+         * Liste in formattab.cpp und ZUORDNUNG_settings_redesign.md; seit
+         * MF-1619 ist spinMaxRetries verdrahtet -> 28 */
+        QCOMPARE(namen.size(), 28);
+        QVERIFY(!namen.contains(QStringLiteral("spinMaxRetries")));
         auto pruefe = [&](const char *wann) {
             for (const QString &n : namen) {
                 QWidget *w = tab.findChild<QWidget *>(n);
@@ -119,6 +121,41 @@ private slots:
         waehle(lvl, UFT_COPY_TRACK);
         QVERIFY2(!rev->isHidden() && !lab->isHidden(),
                  "Spurebene: beide muessen wieder da sein");
+    }
+
+    /* MF-1619: „Max. Wiederholungen" erreicht den Plan — aber nur, wenn
+     * das Feld frei ist. Legt die Lesestrategie `read.retries` fest,
+     * sperrt das Parameter-Tor das Feld, und der Plan traegt KEINE eigene
+     * Zahl. Gesucht wird ueber die Strategien, nicht angenommen. */
+    void wiederholungen_erreichen_den_plan_nur_wenn_frei()
+    {
+        FormatTab tab;
+        benutzerdefiniert(tab);
+        auto *str = tab.findChild<QComboBox *>("comboPlanStrategy");
+        auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
+        auto *spin = tab.findChild<QSpinBox *>("spinMaxRetries");
+        QVERIFY(str && lvl && spin);
+        waehle(lvl, UFT_COPY_FLUX);
+        bool frei = false, fest = false;
+        for (int s = 0; s < str->count(); s++) {
+            str->setCurrentIndex(s);
+            if (spin->isHidden()) continue;
+            if (spin->isEnabled()) {
+                spin->setValue(7);
+                const uft_copy_plan_t p = tab.copyPlan();
+                QVERIFY2(p.read_retries_gesetzt && p.read_retries == 7u,
+                         qPrintable(str->currentText()));
+                frei = true;
+            } else {
+                const uft_copy_plan_t p = tab.copyPlan();
+                QVERIFY2(!p.read_retries_gesetzt,
+                         qPrintable(QStringLiteral("festgelegt, aber gesetzt: ")
+                                    + str->currentText()));
+                fest = true;
+            }
+        }
+        QVERIFY2(frei, "keine Strategie laesst das Feld frei — dann ist es nie wirksam");
+        (void)fest;   /* ob eine Strategie es festlegt, ist Sache des Kerns */
     }
 
     /* B2 */

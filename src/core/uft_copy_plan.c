@@ -18,6 +18,7 @@
  * Umsetzung braucht die Felder und bindet ihn deshalb hier ein. */
 #include "uft/uft_types.h"
 
+#include <stdio.h>    /* snprintf (MF-1619) */
 #include <string.h>
 
 /* ── Rolle eines Parameters auf einer Ebene ─────────────────────────── */
@@ -412,7 +413,15 @@ const char *uft_copy_exact_name(uft_bitexact_kind_t v)
 
 uft_copy_plan_t uft_copy_plan_default(void)
 {
+    /* MF-1619: erst alles auf null. Hier stand `uft_copy_plan_t p;`, und
+     * die in MF-1311 angehaengten Felder `caps` / `caps_bekannt` blieben
+     * UNINITIALISIERT — gemessen nach verschmutztem Stapel: caps =
+     * 0x00001000. `uft_copy_plan_gate_caps()` liest beide und entscheidet
+     * damit zwischen „nein" und „erst messen"; der Settings-Reiter baut
+     * jeden Plan aus dieser Funktion. Jedes spaeter angehaengte Feld ist
+     * mit dieser Zeile ebenfalls „ungesetzt". */
     uft_copy_plan_t p;
+    memset(&p, 0, sizeof p);
     p.level        = UFT_COPY_SECTOR;
     p.strategy     = UFT_READ_STANDARD;
     p.preservation = UFT_PRESERVE_LOGICAL;
@@ -513,7 +522,7 @@ uft_copy_plan_t uft_copy_plan_current(void)
 #define PLX(l, s, e, p, ek, fs) { (l), (s), (e), (p), (ek),              \
                          UFT_TRACK_DECODED, (fs),                       \
                          UFT_GCR_COMMODORE, UFT_VOTE_STRICT_MAJORITY,   \
-                         (uint32_t)UFT_HASH_SHA256, 0u, false }
+                         (uint32_t)UFT_HASH_SHA256, 0u, false, false, 0u }
 #define PLF(l, s, e, p, fs) PLX(l, s, e, p, UFT_EXACT_SECTOR, fs)
 #define PL(l, s, e, p) PLF(l, s, e, p, UFT_FILE_GENERIC)
 
@@ -831,6 +840,11 @@ void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
      *    heute nicht zu holen: der Hashsatz (`plan->hashes`) hat in
      *    `uft_convert_options_t` kein Feld. */
     o->verify_after = (plan->policy != UFT_POLICY_NORMAL);
+
+    /* 2b. MF-1619: eine ausdrueckliche Zahl von Leseversuchen gewinnt
+     *     gegen die Strategie. Ungesetzt bleibt, was Schritt 1 ergab. */
+    if (plan->read_retries_gesetzt)
+        o->decode_retries = plan->read_retries;
 
     /* 3. Ebene und Erhaltung erreichen die Wandlung NICHT, und das ist
      *    gemessen statt vergessen: die Felder, auf die sie abbilden
@@ -1208,6 +1222,14 @@ size_t uft_copy_plan_to_json(const uft_copy_plan_t *plan, char *buf, size_t n)
         pos = haenge(buf, n, pos, uft_copy_exact_name(p.exact_kind)
                                       ? uft_copy_exact_name(p.exact_kind) : "?");
         pos = haenge(buf, n, pos, "\"");
+    }
+    /* MF-1619: die ausdrueckliche Zahl, nur wenn gesetzt — sonst sagt die
+     * Strategie sie, und die steht oben. */
+    if (p.read_retries_gesetzt) {
+        char zahl[16];
+        snprintf(zahl, sizeof zahl, "%u", (unsigned)p.read_retries);
+        pos = haenge(buf, n, pos, ",\n    \"readRetries\": ");
+        pos = haenge(buf, n, pos, zahl);
     }
     pos = haenge(buf, n, pos, "\n  }");
 

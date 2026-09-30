@@ -268,6 +268,15 @@ typedef struct uft_copy_plan {
      * Angehaengt, nicht eingefuegt: die Felder davor bleiben unberuehrt. */
     uint32_t             caps;         /**< uft_copy_caps_t, Schnittmenge */
     bool                 caps_bekannt; /**< false = nicht gemessen        */
+
+    /* MF-1619: eine ausdrueckliche Zahl von Leseversuchen aus dem
+     * Settings-Reiter („Max. Wiederholungen"). Ungesetzt entscheidet die
+     * Lesestrategie wie bisher; gesetzt gewinnt die Zahl. Wirksam wird
+     * sie ueber `uft_convert_options_t.decode_retries`, heute gelesen in
+     * der Wandlung SCP -> D64 (Zahl der versuchten Umdrehungen).
+     * Angehaengt, nicht eingefuegt; die Null-Vorgabe heisst „ungesetzt". */
+    bool                 read_retries_gesetzt;
+    uint32_t             read_retries;
 } uft_copy_plan_t;
 
 /** Ein Befund aus der Pruefung. `hard` heisst: so nicht ausfuehrbar. */
