@@ -1,46 +1,32 @@
 /**
  * @file test_format_tab_capability_gating.cpp
- * @brief Zwei Formate, verschiedene Bedienelemente (MF-661)
+ * @brief Zwei Formate, verschiedene Bedienelemente (MF-661, neu MF-1618)
  *
- * Abnahme für Stufe 2 aus `docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md`.
+ * Abnahme fuer Stufe 2 aus `docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md`:
+ * **die Oberflaeche zeigt fuer verschiedene Formate wirklich Verschiedenes,
+ * und zwar das, was deren Manifest ansagt.** Der Test waehlt das Format
+ * ueber die Auswahlfelder — den Weg eines Benutzers — und liest danach die
+ * echten Widgets (MF-649).
  *
- * ── Was hier bewiesen wird ───────────────────────────────────────────────
+ * MF-1618: der Settings-Reiter ist neu gebaut. Die Zusagen sind dieselben;
+ * geaendert haben sich die ZEUGEN. `comboSampleRate` und die Gruppen
+ * groupFlux/groupPLL/groupProtection gibt es nicht mehr. Das Merkmal
+ * „Flux" haengt jetzt an den zwei Flussfeldern (`checkIncludeRawFlux`,
+ * `checkReadBetweenIndex`), „Write" an `groupWrite`; die Unterscheidung am
+ * Parameter-Tor zeigt `checkWeakBits` (`preserve_weak_bits`). Die zwei
+ * Formate dafuer sucht der Test zur Laufzeit in der Registry, statt Namen
+ * festzuschreiben, die sich aendern koennen.
  *
- * Nicht „die Methode läuft durch", sondern: **die Oberfläche zeigt für
- * verschiedene Formate wirklich Verschiedenes, und zwar das, was deren
- * Manifest ansagt.** Eine Verdrahtung, die für alle Formate dasselbe
- * anzeigt, hat nichts verdrahtet.
- *
- * Der Test geht deshalb nicht über `applyPluginCapabilities()` direkt,
- * sondern setzt das **Format-Auswahlfeld** — also den Weg, den ein
- * Benutzer nimmt — und liest danach die Sichtbarkeit der echten
- * Widgets. Ein Beweis, der den fraglichen Pfad nicht durchläuft,
- * beweist nichts (MF-649).
- *
- * ── Die Erwartung, und woher sie kommt ───────────────────────────────────
- *
- * Über alle 88 Manifeste gemessen (MF-660):
- *
- *     Flux         zeigen  7   verstecken 81
- *     Weak Bits    zeigen  2   verstecken 86
- *
- * Ein Sektorformat wie D64 kann mit Fluss-Bedienelementen nichts
- * anfangen; ein Flussformat wie SCP schon. Genau dieser Unterschied
- * muss in der Oberfläche ankommen.
- *
- * ── Und die Regel für den Unglücksfall ───────────────────────────────────
- *
- * Findet sich kein Plugin zum Namen, wird NICHTS ausgeblendet. Auf
- * Unwissen zu verstecken nähme dem Benutzer Funktion wegen eines
- * Nachschlagefehlers von uns. Auch das steht hier als Zusicherung.
+ * Und die Regel fuer den Ungluecksfall bleibt: zu einem Format, das sich
+ * nicht nachschlagen laesst, wird NICHTS ausgeblendet.
  */
 
 #include <QtTest/QtTest>
 #include <QComboBox>
 #include <QWidget>
+#include <QPushButton>
 
 #include "formattab.h"
-#include "ui_tab_format.h"
 
 extern "C" {
 #include "uft/uft_core.h"
@@ -52,30 +38,46 @@ class TestFormatTabCapabilityGating : public QObject
     Q_OBJECT
 
 private:
-    /* Sichtbarkeit einer Gruppe nach Auswahl eines Formats.
-     * Geht ueber das Auswahlfeld, nicht ueber die Methode. */
-    static bool gruppeSichtbar(FormatTab &tab, const QString &format,
-                               const char *gruppe, bool *gefunden)
+    static bool sichtbar(FormatTab &tab, const char *name, bool *gefunden)
     {
-        QComboBox *combo = tab.findChild<QComboBox *>("comboFormat");
-        *gefunden = false;
-        if (!combo) return false;
+        QWidget *w = tab.findChild<QWidget *>(QString::fromLatin1(name));
+        *gefunden = (w != nullptr);
+        return w && !w->isHidden();
+    }
 
-        int idx = combo->findText(format);
-        if (idx < 0) {
-            /* Format steht nicht im aktuellen System-Filter — dann
-             * direkt eintragen, damit der Test nicht an der
-             * System-Auswahl haengt. */
-            combo->addItem(format);
-            idx = combo->findText(format);
+    /* Ein registriertes Format mit bzw. ohne die Flagge. */
+    static QString formatMit(uint32_t flagge, bool mit)
+    {
+        for (size_t i = 0; i < uft_registered_format_plugin_count(); i++) {
+            const uft_format_plugin_t *p = uft_registered_format_plugin_at(i);
+            if (!p || !p->name || !*p->name) continue;
+            if (((p->capabilities & flagge) != 0) == mit)
+                return QString::fromUtf8(p->name);
         }
-        if (idx < 0) return false;
-        combo->setCurrentIndex(idx);
+        return QString();
+    }
 
-        QWidget *w = tab.findChild<QWidget *>(QString::fromLatin1(gruppe));
-        if (!w) return false;
-        *gefunden = true;
-        return w->isVisible() || !w->isHidden();
+    /* Eine Planstellung, auf der die EBENE das Weak-Bits-Feld zeigt — bei
+     * einem Format, das die Flagge hat. Auf der Sektorebene der
+     * Standardkopie verbirgt schon die Ebene es, bei jedem Format; wer
+     * dort Formate vergleicht, vergleicht nichts. Gesucht wird ueber die
+     * Oberflaeche, nicht ueber eine angenommene Stellung. */
+    static bool stellungMitWeakBits(FormatTab &tab, const QString &format)
+    {
+        auto *custom = tab.findChild<QPushButton *>("btnModus_custom");
+        auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
+        auto *erh = tab.findChild<QComboBox *>("comboPlanPreserve");
+        if (!custom || !lvl || !erh || !tab.waehleFormat(format)) return false;
+        custom->click();
+        bool gef = false;
+        for (int l = 0; l < lvl->count(); l++) {
+            lvl->setCurrentIndex(l);
+            for (int e = 0; e < erh->count(); e++) {
+                erh->setCurrentIndex(e);
+                if (sichtbar(tab, "checkWeakBits", &gef)) return true;
+            }
+        }
+        return false;
     }
 
 private slots:
@@ -86,185 +88,119 @@ private slots:
                  "Format-Registry liess sich nicht aufbauen");
     }
 
-    /* Die Voraussetzung: die beiden Formate sagen wirklich Verschiedenes.
-     * Ohne diese Pruefung koennte der Test spaeter still bedeutungslos
-     * werden, wenn jemand ein Manifest aendert. */
+    /* Die Voraussetzung: die beiden Formate sagen wirklich Verschiedenes. */
     void manifeste_unterscheiden_sich()
     {
         const uft_format_plugin_t *d64 = uft_get_format_plugin_by_name("D64");
         const uft_format_plugin_t *scp = uft_get_format_plugin_by_name("SCP");
         QVERIFY2(d64, "Plugin D64 nicht in der Registry");
         QVERIFY2(scp, "Plugin SCP nicht in der Registry");
-
-        const uft_control_visibility_t vd =
-            uft_plugin_control_visibility(d64, "Flux");
-        const uft_control_visibility_t vs =
-            uft_plugin_control_visibility(scp, "Flux");
-
-        QVERIFY2(vd != vs,
+        QVERIFY2(uft_plugin_control_visibility(d64, "Flux") !=
+                 uft_plugin_control_visibility(scp, "Flux"),
                  "D64 und SCP fuehren \"Flux\" gleich — dann kann dieser "
-                 "Test die Verdrahtung nicht belegen. Ein anderes Paar "
-                 "waehlen oder das Manifest pruefen.");
-        QCOMPARE(vd, UFT_CONTROL_HIDE);   /* Sektorformat, kein Fluss */
+                 "Test die Verdrahtung nicht belegen.");
+        QCOMPARE(uft_plugin_control_visibility(d64, "Flux"), UFT_CONTROL_HIDE);
     }
 
-    /* MF-1320 (E-15): der Kern hat sich verschoben, und zwar aus einem
-     * gemessenen Grund.
-     *
-     * Hier standen zwei Faelle, die `groupFlux` und `groupPLL` auf
-     * Sichtbarkeit prueften. Beide Gruppen gibt es nicht mehr: der
-     * GUI-Umbau hat alle VIER Anker von `applyPluginCapabilities()`
-     * entfernt (je 1 Treffer in der HEAD-Fassung von
-     * `forms/tab_format.ui`, je 0 in der neuen). Das Tor lief seither
-     * durch und blendete fuer KEIN Format etwas aus — lautlos, weil es
-     * `if (!w) continue;` sagte.
-     *
-     * Der Test bleibt stehen, weil er den Fund GEFANGEN hat. Er prueft
-     * jetzt zwei Dinge statt einer Gruppe:
-     *   1. dass das Gruppentor seine fehlenden Anker MELDET,
-     *   2. dass die Faehigkeits-Unterscheidung trotzdem stattfindet —
-     *      auf der Parameter-Ebene, wo sie hingehoert (E-15).
-     */
-    void gruppentor_meldet_seine_fehlenden_anker()
+    /* MF-1320 (E-15): ein Tor, dessen Anker fehlen, darf das nicht
+     * verschweigen. Der alte Reiter meldete 4 fehlende Anker (alle vier
+     * Gruppen waren beim Umbau verschwunden, das Tor blendete fuer KEIN
+     * Format etwas aus). Im neuen Formular sind alle drei Anker da — und
+     * dann muss das Ausblenden auch belegt sein: die Flussfelder
+     * verschwinden bei D64 und stehen bei SCP. */
+    void gruppentor_hat_seine_anker_und_blendet_aus()
     {
         FormatTab tab;
-        bool gefunden = false;
-        (void)gruppeSichtbar(tab, "D64", "groupFlux", &gefunden);
-
-        const int fehlt = tab.gruppenTorFehlendeAnker();
-
-        /* GEMESSEN, nicht gewaehlt: `applyPluginCapabilities()` kennt vier
-         * Anker — groupFlux, groupPLL, groupWrite, groupProtection — und
-         * `forms/tab_format.ui` traegt heute keinen davon (je 1 Treffer in
-         * der HEAD-Fassung, je 0 in der neuen).
-         *
-         * Die erste Fassung dieser Zusage lautete `fehlt >= 0` und war zu
-         * schwach: der Zaehler startet bei -1, und ohne die Ruecksetzung
-         * auf 0 zaehlt er von dort hoch und landet bei 3 — auch das ist
-         * >= 0. Die Mutation blieb gruen. Eine Zusage, die ihre eigene
-         * Verletzung nicht sieht, ist keine. */
-        QVERIFY2(fehlt == 4,
-                 qPrintable(QString(
-                     "Das Gruppentor meldet %1 fehlende Anker, gemessen sind "
-                     "es 4 (groupFlux, groupPLL, groupWrite, "
-                     "groupProtection — keiner mehr in tab_format.ui). "
-                     "Weicht die Zahl ab, hat entweder jemand eine Gruppe "
-                     "zurueckgebracht — dann gehoert hier belegt, dass sie "
-                     "auch ausgeblendet wird — oder das Tor laeuft nicht "
-                     "mehr.").arg(fehlt)));
-
-        /* Der eigentliche Satz: ein Tor, dessen Anker fehlen, darf das
-         * nicht verschweigen. Heute fehlen alle vier. Findet jemand die
-         * Gruppen wieder ein, faellt die Zahl auf 0 — und dann muss der
-         * Fall darunter das Ausblenden belegen. */
-        if (fehlt > 0) {
-            QVERIFY2(!gefunden,
-                     "Widerspruch: das Tor meldet fehlende Anker, aber die "
-                     "Gruppe wurde gefunden.");
-        }
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));
+        QCOMPARE(tab.gruppenTorFehlendeAnker(), 0);
+        bool gef = false;
+        const bool beiD64 = sichtbar(tab, "checkIncludeRawFlux", &gef);
+        QVERIFY2(gef, "checkIncludeRawFlux fehlt im Formular");
+        QVERIFY(tab.waehleFormat(QStringLiteral("SCP")));
+        const bool beiSCP = sichtbar(tab, "checkIncludeRawFlux", &gef);
+        QVERIFY2(!beiD64, "D64 kennt keinen Fluss — das Flussfeld gehoert weg");
+        QVERIFY2(beiSCP, "SCP ist ein Flussformat — das Flussfeld gehoert hin");
+        /* Die Beschriftung-lose Checkbox und ihr Nachbar gehen gemeinsam. */
+        QCOMPARE(sichtbar(tab, "checkReadBetweenIndex", &gef), beiSCP);
     }
 
-    /* Die Faehigkeits-Unterscheidung, dort gemessen, wo sie seit dem
-     * Umbau wirklich stattfindet: am Parameter-Tor.
-     *
-     * `flux.sample_clock` ist an `ui->comboSampleRate` gebunden
-     * (`src/formattab.cpp`, Tafel `bindung[]`) und verlangt
-     * `UFT_CAP_FLUX_IO`. D64 fuehrt „Flux" als UNSUPPORTED, SCP nicht —
-     * das ist im Fall `manifeste_unterscheiden_sich` oben belegt. Also
-     * muss dasselbe Bedienelement bei den beiden Formaten verschieden
-     * dastehen. Tut es das nicht, hat das Tor nichts getan. */
+    /* Die Unterscheidung am Parameter-Tor: `preserve_weak_bits` haengt an
+     * UFT_CAP_WEAK_BITS. Ein Format mit der Flagge und eines ohne muessen
+     * dasselbe Feld verschieden zeigen — sonst hat das Tor nichts getan. */
     void parametertor_unterscheidet_die_formate()
     {
+        const QString mit  = formatMit(UFT_FORMAT_CAP_WEAK_BITS, true);
+        const QString ohne = formatMit(UFT_FORMAT_CAP_WEAK_BITS, false);
+        QVERIFY2(!mit.isEmpty() && !ohne.isEmpty(),
+                 "Kein Formatpaar mit/ohne Weak-Bits-Flagge in der Registry");
         FormatTab tab;
-        bool gefunden = false;
-
-        const bool beiD64 =
-            gruppeSichtbar(tab, "D64", "comboSampleRate", &gefunden);
-        QVERIFY2(gefunden,
-                 "comboSampleRate nicht im Format-Tab — dann ist der Zeuge "
-                 "dieses Tests weg und die Zusage unbelegt");
-
-        const bool beiSCP =
-            gruppeSichtbar(tab, "SCP", "comboSampleRate", &gefunden);
-        QVERIFY2(gefunden, "comboSampleRate nach SCP-Wahl verschwunden");
-
-        QVERIFY2(beiD64 != beiSCP,
-                 "D64 und SCP zeigen `flux.sample_clock` gleich. Der "
-                 "Parameter verlangt UFT_CAP_FLUX_IO, und nur eines der "
-                 "beiden Formate hat es — ein Tor, das fuer beide dasselbe "
-                 "tut, hat nichts verdrahtet.");
-        QVERIFY2(!beiD64,
-                 "D64 ist ein Sektorformat ohne Fluss — der Abtasttakt "
-                 "gehoert dort ausgeblendet");
+        bool gef = false;
+        QVERIFY2(stellungMitWeakBits(tab, mit), qPrintable(QStringLiteral(
+            "Keine Planstellung zeigt das Weak-Bits-Feld bei %1").arg(mit)));
+        /* dieselbe Stellung, anderes Format */
+        QVERIFY2(tab.waehleFormat(ohne), qPrintable(ohne));
+        const bool b = sichtbar(tab, "checkWeakBits", &gef);
+        QVERIFY(gef);
+        QVERIFY2(!b, qPrintable(QStringLiteral(
+            "Weak-Bits-Feld bei %1 (ohne Flagge) sichtbar, bei gleicher "
+            "Planstellung wie %2 (mit Flagge) — das Tor unterscheidet nicht")
+            .arg(ohne, mit)));
     }
 
-    /* MF-1323: die Systemliste der Oberflaeche gegen die Registry.
-     *
-     * `FormatTab` haelt in `m_systemFormats` eine von HAND gepflegte
-     * Zuordnung „System -> Formatnamen" und fuellt daraus `comboFormat`.
-     * MF-1245 hat dieselbe Klasse bei den DATEIDIALOGEN behoben — sieben
-     * gepflegte Endungslisten, alle verschieden — und dabei die
-     * Systemliste nicht angefasst.
-     *
-     * Der Anlass ist ein Einzelfund aus dem Formate-Integrationsplan:
-     * die ZX-Spectrum-Zeile nennt „OPD", und ein Plugin dieses Namens
-     * gibt es nicht — das Format liest `OPUS`. Wer „OPD" waehlt, waehlt
-     * nichts.
-     *
-     * Gemessen wird hier zur LAUFZEIT ueber die Registry und nicht per
-     * Textsuche im Quelltext: zwei eigene Versuche, die Namen aus
-     * `formattab.cpp` und den Plugin-Definitionen zu greppen, lieferten
-     * 29 bzw. 42 angeblich fehlende Namen — darunter ATR, IMG und EDSK,
-     * die es sicher gibt. Eine Messung, die in beide Richtungen irrt,
-     * ist keine. Die Registry weiss es selbst. */
+    /* MF-1323/1618: jede angebotene Format-Zeile hat ein Plugin, und jedes
+     * registrierte Plugin ist irgendwo anwaehlbar. Gemessen zur LAUFZEIT
+     * ueber die Registry. „Automatisch" traegt keinen Namen (leere Daten)
+     * und ist die Abwesenheit einer Wahl. */
     void die_formatliste_nennt_nur_was_es_gibt()
     {
         FormatTab tab;
-        QComboBox *combo = tab.findChild<QComboBox *>("comboFormat");
-        QVERIFY2(combo, "comboFormat nicht gefunden");
-        QVERIFY2(combo->count() > 0, "comboFormat ist leer");
-
+        auto *sys = tab.findChild<QComboBox *>("comboSystem");
+        auto *fmt = tab.findChild<QComboBox *>("comboFormat");
+        QVERIFY(sys && fmt);
+        QSet<QString> angeboten;
         QStringList ohne;
-        for (int i = 0; i < combo->count(); i++) {
-            const QString name = combo->itemText(i).trimmed();
-            if (name.isEmpty()) continue;
-            if (!uft_get_format_plugin_by_name(name.toUtf8().constData()))
-                ohne << name;
+        for (int s = 0; s < sys->count(); s++) {
+            sys->setCurrentIndex(s);
+            for (int i = 0; i < fmt->count(); i++) {
+                const QString name = fmt->itemData(i).toString();
+                if (name.isEmpty()) continue;
+                angeboten.insert(name);
+                if (!uft_get_format_plugin_by_name(name.toUtf8().constData()))
+                    ohne << name;
+            }
         }
-
-        QVERIFY2(ohne.isEmpty(),
-                 qPrintable(QString(
-                     "Die Formatauswahl bietet %1 von %2 Namen an, zu denen "
-                     "die Registry KEIN Plugin hat: %3. Wer einen davon "
-                     "waehlt, waehlt nichts — und das Faehigkeits-Tor "
-                     "bekommt kein Plugin, also blendet es nichts aus.")
-                     .arg(ohne.size()).arg(combo->count())
-                     .arg(ohne.join(", "))));
+        QVERIFY2(ohne.isEmpty(), qPrintable(QStringLiteral(
+            "Formatnamen ohne Plugin: %1").arg(ohne.join(", "))));
+        QStringList nie;
+        for (size_t i = 0; i < uft_registered_format_plugin_count(); i++) {
+            const uft_format_plugin_t *p = uft_registered_format_plugin_at(i);
+            if (p && p->name && *p->name &&
+                !angeboten.contains(QString::fromUtf8(p->name)))
+                nie << QString::fromUtf8(p->name);
+        }
+        QVERIFY2(nie.isEmpty(), qPrintable(QStringLiteral(
+            "Registrierte Formate, die nirgends anwaehlbar sind: %1").arg(nie.join(", "))));
     }
 
-    /* Unbekanntes Format: NICHTS ausblenden. */
+    /* Unbekanntes Format: NICHTS wegen einer Faehigkeit ausblenden. Der
+     * Reiter oeffnet auf „Automatisch" — das ist genau dieser Fall. */
     void unbekanntes_format_versteckt_nichts()
     {
         FormatTab tab;
-        bool gefunden = false;
-
-        /* MF-1320: derselbe Satz, an einem Zeugen, den es noch gibt.
-         *
-         * `comboSampleRate` traegt `flux.sample_clock` und verlangt
-         * UFT_CAP_FLUX_IO. Bei einem unbekannten Format liefert
-         * `copyPlanCaps()` 0 — genau wie bei einem Format ohne Fluss. Wer
-         * die beiden Faelle zusammenwirft, blendet wegen eines
-         * NACHSCHLAGEFEHLERS aus. `copyPlanCapsBekannt()` trennt sie. */
-        const bool sichtbar =
-            gruppeSichtbar(tab, "GIBTESNICHT", "comboSampleRate", &gefunden);
-        QVERIFY2(gefunden, "comboSampleRate nicht gefunden");
-        QVERIFY2(sichtbar,
-                 "Zu einem unbekannten Format darf NICHTS ausgeblendet "
-                 "werden — sonst kostet ein Nachschlagefehler von uns den "
-                 "Benutzer Funktion");
+        QVERIFY2(tab.getSelectedFormat().isEmpty(), "Reiter oeffnet nicht auf Automatisch");
         QVERIFY2(!tab.copyPlanCapsBekannt(),
-                 "Der Reiter haelt ein erfundenes Format fuer nachschlagbar "
-                 "— dann sagt die Zusage darueber nichts.");
+                 "Automatisch gilt als nachschlagbar — dann sagt die Zusage nichts");
+        bool gef = false;
+        QVERIFY2(sichtbar(tab, "checkIncludeRawFlux", &gef) && gef,
+                 "Flussfeld bei unbekanntem Format ausgeblendet");
+        /* Auf einer Stellung, auf der die Ebene das Weak-Bits-Feld zeigt,
+         * darf ein UNBEKANNTES Format es nicht verbergen. */
+        const QString mit = formatMit(UFT_FORMAT_CAP_WEAK_BITS, true);
+        QVERIFY(stellungMitWeakBits(tab, mit));
+        QVERIFY(tab.waehleFormat(QString()));        /* Automatisch */
+        QVERIFY2(sichtbar(tab, "checkWeakBits", &gef) && gef,
+                 "Weak-Bits-Feld bei unbekanntem Format ausgeblendet — ein "
+                 "Nachschlagefehler kostete dann Funktion");
     }
 };
 

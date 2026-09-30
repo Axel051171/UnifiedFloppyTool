@@ -166,6 +166,14 @@ void MainWindow::loadTabWidgets()
     FormatTab* formatTab = new FormatTab();
     m_formatTab = formatTab;
 
+    /* MF-1618: die Kopfzeile des Settings-Reiters nennt die verbundene
+     * Hardware — dieselben zwei Signale, die schon LED und Arbeitsablauf
+     * speisen; keine zweite Quelle. */
+    connect(hardwareTab, &HardwareTab::connectionChanged,
+            formatTab, &FormatTab::setHardwareVerbunden);
+    connect(hardwareTab, &HardwareTab::deviceInfoChanged,
+            formatTab, &FormatTab::setHardwareGeraet);
+
     /* MF-1364 (A-035 DTC-4): MF-1293 hat die Umdrehungen in den
      * Settings-Reiter gelegt und dem Arbeitsablauf `setUmdrehungen()`
      * gegeben — verbunden hat die beiden niemand (gemessen: je 0

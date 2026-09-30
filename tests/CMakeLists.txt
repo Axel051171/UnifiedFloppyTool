@@ -6855,16 +6855,12 @@ if(TARGET Qt6::Test)
             # (vorher `CAPGATE_FORMAT_SOURCES`-GLOB + `UFT_FORMAT_LAYER_DEPS`);
             # hier bleibt der abgeleitete Rest der gemeinsamen Liste.
             target_link_libraries(${qt_test_name} PRIVATE uft_test_formatschicht)
+            # MF-1618: der neu gebaute Reiter ruft das Fliesslayout
+            # (MF-1299), das GW2DMK-Panel und die Schutz-API nicht mehr —
+            # die drei Zeilen sind mit ihren Aufrufern gegangen.
             target_sources(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src/formattab.cpp
-                # MF-1299: seit MF-1293 ruft formattab.cpp das Spalten-
-                # Fliesslayout. Ohne diese Zeile brechen genau diese drei
-                # Ziele beim Binden ab ("undefined reference to
-                # UftFlowLayout::UftFlowLayout") — gemessen im Vollbau.
-                ${CMAKE_SOURCE_DIR}/src/uft_flow_layout.cpp
-                ${CMAKE_SOURCE_DIR}/src/uft_gw2dmk_panel.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
-                ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_api.c
                 ${UFT_FORMAT_LAYER_DEPS_REST})
             target_include_directories(${qt_test_name} PRIVATE
                 ${CMAKE_SOURCE_DIR}/src

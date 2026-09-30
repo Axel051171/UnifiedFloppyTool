@@ -104,11 +104,11 @@ static QString aktiverModus(FormatTab &tab)
  * erst ein Format waehlen, das Fluss zusagt. */
 static void waehleFlussformat(FormatTab &tab)
 {
-    auto *fmt = tab.findChild<QComboBox *>("comboFormat");
-    if (!fmt) return;
-    int idx = fmt->findText(QStringLiteral("SCP"));
-    if (idx < 0) { fmt->addItem(QStringLiteral("SCP")); idx = fmt->count() - 1; }
-    fmt->setCurrentIndex(idx);
+    /* MF-1618: ueber System und Format, wie ein Bediener — nicht mehr per
+     * nachgeschobenem Eintrag. Im neuen Reiter traegt jede Formatzeile
+     * ihren Registry-Namen als Daten; ein Eintrag ohne Daten ist
+     * „Automatisch". */
+    QVERIFY(tab.waehleFormat(QStringLiteral("SCP")));
 }
 
 static int modusKnopfZahl(FormatTab &tab)
@@ -239,6 +239,10 @@ private slots:
     void kopierschutz_ohne_flaggen_meldet_sich()
     {
         FormatTab tab;
+        /* MF-1618: ein BEKANNTES Format ohne Timing und ohne schwache
+         * Bits — der alte Reiter oeffnete auf D64, der neue auf
+         * „Automatisch", und dort ist ein Faehigkeitsbefund erfunden. */
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));
         auto *erh = tab.findChild<QComboBox *>("comboPlanPreserve");
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *bef = tab.findChild<QLabel *>("labelPlanFindings");
@@ -307,10 +311,15 @@ private slots:
      * Setzt-Liste und ist auf der Sektorebene aktiv. */
     void freies_feld_bleibt_bedienbar()
     {
+        /* MF-1618: `spinTracks` ist mit dem alten Formular gegangen. Der
+         * Zeuge ist jetzt `checkHashSha512` — `evidence.hash_algorithms`
+         * ist auf JEDER Ebene frei (Zusage B6 des Kerns) und steht in
+         * keiner Setzt-Liste. */
         FormatTab tab;
         auto *lvl = tab.findChild<QComboBox *>("comboPlanLevel");
-        auto *trk = tab.findChild<QWidget *>("spinTracks");
+        auto *trk = tab.findChild<QWidget *>("checkHashSha512");
         QVERIFY(lvl && trk);
+        tab.findChild<QPushButton *>("btnModus_custom")->click();
 
         waehle(lvl, UFT_COPY_SECTOR);
         QVERIFY2(!trk->isHidden(),
@@ -553,12 +562,38 @@ private slots:
      * `copyPlanCaps()` setzt diese Flagge NIE — dieser Reiter kennt kein
      * geoeffnetes Abbild. Die Gegenprobe an `standardcopy` gehoert dazu,
      * sonst waere die Zusage auch gruen, wenn alles gesperrt ist. */
+    /* G27 (MF-1618): bei unbekanntem Format gibt es keinen harten
+     * Faehigkeitsbefund. FluxCopy verlangt Fluss; ob das Abbild ihn
+     * traegt, weiss der Reiter bei „Automatisch" nicht — „so nicht
+     * ausfuehrbar" waere erfunden. Mit einem bekannten Format ohne Fluss
+     * ist der Modus dagegen gesperrt (unten). */
+    void unbekanntes_format_erfindet_keinen_befund()
+    {
+        FormatTab tab;
+        auto *bef = tab.findChild<QLabel *>("labelPlanFindings");
+        auto *flux = modusKnopf(tab, "fluxcopy");
+        QVERIFY(bef && flux);
+        QVERIFY(tab.getSelectedFormat().isEmpty());
+        QVERIFY2(flux->isEnabled(), "FluxCopy bei unbekanntem Format gesperrt");
+        flux->click();
+        QVERIFY2(!bef->text().contains(QStringLiteral("nicht ausf")),
+                 qPrintable(QStringLiteral("erfundener harter Befund: ") + bef->text()));
+        QVERIFY2(bef->text().contains(QStringLiteral("sobald das Format feststeht")),
+                 qPrintable(bef->text()));
+    }
+
     void unmoegliches_profil_ist_gesperrt_mit_grund()
     {
         FormatTab tab;
 
         auto *raw = modusKnopf(tab, "rawcopy");
         QVERIFY(raw);
+        /* MF-1618: der Reiter oeffnet auf „Automatisch" — UNBEKANNT, nicht
+         * „kann nichts". Dort ist nichts gesperrt (MF-1320); die Sperre
+         * gilt einem bekannten Format, das es nicht traegt. */
+        QVERIFY2(raw->isEnabled(),
+                 "bei unbekanntem Format ist RawCopy gesperrt — Unwissen sperrt");
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));
         QVERIFY2(!raw->isEnabled(),
                  "RawCopy ist waehlbar, obwohl kein Bitstromzugriff "
                  "zugesagt ist");
@@ -613,6 +648,7 @@ private slots:
         QVERIFY(p);
         auto *knopfFlux = modusKnopf(tab, "fluxcopy");
         QVERIFY(knopfFlux);
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));   /* MF-1618 */
         QVERIFY2(!knopfFlux->isEnabled(),
                  "FluxCopy ist ohne Flussformat waehlbar - die Sperre greift nicht");
         waehleFlussformat(tab);
@@ -638,8 +674,11 @@ private slots:
      * angepasst, nie wieder benannt. */
     void knopf_entsperrt_und_fuehrt_zurueck()
     {
+        /* MF-1618: „Plan anpassen" gibt es nicht mehr — Eigentuemer-
+         * Antwort 1: die Achsen sind im Modus „Benutzerdefiniert" frei.
+         * Hin geht es ueber diesen Knopf, zurueck ueber den Modusknopf. */
         FormatTab tab;
-                auto *knopf = tab.findChild<QAbstractButton *>("btnPlanAnpassen");
+        auto *knopf = tab.findChild<QAbstractButton *>("btnModus_custom");
         auto *lvl   = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *txt   = tab.findChild<QLabel *>("labelProfileText");
         QVERIFY(knopf && lvl && txt);
@@ -660,8 +699,8 @@ private slots:
         QCOMPARE(lvl->currentData().toInt(),
                  int(uft_copy_profile_by_id("deepcopy")->plan.level));
 
-        knopf->click();
-        QVERIFY2(!lvl->isEnabled(), "der zweite Druck sperrt nicht wieder");
+        modusKnopf(tab, "deepcopy")->click();
+        QVERIFY2(!lvl->isEnabled(), "der Modusknopf sperrt nicht wieder");
         QCOMPARE(aktiverModus(tab), QStringLiteral("deepcopy"));
     }
 
@@ -679,7 +718,7 @@ private slots:
         auto *text  = tab.findChild<QPlainTextEdit *>("textPlanJson");
         auto *lvl   = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *str   = tab.findChild<QComboBox *>("comboPlanStrategy");
-        auto *anp   = tab.findChild<QAbstractButton *>("btnPlanAnpassen");
+        auto *anp   = tab.findChild<QAbstractButton *>("btnModus_custom");
         QVERIFY(knopf && text && lvl && str && anp);
 
         anp->click();                       /* Achsen frei */
@@ -712,7 +751,7 @@ private slots:
     {
         FormatTab tab;
         auto *knopf = tab.findChild<QAbstractButton *>("btnPlanJson");
-        auto *anp   = tab.findChild<QAbstractButton *>("btnPlanAnpassen");
+        auto *anp   = tab.findChild<QAbstractButton *>("btnModus_custom");
         auto *lvl   = tab.findChild<QComboBox *>("comboPlanLevel");
         auto *str   = tab.findChild<QComboBox *>("comboPlanStrategy");
         auto *erh   = tab.findChild<QComboBox *>("comboPlanPreserve");
@@ -778,7 +817,11 @@ private slots:
      * als „traegt" auffuehrt, waere auch gruen. */
     void caps_zeile_nennt_traegt_und_traegt_nicht()
     {
+        /* MF-1618: der Reiter oeffnet auf „Automatisch"; der alte oeffnete
+         * zufaellig auf D64, und dieser Test stuetzte sich still darauf.
+         * Jetzt waehlt er es ausdruecklich. */
         FormatTab tab;
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));
         auto *lab = tab.findChild<QLabel *>("labelPlanCaps");
         QVERIFY(lab);
         const QString t = lab->text();
@@ -816,6 +859,7 @@ private slots:
     void nicht_messbares_steht_als_nicht_feststellbar()
     {
         FormatTab tab;
+        QVERIFY(tab.waehleFormat(QStringLiteral("D64")));   /* MF-1618 */
         auto *lab = tab.findChild<QLabel *>("labelPlanCaps");
         QVERIFY(lab);
         const QString t = lab->text();
