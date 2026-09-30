@@ -3085,6 +3085,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_recovery_wizard.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_triage_leer_ist_kein_schaden")
+        # MF-1622 (P3-708): ein leerer Sektor ist kein beschaedigter.
+        # Die Triage allein; sie braucht nichts von der Formatschicht.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_triage.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${UFT_D64_PLUGIN_SOURCES})

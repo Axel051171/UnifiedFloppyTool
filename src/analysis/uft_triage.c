@@ -18,6 +18,7 @@
 #include "uft/analysis/uft_triage.h"
 #include "uft/uft_error.h"
 #include "uft/formats/uft_detect.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"   /* uft_cbm_error_byte_ok */
 
 #include <stdio.h>
 #include <string.h>
@@ -112,22 +113,39 @@ static triage_fmt_t triage_detect(const uint8_t *data, size_t size,
     return TRIAGE_FMT_UNKNOWN;
 }
 
-/** Verify a D64 sector by checking for non-0x00 and non-0xFF fill. */
-static int d64_sector_quality(const uint8_t *sector_data) {
-    int zero = 0, ff = 0;
-    for (int i = 0; i < D64_SECTOR_SIZE; i++) {
-        if (sector_data[i] == 0x00) zero++;
-        if (sector_data[i] == 0xFF) ff++;
+/*
+ * P3-708: a blank sector is not a damaged sector.
+ *
+ * Three fill checks stood here, one per format, and each counted a sector of
+ * nothing but 0x00 (D64: also 0xFF) as BAD. That is exactly how an unused
+ * sector of a sparse disk looks, so the free, undamaged xdftool ADF in
+ * tests/corpus_free scored 9/100 and a clean VICE D64 3/100 ("severely
+ * damaged"). A sector dump records no read status; the damage it can show
+ * is data MISSING from the file, and for a D64 with a trailing error block
+ * the 1541 error bytes. Blank sectors are counted and reported, never
+ * scored.
+ */
+/* What a sector dump can say about itself. */
+typedef struct {
+    int  blank;        /* sampled sectors of nothing but fill — not damage */
+    bool read_status;  /* the file carries per-sector read status (D64 error block) */
+} dump_facts_t;
+
+static bool sector_blank(const uint8_t *s, size_t n, bool ff_too) {
+    bool zero = true, ff = ff_too;
+    for (size_t i = 0; i < n && (zero || ff); i++) {
+        if (s[i] != 0x00) zero = false;
+        if (s[i] != 0xFF) ff = false;
     }
-    /* Completely blank or wiped sectors are suspicious but not errors */
-    if (zero == D64_SECTOR_SIZE || ff == D64_SECTOR_SIZE) return 50;
-    return 100;
+    return zero || ff;
 }
 
 /** Check if D64 BAM/directory track shows copy-protection signs. */
 static bool d64_check_protection(const uint8_t *data, size_t size) {
     if (size < 0x16500 + D64_SECTOR_SIZE) return false;
     const uint8_t *bam = data + 0x16500;
+    /* A blank BAM sector means "not formatted", not "protected" (P3-708). */
+    if (sector_blank(bam, D64_SECTOR_SIZE, true)) return false;
     /* Non-standard BAM pointer (track != 18 or sector > 19) */
     if (bam[0] != 0x12) return true;
     if (bam[1] > 19) return true;
@@ -136,34 +154,16 @@ static bool d64_check_protection(const uint8_t *data, size_t size) {
     return false;
 }
 
-/** Verify an ADF sector (512 bytes): simple fill check. */
-static int adf_sector_quality(const uint8_t *sector_data) {
-    int zero = 0;
-    for (int i = 0; i < ADF_SECTOR_SIZE; i++) {
-        if (sector_data[i] == 0x00) zero++;
-    }
-    if (zero == ADF_SECTOR_SIZE) return 50;
-    return 100;
-}
-
 /** Check ADF bootblock for protection markers. */
 static bool adf_check_protection(const uint8_t *data, size_t size) {
     if (size < 1024) return false;
+    /* A blank bootblock means "no bootblock", not "protected" (P3-708). */
+    if (sector_blank(data, 1024, false)) return false;
     /* Standard bootblock starts with "DOS\0" (OFS/FFS) */
     if (memcmp(data, "DOS", 3) != 0) return true;
     /* Filesystem type nibble should be 0..5 */
     if (data[3] > 5) return true;
     return false;
-}
-
-/** Check IMG boot sector signature. */
-static int img_sector_quality(const uint8_t *sector_data) {
-    int zero = 0;
-    for (int i = 0; i < IMG_SECTOR_SIZE; i++) {
-        if (sector_data[i] == 0x00) zero++;
-    }
-    if (zero == IMG_SECTOR_SIZE) return 50;
-    return 100;
 }
 
 /** SCP: quick check of track header presence. */
@@ -203,7 +203,7 @@ static bool scp_check_protection(const uint8_t *data, size_t size) {
  *===========================================================================*/
 
 static void triage_d64(const uint8_t *data, size_t size,
-                       uft_triage_result_t *r)
+                       uft_triage_result_t *r, dump_facts_t *f)
 {
     int tracks[3] = { 1, 18, 35 };
     int total_sectors = 0, ok = 0, bad = 0;
@@ -212,6 +212,16 @@ static void triage_d64(const uint8_t *data, size_t size,
     r->format_confidence = (size == 174848 || size == 175531) ? 95.0f : 70.0f;
     r->tracks_sampled = 3;
 
+    /* The only read status a D64 can carry: a trailing block of one 1541
+     * error byte per sector (174848 + 683 = 175531, 196608 + 768 = 197376),
+     * laid out as the D64 plugin reads it. */
+    int tracks_in_file = (size >= 196608) ? 40 : 35;
+    size_t sectors_in_file = 0;
+    for (int t = 1; t <= tracks_in_file; t++)
+        sectors_in_file += (size_t)d64_sectors_on_track(t);
+    size_t err_off = sectors_in_file * D64_SECTOR_SIZE;
+    f->read_status = size >= err_off + sectors_in_file;
+
     for (int i = 0; i < 3; i++) {
         int t = tracks[i];
         int spt = d64_sectors_on_track(t);
@@ -219,10 +229,15 @@ static void triage_d64(const uint8_t *data, size_t size,
 
         for (int s = 0; s < spt; s++) {
             uint32_t off = base + (uint32_t)s * D64_SECTOR_SIZE;
-            if (off + D64_SECTOR_SIZE > size) { bad++; total_sectors++; continue; }
-            int q = d64_sector_quality(data + off);
             total_sectors++;
-            if (q >= 80) ok++; else bad++;
+            if (off + D64_SECTOR_SIZE > size) { bad++; continue; }
+            if (f->read_status &&
+                !uft_cbm_error_byte_ok(data[err_off + off / D64_SECTOR_SIZE])) {
+                bad++;
+                continue;
+            }
+            ok++;
+            if (sector_blank(data + off, D64_SECTOR_SIZE, true)) f->blank++;
         }
     }
 
@@ -237,7 +252,8 @@ static void triage_d64(const uint8_t *data, size_t size,
                  "Non-standard BAM/DOS");
     }
 
-    /* Quality score: weighted — track 18 (directory) counts double */
+    /* Quality score: share of sampled sectors without a finding (the comment
+     * here said track 18 counts double; the code never weighted it). */
     if (total_sectors > 0) {
         r->quality_score = (ok * 100) / total_sectors;
     }
@@ -248,7 +264,7 @@ static void triage_d64(const uint8_t *data, size_t size,
  *===========================================================================*/
 
 static void triage_adf(const uint8_t *data, size_t size,
-                       uft_triage_result_t *r)
+                       uft_triage_result_t *r, dump_facts_t *f)
 {
     /* Key tracks: 0/0 (bootblock), 40/0 (middle), 79/1 (last) */
     /* ADF layout: track = cyl*2 + head, each track = 11 * 512 bytes */
@@ -263,10 +279,10 @@ static void triage_adf(const uint8_t *data, size_t size,
         uint32_t base = (uint32_t)track_indices[i] * ADF_TRACK_SIZE;
         for (int s = 0; s < ADF_TRACK_SECTORS; s++) {
             uint32_t off = base + (uint32_t)s * ADF_SECTOR_SIZE;
-            if (off + ADF_SECTOR_SIZE > size) { bad++; total_sectors++; continue; }
-            int q = adf_sector_quality(data + off);
             total_sectors++;
-            if (q >= 80) ok++; else bad++;
+            if (off + ADF_SECTOR_SIZE > size) { bad++; continue; }
+            ok++;
+            if (sector_blank(data + off, ADF_SECTOR_SIZE, false)) f->blank++;
         }
     }
 
@@ -290,7 +306,7 @@ static void triage_adf(const uint8_t *data, size_t size,
  *===========================================================================*/
 
 static void triage_img(const uint8_t *data, size_t size,
-                       uft_triage_result_t *r)
+                       uft_triage_result_t *r, dump_facts_t *f)
 {
     /* Sample 3 sectors: first, middle, last */
     size_t offsets[3];
@@ -309,8 +325,8 @@ static void triage_img(const uint8_t *data, size_t size,
 
     for (int i = 0; i < 3; i++) {
         if (offsets[i] + IMG_SECTOR_SIZE > size) { bad++; continue; }
-        int q = img_sector_quality(data + offsets[i]);
-        if (q >= 80) ok++; else bad++;
+        ok++;
+        if (sector_blank(data + offsets[i], IMG_SECTOR_SIZE, false)) f->blank++;
     }
 
     /* Boot sector signature check */
@@ -472,6 +488,41 @@ static void triage_classify(uft_triage_result_t *r) {
     }
 }
 
+/*
+ * P3-708: the texts above speak of "sectors unreadable" and "good
+ * condition". For a sector dump neither is known: it holds what was read,
+ * not how the reading went. Say what the dump shows instead. A protection
+ * finding keeps its own text.
+ */
+static void triage_describe_dump(uft_triage_result_t *r, const dump_facts_t *f)
+{
+    if (r->protection_detected) return;
+    int total = r->sectors_ok + r->sectors_bad;
+    if (f->read_status) {
+        snprintf(r->summary, sizeof(r->summary),
+                 "%s sector dump with 1541 error bytes: %d of %d sampled "
+                 "sectors without error code, %d with an error code or "
+                 "missing, %d blank.",
+                 r->format_name, r->sectors_ok, total, r->sectors_bad,
+                 f->blank);
+        return;
+    }
+    snprintf(r->summary, sizeof(r->summary),
+             "%s sector dump: %d of %d sampled sectors present, %d missing "
+             "from the file, %d blank. A sector dump records no read status; "
+             "the original disk's condition cannot be judged from it.",
+             r->format_name, r->sectors_ok, total, r->sectors_bad, f->blank);
+    if (r->sectors_bad > 0)
+        snprintf(r->recommendation, sizeof(r->recommendation),
+                 "The file lacks data its format requires. Re-create it from "
+                 "the original disk or its source; the gap says nothing about "
+                 "damage on the disk itself.");
+    else
+        snprintf(r->recommendation, sizeof(r->recommendation),
+                 "Every sampled sector is present. To learn the original "
+                 "disk's condition, capture it at flux level.");
+}
+
 /*===========================================================================
  * Public API
  *===========================================================================*/
@@ -485,11 +536,12 @@ int uft_triage_analyze_buffer(const uint8_t *data, size_t size,
     memset(result, 0, sizeof(*result));
 
     triage_fmt_t fmt = triage_detect(data, size, format_hint);
+    dump_facts_t dump = { 0, false };
 
     switch (fmt) {
-        case TRIAGE_FMT_D64: triage_d64(data, size, result); break;
-        case TRIAGE_FMT_ADF: triage_adf(data, size, result); break;
-        case TRIAGE_FMT_IMG: triage_img(data, size, result); break;
+        case TRIAGE_FMT_D64: triage_d64(data, size, result, &dump); break;
+        case TRIAGE_FMT_ADF: triage_adf(data, size, result, &dump); break;
+        case TRIAGE_FMT_IMG: triage_img(data, size, result, &dump); break;
         case TRIAGE_FMT_SCP: triage_scp(data, size, result); break;
         case TRIAGE_FMT_HFE: triage_hfe(data, size, result); break;
         default:
@@ -505,6 +557,8 @@ int uft_triage_analyze_buffer(const uint8_t *data, size_t size,
     }
 
     triage_classify(result);
+    if (fmt == TRIAGE_FMT_D64 || fmt == TRIAGE_FMT_ADF || fmt == TRIAGE_FMT_IMG)
+        triage_describe_dump(result, &dump);
     return 0;
 }
 

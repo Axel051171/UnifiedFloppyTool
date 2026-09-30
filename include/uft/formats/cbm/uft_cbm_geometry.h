@@ -96,6 +96,23 @@ int uft_cbm_block_offset(uft_cbm_family_t family, int track);
  */
 int uft_cbm_total_blocks(uft_cbm_family_t family, int track_count);
 
+/**
+ * @brief Does a 1541 error-info byte say "read without error"?
+ *
+ * A .d64 with a trailing error block carries one byte per sector with the
+ * drive's job code. Peter Schepers, D64.TXT: 0x01 = "00, no error"; every
+ * listed other value names an error (0x05 data checksum, 0x09 header
+ * checksum, 0x02/0x03/0x04/0x0F nothing readable, ...). 0x00 has no entry
+ * in that table; the D64 plugin has always counted it as no error, and
+ * that reading is kept here, not decided. The plugin marks sectors by this
+ * rule and the triage counts by it (P3-708); it stands here once so the
+ * two cannot drift.
+ */
+static inline int uft_cbm_error_byte_ok(uint8_t code)
+{
+    return code == 0x00 || code == 0x01;
+}
+
 #ifdef __cplusplus
 }
 #endif

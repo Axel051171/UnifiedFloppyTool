@@ -184,7 +184,7 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             uint8_t code = 0x01;
             if (fseek(p->file, ei, SEEK_SET) == 0 &&
                 fread(&code, 1, 1, p->file) == 1 &&
-                code != 0x00 && code != 0x01) {
+                !uft_cbm_error_byte_ok(code)) {   /* MF-1622: one rule */
                 uft_sector_t *z = &track->sectors[track->sector_count - 1];
                 switch (code) {
                 case 0x05: uft_sector_mark_data_crc_error(z); break;

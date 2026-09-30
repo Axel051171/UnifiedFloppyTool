@@ -50,6 +50,12 @@ int main(void)
     snprintf(h, sizeof h, "Empfehlung: %s", rat ? rat : "(keine)");
     pruefe("die Empfehlung nennt keine Prozentschaetzung",
            rat && rat[0] && strchr(rat, '%') == NULL, h);
+    /* MF-1622 (P3-708): the file is a clean dump; the wizard neither calls
+     * it damaged nor claims a disk condition a dump cannot show. */
+    pruefe("die Empfehlung erfindet weder Schaden noch Diskettenzustand",
+           rat && strstr(rat, "damage") == NULL
+               && strstr(rat, "quality is good") == NULL
+               && strstr(rat, "sampled sectors") != NULL, h);
 
     /* forward to the EXECUTE step, whose description carried "est. N%" */
     int schritte = 0;

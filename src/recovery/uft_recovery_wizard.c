@@ -143,8 +143,10 @@ static void generate_recommendation(uft_recovery_wizard_t *wiz)
 {
     if (wiz->quality_score > 80 && !wiz->protection_detected) {
         snprintf(wiz->recommendation, sizeof(wiz->recommendation),
-                 "Disk quality is good (score %d/100). "
-                 "No recovery needed — standard imaging should work. "
+                 /* MF-1622 (P3-708): the triage samples; for a sector
+                  * dump it cannot see the disk at all. Say what it saw. */
+                 "No finding in the sampled sectors (score %d/100). "
+                 "No recovery step is indicated. "
                  "Recommended: verify with a full read and export to "
                  "archival format.",
                  wiz->quality_score);
