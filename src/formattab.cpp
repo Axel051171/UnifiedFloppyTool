@@ -27,6 +27,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -148,7 +149,8 @@ static const char *const kUnverdrahtet[] = {
     "comboErrors", "checkRetryOnError",
     "checkSkipBadSectors",
     "checkDiskStructure", "checkFilesystem", "checkAllocationMap",
-    "spinClockAdjust", "checkAdaptivePll", "spinSyncTolerance",
+    /* spinClockAdjust: verdrahtet seit MF-1621 (decode_cell_adjust_pct) */
+    "checkAdaptivePll", "spinSyncTolerance",
 };
 
 QStringList FormatTab::unverdrahteteFelder()
@@ -287,6 +289,18 @@ FormatTab::FormatTab(QWidget *parent)
            "Lesestrategie die Zahl fest, ist das Feld gesperrt."));
     connect(ui->spinMaxRetries, QOverload<int>::of(&QSpinBox::valueChanged),
             this, [this](int) { applyCopyPlan(); });
+
+    /* MF-1621: die Taktkorrektur, ebenso an der Beschriftung erklaert. Sie
+     * gilt nur, solange „Erweiterte Optionen" eingeschaltet ist — die
+     * abwaehlbare Gruppe sperrt ihre Felder, und ein gesperrtes Feld
+     * steuert nichts bei. */
+    ui->labelClockAdjust->setToolTip(
+        tr("Zellendauer des Dekoders in Prozent (100 = unverändert). Wirkt "
+           "heute in der Wandlung SCP → ADF; bei HFE-Quellen sagt die "
+           "Wandlung, dass sie den Wert nicht anwendet (decode_cell_adjust_pct)."));
+    connect(ui->spinClockAdjust, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, [this](double) { applyCopyPlan(); });
+    connect(ui->groupAdvanced, &QGroupBox::toggled, this, [this](bool) { applyCopyPlan(); });
 
     /* Die benannten Modi (MF-1237/1293): ein Knopf je Profil des Kerns,
      * verdrahtet ueber den Namen `btnModus_<Kennung>`. */
@@ -715,6 +729,13 @@ uft_copy_plan_t FormatTab::copyPlan() const
         p.read_retries_gesetzt = true;
         p.read_retries = (uint32_t)ui->spinMaxRetries->value();
     }
+    /* MF-1621: die Taktkorrektur — nur bei eingeschalteter Gruppe
+     * „Erweiterte Optionen" (dann ist das Feld frei) und nur, wenn sie
+     * etwas aendert: 100 % heisst unveraendert und bleibt ungesetzt. */
+    if (!istVerborgen(ui->spinClockAdjust) && ui->spinClockAdjust->isEnabled()
+        && !istUnverdrahtet(ui->spinClockAdjust)
+        && ui->spinClockAdjust->value() != 100.0)
+        p.cell_adjust_pct = ui->spinClockAdjust->value();
     return p;
 }
 
@@ -1031,7 +1052,8 @@ const AchsenFeld kAchsen[] = {
 };
 /* Die wirksamen Einzelwerte eines Setups. Nur Felder mit Leser — ein
  * Setup soll nicht wieder zur Ablage fuer Werte werden, die nichts tun. */
-const char *const kSetupWerte[] = { "spinRevolutions", "spinMaxRetries" };
+const char *const kSetupWerte[] = { "spinRevolutions", "spinMaxRetries",
+                                    "spinClockAdjust" };
 } // namespace
 
 static QComboBox *achsenFeld(Ui::TabFormat *ui, int i)
@@ -1071,10 +1093,19 @@ QJsonObject FormatTab::setupAlsJson() const
     o[QStringLiteral("system")]   = ui->comboSystem->currentData().toString();
     o[QStringLiteral("format")]   = getSelectedFormat();
     o[QStringLiteral("variante")] = ui->comboVersion->currentData().toString();
+    /* Die Vorlage: ein Setup speichert „ausschliesslich wirksame
+     * Einstellungen". Ein Feld, das verborgen, gesperrt oder nicht
+     * verdrahtet ist, schreibt deshalb keinen Wert (MF-1621). Ob die
+     * erweiterten Optionen eingeschaltet waren, steht dabei — ohne das
+     * waere die Taktkorrektur beim Laden immer gesperrt. */
+    o[QStringLiteral("erweitert")] = ui->groupAdvanced->isChecked();
     QJsonObject werte;
     for (const char *name : kSetupWerte) {
         const QString k = QString::fromLatin1(name);
-        if (auto *s = findChild<QSpinBox *>(k)) werte[k] = s->value();
+        QWidget *w = findChild<QWidget *>(k);
+        if (!w || istVerborgen(w) || istUnverdrahtet(w) || !w->isEnabled()) continue;
+        if (auto *s = qobject_cast<QSpinBox *>(w)) werte[k] = s->value();
+        else if (auto *d = qobject_cast<QDoubleSpinBox *>(w)) werte[k] = d->value();
     }
     o[QStringLiteral("werte")] = werte;
     return o;
@@ -1132,15 +1163,18 @@ bool FormatTab::setupAnwenden(const QJsonObject &o, QString *fehler,
     const QJsonArray hashes = o.value(QStringLiteral("hashes")).toArray();
     ui->checkHashSha512->setChecked(hashes.contains(QStringLiteral("sha512")));
     ui->checkCRC32->setChecked(hashes.contains(QStringLiteral("crc32")));
+    ui->groupAdvanced->setChecked(o.value(QStringLiteral("erweitert")).toBool(false));
     const QJsonObject werte = o.value(QStringLiteral("werte")).toObject();
     for (auto it = werte.begin(); it != werte.end(); ++it) {
         QWidget *w = findChild<QWidget *>(it.key());
         auto *s = qobject_cast<QSpinBox *>(w);
-        if (!s || istVerborgen(s) || istUnverdrahtet(s) || !s->isEnabled()) {
+        auto *d = qobject_cast<QDoubleSpinBox *>(w);
+        if ((!s && !d) || istVerborgen(w) || istUnverdrahtet(w) || !w->isEnabled()) {
             if (uebergangen) *uebergangen << it.key();
             continue;
         }
-        s->setValue(it.value().toInt());
+        if (s) s->setValue(it.value().toInt());
+        else d->setValue(it.value().toDouble());
     }
     applyCopyPlan();
     return true;

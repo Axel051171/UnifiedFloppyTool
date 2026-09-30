@@ -27,6 +27,8 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCryptographicHash>
+#include <QDoubleSpinBox>
+#include <QGroupBox>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
@@ -74,9 +76,11 @@ private slots:
         const QStringList namen = FormatTab::unverdrahteteFelder();
         /* gemessen: 29 Felder des Entwurfs ohne Leser (MF-1618), siehe die
          * Liste in formattab.cpp und ZUORDNUNG_settings_redesign.md; seit
-         * MF-1619 ist spinMaxRetries verdrahtet -> 28 */
-        QCOMPARE(namen.size(), 28);
+         * MF-1619 ist spinMaxRetries verdrahtet -> 28, seit MF-1621
+         * spinClockAdjust -> 27 */
+        QCOMPARE(namen.size(), 27);
         QVERIFY(!namen.contains(QStringLiteral("spinMaxRetries")));
+        QVERIFY(!namen.contains(QStringLiteral("spinClockAdjust")));
         auto pruefe = [&](const char *wann) {
             for (const QString &n : namen) {
                 QWidget *w = tab.findChild<QWidget *>(n);
@@ -158,6 +162,33 @@ private slots:
         (void)fest;   /* ob eine Strategie es festlegt, ist Sache des Kerns */
     }
 
+    /* MF-1621: die Taktkorrektur erreicht den Plan — nur mit eingeschalteten
+     * „Erweiterten Optionen", und 100 % bleibt ungesetzt. Ein Setup traegt
+     * beides und stellt es wieder her. */
+    void taktkorrektur_erreicht_den_plan()
+    {
+        FormatTab tab;
+        auto *grp = tab.findChild<QGroupBox *>("groupAdvanced");
+        auto *spin = tab.findChild<QDoubleSpinBox *>("spinClockAdjust");
+        QVERIFY(grp && spin);
+        spin->setValue(97.5);
+        QCOMPARE(tab.copyPlan().cell_adjust_pct, 0.0);     /* Gruppe aus */
+        grp->setChecked(true);
+        QVERIFY(spin->isEnabled());
+        QCOMPARE(tab.copyPlan().cell_adjust_pct, 97.5);
+        spin->setValue(100.0);
+        QCOMPARE(tab.copyPlan().cell_adjust_pct, 0.0);     /* unveraendert */
+        spin->setValue(104.0);
+        const QJsonObject o = tab.setupAlsJson();
+
+        FormatTab b;
+        QString fehler;
+        QStringList weg;
+        QVERIFY2(b.setupAnwenden(o, &fehler, &weg), qPrintable(fehler));
+        QVERIFY2(weg.isEmpty(), qPrintable(weg.join(", ")));
+        QCOMPARE(b.copyPlan().cell_adjust_pct, 104.0);
+    }
+
     /* B2 */
     void nachpruefen_ist_eine_sicht_auf_die_richtlinie()
     {
@@ -231,6 +262,12 @@ private slots:
         plan[QStringLiteral("level")] =
             QString::fromUtf8(uft_copy_level_name(UFT_COPY_FILE));
         o[QStringLiteral("plan")] = plan;
+        /* MF-1621: ein Setup schreibt nur wirksame Werte; der Wert fuer ein
+         * im Ziel verbotenes Feld wird deshalb hier ausdruecklich
+         * eingetragen, wie ihn eine aeltere oder fremde Datei traegt. */
+        QJsonObject werte = o.value(QStringLiteral("werte")).toObject();
+        werte[QStringLiteral("spinRevolutions")] = 9;
+        o[QStringLiteral("werte")] = werte;
 
         FormatTab b;
         const int vorher = b.leseUmdrehungen();

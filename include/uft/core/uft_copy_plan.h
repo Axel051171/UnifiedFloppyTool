@@ -277,6 +277,12 @@ typedef struct uft_copy_plan {
      * Angehaengt, nicht eingefuegt; die Null-Vorgabe heisst „ungesetzt". */
     bool                 read_retries_gesetzt;
     uint32_t             read_retries;
+
+    /* MF-1621: die Taktkorrektur aus dem Settings-Reiter, in Prozent der
+     * Zellendauer (50..200, 100 = unveraendert); 0 heisst ungesetzt.
+     * Wirksam ueber `uft_convert_options_t.decode_cell_adjust_pct`
+     * (MF-480), heute auf dem Pfad SCP -> ADF. */
+    double               cell_adjust_pct;
 } uft_copy_plan_t;
 
 /** Ein Befund aus der Pruefung. `hard` heisst: so nicht ausfuehrbar. */

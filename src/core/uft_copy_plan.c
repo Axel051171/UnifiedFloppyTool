@@ -522,7 +522,8 @@ uft_copy_plan_t uft_copy_plan_current(void)
 #define PLX(l, s, e, p, ek, fs) { (l), (s), (e), (p), (ek),              \
                          UFT_TRACK_DECODED, (fs),                       \
                          UFT_GCR_COMMODORE, UFT_VOTE_STRICT_MAJORITY,   \
-                         (uint32_t)UFT_HASH_SHA256, 0u, false, false, 0u }
+                         (uint32_t)UFT_HASH_SHA256, 0u, false, false, 0u, \
+                         0.0 }
 #define PLF(l, s, e, p, fs) PLX(l, s, e, p, UFT_EXACT_SECTOR, fs)
 #define PL(l, s, e, p) PLF(l, s, e, p, UFT_FILE_GENERIC)
 
@@ -845,6 +846,12 @@ void uft_copy_plan_to_convert_options(const uft_copy_plan_t *plan,
      *     gegen die Strategie. Ungesetzt bleibt, was Schritt 1 ergab. */
     if (plan->read_retries_gesetzt)
         o->decode_retries = plan->read_retries;
+
+    /* 2c. MF-1621: die Taktkorrektur. Ungesetzt (0) bleibt die Vorgabe
+     *     des Verteilers (100); den Bereich 50..200 prueft der Wandler
+     *     selbst und sagt es, wenn er den Wert nicht anwendet. */
+    if (plan->cell_adjust_pct > 0.0)
+        o->decode_cell_adjust_pct = plan->cell_adjust_pct;
 
     /* 3. Ebene und Erhaltung erreichen die Wandlung NICHT, und das ist
      *    gemessen statt vergessen: die Felder, auf die sie abbilden
@@ -1229,6 +1236,13 @@ size_t uft_copy_plan_to_json(const uft_copy_plan_t *plan, char *buf, size_t n)
         char zahl[16];
         snprintf(zahl, sizeof zahl, "%u", (unsigned)p.read_retries);
         pos = haenge(buf, n, pos, ",\n    \"readRetries\": ");
+        pos = haenge(buf, n, pos, zahl);
+    }
+    /* MF-1621 */
+    if (p.cell_adjust_pct > 0.0) {
+        char zahl[32];
+        snprintf(zahl, sizeof zahl, "%g", p.cell_adjust_pct);
+        pos = haenge(buf, n, pos, ",\n    \"cellAdjustPct\": ");
         pos = haenge(buf, n, pos, zahl);
     }
     pos = haenge(buf, n, pos, "\n  }");
