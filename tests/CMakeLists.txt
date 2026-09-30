@@ -6630,6 +6630,7 @@ if(TARGET Qt6::Test)
            ${qt_test_name} STREQUAL "test_decode_job_no_fiction" OR
            ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
            ${qt_test_name} STREQUAL "test_main_window_fits_fullhd" OR
+           ${qt_test_name} STREQUAL "test_forensic_tab_no_fiction" OR
            ${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             # P3-10: die Format-Schicht samt Wandlungs-Maschine
@@ -6704,6 +6705,16 @@ if(TARGET Qt6::Test)
                     ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
                 target_include_directories(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/hardware_providers)
+            elseif(${qt_test_name} STREQUAL "test_forensic_tab_no_fiction")
+                # MF-1628 (P3-714): die Strukturpruefung meldete „complete"
+                # unter Zeilen, die selbst „not checked" sagen.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/forensictab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_forensic.ui
+                    ${CMAKE_SOURCE_DIR}/src/protection/uft_schutzbefund.c
+                    ${CMAKE_SOURCE_DIR}/src/protection/uft_d64_fehlerbytes.c)
+                target_compile_definitions(${qt_test_name} PRIVATE
+                    UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
             elseif(${qt_test_name} STREQUAL "test_validator_fragt_die_registry")
                 # P2-2 (MF-1351): das Pruefetor vor openFile()/Explorer/
                 # Forensik/DecodeJob fragt die Registry, wo seine Liste

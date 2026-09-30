@@ -457,10 +457,14 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
     Q_UNUSED(path);
     
     ui->textDetails->appendPlainText(tr("▶ Validating structure..."));
-    
+
+    /* MF-1628: die Schlusszeile zaehlt, statt „complete" zu sagen. */
+    int gelaufen = 0, nichtGelaufen = 0;
+
     // Bootblock validation
     if (ui->checkValidateBootblock->isChecked() && m_imageData.size() >= 512) {
-        bool hasBootSig = (static_cast<quint8>(m_imageData[510]) == 0x55 && 
+        ++gelaufen;
+        bool hasBootSig = (static_cast<quint8>(m_imageData[510]) == 0x55 &&
                           static_cast<quint8>(m_imageData[511]) == 0xAA);
         addResultRow(tr("Boot Signature"), 
                      hasBootSig ? tr("✓ Present") : tr("— Not found"),
@@ -505,6 +509,7 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
      * gegen ein benanntes Abbild — siehe MF-569. Wer sie verdrahtet,
      * bringt die Messung mit. */
     if (ui->checkValidateDirectory->isChecked()) {
+        ++nichtGelaufen;
         addResultRow(tr("Directory"), tr("— not checked"),
                      tr("Directory reading is not wired yet — this is not "
                         "a statement about the image"));
@@ -513,6 +518,7 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
     if (ui->checkValidateFAT->isChecked()) {
         if (info.formatName.contains("FAT") || info.formatName.contains("IMG") ||
             info.formatName.contains("DOS")) {
+            ++nichtGelaufen;
             addResultRow(tr("FAT Structure"), tr("— not checked"),
                          tr("FAT validation is not wired yet — the format "
                             "name alone says nothing about the table"));
@@ -523,13 +529,21 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
     }
 
     if (ui->checkValidateFilesystem->isChecked()) {
+        ++nichtGelaufen;
         addResultRow(tr("Filesystem"), tr("— not checked"),
                      tr("Filesystem validation is not wired yet — this is "
                         "not a statement about the image"));
     }
 
-
-    ui->textDetails->appendPlainText(tr("  Structure validation complete."));
+    /* MF-1628 (P3-714): hier stand „Structure validation complete." — unter
+     * Zeilen, die selbst „not checked" sagen, und diese Zeile geht mit in
+     * den Bericht. Eine Zusammenfassung darf nicht mehr behaupten als die
+     * Zeilen darueber: sie nennt, wie viele angeforderte Pruefungen liefen
+     * und wie viele nicht. */
+    ui->textDetails->appendPlainText(
+        tr("  Structure checks: %1 run, %2 requested but not run "
+           "(see the rows marked \"not checked\").")
+            .arg(gelaufen).arg(nichtGelaufen));
 }
 
 void ForensicTab::detectProtection(const QByteArray& data)
