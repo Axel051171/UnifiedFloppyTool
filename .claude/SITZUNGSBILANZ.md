@@ -1103,3 +1103,90 @@ Zusätzlich zum Fundus:
     nicht mehr." Bewegt keine der neun Kennzahlen, also Fundus; was es
     öffnet, ist der zweite Fall, in dem jemand die Zahl nachzieht statt den
     Schlüssel zu ändern (dies war der erste, gemessen).
+
+## Sitzungsbilanz 2026-09-30 — wt-dtc: capsimg-Helfer, CT-Raw, IPF-Leser, Settings-Reiter (MF-1613 bis MF-1619)
+
+```
+Kennzahlen bewegt:
+  K7  unveraendert gemessen — CT-Raw -> ADF laeuft ueber den bestehenden
+      Pfad IPF -> ADF; es ist kein neues Paar in der Matrix
+  K8  0 (Sanitizer-Laeufe von MF-1618 gruen)
+
+Kennzahlen unbewegt:
+  K1/K2  Tierstand unveraendert. CT-Raw wird ueber den Helfer gelesen,
+         aber das Format steht nicht in der Tafel; IPF ist schon T1.
+  K3/K4/K5/K6/K9  nicht beruehrt. Die entfernten IPF-Duplikate (drei
+         Big-Endian-Leser, ein zweiter IPF-Parser) sind keine
+         Konstantenfamilien; K3 bewegt sich dadurch nicht.
+
+Fehler dieser Sitzung — je Zeile: was | gefangen von | Folge
+  1. capsimg-Helfer: eine gekuerzte IPF ging als Teilantwort mit END
+     durch (H4) | Mensch (Pruefvektor von Hand gefahren) | behoben
+     MF-1613; ein Tor geht nicht — die CI hat kein capsimg und darf keines
+     haben (SPS v1.02) -> Fundus, siehe unten
+  2. CT-Raw: capsimgs „flakey" wurde zu UFT_TRACK_PROTECTED, 168 von 168
+     Spuren „kopiergeschuetzt" | Mensch | Rotbeweis test_ipf_ctraw (6)
+  3. Die Nachpruefung paarte Sektoren nach Position; ein richtiges ADF
+     fiel durch | TOR (verify_after schlug an) | behoben MF-1616, Rotbeweis
+  4. Der Push von MF-1615 scheiterte still: der Pre-Push-Haken prueft den
+     ARBEITSBAUM, und dort lag schon MF-1616 | Mensch (git ls-remote) |
+     Gedaechtnis „push-haken-prueft-arbeitsbaum"; Fundus unten
+  5. Das Mutationsskript mass bei Qt-Tests nichts: unter Windows kein
+     stdout auf der Pipe, jeder Mutant „gruen" | Mensch (auch die
+     unveraenderte Grundlage war gruen) | Laeufer liest -o datei,txt;
+     Gedaechtnis ci-test-gating, siebte Falle
+  6. `sed` benannte die eigene Big-Endian-Definition in uft_ipf_air.c mit
+     um — sie haette mit dem Header kollidiert | Mensch (vor dem Bau
+     gelesen) | der Compiler haette es gefangen; keine Massnahme
+  7. Eine statische Namensmessung (alte_namen.py) meldete selbst D64 als
+     „ohne Plugin" | Mensch | verworfen, nicht berichtet; massgeblich ist
+     der Laufzeittest die_formatliste_nennt_nur_was_es_gibt
+  8. Vier Reiter-Tests hingen still daran, dass der alte Reiter auf D64
+     oeffnete | TOR (die Tests wurden rot) | sie waehlen D64 ausdruecklich
+  9. MF-1320 hob bei unbekanntem Format auch das Verbot der EBENE auf |
+     TOR (ebene_blendet_aus_und_wieder_ein rot) | Tor fragt mit allen
+     Faehigkeiten; Mutation „caps 0" rot
+ 10. Bei „Automatisch" waren 5 von 18 Modi gesperrt | Mensch (Offscreen-
+     Bild) | Rotbeweis + Mutation „unbekannt sperrt Modi" rot
+ 11. Der eigene Faehigkeitstest pruefte Weak Bits auf einer Ebene, die sie
+     immer verbirgt | TOR (Test rot) | Stellung wird gesucht, nicht
+     angenommen
+ 12. „von aussen gerufen" im Schutzkatalog fiel 9 -> 8 | TOR
+     (audit_protection_claims) | BACKLOG C1 mit Grund nachgezogen
+ 13. Mutant „erfundene Befunde bei unbekanntem Format" ueberlebte | TOR
+     (Mutationsprobe) | Fall unbekanntes_format_erfindet_keinen_befund
+ 14. uft_copy_plan_default() liess caps/caps_bekannt uninitialisiert |
+     Mensch (Lesen) | Rotbeweis mit verschmutztem Stapel, P3-712
+ 15. „Encoding hat einen Traeger im Kern" stand im Code und in P3-711,
+     ohne dass der Leser auf Erreichbarkeit gemessen war | Mensch (vor dem
+     Verdrahten gemessen) | BERICHTIGT; Fundus unten
+ 16. P3-711 nannte „rund 1000 Zeilen" und „14+ von 15" | Mensch |
+     BERICHTIGT in MF-1619 (1322, 15 von 15)
+ 17. Ein Filter per `sed` ins Mutationsskript griff nicht; die volle
+     Matrix lief ohne Ausgabe | Mensch | Filter im Skript selbst;
+     Unversehrtheit des Baums danach gemessen (15 von 15 Stellen)
+ 18. Fall (B2) im Wiederholungstest war zu schwach — ein immer
+     schreibender Mutant haette ihn bestanden | Mensch (vor der Matrix) |
+     geschaerft; Mutation „immer schreiben" rot
+
+K0 dieser Sitzung: 6 von 18
+```
+
+Die 6 Tor-Faenge sind alle Tests, Pruefskripte oder die Mutationsprobe —
+keiner kam vom Vollbau. Die zwoelf Mensch-Faenge, einzeln nach der Regel:
+Rotbeweis oder Mutation haben 2, 10, 14, 18; eine Fundus-Zeile unten haben
+1, 4, 15; ohne weiteres Tor bleiben 6 (der Compiler faengt es), 7 (die
+Messung ist verworfen, nicht verwendet), 16 (Doku-Zahlen, BERICHTIGT) und
+5/17 (Werkzeuge im Scratchpad, die Lehre steht im Gedaechtnis).
+
+**Fundus, je mit dem, was ihn oeffnen wuerde:**
+- (1) H1–H6 des capsimg-Protokolls laufen nur auf einem Rechner mit der
+  SPS-Bibliothek. Oeffnen wuerde es ein Pruefprogramm, das der
+  Eigentuemer bei sich ausfuehrt und dessen Ergebnis eingecheckt wird.
+- (4) `push_lokal.sh` meldet einen fehlgeschlagenen Push nur als Zeile.
+  Ein Tor gehoert an den Aufrufer: `git ls-remote` gegen HEAD nach jedem
+  Push. Das steht als Regel im Gedaechtnis; ein Skript dafuer fehlt, weil
+  die Push-Skripte im Scratchpad liegen, nicht im Baum.
+- (15) „Traeger im Kern" ist eine Erreichbarkeitsaussage. Oeffnen wuerde es
+  eine Spalte „Leser erreichbar" in der Zuordnungstafel, gerechnet ueber
+  den Aufrufgraphen statt ueber `git grep` nach dem Feldnamen.
