@@ -528,7 +528,9 @@ int uft_td0_strom_spur(const uft_td0_strom_t *p, int cyl, int head,
                         decoded_len = dp;
                     }
 
-                    uft_format_add_sector(track, sec_num > 0 ? sec_num - 1 : 0,
+                    /* P3-549 (MF-1623): R as recorded; the old
+                     * `sec_num > 0 ? sec_num - 1 : 0` turned R = 0 into 1. */
+                    uft_format_add_sector_with_id(track, sec_num,
                                           decoded, (uint16_t)sec_size,
                                           (uint8_t)cyl, (uint8_t)head);
                     /* MF-981: weniger dekodiert als der Sektor gross ist —

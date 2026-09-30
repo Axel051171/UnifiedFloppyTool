@@ -138,12 +138,13 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
         if (!uft_stx_air_sector(p->air, cyl, head, i, &sv)) continue;
         if (!sv.data || sv.size == 0) continue;
 
-        /* Die Sektornummer kommt aus R (Adressfeld-Byte 0x0A) und ist
-         * 1-basiert; UFT zaehlt ab 0 (MF-335). */
-        uft_format_add_sector(track,
-                              sv.id_number > 0 ? (uint8_t)(sv.id_number - 1) : 0,
-                              sv.data, (uint16_t)sv.size,
-                              (uint8_t)cyl, (uint8_t)head);
+        /* Die Sektornummer kommt aus R (Adressfeld-Byte 0x0A) und wird so
+         * weitergegeben, wie sie steht. Hier stand `R > 0 ? R - 1 : 0` fuer
+         * uft_format_add_sector(), das 1 wieder addiert — fuer R >= 1 gleich,
+         * aber ein aufgezeichnetes R = 0 kam als 1 an (P3-549, MF-1623). */
+        uft_format_add_sector_with_id(track, sv.id_number,
+                                      sv.data, (uint16_t)sv.size,
+                                      (uint8_t)cyl, (uint8_t)head);
 
         if (track->sector_count > 0) {
             uft_sector_t *dst = &track->sectors[track->sector_count - 1];

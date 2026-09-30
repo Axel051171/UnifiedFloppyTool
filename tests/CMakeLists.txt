@@ -3085,6 +3085,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_recovery_wizard.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_sektor_id_null_bleibt_null")
+        # MF-1623 (P3-549): eine aufgezeichnete Sektor-ID 0 bleibt 0 —
+        # FDI, NFD, STX und TD0, je ueber ihr eigenes Plugin geoeffnet.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_triage_leer_ist_kein_schaden")
         # MF-1622 (P3-708): ein leerer Sektor ist kein beschaedigter.
         # Die Triage allein; sie braucht nichts von der Formatschicht.

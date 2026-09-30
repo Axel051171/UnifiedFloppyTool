@@ -271,25 +271,26 @@ static uft_error_t nfd_read_track(uft_disk_t *disk, int cyl, int head,
         nfd_sec_t *s = &p->secs[i];
         if ((int)s->c != cyl || (int)s->h != head) continue;
 
-        /* add_sector stores id.sector = arg+1 (1-based), so pass R-1 to
-         * preserve the real record number R (PC-98 records are 1-based). */
-        uint8_t sec_arg = (uint8_t)(s->r ? s->r - 1 : 0);
+        /* P3-549 (MF-1623): the record number R as recorded. Here stood
+         * `s->r ? s->r - 1 : 0` for uft_format_add_sector(), which adds 1
+         * back — right for R >= 1, but a recorded R = 0 came out as 1. */
+        uint8_t sec_arg = s->r;
         if (s->data_off + s->size > p->size) {
             /* Data truncated: represent the sector as a forensic fill rather
              * than dropping it or reading out of bounds. */
             uint8_t *fill = malloc(s->size);
             if (!fill) return UFT_ERROR_NO_MEMORY;
             memset(fill, 0xE5, s->size);
-            uft_format_add_sector(track, sec_arg, fill, s->size,
-                                  (uint8_t)cyl, (uint8_t)head);
+            uft_format_add_sector_with_id(track, sec_arg, fill, s->size,
+                                          (uint8_t)cyl, (uint8_t)head);
             free(fill);
             /* MF-1490 (P3-659): the SOURCE ended here — no statement about
              * the medium and none about a CRC. Before, set_crc(false) only,
              * and the 0xE5 fill reached the model as data. */
             uft_format_mark_last_truncated(track);
         } else {
-            uft_format_add_sector(track, sec_arg, p->data + s->data_off, s->size,
-                                  (uint8_t)cyl, (uint8_t)head);
+            uft_format_add_sector_with_id(track, sec_arg, p->data + s->data_off,
+                                          s->size, (uint8_t)cyl, (uint8_t)head);
         }
 
         if (track->sector_count > 0) {

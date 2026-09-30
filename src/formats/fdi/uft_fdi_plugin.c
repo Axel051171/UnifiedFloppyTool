@@ -174,15 +174,17 @@ static uft_error_t fdi_plugin_read_track(uft_disk_t *disk, int cyl, int head,
             uint8_t *fill = malloc(ss);
             if (!fill) return UFT_ERROR_NO_MEMORY;
             memset(fill, 0xE5, ss);
-            uft_format_add_sector(track, sec_r ? sec_r - 1 : 0, fill, ss,
-                                  (uint8_t)cyl, (uint8_t)head);
+            /* P3-549 (MF-1623): R as recorded. `sec_r ? sec_r - 1 : 0` plus
+             * the +1 of uft_format_add_sector() turned R = 0 into 1. */
+            uft_format_add_sector_with_id(track, sec_r, fill, ss,
+                                          (uint8_t)cyl, (uint8_t)head);
             free(fill);
             if (no_data) uft_format_mark_last_unavailable(track);
             else         uft_format_mark_last_truncated(track);
         } else {
-            uft_format_add_sector(track, sec_r ? sec_r - 1 : 0,
-                                  p->data + sec_pos, ss,
-                                  (uint8_t)cyl, (uint8_t)head);
+            uft_format_add_sector_with_id(track, sec_r,
+                                          p->data + sec_pos, ss,
+                                          (uint8_t)cyl, (uint8_t)head);
             if (!crc_ok && track->sector_count > 0)
                 uft_sector_mark_data_crc_error(&track->sectors[track->sector_count - 1]);
         }

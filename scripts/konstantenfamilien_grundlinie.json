@@ -567,22 +567,6 @@
       ]
     },
     {
-      "signatur": "75bc6d286ade",
-      "laenge": 8,
-      "beginn": [
-        0,
-        0,
-        0,
-        12,
-        0,
-        0
-      ],
-      "stellen": [
-        "src/formats/ipf/uft_ipf_air.c::buf",
-        "tests/test_air_cross_validate.c::ipf_trunc"
-      ]
-    },
-    {
       "signatur": "77265a8c888d",
       "laenge": 8,
       "beginn": [
