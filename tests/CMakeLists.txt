@@ -3085,6 +3085,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_recovery_wizard.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_edsk_ein_leser")
+        # MF-1631 (P3-713): ein registrierter EDSK-Leser, ueber den
+        # oeffentlichen Oeffnungsweg ohne Formatnamen.
+        target_link_libraries(${test_name} PRIVATE uft_test_formatschicht)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_sektor_id_null_bleibt_null")
         # MF-1623 (P3-549): eine aufgezeichnete Sektor-ID 0 bleibt 0 —
         # FDI, NFD, STX und TD0, je ueber ihr eigenes Plugin geoeffnet.

@@ -64,8 +64,14 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
  * `uft_register_all_formats()` nicht mehr — und die drei folgenden Tests
  * fielen mit „SCP nicht gefunden" und „DSK_FM7 nicht gefunden". Vier rote
  * Zusagen aus einer verschobenen Zahl. Wer hier eine Registry-Kapazitaet
- * vermutet, sucht an der falschen Stelle (sie ist 192, belegt 138). */
-#define EXPECTED_PLUGINS 138
+ * vermutet, sucht an der falschen Stelle (sie ist 192, belegt 138).
+ *
+ * MF-1631 (P3-713, Eigentuemerentscheidung 2026-09-30): 138 -> 137. `edsk`
+ * ist aus der Registratur genommen — zweiter Leser derselben Kennung wie
+ * `dsk_cpc`, gleichauf bei 95, und der, der Befunde verlor. Der Code bleibt;
+ * Grabstein in docs/FORMAT_ROLL.md. Dasselbe Folgebild wie oben stand beim
+ * ersten Lauf danach wieder da: eine Zahl, fuenf rote Zusagen. */
+#define EXPECTED_PLUGINS 137
 
 static const char *img(const char *name)
 {

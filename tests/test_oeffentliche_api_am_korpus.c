@@ -312,10 +312,12 @@ static const rennen_t RENNEN[] = {
       "`logical` und `posix`: vier Formate teilen sich 737 280 Byte, "
       "und keines kann mehr als die Groesse vorzeigen — P3-401/P3-402" },
     { "edsk", "DSK", "ANDERS",
-      "beide melden 95 und liegen GLEICHAUF (tied 2) — den Zuschlag "
-      "gibt die Reihenfolge. Eine erweiterte CPC-Datei wuerde mit dem "
-      "einfachen DSK-Modell gelesen. Genau der Fall, fuer den P3-402 "
-      "die Entscheidung sucht" },
+      "BERICHTIGT MF-1631: hier stand „beide melden 95 und liegen "
+      "GLEICHAUF — eine erweiterte CPC-Datei wuerde mit dem einfachen "
+      "DSK-Modell gelesen“. Der zweite Halbsatz war falsch: `dsk_cpc` "
+      "liest EDSK vollstaendig, samt uPD765-Befunden (MF-332/338). Seit "
+      "MF-1631 ist `edsk` aus der Registratur genommen (P3-713), das "
+      "Rennen ist eindeutig und geht an DSK — gewollt" },
     { "d77", "D88", "gleich",
       "D88 meldet 95, D77 85. D77 IST ein D88-Behaelter mit anderer "
       "Endung; hxcfe hat die Datei ueber sein NEC_D88-Modul "
@@ -618,17 +620,25 @@ int main(void)
      *            **60 eigenes, 12 fremdes**. Die Zahl ist die FOLGE
      *            der Messung und nicht ihr Ziel (MF-1077): sie bewegt
      *            sich, weil eine Regel jetzt gilt, die vorher nur
-     *            aufgeschrieben war. */
+     *            aufgeschrieben war.
+     *   MF-1631  `edsk` ist aus der Registratur genommen (P3-713,
+     *            Eigentuemerentscheidung). Sein Abbild samdisk_edsk.dsk
+     *            oeffnet jetzt ohne Formatnamen und geht an DSK
+     *            (`dsk_cpc`) — den Leser, der die ST1/ST2-Befunde behaelt.
+     *            Das zaehlt hier als „fremd", und genau das ist die
+     *            Absicht: **59 eigenes, 13 fremdes**. Folge einer
+     *            Entscheidung mit Messung (tests/test_edsk_ein_leser.c),
+     *            kein Ziel. */
     {
         char txt[240];
         snprintf(txt, sizeof txt,
                  "die Bilanz ist unveraendert: %d erreicht, %d eigenes, "
-                 "%d fremdes (gemessen 72 / 60 / 12), davon %d Rennen "
+                 "%d fremdes (gemessen 72 / 59 / 13), davon %d Rennen "
                  "durch die Endung gewonnen und %d nur mit Zwang "
                  "erreichbar",
                  erreicht, eigenes, fremdes,
                  eigenes_durch_endung, nur_mit_zwang);
-        zusage(txt, erreicht == 72 && eigenes == 60 && fremdes == 12);
+        zusage(txt, erreicht == 72 && eigenes == 59 && fremdes == 13);
     }
 
     printf("\n%d gruen, %d rot\n", gruen, rot);

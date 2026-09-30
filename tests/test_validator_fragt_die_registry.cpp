@@ -276,15 +276,20 @@ private slots:
 
     /* ── Gleichstand: „mehrdeutig" mit Namen, keines gewaehlt ──────────────
      *
-     * `hxcfe_pc160.dsk` (194 816 Byte) passt zu keinem `.dsk`-Eintrag der
-     * Liste (143 360), und in der Registry liegen gemessen zwei Plugins
-     * gleichauf, ohne dass die Endung entscheidet (MF-1251). */
+     * Hier stand `hxcfe_pc160.dsk`: zwei Plugins gleichauf, ohne dass die
+     * Endung entscheidet (MF-1251). Die zwei waren `dsk_cpc` und `edsk`,
+     * und seit MF-1631 (P3-713) ist `edsk` aus der Registratur genommen —
+     * die Datei oeffnet jetzt eindeutig als DSK. Der Test prueft aber das
+     * PRUEFETOR bei einem Gleichstand, nicht diese Datei; er nimmt deshalb
+     * ein Abbild, das gemessen weiterhin gleichauf endet und auch mit
+     * seiner Endung nicht aufgeht (`test_oeffentliche_api_am_korpus`:
+     * „erreichbar NUR mit genanntem Format … mehrdeutig"). */
     void gleichstandHeisstMehrdeutig()
     {
         registriert();
-        const QString pfad = korpus("hxcfe_pc160.dsk");
+        const QString pfad = korpus("floptool_jv1_80spuren.jv1");
         if (!QFile::exists(pfad))
-            QSKIP("Korpus fehlt: hxcfe_pc160.dsk");
+            QSKIP("Korpus fehlt: floptool_jv1_80spuren.jv1");
 
         uft_probe_ranking_t rang;
         memset(&rang, 0, sizeof rang);

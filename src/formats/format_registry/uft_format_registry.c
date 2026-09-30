@@ -97,10 +97,18 @@ extern const uft_format_plugin_t uft_format_plugin_t1k;
 extern const uft_format_plugin_t uft_format_plugin_dsk_dc42v;
 
 /* ============================================================================
- * Gruppe: AMSTRAD — Amstrad CPC + PCW (3 Plugins)
+ * Gruppe: AMSTRAD — Amstrad CPC + PCW (2 Plugins)
+ *
+ * MF-1631 (P3-713, Eigentuemerentscheidung 2026-09-30): `edsk`
+ * (src/formats/amstrad/uft_edsk.c) ist aus der Registratur genommen, der
+ * Code bleibt. Er und `dsk_cpc` beanspruchten dieselbe Kennung
+ * "EXTENDED CPC DSK File" mit 95 und lagen gleichauf; ohne Formatnamen
+ * oeffnete keiner, mit „EDSK" gewann der, der ST1/ST2-Befunde, die
+ * ID-Felder C/H/N und eine echte ID 0 verlor. `dsk_cpc` liest EDSK
+ * vollstaendig (MF-332/MF-338, test_edsk_error_marks). Grabstein in
+ * docs/FORMAT_ROLL.md; Nachweis tests/test_edsk_ein_leser.c.
  * ============================================================================ */
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
-extern const uft_format_plugin_t uft_format_plugin_edsk;
 extern const uft_format_plugin_t uft_format_plugin_dsk_pcw;
 
 /* ============================================================================
@@ -266,7 +274,7 @@ static const uft_format_plugin_t* g_ibm_pc_plugins[] = {
 };
 
 static const uft_format_plugin_t* g_amstrad_plugins[] = {
-    &uft_format_plugin_dsk_cpc, &uft_format_plugin_edsk, &uft_format_plugin_dsk_pcw,
+    &uft_format_plugin_dsk_cpc, &uft_format_plugin_dsk_pcw,   /* edsk: MF-1631 */
 };
 
 static const uft_format_plugin_t* g_spectrum_plugins[] = {

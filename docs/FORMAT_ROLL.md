@@ -60,7 +60,7 @@ Dateiaufbau).
 | do | behaelterformat | aktiv |  |
 | dsk_cpc | behaelterformat | aktiv |  |
 | edk | behaelterformat | aktiv |  |
-| edsk | behaelterformat | aktiv |  |
+| edsk | behaelterformat | zurueckgenommen | MF-1631 / P3-713 — Eigentuemerentscheidung 2026-09-30. Zweiter Leser derselben Kennung wie `dsk_cpc`, gleichauf bei 95; sein `read_track` verlor ST1/ST2-Befunde, ID-Felder und eine echte ID 0. Code bleibt (`src/formats/amstrad/uft_edsk.c`), nur die Registrierung ist zurueckgezogen; `dsk_cpc` liest EDSK vollstaendig. Nachweis `tests/test_edsk_ein_leser.c`. |
 | fdi | behaelterformat | aktiv |  |
 | fdi_pc98 | behaelterformat | aktiv |  |
 | fds | behaelterformat | aktiv |  |

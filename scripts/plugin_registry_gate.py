@@ -156,6 +156,22 @@ def scan(repo: Path):
     return plugins, lookups, max_plugins, symbols, listed, declared, enum_values
 
 
+def _zurueckgenommene_ids(repo: Path) -> set[str]:
+    """IDs the name roll carries as `zurueckgenommen` with an MF-/P3- record."""
+    out: set[str] = set()
+    try:
+        text = (repo / "docs/FORMAT_ROLL.md").read_text(encoding="utf-8",
+                                                        errors="replace")
+    except OSError:
+        return out
+    for line in text.splitlines():
+        teile = [t.strip() for t in line.strip().strip("|").split("|")]
+        if len(teile) >= 4 and teile[2] == "zurueckgenommen" and \
+                re.search(r"\b(?:MF|P3)-\d+", teile[3]):
+            out.add(teile[0])
+    return out
+
+
 def check(repo: Path) -> list[str]:
     (plugins, lookups, max_plugins, symbols, listed,
      declared, enum_values) = scan(repo)
@@ -180,7 +196,17 @@ def check(repo: Path) -> list[str]:
     #    uft_register_all_formats() cannot reach it. MF-446 found seven that
     #    were not — among them SCP, the flux container the whole DeepRead path
     #    reads, and IMG. Invisible for as long as the function had no caller.
+    #
+    #    MF-1631: one exception, and it is not a list here. A plugin whose ID
+    #    docs/FORMAT_ROLL.md carries as `zurueckgenommen` WITH an MF-/P3-
+    #    record was taken out of the registry on purpose (first case: `edsk`,
+    #    P3-713, owner decision). The roll is the tombstone; without it the
+    #    missing registration stays a finding.
+    zurueck = _zurueckgenommene_ids(repo)
     for sym in sorted(set(symbols) - listed):
+        if sym.startswith("uft_format_plugin_") and \
+                sym[len("uft_format_plugin_"):] in zurueck:
+            continue
         errors.append(
             f"{symbols[sym]} defines {sym} but no g_*_plugins[] group in "
             f"src/formats/format_registry/uft_format_registry.c lists it - "
