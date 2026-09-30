@@ -113,6 +113,7 @@ void MainWindow::loadTabWidgets()
     
     // Tab 3: Hardware - Controller and Drive settings
     HardwareTab* hardwareTab = new HardwareTab();
+    m_hardwareTab = hardwareTab;   /* MF-1627: Verbindungszustand fuers Menue */
     QVBoxLayout* layout2 = new QVBoxLayout(ui->tab_hardware);
     layout2->setContentsMargins(0, 0, 0, 0);
     layout2->addWidget(hardwareTab);
@@ -229,8 +230,8 @@ void MainWindow::loadTabWidgets()
      * Aufruf den Zustand nicht verliert - bei ForensicTab waere das ein
      * verworfener Vergleich. */
     auto alsFenster = [this](QAction *aktion, QWidget *inhalt,
-                             const QString &titel) {
-        if (!aktion || !inhalt) return;
+                             const QString &titel) -> QDialog * {
+        if (!aktion || !inhalt) return nullptr;
         QDialog *fenster = new QDialog(this);
         fenster->setWindowTitle(titel);
         QVBoxLayout *l = new QVBoxLayout(fenster);
@@ -242,13 +243,61 @@ void MainWindow::loadTabWidgets()
             fenster->raise();
             fenster->activateWindow();
         });
+        return fenster;
     };
 
+    QDialog *toolsFenster =
     alsFenster(ui->actionOpenTools,      toolsTab,      tr("Tools"));
     alsFenster(ui->actionOpenProtection, protectionTab, tr("Protection Analyzer"));
     alsFenster(ui->actionOpenForensic,   forensicTab,   tr("Forensic Compare"));
     alsFenster(ui->actionOpenNibble,     nibbleTab,     tr("Nibble Editor"));
     alsFenster(ui->actionOpenXCopy,      xcopyTab,      tr("XCopy"));
+
+    /* MF-1627: „Convert…", „Compare…" und „Repair…" im Werkzeugmenue waren
+     * mit nichts verbunden, obwohl das Tools-Fenster alle drei traegt. Sie
+     * oeffnen es und druecken dort den ersten Schritt — die Quellauswahl. */
+    auto toolsZeigen = [toolsFenster]() {
+        if (!toolsFenster) return;
+        toolsFenster->show();
+        toolsFenster->raise();
+        toolsFenster->activateWindow();
+    };
+    menueKnopf(ui->actionConvert, toolsTab, "btnBrowseConvertSource", toolsZeigen);
+    menueKnopf(ui->actionCompare, toolsTab, "btnBrowseCompareA", toolsZeigen);
+    menueKnopf(ui->actionRepair,  toolsTab, "btnBrowseRepair", toolsZeigen);
+    /* MF-1627: im Workflow-Reiter standen „Repair", „Compare" und „Create
+     * Blank" sichtbar und frei — ohne ein einziges connect(). Die drei
+     * Handlungen traegt das Tools-Fenster; die Knoepfe fuehren dorthin. */
+    auto werkzeugKnopf = [toolsTab, toolsZeigen](QPushButton *quelle, const char *ziel) {
+        QPushButton *z = toolsTab ? toolsTab->findChild<QPushButton *>(QString::fromLatin1(ziel))
+                                  : nullptr;
+        if (!quelle) {
+            qWarning("[MainWindow] MF-1627: Workflow-Knopf fuer %s fehlt", ziel);
+            return;
+        }
+        if (!z) {
+            qWarning("[MainWindow] MF-1627: Gegenstelle %s fehlt, Knopf abgeschaltet", ziel);
+            quelle->setEnabled(false);
+            quelle->setToolTip(QObject::tr("Die Gegenstelle „%1“ fehlt.")
+                               .arg(QString::fromLatin1(ziel)));
+            return;
+        }
+        QObject::connect(quelle, &QPushButton::clicked, z, [z, toolsZeigen]() {
+            toolsZeigen();
+            if (z->isEnabled()) z->click();
+        });
+    };
+    werkzeugKnopf(ui->tab_workflow->findChild<QPushButton *>(QStringLiteral("btnRepair")),
+                  "btnBrowseRepair");
+    werkzeugKnopf(ui->tab_workflow->findChild<QPushButton *>(QStringLiteral("btnCompare")),
+                  "btnBrowseCompareA");
+    werkzeugKnopf(ui->tab_workflow->findChild<QPushButton *>(QStringLiteral("btnCreateBlank")),
+                  "btnCreateBlank");
+
+    /* Zwei Eintraege hiessen „Protection Analyzer…"; nur einer war
+     * verbunden. Der zweite loest jetzt den ersten aus. */
+    connect(ui->actionProtectionAnalyzer, &QAction::triggered,
+            ui->actionOpenProtection, &QAction::trigger);
 
     qInfo("[MainWindow] MF-1297: 5 Reiter sind Menuefenster geworden; "
           "die Reiterleiste hat jetzt %d statt 11 Eintraege.",
@@ -341,6 +390,101 @@ void MainWindow::setupConnections()
     connect(ui->actionHelp, &QAction::triggered, this, &MainWindow::onHelp);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
     connect(ui->actionKeyboardShortcuts, &QAction::triggered, this, &MainWindow::onKeyboardShortcuts);
+
+    /* MF-1627: die uebrigen toten Menueeintraege (MF-662 zaehlte 21 von 30,
+     * gemessen am 2026-09-30 noch 20). Jeder drueckt jetzt den Knopf des
+     * Reiters, der dasselbe schon tut, oder ist mit Grund abgeschaltet.
+     * Das Tor `scripts/audit_menue_aktionen.py` haelt es so. */
+    auto zeigeReiter = [this](QWidget *seite) {
+        return [this, seite]() { ui->tabWidget->setCurrentWidget(seite); };
+    };
+
+    // Werkzeuge des Status-Reiters (MF-1626: das Label ist eine Anzeige)
+    menueKnopf(ui->actionBAMViewer,       ui->tab_status, "btnBAMViewer",   zeigeReiter(ui->tab_status));
+    menueKnopf(ui->actionBootblockViewer, ui->tab_status, "btnBootblock",   zeigeReiter(ui->tab_status));
+    menueKnopf(ui->actionLabelEditor,     ui->tab_status, "btnLabelEditor", zeigeReiter(ui->tab_status));
+    ui->actionLabelEditor->setText(tr("Volume &Label..."));
+
+    // Laufwerk: Verbinden/Trennen teilen sich EINEN Knopf, der umschaltet;
+    // menueZustand() gibt jeweils nur den passenden Eintrag frei.
+    menueKnopf(ui->actionConnect,    ui->tab_hardware, "btnConnect",  zeigeReiter(ui->tab_hardware));
+    menueKnopf(ui->actionDisconnect, ui->tab_hardware, "btnConnect",  zeigeReiter(ui->tab_hardware));
+    menueKnopf(ui->actionMotorOn,    ui->tab_hardware, "btnMotorOn",  zeigeReiter(ui->tab_hardware));
+    menueKnopf(ui->actionMotorOff,   ui->tab_hardware, "btnMotorOff", zeigeReiter(ui->tab_hardware));
+
+    // Lesen/Schreiben: der Workflow mit voreingestellter Richtung. Gestartet
+    // wird nicht — das bleibt ein bewusster Druck auf „Start".
+    menueKnopf(ui->actionReadDisk,  ui->tab_workflow, "btnSourceFlux", [this]() {
+        ui->tabWidget->setCurrentWidget(ui->tab_workflow);
+        if (auto *b = ui->tab_workflow->findChild<QPushButton *>(QStringLiteral("btnDestFile")))
+            if (b->isEnabled()) b->click();
+    });
+    menueKnopf(ui->actionWriteDisk, ui->tab_workflow, "btnDestFlux", [this]() {
+        ui->tabWidget->setCurrentWidget(ui->tab_workflow);
+        if (auto *b = ui->tab_workflow->findChild<QPushButton *>(QStringLiteral("btnSourceFile")))
+            if (b->isEnabled()) b->click();
+    });
+
+    abschalten(ui->actionVerifyDisk,
+               tr("Einen Pruefvergleich Diskette gegen Abbild gibt es nicht. "
+                  "Nachgeprueft wird nach dem Wandeln, eingestellt im Reiter "
+                  "Einstellungen („Nach dem Wandeln nachpruefen\")."));
+    abschalten(ui->actionChecksumDatabase,
+               tr("Eine Pruefsummen-Datenbank ist nicht umgesetzt."));
+    abschalten(ui->actionCheckUpdates,
+               tr("Die Suche nach Aktualisierungen ist nicht umgesetzt; das "
+                  "Programm nimmt keine Netzverbindung auf."));
+    const QString keineSprache =
+        tr("Die Sprachdateien liegen als translations/*.ts vor, werden aber "
+           "weder uebersetzt noch geladen (kein QTranslator im Programm).");
+    abschalten(ui->actionLangGerman,   keineSprache);
+    abschalten(ui->actionLangEnglish,  keineSprache);
+    abschalten(ui->actionLangFrench,   keineSprache);
+    abschalten(ui->actionLoadLanguage, keineSprache);
+
+    for (QMenu *m : menuBar()->findChildren<QMenu *>()) {
+        m->setToolTipsVisible(true);
+        connect(m, &QMenu::aboutToShow, this, &MainWindow::menueZustand);
+    }
+    menueZustand();
+}
+
+void MainWindow::menueKnopf(QAction *aktion, QWidget *ziel, const char *knopf,
+                            std::function<void()> zeigen)
+{
+    if (!aktion) return;
+    QPushButton *b = ziel ? ziel->findChild<QPushButton *>(QString::fromLatin1(knopf))
+                          : nullptr;
+    if (!b) {
+        qWarning("[MainWindow] MF-1627: Gegenstelle %s fehlt, Menueeintrag abgeschaltet", knopf);
+        abschalten(aktion, tr("Die Gegenstelle „%1“ fehlt.").arg(QString::fromLatin1(knopf)));
+        return;
+    }
+    connect(aktion, &QAction::triggered, this, [b, zeigen]() {
+        if (zeigen) zeigen();
+        if (b->isEnabled()) b->click();
+    });
+    m_menueKnoepfe.append({ aktion, b });
+}
+
+void MainWindow::abschalten(QAction *aktion, const QString &grund)
+{
+    if (!aktion) return;
+    aktion->setEnabled(false);
+    aktion->setToolTip(grund);
+    aktion->setStatusTip(grund);
+}
+
+void MainWindow::menueZustand()
+{
+    for (const MenueKnopf &p : m_menueKnoepfe) {
+        const bool frei = p.knopf->isEnabled();
+        p.aktion->setEnabled(frei);
+        p.aktion->setToolTip(frei ? QString() : p.knopf->toolTip());
+    }
+    const bool verbunden = m_hardwareTab && m_hardwareTab->isConnected();
+    if (verbunden) ui->actionConnect->setEnabled(false);
+    else           ui->actionDisconnect->setEnabled(false);
 }
 
 void MainWindow::loadSettings()

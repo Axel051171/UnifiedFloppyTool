@@ -10,14 +10,20 @@
 #include <QMainWindow>
 #include <QDialog>
 #include <QStringList>
+#include <QVector>
+#include <functional>
 #include "disk_image_validator.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
+class QAction;
 class QDragEnterEvent;
 class QDropEvent;
+class QPushButton;
 class QThread;
 QT_END_NAMESPACE
+
+class HardwareTab;
 
 class VisualDiskWindow;
 class StatusTab;
@@ -112,7 +118,21 @@ private:
     void openFile(const QString &filename);
     void updateRecentFilesMenu();
     void applyDarkMode(bool enabled);
-    
+
+    /* MF-1627: Menueeintraege, die einen Knopf eines Reiters oder Fensters
+     * druecken, statt eine zweite Fassung derselben Handlung zu tragen.
+     * `zeigen` bringt die Seite nach vorn; der Eintrag spiegelt beim
+     * Aufklappen des Menues den Zustand des Knopfes (gesperrt samt Grund).
+     * Fehlt der Knopf, wird der Eintrag mit Grund abgeschaltet. */
+    void menueKnopf(QAction *aktion, QWidget *ziel, const char *knopf,
+                    std::function<void()> zeigen);
+    /* MF-1627: gesperrt, und Tooltip wie Statuszeile sagen warum. */
+    void abschalten(QAction *aktion, const QString &grund);
+    void menueZustand();
+    struct MenueKnopf { QAction *aktion; QPushButton *knopf; };
+    QVector<MenueKnopf> m_menueKnoepfe;
+    HardwareTab *m_hardwareTab = nullptr;
+
     Ui::MainWindow *ui;
     VisualDiskWindow *m_visualDiskWindow;
     

@@ -3946,6 +3946,27 @@ Jeder davon ist anklickbar und tut nichts. Das ist dieselbe Klasse wie
 die 38 toten Bedienelemente aus Stufe 5 des Plans — nur eine Ebene
 höher, im Menü.
 
+> **NACHTRAG MF-1627 — behoben, und mit einem Tor.** Am 2026-09-30
+> nachgemessen: noch **20** (MF-663 hatte `actionAnalyze` verbunden).
+> Jetzt drückt jeder Eintrag den Knopf des Reiters oder Fensters, der
+> dasselbe schon tut — Status-Reiter (BAM, Bootblock, Volume Label),
+> Hardware-Reiter (Connect/Disconnect über den einen Umschaltknopf, Motor
+> an/aus), Tools-Fenster (Convert/Compare/Repair: die Quellauswahl),
+> Workflow (Read/Write: Richtung voreingestellt, gestartet wird nicht) —
+> und spiegelt beim Aufklappen des Menüs dessen Zustand samt Grund.
+> Der doppelte „Protection Analyzer…" löst den verbundenen aus. Mit Grund
+> abgeschaltet: „Verify Disk" (ein Diskette-gegen-Abbild-Vergleich
+> existiert nicht), Prüfsummen-Datenbank und Update-Suche (nicht
+> umgesetzt), die vier Spracheinträge (`translations/*.ts` liegen vor,
+> kein `QTranslator` lädt sie). **Tor:** `scripts/audit_menue_aktionen.py`,
+> Kategorie „Menueeintrag ohne Wirkung" in `check_consistency.py`,
+> Rotbeweis 20 → 0, Selbsttest 10/10 plus zwei gepflanzte Fälle in
+> `audit_selbsttest.py`. **Dazu im selben Zug:** im Workflow-Reiter waren
+> „Repair", „Compare" und „Create Blank" sichtbar, frei und ohne ein
+> einziges `connect()`; sie führen jetzt ins Tools-Fenster. **Nicht
+> gesehen vom Tor:** ob ein Handler das tut, was die Beschriftung sagt —
+> das prüfen die Tests der Reiter, deren Knöpfe gedrückt werden.
+
 ### Und ein Tor, das falsch gezählt hat
 
 `scripts/audit_orphan_modules.py` ist für C geschrieben und kannte

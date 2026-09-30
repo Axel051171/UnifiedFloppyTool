@@ -204,6 +204,20 @@ def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str
 
     pat = re.compile(rf"^\s*{key}\s*\+?=\s*(.*?)\s*$")
     optin_open = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*$")
+    # MF-1627: die zweite Schreibweise eines Opt-in-Blocks. `contains(CONFIG,
+    # uft_dtc_components) { ... }` (MF-1100) fiel durch die Pruefung oben —
+    # der Name steht nicht in _OPTIN_FLAGS und die Form ist eine andere.
+    # Folge: `--emit-cmake-sources` gab die zehn dtc-Quellen an den
+    # CMake-Programmbau, der sie ohne ihren Include-Pfad uebersetzte und an
+    # `dtc_components.h` scheiterte; qmake baut sie ohne CONFIG+= nicht.
+    # Keine gepflegte Liste (MF-636): uebersprungen wird jeder solche Block,
+    # dessen Merkmal die .pro nicht selbst in CONFIG setzt — genau das, was
+    # qmake ohne Kommandozeilen-CONFIG tut.
+    gesetzt = set()
+    for m_cfg in re.finditer(r"^\s*CONFIG\s*\+=\s*(.*)$", text, re.M):
+        gesetzt.update(m_cfg.group(1).split())
+    contains_open = re.compile(
+        r"^\s*contains\s*\(\s*CONFIG\s*,\s*([A-Za-z_][A-Za-z0-9_+]*)\s*\)\s*\{\s*$")
     any_open = re.compile(r"\{\s*$")
     any_close = re.compile(r"^\s*\}")
     out: set[str] = set()
@@ -213,7 +227,9 @@ def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str
     for line in text.splitlines():
         if skip_depth == 0:
             m_optin = optin_open.match(line)
-            if m_optin and m_optin.group(1) in _OPTIN_FLAGS:
+            m_cont = contains_open.match(line)
+            if (m_optin and m_optin.group(1) in _OPTIN_FLAGS) or \
+               (m_cont and m_cont.group(1) not in gesetzt):
                 skip_depth = 1
                 skip_origin = brace_depth
                 brace_depth += 1

@@ -859,6 +859,13 @@ def main() -> int:
         import audit_setting_wiring as _sw
         all_errors.append(("Einstellung ohne Wirkung", _sw.check(repo)))
 
+        # MF-1627: das Menue-Gegenstueck. 20 Eintraege des Hauptfensters
+        # waren anklickbar und taten nichts; aufgeschrieben seit MF-662,
+        # stehen gelassen bis heute. Jeder Eintrag ist jetzt verbunden oder
+        # mit Grund abgeschaltet, und dieses Tor haelt es so.
+        import audit_menue_aktionen as _ma
+        all_errors.append(("Menueeintrag ohne Wirkung", _ma.check(repo)))
+
         # 42. Kategorie (MF-688): wer beim ERKENNEN ein Magic prueft, muss
         # es beim OEFFNEN auch pruefen. `dim_atari` tat es nicht, und
         # `open()` liefert bei Schreibwunsch ein "r+b"-Ziel — gemessen kam

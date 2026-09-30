@@ -337,6 +337,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets
 )
 
+# MF-1627: zlib ist seit MF-1070 verbindlich (.pro: `-lz`, UFT_HAS_ZLIB),
+# und das Programmziel hier linkte es nicht — gemessen scheiterte der
+# CMake-Programmbau an genau einem Symbol, `uncompress` aus uft_mfi.c.
+# Derselbe MinGW-Hinweis wie in src/core/CMakeLists.txt und
+# tests/CMakeLists.txt; `find_package` ist idempotent.
+if(MINGW AND NOT ZLIB_ROOT)
+    get_filename_component(_uft_app_cc_bin "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_uft_app_tc_root "${_uft_app_cc_bin}/.." ABSOLUTE)
+    if(EXISTS "${_uft_app_tc_root}/x86_64-w64-mingw32/include/zlib.h")
+        set(ZLIB_ROOT "${_uft_app_tc_root}/x86_64-w64-mingw32")
+    endif()
+endif()
+find_package(ZLIB REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
+target_compile_definitions(${PROJECT_NAME} PRIVATE UFT_HAS_ZLIB=1)
+
 if(Qt6SerialPort_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::SerialPort)
 endif()

@@ -731,6 +731,31 @@ FAELLE: dict[str, list[Fall]] = {
     ],
 
     # ---------------------------------------------------------------
+    "audit_menue_aktionen": [
+        Fall(
+            name="Menueeintrag ohne Wirkung",
+            dateien={"forms/mainwindow.ui":
+                     '<action name="actionTot"/><action name="actionLebt"/>\n',
+                     "src/mainwindow.cpp":
+                     "void f() {\n"
+                     "    connect(ui->actionLebt, &QAction::triggered, this, g);\n"
+                     "    ui->actionTot->setText(x);\n}\n"},
+            erwartet="treffer", muster="actionTot",
+            warum="MF-1627: 20 Menueeintraege waren anklickbar und taten "
+                  "nichts; eine blosse Nennung ist keine Verbindung."),
+        Fall(
+            name="verbunden oder mit Grund abgeschaltet",
+            dateien={"forms/mainwindow.ui":
+                     '<action name="actionA"/><action name="actionB"/>\n',
+                     "src/mainwindow.cpp":
+                     "void f() {\n"
+                     "    menueKnopf(ui->actionA, seite, \"btnA\", zeigen);\n"
+                     "    abschalten(ui->actionB, tr(\"nicht umgesetzt\"));\n}\n"},
+            erwartet="sauber",
+            warum="beide erlaubten Formen."),
+    ],
+
+    # ---------------------------------------------------------------
     # Gepflanzt wird auf `UFT_FMT_D64` — eine der zwei Sonden OHNE
     # eingefrorene Grundlinie (die andere ist `UFT_SECTOR_DELETED`). Fuer
     # die drei mit Grundlinie waere jeder gepflanzte Baum per Bauart eine
