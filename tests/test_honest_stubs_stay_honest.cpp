@@ -83,6 +83,24 @@ private slots:
                             "Verwechslung:\n" + tip));
     }
 
+    /* ── Workflow: „Open GW→DMK Panel…" (MF-1629) ─────────────────────────
+     * Der Knopf war sichtbar, frei und mit nichts verbunden. Das Panel
+     * dahinter hat seit MF-891 keinen Geraetezugang (alle seine Aktionen
+     * sind gesperrt). Ein Knopf dorthin boete ein leeres Fenster an; er
+     * bleibt aus und sagt, wohin das echte Lesen gehoert. */
+    void workflowGw2DmkButtonStaysOffAndSaysWhy()
+    {
+        WorkflowTab tab;
+        auto *btn = tab.findChild<QPushButton *>("btnGw2DmkOpen");
+        QVERIFY2(btn, "btnGw2DmkOpen ist nicht erreichbar.");
+        QVERIFY2(!btn->isEnabled(),
+                 "Der GW->DMK-Knopf ist frei, obwohl er nichts oeffnet, was "
+                 "lesen kann.");
+        const QString tip = btn->toolTip();
+        QVERIFY2(tip.contains(QStringLiteral("Hardware")),
+                 qPrintable("Der Tooltip nennt nicht, wohin das Lesen gehoert:\n" + tip));
+    }
+
     /* ── Workflow: ohne Quelldatei kein Start, und der Grund steht dran ── */
     void workflowStartIsGatedAndSaysWhy()
     {

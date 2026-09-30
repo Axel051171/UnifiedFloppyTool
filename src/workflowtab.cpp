@@ -166,6 +166,17 @@ void WorkflowTab::connectSignals()
     
     // Analyze button
     connect(ui->btnAnalyze, &QPushButton::clicked, this, &WorkflowTab::onAnalyzeClicked);
+
+    /* MF-1629: „Open GW→DMK Panel…" stand sichtbar und frei und war mit
+     * nichts verbunden. Das Panel (uft_gw2dmk_panel.cpp) hat seit MF-891
+     * keinen Geraetezugang, alle seine Aktionen sind gesperrt — ein Knopf
+     * dorthin boete ein leeres Fenster an. Er bleibt aus und sagt, wohin
+     * das echte Lesen gehoert. */
+    ui->btnGw2DmkOpen->setEnabled(false);
+    ui->btnGw2DmkOpen->setToolTip(
+        tr("GW→DMK hat keinen Geraetezugang: das Panel ist nicht mit dem "
+           "Greaseweazle-Treiber verdrahtet. Zum wirklichen Lesen: Reiter "
+           "\"Hardware\" bzw. Quelle \"Flux Device\" hier im Workflow."));
 }
 
 // ============================================================================

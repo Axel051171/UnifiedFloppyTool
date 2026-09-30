@@ -3966,6 +3966,23 @@ höher, im Menü.
 > einziges `connect()`; sie führen jetzt ins Tools-Fenster. **Nicht
 > gesehen vom Tor:** ob ein Handler das tut, was die Beschriftung sagt —
 > das prüfen die Tests der Reiter, deren Knöpfe gedrückt werden.
+>
+> **NACHTRAG MF-1629 — die Knöpfe vollständig gezählt.** Über alle
+> `forms/*.ui`: jeder `QPushButton`, dessen Name außerhalb von Kommentaren
+> in keiner Quelldatei vorkommt — **27**. Davon sind **22 Fehlalarme mit
+> Grund**: die 17 `btnModus_*` werden über den zusammengesetzten Namen
+> verdrahtet (`formattab.cpp`), die 5 Hardware-Knöpfe über den
+> Codegenerator (`generated/tab_hardware_wiring.gen.cpp`). **4** liegen in
+> `forms/tab_diagnostics.ui`, einem Formular, das kein Code einbindet —
+> unerreichbar, also keine falsche Zusage an einen Bediener. **1** war
+> echt: „Open GW→DMK Panel…" im Workflow-Reiter, sichtbar, frei, ohne
+> Verbindung. Das Panel dahinter hat seit MF-891 keinen Gerätezugang; der
+> Knopf ist jetzt aus und nennt den Grund und das Ziel („Reiter
+> Hardware"). Rotbeweis `test_honest_stubs_stay_honest::
+> workflowGw2DmkButtonStaysOffAndSaysWhy`, Mutation 2 von 2. Die Zählung
+> ist bewusst **kein** Tor geworden: die 22 Fehlalarme zeigen, dass eine
+> Namenssuche Verdrahtung über zusammengesetzte Namen und erzeugten Code
+> nicht sieht.
 
 ### Und ein Tor, das falsch gezählt hat
 
