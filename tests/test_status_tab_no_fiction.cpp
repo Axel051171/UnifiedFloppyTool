@@ -51,7 +51,10 @@
  */
 #include <QtTest/QtTest>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QTextEdit>
 
@@ -175,6 +178,55 @@ private slots:
         QVERIFY2(log->toPlainText().contains("Image loaded"),
                  qPrintable(QString("Die Meldung steht nicht im Protokoll. "
                                     "Inhalt:\n%1").arg(log->toPlainText())));
+    }
+
+    /* ── 4. Der Label-Editor erfindet keinen Diskettennamen (MF-1626) ────
+     *
+     * Der Dialog „Volume Label Editor" nahm einen neuen Namen an, schrieb
+     * ihn in `m_currentImage.volumeName` und protokollierte „Volume label
+     * changed to". Ins Abbild schrieb er nichts — und danach zeigte der
+     * Bootblock-Dialog den eingetippten Namen mit dem Satz „a volume name
+     * came from the decode result". Eine Eingabe des Bedieners erschien als
+     * gelesener Inhalt der Diskette. */
+    void labelEditorInventsNoVolumeName()
+    {
+        StatusTab tab;
+        DecodeResult r;
+        r.formatName      = "D64";
+        r.platformName    = "C64";
+        r.volumeName      = "ORIGINAL";
+        r.tracks          = 35;
+        r.heads           = 1;
+        r.sectorsPerTrack = 21;
+        r.sectorSize      = 256;
+        r.totalSize       = 174848;
+        r.totalSectors    = 683;
+        r.goodSectors     = 683;
+        tab.onImageInfo(r);
+
+        QVERIFY(QMetaObject::invokeMethod(&tab, "onLabelEditorClicked"));
+        QDialog *dlg = openedDialog(&tab);
+        QVERIFY(dlg);
+        auto *edit = dlg->findChild<QLineEdit *>();
+        QVERIFY(edit);
+        QCOMPARE(edit->text(), QStringLiteral("ORIGINAL"));
+        QVERIFY2(edit->isReadOnly(),
+                 "das Namensfeld ist editierbar, obwohl nichts ins Abbild geschrieben wird");
+        QVERIFY2(screenText(dlg).contains(QStringLiteral("nicht verändert")),
+                 qPrintable(screenText(dlg)));
+
+        /* Wer es trotzdem versucht: Text setzen, jeden Knopf druecken. */
+        edit->setText(QStringLiteral("ERFUNDEN"));
+        if (auto *box = dlg->findChild<QDialogButtonBox *>())
+            for (auto *b : box->buttons()) b->click();
+        delete dlg;
+
+        QVERIFY(QMetaObject::invokeMethod(&tab, "onBootblockClicked"));
+        QDialog *boot = openedDialog(&tab);
+        QVERIFY(boot);
+        const QString s = screenText(boot);
+        QVERIFY2(!s.contains(QStringLiteral("ERFUNDEN")), qPrintable(s));
+        QVERIFY2(s.contains(QStringLiteral("ORIGINAL")), qPrintable(s));
     }
 };
 

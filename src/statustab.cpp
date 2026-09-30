@@ -114,9 +114,9 @@ void StatusTab::onLabelEditorClicked()
     appendLog("Label Editor requested", "INFO");
     emit requestLabelEditor();
     
-    // Open Label Editor dialog with QLineEdit for volume label editing
+    // Show the volume label as decoded (read-only, MF-1626)
     QDialog *dlg = new QDialog(this);
-    dlg->setWindowTitle(tr("Volume Label Editor - %1").arg(m_currentImage.formatName));
+    dlg->setWindowTitle(tr("Volume Label - %1").arg(m_currentImage.formatName));
     dlg->setMinimumWidth(400);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -129,43 +129,45 @@ void StatusTab::onLabelEditorClicked()
     QLabel *volLabel = new QLabel(tr("Volume Name:"), dlg);
     editLayout->addWidget(volLabel);
 
+    /* MF-1626: nur anzeigen. Hier stand ein editierbares Feld, dessen „OK"
+     * den Namen in `m_currentImage.volumeName` schrieb und „Volume label
+     * changed to" protokollierte — ins Abbild schrieb es nichts, und der
+     * Bootblock-Dialog zeigte den eingetippten Namen danach als
+     * Dekodierergebnis an. Einen Label-Schreiber gibt es auf diesem Weg
+     * nicht (gemessen: kein Empfaenger von requestLabelEditor()), also
+     * zeigt der Dialog den gelesenen Namen und sagt, dass er nichts
+     * aendert. */
     QLineEdit *nameEdit = new QLineEdit(dlg);
     nameEdit->setText(m_currentImage.volumeName);
-    nameEdit->setMaxLength(32);  // Most formats cap at 16-32 chars
-    nameEdit->setPlaceholderText(tr("Enter volume name..."));
+    nameEdit->setReadOnly(true);
+    nameEdit->setPlaceholderText(tr("(kein Name gelesen)"));
     editLayout->addWidget(nameEdit);
     layout->addLayout(editLayout);
+
+    QLabel *honest = new QLabel(
+        tr("Angezeigt wird der Name, wie er beim Dekodieren gelesen wurde. "
+           "Das Umbenennen auf dem Abbild ist nicht umgesetzt — das Abbild "
+           "wird nicht verändert."), dlg);
+    honest->setWordWrap(true);
+    layout->addWidget(honest);
 
     // Show current label info
     QLabel *infoLabel = new QLabel(dlg);
     QString fmt = m_currentImage.formatName.toUpper();
     if (fmt.contains("D64") || fmt.contains("D71") || fmt.contains("D81")) {
         infoLabel->setText(tr("CBM DOS: max 16 characters, PETSCII encoding"));
-        nameEdit->setMaxLength(16);
     } else if (fmt.contains("ADF") || fmt.contains("AMIGA")) {
         infoLabel->setText(tr("Amiga: max 30 characters, ASCII encoding"));
-        nameEdit->setMaxLength(30);
     } else if (fmt.contains("IMG") || fmt.contains("FAT")) {
         infoLabel->setText(tr("FAT: max 11 characters, ASCII uppercase"));
-        nameEdit->setMaxLength(11);
     } else {
         infoLabel->setText(tr("Label length depends on filesystem"));
     }
     infoLabel->setStyleSheet("color: gray; font-size: 10px;");
     layout->addWidget(infoLabel);
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dlg);
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, dlg);
     layout->addWidget(buttonBox);
-
-    connect(buttonBox, &QDialogButtonBox::accepted, dlg, [this, dlg, nameEdit]() {
-        QString newName = nameEdit->text().trimmed();
-        if (newName != m_currentImage.volumeName) {
-            m_currentImage.volumeName = newName;
-            appendLog(QString("Volume label changed to: %1").arg(newName), "INFO");
-        }
-        dlg->accept();
-    });
     connect(buttonBox, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
 
     dlg->show();
